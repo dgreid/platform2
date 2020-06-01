@@ -53,9 +53,6 @@ class MockWiFiProvider : public WiFiProvider {
               (override));
   MOCK_METHOD(bool, OnServiceUnloaded, (const WiFiServiceRefPtr&), (override));
   MOCK_METHOD(ByteArrays, GetHiddenSSIDList, (), (override));
-  MOCK_METHOD(void, LoadAndFixupServiceEntries, (Profile*), (override));
-  MOCK_METHOD(bool, Save, (StoreInterface*), (const, override));
-  MOCK_METHOD(void, IncrementConnectCount, (uint16_t), (override));
   MOCK_METHOD(int, NumAutoConnectableServices, (), (override));
 
  private:

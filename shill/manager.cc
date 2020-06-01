@@ -336,10 +336,6 @@ void Manager::Stop() {
     UpdateDevice(device);
   }
 
-#if !defined(DISABLE_WIFI)
-  UpdateWiFiProvider();
-#endif  // DISABLE_WIFI
-
   // Persist profile, service information to disk.
   for (const auto& profile : profiles_) {
     // Since this happens in a loop, the current manager state is stored to
@@ -986,7 +982,7 @@ bool Manager::IsTechnologyProhibited(Technology technology) const {
 
 void Manager::OnProfileStorageInitialized(Profile* profile) {
 #if !defined(DISABLE_WIFI)
-  wifi_provider_->LoadAndFixupServiceEntries(profile);
+  wifi_provider_->UpdateStorage(profile);
 #endif  // DISABLE_WIFI
 }
 
@@ -1455,21 +1451,6 @@ void Manager::UpdateDevice(const DeviceRefPtr& to_update) {
     }
   }
 }
-
-#if !defined(DISABLE_WIFI)
-void Manager::UpdateWiFiProvider() {
-  // Saves |wifi_provider_| to the topmost profile that accepts it (ordinary
-  // profiles don't update but default profiles do). Normally, the topmost
-  // updating profile would be the DefaultProfile at the bottom of the stack.
-  // Autotests, differ from the normal scenario, however, in that they push a
-  // second test-only DefaultProfile.
-  for (auto rit = profiles_.rbegin(); rit != profiles_.rend(); ++rit) {
-    if ((*rit)->UpdateWiFiProvider(*wifi_provider_)) {
-      return;
-    }
-  }
-}
-#endif  // DISABLE_WIFI
 
 void Manager::PersistService(const ServiceRefPtr& to_update) {
   if (IsServiceEphemeral(to_update)) {

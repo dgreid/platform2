@@ -4,7 +4,6 @@
 
 #include "shill/wifi/wifi_provider.h"
 
-#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -23,7 +22,6 @@
 #include "shill/mock_profile.h"
 #include "shill/mock_store.h"
 #include "shill/net/ieee80211.h"
-#include "shill/net/mock_time.h"
 #include "shill/supplicant/wpa_supplicant.h"
 #include "shill/technology.h"
 #include "shill/test_event_dispatcher.h"
@@ -31,14 +29,11 @@
 #include "shill/wifi/wifi_endpoint.h"
 
 using base::StringPrintf;
-using std::map;
 using std::set;
 using std::string;
 using std::vector;
 using ::testing::_;
 using ::testing::AnyNumber;
-using ::testing::ContainerEq;
-using ::testing::Eq;
 using ::testing::Invoke;
 using ::testing::Mock;
 using ::testing::NiceMock;
@@ -49,15 +44,6 @@ using ::testing::StrictMock;
 
 namespace shill {
 
-namespace {
-
-const time_t kFirstWeek = 50;
-const char kIllegalDayProfile[] = "IllegalDay";
-const time_t kSecondsPerWeek = 60 * 60 * 24 * 7;
-const time_t kTestDays = 20;
-
-}  // namespace
-
 class WiFiProviderTest : public testing::Test {
  public:
   WiFiProviderTest()
@@ -66,32 +52,6 @@ class WiFiProviderTest : public testing::Test {
         default_profile_(new NiceMock<MockProfile>(&manager_, "default")),
         user_profile_(new NiceMock<MockProfile>(&manager_, "user")),
         storage_entry_index_(0) {
-    provider_.time_ = &time_;
-
-    string freq_string =
-        StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 0);
-    profile_frequency_data_[freq_string] = {
-        base::StringPrintf("@%" PRIu64, static_cast<uint64_t>(kFirstWeek)),
-        "5001:1",
-        "5002:2",
-    };
-
-    freq_string = StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 1);
-    profile_frequency_data_[freq_string] = {
-        base::StringPrintf("@%" PRIu64, static_cast<uint64_t>(kFirstWeek) + 1),
-        "5001:1",  // Overlap one entry with previous block.
-        "6001:1",
-        "6002:2",
-    };
-
-    freq_string = StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 2);
-    profile_frequency_data_[freq_string] = {
-        base::StringPrintf("@%" PRIu64, static_cast<uint64_t>(kFirstWeek) + 2),
-        "7001:1",
-        "7002:2",
-    };
-
-    profile_frequency_data_[kIllegalDayProfile] = {"7001:1", "7002:2"};
   }
 
   ~WiFiProviderTest() override = default;
@@ -135,32 +95,6 @@ class WiFiProviderTest : public testing::Test {
         .Times(AnyNumber());
   }
 
-  bool GetStringList(const std::string& /*group*/,
-                     const std::string& key,
-                     std::vector<std::string>* value) {
-    if (!value) {
-      return false;
-    }
-    if (base::ContainsKey(profile_frequency_data_, key)) {
-      *value = profile_frequency_data_[key];
-      return true;
-    }
-    return false;
-  }
-
-  bool GetIllegalDayStringList(const std::string& /*group*/,
-                               const std::string& key,
-                               std::vector<std::string>* value) {
-    if (!value) {
-      return false;
-    }
-    if (base::ContainsKey(profile_frequency_data_, key)) {
-      *value = profile_frequency_data_[kIllegalDayProfile];
-      return true;
-    }
-    return false;
-  }
-
   // Used by mock invocations of RegisterService() to maintain the side-effect
   // of assigning a profile to |service|.
   void BindServiceToDefaultProfile(const ServiceRefPtr& service) {
@@ -176,12 +110,6 @@ class WiFiProviderTest : public testing::Test {
   void CreateServicesFromProfile(Profile* profile) {
     provider_.CreateServicesFromProfile(profile);
   }
-
-  void LoadAndFixupServiceEntries(Profile* profile) {
-    provider_.LoadAndFixupServiceEntries(profile);
-  }
-
-  void Save() { provider_.Save(&default_profile_storage_); }
 
   const vector<WiFiServiceRefPtr> GetServices() { return provider_.services_; }
 
@@ -316,74 +244,9 @@ class WiFiProviderTest : public testing::Test {
     provider_.service_by_endpoint_[endpoint.get()] = service;
   }
 
-  void BuildFreqCountStrings(vector<string>* strings) {
-    // NOTE: These strings match the frequencies in |BuildFreqCountMap|.  They
-    // are also provided, here, in sorted order to match the frequency map
-    // (iterators for which will provide them in frequency-sorted order).
-    static const char* const kStrings[] = {
-        "@20", "5180:14", "5240:16", "5745:7", "5765:4", "5785:14", "5805:5"};
-    if (!strings) {
-      LOG(ERROR) << "NULL |strings|.";
-      return;
-    }
-    for (size_t i = 0; i < base::size(kStrings); ++i) {
-      (*strings).push_back(kStrings[i]);
-    }
-  }
-
-  void BuildFreqCountMap(WiFiProvider::ConnectFrequencyMap* frequencies) {
-    // NOTE: These structures match the strings in |BuildFreqCountStrings|.
-    static const struct FreqCount {
-      uint16_t freq;
-      int64_t count;
-    } kConnectFreq[] = {{5180, 14}, {5240, 16}, {5745, 7},
-                        {5765, 4},  {5785, 14}, {5805, 5}};
-    if (!frequencies) {
-      LOG(ERROR) << "NULL |frequencies|.";
-      return;
-    }
-    for (size_t i = 0; i < base::size(kConnectFreq); ++i) {
-      (*frequencies)[kConnectFreq[i].freq] = kConnectFreq[i].count;
-    }
-  }
-
-  void LoadConnectCountByFrequency(time_t today_seconds) {
-    provider_.time_ = &time_;
-    EXPECT_CALL(time_, GetSecondsSinceEpoch()).WillOnce(Return(today_seconds));
-    // Provide data for block[0] through block[2] (block[3] is empty).
-    EXPECT_CALL(
-        default_profile_storage_,
-        GetStringList(
-            WiFiProvider::kStorageId,
-            StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 0), _))
-        .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-    EXPECT_CALL(
-        default_profile_storage_,
-        GetStringList(
-            WiFiProvider::kStorageId,
-            StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 1), _))
-        .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-    EXPECT_CALL(
-        default_profile_storage_,
-        GetStringList(
-            WiFiProvider::kStorageId,
-            StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 2), _))
-        .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-    EXPECT_CALL(
-        default_profile_storage_,
-        GetStringList(
-            WiFiProvider::kStorageId,
-            StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 3), _))
-        .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-
-    LoadAndFixupServiceEntries(default_profile_.get());
-  }
-
-  map<string, vector<string>> profile_frequency_data_;
   MockControl control_;
   EventDispatcherForTest dispatcher_;
   MockMetrics metrics_;
-  MockTime time_;
   StrictMock<MockManager> manager_;
   WiFiProvider provider_;
   scoped_refptr<MockProfile> default_profile_;
@@ -1456,69 +1319,6 @@ TEST_F(WiFiProviderTest, OnServiceUnloaded) {
   Mock::VerifyAndClearExpectations(&manager_);
 }
 
-TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesDefaultProfile) {
-  // We test LoadAndFixupServiceEntries indirectly since it calls a static
-  // method in WiFiService.
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 0),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 1),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 2),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 3),
-                    _))
-      .WillOnce(Return(false));
-  LoadAndFixupServiceEntries(default_profile_.get());
-}
-
-TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesUserProfile) {
-  EXPECT_CALL(user_profile_storage_, GetStringList(_, _, _)).Times(0);
-  LoadAndFixupServiceEntries(user_profile_.get());
-}
-
-TEST_F(WiFiProviderTest, LoadAndFixupServiceEntriesNothingToDo) {
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 0),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 1),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 2),
-                    _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 3),
-                    _))
-      .WillOnce(Return(false));
-  LoadAndFixupServiceEntries(default_profile_.get());
-}
-
 TEST_F(WiFiProviderTest, GetHiddenSSIDList) {
   EXPECT_TRUE(provider_.GetHiddenSSIDList().empty());
   const vector<uint8_t> ssid0(1, '0');
@@ -1558,222 +1358,6 @@ TEST_F(WiFiProviderTest, GetHiddenSSIDList) {
   EXPECT_EQ(2, ssid_list.size());
   EXPECT_TRUE(ssid_list[0] == ssid2);
   EXPECT_TRUE(ssid_list[1] == ssid4);
-}
-
-TEST_F(WiFiProviderTest, StringListToFrequencyMap) {
-  vector<string> strings;
-  BuildFreqCountStrings(&strings);
-  WiFiProvider::ConnectFrequencyMap frequencies_result;
-  time_t days =
-      WiFiProvider::StringListToFrequencyMap(strings, &frequencies_result);
-
-  WiFiProvider::ConnectFrequencyMap frequencies_expect;
-  BuildFreqCountMap(&frequencies_expect);
-  EXPECT_THAT(frequencies_result, ContainerEq(frequencies_expect));
-  EXPECT_EQ(days, kTestDays);
-}
-
-TEST_F(WiFiProviderTest, StringListToFrequencyMapEmpty) {
-  vector<string> strings = {"@50"};
-  WiFiProvider::ConnectFrequencyMap frequencies_result;
-  time_t days =
-      WiFiProvider::StringListToFrequencyMap(strings, &frequencies_result);
-  EXPECT_TRUE(frequencies_result.empty());
-  EXPECT_EQ(days, 50);
-}
-
-TEST_F(WiFiProviderTest, FrequencyMapToStringList) {
-  WiFiProvider::ConnectFrequencyMap frequencies;
-  BuildFreqCountMap(&frequencies);
-  vector<string> strings_result;
-  WiFiProvider::FrequencyMapToStringList(kTestDays, frequencies,
-                                         &strings_result);
-
-  vector<string> strings_expect;
-  BuildFreqCountStrings(&strings_expect);
-  EXPECT_THAT(strings_result, ContainerEq(strings_expect));
-}
-
-TEST_F(WiFiProviderTest, FrequencyMapToStringListEmpty) {
-  WiFiProvider::ConnectFrequencyMap frequencies;
-  vector<string> strings_result;
-  WiFiProvider::FrequencyMapToStringList(kTestDays, frequencies,
-                                         &strings_result);
-  EXPECT_EQ(1, strings_result.size());
-  EXPECT_EQ(*strings_result.begin(), "@20");
-}
-
-TEST_F(WiFiProviderTest, FrequencyMapBasicAging) {
-  const time_t kThisWeek =
-      kFirstWeek + WiFiProvider::kWeeksToKeepFrequencyCounts - 1;
-  LoadConnectCountByFrequency(kThisWeek * kSecondsPerWeek);
-
-  // Make sure we have data for all 3 blocks.
-  WiFiProvider::ConnectFrequencyMap expected;
-  expected[5001] = 2;
-  expected[5002] = 2;
-  expected[6001] = 1;
-  expected[6002] = 2;
-  expected[7001] = 1;
-  expected[7002] = 2;
-  EXPECT_THAT(provider_.connect_count_by_frequency_, ContainerEq(expected));
-
-  // And, then, make sure we output the expected blocks of data.
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 0)])));
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 1)])));
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 2)])));
-  vector<string> frequencies = {
-      base::StringPrintf("@%" PRIu64, static_cast<uint64_t>(kThisWeek)),
-  };
-  EXPECT_CALL(default_profile_storage_,
-              SetStringList(WiFiProvider::kStorageId, _, Eq(frequencies)))
-      .Times(0);
-  Save();
-}
-
-TEST_F(WiFiProviderTest, FrequencyMapAgingIllegalDay) {
-  provider_.time_ = &time_;
-  const time_t kThisWeek =
-      kFirstWeek + WiFiProvider::kWeeksToKeepFrequencyCounts - 1;
-  const time_t kThisWeekSeconds = kThisWeek * kSecondsPerWeek;
-  EXPECT_CALL(time_, GetSecondsSinceEpoch()).WillOnce(Return(kThisWeekSeconds));
-  // Instead of block[1], return a block without the date.
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 0),
-                    _))
-      .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 1),
-                    _))
-      .WillOnce(Invoke(this, &WiFiProviderTest::GetIllegalDayStringList));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 2),
-                    _))
-      .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-  EXPECT_CALL(
-      default_profile_storage_,
-      GetStringList(WiFiProvider::kStorageId,
-                    StringPrintf("%s%d", WiFiProvider::kStorageFrequencies, 3),
-                    _))
-      .WillOnce(Invoke(this, &WiFiProviderTest::GetStringList));
-
-  LoadAndFixupServiceEntries(default_profile_.get());
-
-  // Verify that the received information only includes block[0] and block[2].
-  WiFiProvider::ConnectFrequencyMap expected;
-  expected[5001] = 1;
-  expected[5002] = 2;
-  expected[7001] = 1;
-  expected[7002] = 2;
-  EXPECT_THAT(provider_.connect_count_by_frequency_, ContainerEq(expected));
-
-  // And, then, make sure we output the expected blocks of data.
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 0)])));
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 1)])))
-      .Times(0);
-  EXPECT_CALL(
-      default_profile_storage_,
-      SetStringList(WiFiProvider::kStorageId, _,
-                    Eq(profile_frequency_data_[StringPrintf(
-                        "%s%d", WiFiProvider::kStorageFrequencies, 2)])));
-  vector<string> frequencies = {
-      base::StringPrintf("@%" PRIu64, static_cast<uint64_t>(kThisWeek)),
-  };
-  EXPECT_CALL(default_profile_storage_,
-              SetStringList(WiFiProvider::kStorageId, _, Eq(frequencies)))
-      .Times(0);
-  Save();
-}
-
-TEST_F(WiFiProviderTest, IncrementConnectCount) {
-  const time_t kThisWeek =
-      kFirstWeek + WiFiProvider::kWeeksToKeepFrequencyCounts - 1;
-  const time_t kThisWeekSeconds = kThisWeek * kSecondsPerWeek;
-  LoadConnectCountByFrequency(kThisWeekSeconds);
-
-  EXPECT_CALL(time_, GetSecondsSinceEpoch()).WillOnce(Return(kThisWeekSeconds));
-  EXPECT_CALL(manager_, UpdateWiFiProvider());
-  EXPECT_CALL(metrics_,
-              SendToUMA(Metrics::kMetricFrequenciesConnectedEver, _, _, _, _));
-  time_t newest_week_at_start =
-      provider_.connect_count_by_frequency_dated_.crbegin()->first;
-  provider_.IncrementConnectCount(6002);
-
-  // Make sure we have data for all 3 blocks.
-  WiFiProvider::ConnectFrequencyMap expected;
-  expected[5001] = 2;
-  expected[5002] = 2;
-  expected[6001] = 1;
-  expected[6002] = 3;
-  expected[7001] = 1;
-  expected[7002] = 2;
-  EXPECT_THAT(provider_.connect_count_by_frequency_, ContainerEq(expected));
-  // Make sure we didn't delete the oldest block.
-  EXPECT_TRUE(base::ContainsKey(provider_.connect_count_by_frequency_dated_,
-                                kFirstWeek));
-  // Make sure we didn't create a new block.
-  time_t newest_week_at_end =
-      provider_.connect_count_by_frequency_dated_.crbegin()->first;
-  EXPECT_EQ(newest_week_at_start, newest_week_at_end);
-}
-
-TEST_F(WiFiProviderTest, IncrementConnectCountCreateNew) {
-  time_t this_week = kFirstWeek + WiFiProvider::kWeeksToKeepFrequencyCounts - 1;
-  LoadConnectCountByFrequency(this_week * kSecondsPerWeek);
-
-  this_week += 2;
-  EXPECT_CALL(time_, GetSecondsSinceEpoch())
-      .WillOnce(Return(this_week * kSecondsPerWeek));
-  EXPECT_CALL(manager_, UpdateWiFiProvider());
-  EXPECT_CALL(metrics_,
-              SendToUMA(Metrics::kMetricFrequenciesConnectedEver, _, _, _, _));
-  time_t newest_week_at_start =
-      provider_.connect_count_by_frequency_dated_.crbegin()->first;
-  provider_.IncrementConnectCount(6001);
-
-  // Make sure we have data for newest 2 blocks (only).
-  WiFiProvider::ConnectFrequencyMap expected;
-  expected[5001] = 1;
-  expected[6001] = 2;
-  expected[6002] = 2;
-  expected[7001] = 1;
-  expected[7002] = 2;
-  EXPECT_THAT(provider_.connect_count_by_frequency_, ContainerEq(expected));
-  // Verify that the oldest block is gone.
-  EXPECT_FALSE(base::ContainsKey(provider_.connect_count_by_frequency_dated_,
-                                 kFirstWeek));
-  // Make sure we created a new block and that it is for the current week.
-  time_t newest_week_at_end =
-      provider_.connect_count_by_frequency_dated_.crbegin()->first;
-  EXPECT_NE(newest_week_at_start, newest_week_at_end);
-  EXPECT_TRUE(base::ContainsKey(provider_.connect_count_by_frequency_dated_,
-                                this_week));
 }
 
 TEST_F(WiFiProviderTest, ReportAutoConnectableServices) {

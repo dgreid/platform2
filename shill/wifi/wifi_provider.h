@@ -5,14 +5,9 @@
 #ifndef SHILL_WIFI_WIFI_PROVIDER_H_
 #define SHILL_WIFI_WIFI_PROVIDER_H_
 
-#include <time.h>
-
-#include <deque>
 #include <map>
 #include <string>
 #include <vector>
-
-#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "shill/data_types.h"
 #include "shill/provider_interface.h"
@@ -25,8 +20,6 @@ class Error;
 class KeyValueStore;
 class Manager;
 class Metrics;
-class StoreInterface;
-class Time;
 class WiFiEndpoint;
 class WiFiService;
 
@@ -35,21 +28,6 @@ class WiFiService;
 // (created due to user or storage configuration) Services.
 class WiFiProvider : public ProviderInterface {
  public:
-  static const char kStorageFrequencies[];
-  using ConnectFrequencyMap = std::map<uint16_t, int64_t>;
-  // The key to |ConnectFrequencyMapDated| is the number of days since the
-  // Epoch.
-  using ConnectFrequencyMapDated = std::map<time_t, ConnectFrequencyMap>;
-  struct FrequencyCount {
-    FrequencyCount() : frequency(0), connection_count(0) {}
-    FrequencyCount(uint16_t freq, size_t conn)
-        : frequency(freq), connection_count(conn) {}
-    uint16_t frequency;
-    size_t connection_count;  // Number of successful connections at this
-                              // frequency.
-  };
-  using FrequencyCountList = std::deque<FrequencyCount>;
-
   explicit WiFiProvider(Manager* manager);
   ~WiFiProvider() override;
 
@@ -96,18 +74,8 @@ class WiFiProvider : public ProviderInterface {
   // Get the list of SSIDs for hidden WiFi services we are aware of.
   virtual ByteArrays GetHiddenSSIDList();
 
-  // Calls WiFiService::FixupServiceEntries() and adds a UMA metric if
-  // this causes entries to be updated.
-  virtual void LoadAndFixupServiceEntries(Profile* profile);
-
-  // Save configuration for wifi_provider to |storage|.
-  virtual bool Save(StoreInterface* storage) const;
-
-  virtual void IncrementConnectCount(uint16_t frequency_mhz);
-
-  // Returns a list of all of the frequencies on which this device has
-  // connected.  This data is accumulated across multiple shill runs.
-  virtual FrequencyCountList GetScanFrequencies() const;
+  // Performs some "provider_of_wifi" storage updates.
+  virtual void UpdateStorage(Profile* profile);
 
   // Report the number of auto connectable services available to uma
   // metrics.
@@ -125,22 +93,8 @@ class WiFiProvider : public ProviderInterface {
 
  private:
   friend class WiFiProviderTest;
-  FRIEND_TEST(WiFiProviderTest, FrequencyMapAgingIllegalDay);
-  FRIEND_TEST(WiFiProviderTest, FrequencyMapBasicAging);
-  FRIEND_TEST(WiFiProviderTest, FrequencyMapToStringList);
-  FRIEND_TEST(WiFiProviderTest, FrequencyMapToStringListEmpty);
-  FRIEND_TEST(WiFiProviderTest, IncrementConnectCount);
-  FRIEND_TEST(WiFiProviderTest, IncrementConnectCountCreateNew);
-  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesDefaultProfile);
-  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesUserProfile);
-  FRIEND_TEST(WiFiProviderTest, LoadAndFixupServiceEntriesNothingToDo);
-  FRIEND_TEST(WiFiProviderTest, StringListToFrequencyMap);
-  FRIEND_TEST(WiFiProviderTest, StringListToFrequencyMapEmpty);
 
   using EndpointServiceMap = std::map<const WiFiEndpoint*, WiFiServiceRefPtr>;
-
-  static const char kStorageId[];
-  static const time_t kWeeksToKeepFrequencyCounts;
 
   // Add a service to the service_ vector and register it with the Manager.
   WiFiServiceRefPtr AddService(const std::vector<uint8_t>& ssid,
@@ -164,23 +118,6 @@ class WiFiProvider : public ProviderInterface {
   void ReportRememberedNetworkCount();
   void ReportServiceSourceMetrics();
 
-  // Converts frequency profile information from a list of strings of the form
-  // "frequency:connection_count" to a form consistent with
-  // |connect_count_by_frequency_|.  The first string must be of the form
-  // [nnn] where |nnn| is a positive integer that represents the creation time
-  // (number of days since the Epoch) of the data.
-  static time_t StringListToFrequencyMap(
-      const std::vector<std::string>& strings, ConnectFrequencyMap* numbers);
-
-  // Converts frequency profile information from a form consistent with
-  // |connect_count_by_frequency_| to a list of strings of the form
-  // "frequency:connection_count".  The |creation_day| is the day that the
-  // data was first createed (represented as the number of days since the
-  // Epoch).
-  static void FrequencyMapToStringList(time_t creation_day,
-                                       const ConnectFrequencyMap& numbers,
-                                       std::vector<std::string>* strings);
-
   Metrics* metrics() const;
 
   Manager* manager_;
@@ -189,18 +126,6 @@ class WiFiProvider : public ProviderInterface {
   EndpointServiceMap service_by_endpoint_;
 
   bool running_;
-
-  // Map of frequencies at which we've connected and the number of times a
-  // successful connection has been made at that frequency.  Absent frequencies
-  // have not had a successful connection.
-  ConnectFrequencyMap connect_count_by_frequency_;
-  // A number of entries of |ConnectFrequencyMap| stored by date of creation.
-  ConnectFrequencyMapDated connect_count_by_frequency_dated_;
-
-  // Count of successful wifi connections we've made.
-  int64_t total_frequency_connections_;
-
-  Time* time_;
 
   // Disable 802.11ac Very High Throughput (VHT) connections.
   bool disable_vht_;

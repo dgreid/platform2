@@ -679,12 +679,6 @@ class Metrics : public DefaultServiceObserver {
   // The result of the portal detection.
   static const char kMetricPortalResultSuffix[];
 
-  // Wifi connection frequencies.
-  static const char kMetricFrequenciesConnectedEver[];
-  static const int kMetricFrequenciesConnectedMax;
-  static const int kMetricFrequenciesConnectedMin;
-  static const int kMetricFrequenciesConnectedNumBuckets;
-
   static const char kMetricScanResult[];
   static const char kMetricWiFiScanTimeInEbusyMilliseconds[];
 

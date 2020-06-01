@@ -194,12 +194,6 @@ const int Metrics::kMetricPortalAttemptsToOnlineNumBuckets = 10;
 
 const char Metrics::kMetricPortalResultSuffix[] = "PortalResult";
 
-const char Metrics::kMetricFrequenciesConnectedEver[] =
-    "Network.Shill.WiFi.FrequenciesConnectedEver";
-const int Metrics::kMetricFrequenciesConnectedMax = 50;
-const int Metrics::kMetricFrequenciesConnectedMin = 1;
-const int Metrics::kMetricFrequenciesConnectedNumBuckets = 50;
-
 const char Metrics::kMetricScanResult[] = "Network.Shill.WiFi.ScanResult";
 const char Metrics::kMetricWiFiScanTimeInEbusyMilliseconds[] =
     "Network.Shill.WiFi.ScanTimeInEbusy";

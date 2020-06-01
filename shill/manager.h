@@ -158,10 +158,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // Persists |to_update| into an appropriate profile.
   virtual void UpdateDevice(const DeviceRefPtr& to_update);
 
-#if !defined(DISABLE_WIFI)
-  virtual void UpdateWiFiProvider();
-#endif  // DISABLE_WIFI
-
   std::vector<DeviceRefPtr> FilterByTechnology(Technology tech) const;
 
   RpcIdentifiers EnumerateAvailableServices(Error* error);

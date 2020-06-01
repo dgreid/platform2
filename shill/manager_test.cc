@@ -2529,9 +2529,6 @@ TEST_F(ManagerTest, Stop) {
   EXPECT_CALL(*profile, UpdateDevice(DeviceRefPtr(mock_devices_[0].get())))
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_devices_[0], SetEnabled(false));
-#if !defined(DISABLE_WIFI)
-  EXPECT_CALL(*profile, UpdateWiFiProvider(_)).WillOnce(Return(true));
-#endif  // DISABLE_WIFI
   EXPECT_CALL(*profile, Save()).WillOnce(Return(true));
 
   for (const auto& service : GetServices()) {

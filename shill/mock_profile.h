@@ -10,7 +10,6 @@
 #include <gmock/gmock.h>
 
 #include "shill/profile.h"
-#include "shill/wifi/wifi_provider.h"
 
 namespace shill {
 
@@ -29,9 +28,6 @@ class MockProfile : public Profile {
   MOCK_METHOD(const RpcIdentifier&, GetRpcIdentifier, (), (const, override));
   MOCK_METHOD(bool, UpdateService, (const ServiceRefPtr&), (override));
   MOCK_METHOD(bool, UpdateDevice, (const DeviceRefPtr&), (override));
-#if !defined(DISABLE_WIFI)
-  MOCK_METHOD(bool, UpdateWiFiProvider, (const WiFiProvider&), (override));
-#endif  // DISABLE_WIFI
   MOCK_METHOD(bool, Save, (), (override));
   MOCK_METHOD(StoreInterface*, GetStorage, (), (override));
   MOCK_METHOD(const StoreInterface*, GetConstStorage, (), (const, override));

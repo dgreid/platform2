@@ -665,10 +665,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   void ResetPendingService() { SetPendingService(nullptr); }
 
-  size_t GetScanFrequencyCount() const {
-    return wifi_->all_scan_frequencies_.size();
-  }
-
   void SetScanState(WiFi::ScanState new_state,
                     WiFi::ScanMethod new_method,
                     const char* reason) {
@@ -844,7 +840,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
     EXPECT_CALL(*dhcp_provider(), CreateIPv4Config(_, _, _, _))
         .Times(AnyNumber());
     EXPECT_CALL(*dhcp_config_, RequestIP()).Times(AnyNumber());
-    EXPECT_CALL(wifi_provider_, IncrementConnectCount(_));
     ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
     Mock::VerifyAndClearExpectations(service.get());
 
@@ -2382,7 +2377,6 @@ TEST_F(WiFiMainTest, CurrentBSSChangeConnectedToConnectedNewService) {
   ReportCurrentBSSChanged(bss_path1);
   EXPECT_CALL(*service1, SetState(Service::kStateConfiguring));
   EXPECT_CALL(*service1, ResetSuspectedCredentialFailures());
-  EXPECT_CALL(*wifi_provider(), IncrementConnectCount(_));
   ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
   EXPECT_EQ(service1, GetCurrentService());
   EXPECT_FALSE(GetIsRoamingInProgress());

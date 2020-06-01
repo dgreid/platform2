@@ -23,10 +23,6 @@ class Metrics;
 class ProfileAdaptorInterface;
 class StoreInterface;
 
-#if !defined(DISABLE_WIFI)
-class WiFiProvider;
-#endif  // DISABLE_WIFI
-
 class Profile : public base::RefCounted<Profile> {
  public:
   enum InitStorageOption { kOpenExisting, kCreateNew, kCreateOrOpenExisting };
@@ -123,14 +119,6 @@ class Profile : public base::RefCounted<Profile> {
   // always returns false -- currently devices are persisted only in
   // DefaultProfile.
   virtual bool UpdateDevice(const DeviceRefPtr& device);
-
-#if !defined(DISABLE_WIFI)
-  // Clobbers persisted notion of |wifi_provider| with data from
-  // |wifi_provider|. Returns true if |wifi_provider| was found and updated,
-  // false otherwise. The base implementation always returns false -- currently
-  // wifi_provider is persisted only in DefaultProfile.
-  virtual bool UpdateWiFiProvider(const WiFiProvider& wifi_provider);
-#endif  // DISABLE_WIFI
 
   // Write all in-memory state to disk via |storage_|.
   virtual bool Save();

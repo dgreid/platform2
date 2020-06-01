@@ -373,12 +373,6 @@ bool Profile::UpdateDevice(const DeviceRefPtr& device) {
   return false;
 }
 
-#if !defined(DISABLE_WIFI)
-bool Profile::UpdateWiFiProvider(const WiFiProvider& wifi_provider) {
-  return false;
-}
-#endif  // DISABLE_WIFI
-
 void Profile::HelpRegisterConstDerivedRpcIdentifiers(
     const string& name, RpcIdentifiers (Profile::*get)(Error* error)) {
   store_.RegisterDerivedRpcIdentifiers(

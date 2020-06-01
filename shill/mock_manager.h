@@ -59,9 +59,6 @@ class MockManager : public Manager {
   MOCK_METHOD(void, UpdateService, (const ServiceRefPtr&), (override));
   MOCK_METHOD(void, DeregisterService, (const ServiceRefPtr&), (override));
   MOCK_METHOD(void, UpdateDevice, (const DeviceRefPtr&), (override));
-#if !defined(DISABLE_WIFI)
-  MOCK_METHOD(void, UpdateWiFiProvider, (), (override));
-#endif  // DISABLE_WIFI
   MOCK_METHOD(ServiceRefPtr, GetPrimaryPhysicalService, (), (override));
   MOCK_METHOD(void,
               OnDeviceGeolocationInfoUpdated,

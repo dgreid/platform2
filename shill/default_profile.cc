@@ -17,10 +17,6 @@
 #include "shill/resolver.h"
 #include "shill/store_interface.h"
 
-#if !defined(DISABLE_WIFI)
-#include "shill/wifi/wifi_provider.h"
-#endif  // DISABLE_WIFI
-
 namespace shill {
 
 namespace {
@@ -165,11 +161,5 @@ bool DefaultProfile::Save() {
 bool DefaultProfile::UpdateDevice(const DeviceRefPtr& device) {
   return device->Save(storage()) && storage()->Flush();
 }
-
-#if !defined(DISABLE_WIFI)
-bool DefaultProfile::UpdateWiFiProvider(const WiFiProvider& wifi_provider) {
-  return wifi_provider.Save(storage()) && storage()->Flush();
-}
-#endif  // DISABLE_WIFI
 
 }  // namespace shill

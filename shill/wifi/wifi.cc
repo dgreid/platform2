@@ -1849,7 +1849,6 @@ void WiFi::StateChanged(const string& new_state) {
     } else if (has_already_completed_) {
       LOG(INFO) << link_name() << " L3 configuration already started.";
     } else {
-      provider_->IncrementConnectCount(affected_service->frequency());
       if (AcquireIPConfigWithLeaseName(
               GetServiceLeaseName(*affected_service))) {
         LOG(INFO) << link_name() << " is up; started L3 configuration.";

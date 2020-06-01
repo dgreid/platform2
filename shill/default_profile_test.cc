@@ -25,11 +25,6 @@
 #include "shill/property_store_test.h"
 #include "shill/resolver.h"
 
-#if !defined(DISABLE_WIFI)
-#include "shill/wifi/mock_wifi_provider.h"
-#include "shill/wifi/wifi_service.h"
-#endif  // DISABLE_WIFI
-
 using base::FilePath;
 using std::set;
 using std::string;
@@ -281,35 +276,5 @@ TEST_F(DefaultProfileTest, UpdateDevice) {
   EXPECT_TRUE(profile_->UpdateDevice(device_));
   EXPECT_FALSE(profile_->UpdateDevice(device_));
 }
-
-#if !defined(DISABLE_WIFI)
-TEST_F(DefaultProfileTest, UpdateWiFiProvider) {
-  MockWiFiProvider wifi_provider;
-
-  {
-    auto storage = std::make_unique<MockStore>();
-    EXPECT_CALL(*storage, Flush()).Times(0);
-    EXPECT_CALL(wifi_provider, Save(storage.get())).WillOnce(Return(false));
-    profile_->SetStorageForTest(std::move(storage));
-    EXPECT_FALSE(profile_->UpdateWiFiProvider(wifi_provider));
-  }
-
-  {
-    auto storage = std::make_unique<MockStore>();
-    EXPECT_CALL(*storage, Flush()).WillOnce(Return(false));
-    EXPECT_CALL(wifi_provider, Save(storage.get())).WillOnce(Return(true));
-    profile_->SetStorageForTest(std::move(storage));
-    EXPECT_FALSE(profile_->UpdateWiFiProvider(wifi_provider));
-  }
-
-  {
-    auto storage = std::make_unique<MockStore>();
-    EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
-    EXPECT_CALL(wifi_provider, Save(storage.get())).WillOnce(Return(true));
-    profile_->SetStorageForTest(std::move(storage));
-    EXPECT_TRUE(profile_->UpdateWiFiProvider(wifi_provider));
-  }
-}
-#endif  // DISABLE_WIFI
 
 }  // namespace shill
