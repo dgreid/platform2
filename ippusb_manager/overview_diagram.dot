@@ -1,0 +1,39 @@
+digraph {
+  concentrate = true;
+  nodesep = 1.3;
+
+  CUPS[fontname=Monospace,shape=box];
+
+  socket_bridge[label="upstart-socket-bridge",fontname=Monospace,shape=box,];
+  ippusb_manager[fontname=Monospace,shape=box];
+  ippusbxd[fontname=Monospace,shape=box];
+
+  Printer[shape=box];
+
+  cups_and_manager[label="Unix socket"];
+  cups_and_xd[label="Unix socket"];
+  xd_and_printer[label="USB connection"];
+
+  // Links CUPS to the sockets for ippusb_manager and for ippusbxd.
+  CUPS->cups_and_manager[weight=1000];
+  cups_and_manager->CUPS[weight=1000];
+  CUPS->cups_and_xd[weight=1000];
+  cups_and_xd->CUPS[weight=1000];
+
+  // Links the socket, upstart-socket-bridge, and ippusb_manager together.
+  cups_and_manager->socket_bridge[label="is mediated by"];
+  cups_and_manager->ippusb_manager;
+  socket_bridge->ippusb_manager[label="starts"];
+  ippusb_manager->cups_and_manager;
+
+  // Links the socket, ippusbxd, and ippusb_manager together.
+  ippusbxd->cups_and_xd;
+  cups_and_xd->ippusbxd;
+  ippusb_manager->ippusbxd[label="starts or keeps alive"];
+
+  // Links ippusbxd to the printer.
+  ippusbxd->xd_and_printer;
+  xd_and_printer->ippusbxd;
+  Printer->xd_and_printer;
+  xd_and_printer->Printer;
+}
