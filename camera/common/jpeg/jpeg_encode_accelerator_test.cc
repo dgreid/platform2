@@ -39,11 +39,11 @@ const char* kDownloadTestImageURI1 =
     "bali_640x360_P420.yuv";
 const char* kDownloadTestImageURI2 =
     "https://storage.googleapis.com/chromiumos-test-assets-public/jpeg_test/"
-    "lake_4160x3120.yuv";
+    "lake_4096x3072.yuv";
 
 // Default test image file.
 const char kDefaultJpegFilename1[] = "bali_640x360_P420.yuv:640x360";
-const char kDefaultJpegFilename2[] = "lake_4160x3120.yuv:4160x3120";
+const char kDefaultJpegFilename2[] = "lake_4096x3072.yuv:4096x3072";
 // Threshold for mean absolute difference of hardware and software encode.
 // Absolute difference is to calculate the difference between each pixel in two
 // images. This is used for measuring of the similarity of two images.
