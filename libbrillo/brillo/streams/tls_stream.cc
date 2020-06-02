@@ -389,6 +389,8 @@ bool TlsStream::TlsStreamImpl::Init(StreamPtr socket,
   SSL_set_bio(ssl_.get(), stream_bio_, stream_bio_);
   SSL_set_connect_state(ssl_.get());
 
+  SSL_set_tlsext_host_name(ssl_.get(), host.c_str());
+
   // We might have no message loop (e.g. we are in unit tests).
   if (MessageLoop::ThreadHasCurrent()) {
     MessageLoop::current()->PostTask(
