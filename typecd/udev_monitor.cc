@@ -46,7 +46,8 @@ bool UdevMonitor::ScanDevices() {
   }
 
   while (entry != nullptr) {
-    HandleDeviceAdded(base::FilePath(std::string(entry->GetName())));
+    HandleDeviceAddedRemoved(base::FilePath(std::string(entry->GetName())),
+                             true);
     entry = entry->GetNext();
   }
 
@@ -96,16 +97,15 @@ void UdevMonitor::RemoveObserver(Observer* obs) {
   observer_list_.RemoveObserver(obs);
 }
 
-bool UdevMonitor::HandleDeviceAdded(const base::FilePath& path) {
+bool UdevMonitor::HandleDeviceAddedRemoved(const base::FilePath& path,
+                                           bool added) {
   auto name = path.BaseName();
-
-  LOG(INFO) << "Found device: " << path;
 
   for (Observer& observer : observer_list_) {
     if (RE2::FullMatch(name.value(), kPortRegex))
-      observer.OnPortAddedOrRemoved(path, true);
+      observer.OnPortAddedOrRemoved(path, added);
     else if (RE2::FullMatch(name.value(), kPartnerRegex))
-      observer.OnPartnerAddedOrRemoved(path, true);
+      observer.OnPartnerAddedOrRemoved(path, added);
   }
 
   return true;
@@ -131,9 +131,9 @@ void UdevMonitor::HandleUdevEvent() {
   }
 
   if (action == "add")
-    HandleDeviceAdded(path);
+    HandleDeviceAddedRemoved(path, true);
   else if (action == "remove")
-    NOTIMPLEMENTED();
+    HandleDeviceAddedRemoved(path, false);
 }
 
 }  // namespace typecd

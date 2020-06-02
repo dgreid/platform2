@@ -74,8 +74,8 @@ class UdevMonitor {
     udev_ = std::move(udev);
   }
 
-  // Handle a udev event which causes a Type C device to be added.
-  bool HandleDeviceAdded(const base::FilePath& path);
+  // Handle a udev event which causes a Type C device to be added/removed.
+  bool HandleDeviceAddedRemoved(const base::FilePath& path, bool added);
 
   // Handle Udev events emanating from |udev_monitor_watcher_|.
   void HandleUdevEvent();

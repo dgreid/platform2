@@ -104,7 +104,8 @@ TEST_F(UdevMonitorTest, TestBasic) {
   EXPECT_THAT(1, observer->GetNumPartners());
 }
 
-// Check that a port and partner can be detected after init.
+// Check that a port and partner can be detected after init. Also check whether
+// a subsequent partner removal is detected correctly.
 TEST_F(UdevMonitorTest, TestHotplug) {
   auto observer = std::make_unique<TestObserver>();
 
@@ -114,14 +115,22 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   // Create a socket-pair; to help poke the udev monitoring logic.
   auto fds = std::make_unique<brillo::ScopedSocketPair>();
 
+  // Fake the calls for port add.
   auto device_port = std::make_unique<brillo::MockUdevDevice>();
   EXPECT_CALL(*device_port, GetSysPath()).WillOnce(Return(kFakePort0SysPath));
   EXPECT_CALL(*device_port, GetAction()).WillOnce(Return("add"));
 
+  // Fake the calls for partner add.
   auto device_partner_add = std::make_unique<brillo::MockUdevDevice>();
   EXPECT_CALL(*device_partner_add, GetSysPath())
       .WillOnce(Return(kFakePort0PartnerSysPath));
   EXPECT_CALL(*device_partner_add, GetAction()).WillOnce(Return("add"));
+
+  // Fake the calls for partner remove.
+  auto device_partner_remove = std::make_unique<brillo::MockUdevDevice>();
+  EXPECT_CALL(*device_partner_remove, GetSysPath())
+      .WillOnce(Return(kFakePort0PartnerSysPath));
+  EXPECT_CALL(*device_partner_remove, GetAction()).WillOnce(Return("remove"));
 
   // Create the Mock Udev objects and function invocation expectations.
   auto monitor = std::make_unique<brillo::MockUdevMonitor>();
@@ -132,7 +141,8 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   EXPECT_CALL(*monitor, GetFileDescriptor()).WillOnce(Return(fds->left));
   EXPECT_CALL(*monitor, ReceiveDevice())
       .WillOnce(Return(ByMove(std::move(device_port))))
-      .WillOnce(Return(ByMove(std::move(device_partner_add))));
+      .WillOnce(Return(ByMove(std::move(device_partner_add))))
+      .WillOnce(Return(ByMove(std::move(device_partner_remove))));
 
   auto udev = std::make_unique<brillo::MockUdev>();
   EXPECT_CALL(*udev, CreateMonitorFromNetlink(StrEq(kUdevMonitorName)))
@@ -154,6 +164,8 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   EXPECT_THAT(1, observer->GetNumPorts());
   udev_monitor->HandleUdevEvent();
   EXPECT_THAT(1, observer->GetNumPartners());
+  udev_monitor->HandleUdevEvent();
+  EXPECT_THAT(0, observer->GetNumPartners());
 }
 
 }  // namespace typecd
