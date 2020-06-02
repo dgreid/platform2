@@ -31,7 +31,7 @@ class JpegEncodeAccelerator;
 // Implementation of JpegCompressor. This class is not thread-safe.
 class JpegCompressorImpl : public JpegCompressor {
  public:
-  JpegCompressorImpl();
+  explicit JpegCompressorImpl(CameraMojoChannelManager* mojo_manager);
   ~JpegCompressorImpl() override;
 
   // To be deprecated.
@@ -159,6 +159,9 @@ class JpegCompressorImpl : public JpegCompressor {
   // Since output buffer is passed from caller, use a variable to indicate
   // buffer is enough to encode or not.
   bool is_encode_success_;
+
+  // Mojo manager which is used for Mojo communication.
+  CameraMojoChannelManager* mojo_manager_;
 };
 
 }  // namespace cros

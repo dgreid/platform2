@@ -9,7 +9,9 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
+#include <base/files/file_path_watcher.h>
 #include <base/no_destructor.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
@@ -24,71 +26,82 @@ namespace cros {
 class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
  public:
   CameraMojoChannelManagerImpl();
-  ~CameraMojoChannelManagerImpl() final;
+  ~CameraMojoChannelManagerImpl();
 
-  void ConnectToDispatcher(base::Closure on_connection_established,
-                           base::Closure on_connection_error) final;
+  // CameraMojoChannelManager implementations.
 
-  scoped_refptr<base::SingleThreadTaskRunner> GetIpcTaskRunner() final;
+  scoped_refptr<base::SingleThreadTaskRunner> GetIpcTaskRunner();
 
-  void RegisterServer(mojom::CameraHalServerPtr hal_ptr) final;
+  void RegisterServer(mojom::CameraHalServerPtr hal_ptr,
+                      Callback on_construct_callback,
+                      Callback on_error_callback);
 
-  // Creates a new MjpegDecodeAccelerator.
-  // This API uses CameraHalDispatcher to pass |request| to another process to
-  // create Mojo channel.
-  bool CreateMjpegDecodeAccelerator(
-      mojom::MjpegDecodeAcceleratorRequest request) final;
+  void CreateMjpegDecodeAccelerator(
+      mojom::MjpegDecodeAcceleratorRequest request,
+      Callback on_construct_callback,
+      Callback on_error_callback);
 
-  // Creates a new JpegEncodeAccelerator.
-  // This API uses CameraHalDispatcher to pass |request| to another process to
-  // create Mojo channel.
-  bool CreateJpegEncodeAccelerator(
-      mojom::JpegEncodeAcceleratorRequest request) final;
+  void CreateJpegEncodeAccelerator(mojom::JpegEncodeAcceleratorRequest request,
+                                   Callback on_construct_callback,
+                                   Callback on_error_callback);
 
-  // Create a new CameraAlgorithmOpsPtr.
-  // This API uses domain socket to connect to the Algo adapter as a parent to
-  // create Mojo channel, and then return mojom::CameraAlgorithmOpsPtr.
   mojom::CameraAlgorithmOpsPtr CreateCameraAlgorithmOpsPtr(
-      const std::string& socket_path, const std::string& pipe_name) final;
+      const std::string& socket_path, const std::string& pipe_name);
 
  protected:
   friend class CameraMojoChannelManager;
 
   // Thread for IPC chores.
-  static base::Thread* ipc_thread_;
+  base::Thread ipc_thread_;
 
  private:
-  bool InitializeMojoEnv();
+  template <typename T>
+  struct PendingMojoRequest {
+    T requestOrPtr;
+    Callback on_construct_callback;
+    Callback on_error_callback;
+  };
 
-  // Ensure camera dispatcher Mojo channel connected.
-  // It should be called for any public API that needs |dispatcher_|.
-  void EnsureDispatcherConnectedOnIpcThread();
+  void OnSocketFileStatusChange(const base::FilePath& socket_path, bool error);
 
-  void ConnectToDispatcherOnIpcThread(base::Closure on_connection_established,
-                                      base::Closure on_connection_error);
+  // Callback method for the unix domain socket file change events.  The method
+  // will try to establish the Mojo connection to the CameraHalDispatcher
+  // started by Chrome.
+  void OnSocketFileStatusChangeOnIpcThread();
 
-  void RegisterServerOnIpcThread(mojom::CameraHalServerPtr hal_ptr);
+  void TryConnectToDispatcher();
 
-  static void TearDownMojoEnv();
+  void TryConsumePendingMojoRequests();
 
-  static void TearDownMojoEnvLockedOnThread();
+  void TearDownMojoEnvOnIpcThread();
 
-  // Resets the dispatcher.
-  static void ResetDispatcherPtr();
+  // Reset the dispatcher.
+  void ResetDispatcherPtr();
 
   // The Mojo channel to CameraHalDispatcher in Chrome. All the Mojo
   // communication to |dispatcher_| happens on |ipc_thread_|.
-  static mojom::CameraHalDispatcherPtr dispatcher_;
+  mojom::CameraHalDispatcherPtr dispatcher_;
+  std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
 
-  // Used to cancel pending futures when error occurs.
-  std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
+  // Watches for change events on the unix domain socket file created by Chrome.
+  // Upon file change OnSocketFileStatusChange will be called to initiate
+  // connection to CameraHalDispatcher.
+  base::FilePathWatcher watcher_;
 
-  static ino_t bound_socket_inode_num_;
+  // Inode number of current bound socket file.
+  ino_t bound_socket_inode_num_;
 
-  // A mutex to guard static variable.
-  static base::NoDestructor<base::Lock> static_lock_;
-  static mojo::core::ScopedIPCSupport* ipc_support_;
-  static bool mojo_initialized_;
+  // Pending Mojo requests information which should be consumed when the
+  // |dispatcher_| is connected.
+  PendingMojoRequest<mojom::CameraHalServerPtr> camera_hal_server_request_;
+  std::vector<PendingMojoRequest<mojom::JpegEncodeAcceleratorRequest>>
+      jea_requests_;
+  std::vector<PendingMojoRequest<mojom::MjpegDecodeAcceleratorRequest>>
+      jda_requests_;
+
+  // TODO(b/151270948): Remove this static variable once we implemnet CrOS
+  // specific interface on all camera HALs.
+  static CameraMojoChannelManagerImpl* instance_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraMojoChannelManagerImpl);
 };

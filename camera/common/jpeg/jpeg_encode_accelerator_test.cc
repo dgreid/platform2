@@ -13,6 +13,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/threading/thread.h>
+#include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
 #include <libyuv.h>
 
@@ -74,13 +75,11 @@ struct Frame {
 
 class JpegEncodeAcceleratorTest : public ::testing::Test {
  public:
-  JpegEncodeAcceleratorTest() {
-    jpeg_encoder_ = JpegEncodeAccelerator::CreateInstance();
-  }
+  JpegEncodeAcceleratorTest() {}
 
   ~JpegEncodeAcceleratorTest() {}
 
-  void SetUp() {}
+  void SetUp();
   void TearDown() {}
 
   bool StartJea();
@@ -113,18 +112,25 @@ class JpegEncodeAcceleratorTest : public ::testing::Test {
 
 class JpegEncodeTestEnvironment : public ::testing::Environment {
  public:
-  explicit JpegEncodeTestEnvironment(const char* yuv_filename1,
-                                     const char* yuv_filename2,
-                                     bool save_to_file) {
+  JpegEncodeTestEnvironment(const char* yuv_filename1,
+                            const char* yuv_filename2,
+                            bool save_to_file) {
     yuv_filename1_ = yuv_filename1 ? yuv_filename1 : kDefaultJpegFilename1;
     yuv_filename2_ = yuv_filename2 ? yuv_filename2 : kDefaultJpegFilename2;
     save_to_file_ = save_to_file;
+    mojo_manager_ = CameraMojoChannelManager::CreateInstance();
   }
 
   const char* yuv_filename1_;
   const char* yuv_filename2_;
   bool save_to_file_;
+  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 };
+
+void JpegEncodeAcceleratorTest::SetUp() {
+  jpeg_encoder_ =
+      JpegEncodeAccelerator::CreateInstance(g_env->mojo_manager_.get());
+}
 
 bool JpegEncodeAcceleratorTest::StartJea() {
   size_t retry_count = 0;
@@ -211,7 +217,8 @@ double JpegEncodeAcceleratorTest::GetMeanAbsoluteDifference(
 }
 
 bool JpegEncodeAcceleratorTest::GetSoftwareEncodeResult(Frame* frame) {
-  std::unique_ptr<JpegCompressor> compressor(JpegCompressor::GetInstance());
+  std::unique_ptr<JpegCompressor> compressor(
+      JpegCompressor::GetInstance(g_env->mojo_manager_.get()));
   if (!compressor->CompressImage(
           frame->in_shm->memory(), frame->width, frame->height,
           kJpegDefaultQuality, nullptr, 0, frame->sw_out_shm->mapped_size(),
@@ -389,6 +396,9 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Unexpected switch: " << it->first << ":" << it->second;
     return -EINVAL;
   }
+
+  brillo::BaseMessageLoop message_loop;
+  message_loop.SetAsCurrent();
 
   cros::tests::g_env =
       reinterpret_cast<cros::tests::JpegEncodeTestEnvironment*>(

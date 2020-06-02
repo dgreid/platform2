@@ -31,7 +31,7 @@ class JpegDecodeAcceleratorTest;
 // Before using this class, make sure mojo is initialized first.
 class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
  public:
-  JpegDecodeAcceleratorImpl();
+  explicit JpegDecodeAcceleratorImpl(CameraMojoChannelManager* mojo_manager);
 
   ~JpegDecodeAcceleratorImpl() final;
 
@@ -120,6 +120,9 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
     using InputShmMap =
         std::unordered_map<int32_t, std::unique_ptr<base::SharedMemory>>;
 
+    // Initialize the JpegDecodeAccelerator.
+    void Initialize(base::Callback<void(bool)> callback);
+
     // Error handler for JDA mojo channel.
     void OnJpegDecodeAcceleratorError();
 
@@ -174,7 +177,7 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
   int32_t buffer_id_;
 
   // Mojo manager which is used for Mojo communication.
-  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
+  CameraMojoChannelManager* mojo_manager_;
 
   // Used to cancel pending futures when error occurs.
   std::unique_ptr<CancellationRelay> cancellation_relay_;

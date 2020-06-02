@@ -41,6 +41,7 @@ shared_library("libcam_algo_client") {
     "sync",
   ]
   deps += [
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
     "//camera/hal/mediatek/mtkcam/drv/sensor:libmtk_halsensor",
     "//camera/hal/mediatek/mtkcam/utils/hw:libmtkcam_hwutils",
     "//camera/hal/mediatek/mtkcam/utils/imgbuf:libmtkcam_imgbuf",

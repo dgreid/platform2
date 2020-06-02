@@ -40,17 +40,19 @@ STATIC_ASSERT_ENUM(INACCESSIBLE_OUTPUT_BUFFER);
 STATIC_ASSERT_ENUM(PARSE_IMAGE_FAILED);
 STATIC_ASSERT_ENUM(PLATFORM_FAILURE);
 
-std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance() {
+// static
+std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance(
+    CameraMojoChannelManager* mojo_manager) {
   return base::WrapUnique<JpegEncodeAccelerator>(
-      new JpegEncodeAcceleratorImpl());
+      new JpegEncodeAcceleratorImpl(mojo_manager));
 }
 
-JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl()
+JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl(
+    CameraMojoChannelManager* mojo_manager)
     : task_id_(0),
-      mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      mojo_manager_(mojo_manager),
       cancellation_relay_(new CancellationRelay),
-      ipc_bridge_(
-          new IPCBridge(mojo_manager_.get(), cancellation_relay_.get())) {
+      ipc_bridge_(new IPCBridge(mojo_manager, cancellation_relay_.get())) {
   VLOGF_ENTER();
 }
 
@@ -186,17 +188,16 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Start(
   }
 
   auto request = mojo::MakeRequest(&jea_ptr_);
-
-  if (!mojo_manager_->CreateJpegEncodeAccelerator(std::move(request))) {
-    std::move(callback).Run(false);
-    Destroy();
-    return;
-  }
   jea_ptr_.set_connection_error_handler(base::Bind(
       &JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError,
       GetWeakPtr()));
-
-  jea_ptr_->Initialize(callback);
+  mojo_manager_->CreateJpegEncodeAccelerator(
+      std::move(request),
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::Initialize,
+                 GetWeakPtr(), std::move(callback)),
+      base::Bind(
+          &JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError,
+          GetWeakPtr()));
   VLOGF_EXIT();
 }
 
@@ -368,6 +369,14 @@ JpegEncodeAcceleratorImpl::IPCBridge::GetWeakPtr() {
 
 bool JpegEncodeAcceleratorImpl::IPCBridge::IsReady() {
   return jea_ptr_.is_bound();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::Initialize(
+    base::Callback<void(bool)> callback) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  jea_ptr_->Initialize(std::move(callback));
 }
 
 void JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError() {

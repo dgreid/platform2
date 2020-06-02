@@ -56,12 +56,14 @@ PortraitModeEffect::PortraitModeEffect()
 
 int32_t PortraitModeEffect::InitializeAndGetVendorTags(
     std::vector<VendorTagInfo>* request_vendor_tags,
-    std::vector<VendorTagInfo>* result_vendor_tags) {
+    std::vector<VendorTagInfo>* result_vendor_tags,
+    CameraMojoChannelManager* mojo_manager) {
   VLOGF_ENTER();
   if (!request_vendor_tags || !result_vendor_tags) {
     return -EINVAL;
   }
-  gpu_algo_manager_ = GPUAlgoManager::GetInstance();
+
+  gpu_algo_manager_ = GPUAlgoManager::GetInstance(mojo_manager);
   if (!gpu_algo_manager_) {
     LOGF(WARNING)
         << "Cannot connect to GPU algorithm service. Disable portrait mode.";

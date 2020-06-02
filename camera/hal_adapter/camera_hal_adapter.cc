@@ -41,14 +41,16 @@ const uint32_t kIdAll = 0xFFFFFFFF;
 
 }  // namespace
 
-CameraHalAdapter::CameraHalAdapter(std::vector<camera_module_t*> camera_modules)
+CameraHalAdapter::CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
+                                   CameraMojoChannelManager* mojo_manager)
     : camera_modules_(camera_modules),
       camera_module_thread_("CameraModuleThread"),
       camera_module_callbacks_thread_("CameraModuleCallbacksThread"),
       module_id_(0),
       callbacks_id_(0),
       vendor_tag_ops_id_(0),
-      camera_metrics_(CameraMetrics::New()) {
+      camera_metrics_(CameraMetrics::New()),
+      mojo_manager_(mojo_manager) {
   VLOGF_ENTER();
 }
 
@@ -462,7 +464,7 @@ void CameraHalAdapter::StartOnThread(base::Callback<void(bool)> callback) {
   VLOGF_ENTER();
   DCHECK(camera_module_thread_.task_runner()->BelongsToCurrentThread());
 
-  if (reprocess_effect_manager_.Initialize() != 0) {
+  if (reprocess_effect_manager_.Initialize(mojo_manager_) != 0) {
     LOGF(ERROR) << "Failed to initialize reprocess effect manager";
     callback.Run(false);
     return;

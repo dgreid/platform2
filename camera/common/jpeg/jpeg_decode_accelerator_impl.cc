@@ -62,16 +62,23 @@ static mojom::VideoPixelFormat V4L2PixelFormatToMojoFormat(
 
 // static
 std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance() {
-  return base::WrapUnique<JpegDecodeAccelerator>(
-      new JpegDecodeAcceleratorImpl());
+  return JpegDecodeAccelerator::CreateInstance(
+      CameraMojoChannelManager::GetInstance());
 }
 
-JpegDecodeAcceleratorImpl::JpegDecodeAcceleratorImpl()
+// static
+std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance(
+    CameraMojoChannelManager* mojo_manager) {
+  return base::WrapUnique<JpegDecodeAccelerator>(
+      new JpegDecodeAcceleratorImpl(mojo_manager));
+}
+
+JpegDecodeAcceleratorImpl::JpegDecodeAcceleratorImpl(
+    CameraMojoChannelManager* mojo_manager)
     : buffer_id_(0),
-      mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      mojo_manager_(mojo_manager),
       cancellation_relay_(new CancellationRelay),
-      ipc_bridge_(
-          new IPCBridge(mojo_manager_.get(), cancellation_relay_.get())),
+      ipc_bridge_(new IPCBridge(mojo_manager, cancellation_relay_.get())),
       camera_metrics_(CameraMetrics::New()) {
   VLOGF_ENTER();
 }
@@ -228,17 +235,16 @@ void JpegDecodeAcceleratorImpl::IPCBridge::Start(
   }
 
   auto request = mojo::MakeRequest(&jda_ptr_);
-
-  if (!mojo_manager_->CreateMjpegDecodeAccelerator(std::move(request))) {
-    std::move(callback).Run(false);
-    Destroy();
-    return;
-  }
   jda_ptr_.set_connection_error_handler(base::Bind(
       &JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError,
       GetWeakPtr()));
-
-  jda_ptr_->Initialize(std::move(callback));
+  mojo_manager_->CreateMjpegDecodeAccelerator(
+      std::move(request),
+      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::Initialize,
+                 GetWeakPtr(), std::move(callback)),
+      base::Bind(
+          &JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError,
+          GetWeakPtr()));
   VLOGF_EXIT();
 }
 
@@ -373,6 +379,14 @@ JpegDecodeAcceleratorImpl::IPCBridge::GetWeakPtr() {
 
 bool JpegDecodeAcceleratorImpl::IPCBridge::IsReady() {
   return jda_ptr_.is_bound();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::Initialize(
+    base::Callback<void(bool)> callback) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  jda_ptr_->Initialize(std::move(callback));
 }
 
 void JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError() {

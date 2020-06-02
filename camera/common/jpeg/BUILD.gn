@@ -19,6 +19,7 @@ static_library("libjea") {
   ]
   pkg_deps = [
     "cros-camera-android-headers",
+    "libbrillo",
     "libcamera_common",
     "libchrome-${libbase_ver}",
     "libmojo-${libbase_ver}",

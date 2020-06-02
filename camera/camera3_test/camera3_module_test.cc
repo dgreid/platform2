@@ -18,12 +18,15 @@
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
+#include <brillo/message_loops/base_message_loop.h>
 #include <system/camera_metadata_hidden.h>
 
 #include "camera3_test/camera3_device.h"
 #include "camera3_test/camera3_perf_log.h"
 #include "camera3_test/camera3_test_data_forwarder.h"
 #include "common/utils/camera_hal_enumerator.h"
+#include "cros-camera/camera_mojo_channel_manager.h"
+#include "cros-camera/cros_camera_hal.h"
 
 namespace camera3_test {
 
@@ -290,10 +293,21 @@ static void InitCameraModuleOnThread(camera_module_t* cam_module) {
 // On successfully Initialized, |cam_module_| will pointed to valid
 // camera_module_t.
 static void InitCameraModule(const base::FilePath& camera_hal_path,
+                             cros::CameraMojoChannelManager* mojo_manager,
                              void** cam_hal_handle,
-                             camera_module_t** cam_module) {
+                             camera_module_t** cam_module,
+                             cros::cros_camera_hal_t** cros_camera_hal) {
   *cam_hal_handle = dlopen(camera_hal_path.value().c_str(), RTLD_NOW);
   ASSERT_NE(nullptr, *cam_hal_handle) << "Failed to dlopen: " << dlerror();
+
+  *cros_camera_hal = static_cast<cros::cros_camera_hal_t*>(
+      dlsym(*cam_hal_handle, CROS_CAMERA_HAL_INFO_SYM_AS_STR));
+
+  // TODO(b/151270948): We should report error here if it fails to find the
+  // symbol once all camera HALs have implemented the interface.
+  if (*cros_camera_hal != nullptr) {
+    (*cros_camera_hal)->set_up(mojo_manager);
+  }
 
   camera_module_t* module = static_cast<camera_module_t*>(
       dlsym(*cam_hal_handle, HAL_MODULE_INFO_SYM_AS_STR));
@@ -312,12 +326,20 @@ static void InitCameraModule(const base::FilePath& camera_hal_path,
   *cam_module = module;
 }
 
-static void InitCameraModuleByHalPath(const base::FilePath& camera_hal_path,
-                                      void** cam_hal_handle) {
-  InitCameraModule(camera_hal_path, cam_hal_handle, &g_cam_module);
+static void InitCameraModuleByHalPath(
+    const base::FilePath& camera_hal_path,
+    cros::CameraMojoChannelManager* mojo_manager,
+    void** cam_hal_handle,
+    cros::cros_camera_hal_t** cros_camera_hal) {
+  InitCameraModule(camera_hal_path, mojo_manager, cam_hal_handle, &g_cam_module,
+                   cros_camera_hal);
 }
 
-static void InitCameraModuleByFacing(int facing, void** cam_hal_handle) {
+static void InitCameraModuleByFacing(
+    int facing,
+    cros::CameraMojoChannelManager* mojo_manager,
+    void** cam_hal_handle,
+    cros::cros_camera_hal_t** cros_camera_hal) {
   // Do cleanup when exit from ASSERT_XX
   struct CleanupModule {
     void operator()(void** cam_hal_handle) {
@@ -331,7 +353,8 @@ static void InitCameraModuleByFacing(int facing, void** cam_hal_handle) {
     }
   };
   for (const auto& hal_path : cros::GetCameraHalPaths()) {
-    InitCameraModule(hal_path, cam_hal_handle, &g_cam_module);
+    InitCameraModule(hal_path, mojo_manager, cam_hal_handle, &g_cam_module,
+                     cros_camera_hal);
     std::unique_ptr<void*, CleanupModule> cleanup_ptr(cam_hal_handle);
     if (g_cam_module != NULL) {
       Camera3Module camera_module;
@@ -1251,7 +1274,11 @@ static int GetCmdLineTestCameraFacing(const base::CommandLine& cmd_line) {
   return idx;
 }
 
-bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
+bool InitializeTest(int* argc,
+                    char*** argv,
+                    cros::CameraMojoChannelManager* mojo_manager,
+                    void** cam_hal_handle,
+                    cros::cros_camera_hal_t** cros_camera_hal) {
   // Set up logging so we can enable VLOGs with -v / --vmodule.
   base::CommandLine::Init(*argc, *argv);
   logging::LoggingSettings settings;
@@ -1294,10 +1321,12 @@ bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
   // Open camera HAL and get module
   if (facing != -ENOENT) {
     camera3_test::GetModuleThread().Start();
-    camera3_test::InitCameraModuleByFacing(facing, cam_hal_handle);
+    camera3_test::InitCameraModuleByFacing(facing, mojo_manager, cam_hal_handle,
+                                           cros_camera_hal);
   } else if (!camera_hal_path.empty()) {
     camera3_test::GetModuleThread().Start();
-    camera3_test::InitCameraModuleByHalPath(camera_hal_path, cam_hal_handle);
+    camera3_test::InitCameraModuleByHalPath(camera_hal_path, mojo_manager,
+                                            cam_hal_handle, cros_camera_hal);
   } else {
     if (camera3_test::CameraHalClient::GetInstance()->Start(
             camera3_test::CameraModuleCallbacksAux::GetInstance()) != 0) {
@@ -1335,9 +1364,14 @@ bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
 
 extern "C" int LLVMFuzzerInitialize(int* argc, char*** argv) {
   void* cam_hal_handle = NULL;
-  if (!InitializeTest(argc, argv, &cam_hal_handle)) {
+  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager =
+      cros::CameraMojoChannelManager::CreateInstance();
+  cros::cros_camera_hal_t* cros_camera_hal;
+  if (!InitializeTest(argc, argv, mojo_manager.get(), &cam_hal_handle,
+                      &cros_camera_hal)) {
     exit(EXIT_FAILURE);
   }
+
   ::testing::TestEventListeners& listeners =
       ::testing::UnitTest::GetInstance()->listeners();
   delete listeners.Release(listeners.default_result_printer());
@@ -1357,17 +1391,31 @@ int main(int argc, char** argv) {
   base::NoDestructor<base::AtExitManager> leaky_at_exit_manager;
   int result = EXIT_FAILURE;
   void* cam_hal_handle = NULL;
-  if (InitializeTest(&argc, &argv, &cam_hal_handle)) {
+
+  brillo::BaseMessageLoop message_loop;
+  message_loop.SetAsCurrent();
+
+  cros::cros_camera_hal_t* cros_camera_hal = nullptr;
+  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager =
+      cros::CameraMojoChannelManager::CreateInstance();
+  if (InitializeTest(&argc, &argv, mojo_manager.get(), &cam_hal_handle,
+                     &cros_camera_hal)) {
     result = RUN_ALL_TESTS();
   }
 
+  camera3_test::GetModuleThread().Stop();
+
+  // TODO(b/151270948): We should report error here if it fails to find the
+  // symbol once all camera HALs have implemented the interface.
+  if (cros_camera_hal != nullptr) {
+    cros_camera_hal->tear_down();
+  }
+  mojo_manager.reset();
+
   // Close Camera HAL
-  if (cam_hal_handle) {
-    camera3_test::GetModuleThread().Stop();
-    if (dlclose(cam_hal_handle) != 0) {
-      PLOGF(ERROR) << "Failed to dlclose(cam_hal_handle)";
-      result = EXIT_FAILURE;
-    }
+  if (cam_hal_handle && dlclose(cam_hal_handle) != 0) {
+    PLOGF(ERROR) << "Failed to dlclose(cam_hal_handle)";
+    result = EXIT_FAILURE;
   }
 
   return result;

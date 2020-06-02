@@ -12,6 +12,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "cros-camera-android-headers",
     "gbm",
+    "libbrillo",
     "libcamera_client",
     "libcamera_common",
     "libcamera_metadata",
@@ -55,5 +56,8 @@ executable("cros_camera_test") {
     "dl",
     "jpeg",
   ]
-  deps = [ "//camera/common/libcamera_ipc:libcamera_ipc_mojom" ]
+  deps = [
+    "//camera/common/libcamera_ipc",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
+  ]
 }

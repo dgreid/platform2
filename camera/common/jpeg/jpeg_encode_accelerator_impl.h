@@ -29,7 +29,7 @@ namespace cros {
 // Before using this class, make sure mojo is initialized first.
 class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
  public:
-  JpegEncodeAcceleratorImpl();
+  explicit JpegEncodeAcceleratorImpl(CameraMojoChannelManager* mojo_manager);
 
   ~JpegEncodeAcceleratorImpl() override;
 
@@ -120,6 +120,9 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
     using InputShmMap =
         std::unordered_map<int32_t, std::unique_ptr<base::SharedMemory>>;
 
+    // Initialize the JpegEncodeAccelerator.
+    void Initialize(base::Callback<void(bool)> callback);
+
     // Error handler for JEA mojo channel.
     void OnJpegEncodeAcceleratorError();
 
@@ -166,7 +169,7 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
   int32_t task_id_;
 
   // Mojo manager which is used for Mojo communication.
-  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
+  CameraMojoChannelManager* mojo_manager_;
 
   // Used to cancel pending futures when error occurs.
   std::unique_ptr<CancellationRelay> cancellation_relay_;
