@@ -24,14 +24,14 @@ source_set("libsystem") {
   ]
 }
 
-if (use.test) {
-  pkg_config("libsystem_common_test_pkg_deps") {
+if (use.test || use.fuzzer) {
+  pkg_config("libsystem_test_utils_pkg_deps") {
     pkg_deps = [ "libdebugd-client-test" ]
   }
 
   source_set("libsystem_test_utils") {
     configs += [
-      ":libsystem_common_test_pkg_deps",
+      ":libsystem_test_utils_pkg_deps",
       ":libsystem_common_pkg_deps",
     ]
     deps = [ ":libsystem" ]
@@ -42,10 +42,16 @@ if (use.test) {
       "mock_debugd_adapter.cc",
     ]
   }
+}
+
+if (use.test) {
+  pkg_config("libsystem_test_pkg_deps") {
+    pkg_deps = [ "libdebugd-client-test" ]
+  }
 
   source_set("libsystem_test") {
     configs += [
-      ":libsystem_common_test_pkg_deps",
+      ":libsystem_test_pkg_deps",
       ":libsystem_common_pkg_deps",
     ]
     deps = [
