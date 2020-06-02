@@ -12,6 +12,7 @@
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <base/memory/shared_memory.h>
+#include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
 
 #include "common/libcab_test_internal.h"
@@ -26,10 +27,11 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
   const size_t kShmBufferSize = 2048;
 
   CameraAlgorithmBridgeFixture() : req_id_(0) {
+    mojo_manager_ = cros::CameraMojoChannelManager::CreateInstance();
     CameraAlgorithmBridgeFixture::return_callback =
         CameraAlgorithmBridgeFixture::ReturnCallbackForwarder;
     bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
-        cros::CameraAlgorithmBackend::kTest);
+        cros::CameraAlgorithmBackend::kTest, mojo_manager_.get());
     if (!bridge_ || bridge_->Initialize(this) != 0) {
       ADD_FAILURE() << "Failed to initialize camera algorithm bridge";
       return;
@@ -45,6 +47,10 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
       request_map_[req_id_] = buffer_handle;
     }
     bridge_->Request(req_id_++, req_header, buffer_handle);
+  }
+
+  cros::CameraMojoChannelManager* GetMojoManagerInstance() {
+    return mojo_manager_.get();
   }
 
  protected:
@@ -87,6 +93,8 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
   base::Lock request_map_lock_;
 
   std::unordered_map<uint32_t, int32_t> request_map_;
+
+  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeFixture);
 };
@@ -175,7 +183,7 @@ TEST_F(CameraAlgorithmBridgeFixture, DeadLockRecovery) {
   ASSERT_NE(0, sem_timedwait(&return_sem_, &timeout));
   // Reconnect the bridge.
   bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
-      cros::CameraAlgorithmBackend::kTest);
+      cros::CameraAlgorithmBackend::kTest, GetMojoManagerInstance());
   ASSERT_NE(nullptr, bridge_);
   ASSERT_EQ(0, bridge_->Initialize(this));
   base::SharedMemory shm;
@@ -264,6 +272,9 @@ int main(int argc, char** argv) {
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
   LOG_ASSERT(logging::InitLogging(settings));
+
+  brillo::BaseMessageLoop message_loop;
+  message_loop.SetAsCurrent();
 
   // Initialize and run all tests
   ::testing::InitGoogleTest(&argc, argv);

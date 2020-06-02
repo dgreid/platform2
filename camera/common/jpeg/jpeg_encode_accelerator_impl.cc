@@ -40,15 +40,19 @@ STATIC_ASSERT_ENUM(INACCESSIBLE_OUTPUT_BUFFER);
 STATIC_ASSERT_ENUM(PARSE_IMAGE_FAILED);
 STATIC_ASSERT_ENUM(PLATFORM_FAILURE);
 
-std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance() {
+// static
+std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance(
+    CameraMojoChannelManager* mojo_manager) {
   return base::WrapUnique<JpegEncodeAccelerator>(
-      new JpegEncodeAcceleratorImpl());
+      new JpegEncodeAcceleratorImpl(mojo_manager));
 }
 
-JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl()
+JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl(
+    CameraMojoChannelManager* mojo_manager)
     : task_id_(0),
-      mojo_manager_(CameraMojoChannelManager::CreateInstance()),
-      ipc_bridge_(new IPCBridge(mojo_manager_.get())) {
+      mojo_manager_(mojo_manager),
+      cancellation_relay_(new CancellationRelay),
+      ipc_bridge_(new IPCBridge(mojo_manager, cancellation_relay_.get())) {
   VLOGF_ENTER();
 }
 
@@ -66,7 +70,6 @@ JpegEncodeAcceleratorImpl::~JpegEncodeAcceleratorImpl() {
 bool JpegEncodeAcceleratorImpl::Start() {
   VLOGF_ENTER();
 
-  cancellation_relay_ = std::make_unique<CancellationRelay>();
   auto is_initialized = Future<bool>::Create(cancellation_relay_.get());
 
   mojo_manager_->GetIpcTaskRunner()->PostTask(
@@ -161,8 +164,10 @@ int JpegEncodeAcceleratorImpl::EncodeSync(
 }
 
 JpegEncodeAcceleratorImpl::IPCBridge::IPCBridge(
-    CameraMojoChannelManager* mojo_manager)
+    CameraMojoChannelManager* mojo_manager,
+    CancellationRelay* cancellation_relay)
     : mojo_manager_(mojo_manager),
+      cancellation_relay_(cancellation_relay),
       ipc_task_runner_(mojo_manager_->GetIpcTaskRunner()) {}
 
 JpegEncodeAcceleratorImpl::IPCBridge::~IPCBridge() {
@@ -183,17 +188,16 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Start(
   }
 
   auto request = mojo::MakeRequest(&jea_ptr_);
-
-  if (!mojo_manager_->CreateJpegEncodeAccelerator(std::move(request))) {
-    std::move(callback).Run(false);
-    Destroy();
-    return;
-  }
   jea_ptr_.set_connection_error_handler(base::Bind(
       &JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError,
       GetWeakPtr()));
-
-  jea_ptr_->Initialize(callback);
+  mojo_manager_->CreateJpegEncodeAccelerator(
+      std::move(request),
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::Initialize,
+                 GetWeakPtr(), std::move(callback)),
+      base::Bind(
+          &JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError,
+          GetWeakPtr()));
   VLOGF_EXIT();
 }
 
@@ -367,10 +371,19 @@ bool JpegEncodeAcceleratorImpl::IPCBridge::IsReady() {
   return jea_ptr_.is_bound();
 }
 
+void JpegEncodeAcceleratorImpl::IPCBridge::Initialize(
+    base::Callback<void(bool)> callback) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  jea_ptr_->Initialize(std::move(callback));
+}
+
 void JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError() {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   VLOGF_ENTER();
   LOGF(ERROR) << "There is a mojo error for JpegEncodeAccelerator";
+  cancellation_relay_->CancelAllFutures();
   Destroy();
   VLOGF_EXIT();
 }

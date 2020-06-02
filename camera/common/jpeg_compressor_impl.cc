@@ -32,17 +32,24 @@ struct destination_mgr {
 
 // static
 std::unique_ptr<JpegCompressor> JpegCompressor::GetInstance() {
-  return std::make_unique<JpegCompressorImpl>();
+  return JpegCompressor::GetInstance(CameraMojoChannelManager::GetInstance());
 }
 
-JpegCompressorImpl::JpegCompressorImpl()
+// static
+std::unique_ptr<JpegCompressor> JpegCompressor::GetInstance(
+    CameraMojoChannelManager* mojo_manager) {
+  return std::make_unique<JpegCompressorImpl>(mojo_manager);
+}
+
+JpegCompressorImpl::JpegCompressorImpl(CameraMojoChannelManager* mojo_manager)
     : camera_metrics_(CameraMetrics::New()),
       hw_encoder_(nullptr),
       hw_encoder_started_(false),
       out_buffer_ptr_(nullptr),
       out_buffer_size_(0),
       out_data_size_(0),
-      is_encode_success_(false) {}
+      is_encode_success_(false),
+      mojo_manager_(mojo_manager) {}
 
 JpegCompressorImpl::~JpegCompressorImpl() {}
 
@@ -327,7 +334,7 @@ bool JpegCompressorImpl::EncodeHwLegacy(const uint8_t* input_buffer,
                                         uint32_t* out_data_size) {
   base::ElapsedTimer timer;
   if (!hw_encoder_) {
-    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance();
+    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_);
     hw_encoder_started_ = hw_encoder_->Start();
   }
 
@@ -491,7 +498,7 @@ bool JpegCompressorImpl::EncodeHw(buffer_handle_t input_handle,
   }
 
   if (!hw_encoder_) {
-    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance();
+    hw_encoder_ = cros::JpegEncodeAccelerator::CreateInstance(mojo_manager_);
     hw_encoder_started_ = hw_encoder_->Start();
   }
 

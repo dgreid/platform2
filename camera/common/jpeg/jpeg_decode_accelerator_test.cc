@@ -9,6 +9,7 @@
 #include <base/files/file_util.h>
 #include <base/memory/shared_memory.h>
 #include <base/threading/thread.h>
+#include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
 #include <libyuv.h>
 
@@ -65,14 +66,10 @@ struct Frame {
 
 class JpegDecodeAcceleratorTest : public ::testing::Test {
  public:
-  JpegDecodeAcceleratorTest() {
-    for (size_t i = 0; i < kMaxDecoderNumber; i++) {
-      jpeg_decoder_[i] = std::make_unique<JpegDecodeAcceleratorImpl>();
-    }
-  }
+  JpegDecodeAcceleratorTest() {}
 
   ~JpegDecodeAcceleratorTest() {}
-  void SetUp() {}
+  void SetUp();
 
   void TearDown() {}
 
@@ -103,15 +100,24 @@ class JpegDecodeAcceleratorTest : public ::testing::Test {
 
 class JpegDecodeTestEnvironment : public ::testing::Environment {
  public:
-  explicit JpegDecodeTestEnvironment(const char* jpeg_filename1,
-                                     const char* jpeg_filename2) {
+  JpegDecodeTestEnvironment(const char* jpeg_filename1,
+                            const char* jpeg_filename2) {
     jpeg_filename1_ = jpeg_filename1 ? jpeg_filename1 : kDefaultJpegFilename1;
     jpeg_filename2_ = jpeg_filename2 ? jpeg_filename2 : kDefaultJpegFilename2;
+    mojo_manager_ = CameraMojoChannelManager::CreateInstance();
   }
 
   const char* jpeg_filename1_;
   const char* jpeg_filename2_;
+  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 };
+
+void JpegDecodeAcceleratorTest::SetUp() {
+  for (size_t i = 0; i < kMaxDecoderNumber; i++) {
+    jpeg_decoder_[i] =
+        std::make_unique<JpegDecodeAcceleratorImpl>(g_env->mojo_manager_.get());
+  }
+}
 
 bool JpegDecodeAcceleratorTest::StartJda(int number_of_decoders) {
   size_t retry_count = 0;
@@ -450,6 +456,9 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Unexpected switch: " << it->first << ":" << it->second;
     return -EINVAL;
   }
+
+  brillo::BaseMessageLoop message_loop;
+  message_loop.SetAsCurrent();
 
   cros::tests::g_env =
       reinterpret_cast<cros::tests::JpegDecodeTestEnvironment*>(

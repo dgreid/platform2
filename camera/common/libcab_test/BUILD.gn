@@ -25,6 +25,13 @@ executable("libcab_test") {
     ":target_defaults",
     "//common-mk:test",
   ]
-  pkg_deps = [ "libcab" ]
+  pkg_deps = [
+    "libbrillo",
+    "libcab",
+  ]
   libs = [ "rt" ]
+  deps = [
+    "//camera/common/libcamera_ipc",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
+  ]
 }

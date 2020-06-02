@@ -10,6 +10,7 @@
 #include <memory>
 #include <string>
 
+#include <base/callback.h>
 #include <base/callback_forward.h>
 #include <base/memory/ref_counted.h>
 
@@ -29,29 +30,46 @@ namespace cros {
 // This class is used to manage them together.
 class CROS_CAMERA_EXPORT CameraMojoChannelManager {
  public:
+  using Callback = base::OnceCallback<void(void)>;
+
   static std::unique_ptr<CameraMojoChannelManager> CreateInstance();
 
   virtual ~CameraMojoChannelManager() {}
 
-  // Connects to the CameraHalDispatcher.  When the Mojo connection is
-  // established successfully, |on_connection_established| will be called and
-  // |on_connection_error| is set as the Mojo connection error handler.
-  virtual void ConnectToDispatcher(base::Closure on_connection_established,
-                                   base::Closure on_connection_error) = 0;
+  // TODO(b/151270948): Remove this method once all camera HALs implement
+  // the CrOS specific interface so that we can pass the mojo manager instance
+  // to them.
+  static CameraMojoChannelManager* GetInstance();
 
   // Gets the task runner that the CameraHalDispatcher interface is bound to.
   virtual scoped_refptr<base::SingleThreadTaskRunner> GetIpcTaskRunner() = 0;
 
-  // Registers the camera HAL server to the CameraHalDispatcher.
-  virtual void RegisterServer(mojom::CameraHalServerPtr hal_ptr) = 0;
+  // Registers the camera HAL server pointer |hal_ptr| to the
+  // CameraHalDispatcher.
+  // This method is expected to be called on the IPC thread and the
+  // |on_construct_callback| and |on_error_callback| will be run on the IPC
+  // thread as well.
+  virtual void RegisterServer(mojom::CameraHalServerPtr hal_ptr,
+                              Callback on_construct_callback,
+                              Callback on_error_callback) = 0;
 
-  // Creates a new MjpegDecodeAccelerator.
-  virtual bool CreateMjpegDecodeAccelerator(
-      mojom::MjpegDecodeAcceleratorRequest request) = 0;
+  // Creates a new MjpegDecodeAccelerator connection by |request|.
+  // This method is expected to be called on the IPC thread and the
+  // |on_construct_callback| and |on_error_callback| will be run on the IPC
+  // thread as well.
+  virtual void CreateMjpegDecodeAccelerator(
+      mojom::MjpegDecodeAcceleratorRequest request,
+      Callback on_construct_callback,
+      Callback on_error_callback) = 0;
 
-  // Creates a new JpegEncodeAccelerator.
-  virtual bool CreateJpegEncodeAccelerator(
-      mojom::JpegEncodeAcceleratorRequest request) = 0;
+  // Creates a new JpegEncodeAccelerator connection by |request|.
+  // This method is expected to be called on the IPC thread and the
+  // |on_construct_callback| and |on_error_callback| will be run on the IPC
+  // thread as well.
+  virtual void CreateJpegEncodeAccelerator(
+      mojom::JpegEncodeAcceleratorRequest request,
+      Callback on_construct_callback,
+      Callback on_error_callback) = 0;
 
   // Create a new CameraAlgorithmOpsPtr.
   virtual mojom::CameraAlgorithmOpsPtr CreateCameraAlgorithmOpsPtr(

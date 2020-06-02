@@ -22,6 +22,7 @@
 
 #include "common/vendor_tag_manager.h"
 #include "cros-camera/camera_metrics.h"
+#include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/future.h"
 #include "hal_adapter/reprocess_effect/reprocess_effect_manager.h"
 #include "mojo/camera3.mojom.h"
@@ -46,7 +47,8 @@ struct CameraModuleCallbacksAux : camera_module_callbacks_t {
 
 class CameraHalAdapter {
  public:
-  explicit CameraHalAdapter(std::vector<camera_module_t*> camera_modules);
+  CameraHalAdapter(std::vector<camera_module_t*> camera_modules,
+                   CameraMojoChannelManager* mojo_manager);
 
   virtual ~CameraHalAdapter();
 
@@ -213,6 +215,9 @@ class CameraHalAdapter {
 
   // Metrics for camera service.
   std::unique_ptr<CameraMetrics> camera_metrics_;
+
+  // Mojo manager which is used for Mojo communication.
+  CameraMojoChannelManager* mojo_manager_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(CameraHalAdapter);
 };

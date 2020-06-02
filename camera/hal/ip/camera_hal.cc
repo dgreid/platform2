@@ -26,7 +26,7 @@ CameraHal::CameraHal()
       callbacks_set_(base::WaitableEvent::ResetPolicy::MANUAL,
                      base::WaitableEvent::InitialState::NOT_SIGNALED),
       callbacks_(nullptr) {
-  mojo_channel_ = CameraMojoChannelManager::CreateInstance();
+  mojo_channel_ = CameraMojoChannelManager::GetInstance();
 }
 
 CameraHal::~CameraHal() {
@@ -148,7 +148,7 @@ void CameraHal::DestroyOnIpcThread(scoped_refptr<Future<void>> return_val) {
   }
 
   isolated_connection_ = nullptr;
-  mojo_channel_.reset();
+  mojo_channel_ = nullptr;
   return_val->Set();
 }
 

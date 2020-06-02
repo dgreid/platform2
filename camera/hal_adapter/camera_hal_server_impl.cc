@@ -29,11 +29,10 @@
 #include <base/message_loop/message_loop.h>
 #include <base/threading/thread_task_runner_handle.h>
 
-#include "common/utils/camera_hal_enumerator.h"
 #include "common/camera_mojo_channel_manager_impl.h"
+#include "common/utils/camera_hal_enumerator.h"
 #include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/common.h"
-#include "cros-camera/constants.h"
 #include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
 #include "cros-camera/utils/camera_config.h"
@@ -51,6 +50,10 @@ CameraHalServerImpl::CameraHalServerImpl()
 CameraHalServerImpl::~CameraHalServerImpl() {
   VLOGF_ENTER();
 
+  for (auto* cros_camera_hal : cros_camera_hals_) {
+    cros_camera_hal->tear_down();
+  }
+
   ExitOnMainThread(0);
 }
 
@@ -59,16 +62,13 @@ bool CameraHalServerImpl::Start() {
 
   LoadCameraHal();
 
-  base::FilePath socket_path(constants::kCrosCameraSocketPathString);
-  if (!watcher_.Watch(socket_path, false,
-                      base::Bind(&CameraHalServerImpl::OnSocketFileStatusChange,
-                                 base::Unretained(this)))) {
-    LOGF(ERROR) << "Failed to watch socket path";
-    return false;
-  }
-  if (base::PathExists(socket_path)) {
-    OnSocketFileStatusChange(socket_path, false);
-  }
+  // We assume that |camera_hal_adapter_| will only be set once. If the
+  // assumption changed, we should consider another way to provide
+  // CameraHalAdapter.
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE,
+      base::Bind(&CameraHalServerImpl::IPCBridge::Start,
+                 ipc_bridge_->GetWeakPtr(), camera_hal_adapter_.get()));
   return true;
 }
 
@@ -87,7 +87,7 @@ CameraHalServerImpl::IPCBridge::~IPCBridge() {
   }
 }
 
-void CameraHalServerImpl::IPCBridge::RegisterCameraHal(
+void CameraHalServerImpl::IPCBridge::Start(
     CameraHalAdapter* camera_hal_adapter) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
@@ -103,7 +103,12 @@ void CameraHalServerImpl::IPCBridge::RegisterCameraHal(
   server_ptr.set_connection_error_handler(
       base::Bind(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
                  GetWeakPtr()));
-  mojo_manager_->RegisterServer(std::move(server_ptr));
+  mojo_manager_->RegisterServer(
+      std::move(server_ptr),
+      base::BindOnce(&CameraHalServerImpl::IPCBridge::OnServerRegistered,
+                     GetWeakPtr()),
+      base::BindOnce(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
+                     GetWeakPtr()));
 }
 
 void CameraHalServerImpl::IPCBridge::CreateChannel(
@@ -121,6 +126,18 @@ void CameraHalServerImpl::IPCBridge::SetTracingEnabled(bool enabled) {
   TRACE_CAMERA_ENABLE(enabled);
 }
 
+base::WeakPtr<CameraHalServerImpl::IPCBridge>
+CameraHalServerImpl::IPCBridge::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
+void CameraHalServerImpl::IPCBridge::OnServerRegistered() {
+  VLOGF_ENTER();
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
+  LOGF(INFO) << "Registered camera HAL";
+}
+
 void CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError() {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
@@ -133,28 +150,10 @@ void CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError() {
                             base::Unretained(camera_hal_server_), ECONNRESET));
 }
 
-base::WeakPtr<CameraHalServerImpl::IPCBridge>
-CameraHalServerImpl::IPCBridge::GetWeakPtr() {
-  return weak_ptr_factory_.GetWeakPtr();
-}
-
-void CameraHalServerImpl::OnSocketFileStatusChange(
-    const base::FilePath& socket_path, bool error) {
-  if (error) {
-    LOGF(ERROR) << "Error occurs in socket file watcher.";
-    return;
-  }
-
-  mojo_manager_->ConnectToDispatcher(
-      base::Bind(&CameraHalServerImpl::IPCBridge::RegisterCameraHal,
-                 ipc_bridge_->GetWeakPtr(), camera_hal_adapter_.get()),
-      base::Bind(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
-                 ipc_bridge_->GetWeakPtr()));
-}
-
 void CameraHalServerImpl::LoadCameraHal() {
   VLOGF_ENTER();
   DCHECK(!camera_hal_adapter_);
+  DCHECK_EQ(cros_camera_hals_.size(), 0);
 
   std::vector<camera_module_t*> camera_modules;
   std::unique_ptr<CameraConfig> config =
@@ -175,6 +174,16 @@ void CameraHalServerImpl::LoadCameraHal() {
       ExitOnMainThread(ENOENT);
     }
 
+    cros_camera_hal_t* cros_camera_hal = static_cast<cros_camera_hal_t*>(
+        dlsym(handle, CROS_CAMERA_HAL_INFO_SYM_AS_STR));
+    if (!cros_camera_hal) {
+      // TODO(b/151270948): We should report error here once all camera HALs
+      // have implemented the interface.
+    } else {
+      cros_camera_hal->set_up(mojo_manager_.get());
+      cros_camera_hals_.push_back(cros_camera_hal);
+    }
+
     auto* module = static_cast<camera_module_t*>(
         dlsym(handle, HAL_MODULE_INFO_SYM_AS_STR));
     if (!module) {
@@ -187,10 +196,12 @@ void CameraHalServerImpl::LoadCameraHal() {
   }
 
   if (enable_front && enable_back && enable_external) {
-    camera_hal_adapter_.reset(new CameraHalAdapter(camera_modules));
+    camera_hal_adapter_.reset(
+        new CameraHalAdapter(camera_modules, mojo_manager_.get()));
   } else {
-    camera_hal_adapter_.reset(new CameraHalTestAdapter(
-        camera_modules, enable_front, enable_back, enable_external));
+    camera_hal_adapter_.reset(
+        new CameraHalTestAdapter(camera_modules, mojo_manager_.get(),
+                                 enable_front, enable_back, enable_external));
   }
 
   LOGF(INFO) << "Running camera HAL adapter on " << getpid();

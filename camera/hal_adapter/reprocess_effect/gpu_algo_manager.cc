@@ -15,19 +15,20 @@
 namespace cros {
 
 // static
-GPUAlgoManager* GPUAlgoManager::GetInstance() {
-  static GPUAlgoManager* m = new GPUAlgoManager();
+GPUAlgoManager* GPUAlgoManager::GetInstance(
+    CameraMojoChannelManager* mojo_manager) {
+  static GPUAlgoManager* m = new GPUAlgoManager(mojo_manager);
   if (!m->bridge_) {
     return nullptr;
   }
   return m;
 }
 
-GPUAlgoManager::GPUAlgoManager()
+GPUAlgoManager::GPUAlgoManager(CameraMojoChannelManager* mojo_manager)
     : camera_algorithm_callback_ops_t{}, req_id_(0) {
   return_callback = GPUAlgoManager::ReturnCallbackForwarder;
   bridge_ = cros::CameraAlgorithmBridge::CreateInstance(
-      cros::CameraAlgorithmBackend::kGoogleGpu);
+      cros::CameraAlgorithmBackend::kGoogleGpu, mojo_manager);
   if (!bridge_ || bridge_->Initialize(this) != 0) {
     LOGF(WARNING) << "Failed to initialize camera GPU algorithm bridge";
     bridge_ = nullptr;

@@ -29,7 +29,8 @@ namespace cros {
 
 class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
  public:
-  explicit CameraAlgorithmBridgeImpl(CameraAlgorithmBackend backend);
+  CameraAlgorithmBridgeImpl(CameraAlgorithmBackend backend,
+                            CameraMojoChannelManager* mojo_manager);
 
   ~CameraAlgorithmBridgeImpl();
 
@@ -103,7 +104,7 @@ class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
     base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
   };
 
-  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
+  CameraMojoChannelManager* mojo_manager_;
 
   // Store observers for future locks
   cros::CancellationRelay relay_;
