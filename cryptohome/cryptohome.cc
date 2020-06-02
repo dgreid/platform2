@@ -285,6 +285,7 @@ namespace switches {
   static const char kRestoreKeyInHexSwitch[] = "restore_key_in_hex";
   static const char kMassRemoveExemptLabelsSwitch[] = "exempt_key_labels";
   static const char kEnrollSwitch[] = "enroll";
+  static const char kUseDBus[] = "use_dbus";
 }  // namespace switches
 
 #define DBUS_METHOD(method_name) \
@@ -1585,9 +1586,22 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    printf("%s\n",
-           cryptohome::BuildObfuscatedUsername(account_id, GetSystemSalt(proxy))
-               .c_str());
+    if (cl->HasSwitch(switches::kUseDBus)) {
+      gchar* result;
+      brillo::glib::ScopedError error;
+      if (!org_chromium_CryptohomeInterface_get_sanitized_username(
+              proxy.gproxy(), account_id.c_str(), &result,
+              &brillo::Resetter(&error).lvalue())) {
+        printf("GetSanitizedUserName call failed: %s.\n", error->message);
+        return 1;
+      }
+      printf("%s\n", result);
+    } else {
+      // Use libbrillo directly if we are not using dbus/cryptohome.
+      printf("%s\n", cryptohome::BuildObfuscatedUsername(account_id,
+                                                         GetSystemSalt(proxy))
+                         .c_str());
+    }
   } else if (!strcmp(switches::kActions[switches::ACTION_DUMP_KEYSET],
                      action.c_str())) {
     std::string account_id;
