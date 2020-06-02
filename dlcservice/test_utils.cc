@@ -112,7 +112,7 @@ base::FilePath BaseTest::SetUpDlcPreloadedImage(const DlcId& id) {
   EXPECT_TRUE(base::PathExists(image_path));
 
   string data(manifest.size(), '1');
-  WriteToFile(image_path, data);
+  WriteToImage(image_path, data);
 
   return image_path;
 }
@@ -138,7 +138,7 @@ void BaseTest::InstallWithUpdateEngine(const vector<string>& ids) {
         content_path_, id, kPackage, SystemState::Get()->active_boot_slot());
 
     string data(manifest.size(), '1');
-    WriteToFile(image_path, data);
+    WriteToImage(image_path, data);
   }
 }
 

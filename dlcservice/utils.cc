@@ -50,6 +50,21 @@ bool SetFilePermissions(const base::FilePath& path, int perms) {
   return true;
 }
 
+bool WriteFile(const FilePath& path, const string& data, bool truncate) {
+  int flags = O_CREAT | O_WRONLY;
+  if (truncate)
+    flags |= O_TRUNC;
+
+  base::ScopedFD fd(brillo::OpenSafely(path, flags, kDlcFilePerms));
+  if (!fd.is_valid()) {
+    LOG(ERROR) << "Failed to open file for writting " << path.value();
+    return false;
+  }
+  if (data.empty())
+    return true;
+  return base::WriteFileDescriptor(fd.get(), data.c_str(), data.size());
+}
+
 }  // namespace
 
 char kDlcDirAName[] = "dlc_a";
@@ -66,23 +81,13 @@ const int kDlcDirectoryPerms = 0755;
 const int kImageLoaderTimeoutMs = 5000;
 
 bool WriteToFile(const FilePath& path, const string& data) {
-  base::ScopedFD fd(
-      brillo::OpenSafely(path, O_CREAT | O_WRONLY, kDlcFilePerms));
-  if (!fd.is_valid()) {
-    LOG(ERROR) << "Failed to open file for writting " << path.value();
-    return false;
-  }
-  if (data.empty())
-    return true;
-  return base::WriteFileDescriptor(fd.get(), data.c_str(), data.size());
+  return WriteFile(path, data, /*truncate=*/true);
 }
 
-// Resizes the file in |path| to a new |size|. When shrinking, meaning current
-// file size is > |size|, the file will only be resized and not unsparsed as the
-// resized file is already assumed to be unsparse. When increasing, meaning
-// current file size is <  |size|, the file will be resized and unsparsed only
-// to the portions that increased from current file size to |size|. When neither
-// shrinking nor increasing, nothing happens.
+bool WriteToImage(const FilePath& path, const string& data) {
+  return WriteFile(path, data, /*truncate=*/false);
+}
+
 bool ResizeFile(const base::FilePath& path, int64_t size) {
   int64_t prev_size;
   base::File f(path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);

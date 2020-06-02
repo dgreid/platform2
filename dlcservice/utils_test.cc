@@ -51,30 +51,44 @@ class FixtureUtilsTest : public testing::Test {
   base::ScopedTempDir scoped_temp_dir_;
 };
 
-TEST_F(FixtureUtilsTest, WriteToFile) {
+TEST_F(FixtureUtilsTest, WriteToImage) {
   auto path = JoinPaths(scoped_temp_dir_.GetPath(), "file");
-  std::string expected_data1 = "hello", expected_data2 = "world", actual_data;
-  EXPECT_FALSE(base::PathExists(path));
+  std::string actual_data;
 
   // Write "hello".
-  EXPECT_TRUE(WriteToFile(path, expected_data1));
+  EXPECT_TRUE(WriteToImage(path, "hello"));
   EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
-  EXPECT_EQ(actual_data, expected_data1);
+  EXPECT_EQ(actual_data, "hello");
+
+  // Write "helloworld".
+  EXPECT_TRUE(WriteToImage(path, "helloworld"));
+  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
+  EXPECT_EQ(actual_data, "helloworld");
+
+  // Write "world", but file had "helloworld" -> "worldoworld".
+  EXPECT_TRUE(WriteToImage(path, "world"));
+  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
+  EXPECT_EQ(actual_data, "worldworld");
+}
+
+TEST_F(FixtureUtilsTest, WriteToFile) {
+  auto path = JoinPaths(scoped_temp_dir_.GetPath(), "file");
+  std::string actual_data;
+
+  // Write "hello".
+  EXPECT_TRUE(WriteToFile(path, "hello"));
+  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
+  EXPECT_EQ(actual_data, "hello");
+
+  // Write "helloworld".
+  EXPECT_TRUE(WriteToFile(path, "helloworld"));
+  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
+  EXPECT_EQ(actual_data, "helloworld");
 
   // Write "world".
-  EXPECT_TRUE(WriteToFile(path, expected_data2));
+  EXPECT_TRUE(WriteToFile(path, "world"));
   EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
-  EXPECT_EQ(actual_data, expected_data2);
-
-  // Write "worldworld".
-  EXPECT_TRUE(WriteToFile(path, expected_data2 + expected_data2));
-  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
-  EXPECT_EQ(actual_data, expected_data2 + expected_data2);
-
-  // Write "hello", but file had "worldworld" -> "helloworld".
-  EXPECT_TRUE(WriteToFile(path, expected_data1));
-  EXPECT_TRUE(base::ReadFileToString(path, &actual_data));
-  EXPECT_EQ(actual_data, expected_data1 + expected_data2);
+  EXPECT_EQ(actual_data, "world");
 }
 
 TEST_F(FixtureUtilsTest, WriteToFilePermissionsCheck) {

@@ -46,9 +46,13 @@ base::FilePath JoinPaths(Arg&& path, Args&&... paths) {
   return base::FilePath(path).Append(JoinPaths(paths...));
 }
 
-// Wrapper to |base::WriteFileDescriptor()|, closes file descriptor after
-// writing. Returns true if all |size| of |data| are written.
+// Writes |data| into file |path|. Returns true if all |size| of |data| are
+// written.
 bool WriteToFile(const base::FilePath& path, const std::string& data);
+
+// Same as |WriteToFile| but it does not alter the size of the file if the size
+// of |data| is smaller than the size of the file on disk.
+bool WriteToImage(const base::FilePath& path, const std::string& data);
 
 // Creates a directory with permissions required for DLC modules.
 bool CreateDir(const base::FilePath& path);
@@ -56,8 +60,12 @@ bool CreateDir(const base::FilePath& path);
 // Creates a directory with an empty file and resizes it.
 bool CreateFile(const base::FilePath& path, int64_t size);
 
-// Resizes an existing file, failure if file does not exist or failure to
-// resize.
+// Resizes the file in |path| to a new |size|. When shrinking, meaning current
+// file size is > |size|, the file will only be resized and not unsparsed as the
+// resized file is already assumed to be unsparse. When increasing, meaning
+// current file size is <  |size|, the file will be resized and unsparsed only
+// to the portions that increased from current file size to |size|. When neither
+// shrinking nor increasing, nothing happens.
 bool ResizeFile(const base::FilePath& path, int64_t size);
 
 // Hashes the file at |path|.
