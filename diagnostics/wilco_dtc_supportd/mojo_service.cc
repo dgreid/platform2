@@ -42,10 +42,13 @@ void ForwardMojoSendtoUiResponse(
       GetReadOnlySharedMemoryFromMojoHandle(std::move(response_body_handle));
   if (!shared_memory) {
     LOG(ERROR) << "Failed to read data from mojo handle";
-    callback.Run(base::StringPiece());
+    callback.Run(grpc::Status(grpc::StatusCode::UNKNOWN,
+                              "Failed to read data from mojo handle"),
+                 base::StringPiece());
     return;
   }
   callback.Run(
+      grpc::Status::OK,
       base::StringPiece(static_cast<const char*>(shared_memory->memory()),
                         shared_memory->mapped_size()));
 }
@@ -127,7 +130,9 @@ void MojoService::SendWilcoDtcMessageToUi(
       CreateReadOnlySharedMemoryMojoHandle(json_message);
   if (!json_message_mojo_handle.is_valid()) {
     LOG(ERROR) << "Failed to create a mojo handle.";
-    callback.Run(base::StringPiece());
+    callback.Run(grpc::Status(grpc::StatusCode::UNKNOWN,
+                              "Failed to read data from mojo handle"),
+                 base::StringPiece());
     return;
   }
 

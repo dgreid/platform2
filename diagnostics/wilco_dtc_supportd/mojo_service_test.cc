@@ -102,7 +102,7 @@ TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
       kJsonMessageToUi.as_string(),
       base::Bind(
           [](const base::Closure& quit_closure,
-             base::StringPiece expected_json_message,
+             base::StringPiece expected_json_message, grpc::Status status,
              base::StringPiece json_message) {
             EXPECT_EQ(json_message, expected_json_message);
             quit_closure.Run();
@@ -114,7 +114,8 @@ TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
 TEST_F(MojoServiceTest, SendWilcoDtcMessageToUiEmptyMessage) {
   base::RunLoop run_loop;
   auto callback = base::Bind(
-      [](const base::Closure& quit_closure, base::StringPiece json_message) {
+      [](const base::Closure& quit_closure, grpc::Status status,
+         base::StringPiece json_message) {
         EXPECT_TRUE(json_message.empty());
         quit_closure.Run();
       },

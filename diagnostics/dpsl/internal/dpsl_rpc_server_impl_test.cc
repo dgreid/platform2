@@ -274,9 +274,10 @@ class DpslRpcServerImplUnixSocketTest : public DpslRpcServerImplTest {
         client_rpc_ptr, request,
         base::Bind(
             [](DpslThreadContext* thread_context,
-               const ProtoResponse& expected_response,
+               const ProtoResponse& expected_response, grpc::Status status,
                std::unique_ptr<ProtoResponse> response) {
               ASSERT_TRUE(thread_context);
+              EXPECT_TRUE(status.ok());
               ASSERT_TRUE(response);
               EXPECT_TRUE(google::protobuf::util::MessageDifferencer::Equals(
                   *response, expected_response));
@@ -308,11 +309,11 @@ TEST_P(DpslRpcServerImplUnixSocketTest, HandleMessageFromUi) {
     wilco_dtc_grpc_client_->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleMessageFromUi, request,
         base::Bind(
-            [](DpslThreadContext* thread_context,
+            [](DpslThreadContext* thread_context, grpc::Status status,
                std::unique_ptr<grpc_api::HandleMessageFromUiResponse>
                    response) {
               ASSERT_TRUE(thread_context);
-              EXPECT_FALSE(response);
+              EXPECT_FALSE(status.ok());
               thread_context->QuitEventLoop();
             },
             thread_context_.get()));

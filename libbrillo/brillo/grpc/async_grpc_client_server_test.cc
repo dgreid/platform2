@@ -36,7 +36,8 @@ template <typename RequestType, typename ResponseType>
 class PendingIncomingRpcQueue {
  public:
   using HandlerDoneCallback =
-      base::Callback<void(std::unique_ptr<ResponseType> response)>;
+      base::Callback<void(grpc::Status status,
+                          std::unique_ptr<ResponseType> response)>;
   using RpcHandlerCallback =
       base::Callback<void(std::unique_ptr<RequestType> request,
                           const HandlerDoneCallback& response_callback)>;
@@ -110,7 +111,8 @@ class RpcReply {
 
   // Returns a callback that should be called when a response to the outgoing
   // RPC is available.
-  base::Callback<void(std::unique_ptr<ResponseType>)> MakeWriter() {
+  base::Callback<void(grpc::Status status,
+                      std::unique_ptr<ResponseType>)> MakeWriter() {
     return base::Bind(&RpcReply::OnReply, weak_ptr_factory_.GetWeakPtr());
   }
 
@@ -127,7 +129,7 @@ class RpcReply {
   // |Wait| returned.
   bool IsError() const {
     CHECK(has_reply_);
-    return response_ == nullptr;
+    return !status_.ok();
   }
 
   // Returns this outgoing RPC's response. This may only be called after
@@ -138,11 +140,12 @@ class RpcReply {
   }
 
  private:
-  void OnReply(std::unique_ptr<ResponseType> response) {
+  void OnReply(grpc::Status status, std::unique_ptr<ResponseType> response) {
     CHECK(!has_reply_);
 
     has_reply_ = true;
     response_ = std::move(response);
+    status_ = std::move(status);
 
     if (waiting_loop_)
       waiting_loop_->Quit();
@@ -150,6 +153,7 @@ class RpcReply {
 
   std::unique_ptr<base::RunLoop> waiting_loop_;
   bool has_reply_ = false;
+  grpc::Status status_;
   std::unique_ptr<ResponseType> response_;
 
   base::WeakPtrFactory<RpcReply> weak_ptr_factory_;
@@ -293,7 +297,7 @@ TEST_F(AsyncGrpcClientServerTest, OneRpcWithResponse) {
 
   auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
   response->set_echoed_int(42);
-  pending_rpc->handler_done_callback.Run(std::move(response));
+  pending_rpc->handler_done_callback.Run(grpc::Status::OK, std::move(response));
 
   rpc_reply.Wait();
   EXPECT_FALSE(rpc_reply.IsError());
@@ -322,7 +326,8 @@ TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
   EXPECT_EQ(33, pending_echo_int_rpc->request->int_to_echo());
   auto echo_int_response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
   echo_int_response->set_echoed_int(33);
-  pending_echo_int_rpc->handler_done_callback.Run(std::move(echo_int_response));
+  pending_echo_int_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                                  std::move(echo_int_response));
 
   echo_int_rpc_reply.Wait();
   EXPECT_FALSE(echo_int_rpc_reply.IsError());
@@ -332,7 +337,8 @@ TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
   pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
   auto pending_empty_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
   auto empty_rpc_response = std::make_unique<test_rpcs::EmptyRpcResponse>();
-  pending_empty_rpc->handler_done_callback.Run(std::move(empty_rpc_response));
+  pending_empty_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                               std::move(empty_rpc_response));
 
   empty_rpc_reply.Wait();
   EXPECT_FALSE(empty_rpc_reply.IsError());
@@ -348,7 +354,9 @@ TEST_F(AsyncGrpcClientServerTest, OneRpcExplicitCancellation) {
 
   pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
   auto pending_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
-  pending_rpc->handler_done_callback.Run(nullptr);
+  pending_rpc->handler_done_callback.Run(
+    grpc::Status(grpc::StatusCode::CANCELLED, "Cancelled on the server side"),
+    nullptr);
 
   rpc_reply.Wait();
   EXPECT_TRUE(rpc_reply.IsError());
@@ -373,7 +381,8 @@ TEST_F(AsyncGrpcClientServerTest, ShutDownWhileRpcIsPending) {
 
   // Also test that providing a response now does not crash.
   auto empty_rpc_response = std::make_unique<test_rpcs::EmptyRpcResponse>();
-  pending_empty_rpc->handler_done_callback.Run(std::move(empty_rpc_response));
+  pending_empty_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                               std::move(empty_rpc_response));
 }
 
 // Initiate a shutdown of the server and immediately send a response.
@@ -391,7 +400,8 @@ TEST_F(AsyncGrpcClientServerTest, SendResponseAfterInitiatingShutdown) {
   base::RunLoop loop;
   server_->ShutDown(loop.QuitClosure());
   auto empty_rpc_response = std::make_unique<test_rpcs::EmptyRpcResponse>();
-  pending_empty_rpc->handler_done_callback.Run(std::move(empty_rpc_response));
+  pending_empty_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                               std::move(empty_rpc_response));
 
   loop.Run();
   server_.reset();
@@ -417,7 +427,8 @@ TEST_F(AsyncGrpcClientServerTest, ManyRpcs) {
     auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(pending_rpc->request->int_to_echo());
-    pending_rpc->handler_done_callback.Run(std::move(response));
+    pending_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                           std::move(response));
   }
 
   for (int i = 0; i < kNumOfRpcs; ++i) {
@@ -448,7 +459,8 @@ TEST_F(AsyncGrpcClientServerTest, HeavyRpcData) {
 
   auto response = std::make_unique<test_rpcs::HeavyRpcResponse>();
   response->set_data(kData);
-  pending_rpc->handler_done_callback.Run(std::move(response));
+  pending_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                         std::move(response));
 
   rpc_reply.Wait();
   EXPECT_FALSE(rpc_reply.IsError());
@@ -485,7 +497,7 @@ TEST_F(AsyncGrpcClientServerTest, ExcessivelyBigRpcResponse) {
 
   auto response = std::make_unique<test_rpcs::HeavyRpcResponse>();
   response->set_data(kData);
-  pending_rpc->handler_done_callback.Run(std::move(response));
+  pending_rpc->handler_done_callback.Run(grpc::Status::OK, std::move(response));
 
   rpc_reply.Wait();
   EXPECT_TRUE(rpc_reply.IsError());
@@ -524,7 +536,8 @@ TEST_F(AsyncGrpcClientServerTest, TwoRpcClients) {
     auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(pending_rpc->request->int_to_echo());
-    pending_rpc->handler_done_callback.Run(std::move(response));
+    pending_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                           std::move(response));
   }
 
   for (int i = 0; i < kNumOfRpcs; ++i) {
@@ -550,7 +563,8 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
 
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(1);
-    pending_rpc->handler_done_callback.Run(std::move(response));
+    pending_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                           std::move(response));
 
     rpc_reply.Wait();
     EXPECT_FALSE(rpc_reply.IsError());
@@ -572,7 +586,8 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
 
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(2);
-    pending_rpc->handler_done_callback.Run(std::move(response));
+    pending_rpc->handler_done_callback.Run(grpc::Status::OK,
+                                           std::move(response));
 
     rpc_reply.Wait();
     EXPECT_FALSE(rpc_reply.IsError());
@@ -624,7 +639,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
 
   auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
   response->set_echoed_int(2);
-  pending_rpc->handler_done_callback.Run(std::move(response));
+  pending_rpc->handler_done_callback.Run(grpc::Status::OK, std::move(response));
 
   rpc_reply.Wait();
   EXPECT_FALSE(rpc_reply.IsError());

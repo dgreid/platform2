@@ -98,10 +98,10 @@ class RpcState final : public RpcStateBase {
                           grpc::ServerCompletionQueue*,
                           void*)>;
 
-  // Called by the handler to send |response|. If |response| is nullptr, cancels
-  // the RPC.
+  // Called by the handler to send |status| and |response|.
   using HandlerDoneCallback =
-      base::Callback<void(std::unique_ptr<ResponseType> response)>;
+      base::Callback<void(grpc::Status status,
+                          std::unique_ptr<ResponseType> response)>;
 
   // The handler callback - will be invoked to compute a response for a request.
   using HandlerCallback =
@@ -135,7 +135,7 @@ class RpcState final : public RpcStateBase {
 
   void SendResponse() override {
     CHECK(response_);
-    responder_.Finish(*response_, grpc::Status::OK, tag());
+    responder_.Finish(*response_, status_, tag());
   }
 
   void Cancel() override {
@@ -145,15 +145,17 @@ class RpcState final : public RpcStateBase {
   }
 
  private:
-  // This will be invoked by the handler when it provides us a |response|.
-  // |response| may be nullptr (meaning that the RPC should be cancelled).
+  // This will be invoked by the handler when it provides us a |status| and a
+  // |response|.
   void OnHandlerDone(const base::Closure& on_handler_done,
+                     grpc::Status status,
                      std::unique_ptr<ResponseType> response) {
     // Ideally, we would CHECK that |OnHandlerDone| is only called once, but
     // that would require introducing a dedicated boolean flag, which seems to
     // be overkill.
     CHECK(!response_);
     response_ = std::move(response);
+    status_ = std::move(status);
     on_handler_done.Run();
   }
 
@@ -164,6 +166,7 @@ class RpcState final : public RpcStateBase {
   // has finished processing this RPC, i.e. when |OnHandlerDone()| is called, it
   // means that the RPC has been cancelled.
   std::unique_ptr<ResponseType> response_;
+  grpc::Status status_;
   grpc::ServerAsyncResponseWriter<ResponseType> responder_;
 
   base::WeakPtrFactory<RpcState> weak_ptr_factory_{this};

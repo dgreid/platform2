@@ -129,7 +129,7 @@ void FakeWilcoDtc::HandleMessageFromUi(
   auto response = std::make_unique<grpc_api::HandleMessageFromUiResponse>();
   response->set_response_json_message(
       handle_message_from_ui_json_message_response_.value());
-  callback.Run(std::move(response));
+  callback.Run(grpc::Status::OK, std::move(response));
 
   handle_message_from_ui_callback_->Run();
 }
@@ -140,7 +140,7 @@ void FakeWilcoDtc::HandleEcNotification(
   DCHECK(handle_ec_event_request_callback_);
 
   auto response = std::make_unique<grpc_api::HandleEcNotificationResponse>();
-  callback.Run(std::move(response));
+  callback.Run(grpc::Status::OK, std::move(response));
 
   handle_ec_event_request_callback_->Run(request->type(), request->payload());
 }
@@ -151,7 +151,7 @@ void FakeWilcoDtc::HandlePowerNotification(
   DCHECK(handle_power_event_request_callback_);
 
   auto response = std::make_unique<grpc_api::HandlePowerNotificationResponse>();
-  callback.Run(std::move(response));
+  callback.Run(grpc::Status::OK, std::move(response));
 
   handle_power_event_request_callback_->Run(request->power_event());
 }
@@ -163,7 +163,7 @@ void FakeWilcoDtc::HandleConfigurationDataChanged(
 
   auto response =
       std::make_unique<grpc_api::HandleConfigurationDataChangedResponse>();
-  callback.Run(std::move(response));
+  callback.Run(grpc::Status::OK, std::move(response));
 
   configuration_data_changed_callback_->Run();
 }
@@ -175,7 +175,7 @@ void FakeWilcoDtc::HandleBluetoothDataChanged(
 
   auto response =
       std::make_unique<grpc_api::HandleBluetoothDataChangedResponse>();
-  callback.Run(std::move(response));
+  callback.Run(grpc::Status::OK, std::move(response));
 
   bluetooth_data_changed_request_callback_->Run(*request);
 }

@@ -102,10 +102,11 @@ std::string FakeFileContents() {
 }
 
 template <class T>
-base::Callback<void(std::unique_ptr<T>)> GrpcCallbackResponseSaver(
-    std::unique_ptr<T>* response) {
+base::Callback<void(grpc::Status, std::unique_ptr<T>)>
+GrpcCallbackResponseSaver(std::unique_ptr<T>* response) {
   return base::Bind(
-      [](std::unique_ptr<T>* response, std::unique_ptr<T> received_response) {
+      [](std::unique_ptr<T>* response, grpc::Status status,
+         std::unique_ptr<T> received_response) {
         *response = std::move(received_response);
         ASSERT_TRUE(*response);
       },
@@ -331,9 +332,9 @@ class GrpcServiceTest : public testing::Test {
     request->set_json_message(json_message);
     EXPECT_CALL(delegate_, SendWilcoDtcMessageToUi(json_message, _))
         .WillOnce(WithArgs<1>(Invoke(
-            [json_message](
-                const base::Callback<void(base::StringPiece)>& callback) {
-              callback.Run(json_message);
+            [json_message](const base::Callback<void(
+                               grpc::Status, base::StringPiece)>& callback) {
+              callback.Run(grpc::Status::OK, json_message);
             })));
     service()->SendMessageToUi(std::move(request),
                                GrpcCallbackResponseSaver(response));
@@ -872,7 +873,7 @@ TEST_F(GrpcServiceTest, RequestBluetoothDataNotification) {
   service()->RequestBluetoothDataNotification(
       std::move(request),
       base::Bind(
-          [](base::Closure callback,
+          [](base::Closure callback, grpc::Status status,
              std::unique_ptr<
                  grpc_api::RequestBluetoothDataNotificationResponse>) {
             callback.Run();
@@ -922,6 +923,7 @@ TEST_P(GetStatefulPartitionAvailableCapacityTest, All) {
   auto callback_impl =
       [](grpc_api::GetStatefulPartitionAvailableCapacityResponse::Status status,
          int32_t expected_capacity, base::Closure loop_callback,
+         grpc::Status grpcStatus,
          std::unique_ptr<
              grpc_api::GetStatefulPartitionAvailableCapacityResponse> reply) {
         EXPECT_EQ(reply->status(), status);

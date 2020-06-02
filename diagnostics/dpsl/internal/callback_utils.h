@@ -14,28 +14,28 @@
 #include <base/memory/ref_counted.h>
 #include <base/task_runner.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <grpcpp/grpcpp.h>
 
 namespace diagnostics {
 
-// Several versions of the function that transforms base::Callback into
-// std::function:
+// A function that transforms base::Callback into std::function
 
-template <typename ReturnType>
-inline std::function<ReturnType()> MakeStdFunctionFromCallback(
-    base::Callback<ReturnType()> callback) {
-  return std::bind(
-      [](base::Callback<ReturnType()> callback) { return callback.Run(); },
-      std::move(callback));
+template <typename ReturnType, typename... ArgType>
+inline std::function<ReturnType(ArgType...)> MakeStdFunctionFromCallback(
+    base::Callback<ReturnType(ArgType...)> callback) {
+  return [callback](ArgType&&... args) {
+    return callback.Run(std::forward<ArgType>(args)...);
+  };
 }
 
-template <typename ReturnType, typename Arg1Type>
-inline std::function<ReturnType(Arg1Type)> MakeStdFunctionFromCallback(
-    base::Callback<ReturnType(Arg1Type)> callback) {
-  return std::bind(
-      [](base::Callback<ReturnType(Arg1Type)> callback, Arg1Type&& arg1) {
-        return callback.Run(std::forward<Arg1Type>(arg1));
-      },
-      std::move(callback), std::placeholders::_1);
+// A function that transforms base::Callback into std::function, and
+// automatically adds grpc::Status::OK
+template <typename ReturnType, typename... ArgType>
+inline std::function<ReturnType(ArgType...)> MakeStdFunctionFromCallbackGrpc(
+    base::Callback<ReturnType(grpc::Status, ArgType...)> callback) {
+  return [callback](ArgType&&... args) {
+    return callback.Run(grpc::Status::OK, std::forward<ArgType>(args)...);
+  };
 }
 
 namespace internal {
@@ -43,6 +43,14 @@ namespace internal {
 template <typename ReturnType, typename... ArgTypes>
 inline ReturnType RunStdFunctionWithArgs(
     std::function<ReturnType(ArgTypes...)> function, ArgTypes... args) {
+  return function(std::forward<ArgTypes>(args)...);
+}
+
+template <typename ReturnType, typename... ArgTypes>
+inline ReturnType RunStdFunctionWithArgsGrpc(
+    std::function<ReturnType(ArgTypes...)> function,
+    grpc::Status status,
+    ArgTypes... args) {
   return function(std::forward<ArgTypes>(args)...);
 }
 
@@ -54,6 +62,16 @@ inline base::Callback<ReturnType(ArgTypes...)> MakeCallbackFromStdFunction(
     std::function<ReturnType(ArgTypes...)> function) {
   return base::Bind(
       &internal::RunStdFunctionWithArgs<ReturnType, ArgTypes...>,
+      base::Passed(std::move(function)));
+}
+
+// Transforms std::function into base::Callback, and ignores grpc::Status
+template <typename ReturnType, typename... ArgTypes>
+inline base::Callback<ReturnType(grpc::Status, ArgTypes...)>
+MakeCallbackFromStdFunctionGrpc(
+    std::function<ReturnType(ArgTypes...)> function) {
+  return base::Bind(
+      &internal::RunStdFunctionWithArgsGrpc<ReturnType, ArgTypes...>,
       base::Passed(std::move(function)));
 }
 

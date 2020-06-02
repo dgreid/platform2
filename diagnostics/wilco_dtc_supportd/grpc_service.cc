@@ -62,10 +62,11 @@ int64_t CalculateWebRequestParameterSize(
 
 // Forwards and wraps the result of a SendMessageToUi into gRPC response.
 void ForwardSendMessageToUiResponse(const SendMessageToUiCallback& callback,
+                                    grpc::Status status,
                                     base::StringPiece response_json_message) {
   auto reply = std::make_unique<grpc_api::SendMessageToUiResponse>();
   reply->set_response_json_message(response_json_message.as_string());
-  callback.Run(std::move(reply));
+  callback.Run(status, std::move(reply));
 }
 
 // Forwards and wraps status & HTTP status into gRPC PerformWebRequestResponse.
@@ -94,7 +95,7 @@ void ForwardWebGrpcResponse(const PerformWebRequestResponseCallback& callback,
           grpc_api::PerformWebRequestResponse::STATUS_INTERNAL_ERROR);
       break;
   }
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Converts gRPC HTTP method into GrpcService::Delegate's HTTP
@@ -170,7 +171,7 @@ void ForwardGetAvailableRoutinesResponse(
   for (auto routine : routines)
     reply->add_routines(routine);
   reply->set_service_status(service_status);
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Forwards and wraps the result of a RunRoutine command into a gRPC response.
@@ -182,7 +183,7 @@ void ForwardRunRoutineResponse(const RunRoutineCallback& callback,
   reply->set_uuid(uuid);
   reply->set_status(status);
   reply->set_service_status(service_status);
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Forwards and wraps the results of a GetRoutineUpdate command into a gRPC
@@ -204,7 +205,7 @@ void ForwardGetRoutineUpdateResponse(
   reply->set_output(output);
   reply->set_status_message(status_message);
   reply->set_service_status(service_status);
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Forwards and wraps the result of a GetConfigurationDataFromBrowser into gRPC
@@ -214,7 +215,7 @@ void ForwardGetConfigurationDataResponse(
     const std::string& json_configuration_data) {
   auto reply = std::make_unique<grpc_api::GetConfigurationDataResponse>();
   reply->set_json_configuration_data(json_configuration_data);
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Forwards and wraps the result of a GetDriveSystemData into gRPC
@@ -231,7 +232,7 @@ void ForwardGetDriveSystemDataResponse(
     reply->set_status(
         grpc_api::GetDriveSystemDataResponse::STATUS_ERROR_REQUEST_PROCESSING);
   }
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Extracts stateful partition info from cros_healthd's TelemetryInfo
@@ -246,7 +247,7 @@ void ForwardGetStatefulPartitionAvailableCapacity(
       !info->stateful_partition_result->is_partition_info()) {
     reply->set_status(grpc_api::GetStatefulPartitionAvailableCapacityResponse::
                           STATUS_ERROR_REQUEST_PROCESSING);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
 
@@ -257,7 +258,7 @@ void ForwardGetStatefulPartitionAvailableCapacity(
       info->stateful_partition_result->get_partition_info()->available_space;
   reply->set_available_capacity_mb((available_space / 1024 / 1024 / 100) * 100);
 
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 // Maps GetEcTelemetryResponse::Status in EcService to
@@ -370,12 +371,12 @@ void GrpcService::GetProcData(
       LOG(ERROR) << "GetProcData gRPC request type unset or invalid: "
                  << request->type();
       // Error is designated by a reply with the empty list of entries.
-      callback.Run(std::move(reply));
+      callback.Run(grpc::Status::OK, std::move(reply));
       return;
   }
   VLOG(1) << "Completing GetProcData gRPC request of type " << request->type()
           << ", returning " << reply->file_dump_size() << " items";
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 void GrpcService::GetSysfsData(
@@ -416,12 +417,12 @@ void GrpcService::GetSysfsData(
       LOG(ERROR) << "GetSysfsData gRPC request type unset or invalid: "
                  << request->type();
       // Error is designated by a reply with the empty list of entries.
-      callback.Run(std::move(reply));
+      callback.Run(grpc::Status::OK, std::move(reply));
       return;
   }
   VLOG(1) << "Completing GetSysfsData gRPC request of type " << request->type()
           << ", returning " << reply->file_dump_size() << " items";
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 void GrpcService::GetEcTelemetry(
@@ -435,7 +436,7 @@ void GrpcService::GetEcTelemetry(
   auto reply = std::make_unique<grpc_api::GetEcTelemetryResponse>();
   reply->set_status(GetGrpcEcTelemetryStatus(response.status));
   reply->set_payload(std::move(response.payload));
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 void GrpcService::PerformWebRequest(
@@ -448,7 +449,7 @@ void GrpcService::PerformWebRequest(
     LOG(ERROR) << "PerformWebRequest URL is empty.";
     reply->set_status(
         grpc_api::PerformWebRequestResponse::STATUS_ERROR_INVALID_URL);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
   if (!base::StartsWith(parameter->url(), kHttpsPrefix,
@@ -456,7 +457,7 @@ void GrpcService::PerformWebRequest(
     LOG(ERROR) << "PerformWebRequest URL must be an HTTPS URL.";
     reply->set_status(
         grpc_api::PerformWebRequestResponse::STATUS_ERROR_INVALID_URL);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
   if (parameter->headers().size() >
@@ -464,7 +465,7 @@ void GrpcService::PerformWebRequest(
     LOG(ERROR) << "PerformWebRequest number of headers is too large.";
     reply->set_status(
         grpc_api::PerformWebRequestResponse::STATUS_ERROR_MAX_SIZE_EXCEEDED);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
   if (CalculateWebRequestParameterSize(parameter) >
@@ -472,7 +473,7 @@ void GrpcService::PerformWebRequest(
     LOG(ERROR) << "PerformWebRequest request is too large.";
     reply->set_status(
         grpc_api::PerformWebRequestResponse::STATUS_ERROR_MAX_SIZE_EXCEEDED);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
 
@@ -481,7 +482,7 @@ void GrpcService::PerformWebRequest(
                                        &delegate_http_method)) {
     reply->set_status(grpc_api::PerformWebRequestResponse ::
                           STATUS_ERROR_REQUIRED_FIELD_MISSING);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
   delegate_->PerformWebRequestToBrowser(
@@ -689,7 +690,7 @@ void GrpcService::GetOsVersion(
     reply->set_milestone(milestone);
   }
 
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 void GrpcService::GetConfigurationData(
@@ -714,7 +715,7 @@ void GrpcService::GetVpdField(
             << static_cast<int>(request->vpd_field());
     reply->set_status(
         grpc_api::GetVpdFieldResponse::STATUS_ERROR_VPD_FIELD_UNKNOWN);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
 
@@ -723,14 +724,14 @@ void GrpcService::GetVpdField(
     VPLOG(2) << "Failed to read VPD field "
              << static_cast<int>(request->vpd_field());
     reply->set_status(grpc_api::GetVpdFieldResponse::STATUS_ERROR_INTERNAL);
-    callback.Run(std::move(reply));
+    callback.Run(grpc::Status::OK, std::move(reply));
     return;
   }
 
   reply->set_status(grpc_api::GetVpdFieldResponse::STATUS_OK);
   reply->set_vpd_field_value(std::move(result.value()));
 
-  callback.Run(std::move(reply));
+  callback.Run(grpc::Status::OK, std::move(reply));
 }
 
 void GrpcService::GetDriveSystemData(
@@ -752,7 +753,7 @@ void GrpcService::GetDriveSystemData(
       auto reply = std::make_unique<grpc_api::GetDriveSystemDataResponse>();
       reply->set_status(grpc_api::GetDriveSystemDataResponse::
                             STATUS_ERROR_REQUEST_TYPE_UNKNOWN);
-      callback.Run(std::move(reply));
+      callback.Run(grpc::Status::OK, std::move(reply));
       return;
   }
 
@@ -766,6 +767,7 @@ void GrpcService::RequestBluetoothDataNotification(
   delegate_->RequestBluetoothDataNotification();
 
   callback.Run(
+      grpc::Status::OK,
       std::make_unique<grpc_api::RequestBluetoothDataNotificationResponse>());
 }
 

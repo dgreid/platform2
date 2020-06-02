@@ -39,7 +39,8 @@ class BRILLO_EXPORT AsyncGrpcClientBase {
   // available.
   template <typename ResponseType>
   using ReplyCallback =
-      base::Callback<void(std::unique_ptr<ResponseType> response)>;
+      base::Callback<void(grpc::Status status,
+                          std::unique_ptr<ResponseType> response)>;
 
   explicit AsyncGrpcClientBase(
       scoped_refptr<base::SequencedTaskRunner> task_runner);
@@ -79,7 +80,8 @@ class BRILLO_EXPORT AsyncGrpcClientBase {
 //   // |on_shutdown_callback| is called.
 // The callbacks (e.g. |do_something_callback| in the example) have the
 // following form:
-//   void DoSomethingCallback(std::unique_ptr<DoSomethingResponse> response);
+//   void DoSomethingCallback(grpc::Status status,
+//                            std::unique_ptr<DoSomethingResponse> response);
 template <typename ServiceType>
 class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
  public:
@@ -165,9 +167,9 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
               << rpc_state->status.error_code() << ", error_message='"
               << rpc_state->status.error_message() << "', error_details='"
               << rpc_state->status.error_details() << "'";
-      rpc_state->response.reset();
     }
-    on_reply_callback.Run(std::move(rpc_state->response));
+    on_reply_callback.Run(std::move(rpc_state->status),
+                          std::move(rpc_state->response));
   }
 
   base::TimeDelta rpc_deadline_ = kRpcDeadline;

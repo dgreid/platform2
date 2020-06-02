@@ -106,11 +106,12 @@ namespace {
 // Returns a callback that, once called, saves its parameter to |*response| and
 // quits |*run_loop|.
 template <typename ValueType>
-base::Callback<void(std::unique_ptr<ValueType>)> MakeAsyncResponseWriter(
-    const base::Closure& callback, std::unique_ptr<ValueType>* response) {
+base::Callback<void(grpc::Status, std::unique_ptr<ValueType>)>
+MakeAsyncResponseWriter(const base::Closure& callback,
+                        std::unique_ptr<ValueType>* response) {
   return base::Bind(
       [](const base::Closure& callback, std::unique_ptr<ValueType>* response,
-         std::unique_ptr<ValueType> received_response) {
+         grpc::Status status, std::unique_ptr<ValueType> received_response) {
         ASSERT_TRUE(received_response);
         ASSERT_FALSE(*response);
         *response = std::move(received_response);
@@ -688,7 +689,7 @@ TEST_F(StartedCoreTest, HandleRequestBluetoothDataNotification) {
     fake_wilco_dtc.RequestBluetoothDataNotification(
         grpc_api::RequestBluetoothDataNotificationRequest{},
         base::Bind(
-            [](base::Closure barrier_closure,
+            [](base::Closure barrier_closure, grpc::Status status,
                std::unique_ptr<
                    grpc_api::RequestBluetoothDataNotificationResponse>) {
               barrier_closure.Run();
@@ -876,6 +877,7 @@ TEST_F(BootstrappedCoreTest, GetCrosHealthdDiagnosticsService) {
   fake_wilco_dtc()->GetAvailableRoutines(base::Bind(
       [](base::Closure quit_closure,
          std::vector<grpc_api::DiagnosticRoutine>* unpacked_response_out,
+         grpc::Status status,
          std::unique_ptr<grpc_api::GetAvailableRoutinesResponse> response) {
         for (int i = 0; i < response->routines_size(); i++)
           unpacked_response_out->push_back(response->routines(i));

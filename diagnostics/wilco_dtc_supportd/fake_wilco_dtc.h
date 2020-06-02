@@ -30,33 +30,45 @@ namespace diagnostics {
 class FakeWilcoDtc final {
  public:
   using SendMessageToUiCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::SendMessageToUiResponse> response)>;
-  using GetProcDataCallback =
-      base::Callback<void(std::unique_ptr<grpc_api::GetProcDataResponse>)>;
-  using GetEcTelemetryCallback =
-      base::Callback<void(std::unique_ptr<grpc_api::GetEcTelemetryResponse>)>;
+  using GetProcDataCallback = base::Callback<void(
+      grpc::Status status, std::unique_ptr<grpc_api::GetProcDataResponse>)>;
+  using GetEcTelemetryCallback = base::Callback<void(
+      grpc::Status status, std::unique_ptr<grpc_api::GetEcTelemetryResponse>)>;
   using HandleMessageFromUiCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::HandleMessageFromUiResponse>)>;
   using HandleEcNotificationCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::HandleEcNotificationResponse>)>;
   using HandlePowerNotificationCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::HandlePowerNotificationResponse>)>;
   using PerformWebRequestResponseCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::PerformWebRequestResponse>)>;
   using GetConfigurationDataCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::GetConfigurationDataResponse>)>;
   using GetDriveSystemDataCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::GetDriveSystemDataResponse>)>;
   using RequestBluetoothDataNotificationCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::RequestBluetoothDataNotificationResponse>)>;
   using GetStatefulPartitionAvailableCapacityCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<
           grpc_api::GetStatefulPartitionAvailableCapacityResponse>)>;
   using HandleConfigurationDataChangedCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::HandleConfigurationDataChangedResponse>)>;
   using HandleBluetoothDataChangedCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::HandleBluetoothDataChangedResponse>)>;
   using GetAvailableRoutinesCallback = base::Callback<void(
+      grpc::Status status,
       std::unique_ptr<grpc_api::GetAvailableRoutinesResponse>)>;
 
   using HandleEcNotificationRequestCallback =

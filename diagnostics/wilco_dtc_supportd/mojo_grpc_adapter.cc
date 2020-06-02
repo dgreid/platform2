@@ -42,10 +42,13 @@ void MojoGrpcAdapter::SendGrpcUiMessageToWilcoDtc(
       &grpc_api::WilcoDtc::Stub::AsyncHandleMessageFromUi, request,
       base::Bind(
           [](const SendGrpcUiMessageToWilcoDtcCallback& callback,
+             grpc::Status status,
              std::unique_ptr<grpc_api::HandleMessageFromUiResponse> response) {
-            if (!response) {
+            if (!status.ok()) {
               VLOG(1) << "Failed to call HandleMessageFromUiRequest gRPC method"
-                         " on wilco_dtc: response message is nullptr";
+                         " on wilco_dtc. grpc error code: "
+                      << status.error_code()
+                      << ", error message: " << status.error_message();
               callback.Run(std::string() /* response_json_message */);
               return;
             }
@@ -75,11 +78,14 @@ void MojoGrpcAdapter::NotifyConfigurationDataChangedToWilcoDtc() {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleConfigurationDataChanged, request,
         base::Bind(
-            [](std::unique_ptr<grpc_api::HandleConfigurationDataChangedResponse>
+            [](grpc::Status status,
+               std::unique_ptr<grpc_api::HandleConfigurationDataChangedResponse>
                    response) {
-              if (!response) {
+              if (!status.ok()) {
                 VLOG(1) << "Failed to call HandleConfigurationDataChanged gRPC "
-                           "method on wilco_dtc: response message is nullptr";
+                           "method on wilco_dtc. grpc error code: "
+                        << status.error_code()
+                        << ", error message: " << status.error_message();
                 return;
               }
               VLOG(1) << "gRPC method HandleConfigurationDaraChanged was "

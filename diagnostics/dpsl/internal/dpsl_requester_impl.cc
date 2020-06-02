@@ -183,19 +183,22 @@ void DpslRequesterImpl::ScheduleGrpcClientMethodCall(
                                                    ResponseType>,
           weak_ptr_factory_.GetWeakPtr(), grpc_stub_method,
           base::Passed(std::move(request)),
-          MakeCallbackFromStdFunction(std::move(response_callback))));
+          MakeCallbackFromStdFunctionGrpc(std::move(response_callback))));
 }
 
 template <typename GrpcStubMethod, typename RequestType, typename ResponseType>
 void DpslRequesterImpl::CallGrpcClientMethod(
     GrpcStubMethod grpc_stub_method,
     std::unique_ptr<RequestType> request,
-    base::Callback<void(std::unique_ptr<ResponseType>)> response_callback) {
+    base::Callback<void(grpc::Status, std::unique_ptr<ResponseType>)>
+        response_callback) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   if (async_grpc_client_shutting_down_) {
     // Bail out if the client is already being shut down, to avoid doing
     // CallRpc() in this state.
-    response_callback.Run(nullptr /* response */);
+    response_callback.Run(
+        grpc::Status(grpc::StatusCode::CANCELLED, "Client is shutting down"),
+        nullptr /* response */);
     return;
   }
   async_grpc_client_.CallRpc(grpc_stub_method, *request,

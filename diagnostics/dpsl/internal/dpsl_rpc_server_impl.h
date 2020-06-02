@@ -35,14 +35,17 @@ class DpslRpcServerImpl final : public DpslRpcServer {
 
  private:
   using HandleMessageFromUiCallback = base::Callback<void(
-      std::unique_ptr<grpc_api::HandleMessageFromUiResponse>)>;
+      grpc::Status, std::unique_ptr<grpc_api::HandleMessageFromUiResponse>)>;
   using HandleEcNotificationCallback = base::Callback<void(
-      std::unique_ptr<grpc_api::HandleEcNotificationResponse>)>;
+      grpc::Status, std::unique_ptr<grpc_api::HandleEcNotificationResponse>)>;
   using HandlePowerNotificationCallback = base::Callback<void(
+      grpc::Status,
       std::unique_ptr<grpc_api::HandlePowerNotificationResponse>)>;
   using HandleConfigurationDataChangedCallback = base::Callback<void(
+      grpc::Status,
       std::unique_ptr<grpc_api::HandleConfigurationDataChangedResponse>)>;
   using HandleBluetoothDataChangedCallback = base::Callback<void(
+      grpc::Status,
       std::unique_ptr<grpc_api::HandleBluetoothDataChangedResponse>)>;
 
   // Methods corresponding to the "WilcoDtc" gRPC interface (each of these

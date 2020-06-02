@@ -12,6 +12,7 @@
 #include <base/macros.h>
 #include <base/optional.h>
 #include <base/strings/string_piece.h>
+#include <grpcpp/grpcpp.h>
 #include <mojo/public/cpp/bindings/binding.h>
 #include <mojo/public/cpp/system/buffer.h>
 
@@ -42,7 +43,7 @@ class MojoService final
   using MojomWilcoDtcSupportdEvent =
       chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdEvent;
   using MojomSendWilcoDtcMessageToUiCallback =
-      base::Callback<void(base::StringPiece)>;
+      base::Callback<void(grpc::Status, base::StringPiece)>;
   using MojomPerformWebRequestCallback = base::Callback<void(
       MojomWilcoDtcSupportdWebRequestStatus, int, base::StringPiece)>;
   using MojomGetConfigurationDataCallback =

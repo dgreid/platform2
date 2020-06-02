@@ -444,11 +444,11 @@ class TestDsplMultiRequesterServer {
   }
 
  private:
-  using HandleSendMessageToUiCallback =
-      base::Callback<void(std::unique_ptr<grpc_api::SendMessageToUiResponse>)>;
+  using HandleSendMessageToUiCallback = base::Callback<void(
+      grpc::Status, std::unique_ptr<grpc_api::SendMessageToUiResponse>)>;
 
   using HandlePerformWebRequestCallback = base::Callback<void(
-      std::unique_ptr<grpc_api::PerformWebRequestResponse>)>;
+      grpc::Status, std::unique_ptr<grpc_api::PerformWebRequestResponse>)>;
 
   void HandleSendMessageToUiCallbackCall(
       std::unique_ptr<grpc_api::SendMessageToUiRequest> request,
@@ -457,8 +457,9 @@ class TestDsplMultiRequesterServer {
 
     handle_send_message_to_ui_called_++;
 
-    callback.Run(std::make_unique<grpc_api::SendMessageToUiResponse>(
-        send_message_to_ui_response_to_reply_with_));
+    callback.Run(grpc::Status::OK,
+                 std::make_unique<grpc_api::SendMessageToUiResponse>(
+                     send_message_to_ui_response_to_reply_with_));
   }
 
   void HandlePerformWebRequest(
@@ -469,8 +470,9 @@ class TestDsplMultiRequesterServer {
 
     handle_perform_web_request_called_++;
 
-    callback.Run(std::make_unique<grpc_api::PerformWebRequestResponse>(
-        perform_web_request_response_to_reply_with_));
+    callback.Run(grpc::Status::OK,
+                 std::make_unique<grpc_api::PerformWebRequestResponse>(
+                     perform_web_request_response_to_reply_with_));
   }
 
   grpc_api::SendMessageToUiRequest send_message_to_ui_expected_request_;
@@ -605,7 +607,8 @@ class TestDsplRequesterServer {
   int GetHandleCallCalled() const { return handle_call_called_; }
 
  private:
-  using HandleCallCallback = base::Callback<void(std::unique_ptr<Response>)>;
+  using HandleCallCallback =
+      base::Callback<void(grpc::Status, std::unique_ptr<Response>)>;
 
   void HandleCall(std::unique_ptr<Request> request,
                   const HandleCallCallback& callback) {
@@ -613,7 +616,8 @@ class TestDsplRequesterServer {
 
     handle_call_called_++;
 
-    callback.Run(std::make_unique<Response>(response_to_reply_with_));
+    callback.Run(grpc::Status::OK,
+                 std::make_unique<Response>(response_to_reply_with_));
   }
 
   Request expected_request_;

@@ -262,9 +262,11 @@ void Core::SendWilcoDtcMessageToUi(const std::string& json_message,
   VLOG(1) << "SendWilcoDtcMessageToUi() json_message=" << json_message;
   MojoService* mojo_service = mojo_service_factory_->Get();
   if (!mojo_service) {
-    LOG(WARNING) << "GetConfigurationDataFromBrowser happens before Mojo "
-                 << "connection is established.";
-    callback.Run("");
+    constexpr char kErrMsg[] =
+        "GetConfigurationDataFromBrowser happens before "
+        "Mojo connection is established.";
+    LOG(WARNING) << kErrMsg;
+    callback.Run(grpc::Status(grpc::StatusCode::UNKNOWN, kErrMsg), "");
     return;
   }
   mojo_service->SendWilcoDtcMessageToUi(json_message, callback);
@@ -425,11 +427,14 @@ void Core::OnPowerdEvent(PowerEventType type) {
   for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandlePowerNotification, request,
-        base::Bind([](std::unique_ptr<grpc_api::HandlePowerNotificationResponse>
+        base::Bind([](grpc::Status status,
+                      std::unique_ptr<grpc_api::HandlePowerNotificationResponse>
                           response) {
-          if (!response) {
+          if (!status.ok()) {
             VLOG(1) << "Failed to call HandlePowerNotification gRPC "
-                       "method on wilco_dtc: response message is nullptr";
+                       "method on wilco_dtc. grpc error code: "
+                    << status.error_code()
+                    << ", error message: " << status.error_message();
             return;
           }
           VLOG(1) << "gRPC method HandlePowerNotification was "
@@ -493,12 +498,15 @@ void Core::SendGrpcEcEventToWilcoDtc(const EcEvent& ec_event) {
   for (auto& client : grpc_client_manager_->GetClients()) {
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleEcNotification, request,
-        base::Bind([](std::unique_ptr<grpc_api::HandleEcNotificationResponse>
+        base::Bind([](grpc::Status status,
+                      std::unique_ptr<grpc_api::HandleEcNotificationResponse>
                           response) {
-          if (!response) {
+          if (!status.ok()) {
             VLOG(1)
                 << "Failed to call HandleEcNotificationRequest gRPC method on "
-                   "wilco_dtc: response message is nullptr";
+                   "wilco_dtc. grpc error code: "
+                << status.error_code()
+                << ", error message: " << status.error_message();
             return;
           }
           VLOG(1) << "gRPC method HandleEcNotificationRequest was successfully"
@@ -548,11 +556,14 @@ void Core::NotifyClientsBluetoothAdapterState(
     client->CallRpc(
         &grpc_api::WilcoDtc::Stub::AsyncHandleBluetoothDataChanged, request,
         base::Bind(
-            [](std::unique_ptr<grpc_api::HandleBluetoothDataChangedResponse>
+            [](grpc::Status status,
+               std::unique_ptr<grpc_api::HandleBluetoothDataChangedResponse>
                    response) {
-              if (!response) {
+              if (!status.ok()) {
                 VLOG(1) << "Failed to call HandleBluetoothDataChanged gRPC "
-                           "method on wilco_dtc: response message is nullptr";
+                           "method on wilco_dtc. grpc error code: "
+                        << status.error_code()
+                        << ", error message: " << status.error_message();
                 return;
               }
               VLOG(1) << "gRPC method HandleBluetoothDataChanged was "

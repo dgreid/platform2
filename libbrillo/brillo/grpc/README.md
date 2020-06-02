@@ -22,8 +22,9 @@ its constructor.
 Example for sending RPCs:
 
 ```
-void OnRpcResponse(std::unique_ptr<SomeRpcResponse> response) {
-  // Process |response|.
+void OnRpcResponse(grpc::Status status,
+                   std::unique_ptr<SomeRpcResponse> response) {
+  // Process |status| and |response|.
 }
 
 std::string outgoing_address = ...;
@@ -44,9 +45,9 @@ requests.
 ```
 void OnSomeRpc(
     std::unique_ptr<SomeRpcRequest> request,
-    const base::Callback<void(std::unique_ptr<SomeRpcResponse>)>&
+    const base::Callback<void(grpc::Status, std::unique_ptr<SomeRpcResponse>)>&
             response_callback) {
-  // Call |response_callback.Run(response)| when you have a response!
+  // Call |response_callback.Run(status, response)| when you have a response!
 }
 
 std::string listening_address  = ...;
