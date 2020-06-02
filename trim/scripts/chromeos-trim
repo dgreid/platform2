@@ -14,6 +14,7 @@
 # not heavily used.
 
 . /usr/share/misc/shflags
+. /usr/share/cros/disk_utils.sh
 
 DEFINE_boolean 'test' ${FLAGS_FALSE} "For unit testing."
 
@@ -25,7 +26,6 @@ set -e
 
 if [ "${FLAGS_test}" -eq "${FLAGS_FALSE}" ]; then
   . /usr/share/misc/chromeos-common.sh
-  . /usr/share/cros/disk_utils.sh
   . /usr/share/cros/trim_utils.sh
 
   # Names of device and sysfs entries the script will work with.
@@ -95,6 +95,7 @@ read_status_file() {
   load_int write_last_trim
   load_int date_last_trim
   load_int trimmed_amount
+  load_int stateful_writes
 
   trim_status="$(cat "${CHROMEOS_TRIM_STATE}" 2> /dev/null || : )"
 }
@@ -107,6 +108,7 @@ duration=${duration}
 write_last_trim=${write_last_trim}
 date_last_trim=${date_last_trim}
 trimmed_amount=${trimmed_amount}
+stateful_writes=${stateful_writes}
 EOF
   echo "${trim_status}" > "${CHROMEOS_TRIM_STATE}"
 }
@@ -205,9 +207,22 @@ main() {
   local block_size
   local free_blocks
   local written_blocks
+  local current_stateful_writes
+  local stateful_diff
 
   if [ -f "${CHROMEOS_TRIM_DATA}" ]; then
     read_status_file
+
+    current_stateful_writes="$(get_stateful_lifetime_writes)"
+    if [ "${stateful_writes}" -ne 0 ]; then
+        stateful_diff="$((${current_stateful_writes} - ${stateful_writes}))"
+        # The UMA metric for stateful lifetime writes has the 99th
+        # percentile at 4,800 GiB. It seems reasonable to set the max
+        # for the daily metric at 200 GiB.
+        metrics_client Platform.StatefulWritesDaily \
+                       "${stateful_diff}" 0 209715200 50
+    fi
+    stateful_writes="${current_stateful_writes}"
 
     if [ "${current_offset}" -ne 0 ]; then
       # Trim was interrupted due to intense disk activity, resume.
