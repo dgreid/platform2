@@ -131,7 +131,7 @@ class WiFiProviderTest : public testing::Test {
   string AddServiceToProfileStorage(Profile* profile,
                                     const char* ssid,
                                     const char* mode,
-                                    const char* security,
+                                    const char* security_class,
                                     bool is_hidden,
                                     bool provide_hidden) {
     string id = base::StringPrintf("entry_%d", storage_entry_index_);
@@ -151,9 +151,10 @@ class WiFiProviderTest : public testing::Test {
       AddStringParameterToStorage(profile_storage, id,
                                   WiFiService::kStorageMode, mode);
     }
-    if (security) {
+    if (security_class) {
       AddStringParameterToStorage(profile_storage, id,
-                                  WiFiService::kStorageSecurity, security);
+                                  WiFiService::kStorageSecurityClass,
+                                  security_class);
     }
     if (provide_hidden) {
       EXPECT_CALL(*profile_storage, GetBool(id, kWifiHiddenSsid, _))
@@ -568,7 +569,7 @@ TEST_F(WiFiProviderTest, CreateTemporaryServiceFromProfileMissingSecurity) {
                          default_profile_, entry_name, &error));
   EXPECT_FALSE(error.IsSuccess());
   EXPECT_THAT(error.message(),
-              StartsWith("Unspecified or invalid security mode"));
+              StartsWith("Unspecified or invalid security class"));
 }
 
 TEST_F(WiFiProviderTest, CreateTemporaryServiceFromProfileMissingHidden) {
@@ -623,7 +624,7 @@ TEST_F(WiFiProviderTest, CreateTwoServices) {
 TEST_F(WiFiProviderTest, ServiceSourceStats) {
   set<string> default_profile_groups;
   default_profile_groups.insert(AddServiceToProfileStorage(
-      default_profile_.get(), "foo", kModeManaged, kSecurityWpa, false, true));
+      default_profile_.get(), "foo", kModeManaged, kSecurityPsk, false, true));
   EXPECT_CALL(default_profile_storage_,
               GetGroupsWithProperties(TypeWiFiPropertyMatch()))
       .WillRepeatedly(Return(default_profile_groups));
@@ -646,7 +647,7 @@ TEST_F(WiFiProviderTest, ServiceSourceStats) {
 
   set<string> user_profile_groups;
   user_profile_groups.insert(AddServiceToProfileStorage(
-      user_profile_.get(), "bar", kModeManaged, kSecurityRsn, false, true));
+      user_profile_.get(), "bar", kModeManaged, kSecurityPsk, false, true));
   EXPECT_CALL(user_profile_storage_,
               GetGroupsWithProperties(TypeWiFiPropertyMatch()))
       .WillRepeatedly(Return(user_profile_groups));

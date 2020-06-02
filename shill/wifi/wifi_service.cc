@@ -52,12 +52,8 @@ const int WiFiService::kSuspectedCredentialFailureThreshold = 3;
 const char WiFiService::kStorageHiddenSSID[] = "WiFi.HiddenSSID";
 const char WiFiService::kStorageMode[] = "WiFi.Mode";
 const char WiFiService::kStoragePassphrase[] = "Passphrase";
-const char WiFiService::kStorageSecurity[] = "WiFi.Security";
 const char WiFiService::kStorageSecurityClass[] = "WiFi.SecurityClass";
 const char WiFiService::kStorageSSID[] = "SSID";
-// This property is now unused, but was used briefly (M68-M71) and might still
-// exist in some profiles.
-const char WiFiService::kStorageFTEnabled[] = "WiFi.FTEnabled";
 
 bool WiFiService::logged_signal_warning = false;
 
@@ -352,6 +348,13 @@ bool WiFiService::Load(const StoreInterface* storage) {
 
 void WiFiService::MigrateDeprecatedStorage(StoreInterface* storage) {
   Service::MigrateDeprecatedStorage(storage);
+
+  const string id = GetStorageIdentifier();
+  CHECK(storage->ContainsGroup(id));
+
+  // Deprecated keys. TODO: Remove after M89.
+  storage->DeleteKey(id, "WiFi.Security");
+  storage->DeleteKey(id, "WiFi.FTEnabled");
 }
 
 bool WiFiService::Save(StoreInterface* storage) {
@@ -365,7 +368,6 @@ bool WiFiService::Save(StoreInterface* storage) {
   storage->SetBool(id, kStorageHiddenSSID, hidden_ssid_);
   storage->SetString(id, kStorageMode, mode_);
   storage->SetCryptedString(id, kStoragePassphrase, passphrase_);
-  storage->SetString(id, kStorageSecurity, security_);
   storage->SetString(id, kStorageSecurityClass,
                      ComputeSecurityClass(security_));
   storage->SetString(id, kStorageSSID, hex_ssid_);

@@ -29,11 +29,12 @@ class WiFiService : public Service {
   static const char kStorageHiddenSSID[];
   static const char kStorageMode[];
   static const char kStoragePassphrase[];
-  static const char kStorageSecurity[];
   static const char kStorageSecurityClass[];
   static const char kStorageSSID[];
-  static const char kStorageFTEnabled[];
 
+  // TODO(b/157935328): callers pass both security class and security in the
+  // |security| arg. Security classes are a subset of security, but for
+  // clarity, we'll move to using security class.
   WiFiService(Manager* manager,
               WiFiProvider* provider,
               const std::vector<uint8_t>& ssid,

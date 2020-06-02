@@ -160,13 +160,13 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
 
 // Retrieve a WiFi service's identifying properties from passed-in |storage|.
 // Return true if storage contain valid parameter values and populates |ssid|,
-// |mode|, |security| and |hidden_ssid|. Otherwise, this function returns
+// |mode|, |security_class| and |hidden_ssid|. Otherwise, this function returns
 // false and populates |error| with the reason for failure.
 bool GetServiceParametersFromStorage(const StoreInterface* storage,
                                      const std::string& entry_name,
                                      std::vector<uint8_t>* ssid_bytes,
                                      std::string* mode,
-                                     std::string* security,
+                                     std::string* security_class,
                                      bool* hidden_ssid,
                                      Error* error) {
   // Verify service type.
@@ -193,11 +193,11 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
     return false;
   }
 
-  if (!storage->GetString(entry_name, WiFiService::kStorageSecurity,
-                          security) ||
-      !WiFiService::IsValidSecurityMethod(*security)) {
+  if (!storage->GetString(entry_name, WiFiService::kStorageSecurityClass,
+                          security_class) ||
+      !WiFiService::IsValidSecurityClass(*security_class)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
-                          "Unspecified or invalid security mode");
+                          "Unspecified or invalid security class");
     return false;
   }
 
@@ -244,15 +244,15 @@ void WiFiProvider::CreateServicesFromProfile(const ProfileRefPtr& profile) {
   for (const auto& group : storage->GetGroupsWithProperties(args)) {
     vector<uint8_t> ssid_bytes;
     string network_mode;
-    string security;
+    string security_class;
     bool is_hidden = false;
     if (!GetServiceParametersFromStorage(storage, group, &ssid_bytes,
-                                         &network_mode, &security, &is_hidden,
-                                         nullptr)) {
+                                         &network_mode, &security_class,
+                                         &is_hidden, nullptr)) {
       continue;
     }
 
-    if (FindService(ssid_bytes, network_mode, security)) {
+    if (FindService(ssid_bytes, network_mode, security_class)) {
       // If service already exists, we have nothing to do, since the
       // service has already loaded its configuration from storage.
       // This is guaranteed to happen in the single case where
@@ -261,7 +261,7 @@ void WiFiProvider::CreateServicesFromProfile(const ProfileRefPtr& profile) {
       continue;
     }
 
-    AddService(ssid_bytes, network_mode, security, is_hidden);
+    AddService(ssid_bytes, network_mode, security_class, is_hidden);
 
     // By registering the service in AddService, the rest of the configuration
     // will be loaded from the profile into the service via ConfigureService().
@@ -329,14 +329,15 @@ ServiceRefPtr WiFiProvider::CreateTemporaryServiceFromProfile(
     const ProfileRefPtr& profile, const std::string& entry_name, Error* error) {
   vector<uint8_t> ssid;
   string mode;
-  string security;
+  string security_class;
   bool hidden_ssid;
   if (!GetServiceParametersFromStorage(profile->GetConstStorage(), entry_name,
-                                       &ssid, &mode, &security, &hidden_ssid,
-                                       error)) {
+                                       &ssid, &mode, &security_class,
+                                       &hidden_ssid, error)) {
     return nullptr;
   }
-  return new WiFiService(manager_, this, ssid, mode, security, hidden_ssid);
+  return new WiFiService(manager_, this, ssid, mode, security_class,
+                         hidden_ssid);
 }
 
 ServiceRefPtr WiFiProvider::GetService(const KeyValueStore& args,

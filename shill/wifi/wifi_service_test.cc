@@ -184,7 +184,7 @@ class WiFiServiceTest : public PropertyStoreTest {
 // static
 const char WiFiServiceTest::fake_mac[] = "AaBBcCDDeeFF";
 
-MATCHER_P3(ContainsWiFiProperties, ssid, mode, security, "") {
+MATCHER_P3(ContainsWiFiProperties, ssid, mode, security_class, "") {
   string hex_ssid = base::HexEncode(ssid.data(), ssid.size());
   return arg.template Contains<string>(WiFiService::kStorageType) &&
          arg.template Get<string>(WiFiService::kStorageType) == kTypeWifi &&
@@ -194,47 +194,26 @@ MATCHER_P3(ContainsWiFiProperties, ssid, mode, security, "") {
          arg.template Get<string>(WiFiService::kStorageMode) == mode &&
          arg.template Contains<string>(WiFiService::kStorageSecurityClass) &&
          arg.template Get<string>(WiFiService::kStorageSecurityClass) ==
-             security;
+             security_class;
 }
 
 class WiFiServiceSecurityTest : public WiFiServiceTest {
  public:
-  bool TestStorageSecurityIs(WiFiServiceRefPtr wifi_service,
-                             const string& security) {
-    string id = wifi_service->GetStorageIdentifier();
-    size_t mac_pos = id.find(base::ToLowerASCII(GetAnyDeviceAddress()));
-    EXPECT_NE(mac_pos, string::npos);
-    size_t mode_pos = id.find(string(kModeManaged), mac_pos);
-    EXPECT_NE(mode_pos, string::npos);
-    return id.find(string(security), mode_pos) != string::npos;
-  }
-
   // Test that a service that is created with security |from_security|
-  // gets by default a storage identifier with |to_security| as its
-  // security component, and that when saved, it sets the Security
-  // property in to |to_security| as well.
-  bool TestStorageMapping(const string& from_security,
-                          const string& to_security) {
+  // gets its SecurityClass mapped to |to_security|.
+  void TestSecurityMapping(const string& from_security,
+                           const string& to_security_class) {
     WiFiServiceRefPtr wifi_service = MakeSimpleService(from_security);
-    NiceMock<MockStore> mock_store;
-    EXPECT_CALL(mock_store, SetString(_, _, _)).WillRepeatedly(Return(true));
-    EXPECT_CALL(mock_store,
-                SetString(_, WiFiService::kStorageSecurity, from_security))
-        .Times(1);
-    EXPECT_CALL(mock_store,
-                SetString(_, WiFiService::kStorageSecurityClass, to_security))
-        .Times(1);
-    wifi_service->Save(&mock_store);
-    return TestStorageSecurityIs(wifi_service, to_security);
+    EXPECT_EQ(to_security_class, wifi_service->GetSecurityClass(nullptr));
   }
 
   // Test whether a service of type |service_security| can load from a
-  // storage interface containing an entry for |storage_security|.
+  // storage interface containing an entry for |storage_security_class|.
   // Make sure the result meets |expectation|.  If |expectation| is
   // true, also make sure the service storage identifier changes to
-  // match |storage_security|.
+  // match |storage_security_class|.
   bool TestLoadMapping(const string& service_security,
-                       const string& storage_security,
+                       const string& storage_security_class,
                        bool expectation) {
     WiFiServiceRefPtr wifi_service = MakeSimpleService(service_security);
     NiceMock<MockStore> mock_store;
@@ -245,9 +224,9 @@ class WiFiServiceSecurityTest : public WiFiServiceTest {
         .WillRepeatedly(Return(true));
     set<string> groups;
     groups.insert(kStorageId);
-    EXPECT_CALL(mock_store,
-                GetGroupsWithProperties(ContainsWiFiProperties(
-                    wifi_service->ssid(), kModeManaged, storage_security)))
+    EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
+                                wifi_service->ssid(), kModeManaged,
+                                storage_security_class)))
         .WillRepeatedly(Return(groups));
     bool is_loadable = wifi_service->IsLoadableFrom(mock_store);
     EXPECT_EQ(expectation, is_loadable);
@@ -849,21 +828,17 @@ TEST_F(WiFiServiceTest, LoadMultipleMatchingGroups) {
 }
 
 TEST_F(WiFiServiceSecurityTest, WPAMapping) {
-  EXPECT_TRUE(TestStorageMapping(kSecurityRsn, kSecurityPsk));
-  EXPECT_TRUE(TestStorageMapping(kSecurityWpa, kSecurityPsk));
-  EXPECT_TRUE(TestStorageMapping(kSecurityPsk, kSecurityPsk));
-  EXPECT_TRUE(TestStorageMapping(kSecurityWep, kSecurityWep));
-  EXPECT_TRUE(TestStorageMapping(kSecurityNone, kSecurityNone));
-  EXPECT_TRUE(TestStorageMapping(kSecurity8021x, kSecurity8021x));
+  TestSecurityMapping(kSecurityRsn, kSecurityPsk);
+  TestSecurityMapping(kSecurityWpa, kSecurityPsk);
+  TestSecurityMapping(kSecurityPsk, kSecurityPsk);
+  TestSecurityMapping(kSecurityWep, kSecurityWep);
+  TestSecurityMapping(kSecurityNone, kSecurityNone);
+  TestSecurityMapping(kSecurity8021x, kSecurity8021x);
 }
 
 TEST_F(WiFiServiceSecurityTest, LoadMapping) {
   EXPECT_TRUE(TestLoadMapping(kSecurityRsn, kSecurityPsk, true));
-  EXPECT_TRUE(TestLoadMapping(kSecurityRsn, kSecurityRsn, false));
-  EXPECT_TRUE(TestLoadMapping(kSecurityRsn, kSecurityWpa, false));
   EXPECT_TRUE(TestLoadMapping(kSecurityWpa, kSecurityPsk, true));
-  EXPECT_TRUE(TestLoadMapping(kSecurityWpa, kSecurityWpa, false));
-  EXPECT_TRUE(TestLoadMapping(kSecurityWpa, kSecurityRsn, false));
   EXPECT_TRUE(TestLoadMapping(kSecurityWep, kSecurityWep, true));
   EXPECT_TRUE(TestLoadMapping(kSecurityWep, kSecurityPsk, false));
 }
