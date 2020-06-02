@@ -970,7 +970,7 @@ bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
     // The initial 0 timestamp is also written to the vault_keyset which
     // means a timestamp will exist and can be read in case of a rollback.
     serialized->set_timestamp_file_exists(true);
-    brillo::Blob blob(serialized->ByteSize());
+    brillo::Blob blob(serialized->ByteSizeLong());
     serialized->SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(blob.data()));
     return platform_->WriteFileAtomicDurable(
