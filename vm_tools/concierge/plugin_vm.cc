@@ -69,6 +69,43 @@ std::unique_ptr<patchpanel::Subnet> MakeSubnet(
       subnet.base_addr(), subnet.prefix_len(), base::DoNothing());
 }
 
+void TrySuspendVm(dbus::ObjectProxy* vmplugin_service_proxy, const VmId& id) {
+  bool dispatcher_shutting_down = false;
+  base::TimeTicks suspend_start_time(base::TimeTicks::Now());
+  do {
+    pvm::dispatcher::VmOpResult result =
+        pvm::dispatcher::SuspendVm(vmplugin_service_proxy, id);
+
+    switch (result) {
+      case pvm::dispatcher::VmOpResult::SUCCESS:
+        return;
+
+      case pvm::dispatcher::VmOpResult::DISPATCHER_SHUTTING_DOWN:
+        // The dispatcher is in process of shutting down, and is supposed
+        // to suspend all running VMs. Wait a second, and try again, until we
+        // get "dispatcher not available" response.
+        if (!dispatcher_shutting_down) {
+          LOG(INFO) << "Dispatcher is shutting down, will retry suspend";
+          dispatcher_shutting_down = true;
+        }
+        base::PlatformThread::Sleep(base::TimeDelta::FromSeconds(1));
+        break;
+
+      case pvm::dispatcher::VmOpResult::DISPATCHER_NOT_AVAILABLE:
+        if (!dispatcher_shutting_down)
+          LOG(ERROR) << "Failed to suspend VM: dispatcher is not available";
+        return;
+
+      default:
+        // TODO(dtor): handle cases when suspend fails because VM is already
+        // transitioning into some state, such as suspending or shutting down,
+        // in which case dispatcher will reject our request.
+        LOG(ERROR) << "Failed to suspend VM: " << static_cast<int>(result);
+        return;
+    }
+  } while (base::TimeTicks::Now() - suspend_start_time < kVmSuspendTimeout);
+}
+
 }  // namespace
 
 // static
@@ -118,41 +155,7 @@ bool PluginVm::StopVm() {
     return true;
   }
 
-  bool dispatcher_shutting_down = false;
-  base::TimeTicks suspend_start_time(base::TimeTicks::Now());
-  do {
-    pvm::dispatcher::VmOpResult result =
-        pvm::dispatcher::SuspendVm(vmplugin_service_proxy_, id_);
-
-    if (result == pvm::dispatcher::VmOpResult::SUCCESS) {
-      process_.Release();
-      return true;
-    } else if (result ==
-               pvm::dispatcher::VmOpResult::DISPATCHER_SHUTTING_DOWN) {
-      // The dispatcher is in process of shutting down, and is supposed
-      // to suspend all running VMs. Wait a second, and try again, until we
-      // get "dispatcher not available" response.
-      if (!dispatcher_shutting_down) {
-        LOG(INFO) << "Dispatcher is shutting down, will retry suspend";
-        dispatcher_shutting_down = true;
-      }
-      base::PlatformThread::Sleep(base::TimeDelta::FromSeconds(1));
-    } else if (result ==
-               pvm::dispatcher::VmOpResult::DISPATCHER_NOT_AVAILABLE) {
-      if (!dispatcher_shutting_down)
-        LOG(ERROR) << "Failed to suspend VM: dispatcher is not available";
-      break;
-    } else {
-      // TODO(dtor): handle cases when suspend fails because VM is already
-      // transitioning into some state, such as suspending or shutting down,
-      // in which case dispatcher will reject our request.
-      LOG(ERROR) << "Failed to suspend VM: " << static_cast<int>(result);
-      break; /* proceed to killing it */
-    }
-  } while (base::TimeTicks::Now() - suspend_start_time < kVmSuspendTimeout);
-
-  // We may have looped a few times, so we should check if VM is still
-  // running before proceeding to kill it.
+  TrySuspendVm(vmplugin_service_proxy_, id_);
   if (!CheckProcessExists(process_.pid())) {
     process_.Release();
     return true;
