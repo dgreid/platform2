@@ -92,9 +92,11 @@ class DlcService : public DlcServiceInterface {
   // Sends a signal indicating failure to install and cleans up prepped DLC(s).
   void SendFailedSignalAndCleanup();
 
-  // Handles necessary actions prior to update_engine's install completion, but
-  // when update_engine's install is complete it will return true.
-  bool HandleStatusResult(const update_engine::StatusResult& status_result);
+  // Handles status result from update_engine. Returns false if the installation
+  // fails. Returns true if installation was successful or the installation is
+  // not yet completed.
+  bool HandleStatusResult(const update_engine::StatusResult& status_result,
+                          brillo::ErrorPtr* err);
 
   // The periodic check that runs as a delayed task that checks update_engine
   // status during an install to make sure update_engine is active.

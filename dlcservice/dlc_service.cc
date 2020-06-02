@@ -271,38 +271,31 @@ void DlcService::SchedulePeriodicInstallCheck(bool retry) {
   scheduled_period_ue_check_retry_ = retry;
 }
 
-bool DlcService::HandleStatusResult(const StatusResult& status_result) {
-  // If we are not installing any DLC(s), no need to even handle status result.
-  if (!dlc_manager_->IsInstalling())
-    return false;
-
-  // When a signal is received from update_engine, it is more efficient to
-  // cancel the periodic check that's scheduled by re-posting a delayed task
-  // after cancelling the currently set periodic check. If the cancelling of the
-  // periodic check fails, let it run as it will be rescheduled correctly within
-  // the periodic check itself again.
-  if (!brillo::MessageLoop::current()->CancelTask(
-          scheduled_period_ue_check_id_)) {
-    LOG(ERROR) << "Failed to cancel delayed update_engine check when signal "
-                  "was received from update_engine, so letting it run.";
-  } else {
-    scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
-  }
-
+bool DlcService::HandleStatusResult(const StatusResult& status_result,
+                                    brillo::ErrorPtr* err) {
   if (!status_result.is_install()) {
-    LOG(ERROR) << "Signal from update_engine indicates that it's not for an "
-                  "install, but dlcservice was waiting for an install.";
+    *err = Error::Create(
+        FROM_HERE, kErrorInternal,
+        "Signal from update_engine indicates that it's not for an install, but "
+        "dlcservice was waiting for an install.");
     SendFailedSignalAndCleanup();
     return false;
   }
 
   switch (status_result.current_operation()) {
-    case Operation::IDLE:
+    case Operation::IDLE: {
       LOG(INFO)
           << "Signal from update_engine, proceeding to complete installation.";
+      if (!dlc_manager_->FinishInstall(err)) {
+        LOG(ERROR) << "Failed to finish install: " << Error::ToString(*err);
+        return false;
+      }
       return true;
+    }
     case Operation::REPORTING_ERROR_EVENT:
-      LOG(ERROR) << "Signal from update_engine indicates reporting failure.";
+      *err = Error::Create(
+          FROM_HERE, kErrorInternal,
+          "Signal from update_engine indicates reporting failure.");
       SendFailedSignalAndCleanup();
       return false;
     // Only when update_engine's |Operation::DOWNLOADING| should the DLC send
@@ -316,7 +309,7 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result) {
       FALLTHROUGH;
     default:
       SchedulePeriodicInstallCheck(true);
-      return false;
+      return true;
   }
 }
 
@@ -332,14 +325,26 @@ bool DlcService::GetUpdateEngineStatus(Operation* operation) {
 
 void DlcService::OnStatusUpdateAdvancedSignal(
     const StatusResult& status_result) {
-  if (!HandleStatusResult(status_result))
+  // If we are not installing any DLC(s), no need to even handle status result.
+  if (!dlc_manager_->IsInstalling())
     return;
 
-  ErrorPtr tmp_err;
-  if (!dlc_manager_->FinishInstall(&tmp_err)) {
-    LOG(ERROR) << Error::ToString(tmp_err);
-    return;
+  // When a signal is received from update_engine, it is more efficient to
+  // cancel the periodic check that's scheduled by re-posting a delayed task
+  // after cancelling the currently set periodic check. If the cancelling of the
+  // periodic check fails, let it run as it will be rescheduled correctly within
+  // the periodic check itself again.
+  if (!brillo::MessageLoop::current()->CancelTask(
+          scheduled_period_ue_check_id_)) {
+    LOG(ERROR) << "Failed to cancel delayed update_engine check when signal "
+                  "was received from update_engine, so letting it run.";
+  } else {
+    scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
   }
+
+  ErrorPtr err;
+  if (!HandleStatusResult(status_result, &err))
+    DCHECK(err.get());  // TODO(crbug.com/1069121): Add to metrics.
 }
 
 void DlcService::OnStatusUpdateAdvancedSignalConnected(
