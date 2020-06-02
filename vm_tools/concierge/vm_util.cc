@@ -235,9 +235,15 @@ bool WaitForChild(pid_t child, base::TimeDelta timeout) {
 }
 
 bool CheckProcessExists(pid_t pid) {
+  if (pid == 0)
+    return false;
+
+  // Try to reap child process in case it just exited.
+  waitpid(pid, NULL, WNOHANG);
+
   // kill() with a signal value of 0 is explicitly documented as a way to
   // check for the existence of a process.
-  return pid != 0 && (kill(pid, 0) >= 0 || errno != ESRCH);
+  return kill(pid, 0) >= 0 || errno != ESRCH;
 }
 
 void RunCrosvmCommand(std::string command, std::string socket_path) {
