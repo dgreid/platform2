@@ -60,10 +60,7 @@ static_library("libmaitred") {
     "../maitred/service_impl.cc",
   ]
   configs += [ ":target_defaults" ]
-  defines = [
-    "USE_ALLOW_PRIVILEGED_CONTAINERS=${use.allow_privileged_containers}",
-    "USE_VM_BOREALIS=${use.vm_borealis}",
-  ]
+  defines = [ "USE_VM_BOREALIS=${use.vm_borealis}" ]
   pkg_deps = [
     "grpc++",
     "protobuf",

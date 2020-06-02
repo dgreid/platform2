@@ -417,6 +417,7 @@ bool TerminaVm::Mount(string source,
 }
 
 bool TerminaVm::StartTermina(std::string lxd_subnet,
+                             bool allow_privileged_containers,
                              std::string* out_error,
                              vm_tools::StartTerminaResponse* response) {
   DCHECK(out_error);
@@ -431,6 +432,7 @@ bool TerminaVm::StartTermina(std::string lxd_subnet,
   request.set_tremplin_ipv4_address(GatewayAddress());
   request.mutable_lxd_ipv4_subnet()->swap(lxd_subnet);
   request.set_stateful_device(StatefulDevice());
+  request.set_allow_privileged_containers(allow_privileged_containers);
 
   grpc::ClientContext ctx;
   ctx.set_deadline(gpr_time_add(

@@ -1532,8 +1532,10 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   string failure_reason;
   vm_tools::StartTerminaResponse::MountResult mount_result =
       vm_tools::StartTerminaResponse::UNKNOWN;
+  // Allow untrusted VMs to have privileged containers.
   if (request.start_termina() &&
-      !StartTermina(vm.get(), &failure_reason, &mount_result)) {
+      !StartTermina(vm.get(), is_untrusted_vm /* allow_privileged_containers */,
+                    &failure_reason, &mount_result)) {
     response.set_failure_reason(std::move(failure_reason));
     response.set_mount_result((StartVmResponse::MountResult)mount_result);
     writer.AppendProtoAsArrayOfBytes(response);
@@ -2283,6 +2285,7 @@ std::unique_ptr<dbus::Response> Service::SyncVmTimes(
 
 bool Service::StartTermina(
     TerminaVm* vm,
+    bool allow_privileged_containers,
     string* failure_reason,
     vm_tools::StartTerminaResponse::MountResult* result) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
@@ -2298,7 +2301,8 @@ bool Service::StartTermina(
 
   string error;
   vm_tools::StartTerminaResponse response;
-  if (!vm->StartTermina(std::move(container_subnet_cidr), &error, &response)) {
+  if (!vm->StartTermina(std::move(container_subnet_cidr),
+                        allow_privileged_containers, &error, &response)) {
     failure_reason->assign(error);
     return false;
   }

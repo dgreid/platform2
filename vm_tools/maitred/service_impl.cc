@@ -239,11 +239,7 @@ bool WriteResolvConf(const std::vector<string> nameservers,
 ServiceImpl::ServiceImpl(std::unique_ptr<vm_tools::maitred::Init> init)
     : init_(std::move(init)),
       lxd_env_({{"LXD_DIR", "/mnt/stateful/lxd"},
-                {"LXD_CONF", "/mnt/stateful/lxd_conf"},
-                {"GOTRACEBACK", "crash"}}) {
-  if (!USE_ALLOW_PRIVILEGED_CONTAINERS)
-    lxd_env_.emplace("LXD_UNPRIVILEGED_ONLY", "true");
-}
+                {"LXD_CONF", "/mnt/stateful/lxd_conf"}}) {}
 
 bool ServiceImpl::Init() {
   string error;
@@ -564,6 +560,9 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
                                        const StartTerminaRequest* request,
                                        StartTerminaResponse* response) {
   LOG(INFO) << "Received StartTermina request";
+
+  if (!request->allow_privileged_containers())
+    lxd_env_.emplace("LXD_UNPRIVILEGED_ONLY", "true");
 
   response->set_mount_result(StartTerminaResponse::UNKNOWN);
 

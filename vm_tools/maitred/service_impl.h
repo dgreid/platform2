@@ -104,7 +104,8 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
   // Shutdown RPC.
   base::Callback<bool(void)> shutdown_cb_;
 
-  // Flags to configure LXD functionality.
+  // Flags to configure LXD functionality. Configuration happens statically in
+  // the constructor as well as at runtime in the |StartTermina| function.
   std::map<std::string, std::string> lxd_env_;
 
   void ResizeCommandExitCallback(Init::ProcessStatus status, int code);

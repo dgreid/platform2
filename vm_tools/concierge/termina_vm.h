@@ -104,6 +104,7 @@ class TerminaVm final : public VmBaseImpl {
 
   // Starts Termina-specific services in the guest.
   bool StartTermina(std::string lxd_subnet,
+                    bool allow_privileged_containers,
                     std::string* out_error,
                     vm_tools::StartTerminaResponse* response);
 

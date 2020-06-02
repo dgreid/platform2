@@ -180,6 +180,7 @@ class Service final {
 
   // Helper for starting termina VMs, e.g. starting lxd.
   bool StartTermina(TerminaVm* vm,
+                    bool allow_privileged_containers,
                     std::string* failure_reason,
                     vm_tools::StartTerminaResponse::MountResult* result);
 

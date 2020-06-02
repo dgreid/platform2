@@ -131,6 +131,9 @@ message StartTerminaRequest {
 
   // Name of the device containing the stateful partition.
   string stateful_device = 3;
+
+  // Allow termina to support privileged containers.
+  bool allow_privileged_containers = 4;
 }
 
 message StartTerminaResponse {
