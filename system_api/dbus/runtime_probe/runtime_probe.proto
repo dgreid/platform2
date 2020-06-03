@@ -105,6 +105,10 @@ message Battery {
     // http://sbs-forum.org/specs/sbdat110.pdf.
     // The value is calculated by ((year-1980) * 512 + month * 32 + day).
     int32 manufacture_date_smart = 14;
+    // Technology is defined in
+    // /sys/class/power_supply/<supply_name>/technology section in
+    // https://www.kernel.org/doc/Documentation/ABI/testing/sysfs-class-power.
+    string technology = 15;
   }
   // Component alias.
   string name = 1;
