@@ -44,6 +44,10 @@ constexpr size_t kConnectionTypesSize = base::size(kConnectionTypes);
 constexpr int kScreenMagnifierTypeRangeMin = 0;
 constexpr int kScreenMagnifierTypeRangeMax = 2;
 
+// Integer range for kDeviceCrostiniArcAdbSideloadingAllowed policy.
+constexpr int kDeviceCrostiniArcAdbSideloadingAllowedRangeMin = 0;
+constexpr int kDeviceCrostiniArcAdbSideloadingAllowedRangeMax = 2;
+
 // Integer range for DeviceChromeVariations policy.
 constexpr int kChromeVariationsRangeMin = 0;
 constexpr int kChromeVariationsRangeMax = 2;
@@ -776,12 +780,6 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
             value.value()));
   }
 
-  if (base::Optional<std::string> value =
-          EncodeString(key::kDeviceLoginScreenIsolateOrigins)) {
-    policy->mutable_device_login_screen_isolate_origins()->set_isolate_origins(
-        value.value());
-  }
-
   if (base::Optional<bool> value =
           EncodeBoolean(key::kVirtualMachinesAllowed)) {
     policy->mutable_virtual_machines_allowed()->set_virtual_machines_allowed(
@@ -893,6 +891,16 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   if (base::Optional<bool> value =
           EncodeBoolean(key::kDeviceUsbPowerShareEnabled))
     policy->mutable_device_usb_power_share()->set_enabled(value.value());
+
+  if (base::Optional<int> value = EncodeIntegerInRange(
+          key::kDeviceCrostiniArcAdbSideloadingAllowed,
+          kDeviceCrostiniArcAdbSideloadingAllowedRangeMin,
+          kDeviceCrostiniArcAdbSideloadingAllowedRangeMax)) {
+    policy->mutable_device_crostini_arc_adb_sideloading_allowed()->set_mode(
+        static_cast<
+            em::DeviceCrostiniArcAdbSideloadingAllowedProto::AllowanceMode>(
+            value.value()));
+  }
 }
 
 base::Optional<bool> DevicePolicyEncoder::EncodeBoolean(

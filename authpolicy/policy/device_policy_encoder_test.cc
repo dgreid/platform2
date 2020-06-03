@@ -80,6 +80,7 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   constexpr int kScreenMagnifierTypeOutOfRangeInt = 10;
   constexpr int kDeviceChromeVariationsInRangeInt = 1;
   constexpr int kDeviceChromeVariationsOutOfRangeInt = 12;
+  constexpr int kDeviceCrostiniArcAdbSideloadingAllowedOutOfRangeInt = 13;
   const std::string kString = "val1";
   const std::vector<std::string> kStringList = {"val1", "val2", "val3"};
 
@@ -370,6 +371,22 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeString(&policy, key::kSystemProxySettings, kString);
   EXPECT_FALSE(policy.has_system_proxy_settings());
 
+  // The encoder of this policy converts ints to
+  // DeviceCrostiniArcAdbSideloadingAllowedProto::AllowanceMode enums.
+  EncodeInteger(&policy, key::kDeviceCrostiniArcAdbSideloadingAllowed,
+                em::DeviceCrostiniArcAdbSideloadingAllowedProto::DISALLOW);
+  EXPECT_EQ(em::DeviceCrostiniArcAdbSideloadingAllowedProto::DISALLOW,
+            policy.device_crostini_arc_adb_sideloading_allowed().mode());
+
+  EncodeInteger(&policy, key::kDeviceCrostiniArcAdbSideloadingAllowed,
+                kDeviceCrostiniArcAdbSideloadingAllowedOutOfRangeInt);
+  EXPECT_FALSE(policy.has_device_crostini_arc_adb_sideloading_allowed());
+
+  // TODO(crbug.com/1092593) The following policy is going to be supported for
+  // chrome_os, but its not now. However, it needs to be encoded temporarily to
+  // pass the tests.
+  MarkHandled(key::kDeviceSamlLoginAuthenticationType);
+
   EncodeString(&policy, key::kSystemProxySettings,
                R"!!!(
                {
@@ -577,10 +594,6 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EXPECT_EQ(
       em::DeviceUserPolicyLoopbackProcessingModeProto::USER_POLICY_MODE_MERGE,
       policy.device_user_policy_loopback_processing_mode().mode());
-
-  EncodeString(&policy, key::kDeviceLoginScreenIsolateOrigins, kString);
-  EXPECT_EQ(kString,
-            policy.device_login_screen_isolate_origins().isolate_origins());
 
   EncodeBoolean(&policy, key::kVirtualMachinesAllowed, kBool);
   EXPECT_EQ(kBool,
