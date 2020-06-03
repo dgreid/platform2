@@ -468,8 +468,8 @@ bool SaneDeviceImpl::GetValidStringOptionValues(
   }
 
   std::vector<std::string> values;
-  for (const SANE_String_Const* s = opt->constraint.string_list; s; s++) {
-    values.push_back(*s);
+  for (int i = 0; opt->constraint.string_list[i]; i++) {
+    values.push_back(opt->constraint.string_list[i]);
   }
 
   *values_out = values;
