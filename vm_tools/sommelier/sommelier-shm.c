@@ -143,7 +143,7 @@ static void sl_host_shm_pool_create_host_buffer(struct wl_client* client,
 
     host_buffer->shm_format = format;
     host_buffer->shm_mmap = sl_mmap_create(
-        dup(host->fd), sl_size_for_shm_format(format, height, stride),
+        host->fd, sl_size_for_shm_format(format, height, stride),
         sl_shm_bpp_for_shm_format(format),
         sl_shm_num_planes_for_shm_format(format), offset, stride,
         offset + sl_offset_for_shm_format_plane(format, height, stride, 1),
