@@ -86,6 +86,7 @@ void FrameNumberMapper::RegisterCaptureResult(
   if (!status.has_pending_result && status.num_pending_output_buffers == 0 &&
       !status.has_pending_input_buffer) {
     FinishHalFrameNumber(result->frame_number);
+    pending_result_status_.erase(it);
   }
 }
 
