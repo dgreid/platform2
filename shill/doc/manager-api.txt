@@ -166,7 +166,7 @@ Methods
 
 			If a GUID property is specified in properties
 			it is used to find the service; otherwise Type,
-			Security, and type-specific properties such as
+			SecurityClass, and type-specific properties such as
 			WiFi.SSID are used to find any existing service.
 			If no service is located in memory a new one is
 			created with the supplied properties.
@@ -196,7 +196,7 @@ Methods
 			current service.  A matching service is found
 			by first looking for a service with matching
 			"GUID" property if specified, then by using
-			the "Mode", "SSID", and "Security" properties
+			the "Mode", "SSID", and "SecurityClass" properties
 			from |properties|.
 
 			If a matching service is found but its current

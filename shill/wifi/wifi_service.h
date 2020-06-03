@@ -184,9 +184,7 @@ class WiFiService : public Service {
   FRIEND_TEST(WiFiServiceTest, ConnectTaskDynamicWEP);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskPSK);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskRawPMK);
-  FRIEND_TEST(WiFiServiceTest, ConnectTaskRSN);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskWEP);
-  FRIEND_TEST(WiFiServiceTest, ConnectTaskWPA);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskFT);
   FRIEND_TEST(WiFiServiceTest, GetTethering);
   FRIEND_TEST(WiFiServiceTest, IsAutoConnectable);

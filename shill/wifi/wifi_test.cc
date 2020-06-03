@@ -2860,7 +2860,7 @@ TEST_F(WiFiMainTest, SuspectCredentialsOpen) {
 }
 
 TEST_F(WiFiMainTest, SuspectCredentialsWPA) {
-  MockWiFiServiceRefPtr service = MakeMockService(kSecurityWpa);
+  MockWiFiServiceRefPtr service = MakeMockService(kSecurityPsk);
   ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
   EXPECT_CALL(*service, AddSuspectedCredentialFailure())
       .WillOnce(Return(false))
@@ -2955,8 +2955,8 @@ TEST_F(WiFiMainTest, SuspectCredentialsEAPInProgress) {
   EXPECT_FALSE(SuspectCredentials(service, nullptr));
 }
 
-TEST_F(WiFiMainTest, SuspectCredentialsYieldFailureWPA) {
-  MockWiFiServiceRefPtr service = MakeMockService(kSecurityWpa);
+TEST_F(WiFiMainTest, SuspectCredentialsYieldFailurePSK) {
+  MockWiFiServiceRefPtr service = MakeMockService(kSecurityPsk);
   SetPendingService(service);
   ReportStateChanged(WPASupplicant::kInterfaceState4WayHandshake);
 
@@ -3956,7 +3956,7 @@ TEST_F(WiFiMainTest, InitiateScan_NotIdle) {
   ScopedMockLog log;
   ScopeLogger::GetInstance()->EnableScopesByName("wifi");
   ScopeLogger::GetInstance()->set_verbose_level(1);
-  MockWiFiServiceRefPtr service = MakeMockService(kSecurityWpa);
+  MockWiFiServiceRefPtr service = MakeMockService(kSecurityPsk);
   SetPendingService(service);
   EXPECT_FALSE(wifi()->IsIdle());
   EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
@@ -3985,7 +3985,7 @@ TEST_F(WiFiMainTest, InitiateScanInDarkResume_Idle) {
 TEST_F(WiFiMainTest, InitiateScanInDarkResume_NotIdle) {
   const WiFi::FreqSet freqs;
   ScopedMockLog log;
-  MockWiFiServiceRefPtr service = MakeMockService(kSecurityWpa);
+  MockWiFiServiceRefPtr service = MakeMockService(kSecurityPsk);
   SetPendingService(service);
   manager()->set_suppress_autoconnect(false);
   EXPECT_FALSE(wifi()->IsIdle());

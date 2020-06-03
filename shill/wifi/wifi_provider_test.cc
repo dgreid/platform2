@@ -819,10 +819,8 @@ TEST_F(WiFiProviderTest, GetServiceByHexSsid) {
   const string kHexSsid(base::HexEncode(kSSID.c_str(), kSSID.length()));
 
   KeyValueStore args;
-  args.Set<string>(kTypeProperty, kTypeWifi);
+  SetServiceParameters(nullptr, nullptr, kSecurityPsk, false, true, &args);
   args.Set<string>(kWifiHexSsid, kHexSsid);
-  args.Set<string>(kSecurityProperty, kSecurityPsk);
-  args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
   WiFiServiceRefPtr service = GetWiFiService(args, &error);
@@ -841,13 +839,12 @@ TEST_F(WiFiProviderTest, GetServiceByHexSsid) {
   EXPECT_EQ(service, find_service);
 }
 
-TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMismatched) {
+TEST_F(WiFiProviderTest, GetServiceUnexpectedSecurityProperty) {
   const string kSSID("bar");
   KeyValueStore args;
   args.Set<string>(kTypeProperty, kTypeWifi);
   args.Set<string>(kSSIDProperty, kSSID);
   args.Set<string>(kSecurityProperty, kSecurityRsn);
-  args.Set<string>(kSecurityClassProperty, kSecurityPsk);
   args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
@@ -855,47 +852,16 @@ TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMismatched) {
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   service = GetWiFiService(args, &error);
   EXPECT_FALSE(error.IsSuccess());
+  EXPECT_EQ(Error::kInvalidArguments, error.type());
+  EXPECT_EQ("Unexpected Security property", error.message());
 }
 
-TEST_F(WiFiProviderTest, GetServiceWithSecurityAndSecurityClassMatching) {
+TEST_F(WiFiProviderTest, GetServiceBogusSecurityClass) {
   const string kSSID("bar");
   KeyValueStore args;
   args.Set<string>(kTypeProperty, kTypeWifi);
   args.Set<string>(kSSIDProperty, kSSID);
-  args.Set<string>(kSecurityProperty, kSecurityPsk);
-  args.Set<string>(kSecurityClassProperty, kSecurityPsk);
-  args.Set<bool>(kWifiHiddenSsid, false);
-
-  Error error;
-  WiFiServiceRefPtr service;
-  EXPECT_CALL(manager_, RegisterService(_));
-  service = GetWiFiService(args, &error);
-  EXPECT_TRUE(error.IsSuccess());
-}
-
-TEST_F(WiFiProviderTest,
-       GetServiceWithSecurityAndSecurityClassMatchingButInvalidClass) {
-  const string kSSID("bar");
-  KeyValueStore args;
-  args.Set<string>(kTypeProperty, kTypeWifi);
-  args.Set<string>(kSSIDProperty, kSSID);
-  args.Set<string>(kSecurityProperty, kSecurityRsn);
-  args.Set<string>(kSecurityClassProperty, kSecurityRsn);
-  args.Set<bool>(kWifiHiddenSsid, false);
-  EXPECT_CALL(manager_, RegisterService(_)).Times(0);
-
-  Error error;
-  WiFiServiceRefPtr service = GetWiFiService(args, &error);
-  Mock::VerifyAndClearExpectations(&manager_);
-  EXPECT_FALSE(error.IsSuccess());
-}
-
-TEST_F(WiFiProviderTest, GetServiceBadSecurity) {
-  const string kSSID("bar");
-  KeyValueStore args;
-  args.Set<string>(kTypeProperty, kTypeWifi);
-  args.Set<string>(kSSIDProperty, kSSID);
-  args.Set<string>(kSecurityProperty, "pig-80211");
+  args.Set<string>(kSecurityClassProperty, "rot-47");
   args.Set<bool>(kWifiHiddenSsid, false);
 
   Error error;
@@ -904,7 +870,23 @@ TEST_F(WiFiProviderTest, GetServiceBadSecurity) {
   service = GetWiFiService(args, &error);
   EXPECT_FALSE(error.IsSuccess());
   EXPECT_EQ(Error::kNotSupported, error.type());
-  EXPECT_EQ("security mode is unsupported", error.message());
+}
+
+TEST_F(WiFiProviderTest, GetServiceNonSecurityClass) {
+  const string kSSID("bar");
+  KeyValueStore args;
+  args.Set<string>(kTypeProperty, kTypeWifi);
+  args.Set<string>(kSSIDProperty, kSSID);
+  // Using a non-class as a class should be rejected.
+  args.Set<string>(kSecurityClassProperty, kSecurityRsn);
+  args.Set<bool>(kWifiHiddenSsid, false);
+
+  Error error;
+  WiFiServiceRefPtr service;
+  EXPECT_CALL(manager_, RegisterService(_)).Times(0);
+  service = GetWiFiService(args, &error);
+  EXPECT_FALSE(error.IsSuccess());
+  EXPECT_EQ(Error::kNotSupported, error.type());
 }
 
 TEST_F(WiFiProviderTest, FindSimilarService) {
@@ -967,14 +949,13 @@ TEST_F(WiFiProviderTest, CreateTemporaryService) {
   EXPECT_TRUE(service1->HasOneRef());
 }
 
-TEST_F(WiFiProviderTest, FindServiceWPA) {
+TEST_F(WiFiProviderTest, FindServicePSK) {
   const string kSSID("an_ssid");
   Error error;
   EXPECT_CALL(manager_, RegisterService(_)).Times(1);
   KeyValueStore args;
-  SetServiceParameters(kSSID.c_str(), kModeManaged, nullptr, false, false,
+  SetServiceParameters(kSSID.c_str(), kModeManaged, kSecurityPsk, false, false,
                        &args);
-  args.Set<string>(kSecurityProperty, kSecurityRsn);
   WiFiServiceRefPtr service = GetWiFiService(args, &error);
   ASSERT_NE(nullptr, service);
   const vector<uint8_t> ssid_bytes(kSSID.begin(), kSSID.end());

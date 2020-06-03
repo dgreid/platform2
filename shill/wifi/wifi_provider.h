@@ -99,10 +99,12 @@ class WiFiProvider : public ProviderInterface {
   // Add a service to the service_ vector and register it with the Manager.
   WiFiServiceRefPtr AddService(const std::vector<uint8_t>& ssid,
                                const std::string& mode,
-                               const std::string& security,
+                               const std::string& security_class,
                                bool is_hidden);
 
   // Find a service given its properties.
+  // |security| can be either a security class, or a security (security class
+  // is a subset of security).
   WiFiServiceRefPtr FindService(const std::vector<uint8_t>& ssid,
                                 const std::string& mode,
                                 const std::string& security) const;

@@ -77,18 +77,18 @@ class WiFiServiceTest : public PropertyStoreTest {
     service->eap_.reset(eap);  // Passes ownership.
     return eap;
   }
-  bool CheckConnectable(const string& security,
+  bool CheckConnectable(const string& security_class,
                         const char* passphrase,
                         bool is_1x_connectable) {
     Error error;
-    WiFiServiceRefPtr service = MakeSimpleService(security);
+    WiFiServiceRefPtr service = MakeSimpleService(security_class);
     if (passphrase)
       service->SetPassphrase(passphrase, &error);
     MockEapCredentials* eap = SetMockEap(service);
     EXPECT_CALL(*eap, IsConnectable())
         .WillRepeatedly(Return(is_1x_connectable));
     const string kKeyManagement8021x(WPASupplicant::kKeyManagementIeee8021X);
-    if (security == kSecurityWep && is_1x_connectable) {
+    if (security_class == kSecurityWep && is_1x_connectable) {
       EXPECT_CALL(*eap, key_management())
           .WillRepeatedly(ReturnRef(kKeyManagement8021x));
     }
@@ -122,9 +122,9 @@ class WiFiServiceTest : public PropertyStoreTest {
         nullptr, wifi, ssid, bssid, WPASupplicant::kNetworkModeInfrastructure,
         frequency, signal_dbm);
   }
-  WiFiServiceRefPtr MakeSimpleService(const string& security) {
+  WiFiServiceRefPtr MakeSimpleService(const string& security_class) {
     return new WiFiService(manager(), &provider_, simple_ssid_, kModeManaged,
-                           security, false);
+                           security_class, false);
   }
   WiFiServiceRefPtr MakeGenericService() {
     return MakeSimpleService(kSecurityWep);
@@ -135,8 +135,8 @@ class WiFiServiceTest : public PropertyStoreTest {
   void SetWiFiForService(WiFiServiceRefPtr service, WiFiRefPtr wifi) {
     service->wifi_ = wifi;
   }
-  WiFiServiceRefPtr MakeServiceWithWiFi(const string& security) {
-    WiFiServiceRefPtr service = MakeSimpleService(security);
+  WiFiServiceRefPtr MakeServiceWithWiFi(const string& security_class) {
+    WiFiServiceRefPtr service = MakeSimpleService(security_class);
     SetWiFiForService(service, wifi_);
     scoped_refptr<MockProfile> mock_profile(
         new NiceMock<MockProfile>(manager()));
@@ -154,9 +154,9 @@ class WiFiServiceTest : public PropertyStoreTest {
   ServiceMockAdaptor* GetAdaptor(WiFiService* service) {
     return static_cast<ServiceMockAdaptor*>(service->adaptor());
   }
-  Error::Type TestConfigurePassphrase(const string& security,
+  Error::Type TestConfigurePassphrase(const string& security_class,
                                       const char* passphrase) {
-    WiFiServiceRefPtr service = MakeSimpleService(security);
+    WiFiServiceRefPtr service = MakeSimpleService(security_class);
     KeyValueStore args;
     if (passphrase) {
       args.Set<string>(kPassphraseProperty, passphrase);
@@ -328,7 +328,7 @@ TEST_F(WiFiServiceTest, LogName) {
 // Make sure the passphrase is registered as a write only property
 // by reading and comparing all string properties returned on the store.
 TEST_F(WiFiServiceTest, PassphraseWriteOnly) {
-  WiFiServiceRefPtr wifi_service = MakeSimpleService(kSecurityWpa);
+  WiFiServiceRefPtr wifi_service = MakeSimpleService(kSecurityPsk);
   ReadablePropertyConstIterator<string> it =
       (wifi_service->store()).GetStringPropertiesIter();
   for (; !it.AtEnd(); it.Advance())
@@ -386,26 +386,6 @@ TEST_F(WiFiServiceTest, ConnectReportBSSes) {
   EXPECT_CALL(*metrics(), NotifyWifiAvailableBSSes(2));
   EXPECT_CALL(*wifi(), ConnectTo(wifi_service.get(), _));
   wifi_service->Connect(nullptr, "in test");
-}
-
-TEST_F(WiFiServiceTest, ConnectTaskWPA) {
-  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityWpa);
-  EXPECT_CALL(*wifi(), ConnectTo(wifi_service.get(), _));
-  Error error;
-  wifi_service->SetPassphrase("0:mumblemumblem", &error);
-  wifi_service->Connect(nullptr, "in test");
-  EXPECT_THAT(wifi_service->GetSupplicantConfigurationParameters(),
-              PSKSecurityArgs());
-}
-
-TEST_F(WiFiServiceTest, ConnectTaskRSN) {
-  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityRsn);
-  EXPECT_CALL(*wifi(), ConnectTo(wifi_service.get(), _));
-  Error error;
-  wifi_service->SetPassphrase("0:mumblemumblem", &error);
-  wifi_service->Connect(nullptr, "in test");
-  EXPECT_THAT(wifi_service->GetSupplicantConfigurationParameters(),
-              PSKSecurityArgs());
 }
 
 TEST_F(WiFiServiceTest, ConnectConditions) {
@@ -546,7 +526,7 @@ TEST_F(WiFiServiceTest, ConnectTaskDynamicWEP) {
 
 TEST_F(WiFiServiceTest, ConnectTaskFT) {
   {
-    WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityWpa);
+    WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
 
     manager()->ft_enabled_ = false;
     wifi_service->ft_enabled_ = false;
@@ -597,7 +577,7 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
 }
 
 TEST_F(WiFiServiceTest, SetPassphraseResetHasEverConnected) {
-  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityRsn);
+  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
   const string kPassphrase = "abcdefgh";
 
   Error error;
@@ -609,7 +589,7 @@ TEST_F(WiFiServiceTest, SetPassphraseResetHasEverConnected) {
 }
 
 TEST_F(WiFiServiceTest, SetPassphraseRemovesCachedCredentials) {
-  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityRsn);
+  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
 
   const string kPassphrase = "abcdefgh";
 
@@ -987,37 +967,37 @@ TEST_F(WiFiServiceTest, ConfigurePassphrase) {
   EXPECT_EQ(
       Error::kSuccess,
       TestConfigurePassphrase(kSecurityWep, "0:0x0102030405060708090a0b0c0d"));
-  EXPECT_EQ(Error::kSuccess, TestConfigurePassphrase(kSecurityWpa, nullptr));
+  EXPECT_EQ(Error::kSuccess, TestConfigurePassphrase(kSecurityPsk, nullptr));
   EXPECT_EQ(Error::kSuccess,
-            TestConfigurePassphrase(kSecurityWpa, "secure password"));
+            TestConfigurePassphrase(kSecurityPsk, "secure password"));
   EXPECT_EQ(Error::kInvalidPassphrase,
-            TestConfigurePassphrase(kSecurityWpa, ""));
+            TestConfigurePassphrase(kSecurityPsk, ""));
   EXPECT_EQ(
       Error::kSuccess,
       TestConfigurePassphrase(
-          kSecurityWpa, string(IEEE_80211::kWPAAsciiMinLen, 'Z').c_str()));
+          kSecurityPsk, string(IEEE_80211::kWPAAsciiMinLen, 'Z').c_str()));
   EXPECT_EQ(
       Error::kSuccess,
       TestConfigurePassphrase(
-          kSecurityWpa, string(IEEE_80211::kWPAAsciiMaxLen, 'Z').c_str()));
+          kSecurityPsk, string(IEEE_80211::kWPAAsciiMaxLen, 'Z').c_str()));
   // subtle: invalid length for hex key, but valid as ascii passphrase
   EXPECT_EQ(Error::kSuccess,
             TestConfigurePassphrase(
-                kSecurityWpa, string(IEEE_80211::kWPAHexLen - 1, '1').c_str()));
+                kSecurityPsk, string(IEEE_80211::kWPAHexLen - 1, '1').c_str()));
   EXPECT_EQ(Error::kSuccess,
             TestConfigurePassphrase(
-                kSecurityWpa, string(IEEE_80211::kWPAHexLen, '1').c_str()));
+                kSecurityPsk, string(IEEE_80211::kWPAHexLen, '1').c_str()));
   EXPECT_EQ(
       Error::kInvalidPassphrase,
       TestConfigurePassphrase(
-          kSecurityWpa, string(IEEE_80211::kWPAAsciiMinLen - 1, 'Z').c_str()));
+          kSecurityPsk, string(IEEE_80211::kWPAAsciiMinLen - 1, 'Z').c_str()));
   EXPECT_EQ(
       Error::kInvalidPassphrase,
       TestConfigurePassphrase(
-          kSecurityWpa, string(IEEE_80211::kWPAAsciiMaxLen + 1, 'Z').c_str()));
+          kSecurityPsk, string(IEEE_80211::kWPAAsciiMaxLen + 1, 'Z').c_str()));
   EXPECT_EQ(Error::kInvalidPassphrase,
             TestConfigurePassphrase(
-                kSecurityWpa, string(IEEE_80211::kWPAHexLen + 1, '1').c_str()));
+                kSecurityPsk, string(IEEE_80211::kWPAHexLen + 1, '1').c_str()));
 }
 
 TEST_F(WiFiServiceTest, ConfigureRedundantProperties) {
@@ -1105,10 +1085,10 @@ TEST_F(WiFiServiceTest, Connectable) {
   // A bad passphrase should not make a WEP network connectable.
   EXPECT_FALSE(CheckConnectable(kSecurityWep, "a", false));
 
-  // Similar to WEP, for WPA.
-  EXPECT_TRUE(CheckConnectable(kSecurityWpa, "abcdefgh", false));
-  EXPECT_FALSE(CheckConnectable(kSecurityWpa, nullptr, false));
-  EXPECT_FALSE(CheckConnectable(kSecurityWpa, "a", false));
+  // Similar to WEP, for PSK.
+  EXPECT_TRUE(CheckConnectable(kSecurityPsk, "abcdefgh", false));
+  EXPECT_FALSE(CheckConnectable(kSecurityPsk, nullptr, false));
+  EXPECT_FALSE(CheckConnectable(kSecurityPsk, "a", false));
 
   // 802.1x without connectable EAP credentials should NOT be connectable.
   EXPECT_FALSE(CheckConnectable(kSecurity8021x, nullptr, false));
@@ -1661,7 +1641,7 @@ TEST_F(WiFiServiceTest, CustomSetterNoopChange) {
 }
 
 TEST_F(WiFiServiceTest, SuspectedCredentialFailure) {
-  WiFiServiceRefPtr service = MakeSimpleService(kSecurityWpa);
+  WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
   EXPECT_FALSE(service->has_ever_connected());
   EXPECT_EQ(0, service->suspected_credential_failures_);
 
