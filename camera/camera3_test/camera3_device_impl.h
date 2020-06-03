@@ -174,7 +174,7 @@ class Camera3DeviceImpl : protected camera3_callback_ops {
   // thread.
   cros::CameraThread hal_thread_;
 
-  base::ThreadChecker thread_checker_;
+  THREAD_CHECKER(thread_checker_);
 
   bool initialized_;
 
@@ -238,7 +238,7 @@ class Camera3DeviceImpl : protected camera3_callback_ops {
     bool GetMetadataKeyEntry(int32_t key,
                              camera_metadata_ro_entry_t* entry) const;
 
-    base::ThreadChecker thread_checker_;
+    THREAD_CHECKER(thread_checker_);
   };
 
   // Store capture result information with frame number as the key

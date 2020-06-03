@@ -32,7 +32,7 @@ Camera3DeviceImpl::Camera3DeviceImpl(int cam_id)
       cam_stream_idx_(0),
       gralloc_(Camera3TestGralloc::GetInstance()),
       request_frame_number_(kInitialFrameNumber) {
-  thread_checker_.DetachFromThread();
+  DETACH_FROM_THREAD(thread_checker_);
 }
 
 int Camera3DeviceImpl::Initialize(Camera3Module* cam_module) {
@@ -55,6 +55,8 @@ void Camera3DeviceImpl::Destroy() {
                                       base::Unretained(this), &result));
   EXPECT_EQ(0, result) << "Camera device close failed";
   hal_thread_.Stop();
+
+  DETACH_FROM_THREAD(thread_checker_);
 }
 
 void Camera3DeviceImpl::RegisterProcessCaptureResultCallback(
@@ -208,7 +210,7 @@ int Camera3DeviceImpl::Flush() {
 
 void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
                                            int* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (initialized_) {
     LOG(ERROR) << "Device " << cam_id_ << " is already initialized";
     *result = -EINVAL;
@@ -250,25 +252,25 @@ void Camera3DeviceImpl::InitializeOnThread(Camera3Module* cam_module,
 
 void Camera3DeviceImpl::RegisterProcessCaptureResultCallbackOnThread(
     Camera3Device::ProcessCaptureResultCallback cb) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   process_capture_result_cb_ = cb;
 }
 
 void Camera3DeviceImpl::RegisterNotifyCallbackOnThread(
     Camera3Device::NotifyCallback cb) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   notify_cb_ = cb;
 }
 
 void Camera3DeviceImpl::RegisterResultMetadataOutputBufferCallbackOnThread(
     Camera3Device::ProcessResultMetadataOutputBuffersCallback cb) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   process_result_metadata_output_buffers_cb_ = cb;
 }
 
 void Camera3DeviceImpl::RegisterPartialMetadataCallbackOnThread(
     Camera3Device::ProcessPartialMetadataCallback cb) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   process_partial_metadata_cb_ = cb;
 }
 
@@ -287,7 +289,7 @@ void Camera3DeviceImpl::IsTemplateSupportedOnThread(int32_t type,
 
 void Camera3DeviceImpl::ConstructDefaultRequestSettingsOnThread(
     int type, const camera_metadata_t** result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (initialized_) {
     *result = dev_connector_->ConstructDefaultRequestSettings(type);
   }
@@ -298,7 +300,7 @@ void Camera3DeviceImpl::AddStreamOnThread(int format,
                                           int height,
                                           int crop_rotate_scale_degrees,
                                           camera3_stream_type_t type) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   if (initialized_) {
     auto& cur_stream = cam_stream_[!cam_stream_idx_];
     // Push to the bin that is not used currently
@@ -314,7 +316,7 @@ void Camera3DeviceImpl::AddStreamOnThread(int format,
 
 void Camera3DeviceImpl::ConfigureStreamsOnThread(
     std::vector<const camera3_stream_t*>* streams, int* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   *result = -EINVAL;
   if (!initialized_) {
     *result = -ENODEV;
@@ -362,7 +364,7 @@ void Camera3DeviceImpl::ConfigureStreamsOnThread(
 
 void Camera3DeviceImpl::AllocateOutputStreamBuffersOnThread(
     std::vector<camera3_stream_buffer_t>* output_buffers, int32_t* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   std::vector<const camera3_stream_t*> streams;
   for (const auto& it : cam_stream_[cam_stream_idx_]) {
     if (it.stream_type == CAMERA3_STREAM_OUTPUT ||
@@ -377,7 +379,7 @@ void Camera3DeviceImpl::AllocateOutputBuffersByStreamsOnThread(
     const std::vector<const camera3_stream_t*>* streams,
     std::vector<camera3_stream_buffer_t>* output_buffers,
     int32_t* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   *result = -EINVAL;
   if (!initialized_) {
     *result = -ENODEV;
@@ -428,7 +430,7 @@ void Camera3DeviceImpl::RegisterOutputBufferOnThread(
     const camera3_stream_t* stream,
     ScopedBufferHandle unique_buffer,
     int32_t* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   VLOGF_ENTER();
   if (!initialized_) {
     *result = -ENODEV;
@@ -444,7 +446,7 @@ void Camera3DeviceImpl::RegisterOutputBufferOnThread(
 
 void Camera3DeviceImpl::ProcessCaptureRequestOnThread(
     camera3_capture_request_t* request, int* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   VLOGF_ENTER();
   if (!initialized_) {
     *result = -ENODEV;
@@ -487,7 +489,7 @@ Camera3DeviceImpl::CaptureResult::CaptureResult(
 void Camera3DeviceImpl::ProcessCaptureResultOnThread(
     std::unique_ptr<CaptureResult> result) {
   VLOGF_ENTER();
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   ASSERT_NE(nullptr, result) << "Capture result is null";
   // At least one of metadata or output buffers or input buffer should be
   // returned
@@ -594,7 +596,7 @@ void Camera3DeviceImpl::ProcessCaptureResultOnThread(
 }
 
 void Camera3DeviceImpl::NotifyOnThread(camera3_notify_msg_t msg) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   EXPECT_EQ(CAMERA3_MSG_SHUTTER, msg.type)
       << "Shutter error = " << msg.message.error.error_code;
 
@@ -612,7 +614,7 @@ void Camera3DeviceImpl::NotifyOnThread(camera3_notify_msg_t msg) {
 }
 
 void Camera3DeviceImpl::DestroyOnThread(int* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   *result = -EINVAL;
   if (!initialized_) {
     *result = -ENODEV;
@@ -675,7 +677,7 @@ void Camera3DeviceImpl::Notify(const camera3_notify_msg_t* msg) {
 int Camera3DeviceImpl::GetOutputStreamBufferHandles(
     const std::vector<StreamBuffer>& output_buffers,
     std::vector<ScopedBufferHandle>* unique_buffers) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   VLOGF_ENTER();
 
   for (const auto& output_buffer : output_buffers) {
@@ -703,12 +705,12 @@ int Camera3DeviceImpl::GetOutputStreamBufferHandles(
 }
 
 bool Camera3DeviceImpl::UsePartialResult() const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return static_info_->GetPartialResultCount() > 1;
 }
 
 void Camera3DeviceImpl::ProcessPartialResult(CaptureResult* result) {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   // True if this partial result is the final one. If HAL does not use partial
   // result, the value is True by default.
   bool is_final_partial_result = !UsePartialResult();
@@ -736,32 +738,32 @@ Camera3DeviceImpl::CaptureResultInfo::CaptureResultInfo()
     : have_input_buffer_(false),
       num_output_buffers_(0),
       have_result_metadata_(false) {
-  thread_checker_.DetachFromThread();
+  DETACH_FROM_THREAD(thread_checker_);
 }
 
 bool Camera3DeviceImpl::CaptureResultInfo::IsMetadataKeyAvailable(
     int32_t key) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   return GetMetadataKeyEntry(key, nullptr);
 }
 
 int32_t Camera3DeviceImpl::CaptureResultInfo::GetMetadataKeyValue(
     int32_t key) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   camera_metadata_ro_entry_t entry;
   return GetMetadataKeyEntry(key, &entry) ? entry.data.i32[0] : -EINVAL;
 }
 
 int64_t Camera3DeviceImpl::CaptureResultInfo::GetMetadataKeyValue64(
     int32_t key) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   camera_metadata_ro_entry_t entry;
   return GetMetadataKeyEntry(key, &entry) ? entry.data.i64[0] : -EINVAL;
 }
 
 ScopedCameraMetadata
 Camera3DeviceImpl::CaptureResultInfo::MergePartialMetadata() {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   size_t entry_count = 0;
   size_t data_count = 0;
   for (const auto& it : partial_metadata_) {
@@ -782,7 +784,7 @@ Camera3DeviceImpl::CaptureResultInfo::MergePartialMetadata() {
 
 bool Camera3DeviceImpl::CaptureResultInfo::GetMetadataKeyEntry(
     int32_t key, camera_metadata_ro_entry_t* entry) const {
-  DCHECK(thread_checker_.CalledOnValidThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
   camera_metadata_ro_entry_t local_entry;
   entry = entry ? entry : &local_entry;
   for (const auto& it : partial_metadata_) {
