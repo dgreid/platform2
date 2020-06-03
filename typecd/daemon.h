@@ -10,6 +10,7 @@
 #include <base/memory/weak_ptr.h>
 #include <brillo/daemons/daemon.h>
 
+#include "typecd/port_manager.h"
 #include "typecd/udev_monitor.h"
 
 namespace typecd {
@@ -24,6 +25,7 @@ class Daemon : public brillo::Daemon {
 
  private:
   std::unique_ptr<UdevMonitor> udev_monitor_;
+  std::unique_ptr<PortManager> port_manager_;
   base::WeakPtrFactory<Daemon> weak_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(Daemon);

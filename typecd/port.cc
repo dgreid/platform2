@@ -7,24 +7,7 @@
 #include <base/logging.h>
 #include <re2/re2.h>
 
-namespace {
-
-constexpr char kPortNumRegex[] = R"(port(\d+))";
-
-}  // namespace
-
 namespace typecd {
-
-// static
-std::unique_ptr<Port> Port::CreatePort(const base::FilePath& syspath) {
-  int port_num;
-  if (!RE2::FullMatch(syspath.BaseName().value(), kPortNumRegex, &port_num)) {
-    LOG(ERROR) << "Couldn't extract port num from syspath.";
-    return nullptr;
-  }
-
-  return std::make_unique<Port>(syspath, port_num);
-}
 
 Port::Port(const base::FilePath& syspath, int port_num)
     : syspath_(syspath), port_num_(port_num) {
@@ -32,11 +15,23 @@ Port::Port(const base::FilePath& syspath, int port_num)
 }
 
 void Port::AddPartner(const base::FilePath& path) {
+  if (partner_) {
+    LOG(WARNING) << "Partner already exists for port " << port_num_;
+    return;
+  }
   partner_ = std::make_unique<Partner>(path);
+
+  LOG(INFO) << "Partner enumerated for port " << port_num_;
 }
 
 void Port::RemovePartner() {
+  if (!partner_) {
+    LOG(WARNING) << "No partner present for port " << port_num_;
+    return;
+  }
   partner_.reset();
+
+  LOG(INFO) << "Partner removed for port " << port_num_;
 }
 
 }  // namespace typecd

@@ -25,11 +25,15 @@ namespace typecd {
 
 namespace {
 
+constexpr char kInvalidPortSysPath[] = "/sys/class/typec/a-yz";
+
 // A really dumb observer to verify that UdevMonitor is invoking the right
 // callbacks.
 class TestObserver : public UdevMonitor::Observer {
  public:
-  void OnPortAddedOrRemoved(const base::FilePath& path, bool added) override {
+  void OnPortAddedOrRemoved(const base::FilePath& path,
+                            int port_num,
+                            bool added) override {
     if (added)
       num_ports_++;
     else
@@ -37,6 +41,7 @@ class TestObserver : public UdevMonitor::Observer {
   };
 
   void OnPartnerAddedOrRemoved(const base::FilePath& path,
+                               int port_num,
                                bool added) override {
     if (added)
       num_partners_++;
@@ -62,16 +67,25 @@ class UdevMonitorTest : public ::testing::Test {
             base::test::ScopedTaskEnvironment::ExecutionMode::ASYNC) {}
 
  protected:
+  void SetUp() override {
+    observer_ = std::make_unique<TestObserver>();
+
+    monitor_ = std::make_unique<UdevMonitor>();
+    monitor_->AddObserver(observer_.get());
+  }
+
+  void TearDown() override {
+    monitor_.reset();
+    observer_.reset();
+  }
+
   // Add a task environment to keep the FileDescriptorWatcher code happy.
   base::test::ScopedTaskEnvironment task_environment_;
+  std::unique_ptr<TestObserver> observer_;
+  std::unique_ptr<UdevMonitor> monitor_;
 };
 
 TEST_F(UdevMonitorTest, TestBasic) {
-  auto observer = std::make_unique<TestObserver>();
-
-  auto udev_monitor = std::make_unique<UdevMonitor>();
-  udev_monitor->AddObserver(observer.get());
-
   // Create the Mock Udev objects and function invocation expectations.
   auto list_entry2 = std::make_unique<brillo::MockUdevListEntry>();
   EXPECT_CALL(*list_entry2, GetName())
@@ -94,24 +108,19 @@ TEST_F(UdevMonitorTest, TestBasic) {
   EXPECT_CALL(*udev, CreateEnumerate())
       .WillOnce(Return(ByMove(std::move(enumerate))));
 
-  udev_monitor->SetUdev(std::move(udev));
+  monitor_->SetUdev(std::move(udev));
 
-  EXPECT_THAT(0, observer->GetNumPorts());
+  EXPECT_THAT(0, observer_->GetNumPorts());
 
-  ASSERT_TRUE(udev_monitor->ScanDevices());
+  ASSERT_TRUE(monitor_->ScanDevices());
 
-  EXPECT_THAT(1, observer->GetNumPorts());
-  EXPECT_THAT(1, observer->GetNumPartners());
+  EXPECT_THAT(1, observer_->GetNumPorts());
+  EXPECT_THAT(1, observer_->GetNumPartners());
 }
 
 // Check that a port and partner can be detected after init. Also check whether
 // a subsequent partner removal is detected correctly.
 TEST_F(UdevMonitorTest, TestHotplug) {
-  auto observer = std::make_unique<TestObserver>();
-
-  auto udev_monitor = std::make_unique<UdevMonitor>();
-  udev_monitor->AddObserver(observer.get());
-
   // Create a socket-pair; to help poke the udev monitoring logic.
   auto fds = std::make_unique<brillo::ScopedSocketPair>();
 
@@ -148,24 +157,59 @@ TEST_F(UdevMonitorTest, TestHotplug) {
   EXPECT_CALL(*udev, CreateMonitorFromNetlink(StrEq(kUdevMonitorName)))
       .WillOnce(Return(ByMove(std::move(monitor))));
 
-  udev_monitor->SetUdev(std::move(udev));
+  monitor_->SetUdev(std::move(udev));
 
-  EXPECT_THAT(0, observer->GetNumPorts());
+  EXPECT_THAT(0, observer_->GetNumPorts());
 
   // Skip initial scanning, since we are only interested in testing hotplug.
-  ASSERT_TRUE(udev_monitor->BeginMonitoring());
+  ASSERT_TRUE(monitor_->BeginMonitoring());
 
   // It's too tedious to poke the socket pair to actually trigger the
   // FileDescriptorWatcher without it running repeatedly.
   //
   // Instead we manually call HandleUdevEvent. Effectively this equivalent to
   // triggering the event handler using the FileDescriptorWatcher.
-  udev_monitor->HandleUdevEvent();
-  EXPECT_THAT(1, observer->GetNumPorts());
-  udev_monitor->HandleUdevEvent();
-  EXPECT_THAT(1, observer->GetNumPartners());
-  udev_monitor->HandleUdevEvent();
-  EXPECT_THAT(0, observer->GetNumPartners());
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(1, observer_->GetNumPorts());
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(1, observer_->GetNumPartners());
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(0, observer_->GetNumPartners());
+}
+
+// Test that the udev handler correctly handles invalid port sysfs paths.
+TEST_F(UdevMonitorTest, TestInvalidPortSyspath) {
+  // Create a socket-pair; to help poke the udev monitoring logic.
+  auto fds = std::make_unique<brillo::ScopedSocketPair>();
+
+  // Fake the calls for port add.
+  auto device_port = std::make_unique<brillo::MockUdevDevice>();
+  EXPECT_CALL(*device_port, GetSysPath()).WillOnce(Return(kInvalidPortSysPath));
+  EXPECT_CALL(*device_port, GetAction()).WillOnce(Return("add"));
+
+  // Create the Mock Udev objects and function invocation expectations.
+  auto monitor = std::make_unique<brillo::MockUdevMonitor>();
+  EXPECT_CALL(*monitor, FilterAddMatchSubsystemDeviceType(
+                            StrEq(kTypeCSubsystem), nullptr))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*monitor, EnableReceiving()).WillOnce(Return(true));
+  EXPECT_CALL(*monitor, GetFileDescriptor()).WillOnce(Return(fds->left));
+  EXPECT_CALL(*monitor, ReceiveDevice())
+      .WillOnce(Return(ByMove(std::move(device_port))));
+
+  auto udev = std::make_unique<brillo::MockUdev>();
+  EXPECT_CALL(*udev, CreateMonitorFromNetlink(StrEq(kUdevMonitorName)))
+      .WillOnce(Return(ByMove(std::move(monitor))));
+
+  monitor_->SetUdev(std::move(udev));
+
+  // Skip initial scanning, since we are only interested in testing hotplug.
+  ASSERT_TRUE(monitor_->BeginMonitoring());
+
+  // Manually call HandleUdevEvent. Effectively this equivalent to triggering
+  // the event handler using the FileDescriptorWatcher.
+  monitor_->HandleUdevEvent();
+  EXPECT_THAT(0, observer_->GetNumPorts());
 }
 
 }  // namespace typecd

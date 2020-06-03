@@ -6,7 +6,10 @@
 
 namespace typecd {
 
-Daemon::Daemon() : udev_monitor_(new UdevMonitor()), weak_factory_(this) {}
+Daemon::Daemon() :
+  udev_monitor_(new UdevMonitor()),
+  port_manager_(new PortManager()),
+  weak_factory_(this) {}
 
 Daemon::~Daemon() {}
 
@@ -18,6 +21,7 @@ int Daemon::OnInit() {
   }
 
   // Add any observers to |udev_monitor_| here.
+  udev_monitor_->AddObserver(port_manager_.get());
 
   udev_monitor_->ScanDevices();
   udev_monitor_->BeginMonitoring();

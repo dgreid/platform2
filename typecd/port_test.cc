@@ -11,20 +11,11 @@
 
 namespace typecd {
 
-namespace {
-
-constexpr char kInvalidPortSysPath[] = "/sys/class/typec/a-yz";
-
-}  // namespace
-
 class PortTest : public ::testing::Test {};
 
 // Check that basic Port creation, partner addition/deletion works.
 TEST_F(PortTest, TestBasicAdd) {
-  std::unique_ptr<Port> port =
-      Port::CreatePort(base::FilePath(kInvalidPortSysPath));
-  EXPECT_EQ(nullptr, port);
-  port = Port::CreatePort(base::FilePath(kFakePort0SysPath));
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
   EXPECT_NE(nullptr, port);
 
   port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));

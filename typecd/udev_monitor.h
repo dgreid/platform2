@@ -46,18 +46,22 @@ class UdevMonitor {
     // Callback that is executed when a port is connected or disconnected.
     //
     // The |path| argument refers to the sysfs device path of the port.
+    // The |port_num| argmnet refers to the port's index number.
     // The |added| argument is set to true if the port was added, and false
     // otherwise.
     virtual void OnPortAddedOrRemoved(const base::FilePath& path,
+                                      int port_num,
                                       bool added) = 0;
 
     // Callback that is executed when a port partner is connected or
     // disconnected.
     //
     // The |path| argument refers to the sysfs device path of the port partner.
+    // The |port_num| argmnet refers to the port's index number.
     // The |added| argument is set to true if the port was added, and false
     // otherwise.
     virtual void OnPartnerAddedOrRemoved(const base::FilePath& path,
+                                         int port_num,
                                          bool added) = 0;
   };
 
@@ -68,6 +72,7 @@ class UdevMonitor {
   friend class UdevMonitorTest;
   FRIEND_TEST(UdevMonitorTest, TestBasic);
   FRIEND_TEST(UdevMonitorTest, TestHotplug);
+  FRIEND_TEST(UdevMonitorTest, TestInvalidPortSyspath);
 
   // Set the |udev_| pointer to a MockUdev device. *Only* used by unit tests.
   void SetUdev(std::unique_ptr<brillo::MockUdev> udev) {

@@ -100,12 +100,13 @@ void UdevMonitor::RemoveObserver(Observer* obs) {
 bool UdevMonitor::HandleDeviceAddedRemoved(const base::FilePath& path,
                                            bool added) {
   auto name = path.BaseName();
+  int port_num;
 
   for (Observer& observer : observer_list_) {
-    if (RE2::FullMatch(name.value(), kPortRegex))
-      observer.OnPortAddedOrRemoved(path, added);
-    else if (RE2::FullMatch(name.value(), kPartnerRegex))
-      observer.OnPartnerAddedOrRemoved(path, added);
+    if (RE2::FullMatch(name.value(), kPortRegex, &port_num))
+      observer.OnPortAddedOrRemoved(path, port_num, added);
+    else if (RE2::FullMatch(name.value(), kPartnerRegex, &port_num))
+      observer.OnPartnerAddedOrRemoved(path, port_num, added);
   }
 
   return true;
