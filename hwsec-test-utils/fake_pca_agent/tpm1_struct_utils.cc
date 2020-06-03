@@ -162,6 +162,10 @@ base::Optional<std::string> ParseDigestFromTpmCertifyInfo(
     TPM_LOG(ERROR, result) << "Failed to parse TPM_CERTIFY_INFO.";
     return {};
   }
+
+  // Prevent memory leak.
+  std::unique_ptr<BYTE, base::FreeDeleter> scoped_key(
+      parsed.algorithmParms.parms);
   return std::string(
       parsed.pubkeyDigest.digest,
       parsed.pubkeyDigest.digest + sizeof(parsed.pubkeyDigest.digest));
