@@ -30,6 +30,7 @@ shared_library("libcamera.mt8183") {
     "${mtk_root_path}/mtkcam/ipc",
     "${mtk_root_path}/mtkcam/main/common/module",
     "${mtk_root_path}/mtkcam/main/hal/include/",
+    "${mtk_root_path}/mtkcam/utils/std",
   ]
   libs += [
     "dl",

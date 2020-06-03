@@ -29,6 +29,7 @@ shared_library("libcam_algo_client") {
     "${mtk_root_path}/mtkcam/include/mtkcam/drv/def",
     "${mtk_root_path}/mtkcam/ipc",
     "${mtk_root_path}/mtkcam/utils/property_service",
+    "${mtk_root_path}/mtkcam/utils/std",
   ]
   libs += [
     "camalgo.eis",
@@ -48,5 +49,6 @@ shared_library("libcam_algo_client") {
     "//camera/hal/mediatek/mtkcam/utils/metadata:libmtkcam_metadata",
     "//camera/hal/mediatek/mtkcam/utils/metastore:libmtkcam_metastore",
     "//camera/hal/mediatek/mtkcam/utils/module:libmtkcam_modulehelper",
+    "//camera/hal/mediatek/mtkcam/utils/std:libmtkcam_stdutils",
   ]
 }

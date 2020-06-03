@@ -16,12 +16,14 @@
 
 #define LOG_TAG "MtkCam/module"
 //
+#include <cros-camera/cros_camera_hal.h>
 #include <mtkcam/def/common.h>
 #include <mtkcam/main/hal/ICamDeviceManager.h>
 #include <mtkcam/main/hal/module.h>
 #include <mtkcam/main/hal/module/module/module.h>
 #include <mtkcam/utils/std/common.h>
 #include <mtkcam/utils/std/Log.h>
+#include <mtkcam/utils/std/Mojo.h>
 #include <property_lib.h>
 #include <string>
 
@@ -79,6 +81,14 @@ static int hal_init(void) {
     return 0;
 }
 
+static void set_up(cros::CameraMojoChannelManager* mojo_manager) {
+  NSCam::Utils::setMojoManagerInstance(mojo_manager);
+}
+
+static void tear_down() {
+  NSCam::Utils::setMojoManagerInstance(nullptr);
+}
+
 static camera_module get_camera_module() {
   camera_module module = {
       .common =
@@ -105,3 +115,6 @@ static camera_module get_camera_module() {
   };
   return module;
 }
+
+cros::cros_camera_hal_t VISIBILITY CROS_CAMERA_HAL_INFO_SYM = {
+    .set_up = set_up, .tear_down = tear_down};

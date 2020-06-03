@@ -23,7 +23,8 @@
 #include <sys/types.h>
 #include <vector>
 
-#include <camera/hal/mediatek/mtkcam/ipc/client/Mediatek3AClient.h>
+#include <mtkcam/ipc/client/Mediatek3AClient.h>
+#include <mtkcam/utils/std/Mojo.h>
 
 #include "Hal3AIpcAdapter.h"
 
@@ -51,7 +52,9 @@ Mediatek3AClient::Mediatek3AClient()
   Mediatek3AClient::notify = notifyCallback;
 
   mBridge = cros::CameraAlgorithmBridge::CreateInstance(
-      cros::CameraAlgorithmBackend::kVendorCpu);
+      cros::CameraAlgorithmBackend::kVendorCpu,
+      NSCam::Utils::getMojoManagerInstance());
+
   CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
   CheckError((mBridge->Initialize(this) != 0), VOID_VALUE,
              "@%s, call mBridge->Initialize fail", __FUNCTION__);
@@ -86,7 +89,8 @@ void Mediatek3AClient::tryReconnectBridge() {
   Mediatek3AClient::notify = notifyCallback;
 
   mBridge = cros::CameraAlgorithmBridge::CreateInstance(
-      cros::CameraAlgorithmBackend::kVendorCpu);
+      cros::CameraAlgorithmBackend::kVendorCpu,
+      NSCam::Utils::getMojoManagerInstance());
   CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
   CheckError((mBridge->Initialize(this) != 0), VOID_VALUE,
              "@%s, call mBridge->Initialize fail", __FUNCTION__);

@@ -12,6 +12,7 @@ shared_library("libmtkcam_stdutils") {
     "ILogger.cpp",
     "LogTool.cpp",
     "Misc.cpp",
+    "Mojo.cpp",
     "Profile.cpp",
     "StlUtils.cpp",
     "Sync.cpp",

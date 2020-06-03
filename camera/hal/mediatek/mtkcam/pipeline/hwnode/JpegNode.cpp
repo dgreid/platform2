@@ -33,6 +33,7 @@
 #include <mtkcam/utils/std/Sync.h>
 #include <mtkcam/utils/std/Trace.h>
 #include <mtkcam/utils/std/Misc.h>
+#include <mtkcam/utils/std/Mojo.h>
 #include <mtkcam/utils/std/Format.h>
 #include <mtkcam/def/common.h>
 #include <mtkcam/utils/std/common.h>
@@ -549,7 +550,8 @@ JpegNodeImp::JpegNodeImp()
       mpEncodeFrame(nullptr)
 #endif
       ,
-      mJpegCompressor(cros::JpegCompressor::GetInstance()) {
+      mJpegCompressor(cros::JpegCompressor::GetInstance(
+          NSCam::Utils::getMojoManagerInstance())) {
   pthread_rwlock_init(&mConfigRWLock, NULL);
   mNodeName = "JpegNode";  // default name
   MINT32 enable = ::property_get_int32("vendor.jpeg.rotation.enable", 1);
