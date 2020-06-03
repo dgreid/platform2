@@ -8,7 +8,6 @@
 
 #include <dlfcn.h>
 #include <fcntl.h>
-#include <grp.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
@@ -31,9 +30,11 @@
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "common/utils/camera_hal_enumerator.h"
+#include "common/camera_mojo_channel_manager_impl.h"
 #include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/common.h"
 #include "cros-camera/constants.h"
+#include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
 #include "cros-camera/utils/camera_config.h"
 #include "hal_adapter/camera_hal_test_adapter.h"
@@ -42,18 +43,19 @@
 namespace cros {
 
 CameraHalServerImpl::CameraHalServerImpl()
-    : main_task_runner_(base::ThreadTaskRunnerHandle::Get()), binding_(this) {
+    : mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      ipc_bridge_(new IPCBridge(this, mojo_manager_.get())) {
   VLOGF_ENTER();
 }
 
 CameraHalServerImpl::~CameraHalServerImpl() {
   VLOGF_ENTER();
+
+  ExitOnMainThread(0);
 }
 
 bool CameraHalServerImpl::Start() {
   VLOGF_ENTER();
-  camera_mojo_channel_manager_ = CameraMojoChannelManager::CreateInstance();
-  ipc_task_runner_ = camera_mojo_channel_manager_->GetIpcTaskRunner();
 
   LoadCameraHal();
 
@@ -65,12 +67,46 @@ bool CameraHalServerImpl::Start() {
     return false;
   }
   if (base::PathExists(socket_path)) {
-    CameraHalServerImpl::OnSocketFileStatusChange(socket_path, false);
+    OnSocketFileStatusChange(socket_path, false);
   }
   return true;
 }
 
-void CameraHalServerImpl::CreateChannel(
+CameraHalServerImpl::IPCBridge::IPCBridge(
+    CameraHalServerImpl* camera_hal_server,
+    CameraMojoChannelManager* mojo_manager)
+    : camera_hal_server_(camera_hal_server),
+      mojo_manager_(mojo_manager),
+      ipc_task_runner_(mojo_manager_->GetIpcTaskRunner()),
+      main_task_runner_(base::ThreadTaskRunnerHandle::Get()),
+      binding_(this) {}
+
+CameraHalServerImpl::IPCBridge::~IPCBridge() {
+  if (binding_.is_bound()) {
+    binding_.Unbind();
+  }
+}
+
+void CameraHalServerImpl::IPCBridge::RegisterCameraHal(
+    CameraHalAdapter* camera_hal_adapter) {
+  VLOGF_ENTER();
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
+  if (binding_.is_bound()) {
+    return;
+  }
+
+  camera_hal_adapter_ = camera_hal_adapter;
+
+  mojom::CameraHalServerPtr server_ptr;
+  binding_.Bind(mojo::MakeRequest(&server_ptr));
+  server_ptr.set_connection_error_handler(
+      base::Bind(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
+                 GetWeakPtr()));
+  mojo_manager_->RegisterServer(std::move(server_ptr));
+}
+
+void CameraHalServerImpl::IPCBridge::CreateChannel(
     mojom::CameraModuleRequest camera_module_request) {
   VLOGF_ENTER();
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
@@ -78,29 +114,47 @@ void CameraHalServerImpl::CreateChannel(
   camera_hal_adapter_->OpenCameraHal(std::move(camera_module_request));
 }
 
-void CameraHalServerImpl::SetTracingEnabled(bool enabled) {
+void CameraHalServerImpl::IPCBridge::SetTracingEnabled(bool enabled) {
   VLOGF_ENTER();
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
   TRACE_CAMERA_ENABLE(enabled);
+}
+
+void CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError() {
+  VLOGF_ENTER();
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+
+  // The CameraHalDispatcher Mojo parent is probably dead. We need to restart
+  // another process in order to connect to the new Mojo parent.
+  LOGF(INFO) << "Mojo connection to CameraHalDispatcher is broken";
+  main_task_runner_->PostTask(
+      FROM_HERE, base::Bind(&CameraHalServerImpl::ExitOnMainThread,
+                            base::Unretained(camera_hal_server_), ECONNRESET));
+}
+
+base::WeakPtr<CameraHalServerImpl::IPCBridge>
+CameraHalServerImpl::IPCBridge::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
 }
 
 void CameraHalServerImpl::OnSocketFileStatusChange(
     const base::FilePath& socket_path, bool error) {
-  VLOGF_ENTER();
-  DCHECK(main_task_runner_->BelongsToCurrentThread());
+  if (error) {
+    LOGF(ERROR) << "Error occurs in socket file watcher.";
+    return;
+  }
 
-  camera_mojo_channel_manager_->ConnectToDispatcher(
-      base::Bind(&CameraHalServerImpl::RegisterCameraHal,
-                 base::Unretained(this)),
-      base::Bind(&CameraHalServerImpl::OnServiceMojoChannelError,
-                 base::Unretained(this)));
+  mojo_manager_->ConnectToDispatcher(
+      base::Bind(&CameraHalServerImpl::IPCBridge::RegisterCameraHal,
+                 ipc_bridge_->GetWeakPtr(), camera_hal_adapter_.get()),
+      base::Bind(&CameraHalServerImpl::IPCBridge::OnServiceMojoChannelError,
+                 ipc_bridge_->GetWeakPtr()));
 }
 
 void CameraHalServerImpl::LoadCameraHal() {
   VLOGF_ENTER();
-  // We can't load and initialize the camera HALs on |ipc_task_runner_| since it
-  // will cause dead-lock if any of the camera HAL initiates any Mojo connection
-  // during initialization.
-  DCHECK(main_task_runner_->BelongsToCurrentThread());
+  DCHECK(!camera_hal_adapter_);
 
   std::vector<camera_module_t*> camera_modules;
   std::unique_ptr<CameraConfig> config =
@@ -147,45 +201,19 @@ void CameraHalServerImpl::LoadCameraHal() {
   }
 }
 
-void CameraHalServerImpl::RegisterCameraHal() {
-  VLOGF_ENTER();
-  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-
-  if (binding_.is_bound()) {
-    return;
-  }
-
-  mojom::CameraHalServerPtr server_ptr;
-  binding_.Bind(mojo::MakeRequest(&server_ptr));
-  camera_mojo_channel_manager_->RegisterServer(std::move(server_ptr));
-  LOGF(INFO) << "Registered camera HAL";
-}
-
-void CameraHalServerImpl::OnServiceMojoChannelError() {
-  VLOGF_ENTER();
-  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-
-  if (!binding_.is_bound()) {
-    // We reach here because |camera_mojo_channel_manager_| failed to bootstrap
-    // the Mojo channel to Chrome, probably due to invalid socket file.  This
-    // can happen during `restart ui`, so simply return to wait for Chrome to
-    // reinitialize the socket file.
-    return;
-  }
-
-  // The CameraHalDispatcher Mojo parent is probably dead. We need to restart
-  // another process in order to connect to the new Mojo parent.
-  LOGF(INFO) << "Mojo connection to CameraHalDispatcher is broken";
-  main_task_runner_->PostTask(FROM_HERE,
-                              base::Bind(&CameraHalServerImpl::ExitOnMainThread,
-                                         base::Unretained(this), ECONNRESET));
-}
-
 void CameraHalServerImpl::ExitOnMainThread(int exit_status) {
   VLOGF_ENTER();
-  DCHECK(main_task_runner_->BelongsToCurrentThread());
+  DCHECK_CALLED_ON_VALID_THREAD(thread_checker_);
 
-  camera_hal_adapter_.reset();
+  auto future = Future<void>::Create(nullptr);
+  auto delete_ipc_bridge = base::BindOnce(
+      [](std::unique_ptr<IPCBridge> ipc_bridge,
+         base::Callback<void(void)> callback) { std::move(callback).Run(); },
+      std::move(ipc_bridge_), cros::GetFutureCallback(future));
+  mojo_manager_->GetIpcTaskRunner()->PostTask(FROM_HERE,
+                                              std::move(delete_ipc_bridge));
+  future->Wait(-1);
+
   exit(exit_status);
 }
 

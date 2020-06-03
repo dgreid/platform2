@@ -69,14 +69,6 @@ class CameraMojoChannelManagerImpl final : public CameraMojoChannelManager {
 
   void RegisterServerOnIpcThread(mojom::CameraHalServerPtr hal_ptr);
 
-  void CreateMjpegDecodeAcceleratorOnIpcThread(
-      mojom::MjpegDecodeAcceleratorRequest request,
-      base::Callback<void(bool)> callback);
-
-  void CreateJpegEncodeAcceleratorOnIpcThread(
-      mojom::JpegEncodeAcceleratorRequest request,
-      base::Callback<void(bool)> callback);
-
   static void TearDownMojoEnv();
 
   static void TearDownMojoEnvLockedOnThread();

@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <base/memory/weak_ptr.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
 
@@ -49,47 +50,67 @@ class CameraAlgorithmBridgeImpl : public CameraAlgorithmBridge {
   void DeregisterBuffers(const std::vector<int32_t>& buffer_handles);
 
  private:
-  void PreInitializeOnIpcThread(base::Callback<void(void)> cb);
+  // IPCBridge wraps all the IPC-related calls. Most of its methods should/will
+  // be run on IPC thread.
+  class IPCBridge {
+   public:
+    IPCBridge(CameraAlgorithmBackend backend,
+              CameraMojoChannelManager* mojo_manager);
 
-  void InitializeOnIpcThread(
-      const camera_algorithm_callback_ops_t* callback_ops,
-      base::Callback<void(int32_t)> cb);
+    // It should only be triggered on IPC thread to ensure thread-safety.
+    ~IPCBridge();
 
-  void OnConnectionErrorOnIpcThread();
+    void Initialize(const camera_algorithm_callback_ops_t* callback_ops,
+                    base::Callback<void(int32_t)> cb);
 
-  void DestroyOnIpcThread();
+    void RegisterBuffer(int buffer_fd, base::Callback<void(int32_t)> cb);
 
-  void RegisterBufferOnIpcThread(int buffer_fd,
-                                 base::Callback<void(int32_t)> cb);
+    void Request(uint32_t req_id,
+                 std::vector<uint8_t> req_header,
+                 int32_t buffer_handle);
 
-  void RequestOnIpcThread(uint32_t req_id,
-                          std::vector<uint8_t> req_header,
-                          int32_t buffer_handle);
+    void DeregisterBuffers(std::vector<int32_t> buffer_handles);
 
-  void DeregisterBuffersOnIpcThread(std::vector<int32_t> buffer_handles);
+    void OnConnectionError();
 
-  // The algorithm backend this bridge is created for.
-  CameraAlgorithmBackend algo_backend_;
+    void Destroy();
 
-  // Return callback registered by HAL
-  const camera_algorithm_callback_ops_t* callback_ops_;
+    // Gets a weak pointer of the IPCBridge. This method can be called on
+    // non-IPC thread.
+    base::WeakPtr<IPCBridge> GetWeakPtr();
 
-  // Camera Mojo channel manager.
-  // We use it to get CameraAlgorithmOpsPtr.
-  std::unique_ptr<CameraMojoChannelManager> mojo_channel_manager_;
+   private:
+    // The algorithm backend this bridge is created for.
+    CameraAlgorithmBackend algo_backend_;
 
-  // Pointer to local proxy of remote CameraAlgorithmOps interface
-  // implementation.
-  mojom::CameraAlgorithmOpsPtr interface_ptr_;
+    // Return callback registered by HAL
+    const camera_algorithm_callback_ops_t* callback_ops_;
 
-  // Pointer to CameraAlgorithmCallbackOpss interface implementation.
-  std::unique_ptr<CameraAlgorithmCallbackOpsImpl> cb_impl_;
+    // Pointer to local proxy of remote CameraAlgorithmOps interface
+    // implementation.
+    mojom::CameraAlgorithmOpsPtr interface_ptr_;
 
-  // Thread for IPC chores
-  base::Thread ipc_thread_;
+    // Pointer to CameraAlgorithmCallbackOpss interface implementation.
+    std::unique_ptr<CameraAlgorithmCallbackOpsImpl> cb_impl_;
+
+    // Camera Mojo channel manager.
+    // We use it to create JpegEncodeAccelerator Mojo channel.
+    CameraMojoChannelManager* mojo_manager_;
+
+    // The Mojo IPC task runner.
+    const scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
+
+    base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
+  };
+
+  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 
   // Store observers for future locks
   cros::CancellationRelay relay_;
+
+  // The instance which deals with the IPC-related calls. It should always run
+  // and be deleted on IPC thread.
+  std::unique_ptr<IPCBridge> ipc_bridge_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeImpl);
 };

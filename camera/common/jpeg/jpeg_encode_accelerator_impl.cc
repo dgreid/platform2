@@ -46,39 +46,33 @@ std::unique_ptr<JpegEncodeAccelerator> JpegEncodeAccelerator::CreateInstance() {
 }
 
 JpegEncodeAcceleratorImpl::JpegEncodeAcceleratorImpl()
-    : ipc_thread_("JeaIpcThread"), task_id_(0) {
+    : task_id_(0),
+      mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      ipc_bridge_(new IPCBridge(mojo_manager_.get())) {
   VLOGF_ENTER();
-
-  mojo_channel_manager_ = CameraMojoChannelManager::CreateInstance();
 }
 
 JpegEncodeAcceleratorImpl::~JpegEncodeAcceleratorImpl() {
   VLOGF_ENTER();
-  if (ipc_thread_.IsRunning()) {
-    ipc_thread_.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&JpegEncodeAcceleratorImpl::DestroyOnIpcThread,
-                              base::Unretained(this)));
-    ipc_thread_.Stop();
-  }
+
+  bool result = mojo_manager_->GetIpcTaskRunner()->DeleteSoon(
+      FROM_HERE, std::move(ipc_bridge_));
+  DCHECK(result);
+  cancellation_relay_ = nullptr;
+
   VLOGF_EXIT();
 }
 
 bool JpegEncodeAcceleratorImpl::Start() {
   VLOGF_ENTER();
 
-  if (!ipc_thread_.IsRunning()) {
-    if (!ipc_thread_.Start()) {
-      LOGF(ERROR) << "Failed to start IPC thread";
-      return false;
-    }
-  }
-
   cancellation_relay_ = std::make_unique<CancellationRelay>();
   auto is_initialized = Future<bool>::Create(cancellation_relay_.get());
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&JpegEncodeAcceleratorImpl::InitializeOnIpcThread,
-                 base::Unretained(this), GetFutureCallback(is_initialized)));
+
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE, base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::Start,
+                            ipc_bridge_->GetWeakPtr(),
+                            cros::GetFutureCallback(is_initialized)));
   if (!is_initialized->Wait()) {
     return false;
   }
@@ -86,50 +80,6 @@ bool JpegEncodeAcceleratorImpl::Start() {
   VLOGF_EXIT();
 
   return is_initialized->Get();
-}
-
-void JpegEncodeAcceleratorImpl::InitializeOnIpcThread(
-    base::Callback<void(bool)> callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-
-  if (jea_ptr_.is_bound()) {
-    callback.Run(true);
-    return;
-  }
-
-  auto request = mojo::MakeRequest(&jea_ptr_);
-
-  if (!mojo_channel_manager_->CreateJpegEncodeAccelerator(std::move(request))) {
-    callback.Run(false);
-    DestroyOnIpcThread();
-    return;
-  }
-
-  jea_ptr_.set_connection_error_handler(
-      base::Bind(&JpegEncodeAcceleratorImpl::OnJpegEncodeAcceleratorError,
-                 base::Unretained(this)));
-
-  jea_ptr_->Initialize(callback);
-  VLOGF_EXIT();
-}
-
-void JpegEncodeAcceleratorImpl::DestroyOnIpcThread() {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-  jea_ptr_.reset();
-  input_shm_map_.clear();
-  exif_shm_map_.clear();
-  cancellation_relay_ = nullptr;
-  VLOGF_EXIT();
-}
-
-void JpegEncodeAcceleratorImpl::OnJpegEncodeAcceleratorError() {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-  LOGF(ERROR) << "There is a mojo error for JpegEncodeAccelerator";
-  VLOGF_EXIT();
-  DestroyOnIpcThread();
 }
 
 int JpegEncodeAcceleratorImpl::EncodeSync(int input_fd,
@@ -147,19 +97,21 @@ int JpegEncodeAcceleratorImpl::EncodeSync(int input_fd,
   task_id_ = (task_id_ + 1) & 0x3FFFFFFF;
 
   auto future = Future<int>::Create(cancellation_relay_.get());
-  auto callback = base::Bind(&JpegEncodeAcceleratorImpl::EncodeSyncCallback,
-                             base::Unretained(this), GetFutureCallback(future),
-                             output_data_size, task_id);
-  ipc_thread_.task_runner()->PostTask(
+  auto callback =
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::EncodeSyncCallback,
+                 ipc_bridge_->GetWeakPtr(), GetFutureCallback(future),
+                 output_data_size, task_id);
+
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
       FROM_HERE,
-      base::Bind(&JpegEncodeAcceleratorImpl::EncodeOnIpcThreadLegacy,
-                 base::Unretained(this), task_id, input_fd, input_buffer,
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy,
+                 ipc_bridge_->GetWeakPtr(), task_id, input_fd, input_buffer,
                  input_buffer_size, coded_size_width, coded_size_height,
                  exif_buffer, exif_buffer_size, output_fd, output_buffer_size,
                  std::move(callback)));
 
   if (!future->Wait()) {
-    if (!jea_ptr_.is_bound()) {
+    if (!ipc_bridge_->IsReady()) {
       LOGF(WARNING) << "There may be an mojo channel error.";
       return TRY_START_AGAIN;
     }
@@ -184,19 +136,20 @@ int JpegEncodeAcceleratorImpl::EncodeSync(
   task_id_ = (task_id_ + 1) & 0x3FFFFFFF;
 
   auto future = Future<int>::Create(cancellation_relay_.get());
-  auto callback = base::Bind(&JpegEncodeAcceleratorImpl::EncodeSyncCallback,
-                             base::Unretained(this), GetFutureCallback(future),
-                             output_data_size, task_id);
+  auto callback =
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::EncodeSyncCallback,
+                 ipc_bridge_->GetWeakPtr(), GetFutureCallback(future),
+                 output_data_size, task_id);
 
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&JpegEncodeAcceleratorImpl::EncodeOnIpcThread,
-                            base::Unretained(this), task_id, input_format,
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE, base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::Encode,
+                            ipc_bridge_->GetWeakPtr(), task_id, input_format,
                             std::move(input_planes), std::move(output_planes),
                             exif_buffer, exif_buffer_size, coded_size_width,
                             coded_size_height, std::move(callback)));
 
   if (!future->Wait()) {
-    if (!jea_ptr_.is_bound()) {
+    if (!ipc_bridge_->IsReady()) {
       LOGF(WARNING) << "There may be an mojo channel error.";
       return TRY_START_AGAIN;
     }
@@ -207,7 +160,52 @@ int JpegEncodeAcceleratorImpl::EncodeSync(
   return future->Get();
 }
 
-void JpegEncodeAcceleratorImpl::EncodeOnIpcThreadLegacy(
+JpegEncodeAcceleratorImpl::IPCBridge::IPCBridge(
+    CameraMojoChannelManager* mojo_manager)
+    : mojo_manager_(mojo_manager),
+      ipc_task_runner_(mojo_manager_->GetIpcTaskRunner()) {}
+
+JpegEncodeAcceleratorImpl::IPCBridge::~IPCBridge() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  Destroy();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::Start(
+    base::Callback<void(bool)> callback) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  if (jea_ptr_.is_bound()) {
+    std::move(callback).Run(true);
+    return;
+  }
+
+  auto request = mojo::MakeRequest(&jea_ptr_);
+
+  if (!mojo_manager_->CreateJpegEncodeAccelerator(std::move(request))) {
+    std::move(callback).Run(false);
+    Destroy();
+    return;
+  }
+  jea_ptr_.set_connection_error_handler(base::Bind(
+      &JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError,
+      GetWeakPtr()));
+
+  jea_ptr_->Initialize(callback);
+  VLOGF_EXIT();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::Destroy() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+  jea_ptr_.reset();
+  input_shm_map_.clear();
+  exif_shm_map_.clear();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy(
     int32_t task_id,
     int input_fd,
     const uint8_t* input_buffer,
@@ -219,7 +217,7 @@ void JpegEncodeAcceleratorImpl::EncodeOnIpcThreadLegacy(
     int output_fd,
     uint32_t output_buffer_size,
     EncodeWithFDCallback callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(input_shm_map_.count(task_id), 0);
   DCHECK_EQ(exif_shm_map_.count(task_id), 0);
 
@@ -278,15 +276,15 @@ void JpegEncodeAcceleratorImpl::EncodeOnIpcThreadLegacy(
   input_shm_map_[task_id] = std::move(input_shm);
   exif_shm_map_[task_id] = std::move(exif_shm);
 
-  jea_ptr_->EncodeWithFD(task_id, std::move(input_handle), input_buffer_size,
-                         coded_size_width, coded_size_height,
-                         std::move(exif_handle), exif_buffer_size,
-                         std::move(output_handle), output_buffer_size,
-                         base::Bind(&JpegEncodeAcceleratorImpl::OnEncodeAck,
-                                    base::Unretained(this), callback));
+  jea_ptr_->EncodeWithFD(
+      task_id, std::move(input_handle), input_buffer_size, coded_size_width,
+      coded_size_height, std::move(exif_handle), exif_buffer_size,
+      std::move(output_handle), output_buffer_size,
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::OnEncodeAck,
+                 GetWeakPtr(), callback));
 }
 
-void JpegEncodeAcceleratorImpl::EncodeOnIpcThread(
+void JpegEncodeAcceleratorImpl::IPCBridge::Encode(
     int32_t task_id,
     uint32_t input_format,
     const std::vector<JpegCompressor::DmaBufPlane>& input_planes,
@@ -296,7 +294,7 @@ void JpegEncodeAcceleratorImpl::EncodeOnIpcThread(
     int coded_size_width,
     int coded_size_height,
     EncodeWithDmaBufCallback callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(exif_shm_map_.count(task_id), 0);
 
   if (!jea_ptr_.is_bound()) {
@@ -345,26 +343,44 @@ void JpegEncodeAcceleratorImpl::EncodeOnIpcThread(
       task_id, input_format, std::move(mojo_input_planes),
       std::move(mojo_output_planes), std::move(exif_handle), exif_buffer_size,
       coded_size_width, coded_size_height,
-      base::Bind(&JpegEncodeAcceleratorImpl::OnEncodeDmaBufAck,
-                 base::Unretained(this), callback));
+      base::Bind(&JpegEncodeAcceleratorImpl::IPCBridge::OnEncodeDmaBufAck,
+                 GetWeakPtr(), callback));
 }
 
-void JpegEncodeAcceleratorImpl::EncodeSyncCallback(
+void JpegEncodeAcceleratorImpl::IPCBridge::EncodeSyncCallback(
     base::Callback<void(int)> callback,
     uint32_t* output_data_size,
     int32_t task_id,
     uint32_t output_size,
     int status) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   *output_data_size = output_size;
   callback.Run(status);
 }
 
-void JpegEncodeAcceleratorImpl::OnEncodeAck(EncodeWithFDCallback callback,
-                                            int32_t task_id,
-                                            uint32_t output_size,
-                                            mojom::EncodeStatus status) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+base::WeakPtr<JpegEncodeAcceleratorImpl::IPCBridge>
+JpegEncodeAcceleratorImpl::IPCBridge::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
+bool JpegEncodeAcceleratorImpl::IPCBridge::IsReady() {
+  return jea_ptr_.is_bound();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::OnJpegEncodeAcceleratorError() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+  LOGF(ERROR) << "There is a mojo error for JpegEncodeAccelerator";
+  Destroy();
+  VLOGF_EXIT();
+}
+
+void JpegEncodeAcceleratorImpl::IPCBridge::OnEncodeAck(
+    EncodeWithFDCallback callback,
+    int32_t task_id,
+    uint32_t output_size,
+    mojom::EncodeStatus status) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(input_shm_map_.count(task_id), 1u);
   DCHECK_EQ(exif_shm_map_.count(task_id), 1u);
   input_shm_map_.erase(task_id);
@@ -372,11 +388,11 @@ void JpegEncodeAcceleratorImpl::OnEncodeAck(EncodeWithFDCallback callback,
   callback.Run(output_size, static_cast<int>(status));
 }
 
-void JpegEncodeAcceleratorImpl::OnEncodeDmaBufAck(
+void JpegEncodeAcceleratorImpl::IPCBridge::OnEncodeDmaBufAck(
     EncodeWithDmaBufCallback callback,
     uint32_t output_size,
     mojom::EncodeStatus status) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   callback.Run(output_size, static_cast<int>(status));
 }
 

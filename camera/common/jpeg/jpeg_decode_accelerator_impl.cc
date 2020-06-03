@@ -67,44 +67,33 @@ std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance() {
 }
 
 JpegDecodeAcceleratorImpl::JpegDecodeAcceleratorImpl()
-    : ipc_thread_("JdaIpcThread"),
-      buffer_id_(0),
+    : buffer_id_(0),
+      mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      ipc_bridge_(new IPCBridge(mojo_manager_.get())),
       camera_metrics_(CameraMetrics::New()) {
   VLOGF_ENTER();
-
-  mojo_channel_manager_ = CameraMojoChannelManager::CreateInstance();
 }
 
 JpegDecodeAcceleratorImpl::~JpegDecodeAcceleratorImpl() {
   VLOGF_ENTER();
-  if (ipc_thread_.IsRunning()) {
-    ipc_thread_.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&JpegDecodeAcceleratorImpl::DestroyOnIpcThread,
-                              base::Unretained(this)));
-    ipc_thread_.Stop();
-  }
+
+  bool result = mojo_manager_->GetIpcTaskRunner()->DeleteSoon(
+      FROM_HERE, std::move(ipc_bridge_));
+  DCHECK(result);
+  cancellation_relay_ = nullptr;
+
   VLOGF_EXIT();
 }
 
 bool JpegDecodeAcceleratorImpl::Start() {
   VLOGF_ENTER();
 
-  if (!mojo_channel_manager_) {
-    return false;
-  }
-
-  if (!ipc_thread_.IsRunning()) {
-    if (!ipc_thread_.Start()) {
-      LOGF(ERROR) << "Failed to start IPC thread";
-      return false;
-    }
-  }
-
   cancellation_relay_ = std::make_unique<CancellationRelay>();
   auto is_initialized = cros::Future<bool>::Create(cancellation_relay_.get());
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&JpegDecodeAcceleratorImpl::InitializeOnIpcThread,
-                            base::Unretained(this),
+
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE, base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::Start,
+                            ipc_bridge_->GetWeakPtr(),
                             cros::GetFutureCallback(is_initialized)));
   if (!is_initialized->Wait()) {
     return false;
@@ -115,52 +104,6 @@ bool JpegDecodeAcceleratorImpl::Start() {
   return is_initialized->Get();
 }
 
-void JpegDecodeAcceleratorImpl::InitializeOnIpcThread(
-    base::Callback<void(bool)> callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-
-  if (jda_ptr_.is_bound()) {
-    callback.Run(true);
-    return;
-  }
-
-  auto request = mojo::MakeRequest(&jda_ptr_);
-
-  if (!mojo_channel_manager_->CreateMjpegDecodeAccelerator(
-          std::move(request))) {
-    callback.Run(false);
-    DestroyOnIpcThread();
-    return;
-  }
-  jda_ptr_.set_connection_error_handler(
-      base::Bind(&JpegDecodeAcceleratorImpl::OnJpegDecodeAcceleratorError,
-                 base::Unretained(this)));
-
-  jda_ptr_->Initialize(callback);
-  VLOGF_EXIT();
-}
-
-void JpegDecodeAcceleratorImpl::DestroyOnIpcThread() {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-  jda_ptr_.reset();
-  inflight_buffer_ids_.clear();
-  input_shm_map_.clear();
-  VLOGF_EXIT();
-}
-
-void JpegDecodeAcceleratorImpl::OnJpegDecodeAcceleratorError() {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  VLOGF_ENTER();
-  LOGF(ERROR) << "There is a mojo error for JpegDecodeAccelerator";
-  jda_ptr_.reset();
-  inflight_buffer_ids_.clear();
-  input_shm_map_.clear();
-  cancellation_relay_ = nullptr;
-  VLOGF_EXIT();
-}
-
 JpegDecodeAccelerator::Error JpegDecodeAcceleratorImpl::DecodeSync(
     int input_fd,
     uint32_t input_buffer_size,
@@ -168,12 +111,13 @@ JpegDecodeAccelerator::Error JpegDecodeAcceleratorImpl::DecodeSync(
     buffer_handle_t output_buffer) {
   auto future = cros::Future<int>::Create(cancellation_relay_.get());
 
-  Decode(input_fd, input_buffer_size, input_buffer_offset, output_buffer,
-         base::Bind(&JpegDecodeAcceleratorImpl::DecodeSyncCallback,
-                    base::Unretained(this), cros::GetFutureCallback(future)));
+  Decode(
+      input_fd, input_buffer_size, input_buffer_offset, output_buffer,
+      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::DecodeSyncCallback,
+                 ipc_bridge_->GetWeakPtr(), cros::GetFutureCallback(future)));
 
   if (!future->Wait()) {
-    if (!jda_ptr_.is_bound()) {
+    if (!ipc_bridge_->IsReady()) {
       LOGF(WARNING) << "There may be an mojo channel error.";
       return Error::TRY_START_AGAIN;
     }
@@ -195,13 +139,14 @@ JpegDecodeAccelerator::Error JpegDecodeAcceleratorImpl::DecodeSync(
 
   base::ElapsedTimer timer;
 
-  Decode(input_fd, input_buffer_size, coded_size_width, coded_size_height,
-         output_fd, output_buffer_size,
-         base::Bind(&JpegDecodeAcceleratorImpl::DecodeSyncCallback,
-                    base::Unretained(this), cros::GetFutureCallback(future)));
+  Decode(
+      input_fd, input_buffer_size, coded_size_width, coded_size_height,
+      output_fd, output_buffer_size,
+      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::DecodeSyncCallback,
+                 ipc_bridge_->GetWeakPtr(), cros::GetFutureCallback(future)));
 
   if (!future->Wait()) {
-    if (!jda_ptr_.is_bound()) {
+    if (!ipc_bridge_->IsReady()) {
       LOGF(WARNING) << "There may be an mojo channel error.";
       return Error::TRY_START_AGAIN;
     }
@@ -228,11 +173,11 @@ int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
   // Mask against 30 bits, to avoid (undefined) wraparound on signed integer.
   buffer_id_ = (buffer_id_ + 1) & 0x3FFFFFFF;
 
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&JpegDecodeAcceleratorImpl::DecodeOnIpcThread,
-                 base::Unretained(this), buffer_id, input_fd, input_buffer_size,
-                 input_buffer_offset, output_buffer, std::move(callback)));
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE, base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::Decode,
+                            ipc_bridge_->GetWeakPtr(), buffer_id, input_fd,
+                            input_buffer_size, input_buffer_offset,
+                            output_buffer, std::move(callback)));
   return buffer_id;
 }
 
@@ -248,22 +193,67 @@ int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
   // Mask against 30 bits, to avoid (undefined) wraparound on signed integer.
   buffer_id_ = (buffer_id_ + 1) & 0x3FFFFFFF;
 
-  ipc_thread_.task_runner()->PostTask(
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
       FROM_HERE,
-      base::Bind(&JpegDecodeAcceleratorImpl::DecodeOnIpcThreadLegacy,
-                 base::Unretained(this), buffer_id, input_fd, input_buffer_size,
-                 coded_size_width, coded_size_height, output_fd,
-                 output_buffer_size, std::move(callback)));
+      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy,
+                 ipc_bridge_->GetWeakPtr(), buffer_id, input_fd,
+                 input_buffer_size, coded_size_width, coded_size_height,
+                 output_fd, output_buffer_size, std::move(callback)));
   return buffer_id;
 }
 
-void JpegDecodeAcceleratorImpl::DecodeOnIpcThread(int32_t buffer_id,
+JpegDecodeAcceleratorImpl::IPCBridge::IPCBridge(
+    CameraMojoChannelManager* mojo_manager)
+    : mojo_manager_(mojo_manager),
+      ipc_task_runner_(mojo_manager_->GetIpcTaskRunner()) {}
+
+JpegDecodeAcceleratorImpl::IPCBridge::~IPCBridge() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  Destroy();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::Start(
+    base::Callback<void(bool)> callback) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+
+  if (jda_ptr_.is_bound()) {
+    std::move(callback).Run(true);
+    return;
+  }
+
+  auto request = mojo::MakeRequest(&jda_ptr_);
+
+  if (!mojo_manager_->CreateMjpegDecodeAccelerator(std::move(request))) {
+    std::move(callback).Run(false);
+    Destroy();
+    return;
+  }
+  jda_ptr_.set_connection_error_handler(base::Bind(
+      &JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError,
+      GetWeakPtr()));
+
+  jda_ptr_->Initialize(std::move(callback));
+  VLOGF_EXIT();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::Destroy() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+  jda_ptr_.reset();
+  inflight_buffer_ids_.clear();
+  input_shm_map_.clear();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::Decode(int32_t buffer_id,
                                                   int input_fd,
                                                   uint32_t input_buffer_size,
                                                   uint32_t input_buffer_offset,
                                                   buffer_handle_t output_buffer,
                                                   DecodeCallback callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK(!base::ContainsKey(inflight_buffer_ids_, buffer_id));
 
   if (!jda_ptr_.is_bound()) {
@@ -304,11 +294,11 @@ void JpegDecodeAcceleratorImpl::DecodeOnIpcThread(int32_t buffer_id,
   jda_ptr_->DecodeWithDmaBuf(
       buffer_id, std::move(input_handle), input_buffer_size,
       input_buffer_offset, std::move(output_frame),
-      base::BindRepeating(&JpegDecodeAcceleratorImpl::OnDecodeAck,
-                          base::Unretained(this), callback, buffer_id));
+      base::BindRepeating(&JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAck,
+                          GetWeakPtr(), callback, buffer_id));
 }
 
-void JpegDecodeAcceleratorImpl::DecodeOnIpcThreadLegacy(
+void JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy(
     int32_t buffer_id,
     int input_fd,
     uint32_t input_buffer_size,
@@ -317,7 +307,7 @@ void JpegDecodeAcceleratorImpl::DecodeOnIpcThreadLegacy(
     int output_fd,
     uint32_t output_buffer_size,
     DecodeCallback callback) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(input_shm_map_.count(buffer_id), 0);
 
   if (!jda_ptr_.is_bound()) {
@@ -355,29 +345,56 @@ void JpegDecodeAcceleratorImpl::DecodeOnIpcThreadLegacy(
   jda_ptr_->DecodeWithFD(
       buffer_id, std::move(input_handle), input_buffer_size, coded_size_width,
       coded_size_height, std::move(output_handle), output_buffer_size,
-      base::BindRepeating(&JpegDecodeAcceleratorImpl::OnDecodeAckLegacy,
-                          base::Unretained(this), callback));
+      base::BindRepeating(
+          &JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAckLegacy,
+          GetWeakPtr(), callback));
 }
 
-void JpegDecodeAcceleratorImpl::DecodeSyncCallback(
+void JpegDecodeAcceleratorImpl::IPCBridge::DecodeSyncCallback(
     base::Callback<void(int)> callback, int32_t buffer_id, int error) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   callback.Run(error);
 }
 
-void JpegDecodeAcceleratorImpl::OnDecodeAck(DecodeCallback callback,
-                                            int32_t buffer_id,
-                                            cros::mojom::DecodeError error) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+void JpegDecodeAcceleratorImpl::IPCBridge::TestResetJDAChannel(
+    scoped_refptr<cros::Future<void>> future) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  jda_ptr_.reset();
+  future->Set();
+}
+
+base::WeakPtr<JpegDecodeAcceleratorImpl::IPCBridge>
+JpegDecodeAcceleratorImpl::IPCBridge::GetWeakPtr() {
+  return weak_ptr_factory_.GetWeakPtr();
+}
+
+bool JpegDecodeAcceleratorImpl::IPCBridge::IsReady() {
+  return jda_ptr_.is_bound();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError() {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
+  VLOGF_ENTER();
+  LOGF(ERROR) << "There is a mojo error for JpegDecodeAccelerator";
+  Destroy();
+  VLOGF_EXIT();
+}
+
+void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAck(
+    DecodeCallback callback,
+    int32_t buffer_id,
+    cros::mojom::DecodeError error) {
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK(base::ContainsKey(inflight_buffer_ids_, buffer_id));
   inflight_buffer_ids_.erase(buffer_id);
   callback.Run(buffer_id, static_cast<int>(error));
 }
 
-void JpegDecodeAcceleratorImpl::OnDecodeAckLegacy(
+void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAckLegacy(
     DecodeCallback callback,
     int32_t buffer_id,
     cros::mojom::DecodeError error) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK_EQ(input_shm_map_.count(buffer_id), 1u);
   input_shm_map_.erase(buffer_id);
   callback.Run(buffer_id, static_cast<int>(error));
@@ -385,18 +402,12 @@ void JpegDecodeAcceleratorImpl::OnDecodeAckLegacy(
 
 void JpegDecodeAcceleratorImpl::TestResetJDAChannel() {
   auto future = cros::Future<void>::Create(nullptr);
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&JpegDecodeAcceleratorImpl::TestResetJDAChannelOnIpcThread,
-                 base::Unretained(this), base::RetainedRef(future)));
-  future->Wait();
-}
 
-void JpegDecodeAcceleratorImpl::TestResetJDAChannelOnIpcThread(
-    scoped_refptr<cros::Future<void>> future) {
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-  jda_ptr_.reset();
-  future->Set();
+  mojo_manager_->GetIpcTaskRunner()->PostTask(
+      FROM_HERE,
+      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::TestResetJDAChannel,
+                 ipc_bridge_->GetWeakPtr(), base::RetainedRef(future)));
+  future->Wait();
 }
 
 }  // namespace cros
