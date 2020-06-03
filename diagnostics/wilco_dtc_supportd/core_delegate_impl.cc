@@ -19,7 +19,7 @@
 #include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service_impl.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service_impl.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service_impl.h"
 #include "mojo/wilco_dtc_supportd.mojom.h"
 
@@ -88,8 +88,8 @@ CoreDelegateImpl::CreateBluetoothEventService(
   return std::make_unique<BluetoothEventServiceImpl>(bluetooth_client);
 }
 
-std::unique_ptr<EcEventService> CoreDelegateImpl::CreateEcEventService() {
-  return std::make_unique<EcEventService>();
+std::unique_ptr<EcService> CoreDelegateImpl::CreateEcService() {
+  return std::make_unique<EcService>();
 }
 
 std::unique_ptr<PowerdEventService> CoreDelegateImpl::CreatePowerdEventService(

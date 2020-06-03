@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_EVENT_SERVICE_H_
-#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_EVENT_SERVICE_H_
+#ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_SERVICE_H_
+#define DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_SERVICE_H_
 
 #include <cstdint>
 #include <memory>
@@ -27,8 +27,9 @@ namespace internal {
 class EcEventMonitoringThreadDelegate;
 }  // namespace internal
 
-// Subscribes on EC events and redirects EC events to wilco_dtc.
-class EcEventService {
+// Reads EC telemetry data and subscribes on EC events then distributes them to
+// the list of observers.
+class EcService {
  public:
   // A packet of data sent by the EC when it notices certain events have
   // occurred, such as the battery, AC adapter, or USB-C state changing.
@@ -206,8 +207,8 @@ class EcEventService {
     std::string payload;
   };
 
-  EcEventService();
-  virtual ~EcEventService();
+  EcService();
+  virtual ~EcService();
 
   // Starts service.
   bool Start();
@@ -275,9 +276,9 @@ class EcEventService {
 
   base::SequenceCheckerImpl sequence_checker_;
 
-  DISALLOW_COPY_AND_ASSIGN(EcEventService);
+  DISALLOW_COPY_AND_ASSIGN(EcService);
 };
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_EVENT_SERVICE_H_
+#endif  // DIAGNOSTICS_WILCO_DTC_SUPPORTD_TELEMETRY_EC_SERVICE_H_

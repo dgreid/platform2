@@ -6,15 +6,15 @@
 
 #include <gtest/gtest.h>
 
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service_test_utils.h"
 
 namespace diagnostics {
 
 namespace {
 
-using EcEvent = EcEventService::EcEvent;
-using EcEventReason = EcEventService::EcEvent::Reason;
+using EcEvent = EcService::EcEvent;
+using EcEventReason = EcService::EcEvent::Reason;
 
 // Tests for ec_event_test_utils.
 //

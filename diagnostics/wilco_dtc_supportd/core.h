@@ -31,7 +31,7 @@
 #include "diagnostics/wilco_dtc_supportd/probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/routine_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service.h"
 
 #include "mojo/cros_healthd.mojom.h"
@@ -54,7 +54,7 @@ class Core final : public DBusService::Delegate,
                    public chromeos::wilco_dtc_supportd::mojom::
                        WilcoDtcSupportdServiceFactory,
                    public BluetoothEventService::Observer,
-                   public EcEventService::Observer,
+                   public EcService::Observer,
                    public PowerdEventService::Observer {
  public:
   class Delegate {
@@ -99,9 +99,9 @@ class Core final : public DBusService::Delegate,
     virtual std::unique_ptr<BluetoothEventService> CreateBluetoothEventService(
         BluetoothClient* bluetooth_client) = 0;
 
-    // Creates EcEventService. For performance reason, must be called no
+    // Creates EcService. For performance reason, must be called no
     // more than once.
-    virtual std::unique_ptr<EcEventService> CreateEcEventService() = 0;
+    virtual std::unique_ptr<EcService> CreateEcService() = 0;
 
     // Creates PowerdEventService. For performance reason, must be called no
     // more than once.
@@ -123,7 +123,7 @@ class Core final : public DBusService::Delegate,
 
   // Overrides the file system root directory for file operations in tests.
   void set_root_dir_for_testing(const base::FilePath& root_dir) {
-    ec_event_service_->set_root_dir_for_testing(root_dir);
+    ec_service_->set_root_dir_for_testing(root_dir);
     grpc_service_.set_root_dir_for_testing(root_dir);
   }
 
@@ -185,7 +185,7 @@ class Core final : public DBusService::Delegate,
   void ProbeTelemetryInfo(
       std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
       ProbeTelemetryInfoCallback callback) override;
-  EcEventService* GetEcEventService() override;
+  EcService* GetEcService() override;
 
   // MojoService::Delegate overrides:
   void SendGrpcUiMessageToWilcoDtc(
@@ -213,14 +213,14 @@ class Core final : public DBusService::Delegate,
   void BluetoothAdapterDataChanged(
       const std::vector<BluetoothEventService::AdapterData>& adapters) override;
 
-  // EcEventService::Observer overrides:
-  void OnEcEvent(const EcEventService::EcEvent& ec_event) override;
+  // EcService::Observer overrides:
+  void OnEcEvent(const EcService::EcEvent& ec_event) override;
 
   // PowerdEventService::Observer overrides:
   void OnPowerdEvent(PowerEventType type) override;
 
   // OnEcEvent should trigger the following:
-  void SendGrpcEcEventToWilcoDtc(const EcEventService::EcEvent& ec_event);
+  void SendGrpcEcEventToWilcoDtc(const EcService::EcEvent& ec_event);
   void SendMojoEcEventToBrowser(const MojoEvent& mojo_event);
 
   // Called by BluetoothAdapterDataChanged and RequestBluetoothDataNotification.
@@ -285,7 +285,7 @@ class Core final : public DBusService::Delegate,
 
   // Telemetry services:
   std::unique_ptr<BluetoothEventService> bluetooth_event_service_;
-  std::unique_ptr<EcEventService> ec_event_service_;
+  std::unique_ptr<EcService> ec_service_;
   std::unique_ptr<PowerdEventService> powerd_event_service_;
 
   // Diagnostic routine-related members:

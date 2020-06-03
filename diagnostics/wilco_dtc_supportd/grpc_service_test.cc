@@ -301,13 +301,10 @@ class MockGrpcServiceDelegate : public GrpcService::Delegate {
       (std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum> categories,
        ProbeTelemetryInfoCallback callback),
       (override));
-  EcEventService* GetEcEventService() override {
-    return ec_event_service_.get();
-  }
+  EcService* GetEcService() override { return ec_service_.get(); }
 
  private:
-  std::unique_ptr<EcEventService> ec_event_service_ =
-      std::make_unique<EcEventService>();
+  std::unique_ptr<EcService> ec_service_ = std::make_unique<EcService>();
 };
 
 // Tests for the GrpcService class.
@@ -318,8 +315,7 @@ class GrpcServiceTest : public testing::Test {
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
     service_.set_root_dir_for_testing(temp_dir_.GetPath());
-    delegate_.GetEcEventService()->set_root_dir_for_testing(
-        temp_dir_.GetPath());
+    delegate_.GetEcService()->set_root_dir_for_testing(temp_dir_.GetPath());
   }
 
   GrpcService* service() { return &service_; }

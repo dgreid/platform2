@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service_test_utils.h"
 
 #include <base/logging.h>
 
@@ -10,7 +10,7 @@ namespace diagnostics {
 
 namespace {
 
-using EcEvent = diagnostics::EcEventService::EcEvent;
+using EcEvent = diagnostics::EcService::EcEvent;
 
 // A meaningless and meaningful EcEvent::Type
 const auto kNonSystemNotifyType = static_cast<EcEvent::Type>(0xabcd);

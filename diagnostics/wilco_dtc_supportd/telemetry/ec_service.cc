@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -28,14 +28,14 @@ namespace diagnostics {
 namespace internal {
 
 // This is the background ("monitoring") thread delegate used by
-// |EcEventService|.
+// |EcService|.
 class EcEventMonitoringThreadDelegate final
     : public base::DelegateSimpleThread::Delegate {
  public:
   using OnEventAvailableCallback =
-      base::RepeatingCallback<void(const EcEventService::EcEvent&)>;
+      base::RepeatingCallback<void(const EcService::EcEvent&)>;
 
-  // |EcEventService| guarantees that the unowned pointer and file descriptors
+  // |EcService| guarantees that the unowned pointer and file descriptors
   // outlive this delegate. This delegate will post
   // |on_event_available_callback| on the |foreground_task_runner| when an EC
   // event is available and it will post |on_shutdown_callback| on the
@@ -81,7 +81,7 @@ class EcEventMonitoringThreadDelegate final
         continue;
       }
 
-      EcEventService::EcEvent ec_event;
+      EcService::EcEvent ec_event;
       ssize_t bytes_read =
           HANDLE_EINTR(read(fds[0].fd, &ec_event, sizeof(ec_event)));
       if (bytes_read < 0) {
@@ -115,18 +115,18 @@ class EcEventMonitoringThreadDelegate final
 
 }  // namespace internal
 
-EcEventService::EcEvent::EcEvent() = default;
+EcService::EcEvent::EcEvent() = default;
 
-EcEventService::EcEvent::EcEvent(uint16_t num_words_in_payload,
-                                 Type type,
-                                 const uint16_t payload[6])
+EcService::EcEvent::EcEvent(uint16_t num_words_in_payload,
+                            Type type,
+                            const uint16_t payload[6])
     : size(num_words_in_payload + 1), type(type), payload{} {
   memcpy(&this->payload, payload,
          std::min(sizeof(this->payload),
                   num_words_in_payload * sizeof(payload[0])));
 }
 
-EcEventService::EcEvent::Reason EcEventService::EcEvent::GetReason() const {
+EcService::EcEvent::Reason EcService::EcEvent::GetReason() const {
   if (type != Type::SYSTEM_NOTIFY) {
     return Reason::kNonSysNotification;
   }
@@ -166,21 +166,20 @@ EcEventService::EcEvent::Reason EcEventService::EcEvent::GetReason() const {
   return Reason::kSysNotification;
 }
 
-size_t EcEventService::EcEvent::PayloadSizeInBytes() const {
+size_t EcService::EcEvent::PayloadSizeInBytes() const {
   // Guard against the case when |size| == 0.
   uint16_t sanitized_size = std::max(size, static_cast<uint16_t>(1));
   return (sanitized_size - 1) * sizeof(uint16_t);
 }
 
-EcEventService::EcEventService()
-    : task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
+EcService::EcService() : task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
 
-EcEventService::~EcEventService() {
+EcService::~EcService() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   DCHECK(!monitoring_thread_);
 }
 
-bool EcEventService::Start() {
+bool EcService::Start() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   DCHECK(!monitoring_thread_);
 
@@ -202,9 +201,9 @@ bool EcEventService::Start() {
   monitoring_thread_delegate_ =
       std::make_unique<internal::EcEventMonitoringThreadDelegate>(
           event_fd_.get(), event_fd_events_, shutdown_fd_.get(), task_runner_,
-          base::BindRepeating(&EcEventService::OnEventAvailable,
+          base::BindRepeating(&EcService::OnEventAvailable,
                               base::Unretained(this)),
-          base::BindOnce(&EcEventService::OnShutdown, base::Unretained(this)));
+          base::BindOnce(&EcService::OnShutdown, base::Unretained(this)));
   monitoring_thread_ = std::make_unique<base::DelegateSimpleThread>(
       monitoring_thread_delegate_.get(),
       "WilcoDtcSupportdEcEventMonitoring" /* name_prefix */);
@@ -212,7 +211,7 @@ bool EcEventService::Start() {
   return true;
 }
 
-void EcEventService::ShutDown(base::Closure on_shutdown_callback) {
+void EcService::ShutDown(base::Closure on_shutdown_callback) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
   DCHECK(on_shutdown_callback_.is_null());
   DCHECK(!on_shutdown_callback.is_null());
@@ -227,7 +226,7 @@ void EcEventService::ShutDown(base::Closure on_shutdown_callback) {
   ShutDownMonitoringThread();
 }
 
-EcEventService::GetEcTelemetryResponse EcEventService::GetEcTelemetry(
+EcService::GetEcTelemetryResponse EcService::GetEcTelemetry(
     const std::string& request_payload) {
   auto reply = GetEcTelemetryResponse();
   if (request_payload.empty()) {
@@ -283,22 +282,22 @@ EcEventService::GetEcTelemetryResponse EcEventService::GetEcTelemetry(
   return reply;
 }
 
-void EcEventService::AddObserver(EcEventService::Observer* observer) {
+void EcService::AddObserver(EcService::Observer* observer) {
   DCHECK(observer);
   observers_.AddObserver(observer);
 }
 
-void EcEventService::RemoveObserver(EcEventService::Observer* observer) {
+void EcService::RemoveObserver(EcService::Observer* observer) {
   DCHECK(observer);
   observers_.RemoveObserver(observer);
 }
 
-bool EcEventService::HasObserver(EcEventService::Observer* observer) {
+bool EcService::HasObserver(EcService::Observer* observer) {
   DCHECK(observer);
   return observers_.HasObserver(observer);
 }
 
-void EcEventService::ShutDownMonitoringThread() {
+void EcService::ShutDownMonitoringThread() {
   // Due to |eventfd| documentation to invoke |poll()| on |shutdown_fd_| file
   // descriptor we must write any 8-byte value greater than 0 except
   // |0xffffffffffffffff|.
@@ -310,14 +309,14 @@ void EcEventService::ShutDownMonitoringThread() {
   }
 }
 
-void EcEventService::OnEventAvailable(const EcEvent& ec_event) {
+void EcService::OnEventAvailable(const EcEvent& ec_event) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
   for (auto& observer : observers_)
     observer.OnEcEvent(ec_event);
 }
 
-void EcEventService::OnShutdown() {
+void EcService::OnShutdown() {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
   monitoring_thread_->Join();

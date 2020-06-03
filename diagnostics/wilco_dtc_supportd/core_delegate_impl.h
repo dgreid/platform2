@@ -16,7 +16,7 @@
 #include "diagnostics/wilco_dtc_supportd/core.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/bluetooth_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/powerd_event_service.h"
 
 namespace diagnostics {
@@ -41,7 +41,7 @@ class CoreDelegateImpl final : public Core::Delegate {
       const scoped_refptr<dbus::Bus>& bus) override;
   std::unique_ptr<BluetoothEventService> CreateBluetoothEventService(
       BluetoothClient* bluetooth_client) override;
-  std::unique_ptr<EcEventService> CreateEcEventService() override;
+  std::unique_ptr<EcService> CreateEcService() override;
   std::unique_ptr<PowerdEventService> CreatePowerdEventService(
       PowerdAdapter* powerd_adapter) override;
   std::unique_ptr<ProbeService> CreateProbeService(

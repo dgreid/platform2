@@ -21,8 +21,8 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service_test_utils.h"
 #include "mojo/wilco_dtc_supportd.mojom.h"
 
 namespace diagnostics {
@@ -33,8 +33,8 @@ using testing::_;
 using testing::Invoke;
 using testing::StrictMock;
 
-using EcEvent = EcEventService::EcEvent;
-using EcEventReason = EcEventService::EcEvent::Reason;
+using EcEvent = EcService::EcEvent;
+using EcEventReason = EcService::EcEvent::Reason;
 using MojoEvent = chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdEvent;
 
 // Tests for EcEvent.
@@ -81,14 +81,14 @@ INSTANTIATE_TEST_CASE_P(
         std::make_tuple(kEcEventNonWilcoChargerBadSubType,
                         EcEventReason::kSysNotification)));
 
-class MockEcEventServiceObserver : public EcEventService::Observer {
+class MockEcServiceObserver : public EcService::Observer {
  public:
   MOCK_METHOD(void, OnEcEvent, (const EcEvent&), (override));
 };
 
-class EcEventServiceTest : public testing::Test {
+class EcServiceTest : public testing::Test {
  protected:
-  EcEventServiceTest() = default;
+  EcServiceTest() = default;
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
@@ -134,39 +134,39 @@ class EcEventServiceTest : public testing::Test {
             Invoke([callback](const EcEvent& ec_event) { callback.Run(); }));
   }
 
-  EcEventService* service() { return &service_; }
+  EcService* service() { return &service_; }
 
  private:
   base::MessageLoop message_loop_;
-  StrictMock<MockEcEventServiceObserver> observer_;
-  EcEventService service_;
+  StrictMock<MockEcServiceObserver> observer_;
+  EcService service_;
 
   base::ScopedTempDir temp_dir_;
 
   base::ScopedFD fifo_write_end_;
 };
 
-TEST_F(EcEventServiceTest, Start) {
+TEST_F(EcServiceTest, Start) {
   CreateEcEventFile();
   ASSERT_TRUE(service()->Start());
 }
 
-TEST_F(EcEventServiceTest, StartFailure) {
+TEST_F(EcServiceTest, StartFailure) {
   ASSERT_FALSE(service()->Start());
 }
 
-// Tests for the EcEventService class that started successfully.
-class StartedEcEventServiceTest : public EcEventServiceTest {
+// Tests for the EcService class that started successfully.
+class StartedEcServiceTest : public EcServiceTest {
  protected:
   void SetUp() override {
-    ASSERT_NO_FATAL_FAILURE(EcEventServiceTest::SetUp());
+    ASSERT_NO_FATAL_FAILURE(EcServiceTest::SetUp());
     CreateEcEventFile();
     ASSERT_TRUE(service()->Start());
     InitFifoWriteEnd();
   }
 };
 
-TEST_F(StartedEcEventServiceTest, ReadEvent) {
+TEST_F(StartedEcServiceTest, ReadEvent) {
   base::RunLoop run_loop;
   const uint16_t data[] = {0xaaaa, 0xbbbb, 0xcccc, 0xdddd, 0xeeee, 0xffff};
   EmitEcEventAndSetObserverExpectations(
@@ -175,7 +175,7 @@ TEST_F(StartedEcEventServiceTest, ReadEvent) {
   run_loop.Run();
 }
 
-TEST_F(StartedEcEventServiceTest, ReadManyEvent) {
+TEST_F(StartedEcServiceTest, ReadManyEvent) {
   base::RunLoop run_loop;
   base::RepeatingClosure callback = base::BarrierClosure(
       2 /* num_closures */, run_loop.QuitClosure() /* done closure */);

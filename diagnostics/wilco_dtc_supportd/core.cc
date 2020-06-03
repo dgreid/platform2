@@ -30,8 +30,8 @@ namespace diagnostics {
 
 namespace {
 
-using EcEvent = EcEventService::EcEvent;
-using EcEventReason = EcEventService::EcEvent::Reason;
+using EcEvent = EcService::EcEvent;
+using EcEventReason = EcService::EcEvent::Reason;
 using MojomWilcoDtcSupportdWebRequestStatus =
     chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdWebRequestStatus;
 using MojomWilcoDtcSupportdWebRequestHttpMethod =
@@ -109,10 +109,10 @@ Core::Core(Delegate* delegate,
       grpc_server_(base::ThreadTaskRunnerHandle::Get(), grpc_service_uris_) {
   DCHECK(delegate);
   DCHECK(grpc_client_manager_);
-  ec_event_service_ = delegate_->CreateEcEventService();
+  ec_service_ = delegate_->CreateEcService();
   probe_service_ = delegate->CreateProbeService(this);
-  DCHECK(ec_event_service_);
-  ec_event_service_->AddObserver(this);
+  DCHECK(ec_service_);
+  ec_service_->AddObserver(this);
 }
 
 Core::~Core() = default;
@@ -186,7 +186,7 @@ bool Core::Start() {
           << base::JoinString(grpc_service_uris_, ",");
 
   // Start EC event service.
-  if (!ec_event_service_->Start()) {
+  if (!ec_service_->Start()) {
     LOG(WARNING)
         << "Failed to start EC event service. EC events will be ignored.";
   }
@@ -200,7 +200,7 @@ void Core::ShutDown(base::OnceClosure on_shutdown_callback) {
   UnsubscribeFromEventServices();
   const base::Closure barrier_closure =
       base::BarrierClosure(2, std::move(on_shutdown_callback));
-  ec_event_service_->ShutDown(barrier_closure);
+  ec_service_->ShutDown(barrier_closure);
   grpc_server_.ShutDown(barrier_closure);
 
   dbus_object_.reset();
@@ -481,9 +481,9 @@ void Core::ProbeTelemetryInfo(
                                      std::move(callback));
 }
 
-EcEventService* Core::GetEcEventService() {
-  DCHECK(ec_event_service_);
-  return ec_event_service_.get();
+EcService* Core::GetEcService() {
+  DCHECK(ec_service_);
+  return ec_service_.get();
 }
 
 void Core::SendGrpcUiMessageToWilcoDtc(
@@ -717,7 +717,7 @@ void Core::UnsubscribeFromEventServices() {
   if (powerd_event_service_) {
     powerd_event_service_->RemoveObserver(this);
   }
-  ec_event_service_->RemoveObserver(this);
+  ec_service_->RemoveObserver(this);
 }
 
 }  // namespace diagnostics

@@ -59,10 +59,10 @@
 #include "diagnostics/wilco_dtc_supportd/fake_wilco_dtc.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
 #include "diagnostics/wilco_dtc_supportd/service_util.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/ec_event_test_utils.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/ec_service_test_utils.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/fake_bluetooth_event_service.h"
-#include "diagnostics/wilco_dtc_supportd/telemetry/fake_ec_event_service.h"
+#include "diagnostics/wilco_dtc_supportd/telemetry/fake_ec_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/fake_powerd_event_service.h"
 #include "mojo/wilco_dtc_supportd.mojom.h"
 #include "wilco_dtc_supportd.pb.h"  // NOLINT(build/include)
@@ -86,8 +86,8 @@ const char kWilcoDtcGrpcUriTemplate[] = "unix:%s/test_wilco_dtc_socket";
 const char kUiMessageReceiverWilcoDtcGrpcUriTemplate[] =
     "unix:%s/test_ui_message_receiver_wilco_dtc_socket";
 
-using EcEvent = EcEventService::EcEvent;
-using EcEventReason = EcEventService::EcEvent::Reason;
+using EcEvent = EcService::EcEvent;
+using EcEventReason = EcService::EcEvent::Reason;
 using MojoEvent = chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdEvent;
 using MojomWilcoDtcSupportdService =
     chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdService;
@@ -125,7 +125,7 @@ class FakeCoreDelegate : public Core::Delegate {
         passed_powerd_adapter_(std::make_unique<FakePowerdAdapter>()),
         passed_bluetooth_event_service_(
             std::make_unique<FakeBluetoothEventService>()),
-        passed_ec_event_service_(std::make_unique<FakeEcEventService>()),
+        passed_ec_service_(std::make_unique<FakeEcService>()),
         passed_powerd_event_service_(
             std::make_unique<FakePowerdEventService>()),
         passed_probe_service_(std::make_unique<FakeProbeService>()),
@@ -133,7 +133,7 @@ class FakeCoreDelegate : public Core::Delegate {
         debugd_adapter_(passed_debugd_adapter_.get()),
         powerd_adapter_(passed_powerd_adapter_.get()),
         bluetooth_event_service_(passed_bluetooth_event_service_.get()),
-        ec_event_service_(passed_ec_event_service_.get()),
+        ec_service_(passed_ec_service_.get()),
         powerd_event_service_(passed_powerd_event_service_.get()),
         probe_service_(passed_probe_service_.get()) {}
 
@@ -181,9 +181,9 @@ class FakeCoreDelegate : public Core::Delegate {
   }
 
   // Must be called no more than once.
-  std::unique_ptr<EcEventService> CreateEcEventService() override {
-    DCHECK(passed_ec_event_service_);
-    return std::move(passed_ec_event_service_);
+  std::unique_ptr<EcService> CreateEcService() override {
+    DCHECK(passed_ec_service_);
+    return std::move(passed_ec_service_);
   }
 
   // Must be called no more than once.
@@ -211,7 +211,7 @@ class FakeCoreDelegate : public Core::Delegate {
     return bluetooth_event_service_;
   }
 
-  FakeEcEventService* ec_event_service() const { return ec_event_service_; }
+  FakeEcService* ec_service() const { return ec_service_; }
 
   FakePowerdEventService* powerd_event_service() const {
     return powerd_event_service_;
@@ -231,7 +231,7 @@ class FakeCoreDelegate : public Core::Delegate {
   std::unique_ptr<FakePowerdAdapter> passed_powerd_adapter_;
 
   std::unique_ptr<FakeBluetoothEventService> passed_bluetooth_event_service_;
-  std::unique_ptr<FakeEcEventService> passed_ec_event_service_;
+  std::unique_ptr<FakeEcService> passed_ec_service_;
   std::unique_ptr<FakePowerdEventService> passed_powerd_event_service_;
   std::unique_ptr<FakeProbeService> passed_probe_service_;
 
@@ -243,7 +243,7 @@ class FakeCoreDelegate : public Core::Delegate {
   FakePowerdAdapter* powerd_adapter_;
 
   FakeBluetoothEventService* bluetooth_event_service_;
-  FakeEcEventService* ec_event_service_;
+  FakeEcService* ec_service_;
   FakePowerdEventService* powerd_event_service_;
   FakeProbeService* probe_service_;
 };
@@ -333,13 +333,13 @@ class StartedCoreTest : public CoreTest {
     CreateCore({wilco_dtc_supportd_grpc_uri_});
     core()->set_root_dir_for_testing(temp_dir_.GetPath());
 
-    SetUpEcEventService();
+    SetUpEcService();
 
     ASSERT_TRUE(core()->Start());
     grpc_client_manager_.Start(ui_message_receiver_wilco_dtc_grpc_uri_,
                                {wilco_dtc_grpc_uri_});
 
-    SetUpEcEventServiceFifoWriteEnd();
+    SetUpEcServiceFifoWriteEnd();
 
     SetUpDBus();
 
@@ -470,21 +470,19 @@ class StartedCoreTest : public CoreTest {
   }
 
   // Creates FIFO to emulates the EC event file used by EC event service.
-  void SetUpEcEventService() {
-    core_delegate()->ec_event_service()->set_event_fd_events_for_testing(
-        POLLIN);
+  void SetUpEcService() {
+    core_delegate()->ec_service()->set_event_fd_events_for_testing(POLLIN);
     ASSERT_TRUE(base::CreateDirectory(ec_event_file_path().DirName()));
     ASSERT_EQ(mkfifo(ec_event_file_path().value().c_str(), 0600), 0);
   }
 
-  // Setups |ec_event_service_fd_| FIFO file descriptor. Must be called only
+  // Setups |ec_service_fd_| FIFO file descriptor. Must be called only
   // after |Core::Start()| call. Otherwise, it will block
   // thread.
-  void SetUpEcEventServiceFifoWriteEnd() {
-    ASSERT_FALSE(ec_event_service_fd_.is_valid());
-    ec_event_service_fd_.reset(
-        open(ec_event_file_path().value().c_str(), O_WRONLY));
-    ASSERT_TRUE(ec_event_service_fd_.is_valid());
+  void SetUpEcServiceFifoWriteEnd() {
+    ASSERT_FALSE(ec_service_fd_.is_valid());
+    ec_service_fd_.reset(open(ec_event_file_path().value().c_str(), O_WRONLY));
+    ASSERT_TRUE(ec_service_fd_.is_valid());
   }
 
   base::FilePath ec_event_file_path() const {
@@ -514,10 +512,10 @@ class StartedCoreTest : public CoreTest {
   mojo::InterfacePtr<MojomWilcoDtcSupportdServiceFactory>
       mojo_service_factory_interface_ptr_;
 
-  // Write end of FIFO that emulates EC event file. EC event service
-  // operates with read end of FIFO as with usual file.
-  // Must be initialized only after |Core::Start()| call.
-  base::ScopedFD ec_event_service_fd_;
+  // Write end of FIFO that emulates EC event file. EC service operates with
+  // read end of FIFO as with usual file. Must be initialized only after
+  // |Core::Start()| call.
+  base::ScopedFD ec_service_fd_;
 
   // Callback that the tested code exposed as the BootstrapMojoConnection D-Bus
   // method.
@@ -1143,13 +1141,13 @@ TEST_F(BootstrappedCoreTest, HandleBluetoothDataChanged) {
               BluetoothAdaptersEquals(adapters));
 }
 
-// Tests for EcEventService::Observer.
+// Tests for EcService::Observer.
 //
 // This is a parametrized test with the following parameters:
 // * |ec_event_reason| - the reason of the EcEvent
 // * |expected_mojo_event| - the expected mojo event passed to the
 // |wilco_dtc_supportd_client| over mojo
-class EcEventServiceBootstrappedCoreTest
+class EcServiceBootstrappedCoreTest
     : public BootstrappedCoreTest,
       public testing::WithParamInterface<
           std::tuple<EcEventReason, base::Optional<MojoEvent>>> {
@@ -1158,7 +1156,7 @@ class EcEventServiceBootstrappedCoreTest
   using GrpcEvent = std::pair<uint16_t, std::string>;
 
   void EmulateEcEvent(const EcEvent& ec_event) {
-    core_delegate()->ec_event_service()->EmitEcEvent(ec_event);
+    core_delegate()->ec_service()->EmitEcEvent(ec_event);
   }
 
   void ExpectAllFakeWilcoDtcReceivedEcEvents(
@@ -1216,7 +1214,7 @@ class EcEventServiceBootstrappedCoreTest
 // EC events
 // 2. |HandleEvent|, exposed by mojo_client, is called on any EcEvent::Reason
 // values except |kSysNotification| and |kNonSysNotification|.
-TEST_P(EcEventServiceBootstrappedCoreTest, SingleEvents) {
+TEST_P(EcServiceBootstrappedCoreTest, SingleEvents) {
   if (expected_mojo_event().has_value()) {
     // Set HandleEvent expectations for the triggered mojo events
     EXPECT_CALL(*wilco_dtc_supportd_client(),
@@ -1231,7 +1229,7 @@ TEST_P(EcEventServiceBootstrappedCoreTest, SingleEvents) {
 // Test that both methods |HandleEcNotification()| and |HandleEvent()| exposed
 // by wilco_dtc gRPC and mojo_client, respectively, are called multiple times
 // by wilco_dtc support daemon.
-TEST_F(EcEventServiceBootstrappedCoreTest, TriggerMultipleMojoEvents) {
+TEST_F(EcServiceBootstrappedCoreTest, TriggerMultipleMojoEvents) {
   // Set HandleEvent expectations for the triggered mojo events
   EXPECT_CALL(*wilco_dtc_supportd_client(),
               HandleEvent(MojoEvent::kBatteryAuth));
@@ -1253,9 +1251,9 @@ TEST_F(EcEventServiceBootstrappedCoreTest, TriggerMultipleMojoEvents) {
 // Test that the method |HandleEcNotification()| exposed by wilco_dtc gRPC is
 // not called by the wilco_dtc support daemon when |ec_event.size| exceeds
 // allocated data array.
-// TODO(mgawad): move size validation logic inside EcEventService and don't emit
+// TODO(mgawad): move size validation logic inside EcService and don't emit
 // events when the size is invalid.
-TEST_F(EcEventServiceBootstrappedCoreTest, SendGrpcEventToWilcoDtcInvalidSize) {
+TEST_F(EcServiceBootstrappedCoreTest, SendGrpcEventToWilcoDtcInvalidSize) {
   const EcEvent& valid_ec_event =
       GetEcEventWithReason(EcEventReason::kNonSysNotification);
   const EcEvent& invalid_ec_event = kEcEventInvalidPayloadSize;
@@ -1270,7 +1268,7 @@ TEST_F(EcEventServiceBootstrappedCoreTest, SendGrpcEventToWilcoDtcInvalidSize) {
 
 INSTANTIATE_TEST_CASE_P(
     _,
-    EcEventServiceBootstrappedCoreTest,
+    EcServiceBootstrappedCoreTest,
     testing::Values(
         std::make_tuple(
             EcEventReason::kNonWilcoCharger,

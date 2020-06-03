@@ -257,24 +257,22 @@ void ForwardGetStatefulPartitionAvailableCapacity(
   callback.Run(std::move(reply));
 }
 
-// Maps GetEcTelemetryResponse::Status in EcEventService to
+// Maps GetEcTelemetryResponse::Status in EcService to
 // grpc_api::GetEcTelemetryResponse::Status. This is 1:1 mapping.
 grpc_api::GetEcTelemetryResponse::Status GetGrpcEcTelemetryStatus(
-    EcEventService::GetEcTelemetryResponse::Status status) {
+    EcService::GetEcTelemetryResponse::Status status) {
   switch (status) {
-    case (EcEventService::GetEcTelemetryResponse::STATUS_UNSET):
+    case (EcService::GetEcTelemetryResponse::STATUS_UNSET):
       return grpc_api::GetEcTelemetryResponse::STATUS_UNSET;
-    case (EcEventService::GetEcTelemetryResponse::STATUS_OK):
+    case (EcService::GetEcTelemetryResponse::STATUS_OK):
       return grpc_api::GetEcTelemetryResponse::STATUS_OK;
-    case (EcEventService::GetEcTelemetryResponse::
-              STATUS_ERROR_INPUT_PAYLOAD_EMPTY):
+    case (EcService::GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_EMPTY):
       return grpc_api::GetEcTelemetryResponse::STATUS_ERROR_INPUT_PAYLOAD_EMPTY;
-    case (EcEventService::GetEcTelemetryResponse::
+    case (EcService::GetEcTelemetryResponse::
               STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED):
       return grpc_api::GetEcTelemetryResponse::
           STATUS_ERROR_INPUT_PAYLOAD_MAX_SIZE_EXCEEDED;
-    case (
-        EcEventService::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER):
+    case (EcService::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER):
       return grpc_api::GetEcTelemetryResponse::STATUS_ERROR_ACCESSING_DRIVER;
   }
 }
@@ -428,8 +426,8 @@ void GrpcService::GetEcTelemetry(
     const GetEcTelemetryCallback& callback) {
   DCHECK(request);
 
-  auto response = delegate_->GetEcEventService()->GetEcTelemetry(
-      std::move(request->payload()));
+  auto response =
+      delegate_->GetEcService()->GetEcTelemetry(std::move(request->payload()));
 
   auto reply = std::make_unique<grpc_api::GetEcTelemetryResponse>();
   reply->set_status(GetGrpcEcTelemetryStatus(response.status));
