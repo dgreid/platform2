@@ -17,6 +17,7 @@
 #include <base/threading/thread_checker.h>
 #include <hardware/camera_common.h>
 
+#include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/future.h"
 #include "cros-camera/udev_watcher.h"
 #include "hal/usb/camera_characteristics.h"
@@ -38,12 +39,18 @@ class CameraHal : public UdevWatcher::Observer {
 
   static CameraHal& GetInstance();
 
+  CameraMojoChannelManager* GetMojoManagerInstance();
+
   // Implementations for camera_module_t.
   int OpenDevice(int id, const hw_module_t* module, hw_device_t** hw_device);
   int GetNumberOfCameras() const;
   int GetCameraInfo(int id, camera_info* info);
   int SetCallbacks(const camera_module_callbacks_t* callbacks);
   int Init();
+
+  // Implementations for cros_camera_hal_t.
+  void SetUp(CameraMojoChannelManager* mojo_manager);
+  void TearDown();
 
   // Runs on device ops thread. Post a task to the thread which is used for
   // OpenDevice.
@@ -104,6 +111,9 @@ class CameraHal : public UdevWatcher::Observer {
   // external cameras with the same model, so we maintain a set instead of an
   // integer here, and use the smallest free id when the camera is reconnected.
   std::map<std::string, std::set<int>> previous_ids_;
+
+  // Mojo manager which is used for Mojo communication.
+  CameraMojoChannelManager* mojo_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraHal);
 };

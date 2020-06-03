@@ -15,6 +15,7 @@
 #include "cros-camera/common.h"
 #include "cros-camera/exif_utils.h"
 #include "cros-camera/utils/camera_config.h"
+#include "hal/usb/camera_hal.h"
 #include "hal/usb/common_types.h"
 
 namespace cros {
@@ -77,11 +78,13 @@ CachedFrame::CachedFrame()
       jda_available_(false),
       force_jpeg_hw_encode_(false),
       force_jpeg_hw_decode_(false) {
-  jda_ = JpegDecodeAccelerator::CreateInstance();
+  auto* mojo_manager = CameraHal::GetInstance().GetMojoManagerInstance();
+
+  jda_ = JpegDecodeAccelerator::CreateInstance(mojo_manager);
   jda_available_ = jda_->Start();
   LOGF(INFO) << "JDA available: " << jda_available_;
 
-  jpeg_compressor_ = JpegCompressor::GetInstance();
+  jpeg_compressor_ = JpegCompressor::GetInstance(mojo_manager);
 
   // Read force_jpeg_hw_(enc|dec) configs
   std::unique_ptr<CameraConfig> camera_config =

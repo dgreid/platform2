@@ -13,6 +13,7 @@
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "cros-camera/common.h"
+#include "cros-camera/cros_camera_hal.h"
 #include "cros-camera/udev_watcher.h"
 #include "hal/usb/camera_characteristics.h"
 #include "hal/usb/common_types.h"
@@ -126,6 +127,10 @@ int CameraHal::GetNumberOfCameras() const {
 CameraHal& CameraHal::GetInstance() {
   static CameraHal camera_hal;
   return camera_hal;
+}
+
+CameraMojoChannelManager* CameraHal::GetMojoManagerInstance() {
+  return mojo_manager_;
 }
 
 int CameraHal::OpenDevice(int id,
@@ -281,6 +286,14 @@ int CameraHal::Init() {
     // ignore such error.
   }
   return 0;
+}
+
+void CameraHal::SetUp(CameraMojoChannelManager* mojo_manager) {
+  mojo_manager_ = mojo_manager;
+}
+
+void CameraHal::TearDown() {
+  mojo_manager_ = nullptr;
 }
 
 void CameraHal::CloseDeviceOnOpsThread(int id) {
@@ -559,6 +572,14 @@ static int init() {
   return CameraHal::GetInstance().Init();
 }
 
+static void set_up(CameraMojoChannelManager* mojo_manager) {
+  CameraHal::GetInstance().SetUp(mojo_manager);
+}
+
+static void tear_down() {
+  CameraHal::GetInstance().TearDown();
+}
+
 int camera_device_close(struct hw_device_t* hw_device) {
   camera3_device_t* cam_dev = reinterpret_cast<camera3_device_t*>(hw_device);
   CameraClient* cam = static_cast<CameraClient*>(cam_dev->priv);
@@ -595,3 +616,6 @@ camera_module_t HAL_MODULE_INFO_SYM CROS_CAMERA_EXPORT = {
     .set_torch_mode = cros::set_torch_mode,
     .init = cros::init,
     .reserved = {0}};
+
+cros::cros_camera_hal_t CROS_CAMERA_HAL_INFO_SYM CROS_CAMERA_EXPORT = {
+    .set_up = cros::set_up, .tear_down = cros::tear_down};
