@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_POWER_SUBSCRIBER_H_
-#define DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_POWER_SUBSCRIBER_H_
+#ifndef DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_POWER_SUBSCRIBER_H_
+#define DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_POWER_SUBSCRIBER_H_
 
 #include <map>
 #include <string>
@@ -63,4 +63,4 @@ class PowerSubscriber final
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_POWER_SUBSCRIBER_H_
+#endif  // DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_POWER_SUBSCRIBER_H_

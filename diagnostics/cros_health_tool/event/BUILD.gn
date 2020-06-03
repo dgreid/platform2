@@ -4,7 +4,8 @@
 
 import("//common-mk/pkg_config.gni")
 
-pkg_config("cros_healthd_event_pkg_deps") {
+# Library that provides helpers for cros-health-event.
+pkg_config("libevent_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -12,17 +13,17 @@ pkg_config("cros_healthd_event_pkg_deps") {
   ]
 }
 
-executable("cros-health-event") {
-  configs += [ ":cros_healthd_event_pkg_deps" ]
+source_set("libevent") {
+  configs += [ ":libevent_pkg_deps" ]
   deps = [
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
     "bluetooth_subscriber.cc",
+    "event.cc",
     "event_subscriber.cc",
     "lid_subscriber.cc",
-    "main.cc",
     "power_subscriber.cc",
   ]
 }

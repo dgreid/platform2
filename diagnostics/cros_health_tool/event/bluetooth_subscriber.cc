@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/cros_healthd_event_tool/bluetooth_subscriber.h"
+#include "diagnostics/cros_health_tool/event/bluetooth_subscriber.h"
 
 #include <iostream>
 #include <utility>

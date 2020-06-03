@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "diagnostics/cros_health_tool/diag/diag.h"
+
 #include <stdlib.h>
 #include <iostream>
 #include <iterator>
@@ -15,10 +17,12 @@
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 
-#include "diagnostics/diag/diag_actions.h"
+#include "diagnostics/cros_health_tool/diag/diag_actions.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
+
+namespace diagnostics {
 
 namespace {
 
@@ -50,11 +54,7 @@ const struct {
 
 }  // namespace
 
-// 'diag' command-line tool:
-//
-// Test driver for libdiag. Only supports running a single diagnostic routine
-// at a time.
-int main(int argc, char** argv) {
+int diag_main(int argc, char** argv) {
   DEFINE_string(action, "",
                 "Action to perform. Options are:\n\tget_routines - retrieve "
                 "available routines.\n\trun_routine - run specified routine.");
@@ -111,8 +111,8 @@ int main(int argc, char** argv) {
     return EXIT_FAILURE;
   }
 
-  diagnostics::DiagActions actions{kRoutinePollIntervalTimeDelta,
-                                   kMaximumRoutineExecutionTimeDelta};
+  DiagActions actions{kRoutinePollIntervalTimeDelta,
+                      kMaximumRoutineExecutionTimeDelta};
 
   if (FLAGS_action == "get_routines")
     return actions.ActionGetRoutines() ? EXIT_SUCCESS : EXIT_FAILURE;
@@ -213,3 +213,5 @@ int main(int argc, char** argv) {
   std::cout << "Unknown action: " << FLAGS_action << std::endl;
   return EXIT_FAILURE;
 }
+
+}  // namespace diagnostics

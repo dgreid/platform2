@@ -4,22 +4,23 @@
 
 import("//common-mk/pkg_config.gni")
 
-pkg_config("diag_pkg_deps") {
+# Library that provides helpers for the diag tool.
+pkg_config("libdiag_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
   ]
 }
 
-executable("diag") {
-  configs += [ ":diag_pkg_deps" ]
+source_set("libdiag") {
+  configs += [ ":libdiag_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
+    "diag.cc",
     "diag_actions.cc",
-    "main.cc",
   ]
 }

@@ -1635,15 +1635,15 @@ cmd_battery_test() (
 
 # Set the help string so crosh can discover us automatically.
 HELP_diag=''
-EXEC_diag='/usr/bin/diag'
+EXEC_diag='/usr/bin/cros-health-tool'
 cmd_diag() (
   # diag does its own parameter validation. Aside from a single D-Bus command to
   # bootstrap a mojo connection to cros_healthd, diag only sends mojo commands
   # and does no work itself.
-  diag "$@"
+  cros-health-tool diag "$@"
 )
 help_diag() (
-  diag --help
+  cmd_diag --help
 )
 
 USAGE_dump_emk=''

@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "diagnostics/cros_health_tool/telem/telem.h"
+
 #include <cstdlib>
 #include <iostream>
 #include <map>
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <base/at_exit.h>
 #include <base/logging.h>
@@ -20,6 +23,8 @@
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
 #include "mojo/cros_healthd_probe.mojom.h"
+
+namespace diagnostics {
 
 namespace {
 
@@ -361,11 +366,11 @@ std::string GetCategoryHelp() {
 
 }  // namespace
 
-// 'telem' command-line tool:
+// 'telem' sub-command for cros-health-tool:
 //
 // Test driver for cros_healthd's telemetry collection. Supports requesting a
 // single category at a time.
-int main(int argc, char** argv) {
+int telem_main(int argc, char** argv) {
   std::string category_help = GetCategoryHelp();
   DEFINE_string(category, "", category_help.c_str());
   brillo::FlagHelper::Init(argc, argv, "telem - Device telemetry tool.");
@@ -394,10 +399,12 @@ int main(int argc, char** argv) {
   }
 
   // Probe and display the category.
-  diagnostics::CrosHealthdMojoAdapter adapter;
+  CrosHealthdMojoAdapter adapter;
   const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
       categories_to_probe = {iterator->second};
   DisplayTelemetryInfo(adapter.GetTelemetryInfo(categories_to_probe));
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace diagnostics

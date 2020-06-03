@@ -5,16 +5,16 @@
 import("//common-mk/pkg_config.gni")
 
 # The telemetry tool executable.
-pkg_config("telem_pkg_deps") {
+pkg_config("libtelem_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
   ]
 }
 
-executable("telem") {
+source_set("libtelem") {
   deps =
       [ "//diagnostics/cros_healthd_mojo_adapter:libcros_healthd_mojo_adapter" ]
-  configs += [ ":telem_pkg_deps" ]
-  sources = [ "main.cc" ]
+  configs += [ ":libtelem_pkg_deps" ]
+  sources = [ "telem.cc" ]
 }

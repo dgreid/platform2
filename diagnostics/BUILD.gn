@@ -6,14 +6,12 @@ import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
+    "//diagnostics/cros_health_tool:cros-health-tool",
     "//diagnostics/cros_healthd:cros_healthd",
-    "//diagnostics/cros_healthd_event_tool:cros-health-event",
-    "//diagnostics/diag:diag",
     "//diagnostics/routines:floating-point-accuracy",
     "//diagnostics/routines:prime-search",
     "//diagnostics/routines:smartctl-check",
     "//diagnostics/routines:urandom",
-    "//diagnostics/telem:telem",
     "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd",
   ]
   if (use.test) {

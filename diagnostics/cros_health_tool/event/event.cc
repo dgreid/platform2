@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "diagnostics/cros_health_tool/event/event.h"
+
 #include <cstdlib>
 #include <map>
 #include <sstream>
@@ -16,7 +18,9 @@
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/syslog_logging.h>
 
-#include "diagnostics/cros_healthd_event_tool/event_subscriber.h"
+#include "diagnostics/cros_health_tool/event/event_subscriber.h"
+
+namespace diagnostics {
 
 namespace {
 
@@ -49,11 +53,7 @@ std::string GetCategoryHelp() {
 
 }  // namespace
 
-// 'cros-health-event' command-line tool:
-//
-// Test driver for cros_healthd's event subscription. Supports subscribing to a
-// single category of events at a time.
-int main(int argc, char** argv) {
+int event_main(int argc, char** argv) {
   std::string category_help = GetCategoryHelp();
   DEFINE_string(category, "", category_help.c_str());
   DEFINE_uint32(length_seconds, 10, "Number of seconds to listen for events.");
@@ -83,7 +83,7 @@ int main(int argc, char** argv) {
   }
 
   // Subscribe to the specified category.
-  diagnostics::EventSubscriber event_subscriber;
+  EventSubscriber event_subscriber;
   switch (iterator->second) {
     case EventCategory::kLid:
       event_subscriber.SubscribeToLidEvents();
@@ -107,3 +107,5 @@ int main(int argc, char** argv) {
 
   return EXIT_SUCCESS;
 }
+
+}  // namespace diagnostics

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_DIAG_DIAG_ACTIONS_H_
-#define DIAGNOSTICS_DIAG_DIAG_ACTIONS_H_
+#ifndef DIAGNOSTICS_CROS_HEALTH_TOOL_DIAG_DIAG_ACTIONS_H_
+#define DIAGNOSTICS_CROS_HEALTH_TOOL_DIAG_DIAG_ACTIONS_H_
 
 #include <cstdint>
 #include <memory>
@@ -113,4 +113,4 @@ class DiagActions final {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_DIAG_DIAG_ACTIONS_H_
+#endif  // DIAGNOSTICS_CROS_HEALTH_TOOL_DIAG_DIAG_ACTIONS_H_

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_EVENT_SUBSCRIBER_H_
-#define DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_EVENT_SUBSCRIBER_H_
+#ifndef DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_EVENT_SUBSCRIBER_H_
+#define DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_EVENT_SUBSCRIBER_H_
 
 #include <memory>
 
-#include "diagnostics/cros_healthd_event_tool/bluetooth_subscriber.h"
-#include "diagnostics/cros_healthd_event_tool/lid_subscriber.h"
-#include "diagnostics/cros_healthd_event_tool/power_subscriber.h"
+#include "diagnostics/cros_health_tool/event/bluetooth_subscriber.h"
+#include "diagnostics/cros_health_tool/event/lid_subscriber.h"
+#include "diagnostics/cros_health_tool/event/power_subscriber.h"
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
 
 namespace diagnostics {
@@ -46,4 +46,4 @@ class EventSubscriber final {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_CROS_HEALTHD_EVENT_TOOL_EVENT_SUBSCRIBER_H_
+#endif  // DIAGNOSTICS_CROS_HEALTH_TOOL_EVENT_EVENT_SUBSCRIBER_H_
