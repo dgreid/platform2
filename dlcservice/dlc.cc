@@ -307,7 +307,8 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
 bool DlcBase::Install(ErrorPtr* err) {
   bool preloaded = false;
   switch (state_.state()) {
-    case DlcState::NOT_INSTALLED:
+    case DlcState::NOT_INSTALLED: {
+      bool active_image_existed = IsActiveImagePresent();
       // Always try to create the DLC files and directories to make sure they
       // all exist before we start the install.
       if (!CreateDlc(err)) {
@@ -333,12 +334,16 @@ bool DlcBase::Install(ErrorPtr* err) {
       }
 
       if (!IsVerified()) {
-        // By now if the image is not verified, it needs to be installed through
-        // update_engine. So don't go any further.
-        return true;
+        // Images that existed before creation, try verifying.
+        if (active_image_existed && Verify())
+          LOG(INFO) << "Verified existing, but not verified DLC=" << id_;
+        else
+          // By now if the image is not verified, it needs to be installed
+          // through update_engine. So don't go any further.
+          return true;
       }
-
       break;
+    }
     case DlcState::INSTALLING:
       // If the image is already in this state, nothing need to be done. It is
       // already being installed.
