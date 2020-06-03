@@ -19,6 +19,8 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <mutex>
+
+#include <cros-camera/cros_camera_hal.h>
 #include <hardware/camera3.h>
 
 #include "LogHelper.h"
@@ -56,6 +58,8 @@ static int sInstanceCount = 0;
  * Global mutex used to protect sInstanceCount and sInstances
  */
 static std::mutex sCameraHalMutex;
+
+cros::CameraMojoChannelManager* android::camera2::g_mojo_manager = nullptr;
 
 int openCameraHardware(int id, const hw_module_t* module, hw_device_t** device)
 {
@@ -234,6 +238,27 @@ static int hal_init()
     return 0;
 }
 
+static void set_up(cros::CameraMojoChannelManager* mojo_manager)
+{
+    android::camera2::g_mojo_manager = mojo_manager;
+
+    LogHelper::setDebugLevel();
+    PerformanceTraces::reset();
+    PlatformData::init();
+    int ret = PlatformData::numberOfCameras();
+    if (ret == 0) {
+      LOGE("No camera device was found!");
+      return;
+    }
+}
+
+static void tear_down()
+{
+    PlatformData::deinit();
+
+    android::camera2::g_mojo_manager = nullptr;
+}
+
 static struct hw_module_methods_t hal_module_methods = {
     NAMED_FIELD_INITIALIZER(open) hal_dev_open
 };
@@ -259,19 +284,7 @@ camera_module_t VISIBILITY_PUBLIC HAL_MODULE_INFO_SYM = {
     NAMED_FIELD_INITIALIZER(reserved) {0}
 };
 
-// PSL-specific constructor values to start from 200
-// to have enough reserved priorities to common HAL
-__attribute__((constructor)) void initCameraHAL() {
-    LogHelper::setDebugLevel();
-    PerformanceTraces::reset();
-    PlatformData::init();
-    int ret = PlatformData::numberOfCameras();
-    if (ret == 0) {
-      LOGE("No camera device was found!");
-      return;
-    }
-}
-
-__attribute__((destructor)) void deinitCameraHAL() {
-    PlatformData::deinit();
-}
+cros::cros_camera_hal_t VISIBILITY_PUBLIC CROS_CAMERA_HAL_INFO_SYM = {
+    NAMED_FIELD_INITIALIZER(set_up) set_up,
+    NAMED_FIELD_INITIALIZER(tear_down) tear_down
+};

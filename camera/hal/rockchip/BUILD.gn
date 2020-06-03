@@ -4,7 +4,6 @@
 
 group("all") {
   deps = [
-    ":libcam_algo",
     ":libcamera_hal",
   ]
 }
@@ -100,7 +99,6 @@ shared_library("libcamera_hal") {
   pkg_deps = [
     "cros-camera-android-headers",
     "expat",
-    "libcab",
     "libcamera_client",
     "libcamera_common",
     "libcamera_exif",
@@ -146,6 +144,8 @@ shared_library("libcamera_hal") {
     "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
     "//camera/common:libcamera_jpeg",
     "//camera/common:libcamera_metrics",
+    "//camera/common/libcab",
+    ":libcam_algo",
   ]
 }
 

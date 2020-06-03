@@ -22,6 +22,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include "Camera3HAL.h"
 #include "Rockchip3AClient.h"
 #include "Utils.h"
 
@@ -55,7 +56,7 @@ Rockchip3AClient::Rockchip3AClient():
     Rockchip3AClient::notify = notifyCallback;
 
     mBridge = cros::CameraAlgorithmBridge::CreateInstance(
-        cros::CameraAlgorithmBackend::kVendorCpu);
+        cros::CameraAlgorithmBackend::kVendorCpu, g_mojo_manager);
     CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
     CheckError((mBridge->Initialize(this) != 0), VOID_VALUE, "@%s, call mBridge->Initialize fail", __FUNCTION__);
 

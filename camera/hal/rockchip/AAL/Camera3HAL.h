@@ -18,12 +18,15 @@
 #ifndef _CAMERA3_HAL_H_
 #define _CAMERA3_HAL_H_
 
+#include <cros-camera/camera_mojo_channel_manager.h>
 #include <hardware/camera3.h>
 
 #include "PlatformData.h"
 #include "RequestThread.h"
 
 NAMESPACE_DECLARATION {
+
+extern cros::CameraMojoChannelManager* g_mojo_manager;
 
 /**
  * \class Camera3HAL

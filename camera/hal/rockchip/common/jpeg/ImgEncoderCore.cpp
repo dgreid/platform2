@@ -17,17 +17,19 @@
 
 #define LOG_TAG "ImgEncoderCore"
 
-#include "PlatformData.h"
-#include "ImgEncoderCore.h"
-#include "LogHelper.h"
-#include <Utils.h>
+#include <cros-camera/jpeg_compressor.h>
+
+#include "Camera3HAL.h"
 #include "Camera3V4l2Format.h"
 #include "CameraBuffer.h"
-#include "ImageScalerCore.h"
-#include "Exif.h"
-
 #include "ColorConverter.h"
-#include <cros-camera/jpeg_compressor.h>
+#include "Exif.h"
+#include "ImageScalerCore.h"
+#include "ImgEncoderCore.h"
+#include "LogHelper.h"
+#include "PlatformData.h"
+#include "Utils.h"
+
 
 NAMESPACE_DECLARATION {
 ImgEncoderCore::ImgEncoderCore() :
@@ -36,7 +38,7 @@ ImgEncoderCore::ImgEncoderCore() :
     mMainScaled(nullptr),
     mThumbScaled(nullptr),
     mJpegSetting(nullptr),
-    mJpegCompressor(cros::JpegCompressor::GetInstance())
+    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager))
 {
     LOG1("@%s", __FUNCTION__);
 
