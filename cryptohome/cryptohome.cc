@@ -105,6 +105,7 @@ namespace switches {
                                    "update_key_ex",
                                    "remove",
                                    "obfuscate_user",
+                                   "get_system_salt",
                                    "dump_keyset",
                                    "dump_last_activity",
                                    "tpm_status",
@@ -185,6 +186,7 @@ namespace switches {
     ACTION_UPDATE_KEY_EX,
     ACTION_REMOVE,
     ACTION_OBFUSCATE_USER,
+    ACTION_GET_SYSTEM_SALT,
     ACTION_DUMP_KEYSET,
     ACTION_DUMP_LAST_ACTIVITY,
     ACTION_TPM_STATUS,
@@ -1602,6 +1604,31 @@ int main(int argc, char **argv) {
                                                          GetSystemSalt(proxy))
                          .c_str());
     }
+  } else if (!strcmp(switches::kActions[switches::ACTION_GET_SYSTEM_SALT],
+                     action.c_str())) {
+    brillo::SecureBlob system_salt;
+    if (cl->HasSwitch(switches::kUseDBus)) {
+      system_salt = GetSystemSalt(proxy);
+      if (system_salt.empty()) {
+        printf("Failed to retrieve system salt\n");
+      }
+    } else {
+      // Use libbrillo directly instead of going through dbus/cryptohome.
+      if (!brillo::cryptohome::home::EnsureSystemSaltIsLoaded()) {
+        printf("Failed to load system salt\n");
+        return 1;
+      }
+
+      std::string* salt_ptr = brillo::cryptohome::home::GetSystemSalt();
+      system_salt = SecureBlob(*salt_ptr);
+    }
+    std::string hex_salt =
+        base::HexEncode(system_salt.data(), system_salt.size());
+    // We want to follow the convention of having low case hex for output as in
+    // GetSanitizedUsername().
+    std::transform(hex_salt.begin(), hex_salt.end(), hex_salt.begin(),
+                   ::tolower);
+    printf("%s\n", hex_salt.c_str());
   } else if (!strcmp(switches::kActions[switches::ACTION_DUMP_KEYSET],
                      action.c_str())) {
     std::string account_id;
