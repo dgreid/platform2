@@ -23,7 +23,9 @@
 
 #include "diagnostics/common/mojo_test_utils.h"
 #include "diagnostics/common/mojo_utils.h"
+#include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
 #include "diagnostics/wilco_dtc_supportd/mock_mojo_client.h"
+#include "diagnostics/wilco_dtc_supportd/mojo_grpc_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/mojo_service.h"
 
 #include "mojo/wilco_dtc_supportd.mojom.h"
@@ -47,16 +49,6 @@ using MojomWilcoDtcSupportdWebRequestHttpMethod =
 namespace diagnostics {
 
 namespace {
-
-class MockMojoServiceDelegate : public MojoService::Delegate {
- public:
-  MOCK_METHOD(void,
-              SendGrpcUiMessageToWilcoDtc,
-              (base::StringPiece, const SendGrpcUiMessageToWilcoDtcCallback&),
-              (override));
-  MOCK_METHOD(void, NotifyConfigurationDataChangedToWilcoDtc, (), (override));
-};
-
 // Tests for the MojoService class.
 class MojoServiceTest : public testing::Test {
  protected:
@@ -71,12 +63,11 @@ class MojoServiceTest : public testing::Test {
     DCHECK(mojo_client_interface_ptr);
 
     mojo_service_ = std::make_unique<MojoService>(
-        &delegate_,
+        &mojo_grpc_adapter_,
         MojomWilcoDtcSupportdServiceRequest() /* self_interface_request */,
         std::move(mojo_client_interface_ptr));
   }
 
-  MockMojoServiceDelegate* delegate() { return &delegate_; }
   MockMojoClient* mojo_client() { return &mojo_client_; }
   MojoService* mojo_service() { return mojo_service_.get(); }
 
@@ -87,61 +78,11 @@ class MojoServiceTest : public testing::Test {
   std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdClient>>
       mojo_client_binding_;
 
-  StrictMock<MockMojoServiceDelegate> delegate_;
+  GrpcClientManager grpc_client_manager_;
+  MojoGrpcAdapter mojo_grpc_adapter_{&grpc_client_manager_};
+
   std::unique_ptr<MojoService> mojo_service_;
 };
-
-TEST_F(MojoServiceTest, SendUiMessageToWilcoDtc) {
-  constexpr base::StringPiece kJsonMessageToWilcoDtc("{\"message\": \"ping\"}");
-  constexpr base::StringPiece kJsonMessageFromWilcoDtc(
-      "{\"message\": \"pong\"}");
-
-  EXPECT_CALL(*delegate(),
-              SendGrpcUiMessageToWilcoDtc(kJsonMessageToWilcoDtc, _))
-      .WillOnce(WithArg<1>(
-          Invoke([kJsonMessageFromWilcoDtc](
-                     const base::Callback<void(std::string)>& callback) {
-            callback.Run(kJsonMessageFromWilcoDtc.as_string());
-          })));
-
-  base::RunLoop run_loop;
-  mojo_service()->SendUiMessageToWilcoDtc(
-      CreateReadOnlySharedMemoryMojoHandle(kJsonMessageToWilcoDtc),
-      base::Bind(
-          [](const base::Closure& quit_closure,
-             base::StringPiece expected_json_message,
-             mojo::ScopedHandle json_message_handle) {
-            ASSERT_TRUE(json_message_handle.is_valid());
-            std::unique_ptr<base::SharedMemory> json_message_shm =
-                GetReadOnlySharedMemoryFromMojoHandle(
-                    std::move(json_message_handle));
-            ASSERT_TRUE(json_message_shm);
-            const std::string json_message = std::string(
-                static_cast<const char*>(json_message_shm->memory()),
-                json_message_shm->mapped_size());
-
-            EXPECT_EQ(json_message, expected_json_message);
-            quit_closure.Run();
-          },
-          run_loop.QuitClosure(), kJsonMessageFromWilcoDtc));
-  run_loop.Run();
-}
-
-TEST_F(MojoServiceTest, SendUiMessageToWilcoDtcInvalidJSON) {
-  constexpr base::StringPiece kJsonMessage("{'message': 'Hello world!'}");
-
-  base::RunLoop run_loop;
-  mojo_service()->SendUiMessageToWilcoDtc(
-      CreateReadOnlySharedMemoryMojoHandle(kJsonMessage),
-      base::Bind(
-          [](const base::Closure& quit_closure,
-             mojo::ScopedHandle json_message_handle) {
-            EXPECT_FALSE(json_message_handle.is_valid());
-            quit_closure.Run();
-          },
-          run_loop.QuitClosure()));
-  run_loop.Run();
-}
 
 TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
   constexpr base::StringPiece kJsonMessageToUi("{\"message\": \"ping\"}");
@@ -243,11 +184,6 @@ TEST_F(MojoServiceTest, GetConfigurationData) {
       },
       run_loop.QuitClosure(), kFakeJsonConfigurationData));
   run_loop.Run();
-}
-
-TEST_F(MojoServiceTest, NotifyConfigurationDataChanged) {
-  EXPECT_CALL(*delegate(), NotifyConfigurationDataChangedToWilcoDtc());
-  mojo_service()->NotifyConfigurationDataChanged();
 }
 
 }  // namespace

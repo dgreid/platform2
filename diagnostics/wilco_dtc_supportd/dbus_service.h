@@ -5,39 +5,25 @@
 #ifndef DIAGNOSTICS_WILCO_DTC_SUPPORTD_DBUS_SERVICE_H_
 #define DIAGNOSTICS_WILCO_DTC_SUPPORTD_DBUS_SERVICE_H_
 
-#include <string>
+#include <memory>
 
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <base/memory/scoped_refptr.h>
+#include <brillo/dbus/async_event_sequencer.h>
+#include <brillo/dbus/dbus_object.h>
 #include <brillo/errors/error.h>
-#include <dbus/exported_object.h>
-#include <dbus/message.h>
 
 namespace diagnostics {
+
+class MojoServiceFactory;
 
 // Implements the "org.chromium.WilcoDtcSupportdInterface" D-Bus interface
 // exposed by the wilco_dtc_supportd daemon (see constants for the API methods
 // at src/platform/system_api/dbus/wilco_dtc_supportd/dbus-constants.h).
 class DBusService final {
  public:
-  class Delegate {
-   public:
-    virtual ~Delegate() = default;
-
-    // Called when a Mojo invitation is received via a D-Bus call.
-    //
-    // Should start the wilco_dtc_supportd Mojo service factory that talks
-    // through the pipe specified by the passed |mojo_pipe_fd|. Should return
-    // whether the Mojo service factory was successfully started, and when false
-    // should fill |*error_message|.
-    //
-    // In production the pipe's parent side end belongs to the Chrome browser
-    // process.
-    virtual bool StartMojoServiceFactory(base::ScopedFD mojo_pipe_fd,
-                                         std::string* error_message) = 0;
-  };
-
-  explicit DBusService(Delegate* delegate);
+  explicit DBusService(MojoServiceFactory* mojo_service_factory);
   ~DBusService();
 
   // Implementation of the "org.chromium.WilcoDtcSupportdInterface" D-Bus
@@ -45,14 +31,21 @@ class DBusService final {
   bool BootstrapMojoConnection(brillo::ErrorPtr* error,
                                const base::ScopedFD& mojo_fd);
 
- private:
-  // Implements BootstrapMojoConnection(), with the main difference in how
-  // errors are returned.
-  bool DoBootstrapMojoConnection(const base::ScopedFD& mojo_fd,
-                                 std::string* error_message);
+  // Registers the D-Bus object that the wilco_dtc_supportd daemon exposes and
+  // ties methods exposed by this object with the actual implementation.
+  void RegisterDBusObjectsAsync(
+      const scoped_refptr<dbus::Bus>& bus,
+      brillo::dbus_utils::AsyncEventSequencer* sequencer);
 
-  // Unowned. The delegate should outlive this instance.
-  Delegate* const delegate_;
+  // Destroys |dbus_object_|.
+  void ShutDown();
+
+ private:
+  // Unowned. The factory should outlive this instance.
+  MojoServiceFactory* const mojo_service_factory_ = nullptr;
+
+  // Manages the D-Bus interfaces exposed by the wilco_dtc_supportd daemon.
+  std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
 
   DISALLOW_COPY_AND_ASSIGN(DBusService);
 };

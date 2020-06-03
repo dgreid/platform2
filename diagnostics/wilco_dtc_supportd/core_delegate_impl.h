@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <base/macros.h>
-#include <brillo/daemons/daemon.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
@@ -24,15 +23,10 @@ namespace diagnostics {
 // Production implementation of Core's delegate.
 class CoreDelegateImpl final : public Core::Delegate {
  public:
-  explicit CoreDelegateImpl(brillo::Daemon* daemon);
+  CoreDelegateImpl();
   ~CoreDelegateImpl() override;
 
   // Core::Delegate overrides:
-  std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>
-  BindMojoServiceFactory(
-      MojomWilcoDtcSupportdServiceFactory* mojo_service_factory,
-      base::ScopedFD mojo_pipe_fd) override;
-  void BeginDaemonShutdown() override;
   std::unique_ptr<BluetoothClient> CreateBluetoothClient(
       const scoped_refptr<dbus::Bus>& bus) override;
   std::unique_ptr<DebugdAdapter> CreateDebugdAdapter(
@@ -48,9 +42,6 @@ class CoreDelegateImpl final : public Core::Delegate {
       ProbeService::Delegate* delegate) override;
 
  private:
-  // Unowned. The daemon must outlive this instance.
-  brillo::Daemon* const daemon_;
-
   DISALLOW_COPY_AND_ASSIGN(CoreDelegateImpl);
 };
 

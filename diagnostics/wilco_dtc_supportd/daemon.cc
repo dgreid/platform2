@@ -28,10 +28,14 @@ constexpr base::TimeDelta kForceShutdownDelayTimeDelta =
 
 Daemon::Daemon()
     : DBusServiceDaemon(kWilcoDtcSupportdServiceName /* service_name */),
+      mojo_service_factory_(
+          &mojo_grpc_adapter_,
+          base::Bind(&brillo::Daemon::Quit, base::Unretained(this))),
       wilco_dtc_supportd_core_(&wilco_dtc_supportd_core_delegate_impl_,
                                &grpc_client_manager_,
                                {GetWilcoDtcSupportdGrpcHostVsockUri(),
-                                kWilcoDtcSupportdGrpcDomainSocketUri}) {}
+                                kWilcoDtcSupportdGrpcDomainSocketUri},
+                               &mojo_service_factory_) {}
 
 Daemon::~Daemon() = default;
 
@@ -49,8 +53,7 @@ int Daemon::OnInit() {
     ShutDownServicesInRunLoop(&wilco_dtc_supportd_core_, &grpc_client_manager_);
     return EXIT_FAILURE;
   }
-  // Init the Mojo Embedder API. The call to InitIPCSupport() is balanced with
-  // the ShutdownIPCSupport() one in OnShutdown().
+  // Init the Mojo Embedder API.
   mojo::core::Init();
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
@@ -63,7 +66,8 @@ int Daemon::OnInit() {
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
   DCHECK(bus_);
-  wilco_dtc_supportd_core_.RegisterDBusObjectsAsync(bus_, sequencer);
+  dbus_service_.RegisterDBusObjectsAsync(bus_, sequencer);
+  wilco_dtc_supportd_core_.CreateDbusAdapters(bus_);
 }
 
 void Daemon::OnShutdown(int* error_code) {
@@ -73,6 +77,8 @@ void Daemon::OnShutdown(int* error_code) {
   // Allow time for Core to gracefully shut down all threads.
   force_shutdown_timer_.Start(FROM_HERE, kForceShutdownDelayTimeDelta, this,
                               &Daemon::ForceShutdown);
+
+  dbus_service_.ShutDown();
 
   ShutDownServicesInRunLoop(&wilco_dtc_supportd_core_, &grpc_client_manager_);
 

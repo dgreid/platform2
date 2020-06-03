@@ -52,12 +52,15 @@
 #include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/wilco_dtc_supportd/core.h"
+#include "diagnostics/wilco_dtc_supportd/dbus_service.h"
 #include "diagnostics/wilco_dtc_supportd/ec_constants.h"
 #include "diagnostics/wilco_dtc_supportd/fake_browser.h"
 #include "diagnostics/wilco_dtc_supportd/fake_diagnostics_service.h"
 #include "diagnostics/wilco_dtc_supportd/fake_probe_service.h"
 #include "diagnostics/wilco_dtc_supportd/fake_wilco_dtc.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
+#include "diagnostics/wilco_dtc_supportd/mojo_grpc_adapter.h"
+#include "diagnostics/wilco_dtc_supportd/mojo_service_factory.h"
 #include "diagnostics/wilco_dtc_supportd/service_util.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_service.h"
 #include "diagnostics/wilco_dtc_supportd/telemetry/ec_service_test_utils.h"
@@ -137,16 +140,6 @@ class FakeCoreDelegate : public Core::Delegate {
         powerd_event_service_(passed_powerd_event_service_.get()),
         probe_service_(passed_probe_service_.get()) {}
 
-  std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>
-  BindMojoServiceFactory(
-      MojomWilcoDtcSupportdServiceFactory* mojo_service_factory,
-      base::ScopedFD mojo_pipe_fd) override {
-    // Redirect to a separate mockable method to workaround GMock's issues with
-    // move-only types.
-    return std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>(
-        BindMojoServiceFactoryImpl(mojo_service_factory, mojo_pipe_fd.get()));
-  }
-
   // Must be called no more than once.
   std::unique_ptr<BluetoothClient> CreateBluetoothClient(
       const scoped_refptr<dbus::Bus>& bus) override {
@@ -219,11 +212,6 @@ class FakeCoreDelegate : public Core::Delegate {
 
   FakeProbeService* probe_service() const { return probe_service_; }
 
-  MOCK_METHOD(mojo::Binding<MojomWilcoDtcSupportdServiceFactory>*,
-              BindMojoServiceFactoryImpl,
-              (MojomWilcoDtcSupportdServiceFactory*, int));
-  MOCK_METHOD(void, BeginDaemonShutdown, (), (override));
-
  private:
   // Mock objects to be transferred by Create* methods.
   std::unique_ptr<FakeBluetoothClient> passed_bluetooth_client_;
@@ -274,14 +262,19 @@ MATCHER_P(BluetoothAdaptersEquals, expected_adapters, "") {
   return true;
 }
 
+class MockDaemon {
+ public:
+  MOCK_METHOD(void, ShutDown, ());
+};
+
 // Tests for the Core class.
 class CoreTest : public testing::Test {
  protected:
   CoreTest() { InitializeMojo(); }
 
   void CreateCore(const std::vector<std::string>& grpc_service_uris) {
-    core_ = std::make_unique<Core>(&core_delegate_, &grpc_client_manager_,
-                                   grpc_service_uris);
+    core_ = std::make_unique<Core>(&core_delegate_, grpc_client_manager(),
+                                   grpc_service_uris, &mojo_service_factory_);
   }
 
   Core* core() {
@@ -291,13 +284,62 @@ class CoreTest : public testing::Test {
 
   FakeCoreDelegate* core_delegate() { return &core_delegate_; }
 
-  GrpcClientManager grpc_client_manager_;
+  // Fake for MojoServiceFactory::BindFactoryCallback that simulates
+  // successful Mojo service binding to the given file descriptor. After the
+  // mock gets triggered, |mojo_service_factory_interface_ptr_| becomes
+  // initialized to point to the tested Mojo service.
+  MojoServiceFactory::MojoBindingPtr FakeBindMojoFactory(
+      MojomWilcoDtcSupportdServiceFactory* mojo_service_factory,
+      base::ScopedFD mojo_pipe_fd) {
+    if (simulate_bind_failure_)
+      return nullptr;
+    // Initialize a Mojo binding that, instead of working through the
+    // given (fake) file descriptor, talks to the test endpoint
+    // |mojo_service_interface_ptr_|.
+    auto mojo_service_factory_binding =
+        std::make_unique<MojoServiceFactory::MojoBinding>(
+            mojo_service_factory,
+            mojo::MakeRequest(&mojo_service_factory_interface_ptr_));
+    DCHECK(mojo_service_factory_interface_ptr_);
+    return MojoServiceFactory::MojoBindingPtr(
+        mojo_service_factory_binding.release());
+  }
+
+  GrpcClientManager* grpc_client_manager() { return &grpc_client_manager_; }
+
+  StrictMock<MockDaemon>* daemon() { return &daemon_; }
+
+  MojoServiceFactory* mojo_service_factory() { return &mojo_service_factory_; }
+
+  mojo::InterfacePtr<MojomWilcoDtcSupportdServiceFactory>*
+  mojo_service_factory_interface_ptr() {
+    return &mojo_service_factory_interface_ptr_;
+  }
+
+  void SimulateBindFailure() { simulate_bind_failure_ = true; }
 
  private:
   // Initialize the Mojo subsystem.
   void InitializeMojo() { mojo::core::Init(); }
 
   base::MessageLoop message_loop_;
+
+  GrpcClientManager grpc_client_manager_;
+  MojoGrpcAdapter mojo_grpc_adapter_{&grpc_client_manager_};
+
+  // Mocked daemon (for calling ShutDown()).
+  StrictMock<MockDaemon> daemon_;
+
+  // Mojo interface to the service factory exposed by the tested code.
+  mojo::InterfacePtr<MojomWilcoDtcSupportdServiceFactory>
+      mojo_service_factory_interface_ptr_;
+
+  MojoServiceFactory mojo_service_factory_{
+      &mojo_grpc_adapter_,
+      base::Bind(&StrictMock<MockDaemon>::ShutDown, base::Unretained(&daemon_)),
+      base::BindOnce(&CoreTest::FakeBindMojoFactory, base::Unretained(this))};
+
+  bool simulate_bind_failure_ = false;
 
   StrictMock<FakeCoreDelegate> core_delegate_;
 
@@ -336,22 +378,24 @@ class StartedCoreTest : public CoreTest {
     SetUpEcService();
 
     ASSERT_TRUE(core()->Start());
-    grpc_client_manager_.Start(ui_message_receiver_wilco_dtc_grpc_uri_,
-                               {wilco_dtc_grpc_uri_});
+    grpc_client_manager()->Start(ui_message_receiver_wilco_dtc_grpc_uri_,
+                                 {wilco_dtc_grpc_uri_});
 
     SetUpEcServiceFifoWriteEnd();
 
     SetUpDBus();
 
     fake_browser_ =
-        std::make_unique<FakeBrowser>(&mojo_service_factory_interface_ptr_,
+        std::make_unique<FakeBrowser>(mojo_service_factory_interface_ptr(),
                                       bootstrap_mojo_connection_dbus_method_);
   }
 
   void TearDown() override {
     SetDBusShutdownExpectations();
 
-    ShutDownServicesInRunLoop(core(), &grpc_client_manager_);
+    dbus_service_.ShutDown();
+
+    ShutDownServicesInRunLoop(core(), grpc_client_manager());
 
     CoreTest::TearDown();
   }
@@ -361,39 +405,9 @@ class StartedCoreTest : public CoreTest {
     return temp_dir_.GetPath();
   }
 
-  mojo::InterfacePtr<MojomWilcoDtcSupportdServiceFactory>*
-  mojo_service_factory_interface_ptr() {
-    return &mojo_service_factory_interface_ptr_;
-  }
-
   FakeBrowser* fake_browser() {
     DCHECK(fake_browser_);
     return fake_browser_.get();
-  }
-
-  // Set up mock for BindMojoServiceFactory() that simulates
-  // successful Mojo service binding to the given file descriptor. After the
-  // mock gets triggered, |mojo_service_factory_interface_ptr_| become
-  // initialized to point to the tested Mojo service.
-  void SetSuccessMockBindMojoService(
-      FakeMojoFdGenerator* fake_mojo_fd_generator) {
-    EXPECT_CALL(*core_delegate(), BindMojoServiceFactoryImpl(_, _))
-        .WillOnce(Invoke(
-            [fake_mojo_fd_generator, this](
-                MojomWilcoDtcSupportdServiceFactory* mojo_service_factory,
-                int mojo_pipe_fd) {
-              // Verify the file descriptor is a duplicate of an expected one.
-              EXPECT_TRUE(fake_mojo_fd_generator->IsDuplicateFd(mojo_pipe_fd));
-              // Initialize a Mojo binding that, instead of working through the
-              // given (fake) file descriptor, talks to the test endpoint
-              // |mojo_service_interface_ptr_|.
-              auto mojo_service_factory_binding = std::make_unique<
-                  mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>(
-                  mojo_service_factory,
-                  mojo::MakeRequest(&mojo_service_factory_interface_ptr_));
-              DCHECK(mojo_service_factory_interface_ptr_);
-              return mojo_service_factory_binding.release();
-            }));
   }
 
   dbus::ExportedObject::MethodCallCallback
@@ -458,7 +472,8 @@ class StartedCoreTest : public CoreTest {
     // Run the tested code that exports D-Bus objects and methods.
     scoped_refptr<brillo::dbus_utils::AsyncEventSequencer> dbus_sequencer(
         new brillo::dbus_utils::AsyncEventSequencer());
-    core()->RegisterDBusObjectsAsync(dbus_bus_, dbus_sequencer.get());
+    dbus_service_.RegisterDBusObjectsAsync(dbus_bus_, dbus_sequencer.get());
+    core()->CreateDbusAdapters(dbus_bus_);
 
     // Verify that required D-Bus methods are exported.
     EXPECT_FALSE(bootstrap_mojo_connection_dbus_method_.is_null());
@@ -504,13 +519,11 @@ class StartedCoreTest : public CoreTest {
   scoped_refptr<StrictMock<dbus::MockBus>> dbus_bus_ =
       new StrictMock<dbus::MockBus>(dbus::Bus::Options());
 
+  DBusService dbus_service_{mojo_service_factory()};
+
   // Mock D-Bus integration helper for the object exposed by the tested code.
   scoped_refptr<StrictMock<dbus::MockExportedObject>>
       wilco_dtc_supportd_dbus_object_;
-
-  // Mojo interface to the service factory exposed by the tested code.
-  mojo::InterfacePtr<MojomWilcoDtcSupportdServiceFactory>
-      mojo_service_factory_interface_ptr_;
 
   // Write end of FIFO that emulates EC event file. EC service operates with
   // read end of FIFO as with usual file. Must be initialized only after
@@ -529,62 +542,50 @@ class StartedCoreTest : public CoreTest {
 // BootstrapMojoConnection D-Bus method is called.
 TEST_F(StartedCoreTest, MojoBootstrapSuccess) {
   FakeMojoFdGenerator fake_mojo_fd_generator;
-  SetSuccessMockBindMojoService(&fake_mojo_fd_generator);
-
   BootstrapMojoConnection(&fake_mojo_fd_generator);
   EXPECT_TRUE(*mojo_service_factory_interface_ptr());
 }
 
-// Test failure to bootstrap the Mojo service due to en error returned by
-// BindMojoService() delegate method.
+// Test failure to bootstrap the Mojo service due to an error returned by
+// MojoServiceFactory::BootstrapMojoConnection().
 TEST_F(StartedCoreTest, MojoBootstrapErrorToBind) {
   FakeMojoFdGenerator fake_mojo_fd_generator;
-  EXPECT_CALL(*core_delegate(), BindMojoServiceFactoryImpl(_, _))
-      .WillOnce(Return(nullptr));
-  EXPECT_CALL(*core_delegate(), BeginDaemonShutdown());
+  EXPECT_CALL(*daemon(), ShutDown());
+
+  SimulateBindFailure();
 
   base::RunLoop run_loop;
   EXPECT_FALSE(fake_browser()->BootstrapMojoConnection(&fake_mojo_fd_generator,
                                                        run_loop.QuitClosure()));
   run_loop.Run();
-
-  Mock::VerifyAndClearExpectations(core_delegate());
 }
 
 // Test that second attempt to bootstrap the Mojo service results in error and
 // the daemon shutdown.
 TEST_F(StartedCoreTest, MojoBootstrapErrorRepeated) {
   FakeMojoFdGenerator first_fake_mojo_fd_generator;
-  SetSuccessMockBindMojoService(&first_fake_mojo_fd_generator);
-
   BootstrapMojoConnection(&first_fake_mojo_fd_generator);
-  Mock::VerifyAndClearExpectations(core_delegate());
 
   FakeMojoFdGenerator second_fake_mojo_fd_generator;
-  EXPECT_CALL(*core_delegate(), BeginDaemonShutdown());
+  EXPECT_CALL(*daemon(), ShutDown());
 
   base::RunLoop run_loop;
   EXPECT_FALSE(fake_browser()->BootstrapMojoConnection(
       &second_fake_mojo_fd_generator, run_loop.QuitClosure()));
   run_loop.Run();
-  Mock::VerifyAndClearExpectations(core_delegate());
 }
 
 // Test that the daemon gets shut down when the previously bootstrapped Mojo
 // connection aborts.
 TEST_F(StartedCoreTest, MojoBootstrapSuccessThenAbort) {
   FakeMojoFdGenerator fake_mojo_fd_generator;
-  SetSuccessMockBindMojoService(&fake_mojo_fd_generator);
-
   BootstrapMojoConnection(&fake_mojo_fd_generator);
-  Mock::VerifyAndClearExpectations(core_delegate());
 
-  EXPECT_CALL(*core_delegate(), BeginDaemonShutdown());
+  EXPECT_CALL(*daemon(), ShutDown());
 
   // Abort the Mojo connection by closing the browser-side endpoint.
   mojo_service_factory_interface_ptr()->reset();
   base::RunLoop().RunUntilIdle();
-  Mock::VerifyAndClearExpectations(core_delegate());
 }
 
 // Test that the method |ProbeTelemetryInfo()| calls into
@@ -712,7 +713,6 @@ class BootstrappedCoreTest : public StartedCoreTest {
     ASSERT_NO_FATAL_FAILURE(StartedCoreTest::SetUp());
 
     FakeMojoFdGenerator fake_mojo_fd_generator;
-    SetSuccessMockBindMojoService(&fake_mojo_fd_generator);
     BootstrapMojoConnection(&fake_mojo_fd_generator);
 
     ASSERT_TRUE(*mojo_service_factory_interface_ptr());

@@ -4,19 +4,23 @@
 
 #include "diagnostics/wilco_dtc_supportd/dbus_service.h"
 
-#include <unistd.h>
-#include <utility>
+#include <string>
 
 #include <base/location.h>
 #include <base/logging.h>
-#include <base/posix/eintr_wrapper.h>
+#include <base/optional.h>
 #include <brillo/errors/error_codes.h>
 #include <dbus/dbus-protocol.h>
+#include <dbus/object_path.h>
+#include <dbus/wilco_dtc_supportd/dbus-constants.h>
+
+#include "diagnostics/wilco_dtc_supportd/mojo_service_factory.h"
 
 namespace diagnostics {
 
-DBusService::DBusService(Delegate* delegate) : delegate_(delegate) {
-  DCHECK(delegate_);
+DBusService::DBusService(MojoServiceFactory* mojo_service_factory)
+    : mojo_service_factory_(mojo_service_factory) {
+  DCHECK(mojo_service_factory_);
 }
 
 DBusService::~DBusService() = default;
@@ -24,35 +28,37 @@ DBusService::~DBusService() = default;
 bool DBusService::BootstrapMojoConnection(brillo::ErrorPtr* error,
                                           const base::ScopedFD& mojo_fd) {
   VLOG(0) << "Received BootstrapMojoConnection D-Bus request";
-  std::string error_message;
-  if (!DoBootstrapMojoConnection(mojo_fd, &error_message)) {
+  const base::Optional<std::string> bootstrap_error =
+      mojo_service_factory_->BootstrapMojoConnection(mojo_fd);
+  if (bootstrap_error.has_value()) {
     *error = brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain,
-                                   DBUS_ERROR_FAILED, error_message);
+                                   DBUS_ERROR_FAILED, bootstrap_error.value());
     return false;
   }
   return true;
 }
 
-bool DBusService::DoBootstrapMojoConnection(const base::ScopedFD& mojo_fd,
-                                            std::string* error_message) {
-  if (!mojo_fd.is_valid()) {
-    LOG(ERROR) << "Invalid Mojo file descriptor";
-    *error_message = "Invalid file descriptor";
-    return false;
-  }
+void DBusService::RegisterDBusObjectsAsync(
+    const scoped_refptr<dbus::Bus>& bus,
+    brillo::dbus_utils::AsyncEventSequencer* sequencer) {
+  DCHECK(bus);
+  DCHECK(!dbus_object_);
+  dbus_object_ = std::make_unique<brillo::dbus_utils::DBusObject>(
+      nullptr /* object_manager */, bus,
+      dbus::ObjectPath(kWilcoDtcSupportdServicePath));
+  brillo::dbus_utils::DBusInterface* dbus_interface =
+      dbus_object_->AddOrGetInterface(kWilcoDtcSupportdServiceInterface);
+  DCHECK(dbus_interface);
+  dbus_interface->AddSimpleMethodHandlerWithError(
+      kWilcoDtcSupportdBootstrapMojoConnectionMethod, base::Unretained(this),
+      &DBusService::BootstrapMojoConnection);
+  dbus_object_->RegisterAsync(sequencer->GetHandler(
+      "Failed to register D-Bus object" /* descriptive_message */,
+      true /* failure_is_fatal */));
+}
 
-  // We need a file descriptor that stays alive after the current method
-  // finishes, but libbrillo's D-Bus wrappers currently don't support passing
-  // base::ScopedFD by value.
-  base::ScopedFD mojo_fd_copy(HANDLE_EINTR(dup(mojo_fd.get())));
-  if (!mojo_fd_copy.is_valid()) {
-    PLOG(ERROR) << "Failed to duplicate the Mojo file descriptor";
-    *error_message = "Failed to duplicate file descriptor";
-    return false;
-  }
-
-  return delegate_->StartMojoServiceFactory(std::move(mojo_fd_copy),
-                                            error_message);
+void DBusService::ShutDown() {
+  dbus_object_.reset();
 }
 
 }  // namespace diagnostics

@@ -14,7 +14,10 @@
 
 #include "diagnostics/wilco_dtc_supportd/core.h"
 #include "diagnostics/wilco_dtc_supportd/core_delegate_impl.h"
+#include "diagnostics/wilco_dtc_supportd/dbus_service.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_client_manager.h"
+#include "diagnostics/wilco_dtc_supportd/mojo_grpc_adapter.h"
+#include "diagnostics/wilco_dtc_supportd/mojo_service_factory.h"
 
 namespace diagnostics {
 
@@ -35,9 +38,12 @@ class Daemon final : public brillo::DBusServiceDaemon {
   // done within timeout.
   void ForceShutdown();
 
-  GrpcClientManager grpc_client_manager_;
-  CoreDelegateImpl wilco_dtc_supportd_core_delegate_impl_{this /* daemon */};
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
+  GrpcClientManager grpc_client_manager_;
+  MojoGrpcAdapter mojo_grpc_adapter_{&grpc_client_manager_};
+  MojoServiceFactory mojo_service_factory_;
+  DBusService dbus_service_{&mojo_service_factory_};
+  CoreDelegateImpl wilco_dtc_supportd_core_delegate_impl_;
   Core wilco_dtc_supportd_core_;
 
   base::OneShotTimer force_shutdown_timer_;

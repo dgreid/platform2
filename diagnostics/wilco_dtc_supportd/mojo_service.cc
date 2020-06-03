@@ -77,14 +77,14 @@ void ForwardMojoWebResponse(
 }  // namespace
 
 MojoService::MojoService(
-    Delegate* delegate,
+    MojoGrpcAdapter* grpc_adapter,
     MojomWilcoDtcSupportdServiceRequest self_interface_request,
     MojomWilcoDtcSupportdClientPtr client_ptr)
-    : delegate_(delegate),
+    : grpc_adapter_(grpc_adapter),
       self_binding_(this /* impl */, std::move(self_interface_request)),
       client_ptr_(std::move(client_ptr)) {
-  DCHECK(delegate_);
   DCHECK(self_binding_.is_bound());
+  DCHECK(grpc_adapter_);
   DCHECK(client_ptr_);
 }
 
@@ -110,13 +110,13 @@ void MojoService::SendUiMessageToWilcoDtc(
     return;
   }
 
-  delegate_->SendGrpcUiMessageToWilcoDtc(
+  grpc_adapter_->SendGrpcUiMessageToWilcoDtc(
       json_message_content,
       base::Bind(&ForwardMojoJsonResponse, base::Passed(std::move(callback))));
 }
 
 void MojoService::NotifyConfigurationDataChanged() {
-  delegate_->NotifyConfigurationDataChangedToWilcoDtc();
+  grpc_adapter_->NotifyConfigurationDataChangedToWilcoDtc();
 }
 
 void MojoService::SendWilcoDtcMessageToUi(

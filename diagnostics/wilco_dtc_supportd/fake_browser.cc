@@ -102,6 +102,8 @@ void FakeBrowser::CallGetServiceMojoMethod(
   // requests made by the tested service. Note that despite that GetService() is
   // an asynchronous call, it's actually allowed to use
   // |wilco_dtc_supportd_service_ptr_| straight away, before the call completes.
+  DCHECK(wilco_dtc_supportd_service_factory_ptr_);
+  DCHECK(*wilco_dtc_supportd_service_factory_ptr_);
   MojomWilcoDtcSupportdClientPtr wilco_dtc_supportd_client_proxy;
   wilco_dtc_supportd_client_binding_.Bind(
       mojo::MakeRequest(&wilco_dtc_supportd_client_proxy));

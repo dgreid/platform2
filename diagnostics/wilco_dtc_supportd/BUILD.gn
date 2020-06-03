@@ -32,7 +32,9 @@ source_set("libwilco_dtc_supportd") {
     "grpc_client_manager.cc",
     "grpc_service.cc",
     "json_utils.cc",
+    "mojo_grpc_adapter.cc",
     "mojo_service.cc",
+    "mojo_service_factory.cc",
     "probe_service_impl.cc",
     "routine_service.cc",
   ]

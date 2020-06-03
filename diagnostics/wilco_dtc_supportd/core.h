@@ -11,21 +11,16 @@
 #include <vector>
 
 #include <base/callback.h>
-#include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/strings/string_piece.h>
-#include <brillo/dbus/async_event_sequencer.h>
-#include <brillo/dbus/dbus_object.h>
 #include <dbus/bus.h>
-#include <mojo/public/cpp/bindings/binding.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/grpc_async_adapter/async_grpc_client.h"
 #include "diagnostics/grpc_async_adapter/async_grpc_server.h"
-#include "diagnostics/wilco_dtc_supportd/dbus_service.h"
 #include "diagnostics/wilco_dtc_supportd/grpc_service.h"
 #include "diagnostics/wilco_dtc_supportd/mojo_service.h"
 #include "diagnostics/wilco_dtc_supportd/probe_service.h"
@@ -43,41 +38,20 @@
 namespace diagnostics {
 
 class GrpcClientManager;
+class MojoServiceFactory;
 
 // Integrates together all pieces which implement separate IPC services exposed
 // by the wilco_dtc_supportd daemon and IPC clients.
-class Core final : public DBusService::Delegate,
-                   public GrpcService::Delegate,
-                   public MojoService::Delegate,
+class Core final : public GrpcService::Delegate,
                    public ProbeService::Delegate,
                    public RoutineService::Delegate,
-                   public chromeos::wilco_dtc_supportd::mojom::
-                       WilcoDtcSupportdServiceFactory,
                    public BluetoothEventService::Observer,
                    public EcService::Observer,
                    public PowerdEventService::Observer {
  public:
   class Delegate {
    public:
-    using MojomWilcoDtcSupportdServiceFactory =
-        chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdServiceFactory;
-
     virtual ~Delegate() = default;
-
-    // Binds the given |mojo_service_factory| to the Mojo message pipe that
-    // works via the given |mojo_pipe_fd|. On success, returns the created Mojo
-    // binding, otherwise returns nullptr.
-    //
-    // In production this method must be called no more than once during the
-    // lifetime of the daemon, since Mojo EDK gives no guarantee to support
-    // repeated initialization with different parent handles.
-    virtual std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdServiceFactory>>
-    BindMojoServiceFactory(
-        MojomWilcoDtcSupportdServiceFactory* mojo_service_factory,
-        base::ScopedFD mojo_pipe_fd) = 0;
-
-    // Begins the graceful shutdown of the wilco_dtc_supportd daemon.
-    virtual void BeginDaemonShutdown() = 0;
 
     // Creates BluetoothClient. For performance reason, must be called no more
     // than once.
@@ -118,7 +92,8 @@ class Core final : public DBusService::Delegate,
   // wilco_dtc_supportd daemon will be listening.
   Core(Delegate* delegate,
        const GrpcClientManager* grpc_client_manager,
-       const std::vector<std::string>& grpc_service_uris);
+       const std::vector<std::string>& grpc_service_uris,
+       MojoServiceFactory* mojo_service_factory);
   ~Core() override;
 
   // Overrides the file system root directory for file operations in tests.
@@ -137,11 +112,8 @@ class Core final : public DBusService::Delegate,
   // destroyed only after |on_shutdown_callback| has been called.
   void ShutDown(base::OnceClosure on_shutdown_callback);
 
-  // Register the D-Bus object that the wilco_dtc_supportd daemon exposes and
-  // tie methods exposed by this object with the actual implementation.
-  void RegisterDBusObjectsAsync(
-      const scoped_refptr<dbus::Bus>& bus,
-      brillo::dbus_utils::AsyncEventSequencer* sequencer);
+  // Creates the D-Bus adapters.
+  void CreateDbusAdapters(const scoped_refptr<dbus::Bus>& bus);
 
  private:
   using MojoEvent = chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdEvent;
@@ -149,13 +121,6 @@ class Core final : public DBusService::Delegate,
       chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdClientPtr;
   using MojomWilcoDtcSupportdServiceRequest =
       chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdServiceRequest;
-
-  // DBusService::Delegate overrides:
-  bool StartMojoServiceFactory(base::ScopedFD mojo_pipe_fd,
-                               std::string* error_message) override;
-
-  // Shuts down the self instance after a Mojo fatal error happens.
-  void ShutDownDueToMojoError(const std::string& debug_reason);
 
   // WilcoDtcSupportdGrpcService::Delegate overrides:
   void SendWilcoDtcMessageToUi(
@@ -187,12 +152,6 @@ class Core final : public DBusService::Delegate,
       ProbeTelemetryInfoCallback callback) override;
   EcService* GetEcService() override;
 
-  // MojoService::Delegate overrides:
-  void SendGrpcUiMessageToWilcoDtc(
-      base::StringPiece json_message,
-      const SendGrpcUiMessageToWilcoDtcCallback& callback) override;
-  void NotifyConfigurationDataChangedToWilcoDtc() override;
-
   // ProbeService::Delegate overrides:
   bool BindCrosHealthdProbeService(
       chromeos::cros_healthd::mojom::CrosHealthdProbeServiceRequest service)
@@ -202,12 +161,6 @@ class Core final : public DBusService::Delegate,
   bool GetCrosHealthdDiagnosticsService(
       chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServiceRequest
           service) override;
-
-  // chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdServiceFactory
-  // overrides:
-  void GetService(MojomWilcoDtcSupportdServiceRequest service,
-                  MojomWilcoDtcSupportdClientPtr client,
-                  GetServiceCallback callback) override;
 
   // BluetoothEventService::Observer overrides:
   void BluetoothAdapterDataChanged(
@@ -248,35 +201,10 @@ class Core final : public DBusService::Delegate,
   // requests.
   AsyncGrpcServer<grpc_api::WilcoDtcSupportd::AsyncService> grpc_server_;
 
-  // D-Bus-related members:
-
-  // Implementation of the D-Bus interface exposed by the wilco_dtc_supportd
-  // daemon.
-  DBusService dbus_service_{this /* delegate */};
-  // Connects |dbus_service_| with the methods of the D-Bus object exposed by
-  // the wilco_dtc_supportd daemon.
-  std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
-
   // Mojo-related members:
 
-  // Binding that connects this instance (which is an implementation of
-  // chromeos::wilco_dtc_supportd::mojom::WilcoDtcSupportdServiceFactory) with
-  // the message pipe set up on top of the received file descriptor.
-  //
-  // Gets created after the BootstrapMojoConnection D-Bus method is called.
-  std::unique_ptr<mojo::Binding<WilcoDtcSupportdServiceFactory>>
-      mojo_service_factory_binding_;
-  // Implementation of the Mojo interface exposed by the wilco_dtc_supportd
-  // daemon and a proxy that allows sending outgoing Mojo requests.
-  //
-  // Gets created after the GetService() Mojo method is called.
-  std::unique_ptr<MojoService> mojo_service_;
-  // Whether binding of the Mojo service was attempted.
-  //
-  // This flag is needed for detecting repeated Mojo bootstrapping attempts
-  // (alternative ways, like checking |mojo_service_factory_binding_|, are
-  // unreliable during shutdown).
-  bool mojo_service_bind_attempted_ = false;
+  // Unowned. Provides mojo service (after being bootstrapped).
+  MojoServiceFactory* mojo_service_factory_ = nullptr;
 
   // D-Bus adapters for system daemons.
   std::unique_ptr<BluetoothClient> bluetooth_client_;
