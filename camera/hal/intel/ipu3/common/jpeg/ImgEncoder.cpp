@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2014-2019 Intel Corporation
+ * Copyright (C) 2014-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +16,11 @@
 
 #define LOG_TAG "ImgEncoder"
 
-#include <mutex>
-#include "ImgEncoder.h"
 #include <linux/videodev2.h>
+#include <mutex>
+
+#include "Camera3HAL.h"
+#include "ImgEncoder.h"
 #include "LogHelper.h"
 #include "Utils.h"
 
@@ -26,7 +28,7 @@ namespace cros {
 namespace intel {
 
 ImgEncoder::ImgEncoder(int cameraid) :
-    mJpegCompressor(cros::JpegCompressor::GetInstance())
+    mJpegCompressor(cros::JpegCompressor::GetInstance(g_mojo_manager))
 {
     LOG1("@%s", __FUNCTION__);
 }

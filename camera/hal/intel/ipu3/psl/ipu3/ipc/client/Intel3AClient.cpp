@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018-2019 Intel Corporation.
+ * Copyright (C) 2018-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,6 +21,7 @@
 #include <fcntl.h>
 #include <sys/mman.h>
 
+#include "Camera3HAL.h"
 #include "Intel3AClient.h"
 #include "Utils.h"
 
@@ -40,7 +41,7 @@ Intel3AClient::Intel3AClient():
     Intel3AClient::notify = notifyCallback;
 
     mBridge = cros::CameraAlgorithmBridge::CreateInstance(
-        cros::CameraAlgorithmBackend::kVendorCpu);
+        cros::CameraAlgorithmBackend::kVendorCpu, g_mojo_manager);
     CheckError(!mBridge, VOID_VALUE, "@%s, mBridge is nullptr", __FUNCTION__);
     CheckError((mBridge->Initialize(this) != 0), VOID_VALUE, "@%s, call mBridge->Initialize fail", __FUNCTION__);
 

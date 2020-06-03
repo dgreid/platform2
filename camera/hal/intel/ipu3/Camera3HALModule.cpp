@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013-2019 Intel Corporation
+ * Copyright (C) 2013-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@
 #include <dlfcn.h>
 #include <stdlib.h>
 #include <mutex>
+
+#include <cros-camera/cros_camera_hal.h>
 #include <hardware/camera3.h>
 
 #include "LogHelper.h"
@@ -51,6 +53,8 @@ static int sInstanceCount = 0;
  * Global mutex used to protect sInstanceCount and sInstances
  */
 static std::mutex sCameraHalMutex;
+
+CameraMojoChannelManager* cros::intel::g_mojo_manager = nullptr;
 
 int openCameraHardware(int id, const hw_module_t* module, hw_device_t** device)
 {
@@ -229,6 +233,27 @@ static int hal_init()
     return 0;
 }
 
+static void set_up(CameraMojoChannelManager* mojo_manager)
+{
+    cros::intel::g_mojo_manager = mojo_manager;
+
+    LogHelper::setDebugLevel();
+    PerformanceTraces::reset();
+    PlatformData::init();
+    int ret = PlatformData::numberOfCameras();
+    if (ret == 0) {
+        LOGE("No camera device was found!");
+        return;
+    }
+}
+
+static void tear_down()
+{
+    PlatformData::deinit();
+
+    cros::intel::g_mojo_manager = nullptr;
+}
+
 static struct hw_module_methods_t hal_module_methods = {
     NAMED_FIELD_INITIALIZER(open) hal_dev_open
 };
@@ -254,19 +279,7 @@ camera_module_t VISIBILITY_PUBLIC HAL_MODULE_INFO_SYM = {
     NAMED_FIELD_INITIALIZER(reserved) {0}
 };
 
-// PSL-specific constructor values to start from 200
-// to have enough reserved priorities to common HAL
-__attribute__((constructor(103))) void initCameraHAL() {
-    LogHelper::setDebugLevel();
-    PerformanceTraces::reset();
-    PlatformData::init();
-    int ret = PlatformData::numberOfCameras();
-    if (ret == 0) {
-      LOGE("No camera device was found!");
-      return;
-    }
-}
-
-__attribute__((destructor(103))) void deinitCameraHAL() {
-    PlatformData::deinit();
-}
+cros::cros_camera_hal_t VISIBILITY_PUBLIC CROS_CAMERA_HAL_INFO_SYM = {
+    NAMED_FIELD_INITIALIZER(set_up) set_up,
+    NAMED_FIELD_INITIALIZER(tear_down) tear_down
+};
