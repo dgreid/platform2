@@ -205,19 +205,14 @@ For a detailed example of how merging works, see the following test files:
 2. [test_merge_overlay.yaml](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/chromeos-config/libcros_config/test_merge_overlay.yaml) - Second file passed (winner of any conflicts).
 3. [test_merge.json](https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/chromeos-config/libcros_config/test_merge.json) - Result generated from the merge.
 
-### YAML Transform (to JSON)
+### YAML Transform (to SquashFS)
 
-In addition to the templating evaluation discussed above, the YAML is converted
-to JSON before it's actually used in chromeos-config. This fully
-evaluated/de-normalized form accomplishes a couple things:
+Before the config gets used on the device, it's translated to a
+flattened filesystem view of the configuration, and stored as a
+SquashFS image.  This keeps the runtime code on the device very
+simple.
 
-1.  It provides a great diffable format so it's obvious what changes are
-    actually applied if, for example, a shared config element was changed.
-2.  It keeps the consumer code very simple (host and runtime). The code just
-    matches the identity attributes and then uses the respective config. It
-    never has to care about re-use or config sharing.
-
-The transform algorithm works as follows:
+First, the configuration is flattened using the following algorithm:
 
 * FOREACH device in chromeos/devices
     * FOREACH product in device/products
@@ -228,14 +223,31 @@ The transform algorithm works as follows:
             * product variables are put into scope
             * with sku/config
                 * config template variables are evaluated
-                * the config contents are captured and stored in the resulting json
 
-Based on this algorithm, some key points are:
+After this, the configuration is stored in a SquashFS, with paths
+representing directories, and properties representing files.
 
-* Only 'sku/config' actually lands in the JSON output. All other YAML structure
-  supports the generation of the sku/config payloads.
-* 'product' generally defines identity/branding information only. The main
-  reason multiple products are supported is for the whitelabel case.
+    /
+    ├── identity.bin        # "Table of contents" to efficiently lookup device identity.
+    └── v1
+        └── chromeos
+            └── configs
+                ├── 0
+                │   ├── ...
+                │   ├── power
+                │   │   └── ...
+                │   ├── wallpaper
+                │   └── ...
+                ├── 1
+                │   ├── ...
+                │   ├── power
+                │   │   └── ...
+                │   ├── wallpaper
+                │   └── ...
+                └── ...
+
+This file gets installed at `/usr/share/chromeos-config/configfs.img`,
+and is used internally by the `cros_configfs` tool.
 
 ### Making changes to a YAML model file
 
@@ -709,6 +721,61 @@ In the tables below,
 
 
 [](end_definitions)
+
+## On the Device
+
+At bootup, ``cros_configfs`` is executed to mount
+`/usr/share/chromeos-config/configfs.img` at
+`/run/chromeos-config/private`.  The table of contents is scanned to
+match the device's identity to a matching configuration, and the
+corresponding directory then gets mounted (via a bind mount) to
+`/run/chromeos-config/v1`.
+
+### Identity Matching
+
+Identity matching is done by comparing properties which come from
+`/identity` to the corresponding values from firmware.  If properties
+are left unspecified in `/identity`, they will match any value from
+firmware, or even a missing value.
+
+The first config with a matching identity is selected.
+
+The files in the table below, exposed from firmware by the kernel, are
+used to compare the values from firmware.  Strings are compared
+*case-insensitive*.
+
+| Property (from `/identity`)    | x86 file                                | ARM file                                     |
+|--------------------------------|-----------------------------------------|----------------------------------------------|
+| `smbios-name-match`            | `/sys/class/dmi/id/product_name`        | N/A                                          |
+| `device-tree-compatible-match` | N/A                                     | `/proc/device-tree/compatible`               |
+| `sku-id`                       | `/sys/class/dmi/id/product_sku`         | `/proc/device-tree/firmware/coreboot/sku-id` |
+| `customization-id`             | `/sys/firmware/vpd/ro/customization_id` | `/sys/firmware/vpd/ro/customization_id`      |
+| `whitelabel-tag`               | `/sys/firmware/vpd/ro/whitelabel_tag`   | `/sys/firmware/vpd/ro/whitelabel_tag`        |
+
+#### File Parsing Notes
+
+All files are parsed as strings, except where mentioned below:
+
+`/proc/device-tree/compatible`: This file contains a list of
+null-terminated strings.  If any of the strings in the list match
+`device-tree-compatible-match`, it is considered to be a match.
+
+`/sys/class/dmi/id/product_sku`: This file is parsed as
+`scanf("sku%u", &sku_id)`.
+
+`/proc/device-tree/firmware/coreboot/sku-id`: 4 bytes, parsed as a
+32-bit network-endian integer.
+
+### Accessing the Config
+
+The configuration can be read by any language or library simply by
+reading the corresponding file to the property.  For example, to read
+`/ui/power-button:edge` from the configuration, you can simply read
+the contents of `/run/chromeos-config/v1/ui/power-button/edge`.
+
+There is also the `cros_config` command line tool, which can `cat`
+these files for you, or `libcros_config`, which provides C++ bindings
+used widely across `platform2` to read these files.
 
 ## Usage Instructions
 
