@@ -17,7 +17,7 @@ class PinWeaverAuthBlock : public AuthBlock {
  public:
   explicit PinWeaverAuthBlock(LECredentialManager* le_manager);
 
-  bool Derive(const AuthInput& user_input,
+  bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,
               KeyBlobs* key_blobs,
               CryptoError* error) override;

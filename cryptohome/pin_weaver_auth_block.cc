@@ -46,7 +46,7 @@ PinWeaverAuthBlock::PinWeaverAuthBlock(LECredentialManager* le_manager)
   CHECK(le_manager != nullptr);
 }
 
-bool PinWeaverAuthBlock::Derive(const AuthInput& user_input,
+bool PinWeaverAuthBlock::Derive(const AuthInput& auth_input,
                                 const AuthBlockState& state,
                                 KeyBlobs* key_blobs,
                                 CryptoError* error) {
@@ -66,7 +66,7 @@ bool PinWeaverAuthBlock::Derive(const AuthInput& user_input,
   brillo::SecureBlob kdf_skey(kDefaultAesKeySize);
   brillo::SecureBlob le_iv(kAesBlockSize);
   brillo::SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
-  if (!CryptoLib::DeriveSecretsScrypt(user_input.user_input.value(), salt,
+  if (!CryptoLib::DeriveSecretsScrypt(auth_input.user_input.value(), salt,
                                       {&le_secret, &kdf_skey, &le_iv})) {
     PopulateError(error, CryptoError::CE_OTHER_FATAL);
     return false;

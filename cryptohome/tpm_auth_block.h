@@ -24,7 +24,7 @@ class TpmAuthBlock : public AuthBlock {
  public:
   TpmAuthBlock(Tpm* tpm, TpmInit* tpm_init);
 
-  bool Derive(const AuthInput& user_input,
+  bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,
               KeyBlobs* key_blobs,
               CryptoError* error) override;

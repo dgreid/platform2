@@ -479,10 +479,10 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   if (flags & SerializedVaultKeyset::LE_CREDENTIAL) {
     PinWeaverAuthBlock pin_weaver_auth(le_manager_.get());
 
-    AuthInput user_input = { vault_key };
+    AuthInput auth_input = { vault_key };
     AuthBlockState auth_state = { serialized };
     KeyBlobs vkk_data;
-    if (!pin_weaver_auth.Derive(user_input, auth_state, &vkk_data, error)) {
+    if (!pin_weaver_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
     }
 
@@ -517,11 +517,11 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
       should_try_tpm = true;
     }
 
-    AuthInput user_input = { vault_key };
+    AuthInput auth_input = { vault_key };
     AuthBlockState auth_state = { serialized };
     KeyBlobs vkk_data;
     LibScryptCompatAuthBlock auth_block;
-    if (auth_block.Derive(user_input, auth_state, &vkk_data, error)) {
+    if (auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
       if (UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error)) {
         return true;
       }
@@ -533,13 +533,13 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
 
   if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
     KeyBlobs vkk_data;
-    AuthInput user_input;
-    user_input.user_input = vault_key;
-    user_input.locked_to_single_user = locked_to_single_user;
+    AuthInput auth_input;
+    auth_input.user_input = vault_key;
+    auth_input.locked_to_single_user = locked_to_single_user;
 
     AuthBlockState auth_state = { serialized };
     TpmAuthBlock tpm_auth(tpm_, tpm_init_);
-    if (!tpm_auth.Derive(user_input, auth_state, &vkk_data, error)) {
+    if (!tpm_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
     }
 

@@ -58,10 +58,10 @@ TEST(PinWeaverAuthBlockTest, DeriveTest) {
 
   CryptoError error;
   KeyBlobs key_blobs;
-  AuthInput user_input = {vault_key};
+  AuthInput auth_input = {vault_key};
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
-  EXPECT_TRUE(auth_block.Derive(user_input, auth_state, &key_blobs, &error));
+  EXPECT_TRUE(auth_block.Derive(auth_input, auth_state, &key_blobs, &error));
 
   // Set expectations of the key blobs.
   EXPECT_NE(key_blobs.reset_secret, base::nullopt);
@@ -103,10 +103,10 @@ TEST(PinWeaverAuthBlockTest, CheckCredentialFailureTest) {
 
   CryptoError error;
   KeyBlobs key_blobs;
-  AuthInput user_input = {vault_key};
+  AuthInput auth_input = {vault_key};
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
-  EXPECT_FALSE(auth_block.Derive(user_input, auth_state, &key_blobs, &error));
+  EXPECT_FALSE(auth_block.Derive(auth_input, auth_state, &key_blobs, &error));
   EXPECT_EQ(CryptoError::CE_LE_INVALID_SECRET, error);
 }
 
@@ -182,14 +182,14 @@ TEST(TpmAuthBlockTest, DeriveTest) {
   TpmAuthBlock auth_block(&tpm, &tpm_init);
 
   KeyBlobs key_out_data;
-  AuthInput user_input;
-  user_input.user_input = key;
-  user_input.locked_to_single_user = false;
+  AuthInput auth_input;
+  auth_input.user_input = key;
+  auth_input.locked_to_single_user = false;
 
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
   CryptoError error;
-  EXPECT_TRUE(auth_block.Derive(user_input, auth_state, &key_out_data, &error));
+  EXPECT_TRUE(auth_block.Derive(auth_input, auth_state, &key_out_data, &error));
 
   // Assert that the returned key blobs isn't uninitialized.
   EXPECT_NE(key_out_data.vkk_iv, base::nullopt);
@@ -273,15 +273,15 @@ TEST(LibScryptCompatAuthBlockTest, DeriveTest) {
                             0x31, 0x32, 0x62, 0x37, 0x39, 0x36, 0x30, 0x65};
 
   KeyBlobs key_out_data;
-  AuthInput user_input;
-  user_input.user_input = key;
-  user_input.locked_to_single_user = false;
+  AuthInput auth_input;
+  auth_input.user_input = key;
+  auth_input.locked_to_single_user = false;
 
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
   CryptoError error;
   LibScryptCompatAuthBlock auth_block;
-  EXPECT_TRUE(auth_block.Derive(user_input, auth_state, &key_out_data, &error));
+  EXPECT_TRUE(auth_block.Derive(auth_input, auth_state, &key_out_data, &error));
 
   brillo::SecureBlob derived_key = {
       0x58, 0x2A, 0x41, 0x1F, 0xC0, 0x27, 0x2D, 0xC7, 0xF8, 0xEC, 0xA3,

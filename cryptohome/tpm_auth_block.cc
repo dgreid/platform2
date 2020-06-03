@@ -58,7 +58,7 @@ TpmAuthBlock::TpmAuthBlock(Tpm* tpm, TpmInit* tpm_init)
   CHECK(tpm_init_ != nullptr);
 }
 
-bool TpmAuthBlock::Derive(const AuthInput& user_input,
+bool TpmAuthBlock::Derive(const AuthInput& auth_input,
                           const AuthBlockState& state,
                           KeyBlobs* key_out_data,
                           CryptoError* error) {
@@ -111,20 +111,20 @@ bool TpmAuthBlock::Derive(const AuthInput& user_input,
   key_out_data->vkk_key = brillo::SecureBlob(kDefaultAesKeySize);
 
   bool locked_to_single_user =
-      user_input.locked_to_single_user.value_or(false);
+      auth_input.locked_to_single_user.value_or(false);
   brillo::SecureBlob salt(serialized.salt().begin(), serialized.salt().end());
   brillo::SecureBlob tpm_key =
       GetTpmKeyFromSerialized(serialized, locked_to_single_user);
   bool is_pcr_bound = serialized.flags() & SerializedVaultKeyset::PCR_BOUND;
   if (is_pcr_bound) {
-    if (!DecryptTpmBoundToPcr(user_input.user_input.value(), tpm_key, salt,
+    if (!DecryptTpmBoundToPcr(auth_input.user_input.value(), tpm_key, salt,
                               error, &key_out_data->vkk_iv.value(),
                               &key_out_data->vkk_key.value())) {
       return false;
     }
   } else {
     if (!DecryptTpmNotBoundToPcr(
-            serialized, user_input.user_input.value(), tpm_key, salt, error,
+            serialized, auth_input.user_input.value(), tpm_key, salt, error,
             &key_out_data->vkk_iv.value(), &key_out_data->vkk_key.value())) {
       return false;
     }

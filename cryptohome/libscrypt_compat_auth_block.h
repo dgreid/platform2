@@ -15,7 +15,7 @@ class LibScryptCompatAuthBlock : public AuthBlock {
   ~LibScryptCompatAuthBlock() = default;
 
   // This uses Scrypt to derive high entropy keys from the user's password.
-  bool Derive(const AuthInput& user_input,
+  bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,
               KeyBlobs* key_blobs,
               CryptoError* error) override;

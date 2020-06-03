@@ -40,12 +40,12 @@ bool ParseHeaderAndDerive(const brillo::SecureBlob& wrapped_blob,
 
 }  // namespace
 
-bool LibScryptCompatAuthBlock::Derive(const AuthInput& user_input,
+bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                                       const AuthBlockState& state,
                                       KeyBlobs* key_blobs,
                                       CryptoError* error) {
   const SerializedVaultKeyset& serialized = state.vault_keyset.value();
-  const brillo::SecureBlob input_key = user_input.user_input.value();
+  const brillo::SecureBlob input_key = auth_input.user_input.value();
 
   brillo::SecureBlob wrapped_keyset(serialized.wrapped_keyset());
   brillo::SecureBlob derived_scrypt_key;

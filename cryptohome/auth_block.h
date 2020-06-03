@@ -26,7 +26,7 @@ class AuthBlock {
 
   // This is implemented by concrete auth methods to map the user secret
   // input into a key. This method should successfully authenticate the user.
-  virtual bool Derive(const AuthInput& user_input,
+  virtual bool Derive(const AuthInput& auth_input,
                       const AuthBlockState& state,
                       KeyBlobs* key_blobs,
                       CryptoError* error) = 0;
