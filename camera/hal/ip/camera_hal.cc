@@ -13,6 +13,7 @@
 #include <utility>
 
 #include "cros-camera/common.h"
+#include "cros-camera/cros_camera_hal.h"
 #include "cros-camera/export.h"
 #include "dbus_proxies/dbus-proxies.h"
 #include "hal/ip/camera_hal.h"
@@ -25,9 +26,7 @@ CameraHal::CameraHal()
       next_camera_id_(0),
       callbacks_set_(base::WaitableEvent::ResetPolicy::MANUAL,
                      base::WaitableEvent::InitialState::NOT_SIGNALED),
-      callbacks_(nullptr) {
-  mojo_channel_ = CameraMojoChannelManager::GetInstance();
-}
+      callbacks_(nullptr) {}
 
 CameraHal::~CameraHal() {
   auto return_val = Future<void>::Create(nullptr);
@@ -40,6 +39,10 @@ CameraHal::~CameraHal() {
 CameraHal& CameraHal::GetInstance() {
   static CameraHal camera_hal;
   return camera_hal;
+}
+
+CameraMojoChannelManager* CameraHal::GetMojoManagerInstance() {
+  return mojo_manager_;
 }
 
 int CameraHal::OpenDevice(int id,
@@ -106,6 +109,14 @@ int CameraHal::Init() {
   return ret;
 }
 
+void CameraHal::SetUp(CameraMojoChannelManager* mojo_manager) {
+  mojo_manager_ = mojo_manager;
+}
+
+void CameraHal::TearDown() {
+  mojo_manager_ = nullptr;
+}
+
 void CameraHal::InitOnIpcThread(scoped_refptr<Future<int>> return_val) {
   brillo::DBusConnection dbus_connection;
   org::chromium::IpPeripheralService::CameraDetectorProxy proxy(
@@ -148,7 +159,6 @@ void CameraHal::DestroyOnIpcThread(scoped_refptr<Future<void>> return_val) {
   }
 
   isolated_connection_ = nullptr;
-  mojo_channel_ = nullptr;
   return_val->Set();
 }
 
@@ -278,6 +288,14 @@ static int init() {
   return CameraHal::GetInstance().Init();
 }
 
+static void set_up(CameraMojoChannelManager* mojo_manager) {
+  CameraHal::GetInstance().SetUp(mojo_manager);
+}
+
+static void tear_down() {
+  CameraHal::GetInstance().TearDown();
+}
+
 }  // namespace cros
 
 static hw_module_methods_t gCameraModuleMethods = {
@@ -301,3 +319,6 @@ camera_module_t HAL_MODULE_INFO_SYM CROS_CAMERA_EXPORT = {
     .set_torch_mode = cros::set_torch_mode,
     .init = cros::init,
     .reserved = {0}};
+
+cros::cros_camera_hal_t CROS_CAMERA_HAL_INFO_SYM CROS_CAMERA_EXPORT = {
+    .set_up = cros::set_up, .tear_down = cros::tear_down};

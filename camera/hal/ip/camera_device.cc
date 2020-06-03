@@ -488,7 +488,8 @@ void CameraDevice::OnConnectionError() {
 }
 
 void CameraDevice::StartJpegProcessor() {
-  jda_ = JpegDecodeAccelerator::CreateInstance();
+  jda_ = JpegDecodeAccelerator::CreateInstance(
+      CameraHal::GetInstance().GetMojoManagerInstance());
   if (!jda_->Start()) {
     LOGF(ERROR) << "Error starting JPEG processor";
   }

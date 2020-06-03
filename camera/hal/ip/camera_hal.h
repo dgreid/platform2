@@ -32,12 +32,18 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   static CameraHal& GetInstance();
 
+  CameraMojoChannelManager* GetMojoManagerInstance();
+
   // Implementations of camera_module_t
   int OpenDevice(int id, const hw_module_t* module, hw_device_t** hw_device);
   int GetNumberOfCameras() const;
   int GetCameraInfo(int id, camera_info* info);
   int SetCallbacks(const camera_module_callbacks_t* callbacks);
   int Init();
+
+  // Implementations for cros_camera_hal_t.
+  void SetUp(CameraMojoChannelManager* mojo_manager);
+  void TearDown();
 
  private:
   // IpCameraConnectionListener interface
@@ -53,7 +59,6 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   base::AtomicFlag initialized_;
   std::unique_ptr<mojo::IsolatedConnection> isolated_connection_;
-  CameraMojoChannelManager* mojo_channel_;
   mojom::IpCameraDetectorPtr detector_;
   mojo::Binding<IpCameraConnectionListener> binding_;
 
@@ -68,6 +73,9 @@ class CameraHal : public mojom::IpCameraConnectionListener {
   // SetCallbacks has been called
   base::WaitableEvent callbacks_set_;
   const camera_module_callbacks_t* callbacks_;
+
+  // Mojo manager which is used for Mojo communication.
+  CameraMojoChannelManager* mojo_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraHal);
 };
