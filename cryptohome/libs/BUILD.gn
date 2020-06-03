@@ -313,6 +313,7 @@ static_library("libcryptohome") {
   cflags = [ "-Wno-deprecated-register" ]
   libs = [
     "attestation",
+    "biod_proxy",
     "chaps",
     "hwsec",
     "policy",
@@ -328,7 +329,6 @@ static_library("libcryptohome") {
     ":libcrostpm",
     ":namespace-mounter-ipc-proto",
     ":userdataauth_adaptors",
-    "//biod:libbiod_proxy",
   ]
 
   if (use.tpm2) {

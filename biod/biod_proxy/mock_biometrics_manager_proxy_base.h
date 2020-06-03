@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIOD_DBUS_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
-#define BIOD_DBUS_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#ifndef BIOD_BIOD_PROXY_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#define BIOD_BIOD_PROXY_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
 
-#include "biod/dbus/biometrics_manager_proxy_base.h"
+#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
 #include <gmock/gmock.h>
 
 namespace biod {
@@ -38,4 +38,4 @@ class MockBiometricsManagerProxyBase : public BiometricsManagerProxyBase {
 };
 }  // namespace biod
 
-#endif  // BIOD_DBUS_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#endif  // BIOD_BIOD_PROXY_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_

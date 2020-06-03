@@ -14,7 +14,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "biod/dbus/biometrics_manager_proxy_base.h"
+#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
 
 namespace biod {
 

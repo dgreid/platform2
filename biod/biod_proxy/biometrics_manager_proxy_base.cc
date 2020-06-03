@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "biod/dbus/biometrics_manager_proxy_base.h"
+#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
 
 #include <memory>
 #include <string>

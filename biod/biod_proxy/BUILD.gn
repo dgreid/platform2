@@ -1,0 +1,53 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":libbiod_proxy" ]
+  if (use.test) {
+    deps += [ ":biod_proxy_test_runner" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  # NOSORT
+  pkg_deps = [
+    "libchrome-${libbase_ver}",
+
+    # system_api depends on protobuf (or protobuf-lite). It must appear
+    # before protobuf here or the linker flags won't be in the right
+    # order.
+    "system_api",
+  ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
+}
+
+# A shared library for clients
+shared_library("libbiod_proxy") {
+  configs += [ ":target_defaults" ]
+  sources = [ "biometrics_manager_proxy_base.cc" ]
+}
+
+if (use.test) {
+  pkg_config("libchrome_test_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+  executable("biod_proxy_test_runner") {
+    sources = [ "biometrics_manager_proxy_base_test.cc" ]
+    configs += [
+      "//common-mk:test",
+      ":libchrome_test_config",
+      ":target_defaults",
+    ]
+    deps = [
+      ":libbiod_proxy",
+      "//common-mk/testrunner",
+    ]
+  }
+}

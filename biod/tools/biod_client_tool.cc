@@ -21,9 +21,9 @@
 
 #include <chromeos/dbus/service_constants.h>
 
+#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
 #include "biod/biod_version.h"
 #include "biod/biometrics_manager.h"
-#include "biod/dbus/biometrics_manager_proxy_base.h"
 #include "biod/proto_bindings/constants.pb.h"
 #include "biod/proto_bindings/messages.pb.h"
 

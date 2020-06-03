@@ -12,7 +12,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "biod/dbus/mock_biometrics_manager_proxy_base.h"
+#include "biod/biod_proxy/mock_biometrics_manager_proxy_base.h"
 
 namespace cryptohome {
 

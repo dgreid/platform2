@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIOD_DBUS_BIOMETRICS_MANAGER_PROXY_BASE_H_
-#define BIOD_DBUS_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#ifndef BIOD_BIOD_PROXY_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#define BIOD_BIOD_PROXY_BIOMETRICS_MANAGER_PROXY_BASE_H_
 
 #include <memory>
 #include <string>
@@ -12,13 +12,14 @@
 #include <dbus/bus.h>
 #include <dbus/object_manager.h>
 
+#include "biod/biod_export.h"
 #include "biod/proto_bindings/constants.pb.h"
 
 namespace biod {
 
-const char* ScanResultToString(ScanResult result);
+BIOD_EXPORT const char* ScanResultToString(ScanResult result);
 
-class BiometricsManagerProxyBase {
+class BIOD_EXPORT BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
   using SignalCallback = dbus::ObjectProxy::SignalCallback;
@@ -89,4 +90,4 @@ class BiometricsManagerProxyBase {
 
 }  // namespace biod
 
-#endif  // BIOD_DBUS_BIOMETRICS_MANAGER_PROXY_BASE_H_
+#endif  // BIOD_BIOD_PROXY_BIOMETRICS_MANAGER_PROXY_BASE_H_
