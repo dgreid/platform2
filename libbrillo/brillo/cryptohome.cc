@@ -30,6 +30,9 @@ const char kGuestUserName[] = "$guest";
 const char kHiddenUserHomeBaseDir[] = "/home/.shadow";
 const char kHiddenUserHomeMountSubdir[] = "mount";
 
+// Daemon store main directory.
+constexpr char kDaemonStorePath[] = "/run/daemon-store";
+
 // Subdirectory of a user home mount where daemon-specific data is stored.
 // This is used to assemble daemon data storage paths for hidden user home
 // mounts.
@@ -118,6 +121,15 @@ FilePath GetDaemonPath(const std::string& username, const std::string& daemon) {
   if (!EnsureSystemSaltIsLoaded())
     return FilePath();
   return GetRootPath(username).Append(daemon);
+}
+
+FilePath GetDaemonStorePath(const std::string& username,
+                            const std::string& daemon) {
+  if (!EnsureSystemSaltIsLoaded())
+    return FilePath();
+  return FilePath(kDaemonStorePath)
+      .Append(daemon)
+      .Append(SanitizeUserName(username));
 }
 
 FilePath GetDaemonPathForHiddenUserHome(const std::string& username,

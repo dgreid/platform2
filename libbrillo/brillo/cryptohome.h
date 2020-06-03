@@ -39,8 +39,18 @@ BRILLO_EXPORT base::FilePath GetHashedUserPath(
 BRILLO_EXPORT base::FilePath GetRootPath(const std::string& username);
 
 // Returns the path at which the daemon |daemon| should store per-user data.
+// Use of GetDaemonStorePath() function is suggested over this one to store
+// per-user data.
 BRILLO_EXPORT base::FilePath GetDaemonPath(const std::string& username,
                                            const std::string& daemon);
+
+// Returns the path at which the daemon |daemon| should store per-user data.
+// This function returns '/run/daemon-stores/<daemon-name>/<hash>' which is
+// the preferred place to store per-user data.
+// See https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md
+// for more details.
+BRILLO_EXPORT base::FilePath GetDaemonStorePath(const std::string& username,
+                                                const std::string& daemon);
 
 // Returns the path at which the daemon |daemon| should store per-user data
 // when the user's home was mounted with mount_hidden.
