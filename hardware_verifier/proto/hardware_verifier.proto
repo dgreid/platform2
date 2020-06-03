@@ -61,7 +61,7 @@ message HwVerificationReport {
   // by the hardware prober.
   repeated ComponentInfo found_component_infos = 2;
 
-  // Next tag: 5
+  // Next tag: 6
   message GenericDeviceInfo {
     // Records the generic component values of some specific types.  Note
     // that because |HwVerificationReport| intents to only include the needed
@@ -70,6 +70,7 @@ message HwVerificationReport {
     repeated runtime_probe.Battery.Fields battery = 2;
     repeated runtime_probe.Storage.Fields storage = 3;
     repeated runtime_probe.Network.Fields network = 4;
+    repeated runtime_probe.Camera.Fields camera = 5;
   }
 
   // Records the overall device matrics.

@@ -29,11 +29,12 @@ struct FieldType {
   std::string key_name;
   std::string file_name;
 };
-const std::vector<FieldType> kRequiredFields{{"vendor_id", "idVendor"},
-                                             {"product_id", "idProduct"}};
-const std::vector<FieldType> kOptionalFields{{"manufacturer", "manufacturer"},
-                                             {"product", "product"},
-                                             {"bcd_device", "bcdDevice"}};
+const std::vector<FieldType> kRequiredFields{{"usb_vendor_id", "idVendor"},
+                                             {"usb_product_id", "idProduct"}};
+const std::vector<FieldType> kOptionalFields{
+    {"usb_manufacturer", "manufacturer"},
+    {"usb_product", "product"},
+    {"usb_bcd_device", "bcdDevice"}};
 
 bool IsCaptureDevice(const base::FilePath& path) {
   int32_t fd = open(path.value().c_str(), O_RDONLY);
@@ -139,8 +140,9 @@ int UsbCameraFunction::EvalInHelper(std::string* output) const {
   for (auto video_path = path_it.Next(); !video_path.empty();
        video_path = path_it.Next()) {
     base::Value res(base::Value::Type::DICTIONARY);
-    res.SetKey("device_path", base::Value(video_path.value()));
+    res.SetKey("path", base::Value(video_path.value()));
     if (ExploreAsUsbCamera(video_path, &res)) {
+      res.SetKey("bus_type", base::Value("usb"));
       result.GetList().push_back(std::move(res));
     }
   }
