@@ -44,7 +44,6 @@ pkg_config("target_defaults") {
   # NOSORT
   pkg_deps = [
     "dbus-1",
-    "libpatchpanel-util",
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
     "libminijail",
