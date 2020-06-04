@@ -465,7 +465,7 @@ enum {
                                     // mode. arg1:[input] sync mode*/
   SENSOR_CMD_SET_DUAL_CAM_MODE,     //!< Command to set dual cam mode or not.
                                     //   arg1:[input] dual cam or not*/
-
+  SENSOR_CMD_SET_IPC_PING,
   SENSOR_CMD_MAX = 0xFFFF
 };
 

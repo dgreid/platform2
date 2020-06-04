@@ -82,7 +82,7 @@ void V4L2SensorWorker::job() {
   // dequeue a sensor setting
   IPC_SensorParam_T s;
   CAM_LOGD_IF(m_logLevel >= 3, "ipc_dequeue [+]");
-  int result = ipc_dequeue(&s, 1000);
+  int result = ipc_dequeue(&s, 4500);
   CAM_LOGD_IF(m_logLevel >= 3, "ipc_dequeue [-]");
   if (CC_LIKELY(result == 0) && m_worker_status) {
     // configure sensor

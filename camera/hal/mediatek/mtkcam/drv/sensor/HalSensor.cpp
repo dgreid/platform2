@@ -346,6 +346,8 @@ static std::string sensorCommandToString(MUINTPTR cmd) {
       return "SENSOR_CMD_SET_SENSOR_SYNC_MODE";
     case NSCam::SENSOR_CMD_SET_DUAL_CAM_MODE:
       return "SENSOR_CMD_SET_DUAL_CAM_MODE";
+    case NSCam::SENSOR_CMD_SET_IPC_PING:
+      return "SENSOR_CMD_SET_IPC_PING";
     default:
       return "Unknown command";
   }
@@ -953,6 +955,11 @@ MINT HalSensor::sendCommand(MUINT indexDual,
     case SENSOR_CMD_SET_OB_LOCK:
       CAM_LOGD("TODO sendCommand(0x%x)", cmd);
       ret = MFALSE;
+      break;
+
+    case SENSOR_CMD_SET_IPC_PING:
+      // ping message for sensor ipc to indicate 3a alive
+      ret = MTRUE;
       break;
 
     default:
