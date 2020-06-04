@@ -223,13 +223,23 @@ class WiFiProviderTest : public testing::Test {
                                 const string& security) {
     return provider_.FindService(ssid, mode, security);
   }
-  WiFiEndpointRefPtr MakeEndpoint(const string& ssid,
-                                  const string& bssid,
-                                  uint16_t frequency,
-                                  int16_t signal_dbm) {
+  WiFiEndpointRefPtr MakeOpenEndpoint(const string& ssid,
+                                      const string& bssid,
+                                      uint16_t frequency,
+                                      int16_t signal_dbm) {
     return WiFiEndpoint::MakeOpenEndpoint(
         nullptr, nullptr, ssid, bssid,
         WPASupplicant::kNetworkModeInfrastructure, frequency, signal_dbm);
+  }
+  WiFiEndpointRefPtr MakeEndpoint(
+      const string& ssid,
+      const string& bssid,
+      uint16_t frequency,
+      int16_t signal_dbm,
+      const WiFiEndpoint::SecurityFlags& security_flags) {
+    return WiFiEndpoint::MakeEndpoint(nullptr, nullptr, ssid, bssid,
+                                      WPASupplicant::kNetworkModeInfrastructure,
+                                      frequency, signal_dbm, security_flags);
   }
   MockWiFiServiceRefPtr AddMockService(const vector<uint8_t>& ssid,
                                        const string& mode,
@@ -282,7 +292,7 @@ TEST_F(WiFiProviderTest, Stop) {
       vector<uint8_t>(1, '0'), kModeManaged, kSecurityNone, false);
   MockWiFiServiceRefPtr service1 = AddMockService(
       vector<uint8_t>(1, '1'), kModeManaged, kSecurityNone, false);
-  WiFiEndpointRefPtr endpoint = MakeEndpoint("", "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint = MakeOpenEndpoint("", "00:00:00:00:00:00", 0, 0);
   AddEndpointToService(service0, endpoint);
 
   EXPECT_EQ(2, GetServices().size());
@@ -980,7 +990,8 @@ TEST_F(WiFiProviderTest, FindServiceForEndpoint) {
   WiFiServiceRefPtr service = GetService(kSSID.c_str(), kModeManaged,
                                          kSecurityNone, false, true, &error);
   ASSERT_NE(nullptr, service);
-  WiFiEndpointRefPtr endpoint = MakeEndpoint(kSSID, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint =
+      MakeOpenEndpoint(kSSID, "00:00:00:00:00:00", 0, 0);
   WiFiServiceRefPtr endpoint_service =
       provider_.FindServiceForEndpoint(endpoint);
   // Just because a matching service exists, we shouldn't necessarily have
@@ -994,7 +1005,8 @@ TEST_F(WiFiProviderTest, OnEndpointAdded) {
   const string ssid0("an_ssid");
   const vector<uint8_t> ssid0_bytes(ssid0.begin(), ssid0.end());
   EXPECT_FALSE(FindService(ssid0_bytes, kModeManaged, kSecurityNone));
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint0 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(1);
   EXPECT_CALL(manager_, UpdateService(_)).Times(1);
   provider_.OnEndpointAdded(endpoint0);
@@ -1009,7 +1021,8 @@ TEST_F(WiFiProviderTest, OnEndpointAdded) {
       provider_.FindServiceForEndpoint(endpoint0);
   EXPECT_EQ(service0, endpoint_service);
 
-  WiFiEndpointRefPtr endpoint1 = MakeEndpoint(ssid0, "00:00:00:00:00:01", 0, 0);
+  WiFiEndpointRefPtr endpoint1 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:01", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(RefPtrMatch(service0))).Times(1);
   provider_.OnEndpointAdded(endpoint1);
@@ -1019,7 +1032,8 @@ TEST_F(WiFiProviderTest, OnEndpointAdded) {
   const string ssid1("another_ssid");
   const vector<uint8_t> ssid1_bytes(ssid1.begin(), ssid1.end());
   EXPECT_FALSE(FindService(ssid1_bytes, kModeManaged, kSecurityNone));
-  WiFiEndpointRefPtr endpoint2 = MakeEndpoint(ssid1, "00:00:00:00:00:02", 0, 0);
+  WiFiEndpointRefPtr endpoint2 =
+      MakeOpenEndpoint(ssid1, "00:00:00:00:00:02", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(1);
   EXPECT_CALL(manager_, UpdateService(_)).Times(1);
   provider_.OnEndpointAdded(endpoint2);
@@ -1038,8 +1052,10 @@ TEST_F(WiFiProviderTest, OnEndpointAddedWithSecurity) {
   const string ssid0("an_ssid");
   const vector<uint8_t> ssid0_bytes(ssid0.begin(), ssid0.end());
   EXPECT_FALSE(FindService(ssid0_bytes, kModeManaged, kSecurityNone));
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
-  endpoint0->set_security_mode(kSecurityRsn);
+  WiFiEndpoint::SecurityFlags rsn_flags;
+  rsn_flags.rsn_psk = true;
+  WiFiEndpointRefPtr endpoint0 =
+      MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0, rsn_flags);
   EXPECT_CALL(manager_, RegisterService(_)).Times(1);
   EXPECT_CALL(manager_, UpdateService(_)).Times(1);
   provider_.OnEndpointAdded(endpoint0);
@@ -1051,8 +1067,10 @@ TEST_F(WiFiProviderTest, OnEndpointAddedWithSecurity) {
   EXPECT_TRUE(service0->HasEndpoints());
   EXPECT_EQ(kSecurityPsk, service0->security_);
 
-  WiFiEndpointRefPtr endpoint1 = MakeEndpoint(ssid0, "00:00:00:00:00:01", 0, 0);
-  endpoint1->set_security_mode(kSecurityWpa);
+  WiFiEndpoint::SecurityFlags wpa_flags;
+  wpa_flags.wpa_psk = true;
+  WiFiEndpointRefPtr endpoint1 =
+      MakeEndpoint(ssid0, "00:00:00:00:00:01", 0, 0, wpa_flags);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(RefPtrMatch(service0))).Times(1);
   provider_.OnEndpointAdded(endpoint1);
@@ -1062,8 +1080,8 @@ TEST_F(WiFiProviderTest, OnEndpointAddedWithSecurity) {
   const string ssid1("another_ssid");
   const vector<uint8_t> ssid1_bytes(ssid1.begin(), ssid1.end());
   EXPECT_FALSE(FindService(ssid1_bytes, kModeManaged, kSecurityNone));
-  WiFiEndpointRefPtr endpoint2 = MakeEndpoint(ssid1, "00:00:00:00:00:02", 0, 0);
-  endpoint2->set_security_mode(kSecurityWpa);
+  WiFiEndpointRefPtr endpoint2 =
+      MakeEndpoint(ssid1, "00:00:00:00:00:02", 0, 0, wpa_flags);
   EXPECT_CALL(manager_, RegisterService(_)).Times(1);
   EXPECT_CALL(manager_, UpdateService(_)).Times(1);
   provider_.OnEndpointAdded(endpoint2);
@@ -1081,7 +1099,8 @@ TEST_F(WiFiProviderTest, OnEndpointAddedWithSecurity) {
 TEST_F(WiFiProviderTest, OnEndpointAddedWhileStopped) {
   // If we don't call provider_.Start(), OnEndpointAdded should have no effect.
   const string ssid("an_ssid");
-  WiFiEndpointRefPtr endpoint = MakeEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint =
+      MakeOpenEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(_)).Times(0);
   provider_.OnEndpointAdded(endpoint);
@@ -1103,7 +1122,8 @@ TEST_F(WiFiProviderTest, OnEndpointAddedToMockService) {
   MockWiFiServiceRefPtr service1 =
       AddMockService(ssid1_bytes, kModeManaged, kSecurityNone, false);
   EXPECT_EQ(service0, FindService(ssid0_bytes, kModeManaged, kSecurityNone));
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint0 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(RefPtrMatch(service0))).Times(1);
   EXPECT_CALL(*service0, AddEndpoint(RefPtrMatch(endpoint0))).Times(1);
@@ -1113,7 +1133,8 @@ TEST_F(WiFiProviderTest, OnEndpointAddedToMockService) {
   Mock::VerifyAndClearExpectations(service0.get());
   Mock::VerifyAndClearExpectations(service1.get());
 
-  WiFiEndpointRefPtr endpoint1 = MakeEndpoint(ssid0, "00:00:00:00:00:01", 0, 0);
+  WiFiEndpointRefPtr endpoint1 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:01", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(RefPtrMatch(service0))).Times(1);
   EXPECT_CALL(*service0, AddEndpoint(RefPtrMatch(endpoint1))).Times(1);
@@ -1123,7 +1144,8 @@ TEST_F(WiFiProviderTest, OnEndpointAddedToMockService) {
   Mock::VerifyAndClearExpectations(service0.get());
   Mock::VerifyAndClearExpectations(service1.get());
 
-  WiFiEndpointRefPtr endpoint2 = MakeEndpoint(ssid1, "00:00:00:00:00:02", 0, 0);
+  WiFiEndpointRefPtr endpoint2 =
+      MakeOpenEndpoint(ssid1, "00:00:00:00:00:02", 0, 0);
   EXPECT_CALL(manager_, RegisterService(_)).Times(0);
   EXPECT_CALL(manager_, UpdateService(RefPtrMatch(service1))).Times(1);
   EXPECT_CALL(*service0, AddEndpoint(_)).Times(0);
@@ -1144,7 +1166,8 @@ TEST_F(WiFiProviderTest, OnEndpointRemoved) {
   EXPECT_EQ(2, GetServices().size());
 
   // Remove the last endpoint of a non-remembered service.
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint0 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
   AddEndpointToService(service0, endpoint0);
   EXPECT_EQ(1, GetServiceByEndpoint().size());
 
@@ -1175,7 +1198,8 @@ TEST_F(WiFiProviderTest, OnEndpointRemovedButHasEndpoints) {
   EXPECT_EQ(1, GetServices().size());
 
   // Remove an endpoint of a non-remembered service.
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint0 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
   AddEndpointToService(service0, endpoint0);
   EXPECT_EQ(1, GetServiceByEndpoint().size());
 
@@ -1203,7 +1227,8 @@ TEST_F(WiFiProviderTest, OnEndpointRemovedButIsRemembered) {
   EXPECT_EQ(1, GetServices().size());
 
   // Remove the last endpoint of a remembered service.
-  WiFiEndpointRefPtr endpoint0 = MakeEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint0 =
+      MakeOpenEndpoint(ssid0, "00:00:00:00:00:00", 0, 0);
   AddEndpointToService(service0, endpoint0);
   EXPECT_EQ(1, GetServiceByEndpoint().size());
 
@@ -1226,7 +1251,8 @@ TEST_F(WiFiProviderTest, OnEndpointRemovedWhileStopped) {
   // If we don't call provider_.Start(), OnEndpointRemoved should not
   // cause a crash even if a service matching the endpoint does not exist.
   const string ssid("an_ssid");
-  WiFiEndpointRefPtr endpoint = MakeEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint =
+      MakeOpenEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
   provider_.OnEndpointRemoved(endpoint);
 }
 
@@ -1235,7 +1261,8 @@ TEST_F(WiFiProviderTest, OnEndpointUpdated) {
 
   // Create an endpoint and associate it with a mock service.
   const string ssid("an_ssid");
-  WiFiEndpointRefPtr endpoint = MakeEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint =
+      MakeOpenEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
 
   const vector<uint8_t> ssid_bytes(ssid.begin(), ssid.end());
   MockWiFiServiceRefPtr open_service =
@@ -1271,7 +1298,8 @@ TEST_F(WiFiProviderTest, OnEndpointUpdatedWhileStopped) {
   // If we don't call provider_.Start(), OnEndpointUpdated should not
   // cause a crash even if a service matching the endpoint does not exist.
   const string ssid("an_ssid");
-  WiFiEndpointRefPtr endpoint = MakeEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
+  WiFiEndpointRefPtr endpoint =
+      MakeOpenEndpoint(ssid, "00:00:00:00:00:00", 0, 0);
   provider_.OnEndpointUpdated(endpoint);
 }
 

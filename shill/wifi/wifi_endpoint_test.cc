@@ -165,15 +165,15 @@ class WiFiEndpointTest : public PropertyStoreTest {
     endpoint->vendor_information_ = vendor_information;
   }
 
-  WiFiEndpointRefPtr MakeEndpoint(ControlInterface* control_interface,
-                                  const WiFiRefPtr& wifi,
-                                  const std::string& ssid,
-                                  const std::string& bssid,
-                                  bool has_wpa_property,
-                                  bool has_rsn_property) {
+  WiFiEndpointRefPtr MakeEndpoint(
+      ControlInterface* control_interface,
+      const WiFiRefPtr& wifi,
+      const std::string& ssid,
+      const std::string& bssid,
+      const WiFiEndpoint::SecurityFlags& security_flags) {
     return WiFiEndpoint::MakeEndpoint(control_interface, wifi, ssid, bssid,
                                       WPASupplicant::kNetworkModeInfrastructure,
-                                      0, 0, has_wpa_property, has_rsn_property);
+                                      0, 0, security_flags);
   }
 
   WiFiEndpointRefPtr MakeOpenEndpoint(ControlInterface* control_interface,
@@ -819,27 +819,35 @@ TEST_F(WiFiEndpointTest, PropertiesChangedSecurityMode) {
 
 TEST_F(WiFiEndpointTest, HasRsnWpaProperties) {
   {
-    WiFiEndpointRefPtr endpoint = MakeEndpoint(
-        nullptr, wifi(), "ssid", "00:00:00:00:00:01", false, false);
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01",
+                     WiFiEndpoint::SecurityFlags());
     EXPECT_FALSE(endpoint->has_wpa_property());
     EXPECT_FALSE(endpoint->has_rsn_property());
   }
   {
+    WiFiEndpoint::SecurityFlags flags;
+    flags.wpa_psk = true;
     WiFiEndpointRefPtr endpoint =
-        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", true, false);
+        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", flags);
     EXPECT_TRUE(endpoint->has_wpa_property());
     EXPECT_FALSE(endpoint->has_rsn_property());
   }
   {
+    WiFiEndpoint::SecurityFlags flags;
+    flags.rsn_8021x = true;
     WiFiEndpointRefPtr endpoint =
-        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", false, true);
+        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", flags);
     EXPECT_FALSE(endpoint->has_wpa_property());
     EXPECT_TRUE(endpoint->has_rsn_property());
   }
   {
+    WiFiEndpoint::SecurityFlags flags;
     // Both can be true.
+    flags.wpa_psk = true;
+    flags.rsn_psk = true;
     WiFiEndpointRefPtr endpoint =
-        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", true, true);
+        MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", flags);
     EXPECT_TRUE(endpoint->has_wpa_property());
     EXPECT_TRUE(endpoint->has_rsn_property());
   }
@@ -847,21 +855,24 @@ TEST_F(WiFiEndpointTest, HasRsnWpaProperties) {
 
 TEST_F(WiFiEndpointTest, HasTetheringSignature) {
   {
-    WiFiEndpointRefPtr endpoint = MakeEndpoint(
-        nullptr, wifi(), "ssid", "02:1a:11:00:00:01", false, false);
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint(nullptr, wifi(), "ssid", "02:1a:11:00:00:01",
+                     WiFiEndpoint::SecurityFlags());
     EXPECT_TRUE(endpoint->has_tethering_signature());
   }
   {
-    WiFiEndpointRefPtr endpoint = MakeEndpoint(
-        nullptr, wifi(), "ssid", "02:1a:10:00:00:01", false, false);
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint(nullptr, wifi(), "ssid", "02:1a:10:00:00:01",
+                     WiFiEndpoint::SecurityFlags());
     EXPECT_FALSE(endpoint->has_tethering_signature());
     endpoint->vendor_information_.oui_set.insert(Tethering::kIosOui);
     endpoint->CheckForTetheringSignature();
     EXPECT_TRUE(endpoint->has_tethering_signature());
   }
   {
-    WiFiEndpointRefPtr endpoint = MakeEndpoint(
-        nullptr, wifi(), "ssid", "04:1a:10:00:00:01", false, false);
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint(nullptr, wifi(), "ssid", "04:1a:10:00:00:01",
+                     WiFiEndpoint::SecurityFlags());
     EXPECT_FALSE(endpoint->has_tethering_signature());
     endpoint->vendor_information_.oui_set.insert(Tethering::kIosOui);
     endpoint->CheckForTetheringSignature();
@@ -871,7 +882,8 @@ TEST_F(WiFiEndpointTest, HasTetheringSignature) {
 
 TEST_F(WiFiEndpointTest, Ap80211krvSupported) {
   WiFiEndpointRefPtr endpoint =
-      MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01", false, false);
+      MakeEndpoint(nullptr, wifi(), "ssid", "00:00:00:00:00:01",
+                   WiFiEndpoint::SecurityFlags());
   EXPECT_FALSE(endpoint->krv_support().neighbor_list_supported);
   endpoint->krv_support_.neighbor_list_supported = true;
   EXPECT_TRUE(endpoint->krv_support().neighbor_list_supported);

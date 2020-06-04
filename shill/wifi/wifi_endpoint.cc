@@ -36,6 +36,44 @@ static string ObjectID(WiFiEndpoint* w) {
 }
 }  // namespace Logging
 
+namespace {
+
+void PackSecurity(const WiFiEndpoint::SecurityFlags& flags,
+                  KeyValueStore* args) {
+  Strings wpa, rsn;
+
+  if (flags.rsn_8021x) {
+    rsn.push_back(string("wpa2") +
+                  WPASupplicant::kKeyManagementMethodSuffixEAP);
+  }
+  if (flags.rsn_psk) {
+    rsn.push_back(string("wpa2") +
+                  WPASupplicant::kKeyManagementMethodSuffixPSK);
+  }
+  if (flags.wpa_8021x)
+    wpa.push_back(string("wpa") + WPASupplicant::kKeyManagementMethodSuffixEAP);
+  if (flags.wpa_psk)
+    wpa.push_back(string("wpa") + WPASupplicant::kKeyManagementMethodSuffixPSK);
+
+  if (flags.privacy)
+    args->Set<bool>(WPASupplicant::kPropertyPrivacy, true);
+
+  if (!rsn.empty()) {
+    KeyValueStore rsn_args;
+    rsn_args.Set<Strings>(WPASupplicant::kSecurityMethodPropertyKeyManagement,
+                          rsn);
+    args->Set<KeyValueStore>(WPASupplicant::kPropertyRSN, rsn_args);
+  }
+  if (!wpa.empty()) {
+    KeyValueStore wpa_args;
+    wpa_args.Set<Strings>(WPASupplicant::kSecurityMethodPropertyKeyManagement,
+                          wpa);
+    args->Set<KeyValueStore>(WPASupplicant::kPropertyWPA, wpa_args);
+  }
+}
+
+}  // namespace
+
 WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
                            const WiFiRefPtr& device,
                            const RpcIdentifier& rpc_id,
@@ -281,7 +319,7 @@ WiFiEndpointRefPtr WiFiEndpoint::MakeOpenEndpoint(
     uint16_t frequency,
     int16_t signal_dbm) {
   return MakeEndpoint(control_interface, wifi, ssid, bssid, network_mode,
-                      frequency, signal_dbm, false, false);
+                      frequency, signal_dbm, SecurityFlags());
 }
 
 // static
@@ -293,8 +331,7 @@ WiFiEndpointRefPtr WiFiEndpoint::MakeEndpoint(
     const string& network_mode,
     uint16_t frequency,
     int16_t signal_dbm,
-    bool has_wpa_property,
-    bool has_rsn_property) {
+    const SecurityFlags& security_flags) {
   KeyValueStore args;
 
   args.Set<vector<uint8_t>>(WPASupplicant::kBSSPropertySSID,
@@ -307,14 +344,7 @@ WiFiEndpointRefPtr WiFiEndpoint::MakeEndpoint(
   args.Set<uint16_t>(WPASupplicant::kBSSPropertyFrequency, frequency);
   args.Set<string>(WPASupplicant::kBSSPropertyMode, network_mode);
 
-  if (has_wpa_property) {
-    KeyValueStore empty_args;
-    args.Set<KeyValueStore>(WPASupplicant::kPropertyWPA, empty_args);
-  }
-  if (has_rsn_property) {
-    KeyValueStore empty_args;
-    args.Set<KeyValueStore>(WPASupplicant::kPropertyRSN, empty_args);
-  }
+  PackSecurity(security_flags, &args);
 
   return new WiFiEndpoint(control_interface, wifi,
                           RpcIdentifier(bssid),  // |bssid| fakes an RPC ID

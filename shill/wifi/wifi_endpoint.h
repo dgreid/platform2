@@ -28,17 +28,11 @@ class SupplicantBSSProxyInterface;
 class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
  public:
   struct SecurityFlags {
-    SecurityFlags()
-        : rsn_8021x(false),
-          rsn_psk(false),
-          wpa_8021x(false),
-          wpa_psk(false),
-          privacy(false) {}
-    bool rsn_8021x;
-    bool rsn_psk;
-    bool wpa_8021x;
-    bool wpa_psk;
-    bool privacy;
+    bool rsn_8021x = false;
+    bool rsn_psk = false;
+    bool wpa_8021x = false;
+    bool wpa_psk = false;
+    bool privacy = false;
   };
   struct VendorInformation {
     std::string wps_manufacturer;
@@ -118,13 +112,13 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   friend class WiFiObjectTest;    // for MakeOpenEndpoint
   friend class WiFiProviderTest;  // for MakeOpenEndpoint
   friend class WiFiServiceTest;   // for MakeOpenEndpoint
-  // these test cases need access to the KeyManagement enum
+  // For DeterminePhyModeFromFrequency
   FRIEND_TEST(WiFiEndpointTest, DeterminePhyModeFromFrequency);
+  // These test cases need access to the KeyManagement enum.
   FRIEND_TEST(WiFiEndpointTest, ParseKeyManagementMethodsEAP);
   FRIEND_TEST(WiFiEndpointTest, ParseKeyManagementMethodsPSK);
   FRIEND_TEST(WiFiEndpointTest, ParseKeyManagementMethodsEAPAndPSK);
-  FRIEND_TEST(WiFiEndpointTest, HasTetheringSignature);
-  FRIEND_TEST(WiFiProviderTest, OnEndpointAddedWithSecurity);
+  FRIEND_TEST(WiFiEndpointTest, HasTetheringSignature);  // vendor_information_
   FRIEND_TEST(WiFiProviderTest, OnEndpointUpdated);
   FRIEND_TEST(WiFiServiceTest, GetTethering);
   FRIEND_TEST(WiFiServiceUpdateFromEndpointsTest, EndpointModified);
@@ -143,8 +137,7 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
                                          const std::string& network_mode,
                                          uint16_t frequency,
                                          int16_t signal_dbm,
-                                         bool has_wpa_property,
-                                         bool has_rsn_property);
+                                         const SecurityFlags& security_flags);
   // As above, but with the last two parameters false.
   static WiFiEndpointRefPtr MakeOpenEndpoint(
       ControlInterface* control_interface,
