@@ -252,6 +252,16 @@ properties:
                   enum:
                     - 280
               additionalProperties: false
+            nnpalm:
+              type: object
+              properties:
+                touch-compatible:
+                  description: Optional - false by default but should be true for compatible devices.
+                  type: boolean
+                radius-polynomial:
+                  description: Optional - empty by default.
+                  type: string
+              additionalProperties: false
             audio:
               type: object
               properties:
