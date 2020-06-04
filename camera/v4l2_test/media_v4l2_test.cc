@@ -565,10 +565,10 @@ TEST_P(V4L2TestWithIO, MultipleInit) {
   dev2.CloseDevice();
 }
 
-INSTANTIATE_TEST_CASE_P(V4L2Test,
-                        V4L2TestWithIO,
-                        ::testing::Values(V4L2Device::IO_METHOD_MMAP,
-                                          V4L2Device::IO_METHOD_USERPTR));
+INSTANTIATE_TEST_SUITE_P(V4L2Test,
+                         V4L2TestWithIO,
+                         ::testing::Values(V4L2Device::IO_METHOD_MMAP,
+                                           V4L2Device::IO_METHOD_USERPTR));
 
 // EnumInput and EnumStandard are optional.
 TEST_F(V4L2Test, EnumInputAndStandard) {
@@ -711,14 +711,14 @@ const std::pair<uint32_t, uint32_t> kTestResolutions[] = {
     {320, 240},  {640, 480},   {1280, 720},
     {1280, 960}, {1600, 1200}, {1920, 1080},
 };
-INSTANTIATE_TEST_CASE_P(V4L2Test,
-                        V4L2TestWithResolution,
-                        ::testing::ValuesIn(kTestResolutions),
-                        [](const auto& info) {
-                          uint32_t width = std::get<0>(info.param);
-                          uint32_t height = std::get<1>(info.param);
-                          return base::StringPrintf("%ux%u", width, height);
-                        });
+INSTANTIATE_TEST_SUITE_P(V4L2Test,
+                         V4L2TestWithResolution,
+                         ::testing::ValuesIn(kTestResolutions),
+                         [](const auto& info) {
+                           uint32_t width = std::get<0>(info.param);
+                           uint32_t height = std::get<1>(info.param);
+                           return base::StringPrintf("%ux%u", width, height);
+                         });
 
 // ChromeOS spec requires world-facing camera should be at least 1920x1080 and
 // user-facing camera should be at least 1280x720.
