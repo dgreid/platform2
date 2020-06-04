@@ -32,14 +32,11 @@ class WiFiService : public Service {
   static const char kStorageSecurityClass[];
   static const char kStorageSSID[];
 
-  // TODO(b/157935328): callers pass both security class and security in the
-  // |security| arg. Security classes are a subset of security, but for
-  // clarity, we'll move to using security class.
   WiFiService(Manager* manager,
               WiFiProvider* provider,
               const std::vector<uint8_t>& ssid,
               const std::string& mode,
-              const std::string& security,
+              const std::string& security_class,
               bool hidden_ssid);
   ~WiFiService();
 
@@ -302,6 +299,8 @@ class WiFiService : public Service {
   std::string passphrase_;
   bool need_passphrase_;
   // The current security mode. May be updated based on detected BSS.
+  // TODO(b/157935328): consider factoring this out into a class, to hide some
+  // of the overlap (but not identical) nature of Security and SecurityClass.
   std::string security_;
   // TODO(cmasone): see if the below can be pulled from the endpoint associated
   // with this service instead.

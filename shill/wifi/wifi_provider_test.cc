@@ -1321,7 +1321,7 @@ TEST_F(WiFiProviderTest, OnEndpointUpdated) {
   // service, the provider should transfer the endpoint from one service to
   // the other.
   MockWiFiServiceRefPtr rsn_service =
-      AddMockService(ssid_bytes, kModeManaged, kSecurityRsn, false);
+      AddMockService(ssid_bytes, kModeManaged, kSecurityPsk, false);
   EXPECT_CALL(*open_service, RemoveEndpoint(RefPtrMatch(endpoint)));
   // We are playing out a scenario where the open service is not removed
   // since it still claims to have more endpoints remaining.

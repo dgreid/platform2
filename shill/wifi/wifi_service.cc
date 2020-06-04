@@ -61,11 +61,11 @@ WiFiService::WiFiService(Manager* manager,
                          WiFiProvider* provider,
                          const vector<uint8_t>& ssid,
                          const string& mode,
-                         const string& security,
+                         const string& security_class,
                          bool hidden_ssid)
     : Service(manager, Technology::kWifi),
       need_passphrase_(false),
-      security_(security),
+      security_(security_class),
       mode_(mode),
       hidden_ssid_(hidden_ssid),
       ft_enabled_(true),
@@ -78,6 +78,10 @@ WiFiService::WiFiService(Manager* manager,
       expecting_disconnect_(false),
       certificate_file_(new CertificateFile()),
       provider_(provider) {
+  // Must be constructed with a SecurityClass. We only detect (for internal and
+  // informational purposes) the specific mode in use later.
+  CHECK(IsValidSecurityClass(security_)) << base::StringPrintf(
+      "Security \"%s\" is not a SecurityClass", security_.c_str());
   set_log_name("wifi_" + security_ + "_" +
                base::NumberToString(serial_number()));
 
@@ -116,10 +120,6 @@ WiFiService::WiFiService(Manager* manager,
     // Passphrases are not mandatory for 802.1X.
     need_passphrase_ = false;
   } else if (security_ == kSecurityPsk) {
-    SetEAPKeyManagement(WPASupplicant::kKeyManagementWPAPSK);
-  } else if (security_ == kSecurityRsn) {
-    SetEAPKeyManagement(WPASupplicant::kKeyManagementWPAPSK);
-  } else if (security_ == kSecurityWpa) {
     SetEAPKeyManagement(WPASupplicant::kKeyManagementWPAPSK);
   } else if (security_ == kSecurityWep) {
     SetEAPKeyManagement(WPASupplicant::kKeyModeNone);

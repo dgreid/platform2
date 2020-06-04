@@ -1542,13 +1542,25 @@ TEST_F(WiFiServiceTest, UpdateSecurity) {
     EXPECT_FALSE(service->endpoint_auth());
   }
   {
-    WiFiServiceRefPtr service = MakeSimpleService(kSecurityWpa);
+    WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
+    WiFiEndpoint::SecurityFlags flags;
+    flags.wpa_psk = true;
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint("a", "00:00:00:00:00:01", 0, 0, flags);
+    service->AddEndpoint(endpoint);
+    EXPECT_EQ(kSecurityWpa, service->security());
     EXPECT_EQ(Service::kCryptoRc4, service->crypto_algorithm());
     EXPECT_TRUE(service->key_rotation());
     EXPECT_FALSE(service->endpoint_auth());
   }
   {
-    WiFiServiceRefPtr service = MakeSimpleService(kSecurityRsn);
+    WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
+    WiFiEndpoint::SecurityFlags flags;
+    flags.rsn_psk = true;
+    WiFiEndpointRefPtr endpoint =
+        MakeEndpoint("a", "00:00:00:00:00:01", 0, 0, flags);
+    service->AddEndpoint(endpoint);
+    EXPECT_EQ(kSecurityRsn, service->security());
     EXPECT_EQ(Service::kCryptoAes, service->crypto_algorithm());
     EXPECT_TRUE(service->key_rotation());
     EXPECT_FALSE(service->endpoint_auth());
