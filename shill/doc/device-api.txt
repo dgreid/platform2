@@ -221,6 +221,7 @@ Properties	string Address [readonly]
 			Possible values:
 				"simple" [default]
 				"learn"
+				"none"
 
 			A change to this property takes affect on the next
 			association.
