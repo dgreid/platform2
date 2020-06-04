@@ -1762,7 +1762,7 @@ namespace {
 }
 
 FilePath HomeDirs::GetChapsTokenDir(const std::string& user) const {
-  return brillo::cryptohome::home::GetDaemonPath(user, kChapsDaemonName);
+  return brillo::cryptohome::home::GetDaemonStorePath(user, kChapsDaemonName);
 }
 
 FilePath HomeDirs::GetLegacyChapsTokenDir(const std::string& user) const {

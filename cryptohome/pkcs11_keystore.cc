@@ -388,9 +388,10 @@ bool Pkcs11KeyStore::GetUserSlot(bool is_user_specific,
                                  CK_SLOT_ID_PTR slot) {
   const char kChapsDaemonName[] = "chaps";
   const char kChapsSystemToken[] = "/var/lib/chaps";
-  FilePath token_path = is_user_specific ?
-      brillo::cryptohome::home::GetDaemonPath(username, kChapsDaemonName) :
-      FilePath(kChapsSystemToken);
+  FilePath token_path = is_user_specific
+                            ? brillo::cryptohome::home::GetDaemonStorePath(
+                                  username, kChapsDaemonName)
+                            : FilePath(kChapsSystemToken);
   return pkcs11_init_->GetTpmTokenSlotForPath(token_path, slot);
 }
 
