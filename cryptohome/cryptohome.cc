@@ -91,7 +91,6 @@ namespace switches {
   static const char kWaitOwnershipTimeoutSwitch[] = "wait-ownership-timeout";
   static const char kActionSwitch[] = "action";
   static const char* kActions[] = {"mount_ex",
-                                   "mount_guest",
                                    "mount_guest_ex",
                                    "unmount",
                                    "is_mounted",
@@ -172,7 +171,6 @@ namespace switches {
                                    NULL};
   enum ActionEnum {
     ACTION_MOUNT_EX,
-    ACTION_MOUNT_GUEST,
     ACTION_MOUNT_GUEST_EX,
     ACTION_UNMOUNT,
     ACTION_MOUNTED,
