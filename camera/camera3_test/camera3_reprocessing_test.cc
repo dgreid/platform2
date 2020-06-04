@@ -656,12 +656,12 @@ static std::vector<int> EnumerateReprocessingTestCameras() {
   return ret_ids;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3ReprocessingTest,
     ::testing::ValuesIn(EnumerateReprocessingTestCameras()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3ReprocessingReorderTest,
     ::testing::ValuesIn(EnumerateReprocessingTestCameras()));

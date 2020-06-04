@@ -208,7 +208,7 @@ TEST_P(Camera3StreamInvalidRotationTest, CreateStream) {
       << "Configuring stream of invalid rotation should not succeed";
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StreamTest,
     Camera3SingleStreamTest,
     ::testing::Combine(
@@ -222,12 +222,12 @@ INSTANTIATE_TEST_CASE_P(
                           HAL_PIXEL_FORMAT_Y16,
                           HAL_PIXEL_FORMAT_RAW16)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StreamTest,
     Camera3MultiStreamTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StreamTest,
     Camera3StreamInvalidRotationTest,
     ::testing::Combine(

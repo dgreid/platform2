@@ -329,7 +329,7 @@ TEST_P(Camera3JpegResolutionTest, JpegResolutionTest) {
       << "JPEG size result and request should match";
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StillCaptureTest,
     Camera3SimpleStillCaptureTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
@@ -352,12 +352,12 @@ IterateCameraIdPreviewJpegResolution() {
   return result;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StillCaptureTest,
     Camera3JpegResolutionTest,
     ::testing::ValuesIn(IterateCameraIdPreviewJpegResolution()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3StillCaptureTest,
     Camera3DumpSimpleStillCaptureTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));

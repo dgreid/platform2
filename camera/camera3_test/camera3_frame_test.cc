@@ -2004,7 +2004,7 @@ TEST_P(Camera3PortraitModeTest, NoFace) {
   TakePortraitModePictureTest(false);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3SingleFrameTest,
     ::testing::Combine(
@@ -2025,7 +2025,7 @@ INSTANTIATE_TEST_CASE_P(
                           CAMERA3_TEMPLATE_MANUAL),
         ::testing::Bool()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3MultiFrameTest,
     ::testing::Combine(::testing::ValuesIn(Camera3Module().GetTestCameraIds()),
@@ -2037,12 +2037,12 @@ INSTANTIATE_TEST_CASE_P(
                                          CAMERA3_TEMPLATE_MANUAL),
                        ::testing::Range(1, 10)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3MixedTemplateMultiFrameTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3FlushRequestsTest,
     ::testing::Combine(::testing::ValuesIn(Camera3Module().GetTestCameraIds()),
@@ -2054,28 +2054,28 @@ INSTANTIATE_TEST_CASE_P(
                                          CAMERA3_TEMPLATE_MANUAL),
                        ::testing::Values(10)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3MultiStreamFrameTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3InvalidRequestTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3SimpleCaptureFrames,
     ::testing::Combine(::testing::ValuesIn(Camera3Module().GetTestCameraIds()),
                        ::testing::Values(10)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3ResultTimestampsTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3InvalidBufferTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));
@@ -2100,17 +2100,18 @@ IterateCameraIdFormatResolution() {
   return result;
 }
 
-INSTANTIATE_TEST_CASE_P(Camera3FrameTest,
-                        Camera3FrameContentTest,
-                        ::testing::ValuesIn(IterateCameraIdFormatResolution()));
+INSTANTIATE_TEST_SUITE_P(
+    Camera3FrameTest,
+    Camera3FrameContentTest,
+    ::testing::ValuesIn(IterateCameraIdFormatResolution()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3PortraitRotationTest,
     ::testing::Combine(::testing::ValuesIn(IterateCameraIdFormatResolution()),
                        ::testing::Values(90, 270)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3FrameTest,
     Camera3PortraitModeTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));

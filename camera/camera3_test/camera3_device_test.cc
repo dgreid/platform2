@@ -1130,11 +1130,11 @@ TEST_P(Camera3AlgoSandboxIPCErrorTest, IPCErrorAfterOpen) {
       << "Camera device initialization fails";
 }
 
-INSTANTIATE_TEST_CASE_P(Camera3DeviceTest,
-                        Camera3DeviceSimpleTest,
-                        ::testing::ValuesIn(Camera3Module().GetCameraIds()));
+INSTANTIATE_TEST_SUITE_P(Camera3DeviceTest,
+                         Camera3DeviceSimpleTest,
+                         ::testing::ValuesIn(Camera3Module().GetCameraIds()));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3DeviceTest,
     Camera3DeviceDefaultSettings,
     ::testing::Combine(::testing::ValuesIn(Camera3Module().GetCameraIds()),
@@ -1145,15 +1145,15 @@ INSTANTIATE_TEST_CASE_P(
                                          CAMERA3_TEMPLATE_ZERO_SHUTTER_LAG,
                                          CAMERA3_TEMPLATE_MANUAL)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3DeviceTest,
     CreateInvalidTemplate,
     ::testing::Combine(::testing::ValuesIn(Camera3Module().GetCameraIds()),
                        ::testing::Values(CAMERA3_TEMPLATE_PREVIEW - 1,
                                          CAMERA3_TEMPLATE_MANUAL + 1)));
 
-INSTANTIATE_TEST_CASE_P(Camera3DeviceTest,
-                        Camera3AlgoSandboxIPCErrorTest,
-                        ::testing::ValuesIn(Camera3Module().GetCameraIds()));
+INSTANTIATE_TEST_SUITE_P(Camera3DeviceTest,
+                         Camera3AlgoSandboxIPCErrorTest,
+                         ::testing::ValuesIn(Camera3Module().GetCameraIds()));
 
 }  // namespace camera3_test

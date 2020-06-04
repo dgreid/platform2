@@ -52,7 +52,7 @@ TEST_P(Camera3SinglePreviewTest, Camera3BasicPreviewTest) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     Camera3PreviewTest,
     Camera3SinglePreviewTest,
     ::testing::ValuesIn(Camera3Module().GetTestCameraIds()));

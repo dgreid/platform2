@@ -178,8 +178,8 @@ TEST_P(Camera3BasicRecordingTest, BasicRecording) {
   cam_service_.StopPreview(cam_id_);
 }
 
-INSTANTIATE_TEST_CASE_P(Camera3RecordingFixture,
-                        Camera3BasicRecordingTest,
-                        ::testing::ValuesIn(ParseRecordingParams()));
+INSTANTIATE_TEST_SUITE_P(Camera3RecordingFixture,
+                         Camera3BasicRecordingTest,
+                         ::testing::ValuesIn(ParseRecordingParams()));
 
 }  // namespace camera3_test
