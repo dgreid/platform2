@@ -1767,7 +1767,7 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   ASSERT_TRUE(
       mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
 
-  // Update the timestamp. Normally it is called in MountTaskMount::Run() in
+  // Update the timestamp. Normally it is called in MountTask::Run() in
   // background but here in the test we must call it manually.
   static const int kMagicTimestamp = 123;
   brillo::Blob updated_keyset;
