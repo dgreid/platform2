@@ -222,8 +222,8 @@ class HomeDirsTest
   DISALLOW_COPY_AND_ASSIGN(HomeDirsTest);
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, HomeDirsTest, ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, HomeDirsTest, ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, HomeDirsTest, ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, HomeDirsTest, ::testing::Values(false));
 
 TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
   // Ensure that RemoveNonOwnerCryptohomes does.
@@ -644,10 +644,10 @@ class FreeDiskSpaceTest : public HomeDirsTest {
   }
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, FreeDiskSpaceTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, FreeDiskSpaceTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, FreeDiskSpaceTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, FreeDiskSpaceTest,
+                         ::testing::Values(false));
 
 TEST_P(FreeDiskSpaceTest, InitializeTimeCacheWithNoTime) {
   // To get to the init logic, we need to fail the check in FreeDiskSpace.
@@ -2007,10 +2007,10 @@ class KeysetManagementTest : public HomeDirsTest {
   SerializedVaultKeyset serialized_;
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, KeysetManagementTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, KeysetManagementTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, KeysetManagementTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, KeysetManagementTest,
+                         ::testing::Values(false));
 
 TEST_P(KeysetManagementTest, AddKeysetSuccess) {
   KeysetSetUp();

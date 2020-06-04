@@ -265,12 +265,12 @@ TEST_P(LockboxTest, StoreTpmNotReady) {
   EXPECT_EQ(error, LockboxError::kNvramInvalid);
 }
 
-INSTANTIATE_TEST_CASE_P(LockboxTestTpm12,
-                        LockboxTest,
-                        testing::Values(Tpm::TpmVersion::TPM_1_2));
-INSTANTIATE_TEST_CASE_P(LockboxTestTpm20,
-                        LockboxTest,
-                        testing::Values(Tpm::TpmVersion::TPM_2_0));
+INSTANTIATE_TEST_SUITE_P(LockboxTestTpm12,
+                         LockboxTest,
+                         testing::Values(Tpm::TpmVersion::TPM_1_2));
+INSTANTIATE_TEST_SUITE_P(LockboxTestTpm20,
+                         LockboxTest,
+                         testing::Values(Tpm::TpmVersion::TPM_2_0));
 
 class LockboxContentsTest : public testing::Test {
  public:

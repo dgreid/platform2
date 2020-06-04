@@ -788,7 +788,7 @@ TEST_P(ChallengeCredentialsHelperImplAlgorithmsTest, DecryptSuccess) {
 
 // Test that SHA-1 algorithms are the least preferred and chosen only if there's
 // no other option.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LowPriorityOfSha1,
     ChallengeCredentialsHelperImplAlgorithmsTest,
     Values(
@@ -803,7 +803,7 @@ INSTANTIATE_TEST_CASE_P(
             CHALLENGE_RSASSA_PKCS1_V1_5_SHA1 /* unsealing_algorithm */}));
 
 // Test prioritization of algorithms according to their order in the input.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     InputPrioritization,
     ChallengeCredentialsHelperImplAlgorithmsTest,
     Values(

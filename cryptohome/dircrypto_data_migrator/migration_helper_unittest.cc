@@ -1151,17 +1151,17 @@ TEST_P(DataMigrationTest, CopyFileData) {
   EXPECT_FALSE(platform.FileExists(kFromFile));
 }
 
-INSTANTIATE_TEST_CASE_P(WithRandomData,
-                        DataMigrationTest,
-                        Values(kDefaultChunkSize / 2,
-                               kDefaultChunkSize,
-                               kDefaultChunkSize * 2,
-                               kDefaultChunkSize * 2 + kDefaultChunkSize / 2,
-                               kDefaultChunkSize * 10,
-                               kDefaultChunkSize * 100,
-                               123456,
-                               1,
-                               2));
+INSTANTIATE_TEST_SUITE_P(WithRandomData,
+                         DataMigrationTest,
+                         Values(kDefaultChunkSize / 2,
+                                kDefaultChunkSize,
+                                kDefaultChunkSize * 2,
+                                kDefaultChunkSize * 2 + kDefaultChunkSize / 2,
+                                kDefaultChunkSize * 10,
+                                kDefaultChunkSize * 100,
+                                123456,
+                                1,
+                                2));
 
 // MigrationHelperJobListTest verifies that the job list size limit doesn't
 // cause dead lock, however small (or big) the limit is.
@@ -1215,9 +1215,9 @@ TEST_P(MigrationHelperJobListTest, ProcessJobs) {
   EXPECT_TRUE(base::IsDirectoryEmpty(from_dir_.GetPath()));
 }
 
-INSTANTIATE_TEST_CASE_P(JobListSize,
-                        MigrationHelperJobListTest,
-                        Values(1, 10, 100, 1000));
+INSTANTIATE_TEST_SUITE_P(JobListSize,
+                         MigrationHelperJobListTest,
+                         Values(1, 10, 100, 1000));
 
 }  // namespace dircrypto_data_migrator
 }  // namespace cryptohome

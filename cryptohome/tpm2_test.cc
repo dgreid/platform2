@@ -1713,42 +1713,42 @@ TEST_P(Tpm2RsaSignatureSecretSealingTest, Unseal) {
                             tpmt_signature.signature.rsassa.sig.size));
 }
 
-INSTANTIATE_TEST_CASE_P(SingleAlgorithm,
-                        Tpm2RsaSignatureSecretSealingTest,
-                        Values(Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA1},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA1,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA1),
-                               Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA256},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA256,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA256),
-                               Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA384},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA384),
-                               Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA512},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA512,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA512)));
-INSTANTIATE_TEST_CASE_P(MultipleAlgorithms,
-                        Tpm2RsaSignatureSecretSealingTest,
-                        Values(Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
+INSTANTIATE_TEST_SUITE_P(SingleAlgorithm,
+                         Tpm2RsaSignatureSecretSealingTest,
+                         Values(Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA1},
+                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA1,
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA1),
+                                Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA256},
                                     CHALLENGE_RSASSA_PKCS1_V1_5_SHA256,
-                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA512},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA384),
-                               Tpm2RsaSignatureSecretSealingTestParam(
-                                   {CHALLENGE_RSASSA_PKCS1_V1_5_SHA1,
-                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA256},
-                                   CHALLENGE_RSASSA_PKCS1_V1_5_SHA256,
-                                   trunks::TPM_ALG_RSASSA,
-                                   trunks::TPM_ALG_SHA256)));
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA256),
+                                Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA384},
+                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA384),
+                                Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA512},
+                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA512,
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA512)));
+INSTANTIATE_TEST_SUITE_P(MultipleAlgorithms,
+                         Tpm2RsaSignatureSecretSealingTest,
+                         Values(Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
+                                     CHALLENGE_RSASSA_PKCS1_V1_5_SHA256,
+                                     CHALLENGE_RSASSA_PKCS1_V1_5_SHA512},
+                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA384,
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA384),
+                                Tpm2RsaSignatureSecretSealingTestParam(
+                                    {CHALLENGE_RSASSA_PKCS1_V1_5_SHA1,
+                                     CHALLENGE_RSASSA_PKCS1_V1_5_SHA256},
+                                    CHALLENGE_RSASSA_PKCS1_V1_5_SHA256,
+                                    trunks::TPM_ALG_RSASSA,
+                                    trunks::TPM_ALG_SHA256)));
 
 }  // namespace cryptohome

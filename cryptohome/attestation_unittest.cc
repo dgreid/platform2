@@ -1535,11 +1535,11 @@ TEST_P(AttestationTest, Payload) {
   EXPECT_TRUE(CompareBlob(blob, "stored_payload"));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     PcaType, AttestationTest,
     ::testing::Values(Attestation::kDefaultPCA, Attestation::kTestPCA));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AbeData, AttestationWithAbeDataTest,
     ::testing::Values(AbeDataTestParam(AbeDataParam(nullptr, nullptr, ""),
                                        Attestation::kDefaultPCA),

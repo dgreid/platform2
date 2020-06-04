@@ -590,8 +590,8 @@ class MountTest
   DISALLOW_COPY_AND_ASSIGN(MountTest);
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, MountTest, ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, MountTest, ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, MountTest, ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, MountTest, ::testing::Values(false));
 
 TEST_P(MountTest, BadInitTest) {
   // Create a Mount instance that points to a bad shadow root.
@@ -2498,10 +2498,10 @@ class EphemeralNoUserSystemTest : public AltImageTest {
   DISALLOW_COPY_AND_ASSIGN(EphemeralNoUserSystemTest);
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, EphemeralNoUserSystemTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, EphemeralNoUserSystemTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralNoUserSystemTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralNoUserSystemTest,
+                         ::testing::Values(false));
 
 TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   // Checks that MountHelper::SetUpEphemeralCryptohome creates
@@ -3082,10 +3082,10 @@ class EphemeralOwnerOnlySystemTest : public AltImageTest {
   DISALLOW_COPY_AND_ASSIGN(EphemeralOwnerOnlySystemTest);
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, EphemeralOwnerOnlySystemTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, EphemeralOwnerOnlySystemTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralOwnerOnlySystemTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralOwnerOnlySystemTest,
+                         ::testing::Values(false));
 
 TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
   // Checks that when a device is not enterprise enrolled and has a known owner,
@@ -3225,10 +3225,10 @@ class EphemeralExistingUserSystemTest : public AltImageTest {
   DISALLOW_COPY_AND_ASSIGN(EphemeralExistingUserSystemTest);
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs, EphemeralExistingUserSystemTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto, EphemeralExistingUserSystemTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralExistingUserSystemTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralExistingUserSystemTest,
+                         ::testing::Values(false));
 
 TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   // Checks that when a device is not enterprise enrolled and does not have a

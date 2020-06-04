@@ -109,8 +109,8 @@ TEST_P(Tpm1StaticUtilsRsaKeyTest, ParseRsaFromTpmPubkeyBlob) {
   EXPECT_EQ(BN_cmp(e, parsed_e), 0);
 }
 
-INSTANTIATE_TEST_CASE_P(,
-                        Tpm1StaticUtilsRsaKeyTest,
-                        testing::Values(512, 1024, 2048, 4096));
+INSTANTIATE_TEST_SUITE_P(,
+                         Tpm1StaticUtilsRsaKeyTest,
+                         testing::Values(512, 1024, 2048, 4096));
 
 }  // namespace cryptohome
