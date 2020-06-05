@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include <base/gtest_prod_util.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 namespace dlcservice {
 
