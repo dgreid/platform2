@@ -5,6 +5,7 @@
 #include "smbfs/fuse_session.h"
 
 #include <errno.h>
+#include <fuse_opt.h>
 #include <unistd.h>
 
 #include <string>
@@ -365,7 +366,13 @@ bool FuseSession::Start(base::OnceClosure stop_callback) {
   ops.mkdir = &Impl::FuseMkDir;
   ops.rmdir = &Impl::FuseRmDir;
 
-  session_ = fuse_lowlevel_new(nullptr, &ops, sizeof(ops), impl_.get());
+  struct fuse_args args = {0};
+  // The first argument needs to be the program name, which is ignored by the
+  // options parser.
+  CHECK_EQ(fuse_opt_add_arg(&args, "smbfs"), 0);
+  CHECK_EQ(fuse_opt_add_arg(&args, "-obig_writes"), 0);
+
+  session_ = fuse_lowlevel_new(&args, &ops, sizeof(ops), impl_.get());
   if (!session_) {
     LOG(ERROR) << "Unable to create new FUSE session";
     return false;
