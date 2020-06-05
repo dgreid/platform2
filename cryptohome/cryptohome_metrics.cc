@@ -117,6 +117,7 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     // Latency of the UserSession::Verify operation that gets invoked on session
     // unlock.
     {"Cryptohome.TimeSessionUnlock", 0, 4000, 50},
+    {"Cryptohome.TimeToMountGuestEx", 0, 4000, 50},
 };
 
 static_assert(base::size(kTimerHistogramParams) == cryptohome::kNumTimerTypes,

@@ -2922,7 +2922,14 @@ void Service::DoMountGuestEx(scoped_refptr<cryptohome::Mount> guest_mount,
   }
 
   BaseReply reply;
-  if (!guest_mount->MountGuestCryptohome())
+  // As per the other timers, this really only tracks time spent in
+  // MountGuestCryptohome() not in the other areas prior.
+  ReportTimerStart(kMountGuestExTimer);
+  bool success = guest_mount->MountGuestCryptohome();
+  // Mark the timer as done.
+  ReportTimerStop(kMountGuestExTimer);
+
+  if (!success)
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
   else
     reply.clear_error();
