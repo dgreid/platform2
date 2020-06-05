@@ -18,7 +18,6 @@
 #include "shill/control_interface.h"
 #include "shill/device.h"
 #include "shill/device_info.h"
-#include "shill/eap_credentials.h"
 #include "shill/ethernet/ethernet.h"
 #include "shill/ethernet/ethernet_provider.h"
 #include "shill/manager.h"
