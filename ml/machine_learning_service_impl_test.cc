@@ -183,7 +183,7 @@ constexpr float kHandwritingTestPoints[23][2] = {
 };
 
 constexpr char kTextClassifierTestInput[] =
-    "user.name@gmail.com. 123 George Street. unknownword. 12pm. 23 cm";
+    "user.name@gmail.com. 123 George Street. unknownword. 12pm. 350°F";
 
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
@@ -850,22 +850,32 @@ TEST(TextClassifierAnnotateTest, ComplexString) {
             EXPECT_EQ(annotations[0]->end_offset, 19);
             ASSERT_GE(annotations[0]->entities.size(), 1);
             EXPECT_EQ(annotations[0]->entities[0]->name, "email");
+            EXPECT_EQ(annotations[0]->entities[0]->data->get_string_value(),
+                      "user.name@gmail.com");
             EXPECT_EQ(annotations[1]->start_offset, 21);
             EXPECT_EQ(annotations[1]->end_offset, 38);
             ASSERT_GE(annotations[1]->entities.size(), 1);
             EXPECT_EQ(annotations[1]->entities[0]->name, "address");
+            EXPECT_EQ(annotations[1]->entities[0]->data->get_string_value(),
+                      "123 George Street");
             EXPECT_EQ(annotations[2]->start_offset, 40);
             EXPECT_EQ(annotations[2]->end_offset, 51);
             ASSERT_GE(annotations[2]->entities.size(), 1);
             EXPECT_EQ(annotations[2]->entities[0]->name, "dictionary");
+            EXPECT_EQ(annotations[2]->entities[0]->data->get_string_value(),
+                      "unknownword");
             EXPECT_EQ(annotations[3]->start_offset, 53);
             EXPECT_EQ(annotations[3]->end_offset, 58);
             ASSERT_GE(annotations[3]->entities.size(), 1);
             EXPECT_EQ(annotations[3]->entities[0]->name, "datetime");
+            EXPECT_EQ(annotations[3]->entities[0]->data->get_string_value(),
+                      "12pm.");
             EXPECT_EQ(annotations[4]->start_offset, 59);
             EXPECT_EQ(annotations[4]->end_offset, 64);
             ASSERT_GE(annotations[4]->entities.size(), 1);
             EXPECT_EQ(annotations[4]->entities[0]->name, "unit");
+            EXPECT_EQ(annotations[4]->entities[0]->data->get_string_value(),
+                      "350°F");
           },
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();

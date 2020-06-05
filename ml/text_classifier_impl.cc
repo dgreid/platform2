@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/logging.h>
+#include <utils/utf8/unicodetext.h>
 
 #include "ml/mojom/text_classifier.mojom.h"
 #include "ml/request_metrics.h"
@@ -111,9 +112,11 @@ void TextClassifierImpl::Annotate(TextAnnotationRequestPtr request,
         // For the other types, just encode the substring into string_value.
         // TODO(honglinyu): add data extraction for more types when needed
         // and available.
-        entity_data->set_string_value(request->text.substr(
-            annotated_result.span.first,
-            annotated_result.span.second - annotated_result.span.first));
+        // Note that the returned indices by annotator is unicode codepoints.
+        entity_data->set_string_value(
+            libtextclassifier3::UTF8ToUnicodeText(request->text, false)
+                .UTF8Substring(annotated_result.span.first,
+                               annotated_result.span.second));
       }
 
       // Second, create the entity.
