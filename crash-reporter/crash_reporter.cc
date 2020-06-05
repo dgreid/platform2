@@ -163,8 +163,7 @@ int BootCollect(KernelCollector* kernel_collector,
 
 int HandleUserCrash(UserCollector* user_collector,
                     const UserCollectorBase::CrashAttributes& attrs,
-                    const bool crash_test,
-                    const bool early) {
+                    const bool crash_test) {
   // Make it possible to test what happens when we crash while
   // handling a crash.
   if (crash_test) {
@@ -651,6 +650,5 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  return HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test,
-                         FLAGS_early);
+  return HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test);
 }
