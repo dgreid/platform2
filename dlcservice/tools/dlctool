@@ -57,6 +57,16 @@ die() {
   exit 1
 }
 
+# Checks to see if the rootfs is writable.
+check_writable_rootfs() {
+  if [ ! -w "/" ]; then
+    local doc_url="https://chromium.googlesource.com"
+    local doc_path="/chromiumos/docs/+/master/developer_mode.md#disable-verity"
+    die "Disable rootfs verification to use this script." \
+      "Reference: ${doc_url}${doc_path}"
+  fi
+}
+
 # Unmount and delete a DLC by force.
 force_delete() {
   imageloader --unmount "${MOUNT_PATH}/${FLAGS_id}/${DLC_PACKAGE}"
@@ -196,6 +206,8 @@ deploy_dlc() {
 
 # Main function.
 main() {
+  check_writable_rootfs
+
   echo "Stopping dlcservice"
   stop dlcservice
 
