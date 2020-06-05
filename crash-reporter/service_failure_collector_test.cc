@@ -69,8 +69,7 @@ TEST_F(ServiceFailureCollectorTest, CollectOKMain) {
   ASSERT_TRUE(test_util::CreateFile(
       test_path_,
       "crash-crash main process (2563) terminated with status 2\n"));
-  collector_.SetServiceName("crash-crash");
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("crash-crash"));
   EXPECT_FALSE(IsDirectoryEmpty(test_crash_directory_));
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
       test_crash_directory_, "service_failure_crash_crash.*.meta", NULL));
@@ -83,8 +82,7 @@ TEST_F(ServiceFailureCollectorTest, CollectOKPreStart) {
   ASSERT_TRUE(test_util::CreateFile(
       test_path_,
       "crash-crash pre-start process (2563) terminated with status 2\n"));
-  collector_.SetServiceName("crash-crash");
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("crash-crash"));
   EXPECT_FALSE(IsDirectoryEmpty(test_crash_directory_));
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
       test_crash_directory_, "service_failure_crash_crash.*.meta", NULL));
@@ -94,14 +92,14 @@ TEST_F(ServiceFailureCollectorTest, CollectOKPreStart) {
 
 TEST_F(ServiceFailureCollectorTest, FailureReportDoesNotExist) {
   // Service failure report file doesn't exist.
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("crash-crash"));
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }
 
 TEST_F(ServiceFailureCollectorTest, EmptyFailureReport) {
   // Service failure report file exists, but doesn't have the expected contents.
   ASSERT_TRUE(test_util::CreateFile(test_path_, ""));
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("crash-crash"));
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }
 
@@ -111,6 +109,6 @@ TEST_F(ServiceFailureCollectorTest, FeedbackNotAllowed) {
   ASSERT_TRUE(test_util::CreateFile(
       test_path_,
       "crash-crash main process (2563) terminated with status 2\n"));
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("crash-crash"));
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }

@@ -69,8 +69,7 @@ TEST_F(ArcServiceFailureCollectorTest, CollectOK) {
   const char kLog[] =
       "arc-crash main process (2563) terminated with status 2\n";
   ASSERT_TRUE(test_util::CreateFile(test_path_, kLog));
-  collector_.SetServiceName("arc-crash");
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("arc-crash"));
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
       test_crash_directory_, "arc_service_failure_arc_crash.*.meta", NULL));
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -81,7 +80,7 @@ TEST_F(ArcServiceFailureCollectorTest, CollectOK) {
 TEST_F(ArcServiceFailureCollectorTest, FailureReportDoesNotExist) {
   // ARC service failure report file doesn't exist without a relevant log
   // message.
-  EXPECT_TRUE(collector_.Collect());
+  EXPECT_TRUE(collector_.Collect("arc-crash"));
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
   EXPECT_EQ(collector_.get_bytes_written(), 0);
 }

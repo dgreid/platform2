@@ -282,8 +282,7 @@ int HandleServiceFailure(ServiceFailureCollector* service_failure_collector,
                          const std::string& service_name) {
   // Accumulate logs to help in diagnosing failures during collection.
   brillo::LogToString(true);
-  service_failure_collector->SetServiceName(service_name);
-  bool handled = service_failure_collector->Collect();
+  bool handled = service_failure_collector->Collect(service_name);
   brillo::LogToString(false);
   if (!handled)
     return 1;

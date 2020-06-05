@@ -39,7 +39,7 @@ bool ServiceFailureCollector::LoadServiceFailure(std::string* signature) {
   return !signature->empty();
 }
 
-bool ServiceFailureCollector::Collect() {
+bool ServiceFailureCollector::Collect(const std::string& service_name) {
   std::string reason = "normal collection";
   bool feedback = true;
   if (util::IsDeveloperImage()) {
@@ -67,7 +67,7 @@ bool ServiceFailureCollector::Collect() {
   }
 
   std::string dump_basename =
-      FormatDumpBasename(exec_name_ + "-" + service_name_, time(nullptr), 0);
+      FormatDumpBasename(exec_name_ + "-" + service_name, time(nullptr), 0);
   FilePath log_path = GetCrashPath(crash_directory, dump_basename, "log");
   FilePath meta_path = GetCrashPath(crash_directory, dump_basename, "meta");
 
@@ -77,7 +77,7 @@ bool ServiceFailureCollector::Collect() {
 
   bool result = GetLogContents(log_config_path_, exec_name_, log_path);
   if (result) {
-    FinishCrash(meta_path, exec_name_ + "-" + service_name_,
+    FinishCrash(meta_path, exec_name_ + "-" + service_name,
                 log_path.BaseName().value());
   }
 
