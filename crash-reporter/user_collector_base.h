@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/files/file_path.h>
+#include <base/optional.h>
 #include <base/time/time.h>
 
 #include "crash-reporter/crash_collector.h"
@@ -26,8 +27,28 @@ class UserCollectorBase : public CrashCollector {
                   bool directory_failure,
                   bool early);
 
+  struct CrashAttributes {
+    pid_t pid;
+    int signal;
+    uid_t uid;
+    gid_t gid;
+    std::string exec_name;
+  };
+
   // Handle a specific user crash.  Returns true on success.
-  bool HandleCrash(const std::string& crash_attributes, const char* force_exec);
+  bool HandleCrash(const CrashAttributes& crash_attributes,
+                   const char* force_exec);
+
+  // Attempt to parse a given attributes string into a CrashAttributes struct.
+  // The attributes string is generated in the kernel by the core_pattern
+  // specification %P:%s:%u:%g:%e, and consists of the pid, the signal
+  // responsible for terminating the process, the uid, the gid, and the
+  // executable's name, separated by colons.
+  // For example, an input string 123456:11:1000:2000:foobar is pid
+  // 123456, signal 11, uid 1000, gid 2000, and exec name "foobar".
+  // See man 5 core for details on the format.
+  static base::Optional<CrashAttributes> ParseCrashAttributes(
+      const std::string& crash_attributes);
 
  protected:
   // Enumeration to pass to GetIdFromStatus.  Must match the order
@@ -39,13 +60,6 @@ class UserCollectorBase : public CrashCollector {
     kIdFileSystem = 3,  // fsuid and fsgid
     kIdMax
   };
-
-  bool ParseCrashAttributes(const std::string& crash_attributes,
-                            pid_t* pid,
-                            int* signal,
-                            uid_t* uid,
-                            gid_t* gid,
-                            std::string* exec_name);
 
   bool ShouldDump(base::Optional<pid_t> pid,
                   bool has_owner_consent,

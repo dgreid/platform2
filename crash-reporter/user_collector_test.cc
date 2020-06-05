@@ -184,43 +184,38 @@ TEST_F(UserCollectorTest, DisableNoFileAccess) {
 }
 
 TEST_F(UserCollectorTest, ParseCrashAttributes) {
-  pid_t pid;
-  int signal;
-  uid_t uid;
-  gid_t gid;
-  std::string exec_name;
-  EXPECT_TRUE(collector_.ParseCrashAttributes(
-      "123456:11:1000:2000:foobar", &pid, &signal, &uid, &gid, &exec_name));
-  EXPECT_EQ(123456, pid);
-  EXPECT_EQ(11, signal);
-  EXPECT_EQ(1000, uid);
-  EXPECT_EQ(2000, gid);
-  EXPECT_EQ("foobar", exec_name);
-  EXPECT_TRUE(collector_.ParseCrashAttributes("4321:6:0:0:barfoo", &pid,
-                                              &signal, &uid, &gid, &exec_name));
-  EXPECT_EQ(4321, pid);
-  EXPECT_EQ(6, signal);
-  EXPECT_EQ(0, uid);
-  EXPECT_EQ(0, gid);
-  EXPECT_EQ("barfoo", exec_name);
+  base::Optional<UserCollectorBase::CrashAttributes> attrs =
+      UserCollectorBase::ParseCrashAttributes("123456:11:1000:2000:foobar");
+  ASSERT_TRUE(attrs);
+  EXPECT_EQ(123456, attrs->pid);
+  EXPECT_EQ(11, attrs->signal);
+  EXPECT_EQ(1000, attrs->uid);
+  EXPECT_EQ(2000, attrs->gid);
+  EXPECT_EQ("foobar", attrs->exec_name);
 
-  EXPECT_FALSE(collector_.ParseCrashAttributes("123456:11:1000", &pid, &signal,
-                                               &uid, &gid, &exec_name));
-  EXPECT_FALSE(collector_.ParseCrashAttributes(
-      "123456:11:1000:100", &pid, &signal, &uid, &gid, &exec_name));
+  attrs = UserCollectorBase::ParseCrashAttributes("4321:6:0:0:barfoo");
+  ASSERT_TRUE(attrs);
+  EXPECT_EQ(4321, attrs->pid);
+  EXPECT_EQ(6, attrs->signal);
+  EXPECT_EQ(0, attrs->uid);
+  EXPECT_EQ(0, attrs->gid);
+  EXPECT_EQ("barfoo", attrs->exec_name);
 
-  EXPECT_TRUE(collector_.ParseCrashAttributes(
-      "123456:11:1000:100:exec:extra", &pid, &signal, &uid, &gid, &exec_name));
-  EXPECT_EQ("exec:extra", exec_name);
+  EXPECT_FALSE(UserCollectorBase::ParseCrashAttributes("123456:11:1000"));
+  EXPECT_FALSE(UserCollectorBase::ParseCrashAttributes("123456:11:1000:100"));
 
-  EXPECT_FALSE(collector_.ParseCrashAttributes(
-      "12345p:11:1000:100:foobar", &pid, &signal, &uid, &gid, &exec_name));
+  attrs =
+      UserCollectorBase::ParseCrashAttributes("123456:11:1000:100:exec:extra");
+  ASSERT_TRUE(attrs);
+  EXPECT_EQ("exec:extra", attrs->exec_name);
 
-  EXPECT_FALSE(collector_.ParseCrashAttributes(
-      "123456:1 :1000:0:foobar", &pid, &signal, &uid, &gid, &exec_name));
+  EXPECT_FALSE(
+      UserCollectorBase::ParseCrashAttributes("12345p:11:1000:100:foobar"));
 
-  EXPECT_FALSE(collector_.ParseCrashAttributes(
-      "123456::::foobar", &pid, &signal, &uid, &gid, &exec_name));
+  EXPECT_FALSE(
+      UserCollectorBase::ParseCrashAttributes("123456:1 :1000:0:foobar"));
+
+  EXPECT_FALSE(UserCollectorBase::ParseCrashAttributes("123456::::foobar"));
 }
 
 TEST_F(UserCollectorTest, ShouldDumpFiltering) {
@@ -309,10 +304,14 @@ TEST_F(UserCollectorTest, HandleCrashWithoutConsent) {
   s_metrics = false;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
-  // The "--user" arg passed to us from the kernel. man 5 core and read
-  // UserCollector::GetPattern() for more.
-  constexpr char kernel_user_arg[] = "20:10:1000:1000:ignored";
-  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "foobar"));
+
+  UserCollectorBase::CrashAttributes attrs;
+  attrs.pid = 20;
+  attrs.signal = 10;
+  attrs.uid = 1000;
+  attrs.gid = 1000;
+  attrs.exec_name = "ignored";
+  EXPECT_TRUE(collector_.HandleCrash(attrs, "foobar"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for foobar[20] sig 10"));
   }
@@ -343,10 +342,14 @@ TEST_F(UserCollectorTest, HandleNonChromeCrashWithConsent) {
                            AllOf(StartsWith(crash_prefix), EndsWith("dmp")))))
       .Times(expected_mock_calls)
       .WillRepeatedly(Return(CrashCollector::kErrorNone));
-  // The "--user" arg passed to us from the kernel. man 5 core and read
-  // UserCollector::GetPattern() for more.
-  constexpr char kernel_user_arg[] = "5:2:1000:1000:ignored";
-  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "chromeos-wm"));
+
+  UserCollectorBase::CrashAttributes attrs;
+  attrs.pid = 5;
+  attrs.signal = 2;
+  attrs.uid = 1000;
+  attrs.gid = 1000;
+  attrs.exec_name = "ignored";
+  EXPECT_TRUE(collector_.HandleCrash(attrs, "chromeos-wm"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(
         FindLog("Received crash notification for chromeos-wm[5] sig 2"));
@@ -361,10 +364,14 @@ TEST_F(UserCollectorTest, HandleChromeCrashWithConsent) {
   s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
-  // The "--user" arg passed to us from the kernel. man 5 core and read
-  // UserCollector::GetPattern() for more.
-  constexpr char kernel_user_arg[] = "5:2:1000:1000:ignored";
-  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, "chrome"));
+
+  UserCollectorBase::CrashAttributes attrs;
+  attrs.pid = 5;
+  attrs.signal = 2;
+  attrs.uid = 1000;
+  attrs.gid = 1000;
+  attrs.exec_name = "ignored";
+  EXPECT_TRUE(collector_.HandleCrash(attrs, "chrome"));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(FindLog("Received crash notification for chrome[5] sig 2"));
     EXPECT_TRUE(FindLog(kChromeIgnoreMsg));
@@ -379,10 +386,14 @@ TEST_F(UserCollectorTest, HandleSuppliedChromeCrashWithConsent) {
   s_metrics = true;
   EXPECT_CALL(collector_, AccounceUserCrash()).Times(0);
   EXPECT_CALL(collector_, ConvertCoreToMinidump(_, _, _, _)).Times(0);
-  // The "--user" arg passed to us from the kernel. man 5 core and read
-  // UserCollector::GetPattern() for more.
-  constexpr char kernel_user_arg[] = "5:2:1000:1000:chrome";
-  EXPECT_TRUE(collector_.HandleCrash(kernel_user_arg, nullptr));
+
+  UserCollectorBase::CrashAttributes attrs;
+  attrs.pid = 5;
+  attrs.signal = 2;
+  attrs.uid = 1000;
+  attrs.gid = 1000;
+  attrs.exec_name = "chrome";
+  EXPECT_TRUE(collector_.HandleCrash(attrs, nullptr));
   if (!VmSupport::Get()) {
     EXPECT_TRUE(
         FindLog("Received crash notification for supplied_chrome[5] sig 2"));

@@ -162,12 +162,9 @@ int BootCollect(KernelCollector* kernel_collector,
 }
 
 int HandleUserCrash(UserCollector* user_collector,
-                    const std::string& user,
+                    const UserCollectorBase::CrashAttributes& attrs,
                     const bool crash_test,
                     const bool early) {
-  // Handle a specific user space crash.
-  CHECK(!user.empty()) << "--user= must be set";
-
   // Make it possible to test what happens when we crash while
   // handling a crash.
   if (crash_test) {
@@ -179,7 +176,7 @@ int HandleUserCrash(UserCollector* user_collector,
   // Accumulate logs to help in diagnosing failures during user collection.
   brillo::LogToString(true);
   // Handle the crash, get the name of the process from procfs.
-  bool handled = user_collector->HandleCrash(user, nullptr);
+  bool handled = user_collector->HandleCrash(attrs, nullptr);
   brillo::LogToString(false);
   if (!handled)
     return 1;
@@ -187,9 +184,10 @@ int HandleUserCrash(UserCollector* user_collector,
 }
 
 #if USE_CHEETS
-int HandleArcCrash(ArcCollector* arc_collector, const std::string& user) {
+int HandleArcCrash(ArcCollector* arc_collector,
+                   const UserCollectorBase::CrashAttributes& attrs) {
   brillo::LogToString(true);
-  bool handled = arc_collector->HandleCrash(user, nullptr);
+  bool handled = arc_collector->HandleCrash(attrs, nullptr);
   brillo::LogToString(false);
   if (!handled)
     return 1;
@@ -646,11 +644,18 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  int exit_code = HandleUserCrash(&user_collector, FLAGS_user, FLAGS_crash_test,
-                                  FLAGS_early);
+  base::Optional<UserCollectorBase::CrashAttributes> attrs =
+      UserCollectorBase::ParseCrashAttributes(FLAGS_user);
+  if (!attrs.has_value()) {
+    LOG(ERROR) << "Invalid parameter: --user=" << FLAGS_user;
+    return 1;
+  }
+
+  int exit_code =
+      HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test, FLAGS_early);
 #if USE_CHEETS
   if (ArcCollector::IsArcRunning())
-    exit_code |= HandleArcCrash(&arc_collector, FLAGS_user);
+    exit_code |= HandleArcCrash(&arc_collector, *attrs);
 #endif
   return exit_code;
 }

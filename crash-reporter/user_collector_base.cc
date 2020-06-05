@@ -72,43 +72,31 @@ void UserCollectorBase::AccounceUserCrash() {
   dbus.Release();
 }
 
-bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
-                                    const char* force_exec) {
+bool UserCollectorBase::HandleCrash(
+    const UserCollectorBase::CrashAttributes& attrs, const char* force_exec) {
   CHECK(initialized_);
 
   base::TimeDelta crash_time;
   GetUptime(&crash_time);
 
-  pid_t pid;
-  int signal;
-  uid_t supplied_ruid;
-  gid_t supplied_rgid;
-  std::string kernel_supplied_name;
-
-  if (!ParseCrashAttributes(crash_attributes, &pid, &signal, &supplied_ruid,
-                            &supplied_rgid, &kernel_supplied_name)) {
-    LOG(ERROR) << "Invalid parameter: --user=" << crash_attributes;
-    return false;
-  }
-
   std::string exec;
   if (force_exec) {
     exec.assign(force_exec);
-  } else if (!GetExecutableBaseNameFromPid(pid, &exec)) {
+  } else if (!GetExecutableBaseNameFromPid(attrs.pid, &exec)) {
     // If we cannot find the exec name, use the kernel supplied name.
     // We don't always use the kernel's since it truncates the name to
     // 16 characters.
-    exec = StringPrintf("supplied_%s", kernel_supplied_name.c_str());
+    exec = StringPrintf("supplied_%s", attrs.exec_name.c_str());
   }
 
   std::string reason;
-  bool dump = ShouldDump(pid, supplied_ruid, exec, &reason);
+  bool dump = ShouldDump(attrs.pid, attrs.uid, exec, &reason);
 
   // anomaly_detector's CrashReporterParser looks for this message; don't change
   // it without updating the regex.
   const auto message = StringPrintf(
       "Received crash notification for %s[%d] sig %d, user %u group %u",
-      exec.c_str(), pid, signal, supplied_ruid, supplied_rgid);
+      exec.c_str(), attrs.pid, attrs.signal, attrs.uid, attrs.gid);
 
   // TODO(crbug.com/1053847) The executable name is sensitive user data inside
   // the VM, so don't log this message. Eventually we will move the VM logs
@@ -120,11 +108,11 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
   if (dump) {
     AccounceUserCrash();
 
-    AddExtraMetadata(exec, pid);
+    AddExtraMetadata(exec, attrs.pid);
 
     bool out_of_capacity = false;
     ErrorType error_type = ConvertAndEnqueueCrash(
-        pid, exec, supplied_ruid, supplied_rgid, crash_time, &out_of_capacity);
+        attrs.pid, exec, attrs.uid, attrs.gid, crash_time, &out_of_capacity);
     if (error_type != kErrorNone) {
       if (!out_of_capacity) {
         EnqueueCollectionErrorLog(error_type);
@@ -136,15 +124,15 @@ bool UserCollectorBase::HandleCrash(const std::string& crash_attributes,
   return true;
 }
 
-bool UserCollectorBase::ParseCrashAttributes(
-    const std::string& crash_attributes,
-    pid_t* pid,
-    int* signal,
-    uid_t* uid,
-    gid_t* gid,
-    std::string* exec_name) {
+base::Optional<UserCollectorBase::CrashAttributes>
+UserCollectorBase::ParseCrashAttributes(const std::string& crash_attributes) {
   pcrecpp::RE re("(\\d+):(\\d+):(\\d+):(\\d+):(.*)");
-  return re.FullMatch(crash_attributes, pid, signal, uid, gid, exec_name);
+  UserCollectorBase::CrashAttributes attrs;
+  if (!re.FullMatch(crash_attributes, &attrs.pid, &attrs.signal, &attrs.uid,
+                    &attrs.gid, &attrs.exec_name)) {
+    return base::nullopt;
+  }
+  return attrs;
 }
 
 bool UserCollectorBase::ShouldDump(base::Optional<pid_t> pid,
