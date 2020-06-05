@@ -112,6 +112,7 @@ _IUSE = [
     'wake_on_wifi',
     'wifi',
     'wired_8021x',
+    'wpa3_sae',
 ]
 
 # USE flags whose default values are true.

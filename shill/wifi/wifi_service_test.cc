@@ -549,25 +549,32 @@ TEST_F(WiFiServiceTest, ConnectTaskDynamicWEP) {
 TEST_F(WiFiServiceTest, ConnectTaskFT) {
   {
     WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
+#if !defined(DISABLE_WPA3_SAE)
+    string ft_key_mgmt = "WPA-PSK SAE FT-PSK FT-SAE";
+    string noft_key_mgmt = "WPA-PSK SAE";
+#else
+    string ft_key_mgmt = "WPA-PSK FT-PSK";
+    string noft_key_mgmt = "WPA-PSK";
+#endif  // DISABLE_WPA3_SAE
 
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-    string default_key_mgmt = "WPA-PSK FT-PSK";
     EXPECT_EQ(
-        default_key_mgmt,
+        ft_key_mgmt,
         params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
 
     manager()->props_.ft_enabled = false;
     wifi_service->Connect(nullptr, "in test");
     params = wifi_service->GetSupplicantConfigurationParameters();
-    EXPECT_EQ("WPA-PSK", params.Get<string>(
-                             WPASupplicant::kNetworkPropertyEapKeyManagement));
+    EXPECT_EQ(
+        noft_key_mgmt,
+        params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
 
     manager()->props_.ft_enabled = true;
     wifi_service->Connect(nullptr, "in test");
     params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ(
-        "WPA-PSK FT-PSK",
+        ft_key_mgmt,
         params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
   }
   {

@@ -97,6 +97,10 @@ pkg_config("target_defaults") {
     defines += [ "DISABLE_WIRED_8021X" ]
   }
 
+  if (!use.wpa3_sae) {
+    defines += [ "DISABLE_WPA3_SAE" ]
+  }
+
   pkg_deps = [
     "dbus-1",
     "libbrillo",

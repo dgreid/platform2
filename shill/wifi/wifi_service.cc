@@ -124,8 +124,15 @@ WiFiService::WiFiService(Manager* manager,
     // Passphrases are not mandatory for 802.1X.
     need_passphrase_ = false;
   } else if (security_ == kSecurityPsk) {
-    // TODO(crbug.com/942973): include SAE, once it's validated.
+#if !defined(DISABLE_WPA3_SAE)
+    // WPA/WPA2-PSK or WPA3-SAE.
+    SetEAPKeyManagement(base::StringPrintf("%s %s",
+                                           WPASupplicant::kKeyManagementWPAPSK,
+                                           WPASupplicant::kKeyManagementSAE));
+#else
+    // WPA/WPA2-PSK.
     SetEAPKeyManagement(WPASupplicant::kKeyManagementWPAPSK);
+#endif  // DISABLE_WPA3_SAE
   } else if (security_ == kSecurityWep) {
     SetEAPKeyManagement(WPASupplicant::kKeyModeNone);
   } else if (security_ == kSecurityNone) {
@@ -617,14 +624,23 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
 
   string key_mgmt = key_management();
   if (manager()->GetFTEnabled(nullptr)) {
-    if (key_mgmt == WPASupplicant::kKeyManagementWPAPSK)
-      key_mgmt =
-          base::StringPrintf("%s %s", WPASupplicant::kKeyManagementWPAPSK,
-                             WPASupplicant::kKeyManagementFTPSK);
-    else if (key_mgmt == WPASupplicant::kKeyManagementWPAEAP)
-      key_mgmt =
-          base::StringPrintf("%s %s", WPASupplicant::kKeyManagementWPAEAP,
-                             WPASupplicant::kKeyManagementFTEAP);
+    // Append the FT analog for each non-FT key management method.
+    for (const auto& mgmt :
+         base::SplitString(key_mgmt, base::kWhitespaceASCII,
+                           base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
+      string ft_mgmt;
+      if (mgmt == WPASupplicant::kKeyManagementWPAPSK) {
+        ft_mgmt = WPASupplicant::kKeyManagementFTPSK;
+      } else if (mgmt == WPASupplicant::kKeyManagementWPAEAP) {
+        ft_mgmt = WPASupplicant::kKeyManagementFTEAP;
+      } else if (mgmt == WPASupplicant::kKeyManagementSAE) {
+        ft_mgmt = WPASupplicant::kKeyManagementFTSAE;
+      } else {
+        LOG(ERROR) << "Unrecognized key management protocol " << mgmt;
+        continue;
+      }
+      key_mgmt += base::StringPrintf(" %s", ft_mgmt.c_str());
+    }
   }
   params.Set<string>(WPASupplicant::kNetworkPropertyEapKeyManagement, key_mgmt);
 
