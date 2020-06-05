@@ -83,9 +83,7 @@ bool SetUpLockFile() {
 // Set up necessary crash reporter state.
 // This function will change ownership and permissions on many files (to allow
 // `crash` to read/write them) so it MUST run as root.
-int Initialize(UserCollector* user_collector,
-               UdevCollector* udev_collector,
-               bool early) {
+int Initialize(UserCollector* user_collector, bool early) {
   // Try to create the lock file for crash_sender. Creating this early ensures
   // that no one else can make a directory or such with this name. If the lock
   // file isn't a normal file, crash_sender will never work correctly.
@@ -547,7 +545,7 @@ int main(int argc, char* argv[]) {
   vm_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
   if (FLAGS_init) {
-    return Initialize(&user_collector, &udev_collector, FLAGS_early);
+    return Initialize(&user_collector, FLAGS_early);
   }
 
   if (FLAGS_boot_collect) {
