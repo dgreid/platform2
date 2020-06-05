@@ -498,20 +498,15 @@ int main(int argc, char* argv[]) {
   ec_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
   BERTCollector bert_collector;
   bert_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-  UserCollector user_collector;
-  UserCollector::FilterOutFunction filter_out = [](pid_t) { return false; };
 #if USE_CHEETS
   ArcCollector arc_collector;
   arc_collector.Initialize(IsFeedbackAllowed,
                            FLAGS_directory_failure, false /* early */);
-  // Filter out ARC processes.
-  if (ArcCollector::IsArcRunning())
-    filter_out = std::bind(&ArcCollector::IsArcProcess, &arc_collector,
-                           std::placeholders::_1);
 #endif
+  UserCollector user_collector;
   user_collector.Initialize(my_path.value(), IsFeedbackAllowed,
                             FLAGS_core2md_failure, FLAGS_directory_failure,
-                            std::move(filter_out), FLAGS_early);
+                            FLAGS_early);
   UncleanShutdownCollector unclean_shutdown_collector;
   unclean_shutdown_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
@@ -651,11 +646,12 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  int exit_code =
-      HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test, FLAGS_early);
 #if USE_CHEETS
-  if (ArcCollector::IsArcRunning())
-    exit_code |= HandleArcCrash(&arc_collector, *attrs);
+  if (ArcCollector::IsArcRunning() && arc_collector.IsArcProcess(attrs->pid)) {
+    return HandleArcCrash(&arc_collector, *attrs);
+  }
 #endif
-  return exit_code;
+
+  return HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test,
+                         FLAGS_early);
 }

@@ -76,9 +76,7 @@ class UserCollectorTest : public ::testing::Test {
     test_dir_ = scoped_temp_dir_.GetPath();
 
     const pid_t pid = getpid();
-    collector_.Initialize(
-        kFilePath, IsMetrics, false, false,
-        [pid](pid_t p) { return p == pid + 1; }, false);
+    collector_.Initialize(kFilePath, IsMetrics, false, false, false);
     // Setup paths for output files.
     test_core_pattern_file_ = test_dir_.Append("core_pattern");
     collector_.set_core_pattern_file(test_core_pattern_file_.value());
@@ -216,13 +214,6 @@ TEST_F(UserCollectorTest, ParseCrashAttributes) {
       UserCollectorBase::ParseCrashAttributes("123456:1 :1000:0:foobar"));
 
   EXPECT_FALSE(UserCollectorBase::ParseCrashAttributes("123456::::foobar"));
-}
-
-TEST_F(UserCollectorTest, ShouldDumpFiltering) {
-  std::string reason;
-  EXPECT_FALSE(collector_.ShouldDump(pid_ + 1, true, false, false, "chrome-wm",
-                                     &reason));
-  EXPECT_EQ("ignoring - PID filtered out", reason);
 }
 
 TEST_F(UserCollectorTest, ShouldDumpDeveloperImageOverridesConsent) {

@@ -89,13 +89,11 @@ void UserCollector::Initialize(
     UserCollector::IsFeedbackAllowedFunction is_feedback_allowed_function,
     bool core2md_failure,
     bool directory_failure,
-    FilterOutFunction filter_out,
     bool early) {
   UserCollectorBase::Initialize(is_feedback_allowed_function, directory_failure,
                                 early);
   our_path_ = our_path;
   core2md_failure_ = core2md_failure;
-  filter_out_ = std::move(filter_out);
 }
 
 UserCollector::~UserCollector() {}
@@ -349,11 +347,6 @@ bool UserCollector::ShouldDump(pid_t pid,
                                const std::string& exec,
                                std::string* reason) {
   reason->clear();
-
-  if (filter_out_(pid)) {
-    *reason = "ignoring - PID filtered out";
-    return false;
-  }
 
   // Treat Chrome crashes as if the user opted-out.  We stop counting Chrome
   // crashes towards user crashes, so user crashes really mean non-Chrome

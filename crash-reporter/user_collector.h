@@ -7,10 +7,6 @@
 // /proc/sys/kernel/core_pattern.
 // This handler ignores chrome crashes (letting chrome_collector handle them
 // when it is directly invoked).
-// It's currently configured to ignore arc crashes as well, but the logic for
-// that lives in crash_reporter.cc, which constructs a
-// UserCollector::FilterOutFunction and passes it in to the user collector's
-// constructor.
 
 #ifndef CRASH_REPORTER_USER_COLLECTOR_H_
 #define CRASH_REPORTER_USER_COLLECTOR_H_
@@ -27,8 +23,6 @@
 // User crash collector.
 class UserCollector : public UserCollectorBase {
  public:
-  typedef std::function<bool(pid_t)> FilterOutFunction;
-
   UserCollector();
 
   // Initialize the user crash collector for detection of crashes,
@@ -39,7 +33,6 @@ class UserCollector : public UserCollectorBase {
                   IsFeedbackAllowedFunction is_metrics_allowed,
                   bool core2md_failure,
                   bool directory_failure,
-                  FilterOutFunction filter_out,
                   bool early);
 
   ~UserCollector() override;
@@ -139,8 +132,6 @@ class UserCollector : public UserCollectorBase {
 
   // Force a core2md failure for testing.
   bool core2md_failure_;
-
-  FilterOutFunction filter_out_;
 
   DISALLOW_COPY_AND_ASSIGN(UserCollector);
 };
