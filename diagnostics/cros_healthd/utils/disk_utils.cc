@@ -21,6 +21,7 @@
 
 #include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/device_info.h"
 #include "diagnostics/cros_healthd/utils/storage/device_lister.h"
 
 namespace diagnostics {
@@ -167,10 +168,24 @@ mojo_ipc::NonRemovableBlockDeviceResultPtr
 DiskFetcher::FetchNonRemovableBlockDevicesInfo(const base::FilePath& root) {
   std::vector<mojo_ipc::NonRemovableBlockDeviceInfoPtr> devices{};
 
-  for (const base::FilePath& sys_path : GetNonRemovableBlockDevices(root)) {
+  for (const auto& sys_path : GetNonRemovableBlockDevices(root)) {
     VLOG(1) << "Processing the node " << sys_path.value();
+
+    // TODO(dlunev): factor devnode and subsystem retrieval into a class,
+    // ideally into a factory or StorageDeviceInfo itself.
+    base::FilePath devnode_path;
+    std::string subsystem;
+    auto error = GatherSysPathRelatedInfo(sys_path, &devnode_path, &subsystem);
+    if (error.has_value()) {
+      return mojo_ipc::NonRemovableBlockDeviceResult::NewError(
+          std::move(error.value()));
+    }
+    // TODO(dlunev): this shall be persisted across probes.
+    std::unique_ptr<StorageDeviceInfo> dev_info =
+        std::make_unique<StorageDeviceInfo>(sys_path, devnode_path, subsystem);
+
     mojo_ipc::NonRemovableBlockDeviceInfoPtr info;
-    auto error = FetchNonRemovableBlockDeviceInfo(sys_path, &info);
+    error = FetchNonRemovableBlockDeviceInfo(dev_info, &info);
     if (error.has_value()) {
       return mojo_ipc::NonRemovableBlockDeviceResult::NewError(
           std::move(error.value()));
@@ -187,28 +202,24 @@ DiskFetcher::FetchNonRemovableBlockDevicesInfo(const base::FilePath& root) {
 
 base::Optional<mojo_ipc::ProbeErrorPtr>
 DiskFetcher::FetchNonRemovableBlockDeviceInfo(
-    const base::FilePath& sys_path,
+    const std::unique_ptr<StorageDeviceInfo>& dev_info,
     mojo_ipc::NonRemovableBlockDeviceInfoPtr* output_info) {
   DCHECK(output_info);
   mojo_ipc::NonRemovableBlockDeviceInfo info;
 
   SectorStats sector_stats;
   auto error = GetReadWriteStats(
-      sys_path, &info.read_time_seconds_since_last_boot,
+      dev_info->GetSysPath(), &info.read_time_seconds_since_last_boot,
       &info.write_time_seconds_since_last_boot, &sector_stats);
   if (error.has_value())
     return error;
 
-  base::FilePath devnode_path;
-  error = GatherSysPathRelatedInfo(sys_path, &devnode_path, &info.type);
-  if (error.has_value())
-    return error;
-
-  info.path = devnode_path.value();
+  info.path = dev_info->GetDevNodePath().value();
+  info.type = dev_info->GetSubsystem();
 
   uint64_t sector_size;
-  error =
-      GetDeviceAndSectorSizesInBytes(devnode_path, &info.size, &sector_size);
+  error = GetDeviceAndSectorSizesInBytes(dev_info->GetDevNodePath(), &info.size,
+                                         &sector_size);
   if (error.has_value())
     return error;
 
@@ -216,7 +227,7 @@ DiskFetcher::FetchNonRemovableBlockDeviceInfo(
   info.bytes_written_since_last_boot = sector_size * sector_stats.written;
   info.bytes_read_since_last_boot = sector_size * sector_stats.read;
 
-  const auto device_path = sys_path.Append("device");
+  const auto device_path = dev_info->GetSysPath().Append("device");
 
   // Not all devices in sysfs have a model/name, so ignore failure here.
   if (!ReadAndTrimString(device_path, "model", &info.name)) {

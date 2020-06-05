@@ -6,12 +6,14 @@
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_DISK_UTILS_H_
 
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/optional.h>
 
+#include "diagnostics/cros_healthd/utils/storage/device_info.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -34,7 +36,7 @@ class DiskFetcher {
   // Fetches information for a single non-removable block device.
   base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
   FetchNonRemovableBlockDeviceInfo(
-      const base::FilePath& sys_path,
+      const std::unique_ptr<StorageDeviceInfo>& dev_info,
       chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfoPtr*
           output_info);
 

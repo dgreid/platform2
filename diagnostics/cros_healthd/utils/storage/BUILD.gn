@@ -15,6 +15,7 @@ source_set("storage_data_source") {
   deps = [ "//diagnostics/common:libcommon" ]
   libs = [ "rootdev" ]
   sources = [
+    "device_info.cc",
     "device_lister.cc",
     "platform.cc",
   ]
@@ -24,6 +25,9 @@ if (use.test) {
   source_set("storage_data_source_test") {
     configs += [ ":storage_data_source_common_pkg_deps" ]
     deps = [ ":storage_data_source" ]
-    sources = [ "device_lister_test.cc" ]
+    sources = [
+      "device_info_test.cc",
+      "device_lister_test.cc",
+    ]
   }
 }
