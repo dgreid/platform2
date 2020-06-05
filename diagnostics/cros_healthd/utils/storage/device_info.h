@@ -5,9 +5,14 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_DEVICE_INFO_H_
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_DEVICE_INFO_H_
 
+#include <cstdint>
+#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
+
+#include "diagnostics/cros_healthd/utils/storage/platform.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -15,9 +20,11 @@ namespace diagnostics {
 // individual storage device.
 class StorageDeviceInfo {
  public:
-  StorageDeviceInfo(const base::FilePath& dev_sys_path,
-                    const base::FilePath& dev_node_path,
-                    const std::string& subsystem);
+  StorageDeviceInfo(
+      const base::FilePath& dev_sys_path,
+      const base::FilePath& dev_node_path,
+      const std::string& subsystem,
+      std::unique_ptr<Platform> platform = std::make_unique<Platform>());
   StorageDeviceInfo(const StorageDeviceInfo&) = delete;
   StorageDeviceInfo(StorageDeviceInfo&&) = delete;
   StorageDeviceInfo& operator=(const StorageDeviceInfo&) = delete;
@@ -26,11 +33,14 @@ class StorageDeviceInfo {
   base::FilePath GetSysPath() const;
   base::FilePath GetDevNodePath() const;
   std::string GetSubsystem() const;
+  StatusOr<uint64_t> GetSizeBytes();
+  StatusOr<uint64_t> GetBlockSizeBytes();
 
  private:
   const base::FilePath dev_sys_path_;
   const base::FilePath dev_node_path_;
   const std::string subsystem_;
+  const std::unique_ptr<const Platform> platform_;
 };
 
 }  // namespace diagnostics

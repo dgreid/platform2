@@ -5,8 +5,10 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_MOCK_MOCK_PLATFORM_H_
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_MOCK_MOCK_PLATFORM_H_
 
+#include <cstdint>
 #include <string>
 
+#include <base/files/file_path.h>
 #include <gmock/gmock.h>
 
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
@@ -23,6 +25,14 @@ class MockPlatform : public Platform {
   ~MockPlatform() override = default;
 
   MOCK_METHOD(std::string, GetRootDeviceName, (), (const, override));
+  MOCK_METHOD(StatusOr<uint64_t>,
+              GetDeviceSizeBytes,
+              (const base::FilePath&),
+              (const, override));
+  MOCK_METHOD(StatusOr<uint64_t>,
+              GetDeviceBlockSizeBytes,
+              (const base::FilePath&),
+              (const, override));
 };
 
 }  // namespace diagnostics

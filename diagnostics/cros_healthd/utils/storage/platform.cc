@@ -2,13 +2,22 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <string>
+#include <linux/fs.h>
 #include <linux/limits.h>
+#include <sys/file.h>
+#include <sys/ioctl.h>
+
+#include <cstdint>
+#include <string>
 
 #include <base/logging.h>
+#include <base/files/file_path.h>
+#include <base/files/scoped_file.h>
+#include <base/posix/eintr_wrapper.h>
 #include <rootdev/rootdev.h>
 
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -37,6 +46,34 @@ std::string Platform::GetRootDeviceName() const {
   }
 
   return dev_path.substr(std::string(kDevPrefix).length());
+}
+
+StatusOr<uint64_t> Platform::GetDeviceSizeBytes(
+    const base::FilePath& dev_path) const {
+  base::ScopedFD fd(HANDLE_EINTR(
+      open(dev_path.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
+  if (!fd.is_valid())
+    return Status(-EINVAL, "Failed to open: " + dev_path.value());
+
+  uint64_t size;
+  auto ret = ioctl(fd.get(), BLKGETSIZE64, &size);
+  if (ret != 0)
+    return Status(ret, "Failed to query size: " + dev_path.value());
+  return size;
+}
+
+StatusOr<uint64_t> Platform::GetDeviceBlockSizeBytes(
+    const base::FilePath& dev_path) const {
+  base::ScopedFD fd(HANDLE_EINTR(
+      open(dev_path.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
+  if (!fd.is_valid())
+    return Status(-EINVAL, "Failed to open: " + dev_path.value());
+
+  uint64_t blksize;
+  auto ret = ioctl(fd.get(), BLKSSZGET, &blksize);
+  if (ret != 0)
+    return Status(ret, "Failed to query block size: " + dev_path.value());
+  return blksize;
 }
 
 }  // namespace diagnostics

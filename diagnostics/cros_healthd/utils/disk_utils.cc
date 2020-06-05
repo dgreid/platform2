@@ -4,12 +4,9 @@
 
 #include "diagnostics/cros_healthd/utils/disk_utils.h"
 
-#include <fcntl.h>
 #include <libudev.h>
 #include <memory>
 #include <string>
-#include <sys/ioctl.h>
-#include <sys/mount.h>
 #include <utility>
 #include <vector>
 
@@ -217,11 +214,19 @@ DiskFetcher::FetchNonRemovableBlockDeviceInfo(
   info.path = dev_info->GetDevNodePath().value();
   info.type = dev_info->GetSubsystem();
 
-  uint64_t sector_size;
-  error = GetDeviceAndSectorSizesInBytes(dev_info->GetDevNodePath(), &info.size,
-                                         &sector_size);
-  if (error.has_value())
-    return error;
+  auto res = dev_info->GetSizeBytes();
+  if (!res.ok()) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  res.status().ToString());
+  }
+  info.size = res.value();
+
+  res = dev_info->GetBlockSizeBytes();
+  if (!res.ok()) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  res.status().ToString());
+  }
+  uint64_t sector_size = res.value();
 
   // Convert from sectors to bytes.
   info.bytes_written_since_last_boot = sector_size * sector_stats.written;
@@ -279,59 +284,6 @@ base::Optional<mojo_ipc::ProbeErrorPtr> DiskFetcher::GatherSysPathRelatedInfo(
   *devnode_path = base::FilePath{udev_device_get_devnode(device)};
   udev_device_unref(device);
   udev_unref(udev);
-  return base::nullopt;
-}
-
-base::Optional<mojo_ipc::ProbeErrorPtr>
-DiskFetcher::GetDeviceAndSectorSizesInBytes(const base::FilePath& dev_path,
-                                            uint64_t* size_in_bytes,
-                                            uint64_t* sector_size_in_bytes) {
-  DCHECK(size_in_bytes);
-  DCHECK(sector_size_in_bytes);
-
-  int fd = open(dev_path.value().c_str(), O_RDONLY, 0);
-  if (fd < 0) {
-    return CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kSystemUtilityError,
-        "Could not open " + dev_path.value() + " for ioctl access");
-  }
-
-  base::ScopedFD scoped_fd(fd);
-
-  // Get the device size.
-  uint64_t size = 0;
-  int res = ioctl(fd, BLKGETSIZE64, &size);
-  if (res != 0) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  "Unable to run ioctl(" + std::to_string(fd) +
-                                      ", BLKGETSIZE64, &size) => " +
-                                      std::to_string(res) + " for " +
-                                      dev_path.value());
-  }
-
-  DCHECK_GE(size, 0);
-  VLOG(1) << "Found size of " << dev_path.value() << " is "
-          << std::to_string(size);
-
-  *size_in_bytes = size;
-
-  // Get the sector size.
-  uint64_t sector_size = 0;
-  res = ioctl(fd, BLKSSZGET, &sector_size);
-  if (res != 0) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  "Unable to run ioctl(" + std::to_string(fd) +
-                                      ", BLKSSZGET, &sector_size) => " +
-                                      std::to_string(res) + " for " +
-                                      dev_path.value());
-  }
-
-  DCHECK_GE(sector_size, 0);
-  VLOG(1) << "Found sector size of " << dev_path.value() << " is "
-          << std::to_string(sector_size);
-
-  *sector_size_in_bytes = sector_size;
-
   return base::nullopt;
 }
 

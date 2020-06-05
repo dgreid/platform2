@@ -5,7 +5,12 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_PLATFORM_H_
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_PLATFORM_H_
 
+#include <cstdint>
 #include <string>
+
+#include <base/files/file_path.h>
+
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -23,6 +28,12 @@ class Platform {
   // Returns physical device name underlying the root partition. The result is
   // only the node name, not the full path, and is assumed to lie in '/dev/'.
   virtual std::string GetRootDeviceName() const;
+  // Returns size of the block device in bytes.
+  virtual StatusOr<uint64_t> GetDeviceSizeBytes(
+      const base::FilePath& dev_path) const;
+  // Returns size of a block of the block device in bytes.
+  virtual StatusOr<uint64_t> GetDeviceBlockSizeBytes(
+      const base::FilePath& dev_path) const;
 };
 
 }  // namespace diagnostics
