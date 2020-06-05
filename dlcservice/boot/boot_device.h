@@ -8,7 +8,6 @@
 #include <string>
 
 #include <base/gtest_prod_util.h>
-#include <base/macros.h>
 
 namespace dlcservice {
 
@@ -38,7 +37,8 @@ class BootDevice : public BootDeviceInterface {
   // string if the input device is not of the "/dev/xyz" form.
   std::string SysfsBlockDevice(const std::string& device);
 
-  DISALLOW_COPY_AND_ASSIGN(BootDevice);
+  BootDevice(const BootDevice&) = delete;
+  BootDevice& operator=(const BootDevice&) = delete;
 };
 
 }  // namespace dlcservice

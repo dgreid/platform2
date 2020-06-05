@@ -72,7 +72,8 @@ class DlcManagerTest : public BaseTest {
   std::unique_ptr<DlcManager> dlc_manager_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(DlcManagerTest);
+  DlcManagerTest(const DlcManagerTest&) = delete;
+  DlcManagerTest& operator=(const DlcManagerTest&) = delete;
 };
 
 TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {

@@ -58,7 +58,8 @@ class RefCountTest : public BaseTest {
   FilePath ref_count_path_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(RefCountTest);
+  RefCountTest(const RefCountTest&) = delete;
+  RefCountTest& operator=(const RefCountTest&) = delete;
 };
 
 TEST_F(RefCountTest, CreateUserBased) {
@@ -137,7 +138,8 @@ class MockRefCountBase : public RefCountBase {
   MOCK_METHOD(std::string, GetCurrentUserName, (), (const override));
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockRefCountBase);
+  MockRefCountBase(const MockRefCountBase&) = delete;
+  MockRefCountBase& operator=(const MockRefCountBase&) = delete;
 };
 
 TEST_F(RefCountTest, ShouldPurgeDlc) {

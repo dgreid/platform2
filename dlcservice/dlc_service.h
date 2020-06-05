@@ -140,7 +140,8 @@ class DlcService : public DlcServiceInterface {
 
   base::WeakPtrFactory<DlcService> weak_ptr_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(DlcService);
+  DlcService(const DlcService&) = delete;
+  DlcService& operator=(const DlcService&) = delete;
 };
 
 }  // namespace dlcservice

@@ -9,7 +9,6 @@
 #include <string>
 
 #include <base/gtest_prod_util.h>
-#include <base/macros.h>
 
 namespace dlcservice {
 
@@ -55,7 +54,8 @@ class BootSlot {
 
   std::unique_ptr<BootDeviceInterface> boot_device_;
 
-  DISALLOW_COPY_AND_ASSIGN(BootSlot);
+  BootSlot(const BootSlot&) = delete;
+  BootSlot& operator=(const BootSlot&) = delete;
 };
 
 }  // namespace dlcservice

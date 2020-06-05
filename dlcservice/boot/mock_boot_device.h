@@ -9,8 +9,6 @@
 
 #include <string>
 
-#include <base/macros.h>
-
 namespace dlcservice {
 
 class MockBootDevice : public BootDeviceInterface {
@@ -21,7 +19,8 @@ class MockBootDevice : public BootDeviceInterface {
   MOCK_METHOD(std::string, GetBootDevice, (), (override));
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockBootDevice);
+  MockBootDevice(const MockBootDevice&) = delete;
+  MockBootDevice& operator=(const MockBootDevice&) = delete;
 };
 
 }  // namespace dlcservice

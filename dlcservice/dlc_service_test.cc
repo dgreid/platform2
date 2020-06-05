@@ -103,7 +103,8 @@ class DlcServiceTest : public BaseTest {
   std::unique_ptr<DlcService> dlc_service_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceTest);
+  DlcServiceTest(const DlcServiceTest&) = delete;
+  DlcServiceTest& operator=(const DlcServiceTest&) = delete;
 };
 
 TEST_F(DlcServiceTest, GetInstalledTest) {

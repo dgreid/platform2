@@ -7,7 +7,6 @@
 
 #include <string>
 
-#include <base/macros.h>
 #include <base/time/time.h>
 #include <brillo/errors/error.h>
 #include <brillo/message_loops/message_loop.h>
@@ -132,7 +131,8 @@ class DlcManager {
 
   brillo::MessageLoop::TaskId cleanup_dangling_task_id_;
 
-  DISALLOW_COPY_AND_ASSIGN(DlcManager);
+  DlcManager(const DlcManager&) = delete;
+  DlcManager& operator=(const DlcManager&) = delete;
 };
 
 }  // namespace dlcservice

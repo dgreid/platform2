@@ -28,7 +28,8 @@ class FakeBootDevice : public BootDeviceInterface {
   std::string boot_device_;
   bool is_removable_device_;
 
-  DISALLOW_COPY_AND_ASSIGN(FakeBootDevice);
+  FakeBootDevice(const FakeBootDevice&) = delete;
+  FakeBootDevice& operator=(const FakeBootDevice&) = delete;
 };
 
 }  // namespace dlcservice

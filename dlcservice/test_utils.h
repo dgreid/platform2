@@ -85,7 +85,8 @@ class BaseTest : public testing::Test {
   MockStateChangeReporter mock_state_change_reporter_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(BaseTest);
+  BaseTest(const BaseTest&) = delete;
+  BaseTest& operator=(const BaseTest&) = delete;
 };
 
 }  // namespace dlcservice

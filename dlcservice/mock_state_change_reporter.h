@@ -5,8 +5,6 @@
 #ifndef DLCSERVICE_MOCK_STATE_CHANGE_REPORTER_H_
 #define DLCSERVICE_MOCK_STATE_CHANGE_REPORTER_H_
 
-#include <base/macros.h>
-
 #include "dlcservice/state_change_reporter_interface.h"
 
 namespace dlcservice {
@@ -18,7 +16,8 @@ class MockStateChangeReporter : public StateChangeReporterInterface {
   MOCK_METHOD(void, DlcStateChanged, (const DlcState& dlc_state), (override));
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockStateChangeReporter);
+  MockStateChangeReporter(const MockStateChangeReporter&) = delete;
+  MockStateChangeReporter& operator=(const MockStateChangeReporter&) = delete;
 };
 
 }  // namespace dlcservice

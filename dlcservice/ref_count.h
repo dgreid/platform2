@@ -63,7 +63,8 @@ class RefCountInterface {
   RefCountInterface() = default;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(RefCountInterface);
+  RefCountInterface(const RefCountInterface&) = delete;
+  RefCountInterface& operator=(const RefCountInterface&) = delete;
 };
 
 // The base class for ref counts based on ref count proto file.
@@ -96,7 +97,8 @@ class RefCountBase : public RefCountInterface {
   base::FilePath ref_count_path_;
   RefCountInfo ref_count_info_;
 
-  DISALLOW_COPY_AND_ASSIGN(RefCountBase);
+  RefCountBase(const RefCountBase&) = delete;
+  RefCountBase& operator=(const RefCountBase&) = delete;
 };
 
 class UserRefCount : public RefCountBase {
@@ -117,7 +119,8 @@ class UserRefCount : public RefCountBase {
   static std::set<std::string> user_names_;
   static std::unique_ptr<std::string> primary_session_username_;
 
-  DISALLOW_COPY_AND_ASSIGN(UserRefCount);
+  UserRefCount(const UserRefCount&) = delete;
+  UserRefCount& operator=(const UserRefCount&) = delete;
 };
 
 class SystemRefCount : public RefCountBase {
@@ -130,7 +133,8 @@ class SystemRefCount : public RefCountBase {
   std::string GetCurrentUserName() const override { return kSystemUsername; }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(SystemRefCount);
+  SystemRefCount(const SystemRefCount&) = delete;
+  SystemRefCount& operator=(const SystemRefCount&) = delete;
 };
 
 }  // namespace dlcservice

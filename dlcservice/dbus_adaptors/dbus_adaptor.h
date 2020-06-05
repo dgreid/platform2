@@ -51,7 +51,8 @@ class DBusService : public org::chromium::DlcServiceInterfaceInterface {
  private:
   DlcServiceInterface* dlc_service_;
 
-  DISALLOW_COPY_AND_ASSIGN(DBusService);
+  DBusService(const DBusService&) = delete;
+  DBusService& operator=(const DBusService&) = delete;
 };
 
 class DBusAdaptor : public org::chromium::DlcServiceInterfaceAdaptor,
@@ -67,7 +68,8 @@ class DBusAdaptor : public org::chromium::DlcServiceInterfaceAdaptor,
  private:
   std::unique_ptr<DBusService> dbus_service_{};
 
-  DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
+  DBusAdaptor(const DBusAdaptor&) = delete;
+  DBusAdaptor& operator=(const DBusAdaptor&) = delete;
 };
 
 }  // namespace dlcservice

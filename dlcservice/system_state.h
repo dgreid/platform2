@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <base/files/file_path.h>
-#include <base/macros.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxies.h>
 #include <session_manager/dbus-proxies.h>
@@ -101,7 +100,9 @@ class SystemState {
   bool is_device_removable_;
 
   static std::unique_ptr<SystemState> g_instance_;
-  DISALLOW_COPY_AND_ASSIGN(SystemState);
+
+  SystemState(const SystemState&) = delete;
+  SystemState& operator=(const SystemState&) = delete;
 };
 
 }  // namespace dlcservice

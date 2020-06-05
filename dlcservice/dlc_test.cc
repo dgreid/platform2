@@ -24,7 +24,8 @@ class DlcBaseTest : public BaseTest {
   DlcBaseTest() = default;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(DlcBaseTest);
+  DlcBaseTest(const DlcBaseTest&) = delete;
+  DlcBaseTest& operator=(const DlcBaseTest&) = delete;
 };
 
 class DlcBaseTestRemovable : public DlcBaseTest {
@@ -49,7 +50,8 @@ class DlcBaseTestRemovable : public DlcBaseTest {
   }
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(DlcBaseTestRemovable);
+  DlcBaseTestRemovable(const DlcBaseTestRemovable&) = delete;
+  DlcBaseTestRemovable& operator=(const DlcBaseTestRemovable&) = delete;
 };
 
 TEST_F(DlcBaseTest, CreateDlc) {

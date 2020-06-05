@@ -378,7 +378,8 @@ class DlcServiceUtil : public brillo::Daemon {
 
   base::WeakPtrFactory<DlcServiceUtil> weak_ptr_factory_;
 
-  DISALLOW_COPY_AND_ASSIGN(DlcServiceUtil);
+  DlcServiceUtil(const DlcServiceUtil&) = delete;
+  DlcServiceUtil& operator=(const DlcServiceUtil&) = delete;
 };
 
 int main(int argc, const char** argv) {

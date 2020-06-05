@@ -191,7 +191,8 @@ class DlcBase {
   // directly. Use |GetRefCount()| instead.
   std::unique_ptr<RefCountInterface> ref_count_;
 
-  DISALLOW_COPY_AND_ASSIGN(DlcBase);
+  DlcBase(const DlcBase&) = delete;
+  DlcBase& operator=(const DlcBase&) = delete;
 };
 
 using DlcMap = std::map<DlcId, DlcBase>;

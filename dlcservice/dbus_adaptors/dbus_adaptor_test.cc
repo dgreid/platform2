@@ -34,7 +34,8 @@ class DBusServiceTest : public BaseTest {
   std::unique_ptr<DBusService> dbus_service_;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(DBusServiceTest);
+  DBusServiceTest(const DBusServiceTest&) = delete;
+  DBusServiceTest& operator=(const DBusServiceTest&) = delete;
 };
 
 TEST_F(DBusServiceTest, InstallDlc) {

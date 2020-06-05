@@ -20,7 +20,9 @@ class StateChangeReporterInterface {
   StateChangeReporterInterface() = default;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(StateChangeReporterInterface);
+  StateChangeReporterInterface(const StateChangeReporterInterface&) = delete;
+  StateChangeReporterInterface& operator=(const StateChangeReporterInterface&) =
+      delete;
 };
 
 }  // namespace dlcservice

@@ -7,8 +7,6 @@
 
 #include <string>
 
-#include <base/macros.h>
-
 #include "dlcservice/dlc_service.h"
 
 namespace dlcservice {
@@ -44,7 +42,8 @@ class MockDlcService : public DlcServiceInterface {
               (override));
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(MockDlcService);
+  MockDlcService(const MockDlcService&) = delete;
+  MockDlcService& operator=(const MockDlcService&) = delete;
 };
 
 }  // namespace dlcservice

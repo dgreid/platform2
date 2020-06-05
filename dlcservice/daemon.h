@@ -36,7 +36,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   scoped_refptr<dbus::Bus> bus_for_proxies_;
   brillo::DBusConnection dbus_connection_for_proxies_;
 
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
 };
 
 }  // namespace dlcservice
