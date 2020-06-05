@@ -54,7 +54,8 @@ void DlcManager::CleanupUnsupportedDlcs() {
   auto system_state = SystemState::Get();
   // Delete deprecated DLC(s) in content directory.
   for (const auto& id : ScanDirectory(system_state->content_dir())) {
-    if (IsSupported(id))
+    brillo::ErrorPtr tmp_err;
+    if (GetDlc(id, &tmp_err) != nullptr)
       continue;
     for (const auto& path : DlcBase::GetPathsToDelete(id))
       if (base::PathExists(path)) {
@@ -69,11 +70,11 @@ void DlcManager::CleanupUnsupportedDlcs() {
   // directory.
   auto preloaded_content_dir = system_state->preloaded_content_dir();
   for (const auto& id : ScanDirectory(preloaded_content_dir)) {
-    if (IsSupported(id)) {
-      auto* dlc = GetDlc(id);
-      if (dlc->IsPreloadAllowed())
-        continue;
-    }
+    brillo::ErrorPtr tmp_err;
+    auto* dlc = GetDlc(id, &tmp_err);
+    if (dlc != nullptr && dlc->IsPreloadAllowed())
+      continue;
+
     // Preloading is not allowed for this image so it will be deleted.
     auto path = JoinPaths(preloaded_content_dir, id);
     if (!base::DeleteFile(path, /*recursive=*/true))
@@ -112,22 +113,18 @@ void DlcManager::PostCleanupDanglingDlcs(const base::TimeDelta& timeout) {
       timeout);
 }
 
-bool DlcManager::IsSupported(const DlcId& id) {
-  // TODO(ahassani): Consider searching through the manifest directory again if
-  // we missed to get the manifest for a specific when we initialized it.
-  return supported_.find(id) != supported_.end();
-}
-
 bool DlcManager::IsInstalling() {
   return std::any_of(
       supported_.begin(), supported_.end(),
       [](const auto& pair) { return pair.second.IsInstalling(); });
 }
 
-const DlcBase* DlcManager::GetDlc(const DlcId& id) {
+DlcBase* DlcManager::GetDlc(const DlcId& id, brillo::ErrorPtr* err) {
   const auto& iter = supported_.find(id);
   if (iter == supported_.end()) {
-    LOG(ERROR) << "Passed invalid DLC: " << id;
+    *err = Error::Create(
+        FROM_HERE, kErrorInvalidDlc,
+        base::StringPrintf("Passed unsupported DLC=%s", id.c_str()));
     return nullptr;
   }
   return &iter->second;
@@ -158,19 +155,18 @@ bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   DCHECK(err);
   bool ret = true;
   for (const auto& id : ids) {
-    if (!IsSupported(id)) {
+    auto* dlc = GetDlc(id, err);
+    if (dlc == nullptr) {
       LOG(WARNING) << "Trying to complete installation for unsupported DLC="
                    << id;
       ret = false;
-    } else if (!supported_.find(id)->second.InstallCompleted(err)) {
+    } else if (!dlc->InstallCompleted(err)) {
       PLOG(WARNING) << Error::ToString(*err);
       ret = false;
     }
   }
-  if (!ret)
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Failed to mark all installed DLCs as verified."));
+  // The returned error pertains to the last error happened. We probably don't
+  // need any accumulation of errors.
   return ret;
 }
 
@@ -178,18 +174,17 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
   DCHECK(err);
   bool ret = true;
   for (const auto& id : ids) {
-    if (!IsSupported(id)) {
+    auto* dlc = GetDlc(id, err);
+    if (dlc == nullptr) {
       LOG(WARNING) << "Trying to complete update for unsupported DLC=" << id;
       ret = false;
-    } else if (!supported_.find(id)->second.UpdateCompleted(err)) {
+    } else if (!dlc->UpdateCompleted(err)) {
       LOG(WARNING) << Error::ToString(*err);
       ret = false;
     }
   }
-  if (!ret)
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Failed to mark all updated DLCs as hashed."));
+  // The returned error pertains to the last error happened. We probably don't
+  // need any accumulation of errors.
   return ret;
 }
 
@@ -197,52 +192,44 @@ bool DlcManager::Install(const DlcId& id,
                          bool* external_install_needed,
                          ErrorPtr* err) {
   DCHECK(err);
-  // Don't even start installing if we have some unsupported DLC request.
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Trying to install unsupported DLC=%s", id.c_str()));
+  auto* dlc = GetDlc(id, err);
+  if (dlc == nullptr) {
     return false;
   }
 
-  DlcBase& dlc = supported_.find(id)->second;
   // If the DLC is being installed, nothing can be done anymore.
-  if (dlc.IsInstalling()) {
+  if (dlc->IsInstalling()) {
     return true;
   }
 
   // Otherwise proceed to install the DLC.
-  if (!dlc.Install(err)) {
+  if (!dlc->Install(err)) {
     LOG(ERROR) << "Failed to initialize installation for DLC=" << id;
     return false;
   }
 
   // If the DLC is now in installing state, it means it now needs update_engine
   // installation.
-  *external_install_needed = dlc.IsInstalling();
+  *external_install_needed = dlc->IsInstalling();
   return true;
 }
 
 bool DlcManager::Uninstall(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Trying to delete unsupported DLC=%s", id.c_str()));
+  auto* dlc = GetDlc(id, err);
+  if (dlc == nullptr) {
     return false;
   }
-  return supported_.find(id)->second.Uninstall(err);
+  return dlc->Uninstall(err);
 }
 
 bool DlcManager::Purge(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Trying to purge unsupported DLC=%s", id.c_str()));
+  auto* dlc = GetDlc(id, err);
+  if (dlc == nullptr) {
     return false;
   }
-  return supported_.find(id)->second.Purge(err);
+  return dlc->Purge(err);
 }
 
 bool DlcManager::FinishInstall(ErrorPtr* err) {
@@ -264,25 +251,18 @@ bool DlcManager::FinishInstall(ErrorPtr* err) {
 
 bool DlcManager::CancelInstall(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
-  if (!IsSupported(id)) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Trying to cancle install for unsupported DLC=%s",
-                           id.c_str()));
+  auto* dlc = GetDlc(id, err);
+  if (dlc == nullptr) {
     return false;
   }
-
-  auto& dlc = supported_.find(id)->second;
-  return !dlc.IsInstalling() || dlc.CancelInstall(err);
+  return !dlc->IsInstalling() || dlc->CancelInstall(err);
 }
 
 bool DlcManager::CancelInstall(ErrorPtr* err) {
   DCHECK(err);
-
   bool ret = true;
   for (auto& pr : supported_) {
-    auto& dlc = pr.second;
-    if (dlc.IsInstalling() && !dlc.CancelInstall(err)) {
+    if (!CancelInstall(pr.first, err)) {
       LOG(ERROR) << "Failed during install cancellation: "
                  << Error::ToString(*err);
       ret = false;

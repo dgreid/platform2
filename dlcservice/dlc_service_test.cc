@@ -91,7 +91,7 @@ class DlcServiceTest : public BaseTest {
   }
 
   void CheckDlcState(const DlcId& id, const DlcState::State& expected_state) {
-    const auto* dlc = dlc_service_->GetDlc(id);
+    const auto* dlc = dlc_service_->GetDlc(id, &err_);
     EXPECT_NE(dlc, nullptr);
     EXPECT_EQ(expected_state, dlc->GetState().state());
   }
@@ -113,7 +113,8 @@ TEST_F(DlcServiceTest, GetInstalledTest) {
   const auto& dlcs = dlc_service_->GetInstalled();
 
   EXPECT_THAT(dlcs, ElementsAre(kFirstDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_service_->GetDlc(kFirstDlc, &err_)->GetRoot().value().empty());
 }
 
 TEST_F(DlcServiceTest, GetExistingDlcs) {
@@ -140,7 +141,8 @@ TEST_F(DlcServiceTest, GetInstalledMimicDlcserviceRebootWithoutVerifiedStamp) {
   Install(kFirstDlc);
   const auto& dlcs_before = dlc_service_->GetInstalled();
   EXPECT_THAT(dlcs_before, ElementsAre(kFirstDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_service_->GetDlc(kFirstDlc, &err_)->GetRoot().value().empty());
 
   // Create |kSecondDlc| image, but not verified after device reboot.
   SetUpDlcWithSlots(kSecondDlc);
@@ -169,7 +171,7 @@ TEST_F(DlcServiceTest, UninstallTestForUserDlc) {
   EXPECT_TRUE(base::PathExists(dlc_prefs_path));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
   // Uninstall should not change the verified status.
-  EXPECT_TRUE(dlc_service_->GetDlc(kFirstDlc)->IsVerified());
+  EXPECT_TRUE(dlc_service_->GetDlc(kFirstDlc, &err_)->IsVerified());
 }
 
 TEST_F(DlcServiceTest, PurgeTest) {
@@ -500,8 +502,10 @@ TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
   const auto& dlcs_after = dlc_service_->GetInstalled();
 
   EXPECT_THAT(dlcs_after, ElementsAre(kFirstDlc, kSecondDlc));
-  EXPECT_FALSE(dlc_service_->GetDlc(kFirstDlc)->GetRoot().value().empty());
-  EXPECT_FALSE(dlc_service_->GetDlc(kSecondDlc)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_service_->GetDlc(kFirstDlc, &err_)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_service_->GetDlc(kSecondDlc, &err_)->GetRoot().value().empty());
 }
 
 TEST_F(DlcServiceTest, OnStatusUpdateSignalNoRemountTest) {
@@ -795,7 +799,7 @@ TEST_F(DlcServiceTest, PeriodCheckUpdateEngineInstallSignalRaceChecker) {
 
 TEST_F(DlcServiceTest, InstallCompleted) {
   EXPECT_TRUE(dlc_service_->InstallCompleted({kSecondDlc}, &err_));
-  EXPECT_TRUE(dlc_service_->GetDlc(kSecondDlc)->IsVerified());
+  EXPECT_TRUE(dlc_service_->GetDlc(kSecondDlc, &err_)->IsVerified());
 }
 
 TEST_F(DlcServiceTest, UpdateCompleted) {

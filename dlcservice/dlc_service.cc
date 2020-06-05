@@ -179,8 +179,8 @@ bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {
   return dlc_manager_->Purge(id, err);
 }
 
-const DlcBase* DlcService::GetDlc(const DlcId& id) {
-  return dlc_manager_->GetDlc(id);
+const DlcBase* DlcService::GetDlc(const DlcId& id, brillo::ErrorPtr* err) {
+  return dlc_manager_->GetDlc(id, err);
 }
 
 DlcIdList DlcService::GetInstalled() {

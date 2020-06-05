@@ -58,7 +58,7 @@ class DlcManagerTest : public BaseTest {
   }
 
   void CheckDlcState(const DlcId& id, const DlcState::State& expected_state) {
-    const auto* dlc = dlc_manager_->GetDlc(id);
+    const auto* dlc = dlc_manager_->GetDlc(id, &err_);
     EXPECT_NE(dlc, nullptr);
     EXPECT_EQ(expected_state, dlc->GetState().state());
   }
@@ -93,7 +93,8 @@ TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   EXPECT_TRUE(
       dlc_manager_->Install(kThirdDlc, &external_install_needed, &err_));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
-  EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_manager_->GetDlc(kThirdDlc, &err_)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 
@@ -115,7 +116,8 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   EXPECT_TRUE(
       dlc_manager_->Install(kThirdDlc, &external_install_needed, &err_));
   EXPECT_THAT(dlc_manager_->GetInstalled(), ElementsAre(kThirdDlc));
-  EXPECT_FALSE(dlc_manager_->GetDlc(kThirdDlc)->GetRoot().value().empty());
+  EXPECT_FALSE(
+      dlc_manager_->GetDlc(kThirdDlc, &err_)->GetRoot().value().empty());
   CheckDlcState(kThirdDlc, DlcState::INSTALLED);
 }
 

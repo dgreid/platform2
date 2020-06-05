@@ -69,7 +69,8 @@ TEST_F(DBusServiceTest, GetExistingDlcs) {
   DlcBase second_dlc(kSecondDlc);
   SetUpDlcWithSlots(kSecondDlc);
   second_dlc.Initialize();
-  EXPECT_CALL(*dlc_service_, GetDlc(kSecondDlc)).WillOnce(Return(&second_dlc));
+  EXPECT_CALL(*dlc_service_, GetDlc(kSecondDlc, _))
+      .WillOnce(Return(&second_dlc));
 
   DlcsWithContent dlc_list;
   EXPECT_TRUE(dbus_service_->GetExistingDlcs(&err_, &dlc_list));

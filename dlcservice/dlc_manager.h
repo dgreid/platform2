@@ -21,9 +21,9 @@ class DlcManager {
   DlcManager() = default;
   virtual ~DlcManager();
 
-  // Returns a reference to a DLC object given a DLC ID. We assume the ID is
-  // valid.
-  const DlcBase* GetDlc(const DlcId& id);
+  // Returns a reference to a DLC object given a DLC ID. If the ID is not
+  // supported, it will set the error and return |nullptr|.
+  DlcBase* GetDlc(const DlcId& id, brillo::ErrorPtr* err);
 
   // Initializes the state of DlcManager.
   void Initialize();
@@ -124,8 +124,6 @@ class DlcManager {
 
   // Posts the |CleanuupDanglingDlcs| as a delayed task with timeout |timeout|.
   void PostCleanupDanglingDlcs(const base::TimeDelta& timeout);
-
-  bool IsSupported(const DlcId& id);
 
   DlcMap supported_;
 

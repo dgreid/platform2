@@ -56,7 +56,7 @@ bool DBusService::GetExistingDlcs(brillo::ErrorPtr* err,
                                   DlcsWithContent* dlc_list_out) {
   DlcIdList ids = dlc_service_->GetExistingDlcs();
   for (const auto& id : ids) {
-    const auto* dlc = dlc_service_->GetDlc(id);
+    const auto* dlc = dlc_service_->GetDlc(id, err);
     auto* dlc_info = dlc_list_out->add_dlc_infos();
     dlc_info->set_id(id);
     dlc_info->set_name(dlc->GetName());
@@ -75,11 +75,8 @@ bool DBusService::GetDlcsToUpdate(brillo::ErrorPtr* err,
 bool DBusService::GetDlcState(brillo::ErrorPtr* err,
                               const string& id_in,
                               DlcState* dlc_state_out) {
-  const auto* dlc = dlc_service_->GetDlc(id_in);
+  const auto* dlc = dlc_service_->GetDlc(id_in, err);
   if (dlc == nullptr) {
-    *err = Error::Create(
-        FROM_HERE, kErrorInvalidDlc,
-        base::StringPrintf("Requested unsupported DLC=%s.", id_in.c_str()));
     return false;
   }
   *dlc_state_out = dlc->GetState();
