@@ -9,6 +9,7 @@ clock_gettime: 1
 clone: 1
 close: 1
 connect: 1
+dup: 1
 dup3: 1
 epoll_create1: 1
 epoll_ctl: 1

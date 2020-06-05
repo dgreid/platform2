@@ -60,7 +60,9 @@ madvise: 1
 uname: 1
 setsid: 1
 chdir: 1
+dup: 1
 dup2: 1
+dup3: 1
 unlink: 1
 tgkill: 1
 getresgid32: 1

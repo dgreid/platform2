@@ -27,7 +27,9 @@ sendto: 1
 gettid: 1
 stat: 1
 madvise: 1
+dup: 1
 dup2: 1
+dup3: 1
 set_robust_list: 1
 # Allow socket(domain==PF_LOCAL) or socket(domain==PF_NETLINK)
 socket: arg0 == 0x1 || arg0 == 0x10

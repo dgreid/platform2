@@ -54,7 +54,9 @@ gettimeofday: 1
 time: 1
 setsid: 1
 chdir: 1
+dup: 1
 dup2: 1
+dup3: 1
 unlink: 1
 tgkill: 1
 _llseek: 1
