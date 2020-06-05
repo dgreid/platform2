@@ -50,13 +50,15 @@ class WebAuthnHandler {
   WebAuthnHandler();
 
   // Initializes WebAuthnHandler.
+  // |bus| - DBus pointer.
   // |tpm_proxy| - proxy to send commands to TPM. Owned by U2fDaemon and should
   // outlive WebAuthnHandler.
   // |user_state| - pointer to a UserState instance, for requesting user secret.
   // Owned by U2fDaemon and should outlive WebAuthnHandler.
   // |request_presence| - callback for performing other platform tasks when
   // expecting the user to press the power button.
-  void Initialize(TpmVendorCommandProxy* tpm_proxy,
+  void Initialize(dbus::Bus* bus,
+                  TpmVendorCommandProxy* tpm_proxy,
                   UserState* user_state,
                   std::function<void()> request_presence);
 
@@ -76,6 +78,12 @@ class WebAuthnHandler {
   friend class WebAuthnHandlerTest;
 
   bool Initialized();
+
+  void HandleUVFlowResultMakeCredential(struct MakeCredentialSession session,
+                                        dbus::Response* flow_response);
+
+  void HandleUVFlowResultGetAssertion(struct GetAssertionSession session,
+                                      dbus::Response* flow_response);
 
   // Proceeds to cr50 for the current MakeCredential request, and responds to
   // the request with authenticator data.
@@ -141,9 +149,12 @@ class WebAuthnHandler {
   HasCredentialsResponse::HasCredentialsStatus HasExcludedCredentials(
       const MakeCredentialRequest& request);
 
-  TpmVendorCommandProxy* tpm_proxy_;
-  UserState* user_state_;
+  TpmVendorCommandProxy* tpm_proxy_ = nullptr;
+  UserState* user_state_ = nullptr;
   std::function<void()> request_presence_;
+  dbus::Bus* bus_ = nullptr;
+  // Proxy to user authentication dialog in Ash. Used only in UV requests.
+  dbus::ObjectProxy* auth_dialog_dbus_proxy_ = nullptr;
 };
 
 }  // namespace u2f

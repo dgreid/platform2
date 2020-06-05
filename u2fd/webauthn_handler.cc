@@ -9,9 +9,11 @@
 #include <utility>
 #include <vector>
 
+#include <base/bind_helpers.h>
 #include <base/time/time.h>
 #include <chromeos/cbor/values.h>
 #include <chromeos/cbor/writer.h>
+#include <chromeos/dbus/service_constants.h>
 #include <u2f/proto_bindings/u2f_interface.pb.h>
 
 #include "u2fd/util.h"
@@ -108,12 +110,18 @@ std::vector<uint8_t> EncodeCredentialPublicKeyInCBOR(
 WebAuthnHandler::WebAuthnHandler()
     : tpm_proxy_(nullptr), user_state_(nullptr) {}
 
-void WebAuthnHandler::Initialize(TpmVendorCommandProxy* tpm_proxy,
+void WebAuthnHandler::Initialize(dbus::Bus* bus,
+                                 TpmVendorCommandProxy* tpm_proxy,
                                  UserState* user_state,
                                  std::function<void()> request_presence) {
   tpm_proxy_ = tpm_proxy;
   user_state_ = user_state;
   request_presence_ = request_presence;
+  bus_ = bus;
+  auth_dialog_dbus_proxy_ = bus_->GetObjectProxy(
+      chromeos::kUserAuthenticationServiceName,
+      dbus::ObjectPath(chromeos::kUserAuthenticationServicePath));
+  DCHECK(auth_dialog_dbus_proxy_);
 }
 
 bool WebAuthnHandler::Initialized() {
@@ -137,9 +145,7 @@ void WebAuthnHandler::MakeCredential(
     return;
   }
 
-  if (request.verification_type() !=
-      VerificationType::VERIFICATION_USER_PRESENCE) {
-    // TODO(yichengli): Add support for VERIFICATION_USER_VERIFICATION
+  if (request.verification_type() == VerificationType::VERIFICATION_UNKNOWN) {
     response.set_status(MakeCredentialResponse::VERIFICATION_FAILED);
     method_response->Return(response);
     return;
@@ -148,7 +154,84 @@ void WebAuthnHandler::MakeCredential(
   struct MakeCredentialSession session = {
       static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
       std::move(method_response)};
+
+  if (request.verification_type() ==
+      VerificationType::VERIFICATION_USER_VERIFICATION) {
+    dbus::MethodCall call(
+        chromeos::kUserAuthenticationServiceInterface,
+        chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+    auth_dialog_dbus_proxy_->CallMethod(
+        &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        base::Bind(&WebAuthnHandler::HandleUVFlowResultMakeCredential,
+                   base::Unretained(this), base::Passed(std::move(session))));
+    return;
+  }
+
   DoMakeCredential(std::move(session), PresenceRequirement::kPowerButton);
+}
+
+void WebAuthnHandler::HandleUVFlowResultMakeCredential(
+    struct MakeCredentialSession session, dbus::Response* flow_response) {
+  MakeCredentialResponse response;
+
+  if (!flow_response) {
+    LOG(ERROR) << "User auth flow had no response.";
+    response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
+    session.response_->Return(response);
+    return;
+  }
+
+  dbus::MessageReader response_reader(flow_response);
+  bool success;
+  if (!response_reader.PopBool(&success)) {
+    LOG(ERROR) << "Failed to parse user auth flow result.";
+    response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
+    session.response_->Return(response);
+    return;
+  }
+
+  if (!success) {
+    LOG(ERROR) << "User auth flow failed. Aborting MakeCredential.";
+    response.set_status(MakeCredentialResponse::VERIFICATION_FAILED);
+    session.response_->Return(response);
+    return;
+  }
+
+  // TODO(yichengli): Change the presence requirement here once cr50 supports
+  // fp.
+  DoMakeCredential(std::move(session), PresenceRequirement::kPowerButton);
+}
+
+void WebAuthnHandler::HandleUVFlowResultGetAssertion(
+    struct GetAssertionSession session, dbus::Response* flow_response) {
+  GetAssertionResponse response;
+
+  if (!flow_response) {
+    LOG(ERROR) << "User auth flow had no response.";
+    response.set_status(GetAssertionResponse::INTERNAL_ERROR);
+    session.response_->Return(response);
+    return;
+  }
+
+  dbus::MessageReader response_reader(flow_response);
+  bool success;
+  if (!response_reader.PopBool(&success)) {
+    LOG(ERROR) << "Failed to parse user auth flow result.";
+    response.set_status(GetAssertionResponse::INTERNAL_ERROR);
+    session.response_->Return(response);
+    return;
+  }
+
+  if (!success) {
+    LOG(ERROR) << "User auth flow failed. Aborting GetAssertion.";
+    response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
+    session.response_->Return(response);
+    return;
+  }
+
+  // TODO(yichengli): Change the presence requirement here once cr50 supports
+  // fp.
+  DoGetAssertion(std::move(session), PresenceRequirement::kPowerButton);
 }
 
 void WebAuthnHandler::DoMakeCredential(
@@ -330,9 +413,7 @@ void WebAuthnHandler::GetAssertion(
     return;
   }
 
-  if (request.verification_type() !=
-      VerificationType::VERIFICATION_USER_PRESENCE) {
-    // TODO(yichengli): Add support for VERIFICATION_USER_VERIFICATION
+  if (request.verification_type() == VerificationType::VERIFICATION_UNKNOWN) {
     response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
     method_response->Return(response);
     return;
@@ -366,6 +447,19 @@ void WebAuthnHandler::GetAssertion(
   struct GetAssertionSession session = {
       static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
       std::move(method_response)};
+
+  if (request.verification_type() ==
+      VerificationType::VERIFICATION_USER_VERIFICATION) {
+    dbus::MethodCall call(
+        chromeos::kUserAuthenticationServiceInterface,
+        chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+    auth_dialog_dbus_proxy_->CallMethod(
+        &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        base::Bind(&WebAuthnHandler::HandleUVFlowResultGetAssertion,
+                   base::Unretained(this), base::Passed(std::move(session))));
+    return;
+  }
+
   DoGetAssertion(std::move(session), PresenceRequirement::kPowerButton);
 }
 

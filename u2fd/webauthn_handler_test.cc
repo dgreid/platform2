@@ -11,6 +11,10 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
 #include <brillo/dbus/mock_dbus_method_response.h>
+#include <chromeos/dbus/service_constants.h>
+#include <dbus/bus.h>
+#include <dbus/mock_bus.h>
+#include <dbus/mock_object_proxy.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -129,7 +133,10 @@ MATCHER_P(StructMatchesRegex, pattern, "") {
 
 class WebAuthnHandlerTest : public ::testing::Test {
  public:
-  void SetUp() override { CreateHandler(); }
+  void SetUp() override {
+    PrepareMockBus();
+    CreateHandler();
+  }
 
   void TearDown() override {
     if (presence_requested_expected_ == kMaxRetries) {
@@ -143,9 +150,26 @@ class WebAuthnHandlerTest : public ::testing::Test {
   }
 
  protected:
+  void PrepareMockBus() {
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    mock_bus_ = new dbus::MockBus(options);
+
+    mock_auth_dialog_proxy_ = new dbus::MockObjectProxy(
+        mock_bus_.get(), chromeos::kUserAuthenticationServiceName,
+        dbus::ObjectPath(chromeos::kUserAuthenticationServicePath));
+
+    // Set an expectation so that the MockBus will return our mock proxy.
+    EXPECT_CALL(*mock_bus_,
+                GetObjectProxy(
+                    chromeos::kUserAuthenticationServiceName,
+                    dbus::ObjectPath(chromeos::kUserAuthenticationServicePath)))
+        .WillOnce(Return(mock_auth_dialog_proxy_.get()));
+  }
+
   void CreateHandler() {
-    handler_.reset(new WebAuthnHandler());
-    handler_->Initialize(&mock_tpm_proxy_, &mock_user_state_,
+    handler_ = std::make_unique<WebAuthnHandler>();
+    handler_->Initialize(mock_bus_.get(), &mock_tpm_proxy_, &mock_user_state_,
                          [this]() { presence_requested_count_++; });
   }
 
@@ -203,6 +227,8 @@ class WebAuthnHandlerTest : public ::testing::Test {
   int presence_requested_expected_ = 0;
 
  private:
+  scoped_refptr<dbus::MockBus> mock_bus_;
+  scoped_refptr<dbus::MockObjectProxy> mock_auth_dialog_proxy_;
   int presence_requested_count_ = 0;
 };
 

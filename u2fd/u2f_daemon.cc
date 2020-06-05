@@ -304,7 +304,7 @@ void U2fDaemon::InitializeWebAuthnHandler() {
     SendWinkSignal();
   };
 
-  webauthn_handler_.Initialize(&tpm_proxy_, user_state_.get(),
+  webauthn_handler_.Initialize(bus_.get(), &tpm_proxy_, user_state_.get(),
                                request_presence);
 }
 
