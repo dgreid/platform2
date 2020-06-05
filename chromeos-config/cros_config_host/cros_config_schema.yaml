@@ -281,6 +281,7 @@ properties:
             bluetooth:
               type: object
               properties:
+                # TODO(b:152526402) - Remove when no yaml references "config".
                 config: *system_file_v2
                 flags:
                   type: object
@@ -297,8 +298,6 @@ properties:
                       type: boolean
                   additionalProperties: false
               additionalProperties: false
-              required:
-              - config
             wifi:
               type: object
               description: Sets limits on maximum WiFi transmit power for tablet and non-tablet

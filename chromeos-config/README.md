@@ -387,7 +387,7 @@ In the tables below,
 ### bluetooth
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| config | [config](#config) |  | True |  | False |  |
+| config | [config](#config) |  | False |  | False |  |
 | flags | [flags](#flags) |  | False |  | False |  |
 
 ### config
