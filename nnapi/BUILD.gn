@@ -75,7 +75,6 @@ static_library("libbase") {
   ]
   sources = [
     "${libbase_src}/chrono_utils.cpp",
-    "${libbase_src}/cmsg.cpp",
     "${libbase_src}/errors_unix.cpp",
     "${libbase_src}/file.cpp",
     "${libbase_src}/liblog_symbols.cpp",
@@ -112,7 +111,6 @@ if (use.test) {
     ]
     sources = [
       "${libbase_src}/chrono_utils_test.cpp",
-      "${libbase_src}/cmsg_test.cpp",
       "${libbase_src}/endian_test.cpp",
       "${libbase_src}/errors_test.cpp",
 
