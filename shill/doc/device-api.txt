@@ -272,6 +272,19 @@ Properties	string Address [readonly]
 			(Cellular only) The name of the carrier for
 			which the device is configured.
 
+		string Cellular.DeviceID [readonly]
+
+			(Cellular only) The device ID of the physical
+			underlying device, if known, using the form
+			"[bus-type]:[vendor-ID]:[device-ID]".
+
+			Valid bus types: "pci" or "usb".
+
+			Vendor and device IDs are 4-character, zero-padded
+			hexadecimal numbers (e.g., "0f0a").
+
+			Examples: "pci:0123:fedc", "usb:dead:beef"
+
 		dict Cellular.HomeProvider [readonly] [GSM only]
 
 			(Cellular only) Description of the operator that
