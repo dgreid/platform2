@@ -337,10 +337,11 @@ class HomeDirs {
     return vault_keyset_factory_;
   }
 
+  void set_use_tpm(bool use_tpm) { use_tpm_ = use_tpm; }
+
   // Returns true if there is now at least |kTargetFreeSpaceAfterCleanup|
   // amount of free disk space or false otherwise.
   bool HasTargetFreeSpace() const;
-
 
  private:
   struct HomeDir {
@@ -425,6 +426,10 @@ class HomeDirs {
   // UID.
   bool IsOwnedByAndroidSystem(const base::FilePath& directory) const;
 
+  // If the VaultKeyset is TPM backed (directly or via PinWeaver, etc.) this
+  // method will tell the TPM firmware that a successful decryption occurred.
+  void DeclareTpmStableIfAppropriate(VaultKeyset* vk);
+
   // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
   // in unit tests.
   void own_policy_provider(policy::PolicyProvider* value) {
@@ -461,6 +466,8 @@ class HomeDirs {
 
   // The container a not-shifted system UID in ARC++ container (AID_SYSTEM).
   static constexpr uid_t kAndroidSystemUid = 1000;
+
+  bool use_tpm_;
 
   friend class HomeDirsTest;
   FRIEND_TEST(HomeDirsTest, GetTrackedDirectoryForDirCrypto);

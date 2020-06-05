@@ -351,10 +351,6 @@ TEST_F(CryptoTest, TpmStepTest) {
       .WillOnce(DoAll(SetArgPointee<4>(vkk_key),
                       Return(Tpm::kTpmRetryNone)));
 
-  // Successful DecryptVaultKeyset for tpm-backed keyset should
-  // lead to a call to DeclareTpmFirmwareStable().
-  EXPECT_CALL(tpm, DeclareTpmFirmwareStable());
-
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
                                         false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
@@ -435,10 +431,6 @@ TEST_F(CryptoTest, Tpm1_2_StepTest) {
       .WillOnce(DoAll(SetArgPointee<4>(vkk_key),
                       Return(Tpm::kTpmRetryNone)));
 
-  // Successful DecryptVaultKeyset for tpm-backed keyset should
-  // lead to a call to DeclareTpmFirmwareStable().
-  EXPECT_CALL(tpm, DeclareTpmFirmwareStable());
-
   ASSERT_TRUE(crypto.DecryptVaultKeyset(serialized, key,
                                         false /* locked_to_single_user */,
                                         &crypt_flags, &crypto_error,
@@ -512,11 +504,6 @@ TEST_F(CryptoTest, TpmDecryptFailureTest) {
   // UnsealWithAuthorization operation will fail.
   EXPECT_CALL(tpm, UnsealWithAuthorization(_, _, _, _, _))
       .WillOnce(Return(Tpm::kTpmRetryFatal));
-
-  // Unsuccessful DecryptValutKeyset for tpm-backed keyset should not
-  // lead to a call to DeclareTpmFirmwareStable().
-  EXPECT_CALL(tpm, DeclareTpmFirmwareStable())
-      .Times(0);
 
   ASSERT_FALSE(crypto.DecryptVaultKeyset(serialized, key,
                                          false /* locked_to_single_user */,
@@ -615,10 +602,6 @@ TEST_F(CryptoTest, TpmScryptStepTest) {
   new_keyset.Initialize(&platform_, &crypto);
   unsigned int crypt_flags = 0;
   CryptoError crypto_error = CryptoError::CE_NONE;
-
-  // Successful DecryptValutKeyset for tpm-backed keyset should
-  // lead to a call to DeclareTpmFirmwareStable().
-  EXPECT_CALL(tpm, DeclareTpmFirmwareStable());
 
   EXPECT_CALL(tpm, UnsealWithAuthorization(_, _, _, _, _))
       .WillOnce(DoAll(SetArgPointee<4>(vkk_key),

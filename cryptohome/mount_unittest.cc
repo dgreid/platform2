@@ -1243,6 +1243,9 @@ TEST_P(MountTest, GoodReDecryptTest) {
 
   user->InjectKeyset(&platform_, true);
 
+  // Successful DecryptValutKeyset for tpm-backed keyset should
+  // lead to a call to DeclareTpmFirmwareStable().
+  EXPECT_CALL(tpm_, DeclareTpmFirmwareStable());
   EXPECT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
   ASSERT_EQ(error, MOUNT_ERROR_NONE);

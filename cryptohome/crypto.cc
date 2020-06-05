@@ -543,17 +543,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
       return false;
     }
 
-    if (!UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error)) {
-      return false;
-    }
-
-    // By this point we know that the TPM is successfully owned, everything
-    // is initialized, and we were able to successfully decrypt a
-    // TPM-wrapped keyset. So, for TPMs with updateable firmware, we assume
-    // that it is stable (and the TPM can invalidate the old version).
-    tpm_->DeclareTpmFirmwareStable();
-
-    return true;
+    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
   }
 
   LOG(ERROR) << "Keyset wrapped with unknown method.";

@@ -154,6 +154,7 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
   homedirs_->set_platform(platform_);
   homedirs_->set_shadow_root(FilePath(shadow_root_));
   homedirs_->set_enterprise_owned(enterprise_owned_);
+  homedirs_->set_use_tpm(use_tpm_);
 
   // Make sure |homedirs_| uses the same PolicyProvider instance as we in case
   // it was set by a test.
