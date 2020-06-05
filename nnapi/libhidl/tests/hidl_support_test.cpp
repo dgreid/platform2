@@ -3,11 +3,17 @@
 // found in the LICENSE file.
 
 
+#include <android/hidl/memory/1.0/IMemory.h>
+#include <android-base/logging.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <hidl/HidlSupport.h>
+#include <hidl/Status.h>
+
 #include <string>
+#include <utility>
 #include <vector>
 
-#include "hidl/HidlSupport.h"
 
 // Unit tests for HidlSupport, taken from upstream. We do not want all
 // of the upstream tests as we are not porting all of the classes from libhidl
@@ -239,6 +245,144 @@ TEST(LibHidlTest, VecIterTest) {
     EXPECT_EQ(five[1], 6);
 }
 
+
+TEST(LibHidlTest, VecIterForTest) {
+    using android::hardware::hidl_vec;
+    int32_t array[] = {5, 6, 7};
+    hidl_vec<int32_t> hv1 = std::vector<int32_t>(array, array + 3);
+
+    int32_t sum = 0;            // range based for loop interoperability
+    for (auto &&i : hv1) {
+        sum += i;
+    }
+    EXPECT_EQ(sum, 5+6+7);
+
+    for (auto iter = hv1.begin(); iter < hv1.end(); ++iter) {
+        *iter += 10;
+    }
+    const hidl_vec<int32_t> &v4 = hv1;
+    sum = 0;
+    for (const auto &i : v4) {
+        sum += i;
+    }
+    EXPECT_EQ(sum, 15+16+17);
+}
+
+TEST(LibHidlTest, VecEqTest) {
+    android::hardware::hidl_vec<int32_t> hv1{5, 6, 7};
+    android::hardware::hidl_vec<int32_t> hv2{5, 6, 7};
+    android::hardware::hidl_vec<int32_t> hv3{5, 6, 8};
+
+    // use the == and != operator intentionally here
+    EXPECT_TRUE(hv1 == hv2);
+    EXPECT_TRUE(hv1 != hv3);
+}
+
+TEST(LibHidlTest, VecEqInitializerTest) {
+    std::vector<int32_t> reference{5, 6, 7};
+    android::hardware::hidl_vec<int32_t> hv1{1, 2, 3};
+    hv1 = {5, 6, 7};
+    android::hardware::hidl_vec<int32_t> hv2;
+    hv2 = {5, 6, 7};
+    android::hardware::hidl_vec<int32_t> hv3;
+    hv3 = {5, 6, 8};
+
+    // use the == and != operator intentionally here
+    EXPECT_TRUE(hv1 == hv2);
+    EXPECT_TRUE(hv1 == reference);
+    EXPECT_TRUE(hv1 != hv3);
+}
+
+TEST(LibHidlTest, VecRangeCtorTest) {
+    struct ConvertibleType {
+        int val;
+
+        explicit ConvertibleType(int val) : val(val) {}
+        explicit operator int() const { return val; }
+        bool operator==(const int& other) const { return val == other; }
+    };
+
+    std::vector<ConvertibleType> input{
+        ConvertibleType(1), ConvertibleType(2), ConvertibleType(3),
+    };
+
+    android::hardware::hidl_vec<int> hv(input.begin(), input.end());
+
+    EXPECT_EQ(input.size(), hv.size());
+    int sum = 0;
+    for (unsigned i = 0; i < input.size(); i++) {
+        EXPECT_EQ(input[i], hv[i]);
+        sum += hv[i];
+    }
+    EXPECT_EQ(sum, 1 + 2 + 3);
+}
+
+struct FailsIfCopied {
+    FailsIfCopied() {}
+
+    // add failure if copied since in general this can be expensive
+    FailsIfCopied(const FailsIfCopied& o) { *this = o; }
+    FailsIfCopied& operator=(const FailsIfCopied&) {
+        ADD_FAILURE() << "FailsIfCopied copied";
+        return *this;
+    }
+
+    // fine to move this type since in general this is cheaper
+    FailsIfCopied(FailsIfCopied&& o) = default;
+    FailsIfCopied& operator=(FailsIfCopied&&) = default;
+};
+
+TEST(LibHidlTest, VecResizeNoCopy) {
+    using android::hardware::hidl_vec;
+
+    hidl_vec<FailsIfCopied> noCopies;
+    noCopies.resize(3);  // instantiates three elements
+
+    FailsIfCopied* oldPointer = noCopies.data();
+
+    noCopies.resize(6);  // should move three elements, not copy
+
+    // oldPointer should be invalidated at this point.
+    // hidl_vec doesn't currently try to realloc but if it ever switches
+    // to an implementation that does, this test wouldn't do anything.
+    EXPECT_NE(oldPointer, noCopies.data());
+}
+
+TEST(LibHidlTest, VecFindTest) {
+    using android::hardware::hidl_vec;
+    hidl_vec<int32_t> hv1 = {10, 20, 30, 40};
+    const hidl_vec<int32_t> hv2 = {1, 2, 3, 4};
+
+    auto it = hv1.find(20);
+    EXPECT_EQ(20, *it);
+    *it = 21;
+    EXPECT_EQ(21, *it);
+    it = hv1.find(20);
+    EXPECT_EQ(hv1.end(), it);
+    it = hv1.find(21);
+    EXPECT_EQ(21, *it);
+
+    auto cit = hv2.find(4);
+    EXPECT_EQ(4, *cit);
+}
+
+TEST(LibHidlTest, VecContainsTest) {
+    using android::hardware::hidl_vec;
+    hidl_vec<int32_t> hv1 = {10, 20, 30, 40};
+    const hidl_vec<int32_t> hv2 = {0, 1, 2, 3, 4};
+
+    EXPECT_TRUE(hv1.contains(10));
+    EXPECT_TRUE(hv1.contains(40));
+    EXPECT_FALSE(hv1.contains(1));
+    EXPECT_FALSE(hv1.contains(0));
+    EXPECT_TRUE(hv2.contains(0));
+    EXPECT_FALSE(hv2.contains(10));
+
+    hv1[0] = 11;
+    EXPECT_FALSE(hv1.contains(10));
+    EXPECT_TRUE(hv1.contains(11));
+}
+
 TEST(LibHidlTest, ArrayTest) {
     using android::hardware::hidl_array;
     int32_t array[] = {5, 6, 7};
@@ -290,3 +434,135 @@ TEST(LibHidlTest, MultiDimStdArrayTest) {
     hidl_array<int32_t, 2, 3> array2 = stdArray;
     EXPECT_2DARRAYEQ(array, array2, 2, 3);
 }
+
+TEST(LibHidlTest, HidlVersionTest) {
+    using android::hardware::hidl_version;
+    hidl_version v1_0{1, 0};
+    EXPECT_EQ(1, v1_0.get_major());
+    EXPECT_EQ(0, v1_0.get_minor());
+    hidl_version v2_0{2, 0};
+    hidl_version v2_1{2, 1};
+    hidl_version v2_2{2, 2};
+    hidl_version v3_0{3, 0};
+    hidl_version v3_0b{3, 0};
+
+    EXPECT_TRUE(v1_0 < v2_0);
+    EXPECT_TRUE(v1_0 != v2_0);
+    EXPECT_TRUE(v2_0 < v2_1);
+    EXPECT_TRUE(v2_1 < v3_0);
+    EXPECT_TRUE(v2_0 > v1_0);
+    EXPECT_TRUE(v2_0 != v1_0);
+    EXPECT_TRUE(v2_1 > v2_0);
+    EXPECT_TRUE(v3_0 > v2_1);
+    EXPECT_TRUE(v3_0 == v3_0b);
+    EXPECT_FALSE(v3_0 != v3_0b);
+    EXPECT_TRUE(v3_0 <= v3_0b);
+    EXPECT_TRUE(v2_2 <= v3_0);
+    EXPECT_TRUE(v3_0 >= v3_0b);
+    EXPECT_TRUE(v3_0 >= v2_2);
+}
+
+TEST(LibHidlTest, ReturnMoveTest) {
+    using ::android::DEAD_OBJECT;
+    using ::android::hardware::Return;
+    using ::android::hardware::Status;
+    Return<void> ret{Status::fromStatusT(DEAD_OBJECT)};
+    ret.isOk();
+    ret = {Status::fromStatusT(DEAD_OBJECT)};
+    ret.isOk();
+}
+
+TEST(LibHidlTest, ReturnTest) {
+    using ::android::DEAD_OBJECT;
+    using ::android::hardware::Return;
+    using ::android::hardware::Status;
+    using ::android::hardware::hidl_string;
+
+    EXPECT_FALSE(Return<void>(Status::fromStatusT(DEAD_OBJECT)).isOk());
+    EXPECT_TRUE(Return<void>(Status::ok()).isOk());
+
+    hidl_string one = "1";
+    hidl_string two = "2";
+    Return<hidl_string> ret = Return<hidl_string>(
+        Status::fromStatusT(DEAD_OBJECT));
+
+    EXPECT_EQ(one, Return<hidl_string>(one).withDefault(two));
+    EXPECT_EQ(two, ret.withDefault(two));
+
+    hidl_string&& moved = ret.withDefault(std::move(two));
+    EXPECT_EQ("2", moved);
+
+    const hidl_string three = "3";
+    EXPECT_EQ(three, ret.withDefault(three));
+}
+
+TEST(LibHidlTest, ReturnDies) {
+    using ::android::hardware::Return;
+    using ::android::hardware::Status;
+
+    EXPECT_DEATH({ Return<void>(Status::fromStatusT(-EBUSY)); }, "");
+    EXPECT_DEATH({ Return<void>(
+        Status::fromStatusT(-EBUSY)).isDeadObject(); }, "");
+    EXPECT_DEATH(
+            {
+                Return<int> ret = Return<int>(Status::fromStatusT(-EBUSY));
+                int foo = ret;  // should crash here
+                (void)foo;
+                ret.isOk();
+            },
+            "");
+}
+
+TEST(LibHidlTest, DetectUncheckedReturn) {
+    using ::android::hardware::HidlReturnRestriction;
+    using ::android::hardware::Return;
+    using ::android::hardware::setProcessHidlReturnRestriction;
+    using ::android::hardware::Status;
+
+    setProcessHidlReturnRestriction(HidlReturnRestriction::FATAL_IF_UNCHECKED);
+
+    EXPECT_DEATH(
+            {
+                auto ret = Return<void>(Status::ok());
+                (void)ret;
+            },
+            "");
+    EXPECT_DEATH(
+            {
+                auto ret = Return<void>(Status::ok());
+                ret = Return<void>(Status::ok());
+                ret.isOk();
+            },
+            "");
+
+    auto ret = Return<void>(Status::ok());
+    (void)ret.isOk();
+    ret = Return<void>(Status::ok());
+    (void)ret.isOk();
+
+    setProcessHidlReturnRestriction(HidlReturnRestriction::NONE);
+}
+
+std::string toString(const ::android::hardware::Status &s) {
+    using ::android::hardware::operator<<;
+    std::ostringstream oss;
+    oss << s;
+    return oss.str();
+}
+
+TEST(LibHidlTest, StatusStringTest) {
+    using ::android::DEAD_OBJECT;
+    using ::android::hardware::Status;
+    using ::testing::HasSubstr;
+
+    EXPECT_EQ(toString(Status::ok()), "No error");
+
+    EXPECT_THAT(toString(
+        Status::fromStatusT(DEAD_OBJECT)), HasSubstr("DEAD_OBJECT"));
+
+    EXPECT_THAT(toString(Status::fromStatusT(-EBUSY)), HasSubstr("busy"));
+
+    EXPECT_THAT(toString(Status::fromExceptionCode(Status::EX_NULL_POINTER)),
+            HasSubstr("EX_NULL_POINTER"));
+}
+

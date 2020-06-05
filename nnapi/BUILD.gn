@@ -178,10 +178,16 @@ static_library("libhidl") {
     "${libhidl_src}/base/include",
     "${libhidl_src}/libhidlmemory/include",
   ]
-  deps = [ ":libbase" ]
+  deps = [
+    ":libbase",
+    ":libutils",
+  ]
   sources = [
     "${libhidl_src}/base/HidlInternal.cpp",
     "${libhidl_src}/base/HidlSupport.cpp",
+    "${libhidl_src}/base/Status.cpp",
+    "${libhidl_src}/libhidlmemory/HidlMemoryToken.cpp",
+    "${libhidl_src}/libhidlmemory/mapping.cpp",
   ]
 }
 
