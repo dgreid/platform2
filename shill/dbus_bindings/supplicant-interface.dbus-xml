@@ -62,11 +62,6 @@
     <method name="TDLSTeardown">
       <arg name="peer" type="s" direction="in"/>
     </method>
-    <method name="EnableMACAddressRandomization">
-      <arg name="mask" type="ay" direction="in"/>
-    </method>
-    <method name="DisableMACAddressRandomization">
-    </method>
     <property name="Capabilities" type="a{sv}" access="read"/>
     <property name="State" type="s" access="read"/>
     <property name="Scanning" type="b" access="read"/>

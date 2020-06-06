@@ -303,15 +303,8 @@ bool SupplicantInterfaceProxy::EnableMacAddressRandomization(
     mac_randomization_args.insert(
         std::pair<std::string, std::vector<uint8_t>>("sched_scan", mask));
 
-  // First try setting the MACRandomizationMask property
-  // (wpa_supplicant-2.8 interface).
-  // If that fails, try the EnableMACAddressRandomization method
-  // (wpa_supplicant-2.6 interface).
-  // TODO(crbug.com/985122): Remove supplicant-2.6 method call after
-  // uprev to supplicant-2.8 is complete.
   if (!(properties_->mac_address_randomization_mask.SetAndBlock(
-            mac_randomization_args) ||
-        interface_proxy_->EnableMACAddressRandomization(mask, &error))) {
+          mac_randomization_args))) {
     LOG(ERROR) << "Failed to enable MAC address randomization: "
                << error->GetCode() << " " << error->GetMessage();
     return false;
@@ -324,16 +317,8 @@ bool SupplicantInterfaceProxy::DisableMacAddressRandomization() {
   brillo::ErrorPtr error;
   // Send an empty map to disable Randomization for all scan types.
   std::map<std::string, std::vector<uint8_t>> mac_randomization_empty;
-
-  // First try setting the MACRandomizationMask property
-  // (wpa_supplicant-2.8 interface).
-  // If that fails, try the DisableMACAddressRandomization method
-  // (wpa_supplicant-2.6 interface).
-  // TODO(crbug.com/985122): Remove supplicant-2.6 method call after
-  // uprev to supplicant-2.8 is complete.
   if (!(properties_->mac_address_randomization_mask.SetAndBlock(
-            mac_randomization_empty) ||
-        interface_proxy_->DisableMACAddressRandomization(&error))) {
+          mac_randomization_empty))) {
     LOG(ERROR) << "Failed to enable MAC address randomization: "
                << error->GetCode() << " " << error->GetMessage();
     return false;
