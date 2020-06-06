@@ -68,14 +68,6 @@ std::string MountFailureCollector::StorageDeviceTypeToString(
   }
 }
 
-// At the moment, mount failure collection occurs early in the boot process (and
-// as a result of inability to setup the stateful/encrypted stateful
-// partitions).
-void MountFailureCollector::Initialize(
-    IsFeedbackAllowedFunction is_feedback_allowed_function, bool early) {
-  CrashCollector::Initialize(is_feedback_allowed_function, early);
-}
-
 bool MountFailureCollector::Collect(bool is_mount_failure) {
   if (!is_feedback_allowed_function_()) {
     LOG(INFO) << "Not collecting clobber report; no user consent";

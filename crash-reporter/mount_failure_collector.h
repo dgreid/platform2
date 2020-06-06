@@ -25,8 +25,6 @@ class MountFailureCollector : public CrashCollector {
   explicit MountFailureCollector(StorageDeviceType device_type);
   ~MountFailureCollector() override = default;
 
-  void Initialize(IsFeedbackAllowedFunction is_feedback_allowed, bool early);
-
   bool Collect(bool is_mount_failure);
 
   static StorageDeviceType ValidateStorageDeviceType(const std::string& device);
