@@ -106,7 +106,6 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   uint16_t physical_mode() const;
   const std::string& network_mode() const;
   const std::string& security_mode() const;
-  bool ieee80211w_required() const;
   bool has_rsn_property() const;
   bool has_wpa_property() const;
   bool has_tethering_signature() const;
@@ -127,10 +126,8 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   FRIEND_TEST(WiFiEndpointTest, HasTetheringSignature);
   FRIEND_TEST(WiFiProviderTest, OnEndpointAddedWithSecurity);
   FRIEND_TEST(WiFiProviderTest, OnEndpointUpdated);
-  FRIEND_TEST(WiFiServiceTest, ConnectTaskWPA80211w);
   FRIEND_TEST(WiFiServiceTest, GetTethering);
   FRIEND_TEST(WiFiServiceUpdateFromEndpointsTest, EndpointModified);
-  FRIEND_TEST(WiFiServiceUpdateFromEndpointsTest, Ieee80211w);
   // for physical_mode_
   FRIEND_TEST(WiFiServiceUpdateFromEndpointsTest, PhysicalMode);
   // for 802.11k/r/v features
@@ -177,14 +174,12 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   // elements and data rates live in |properties|.
   static Metrics::WiFiNetworkPhyMode DeterminePhyModeFromFrequency(
       const KeyValueStore& properties, uint16_t frequency);
-  // Parse information elements to determine the physical mode, vendor
-  // information and IEEE 802.11w requirement information associated
-  // with the AP.  Returns true if a physical mode was determined from
-  // the IE elements, false otherwise.
+  // Parse information elements to determine the physical mode and other
+  // information associated with the AP.  Returns true if a physical mode was
+  // determined from the IE elements, false otherwise.
   static bool ParseIEs(const KeyValueStore& properties,
                        Metrics::WiFiNetworkPhyMode* phy_mode,
                        VendorInformation* vendor_information,
-                       bool* ieee80211w_required,
                        std::string* country_code,
                        Ap80211krvSupport* krv_support,
                        HS20Information* hs20_information);
@@ -202,18 +197,14 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
       std::vector<uint8_t>::const_iterator ie,
       std::vector<uint8_t>::const_iterator end,
       Ap80211krvSupport* krv_support);
-  // Parse a WPA information element and set *|ieee80211w_required| to true
-  // if IEEE 802.11w is required by this AP.
+  // Parse a WPA information element.
   static void ParseWPACapabilities(std::vector<uint8_t>::const_iterator ie,
                                    std::vector<uint8_t>::const_iterator end,
-                                   bool* ieee80211w_required,
                                    bool* found_ft_cipher);
-  // Parse a single vendor information element.  If this is a WPA vendor
-  // element, call ParseWPACapabilites with |ieee80211w_required|.
+  // Parse a single vendor information element.
   static void ParseVendorIE(std::vector<uint8_t>::const_iterator ie,
                             std::vector<uint8_t>::const_iterator end,
                             VendorInformation* vendor_information,
-                            bool* ieee80211w_required,
                             HS20Information* hs20_information);
 
   // Assigns a value to |has_tethering_signature_|.
@@ -238,7 +229,6 @@ class WiFiEndpoint : public base::RefCounted<WiFiEndpoint> {
   std::string network_mode_;
   std::string security_mode_;
   VendorInformation vendor_information_;
-  bool ieee80211w_required_;
   bool has_rsn_property_;
   bool has_wpa_property_;
   bool has_tethering_signature_;

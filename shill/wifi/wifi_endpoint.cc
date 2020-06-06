@@ -48,7 +48,6 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
       bssid_hex_(base::HexEncode(bssid_.data(), bssid_.size())),
       frequency_(0),
       physical_mode_(Metrics::kWiFiNetworkPhyModeUndef),
-      ieee80211w_required_(false),
       metrics_(metrics),
       control_interface_(control_interface),
       device_(device),
@@ -66,9 +65,8 @@ WiFiEndpoint::WiFiEndpoint(ControlInterface* control_interface,
   }
 
   Metrics::WiFiNetworkPhyMode phy_mode = Metrics::kWiFiNetworkPhyModeUndef;
-  if (!ParseIEs(properties, &phy_mode, &vendor_information_,
-                &ieee80211w_required_, &country_code_, &krv_support_,
-                &hs20_information_)) {
+  if (!ParseIEs(properties, &phy_mode, &vendor_information_, &country_code_,
+                &krv_support_, &hs20_information_)) {
     phy_mode = DeterminePhyModeFromFrequency(properties, frequency_);
   }
   physical_mode_ = phy_mode;
@@ -253,10 +251,6 @@ const string& WiFiEndpoint::security_mode() const {
   return security_mode_;
 }
 
-bool WiFiEndpoint::ieee80211w_required() const {
-  return ieee80211w_required_;
-}
-
 bool WiFiEndpoint::has_rsn_property() const {
   return has_rsn_property_;
 }
@@ -439,7 +433,6 @@ Metrics::WiFiNetworkPhyMode WiFiEndpoint::DeterminePhyModeFromFrequency(
 bool WiFiEndpoint::ParseIEs(const KeyValueStore& properties,
                             Metrics::WiFiNetworkPhyMode* phy_mode,
                             VendorInformation* vendor_information,
-                            bool* ieee80211w_required,
                             string* country_code,
                             Ap80211krvSupport* krv_support,
                             HS20Information* hs20_information) {
@@ -518,12 +511,11 @@ bool WiFiEndpoint::ParseIEs(const KeyValueStore& properties,
         found_rm_enabled_cap = true;
         break;
       case IEEE_80211::kElemIdRSN:
-        ParseWPACapabilities(it + 2, it + ie_len, ieee80211w_required,
-                             &found_ft_cipher);
+        ParseWPACapabilities(it + 2, it + ie_len, &found_ft_cipher);
         break;
       case IEEE_80211::kElemIdVendor:
         ParseVendorIE(it + 2, it + ie_len, vendor_information,
-                      ieee80211w_required, hs20_information);
+                      hs20_information);
         break;
       case IEEE_80211::kElemIdVHTCap:
       case IEEE_80211::kElemIdVHTOperation:
@@ -597,7 +589,6 @@ void WiFiEndpoint::ParseExtendedCapabilities(
 // static
 void WiFiEndpoint::ParseWPACapabilities(vector<uint8_t>::const_iterator ie,
                                         vector<uint8_t>::const_iterator end,
-                                        bool* ieee80211w_required,
                                         bool* found_ft_cipher) {
   // Format of an RSN Information Element:
   //    2             4
@@ -665,27 +656,12 @@ void WiFiEndpoint::ParseWPACapabilities(vector<uint8_t>::const_iterator ie,
     // Skip over the cipher selectors.
     ie += skip_length;
   }
-
-  if (std::distance(ie, end) < IEEE_80211::kRSNIECapabilitiesLen) {
-    return;
-  }
-
-  // Retrieve a little-endian capabilities bitfield.
-  uint16_t capabilities = *ie | (*(ie + 1) << 8);
-
-  if (capabilities & IEEE_80211::kRSNCapabilityFrameProtectionRequired &&
-      ieee80211w_required) {
-    // Never set this value to false, since there may be multiple RSN
-    // information elements.
-    *ieee80211w_required = true;
-  }
 }
 
 // static
 void WiFiEndpoint::ParseVendorIE(vector<uint8_t>::const_iterator ie,
                                  vector<uint8_t>::const_iterator end,
                                  VendorInformation* vendor_information,
-                                 bool* ieee80211w_required,
                                  HS20Information* hs20_information) {
   // Format of an vendor-specific information element (with type
   // and length field for the IE removed by the caller):
@@ -763,9 +739,6 @@ void WiFiEndpoint::ParseVendorIE(vector<uint8_t>::const_iterator ie,
       // Parse out the version number from the Hotspot Configuration field.
       hs20_information->version = (*ie & 0xf0) >> 4;
     }
-  } else if (oui == IEEE_80211::kOUIVendorMicrosoft &&
-             oui_type == IEEE_80211::kOUIMicrosoftWPA) {
-    ParseWPACapabilities(ie, end, ieee80211w_required, nullptr);
   } else if (oui != IEEE_80211::kOUIVendorEpigram &&
              oui != IEEE_80211::kOUIVendorMicrosoft) {
     vendor_information->oui_set.insert(oui);

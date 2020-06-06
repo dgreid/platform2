@@ -502,25 +502,6 @@ TEST_F(WiFiServiceTest, ConnectTask8021xWithMockEap) {
   service->GetSupplicantConfigurationParameters();
 }
 
-TEST_F(WiFiServiceTest, ConnectTaskWPA80211w) {
-  WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
-  WiFiEndpointRefPtr endpoint =
-      MakeOpenEndpoint("a", "00:00:00:00:00:01", 0, 0);
-  endpoint->ieee80211w_required_ = true;
-  wifi_service->AddEndpoint(endpoint);
-  Error error;
-  wifi_service->SetPassphrase("0:mumblemumblem", &error);
-  EXPECT_CALL(*wifi(), ConnectTo(wifi_service.get(), _));
-  wifi_service->Connect(nullptr, "in test");
-
-  KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-  EXPECT_TRUE(
-      params.Contains<string>(WPASupplicant::kPropertySecurityProtocol));
-  EXPECT_TRUE(params.Contains<string>(WPASupplicant::kPropertyPreSharedKey));
-  EXPECT_TRUE(
-      params.Contains<uint32_t>(WPASupplicant::kNetworkPropertyIeee80211w));
-}
-
 MATCHER_P(WEPSecurityArgsKeyIndex, index, "") {
   uint32_t index_u32 = index;
   return arg.template Contains<string>(WPASupplicant::kPropertyAuthAlg) &&
@@ -1409,20 +1390,6 @@ TEST_F(WiFiServiceUpdateFromEndpointsTest, EndpointModified) {
   ok_endpoint->signal_strength_ = kGoodEndpointSignal + 2;
   service->NotifyEndpointUpdated(ok_endpoint);
   Mock::VerifyAndClearExpectations(&adaptor);
-}
-
-TEST_F(WiFiServiceUpdateFromEndpointsTest, Ieee80211w) {
-  EXPECT_CALL(adaptor, EmitUint16Changed(_, _)).Times(AnyNumber());
-  EXPECT_CALL(adaptor, EmitStringChanged(_, _)).Times(AnyNumber());
-  EXPECT_CALL(adaptor, EmitUint8Changed(_, _)).Times(AnyNumber());
-  EXPECT_CALL(adaptor, EmitBoolChanged(_, _)).Times(AnyNumber());
-  service->AddEndpoint(ok_endpoint);
-  EXPECT_FALSE(service->ieee80211w_required());
-  good_endpoint->ieee80211w_required_ = true;
-  service->AddEndpoint(good_endpoint);
-  EXPECT_TRUE(service->ieee80211w_required());
-  service->RemoveEndpoint(good_endpoint);
-  EXPECT_TRUE(service->ieee80211w_required());
 }
 
 TEST_F(WiFiServiceUpdateFromEndpointsTest, PhysicalMode) {

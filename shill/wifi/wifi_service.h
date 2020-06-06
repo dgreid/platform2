@@ -112,7 +112,6 @@ class WiFiService : public Service {
   virtual void ResetSuspectedCredentialFailures();
 
   bool hidden_ssid() const { return hidden_ssid_; }
-  bool ieee80211w_required() const { return ieee80211w_required_; }
 
   void InitializeCustomMetrics() const;
   void SendPostReadyStateMetrics(
@@ -183,7 +182,6 @@ class WiFiService : public Service {
   FRIEND_TEST(WiFiServiceTest, ConnectTaskRSN);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskWEP);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskWPA);
-  FRIEND_TEST(WiFiServiceTest, ConnectTaskWPA80211w);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskFT);
   FRIEND_TEST(WiFiServiceTest, GetTethering);
   FRIEND_TEST(WiFiServiceTest, IsAutoConnectable);
@@ -333,9 +331,6 @@ class WiFiService : public Service {
   std::set<WiFiEndpointConstRefPtr> endpoints_;
   WiFiEndpointConstRefPtr current_endpoint_;
   const std::vector<uint8_t> ssid_;
-  // Track whether IEEE 802.11w (Protected Management Frame) support is
-  // mandated by one or more endpoints we have seen that provide this service.
-  bool ieee80211w_required_;
   // Flag indicating if service disconnect is initiated by user for
   // connecting to other service.
   bool expecting_disconnect_;

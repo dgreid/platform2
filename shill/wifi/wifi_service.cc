@@ -79,7 +79,6 @@ WiFiService::WiFiService(Manager* manager,
       cipher_8021x_(kCryptoNone),
       suspected_credential_failures_(0),
       ssid_(ssid),
-      ieee80211w_required_(false),
       expecting_disconnect_(false),
       certificate_file_(new CertificateFile()),
       provider_(provider) {
@@ -105,8 +104,6 @@ WiFiService::WiFiService(Manager* manager,
   store->RegisterConstString(kCountryProperty, &country_code_);
   store->RegisterConstStringmap(kWifiVendorInformationProperty,
                                 &vendor_information_);
-  store->RegisterConstBool(kWifiProtectedManagementFrameRequiredProperty,
-                           &ieee80211w_required_);
 
   hex_ssid_ = base::HexEncode(ssid_.data(), ssid_.size());
   store->RegisterConstString(kWifiHexSsid, &hex_ssid_);
@@ -694,14 +691,6 @@ void WiFiService::UpdateFromEndpoints() {
   }
 
   SetWiFi(wifi);
-
-  for (const auto& endpoint : endpoints_) {
-    if (endpoint->ieee80211w_required()) {
-      // Never reset ieee80211w_required_ to false, so we track whether we have
-      // ever seen an AP that requires 802.11w.
-      ieee80211w_required_ = true;
-    }
-  }
 
   set<uint16_t> frequency_set;
   for (const auto& endpoint : endpoints_) {
