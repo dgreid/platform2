@@ -43,9 +43,9 @@ bool GenericFailureCollector::LoadGenericFailure(std::string* content,
   return true;
 }
 
-bool GenericFailureCollector::Collect(const std::string& exec_name,
-                                      const std::string& log_key_name,
-                                      base::Optional<int> weight) {
+bool GenericFailureCollector::CollectFull(const std::string& exec_name,
+                                          const std::string& log_key_name,
+                                          base::Optional<int> weight) {
   std::string reason = "normal collection";
   bool feedback = true;
   if (util::IsDeveloperImage()) {

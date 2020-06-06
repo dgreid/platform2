@@ -8,11 +8,15 @@
 #include <string>
 #include <utility>
 
+#include <base/bind.h>
+#include <base/bind_helpers.h>
+#include <base/callback.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/strings/stringprintf.h>
 #include <base/message_loop/message_loop.h>
+#include <base/optional.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 #include <libminijail.h>
@@ -83,30 +87,29 @@ bool SetUpLockFile() {
 // Set up necessary crash reporter state.
 // This function will change ownership and permissions on many files (to allow
 // `crash` to read/write them) so it MUST run as root.
-int Initialize(UserCollector* user_collector, bool early) {
+// Return true on success.
+bool InitializeSystem(UserCollector* user_collector, bool early) {
   // Try to create the lock file for crash_sender. Creating this early ensures
   // that no one else can make a directory or such with this name. If the lock
   // file isn't a normal file, crash_sender will never work correctly.
   if (!SetUpLockFile()) {
     LOG(ERROR) << "Couldn't set up lock file";
-    return 1;
+    return false;
   }
 
   // Set up all the common crash state directories first.  If we can't guarantee
   // these basic paths, just give up & don't turn on anything else.
-  if (!CrashCollector::InitializeSystemCrashDirectories(early))
-    return 1;
+  if (!CrashCollector::InitializeSystemCrashDirectories(early)) {
+    return false;
+  }
 
   // Set up metrics flag directory. Returns with non-zero if we cannot create
   // it.
-  if (!CrashCollector::InitializeSystemMetricsDirectories())
-    return 1;
+  if (!CrashCollector::InitializeSystemMetricsDirectories()) {
+    return false;
+  }
 
-  int ret = 0;
-
-  if (!user_collector->Enable(early))
-    ret = 1;
-  return ret;
+  return user_collector->Enable(early);
 }
 
 int BootCollect(KernelCollector* kernel_collector,
@@ -159,148 +162,6 @@ int BootCollect(KernelCollector* kernel_collector,
   TouchFile(FilePath(kBootCollectorDone));
 
   return 0;
-}
-
-int HandleUserCrash(UserCollector* user_collector,
-                    const UserCollectorBase::CrashAttributes& attrs) {
-  // Accumulate logs to help in diagnosing failures during user collection.
-  brillo::LogToString(true);
-  // Handle the crash, get the name of the process from procfs.
-  bool handled = user_collector->HandleCrash(attrs, nullptr);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-#if USE_CHEETS
-int HandleArcCrash(ArcCollector* arc_collector,
-                   const UserCollectorBase::CrashAttributes& attrs) {
-  brillo::LogToString(true);
-  bool handled = arc_collector->HandleCrash(attrs, nullptr);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleArcJavaCrash(ArcCollector* arc_collector,
-                       const std::string& crash_type,
-                       const ArcCollector::BuildProperty& build_property) {
-  brillo::LogToString(true);
-  bool handled = arc_collector->HandleJavaCrash(crash_type, build_property);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-#endif
-
-int HandleChromeCrash(ChromeCollector* chrome_collector,
-                      const std::string& chrome_dump_file,
-                      pid_t pid,
-                      uid_t uid,
-                      const std::string& exe) {
-  CHECK(!chrome_dump_file.empty()) << "--chrome= must be set";
-
-  brillo::LogToString(true);
-  bool handled =
-      chrome_collector->HandleCrash(FilePath(chrome_dump_file), pid, uid, exe);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleChromeCrashThroughMemfd(ChromeCollector* chrome_collector,
-                                  int memfd,
-                                  pid_t pid,
-                                  uid_t uid,
-                                  const std::string& exe,
-                                  const std::string& dump_dir) {
-  CHECK(memfd >= 0) << "--chrome_memfd= must be set";
-
-  brillo::LogToString(true);
-  bool handled =
-      chrome_collector->HandleCrashThroughMemfd(memfd, pid, uid, exe, dump_dir);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleUdevCrash(UdevCollector* udev_collector,
-                    const std::string& udev_event) {
-  // Handle a crash indicated by a udev event.
-  CHECK(!udev_event.empty()) << "--udev= must be set";
-
-  // Accumulate logs to help in diagnosing failures during user collection.
-  brillo::LogToString(true);
-  bool handled = udev_collector->HandleCrash(udev_event);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleKernelWarning(KernelWarningCollector* kernel_warning_collector,
-                        KernelWarningCollector::WarningType type) {
-  // Accumulate logs to help in diagnosing failures during collection.
-  brillo::LogToString(true);
-  bool handled = kernel_warning_collector->Collect(type);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleSuspendFailure(GenericFailureCollector* suspend_failure_collector) {
-  // Accumulate logs to help in diagnosing failures during collection.
-  brillo::LogToString(true);
-  bool handled = suspend_failure_collector->Collect(
-      GenericFailureCollector::kSuspendFailure);
-  brillo::LogToString(false);
-  return handled ? 0 : 1;
-}
-
-int HandleServiceFailure(GenericFailureCollector* service_failure_collector,
-                         std::string exec_name,
-                         std::string log_entry_name) {
-  // Accumulate logs to help in diagnosing failures during collection.
-  brillo::LogToString(true);
-  bool handled = service_failure_collector->Collect(
-      exec_name, log_entry_name, util::GetServiceFailureWeight());
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleSELinuxViolation(
-    SELinuxViolationCollector* selinux_violation_collector) {
-  brillo::LogToString(true);
-  bool handled = selinux_violation_collector->Collect();
-  brillo::LogToString(false);
-  return handled ? 0 : 1;
-}
-
-int HandleVmCrash(VmCollector* vm_collector, pid_t pid) {
-  // Accumulate logs to help in diagnosing failures during collection.
-  brillo::LogToString(true);
-  bool handled = vm_collector->Collect(pid);
-  brillo::LogToString(false);
-  if (!handled)
-    return 1;
-  return 0;
-}
-
-int HandleCrashReporterFailure(
-    CrashReporterFailureCollector* crash_reporter_failure_collector) {
-  // Accumulate logs to help in diagnosing failures during collection.
-  brillo::LogToString(true);
-  bool handled = crash_reporter_failure_collector->Collect();
-  brillo::LogToString(false);
-  return handled ? 0 : 1;
 }
 
 // Ensure stdout, stdin, and stderr are open file descriptors.  If
@@ -358,6 +219,29 @@ void EnterSandbox(bool write_proc, bool log_to_stderr) {
 }
 
 }  // namespace
+
+// Information to invoke a specific call on a collector.
+struct InvocationInfo {
+  // True iff this callback should be invoked.
+  // Once this is true and we invoke the associated callback, main() returns,
+  // so only one handler can run for each execution of crash_reporter.
+  bool should_handle;
+  // Callback to invoke if |should_handle| is true. (can be null).
+  base::RepeatingCallback<bool()> cb;
+};
+
+// Information required to initialize and invoke a collector
+struct CollectorInfo {
+  // An un-owned pointer to the collector
+  CrashCollector* collector;
+  // Initialization function. If none is specified, invoke the default
+  // crash_collector Initialize().
+  base::RepeatingClosure init;
+  // List of handlers with associated conditions.
+  // If a particular condition is true, run init and the associated handler (if
+  // any). If there is no associated handler, keep going.
+  std::vector<InvocationInfo> handlers;
+};
 
 int main(int argc, char* argv[]) {
   DEFINE_bool(init, false, "Initialize crash logging");
@@ -457,14 +341,6 @@ int main(int argc, char* argv[]) {
   // Now that we've processed the command line, sandbox ourselves.
   EnterSandbox(FLAGS_init || FLAGS_clean_shutdown, FLAGS_log_to_stderr);
 
-  EphemeralCrashCollector ephemeral_crash_collector;
-  ephemeral_crash_collector.Initialize(IsFeedbackAllowed,
-                                       FLAGS_preserve_across_clobber);
-
-  MountFailureCollector mount_failure_collector(
-      MountFailureCollector::ValidateStorageDeviceType(FLAGS_mount_device));
-  mount_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
   // Decide if we should use Crash-Loop sending mode. If session_manager sees
   // several Chrome crashes in a brief period, it will log the user out. On the
   // last Chrome startup before it logs the user out, it will set the
@@ -486,62 +362,301 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  KernelCollector kernel_collector;
-  kernel_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-  ECCollector ec_collector;
-  ec_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-  BERTCollector bert_collector;
-  bert_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-#if USE_CHEETS
-  ArcCollector arc_collector;
-  arc_collector.Initialize(IsFeedbackAllowed,
-                           FLAGS_directory_failure, false /* early */);
-#endif
-  UserCollector user_collector;
-  user_collector.Initialize(my_path.value(), IsFeedbackAllowed,
-                            FLAGS_core2md_failure, FLAGS_directory_failure,
-                            FLAGS_early);
-  UncleanShutdownCollector unclean_shutdown_collector;
-  unclean_shutdown_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  UdevCollector udev_collector;
-  udev_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-  ChromeCollector chrome_collector(crash_sending_mode);
-  chrome_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  KernelWarningCollector kernel_warning_collector;
-  kernel_warning_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  GenericFailureCollector generic_failure_collector;
-  generic_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  SELinuxViolationCollector selinux_violation_collector;
-  selinux_violation_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  CrashReporterFailureCollector crash_reporter_failure_collector;
-  crash_reporter_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  VmCollector vm_collector;
-  vm_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  if (FLAGS_init) {
-    return Initialize(&user_collector, FLAGS_early);
+  UserCollectorBase::CrashAttributes user_crash_attrs;
+  if (!FLAGS_user.empty()) {
+    base::Optional<UserCollectorBase::CrashAttributes> attrs =
+        UserCollectorBase::ParseCrashAttributes(FLAGS_user);
+    if (!attrs.has_value()) {
+      LOG(ERROR) << "Invalid parameter: --user=" << FLAGS_user;
+      return 1;
+    }
+    user_crash_attrs = *attrs;
   }
 
+  std::vector<CollectorInfo> collectors;
+#if USE_CHEETS
+  ArcCollector arc_collector;
+
+  // Always initialize arc_collector so that we can use it to determine if the
+  // process is an arc process.
+  arc_collector.Initialize(IsFeedbackAllowed, FLAGS_directory_failure,
+                           false /* early */);
+  bool is_arc_process = !FLAGS_user.empty() && ArcCollector::IsArcRunning() &&
+                        arc_collector.IsArcProcess(user_crash_attrs.pid);
+
+  collectors.push_back({
+      .collector = &arc_collector,
+      .init = base::DoNothing(),
+      .handlers =
+          {{
+               .should_handle = is_arc_process,
+               .cb = base::BindRepeating(&ArcCollector::HandleCrash,
+                                         base::Unretained(&arc_collector),
+                                         user_crash_attrs, nullptr),
+           },
+           {
+               .should_handle = !FLAGS_arc_java_crash.empty(),
+               .cb = base::BindRepeating(
+                   &ArcCollector::HandleJavaCrash,
+                   base::Unretained(&arc_collector), FLAGS_arc_java_crash,
+                   ArcCollector::BuildProperty{
+                       .device = FLAGS_arc_device,
+                       .board = FLAGS_arc_board,
+                       .cpu_abi = FLAGS_arc_cpu_abi,
+                       .fingerprint = FLAGS_arc_fingerprint,
+                   }),
+           }},
+  });
+#else   // USE_CHEETS
+  bool is_arc_process = false;
+#endif  // USE_CHEETS
+
+  UserCollector user_collector;
+  collectors.push_back({
+      .collector = &user_collector,
+      .init = base::BindRepeating(
+          &UserCollector::Initialize, base::Unretained(&user_collector),
+          my_path.value(), IsFeedbackAllowed, FLAGS_core2md_failure,
+          FLAGS_directory_failure, FLAGS_early),
+      .handlers = {{
+                       // NOTE: This is not handling a crash; it's instead
+                       // initializing the entire crash reporting system.
+                       .should_handle = FLAGS_init,
+                       .cb = base::BindRepeating(InitializeSystem,
+                                                 &user_collector, FLAGS_early),
+                   },
+                   {
+                       .should_handle = FLAGS_clean_shutdown,
+                       // Leave cb unset: clean_shutdown requires other
+                       // collectors, so it's handled later.
+                   },
+                   {
+                       .should_handle = !FLAGS_user.empty() && !is_arc_process,
+                       .cb = base::BindRepeating(
+                           &UserCollector::HandleCrash,
+                           base::Unretained(&user_collector), user_crash_attrs,
+                           nullptr),
+                   }},
+  });
+
+  EphemeralCrashCollector ephemeral_crash_collector;
+  collectors.push_back({
+      .collector = &ephemeral_crash_collector,
+      .init =
+          base::BindRepeating(&EphemeralCrashCollector::Initialize,
+                              base::Unretained(&ephemeral_crash_collector),
+                              IsFeedbackAllowed, FLAGS_preserve_across_clobber),
+      .handlers =
+          {{
+               .should_handle = FLAGS_ephemeral_collect,
+               .cb = base::BindRepeating(
+                   &EphemeralCrashCollector::Collect,
+                   base::Unretained(&ephemeral_crash_collector)),
+           },
+           {
+               .should_handle = FLAGS_boot_collect,
+               // leave cb empty because boot_collect needs multiple collectors.
+               // It's handled separately at the end of main.
+           }},
+  });
+
+  MountFailureCollector mount_failure_collector(
+      MountFailureCollector::ValidateStorageDeviceType(FLAGS_mount_device));
+  collectors.push_back({
+      .collector = &mount_failure_collector,
+      .handlers = {{
+          .should_handle = FLAGS_mount_failure || FLAGS_umount_failure,
+          .cb = base::BindRepeating(&MountFailureCollector::Collect,
+                                    base::Unretained(&mount_failure_collector),
+                                    FLAGS_mount_failure),
+      }},
+  });
+
+  UncleanShutdownCollector unclean_shutdown_collector;
+  collectors.push_back({
+      .collector = &unclean_shutdown_collector,
+      .handlers = {{
+          .should_handle = FLAGS_boot_collect || FLAGS_clean_shutdown,
+          // leave cb empty because both of these need multiple collectors and
+          // are handled separately at the end of main.
+      }},
+  });
+
+  std::vector<InvocationInfo> boot_handlers = {{
+      .should_handle = FLAGS_boot_collect,
+      // leave cb empty because boot_collect needs multiple collectors and is
+      // handled separately at the end of main. should_handle is only true so
+      // the collector gets initialized.
+  }};
+
+  KernelCollector kernel_collector;
+  collectors.push_back({
+      .collector = &kernel_collector,
+      .handlers = boot_handlers,
+  });
+
+  ECCollector ec_collector;
+  collectors.push_back({
+      .collector = &ec_collector,
+      .handlers = boot_handlers,
+  });
+
+  BERTCollector bert_collector;
+  collectors.push_back({
+      .collector = &bert_collector,
+      .handlers = boot_handlers,
+  });
+
+  UdevCollector udev_collector;
+  collectors.push_back({.collector = &udev_collector,
+                        .handlers = {{
+                            .should_handle = !FLAGS_udev.empty(),
+                            .cb = base::BindRepeating(
+                                &UdevCollector::HandleCrash,
+                                base::Unretained(&udev_collector), FLAGS_udev),
+                        }}});
+
+  CHECK(FLAGS_chrome.empty() || FLAGS_chrome_memfd == -1)
+      << "--chrome= and --chrome_memfd= cannot be both set";
+
+  ChromeCollector chrome_collector(crash_sending_mode);
+  collectors.push_back({
+      .collector = &chrome_collector,
+      .handlers =
+          {{
+               .should_handle = !FLAGS_chrome.empty(),
+               .cb = base::BindRepeating(&ChromeCollector::HandleCrash,
+                                         base::Unretained(&chrome_collector),
+                                         FilePath(FLAGS_chrome), FLAGS_pid,
+                                         FLAGS_uid, FLAGS_exe),
+           },
+           {
+               .should_handle = FLAGS_chrome_memfd >= 0,
+               .cb = base::BindRepeating(
+                   &ChromeCollector::HandleCrashThroughMemfd,
+                   base::Unretained(&chrome_collector), FLAGS_chrome_memfd,
+                   FLAGS_pid, FLAGS_uid, FLAGS_exe, FLAGS_chrome_dump_dir),
+           }},
+  });
+
+  KernelWarningCollector kernel_warning_collector;
+  base::RepeatingCallback<bool(KernelWarningCollector::WarningType)>
+      kernel_warn_cb =
+          base::BindRepeating(&KernelWarningCollector::Collect,
+                              base::Unretained(&kernel_warning_collector));
+  collectors.push_back({
+      .collector = &kernel_warning_collector,
+      .handlers = {{
+                       .should_handle = FLAGS_kernel_warning,
+                       .cb = base::BindRepeating(
+                           kernel_warn_cb,
+                           KernelWarningCollector::WarningType::kGeneric),
+                   },
+                   {
+                       .should_handle = FLAGS_kernel_wifi_warning,
+                       .cb = base::BindRepeating(
+                           kernel_warn_cb,
+                           KernelWarningCollector::WarningType::kWifi),
+                   },
+                   {
+                       .should_handle = FLAGS_kernel_suspend_warning,
+                       .cb = base::BindRepeating(
+                           kernel_warn_cb,
+                           KernelWarningCollector::WarningType::kSuspend),
+                   }},
+  });
+
+  GenericFailureCollector generic_failure_collector;
+  collectors.push_back(
+      {.collector = &generic_failure_collector,
+       .handlers = {
+           {
+               .should_handle = FLAGS_suspend_failure,
+               .cb = base::BindRepeating(
+                   &GenericFailureCollector::Collect,
+                   base::Unretained(&generic_failure_collector),
+                   GenericFailureCollector::kSuspendFailure),
+           },
+           {
+               .should_handle = !FLAGS_arc_service_failure.empty(),
+               .cb = base::BindRepeating(
+                   &GenericFailureCollector::CollectFull,
+                   base::Unretained(&generic_failure_collector),
+                   StringPrintf("%s-%s",
+                                GenericFailureCollector::kArcServiceFailure,
+                                FLAGS_arc_service_failure.c_str()),
+                   GenericFailureCollector::kArcServiceFailure,
+                   util::GetServiceFailureWeight()),
+           },
+           {
+               .should_handle = !FLAGS_service_failure.empty(),
+               .cb = base::BindRepeating(
+                   &GenericFailureCollector::CollectFull,
+                   base::Unretained(&generic_failure_collector),
+                   StringPrintf("%s-%s",
+                                GenericFailureCollector::kServiceFailure,
+                                FLAGS_service_failure.c_str()),
+                   GenericFailureCollector::kServiceFailure,
+                   util::GetServiceFailureWeight()),
+           }}});
+
+  SELinuxViolationCollector selinux_violation_collector;
+  collectors.push_back({.collector = &selinux_violation_collector,
+                        .handlers = {{
+                            .should_handle = FLAGS_selinux_violation,
+                            .cb = base::BindRepeating(
+                                &SELinuxViolationCollector::Collect,
+                                base::Unretained(&selinux_violation_collector)),
+                        }}});
+
+  CrashReporterFailureCollector crash_reporter_failure_collector;
+  collectors.push_back(
+      {.collector = &crash_reporter_failure_collector,
+       .handlers = {{
+           .should_handle = FLAGS_crash_reporter_crashed,
+           .cb = base::BindRepeating(
+               &CrashReporterFailureCollector::Collect,
+               base::Unretained(&crash_reporter_failure_collector)),
+       }}});
+
+  VmCollector vm_collector;
+  collectors.push_back({.collector = &vm_collector,
+                        .handlers = {{
+                            .should_handle = FLAGS_vm_crash,
+                            .cb = base::BindRepeating(
+                                &VmCollector::Collect,
+                                base::Unretained(&vm_collector), FLAGS_vm_pid),
+                        }}});
+
+  for (const CollectorInfo& collector : collectors) {
+    bool ran_init = false;
+    for (const InvocationInfo& info : collector.handlers) {
+      if (info.should_handle) {
+        if (!ran_init) {
+          if (collector.init) {
+            collector.init.Run();
+          } else {
+            collector.collector->Initialize(IsFeedbackAllowed, FLAGS_early);
+          }
+          ran_init = true;
+        }
+        if (info.cb) {
+          // Accumulate logs to a string to help in diagnosing failures during
+          // collection.
+          brillo::LogToString(true);
+          bool handled = info.cb.Run();
+          brillo::LogToString(false);
+          return handled ? 0 : 1;
+        }
+      }
+    }
+  }
+
+  // These special cases (which use multiple collectors) are at the end so that
+  // it's clear that all relevant collectors have been initialized.
   if (FLAGS_boot_collect) {
     return BootCollect(&kernel_collector, &ec_collector, &bert_collector,
                        &unclean_shutdown_collector, &ephemeral_crash_collector);
-  }
-
-  // Attempt to persist crashes into more persistent storage.
-  if (FLAGS_ephemeral_collect) {
-    ephemeral_crash_collector.Collect();
-    return 0;
-  }
-
-  if (FLAGS_mount_failure || FLAGS_umount_failure) {
-    mount_failure_collector.Collect(FLAGS_mount_failure);
-    return 0;
   }
 
   if (FLAGS_clean_shutdown) {
@@ -552,95 +667,4 @@ int main(int argc, char* argv[]) {
       ret = 1;
     return ret;
   }
-
-  if (!FLAGS_udev.empty()) {
-    return HandleUdevCrash(&udev_collector, FLAGS_udev);
-  }
-
-  if (FLAGS_kernel_warning) {
-    return HandleKernelWarning(&kernel_warning_collector,
-                               KernelWarningCollector::WarningType::kGeneric);
-  }
-
-  if (FLAGS_kernel_wifi_warning) {
-    return HandleKernelWarning(&kernel_warning_collector,
-                               KernelWarningCollector::WarningType::kWifi);
-  }
-
-  if (FLAGS_kernel_suspend_warning) {
-    return HandleKernelWarning(&kernel_warning_collector,
-                               KernelWarningCollector::WarningType::kSuspend);
-  }
-
-  if (!FLAGS_arc_service_failure.empty()) {
-    return HandleServiceFailure(
-        &generic_failure_collector,
-        StringPrintf("%s-%s", GenericFailureCollector::kArcServiceFailure,
-                     FLAGS_arc_service_failure.c_str()),
-        GenericFailureCollector::kArcServiceFailure);
-  }
-
-  if (FLAGS_suspend_failure) {
-    return HandleSuspendFailure(&generic_failure_collector);
-  }
-
-  if (!FLAGS_service_failure.empty()) {
-    return HandleServiceFailure(
-        &generic_failure_collector,
-        StringPrintf("%s-%s", GenericFailureCollector::kServiceFailure,
-                     FLAGS_service_failure.c_str()),
-        GenericFailureCollector::kServiceFailure);
-  }
-
-  if (FLAGS_selinux_violation) {
-    return HandleSELinuxViolation(&selinux_violation_collector);
-  }
-
-  if (FLAGS_crash_reporter_crashed) {
-    return HandleCrashReporterFailure(&crash_reporter_failure_collector);
-  }
-
-  if (!FLAGS_chrome.empty()) {
-    CHECK(FLAGS_chrome_memfd == -1)
-        << "--chrome= and --chrome_memfd= cannot be both set";
-    return HandleChromeCrash(&chrome_collector, FLAGS_chrome, FLAGS_pid,
-                             FLAGS_uid, FLAGS_exe);
-  }
-
-  if (FLAGS_chrome_memfd != -1) {
-    return HandleChromeCrashThroughMemfd(&chrome_collector, FLAGS_chrome_memfd,
-                                         FLAGS_pid, FLAGS_uid, FLAGS_exe,
-                                         FLAGS_chrome_dump_dir);
-  }
-
-  if (FLAGS_vm_crash) {
-    return HandleVmCrash(&vm_collector, FLAGS_vm_pid);
-  }
-
-#if USE_CHEETS
-  if (!FLAGS_arc_java_crash.empty()) {
-    ArcCollector::BuildProperty build_property = {
-        .device = FLAGS_arc_device,
-        .board = FLAGS_arc_board,
-        .cpu_abi = FLAGS_arc_cpu_abi,
-        .fingerprint = FLAGS_arc_fingerprint};
-    return HandleArcJavaCrash(&arc_collector, FLAGS_arc_java_crash,
-                              build_property);
-  }
-#endif
-
-  base::Optional<UserCollectorBase::CrashAttributes> attrs =
-      UserCollectorBase::ParseCrashAttributes(FLAGS_user);
-  if (!attrs.has_value()) {
-    LOG(ERROR) << "Invalid parameter: --user=" << FLAGS_user;
-    return 1;
-  }
-
-#if USE_CHEETS
-  if (ArcCollector::IsArcRunning() && arc_collector.IsArcProcess(attrs->pid)) {
-    return HandleArcCrash(&arc_collector, *attrs);
-  }
-#endif
-
-  return HandleUserCrash(&user_collector, *attrs);
 }

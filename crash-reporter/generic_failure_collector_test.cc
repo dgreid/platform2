@@ -120,9 +120,9 @@ TEST_F(GenericFailureCollectorTest, CollectOKMainServiceFailure) {
   ASSERT_TRUE(test_util::CreateFile(
       test_path_,
       "crash-crash main process (2563) terminated with status 2\n"));
-  EXPECT_TRUE(collector_.Collect("service-failure-crash-crash",
-                                 GenericFailureCollector::kServiceFailure,
-                                 /*weight=*/50));
+  EXPECT_TRUE(collector_.CollectFull("service-failure-crash-crash",
+                                     GenericFailureCollector::kServiceFailure,
+                                     /*weight=*/50));
   EXPECT_FALSE(IsDirectoryEmpty(test_failure_directory_));
 
   base::FilePath meta_path;
@@ -144,9 +144,9 @@ TEST_F(GenericFailureCollectorTest, CollectOKPreStart) {
   ASSERT_TRUE(test_util::CreateFile(
       test_path_,
       "crash-crash pre-start process (2563) terminated with status 2\n"));
-  EXPECT_TRUE(collector_.Collect("service-failure-crash-crash",
-                                 GenericFailureCollector::kServiceFailure,
-                                 /*weight=*/50));
+  EXPECT_TRUE(collector_.CollectFull("service-failure-crash-crash",
+                                     GenericFailureCollector::kServiceFailure,
+                                     /*weight=*/50));
   EXPECT_FALSE(IsDirectoryEmpty(test_failure_directory_));
 
   base::FilePath meta_path;
