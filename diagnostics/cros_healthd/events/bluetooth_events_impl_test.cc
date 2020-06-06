@@ -9,7 +9,6 @@
 #include <base/bind.h>
 #include <base/run_loop.h>
 #include <base/test/scoped_task_environment.h>
-#include <base/test/test_timeouts.h>
 #include <dbus/object_path.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -129,8 +128,6 @@ class BluetoothEventsImplTest : public testing::Test {
     // connection error.
     scoped_task_environment_.RunUntilIdle();
   }
-
-  static void SetUpTestSuite() { TestTimeouts::Initialize(); }
 
  private:
   base::test::ScopedTaskEnvironment scoped_task_environment_;

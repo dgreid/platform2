@@ -10,6 +10,7 @@
 #include <base/at_exit.h>
 #include <base/command_line.h>
 #include <base/logging.h>
+#include <base/test/test_timeouts.h>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -36,6 +37,7 @@ class TestRunner {
   struct Options {
     Options() {}
     bool instantiate_exit_manager = true;
+    bool instantiate_test_timeouts = true;
   };
 
   TestRunner(int argc, char** argv, const Options& opts = Options()) {
@@ -44,6 +46,10 @@ class TestRunner {
 
     if (opts.instantiate_exit_manager) {
       exit_manager_ = std::make_unique<base::AtExitManager>();
+    }
+
+    if (opts.instantiate_test_timeouts) {
+      TestTimeouts::Initialize();
     }
 
     testing::InitGoogleTest(&argc, argv);
