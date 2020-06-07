@@ -48,6 +48,7 @@
 /sys/devices/system/cpu/cpu[0-9]+/cpufreq/scaling_setspeed      u:object_r:sysfs:s0
 /sys/devices/system/cpu/cpu[0-9]+/cpuidle/state[0-9]+/disable   u:object_r:sysfs:s0
 # For Intel
+/sys/devices/system/cpu/(cpu[0-9]+/)?power/energy_perf_bias     u:object_r:sysfs:s0
 /sys/devices/system/cpu/cpufreq/policy[0-9]*/energy_performance_preference u:object_r:sysfs:s0
 /sys/devices/system/cpu/intel_pstate/hwp_dynamic_boost          u:object_r:sysfs:s0
 /sys/devices/system/cpu/intel_pstate/max_perf_pct               u:object_r:sysfs:s0
@@ -56,6 +57,8 @@
 /sys/devices/system/cpu/intel_pstate/status                     u:object_r:sysfs:s0
 /sys/devices/system/cpu/microcode/reload                        u:object_r:sysfs:s0
 /sys/devices/system/cpu/smt/control                             u:object_r:sysfs:s0
+/sys/devices/system/cpu/umwait_control/enable_c02               u:object_r:sysfs:s0
+/sys/devices/system/cpu/umwait_control/max_time                 u:object_r:sysfs:s0
 # For ARM
 /sys/devices/system/cpu/cpu[0-9]+/online                        u:object_r:sysfs:s0
 /sys/devices/system/cpu/cpufreq/policy[0-9]+/scaling_governor   u:object_r:sysfs:s0
