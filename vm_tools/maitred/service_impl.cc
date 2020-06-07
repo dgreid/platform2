@@ -37,6 +37,7 @@
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/posix/safe_strerror.h>
+#include <base/process/process_iterator.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -523,8 +524,19 @@ grpc::Status ServiceImpl::Mount(grpc::ServerContext* ctx,
 grpc::Status ServiceImpl::ResetIPv6(grpc::ServerContext* ctx,
                                     const vm_tools::EmptyMessage* request,
                                     vm_tools::EmptyMessage* response) {
-  LOG(INFO) << "Received ResetIPv6 request";
+  // This method is deprecated, but should otherwise perform the same actions
+  // as OnHostNetworkChanged.
+  return OnHostNetworkChanged(ctx, request, response);
+}
+
+grpc::Status ServiceImpl::OnHostNetworkChanged(
+    grpc::ServerContext* ctx,
+    const vm_tools::EmptyMessage* request,
+    vm_tools::EmptyMessage* response) {
+  LOG(INFO) << "Received OnHostNetworkChanged request";
   string error;
+
+  // Reset IPv6 to force SLAAC renegotiation.
   if (!SetSysctl(base::StringPrintf("/proc/sys/net/ipv6/conf/%s/disable_ipv6",
                                     kInterfaceName)
                      .c_str(),
@@ -538,6 +550,12 @@ grpc::Status ServiceImpl::ResetIPv6(grpc::ServerContext* ctx,
     return grpc::Status(grpc::INTERNAL, error + ", cannot enable ipv6");
   }
 
+  // Send SIGHUP to dnsmasq to flush caches.
+  base::NamedProcessIterator iter("dnsmasq", nullptr);
+  while (const base::ProcessEntry* entry = iter.NextProcessEntry())
+    kill(entry->pid(), SIGHUP);
+
+  // TODO(http://crbug/1058730): Existing sockets should also be shut down.
   return grpc::Status::OK;
 }
 

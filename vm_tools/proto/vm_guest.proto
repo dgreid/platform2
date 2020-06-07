@@ -226,8 +226,14 @@ service Maitred {
   // Set up networking inside the VM so that it can access the internet.
   rpc ConfigureNetwork(NetworkConfigRequest) returns (EmptyMessage);
 
+  // DEPRECATED. Use OnHostNetworkChanged instead.
   // Reset IPv6 in VM and restart SLAAC process to acquire a new configuration.
   rpc ResetIPv6(EmptyMessage) returns (EmptyMessage);
+
+  // Informs the guest that the host network has changed. The guest should
+  // perform any actions necessary, such as resetting potentially stale sockets,
+  // flushing DNS caches, and renegotiating SLAAC addresses for IPv6.
+  rpc OnHostNetworkChanged(EmptyMessage) returns (EmptyMessage);
 
   // Initiate a shut-down of the VM.
   rpc Shutdown(EmptyMessage) returns (EmptyMessage);

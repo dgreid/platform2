@@ -52,9 +52,14 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
                        const vm_tools::Mount9PRequest* request,
                        vm_tools::MountResponse* response) override;
 
+  // DEPRECATED. Use OnHostNetworkChanged instead.
   grpc::Status ResetIPv6(grpc::ServerContext* ctx,
                          const vm_tools::EmptyMessage* request,
                          vm_tools::EmptyMessage* response) override;
+
+  grpc::Status OnHostNetworkChanged(grpc::ServerContext* ctx,
+                                    const vm_tools::EmptyMessage* request,
+                                    vm_tools::EmptyMessage* response) override;
 
   grpc::Status StartTermina(grpc::ServerContext* ctx,
                             const vm_tools::StartTerminaRequest* request,
