@@ -1015,7 +1015,7 @@ void UserDataAuth::MountGuest(
     std::move(on_done).Run(reply);
     return;
   }
-  ReportTimerStart(kAsyncGuestMountTimer);
+  ReportTimerStart(kMountGuestExTimer);
 
   if (!guest_mount->MountGuestCryptohome()) {
     reply.set_error(
@@ -1025,7 +1025,7 @@ void UserDataAuth::MountGuest(
   if (reply.error() ==
       user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_NOT_SET) {
     // We only report the guest mount time for successful cases.
-    ReportTimerStop(kAsyncGuestMountTimer);
+    ReportTimerStop(kMountGuestExTimer);
   }
 
   // TODO(b/137073669): Cleanup guest_mount if mount failed.
