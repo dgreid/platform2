@@ -87,6 +87,7 @@ void AsynchronousSignalHandler::UpdateSignals() {
   if (!descriptor_.is_valid())
     return;
   sigset_t mask;
+  CHECK_EQ(0, sigemptyset(&mask));
   CHECK_EQ(0, sigorset(&mask, &signal_mask_, &saved_signal_mask_));
   CHECK_EQ(0, sigprocmask(SIG_SETMASK, &mask, nullptr));
   CHECK_EQ(
