@@ -32,7 +32,8 @@ constexpr char kFailedToStartWorkerError[] = "Failed to start worker process";
 std::vector<uint8_t> SerializeProto(
     const google::protobuf::MessageLite& proto) {
   std::vector<uint8_t> proto_blob(proto.ByteSizeLong());
-  DCHECK(proto.SerializeToArray(proto_blob.data(), proto_blob.size()));
+  bool result = proto.SerializeToArray(proto_blob.data(), proto_blob.size());
+  DCHECK(result);
   return proto_blob;
 }
 

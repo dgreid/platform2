@@ -135,6 +135,11 @@ class SystemProxyAdaptorTest : public ::testing::Test {
     EXPECT_EQ(signal->GetInterface(), "org.chromium.SystemProxy");
     EXPECT_EQ(signal->GetMember(), "WorkerActive");
     active_worker_signal_called_ = true;
+
+    dbus::MessageReader signal_reader(signal);
+    system_proxy::WorkerActiveSignalDetails details;
+    EXPECT_TRUE(signal_reader.PopArrayOfBytesAsProto(&details));
+    EXPECT_EQ(kLocalProxyHostPort, details.local_proxy_url());
   }
 
  protected:
