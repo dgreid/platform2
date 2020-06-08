@@ -58,6 +58,9 @@ namespace patchpanel {
 //   it again from kernel.
 class NeighborLinkMonitor {
  public:
+  static constexpr base::TimeDelta kActiveProbeInterval =
+      base::TimeDelta::FromSeconds(60);
+
   NeighborLinkMonitor(int ifindex,
                       const std::string& ifname,
                       shill::RTNLHandler* rtnl_handler);
@@ -125,13 +128,11 @@ class NeighborLinkMonitor {
   std::unique_ptr<shill::RTNLListener> listener_;
 
   // Timer for running ProbeAll().
-  std::unique_ptr<base::RepeatingTimer> probe_timer_;
+  base::RepeatingTimer probe_timer_;
 
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;
 
-  FRIEND_TEST(NeighborLinkMonitorTest, SendNeighborGetMessageOnIPConfigChanged);
-  FRIEND_TEST(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress);
   FRIEND_TEST(NeighborLinkMonitorTest, SendNeighborProbeMessage);
 };
 

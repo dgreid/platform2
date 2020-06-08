@@ -20,8 +20,6 @@
 namespace patchpanel {
 
 namespace {
-constexpr base::TimeDelta kActiveProbeInterval =
-    base::TimeDelta::FromSeconds(60);
 // The set of states which indicate the neighbor is valid. Copied from
 // /include/net/neighbour.h in linux kernel.
 constexpr uint16_t kNUDStateValid = NUD_PERMANENT | NUD_NOARP | NUD_REACHABLE |
@@ -74,10 +72,7 @@ bool NeedProbeForState(uint16_t current_state) {
 NeighborLinkMonitor::NeighborLinkMonitor(int ifindex,
                                          const std::string& ifname,
                                          shill::RTNLHandler* rtnl_handler)
-    : ifindex_(ifindex),
-      ifname_(ifname),
-      probe_timer_(new base::RepeatingTimer()),
-      rtnl_handler_(rtnl_handler) {}
+    : ifindex_(ifindex), ifname_(ifname), rtnl_handler_(rtnl_handler) {}
 
 NeighborLinkMonitor::WatchingEntry::WatchingEntry(shill::IPAddress addr,
                                                   Role role)
@@ -169,15 +164,15 @@ void NeighborLinkMonitor::Start() {
                             base::Unretained(this)),
         rtnl_handler_);
 
-  probe_timer_->Stop();
-  probe_timer_->Start(FROM_HERE, kActiveProbeInterval, this,
-                      &NeighborLinkMonitor::ProbeAll);
+  probe_timer_.Stop();
+  probe_timer_.Start(FROM_HERE, kActiveProbeInterval, this,
+                     &NeighborLinkMonitor::ProbeAll);
   ProbeAll();
 }
 
 void NeighborLinkMonitor::Stop() {
   listener_ = nullptr;
-  probe_timer_->Stop();
+  probe_timer_.Stop();
 }
 
 void NeighborLinkMonitor::ProbeAll() {

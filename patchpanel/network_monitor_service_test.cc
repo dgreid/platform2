@@ -7,7 +7,7 @@
 #include <memory>
 #include <linux/rtnetlink.h>
 
-#include <base/timer/mock_timer.h>
+#include <base/test/scoped_task_environment.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 
@@ -82,7 +82,6 @@ class NeighborLinkMonitorTest : public testing::Test {
     mock_rtnl_handler_ = std::make_unique<shill::MockRTNLHandler>();
     link_monitor_ = std::make_unique<NeighborLinkMonitor>(
         kTestInterfaceIndex, kTestInterfaceName, mock_rtnl_handler_.get());
-    mock_timer_ = new base::MockRepeatingTimer();
   }
 
   void TearDown() override {
@@ -92,13 +91,18 @@ class NeighborLinkMonitorTest : public testing::Test {
     mock_rtnl_handler_ = nullptr;
   }
 
-  base::MockRepeatingTimer* mock_timer_;
+  void FastForwardOneActiveProbeInterval() {
+    scoped_task_environment_.FastForwardBy(
+        NeighborLinkMonitor::kActiveProbeInterval);
+  }
+
+  base::test::ScopedTaskEnvironment scoped_task_environment_{
+      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
   std::unique_ptr<NeighborLinkMonitor> link_monitor_;
 };
 
 TEST_F(NeighborLinkMonitorTest, SendNeighborGetMessageOnIPConfigChanged) {
-  link_monitor_->probe_timer_.reset(mock_timer_);
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv4_address = "1.2.3.4";
   ipconfig.ipv4_gateway = "1.2.3.5";
@@ -120,7 +124,6 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborGetMessageOnIPConfigChanged) {
 }
 
 TEST_F(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress) {
-  link_monitor_->probe_timer_.reset(mock_timer_);
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv6_address = "2401::1";
   ipconfig.ipv6_prefix_length = 64;
@@ -138,7 +141,6 @@ TEST_F(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress) {
 }
 
 TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
-  link_monitor_->probe_timer_.reset(mock_timer_);
   // Only the gateway should be in the wathing list.
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv4_address = "1.2.3.4";
@@ -159,14 +161,14 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborProbeMessage("1.2.3.5"), _))
       .WillOnce(Return(true));
-  mock_timer_->Fire();
+  FastForwardOneActiveProbeInterval();
 
   // If the state changed to NUD_PROBE, we should not probe this address again
   // when the timer is triggered.
   std::unique_ptr<shill::RTNLMessage> address_is_probing(
       CreateNUDStateChangedMessage("1.2.3.5", NUD_PROBE));
   link_monitor_->OnNeighborMessage(*address_is_probing);
-  mock_timer_->Fire();
+  FastForwardOneActiveProbeInterval();
 
   // The gateway is removed in the kernel. A get request should be sent when the
   // timer is triggered.
@@ -176,7 +178,7 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborGetMessage("1.2.3.5"), _))
       .WillOnce(Return(true));
-  mock_timer_->Fire();
+  FastForwardOneActiveProbeInterval();
 }
 
 class NetworkMonitorServiceTest : public testing::Test {
