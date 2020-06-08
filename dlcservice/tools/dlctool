@@ -4,6 +4,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+. /usr/share/misc/chromeos-common.sh || exit 1
+. /usr/sbin/write_gpt.sh || exit 1
 . /usr/share/misc/shflags || exit 1
 
 # Constant variables related to dlcservice.
@@ -14,16 +16,25 @@ readonly DLC_IMG_FILE="dlc.img"
 readonly DLC_LIB_PATH="/var/lib/dlcservice/dlc"
 readonly DLC_METADATA_PATH="/opt/google/dlc"
 readonly DLC_PACKAGE="package"
+readonly DLC_PRELOAD_PATH="/mnt/stateful_partition/var_overlay/cache/dlc-images"
+readonly DLC_SLOT_A="dlc_a"
+readonly DLC_SLOT_B="dlc_b"
 readonly DLC_TABLE_FILE="table"
 readonly IMAGELOADER_JSON_FILE="imageloader.json"
 readonly MOUNT_PATH="/run/imageloader"
 
 # Command line parsing variables.
 readonly FLAGS_HELP="Usage:
+  [Unpacking a DLC]
+  $(basename $0) --unpack --id=<id> <path>
+  <path> to which the DLC image will be unpacked to.
+
+  [Packaging a DLC]
   $(basename $0) --id=<id> <path>
   <path> from which to create the DLC image and manifest.
 "
-DEFINE_string id "" "ID name of the DLC to pack"
+DEFINE_string "id" "" "ID name of the DLC to pack"
+DEFINE_boolean "unpack" false "To unpack the DLC passed to --id" "u"
 
 # Parse command line.
 FLAGS "$@" || exit "$?"
@@ -57,6 +68,44 @@ die() {
   exit 1
 }
 
+path_exists() {
+  local path="$1"
+  [[ -f "${path}" || -d "${path}" ]]
+}
+
+# Check if the DLC is preloadable.
+is_dlc_preloadable() {
+  [ -f "${DLC_PRELOAD_PATH}/${FLAGS_id}/${DLC_PACKAGE}/${DLC_IMG_FILE}" ]
+}
+
+# Locate the active DLC image from cache.
+locate_dlc_image() {
+  load_base_vars
+  local root_part=$(get_partition_number $(rootdev -s))
+  local dlc_cache_path="${DLC_CACHE_PATH}/${FLAGS_id}/${DLC_PACKAGE}"
+  if [[ "${root_part}" == "${PARTITION_NUM_ROOT_A}" ]]; then
+    echo "${dlc_cache_path}/${DLC_SLOT_A}/${DLC_IMG_FILE}"
+  elif [[ "${root_part}" == "${PARTITION_NUM_ROOT_B}" ]]; then
+    echo "${dlc_cache_path}/${DLC_SLOT_B}/${DLC_IMG_FILE}"
+  else
+    die "Unexpected root partition ${root_part}"
+  fi
+}
+
+# Unpack (unsquashfs) the DLC image.
+unpack_dlc() {
+  # If the path already exists, alert user.
+  if path_exists "${DIR_NAME}"; then
+    die "${DIR_NAME} is a path which already exists."
+  fi
+  # If the DLC is preloadable, install it.
+  if is_dlc_preloadable; then
+    echo "Preloading DLC to not override deployed DLC images."
+    dlcservice_util --install --id="${FLAGS_id}" || die "Failed to preload."
+  fi
+  unsquashfs -d "${DIR_NAME}" $(locate_dlc_image) || die "Failed to unpack."
+}
+
 # Checks to see if the rootfs is writable.
 check_writable_rootfs() {
   if [ ! -w "/" ]; then
@@ -69,7 +118,7 @@ check_writable_rootfs() {
 
 # Unmount and delete a DLC by force.
 force_delete() {
-  imageloader --unmount "${MOUNT_PATH}/${FLAGS_id}/${DLC_PACKAGE}"
+  imageloader --unmount --mount_point="${MOUNT_PATH}/${FLAGS_id}/${DLC_PACKAGE}"
   rm -rf "${DLC_CACHE_PATH}/${FLAGS_id}" "${DLC_LIB_PATH}/${FLAGS_id}"
 }
 
@@ -206,6 +255,14 @@ deploy_dlc() {
 
 # Main function.
 main() {
+  # Unpacking the DLC.
+  if [ "${FLAGS_unpack}" -eq "${FLAGS_TRUE}" ]; then
+    echo "Unpacking DLC (${FLAGS_id}) to: ${DIR_NAME}"
+    unpack_dlc
+    exit "$?"
+  fi
+
+  echo "Packing DLC (${FLAGS_id}) from: ${DIR_NAME}"
   check_writable_rootfs
 
   echo "Stopping dlcservice"
