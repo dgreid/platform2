@@ -11,7 +11,10 @@ pkg_config("libcros_healthd_utils_pkg_deps") {
 
 source_set("libcros_healthd_utils") {
   configs += [ ":libcros_healthd_utils_pkg_deps" ]
-  sources = [ "cpu_file_helpers.cc" ]
+  sources = [
+    "cpu_file_helpers.cc",
+    "helper_tool_utils.cc",
+  ]
 }
 
 if (use.test) {
@@ -32,6 +35,9 @@ if (use.test) {
       "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
     ]
-    sources = [ "cpu_file_helpers_test.cc" ]
+    sources = [
+      "cpu_file_helpers_test.cc",
+      "helper_tool_utils_test.cc",
+    ]
   }
 }
