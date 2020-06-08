@@ -54,7 +54,15 @@ enum TrafficOrigin {
 
   USER = 2;
 
-  BOTH = 3;
+  ALL = 3;
+}
+
+// Message request to remove the user credentials from the System-proxy service.
+message ClearUserCredentialsRequest {}
+
+message ClearUserCredentialsResponse {
+  // Error message, empty if no error occurred.
+  optional string error_message = 1;
 }
 
 message SetAuthenticationDetailsRequest {
@@ -78,6 +86,12 @@ message SetAuthenticationDetailsRequest {
 message SetAuthenticationDetailsResponse {
   // Error message, empty if no error occurred.
   optional string error_message = 1;
+}
+
+message ShutDownRequest {
+  // Indicates which worker process should be shut down. If |ALL| are selected,
+  // it will shut down the service.
+  optional TrafficOrigin traffic_type = 1;
 }
 
 message ShutDownResponse {
