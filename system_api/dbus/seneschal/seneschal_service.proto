@@ -126,6 +126,7 @@ message SharePathRequest {
   // The location where the path to be shared lives.
   enum StorageLocation {
     // The user's Downloads/ directory /home/user/<owner_id>/Downloads.
+    // Note: This field is deprecated.  MY_FILES should be used.
     DOWNLOADS = 0;
     // DriveFS directory /media/fuse/<drivefs_mount_name>/root.
     DRIVEFS_MY_DRIVE = 1;
@@ -142,15 +143,18 @@ message SharePathRequest {
     MY_FILES = 5;
     // The user's PlayFiles/ directory /run/arc/sdcard/write/emulated/0.
     PLAY_FILES = 6;
-    // The user's LinuxFiles/ directory /media/fuse/crostini_<username>_terminal_penguin.
+    // The user's LinuxFiles/ directory /media/fuse/crostini_<owner_id>_termina_penguin.
     LINUX_FILES = 7;
-    // The system fonts directory /usr/share/fonts
+    // The system fonts directory /usr/share/fonts.
     FONTS = 8;
+    // Archive mount directory /media/archive.
+    ARCHIVE = 9;
   }
   StorageLocation storage_location = 3;
 
   // The user's cryptohome.  This is the <hash> part of /home/user/<hash>.
-  // This field is required when storage_location=DOWNLOADS.
+  // This field is required when storage_location is DOWNLOADS, MY_FILES, or
+  // LINUX_FILES.
   string owner_id = 4;
 
   // DriveFS mount name.  This is the directory name mounted at /media/fuse with
