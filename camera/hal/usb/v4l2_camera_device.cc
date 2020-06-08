@@ -37,11 +37,17 @@ constexpr float kFpsDifferenceThreshold = 1.0f;
 
 const int ControlTypeToCid(ControlType type) {
   switch (type) {
+    case kControlAutoWhiteBalance:
+      return V4L2_CID_AUTO_WHITE_BALANCE;
+
     case kControlBrightness:
       return V4L2_CID_BRIGHTNESS;
 
     case kControlContrast:
       return V4L2_CID_CONTRAST;
+
+    case kControlExposureAutoPriority:
+      return V4L2_CID_EXPOSURE_AUTO_PRIORITY;
 
     case kControlPan:
       return V4L2_CID_PAN_ABSOLUTE;
@@ -58,8 +64,8 @@ const int ControlTypeToCid(ControlType type) {
     case kControlZoom:
       return V4L2_CID_ZOOM_ABSOLUTE;
 
-    case kControlExposureAutoPriority:
-      return V4L2_CID_EXPOSURE_AUTO_PRIORITY;
+    case kControlWhiteBalanceTemperature:
+      return V4L2_CID_WHITE_BALANCE_TEMPERATURE;
 
     default:
       NOTREACHED() << "Unexpected control type " << type;
@@ -69,11 +75,17 @@ const int ControlTypeToCid(ControlType type) {
 
 const std::string ControlTypeToString(ControlType type) {
   switch (type) {
+    case kControlAutoWhiteBalance:
+      return "auto white balance";
+
     case kControlBrightness:
       return "brightness";
 
     case kControlContrast:
       return "contrast";
+
+    case kControlExposureAutoPriority:
+      return "exposure_auto_priority";
 
     case kControlPan:
       return "pan";
@@ -90,14 +102,50 @@ const std::string ControlTypeToString(ControlType type) {
     case kControlZoom:
       return "zoom";
 
-    case kControlExposureAutoPriority:
-      return "exposure_auto_priority";
+    case kControlWhiteBalanceTemperature:
+      return "white balance temperature";
 
     default:
       NOTREACHED() << "Unexpected control type " << type;
       return "N/A";
   }
 }
+
+const std::string CidToString(int cid) {
+  switch (cid) {
+    case V4L2_CID_AUTO_WHITE_BALANCE:
+      return "V4L2_CID_AUTO_WHITE_BALANCE";
+
+    case V4L2_CID_BRIGHTNESS:
+      return "V4L2_CID_BRIGHTNESS";
+
+    case V4L2_CID_CONTRAST:
+      return "V4L2_CID_CONTRAST";
+
+    case V4L2_CID_PAN_ABSOLUTE:
+      return "V4L2_CID_PAN_ABSOLUTE";
+
+    case V4L2_CID_SATURATION:
+      return "V4L2_CID_SATURATION";
+
+    case V4L2_CID_SHARPNESS:
+      return "V4L2_CID_SHARPNESS";
+
+    case V4L2_CID_TILT_ABSOLUTE:
+      return "V4L2_CID_TILT_ABSOLUTE";
+
+    case V4L2_CID_ZOOM_ABSOLUTE:
+      return "V4L2_CID_ZOOM_ABSOLUTE";
+
+    case V4L2_CID_WHITE_BALANCE_TEMPERATURE:
+      return "V4L2_CID_WHITE_BALANCE_TEMPERATURE";
+
+    default:
+      NOTREACHED() << "Unexpected cid " << cid;
+      return "N/A";
+  }
+}
+
 }  // namespace
 
 V4L2CameraDevice::V4L2CameraDevice()
@@ -176,6 +224,24 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
   } else {
     autofocus_supported_ = true;
     autofocus_on_ = control.value;
+  }
+
+  // Query the initial auto white balance state.
+  white_balance_control_supported_ =
+      IsControlSupported(kControlAutoWhiteBalance) &&
+      IsControlSupported(kControlWhiteBalanceTemperature);
+  if (white_balance_control_supported_) {
+    LOGF(INFO) << "Device " << device_info_.camera_id
+               << " supports white balance control";
+    int32_t value;
+    if (GetControlValue(kControlAutoWhiteBalance, &value) == 0) {
+      if (value) {
+        LOGF(INFO) << "Current white balance control is AUTO";
+      } else if (GetControlValue(kControlWhiteBalanceTemperature, &value) ==
+                 0) {
+        LOGF(INFO) << "Current white balance temperature is " << value;
+      }
+    }
   }
 
   // Initialize the capabilities.
@@ -527,41 +593,74 @@ int V4L2CameraDevice::SetFrameRate(float frame_rate) {
   return 0;
 }
 
-bool V4L2CameraDevice::SetControlValue(ControlType type, int32_t value) {
-  auto iter_value = control_values_.find(type);
-  // Has cached value
-  if (iter_value != control_values_.end())
-    if (iter_value->second == value)
-      return true;
+int V4L2CameraDevice::SetColorTemperature(uint32_t color_temperature) {
+  if (!white_balance_control_supported_)
+    return 0;
 
-  int cid = ControlTypeToCid(type);
-  int32_t current_value;
-
-  if (SetControlValue(device_fd_.get(), cid, value)) {
-    if (GetControlValue(type, &current_value)) {
-      LOGF(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
-      control_values_[type] = value;
-      return true;
-    }
+  if (color_temperature == kColorTemperatureAuto) {
+    if (control_values_.count(kControlWhiteBalanceTemperature))
+      control_values_.erase(kControlWhiteBalanceTemperature);
+    return SetControlValue(kControlAutoWhiteBalance, 1);
   }
 
-  return false;
+  int ret = SetControlValue(kControlAutoWhiteBalance, 0);
+  if (ret != 0) {
+    LOGF(WARNING) << "Failed to set white_balance_control to manual";
+    return ret;
+  }
+
+  return SetControlValue(kControlWhiteBalanceTemperature, color_temperature);
 }
 
-bool V4L2CameraDevice::GetControlValue(ControlType type, int32_t* value) {
-  auto iter_value = control_values_.find(type);
+int V4L2CameraDevice::SetControlValue(ControlType type, int32_t value) {
+  auto it = control_values_.find(type);
   // Has cached value
-  if (iter_value != control_values_.end()) {
-    *value = iter_value->second;
-    return true;
+  if (it != control_values_.end()) {
+    if (it->second == value)
+      return 0;
+    else
+      control_values_.erase(type);
   }
 
-  int cid = ControlTypeToCid(type);
-  if (GetControlValue(device_fd_.get(), cid, value)) {
-    control_values_[type] = *value;
-    return true;
+  int ret = SetControlValue(device_fd_.get(), type, value);
+  if (ret != 0)
+    return ret;
+  LOGF(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
+
+  int32_t current_value;
+
+  ret = GetControlValue(type, &current_value);
+  if (ret != 0)
+    return ret;
+  LOGF(INFO) << "Get " << ControlTypeToString(type) << " " << current_value;
+
+  return 0;
+}
+
+int V4L2CameraDevice::GetControlValue(ControlType type, int32_t* value) {
+  auto it = control_values_.find(type);
+  // Has cached value
+  if (it != control_values_.end()) {
+    *value = it->second;
+    return 0;
   }
-  return false;
+
+  int ret = GetControlValue(device_fd_.get(), type, value);
+  if (ret != 0)
+    return ret;
+
+  control_values_[type] = *value;
+  return 0;
+}
+
+bool V4L2CameraDevice::IsControlSupported(ControlType type) {
+  ControlRange range;
+
+  return QueryControl(device_fd_.get(), type, &range) == 0;
+}
+
+int V4L2CameraDevice::QueryControl(ControlType type, ControlRange* range) {
+  return QueryControl(device_fd_.get(), type, range);
 }
 
 // static
@@ -609,67 +708,87 @@ const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
 }
 
 // static
-bool V4L2CameraDevice::GetControlRange(const std::string& device_path,
-                                       int control_id,
-                                       ControlRange* range) {
-  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
-  if (!fd.is_valid()) {
-    PLOGF(ERROR) << "Failed to open " << device_path;
-    return false;
+int V4L2CameraDevice::QueryControl(int fd,
+                                   ControlType type,
+                                   ControlRange* range) {
+  if (!range) {
+    LOGF(ERROR) << "range argument is null";
+    return -EINVAL;
   }
 
-  v4l2_queryctrl query_ctrl = {};
+  int control_id = ControlTypeToCid(type);
+  v4l2_queryctrl query_ctrl = {.id = static_cast<__u32>(control_id)};
 
-  query_ctrl.id = control_id;
-  query_ctrl.type = V4L2_CTRL_TYPE_INTEGER;
-  if (HANDLE_EINTR(ioctl(fd.get(), VIDIOC_QUERYCTRL, &query_ctrl)) < 0) {
-    VLOGF(1) << "Unsupported control_id: " << control_id;
-    return false;
+  if (HANDLE_EINTR(ioctl(fd, VIDIOC_QUERYCTRL, &query_ctrl)) < 0) {
+    VLOGF(1) << "Unsupported control:" << CidToString(control_id);
+    return -errno;
   }
 
   if (query_ctrl.flags & V4L2_CTRL_FLAG_DISABLED) {
-    LOGF(WARNING) << "Disabled control_id: " << control_id;
-    return false;
+    LOGF(WARNING) << "Disabled control:" << CidToString(control_id);
+    return -EPERM;
+  }
+
+  switch (query_ctrl.type) {
+    case V4L2_CTRL_TYPE_INTEGER:
+    case V4L2_CTRL_TYPE_BOOLEAN:
+    case V4L2_CTRL_TYPE_MENU:
+    case V4L2_CTRL_TYPE_STRING:
+    case V4L2_CTRL_TYPE_INTEGER_MENU:
+    case V4L2_CTRL_TYPE_U8:
+    case V4L2_CTRL_TYPE_U16:
+    case V4L2_CTRL_TYPE_U32:
+      break;
+
+    case V4L2_CTRL_TYPE_INTEGER64:
+      LOGF(WARNING) << "Unsupported query V4L2_CTRL_TYPE_INTEGER64:"
+                    << CidToString(control_id);
+      return -EINVAL;
+
+    default:
+      range->minimum = query_ctrl.minimum;
+      range->maximum = query_ctrl.maximum;
+      range->step = query_ctrl.step;
+      range->default_value = query_ctrl.default_value;
+      return 0;
   }
 
   if (query_ctrl.minimum > query_ctrl.maximum) {
-    LOGF(WARNING) << "control_id:" << control_id << " min "
-                  << query_ctrl.minimum << " > max " << query_ctrl.maximum;
-    return false;
+    LOGF(WARNING) << CidToString(control_id) << " min " << query_ctrl.minimum
+                  << " > max " << query_ctrl.maximum;
+    return -EINVAL;
   }
 
   if (query_ctrl.minimum > query_ctrl.default_value) {
-    LOGF(WARNING) << "control_id:" << control_id << " min "
-                  << query_ctrl.minimum << " > default "
-                  << query_ctrl.default_value;
-    return false;
+    LOGF(WARNING) << CidToString(control_id) << " min " << query_ctrl.minimum
+                  << " > default " << query_ctrl.default_value;
+    return -EINVAL;
   }
 
   if (query_ctrl.maximum < query_ctrl.default_value) {
-    LOGF(WARNING) << "control_id:" << control_id << " max "
-                  << query_ctrl.maximum << " < default "
-                  << query_ctrl.default_value;
-    return false;
+    LOGF(WARNING) << CidToString(control_id) << " max " << query_ctrl.maximum
+                  << " < default " << query_ctrl.default_value;
+    return -EINVAL;
   }
 
   if (query_ctrl.step <= 0) {
-    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+    LOGF(WARNING) << CidToString(control_id) << " step " << query_ctrl.step
                   << " <= 0";
-    return false;
+    return -EINVAL;
   }
 
   if ((query_ctrl.default_value - query_ctrl.minimum) % query_ctrl.step != 0) {
-    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+    LOGF(WARNING) << CidToString(control_id) << " step " << query_ctrl.step
                   << " can't divide minimum " << query_ctrl.minimum
                   << " default_value " << query_ctrl.default_value;
-    return false;
+    return -EINVAL;
   }
 
   if ((query_ctrl.maximum - query_ctrl.minimum) % query_ctrl.step != 0) {
-    LOGF(WARNING) << "control_id:" << control_id << " step " << query_ctrl.step
+    LOGF(WARNING) << CidToString(control_id) << " step " << query_ctrl.step
                   << " can't divide minimum " << query_ctrl.minimum
                   << " maximum " << query_ctrl.maximum;
-    return false;
+    return -EINVAL;
   }
 
   range->minimum = query_ctrl.minimum;
@@ -677,37 +796,45 @@ bool V4L2CameraDevice::GetControlRange(const std::string& device_path,
   range->step = query_ctrl.step;
   range->default_value = query_ctrl.default_value;
 
-  return true;
+  return 0;
 }
 
 // static
-bool V4L2CameraDevice::SetControlValue(int fd, int control_id, int32_t value) {
-  VLOGF(1) << "Set control_id:" << control_id << ", value:" << value;
+int V4L2CameraDevice::SetControlValue(int fd, ControlType type, int32_t value) {
+  int control_id = ControlTypeToCid(type);
+  VLOGF(1) << "Set " << CidToString(control_id) << ", value:" << value;
 
   v4l2_control current = {.id = static_cast<__u32>(control_id), .value = value};
   if (HANDLE_EINTR(ioctl(fd, VIDIOC_S_CTRL, &current)) < 0) {
-    PLOGF(WARNING) << "Error setting control_id: " << control_id << " to "
+    PLOGF(WARNING) << "Failed to set " << CidToString(control_id) << " to "
                    << value;
-    return false;
+    return -errno;
   }
 
-  return true;
+  return 0;
 }
 
 // static
-bool V4L2CameraDevice::GetControlValue(int fd, int control_id, int32_t* value) {
+int V4L2CameraDevice::GetControlValue(int fd,
+                                      ControlType type,
+                                      int32_t* value) {
+  if (!value) {
+    LOGF(ERROR) << "value argument is null";
+    return -EINVAL;
+  }
+
+  int control_id = ControlTypeToCid(type);
   v4l2_control current = {.id = static_cast<__u32>(control_id)};
 
-  current.id = control_id;
   if (HANDLE_EINTR(ioctl(fd, VIDIOC_G_CTRL, &current)) < 0) {
-    PLOGF(WARNING) << "Error getting control_id: " << control_id;
-    return false;
+    PLOGF(WARNING) << "Failed to get " << CidToString(control_id);
+    return -errno;
   }
   *value = current.value;
 
-  VLOGF(1) << "Get control_id:" << control_id << ", value:" << *value;
+  VLOGF(1) << "Get " << CidToString(control_id) << ", value:" << *value;
 
-  return true;
+  return 0;
 }
 
 // static
@@ -825,19 +952,32 @@ std::string V4L2CameraDevice::GetModelName(const std::string& device_path) {
 }
 
 // static
-bool V4L2CameraDevice::GetControlRange(const std::string& device_path,
-                                       ControlType type,
-                                       ControlRange* range) {
-  int cid = ControlTypeToCid(type);
+bool V4L2CameraDevice::IsControlSupported(const std::string& device_path,
+                                          ControlType type) {
+  ControlRange range;
+  return QueryControl(device_path, type, &range) == 0;
+}
 
-  if (!GetControlRange(device_path, cid, range)) {
-    return false;
+// static
+int V4L2CameraDevice::QueryControl(const std::string& device_path,
+                                   ControlType type,
+                                   ControlRange* range) {
+  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
+  if (!fd.is_valid()) {
+    PLOGF(ERROR) << "Failed to open " << device_path;
+    return -errno;
+  }
+
+  int ret = QueryControl(fd.get(), type, range);
+  if (ret != 0) {
+    return ret;
   }
 
   LOGF(INFO) << ControlTypeToString(type) << "(min,max,step,default) = "
              << "(" << range->minimum << "," << range->maximum << ","
              << range->step << "," << range->default_value << ")";
-  return true;
+
+  return 0;
 }
 
 // static

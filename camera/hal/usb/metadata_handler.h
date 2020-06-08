@@ -6,7 +6,9 @@
 #ifndef CAMERA_HAL_USB_METADATA_HANDLER_H_
 #define CAMERA_HAL_USB_METADATA_HANDLER_H_
 
+#include <map>
 #include <memory>
+#include <vector>
 
 #include <base/threading/thread_checker.h>
 #include <camera/camera_metadata.h>
@@ -17,6 +19,9 @@
 #include "hal/usb/v4l2_camera_device.h"
 
 namespace cros {
+
+using AwbModeToTemperatureMap =
+    std::map<camera_metadata_enum_android_control_awb_mode, uint32_t>;
 
 struct CameraMetadataDeleter {
   inline void operator()(camera_metadata_t* metadata) const {
@@ -92,6 +97,9 @@ class MetadataHandler {
   int FillDefaultZeroShutterLagSettings(android::CameraMetadata* metadata);
   int FillDefaultManualSettings(android::CameraMetadata* metadata);
 
+  static AwbModeToTemperatureMap GetAvailableAwbTemperatures(
+      const DeviceInfo& device_info);
+
   // Metadata containing persistent camera characteristics.
   android::CameraMetadata static_metadata_;
   // The base template for constructing request settings.
@@ -119,6 +127,10 @@ class MetadataHandler {
 
   // Sensor handler to get sensor related metadata.
   std::unique_ptr<SensorHandler> sensor_handler_;
+
+  // Awb mode to color temperature map
+  AwbModeToTemperatureMap awb_temperature_;
+  bool is_awb_control_supported_;
 };
 
 }  // namespace cros

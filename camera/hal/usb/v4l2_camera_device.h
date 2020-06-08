@@ -30,15 +30,19 @@ struct ControlRange {
 };
 
 enum ControlType {
+  kControlAutoWhiteBalance,
   kControlBrightness,
   kControlContrast,
+  kControlExposureAutoPriority,  // 0 for constant frame rate
   kControlPan,
   kControlSaturation,
   kControlSharpness,
   kControlTilt,
   kControlZoom,
-  kControlExposureAutoPriority,  // 0 for constant frame rate
+  kControlWhiteBalanceTemperature,
 };
+
+constexpr uint32_t kColorTemperatureAuto = 0;
 
 // The class is thread-safe.
 class V4L2CameraDevice {
@@ -100,6 +104,11 @@ class V4L2CameraDevice {
   // |-errno|.
   int SetAutoFocus(bool enable);
 
+  // Return 0 if device sets color tepmerature successfully. Otherwise, return
+  // |-errno|. Set |color_temperature| to |kColorTemperatureAuto| means auto
+  // white balance mode.
+  int SetColorTemperature(uint32_t color_temperature);
+
   // TODO(shik): Change the type of |device_path| to base::FilePath.
 
   // Whether the device supports updating frame rate.
@@ -111,13 +120,18 @@ class V4L2CameraDevice {
   // Sets the frame rate to |frame_rate| for current device.
   int SetFrameRate(float frame_rate);
 
+  // Return true if control |type| is supported otherwise return false.
+  bool IsControlSupported(ControlType type);
+
   // Sets the |type|'s value to |value| for current device.
-  bool SetControlValue(ControlType type, int32_t value);
+  // Return 0 if set successfully. Otherwise, return |-errno|.
+  int SetControlValue(ControlType type, int32_t value);
 
   // Gets the |type|'s current value for current device.
   // To prevent ioctl overhead, this API only returned cached value if there is
   // one. The cached current value is updated in SetControlValue.
-  bool GetControlValue(ControlType type, int32_t* value);
+  // Return 0 if get successfully. Otherwise, return |-errno|.
+  int GetControlValue(ControlType type, int32_t* value);
 
   // Get all supported formats of device by |device_path|. This function can be
   // called without calling Connect().
@@ -140,12 +154,16 @@ class V4L2CameraDevice {
   // Get the model name from |device_path|.
   static std::string GetModelName(const std::string& device_path);
 
-  // Get control's range.
-  // Return true if operation successfully. Otherwise, return false.
-  // The returned value is stored in |range|.
-  static bool GetControlRange(const std::string& device_path,
-                              ControlType type,
-                              ControlRange* range);
+  // Return true if control |type| is supported otherwise return false.
+  static bool IsControlSupported(const std::string& device_path,
+                                 ControlType type);
+
+  // Query control.
+  // Return 0 if operation successfully. Otherwise, return |-errno|.
+  // The control range value is stored in |range|.
+  static int QueryControl(const std::string& device_path,
+                          ControlType type,
+                          ControlRange* range);
 
  private:
   static std::vector<float> GetFrameRateList(int fd,
@@ -153,23 +171,23 @@ class V4L2CameraDevice {
                                              uint32_t width,
                                              uint32_t height);
 
-  // Get the control range of |control_id|.
-  // Return true if operation successfully. Otherwise, return false.
-  // The returned value is stored in |range|.
-  static bool GetControlRange(const std::string& device_path,
-                              int control_id,
-                              ControlRange* range);
+  // Query the control of |type|.
+  // Return 0 if operation successfully. Otherwise, return |-errno|.
+  // The control range value is stored in |range|.
+  static int QueryControl(int fd, ControlType type, ControlRange* range);
 
-  // Return true if set control successfully. Otherwise, return false.
-  static bool SetControlValue(int fd, int control_id, int32_t value);
+  // Return 0 if set control successfully. Otherwise, return |-errno|.
+  static int SetControlValue(int fd, ControlType type, int32_t value);
 
-  // Return true if get control successfully. Otherwise, return false.
+  // Return 0 if get control successfully. Otherwise, return |-errno|.
   // The returned value is stored in |value|.
-  static bool GetControlValue(int fd, int control_id, int32_t* value);
+  static int GetControlValue(int fd, ControlType type, int32_t* value);
 
   // This is for suspend/resume feature. USB camera will be enumerated after
   // device resumed. But camera device may not be ready immediately.
   static int RetryDeviceOpen(const std::string& device_path, int flags);
+
+  int QueryControl(ControlType type, ControlRange* range);
 
   // Set power frequency supported from device.
   int SetPowerLineFrequency(PowerLineFrequency setting);
@@ -189,6 +207,8 @@ class V4L2CameraDevice {
   // AF state
   bool autofocus_on_;
   bool autofocus_supported_;
+
+  bool white_balance_control_supported_;
 
   bool can_update_frame_rate_;
   float frame_rate_;
