@@ -29,7 +29,7 @@
 
 #include "system-proxy/curl_socket.h"
 
-// The libarcnetwork-util library overloads << for socket data structures.
+// The libpatchpanel-util library overloads << for socket data structures.
 // By C++'s argument-dependent lookup rules, operators defined in a
 // different namespace are not visible. We need the using directive to make
 // the overload available this namespace.
