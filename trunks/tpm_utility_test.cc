@@ -1994,7 +1994,10 @@ TEST_F(TpmUtilityTest, UnsealDataSuccess) {
   std::string unsealed_data;
   TPM_HANDLE object_handle = 42;
   TPM2B_PUBLIC public_data;
+  public_data.public_area.type = TPM_ALG_RSA;
+  public_data.public_area.object_attributes = kDecrypt;
   public_data.public_area.auth_policy.size = 0;
+  public_data.public_area.unique.rsa.size = 0;
   EXPECT_CALL(mock_tpm_, ReadPublicSync(_, _, _, _, _, _))
       .WillRepeatedly(
           DoAll(SetArgPointee<2>(public_data), Return(TPM_RC_SUCCESS)));
