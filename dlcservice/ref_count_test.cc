@@ -129,47 +129,43 @@ TEST_F(RefCountTest, UserInstalledAndUninstallDlc) {
   EXPECT_EQ(info.users(0).sanitized_username(), "user-1");
 }
 
-class MockRefCountBase : public RefCountBase {
- public:
-  explicit MockRefCountBase(const FilePath& prefs_path)
-      : RefCountBase(prefs_path) {}
-
-  MOCK_METHOD(base::TimeDelta, GetExpirationDelay, (), (const override));
-  MOCK_METHOD(std::string, GetCurrentUserName, (), (const override));
-
- private:
-  MockRefCountBase(const MockRefCountBase&) = delete;
-  MockRefCountBase& operator=(const MockRefCountBase&) = delete;
-};
-
-TEST_F(RefCountTest, ShouldPurgeDlc) {
-  MockRefCountBase ref_count(prefs_path_);
+TEST_F(RefCountTest, ShouldPurgeDlcAfterInitialize) {
+  SystemRefCount ref_count(prefs_path_);
 
   // If the DLC is not touched yet, it should return false.
   EXPECT_FALSE(ref_count.ShouldPurgeDlc());
+}
 
-  EXPECT_CALL(ref_count, GetCurrentUserName()).WillRepeatedly(Return("user-1"));
-
+TEST_F(RefCountTest, ShouldPurgeDlcHasUser) {
+  SystemRefCount ref_count(prefs_path_);
   // After this ref count should be persisted.
   EXPECT_TRUE(ref_count.InstalledDlc());
 
-  // We have a user using it, so we can't remove it even if the expiration has
-  // passed.
+  // We have a user using it, so we can't remove it.
   EXPECT_FALSE(ref_count.ShouldPurgeDlc());
 
-  // Now there is no user after this.
+  clock_.Advance(base::TimeDelta::FromDays(6));
+  // Now the expiration is passed, but it should not be purged because it still
+  // has a user.
+  EXPECT_FALSE(ref_count.ShouldPurgeDlc());
+}
+
+TEST_F(RefCountTest, ShouldPurgeDlcExpirationDelay) {
+  SystemRefCount ref_count(prefs_path_);
+  // Add a user.
+  EXPECT_TRUE(ref_count.InstalledDlc());
+  // Move the time a bit.
+  clock_.Advance(base::TimeDelta::FromMinutes(6));
+  // Now remove the user so we can test the expiration.
   EXPECT_TRUE(ref_count.UninstalledDlc());
-  EXPECT_CALL(ref_count, GetExpirationDelay())
-      .WillOnce(Return(base::TimeDelta::FromSeconds(1)));
-  // There is no user, but also the expiration has not reached.
+
+  // We don't have a user, but expiration hasn't passed yet.
   EXPECT_FALSE(ref_count.ShouldPurgeDlc());
 
-  EXPECT_CALL(ref_count, GetExpirationDelay())
-      .WillOnce(Return(base::TimeDelta::FromMicroseconds(1)));
-  // Now lets sleep briefly.
-  base::PlatformThread::Sleep(base::TimeDelta::FromMicroseconds(3));
-  // We have now reached the 1 seconds timeout. So with no user, it should be
+  clock_.Advance(base::TimeDelta::FromDays(6));
+  // We have now reached the 5 days timeout. So with no user, it should be
   // removed.
   EXPECT_TRUE(ref_count.ShouldPurgeDlc());
 }
+
 }  // namespace dlcservice

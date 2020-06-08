@@ -6,8 +6,6 @@
 #include <string>
 
 #include <base/time/time.h>
-#include <brillo/message_loops/base_message_loop.h>
-#include <brillo/message_loops/message_loop_utils.h>
 #include <gtest/gtest.h>
 
 #include "dlcservice/ref_count.h"
@@ -25,11 +23,6 @@ namespace dlcservice {
 class DlcManagerTest : public BaseTest {
  public:
   DlcManagerTest() { dlc_manager_ = std::make_unique<DlcManager>(); }
-
-  void SetUp() override {
-    loop_.SetAsCurrent();
-    BaseTest::SetUp();
-  }
 
   void Install(const DlcId& id) {
     EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(id, _, _, _, _, _))
@@ -64,11 +57,6 @@ class DlcManagerTest : public BaseTest {
   }
 
  protected:
-  // These should come before |dlc_manager_| so it would have the loop in its
-  // dtor.
-  base::MessageLoopForIO base_loop_;
-  brillo::BaseMessageLoop loop_{&base_loop_};
-
   std::unique_ptr<DlcManager> dlc_manager_;
 
  private:
@@ -163,6 +151,9 @@ TEST_F(DlcManagerTest, UnsupportedPreloadedDlcRemovalCheck) {
 }
 
 TEST_F(DlcManagerTest, CleanupDanglingDlcs) {
+  // The the clock to the system time so it doesn't start with 0;
+  clock_.SetNow(base::Time::Now());
+
   dlc_manager_->Initialize();
   Install(kFirstDlc);
 
@@ -173,21 +164,10 @@ TEST_F(DlcManagerTest, CleanupDanglingDlcs) {
   Uninstall(kFirstDlc);
   EXPECT_TRUE(base::PathExists(ref_count_path));
 
-  // Read the ref count, reduce its timestamp by like 6 days, and write it back
-  // so we can assume the |kFirstDlc| is dangling now.
-  string str;
-  EXPECT_TRUE(base::ReadFileToString(ref_count_path, &str));
-  RefCountInfo info;
-  EXPECT_TRUE(info.ParseFromString(str));
-  int64_t past_time =
-      (base::TimeDelta::FromMicroseconds(info.last_access_time_us()) -
-       base::TimeDelta::FromDays(6))
-          .InMicroseconds();
-  info.set_last_access_time_us(past_time);
-  EXPECT_TRUE(info.SerializeToString(&str));
-  EXPECT_TRUE(WriteToFile(ref_count_path, str));
+  // Advance the time so the |kFirstDlc| becomes dangling.
+  clock_.Advance(base::TimeDelta::FromDays(6));
 
-  // Reinitialize the |dlc_manager_| so it initializes the kFirstDlc again.
+  // Reinitialize the |dlc_manager_| so it initializes the |kFirstDlc| again.
   dlc_manager_->Initialize();
   // Install another DLC to make sure cleanup dangling doesn't remove them.
   Install(kSecondDlc);
@@ -200,12 +180,14 @@ TEST_F(DlcManagerTest, CleanupDanglingDlcs) {
       .WillOnce(Return(true));
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
-  dlc_manager_->CleanupDanglingDlcs();
+  // Advance by 31 minutes so it kicks in the cleanup method.
+  clock_.Advance(base::TimeDelta::FromDays(31));
+  loop_.RunOnce(false);
 
   // |kFirstDLC| should be gone by now.
   EXPECT_FALSE(base::PathExists(ref_count_path));
   // |kSecondDlc| should still be around.
-  // CheckDlcState(kSecondDlc, DlcState::INSTALLED);
+  CheckDlcState(kSecondDlc, DlcState::INSTALLED);
 }
 
 }  // namespace dlcservice

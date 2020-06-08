@@ -77,11 +77,13 @@ class DlcService : public DlcServiceInterface {
   FRIEND_TEST(DlcServiceTest, ReportingFailureCleanupTest);
   FRIEND_TEST(DlcServiceTest, ReportingFailureSignalTest);
   FRIEND_TEST(DlcServiceTest, ProbableUpdateEngineRestartCleanupTest);
-  FRIEND_TEST(DlcServiceTest, UpdateEngineFailAfterSignalsSafeTest);
   FRIEND_TEST(DlcServiceTest, OnStatusUpdateSignalDownloadProgressTest);
   FRIEND_TEST(
       DlcServiceTest,
       OnStatusUpdateSignalSubsequentialBadOrNonInstalledDlcsNonBlocking);
+  FRIEND_TEST(DlcServiceTest, PeriodicInstallCheck);
+  FRIEND_TEST(DlcServiceTest, InstallUpdateEngineBusyThenFreeTest);
+  FRIEND_TEST(DlcServiceTest, InstallSchedulesPeriodicInstallCheck);
 
   // Install the DLC with ID |id| through update_engine by sending a request to
   // it.
@@ -89,26 +91,24 @@ class DlcService : public DlcServiceInterface {
                                const std::string& omaha_url,
                                brillo::ErrorPtr* err);
 
-  // Sends a signal indicating failure to install and cleans up prepped DLC(s).
-  void SendFailedSignalAndCleanup();
+  // Cancels the current running install.
+  void CancelInstall();
 
-  // Handles status result from update_engine. Returns false if the installation
-  // fails. Returns true if installation was successful or the installation is
-  // not yet completed.
-  bool HandleStatusResult(const update_engine::StatusResult& status_result,
-                          brillo::ErrorPtr* err);
+  // Handles status result from update_engine. Returns true if the installation
+  // is going fine, false otherwise.
+  bool HandleStatusResult(brillo::ErrorPtr* err);
 
   // The periodic check that runs as a delayed task that checks update_engine
-  // status during an install to make sure update_engine is active.
+  // status during an install to make sure update_engine is active. This is
+  // basically a fallback mechanism in case we miss some of the update_engine's
+  // signals so we don't block forever.
   void PeriodicInstallCheck();
 
   // Schedules the method |PeriodicInstallCheck()| to be ran at a later time,
-  // taking as an argument a boolean |retry| that determines a once retry when
-  // update_engine indicates an idle status while dlcservice expects an install.
-  void SchedulePeriodicInstallCheck(bool retry);
+  void SchedulePeriodicInstallCheck();
 
-  // Gets update_engine's operation status.
-  bool GetUpdateEngineStatus(update_engine::Operation* operation);
+  // Gets update_engine's operation status and saves it in |SystemState|.
+  bool GetUpdateEngineStatus();
 
   // Called on receiving update_engine's |StatusUpdate| signal.
   void OnStatusUpdateAdvancedSignal(
@@ -132,11 +132,7 @@ class DlcService : public DlcServiceInterface {
 
   // Holds the ML task id of the delayed |PeriodicInstallCheck()| if an install
   // is in progress.
-  brillo::MessageLoop::TaskId scheduled_period_ue_check_id_;
-
-  // Indicates whether a retry to check update_engine's status during an install
-  // needs to happen to make sure the install completion signal is not lost.
-  bool scheduled_period_ue_check_retry_ = false;
+  brillo::MessageLoop::TaskId periodic_install_check_id_;
 
   base::WeakPtrFactory<DlcService> weak_ptr_factory_;
 

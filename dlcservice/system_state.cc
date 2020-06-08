@@ -143,4 +143,18 @@ base::Clock* SystemState::clock() const {
   return clock_;
 }
 
+void SystemState::set_update_engine_status(
+    const update_engine::StatusResult& status) {
+  last_update_engine_status_ = status;
+  last_update_engine_status_timestamp_ = clock_->Now();
+}
+
+const update_engine::StatusResult& SystemState::update_engine_status() {
+  return last_update_engine_status_;
+}
+
+const base::Time& SystemState::update_engine_status_timestamp() {
+  return last_update_engine_status_timestamp_;
+}
+
 }  // namespace dlcservice

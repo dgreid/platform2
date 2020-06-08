@@ -55,6 +55,8 @@ BaseTest::BaseTest() {
 }
 
 void BaseTest::SetUp() {
+  loop_.SetAsCurrent();
+
   SetUpFilesAndDirectories();
 
   auto mock_boot_device = std::make_unique<MockBootDevice>();

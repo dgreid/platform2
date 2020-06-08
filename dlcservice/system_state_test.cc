@@ -29,6 +29,12 @@ TEST_F(SystemStateTest, GettersTest) {
   EXPECT_FALSE(system_state->IsDeviceRemovable());
 
   EXPECT_EQ(system_state->clock(), &clock_);
+
+  update_engine::StatusResult status;
+  status.set_current_operation(update_engine::Operation::DOWNLOADING);
+  system_state->set_update_engine_status(status);
+  EXPECT_EQ(system_state->update_engine_status().current_operation(),
+            update_engine::Operation::DOWNLOADING);
 }
 
 }  // namespace dlcservice

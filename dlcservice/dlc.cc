@@ -543,6 +543,18 @@ bool DlcBase::Uninstall(ErrorPtr* err) {
 }
 
 bool DlcBase::Purge(ErrorPtr* err) {
+  // If the DLC is not verified, its not being updated, so there is no danger
+  // purging it.
+  auto ue_operation =
+      SystemState::Get()->update_engine_status().current_operation();
+  bool ue_is_busy = ue_operation != update_engine::IDLE &&
+                    ue_operation != update_engine::UPDATED_NEED_REBOOT;
+  if (IsVerified() && ue_is_busy) {
+    *err = Error::Create(FROM_HERE, kErrorBusy,
+                         "Install or update is in progress.");
+    return false;
+  }
+
   if (!Uninstall(err))
     return false;
 

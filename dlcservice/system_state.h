@@ -72,6 +72,10 @@ class SystemState {
   // Returns the clock object.
   base::Clock* clock() const;
 
+  void set_update_engine_status(const update_engine::StatusResult& status);
+  const update_engine::StatusResult& update_engine_status();
+  const base::Time& update_engine_status_timestamp();
+
  protected:
   SystemState(
       std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -106,6 +110,10 @@ class SystemState {
   base::FilePath users_dir_;
   base::Clock* clock_;
   bool is_device_removable_;
+
+  // Keep the last status result we saw.
+  update_engine::StatusResult last_update_engine_status_;
+  base::Time last_update_engine_status_timestamp_;
 
   static std::unique_ptr<SystemState> g_instance_;
 

@@ -34,13 +34,12 @@ using update_engine::StatusResult;
 namespace dlcservice {
 
 DlcService::DlcService()
-    : scheduled_period_ue_check_id_(MessageLoop::kTaskIdNull),
+    : periodic_install_check_id_(MessageLoop::kTaskIdNull),
       weak_ptr_factory_(this) {}
 
 DlcService::~DlcService() {
-  if (scheduled_period_ue_check_id_ != MessageLoop::kTaskIdNull &&
-      !brillo::MessageLoop::current()->CancelTask(
-          scheduled_period_ue_check_id_))
+  if (periodic_install_check_id_ != MessageLoop::kTaskIdNull &&
+      !brillo::MessageLoop::current()->CancelTask(periodic_install_check_id_))
     LOG(ERROR)
         << "Failed to cancel delayed update_engine check during cleanup.";
 }
@@ -90,7 +89,10 @@ bool DlcService::Install(const DlcId& id,
   }
 
   // Install through update_engine only if needed.
-  if (external_install_needed && !InstallWithUpdateEngine(id, omaha_url, err)) {
+  if (!external_install_needed)
+    return true;
+
+  if (!InstallWithUpdateEngine(id, omaha_url, err)) {
     // dlcservice must cancel the install as update_engine won't be able to
     // install the initialized DLC.
     ErrorPtr tmp_err;
@@ -100,6 +102,10 @@ bool DlcService::Install(const DlcId& id,
     return false;
   }
 
+  // By now the update_engine is installing the DLC, so schedule a periodic
+  // install checker in case we miss update_engine signals.
+  SchedulePeriodicInstallCheck();
+
   return true;
 }
 
@@ -107,29 +113,15 @@ bool DlcService::InstallWithUpdateEngine(const DlcId& id,
                                          const string& omaha_url,
                                          ErrorPtr* err) {
   // Check what state update_engine is in.
-  Operation update_engine_op;
-  if (!GetUpdateEngineStatus(&update_engine_op)) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
-                         "Failed to get the status of Update Engine.");
+  if (SystemState::Get()->update_engine_status().current_operation() ==
+      update_engine::UPDATED_NEED_REBOOT) {
+    *err =
+        Error::Create(FROM_HERE, kErrorNeedReboot,
+                      "Update Engine applied update, device needs a reboot.");
     return false;
   }
-  switch (update_engine_op) {
-    case update_engine::UPDATED_NEED_REBOOT:
-      *err =
-          Error::Create(FROM_HERE, kErrorNeedReboot,
-                        "Update Engine applied update, device needs a reboot.");
-      return false;
-    case update_engine::IDLE:
-      break;
-    default:
-      *err = Error::Create(FROM_HERE, kErrorBusy,
-                           "Update Engine is performing operations.");
-      return false;
-  }
-
 
   LOG(INFO) << "Sending request to update_engine to install DLC=" << id;
-
   // Invokes update_engine to install the DLC.
   ErrorPtr tmp_err;
   if (!SystemState::Get()->update_engine()->AttemptInstall(omaha_url, {id},
@@ -151,7 +143,6 @@ bool DlcService::InstallWithUpdateEngine(const DlcId& id,
     return false;
   }
 
-  SchedulePeriodicInstallCheck(true);
   return true;
 }
 
@@ -160,22 +151,6 @@ bool DlcService::Uninstall(const string& id, brillo::ErrorPtr* err) {
 }
 
 bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {
-  // Check that an update isn't in progress.
-  Operation op;
-  if (!GetUpdateEngineStatus(&op)) {
-    *err = Error::Create(FROM_HERE, kErrorInternal,
-                         "Failed to get the status of Update Engine");
-    return false;
-  }
-  switch (op) {
-    case update_engine::IDLE:
-    case update_engine::UPDATED_NEED_REBOOT:
-      break;
-    default:
-      *err = Error::Create(FROM_HERE, kErrorBusy,
-                           "Install or update is in progress.");
-      return false;
-  }
   return dlc_manager_->Purge(id, err);
 }
 
@@ -203,84 +178,71 @@ bool DlcService::UpdateCompleted(const DlcIdList& ids, ErrorPtr* err) {
   return dlc_manager_->UpdateCompleted(ids, err);
 }
 
-void DlcService::SendFailedSignalAndCleanup() {
+void DlcService::CancelInstall() {
   ErrorPtr tmp_err;
   if (!dlc_manager_->CancelInstall(&tmp_err))
     LOG(ERROR) << Error::ToString(tmp_err);
 }
 
 void DlcService::PeriodicInstallCheck() {
-  if (scheduled_period_ue_check_id_ == MessageLoop::kTaskIdNull) {
-    LOG(ERROR) << "Should not have been called unless scheduled.";
-    return;
-  }
+  periodic_install_check_id_ = MessageLoop::kTaskIdNull;
 
-  scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
-
-  if (!dlc_manager_->IsInstalling()) {
-    LOG(ERROR) << "Should not have to check update_engine status while not "
-                  "performing an install.";
+  // If we're not installing anything anymore, no need to schedule again.
+  if (!dlc_manager_->IsInstalling())
     return;
-  }
 
-  Operation update_engine_op;
-  if (!GetUpdateEngineStatus(&update_engine_op)) {
-    LOG(ERROR)
-        << "Failed to get the status of update_engine, it is most likely down.";
-    SendFailedSignalAndCleanup();
-    return;
-  }
-  switch (update_engine_op) {
-    case update_engine::UPDATED_NEED_REBOOT:
-      LOG(ERROR) << "Thought to be installing DLC(s), but update_engine is not "
-                    "installing and actually performed an update.";
-      SendFailedSignalAndCleanup();
-      break;
-    case update_engine::IDLE:
-      if (scheduled_period_ue_check_retry_) {
-        LOG(INFO) << "Going to retry periodic check to check install signal.";
-        SchedulePeriodicInstallCheck(false);
+  const int kNotSeenStatusDelay = 10;
+  auto system_state = SystemState::Get();
+  if ((system_state->clock()->Now() -
+       system_state->update_engine_status_timestamp()) >
+      base::TimeDelta::FromSeconds(kNotSeenStatusDelay)) {
+    if (GetUpdateEngineStatus()) {
+      ErrorPtr tmp_error;
+      if (!HandleStatusResult(&tmp_error)) {
+        DCHECK(tmp_error.get());  // TODO(crbug.com/1069121): Add to metrics.
         return;
       }
-      SendFailedSignalAndCleanup();
-      break;
-    default:
-      SchedulePeriodicInstallCheck(true);
-  }
-}
-
-void DlcService::SchedulePeriodicInstallCheck(bool retry) {
-  if (scheduled_period_ue_check_id_ != MessageLoop::kTaskIdNull) {
-    LOG(ERROR) << "Scheduling logic is internally not handled correctly, this "
-               << "requires a scheduling logic update.";
-    if (!brillo::MessageLoop::current()->CancelTask(
-            scheduled_period_ue_check_id_)) {
-      LOG(ERROR) << "Failed to cancel previous delayed update_engine check "
-                 << "when scheduling.";
     }
   }
-  scheduled_period_ue_check_id_ =
-      brillo::MessageLoop::current()->PostDelayedTask(
-          FROM_HERE,
-          base::Bind(&DlcService::PeriodicInstallCheck,
-                     weak_ptr_factory_.GetWeakPtr()),
-          base::TimeDelta::FromSeconds(kUECheckTimeout));
-  scheduled_period_ue_check_retry_ = retry;
+
+  SchedulePeriodicInstallCheck();
 }
 
-bool DlcService::HandleStatusResult(const StatusResult& status_result,
-                                    brillo::ErrorPtr* err) {
-  if (!status_result.is_install()) {
+void DlcService::SchedulePeriodicInstallCheck() {
+  if (periodic_install_check_id_ != MessageLoop::kTaskIdNull) {
+    LOG(INFO) << "Another periodic install check already scheduled.";
+    return;
+  }
+
+  periodic_install_check_id_ = brillo::MessageLoop::current()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&DlcService::PeriodicInstallCheck,
+                 weak_ptr_factory_.GetWeakPtr()),
+      base::TimeDelta::FromSeconds(kUECheckTimeout));
+}
+
+bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
+  // If we are not installing any DLC(s), no need to even handle status result.
+  if (!dlc_manager_->IsInstalling())
+    return true;
+
+  const StatusResult& status = SystemState::Get()->update_engine_status();
+  if (!status.is_install()) {
     *err = Error::Create(
         FROM_HERE, kErrorInternal,
         "Signal from update_engine indicates that it's not for an install, but "
         "dlcservice was waiting for an install.");
-    SendFailedSignalAndCleanup();
+    CancelInstall();
     return false;
   }
 
-  switch (status_result.current_operation()) {
-    case Operation::IDLE: {
+  switch (status.current_operation()) {
+    case update_engine::UPDATED_NEED_REBOOT:
+      *err =
+          Error::Create(FROM_HERE, kErrorNeedReboot,
+                        "Update Engine applied update, device needs a reboot.");
+      break;
+    case Operation::IDLE:
       LOG(INFO)
           << "Signal from update_engine, proceeding to complete installation.";
       if (!dlc_manager_->FinishInstall(err)) {
@@ -288,59 +250,47 @@ bool DlcService::HandleStatusResult(const StatusResult& status_result,
         return false;
       }
       return true;
-    }
     case Operation::REPORTING_ERROR_EVENT:
-      *err = Error::Create(
-          FROM_HERE, kErrorInternal,
-          "Signal from update_engine indicates reporting failure.");
-      SendFailedSignalAndCleanup();
-      return false;
+      *err = Error::Create(FROM_HERE, kErrorInternal,
+                           "update_engine indicates reporting failure.");
+      break;
     // Only when update_engine's |Operation::DOWNLOADING| should the DLC send
     // |DlcState::INSTALLING|. Majority of the install process for DLC(s) is
     // during |Operation::DOWNLOADING|, this also means that only a single
     // growth from 0.0 to 1.0 for progress reporting will happen.
     case Operation::DOWNLOADING:
       // TODO(ahassani): Add unittest for this.
-      dlc_manager_->ChangeProgress(status_result.progress());
+      dlc_manager_->ChangeProgress(status.progress());
 
       FALLTHROUGH;
     default:
-      SchedulePeriodicInstallCheck(true);
       return true;
   }
+
+  CancelInstall();
+  return false;
 }
 
-bool DlcService::GetUpdateEngineStatus(Operation* operation) {
+bool DlcService::GetUpdateEngineStatus() {
   StatusResult status_result;
   if (!SystemState::Get()->update_engine()->GetStatusAdvanced(&status_result,
                                                               nullptr)) {
+    LOG(ERROR) << "Failed to get update_engine status, will try again later.";
     return false;
   }
-  *operation = status_result.current_operation();
+  SystemState::Get()->set_update_engine_status(status_result);
+  LOG(INFO) << "Got update_engine status: "
+            << status_result.current_operation();
   return true;
 }
 
 void DlcService::OnStatusUpdateAdvancedSignal(
     const StatusResult& status_result) {
-  // If we are not installing any DLC(s), no need to even handle status result.
-  if (!dlc_manager_->IsInstalling())
-    return;
-
-  // When a signal is received from update_engine, it is more efficient to
-  // cancel the periodic check that's scheduled by re-posting a delayed task
-  // after cancelling the currently set periodic check. If the cancelling of the
-  // periodic check fails, let it run as it will be rescheduled correctly within
-  // the periodic check itself again.
-  if (!brillo::MessageLoop::current()->CancelTask(
-          scheduled_period_ue_check_id_)) {
-    LOG(ERROR) << "Failed to cancel delayed update_engine check when signal "
-                  "was received from update_engine, so letting it run.";
-  } else {
-    scheduled_period_ue_check_id_ = MessageLoop::kTaskIdNull;
-  }
+  // Always set the status.
+  SystemState::Get()->set_update_engine_status(status_result);
 
   ErrorPtr err;
-  if (!HandleStatusResult(status_result, &err))
+  if (!HandleStatusResult(&err))
     DCHECK(err.get());  // TODO(crbug.com/1069121): Add to metrics.
 }
 
@@ -348,6 +298,15 @@ void DlcService::OnStatusUpdateAdvancedSignalConnected(
     const string& interface_name, const string& signal_name, bool success) {
   if (!success) {
     LOG(ERROR) << "Failed to connect to update_engine's StatusUpdate signal.";
+  }
+  if (!GetUpdateEngineStatus()) {
+    // As a last resort, if we couldn't get the status, just set the status to
+    // IDLE, so things can move forward. This is mostly the case because when
+    // update_engine comes up its first status is IDLE and it will stay that way
+    // for quite a while.
+    StatusResult status;
+    status.set_current_operation(Operation::IDLE);
+    status.set_is_install(false);
   }
 }
 

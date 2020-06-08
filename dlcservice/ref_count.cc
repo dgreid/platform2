@@ -108,13 +108,17 @@ bool RefCountBase::ShouldPurgeDlc() const {
 
   base::Time last_accessed = base::Time::FromDeltaSinceWindowsEpoch(
       base::TimeDelta::FromMicroseconds(last_access_time_us));
-  base::TimeDelta delta_time = base::Time::Now() - last_accessed;
+  base::TimeDelta delta_time =
+      SystemState::Get()->clock()->Now() - last_accessed;
   return delta_time > GetExpirationDelay();
 }
 
 bool RefCountBase::Persist() {
-  ref_count_info_.set_last_access_time_us(
-      base::Time::Now().ToDeltaSinceWindowsEpoch().InMicroseconds());
+  ref_count_info_.set_last_access_time_us(SystemState::Get()
+                                              ->clock()
+                                              ->Now()
+                                              .ToDeltaSinceWindowsEpoch()
+                                              .InMicroseconds());
 
   string ref_count_str;
   if (!ref_count_info_.SerializeToString(&ref_count_str)) {

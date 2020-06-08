@@ -8,7 +8,6 @@
 #include <utility>
 
 #include <base/strings/stringprintf.h>
-#include <brillo/message_loops/message_loop.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/dlcservice/dbus-constants.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>

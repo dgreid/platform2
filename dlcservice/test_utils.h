@@ -12,6 +12,7 @@
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/test/simple_test_clock.h>
+#include <brillo/message_loops/fake_message_loop.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxy-mocks.h>
 #include <session_manager/dbus-proxy-mocks.h>
@@ -86,6 +87,7 @@ class BaseTest : public testing::Test {
   MockStateChangeReporter mock_state_change_reporter_;
 
   base::SimpleTestClock clock_;
+  brillo::FakeMessageLoop loop_{&clock_};
 
  private:
   BaseTest(const BaseTest&) = delete;
