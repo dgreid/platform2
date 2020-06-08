@@ -162,16 +162,7 @@ int BootCollect(KernelCollector* kernel_collector,
 }
 
 int HandleUserCrash(UserCollector* user_collector,
-                    const UserCollectorBase::CrashAttributes& attrs,
-                    const bool crash_test) {
-  // Make it possible to test what happens when we crash while
-  // handling a crash.
-  if (crash_test) {
-    LOG(ERROR) << "crash_test requested";
-    *(volatile char*)0 = 0;
-    return 0;
-  }
-
+                    const UserCollectorBase::CrashAttributes& attrs) {
   // Accumulate logs to help in diagnosing failures during user collection.
   brillo::LogToString(true);
   // Handle the crash, get the name of the process from procfs.
@@ -458,6 +449,13 @@ int main(int argc, char* argv[]) {
     always_allow_feedback = true;
   }
 
+  // Make it possible to test what happens when we crash while handling a crash.
+  if (FLAGS_crash_test) {
+    LOG(ERROR) << "crash_test requested";
+    *(volatile char*)0 = 0;
+    return 0;
+  }
+
   // Now that we've processed the command line, sandbox ourselves.
   EnterSandbox(FLAGS_init || FLAGS_clean_shutdown, FLAGS_log_to_stderr);
 
@@ -650,5 +648,5 @@ int main(int argc, char* argv[]) {
   }
 #endif
 
-  return HandleUserCrash(&user_collector, *attrs, FLAGS_crash_test);
+  return HandleUserCrash(&user_collector, *attrs);
 }
