@@ -92,6 +92,9 @@ void ShillClient::OnManagerPropertyChange(const std::string& property_name,
     // future update of the default service property.
     nameservers_.clear();
     search_domains_.clear();
+    if (!config_changed_callback_.is_null()) {
+      config_changed_callback_.Run(nameservers_, search_domains_);
+    }
     return;
   }
 
@@ -142,6 +145,9 @@ void ShillClient::OnServicePropertyChange(const std::string& property_name,
     // update of the IPConfig.
     nameservers_.clear();
     search_domains_.clear();
+    if (!config_changed_callback_.is_null()) {
+      config_changed_callback_.Run(nameservers_, search_domains_);
+    }
     return;
   }
 
