@@ -470,6 +470,18 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledThatGotUnmountedTest) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
+TEST_F(DlcServiceTest, InstallFailsToCreateDirectory) {
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  base::SetPosixFilePermissions(content_path_, 0444);
+
+  // Install will fail because DlcBase::CreateDlc() will fail to create
+  // directories inside |content_path_|, since the permissions don't allow
+  // writing into |content_path_|.
+  EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
+
+  CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
+}
+
 TEST_F(DlcServiceTest, OnStatusUpdateSignalDlcRootTest) {
   Install(kFirstDlc);
 
