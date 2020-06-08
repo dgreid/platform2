@@ -181,6 +181,51 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
   FastForwardOneActiveProbeInterval();
 }
 
+TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
+  ShillClient::IPConfig ipconfig;
+  ipconfig.ipv4_address = "1.2.3.4";
+  ipconfig.ipv4_gateway = "1.2.3.5";
+  ipconfig.ipv4_dns_addresses = {"1.2.3.6"};
+  ipconfig.ipv4_prefix_length = 24;
+  link_monitor_->OnIPConfigChanged(ipconfig);
+
+  ipconfig.ipv4_dns_addresses = {"1.2.3.7"};
+  // The watching list should be updated to {"1.2.3.5", "1.2.3.7"}, and only
+  // "1.2.3.7" is an new entry, so it should be probed immediately.
+  EXPECT_CALL(*mock_rtnl_handler_,
+              DoSendMessage(IsNeighborGetMessage("1.2.3.7"), _))
+      .WillOnce(Return(true));
+  link_monitor_->OnIPConfigChanged(ipconfig);
+
+  // Updates both addresses to NUD_PROBE (to avoid the link monitor sending a
+  // probe request), and then NUD_REACHABLE state.
+  std::unique_ptr<shill::RTNLMessage> addr_5_is_probing(
+      CreateNUDStateChangedMessage("1.2.3.5", NUD_PROBE));
+  std::unique_ptr<shill::RTNLMessage> addr_5_is_reachable(
+      CreateNUDStateChangedMessage("1.2.3.5", NUD_REACHABLE));
+  std::unique_ptr<shill::RTNLMessage> addr_7_is_probing(
+      CreateNUDStateChangedMessage("1.2.3.7", NUD_PROBE));
+  std::unique_ptr<shill::RTNLMessage> addr_7_is_reachable(
+      CreateNUDStateChangedMessage("1.2.3.7", NUD_REACHABLE));
+  link_monitor_->OnNeighborMessage(*addr_5_is_probing);
+  link_monitor_->OnNeighborMessage(*addr_5_is_reachable);
+  link_monitor_->OnNeighborMessage(*addr_7_is_probing);
+  link_monitor_->OnNeighborMessage(*addr_7_is_reachable);
+
+  // Nothing should happen within one interval.
+  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromSeconds(30));
+
+  // Checks if probe requests sent for both addresses when the timer is
+  // triggered.
+  EXPECT_CALL(*mock_rtnl_handler_,
+              DoSendMessage(IsNeighborProbeMessage("1.2.3.5"), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_rtnl_handler_,
+              DoSendMessage(IsNeighborProbeMessage("1.2.3.7"), _))
+      .WillOnce(Return(true));
+  FastForwardOneActiveProbeInterval();
+}
+
 class NetworkMonitorServiceTest : public testing::Test {
  protected:
   void SetUp() override {

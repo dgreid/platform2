@@ -69,8 +69,12 @@ class NeighborLinkMonitor {
   NeighborLinkMonitor(const NeighborLinkMonitor&) = delete;
   NeighborLinkMonitor& operator=(const NeighborLinkMonitor&) = delete;
 
-  // Resets |watching_entries_| with addresses in |ipconfig|, calls
-  // Start()/Stop() depends on whether the new |watching_entries_| is not empty.
+  // This function will:
+  // - Update |watching_entries_| with addresses in |ipconfig|;
+  // - Call Start()/Stop() depends on whether the new |watching_entries_| is
+  //   empty or not.
+  // - For each new added address, send a neighbor get request to the kernel
+  //   immediately.
   void OnIPConfigChanged(const ShillClient::IPConfig& ipconfig);
 
  private:
@@ -99,13 +103,16 @@ class NeighborLinkMonitor {
     uint16_t nud_state = NUD_NONE;
   };
 
-  // For each entry in |watching_entries_|, sends a RTM_NEWNEIGH message to set
-  // the NUD state in the kernel to NUD_PROBE, or sends a RTM_GETNEIGH message
-  // if we haven't heard of this address from kernel.
+  // ProbeAll() calls ProbeEntry() for each entry in |watching_entries_|: sends
+  // a RTM_NEWNEIGH message to set the NUD state in the kernel to NUD_PROBE, or
+  // sends a RTM_GETNEIGH message if we haven't heard of this address from
+  // kernel.
   void ProbeAll();
+  void ProbeEntry(const WatchingEntry& entry);
 
-  // Start() will run ProbeAll() at once and set a repeating timer to run it
-  // periodically, until Stop() is called.
+  // Start() will set a repeating timer to run ProbeAll() periodically and start
+  // the listener for RTNL messages (if they are already running then Start()
+  // has no effect). Stop() will stop the timer and the listener.
   void Start();
   void Stop();
 
@@ -134,6 +141,7 @@ class NeighborLinkMonitor {
   shill::RTNLHandler* rtnl_handler_;
 
   FRIEND_TEST(NeighborLinkMonitorTest, SendNeighborProbeMessage);
+  FRIEND_TEST(NeighborLinkMonitorTest, UpdateWatchingEntries);
 };
 
 class NetworkMonitorService {

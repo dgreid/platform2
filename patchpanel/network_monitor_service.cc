@@ -137,7 +137,9 @@ void NeighborLinkMonitor::UpdateWatchingEntry(const shill::IPAddress& addr,
 
 void NeighborLinkMonitor::OnIPConfigChanged(
     const ShillClient::IPConfig& ipconfig) {
-  LOG(INFO) << "ipconfigs changed on " << ifname_ << ", reset watching entries";
+  LOG(INFO) << "ipconfigs changed on " << ifname_
+            << ", update watching entries";
+  const auto old_watching_entries = std::move(watching_entries_);
   watching_entries_.clear();
 
   if (!ipconfig.ipv4_address.empty())
@@ -154,20 +156,30 @@ void NeighborLinkMonitor::OnIPConfigChanged(
   }
 
   Start();
+
+  // If one address is in our list before, restores its NUD state and does
+  // nothing; otherwise, probes it immediately.
+  for (auto new_it = watching_entries_.begin();
+       new_it != watching_entries_.end(); new_it++) {
+    const auto old_it = old_watching_entries.find(new_it->first);
+    if (old_it == old_watching_entries.end())
+      ProbeEntry(new_it->second);
+    else
+      new_it->second.nud_state = old_it->second.nud_state;
+  }
 }
 
 void NeighborLinkMonitor::Start() {
-  if (!listener_)
-    listener_ = std::make_unique<shill::RTNLListener>(
-        shill::RTNLHandler::kRequestNeighbor,
-        base::BindRepeating(&NeighborLinkMonitor::OnNeighborMessage,
-                            base::Unretained(this)),
-        rtnl_handler_);
+  if (listener_ != nullptr)
+    return;
 
-  probe_timer_.Stop();
+  listener_ = std::make_unique<shill::RTNLListener>(
+      shill::RTNLHandler::kRequestNeighbor,
+      base::BindRepeating(&NeighborLinkMonitor::OnNeighborMessage,
+                          base::Unretained(this)),
+      rtnl_handler_);
   probe_timer_.Start(FROM_HERE, kActiveProbeInterval, this,
                      &NeighborLinkMonitor::ProbeAll);
-  ProbeAll();
 }
 
 void NeighborLinkMonitor::Stop() {
@@ -176,20 +188,17 @@ void NeighborLinkMonitor::Stop() {
 }
 
 void NeighborLinkMonitor::ProbeAll() {
-  for (const auto& addr_entry : watching_entries_) {
-    const auto& entry = addr_entry.second;
-    // If we know nothing about this address from the kernel, send a get request
-    // first. Probe will be done on getting the response in OnNeighborMessage().
-    if (entry.nud_state == NUD_NONE) {
-      SendNeighborGetRTNLMessage(entry);
-      continue;
-    }
+  for (const auto& addr_entry : watching_entries_)
+    ProbeEntry(addr_entry.second);
+}
 
-    if (!NeedProbeForState(entry.nud_state))
-      continue;
-
+void NeighborLinkMonitor::ProbeEntry(const WatchingEntry& entry) {
+  // If we know nothing about this address from the kernel, send a get request
+  // first. Probe will be done on getting the response in OnNeighborMessage().
+  if (entry.nud_state == NUD_NONE)
+    SendNeighborGetRTNLMessage(entry);
+  else if (NeedProbeForState(entry.nud_state))
     SendNeighborProbeRTNLMessage(entry);
-  }
 }
 
 void NeighborLinkMonitor::SendNeighborGetRTNLMessage(
