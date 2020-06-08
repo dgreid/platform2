@@ -1730,7 +1730,7 @@ void Manager::SortServicesTask() {
       new_physical = service;
       // This is done so that non-Android VPNs will only use the primary
       // physical connection. Android VPNs route traffic using interface
-      // mappings set up by arc-networkd.
+      // mappings set up by patchpaneld.
       if (conn)
         conn->set_allowed_srcs(vpn_addresses);
     }

@@ -29,7 +29,7 @@ functionality as:
 *   Providing VPN support for:
     *    Third-party Chrome extensions that support the [third-party VPN
          interface](doc/thirdpartyvpn-api.txt)
-    *    Android VPN apps (which is primarily taken care of by `arc-networkd`;
+    *    Android VPN apps (which is primarily taken care of by `patchpanel`;
          Shill's main responsibility is to ensure that traffic which doesn't
          originate in Android and should go through the VPN is sent to ARC
          rather than directly out of a physical interface).

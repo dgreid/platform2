@@ -28,7 +28,7 @@ function run_iptables {
 
       * )
       # Mark packets coming from ${iface} so that they are masqueraded on their
-      # way back and correctly forwarded. See /etc/init/arc-network-bridge.conf
+      # way back and correctly forwarded. See platform2/patchpanel/manager.cc
       # for more details.
       iptables -t mangle ${action} PREROUTING -i ${iface} \
         -p tcp ! --dport ${SSH_PORT} -j MARK --set-mark 1 -w || return 1
