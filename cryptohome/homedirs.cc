@@ -970,6 +970,8 @@ CryptohomeErrorCode HomeDirs::AddKeyset(
   if (new_data) {
     *(vk->mutable_serialized()->mutable_key_data()) = *new_data;
   }
+  // The new keyset doesn't have an associated timestamp file.
+  vk->mutable_serialized()->set_timestamp_file_exists(false);
 
   // Repersist the VK with the new creds.
   CryptohomeErrorCode added = CRYPTOHOME_ERROR_NOT_SET;
