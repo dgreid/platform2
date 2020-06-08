@@ -41,7 +41,7 @@ class RegionTest(unittest.TestCase):
     """
     with open(os.path.join(os.path.dirname(__file__),
                            'testdata', name + '.yaml')) as f:
-      return yaml.load(f)
+      return yaml.load(f, Loader=yaml.SafeLoader)
 
   @classmethod
   def setUpClass(cls):
@@ -171,7 +171,7 @@ class RegionTest(unittest.TestCase):
   def testYAMLOutput(self):
     output = io.StringIO()
     regions.main(['--format', 'yaml'], output)
-    data = yaml.load(output.getvalue())
+    data = yaml.load(output.getvalue(), Loader=yaml.SafeLoader)
     self.assertEqual(
         {'keyboards': ['xkb:us::eng'],
          'keyboard_mechanical_layout': 'ANSI',
