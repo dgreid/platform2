@@ -14,6 +14,29 @@
 
 namespace patchpanel {
 
+namespace {
+
+ShillClient::Device::Type ParseDeviceType(const std::string& type_str) {
+  static const std::map<std::string, ShillClient::Device::Type> str2enum{
+      {shill::kTypeCellular, ShillClient::Device::Type::kCellular},
+      {shill::kTypeEthernet, ShillClient::Device::Type::kEthernet},
+      {shill::kTypeEthernetEap, ShillClient::Device::Type::kEthernetEap},
+      {shill::kTypeGuestInterface, ShillClient::Device::Type::kGuestInterface},
+      {shill::kTypeLoopback, ShillClient::Device::Type::kLoopback},
+      {shill::kTypePPP, ShillClient::Device::Type::kPPP},
+      {shill::kTypePPPoE, ShillClient::Device::Type::kPPPoE},
+      {shill::kTypeTunnel, ShillClient::Device::Type::kTunnel},
+      {shill::kTypeWifi, ShillClient::Device::Type::kWifi},
+      {shill::kTypeVPN, ShillClient::Device::Type::kVPN},
+  };
+
+  const auto it = str2enum.find(type_str);
+  return it != str2enum.end() ? it->second
+                              : ShillClient::Device::Type::kUnknown;
+}
+
+}  // namespace
+
 ShillClient::ShillClient(const scoped_refptr<dbus::Bus>& bus) : bus_(bus) {
   manager_proxy_.reset(new org::chromium::flimflam::ManagerProxy(bus_));
   manager_proxy_->RegisterPropertyChangedSignalHandler(
@@ -358,7 +381,10 @@ bool ShillClient::GetDeviceProperties(const std::string& device,
     LOG(WARNING) << "Device properties is missing Type for " << device;
     return false;
   }
-  output->type = type_it->second.TryGet<std::string>();
+  const std::string& type_str = type_it->second.TryGet<std::string>();
+  output->type = ParseDeviceType(type_str);
+  if (output->type == Device::Type::kUnknown)
+    LOG(WARNING) << "Unknown device type " << type_str << " for " << device;
 
   const auto& interface_it = props.find(shill::kInterfaceProperty);
   if (interface_it == props.end()) {

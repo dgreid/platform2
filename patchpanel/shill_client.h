@@ -51,8 +51,22 @@ class ShillClient {
   // - the connection state of the Service, if possible by translating back to
   //   the enum shill::Service::ConnectState
   struct Device {
-    // Device technology name in shill.
-    std::string type;
+    // A subset of shill::Technology::Type.
+    enum class Type {
+      kUnknown,
+      kCellular,
+      kEthernet,
+      kEthernetEap,
+      kGuestInterface,
+      kLoopback,
+      kPPP,
+      kPPPoE,
+      kTunnel,
+      kVPN,
+      kWifi,
+    };
+
+    Type type;
     std::string ifname;
     IPConfig ipconfig;
   };

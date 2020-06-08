@@ -302,9 +302,8 @@ void NetworkMonitorService::OnDevicesChanged(
       continue;
     }
 
-    if (device_props.type != shill::kTypeWifi) {
-      LOG(INFO) << "Skipped creating neighbor monitor for device with type="
-                << device_props.type << " on " << device;
+    if (device_props.type != ShillClient::Device::Type::kWifi) {
+      LOG(INFO) << "Skipped creating neighbor monitor for device " << device;
       continue;
     }
 
