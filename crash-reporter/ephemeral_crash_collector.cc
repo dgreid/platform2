@@ -55,6 +55,8 @@ bool EphemeralCrashCollector::Collect() {
       base::FileEnumerator source_directory_enumerator(
           dir, false /* recursive */, base::FileEnumerator::FILES);
 
+      LOG(INFO) << "Examining " << dir << " for crashes";
+
       for (auto source_path = source_directory_enumerator.Next();
            !source_path.empty();
            source_path = source_directory_enumerator.Next()) {
