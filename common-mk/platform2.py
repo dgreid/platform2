@@ -41,6 +41,7 @@ _IUSE = [
     'buffet',
     'cellular',
     'cert_provision',
+    'cfm',
     'cfm_enabled_device',
     'cheets',
     'chromeless_tty',
