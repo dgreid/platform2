@@ -1355,8 +1355,14 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   // We use _SC_NPROCESSORS_ONLN here rather than
   // base::SysInfo::NumberOfProcessors() so that offline CPUs are not counted.
+  // Also, |untrusted_vm_utils_| may disable SMT leading to cores being
+  // disabled. Hence, only allocate the lower of (available cores, cpus
+  // allocated by the user).
   const int32_t cpus =
-      request.cpus() == 0 ? sysconf(_SC_NPROCESSORS_ONLN) : request.cpus();
+      request.cpus() == 0
+          ? sysconf(_SC_NPROCESSORS_ONLN)
+          : std::min(static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN)),
+                     static_cast<int32_t>(request.cpus()));
 
   auto vm = TerminaVm::Create(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
