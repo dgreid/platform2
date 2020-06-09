@@ -205,7 +205,11 @@ proto_library("system_api-attestation-protos") {
 goproto_library("system_api-attestation-goprotos") {
   proto_in_dir = "dbus/attestation"
   proto_out_dir = "go/src/chromiumos/system_api/attestation_proto"
-  sources = [ "${proto_in_dir}/attestation_ca.proto" ]
+  sources = [
+    "${proto_in_dir}/attestation_ca.proto",
+    "${proto_in_dir}/interface.proto",
+    "${proto_in_dir}/keystore.proto",
+  ]
 }
 
 proto_library("system_api-tpm_manager-protos") {
