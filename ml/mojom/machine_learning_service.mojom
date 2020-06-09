@@ -29,6 +29,7 @@ enum LoadModelResult {
   MODEL_SPEC_ERROR = 1,
   LOAD_MODEL_ERROR = 2,
   FEATURE_NOT_SUPPORTED_ERROR = 3,
+  LANGUAGE_NOT_SUPPORTED_ERROR = 4,
 };
 
 // Top-level interface between Chromium and the ML Service daemon.
@@ -47,5 +48,9 @@ interface MachineLearningService {
       => (LoadModelResult result);
   // Create and initialize a handwriting recognizer.
   LoadHandwritingModel(HandwritingRecognizer& request)
+      => (LoadModelResult result);
+  // Create and initialize a handwriting recognizer with given |spec|.
+  LoadHandwritingModelWithSpec(HandwritingRecognizerSpec spec,
+                               HandwritingRecognizer& request)
       => (LoadModelResult result);
 };

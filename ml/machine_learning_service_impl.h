@@ -61,6 +61,12 @@ class MachineLearningServiceImpl
       chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
       LoadHandwritingModelCallback callback) override;
 
+  // chromeos::machine_learning::mojom::MachineLearningService:
+  void LoadHandwritingModelWithSpec(
+      chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
+      chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
+      LoadHandwritingModelCallback callback) override;
+
   // Init the icu data if it is not initialized yet.
   void InitIcuIfNeeded();
 

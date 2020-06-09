@@ -24,6 +24,7 @@ class HandwritingRecognizerImpl
   // connection is destroyed.
   // Returns whether the object is create successfully.
   static bool Create(
+      chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       chromeos::machine_learning::mojom::HandwritingRecognizerRequest request);
 
   // Called when mojom connection is destroyed.
@@ -34,6 +35,7 @@ class HandwritingRecognizerImpl
   // Recognize can be called on the other side for a particular handwriting
   // reconition query.
   HandwritingRecognizerImpl(
+      chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       chromeos::machine_learning::mojom::HandwritingRecognizerRequest request);
 
   // mojom::HandwritingRecognizer:

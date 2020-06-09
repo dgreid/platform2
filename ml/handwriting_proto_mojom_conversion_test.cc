@@ -9,11 +9,13 @@
 
 #include "chrome/knowledge/handwriting/validate.pb.h"
 #include "ml/handwriting.h"
+#include "ml/handwriting_path.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
 
 namespace ml {
 
 using chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
+using chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
 
 // Gets a test request proto with two strokes.
 chrome_knowledge::HandwritingRecognizerRequest
@@ -79,9 +81,10 @@ TEST(HandwritingProtoMojomConversionTest, RequestProtoToQueryRealExamples) {
   }
   chrome_knowledge::HandwritingRecognizerLabeledRequests test_data;
   std::string buf;
-  ASSERT_TRUE(base::ReadFileToString(
-      base::FilePath("/build/share/libhandwriting/correct_labeled_requests.pb"),
-      &buf));
+  ASSERT_TRUE(
+      base::ReadFileToString(base::FilePath(GetLabeledRequestsPathForTesting(
+                                 HandwritingRecognizerSpec::New("en"))),
+                             &buf));
   ASSERT_TRUE(test_data.ParseFromString(buf));
   ASSERT_GT(test_data.labeled_requests().size(), 0);
   for (auto const& labeled_request : test_data.labeled_requests()) {

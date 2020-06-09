@@ -200,6 +200,7 @@ using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResultPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningServicePtr;
 using ::chromeos::machine_learning::mojom::Model;
@@ -1001,115 +1002,136 @@ TEST(TextClassifierSelectionTest, WrongInput) {
   ASSERT_TRUE(infer_callback_done);
 }
 
+// Test class for HandwritingRecognizerTest.
+class HandwritingRecognizerTest : public testing::Test {
+ protected:
+  void SetUp() override {
+    // Set ml_service.
+    ml_service_impl_ = std::make_unique<MachineLearningServiceImplForTesting>(
+        mojo::MakeRequest(&ml_service_).PassMessagePipe());
+
+    // Set default request.
+    request_.set_max_num_results(1);
+    auto& stroke = *request_.mutable_ink()->add_strokes();
+    for (int i = 0; i < 23; ++i) {
+      auto& point = *stroke.add_points();
+      point.set_x(kHandwritingTestPoints[i][0]);
+      point.set_y(kHandwritingTestPoints[i][1]);
+    }
+  }
+
+  // recognizer_ should be loaded successfully for this |language|.
+  void LoadRecognizerWithLanguage(const std::string& langauge) {
+    bool model_callback_done = false;
+    ml_service_->LoadHandwritingModelWithSpec(
+        HandwritingRecognizerSpec::New(langauge),
+        mojo::MakeRequest(&recognizer_),
+        base::Bind(
+            [](bool* model_callback_done, const LoadModelResult result) {
+              ASSERT_EQ(result, LoadModelResult::OK);
+              *model_callback_done = true;
+            },
+            &model_callback_done));
+    base::RunLoop().RunUntilIdle();
+    ASSERT_TRUE(model_callback_done);
+    ASSERT_TRUE(recognizer_.is_bound());
+  }
+
+  // Recognizing on the request_ should produce expected text and score.
+  void ExpectRecognizeResult(const std::string& text, const float score) {
+    // Perform inference.
+    bool infer_callback_done = false;
+    recognizer_->Recognize(
+        HandwritingRecognitionQueryFromProtoForTesting(request_),
+        base::Bind(
+            [](bool* infer_callback_done, const std::string& text,
+               const float score, const HandwritingRecognizerResultPtr result) {
+              // Check that the inference succeeded and gives
+              // the expected number of outputs.
+              EXPECT_EQ(result->status,
+                        HandwritingRecognizerResult::Status::OK);
+              ASSERT_EQ(result->candidates.size(), 1);
+              EXPECT_EQ(result->candidates.at(0)->text, text);
+              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, score);
+              *infer_callback_done = true;
+            },
+            &infer_callback_done, text, score));
+    base::RunLoop().RunUntilIdle();
+    ASSERT_TRUE(infer_callback_done);
+  }
+
+  std::unique_ptr<MachineLearningServiceImplForTesting> ml_service_impl_;
+  MachineLearningServicePtr ml_service_;
+  HandwritingRecognizerPtr recognizer_;
+  chrome_knowledge::HandwritingRecognizerRequest request_;
+};
+
 // Tests that the HandwritingRecognizer recognition returns expected scores.
-TEST(HandwritingRecognizerTest, GetExpectedScores) {
+TEST_F(HandwritingRecognizerTest, GetExpectedScores) {
   // Nothing to test on an unsupported platform.
   if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
       ml::HandwritingLibrary::Status::kNotSupported) {
     return;
   }
 
-  MachineLearningServicePtr ml_service;
-  const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+  // Load Recognizer successfully.
+  LoadRecognizerWithLanguage("en");
 
-  // Load recognizer.
-  HandwritingRecognizerPtr recognizer;
-  bool model_callback_done = false;
-  ml_service->LoadHandwritingModel(
-      mojo::MakeRequest(&recognizer),
-      base::Bind(
-          [](bool* model_callback_done, const LoadModelResult result) {
-            ASSERT_EQ(result, LoadModelResult::OK);
-            *model_callback_done = true;
-          },
-          &model_callback_done));
-  base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(model_callback_done);
-  ASSERT_TRUE(recognizer.is_bound());
+  // Run Recognition on the default request_.
+  ExpectRecognizeResult("a", 0.50640869f);
 
-  // Construct input.
-  chrome_knowledge::HandwritingRecognizerRequest request;
-  request.set_max_num_results(1);
-  auto& stroke = *request.mutable_ink()->add_strokes();
+  // Modify the request_ by setting fake time.
   for (int i = 0; i < 23; ++i) {
-    auto& point = *stroke.add_points();
-    point.set_x(kHandwritingTestPoints[i][0]);
-    point.set_y(kHandwritingTestPoints[i][1]);
+    request_.mutable_ink()->mutable_strokes(0)->mutable_points(i)->set_t(i * i *
+                                                                         100);
   }
-
-  {
-    HandwritingRecognitionQueryPtr query =
-        HandwritingRecognitionQueryFromProtoForTesting(request);
-    // Perform inference.
-    bool infer_callback_done = false;
-    recognizer->Recognize(
-        std::move(query),
-        base::Bind(
-            [](bool* infer_callback_done,
-               const HandwritingRecognizerResultPtr result) {
-              // Check that the inference succeeded and gives
-              // the expected number of outputs.
-              EXPECT_EQ(result->status,
-                        HandwritingRecognizerResult::Status::OK);
-              ASSERT_EQ(result->candidates.size(), 1);
-              EXPECT_EQ(result->candidates.at(0)->text, "a");
-              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, 0.50640869f);
-              *infer_callback_done = true;
-            },
-            &infer_callback_done));
-    base::RunLoop().RunUntilIdle();
-    ASSERT_TRUE(infer_callback_done);
-  }
-
-  // Set fake time as 100 milliseconds apart.
-  for (int i = 0; i < 23; ++i) {
-    auto& point = *stroke.mutable_points(i);
-    point.set_t(i * i * 100);
-  }
-
-  {
-    HandwritingRecognitionQueryPtr query =
-        HandwritingRecognitionQueryFromProtoForTesting(request);
-    // Perform inference.
-    bool infer_callback_done = false;
-    recognizer->Recognize(
-        std::move(query),
-        base::Bind(
-            [](bool* infer_callback_done,
-               const HandwritingRecognizerResultPtr result) {
-              // Check that the inference succeeded and gives
-              // the expected number of outputs.
-              EXPECT_EQ(result->status,
-                        HandwritingRecognizerResult::Status::OK);
-              ASSERT_EQ(result->candidates.size(), 1);
-              EXPECT_EQ(result->candidates.at(0)->text, "a");
-              EXPECT_FLOAT_EQ(result->candidates.at(0)->score, 0.51218414f);
-              *infer_callback_done = true;
-            },
-            &infer_callback_done));
-    base::RunLoop().RunUntilIdle();
-    ASSERT_TRUE(infer_callback_done);
-  }
+  ExpectRecognizeResult("a", 0.51218414f);
 }
 
 // Tests that the HandwritingRecognizer Recognition should fail on empty ink.
-TEST(HandwritingRecognizerTest, FailOnEmptyInk) {
+TEST_F(HandwritingRecognizerTest, FailOnEmptyInk) {
   // Nothing to test on an unsupported platform.
   if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
       ml::HandwritingLibrary::Status::kNotSupported) {
     return;
   }
 
-  MachineLearningServicePtr ml_service;
-  const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+  // Load Recognizer successfully.
+  LoadRecognizerWithLanguage("en");
 
-  // Load recognizer.
-  HandwritingRecognizerPtr recognizer;
+  // Clear the ink inside request.
+  request_.clear_ink();
+
+  // Perform inference should return an error.
+  bool infer_callback_done = false;
+  recognizer_->Recognize(
+      HandwritingRecognitionQueryFromProtoForTesting(request_),
+      base::Bind(
+          [](bool* infer_callback_done,
+             const HandwritingRecognizerResultPtr result) {
+            // Check that the inference failed.
+            EXPECT_EQ(result->status,
+                      HandwritingRecognizerResult::Status::ERROR);
+            EXPECT_EQ(result->candidates.size(), 0);
+            *infer_callback_done = true;
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests that LoadHandwritingModel without a spec produces expected result.
+TEST_F(HandwritingRecognizerTest, LoadHandwritingModelShouldUseEnAsDefault) {
+  // Nothing to test on an unsupported platform.
+  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
+      ml::HandwritingLibrary::Status::kNotSupported) {
+    return;
+  }
+
+  // Load Recognizer without a spec should succeed.
   bool model_callback_done = false;
-  ml_service->LoadHandwritingModel(
-      mojo::MakeRequest(&recognizer),
+  ml_service_->LoadHandwritingModel(
+      mojo::MakeRequest(&recognizer_),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             ASSERT_EQ(result, LoadModelResult::OK);
@@ -1118,27 +1140,10 @@ TEST(HandwritingRecognizerTest, FailOnEmptyInk) {
           &model_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(model_callback_done);
-  ASSERT_TRUE(recognizer.is_bound());
+  ASSERT_TRUE(recognizer_.is_bound());
 
-  HandwritingRecognitionQueryPtr query = HandwritingRecognitionQuery::New();
-  query->max_num_results = 1;
-
-  // Perform inference.
-  bool infer_callback_done = false;
-  recognizer->Recognize(std::move(query),
-                        base::Bind(
-                            [](bool* infer_callback_done,
-                               const HandwritingRecognizerResultPtr result) {
-                              // Check that the inference failed.
-                              EXPECT_EQ(
-                                  result->status,
-                                  HandwritingRecognizerResult::Status::ERROR);
-                              EXPECT_EQ(result->candidates.size(), 0);
-                              *infer_callback_done = true;
-                            },
-                            &infer_callback_done));
-  base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(infer_callback_done);
+  // Run recognize on the default request should produce the expected result.
+  ExpectRecognizeResult("a", 0.50640869f);
 }
 
 }  // namespace

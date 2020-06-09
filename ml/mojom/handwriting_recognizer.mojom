@@ -118,6 +118,13 @@ struct HandwritingRecognizerResult {
   array<HandwritingRecognizerCandidate> candidates;
 };
 
+// The specification of a handwriting recognizer.
+struct HandwritingRecognizerSpec {
+  // The language the recognizer will handle. Only "en" (for english) and
+  // "gesture_in_context" (for gesture) are supported.
+  string language;
+};
+
 // The mojom interface for performing the recognition of handwritten text.
 interface HandwritingRecognizer {
   // Performs handwriting recognition on a set of ink strokes, and returns a set

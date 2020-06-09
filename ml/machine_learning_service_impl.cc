@@ -18,6 +18,7 @@
 #include <utils/memory/mmap.h>
 
 #include "ml/handwriting.h"
+#include "ml/handwriting_path.h"
 #include "ml/handwriting_recognizer_impl.h"
 #include "ml/model_impl.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
@@ -32,6 +33,8 @@ using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 
@@ -193,6 +196,15 @@ void MachineLearningServiceImpl::LoadTextClassifier(
 void MachineLearningServiceImpl::LoadHandwritingModel(
     HandwritingRecognizerRequest request,
     LoadHandwritingModelCallback callback) {
+  // Use english as default language.
+  LoadHandwritingModelWithSpec(HandwritingRecognizerSpec::New("en"),
+                               std::move(request), std::move(callback));
+}
+
+void MachineLearningServiceImpl::LoadHandwritingModelWithSpec(
+    HandwritingRecognizerSpecPtr spec,
+    HandwritingRecognizerRequest request,
+    LoadHandwritingModelCallback callback) {
   RequestMetrics<LoadModelResult> request_metrics("HandwritingModel",
                                                   kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
@@ -220,8 +232,18 @@ void MachineLearningServiceImpl::LoadHandwritingModel(
     return;
   }
 
+  if (!GetModelPaths(spec.Clone()).has_value()) {
+    LOG(ERROR) << "LoadHandwritingRecognizer is not called because language "
+                  "code is not supported.";
+
+    std::move(callback).Run(LoadModelResult::LANGUAGE_NOT_SUPPORTED_ERROR);
+    request_metrics.RecordRequestEvent(
+        LoadModelResult::LANGUAGE_NOT_SUPPORTED_ERROR);
+    return;
+  }
+
   // Create HandwritingRecognizer.
-  if (!HandwritingRecognizerImpl::Create(std::move(request))) {
+  if (!HandwritingRecognizerImpl::Create(std::move(spec), std::move(request))) {
     LOG(ERROR) << "LoadHandwritingRecognizer returned false.";
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);

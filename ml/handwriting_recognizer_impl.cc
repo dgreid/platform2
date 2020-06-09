@@ -7,6 +7,7 @@
 #include <utility>
 #include <vector>
 
+#include "ml/handwriting_path.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
 
 namespace ml {
@@ -16,28 +17,14 @@ using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerCandidatePtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
-
-// Returns paths of the current HandwritingRecognizerModel.
-chrome_knowledge::HandwritingRecognizerModelPaths GetModelPaths() {
-  chrome_knowledge::HandwritingRecognizerModelPaths paths;
-  paths.set_reco_model_path(
-      "/opt/google/chrome/ml_models/handwriting/latin_indy.tflite");
-  paths.set_seg_model_path(
-      "/opt/google/chrome/ml_models/handwriting/latin_indy_seg.tflite");
-  paths.set_conf_model_path(
-      "/opt/google/chrome/ml_models/handwriting/latin_indy_conf.tflite");
-  paths.set_fst_lm_path(
-      "/opt/google/chrome/ml_models/handwriting/latin_indy.compact.fst");
-  paths.set_recospec_path(
-      "/opt/google/chrome/ml_models/handwriting/latin_indy.pb");
-  return paths;
-}
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 
 }  // namespace
 
-bool HandwritingRecognizerImpl::Create(HandwritingRecognizerRequest request) {
+bool HandwritingRecognizerImpl::Create(HandwritingRecognizerSpecPtr spec,
+                                       HandwritingRecognizerRequest request) {
   auto recognizer_impl =
-      new HandwritingRecognizerImpl(std::move(request));
+      new HandwritingRecognizerImpl(std::move(spec), std::move(request));
 
   // Set the connection error handler to strongly bind |recognizer_impl| to
   // delete |recognizer_impl| when the connection is gone.
@@ -51,18 +38,24 @@ bool HandwritingRecognizerImpl::Create(HandwritingRecognizerRequest request) {
 }
 
 HandwritingRecognizerImpl::HandwritingRecognizerImpl(
-    HandwritingRecognizerRequest request)
+    HandwritingRecognizerSpecPtr spec, HandwritingRecognizerRequest request)
     : binding_(this, std::move(request)) {
   auto* const hwr_library = ml::HandwritingLibrary::GetInstance();
   DCHECK(hwr_library->GetStatus() == ml::HandwritingLibrary::Status::kOk)
       << "HandwritingRecognizerImpl should be created only if "
          "HandwritingLibrary is initialized successfully.";
 
+  const auto model_path = GetModelPaths(std::move(spec));
+  if (!model_path.has_value()) {
+    successfully_loaded_ = false;
+    return;
+  }
+
   recognizer_ = hwr_library->CreateHandwritingRecognizer();
 
   successfully_loaded_ = hwr_library->LoadHandwritingRecognizer(
       recognizer_, chrome_knowledge::HandwritingRecognizerOptions(),
-      GetModelPaths());
+      model_path.value());
 }
 
 HandwritingRecognizerImpl::~HandwritingRecognizerImpl() {
