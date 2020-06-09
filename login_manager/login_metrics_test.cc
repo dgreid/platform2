@@ -94,34 +94,34 @@ TEST_P(UserTypeTest, CalculateUserType) {
                                                             GetParam().owner));
 }
 
-INSTANTIATE_TEST_CASE_P(DevGuest,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::DEV_GUEST, true, true, false)));
+INSTANTIATE_TEST_SUITE_P(DevGuest,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::DEV_GUEST, true, true, false)));
 
-INSTANTIATE_TEST_CASE_P(DevOwner,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::DEV_OWNER, true, false, true)));
+INSTANTIATE_TEST_SUITE_P(DevOwner,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::DEV_OWNER, true, false, true)));
 
-INSTANTIATE_TEST_CASE_P(DevOther,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::DEV_OTHER, true, false, false)));
+INSTANTIATE_TEST_SUITE_P(DevOther,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::DEV_OTHER, true, false, false)));
 
-INSTANTIATE_TEST_CASE_P(Guest,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::GUEST, false, true, false)));
+INSTANTIATE_TEST_SUITE_P(Guest,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::GUEST, false, true, false)));
 
-INSTANTIATE_TEST_CASE_P(Owner,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::OWNER, false, false, true)));
+INSTANTIATE_TEST_SUITE_P(Owner,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::OWNER, false, false, true)));
 
-INSTANTIATE_TEST_CASE_P(Other,
-                        UserTypeTest,
-                        ::testing::Values(UserTypeTestParams(
-                            LoginMetrics::OTHER, false, false, false)));
+INSTANTIATE_TEST_SUITE_P(Other,
+                         UserTypeTest,
+                         ::testing::Values(UserTypeTestParams(
+                             LoginMetrics::OTHER, false, false, false)));
 
 }  // namespace login_manager

@@ -2552,7 +2552,7 @@ TEST_P(SessionManagerPackagesCacheTest, PackagesCache) {
   EXPECT_FALSE(android_container_.running());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     SessionManagerPackagesCacheTest,
     ::testing::Combine(
@@ -2581,7 +2581,7 @@ TEST_P(SessionManagerPlayStoreAutoUpdateTest, PlayStoreAutoUpdate) {
   EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     SessionManagerPlayStoreAutoUpdateTest,
     ::testing::ValuesIn(

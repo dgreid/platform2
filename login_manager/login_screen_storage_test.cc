@@ -161,7 +161,7 @@ TEST_P(LoginScreenStorageTest, CannotRetrieveDeletedKey) {
   EXPECT_TRUE(error.get());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     LoginScreenStorageTest,
     LoginScreenStorageTest,
     testing::Combine(
