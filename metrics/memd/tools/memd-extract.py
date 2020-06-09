@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
@@ -59,7 +59,7 @@ class Extractor(object):
     """
     list_output = subprocess.check_output(['unzip', '-l', filename])
     for line in list_output.splitlines():
-      if re.match(r'.*system_logs.txt$', line):
+      if re.match(r'.*system_logs.txt$', str(line, encoding='utf-8')):
         subprocess.check_call(['unzip', '-o', filename])
         return open('system_logs.txt', 'r')
     die('%s does not contain system_logs.txt' % filename)
@@ -108,6 +108,8 @@ class Extractor(object):
 
     if scan_state != scan_state_start:
       die('missing END line in multiline section')
+    if len(memd_clip_lines) == 0:
+      die('missing memd_clips section')
     if '--- START ---' not in memd_clip_lines[0]:
       die('missing START line in memd clips section')
     if '--- START ---' not in memd_parameters[0]:

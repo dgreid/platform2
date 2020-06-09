@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 #
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
@@ -11,16 +11,17 @@
 """Interactive visualizer of memd logs."""
 
 from __future__ import print_function
+from __future__ import division
 
 import argparse
 import glob
 import math
 import os
 import sys
+import warnings
 import matplotlib.pyplot as plt
 
 # Remove spurious warning from pyplot.
-import warnings
 warnings.filterwarnings('ignore',
                         '.*Using default event loop until function ' +
                         'specific to this GUI is implemented.*')
@@ -161,10 +162,10 @@ def add_grid(fig, max_x):
     # current window on the plots, not the absolute maximum.
     return
 
-  major_xticks = range(0, max_x, 5)
-  minor_xticks = range(0, max_x, 1)
-  major_yticks = range(0, 101, 10)
-  minor_yticks = range(0, 101, 5)
+  major_xticks = list(range(0, max_x, 5))
+  minor_xticks = list(range(0, max_x, 1))
+  major_yticks = list(range(0, 101, 10))
+  minor_yticks = list(range(0, 101, 5))
 
   ax.set_xticks(major_xticks)
   ax.set_xticks(minor_xticks, minor=True)
@@ -590,12 +591,12 @@ class Plotter(object):
       return
 
     pgalloc_samples = None
-    for (label, values) in self._samples.iteritems():
+    for (label, values) in self._samples.items():
       if label.startswith('pgalloc_'):
         if pgalloc_samples is None:
           pgalloc_samples = values[:]
         else:
-          pgalloc_samples = map(sum, zip(pgalloc_samples, values))
+          pgalloc_samples = [x + y for x, y in zip(pgalloc_samples, values)]
     self._samples['pgalloc'] = pgalloc_samples
 
   def run(self):
@@ -612,7 +613,7 @@ class Plotter(object):
     self.read_parameters()
 
     # Sort files by their time stamp (first line of each file)
-    filenames = [x[0] for x in sorted([(name, open(name).next())
+    filenames = [x[0] for x in sorted([(name, next(open(name)))
                                        for name in filenames],
                                       key=lambda x: x[1])]
 
@@ -621,10 +622,10 @@ class Plotter(object):
       sample_file = open(filename)
 
       # Skip first line (time stamp).
-      _ = sample_file.next()
+      _ = next(sample_file)
 
       # Second line: field names.
-      line = sample_file.next()
+      line = next(sample_file)
       if field_names:
         assert set(line.split()) == field_names_set
       else:
