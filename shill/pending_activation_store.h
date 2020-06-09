@@ -73,7 +73,7 @@ class PendingActivationStore {
 
   // Removes the entry for the given identifier from the database. Returns true
   // if the operation was successful. If the identifier did not exist in the
-  // database, still returns true.
+  // database, returns false.
   virtual bool RemoveEntry(IdentifierType type, const std::string& identifier);
 
  private:

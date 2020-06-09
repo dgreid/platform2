@@ -132,7 +132,7 @@ TEST_F(PendingActivationStoreTest, FileInteractions) {
 
   EXPECT_TRUE(
       store_.RemoveEntry(PendingActivationStore::kIdentifierICCID, kEntry1));
-  EXPECT_TRUE(
+  EXPECT_FALSE(
       store_.RemoveEntry(PendingActivationStore::kIdentifierMEID, kEntry2));
   EXPECT_EQ(PendingActivationStore::kStateUnknown,
             store_.GetActivationState(PendingActivationStore::kIdentifierICCID,

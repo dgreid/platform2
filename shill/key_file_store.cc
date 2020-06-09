@@ -320,10 +320,7 @@ class KeyFileStore::KeyFile {
       return false;
     }
 
-    // Older behavior here was that deleting a nonexistent key from an
-    // existing group did not return an error, so replicate that here.
-    it->second->Delete(key);
-    return true;
+    return it->second->Delete(key);
   }
 
   bool HasGroup(const string& group) const { return index_.count(group) > 0; }
