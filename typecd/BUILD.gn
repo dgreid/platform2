@@ -32,6 +32,7 @@ executable("typecd") {
 static_library("typecd_common") {
   all_dependent_configs = [ ":target_defaults" ]
   sources = [
+    "alt_mode.cc",
     "partner.cc",
     "port.cc",
     "port_manager.cc",

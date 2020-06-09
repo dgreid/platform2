@@ -7,6 +7,16 @@
 
 namespace typecd {
 
+// Some SVIDs and VDOs we can use to populate the sysfs directories
+const int kDPAltModeIndex = 0;
+const uint16_t kDPSVID = 0xff01;
+const uint32_t kDPVDO = 0x1c46;
+const uint32_t kDPVDOIndex = 0;
+const int kTBTAltModeIndex = 1;
+const uint16_t kTBTSVID = 0x8087;
+const uint32_t kTBTVDO = 0x1;
+const uint32_t kTBTVDOIndex = 0;
+
 constexpr char kFakePort0SysPath[] = "/sys/class/typec/port0";
 constexpr char kFakePort0PartnerSysPath[] =
     "/sys/class/typec/port0/port0-partner";

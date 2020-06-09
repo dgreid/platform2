@@ -25,6 +25,8 @@ class Port {
 
   void AddPartner(const base::FilePath& path);
   void RemovePartner();
+  // Add/remove an alternate mode for the partner.
+  void AddRemovePartnerAltMode(const base::FilePath& path, bool added);
 
  private:
   friend class PortTest;

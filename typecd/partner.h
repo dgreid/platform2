@@ -35,12 +35,12 @@ class Partner {
   uint32_t GetCertStateVDO() { return cert_stat_vdo_; }
   uint32_t GetProductVDO() { return product_vdo_; }
 
-  void AddAltMode(int index, uint16_t svid, uint32_t vdo);
+  // Check if a particular alt mode index (as specified by the Type C connector
+  // class framework) is registered.
+  bool IsAltModePresent(int index);
 
-  // Return a pointer to the |AltMode| struct, provided an |index|. It is
-  // alright to return a raw pointer here, since the |AltMode| can be considered
-  // present for the lifetime of the partner.
-  AltMode* GetAltMode(int index);
+  bool AddAltMode(const base::FilePath& mode_syspath);
+  void RemoveAltMode(const base::FilePath& mode_syspath);
 
   // Update the AltMode information based on Type C connector class sysfs.
   // A udev event is generated when a new partner altmode is registered; parse
@@ -54,7 +54,11 @@ class Partner {
   friend class PartnerTest;
   FRIEND_TEST(PartnerTest, TestAltModeManualAddition);
 
-  // The key represents the mode index reported by the Type C connector class.
+  // A map representing all the alternate modes supported by the partner.
+  // The key is the index of the alternate mode as determined by the connector
+  // class sysfs directories that represent them. For example, and alternate
+  // mode which has the directory
+  // "/sys/class/typec/port1-partner/port1-partner.0" will use an key of "0".
   std::map<int, std::unique_ptr<AltMode>> alt_modes_;
 
   // PD Identity Data objects; expected to be read from the partner sysfs.
@@ -63,6 +67,8 @@ class Partner {
   uint32_t product_vdo_;
   // Sysfs path used to access partner PD information.
   base::FilePath syspath_;
+
+  DISALLOW_COPY_AND_ASSIGN(Partner);
 };
 
 }  // namespace typecd

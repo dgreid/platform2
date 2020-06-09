@@ -34,4 +34,20 @@ void Port::RemovePartner() {
   LOG(INFO) << "Partner removed for port " << port_num_;
 }
 
+void Port::AddRemovePartnerAltMode(const base::FilePath& path, bool added) {
+  if (!partner_) {
+    LOG(WARNING) << "Trying to add alt mode for non-existent partner on port "
+                 << port_num_;
+    return;
+  }
+
+  if (added) {
+    if (!partner_->AddAltMode(path))
+      LOG(ERROR) << "Failed to add alt mode for port " << port_num_
+                 << " at path " << path;
+  } else {
+    partner_->RemoveAltMode(path);
+  }
+}
+
 }  // namespace typecd
