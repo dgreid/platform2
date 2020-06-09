@@ -88,23 +88,27 @@ class RefCountBase : public RefCountInterface {
     return base::TimeDelta::FromDays(kDefaultExpirationDelayDays);
   }
 
+  std::set<std::string> users_;
+  int64_t last_access_time_us_;
+
  private:
+  friend class RefCountTest;
   FRIEND_TEST(RefCountTest, Ctor);
 
   // Persists the ref count proto file to disk.
   bool Persist();
 
-  base::FilePath ref_count_path_;
-  RefCountInfo ref_count_info_;
+  // Utility for reading the ref count info.
+  static bool ReadRefCountInfo(const base::FilePath& path, RefCountInfo* info);
 
+  base::FilePath ref_count_path_;
   RefCountBase(const RefCountBase&) = delete;
   RefCountBase& operator=(const RefCountBase&) = delete;
 };
 
 class UserRefCount : public RefCountBase {
  public:
-  explicit UserRefCount(const base::FilePath& prefs_path)
-      : RefCountBase(prefs_path) {}
+  explicit UserRefCount(const base::FilePath& prefs_path);
   ~UserRefCount() = default;
 
   // Refreshes the internal cache of the user names we keep.
@@ -116,7 +120,7 @@ class UserRefCount : public RefCountBase {
   }
 
  private:
-  static std::set<std::string> user_names_;
+  static std::set<std::string> device_users_;
   static std::unique_ptr<std::string> primary_session_username_;
 
   UserRefCount(const UserRefCount&) = delete;

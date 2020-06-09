@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
+#include <iterator>
 #include <set>
 #include <string>
 
@@ -42,13 +44,35 @@ std::unique_ptr<RefCountInterface> RefCountInterface::Create(
 }
 
 RefCountBase::RefCountBase(const base::FilePath& prefs_path) {
+  last_access_time_us_ = 0;
+
   // Load the ref count proto only if it exists.
   ref_count_path_ = prefs_path.Append(kRefCountFileName);
   if (base::PathExists(ref_count_path_)) {
-    string ref_count_str;
-    if (base::ReadFileToString(ref_count_path_, &ref_count_str))
-      ref_count_info_.ParseFromString(ref_count_str);
+    RefCountInfo info;
+    if (ReadRefCountInfo(ref_count_path_, &info)) {
+      for (const auto& user : info.users()) {
+        users_.insert(user.sanitized_username());
+      }
+      last_access_time_us_ = info.last_access_time_us();
+    }
   }
+}
+
+// static
+bool RefCountBase::ReadRefCountInfo(const base::FilePath& path,
+                                    RefCountInfo* info) {
+  DCHECK(info);
+  string info_str;
+  if (!base::ReadFileToString(path, &info_str)) {
+    PLOG(ERROR) << "Failed to read the ref count proto file: " << path.value();
+    return false;
+  }
+  if (!info->ParseFromString(info_str)) {
+    LOG(ERROR) << "Failed to parse the ref count proto file: " << path.value();
+    return false;
+  }
+  return true;
 }
 
 bool RefCountBase::InstalledDlc() {
@@ -59,16 +83,11 @@ bool RefCountBase::InstalledDlc() {
   }
 
   // If we already have the user, ignore.
-  if (std::any_of(ref_count_info_.users().begin(),
-                  ref_count_info_.users().end(),
-                  [&username](const RefCountInfo::User& user) {
-                    return user.sanitized_username() == username;
-                  })) {
+  if (users_.find(username) != users_.end())
     return true;
-  }
 
   // Add the current user to the list of users for this DLC.
-  ref_count_info_.add_users()->set_sanitized_username(username);
+  users_.insert(username);
   return Persist();
 }
 
@@ -79,53 +98,54 @@ bool RefCountBase::UninstalledDlc() {
     return true;
   }
 
-  // If we don't have the user, ignore.
-  auto user_it = std::find_if(ref_count_info_.users().begin(),
-                              ref_count_info_.users().end(),
-                              [&username](const RefCountInfo::User& user) {
-                                return user.sanitized_username() == username;
-                              });
-  if (user_it == ref_count_info_.users().end())
+  auto user_it = users_.find(username);
+  // If we don't have this user, ignore.
+  if (user_it == users_.end())
     return true;
 
   // Remove the user from the list of users currently using this DLC.
-  ref_count_info_.mutable_users()->erase(user_it);
+  users_.erase(user_it);
   return Persist();
 }
 
 bool RefCountBase::ShouldPurgeDlc() const {
   // If someone is using it, it should not be removed.
-  if (ref_count_info_.users_size() != 0) {
+  if (users_.size() != 0) {
     return false;
   }
 
   // If the last access time has not been set, then we don't know the timeline
   // and this DLC should not be removed.
-  int64_t last_access_time_us = ref_count_info_.last_access_time_us();
-  if (last_access_time_us == 0) {
+  if (last_access_time_us_ == 0) {
     return false;
   }
 
   base::Time last_accessed = base::Time::FromDeltaSinceWindowsEpoch(
-      base::TimeDelta::FromMicroseconds(last_access_time_us));
+      base::TimeDelta::FromMicroseconds(last_access_time_us_));
   base::TimeDelta delta_time =
       SystemState::Get()->clock()->Now() - last_accessed;
   return delta_time > GetExpirationDelay();
 }
 
 bool RefCountBase::Persist() {
-  ref_count_info_.set_last_access_time_us(SystemState::Get()
-                                              ->clock()
-                                              ->Now()
-                                              .ToDeltaSinceWindowsEpoch()
-                                              .InMicroseconds());
+  last_access_time_us_ = SystemState::Get()
+                             ->clock()
+                             ->Now()
+                             .ToDeltaSinceWindowsEpoch()
+                             .InMicroseconds();
 
-  string ref_count_str;
-  if (!ref_count_info_.SerializeToString(&ref_count_str)) {
+  RefCountInfo info;
+  info.set_last_access_time_us(last_access_time_us_);
+  for (const auto& username : users_) {
+    info.add_users()->set_sanitized_username(username);
+  }
+
+  string info_str;
+  if (!info.SerializeToString(&info_str)) {
     LOG(ERROR) << "Failed to serialize user based ref count proto.";
     return false;
   }
-  if (!WriteToFile(ref_count_path_, ref_count_str)) {
+  if (!WriteToFile(ref_count_path_, info_str)) {
     PLOG(ERROR) << "Failed to write user based ref count proto to: "
                 << ref_count_path_;
     return false;
@@ -134,13 +154,13 @@ bool RefCountBase::Persist() {
 }
 
 // UserRefCount implementations.
-set<string> UserRefCount::user_names_;
+set<string> UserRefCount::device_users_;
 unique_ptr<string> UserRefCount::primary_session_username_;
 
 // static
 void UserRefCount::SessionChanged(const string& state) {
   if (state == kSessionStarted) {
-    user_names_ = ScanDirectory(SystemState::Get()->users_dir());
+    device_users_ = ScanDirectory(SystemState::Get()->users_dir());
 
     string username, sanitized_username;
     brillo::ErrorPtr err;
@@ -153,6 +173,22 @@ void UserRefCount::SessionChanged(const string& state) {
     }
     primary_session_username_ = std::make_unique<string>(sanitized_username);
   }
+}
+
+UserRefCount::UserRefCount(const base::FilePath& prefs_path)
+    : RefCountBase(prefs_path) {
+  // We are only interested in users that exist on the system. Any other user
+  // that don't exist in the system, but is included in the ref count should be
+  // ignored. We don't necessarily need to delete these dangling users from the
+  // proto file itself because one, that user might come back, and two it
+  // doesn't really matter to the logic of ref counts because when we load, we
+  // only care about the users we loaded and approved. On the next install or
+  // uninstall the correct users will be persisted.
+  set<string> intersection;
+  std::set_intersection(users_.begin(), users_.end(), device_users_.begin(),
+                        device_users_.end(),
+                        std::inserter(intersection, intersection.end()));
+  users_.swap(intersection);
 }
 
 }  // namespace dlcservice

@@ -562,7 +562,9 @@ bool DlcBase::Purge(ErrorPtr* err) {
 }
 
 bool DlcBase::ShouldPurge() {
-  return ref_count_->ShouldPurgeDlc();
+  // We can only automatically purge a DLC that is not installed.
+  return state_.state() == DlcState::NOT_INSTALLED &&
+         ref_count_->ShouldPurgeDlc();
 }
 
 void DlcBase::SetActiveValue(bool active) {

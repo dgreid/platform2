@@ -34,11 +34,8 @@ class RefCountTest : public BaseTest {
   }
 
   RefCountInfo ReadRefCountInfo() {
-    EXPECT_TRUE(base::PathExists(ref_count_path_));
-    string str;
-    EXPECT_TRUE(base::ReadFileToString(ref_count_path_, &str));
     RefCountInfo info;
-    EXPECT_TRUE(info.ParseFromString(str));
+    EXPECT_TRUE(RefCountBase::ReadRefCountInfo(ref_count_path_, &info));
     return info;
   }
 
@@ -80,8 +77,8 @@ TEST_F(RefCountTest, Ctor) {
   SystemRefCount ref_count(prefs_path_);
   // TODO(ahassani): Improve the test so we don't access the private variables
   // like this.
-  EXPECT_EQ(ref_count.ref_count_info_.users_size(), 2);
-  EXPECT_EQ(ref_count.ref_count_info_.last_access_time_us(), 10);
+  EXPECT_EQ(ref_count.users_.size(), 2);
+  EXPECT_EQ(ref_count.last_access_time_us_, 10);
 }
 
 TEST_F(RefCountTest, SystemInstalledAndUninstallDlc) {
@@ -127,6 +124,42 @@ TEST_F(RefCountTest, UserInstalledAndUninstallDlc) {
   info = ReadRefCountInfo();
   EXPECT_EQ(info.users_size(), 1);
   EXPECT_EQ(info.users(0).sanitized_username(), "user-1");
+}
+
+TEST_F(RefCountTest, DeleteNotExistingUsers) {
+  for (const auto& sanitized_username : {"user-1", "user-2"}) {
+    auto path = JoinPaths(SystemState::Get()->users_dir(), sanitized_username);
+    EXPECT_TRUE(base::CreateDirectoryAndGetError(path, nullptr));
+  }
+
+  EXPECT_CALL(*mock_session_manager_proxy_ptr_,
+              RetrievePrimarySession(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>("username-1"),
+                      SetArgPointee<1>("user-1"), Return(true)))
+      .WillOnce(DoAll(SetArgPointee<0>("username-2"),
+                      SetArgPointee<1>("user-2"), Return(true)))
+      .WillOnce(DoAll(SetArgPointee<0>("username-2"),
+                      SetArgPointee<1>("user-2"), Return(true)));
+
+  // Install with both "user-1".
+  UserRefCount ref_count(prefs_path_);
+  UserRefCount::SessionChanged(kSessionStarted);
+  EXPECT_TRUE(ref_count.InstalledDlc());
+
+  // Install with both "user-2".
+  UserRefCount::SessionChanged(kSessionStarted);
+  EXPECT_TRUE(ref_count.InstalledDlc());
+
+  // Now delete one user of the system. Only remaining is "user-1".
+  auto path = JoinPaths(SystemState::Get()->users_dir(), "user-1");
+  EXPECT_TRUE(base::DeleteFile(path, /*recursive=*/true));
+  UserRefCount::SessionChanged(kSessionStarted);
+
+  // Uninstall should remove both users after a reboot.
+  UserRefCount ref_count2(prefs_path_);
+  EXPECT_TRUE(ref_count2.UninstalledDlc());
+  auto info = ReadRefCountInfo();
+  EXPECT_EQ(info.users_size(), 0);
 }
 
 TEST_F(RefCountTest, ShouldPurgeDlcAfterInitialize) {
