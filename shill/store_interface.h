@@ -63,8 +63,8 @@ class StoreInterface {
   // existing group will return false.
   virtual bool DeleteKey(const std::string& group, const std::string& key) = 0;
 
-  // Deletes |group|. Returns true on success. It is not an error to
-  // delete a group that does not exist.
+  // Deletes |group|. Returns true on success. Attempting to delete a
+  // non-existent group will return false.
   virtual bool DeleteGroup(const std::string& group) = 0;
 
   // Sets a descriptive header on the key file.

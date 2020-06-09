@@ -293,7 +293,7 @@ TEST_F(KeyFileStoreTest, DeleteGroup) {
                          kGroupA, kGroupB, kGroupC));
   ASSERT_TRUE(store_->Open());
   EXPECT_TRUE(store_->DeleteGroup(kGroupB));
-  EXPECT_TRUE(store_->DeleteGroup("group-d"));
+  EXPECT_FALSE(store_->DeleteGroup("group-d"));
   ASSERT_TRUE(store_->Close());
   EXPECT_EQ(base::StringPrintf("[%s]\n"
                                "\n"
@@ -953,7 +953,7 @@ TEST_F(KeyFileStoreTest, Combo) {
   }
 
   EXPECT_TRUE(store_->DeleteGroup(kGroupA));
-  EXPECT_TRUE(store_->DeleteGroup(kGroupA));
+  EXPECT_FALSE(store_->DeleteGroup(kGroupA));
 
   EXPECT_FALSE(store_->ContainsGroup(kGroupA));
   EXPECT_TRUE(store_->ContainsGroup(kGroupB));

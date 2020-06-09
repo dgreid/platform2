@@ -325,15 +325,16 @@ class KeyFileStore::KeyFile {
 
   bool HasGroup(const string& group) const { return index_.count(group) > 0; }
 
-  void DeleteGroup(const string& group) {
+  bool DeleteGroup(const string& group) {
     const auto it = index_.find(group);
     if (it == index_.end()) {
-      return;
+      return false;
     }
 
     Group* grp = it->second;
     index_.erase(it);
     base::EraseIf(groups_, [grp](const Group& g) { return &g == grp; });
+    return true;
   }
 
   set<string> GetGroups() const {
@@ -483,8 +484,7 @@ bool KeyFileStore::DeleteKey(const string& group, const string& key) {
 
 bool KeyFileStore::DeleteGroup(const string& group) {
   CHECK(key_file_);
-  key_file_->DeleteGroup(group);
-  return true;
+  return key_file_->DeleteGroup(group);
 }
 
 bool KeyFileStore::SetHeader(const string& header) {

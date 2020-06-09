@@ -168,8 +168,8 @@ bool Profile::AdoptService(const ServiceRefPtr& service) {
 bool Profile::AbandonService(const ServiceRefPtr& service) {
   if (service->profile() == this)
     service->SetProfile(nullptr);
-  return storage_->DeleteGroup(service->GetStorageIdentifier()) &&
-         storage_->Flush();
+  storage_->DeleteGroup(service->GetStorageIdentifier());
+  return storage_->Flush();
 }
 
 bool Profile::UpdateService(const ServiceRefPtr& service) {
