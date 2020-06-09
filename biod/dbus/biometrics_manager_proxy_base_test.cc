@@ -132,7 +132,7 @@ TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxyAsync) {
             dbus::Response::CreateEmpty();
         dbus::MessageWriter writer(fake_response.get());
         writer.AppendObjectPath(auth_session_path);
-        std::move(*dbus_callback).Run(fake_response.release());
+        std::move(*dbus_callback).Run(fake_response.get());
       };
   EXPECT_CALL(*mock_object_proxy_, DoCallMethod(_, _, _))
       .WillOnce(ExecuteCallbackWithFakeResponse);
