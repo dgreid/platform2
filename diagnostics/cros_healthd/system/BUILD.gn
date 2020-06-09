@@ -54,7 +54,9 @@ if (use.test || use.fuzzer) {
       "mock_context.cc",
     ]
   }
+}
 
+if (use.test) {
   pkg_config("system_config_test_pkg_deps") {
     pkg_deps = [
       "libchrome-${libbase_ver}",
