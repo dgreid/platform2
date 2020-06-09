@@ -709,24 +709,6 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
 }
 
 // static
-void ClobberState::RemoveVPDKeys() {
-  std::vector<std::string> keys_to_remove{"recovery_count",
-                                          "first_active_omaha_ping_sent"};
-  base::FilePath temp_file;
-  base::CreateTemporaryFile(&temp_file);
-  for (const std::string& key : keys_to_remove) {
-    brillo::ProcessImpl vpd;
-    vpd.AddArg("/usr/sbin/vpd");
-    vpd.AddStringOption("-i", "RW_VPD");
-    vpd.AddStringOption("-d", key);
-    // Do not report failures as the key might not even exist in the VPD.
-    vpd.RedirectOutput(temp_file.value());
-    vpd.Run();
-    AppendFileToLog(temp_file);
-  }
-}
-
-// static
 int ClobberState::GetPartitionNumber(const base::FilePath& drive_name,
                                      const std::string& partition_label) {
   // TODO(C++20): Switch to aggregate initialization once we require C++20.
@@ -1143,11 +1125,6 @@ int ClobberState::Run() {
   if (preserve_sensitive_files) {
     if (CreateEncryptedRebootVault())
       CollectClobberCrashReports();
-  }
-
-  // Destroy less sensitive data.
-  if (!args_.safe_wipe) {
-    RemoveVPDKeys();
   }
 
   if (!args_.keepimg) {

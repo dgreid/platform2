@@ -101,11 +101,6 @@ class ClobberState {
                               ClobberUi* ui,
                               bool fast);
 
-  // Removes the following keys from the VPD. Do not do this for a safe wipe.
-  //   first_active_omaha_ping_sent
-  //   recovery_count
-  static void RemoveVPDKeys();
-
   // Reads successful and priority metadata from partition numbered
   // |partition_number| on |disk|, storing the results in |successful_out| and
   // |priority_out|, respectively. Returns true on success.
