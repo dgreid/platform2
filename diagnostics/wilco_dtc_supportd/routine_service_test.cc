@@ -584,7 +584,7 @@ TEST_P(GetInteractiveUpdateTest, AccessInteractiveRunningRoutine) {
             grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetInteractiveUpdateTest,
     testing::Values(std::make_tuple(
@@ -637,7 +637,7 @@ TEST_P(GetNonInteractiveUpdateTest, AccessNonInteractiveRunningRoutine) {
             grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetNonInteractiveUpdateTest,
     testing::Values(
@@ -703,7 +703,7 @@ TEST_P(GetRoutineUpdateCommandTest, SendCommand) {
             grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetRoutineUpdateCommandTest,
     testing::Values(grpc_api::GetRoutineUpdateRequest::RESUME,
@@ -741,7 +741,7 @@ TEST_P(RunRoutineTest, RunRoutine) {
   EXPECT_EQ(reply.service_status(), grpc_api::ROUTINE_SERVICE_STATUS_OK);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     RunRoutineTest,
     testing::Values(MakeBatteryRoutineRequest(),

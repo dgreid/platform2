@@ -46,7 +46,7 @@ TEST_P(EcEventTestUtilsTest, GetEcEventWithReason) {
   EXPECT_EQ(GetEcEventWithReason(ec_event_reason()), expected_ec_event());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     GetEcEventWithReason,
     EcEventTestUtilsTest,
     testing::Values(

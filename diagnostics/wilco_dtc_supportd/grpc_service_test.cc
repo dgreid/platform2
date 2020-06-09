@@ -937,7 +937,7 @@ TEST_P(GetStatefulPartitionAvailableCapacityTest, All) {
   run_loop.Run();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetStatefulPartitionAvailableCapacityTest,
     testing::Values(
@@ -1194,7 +1194,7 @@ TEST_P(SingleProcFileGrpcServiceTest, NonExisting) {
   EXPECT_EQ(file_dumps.size(), 0);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     SingleProcFileGrpcServiceTest,
     testing::Values(
@@ -1315,7 +1315,7 @@ TEST_P(SysfsDirectoryGrpcServiceTest, Empty) {
   EXPECT_EQ(file_dumps.size(), 0);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     SysfsDirectoryGrpcServiceTest,
     testing::Values(
@@ -1379,7 +1379,7 @@ TEST_P(GetEcTelemetryGrpcServiceTest, Base) {
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetEcTelemetryGrpcServiceTest,
     testing::Values(
@@ -1467,7 +1467,7 @@ TEST_P(PerformWebRequestGrpcServiceTest, PerformWebRequest) {
 // Test cases to run a PerformWebRequest test.
 // Make sure that the delegate_http_header is not set if the flow does not
 // involve the calls to GrpcService::Delegate.
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     PerformWebRequestGrpcServiceTest,
     testing::Values(
@@ -1614,13 +1614,13 @@ TEST_P(GetRoutineUpdateRequestGrpcServiceTest,
 }
 
 // Test cases to run a GetRoutineUpdateRequest test.
-INSTANTIATE_TEST_CASE_P(,
-                        GetRoutineUpdateRequestGrpcServiceTest,
-                        testing::Values(
-                            // Test each possible command value.
-                            grpc_api::GetRoutineUpdateRequest::RESUME,
-                            grpc_api::GetRoutineUpdateRequest::CANCEL,
-                            grpc_api::GetRoutineUpdateRequest::GET_STATUS));
+INSTANTIATE_TEST_SUITE_P(,
+                         GetRoutineUpdateRequestGrpcServiceTest,
+                         testing::Values(
+                             // Test each possible command value.
+                             grpc_api::GetRoutineUpdateRequest::RESUME,
+                             grpc_api::GetRoutineUpdateRequest::CANCEL,
+                             grpc_api::GetRoutineUpdateRequest::GET_STATUS));
 
 // Test for the GetVpdField() method of GrpcService.
 //
@@ -1672,7 +1672,7 @@ TEST_P(GetVpdFieldGrpcServiceTest, NoVpdField) {
   EXPECT_TRUE(vpd_field_value.empty());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetVpdFieldGrpcServiceTest,
     testing::Values(
@@ -1740,7 +1740,7 @@ TEST_P(GetDriveSystemDataGrpcServiceTest, GetDriveSystem) {
       << "Actual response: {" << response->ShortDebugString() << "}";
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     GetDriveSystemDataGrpcServiceTest,
     testing::Values(

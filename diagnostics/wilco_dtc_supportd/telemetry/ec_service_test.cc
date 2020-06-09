@@ -58,7 +58,7 @@ TEST_P(EcEventTest, GetReason) {
   EXPECT_EQ(source_ec_event().GetReason(), expected_event_reason());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     _,
     EcEventTest,
     testing::Values(

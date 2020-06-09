@@ -213,7 +213,7 @@ TEST_P(DpslRpcServerImplTest, CreateUsingVsockTwiceOnInUseAddress) {
                                      grpc_server_uri()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     DpslRpcServerImplTest,
     testing::Values(DpslRpcServer::GrpcServerUri::kVmVsock,
@@ -389,7 +389,7 @@ TEST_P(DpslRpcServerImplUnixSocketTest, HandleBluetoothDataChanged) {
       response);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     DpslRpcServerImplUnixSocketTest,
     testing::Values(DpslRpcServer::GrpcServerUri::kVmVsock,

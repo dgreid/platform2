@@ -1266,7 +1266,7 @@ TEST_F(EcServiceBootstrappedCoreTest, SendGrpcEventToWilcoDtcInvalidSize) {
       {{valid_ec_event.type, GetPayload(valid_ec_event)}});
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     _,
     EcServiceBootstrappedCoreTest,
     testing::Values(
@@ -1357,7 +1357,7 @@ TEST_P(PowerdEventServiceBootstrappedCoreTest, PowerEvent) {
             expected_power_event());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     PowerdEventServiceBootstrappedCoreTest,
     testing::Values(

@@ -205,7 +205,7 @@ TEST_P(PowerdAdapterImplTest, OnPowerSignal) {
   InvokeSignal(signal_name(), &signal);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     PowerdAdapterImplTest,
     testing::Values(
@@ -260,7 +260,7 @@ TEST_P(PowerdAdapterImplLidTest, OnLidSignal) {
   InvokeSignal(signal_name(), &signal);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ,
     PowerdAdapterImplLidTest,
     testing::Values(std::make_tuple(power_manager::kLidClosedSignal,
