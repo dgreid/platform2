@@ -205,9 +205,9 @@ TEST_P(SeverityTest, ParsesCorrectly) {
 
   EXPECT_EQ(ParseProtoSeverity(param.severity), string(param.result));
 }
-INSTANTIATE_TEST_CASE_P(Scrubber,
-                        SeverityTest,
-                        ::testing::ValuesIn(kSeverityTests));
+INSTANTIATE_TEST_SUITE_P(Scrubber,
+                         SeverityTest,
+                         ::testing::ValuesIn(kSeverityTests));
 
 TEST_P(TimestampTest, ParsesCorrectly) {
   struct TimestampTestCase param = GetParam();
@@ -217,18 +217,18 @@ TEST_P(TimestampTest, ParsesCorrectly) {
   ASSERT_NE(timestamp.seconds(), -1);
   EXPECT_EQ(ParseProtoTimestamp(timestamp), string(param.result));
 }
-INSTANTIATE_TEST_CASE_P(Scrubber,
-                        TimestampTest,
-                        ::testing::ValuesIn(kTimestampTests));
+INSTANTIATE_TEST_SUITE_P(Scrubber,
+                         TimestampTest,
+                         ::testing::ValuesIn(kTimestampTests));
 
 TEST_P(ContentTest, ScrubsCleanly) {
   struct ContentTestCase param = GetParam();
 
   EXPECT_EQ(ScrubProtoContent(param.input), string(param.output));
 }
-INSTANTIATE_TEST_CASE_P(Scrubber,
-                        ContentTest,
-                        ::testing::ValuesIn(kContentTests));
+INSTANTIATE_TEST_SUITE_P(Scrubber,
+                         ContentTest,
+                         ::testing::ValuesIn(kContentTests));
 
 TEST(Content, StressTest) {
   base::FilePath src(getenv("PWD"));

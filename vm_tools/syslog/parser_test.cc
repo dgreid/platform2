@@ -244,9 +244,9 @@ TEST_P(PriorityTest, ParsesCorrectly) {
   EXPECT_EQ(param.severity, severity);
 }
 
-INSTANTIATE_TEST_CASE_P(SyslogParser,
-                        PriorityTest,
-                        ::testing::ValuesIn(priority_tests));
+INSTANTIATE_TEST_SUITE_P(SyslogParser,
+                         PriorityTest,
+                         ::testing::ValuesIn(priority_tests));
 
 TEST_P(TimestampTest, ParsesCorrectly) {
   struct TimestampTestCase param = GetParam();
@@ -268,9 +268,9 @@ TEST_P(TimestampTest, ParsesCorrectly) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(SyslogParser,
-                        TimestampTest,
-                        ::testing::ValuesIn(timestamp_tests));
+INSTANTIATE_TEST_SUITE_P(SyslogParser,
+                         TimestampTest,
+                         ::testing::ValuesIn(timestamp_tests));
 
 TEST_P(EndToEndSyslogTest, ParsesCorrectly) {
   struct EndToEndTestCase param = GetParam();
@@ -339,9 +339,9 @@ TEST_P(EndToEndSyslogTest, ParsesCorrectly) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(SyslogParser,
-                        EndToEndSyslogTest,
-                        ::testing::ValuesIn(end_to_end_tests));
+INSTANTIATE_TEST_SUITE_P(SyslogParser,
+                         EndToEndSyslogTest,
+                         ::testing::ValuesIn(end_to_end_tests));
 
 }  // namespace syslog
 }  // namespace vm_tools
