@@ -415,8 +415,10 @@ bool SlotManagerImpl::InitStage2() {
   if (is_initialized_)
     return true;
   if (tpm_utility_->IsTPMAvailable()) {
-    if (!tpm_utility_->IsSRKReady())
+    if (!tpm_utility_->IsSRKReady()) {
+      LOG(ERROR) << "InitStage2 failed because SRK is not ready";
       return false;
+    }
     // Mix in some random bytes from the TPM to the openssl prng.
     string random;
     if (!tpm_utility_->GenerateRandom(128, &random)) {
