@@ -175,6 +175,26 @@
                     value="attestation::FinishCertificateRequestReply" />
       </arg>
     </method>
+    <method name="Enroll">
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="attestation::EnrollRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="attestation::EnrollReply" />
+      </arg>
+    </method>
+    <method name="GetCertificate">
+      <arg name="request" type="ay" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="attestation::GetCertificateRequest" />
+      </arg>
+      <arg name="reply" type="ay" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="attestation::GetCertificateReply" />
+      </arg>
+    </method>
     <method name="SignEnterpriseChallenge">
       <arg name="request" type="ay" direction="in">
         <annotation name="org.chromium.DBus.Argument.ProtobufClass"
