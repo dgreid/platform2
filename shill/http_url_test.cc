@@ -50,7 +50,7 @@ TEST_P(HttpUrlParseTest, ParseURL) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ParseFailed,
     HttpUrlParseTest,
     ::testing::Values(
@@ -63,7 +63,7 @@ INSTANTIATE_TEST_CASE_P(
         StringAndResult("http://www.foo.com:x"),    // Non-numeric port
         StringAndResult("http://foo.com:10:20")));  // Too many colons
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ParseSucceeded,
     HttpUrlParseTest,
     ::testing::Values(StringAndResult("http://www.foo.com",

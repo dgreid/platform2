@@ -484,7 +484,7 @@ TEST_P(PortalDetectorResultMappingTest, MapResult) {
   EXPECT_EQ(trial_result.status, GetParam().portal_result.status);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     TrialResultMappingTest,
     PortalDetectorResultMappingTest,
     ::testing::Values(

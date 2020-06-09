@@ -2267,9 +2267,9 @@ TEST_P(CellularTest, DontMergeProfileAndOperatorApn) {
   CHECK_EQ(kUsernameFromOperator, apn_list_prop[1][kApnUsernameProperty]);
 }
 
-INSTANTIATE_TEST_CASE_P(CellularTest,
-                        CellularTest,
-                        testing::Values(Cellular::kType3gpp,
-                                        Cellular::kTypeCdma));
+INSTANTIATE_TEST_SUITE_P(CellularTest,
+                         CellularTest,
+                         testing::Values(Cellular::kType3gpp,
+                                         Cellular::kTypeCdma));
 
 }  // namespace shill

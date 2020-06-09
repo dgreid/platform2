@@ -88,19 +88,19 @@ TEST_P(PropertyStoreTest, SetPropertyNonexistent) {
   EXPECT_EQ(Error::kInvalidProperty, error.type());
 }
 
-INSTANTIATE_TEST_CASE_P(PropertyStoreTestInstance,
-                        PropertyStoreTest,
-                        Values(PropertyStoreTest::kBoolV,
-                               PropertyStoreTest::kByteV,
-                               PropertyStoreTest::kInt16V,
-                               PropertyStoreTest::kInt32V,
-                               PropertyStoreTest::kStringV,
-                               PropertyStoreTest::kStringmapV,
-                               PropertyStoreTest::kStringsV,
-                               PropertyStoreTest::kUint16V,
-                               PropertyStoreTest::kUint16sV,
-                               PropertyStoreTest::kUint32V,
-                               PropertyStoreTest::kUint64V));
+INSTANTIATE_TEST_SUITE_P(PropertyStoreTestInstance,
+                         PropertyStoreTest,
+                         Values(PropertyStoreTest::kBoolV,
+                                PropertyStoreTest::kByteV,
+                                PropertyStoreTest::kInt16V,
+                                PropertyStoreTest::kInt32V,
+                                PropertyStoreTest::kStringV,
+                                PropertyStoreTest::kStringmapV,
+                                PropertyStoreTest::kStringsV,
+                                PropertyStoreTest::kUint16V,
+                                PropertyStoreTest::kUint16sV,
+                                PropertyStoreTest::kUint32V,
+                                PropertyStoreTest::kUint64V));
 
 template <typename T>
 class PropertyStoreTypedTest : public PropertyStoreTest {

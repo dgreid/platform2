@@ -1601,25 +1601,25 @@ TEST_P(MobileOperatorInfoOverrideTest, MultipleDBOverrides) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(MobileOperatorInfoMainTestInstance,
-                        MobileOperatorInfoMainTest,
-                        Values(kEventCheckingPolicyStrict,
-                               kEventCheckingPolicyNonStrict));
-INSTANTIATE_TEST_CASE_P(MobileOperatorInfoDataTestInstance,
-                        MobileOperatorInfoDataTest,
-                        Values(kEventCheckingPolicyStrict,
-                               kEventCheckingPolicyNonStrict));
+INSTANTIATE_TEST_SUITE_P(MobileOperatorInfoMainTestInstance,
+                         MobileOperatorInfoMainTest,
+                         Values(kEventCheckingPolicyStrict,
+                                kEventCheckingPolicyNonStrict));
+INSTANTIATE_TEST_SUITE_P(MobileOperatorInfoDataTestInstance,
+                         MobileOperatorInfoDataTest,
+                         Values(kEventCheckingPolicyStrict,
+                                kEventCheckingPolicyNonStrict));
 // It only makes sense to do strict checking here.
-INSTANTIATE_TEST_CASE_P(MobileOperatorInfoObserverTestInstance,
-                        MobileOperatorInfoObserverTest,
-                        Values(kEventCheckingPolicyStrict));
+INSTANTIATE_TEST_SUITE_P(MobileOperatorInfoObserverTestInstance,
+                         MobileOperatorInfoObserverTest,
+                         Values(kEventCheckingPolicyStrict));
 
 vector<std::pair<string, string>> kMccmncApnPairs = {
     {"00", "zeroes_override"}, {"00", "twosies_override"},
     {"01", "zeros_default"},   {"01", "onesies_default"},
     {"02", "zeroes_override"}, {"02", "twosies_override"}};
 
-INSTANTIATE_TEST_CASE_P(MobileOperatorInfoOverrideTestInstance,
-                        MobileOperatorInfoOverrideTest,
-                        Values(kMccmncApnPairs));
+INSTANTIATE_TEST_SUITE_P(MobileOperatorInfoOverrideTestInstance,
+                         MobileOperatorInfoOverrideTest,
+                         Values(kMccmncApnPairs));
 }  // namespace shill

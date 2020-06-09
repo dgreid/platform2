@@ -28,7 +28,7 @@ TEST_P(VerizonSubscriptionStateInvalidPcoTest,
   EXPECT_EQ(SubscriptionState::kUnknown, subscription_state);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VerizonSubscriptionStateInvalidPcoTest,
     VerizonSubscriptionStateInvalidPcoTest,
     testing::Values(
@@ -66,7 +66,7 @@ TEST_P(VerizonSubscriptionStateTest, FindVerizonSubscriptionStateFromPco) {
   EXPECT_EQ(expected_subscription_state, subscription_state);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VerizonSubscriptionStateTest,
     VerizonSubscriptionStateTest,
     testing::Values(make_tuple(vector<uint8_t>({0x27, 0x08, 0x00, 0xFF, 0x00,

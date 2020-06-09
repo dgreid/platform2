@@ -1383,9 +1383,9 @@ TEST_P(WriteOnlyServicePropertyTest, PropertyWriteOnly) {
   EXPECT_EQ(Error::kPermissionDenied, error.type());
 }
 
-INSTANTIATE_TEST_CASE_P(WriteOnlyServicePropertyTestInstance,
-                        WriteOnlyServicePropertyTest,
-                        Values(brillo::Any(string(kEapPasswordProperty))));
+INSTANTIATE_TEST_SUITE_P(WriteOnlyServicePropertyTestInstance,
+                         WriteOnlyServicePropertyTest,
+                         Values(brillo::Any(string(kEapPasswordProperty))));
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
 
 TEST_F(ServiceTest, GetIPConfigRpcIdentifier) {

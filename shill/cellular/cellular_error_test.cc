@@ -49,7 +49,7 @@ TEST_P(CellularErrorMM1Test, FromDBusError) {
   EXPECT_EQ(param.error_type, shill_error.type());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CellularErrorMM1Test,
     CellularErrorMM1Test,
     testing::Values(TestParam(kErrorIncorrectPasswordMM1, Error::kIncorrectPin),

@@ -21,7 +21,7 @@ TEST_P(CellularPcoInvalidRawDataTest, CreateFromRawData) {
   EXPECT_EQ(nullptr, CellularPco::CreateFromRawData(raw_data));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CellularPcoInvalidRawDataTest,
     CellularPcoInvalidRawDataTest,
     testing::Values(
@@ -97,7 +97,7 @@ TEST_P(CellularPcoValidRawDataTest, FindElement) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     CellularPcoValidRawDataTest,
     CellularPcoValidRawDataTest,
     testing::Values(

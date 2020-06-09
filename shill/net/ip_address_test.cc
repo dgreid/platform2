@@ -217,7 +217,7 @@ TEST_P(IPAddressPrefixMappingTest, TestPrefixMapping) {
   EXPECT_TRUE(expected_address.Equals(address));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IPAddressPrefixMappingTestRun,
     IPAddressPrefixMappingTest,
     ::testing::Values(
@@ -293,7 +293,7 @@ TEST_P(IPAddressBitOperationMappingTest, TestBitOperationMapping) {
   EXPECT_TRUE(expected_orred.Equals(address_a.MergeWith(address_b)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IPAddressBitOperationMappingTestRun,
     IPAddressBitOperationMappingTest,
     ::testing::Values(BitOperationMapping(IPAddress::kFamilyIPv4,
@@ -364,7 +364,7 @@ TEST_P(IPAddressNetworkPartMappingTest, TestNetworkPartMapping) {
   EXPECT_TRUE(expected_broadcast.Equals(address.GetDefaultBroadcast()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IPAddressNetworkPartMappingTestRun,
     IPAddressNetworkPartMappingTest,
     ::testing::Values(
@@ -429,7 +429,7 @@ TEST_P(IPAddressMinPrefixLengthMappingTest, TestMinPrefixLengthMapping) {
   EXPECT_EQ(GetParam().expected_min_prefix, address.GetMinPrefixLength());
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IPAddressMinPrefixLengthMappingTestRun,
     IPAddressMinPrefixLengthMappingTest,
     ::testing::Values(
@@ -467,7 +467,7 @@ TEST_P(IPAddressCanReachAddressMappingTest, TestCanReachAddressMapping) {
   EXPECT_EQ(GetParam().expected_result, address_a.CanReachAddress(address_b));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     IPAddressCanReachAddressMappingTestRun,
     IPAddressCanReachAddressMappingTest,
     ::testing::Values(
@@ -546,21 +546,21 @@ TEST_P(IPAddressCrossComparisonTest, LessThanTest) {
   EXPECT_FALSE(kIPv6OrderedAddresses[i6] < kIPv4OrderedAddresses[i4]);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ComparisonTest,
     IPAddressIPv4ComparisonTest,
     testing::Combine(
         testing::Range<size_t>(0, base::size(kIPv4OrderedAddresses) - 1),
         testing::Range<size_t>(0, base::size(kIPv4OrderedAddresses) - 1)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ComparisonTest,
     IPAddressIPv6ComparisonTest,
     testing::Combine(
         testing::Range<size_t>(0, base::size(kIPv6OrderedAddresses) - 1),
         testing::Range<size_t>(0, base::size(kIPv6OrderedAddresses) - 1)));
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     ComparisonTest,
     IPAddressCrossComparisonTest,
     testing::Combine(
