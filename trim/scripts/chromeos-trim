@@ -40,6 +40,7 @@ fi
 
 # Maximal amount of time before forcing a trim.
 MAX_DELAY_DAYS=7
+MAX_DELAY_HOURS=$(( MAX_DELAY_DAYS * 24 ))
 MAX_DELAY=$(( MAX_DELAY_DAYS * 24 * 3600 ))
 
 # Ratio of write/free space to trigger a trim.
@@ -141,9 +142,14 @@ do_trim() {
   local output
   local trimmed
   local trim_length=${FSTRIM_SLICE_MB}
+  local time_between_trim
+  local time_between_hours
+  local trimmed_amount_mb
 
   read_status_file
   trim_status="${TRIM_IN_PROGRESS}"
+
+  : $(( time_between_trim = start_time - date_last_trim ))
 
   if [ "${current_offset}" -eq 0 ]; then
     trimmed_amount=0
@@ -182,6 +188,14 @@ do_trim() {
     date_last_trim=$(date +%s)
     : $(( current_duration = date_last_trim - start_time ))
   done
+
+  : $(( trimmed_amount_mb = trimmed_amount / 1048576 ))
+  metrics_client Platform.StatefulTrim.TrimmedAmount "${trimmed_amount_mb}" \
+                 0 10240 50
+  : $(( time_between_hours = time_between_trim / 3600 ))
+  metrics_client Platform.StatefulTrim.TimeBetweenTrim "${time_between_hours}" \
+                 0 ${MAX_DELAY_HOURS} 20
+
 
   : $(( duration += current_duration ))
 
