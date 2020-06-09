@@ -56,6 +56,7 @@
 #include "power_manager/powerd/system/lockfile_checker.h"
 #include "power_manager/powerd/system/peripheral_battery_watcher.h"
 #include "power_manager/powerd/system/power_supply.h"
+#include "power_manager/powerd/system/smart_discharge_configurator.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
 #include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/user_proximity_watcher_interface.h"
@@ -456,6 +457,13 @@ void Daemon::Init() {
   if (acpi_wakeup_helper_->IsSupported()) {
     acpi_wakeup_helper_->SetWakeupEnabled("CREC", true);
   }
+
+  // Configure Smart Discharge in EC.
+  int64_t to_zero_hr = -1, cutoff_ua = -1, hibernate_ua = -1;
+  prefs_->GetInt64(kSmartDischargeToZeroHrPref, &to_zero_hr);
+  prefs_->GetInt64(kCutoffPowerUaPref, &cutoff_ua);
+  prefs_->GetInt64(kHibernatePowerUaPref, &hibernate_ua);
+  system::ConfigureSmartDischarge(to_zero_hr, cutoff_ua, hibernate_ua);
 
   // Call this last to ensure that all of our members are already initialized.
   OnPowerStatusUpdate();

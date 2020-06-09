@@ -254,6 +254,19 @@ extern const char kSuspendModePref[];
 // ports.
 extern const char kWakeOnDpPref[];
 
+// Time in hours for Smart Discharge to help device last through.
+extern const char kSmartDischargeToZeroHrPref[];
+
+// Current in microamps that the device is expected to consume in battery cutoff
+// state. This field allows EC to calculate the battery level at which the
+// device should enter battery cutoff state.
+extern const char kCutoffPowerUaPref[];
+
+// Current in microamps that the device is expected to consume in hibernate
+// state. This field allows EC to calculate the battery level at which the
+// device should enter S5 or hibernate if EC can wake up by timer.
+extern const char kHibernatePowerUaPref[];
+
 // Miscellaneous constants.
 
 // Name of the cros_fp fingerprint sensor input device.

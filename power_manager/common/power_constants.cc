@@ -98,6 +98,9 @@ const char kMaxDarkSuspendDelayTimeoutMsPref[] =
     "max_dark_suspend_delay_timeout_ms";
 const char kSuspendModePref[] = "suspend_mode";
 const char kWakeOnDpPref[] = "wake_on_dp";
+const char kSmartDischargeToZeroHrPref[] = "smart_discharge_to_zero_hr";
+const char kCutoffPowerUaPref[] = "cutoff_power_ua";
+const char kHibernatePowerUaPref[] = "hibernate_power_ua";
 
 // Miscellaneous constants.
 const char kCrosFpInputDevName[] = "cros_fp_input";
