@@ -85,7 +85,8 @@ class HalDeviceConnector final : public DeviceConnector {
 class ClientDeviceConnector final : public DeviceConnector,
                                     public cros::mojom::Camera3CallbackOps {
  public:
-  explicit ClientDeviceConnector(cros::mojom::Camera3DeviceOpsPtr dev_ops);
+  explicit ClientDeviceConnector(
+      cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info);
 
   ~ClientDeviceConnector();
 
@@ -98,30 +99,27 @@ class ClientDeviceConnector final : public DeviceConnector,
   int Flush() override;
 
  private:
-  void CloseOnThread(int* result);
-  void OnClosed(base::Callback<void(int32_t)> cb, int32_t result);
+  void CloseOnThread(base::OnceCallback<void(int32_t)> cb);
+  void ReceiveInterfaceOnThread(
+      cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info);
   void InitializeOnThread(const camera3_callback_ops_t* callback_ops,
-                          int* result);
-  void OnInitialized(base::Callback<void(int32_t)> cb, int32_t result);
+                          base::OnceCallback<void(int32_t)> cb);
   void ConfigureStreamsOnThread(camera3_stream_configuration_t* stream_list,
-                                int* result);
+                                base::OnceCallback<void(int32_t)> cb);
   void OnConfiguredStreams(
-      base::Callback<void(int32_t)> cb,
+      base::OnceCallback<void(int32_t)> cb,
       int32_t result,
       cros::mojom::Camera3StreamConfigurationPtr updated_config);
   void ConstructDefaultRequestSettingsOnThread(
-      int type, const camera_metadata_t** result);
+      int type, base::OnceCallback<void(const camera_metadata_t*)> cb);
   void OnConstructedDefaultRequestSettings(
       int type,
-      base::Callback<void(void)> cb,
+      base::OnceCallback<void(const camera_metadata_t*)> cb,
       cros::mojom::CameraMetadataPtr settings);
   void ProcessCaptureRequestOnThread(camera3_capture_request_t* request,
-                                     int* result);
+                                     base::OnceCallback<void(int32_t)> cb);
   cros::mojom::Camera3StreamBufferPtr PrepareStreamBufferPtr(
       const camera3_stream_buffer_t* buffer);
-  void OnProcessedCaptureRequest(base::Callback<void(int32_t)> cb,
-                                 int32_t result);
-  void OnFlushed(base::Callback<void(int32_t)> cb, int32_t result);
   void Notify(cros::mojom::Camera3NotifyMsgPtr message) override;
   void ProcessCaptureResult(
       cros::mojom::Camera3CaptureResultPtr result) override;

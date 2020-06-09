@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/stl_util.h>
 #include <base/posix/eintr_wrapper.h>
 #include <drm_fourcc.h>
 #include <mojo/public/cpp/system/platform_handle.h>
@@ -140,59 +141,67 @@ int HalDeviceConnector::Flush() {
 }
 
 ClientDeviceConnector::ClientDeviceConnector(
-    cros::mojom::Camera3DeviceOpsPtr dev_ops)
-    : dev_ops_(std::move(dev_ops)),
-      mojo_callback_ops_(this),
+    cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info)
+    : mojo_callback_ops_(this),
       user_callback_ops_(nullptr),
-      dev_thread_("Camera3TestClientDeviceConnectorThread") {}
+      dev_thread_("Camera3TestClientDeviceConnectorThread") {
+  dev_thread_.Start();
+
+  dev_thread_.PostTaskAsync(
+      FROM_HERE,
+      base::Bind(&ClientDeviceConnector::ReceiveInterfaceOnThread,
+                 base::Unretained(this), base::Passed(&dev_ops_info)));
+}
 
 ClientDeviceConnector::~ClientDeviceConnector() {
-  int result = -EIO;
-  dev_thread_.PostTaskSync(FROM_HERE,
-                           base::Bind(&ClientDeviceConnector::CloseOnThread,
-                                      base::Unretained(this), &result));
-  if (result != 0) {
+  auto future = cros::Future<int32_t>::Create(nullptr);
+  dev_thread_.PostTaskAsync(
+      FROM_HERE,
+      base::Bind(&ClientDeviceConnector::CloseOnThread, base::Unretained(this),
+                 cros::GetFutureCallback(future)));
+  if (!future->Wait() || future->Get() != 0) {
     ADD_FAILURE() << "Camera device close failed";
   }
   dev_thread_.Stop();
 }
 
-void ClientDeviceConnector::CloseOnThread(int* result) {
-  auto future = cros::Future<int32_t>::Create(nullptr);
-  dev_ops_->Close(cros::GetFutureCallback(future));
-  if (!future->Wait()) {
-    ADD_FAILURE() << "Wait timeout";
-    return;
-  }
-  *result = future->Get();
+void ClientDeviceConnector::CloseOnThread(
+    base::OnceCallback<void(int32_t)> cb) {
+  dev_ops_->Close(std::move(cb));
+}
+
+void ClientDeviceConnector::ReceiveInterfaceOnThread(
+    cros::mojom::Camera3DeviceOpsPtrInfo dev_ops_info) {
+  dev_ops_ = mojo::MakeProxy(std::move(dev_ops_info));
 }
 
 int ClientDeviceConnector::Initialize(
     const camera3_callback_ops_t* callback_ops) {
-  if (!callback_ops || !dev_thread_.Start()) {
+  if (!callback_ops) {
     return -EINVAL;
   }
-  int result = -EIO;
-  dev_thread_.PostTaskSync(
+  auto future = cros::Future<int32_t>::Create(nullptr);
+  dev_thread_.PostTaskAsync(
       FROM_HERE, base::Bind(&ClientDeviceConnector::InitializeOnThread,
-                            base::Unretained(this), callback_ops, &result));
-  return result;
+                            base::Unretained(this), callback_ops,
+                            cros::GetFutureCallback(future)));
+  if (!future->Wait()) {
+    LOGF(ERROR) << "Failed to initialize client camera device";
+    return -EIO;
+  }
+  user_callback_ops_ = callback_ops;
+  return future->Get();
 }
 
 void ClientDeviceConnector::InitializeOnThread(
-    const camera3_callback_ops_t* callback_ops, int* result) {
+    const camera3_callback_ops_t* callback_ops,
+    base::OnceCallback<void(int32_t)> cb) {
   VLOGF_ENTER();
   cros::mojom::Camera3CallbackOpsPtr callback_ops_ptr;
   cros::mojom::Camera3CallbackOpsRequest callback_ops_request =
       mojo::MakeRequest(&callback_ops_ptr);
   mojo_callback_ops_.Bind(std::move(callback_ops_request));
-  auto future = cros::Future<int32_t>::Create(nullptr);
-  dev_ops_->Initialize(std::move(callback_ops_ptr),
-                       cros::GetFutureCallback(future));
-  *result = -ENODEV;
-  ASSERT_TRUE(future->Wait());
-  user_callback_ops_ = callback_ops;
-  *result = future->Get();
+  dev_ops_->Initialize(std::move(callback_ops_ptr), std::move(cb));
 }
 
 int ClientDeviceConnector::ConfigureStreams(
@@ -200,15 +209,20 @@ int ClientDeviceConnector::ConfigureStreams(
   if (!stream_list) {
     return -EINVAL;
   }
-  int32_t result = -EIO;
-  dev_thread_.PostTaskSync(
+  auto future = cros::Future<int32_t>::Create(nullptr);
+  dev_thread_.PostTaskAsync(
       FROM_HERE, base::Bind(&ClientDeviceConnector::ConfigureStreamsOnThread,
-                            base::Unretained(this), stream_list, &result));
-  return result;
+                            base::Unretained(this), stream_list,
+                            cros::GetFutureCallback(future)));
+  if (!future->Wait()) {
+    return -ENODEV;
+  }
+  return future->Get();
 }
 
 void ClientDeviceConnector::ConfigureStreamsOnThread(
-    camera3_stream_configuration_t* stream_list, int* result) {
+    camera3_stream_configuration_t* stream_list,
+    base::OnceCallback<void(int32_t)> cb) {
   camera3_streams_.clear();
   for (uint32_t i = 0; i < stream_list->num_streams; i++) {
     camera3_streams_.insert(stream_list->streams[i]);
@@ -239,18 +253,14 @@ void ClientDeviceConnector::ConfigureStreamsOnThread(
     stream->crop_rotate_scale_info = std::move(info);
     stream_config->streams.push_back(std::move(stream));
   }
-  auto future = cros::Future<int32_t>::Create(nullptr);
   dev_ops_->ConfigureStreams(
       std::move(stream_config),
-      base::Bind(&ClientDeviceConnector::OnConfiguredStreams,
-                 base::Unretained(this), cros::GetFutureCallback(future)));
-  *result = -ENODEV;
-  ASSERT_TRUE(future->Wait());
-  *result = future->Get();
+      base::BindOnce(&ClientDeviceConnector::OnConfiguredStreams,
+                     base::Unretained(this), std::move(cb)));
 }
 
 void ClientDeviceConnector::OnConfiguredStreams(
-    base::Callback<void(int32_t)> cb,
+    base::OnceCallback<void(int32_t)> cb,
     int32_t result,
     cros::mojom::Camera3StreamConfigurationPtr updated_config) {
   VLOGF_ENTER();
@@ -262,50 +272,47 @@ void ClientDeviceConnector::OnConfiguredStreams(
       ptr->max_buffers = s->max_buffers;
     }
   }
-  cb.Run(result);
+  std::move(cb).Run(result);
 }
 
 const camera_metadata_t* ClientDeviceConnector::ConstructDefaultRequestSettings(
     int type) {
   VLOGF_ENTER();
-  const camera_metadata_t* metadata = nullptr;
-  dev_thread_.PostTaskSync(
+  auto future = cros::Future<const camera_metadata_t*>::Create(nullptr);
+  dev_thread_.PostTaskAsync(
       FROM_HERE,
       base::Bind(
           &ClientDeviceConnector::ConstructDefaultRequestSettingsOnThread,
-          base::Unretained(this), type, &metadata));
-  return metadata;
+          base::Unretained(this), type, cros::GetFutureCallback(future)));
+  if (!future->Wait()) {
+    return nullptr;
+  }
+  return future->Get();
 }
 
 void ClientDeviceConnector::ConstructDefaultRequestSettingsOnThread(
-    int type, const camera_metadata_t** result) {
-  if (default_req_settings_map_.find(type) != default_req_settings_map_.end()) {
-    *result = default_req_settings_map_.at(type).get();
+    int type, base::OnceCallback<void(const camera_metadata_t*)> cb) {
+  if (base::ContainsKey(default_req_settings_map_, type)) {
+    std::move(cb).Run(default_req_settings_map_.at(type).get());
     return;
   }
-  auto future = cros::Future<void>::Create(nullptr);
   dev_ops_->ConstructDefaultRequestSettings(
       static_cast<cros::mojom::Camera3RequestTemplate>(type),
-      base::Bind(&ClientDeviceConnector::OnConstructedDefaultRequestSettings,
-                 base::Unretained(this), type,
-                 cros::GetFutureCallback(future)));
-  *result = nullptr;
-  ASSERT_TRUE(future->Wait());
-  if (default_req_settings_map_.find(type) != default_req_settings_map_.end()) {
-    *result = default_req_settings_map_.at(type).get();
-  }
+      base::BindOnce(
+          &ClientDeviceConnector::OnConstructedDefaultRequestSettings,
+          base::Unretained(this), type, std::move(cb)));
 }
 
 void ClientDeviceConnector::OnConstructedDefaultRequestSettings(
     int type,
-    base::Callback<void(void)> cb,
+    base::OnceCallback<void(const camera_metadata_t*)> cb,
     cros::mojom::CameraMetadataPtr settings) {
   VLOGF_ENTER();
-  if (default_req_settings_map_.find(type) == default_req_settings_map_.end()) {
+  if (!base::ContainsKey(default_req_settings_map_, type)) {
     default_req_settings_map_[type] =
         cros::internal::DeserializeCameraMetadata(settings);
   }
-  cb.Run();
+  std::move(cb).Run(default_req_settings_map_.at(type).get());
 }
 
 int ClientDeviceConnector::ProcessCaptureRequest(
@@ -314,22 +321,26 @@ int ClientDeviceConnector::ProcessCaptureRequest(
   if (!capture_request) {
     return -EINVAL;
   }
-  int32_t result = -EIO;
-  dev_thread_.PostTaskSync(
+  auto future = cros::Future<int32_t>::Create(nullptr);
+  dev_thread_.PostTaskAsync(
       FROM_HERE,
       base::Bind(&ClientDeviceConnector::ProcessCaptureRequestOnThread,
-                 base::Unretained(this), capture_request, &result));
-  return result;
+                 base::Unretained(this), capture_request,
+                 cros::GetFutureCallback(future)));
+  if (!future->Wait()) {
+    return -EIO;
+  }
+  return future->Get();
 }
 
 void ClientDeviceConnector::ProcessCaptureRequestOnThread(
-    camera3_capture_request_t* capture_request, int* result) {
+    camera3_capture_request_t* capture_request,
+    base::OnceCallback<void(int32_t)> cb) {
   cros::mojom::Camera3CaptureRequestPtr request =
       cros::mojom::Camera3CaptureRequest::New();
   request->frame_number = capture_request->frame_number;
   request->settings =
       cros::internal::SerializeCameraMetadata(capture_request->settings);
-  *result = -EINVAL;
   if (capture_request->input_buffer) {
     cros::mojom::Camera3StreamBufferPtr input_buffer =
         PrepareStreamBufferPtr(capture_request->input_buffer);
@@ -342,14 +353,7 @@ void ClientDeviceConnector::ProcessCaptureRequestOnThread(
     ASSERT_FALSE(output_buffer.is_null());
     request->output_buffers.push_back(std::move(output_buffer));
   }
-  auto future = cros::Future<int32_t>::Create(nullptr);
-  dev_ops_->ProcessCaptureRequest(
-      std::move(request),
-      base::Bind(&ClientDeviceConnector::OnProcessedCaptureRequest,
-                 base::Unretained(this), cros::GetFutureCallback(future)));
-  *result = -ENODEV;
-  ASSERT_TRUE(future->Wait());
-  *result = future->Get();
+  dev_ops_->ProcessCaptureRequest(std::move(request), std::move(cb));
 }
 
 cros::mojom::Camera3StreamBufferPtr
@@ -423,29 +427,14 @@ ClientDeviceConnector::PrepareStreamBufferPtr(
   return buffer_ptr;
 }
 
-void ClientDeviceConnector::OnProcessedCaptureRequest(
-    base::Callback<void(int32_t)> cb, int32_t result) {
-  VLOGF_ENTER();
-  cb.Run(result);
-}
-
 int ClientDeviceConnector::Flush() {
   VLOGF_ENTER();
   auto future = cros::Future<int32_t>::Create(nullptr);
-  dev_ops_->Flush(base::Bind(&ClientDeviceConnector::OnFlushed,
-                             base::Unretained(this),
-                             cros::GetFutureCallback(future)));
+  dev_ops_->Flush(cros::GetFutureCallback(future));
   if (!future->Wait()) {
-    ADD_FAILURE() << "Wait timeout";
     return -ENODEV;
   }
   return future->Get();
-}
-
-void ClientDeviceConnector::OnFlushed(base::Callback<void(int32_t)> cb,
-                                      int32_t result) {
-  VLOGF_ENTER();
-  cb.Run(result);
 }
 
 void ClientDeviceConnector::Notify(cros::mojom::Camera3NotifyMsgPtr message) {

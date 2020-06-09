@@ -130,10 +130,7 @@ int ClientModuleConnector::GetNumberOfCameras() {
 
 std::unique_ptr<DeviceConnector> ClientModuleConnector::OpenDevice(int cam_id) {
   cros::mojom::Camera3DeviceOpsPtr dev_ops = cam_client_->OpenDevice(cam_id);
-  if (!dev_ops.is_bound()) {
-    return nullptr;
-  }
-  return std::make_unique<ClientDeviceConnector>(std::move(dev_ops));
+  return std::make_unique<ClientDeviceConnector>(dev_ops.PassInterface());
 }
 
 int ClientModuleConnector::GetCameraInfo(int cam_id, camera_info* info) {
