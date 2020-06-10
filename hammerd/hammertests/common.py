@@ -11,7 +11,7 @@ import os
 import time
 import subprocess
 
-import hammerd_api
+import hammerd_api # pylint: disable=import-error
 
 # The root path of the hammertests.
 ROOT_DIR = os.path.dirname(os.path.realpath(__file__))
@@ -51,15 +51,13 @@ elif BASE_NAME == 'hammer':
 elif BASE_NAME == 'magnemite':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x503d
-  BASE_BUS = 1
-  BASE_PORT = '1.1'
+  BASE_USB_PATH = '1-1.1'
   BASE_CONN_GPIO = 'EN_PP3300_POGO'
   TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
 elif BASE_NAME == 'masterball':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x503c
-  BASE_BUS = 1
-  BASE_PORT = '1.1'
+  BASE_USB_PATH = '1-1.1'
   BASE_CONN_GPIO = 'EN_PP3300_POGO'
   TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
 else:

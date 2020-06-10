@@ -191,8 +191,7 @@ class FirmwareUpdater(object):
 
   def __init__(self, vendor_id, product_id, path=None):
     func = _DLL.FirmwareUpdater_New
-    func.argtypes = [ctypes.c_uint16, ctypes.c_uint16,
-                     ctypes.c_int, ctypes.c_char_p]
+    func.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_char_p]
     func.restype = ctypes.c_void_p
     self.object = func(vendor_id, product_id, path)
 
