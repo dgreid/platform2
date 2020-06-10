@@ -13216,6 +13216,20 @@ mno {
 
 mno {
   data {
+    uuid : "abe93326-f5ae-4598-9f17-db2376ecc68d"
+    country : "us"
+    localized_name {
+      name : "CSpire"
+    }
+    mccmnc : "311230"
+    mobile_apn {
+      apn : "admin.cs4glte.com"
+    }
+  }
+}
+
+mno {
+  data {
     uuid : "9f08a247-80f6-4cab-a7f2-8056289fac7a"
     country : "us"
     localized_name {
