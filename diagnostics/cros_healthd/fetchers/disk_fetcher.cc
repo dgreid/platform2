@@ -14,6 +14,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/time/time.h>
 #include <re2/re2.h>
 
 #include "diagnostics/common/file_utils.h"
@@ -29,8 +30,14 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 constexpr char kDevStatFileName[] = "stat";
 
+// These fields should be supported on all CrOS kernels.
 constexpr char kDevStatRegex[] =
-    R"(\s*\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+(\d+))";
+    R"(\s*\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+(\d+))"
+    R"(\s+\d+)";
+// Includes fields which are only supported on kernel versions 4.18+.
+constexpr char kDevStatKernel4_18PlusRegex[] =
+    R"(\s*\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+\d+\s+(\d+)\s+(\d+)\s+\d+\s+(\d+))"
+    R"(\s+\d+\s+\d+\s+\d+\s+\d+\s+(\d+))";
 
 constexpr char kSysBlockPath[] = "sys/block/";
 
@@ -90,16 +97,22 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetUdevDeviceSubsystems(
 
 // When successful, populates |read_time_seconds|, |write_time_seconds| and
 // |sector_stats| with information from the disk corresponding to |sys_path| and
-// returns base::nullopt. On failure, returns an appropriate error, and none of
-// the output variables are valid.
-base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
+// returns base::nullopt. On kernels 4.18+, this will also populate
+// |io_time| and |discard_time|. On earlier kernels, those two fields will
+// remain unset. On failure, returns an appropriate error, and none of the
+// output variables are valid.
+base::Optional<mojo_ipc::ProbeErrorPtr> GetIOStats(
     const base::FilePath& sys_path,
     uint64_t* read_time_seconds,
     uint64_t* write_time_seconds,
-    SectorStats* sector_stats) {
+    base::TimeDelta* io_time,
+    SectorStats* sector_stats,
+    base::Optional<base::TimeDelta>* discard_time) {
   DCHECK(read_time_seconds);
   DCHECK(write_time_seconds);
+  DCHECK(io_time);
   DCHECK(sector_stats);
+  DCHECK(discard_time);
 
   std::string stat_contents;
   if (!ReadAndTrimString(sys_path, kDevStatFileName, &stat_contents)) {
@@ -112,8 +125,21 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
   std::string write_time_ms;
   std::string sectors_read;
   std::string sectors_written;
-  if (!RE2::PartialMatch(stat_contents, kDevStatRegex, &sectors_read,
-                         &read_time_ms, &sectors_written, &write_time_ms)) {
+  std::string io_time_ms;
+  std::string discard_time_ms;
+
+  // Try the 4.18+ kernel regex first. If we can't match that, fall back to the
+  // regex which should be supported on all CrOS kernels.
+  bool extra_fields_supported = false;
+  if (RE2::PartialMatch(stat_contents, kDevStatKernel4_18PlusRegex,
+                        &sectors_read, &read_time_ms, &sectors_written,
+                        &write_time_ms, &io_time_ms, &discard_time_ms)) {
+    extra_fields_supported = true;
+  } else if (!RE2::FullMatch(stat_contents, kDevStatRegex, &sectors_read,
+                             &read_time_ms, &sectors_written, &write_time_ms,
+                             &io_time_ms)) {
+    // At least one regex should have matched for every kernel, so this is an
+    // error.
     return CreateAndLogProbeError(
         mojo_ipc::ErrorType::kParseError,
         "Unable to parse " + sys_path.Append(kDevStatFileName).value() + ": " +
@@ -135,6 +161,13 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
             write_time_ms);
   }
 
+  uint32_t io_time_ms_uint;
+  if (!base::StringToUint(io_time_ms, &io_time_ms_uint)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert io_time_ms to unsigned integer: " + io_time_ms);
+  }
+
   if (!base::StringToUint64(sectors_read, &sector_stats->read)) {
     return CreateAndLogProbeError(
         mojo_ipc::ErrorType::kParseError,
@@ -148,9 +181,25 @@ base::Optional<mojo_ipc::ProbeErrorPtr> GetReadWriteStats(
             sectors_written);
   }
 
+  if (extra_fields_supported) {
+    uint32_t discard_time_ms_uint;
+    if (!base::StringToUint(discard_time_ms, &discard_time_ms_uint)) {
+      return CreateAndLogProbeError(
+          mojo_ipc::ErrorType::kParseError,
+          "Failed to convert discard_time_ms to unsigned integer: " +
+              discard_time_ms);
+    }
+
+    *discard_time = base::TimeDelta::FromMilliseconds(
+        static_cast<int64_t>(discard_time_ms_uint));
+  }
+
   // Convert from ms to seconds.
   *read_time_seconds = read_time_ms_int / 1000;
   *write_time_seconds = write_time_ms_int / 1000;
+
+  *io_time =
+      base::TimeDelta::FromMilliseconds(static_cast<int64_t>(io_time_ms_uint));
 
   return base::nullopt;
 }
@@ -205,11 +254,22 @@ DiskFetcher::FetchNonRemovableBlockDeviceInfo(
   mojo_ipc::NonRemovableBlockDeviceInfo info;
 
   SectorStats sector_stats;
-  auto error = GetReadWriteStats(
-      dev_info->GetSysPath(), &info.read_time_seconds_since_last_boot,
-      &info.write_time_seconds_since_last_boot, &sector_stats);
+  base::TimeDelta io_time;
+  base::Optional<base::TimeDelta> discard_time;
+  auto error = GetIOStats(dev_info->GetSysPath(),
+                          &info.read_time_seconds_since_last_boot,
+                          &info.write_time_seconds_since_last_boot, &io_time,
+                          &sector_stats, &discard_time);
   if (error.has_value())
     return error;
+
+  info.io_time_seconds_since_last_boot =
+      static_cast<uint64_t>(io_time.InSeconds());
+
+  if (discard_time.has_value()) {
+    info.discard_time_seconds_since_last_boot = mojo_ipc::UInt64Value::New(
+        static_cast<uint64_t>(discard_time.value().InSeconds()));
+  }
 
   info.path = dev_info->GetDevNodePath().value();
   info.type = dev_info->GetSubsystem();
