@@ -156,7 +156,8 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
     const char* child_type = udev_device_get_devtype(child.get());
     if (!child_type || strcmp(child_type, "usb_interface") != 0) {
       // If this is not a usb_interface node then something is wrong, fail safe.
-      LOG(WARNING) << "Found a child with unexpected type: "
+      LOG(WARNING) << "Found a child '" << entry_path
+                   << "' with unexpected type: "
                    << (child_type ? child_type : "(null)");
       return DENY;
     }
