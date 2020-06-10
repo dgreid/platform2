@@ -10,7 +10,7 @@ openat: 1
 sendto: 1
 send: 1
 fstat64: 1
-socket: arg0 == AF_INET || arg0 == AF_NETLINK || arg0 == AF_UNIX
+socket: arg0 == AF_INET || arg0 == AF_NETLINK || arg0 == AF_UNIX || arg0 == AF_INET6
 recvfrom: 1
 connect: 1
 fcntl64: 1
