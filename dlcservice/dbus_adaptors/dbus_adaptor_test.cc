@@ -82,6 +82,7 @@ TEST_F(DBusServiceTest, GetExistingDlcs) {
   EXPECT_EQ(second_dlc_info.description(), "unittest only description");
   EXPECT_EQ(second_dlc_info.used_bytes_on_disk(),
             second_dlc.GetUsedBytesOnDisk());
+  EXPECT_TRUE(second_dlc_info.is_removable());
 }
 
 }  // namespace dlcservice

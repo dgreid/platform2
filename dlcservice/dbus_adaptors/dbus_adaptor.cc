@@ -62,6 +62,11 @@ bool DBusService::GetExistingDlcs(brillo::ErrorPtr* err,
     dlc_info->set_name(dlc->GetName());
     dlc_info->set_description(dlc->GetDescription());
     dlc_info->set_used_bytes_on_disk(dlc->GetUsedBytesOnDisk());
+
+    // TODO(crbug.com/1092770): This is a very temporarily measure so UI can
+    // handle is_removable logic with exceptions for pita. Once the bug is
+    // resolved, this logic should change.
+    dlc_info->set_is_removable(id != "pita");
   }
   return true;
 }
