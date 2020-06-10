@@ -1423,7 +1423,7 @@ bool HomeDirs::LoadVaultKeysetForUser(const std::string& obfuscated_user,
   // We don't have keys yet, so just load it.
   // TODO(wad) Move to passing around keysets and not serialized versions.
   if (!keyset->Load(user_key_file)) {
-    LOG(ERROR) << "Failed to read keyset file for user " << obfuscated_user;
+    LOG(ERROR) << "Failed to load keyset file for user " << obfuscated_user;
     return false;
   }
   return true;

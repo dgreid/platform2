@@ -886,7 +886,8 @@ bool Mount::LoadVaultKeysetForUser(const std::string& obfuscated_username,
   }
   brillo::Blob cipher_text;
   if (!platform_->ReadFile(user_key_file, &cipher_text)) {
-    LOG(ERROR) << "Failed to read keyset file for user " << obfuscated_username;
+    LOG(ERROR) << "Failed to read keyset file from storage for user "
+               << obfuscated_username;
     return false;
   }
   if (!serialized->ParseFromArray(cipher_text.data(), cipher_text.size())) {
