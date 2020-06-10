@@ -1005,9 +1005,6 @@ void Service::NotifyEvent(CryptohomeEventBase* event) {
         DLOG(INFO) << "Dropping MountMap entry for failed Guest mount.";
         RemoveMountForUser(guest_user_);
       }
-      if (result->return_status() && !result->return_code()) {
-        ReportTimerStop(kAsyncGuestMountTimer);
-      }
     }
   } else if (!strcmp(event->GetEventName(), kTpmInitStatusEventType)) {
     TpmInitStatus* result = static_cast<TpmInitStatus*>(event);
@@ -2955,8 +2952,6 @@ gboolean Service::MountGuestEx(GArray* request,
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     return TRUE;
   }
-
-  ReportTimerStart(kAsyncGuestMountTimer);
 
   PostTask(FROM_HERE,
            base::Bind(&Service::DoMountGuestEx, base::Unretained(this),

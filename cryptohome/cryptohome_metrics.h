@@ -71,7 +71,7 @@ enum CryptohomeError {
 enum TimerType {
   kAsyncMountTimer,  // Unused.
   kSyncMountTimer,  // Unused.
-  kAsyncGuestMountTimer,
+  kAsyncGuestMountTimer,  // Unused.
   kSyncGuestMountTimer,  // Unused.
   kTpmTakeOwnershipTimer,
   kPkcs11InitTimer,
