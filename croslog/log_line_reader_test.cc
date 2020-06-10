@@ -4,8 +4,11 @@
 
 #include "croslog/log_line_reader.h"
 
+#include <string>
+
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
+#include "base/run_loop.h"
 #include "gtest/gtest.h"
 
 namespace croslog {
@@ -38,12 +41,37 @@ const char* kAppendingLines[][2] = {{"A", "A\n"},
 
 }  // anonymous namespace
 
-class LogLineReaderTest : public ::testing::Test {
+class LogLineReaderTest : public ::testing::Test,
+                          public LogLineReader::Observer {
  public:
   LogLineReaderTest() = default;
 
   void SetLogContentText(LogLineReader* reader, const char* text) {
     reader->OpenMemoryBufferForTest(text, strlen(text));
+  }
+
+  void OnFileChanged(LogLineReader* reader) override {
+    changed_event_receieved_++;
+  }
+  int changed_event_receieved_ = 0;
+
+  int changed_event_receieved() const { return changed_event_receieved_; }
+
+  bool WaitForChangeEvent(int previous_value) {
+    base::RunLoop().RunUntilIdle();
+
+    const int kTinyTimeoutMs = 100;
+    int max_try = 50;
+    while (previous_value == changed_event_receieved_) {
+      base::PlatformThread::Sleep(
+          base::TimeDelta::FromMilliseconds(kTinyTimeoutMs));
+      base::RunLoop().RunUntilIdle();
+      max_try--;
+      EXPECT_NE(0u, max_try);
+      if (max_try == 0)
+        return false;
+    }
+    return true;
   }
 
  private:
@@ -227,6 +255,255 @@ TEST_F(LogLineReaderTest, ReadEmptyFile) {
   // Nothing to be read, since the file is empty.
   EXPECT_FALSE(reader.Forward().has_value());
   EXPECT_FALSE(reader.Forward().has_value());
+}
+
+TEST_F(LogLineReaderTest, ReadFileBeingWritten) {
+  // This is not used explicitly but necessary for FileChange class.
+  // base::MessageLoopForIO message_loop;
+
+  base::FilePath temp_path;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+  ASSERT_FALSE(temp_path.empty());
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.AddObserver(this);
+  reader.OpenFile(temp_path);
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+  // Nothing to be read, since the file is empty.
+  EXPECT_FALSE(reader.Forward().has_value());
+
+  // Write and read
+  {
+    std::string test_string("TESTTEST");
+    std::string test_string_with_lf = test_string + "\n";
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string_with_lf.c_str(),
+                                     test_string_with_lf.length()),
+              test_string_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string, s.value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+
+  // Write and read
+  {
+    std::string test_string("HOGEHOGE");
+    std::string test_string_with_lf = test_string + "\n";
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string_with_lf.c_str(),
+                                     test_string_with_lf.length()),
+              test_string_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string, s.value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+
+  reader.RemoveObserver(this);
+}
+
+TEST_F(LogLineReaderTest, ReadFileRotated) {
+  base::FilePath temp_path;
+  base::FilePath temp_path2;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path2));
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.AddObserver(this);
+  reader.OpenFile(temp_path);
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+  // Nothing to be read, since the file is empty.
+  EXPECT_FALSE(reader.Forward().has_value());
+
+  // Write and read
+  {
+    std::string test_string1("TESTTEST");
+    std::string test_string1_with_lf = test_string1 + "\n";
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string1_with_lf.c_str(),
+                                     test_string1_with_lf.length()),
+              test_string1_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string1, s.value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+
+  // Rotate
+  {
+    // Rename the old file.
+    base::File::Error rename_error;
+    int previous_change_event_counter = changed_event_receieved();
+    ASSERT_TRUE(base::ReplaceFile(temp_path, temp_path2, &rename_error));
+    WaitForChangeEvent(previous_change_event_counter);
+
+    // Create a new file with the same file name.
+    file = base::File(temp_path,
+                      base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_WRITE);
+    EXPECT_TRUE(file.IsValid());
+    // Nothing to be read, since the new file is empty.
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+
+  // Write and read
+  {
+    std::string test_string2("FUGAFUGA");
+    std::string test_string2_with_lf = test_string2 + "\n";
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string2_with_lf.c_str(),
+                                     test_string2_with_lf.length()),
+              test_string2_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string2, s.value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+  reader.RemoveObserver(this);
+}
+
+TEST_F(LogLineReaderTest, ReadFileRotatedMisorder) {
+  base::FilePath temp_path;
+  base::FilePath temp_path2;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path2));
+
+  std::string test_string1("TESTTEST");
+  std::string test_string1_with_lf = test_string1 + "\n";
+  std::string test_string2("FUGAFUGA");
+  std::string test_string2_with_lf = test_string2 + "\n";
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.AddObserver(this);
+  reader.OpenFile(temp_path);
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+
+  // Write to the first file.
+  {
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string1_with_lf.c_str(),
+                                     test_string1_with_lf.length()),
+              test_string1_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+  }
+
+  // Rotate
+  {
+    base::File::Error rename_error;
+    int previous_change_event_counter = changed_event_receieved();
+    ASSERT_TRUE(base::ReplaceFile(temp_path, temp_path2, &rename_error));
+    WaitForChangeEvent(previous_change_event_counter);
+
+    file = base::File(temp_path,
+                      base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_WRITE);
+    EXPECT_TRUE(file.IsValid());
+  }
+
+  // Write to the second file.
+  {
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string2_with_lf.c_str(),
+                                     test_string2_with_lf.length()),
+              test_string2_with_lf.length());
+    EXPECT_EQ(previous_change_event_counter, changed_event_receieved());
+  }
+
+  // First read, should be from the first file.
+  {
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string1, s.value());
+  }
+
+  // First read, should be from the second file.
+  {
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string2, s.value());
+  }
+
+  EXPECT_FALSE(reader.Forward().has_value());
+
+  reader.RemoveObserver(this);
+}
+
+TEST_F(LogLineReaderTest, ReadFileRotatedWithoutLf) {
+  base::FilePath temp_path;
+  base::FilePath temp_path2;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path2));
+
+  // The first file doesn't end with '\n' but the whole can be read since the
+  // file is rotated to new file.
+  std::string test_string1("TESTTEST");
+
+  std::string test_string2("FUGAFUGA");
+  std::string test_string2_with_lf = test_string2 + "\n";
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.AddObserver(this);
+  reader.OpenFile(temp_path);
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+
+  // Write to the first file.
+  {
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(
+        file.WriteAtCurrentPos(test_string1.c_str(), test_string1.length()),
+        test_string1.length());
+    WaitForChangeEvent(previous_change_event_counter);
+  }
+
+  // Rotate
+  {
+    base::File::Error rename_error;
+    int previous_change_event_counter = changed_event_receieved();
+    ASSERT_TRUE(base::ReplaceFile(temp_path, temp_path2, &rename_error));
+    WaitForChangeEvent(previous_change_event_counter);
+
+    file = base::File(temp_path,
+                      base::File::FLAG_OPEN_ALWAYS | base::File::FLAG_WRITE);
+    EXPECT_TRUE(file.IsValid());
+  }
+
+  // Write to the second file.
+  {
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string2_with_lf.c_str(),
+                                     test_string2_with_lf.length()),
+              test_string2_with_lf.length());
+    EXPECT_EQ(previous_change_event_counter, changed_event_receieved());
+  }
+
+  // First read, should be from the first file.
+  {
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string1, s.value());
+  }
+
+  // First read, should be from the second file.
+  {
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string2, s.value());
+  }
+
+  EXPECT_FALSE(reader.Forward().has_value());
+
+  reader.RemoveObserver(this);
 }
 
 }  // namespace croslog

@@ -45,6 +45,10 @@ executable("croslog") {
 }
 
 if (use.test) {
+  pkg_config("croslog_testrunner_config") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
   executable("croslog_testrunner") {
     sources = [
       "config_test.cc",
@@ -52,16 +56,15 @@ if (use.test) {
       "log_line_reader_test.cc",
       "log_parser_syslog_test.cc",
       "multiplexer_test.cc",
+      "testrunner.cc",
     ]
     run_test = true
     defines = [ "UNIT_TEST" ]
     configs += [
       "//common-mk:test",
+      ":croslog_testrunner_config",
       ":target_defaults",
     ]
-    deps = [
-      ":libcroslog_static",
-      "//common-mk/testrunner:testrunner",
-    ]
+    deps = [ ":libcroslog_static" ]
   }
 }

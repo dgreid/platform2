@@ -28,7 +28,6 @@ class ViewerPlaintext : public Multiplexer::Observer {
  private:
   // Do not use them directly.
   base::AtExitManager at_exit_manager_;
-  base::MessageLoopForIO message_loop_;
 
   base::RunLoop run_loop_;
   base::Closure quit_closure_{run_loop_.QuitWhenIdleClosure()};

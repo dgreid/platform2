@@ -16,12 +16,14 @@
 
 namespace croslog {
 
-class FileChangeWatcherTest : public ::testing::Test {
+class FileChangeWatcherTest : public ::testing::Test,
+                              public FileChangeWatcher::Observer {
  public:
   FileChangeWatcherTest() = default;
   ~FileChangeWatcherTest() override = default;
 
-  void OnFileChanged() { counter_++; }
+  void OnFileContentMaybeChanged() override { counter_++; }
+  void OnFileNameMaybeChanged() override {}
 
   bool WaitForCounterValue(uint32_t target_value) {
     const int kTinyTimeoutMs = 100;
@@ -45,19 +47,13 @@ class FileChangeWatcherTest : public ::testing::Test {
 };
 
 TEST_F(FileChangeWatcherTest, FileChange) {
-  // This is not used explicitly but creates the message loop used internally
-  // in FileChange class.
-  base::MessageLoopForIO message_loop;
-
   base::FilePath mount_info;
   std::string test_string = "test";
 
   FileChangeWatcher* watcher = FileChangeWatcher::GetInstance();
 
   EXPECT_TRUE(base::CreateTemporaryFile(&mount_info));
-  EXPECT_TRUE(watcher->AddWatch(
-      mount_info, base::Bind(&FileChangeWatcherTest::OnFileChanged,
-                             base::Unretained(this))));
+  EXPECT_TRUE(watcher->AddWatch(mount_info, this));
 
   // Open the temporary file and write something twice.
   {

@@ -20,7 +20,7 @@
 
 namespace croslog {
 
-class LogLineReader {
+class LogLineReader : public FileChangeWatcher::Observer {
  public:
   class Observer : public base::CheckedObserver {
    public:
@@ -57,8 +57,10 @@ class LogLineReader {
   off_t position() const { return pos_; }
 
  private:
+  void ReloadRotatedFile();
   void Remap();
-  void OnChanged();
+  void OnFileContentMaybeChanged() override;
+  void OnFileNameMaybeChanged() override;
 
   std::string GetString(off_t offset, size_t length) const;
 
@@ -66,6 +68,7 @@ class LogLineReader {
   // OpenFile() for either FILE or FILE_FOLLOW.
   base::File file_;
   base::FilePath file_path_;
+  ino_t file_inode_ = 0;
   std::unique_ptr<base::MemoryMappedFile> mmap_;
 
   // This is initialized by OpenFile() for FILE_FOLLOW backend.
@@ -74,6 +77,7 @@ class LogLineReader {
   const uint8_t* buffer_ = nullptr;
   uint64_t buffer_size_ = 0;
   const Backend backend_mode_;
+  bool rotated_ = false;
 
   // Position must be between [0, buffer_size_]. |buffer_[pos]| might be
   // invalid.

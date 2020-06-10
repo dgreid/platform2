@@ -32,7 +32,7 @@ class InotifyReaderThread : public base::PlatformThread::Delegate {
  public:
   class Delegate {
    public:
-    virtual void OnChanged(int inotify_wd) = 0;
+    virtual void OnChanged(int inotify_wd, uint32_t mask) = 0;
   };
 
   // Must be called on the main thread.
@@ -131,8 +131,9 @@ class InotifyReaderThread : public base::PlatformThread::Delegate {
     // access |watches_| safely. Use a WeakPtr to prevent the callback from
     // running after |this| is destroyed (i.e. after the watch is cancelled).
     task_runner_->PostTask(
-        FROM_HERE, base::BindOnce(&Delegate::OnChanged,
-                                  base::Unretained(delegate_), event->wd));
+        FROM_HERE,
+        base::BindOnce(&Delegate::OnChanged, base::Unretained(delegate_),
+                       event->wd, event->mask));
   }
 };
 
@@ -156,11 +157,13 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
   // Note: This class is initialized with base::NoDestructor so its destructor
   // is never called.
 
-  bool AddWatch(const base::FilePath& path, base::Closure callback) override {
+  bool AddWatch(const base::FilePath& path,
+                FileChangeWatcher::Observer* observer) override {
     DCHECK(task_runner_->RunsTasksInCurrentSequence());
+    DCHECK(observer != nullptr);
 
-    int inotify_wd =
-        inotify_add_watch(inotify_fd_.get(), path.value().c_str(), IN_MODIFY);
+    int inotify_wd = inotify_add_watch(inotify_fd_.get(), path.value().c_str(),
+                                       IN_MODIFY | IN_MOVE_SELF);
 
     if (inotify_wd == -1) {
       DPLOG(ERROR) << "inotify_add_watch (" << path << ") failed";
@@ -168,10 +171,10 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
     }
 
     CHECK(watchers_inotify_.find(path) == watchers_inotify_.end());
-    CHECK(watchers_callback_.find(inotify_wd) == watchers_callback_.end());
+    CHECK(watchers_observer_.find(inotify_wd) == watchers_observer_.end());
 
     watchers_inotify_[path] = inotify_wd;
-    watchers_callback_[inotify_wd] = std::move(callback);
+    watchers_observer_[inotify_wd] = observer;
 
     return true;
   }
@@ -186,13 +189,22 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
 
     int inotify_wd = watchers_inotify_[path];
 
-    CHECK(watchers_callback_.find(inotify_wd) != watchers_callback_.end());
-    watchers_callback_.erase(inotify_wd);
+    CHECK(watchers_observer_.find(inotify_wd) != watchers_observer_.end());
+    watchers_observer_.erase(inotify_wd);
     watchers_inotify_.erase(path);
 
+    auto inotify_wd_it = std::find(
+        unexpectedly_removed_inotify_wds_.begin(),
+        unexpectedly_removed_inotify_wds_.end(), inotify_wd);
+    bool already_removed_unexpectedly =
+        inotify_wd_it != unexpectedly_removed_inotify_wds_.end();
+
     int ret = inotify_rm_watch(inotify_fd_.get(), inotify_wd);
-    if (ret == -1)
+    if (ret == -1 && !already_removed_unexpectedly)
       DPLOG(WARNING) << "inotify_rm_watch (" << path << ") failed";
+
+    if (already_removed_unexpectedly)
+      unexpectedly_removed_inotify_wds_.erase(inotify_wd_it);
   }
 
  private:
@@ -201,22 +213,47 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
   InotifyReaderThread thread_;
 
   std::map<base::FilePath, int> watchers_inotify_;
-  std::map<int, base::Closure> watchers_callback_;
+  std::map<int, FileChangeWatcher::Observer*> watchers_observer_;
+  std::vector<int> unexpectedly_removed_inotify_wds_;
 
-  void OnChanged(int inotify_wd) override {
+  void OnChanged(int inotify_wd, uint32_t mask) override {
     DCHECK(task_runner_->RunsTasksInCurrentSequence());
 
     // |inotify_wd| is negative if the event queue is overflowed.
     if (inotify_wd == -1) {
-      for (auto&& i : watchers_callback_) {
+      for (auto&& i : watchers_observer_) {
         auto&& callback = i.second;
-        callback.Run();
+        callback->OnFileContentMaybeChanged();
+        callback->OnFileNameMaybeChanged();
       }
       return;
     }
+    if (watchers_observer_.find(inotify_wd) == watchers_observer_.end()) {
+      // Timing issue. Maybe the inotify observer was removed but some
+      // remaining event have been queued. Ignore them.
+      return;
+    }
 
-    auto callback = watchers_callback_[inotify_wd];
-    callback.Run();
+    if (mask & IN_MODIFY) {
+      auto&& delegate = watchers_observer_[inotify_wd];
+      delegate->OnFileContentMaybeChanged();
+    }
+
+    if (mask & IN_MOVE_SELF) {
+      auto&& delegate = watchers_observer_[inotify_wd];
+      delegate->OnFileNameMaybeChanged();
+
+      // Don't remove and add the inotify here. The user will do that, since
+      // new file is unlikely to be created yet at this point.
+    }
+
+    if (mask & IN_IGNORED) {
+      if (watchers_observer_.find(inotify_wd) != watchers_observer_.end()) {
+        LOG(WARNING) << "The inofity has been removed unexpectedly (maybe the "
+                        "file was removed?).";
+        unexpectedly_removed_inotify_wds_.push_back(inotify_wd);
+      }
+    }
   }
 
   DISALLOW_COPY_AND_ASSIGN(FileChangeWatcherImpl);

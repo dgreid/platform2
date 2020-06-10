@@ -9,6 +9,7 @@
 
 #include <fcntl.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 
 #include "base/bind.h"
@@ -50,13 +51,17 @@ void LogLineReader::OpenFile(const base::FilePath& file_path) {
   file_path_ = file_path;
   pos_ = 0;
 
+  // TODO(yoshiki): Use stat_wrapper_t and File::FStat after libchrome uprev.
+  struct stat file_stat;
+  if (fstat(file_.GetPlatformFile(), &file_stat) == 0)
+    file_inode_ = file_stat.st_ino;
+  DCHECK_NE(0, file_inode_);
+
   if (backend_mode_ == Backend::FILE_FOLLOW) {
     // Race may happen when the file rotates just after file opens.
-    // TODO(yoshiki): detect the race.
+    // TODO(yoshiki): detect the race. Maybe we can use /proc/self/fd/$fd.
     file_change_watcher_ = FileChangeWatcher::GetInstance();
-    bool ret = file_change_watcher_->AddWatch(
-        file_path_,
-        base::BindRepeating(&LogLineReader::OnChanged, base::Unretained(this)));
+    bool ret = file_change_watcher_->AddWatch(file_path_, this);
     if (!ret) {
       LOG(ERROR) << "Failed to install FileChangeWatcher for " << file_path_
                  << ".";
@@ -81,11 +86,36 @@ void LogLineReader::SetPositionLast() {
     pos_--;
 }
 
+// Ensure the file path is initialized.
+void LogLineReader::ReloadRotatedFile() {
+  CHECK(backend_mode_ == Backend::FILE_FOLLOW);
+
+  DCHECK(rotated_);
+  DCHECK(PathExists(file_path_));
+
+  rotated_ = false;
+
+  CHECK(file_change_watcher_);
+  file_change_watcher_->RemoveWatch(file_path_);
+
+  base::FilePath file_path = file_path_;
+  file_path_.clear();
+  mmap_.reset();
+  file_inode_ = 0;
+  buffer_ = nullptr;
+  buffer_size_ = 0;
+  pos_ = 0;
+
+  OpenFile(file_path);
+  if (!file_.IsValid()) {
+    LOG(FATAL) << "File looks rotated, but new file can't be opened.";
+  }
+}
+
 void LogLineReader::Remap() {
   CHECK(backend_mode_ == Backend::FILE ||
         backend_mode_ == Backend::FILE_FOLLOW);
 
-  // Ensure the file path is initialized.
   CHECK(!file_path_.empty());
 
   int64_t file_size = file_.GetLength();
@@ -142,14 +172,12 @@ void LogLineReader::Remap() {
 
 base::Optional<std::string> LogLineReader::Forward() {
   CHECK(buffer_ != nullptr);
+  DCHECK(pos_ <= buffer_size_);
 
   if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
     LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
                  << "be broken.";
   }
-
-  if (pos_ >= buffer_size_)
-    return base::nullopt;
 
   off_t pos_line_end = -1;
   for (off_t i = pos_; i < buffer_size_; i++) {
@@ -160,19 +188,37 @@ base::Optional<std::string> LogLineReader::Forward() {
   }
 
   if (pos_line_end == -1) {
-    // Reach EOF without '\n'.
-    return base::nullopt;
+    // Reaches EOF without '\n'.
+    size_t unread_length = buffer_size_ - pos_;
+
+    if (rotated_ && unread_length == 0 && PathExists(file_path_)) {
+      ReloadRotatedFile();
+      return Forward();
+    }
+
+    // If next file doesn't exist, leave the remaining string.
+    // If next file exists, read the remaining string.
+    if (!rotated_)
+      return base::nullopt;
+
+    pos_line_end = buffer_size_;
   }
 
   size_t pos_line_start = pos_;
   size_t line_length = pos_line_end - pos_;
-  pos_ = pos_line_end + 1;
+  pos_ = pos_line_end;
+
+  if (pos_ < buffer_size_) {
+    DCHECK_EQ('\n', buffer_[pos_]);
+    pos_ += 1;
+  }
 
   return GetString(pos_line_start, line_length);
 }
 
 base::Optional<std::string> LogLineReader::Backward() {
   CHECK(buffer_ != nullptr);
+  DCHECK(pos_ <= buffer_size_);
 
   if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
     LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
@@ -208,12 +254,40 @@ std::string LogLineReader::GetString(off_t offset, size_t length) const {
   return std::string(reinterpret_cast<const char*>(buffer_ + offset), length);
 }
 
-void LogLineReader::OnChanged() {
+void LogLineReader::OnFileContentMaybeChanged() {
+  CHECK(backend_mode_ == Backend::FILE_FOLLOW);
+  CHECK(file_.IsValid());
+
+  int64_t file_size = file_.GetLength();
+  if (buffer_size_ != file_size) {
+    Remap();
+    for (Observer& obs : observers_)
+      obs.OnFileChanged(this);
+  }
+}
+
+void LogLineReader::OnFileNameMaybeChanged() {
   CHECK(backend_mode_ == Backend::FILE_FOLLOW);
 
-  Remap();
-  for (Observer& obs : observers_)
-    obs.OnFileChanged(this);
+  if (rotated_)
+    return;
+
+  if (!PathExists(file_path_)) {
+    rotated_ = true;
+  } else {
+    // TODO(yoshiki): Use stat_wrapper_t and File::Stat after libchrome uprev.
+    struct stat file_stat;
+    bool inode_changed = ((stat(file_path_.value().c_str(), &file_stat) == 0) &&
+                          (file_inode_ != file_stat.st_ino));
+
+    if (inode_changed)
+      rotated_ = true;
+  }
+
+  if (rotated_) {
+    for (Observer& obs : observers_)
+      obs.OnFileChanged(this);
+  }
 }
 
 }  // namespace croslog

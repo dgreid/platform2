@@ -8,7 +8,7 @@
 #include "base/callback.h"
 #include "base/files/file_path.h"
 #include "base/memory/singleton.h"
-
+#include "base/observer_list_types.h"
 namespace croslog {
 
 class InotifyReader;
@@ -17,8 +17,14 @@ class FileChangeWatcher {
  public:
   static FileChangeWatcher* GetInstance();
 
+  class Observer : public base::CheckedObserver {
+   public:
+    virtual void OnFileContentMaybeChanged() = 0;
+    virtual void OnFileNameMaybeChanged() = 0;
+  };
+
   // Add a handler to retrieve file change events.
-  virtual bool AddWatch(const base::FilePath& path, base::Closure callback) = 0;
+  virtual bool AddWatch(const base::FilePath& path, Observer* observer) = 0;
   // Remove a handler to retrieve file change events.
   virtual void RemoveWatch(const base::FilePath& path) = 0;
 
