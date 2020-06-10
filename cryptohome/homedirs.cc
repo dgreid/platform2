@@ -244,8 +244,11 @@ void HomeDirs::FreeDiskSpaceInternal() {
        dir != normal_cleanup_homedirs.rend(); dir++) {
     HomeDirs::DeleteCacheCallback(dir->shadow);
 
-    if (HasTargetFreeSpace())
-      break;
+    if (HasTargetFreeSpace()) {
+      ReportDiskCleanupProgress(
+          DiskCleanupProgress::kBrowserCacheCleanedAboveTarget);
+      return;
+    }
   }
 
   auto freeDiskSpace = AmountOfFreeDiskSpace();
@@ -254,12 +257,7 @@ void HomeDirs::FreeDiskSpaceInternal() {
     return;
   }
 
-  if (GetFreeDiskSpaceState(freeDiskSpace)
-        == HomeDirs::FreeSpaceState::kAboveTarget) {
-    ReportDiskCleanupProgress(
-        DiskCleanupProgress::kBrowserCacheCleanedAboveTarget);
-    return;
-  }
+  bool earlyStop = false;
 
   // Clean GCache directories for every unmounted user that has logged out after
   // after the last normal cleanup happened.
@@ -267,11 +265,14 @@ void HomeDirs::FreeDiskSpaceInternal() {
        dir != normal_cleanup_homedirs.rend(); dir++) {
     HomeDirs::DeleteGCacheTmpCallback(dir->shadow);
 
-    if (HasTargetFreeSpace())
+    if (HasTargetFreeSpace()) {
+      earlyStop = true;
       break;
+    }
   }
 
-  last_normal_disk_cleanup_complete_ = platform_->GetCurrentTime();
+  if (!earlyStop)
+    last_normal_disk_cleanup_complete_ = platform_->GetCurrentTime();
 
   const auto old_free_disk_space = freeDiskSpace;
   freeDiskSpace = AmountOfFreeDiskSpace();
@@ -321,11 +322,14 @@ void HomeDirs::FreeDiskSpaceInternal() {
        dir != aggressive_cleanup_homedirs.rend(); dir++) {
     HomeDirs::DeleteAndroidCacheCallback(dir->shadow);
 
-    if (HasTargetFreeSpace())
+    if (HasTargetFreeSpace()) {
+      earlyStop = true;
       break;
+    }
   }
 
-  last_aggressive_disk_cleanup_complete_ = platform_->GetCurrentTime();
+  if (!earlyStop)
+    last_aggressive_disk_cleanup_complete_ = platform_->GetCurrentTime();
 
   switch (GetFreeDiskSpaceState()) {
     case HomeDirs::FreeSpaceState::kAboveTarget:

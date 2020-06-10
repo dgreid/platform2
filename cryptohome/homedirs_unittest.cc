@@ -896,9 +896,6 @@ TEST_P(FreeDiskSpaceTest, TimeCacheSkipNormalCleanupIfNotActive) {
       // FreeDiskSpace early termination.
       .WillOnce(Return(0))
 
-      // Skip early Cache termination for 1 user.
-      .WillOnce(Return(0))
-
       // Stop before GCache cleanup.
       .WillOnce(Return(kTargetFreeSpaceAfterCleanup + 1))
 
@@ -1066,7 +1063,6 @@ TEST_P(FreeDiskSpaceTest, OnlyCacheCleanup) {
               Return(true)));
 
   EXPECT_CALL(platform_, AmountOfFreeDiskSpace(kTestRoot))
-      .WillOnce(Return(0))
       .WillOnce(Return(0))
       .WillOnce(Return(0))
       .WillOnce(Return(0))
