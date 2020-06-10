@@ -104,7 +104,6 @@ copies.
 | [print_tools](./print_tools/) | Various tools related to the native printing system |
 | [qmi2cpp](./qmi2cpp/) | Chrome OS QMI IDL Compiler |
 | [regions](./regions/) ||
-| [rendernodehost](./rendernodehost/)| Render node forward library |
 | [run_oci](./run_oci/) | Minimalistic container runtime |
 | [runtime_probe](./runtime_probe/) | Runtime probe tool for ChromeOS |
 | [salsa](./salsa/) | Touchpad experimentation framework |
