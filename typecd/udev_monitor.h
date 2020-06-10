@@ -63,6 +63,17 @@ class UdevMonitor {
     virtual void OnPartnerAddedOrRemoved(const base::FilePath& path,
                                          int port_num,
                                          bool added) = 0;
+
+    // Callback that is executed when a port partner alt mode is registered or
+    // removed.
+    //
+    // The |path| argument refers to the sysfs device path of the partner alt
+    // mode. The |port_num| argmnet refers to the port's index number. The
+    // |added| argument is set to true if the alt mode was added, and false
+    // otherwise.
+    virtual void OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
+                                                int port_num,
+                                                bool added) = 0;
   };
 
   void AddObserver(Observer* obs);

@@ -49,6 +49,10 @@ class TestObserver : public UdevMonitor::Observer {
       num_partners_--;
   };
 
+  void OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
+                               int port_num,
+                               bool added) override {};
+
   int GetNumPorts() { return num_ports_; }
   int GetNumPartners() { return num_partners_; }
 

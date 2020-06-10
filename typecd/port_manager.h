@@ -32,6 +32,9 @@ class PortManager : public UdevMonitor::Observer {
   void OnPartnerAddedOrRemoved(const base::FilePath& path,
                                int port_num,
                                bool added) override;
+  void OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
+                                      int port_num,
+                                      bool added) override;
 
   std::map<int, std::unique_ptr<Port>> ports_;
 

@@ -11,6 +11,7 @@
 
 namespace {
 
+constexpr char kPartnerAltModeRegex[] = R"(port(\d+)-partner.(\d+))";
 constexpr char kPartnerRegex[] = R"(port(\d+)-partner)";
 constexpr char kPortRegex[] = R"(port(\d+))";
 
@@ -107,6 +108,8 @@ bool UdevMonitor::HandleDeviceAddedRemoved(const base::FilePath& path,
       observer.OnPortAddedOrRemoved(path, port_num, added);
     else if (RE2::FullMatch(name.value(), kPartnerRegex, &port_num))
       observer.OnPartnerAddedOrRemoved(path, port_num, added);
+    else if (RE2::FullMatch(name.value(), kPartnerAltModeRegex, &port_num))
+      observer.OnPartnerAltModeAddedOrRemoved(path, port_num, added);
   }
 
   return true;

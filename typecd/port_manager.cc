@@ -48,4 +48,19 @@ void PortManager::OnPartnerAddedOrRemoved(const base::FilePath& path,
   }
 }
 
+void PortManager::OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
+                                                 int port_num,
+                                                 bool added) {
+  auto it = ports_.find(port_num);
+  if (it == ports_.end()) {
+    LOG(WARNING)
+        << "Partner alt mode add/remove attempted for non-existent port "
+        << port_num;
+    return;
+  }
+
+  auto port = it->second.get();
+  port->AddRemovePartnerAltMode(path, added);
+}
+
 }  // namespace typecd
