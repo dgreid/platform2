@@ -112,7 +112,7 @@ def sim_disconnect_connect(updater):
 
 def disable_hammerd():
   print('Disabling hammerd')
-  subprocess.call('mount --bind /dev/null /lib/udev/rules.d/99 hammerd.rules',
+  subprocess.call('mount --bind /dev/null /lib/udev/rules.d/99-hammerd.rules',
                   shell=True)
   subprocess.call('initctl restart udev', shell=True)
 
