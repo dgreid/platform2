@@ -29,6 +29,8 @@ Daemon::Daemon(bool has_session_manager)
       device_ejector_(&process_reaper_),
       rar_manager_(
           kArchiveMountRootDirectory, &platform_, &metrics_, &process_reaper_),
+      zip_manager_(
+          kArchiveMountRootDirectory, &platform_, &metrics_, &process_reaper_),
       disk_monitor_(),
       disk_manager_(kDiskMountRootDirectory,
                     &platform_,
@@ -47,6 +49,7 @@ Daemon::Daemon(bool has_session_manager)
       << quote(kNonPrivilegedMountUser)
       << " is not available for non-privileged mount operations";
   CHECK(rar_manager_.Initialize()) << "Failed to initialize the RAR manager";
+  CHECK(zip_manager_.Initialize()) << "Failed to initialize the ZIP manager";
   CHECK(disk_manager_.Initialize()) << "Failed to initialize the disk manager";
   CHECK(fuse_manager_.Initialize()) << "Failed to initialize the FUSE manager";
   process_reaper_.Register(this);
@@ -62,6 +65,7 @@ void Daemon::RegisterDBusObjectsAsync(
   // Register mount managers with the commonly used ones come first.
   server_->RegisterMountManager(&disk_manager_);
   server_->RegisterMountManager(&rar_manager_);
+  server_->RegisterMountManager(&zip_manager_);
   server_->RegisterMountManager(&fuse_manager_);
 
   event_moderator_ = std::make_unique<DeviceEventModerator>(

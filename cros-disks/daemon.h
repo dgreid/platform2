@@ -24,6 +24,7 @@
 #include "cros-disks/rar_manager.h"
 #include "cros-disks/rename_manager.h"
 #include "cros-disks/session_manager_proxy.h"
+#include "cros-disks/zip_manager.h"
 
 namespace cros_disks {
 
@@ -48,6 +49,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   brillo::ProcessReaper process_reaper_;
   DeviceEjector device_ejector_;
   RarManager rar_manager_;
+  ZipManager zip_manager_;
   DiskMonitor disk_monitor_;
   DiskManager disk_manager_;
   FormatManager format_manager_;

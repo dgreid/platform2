@@ -84,6 +84,7 @@ static_library("libdisks") {
     "udev_device.cc",
     "uri.cc",
     "usb_device_info.cc",
+    "zip_manager.cc",
   ]
   configs += [ ":target_defaults" ]
   deps = [ ":libdisks-adaptors" ]
