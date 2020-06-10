@@ -10,7 +10,10 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/optional.h>
 
+#include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
@@ -35,12 +38,16 @@ class StorageDeviceInfo {
   std::string GetSubsystem() const;
   StatusOr<uint64_t> GetSizeBytes();
   StatusOr<uint64_t> GetBlockSizeBytes();
+  // Temporary accessor to the iostats.
+  DiskIoStat* GetIoStat();
 
  private:
   const base::FilePath dev_sys_path_;
   const base::FilePath dev_node_path_;
   const std::string subsystem_;
   const std::unique_ptr<const Platform> platform_;
+
+  DiskIoStat iostat_;
 };
 
 }  // namespace diagnostics

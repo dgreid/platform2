@@ -20,7 +20,7 @@ using testing::StrictMock;
 
 namespace diagnostics {
 
-TEST(StorageDeviceInfoTest, SimpleTest) {
+TEST(StorageDeviceInfoTest, OkData) {
   constexpr char kPath[] = "test/sys/path";
   constexpr char kDevnode[] = "dev/node/path";
   constexpr char kSubsystem[] = "test_subsystem";

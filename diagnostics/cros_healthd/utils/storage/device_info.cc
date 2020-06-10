@@ -11,6 +11,8 @@
 
 #include <base/files/file_path.h>
 
+#include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
+
 namespace diagnostics {
 
 StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
@@ -20,7 +22,8 @@ StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
     : dev_sys_path_(dev_sys_path),
       dev_node_path_(dev_node_path),
       subsystem_(subsystem),
-      platform_(std::move(platform)) {
+      platform_(std::move(platform)),
+      iostat_(dev_sys_path) {
   DCHECK(platform_);
 }
 
@@ -42,6 +45,10 @@ StatusOr<uint64_t> StorageDeviceInfo::GetSizeBytes() {
 
 StatusOr<uint64_t> StorageDeviceInfo::GetBlockSizeBytes() {
   return platform_->GetDeviceBlockSizeBytes(dev_node_path_);
+}
+
+DiskIoStat* StorageDeviceInfo::GetIoStat() {
+  return &iostat_;
 }
 
 }  // namespace diagnostics

@@ -12,11 +12,15 @@ pkg_config("storage_data_source_common_pkg_deps") {
 
 source_set("storage_data_source") {
   configs += [ ":storage_data_source_common_pkg_deps" ]
-  deps = [ "//diagnostics/common:libcommon" ]
+  deps = [
+    "//diagnostics/common:libcommon",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
+  ]
   libs = [ "rootdev" ]
   sources = [
     "device_info.cc",
     "device_lister.cc",
+    "disk_iostat.cc",
     "platform.cc",
   ]
 }
@@ -28,6 +32,7 @@ if (use.test) {
     sources = [
       "device_info_test.cc",
       "device_lister_test.cc",
+      "disk_iostat_test.cc",
     ]
   }
 }
