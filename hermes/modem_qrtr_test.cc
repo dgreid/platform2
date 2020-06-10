@@ -21,6 +21,7 @@
 #include <gtest/gtest.h>
 
 #include "hermes/apdu.h"
+#include "hermes/fake_euicc_manager.h"
 #include "hermes/sgp_22.h"
 #include "hermes/socket_qrtr.h"
 #include "hermes/type_traits.h"
@@ -69,6 +70,23 @@ constexpr auto kQrtrResetReq = brillo::make_array<uint8_t>(
 constexpr auto kQrtrResetResp = brillo::make_array<uint8_t>(
   0x02, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00, 0x00,
   0x00
+);
+
+constexpr auto kQrtrGetSlotsReq = brillo::make_array<uint8_t>(
+    0x00, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00
+);
+
+constexpr auto kQrtrGetSlotsResp = brillo::make_array<uint8_t>(
+    0x02, 0x00, 0x00, 0x47, 0x00, 0x67, 0x00, 0x02, 0x04, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x12, 0x13, 0x00, 0x02, 0x10, 0x89, 0x03, 0x30, 0x23, 0x42,
+    0x51, 0x20, 0x00, 0x00, 0x00, 0x00, 0x09, 0x71, 0x04, 0x28, 0x68, 0x00,
+    0x13, 0x05, 0x00, 0x02, 0x01, 0x00, 0x02, 0x03, 0x11, 0x27, 0x00, 0x02,
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x18, 0x3B, 0x9F, 0x97, 0xC0, 0x0A, 0x3F,
+    0xC6, 0x82, 0x80, 0x31, 0xE0, 0x73, 0xFE, 0x21, 0x1B, 0x65, 0xD0, 0x02,
+    0x33, 0x14, 0xA5, 0x81, 0x0F, 0xE4, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x10, 0x15, 0x00, 0x02, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00,
+    0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x01, 0x00
 );
 
 constexpr auto kQrtrOpenLogicalChannelReq = brillo::make_array<uint8_t>(
@@ -261,22 +279,27 @@ class ModemQrtrTest : public testing::Test {
           this->receive_ids_.push_back(0);
           return true;
         })));
-    modem_->Initialize();
+    modem_->Initialize(&euicc_manager_);
+    EXPECT_EQ(euicc_manager_.valid_slots().size(), 0);
 
     {
       ::testing::InSequence dummy;
 
-      // Expect RESET and OPEN_LOGICAL_CHANNEL request after receiving
-      // NEW_SERVER.
+      // Expect RESET, GET_SLOTS and OPEN_LOGICAL_CHANNEL request after
+      // receiving NEW_SERVER.
       EXPECT_SEND(*socket_, kQrtrResetReq);
+      EXPECT_SEND(*socket_, kQrtrGetSlotsReq);
       EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
     }
 
     // Receive NEW_SERVER response from sock_new_lookup
     ModemReceiveData(kQrtrNewServerResp.begin(), kQrtrNewServerResp.end());
-    // Receive RESET response from RESET request
+    // Receive RESET response from RESET request.
     ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
-    // Receive repsonse to OPEN_LOGICAL_CHANNEL request
+    // Receive slot info from GET_SLOTS request.
+    ModemReceiveData(kQrtrGetSlotsResp.begin(), kQrtrGetSlotsResp.end());
+    EXPECT_EQ(euicc_manager_.valid_slots().size(), 1);
+    // Receive response to OPEN_LOGICAL_CHANNEL request.
     ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
                      kQrtrOpenLogicalChannelResp.end());
   }
@@ -290,6 +313,7 @@ class ModemQrtrTest : public testing::Test {
   std::deque<uint16_t> receive_ids_;
   MockSocketQrtr* socket_;
   std::unique_ptr<ModemQrtr> modem_;
+  FakeEuiccManager euicc_manager_;
 };
 
 ///////////

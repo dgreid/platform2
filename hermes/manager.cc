@@ -19,8 +19,6 @@ namespace hermes {
 Manager::Manager()
     : context_(Context::Get()),
       dbus_adaptor_(context_->adaptor_factory()->CreateManagerAdaptor(this)) {
-  // Fake an Euicc until we get euicc info from the modem.
-  OnEuiccUpdated(0, EuiccSlotInfo(1));
 }
 
 void Manager::SetTestMode(bool /*is_test_mode*/) {

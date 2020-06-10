@@ -20,6 +20,8 @@
 
 namespace hermes {
 
+class EuiccManagerInterface;
+
 // Implementation of EuiccCard using QRTR sockets to send QMI UIM
 // messages.
 class ModemQrtr : public lpa::card::EuiccCard {
@@ -43,7 +45,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
       Executor* executor);
   virtual ~ModemQrtr();
 
-  void Initialize();
+  void Initialize(EuiccManagerInterface* euicc_manager);
 
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -71,8 +73,6 @@ class ModemQrtr : public lpa::card::EuiccCard {
   // the proper TransmitQmi* method to perform QMI encoding prior to sending
   // data to the socket. Will remove elements from the tx queue as needed.
   void TransmitFromQueue();
-  // Creates and sends RESET QMI request.
-  void TransmitQmiReset(TxElement* tx_element);
   // Creates and sends OPEN_LOGICAL_CHANNEL QMI request.
   void TransmitQmiOpenLogicalChannel(TxElement* tx_element);
   // Creates and sends SEND_APDU QMI request.
@@ -89,6 +89,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
   void ProcessQrtrPacket(uint32_t node, uint32_t port, int size);
   // Dispatches to proper ReceiveQmi* method based on QMI type.
   void ProcessQmiPacket(const qrtr_packet& packet);
+  // Performs decoding for GET_SLOTS QMI response.
+  void ReceiveQmiGetSlots(const qrtr_packet& packet);
   // Performs decoding for OPEN_LOGICAL_CHANNEL QMI response.
   void ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet);
   // Performs decoding for SEND_APDU response and calls |on_recv_| with
@@ -201,6 +203,9 @@ class ModemQrtr : public lpa::card::EuiccCard {
   std::vector<std::vector<uint8_t>> responses_;
   // Queue of packets to send to the modem
   std::deque<TxElement> tx_queue_;
+
+  // Used to send notifications about eSIM slot changes.
+  EuiccManagerInterface* euicc_manager_;
 
   Logger* logger_;
   Executor* executor_;

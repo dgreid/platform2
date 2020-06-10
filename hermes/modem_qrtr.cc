@@ -14,6 +14,7 @@
 #include <libqrtr.h>
 
 #include "hermes/apdu.h"
+#include "hermes/euicc_manager_interface.h"
 #include "hermes/qmi_uim.h"
 #include "hermes/sgp_22.h"
 #include "hermes/socket_qrtr.h"
@@ -74,6 +75,7 @@ ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
       slot_(kEsimSlot),
       socket_(std::move(socket)),
       buffer_(4096),
+      euicc_manager_(nullptr),
       logger_(logger),
       executor_(executor) {
   CHECK(socket_);
@@ -120,9 +122,10 @@ bool ModemQrtr::IsSimValidAfterDisable() {
   return true;
 }
 
-void ModemQrtr::Initialize() {
+void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   CHECK(current_state_ == State::kUninitialized);
   LOG(INFO) << "Initializing ModemQrtr";
+  euicc_manager_ = euicc_manager;
 
   // StartService should result in a received QRTR_TYPE_NEW_SERVER
   // packet. Don't send other packets until that occurs.
@@ -138,6 +141,11 @@ void ModemQrtr::Initialize() {
   // successful initialization.
   tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
                         QmiUimCommand::kOpenLogicalChannel});
+  // Request initial info about SIM slots.
+  // TODO(crbug.com/1085825) Add support for getting indications so that this
+  // info can get updated.
+  tx_queue_.push_front(
+      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
   tx_queue_.push_front(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
 }
@@ -146,7 +154,9 @@ void ModemQrtr::RetryInitialization() {
   LOG(INFO) << "Retrying ModemQrtr initialization in "
             << kInitRetryDelay.InSeconds() << " seconds";
   base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE, base::Bind(&ModemQrtr::Initialize, base::Unretained(this)),
+      FROM_HERE,
+      base::Bind(&ModemQrtr::Initialize, base::Unretained(this),
+                 euicc_manager_),
       kInitRetryDelay);
 }
 
@@ -196,7 +206,14 @@ void ModemQrtr::TransmitFromQueue() {
   bool should_pop = true;
   switch (tx_queue_[0].uim_type_) {
     case QmiUimCommand::kReset:
-      TransmitQmiReset(&tx_queue_[0]);
+      uim_reset_req reset_request;
+      SendCommand(QmiUimCommand::kReset, tx_queue_[0].id_, &reset_request,
+                  uim_reset_req_ei);
+      break;
+    case QmiUimCommand::kGetSlots:
+      uim_get_slots_req slots_request;
+      SendCommand(QmiUimCommand::kGetSlots, tx_queue_[0].id_, &slots_request,
+                  uim_get_slots_req_ei);
       break;
     case QmiUimCommand::kOpenLogicalChannel:
       TransmitQmiOpenLogicalChannel(&tx_queue_[0]);
@@ -214,14 +231,6 @@ void ModemQrtr::TransmitFromQueue() {
   if (should_pop) {
     tx_queue_.pop_front();
   }
-}
-
-void ModemQrtr::TransmitQmiReset(TxElement* tx_element) {
-  DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kReset);
-
-  uim_reset_req request;
-  SendCommand(QmiUimCommand::kReset, tx_element->id_, &request,
-              uim_reset_req_ei);
 }
 
 void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
@@ -375,6 +384,9 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
     case QmiUimCommand::kReset:
       // TODO(akhouderchah) implement a service reset
       break;
+    case QmiUimCommand::kGetSlots:
+      ReceiveQmiGetSlots(packet);
+      break;
     case QmiUimCommand::kOpenLogicalChannel:
       ReceiveQmiOpenLogicalChannel(packet);
       if (!current_state_.IsInitialized()) {
@@ -386,6 +398,46 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
       break;
     default:
       LOG(WARNING) << "Received QMI packet of unknown type: " << qmi_type;
+  }
+}
+
+void ModemQrtr::ReceiveQmiGetSlots(const qrtr_packet& packet) {
+  QmiUimCommand cmd(QmiUimCommand::kGetSlots);
+  uim_get_slots_resp resp;
+  unsigned int id;
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+                         uim_get_slots_resp_ei) < 0) {
+    LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
+    return;
+  } else if (!CheckMessageSuccess(cmd, resp.result)) {
+    return;
+  }
+
+  if (!resp.status_valid || !resp.info_valid) {
+    LOG(ERROR) << "QMI UIM response for " << cmd.ToString()
+               << " contained invalid slot info";
+    return;
+  }
+
+  CHECK(euicc_manager_);
+  uint8_t max_len = std::max(resp.status_len, resp.info_len);
+  for (uint8_t i = 0; i < max_len; ++i) {
+    bool is_present = (resp.status[i].physical_card_status ==
+                       uim_physical_slot_status::kCardPresent);
+    bool is_euicc = resp.info[i].is_euicc;
+    if (!is_present || !is_euicc) {
+      euicc_manager_->OnEuiccRemoved(i);
+      continue;
+    }
+
+    bool is_active = (resp.status[i].physical_slot_state ==
+                      uim_physical_slot_status::kSlotActive);
+    if (!is_active) {
+      euicc_manager_->OnEuiccUpdated(i, EuiccSlotInfo());
+    } else {
+      euicc_manager_->OnEuiccUpdated(
+          i, EuiccSlotInfo(resp.status[i].logical_slot));
+    }
   }
 }
 
