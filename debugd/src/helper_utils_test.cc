@@ -4,6 +4,8 @@
 
 #include "debugd/src/helper_utils.h"
 
+#include <limits.h>
+
 #include <gtest/gtest.h>
 
 namespace debugd {
@@ -16,6 +18,9 @@ TEST(SandboxedProcessTest, GetHelperPath) {
 
   EXPECT_TRUE(GetHelperPath("test/me", &full_path));
   EXPECT_EQ("/usr/libexec/debugd/helpers/test/me", full_path);
+
+  std::string str(PATH_MAX, 'x');
+  EXPECT_FALSE(GetHelperPath(str, &full_path));
 }
 
 }  // namespace debugd
