@@ -102,6 +102,7 @@ const CREATE_LXD_CONTAINER_METHOD: &str = "CreateLxdContainer";
 const START_LXD_CONTAINER_METHOD: &str = "StartLxdContainer";
 const GET_LXD_CONTAINER_USERNAME_METHOD: &str = "GetLxdContainerUsername";
 const SET_UP_LXD_CONTAINER_USER_METHOD: &str = "SetUpLxdContainerUser";
+const START_LXD_METHOD: &str = "StartLxd";
 const GET_DEBUG_INFORMATION: &str = "GetDebugInformation";
 const CONTAINER_STARTED_SIGNAL: &str = "ContainerStarted";
 const CONTAINER_SHUTDOWN_SIGNAL: &str = "ContainerShutdown";
@@ -111,6 +112,7 @@ const LXD_CONTAINER_CREATED_SIGNAL: &str = "LxdContainerCreated";
 const LXD_CONTAINER_DOWNLOADING_SIGNAL: &str = "LxdContainerDownloading";
 const LXD_CONTAINER_STARTING_SIGNAL: &str = "LxdContainerStarting";
 const TREMPLIN_STARTED_SIGNAL: &str = "TremplinStarted";
+const START_LXD_PROGRESS_SIGNAL: &str = "StartLxdProgress";
 
 // seneschal dbus-constants.h
 const SENESCHAL_INTERFACE: &str = "org.chromium.Seneschal";
@@ -174,6 +176,8 @@ enum ChromeOSError {
     FailedSharePath(String),
     FailedStartContainerSignal(LxdContainerStartingSignal_Status, String),
     FailedStartContainerStatus(StartLxdContainerResponse_Status, String),
+    FailedStartLxdProgressSignal(StartLxdProgressSignal_Status, String),
+    FailedStartLxdStatus(StartLxdResponse_Status, String),
     FailedStopVm { vm_name: String, reason: String },
     InvalidExportPath,
     InvalidImportPath,
@@ -229,6 +233,12 @@ impl fmt::Display for ChromeOSError {
             FailedSharePath(reason) => write!(f, "failed to share path with vm: {}", reason),
             FailedStartContainerStatus(s, reason) => {
                 write!(f, "failed to start container: `{:?}`: {}", s, reason)
+            }
+            FailedStartLxdProgressSignal(s, reason) => {
+                write!(f, "failed to start lxd: `{:?}`: {}", s, reason)
+            }
+            FailedStartLxdStatus(s, reason) => {
+                write!(f, "failed to start lxd: `{:?}`: {}", s, reason)
             }
             FailedListDiskImages(reason) => write!(f, "failed to list disk images: {}", reason),
             FailedListUsb => write!(f, "failed to get list of usb devices attached to vm"),
@@ -295,10 +305,71 @@ impl ChromeOS {
     }
 }
 
+struct ProtobusSignalWatcher<'a> {
+    connection: &'a Connection,
+    interface: String,
+    signal: String,
+}
+
+impl<'a> ProtobusSignalWatcher<'a> {
+    fn new(
+        connection: &'a Connection,
+        interface: &str,
+        signal: &str,
+    ) -> Result<ProtobusSignalWatcher<'a>, Box<dyn Error>> {
+        connection.add_match(&Self::format_rule(interface, signal))?;
+        Ok(ProtobusSignalWatcher {
+            connection,
+            interface: interface.to_owned(),
+            signal: signal.to_owned(),
+        })
+    }
+
+    fn format_rule(interface: &str, signal: &str) -> String {
+        format!("interface='{}',member='{}'", interface, signal)
+    }
+
+    fn wait<O: ProtoMessage>(&self, timeout_millis: i32) -> Result<O, Box<dyn Error>> {
+        self.wait_with_filter(timeout_millis, |_| true)
+    }
+
+    fn wait_with_filter<O, F>(&self, timeout_millis: i32, predicate: F) -> Result<O, Box<dyn Error>>
+    where
+        O: ProtoMessage,
+        F: Fn(&O) -> bool,
+    {
+        for item in self.connection.iter(timeout_millis) {
+            match item {
+                ConnectionItem::Signal(message) => {
+                    if let (_, _, Some(msg_interface), Some(msg_signal)) = message.headers() {
+                        if msg_interface == self.interface && msg_signal == self.signal {
+                            let proto_message: O = dbus_message_to_proto(&message)?;
+                            if predicate(&proto_message) {
+                                return Ok(proto_message);
+                            }
+                        }
+                    }
+                }
+                ConnectionItem::Nothing => break,
+                _ => {}
+            };
+        }
+        Err("timeout while waiting for signal".into())
+    }
+}
+
+impl Drop for ProtobusSignalWatcher<'_> {
+    fn drop(&mut self) {
+        self.connection
+            .remove_match(&Self::format_rule(&self.interface, &self.signal))
+            .expect("unable to remove match rule on protobus");
+    }
+}
+
 impl ChromeOS {
     /// Helper for doing protobuf over dbus requests and responses.
     fn sync_protobus<I: ProtoMessage, O: ProtoMessage>(
-        &mut self,
+        &self,
         message: Message,
         request: &I,
     ) -> Result<O, Box<dyn Error>> {
@@ -307,7 +378,7 @@ impl ChromeOS {
 
     /// Helper for doing protobuf over dbus requests and responses.
     fn sync_protobus_timeout<I: ProtoMessage, O: ProtoMessage>(
-        &mut self,
+        &self,
         message: Message,
         request: &I,
         fds: &[OwnedFd],
@@ -326,25 +397,7 @@ impl ChromeOS {
         signal: &str,
         timeout_millis: i32,
     ) -> Result<O, Box<dyn Error>> {
-        let rule = format!("interface='{}',member='{}'", interface, signal);
-        self.connection.add_match(&rule)?;
-        let mut result: Result<O, Box<dyn Error>> = Err("timeout while waiting for signal".into());
-        for item in self.connection.iter(timeout_millis) {
-            match item {
-                ConnectionItem::Signal(message) => {
-                    if let (_, _, Some(msg_interface), Some(msg_signal)) = message.headers() {
-                        if msg_interface == interface && signal == msg_signal {
-                            result = dbus_message_to_proto(&message);
-                            break;
-                        }
-                    }
-                }
-                ConnectionItem::Nothing => break,
-                _ => {}
-            };
-        }
-        self.connection.remove_match(&rule)?;
-        result
+        ProtobusSignalWatcher::new(&self.connection, interface, signal)?.wait(timeout_millis)
     }
 
     /// Request that component updater load a named component.
@@ -989,6 +1042,12 @@ impl ChromeOS {
             disk_image.do_mount = false;
         }
 
+        let tremplin_started = ProtobusSignalWatcher::new(
+            &self.connection,
+            VM_CICERONE_INTERFACE,
+            TREMPLIN_STARTED_SIGNAL,
+        )?;
+
         let response: StartVmResponse = self.sync_protobus(
             Message::new_method_call(
                 VM_CONCIERGE_SERVICE_NAME,
@@ -999,13 +1058,71 @@ impl ChromeOS {
             &request,
         )?;
 
-        if response.success {
-            return Ok(());
-        }
-
         match response.status {
-            VmStatus::VM_STATUS_RUNNING | VmStatus::VM_STATUS_STARTING => Ok(()),
+            VmStatus::VM_STATUS_STARTING => {
+                assert!(response.success);
+                tremplin_started
+                    .wait_with_filter(DEFAULT_TIMEOUT_MS, |s: &TremplinStartedSignal| {
+                        s.vm_name == vm_name && s.owner_id == user_id_hash
+                    })?;
+                Ok(())
+            }
+            VmStatus::VM_STATUS_RUNNING => {
+                assert!(response.success);
+                Ok(())
+            }
             _ => Err(BadVmStatus(response.status, response.failure_reason).into()),
+        }
+    }
+
+    fn start_lxd(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
+        let mut request = StartLxdRequest::new();
+        request.vm_name = vm_name.to_owned();
+        request.owner_id = user_id_hash.to_owned();
+
+        let lxd_started = ProtobusSignalWatcher::new(
+            &self.connection,
+            VM_CICERONE_INTERFACE,
+            START_LXD_PROGRESS_SIGNAL,
+        )?;
+
+        let response: StartLxdResponse = self.sync_protobus(
+            Message::new_method_call(
+                VM_CICERONE_SERVICE_NAME,
+                VM_CICERONE_SERVICE_PATH,
+                VM_CICERONE_INTERFACE,
+                START_LXD_METHOD,
+            )?,
+            &request,
+        )?;
+
+        use self::StartLxdResponse_Status::*;
+        match response.status {
+            STARTING => {
+                use self::StartLxdProgressSignal_Status::*;
+                let signal = lxd_started.wait_with_filter(
+                    DEFAULT_TIMEOUT_MS,
+                    |s: &StartLxdProgressSignal| {
+                        s.vm_name == vm_name
+                            && s.owner_id == user_id_hash
+                            && s.status != STARTING
+                            && s.status != RECOVERING
+                    },
+                )?;
+                match signal.status {
+                    STARTED => Ok(()),
+                    STARTING | RECOVERING => unreachable!(),
+                    UNKNOWN | FAILED => Err(FailedStartLxdProgressSignal(
+                        signal.status,
+                        signal.failure_reason,
+                    )
+                    .into()),
+                }
+            }
+            ALREADY_RUNNING => Ok(()),
+            UNKNOWN | FAILED => {
+                Err(FailedStartLxdStatus(response.status, response.failure_reason).into())
+            }
         }
     }
 
@@ -1483,7 +1600,8 @@ impl Backend for ChromeOS {
             }
 
             let disk_image_path = self.create_disk_image(name, user_id_hash)?;
-            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path)
+            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path)?;
+            self.start_lxd(name, user_id_hash)
         }
     }
 
