@@ -7,16 +7,20 @@
 
 #include <memory>
 
+#include "hermes/adaptor_interfaces.h"
 #include "hermes/dbus_bindings/org.chromium.Hermes.Manager.h"
 
 namespace hermes {
 
+class Euicc;
 class Manager;
 
-// Interface for an object factory that creates an adaptor/proxy object
+// Interface for an object factory that creates an adaptor/proxy object.
 class AdaptorFactoryInterface {
  public:
   virtual ~AdaptorFactoryInterface() = default;
+  virtual std::unique_ptr<EuiccAdaptorInterface> CreateEuiccAdaptor(
+      Euicc* euicc) = 0;
   virtual std::unique_ptr<org::chromium::Hermes::ManagerAdaptor>
   CreateManagerAdaptor(Manager* manager) = 0;
 };

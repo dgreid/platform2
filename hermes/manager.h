@@ -7,58 +7,34 @@
 
 #include <map>
 #include <memory>
-#include <string>
-#include <tuple>
-#include <vector>
-
-#include <google-lpa/lpa/core/lpa.h>
-#include <google-lpa/lpa/data/proto/profile_info.pb.h>
 
 #include "hermes/context.h"
 #include "hermes/dbus_bindings/org.chromium.Hermes.Manager.h"
-#include "hermes/profile.h"
-#include "hermes/result_callback.h"
+#include "hermes/euicc.h"
+#include "hermes/euicc_manager_interface.h"
 
 namespace hermes {
 
-class Manager {
+class Manager final : public EuiccManagerInterface {
  public:
   Manager();
 
-  // org::chromium::Hermes::ManagerInterface overrides.
-  // Install a profile. An empty activation code will cause the default profile
-  // to be installed.
-  void InstallProfileFromActivationCode(
-      const std::string& in_activation_code,
-      const std::string& in_confirmation_code,
-      ResultCallback<dbus::ObjectPath> result_callback);
-  void InstallPendingProfile(const dbus::ObjectPath& in_pending_profile,
-                             const std::string& in_confirmation_code);
+  // Set/unset test mode. Normally, only production profiles may be
+  // downloaded. In test mode, only test profiles may be downloaded.
+  void SetTestMode(bool is_test_mode);
 
-  void UninstallProfile(const dbus::ObjectPath& in_profile,
-                        ResultCallback<> result_callback);
+  // EuiccManagerInterface overrides.
+  void OnEuiccUpdated(uint8_t physical_slot, EuiccSlotInfo slot_info) override;
+  void OnEuiccRemoved(uint8_t physical_slot) override;
 
  private:
-  void OnProfileInstalled(const lpa::proto::ProfileInfo& profile_info,
-                          int error,
-                          ResultCallback<dbus::ObjectPath> result_callback);
-  void OnProfileUninstalled(const dbus::ObjectPath& profile_path,
-                            int error,
-                            ResultCallback<> result_callback);
-  void UpdateInstalledProfilesProperty();
-
-  // Request the eUICC to provide all installed profiles.
-  void RequestInstalledProfiles();
-  // Update |profiles_| with all profiles installed on the eUICC.
-  void OnInstalledProfilesReceived(
-      const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error);
+  void UpdateAvailableEuiccsProperty();
 
   Context* context_;
-
   std::unique_ptr<org::chromium::Hermes::ManagerAdaptor> dbus_adaptor_;
 
-  std::vector<std::unique_ptr<Profile>> installed_profiles_;
-  std::vector<std::unique_ptr<Profile>> pending_profiles_;
+  // Map of physical SIM slot -> Euicc.
+  std::map<uint8_t, std::unique_ptr<Euicc>> available_euiccs_;
 
   DISALLOW_COPY_AND_ASSIGN(Manager);
 };

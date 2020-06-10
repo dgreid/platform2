@@ -33,6 +33,7 @@ generate_dbus_adaptors("hermes_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/hermes/dbus_bindings"
   sources = [
+    "dbus_bindings/org.chromium.Hermes.Euicc.xml",
     "dbus_bindings/org.chromium.Hermes.Manager.xml",
     "dbus_bindings/org.chromium.Hermes.Profile.xml",
   ]
@@ -45,6 +46,8 @@ static_library("libhermes") {
     "apdu.cc",
     "context.cc",
     "daemon.cc",
+    "euicc.cc",
+    "euicc_dbus_adaptor.cc",
     "executor.cc",
     "lpa_util.cc",
     "manager.cc",

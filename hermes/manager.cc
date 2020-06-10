@@ -12,140 +12,50 @@
 
 #include <base/callback.h>
 #include <brillo/errors/error_codes.h>
-#include <chromeos/dbus/service_constants.h>
 #include <google-lpa/lpa/core/lpa.h>
-
-#include "hermes/executor.h"
-#include "hermes/lpa_util.h"
-#include "hermes/result_callback.h"
-
-using lpa::proto::ProfileInfo;
 
 namespace hermes {
 
 Manager::Manager()
     : context_(Context::Get()),
       dbus_adaptor_(context_->adaptor_factory()->CreateManagerAdaptor(this)) {
-  RequestInstalledProfiles();
+  // Fake an Euicc until we get euicc info from the modem.
+  OnEuiccUpdated(0, EuiccSlotInfo(1));
 }
 
-void Manager::InstallProfileFromActivationCode(
-    const std::string& in_activation_code,
-    const std::string& in_confirmation_code,
-    ResultCallback<dbus::ObjectPath> result_callback) {
-  auto profile_cb = [result_callback{std::move(result_callback)}, this](
-                        lpa::proto::ProfileInfo& info, int error) mutable {
-    OnProfileInstalled(info, error, std::move(result_callback));
-  };
-  if (in_activation_code.empty()) {
-    context_->lpa()->GetDefaultProfileFromSmdp("", context_->executor(),
-                                               std::move(profile_cb));
+void Manager::SetTestMode(bool /*is_test_mode*/) {
+  // TODO(akhouderchah) This is a no-op until the Lpa interface allows for
+  // switching certificate directory without recreating the Lpa object.
+  NOTIMPLEMENTED();
+}
+
+void Manager::OnEuiccUpdated(uint8_t physical_slot, EuiccSlotInfo slot_info) {
+  auto iter = available_euiccs_.find(physical_slot);
+  if (iter == available_euiccs_.end()) {
+    available_euiccs_[physical_slot] =
+        std::make_unique<Euicc>(physical_slot, std::move(slot_info));
+    UpdateAvailableEuiccsProperty();
     return;
   }
 
-  lpa::core::Lpa::DownloadOptions options;
-  options.enable_profile = false;
-  options.allow_policy_rules = false;
-  options.confirmation_code = in_confirmation_code;
-  context_->lpa()->DownloadProfile(in_activation_code, std::move(options),
-                                   context_->executor(), std::move(profile_cb));
+  iter->second->UpdateSlotInfo(std::move(slot_info));
 }
-void Manager::UninstallProfile(const dbus::ObjectPath& in_profile,
-                               ResultCallback<> result_callback) {
-  const Profile* matching_profile = nullptr;
-  for (auto& profile : installed_profiles_) {
-    if (profile->object_path() == in_profile) {
-      matching_profile = profile.get();
-      break;
-    }
-  }
-  if (!matching_profile) {
-    result_callback.Error(brillo::Error::Create(
-        FROM_HERE, brillo::errors::dbus::kDomain, kErrorInvalidParameter,
-        "Could not find Profile " + in_profile.value()));
+
+void Manager::OnEuiccRemoved(uint8_t physical_slot) {
+  auto iter = available_euiccs_.find(physical_slot);
+  if (iter == available_euiccs_.end()) {
     return;
   }
-
-  context_->lpa()->DeleteProfile(
-      matching_profile->GetIccid(), context_->executor(),
-      [in_profile, result_callback{std::move(result_callback)},
-       this](int error) mutable {
-        OnProfileUninstalled(in_profile, error, std::move(result_callback));
-      });
-}
-void Manager::UpdateInstalledProfilesProperty() {
-  std::vector<dbus::ObjectPath> profile_paths;
-  for (auto& profile : installed_profiles_) {
-    profile_paths.push_back(profile->object_path());
-  }
-  dbus_adaptor_->SetInstalledProfiles(profile_paths);
+  available_euiccs_.erase(iter);
+  UpdateAvailableEuiccsProperty();
 }
 
-void Manager::OnProfileInstalled(
-    const lpa::proto::ProfileInfo& profile_info,
-    int error,
-    ResultCallback<dbus::ObjectPath> result_callback) {
-  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-  if (decoded_error) {
-    result_callback.Error(decoded_error);
-    return;
+void Manager::UpdateAvailableEuiccsProperty() {
+  std::vector<dbus::ObjectPath> euicc_paths;
+  for (const auto& euicc : available_euiccs_) {
+    euicc_paths.push_back(euicc.second->object_path());
   }
-
-  auto profile = Profile::Create(profile_info);
-  if (!profile) {
-    result_callback.Error(brillo::Error::Create(
-        FROM_HERE, brillo::errors::dbus::kDomain, kErrorInternalLpaFailure,
-        "Failed to create Profile object"));
-    return;
-  }
-
-  installed_profiles_.push_back(std::move(profile));
-  UpdateInstalledProfilesProperty();
-  result_callback.Success(installed_profiles_.back()->object_path());
-}
-void Manager::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
-                                   int error,
-                                   ResultCallback<> result_callback) {
-  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-  if (decoded_error) {
-    result_callback.Error(decoded_error);
-    return;
-  }
-
-  auto iter = installed_profiles_.begin();
-  for (; iter != installed_profiles_.end(); ++iter) {
-    if ((*iter)->object_path() == profile_path) {
-      break;
-    }
-  }
-  CHECK(iter != installed_profiles_.end());
-  installed_profiles_.erase(iter);
-  UpdateInstalledProfilesProperty();
-  result_callback.Success();
-}
-void Manager::RequestInstalledProfiles() {
-  context_->lpa()->GetInstalledProfiles(
-      context_->executor(),
-      [this](std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
-        OnInstalledProfilesReceived(profile_infos, error);
-      });
-}
-
-void Manager::OnInstalledProfilesReceived(
-    const std::vector<lpa::proto::ProfileInfo>& profile_infos, int error) {
-  auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
-  if (decoded_error) {
-    LOG(ERROR) << "Failed to retrieve installed profiles";
-    return;
-  }
-
-  for (const auto& info : profile_infos) {
-    auto profile = Profile::Create(info);
-    if (profile) {
-      installed_profiles_.push_back(std::move(profile));
-    }
-  }
-  UpdateInstalledProfilesProperty();
+  dbus_adaptor_->SetAvailableEuiccs(euicc_paths);
 }
 
 }  // namespace hermes

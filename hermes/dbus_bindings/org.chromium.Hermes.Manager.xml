@@ -7,57 +7,6 @@
 <node name="/org/chromium/Hermes/Manager"
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
 <interface name="org.chromium.Hermes.Manager">
-  <method name="InstallProfileFromActivationCode">
-    <tp:docstring>
-      Install a profile onto the eUICC using an activation code.
-    </tp:docstring>
-    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-    <arg name="activation_code" type="s" direction="in">
-      <tp:docstring>
-        Activation code of the profile to install.
-      </tp:docstring>
-    </arg>
-    <arg name="confirmation_code" type="s" direction="in">
-      <tp:docstring>
-        Confirmation code of the profile to install, or "" if none.
-      </tp:docstring>
-    </arg>
-    <arg name="profile" type="o" direction="out">
-      <tp:docstring>
-        Profile object representing the newly-installed profile.
-      </tp:docstring>
-    </arg>
-  </method>
-  <method name="InstallPendingProfile">
-    <tp:docstring>
-      Install a profile onto the eUICC using a pending Profile from SM-DS.
-    </tp:docstring>
-    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-    <arg name="pending_profile" type="o" direction="in" />
-    <arg name="confirmation_code" type="s" direction="in">
-      <tp:docstring>
-        Confirmation code of the profile to install, or "" if none.
-      </tp:docstring>
-    </arg>
-  </method>
-  <method name="UninstallProfile">
-    <tp:docstring>
-      Uninstall a profile from the eUICC.
-    </tp:docstring>
-    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-    <arg name="profile" type="o" direction="in">
-      <tp:docstring>
-        D-Bus path of the Profile object to uninstall.
-      </tp:docstring>
-    </arg>
-  </method>
-  <method name="RequestPendingEvents">
-    <tp:docstring>
-      Request Events from SM-DS. Will update the PendingProfiles property as
-      needed prior to returning.
-    </tp:docstring>
-    <annotation name="org.chromium.DBus.Method.Kind" value="async" />
-  </method>
   <method name="SetTestMode">
     <tp:docstring>
       Set/unset test mode.
@@ -65,7 +14,6 @@
     <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
     <arg name="is_test_mode" type="b" direction="in" />
   </method>
-  <property name="InstalledProfiles" type="ao" access="read" />
-  <property name="PendingProfiles" type="ao" access="read" />
+  <property name="AvailableEuiccs" type="ao" access="read" />
 </interface>
 </node>
