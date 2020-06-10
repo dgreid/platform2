@@ -70,7 +70,7 @@ enum CryptohomeError {
 // numeric values should never be reused.
 enum TimerType {
   kAsyncMountTimer,  // Unused.
-  kSyncMountTimer,
+  kSyncMountTimer,  // Unused.
   kAsyncGuestMountTimer,
   kSyncGuestMountTimer,  // Unused.
   kTpmTakeOwnershipTimer,

@@ -2178,7 +2178,6 @@ gboolean Service::Mount(const gchar *userid,
   if (install_attrs_->status() == InstallAttributes::Status::kFirstInstall)
     install_attrs_->Finalize();
 
-  ReportTimerStart(kSyncMountTimer);
   Mount::MountArgs mount_args;
   mount_args.create_if_missing = create_if_missing;
   mount_args.is_ephemeral = is_ephemeral;
@@ -2206,10 +2205,6 @@ gboolean Service::Mount(const gchar *userid,
   PostTask(FROM_HERE,
            base::Bind(&Service::DoUpdateTimestamp, base::Unretained(this),
                       base::RetainedRef(user_mount)));
-
-  // We only report successful mounts.
-  if (return_status && !return_code)
-    ReportTimerStop(kSyncMountTimer);
 
   user_mount->set_pkcs11_state(cryptohome::Mount::kUninitialized);
   if (return_status) {
