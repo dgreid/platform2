@@ -7,6 +7,7 @@
 #include <string>
 #include <utility>
 
+#include <base/time/default_clock.h>
 #include <chromeos/constants/imageloader.h>
 #include <chromeos/dbus/dlcservice/dbus-constants.h>
 #include <sysexits.h>
@@ -68,7 +69,8 @@ void Daemon::RegisterDBusObjectsAsync(
       base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
-      base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath));
+      base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath),
+      base::DefaultClock::GetInstance());
   CHECK(SystemState::Get());
 
   dbus_adaptor_->RegisterWithDBusObject(dbus_object_.get());

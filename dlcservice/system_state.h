@@ -8,6 +8,8 @@
 #include <memory>
 
 #include <base/files/file_path.h>
+#include <base/time/time.h>
+#include <base/time/clock.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <imageloader/dbus-proxies.h>
 #include <session_manager/dbus-proxies.h>
@@ -42,6 +44,7 @@ class SystemState {
       const base::FilePath& content_dir,
       const base::FilePath& prefs_dir,
       const base::FilePath& users_dir,
+      base::Clock* clock,
       bool for_test = false);
 
   // Gets the pointer to the current |SystemState|.
@@ -66,6 +69,9 @@ class SystemState {
   // Return true if the device is removable.
   bool IsDeviceRemovable() const;
 
+  // Returns the clock object.
+  base::Clock* clock() const;
+
  protected:
   SystemState(
       std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -80,7 +86,8 @@ class SystemState {
       const base::FilePath& preloaded_content_dir,
       const base::FilePath& content_dir,
       const base::FilePath& prefs_dir,
-      const base::FilePath& users_dir);
+      const base::FilePath& users_dir,
+      base::Clock* clock);
 
  private:
   std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
@@ -97,6 +104,7 @@ class SystemState {
   base::FilePath prefs_dir_;
   BootSlot::Slot active_boot_slot_{};
   base::FilePath users_dir_;
+  base::Clock* clock_;
   bool is_device_removable_;
 
   static std::unique_ptr<SystemState> g_instance_;

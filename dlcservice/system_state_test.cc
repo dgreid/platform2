@@ -27,6 +27,8 @@ TEST_F(SystemStateTest, GettersTest) {
   EXPECT_EQ(system_state->inactive_boot_slot(), BootSlot::Slot::A);
   EXPECT_EQ(system_state->users_dir(), temp_path.Append("users"));
   EXPECT_FALSE(system_state->IsDeviceRemovable());
+
+  EXPECT_EQ(system_state->clock(), &clock_);
 }
 
 }  // namespace dlcservice

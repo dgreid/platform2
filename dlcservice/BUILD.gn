@@ -119,6 +119,7 @@ executable("dlcservice_util") {
 if (use.test) {
   pkg_config("dlcservice_tests_config") {
     pkg_deps = [
+      "libbrillo-test",
       "libchrome-test-${libbase_ver}",
       "libimageloader-client-test",
       "libsession_manager-client-test",
