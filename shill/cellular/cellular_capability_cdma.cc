@@ -10,11 +10,11 @@
 
 #include "shill/cellular/cellular_bearer.h"
 #include "shill/cellular/cellular_service.h"
+#include "shill/cellular/pending_activation_store.h"
 #include "shill/control_interface.h"
 #include "shill/dbus_properties_proxy_interface.h"
 #include "shill/error.h"
 #include "shill/logging.h"
-#include "shill/pending_activation_store.h"
 
 using std::string;
 using std::vector;

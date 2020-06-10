@@ -11,12 +11,12 @@
 #include <base/macros.h>
 #include <gmock/gmock.h>
 
+#include "shill/cellular/mock_pending_activation_store.h"
 #include "shill/cellular/modem_info.h"
 #include "shill/mock_control.h"
 #include "shill/mock_event_dispatcher.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_pending_activation_store.h"
 
 namespace shill {
 

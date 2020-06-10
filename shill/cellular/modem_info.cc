@@ -12,11 +12,11 @@
 
 #include "shill/cellular/dbus_objectmanager_proxy_interface.h"
 #include "shill/cellular/modem.h"
+#include "shill/cellular/pending_activation_store.h"
 #include "shill/control_interface.h"
 #include "shill/dbus/dbus_objectmanager_proxy.h"
 #include "shill/logging.h"
 #include "shill/manager.h"
-#include "shill/pending_activation_store.h"
 
 namespace shill {
 

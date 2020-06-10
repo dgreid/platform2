@@ -23,13 +23,13 @@
 #include "shill/cellular/cellular_pco.h"
 #include "shill/cellular/cellular_service.h"
 #include "shill/cellular/mobile_operator_info.h"
+#include "shill/cellular/pending_activation_store.h"
 #include "shill/cellular/verizon_subscription_state.h"
 #include "shill/control_interface.h"
 #include "shill/dbus_properties_proxy_interface.h"
 #include "shill/device_id.h"
 #include "shill/error.h"
 #include "shill/logging.h"
-#include "shill/pending_activation_store.h"
 #include "shill/property_accessor.h"
 
 using base::Bind;

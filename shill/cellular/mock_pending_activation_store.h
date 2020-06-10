@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SHILL_MOCK_PENDING_ACTIVATION_STORE_H_
-#define SHILL_MOCK_PENDING_ACTIVATION_STORE_H_
+#ifndef SHILL_CELLULAR_MOCK_PENDING_ACTIVATION_STORE_H_
+#define SHILL_CELLULAR_MOCK_PENDING_ACTIVATION_STORE_H_
 
 #include <string>
 
 #include <base/files/file_path.h>
 #include <gmock/gmock.h>
 
-#include "shill/pending_activation_store.h"
+#include "shill/cellular/pending_activation_store.h"
 
 namespace shill {
 
@@ -36,4 +36,4 @@ class MockPendingActivationStore : public PendingActivationStore {
 
 }  // namespace shill
 
-#endif  // SHILL_MOCK_PENDING_ACTIVATION_STORE_H_
+#endif  // SHILL_CELLULAR_MOCK_PENDING_ACTIVATION_STORE_H_

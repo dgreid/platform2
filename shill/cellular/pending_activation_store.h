@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SHILL_PENDING_ACTIVATION_STORE_H_
-#define SHILL_PENDING_ACTIVATION_STORE_H_
+#ifndef SHILL_CELLULAR_PENDING_ACTIVATION_STORE_H_
+#define SHILL_CELLULAR_PENDING_ACTIVATION_STORE_H_
 
 #include <memory>
 #include <string>
@@ -97,4 +97,4 @@ class PendingActivationStore {
 
 }  // namespace shill
 
-#endif  // SHILL_PENDING_ACTIVATION_STORE_H_
+#endif  // SHILL_CELLULAR_PENDING_ACTIVATION_STORE_H_

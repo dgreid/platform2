@@ -24,12 +24,12 @@
 #include "shill/cellular/mock_mm1_sim_proxy.h"
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
+#include "shill/cellular/mock_pending_activation_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
 #include "shill/mock_dbus_properties_proxy.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_pending_activation_store.h"
 #include "shill/test_event_dispatcher.h"
 
 using std::string;
