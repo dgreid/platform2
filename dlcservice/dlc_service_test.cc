@@ -458,6 +458,7 @@ TEST_F(DlcServiceTest, InstallFailureCleansUp) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
 
   EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
+  EXPECT_EQ(err_->GetCode(), kErrorBusy);
 
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
@@ -501,6 +502,7 @@ TEST_F(DlcServiceTest, InstallFailsToCreateDirectory) {
   // directories inside |content_path_|, since the permissions don't allow
   // writing into |content_path_|.
   EXPECT_FALSE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
+  EXPECT_EQ(err_->GetCode(), kErrorInternal);
 
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
