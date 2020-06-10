@@ -67,7 +67,6 @@ pkg_config("libcrash_reporter_config") {
 static_library("libcrash_reporter") {
   all_dependent_configs = [ ":libcrash_reporter_config" ]
   sources = [
-    "arc_service_failure_collector.cc",
     "bert_collector.cc",
     "chrome_collector.cc",
     "crash_collector.cc",
@@ -79,7 +78,6 @@ static_library("libcrash_reporter") {
     "kernel_warning_collector.cc",
     "mount_failure_collector.cc",
     "selinux_violation_collector.cc",
-    "service_failure_collector.cc",
     "udev_collector.cc",
     "unclean_shutdown_collector.cc",
     "user_collector.cc",
@@ -288,7 +286,6 @@ if (use.test) {
       ":crash_reporter_test_config",
     ]
     sources = [
-      "arc_service_failure_collector_test.cc",
       "bert_collector_test.cc",
       "chrome_collector_test.cc",
       "crash_collector_test.cc",
@@ -305,7 +302,6 @@ if (use.test) {
       "mount_failure_collector_test.cc",
       "paths_test.cc",
       "selinux_violation_collector_test.cc",
-      "service_failure_collector_test.cc",
       "testrunner.cc",
       "udev_collector_test.cc",
       "unclean_shutdown_collector_test.cc",

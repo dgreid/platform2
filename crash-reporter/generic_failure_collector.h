@@ -15,6 +15,7 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/optional.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "crash-reporter/crash_collector.h"
@@ -23,19 +24,32 @@
 class GenericFailureCollector : public CrashCollector {
  public:
   GenericFailureCollector();
-  explicit GenericFailureCollector(const std::string& exec_name);
 
   ~GenericFailureCollector() override;
 
-  // Collects service failure.
-  bool Collect();
+  // Collects generic failure.
+  bool Collect(const std::string& exec_name) {
+    return Collect(exec_name, exec_name, base::nullopt);
+  }
+
+  // All the bells and whistles.
+  // exec_name is the string used for filenames on disk.
+  // log_key_name is a key used for the exec_name as passed to GetLogContents
+  // if weight is not nullopt, the "weight" key is set to that value.
+  bool Collect(const std::string& exec_name,
+               const std::string& log_key_name,
+               base::Optional<int> weight);
 
   static const char* const kGenericFailure;
   static const char* const kSuspendFailure;
+  static const char* const kServiceFailure;
+  static const char* const kArcServiceFailure;
 
  protected:
   std::string failure_report_path_;
   std::string exec_name_;
+  std::string log_key_name_;
+  base::Optional<int> weight_;
 
  private:
   friend class GenericFailureCollectorTest;

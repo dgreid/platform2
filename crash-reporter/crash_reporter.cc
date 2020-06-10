@@ -11,6 +11,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/files/file_descriptor_watcher_posix.h>
+#include <base/strings/stringprintf.h>
 #include <base/message_loop/message_loop.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -18,7 +19,6 @@
 #include <metrics/metrics_library.h>
 
 #include "crash-reporter/arc_collector.h"
-#include "crash-reporter/arc_service_failure_collector.h"
 #include "crash-reporter/bert_collector.h"
 #include "crash-reporter/chrome_collector.h"
 #include "crash-reporter/constants.h"
@@ -31,7 +31,6 @@
 #include "crash-reporter/mount_failure_collector.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/selinux_violation_collector.h"
-#include "crash-reporter/service_failure_collector.h"
 #include "crash-reporter/udev_collector.h"
 #include "crash-reporter/unclean_shutdown_collector.h"
 #include "crash-reporter/user_collector.h"
@@ -40,6 +39,7 @@
 #include "crash-reporter/vm_support.h"
 
 using base::FilePath;
+using base::StringPrintf;
 
 namespace {
 
@@ -263,16 +263,19 @@ int HandleKernelWarning(KernelWarningCollector* kernel_warning_collector,
 int HandleSuspendFailure(GenericFailureCollector* suspend_failure_collector) {
   // Accumulate logs to help in diagnosing failures during collection.
   brillo::LogToString(true);
-  bool handled = suspend_failure_collector->Collect();
+  bool handled = suspend_failure_collector->Collect(
+      GenericFailureCollector::kSuspendFailure);
   brillo::LogToString(false);
   return handled ? 0 : 1;
 }
 
-int HandleServiceFailure(ServiceFailureCollector* service_failure_collector,
-                         const std::string& service_name) {
+int HandleServiceFailure(GenericFailureCollector* service_failure_collector,
+                         std::string exec_name,
+                         std::string log_entry_name) {
   // Accumulate logs to help in diagnosing failures during collection.
   brillo::LogToString(true);
-  bool handled = service_failure_collector->Collect(service_name);
+  bool handled = service_failure_collector->Collect(
+      exec_name, log_entry_name, util::GetServiceFailureWeight());
   brillo::LogToString(false);
   if (!handled)
     return 1;
@@ -514,15 +517,8 @@ int main(int argc, char* argv[]) {
   KernelWarningCollector kernel_warning_collector;
   kernel_warning_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
-  ArcServiceFailureCollector arc_service_failure_collector;
-  arc_service_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  ServiceFailureCollector service_failure_collector;
-  service_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
-
-  GenericFailureCollector suspend_failure_collector(
-      GenericFailureCollector::kSuspendFailure);
-  suspend_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
+  GenericFailureCollector generic_failure_collector;
+  generic_failure_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
 
   SELinuxViolationCollector selinux_violation_collector;
   selinux_violation_collector.Initialize(IsFeedbackAllowed, FLAGS_early);
@@ -582,17 +578,23 @@ int main(int argc, char* argv[]) {
   }
 
   if (!FLAGS_arc_service_failure.empty()) {
-    return HandleServiceFailure(&arc_service_failure_collector,
-                                FLAGS_arc_service_failure);
+    return HandleServiceFailure(
+        &generic_failure_collector,
+        StringPrintf("%s-%s", GenericFailureCollector::kArcServiceFailure,
+                     FLAGS_arc_service_failure.c_str()),
+        GenericFailureCollector::kArcServiceFailure);
   }
 
   if (FLAGS_suspend_failure) {
-    return HandleSuspendFailure(&suspend_failure_collector);
+    return HandleSuspendFailure(&generic_failure_collector);
   }
 
   if (!FLAGS_service_failure.empty()) {
-    return HandleServiceFailure(&service_failure_collector,
-                                FLAGS_service_failure);
+    return HandleServiceFailure(
+        &generic_failure_collector,
+        StringPrintf("%s-%s", GenericFailureCollector::kServiceFailure,
+                     FLAGS_service_failure.c_str()),
+        GenericFailureCollector::kServiceFailure);
   }
 
   if (FLAGS_selinux_violation) {

@@ -996,8 +996,10 @@ bool CrashCollector::GetMultipleLogContents(
   std::string collated_log_contents;
   for (auto exec_name : exec_names) {
     std::string command;
-    if (!store.GetString(exec_name, &command))
+    if (!store.GetString(exec_name, &command)) {
+      LOG(WARNING) << "exec name '" << exec_name << "' not found in log file";
       continue;
+    }
 
     FilePath raw_output_file;
     if (!base::CreateTemporaryFile(&raw_output_file)) {

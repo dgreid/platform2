@@ -14,17 +14,15 @@ const char kSignatureKey[] = "sig";
 }  // namespace
 
 using base::FilePath;
+using base::StringPrintf;
 
-const char* const GenericFailureCollector::kGenericFailure = "generic-failure";
 const char* const GenericFailureCollector::kSuspendFailure = "suspend-failure";
+const char* const GenericFailureCollector::kServiceFailure = "service-failure";
+const char* const GenericFailureCollector::kArcServiceFailure =
+    "arc-service-failure";
 
 GenericFailureCollector::GenericFailureCollector()
-    : GenericFailureCollector(kGenericFailure) {}
-
-GenericFailureCollector::GenericFailureCollector(const std::string& exec_name)
-    : CrashCollector("generic_failure"),
-      failure_report_path_("/dev/stdin"),
-      exec_name_(exec_name) {}
+    : CrashCollector("generic_failure"), failure_report_path_("/dev/stdin") {}
 
 GenericFailureCollector::~GenericFailureCollector() {}
 
@@ -45,7 +43,9 @@ bool GenericFailureCollector::LoadGenericFailure(std::string* content,
   return true;
 }
 
-bool GenericFailureCollector::Collect() {
+bool GenericFailureCollector::Collect(const std::string& exec_name,
+                                      const std::string& log_key_name,
+                                      base::Optional<int> weight) {
   std::string reason = "normal collection";
   bool feedback = true;
   if (util::IsDeveloperImage()) {
@@ -73,15 +73,18 @@ bool GenericFailureCollector::Collect() {
     return true;
   }
 
-  std::string dump_basename = FormatDumpBasename(exec_name_, time(nullptr), 0);
+  std::string dump_basename = FormatDumpBasename(exec_name, time(nullptr), 0);
   FilePath log_path = GetCrashPath(crash_directory, dump_basename, "log");
   FilePath meta_path = GetCrashPath(crash_directory, dump_basename, "meta");
+  if (weight) {
+    AddCrashMetaUploadData("weight", StringPrintf("%d", *weight));
+  }
 
   AddCrashMetaData(kSignatureKey, failure_signature);
 
-  bool result = GetLogContents(log_config_path_, exec_name_, log_path);
+  bool result = GetLogContents(log_config_path_, log_key_name, log_path);
   if (result) {
-    FinishCrash(meta_path, exec_name_, log_path.BaseName().value());
+    FinishCrash(meta_path, exec_name, log_path.BaseName().value());
   }
 
   return true;
