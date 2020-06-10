@@ -18,6 +18,7 @@ class QmiUimCommand {
     kReset = 0x00,
     kSendApdu = 0x3B,
     kOpenLogicalChannel = 0x42,
+    kGetSlots = 0x47,
   };
 
   QmiUimCommand(Code code) : code_(code) {}  // NOLINT(runtime/explicit)
@@ -31,6 +32,8 @@ class QmiUimCommand {
         return "SendApdu";
       case kOpenLogicalChannel:
         return "OpenLogicalChannel";
+      case kGetSlots:
+        return "GetSlots";
       default:
         CHECK(false) << "Unrecognized value: " << code_;
         return "";
@@ -42,6 +45,8 @@ class QmiUimCommand {
 };
 
 constexpr int kBufferDataSize = 260;
+
+constexpr int kIccidMaxSize = 20;
 
 struct uim_qmi_result {
   uint16_t result;
@@ -92,11 +97,48 @@ struct uim_send_apdu_resp {
   uint8_t apdu_response[kBufferDataSize];
 };
 
+struct uim_physical_slot_status {
+  enum physical_card_status_t : uint32_t {
+    kCardUnknown = 0,
+    kCardAbsent = 1,
+    kCardPresent = 2,
+  } physical_card_status;
+  enum physical_slot_state_t : uint32_t {
+    kSlotInactive = 0,
+    kSlotActive = 1,
+  } physical_slot_state;
+  uint8_t logical_slot;
+  uint8_t iccid_len;
+  uint8_t iccid[kIccidMaxSize];
+};
+
+struct uim_physical_slot_info {
+  uint32_t card_protocol;
+  uint8_t num_app;
+  uint8_t atr_len;
+  uint8_t atr[255];
+  uint8_t is_euicc;
+};
+
+struct uim_get_slots_req {};
+
+struct uim_get_slots_resp {
+  uim_qmi_result result;
+  bool status_valid;
+  uint8_t status_len;
+  uim_physical_slot_status status[10];
+  bool info_valid;
+  uint8_t info_len;
+  uim_physical_slot_info info[10];
+};
+
 extern struct qmi_elem_info uim_open_logical_channel_req_ei[];
 extern struct qmi_elem_info uim_open_logical_channel_resp_ei[];
 extern struct qmi_elem_info uim_reset_req_ei[];
 extern struct qmi_elem_info uim_reset_resp_ei[];
 extern struct qmi_elem_info uim_send_apdu_req_ei[];
 extern struct qmi_elem_info uim_send_apdu_resp_ei[];
+extern struct qmi_elem_info uim_get_slots_req_ei[];
+extern struct qmi_elem_info uim_get_slots_resp_ei[];
 
 #endif  // HERMES_QMI_UIM_H_
