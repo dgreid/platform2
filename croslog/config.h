@@ -12,10 +12,7 @@
 
 namespace croslog {
 
-enum class SourceMode {
-  JOURNAL_LOG,
-  PLAINTEXT_LOG
-};
+enum class SourceMode { JOURNAL_LOG, PLAINTEXT_LOG };
 
 struct Config {
   bool ParseCommandLineArgs(const base::CommandLine* command_line);

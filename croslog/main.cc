@@ -25,7 +25,7 @@ void ShowUsage() {
 }
 
 bool LaunchJournalctlAndWait(const croslog::Config& config) {
-  std::vector<std::string> journalctl_command_line = { kJournalctlCmdPath };
+  std::vector<std::string> journalctl_command_line = {kJournalctlCmdPath};
 
   if (!config.output.empty()) {
     journalctl_command_line.push_back("--output");
@@ -93,7 +93,6 @@ bool LaunchJournalctlAndWait(const croslog::Config& config) {
 }
 
 }  // anonymous namespace
-
 
 int main(int argc, char* argv[]) {
   base::CommandLine::Init(argc, argv);
