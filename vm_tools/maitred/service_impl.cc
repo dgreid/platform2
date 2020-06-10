@@ -612,6 +612,8 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     PLOG(ERROR) << "btrfs resize returned non-zero";
   }
 
+  // TODO(davidriley): Replace this #ifdef with StartBorealis.
+#ifndef USE_VM_BOREALIS
   // Start lxcfs.
   if (!init_->Spawn({"lxcfs", "/var/lib/lxcfs"}, {} /*env*/, true /*respawn*/,
                     true /*use_console*/, false /*wait_for_exit*/,
@@ -646,6 +648,7 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
   } else if (launch_info.status != Init::ProcessStatus::LAUNCHED) {
     LOG(WARNING) << "mcastd did not launch";
   }
+#endif
 
   return grpc::Status::OK;
 }

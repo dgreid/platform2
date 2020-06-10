@@ -147,6 +147,7 @@ constexpr struct {
         .data = "gid=5,mode=0620,ptmxmode=666",
         .failure_is_fatal = true,
     },
+#ifndef USE_VM_BOREALIS
     {
         .source = "var",
         .target = "/var",
@@ -155,6 +156,7 @@ constexpr struct {
         .data = "mode=0755",
         .failure_is_fatal = true,
     },
+#endif
     {
         .source = "none",
         .target = kCgroupRootDir,
@@ -294,6 +296,7 @@ constexpr struct {
         .path = "/run/tokens",
         .mode = 01777,
     },
+#ifndef USE_VM_BOREALIS
     {
         .path = "/var/cache",
         .mode = 0755,
@@ -334,6 +337,7 @@ constexpr struct {
         .path = "/var/lib/misc",
         .mode = 0755,
     },
+#endif
 };
 
 // These limits are based on suggestions from lxd doc/production-setup.md.
