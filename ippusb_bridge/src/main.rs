@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use std::fmt;
+use std::io;
+use std::net::TcpListener;
 use std::os::unix::io::IntoRawFd;
+use std::os::unix::net::UnixListener;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
 use sys_util::{error, info, register_signal_handler, syslog, EventFd, PollContext, PollToken};
@@ -12,9 +15,11 @@ mod arguments;
 use arguments::Args;
 
 mod listeners;
+use listeners::{Accept, ScopedUnixListener};
 
 #[derive(Debug)]
 pub enum Error {
+    CreateSocket(io::Error),
     EventFd(sys_util::Error),
     ParseArgs(arguments::Error),
     PollEvents(sys_util::Error),
@@ -29,6 +34,7 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         use Error::*;
         match self {
+            CreateSocket(err) => write!(f, "Failed to create socket: {}", err),
             EventFd(err) => write!(f, "Failed to create/duplicate EventFd: {}", err),
             ParseArgs(err) => write!(f, "Failed to parse arguments: {}", err),
             PollEvents(err) => write!(f, "Failed to poll for events: {}", err),
@@ -39,7 +45,7 @@ impl fmt::Display for Error {
     }
 }
 
-type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 // Set to true if the program should terminate.
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
@@ -77,30 +83,38 @@ fn add_sigint_handler(shutdown_fd: EventFd) -> sys_util::Result<()> {
     unsafe { register_signal_handler(SIGINT, sigint_handler) }
 }
 
-struct Daemon {
+struct Daemon<A: Accept> {
     shutdown: EventFd,
+    listener: A,
 }
 
-impl Daemon {
-    fn new(shutdown: EventFd) -> Self {
-        Self { shutdown }
+impl<A: Accept> Daemon<A> {
+    fn new(shutdown: EventFd, listener: A) -> Self {
+        Self { shutdown, listener }
     }
 
     fn run(&mut self) -> Result<()> {
         #[derive(PollToken)]
         enum Token {
             Shutdown,
+            ClientConnection,
         }
 
-        let poll_ctx: PollContext<Token> =
-            PollContext::build_with(&[(&self.shutdown, Token::Shutdown)])
-                .map_err(Error::SysUtil)?;
+        let poll_ctx: PollContext<Token> = PollContext::build_with(&[
+            (&self.shutdown, Token::Shutdown),
+            (&self.listener, Token::ClientConnection),
+        ])
+        .map_err(Error::SysUtil)?;
 
         'poll: loop {
             let events = poll_ctx.wait().map_err(Error::PollEvents)?;
             for event in &events {
                 match event.token() {
                     Token::Shutdown => break 'poll,
+                    Token::ClientConnection => match self.listener.accept() {
+                        Ok(_stream) => info!("Received connection"),
+                        Err(err) => error!("Failed to accept connection: {}", err),
+                    },
                 }
             }
         }
@@ -112,7 +126,7 @@ impl Daemon {
 fn run() -> Result<()> {
     syslog::init().map_err(Error::Syslog)?;
     let argv: Vec<String> = std::env::args().collect();
-    let _args = match Args::parse(&argv).map_err(Error::ParseArgs)? {
+    let args = match Args::parse(&argv).map_err(Error::ParseArgs)? {
         None => return Ok(()),
         Some(args) => args,
     };
@@ -121,8 +135,19 @@ fn run() -> Result<()> {
     let sigint_shutdown_fd = shutdown_fd.try_clone().map_err(Error::EventFd)?;
     add_sigint_handler(sigint_shutdown_fd).map_err(Error::RegisterHandler)?;
 
-    let mut daemon = Daemon::new(shutdown_fd);
-    daemon.run()?;
+    if let Some(unix_socket_path) = args.unix_socket {
+        info!("Listening on {}", unix_socket_path.display());
+        let unix_listener =
+            ScopedUnixListener(UnixListener::bind(unix_socket_path).map_err(Error::CreateSocket)?);
+        let mut daemon = Daemon::new(shutdown_fd, unix_listener);
+        daemon.run()?;
+    } else {
+        let host = "127.0.0.1:60000";
+        info!("Listening on {}", host);
+        let tcp_listener = TcpListener::bind(host).map_err(Error::CreateSocket)?;
+        let mut daemon = Daemon::new(shutdown_fd, tcp_listener);
+        daemon.run()?;
+    }
 
     info!("Shutting down.");
     Ok(())
