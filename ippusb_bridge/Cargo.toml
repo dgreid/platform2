@@ -7,6 +7,8 @@ edition = "2018"
 [dependencies]
 getopts = "0.2.18"
 libc = "0.2.44"
+rusb = "0.6.0"
+sync = { path = "../../platform/crosvm/sync" } # provided by ebuild
 sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
 tiny_http = "0.7.0"
 

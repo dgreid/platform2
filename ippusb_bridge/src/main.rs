@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod arguments;
+mod listeners;
+mod usb_connector;
+
 use std::fmt;
 use std::io;
 use std::net::TcpListener;
@@ -11,15 +15,14 @@ use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
 use sys_util::{error, info, register_signal_handler, syslog, EventFd, PollContext, PollToken};
 
-mod arguments;
-use arguments::Args;
-
-mod listeners;
-use listeners::{Accept, ScopedUnixListener};
+use crate::arguments::Args;
+use crate::listeners::{Accept, ScopedUnixListener};
+use crate::usb_connector::UsbConnector;
 
 #[derive(Debug)]
 pub enum Error {
     CreateSocket(io::Error),
+    CreateUsbConnector(usb_connector::Error),
     EventFd(sys_util::Error),
     ParseArgs(arguments::Error),
     PollEvents(sys_util::Error),
@@ -35,6 +38,7 @@ impl fmt::Display for Error {
         use Error::*;
         match self {
             CreateSocket(err) => write!(f, "Failed to create socket: {}", err),
+            CreateUsbConnector(err) => write!(f, "Failed to create USB connector: {}", err),
             EventFd(err) => write!(f, "Failed to create/duplicate EventFd: {}", err),
             ParseArgs(err) => write!(f, "Failed to parse arguments: {}", err),
             PollEvents(err) => write!(f, "Failed to poll for events: {}", err),
@@ -45,7 +49,7 @@ impl fmt::Display for Error {
     }
 }
 
-pub type Result<T> = std::result::Result<T, Error>;
+type Result<T> = std::result::Result<T, Error>;
 
 // Set to true if the program should terminate.
 static SHUTDOWN: AtomicBool = AtomicBool::new(false);
@@ -86,11 +90,16 @@ fn add_sigint_handler(shutdown_fd: EventFd) -> sys_util::Result<()> {
 struct Daemon<A: Accept> {
     shutdown: EventFd,
     listener: A,
+    usb: UsbConnector,
 }
 
 impl<A: Accept> Daemon<A> {
-    fn new(shutdown: EventFd, listener: A) -> Self {
-        Self { shutdown, listener }
+    fn new(shutdown: EventFd, listener: A, usb: UsbConnector) -> Self {
+        Self {
+            shutdown,
+            listener,
+            usb,
+        }
     }
 
     fn run(&mut self) -> Result<()> {
@@ -135,17 +144,19 @@ fn run() -> Result<()> {
     let sigint_shutdown_fd = shutdown_fd.try_clone().map_err(Error::EventFd)?;
     add_sigint_handler(sigint_shutdown_fd).map_err(Error::RegisterHandler)?;
 
+    let usb = UsbConnector::new(args.bus_device).map_err(Error::CreateUsbConnector)?;
+
     if let Some(unix_socket_path) = args.unix_socket {
         info!("Listening on {}", unix_socket_path.display());
         let unix_listener =
             ScopedUnixListener(UnixListener::bind(unix_socket_path).map_err(Error::CreateSocket)?);
-        let mut daemon = Daemon::new(shutdown_fd, unix_listener);
+        let mut daemon = Daemon::new(shutdown_fd, unix_listener, usb);
         daemon.run()?;
     } else {
         let host = "127.0.0.1:60000";
         info!("Listening on {}", host);
         let tcp_listener = TcpListener::bind(host).map_err(Error::CreateSocket)?;
-        let mut daemon = Daemon::new(shutdown_fd, tcp_listener);
+        let mut daemon = Daemon::new(shutdown_fd, tcp_listener, usb);
         daemon.run()?;
     }
 
