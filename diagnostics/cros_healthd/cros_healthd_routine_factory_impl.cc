@@ -7,7 +7,7 @@
 #include "diagnostics/routines/ac_power/ac_power.h"
 #include "diagnostics/routines/battery_capacity/battery_capacity.h"
 #include "diagnostics/routines/battery_discharge/battery_discharge.h"
-#include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
+#include "diagnostics/routines/battery_health/battery_health.h"
 #include "diagnostics/routines/cpu_cache/cpu_cache.h"
 #include "diagnostics/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/routines/disk_read/disk_read.h"
@@ -37,8 +37,8 @@ CrosHealthdRoutineFactoryImpl::MakeBatteryCapacityRoutine(uint32_t low_mah,
 std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeBatteryHealthRoutine(
     uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  return std::make_unique<BatterySysfsRoutine>(maximum_cycle_count,
-                                               percent_battery_wear_allowed);
+  return std::make_unique<BatteryHealthRoutine>(maximum_cycle_count,
+                                                percent_battery_wear_allowed);
 }
 
 std::unique_ptr<DiagnosticRoutine>

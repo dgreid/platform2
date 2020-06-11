@@ -15,7 +15,7 @@
 
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/common/mojo_utils.h"
-#include "diagnostics/routines/battery_sysfs/battery_sysfs.h"
+#include "diagnostics/routines/battery_health/battery_health.h"
 #include "diagnostics/routines/routine_test_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -63,15 +63,13 @@ std::string ConstructOutput() {
 
 }  // namespace
 
-class BatterySysfsRoutineTest : public testing::Test {
+class BatteryHealthRoutineTest : public testing::Test {
  protected:
-  BatterySysfsRoutineTest() { mojo::core::Init(); }
-  BatterySysfsRoutineTest(const BatterySysfsRoutineTest&) = delete;
-  BatterySysfsRoutineTest& operator=(const BatterySysfsRoutineTest&) = delete;
+  BatteryHealthRoutineTest() { mojo::core::Init(); }
+  BatteryHealthRoutineTest(const BatteryHealthRoutineTest&) = delete;
+  BatteryHealthRoutineTest& operator=(const BatteryHealthRoutineTest&) = delete;
 
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
   DiagnosticRoutine* routine() { return routine_.get(); }
 
@@ -80,7 +78,7 @@ class BatterySysfsRoutineTest : public testing::Test {
   void CreateRoutine(
       uint32_t maximum_cycle_count = kMaximumCycleCount,
       uint32_t percent_battery_wear_allowed = kPercentBatteryWearAllowed) {
-    routine_ = std::make_unique<BatterySysfsRoutine>(
+    routine_ = std::make_unique<BatteryHealthRoutine>(
         maximum_cycle_count, percent_battery_wear_allowed);
     routine_->set_root_dir_for_testing(temp_dir_.GetPath());
   }
@@ -89,20 +87,20 @@ class BatterySysfsRoutineTest : public testing::Test {
     DCHECK(routine_);
     routine_->Start();
 
-    // Since the BatterySysfsRoutine has finished by the time Start() returns,
+    // Since the BatteryHealthRoutine has finished by the time Start() returns,
     // there is no need to wait.
     routine_->PopulateStatusUpdate(&update_, true);
   }
 
   void WriteFilesReadByLog() {
-    WriteFileContents(kBatterySysfsManufacturerPath, kFakeManufacturer);
-    WriteFileContents(kBatterySysfsCurrentNowPath,
+    WriteFileContents(kBatteryHealthManufacturerPath, kFakeManufacturer);
+    WriteFileContents(kBatteryHealthCurrentNowPath,
                       std::to_string(kFakeCurrentNow));
-    WriteFileContents(kBatterySysfsPresentPath, std::to_string(kFakePresent));
-    WriteFileContents(kBatterySysfsStatusPath, kFakeStatus);
-    WriteFileContents(kBatterySysfsVoltageNowPath,
+    WriteFileContents(kBatteryHealthPresentPath, std::to_string(kFakePresent));
+    WriteFileContents(kBatteryHealthStatusPath, kFakeStatus);
+    WriteFileContents(kBatteryHealthVoltageNowPath,
                       std::to_string(kFakeVoltageNow));
-    WriteFileContents(kBatterySysfsChargeNowPath,
+    WriteFileContents(kBatteryHealthChargeNowPath,
                       std::to_string(kFakeChargeNow));
   }
 
@@ -119,83 +117,83 @@ class BatterySysfsRoutineTest : public testing::Test {
 
  private:
   base::ScopedTempDir temp_dir_;
-  std::unique_ptr<BatterySysfsRoutine> routine_;
+  std::unique_ptr<BatteryHealthRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
 };
 
-// Test that the battery_sysfs routine fails if the cycle count is too high.
-TEST_F(BatterySysfsRoutineTest, HighCycleCount) {
+// Test that the battery health routine fails if the cycle count is too high.
+TEST_F(BatteryHealthRoutineTest, HighCycleCount) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatterySysfsCycleCountPath,
+  WriteFileContents(kBatteryHealthCycleCountPath,
                     std::to_string(kHighCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kFailed,
-                             kBatterySysfsExcessiveCycleCountMessage);
+                             kBatteryHealthExcessiveCycleCountMessage);
 }
 
-// Test that the battery_sysfs routine fails if cycle_count is not present.
-TEST_F(BatterySysfsRoutineTest, NoCycleCount) {
+// Test that the battery health routine fails if cycle_count is not present.
+TEST_F(BatteryHealthRoutineTest, NoCycleCount) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatterySysfsFailedReadingCycleCountMessage);
+                             kBatteryHealthFailedReadingCycleCountMessage);
 }
 
-// Test that the battery_sysfs routine fails if the wear percentage is too
+// Test that the battery health routine fails if the wear percentage is too
 // high.
-TEST_F(BatterySysfsRoutineTest, HighWearPercentage) {
+TEST_F(BatteryHealthRoutineTest, HighWearPercentage) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kLowChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatterySysfsCycleCountPath,
+  WriteFileContents(kBatteryHealthCycleCountPath,
                     std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kFailed,
-                             kBatterySysfsExcessiveWearMessage);
+                             kBatteryHealthExcessiveWearMessage);
 }
 
-// Test that the battery_sysfs routine fails if neither charge_full nor
+// Test that the battery health routine fails if neither charge_full nor
 // energy_full are present.
-TEST_F(BatterySysfsRoutineTest, NoWearPercentage) {
+TEST_F(BatteryHealthRoutineTest, NoWearPercentage) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsCycleCountPath,
+  WriteFileContents(kBatteryHealthCycleCountPath,
                     std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(
       update()->routine_update_union,
       mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-      kBatterySysfsFailedCalculatingWearPercentageMessage);
+      kBatteryHealthFailedCalculatingWearPercentageMessage);
 }
 
-// Test that the battery_sysfs routine passes if the cycle count and wear
+// Test that the battery health routine passes if the cycle count and wear
 // percentage are within acceptable limits.
-TEST_F(BatterySysfsRoutineTest, GoodParameters) {
+TEST_F(BatteryHealthRoutineTest, GoodParameters) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatterySysfsCycleCountPath,
+  WriteFileContents(kBatteryHealthCycleCountPath,
                     std::to_string(kLowCycleCount));
   WriteFilesReadByLog();
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kBatterySysfsRoutinePassedMessage);
+                             kBatteryHealthRoutinePassedMessage);
 
   base::StringPairs expected_output_pairs;
   base::StringPairs actual_output_pairs;
@@ -212,28 +210,28 @@ TEST_F(BatterySysfsRoutineTest, GoodParameters) {
               UnorderedElementsAreArray(expected_output_pairs));
 }
 
-// Test that the battery_sysfs routine will find energy-reporting batteries.
-TEST_F(BatterySysfsRoutineTest, EnergyReportingBattery) {
+// Test that the battery health routine will find energy-reporting batteries.
+TEST_F(BatteryHealthRoutineTest, EnergyReportingBattery) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsEnergyFullPath,
+  WriteFileContents(kBatteryHealthEnergyFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsEnergyFullDesignPath,
+  WriteFileContents(kBatteryHealthEnergyFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
-  WriteFileContents(kBatterySysfsCycleCountPath,
+  WriteFileContents(kBatteryHealthCycleCountPath,
                     std::to_string(kLowCycleCount));
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kBatterySysfsRoutinePassedMessage);
+                             kBatteryHealthRoutinePassedMessage);
 }
 
-// Test that the battery_sysfs routine uses the expected full path to
+// Test that the battery health routine uses the expected full path to
 // cycle_count, relative to the temporary test directory.
-TEST_F(BatterySysfsRoutineTest, FullCycleCountPath) {
+TEST_F(BatteryHealthRoutineTest, FullCycleCountPath) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
   EXPECT_TRUE(WriteFileAndCreateParentDirs(
       temp_dir_path().AppendASCII(kFullCycleCountPath),
@@ -241,22 +239,22 @@ TEST_F(BatterySysfsRoutineTest, FullCycleCountPath) {
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kBatterySysfsRoutinePassedMessage);
+                             kBatteryHealthRoutinePassedMessage);
 }
 
-// Test that the battery_sysfs routine catches invalid parameters.
-TEST_F(BatterySysfsRoutineTest, InvalidParameters) {
+// Test that the battery health routine catches invalid parameters.
+TEST_F(BatteryHealthRoutineTest, InvalidParameters) {
   constexpr int kInvalidMaximumWearPercentage = 101;
   CreateRoutine(kMaximumCycleCount, kInvalidMaximumWearPercentage);
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatterySysfsInvalidParametersMessage);
+                             kBatteryHealthInvalidParametersMessage);
 }
 
-// Test that the battery_sysfs routine handles a battery whose capacity exceeds
+// Test that the battery health routine handles a battery whose capacity exceeds
 // its design capacity.
-TEST_F(BatterySysfsRoutineTest, CapacityExceedsDesignCapacity) {
+TEST_F(BatteryHealthRoutineTest, CapacityExceedsDesignCapacity) {
   // When the capacity exceeds the design capacity, the battery shouldn't be
   // worn at all.
   constexpr int kNotWornPercentage = 0;
@@ -264,9 +262,9 @@ TEST_F(BatterySysfsRoutineTest, CapacityExceedsDesignCapacity) {
   // Set the capacity to anything higher than the design capacity.
   constexpr int kHigherCapacity = 100;
   constexpr int kLowerDesignCapacity = 20;
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHigherCapacity));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kLowerDesignCapacity));
   EXPECT_TRUE(WriteFileAndCreateParentDirs(
       temp_dir_path().AppendASCII(kFullCycleCountPath),
@@ -274,16 +272,16 @@ TEST_F(BatterySysfsRoutineTest, CapacityExceedsDesignCapacity) {
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kBatterySysfsRoutinePassedMessage);
+                             kBatteryHealthRoutinePassedMessage);
 }
 
-// Test that the battery_sysfs routine fails when invalid file contents are
+// Test that the battery health routine fails when invalid file contents are
 // read.
-TEST_F(BatterySysfsRoutineTest, InvalidFileContents) {
+TEST_F(BatteryHealthRoutineTest, InvalidFileContents) {
   CreateRoutine();
-  WriteFileContents(kBatterySysfsChargeFullPath,
+  WriteFileContents(kBatteryHealthChargeFullPath,
                     std::to_string(kHighChargeFull));
-  WriteFileContents(kBatterySysfsChargeFullDesignPath,
+  WriteFileContents(kBatteryHealthChargeFullDesignPath,
                     std::to_string(kFakeBatteryChargeFullDesign));
   constexpr char kInvalidUnsignedInt[] = "Invalid unsigned int!";
   EXPECT_TRUE(WriteFileAndCreateParentDirs(
@@ -291,23 +289,23 @@ TEST_F(BatterySysfsRoutineTest, InvalidFileContents) {
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatterySysfsFailedReadingCycleCountMessage);
+                             kBatteryHealthFailedReadingCycleCountMessage);
 }
 
 // Test that calling resume doesn't crash.
-TEST_F(BatterySysfsRoutineTest, Resume) {
+TEST_F(BatteryHealthRoutineTest, Resume) {
   CreateRoutine();
   routine()->Resume();
 }
 
 // Test that calling cancel doesn't crash.
-TEST_F(BatterySysfsRoutineTest, Cancel) {
+TEST_F(BatteryHealthRoutineTest, Cancel) {
   CreateRoutine();
   routine()->Cancel();
 }
 
-// Test that we can retrieve the status of the battery_sysfs routine.
-TEST_F(BatterySysfsRoutineTest, GetStatus) {
+// Test that we can retrieve the status of the battery health routine.
+TEST_F(BatteryHealthRoutineTest, GetStatus) {
   CreateRoutine();
   EXPECT_EQ(routine()->GetStatus(),
             mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
