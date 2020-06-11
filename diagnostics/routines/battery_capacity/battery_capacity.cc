@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/routines/battery/battery.h"
+#include "diagnostics/routines/battery_capacity/battery_capacity.h"
 
 #include <cstdint>
 #include <utility>
@@ -21,8 +21,8 @@ constexpr uint32_t kuAhTomAhDivisor = 1000;
 
 uint32_t CalculateProgressPercent(
     mojo_ipc::DiagnosticRoutineStatusEnum status) {
-  // Since the battery test cannot be cancelled, the progress percent can only
-  // be 0 or 100.
+  // Since the battery capacity routine cannot be cancelled, the progress
+  // percent can only be 0 or 100.
   if (status == mojo_ipc::DiagnosticRoutineStatusEnum::kPassed ||
       status == mojo_ipc::DiagnosticRoutineStatusEnum::kFailed)
     return 100;
@@ -31,41 +31,42 @@ uint32_t CalculateProgressPercent(
 
 }  // namespace
 
-const char kBatteryChargeFullDesignPath[] =
+const char kBatteryCapacityChargeFullDesignPath[] =
     "sys/class/power_supply/BAT0/charge_full_design";
-const char kBatteryRoutineParametersInvalidMessage[] =
-    "Invalid BatteryRoutineParameters.";
-const char kBatteryFailedReadingChargeFullDesignMessage[] =
+const char kBatteryCapacityRoutineParametersInvalidMessage[] =
+    "Invalid BatteryCapacityRoutineParameters.";
+const char kBatteryCapacityFailedReadingChargeFullDesignMessage[] =
     "Failed to read charge_full_design.";
-const char kBatteryFailedParsingChargeFullDesignMessage[] =
+const char kBatteryCapacityFailedParsingChargeFullDesignMessage[] =
     "Failed to parse charge_full_design.";
-const char kBatteryRoutineSucceededMessage[] =
+const char kBatteryCapacityRoutineSucceededMessage[] =
     "Battery design capacity within given limits.";
-const char kBatteryRoutineFailedMessage[] =
+const char kBatteryCapacityRoutineFailedMessage[] =
     "Battery design capacity not within given limits.";
 
-BatteryRoutine::BatteryRoutine(uint32_t low_mah, uint32_t high_mah)
+BatteryCapacityRoutine::BatteryCapacityRoutine(uint32_t low_mah,
+                                               uint32_t high_mah)
     : status_(mojo_ipc::DiagnosticRoutineStatusEnum::kReady),
       low_mah_(low_mah),
       high_mah_(high_mah) {}
 
-BatteryRoutine::~BatteryRoutine() = default;
+BatteryCapacityRoutine::~BatteryCapacityRoutine() = default;
 
-void BatteryRoutine::Start() {
+void BatteryCapacityRoutine::Start() {
   DCHECK_EQ(status_, mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
-  status_ = RunBatteryRoutine();
+  status_ = RunBatteryCapacityRoutine();
   if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed)
     LOG(ERROR) << "Routine failed: " << status_message_;
 }
 
-// The battery test can only be started.
-void BatteryRoutine::Resume() {}
-void BatteryRoutine::Cancel() {}
+// The battery capacity routine can only be started.
+void BatteryCapacityRoutine::Resume() {}
+void BatteryCapacityRoutine::Cancel() {}
 
-void BatteryRoutine::PopulateStatusUpdate(mojo_ipc::RoutineUpdate* response,
-                                          bool include_output) {
-  // Because the battery routine is non-interactive, we will never include a
-  // user message.
+void BatteryCapacityRoutine::PopulateStatusUpdate(
+    mojo_ipc::RoutineUpdate* response, bool include_output) {
+  // Because the battery capacity routine is non-interactive, we will never
+  // include a user message.
   mojo_ipc::NonInteractiveRoutineUpdate update;
   update.status = status_;
   update.status_message = status_message_;
@@ -74,27 +75,29 @@ void BatteryRoutine::PopulateStatusUpdate(mojo_ipc::RoutineUpdate* response,
   response->progress_percent = CalculateProgressPercent(status_);
 }
 
-mojo_ipc::DiagnosticRoutineStatusEnum BatteryRoutine::GetStatus() {
+mojo_ipc::DiagnosticRoutineStatusEnum BatteryCapacityRoutine::GetStatus() {
   return status_;
 }
 
-void BatteryRoutine::set_root_dir_for_testing(const base::FilePath& root_dir) {
+void BatteryCapacityRoutine::set_root_dir_for_testing(
+    const base::FilePath& root_dir) {
   root_dir_ = root_dir;
 }
 
-mojo_ipc::DiagnosticRoutineStatusEnum BatteryRoutine::RunBatteryRoutine() {
+mojo_ipc::DiagnosticRoutineStatusEnum
+BatteryCapacityRoutine::RunBatteryCapacityRoutine() {
   if (low_mah_ > high_mah_) {
-    status_message_ = kBatteryRoutineParametersInvalidMessage;
+    status_message_ = kBatteryCapacityRoutineParametersInvalidMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
   base::FilePath charge_full_design_path(
-      root_dir_.AppendASCII(kBatteryChargeFullDesignPath));
+      root_dir_.AppendASCII(kBatteryCapacityChargeFullDesignPath));
 
   std::string charge_full_design_contents;
   if (!base::ReadFileToString(charge_full_design_path,
                               &charge_full_design_contents)) {
-    status_message_ = kBatteryFailedReadingChargeFullDesignMessage;
+    status_message_ = kBatteryCapacityFailedReadingChargeFullDesignMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
@@ -103,7 +106,7 @@ mojo_ipc::DiagnosticRoutineStatusEnum BatteryRoutine::RunBatteryRoutine() {
   uint32_t charge_full_design_uah;
   if (!base::StringToUint(charge_full_design_contents,
                           &charge_full_design_uah)) {
-    status_message_ = kBatteryFailedParsingChargeFullDesignMessage;
+    status_message_ = kBatteryCapacityFailedParsingChargeFullDesignMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kError;
   }
 
@@ -112,11 +115,11 @@ mojo_ipc::DiagnosticRoutineStatusEnum BatteryRoutine::RunBatteryRoutine() {
   uint32_t charge_full_design_mah = charge_full_design_uah / kuAhTomAhDivisor;
   if (!(charge_full_design_mah >= low_mah_) ||
       !(charge_full_design_mah <= high_mah_)) {
-    status_message_ = kBatteryRoutineFailedMessage;
+    status_message_ = kBatteryCapacityRoutineFailedMessage;
     return mojo_ipc::DiagnosticRoutineStatusEnum::kFailed;
   }
 
-  status_message_ = kBatteryRoutineSucceededMessage;
+  status_message_ = kBatteryCapacityRoutineSucceededMessage;
   return mojo_ipc::DiagnosticRoutineStatusEnum::kPassed;
 }
 

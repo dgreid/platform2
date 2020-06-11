@@ -11,7 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
-#include "diagnostics/routines/battery/battery.h"
+#include "diagnostics/routines/battery_capacity/battery_capacity.h"
 #include "diagnostics/routines/routine_test_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -34,36 +34,36 @@ std::string FakeBadFileContents() {
 
 }  // namespace
 
-class BatteryRoutineTest : public testing::Test {
+class BatteryCapacityRoutineTest : public testing::Test {
  protected:
-  BatteryRoutineTest() = default;
-  BatteryRoutineTest(const BatteryRoutineTest&) = delete;
-  BatteryRoutineTest& operator=(const BatteryRoutineTest&) = delete;
+  BatteryCapacityRoutineTest() = default;
+  BatteryCapacityRoutineTest(const BatteryCapacityRoutineTest&) = delete;
+  BatteryCapacityRoutineTest& operator=(const BatteryCapacityRoutineTest&) =
+      delete;
 
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
   DiagnosticRoutine* routine() { return routine_.get(); }
 
   mojo_ipc::RoutineUpdate* update() { return &update_; }
 
   void CreateRoutine(uint32_t low_mah = kLowmAh, uint32_t high_mah = kHighmAh) {
-    routine_ = std::make_unique<BatteryRoutine>(low_mah, high_mah);
+    routine_ = std::make_unique<BatteryCapacityRoutine>(low_mah, high_mah);
     routine_->set_root_dir_for_testing(temp_dir_.GetPath());
   }
 
   void RunRoutineAndWaitForExit() {
     routine_->Start();
 
-    // Since the BatteryRoutine has finished by the time Start() returns, there
-    // is no need to wait.
+    // Since the BatteryCapacityRoutine has finished by the time Start()
+    // returns, there is no need to wait.
     routine_->PopulateStatusUpdate(&update_, true);
   }
 
   void WriteChargeFullDesign(const std::string& file_contents) {
     EXPECT_TRUE(WriteFileAndCreateParentDirs(
-        temp_dir_path().Append(base::FilePath(kBatteryChargeFullDesignPath)),
+        temp_dir_path().Append(
+            base::FilePath(kBatteryCapacityChargeFullDesignPath)),
         file_contents));
   }
 
@@ -71,78 +71,80 @@ class BatteryRoutineTest : public testing::Test {
 
  private:
   base::ScopedTempDir temp_dir_;
-  std::unique_ptr<BatteryRoutine> routine_;
+  std::unique_ptr<BatteryCapacityRoutine> routine_;
   mojo_ipc::RoutineUpdate update_{0, mojo::ScopedHandle(),
                                   mojo_ipc::RoutineUpdateUnion::New()};
 };
 
 // Test that the battery routine fails if charge_full_design does not exist.
-TEST_F(BatteryRoutineTest, NoChargeFullDesign) {
+TEST_F(BatteryCapacityRoutineTest, NoChargeFullDesign) {
   CreateRoutine();
   RunRoutineAndWaitForExit();
-  VerifyNonInteractiveUpdate(update()->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatteryFailedReadingChargeFullDesignMessage);
+  VerifyNonInteractiveUpdate(
+      update()->routine_update_union,
+      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+      kBatteryCapacityFailedReadingChargeFullDesignMessage);
 }
 
 // Test that the battery routine fails if charge_full_design is outside the
 // limits.
-TEST_F(BatteryRoutineTest, LowChargeFullDesign) {
+TEST_F(BatteryCapacityRoutineTest, LowChargeFullDesign) {
   CreateRoutine();
   WriteChargeFullDesign(FakeBadFileContents());
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kFailed,
-                             kBatteryRoutineFailedMessage);
+                             kBatteryCapacityRoutineFailedMessage);
 }
 
 // Test that the battery routine passes if charge_full_design is within the
 // limits.
-TEST_F(BatteryRoutineTest, GoodChargeFullDesign) {
+TEST_F(BatteryCapacityRoutineTest, GoodChargeFullDesign) {
   CreateRoutine();
   WriteChargeFullDesign(FakeGoodFileContents());
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kPassed,
-                             kBatteryRoutineSucceededMessage);
+                             kBatteryCapacityRoutineSucceededMessage);
 }
 
 // Test that the battery routine handles invalid charge_full_design contents.
-TEST_F(BatteryRoutineTest, InvalidChargeFullDesign) {
+TEST_F(BatteryCapacityRoutineTest, InvalidChargeFullDesign) {
   CreateRoutine();
   constexpr char kInvalidChargeFullDesign[] = "Not an unsigned int!";
   WriteChargeFullDesign(kInvalidChargeFullDesign);
   RunRoutineAndWaitForExit();
-  VerifyNonInteractiveUpdate(update()->routine_update_union,
-                             mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatteryFailedParsingChargeFullDesignMessage);
+  VerifyNonInteractiveUpdate(
+      update()->routine_update_union,
+      mojo_ipc::DiagnosticRoutineStatusEnum::kError,
+      kBatteryCapacityFailedParsingChargeFullDesignMessage);
 }
 
 // Test that the battery routine handles invalid parameters.
-TEST_F(BatteryRoutineTest, InvalidParameters) {
+TEST_F(BatteryCapacityRoutineTest, InvalidParameters) {
   constexpr uint32_t kInvalidLowMah = 5;
   constexpr uint32_t kInvalidHighMah = 4;
   CreateRoutine(kInvalidLowMah, kInvalidHighMah);
   RunRoutineAndWaitForExit();
   VerifyNonInteractiveUpdate(update()->routine_update_union,
                              mojo_ipc::DiagnosticRoutineStatusEnum::kError,
-                             kBatteryRoutineParametersInvalidMessage);
+                             kBatteryCapacityRoutineParametersInvalidMessage);
 }
 
 // Test that calling resume doesn't crash.
-TEST_F(BatteryRoutineTest, Resume) {
+TEST_F(BatteryCapacityRoutineTest, Resume) {
   CreateRoutine();
   routine()->Resume();
 }
 
 // Test that calling cancel doesn't crash.
-TEST_F(BatteryRoutineTest, Cancel) {
+TEST_F(BatteryCapacityRoutineTest, Cancel) {
   CreateRoutine();
   routine()->Cancel();
 }
 
 // Test that we can retrieve the status of the battery routine.
-TEST_F(BatteryRoutineTest, GetStatus) {
+TEST_F(BatteryCapacityRoutineTest, GetStatus) {
   CreateRoutine();
   EXPECT_EQ(routine()->GetStatus(),
             mojo_ipc::DiagnosticRoutineStatusEnum::kReady);
