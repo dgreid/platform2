@@ -3,9 +3,11 @@
 // found in the LICENSE file.
 
 mod arguments;
+mod http;
 mod io_adapters;
 mod listeners;
 mod usb_connector;
+mod util;
 
 use std::fmt;
 use std::io;
@@ -15,8 +17,10 @@ use std::os::unix::net::UnixListener;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
 use sys_util::{error, info, register_signal_handler, syslog, EventFd, PollContext, PollToken};
+use tiny_http::{ClientConnection, Stream};
 
 use crate::arguments::Args;
+use crate::http::handle_request;
 use crate::listeners::{Accept, ScopedUnixListener};
 use crate::usb_connector::{UnplugDetector, UsbConnector};
 
@@ -122,14 +126,26 @@ impl<A: Accept> Daemon<A> {
                 match event.token() {
                     Token::Shutdown => break 'poll,
                     Token::ClientConnection => match self.listener.accept() {
-                        Ok(_stream) => info!("Received connection"),
+                        Ok(stream) => self.handle_connection(stream),
                         Err(err) => error!("Failed to accept connection: {}", err),
                     },
                 }
             }
         }
-
         Ok(())
+    }
+
+    fn handle_connection(&mut self, stream: Stream) {
+        let connection = ClientConnection::new(stream);
+        let mut thread_usb = self.usb.clone();
+        std::thread::spawn(move || {
+            for request in connection {
+                let usb_conn = thread_usb.get_connection();
+                if let Err(e) = handle_request(usb_conn, request) {
+                    error!("Handling request failed: {}", e);
+                }
+            }
+        });
     }
 }
 

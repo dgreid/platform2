@@ -5,7 +5,9 @@ authors = ["The Chromium OS Authors"]
 edition = "2018"
 
 [dependencies]
+chunked_transfer = "1"
 getopts = "0.2.18"
+httparse = "1.3.4"
 libc = "0.2.44"
 rusb = "0.6.0"
 sync = { path = "../../platform/crosvm/sync" } # provided by ebuild
