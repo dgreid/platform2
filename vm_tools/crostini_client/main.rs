@@ -2,13 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate dbus;
-extern crate getopts;
-extern crate protobuf;
-
-pub mod backends;
+pub mod dbus_constants;
+pub mod disk;
 pub mod frontends;
 pub mod lsb_release;
+pub mod methods;
 pub mod proto;
 pub mod unsafe_misc;
 
@@ -18,8 +16,8 @@ use std::error::Error;
 
 use getopts::Options;
 
-use backends::ChromeOS;
 use frontends::{EnvMap, FRONTENDS};
+use methods::Methods;
 
 fn make_options() -> Options {
     let mut opts = Options::new();
@@ -67,7 +65,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Match the program name against frontend names.
     for frontend in FRONTENDS {
         if args[0].ends_with(frontend.name()) {
-            return frontend.run(&mut ChromeOS::new()?, &args, &vars);
+            return frontend.run(&mut Methods::new()?, &args, &vars);
         }
     }
 
@@ -79,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     // Next, match the subcommand against frontend names.
     for frontend in FRONTENDS {
         if args[1].ends_with(frontend.name()) {
-            return frontend.run(&mut ChromeOS::new()?, &args[1..], &vars);
+            return frontend.run(&mut Methods::new()?, &args[1..], &vars);
         }
     }
 

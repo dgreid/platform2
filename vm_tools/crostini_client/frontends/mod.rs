@@ -5,17 +5,16 @@
 use std::collections::BTreeMap;
 use std::error::Error;
 
-use backends::Backend;
-
 mod vmc;
 
-use self::vmc::Vmc;
+use crate::methods::Methods;
+use vmc::Vmc;
 
 /// A string to string mapping of environment variables to values.
 pub type EnvMap<'a> = BTreeMap<&'a str, &'a str>;
 
-/// Each frontend implements a command line style interface that uses a backend to implement
-/// commands.
+/// Each frontend implements a command line style interface that executes against the given
+/// `methods`.
 pub trait Frontend {
     /// Get the name of this frontend.
     fn name(&self) -> &str;
@@ -23,11 +22,11 @@ pub trait Frontend {
     /// Prints the command line style usage of this frontend.
     fn print_usage(&self, program_name: &str);
 
-    /// Parses the command line style `args` and enviroment variables and runs the chosen
-    /// command against the given `backend`.
+    /// Parses the command line style `args` and environment variables and runs the chosen
+    /// command against the given `methods`.
     fn run(
         &self,
-        backend: &mut dyn Backend,
+        methods: &mut Methods,
         args: &[&str],
         environ: &EnvMap,
     ) -> Result<(), Box<dyn Error>>;

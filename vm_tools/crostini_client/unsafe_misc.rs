@@ -4,14 +4,12 @@
 
 //! This module contains all the unsafe code necessary for this crate.
 
-extern crate libc;
-
 use std::ffi::CString;
 use std::mem::zeroed;
 use std::os::unix::ffi::OsStrExt;
 use std::path::Path;
 
-use self::libc::{__errno_location, statvfs64, EINTR, EINVAL};
+use libc::{__errno_location, statvfs64, EINTR, EINVAL};
 
 /// Gets free disk space in bytes on the filesystem that contains `path`. Returns a positive `errno`
 /// on failure.
@@ -42,8 +40,8 @@ pub fn get_free_disk_space<P: AsRef<Path>>(path: P) -> Result<u64, i32> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use libc::ENOENT;
     use std::process::Command;
-    use unsafe_misc::libc::ENOENT;
 
     #[test]
     #[ignore]

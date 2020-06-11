@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(dead_code)]
-
 use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
@@ -15,141 +13,32 @@ use std::process::Command;
 use std::thread::sleep;
 use std::time::Duration;
 
-use dbus::{BusType, Connection, ConnectionItem, Message, OwnedFd};
+use dbus::{
+    arg::OwnedFd,
+    ffidisp::{BusType, Connection, ConnectionItem},
+    Message,
+};
 use protobuf::Message as ProtoMessage;
 
-use backends::{Backend, ContainerSource, DiskInfo, DiskOpType, VmDiskImageType, VmFeatures};
-use lsb_release::{LsbRelease, ReleaseChannel};
-use proto::system_api::cicerone_service::{self, *};
-use proto::system_api::concierge_service::*;
-use proto::system_api::dlcservice::*;
-use proto::system_api::seneschal_service::*;
-use proto::system_api::vm_plugin_dispatcher;
-use proto::system_api::vm_plugin_dispatcher::VmErrorCode;
+use crate::dbus_constants::*;
+use crate::disk::{DiskInfo, DiskOpType, VmDiskImageType};
+use crate::lsb_release::{LsbRelease, ReleaseChannel};
+use crate::proto::system_api::cicerone_service::{self, *};
+use crate::proto::system_api::concierge_service::*;
+use crate::proto::system_api::dlcservice::*;
+use crate::proto::system_api::seneschal_service::*;
+use crate::proto::system_api::vm_plugin_dispatcher;
+use crate::proto::system_api::vm_plugin_dispatcher::VmErrorCode;
 
-const IMAGE_TYPE_QCOW2: &str = "qcow2";
 const REMOVABLE_MEDIA_ROOT: &str = "/media/removable";
 const CRYPTOHOME_USER: &str = "/home/user";
-const CRYPTOHOME_ROOT: &str = "/home";
 const DOWNLOADS_DIR: &str = "Downloads";
 const MNT_SHARED_ROOT: &str = "/mnt/shared";
 
 /// Round to disk block size.
-const DISK_SIZE_MASK: u64 = !511;
 const DEFAULT_TIMEOUT_MS: i32 = 80 * 1000;
 const EXPORT_DISK_TIMEOUT_MS: i32 = 15 * 60 * 1000;
 const COMPONENT_UPDATER_TIMEOUT_MS: i32 = 120 * 1000;
-
-// debugd dbus-constants.h
-const DEBUGD_INTERFACE: &str = "org.chromium.debugd";
-const DEBUGD_SERVICE_PATH: &str = "/org/chromium/debugd";
-const DEBUGD_SERVICE_NAME: &str = "org.chromium.debugd";
-const START_VM_CONCIERGE: &str = "StartVmConcierge";
-const START_VM_PLUGIN_DISPATCHER: &str = "StartVmPluginDispatcher";
-
-// Chrome dbus service_constants.h
-const CHROME_FEATURES_INTERFACE: &str = "org.chromium.ChromeFeaturesServiceInterface";
-const CHROME_FEATURES_SERVICE_PATH: &str = "/org/chromium/ChromeFeaturesService";
-const CHROME_FEATURES_SERVICE_NAME: &str = "org.chromium.ChromeFeaturesService";
-const IS_CROSTINI_ENABLED: &str = "IsCrostiniEnabled";
-const IS_PLUGIN_VM_ENABLED: &str = "IsPluginVmEnabled";
-
-// concierge dbus-constants.h
-const VM_CONCIERGE_INTERFACE: &str = "org.chromium.VmConcierge";
-const VM_CONCIERGE_SERVICE_PATH: &str = "/org/chromium/VmConcierge";
-const VM_CONCIERGE_SERVICE_NAME: &str = "org.chromium.VmConcierge";
-const START_VM_METHOD: &str = "StartVm";
-const STOP_VM_METHOD: &str = "StopVm";
-const STOP_ALL_VMS_METHOD: &str = "StopAllVms";
-const GET_VM_INFO_METHOD: &str = "GetVmInfo";
-const ADJUST_VM_METHOD: &str = "AdjustVm";
-const CREATE_DISK_IMAGE_METHOD: &str = "CreateDiskImage";
-const DESTROY_DISK_IMAGE_METHOD: &str = "DestroyDiskImage";
-const EXPORT_DISK_IMAGE_METHOD: &str = "ExportDiskImage";
-const IMPORT_DISK_IMAGE_METHOD: &str = "ImportDiskImage";
-const RESIZE_DISK_IMAGE_METHOD: &str = "ResizeDiskImage";
-const DISK_IMAGE_STATUS_METHOD: &str = "DiskImageStatus";
-const LIST_VM_DISKS_METHOD: &str = "ListVmDisks";
-const START_CONTAINER_METHOD: &str = "StartContainer";
-const GET_CONTAINER_SSH_KEYS_METHOD: &str = "GetContainerSshKeys";
-const SYNC_VM_TIMES_METHOD: &str = "SyncVmTimes";
-const ATTACH_USB_DEVICE_METHOD: &str = "AttachUsbDevice";
-const DETACH_USB_DEVICE_METHOD: &str = "DetachUsbDevice";
-const LIST_USB_DEVICE_METHOD: &str = "ListUsbDevices";
-const CONTAINER_STARTUP_FAILED_SIGNAL: &str = "ContainerStartupFailed";
-const DISK_IMAGE_PROGRESS_SIGNAL: &str = "DiskImageProgress";
-
-// vm_plugin_dispatcher dbus-constants.h
-const VM_PLUGIN_DISPATCHER_INTERFACE: &str = "org.chromium.VmPluginDispatcher";
-const VM_PLUGIN_DISPATCHER_SERVICE_PATH: &str = "/org/chromium/VmPluginDispatcher";
-const VM_PLUGIN_DISPATCHER_SERVICE_NAME: &str = "org.chromium.VmPluginDispatcher";
-const START_PLUGIN_VM_METHOD: &str = "StartVm";
-const SHOW_PLUGIN_VM_METHOD: &str = "ShowVm";
-
-// cicerone dbus-constants.h
-const VM_CICERONE_INTERFACE: &str = "org.chromium.VmCicerone";
-const VM_CICERONE_SERVICE_PATH: &str = "/org/chromium/VmCicerone";
-const VM_CICERONE_SERVICE_NAME: &str = "org.chromium.VmCicerone";
-const NOTIFY_VM_STARTED_METHOD: &str = "NotifyVmStarted";
-const NOTIFY_VM_STOPPED_METHOD: &str = "NotifyVmStopped";
-const GET_CONTAINER_TOKEN_METHOD: &str = "GetContainerToken";
-const LAUNCH_CONTAINER_APPLICATION_METHOD: &str = "LaunchContainerApplication";
-const GET_CONTAINER_APP_ICON_METHOD: &str = "GetContainerAppIcon";
-const LAUNCH_VSHD_METHOD: &str = "LaunchVshd";
-const GET_LINUX_PACKAGE_INFO_METHOD: &str = "GetLinuxPackageInfo";
-const INSTALL_LINUX_PACKAGE_METHOD: &str = "InstallLinuxPackage";
-const UNINSTALL_PACKAGE_OWNING_FILE_METHOD: &str = "UninstallPackageOwningFile";
-const CREATE_LXD_CONTAINER_METHOD: &str = "CreateLxdContainer";
-const START_LXD_CONTAINER_METHOD: &str = "StartLxdContainer";
-const GET_LXD_CONTAINER_USERNAME_METHOD: &str = "GetLxdContainerUsername";
-const SET_UP_LXD_CONTAINER_USER_METHOD: &str = "SetUpLxdContainerUser";
-const START_LXD_METHOD: &str = "StartLxd";
-const GET_DEBUG_INFORMATION: &str = "GetDebugInformation";
-const CONTAINER_STARTED_SIGNAL: &str = "ContainerStarted";
-const CONTAINER_SHUTDOWN_SIGNAL: &str = "ContainerShutdown";
-const INSTALL_LINUX_PACKAGE_PROGRESS_SIGNAL: &str = "InstallLinuxPackageProgress";
-const UNINSTALL_PACKAGE_PROGRESS_SIGNAL: &str = "UninstallPackageProgress";
-const LXD_CONTAINER_CREATED_SIGNAL: &str = "LxdContainerCreated";
-const LXD_CONTAINER_DOWNLOADING_SIGNAL: &str = "LxdContainerDownloading";
-const LXD_CONTAINER_STARTING_SIGNAL: &str = "LxdContainerStarting";
-const TREMPLIN_STARTED_SIGNAL: &str = "TremplinStarted";
-const START_LXD_PROGRESS_SIGNAL: &str = "StartLxdProgress";
-
-// seneschal dbus-constants.h
-const SENESCHAL_INTERFACE: &str = "org.chromium.Seneschal";
-const SENESCHAL_SERVICE_PATH: &str = "/org/chromium/Seneschal";
-const SENESCHAL_SERVICE_NAME: &str = "org.chromium.Seneschal";
-const START_SERVER_METHOD: &str = "StartServer";
-const STOP_SERVER_METHOD: &str = "StopServer";
-const SHARE_PATH_METHOD: &str = "SharePath";
-const UNSHARE_PATH_METHOD: &str = "UnsharePath";
-
-// permission_broker dbus-constants.h
-const PERMISSION_BROKER_INTERFACE: &str = "org.chromium.PermissionBroker";
-const PERMISSION_BROKER_SERVICE_PATH: &str = "/org/chromium/PermissionBroker";
-const PERMISSION_BROKER_SERVICE_NAME: &str = "org.chromium.PermissionBroker";
-const CHECK_PATH_ACCESS: &str = "CheckPathAccess";
-const OPEN_PATH: &str = "OpenPath";
-const REQUEST_TCP_PORT_ACCESS: &str = "RequestTcpPortAccess";
-const REQUEST_UDP_PORT_ACCESS: &str = "RequestUdpPortAccess";
-const RELEASE_TCP_PORT: &str = "ReleaseTcpPort";
-const RELEASE_UDP_PORT: &str = "ReleaseUdpPort";
-const REQUEST_VPN_SETUP: &str = "RequestVpnSetup";
-const REMOVE_VPN_SETUP: &str = "RemoveVpnSetup";
-const POWER_CYCLE_USB_PORTS: &str = "PowerCycleUsbPorts";
-
-// lock_to_single_user dbus-constants.h
-const LOCK_TO_SINGLE_USER_INTERFACE: &str = "org.chromium.LockToSingleUser";
-const LOCK_TO_SINGLE_USER_SERVICE_PATH: &str = "/org/chromium/LockToSingleUser";
-const LOCK_TO_SINGLE_USER_SERVICE_NAME: &str = "org.chromium.LockToSingleUser";
-const NOTIFY_VM_STARTING_METHOD: &str = "NotifyVmStarting";
-
-// DLC service dbus-constants.h
-const DLC_SERVICE_INTERFACE: &str = "org.chromium.DlcServiceInterface";
-const DLC_SERVICE_PATH: &str = "/org/chromium/DlcService";
-const DLC_SERVICE_NAME: &str = "org.chromium.DlcService";
-const DLC_INSTALL_METHOD: &str = "InstallDlc";
-const DLC_GET_STATE_METHOD: &str = "GetDlcState";
 
 enum ChromeOSError {
     BadChromeFeatureStatus,
@@ -176,7 +65,6 @@ enum ChromeOSError {
     FailedOpenPath(dbus::Error),
     FailedSetupContainerUser(SetUpLxdContainerUserResponse_Status, String),
     FailedSharePath(String),
-    FailedStartContainerSignal(LxdContainerStartingSignal_Status, String),
     FailedStartContainerStatus(StartLxdContainerResponse_Status, String),
     FailedStartLxdProgressSignal(StartLxdProgressSignal_Status, String),
     FailedStartLxdStatus(StartLxdResponse_Status, String),
@@ -224,9 +112,6 @@ impl fmt::Display for ChromeOSError {
             }
             FailedCreateContainerSignal(s, reason) => {
                 write!(f, "failed to create container: `{:?}`: {}", s, reason)
-            }
-            FailedStartContainerSignal(s, reason) => {
-                write!(f, "failed to start container: `{:?}`: {}", s, reason)
             }
             FailedGetOpenPath(path) => write!(f, "failed to request OpenPath {}", path.display()),
             FailedGetVmInfo => write!(f, "failed to get vm info"),
@@ -288,48 +173,58 @@ fn dbus_message_to_proto<T: ProtoMessage>(message: &Message) -> Result<T, Box<dy
     Ok(proto)
 }
 
-/// Uses the standard ChromeOS interfaces to implement the backends methods with the least possible
-/// privilege. Uses a combination of D-Bus, protobufs, and shell protocols.
-pub struct ChromeOS {
-    connection: Connection,
-    crostini_enabled: Option<bool>,
-    plugin_vm_enabled: Option<bool>,
+#[derive(Default)]
+pub struct VmFeatures {
+    pub gpu: bool,
+    pub software_tpm: bool,
+    pub audio_capture: bool,
 }
 
-impl ChromeOS {
-    /// Initiates a D-Bus connection and returns an initialized backend.
-    pub fn new() -> Result<ChromeOS, Box<dyn Error>> {
-        let connection = Connection::get_private(BusType::System)?;
-        Ok(ChromeOS {
-            connection: connection,
-            crostini_enabled: None,
-            plugin_vm_enabled: None,
-        })
+pub enum ContainerSource {
+    ImageServer {
+        image_alias: String,
+        image_server: String,
+    },
+    Tarballs {
+        rootfs_path: String,
+        metadata_path: String,
+    },
+}
+
+impl Default for ContainerSource {
+    fn default() -> Self {
+        ContainerSource::ImageServer {
+            image_alias: "".to_string(),
+            image_server: "".to_string(),
+        }
     }
 }
 
 struct ProtobusSignalWatcher<'a> {
-    connection: &'a Connection,
+    connection: Option<&'a Connection>,
     interface: String,
     signal: String,
 }
 
 impl<'a> ProtobusSignalWatcher<'a> {
     fn new(
-        connection: &'a Connection,
+        connection: Option<&'a Connection>,
         interface: &str,
         signal: &str,
     ) -> Result<ProtobusSignalWatcher<'a>, Box<dyn Error>> {
-        connection.add_match(&Self::format_rule(interface, signal))?;
-        Ok(ProtobusSignalWatcher {
+        let out = ProtobusSignalWatcher {
             connection,
             interface: interface.to_owned(),
             signal: signal.to_owned(),
-        })
+        };
+        if let Some(connection) = out.connection {
+            connection.add_match(&out.format_rule())?;
+        }
+        Ok(out)
     }
 
-    fn format_rule(interface: &str, signal: &str) -> String {
-        format!("interface='{}',member='{}'", interface, signal)
+    fn format_rule(&self) -> String {
+        format!("interface='{}',member='{}'", self.interface, self.signal)
     }
 
     fn wait<O: ProtoMessage>(&self, timeout_millis: i32) -> Result<O, Box<dyn Error>> {
@@ -341,11 +236,19 @@ impl<'a> ProtobusSignalWatcher<'a> {
         O: ProtoMessage,
         F: Fn(&O) -> bool,
     {
-        for item in self.connection.iter(timeout_millis) {
+        let connection = match self.connection.as_ref() {
+            Some(c) => c,
+            None => return Err("waiting for items on mocked connections is not implemented".into()),
+        };
+        for item in connection.iter(timeout_millis) {
             match item {
                 ConnectionItem::Signal(message) => {
-                    if let (_, _, Some(msg_interface), Some(msg_signal)) = message.headers() {
-                        if msg_interface == self.interface && msg_signal == self.signal {
+                    if let (Some(msg_interface), Some(msg_signal)) =
+                        (message.interface(), message.member())
+                    {
+                        if msg_interface.as_cstr().to_string_lossy() == self.interface
+                            && msg_signal.as_cstr().to_string_lossy() == self.signal
+                        {
                             let proto_message: O = dbus_message_to_proto(&message)?;
                             if predicate(&proto_message) {
                                 return Ok(proto_message);
@@ -363,13 +266,100 @@ impl<'a> ProtobusSignalWatcher<'a> {
 
 impl Drop for ProtobusSignalWatcher<'_> {
     fn drop(&mut self) {
-        self.connection
-            .remove_match(&Self::format_rule(&self.interface, &self.signal))
-            .expect("unable to remove match rule on protobus");
+        if let Some(connection) = self.connection {
+            connection
+                .remove_match(&self.format_rule())
+                .expect("unable to remove match rule on protobus");
+        }
     }
 }
 
-impl ChromeOS {
+pub trait FilterFn: 'static + Fn(Message) -> Result<Message, Result<Message, dbus::Error>> {}
+
+impl<T> FilterFn for T where
+    T: 'static + Fn(Message) -> Result<Message, Result<Message, dbus::Error>>
+{
+}
+
+#[derive(Default)]
+pub struct ConnectionProxy {
+    connection: Option<Connection>,
+    filter: Option<Box<dyn FilterFn>>,
+}
+
+impl From<Connection> for ConnectionProxy {
+    fn from(connection: Connection) -> ConnectionProxy {
+        ConnectionProxy {
+            connection: Some(connection),
+            ..Default::default()
+        }
+    }
+}
+
+impl ConnectionProxy {
+    pub fn dummy() -> ConnectionProxy {
+        Default::default()
+    }
+
+    pub fn set_filter<F: FilterFn>(&mut self, filter: F) {
+        self.filter = Some(Box::new(filter));
+    }
+
+    fn send_with_reply_and_block(
+        &self,
+        msg: Message,
+        timeout_millis: i32,
+    ) -> Result<Message, dbus::Error> {
+        let mut filtered_msg = match &self.filter {
+            Some(filter) => match filter(msg) {
+                Ok(new_msg) => new_msg,
+                Err(res) => return res,
+            },
+            None => msg,
+        };
+        match &self.connection {
+            Some(connection) => connection.send_with_reply_and_block(filtered_msg, timeout_millis),
+            None => {
+                // A serial number is required to assign to the method return message.
+                filtered_msg.set_serial(1);
+                Ok(Message::new_method_return(&filtered_msg).unwrap())
+            }
+        }
+    }
+}
+
+/// Uses the standard ChromeOS interfaces to implement the methods with the least possible
+/// privilege. Uses a combination of D-Bus, protobufs, and shell protocols.
+pub struct Methods {
+    connection: ConnectionProxy,
+    crostini_enabled: Option<bool>,
+    plugin_vm_enabled: Option<bool>,
+}
+
+impl Methods {
+    /// Initiates a D-Bus connection and returns an initialized `Methods`.
+    pub fn new() -> Result<Methods, Box<dyn Error>> {
+        let connection = Connection::get_private(BusType::System)?;
+        Ok(Methods {
+            connection: connection.into(),
+            crostini_enabled: None,
+            plugin_vm_enabled: None,
+        })
+    }
+
+    #[cfg(test)]
+    pub fn dummy() -> Methods {
+        Methods {
+            connection: ConnectionProxy::dummy(),
+            crostini_enabled: Some(true),
+            plugin_vm_enabled: Some(true),
+        }
+    }
+
+    pub fn connection_proxy_mut(&mut self) -> &mut ConnectionProxy {
+        &mut self.connection
+    }
+
     /// Helper for doing protobuf over dbus requests and responses.
     fn sync_protobus<I: ProtoMessage, O: ProtoMessage>(
         &self,
@@ -400,7 +390,8 @@ impl ChromeOS {
         signal: &str,
         timeout_millis: i32,
     ) -> Result<O, Box<dyn Error>> {
-        ProtobusSignalWatcher::new(&self.connection, interface, signal)?.wait(timeout_millis)
+        ProtobusSignalWatcher::new(self.connection.connection.as_ref(), interface, signal)?
+            .wait(timeout_millis)
     }
 
     /// Request that component updater load a named component.
@@ -576,8 +567,8 @@ impl ChromeOS {
             DEBUGD_INTERFACE,
             START_VM_PLUGIN_DISPATCHER,
         )?
-        .append(user_id_hash)
-        .append("en-US");
+        .append1(user_id_hash)
+        .append1("en-US");
 
         let message = self
             .connection
@@ -712,7 +703,8 @@ impl ChromeOS {
 
                 let source_file = OpenOptions::new().read(true).open(source_path)?;
                 request.source_size = source_file.metadata()?.len();
-                Some(OwnedFd::new(source_file.into_raw_fd()))
+                // Safe because OwnedFd is given a valid owned fd.
+                Some(unsafe { OwnedFd::new(source_file.into_raw_fd()) })
             }
             None => None,
         };
@@ -819,7 +811,8 @@ impl ChromeOS {
         removable_media: Option<&str>,
     ) -> Result<Option<String>, Box<dyn Error>> {
         let export_file = self.create_output_file(user_id_hash, export_name, removable_media)?;
-        let export_fd = OwnedFd::new(export_file.into_raw_fd());
+        // Safe because OwnedFd is given a valid owned fd.
+        let export_fd = unsafe { OwnedFd::new(export_file.into_raw_fd()) };
 
         let mut request = ExportDiskImageRequest::new();
         request.disk_path = vm_name.to_owned();
@@ -839,7 +832,8 @@ impl ChromeOS {
 
         if let Some(name) = digest_name {
             let digest_file = self.create_output_file(user_id_hash, name, removable_media)?;
-            let digest_fd = OwnedFd::new(digest_file.into_raw_fd());
+            // Safe because OwnedFd is given a valid owned fd.
+            let digest_fd = unsafe { OwnedFd::new(digest_file.into_raw_fd()) };
             method = method.append1(digest_fd);
         }
 
@@ -884,7 +878,8 @@ impl ChromeOS {
 
         let import_file = OpenOptions::new().read(true).open(import_path)?;
         let file_size = import_file.metadata()?.len();
-        let import_fd = OwnedFd::new(import_file.into_raw_fd());
+        // Safe because OwnedFd is given a valid owned fd.
+        let import_fd = unsafe { OwnedFd::new(import_file.into_raw_fd()) };
 
         let mut request = ImportDiskImageRequest::new();
         request.disk_path = vm_name.to_owned();
@@ -1080,7 +1075,7 @@ impl ChromeOS {
         }
 
         let tremplin_started = ProtobusSignalWatcher::new(
-            &self.connection,
+            self.connection.connection.as_ref(),
             VM_CICERONE_INTERFACE,
             TREMPLIN_STARTED_SIGNAL,
         )?;
@@ -1118,7 +1113,7 @@ impl ChromeOS {
         request.owner_id = user_id_hash.to_owned();
 
         let lxd_started = ProtobusSignalWatcher::new(
-            &self.connection,
+            self.connection.connection.as_ref(),
             VM_CICERONE_INTERFACE,
             START_LXD_PROGRESS_SIGNAL,
         )?;
@@ -1556,14 +1551,14 @@ impl ChromeOS {
             .get1()
             .ok_or_else(|| FailedGetOpenPath(path.into()).into())
     }
-}
 
-impl Backend for ChromeOS {
-    fn name(&self) -> &'static str {
-        "ChromeOS"
-    }
+    pub fn metrics_send_sample(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
+        #![allow(unreachable_code)]
+        let _ = name;
+        // Metrics are not appropriate for test builds
+        #[cfg(test)]
+        return Ok(());
 
-    fn metrics_send_sample(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
         let status = Command::new("metrics_client")
             .arg("-v")
             .arg(name)
@@ -1577,7 +1572,7 @@ impl Backend for ChromeOS {
         Ok(())
     }
 
-    fn sessions_list(&mut self) -> Result<Vec<(String, String)>, Box<dyn Error>> {
+    pub fn sessions_list(&mut self) -> Result<Vec<(String, String)>, Box<dyn Error>> {
         let method = Message::new_method_call(
             "org.chromium.SessionManager",
             "/org/chromium/SessionManager",
@@ -1593,7 +1588,7 @@ impl Backend for ChromeOS {
         }
     }
 
-    fn vm_create(
+    pub fn vm_create(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1613,7 +1608,7 @@ impl Backend for ChromeOS {
         )
     }
 
-    fn vm_adjust(
+    pub fn vm_adjust(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1624,7 +1619,7 @@ impl Backend for ChromeOS {
         self.adjust_vm(name, user_id_hash, operation, params)
     }
 
-    fn vm_start(
+    pub fn vm_start(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1653,12 +1648,12 @@ impl Backend for ChromeOS {
         }
     }
 
-    fn vm_stop(&mut self, name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
+    pub fn vm_stop(&mut self, name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         self.stop_vm(name, user_id_hash)
     }
 
-    fn vm_export(
+    pub fn vm_export(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1670,7 +1665,7 @@ impl Backend for ChromeOS {
         self.export_disk_image(name, user_id_hash, file_name, digest_name, removable_media)
     }
 
-    fn vm_import(
+    pub fn vm_import(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1682,7 +1677,7 @@ impl Backend for ChromeOS {
         self.import_disk_image(name, user_id_hash, plugin_vm, file_name, removable_media)
     }
 
-    fn vm_share_path(
+    pub fn vm_share_path(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1695,7 +1690,7 @@ impl Backend for ChromeOS {
         Ok(format!("{}/{}", MNT_SHARED_ROOT, vm_path))
     }
 
-    fn vm_unshare_path(
+    pub fn vm_unshare_path(
         &mut self,
         name: &str,
         user_id_hash: &str,
@@ -1706,7 +1701,7 @@ impl Backend for ChromeOS {
         self.unshare_path_with_vm(vm_info.seneschal_server_handle, path)
     }
 
-    fn vsh_exec(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
+    pub fn vsh_exec(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         if self.is_plugin_vm(vm_name, user_id_hash)? {
             self.show_plugin_vm(vm_name, user_id_hash)
@@ -1724,7 +1719,7 @@ impl Backend for ChromeOS {
         }
     }
 
-    fn vsh_exec_container(
+    pub fn vsh_exec_container(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1744,12 +1739,19 @@ impl Backend for ChromeOS {
         Ok(())
     }
 
-    fn disk_destroy(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
+    pub fn disk_destroy(
+        &mut self,
+        vm_name: &str,
+        user_id_hash: &str,
+    ) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         self.destroy_disk_image(vm_name, user_id_hash)
     }
 
-    fn disk_list(&mut self, user_id_hash: &str) -> Result<(Vec<DiskInfo>, u64), Box<dyn Error>> {
+    pub fn disk_list(
+        &mut self,
+        user_id_hash: &str,
+    ) -> Result<(Vec<DiskInfo>, u64), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let (images, total_size) = self.list_disk_images(user_id_hash, None, None)?;
         let out_images: Vec<DiskInfo> = images
@@ -1774,7 +1776,7 @@ impl Backend for ChromeOS {
         Ok((out_images, total_size))
     }
 
-    fn disk_resize(
+    pub fn disk_resize(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1784,7 +1786,7 @@ impl Backend for ChromeOS {
         self.resize_disk(vm_name, user_id_hash, size)
     }
 
-    fn disk_op_status(
+    pub fn disk_op_status(
         &mut self,
         uuid: &str,
         user_id_hash: &str,
@@ -1794,7 +1796,7 @@ impl Backend for ChromeOS {
         self.check_disk_operation(uuid, op_type)
     }
 
-    fn wait_disk_op(
+    pub fn wait_disk_op(
         &mut self,
         uuid: &str,
         user_id_hash: &str,
@@ -1804,7 +1806,7 @@ impl Backend for ChromeOS {
         self.wait_disk_operation(uuid, op_type)
     }
 
-    fn container_create(
+    pub fn container_create(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1819,7 +1821,7 @@ impl Backend for ChromeOS {
         self.create_container(vm_name, user_id_hash, container_name, source)
     }
 
-    fn container_start(
+    pub fn container_start(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1834,7 +1836,7 @@ impl Backend for ChromeOS {
         self.start_container(vm_name, user_id_hash, container_name, privilege_level)
     }
 
-    fn container_setup_user(
+    pub fn container_setup_user(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1849,7 +1851,7 @@ impl Backend for ChromeOS {
         self.setup_container_user(vm_name, user_id_hash, container_name, username)
     }
 
-    fn usb_attach(
+    pub fn usb_attach(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1862,7 +1864,7 @@ impl Backend for ChromeOS {
         self.attach_usb(vm_name, user_id_hash, bus, device, usb_fd)
     }
 
-    fn usb_detach(
+    pub fn usb_detach(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,
@@ -1872,7 +1874,7 @@ impl Backend for ChromeOS {
         self.detach_usb(vm_name, user_id_hash, port)
     }
 
-    fn usb_list(
+    pub fn usb_list(
         &mut self,
         vm_name: &str,
         user_id_hash: &str,

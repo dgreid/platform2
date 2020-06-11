@@ -10,10 +10,11 @@ use std::io::{stdout, Write};
 
 use getopts::Options;
 
-use backends::{Backend, ContainerSource, DiskOpType, VmFeatures};
-use frontends::Frontend;
-use proto::system_api::cicerone_service::StartLxdContainerRequest_PrivilegeLevel;
-use EnvMap;
+use super::Frontend;
+use crate::disk::DiskOpType;
+use crate::methods::{ContainerSource, Methods, VmFeatures};
+use crate::proto::system_api::cicerone_service::StartLxdContainerRequest_PrivilegeLevel;
+use crate::EnvMap;
 
 enum VmcError {
     Command(&'static str, u32, Box<dyn Error>),
@@ -46,7 +47,7 @@ static PRIVILEGED_FLAG: &str = "privileged";
 // Remove useless expression items that the `try_command!()` macro captures and stringifies when
 // generating a `VmcError::Command`.
 fn trim_routine(s: &str) -> String {
-    s.trim_start_matches("self.backend.")
+    s.trim_start_matches("self.methods.")
         .replace(char::is_whitespace, "")
 }
 
@@ -129,12 +130,18 @@ type VmcResult = Result<(), Box<dyn Error>>;
 
 macro_rules! try_command {
     ($x:expr) => {
-        $x.map_err(|e| Command(stringify!($x), line!(), e))?
+        if cfg!(test) {
+            // Ignore the command's result for testing.
+            $x.map_err(|e| Command(stringify!($x), line!(), e))
+                .unwrap_or_default()
+        } else {
+            $x.map_err(|e| Command(stringify!($x), line!(), e))?
+        }
     };
 }
 
 struct Command<'a, 'b, 'c> {
-    backend: &'a mut dyn Backend,
+    methods: &'a mut Methods,
     args: &'b [&'b str],
     environ: &'c EnvMap<'c>,
 }
@@ -143,7 +150,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
     // Metrics are on a best-effort basis. We print errors related to sending metrics, but stop
     // propagation of the error, which is why this function never returns an error.
     fn metrics_send_sample(&mut self, name: &str) {
-        if let Err(e) = self.backend.metrics_send_sample(name) {
+        if let Err(e) = self.methods.metrics_send_sample(name) {
             eprintln!(
                 "warning: failed attempt to send metrics sample `{}`: {}",
                 name, e
@@ -179,9 +186,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         };
 
         self.metrics_send_sample("Vm.VmcStart");
-        try_command!(self.backend.vm_start(vm_name, &user_id_hash, features));
+        try_command!(self.methods.vm_start(vm_name, &user_id_hash, features));
         self.metrics_send_sample("Vm.VmcStartSuccess");
-        try_command!(self.backend.vsh_exec(vm_name, &user_id_hash));
+        try_command!(self.methods.vsh_exec(vm_name, &user_id_hash));
 
         Ok(())
     }
@@ -194,7 +201,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         let vm_name = self.args[0];
         let user_id_hash = get_user_hash(self.environ)?;
 
-        try_command!(self.backend.vm_stop(vm_name, &user_id_hash));
+        try_command!(self.methods.vm_stop(vm_name, &user_id_hash));
 
         Ok(())
     }
@@ -219,7 +226,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        if let Some(uuid) = try_command!(self.backend.vm_create(
+        if let Some(uuid) = try_command!(self.methods.vm_create(
             vm_name,
             &user_id_hash,
             plugin_vm,
@@ -243,7 +250,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         let operation = &self.args[1];
 
         try_command!(self
-            .backend
+            .methods
             .vm_adjust(vm_name, &user_id_hash, operation, &self.args[2..]));
 
         Ok(())
@@ -257,7 +264,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         let vm_name = self.args[0];
         let user_id_hash = get_user_hash(self.environ)?;
 
-        match self.backend.disk_destroy(vm_name, &user_id_hash) {
+        match self.methods.disk_destroy(vm_name, &user_id_hash) {
             Ok(()) => Ok(()),
             Err(e) => {
                 self.metrics_send_sample("Vm.DiskEraseFailed");
@@ -274,7 +281,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
     ) -> VmcResult {
         loop {
             let (done, progress) =
-                try_command!(self.backend.wait_disk_op(&uuid, &user_id_hash, op_type));
+                try_command!(self.methods.wait_disk_op(&uuid, &user_id_hash, op_type));
             if done {
                 println!("\rOperation completed successfully");
                 return Ok(());
@@ -295,7 +302,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        match try_command!(self.backend.disk_resize(vm_name, &user_id_hash, size)) {
+        match try_command!(self.methods.disk_resize(vm_name, &user_id_hash, size)) {
             Some(uuid) => {
                 println!("Resize in progress: {}", uuid);
                 self.wait_disk_op_completion(&uuid, &user_id_hash, DiskOpType::Resize)?;
@@ -329,7 +336,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        if let Some(uuid) = try_command!(self.backend.vm_export(
+        if let Some(uuid) = try_command!(self.methods.vm_export(
             vm_name,
             &user_id_hash,
             file_name,
@@ -356,7 +363,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        if let Some(uuid) = try_command!(self.backend.vm_import(
+        if let Some(uuid) = try_command!(self.methods.vm_import(
             vm_name,
             &user_id_hash,
             plugin_vm,
@@ -379,7 +386,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let (done, progress) =
             try_command!(self
-                .backend
+                .methods
                 .disk_op_status(uuid, &user_id_hash, DiskOpType::Create));
         if done {
             println!("Operation completed successfully");
@@ -396,7 +403,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        let (disk_image_list, total_size) = try_command!(self.backend.disk_list(&user_id_hash));
+        let (disk_image_list, total_size) = try_command!(self.methods.disk_list(&user_id_hash));
         for disk in disk_image_list {
             let mut extra_info = String::new();
             if let Some(min_size) = disk.min_size {
@@ -421,7 +428,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let vm_name = self.args[0];
         let path = self.args[1];
-        let vm_path = try_command!(self.backend.vm_share_path(vm_name, &user_id_hash, path));
+        let vm_path = try_command!(self.methods.vm_share_path(vm_name, &user_id_hash, path));
         println!("{} is available at path {}", path, vm_path);
         Ok(())
     }
@@ -435,7 +442,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let vm_name = self.args[0];
         let path = self.args[1];
-        try_command!(self.backend.vm_unshare_path(vm_name, &user_id_hash, path));
+        try_command!(self.methods.vm_unshare_path(vm_name, &user_id_hash, path));
         Ok(())
     }
 
@@ -494,7 +501,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        let sessions = try_command!(self.backend.sessions_list());
+        let sessions = try_command!(self.methods.sessions_list());
         let email = sessions
             .iter()
             .find(|(_, hash)| hash == &user_id_hash)
@@ -507,9 +514,9 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         };
 
         try_command!(self
-            .backend
+            .methods
             .container_create(vm_name, &user_id_hash, container_name, source));
-        try_command!(self.backend.container_setup_user(
+        try_command!(self.methods.container_setup_user(
             vm_name,
             &user_id_hash,
             container_name,
@@ -519,7 +526,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         // If the container was already running then this will update the privilege level of the
         // container if |privilege_level| is not |UNCHANGED|. This will take into effect on next
         // container boot.
-        try_command!(self.backend.container_start(
+        try_command!(self.methods.container_start(
             vm_name,
             &user_id_hash,
             container_name,
@@ -527,7 +534,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         ));
 
         try_command!(self
-            .backend
+            .methods
             .vsh_exec_container(vm_name, &user_id_hash, container_name));
 
         Ok(())
@@ -550,7 +557,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        let guest_port = try_command!(self.backend.usb_attach(vm_name, &user_id_hash, bus, device));
+        let guest_port = try_command!(self.methods.usb_attach(vm_name, &user_id_hash, bus, device));
 
         println!(
             "usb device at bus={} device={} attached to vm {} at port={}",
@@ -568,7 +575,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 
         let user_id_hash = get_user_hash(self.environ)?;
 
-        try_command!(self.backend.usb_detach(vm_name, &user_id_hash, port));
+        try_command!(self.methods.usb_detach(vm_name, &user_id_hash, port));
 
         println!("usb device detached from port {}", port);
 
@@ -583,7 +590,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         let vm_name = self.args[0];
         let user_id_hash = get_user_hash(self.environ)?;
 
-        let devices = try_command!(self.backend.usb_list(vm_name, &user_id_hash));
+        let devices = try_command!(self.methods.usb_list(vm_name, &user_id_hash));
         if devices.is_empty() {
             println!("No attached usb devices");
         }
@@ -631,7 +638,7 @@ impl Frontend for Vmc {
         eprintln!("USAGE: {}{}", program_name, USAGE);
     }
 
-    fn run(&self, backend: &mut dyn Backend, args: &[&str], environ: &EnvMap) -> VmcResult {
+    fn run(&self, methods: &mut Methods, args: &[&str], environ: &EnvMap) -> VmcResult {
         if args.len() < 2 {
             self.print_usage("vmc");
             return Ok(());
@@ -649,7 +656,7 @@ impl Frontend for Vmc {
         }
 
         let mut command = Command {
-            backend,
+            methods,
             args: &args[2..],
             environ,
         };
@@ -680,10 +687,60 @@ impl Frontend for Vmc {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use backends::DummyDefaultBackend;
+    use crate::proto::system_api::concierge_service::*;
+    use crate::proto::system_api::dlcservice::*;
+    use dbus::Message;
+    use protobuf::Message as ProtoMessage;
+    use std::collections::HashMap;
+
+    fn mocked_connection_filter(mut msg: Message) -> Result<Message, Result<Message, dbus::Error>> {
+        eprintln!("{:?}", msg);
+        msg.set_serial(1);
+        if let Some(member) = msg.member() {
+            match member.as_cstr().to_bytes() {
+                b"GetDlcState" => {
+                    let mut dlc_state = DlcState::new();
+                    dlc_state.state = DlcState_State::INSTALLED;
+                    let msg_return = msg
+                        .method_return()
+                        .append1(dlc_state.write_to_bytes().unwrap());
+                    return Err(Ok(msg_return));
+                }
+                b"StartVmPluginDispatcher" => {
+                    let msg_return = msg.method_return().append1(true);
+                    return Err(Ok(msg_return));
+                }
+                b"DestroyDiskImage" => {
+                    let mut resp = DestroyDiskImageResponse::new();
+                    resp.status = DiskImageStatus::DISK_STATUS_DOES_NOT_EXIST;
+                    let msg_return = msg.method_return().append1(resp.write_to_bytes().unwrap());
+                    return Err(Ok(msg_return));
+                }
+                b"RetrieveActiveSessions" => {
+                    let sessions: HashMap<String, String> =
+                        [("testuser@example.com".to_owned(), "fake_hash".to_owned())]
+                            .iter()
+                            .cloned()
+                            .collect();
+                    let msg_return = msg.method_return().append1(sessions);
+                    return Err(Ok(msg_return));
+                }
+                _ => {}
+            }
+        }
+        Ok(msg)
+    }
+
+    fn mocked_methods() -> Methods {
+        let mut methods = Methods::dummy();
+        methods
+            .connection_proxy_mut()
+            .set_filter(mocked_connection_filter);
+        methods
+    }
 
     #[test]
-    fn dummy_default_backend() {
+    fn arg_parsing() {
         const DUMMY_SUCCESS_ARGS: &[&[&str]] = &[
             &["vmc", "start", "termina"],
             &["vmc", "start", "--enable-gpu", "termina"],
@@ -801,16 +858,18 @@ mod tests {
             &["vmc", "usb-list", "termina", "args"],
         ];
 
+        let mut methods = mocked_methods();
+
         let environ = vec![("CROS_USER_ID_HASH", "fake_hash")]
             .into_iter()
             .collect();
         for args in DUMMY_SUCCESS_ARGS {
-            if let Err(e) = Vmc.run(&mut DummyDefaultBackend, args, &environ) {
+            if let Err(e) = Vmc.run(&mut methods, args, &environ) {
                 panic!("test args failed: {:?}: {}", args, e)
             }
         }
         for args in DUMMY_FAILURE_ARGS {
-            if let Ok(()) = Vmc.run(&mut DummyDefaultBackend, args, &environ) {
+            if let Ok(()) = Vmc.run(&mut methods, args, &environ) {
                 panic!("test args should have failed: {:?}", args)
             }
         }
@@ -830,63 +889,16 @@ mod tests {
             ],
         ];
 
-        struct SessionsListBackend;
-
-        impl Backend for SessionsListBackend {
-            fn name(&self) -> &'static str {
-                "Sessions List"
-            }
-            fn sessions_list(&mut self) -> Result<Vec<(String, String)>, Box<dyn Error>> {
-                Ok(vec![(
-                    "testuser@example.com".to_owned(),
-                    "fake_hash".to_owned(),
-                )])
-            }
-            fn vsh_exec_container(
-                &mut self,
-                _vm_name: &str,
-                _user_id_hash: &str,
-                _container_name: &str,
-            ) -> Result<(), Box<dyn Error>> {
-                Ok(())
-            }
-            fn container_create(
-                &mut self,
-                _vm_name: &str,
-                _user_id_hash: &str,
-                _container_name: &str,
-                _source: ContainerSource,
-            ) -> Result<(), Box<dyn Error>> {
-                Ok(())
-            }
-            fn container_start(
-                &mut self,
-                _vm_name: &str,
-                _user_id_hash: &str,
-                _container_name: &str,
-                _privileged: StartLxdContainerRequest_PrivilegeLevel,
-            ) -> Result<(), Box<dyn Error>> {
-                Ok(())
-            }
-            fn container_setup_user(
-                &mut self,
-                _vm_name: &str,
-                _user_id_hash: &str,
-                _container_name: &str,
-                _username: &str,
-            ) -> Result<(), Box<dyn Error>> {
-                Ok(())
-            }
-        }
-
         // How |PRIVILEGED_FLAG| appears on the command line.
         const PRIVILEGED_FLAG_CMDLINE: &str = "--privileged";
+
+        let mut methods = mocked_methods();
 
         let environ = vec![("CROS_USER_ID_HASH", "fake_hash")]
             .into_iter()
             .collect();
         for args in CONTAINER_ARGS {
-            if let Err(e) = Vmc.run(&mut SessionsListBackend, args, &environ) {
+            if let Err(e) = Vmc.run(&mut methods, args, &environ) {
                 panic!("test args failed: {:?}: {}", args, e)
             }
         }
@@ -920,7 +932,7 @@ mod tests {
         ];
 
         for args in DUMMY_PRIVILEGED_SUCCESS_ARGS {
-            if let Err(e) = Vmc.run(&mut SessionsListBackend, args, &environ) {
+            if let Err(e) = Vmc.run(&mut methods, args, &environ) {
                 panic!("test args failed: {:?}: {}", args, e)
             }
         }
@@ -939,7 +951,7 @@ mod tests {
         ];
 
         for args in DUMMY_PRIVILEGED_FAILURE_ARGS {
-            if let Ok(()) = Vmc.run(&mut SessionsListBackend, args, &environ) {
+            if let Ok(()) = Vmc.run(&mut methods, args, &environ) {
                 panic!("test args should have failed: {:?}", args)
             }
         }
