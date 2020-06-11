@@ -43,6 +43,15 @@ check_file() {
   fi
 }
 
+# This defaults to on, and is flipped to off in the overlay if
+# cryptohome_userdataauth_interface use flag is on.
+killswitch=on
+
+if [ "${killswitch}" = "on" ]; then
+  # If kill switch is on, then always use the legacy interface.
+  exit "${result_use_old}"
+fi
+
 # Load the one in /var/lib, if there's a result, it'll exit with the status
 # code and not return.
 check_file "${VAR_LIB_CONF_FILE}"
