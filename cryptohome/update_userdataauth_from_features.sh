@@ -29,13 +29,12 @@ try_once() {
   if [ "${reply##* }" = "false" ] ; then
     # Disable cryptohome userdataauth.
     echo "USER_DATA_AUTH_INTERFACE=off" > "${ctrl_file}"
-    logger -p INFO "Disabling cryptohome UserDataAuth due to chrome" \
-      "features"
+    logger -p INFO "Cryptohome UserDataAuth kill switch on"
   elif [ "${reply##* }" = "true" ] ; then
-    # Enable cryptohome userdataauth.
-    echo "USER_DATA_AUTH_INTERFACE=on" > "${ctrl_file}"
-    logger -p INFO "Enabling cryptohome UserDataAuth due to chrome" \
-      "features"
+    # Currently finch is used as a kill switch, so if finch indicates that
+    # userdataauth is used, then we'll leave it to /etc to decide.
+    rm "${ctrl_file}"
+    logger -p INFO "Cryptohome UserDataAuth kill switch off"
   else
     # Response is bad.
     logger -p WARN "Bad response from chrome features service when" \
