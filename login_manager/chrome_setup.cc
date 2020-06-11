@@ -59,6 +59,12 @@ constexpr char kFingerprintSensorLocationField[] = "sensor-location";
 constexpr char kArcScalePath[] = "/arc";
 constexpr char kArcScaleProperty[] = "scale";
 
+constexpr char kOzoneNNPalmPropertiesPath[] = "/nnpalm";
+constexpr char kOzoneNNPalmCompatibleProperty[] = "touch-compatible";
+constexpr char kOzoneNNPalmRadiusProperty[] = "radius-polynomial";
+constexpr std::array<const char*, 2> kOzoneNNPalmOptionalProperties = {
+    kOzoneNNPalmCompatibleProperty, kOzoneNNPalmRadiusProperty};
+
 constexpr char kArcBuildPropertiesPath[] = "/arc/build-properties";
 constexpr std::array<const char*, 2> kArcBuildProperties = {"device",
                                                             "product"};
@@ -500,6 +506,7 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   SetUpRegulatoryLabelFlag(builder, cros_config);
   SetUpInternalStylusFlag(builder, cros_config);
   SetUpFingerprintSensorLocationFlag(builder, cros_config);
+  SetUpOzoneNNPalmPropertiesFlag(builder, cros_config);
   SetUpArcBuildPropertiesFlag(builder, cros_config);
   SetUpAutoNightLightFlag(builder, cros_config);
   SetUpAllowAmbientEQFlag(builder, cros_config);
@@ -707,6 +714,29 @@ void SetUpSideVolumeButtonPositionFlag(
     return;
   }
   builder->AddArg("--ash-side-volume-button-position=" + json_position_info);
+}
+
+void SetUpOzoneNNPalmPropertiesFlag(ChromiumCommandBuilder* builder,
+                                    brillo::CrosConfigInterface* cros_config) {
+  base::DictionaryValue info;
+  if (cros_config) {
+    std::string value;
+    for (const char* property : kOzoneNNPalmOptionalProperties) {
+      if (cros_config->GetString(kOzoneNNPalmPropertiesPath, property,
+                                 &value)) {
+        info.SetString(property, value);
+        continue;
+      }
+    }
+  }
+
+  std::string json_info;
+  if (!base::JSONWriter::Write(info, &json_info)) {
+    LOG(ERROR)
+        << "JSONWriter::Write failed in writing Ozone NNPalm properties.";
+    return;
+  }
+  builder->AddArg("--ozone-nnpalm-properties=" + json_info);
 }
 
 void SetUpArcBuildPropertiesFlag(ChromiumCommandBuilder* builder,

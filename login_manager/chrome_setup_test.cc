@@ -19,6 +19,7 @@
 #include <chromeos-config/libcros_config/fake_cros_config.h>
 #include <chromeos/ui/chromium_command_builder.h>
 #include <chromeos/ui/util.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 using chromeos::ui::ChromiumCommandBuilder;
@@ -83,6 +84,25 @@ class ChromeSetupTest : public ::testing::Test {
   };
   brillo::FakeCrosConfig cros_config_;
 };
+
+TEST_F(ChromeSetupTest, TestNNPalmEmpty) {
+  login_manager::SetUpOzoneNNPalmPropertiesFlag(&builder_, &cros_config_);
+  std::vector<std::string> argv = builder_.arguments();
+  EXPECT_THAT(argv,
+              testing::UnorderedElementsAre("--ozone-nnpalm-properties={}"));
+}
+
+TEST_F(ChromeSetupTest, TestNNPalmFilled) {
+  cros_config_.SetString(login_manager::kOzoneNNPalmPropertiesPath,
+                         login_manager::kOzoneNNPalmCompatibleProperty, "true");
+  cros_config_.SetString(login_manager::kOzoneNNPalmPropertiesPath,
+                         login_manager::kOzoneNNPalmRadiusProperty, "0.1, 1.5");
+  login_manager::SetUpOzoneNNPalmPropertiesFlag(&builder_, &cros_config_);
+  std::vector<std::string> argv = builder_.arguments();
+  EXPECT_THAT(argv, testing::UnorderedElementsAre(
+                        "--ozone-nnpalm-properties={\"radius-polynomial\":\"0."
+                        "1, 1.5\",\"touch-compatible\":\"true\"}"));
+}
 
 TEST_F(ChromeSetupTest, TestOem) {
   paths_.insert(GetPath("oem", "small"));

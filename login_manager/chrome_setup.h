@@ -59,6 +59,15 @@ extern const char kAllowAmbientEQField[];
 // AllowAmbientEQ feature to enable on Chrome.
 extern const char kAllowAmbientEQFeature[];
 
+// Path to get nnpalm data from cros_config.
+extern const char kOzoneNNPalmPropertiesPath[];
+
+// Property for compatibility with NNPalm in Ozone.
+extern const char kOzoneNNPalmCompatibleProperty[];
+
+// Property for radius polynomial in NNPalm for Ozone.
+extern const char kOzoneNNPalmRadiusProperty[];
+
 // Does this board require us to use a particular crash handler for Chrome?
 enum BoardCrashHandler {
   // Breakpad doesn't work on this board, always use crashpad.
@@ -132,6 +141,11 @@ void SetUpFingerprintSensorLocationFlag(
 // auto-dimming should be enabled.
 void SetUpAutoDimFlag(chromeos::ui::ChromiumCommandBuilder* builder,
                       brillo::CrosConfigInterface* cros_config);
+
+// Add "--ozone-nnpalm-properties" flag with value read from |cros_config|.
+void SetUpOzoneNNPalmPropertiesFlag(
+    chromeos::ui::ChromiumCommandBuilder* builder,
+    brillo::CrosConfigInterface* cros_config);
 
 // Add "--arc-build-properties" flag with value read from |cros_config|.
 void SetUpArcBuildPropertiesFlag(chromeos::ui::ChromiumCommandBuilder* builder,
