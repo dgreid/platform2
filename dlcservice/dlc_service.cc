@@ -96,7 +96,7 @@ bool DlcService::Install(const DlcId& id,
     // dlcservice must cancel the install as update_engine won't be able to
     // install the initialized DLC.
     ErrorPtr tmp_err;
-    if (!dlc_manager_->CancelInstall(id, &tmp_err))
+    if (!dlc_manager_->CancelInstall(id, *err, &tmp_err))
       LOG(ERROR) << Error::ToString(tmp_err);
 
     return false;
@@ -178,9 +178,9 @@ bool DlcService::UpdateCompleted(const DlcIdList& ids, ErrorPtr* err) {
   return dlc_manager_->UpdateCompleted(ids, err);
 }
 
-void DlcService::CancelInstall() {
+void DlcService::CancelInstall(const ErrorPtr& err_in) {
   ErrorPtr tmp_err;
-  if (!dlc_manager_->CancelInstall(&tmp_err))
+  if (!dlc_manager_->CancelInstall(err_in, &tmp_err))
     LOG(ERROR) << Error::ToString(tmp_err);
 }
 
@@ -232,7 +232,7 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
         FROM_HERE, kErrorInternal,
         "Signal from update_engine indicates that it's not for an install, but "
         "dlcservice was waiting for an install.");
-    CancelInstall();
+    CancelInstall(*err);
     return false;
   }
 
@@ -267,7 +267,7 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
       return true;
   }
 
-  CancelInstall();
+  CancelInstall(*err);
   return false;
 }
 

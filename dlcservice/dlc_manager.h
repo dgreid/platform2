@@ -87,13 +87,16 @@ class DlcManager {
   // which case the errors will reflect the causes and provide insight in ways
   // dlcservice can be put into a valid state again.
   // Args:
+  //   err_in: The error that caused the install to be cancelled.
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool CancelInstall(brillo::ErrorPtr* err);
+  bool CancelInstall(const brillo::ErrorPtr& err_in, brillo::ErrorPtr* err);
 
   // Same as above, but we know exactly which DLC should be cancelled.
-  bool CancelInstall(const DlcId& id, brillo::ErrorPtr* err);
+  bool CancelInstall(const DlcId& id,
+                     const brillo::ErrorPtr& err_in,
+                     brillo::ErrorPtr* err);
 
   // DLC Deletion Flow
 

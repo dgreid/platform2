@@ -248,20 +248,22 @@ bool DlcManager::FinishInstall(ErrorPtr* err) {
   return ret;
 }
 
-bool DlcManager::CancelInstall(const DlcId& id, ErrorPtr* err) {
+bool DlcManager::CancelInstall(const DlcId& id,
+                               const ErrorPtr& err_in,
+                               ErrorPtr* err) {
   DCHECK(err);
   auto* dlc = GetDlc(id, err);
   if (dlc == nullptr) {
     return false;
   }
-  return !dlc->IsInstalling() || dlc->CancelInstall(err);
+  return !dlc->IsInstalling() || dlc->CancelInstall(err_in, err);
 }
 
-bool DlcManager::CancelInstall(ErrorPtr* err) {
+bool DlcManager::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
   DCHECK(err);
   bool ret = true;
   for (auto& pr : supported_) {
-    if (!CancelInstall(pr.first, err)) {
+    if (!CancelInstall(pr.first, err_in, err)) {
       LOG(ERROR) << "Failed during install cancellation: "
                  << Error::ToString(*err);
       ret = false;

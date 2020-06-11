@@ -87,7 +87,8 @@ class DlcBase {
 
   // Cancels the ongoing installation of this DLC. The state will be set to
   // uninstalled after this call if successful.
-  bool CancelInstall(brillo::ErrorPtr* err);
+  // The |err_in| argument is the error that causes the install to be cancelled.
+  bool CancelInstall(const brillo::ErrorPtr& err_in, brillo::ErrorPtr* err);
 
   // Uninstalls the DLC.
   bool Uninstall(brillo::ErrorPtr* err);

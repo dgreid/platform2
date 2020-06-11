@@ -92,7 +92,8 @@ class DlcService : public DlcServiceInterface {
                                brillo::ErrorPtr* err);
 
   // Cancels the current running install.
-  void CancelInstall();
+  // The |err_in| argument is the error that causes the install to be cancelled.
+  void CancelInstall(const brillo::ErrorPtr& err_in);
 
   // Handles status result from update_engine. Returns true if the installation
   // is going fine, false otherwise.

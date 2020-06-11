@@ -85,6 +85,7 @@ class BaseTest : public testing::Test {
   SessionManagerProxyMock* mock_session_manager_proxy_ptr_;
 
   MockStateChangeReporter mock_state_change_reporter_;
+  dlcservice::DlcState state_;
 
   base::SimpleTestClock clock_;
   brillo::FakeMessageLoop loop_{&clock_};

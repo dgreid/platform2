@@ -314,9 +314,9 @@ bool DlcBase::Install(ErrorPtr* err) {
       // Always try to create the DLC files and directories to make sure they
       // all exist before we start the install.
       if (!CreateDlc(err)) {
-        if (!CancelInstall(err))
-          LOG(ERROR) << "Failed during install initialization: "
-                     << Error::ToString(*err);
+        ErrorPtr tmp_err;
+        if (!CancelInstall(*err, &tmp_err))
+          LOG(ERROR) << "Failed to cancel the install correctly.";
         return false;
       }
 
@@ -400,7 +400,7 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
             base::StringPrintf("Cannot mount image for DLC=%s", id_.c_str()));
 
         ErrorPtr tmp_err;
-        if (!CancelInstall(&tmp_err))
+        if (!CancelInstall(*err, &tmp_err))
           LOG(ERROR) << "Failed during install finalization: "
                      << Error::ToString(tmp_err) << " for DLC=" << id_;
         return false;
@@ -422,7 +422,8 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
   return true;
 }
 
-bool DlcBase::CancelInstall(ErrorPtr* err) {
+bool DlcBase::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
+  state_.set_last_error_code(err_in->GetCode());
   ChangeState(DlcState::NOT_INSTALLED);
 
   // Consider as not installed even if delete fails below, correct errors
