@@ -6,6 +6,8 @@ edition = "2018"
 
 [dependencies]
 getopts = "0.2.18"
+libc = "0.2.44"
+sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
 
 [profile.release]
 lto = true
