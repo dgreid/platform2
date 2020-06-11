@@ -153,6 +153,8 @@ static_library("libcutils") {
     ":target_defaults",
   ]
   include_dirs = [ "${libcutils_src}/include" ]
+  libs = [ "rt" ]
+  deps = [ ":liblog" ]
   sources = [
     "${libcutils_src}/config_utils.cpp",
     "${libcutils_src}/hashmap.cpp",
@@ -160,6 +162,7 @@ static_library("libcutils") {
     "${libcutils_src}/load_file.cpp",
     "${libcutils_src}/native_handle.cpp",
     "${libcutils_src}/threads.cpp",
+    "libcutils/ashmem_chromeos.cpp",
   ]
 }
 
@@ -174,7 +177,10 @@ if (use.test) {
       ":libcutils",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "${libcutils_src}/native_handle_test.cpp" ]
+    sources = [
+      "${libcutils_src}/ashmem_test.cpp",
+      "${libcutils_src}/native_handle_test.cpp",
+    ]
   }
 }
 
