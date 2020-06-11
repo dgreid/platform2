@@ -6,6 +6,7 @@ import("//common-mk/pkg_config.gni")
 
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
+libfmq_src = "../aosp/system/libfmq"
 libhidl_src = "../aosp/system/libhidl"
 liblog_src = "../aosp/system/core/liblog"
 libutils_src = "../aosp/system/core/libutils"
@@ -19,6 +20,9 @@ group("all") {
     deps += [
       ":libbase_testrunner",
       ":libcutils_testrunner",
+
+      # libfmq uses ashmem, which we need to replace.
+      # ":libfmq_testrunner",
       ":libhidl_testrunner",
       ":liblog_testrunner",
       ":libutils_testrunner",
@@ -54,6 +58,7 @@ static_library("libnnapi-support") {
   deps = [
     ":libbase",
     ":libcutils",
+    ":libfmq",
     ":libhidl",
     ":liblog",
     ":libutils",
@@ -166,6 +171,41 @@ if (use.test) {
   }
 }
 
+static_library("libfmq") {
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
+  deps = [
+    ":libcutils",
+    ":libutils",
+  ]
+  include_dirs = [ "${libfmq_src}/include" ]
+  sources = [
+    "${libfmq_src}/EventFlag.cpp",
+    "${libfmq_src}/FmqInternal.cpp",
+  ]
+}
+
+if (use.test) {
+  executable("libfmq_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [
+      "${libfmq_src}/include",
+      "${libhidl_src}/base/include",
+    ]
+    deps = [
+      ":libfmq",
+      ":libhidl",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "${libfmq_src}/tests/fmq_unit_tests.cpp" ]
+  }
+}
+
 static_library("libhidl") {
   configs += [
     "//common-mk:pic",
@@ -273,6 +313,7 @@ static_library("libutils") {
     "${libutils_src}/RefBase.cpp",
     "${libutils_src}/SharedBuffer.cpp",
     "${libutils_src}/StrongPointer.cpp",
+    "${libutils_src}/SystemClock.cpp",
     "${libutils_src}/Timers.cpp",
     "${libutils_src}/VectorImpl.cpp",
     "${libutils_src}/misc.cpp",
@@ -295,6 +336,7 @@ if (use.test) {
       "${libutils_src}/RefBase_test.cpp",
       "${libutils_src}/SharedBuffer_test.cpp",
       "${libutils_src}/StrongPointer_test.cpp",
+      "${libutils_src}/SystemClock_test.cpp",
       "${libutils_src}/Vector_test.cpp",
     ]
   }
