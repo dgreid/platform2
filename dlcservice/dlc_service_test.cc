@@ -611,7 +611,7 @@ TEST_F(DlcServiceTest, MountFailureTest) {
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
 
   EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
-  CheckDlcState(kThirdDlc, DlcState::NOT_INSTALLED);
+  CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
 TEST_F(DlcServiceTest, ReportingFailureCleanupTest) {
