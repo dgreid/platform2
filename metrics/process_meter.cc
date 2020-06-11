@@ -346,13 +346,8 @@ const std::vector<ProcessNode*>& ProcessInfo::GetGroup(
 void GetMemoryUsage(const base::FilePath& procfs_path,
                     int pid,
                     ProcessMemoryStats* stats) {
-  static bool has_smaps_rollup =
-      base::PathExists(procfs_path.Append("1/smaps_rollup"));
   std::string file_content;
-
-  const std::string file_name = has_smaps_rollup
-                                    ? base::StringPrintf("%d/smaps_rollup", pid)
-                                    : base::StringPrintf("%d/totmaps", pid);
+  const std::string file_name = base::StringPrintf("%d/totmaps", pid);
   const base::FilePath file_path = procfs_path.Append(file_name);
   if (!base::ReadFileToString(file_path, &file_content))
     return;
