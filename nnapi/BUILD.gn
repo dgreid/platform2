@@ -4,12 +4,14 @@
 
 import("//common-mk/pkg_config.gni")
 
+arect_src = "../aosp/frameworks/native/libs/arect"
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
 libfmq_src = "../aosp/system/libfmq"
 libhidl_src = "../aosp/system/libhidl"
 liblog_src = "../aosp/system/core/liblog"
 libutils_src = "../aosp/system/core/libutils"
+nativewindow_src = "../aosp/frameworks/native/libs/nativewindow"
 
 group("all") {
   deps = [
@@ -24,6 +26,7 @@ group("all") {
       # libfmq uses ashmem, which we need to replace.
       # ":libfmq_testrunner",
       ":libhidl_testrunner",
+      ":libhwbuf_testrunner",
       ":liblog_testrunner",
       ":libutils_testrunner",
     ]
@@ -44,7 +47,9 @@ config("target_defaults") {
     "${liblog_src}/include",
     "${libutils_src}/include",
   ]
-  defines = []
+  defines = [
+    "__ANDROID_API__=30",  # Android R
+  ]
 }
 
 static_library("libnnapi-support") {
@@ -60,6 +65,7 @@ static_library("libnnapi-support") {
     ":libcutils",
     ":libfmq",
     ":libhidl",
+    ":libhwbuf",
     ":liblog",
     ":libutils",
     ":neuralnetworks",
@@ -259,6 +265,37 @@ if (use.test) {
       "libhidl/tests/shared_pointer_allocator_test.cpp",
       "libhidl/tests/shared_pointer_mapper_test.cpp",
     ]
+  }
+}
+
+static_library("libhwbuf") {
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
+  include_dirs = [
+    "${arect_src}/include",
+    "${nativewindow_src}/include",
+  ]
+  deps = []
+  sources = [ "hardware_buffer/AHardwareBuffer.cpp" ]
+}
+
+if (use.test) {
+  executable("libhwbuf_testrunner") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    include_dirs = [
+      "${arect_src}/include",
+      "${nativewindow_src}/include",
+    ]
+    deps = [
+      ":libhwbuf",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "hardware_buffer/AHardwareBufferTest.cpp" ]
   }
 }
 
