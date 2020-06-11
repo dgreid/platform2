@@ -169,12 +169,9 @@ DiskFetcher::FetchNonRemovableBlockDeviceInfo(
       sector_size * iostat->GetWrittenSectors();
   info.bytes_read_since_last_boot = sector_size * iostat->GetReadSectors();
 
-  const auto device_path = dev_info->GetSysPath().Append("device");
+  info.name = dev_info->GetModel();
 
-  // Not all devices in sysfs have a model/name, so ignore failure here.
-  if (!ReadAndTrimString(device_path, "model", &info.name)) {
-    ReadAndTrimString(device_path, "name", &info.name);
-  }
+  const auto device_path = dev_info->GetSysPath().Append("device");
 
   // Not all devices in sysfs have a serial, so ignore the return code.
   ReadInteger(device_path, "serial", &base::HexStringToUInt, &info.serial);

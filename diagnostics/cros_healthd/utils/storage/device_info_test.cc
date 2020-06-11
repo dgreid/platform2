@@ -21,9 +21,10 @@ using testing::StrictMock;
 namespace diagnostics {
 
 TEST(StorageDeviceInfoTest, OkData) {
-  constexpr char kPath[] = "test/sys/path";
+  constexpr char kPath[] =
+      "cros_healthd/utils/storage/testdata/sys/block/nvme0n1";
   constexpr char kDevnode[] = "dev/node/path";
-  constexpr char kSubsystem[] = "test_subsystem";
+  constexpr char kSubsystem[] = "block:nvme";
   constexpr uint64_t kSize = 42;
   constexpr uint64_t kErrorCode = 15;
   constexpr char kErrorMessage[] = "ERROR";
@@ -41,6 +42,8 @@ TEST(StorageDeviceInfoTest, OkData) {
   EXPECT_EQ(kPath, dev_info.GetSysPath().value());
   EXPECT_EQ(kDevnode, dev_info.GetDevNodePath().value());
   EXPECT_EQ(kSubsystem, dev_info.GetSubsystem());
+  EXPECT_EQ("nvme0n1", dev_info.GetDeviceName());
+  EXPECT_EQ("test_nvme_model", dev_info.GetModel());
 
   auto res = dev_info.GetSizeBytes();
   ASSERT_TRUE(res.ok());

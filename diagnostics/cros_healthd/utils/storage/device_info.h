@@ -16,6 +16,7 @@
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
 
 namespace diagnostics {
 
@@ -41,10 +42,14 @@ class StorageDeviceInfo {
   // Temporary accessor to the iostats.
   DiskIoStat* GetIoStat();
 
+  std::string GetDeviceName() const;
+  std::string GetModel() const;
+
  private:
   const base::FilePath dev_sys_path_;
   const base::FilePath dev_node_path_;
   const std::string subsystem_;
+  const std::unique_ptr<const StorageDeviceAdapter> adapter_;
   const std::unique_ptr<const Platform> platform_;
 
   DiskIoStat iostat_;
