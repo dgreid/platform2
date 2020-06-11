@@ -109,6 +109,17 @@ Status StorageDeviceInfo::PopulateDeviceInfo(
                    platform_->GetDeviceSizeBytes(dev_node_path_));
   ASSIGN_OR_RETURN(output_info->name, adapter_->GetModel());
 
+  // Returns mojo objects.
+  ASSIGN_OR_RETURN(auto vendor, adapter_->GetVendorId());
+  ASSIGN_OR_RETURN(auto product, adapter_->GetProductId());
+  ASSIGN_OR_RETURN(auto revision, adapter_->GetRevision());
+  ASSIGN_OR_RETURN(auto fwversion, adapter_->GetFirmwareVersion());
+
+  output_info->vendor_id = vendor.Clone();
+  output_info->product_id = product.Clone();
+  output_info->revision = revision.Clone();
+  output_info->firmware_version = fwversion.Clone();
+
   RETURN_IF_ERROR(iostat_.Update());
   ASSIGN_OR_RETURN(uint64_t sector_size,
                    platform_->GetDeviceBlockSizeBytes(dev_node_path_));

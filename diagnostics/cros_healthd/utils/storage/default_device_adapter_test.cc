@@ -16,9 +16,23 @@ TEST(DefaultDeviceAdapterTest, ModelFile) {
       "cros_healthd/utils/storage/testdata/sys/block/model_file_test";
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
-  EXPECT_EQ("model_file_test", adapter.GetDeviceName());
+  ASSERT_TRUE(adapter.GetVendorId().ok());
+  ASSERT_TRUE(adapter.GetProductId().ok());
+  ASSERT_TRUE(adapter.GetRevision().ok());
   ASSERT_TRUE(adapter.GetModel().ok());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().ok());
+
+  ASSERT_TRUE(adapter.GetVendorId().value().is_other());
+  ASSERT_TRUE(adapter.GetProductId().value().is_other());
+  ASSERT_TRUE(adapter.GetRevision().value().is_other());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().value().is_other());
+
+  EXPECT_EQ("model_file_test", adapter.GetDeviceName());
+  EXPECT_EQ(0, adapter.GetVendorId().value().get_other());
+  EXPECT_EQ(0, adapter.GetProductId().value().get_other());
+  EXPECT_EQ(0, adapter.GetRevision().value().get_other());
   EXPECT_EQ("test0_model", adapter.GetModel().value());
+  EXPECT_EQ(0, adapter.GetFirmwareVersion().value().get_other());
 }
 
 TEST(DefaultDeviceAdapterTest, NameFile) {
@@ -26,9 +40,23 @@ TEST(DefaultDeviceAdapterTest, NameFile) {
       "cros_healthd/utils/storage/testdata/sys/block/name_file_test";
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
-  EXPECT_EQ("name_file_test", adapter.GetDeviceName());
+  ASSERT_TRUE(adapter.GetVendorId().ok());
+  ASSERT_TRUE(adapter.GetProductId().ok());
+  ASSERT_TRUE(adapter.GetRevision().ok());
   ASSERT_TRUE(adapter.GetModel().ok());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().ok());
+
+  ASSERT_TRUE(adapter.GetVendorId().value().is_other());
+  ASSERT_TRUE(adapter.GetProductId().value().is_other());
+  ASSERT_TRUE(adapter.GetRevision().value().is_other());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().value().is_other());
+
+  EXPECT_EQ("name_file_test", adapter.GetDeviceName());
+  EXPECT_EQ(0, adapter.GetVendorId().value().get_other());
+  EXPECT_EQ(0, adapter.GetProductId().value().get_other());
+  EXPECT_EQ(0, adapter.GetRevision().value().get_other());
   EXPECT_EQ("test1_model", adapter.GetModel().value());
+  EXPECT_EQ(0, adapter.GetFirmwareVersion().value().get_other());
 }
 
 // Test when device is present, but data is missing.
@@ -38,10 +66,23 @@ TEST(DefaultDeviceAdapterTest, NoData) {
       "missing_model_and_name_test";
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
+  ASSERT_TRUE(adapter.GetVendorId().ok());
+  ASSERT_TRUE(adapter.GetProductId().ok());
+  ASSERT_TRUE(adapter.GetRevision().ok());
+  ASSERT_FALSE(adapter.GetModel().ok());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().ok());
+
+  ASSERT_TRUE(adapter.GetVendorId().value().is_other());
+  ASSERT_TRUE(adapter.GetProductId().value().is_other());
+  ASSERT_TRUE(adapter.GetRevision().value().is_other());
+  ASSERT_TRUE(adapter.GetFirmwareVersion().value().is_other());
+
   EXPECT_EQ("missing_model_and_name_test", adapter.GetDeviceName());
-  auto model_or = adapter.GetModel();
-  ASSERT_FALSE(model_or.ok());
-  EXPECT_EQ(StatusCode::kUnavailable, model_or.status().code());
+  EXPECT_EQ(0, adapter.GetVendorId().value().get_other());
+  EXPECT_EQ(0, adapter.GetProductId().value().get_other());
+  EXPECT_EQ(0, adapter.GetRevision().value().get_other());
+  EXPECT_EQ(StatusCode::kUnavailable, adapter.GetModel().status().code());
+  EXPECT_EQ(0, adapter.GetFirmwareVersion().value().get_other());
 }
 
 }  // namespace diagnostics

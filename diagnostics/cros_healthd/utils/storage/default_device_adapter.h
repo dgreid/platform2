@@ -11,6 +11,7 @@
 
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
@@ -31,7 +32,15 @@ class DefaultDeviceAdapter : public StorageDeviceAdapter {
   ~DefaultDeviceAdapter() override = default;
 
   std::string GetDeviceName() const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceVendor> GetVendorId()
+      const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceProduct> GetProductId()
+      const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceRevision> GetRevision()
+      const override;
   StatusOr<std::string> GetModel() const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceFirmware>
+  GetFirmwareVersion() const override;
 
  private:
   const base::FilePath dev_sys_path_;

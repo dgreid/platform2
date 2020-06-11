@@ -29,14 +29,30 @@ class CachingDeviceAdapter final : public StorageDeviceAdapter {
   ~CachingDeviceAdapter() override = default;
 
   std::string GetDeviceName() const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceVendor> GetVendorId()
+      const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceProduct> GetProductId()
+      const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceRevision> GetRevision()
+      const override;
   StatusOr<std::string> GetModel() const override;
+  StatusOr<chromeos::cros_healthd::mojom::BlockDeviceFirmware>
+  GetFirmwareVersion() const override;
 
  private:
   const std::unique_ptr<const StorageDeviceAdapter> adapter_;
 
   // The fields have to be mutable because of the const interface.
   mutable base::Optional<std::string> device_name_;
+  mutable base::Optional<chromeos::cros_healthd::mojom::BlockDeviceVendor>
+      vendor_id_;
+  mutable base::Optional<chromeos::cros_healthd::mojom::BlockDeviceProduct>
+      product_id_;
+  mutable base::Optional<chromeos::cros_healthd::mojom::BlockDeviceRevision>
+      revision_;
   mutable base::Optional<std::string> model_;
+  mutable base::Optional<chromeos::cros_healthd::mojom::BlockDeviceFirmware>
+      firmware_;
 };
 
 }  // namespace diagnostics

@@ -57,7 +57,11 @@ TEST(StorageDeviceInfoTest, PopulateTest) {
             info.bytes_written_since_last_boot);
   EXPECT_EQ(4646, info.io_time_seconds_since_last_boot);
   EXPECT_EQ(200, info.discard_time_seconds_since_last_boot->value);
+  EXPECT_EQ(0x1812, info.vendor_id->get_nvme_subsystem_vendor());
+  EXPECT_EQ(0x3243, info.product_id->get_nvme_subsystem_device());
+  EXPECT_EQ(0x13, info.revision->get_nvme_pcie_rev());
   EXPECT_EQ("test_nvme_model", info.name);
+  EXPECT_EQ(0x5645525F54534554, info.firmware_version->get_nvme_firmware_rev());
 }
 
 TEST(StorageDeviceInfoTest, PopulateLegacyTest) {
