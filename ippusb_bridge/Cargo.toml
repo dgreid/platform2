@@ -8,6 +8,7 @@ edition = "2018"
 getopts = "0.2.18"
 libc = "0.2.44"
 sys_util = { path = "../../platform/crosvm/sys_util" } # provided by ebuild
+tiny_http = "0.7.0"
 
 [profile.release]
 lto = true
