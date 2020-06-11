@@ -119,7 +119,8 @@ check_writable_rootfs() {
 # Unmount and delete a DLC by force.
 force_delete() {
   imageloader --unmount --mount_point="${MOUNT_PATH}/${FLAGS_id}/${DLC_PACKAGE}"
-  rm -rf "${DLC_CACHE_PATH}/${FLAGS_id}" "${DLC_LIB_PATH}/${FLAGS_id}"
+  rm -rf "${DLC_CACHE_PATH}/${FLAGS_id}" "${DLC_LIB_PATH}/${FLAGS_id}" \
+    "${DLC_PRELOAD_PATH}/${FLAGS_id}"
 }
 
 # Check if the directory can be packed as DLC image.
