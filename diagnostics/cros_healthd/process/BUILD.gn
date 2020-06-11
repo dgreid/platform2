@@ -1,0 +1,19 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides process utilities used by cros_healthd.
+pkg_config("libcros_healthd_process_pkg_deps") {
+  pkg_deps = [ "libbrillo" ]
+}
+
+source_set("libcros_healthd_process") {
+  configs += [ ":libcros_healthd_process_pkg_deps" ]
+  deps = [ "//diagnostics/common:libcommon" ]
+  sources = [
+    "process_with_output.cc",
+    "sandboxed_process.cc",
+  ]
+}

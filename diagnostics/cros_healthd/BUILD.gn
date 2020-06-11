@@ -19,6 +19,7 @@ source_set("libcros_healthd") {
   deps = [
     "events:libcros_healthd_events",
     "fetchers:libcros_healthd_fetchers",
+    "process:libcros_healthd_process",
     "system:libcros_healthd_system",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
@@ -28,8 +29,6 @@ source_set("libcros_healthd") {
     "cros_healthd_mojo_service.cc",
     "cros_healthd_routine_factory_impl.cc",
     "cros_healthd_routine_service_impl.cc",
-    "process/process_with_output.cc",
-    "process/sandboxed_process.cc",
   ]
 }
 
