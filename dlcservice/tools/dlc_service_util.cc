@@ -246,7 +246,8 @@ class DlcServiceUtil : public brillo::Daemon {
                  << ErrorPtrStr(err);
       return false;
     }
-    LOG(INFO) << "'" << dlc_id_ << "' successfully " << cmd_str << "ed.";
+    LOG(INFO) << "Successfully " << (purge ? "purged" : "uninstalled")
+              << " DLC: " << dlc_id_;
     return true;
   }
 
