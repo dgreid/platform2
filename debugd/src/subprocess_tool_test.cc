@@ -42,9 +42,9 @@ TEST_P(SubprocessToolTest, CreateProcessAndStop) {
   EXPECT_EQ(handle, error->GetMessage());
 }
 
-INSTANTIATE_TEST_CASE_P(SubprocessToolCreateProcess,
-                        SubprocessToolTest,
-                        testing::Combine(testing::Bool(), testing::Bool()));
+INSTANTIATE_TEST_SUITE_P(SubprocessToolCreateProcess,
+                         SubprocessToolTest,
+                         testing::Combine(testing::Bool(), testing::Bool()));
 
 TEST_F(SubprocessToolTest, StopInvalidProcessHandle) {
   std::string invalid_handle = "some_invalid_handle";

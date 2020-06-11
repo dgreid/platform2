@@ -937,7 +937,7 @@ TEST_P(AttestationServiceEnterpriseTest,
   Run();
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     VerifiedAccessType,
     AttestationServiceEnterpriseTest,
     ::testing::Values(DEFAULT_VA, TEST_VA));
@@ -3030,7 +3030,7 @@ TEST_P(AttestationServiceTest, GetCertificateFailureQueued) {
 
 #endif
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     AcaType, AttestationServiceTest,
     ::testing::Values(DEFAULT_ACA, TEST_ACA));
 

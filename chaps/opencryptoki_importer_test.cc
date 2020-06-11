@@ -318,23 +318,23 @@ ModifierResult AppendJunkEncrypted(const char* object_path) {
 }
 
 // List of parameterized test cases.
-INSTANTIATE_TEST_CASE_P(ModifierTests,
-                        TestImporterWithModifier,
-                        Values(NoModify,
-                               DeleteAll,
-                               DeleteAllObjectFiles,
-                               DeleteMasterKey,
-                               DeleteObjectIndex,
-                               DeleteAllButIndex,
-                               DeleteHierarchyFile,
-                               TruncateFile0,
-                               TruncateFile5,
-                               TruncateFile21,
-                               TruncateFile80,
-                               TruncateEncrypted,
-                               AddNotIndexed,
-                               AppendJunk,
-                               AppendJunkEncrypted));
+INSTANTIATE_TEST_SUITE_P(ModifierTests,
+                         TestImporterWithModifier,
+                         Values(NoModify,
+                                DeleteAll,
+                                DeleteAllObjectFiles,
+                                DeleteMasterKey,
+                                DeleteObjectIndex,
+                                DeleteAllButIndex,
+                                DeleteHierarchyFile,
+                                TruncateFile0,
+                                TruncateFile5,
+                                TruncateFile21,
+                                TruncateFile80,
+                                TruncateEncrypted,
+                                AddNotIndexed,
+                                AppendJunk,
+                                AppendJunkEncrypted));
 
 ModifierResult RandomizeFile(const char* object_path) {
   RunCommand(base::StringPrintf("head -c 1000 < /dev/urandom > %s/C0000000",
@@ -351,7 +351,7 @@ ModifierResult RandomizeObjectAttributes(const char* object_path) {
 
 // List of test cases that involve randomization; these are listed separately
 // for easy filtering.
-INSTANTIATE_TEST_CASE_P(RandomizedTests,
-                        TestImporterWithModifier,
-                        Values(RandomizeFile, RandomizeObjectAttributes));
+INSTANTIATE_TEST_SUITE_P(RandomizedTests,
+                         TestImporterWithModifier,
+                         Values(RandomizeFile, RandomizeObjectAttributes));
 }  // namespace chaps

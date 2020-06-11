@@ -141,9 +141,9 @@ TEST_P(VmSubnetTest, AddressAtOffset) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(AllValues,
-                        VmSubnetTest,
-                        ::testing::Range(size_t{0}, size_t{26}));
+INSTANTIATE_TEST_SUITE_P(AllValues,
+                         VmSubnetTest,
+                         ::testing::Range(size_t{0}, size_t{26}));
 
 TEST_P(ContainerSubnetTest, AddressAtOffset) {
   size_t index = GetParam();
@@ -157,9 +157,9 @@ TEST_P(ContainerSubnetTest, AddressAtOffset) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(AllValues,
-                        ContainerSubnetTest,
-                        ::testing::Range(size_t{1}, size_t{4}));
+INSTANTIATE_TEST_SUITE_P(AllValues,
+                         ContainerSubnetTest,
+                         ::testing::Range(size_t{1}, size_t{4}));
 
 TEST_P(PrefixTest, AvailableCount) {
   size_t prefix_length = GetParam();
@@ -175,9 +175,9 @@ TEST_P(PrefixTest, Netmask) {
   EXPECT_EQ(kExpectedNetmask[prefix_length], subnet.Netmask());
 }
 
-INSTANTIATE_TEST_CASE_P(AllValues,
-                        PrefixTest,
-                        ::testing::Range(size_t{8}, size_t{32}));
+INSTANTIATE_TEST_SUITE_P(AllValues,
+                         PrefixTest,
+                         ::testing::Range(size_t{8}, size_t{32}));
 
 TEST(SubtnetAddress, StringConversion) {
   Subnet container_subnet(kContainerBaseAddress, kContainerSubnetPrefixLength,

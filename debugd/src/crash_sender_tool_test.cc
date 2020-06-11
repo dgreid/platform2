@@ -361,7 +361,7 @@ std::string FileNameToTestName(const TestParamInfo<std::string>& param) {
   return result;
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     BadFilenameTests,
     BadFilenameTest,
     Values("/tmp/absolute", ".", "..", "../backup", "non/basename", "/", "//"),

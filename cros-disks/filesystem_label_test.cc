@@ -45,9 +45,9 @@ TEST(FilesystemLabelTest, ValidateVolumeLabel) {
 class FilesystemLabelCharacterTest
     : public ::testing::TestWithParam<const char*> {};
 
-INSTANTIATE_TEST_CASE_P(AsciiRange,
-                        FilesystemLabelCharacterTest,
-                        testing::Values("vfat", "exfat", "ntfs"));
+INSTANTIATE_TEST_SUITE_P(AsciiRange,
+                         FilesystemLabelCharacterTest,
+                         testing::Values("vfat", "exfat", "ntfs"));
 
 TEST_P(FilesystemLabelCharacterTest, ValidateVolumeLabelCharacters) {
   const char* filesystem = GetParam();

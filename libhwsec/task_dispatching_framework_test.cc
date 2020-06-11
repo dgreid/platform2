@@ -119,9 +119,9 @@ class ThreadSafeDBusMethodResponseTest
   bool on_worker_thread_;
 };
 
-INSTANTIATE_TEST_CASE_P(TestedOnWorkerThread,
-                        ThreadSafeDBusMethodResponseTest,
-                        ::testing::Values(false, true));
+INSTANTIATE_TEST_SUITE_P(TestedOnWorkerThread,
+                         ThreadSafeDBusMethodResponseTest,
+                         ::testing::Values(false, true));
 
 TEST_P(ThreadSafeDBusMethodResponseTest, Return) {
   auto dbus_handler = base::Bind(
