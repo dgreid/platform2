@@ -12,14 +12,17 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/optional.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 
+#include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/default_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/emmc_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/nvme_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
@@ -68,36 +71,74 @@ StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
   DCHECK(platform_);
 }
 
-base::FilePath StorageDeviceInfo::GetSysPath() const {
-  return dev_sys_path_;
+base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
+StorageDeviceInfo::PopulateDeviceInfo(
+    mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
+  DCHECK(output_info);
+
+  auto error = iostat_.Update();
+  if (error.has_value())
+    return error;
+
+  output_info->path = dev_node_path_.value();
+  output_info->type = subsystem_;
+
+  auto res = platform_->GetDeviceSizeBytes(dev_node_path_);
+  if (!res.ok()) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  res.status().ToString());
+  }
+  output_info->size = res.value();
+
+  res = platform_->GetDeviceBlockSizeBytes(dev_node_path_);
+  if (!res.ok()) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  res.status().ToString());
+  }
+  uint64_t sector_size = res.value();
+
+  output_info->read_time_seconds_since_last_boot =
+      static_cast<uint64_t>(iostat_.GetReadTime().InSeconds());
+  output_info->write_time_seconds_since_last_boot =
+      static_cast<uint64_t>(iostat_.GetWriteTime().InSeconds());
+  output_info->io_time_seconds_since_last_boot =
+      static_cast<uint64_t>(iostat_.GetIoTime().InSeconds());
+
+  auto discard_time = iostat_.GetDiscardTime();
+  if (discard_time.has_value()) {
+    output_info->discard_time_seconds_since_last_boot =
+        mojo_ipc::UInt64Value::New(
+            static_cast<uint64_t>(discard_time.value().InSeconds()));
+  }
+
+  // Convert from sectors to bytes.
+  output_info->bytes_written_since_last_boot =
+      sector_size * iostat_.GetWrittenSectors();
+  output_info->bytes_read_since_last_boot =
+      sector_size * iostat_.GetReadSectors();
+
+  output_info->name = adapter_->GetModel();
+
+  return base::nullopt;
 }
 
-base::FilePath StorageDeviceInfo::GetDevNodePath() const {
-  return dev_node_path_;
-}
+void StorageDeviceInfo::PopulateLegacyFields(
+    mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
+  DCHECK(output_info);
 
-std::string StorageDeviceInfo::GetSubsystem() const {
-  return subsystem_;
-}
+  constexpr char kLegacySerialFile[] = "device/serial";
+  constexpr char kLegacyManfidFile[] = "device/manfid";
 
-StatusOr<uint64_t> StorageDeviceInfo::GetSizeBytes() {
-  return platform_->GetDeviceSizeBytes(dev_node_path_);
-}
+  // Not all devices in sysfs have a serial, so ignore the return code.
+  ReadInteger(dev_sys_path_, kLegacySerialFile, &base::HexStringToUInt,
+              &output_info->serial);
 
-StatusOr<uint64_t> StorageDeviceInfo::GetBlockSizeBytes() {
-  return platform_->GetDeviceBlockSizeBytes(dev_node_path_);
-}
-
-DiskIoStat* StorageDeviceInfo::GetIoStat() {
-  return &iostat_;
-}
-
-std::string StorageDeviceInfo::GetDeviceName() const {
-  return adapter_->GetDeviceName();
-}
-
-std::string StorageDeviceInfo::GetModel() const {
-  return adapter_->GetModel();
+  uint64_t manfid = 0;
+  if (ReadInteger(dev_sys_path_, kLegacyManfidFile, &base::HexStringToUInt64,
+                  &manfid)) {
+    DCHECK_EQ(manfid & 0xFF, manfid);
+    output_info->manufacturer_id = manfid;
+  }
 }
 
 }  // namespace diagnostics

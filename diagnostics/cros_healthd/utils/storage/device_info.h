@@ -17,6 +17,7 @@
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
+#include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 
@@ -34,16 +35,17 @@ class StorageDeviceInfo {
   StorageDeviceInfo& operator=(const StorageDeviceInfo&) = delete;
   StorageDeviceInfo& operator=(StorageDeviceInfo&&) = delete;
 
-  base::FilePath GetSysPath() const;
-  base::FilePath GetDevNodePath() const;
-  std::string GetSubsystem() const;
-  StatusOr<uint64_t> GetSizeBytes();
-  StatusOr<uint64_t> GetBlockSizeBytes();
-  // Temporary accessor to the iostats.
-  DiskIoStat* GetIoStat();
-
-  std::string GetDeviceName() const;
-  std::string GetModel() const;
+  // PopulateDeviceInfo fills the fields of Mojo's data structure representing
+  // a block device. It is responsible for population of most of the info.
+  base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
+  PopulateDeviceInfo(
+      chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
+  // PopulateLegaceInfo fills the fields of Mojo's data structure representing
+  // a block device. It is responsible for population of fields which are kept
+  // for compatibility with the existing applications and will be gradually
+  // replaced.
+  void PopulateLegacyFields(
+      chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
 
  private:
   const base::FilePath dev_sys_path_;
