@@ -70,6 +70,7 @@ copies.
 | [imageloader](./imageloader/) | Daemon for mounting signed disk images |
 | [init](./init/) | CrOS common startup init scripts and boot time helpers |
 | [installer](./installer/) | CrOS installer utility (for AU/recovery/etc...) |
+| [ippusb_bridge](./ippusb_bridge/) | HTTP proxy to IPP-enabled printers |
 | [ippusb_manager](./ippusb_manager/) | "Service" for ipp-over-usb printing |
 | [kerberos](./kerberos/) | Daemon for managing Kerberos tickets |
 | [libbrillo](./libbrillo/) | Common platform utility library |

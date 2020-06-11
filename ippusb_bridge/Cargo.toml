@@ -1,0 +1,14 @@
+[package]
+name = "ippusb_bridge"
+version = "0.1.0"
+authors = ["The Chromium OS Authors"]
+edition = "2018"
+
+[dependencies]
+getopts = "0.2.18"
+
+[profile.release]
+lto = true
+panic = 'abort'
+overflow-checks = true
+opt-level = 's'
