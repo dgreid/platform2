@@ -34,7 +34,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   Logger logger_;
   SmdpFactory smdp_;
   SmdsFactory smds_;
-  std::unique_ptr<lpa::card::EuiccCard> card_;
+  std::unique_ptr<lpa::card::EuiccCard> modem_;
   std::unique_ptr<lpa::core::Lpa> lpa_;
 
   std::unique_ptr<Manager> manager_;

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HERMES_CARD_QRTR_H_
-#define HERMES_CARD_QRTR_H_
+#ifndef HERMES_MODEM_QRTR_H_
+#define HERMES_MODEM_QRTR_H_
 
 #include <deque>
 #include <iostream>
@@ -22,7 +22,7 @@ namespace hermes {
 
 // Implementation of EuiccCard using QRTR sockets to send QMI UIM
 // messages.
-class CardQrtr : public lpa::card::EuiccCard {
+class ModemQrtr : public lpa::card::EuiccCard {
  public:
   // Base class for the tx info specific to a certain type of uim command.
   // Uim command types that need any additional information should define
@@ -37,11 +37,11 @@ class CardQrtr : public lpa::card::EuiccCard {
                              responses,  // NOLINT(runtime/references)
                          int err)>;
 
-  static std::unique_ptr<CardQrtr> Create(
+  static std::unique_ptr<ModemQrtr> Create(
       std::unique_ptr<SocketInterface> socket,
       Logger* logger,
       Executor* executor);
-  virtual ~CardQrtr();
+  virtual ~ModemQrtr();
 
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
@@ -57,9 +57,9 @@ class CardQrtr : public lpa::card::EuiccCard {
     QmiUimCommand uim_type_;
   };
 
-  CardQrtr(std::unique_ptr<SocketInterface> socket,
-           Logger* logger,
-           Executor* executor);
+  ModemQrtr(std::unique_ptr<SocketInterface> socket,
+            Logger* logger,
+            Executor* executor);
   void Initialize();
   void FinalizeInitialization();
   void Shutdown();
@@ -100,7 +100,7 @@ class CardQrtr : public lpa::card::EuiccCard {
   lpa::util::Executor* executor() override { return executor_; }
 
  private:
-  friend class CardQrtrTest;
+  friend class ModemQrtrTest;
 
   ///////////////////
   // State Diagram //
@@ -207,4 +207,4 @@ class CardQrtr : public lpa::card::EuiccCard {
 
 }  // namespace hermes
 
-#endif  // HERMES_CARD_QRTR_H_
+#endif  // HERMES_MODEM_QRTR_H_

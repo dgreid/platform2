@@ -11,8 +11,8 @@
 #include <chromeos/dbus/service_constants.h>
 #include <google-lpa/lpa/core/lpa.h>
 
-#include "hermes/card_qrtr.h"
 #include "hermes/context.h"
+#include "hermes/modem_qrtr.h"
 #include "hermes/socket_qrtr.h"
 
 namespace hermes {
@@ -21,11 +21,14 @@ Daemon::Daemon()
     : DBusServiceDaemon(kHermesServiceName),
       executor_(base::ThreadTaskRunnerHandle::Get()),
       smdp_(&logger_, &executor_) {
-  card_ =
-      CardQrtr::Create(std::make_unique<SocketQrtr>(), &logger_, &executor_);
+  modem_ =
+      ModemQrtr::Create(std::make_unique<SocketQrtr>(), &logger_, &executor_);
 
   lpa::core::Lpa::Builder b;
-  b.SetEuiccCard(card_.get())
+  // TODO(crbug.com/1085825) Once a Channel class is created to abstract out the
+  // logical channel logic in ModemQrtr, a Channel (subclass?) can be used as an
+  // EuiccCard rather than the ModemQrtr instance.
+  b.SetEuiccCard(modem_.get())
       .SetSmdpClientFactory(&smdp_)
       .SetSmdsClientFactory(&smds_)
       .SetLogger(&logger_);

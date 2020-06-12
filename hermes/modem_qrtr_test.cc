@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hermes/card_qrtr.h"
+#include "hermes/modem_qrtr.h"
 
 #include <fcntl.h>
 #include <sys/stat.h>
@@ -28,20 +28,20 @@
 //
 // General testing structure
 // -------------------------
-// The CardQrtr implementation sends and receives data from a qrtr socket, whose
-// other end is a modem. In order to fake communication with the modem, the
-// qrtr socket is replaced with a regular file descriptor, with the modem itself
-// being faked by the CardQrtrTest testing framework.
+// The ModemQrtr implementation sends and receives data from a qrtr socket,
+// whose other end is a modem. In order to fake communication with the modem,
+// the qrtr socket is replaced with a regular file descriptor, with the modem
+// itself being faked by the ModemQrtrTest testing framework.
 //
-// For each TEST_F(CardQrtrTest, ...) test, sending data from modem -> CardQrtr
-// can be faked with CardQrtrTest::CardReceiveData(...). The CardQrtr -> modem
-// messages are obviously not faked, as it is what we are testing, but
-// CardQrtr::SendApdus is now wrapped by CardQrtrTest::SendApdus. The
-// EXPECT_SEND macro is used to verify that the sent data is as we expected.  In
-// both cases, the transaction IDs of provided data is ignored, and the proper
-// transaction ID values from the calls made to CardQrtr::AllocateIds are used
-// instead. This means that tests will not break if the implementation of
-// AllocateIds is changed.
+// For each TEST_F(ModemQrtrTest, ...) test, sending data from modem ->
+// ModemQrtr can be faked with ModemQrtrTest::ModemReceiveData(...). The
+// ModemQrtr -> modem messages are obviously not faked, as it is what we are
+// testing, but ModemQrtr::SendApdus is now wrapped by ModemQrtrTest::SendApdus.
+// The EXPECT_SEND macro is used to verify that the sent data is as we expected.
+// In both cases, the transaction IDs of provided data is ignored, and the
+// proper transaction ID values from the calls made to ModemQrtr::AllocateIds
+// are used instead. This means that tests will not break if the implementation
+// of AllocateIds is changed.
 //
 
 using ::testing::_;
@@ -128,11 +128,11 @@ hermes::EnableIfIterator_t<Iterator, std::vector<uint8_t>> CreateQrtrFromApdu(
 
 }  // namespace
 
-// Expect CardQrtr instance to send the provided vector of data to the modem.
-// This macro should only be called within a CardQrtrTest.
+// Expect ModemQrtr instance to send the provided vector of data to the modem.
+// This macro should only be called within a ModemQrtrTest.
 //
 // Note that the transaction ID in the provided vector will be ignored and the
-// earliest unused ID from CardQrtr::AllocateId will be used instead. This
+// earliest unused ID from ModemQrtr::AllocateId will be used instead. This
 // allows for changes in message ordering to not invalidate the data passed
 // to this macro.
 #define EXPECT_SEND(socket_obj, data)                                         \
@@ -167,7 +167,7 @@ class MockSocketQrtr : public SocketInterface {
     // Return without setting up a MessageLoop::WatchFileDescriptor. The epoll
     // syscall does not always support regular file descriptors. Libevent could
     // be configured not to use epoll, but this would require modifying or
-    // substituting base::MessagePumpLibevent. Instead, CardQrtrTest will
+    // substituting base::MessagePumpLibevent. Instead, ModemQrtrTest will
     // manually call the DataAvailableCallback as needed.
     return true;
   }
@@ -178,7 +178,7 @@ class MockSocketQrtr : public SocketInterface {
   int Recv(void* buf, size_t size, void* metadata) override {
     int bytes_read = read(socket_.get(), buf, size);
     EXPECT_EQ(bytes_read, size);
-    LOG(INFO) << "Mock CardQrtr receiving data (" << size
+    LOG(INFO) << "Mock ModemQrtr receiving data (" << size
               << " bytes): " << base::HexEncode(buf, size);
 
     if (metadata) {
@@ -199,15 +199,15 @@ class MockSocketQrtr : public SocketInterface {
   MOCK_METHOD(int, Send, (const void*, size_t, const void*), (override));
 
  private:
-  friend class CardQrtrTest;
+  friend class ModemQrtrTest;
 
   base::ScopedFD socket_;
   DataAvailableCallback cb_;
 };
 
-// Test framework for CardQrtr tests. Allows for the faking of modem -> cpu
-// responses with the use of CardReceiveData.
-class CardQrtrTest : public testing::Test {
+// Test framework for ModemQrtr tests. Allows for the faking of modem -> cpu
+// responses with the use of ModemReceiveData.
+class ModemQrtrTest : public testing::Test {
  protected:
   // Fake modem initialization such that tests may jump right to sending QMI
   // commands
@@ -217,22 +217,22 @@ class CardQrtrTest : public testing::Test {
 
     auto socket = std::make_unique<MockSocketQrtr>();
     socket_ = socket.get();
-    card_ = CardQrtr::Create(std::move(socket), nullptr, nullptr);
-    ASSERT_NE(card_, nullptr);
+    modem_ = ModemQrtr::Create(std::move(socket), nullptr, nullptr);
+    ASSERT_NE(modem_, nullptr);
 
     receive_ids_.clear();
   }
 
   void TearDown() override {
     EXPECT_CALL(*socket_, Close());
-    card_.reset(nullptr);
+    modem_.reset(nullptr);
     fd_.reset();
   }
 
-  // Wrapper for CardQrtr::SendApdus. Tests should use this rather than
-  // CardQrtr::SendApdus.
+  // Wrapper for ModemQrtr::SendApdus. Tests should use this rather than
+  // ModemQrtr::SendApdus.
   void SendApdus(std::vector<lpa::card::Apdu> commands,
-                 CardQrtr::ResponseCallback cb) {
+                 ModemQrtr::ResponseCallback cb) {
     EXPECT_CALL(*socket_, StartService(_, _, _))
         // Add a receive transaction id when new_lookup is called.
         .WillOnce(WithoutArgs(Invoke([this]() {
@@ -249,60 +249,60 @@ class CardQrtrTest : public testing::Test {
       EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
     }
 
-    card_->SendApdus(std::move(commands), std::move(cb));
+    modem_->SendApdus(std::move(commands), std::move(cb));
     SimulateInitialization();
 
     EXPECT_CALL(*socket_, StopService(_, _, _));
   }
 
-  // Cause |card_| to receive the provided data.
+  // Cause |modem_| to receive the provided data.
   template <typename Iterator>
-  EnableIfIterator_t<Iterator, void> CardReceiveData(Iterator first,
-                                                     Iterator last) {
+  EnableIfIterator_t<Iterator, void> ModemReceiveData(Iterator first,
+                                                      Iterator last) {
     std::vector<uint8_t> receive_data(first, last);
     receive_data[1] = receive_ids_[0];
     receive_ids_.pop_front();
 
     int ret = write(fd_.get(), receive_data.data(), receive_data.size());
     EXPECT_EQ(ret, receive_data.size());
-    // Set card buffer size so that the proper amount of data is read from fd.
-    card_->buffer_.resize(receive_data.size());
-    socket_->cb_.Run(card_->socket_.get());
+    // Set modem buffer size so that the proper amount of data is read from fd.
+    modem_->buffer_.resize(receive_data.size());
+    socket_->cb_.Run(modem_->socket_.get());
   }
 
   void SimulateInitialization() {
     // Receive NEW_SERVER response from sock_new_lookup
-    CardReceiveData(kQrtrNewServerResp.begin(), kQrtrNewServerResp.end());
+    ModemReceiveData(kQrtrNewServerResp.begin(), kQrtrNewServerResp.end());
     // Receive RESET response from RESET request
-    CardReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
+    ModemReceiveData(kQrtrResetResp.begin(), kQrtrResetResp.end());
     // Receive repsonse to OPEN_LOGICAL_CHANNEL request
-    CardReceiveData(kQrtrOpenLogicalChannelResp.begin(),
-                    kQrtrOpenLogicalChannelResp.end());
+    ModemReceiveData(kQrtrOpenLogicalChannelResp.begin(),
+                     kQrtrOpenLogicalChannelResp.end());
   }
 
   base::ScopedFD fd_;
-  // Queue of transaction ids created by the CardQrtr instance in question. This
-  // is used such that AllocateId implementations may change without breaking
-  // the unit tests (which should not be affected by changes in id allocation
-  // strategy).  Send ids are ids to use when sending commands. Likewise for
-  // receive ids.
+  // Queue of transaction ids created by the ModemQrtr instance in question.
+  // This is used such that AllocateId implementations may change without
+  // breaking the unit tests (which should not be affected by changes in id
+  // allocation strategy).  Send ids are ids to use when sending commands.
+  // Likewise for receive ids.
   std::deque<uint16_t> receive_ids_;
   MockSocketQrtr* socket_;
-  std::unique_ptr<CardQrtr> card_;
+  std::unique_ptr<ModemQrtr> modem_;
 };
 
 ///////////
 // TESTS //
 ///////////
 
-TEST_F(CardQrtrTest, EmptyApdu) {
+TEST_F(ModemQrtrTest, EmptyApdu) {
   auto v = std::vector<uint8_t>();
   EXPECT_SEND(*socket_, CreateQrtrFromApdu(v.begin(), v.end()));
   std::vector<lpa::card::Apdu> commands = {lpa::card::Apdu::NewStoreData({})};
   SendApdus(std::move(commands), NullResponseCallback);
 }
 
-TEST_F(CardQrtrTest, RequestGetEid) {
+TEST_F(ModemQrtrTest, RequestGetEid) {
   EXPECT_SEND(*socket_, CreateQrtrFromApdu(kGetChallengeApdu.begin(),
                                            kGetChallengeApdu.end()));
   std::vector<lpa::card::Apdu> commands = {
@@ -311,7 +311,7 @@ TEST_F(CardQrtrTest, RequestGetEid) {
   SendApdus(std::move(commands), NullResponseCallback);
 }
 
-TEST_F(CardQrtrTest, SendTwoApdus) {
+TEST_F(ModemQrtrTest, SendTwoApdus) {
   auto v = std::vector<uint8_t>();
   {
     ::testing::InSequence dummy;
@@ -327,7 +327,7 @@ TEST_F(CardQrtrTest, SendTwoApdus) {
           kGetChallengeApdu.begin(), kGetChallengeApdu.end())),
       lpa::card::Apdu::NewStoreData({})};
   SendApdus(std::move(commands), NullResponseCallback);
-  CardReceiveData(kGetChallengeResp.begin(), kGetChallengeResp.end());
+  ModemReceiveData(kGetChallengeResp.begin(), kGetChallengeResp.end());
 }
 
 }  // namespace hermes

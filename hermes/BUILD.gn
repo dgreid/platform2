@@ -42,12 +42,12 @@ static_library("libhermes") {
   configs += [ ":target_defaults" ]
   sources = [
     "apdu.cc",
-    "card_qrtr.cc",
     "context.cc",
     "daemon.cc",
     "executor.cc",
     "lpa_util.cc",
     "manager.cc",
+    "modem_qrtr.cc",
     "profile.cc",
     "qmi_uim.cc",
     "sgp_22.cc",
@@ -79,7 +79,7 @@ if (use.test) {
     ]
     sources = [
       "apdu_test.cc",
-      "card_qrtr_test.cc",
+      "modem_qrtr_test.cc",
     ]
     deps = [
       ":libhermes",

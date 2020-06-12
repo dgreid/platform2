@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "hermes/card_qrtr.h"
+#include "hermes/modem_qrtr.h"
 
 #include <algorithm>
 #include <array>
@@ -35,30 +35,31 @@ bool DecodeSuccessful(const uim_qmi_result& qmi_result) {
 
 namespace hermes {
 
-struct ApduTxInfo : public CardQrtr::TxInfo {
-  explicit ApduTxInfo(CommandApdu apdu, CardQrtr::ResponseCallback cb = nullptr)
+struct ApduTxInfo : public ModemQrtr::TxInfo {
+  explicit ApduTxInfo(CommandApdu apdu,
+                      ModemQrtr::ResponseCallback cb = nullptr)
       : apdu_(std::move(apdu)), callback_(cb) {}
   CommandApdu apdu_;
-  CardQrtr::ResponseCallback callback_;
+  ModemQrtr::ResponseCallback callback_;
 };
 
-std::unique_ptr<CardQrtr> CardQrtr::Create(
+std::unique_ptr<ModemQrtr> ModemQrtr::Create(
     std::unique_ptr<SocketInterface> socket,
     Logger* logger,
     Executor* executor) {
-  // Open the socket prior to passing to CardQrtr, such that it always has a
+  // Open the socket prior to passing to ModemQrtr, such that it always has a
   // valid socket to write to.
   if (!socket || !socket->Open()) {
     LOG(ERROR) << "Failed to open socket";
     return nullptr;
   }
-  return std::unique_ptr<CardQrtr>(
-      new CardQrtr(std::move(socket), logger, executor));
+  return std::unique_ptr<ModemQrtr>(
+      new ModemQrtr(std::move(socket), logger, executor));
 }
 
-CardQrtr::CardQrtr(std::unique_ptr<SocketInterface> socket,
-                   Logger* logger,
-                   Executor* executor)
+ModemQrtr::ModemQrtr(std::unique_ptr<SocketInterface> socket,
+                     Logger* logger,
+                     Executor* executor)
     : extended_apdu_supported_(false),
       current_transaction_id_(static_cast<uint16_t>(-1)),
       channel_(kInvalidChannel),
@@ -70,7 +71,7 @@ CardQrtr::CardQrtr(std::unique_ptr<SocketInterface> socket,
   CHECK(socket_);
   CHECK(socket_->IsValid());
   socket_->SetDataAvailableCallback(
-      base::Bind(&CardQrtr::OnDataAvailable, base::Unretained(this)));
+      base::Bind(&ModemQrtr::OnDataAvailable, base::Unretained(this)));
 
   // Set SGP.22 specification version supported by this implementation (this is
   // not currently constrained by the eUICC we use).
@@ -79,13 +80,13 @@ CardQrtr::CardQrtr(std::unique_ptr<SocketInterface> socket,
   spec_version_.set_revision(0);
 }
 
-CardQrtr::~CardQrtr() {
+ModemQrtr::~ModemQrtr() {
   Shutdown();
   socket_->Close();
 }
 
-void CardQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
-                         ResponseCallback cb) {
+void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
+                          ResponseCallback cb) {
   if (current_state_ == State::kUninitialized) {
     Initialize();
   }
@@ -106,24 +107,25 @@ void CardQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
   }
 }
 
-bool CardQrtr::IsSimValidAfterEnable() {
+bool ModemQrtr::IsSimValidAfterEnable() {
   return true;
 }
 
-bool CardQrtr::IsSimValidAfterDisable() {
+bool ModemQrtr::IsSimValidAfterDisable() {
   return true;
 }
 
-void CardQrtr::Initialize() {
+void ModemQrtr::Initialize() {
   CHECK(socket_->IsValid());
 
   if (current_state_.IsInitialized()) {
     LOG(WARNING)
-        << "Attempt to initialize already-initialized CardQrtr instance";
+        << "Attempt to initialize already-initialized ModemQrtr instance";
     return;
   } else if (current_state_ != State::kUninitialized) {
-    LOG(WARNING) << "Attempt to initialize a CardQrtr instance that is already "
-                 << "initializing";
+    LOG(WARNING)
+        << "Attempt to initialize a ModemQrtr instance that is already "
+        << "initializing";
     return;
   }
 
@@ -131,7 +133,7 @@ void CardQrtr::Initialize() {
   // StartService should result in a received QRTR_TYPE_NEW_SERVER
   // packet. Don't send other packets until that occurs.
   if (!socket_->StartService(kQmiUimService, 1, 0)) {
-    LOG(ERROR) << "Starting uim service failed during CardQrtr initialization";
+    LOG(ERROR) << "Starting uim service failed during ModemQrtr initialization";
     return;
   }
   // Place Reset request on the tx queue
@@ -142,22 +144,22 @@ void CardQrtr::Initialize() {
                        QmiUimCommand::kOpenLogicalChannel});
 }
 
-void CardQrtr::FinalizeInitialization() {
+void ModemQrtr::FinalizeInitialization() {
   if (current_state_ != State::kLogicalChannelOpened) {
-    LOG(ERROR) << "CardQrtr initialization unsuccessful";
+    LOG(ERROR) << "ModemQrtr initialization unsuccessful";
     // TODO(akhouderchah) Call lpa library and flush kSendApdu requests from the
     // queue.
     Shutdown();
     return;
   }
-  LOG(INFO) << "CardQrtr initialization successful";
+  LOG(INFO) << "ModemQrtr initialization successful";
   current_state_.Transition(State::kReady);
   // TODO(akhouderchah) set this based on whether or not Extended Length APDU is
   // supported.
   extended_apdu_supported_ = false;
 }
 
-void CardQrtr::Shutdown() {
+void ModemQrtr::Shutdown() {
   if (current_state_ != State::kUninitialized &&
       current_state_ != State::kInitializeStarted) {
     // TODO(akhouderchah) Implement actual shutdown procedure
@@ -166,7 +168,7 @@ void CardQrtr::Shutdown() {
   current_state_.Transition(State::kUninitialized);
 }
 
-uint16_t CardQrtr::AllocateId() {
+uint16_t ModemQrtr::AllocateId() {
   // transaction id cannot be 0, but when incrementing by 1, an overflow will
   // result in this method at some point returning 0. Incrementing by 2 when
   // transaction_id is initialized as an odd number guarantees us that this
@@ -179,7 +181,7 @@ uint16_t CardQrtr::AllocateId() {
 // Transmit method implementations //
 /////////////////////////////////////
 
-void CardQrtr::TransmitFromQueue() {
+void ModemQrtr::TransmitFromQueue() {
   if (tx_queue_.empty()) {
     return;
   }
@@ -200,14 +202,14 @@ void CardQrtr::TransmitFromQueue() {
       TransmitQmiSendApdu(&tx_queue_[0]);
       break;
     default:
-      LOG(ERROR) << "Unexpected QMI UIM type in CardQrtr tx queue";
+      LOG(ERROR) << "Unexpected QMI UIM type in ModemQrtr tx queue";
   }
   if (should_pop) {
     tx_queue_.pop_front();
   }
 }
 
-void CardQrtr::TransmitQmiReset(TxElement* tx_element) {
+void ModemQrtr::TransmitQmiReset(TxElement* tx_element) {
   DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kReset);
 
   uim_reset_req request;
@@ -215,7 +217,7 @@ void CardQrtr::TransmitQmiReset(TxElement* tx_element) {
               uim_reset_req_ei);
 }
 
-void CardQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
+void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
   DCHECK(tx_element &&
          tx_element->uim_type_ == QmiUimCommand::kOpenLogicalChannel);
 
@@ -229,7 +231,7 @@ void CardQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
               uim_open_logical_channel_req_ei);
 }
 
-void CardQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
+void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
   DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kSendApdu);
 
   // TODO(akhouderchah) we can't avoid the copy when encoding into QMI format,
@@ -249,12 +251,12 @@ void CardQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
               uim_send_apdu_req_ei);
 }
 
-bool CardQrtr::SendCommand(QmiUimCommand type,
-                           uint16_t id,
-                           void* c_struct,
-                           qmi_elem_info* ei) {
+bool ModemQrtr::SendCommand(QmiUimCommand type,
+                            uint16_t id,
+                            void* c_struct,
+                            qmi_elem_info* ei) {
   if (current_state_ == State::kWaitingForResponse) {
-    LOG(ERROR) << "CardQrtr: attempt to send raw buffer when waiting for a "
+    LOG(ERROR) << "ModemQrtr: attempt to send raw buffer when waiting for a "
                << "response";
     return false;
   } else if (!current_state_.CanSend()) {
@@ -262,7 +264,7 @@ bool CardQrtr::SendCommand(QmiUimCommand type,
                << current_state_;
     return false;
   } else if (!socket_->IsValid()) {
-    LOG(ERROR) << "CardQrtr socket is invalid!";
+    LOG(ERROR) << "ModemQrtr socket is invalid!";
     return false;
   }
 
@@ -279,7 +281,8 @@ bool CardQrtr::SendCommand(QmiUimCommand type,
     return false;
   }
 
-  VLOG(1) << "CardQrtr sending transaction type " << static_cast<uint16_t>(type)
+  VLOG(1) << "ModemQrtr sending transaction type "
+          << static_cast<uint16_t>(type)
           << " with data (size : " << packet.data_len
           << ") : " << base::HexEncode(packet.data, packet.data_len);
   int success = socket_->Send(packet.data, packet.data_len,
@@ -301,7 +304,7 @@ bool CardQrtr::SendCommand(QmiUimCommand type,
 // Receive method implementations //
 ////////////////////////////////////
 
-void CardQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
+void ModemQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
   sockaddr_qrtr qrtr_sock;
   qrtr_sock.sq_family = AF_QIPCRTR;
   qrtr_sock.sq_node = node;
@@ -353,7 +356,7 @@ void CardQrtr::ProcessQrtrPacket(uint32_t node, uint32_t port, int size) {
   }
 }
 
-void CardQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
+void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
   uint32_t qmi_type;
   if (qmi_decode_header(&packet, &qmi_type) < 0) {
     LOG(ERROR) << "QRTR received invalid QMI packet";
@@ -379,7 +382,7 @@ void CardQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
   }
 }
 
-void CardQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
+void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
   uim_open_logical_channel_resp resp;
   unsigned int id;
   if (qmi_decode_message(
@@ -408,7 +411,7 @@ void CardQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
   current_state_.Transition(State::kLogicalChannelOpened);
 }
 
-void CardQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
+void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
   CHECK(tx_queue_.size());
   // Ensure that the queued element is for a kSendApdu command
   TxInfo* base_info = tx_queue_[0].info_.get();
@@ -446,7 +449,7 @@ void CardQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
   }
 
   if (tx_queue_.empty() || static_cast<uint16_t>(id) != tx_queue_[0].id_) {
-    LOG(ERROR) << "CardQrtr received APDU from modem with unrecognized "
+    LOG(ERROR) << "ModemQrtr received APDU from modem with unrecognized "
                << "transaction ID";
     return;
   }
@@ -464,7 +467,7 @@ void CardQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
   tx_queue_.pop_front();
 }
 
-void CardQrtr::OnDataAvailable(SocketInterface* socket) {
+void ModemQrtr::OnDataAvailable(SocketInterface* socket) {
   CHECK(socket == socket_.get());
 
   void* metadata = nullptr;
@@ -478,17 +481,17 @@ void CardQrtr::OnDataAvailable(SocketInterface* socket) {
     LOG(ERROR) << "Socket recv failed";
     return;
   }
-  VLOG(2) << "CardQrtr recevied raw data (" << bytes_received
+  VLOG(2) << "ModemQrtr recevied raw data (" << bytes_received
           << " bytes): " << base::HexEncode(buffer_.data(), bytes_received);
   LOG(INFO) << data.port;
   ProcessQrtrPacket(data.node, data.port, bytes_received);
 }
 
-const lpa::proto::EuiccSpecVersion& CardQrtr::GetCardVersion() {
+const lpa::proto::EuiccSpecVersion& ModemQrtr::GetCardVersion() {
   return spec_version_;
 }
 
-bool CardQrtr::State::Transition(CardQrtr::State::Value value) {
+bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
   bool valid_transition = false;
   switch (value) {
     case kUninitialized:
