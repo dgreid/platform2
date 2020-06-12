@@ -74,11 +74,13 @@ StorageDeviceInfo::StorageDeviceInfo(
     const base::FilePath& dev_sys_path,
     const base::FilePath& dev_node_path,
     const std::string& subsystem,
+    mojo_ipc::StorageDevicePurpose purpose,
     std::unique_ptr<StorageDeviceAdapter> adapter,
     const Platform* platform)
     : dev_sys_path_(dev_sys_path),
       dev_node_path_(dev_node_path),
       subsystem_(subsystem),
+      purpose_(purpose),
       adapter_(std::move(adapter)),
       platform_(platform),
       iostat_(dev_sys_path) {
@@ -90,12 +92,14 @@ std::unique_ptr<StorageDeviceInfo> StorageDeviceInfo::Create(
     const base::FilePath& dev_sys_path,
     const base::FilePath& dev_node_path,
     const std::string& subsystem,
+    mojo_ipc::StorageDevicePurpose purpose,
     const Platform* platform) {
   auto adapter = CreateAdapter(dev_sys_path, subsystem);
   if (!adapter)
     return nullptr;
-  return std::unique_ptr<StorageDeviceInfo>(new StorageDeviceInfo(
-      dev_sys_path, dev_node_path, subsystem, std::move(adapter), platform));
+  return std::unique_ptr<StorageDeviceInfo>(
+      new StorageDeviceInfo(dev_sys_path, dev_node_path, subsystem, purpose,
+                            std::move(adapter), platform));
 }
 
 Status StorageDeviceInfo::PopulateDeviceInfo(
@@ -104,6 +108,7 @@ Status StorageDeviceInfo::PopulateDeviceInfo(
 
   output_info->path = dev_node_path_.value();
   output_info->type = subsystem_;
+  output_info->purpose = purpose_;
 
   ASSIGN_OR_RETURN(output_info->size,
                    platform_->GetDeviceSizeBytes(dev_node_path_));

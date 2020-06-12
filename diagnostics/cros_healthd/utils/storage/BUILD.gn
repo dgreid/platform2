@@ -16,13 +16,17 @@ source_set("storage_data_source") {
     "//diagnostics/common:libcommon",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
-  libs = [ "rootdev" ]
+  libs = [
+    "mount",
+    "rootdev",
+  ]
   sources = [
     "caching_device_adapter.cc",
     "default_device_adapter.cc",
     "device_info.cc",
     "device_lister.cc",
     "device_manager.cc",
+    "device_resolver.cc",
     "disk_iostat.cc",
     "emmc_device_adapter.cc",
     "nvme_device_adapter.cc",
@@ -40,6 +44,7 @@ if (use.test) {
       "device_info_test.cc",
       "device_lister_test.cc",
       "device_manager_test.cc",
+      "device_resolver_test.cc",
       "disk_iostat_test.cc",
       "emmc_device_adapter_test.cc",
       "nvme_device_adapter_test.cc",

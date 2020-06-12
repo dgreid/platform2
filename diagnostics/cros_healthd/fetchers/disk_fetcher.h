@@ -18,10 +18,10 @@ namespace diagnostics {
 // cros_healthd.
 class DiskFetcher {
  public:
-  DiskFetcher();
+  DiskFetcher() = default;
+  ~DiskFetcher() = default;
   DiskFetcher(const DiskFetcher&) = delete;
   DiskFetcher& operator=(const DiskFetcher&) = delete;
-  ~DiskFetcher();
 
   // Returns a structure with either the device's non-removable block device
   // info or the error that occurred fetching the information.
@@ -31,7 +31,7 @@ class DiskFetcher {
  private:
   std::unique_ptr<StorageDeviceManager> manager_;
 
-  Status InitManager();
+  Status InitManager(const base::FilePath& root);
 };
 
 }  // namespace diagnostics

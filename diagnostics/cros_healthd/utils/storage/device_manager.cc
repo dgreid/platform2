@@ -34,12 +34,15 @@ constexpr char kSysBlockPath[] = "sys/block/";
 
 StorageDeviceManager::StorageDeviceManager(
     std::unique_ptr<StorageDeviceLister> device_lister,
+    std::unique_ptr<StorageDeviceResolver> device_resolver,
     std::unique_ptr<brillo::Udev> udev,
     std::unique_ptr<Platform> platform)
     : device_lister_(std::move(device_lister)),
+      device_resolver_(std::move(device_resolver)),
       udev_(std::move(udev)),
       platform_(std::move(platform)) {
   DCHECK(device_lister_);
+  DCHECK(device_resolver_);
   DCHECK(udev_);
   DCHECK(platform_);
 }
@@ -99,6 +102,7 @@ Status StorageDeviceManager::RefreshDevices(const base::FilePath& root) {
 
     auto dev_info = StorageDeviceInfo::Create(
         sys_path, base::FilePath(dev->GetDeviceNode()), subsystem,
+        device_resolver_->GetDevicePurpose(sys_path.BaseName().value()),
         platform_.get());
 
     if (!dev_info) {

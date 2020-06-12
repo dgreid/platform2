@@ -18,6 +18,7 @@
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/device_info.h"
 #include "diagnostics/cros_healthd/utils/storage/device_lister.h"
+#include "diagnostics/cros_healthd/utils/storage/device_resolver.h"
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
@@ -26,6 +27,7 @@ namespace diagnostics {
 class StorageDeviceManager final {
  public:
   StorageDeviceManager(std::unique_ptr<StorageDeviceLister> device_lister,
+                       std::unique_ptr<StorageDeviceResolver> device_resolver,
                        std::unique_ptr<brillo::Udev> udev,
                        std::unique_ptr<Platform> platform);
   StorageDeviceManager(const StorageDeviceManager&) = delete;
@@ -46,7 +48,8 @@ class StorageDeviceManager final {
       const base::FilePath& root) const;
 
   const std::unique_ptr<const StorageDeviceLister> device_lister_;
-  std::unique_ptr<brillo::Udev> udev_;  // Has non-const interface.
+  const std::unique_ptr<const StorageDeviceResolver> device_resolver_;
+  std::unique_ptr<brillo::Udev> udev_;  // Has non-const interface
   const std::unique_ptr<const Platform> platform_;
 
   // fetch_lock_ must be held throughout the whole fetch process.

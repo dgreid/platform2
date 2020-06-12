@@ -25,13 +25,15 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-}
+}  // namespace
 
 TEST(StorageDeviceInfoTest, PopulateTest) {
   constexpr char kPath[] =
       "cros_healthd/utils/storage/testdata/sys/block/nvme0n1";
   constexpr char kDevnode[] = "dev/node/path";
   constexpr char kSubsystem[] = "block:nvme";
+  constexpr mojo_ipc::StorageDevicePurpose kPurpose =
+      mojo_ipc::StorageDevicePurpose::kSwapDevice;
   constexpr uint64_t kSize = 16 * 1024;
   constexpr uint64_t kBlockSize = 512;
   auto mock_platform = std::make_unique<StrictMock<MockPlatform>>();
@@ -43,7 +45,7 @@ TEST(StorageDeviceInfoTest, PopulateTest) {
 
   auto dev_info =
       StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
-                                kSubsystem, mock_platform.get());
+                                kSubsystem, kPurpose, mock_platform.get());
   mojo_ipc::NonRemovableBlockDeviceInfo info;
   EXPECT_TRUE(dev_info->PopulateDeviceInfo(&info).ok());
 
@@ -62,6 +64,7 @@ TEST(StorageDeviceInfoTest, PopulateTest) {
   EXPECT_EQ(0x13, info.revision->get_nvme_pcie_rev());
   EXPECT_EQ("test_nvme_model", info.name);
   EXPECT_EQ(0x5645525F54534554, info.firmware_version->get_nvme_firmware_rev());
+  EXPECT_EQ(kPurpose, info.purpose);
 }
 
 TEST(StorageDeviceInfoTest, PopulateLegacyTest) {
@@ -69,11 +72,13 @@ TEST(StorageDeviceInfoTest, PopulateLegacyTest) {
       "cros_healthd/utils/storage/testdata/sys/block/mmcblk0";
   constexpr char kDevnode[] = "dev/node/path";
   constexpr char kSubsystem[] = "block:mmc";
+  constexpr mojo_ipc::StorageDevicePurpose kPurpose =
+      mojo_ipc::StorageDevicePurpose::kBootDevice;
   auto mock_platform = std::make_unique<StrictMock<MockPlatform>>();
 
   auto dev_info =
       StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
-                                kSubsystem, mock_platform.get());
+                                kSubsystem, kPurpose, mock_platform.get());
   mojo_ipc::NonRemovableBlockDeviceInfo info;
   dev_info->PopulateLegacyFields(&info);
 
