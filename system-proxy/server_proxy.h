@@ -26,6 +26,7 @@ namespace system_proxy {
 
 using OnProxyResolvedCallback =
     base::OnceCallback<void(const std::list<std::string>&)>;
+using OnAuthAcquiredCallback = base::OnceCallback<void(const std::string&)>;
 
 class ProxyConnectJob;
 
@@ -49,6 +50,16 @@ class ServerProxy {
   // only the direct proxy.
   void ResolveProxy(const std::string& target_url,
                     OnProxyResolvedCallback callback);
+  // Creates an authentication required request that is forwarded to the parent
+  // process trough the standard output. When the request is resolved, the
+  // parent process will send the result trough the standard input. |callback|
+  // will be called when the credentials associated to the protection space
+  // given by the input parameters, or empty strings in case of failure or
+  // missing credentials.
+  void AuthenticationRequired(const std::string& proxy_url,
+                              const std::string& scheme,
+                              const std::string& realm,
+                              OnAuthAcquiredCallback callback);
 
  protected:
   virtual int GetStdinPipe();
@@ -83,6 +94,8 @@ class ServerProxy {
   void OnProxyResolved(const std::string& target_url,
                        const std::list<std::string>& proxy_servers);
 
+  void OnCredentialsReceived();
+
   // Sets the environment variables for kerberos authentication.
   void SetKerberosEnv(bool kerberos_enabled);
 
@@ -93,7 +106,7 @@ class ServerProxy {
   // The user name and password to use for proxy authentication in the format
   // compatible with libcurl's CURLOPT_USERPWD: both user name and password URL
   // encoded and separated by colon.
-  std::string credentials_ = ":";
+  std::string system_credentials_;
 
   std::unique_ptr<patchpanel::Socket> listening_fd_;
 

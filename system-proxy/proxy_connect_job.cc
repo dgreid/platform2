@@ -107,9 +107,12 @@ ProxyConnectJob::ProxyConnectJob(
     std::unique_ptr<patchpanel::Socket> socket,
     const std::string& credentials,
     ResolveProxyCallback resolve_proxy_callback,
+    AuthenticationRequiredCallback auth_required_callback,
     OnConnectionSetupFinishedCallback setup_finished_callback)
     : credentials_(credentials),
+      first_http_connect_attempt_(true),
       resolve_proxy_callback_(std::move(resolve_proxy_callback)),
+      auth_required_callback_(std::move(auth_required_callback)),
       setup_finished_callback_(std::move(setup_finished_callback)),
       // Safe to use |base::Unretained| because the callback will be canceled
       // when it goes out of scope.
@@ -209,10 +212,60 @@ bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
 void ProxyConnectJob::OnProxyResolution(
     const std::list<std::string>& proxy_servers) {
   proxy_servers_ = proxy_servers;
-  DoCurlServerConnection(proxy_servers.front());
+  DoCurlServerConnection();
 }
 
-void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
+void ProxyConnectJob::AuthenticationRequired(
+    const std::vector<char>& http_response_headers) {
+  DCHECK(!proxy_servers_.empty());
+  SchemeRealmPairList scheme_realm_pairs = ParseAuthChallenge(base::StringPiece(
+      http_response_headers.data(), http_response_headers.size()));
+  if (scheme_realm_pairs.empty()) {
+    LOG(ERROR) << "Failed to parse authentication challenge";
+    OnError(kHttpBadGateway);
+    return;
+  }
+
+  std::move(auth_required_callback_)
+      .Run(proxy_servers_.front(), scheme_realm_pairs.front().first,
+           scheme_realm_pairs.front().second,
+           base::Bind(&ProxyConnectJob::OnAuthCredentialsProvided,
+                      base::Unretained(this)));
+}
+
+void ProxyConnectJob::OnAuthCredentialsProvided(
+    const std::string& credentials) {
+  if (credentials.empty()) {
+    SendHttpResponseToClient(/* http_response_headers= */ {},
+                             /* http_response_body= */ {});
+    std::move(setup_finished_callback_).Run(nullptr, this);
+    return;
+  }
+  credentials_ = credentials;
+  VLOG(1) << "Connecting to the remote server with provided credentials";
+  DoCurlServerConnection();
+}
+
+bool ProxyConnectJob::AreAuthCredentialsRequired(CURL* easyhandle) {
+  if (http_response_code_ != kHttpCodeProxyAuthRequired) {
+    return false;
+  }
+
+  CURLcode res;
+  int64_t server_proxy_auth_scheme = 0;
+  res = curl_easy_getinfo(easyhandle, CURLINFO_PROXYAUTH_AVAIL,
+                          &server_proxy_auth_scheme);
+  if (res != CURLE_OK || !server_proxy_auth_scheme) {
+    return false;
+  }
+
+  // If kerberos is enabled, then we need to wait for the user to request a
+  // kerberos ticket from Chrome.
+  return !(server_proxy_auth_scheme & CURLAUTH_NEGOTIATE);
+}
+
+void ProxyConnectJob::DoCurlServerConnection() {
+  DCHECK(!proxy_servers_.empty());
   CURL* easyhandle = curl_easy_init();
   CURLcode res;
   curl_socket_t newSocket = -1;
@@ -227,8 +280,9 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   curl_easy_setopt(easyhandle, CURLOPT_URL, target_url_.c_str());
   std::vector<char> http_response_headers;
   std::vector<char> http_response_body;
-  if (proxy_url != brillo::http::kDirectProxy) {
-    curl_easy_setopt(easyhandle, CURLOPT_PROXY, proxy_url.c_str());
+
+  if (proxy_servers_.front().c_str() != brillo::http::kDirectProxy) {
+    curl_easy_setopt(easyhandle, CURLOPT_PROXY, proxy_servers_.front().c_str());
     curl_easy_setopt(easyhandle, CURLOPT_HTTPPROXYTUNNEL, 1L);
     curl_easy_setopt(easyhandle, CURLOPT_CONNECT_ONLY, 1);
     // Allow libcurl to pick authentication method. Curl will use the most
@@ -250,6 +304,12 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   if (res != CURLE_OK) {
     LOG(ERROR) << *this << " curl_easy_perform() failed with error: "
                << curl_easy_strerror(res);
+    if (first_http_connect_attempt_ && AreAuthCredentialsRequired(easyhandle)) {
+      first_http_connect_attempt_ = false;
+      AuthenticationRequired(http_response_headers);
+      curl_easy_cleanup(easyhandle);
+      return;
+    }
     curl_easy_cleanup(easyhandle);
 
     SendHttpResponseToClient(/* http_response_headers= */ {},

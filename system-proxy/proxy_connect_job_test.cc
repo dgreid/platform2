@@ -29,6 +29,7 @@
 namespace {
 
 constexpr char kProxyServerUrl[] = "http://127.0.0.1:3128";
+constexpr char kCredentials[] = "username:pwd";
 constexpr char kValidConnectRequest[] =
     "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
 }  // namespace
@@ -40,6 +41,20 @@ using ::testing::Return;
 
 class ProxyConnectJobTest : public ::testing::Test {
  public:
+  struct HttpAuthEntry {
+    HttpAuthEntry(const std::string& origin,
+                  const std::string& scheme,
+                  const std::string& realm,
+                  const std::string& credentials)
+        : origin(origin),
+          scheme(scheme),
+          realm(realm),
+          credentials(credentials) {}
+    std::string origin;
+    std::string scheme;
+    std::string realm;
+    std::string credentials;
+  };
   ProxyConnectJobTest() = default;
   ProxyConnectJobTest(const ProxyConnectJobTest&) = delete;
   ProxyConnectJobTest& operator=(const ProxyConnectJobTest&) = delete;
@@ -57,15 +72,43 @@ class ProxyConnectJobTest : public ::testing::Test {
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
+        base::BindOnce(&ProxyConnectJobTest::FetchCredentialsFromCache,
+                       base::Unretained(this)),
         base::BindOnce(&ProxyConnectJobTest::OnConnectionSetupFinished,
                        base::Unretained(this)));
   }
+  void AddHttpAuthEntry(const std::string& origin,
+                        const std::string& scheme,
+                        const std::string& realm,
+                        const std::string& credentials) {
+    http_auth_cache_.push_back(
+        HttpAuthEntry(origin, scheme, realm, credentials));
+  }
+
+  bool AuthRequested() { return auth_requested_; }
 
  protected:
   void ResolveProxy(
       const std::string& target_url,
       base::OnceCallback<void(const std::list<std::string>&)> callback) {
     std::move(callback).Run({remote_proxy_url_});
+  }
+
+  void FetchCredentialsFromCache(
+      const std::string& proxy_url,
+      const std::string& scheme,
+      const std::string& realm,
+      base::OnceCallback<void(const std::string&)> callback) {
+    ASSERT_FALSE(auth_requested_);
+    auth_requested_ = true;
+    for (const auto& auth_entry : http_auth_cache_) {
+      if (auth_entry.origin == proxy_url && auth_entry.realm == realm &&
+          auth_entry.scheme == scheme) {
+        std::move(callback).Run(auth_entry.credentials);
+        return;
+      }
+    }
+    std::move(callback).Run(/* credentials = */ "");
   }
 
   void OnConnectionSetupFinished(
@@ -85,6 +128,8 @@ class ProxyConnectJobTest : public ::testing::Test {
   std::unique_ptr<patchpanel::Socket> cros_client_socket_;
 
  private:
+  std::vector<HttpAuthEntry> http_auth_cache_;
+  bool auth_requested_ = false;
   FRIEND_TEST(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled);
 };
 
@@ -103,6 +148,7 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
   EXPECT_EQ(http_test_server.GetUrl(), connect_job_->proxy_servers_.front());
   EXPECT_TRUE(forwarder_created_);
+  ASSERT_FALSE(AuthRequested());
 }
 
 TEST_F(ProxyConnectJobTest, TunnelFailedBadGatewayFromRemote) {
@@ -143,6 +189,7 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnectionAltEnding) {
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
   EXPECT_EQ(http_test_server.GetUrl(), connect_job_->proxy_servers_.front());
   EXPECT_TRUE(forwarder_created_);
+  ASSERT_FALSE(AuthRequested());
 }
 
 TEST_F(ProxyConnectJobTest, BadHttpRequestWrongMethod) {
@@ -226,6 +273,8 @@ TEST_F(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled) {
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
+        base::BindOnce(&ProxyConnectJobTest::FetchCredentialsFromCache,
+                       base::Unretained(this)),
         base::BindOnce(&ProxyConnectJobTest::OnConnectionSetupFinished,
                        base::Unretained(this)));
     // Post the timeout task.
@@ -234,6 +283,71 @@ TEST_F(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled) {
   }
   // Check that the task was canceled.
   EXPECT_FALSE(task_runner->HasPendingTask());
+}
+
+// Test that the the CONNECT request is sent again after acquiring credentials.
+TEST_F(ProxyConnectJobTest, ResendWithCredentials) {
+  // Start the test server
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server.AddHttpConnectReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
+  AddHttpAuthEntry(remote_proxy_url_, "Basic", "\"My Proxy\"", kCredentials);
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_.RunOnce(false);
+
+  ASSERT_TRUE(AuthRequested());
+  EXPECT_TRUE(forwarder_created_);
+  EXPECT_EQ(kCredentials, connect_job_->credentials_);
+  EXPECT_EQ(200, connect_job_->http_response_code_);
+}
+
+// Test that the proxy auth required status is forwarded to the client if
+// credentials are missing.
+TEST_F(ProxyConnectJobTest, NoCredentials) {
+  // Start the test server
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_.RunOnce(false);
+
+  ASSERT_TRUE(AuthRequested());
+  EXPECT_EQ("", connect_job_->credentials_);
+  EXPECT_EQ(407, connect_job_->http_response_code_);
+}
+
+// Test that the proxy auth required status is forwarded to the client if the
+// server chose Kerberos as an authentication method.
+TEST_F(ProxyConnectJobTest, KerberosAuth) {
+  // Start the test server
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredKerberos);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_.RunOnce(false);
+
+  ASSERT_FALSE(AuthRequested());
+  EXPECT_EQ("", connect_job_->credentials_);
+  EXPECT_EQ(407, connect_job_->http_response_code_);
 }
 
 }  // namespace system_proxy

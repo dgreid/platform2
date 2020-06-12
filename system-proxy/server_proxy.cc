@@ -40,6 +40,7 @@ constexpr char kKrb5CCEnvKey[] = "KRB5CCNAME";
 // and for Kerberos applications, and mappings of hostnames onto Kerberos
 // realms.
 constexpr char kKrb5ConfEnvKey[] = "KRB5_CONFIG";
+constexpr char kCredentialsColonSeparator[] = ":";
 
 // Returns the URL encoded value of |text|. It also verifies if the string was
 // already encoded and, if true it returns it unmodified.
@@ -52,7 +53,9 @@ std::string UrlEncode(const std::string& text) {
 }  // namespace
 
 ServerProxy::ServerProxy(base::OnceClosure quit_closure)
-    : quit_closure_(std::move(quit_closure)), weak_ptr_factory_(this) {}
+    : system_credentials_(kCredentialsColonSeparator),
+      quit_closure_(std::move(quit_closure)),
+      weak_ptr_factory_(this) {}
 ServerProxy::~ServerProxy() = default;
 
 void ServerProxy::Init() {
@@ -90,6 +93,14 @@ void ServerProxy::ResolveProxy(const std::string& target_url,
   pending_proxy_resolution_requests_[target_url].push_back(std::move(callback));
 }
 
+void ServerProxy::AuthenticationRequired(const std::string& proxy_url,
+                                         const std::string& scheme,
+                                         const std::string& realm,
+                                         OnAuthAcquiredCallback callback) {
+  // TODO(acostinas): Request the credentials from the main process.
+  std::move(callback).Run(std::string());
+}
+
 void ServerProxy::HandleStdinReadable() {
   worker::WorkerConfigs config;
   if (!ReadProtobuf(GetStdinPipe(), &config)) {
@@ -100,7 +111,8 @@ void ServerProxy::HandleStdinReadable() {
   if (config.has_credentials()) {
     const std::string username = UrlEncode(config.credentials().username());
     const std::string password = UrlEncode(config.credentials().password());
-    credentials_ = base::JoinString({username.c_str(), password.c_str()}, ":");
+    system_credentials_ = base::JoinString({username.c_str(), password.c_str()},
+                                           kCredentialsColonSeparator);
   }
 
   if (config.has_listening_address()) {
@@ -183,8 +195,10 @@ void ServerProxy::OnConnectionAccept() {
   if (auto client_conn =
           listening_fd_->Accept((struct sockaddr*)&client_src, &sockaddr_len)) {
     auto connect_job = std::make_unique<ProxyConnectJob>(
-        std::move(client_conn), credentials_,
+        std::move(client_conn), system_credentials_,
         base::BindOnce(&ServerProxy::ResolveProxy, base::Unretained(this)),
+        base::BindOnce(&ServerProxy::AuthenticationRequired,
+                       base::Unretained(this)),
         base::BindOnce(&ServerProxy::OnConnectionSetupFinished,
                        base::Unretained(this)));
     if (connect_job->Start())

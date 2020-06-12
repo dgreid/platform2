@@ -58,10 +58,12 @@ class MockProxyConnectJob : public ProxyConnectJob {
   MockProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
                       const std::string& credentials,
                       ResolveProxyCallback resolve_proxy_callback,
+                      AuthenticationRequiredCallback auth_required_callback,
                       OnConnectionSetupFinishedCallback setup_finished_callback)
       : ProxyConnectJob(std::move(socket),
                         credentials,
                         std::move(resolve_proxy_callback),
+                        std::move(auth_required_callback),
                         std::move(setup_finished_callback)) {}
   MockProxyConnectJob(const MockProxyConnectJob&) = delete;
   MockProxyConnectJob& operator=(const MockProxyConnectJob&) = delete;
@@ -125,7 +127,7 @@ TEST_F(ServerProxyTest, FetchCredentials) {
 
   std::string expected_credentials =
       base::JoinString({kUsernameEncoded, kPasswordEncoded}, ":");
-  EXPECT_EQ(server_proxy_->credentials_, expected_credentials);
+  EXPECT_EQ(server_proxy_->system_credentials_, expected_credentials);
 }
 
 TEST_F(ServerProxyTest, FetchListeningAddress) {
@@ -225,6 +227,9 @@ TEST_F(ServerProxyTest, HandlePendingJobs) {
         std::move(client_socket), "" /* credentials */,
         base::BindOnce([](const std::string& target_url,
                           OnProxyResolvedCallback callback) {}),
+        base::BindOnce([](const std::string& proxy_url,
+                          const std::string& realm, const std::string& scheme,
+                          OnAuthAcquiredCallback callback) {}),
         base::BindOnce(&ServerProxy::OnConnectionSetupFinished,
                        base::Unretained(server_proxy_.get())));
     server_proxy_->pending_connect_jobs_[mock_connect_job.get()] =
