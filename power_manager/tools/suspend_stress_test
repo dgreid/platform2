@@ -13,6 +13,8 @@ DEFINE_integer suspend_max 10 "Max seconds to suspend"
 DEFINE_integer suspend_min 5 "Min seconds to suspend"
 DEFINE_integer wake_max 10 "Max seconds to stay awake for"
 DEFINE_integer wake_min 5 "Min seconds to stay awake for"
+DEFINE_integer wake_early_margin 0 "The allowable margin to wake early"
+DEFINE_integer wake_worst_case 30 "The worst case time to wake"
 DEFINE_boolean backup_rtc ${FLAGS_FALSE} "Use second rtc if present for backup"
 DEFINE_boolean bug_fatal ${FLAGS_TRUE} "Abort on BUG dmesg lines"
 DEFINE_boolean crc_fatal ${FLAGS_TRUE} "Abort on CRC error dmesg lines"
@@ -83,6 +85,8 @@ dump_stats_and_exit() {
   start tlsdated
   echo ""
   echo "Finished ${cur} iterations."
+  echo "Premature wakes: ${premature_wake_count}"
+  echo "Late wakes: ${late_wake_count}"
   echo "Suspend failures: $(( cur -
                               ($(get_success_count) - initial_successes) ))"
   echo "Wakealarm errors: ${wakealarm_errors}"
@@ -189,6 +193,8 @@ last_successes=${initial_successes}
 exit_loop=0
 cur_ignore_count=0
 last_ignore_count=0
+premature_wake_count=0
+late_wake_count=0
 
 while true; do
   : $(( cur += 1 ))
@@ -211,6 +217,7 @@ while true; do
     echo "+$(( sus_time + 5 ))" > /sys/class/rtc/rtc1/wakealarm
   fi
 
+  start_time="$(cat /sys/class/rtc/rtc0/since_epoch)"
   ${suspend_cmd} --wakeup_count=${wakeup_count} --suspend_for_sec=${sus_time}
 
   if [ -n "${FLAGS_post_resume_command}" ]; then
@@ -219,21 +226,30 @@ while true; do
     echo " running ${FLAGS_post_resume_command}"
     ${FLAGS_post_resume_command}
   fi
+  end_time="$(cat /sys/class/rtc/rtc0/since_epoch)"
 
+  diff_sus_time=$(( (end_time - start_time) - sus_time ))
+  if [ ${diff_sus_time} -lt -${FLAGS_wake_early_margin} ]; then
+    : $(( premature_wake_count += 1 ))
+    echo "Premature wake detected (ignoring)."
+  fi
+  if [ ${diff_sus_time} -gt ${FLAGS_wake_worst_case} ]; then
+    : $(( late_wake_count += 1 ))
+    echo "Late wake detected (ignoring)."
+  fi
   # Wakealarm is expected to be cleared after the set wakeup time,
   # which is the resume time if the device does not resume due to
   # other sources. Although we always clear the wakealarm file before
   # setting it, we still report this error if it is not cleared.
-  cur_time="$(cat /sys/class/rtc/rtc0/since_epoch)"
   main_wakealarm="$(cat /sys/class/rtc/rtc0/wakealarm)"
-  if [ -n "${main_wakealarm}" ] && [ ${main_wakealarm} -lt ${cur_time} ]; then
+  if [ -n "${main_wakealarm}" ] && [ ${main_wakealarm} -lt ${end_time} ]; then
     : $(( wakealarm_errors += 1 ))
     echo "Wakealarm is not cleared (ignoring)."
   fi
   if [ ${FLAGS_backup_rtc} -eq ${FLAGS_TRUE} ]; then
     backup_wakealarm="$(cat /sys/class/rtc/rtc1/wakealarm)"
     if [ -n "${backup_wakealarm}" ] &&
-       [ ${backup_wakealarm} -lt ${cur_time} ]; then
+       [ ${backup_wakealarm} -lt ${end_time} ]; then
       : $(( wakealarm_errors += 1 ))
       echo "Backup wakealarm is not cleared (ignoring)."
     fi
