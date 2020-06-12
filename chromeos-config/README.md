@@ -562,6 +562,7 @@ In the tables below,
 | battery-stabilized-after-resume-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | battery-stabilized-after-startup-ms | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | charging-ports | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| cutoff-power-ua | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | dark-resume-devices | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | dark-resume-sources | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | detect-hover | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
@@ -573,6 +574,7 @@ In the tables below,
 | has-ambient-light-sensor | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | has-charge-controller | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | has-keyboard-backlight | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| hibernate-power-ua | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | ignore-external-policy | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | instant-transitions-below-min-level | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | internal-backlight-als-steps | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
@@ -608,6 +610,7 @@ In the tables below,
 | set-wifi-transmit-power-for-proximity | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | set-wifi-transmit-power-for-tablet-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | shutdown-from-suspend-sec | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
+| smart-discharge-to-zero-hr | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | suspend-mode | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | suspend-to-idle | string |  | False |  | False | For details, see https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/power_manager/ |
 | touchpad-wakeup | string | ```^[01]$``` | False |  | False | Enable (1) or disable (0) wake from touchpad. |

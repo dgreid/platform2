@@ -153,3 +153,12 @@ powerd_prefs: &powerd_prefs
     <<: *powerd_prefs_default
     default: "deep"
   wake-on-dp: *powerd_prefs_default
+  smart-discharge-to-zero-hr:
+    <<: *powerd_prefs_default
+    default: "-1"
+  cutoff-power-ua:
+    <<: *powerd_prefs_default
+    default: "-1"
+  hibernate-power-ua:
+    <<: *powerd_prefs_default
+    default: "-1"

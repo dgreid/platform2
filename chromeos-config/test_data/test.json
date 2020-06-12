@@ -50,10 +50,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
@@ -115,10 +118,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
@@ -209,10 +215,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
@@ -264,10 +273,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
@@ -319,10 +331,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
@@ -374,10 +389,13 @@
         "power": {
           "allow-ambient-eq": "1",
           "charging-ports": "CROS_USB_PD_CHARGER0 LEFT\nCROS_USB_PD_CHARGER1 RIGHT\n",
+          "cutoff-power-ua": "-1",
+          "hibernate-power-ua": "-1",
           "keyboard-backlight-no-als-brightness": "98.7",
           "low-battery-shutdown-percent": "100.0",
           "power-supply-full-factor": "0.0",
           "set-wifi-transmit-power-for-tablet-mode": "1",
+          "smart-discharge-to-zero-hr": "-1",
           "suspend-to-idle": "0",
           "touchpad-wakeup": "1"
         },
