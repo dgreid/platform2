@@ -17,7 +17,6 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/strings/stringprintf.h>
-#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/time/time.h>
 #include <base/threading/thread.h>
@@ -28,6 +27,7 @@
 #include <chromeos/patchpanel/socket_forwarder.h>
 
 #include "system-proxy/curl_socket.h"
+#include "system-proxy/http_util.h"
 
 // The libpatchpanel-util library overloads << for socket data structures.
 // By C++'s argument-dependent lookup rules, operators defined in a
@@ -40,17 +40,10 @@ namespace {
 // popular http server implementations (Apache, IIS, Tomcat) set the lower limit
 // to 8000.
 constexpr int kMaxHttpRequestHeadersSize = 8000;
-constexpr char kConnectMethod[] = "CONNECT";
 constexpr base::TimeDelta kCurlConnectTimeout = base::TimeDelta::FromMinutes(2);
 constexpr base::TimeDelta kWaitClientConnectTimeout =
     base::TimeDelta::FromMinutes(2);
 constexpr size_t kMaxBadRequestPrintSize = 120;
-// The elements in this array are used to identify the end of a HTTP header
-// which should be an empty line. Note: all HTTP header lines end with CRLF.
-// RFC7230, section 3.5 allow LF (without CR) as a valid end of header. HTTP
-// connect requests don't have a body so end of header is end of request.
-static const std::array<std::string, 2> kValidHttpHeaderEnd = {"\r\n\n",
-                                                               "\r\n\r\n"};
 
 // HTTP error codes and messages with origin information for debugging (RFC723,
 // section 6.1).
@@ -63,20 +56,9 @@ const std::string_view kHttpInternalServerError =
 const std::string_view kHttpBadGateway =
     "HTTP/1.1 502 Bad Gateway - Origin: local proxy\r\n\r\n";
 
-// Verifies if the http headers are ending with an http empty line, meaning a
-// line that contains only CRLF or LF preceded by a line ending with CRLF.
-bool IsEndingWithHttpEmptyLine(const char* headers, int headers_size) {
-  for (const auto& header_end : kValidHttpHeaderEnd) {
-    if (headers_size > header_end.size() &&
-        std::memcmp(header_end.data(),
-                    headers + headers_size - header_end.size(),
-                    header_end.size()) == 0) {
-      return true;
-    }
-  }
-  return false;
-}
+}  // namespace
 
+namespace system_proxy {
 // CURLOPT_HEADERFUNCTION callback implementation that only returns the headers
 // from the last response sent by the sever. This is to make sure that we
 // send back valid HTTP replies and auhentication data from the HTTP messages is
@@ -96,7 +78,7 @@ static size_t WriteHeadersCallback(char* contents,
 
   // Check if we are receiving a new HTTP message (after the last one was
   // terminated with an empty line).
-  if (IsEndingWithHttpEmptyLine(vec->data(), vec->size())) {
+  if (IsEndingWithHttpEmptyLine(base::StringPiece(vec->data(), vec->size()))) {
     VLOG(1) << "Removing the http reply headers from the server "
             << base::StringPiece(vec->data(), vec->size());
     vec->clear();
@@ -116,37 +98,6 @@ static size_t WriteCallback(char* contents,
   vec->insert(vec->end(), contents, contents + (nmemb * size));
   return size * nmemb;
 }
-
-// Parses the first line of the http CONNECT request and extracts the URI
-// authority, defined in RFC3986, section 3.2, as the host name and port number
-// separated by a colon. The destination URI is specified in the request line
-// (RFC2817, section 5.2):
-//      CONNECT server.example.com:80 HTTP/1.1
-// If the first line in |raw_request| (the Request-Line) is a correctly formed
-// CONNECT request, it will return the destination URI as host:port, otherwise
-// it will return an empty string.
-std::string GetUriAuthorityFromHttpHeader(
-    const std::vector<char>& raw_request) {
-  base::StringPiece request(raw_request.data(), raw_request.size());
-  // Request-Line ends with CRLF (RFC2616, section 5.1).
-  size_t i = request.find_first_of("\r\n");
-  if (i == base::StringPiece::npos)
-    return std::string();
-  // Elements are delimited by non-breaking space (SP).
-  auto pieces =
-      base::SplitString(request.substr(0, i), " ", base::TRIM_WHITESPACE,
-                        base::SPLIT_WANT_NONEMPTY);
-  // Request-Line has the format: Method SP Request-URI SP HTTP-Version CRLF.
-  if (pieces.size() < 3)
-    return std::string();
-  if (pieces[0] != kConnectMethod)
-    return std::string();
-
-  return pieces[1];
-}
-}  // namespace
-
-namespace system_proxy {
 
 ProxyConnectJob::ProxyConnectJob(
     std::unique_ptr<patchpanel::Socket> socket,
@@ -205,8 +156,8 @@ void ProxyConnectJob::OnClientReadReady() {
     OnError(kHttpBadRequest);
     return;
   }
-
-  target_url_ = GetUriAuthorityFromHttpHeader(connect_request);
+  base::StringPiece request(connect_request.data(), connect_request.size());
+  target_url_ = GetUriAuthorityFromHttpHeader(request);
   if (target_url_.empty()) {
     LOG(ERROR)
         << *this
@@ -242,7 +193,8 @@ bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
     }
     ++read_byte_count;
 
-    if (IsEndingWithHttpEmptyLine(raw_request->data(), read_byte_count)) {
+    if (IsEndingWithHttpEmptyLine(
+            base::StringPiece(raw_request->data(), read_byte_count))) {
       raw_request->resize(read_byte_count);
       return true;
     }
@@ -290,8 +242,8 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   res = curl_easy_perform(easyhandle);
 
   if (res != CURLE_OK) {
-    LOG(ERROR) << *this << " curl_easy_perform() failed with error: ",
-        curl_easy_strerror(res);
+    LOG(ERROR) << *this << " curl_easy_perform() failed with error: "
+               << curl_easy_strerror(res);
     curl_easy_cleanup(easyhandle);
 
     if (server_header_reply.size() > 0) {

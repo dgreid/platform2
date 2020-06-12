@@ -84,6 +84,7 @@ static_library("libsystemproxyworker") {
   configs += [ ":target_defaults" ]
   sources = [
     "curl_socket.cc",
+    "http_util.cc",
     "protobuf_util.cc",
     "proxy_connect_job.cc",
     "server_proxy.cc",
@@ -123,6 +124,7 @@ if (use.test) {
     ]
     all_dependent_pkg_deps = [ "libcurl" ]
     sources = [
+      "http_util_test.cc",
       "kerberos_client_test.cc",
       "proxy_connect_job_test.cc",
       "server_proxy_test.cc",
