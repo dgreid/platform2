@@ -164,9 +164,13 @@ bool VshClient::Init(const std::string& user,
   sock_watcher_ = base::FileDescriptorWatcher::WatchReadable(
       sock_fd_.get(),
       base::Bind(&VshClient::HandleVsockReadable, base::Unretained(this)));
-  stdin_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      STDIN_FILENO,
-      base::Bind(&VshClient::HandleStdinReadable, base::Unretained(this)));
+  // STDIN_FILENO may not be watchable if it's /dev/null, and WatchReadable will
+  // CHECK in this case. So watch only if it's interactive tty.
+  if (interactive) {
+    stdin_watcher_ = base::FileDescriptorWatcher::WatchReadable(
+        STDIN_FILENO,
+        base::Bind(&VshClient::HandleStdinReadable, base::Unretained(this)));
+  }
 
   // Handle termination signals and SIGWINCH.
   signal_handler_.Init();
