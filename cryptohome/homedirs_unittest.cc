@@ -1396,9 +1396,10 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
   FilePath cache_dir = app_dir.Append("cache");
   FilePath data_dir = app_dir.Append("data");
   FilePath code_cache_dir = app_dir.Append("code_cache");
+  uint64_t cache_inode = 2;
   uint64_t code_cache_inode = 4;
   fe->entries_.push_back(CreateFileInfo(app_dir, 1));
-  fe->entries_.push_back(CreateFileInfo(cache_dir, 2));
+  fe->entries_.push_back(CreateFileInfo(cache_dir, cache_inode));
   fe->entries_.push_back(CreateFileInfo(data_dir, 3));
   fe->entries_.push_back(CreateFileInfo(code_cache_dir, code_cache_inode));
   EXPECT_CALL(
@@ -1415,16 +1416,14 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
       .WillOnce(InvokeWithoutArgs(CreateMockFileEnumerator));
 
   EXPECT_CALL(platform_,
-              HasExtendedFileAttribute(_, kAndroidCacheFilesAttribute))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
               HasExtendedFileAttribute(_, kAndroidCodeCacheInodeAttribute))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
               HasExtendedFileAttribute(_, kAndroidCacheInodeAttribute))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-              HasExtendedFileAttribute(cache_dir, kAndroidCacheFilesAttribute))
+  EXPECT_CALL(
+      platform_,
+      HasExtendedFileAttribute(app_dir, kAndroidCacheInodeAttribute))
       .WillOnce(Return(true));
   EXPECT_CALL(
       platform_,
@@ -1437,6 +1436,14 @@ TEST_P(FreeDiskSpaceTest, CacheAndGCacheAndAndroidCleanup) {
       .WillOnce(DoAll(
           SetArrayArgument<2>(code_cache_array,
                               code_cache_array + sizeof(code_cache_inode)),
+          Return(true)));
+  char* cache_array = reinterpret_cast<char*>(&cache_inode);
+  EXPECT_CALL(
+      platform_,
+      GetExtendedFileAttribute(app_dir, kAndroidCacheInodeAttribute, _, _))
+      .WillOnce(DoAll(
+          SetArrayArgument<2>(cache_array,
+                              cache_array + sizeof(cache_inode)),
           Return(true)));
   std::vector<FilePath> cache_entries = {cache_dir.Append("foo")};
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(cache_dir, false, _))

@@ -42,7 +42,6 @@ const int64_t kFreeSpaceThresholdToTriggerCleanup = 1LL << 30;
 const int64_t kFreeSpaceThresholdToTriggerAggressiveCleanup =
                                       768 * 1024 * 1024;
 const int64_t kTargetFreeSpaceAfterCleanup = 2LL << 30;
-extern const char kAndroidCacheFilesAttribute[];
 extern const char kAndroidCacheInodeAttribute[];
 extern const char kAndroidCodeCacheInodeAttribute[];
 extern const char kTrackedDirectoryNameAttribute[];

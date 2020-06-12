@@ -45,10 +45,8 @@ namespace cryptohome {
 
 const char *kShadowRoot = "/home/.shadow";
 const char *kEmptyOwner = "";
-// xattr used for ARC++ M. No longer used since end of 2017, should be removed.
-const char kAndroidCacheFilesAttribute[] = "user.AndroidCache";
 // Each xattr is set to Android app internal data directory, contains
-// 8-byte inode number of cache subdirectory.  Used in ARC++ N, see
+// 8-byte inode number of cache subdirectory.  See
 // frameworks/base/core/java/android/app/ContextImpl.java
 const char kAndroidCacheInodeAttribute[] = "user.inode_cache";
 const char kAndroidCodeCacheInodeAttribute[] = "user.inode_code_cache";
@@ -1345,10 +1343,9 @@ void HomeDirs::DeleteAndroidCacheCallback(const FilePath& user_dir) {
     LOG(ERROR) << "Failed to locate the root directory.";
     return;
   }
-  // Find the cache directory by walking under the root directory
-  // and looking for AndroidCache xattr set. Alternatively for Android N the
-  // pacakge directory stores the inode of the cache directory in the
-  // kAndroidCacheInodeAttribute xattr. Data is stored under
+  // The package directory stores the inodes of the cache directory and code
+  // cache directory in the kAndroidCacheInodeAttribute xattr and
+  // kAndroidCodeCacheInodeAttribute xattr.  Data is stored under
   // root/android-data/data/data/<package name>/[code_]cache. It is not
   // desirable to make all package name directories unencrypted, they
   // are not marked as tracked directory.
@@ -1366,9 +1363,7 @@ void HomeDirs::DeleteAndroidCacheCallback(const FilePath& user_dir) {
     ino_t inode = file_enumerator->GetInfo().stat().st_ino;
     std::pair<const FilePath, ino_t> parent_inode_pair =
         std::make_pair(next_path.DirName(), inode);
-    if (cache_inodes.find(parent_inode_pair) != cache_inodes.end() ||
-        platform_->HasExtendedFileAttribute(next_path,
-                                            kAndroidCacheFilesAttribute)) {
+    if (cache_inodes.find(parent_inode_pair) != cache_inodes.end()) {
       VLOG(1) << "Deleting Android Cache " << next_path.value();
       std::vector<FilePath> entry_list;
       platform_->EnumerateDirectoryEntries(next_path, false, &entry_list);
