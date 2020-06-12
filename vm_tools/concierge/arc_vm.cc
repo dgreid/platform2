@@ -123,7 +123,8 @@ std::string CreateSharedDataParam(const base::FilePath& data_dir,
                                   const std::string& tag,
                                   bool enable_caches) {
   return base::StringPrintf(
-      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600",
+      "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
+      "security-xattrs=true",
       data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "never",
       kAndroidUidMap, kAndroidGidMap);
 }
@@ -216,7 +217,8 @@ bool ArcVm::Start(base::FilePath kernel,
   const std::string rootfs_flag = rootfs_writable() ? "--rwdisk" : "--disk";
 
   std::string oem_etc_shared_dir = base::StringPrintf(
-      "%s:%s:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600",
+      "%s:%s:type=fs:cache=always:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
+      "security-xattrs=true",
       kOemEtcSharedDir, kOemEtcSharedDirTag, kOemEtcUgidMap, kOemEtcUgidMap);
 
   std::string shared_data = CreateSharedDataParam(data_dir, "data", true);
