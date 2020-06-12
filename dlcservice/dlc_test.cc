@@ -200,7 +200,7 @@ TEST_F(DlcBaseTest, MakeReadyForUpdateNotVerfied) {
   EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 
-TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
+TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
   // Place preloaded images.
@@ -215,8 +215,8 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceDeletesPreloadedDLCs) {
 
   EXPECT_TRUE(dlc.Install(&err_));
 
-  // Preloaded DLC image should be deleted.
-  EXPECT_FALSE(base::PathExists(image_path));
+  // Preloaded DLC image should still exists.
+  EXPECT_TRUE(base::PathExists(image_path));
 }
 
 TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {

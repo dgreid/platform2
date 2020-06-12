@@ -307,7 +307,6 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
 }
 
 bool DlcBase::Install(ErrorPtr* err) {
-  bool preloaded = false;
   switch (state_.state()) {
     case DlcState::NOT_INSTALLED: {
       bool active_image_existed = IsActiveImagePresent();
@@ -327,7 +326,6 @@ bool DlcBase::Install(ErrorPtr* err) {
       // to preload it each time the dlcservice is started.
       if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
         if (PreloadedCopier(err)) {
-          preloaded = true;
           break;
         } else {
           LOG(ERROR) << "Preloading failed, so assuming install failure.";
@@ -364,16 +362,8 @@ bool DlcBase::Install(ErrorPtr* err) {
     return false;
   }
 
-  // Don't remove preloaded DLC images when booted from removable device,
-  // otherwise chromeos-install script will not be able to install stateful
-  // partition correctly with preloaded DLC images.
-  if (preloaded && !SystemState::Get()->IsDeviceRemovable()) {
-    // Delete the preloaded DLC only after both copies into A and B succeed as
-    // well as mounting.
-    const auto path = SystemState::Get()->preloaded_content_dir().Append(id_);
-    if (!base::DeleteFile(path, true))
-      PLOG(ERROR) << "Failed to delete preloaded DLC image=" << path.value();
-  }
+  // Note: Don't remove preloaded DLC images. F20 transition to provision DLC
+  // images will allow for preloading to be deprecated.
   return true;
 }
 
