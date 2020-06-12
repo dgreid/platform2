@@ -31,7 +31,8 @@ const std::string_view kProxyAuthenticationRequiredNegotiate =
     "Proxy-Authenticate: Negotiate realm=\"My Proxy\"\r\n"
     "\r\n";
 
-const std::string_view kHttpBadGateway = "HTTP/1.1 502 Bad Gateway\r\n\r\n";
+const std::string_view kHttpBadGateway =
+    "HTTP/1.1 502 Bad Gateway\r\n\r\nBag gateway message from the server";
 
 }  // namespace
 namespace system_proxy {

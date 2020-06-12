@@ -8,7 +8,6 @@
 #include <utility>
 #include <vector>
 
-#include <curl/curl.h>
 #include <curl/easy.h>
 
 #include <base/base64.h>
@@ -45,6 +44,8 @@ constexpr base::TimeDelta kWaitClientConnectTimeout =
     base::TimeDelta::FromMinutes(2);
 constexpr size_t kMaxBadRequestPrintSize = 120;
 
+constexpr int64_t kHttpCodeProxyAuthRequired = 407;
+
 // HTTP error codes and messages with origin information for debugging (RFC723,
 // section 6.1).
 const std::string_view kHttpBadRequest =
@@ -55,7 +56,10 @@ const std::string_view kHttpInternalServerError =
     "HTTP/1.1 500 Internal Server Error - Origin: local proxy\r\n\r\n";
 const std::string_view kHttpBadGateway =
     "HTTP/1.1 502 Bad Gateway - Origin: local proxy\r\n\r\n";
-
+const std::string_view kHttpProxyAuthRequired =
+    "HTTP/1.1 407 Credentials required - Origin: local proxy\r\n\r\n";
+constexpr char kHttpErrorTunnelFailed[] =
+    "HTTP/1.1 %s Error creating tunnel - Origin: local proxy\r\n\r\n";
 }  // namespace
 
 namespace system_proxy {
@@ -212,7 +216,6 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   CURL* easyhandle = curl_easy_init();
   CURLcode res;
   curl_socket_t newSocket = -1;
-  std::vector<char> server_header_reply, server_body_reply;
 
   if (!easyhandle) {
     // Unfortunately it's not possible to get the failure reason.
@@ -222,7 +225,8 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
     return;
   }
   curl_easy_setopt(easyhandle, CURLOPT_URL, target_url_.c_str());
-
+  std::vector<char> http_response_headers;
+  std::vector<char> http_response_body;
   if (proxy_url != brillo::http::kDirectProxy) {
     curl_easy_setopt(easyhandle, CURLOPT_PROXY, proxy_url.c_str());
     curl_easy_setopt(easyhandle, CURLOPT_HTTPPROXYTUNNEL, 1L);
@@ -235,24 +239,22 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   curl_easy_setopt(easyhandle, CURLOPT_CONNECTTIMEOUT_MS,
                    kCurlConnectTimeout.InMilliseconds());
   curl_easy_setopt(easyhandle, CURLOPT_HEADERFUNCTION, WriteHeadersCallback);
-  curl_easy_setopt(easyhandle, CURLOPT_HEADERDATA, &server_header_reply);
+  curl_easy_setopt(easyhandle, CURLOPT_HEADERDATA, &http_response_headers);
   curl_easy_setopt(easyhandle, CURLOPT_WRITEFUNCTION, WriteCallback);
-  curl_easy_setopt(easyhandle, CURLOPT_WRITEDATA, &server_body_reply);
+  curl_easy_setopt(easyhandle, CURLOPT_WRITEDATA, &http_response_body);
 
   res = curl_easy_perform(easyhandle);
+  curl_easy_getinfo(easyhandle, CURLINFO_HTTP_CONNECTCODE,
+                    &http_response_code_);
 
   if (res != CURLE_OK) {
     LOG(ERROR) << *this << " curl_easy_perform() failed with error: "
                << curl_easy_strerror(res);
     curl_easy_cleanup(easyhandle);
 
-    if (server_header_reply.size() > 0) {
-      // Send the error message from the remote server back to the client.
-      OnError(std::string_view(server_header_reply.data(),
-                               server_header_reply.size()));
-    } else {
-      OnError(kHttpInternalServerError);
-    }
+    SendHttpResponseToClient(/* http_response_headers= */ {},
+                             /* http_response_body= */ {});
+    std::move(setup_finished_callback_).Run(nullptr, this);
     return;
   }
   // Extract the socket from the curl handle.
@@ -271,28 +273,9 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
 
   // Send the server reply to the client. If the connection is successful, the
   // reply headers should be "HTTP/1.1 200 Connection Established".
-  if (client_socket_->SendTo(server_header_reply.data(),
-                             server_header_reply.size()) !=
-      server_header_reply.size()) {
-    PLOG(ERROR) << *this << " Failed to send HTTP reply headers to client: "
-                << base::StringPiece(server_header_reply.data(),
-                                     server_header_reply.size());
-    OnError(kHttpInternalServerError);
+  if (!SendHttpResponseToClient(http_response_headers, http_response_body)) {
+    std::move(setup_finished_callback_).Run(nullptr, this);
     return;
-  }
-  // HTTP CONNECT responses can have a payload body which should be forwarded to
-  // the client.
-  if (server_body_reply.size() > 0) {
-    // TODO(acostinas, chromium:1064536) Resend the reply body in case of EAGAIN
-    // or EWOULDBLOCK errors.
-    if (client_socket_->SendTo(server_body_reply.data(),
-                               server_body_reply.size()) !=
-        server_body_reply.size()) {
-      PLOG(ERROR) << *this
-                  << " Failed to send HTTP CONNECT reply body to client: "
-                  << base::StringPiece(server_body_reply.data(),
-                                       server_body_reply.size());
-    }
   }
 
   auto fwd = std::make_unique<patchpanel::SocketForwarder>(
@@ -301,6 +284,50 @@ void ProxyConnectJob::DoCurlServerConnection(const std::string& proxy_url) {
   // Start forwarding data between sockets.
   fwd->Start();
   std::move(setup_finished_callback_).Run(std::move(fwd), this);
+}
+
+bool ProxyConnectJob::SendHttpResponseToClient(
+    const std::vector<char>& http_response_headers,
+    const std::vector<char>& http_response_body) {
+  if (http_response_code_ == 0) {
+    // No HTTP CONNECT response code is available.
+    return client_socket_->SendTo(kHttpInternalServerError.data(),
+                                  kHttpInternalServerError.size());
+  }
+
+  if (http_response_code_ == kHttpCodeProxyAuthRequired) {
+    // This will be a hint for the user to authenticate via the Browser or
+    // acquire a Kerberos ticket.
+    return client_socket_->SendTo(kHttpProxyAuthRequired.data(),
+                                  kHttpProxyAuthRequired.size());
+  }
+
+  if (http_response_code_ >= 400) {
+    VLOG(1) << "Failed to set up HTTP tunnel with code " << http_response_code_;
+    std::string http_error = base::StringPrintf(
+        kHttpErrorTunnelFailed, std::to_string(http_response_code_).c_str());
+    return client_socket_->SendTo(http_error.c_str(), http_error.size());
+  }
+
+  if (http_response_headers.empty()) {
+    return client_socket_->SendTo(kHttpInternalServerError.data(),
+                                  kHttpInternalServerError.size());
+  }
+
+  VLOG(1) << "Sending server reply to client";
+  if (!client_socket_->SendTo(http_response_headers.data(),
+                              http_response_headers.size())) {
+    PLOG(ERROR) << "Failed to send HTTP server response headers to client";
+    return false;
+  }
+  if (!http_response_body.empty()) {
+    if (!client_socket_->SendTo(http_response_body.data(),
+                                http_response_body.size())) {
+      PLOG(ERROR) << "Failed to send HTTP server response payload to client";
+      return false;
+    }
+  }
+  return true;
 }
 
 void ProxyConnectJob::OnError(const std::string_view& http_error_message) {

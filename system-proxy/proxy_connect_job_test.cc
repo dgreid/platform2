@@ -105,6 +105,29 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
   EXPECT_TRUE(forwarder_created_);
 }
 
+TEST_F(ProxyConnectJobTest, TunnelFailedBadGatewayFromRemote) {
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kBadGateway);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
+  connect_job_->Start();
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_.RunOnce(false);
+
+  EXPECT_FALSE(forwarder_created_);
+
+  std::string expected_server_reply =
+      "HTTP/1.1 502 Error creating tunnel - Origin: local proxy\r\n\r\n";
+  std::vector<char> buf(expected_server_reply.size());
+  ASSERT_TRUE(cros_client_socket_->RecvFrom(buf.data(), buf.size()));
+  std::string actual_server_reply(buf.data(), buf.size());
+
+  EXPECT_EQ(expected_server_reply, actual_server_reply);
+}
+
 TEST_F(ProxyConnectJobTest, SuccessfulConnectionAltEnding) {
   HttpTestServer http_test_server;
   http_test_server.AddHttpConnectReply(HttpTestServer::HttpConnectReply::kOk);

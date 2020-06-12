@@ -10,6 +10,8 @@
 #include <string_view>
 #include <vector>
 
+#include <curl/curl.h>
+
 #include <base/callback_forward.h>
 #include <base/cancelable_callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
@@ -82,7 +84,18 @@ class ProxyConnectJob {
 
   void OnClientConnectTimeout();
 
+  // Sends the server response to the client. Returns true if the headers and
+  // body were sent successfully, false otherwise. In case of failure, calls
+  // |OnError|. The response headers and body can be empty if the libcurl
+  // connection fails. In this case, this will send the client an error message
+  // based on the HTTP status code |http_response_code_|.
+  bool SendHttpResponseToClient(const std::vector<char>& http_response_headers,
+                                const std::vector<char>& http_response_body);
+
   std::string target_url_;
+  // HTTP proxy response code to the CONNECT request.
+  int64_t http_response_code_ = 0;
+
   const std::string credentials_;
   std::list<std::string> proxy_servers_;
   ResolveProxyCallback resolve_proxy_callback_;
