@@ -130,6 +130,12 @@ to install/uninstall a DLC. For calling the dlcservice API inside Chrome,
 use [system_api] to send API calls. For calling dlcservice API outside of
 Chrome, use generated D-Bus bindings.
 
+If your daemon uses minijail, you will have to add `/run/imageloader/` to your
+minijail parameters to allow it access to that path by bind mounting the path,
+and depending on your current Seccomp filters, you might have to add some
+permissions to it. See
+[sandboxing].
+
 On a locally built test build|image, calling dlcservice API does not download
 the DLC (no DLC is being served). You need to
 [Install a DLC for dev/test] before calling dlcservice API.
@@ -165,17 +171,18 @@ each version of a DLC image is tied to the version of the OS image.
 Modifying a Chrome OS DLC is the same as modifying a Chrome OS package (ebuild).
 A DLC is updated at the same time the device itself is updated.
 
-[dlcservice]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/dlcservice
+[dlcservice]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/dlcservice
 [Enable DLC for your board]: #Enable-DLC-for-your-board
 [Create a DLC]: #Create-a-DLC
 [Write platform code to request DLC]: #Write-platform-code-to-request-DLC
 [Install a DLC for dev/test]: #install-a-dlc-for-devtest
 [Write tests for a DLC]: #Write-tests-for-a-DLC
 [dlc.eclass]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/eclass/dlc.eclass
-[system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/system_api
-[imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/refs/heads/master/imageloader/imageloader_impl.cc
+[sandboxing]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/sandboxing.md
+[system_api]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/system_api
+[imageloader_impl.cc]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/imageloader/imageloader_impl.cc
 [tast]: go/tast
 [tast-deps]: go/tast-deps
-[dummy-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
-[dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/chromeos/config/env/chromeos-base/dummy-dlc
-[overlay-eve make.defaults]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/refs/heads/master/overlay-eve/profiles/base/make.defaults
+[dummy-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
+[dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos/config/env/chromeos-base/dummy-dlc
+[overlay-eve make.defaults]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/overlay-eve/profiles/base/make.defaults
