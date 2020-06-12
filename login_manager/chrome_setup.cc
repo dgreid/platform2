@@ -211,6 +211,12 @@ void AddPluginVmFlags(ChromiumCommandBuilder* builder) {
   if (builder->UseFlagIsSet("pita")) {
     builder->AddFeatureEnableOverride("PluginVm");
   }
+  if (builder->UseFlagIsSet("pita-camera")) {
+    builder->AddFeatureEnableOverride("PluginVmShowCameraPermissions");
+  }
+  if (builder->UseFlagIsSet("pita-microphone")) {
+    builder->AddFeatureEnableOverride("PluginVmShowMicrophonePermissions");
+  }
 }
 
 void AddLacrosFlags(ChromiumCommandBuilder* builder) {
