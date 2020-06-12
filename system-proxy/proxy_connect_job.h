@@ -91,6 +91,7 @@ class ProxyConnectJob {
 
   std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;
+  base::WeakPtrFactory<ProxyConnectJob> weak_ptr_factory_{this};
 };
 }  // namespace system_proxy
 

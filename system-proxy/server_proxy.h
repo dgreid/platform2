@@ -62,6 +62,7 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, HandleConnectRequest);
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
   FRIEND_TEST(ServerProxyTest, SetupConnection);
+  FRIEND_TEST(ServerProxyTest, HandleCanceledJobWhilePendingProxyResolution);
 
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
 

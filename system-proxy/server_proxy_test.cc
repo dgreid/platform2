@@ -259,4 +259,44 @@ TEST_F(ServerProxyTest, HandlePendingJobs) {
   EXPECT_EQ(success_count, server_proxy_->forwarders_.size());
 }
 
+// Test to ensure proxy resolution requests are correctly handled if the
+// associated job is canceled before resolution.
+TEST_F(ServerProxyTest, HandleCanceledJobWhilePendingProxyResolution) {
+  server_proxy_->listening_addr_ = htonl(INADDR_LOOPBACK);
+  server_proxy_->listening_port_ = 3129;
+  // Redirect the worker stdin and stdout pipes.
+  RedirectStdPipes();
+  server_proxy_->CreateListeningSocket();
+  CHECK_NE(-1, server_proxy_->listening_fd_->fd());
+  brillo_loop_.RunOnce(false);
+
+  struct sockaddr_in ipv4addr;
+  ipv4addr.sin_family = AF_INET;
+  ipv4addr.sin_port = htons(3129);
+  ipv4addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+  auto client_socket =
+      std::make_unique<patchpanel::Socket>(AF_INET, SOCK_STREAM);
+  EXPECT_TRUE(client_socket->Connect((const struct sockaddr*)&ipv4addr,
+                                     sizeof(ipv4addr)));
+  brillo_loop_.RunOnce(false);
+
+  EXPECT_EQ(1, server_proxy_->pending_connect_jobs_.size());
+  const std::string_view http_req =
+      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
+  client_socket->SendTo(http_req.data(), http_req.size());
+
+  EXPECT_CALL(*server_proxy_, GetStdoutPipe())
+      .WillOnce(Return(stdout_write_fd_.get()));
+  brillo_loop_.RunOnce(false);
+
+  EXPECT_EQ(1, server_proxy_->pending_connect_jobs_.size());
+  server_proxy_->pending_connect_jobs_.clear();
+
+  EXPECT_EQ(1, server_proxy_->pending_proxy_resolution_requests_.size());
+  server_proxy_->OnProxyResolved("https://www.example.server.com:443", {});
+
+  EXPECT_EQ(0, server_proxy_->pending_proxy_resolution_requests_.size());
+}
+
 }  // namespace system_proxy

@@ -128,8 +128,8 @@ bool ProxyConnectJob::Start() {
       FROM_HERE, client_connect_timeout_callback_.callback(),
       kWaitClientConnectTimeout);
   read_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      client_socket_->fd(),
-      base::Bind(&ProxyConnectJob::OnClientReadReady, base::Unretained(this)));
+      client_socket_->fd(), base::Bind(&ProxyConnectJob::OnClientReadReady,
+                                       weak_ptr_factory_.GetWeakPtr()));
   return true;
 }
 
@@ -172,7 +172,7 @@ void ProxyConnectJob::OnClientReadReady() {
   std::move(resolve_proxy_callback_)
       .Run(base::StringPrintf("https://%s", target_url_.c_str()),
            base::Bind(&ProxyConnectJob::OnProxyResolution,
-                      base::Unretained(this)));
+                      weak_ptr_factory_.GetWeakPtr()));
 }
 
 bool ProxyConnectJob::TryReadHttpHeader(std::vector<char>* raw_request) {
