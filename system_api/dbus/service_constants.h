@@ -251,6 +251,16 @@ constexpr char kMlDecisionServiceInterface[] = "org.chromium.MlDecisionService";
 constexpr char kMlDecisionServiceShouldDeferScreenDimMethod[] =
     "ShouldDeferScreenDim";
 
+const char kVmPermissionServiceName[] = "org.chromium.VmPermissionService";
+const char kVmPermissionServicePath[] = "/org/chromium/VmPermissionService";
+const char kVmPermissionServiceInterface[] =
+    "org.chromium.VmPermissionServiceInterface";
+
+const char kVmPermissionServiceRegisterVmMethod[] = "RegisterVm";
+const char kVmPermissionServiceUnregisterVmMethod[] = "UnregisterVm";
+const char kVmPermissionServiceGetPermissionsMethod[] = "GetPermissions";
+const char kVmPermissionServiceSetPermissionsMethod[] = "SetPermissions";
+
 }  // namespace chromeos
 
 namespace media_perception {
