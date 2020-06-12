@@ -12,7 +12,6 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
-#include <brillo/cryptohome.h>
 #include <brillo/scoped_mount_namespace.h>
 
 #include "cros-disks/error_logger.h"
@@ -23,21 +22,12 @@
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 
-using ScopedMountNamespace = brillo::ScopedMountNamespace;
-
 namespace cros_disks {
 namespace {
 
 const char kExtension[] = ".rar";
-const char kChromeMountNamespacePath[] = "/run/namespaces/mnt_chrome";
 
 }  // namespace
-
-RarManager::RarManager(const std::string& mount_root,
-                       Platform* const platform,
-                       Metrics* const metrics,
-                       brillo::ProcessReaper* const reaper)
-    : MountManager(mount_root, platform, metrics, reaper) {}
 
 RarManager::~RarManager() {
   UnmountAll();
@@ -45,66 +35,25 @@ RarManager::~RarManager() {
 
 bool RarManager::CanMount(const std::string& source_path) const {
   // Check for expected file extension.
-  if (!base::EndsWith(source_path, kExtension,
-                      base::CompareCase::INSENSITIVE_ASCII))
-    return false;
-
-  // The following paths can be mounted:
-  //     /home/chronos/u-<user-id>/MyFiles/...<file>
-  //     /media/archive/<dir>/...<file>
-  //     /media/fuse/<dir>/...<file>
-  //     /media/removable/<dir>/...<file>
-  //     /run/arc/sdcard/write/emulated/0/<dir>/...<file>
-  std::vector<std::string> parts;
-  base::FilePath(source_path).GetComponents(&parts);
-
-  if (parts.size() < 2 || parts[0] != "/")
-    return false;
-
-  if (parts[1] == "home")
-    return parts.size() > 5 && parts[2] == "chronos" &&
-           base::StartsWith(parts[3], "u-", base::CompareCase::SENSITIVE) &&
-           brillo::cryptohome::home::IsSanitizedUserName(parts[3].substr(2)) &&
-           parts[4] == "MyFiles";
-
-  if (parts[1] == "media")
-    return parts.size() > 4 && (parts[2] == "archive" || parts[2] == "fuse" ||
-                                parts[2] == "removable");
-
-  if (parts[1] == "run")
-    return parts.size() > 8 && parts[2] == "arc" && parts[3] == "sdcard" &&
-           parts[4] == "write" && parts[5] == "emulated" && parts[6] == "0";
-
-  return false;
-}
-
-std::string RarManager::SuggestMountPath(const std::string& source_path) const {
-  const base::FilePath base_name = base::FilePath(source_path).BaseName();
-  return mount_root().Append(base_name).value();
-}
-
-bool RarManager::ResolvePath(const std::string& path, std::string* real_path) {
-  std::unique_ptr<ScopedMountNamespace> guard =
-      ScopedMountNamespace::CreateFromPath(
-          base::FilePath(kChromeMountNamespacePath));
-
-  // If the path doesn't exist in Chrome's mount namespace, exit the namespace,
-  // so that GetRealPath() below gets executed in cros-disks's mount namespace.
-  if (!base::PathExists(base::FilePath(path)))
-    guard.reset();
-
-  return platform()->GetRealPath(path, real_path);
+  return base::EndsWith(source_path, kExtension,
+                        base::CompareCase::INSENSITIVE_ASCII) &&
+         IsInAllowedFolder(source_path);
 }
 
 std::unique_ptr<MountPoint> RarManager::DoMount(
     const std::string& source_path,
-    const std::string& /*filesystem_type*/,
-    const std::vector<std::string>& /*options*/,
+    const std::string& filesystem_type,
+    const std::vector<std::string>& original_options,
     const base::FilePath& mount_path,
     MountOptions* const applied_options,
     MountErrorType* const error) {
   DCHECK(applied_options);
   DCHECK(error);
+
+  if (filesystem_type != ".rar2fs")
+    return ArchiveManager::DoMount(source_path, filesystem_type,
+                                   original_options, mount_path,
+                                   applied_options, error);
 
   metrics()->RecordArchiveType("rar");
 
@@ -139,9 +88,8 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
   // Determine which mount namespace to use.
   {
     // Attempt to enter the Chrome mount namespace, if it exists.
-    std::unique_ptr<ScopedMountNamespace> guard =
-        ScopedMountNamespace::CreateFromPath(
-            base::FilePath(kChromeMountNamespacePath));
+    auto guard = brillo::ScopedMountNamespace::CreateFromPath(
+        base::FilePath(kChromeMountNamespacePath));
 
     if (guard) {
       // Check if the source path exists in Chrome's mount namespace.

@@ -24,7 +24,11 @@ class ArchiveManager : public MountManager {
                  Platform* platform,
                  Metrics* metrics,
                  brillo::ProcessReaper* process_reaper);
+
   ~ArchiveManager() override;
+
+  // MountManager overrides
+  bool ResolvePath(const std::string& path, std::string* real_path) final;
 
   // Initializes the manager and registers default file extensions.
   // Returns true on success.
@@ -37,7 +41,7 @@ class ArchiveManager : public MountManager {
   bool CanMount(const std::string& source_path) const override;
 
   // Returns the type of mount sources supported by the manager.
-  MountSourceType GetMountSourceType() const override {
+  MountSourceType GetMountSourceType() const final {
     return MOUNT_SOURCE_ARCHIVE;
   }
 
@@ -51,8 +55,15 @@ class ArchiveManager : public MountManager {
   void RegisterFileExtension(const std::string& extension,
                              const std::string& avfs_handler);
 
-  // Allows to deactivate ArchiveManager for RarManager to kick in.
-  static void SetActive(bool active) { is_active_ = active; }
+  // Checks if the given file path is in an allowed location to be mounted as an
+  // archive. The following paths can be mounted:
+  //
+  //     /home/chronos/u-<user-id>/MyFiles/...<file>
+  //     /media/archive/<dir>/...<file>
+  //     /media/fuse/<dir>/...<file>
+  //     /media/removable/<dir>/...<file>
+  //     /run/arc/sdcard/write/emulated/0/<dir>/...<file>
+  static bool IsInAllowedFolder(const std::string& source_path);
 
  protected:
   // Mounts |source_path| to |mount_path| as |source_format| with |options|.
@@ -72,6 +83,8 @@ class ArchiveManager : public MountManager {
 
   // Returns a suggested mount path for a source path.
   std::string SuggestMountPath(const std::string& source_path) const override;
+
+  static const char* const kChromeMountNamespacePath;
 
  private:
   // MountPoint implementation that calls RemoveMountVirtualPath() on successful
@@ -130,9 +143,6 @@ class ArchiveManager : public MountManager {
   // Mapping of AVFS daemon mount path to MountPoint. Should contain one entry
   // per running AVFS daemon.
   std::map<base::FilePath, std::unique_ptr<MountPoint>> avfsd_mounts_;
-
-  // Allows to deactivate ArchiveManager for RarManager to kick in.
-  static bool is_active_;
 
   FRIEND_TEST(ArchiveManagerTest, GetAVFSPath);
   FRIEND_TEST(ArchiveManagerTest, GetAVFSPathWithInvalidPaths);

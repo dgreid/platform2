@@ -27,8 +27,6 @@ Daemon::Daemon(bool has_session_manager)
     : brillo::DBusServiceDaemon(kCrosDisksServiceName),
       has_session_manager_(has_session_manager),
       device_ejector_(&process_reaper_),
-      archive_manager_(
-          kArchiveMountRootDirectory, &platform_, &metrics_, &process_reaper_),
       rar_manager_(
           kArchiveMountRootDirectory, &platform_, &metrics_, &process_reaper_),
       disk_monitor_(),
@@ -48,8 +46,6 @@ Daemon::Daemon(bool has_session_manager)
   CHECK(platform_.SetMountUser(kNonPrivilegedMountUser))
       << quote(kNonPrivilegedMountUser)
       << " is not available for non-privileged mount operations";
-  CHECK(archive_manager_.Initialize())
-      << "Failed to initialize the archive manager";
   CHECK(rar_manager_.Initialize()) << "Failed to initialize the RAR manager";
   CHECK(disk_manager_.Initialize()) << "Failed to initialize the disk manager";
   CHECK(fuse_manager_.Initialize()) << "Failed to initialize the FUSE manager";
@@ -65,8 +61,6 @@ void Daemon::RegisterDBusObjectsAsync(
 
   // Register mount managers with the commonly used ones come first.
   server_->RegisterMountManager(&disk_manager_);
-  // The order matters here: archive_manager_ registered before rar_manager_.
-  server_->RegisterMountManager(&archive_manager_);
   server_->RegisterMountManager(&rar_manager_);
   server_->RegisterMountManager(&fuse_manager_);
 

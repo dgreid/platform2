@@ -16,6 +16,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <brillo/cryptohome.h>
+#include <brillo/scoped_mount_namespace.h>
 
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_helper.h"
@@ -27,9 +28,6 @@
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 #include "cros-disks/system_mounter.h"
-
-// TODO(benchan): Remove entire archive manager after deprecating the rar
-// support (see chromium:707327).
 
 namespace cros_disks {
 namespace {
@@ -63,7 +61,8 @@ const char kAVFSSubdirOptionPrefix[] = "subdir=";
 
 }  // namespace
 
-bool ArchiveManager::is_active_ = true;
+const char* const ArchiveManager::kChromeMountNamespacePath =
+    "/run/namespaces/mnt_chrome";
 
 class ArchiveManager::ArchiveMountPoint : public MountPoint {
  public:
@@ -118,45 +117,44 @@ bool ArchiveManager::StopSession() {
   return StopAVFS();
 }
 
+bool ArchiveManager::ResolvePath(const std::string& path,
+                                 std::string* real_path) {
+  auto guard = brillo::ScopedMountNamespace::CreateFromPath(
+      base::FilePath(kChromeMountNamespacePath));
+
+  // If the path doesn't exist in Chrome's mount namespace, exit the namespace,
+  // so that GetRealPath() below gets executed in cros-disks's mount namespace.
+  if (!base::PathExists(base::FilePath(path)))
+    guard.reset();
+
+  return platform()->GetRealPath(path, real_path);
+}
+
 bool ArchiveManager::CanMount(const std::string& source_path) const {
-  if (!is_active_)
+  return IsInAllowedFolder(source_path);
+}
+
+bool ArchiveManager::IsInAllowedFolder(const std::string& source_path) {
+  std::vector<std::string> parts;
+  base::FilePath(source_path).GetComponents(&parts);
+
+  if (parts.size() < 2 || parts[0] != "/")
     return false;
 
-  // The following paths can be mounted:
-  //     /home/chronos/u-<user-id>/Downloads/...<file>
-  //     /home/chronos/u-<user-id>/MyFiles/...<file>
-  //     /home/chronos/u-<user-id>/GCache/...<file>
-  //     /media/<dir>/<dir>/...<file>
-  //
-  base::FilePath file_path(source_path);
-  if (base::FilePath(kUserRootDirectory).IsParent(file_path)) {
-    std::vector<std::string> components;
-    file_path.StripTrailingSeparators().GetComponents(&components);
-    // The file path of an archive file under a user's Downloads or GCache
-    // directory path is split into the following components:
-    //   '/', 'home', 'chronos', 'u-<userid>', 'Downloads', ..., 'doc.zip'
-    //   '/', 'home', 'chronos', 'u-<userid>', 'GCache', ..., 'doc.zip'
-    if (components.size() > 5 &&
-        (base::StartsWith(components[3], "u-",
-                          base::CompareCase::INSENSITIVE_ASCII) &&
-         brillo::cryptohome::home::IsSanitizedUserName(
-             components[3].substr(2))) &&
-        (components[4] == "Downloads" || components[4] == "GCache" ||
-         components[4] == "MyFiles")) {
-      return true;
-    }
-  }
+  if (parts[1] == "home")
+    return parts.size() > 5 && parts[2] == "chronos" &&
+           base::StartsWith(parts[3], "u-", base::CompareCase::SENSITIVE) &&
+           brillo::cryptohome::home::IsSanitizedUserName(parts[3].substr(2)) &&
+           parts[4] == "MyFiles";
 
-  if (base::FilePath(kMediaDirectory).IsParent(file_path)) {
-    std::vector<std::string> components;
-    file_path.StripTrailingSeparators().GetComponents(&components);
-    // A mount directory is always created under /media/<sub type>/<mount dir>,
-    // so the file path of an archive file under a mount directory is split
-    // into more than 4 components:
-    //   '/', 'media', 'removable', 'usb', ..., 'doc.zip'
-    if (components.size() > 4)
-      return true;
-  }
+  if (parts[1] == "media")
+    return parts.size() > 4 && (parts[2] == "archive" || parts[2] == "fuse" ||
+                                parts[2] == "removable");
+
+  if (parts[1] == "run")
+    return parts.size() > 8 && parts[2] == "arc" && parts[3] == "sdcard" &&
+           parts[4] == "write" && parts[5] == "emulated" && parts[6] == "0";
+
   return false;
 }
 

@@ -79,15 +79,11 @@ TEST_F(ArchiveManagerTest, CanMount) {
   EXPECT_TRUE(
       manager_.CanMount("/home/chronos"
                         "/u-0123456789abcdef0123456789abcdef01234567"
-                        "/Downloads/test1.zip"));
+                        "/MyFiles/Downloads/test1.zip"));
   EXPECT_TRUE(
       manager_.CanMount("/home/chronos"
                         "/u-0123456789abcdef0123456789abcdef01234567"
                         "/MyFiles/test1.zip"));
-  EXPECT_TRUE(
-      manager_.CanMount("/home/chronos"
-                        "/u-0123456789abcdef0123456789abcdef01234567"
-                        "/GCache/test1.zip"));
   EXPECT_FALSE(manager_.CanMount(""));
   EXPECT_FALSE(manager_.CanMount("/tmp"));
   EXPECT_FALSE(manager_.CanMount("/media/removable"));

@@ -9,7 +9,6 @@
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 
-#include "cros-disks/archive_manager.h"
 #include "cros-disks/device_event.h"
 #include "cros-disks/disk.h"
 #include "cros-disks/disk_manager.h"
@@ -107,9 +106,6 @@ MountManager* CrosDisksServer::FindMounter(
 void CrosDisksServer::Mount(const std::string& source,
                             const std::string& filesystem_type,
                             const std::vector<std::string>& options) {
-  if (base::StringPiece(filesystem_type).starts_with(".rar"))
-    ArchiveManager::SetActive(filesystem_type != ".rar2fs");
-
   MountErrorType error_type = MOUNT_ERROR_INVALID_PATH;
   MountSourceType source_type = MOUNT_SOURCE_INVALID;
   std::string mount_path;

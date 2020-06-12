@@ -12,32 +12,21 @@
 #include <base/strings/string_piece.h>
 #include <gtest/gtest_prod.h>
 
+#include "cros-disks/archive_manager.h"
 #include "cros-disks/fuse_mounter.h"
-#include "cros-disks/mount_manager.h"
 
 namespace cros_disks {
 
 // A MountManager mounting RAR archives as virtual filesystems using rar2fs.
-class RarManager : public MountManager {
+class RarManager : public ArchiveManager {
  public:
-  RarManager(const std::string& mount_root,
-             Platform* platform,
-             Metrics* metrics,
-             brillo::ProcessReaper* reaper);
+  using ArchiveManager::ArchiveManager;
 
   ~RarManager() override;
 
  private:
-  // MountManager overrides
-  MountSourceType GetMountSourceType() const override {
-    return MOUNT_SOURCE_ARCHIVE;
-  }
-
-  bool ResolvePath(const std::string& path, std::string* real_path) override;
-
+  // ArchiveManager overrides
   bool CanMount(const std::string& source_path) const override;
-
-  std::string SuggestMountPath(const std::string& source_path) const override;
 
   std::unique_ptr<MountPoint> DoMount(const std::string& source_path,
                                       const std::string& filesystem_type,
