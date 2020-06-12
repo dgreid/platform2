@@ -401,8 +401,7 @@ bool DlcBase::FinishInstall(ErrorPtr* err) {
 
         ErrorPtr tmp_err;
         if (!CancelInstall(*err, &tmp_err))
-          LOG(ERROR) << "Failed during install finalization: "
-                     << Error::ToString(tmp_err) << " for DLC=" << id_;
+          LOG(ERROR) << "Failed during install finalization for DLC=" << id_;
         return false;
       }
     case DlcState::NOT_INSTALLED:
@@ -429,8 +428,7 @@ bool DlcBase::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
   // Consider as not installed even if delete fails below, correct errors
   // will be propagated later and should not block on further installs.
   if (!DeleteInternal(err)) {
-    LOG(ERROR) << "Failed during install cancellation: "
-               << Error::ToString(*err) << " for DLC " << id_;
+    LOG(ERROR) << "Failed during install cancellation for DLC=" << id_;
     return false;
   }
   return true;

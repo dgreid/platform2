@@ -84,7 +84,7 @@ bool DlcService::Install(const DlcId& id,
   // Try to install and figure out if install through update_engine is needed.
   bool external_install_needed = false;
   if (!dlc_manager_->Install(id, &external_install_needed, err)) {
-    LOG(ERROR) << Error::ToString(*err);
+    LOG(ERROR) << "Failed to install DLC=" << id;
     return false;
   }
 
@@ -97,7 +97,7 @@ bool DlcService::Install(const DlcId& id,
     // install the initialized DLC.
     ErrorPtr tmp_err;
     if (!dlc_manager_->CancelInstall(id, *err, &tmp_err))
-      LOG(ERROR) << Error::ToString(tmp_err);
+      LOG(ERROR) << "Failed to cancel install.";
 
     return false;
   }
@@ -181,7 +181,7 @@ bool DlcService::UpdateCompleted(const DlcIdList& ids, ErrorPtr* err) {
 void DlcService::CancelInstall(const ErrorPtr& err_in) {
   ErrorPtr tmp_err;
   if (!dlc_manager_->CancelInstall(err_in, &tmp_err))
-    LOG(ERROR) << Error::ToString(tmp_err);
+    LOG(ERROR) << "Failed to cancel install.";
 }
 
 void DlcService::PeriodicInstallCheck() {
@@ -246,7 +246,7 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
       LOG(INFO)
           << "Signal from update_engine, proceeding to complete installation.";
       if (!dlc_manager_->FinishInstall(err)) {
-        LOG(ERROR) << "Failed to finish install: " << Error::ToString(*err);
+        LOG(ERROR) << "Failed to finish install.";
         return false;
       }
       return true;

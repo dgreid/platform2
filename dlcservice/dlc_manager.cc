@@ -93,8 +93,7 @@ void DlcManager::CleanupDanglingDlcs() {
                 << "dangling.";
       brillo::ErrorPtr error;
       if (!dlc.Purge(&error)) {
-        LOG(ERROR) << "Failed to delete dangling DLC=" << dlc.GetId()
-                   << " with error: " << Error::ToString(error);
+        LOG(ERROR) << "Failed to delete dangling DLC=" << dlc.GetId();
       }
     }
   }
@@ -160,7 +159,7 @@ bool DlcManager::InstallCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
                    << id;
       ret = false;
     } else if (!dlc->InstallCompleted(err)) {
-      PLOG(WARNING) << Error::ToString(*err);
+      PLOG(WARNING) << "Failed to complete install.";
       ret = false;
     }
   }
@@ -178,7 +177,7 @@ bool DlcManager::UpdateCompleted(const DlcIdList& ids, brillo::ErrorPtr* err) {
       LOG(WARNING) << "Trying to complete update for unsupported DLC=" << id;
       ret = false;
     } else if (!dlc->UpdateCompleted(err)) {
-      LOG(WARNING) << Error::ToString(*err);
+      LOG(WARNING) << "Failed to complete update.";
       ret = false;
     }
   }
@@ -264,8 +263,7 @@ bool DlcManager::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
   bool ret = true;
   for (auto& pr : supported_) {
     if (!CancelInstall(pr.first, err_in, err)) {
-      LOG(ERROR) << "Failed during install cancellation: "
-                 << Error::ToString(*err);
+      LOG(ERROR) << "Failed during install cancellation.";
       ret = false;
     }
   }
