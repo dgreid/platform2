@@ -7,6 +7,8 @@
 213:302
 # fuse-rar2fs
 213:308
+# fuse-zip
+213:309
 # fuse-sshfs
 213:305
 # nobody
