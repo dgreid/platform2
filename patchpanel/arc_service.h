@@ -30,7 +30,6 @@ class ArcService {
    public:
     virtual ~Impl() = default;
 
-    virtual GuestMessage::GuestType guest() const = 0;
     virtual uint32_t id() const = 0;
 
     // Returns the list of device configurations that were provided to the
@@ -41,29 +40,23 @@ class ArcService {
     virtual bool Start(uint32_t id) = 0;
     virtual void Stop(uint32_t id) = 0;
     virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
+    // Enables the datapath for a physical Device. This is never called for
+    // the ARC management device.
     virtual bool OnStartDevice(Device* device) = 0;
+    // Disables the datapath for a physical Device. This is never called for
+    // the ARC management device.
     virtual void OnStopDevice(Device* device) = 0;
-    virtual void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                           const std::string& prev_ifname) = 0;
 
    protected:
     Impl() = default;
-
-    // For now each implementation manages its own ARC device since ARCVM is
-    // still single-networked.
-    std::unique_ptr<Device> arc_device_;
   };
 
   // Encapsulates all ARC++ container-specific logic.
   class ContainerImpl : public Impl {
    public:
-    ContainerImpl(Datapath* datapath,
-                  AddressManager* addr_mgr,
-                  TrafficForwarder* forwarder,
-                  GuestMessage::GuestType guest);
+    ContainerImpl(Datapath* datapath, TrafficForwarder* forwarder);
     ~ContainerImpl() = default;
 
-    GuestMessage::GuestType guest() const override;
     uint32_t id() const override;
     std::vector<const Device::Config*> GetDeviceConfigs() const override {
       return {};
@@ -74,15 +67,11 @@ class ArcService {
     bool IsStarted(uint32_t* pid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
-    void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                   const std::string& prev_ifname) override;
 
    private:
     uint32_t pid_;
     Datapath* datapath_;
-    AddressManager* addr_mgr_;
     TrafficForwarder* forwarder_;
-    GuestMessage::GuestType guest_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
     DISALLOW_COPY_AND_ASSIGN(ContainerImpl);
@@ -94,14 +83,11 @@ class ArcService {
     // |configs| is an optional list of device configurations that, if provided,
     // will be used to pre-allocated and associate them, when necessary, to
     // devices as they are added. The caller retains ownership of the pointers.
-    VmImpl(ShillClient* shill_client,
-           Datapath* datapath,
-           AddressManager* addr_mgr,
+    VmImpl(Datapath* datapath,
            TrafficForwarder* forwarder,
            const std::vector<Device::Config*>& configs);
     ~VmImpl() = default;
 
-    GuestMessage::GuestType guest() const override;
     uint32_t id() const override;
     std::vector<const Device::Config*> GetDeviceConfigs() const override;
 
@@ -110,20 +96,10 @@ class ArcService {
     bool IsStarted(uint32_t* cid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
     void OnStopDevice(Device* device) override;
-    void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                   const std::string& prev_ifname) override;
 
    private:
-    // TODO(garrick): Remove once ARCVM P is gone.
-    bool OnStartArcPDevice();
-    void OnStopArcPDevice();
-
-    bool IsMultinetEnabled() const;
-
     uint32_t cid_;
-    const ShillClient* const shill_client_;
     Datapath* datapath_;
-    AddressManager* addr_mgr_;
     TrafficForwarder* forwarder_;
     std::vector<Device::Config*> configs_;
 
@@ -142,7 +118,7 @@ class ArcService {
              Datapath* datapath,
              AddressManager* addr_mgr,
              TrafficForwarder* forwarder,
-             bool enable_arcvm_multinet);
+             GuestMessage::GuestType guest);
   ~ArcService();
 
   bool Start(uint32_t id);
@@ -159,11 +135,6 @@ class ArcService {
   // (e.g. "eth0", "wlan0", etc).
   void OnDevicesChanged(const std::set<std::string>& added,
                         const std::set<std::string>& removed);
-
-  // Callback from ShillClient, invoked whenever the default network
-  // interface changes or goes away.
-  void OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                 const std::string& prev_ifname);
 
   // Build and configure an ARC device for the interface |name| provided by
   // Shill. The new device will be added to |devices_|. If an implementation is
@@ -203,23 +174,39 @@ class ArcService {
   Datapath* datapath_;
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
-  bool enable_arcvm_multinet_;
+  GuestMessage::GuestType guest_;
   std::unique_ptr<Impl> impl_;
+  // A set of preallocated device configurations keyed by technology type and
+  // used for setting up ARCVM tap devices at VM booting time.
   std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>> configs_;
+  // The ARC device configurations corresponding to the host physical devices,
+  // keyed by device interface name.
   std::map<std::string, std::unique_ptr<Device>> devices_;
+  // The ARC management device used for legacy adb-over-tcp support and VPN
+  // forwarding.
+  std::unique_ptr<Device> arc_device_;
 
-  FRIEND_TEST(ArcServiceTest, StartDevice);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_OnStartDevice);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_FailsToConfigureInterface);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_OnStopDevice);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_Start);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_FailsToCreateInterface);
+  FRIEND_TEST(ArcServiceTest, ContainerImpl_Stop);
+  FRIEND_TEST(ArcServiceTest, NotStarted_AddDevice);
+  FRIEND_TEST(ArcServiceTest, NotStarted_AddRemoveDevice);
+  FRIEND_TEST(ArcServiceTest, StableArcVmMacAddrs);
   FRIEND_TEST(ArcServiceTest, StopDevice);
   FRIEND_TEST(ArcServiceTest, VerifyAddrConfigs);
   FRIEND_TEST(ArcServiceTest, VerifyAddrOrder);
+  FRIEND_TEST(ArcServiceTest, VmImpl_Start);
+  FRIEND_TEST(ArcServiceTest, VmImpl_StartDevice);
+  FRIEND_TEST(ArcServiceTest, VmImpl_StartMultipleDevices);
+  FRIEND_TEST(ArcServiceTest, VmImpl_Stop);
+  FRIEND_TEST(ArcServiceTest, VmImpl_StopDevice);
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(ArcService);
 };
-
-namespace test {
-extern GuestMessage::GuestType guest;
-}  // namespace test
 
 }  // namespace patchpanel
 

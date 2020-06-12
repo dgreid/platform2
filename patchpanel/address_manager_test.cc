@@ -20,8 +20,7 @@ namespace patchpanel {
 TEST(AddressManager, BaseAddresses) {
   std::map<AddressManager::Guest, size_t> addrs = {
       {AddressManager::Guest::ARC, Ipv4Addr(100, 115, 92, 0)},
-      {AddressManager::Guest::VM_ARC, Ipv4Addr(100, 115, 92, 4)},
-      {AddressManager::Guest::ARC_NET, Ipv4Addr(100, 115, 92, 8)},
+      {AddressManager::Guest::ARC_NET, Ipv4Addr(100, 115, 92, 4)},
       {AddressManager::Guest::VM_TERMINA, Ipv4Addr(100, 115, 92, 24)},
       {AddressManager::Guest::VM_PLUGIN, Ipv4Addr(100, 115, 93, 0)},
       {AddressManager::Guest::CONTAINER, Ipv4Addr(100, 115, 92, 192)},
@@ -40,7 +39,6 @@ TEST(AddressManager, BaseAddresses) {
 TEST(AddressManager, AddressesPerSubnet) {
   std::map<AddressManager::Guest, size_t> addrs = {
       {AddressManager::Guest::ARC, 2},
-      {AddressManager::Guest::VM_ARC, 2},
       {AddressManager::Guest::ARC_NET, 2},
       {AddressManager::Guest::VM_TERMINA, 2},
       {AddressManager::Guest::VM_PLUGIN, 6},
@@ -58,8 +56,7 @@ TEST(AddressManager, AddressesPerSubnet) {
 TEST(AddressManager, SubnetsPerPool) {
   std::map<AddressManager::Guest, size_t> addrs = {
       {AddressManager::Guest::ARC, 1},
-      {AddressManager::Guest::VM_ARC, 1},
-      {AddressManager::Guest::ARC_NET, 4},
+      {AddressManager::Guest::ARC_NET, 5},
       {AddressManager::Guest::VM_TERMINA, 26},
       {AddressManager::Guest::VM_PLUGIN, 32},
       {AddressManager::Guest::CONTAINER, 4},
@@ -81,7 +78,6 @@ TEST(AddressManager, SubnetsPerPool) {
 TEST(AddressManager, SubnetIndexing) {
   AddressManager mgr;
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC, 1));
-  EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_ARC, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::ARC_NET, 1));
   EXPECT_FALSE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_TERMINA, 1));
   EXPECT_TRUE(mgr.AllocateIPv4Subnet(AddressManager::Guest::VM_PLUGIN, 1));

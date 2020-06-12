@@ -31,17 +31,11 @@
 #include "patchpanel/scoped_ns.h"
 
 namespace patchpanel {
-namespace test {
-GuestMessage::GuestType guest = GuestMessage::UNKNOWN_GUEST;
-}  // namespace test
-
 namespace {
 constexpr pid_t kInvalidPID = 0;
 constexpr uint32_t kInvalidCID = 0;
 constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
-constexpr char kArcVmIfname[] = "arc1";
-constexpr char kArcVmBridge[] = "arc_br1";
 constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
 constexpr std::array<const char*, 2> kWifiInterfacePrefixes{{"wlan", "mlan"}};
 constexpr std::array<const char*, 2> kCellInterfacePrefixes{{"wwan", "rmnet"}};
@@ -122,21 +116,6 @@ void OneTimeSetup(const Datapath& datapath) {
   done = true;
 }
 
-bool IsArcVm() {
-  if (test::guest != GuestMessage::UNKNOWN_GUEST) {
-    LOG(WARNING) << "Overridden for testing";
-    return test::guest == GuestMessage::ARC_VM;
-  }
-  return USE_ARCVM;
-}
-
-GuestMessage::GuestType ArcGuest() {
-  if (test::guest != GuestMessage::UNKNOWN_GUEST)
-    return test::guest;
-
-  return IsArcVm() ? GuestMessage::ARC_VM : GuestMessage::ARC;
-}
-
 ArcService::InterfaceType InterfaceTypeFor(const std::string& ifname) {
   for (const auto& prefix : kEthernetInterfacePrefixes) {
     if (base::StartsWith(ifname, prefix,
@@ -189,8 +168,10 @@ bool IsMulticastInterface(const std::string& ifname) {
 
 // Returns the configuration for the ARC management interface used for VPN
 // forwarding, ADB-over-TCP and single-networked ARCVM.
-std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
-                                              AddressManager::Guest guest) {
+std::unique_ptr<Device::Config> MakeArcConfig(
+    AddressManager* addr_mgr,
+    AddressManager::Guest guest,
+    GuestMessage::GuestType guest_type) {
   auto ipv4_subnet = addr_mgr->AllocateIPv4Subnet(guest);
   if (!ipv4_subnet) {
     LOG(ERROR) << "Subnet already in use or unavailable";
@@ -207,10 +188,11 @@ std::unique_ptr<Device::Config> MakeArcConfig(AddressManager* addr_mgr,
     return nullptr;
   }
 
+  int subnet_index = (guest_type == GuestMessage::ARC_VM) ? 1 : kAnySubnetIndex;
+
   return std::make_unique<Device::Config>(
-      addr_mgr->GenerateMacAddress(IsArcVm() ? 1 : kAnySubnetIndex),
-      std::move(ipv4_subnet), std::move(host_ipv4_addr),
-      std::move(guest_ipv4_addr));
+      addr_mgr->GenerateMacAddress(subnet_index), std::move(ipv4_subnet),
+      std::move(host_ipv4_addr), std::move(guest_ipv4_addr));
 }
 
 }  // namespace
@@ -219,18 +201,16 @@ ArcService::ArcService(ShillClient* shill_client,
                        Datapath* datapath,
                        AddressManager* addr_mgr,
                        TrafficForwarder* forwarder,
-                       bool enable_arcvm_multinet)
+                       GuestMessage::GuestType guest)
     : shill_client_(shill_client),
       datapath_(datapath),
       addr_mgr_(addr_mgr),
       forwarder_(forwarder),
-      enable_arcvm_multinet_(enable_arcvm_multinet) {
+      guest_(guest) {
   AllocateAddressConfigs();
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
   shill_client_->ScanDevices();
-  shill_client_->RegisterDefaultInterfaceChangedHandler(base::Bind(
-      &ArcService::OnDefaultInterfaceChanged, weak_factory_.GetWeakPtr()));
 }
 
 ArcService::~ArcService() {
@@ -242,24 +222,19 @@ ArcService::~ArcService() {
 void ArcService::AllocateAddressConfigs() {
   configs_.clear();
   // The first usable subnet is the "other" ARC device subnet.
-  // TODO(garrick): This can be removed and ARC_NET will be widened once ARCVM
-  // switches over to use .0/30.
-  const bool is_arcvm = IsArcVm();
-  AddressManager::Guest alloc =
-      is_arcvm ? AddressManager::Guest::ARC : AddressManager::Guest::VM_ARC;
   // As a temporary workaround, for ARCVM, allocate fixed MAC addresses.
   uint8_t mac_addr_index = 2;
   // Allocate 2 subnets each for Ethernet and WiFi and 1 for LTE WAN interfaces.
   for (const auto itype :
        {InterfaceType::ETHERNET, InterfaceType::ETHERNET, InterfaceType::WIFI,
         InterfaceType::WIFI, InterfaceType::CELL}) {
-    auto ipv4_subnet = addr_mgr_->AllocateIPv4Subnet(alloc);
+    auto ipv4_subnet =
+        addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
     if (!ipv4_subnet) {
       LOG(ERROR) << "Subnet already in use or unavailable";
       continue;
     }
     // For here out, use the same slices.
-    alloc = AddressManager::Guest::ARC_NET;
     auto host_ipv4_addr = ipv4_subnet->AllocateAtOffset(0);
     if (!host_ipv4_addr) {
       LOG(ERROR) << "Bridge address already in use or unavailable";
@@ -271,10 +246,9 @@ void ArcService::AllocateAddressConfigs() {
       continue;
     }
 
-    MacAddress mac_addr = is_arcvm
+    MacAddress mac_addr = (guest_ == GuestMessage::ARC_VM)
                               ? addr_mgr_->GenerateMacAddress(mac_addr_index++)
                               : addr_mgr_->GenerateMacAddress();
-
     configs_[itype].emplace_back(std::make_unique<Device::Config>(
         mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
         std::move(guest_ipv4_addr)));
@@ -291,10 +265,9 @@ std::vector<Device::Config*> ArcService::ReallocateAddressConfigs() {
   }
   AllocateAddressConfigs();
   std::vector<Device::Config*> configs;
-  if (enable_arcvm_multinet_) {
-    for (const auto& kv : configs_)
-      for (const auto& c : kv.second)
-        configs.push_back(c.get());
+  for (const auto& kv : configs_) {
+    for (const auto& c : kv.second)
+      configs.push_back(c.get());
   }
   for (const auto& d : existing_devices) {
     AddDevice(d);
@@ -344,18 +317,62 @@ bool ArcService::Start(uint32_t id) {
   }
 
   auto configs = ReallocateAddressConfigs();
-  const auto guest = ArcGuest();
-  if (guest == GuestMessage::ARC_VM) {
-    impl_ = std::make_unique<VmImpl>(shill_client_, datapath_, addr_mgr_,
-                                     forwarder_, configs);
+  std::unique_ptr<Device::Config> arc_device_config =
+      MakeArcConfig(addr_mgr_, AddressManager::Guest::ARC, guest_);
+  if (guest_ == GuestMessage::ARC_VM) {
+    // Append arc0 config separately from ArcService::ReallocateAddressConfigs()
+    // so that VmImpl::Start() can create the necessary tap device.
+    configs.insert(configs.begin(), arc_device_config.get());
+    impl_ = std::make_unique<VmImpl>(datapath_, forwarder_, configs);
   } else {
-    impl_ = std::make_unique<ContainerImpl>(datapath_, addr_mgr_, forwarder_,
-                                            guest);
+    impl_ = std::make_unique<ContainerImpl>(datapath_, forwarder_);
   }
   if (!impl_->Start(id)) {
     impl_.reset();
     return false;
   }
+
+  // Create the bridge for the management device arc0.
+  // Per crbug/1008686 this device cannot be deleted and then re-added.
+  // So instead of removing the bridge when the service stops, bring down the
+  // device instead and re-up it on restart.
+  if (!datapath_->AddBridge(kArcBridge, arc_device_config->host_ipv4_addr(),
+                            30) &&
+      !datapath_->MaskInterfaceFlags(kArcBridge, IFF_UP)) {
+    LOG(ERROR) << "Failed to bring up arc bridge " << kArcBridge;
+    return false;
+  }
+
+  Device::Options opts{
+      .fwd_multicast = false,
+      .ipv6_enabled = false,
+  };
+  arc_device_ = std::make_unique<Device>(kArcIfname, kArcBridge, kArcIfname,
+                                         std::move(arc_device_config), opts);
+
+  std::string arc_device_ifname;
+  if (guest_ == GuestMessage::ARC_VM) {
+    arc_device_ifname = arc_device_->config().tap_ifname();
+    // The tap device associated with arc_device is created by VmImpl::Start().
+  } else {
+    arc_device_ifname = ArcVethHostName(arc_device_->guest_ifname());
+    if (!datapath_->ConnectVethPair(impl_->id(), arc_device_ifname,
+                                    arc_device_->guest_ifname(),
+                                    arc_device_->config().mac_addr(),
+                                    arc_device_->config().guest_ipv4_addr(), 30,
+                                    arc_device_->options().fwd_multicast)) {
+      LOG(ERROR) << "Cannot create virtual link for device "
+                 << arc_device_->phys_ifname();
+      return false;
+    }
+  }
+
+  if (!datapath_->AddToBridge(kArcBridge, arc_device_ifname)) {
+    LOG(ERROR) << "Failed to bridge arc device " << arc_device_ifname << " to "
+               << kArcBridge;
+    return false;
+  }
+  LOG(INFO) << "Started ARC management device " << arc_device_.get();
 
   // Start already known Shill <-> ARC mapped devices.
   for (const auto& d : devices_)
@@ -369,10 +386,24 @@ void ArcService::Stop(uint32_t id) {
   for (const auto& d : devices_)
     StopDevice(d.second.get());
 
+  // Per crbug/1008686 this device cannot be deleted and then re-added.
+  // So instead of removing the bridge, bring it down and mark it. This will
+  // allow us to detect if the device is re-added in case of a crash restart
+  // and do the right thing.
+  if (!datapath_->MaskInterfaceFlags(kArcBridge, IFF_DEBUG, IFF_UP))
+    LOG(ERROR) << "Failed to bring down arc bridge "
+               << "- it may not restart correctly";
+
+  if (guest_ == GuestMessage::ARC)
+    datapath_->RemoveInterface(ArcVethHostName(arc_device_->phys_ifname()));
+
   if (impl_) {
     impl_->Stop(id);
     impl_.reset();
   }
+
+  LOG(INFO) << "Stopped ARC management device " << arc_device_.get();
+  arc_device_.reset();
 }
 
 void ArcService::OnDevicesChanged(const std::set<std::string>& added,
@@ -419,15 +450,9 @@ void ArcService::StartDevice(Device* device) {
   if (!impl_ || !impl_->IsStarted())
     return;
 
-  // For now, only start devices for ARC++.
-  if (impl_->guest() != GuestMessage::ARC)
-    return;
-
   const auto& config = device->config();
 
-  LOG(INFO) << "Adding device " << device->phys_ifname()
-            << " bridge: " << device->host_ifname()
-            << " guest_iface: " << device->guest_ifname();
+  LOG(INFO) << "Starting device " << *device;
 
   // Create the bridge.
   if (!datapath_->AddBridge(device->host_ifname(), config.host_ipv4_addr(),
@@ -446,9 +471,8 @@ void ArcService::StartDevice(Device* device) {
     LOG(ERROR) << "Failed to configure egress traffic rules for "
                << device->phys_ifname();
 
-  if (!impl_->OnStartDevice(device)) {
+  if (!impl_->OnStartDevice(device))
     LOG(ERROR) << "Failed to start device " << device->phys_ifname();
-  }
 }
 
 void ArcService::RemoveDevice(const std::string& ifname) {
@@ -469,29 +493,15 @@ void ArcService::StopDevice(Device* device) {
   if (!impl_ || !impl_->IsStarted())
     return;
 
-  // For now, devices are only started for ARC++.
-  if (impl_->guest() != GuestMessage::ARC)
-    return;
+  LOG(INFO) << "Removing device " << *device;
 
   impl_->OnStopDevice(device);
 
   const auto& config = device->config();
-
-  LOG(INFO) << "Removing device " << device->phys_ifname()
-            << " bridge: " << device->host_ifname()
-            << " guest_iface: " << device->guest_ifname();
-
   datapath_->RemoveOutboundIPv4(device->host_ifname());
   datapath_->RemoveInboundIPv4DNAT(
       device->phys_ifname(), IPv4AddressToString(config.guest_ipv4_addr()));
-
   datapath_->RemoveBridge(device->host_ifname());
-}
-
-void ArcService::OnDefaultInterfaceChanged(const std::string& new_ifname,
-                                           const std::string& prev_ifname) {
-  if (impl_)
-    impl_->OnDefaultInterfaceChanged(new_ifname, prev_ifname);
 }
 
 std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
@@ -504,19 +514,9 @@ std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
 // ARC++ specific functions.
 
 ArcService::ContainerImpl::ContainerImpl(Datapath* datapath,
-                                         AddressManager* addr_mgr,
-                                         TrafficForwarder* forwarder,
-                                         GuestMessage::GuestType guest)
-    : pid_(kInvalidPID),
-      datapath_(datapath),
-      addr_mgr_(addr_mgr),
-      forwarder_(forwarder),
-      guest_(guest) {
+                                         TrafficForwarder* forwarder)
+    : pid_(kInvalidPID), datapath_(datapath), forwarder_(forwarder) {
   OneTimeSetup(*datapath_);
-}
-
-GuestMessage::GuestType ArcService::ContainerImpl::guest() const {
-  return guest_;
 }
 
 uint32_t ArcService::ContainerImpl::id() const {
@@ -535,27 +535,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
   }
   pid_ = pid;
 
-  Device::Options opts{
-      .fwd_multicast = false,
-      .ipv6_enabled = false,
-  };
-  auto config = MakeArcConfig(addr_mgr_, AddressManager::Guest::ARC);
-
-  // Create the bridge.
-  // Per crbug/1008686 this device cannot be deleted and then re-added.
-  // So instead of removing the bridge when the service stops, bring down the
-  // device instead and re-up it on restart.
-  if (!datapath_->AddBridge(kArcBridge, config->host_ipv4_addr(), 30) &&
-      !datapath_->MaskInterfaceFlags(kArcBridge, IFF_UP)) {
-    LOG(ERROR) << "Failed to bring up arc bridge: " << kArcBridge;
-    return false;
-  }
-
-  arc_device_ = std::make_unique<Device>(kArcIfname, kArcBridge, kArcIfname,
-                                         std::move(config), opts);
-
-  OnStartDevice(arc_device_.get());
-
   LOG(INFO) << "ARC++ network service started {pid: " << pid_ << "}";
   return true;
 }
@@ -563,17 +542,6 @@ bool ArcService::ContainerImpl::Start(uint32_t pid) {
 void ArcService::ContainerImpl::Stop(uint32_t /*pid*/) {
   if (!IsStarted())
     return;
-
-  // Per crbug/1008686 this device cannot be deleted and then re-added.
-  // So instead of removing the bridge, bring it down and mark it. This will
-  // allow us to detect if the device is re-added in case of a crash restart
-  // and do the right thing.
-  if (arc_device_) {
-    OnStopDevice(arc_device_.get());
-    if (!datapath_->MaskInterfaceFlags(kArcBridge, IFF_DEBUG, IFF_UP))
-      LOG(ERROR) << "Failed to bring down arc bridge "
-                 << "- it may not restart correctly";
-  }
 
   LOG(INFO) << "ARC++ network service stopped {pid: " << pid_ << "}";
   pid_ = kInvalidPID;
@@ -587,10 +555,6 @@ bool ArcService::ContainerImpl::IsStarted(uint32_t* pid) const {
 }
 
 bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
-  LOG(INFO) << "Starting device " << device->phys_ifname()
-            << " bridge: " << device->host_ifname()
-            << " guest_iface: " << device->guest_ifname() << " pid: " << pid_;
-
   // Set up the virtual pair inside the container namespace.
   const std::string veth_ifname = ArcVethHostName(device->guest_ifname());
   const auto& config = device->config();
@@ -607,48 +571,28 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
     return false;
   }
 
-  if (device != arc_device_.get()) {
-    forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
-                                device->options().ipv6_enabled,
-                                device->options().fwd_multicast);
-  }
-
+  forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
+                              device->options().ipv6_enabled,
+                              device->options().fwd_multicast);
   return true;
 }
 
 void ArcService::ContainerImpl::OnStopDevice(Device* device) {
-  LOG(INFO) << "Stopping device " << device->phys_ifname()
-            << " bridge: " << device->host_ifname()
-            << " guest_iface: " << device->guest_ifname() << " pid: " << pid_;
-
-  if (device != arc_device_.get())
-    forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
-                               device->options().ipv6_enabled,
-                               device->options().fwd_multicast);
-
+  forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
+                             device->options().ipv6_enabled,
+                             device->options().fwd_multicast);
   datapath_->RemoveInterface(ArcVethHostName(device->phys_ifname()));
 }
 
-void ArcService::ContainerImpl::OnDefaultInterfaceChanged(
-    const std::string& new_ifname, const std::string& prev_ifname) {}
-
 // VM specific functions
 
-ArcService::VmImpl::VmImpl(ShillClient* shill_client,
-                           Datapath* datapath,
-                           AddressManager* addr_mgr,
+ArcService::VmImpl::VmImpl(Datapath* datapath,
                            TrafficForwarder* forwarder,
                            const std::vector<Device::Config*>& configs)
     : cid_(kInvalidCID),
-      shill_client_(shill_client),
       datapath_(datapath),
-      addr_mgr_(addr_mgr),
       forwarder_(forwarder),
       configs_(configs) {}
-
-GuestMessage::GuestType ArcService::VmImpl::guest() const {
-  return GuestMessage::ARC_VM;
-}
 
 uint32_t ArcService::VmImpl::id() const {
   return cid_;
@@ -675,13 +619,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
   }
   cid_ = cid;
 
-  Device::Options opts{
-      .fwd_multicast = true,
-      .ipv6_enabled = true,
-  };
-  auto arc_config = MakeArcConfig(addr_mgr_, AddressManager::Guest::VM_ARC);
-  configs_.insert(configs_.begin(), arc_config.get());
-
   // Allocate TAP devices for all configs.
   for (auto* config : configs_) {
     auto mac = config->mac_addr();
@@ -696,16 +633,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
     config->set_tap_ifname(tap);
   }
 
-  arc_device_ = std::make_unique<Device>(
-      kArcVmIfname, kArcVmBridge, kArcVmIfname, std::move(arc_config), opts);
-  // Create the bridge.
-  if (!datapath_->AddBridge(kArcVmBridge,
-                            arc_device_->config().host_ipv4_addr(), 30)) {
-    LOG(ERROR) << "Failed to setup arc bridge for device " << *arc_device_;
-    return false;
-  }
-  OnStartDevice(arc_device_.get());
-
   LOG(INFO) << "ARCVM network service started {cid: " << cid_ << "}";
   return true;
 }
@@ -716,17 +643,9 @@ void ArcService::VmImpl::Stop(uint32_t cid) {
     return;
   }
 
-  for (auto* config : configs_) {
-    const auto& tap = config->tap_ifname();
-    if (!tap.empty()) {
-      datapath_->RemoveInterface(tap);
-      config->set_tap_ifname("");
-    }
-  }
-
-  OnStopDevice(arc_device_.get());
-  datapath_->RemoveBridge(kArcVmBridge);
-  arc_device_.reset();
+  for (auto* config : configs_)
+    if (!config->tap_ifname().empty())
+      datapath_->RemoveInterface(config->tap_ifname());
 
   LOG(INFO) << "ARCVM network service stopped {cid: " << cid_ << "}";
   cid_ = kInvalidCID;
@@ -740,113 +659,26 @@ bool ArcService::VmImpl::IsStarted(uint32_t* cid) const {
 }
 
 bool ArcService::VmImpl::OnStartDevice(Device* device) {
-  // TODO(garrick): Remove once ARCVM P is gone.
-  if (device == arc_device_.get() && !IsMultinetEnabled())
-    return OnStartArcPDevice();
-
-  std::string tap;
-  for (auto* config : configs_) {
-    if (config == &device->config()) {
-      tap = config->tap_ifname();
-      break;
-    }
-  }
+  const std::string& tap = device->config().tap_ifname();
   if (tap.empty()) {
     LOG(ERROR) << "No TAP device for: " << *device;
     return false;
   }
-
-  LOG(INFO) << "Starting device " << *device << " cid: " << cid_;
-
   if (!datapath_->AddToBridge(device->host_ifname(), tap)) {
     LOG(ERROR) << "Failed to bridge TAP device " << tap;
-    datapath_->RemoveInterface(tap);
     return false;
   }
 
-  if (device != arc_device_.get())
-    forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
-                                device->options().ipv6_enabled,
-                                device->options().fwd_multicast);
-
-  return true;
-}
-
-bool ArcService::VmImpl::OnStartArcPDevice() {
-  LOG(INFO) << "Starting device " << *arc_device_ << " cid: " << cid_;
-
-  if (!datapath_->AddToBridge(kArcVmBridge,
-                              arc_device_->config().tap_ifname())) {
-    LOG(ERROR) << "Failed to bridge TAP device " << *arc_device_;
-    return false;
-  }
-
-  // Setup the iptables.
-  if (!datapath_->AddLegacyIPv4DNAT(
-          IPv4AddressToString(arc_device_->config().guest_ipv4_addr())))
-    LOG(ERROR) << "Failed to configure ARC traffic rules";
-
-  if (!datapath_->AddOutboundIPv4(kArcVmBridge))
-    LOG(ERROR) << "Failed to configure egress traffic rules";
-
-  OnDefaultInterfaceChanged(shill_client_->default_interface(),
-                            "" /*previous*/);
-
+  forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
+                              device->options().ipv6_enabled,
+                              device->options().fwd_multicast);
   return true;
 }
 
 void ArcService::VmImpl::OnStopDevice(Device* device) {
-  // TODO(garrick): Remove once ARCVM P is gone.
-  if (device == arc_device_.get() && !IsMultinetEnabled())
-    return OnStopArcPDevice();
-
-  LOG(INFO) << "Stopping device " << *device << " cid: " << cid_;
-
-  if (device != arc_device_.get())
-    forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
-                               device->options().ipv6_enabled,
-                               device->options().fwd_multicast);
-
-  for (auto* config : configs_) {
-    if (config == &device->config()) {
-      config->set_tap_ifname("");
-      break;
-    }
-  }
+  forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
+                             device->options().ipv6_enabled,
+                             device->options().fwd_multicast);
+  // TAP devices are removed in VmImpl::Stop().
 }
-
-void ArcService::VmImpl::OnStopArcPDevice() {
-  LOG(INFO) << "Stopping device " << *arc_device_.get() << " cid: " << cid_;
-
-  datapath_->RemoveOutboundIPv4(kArcVmBridge);
-  datapath_->RemoveLegacyIPv4DNAT();
-
-  OnDefaultInterfaceChanged("" /*new_ifname*/,
-                            shill_client_->default_interface());
-
-  arc_device_->config().set_tap_ifname("");
-}
-
-void ArcService::VmImpl::OnDefaultInterfaceChanged(
-    const std::string& new_ifname, const std::string& prev_ifname) {
-  if (!IsStarted() || IsMultinetEnabled())
-    return;
-
-  forwarder_->StopForwarding(prev_ifname, kArcVmBridge, true /*ipv6*/,
-                             true /*multicast*/);
-
-  datapath_->RemoveLegacyIPv4InboundDNAT();
-
-  // If a new default interface was given, then re-enable with that.
-  if (!new_ifname.empty()) {
-    datapath_->AddLegacyIPv4InboundDNAT(new_ifname);
-    forwarder_->StartForwarding(new_ifname, kArcVmBridge, true /*ipv6*/,
-                                true /*multicast*/);
-  }
-}
-
-bool ArcService::VmImpl::IsMultinetEnabled() const {
-  return configs_.size() > 1;
-}
-
 }  // namespace patchpanel

@@ -40,10 +40,6 @@ constexpr char kNDProxyFeatureName[] = "ARC NDProxy";
 constexpr int kNDProxyMinAndroidSdkVersion = 28;  // P
 constexpr int kNDProxyMinChromeMilestone = 80;
 
-constexpr char kArcVmMultinetFeatureName[] = "ARCVM Multinet";
-constexpr int kArcVmMultinetMinAndroidSdkVersion = 29;  // R DEV
-constexpr int kArcVmMultinetMinChromeMilestone = 99;    // DISABLED
-
 // Time interval between epoll checks on file descriptors committed by callers
 // of ConnectNamespace DBus API.
 constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
@@ -274,11 +270,10 @@ void Manager::InitialSetup() {
   shill_client_ = std::make_unique<ShillClient>(bus_);
   auto* const forwarder = static_cast<TrafficForwarder*>(this);
 
-  arc_svc_ = std::make_unique<ArcService>(
-      shill_client_.get(), datapath_.get(), &addr_mgr_, forwarder,
-      ShouldEnableFeature(kArcVmMultinetMinAndroidSdkVersion,
-                          kArcVmMultinetMinChromeMilestone, {},
-                          kArcVmMultinetFeatureName));
+  GuestMessage::GuestType arc_guest =
+      USE_ARCVM ? GuestMessage::ARC_VM : GuestMessage::ARC;
+  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
+                                          &addr_mgr_, forwarder, arc_guest);
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
   network_monitor_svc_ =

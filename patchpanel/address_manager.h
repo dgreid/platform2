@@ -23,12 +23,10 @@ namespace patchpanel {
 class BRILLO_EXPORT AddressManager {
  public:
   enum class Guest {
-    // ARC++ management interface.
+    // ARC++ or ARCVM management interface.
     ARC,
-    // ARC++ virtual networks connected to shill Devices.
+    // ARC++ or ARCVM virtual networks connected to shill Devices.
     ARC_NET,
-    // ARCVM single interface.
-    VM_ARC,
     /// Crostini VM root namespace.
     VM_TERMINA,
     // Crostini plugin VMs.

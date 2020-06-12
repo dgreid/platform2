@@ -15,9 +15,8 @@ namespace {
 // +---------------+------------+----------------------------------------------+
 // |   IP Range    |    Guest   |                                              |
 // +---------------+------------+----------------------------------------------+
-// | 0       (/30) | ARC        | Also used for legacy single network ARC++    |
-// | 4       (/30) | ARCVM      | Currently a hard-coded reservation           |
-// | 8-20    (/30) | ARC        | Used to expose multiple host networks to ARC |
+// | 0       (/30) | ARC        | Used for ARC management interface            |
+// | 4-20    (/30) | ARC        | Used to expose multiple host networks to ARC |
 // | 24-124  (/30) | Termina VM | Used by Crostini                             |
 // | 128-160 (/30) | Host netns | Used for netns hosting minijailed services   |
 // | 164-192       | Reserved   |                                              |
@@ -29,7 +28,7 @@ namespace {
 }  // namespace
 
 AddressManager::AddressManager() {
-  for (auto g : {Guest::ARC, Guest::ARC_NET, Guest::VM_ARC, Guest::VM_TERMINA,
+  for (auto g : {Guest::ARC, Guest::ARC_NET, Guest::VM_TERMINA,
                  Guest::VM_PLUGIN, Guest::CONTAINER, Guest::MINIJAIL_NETNS}) {
     uint32_t base_addr;
     uint32_t prefix_length = 30;
@@ -38,12 +37,9 @@ AddressManager::AddressManager() {
       case Guest::ARC:
         base_addr = Ipv4Addr(100, 115, 92, 0);
         break;
-      case Guest::VM_ARC:
-        base_addr = Ipv4Addr(100, 115, 92, 4);
-        break;
       case Guest::ARC_NET:
-        base_addr = Ipv4Addr(100, 115, 92, 8);
-        subnets = 4;
+        base_addr = Ipv4Addr(100, 115, 92, 4);
+        subnets = 5;
         break;
       case Guest::VM_TERMINA:
         base_addr = Ipv4Addr(100, 115, 92, 24);

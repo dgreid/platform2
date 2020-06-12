@@ -34,10 +34,8 @@ constexpr pid_t kTestPID = -2;
 constexpr uint32_t kTestCID = 2;
 constexpr uint32_t kArcHostIP = Ipv4Addr(100, 115, 92, 1);
 constexpr uint32_t kArcGuestIP = Ipv4Addr(100, 115, 92, 2);
-constexpr uint32_t kArcVmHostIP = Ipv4Addr(100, 115, 92, 5);
-constexpr uint32_t kArcVmGuestIP = Ipv4Addr(100, 115, 92, 6);
-constexpr uint32_t kFirstArcEthHostIP = kArcVmHostIP;
-constexpr uint32_t kFirstArcEthGuestIP = kArcVmGuestIP;
+constexpr uint32_t kFirstEthHostIP = Ipv4Addr(100, 115, 92, 5);
+constexpr uint32_t kFirstEthGuestIP = Ipv4Addr(100, 115, 92, 6);
 constexpr uint32_t kSecondEthHostIP = Ipv4Addr(100, 115, 92, 9);
 constexpr uint32_t kFirstWifiHostIP = Ipv4Addr(100, 115, 92, 13);
 constexpr uint32_t kSecondWifiHostIP = Ipv4Addr(100, 115, 92, 17);
@@ -62,23 +60,6 @@ class MockTrafficForwarder : public TrafficForwarder {
                     bool multicast));
 };
 
-class MockImpl : public ArcService::Impl {
- public:
-  MockImpl() = default;
-  ~MockImpl() = default;
-
-  MOCK_CONST_METHOD0(guest, GuestMessage::GuestType());
-  MOCK_CONST_METHOD0(id, uint32_t());
-  MOCK_CONST_METHOD0(GetDeviceConfigs, std::vector<const Device::Config*>());
-  MOCK_METHOD1(Start, bool(uint32_t));
-  MOCK_METHOD1(Stop, void(uint32_t));
-  MOCK_CONST_METHOD1(IsStarted, bool(uint32_t*));
-  MOCK_METHOD1(OnStartDevice, bool(Device*));
-  MOCK_METHOD1(OnStopDevice, void(Device*));
-  MOCK_METHOD2(OnDefaultInterfaceChanged,
-               void(const std::string&, const std::string&));
-};
-
 }  // namespace
 
 class ArcServiceTest : public testing::Test {
@@ -94,12 +75,9 @@ class ArcServiceTest : public testing::Test {
     addr_mgr_ = std::make_unique<AddressManager>();
   }
 
-  std::unique_ptr<ArcService> NewService(
-      GuestMessage::GuestType guest = GuestMessage::ARC) {
-    patchpanel::test::guest = guest;
+  std::unique_ptr<ArcService> NewService(GuestMessage::GuestType guest) {
     return std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                        addr_mgr_.get(), &forwarder_,
-                                        guest == GuestMessage::ARC_VM);
+                                        addr_mgr_.get(), &forwarder_, guest);
   }
 
   FakeShillClientHelper shill_helper_;
@@ -110,50 +88,34 @@ class ArcServiceTest : public testing::Test {
   std::unique_ptr<FakeProcessRunner> runner_;
 };
 
-TEST_F(ArcServiceTest, StartDevice) {
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_,
-              AddInboundIPv4DNAT(StrEq("eth0"),
-                                 IPv4AddressToString(kFirstArcEthGuestIP)))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")))
-      .WillOnce(Return(true));
+TEST_F(ArcServiceTest, NotStarted_AddDevice) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), _, _)).Times(0);
+  EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(StrEq("eth0"), _)).Times(0);
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0"))).Times(0);
 
-  auto svc = NewService();
-  auto impl = std::make_unique<MockImpl>();
-  auto* mock_impl = impl.get();
-  svc->impl_ = std::move(impl);
-
-  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
-  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillOnce(Return(true));
+  auto svc = NewService(GuestMessage::ARC);
   svc->AddDevice("eth0");
   EXPECT_TRUE(svc->devices_.find("eth0") != svc->devices_.end());
 }
 
-TEST_F(ArcServiceTest, StopDevice) {
-  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0")));
-  EXPECT_CALL(*datapath_,
-              RemoveInboundIPv4DNAT(StrEq("eth0"),
-                                    IPv4AddressToString(kFirstArcEthGuestIP)));
-  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
+TEST_F(ArcServiceTest, NotStarted_AddRemoveDevice) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), _, _)).Times(0);
+  EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(StrEq("eth0"), _)).Times(0);
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0"))).Times(0);
+  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0"))).Times(0);
+  EXPECT_CALL(*datapath_, RemoveInboundIPv4DNAT(StrEq("eth0"), _)).Times(0);
+  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0"))).Times(0);
 
-  auto svc = NewService();
-  auto impl = std::make_unique<MockImpl>();
-  auto* mock_impl = impl.get();
-  svc->impl_ = std::move(impl);
-
-  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
-  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_impl, OnStopDevice(_));
+  auto svc = NewService(GuestMessage::ARC);
   svc->AddDevice("eth0");
   svc->RemoveDevice("eth0");
   EXPECT_TRUE(svc->devices_.find("eth0") == svc->devices_.end());
 }
 
 TEST_F(ArcServiceTest, VerifyAddrConfigs) {
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth1"), kSecondEthHostIP, 30))
       .WillOnce(Return(true));
@@ -165,16 +127,9 @@ TEST_F(ArcServiceTest, VerifyAddrConfigs) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(_, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
 
-  auto svc = NewService();
-  auto impl = std::make_unique<MockImpl>();
-  auto* mock_impl = impl.get();
-  svc->impl_ = std::move(impl);
-
-  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
-  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillRepeatedly(Return(true));
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
   svc->AddDevice("eth0");
   svc->AddDevice("eth1");
   svc->AddDevice("wlan0");
@@ -183,7 +138,9 @@ TEST_F(ArcServiceTest, VerifyAddrConfigs) {
 }
 
 TEST_F(ArcServiceTest, VerifyAddrOrder) {
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstArcEthHostIP, 30))
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
       .Times(2)
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wlan0"), kFirstWifiHostIP, 30))
@@ -192,14 +149,8 @@ TEST_F(ArcServiceTest, VerifyAddrOrder) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
 
-  auto svc = NewService();
-  auto impl = std::make_unique<MockImpl>();
-  auto* mock_impl = impl.get();
-  svc->impl_ = std::move(impl);
-
-  EXPECT_CALL(*mock_impl, guest()).WillRepeatedly(Return(GuestMessage::ARC));
-  EXPECT_CALL(*mock_impl, IsStarted(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_impl, OnStartDevice(_)).WillRepeatedly(Return(true));
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
   svc->AddDevice("wlan0");
   svc->AddDevice("eth0");
   svc->RemoveDevice("eth0");
@@ -225,62 +176,8 @@ TEST_F(ArcServiceTest, StableArcVmMacAddrs) {
 
 // ContainerImpl
 
-class ContainerImplTest : public testing::Test {
- public:
-  ContainerImplTest() : testing::Test() {}
-
- protected:
-  void SetUp() override {
-    addr_mgr_ = std::make_unique<AddressManager>();
-    runner_ = std::make_unique<FakeProcessRunner>();
-    runner_->Capture(false);
-    datapath_ = std::make_unique<MockDatapath>(runner_.get());
-    addr_mgr_ = std::make_unique<AddressManager>();
-  }
-
-  std::unique_ptr<ArcService::ContainerImpl> Impl(bool start = true) {
-    auto impl = std::make_unique<ArcService::ContainerImpl>(
-        datapath_.get(), addr_mgr_.get(), &forwarder_, GuestMessage::ARC);
-    if (start) {
-      // Set expectations for tests that want it started already.
-      EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
-          .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_,
-                  AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
-          .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("arc0"), _, kArcGuestIP,
-                                                 30, true, _))
-          .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
-          .WillOnce(Return(true));
-      EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
-          .WillOnce(Return(true));
-
-      impl->Start(kTestPID);
-    }
-    return impl;
-  }
-
-  std::unique_ptr<Device> MakeDevice(const std::string& name,
-                                     const std::string& host,
-                                     const std::string& guest) {
-    Device::Options opt{};
-    auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
-    auto addr0 = subnet->AllocateAtOffset(0);
-    auto addr1 = subnet->AllocateAtOffset(1);
-    auto cfg = std::make_unique<Device::Config>(
-        addr_mgr_->GenerateMacAddress(), std::move(subnet), std::move(addr0),
-        std::move(addr1));
-    return std::make_unique<Device>(name, host, guest, std::move(cfg), opt);
-  }
-
-  std::unique_ptr<AddressManager> addr_mgr_;
-  std::unique_ptr<MockDatapath> datapath_;
-  std::unique_ptr<FakeProcessRunner> runner_;
-  MockTrafficForwarder forwarder_;
-};
-
-TEST_F(ContainerImplTest, Start) {
+TEST_F(ArcServiceTest, ContainerImpl_Start) {
+  // Expectations for arc0 setup.
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
@@ -294,10 +191,12 @@ TEST_F(ContainerImplTest, Start) {
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(forwarder_, StartForwarding(_, _, _, _)).Times(0);
-  Impl(false)->Start(kTestPID);
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
 }
 
-TEST_F(ContainerImplTest, Start_FailsToCreateInterface_Android) {
+TEST_F(ArcServiceTest, ContainerImpl_FailsToCreateInterface) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
@@ -305,10 +204,12 @@ TEST_F(ContainerImplTest, Start_FailsToCreateInterface_Android) {
       .WillOnce(Return(false));
   EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _)).Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
-  Impl(false)->Start(kTestPID);
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
+TEST_F(ArcServiceTest, ContainerImpl_FailsToConfigureInterface) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
@@ -318,18 +219,57 @@ TEST_F(ContainerImplTest, OnStartDevice_FailsToConfigureInterface_Android) {
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
       .WillOnce(Return(false));
   EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true)).Times(0);
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("arc0")));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
-  Impl(false)->Start(kTestPID);
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStartDevice) {
+TEST_F(ArcServiceTest, ContainerImpl_FailsToAddInterfaceToBridge) {
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .WillOnce(Return(false));
+
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vetharc0")));
+  EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+}
+
+TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
+  // Expectations for arc0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .WillOnce(Return(true));
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("vetheth0"), StrEq("eth0")))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_,
-              ConfigureInterface(StrEq("eth0"), _, Ipv4Addr(100, 115, 92, 10),
-                                 30, true, _))
+  EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("eth0"), _, kFirstEthGuestIP,
+                                             30, true, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetheth0"), true))
       .WillOnce(Return(true));
@@ -337,214 +277,255 @@ TEST_F(ContainerImplTest, OnStartDevice) {
       .WillOnce(Return(true));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  Impl()->OnStartDevice(dev.get());
+  EXPECT_CALL(
+      *datapath_,
+      AddInboundIPv4DNAT(StrEq("eth0"), IPv4AddressToString(kFirstEthGuestIP)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")))
+      .WillOnce(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+  svc->AddDevice("eth0");
 }
 
-TEST_F(ContainerImplTest, Stop) {
+TEST_F(ArcServiceTest, ContainerImpl_Stop) {
+  // Expectations for arc0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP));
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .WillOnce(Return(true));
+  // Expectations for arc0 teardown.
+  EXPECT_CALL(*datapath_,
+              MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vetharc0")));
   EXPECT_CALL(forwarder_, StopForwarding(_, _, _, _)).Times(0);
 
-  Impl()->Stop(kTestPID);
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+  svc->Stop(kTestPID);
 }
 
-TEST_F(ContainerImplTest, OnStopDevice) {
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vetheth0")));
+TEST_F(ArcServiceTest, ContainerImpl_OnStopDevice) {
+  // Expectations for arc0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .WillOnce(Return(true));
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("vetheth0"), StrEq("eth0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("eth0"), _, kFirstEthGuestIP,
+                                             30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetheth0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vetheth0")))
+      .WillOnce(Return(true));
+  // Expectations for eth0 teardown.
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0")));
+  EXPECT_CALL(*datapath_,
+              RemoveInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.6")));
+  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  ASSERT_TRUE(dev);
-  Impl()->OnStopDevice(dev.get());
+  auto svc = NewService(GuestMessage::ARC);
+  svc->Start(kTestPID);
+  svc->AddDevice("eth0");
+  svc->RemoveDevice("eth0");
 }
 
 // VM Impl
 
-class VmImplTest : public testing::Test {
- public:
-  VmImplTest() : testing::Test() {}
-
- protected:
-  void SetUp() override {
-    test::guest = GuestMessage::ARC_VM;
-    addr_mgr_ = std::make_unique<AddressManager>();
-    runner_ = std::make_unique<FakeProcessRunner>();
-    runner_->Capture(false);
-    datapath_ = std::make_unique<MockDatapath>(runner_.get());
-    shill_client_ = helper_.FakeClient();
-    shill_client_->SetFakeDefaultInterface("eth0");
-    addr_mgr_ = std::make_unique<AddressManager>();
-  }
-
-  std::unique_ptr<ArcService::VmImpl> Impl(
-      bool start = true, const std::vector<Device::Config*> configs = {}) {
-    auto impl = std::make_unique<ArcService::VmImpl>(
-        shill_client_.get(), datapath_.get(), addr_mgr_.get(), &forwarder_,
-        configs);
-    if (start) {
-      impl->Start(kTestCID);
-    }
-
-    return impl;
-  }
-
-  std::unique_ptr<Device> MakeDevice(const std::string& name,
-                                     const std::string& host,
-                                     const std::string& guest) {
-    Device::Options opt{};
-    auto subnet = addr_mgr_->AllocateIPv4Subnet(AddressManager::Guest::ARC_NET);
-    auto addr0 = subnet->AllocateAtOffset(0);
-    auto addr1 = subnet->AllocateAtOffset(1);
-    auto cfg = std::make_unique<Device::Config>(
-        addr_mgr_->GenerateMacAddress(), std::move(subnet), std::move(addr0),
-        std::move(addr1));
-    return std::make_unique<Device>(name, host, guest, std::move(cfg), opt);
-  }
-
-  std::unique_ptr<AddressManager> addr_mgr_;
-  std::unique_ptr<MockDatapath> datapath_;
-  std::unique_ptr<FakeProcessRunner> runner_;
-  std::unique_ptr<FakeShillClient> shill_client_;
-  FakeShillClientHelper helper_;
-  MockTrafficForwarder forwarder_;
-};
-
-TEST_F(VmImplTest, Start) {
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), Pointee(Eq(kArcVmArc0MacAddr)),
-                                 nullptr, StrEq("crosvm")))
-      .WillOnce(Return("vmtap0"));
-  // OnStartDevice
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_,
-              AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
-      .WillOnce(Return(true));
-  // OnDefaultInterfaceChanged
-  EXPECT_CALL(forwarder_,
-              StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
-  EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT());
-  EXPECT_CALL(forwarder_,
-              StartForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
-  EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
-
-  Impl(false)->Start(kTestCID);
-}
-
-// Verifies TAPs are added for each provided config.
-TEST_F(VmImplTest, StartWithConfigs) {
+TEST_F(ArcServiceTest, VmImpl_Start) {
+  // Expectations for tap devices pre-creation.
   EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"))
-      .WillOnce(Return("vmtap2"));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  // Expectations for "arc0" setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vmtap0")))
       .WillOnce(Return(true));
 
-  Device::Config config1({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
-  Device::Config config2({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
-  Impl(false, {&config1, &config2})->Start(kTestCID);
-  EXPECT_EQ(config1.tap_ifname(), "vmtap1");
-  EXPECT_EQ(config2.tap_ifname(), "vmtap2");
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
 }
 
-TEST_F(VmImplTest, StartDeviceWithConfigs) {
+TEST_F(ArcServiceTest, VmImpl_StartDevice) {
+  // Expectations for tap devices pre-creation.
   EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
-      .WillOnce(Return("vmtap1"));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  // Expectations for "arc0" setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vmtap1")))
       .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.6")));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")));
   EXPECT_CALL(forwarder_,
               StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
 
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  auto* config = &dev->config();
-  Impl(true, {config})->OnStartDevice(dev.get());
-  EXPECT_EQ(config->tap_ifname(), "vmtap1");
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+  svc->AddDevice("eth0");
 }
 
-TEST_F(VmImplTest, Stop) {
-  // Start
-  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
-      .WillOnce(Return("vmtap0"));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_,
-              AddLegacyIPv4DNAT(StrEq(IPv4AddressToString(kArcVmGuestIP))))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_br1")))
-      .WillOnce(Return(true));
-  // OnDefaultInterfaceChanged
-  EXPECT_CALL(forwarder_,
-              StopForwarding(StrEq(""), StrEq("arc_br1"), true, true));
-  EXPECT_CALL(forwarder_,
-              StartForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
-  EXPECT_CALL(*datapath_, AddLegacyIPv4InboundDNAT(StrEq("eth0")));
-
-  // Stop
-  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_br1")));
-  EXPECT_CALL(*datapath_, RemoveLegacyIPv4DNAT());
-  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap0")));
-  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_br1")));
-  // OnDefaultInterfaceChanged
-  EXPECT_CALL(*datapath_, RemoveLegacyIPv4InboundDNAT())
-      .Times(2);  // +1 for Start
-  EXPECT_CALL(forwarder_,
-              StopForwarding(StrEq("eth0"), StrEq("arc_br1"), true, true));
-  Impl()->Stop(kTestCID);
-}
-
-// Verifies TAPs are added for each provided config.
-TEST_F(VmImplTest, StopWithConfigs) {
+TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
+  // Expectations for tap devices pre-creation.
   EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
       .WillOnce(Return("vmtap1"))
-      .WillOnce(Return("vmtap2"));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  // Expectations for "arc0" setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vmtap0")))
       .WillOnce(Return(true));
-  // Stop
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vmtap1")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.6")));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+  // Expectations for wlan0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_wlan0"), kFirstWifiHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_wlan0"), StrEq("vmtap3")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddInboundIPv4DNAT(StrEq("wlan0"), StrEq("100.115.92.14")));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_wlan0")));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("wlan0"), StrEq("arc_wlan0"), _, _));
+  // Expectations for eth1 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth1"), kSecondEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth1"), StrEq("vmtap2")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddInboundIPv4DNAT(StrEq("eth1"), StrEq("100.115.92.10")));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth1")));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth1"), StrEq("arc_eth1"), _, _));
+
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+  svc->AddDevice("eth0");
+  svc->AddDevice("wlan0");
+  svc->AddDevice("eth1");
+}
+
+TEST_F(ArcServiceTest, VmImpl_Stop) {
+  // Expectations for tap devices pre-creation.
+  EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
+      .WillOnce(Return("vmtap0"))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  // Expectations for "arc0" setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vmtap0")))
+      .WillOnce(Return(true));
+  // Expectations for "arc0" teardown.
+  EXPECT_CALL(*datapath_,
+              MaskInterfaceFlags(StrEq("arcbr0"), IFF_DEBUG, IFF_UP))
+      .WillOnce(Return(true));
+  // Expectations for tap devices teardown
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap0")));
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap1")));
   EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap2")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap3")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap4")));
+  EXPECT_CALL(*datapath_, RemoveInterface(StrEq("vmtap5")));
 
-  Device::Config config1({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
-  Device::Config config2({0, 0, 0, 0, 0, 0}, nullptr, nullptr, nullptr);
-  Impl(true, {&config1, &config2})->Stop(kTestCID);
-  EXPECT_TRUE(config1.tap_ifname().empty());
-  EXPECT_TRUE(config2.tap_ifname().empty());
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+  svc->Stop(kTestPID);
 }
 
-TEST_F(VmImplTest, StopDeviceWithConfigs) {
+TEST_F(ArcServiceTest, VmImpl_StopDevice) {
+  // Expectations for tap devices pre-creation.
   EXPECT_CALL(*datapath_, AddTAP(StrEq(""), _, nullptr, StrEq("crosvm")))
       .WillOnce(Return("vmtap0"))
-      .WillOnce(Return("vmtap1"));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_br1"), kArcVmHostIP, 30))
+      .WillOnce(Return("vmtap1"))
+      .WillOnce(Return("vmtap2"))
+      .WillOnce(Return("vmtap3"))
+      .WillOnce(Return("vmtap4"))
+      .WillOnce(Return("vmtap5"));
+  // Expectations for "arc0" setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_br1"), StrEq("vmtap0")))
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vmtap0")))
       .WillOnce(Return(true));
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vmtap1")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.6")));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+  // Expectations for eth0 teardown.
   EXPECT_CALL(forwarder_,
               StopForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+  EXPECT_CALL(*datapath_, RemoveOutboundIPv4(StrEq("arc_eth0")));
+  EXPECT_CALL(*datapath_,
+              RemoveInboundIPv4DNAT(StrEq("eth0"), StrEq("100.115.92.6")));
+  EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0")));
 
-  auto dev = MakeDevice("eth0", "arc_eth0", "eth0");
-  auto* config = &dev->config();
-  config->set_tap_ifname("vmtap1");  // Usually happens in OnStartDevice.
-  Impl(true, {config})->OnStopDevice(dev.get());
-  EXPECT_TRUE(config->tap_ifname().empty());
+  auto svc = NewService(GuestMessage::ARC_VM);
+  svc->Start(kTestPID);
+  svc->AddDevice("eth0");
+  svc->RemoveDevice("eth0");
 }
 
 }  // namespace patchpanel
