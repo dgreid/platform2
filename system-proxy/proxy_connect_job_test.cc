@@ -24,9 +24,13 @@
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/protobuf_util.h"
+#include "system-proxy/test_http_server.h"
 
 namespace {
-constexpr char kProxyServerUrl[] = "172.0.0.1:8888";
+
+constexpr char kProxyServerUrl[] = "http://127.0.0.1:3128";
+constexpr char kValidConnectRequest[] =
+    "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
 }  // namespace
 
 namespace system_proxy {
@@ -61,15 +65,20 @@ class ProxyConnectJobTest : public ::testing::Test {
   void ResolveProxy(
       const std::string& target_url,
       base::OnceCallback<void(const std::list<std::string>&)> callback) {
-    std::move(callback).Run({kProxyServerUrl});
+    std::move(callback).Run({remote_proxy_url_});
   }
 
   void OnConnectionSetupFinished(
       std::unique_ptr<patchpanel::SocketForwarder> fwd,
       ProxyConnectJob* connect_job) {
     ASSERT_EQ(connect_job, connect_job_.get());
+    if (fwd) {
+      forwarder_created_ = true;
+    }
   }
 
+  std::string remote_proxy_url_ = kProxyServerUrl;
+  bool forwarder_created_ = false;
   std::unique_ptr<ProxyConnectJob> connect_job_;
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
@@ -80,27 +89,37 @@ class ProxyConnectJobTest : public ::testing::Test {
 };
 
 TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
   connect_job_->Start();
-  char validConnRequest[] =
-      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\r\n";
-  cros_client_socket_->SendTo(validConnRequest, std::strlen(validConnRequest));
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
   brillo_loop_.RunOnce(false);
 
   EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
-  EXPECT_EQ(kProxyServerUrl, connect_job_->proxy_servers_.front());
+  EXPECT_EQ(http_test_server.GetUrl(), connect_job_->proxy_servers_.front());
+  EXPECT_TRUE(forwarder_created_);
 }
 
 TEST_F(ProxyConnectJobTest, SuccessfulConnectionAltEnding) {
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(HttpTestServer::HttpConnectReply::kOk);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
   connect_job_->Start();
-  char validConnRequest[] =
-      "CONNECT www.example.server.com:443 HTTP/1.1\r\n\n";
+  char validConnRequest[] = "CONNECT www.example.server.com:443 HTTP/1.1\r\n\n";
   cros_client_socket_->SendTo(validConnRequest, std::strlen(validConnRequest));
   brillo_loop_.RunOnce(false);
 
   EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
-  EXPECT_EQ(kProxyServerUrl, connect_job_->proxy_servers_.front());
+  EXPECT_EQ(http_test_server.GetUrl(), connect_job_->proxy_servers_.front());
+  EXPECT_TRUE(forwarder_created_);
 }
 
 TEST_F(ProxyConnectJobTest, BadHttpRequestWrongMethod) {

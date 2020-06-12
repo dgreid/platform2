@@ -129,6 +129,7 @@ if (use.test) {
       "proxy_connect_job_test.cc",
       "server_proxy_test.cc",
       "system_proxy_adaptor_test.cc",
+      "test_http_server.cc",
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
