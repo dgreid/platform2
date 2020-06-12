@@ -202,9 +202,6 @@ int HandleChromeCrash(ChromeCollector* chrome_collector,
                       uid_t uid,
                       const std::string& exe) {
   CHECK(!chrome_dump_file.empty()) << "--chrome= must be set";
-  CHECK(pid != (pid_t)-1) << "--pid= must be set";
-  CHECK(uid != (uid_t)-1) << "--uid= must be set";
-  CHECK(!exe.empty()) << "--exe= must be set";
 
   brillo::LogToString(true);
   bool handled =
@@ -222,9 +219,6 @@ int HandleChromeCrashThroughMemfd(ChromeCollector* chrome_collector,
                                   const std::string& exe,
                                   const std::string& dump_dir) {
   CHECK(memfd >= 0) << "--chrome_memfd= must be set";
-  CHECK(pid >= (pid_t)0) << "--pid= must be set";
-  CHECK(uid >= (uid_t)0) << "--uid= must be set";
-  CHECK(!exe.empty()) << "--exe= must be set";
 
   brillo::LogToString(true);
   bool handled =
@@ -614,8 +608,6 @@ int main(int argc, char* argv[]) {
   }
 
   if (FLAGS_chrome_memfd != -1) {
-    CHECK(FLAGS_chrome_dump_dir.empty() || util::IsTestImage())
-        << "--chrome_dump_dir is only for tests";
     return HandleChromeCrashThroughMemfd(&chrome_collector, FLAGS_chrome_memfd,
                                          FLAGS_pid, FLAGS_uid, FLAGS_exe,
                                          FLAGS_chrome_dump_dir);

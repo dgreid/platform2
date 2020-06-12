@@ -64,6 +64,13 @@ bool ChromeCollector::HandleCrashWithDumpData(const std::string& data,
                                               uid_t uid,
                                               const std::string& exe_name,
                                               const std::string& dump_dir) {
+  // Perform basic input validation.
+  CHECK(pid >= (pid_t)0) << "--pid= must be set";
+  CHECK(uid >= (uid_t)0) << "--uid= must be set";
+  CHECK(!exe_name.empty()) << "--exe= must be set";
+  CHECK(dump_dir.empty() || util::IsTestImage())
+      << "--chrome_dump_dir is only for tests";
+
   // anomaly_detector's CrashReporterParser looks for this message; don't change
   // it without updating the regex.
   LOG(WARNING) << "Received crash notification for " << exe_name << "[" << pid
