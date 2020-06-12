@@ -4,6 +4,53 @@
 
 use std::io::{self, BufRead};
 
+use sys_util::{error, EventFd};
+
+/// ConnectionTracker is responsible for keeping track of the number of active connections to
+/// ippusb_bridge. Whenever the number of clients connected drops to 0 or increases to 1, a
+/// notification is sent on `notify` so that the poll loop can wake up and change its polling
+/// behavior (i.e. set up a timeout so that it can shut down after 10 seconds of inactivity).
+pub struct ConnectionTracker {
+    active_connections: usize,
+    notify: EventFd,
+}
+
+impl ConnectionTracker {
+    pub fn new() -> sys_util::Result<Self> {
+        let notify = EventFd::new()?;
+        Ok(Self {
+            active_connections: 0,
+            notify,
+        })
+    }
+
+    pub fn client_connected(&mut self) {
+        self.active_connections += 1;
+        if self.active_connections == 1 {
+            if let Err(e) = self.notify.write(1) {
+                error!("Notifying EventFd failed: {}", e);
+            }
+        }
+    }
+
+    pub fn client_disconnected(&mut self) {
+        self.active_connections -= 1;
+        if self.active_connections == 0 {
+            if let Err(e) = self.notify.write(1) {
+                error!("Notifying EventFd failed: {}", e);
+            }
+        }
+    }
+
+    pub fn active_connections(&self) -> usize {
+        self.active_connections
+    }
+
+    pub fn event_fd(&self) -> &EventFd {
+        &self.notify
+    }
+}
+
 /// Read from `reader` until `delimiter` is seen or EOF is reached.
 /// Returns read data.
 pub fn read_until_delimiter(reader: &mut dyn BufRead, delimiter: &[u8]) -> io::Result<Vec<u8>> {
