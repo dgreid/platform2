@@ -654,6 +654,7 @@ In the tables below,
 ### ui
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| extra-ash-flags | array - string |  | False |  | False | Flags passed to the Ash window manager and system UI. Each entry should be a string of the form --<key>=<value>, or --<key> for boolean flags. If this property is not set, flags will be determined by other cros_config properties. Serialized to a null byte separated string when written to configfs.img |
 | power-button | [power-button](#power_button) |  | False |  | False |  |
 | side-volume-button | [side-volume-button](#side_volume_button) |  | False |  | False | Defines the position of the side volume button. `region` indicates whether the button is at the side of the "screen" or "keyboard" of the device. `side` indicates which edge the button is anchored to while the device in landscape primary screen orientation. It can be "left", "right", "top", "bottom". |
 

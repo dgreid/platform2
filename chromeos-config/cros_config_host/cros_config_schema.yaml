@@ -652,6 +652,18 @@ properties:
                       - top
                       - bottom
                   additionalProperties: false
+                extra-ash-flags:
+                  type: array
+                  items:
+                    type: string
+                    pattern: "^--[a-zA-Z][a-zA-Z-]*(=.+)?$"
+                    description: Flags passed to the Ash window manager and
+                      system UI. Each entry should be a string of the form
+                      --<key>=<value>, or --<key> for boolean flags. If this
+                      property is not set, flags will be determined by other
+                      cros_config properties. Serialized to a null byte
+                      separated string when written to configfs.img
+                    build-only-element: true
               additionalProperties: false
             auto-night-light:
               description: Whether the auto-night-light feature is enabled on the device, which
