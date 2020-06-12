@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod arguments;
+mod io_adapters;
 mod listeners;
 mod usb_connector;
 
