@@ -16,6 +16,7 @@
 #include <base/system/sys_info.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
+#include <chromeos-config/libcros_config/cros_config.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <libyuv.h>
@@ -115,9 +116,11 @@ std::vector<base::FilePath> GetUsbCameras() {
 }
 
 void AddNegativeGtestFilter(const std::string& pattern) {
-  LOG(INFO) << "Disable test " << pattern;
-  char has_dash = GTEST_FLAG(filter).find('-') != std::string::npos;
-  GTEST_FLAG(filter).append(has_dash ? ":" : "-").append(pattern);
+  if (GTEST_FLAG(filter).find(pattern) == std::string::npos) {
+    LOG(INFO) << "Disable test " << pattern;
+    char has_dash = GTEST_FLAG(filter).find('-') != std::string::npos;
+    GTEST_FLAG(filter).append(has_dash ? ":" : "-").append(pattern);
+  }
 }
 
 // This is for Android testCameraToSurfaceTextureMetadata CTS test case.
@@ -179,6 +182,25 @@ class V4L2TestEnvironment : public ::testing::Environment {
       : test_list_(test_list),
         device_path_(device_path),
         usb_info_(GetUsbVidPid(base::FilePath(device_path))) {
+    std::string model = []() {
+      std::string res;
+      brillo::CrosConfig cros_config;
+      if (!cros_config.Init()) {
+        LOGF(WARNING) << "Failed to initialize CrOS config";
+        return res;
+      }
+      if (!cros_config.GetString("/", "name", &res)) {
+        LOGF(WARNING) << "Failed to get model name of CrOS device";
+      }
+      return res;
+    }();
+    // The WFC maximum supported resoltuion requirement is waived on some
+    // models (b/158564147).
+    if ((model == "blacktip360" && usb_info_ == "0408:5192") ||
+        (model == "garg360" && usb_info_ == "0408:5192")) {
+      AddNegativeGtestFilter("V4L2Test.MaximumSupportedResolution");
+    }
+
     // The gtest filter need to be modified before RUN_ALL_TESTS().
     if (test_list == kDefaultTestList) {
       // Disable new requirements added in HALv3.
