@@ -43,6 +43,7 @@
 #include <dbus/object_path.h>
 #include <dbus/object_proxy.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
+#include <vboot/crossystem.h>
 
 using std::string;
 using vm_tools::concierge::StorageLocation;
@@ -228,12 +229,17 @@ static bool ParseExtraDisks(vm_tools::concierge::StartVmRequest* request,
   return true;
 }
 
+bool IsDevModeEnabled() {
+  return VbGetSystemPropertyInt("cros_debug") == 1;
+}
+
 int StartVm(dbus::ObjectProxy* proxy,
             string owner_id,
             string name,
             string kernel,
             string rootfs,
-            string extra_disks) {
+            string extra_disks,
+            bool untrusted) {
   if (name.empty()) {
     LOG(ERROR) << "--name is required";
     return -1;
@@ -259,6 +265,11 @@ int StartVm(dbus::ObjectProxy* proxy,
     return -1;
   }
 
+  if (untrusted && !IsDevModeEnabled()) {
+    LOG(ERROR) << "Untrusted VMs are only allowed in developer mode";
+    return -1;
+  }
+
   LOG(INFO) << "Starting VM " << name << " with kernel " << kernel
             << " and rootfs " << rootfs;
 
@@ -276,6 +287,8 @@ int StartVm(dbus::ObjectProxy* proxy,
   if (!ParseExtraDisks(&request, extra_disks)) {
     return -1;
   }
+
+  request.set_allow_untrusted(untrusted);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StartVmRequest protobuf";
@@ -1562,6 +1575,8 @@ int main(int argc, char** argv) {
   DEFINE_string(removable_media, "", "Name of the removable media to use");
   DEFINE_string(image_name, "", "Name of the file on removable media to use");
   DEFINE_string(android_fstab, "", "Path to the Android fstab");
+  DEFINE_bool(untrusted, false,
+              "Allow untrusted VM. Only respected in developer mode");
 
   // create_disk parameters.
   DEFINE_string(cryptohome_id, "", "User cryptohome id");
@@ -1642,7 +1657,7 @@ int main(int argc, char** argv) {
   if (FLAGS_start) {
     return StartVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name),
                    std::move(FLAGS_kernel), std::move(FLAGS_rootfs),
-                   std::move(FLAGS_extra_disks));
+                   std::move(FLAGS_extra_disks), FLAGS_untrusted);
   } else if (FLAGS_stop) {
     return StopVm(proxy, std::move(FLAGS_cryptohome_id), std::move(FLAGS_name));
   } else if (FLAGS_stop_all) {

@@ -139,6 +139,7 @@ static_library("libconcierge") {
     "libshill-client",
     "protobuf",
     "system_api",
+    "vboot_host",
     "vm_protos",
   ]
 
@@ -160,6 +161,7 @@ executable("concierge_client") {
     "libqcow_utils",
     "protobuf",
     "system_api",
+    "vboot_host",
   ]
 }
 

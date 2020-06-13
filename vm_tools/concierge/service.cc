@@ -61,6 +61,7 @@
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vm_protos/proto_bindings/vm_guest.pb.h>
 #include <chromeos/constants/vm_tools.h>
+#include <vboot/crossystem.h>
 
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/plugin_vm.h"
@@ -164,8 +165,8 @@ constexpr base::TimeDelta kDiskOpReportInterval =
 
 // The minimum kernel version of the host which supports untrusted VMs or a
 // trusted VM with nested VM support.
-constexpr KernelVersionAndMajorRevision kMinKernelVersionForUntrustedVM =
-    std::make_pair(4, 14);
+constexpr KernelVersionAndMajorRevision
+    kMinKernelVersionForUntrustedAndNestedVM = std::make_pair(4, 14);
 
 // The minimum kernel version of the host which supports virtio-pmem.
 constexpr KernelVersionAndMajorRevision kMinKernelVersionForVirtioPmem =
@@ -178,6 +179,20 @@ constexpr const char kL1TFFilePath[] =
 // File path that reports the MDS vulnerability status.
 constexpr const char kMDSFilePath[] =
     "/sys/devices/system/cpu/vulnerabilities/mds";
+
+// Used with the |IsUntrustedVMAllowed| function.
+struct UntrustedVMCheckResult {
+  UntrustedVMCheckResult(bool untrusted_vm_allowed, bool skip_host_checks)
+      : untrusted_vm_allowed(untrusted_vm_allowed),
+        skip_host_checks(skip_host_checks) {}
+
+  // Is an untrusted VM allowed on the host.
+  bool untrusted_vm_allowed;
+
+  // Should checking for security patches on the host be skipped while starting
+  // untrusted VMs.
+  bool skip_host_checks;
+};
 
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns NULL, an empty response is created
@@ -642,6 +657,48 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
   return path;
 }
 
+bool IsDevModeEnabled() {
+  return VbGetSystemPropertyInt("cros_debug") == 1;
+}
+
+// Returns whether the VM is trusted or untrusted based on the source image and
+// the host kernel version.
+bool IsUntrustedVM(bool is_trusted_image,
+                   KernelVersionAndMajorRevision host_kernel_version) {
+  // Any untrusted image definitely results in an unstrusted VM.
+  if (!is_trusted_image)
+    return true;
+
+  // Nested virtualization is enabled for all kernels >=
+  // |kMinKernelVersionForUntrustedAndNestedVM|. This means that even with a
+  // trusted image the VM started will essentially be untrusted.
+  if (host_kernel_version >= kMinKernelVersionForUntrustedAndNestedVM)
+    return true;
+
+  return false;
+}
+
+// Returns whether an untrusted VM is allowed on the host and whether checking
+// for security patches while starting the untrusted VM should be skipped.
+UntrustedVMCheckResult IsUntrustedVMAllowed(
+    bool allow_untrusted,
+    bool developer_mode_enabled,
+    KernelVersionAndMajorRevision host_kernel_version) {
+  // For host >= |kMinKernelVersionForUntrustedAndNestedVM| untrusted VMs are
+  // always allowed. But the host still need to be checked for vulnerabilities.
+  if (host_kernel_version >= kMinKernelVersionForUntrustedAndNestedVM)
+    return UntrustedVMCheckResult(true /* untrusted_vm_allowed */,
+                                  false /* skip_host_checks */);
+
+  // Lower kernel versions are deemed insecure. They only allow untrusted VMs
+  // when the user wants it and the device is in developer mode. Since the
+  // device is in developer mode and the kernel is anyway insecure, skip
+  // vulnerability checks.
+  return UntrustedVMCheckResult(
+      allow_untrusted && developer_mode_enabled /* untrusted_vm_allowed */,
+      true /* skip_host_checks */);
+}
+
 }  // namespace
 
 bool Service::ListVmDisksInLocation(const string& cryptohome_id,
@@ -808,8 +865,9 @@ bool Service::Init() {
     return false;
   }
   untrusted_vm_utils_ = std::make_unique<UntrustedVMUtils>(
-      debugd_proxy, host_kernel_version_, kMinKernelVersionForUntrustedVM,
-      base::FilePath(kL1TFFilePath), base::FilePath(kMDSFilePath));
+      debugd_proxy, host_kernel_version_,
+      kMinKernelVersionForUntrustedAndNestedVM, base::FilePath(kL1TFFilePath),
+      base::FilePath(kMDSFilePath));
 
   using ServiceMethod =
       std::unique_ptr<dbus::Response> (Service::*)(dbus::MethodCall*);
@@ -1120,8 +1178,16 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   if (request.disks_size() > kMaxExtraDisks) {
     LOG(ERROR) << "Rejecting request with " << request.disks_size()
                << " extra disks";
-
     response.set_failure_reason("Too many extra disks");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  const bool is_dev_mode_enabled = IsDevModeEnabled();
+  if (request.allow_untrusted() && !is_dev_mode_enabled) {
+    LOG(ERROR) << "Allow untrusted flag not respected in verified mode";
+    response.set_failure_reason(
+        "Allow untrusted flag not respected in verified mode");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
@@ -1129,7 +1195,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   base::FilePath kernel, rootfs, tools_disk;
 
   // A VM is trusted when this daemon chooses the kernel and rootfs path.
-  bool is_trusted_vm = false;
+  bool is_trusted_image = false;
   if (request.start_termina()) {
     base::FilePath component_path = GetLatestVMPath();
     if (component_path.empty()) {
@@ -1142,12 +1208,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     kernel = component_path.Append(kVmKernelName);
     rootfs = component_path.Append(kVmRootfsName);
     tools_disk = component_path.Append(kVmToolsDiskName);
-    is_trusted_vm = true;
-  } else if (!request.allow_untrusted()) {
-    LOG(ERROR) << "Untrusted VMs aren't allowed";
-    response.set_failure_reason("Untrusted VMs aren't allowed");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
+    is_trusted_image = true;
   } else {
     kernel = base::FilePath(request.vm().kernel());
     rootfs = base::FilePath(request.vm().rootfs());
@@ -1155,7 +1216,6 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   if (!base::PathExists(kernel)) {
     LOG(ERROR) << "Missing VM kernel path: " << kernel.value();
-
     response.set_failure_reason("Kernel path does not exist");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
@@ -1163,13 +1223,30 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   if (!base::PathExists(rootfs)) {
     LOG(ERROR) << "Missing VM rootfs path: " << rootfs.value();
-
     response.set_failure_reason("Rootfs path does not exist");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
 
-  if (!is_trusted_vm) {
+  const bool is_untrusted_vm =
+      IsUntrustedVM(is_trusted_image, host_kernel_version_);
+  const auto untrusted_vm_check_result = IsUntrustedVMAllowed(
+      request.allow_untrusted(), is_dev_mode_enabled, host_kernel_version_);
+  const bool is_untrusted_vm_allowed =
+      untrusted_vm_check_result.untrusted_vm_allowed;
+  const bool skip_untrusted_vm_host_checks =
+      untrusted_vm_check_result.skip_host_checks;
+  if (is_untrusted_vm && !is_untrusted_vm_allowed) {
+    LOG(ERROR) << "Untrusted VMs are not allowed";
+    response.set_failure_reason("Untrusted VMs are not allowed");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  // For untrusted VMs check if mitigations are present in the host. Skip the
+  // checks if untrusted VMs are requested in developer mode on insecure
+  // kernels. This is done to support testing by developers.
+  if (is_untrusted_vm && !skip_untrusted_vm_host_checks) {
     switch (untrusted_vm_utils_->CheckUntrustedVMMitigationStatus()) {
       case UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE:
         break;
@@ -1192,7 +1269,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   // Nested virtualization is turned on for all host kernels that support
   // untrusted VMs. For security purposes this requires that SMT is disabled for
   // both trusted and untrusted VMs.
-  if (host_kernel_version_ >= kMinKernelVersionForUntrustedVM) {
+  if (host_kernel_version_ >= kMinKernelVersionForUntrustedAndNestedVM) {
     if (!untrusted_vm_utils_->DisableSMT()) {
       LOG(ERROR) << "Failed to disable SMT";
       response.set_failure_reason("Failed to disable SMT");

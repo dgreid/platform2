@@ -154,6 +154,9 @@ TEST_F(UntrustedVMUtilsTest, CheckL1TFStatus) {
   CheckL1TFStatus("Not affected",
                   UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE);
 
+  CheckL1TFStatus("Mitigation: PTE Inversion",
+                  UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE);
+
   CheckL1TFStatus("Some gibberish; some more gibberish",
                   UntrustedVMUtils::MitigationStatus::VULNERABLE);
 
@@ -191,6 +194,9 @@ TEST_F(UntrustedVMUtilsTest, CheckMDSStatus) {
 
   CheckMDSStatus("Vulnerable; SMT disabled",
                  UntrustedVMUtils::MitigationStatus::VULNERABLE);
+
+  CheckMDSStatus("Mitigation: Clear CPU buffers; SMT disabled",
+                 UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE);
 
   CheckMDSStatus(
       "Mitigation: Clear CPU buffers; SMT mitigated",

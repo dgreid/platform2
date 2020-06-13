@@ -40,10 +40,16 @@ UntrustedVMUtils::MitigationStatus GetL1TFMitigationStatus(
     return UntrustedVMUtils::MitigationStatus::VULNERABLE;
   }
 
+  LOG(INFO) << "l1tf status: " << l1tf_status;
+
   std::vector<base::StringPiece> l1tf_statuses = base::SplitStringPiece(
       l1tf_status, ",;", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  const size_t num_statuses = l1tf_statuses.size();
   // The sysfs file should always return up to 3 statuses and no more.
-  DCHECK_LE(l1tf_statuses.size(), 3);
+  if (num_statuses > 3) {
+    LOG(ERROR) << "Bad l1tf state";
+    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  }
 
   const base::StringPiece& processor_mitigation_status = l1tf_statuses[0];
   if (processor_mitigation_status == "Not affected")
@@ -51,19 +57,24 @@ UntrustedVMUtils::MitigationStatus GetL1TFMitigationStatus(
   if (processor_mitigation_status != "Mitigation: PTE Inversion")
     return UntrustedVMUtils::MitigationStatus::VULNERABLE;
 
-  const base::StringPiece& vmx_mitigation_status = l1tf_statuses[1];
-  if (vmx_mitigation_status == "VMX: vulnerable")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
-  if (vmx_mitigation_status == "VMX: conditional cache flushes")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
-  if (vmx_mitigation_status != "VMX: cache flushes")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  if (num_statuses >= 2) {
+    const base::StringPiece& vmx_mitigation_status = l1tf_statuses[1];
+    if (vmx_mitigation_status == "VMX: vulnerable")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+    if (vmx_mitigation_status == "VMX: conditional cache flushes")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+    if (vmx_mitigation_status != "VMX: cache flushes")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  }
 
-  const base::StringPiece& smt_mitigation_status = l1tf_statuses[2];
-  if (smt_mitigation_status == "SMT vulnerable")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
-  if (smt_mitigation_status != "SMT disabled")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  // Only a maximum of 3 statuses are expected.
+  if (num_statuses == 3) {
+    const base::StringPiece& smt_mitigation_status = l1tf_statuses[2];
+    if (smt_mitigation_status == "SMT vulnerable")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
+    if (smt_mitigation_status != "SMT disabled")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  }
 
   return UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE;
 }
@@ -73,14 +84,20 @@ UntrustedVMUtils::MitigationStatus GetMDSMitigationStatus(
     const base::FilePath& mds_status_path) {
   std::string mds_status;
   if (!base::ReadFileToString(mds_status_path, &mds_status)) {
-    LOG(ERROR) << "Failed to read L1TF status";
+    LOG(ERROR) << "Failed to read MDS status";
     return UntrustedVMUtils::MitigationStatus::VULNERABLE;
   }
 
+  LOG(INFO) << "mds status: " << mds_status;
+
   std::vector<base::StringPiece> mds_statuses = base::SplitStringPiece(
       mds_status, ",;", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  const size_t num_statuses = mds_statuses.size();
   // The sysfs file should always return up to 2 statuses and no more.
-  DCHECK_LE(mds_statuses.size(), 2);
+  if (num_statuses > 2) {
+    LOG(ERROR) << "Bad mds state";
+    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  }
 
   const base::StringPiece& processor_mitigation_status = mds_statuses[0];
   if (processor_mitigation_status == "Not affected")
@@ -90,15 +107,18 @@ UntrustedVMUtils::MitigationStatus GetMDSMitigationStatus(
   if (processor_mitigation_status != "Mitigation: Clear CPU buffers")
     return UntrustedVMUtils::MitigationStatus::VULNERABLE;
 
-  const base::StringPiece& smt_mitigation_status = mds_statuses[1];
-  if (smt_mitigation_status == "SMT vulnerable")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
-  if (smt_mitigation_status == "SMT mitigated")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
-  if (smt_mitigation_status == "SMT Host state unknown")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
-  if (smt_mitigation_status != "SMT disabled")
-    return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  // Only a maximum of 2 statuses are expected.
+  if (num_statuses == 2) {
+    const base::StringPiece& smt_mitigation_status = mds_statuses[1];
+    if (smt_mitigation_status == "SMT vulnerable")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
+    if (smt_mitigation_status == "SMT mitigated")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
+    if (smt_mitigation_status == "SMT Host state unknown")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED;
+    if (smt_mitigation_status != "SMT disabled")
+      return UntrustedVMUtils::MitigationStatus::VULNERABLE;
+  }
 
   return UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE;
 }
