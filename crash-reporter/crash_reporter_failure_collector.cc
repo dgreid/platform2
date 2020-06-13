@@ -22,7 +22,7 @@ CrashReporterFailureCollector::CrashReporterFailureCollector()
 
 CrashReporterFailureCollector::~CrashReporterFailureCollector() {}
 
-void CrashReporterFailureCollector::Collect() {
+bool CrashReporterFailureCollector::Collect() {
   std::string reason = "normal collection";
   bool feedback = true;
   if (util::IsDeveloperImage()) {
@@ -36,12 +36,12 @@ void CrashReporterFailureCollector::Collect() {
   LOG(INFO) << "Detected crash_reporter failure: (" << reason << ")";
 
   if (!feedback) {
-    return;
+    return false;
   }
 
   FilePath crash_directory;
   if (!GetCreatedCrashDirectoryByEuid(kRootUid, &crash_directory, nullptr)) {
-    return;
+    return false;
   }
 
   std::string dump_basename = FormatDumpBasename(kExecName, time(nullptr), 0);
@@ -52,4 +52,5 @@ void CrashReporterFailureCollector::Collect() {
   if (result) {
     FinishCrash(meta_path, kExecName, log_path.BaseName().value());
   }
+  return true;
 }

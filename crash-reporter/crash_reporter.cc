@@ -294,12 +294,13 @@ int HandleVmCrash(VmCollector* vm_collector, pid_t pid) {
   return 0;
 }
 
-void HandleCrashReporterFailure(
+int HandleCrashReporterFailure(
     CrashReporterFailureCollector* crash_reporter_failure_collector) {
   // Accumulate logs to help in diagnosing failures during collection.
   brillo::LogToString(true);
-  crash_reporter_failure_collector->Collect();
+  bool handled = crash_reporter_failure_collector->Collect();
   brillo::LogToString(false);
+  return handled ? 0 : 1;
 }
 
 // Ensure stdout, stdin, and stderr are open file descriptors.  If
@@ -596,8 +597,7 @@ int main(int argc, char* argv[]) {
   }
 
   if (FLAGS_crash_reporter_crashed) {
-    HandleCrashReporterFailure(&crash_reporter_failure_collector);
-    return 0;
+    return HandleCrashReporterFailure(&crash_reporter_failure_collector);
   }
 
   if (!FLAGS_chrome.empty()) {

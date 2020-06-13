@@ -24,7 +24,7 @@ class CrashReporterFailureCollector : public CrashCollector {
   ~CrashReporterFailureCollector() override;
 
   // Collect crash reporter failures.
-  void Collect();
+  bool Collect();
 
  private:
   DISALLOW_COPY_AND_ASSIGN(CrashReporterFailureCollector);
