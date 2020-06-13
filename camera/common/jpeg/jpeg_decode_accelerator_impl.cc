@@ -69,7 +69,9 @@ std::unique_ptr<JpegDecodeAccelerator> JpegDecodeAccelerator::CreateInstance() {
 JpegDecodeAcceleratorImpl::JpegDecodeAcceleratorImpl()
     : buffer_id_(0),
       mojo_manager_(CameraMojoChannelManager::CreateInstance()),
-      ipc_bridge_(new IPCBridge(mojo_manager_.get())),
+      cancellation_relay_(new CancellationRelay),
+      ipc_bridge_(
+          new IPCBridge(mojo_manager_.get(), cancellation_relay_.get())),
       camera_metrics_(CameraMetrics::New()) {
   VLOGF_ENTER();
 }
@@ -88,7 +90,6 @@ JpegDecodeAcceleratorImpl::~JpegDecodeAcceleratorImpl() {
 bool JpegDecodeAcceleratorImpl::Start() {
   VLOGF_ENTER();
 
-  cancellation_relay_ = std::make_unique<CancellationRelay>();
   auto is_initialized = cros::Future<bool>::Create(cancellation_relay_.get());
 
   mojo_manager_->GetIpcTaskRunner()->PostTask(
@@ -203,8 +204,10 @@ int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
 }
 
 JpegDecodeAcceleratorImpl::IPCBridge::IPCBridge(
-    CameraMojoChannelManager* mojo_manager)
+    CameraMojoChannelManager* mojo_manager,
+    CancellationRelay* cancellation_relay)
     : mojo_manager_(mojo_manager),
+      cancellation_relay_(cancellation_relay),
       ipc_task_runner_(mojo_manager_->GetIpcTaskRunner()) {}
 
 JpegDecodeAcceleratorImpl::IPCBridge::~IPCBridge() {
@@ -376,6 +379,7 @@ void JpegDecodeAcceleratorImpl::IPCBridge::OnJpegDecodeAcceleratorError() {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   VLOGF_ENTER();
   LOGF(ERROR) << "There is a mojo error for JpegDecodeAccelerator";
+  cancellation_relay_->CancelAllFutures();
   Destroy();
   VLOGF_EXIT();
 }

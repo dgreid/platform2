@@ -63,7 +63,8 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
   // be run on IPC thread.
   class IPCBridge {
    public:
-    IPCBridge(CameraMojoChannelManager* mojo_manager);
+    IPCBridge(CameraMojoChannelManager* mojo_manager,
+              CancellationRelay* cancellation_relay);
 
     // It should only be triggered on IPC thread to ensure thread-safety.
     ~IPCBridge();
@@ -137,6 +138,9 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
     // We use it to create JpegEncodeAccelerator Mojo channel.
     CameraMojoChannelManager* mojo_manager_;
 
+    // Used to cancel pending futures when error occurs.
+    CancellationRelay* cancellation_relay_;
+
     // The Mojo IPC task runner.
     const scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
 
@@ -165,7 +169,7 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
   std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 
   // Used to cancel pending futures when error occurs.
-  std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
+  std::unique_ptr<CancellationRelay> cancellation_relay_;
 
   // The instance which deals with the IPC-related calls. It should always run
   // and be deleted on IPC thread.
