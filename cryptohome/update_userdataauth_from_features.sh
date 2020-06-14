@@ -7,7 +7,7 @@
 try_once() {
   local ctrl_file="/var/lib/cryptohome/cryptohome_userdataauth_interface.conf"
   local dbus_interface="org.chromium.ChromeFeaturesServiceInterface"
-  local dbus_method="IsCryptohomeUserDataAuthEnabled"
+  local dbus_method="IsCryptohomeUserDataAuthKillswitchEnabled"
   mkdir -p "$(dirname "${ctrl_file}")"
 
   local status=0
@@ -21,24 +21,23 @@ try_once() {
   if [ "${status}" -ne 0 ]; then
     # The command failed.
     logger -p WARN "Failed to contact chrome features service to" \
-      "check if cryptohome UserDataAuth interface is enabled;" \
+      "check if cryptohome UserDataAuth interface is disabled;" \
       "status=${status} reply=${reply}"
     return 1
   fi
 
-  if [ "${reply##* }" = "false" ] ; then
-    # Disable cryptohome userdataauth.
+  if [ "${reply##* }" = "true" ] ; then
+    # Killswitch is on, disable cryptohome userdataauth.
     echo "USER_DATA_AUTH_INTERFACE=off" > "${ctrl_file}"
     logger -p INFO "Cryptohome UserDataAuth kill switch on"
-  elif [ "${reply##* }" = "true" ] ; then
-    # Currently finch is used as a kill switch, so if finch indicates that
-    # userdataauth is used, then we'll leave it to /etc to decide.
+  elif [ "${reply##* }" = "false" ] ; then
+    # Killswitch is off, leave it to /etc to decide.
     rm "${ctrl_file}"
     logger -p INFO "Cryptohome UserDataAuth kill switch off"
   else
     # Response is bad.
     logger -p WARN "Bad response from chrome features service when" \
-      "checking if cryptohome UserDataAuth interface is enabled;" \
+      "checking if cryptohome UserDataAuth interface is disabled;" \
       "reply=${reply}"
     return 1
   fi
