@@ -260,10 +260,11 @@ class Service final {
 
   // Connection to the system bus.
   scoped_refptr<dbus::Bus> bus_;
-  dbus::ExportedObject* exported_object_;       // Owned by |bus_|.
-  dbus::ObjectProxy* cicerone_service_proxy_;   // Owned by |bus_|.
-  dbus::ObjectProxy* seneschal_service_proxy_;  // Owned by |bus_|.
-  dbus::ObjectProxy* vmplugin_service_proxy_;   // Owned by |bus_|.
+  dbus::ExportedObject* exported_object_;           // Owned by |bus_|.
+  dbus::ObjectProxy* cicerone_service_proxy_;       // Owned by |bus_|.
+  dbus::ObjectProxy* seneschal_service_proxy_;      // Owned by |bus_|.
+  dbus::ObjectProxy* vm_permission_service_proxy_;  // Owned by |bus_|.
+  dbus::ObjectProxy* vmplugin_service_proxy_;       // Owned by |bus_|.
 
   // The port number to assign to the next shared directory server.
   uint32_t next_seneschal_server_port_;

@@ -124,6 +124,7 @@ static_library("libconcierge") {
     "../concierge/termina_vm.cc",
     "../concierge/untrusted_vm_utils.cc",
     "../concierge/vm_base_impl.cc",
+    "../concierge/vm_permission_interface.cc",
     "../concierge/vm_util.cc",
     "../concierge/vmplugin_dispatcher_interface.cc",
     "../concierge/vsock_cid_pool.cc",

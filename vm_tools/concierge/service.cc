@@ -67,6 +67,7 @@
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/ssh_keys.h"
+#include "vm_tools/concierge/vm_permission_interface.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
 using std::string;
@@ -900,6 +901,13 @@ bool Service::Init() {
   }
 
   // Get the D-Bus proxy for communicating with Plugin VM dispatcher.
+  vm_permission_service_proxy_ = vm_permission::GetServiceProxy(bus_);
+  if (!vm_permission_service_proxy_) {
+    LOG(ERROR) << "Unable to get dbus proxy for VM permission service";
+    return false;
+  }
+
+  // Get the D-Bus proxy for communicating with Plugin VM dispatcher.
   vmplugin_service_proxy_ = pvm::dispatcher::GetServiceProxy(bus_);
   if (!vmplugin_service_proxy_) {
     LOG(ERROR) << "Unable to get dbus proxy for Plugin VM dispatcher service";
@@ -1611,7 +1619,8 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
       std::move(iso_dir), root_dir.Take(), runtime_dir.Take(),
       std::move(network_client), request.subnet_index(),
       request.net_options().enable_vnet_hdr(),
-      std::move(seneschal_server_proxy), vmplugin_service_proxy_);
+      std::move(seneschal_server_proxy), vm_permission_service_proxy_,
+      vmplugin_service_proxy_);
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
     response.set_failure_reason("Unable to start VM");

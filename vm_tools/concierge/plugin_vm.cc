@@ -24,6 +24,7 @@
 
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/tap_device_builder.h"
+#include "vm_tools/concierge/vm_permission_interface.h"
 #include "vm_tools/concierge/vm_util.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
@@ -121,11 +122,13 @@ std::unique_ptr<PluginVm> PluginVm::Create(
     int subnet_index,
     bool enable_vnet_hdr,
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
+    dbus::ObjectProxy* vm_permission_service_proxy,
     dbus::ObjectProxy* vmplugin_service_proxy) {
   auto vm = base::WrapUnique(new PluginVm(
       std::move(id), std::move(network_client), subnet_index, enable_vnet_hdr,
-      std::move(seneschal_server_proxy), vmplugin_service_proxy,
-      std::move(iso_dir), std::move(root_dir), std::move(runtime_dir)));
+      std::move(seneschal_server_proxy), vm_permission_service_proxy,
+      vmplugin_service_proxy, std::move(iso_dir), std::move(root_dir),
+      std::move(runtime_dir)));
 
   if (!vm->CreateUsbListeningSocket() ||
       !vm->Start(cpus, std::move(params), std::move(stateful_dir))) {
@@ -146,6 +149,11 @@ bool PluginVm::StopVm() {
   // Note the client will only be null during testing.
   if (network_client_ && !network_client_->NotifyPluginVmShutdown(id_hash_)) {
     LOG(WARNING) << "Unable to notify networking services";
+  }
+
+  // Notify permission service of VM destruction.
+  if (!permission_token_.empty()) {
+    vm_permission::UnregisterVm(vm_permission_service_proxy_, id_);
   }
 
   // Do a sanity check here to make sure the process is still around.
@@ -621,6 +629,7 @@ PluginVm::PluginVm(VmId id,
                    int subnet_index,
                    bool enable_vnet_hdr,
                    std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
+                   dbus::ObjectProxy* vm_permission_service_proxy,
                    dbus::ObjectProxy* vmplugin_service_proxy,
                    base::FilePath iso_dir,
                    base::FilePath root_dir,
@@ -631,8 +640,10 @@ PluginVm::PluginVm(VmId id,
       subnet_index_(subnet_index),
       enable_vnet_hdr_(enable_vnet_hdr),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
+      vm_permission_service_proxy_(vm_permission_service_proxy),
       vmplugin_service_proxy_(vmplugin_service_proxy),
       usb_last_handle_(0) {
+  CHECK(vm_permission_service_proxy_);
   CHECK(vmplugin_service_proxy_);
   CHECK(base::DirectoryExists(iso_dir_));
   CHECK(base::DirectoryExists(root_dir));
@@ -652,6 +663,15 @@ bool PluginVm::Start(uint32_t cpus,
                      base::FilePath stateful_dir) {
   if (!pvm::helper::IsDlcVm()) {
     LOG(ERROR) << "PluginVM DLC is not installed.";
+    return false;
+  }
+
+  // Register the VM with permission service and obtain permission
+  // token.
+  if (!vm_permission::RegisterVm(vm_permission_service_proxy_, id_,
+                                 vm_permission::VmType::PLUGIN_VM,
+                                 &permission_token_)) {
+    LOG(ERROR) << "Failed to register with permission service";
     return false;
   }
 
@@ -708,6 +728,24 @@ bool PluginVm::Start(uint32_t cpus,
                          root_dir_.GetPath().Append("etc").value().c_str(),
                          "/etc"),
   };
+
+  if (vm_permission::IsCameraEnabled(vm_permission_service_proxy_,
+                                     permission_token_)) {
+    LOG(INFO) << "VM " << id_ << ": camera access enabled";
+    bind_mounts.push_back("/run/camera:/run/camera:true");
+  } else {
+    LOG(INFO) << "VM " << id_ << ": camera access disabled";
+  }
+
+  if (vm_permission::IsMicrophoneEnabled(vm_permission_service_proxy_,
+                                         permission_token_)) {
+    LOG(INFO) << "VM " << id_ << ": microphone access enabled";
+    bind_mounts.push_back(
+        "/run/cras/.cras_unified:/run/cras/.cras_socket:true");
+  } else {
+    LOG(INFO) << "VM " << id_ << ": microphone access disabled";
+    bind_mounts.push_back("/run/cras/.cras_socket::true");
+  }
 
   // TODO(kimjae): This is a temporary hack to have relative files to be found
   // even when started from DLC paths. Clean this up once a cleaner solution

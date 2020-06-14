@@ -47,6 +47,7 @@ class PluginVm final : public VmBaseImpl {
       int subnet_index,
       bool enable_vnet_hdr,
       std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
+      dbus::ObjectProxy* vm_permission_service_proxy,
       dbus::ObjectProxy* vmplugin_service_proxy);
   ~PluginVm() override;
 
@@ -100,6 +101,7 @@ class PluginVm final : public VmBaseImpl {
            int subnet_index,
            bool enable_vnet_hdr,
            std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
+           dbus::ObjectProxy* vm_perrmission_service_proxy,
            dbus::ObjectProxy* vmplugin_service_proxy,
            base::FilePath iso_dir,
            base::FilePath root_dir,
@@ -140,6 +142,12 @@ class PluginVm final : public VmBaseImpl {
 
   // Proxy to the server providing shared directory access for this VM.
   std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy_;
+
+  // Proxy to the dispatcher service.  Not owned.
+  dbus::ObjectProxy* vm_permission_service_proxy_;
+
+  // Token assigned to the VM by the permission service.
+  std::string permission_token_;
 
   // Proxy to the dispatcher service.  Not owned.
   dbus::ObjectProxy* vmplugin_service_proxy_;
