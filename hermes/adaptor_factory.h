@@ -1,0 +1,22 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef HERMES_ADAPTOR_FACTORY_H_
+#define HERMES_ADAPTOR_FACTORY_H_
+
+#include <memory>
+
+#include "hermes/adaptor_factory_interface.h"
+
+namespace hermes {
+
+class AdaptorFactory : public AdaptorFactoryInterface {
+ public:
+  std::unique_ptr<org::chromium::Hermes::ManagerAdaptor> CreateManagerAdaptor(
+      Manager* manager) override;
+};
+
+}  // namespace hermes
+
+#endif  // HERMES_ADAPTOR_FACTORY_H_

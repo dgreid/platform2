@@ -37,7 +37,7 @@ Daemon::Daemon()
 
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
-  Context::Initialize(bus_, lpa_.get(), &executor_);
+  Context::Initialize(bus_, lpa_.get(), &executor_, &adaptor_factory_);
   manager_ = std::make_unique<Manager>();
 }
 

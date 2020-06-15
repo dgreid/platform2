@@ -12,14 +12,19 @@ Context* Context::context_ = nullptr;
 // static
 void Context::Initialize(const scoped_refptr<dbus::Bus>& bus,
                          lpa::core::Lpa* lpa,
-                         Executor* executor) {
+                         Executor* executor,
+                         AdaptorFactoryInterface* adaptor_factory) {
   CHECK(!context_);
-  context_ = new Context(bus, lpa, executor);
+  context_ = new Context(bus, lpa, executor, adaptor_factory);
 }
 
 Context::Context(const scoped_refptr<dbus::Bus>& bus,
                  lpa::core::Lpa* lpa,
-                 Executor* executor)
-    : bus_(bus), lpa_(lpa), executor_(executor) {}
+                 Executor* executor,
+                 AdaptorFactoryInterface* adaptor_factory)
+    : bus_(bus),
+      lpa_(lpa),
+      executor_(executor),
+      adaptor_factory_(adaptor_factory) {}
 
 }  // namespace hermes

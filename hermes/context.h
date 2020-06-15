@@ -8,6 +8,8 @@
 #include <dbus/bus.h>
 #include <google-lpa/lpa/core/lpa.h>
 
+#include "hermes/adaptor_factory_interface.h"
+
 namespace hermes {
 
 class Executor;
@@ -22,7 +24,8 @@ class Context {
   // invoked prior to clients calling Get().
   static void Initialize(const scoped_refptr<dbus::Bus>& bus,
                          lpa::core::Lpa* lpa,
-                         Executor* executor);
+                         Executor* executor,
+                         AdaptorFactoryInterface* adaptor_factory);
   // Returns initialized Context singleton. Initialize() must have been invoked
   // prior to calls to this.
   static Context* Get() {
@@ -33,17 +36,20 @@ class Context {
   const scoped_refptr<dbus::Bus>& bus() { return bus_; }
   lpa::core::Lpa* lpa() { return lpa_; }
   Executor* executor() { return executor_; }
+  AdaptorFactoryInterface* adaptor_factory() { return adaptor_factory_; }
 
  private:
   Context(const scoped_refptr<dbus::Bus>& bus,
           lpa::core::Lpa* lpa,
-          Executor* executor);
+          Executor* executor,
+          AdaptorFactoryInterface* adaptor_factory);
 
   static Context* context_;
 
   scoped_refptr<dbus::Bus> bus_;
   lpa::core::Lpa* lpa_;
   Executor* executor_;
+  AdaptorFactoryInterface* adaptor_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(Context);
 };

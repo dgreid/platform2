@@ -17,32 +17,25 @@
 
 #include "hermes/executor.h"
 #include "hermes/lpa_util.h"
+#include "hermes/result_callback.h"
 
 using lpa::proto::ProfileInfo;
 
 namespace hermes {
 
 Manager::Manager()
-    : org::chromium::Hermes::ManagerAdaptor(this),
-      context_(Context::Get()),
-      dbus_object_(nullptr,
-                   context_->bus(),
-                   org::chromium::Hermes::ManagerAdaptor::GetObjectPath()) {
-  RegisterWithDBusObject(&dbus_object_);
-  dbus_object_.RegisterAndBlock();
-
-  SetPendingProfiles({});
+    : context_(Context::Get()),
+      dbus_adaptor_(context_->adaptor_factory()->CreateManagerAdaptor(this)) {
   RequestInstalledProfiles();
 }
 
 void Manager::InstallProfileFromActivationCode(
-    std::unique_ptr<DBusResponse<dbus::ObjectPath>> response,
     const std::string& in_activation_code,
-    const std::string& in_confirmation_code) {
-  auto profile_cb = [response{std::shared_ptr<DBusResponse<dbus::ObjectPath>>(
-                         std::move(response))},
-                     this](lpa::proto::ProfileInfo& info, int error) {
-    OnProfileInstalled(info, error, std::move(response));
+    const std::string& in_confirmation_code,
+    ResultCallback<dbus::ObjectPath> result_callback) {
+  auto profile_cb = [result_callback{std::move(result_callback)}, this](
+                        lpa::proto::ProfileInfo& info, int error) mutable {
+    OnProfileInstalled(info, error, std::move(result_callback));
   };
   if (in_activation_code.empty()) {
     context_->lpa()->GetDefaultProfileFromSmdp("", context_->executor(),
@@ -57,18 +50,8 @@ void Manager::InstallProfileFromActivationCode(
   context_->lpa()->DownloadProfile(in_activation_code, std::move(options),
                                    context_->executor(), std::move(profile_cb));
 }
-
-void Manager::InstallPendingProfile(
-    std::unique_ptr<DBusResponse<>> response,
-    const dbus::ObjectPath& /*in_pending_profile*/,
-    const std::string& /*in_confirmation_code*/) {
-  response->ReplyWithError(
-      FROM_HERE, brillo::errors::dbus::kDomain, kErrorUnsupported,
-      "This method is not supported until crbug.com/1071470 is implemented");
-}
-
-void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
-                               const dbus::ObjectPath& in_profile) {
+void Manager::UninstallProfile(const dbus::ObjectPath& in_profile,
+                               ResultCallback<> result_callback) {
   const Profile* matching_profile = nullptr;
   for (auto& profile : installed_profiles_) {
     if (profile->object_path() == in_profile) {
@@ -77,71 +60,55 @@ void Manager::UninstallProfile(std::unique_ptr<DBusResponse<>> response,
     }
   }
   if (!matching_profile) {
-    response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                             kErrorInvalidParameter,
-                             "Could not find Profile " + in_profile.value());
+    result_callback.Error(brillo::Error::Create(
+        FROM_HERE, brillo::errors::dbus::kDomain, kErrorInvalidParameter,
+        "Could not find Profile " + in_profile.value()));
     return;
   }
 
   context_->lpa()->DeleteProfile(
       matching_profile->GetIccid(), context_->executor(),
-      [response{std::shared_ptr<DBusResponse<>>(std::move(response))},
-       in_profile, this](int error) {
-        OnProfileUninstalled(in_profile, error, std::move(response));
+      [in_profile, result_callback{std::move(result_callback)},
+       this](int error) mutable {
+        OnProfileUninstalled(in_profile, error, std::move(result_callback));
       });
 }
-
-void Manager::RequestPendingEvents(std::unique_ptr<DBusResponse<>> response) {
-  // TODO(crbug.com/1071470) This is stubbed until google-lpa supports SM-DS.
-  //
-  // Note that there will need to be some way to store the Event Record info
-  // (SM-DP+ address and event id) for each pending Profile.
-  response->Return();
-}
-
-void Manager::SetTestMode(bool /*in_is_test_mode*/) {
-  // TODO(akhouderchah) This is a no-op until the Lpa interface allows for
-  // switching certificate directory without recreating the Lpa object.
-  NOTIMPLEMENTED();
-}
-
 void Manager::UpdateInstalledProfilesProperty() {
   std::vector<dbus::ObjectPath> profile_paths;
   for (auto& profile : installed_profiles_) {
     profile_paths.push_back(profile->object_path());
   }
-  SetInstalledProfiles(profile_paths);
+  dbus_adaptor_->SetInstalledProfiles(profile_paths);
 }
 
 void Manager::OnProfileInstalled(
     const lpa::proto::ProfileInfo& profile_info,
     int error,
-    std::shared_ptr<DBusResponse<dbus::ObjectPath>> response) {
+    ResultCallback<dbus::ObjectPath> result_callback) {
   auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
   if (decoded_error) {
-    response->ReplyWithError(decoded_error.get());
+    result_callback.Error(decoded_error);
     return;
   }
 
   auto profile = Profile::Create(profile_info);
   if (!profile) {
-    response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                             kErrorInternalLpaFailure,
-                             "Failed to create Profile object");
+    result_callback.Error(brillo::Error::Create(
+        FROM_HERE, brillo::errors::dbus::kDomain, kErrorInternalLpaFailure,
+        "Failed to create Profile object"));
     return;
   }
 
   installed_profiles_.push_back(std::move(profile));
   UpdateInstalledProfilesProperty();
-  response->Return(installed_profiles_.back()->object_path());
+  result_callback.Success(installed_profiles_.back()->object_path());
 }
-
 void Manager::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
                                    int error,
-                                   std::shared_ptr<DBusResponse<>> response) {
+                                   ResultCallback<> result_callback) {
   auto decoded_error = LpaErrorToBrillo(FROM_HERE, error);
   if (decoded_error) {
-    response->ReplyWithError(decoded_error.get());
+    result_callback.Error(decoded_error);
     return;
   }
 
@@ -154,9 +121,8 @@ void Manager::OnProfileUninstalled(const dbus::ObjectPath& profile_path,
   CHECK(iter != installed_profiles_.end());
   installed_profiles_.erase(iter);
   UpdateInstalledProfilesProperty();
-  response->Return();
+  result_callback.Success();
 }
-
 void Manager::RequestInstalledProfiles() {
   context_->lpa()->GetInstalledProfiles(
       context_->executor(),

@@ -12,6 +12,7 @@
 #include <google-lpa/lpa/card/euicc_card.h>
 #include <google-lpa/lpa/core/lpa.h>
 
+#include "hermes/adaptor_factory.h"
 #include "hermes/executor.h"
 #include "hermes/logger.h"
 #include "hermes/manager.h"
@@ -36,6 +37,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   SmdsFactory smds_;
   std::unique_ptr<lpa::card::EuiccCard> modem_;
   std::unique_ptr<lpa::core::Lpa> lpa_;
+
+  AdaptorFactory adaptor_factory_;
 
   std::unique_ptr<Manager> manager_;
 

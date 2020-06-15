@@ -41,12 +41,14 @@ generate_dbus_adaptors("hermes_adaptors") {
 static_library("libhermes") {
   configs += [ ":target_defaults" ]
   sources = [
+    "adaptor_factory.cc",
     "apdu.cc",
     "context.cc",
     "daemon.cc",
     "executor.cc",
     "lpa_util.cc",
     "manager.cc",
+    "manager_dbus_adaptor.cc",
     "modem_qrtr.cc",
     "profile.cc",
     "qmi_uim.cc",
