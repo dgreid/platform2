@@ -74,6 +74,9 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
   FRIEND_TEST(ServerProxyTest, SetupConnection);
   FRIEND_TEST(ServerProxyTest, HandleCanceledJobWhilePendingProxyResolution);
+  FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequests);
+  FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials);
+  FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsNoCredentials);
 
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
 
@@ -99,19 +102,28 @@ class ServerProxy {
   // Sets the environment variables for kerberos authentication.
   void SetKerberosEnv(bool kerberos_enabled);
 
+  // Notifies proxy connect jobs which are pending authentication that
+  // credentials were provided for the protection space identified by
+  // |auth_credentials_key|. Called when the parent process sends credentials
+  // along with the associated protection space via the standard input.
+  void AuthCredentialsProvided(const std::string& auth_credentials_key,
+                               const std::string& credentials);
+
   // The proxy listening address in network-byte order.
   uint32_t listening_addr_ = 0;
   int listening_port_;
 
   // The user name and password to use for proxy authentication in the format
   // compatible with libcurl's CURLOPT_USERPWD: both user name and password URL
-  // encoded and separated by colon.
+  // encoded and separated by colon. Only set for system traffic. If set, the
+  // credentials will be applied to any connection, regardless of the remote
+  // proxy it's connecting to or the challenge response.
   std::string system_credentials_;
 
   std::unique_ptr<patchpanel::Socket> listening_fd_;
 
   // List of SocketForwarders that corresponds to the TCP tunnel between the
-  // local client and the remote  proxy, forwarding data between the TCP
+  // local client and the remote proxy, forwarding data between the TCP
   // connection initiated by the local client to the local proxy and the TCP
   // connection initiated by the local proxy to the remote proxy.
   std::list<std::unique_ptr<patchpanel::SocketForwarder>> forwarders_;
@@ -124,6 +136,21 @@ class ServerProxy {
   // connect jobs that are connecting to the same target url.
   std::map<std::string, std::list<OnProxyResolvedCallback>>
       pending_proxy_resolution_requests_;
+
+  // Collection of ongoing authentication requests. The key represents the
+  // ProtectionSpace proto message (proxy url, scheme and realm) associated with
+  // the request, serialized as a string. The value is a list of callbaks to
+  // pending connect jobs that are awaiting authentication and have received a
+  // challenge with the same scheme and realm from the same proxy server.
+  std::map<std::string, std::list<OnAuthAcquiredCallback>>
+      pending_auth_required_requests_;
+
+  // Stores HTTP authentication identities acquired from the user and challenge
+  // info. The credentials are mapped by the protection space (origin, realm,
+  // scheme) and can only be used in response to challenges corresponding to
+  // this specific triple, as opposed to |system_credentials_| which, if set,
+  // can be used for any protection space.
+  std::map<std::string, std::string> auth_cache_;
 
   base::OnceClosure quit_closure_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdin_watcher_;

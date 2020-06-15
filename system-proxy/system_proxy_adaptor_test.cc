@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <list>
+#include <map>
 #include <utility>
 
 #include <base/bind.h>
@@ -27,6 +28,7 @@
 #include <dbus/mock_object_proxy.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/kerberos/dbus-constants.h>
+#include <dbus/system_proxy/dbus-constants.h>
 
 #include "bindings/worker_common.pb.h"
 #include "system-proxy/kerberos_client.h"
@@ -93,6 +95,8 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
   FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
 
   base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
 };
@@ -131,6 +135,16 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   SystemProxyAdaptorTest& operator=(const SystemProxyAdaptorTest&) = delete;
   ~SystemProxyAdaptorTest() override = default;
 
+  void AddCredentialsToAuthCache(
+      const worker::ProtectionSpace& protection_space,
+      const std::string& username,
+      const std::string& password) {
+    Credentials credentials;
+    credentials.set_username(username);
+    credentials.set_password(password);
+    mock_auth_cache_[protection_space.SerializeAsString()] = credentials;
+  }
+
   void OnWorkerActive(dbus::Signal* signal) {
     EXPECT_EQ(signal->GetInterface(), "org.chromium.SystemProxy");
     EXPECT_EQ(signal->GetMember(), "WorkerActive");
@@ -142,8 +156,41 @@ class SystemProxyAdaptorTest : public ::testing::Test {
     EXPECT_EQ(kLocalProxyHostPort, details.local_proxy_url());
   }
 
+  void OnAuthenticationRequired(dbus::Signal* signal) {
+    EXPECT_EQ(signal->GetInterface(), "org.chromium.SystemProxy");
+    EXPECT_EQ(signal->GetMember(), "AuthenticationRequired");
+
+    dbus::MessageReader signal_reader(signal);
+    system_proxy::AuthenticationRequiredDetails details;
+    EXPECT_TRUE(signal_reader.PopArrayOfBytesAsProto(&details));
+
+    Credentials credentials;
+
+    auto it = mock_auth_cache_.find(
+        details.proxy_protection_space().SerializeAsString());
+
+    if (it != mock_auth_cache_.end()) {
+      credentials = it->second;
+    } else {
+      credentials.set_username("");
+      credentials.set_password("");
+    }
+
+    SetAuthenticationDetailsRequest request;
+    *request.mutable_credentials() = credentials;
+    *request.mutable_protection_space() = details.proxy_protection_space();
+    request.set_traffic_type(TrafficOrigin::SYSTEM);
+
+    std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+    request.SerializeToArray(proto_blob.data(), proto_blob.size());
+
+    adaptor_->SetAuthenticationDetails(proto_blob);
+    ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+  }
+
  protected:
   bool active_worker_signal_called_ = false;
+  std::map<std::string, Credentials> mock_auth_cache_;
   scoped_refptr<dbus::MockBus> bus_ = new dbus::MockBus(dbus::Bus::Options());
   scoped_refptr<dbus::MockExportedObject> mock_exported_object_;
   // SystemProxyAdaptor instance that creates fake worker processes.
@@ -155,40 +202,6 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   base::MessageLoopForIO loop_;
   brillo::BaseMessageLoop brillo_loop_{&loop_};
 };
-
-TEST_F(SystemProxyAdaptorTest, SetSystemTrafficCredentials) {
-  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
-      .WillOnce(Return(mock_patchpanel_proxy_.get()));
-
-  EXPECT_FALSE(adaptor_->system_services_worker_.get());
-  SetSystemTrafficCredentialsRequest request;
-  request.set_system_services_username(kUser);
-  request.set_system_services_password(kPassword);
-  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
-  request.SerializeToArray(proto_blob.data(), proto_blob.size());
-
-  // First create a worker object.
-  adaptor_->SetSystemTrafficCredentials(proto_blob);
-  brillo_loop_.RunOnce(false);
-
-  EXPECT_TRUE(adaptor_->system_services_worker_.get());
-  EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
-
-  int fds[2];
-  EXPECT_TRUE(base::CreateLocalNonBlockingPipe(fds));
-  base::ScopedFD read_scoped_fd(fds[0]);
-  // Reset the worker stdin pipe to read the input from the other endpoint.
-  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
-
-  adaptor_->SetSystemTrafficCredentials(proto_blob);
-  brillo_loop_.RunOnce(false);
-
-  worker::WorkerConfigs config;
-  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
-  EXPECT_TRUE(config.has_credentials());
-  EXPECT_EQ(config.credentials().username(), kUser);
-  EXPECT_EQ(config.credentials().password(), kPassword);
-}
 
 TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
@@ -268,14 +281,17 @@ TEST_F(SystemProxyAdaptorTest, ShutDown) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
       .WillOnce(Return(mock_patchpanel_proxy_.get()));
   EXPECT_FALSE(adaptor_->system_services_worker_.get());
-  SetSystemTrafficCredentialsRequest request;
-  request.set_system_services_username(kUser);
-  request.set_system_services_password(kPassword);
+  SetAuthenticationDetailsRequest request;
+  Credentials credentials;
+  credentials.set_username(kUser);
+  credentials.set_password(kPassword);
+  *request.mutable_credentials() = credentials;
+  request.set_traffic_type(TrafficOrigin::SYSTEM);
   std::vector<uint8_t> proto_blob(request.ByteSizeLong());
   request.SerializeToArray(proto_blob.data(), proto_blob.size());
 
   // First create a worker object.
-  adaptor_->SetSystemTrafficCredentials(proto_blob);
+  adaptor_->SetAuthenticationDetails(proto_blob);
   brillo_loop_.RunOnce(false);
 
   EXPECT_TRUE(adaptor_->system_services_worker_.get());
@@ -323,6 +339,80 @@ TEST_F(SystemProxyAdaptorTest, ProxyResolutionFilter) {
   EXPECT_EQ("target_url", reply.target_url());
   EXPECT_EQ(2, proxies.size());
   EXPECT_EQ("http://test.proxy.com", proxies.front());
+}
+
+// Test that verifies that authentication requests are result in sending a
+// signal to notify credentials are missing and credentials and protection space
+// if correctly forwarded to the worker processes.
+TEST_F(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired) {
+  EXPECT_CALL(*mock_exported_object_, SendSignal(_))
+      .WillOnce(
+          Invoke(this, &SystemProxyAdaptorTest::OnAuthenticationRequired));
+
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin("http://test.proxy.com");
+  protection_space.set_realm("my realm");
+  protection_space.set_scheme("basic");
+  std::string msg;
+  protection_space.SerializeToString(&msg);
+  AddCredentialsToAuthCache(protection_space, kUser, kPassword);
+
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  int fds[2];
+  ASSERT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+  adaptor_->RequestAuthenticationCredentials(protection_space);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_credentials());
+
+  const worker::Credentials& reply = config.credentials();
+  EXPECT_TRUE(reply.has_protection_space());
+  EXPECT_EQ(reply.username(), kUser);
+  EXPECT_EQ(reply.password(), kPassword);
+  EXPECT_EQ(reply.protection_space().SerializeAsString(),
+            protection_space.SerializeAsString());
+}
+
+// Test that verifies that authentication requests that resolve to an empty
+// credentials set are forwarded to the worker processes.
+TEST_F(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials) {
+  EXPECT_CALL(*mock_exported_object_, SendSignal(_))
+      .WillOnce(
+          Invoke(this, &SystemProxyAdaptorTest::OnAuthenticationRequired));
+
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin("http://test.proxy.com");
+  protection_space.set_realm("my realm");
+  protection_space.set_scheme("basic");
+  std::string msg;
+  protection_space.SerializeToString(&msg);
+
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  int fds[2];
+  ASSERT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+  adaptor_->RequestAuthenticationCredentials(protection_space);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_credentials());
+
+  const worker::Credentials& reply = config.credentials();
+  EXPECT_TRUE(reply.has_protection_space());
+  EXPECT_EQ(reply.username(), "");
+  EXPECT_EQ(reply.password(), "");
+  EXPECT_EQ(reply.protection_space().SerializeAsString(),
+            protection_space.SerializeAsString());
 }
 
 }  // namespace system_proxy

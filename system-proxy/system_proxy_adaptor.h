@@ -14,6 +14,7 @@
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
+#include "bindings/worker_common.pb.h"
 #include "system_proxy/org.chromium.SystemProxy.h"
 
 namespace brillo {
@@ -54,6 +55,9 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       const std::string& target_url,
       const brillo::http::GetChromeProxyServersCallback& callback);
 
+  void RequestAuthenticationCredentials(
+      const worker::ProtectionSpace& protection_space);
+
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
   virtual bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic);
@@ -68,10 +72,11 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
 
   void SetCredentialsTask(SandboxedWorker* worker,
-                          const std::string& username,
-                          const std::string& password);
+                          const worker::Credentials& credentials);
 
   void SetKerberosEnabledTask(SandboxedWorker* worker,
                               bool kerberos_enabled,

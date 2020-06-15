@@ -82,11 +82,6 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
     return SerializeProto(response);
   }
 
-  if (!request.has_credentials() && !request.has_kerberos_enabled()) {
-    response.set_error_message(kNoCredentialsSpecifiedError);
-    return SerializeProto(response);
-  }
-
   if (request.traffic_type() != TrafficOrigin::SYSTEM) {
     response.set_error_message(kOnlySystemTrafficSupportedError);
     return SerializeProto(response);
@@ -98,17 +93,28 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
   }
 
   if (request.has_credentials()) {
-    if (!request.credentials().has_username() ||
-        !request.credentials().has_password()) {
+    if (!((request.credentials().has_username() &&
+           request.credentials().has_password()) ||
+          request.has_protection_space())) {
       response.set_error_message(kNoCredentialsSpecifiedError);
       return SerializeProto(response);
+    }
+    worker::Credentials credentials;
+    if (request.has_protection_space()) {
+      worker::ProtectionSpace protection_space;
+      protection_space.set_origin(request.protection_space().origin());
+      protection_space.set_scheme(request.protection_space().scheme());
+      protection_space.set_realm(request.protection_space().realm());
+      *credentials.mutable_protection_space() = protection_space;
+    }
+    if (request.credentials().has_username()) {
+      credentials.set_username(request.credentials().username());
+      credentials.set_password(request.credentials().password());
     }
     brillo::MessageLoop::current()->PostTask(
         FROM_HERE, base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
                               weak_ptr_factory_.GetWeakPtr(),
-                              system_services_worker_.get(),
-                              request.credentials().username(),
-                              request.credentials().password()));
+                              system_services_worker_.get(), credentials));
   }
 
   if (request.has_kerberos_enabled()) {
@@ -128,35 +134,8 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
 
 std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
     const std::vector<uint8_t>& request_blob) {
-  LOG(INFO) << "Received set credentials request.";
-
-  SetSystemTrafficCredentialsRequest request;
-  const std::string error_message =
-      DeserializeProto(FROM_HERE, &request, request_blob);
-
   SetSystemTrafficCredentialsResponse response;
-  if (!error_message.empty()) {
-    response.set_error_message(error_message);
-    return SerializeProto(response);
-  }
-
-  if (!request.has_system_services_username() ||
-      !request.has_system_services_password()) {
-    response.set_error_message(kNoCredentialsSpecifiedError);
-    return SerializeProto(response);
-  }
-
-  if (!CreateWorkerIfNeeded(/* user_traffic */ false)) {
-    response.set_error_message(kFailedToStartWorkerError);
-    return SerializeProto(response);
-  }
-
-  brillo::MessageLoop::current()->PostTask(
-      FROM_HERE,
-      base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
-                 weak_ptr_factory_.GetWeakPtr(), system_services_worker_.get(),
-                 request.system_services_username(),
-                 request.system_services_password()));
+  response.set_error_message("Deprecated. Please use SetAuthenticationDetails");
 
   return SerializeProto(response);
 }
@@ -223,11 +202,10 @@ bool SystemProxyAdaptor::CreateWorkerIfNeeded(bool user_traffic) {
   return true;
 }
 
-void SystemProxyAdaptor::SetCredentialsTask(SandboxedWorker* worker,
-                                            const std::string& username,
-                                            const std::string& password) {
+void SystemProxyAdaptor::SetCredentialsTask(
+    SandboxedWorker* worker, const worker::Credentials& credentials) {
   DCHECK(worker);
-  worker->SetUsernameAndPassword(username, password);
+  worker->SetCredentials(credentials);
 }
 
 void SystemProxyAdaptor::SetKerberosEnabledTask(
@@ -301,6 +279,17 @@ void SystemProxyAdaptor::OnNamespaceConnected(SandboxedWorker* worker,
                                           : TrafficOrigin::SYSTEM);
   details.set_local_proxy_url(worker->local_proxy_host_and_port());
   SendWorkerActiveSignal(SerializeProto(details));
+}
+
+void SystemProxyAdaptor::RequestAuthenticationCredentials(
+    const worker::ProtectionSpace& protection_space) {
+  AuthenticationRequiredDetails details;
+  ProtectionSpace proxy_protection_space;
+  proxy_protection_space.set_origin(protection_space.origin());
+  proxy_protection_space.set_realm(protection_space.realm());
+  proxy_protection_space.set_scheme(protection_space.scheme());
+  *details.mutable_proxy_protection_space() = proxy_protection_space;
+  SendAuthenticationRequiredSignal(SerializeProto(details));
 }
 
 }  // namespace system_proxy

@@ -56,5 +56,16 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </signal>
+    <signal name="AuthenticationRequired">
+      <tp:docstring>
+        Signal emitted when a system proxy worker requires credentials for proxy authentication.
+      </tp:docstring>
+      <arg name="details" type="ay">
+        <tp:docstring>
+          Serialized AuthenticationRequiredDetails message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+    </signal>
   </interface>
 </node>

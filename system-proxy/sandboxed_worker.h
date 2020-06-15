@@ -17,6 +17,8 @@
 #include <base/memory/weak_ptr.h>
 #include <chromeos/scoped_minijail.h>
 
+#include "bindings/worker_common.pb.h"
+
 namespace system_proxy {
 
 class SystemProxyAdaptor;
@@ -30,9 +32,9 @@ class SandboxedWorker {
 
   // Starts a sandboxed worker with pipes.
   virtual bool Start();
-  // Sends the username and password to the worker via communication pipes.
-  void SetUsernameAndPassword(const std::string& username,
-                              const std::string& password);
+  // Sends the credentials which include username, password and protection
+  // space (optional) to the worker via communication pipes.
+  void SetCredentials(const worker::Credentials& credentials);
   // Sends the availability of kerberos auth to the worker via communication
   // pipes.
   bool SetKerberosEnabled(bool enabled,
@@ -63,6 +65,8 @@ class SandboxedWorker {
   FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
   FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
+  FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
 
   void OnMessageReceived();
   void OnErrorReceived();

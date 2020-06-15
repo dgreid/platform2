@@ -21,7 +21,6 @@
 #include <chromeos/patchpanel/net_util.h>
 #include <google/protobuf/repeated_field.h>
 
-#include "bindings/worker_common.pb.h"
 #include "system-proxy/protobuf_util.h"
 #include "system-proxy/system_proxy_adaptor.h"
 
@@ -93,11 +92,7 @@ bool SandboxedWorker::Start() {
   return true;
 }
 
-void SandboxedWorker::SetUsernameAndPassword(const std::string& username,
-                                             const std::string& password) {
-  worker::Credentials credentials;
-  credentials.set_username(username);
-  credentials.set_password(password);
+void SandboxedWorker::SetCredentials(const worker::Credentials& credentials) {
   worker::WorkerConfigs configs;
   *configs.mutable_credentials() = credentials;
   if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
@@ -186,6 +181,11 @@ void SandboxedWorker::OnMessageReceived() {
         base::BindRepeating(&SandboxedWorker::OnProxyResolved,
                             weak_ptr_factory_.GetWeakPtr(),
                             proxy_request.target_url()));
+  }
+  if (request.has_auth_required_request()) {
+    const worker::AuthRequiredRequest& auth_request =
+        request.auth_required_request();
+    adaptor_->RequestAuthenticationCredentials(auth_request.protection_space());
   }
 }
 

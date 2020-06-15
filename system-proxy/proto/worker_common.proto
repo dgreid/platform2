@@ -4,9 +4,22 @@ option optimize_for = LITE_RUNTIME;
 
 package system_proxy.worker;
 
+// The protection space determines the domain over which credentials can
+// be automatically applied (defined in RFC7235 , section 2.2).
+message ProtectionSpace {
+  // The origin of the URL of the web proxy server issuing
+  // the challenge, formatted as scheme://url:port.
+  optional string origin = 1;
+  // The case-sensitive realm string of the challenge.
+  optional string realm = 2;
+  // The authentication scheme that can be basic, digest or NTLM.
+  optional string scheme = 3;
+}
+
 message Credentials {
   optional string username = 1;
   optional string password = 2;
+  optional ProtectionSpace protection_space = 3;
 }
 
 message SocketAddress {
@@ -34,10 +47,15 @@ message ProxyResolutionReply {
   repeated string proxy_servers = 2;
 }
 
+message AuthRequiredRequest {
+  optional ProtectionSpace protection_space = 1;
+}
+
 message WorkerRequest {
   oneof params {
     LogRequest log_request = 1;
     ProxyResolutionRequest proxy_resolution_request = 2;
+    AuthRequiredRequest auth_required_request = 3;
   }
 }
 

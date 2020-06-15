@@ -304,4 +304,136 @@ TEST_F(ServerProxyTest, HandleCanceledJobWhilePendingProxyResolution) {
   EXPECT_EQ(0, server_proxy_->pending_proxy_resolution_requests_.size());
 }
 
+// This test verifies that the athentication request is forwarded to the parent
+// process and that the pending authentication requests are resolved when the
+// parent sends the credentials associated with the protection space included in
+// the request.
+TEST_F(ServerProxyTest, HandlePendingAuthRequests) {
+  RedirectStdPipes();
+
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(kFakeProxyAddress);
+  protection_space.set_scheme("Basic");
+  protection_space.set_realm("Proxy test realm");
+  std::string actual_credentials = "";
+
+  EXPECT_CALL(*server_proxy_, GetStdoutPipe())
+      .WillOnce(Return(stdout_write_fd_.get()));
+
+  server_proxy_->AuthenticationRequired(
+      protection_space.origin(), protection_space.scheme(),
+      protection_space.realm(),
+      base::Bind(
+          [](std::string* actual_credentials, const std::string& credentials) {
+            *actual_credentials = credentials;
+          },
+          &actual_credentials));
+
+  EXPECT_EQ(1, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ(protection_space.SerializeAsString(),
+            server_proxy_->pending_auth_required_requests_.begin()->first);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerRequest request;
+  // Read the request from the worker's stdout output.
+  ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
+  ASSERT_TRUE(request.has_auth_required_request());
+  ASSERT_TRUE(request.auth_required_request().has_protection_space());
+  EXPECT_EQ(
+      request.auth_required_request().protection_space().SerializeAsString(),
+      protection_space.SerializeAsString());
+
+  // Write reply with a fake credentials to the worker's standard input.
+  worker::Credentials credentials;
+  *credentials.mutable_protection_space() = protection_space;
+  credentials.set_username("test_user");
+  credentials.set_password("test_pwd");
+  worker::WorkerConfigs configs;
+  *configs.mutable_credentials() = credentials;
+
+  ASSERT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
+  brillo_loop_.RunOnce(false);
+  EXPECT_EQ(0, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ("test_user:test_pwd", actual_credentials);
+}
+
+// This test verifies that pending athentication requests are solved when the
+// parent returns empty credentials for the protection space.
+TEST_F(ServerProxyTest, HandlePendingAuthRequestsNoCredentials) {
+  RedirectStdPipes();
+
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(kFakeProxyAddress);
+  protection_space.set_scheme("Basic");
+  protection_space.set_realm("Proxy test realm");
+  std::string actual_credentials = "";
+
+  EXPECT_CALL(*server_proxy_, GetStdoutPipe())
+      .WillOnce(Return(stdout_write_fd_.get()));
+
+  server_proxy_->AuthenticationRequired(
+      protection_space.origin(), protection_space.scheme(),
+      protection_space.realm(),
+      base::Bind(
+          [](std::string* actual_credentials, const std::string& credentials) {
+            *actual_credentials = credentials;
+          },
+          &actual_credentials));
+
+  EXPECT_EQ(1, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ(protection_space.SerializeAsString(),
+            server_proxy_->pending_auth_required_requests_.begin()->first);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerRequest request;
+  // Read the request from the worker's stdout output.
+  ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
+  ASSERT_TRUE(request.has_auth_required_request());
+  ASSERT_TRUE(request.auth_required_request().has_protection_space());
+  EXPECT_EQ(
+      request.auth_required_request().protection_space().SerializeAsString(),
+      protection_space.SerializeAsString());
+
+  // Write reply with a fake credentials to the worker's standard input.
+  worker::Credentials credentials;
+  *credentials.mutable_protection_space() = protection_space;
+  worker::WorkerConfigs configs;
+  *configs.mutable_credentials() = credentials;
+
+  ASSERT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
+  brillo_loop_.RunOnce(false);
+  EXPECT_EQ(0, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ("", actual_credentials);
+}
+
+// This test verifies that the athentication request is solved with cached
+// credentials.
+TEST_F(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials) {
+  RedirectStdPipes();
+
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(kFakeProxyAddress);
+  protection_space.set_scheme("Basic");
+  protection_space.set_realm("Proxy test realm");
+  std::string actual_credentials = "";
+
+  server_proxy_->auth_cache_[protection_space.SerializeAsString()] =
+      "test_user:test_pwd";
+
+  server_proxy_->AuthenticationRequired(
+      protection_space.origin(), protection_space.scheme(),
+      protection_space.realm(),
+      base::Bind(
+          [](std::string* actual_credentials, const std::string& credentials) {
+            *actual_credentials = credentials;
+          },
+          &actual_credentials));
+
+  brillo_loop_.RunOnce(false);
+  EXPECT_EQ(0, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ("test_user:test_pwd", actual_credentials);
+}
+
 }  // namespace system_proxy

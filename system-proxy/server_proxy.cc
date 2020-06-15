@@ -97,8 +97,45 @@ void ServerProxy::AuthenticationRequired(const std::string& proxy_url,
                                          const std::string& scheme,
                                          const std::string& realm,
                                          OnAuthAcquiredCallback callback) {
-  // TODO(acostinas): Request the credentials from the main process.
-  std::move(callback).Run(std::string());
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(proxy_url);
+  protection_space.set_realm(realm);
+  protection_space.set_scheme(scheme);
+
+  std::string auth_key = protection_space.SerializeAsString();
+  // Check the local cache.
+  auto it = auth_cache_.find(auth_key);
+  if (it != auth_cache_.end()) {
+    std::move(callback).Run(it->second);
+    return;
+  }
+
+  // Request the credentials from the main process.
+  worker::AuthRequiredRequest auth_request;
+  *auth_request.mutable_protection_space() = protection_space;
+
+  worker::WorkerRequest request;
+  *request.mutable_auth_required_request() = auth_request;
+
+  if (!WriteProtobuf(GetStdoutPipe(), request)) {
+    LOG(ERROR) << "Failed to send authentication required request";
+    std::move(callback).Run(/* credentials= */ std::string());
+    return;
+  }
+  pending_auth_required_requests_[auth_key].push_back(std::move(callback));
+}
+
+void ServerProxy::AuthCredentialsProvided(
+    const std::string& auth_credentials_key, const std::string& credentials) {
+  auto it = pending_auth_required_requests_.find(auth_credentials_key);
+  if (it == pending_auth_required_requests_.end()) {
+    LOG(WARNING) << "No pending requests found for credentials";
+    return;
+  }
+  for (auto& auth_acquired_callback : it->second) {
+    std::move(auth_acquired_callback).Run(credentials);
+  }
+  pending_auth_required_requests_.erase(auth_credentials_key);
 }
 
 void ServerProxy::HandleStdinReadable() {
@@ -109,10 +146,23 @@ void ServerProxy::HandleStdinReadable() {
   }
 
   if (config.has_credentials()) {
+    std::string credentials;
     const std::string username = UrlEncode(config.credentials().username());
     const std::string password = UrlEncode(config.credentials().password());
-    system_credentials_ = base::JoinString({username.c_str(), password.c_str()},
-                                           kCredentialsColonSeparator);
+    credentials = base::JoinString({username.c_str(), password.c_str()},
+                                   kCredentialsColonSeparator);
+    if (config.credentials().has_protection_space()) {
+      std::string auth_key =
+          config.credentials().protection_space().SerializeAsString();
+      if (!username.empty() && !password.empty()) {
+        auth_cache_[auth_key] = credentials;
+        AuthCredentialsProvided(auth_key, credentials);
+      } else {
+        AuthCredentialsProvided(auth_key, std::string());
+      }
+    } else {
+      system_credentials_ = credentials;
+    }
   }
 
   if (config.has_listening_address()) {
