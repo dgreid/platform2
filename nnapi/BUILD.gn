@@ -22,9 +22,7 @@ group("all") {
     deps += [
       ":libbase_testrunner",
       ":libcutils_testrunner",
-
-      # libfmq uses ashmem, which we need to replace.
-      # ":libfmq_testrunner",
+      ":libfmq_testrunner",
       ":libhidl_testrunner",
       ":libhwbuf_testrunner",
       ":liblog_testrunner",
