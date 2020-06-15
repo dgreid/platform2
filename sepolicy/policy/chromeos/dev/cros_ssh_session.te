@@ -14,3 +14,9 @@ allow cros_ssh_session cros_audit_sanity_test_file:file create_file_perms;
 allow cros_ssh_session cros_audit_sanity_test_file:dir create_file_perms;
 # Intentially audit this to test in tast tests.
 auditallow cros_ssh_session cros_audit_sanity_test_file:file create;
+
+# Tast tests run in the cros_ssh_session context. Crash-related tast tests may
+# need to create or read files in this directory, and in particular for tests
+# that test SELinux violation handling, it is important that we not create
+# spurious audit log entries.
+allow cros_ssh_session cros_run_crash_reporter:dir rw_dir_perms;
