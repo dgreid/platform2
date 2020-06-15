@@ -9,8 +9,6 @@
 #include <set>
 #include <string>
 
-#include <base/macros.h>
-
 #include "permission_broker/dbus-proxies.h"
 
 // Class for managing required firewall rules for lorgnette.
@@ -19,6 +17,8 @@ namespace lorgnette {
 class FirewallManager final {
  public:
   explicit FirewallManager(const std::string& interface);
+  FirewallManager(const FirewallManager&) = delete;
+  FirewallManager& operator=(const FirewallManager&) = delete;
   ~FirewallManager();
 
   void Init(const scoped_refptr<dbus::Bus>& bus);
@@ -62,8 +62,6 @@ class FirewallManager final {
 
   // The set of ports for which access has been requested.
   std::set<uint16_t> requested_ports_;
-
-  DISALLOW_COPY_AND_ASSIGN(FirewallManager);
 };
 
 }  // namespace lorgnette

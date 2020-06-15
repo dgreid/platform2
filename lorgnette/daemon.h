@@ -21,6 +21,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   static const char kScanUserName[];
 
   explicit Daemon(const base::Closure& startup_callback);
+  Daemon(const Daemon&) = delete;
+  Daemon& operator=(const Daemon&) = delete;
   ~Daemon() = default;
 
  protected:
@@ -41,8 +43,6 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<Manager> manager_;
   base::Closure startup_callback_;
   base::CancelableClosure shutdown_callback_;
-
-  DISALLOW_COPY_AND_ASSIGN(Daemon);
 };
 
 }  // namespace lorgnette

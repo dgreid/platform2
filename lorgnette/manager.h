@@ -41,6 +41,8 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
   Manager(base::Callback<void()> activity_callback,
           std::unique_ptr<SaneClient> sane_client);
+  Manager(const Manager&) = delete;
+  Manager& operator=(const Manager&) = delete;
   virtual ~Manager();
 
   void RegisterAsync(
@@ -92,8 +94,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
   // Manages connection to SANE for listing and connecting to scanners.
   std::unique_ptr<SaneClient> sane_client_;
-
-  DISALLOW_COPY_AND_ASSIGN(Manager);
 };
 
 }  // namespace lorgnette
