@@ -487,8 +487,8 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   if (builder->UseFlagIsSet("allow_consumer_kiosk"))
     builder->AddArg("--enable-consumer-kiosk");
 
-  if (builder->UseFlagIsSet("instant_tethering"))
-    builder->AddFeatureEnableOverride("InstantTethering");
+  if (builder->UseFlagIsSet("disable_instant_tethering"))
+    builder->AddFeatureDisableOverride("InstantTethering");
 
   if (builder->UseFlagIsSet("biod"))
     builder->AddFeatureEnableOverride("QuickUnlockFingerprint");
