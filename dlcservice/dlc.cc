@@ -298,10 +298,8 @@ bool DlcBase::PreloadedCopier(ErrorPtr* err) {
     return false;
   }
 
-  if (!MarkVerified()) {
-    LOG(ERROR) << "Failed to mark the image for DLC=" << id_
-               << " verified. But temporarily assuming it is verified.";
-  }
+  if (!MarkVerified())
+    LOG(ERROR) << "Failed to mark the image verified for DLC=" << id_;
 
   return true;
 }
@@ -319,28 +317,36 @@ bool DlcBase::Install(ErrorPtr* err) {
         return false;
       }
 
-      // TODO(ahassani): Before preloading, we should try to verify the current
-      // image and only if it did not verify, we should preload it otherwise
-      // when running from removable devices or when we fail to remove the
-      // preloaded copy because of permission issues or IO errors, we don't have
-      // to preload it each time the dlcservice is started.
+      // Finish the installation for verified images so they can be mounted.
+      if (IsVerified()) {
+        LOG(INFO) << "Installing already verified DLC=" << id_;
+        break;
+      }
+
+      // Try verifying images that already existed before creation. If verified,
+      // finish the installation so they can be mounted.
+      if (active_image_existed && Verify()) {
+        LOG(INFO) << "Verified existing, but previously not verified DLC="
+                  << id_;
+        break;
+      }
+
+      // Preload the DLC if possible.
       if (IsPreloadAllowed() && base::PathExists(preloaded_image_path_)) {
-        if (PreloadedCopier(err)) {
-          break;
-        } else {
-          LOG(ERROR) << "Preloading failed, so assuming install failure.";
+        if (!PreloadedCopier(err)) {
+          LOG(ERROR)
+              << "Preloading failed, so assuming installation failed for DLC="
+              << id_;
           return false;
         }
+        LOG(INFO) << "Preloading DLC=" << id_;
+        break;
       }
 
       if (!IsVerified()) {
-        // Images that existed before creation, try verifying.
-        if (active_image_existed && Verify())
-          LOG(INFO) << "Verified existing, but not verified DLC=" << id_;
-        else
-          // By now if the image is not verified, it needs to be installed
-          // through update_engine. So don't go any further.
-          return true;
+        // By now if the image is not verified, it needs to be installed
+        // through update_engine. So don't go any further.
+        return true;
       }
       break;
     }

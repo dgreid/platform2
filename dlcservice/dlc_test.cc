@@ -261,6 +261,53 @@ TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
   EXPECT_TRUE(dlc.IsVerified());
 }
 
+TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+
+  // Cause |PreloadedCopier()| to fail due to size mismatch in manifest if it
+  // were to be called.
+  EXPECT_TRUE(ResizeFile(SetUpDlcPreloadedImage(kThirdDlc), 1));
+  SetUpDlcWithSlots(kThirdDlc);
+  InstallWithUpdateEngine({kThirdDlc});
+
+  EXPECT_TRUE(dlc.MarkVerified());
+  EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kThirdDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kThirdDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_TRUE(dlc.IsInstalled());
+}
+
+TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyExistingAndVerifiableDlc) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+
+  // Cause |PreloadedCopier()| to fail due to size mismatch in manifest if it
+  // were to be called.
+  EXPECT_TRUE(ResizeFile(SetUpDlcPreloadedImage(kThirdDlc), 1));
+  SetUpDlcWithSlots(kThirdDlc);
+  InstallWithUpdateEngine({kThirdDlc});
+
+  EXPECT_EQ(dlc.GetState().state(), DlcState::NOT_INSTALLED);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kThirdDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kThirdDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_TRUE(dlc.IsInstalled());
+}
+
 TEST_F(DlcBaseTest, HasContent) {
   DlcBase dlc(kSecondDlc);
   dlc.Initialize();
