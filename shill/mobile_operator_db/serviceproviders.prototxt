@@ -13172,11 +13172,14 @@ mno {
     uuid : "abe93326-f5ae-4598-9f17-db2376ecc68d"
     country : "us"
     localized_name {
-      name : "CSpire"
+      name : "C Spire"
     }
     mccmnc : "311230"
     mobile_apn {
-      apn : "admin.cs4glte.com"
+      apn : "internet.cs4glte.com"
+      localized_name {
+        name : "C Spire internet"
+      }
     }
   }
 }
