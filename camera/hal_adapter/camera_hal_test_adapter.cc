@@ -14,11 +14,10 @@ namespace cros {
 
 CameraHalTestAdapter::CameraHalTestAdapter(
     std::vector<camera_module_t*> camera_modules,
-    CameraMojoChannelManager* mojo_manager,
     bool enable_front,
     bool enable_back,
     bool enable_external)
-    : CameraHalAdapter(camera_modules, mojo_manager),
+    : CameraHalAdapter(camera_modules),
       enable_front_(enable_front),
       enable_back_(enable_back),
       enable_external_(enable_external) {

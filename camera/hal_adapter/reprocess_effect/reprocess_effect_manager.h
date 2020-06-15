@@ -16,7 +16,6 @@
 #include <system/camera_vendor_tags.h>
 
 #include "cros-camera/camera_buffer_manager.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
 #include "hal_adapter/reprocess_effect/portrait_mode_effect.h"
 #include "hal_adapter/reprocess_effect/reprocess_effect.h"
 
@@ -31,7 +30,7 @@ class ReprocessEffectManager : public vendor_tag_ops_t {
 
   ~ReprocessEffectManager() = default;
 
-  int32_t Initialize(CameraMojoChannelManager* mojo_manager);
+  int32_t Initialize();
 
   // Check whether there are vendor tags for reprocessing effects
   bool HasReprocessEffectVendorTag(const camera_metadata_t& settings);

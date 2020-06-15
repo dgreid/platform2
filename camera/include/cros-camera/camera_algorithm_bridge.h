@@ -13,7 +13,6 @@
 #include <vector>
 
 #include "cros-camera/camera_algorithm.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/export.h"
 
 namespace cros {
@@ -35,8 +34,7 @@ enum class CameraAlgorithmBackend {
 // Example usage:
 //
 //  #include <cros-camera/camera_algorithm_bridge.h>
-//  auto* mojo_manager = GetMojoChannelManager();
-//  auto algo = CameraAlgorithmBridge::CreateInstance(backend, mojo_manager);
+//  auto algo = CameraAlgorithmBridge::CreateInstance(backend);
 //  algo->Initialize(this);
 //  std::vector<int32_t> handles(2);
 //  handles[0] = algo->RegisterBuffer(buffer_fd0);
@@ -49,8 +47,6 @@ enum class CameraAlgorithmBackend {
 
 class CROS_CAMERA_EXPORT CameraAlgorithmBridge {
  public:
-  // [DEPRECATED]
-  //
   // This method creates and returns the CameraAlgorithmBridge instance of
   // vendor algorithms.
   //
@@ -58,17 +54,6 @@ class CROS_CAMERA_EXPORT CameraAlgorithmBridge {
   //    Unique pointer to instance on success; nullptr on failure.
   static std::unique_ptr<CameraAlgorithmBridge> CreateInstance(
       CameraAlgorithmBackend backend);
-
-  // This method creates and returns the CameraAlgorithmBridge instance of
-  // vendor algorithms.
-  //
-  // Args:
-  //    |mojo_manager|: The camera mojo channel manager instance which is used
-  //                    for mojo communication.
-  // Returns:
-  //    Unique pointer to instance on success; nullptr on failure.
-  static std::unique_ptr<CameraAlgorithmBridge> CreateInstance(
-      CameraAlgorithmBackend backend, CameraMojoChannelManager* mojo_manager);
 
   virtual ~CameraAlgorithmBridge() {}
 

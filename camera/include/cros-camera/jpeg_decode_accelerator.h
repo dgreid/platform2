@@ -14,8 +14,6 @@
 
 #include <system/window.h>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
-
 namespace cros {
 
 using DecodeCallback = base::Callback<void(int buffer_id, int error)>;
@@ -57,11 +55,7 @@ class JpegDecodeAccelerator {
     NO_DECODE_RESPONSE,
   };
 
-  // [Deprecated]
   static std::unique_ptr<JpegDecodeAccelerator> CreateInstance();
-
-  static std::unique_ptr<JpegDecodeAccelerator> CreateInstance(
-      CameraMojoChannelManager* mojo_manager);
 
   virtual ~JpegDecodeAccelerator() {}
 

@@ -53,7 +53,7 @@ class CameraHal : public mojom::IpCameraConnectionListener {
 
   base::AtomicFlag initialized_;
   std::unique_ptr<mojo::IsolatedConnection> isolated_connection_;
-  CameraMojoChannelManager* mojo_channel_;
+  std::unique_ptr<CameraMojoChannelManager> mojo_channel_;
   mojom::IpCameraDetectorPtr detector_;
   mojo::Binding<IpCameraConnectionListener> binding_;
 

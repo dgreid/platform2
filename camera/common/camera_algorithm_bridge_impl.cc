@@ -29,21 +29,14 @@ namespace cros {
 // static
 std::unique_ptr<CameraAlgorithmBridge> CameraAlgorithmBridge::CreateInstance(
     CameraAlgorithmBackend backend) {
-  return CameraAlgorithmBridge::CreateInstance(
-      backend, CameraMojoChannelManager::GetInstance());
-}
-
-// static
-std::unique_ptr<CameraAlgorithmBridge> CameraAlgorithmBridge::CreateInstance(
-    CameraAlgorithmBackend backend, CameraMojoChannelManager* mojo_manager) {
   VLOGF_ENTER();
-  return std::make_unique<CameraAlgorithmBridgeImpl>(backend, mojo_manager);
+  return std::make_unique<CameraAlgorithmBridgeImpl>(backend);
 }
 
 CameraAlgorithmBridgeImpl::CameraAlgorithmBridgeImpl(
-    CameraAlgorithmBackend backend, CameraMojoChannelManager* mojo_manager)
-    : mojo_manager_(mojo_manager),
-      ipc_bridge_(new IPCBridge(backend, mojo_manager)) {}
+    CameraAlgorithmBackend backend)
+    : mojo_manager_(CameraMojoChannelManager::CreateInstance()),
+      ipc_bridge_(new IPCBridge(backend, mojo_manager_.get())) {}
 
 CameraAlgorithmBridgeImpl::~CameraAlgorithmBridgeImpl() {
   VLOGF_ENTER();

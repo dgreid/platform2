@@ -31,7 +31,7 @@ class JpegDecodeAcceleratorTest;
 // Before using this class, make sure mojo is initialized first.
 class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
  public:
-  explicit JpegDecodeAcceleratorImpl(CameraMojoChannelManager* mojo_manager);
+  JpegDecodeAcceleratorImpl();
 
   ~JpegDecodeAcceleratorImpl() final;
 
@@ -70,8 +70,7 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
   // be run on IPC thread.
   class IPCBridge {
    public:
-    IPCBridge(CameraMojoChannelManager* mojo_manager,
-              CancellationRelay* cancellation_relay);
+    IPCBridge(CameraMojoChannelManager* mojo_manager);
 
     // It should only be triggered on IPC thread to ensure thread-safety.
     ~IPCBridge();
@@ -120,9 +119,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
     using InputShmMap =
         std::unordered_map<int32_t, std::unique_ptr<base::SharedMemory>>;
 
-    // Initialize the JpegDecodeAccelerator.
-    void Initialize(base::Callback<void(bool)> callback);
-
     // Error handler for JDA mojo channel.
     void OnJpegDecodeAcceleratorError();
 
@@ -139,9 +135,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
     // Camera Mojo channel manager.
     // We use it to create JpegDecodeAccelerator Mojo channel.
     CameraMojoChannelManager* mojo_manager_;
-
-    // Used to cancel pending futures when error occurs.
-    CancellationRelay* cancellation_relay_;
 
     // The Mojo IPC task runner.
     const scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
@@ -177,10 +170,10 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
   int32_t buffer_id_;
 
   // Mojo manager which is used for Mojo communication.
-  CameraMojoChannelManager* mojo_manager_;
+  std::unique_ptr<CameraMojoChannelManager> mojo_manager_;
 
   // Used to cancel pending futures when error occurs.
-  std::unique_ptr<CancellationRelay> cancellation_relay_;
+  std::unique_ptr<cros::CancellationRelay> cancellation_relay_;
 
   // The instance which deals with the IPC-related calls. It should always run
   // and be deleted on IPC thread.

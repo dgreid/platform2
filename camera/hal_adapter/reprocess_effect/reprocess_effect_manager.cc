@@ -25,14 +25,13 @@ ReprocessEffectManager::ReprocessEffectManager()
     : next_vendor_tag_(kReprocessEffectVendorTagStart),
       buffer_manager_(CameraBufferManager::GetInstance()) {}
 
-int32_t ReprocessEffectManager::Initialize(
-    CameraMojoChannelManager* mojo_manager) {
+int32_t ReprocessEffectManager::Initialize() {
   VLOGF_ENTER();
   portrait_mode_ = std::make_unique<PortraitModeEffect>();
   std::vector<VendorTagInfo> request_vendor_tags;
   std::vector<VendorTagInfo> result_vendor_tags;
-  if (portrait_mode_->InitializeAndGetVendorTags(
-          &request_vendor_tags, &result_vendor_tags, mojo_manager) != 0) {
+  if (portrait_mode_->InitializeAndGetVendorTags(&request_vendor_tags,
+                                                 &result_vendor_tags) != 0) {
     LOGF(ERROR) << "Failed to initialize portrait mode effect";
     return -ENODEV;
   }

@@ -15,13 +15,12 @@
 #include <base/synchronization/lock.h>
 
 #include "cros-camera/camera_algorithm_bridge.h"
-#include "cros-camera/camera_mojo_channel_manager.h"
 
 namespace cros {
 
 class GPUAlgoManager final : public camera_algorithm_callback_ops_t {
  public:
-  static GPUAlgoManager* GetInstance(CameraMojoChannelManager* mojo_manager);
+  static GPUAlgoManager* GetInstance();
 
   int32_t RegisterBuffer(int buffer_fd);
 
@@ -32,7 +31,7 @@ class GPUAlgoManager final : public camera_algorithm_callback_ops_t {
   void DeregisterBuffers(const std::vector<int32_t>& buffer_handles);
 
  private:
-  explicit GPUAlgoManager(CameraMojoChannelManager* mojo_manager);
+  GPUAlgoManager();
 
   ~GPUAlgoManager() = default;
 

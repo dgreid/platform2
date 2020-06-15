@@ -11,7 +11,6 @@
 
 #include <memory>
 
-#include "cros-camera/camera_mojo_channel_manager.h"
 #include "cros-camera/export.h"
 
 namespace cros {
@@ -35,11 +34,7 @@ class CROS_CAMERA_EXPORT JpegCompressor {
     uint32_t size;
   };
 
-  // [Deprecated]
   static std::unique_ptr<JpegCompressor> GetInstance();
-
-  static std::unique_ptr<JpegCompressor> GetInstance(
-      CameraMojoChannelManager* mojo_manager);
 
   virtual ~JpegCompressor() {}
 

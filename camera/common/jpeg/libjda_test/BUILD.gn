@@ -15,7 +15,6 @@ executable("libjda_test") {
   libs = [ "jpeg" ]
   pkg_deps = [
     "cros-camera-android-headers",
-    "libbrillo",
     "libcamera_common",
     "libyuv",
   ]
