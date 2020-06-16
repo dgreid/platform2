@@ -24,7 +24,7 @@
     DEALINGS IN THE SOFTWARE.
   </copyright>
 
-  <interface name="zaura_shell" version="9">
+  <interface name="zaura_shell" version="10">
     <description summary="aura_shell">
       The global interface exposing aura shell capabilities is used to
       instantiate an interface extension for a wl_surface object.
@@ -68,7 +68,7 @@
     </request>
   </interface>
 
-  <interface name="zaura_surface" version="9">
+  <interface name="zaura_surface" version="10">
     <description summary="aura shell interface to a wl_surface">
       An additional interface to a wl_surface object, which allows the
       client to access aura shell specific functionality for surface.
@@ -195,6 +195,25 @@
 	and are more likely to be honoured.
       </description>
     </request>
+
+    <!-- Version 10 additions -->
+
+    <request name="set_fullscreen_mode" since="10">
+      <description summary="Specifies the behavior of the surface in fullscreen.">
+        Specifies how the OS will behave if this surface later goes fullscreen.
+        Does not make the surface fullscreen.
+
+        Typically the default mode is "immersive", in which the user can access
+        the shelf by pointing to, or swiping over, the screen edge. In "plain"
+        mode this functionality is disabled.
+      </description>
+      <arg name="mode" type="uint" enum="fullscreen_mode"/>
+    </request>
+
+    <enum name="fullscreen_mode">
+      <entry name="immersive" value="0"/>
+      <entry name="plain" value="1"/>
+    </enum>
   </interface>
 
   <interface name="zaura_output" version="6">

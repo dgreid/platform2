@@ -149,6 +149,7 @@ struct sl_context {
   int clipboard_manager;
   uint32_t frame_color;
   uint32_t dark_frame_color;
+  int fullscreen_mode;
   struct sl_host_seat* default_seat;
   xcb_window_t selection_window;
   xcb_window_t selection_owner;

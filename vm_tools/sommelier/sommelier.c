@@ -203,7 +203,7 @@ struct sl_mwm_hints {
   APPLICATION_ID_FORMAT_PREFIX ".wmclass.%s"
 
 #define MIN_AURA_SHELL_VERSION 6
-#define MAX_AURA_SHELL_VERSION 9
+#define MAX_AURA_SHELL_VERSION 10
 
 // Performs an asprintf operation and checks the result for validity and calls
 // abort() if there's a failure. Returns a newly allocated string rather than
@@ -765,8 +765,13 @@ void sl_window_update(struct sl_window* window) {
     zaura_surface_set_frame_colors(window->aura_surface, frame_color,
                                    frame_color);
     zaura_surface_set_startup_id(window->aura_surface, window->startup_id);
-
     sl_update_application_id(ctx, window);
+
+    if (ctx->aura_shell->version >=
+        ZAURA_SURFACE_SET_FULLSCREEN_MODE_SINCE_VERSION) {
+      zaura_surface_set_fullscreen_mode(window->aura_surface,
+                                        ctx->fullscreen_mode);
+    }
   }
 
   // Always use top-level surface for X11 windows as we can't control when the
@@ -3550,7 +3555,9 @@ static void sl_print_usage() {
       "  --frame-color=COLOR\t\tWindow frame color for X11 clients\n"
       "  --virtwl-device=DEVICE\tVirtWL device to use\n"
       "  --drm-device=DEVICE\t\tDRM device to use\n"
-      "  --glamor\t\t\tUse glamor to accelerate X11 clients\n");
+      "  --glamor\t\t\tUse glamor to accelerate X11 clients\n"
+      "  --fullscreen-mode=MODE\tDefault fullscreen behavior (immersive,"
+      " plain)\n");
 }
 
 static const char* sl_arg_value(const char* arg) {
@@ -3613,6 +3620,7 @@ int main(int argc, char** argv) {
       .clipboard_manager = 0,
       .frame_color = 0xffffffff,
       .dark_frame_color = 0xff000000,
+      .fullscreen_mode = ZAURA_SURFACE_FULLSCREEN_MODE_IMMERSIVE,
       .default_seat = NULL,
       .selection_window = XCB_WINDOW_NONE,
       .selection_owner = XCB_WINDOW_NONE,
@@ -3674,6 +3682,7 @@ int main(int argc, char** argv) {
   const char* virtwl_device = getenv("SOMMELIER_VIRTWL_DEVICE");
   const char* drm_device = getenv("SOMMELIER_DRM_DEVICE");
   const char* glamor = getenv("SOMMELIER_GLAMOR");
+  const char* fullscreen_mode = getenv("SOMMELIER_FULLSCREEN_MODE");
   const char* shm_driver = getenv("SOMMELIER_SHM_DRIVER");
   const char* data_driver = getenv("SOMMELIER_DATA_DRIVER");
   const char* peer_cmd_prefix = getenv("SOMMELIER_PEER_CMD_PREFIX");
@@ -3761,6 +3770,8 @@ int main(int argc, char** argv) {
       drm_device = sl_arg_value(arg);
     } else if (strstr(arg, "--glamor") == arg) {
       glamor = "1";
+    } else if (strstr(arg, "--fullscreen-mode") == arg) {
+      fullscreen_mode = sl_arg_value(arg);
     } else if (strstr(arg, "--x-auth") == arg) {
       xauth_path = sl_arg_value(arg);
     } else if (strstr(arg, "--x-font-path") == arg) {
@@ -3962,6 +3973,18 @@ int main(int argc, char** argv) {
     int r, g, b;
     if (sscanf(dark_frame_color, "#%02x%02x%02x", &r, &g, &b) == 3)
       ctx.dark_frame_color = 0xff000000 | (r << 16) | (g << 8) | (b << 0);
+  }
+
+  if (fullscreen_mode) {
+    if (strcmp(fullscreen_mode, "immersive") == 0) {
+      ctx.fullscreen_mode = ZAURA_SURFACE_FULLSCREEN_MODE_IMMERSIVE;
+    } else if (strcmp(fullscreen_mode, "plain") == 0) {
+      ctx.fullscreen_mode = ZAURA_SURFACE_FULLSCREEN_MODE_PLAIN;
+    } else {
+      fprintf(stderr, "error: unrecognised --fullscreen-mode\n");
+      sl_print_usage();
+      return EXIT_FAILURE;
+    }
   }
 
   // Handle broken pipes without signals that kill the entire process.
