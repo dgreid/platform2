@@ -27,6 +27,7 @@ android::CameraMetadata MetadataHandler::CreateStaticMetadata(
       ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES,
       ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS,
       ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
+      ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE,
       ANDROID_SENSOR_ORIENTATION,
       ANDROID_REQUEST_PIPELINE_MAX_DEPTH,
   };
@@ -63,6 +64,9 @@ android::CameraMetadata MetadataHandler::CreateStaticMetadata(
 
   metadata.update(ANDROID_SCALER_AVAILABLE_STREAM_CONFIGURATIONS,
                   stream_configurations);
+
+  std::vector<int32_t> active_array_size = {0, 0, width, height};
+  metadata.update(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE, active_array_size);
 
   int32_t sensor_orientation = 0;
   metadata.update(ANDROID_SENSOR_ORIENTATION, &sensor_orientation, 1);
