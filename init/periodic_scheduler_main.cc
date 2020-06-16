@@ -6,39 +6,41 @@
 
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
 int main(int argc, char** argv) {
+  DEFINE_uint64(period, 3600,
+                "Time period (in seconds) between successive tasks.");
+  DEFINE_uint64(timeout, 600, "Timeout (in seconds) before killing the task.");
+  DEFINE_uint64(check_frequency, 0,
+                "(For testing) Frequency to check task readiness.");
+  DEFINE_string(spool_dir, "",
+                "(For testing) Spool directory to store task state.");
+  DEFINE_string(task_name, "", "Task name");
+
+  brillo::FlagHelper::Init(argc, argv, "Periodic Task Scheduler");
+
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
 
-  if (argc < 5) {
-    LOG(ERROR) << "Usage: periodic_scheduler <period_seconds> <timeout_seconds>"
-                  " <task_name> <task_binary>";
-    return 1;
+  std::vector<std::string> args =
+      base::CommandLine::ForCurrentProcess()->GetArgs();
+
+  if (FLAGS_task_name.empty()) {
+    FLAGS_task_name = base::FilePath(args[0]).BaseName().value();
   }
 
-  int64_t period = 0;
-  if (!base::StringToInt64(std::string(argv[1]), &period)) {
-    LOG(ERROR) << "Invalid value for delay";
-    return 1;
+  PeriodicScheduler p(base::TimeDelta::FromSeconds(FLAGS_period),
+                      base::TimeDelta::FromSeconds(FLAGS_timeout),
+                      FLAGS_task_name, args);
+
+  if (!FLAGS_spool_dir.empty())
+    p.set_spool_dir_for_test(base::FilePath(FLAGS_spool_dir));
+
+  if (FLAGS_check_frequency != 0) {
+    p.set_check_freq_for_test(
+        base::TimeDelta::FromSeconds(FLAGS_check_frequency));
   }
-
-  int64_t timeout = 0;
-  if (!base::StringToInt64(std::string(argv[2]), &timeout)) {
-    LOG(ERROR) << "Invalid value for timeout";
-    return 1;
-  }
-
-  std::string task_name(argv[3]);
-
-  // Shift arguments.
-  argc -= 4;
-  argv += 4;
-
-  std::vector<std::string> args(argv, argv + argc);
-
-  PeriodicScheduler p(base::TimeDelta::FromSeconds(period),
-                      base::TimeDelta::FromSeconds(timeout), task_name, args);
 
   return p.Run() == true ? 0 : 1;
 }
