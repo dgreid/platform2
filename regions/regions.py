@@ -485,7 +485,13 @@ REGIONS_LIST = [
 """A list of :py:class:`regions.Region` objects for
 all **confirmed** regions.  A confirmed region is a region whose
 properties are known to be correct and valid: all contents (locale / timezone /
-keyboards) are supported by Chrome."""
+keyboards) are supported by Chrome.
+
+NOTE: This list is NOT alpha-sorted. New entries MUST be appended to the end of
+the list to retain relative order of existing entries. For backward
+compatibility, legacy entries need to stay in the same order because they used
+to have numeric mappings.
+"""
 
 
 UNCONFIRMED_REGIONS_LIST = [
