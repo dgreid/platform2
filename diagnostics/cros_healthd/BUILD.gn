@@ -18,8 +18,8 @@ source_set("libcros_healthd") {
   configs += [ ":libcros_healthd_pkg_deps" ]
   deps = [
     "events:libcros_healthd_events",
+    "fetchers:libcros_healthd_fetchers",
     "system:libcros_healthd_system",
-    "utils:libcros_healthd_utils",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
     "//diagnostics/routines:libdiag_routine",
   ]

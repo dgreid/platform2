@@ -15,11 +15,11 @@
 #include <dbus/cros_healthd/dbus-constants.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
-#include "diagnostics/cros_healthd/utils/cpu_utils.h"
-#include "diagnostics/cros_healthd/utils/disk_utils.h"
-#include "diagnostics/cros_healthd/utils/memory_utils.h"
-#include "diagnostics/cros_healthd/utils/stateful_partition_utils.h"
-#include "diagnostics/cros_healthd/utils/timezone_utils.h"
+#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/memory_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/stateful_partition_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/timezone_fetcher.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {

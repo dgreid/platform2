@@ -1,0 +1,117 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides fetchers used by cros_healthd.
+pkg_config("libcros_healthd_fetchers_pkg_deps") {
+  pkg_deps = [
+    "dbus-1",
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libcros_config",
+    "libdebugd-client",
+    "libmojo-${libbase_ver}",
+    "libudev",
+    "protobuf",
+    "re2",
+    "system_api",
+  ]
+}
+
+source_set("libcros_healthd_fetchers") {
+  configs += [ ":libcros_healthd_fetchers_pkg_deps" ]
+  deps = [
+    "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
+    "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
+    "//diagnostics/cros_healthd/utils/storage:storage_data_source",
+    "//diagnostics/mojo:cros_healthd_mojo_bindings",
+  ]
+  sources = [
+    "backlight_fetcher.cc",
+    "battery_fetcher.cc",
+    "bluetooth_fetcher.cc",
+    "cached_vpd_fetcher.cc",
+    "cpu_fetcher.cc",
+    "disk_fetcher.cc",
+    "fan_fetcher.cc",
+    "memory_fetcher.cc",
+    "stateful_partition_fetcher.cc",
+    "timezone_fetcher.cc",
+  ]
+}
+
+if (use.test) {
+  pkg_config("libcros_healthd_fetchers_test_pkg_deps") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+      "libcros_config",
+      "libdebugd-client",
+      "libdebugd-client-test",
+      "system_api",
+    ]
+  }
+
+  executable("libcros_healthd_fetchers_test") {
+    configs += [
+      ":libcros_healthd_fetchers_test_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":libcros_healthd_fetchers",
+      "//common-mk/testrunner:testrunner",
+      "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
+      "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
+      "//diagnostics/cros_healthd/utils/storage:storage_data_source_test",
+    ]
+    sources = [
+      "backlight_fetcher_test.cc",
+      "battery_fetcher_test.cc",
+      "bluetooth_fetcher_test.cc",
+      "cached_vpd_fetcher_test.cc",
+      "cpu_fetcher_test.cc",
+      "fan_fetcher_test.cc",
+      "memory_fetcher_test.cc",
+      "stateful_partition_fetcher_test.cc",
+      "timezone_fetcher_test.cc",
+    ]
+  }
+}
+
+if (use.fuzzer) {
+  pkg_config("fetch_block_device_fuzzer_pkg_deps") {
+    pkg_deps = [ "libchrome-${libbase_ver}" ]
+  }
+
+  executable("fetch_block_device_fuzzer") {
+    configs += [
+      ":fetch_block_device_fuzzer_pkg_deps",
+      "//common-mk/common_fuzzer:common_fuzzer",
+    ]
+    deps = [ ":libcros_healthd_fetchers" ]
+    sources = [ "fetch_block_device_fuzzer.cc" ]
+  }
+
+  pkg_config("fetch_cached_vpd_fuzzer_pkg_deps") {
+    pkg_deps = [
+      "libchrome-${libbase_ver}",
+      "libcros_config",
+    ]
+  }
+
+  executable("fetch_cached_vpd_fuzzer") {
+    configs += [
+      ":fetch_cached_vpd_fuzzer_pkg_deps",
+      "//common-mk/common_fuzzer:common_fuzzer",
+    ]
+    deps = [
+      ":libcros_healthd_fetchers",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
+    ]
+    sources = [ "fetch_cached_vpd_fuzzer.cc" ]
+  }
+}
