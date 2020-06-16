@@ -638,6 +638,16 @@ HELP_cras='
           1 = Call is placed on hold or active/held calls swapped
           (The AG has both an active AND a held call)
           2 = Call on hold, no active call
+      - SetCallsetup <CallSetupIndicator>: Set the callsetup indicator.
+        CallSetupIndicator:
+          0 = No call setup in progress
+          1 = Incoming call setup in progress
+          2 = Outgoing call setup in dialing state
+          3 = Outgoing call setup in alerting state
+      - SetCall <CallIndicator>: Set the call indicator.
+        CallIndicator:
+          0 = No call (held or active)
+          1 = Call is present (active or held)
 '
 cmd_cras() (
   if [ $# -eq 0 ]; then
@@ -702,14 +712,15 @@ cmd_cras() (
       return
       ;;
     IncomingCall|SetBatteryLevel|SetSignalStrength|SetServiceAvailability| \
-    SetCallheld)
+    SetCallheld|SetCallsetup|SetCall)
       local type
       if [ $# -ne 1 ]; then
         help "missing or invalid arguments for ${subcommand} ${event}"
         return 1
       fi
       case "${event}" in
-      SetBatteryLevel|SetSignalStrength|SetServiceAvailability|SetCallheld)
+      SetBatteryLevel|SetSignalStrength|SetServiceAvailability|SetCallheld| \
+      SetCallsetup|SetCall)
         type="int32"
         ;;
       *)
