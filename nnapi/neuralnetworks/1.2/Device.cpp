@@ -121,6 +121,21 @@ IDevice::castFrom(
   return parent;
 }
 
+::android::hardware::Return<
+    ::android::sp<::android::hardware::neuralnetworks::V1_2::IDevice>>
+IDevice::castFrom(
+    const ::android::sp<
+        ::android::hardware::neuralnetworks::V1_0::IDevice>& /*parent*/,
+    bool /*emitError*/) {
+  return nullptr;
+  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
+  //                  pulling in too many dependencies from hidl/transport .
+  // return ::android::hardware::details::castInterface<
+  //  IDevice, ::android::hardware::neuralnetworks::V1_0::IDevice,
+  //  BpHwPreparedModel>(parent, "android.hardware.neuralnetworks@1.2::IDevice",
+  //                     emitError);
+}
+
 }  // namespace V1_2
 }  // namespace neuralnetworks
 }  // namespace hardware

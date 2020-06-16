@@ -419,6 +419,8 @@ static_library("neuralnetworks") {
     "neuralnetworks/1.3/Device.cpp",
     "neuralnetworks/1.3/ExecutionCallback.cpp",
     "neuralnetworks/1.3/FencedExecutionCallback.cpp",
+    "neuralnetworks/1.3/PreparedModel.cpp",
+    "neuralnetworks/1.3/PreparedModelCallback.cpp",
     "neuralnetworks/1.3/types.cpp",
   ]
 }
