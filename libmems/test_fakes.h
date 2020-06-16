@@ -260,9 +260,11 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   bool readable_fd_ = false;
   int sample_index_ = 0;
 
-  bool disabled_fd_ = false;
-  std::priority_queue<int> failed_read_queue_;
+  // Pops from the failure with the smallest sample index.
+  std::priority_queue<int, std::vector<int>, std::greater<int>>
+      failed_read_queue_;
 
+  bool disabled_fd_ = false;
   bool is_paused_ = false;
   base::Optional<int> pause_index_;
   base::OnceCallback<void()> pause_callback_;
