@@ -250,6 +250,11 @@ bool PcaEnrollV2::Generate() {
     return false;
   }
   CHECK_LE(tpm_static_x.size(), 32);
+
+  // TPM2.0 spec part I, C.8 ECC Point Padding -- Use the padded input to feed
+  // DKFe.
+  tpm_static_x.insert(0, 32 - tpm_static_x.size(), '\x00');
+
   // TPM2.0 spec Part I, 11.4.10.3 KDFe for ECDH.
   std::string ecdh_seed = KDFe(*z, "IDENTITY", ephemeral_x, tpm_static_x);
   const std::string sized_ephemeral_x = ToSizedEccParameter(ephemeral_x);
