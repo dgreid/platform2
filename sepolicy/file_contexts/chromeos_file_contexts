@@ -63,6 +63,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/dbus-uuidgen           u:object_r:cros_dbus_uuidgen_exec:s0
 /usr/bin/esif_ufd               u:object_r:cros_esif_ufd_exec:s0
 /usr/bin/find                   u:object_r:cros_system_file:s0
+/usr/bin/hermes                 u:object_r:cros_hermes_exec:s0
 /usr/bin/ionice                 u:object_r:cros_ionice_exec:s0
 /usr/bin/ippusb_manager         u:object_r:cros_ippusb_manager_exec:s0
 /usr/bin/logger                 u:object_r:cros_logger_exec:s0
@@ -79,6 +80,8 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/periodic_scheduler     u:object_r:cros_periodic_scheduler_exec:s0
 /usr/bin/permission_broker      u:object_r:cros_permission_broker_exec:s0
 /usr/bin/powerd                 u:object_r:cros_powerd_exec:s0
+/usr/bin/qrtr-ns                u:object_r:cros_qrtr_ns_exec:s0
+/usr/bin/rmtfs                  u:object_r:cros_rmtfs_exec:s0
 /usr/bin/run_oci                u:object_r:cros_run_oci_exec:s0
 /usr/bin/shill                  u:object_r:cros_shill_exec:s0
 /usr/bin/systemd-cat            u:object_r:cros_systemd_cat_exec:s0

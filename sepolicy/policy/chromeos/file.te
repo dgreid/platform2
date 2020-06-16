@@ -68,6 +68,7 @@ type cros_dlcservice_exec, exec_type, file_type, cros_file_type, cros_system_fil
 type cros_easy_unlock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_esif_ufd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_healthd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_hermes_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_huddly_monitor_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_hwclock_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_imageloader_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -98,8 +99,10 @@ type cros_pca_agentd_exec, exec_type, file_type, cros_file_type, cros_system_fil
 type cros_periodic_scheduler_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_permission_broker_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_powerd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_qrtr_ns_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_recover_duts_script, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_restorecon_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_rmtfs_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_rsyslogd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_run_oci_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_session_manager_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
