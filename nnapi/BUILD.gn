@@ -312,6 +312,8 @@ static_library("liblog") {
   include_dirs = [ "${liblog_src}/include" ]
   deps = [ ":libbase" ]
   sources = [
+    "${liblog_src}/log_event_list.cpp",
+    "${liblog_src}/log_event_write.cpp",
     "${liblog_src}/log_time.cpp",
     "${liblog_src}/logger_write.cpp",
     "${liblog_src}/logprint.cpp",

@@ -22,6 +22,9 @@ namespace hardware {
 namespace neuralnetworks {
 namespace V1_2 {
 
+const char* IExecutionCallback::descriptor(
+    "android.hardware.neuralnetworks@1.2::IExecutionCallback");
+
 ::android::hardware::Return<void> IExecutionCallback::interfaceChain(
     interfaceChain_cb _hidl_cb) {
   _hidl_cb({
