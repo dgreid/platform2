@@ -115,6 +115,9 @@ bool GetDelegateWebRequestHttpMethod(
     case grpc_api::PerformWebRequestParameter::HTTP_METHOD_PUT:
       *delegate_http_method = DelegateWebRequestHttpMethod::kPut;
       return true;
+    case grpc_api::PerformWebRequestParameter::HTTP_METHOD_PATCH:
+      *delegate_http_method = DelegateWebRequestHttpMethod::kPatch;
+      return true;
     default:
       LOG(ERROR) << "The HTTP method is unset or invalid: "
                  << static_cast<int>(http_method);

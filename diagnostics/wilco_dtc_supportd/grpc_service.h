@@ -52,6 +52,7 @@ class GrpcService final {
       kHead,
       kPost,
       kPut,
+      kPatch,
     };
 
     // Drive system data type to be retrieved by |GetDriveSystemData|.

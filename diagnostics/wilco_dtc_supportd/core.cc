@@ -52,6 +52,9 @@ bool ConvertWebRequestHttpMethodToMojom(
     case Core::WebRequestHttpMethod::kPut:
       *mojo_http_method_out = MojomWilcoDtcSupportdWebRequestHttpMethod::kPut;
       return true;
+    case Core::WebRequestHttpMethod::kPatch:
+      *mojo_http_method_out = MojomWilcoDtcSupportdWebRequestHttpMethod::kPatch;
+      return true;
   }
   return false;
 }

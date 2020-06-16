@@ -73,6 +73,8 @@ const DelegateWebRequestHttpMethod kDelegateWebRequestHttpMethodPost =
     DelegateWebRequestHttpMethod::kPost;
 const DelegateWebRequestHttpMethod kDelegateWebRequestHttpMethodPut =
     DelegateWebRequestHttpMethod::kPut;
+const DelegateWebRequestHttpMethod kDelegateWebRequestHttpMethodPatch =
+    DelegateWebRequestHttpMethod::kPatch;
 
 constexpr grpc_api::DiagnosticRoutine kFakeAvailableRoutines[] = {
     grpc_api::ROUTINE_BATTERY,
@@ -1529,6 +1531,15 @@ INSTANTIATE_TEST_SUITE_P(
                         std::vector<std::string>() /* headers */,
                         "" /* request_body */,
                         &kDelegateWebRequestHttpMethodPost,
+                        grpc_api::PerformWebRequestResponse::STATUS_OK,
+                        &kHttpStatusOk,
+                        kFakeWebResponseBody),
+        // The HTTP method is PATCH.
+        std::make_tuple(grpc_api::PerformWebRequestParameter::HTTP_METHOD_PATCH,
+                        kCorrectUrl,
+                        std::vector<std::string>() /* headers */,
+                        "" /* request_body */,
+                        &kDelegateWebRequestHttpMethodPatch,
                         grpc_api::PerformWebRequestResponse::STATUS_OK,
                         &kHttpStatusOk,
                         kFakeWebResponseBody),
