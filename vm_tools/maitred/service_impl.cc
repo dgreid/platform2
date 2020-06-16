@@ -630,8 +630,8 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     PLOG(ERROR) << "btrfs resize returned non-zero";
   }
 
-  // TODO(davidriley): Replace this #ifdef with StartBorealis.
-#ifndef USE_VM_BOREALIS
+  // TODO(davidriley): Replace this #if with StartBorealis.
+#if !USE_VM_BOREALIS
   // Start lxcfs.
   if (!init_->Spawn({"lxcfs", "/var/lib/lxcfs"}, {} /*env*/, true /*respawn*/,
                     true /*use_console*/, false /*wait_for_exit*/,

@@ -147,7 +147,7 @@ constexpr struct {
         .data = "gid=5,mode=0620,ptmxmode=666",
         .failure_is_fatal = true,
     },
-#ifndef USE_VM_BOREALIS
+#if !USE_VM_BOREALIS
     {
         .source = "var",
         .target = "/var",
@@ -296,7 +296,7 @@ constexpr struct {
         .path = "/run/tokens",
         .mode = 01777,
     },
-#ifndef USE_VM_BOREALIS
+#if !USE_VM_BOREALIS
     {
         .path = "/var/cache",
         .mode = 0755,
