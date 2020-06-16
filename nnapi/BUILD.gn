@@ -160,6 +160,7 @@ static_library("libcutils") {
     "${libcutils_src}/load_file.cpp",
     "${libcutils_src}/native_handle.cpp",
     "${libcutils_src}/threads.cpp",
+    "${libcutils_src}/trace-host.cpp",
     "libcutils/ashmem_chromeos.cpp",
   ]
 }
