@@ -20,7 +20,7 @@ class PeriodicScheduler {
                     const std::string& task_name,
                     const std::vector<std::string>& task_exec);
   ~PeriodicScheduler() = default;
-  bool Run();
+  bool Run(bool start_immediately = false);
 
   void set_spool_dir_for_test(const base::FilePath& spool_dir) {
     spool_dir_ = spool_dir;

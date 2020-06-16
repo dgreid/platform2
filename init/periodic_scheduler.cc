@@ -79,7 +79,7 @@ PeriodicScheduler::PeriodicScheduler(
       spool_dir_(base::FilePath(kSpoolDir)),
       process_args_(task_command) {}
 
-bool PeriodicScheduler::Run() {
+bool PeriodicScheduler::Run(bool start_immediately) {
   if (!CheckAndFixSpoolPaths(spool_dir_)) {
     LOG(ERROR) << "Spool directory is damaged. Aborting!";
     return false;
@@ -89,18 +89,19 @@ bool PeriodicScheduler::Run() {
       spool_dir_.Append(kSpoolCronLiteDir).Append(task_name_);
 
   while (true) {
-    if (!base::PathExists(spool_file)) {
-      base::WriteFile(spool_file, nullptr, 0);
-      auto now = base::Time::Now();
-      base::TouchFile(spool_file, now, now);
+    if (!start_immediately) {
+      if (!base::PathExists(spool_file)) {
+        base::WriteFile(spool_file, nullptr, 0);
+        auto now = base::Time::Now();
+        base::TouchFile(spool_file, now, now);
+      }
+      base::PlatformThread::Sleep(check_frequency_seconds_);
     }
-
-    base::PlatformThread::Sleep(check_frequency_seconds_);
 
     auto file_last_mtime = GetPathMtime(spool_file);
     auto current_time = base::Time::Now();
 
-    if (current_time - file_last_mtime > period_seconds_) {
+    if (start_immediately || current_time - file_last_mtime > period_seconds_) {
       base::DeleteFile(spool_file, false /* recursive */);
       base::WriteFile(spool_file, nullptr, 0);
       auto now = base::Time::Now();
@@ -130,5 +131,7 @@ bool PeriodicScheduler::Run() {
 
       LOG(INFO) << task_name_ << ": job completed";
     }
+
+    start_immediately = false;
   }
 }

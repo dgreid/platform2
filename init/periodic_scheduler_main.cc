@@ -18,6 +18,8 @@ int main(int argc, char** argv) {
   DEFINE_string(spool_dir, "",
                 "(For testing) Spool directory to store task state.");
   DEFINE_string(task_name, "", "Task name");
+  DEFINE_bool(start_immediately, false,
+              "Skip waiting before launching the first task instance.");
 
   brillo::FlagHelper::Init(argc, argv, "Periodic Task Scheduler");
 
@@ -42,5 +44,5 @@ int main(int argc, char** argv) {
         base::TimeDelta::FromSeconds(FLAGS_check_frequency));
   }
 
-  return p.Run() == true ? 0 : 1;
+  return p.Run(FLAGS_start_immediately) == true ? 0 : 1;
 }
