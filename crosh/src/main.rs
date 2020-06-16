@@ -89,7 +89,13 @@ impl Completer for ReadLineHelper {
         _pos: usize,
         _ctx: &Context<'_>,
     ) -> Result<(usize, Vec<String>), ReadlineError> {
-        let tokens: Vec<String> = parse_command(&line);
+        let tokens: Vec<String> = match shell_words::split(&line) {
+            Ok(v) => v,
+            Err(shell_words::ParseError) => {
+                // Don't provide completion if the given line ends in the middle of a token.
+                return Ok((0, vec![line.to_string(); 1]));
+            }
+        };
         match self.dispatcher.complete_command(tokens) {
             CompletionResult::NoMatches => Ok((0, vec![line.to_string(); 1])),
             CompletionResult::SingleDiff(diff) => Ok((line.len(), vec![diff; 1])),
@@ -213,11 +219,6 @@ fn clear_signal_handlers() {
     util::clear_signal_handlers(&[SIGINT, SIGHUP]);
 }
 
-fn parse_command(command: &str) -> Vec<String> {
-    // TODO(crbug.com/1002931) handle quotes
-    command.split_whitespace().map(|s| s.to_string()).collect()
-}
-
 // Loop for getting each command from the user and dispatching it to the handler.
 fn input_loop(dispatcher: Dispatcher) {
     let history_path = match var("HOME") {
@@ -250,26 +251,40 @@ fn input_loop(dispatcher: Dispatcher) {
         }
     }
 
+    let mut buffer = Vec::new();
     loop {
-        match editor.readline("\x1b[1;33mcrosh>\x1b[0m ") {
+        let prompt = if buffer.is_empty() { "crosh" } else { "" };
+        match editor.readline(&format!("\x1b[1;33m{}>\x1b[0m ", prompt)) {
             Ok(line) => {
-                let command = line.trim();
-                if command == "exit" || command == "quit" {
+                if line.ends_with('\\') {
+                    buffer.push(line);
+                    continue;
+                }
+
+                buffer.push(line);
+                let tokens = match shell_words::split(&buffer.join("\n")) {
+                    Ok(v) => v,
+                    Err(shell_words::ParseError) => {
+                        continue;
+                    }
+                };
+                buffer.clear();
+
+                if tokens.is_empty() {
+                    continue;
+                }
+                if tokens[0] == "exit" || tokens[0] == "quit" {
                     break;
-                } else if !command.is_empty() {
-                    let _ = handle_cmd(
-                        editor.helper().unwrap().dispatcher(),
-                        parse_command(&command),
-                    );
-                    if let Some(h) = history_path.as_ref() {
-                        if let Err(e) = editor.save_history(h) {
-                            eprintln!("Error persisting history: {}", e);
-                        }
+                }
+                let _ = handle_cmd(editor.helper().unwrap().dispatcher(), tokens);
+                if let Some(h) = history_path.as_ref() {
+                    if let Err(e) = editor.save_history(h) {
+                        eprintln!("Error persisting history: {}", e);
                     }
                 }
             }
             Err(ReadlineError::Interrupted) => {
-                // Ignore.
+                buffer.clear();
             }
             Err(ReadlineError::Eof) => {
                 break;
