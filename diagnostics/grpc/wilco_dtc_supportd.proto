@@ -206,6 +206,7 @@ message PerformWebRequestParameter {
     HTTP_METHOD_HEAD = 2;
     HTTP_METHOD_POST = 3;
     HTTP_METHOD_PUT = 4;
+    HTTP_METHOD_PATCH = 5;
   }
 
   // Must be distinct from |HTTP_METHOD_UNSET|.
