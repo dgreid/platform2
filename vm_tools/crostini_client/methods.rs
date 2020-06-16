@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 use std::collections::HashMap;
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 use std::error::Error;
 use std::fmt;
-use std::fs::OpenOptions;
+use std::fs::{remove_file, OpenOptions};
 use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::io::IntoRawFd;
+use std::os::unix::io::{AsRawFd, IntoRawFd};
 use std::path::{Component, Path, PathBuf};
 use std::process::Command;
 use std::thread::sleep;
@@ -53,6 +53,7 @@ enum ChromeOSError {
     ImportPathDoesNotExist,
     FailedAdjustVm(String),
     FailedAttachUsb(String),
+    FailedAllocateExtraDisk { path: String, errno: i32 },
     FailedComponentUpdater(String),
     FailedCreateContainer(CreateLxdContainerResponse_Status, String),
     FailedCreateContainerSignal(LxdContainerCreatedSignal_Status, String),
@@ -101,6 +102,9 @@ impl fmt::Display for ChromeOSError {
             ImportPathDoesNotExist => write!(f, "disk import path does not exist"),
             FailedAdjustVm(reason) => write!(f, "failed to adjust vm: {}", reason),
             FailedAttachUsb(reason) => write!(f, "failed to attach usb device to vm: {}", reason),
+            FailedAllocateExtraDisk { path, errno } => {
+                write!(f, "failed to allocate an extra disk at {}: {}", path, errno)
+            }
             FailedDetachUsb(reason) => write!(f, "failed to detach usb device from vm: {}", reason),
             FailedComponentUpdater(name) => {
                 write!(f, "component updater could not load component `{}`", name)
@@ -1868,6 +1872,40 @@ impl Methods {
     ) -> Result<(bool, u32), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         self.wait_disk_operation(uuid, op_type)
+    }
+
+    pub fn extra_disk_create(&mut self, path: &str, disk_size: u64) -> Result<(), Box<dyn Error>> {
+        // When testing, don't create a file.
+        if cfg!(test) {
+            return Ok(());
+        }
+
+        // Validate `disk_size`.
+        let disk_size =
+            libc::off64_t::try_from(disk_size).map_err(|_| FailedAllocateExtraDisk {
+                path: path.to_owned(),
+                errno: libc::EINVAL,
+            })?;
+
+        let file = OpenOptions::new()
+            .create_new(true)
+            .read(true)
+            .write(true)
+            .open(path)?;
+
+        // Truncate a disk file.
+        // Safe since we pass in a valid fd and disk_size.
+        let ret = unsafe { libc::fallocate64(file.as_raw_fd(), 0, 0, disk_size) };
+        if ret < 0 {
+            let errno = unsafe { *libc::__errno_location() };
+            let _ = remove_file(path);
+            return Err(FailedAllocateExtraDisk {
+                path: path.to_owned(),
+                errno,
+            }
+            .into());
+        }
+        Ok(())
     }
 
     pub fn container_create(

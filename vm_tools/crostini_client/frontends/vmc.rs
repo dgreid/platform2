@@ -20,8 +20,10 @@ enum VmcError {
     Command(&'static str, u32, Box<dyn Error>),
     BadProblemReportArguments(getopts::Fail),
     ExpectedCrosUserIdHash,
+    ExpectedUIntSize,
     ExpectedName,
     ExpectedNoArgs,
+    ExpectedPath,
     ExpectedSize,
     ExpectedU8Bus,
     ExpectedU8Device,
@@ -35,6 +37,7 @@ enum VmcError {
     ExpectedVmBusDevice,
     ExpectedVmPort,
     InvalidEmail,
+    InvalidPath(std::ffi::OsString),
     MissingActiveSession,
     ExpectedPrivilegedFlagValue,
     UnknownSubcommand(String),
@@ -92,7 +95,12 @@ impl fmt::Display for VmcError {
                 e
             ),
             ExpectedCrosUserIdHash => write!(f, "expected CROS_USER_ID_HASH environment variable"),
+            ExpectedUIntSize => write!(
+                f,
+                "expected unsigned integer for the disk size. (e.g. 1000000000, 256M, 1G)"
+            ),
             ExpectedName => write!(f, "expected <name>"),
+            ExpectedPath => write!(f, "expected <path>"),
             ExpectedSize => write!(f, "expected <size>"),
             ExpectedVmAndContainer => write!(
                 f,
@@ -115,6 +123,7 @@ impl fmt::Display for VmcError {
             ExpectedUUID => write!(f, "expected <command UUID>"),
             ExpectedVmPort => write!(f, "expected <vm name> <port>"),
             InvalidEmail => write!(f, "the active session has an invalid email address"),
+            InvalidPath(path) => write!(f, "invalid path: {:?}", path),
             MissingActiveSession => write!(
                 f,
                 "missing active session corresponding to $CROS_USER_ID_HASH"
@@ -405,6 +414,45 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         Ok(())
     }
 
+    fn create_extra_disk(&mut self) -> VmcResult {
+        let mut opts = Options::new();
+        opts.reqopt("", "size", "size of extra disk", "SIZE");
+        opts.optflag(
+            "",
+            "removable-media",
+            "store the extra disk on a removable media",
+        );
+
+        let matches = opts.parse(self.args)?;
+
+        let s = matches.opt_str("size").ok_or_else(|| ExpectedSize)?;
+        let size: u64 = match s.chars().last() {
+            Some('M') => s[..s.len() - 1].parse::<u64>().map(|x| x * 1024 * 1024),
+            Some('G') => s[..s.len() - 1]
+                .parse::<u64>()
+                .map(|x| x * 1024 * 1024 * 1024),
+            _ => s.parse(),
+        }
+        .map_err(|_| ExpectedUIntSize)?;
+
+        if matches.free.len() != 1 {
+            return Err(ExpectedPath.into());
+        }
+
+        let mut path = matches.free[0].clone();
+        if matches.opt_present("removable-media") {
+            path = Path::new("/media/removable")
+                .join(path)
+                .into_os_string()
+                .into_string()
+                .map_err(|s| InvalidPath(s))?;
+        }
+
+        try_command!(self.methods.extra_disk_create(&path, size));
+        println!("A raw disk is created at {}.", path);
+        Ok(())
+    }
+
     fn list(&mut self) -> VmcResult {
         if !self.args.is_empty() {
             return Err(ExpectedNoArgs.into());
@@ -654,6 +702,7 @@ const USAGE: &str = r#"
    [ start [--enable-gpu] [--enable-audio-capture] <name> |
      stop <name> |
      create [-p] <name> [<source media> [<removable storage name>]] [-- additional parameters]
+     create-extra-disk --size SIZE [--removable-media] <host disk path> |
      adjust <name> <operation> [additional parameters] |
      destroy <name> |
      disk-op-status <command UUID> |
@@ -711,6 +760,7 @@ impl Frontend for Vmc {
             "start" => command.start(),
             "stop" => command.stop(),
             "create" => command.create(),
+            "create-extra-disk" => command.create_extra_disk(),
             "adjust" => command.adjust(),
             "destroy" => command.destroy(),
             "export" => command.export(),
@@ -821,6 +871,17 @@ mod tests {
             ],
             &["vmc", "create", "-p", "termina", "--"],
             &["vmc", "create", "-p", "termina", "--", "param"],
+            &["vmc", "create-extra-disk", "--size=1000000", "foo.img"],
+            &["vmc", "create-extra-disk", "--size=256M", "foo.img"],
+            &["vmc", "create-extra-disk", "--size=1G", "foo.img"],
+            &["vmc", "create-extra-disk", "--size", "1G", "foo.img"],
+            &[
+                "vmc",
+                "create-extra-disk",
+                "--size=1G",
+                "--removable-media",
+                "'USB Drive/foo.img'",
+            ],
             &["vmc", "adjust", "termina", "op"],
             &["vmc", "adjust", "termina", "op", "param"],
             &["vmc", "destroy", "termina"],
@@ -904,6 +965,11 @@ mod tests {
                 "removable media",
                 "extra args",
             ],
+            &["vmc", "create-extra-disk"],
+            &["vmc", "create-extra-disk", "foo.img"],
+            &["vmc", "create-extra-disk", "--size", "1G"],
+            &["vmc", "create-extra-disk", "--size", "foo.img"],
+            &["vmc", "create-extra-disk", "--size=1G", "--removable-media"],
             &["vmc", "adjust"],
             &["vmc", "adjust", "termina"],
             &["vmc", "destroy"],
