@@ -92,27 +92,25 @@ bool Config::ParseJsonFile(const base::FilePath& config_json) {
     return false;
   }
 
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<base::Value> value =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          json_str, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
-          &error_msg);
-  if (!value) {
-    LOG(ERROR) << "Failed to parse json: " << error_msg;
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      json_str, base::JSON_PARSE_RFC);
+  if (!result.value) {
+    LOG(ERROR) << "Failed to parse json: " << result.error_message;
     return false;
   }
 
-  const base::DictionaryValue* dict = nullptr;
-  if (!value->GetAsDictionary(&dict)) {
+  if (!result.value->is_dict()) {
     LOG(ERROR) << "Failed to read json as dictionary";
     return false;
   }
 
-  for (base::DictionaryValue::Iterator it(*dict); !it.IsAtEnd(); it.Advance()) {
-    if (!json_.emplace(it.key(), it.value().CreateDeepCopy()).second) {
-      LOG(ERROR) << "The config " << it.key() << " appeared twice in the file.";
+  for (const auto& item : result.value->DictItems()) {
+    if (!json_
+             .emplace(item.first,
+                      base::Value::ToUniquePtrValue(std::move(item.second)))
+             .second) {
+      LOG(ERROR) << "The config " << item.first
+                 << " appeared twice in the file.";
       return false;
     }
   }

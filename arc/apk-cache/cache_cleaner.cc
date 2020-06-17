@@ -56,35 +56,31 @@ bool IsMatch(const std::string& file_name, const std::string& pattern) {
 // Parses contents of the attributes JSON file and verifies that last access
 // time of the package was at most 30 days ago.
 bool IsAccessTimeValid(const base::StringPiece& json_message) {
-  std::string error_msg;
-  int error_code = 0;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  const std::unique_ptr<base::Value> root(
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          json_message, base::JSON_PARSE_RFC, &error_code, &error_msg));
-  if (!root.get()) {
-    LOG(ERROR) << "Reading attributes JSON failed (error code: " << error_code
-               << "; error message: " << error_msg << ").";
+  auto root = base::JSONReader::ReadAndReturnValueWithError(
+      json_message, base::JSON_PARSE_RFC);
+  if (!root.value) {
+    LOG(ERROR) << "Reading attributes JSON failed (error code: "
+               << root.error_code << "; error message: " << root.error_message
+               << ").";
     return false;
   }
 
-  base::DictionaryValue* root_dict = nullptr;
-  if (!root->GetAsDictionary(&root_dict)) {
+  if (!root.value->is_dict()) {
     LOG(ERROR) << "Could not interpret the JSON as a dictionary.";
     return false;
   }
 
-  std::string atime_str;
-  if (!root_dict->GetString(kKeyAttributesAtime, &atime_str)) {
+  const std::string* atime_str =
+      root.value->FindStringPath(kKeyAttributesAtime);
+  if (!atime_str) {
     LOG(ERROR) << "Could not read the value of the access time with the "
                << kKeyAttributesAtime << " key.";
     return false;
   }
 
   base::Time atime;
-  if (!base::Time::FromString(atime_str.c_str(), &atime)) {
-    LOG(ERROR) << "Can not parse the date: " << atime_str;
+  if (!base::Time::FromString(atime_str->c_str(), &atime)) {
+    LOG(ERROR) << "Can not parse the date: " << *atime_str;
     return false;
   }
 

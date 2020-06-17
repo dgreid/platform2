@@ -160,51 +160,50 @@ bool GetConfiguration(AdbdConfiguration* config) {
     return false;
   }
 
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<const base::Value> config_root_val =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          config_json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
-          &error_msg, nullptr /* error_line_out */,
-          nullptr /* error_column_out */);
-  if (!config_root_val) {
-    LOG(ERROR) << "Failed to parse adb.json: " << error_msg;
+  auto config_root = base::JSONReader::ReadAndReturnValueWithError(
+      config_json_data, base::JSON_PARSE_RFC);
+  if (!config_root.value) {
+    LOG(ERROR) << "Failed to parse adb.json: " << config_root.error_message;
     return false;
   }
-  const base::DictionaryValue* config_root_dict = nullptr;
-  if (!config_root_val->GetAsDictionary(&config_root_dict)) {
+  if (!config_root.value->is_dict()) {
     LOG(ERROR) << "Failed to parse root dictionary from adb.json";
     return false;
   }
-  if (!config_root_dict->GetString("usbProductId", &config->usb_product_id)) {
+  const std::string* usb_product_id =
+      config_root.value->FindStringKey("usbProductId");
+  if (!usb_product_id) {
     LOG(ERROR) << "Failed to parse usbProductId";
     return false;
   }
-  const base::ListValue* kernel_module_list = nullptr;
+  config->usb_product_id = *usb_product_id;
   // kernelModules are optional.
-  if (config_root_dict->GetList("kernelModules", &kernel_module_list)) {
-    for (const auto& kernel_module_value : *kernel_module_list) {
+  const base::Value* kernel_module_list =
+      config_root.value->FindListKey("kernelModules");
+  if (kernel_module_list) {
+    for (const auto& kernel_module_value : kernel_module_list->GetList()) {
       AdbdConfigurationKernelModule module;
-      const base::DictionaryValue* kernel_module_dict = nullptr;
-      if (!kernel_module_value.GetAsDictionary(&kernel_module_dict)) {
+      if (!kernel_module_value.is_dict()) {
         LOG(ERROR) << "kernelModules contains a non-dictionary";
         return false;
       }
-      if (!kernel_module_dict->GetString("name", &module.name)) {
+      const std::string* module_name =
+          kernel_module_value.FindStringKey("name");
+      if (!module_name) {
         LOG(ERROR) << "Failed to parse kernelModules.name";
         return false;
       }
-      const base::ListValue* parameter_list = nullptr;
-      if (kernel_module_dict->GetList("parameters", &parameter_list)) {
+      module.name = *module_name;
+      const base::Value* module_parameters =
+          kernel_module_value.FindListKey("parameters");
+      if (module_parameters) {
         // Parameters are optional.
-        for (const auto& parameter_value : *parameter_list) {
-          std::string parameter;
-          if (!parameter_value.GetAsString(&parameter)) {
+        for (const auto& parameter_value : module_parameters->GetList()) {
+          if (!parameter_value.is_string()) {
             LOG(ERROR) << "kernelModules.parameters contains a non-string";
             return false;
           }
-          module.parameters.emplace_back(parameter);
+          module.parameters.emplace_back(parameter_value.GetString());
         }
       }
       config->kernel_modules.emplace_back(module);

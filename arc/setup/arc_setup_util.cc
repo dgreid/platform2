@@ -812,42 +812,39 @@ bool GetOciContainerState(const base::FilePath& path,
     PLOG(ERROR) << "Failed to read json string from " << path.value();
     return false;
   }
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<base::Value> container_state_value =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          json_str, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
-          &error_msg, nullptr /* error_line_out */,
-          nullptr /* error_column_out */);
-  if (!container_state_value) {
-    LOG(ERROR) << "Failed to parse json: " << error_msg;
+  auto container_state = base::JSONReader::ReadAndReturnValueWithError(
+      json_str, base::JSON_PARSE_RFC);
+  if (!container_state.value) {
+    LOG(ERROR) << "Failed to parse json: " << container_state.error_message;
     return false;
   }
-  const base::DictionaryValue* container_state = nullptr;
-  if (!container_state_value->GetAsDictionary(&container_state)) {
+  if (!container_state.value->is_dict()) {
     LOG(ERROR) << "Failed to read container state as dictionary";
     return false;
   }
 
   // Get the container PID and the rootfs path.
-  if (!container_state->GetInteger("pid", out_container_pid)) {
+  base::Optional<int> pid = container_state.value->FindIntKey("pid");
+  if (!pid) {
     LOG(ERROR) << "Failed to get PID from container state";
     return false;
   }
-  const base::DictionaryValue* annotations = nullptr;
-  if (!container_state->GetDictionary("annotations", &annotations)) {
+  *out_container_pid = pid.value();
+
+  const base::Value* annotations =
+      container_state.value->FindDictKey("annotations");
+  if (!annotations) {
     LOG(ERROR) << "Failed to get annotations from container state";
     return false;
   }
-  std::string container_root_str;
-  if (!annotations->GetStringWithoutPathExpansion(
-          "org.chromium.run_oci.container_root", &container_root_str)) {
+  const std::string* container_root_path =
+      annotations->FindStringKey("org.chromium.run_oci.container_root");
+  if (!container_root_path) {
     LOG(ERROR)
         << "Failed to get org.chromium.run_oci.container_root annotation";
     return false;
   }
-  base::FilePath container_root(container_root_str);
+  base::FilePath container_root(*container_root_path);
   if (!base::ReadSymbolicLink(
           container_root.Append("mountpoints/container-root"), out_rootfs)) {
     PLOG(ERROR) << "Failed to read container root symlink";
