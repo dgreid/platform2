@@ -166,7 +166,18 @@ bool VshClient::Init(const std::string& user,
       base::Bind(&VshClient::HandleVsockReadable, base::Unretained(this)));
   // STDIN_FILENO may not be watchable if it's /dev/null, and WatchReadable will
   // CHECK in this case. So watch only if it's interactive tty.
-  if (interactive) {
+  // Watch FIFO too to make `echo command | vsh` usable even it's not
+  // interactive.
+  bool is_stdin_watchable = interactive;
+  if (!interactive) {
+    struct stat buf;
+    if (HANDLE_EINTR(fstat(STDIN_FILENO, &buf)) == 0) {
+      is_stdin_watchable |= S_ISFIFO(buf.st_mode);
+    } else {
+      PLOG(ERROR) << "Failed to stat stdin fd";
+    }
+  }
+  if (is_stdin_watchable) {
     stdin_watcher_ = base::FileDescriptorWatcher::WatchReadable(
         STDIN_FILENO,
         base::Bind(&VshClient::HandleStdinReadable, base::Unretained(this)));
