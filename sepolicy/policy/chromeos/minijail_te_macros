@@ -59,7 +59,7 @@ filetrans_pattern($1, tmpfs, cros_minijail_$2_tmp_file, dir);
 filetrans_pattern($1, tmpfs, cros_minijail_$2_tmp_file, file);
 ')
 
-# Domain transition where miniajil0 runs on static mode.
+# Domain transition where minijail0 runs on static mode.
 # ($1 where minijail running) -> (execute $2) -> $3
 define(`from_minijail_static_custom', `
 typeattribute $1 minijail_domain;
