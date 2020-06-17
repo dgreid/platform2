@@ -446,8 +446,10 @@ void SmbFilesystem::SetAttrInternal(std::unique_ptr<AttrRequest> request,
     return;
   }
 
-  // Currently, only setting size is supported (ie. O_TRUC, ftruncate()).
-  const int kSupportedAttrs = FUSE_SET_ATTR_SIZE;
+  // Currently, only setting size (ie. O_TRUC, ftruncate()) or times (ie.
+  // utime(), utimensat()) is supported.
+  const int kSupportedAttrs =
+      FUSE_SET_ATTR_SIZE | FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME;
   if (to_set & ~kSupportedAttrs) {
     LOG(WARNING) << "Unsupported |to_set| flags on setattr: " << to_set;
     request->ReplyError(ENOTSUP);
@@ -469,58 +471,120 @@ void SmbFilesystem::SetAttrInternal(std::unique_ptr<AttrRequest> request,
     request->ReplyError(error);
     return;
   }
-  if (smb_stat.st_mode & S_IFDIR) {
-    request->ReplyError(EISDIR);
-    return;
-  } else if (!(smb_stat.st_mode & S_IFREG)) {
-    VLOG(1) << "Disallowed file mode " << smb_stat.st_mode << " for path "
-            << share_file_path;
-    request->ReplyError(EACCES);
-    return;
-  }
   struct stat reply_stat = MakeStat(inode, smb_stat);
 
+  // SetAttrInternal supports changing multiple attributes simultaneously but
+  // this is not atomic: all changes must succeed for the request to succeed but
+  // a partial failure will not be unapplied.
+  if (to_set & FUSE_SET_ATTR_SIZE) {
+    error = SetFileSizeInternal(share_file_path, file_handle, attr.st_size,
+                                smb_stat, &reply_stat);
+    if (error) {
+      request->ReplyError(error);
+      return;
+    }
+  }
+
+  if (to_set & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME)) {
+    error = SetUtimesInternal(share_file_path, to_set, attr.st_atim,
+                              attr.st_mtim, smb_stat, &reply_stat);
+    if (error) {
+      request->ReplyError(error);
+      return;
+    }
+  }
+
+  // Modifying the attributes invalidates any cached inode we have.
+  EraseCachedInodeStat(inode);
+
+  request->ReplyAttr(reply_stat, kAttrTimeoutSeconds);
+}
+
+int SmbFilesystem::SetFileSizeInternal(const std::string& share_file_path,
+                                       base::Optional<uint64_t> file_handle,
+                                       off_t size,
+                                       const struct stat& current_stat,
+                                       struct stat* reply_stat) {
+  DCHECK(reply_stat);
+
+  if (current_stat.st_mode & S_IFDIR) {
+    return EISDIR;
+  } else if (!(current_stat.st_mode & S_IFREG)) {
+    VLOG(1) << "Disallowed file mode " << current_stat.st_mode << " for path "
+            << share_file_path;
+    return EACCES;
+  }
+
   SMBCFILE* file = nullptr;
+  int error = 0;
   base::ScopedClosureRunner file_closer;
   if (file_handle) {
     file = LookupOpenFile(*file_handle);
     if (!file) {
-      request->ReplyError(EBADF);
-      return;
+      return EBADF;
     }
   } else {
     error = samba_impl_->OpenFile(share_file_path, O_WRONLY, 0, &file);
     if (error) {
       VLOG(1) << "OpenFile path: " << share_file_path
               << " failed: " << base::safe_strerror(error);
-      request->ReplyError(error);
-      return;
+      return error;
     }
 
     file_closer.ReplaceClosure(base::BindOnce(
         [](SambaInterface* samba_impl, SMBCFILE* file) {
           int error = samba_impl->CloseFile(file);
           if (error) {
-            LOG(ERROR) << "CloseFile failed on temporary setattr file: "
-                       << base::safe_strerror(error);
+            LOG(ERROR)
+                << "CloseFile failed on temporary SetFileSizeInternal file: "
+                << base::safe_strerror(error);
           }
         },
         samba_impl_.get(), file));
   }
 
-  error = samba_impl_->TruncateFile(file, attr.st_size);
+  error = samba_impl_->TruncateFile(file, size);
   if (error) {
-    VLOG(1) << "TruncateFile size: " << attr.st_size
+    VLOG(1) << "TruncateFile size: " << size
             << " failed: " << base::safe_strerror(error);
-    request->ReplyError(error);
-    return;
+    return error;
   }
-  reply_stat.st_size = attr.st_size;
+  reply_stat->st_size = size;
 
-  // Modifying the file size invalidates any cached inode we have.
-  EraseCachedInodeStat(inode);
+  return 0;
+}
 
-  request->ReplyAttr(reply_stat, kAttrTimeoutSeconds);
+int SmbFilesystem::SetUtimesInternal(const std::string& share_file_path,
+                                     int to_set,
+                                     const struct timespec& atime,
+                                     const struct timespec& mtime,
+                                     const struct stat& current_stat,
+                                     struct stat* reply_stat) {
+  DCHECK(to_set & (FUSE_SET_ATTR_ATIME | FUSE_SET_ATTR_MTIME));
+  DCHECK(reply_stat);
+
+  struct timespec requested_atime = current_stat.st_atim;
+  struct timespec requested_mtime = current_stat.st_mtim;
+
+  if (to_set & FUSE_SET_ATTR_ATIME) {
+    requested_atime = atime;
+  }
+  if (to_set & FUSE_SET_ATTR_MTIME) {
+    requested_mtime = mtime;
+  }
+
+  int error =
+      samba_impl_->SetUtimes(share_file_path, requested_atime, requested_mtime);
+  if (error) {
+    VLOG(1) << "SetUtimes path: " << share_file_path
+            << " failed: " << base::safe_strerror(error);
+    return error;
+  }
+
+  reply_stat->st_atim = requested_atime;
+  reply_stat->st_mtim = requested_mtime;
+
+  return 0;
 }
 
 void SmbFilesystem::Open(std::unique_ptr<OpenRequest> request,

@@ -200,6 +200,17 @@ class SmbFilesystem : public Filesystem {
                        base::Optional<uint64_t> file_handle,
                        const struct stat& attr,
                        int to_set);
+  int SetFileSizeInternal(const std::string& share_file_path,
+                          base::Optional<uint64_t> file_handle,
+                          off_t size,
+                          const struct stat& current_stat,
+                          struct stat* reply_stat);
+  int SetUtimesInternal(const std::string& share_file_path,
+                        int to_set,
+                        const struct timespec& atime,
+                        const struct timespec& mtime,
+                        const struct stat& current_stat,
+                        struct stat* reply_stat);
   void OpenInternal(std::unique_ptr<OpenRequest> request,
                     fuse_ino_t inode,
                     int flags);

@@ -82,6 +82,7 @@ SambaInterfaceImpl::SambaInterfaceImpl(
   smbc_statvfs_ctx_ = smbc_getFunctionStatVFS(context_);
   smbc_telldir_ctx_ = smbc_getFunctionTelldir(context_);
   smbc_unlink_ctx_ = smbc_getFunctionUnlink(context_);
+  smbc_utimes_ctx_ = smbc_getFunctionUtimes(context_);
   smbc_write_ctx_ = smbc_getFunctionWrite(context_);
 }
 
@@ -244,6 +245,23 @@ int SambaInterfaceImpl::Stat(const std::string& path, struct stat* out_stat) {
   DCHECK(out_stat);
 
   if (smbc_stat_ctx_(context_, path.c_str(), out_stat) < 0) {
+    return errno;
+  }
+
+  return 0;
+}
+
+int SambaInterfaceImpl::SetUtimes(const std::string& path,
+                                  const struct timespec& atime,
+                                  const struct timespec& mtime) {
+  struct timeval packed_times[2];
+
+  packed_times[0].tv_sec = atime.tv_sec;
+  packed_times[0].tv_usec = 0;  // per libsmbclient, tv_usec is ignored
+  packed_times[1].tv_sec = mtime.tv_sec;
+  packed_times[1].tv_usec = 0;  // per libsmbclient, tv_usec is ignored
+
+  if (smbc_utimes_ctx_(context_, path.c_str(), packed_times) < 0) {
     return errno;
   }
 

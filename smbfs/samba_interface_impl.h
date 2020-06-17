@@ -53,6 +53,9 @@ class SambaInterfaceImpl : public SambaInterface {
                 size_t* out_bytes_written) override;
   int TruncateFile(SMBCFILE* file, off_t size) override;
   int Stat(const std::string& path, struct stat* out_stat) override;
+  int SetUtimes(const std::string& path,
+                const struct timespec& atime,
+                const struct timespec& mtime) override;
   int Rename(const std::string& old_path, const std::string& new_path) override;
   int UnlinkFile(const std::string& file_path) override;
 
@@ -112,6 +115,7 @@ class SambaInterfaceImpl : public SambaInterface {
   smbc_statvfs_fn smbc_statvfs_ctx_ = nullptr;
   smbc_telldir_fn smbc_telldir_ctx_ = nullptr;
   smbc_unlink_fn smbc_unlink_ctx_ = nullptr;
+  smbc_utimes_fn smbc_utimes_ctx_ = nullptr;
   smbc_write_fn smbc_write_ctx_ = nullptr;
 
   // Should be the last member.

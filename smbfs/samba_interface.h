@@ -96,6 +96,12 @@ class SambaInterface {
   virtual int Stat(const std::string& path,
                    struct stat* out_stat) WARN_UNUSED_RESULT = 0;
 
+  // Sets the access and modification times for the file or directory at |path|.
+  // Returns 0 on success and errno on failure.
+  virtual int SetUtimes(const std::string& path,
+                        const struct timespec& atime,
+                        const struct timespec& mtime) = 0;
+
   // Renames |old_path| to |new_path|.
   // Returns 0 on success and errno on failure.
   virtual int Rename(const std::string& old_path,
