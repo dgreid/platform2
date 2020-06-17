@@ -260,8 +260,6 @@ void WiFi::Stop(Error* error, const EnabledStateChangedCallback& /*callback*/) {
   if (supplicant_present_ && supplicant_interface_proxy_) {
     supplicant_process_proxy()->RemoveInterface(supplicant_interface_path_);
   }
-  supplicant_interface_path_ = RpcIdentifier("");
-  SetSupplicantInterfaceProxy(nullptr);
   pending_scan_results_.reset();
   current_service_ = nullptr;  // breaks a reference cycle
   pending_service_ = nullptr;  // breaks a reference cycle
@@ -303,6 +301,12 @@ void WiFi::Scan(Error* /*error*/, const string& reason) {
 void WiFi::AddPendingScanResult(const RpcIdentifier& path,
                                 const KeyValueStore& properties,
                                 bool is_removal) {
+  // BSS events might come immediately after Stop(). Don't bother stashing them
+  // at all.
+  if (!enabled()) {
+    return;
+  }
+
   if (!pending_scan_results_) {
     pending_scan_results_.reset(new PendingScanResults(
         Bind(&WiFi::PendingScanResultsHandler,
@@ -344,16 +348,20 @@ void WiFi::PropertiesChanged(const KeyValueStore& properties) {
   SLOG(this, 2) << __func__;
   // Called from D-Bus signal handler, but may need to send a D-Bus
   // message. So defer work to event loop.
-  dispatcher()->PostTask(
-      FROM_HERE,
-      Bind(&WiFi::PropertiesChangedTask,
-           weak_ptr_factory_while_started_.GetWeakPtr(), properties));
+  dispatcher()->PostTask(FROM_HERE,
+                         Bind(&WiFi::PropertiesChangedTask,
+                              weak_ptr_factory_.GetWeakPtr(), properties));
 }
 
 void WiFi::ScanDone(const bool& success) {
   // This log line should be kept at INFO level to support the Shill log
   // processor.
   LOG(INFO) << __func__;
+
+  if (!enabled()) {
+    SLOG(this, 2) << "Ignoring scan completion while disabled";
+    return;
+  }
 
   // Defer handling of scan result processing, because that processing
   // may require the the registration of new D-Bus objects. And such
@@ -1571,6 +1579,11 @@ void WiFi::BSSRemovedTask(const RpcIdentifier& path) {
 }
 
 void WiFi::CertificationTask(const KeyValueStore& properties) {
+  // Events may come immediately after Stop().
+  if (!enabled()) {
+    return;
+  }
+
   if (!current_service_) {
     LOG(ERROR) << "WiFi " << link_name() << " " << __func__
                << " with no current service.";
@@ -1585,6 +1598,11 @@ void WiFi::CertificationTask(const KeyValueStore& properties) {
 }
 
 void WiFi::EAPEventTask(const string& status, const string& parameter) {
+  // Events may come immediately after Stop().
+  if (!enabled()) {
+    return;
+  }
+
   if (!current_service_) {
     LOG(ERROR) << "WiFi " << link_name() << " " << __func__
                << " with no current service.";
@@ -1620,8 +1638,10 @@ void WiFi::PropertiesChangedTask(const KeyValueStore& properties) {
   // Note that order matters here. In particular, we want to process
   // changes in the current BSS before changes in state. This is so
   // that we update the state of the correct Endpoint/Service.
-  if (properties.Contains<RpcIdentifier>(
-          WPASupplicant::kInterfacePropertyCurrentBSS)) {
+  // Also note that events may occur (briefly) after Stop(), so we need to make
+  // explicit decisions here on what to do when !enabled().
+  if (enabled() && properties.Contains<RpcIdentifier>(
+                       WPASupplicant::kInterfacePropertyCurrentBSS)) {
     CurrentBSSChanged(properties.Get<RpcIdentifier>(
         WPASupplicant::kInterfacePropertyCurrentBSS));
   }
@@ -2612,13 +2632,13 @@ void WiFi::ConnectToSupplicant() {
             << " supplicant: " << (supplicant_present_ ? "present" : "absent")
             << " proxy: "
             << (supplicant_interface_proxy_.get() ? "non-null" : "null");
-  // The check for |supplicant_interface_proxy_| is mainly for testing,
-  // to avoid recreation of supplicant interface proxy.
-  if (!enabled() || !supplicant_present_ || supplicant_interface_proxy_) {
+  if (!enabled() || !supplicant_present_) {
     return;
   }
   OnWiFiDebugScopeChanged(
       ScopeLogger::GetInstance()->IsScopeEnabled(ScopeLogger::kWiFi));
+
+  RpcIdentifier previous_supplicant_interface_path(supplicant_interface_path_);
 
   KeyValueStore create_interface_args;
   create_interface_args.Set<string>(WPASupplicant::kInterfacePropertyName,
@@ -2660,9 +2680,23 @@ void WiFi::ConnectToSupplicant() {
             << supplicant_connect_attempts_;
   metrics()->NotifyWiFiSupplicantSuccess(supplicant_connect_attempts_);
 
-  SetSupplicantInterfaceProxy(
-      control_interface()->CreateSupplicantInterfaceProxy(
-          this, supplicant_interface_path_));
+  // Only (re)create the interface proxy if its D-Bus path changed, or if we
+  // haven't created one yet. This lets us watch interface properties
+  // immediately after Stop() (e.g., for metrics collection) and also allows
+  // tests to skip recreation (by retaining the same interface path).
+  if (!supplicant_interface_proxy_ ||
+      previous_supplicant_interface_path != supplicant_interface_path_) {
+    SLOG(this, 2) << StringPrintf(
+        "Updating interface path from \"%s\" to \"%s\"",
+        previous_supplicant_interface_path.value().c_str(),
+        supplicant_interface_path_.value().c_str());
+    SetSupplicantInterfaceProxy(
+        control_interface()->CreateSupplicantInterfaceProxy(
+            this, supplicant_interface_path_));
+  } else {
+    SLOG(this, 2) << "Reusing existing interface at "
+                  << supplicant_interface_path_.value();
+  }
 
   RTNLHandler::GetInstance()->SetInterfaceFlags(interface_index(), IFF_UP,
                                                 IFF_UP);

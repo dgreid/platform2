@@ -662,6 +662,10 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
     EXPECT_EQ(method, wifi_->scan_method_);
   }
 
+  void PropertiesChanged(const KeyValueStore& props) {
+    wifi_->PropertiesChanged(props);
+  }
+
  protected:
   using MockWiFiServiceRefPtr = scoped_refptr<MockWiFiService>;
 
@@ -1187,6 +1191,7 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   std::unique_ptr<SupplicantInterfaceProxyInterface>
   CreateSupplicantInterfaceProxy(SupplicantEventDelegateInterface* delegate,
                                  const RpcIdentifier& object_path) {
+    CHECK(supplicant_interface_proxy_);
     return std::move(supplicant_interface_proxy_);
   }
 
@@ -2152,6 +2157,23 @@ TEST_F(WiFiMainTest, StopWhileConnected) {
   EXPECT_CALL(*GetSupplicantInterfaceProxy(), Disconnect());
   StopWiFi();
   EXPECT_EQ(nullptr, GetCurrentService());
+}
+
+TEST_F(WiFiMainTest, StopDisconnectReason) {
+  StartWiFi();
+
+  KeyValueStore props;
+  props.Set<int32_t>(WPASupplicant::kInterfacePropertyDisconnectReason,
+                     -IEEE_80211::kReasonCodeSenderHasLeft);
+
+  PropertiesChanged(props);
+  StopWiFi();
+  EXPECT_CALL(*metrics(),
+              Notify80211Disconnect(Metrics::kDisconnectedNotByAp,
+                                    IEEE_80211::kReasonCodeSenderHasLeft));
+
+  event_dispatcher_->DispatchPendingEvents();
+  Mock::VerifyAndClearExpectations(GetSupplicantInterfaceProxy());
 }
 
 TEST_F(WiFiMainTest, ReconnectTimer) {
@@ -3377,6 +3399,8 @@ TEST_F(WiFiTimerTest, StartScanTimer_NoFastScansRemaining) {
 }
 
 TEST_F(WiFiMainTest, EAPCertification) {
+  StartWiFi();
+
   MockWiFiServiceRefPtr service = MakeMockService(kSecurity8021x);
   EXPECT_CALL(*service, AddEAPCertification(_, _)).Times(0);
 
@@ -3408,6 +3432,8 @@ TEST_F(WiFiMainTest, EAPCertification) {
 }
 
 TEST_F(WiFiTimerTest, ScanDoneDispatchesTasks) {
+  SetWiFiEnabled(true);
+
   // Dispatch WiFi::ScanFailedTask if scan failed.
   EXPECT_TRUE(ScanFailedCallbackIsCancelled());
   EXPECT_CALL(*mock_dispatcher_,
