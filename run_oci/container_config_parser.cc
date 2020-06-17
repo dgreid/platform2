@@ -853,6 +853,7 @@ bool ParseHooks(const base::DictionaryValue& config_root_dict,
 // Parses the configuration file for the container.  The config file specifies
 // basic filesystem info and details about the process to be run.  namespace,
 // cgroup, and syscall configurations are also specified
+// TODO(crbug.com/1099111): change config_root_dict type to base::Value
 bool ParseConfigDict(const base::DictionaryValue& config_root_dict,
                      OciConfigPtr const& config_out) {
   if (!config_root_dict.GetString("ociVersion", &config_out->ociVersion)) {
@@ -907,20 +908,14 @@ bool ParseConfigDict(const base::DictionaryValue& config_root_dict,
 
 bool ParseContainerConfig(const std::string& config_json_data,
                           OciConfigPtr const& config_out) {
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<const base::Value> config_root_val =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          config_json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */,
-          &error_msg, nullptr /* error_line_out */,
-          nullptr /* error_column_out */);
-  if (!config_root_val) {
-    LOG(ERROR) << "Fail to parse config.json: " << error_msg;
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      config_json_data, base::JSON_PARSE_RFC);
+  if (result.error_code != base::JSONReader::JSON_NO_ERROR) {
+    LOG(ERROR) << "Fail to parse config.json: " << result.error_message;
     return false;
   }
   const base::DictionaryValue* config_dict = nullptr;
-  if (!config_root_val->GetAsDictionary(&config_dict)) {
+  if (!result.value->GetAsDictionary(&config_dict)) {
     LOG(ERROR) << "Fail to parse root dictionary from config.json";
     return false;
   }
