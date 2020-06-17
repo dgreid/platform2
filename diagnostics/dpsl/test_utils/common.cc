@@ -29,23 +29,21 @@ bool PrintProto(const google::protobuf::Message& message) {
   }
 
   // Then convert the JSON back to a base::Value.
-  // TODO(crbug/1054279): use new Read API after libchrome uprev.
-  std::unique_ptr<base::Value> body =
-      base::JSONReader::ReadDeprecated(body_json);
+  auto body = base::JSONReader::Read(body_json);
   if (!body) {
     std::cerr << "Failed to parse JSON to base::Value: " << body_json << '\n';
     return false;
   }
 
-  // Embed the body and name of the proto in a base::DictionaryValue.
-  base::DictionaryValue dv;
-  dv.SetString("name", message.GetDescriptor()->name());
-  dv.Set("body", std::move(body));
+  // Embed the body and name of the proto in a base::Value.
+  base::Value value;
+  value.SetStringKey("name", message.GetDescriptor()->name());
+  value.SetKey("body", std::move(*body));
 
-  // Serialize the base::DictionaryValue back to JSON.
+  // Serialize the base::Value back to JSON.
   std::string message_json;
-  base::JSONWriter::WriteWithOptions(dv, base::JSONWriter::OPTIONS_PRETTY_PRINT,
-                                     &message_json);
+  base::JSONWriter::WriteWithOptions(
+      value, base::JSONWriter::OPTIONS_PRETTY_PRINT, &message_json);
   std::cout << message_json << std::endl;
 
   return true;

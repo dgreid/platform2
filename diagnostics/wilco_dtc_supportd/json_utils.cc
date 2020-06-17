@@ -12,13 +12,10 @@ namespace diagnostics {
 
 bool IsJsonValid(base::StringPiece json, std::string* json_error_message) {
   DCHECK(json_error_message);
-  int json_error_code = base::JSONReader::JSON_NO_ERROR;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  base::JSONReader::ReadAndReturnErrorDeprecated(
-      json, base::JSONParserOptions::JSON_ALLOW_TRAILING_COMMAS,
-      &json_error_code, json_error_message, nullptr, nullptr);
-  return json_error_code == base::JSONReader::JSON_NO_ERROR;
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      json, base::JSONParserOptions::JSON_ALLOW_TRAILING_COMMAS);
+  *json_error_message = result.error_message;
+  return result.value.has_value();
 }
 
 }  // namespace diagnostics
