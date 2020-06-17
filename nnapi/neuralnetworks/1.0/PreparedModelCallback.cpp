@@ -117,6 +117,22 @@ IPreparedModelCallback::castFrom(
   return parent;
 }
 
+::android::hardware::Return<::android::sp<
+    ::android::hardware::neuralnetworks::V1_0::IPreparedModelCallback>>
+IPreparedModelCallback::castFrom(
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
+    bool /*emitError*/) {
+  return nullptr;
+  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
+  //                  pulling in too many dependencies from hidl/transport .
+  //    return
+  //    ::android::hardware::details::castInterface<IPreparedModelCallback,
+  //    ::android::hidl::base::V1_0::IBase, BpHwPreparedModelCallback>(
+  //          parent,
+  //          "android.hardware.neuralnetworks@1.0::IPreparedModelCallback",
+  //          emitError);
+}
+
 }  // namespace V1_0
 }  // namespace neuralnetworks
 }  // namespace hardware

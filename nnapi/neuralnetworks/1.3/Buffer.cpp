@@ -111,6 +111,19 @@ IBuffer::castFrom(
   return parent;
 }
 
+::android::hardware::Return<
+    ::android::sp<::android::hardware::neuralnetworks::V1_3::IBuffer>>
+IBuffer::castFrom(
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
+    bool /*emitError*/) {
+  return nullptr;
+  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
+  //                  pulling in too many dependencies from hidl/transport .
+  // return ::android::hardware::details::castInterface<IBuffer,
+  // ::android::hidl::base::V1_0::IBase, BpHwBuffer>(
+  //         parent, "android.hardware.neuralnetworks@1.3::IBuffer", emitError);
+}
+
 }  // namespace V1_3
 }  // namespace neuralnetworks
 }  // namespace hardware
