@@ -81,7 +81,7 @@ bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int) {
   return true;
 }
 
-bool SaneDeviceFake::SetScanMode(brillo::ErrorPtr*, const std::string&) {
+bool SaneDeviceFake::SetColorMode(brillo::ErrorPtr*, ColorMode) {
   return true;
 }
 

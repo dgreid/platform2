@@ -183,8 +183,26 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
   return true;
 }
 
-bool SaneDeviceImpl::SetScanMode(brillo::ErrorPtr* error,
-                                 const std::string& scan_mode) {
+bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
+                                  ColorMode color_mode) {
+  std::string mode_string = "";
+  switch (color_mode) {
+    case MODE_LINEART:
+      mode_string = kScanPropertyModeLineart;
+      break;
+    case MODE_GRAYSCALE:
+      mode_string = kScanPropertyModeGray;
+      break;
+    case MODE_COLOR:
+      mode_string = kScanPropertyModeColor;
+      break;
+    default:
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Invalid color mode: %s", ColorMode_Name(color_mode).c_str());
+      return false;
+  }
+
   if (options_.count(kScanMode) == 0) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "No scan mode option found.");
@@ -192,7 +210,7 @@ bool SaneDeviceImpl::SetScanMode(brillo::ErrorPtr* error,
   }
 
   SaneOption option = options_[kScanMode];
-  option.SetString(scan_mode);
+  option.SetString(mode_string);
 
   bool should_reload = false;
   SANE_Status status = SetOption(&option, &should_reload);
@@ -202,7 +220,7 @@ bool SaneDeviceImpl::SetScanMode(brillo::ErrorPtr* error,
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
                                kManagerServiceError,
                                "Unable to set scan mode to %s: %s",
-                               scan_mode.c_str(), sane_strstatus(status));
+                               mode_string.c_str(), sane_strstatus(status));
     return false;
   }
   return true;

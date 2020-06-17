@@ -340,18 +340,30 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
 
   uint32_t resolution = 0;
-  string scan_mode;
-  if (!ExtractScanOptions(error, scan_properties, &resolution, &scan_mode))
+  string color_mode_string;
+  if (!ExtractScanOptions(error, scan_properties, &resolution,
+                          &color_mode_string))
     return false;
 
-  LOG(INFO) << "User requested scan mode: '" << scan_mode
+  LOG(INFO) << "User requested color mode: '" << color_mode_string
             << "' and resolution: " << resolution;
 
   if (resolution != 0 && !device->SetScanResolution(error, resolution))
     return false;
 
-  if (scan_mode != "" && !device->SetScanMode(error, scan_mode))
-    return false;
+  if (color_mode_string != "") {
+    ColorMode color_mode;
+    if (!ColorMode_Parse(color_mode_string, &color_mode)) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Invalid color mode: %s", color_mode_string.c_str());
+      return false;
+    }
+
+    if (!device->SetColorMode(error, color_mode)) {
+      return false;
+    }
+  }
 
   // Automatically report a scan failure if we exit early. This will be
   // cancelled once scanning has succeeded.

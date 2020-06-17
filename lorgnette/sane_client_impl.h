@@ -54,8 +54,7 @@ class SaneDeviceImpl : public SaneDevice {
                             ValidOptionValues* values) override;
 
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
-  bool SetScanMode(brillo::ErrorPtr* error,
-                   const std::string& scan_mode) override;
+  bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
   bool StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;

@@ -46,8 +46,7 @@ class SaneDevice {
                                     ValidOptionValues* values) = 0;
 
   virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
-  virtual bool SetScanMode(brillo::ErrorPtr* error,
-                           const std::string& scan_mode) = 0;
+  virtual bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) = 0;
   virtual bool StartScan(brillo::ErrorPtr* error) = 0;
   virtual bool GetScanParameters(brillo::ErrorPtr* error,
                                  ScanParameters* parameters) = 0;
