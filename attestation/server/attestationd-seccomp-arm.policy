@@ -92,6 +92,12 @@ sched_yield: 1
 sysinfo: 1
 getrandom: 1
 
+# openssl 1.1.1d+ uses these to access the seeded state in shared memory if
+# getrandom() is not implemented.
+shmget: 1
+shmat: 1
+shmdt: 1
+
 # These calls are attempted but apparently not necessary; return EPERM.
 ioctl: return 1
 prctl: return 1
