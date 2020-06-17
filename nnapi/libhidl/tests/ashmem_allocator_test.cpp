@@ -13,9 +13,9 @@ TEST(SharedPointerAllocatorTest, Allocate) {
   auto allocator = IAllocator::getService("ashmem");
   hidl_memory memory;
   allocator->allocate(1024, [&](bool success, const hidl_memory& mem) {
-      ASSERT_FALSE(success);
+      ASSERT_TRUE(success);
       memory = mem;
     });
-  ASSERT_FALSE(memory.valid());
-  ASSERT_EQ(0, memory.size());
+  ASSERT_TRUE(memory.valid());
+  ASSERT_EQ(1024, memory.size());
 }

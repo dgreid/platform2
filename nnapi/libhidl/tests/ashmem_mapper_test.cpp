@@ -11,10 +11,7 @@ using ::android::hidl::memory::V1_0::IMapper;
 using ::android::hidl::memory::V1_0::IMemory;
 using ::android::sp;
 
-TEST(SharedPointerMapperTest, EmptyMemory) {
+TEST(AshmemMapperTest, EmptyMemory) {
   auto mapper = IMapper::getService("ashmem", false);
-  hidl_memory memory;
-  sp<IMemory> result = mapper->mapMemory(memory);
-  ASSERT_EQ(nullptr, result->getPointer());
-  ASSERT_EQ(0, result->getSize());
+  ASSERT_NE(nullptr, mapper);
 }

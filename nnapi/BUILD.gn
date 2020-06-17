@@ -227,6 +227,8 @@ static_library("libhidl") {
     "${libbase_src}/include",
     "${libhidl_src}/base/include",
     "${libhidl_src}/libhidlmemory/include",
+    "${libhidl_src}/transport/allocator/1.0/default",
+    "${libhidl_src}/transport/memory/1.0/default",
     "libhidl",
   ]
   deps = [
@@ -239,13 +241,15 @@ static_library("libhidl") {
     "${libhidl_src}/base/Status.cpp",
     "${libhidl_src}/libhidlmemory/HidlMemoryToken.cpp",
     "${libhidl_src}/libhidlmemory/mapping.cpp",
+    "${libhidl_src}/transport/allocator/1.0/default/AshmemAllocator.cpp",
+    "${libhidl_src}/transport/memory/1.0/default/AshmemMapper.cpp",
+    "${libhidl_src}/transport/memory/1.0/default/AshmemMemory.cpp",
     "libhidl/allocator/IAllocator.cpp",
-    "libhidl/allocator/shared_pointer_allocator.cpp",
+    "libhidl/allocator/ashmem_allocator.cpp",
     "libhidl/base/IBase.cpp",
     "libhidl/memory/IMapper.cpp",
     "libhidl/memory/IMemory.cpp",
-    "libhidl/memory/shared_pointer_mapper.cpp",
-    "libhidl/memory/shared_pointer_memory.cpp",
+    "libhidl/memory/ashmem_mapper.cpp",
   ]
 }
 
@@ -266,9 +270,9 @@ if (use.test) {
       "//common-mk/testrunner:testrunner",
     ]
     sources = [
+      "libhidl/tests/ashmem_allocator_test.cpp",
+      "libhidl/tests/ashmem_mapper_test.cpp",
       "libhidl/tests/hidl_support_test.cpp",
-      "libhidl/tests/shared_pointer_allocator_test.cpp",
-      "libhidl/tests/shared_pointer_mapper_test.cpp",
     ]
   }
 }
