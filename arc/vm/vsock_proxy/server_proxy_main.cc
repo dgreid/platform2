@@ -24,7 +24,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   base::Thread proxy_file_system_thread{"ProxyFileSystem"};
   base::Thread::Options options;

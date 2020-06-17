@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
 
   base::AtExitManager at_exit_manager;
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
 
   // Connect the bus.
   dbus::Bus::Options options;

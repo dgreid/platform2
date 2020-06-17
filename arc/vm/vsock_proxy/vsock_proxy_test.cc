@@ -130,7 +130,7 @@ class VSockProxyTest : public testing::Test {
 
  private:
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   std::unique_ptr<TestDelegate> server_delegate_;
   std::unique_ptr<TestDelegate> client_delegate_;

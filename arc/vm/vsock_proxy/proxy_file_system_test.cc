@@ -86,7 +86,7 @@ class ProxyFileSystemTest : public testing::Test,
 
  protected:
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   // Mount point for ProxyFileSystem.
   base::ScopedTempDir mount_dir_;

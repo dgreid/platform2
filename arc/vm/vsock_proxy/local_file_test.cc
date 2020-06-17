@@ -171,7 +171,7 @@ class SocketStreamTest : public testing::Test {
 
  private:
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   DISALLOW_COPY_AND_ASSIGN(SocketStreamTest);
 };
@@ -296,7 +296,7 @@ class SocketSeqpacketTest : public testing::Test {
 
  private:
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   DISALLOW_COPY_AND_ASSIGN(SocketSeqpacketTest);
 };
@@ -357,7 +357,7 @@ class PipeStreamTest : public testing::Test {
 
  private:
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
   DISALLOW_COPY_AND_ASSIGN(PipeStreamTest);
 };
