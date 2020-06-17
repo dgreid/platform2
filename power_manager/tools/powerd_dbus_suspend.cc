@@ -166,7 +166,7 @@ int main(int argc, char* argv[]) {
                            "Instruct powerd to suspend the system.");
   base::AtExitManager at_exit_manager;
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
 
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;

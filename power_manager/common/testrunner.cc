@@ -18,7 +18,7 @@ int main(int argc, char** argv) {
   logging::SetMinLogLevel(logging::LOG_WARNING);
   base::AtExitManager at_exit_manager;
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
