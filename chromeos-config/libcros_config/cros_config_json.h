@@ -9,6 +9,8 @@
 #include <string>
 
 #include <base/macros.h>
+#include <base/values.h>
+
 #include "chromeos-config/libcros_config/cros_config_impl.h"
 #include "chromeos-config/libcros_config/identity.h"
 #include "chromeos-config/libcros_config/identity_arm.h"
@@ -16,8 +18,6 @@
 
 namespace base {
 class FilePath;
-class Value;
-class DictionaryValue;
 }  // namespace base
 
 namespace brillo {
@@ -48,9 +48,9 @@ class CrosConfigJson : public CrosConfigImpl {
   // @return: true on success, false otherwise
   bool SelectConfigByIdentityInternal(const CrosConfigIdentity& identity);
 
-  std::unique_ptr<const base::Value> json_config_;
+  base::Value json_config_;
   // Owned by json_config_
-  const base::DictionaryValue* config_dict_;  // Root of configs
+  const base::Value* config_dict_;  // Root of configs
 
   int device_index_;
 

@@ -77,12 +77,12 @@ bool CrosConfigIdentityArm::IsCompatible(const std::string& device_name) const {
 }
 
 bool CrosConfigIdentityArm::PlatformIdentityMatch(
-    const base::DictionaryValue& identity_dict) const {
-  std::string dt_compatible_match;
-  if (!identity_dict.GetString("device-tree-compatible-match",
-                               &dt_compatible_match))
+    const base::Value& identity_dict) const {
+  const std::string* dt_compatible_match =
+      identity_dict.FindStringKey("device-tree-compatible-match");
+  if (!dt_compatible_match)
     return false;
-  return IsCompatible(dt_compatible_match);
+  return IsCompatible(*dt_compatible_match);
 }
 
 std::string CrosConfigIdentityArm::DebugString() const {

@@ -14,8 +14,8 @@
 #include <brillo/brillo_export.h>
 
 namespace base {
-class DictionaryValue;
 class FilePath;
+class Value;
 }  // namespace base
 
 namespace brillo {
@@ -90,7 +90,7 @@ class BRILLO_EXPORT CrosConfigIdentity {
   // @identity_dict: a dictionary specified under /chromeos/configs
   // @return: true if the config is a possible identity, false otherwise
   virtual bool PlatformIdentityMatch(
-      const base::DictionaryValue& identity_dict) const = 0;
+      const base::Value& identity_dict) const = 0;
 
   // Get a string representation of the identity for logging purposes
   // @return A string representing the identity

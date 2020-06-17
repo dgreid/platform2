@@ -12,8 +12,8 @@
 #include "chromeos-config/libcros_config/identity.h"
 
 namespace base {
-class DictionaryValue;
 class FilePath;
+class Value;
 }  // namespace base
 
 namespace brillo {
@@ -43,8 +43,7 @@ class CrosConfigIdentityArm : public CrosConfigIdentity {
 
   // Check that the identity is device-tree compatible with the one
   // specified in the identity dictionary
-  bool PlatformIdentityMatch(
-      const base::DictionaryValue& identity_dict) const override;
+  bool PlatformIdentityMatch(const base::Value& identity_dict) const override;
 
   std::string DebugString() const override;
 

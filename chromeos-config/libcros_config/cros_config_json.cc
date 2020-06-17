@@ -8,14 +8,16 @@
 #include "chromeos-config/libcros_config/cros_config_json.h"
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/json/json_reader.h>
 #include <base/logging.h>
+#include <base/optional.h>
 #include <base/strings/string_split.h>
-#include <base/values.h>
+#include <base/strings/string_util.h>
 #include "chromeos-config/libcros_config/cros_config.h"
 #include "chromeos-config/libcros_config/identity.h"
 #include "chromeos-config/libcros_config/identity_arm.h"
@@ -32,28 +34,27 @@ CrosConfigJson::~CrosConfigJson() {}
 
 bool CrosConfigJson::SelectConfigByIdentityInternal(
     const CrosConfigIdentity& identity) {
-  const base::DictionaryValue* root_dict;
-  if (!json_config_->GetAsDictionary(&root_dict))
+  if (!json_config_.is_dict())
     return false;
 
-  const base::DictionaryValue* chromeos;
-  if (!root_dict->GetDictionary(kRootName, &chromeos))
+  const base::Value* chromeos = json_config_.FindDictKey(kRootName);
+  if (!chromeos)
     return false;
 
-  const base::ListValue* configs_list;
-  if (!chromeos->GetList(kConfigListName, &configs_list))
+  const base::Value* configs_list = chromeos->FindListKey(kConfigListName);
+  if (!configs_list)
     return false;
 
   const std::string& find_whitelabel_name = identity.GetVpdId();
   const int find_sku_id = identity.GetSkuId();
 
-  for (size_t i = 0; i < configs_list->GetSize(); ++i) {
-    const base::DictionaryValue* config_dict;
-    if (!configs_list->GetDictionary(i, &config_dict))
+  for (size_t i = 0; i < configs_list->GetList().size(); ++i) {
+    const base::Value& config_dict = configs_list->GetList()[i];
+    if (!config_dict.is_dict())
       continue;
 
-    const base::DictionaryValue* identity_dict;
-    if (!config_dict->GetDictionary("identity", &identity_dict))
+    const base::Value* identity_dict = config_dict.FindDictKey("identity");
+    if (!identity_dict)
       continue;
 
     // Check SMBIOS name matches (x86) or dt-compatible (arm)
@@ -63,25 +64,26 @@ bool CrosConfigJson::SelectConfigByIdentityInternal(
     // Check that either the SKU is less than zero, or the current
     // entry has a matching SKU id. If sku-id is not defined in the
     // identity dictionary, this entry will match any SKU id.
-    int current_sku_id;
-    if (find_sku_id != kDefaultSkuId &&
-        identity_dict->GetInteger("sku-id", &current_sku_id) &&
-        current_sku_id != find_sku_id)
-      continue;
+    if (find_sku_id != kDefaultSkuId) {
+      base::Optional<int> current_sku_id = identity_dict->FindIntKey("sku-id");
+      if (current_sku_id && current_sku_id != find_sku_id)
+        continue;
+    }
 
     // Currently, the find_whitelabel_name can be either the
     // whitelabel-tag or the customization-id.
-    std::string current_vpd_tag;
-    identity_dict->GetString("whitelabel-tag", &current_vpd_tag);
-    if (current_vpd_tag.empty()) {
-      identity_dict->GetString("customization-id", &current_vpd_tag);
-    }
-    if (current_vpd_tag != find_whitelabel_name)
+    const std::string* current_vpd_tag =
+        identity_dict->FindStringKey("whitelabel-tag");
+    if (!current_vpd_tag)
+      current_vpd_tag = identity_dict->FindStringKey("customization-id");
+    if (!current_vpd_tag)
+      current_vpd_tag = &base::EmptyString();
+    if (*current_vpd_tag != find_whitelabel_name)
       continue;
 
     // SMBIOS name matches/dt-compatible, SKU matches, and VPD tag
     // matches. This is the config.
-    config_dict_ = config_dict;
+    config_dict_ = &config_dict;
     device_index_ = i;
     return true;
   }
@@ -116,45 +118,37 @@ bool CrosConfigJson::GetString(const std::string& path,
     return false;
   }
 
-  bool valid_path = true;
-  const base::DictionaryValue* attr_dict = config_dict_;
+  const base::Value* attr_dict = config_dict_;
 
   if (path.length() > 1) {
-    std::vector<std::string> path_tokens = base::SplitString(
-        path.substr(1), "/", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
-    for (const std::string& path : path_tokens) {
-      valid_path = attr_dict->GetDictionary(path, &attr_dict);
-      if (!valid_path) {
+    std::string path_no_root = path.substr(1);
+    for (const auto& path :
+         base::SplitStringPiece(path_no_root, "/", base::TRIM_WHITESPACE,
+                           base::SPLIT_WANT_ALL)) {
+      attr_dict = attr_dict->FindDictKey(path);
+      if (!attr_dict) {
         CROS_CONFIG_LOG(ERROR) << "Failed to find path: " << path;
-        break;
+        return false;
       }
     }
   }
 
-  if (valid_path) {
-    std::string value;
-    if (attr_dict->GetString(property, &value)) {
-      val_out->assign(value);
+  const base::Value* value = attr_dict->FindKey(property);
+  if (!value)
+    return false;
+  switch (value->type()) {
+    case base::Value::Type::STRING:
+      val_out->assign(value->GetString());
       return true;
-    }
-
-    int int_value;
-    if (attr_dict->GetInteger(property, &int_value)) {
-      val_out->assign(std::to_string(int_value));
+    case base::Value::Type::INTEGER:
+      val_out->assign(std::to_string(value->GetInt()));
       return true;
-    }
-
-    bool bool_value;
-    if (attr_dict->GetBoolean(property, &bool_value)) {
-      if (bool_value) {
-        val_out->assign("true");
-      } else {
-        val_out->assign("false");
-      }
+    case base::Value::Type::BOOLEAN:
+      val_out->assign(value->GetBool() ? "true" : "false");
       return true;
-    }
+    default:
+      return false;
   }
-  return false;
 }
 
 bool CrosConfigJson::GetDeviceIndex(int* device_index_out) {
@@ -171,16 +165,14 @@ bool CrosConfigJson::ReadConfigFile(const base::FilePath& filepath) {
     CROS_CONFIG_LOG(ERROR) << "Could not read file " << filepath.MaybeAsASCII();
     return false;
   }
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  json_config_ = base::JSONReader::ReadAndReturnErrorDeprecated(
-      json_data, base::JSON_PARSE_RFC, nullptr /* error_code_out */, &error_msg,
-      nullptr /* error_line_out */, nullptr /* error_column_out */);
-  if (!json_config_) {
-    CROS_CONFIG_LOG(ERROR) << "Fail to parse config.json: " << error_msg;
+  auto json_root = base::JSONReader::ReadAndReturnValueWithError(
+      json_data, base::JSON_PARSE_RFC);
+  if (!json_root.value) {
+    CROS_CONFIG_LOG(ERROR) << "Fail to parse config.json: "
+                           << json_root.error_message;
     return false;
   }
+  json_config_ = std::move(json_root.value.value());
 
   return true;
 }

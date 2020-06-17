@@ -13,8 +13,8 @@
 #include "chromeos-config/libcros_config/identity.h"
 
 namespace base {
-class DictionaryValue;
 class FilePath;
+class Value;
 }  // namespace base
 
 namespace brillo {
@@ -39,8 +39,7 @@ class CrosConfigIdentityX86 : public CrosConfigIdentity {
   // CrosConfigIdentity:
   // Check that the SMBIOS name matches the one specified in the
   // identity dictionary
-  bool PlatformIdentityMatch(
-      const base::DictionaryValue& identity_dict) const override;
+  bool PlatformIdentityMatch(const base::Value& identity_dict) const override;
 
   std::string DebugString() const override;
 
