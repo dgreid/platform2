@@ -95,36 +95,34 @@ bool LoadConfigFromFile(const base::FilePath& json_file_path, Config* config) {
 bool LoadConfigFromString(const std::string& config_json,
                           Config* config,
                           brillo::ErrorPtr* error) {
-  std::string error_msg;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
-      config_json, base::JSON_ALLOW_TRAILING_COMMAS, nullptr, &error_msg);
+  auto result = base::JSONReader::ReadAndReturnValueWithError(
+      config_json, base::JSON_ALLOW_TRAILING_COMMAS);
 
-  if (!value) {
+  if (result.error_code != base::JSONReader::JSON_NO_ERROR) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,
                                "Error parsing server configuration: %s",
-                               error_msg.c_str());
+                               result.error_message.c_str());
     return false;
   }
 
-  auto dict_value = base::DictionaryValue::From(std::move(value));
-  if (!dict_value) {
+  if (!result.value->is_dict()) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::json::kDomain,
                          brillo::errors::json::kObjectExpected,
                          "JSON object is expected.");
     return false;
   }
 
-  // "log_directory" is optional, so ignoring the return value here.
-  dict_value->GetString(kLogDirectoryKey, &config->log_directory);
+  // "log_directory" is optional
+  if (result.value->FindStringKey(kLogDirectoryKey)) {
+    config->log_directory = *result.value->FindStringKey(kLogDirectoryKey);
+  }
 
-  const base::ListValue* protocol_handlers = nullptr;  // Owned by |dict_value|
-  if (dict_value->GetList(kProtocolHandlersKey, &protocol_handlers)) {
-    for (const base::Value& handler_value : *protocol_handlers) {
-      const base::DictionaryValue* handler_dict = nullptr;  // Owned by
-                                                            // |dict_value|
+  const base::Value* protocol_handlers =
+      result.value->FindListKey(kProtocolHandlersKey);
+  if (protocol_handlers) {
+    for (const base::Value& handler_value : protocol_handlers->GetList()) {
+      const base::DictionaryValue* handler_dict = nullptr;
       if (!handler_value.GetAsDictionary(&handler_dict)) {
         brillo::Error::AddTo(
             error, FROM_HERE, brillo::errors::json::kDomain,
