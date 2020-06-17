@@ -66,7 +66,7 @@ bool ArpPacket::Parse(const ByteString& packet) {
 
   const uint16_t hardware_type = ntohs(header.ar_hrd);
   if (hardware_type != ARPHRD_ETHER) {
-    NOTIMPLEMENTED() << "Packet is of unknown ARPHRD type " << hardware_type;
+    LOG(ERROR) << "Packet is of unknown ARPHRD type " << hardware_type;
     return false;
   }
   const uint16_t protocol = ntohs(header.ar_pro);
@@ -76,7 +76,7 @@ bool ArpPacket::Parse(const ByteString& packet) {
   } else if (protocol == ETHERTYPE_IPV6) {
     family = IPAddress::kFamilyIPv6;
   } else {
-    NOTIMPLEMENTED() << "Packet has unknown protocol " << protocol;
+    LOG(ERROR) << "Packet has unknown protocol " << protocol;
     return false;
   }
   if (header.ar_hln != ETH_ALEN) {
@@ -93,16 +93,16 @@ bool ArpPacket::Parse(const ByteString& packet) {
   }
   const uint16_t operation = ntohs(header.ar_op);
   if (operation != ARPOP_REPLY && operation != ARPOP_REQUEST) {
-    NOTIMPLEMENTED() << "Packet is not an ARP reply or request but of type "
-                     << operation;
+    LOG(ERROR) << "Packet is not an ARP reply or request but of type "
+               << operation;
     return false;
   }
   size_t min_packet_size =
       sizeof(header) + 2 * ip_address_length + 2 * ETH_ALEN;
   if (packet.GetLength() < min_packet_size) {
-    NOTIMPLEMENTED() << "Packet of size " << packet.GetLength()
-                     << " is too small to contain entire ARP payload; "
-                     << "expected at least " << min_packet_size;
+    LOG(ERROR) << "Packet of size " << packet.GetLength()
+               << " is too small to contain entire ARP payload; "
+               << "expected at least " << min_packet_size;
     return false;
   }
   operation_ = operation;
@@ -136,9 +136,8 @@ bool ArpPacket::FormatRequest(ByteString* packet) const {
   } else if (family == IPAddress::kFamilyIPv6) {
     protocol = ETHERTYPE_IPV6;
   } else {
-    NOTIMPLEMENTED() << "Address family "
-                     << IPAddress::GetAddressFamilyName(family)
-                     << " is not supported.";
+    LOG(ERROR) << "Address family " << IPAddress::GetAddressFamilyName(family)
+               << " is not supported.";
     return false;
   }
   size_t ip_address_length = IPAddress::GetAddressLength(family);
