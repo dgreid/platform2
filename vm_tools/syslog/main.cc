@@ -111,7 +111,7 @@ int main(int argc, char** argv) {
   }
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   base::RunLoop run_loop;
 
   std::unique_ptr<vm_tools::syslog::Collector> collector =

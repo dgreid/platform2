@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   }
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   base::RunLoop run_loop;
 
   auto service = vm_tools::seneschal::Service::Create(run_loop.QuitClosure());

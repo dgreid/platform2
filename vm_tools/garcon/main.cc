@@ -164,7 +164,7 @@ void PrintUsage() {
 int main(int argc, char** argv) {
   base::AtExitManager at_exit;
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   base::CommandLine::Init(argc, argv);
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   logging::InitLogging(logging::LoggingSettings());

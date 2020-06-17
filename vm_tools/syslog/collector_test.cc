@@ -138,7 +138,7 @@ class CollectorTest : public ::testing::Test {
   // The message loop for the current thread.  Declared here because it must be
   // the last thing to be cleaned up.
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
 
  protected:
   // Actual Collector being tested.

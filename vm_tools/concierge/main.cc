@@ -15,7 +15,7 @@
 int main(int argc, char** argv) {
   base::AtExitManager at_exit;
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
 
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
   brillo::FlagHelper::Init(argc, argv, "vm_concierge service");

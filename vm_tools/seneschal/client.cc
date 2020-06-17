@@ -395,7 +395,7 @@ int main(int argc, char** argv) {
   brillo::InitLog(brillo::kLogToStderrIfTty);
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
 
   dbus::Bus::Options opts;
   opts.bus_type = dbus::Bus::SYSTEM;
