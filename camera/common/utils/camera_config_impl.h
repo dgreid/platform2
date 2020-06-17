@@ -10,6 +10,7 @@
 #include <string>
 
 #include <base/values.h>
+#include <base/memory/ptr_util.h>
 
 #include "cros-camera/utils/camera_config.h"
 
@@ -19,8 +20,6 @@ namespace cros {
 // Reference for all options from: include/cros-camera/constants.h
 class CameraConfigImpl final : public CameraConfig {
  public:
-  explicit CameraConfigImpl(std::unique_ptr<base::DictionaryValue> config);
-
   ~CameraConfigImpl() final;
 
   bool HasKey(const std::string& key) const final;
@@ -33,7 +32,11 @@ class CameraConfigImpl final : public CameraConfig {
                         const std::string& default_value) const final;
 
  private:
-  std::unique_ptr<base::DictionaryValue> config_;
+  explicit CameraConfigImpl(base::Value config);
+  friend std::unique_ptr<CameraConfig> CameraConfig::Create(
+      const std::string& config_path_string);
+
+  base::Value config_;
 };
 
 }  // namespace cros
