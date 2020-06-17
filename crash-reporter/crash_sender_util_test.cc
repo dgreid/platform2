@@ -81,17 +81,14 @@ class MockClock : public base::Clock {
 //
 // => [{"field1":"foo1","field2":"foo2"}, {"field1":"bar1","field2":"bar2"}]
 //
-std::vector<std::unique_ptr<base::Value>> ParseChromeUploadsLog(
+std::vector<base::Optional<base::Value>> ParseChromeUploadsLog(
     const std::string& contents) {
-  std::vector<std::unique_ptr<base::Value>> rows;
+  std::vector<base::Optional<base::Value>> rows;
 
   std::vector<std::string> lines = base::SplitString(
       contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : lines) {
-    // TODO(crbug.com/1054279): migrate to base::JSONReader::Read after
-    // libchrome uprev.
-    std::unique_ptr<base::Value> json = base::JSONReader::ReadDeprecated(line);
-    rows.push_back(std::move(json));
+    rows.push_back(base::JSONReader::Read(line));
   }
 
   return rows;
@@ -1490,7 +1487,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   std::string contents;
   ASSERT_TRUE(
       base::ReadFileToString(paths::Get(paths::kChromeCrashLog), &contents));
-  std::vector<std::unique_ptr<base::Value>> rows =
+  std::vector<base::Optional<base::Value>> rows =
       ParseChromeUploadsLog(contents);
   // Should only contain two results, since max_crash_rate is set to 2.
   // FakeSleep should be called three times since we sleep before we check the
@@ -1502,7 +1499,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // <value>,"local_id":<value>,"capture_time":<value>,"state":<value>,"source":
   // <value>}".
   // The first run should be for the meta file in the system directory.
-  std::unique_ptr<base::Value> row = std::move(rows[0]);
+  base::Optional<base::Value> row = std::move(rows[0]);
+  ASSERT_TRUE(row.has_value());
   ASSERT_EQ(6, row->DictSize());
   EXPECT_TRUE(row->FindKey("upload_time"));
   EXPECT_EQ("123", row->FindKey("upload_id")->GetString());
@@ -1513,6 +1511,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
 
   // The second run should be for the meta file in the "user" directory.
   row = std::move(rows[1]);
+  ASSERT_TRUE(row.has_value());
   ASSERT_EQ(6, row->DictSize());
   EXPECT_TRUE(row->FindKey("upload_time"));
   EXPECT_EQ("456", row->FindKey("upload_id")->GetString());
