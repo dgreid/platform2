@@ -183,6 +183,35 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
   return true;
 }
 
+bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
+                                       const DocumentSource& source) {
+  if (options_.count(kSource) == 0) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No source option found.");
+    return false;
+  }
+
+  SaneOption option = options_[kSource];
+  if (!option.SetString(source.name())) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Failed to set SaneOption");
+  }
+
+  bool should_reload = false;
+  SANE_Status status = SetOption(&option, &should_reload);
+  if (should_reload)
+    LoadOptions(error);
+  if (status != SANE_STATUS_GOOD) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError,
+                               "Unable to set document source to %s: %s",
+                               source.name().c_str(), sane_strstatus(status));
+    return false;
+  }
+
+  return true;
+}
+
 bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
                                   ColorMode color_mode) {
   std::string mode_string = "";

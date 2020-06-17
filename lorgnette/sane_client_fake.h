@@ -51,6 +51,8 @@ class SaneDeviceFake : public SaneDevice {
                             ValidOptionValues* values) override;
 
   bool SetScanResolution(brillo::ErrorPtr* error, int resolution) override;
+  bool SetDocumentSource(brillo::ErrorPtr* error,
+                         const DocumentSource& source) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
   bool StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,

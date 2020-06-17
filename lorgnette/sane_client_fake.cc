@@ -89,6 +89,11 @@ bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int) {
   return true;
 }
 
+bool SaneDeviceFake::SetDocumentSource(brillo::ErrorPtr*,
+                                       const DocumentSource&) {
+  return true;
+}
+
 bool SaneDeviceFake::SetColorMode(brillo::ErrorPtr*, ColorMode) {
   return true;
 }

@@ -506,6 +506,14 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
+  if (settings.has_source()) {
+    LOG(INFO) << "User requested document source: '" << settings.source().name()
+              << "'";
+    if (!device->SetDocumentSource(error, settings.source())) {
+      return false;
+    }
+  }
+
   if (settings.color_mode() != MODE_UNSPECIFIED) {
     LOG(INFO) << "User requested color mode: '"
               << ColorMode_Name(settings.color_mode()) << "'";
