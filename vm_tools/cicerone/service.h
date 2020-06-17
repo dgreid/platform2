@@ -419,6 +419,10 @@ class Service final {
       dbus::MethodCall* method_call);
 
   // Handles a notification a VM is stopping.
+  std::unique_ptr<dbus::Response> NotifyVmStopping(
+      dbus::MethodCall* method_call);
+
+  // Handles a notification a VM has stopped.
   std::unique_ptr<dbus::Response> NotifyVmStopped(
       dbus::MethodCall* method_call);
 

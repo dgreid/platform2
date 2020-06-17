@@ -141,6 +141,9 @@ class VirtualMachine {
   VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token);
   ~VirtualMachine();
 
+  bool is_stopping() const { return is_stopping_; }
+  void notify_shutdown() { is_stopping_ = true; }
+
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
@@ -351,6 +354,9 @@ class VirtualMachine {
   // case, we don't try to connect to tremplin even if ConnectTremplin is called
   // for some reason.
   bool using_mock_tremplin_stub_;
+
+  // True if the VM is expected to shutdown soon.
+  bool is_stopping_ = false;
 
   base::WeakPtrFactory<VirtualMachine> weak_ptr_factory_;
 

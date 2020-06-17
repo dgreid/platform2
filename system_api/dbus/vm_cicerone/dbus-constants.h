@@ -14,6 +14,7 @@ const char kVmCiceroneServiceName[] = "org.chromium.VmCicerone";
 
 // Methods to be called from vm_concierge.
 const char kNotifyVmStartedMethod[] = "NotifyVmStarted";
+const char kNotifyVmStoppingMethod[] = "NotifyVmStopping";
 const char kNotifyVmStoppedMethod[] = "NotifyVmStopped";
 const char kGetContainerTokenMethod[] = "GetContainerToken";
 

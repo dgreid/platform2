@@ -1211,6 +1211,7 @@ bool Service::Init(
       std::unique_ptr<dbus::Response> (Service::*)(dbus::MethodCall*);
   const std::map<const char*, ServiceMethod> kServiceMethods = {
       {kNotifyVmStartedMethod, &Service::NotifyVmStarted},
+      {kNotifyVmStoppingMethod, &Service::NotifyVmStopping},
       {kNotifyVmStoppedMethod, &Service::NotifyVmStopped},
       {kGetContainerTokenMethod, &Service::GetContainerToken},
       {kLaunchContainerApplicationMethod, &Service::LaunchContainerApplication},
@@ -1463,6 +1464,38 @@ std::unique_ptr<dbus::Response> Service::NotifyVmStarted(
   if (request.cid() != 0 && (primary_owner_id_.empty() || vms_.empty())) {
     primary_owner_id_ = request.owner_id();
   }
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::NotifyVmStopping(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received NotifyVmStopping request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  NotifyVmStoppingRequest request;
+  EmptyMessage response;
+  writer.AppendProtoAsArrayOfBytes(response);
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse NotifyVmStoppingRequest from message";
+    return dbus_response;
+  }
+
+  VmKey vm_key =
+      std::make_pair(std::move(request.owner_id()), request.vm_name());
+  auto iter = vms_.find(vm_key);
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Requested VM does not exist: " << request.vm_name();
+    return dbus_response;
+  }
+
+  iter->second->notify_shutdown();
+
   return dbus_response;
 }
 

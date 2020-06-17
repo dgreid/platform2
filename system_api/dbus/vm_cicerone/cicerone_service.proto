@@ -30,6 +30,17 @@ message NotifyVmStartedRequest {
   uint32 pid = 5;
 }
 
+// Message sent to cicerone when concierge is about to stop a VM.
+// This is just for tracking purposes by cicerone. This may not be
+// sent if the VM stops unexpectedly.
+message NotifyVmStoppingRequest {
+  // Name of the VM.
+  string vm_name = 1;
+
+  // The owner of the VM.
+  string owner_id = 2;
+}
+
 // Message sent to cicerone when a VM stopped or failed to complete startup.
 // This is just for tracking purposes by cicerone.
 message NotifyVmStoppedRequest {

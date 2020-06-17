@@ -470,6 +470,7 @@ void ServiceTestingHelper::IncrementQuitClosure() {
 
 void ServiceTestingHelper::SetDbusCallbackNames() {
   dbus_callbacks_[kNotifyVmStarted].method_name = kNotifyVmStartedMethod;
+  dbus_callbacks_[kNotifyVmStopping].method_name = kNotifyVmStoppingMethod;
   dbus_callbacks_[kNotifyVmStopped].method_name = kNotifyVmStoppedMethod;
   dbus_callbacks_[kGetContainerToken].method_name = kGetContainerTokenMethod;
   dbus_callbacks_[kLaunchContainerApplication].method_name =

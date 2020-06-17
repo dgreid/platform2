@@ -45,6 +45,7 @@ class ServiceTestingHelper {
   // List of calls the Service accepts through its dbus interface
   enum DbusCall {
     kNotifyVmStarted = 0,
+    kNotifyVmStopping,
     kNotifyVmStopped,
     kGetContainerToken,
     kLaunchContainerApplication,

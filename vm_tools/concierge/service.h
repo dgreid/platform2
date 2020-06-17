@@ -192,6 +192,7 @@ class Service final {
   void SendVmStartedSignal(const VmId& vm_id,
                            const vm_tools::concierge::VmInfo& vm_info,
                            vm_tools::concierge::VmStatus status);
+  void NotifyVmStopping(const VmId& vm_id, int64_t cid);
   void NotifyVmStopped(const VmId& vm_id, int64_t cid);
   std::string GetContainerToken(const VmId& vm_id,
                                 const std::string& container_name);

@@ -1869,6 +1869,9 @@ std::unique_ptr<dbus::Response> Service::StopVm(dbus::MethodCall* method_call) {
     return dbus_response;
   }
 
+  // Notify that we are about to stop a VM.
+  NotifyVmStopping(iter->first, iter->second->GetInfo().cid);
+
   if (!iter->second->Shutdown()) {
     LOG(ERROR) << "Unable to shut down VM";
 
@@ -1894,13 +1897,16 @@ std::unique_ptr<dbus::Response> Service::StopAllVms(
 
   // Spawn a thread for each VM to shut it down.
   for (auto& iter : vms_) {
-    // Notify that we have stopped a VM.
-    NotifyVmStopped(iter.first, iter.second->GetInfo().cid);
+    // Notify that we are about to stop a VM.
+    NotifyVmStopping(iter.first, iter.second->GetInfo().cid);
 
     // Resetting the unique_ptr will call the destructor for that VM,
     // which will try stopping it normally (and then forcibly) it if
     // it hasn't stopped yet.
     iter.second.reset();
+
+    // Notify that we have stopped a VM.
+    NotifyVmStopped(iter.first, iter.second->GetInfo().cid);
   }
 
   vms_.clear();
@@ -2488,6 +2494,9 @@ std::unique_ptr<dbus::Response> Service::DestroyDiskImage(
   auto iter = FindVm(request.cryptohome_id(), request.disk_path());
   if (iter != vms_.end()) {
     LOG(INFO) << "Shutting down VM";
+
+    // Notify that we are about to stop a VM.
+    NotifyVmStopping(iter->first, iter->second->GetInfo().cid);
     if (!iter->second->Shutdown()) {
       LOG(ERROR) << "Unable to shut down VM";
 
@@ -3417,6 +3426,24 @@ void Service::SendVmStartedSignal(const VmId& vm_id,
   proto.set_status(status);
   dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
   exported_object_->SendSignal(&signal);
+}
+
+void Service::NotifyVmStopping(const VmId& vm_id, int64_t cid) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  // Notify cicerone.
+  dbus::MethodCall method_call(vm_tools::cicerone::kVmCiceroneInterface,
+                               vm_tools::cicerone::kNotifyVmStoppingMethod);
+  dbus::MessageWriter writer(&method_call);
+  vm_tools::cicerone::NotifyVmStoppingRequest request;
+  request.set_owner_id(vm_id.owner_id());
+  request.set_vm_name(vm_id.name());
+  writer.AppendProtoAsArrayOfBytes(request);
+  std::unique_ptr<dbus::Response> dbus_response =
+      cicerone_service_proxy_->CallMethodAndBlock(
+          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed notifying cicerone of stopping VM";
+  }
 }
 
 void Service::NotifyVmStopped(const VmId& vm_id, int64_t cid) {
