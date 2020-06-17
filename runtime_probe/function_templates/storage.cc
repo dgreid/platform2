@@ -121,11 +121,10 @@ StorageFunction::DataType StorageFunction::Eval() const {
         << "Failed to invoke helper to retrieve cached storage information.";
     return result;
   }
-  const auto storage_results = base::ListValue::From(std::move(json_output));
 
-  for (int i = 0; i < storage_results->GetSize(); i++) {
+  for (auto& value : json_output->GetList()) {
     base::DictionaryValue* storage_res;
-    storage_results->GetDictionary(i, &storage_res);
+    value.GetAsDictionary(&storage_res);
     const auto storage_aux_res = EvalByDV(*storage_res);
     if (!storage_aux_res.empty())
       storage_res->MergeDictionary(&storage_aux_res);

@@ -22,12 +22,16 @@ VPDCached::DataType VPDCached::Eval() const {
     LOG(ERROR) << "Failed to invoke helper to retrieve cached vpd information.";
     return result;
   }
-  auto vpd_results = base::ListValue::From(std::move(json_output));
 
-  for (int i = 0; i < vpd_results->GetSize(); i++) {
-    base::DictionaryValue* vpd_res;
-    vpd_results->GetDictionary(i, &vpd_res);
-    result.push_back(std::move(*vpd_res));
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return result;
+  }
+
+  for (auto& helper_result : json_output->GetList()) {
+    base::DictionaryValue* result_dict = nullptr;
+    if (helper_result.GetAsDictionary(&result_dict))
+      result.push_back(std::move(*result_dict));
   }
   return result;
 }

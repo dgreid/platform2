@@ -118,15 +118,14 @@ TEST(SequenceFunctionTest, TestEvalSuccess) {
 }
 
 TEST(SequenceFunctionTest, TestParserEmptyList) {
-  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
-  auto json_object = base::JSONReader::ReadDeprecated(R"({
-    "sequence": {
-      "functions": []
-    }
-  })");
+  auto json_object = base::JSONReader::Read(R"({
+        "sequence": {
+          "functions": []
+        }
+      })");
 
   auto p = ProbeFunction::FromValue(*json_object);
-  ASSERT_NE(p, nullptr) << "Failed to load function: " << json_object;
+  ASSERT_NE(p, nullptr) << "Failed to load function: " << *json_object;
 
   auto sequence = dynamic_cast<SequenceFunction*>(p.get());
   ASSERT_NE(sequence, nullptr) << "Loaded function is not SequenceFunction";
@@ -135,28 +134,27 @@ TEST(SequenceFunctionTest, TestParserEmptyList) {
 }
 
 TEST(SequenceFunctionTest, TestParseFunctions) {
-  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
-  auto json_object = base::JSONReader::ReadDeprecated(R"({
-    "sequence": {
-      "functions": [
-        {
-          "sysfs": {
-            "dir_path": "/sys/class/cool/device/*",
-            "keys": ["1", "2", "3"]
-          }
-        },
-        {
-          "sysfs": {
-            "dir_path": "/sys/class/some/device/*",
-            "keys": ["4", "5", "6"]
-          }
+  auto json_object = base::JSONReader::Read(R"({
+        "sequence": {
+          "functions": [
+            {
+              "sysfs": {
+                "dir_path": "/sys/class/cool/device/*",
+                "keys": ["1", "2", "3"]
+              }
+            },
+            {
+              "sysfs": {
+                "dir_path": "/sys/class/some/device/*",
+                "keys": ["4", "5", "6"]
+              }
+            }
+          ]
         }
-      ]
-    }
-  })");
+      })");
 
   auto p = ProbeFunction::FromValue(*json_object);
-  ASSERT_NE(p, nullptr) << "Failed to load function: " << json_object;
+  ASSERT_NE(p, nullptr) << "Failed to load function: " << *json_object;
 
   auto sequence = dynamic_cast<SequenceFunction*>(p.get());
   ASSERT_NE(sequence, nullptr) << "Loaded function is not SequenceFunction";

@@ -3,6 +3,8 @@
  * found in the LICENSE file.
  */
 
+#include <utility>
+
 #include <base/json/json_reader.h>
 #include <base/values.h>
 #include <brillo/map_utils.h>
@@ -30,10 +32,10 @@ TEST(ProbeConfigTest, LoadConfig) {
       }
     }
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(config_content));
+
+  auto val = base::JSONReader::Read(config_content);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
 
   EXPECT_NE(dict_value, nullptr);
 

@@ -27,12 +27,16 @@ GenericBattery::DataType GenericBattery::Eval() const {
     LOG(ERROR) << "Failed to invoke helper to retrieve battery sysfs results.";
     return result;
   }
-  auto battery_results = base::ListValue::From(std::move(json_output));
 
-  for (int i = 0; i < battery_results->GetSize(); ++i) {
-    base::DictionaryValue* battery_res;
-    battery_results->GetDictionary(i, &battery_res);
-    result.push_back(std::move(*battery_res));
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return result;
+  }
+
+  for (auto& battery_result : json_output->GetList()) {
+    base::DictionaryValue* result_dict = nullptr;
+    if (battery_result.GetAsDictionary(&result_dict))
+      result.push_back(std::move(*result_dict));
   }
   return result;
 }

@@ -74,16 +74,15 @@ base::Optional<ProbeConfigData> ParseProbeConfig(
   LOG(INFO) << "SHA1 hash of probe config read from " << config_file_path
             << ": " << probe_config_sha1_hash;
 
-  std::unique_ptr<DictionaryValue> dict_val =
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      DictionaryValue::From(base::JSONReader::ReadDeprecated(config_json));
-  if (dict_val == nullptr) {
+  auto json_val = base::JSONReader::Read(config_json, base::JSON_PARSE_RFC);
+  if (!json_val || !json_val->is_dict()) {
     LOG(ERROR) << "Failed to parse ProbeConfig from : [" << config_file_path
                << "]\nInput JSON string is:\n"
                << config_json;
     return base::nullopt;
   }
+  base::DictionaryValue* dict_val;
+  json_val->GetAsDictionary(&dict_val);
 
   return ProbeConfigData{.config_dv = std::move(*dict_val),
                          .sha1_hash = std::move(probe_config_sha1_hash)};

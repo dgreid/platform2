@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <string>
+#include <utility>
 
 #include <base/json/json_reader.h>
 #include <base/values.h>
@@ -127,52 +128,44 @@ TEST(StringFieldConverterTest, TestValidateRule) {
     "2": "??? hello ???",
     "3": "??? hello"
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(json_string));
-  ASSERT_TRUE(dict_value.get());
+  auto val = base::JSONReader::Read(json_string);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
+  ASSERT_TRUE(dict_value);
   {
     auto converter = StringFieldConverter::Build("!ne hello world");
     ASSERT_EQ(converter->operator_, ValidatorOperator::NE);
     ASSERT_EQ(converter->regex_, nullptr);
     ASSERT_EQ(converter->operand_, "hello world");
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = StringFieldConverter::Build("!eq hello world");
     ASSERT_EQ(converter->operator_, ValidatorOperator::EQ);
     ASSERT_EQ(converter->regex_, nullptr);
     ASSERT_EQ(converter->operand_, "hello world");
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = StringFieldConverter::Build("!re hello .*");
     ASSERT_EQ(converter->operator_, ValidatorOperator::RE);
     ASSERT_EQ(converter->regex_->pattern(), "hello .*");
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = StringFieldConverter::Build("!re .* hello");
     ASSERT_EQ(converter->operator_, ValidatorOperator::RE);
     ASSERT_EQ(converter->regex_->pattern(), ".* hello");
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("3", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("3", dict_value), ReturnCode::OK);
   }
 }
 
@@ -182,67 +175,57 @@ TEST(IntegerFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(json_string));
-  ASSERT_TRUE(dict_value.get());
+  auto val = base::JSONReader::Read(json_string);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
+  ASSERT_TRUE(dict_value);
   {
     auto converter = IntegerFieldConverter::Build("!ne 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::NE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = IntegerFieldConverter::Build("!eq 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::EQ);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = IntegerFieldConverter::Build("!gt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = IntegerFieldConverter::Build("!ge 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = IntegerFieldConverter::Build("!lt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = IntegerFieldConverter::Build("!le 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
 }
 
@@ -252,67 +235,57 @@ TEST(HexFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(json_string));
-  ASSERT_TRUE(dict_value.get());
+  auto val = base::JSONReader::Read(json_string);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
+  ASSERT_TRUE(dict_value);
   {
     auto converter = HexFieldConverter::Build("!ne 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::NE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = HexFieldConverter::Build("!eq 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::EQ);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = HexFieldConverter::Build("!gt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = HexFieldConverter::Build("!ge 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = HexFieldConverter::Build("!lt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = HexFieldConverter::Build("!le 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
 }
 
@@ -322,67 +295,57 @@ TEST(DoubleFieldConverterTest, TestValidateRule) {
     "1": 1,
     "2": 2
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(json_string));
-  ASSERT_TRUE(dict_value.get());
+  auto val = base::JSONReader::Read(json_string);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
+  ASSERT_TRUE(dict_value);
   {
     auto converter = DoubleFieldConverter::Build("!ne 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::NE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = DoubleFieldConverter::Build("!eq 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::EQ);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = DoubleFieldConverter::Build("!gt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = DoubleFieldConverter::Build("!ge 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::GE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::OK);
   }
   {
     auto converter = DoubleFieldConverter::Build("!lt 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LT);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
   {
     auto converter = DoubleFieldConverter::Build("!le 1");
     ASSERT_EQ(converter->operator_, ValidatorOperator::LE);
     ASSERT_EQ(converter->operand_, 1);
-    ASSERT_EQ(converter->Validate("0", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("1", dict_value.get()), ReturnCode::OK);
-    ASSERT_EQ(converter->Validate("2", dict_value.get()),
-              ReturnCode::INVALID_VALUE);
+    ASSERT_EQ(converter->Validate("0", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("1", dict_value), ReturnCode::OK);
+    ASSERT_EQ(converter->Validate("2", dict_value), ReturnCode::INVALID_VALUE);
   }
 }
 
@@ -395,11 +358,10 @@ TEST(ProbeResultCheckerTest, TestFromDictionaryValue) {
     "double_field": [true, "double"],
     "hex_field": [false, "hex"]
   })";
-  auto dict_value = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(json_string));
-  ASSERT_TRUE(dict_value.get());
+  auto val = base::JSONReader::Read(json_string);
+  base::DictionaryValue* dict_value = nullptr;
+  val->GetAsDictionary(&dict_value);
+  ASSERT_TRUE(dict_value);
 
   auto expect_fields = ProbeResultChecker::FromDictionaryValue(*dict_value);
   ASSERT_TRUE(expect_fields.get());
@@ -444,16 +406,16 @@ TEST(ProbeResultCheckerTest, TestApplySuccess) {
     "double": "1e2"
   })";
 
-  auto probe_result = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(probe_result_string));
-  auto checker = ProbeResultChecker::FromDictionaryValue(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
+  auto probe_result_val = base::JSONReader::Read(probe_result_string);
+  base::DictionaryValue* probe_result = nullptr;
+  probe_result_val->GetAsDictionary(&probe_result);
 
-  ASSERT_TRUE(checker->Apply(probe_result.get()));
+  auto expect_val = base::JSONReader::Read(expect);
+  base::DictionaryValue* expect_dict_val = nullptr;
+  expect_val->GetAsDictionary(&expect_dict_val);
+  auto checker = ProbeResultChecker::FromDictionaryValue(*expect_dict_val);
+
+  ASSERT_TRUE(checker->Apply(probe_result));
 
   std::string str_value;
   ASSERT_TRUE(probe_result->GetString("str", &str_value));
@@ -487,16 +449,16 @@ TEST(ProbeResultCheckerTest, TestApplyWithLimitsSuccess) {
     "double": "1e2"
   })";
 
-  auto probe_result = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(probe_result_string));
-  auto checker = ProbeResultChecker::FromDictionaryValue(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
+  auto probe_result_val = base::JSONReader::Read(probe_result_string);
+  base::DictionaryValue* probe_result = nullptr;
+  probe_result_val->GetAsDictionary(&probe_result);
 
-  ASSERT_TRUE(checker->Apply(probe_result.get()));
+  auto expect_val = base::JSONReader::Read(expect);
+  base::DictionaryValue* expect_dict_val = nullptr;
+  expect_val->GetAsDictionary(&expect_dict_val);
+  auto checker = ProbeResultChecker::FromDictionaryValue(*expect_dict_val);
+
+  ASSERT_TRUE(checker->Apply(probe_result));
 
   std::string str_value;
   ASSERT_TRUE(probe_result->GetString("str", &str_value));
@@ -531,15 +493,16 @@ TEST(ProbeResultCheckerTest, TestApplyWithLimitsFail) {
     "hex": "0x7b",
     "double": "1e2"
   })";
-  auto probe_result = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(probe_result_string));
-  auto checker = ProbeResultChecker::FromDictionaryValue(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      *base::DictionaryValue::From(base::JSONReader::ReadDeprecated(expect)));
-  ASSERT_FALSE(checker->Apply(probe_result.get()));
+  auto probe_result_val = base::JSONReader::Read(probe_result_string);
+  base::DictionaryValue* probe_result = nullptr;
+  probe_result_val->GetAsDictionary(&probe_result);
+
+  auto expect_val = base::JSONReader::Read(expect);
+  base::DictionaryValue* expect_dict_val = nullptr;
+  expect_val->GetAsDictionary(&expect_dict_val);
+  auto checker = ProbeResultChecker::FromDictionaryValue(*expect_dict_val);
+
+  ASSERT_FALSE(checker->Apply(probe_result));
 }
 
 }  // namespace runtime_probe

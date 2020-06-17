@@ -93,7 +93,7 @@ class ProbeFunction {
   // for InvokeHelper() where the output is known in advanced in JSON format.
   // The transform of JSON will be automatically applied.  If it fails,
   // the returned pointer points to NULL.
-  std::unique_ptr<base::Value> InvokeHelperToJSON() const;
+  base::Optional<base::Value> InvokeHelperToJSON() const;
 
   // Evaluates the helper part for this probe function. Helper part is
   // designed for portion that need extended sandbox. ProbeFunction will

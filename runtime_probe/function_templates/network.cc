@@ -91,18 +91,16 @@ NetworkFunction::DataType NetworkFunction::Eval() const {
     return result;
   }
 
-  const auto network_results = base::ListValue::From(std::move(json_output));
-
-  if (!network_results) {
+  if (!json_output->is_list()) {
     LOG(ERROR) << "Failed to parse output from " << GetFunctionName()
                << "::EvalInHelper.";
     return result;
   }
 
-  for (int i = 0; i < network_results->GetSize(); i++) {
+  for (auto& value : json_output->GetList()) {
     base::DictionaryValue* network_res;
-    if (!network_results->GetDictionary(i, &network_res)) {
-      DLOG(INFO) << "Unable to get result " << i << ". Skipped.";
+    if (!value.GetAsDictionary(&network_res)) {
+      DLOG(INFO) << "Unable to get result. Skipped.";
       continue;
     }
     result.push_back(std::move(*network_res));

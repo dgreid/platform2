@@ -29,17 +29,14 @@ int main(int argc, char* argv[]) {
     return kFailedToParseProbeStatementFromArg;
   }
 
-  std::unique_ptr<base::DictionaryValue> dict_val =
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::DictionaryValue::From(base::JSONReader::ReadDeprecated(argv[1]));
-  if (dict_val == nullptr) {
+  auto val = base::JSONReader::Read(argv[1]);
+  if (!val || !val->is_dict()) {
     LOG(ERROR) << "Failed to parse the probe statement to JSON";
     return kFailedToParseProbeStatementFromArg;
   }
 
   std::unique_ptr<runtime_probe::ProbeFunction> probe_function =
-      runtime_probe::ProbeFunction::FromValue(*dict_val);
+      runtime_probe::ProbeFunction::FromValue(*val);
   if (probe_function == nullptr) {
     LOG(ERROR) << "Failed to convert a probe statement to probe function";
     return kFailedToParseProbeStatementFromArg;

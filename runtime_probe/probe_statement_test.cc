@@ -28,10 +28,9 @@ TEST(ProbeStatementTest, TestEval) {
   auto expect_string = R"({
     "expected_field": [true, "str"]
   })";
-  auto expect = base::DictionaryValue::From(
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::JSONReader::ReadDeprecated(expect_string));
+  auto val = base::JSONReader::Read(expect_string);
+  base::DictionaryValue* expect = nullptr;
+  val->GetAsDictionary(&expect);
 
   probe_statement.expect_ = ProbeResultChecker::FromDictionaryValue(*expect);
 

@@ -180,13 +180,12 @@ bool ProbeFunction::InvokeHelper(std::string* result) const {
   return true;
 }
 
-std::unique_ptr<base::Value> ProbeFunction::InvokeHelperToJSON() const {
+base::Optional<base::Value> ProbeFunction::InvokeHelperToJSON() const {
   std::string raw_output;
   if (!InvokeHelper(&raw_output)) {
-    return nullptr;
+    return base::nullopt;
   }
-  // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to r680000.
-  return base::JSONReader::ReadDeprecated(raw_output);
+  return base::JSONReader::Read(raw_output);
 }
 
 int ProbeFunction::EvalInHelper(std::string* output) const {

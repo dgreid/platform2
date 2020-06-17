@@ -39,13 +39,12 @@ TEST(SysfsFunctionTest, TestRead) {
   base::CreateDirectory(dir_c);
   base::WriteFile(dir_c.Append("2"), "c2", strlen("c2"));
 
-  auto dict_value =
-      // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-      // r680000.
-      base::DictionaryValue::From(base::JSONReader::ReadDeprecated(R"({
-          "keys": ["1"],
-          "optional_keys": ["2"]
-      })"));
+  base::DictionaryValue* dict_value = nullptr;
+  auto json_val = base::JSONReader::Read(R"({
+      "keys": ["1"],
+      "optional_keys": ["2"]
+  })");
+  json_val->GetAsDictionary(&dict_value);
 
   dict_value->SetString("dir_path", temp_dir.GetPath().Append("D*").value());
   auto p = SysfsFunction::FromDictionaryValue(*dict_value);
