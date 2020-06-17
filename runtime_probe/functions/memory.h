@@ -25,7 +25,7 @@ struct DmiMemoryRaw {
 
   // Memory attributes
   uint8_t pad_1[8];       // skipped values
-  uint16_t size;          // bit15: 0=MB, 1=KB
+  uint16_t size;          // bit15: 0=MiB, 1=KiB
   uint8_t pad_2[2];       // skipped values
   uint8_t locator;        // string
   uint8_t pad_3[4];       // skipped values
