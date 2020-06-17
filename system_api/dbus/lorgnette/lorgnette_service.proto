@@ -11,9 +11,10 @@ package lorgnette;
 
 // Describes possible types of sources that can be supported by a scanner.
 enum SourceType {
-  SOURCE_PLATEN = 0;
-  SOURCE_ADF_SIMPLEX = 1;
-  SOURCE_ADF_DUPLEX = 2;
+  SOURCE_UNSPECIFIED = 0;
+  SOURCE_PLATEN = 1;
+  SOURCE_ADF_SIMPLEX = 2;
+  SOURCE_ADF_DUPLEX = 3;
 }
 
 // A source that can be scanned from for a scanner.
@@ -27,9 +28,10 @@ message DocumentSource {
 
 // The color modes that may be supported for a particular scanner.
 enum ColorMode {
-  MODE_LINEART = 0;
-  MODE_GRAYSCALE = 1;
-  MODE_COLOR = 2;
+  MODE_UNSPECIFIED = 0;
+  MODE_LINEART = 1;
+  MODE_GRAYSCALE = 2;
+  MODE_COLOR = 3;
 }
 
 // An object representing one scanner.
