@@ -21,6 +21,7 @@ pkg_config("target_defaults_deps") {
     "protobuf-lite",
     "sane-backends",
     "system_api",
+    "uuid",
   ]
 }
 

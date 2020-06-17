@@ -16,10 +16,12 @@
 #include <base/files/file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/type_name_undecorate.h>
 #include <chromeos/dbus/service_constants.h>
-#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
+#include <crypto/random.h>
 #include <png.h>
+#include <uuid/uuid.h>
 
 #include "lorgnette/daemon.h"
 #include "lorgnette/epson_probe.h"
@@ -33,6 +35,22 @@ using std::string;
 namespace lorgnette {
 
 namespace {
+
+constexpr size_t kUUIDStringLength = 37;
+
+std::string SerializeError(const brillo::ErrorPtr& error_ptr) {
+  std::string message;
+  const brillo::Error* error = error_ptr.get();
+  while (error) {
+    // Format error string as "domain/code:message".
+    if (!message.empty())
+      message += ';';
+    message +=
+        error->GetDomain() + '/' + error->GetCode() + ':' + error->GetMessage();
+    error = error->GetInnerError();
+  }
+  return message;
+}
 
 // Checks that the scan parameters in |params| are supported by our scanning
 // and PNG conversion logic.
@@ -219,7 +237,14 @@ Manager::Manager(base::Callback<void()> activity_callback,
     : org::chromium::lorgnette::ManagerAdaptor(this),
       activity_callback_(activity_callback),
       metrics_library_(new MetricsLibrary),
-      sane_client_(std::move(sane_client)) {}
+      sane_client_(std::move(sane_client)) {
+  // Set signal sender to be the real D-Bus call by default.
+  status_signal_sender_ = base::BindRepeating(
+      [](Manager* manager, const ScanStatusChangedSignal& signal) {
+        manager->SendScanStatusChangedSignal(impl::SerializeProto(signal));
+      },
+      base::Unretained(this));
+}
 
 Manager::~Manager() {}
 
@@ -338,18 +363,8 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
                         const string& device_name,
                         const base::ScopedFD& outfd,
                         const brillo::VariantDictionary& scan_properties) {
-  if (!sane_client_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No connection to SANE");
-    return false;
-  }
-
-  LOG(INFO) << "Scanning image from device " << device_name;
-
-  std::unique_ptr<SaneDevice> device =
-      sane_client_->ConnectToDevice(error, device_name);
-  if (!device)
-    return false;
+  StartScanRequest request;
+  request.set_device_name(device_name);
 
   uint32_t resolution = 0;
   string color_mode_string;
@@ -360,8 +375,8 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   LOG(INFO) << "User requested color mode: '" << color_mode_string
             << "' and resolution: " << resolution;
 
-  if (resolution != 0 && !device->SetScanResolution(error, resolution))
-    return false;
+  if (resolution != 0)
+    request.mutable_settings()->set_resolution(resolution);
 
   if (color_mode_string != "") {
     base::Optional<ColorMode> color_mode =
@@ -373,11 +388,145 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
       return false;
     }
 
-    if (!device->SetColorMode(error, color_mode.value())) {
+    request.mutable_settings()->set_color_mode(color_mode.value());
+  }
+
+  std::unique_ptr<SaneDevice> device;
+  if (!StartScanInternal(error, request, &device)) {
+    return false;
+  }
+
+  if (!RunScanLoop(error, std::move(device), outfd)) {
+    return false;
+  }
+
+  LOG(INFO) << __func__ << ": completed image scan and conversion.";
+
+  if (!activity_callback_.is_null())
+    activity_callback_.Run();
+  return true;
+}
+
+void Manager::StartScan(
+    std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> method_response,
+    const std::vector<uint8_t>& start_scan_request,
+    const base::ScopedFD& outfd) {
+  StartScanResponse response;
+  response.set_state(SCAN_STATE_FAILED);
+
+  StartScanRequest request;
+  if (!request.ParseFromArray(start_scan_request.data(),
+                              start_scan_request.size())) {
+    response.set_failure_reason("Failed to parse StartScanRequest");
+    method_response->Return(impl::SerializeProto(response));
+    return;
+  }
+
+  brillo::ErrorPtr error;
+  std::unique_ptr<SaneDevice> device;
+  if (!StartScanInternal(&error, request, &device)) {
+    response.set_failure_reason(SerializeError(error));
+    method_response->Return(impl::SerializeProto(response));
+    return;
+  }
+
+  // The scan has now been successfully started, notify the client.
+  response.set_state(SCAN_STATE_IN_PROGRESS);
+
+  uuid_t uuid_bytes;
+  uuid_generate_random(uuid_bytes);
+  std::string uuid(kUUIDStringLength, '\0');
+  uuid_unparse(uuid_bytes, &uuid[0]);
+  // Remove the null terminator from the string.
+  uuid.resize(kUUIDStringLength - 1);
+  response.set_scan_uuid(uuid);
+  method_response->Return(impl::SerializeProto(response));
+
+  ScanStatusChangedSignal result_signal;
+  result_signal.set_scan_uuid(uuid);
+
+  if (!RunScanLoop(&error, std::move(device), outfd)) {
+    result_signal.set_failure_reason(SerializeError(error));
+    result_signal.set_state(SCAN_STATE_FAILED);
+    status_signal_sender_.Run(result_signal);
+    return;
+  }
+
+  LOG(INFO) << __func__ << ": completed image scan and conversion.";
+
+  result_signal.set_state(SCAN_STATE_COMPLETED);
+  result_signal.set_progress(100);
+  status_signal_sender_.Run(result_signal);
+
+  if (!activity_callback_.is_null())
+    activity_callback_.Run();
+}
+
+void Manager::SetScanStatusChangedSignalSenderForTest(
+    StatusSignalSender sender) {
+  status_signal_sender_ = sender;
+}
+
+bool Manager::StartScanInternal(brillo::ErrorPtr* error,
+                                const StartScanRequest& request,
+                                std::unique_ptr<SaneDevice>* device_out) {
+  if (!device_out) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "device_out cannot be null");
+    return false;
+  }
+
+  if (request.device_name() == "") {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "A device name must be provided");
+    return false;
+  }
+
+  if (!sane_client_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No connection to SANE");
+    return false;
+  }
+
+  LOG(INFO) << "Scanning image from device " << request.device_name();
+
+  std::unique_ptr<SaneDevice> device =
+      sane_client_->ConnectToDevice(error, request.device_name());
+  if (!device) {
+    return false;
+  }
+
+  const ScanSettings& settings = request.settings();
+
+  if (settings.resolution() != 0) {
+    LOG(INFO) << "User requested resolution: " << settings.resolution();
+    if (!device->SetScanResolution(error, settings.resolution())) {
       return false;
     }
   }
 
+  if (settings.color_mode() != MODE_UNSPECIFIED) {
+    LOG(INFO) << "User requested color mode: '"
+              << ColorMode_Name(settings.color_mode()) << "'";
+    if (!device->SetColorMode(error, settings.color_mode())) {
+      return false;
+    }
+  }
+
+  if (!device->StartScan(error)) {
+    metrics_library_->SendEnumToUMA(kMetricScanResult, kBooleanMetricFailure,
+                                    kBooleanMetricMax);
+    return false;
+  }
+
+  *device_out = std::move(device);
+  return true;
+}
+
+bool Manager::RunScanLoop(brillo::ErrorPtr* error,
+                          std::unique_ptr<SaneDevice> device,
+                          const base::ScopedFD& outfd) {
   // Automatically report a scan failure if we exit early. This will be
   // cancelled once scanning has succeeded.
   base::ScopedClosureRunner report_scan_failure(base::BindOnce(
@@ -387,12 +536,10 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
       },
       metrics_library_.get()));
 
-  if (!device->StartScan(error))
-    return false;
-
   ScanParameters params;
-  if (!device->GetScanParameters(error, &params))
+  if (!device->GetScanParameters(error, &params)) {
     return false;
+  }
 
   if (!ValidateParams(error, params)) {
     return false;
@@ -493,10 +640,6 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   metrics_library_->SendEnumToUMA(kMetricScanResult, kBooleanMetricSuccess,
                                   kBooleanMetricMax);
 
-  LOG(INFO) << __func__ << ": completed image scan and conversion.";
-
-  if (!activity_callback_.is_null())
-    activity_callback_.Run();
   return true;
 }
 

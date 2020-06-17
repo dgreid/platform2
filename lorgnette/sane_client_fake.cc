@@ -10,6 +10,8 @@
 
 #include <chromeos/dbus/service_constants.h>
 
+#include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
+
 namespace lorgnette {
 
 // static
@@ -29,6 +31,9 @@ std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDevice(
     devices_.erase(device_name);
     return ptr;
   }
+
+  brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                       kManagerServiceError, "No device");
   return nullptr;
 }
 
@@ -70,8 +75,11 @@ SaneDeviceFake::~SaneDeviceFake() {}
 
 bool SaneDeviceFake::GetValidOptionValues(brillo::ErrorPtr* error,
                                           ValidOptionValues* values) {
-  if (!values || !values_.has_value())
+  if (!values || !values_.has_value()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No option values");
     return false;
+  }
 
   *values = values_.value();
   return true;
@@ -86,11 +94,17 @@ bool SaneDeviceFake::SetColorMode(brillo::ErrorPtr*, ColorMode) {
 }
 
 bool SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
-  if (scan_running_)
+  if (scan_running_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Scan not running");
     return false;
+  }
 
-  if (!start_scan_result_)
+  if (!start_scan_result_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Starting failed.");
     return false;
+  }
 
   scan_running_ = true;
   scan_data_offset_ = 0;
@@ -99,22 +113,31 @@ bool SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
 
 bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
                                        ScanParameters* parameters) {
-  if (!parameters || !params_.has_value())
+  if (!parameters || !params_.has_value()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No parameters");
     return false;
+  }
 
   *parameters = params_.value();
   return true;
 }
 
-bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr*,
+bool SaneDeviceFake::ReadScanData(brillo::ErrorPtr* error,
                                   uint8_t* buf,
                                   size_t count,
                                   size_t* read_out) {
-  if (!scan_running_)
+  if (!scan_running_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Scan not running");
     return false;
+  }
 
-  if (!read_scan_data_result_)
+  if (!read_scan_data_result_) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Reading data failed");
     return false;
+  }
 
   if (scan_data_offset_ >= scan_data_.size()) {
     scan_running_ = false;

@@ -14,12 +14,15 @@
 #include <base/files/scoped_file.h>
 #include <brillo/variant_dictionary.h>
 #include <brillo/errors/error.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <metrics/metrics_library.h>
 
 #include <sane/sane.h>
 
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
 #include "lorgnette/sane_client.h"
+
+using brillo::dbus_utils::DBusMethodResponse;
 
 namespace brillo {
 
@@ -30,6 +33,22 @@ class ExportedObjectManager;
 }  // namespace brillo
 
 namespace lorgnette {
+
+namespace impl {
+
+// Returns a byte vector containing the serialized representation of |proto|.
+template <typename T>
+std::vector<uint8_t> SerializeProto(const T& proto) {
+  std::vector<uint8_t> serialized;
+  serialized.resize(proto.ByteSizeLong());
+  proto.SerializeToArray(serialized.data(), serialized.size());
+  return serialized;
+}
+
+}  // namespace impl
+
+using StatusSignalSender =
+    base::RepeatingCallback<void(const ScanStatusChangedSignal&)>;
 
 class FirewallManager;
 
@@ -56,6 +75,14 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                  const std::string& device_name,
                  const base::ScopedFD& outfd,
                  const brillo::VariantDictionary& scan_properties) override;
+  void StartScan(
+      std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
+      const std::vector<uint8_t>& start_scan_request,
+      const base::ScopedFD& outfd) override;
+
+  // Register the callback to call when we send a ScanStatusChanged signal for
+  // tests.
+  void SetScanStatusChangedSignalSenderForTest(StatusSignalSender sender);
 
  private:
   friend class ManagerTest;
@@ -67,6 +94,14 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   };
 
   static const char kMetricScanResult[];
+
+  bool StartScanInternal(brillo::ErrorPtr* error,
+                         const StartScanRequest& request,
+                         std::unique_ptr<SaneDevice>* device_out);
+
+  bool RunScanLoop(brillo::ErrorPtr* error,
+                   std::unique_ptr<SaneDevice> device,
+                   const base::ScopedFD& outfd);
 
   static bool ExtractScanOptions(
       brillo::ErrorPtr* error,
@@ -83,6 +118,10 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
   // Manages connection to SANE for listing and connecting to scanners.
   std::unique_ptr<SaneClient> sane_client_;
+
+  // A callback to call when we attempt to send a D-Bus signal. This is used
+  // for testing in order to track the signals sent from StartScan.
+  StatusSignalSender status_signal_sender_;
 };
 
 }  // namespace lorgnette

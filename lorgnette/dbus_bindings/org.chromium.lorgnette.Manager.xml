@@ -50,5 +50,30 @@ ns-v0">
             Resolution (uint32): Image resolution in DPI.
         </tp:docstring>
     </method>
+    <method name="StartScan">
+      <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
+      <tp:docstring>
+        Initiates an asynchronous scan job, outputting PNG data to |outfd|.
+        A response will be sent once the scan has been successfully started,
+        or if starting the scan failed.
+      </tp:docstring>
+      <arg name="start_scan_request" type="ay" direction="in"/>
+        <tp:docstring>
+          Serialized StartScanRequest proto specifying the scanner to use and
+          the settings for the scan.
+        </tp:docstring>
+      <arg name="outfd" type="h" direction="in"/>
+        <tp:docstring>
+          Output file descriptor. PNG image data will be written to this fd.
+        </tp:docstring>
+      <arg name="scan_status_response" type="ay" direction="out" />
+    </method>
+    <signal name="ScanStatusChanged">
+      <arg name="scan_status_changed_signal" type="ay" direction="out" />
+        <tp:docstring>
+          A serialized ScanStatusChangedSignal proto, containing a scan id, scan
+          state, and potentially a failure reason or progress percentage.
+        </tp:docstring>
+    </signal>
   </interface>
 </node>
