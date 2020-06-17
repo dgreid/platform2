@@ -90,11 +90,7 @@ bool ProbeTool::EvaluateProbeFunction(
     DLOG(INFO) << "minijail arguments : " << minijail_args_str;
 
     // Parse the JSON formatted minijail arguments.
-    // TODO(crbug.com/1054279): use base::JSONReader::ReadToValue after uprev to
-    // r680000.
-    std::unique_ptr<ListValue> minijail_args =
-        ListValue::From(
-            base::JSONReader().ReadToValueDeprecated(minijail_args_str));
+    auto minijail_args = base::JSONReader::Read(minijail_args_str);
 
     if (!minijail_args) {
       DEBUGD_ADD_ERROR(error, kErrorPath,
@@ -122,14 +118,13 @@ bool ProbeTool::EvaluateProbeFunction(
     parsed_args.push_back("-r");        // Remount /proc read-only
     parsed_args.push_back("-d");        // Mount a new /dev with minimum nodes
 
-    std::string tmp_str;
-    for (size_t i = 0; i < minijail_args->GetSize(); ++i) {
-      if (!minijail_args->GetString(i, &tmp_str)) {
+    for (const auto& arg : minijail_args->GetList()) {
+      if (!arg.is_string()) {
         DEBUGD_ADD_ERROR(error, kErrorPath,
                          "Failed to parse minijail arguments");
         return false;
       }
-      parsed_args.push_back(tmp_str);
+      parsed_args.push_back(arg.GetString());
     }
 
     sandboxed_process->SandboxAs(kRunAs, kRunAs);
