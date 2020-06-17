@@ -14,10 +14,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/epoll.h>
 #include <unistd.h>
 
 static const char kDevInputEvent[] = "/dev/input";
 static const char kEventDevName[] = "event";
+
+// Maximum number of event devices to monitor.
+// 10 should be large enough for normal use case.
+static const int kMaxFds = 10;
 
 // Determines if the given |bit| is set in the |bitmask| array.
 static bool TestBit(const int bit, const uint8_t* bitmask) {
@@ -65,13 +70,36 @@ static bool SupportsAllKeys(const int fd, const int* events,
   return true;
 }
 
-static int WaitForKeys(const int fd, const int* events, const int num_events) {
+static int WaitForKeys(const int* fds,
+                       const int num_fds,
+                       const int* events,
+                       const int num_events) {
   // Boolean array to keep track of whether a key is currently up or down.
-  bool key_states[KEY_MAX + 1] = {};
+  bool key_states[kMaxFds][KEY_MAX + 1] = {{}};
+
+  int epfd = epoll_create1(EPOLL_CLOEXEC);
+  if (epfd < 0) {
+    err(EXIT_FAILURE, "epoll_create failed");
+  }
+
+  for (int i = 0; i < num_fds; ++i) {
+    struct epoll_event ep_event;
+    ep_event.data.u32 = i;
+    ep_event.events = EPOLLIN;
+    if (epoll_ctl(epfd, EPOLL_CTL_ADD, fds[i], &ep_event) < 0) {
+      err(EXIT_FAILURE, "epoll_ctl failed");
+    }
+  }
 
   while (true) {
+    struct epoll_event ep_event;
+    if (epoll_wait(epfd, &ep_event, 1, -1) <= 0) {
+      err(EXIT_FAILURE, "epoll_wait failed");
+    }
+
     struct input_event ev;
-    int rd = read(fd, &ev, sizeof(ev));
+    int index = ep_event.data.u32;
+    int rd = read(fds[index], &ev, sizeof(ev));
     if (rd != sizeof(ev)) {
       err(EXIT_FAILURE, "Could not read event");
     }
@@ -90,13 +118,14 @@ static int WaitForKeys(const int fd, const int* events, const int num_events) {
           //
           // So, we force that we must have seen the key be pressed and then
           // released in the time that we have been in recovery.
-          if (ev.value == 0 && key_states[ev.code]) {
+          if (ev.value == 0 && key_states[index][ev.code]) {
+            close(epfd);
             // Key was released while we knew it was pressed; we're done.
             return ev.code;
           } else if (ev.value == 1) {
             // Only count first presses, long holds/key repeats from entering
             // recovery will have |ev.value| == 2, so won't go down here.
-            key_states[ev.code] = true;
+            key_states[index][ev.code] = true;
           }
         }
       }
@@ -189,6 +218,7 @@ int main(int argc, char** argv) {
 
   struct dirent** input_devs;
   int ndev = scandir(kDevInputEvent, &input_devs, IsEventDevice, NULL);
+  int fds[kMaxFds], num_fds = 0;
 
   for (int i = 0; i < ndev; ++i) {
     char* ev_dev;
@@ -210,16 +240,26 @@ int main(int argc, char** argv) {
     // attacker to masquerade as keyboards and bypass physical presence checks.
     if ((flag_include_usb || !IsUSBDevice(fd)) && IsKeyboardDevice(fd) &&
         SupportsAllKeys(fd, events, num_events)) {
-      if (!flag_check) {
-        int ev = WaitForKeys(fd, events, num_events);
-        printf("%d\n", ev);
+      fds[num_fds++] = fd;
+      if (flag_check || num_fds >= kMaxFds) {
+        break;
       }
-
+    } else {
       close(fd);
-      return EXIT_SUCCESS;
+    }
+  }
+
+  if (num_fds > 0) {
+    if (!flag_check) {
+      int ev = WaitForKeys(fds, num_fds, events, num_events);
+      printf("%d\n", ev);
     }
 
-    close(fd);
+    for (int i = 0; i < num_fds; i++) {
+      close(fds[i]);
+    }
+
+    return EXIT_SUCCESS;
   }
 
   if (!flag_check) {
