@@ -1320,7 +1320,7 @@ bool InitializeTest(int* argc, char*** argv, void** cam_hal_handle) {
       "scarlet",
   };
   std::string board = base::SysInfo::GetLsbReleaseBoard();
-  if (base::ContainsValue(kIgnoreSensorOrientationTestBoards, board)) {
+  if (base::Contains(kIgnoreSensorOrientationTestBoards, board)) {
     VLOG(1) << "Ignore SensorOrientationTest on " << board;
     AddGtestFilterNegativePattern("*SensorOrientationTest/*");
   }

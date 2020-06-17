@@ -812,7 +812,7 @@ void Metrics::Stop() {
 
 void Metrics::RegisterService(const Service& service) {
   SLOG(this, 2) << __func__;
-  LOG_IF(WARNING, base::ContainsKey(services_metrics_, &service))
+  LOG_IF(WARNING, base::Contains(services_metrics_, &service))
       << "Repeatedly registering " << service.log_name();
   services_metrics_[&service] = std::make_unique<ServiceMetrics>();
   InitializeCommonServiceMetrics(service);

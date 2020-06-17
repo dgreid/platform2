@@ -48,7 +48,7 @@ InodeMap::Entry* InodeMap::GetEntryByPath(const base::FilePath& path) {
     return it->second;
   }
 
-  DCHECK(!base::ContainsKey(inodes_, seq_num_));
+  DCHECK(!base::Contains(inodes_, seq_num_));
 
   ino_t inode = seq_num_++;
   CHECK(inode) << "Inode wrap around";

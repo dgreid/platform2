@@ -78,10 +78,10 @@ void MountOptions::Initialize(const std::vector<std::string>& options,
     } else if (base::StartsWith(option, kOptionGidPrefix,
                                 base::CompareCase::INSENSITIVE_ASCII)) {
       option_group_id = option;
-    } else if (base::ContainsValue(enforced_options_, option)) {
+    } else if (base::Contains(enforced_options_, option)) {
       // We'll add these options unconditionally below.
       continue;
-    } else if (base::ContainsValue(whitelist_exact_, option)) {
+    } else if (base::Contains(whitelist_exact_, option)) {
       // Only add options in the whitelist.
       options_.push_back(option);
     } else if (std::find_if(whitelist_prefix_.begin(), whitelist_prefix_.end(),
@@ -206,7 +206,7 @@ void MountOptions::EnforceOption(const std::string& option) {
 }
 
 bool MountOptions::HasOption(const std::string& option) const {
-  return base::ContainsValue(options_, option);
+  return base::Contains(options_, option);
 }
 
 }  // namespace cros_disks

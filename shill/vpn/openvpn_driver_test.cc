@@ -286,7 +286,7 @@ void OpenVPNDriverTest::ExpectInFlags(const vector<vector<string>>& options,
 
 void OpenVPNDriverTest::ExpectInFlags(const vector<vector<string>>& options,
                                       const vector<string>& arguments) {
-  EXPECT_TRUE(base::ContainsValue(options, arguments));
+  EXPECT_TRUE(base::Contains(options, arguments));
 }
 
 void OpenVPNDriverTest::ExpectNotInFlags(const vector<vector<string>>& options,

@@ -54,7 +54,7 @@ void AgentManagerInterfaceHandler::DisplayPasskey(
   LOG(INFO) << "Please enter passkey " << passkey << " on the device";
 
   if (default_agent_client_.empty() ||
-      !base::ContainsKey(agent_object_paths_, default_agent_client_)) {
+      !base::Contains(agent_object_paths_, default_agent_client_)) {
     LOG(WARNING) << "No agent available to display passkey";
     return;
   }
@@ -88,7 +88,7 @@ void AgentManagerInterfaceHandler::RequestAuthorization(
   LOG(INFO) << "Request authorization on the device";
 
   if (default_agent_client_.empty() ||
-      !base::ContainsKey(agent_object_paths_, default_agent_client_)) {
+      !base::Contains(agent_object_paths_, default_agent_client_)) {
     LOG(WARNING) << "No agent available to request authorization";
     return;
   }
@@ -139,7 +139,7 @@ bool AgentManagerInterfaceHandler::HandleUnregisterAgent(
     dbus::ObjectPath agent_object_path) {
   VLOG(1) << __func__;
 
-  if (base::ContainsKey(agent_object_paths_, message->GetSender())) {
+  if (base::Contains(agent_object_paths_, message->GetSender())) {
     if (agent_object_paths_[message->GetSender()] != agent_object_path)
       LOG(WARNING) << "Agent path does not match.";
     agent_object_paths_.erase(message->GetSender());
@@ -157,7 +157,7 @@ bool AgentManagerInterfaceHandler::HandleRequestDefaultAgent(
     dbus::ObjectPath agent_object_path) {
   VLOG(1) << "Setting default agent " << agent_object_path.value();
 
-  if (!base::ContainsKey(agent_object_paths_, message->GetSender())) {
+  if (!base::Contains(agent_object_paths_, message->GetSender())) {
     brillo::Error::AddTo(
         error, FROM_HERE, brillo::errors::dbus::kDomain,
         bluetooth_adapter::kErrorFailed,

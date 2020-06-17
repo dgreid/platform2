@@ -274,7 +274,7 @@ TEST_F(RoutingTableTest, RouteAddDelete) {
 
   // We should have a single table, which should in turn have a single entry.
   EXPECT_EQ(1, tables->size());
-  EXPECT_TRUE(base::ContainsKey(*tables, kTestDeviceIndex0));
+  EXPECT_TRUE(base::Contains(*tables, kTestDeviceIndex0));
   EXPECT_EQ(1, (*tables)[kTestDeviceIndex0].size());
 
   RoutingTableEntry test_entry = (*tables)[kTestDeviceIndex0][0];
@@ -290,7 +290,7 @@ TEST_F(RoutingTableTest, RouteAddDelete) {
 
   // We should have two tables, which should have a single entry each.
   EXPECT_EQ(2, tables->size());
-  EXPECT_TRUE(base::ContainsKey(*tables, kTestDeviceIndex1));
+  EXPECT_TRUE(base::Contains(*tables, kTestDeviceIndex1));
   EXPECT_EQ(1, (*tables)[kTestDeviceIndex0].size());
   EXPECT_EQ(1, (*tables)[kTestDeviceIndex1].size());
 
@@ -390,7 +390,7 @@ TEST_F(RoutingTableTest, RouteAddDelete) {
 
   // Test that removing the table causes the route to disappear.
   routing_table_->ResetTable(kTestDeviceIndex1);
-  EXPECT_FALSE(base::ContainsKey(*tables, kTestDeviceIndex1));
+  EXPECT_FALSE(base::Contains(*tables, kTestDeviceIndex1));
   EXPECT_FALSE(routing_table_->GetDefaultRoute(
       kTestDeviceIndex1, IPAddress::kFamilyIPv4, &test_entry));
   EXPECT_EQ(1, GetRoutingTables()->size());
@@ -547,7 +547,7 @@ TEST_F(RoutingTableTest, IPv6StatelessAutoconfiguration) {
 
   // We should have a single table, which should in turn have a single entry.
   EXPECT_EQ(1, tables->size());
-  EXPECT_TRUE(base::ContainsKey(*tables, kTestDeviceIndex0));
+  EXPECT_TRUE(base::Contains(*tables, kTestDeviceIndex0));
   EXPECT_EQ(1, (*tables)[kTestDeviceIndex0].size());
 
   RoutingTableEntry test_entry = (*tables)[kTestDeviceIndex0][0];
@@ -634,7 +634,7 @@ TEST_F(RoutingTableTest, RequestHostRoute) {
 
   // We should have a single table, which should in turn have a single entry.
   EXPECT_EQ(1, tables->size());
-  EXPECT_TRUE(base::ContainsKey(*tables, kTestDeviceIndex0));
+  EXPECT_TRUE(base::Contains(*tables, kTestDeviceIndex0));
   EXPECT_EQ(1, (*tables)[kTestDeviceIndex0].size());
 
   // This entry's tag should match the tag we requested.

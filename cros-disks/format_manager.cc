@@ -193,7 +193,7 @@ FormatErrorType FormatManager::StartFormatting(
     return LabelErrorToFormatError(label_error);
   }
 
-  if (base::ContainsKey(format_process_, device_path)) {
+  if (base::Contains(format_process_, device_path)) {
     LOG(WARNING) << "Device " << quote(device_path)
                  << " is already being formatted";
     return FORMAT_ERROR_DEVICE_BEING_FORMATTED;

@@ -333,8 +333,8 @@ void RTNLHandler::ParseRTNL(InputData* data) {
             std::string error_msg = base::StringPrintf(
                 "sequence %d%s received error %d (%s)", hdr->nlmsg_seq,
                 request_str.c_str(), error_number, strerror(error_number));
-            if (!base::ContainsKey(GetAndClearErrorMask(hdr->nlmsg_seq),
-                                   error_number)) {
+            if (!base::Contains(GetAndClearErrorMask(hdr->nlmsg_seq),
+                                error_number)) {
               LOG(ERROR) << error_msg;
             } else {
               SLOG(this, 3) << error_msg;

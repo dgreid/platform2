@@ -78,7 +78,7 @@ void EthernetProvider::RegisterService(EthernetServiceRefPtr service) {
   // Add the service to the services_ list and register it with the Manager.
   // A service is registered with the Manager if and only if it is also
   // registered with the EthernetProvider.
-  if (base::ContainsValue(services_, service)) {
+  if (base::Contains(services_, service)) {
     LOG(INFO) << "Reusing existing Ethernet service.";
     return;
   }
@@ -92,7 +92,7 @@ void EthernetProvider::DeregisterService(EthernetServiceRefPtr service) {
   // service. Otherwise, turn it into the ethernet_any service. A service is
   // deregistered with the Manager if and only if it is also deregistered with
   // the EthernetProvider.
-  CHECK(base::ContainsValue(services_, service))
+  CHECK(base::Contains(services_, service))
       << "De-registering an unregistered service";
   if (services_.size() == 1 && service->HasEthernet()) {
     service->ResetEthernet();
@@ -132,7 +132,7 @@ void EthernetProvider::RefreshGenericEthernetService() {
   // from the old ethernet_any service and configure it according to its new
   // storage ID (MAC address of the associated device).
   service_->ResetStorageIdentifier();
-  if (service_->HasEthernet() && base::ContainsValue(services_, service_)) {
+  if (service_->HasEthernet() && base::Contains(services_, service_)) {
     manager_->MatchProfileWithService(service_);
   }
 

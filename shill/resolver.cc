@@ -63,7 +63,7 @@ bool Resolver::SetDNSFromLists(const std::vector<std::string>& dns_servers,
 
   vector<string> filtered_domain_search;
   for (const auto& domain : domain_search) {
-    if (base::ContainsValue(ignored_search_list_, domain)) {
+    if (base::Contains(ignored_search_list_, domain)) {
       continue;
     }
     if (IsValidDNSDomain(domain)) {

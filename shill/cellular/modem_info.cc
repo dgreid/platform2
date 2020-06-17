@@ -100,7 +100,7 @@ void ModemInfo::Disconnect() {
 
 bool ModemInfo::ModemExists(const RpcIdentifier& path) const {
   CHECK(service_connected_);
-  return base::ContainsKey(modems_, path);
+  return base::Contains(modems_, path);
 }
 
 void ModemInfo::AddModem(const RpcIdentifier& path,
@@ -131,7 +131,7 @@ void ModemInfo::OnVanished() {
 
 void ModemInfo::OnInterfacesAddedSignal(
     const RpcIdentifier& object_path, const InterfaceToProperties& properties) {
-  if (!base::ContainsKey(properties, MM_DBUS_INTERFACE_MODEM)) {
+  if (!base::Contains(properties, MM_DBUS_INTERFACE_MODEM)) {
     LOG(ERROR) << "Interfaces added, but not modem interface.";
     return;
   }
@@ -142,7 +142,7 @@ void ModemInfo::OnInterfacesRemovedSignal(
     const RpcIdentifier& object_path,
     const std::vector<std::string>& interfaces) {
   LOG(INFO) << "ModemInfo:  Removing interfaces from: " << object_path.value();
-  if (!base::ContainsValue(interfaces, MM_DBUS_INTERFACE_MODEM)) {
+  if (!base::Contains(interfaces, MM_DBUS_INTERFACE_MODEM)) {
     // In theory, a modem could drop, say, 3GPP, but not CDMA.  In
     // practice, we don't expect this.
     LOG(ERROR) << "Interfaces removed, but not modem interface";

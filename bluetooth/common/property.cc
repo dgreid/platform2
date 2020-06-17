@@ -14,7 +14,7 @@ namespace bluetooth {
 void PropertySet::RegisterProperty(
     const std::string& property_name,
     std::unique_ptr<dbus::PropertyBase> property_base) {
-  CHECK(!base::ContainsKey(properties_, property_name))
+  CHECK(!base::Contains(properties_, property_name))
       << "Property " << property_name << " already registered";
 
   dbus::PropertySet::RegisterProperty(property_name, property_base.get());

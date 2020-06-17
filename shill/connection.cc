@@ -423,7 +423,7 @@ void Connection::AllowTrafficThrough(uint32_t table_id,
 
 void Connection::AddInputInterfaceToRoutingTable(
     const std::string& interface_name) {
-  if (base::ContainsValue(allowed_iifs_, interface_name))
+  if (base::Contains(allowed_iifs_, interface_name))
     return;  // interface already whitelisted
 
   allowed_iifs_.push_back(interface_name);
@@ -433,7 +433,7 @@ void Connection::AddInputInterfaceToRoutingTable(
 
 void Connection::RemoveInputInterfaceFromRoutingTable(
     const std::string& interface_name) {
-  if (!base::ContainsValue(allowed_iifs_, interface_name))
+  if (!base::Contains(allowed_iifs_, interface_name))
     return;  // interface already removed
 
   base::Erase(allowed_iifs_, interface_name);

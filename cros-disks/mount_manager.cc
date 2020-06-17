@@ -368,7 +368,7 @@ bool MountManager::RemoveMountPathFromCache(const std::string& mount_path) {
 }
 
 bool MountManager::IsMountPathReserved(const std::string& mount_path) const {
-  return base::ContainsKey(reserved_mount_paths_, mount_path);
+  return base::Contains(reserved_mount_paths_, mount_path);
 }
 
 MountErrorType MountManager::GetMountErrorOfReservedMountPath(

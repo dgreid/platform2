@@ -292,7 +292,7 @@ const camera_metadata_t* ClientDeviceConnector::ConstructDefaultRequestSettings(
 
 void ClientDeviceConnector::ConstructDefaultRequestSettingsOnThread(
     int type, base::OnceCallback<void(const camera_metadata_t*)> cb) {
-  if (base::ContainsKey(default_req_settings_map_, type)) {
+  if (base::Contains(default_req_settings_map_, type)) {
     std::move(cb).Run(default_req_settings_map_.at(type).get());
     return;
   }
@@ -308,7 +308,7 @@ void ClientDeviceConnector::OnConstructedDefaultRequestSettings(
     base::OnceCallback<void(const camera_metadata_t*)> cb,
     cros::mojom::CameraMetadataPtr settings) {
   VLOGF_ENTER();
-  if (!base::ContainsKey(default_req_settings_map_, type)) {
+  if (!base::Contains(default_req_settings_map_, type)) {
     default_req_settings_map_[type] =
         cros::internal::DeserializeCameraMetadata(settings);
   }

@@ -691,14 +691,14 @@ void Manager::RemoveProfile(const string& name, Error* error) {
 }
 
 bool Manager::DeviceManagementAllowed(const string& device_name) {
-  if (base::ContainsValue(blacklisted_devices_, device_name)) {
+  if (base::Contains(blacklisted_devices_, device_name)) {
     return false;
   }
   if (whitelisted_devices_.empty()) {
     // If no whitelist is specified, all devices are considered whitelisted.
     return true;
   }
-  if (base::ContainsValue(whitelisted_devices_, device_name)) {
+  if (base::Contains(whitelisted_devices_, device_name)) {
     return true;
   }
   return false;
@@ -875,7 +875,7 @@ ServiceRefPtr Manager::CreateTemporaryServiceFromProfile(
   }
 
   ServiceRefPtr service = nullptr;
-  if (base::ContainsKey(providers_, technology)) {
+  if (base::Contains(providers_, technology)) {
     service = providers_[technology]->CreateTemporaryServiceFromProfile(
         profile, entry_name, error);
   }
@@ -931,7 +931,7 @@ bool Manager::IsTechnologyInList(const string& technology_list,
   vector<Technology> technologies;
   return GetTechnologyVectorFromString(technology_list, &technologies,
                                        &error) &&
-         base::ContainsValue(technologies, tech);
+         base::Contains(technologies, tech);
 }
 
 bool Manager::IsPortalDetectionEnabled(Technology tech) {
@@ -1133,7 +1133,7 @@ void Manager::SetDHCPv6EnabledDevices(const vector<string>& device_list) {
 }
 
 bool Manager::IsDHCPv6EnabledForDevice(const string& device_name) const {
-  return base::ContainsValue(dhcpv6_enabled_devices_, device_name);
+  return base::Contains(dhcpv6_enabled_devices_, device_name);
 }
 
 vector<string> Manager::FilterPrependDNSServersByFamily(
@@ -1816,7 +1816,7 @@ void Manager::DevicePresenceStatusCheck() {
   vector<string> available_technologies = AvailableTechnologies(&error);
 
   for (const auto& technology : kProbeTechnologies) {
-    bool presence = base::ContainsValue(available_technologies, technology);
+    bool presence = base::Contains(available_technologies, technology);
     metrics_->NotifyDevicePresenceStatus(Technology::CreateFromName(technology),
                                          presence);
   }
@@ -1928,7 +1928,7 @@ void Manager::ConnectToBestServicesTask() {
       // Non-primary services need some other service connected first.
       continue;
     }
-    if (base::ContainsKey(connecting_technologies, technology)) {
+    if (base::Contains(connecting_technologies, technology)) {
       // We have already started a connection for this technology.
       continue;
     }
@@ -2220,7 +2220,7 @@ ServiceRefPtr Manager::GetServiceInner(const KeyValueStore& args,
 
   string type = args.Get<string>(kTypeProperty);
   Technology technology = Technology::CreateFromName(type);
-  if (!base::ContainsKey(providers_, technology)) {
+  if (!base::Contains(providers_, technology)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                           kErrorUnsupportedServiceType);
     return nullptr;
@@ -2311,7 +2311,7 @@ ServiceRefPtr Manager::ConfigureServiceForProfile(const string& profile_rpcid,
   string type = args.Get<string>(kTypeProperty);
   Technology technology = Technology::CreateFromName(type);
 
-  if (!base::ContainsKey(providers_, technology)) {
+  if (!base::Contains(providers_, technology)) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
                           kErrorUnsupportedServiceType);
     return nullptr;

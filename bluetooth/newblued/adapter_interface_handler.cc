@@ -213,7 +213,7 @@ bool AdapterInterfaceHandler::HandleStartDiscovery(brillo::ErrorPtr* error,
 
   const std::string& client_address = message->GetSender();
 
-  if (base::ContainsKey(discovery_clients_, client_address)) {
+  if (base::Contains(discovery_clients_, client_address)) {
     brillo::Error::AddTo(
         error, FROM_HERE, brillo::errors::dbus::kDomain,
         bluetooth_adapter::kErrorInProgress,
@@ -244,7 +244,7 @@ bool AdapterInterfaceHandler::HandleStopDiscovery(brillo::ErrorPtr* error,
 
   const std::string& client_address = message->GetSender();
 
-  if (!base::ContainsKey(discovery_clients_, client_address)) {
+  if (!base::Contains(discovery_clients_, client_address)) {
     brillo::Error::AddTo(
         error, FROM_HERE, brillo::errors::dbus::kDomain,
         bluetooth_adapter::kErrorFailed,

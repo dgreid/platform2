@@ -95,7 +95,7 @@ bool MtpdServer::OpenStorage(brillo::ErrorPtr* error,
   do {
     base::RandBytes(random_data, sizeof(random_data));
     new_id = base::HexEncode(random_data, sizeof(random_data));
-  } while (base::ContainsKey(handle_map_, new_id));
+  } while (base::Contains(handle_map_, new_id));
 
   handle_map_.insert(
       std::make_pair(new_id, std::make_pair(storage_name, mode)));

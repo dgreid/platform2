@@ -197,7 +197,7 @@ bool ImpersonationObjectManagerInterface::HasImpersonatedServicesForObject(
 
 int ImpersonationObjectManagerInterface::GetImpersonatedServicesCountForObject(
     const std::string& object_path) const {
-  if (!base::ContainsKey(impersonated_services_, object_path))
+  if (!base::Contains(impersonated_services_, object_path))
     return 0;
 
   return impersonated_services_.at(object_path).size();
@@ -205,12 +205,12 @@ int ImpersonationObjectManagerInterface::GetImpersonatedServicesCountForObject(
 
 std::string ImpersonationObjectManagerInterface::GetDefaultServiceForObject(
     const std::string& object_path) const {
-  CHECK(base::ContainsKey(impersonated_services_, object_path) &&
+  CHECK(base::Contains(impersonated_services_, object_path) &&
         !impersonated_services_.find(object_path)->second.empty());
 
   for (const std::string& service : service_names()) {
-    if (base::ContainsKey(impersonated_services_.find(object_path)->second,
-                          service))
+    if (base::Contains(impersonated_services_.find(object_path)->second,
+                       service))
       return service;
   }
 
@@ -235,7 +235,7 @@ bool ImpersonationObjectManagerInterface::HasImpersonatedServiceForObject(
   auto iter = impersonated_services_.find(object_path);
   if (iter == impersonated_services_.end())
     return false;
-  return base::ContainsKey(iter->second, service_name);
+  return base::Contains(iter->second, service_name);
 }
 
 dbus::ObjectManager* ImpersonationObjectManagerInterface::GetObjectManager(

@@ -46,7 +46,7 @@ ObjectManagerInterfaceMultiplexer::ObjectManagerInterfaceMultiplexer(
 
 void ObjectManagerInterfaceMultiplexer::RegisterToObjectManager(
     dbus::ObjectManager* object_manager, const std::string& service_name) {
-  CHECK(!base::ContainsKey(object_manager_interfaces_, service_name))
+  CHECK(!base::Contains(object_manager_interfaces_, service_name))
       << "Interface " << interface_name_ << " for service " << service_name
       << " has been registered before";
 

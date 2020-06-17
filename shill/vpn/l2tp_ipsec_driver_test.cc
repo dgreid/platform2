@@ -212,7 +212,7 @@ void L2TPIPSecDriverTest::ExpectInFlags(const vector<string>& options,
                                         const string& flag,
                                         const string& value) {
   string flag_value = base::StringPrintf("%s=%s", flag.c_str(), value.c_str());
-  EXPECT_TRUE(base::ContainsValue(options, flag_value));
+  EXPECT_TRUE(base::Contains(options, flag_value));
 }
 
 FilePath L2TPIPSecDriverTest::SetupPSKFile() {

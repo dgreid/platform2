@@ -23,7 +23,7 @@ ClientManager::ClientManager(
 
 DispatcherClient* ClientManager::EnsureClientAdded(
     const std::string& client_address) {
-  if (base::ContainsKey(clients_, client_address))
+  if (base::Contains(clients_, client_address))
     return clients_[client_address].get();
 
   VLOG(1) << "Adding new client " << client_address;

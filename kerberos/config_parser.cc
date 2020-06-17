@@ -217,7 +217,7 @@ ConfigErrorInfo ConfigParser::ParseConfig(
 
       // Bail if the section is not supported, e.g. [appdefaults].
       if (current_section.empty() ||
-          !base::ContainsKey(section_whitelist_, current_section)) {
+          !base::Contains(section_whitelist_, current_section)) {
         return MakeErrorInfo(CONFIG_ERROR_SECTION_NOT_SUPPORTED, line_index);
       }
       continue;
@@ -267,7 +267,7 @@ ConfigErrorInfo ConfigParser::ParseConfig(
 
     // If |key| is a enctypes field in the [libdefaults] section.
     if (current_section == kSectionLibdefaults && group_level <= 1 &&
-        base::ContainsKey(enctypes_fields_, key)) {
+        base::Contains(enctypes_fields_, key)) {
       listed_enctypes_fields.insert(key);
 
       // Note: encryption types can be delimited by comma or whitespace.
@@ -275,8 +275,8 @@ ConfigErrorInfo ConfigParser::ParseConfig(
           value, ", ", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
 
       for (const std::string& type : enctypes) {
-        has_weak_enctype |= base::ContainsKey(weak_enctypes_, type);
-        has_strong_enctype |= base::ContainsKey(strong_enctypes_, type);
+        has_weak_enctype |= base::Contains(weak_enctypes_, type);
+        has_strong_enctype |= base::Contains(strong_enctypes_, type);
       }
     }
   }
@@ -310,7 +310,7 @@ bool ConfigParser::IsKeySupported(const std::string& key,
   //     clockskew = 500
   //   }
   if (section == kSectionLibdefaults && group_level <= 1) {
-    return base::ContainsKey(libdefaults_whitelist_, key);
+    return base::Contains(libdefaults_whitelist_, key);
   }
 
   // Enforce only whitelisted realm keys on the root and realm levels:
@@ -321,7 +321,7 @@ bool ConfigParser::IsKeySupported(const std::string& key,
   //   }
   // Not sure if they can actually be at the root level, but just in case...
   if (section == kSectionRealms && group_level <= 1)
-    return base::ContainsKey(realms_whitelist_, key);
+    return base::Contains(realms_whitelist_, key);
 
   // Anything else is fine (all keys of other supported sections).
   return true;

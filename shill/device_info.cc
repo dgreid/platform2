@@ -204,7 +204,7 @@ void DeviceInfo::RemoveDeviceFromBlackList(const string& device_name) {
 }
 
 bool DeviceInfo::IsDeviceBlackListed(const string& device_name) {
-  return base::ContainsKey(black_list_, device_name);
+  return base::Contains(black_list_, device_name);
 }
 
 void DeviceInfo::Start() {
@@ -249,7 +249,7 @@ vector<string> DeviceInfo::GetUninitializedTechnologies() const {
       continue;
     }
     if (technology.IsPrimaryConnectivityTechnology() &&
-        !base::ContainsKey(initialized_technologies, technology))
+        !base::Contains(initialized_technologies, technology))
       unique_technologies.insert(technology.GetName());
   }
   return vector<string>(unique_technologies.begin(), unique_technologies.end());
@@ -1201,7 +1201,7 @@ void DeviceInfo::RdnssMsgHandler(const RTNLMessage& msg) {
   SLOG(this, 2) << __func__;
   DCHECK(msg.type() == RTNLMessage::kTypeRdnss);
   int interface_index = msg.interface_index();
-  if (!base::ContainsKey(infos_, interface_index)) {
+  if (!base::Contains(infos_, interface_index)) {
     SLOG(this, 2) << "Got RDNSS option for unknown index " << interface_index;
   }
 
@@ -1236,7 +1236,7 @@ void DeviceInfo::DelayedDeviceCreationTask() {
     int dev_index = *it;
     delayed_devices_.erase(it);
 
-    DCHECK(base::ContainsKey(infos_, dev_index));
+    DCHECK(base::Contains(infos_, dev_index));
     DCHECK(!GetDevice(dev_index));
 
     const string& link_name = infos_[dev_index].name;

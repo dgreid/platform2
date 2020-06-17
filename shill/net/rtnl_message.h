@@ -200,7 +200,7 @@ class SHILL_EXPORT RTNLMessage {
   // type that's used in the system headers.  Use uint16_t instead and hope
   // that the conversion never ends up truncating on some strange platform.
   bool HasAttribute(uint16_t attr) const {
-    return base::ContainsKey(attributes_, attr);
+    return base::Contains(attributes_, attr);
   }
   const ByteString GetAttribute(uint16_t attr) const {
     return HasAttribute(attr) ? attributes_.find(attr)->second : ByteString(0);

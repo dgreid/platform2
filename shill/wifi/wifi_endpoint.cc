@@ -347,8 +347,8 @@ const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
         properties.Get<KeyValueStore>(WPASupplicant::kPropertyRSN);
     set<KeyManagement> key_management;
     ParseKeyManagementMethods(rsn_properties, &key_management);
-    flags->rsn_8021x = base::ContainsKey(key_management, kKeyManagement802_1x);
-    flags->rsn_psk = base::ContainsKey(key_management, kKeyManagementPSK);
+    flags->rsn_8021x = base::Contains(key_management, kKeyManagement802_1x);
+    flags->rsn_psk = base::Contains(key_management, kKeyManagementPSK);
   }
 
   if (properties.Contains<KeyValueStore>(WPASupplicant::kPropertyWPA)) {
@@ -356,8 +356,8 @@ const char* WiFiEndpoint::ParseSecurity(const KeyValueStore& properties,
         properties.Get<KeyValueStore>(WPASupplicant::kPropertyWPA);
     set<KeyManagement> key_management;
     ParseKeyManagementMethods(rsn_properties, &key_management);
-    flags->wpa_8021x = base::ContainsKey(key_management, kKeyManagement802_1x);
-    flags->wpa_psk = base::ContainsKey(key_management, kKeyManagementPSK);
+    flags->wpa_8021x = base::Contains(key_management, kKeyManagement802_1x);
+    flags->wpa_psk = base::Contains(key_management, kKeyManagementPSK);
   }
 
   if (properties.Contains<bool>(WPASupplicant::kPropertyPrivacy)) {

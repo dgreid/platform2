@@ -487,7 +487,7 @@ bool IsChromeExecName(const std::string& exec) {
     }
   }
 
-  return base::ContainsKey(chrome_names, exec);
+  return base::Contains(chrome_names, exec);
 }
 
 }  // namespace

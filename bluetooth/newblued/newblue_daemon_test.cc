@@ -155,7 +155,7 @@ class NewblueDaemonTest : public ::testing::Test {
  protected:
   dbus::ExportedObject::MethodCallCallback* GetMethodHandler(
       MethodHandlerMap method_handlers, const std::string& method_name) {
-    return base::ContainsKey(method_handlers, method_name)
+    return base::Contains(method_handlers, method_name)
                ? method_handlers[method_name]
                : &dummy_method_handler_;
   }
@@ -314,7 +314,7 @@ class NewblueDaemonTest : public ::testing::Test {
 
   scoped_refptr<dbus::MockExportedObject> AddOrGetMockExportedObject(
       const dbus::ObjectPath& object_path) {
-    if (base::ContainsKey(mock_exported_objects_, object_path))
+    if (base::Contains(mock_exported_objects_, object_path))
       return mock_exported_objects_[object_path];
 
     scoped_refptr<dbus::MockExportedObject> exported_object =
@@ -324,7 +324,7 @@ class NewblueDaemonTest : public ::testing::Test {
   }
 
   void RemoveMockExportedObject(const dbus::ObjectPath& object_path) {
-    if (base::ContainsKey(mock_exported_objects_, object_path))
+    if (base::Contains(mock_exported_objects_, object_path))
       mock_exported_objects_.erase(object_path);
   }
 

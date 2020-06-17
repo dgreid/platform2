@@ -157,7 +157,7 @@ TEST_F(ModemInfoTest, StartStop) {
 TEST_F(ModemInfoTest, Connect) {
   Connect(GetModemWithProperties());
   EXPECT_EQ(1, modem_info_.modems_.size());
-  EXPECT_TRUE(base::ContainsKey(modem_info_.modems_, kModemPath));
+  EXPECT_TRUE(base::Contains(modem_info_.modems_, kModemPath));
 }
 
 TEST_F(ModemInfoTest, AddRemoveInterfaces) {

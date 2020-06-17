@@ -257,7 +257,7 @@ void JpegDecodeAcceleratorImpl::IPCBridge::Decode(int32_t buffer_id,
                                                   buffer_handle_t output_buffer,
                                                   DecodeCallback callback) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK(!base::ContainsKey(inflight_buffer_ids_, buffer_id));
+  DCHECK(!base::Contains(inflight_buffer_ids_, buffer_id));
 
   if (!jda_ptr_.is_bound()) {
     callback.Run(buffer_id, static_cast<int>(Error::TRY_START_AGAIN));
@@ -389,7 +389,7 @@ void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAck(
     int32_t buffer_id,
     cros::mojom::DecodeError error) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK(base::ContainsKey(inflight_buffer_ids_, buffer_id));
+  DCHECK(base::Contains(inflight_buffer_ids_, buffer_id));
   inflight_buffer_ids_.erase(buffer_id);
   callback.Run(buffer_id, static_cast<int>(error));
 }

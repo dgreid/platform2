@@ -193,7 +193,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   // specific capability types into their own test fixture subclasses.
   bool IsCellularTypeUnderTestOneOf(
       const std::set<Cellular::Type>& valid_types) const {
-    return base::ContainsKey(valid_types, GetParam());
+    return base::Contains(valid_types, GetParam());
   }
 
   void PopulateProxies() {

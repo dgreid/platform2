@@ -48,7 +48,7 @@ ProcessWithId* SubprocessTool::CreateProcess(bool sandboxed,
 }
 
 bool SubprocessTool::RecordProcess(std::unique_ptr<ProcessWithId> process) {
-  if (base::ContainsKey(processes_, process->id()))
+  if (base::Contains(processes_, process->id()))
     return false;
 
   processes_[process->id()] = std::move(process);

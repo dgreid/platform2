@@ -181,7 +181,7 @@ bool ScanManager::IsFilterMatch(const DeviceInfo& device_info) const {
 bool ScanManager::StartScan(std::string client_id) {
   clients_.push_back(client_id);
   // Create and initialize a new filter for the client if not exist yet.
-  if (!base::ContainsKey(filters_, client_id))
+  if (!base::Contains(filters_, client_id))
     filters_[client_id] = Filter();
   MergeFilters();
   if (!UpdateScan()) {

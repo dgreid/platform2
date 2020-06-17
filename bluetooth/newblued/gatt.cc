@@ -358,7 +358,7 @@ void Gatt::OnGattClientEnumServices(bool finished,
           << ", transaction " << transaction_id << ", found "
           << uuid.canonical_value();
 
-  if (!base::ContainsKey(remote_services_, device_address)) {
+  if (!base::Contains(remote_services_, device_address)) {
     std::map<uint16_t, std::unique_ptr<GattService>> services;
     remote_services_.emplace(device_address, std::move(services));
   }

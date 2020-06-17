@@ -57,7 +57,7 @@ bool PPPDevice::AcquireIPv6Config() {
 
 // static
 string PPPDevice::GetInterfaceName(const map<string, string>& configuration) {
-  if (base::ContainsKey(configuration, kPPPInterfaceName)) {
+  if (base::Contains(configuration, kPPPInterfaceName)) {
     return configuration.find(kPPPInterfaceName)->second;
   }
   return string();

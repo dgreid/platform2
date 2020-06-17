@@ -207,7 +207,7 @@ void DiskMonitor::ProcessBlockDeviceEvents(
   std::string device_path = device.NativePath();
   if (disk_added) {
     if (device.IsAutoMountable()) {
-      if (base::ContainsKey(disks_detected_, device_path)) {
+      if (base::Contains(disks_detected_, device_path)) {
         // Disk already exists, so remove it and then add it again.
         events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, device_path));
       } else {
@@ -219,7 +219,7 @@ void DiskMonitor::ProcessBlockDeviceEvents(
         if (parent) {
           std::string parent_device_path =
               UdevDevice(std::move(parent)).NativePath();
-          if (base::ContainsKey(disks_detected_, parent_device_path)) {
+          if (base::Contains(disks_detected_, parent_device_path)) {
             disks_detected_[parent_device_path].insert(device_path);
           }
         }
@@ -231,7 +231,7 @@ void DiskMonitor::ProcessBlockDeviceEvents(
     events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, device_path));
   } else if (child_disk_removed) {
     bool no_child_disks_found = true;
-    if (base::ContainsKey(disks_detected_, device_path)) {
+    if (base::Contains(disks_detected_, device_path)) {
       auto& child_disks = disks_detected_[device_path];
       no_child_disks_found = child_disks.empty();
       for (const auto& child_disk : child_disks) {
@@ -255,14 +255,14 @@ void DiskMonitor::ProcessMmcOrScsiDeviceEvents(
 
   std::string device_path = device.NativePath();
   if (strcmp(action, kUdevAddAction) == 0) {
-    if (base::ContainsKey(devices_detected_, device_path)) {
+    if (base::Contains(devices_detected_, device_path)) {
       events->push_back(DeviceEvent(DeviceEvent::kDeviceScanned, device_path));
     } else {
       devices_detected_.insert(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDeviceAdded, device_path));
     }
   } else if (strcmp(action, kUdevRemoveAction) == 0) {
-    if (base::ContainsKey(devices_detected_, device_path)) {
+    if (base::Contains(devices_detected_, device_path)) {
       devices_detected_.erase(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDeviceRemoved, device_path));
     }

@@ -263,7 +263,7 @@ void UnknownMessage::Print(int header_log_level,
 
 bool NetlinkMessageFactory::AddFactoryMethod(uint16_t message_type,
                                              FactoryMethod factory) {
-  if (base::ContainsKey(factories_, message_type)) {
+  if (base::Contains(factories_, message_type)) {
     LOG(WARNING) << "Message type " << message_type << " already exists.";
     return false;
   }
@@ -288,7 +288,7 @@ std::unique_ptr<NetlinkMessage> NetlinkMessageFactory::CreateMessage(
     message = std::make_unique<OverrunMessage>();
   } else if (message_type == ErrorAckMessage::kMessageType) {
     message = std::make_unique<ErrorAckMessage>();
-  } else if (base::ContainsKey(factories_, message_type)) {
+  } else if (base::Contains(factories_, message_type)) {
     std::map<uint16_t, FactoryMethod>::const_iterator factory;
     factory = factories_.find(message_type);
     message = factory->second.Run(*packet);

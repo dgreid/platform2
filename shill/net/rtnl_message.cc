@@ -439,14 +439,14 @@ bool RTNLMessage::DecodeLink(const RTNLHeader* hdr,
 
   base::Optional<std::string> kind_option;
 
-  if (base::ContainsKey(*attrs, IFLA_LINKINFO)) {
+  if (base::Contains(*attrs, IFLA_LINKINFO)) {
     ByteString& bytes = attrs->find(IFLA_LINKINFO)->second;
     struct rtattr* link_data =
         reinterpret_cast<struct rtattr*>(bytes.GetData());
     size_t link_len = bytes.GetLength();
     std::unique_ptr<RTNLAttrMap> linkinfo = ParseAttrs(link_data, link_len);
 
-    if (linkinfo && base::ContainsKey(*linkinfo, IFLA_INFO_KIND)) {
+    if (linkinfo && base::Contains(*linkinfo, IFLA_INFO_KIND)) {
       ByteString& kindBytes = linkinfo->find(IFLA_INFO_KIND)->second;
       const char* kind = reinterpret_cast<const char*>(kindBytes.GetData());
       std::string kind_string(kind, strnlen(kind, kindBytes.GetLength()));

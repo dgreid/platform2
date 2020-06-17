@@ -401,7 +401,7 @@ bool ArchiveManager::CreateMountDirectory(const std::string& path) const {
 MountErrorType ArchiveManager::MountAVFSPath(const std::string& base_path,
                                              const std::string& avfs_path) {
   base::FilePath mount_path(avfs_path);
-  if (base::ContainsKey(avfsd_mounts_, mount_path)) {
+  if (base::Contains(avfsd_mounts_, mount_path)) {
     LOG(ERROR) << "AVFS mount point " << quote(mount_path) << " already exists";
     return MOUNT_ERROR_INTERNAL;
   }

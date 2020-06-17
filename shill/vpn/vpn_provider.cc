@@ -134,7 +134,7 @@ void VPNProvider::Start() {}
 void VPNProvider::Stop() {}
 
 void VPNProvider::AddAllowedInterface(const std::string& interface_name) {
-  if (base::ContainsValue(allowed_iifs_, interface_name))
+  if (base::Contains(allowed_iifs_, interface_name))
     return;
 
   // Add to the list of interfaces whitelisted via |SetDefaultRoutingPolicy|
@@ -150,7 +150,7 @@ void VPNProvider::AddAllowedInterface(const std::string& interface_name) {
 }
 
 void VPNProvider::RemoveAllowedInterface(const std::string& interface_name) {
-  if (!base::ContainsValue(allowed_iifs_, interface_name))
+  if (!base::Contains(allowed_iifs_, interface_name))
     return;
 
   base::Erase(allowed_iifs_, interface_name);

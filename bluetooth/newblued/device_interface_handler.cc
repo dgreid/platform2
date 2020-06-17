@@ -315,8 +315,8 @@ bool DeviceInterfaceHandler::RemoveDevice(const std::string& address,
   }
 
   // For device which is either connected or to-be-connected, disconnect it.
-  if (base::ContainsKey(connections_, address) ||
-      base::ContainsKey(connection_attempts_, address)) {
+  if (base::Contains(connections_, address) ||
+      base::Contains(connection_attempts_, address)) {
     DisconnectInternal(address, /* disconnect_response */ nullptr,
                        /* disconnect_by_us */ true);
   }
@@ -534,7 +534,7 @@ void DeviceInterfaceHandler::HandleConnect(
 
   VLOG(1) << "Handling Connect for device " << device_address;
 
-  if (base::ContainsKey(connection_sessions_, device_address)) {
+  if (base::Contains(connection_sessions_, device_address)) {
     response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
                              bluetooth_device::kErrorInProgress,
                              "Connection/disconnection in progress");
@@ -555,7 +555,7 @@ void DeviceInterfaceHandler::HandleDisconnect(
 
   VLOG(1) << "Handling Disconnect for device " << device_address;
 
-  if (base::ContainsKey(connection_sessions_, device_address)) {
+  if (base::Contains(connection_sessions_, device_address)) {
     response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
                              bluetooth_device::kErrorInProgress,
                              "Connection/disconnection in progress");
@@ -600,7 +600,7 @@ void DeviceInterfaceHandler::ConnectInternal(
   struct bt_addr address;
   CHECK(ConvertToBtAddr(device->is_random_address, device_address, &address));
 
-  if (base::ContainsKey(connection_attempts_, device_address)) {
+  if (base::Contains(connection_attempts_, device_address)) {
     LOG(WARNING) << "Connection with device " << device_address
                  << " in progress";
     ConnectReply(device_address, false, bluetooth_device::kErrorInProgress);

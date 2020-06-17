@@ -207,7 +207,7 @@ void BaseDirectoryIterator::AddEntryIfValid(const smbc_dirent& dirent) {
   // Ignore "." and ".." entries.
   // TODO(allenvic): Handle SMBC_LINK
   if (IsSelfOrParentDir(name) || !ShouldIncludeEntryType(dirent.smbc_type) ||
-      base::ContainsValue(name, '/') || base::ContainsValue(name, '\\')) {
+      base::Contains(name, '/') || base::Contains(name, '\\')) {
     return;
   }
 
@@ -224,7 +224,7 @@ void BaseDirectoryIterator::AddEntryIfValid(
   // TODO(zentaro): Investigate how this API deals with directories that are
   // file shares.
   if (IsSelfOrParentDir(name) || IsSymlink(file_info.attrs) ||
-      base::ContainsValue(name, '/') || base::ContainsValue(name, '\\')) {
+      base::Contains(name, '/') || base::Contains(name, '\\')) {
     return;
   }
 

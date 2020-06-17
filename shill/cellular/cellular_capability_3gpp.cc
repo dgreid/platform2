@@ -626,11 +626,11 @@ void CellularCapability3gpp::FillConnectPropertyMap(KeyValueStore* properties) {
   Stringmap apn_info = apn_try_list_.front();
   SLOG(this, 2) << __func__ << ": Using APN " << apn_info[kApnProperty];
   properties->Set<string>(kConnectApn, apn_info[kApnProperty]);
-  if (base::ContainsKey(apn_info, kApnUsernameProperty))
+  if (base::Contains(apn_info, kApnUsernameProperty))
     properties->Set<string>(kConnectUser, apn_info[kApnUsernameProperty]);
-  if (base::ContainsKey(apn_info, kApnPasswordProperty))
+  if (base::Contains(apn_info, kApnPasswordProperty))
     properties->Set<string>(kConnectPassword, apn_info[kApnPasswordProperty]);
-  if (base::ContainsKey(apn_info, kApnAuthenticationProperty)) {
+  if (base::Contains(apn_info, kApnAuthenticationProperty)) {
     MMBearerAllowedAuth allowed_auth = ApnAuthenticationToMMBearerAllowedAuth(
         apn_info[kApnAuthenticationProperty]);
     if (allowed_auth != MM_BEARER_ALLOWED_AUTH_UNKNOWN)
@@ -987,9 +987,9 @@ Stringmap CellularCapability3gpp::ParseScanResult(const ScanResult& result) {
 
   // If the long name is not available but the network ID is, look up the long
   // name in the mobile provider database.
-  if ((!base::ContainsKey(parsed, kLongNameProperty) ||
+  if ((!base::Contains(parsed, kLongNameProperty) ||
        parsed[kLongNameProperty].empty()) &&
-      base::ContainsKey(parsed, kNetworkIdProperty)) {
+      base::Contains(parsed, kNetworkIdProperty)) {
     mobile_operator_info_->Reset();
     mobile_operator_info_->UpdateMCCMNC(parsed[kNetworkIdProperty]);
     if (mobile_operator_info_->IsMobileNetworkOperatorKnown() &&

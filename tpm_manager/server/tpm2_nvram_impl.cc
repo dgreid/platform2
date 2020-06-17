@@ -511,7 +511,7 @@ void Tpm2NvramImpl::PrunePolicies() {
   // owned.
   LocalData new_local_data;
   for (const auto& policy : local_data.nvram_policy()) {
-    if (base::ContainsValue(nv_indices, policy.index())) {
+    if (base::Contains(nv_indices, policy.index())) {
       *new_local_data.add_nvram_policy() = policy;
     }
   }

@@ -136,7 +136,7 @@ ExportedInterface::EnsureExportedPropertyRegistered(
 
 void ExportedInterface::EnsureExportedPropertyUnregistered(
     const std::string& property_name) {
-  if (!base::ContainsKey(exported_properties_, property_name))
+  if (!base::Contains(exported_properties_, property_name))
     return;
 
   VLOG(2) << "Removing property " << property_name << " to exported object "
@@ -153,7 +153,7 @@ void ExportedInterface::EnsureExportedPropertyUnregistered(
 brillo::dbus_utils::ExportedPropertyBase*
 ExportedInterface::GetRegisteredExportedProperty(
     const std::string& property_name) {
-  if (!base::ContainsKey(exported_properties_, property_name))
+  if (!base::Contains(exported_properties_, property_name))
     return nullptr;
 
   return exported_properties_[property_name].get();
@@ -179,14 +179,14 @@ ExportedObject::~ExportedObject() {
 
 ExportedInterface* ExportedObject::GetExportedInterface(
     const std::string& interface_name) {
-  if (!base::ContainsKey(exported_interfaces_, interface_name))
+  if (!base::Contains(exported_interfaces_, interface_name))
     return nullptr;
 
   return exported_interfaces_.find(interface_name)->second.get();
 }
 
 void ExportedObject::AddExportedInterface(const std::string& interface_name) {
-  CHECK(!base::ContainsKey(exported_interfaces_, interface_name))
+  CHECK(!base::Contains(exported_interfaces_, interface_name))
       << "Interface " << interface_name << " has been added before";
 
   exported_interfaces_.emplace(
@@ -288,7 +288,7 @@ void ExportedObjectManagerWrapper::EnsureExportedObjectRegistered(
     const dbus::ObjectPath& object_path,
     const brillo::dbus_utils::DBusObject::PropertyHandlerSetupCallback&
         property_handler_setup_callback) {
-  if (base::ContainsKey(exported_objects_, object_path.value()))
+  if (base::Contains(exported_objects_, object_path.value()))
     return;
 
   VLOG(1) << "Adding new ExportedObject " << object_path.value();

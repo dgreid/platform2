@@ -37,7 +37,7 @@ bool KeyValueStore::operator!=(const KeyValueStore& rhs) const {
 }
 
 bool KeyValueStore::ContainsVariant(const string& name) const {
-  return base::ContainsKey(properties_, name);
+  return base::Contains(properties_, name);
 }
 
 const brillo::Any& KeyValueStore::GetVariant(const string& name) const {

@@ -228,7 +228,7 @@ ErrorType AccountManager::ClearAccounts(
     return ERROR_NONE;
 
   for (auto it = accounts_.begin(); it != accounts_.end(); /* empty */) {
-    if (base::ContainsKey(keep_list, it->data.principal_name())) {
+    if (base::Contains(keep_list, it->data.principal_name())) {
       ++it;
       continue;
     }

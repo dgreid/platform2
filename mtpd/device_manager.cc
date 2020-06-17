@@ -482,7 +482,7 @@ bool DeviceManager::AddStorageForTest(const std::string& storage_name,
 
   // And the storage should not already exist.
   MtpStorageMap& existing_mtp_storage_map = existing_mtp_device.storage_map;
-  if (base::ContainsKey(existing_mtp_storage_map, storage_id))
+  if (base::Contains(existing_mtp_storage_map, storage_id))
     return false;
 
   existing_mtp_storage_map.insert(std::make_pair(storage_id, storage_info));
@@ -589,7 +589,7 @@ bool DeviceManager::GetDeviceAndStorageId(const std::string& storage_name,
   if (device_it == device_map_.end())
     return false;
 
-  if (!base::ContainsKey(device_it->second.storage_map, id))
+  if (!base::Contains(device_it->second.storage_map, id))
     return false;
 
   *storage_id = id;
@@ -689,7 +689,7 @@ void DeviceManager::AddOrUpdateDevices(
 
     if (add_update) {
       // Skip devices that have already been opened.
-      if (base::ContainsKey(device_map_, usb_bus_str))
+      if (base::Contains(device_map_, usb_bus_str))
         continue;
     } else {
       // Skip non-target device.
@@ -755,7 +755,7 @@ void DeviceManager::AddOrUpdateDevices(
     // Iterate through storages on the device and add any that are missing.
     for (LIBMTP_devicestorage_t* storage = mtp_device->storage; storage;
          storage = storage->next) {
-      if (base::ContainsKey(*storage_map_ptr, storage->id))
+      if (base::Contains(*storage_map_ptr, storage->id))
         continue;
       const std::string storage_name =
           StorageToString(usb_bus_str, storage->id);

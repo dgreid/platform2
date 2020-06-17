@@ -1290,7 +1290,7 @@ bool Device::SetIPFlag(IPAddress::Family family,
     string message = StringPrintf("IP flag write failed: %s to %s",
                                   value.c_str(), flag_file.value().c_str());
     if (!base::PathExists(flag_file) &&
-        base::ContainsKey(written_flags_, flag_file.value())) {
+        base::Contains(written_flags_, flag_file.value())) {
       SLOG(this, 2) << message << " (device is no longer present?)";
     } else {
       LOG(ERROR) << message;

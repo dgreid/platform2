@@ -30,7 +30,7 @@ bool DeviceEjector::Eject(const std::string& device_path) {
   CHECK(!device_path.empty()) << "Invalid device path";
 
   LOG(INFO) << "Eject device " << quote(device_path);
-  if (base::ContainsKey(eject_process_, device_path)) {
+  if (base::Contains(eject_process_, device_path)) {
     LOG(WARNING) << "Device " << quote(device_path)
                  << " is already being ejected";
     return false;

@@ -222,7 +222,7 @@ bool ShillClient::IsMonitoredDevice(DeviceProxyInterface* device) {
     LOG(ERROR) << "Failed to find interface property in device properties.";
     return false;
   }
-  return base::ContainsKey(device_whitelist_, it->second.TryGet<string>());
+  return base::Contains(device_whitelist_, it->second.TryGet<string>());
 }
 
 void ShillClient::OnShillServiceOwnerChange(const string& old_owner,

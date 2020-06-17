@@ -83,7 +83,7 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
 
       string path = devnode;
       const char* driver = udev_device_get_driver(device.get());
-      if (!base::ContainsKey(partially_claimed_devices_, path)) {
+      if (!base::Contains(partially_claimed_devices_, path)) {
         if (driver) {
           auto it = unclaimed_devices_.find(path);
           if (it == unclaimed_devices_.end()) {

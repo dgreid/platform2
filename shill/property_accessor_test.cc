@@ -553,7 +553,7 @@ class StringMapWrapper {
  public:
   void Clear(const string& key, Error* /*error*/) { value_.erase(key); }
   string Get(const string& key, Error* /*error*/) {
-    EXPECT_TRUE(base::ContainsKey(value_, key));
+    EXPECT_TRUE(base::Contains(value_, key));
     return value_[key];
   }
   bool Set(const string& key, const string& value, Error* /*error*/) {
@@ -607,7 +607,7 @@ TEST(PropertyAccessorTest, CustomMappedAccessor) {
     Error error;
     accessor.Clear(&error);
     EXPECT_TRUE(error.IsSuccess());
-    EXPECT_FALSE(base::ContainsKey(wrapper.value_, kKey));
+    EXPECT_FALSE(base::Contains(wrapper.value_, kKey));
   }
 }
 

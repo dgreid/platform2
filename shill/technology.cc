@@ -49,7 +49,7 @@ bool GetTechnologyVectorFromString(const string& technologies_string,
       return false;
     }
 
-    if (base::ContainsKey(seen, technology)) {
+    if (base::Contains(seen, technology)) {
       Error::PopulateAndLog(FROM_HERE, error, Error::kInvalidArguments,
                             name + " is duplicated in the list");
       return false;

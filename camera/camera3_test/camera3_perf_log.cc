@@ -69,7 +69,7 @@ bool Camera3PerfLog::UpdateDeviceEvent(int cam_id,
                                        base::TimeTicks time) {
   VLOGF(1) << "Updating device event " << static_cast<int>(event)
            << " of camera " << cam_id << " at " << time << " us";
-  if (base::ContainsKey(device_events_[cam_id], event)) {
+  if (base::Contains(device_events_[cam_id], event)) {
     LOGF(ERROR) << "Device event " << static_cast<int>(event) << " of camera "
                 << cam_id << " is being updated multiple times";
     return false;
@@ -85,7 +85,7 @@ bool Camera3PerfLog::UpdateFrameEvent(int cam_id,
   VLOGF(1) << "Updating frame event " << static_cast<int>(event)
            << " of camera " << cam_id << " for frame number " << frame_number
            << " at " << time << " us";
-  if (base::ContainsKey(frame_events_[cam_id][frame_number], event)) {
+  if (base::Contains(frame_events_[cam_id][frame_number], event)) {
     LOGF(ERROR) << "Frame event " << static_cast<int>(event) << " of camera "
                 << cam_id << " frame number " << frame_number
                 << " is being updated multiple times";
@@ -104,16 +104,16 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
       {DeviceEvent::OPENED, "device_open"},
       {DeviceEvent::PREVIEW_STARTED, "preview_start"},
   };
-  if (base::ContainsKey(device_events_, cam_id)) {
+  if (base::Contains(device_events_, cam_id)) {
     const std::map<DeviceEvent, base::TimeTicks>& events =
         device_events_.at(cam_id);
-    if (!base::ContainsKey(events, DeviceEvent::OPENING)) {
+    if (!base::Contains(events, DeviceEvent::OPENING)) {
       LOGF(ERROR) << "Failed to find device opening performance log";
       return perf_logs;
     }
     const base::TimeTicks start_ticks = events.at(DeviceEvent::OPENING);
     for (const auto& event_name : kDeviceEventNameMap) {
-      if (!base::ContainsKey(events, event_name.first))
+      if (!base::Contains(events, event_name.first))
         continue;
       const base::TimeTicks end_ticks = events.at(event_name.first);
       perf_logs.emplace_back(event_name.second,
@@ -121,12 +121,12 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
     }
 
     // The first still image captured time.
-    if (base::ContainsKey(frame_events_, cam_id)) {
+    if (base::Contains(frame_events_, cam_id)) {
       const auto it = std::find_if(
           frame_events_.at(cam_id).begin(), frame_events_.at(cam_id).end(),
           [](const auto& fn_events) {
-            return base::ContainsKey(fn_events.second,
-                                     FrameEvent::STILL_CAPTURE_RESULT);
+            return base::Contains(fn_events.second,
+                                  FrameEvent::STILL_CAPTURE_RESULT);
           });
       if (it != frame_events_.at(cam_id).end()) {
         const base::TimeTicks end_ticks =
@@ -144,18 +144,18 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
       {FrameEvent::VIDEO_RECORD_RESULT, "video_record_latency"},
   };
   std::map<std::string, std::vector<int64_t>> frame_perf_logs;
-  if (base::ContainsKey(frame_events_, cam_id)) {
+  if (base::Contains(frame_events_, cam_id)) {
     for (const auto& it : frame_events_.at(cam_id)) {
       const uint32_t frame_number = it.first;
       const std::map<FrameEvent, base::TimeTicks>& events = it.second;
-      if (!base::ContainsKey(events, FrameEvent::SHUTTER)) {
+      if (!base::Contains(events, FrameEvent::SHUTTER)) {
         VLOGF(1) << "No shutter event found for frame " << frame_number
                  << " of camera " << cam_id;
         continue;
       }
       const base::TimeTicks start_ticks = events.at(FrameEvent::SHUTTER);
       for (const auto& event_name : kFrameEventNameMap) {
-        if (!base::ContainsKey(events, event_name.first))
+        if (!base::Contains(events, event_name.first))
           continue;
         const base::TimeTicks end_ticks = events.at(event_name.first);
         frame_perf_logs[event_name.second].push_back(
@@ -163,7 +163,7 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
       }
     }
     for (const auto& event_name : kFrameEventNameMap) {
-      if (!base::ContainsKey(frame_perf_logs, event_name.second))
+      if (!base::Contains(frame_perf_logs, event_name.second))
         continue;
       const std::vector<int64_t>& logs = frame_perf_logs.at(event_name.second);
       if (!logs.empty()) {
@@ -179,7 +179,7 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
     std::vector<int64_t> logs;
     base::Optional<base::TimeTicks> start_ticks;
     for (const auto& it : frame_events_.at(cam_id)) {
-      if (!base::ContainsKey(it.second, FrameEvent::STILL_CAPTURE_RESULT))
+      if (!base::Contains(it.second, FrameEvent::STILL_CAPTURE_RESULT))
         continue;
       const base::TimeTicks end_ticks =
           it.second.at(FrameEvent::STILL_CAPTURE_RESULT);
@@ -197,8 +197,8 @@ std::vector<std::pair<std::string, int64_t>> Camera3PerfLog::CollectPerfLogs(
 
     // Portrait mode time.
     for (const auto& it : frame_events_.at(cam_id)) {
-      if (!base::ContainsKey(it.second, FrameEvent::PORTRAIT_MODE_STARTED) ||
-          !base::ContainsKey(it.second, FrameEvent::PORTRAIT_MODE_ENDED))
+      if (!base::Contains(it.second, FrameEvent::PORTRAIT_MODE_STARTED) ||
+          !base::Contains(it.second, FrameEvent::PORTRAIT_MODE_ENDED))
         continue;
       const base::TimeTicks start_ticks =
           it.second.at(FrameEvent::PORTRAIT_MODE_STARTED);

@@ -97,7 +97,7 @@ RenameErrorType RenameManager::StartRenaming(
     return RENAME_ERROR_RENAME_PROGRAM_NOT_FOUND;
   }
 
-  if (base::ContainsKey(rename_process_, device_path)) {
+  if (base::Contains(rename_process_, device_path)) {
     LOG(WARNING) << "Device " << quote(device_path)
                  << " is already being renamed";
     return RENAME_ERROR_DEVICE_BEING_RENAMED;

@@ -41,7 +41,7 @@ int32_t CameraGPUAlgorithm::Initialize(
 
 int32_t CameraGPUAlgorithm::RegisterBuffer(int buffer_fd) {
   base::AutoLock auto_lock(map_lock_);
-  if (base::ContainsKey(shm_map_, buffer_fd)) {
+  if (base::Contains(shm_map_, buffer_fd)) {
     LOGF(ERROR) << "Buffer already registered";
     return -EINVAL;
   }
@@ -78,7 +78,7 @@ void CameraGPUAlgorithm::DeregisterBuffers(const int32_t buffer_handles[],
                                            uint32_t size) {
   base::AutoLock auto_lock(map_lock_);
   for (uint32_t i = 0; i < size; i++) {
-    if (!base::ContainsKey(shm_map_, buffer_handles[i])) {
+    if (!base::Contains(shm_map_, buffer_handles[i])) {
       LOGF(ERROR) << "Invalid buffer handle (" << buffer_handles[i] << ")";
       continue;
     }
@@ -126,8 +126,8 @@ void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
     const uint32_t kChannels = 3;
     size_t buffer_size = params.width * params.height * kChannels;
     base::AutoLock auto_lock(map_lock_);
-    if (!base::ContainsKey(shm_map_, params.input_buffer_handle) ||
-        !base::ContainsKey(shm_map_, params.output_buffer_handle) ||
+    if (!base::Contains(shm_map_, params.input_buffer_handle) ||
+        !base::Contains(shm_map_, params.output_buffer_handle) ||
         shm_map_.at(params.input_buffer_handle)->mapped_size() < buffer_size ||
         shm_map_.at(params.output_buffer_handle)->mapped_size() < buffer_size) {
       LOGF(ERROR) << "Invalid buffer handle";

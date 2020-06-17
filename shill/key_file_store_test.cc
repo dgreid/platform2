@@ -130,10 +130,10 @@ TEST_F(KeyFileStoreTest, GetGroups) {
   ASSERT_TRUE(store_->Open());
   set<string> groups = store_->GetGroups();
   EXPECT_EQ(3, groups.size());
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupA));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupB));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupC));
-  EXPECT_FALSE(base::ContainsKey(groups, "g-x"));
+  EXPECT_TRUE(base::Contains(groups, kGroupA));
+  EXPECT_TRUE(base::Contains(groups, kGroupB));
+  EXPECT_TRUE(base::Contains(groups, kGroupC));
+  EXPECT_FALSE(base::Contains(groups, "g-x"));
   ASSERT_TRUE(store_->Close());
 }
 
@@ -158,12 +158,12 @@ TEST_F(KeyFileStoreTest, GetGroupsWithKey) {
   ASSERT_TRUE(store_->Open());
   set<string> groups_a = store_->GetGroupsWithKey(kKeyA);
   EXPECT_EQ(2, groups_a.size());
-  EXPECT_TRUE(base::ContainsKey(groups_a, kGroupA));
-  EXPECT_TRUE(base::ContainsKey(groups_a, kGroupB));
+  EXPECT_TRUE(base::Contains(groups_a, kGroupA));
+  EXPECT_TRUE(base::Contains(groups_a, kGroupB));
   set<string> groups_b = store_->GetGroupsWithKey(kKeyB);
   EXPECT_EQ(2, groups_b.size());
-  EXPECT_TRUE(base::ContainsKey(groups_b, kGroupB));
-  EXPECT_TRUE(base::ContainsKey(groups_b, kGroupC));
+  EXPECT_TRUE(base::Contains(groups_b, kGroupB));
+  EXPECT_TRUE(base::Contains(groups_b, kGroupC));
   ASSERT_TRUE(store_->Close());
 }
 
@@ -909,10 +909,10 @@ TEST_F(KeyFileStoreTest, Combo) {
 
   set<string> groups = store_->GetGroups();
   EXPECT_EQ(3, groups.size());
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupA));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupB));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupC));
-  EXPECT_FALSE(base::ContainsKey(groups, kGroupX));
+  EXPECT_TRUE(base::Contains(groups, kGroupA));
+  EXPECT_TRUE(base::Contains(groups, kGroupB));
+  EXPECT_TRUE(base::Contains(groups, kGroupC));
+  EXPECT_FALSE(base::Contains(groups, kGroupX));
 
   {
     string value;
@@ -961,9 +961,9 @@ TEST_F(KeyFileStoreTest, Combo) {
 
   groups = store_->GetGroups();
   EXPECT_EQ(2, groups.size());
-  EXPECT_FALSE(base::ContainsKey(groups, kGroupA));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupB));
-  EXPECT_TRUE(base::ContainsKey(groups, kGroupC));
+  EXPECT_FALSE(base::Contains(groups, kGroupA));
+  EXPECT_TRUE(base::Contains(groups, kGroupB));
+  EXPECT_TRUE(base::Contains(groups, kGroupC));
 
   EXPECT_TRUE(store_->SetBool(kGroupB, kKeyBool, false));
   EXPECT_TRUE(store_->SetInt(kGroupB, kKeyInt, kValueIntBNew));

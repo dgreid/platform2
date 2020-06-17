@@ -75,7 +75,7 @@ void GPUAlgoManager::ReturnCallback(uint32_t req_id,
   base::Callback<void(uint32_t, int32_t)> cb;
   {
     base::AutoLock l(lock_);
-    if (!base::ContainsKey(cb_map_, req_id)) {
+    if (!base::Contains(cb_map_, req_id)) {
       LOGF(ERROR) << "Failed to find callback for request " << req_id;
       return;
     }
