@@ -117,12 +117,6 @@ FilePath GetRootPath(const std::string& username) {
       "%s%s", g_root_home_prefix, SanitizeUserName(username).c_str()));
 }
 
-FilePath GetDaemonPath(const std::string& username, const std::string& daemon) {
-  if (!EnsureSystemSaltIsLoaded())
-    return FilePath();
-  return GetRootPath(username).Append(daemon);
-}
-
 FilePath GetDaemonStorePath(const std::string& username,
                             const std::string& daemon) {
   if (!EnsureSystemSaltIsLoaded())
