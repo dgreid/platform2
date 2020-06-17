@@ -132,6 +132,7 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
 
   udev* udev = udev_device_get_udev(device);
   ScopedUdevEnumeratePtr enumerate(udev_enumerate_new(udev));
+  udev_enumerate_add_match_subsystem(enumerate.get(), "usb");
   udev_enumerate_scan_devices(enumerate.get());
 
   bool found_claimed_interface = false;
