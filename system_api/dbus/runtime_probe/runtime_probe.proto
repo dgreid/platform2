@@ -39,6 +39,7 @@ message ProbeRequest {
     touchpad = 7;
     touchscreen = 8;
     dram = 9;
+    display_panel = 10;
   }
   repeated SupportCategory categories = 1;
   // This option allows clients to retrieve data with privacy implication from
@@ -323,6 +324,27 @@ message Memory {
   Information information = 3;
 }
 
+message Edid {
+  message Fields {
+    // The absolute path to the Edid file of the device.
+    string path = 1;
+    // The vendor code, 3 letters.
+    string vendor = 2;
+    // The product code, 16 bits.
+    uint32 product = 3;
+    // The height of the device.
+    uint32 height = 4;
+    // The width of the device.
+    uint32 width = 5;
+  }
+  // Component alias.
+  string name = 1;
+  // Component's details.
+  Fields values = 2;
+  // Component probe info.
+  Information information = 3;
+}
+
 // A ProbeResult contains all potential probe results. For category not
 // existed or not requested for probing, field is expected to be empty.
 message ProbeResult {
@@ -343,4 +365,5 @@ message ProbeResult {
   repeated InputDevice touchpad = 10;
   repeated InputDevice touchscreen = 11;
   repeated Memory dram = 12;
+  repeated Edid display_panel = 13;
 }

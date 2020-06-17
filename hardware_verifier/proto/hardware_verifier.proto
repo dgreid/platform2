@@ -74,6 +74,7 @@ message HwVerificationReport {
     repeated runtime_probe.InputDevice.Fields touchpad = 7;
     repeated runtime_probe.InputDevice.Fields touchscreen = 8;
     repeated runtime_probe.Memory.Fields dram = 9;
+    repeated runtime_probe.Edid.Fields display_panel = 10;
   }
 
   // Records the overall device matrics.

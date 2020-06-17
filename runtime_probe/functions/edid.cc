@@ -131,7 +131,7 @@ base::Value EdidFunction::EvalInHelperByPath(
              base::Value(base::StringPrintf("%04x", edid->product_id)));
   res.SetKey("width", base::Value(edid->width));
   res.SetKey("height", base::Value(edid->height));
-  res.SetKey("sys_path", base::Value(edid_path.value()));
+  res.SetKey("path", base::Value(edid_path.value()));
   return res;
 }
 
