@@ -196,17 +196,14 @@ bool AuthPolicyFlags::LoadFromJsonFile(const base::FilePath& path) {
 }
 
 void AuthPolicyFlags::LoadFromJsonString(const std::string& flags_json) {
-  std::string error_message;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<base::Value> root =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          flags_json, base::JSON_ALLOW_TRAILING_COMMAS,
-          nullptr /* error_code_out */, &error_message);
+  auto root = base::JSONReader::ReadAndReturnValueWithError(
+      flags_json, base::JSON_ALLOW_TRAILING_COMMAS);
   base::DictionaryValue* dict = nullptr;
-  if (!root || !root->GetAsDictionary(&dict)) {
+  if (root.error_code != base::JSONReader::JSON_NO_ERROR ||
+      !root.value->GetAsDictionary(&dict)) {
     LOG(ERROR) << "Fail to parse flags: "
-               << (error_message.empty() ? "Invalid JSON" : error_message);
+               << (root.error_message.empty() ? "Invalid JSON"
+                                              : root.error_message);
     return;
   }
 
