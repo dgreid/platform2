@@ -11,7 +11,8 @@ libfmq_src = "../aosp/system/libfmq"
 libhidl_src = "../aosp/system/libhidl"
 liblog_src = "../aosp/system/core/liblog"
 libutils_src = "../aosp/system/core/libutils"
-nativewindow_src = "../aosp/frameworks/native/libs/nativewindow"
+native_src = "../aosp/frameworks/native"
+nativewindow_src = "${native_src}/libs/nativewindow"
 
 group("all") {
   deps = [
@@ -65,6 +66,7 @@ static_library("libnnapi-support") {
     ":libhidl",
     ":libhwbuf",
     ":liblog",
+    ":libnative",
     ":libutils",
     ":neuralnetworks",
   ]
@@ -342,6 +344,16 @@ if (use.test) {
       "${liblog_src}/tests/log_time_test.cpp",
     ]
   }
+}
+
+static_library("libnative") {
+  configs += [
+    "//common-mk:pic",
+    ":target_defaults",
+  ]
+  include_dirs = [ "${native_src}/include" ]
+  deps = [ ":libcutils" ]
+  sources = [ "native/shared_memory.cpp" ]
 }
 
 static_library("libutils") {
