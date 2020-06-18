@@ -69,7 +69,7 @@ class EventDispatcher {
   base::MessageLoopForIO message_loop_;  // Do not use this directly.
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::OnceClosure quit_closure_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
   std::map<int, Watcher> file_descriptor_watchers_;
 
   DISALLOW_COPY_AND_ASSIGN(EventDispatcher);
