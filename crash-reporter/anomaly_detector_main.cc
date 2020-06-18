@@ -132,14 +132,6 @@ int main(int argc, char* argv[]) {
   std::bernoulli_distribution drop_service_failure_report(
       1.0 - 1.0 / util::GetServiceFailureWeight());
 
-  base::FilePath path = base::FilePath(paths::kSystemRunStateDirectory)
-                            .Append(paths::kAnomalyDetectorReady);
-  if (base::WriteFile(path, "", 0) == -1) {
-    // Log but don't prevent anomaly detector from starting because this file
-    // is not essential to its operation.
-    PLOG(ERROR) << "Couldn't write " << path.value() << " (tests may fail)";
-  }
-
   std::map<std::string, std::unique_ptr<anomaly::Parser>> parsers;
   parsers["audit"] = std::make_unique<anomaly::SELinuxParser>();
   parsers["init"] = std::make_unique<anomaly::ServiceParser>();
@@ -163,6 +155,15 @@ int main(int argc, char* argv[]) {
                                         anomaly::kUpstartLogPattern);
   anomaly::LogReader* log_readers[]{&audit_reader, &message_reader,
                                     &upstart_reader};
+
+  // Indicate to tast tests that anomaly-detector has started.
+  base::FilePath path = base::FilePath(paths::kSystemRunStateDirectory)
+                            .Append(paths::kAnomalyDetectorReady);
+  if (base::WriteFile(path, "", 0) == -1) {
+    // Log but don't prevent anomaly detector from starting because this file
+    // is not essential to its operation.
+    PLOG(ERROR) << "Couldn't write " << path.value() << " (tests may fail)";
+  }
 
   while (true) {
     for (auto* reader : log_readers) {
