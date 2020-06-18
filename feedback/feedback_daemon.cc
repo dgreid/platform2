@@ -38,7 +38,7 @@ static const char kFeedbackPostUrl[] =
 namespace feedback {
 
 Daemon::Daemon(const std::string& url)
-    : worker_thread_(kWorkerThreadName), watcher_(&loop_) {
+    : worker_thread_(kWorkerThreadName), watcher_(loop_.task_runner()) {
   worker_thread_.Start();
   uploader_ = std::make_unique<FeedbackUploaderHttp>(
       base::FilePath(kFeedbackReportPath), worker_thread_.task_runner(), url);
