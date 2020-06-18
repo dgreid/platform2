@@ -24,6 +24,7 @@
 // These usually need to come after the sys/ includes.
 #include <linux/dm-ioctl.h>
 #include <linux/loop.h>
+#include <linux/vm_sockets.h>
 
 #include <algorithm>
 #include <limits>
@@ -48,7 +49,11 @@
 #include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <base/time/time.h>
+#include <chromeos/constants/vm_tools.h>
+#include <grpcpp/grpcpp.h>
+#include <vm_protos/proto_bindings/vm_crash.grpc.pb.h>
 
 #include "vm_tools/common/spawn_util.h"
 
@@ -746,7 +751,11 @@ class Init::Worker {
     base::Optional<base::Callback<void(ProcessStatus, int)>> exit_cb;
   };
 
-  Worker() = default;
+  Worker()
+      : crash_listener_(grpc::CreateChannel(
+            base::StringPrintf(
+                "vsock:%u:%u", VMADDR_CID_HOST, vm_tools::kCrashListenerPort),
+            grpc::InsecureChannelCredentials())) {}
   ~Worker() = default;
 
   // Start the worker.  This will set up a signalfd for receiving SIGCHLD
@@ -777,6 +786,8 @@ class Init::Worker {
   // File descriptor on which we will receive SIGCHLD events.
   base::ScopedFD signal_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
+
+  vm_tools::cicerone::CrashListener::Stub crash_listener_;
 
   // Information about processes launched by this process.
   std::map<pid_t, ChildInfo> children_;
@@ -1043,6 +1054,21 @@ void Init::Worker::OnSignalReadable() {
 
     if (!info.respawn) {
       continue;
+    }
+
+    // Notify the host that a persistent process has failed.
+    {
+      grpc::ClientContext ctx;
+      vm_tools::EmptyMessage empty;
+      vm_tools::cicerone::FailureReport failure_report;
+      failure_report.set_failed_process(info.argv.front());
+      grpc::Status status =
+          crash_listener_.SendFailureReport(&ctx, failure_report, &empty);
+      if (!status.ok()) {
+        LOG(ERROR) << "Failed to report failure of service \""
+                   << info.argv.front() << "\": " << status.error_message()
+                   << ", error code " << status.error_code();
+      }
     }
 
     // The process needs to be respawned.  First remove any spawn times older
