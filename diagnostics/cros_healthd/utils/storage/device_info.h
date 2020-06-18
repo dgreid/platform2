@@ -25,15 +25,11 @@ namespace diagnostics {
 // individual storage device.
 class StorageDeviceInfo {
  public:
-  StorageDeviceInfo(
+  static std::unique_ptr<StorageDeviceInfo> Create(
       const base::FilePath& dev_sys_path,
       const base::FilePath& dev_node_path,
       const std::string& subsystem,
       std::unique_ptr<Platform> platform = std::make_unique<Platform>());
-  StorageDeviceInfo(const StorageDeviceInfo&) = delete;
-  StorageDeviceInfo(StorageDeviceInfo&&) = delete;
-  StorageDeviceInfo& operator=(const StorageDeviceInfo&) = delete;
-  StorageDeviceInfo& operator=(StorageDeviceInfo&&) = delete;
 
   // PopulateDeviceInfo fills the fields of Mojo's data structure representing
   // a block device. It is responsible for population of most of the info.
@@ -56,6 +52,16 @@ class StorageDeviceInfo {
   const std::unique_ptr<const Platform> platform_;
 
   DiskIoStat iostat_;
+
+  StorageDeviceInfo(const base::FilePath& dev_sys_path,
+                    const base::FilePath& dev_node_path,
+                    const std::string& subsystem,
+                    std::unique_ptr<StorageDeviceAdapter> adapter,
+                    std::unique_ptr<Platform> platform);
+  StorageDeviceInfo(const StorageDeviceInfo&) = delete;
+  StorageDeviceInfo(StorageDeviceInfo&&) = delete;
+  StorageDeviceInfo& operator=(const StorageDeviceInfo&) = delete;
+  StorageDeviceInfo& operator=(StorageDeviceInfo&&) = delete;
 
   // Implementation of the field population. The separation is used for uniform
   // error propagation via Status.

@@ -101,7 +101,13 @@ DiskFetcher::FetchNonRemovableBlockDevicesInfo(const base::FilePath& root) {
 
     // TODO(dlunev): this shall be persisted across probes.
     std::unique_ptr<StorageDeviceInfo> dev_info =
-        std::make_unique<StorageDeviceInfo>(sys_path, devnode_path, subsystem);
+        StorageDeviceInfo::Create(sys_path, devnode_path, subsystem);
+    if (!dev_info) {
+      return mojo_ipc::NonRemovableBlockDeviceResult::NewError(
+          CreateAndLogProbeError(
+              mojo_ipc::ErrorType::kSystemUtilityError,
+              "Unable to create device info object for " + sys_path.value()));
+    }
 
     mojo_ipc::NonRemovableBlockDeviceInfo info;
     error = dev_info->PopulateDeviceInfo(&info);

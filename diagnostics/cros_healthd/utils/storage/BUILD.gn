@@ -18,6 +18,7 @@ source_set("storage_data_source") {
   ]
   libs = [ "rootdev" ]
   sources = [
+    "caching_device_adapter.cc",
     "default_device_adapter.cc",
     "device_info.cc",
     "device_lister.cc",
@@ -33,6 +34,7 @@ if (use.test) {
     configs += [ ":storage_data_source_common_pkg_deps" ]
     deps = [ ":storage_data_source" ]
     sources = [
+      "caching_device_adapter_test.cc",
       "default_device_adapter_test.cc",
       "device_info_test.cc",
       "device_lister_test.cc",

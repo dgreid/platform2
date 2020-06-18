@@ -17,6 +17,7 @@
 
 #include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/caching_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/default_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/emmc_device_adapter.h"
@@ -32,7 +33,22 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-std::unique_ptr<StorageDeviceAdapter> CreateAdapter(
+mojo_ipc::ErrorType StatusCodeToMojoError(StatusCode code) {
+  switch (code) {
+    case StatusCode::kUnavailable:
+      return mojo_ipc::ErrorType::kFileReadError;
+    case StatusCode::kInvalidArgument:
+      return mojo_ipc::ErrorType::kParseError;
+    case StatusCode::kInternal:
+      return mojo_ipc::ErrorType::kSystemUtilityError;
+    default:
+      NOTREACHED() << "Unexpected error code: " << static_cast<int>(code);
+      return mojo_ipc::ErrorType::kSystemUtilityError;
+  }
+}
+
+// Creates a specific adapter for device's data retrieval.
+std::unique_ptr<StorageDeviceAdapter> CreateDeviceSpecificAdapter(
     const base::FilePath& dev_sys_path, const std::string& subsystem) {
   // A particular device has a chain of subsystems it belongs to. We pass them
   // here in a colon-separated format (e.g. "block:mmc:mmc_host:pci"). We expect
@@ -57,34 +73,44 @@ std::unique_ptr<StorageDeviceAdapter> CreateAdapter(
   return std::make_unique<DefaultDeviceAdapter>(dev_sys_path);
 }
 
-mojo_ipc::ErrorType StatusCodeToMojoError(StatusCode code) {
-  switch (code) {
-    case StatusCode::kUnavailable:
-      return mojo_ipc::ErrorType::kFileReadError;
-    case StatusCode::kInvalidArgument:
-      return mojo_ipc::ErrorType::kParseError;
-    case StatusCode::kInternal:
-      return mojo_ipc::ErrorType::kSystemUtilityError;
-    default:
-      NOTREACHED() << "Unexpected error code: " << static_cast<int>(code);
-      return mojo_ipc::ErrorType::kSystemUtilityError;
-  }
+// Creates a device-specific adapter and wraps it into a caching decorator.
+std::unique_ptr<StorageDeviceAdapter> CreateAdapter(
+    const base::FilePath& dev_sys_path, const std::string& subsystem) {
+  auto adapter = CreateDeviceSpecificAdapter(dev_sys_path, subsystem);
+  if (!adapter)
+    return nullptr;
+  return std::make_unique<CachingDeviceAdapter>(std::move(adapter));
 }
 
 }  // namespace
 
-StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
-                                     const base::FilePath& dev_node_path,
-                                     const std::string& subsystem,
-                                     std::unique_ptr<Platform> platform)
+StorageDeviceInfo::StorageDeviceInfo(
+    const base::FilePath& dev_sys_path,
+    const base::FilePath& dev_node_path,
+    const std::string& subsystem,
+    std::unique_ptr<StorageDeviceAdapter> adapter,
+    std::unique_ptr<Platform> platform)
     : dev_sys_path_(dev_sys_path),
       dev_node_path_(dev_node_path),
       subsystem_(subsystem),
-      adapter_(CreateAdapter(dev_sys_path, subsystem)),
+      adapter_(std::move(adapter)),
       platform_(std::move(platform)),
       iostat_(dev_sys_path) {
   DCHECK(adapter_);
   DCHECK(platform_);
+}
+
+std::unique_ptr<StorageDeviceInfo> StorageDeviceInfo::Create(
+    const base::FilePath& dev_sys_path,
+    const base::FilePath& dev_node_path,
+    const std::string& subsystem,
+    std::unique_ptr<Platform> platform) {
+  auto adapter = CreateAdapter(dev_sys_path, subsystem);
+  if (!adapter)
+    return nullptr;
+  return std::unique_ptr<StorageDeviceInfo>(
+      new StorageDeviceInfo(dev_sys_path, dev_node_path, subsystem,
+                            std::move(adapter), std::move(platform)));
 }
 
 base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>

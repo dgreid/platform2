@@ -43,10 +43,11 @@ TEST(StorageDeviceInfoTest, PopulateTest) {
               GetDeviceBlockSizeBytes(base::FilePath(kDevnode)))
       .WillOnce(Return(kBlockSize));
 
-  StorageDeviceInfo dev_info(base::FilePath(kPath), base::FilePath(kDevnode),
-                             kSubsystem, std::move(mock_platform));
+  auto dev_info =
+      StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
+                                kSubsystem, std::move(mock_platform));
   mojo_ipc::NonRemovableBlockDeviceInfo info;
-  EXPECT_FALSE(dev_info.PopulateDeviceInfo(&info).has_value());
+  EXPECT_FALSE(dev_info->PopulateDeviceInfo(&info).has_value());
 
   EXPECT_EQ(kDevnode, info.path);
   EXPECT_EQ(kSubsystem, info.type);
@@ -68,10 +69,11 @@ TEST(StorageDeviceInfoTest, PopulateLegacyTest) {
   constexpr char kSubsystem[] = "block:mmc";
   auto mock_platform = std::make_unique<StrictMock<MockPlatform>>();
 
-  StorageDeviceInfo dev_info(base::FilePath(kPath), base::FilePath(kDevnode),
-                             kSubsystem, std::move(mock_platform));
+  auto dev_info =
+      StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
+                                kSubsystem, std::move(mock_platform));
   mojo_ipc::NonRemovableBlockDeviceInfo info;
-  dev_info.PopulateLegacyFields(&info);
+  dev_info->PopulateLegacyFields(&info);
 
   EXPECT_EQ(0x1EAFBED5, info.serial);
   EXPECT_EQ(0xA5, info.manufacturer_id);
