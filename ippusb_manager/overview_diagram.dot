@@ -36,4 +36,10 @@ digraph {
   xd_and_printer->ippusbxd;
   Printer->xd_and_printer;
   xd_and_printer->Printer;
+
+  // Aligns the Unix sockets.
+  {rank=same; cups_and_manager cups_and_xd}
+
+  // Aligns ippusb_manager and ippusbxd.
+  {rank=same; ippusb_manager ippusbxd}
 }
