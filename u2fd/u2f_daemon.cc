@@ -202,10 +202,6 @@ int U2fDaemon::StartService() {
     return EX_CONFIG;
   }
 
-  if (!SetVendorMode(u2f_mode)) {
-    return EX_PROTOCOL;
-  }
-
   // If g2f is enabled by policy, we always include allowlisting data.
   bool include_g2f_allowlist_data =
       g2f_allowlist_data_ || (ReadU2fPolicy() == U2fMode::kU2fExtended);
@@ -310,20 +306,6 @@ void U2fDaemon::InitializeWebAuthnHandler() {
 
   webauthn_handler_.Initialize(&tpm_proxy_, user_state_.get(),
                                request_presence);
-}
-
-bool U2fDaemon::SetVendorMode(U2fMode mode) {
-  uint32_t vendor_mode_rc =
-      tpm_proxy_.SetU2fVendorMode(static_cast<uint8_t>(mode));
-
-  if (vendor_mode_rc == u2f::kVendorRcNoSuchCommand) {
-    LOG(WARNING) << "U2F Vendor Mode not supported in firmware, ignoring.";
-  } else if (vendor_mode_rc) {
-    LOG(ERROR) << "Failed to set U2F Vendor Mode.";
-    return false;
-  }
-
-  return true;
 }
 
 void U2fDaemon::SendWinkSignal() {

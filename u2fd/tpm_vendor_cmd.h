@@ -38,10 +38,6 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   TpmVendorCommandProxy();
   ~TpmVendorCommandProxy() override;
 
-  // Sets the operating mode of the U2F feature in the TPM.
-  // Returns the TPM response code.
-  virtual uint32_t SetU2fVendorMode(uint8_t mode);
-
   // Sends the VENDOR_CC_U2F_GENERATE command to cr50, and populates
   // resp_out with the reply.
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
@@ -102,15 +98,6 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
 
   // Retrieve and record in the log the individual attestation certificate.
   void LogIndividualCertificate();
-
-  // Cr50 loses U2F state during deep sleep; this function sends a command
-  // that will re-load it. Returns true iff state was successfully reloaded.
-  bool ReloadCr50State();
-
-  // Whether Cr50 supports the vendor mode command, default is true.
-  bool vendor_mode_supported_;
-  // Mode set on the most recent call to SetU2fVendorMode()
-  uint8_t last_u2f_vendor_mode_;
 
   // A lock to ensure public SendU2fGenerate, SendU2fSign and SendU2fAttest are
   // executed sequentially. Client code is responsible for acquiring the lock.

@@ -43,8 +43,7 @@ const uint16_t kVendorCcU2fAttest = 46;
 
 namespace u2f {
 
-TpmVendorCommandProxy::TpmVendorCommandProxy()
-    : vendor_mode_supported_(true), last_u2f_vendor_mode_(0) {}
+TpmVendorCommandProxy::TpmVendorCommandProxy() {}
 TpmVendorCommandProxy::~TpmVendorCommandProxy() {}
 
 base::Lock& TpmVendorCommandProxy::GetLock() {
@@ -130,35 +129,6 @@ uint32_t TpmVendorCommandProxy::VendorCommandStruct(uint16_t cc,
   return resp_code;
 }
 
-uint32_t TpmVendorCommandProxy::SetU2fVendorMode(uint8_t mode) {
-  std::string vendor_mode(5, 0);
-  std::string rmode;
-  const uint8_t kCmdU2fVendorMode = 0xbf;
-  const uint8_t kP1SetMode = 0x1;
-  const uint8_t kU2fExtended = 3;
-
-  // build the command U2F_VENDOR_MODE:
-  // CLA INS P1  P2  Le
-  // 00  bf  01  md  00
-  vendor_mode[1] = kCmdU2fVendorMode;
-  vendor_mode[2] = kP1SetMode;
-  vendor_mode[3] = mode;
-  int rc = SendU2fApdu(vendor_mode, &rmode);
-
-  if (!rc) {
-    last_u2f_vendor_mode_ = rmode[0];
-    // remove the 16-bit status code at the end
-    VLOG(1) << "current mode " << static_cast<int>(last_u2f_vendor_mode_);
-    // record the individual attestation certificate if the extension is on.
-    if (last_u2f_vendor_mode_ == kU2fExtended && VLOG_IS_ON(1))
-      LogIndividualCertificate();
-  } else if (rc == kVendorRcNoSuchCommand) {
-    vendor_mode_supported_ = false;
-  }
-
-  return rc;
-}
-
 uint32_t TpmVendorCommandProxy::SendU2fApdu(const std::string& req,
                                             std::string* resp_out) {
   return VendorCommand(kVendorCcU2fApdu, req, resp_out);
@@ -166,19 +136,11 @@ uint32_t TpmVendorCommandProxy::SendU2fApdu(const std::string& req,
 
 uint32_t TpmVendorCommandProxy::SendU2fGenerate(
     const struct u2f_generate_req& req, struct u2f_generate_resp* resp_out) {
-  if (!ReloadCr50State()) {
-    return kVendorRcInvalidResponse;
-  }
-
   return VendorCommandStruct(kVendorCcU2fGenerate, req, resp_out);
 }
 
 uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
                                             struct u2f_sign_resp* resp_out) {
-  if (!ReloadCr50State()) {
-    return kVendorRcInvalidResponse;
-  }
-
   std::string output_str;
   uint32_t resp_code =
       VendorCommand(kVendorCcU2fSign, RequestToString(req), &output_str);
@@ -208,10 +170,6 @@ uint32_t TpmVendorCommandProxy::SendU2fSign(const struct u2f_sign_req& req,
 
 uint32_t TpmVendorCommandProxy::SendU2fAttest(
     const struct u2f_attest_req& req, struct u2f_attest_resp* resp_out) {
-  if (!ReloadCr50State()) {
-    return kVendorRcInvalidResponse;
-  }
-
   return VendorCommandStruct(kVendorCcU2fAttest, req, resp_out);
 }
 
@@ -280,22 +238,6 @@ void TpmVendorCommandProxy::LogIndividualCertificate() {
   } else {
     VLOG(1) << "Certificate: " << base::HexEncode(cert.data(), cert.size());
   }
-}
-
-bool TpmVendorCommandProxy::ReloadCr50State() {
-  if (!vendor_mode_supported_) {
-    // We're running against a newer build of cr50 that doesn't support the
-    // vendor mode command; it is not necessary to set it, or re-load state.
-    return true;
-  }
-
-  if (last_u2f_vendor_mode_) {
-    return SetU2fVendorMode(last_u2f_vendor_mode_) == 0;
-  }
-
-  // Vendor mode is supported, and has not been set. Vendor mode is part of
-  // cr50 state, and must be set before we can attempt to re-load state.
-  return false;
 }
 
 }  // namespace u2f

@@ -69,10 +69,6 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
   void CreateU2fHid();
   void InitializeWebAuthnHandler();
 
-  // Sets the vendor mode in cr50, if applicable, based on U2F mode.
-  // Newer builds of cr50 do not have a concept of vendor mode.
-  bool SetVendorMode(U2fMode mode);
-
   // Sends a DBus signal that indicates to Chrome a 'Press Power Button'
   // notification should be displayed.
   void SendWinkSignal();

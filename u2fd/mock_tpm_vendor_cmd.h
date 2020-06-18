@@ -16,7 +16,6 @@ namespace u2f {
 
 class MockTpmVendorCommandProxy : public TpmVendorCommandProxy {
  public:
-  MOCK_METHOD(uint32_t, SetU2fVendorMode, (uint8_t), (override));
   MOCK_METHOD(uint32_t,
               SendU2fGenerate,
               (const struct u2f_generate_req&, struct u2f_generate_resp*),
