@@ -227,6 +227,7 @@ static_library("libhidl") {
   ]
   include_dirs = [
     "${libbase_src}/include",
+    "${libhidl_src}/adapter/include",
     "${libhidl_src}/base/include",
     "${libhidl_src}/libhidlmemory/include",
     "${libhidl_src}/transport/allocator/1.0/default",
@@ -244,10 +245,11 @@ static_library("libhidl") {
     "${libhidl_src}/base/Status.cpp",
     "${libhidl_src}/libhidlmemory/HidlMemoryToken.cpp",
     "${libhidl_src}/libhidlmemory/mapping.cpp",
+    "${libhidl_src}/transport/HidlTransportUtils.cpp",
     "${libhidl_src}/transport/allocator/1.0/default/AshmemAllocator.cpp",
     "${libhidl_src}/transport/memory/1.0/default/AshmemMapper.cpp",
     "${libhidl_src}/transport/memory/1.0/default/AshmemMemory.cpp",
-    "${libhidl_src}/transport/HidlTransportUtils.cpp",
+    "libhidl/adapter/HidlAdapterUtil.cpp",
     "libhidl/allocator/IAllocator.cpp",
     "libhidl/allocator/ashmem_allocator.cpp",
     "libhidl/base/IBase.cpp",
