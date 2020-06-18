@@ -1154,7 +1154,7 @@ class WakeOnWiFiTestWithMockDispatcher : public WakeOnWiFiTest {
   // TODO(zqiu): message loop is needed by AlarmTimer, should restructure the
   // code so that it can be mocked out.
   base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
   MockEventDispatcher mock_dispatcher_;
 };
 
