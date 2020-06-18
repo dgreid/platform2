@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Intel Corporation
+ * Copyright (C) 2019-2020 Intel Corporation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -55,7 +55,7 @@ bool IntelFaceEngine::init(unsigned int max_face_num, int maxWidth, int maxHeigh
     LOG1("@%s, max_face_num:%d, fd_mode:%d", __FUNCTION__, max_face_num, fd_mode);
     CheckError(!mInitialized, false, "@%s, mInitialized is false", __FUNCTION__);
 
-    CheckError((maxWidth * maxHeight * 3 / 2 > MAX_FACE_FRAME_SIZE), false,
+    CheckError((maxWidth * maxHeight > MAX_FACE_FRAME_SIZE), false,
                 "@%s, maxWidth:%d, maxHeight:%d > MAX_FACE_FRAME_SIZE", __FUNCTION__, maxWidth, maxHeight);
 
     face_engine_init_params* params = static_cast<face_engine_init_params*>(mMemInit.mAddr);

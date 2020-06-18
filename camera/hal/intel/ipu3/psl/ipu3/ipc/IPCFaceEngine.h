@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2018 Intel Corporation.
+ * Copyright (C) 2018-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -53,7 +53,7 @@ struct face_engine_init_params {
 
 #define MAX_FACE_FRAME_WIDTH 1920
 #define MAX_FACE_FRAME_HEIGHT 1280
-#define MAX_FACE_FRAME_SIZE (MAX_FACE_FRAME_WIDTH * MAX_FACE_FRAME_HEIGHT * 3 / 2)
+#define MAX_FACE_FRAME_SIZE (MAX_FACE_FRAME_WIDTH * MAX_FACE_FRAME_HEIGHT) // only using Y
 struct face_engine_run_params {
     uint8_t data[MAX_FACE_FRAME_SIZE]; // TODO: use dma buf to optimize.
     uint32_t size;

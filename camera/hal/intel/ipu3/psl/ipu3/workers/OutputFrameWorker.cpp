@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2016-2019 Intel Corporation.
+ * Copyright (C) 2016-2020 Intel Corporation.
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -395,11 +395,11 @@ status_t OutputFrameWorker::processData(ProcessingData processingData)
 
         pvl_image image;
         image.data = static_cast<uint8_t*>(processingData.mOutputBuffer->data());
-        image.size = processingData.mOutputBuffer->size();
         image.width = processingData.mOutputBuffer->width();
         image.height = processingData.mOutputBuffer->height();
-        image.format = pvl_image_format_nv12;
         image.stride = processingData.mOutputBuffer->stride();
+        image.size = image.stride * image.height;
+        image.format = pvl_image_format_gray;
         image.rotation = (mSensorOrientation + mCamOriDetector->getOrientation()) % 360;
         mFaceEngine->run(image);
     }
