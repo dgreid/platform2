@@ -27,7 +27,6 @@ using PairOfStrings = std::pair<std::string, std::string>;
 
 class DBusProtocolHandler;
 
-
 // This class represents the file information about a file uploaded via
 // POST request using multipart/form-data request.
 class LIBWEBSERV_EXPORT FileInfo final {
@@ -63,7 +62,7 @@ class LIBWEBSERV_EXPORT FileInfo final {
 class LIBWEBSERV_EXPORT Request {
  public:
   Request(const std::string& url, const std::string& method)
-    : url_{url}, method_{method} {}
+      : url_{url}, method_{method} {}
   virtual ~Request() = default;
 
   // Gets the request body data stream. Note that the stream is available

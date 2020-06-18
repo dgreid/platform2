@@ -90,10 +90,9 @@ class LIBWEBSERV_PRIVATE DBusProtocolHandler : public ProtocolHandler {
 
   // Asynchronous callbacks to handle successful or failed request handler
   // registration over D-Bus.
-  void AddHandlerSuccess(
-      int handler_id,
-      ProtocolHandlerProxyInterface* proxy,
-      const std::string& remote_handler_id);
+  void AddHandlerSuccess(int handler_id,
+                         ProtocolHandlerProxyInterface* proxy,
+                         const std::string& remote_handler_id);
   void AddHandlerError(int handler_id, brillo::Error* error);
 
   // Called by DBusServer when an incoming request is dispatched.
@@ -104,11 +103,10 @@ class LIBWEBSERV_PRIVATE DBusProtocolHandler : public ProtocolHandler {
                       brillo::ErrorPtr* error);
 
   // Called by Response object to finish the request and send response data.
-  void CompleteRequest(
-      const std::string& request_id,
-      int status_code,
-      const std::multimap<std::string, std::string>& headers,
-      brillo::StreamPtr data_stream);
+  void CompleteRequest(const std::string& request_id,
+                       int status_code,
+                       const std::multimap<std::string, std::string>& headers,
+                       brillo::StreamPtr data_stream);
 
   // Makes a call to the (remote) web server request handler over D-Bus to
   // obtain the file content of uploaded file (identified by |file_id|) during

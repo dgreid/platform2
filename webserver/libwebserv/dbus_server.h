@@ -86,12 +86,10 @@ class LIBWEBSERV_PRIVATE DBusServer : public Server {
       org::chromium::WebServer::ProtocolHandlerProxyInterface* handler);
 
   // Handler invoked when a protocol handler D-Bus proxy object disappears.
-  void ProtocolHandlerRemoved(
-      const dbus::ObjectPath& object_path);
+  void ProtocolHandlerRemoved(const dbus::ObjectPath& object_path);
 
   // Looks up a protocol handler by ID. If not found, returns nullptr.
-  DBusProtocolHandler* GetProtocolHandlerByID(
-      const std::string& id) const;
+  DBusProtocolHandler* GetProtocolHandlerByID(const std::string& id) const;
 
   // Like the public version, but returns our specific handler type.
   DBusProtocolHandler* GetProtocolHandlerImpl(const std::string& name);

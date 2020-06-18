@@ -24,27 +24,23 @@ FileInfo::FileInfo(DBusProtocolHandler* handler,
       request_id_{request_id},
       file_name_(file_name),
       content_type_(content_type),
-      transfer_encoding_(transfer_encoding) {
-}
+      transfer_encoding_(transfer_encoding) {}
 
 void FileInfo::GetData(
     const base::Callback<void(brillo::StreamPtr)>& success_callback,
     const base::Callback<void(brillo::Error*)>& error_callback) const {
-  handler_->GetFileData(request_id_,
-                        file_id_,
-                        success_callback,
+  handler_->GetFileData(request_id_, file_id_, success_callback,
                         error_callback);
 }
 
 RequestImpl::RequestImpl(DBusProtocolHandler* handler,
                          const std::string& url,
                          const std::string& method)
-    : Request{url, method}, handler_{handler} {
-}
+    : Request{url, method}, handler_{handler} {}
 
 brillo::StreamPtr RequestImpl::GetDataStream() {
-  return brillo::FileStream::FromFileDescriptor(
-      raw_data_fd_.GetPlatformFile(), false, nullptr);
+  return brillo::FileStream::FromFileDescriptor(raw_data_fd_.GetPlatformFile(),
+                                                false, nullptr);
 }
 
 std::vector<PairOfStrings> Request::GetFormData() const {
@@ -125,8 +121,7 @@ std::vector<PairOfStrings> Request::GetHeaders() const {
 
 std::vector<std::string> Request::GetHeader(const std::string& name) const {
   std::vector<std::string> data;
-  auto range =
-      headers_.equal_range(brillo::http::GetCanonicalHeaderName(name));
+  auto range = headers_.equal_range(brillo::http::GetCanonicalHeaderName(name));
   while (range.first != range.second) {
     data.push_back(range.first->second);
     ++range.first;

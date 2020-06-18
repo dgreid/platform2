@@ -12,8 +12,7 @@ namespace webservd {
 
 TempFileManager::TempFileManager(const base::FilePath& temp_dir_path,
                                  FileDeleterInterface* file_deleter)
-    : temp_dir_path_{temp_dir_path}, file_deleter_{file_deleter} {
-}
+    : temp_dir_path_{temp_dir_path}, file_deleter_{file_deleter} {}
 
 TempFileManager::~TempFileManager() {
   for (const auto& pair : request_files_)

@@ -22,12 +22,18 @@ class DBusServer::RequestHandler final
   explicit RequestHandler(DBusServer* server) : server_{server} {}
   bool ProcessRequest(
       brillo::ErrorPtr* error,
-      const std::tuple<std::string, std::string, std::string, std::string,
+      const std::tuple<std::string,
+                       std::string,
+                       std::string,
+                       std::string,
                        std::string>& in_request_info,
       const std::vector<std::tuple<std::string, std::string>>& in_headers,
       const std::vector<std::tuple<bool, std::string, std::string>>& in_params,
-      const std::vector<std::tuple<int32_t, std::string, std::string,
-                                   std::string, std::string>>& in_files,
+      const std::vector<std::tuple<int32_t,
+                                   std::string,
+                                   std::string,
+                                   std::string,
+                                   std::string>>& in_files,
       const base::ScopedFD& in_body) override;
 
  private:
@@ -37,12 +43,15 @@ class DBusServer::RequestHandler final
 
 bool DBusServer::RequestHandler::ProcessRequest(
     brillo::ErrorPtr* error,
-    const std::tuple<std::string, std::string, std::string, std::string,
-                     std::string>& in_request_info,
+    const std::
+        tuple<std::string, std::string, std::string, std::string, std::string>&
+            in_request_info,
     const std::vector<std::tuple<std::string, std::string>>& in_headers,
     const std::vector<std::tuple<bool, std::string, std::string>>& in_params,
-    const std::vector<std::tuple<int32_t, std::string, std::string, std::string,
-                                 std::string>>& in_files,
+    const std::vector<
+        std::
+            tuple<int32_t, std::string, std::string, std::string, std::string>>&
+        in_files,
     const base::ScopedFD& in_body) {
   std::string protocol_handler_id = std::get<0>(in_request_info);
   std::string request_handler_id = std::get<1>(in_request_info);
@@ -52,15 +61,13 @@ bool DBusServer::RequestHandler::ProcessRequest(
   DBusProtocolHandler* protocol_handler =
       server_->GetProtocolHandlerByID(protocol_handler_id);
   if (!protocol_handler) {
-    brillo::Error::AddToPrintf(error, FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               DBUS_ERROR_FAILED,
-                               "Unknown protocol handler '%s'",
-                               protocol_handler_id.c_str());
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, DBUS_ERROR_FAILED,
+        "Unknown protocol handler '%s'", protocol_handler_id.c_str());
     return false;
   }
   std::unique_ptr<RequestImpl> request{
-    new RequestImpl{protocol_handler, url, method}};
+      new RequestImpl{protocol_handler, url, method}};
   // Convert request data into format required by the Request object.
   for (const auto& tuple : in_params) {
     if (std::get<0>(tuple))
@@ -73,25 +80,22 @@ bool DBusServer::RequestHandler::ProcessRequest(
     request->headers_.emplace(std::get<0>(tuple), std::get<1>(tuple));
 
   for (const auto& tuple : in_files) {
-    request->file_info_.emplace(
-        std::get<1>(tuple),  // field_name
-        std::unique_ptr<FileInfo>{new FileInfo{
-            protocol_handler,
-            std::get<0>(tuple),     // file_id
-            request_id,
-            std::get<2>(tuple),     // file_name
-            std::get<3>(tuple),     // content_type
-            std::get<4>(tuple)}});  // transfer_encoding
+    request->file_info_.emplace(std::get<1>(tuple),  // field_name
+                                std::unique_ptr<FileInfo>{new FileInfo{
+                                    protocol_handler,
+                                    std::get<0>(tuple),  // file_id
+                                    request_id,
+                                    std::get<2>(tuple),     // file_name
+                                    std::get<3>(tuple),     // content_type
+                                    std::get<4>(tuple)}});  // transfer_encoding
   }
 
   request->raw_data_fd_ = base::File(dup(in_body.get()));
   CHECK(request->raw_data_fd_.IsValid());
 
   return protocol_handler->ProcessRequest(protocol_handler_id,
-                                          request_handler_id,
-                                          request_id,
-                                          std::move(request),
-                                          error);
+                                          request_handler_id, request_id,
+                                          std::move(request), error);
 }
 
 DBusServer::DBusServer()
@@ -187,10 +191,11 @@ DBusProtocolHandler* DBusServer::GetProtocolHandlerImpl(
   if (p == protocol_handlers_names_.end()) {
     VLOG(1) << "Creating a client-side instance of web server's protocol "
             << "handler with name '" << name << "'";
-    p = protocol_handlers_names_.emplace(
-        name,
-        std::unique_ptr<DBusProtocolHandler>{
-            new DBusProtocolHandler{name, this}}).first;
+    p = protocol_handlers_names_
+            .emplace(name,
+                     std::unique_ptr<DBusProtocolHandler>{
+                         new DBusProtocolHandler{name, this}})
+            .first;
   }
   return p->second.get();
 }

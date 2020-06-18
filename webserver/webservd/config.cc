@@ -48,17 +48,12 @@ bool LoadHandlerConfig(const base::DictionaryValue* handler_value,
                        brillo::ErrorPtr* error) {
   int port = 0;
   if (!handler_value->GetInteger(kPortKey, &port)) {
-    brillo::Error::AddTo(error,
-                         FROM_HERE,
-                         webservd::errors::kDomain,
-                         webservd::errors::kInvalidConfig,
-                         "Port is missing");
+    brillo::Error::AddTo(error, FROM_HERE, webservd::errors::kDomain,
+                         webservd::errors::kInvalidConfig, "Port is missing");
     return false;
   }
   if (port < 1 || port > 0xFFFF) {
-    brillo::Error::AddToPrintf(error,
-                               FROM_HERE,
-                               webservd::errors::kDomain,
+    brillo::Error::AddToPrintf(error, FROM_HERE, webservd::errors::kDomain,
                                webservd::errors::kInvalidConfig,
                                "Invalid port value: %d", port);
     return false;
@@ -107,8 +102,7 @@ bool LoadConfigFromString(const std::string& config_json,
       config_json, base::JSON_ALLOW_TRAILING_COMMAS, nullptr, &error_msg);
 
   if (!value) {
-    brillo::Error::AddToPrintf(error, FROM_HERE,
-                               brillo::errors::json::kDomain,
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,
                                "Error parsing server configuration: %s",
                                error_msg.c_str());
@@ -117,9 +111,7 @@ bool LoadConfigFromString(const std::string& config_json,
 
   auto dict_value = base::DictionaryValue::From(std::move(value));
   if (!dict_value) {
-    brillo::Error::AddTo(error,
-                         FROM_HERE,
-                         brillo::errors::json::kDomain,
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::json::kDomain,
                          brillo::errors::json::kObjectExpected,
                          "JSON object is expected.");
     return false;
@@ -135,9 +127,7 @@ bool LoadConfigFromString(const std::string& config_json,
                                                             // |dict_value|
       if (!handler_value.GetAsDictionary(&handler_dict)) {
         brillo::Error::AddTo(
-            error,
-            FROM_HERE,
-            brillo::errors::json::kDomain,
+            error, FROM_HERE, brillo::errors::json::kDomain,
             brillo::errors::json::kObjectExpected,
             "Protocol handler definition must be a JSON object");
         return false;
@@ -146,10 +136,7 @@ bool LoadConfigFromString(const std::string& config_json,
       std::string name;
       if (!handler_dict->GetString(kNameKey, &name)) {
         brillo::Error::AddTo(
-            error,
-            FROM_HERE,
-            errors::kDomain,
-            errors::kInvalidConfig,
+            error, FROM_HERE, errors::kDomain, errors::kInvalidConfig,
             "Protocol handler definition must include its name");
         return false;
       }
@@ -158,12 +145,8 @@ bool LoadConfigFromString(const std::string& config_json,
       handler_config.name = name;
       if (!LoadHandlerConfig(handler_dict, &handler_config, error)) {
         brillo::Error::AddToPrintf(
-            error,
-            FROM_HERE,
-            errors::kDomain,
-            errors::kInvalidConfig,
-            "Unable to parse config for protocol handler '%s'",
-            name.c_str());
+            error, FROM_HERE, errors::kDomain, errors::kInvalidConfig,
+            "Unable to parse config for protocol handler '%s'", name.c_str());
         return false;
       }
       config->protocol_handlers.push_back(std::move(handler_config));

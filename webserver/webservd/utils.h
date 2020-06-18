@@ -16,7 +16,7 @@
 
 namespace webservd {
 
-using X509Ptr = std::unique_ptr<X509, void(*)(X509*)>;
+using X509Ptr = std::unique_ptr<X509, void (*)(X509*)>;
 
 // Creates a new X509 certificate.
 X509Ptr CreateCertificate(int serial_number,
@@ -24,7 +24,7 @@ X509Ptr CreateCertificate(int serial_number,
                           const std::string& common_name);
 
 // Generates an RSA public-private key pair of the specified strength.
-std::unique_ptr<RSA, void(*)(RSA*)> GenerateRSAKeyPair(int key_length_bits);
+std::unique_ptr<RSA, void (*)(RSA*)> GenerateRSAKeyPair(int key_length_bits);
 
 // Serializes a private key from the key pair into a PEM string and returns
 // it as a binary blob.

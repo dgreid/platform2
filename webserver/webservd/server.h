@@ -32,7 +32,8 @@ class Server final : public org::chromium::WebServer::ServerInterface,
                      public ServerInterface {
  public:
   Server(brillo::dbus_utils::ExportedObjectManager* object_manager,
-         const Config& config, std::unique_ptr<FirewallInterface> firewall);
+         const Config& config,
+         std::unique_ptr<FirewallInterface> firewall);
   // Need to off-line the destructor to allow |protocol_handler_map_| to contain
   // a forward-declared pointer to DBusProtocolHandler.
   ~Server();
@@ -53,9 +54,7 @@ class Server final : public org::chromium::WebServer::ServerInterface,
 
   // Allows injection of a non-default |encryptor| (used for testing). The
   // caller retains ownership of the pointer.
-  void SetEncryptor(Encryptor* encryptor) {
-    encryptor_ = encryptor;
-  }
+  void SetEncryptor(Encryptor* encryptor) { encryptor_ = encryptor; }
 
  private:
   void CreateProtocolHandler(Config::ProtocolHandler* handler_config);
@@ -74,8 +73,8 @@ class Server final : public org::chromium::WebServer::ServerInterface,
   brillo::Blob TLS_certificate_fingerprint_;
   brillo::SecureBlob TLS_private_key_;
 
-  std::map<ProtocolHandler*,
-           std::unique_ptr<DBusProtocolHandler>> protocol_handler_map_;
+  std::map<ProtocolHandler*, std::unique_ptr<DBusProtocolHandler>>
+      protocol_handler_map_;
   // |protocol_handlers_| is currently used to maintain the lifetime of
   // ProtocolHandler object instances. When (if) we start to add/remove
   // protocol handlers dynamically at run-time, it will be used to locate

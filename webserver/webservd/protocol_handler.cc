@@ -30,7 +30,7 @@ namespace webservd {
 // with the ability to access private methods of Server class.
 class ServerHelper final {
  public:
-  static int ConnectionHandler(void *cls,
+  static int ConnectionHandler(void* cls,
                                MHD_Connection* connection,
                                const char* url,
                                const char* method,
@@ -42,8 +42,7 @@ class ServerHelper final {
     if (nullptr == *con_cls) {
       std::string request_handler_id = handler->FindRequestHandler(url, method);
       std::unique_ptr<Request> request{new Request{
-          request_handler_id, url, method, version, connection, handler
-      }};
+          request_handler_id, url, method, version, connection, handler}};
       if (!request->BeginRequestData())
         return MHD_NO;
 
@@ -63,7 +62,7 @@ class ServerHelper final {
   }
 
   static void RequestCompleted(void* /* cls */,
-                               MHD_Connection*  /* connection */,
+                               MHD_Connection* /* connection */,
                                void** con_cls,
                                MHD_RequestTerminationCode toe) {
     if (toe != MHD_REQUEST_TERMINATED_COMPLETED_OK) {
@@ -101,8 +100,7 @@ bool ProtocolHandler::RemoveRequestHandler(const std::string& handler_id) {
 }
 
 std::string ProtocolHandler::FindRequestHandler(
-    const base::StringPiece& url,
-    const base::StringPiece& method) const {
+    const base::StringPiece& url, const base::StringPiece& method) const {
   size_t score = std::numeric_limits<size_t>::max();
   std::string handler_id;
   for (const auto& pair : request_handlers_) {
@@ -172,7 +170,7 @@ bool ProtocolHandler::Start(const Config::ProtocolHandler& config) {
   // Enable IPv6 if supported.
   if (server_interface_->GetConfig().use_ipv6)
     flags |= MHD_USE_DUAL_STACK;
-  flags |= MHD_USE_TCP_FASTOPEN;  // Use TCP Fast Open (see RFC 7413).
+  flags |= MHD_USE_TCP_FASTOPEN;    // Use TCP Fast Open (see RFC 7413).
   flags |= MHD_USE_SUSPEND_RESUME;  // Allow suspending/resuming connections.
 
   // MHD uses timeout of 0 to mean there is no timeout.
@@ -181,9 +179,9 @@ bool ProtocolHandler::Start(const Config::ProtocolHandler& config) {
     timeout = 0;
 
   std::vector<MHD_OptionItem> options{
-    {MHD_OPTION_CONNECTION_LIMIT, 10, nullptr},
-    {MHD_OPTION_CONNECTION_TIMEOUT, timeout, nullptr},
-    {MHD_OPTION_NOTIFY_COMPLETED, callback_addr, nullptr},
+      {MHD_OPTION_CONNECTION_LIMIT, 10, nullptr},
+      {MHD_OPTION_CONNECTION_TIMEOUT, timeout, nullptr},
+      {MHD_OPTION_NOTIFY_COMPLETED, callback_addr, nullptr},
   };
 
   if (config.socket_fd != -1) {
@@ -215,8 +213,8 @@ bool ProtocolHandler::Start(const Config::ProtocolHandler& config) {
     if ((flags & MHD_USE_TCP_FASTOPEN) != 0) {
       // This is the default value from libmicrohttpd.
       int fastopen_queue_size = 10;
-      if (setsockopt(socket_fd, IPPROTO_TCP, TCP_FASTOPEN,
-                     &fastopen_queue_size, sizeof(fastopen_queue_size)) < 0) {
+      if (setsockopt(socket_fd, IPPROTO_TCP, TCP_FASTOPEN, &fastopen_queue_size,
+                     sizeof(fastopen_queue_size)) < 0) {
         // Treat this as a non-fatal failure. Just continue after logging.
         PLOG(WARNING) << "Failed to set TCP_FASTOPEN option on socket.";
       }

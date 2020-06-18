@@ -21,11 +21,10 @@ using brillo::dbus_utils::ExportedObjectManager;
 
 namespace webservd {
 
-DBusProtocolHandler::DBusProtocolHandler(
-    ExportedObjectManager* object_manager,
-    const dbus::ObjectPath& object_path,
-    ProtocolHandler* protocol_handler,
-    Server* server)
+DBusProtocolHandler::DBusProtocolHandler(ExportedObjectManager* object_manager,
+                                         const dbus::ObjectPath& object_path,
+                                         ProtocolHandler* protocol_handler,
+                                         Server* server)
     : dbus_object_{new DBusObject{object_manager, object_manager->GetBus(),
                                   object_path}},
       protocol_handler_{protocol_handler},
@@ -73,16 +72,15 @@ bool DBusProtocolHandler::AddRequestHandler(
         new RequestHandlerProxy{server_->GetBus(), in_service_name});
     dbus_service_data.on_client_disconnected_callback =
         base::Bind(&DBusProtocolHandler::OnClientDisconnected,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   in_service_name);
+                   weak_ptr_factory_.GetWeakPtr(), in_service_name);
     server_->GetBus()->ListenForServiceOwnerChange(
         in_service_name, dbus_service_data.on_client_disconnected_callback);
-    p = dbus_service_data_.emplace(in_service_name,
-                                   std::move(dbus_service_data)).first;
+    p = dbus_service_data_
+            .emplace(in_service_name, std::move(dbus_service_data))
+            .first;
   }
   std::unique_ptr<RequestHandlerInterface> handler{
-    new DBusRequestHandler{server_, p->second.handler_proxy.get()}
-  };
+      new DBusRequestHandler{server_, p->second.handler_proxy.get()}};
   std::string handler_id = protocol_handler_->AddRequestHandler(
       in_url, in_method, std::move(handler));
   p->second.handler_ids.insert(handler_id);
@@ -93,17 +91,12 @@ bool DBusProtocolHandler::AddRequestHandler(
 }
 
 bool DBusProtocolHandler::RemoveRequestHandler(
-    brillo::ErrorPtr* error,
-    const std::string& in_handler_id) {
-
+    brillo::ErrorPtr* error, const std::string& in_handler_id) {
   auto p = handler_to_service_name_map_.find(in_handler_id);
   if (p == handler_to_service_name_map_.end()) {
-    brillo::Error::AddToPrintf(error,
-                               FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               DBUS_ERROR_FAILED,
-                               "Handler with ID %s does not exist",
-                               in_handler_id.c_str());
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, DBUS_ERROR_FAILED,
+        "Handler with ID %s does not exist", in_handler_id.c_str());
     return false;
   }
   std::string service_name = p->second;
@@ -119,8 +112,7 @@ bool DBusProtocolHandler::RemoveRequestHandler(
 }
 
 void DBusProtocolHandler::OnClientDisconnected(
-    const std::string& service_name,
-    const std::string& service_owner) {
+    const std::string& service_name, const std::string& service_owner) {
   // This method will be called when the client's D-Bus service owner has
   // changed which could be either the client exiting (|service_owner| is empty)
   // or is being replaced with another running instance.
@@ -158,12 +150,9 @@ bool DBusProtocolHandler::GetRequestFileData(
     return true;
   }
 
-  brillo::Error::AddToPrintf(error,
-                             FROM_HERE,
-                             brillo::errors::dbus::kDomain,
+  brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
                              DBUS_ERROR_FAILED,
-                             "File with ID %d does not exist",
-                             in_file_id);
+                             "File with ID %d does not exist", in_file_id);
   return false;
 }
 
@@ -192,11 +181,8 @@ Request* DBusProtocolHandler::GetRequest(const std::string& request_id,
                                          brillo::ErrorPtr* error) {
   Request* request = protocol_handler_->GetRequest(request_id);
   if (!request) {
-    brillo::Error::AddToPrintf(error,
-                               FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               DBUS_ERROR_FAILED,
-                               "Unknown request ID: %s",
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               DBUS_ERROR_FAILED, "Unknown request ID: %s",
                                request_id.c_str());
   }
   return request;

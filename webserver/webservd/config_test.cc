@@ -190,8 +190,8 @@ TEST(Config, ParseError_NoPort) {
 TEST(Config, ParseError_InvalidPort) {
   brillo::ErrorPtr error;
   Config config;
-  ASSERT_FALSE(LoadConfigFromString(kInvalidConfig_InvalidPort, &config,
-               &error));
+  ASSERT_FALSE(
+      LoadConfigFromString(kInvalidConfig_InvalidPort, &config, &error));
   EXPECT_EQ(webservd::errors::kDomain, error->GetDomain());
   EXPECT_EQ(webservd::errors::kInvalidConfig, error->GetCode());
   EXPECT_EQ("Unable to parse config for protocol handler 'https'",

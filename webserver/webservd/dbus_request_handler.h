@@ -21,8 +21,7 @@ class Server;
 class DBusRequestHandler final : public RequestHandlerInterface {
  public:
   using RequestHandlerProxy = org::chromium::WebServer::RequestHandlerProxy;
-  DBusRequestHandler(Server* server,
-                     RequestHandlerProxy* handler_proxy);
+  DBusRequestHandler(Server* server, RequestHandlerProxy* handler_proxy);
 
   // Called to process an incoming HTTP request this handler is subscribed
   // to handle.

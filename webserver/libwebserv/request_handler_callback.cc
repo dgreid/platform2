@@ -9,8 +9,8 @@
 namespace libwebserv {
 
 RequestHandlerCallback::RequestHandlerCallback(
-    const base::Callback<HandlerSignature>& callback) : callback_(callback) {
-}
+    const base::Callback<HandlerSignature>& callback)
+    : callback_(callback) {}
 
 void RequestHandlerCallback::HandleRequest(std::unique_ptr<Request> request,
                                            std::unique_ptr<Response> response) {

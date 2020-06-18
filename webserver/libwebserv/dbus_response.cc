@@ -19,8 +19,7 @@ namespace libwebserv {
 
 DBusResponse::DBusResponse(DBusProtocolHandler* handler,
                            const std::string& request_id)
-    : handler_{handler}, request_id_{request_id} {
-}
+    : handler_{handler}, request_id_{request_id} {}
 
 DBusResponse::~DBusResponse() {
   if (!reply_sent_) {

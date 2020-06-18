@@ -52,8 +52,7 @@ void GetRequestData(std::unique_ptr<Request> request,
                     const GetRequestDataErrorCallback& error_callback) {
   auto container = std::make_shared<RequestDataContainer>();
   auto in_stream = request->GetDataStream();
-  auto out_stream =
-      brillo::MemoryStream::CreateRef(&container->data, nullptr);
+  auto out_stream = brillo::MemoryStream::CreateRef(&container->data, nullptr);
   container->request = std::move(request);
   container->response = std::move(response);
   container->success_callback = success_callback;

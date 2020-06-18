@@ -29,8 +29,7 @@ class ServerInterface;
 // particular port to handle requests on.
 class ProtocolHandler final {
  public:
-  ProtocolHandler(const std::string& name,
-                  ServerInterface* server_interface);
+  ProtocolHandler(const std::string& name, ServerInterface* server_interface);
   ~ProtocolHandler();
 
   // Registers a new request handler for the given URL and request method.

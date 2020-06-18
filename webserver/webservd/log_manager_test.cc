@@ -31,9 +31,7 @@ struct TestLogger : public LogManager::LoggerInterface {
 
 class LogManagerTest : public testing::Test {
  public:
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir.CreateUniqueTempDir()); }
 
   // Adds a test log entry to the file corresponding to the give |timestamp|.
   void LogEntry(const base::Time& timestamp) {
@@ -75,8 +73,7 @@ TEST_F(LogManagerTest, OnRequestCompleted) {
   strftime(str_buf, sizeof(str_buf), "%d/%b/%Y:%H:%M:%S %z",
            localtime_r(&time, &time_buf));
   std::string match = base::StringPrintf(
-      "10.11.12.13 - - [%s] \"POST /test HTTP/1.0\" 200 123456\n",
-      str_buf);
+      "10.11.12.13 - - [%s] \"POST /test HTTP/1.0\" 200 123456\n", str_buf);
   EXPECT_EQ(match, last_entry);
 }
 
@@ -94,13 +91,8 @@ TEST_F(LogManagerTest, LogFileManagement) {
     timestamp += base::TimeDelta::FromDays(1);
   }
   std::set<std::string> expected_files{
-    "2015-02-28.log",
-    "2015-03-01.log",
-    "2015-03-02.log",
-    "2015-03-03.log",
-    "2015-03-04.log",
-    "2015-03-05.log",
-    "2015-03-06.log",
+      "2015-02-28.log", "2015-03-01.log", "2015-03-02.log", "2015-03-03.log",
+      "2015-03-04.log", "2015-03-05.log", "2015-03-06.log",
   };
   EXPECT_EQ(expected_files, GetLogFiles());
 }
@@ -124,26 +116,26 @@ TEST_F(LogManagerTest, LargeLogs) {
   // Add the line. Should still go to the same file.
   LogEntry(timestamp);
   std::set<std::string> expected_files{
-    "2015-02-25.log",
-    "2015-02-26.log",
+      "2015-02-25.log",
+      "2015-02-26.log",
   };
   EXPECT_EQ(expected_files, GetLogFiles());
   // Now this log entry will not fit and will end up creating a new file.
   LogEntry(timestamp);
   expected_files = {
-    "2015-02-25.log",
-    "2015-02-26-a.log",
-    "2015-02-26.log",
+      "2015-02-25.log",
+      "2015-02-26-a.log",
+      "2015-02-26.log",
   };
   EXPECT_EQ(expected_files, GetLogFiles());
   // Add some more data to the current file.
   ASSERT_TRUE(base::AppendToFile(current_file, data.data(), data.size()));
   LogEntry(timestamp);
   expected_files = {
-    "2015-02-25.log",
-    "2015-02-26-a.log",
-    "2015-02-26-b.log",
-    "2015-02-26.log",
+      "2015-02-25.log",
+      "2015-02-26-a.log",
+      "2015-02-26-b.log",
+      "2015-02-26.log",
   };
 }
 }  // namespace webservd

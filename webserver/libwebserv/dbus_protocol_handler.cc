@@ -30,8 +30,7 @@ void IgnoreDBusError(brillo::Error* /* error */) {}
 
 // Copies the data from |src_stream| to the destination stream represented
 // by a file descriptor |fd|.
-void WriteResponseData(brillo::StreamPtr src_stream,
-                       const base::ScopedFD& fd) {
+void WriteResponseData(brillo::StreamPtr src_stream, const base::ScopedFD& fd) {
   int dupfd = dup(fd.get());
   auto dest_stream =
       brillo::FileStream::FromFileDescriptor(dupfd, true, nullptr);
@@ -41,17 +40,15 @@ void WriteResponseData(brillo::StreamPtr src_stream,
   auto on_success = [](brillo::StreamPtr, brillo::StreamPtr, uint64_t) {};
   auto on_error = [](brillo::StreamPtr, brillo::StreamPtr,
                      const brillo::Error*) {};
-  brillo::stream_utils::CopyData(
-      std::move(src_stream), std::move(dest_stream), base::Bind(on_success),
-      base::Bind(on_error));
+  brillo::stream_utils::CopyData(std::move(src_stream), std::move(dest_stream),
+                                 base::Bind(on_success), base::Bind(on_error));
 }
 
 }  // anonymous namespace
 
 DBusProtocolHandler::DBusProtocolHandler(const std::string& name,
                                          DBusServer* server)
-    : name_{name}, server_{server} {
-}
+    : name_{name}, server_{server} {}
 
 DBusProtocolHandler::~DBusProtocolHandler() {
   // Remove any existing handlers, so the web server knows that we don't
@@ -64,6 +61,7 @@ DBusProtocolHandler::~DBusProtocolHandler() {
     RemoveHandler(handler_id);
   }
 }
+
 bool DBusProtocolHandler::IsConnected() const {
   return !proxies_.empty();
 }
@@ -109,16 +107,12 @@ int DBusProtocolHandler::AddHandler(
   // add the request handler.
   for (const auto& pair : proxies_) {
     pair.second->AddRequestHandlerAsync(
-        url,
-        method,
-        server_->service_name_,
+        url, method, server_->service_name_,
         base::Bind(&DBusProtocolHandler::AddHandlerSuccess,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   last_handler_id_,
+                   weak_ptr_factory_.GetWeakPtr(), last_handler_id_,
                    pair.second),
         base::Bind(&DBusProtocolHandler::AddHandlerError,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   last_handler_id_));
+                   weak_ptr_factory_.GetWeakPtr(), last_handler_id_));
   }
   return last_handler_id_;
 }
@@ -151,16 +145,11 @@ void DBusProtocolHandler::Connect(ProtocolHandlerProxyInterface* proxy) {
   proxies_.emplace(proxy->GetObjectPath(), proxy);
   for (const auto& pair : request_handlers_) {
     proxy->AddRequestHandlerAsync(
-        pair.second.url,
-        pair.second.method,
-        server_->service_name_,
+        pair.second.url, pair.second.method, server_->service_name_,
         base::Bind(&DBusProtocolHandler::AddHandlerSuccess,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   pair.first,
-                   proxy),
+                   weak_ptr_factory_.GetWeakPtr(), pair.first, proxy),
         base::Bind(&DBusProtocolHandler::AddHandlerError,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   pair.first));
+                   weak_ptr_factory_.GetWeakPtr(), pair.first));
   }
 }
 
@@ -191,26 +180,22 @@ void DBusProtocolHandler::AddHandlerError(int /* handler_id */,
 }
 
 bool DBusProtocolHandler::ProcessRequest(const std::string& protocol_handler_id,
-                                     const std::string& remote_handler_id,
-                                     const std::string& request_id,
-                                     std::unique_ptr<Request> request,
-                                     brillo::ErrorPtr* error) {
+                                         const std::string& remote_handler_id,
+                                         const std::string& request_id,
+                                         std::unique_ptr<Request> request,
+                                         brillo::ErrorPtr* error) {
   auto id_iter = remote_handler_id_map_.find(remote_handler_id);
   if (id_iter == remote_handler_id_map_.end()) {
-    brillo::Error::AddToPrintf(error, FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               DBUS_ERROR_FAILED,
-                               "Unknown request handler '%s'",
-                               remote_handler_id.c_str());
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, DBUS_ERROR_FAILED,
+        "Unknown request handler '%s'", remote_handler_id.c_str());
     return false;
   }
   auto handler_iter = request_handlers_.find(id_iter->second);
   if (handler_iter == request_handlers_.end()) {
-    brillo::Error::AddToPrintf(error, FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               DBUS_ERROR_FAILED,
-                               "Handler # %d is no longer available",
-                               id_iter->second);
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, DBUS_ERROR_FAILED,
+        "Handler # %d is no longer available", id_iter->second);
     return false;
   }
   request_id_map_.emplace(request_id, protocol_handler_id);
@@ -225,7 +210,6 @@ void DBusProtocolHandler::CompleteRequest(
     int status_code,
     const std::multimap<std::string, std::string>& headers,
     brillo::StreamPtr data_stream) {
-
   // Once request gets a response and the request_id_map should remove
   // the request id from the map
   auto clear_request_itr = request_id_map_.find(request_id);
@@ -290,9 +274,7 @@ void DBusProtocolHandler::GetFileData(
     callbacks->on_success.Run(std::move(stream));
   };
   auto on_error = [](std::shared_ptr<Callbacks> callbacks,
-                     brillo::Error* error) {
-    callbacks->on_error.Run(error);
-  };
+                     brillo::Error* error) { callbacks->on_error.Run(error); };
 
   proxy->GetRequestFileDataAsync(request_id, file_id,
                                  base::Bind(on_success, callbacks),
@@ -311,14 +293,13 @@ DBusProtocolHandler::GetRequestProtocolHandlerProxy(
   auto find_proxy_by_id = [handler_id](decltype(*proxies_.begin()) pair) {
     return pair.second->id() == handler_id;
   };
-  auto proxy_iter = std::find_if(proxies_.begin(), proxies_.end(),
-                                 find_proxy_by_id);
+  auto proxy_iter =
+      std::find_if(proxies_.begin(), proxies_.end(), find_proxy_by_id);
   if (proxy_iter == proxies_.end()) {
     LOG(WARNING) << "Completing a request after the handler proxy is removed";
     return nullptr;
   }
   return proxy_iter->second;
 }
-
 
 }  // namespace libwebserv

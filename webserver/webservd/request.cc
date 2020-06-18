@@ -39,7 +39,9 @@ class RequestHelper {
                               size_t size) {
     auto self = reinterpret_cast<Request*>(cls);
     return self->ProcessPostData(key, filename, content_type, transfer_encoding,
-                                 data, off, size) ? MHD_YES : MHD_NO;
+                                 data, off, size)
+               ? MHD_YES
+               : MHD_NO;
   }
 
   static int ValueCallback(void* cls,
@@ -71,16 +73,14 @@ FileInfo::FileInfo(const std::string& in_field_name,
     : field_name(in_field_name),
       file_name(in_file_name),
       content_type(in_content_type),
-      transfer_encoding(in_transfer_encoding) {
-}
+      transfer_encoding(in_transfer_encoding) {}
 
-Request::Request(
-    const std::string& request_handler_id,
-    const std::string& url,
-    const std::string& method,
-    const std::string& version,
-    MHD_Connection* connection,
-    ProtocolHandler* protocol_handler)
+Request::Request(const std::string& request_handler_id,
+                 const std::string& url,
+                 const std::string& method,
+                 const std::string& version,
+                 MHD_Connection* connection,
+                 ProtocolHandler* protocol_handler)
     : id_{base::GenerateGUID()},
       request_handler_id_{request_handler_id},
       url_{url},
@@ -94,8 +94,8 @@ Request::Request(
   CHECK_EQ(0, pipe(pipe_fds));
   request_data_pipe_out_ = base::File{pipe_fds[0]};
   CHECK(request_data_pipe_out_.IsValid());
-  request_data_stream_ = brillo::FileStream::FromFileDescriptor(
-      pipe_fds[1], true, nullptr);
+  request_data_stream_ =
+      brillo::FileStream::FromFileDescriptor(pipe_fds[1], true, nullptr);
   CHECK(request_data_stream_);
 
   // POST request processor.
@@ -138,8 +138,8 @@ base::File Request::Complete(
   CHECK_EQ(0, pipe(pipe_fds));
   file = base::File{pipe_fds[1]};
   CHECK(file.IsValid());
-  response_data_stream_ = brillo::FileStream::FromFileDescriptor(
-      pipe_fds[0], true, nullptr);
+  response_data_stream_ =
+      brillo::FileStream::FromFileDescriptor(pipe_fds[0], true, nullptr);
   CHECK(response_data_stream_);
 
   response_data_size_ = in_data_size;
@@ -245,10 +245,10 @@ void Request::ForwardRequestToHandler() {
     CHECK(p != protocol_handler_->request_handlers_.end());
     const MHD_ConnectionInfo* info = MHD_get_connection_info(
         connection_, MHD_CONNECTION_INFO_CLIENT_ADDRESS);
-    struct sockaddr_in6 *sock_addr;
+    struct sockaddr_in6* sock_addr;
     char src[INET6_ADDRSTRLEN] = {};
     if (info) {
-      sock_addr = reinterpret_cast<struct sockaddr_in6 *>(info->client_addr);
+      sock_addr = reinterpret_cast<struct sockaddr_in6*>(info->client_addr);
       inet_ntop(AF_INET6, &sock_addr->sin6_addr, src, INET6_ADDRSTRLEN);
     }
     // Send the request over D-Bus and await the response.
@@ -315,7 +315,9 @@ bool Request::AddRawRequestData(const void* data, size_t* size) {
   return waiting_for_data_;
 }
 
-ssize_t Request::ResponseDataCallback(void *cls, uint64_t /* pos */, char *buf,
+ssize_t Request::ResponseDataCallback(void* cls,
+                                      uint64_t /* pos */,
+                                      char* buf,
                                       size_t max) {
   Request* self = static_cast<Request*>(cls);
   size_t read = 0;

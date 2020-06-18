@@ -41,7 +41,7 @@ class MockResponse : public Response {
  private:
   void Reply(int status_code,
              brillo::StreamPtr data_stream,
-             const std::string &mime_type) override {
+             const std::string& mime_type) override {
     return MockReply(status_code, data_stream.get(), mime_type);
   }
 

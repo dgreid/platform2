@@ -26,8 +26,7 @@ PermissionBrokerFirewall::~PermissionBrokerFirewall() {
 }
 
 void PermissionBrokerFirewall::WaitForServiceAsync(
-    scoped_refptr<dbus::Bus> bus,
-    const base::Closure& callback) {
+    scoped_refptr<dbus::Bus> bus, const base::Closure& callback) {
   service_started_cb_ = callback;
   proxy_ = std::make_unique<org::chromium::PermissionBrokerProxy>(bus);
   proxy_->GetObjectProxy()->WaitForServiceToBeAvailable(
@@ -53,8 +52,7 @@ void PermissionBrokerFirewall::OnPermissionBrokerAvailable(bool available) {
 }
 
 void PermissionBrokerFirewall::OnPermissionBrokerNameOwnerChanged(
-    const std::string& old_owner,
-    const std::string& new_owner) {
+    const std::string& old_owner, const std::string& new_owner) {
   if (!new_owner.empty())
     service_started_cb_.Run();
 }

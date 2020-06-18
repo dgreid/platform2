@@ -163,7 +163,9 @@ class Request final {
   void ForwardRequestToHandler();
 
   // Response data callback for MHD_create_response_from_callback().
-  static ssize_t ResponseDataCallback(void* cls, uint64_t pos, char* buf,
+  static ssize_t ResponseDataCallback(void* cls,
+                                      uint64_t pos,
+                                      char* buf,
                                       size_t max);
 
   TempFileManager* GetTempFileManager();

@@ -30,5 +30,4 @@ std::unique_ptr<Encryptor> Encryptor::CreateDefaultEncryptor() {
   return std::unique_ptr<Encryptor>{new FakeEncryptor};
 }
 
-
 }  // namespace webservd

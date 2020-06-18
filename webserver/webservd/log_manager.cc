@@ -47,8 +47,7 @@ std::string GetIPAddress(const sockaddr* addr) {
       auto addr_in = reinterpret_cast<const sockaddr_in*>(addr);
       if (!inet_ntop(AF_INET, &addr_in->sin_addr, buf, sizeof(buf)))
         PLOG(ERROR) << "Unable to get IP address string (IPv4)";
-    }
-    break;
+    } break;
 
     case AF_INET6: {
       auto addr_in6 = reinterpret_cast<const sockaddr_in6*>(addr);
@@ -66,13 +65,12 @@ std::string GetIPAddress(const sockaddr* addr) {
       if (dwords[0] == 0x00000000 && dwords[1] == 0x00000000 &&
           dwords[2] == htonl(0x0000ffff)) {
         auto bytes = reinterpret_cast<const uint8_t*>(&addr_in6->sin6_addr);
-        return base::StringPrintf("%d.%d.%d.%d",
-                                  bytes[12], bytes[13], bytes[14], bytes[15]);
+        return base::StringPrintf("%d.%d.%d.%d", bytes[12], bytes[13],
+                                  bytes[14], bytes[15]);
       } else if (!inet_ntop(AF_INET6, &addr_in6->sin6_addr, buf, sizeof(buf))) {
         PLOG(ERROR) << "Unable to get IP address string (IPv6)";
       }
-    }
-    break;
+    } break;
 
     default:
       LOG(ERROR) << "Unsupported address family " << addr->sa_family;
@@ -121,8 +119,8 @@ class FileLogger final : public LogManager::LoggerInterface {
         log_manager_->PerformLogMaintenance();
       }
     }
-    PLOG_IF(ERROR, !success) << "Failed to append a log entry to log file at "
-                             << file_path.value();
+    PLOG_IF(ERROR, !success)
+        << "Failed to append a log entry to log file at " << file_path.value();
   }
 
  private:
@@ -140,18 +138,17 @@ class FileLogger final : public LogManager::LoggerInterface {
     // If we try all the suffixes from 'a' to 'z' and still can't find a name,
     // abandon this strategy and keep appending to the current file.
     while (suffix <= 'z') {
-      base::FilePath archive_file_path = log_directory_.Append(
-          base::StringPrintf("%s-%c.%s", pair.first.c_str(),
-                              suffix, pair.second.c_str()));
+      base::FilePath archive_file_path =
+          log_directory_.Append(base::StringPrintf(
+              "%s-%c.%s", pair.first.c_str(), suffix, pair.second.c_str()));
       if (!base::PathExists(archive_file_path)) {
         base::FilePath file_path = log_directory_.Append(file_name);
         if (base::Move(file_path, archive_file_path)) {
           // Successfully renamed, start a new log file.
           return true;
         } else {
-          PLOG(ERROR) << "Failed to rename log file from "
-                      << file_path.value() << " to "
-                      << archive_file_path.value();
+          PLOG(ERROR) << "Failed to rename log file from " << file_path.value()
+                      << " to " << archive_file_path.value();
         }
         break;
       }
@@ -192,10 +189,10 @@ void LogManager::OnRequestCompleted(const base::Time& timestamp,
   std::string size_string{"-"};
   if (response_size >= 0)
     size_string = std::to_string(response_size);
-  std::string log_entry = base::StringPrintf(
-      "%s - - [%s] \"%s %s %s\" %d %s\n", ip_address.c_str(), str_buf,
-      method.c_str(), url.c_str(), version.c_str(), status_code,
-      size_string.c_str());
+  std::string log_entry =
+      base::StringPrintf("%s - - [%s] \"%s %s %s\" %d %s\n", ip_address.c_str(),
+                         str_buf, method.c_str(), url.c_str(), version.c_str(),
+                         status_code, size_string.c_str());
   GetInstance()->logger_->Log(timestamp, log_entry);
 }
 
@@ -213,10 +210,8 @@ void LogManager::PerformLogMaintenance() {
   // we chose the file naming scheme deliberately to guarantee proper sorting
   // order).
   std::set<base::FilePath> log_files;
-  base::FileEnumerator enumerator{log_directory_,
-                                  false,
-                                  base::FileEnumerator::FILES,
-                                  "*.log"};
+  base::FileEnumerator enumerator{log_directory_, false,
+                                  base::FileEnumerator::FILES, "*.log"};
   base::FilePath file = enumerator.Next();
   while (!file.empty()) {
     log_files.insert(file);

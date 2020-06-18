@@ -23,9 +23,7 @@ namespace {
 
 constexpr int kDbusTimeoutInMsec = 50 * 1000;
 
-void OnError(Request* request,
-             bool debug,
-             brillo::Error* error) {
+void OnError(Request* request, bool debug, brillo::Error* error) {
   std::string error_msg{"Internal Server Error"};
   if (debug) {
     error_msg += "\r\n" + error->GetMessage();
@@ -47,9 +45,7 @@ bool CompleteRequestIfInvalid(Request* request, const std::string& value) {
 
 DBusRequestHandler::DBusRequestHandler(Server* server,
                                        RequestHandlerProxy* handler_proxy)
-    : server_{server},
-      handler_proxy_{handler_proxy} {
-}
+    : server_{server}, handler_proxy_{handler_proxy} {}
 
 void DBusRequestHandler::HandleRequest(Request* request,
                                        const std::string& src) {
@@ -61,12 +57,13 @@ void DBusRequestHandler::HandleRequest(Request* request,
   }
   headers.emplace_back("Source-Host", src);
 
-  std::vector<std::tuple<int32_t, std::string, std::string, std::string,
-                         std::string>> files;
+  std::vector<
+      std::tuple<int32_t, std::string, std::string, std::string, std::string>>
+      files;
   int32_t index = 0;
   for (const auto& file : request->GetFileInfo()) {
     files.emplace_back(index++, file->field_name, file->file_name,
-                        file->content_type, file->transfer_encoding);
+                       file->content_type, file->transfer_encoding);
   }
 
   std::vector<std::tuple<bool, std::string, std::string>> params;
@@ -82,15 +79,12 @@ void DBusRequestHandler::HandleRequest(Request* request,
     params.emplace_back(true, pair.first, pair.second);
   }
 
-  auto error_callback = base::Bind(&OnError,
-                                   base::Unretained(request),
+  auto error_callback = base::Bind(&OnError, base::Unretained(request),
                                    server_->GetConfig().use_debug);
 
-  auto request_id = std::make_tuple(request->GetProtocolHandlerID(),
-                                    request->GetRequestHandlerID(),
-                                    request->GetID(),
-                                    request->GetURL(),
-                                    request->GetMethod());
+  auto request_id = std::make_tuple(
+      request->GetProtocolHandlerID(), request->GetRequestHandlerID(),
+      request->GetID(), request->GetURL(), request->GetMethod());
 
   base::ScopedFD body_data_pipe(request->GetBodyDataFileDescriptor());
   handler_proxy_->ProcessRequestAsync(request_id, headers, params, files,

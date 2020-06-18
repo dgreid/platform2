@@ -47,9 +47,7 @@ class Daemon final : public brillo::DBusServiceDaemon {
         sequencer->GetHandler("Server.RegisterAsync() failed.", true));
   }
 
-  void OnShutdown(int* /* return_code */) override {
-    server_.reset();
-  }
+  void OnShutdown(int* /* return_code */) override { server_.reset(); }
 
  private:
   webservd::Config config_;
@@ -64,8 +62,7 @@ int main(int argc, char* argv[]) {
   DEFINE_bool(log_to_stderr, false, "log trace messages to stderr as well");
   DEFINE_string(config_path, "",
                 "path to a file containing server configuration");
-  DEFINE_bool(debug, false,
-              "return debug error information in web requests");
+  DEFINE_bool(debug, false, "return debug error information in web requests");
   DEFINE_bool(ipv6, true, "enable IPv6 support");
   brillo::FlagHelper::Init(argc, argv, "Brillo web server daemon");
 

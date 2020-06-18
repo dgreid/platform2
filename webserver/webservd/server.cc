@@ -36,13 +36,12 @@ void OnFirewallSuccess(const std::string& itf_name,
     LOG(INFO) << "Successfully opened up port " << port << " on interface "
               << itf_name;
   } else {
-    LOG(ERROR) << "Failed to open up port " << port << ", interface: "
-               << itf_name;
+    LOG(ERROR) << "Failed to open up port " << port
+               << ", interface: " << itf_name;
   }
 }
 
-void IgnoreFirewallDBusMethodError(brillo::Error* /* error */) {
-}
+void IgnoreFirewallDBusMethodError(brillo::Error* /* error */) {}
 
 brillo::SecureBlob LoadAndValidatePrivateKey(const base::FilePath& key_file,
                                              webservd::Encryptor* encryptor) {
@@ -62,7 +61,8 @@ brillo::SecureBlob LoadAndValidatePrivateKey(const base::FilePath& key_file,
 
 namespace webservd {
 
-Server::Server(ExportedObjectManager* object_manager, const Config& config,
+Server::Server(ExportedObjectManager* object_manager,
+               const Config& config,
                std::unique_ptr<FirewallInterface> firewall)
     : dbus_object_{new DBusObject{
           object_manager, object_manager->GetBus(),
@@ -106,11 +106,10 @@ void Server::OnFirewallServiceOnline() {
             << "Opening firewall for protocol handlers";
   for (auto& handler_config : config_.protocol_handlers) {
     VLOG(1) << "Firewall request: Protocol Handler = " << handler_config.name
-            << ", Port = " << handler_config.port << ", Interface = "
-            << handler_config.interface_name;
+            << ", Port = " << handler_config.port
+            << ", Interface = " << handler_config.interface_name;
     firewall_->PunchTcpHoleAsync(
-        handler_config.port,
-        handler_config.interface_name,
+        handler_config.port, handler_config.interface_name,
         base::Bind(&OnFirewallSuccess, handler_config.interface_name,
                    handler_config.port),
         base::Bind(&IgnoreFirewallDBusMethodError));
@@ -129,10 +128,7 @@ void Server::ProtocolHandlerStarted(ProtocolHandler* handler) {
   dbus::ObjectPath object_path{path};
   std::unique_ptr<DBusProtocolHandler> dbus_protocol_handler{
       new DBusProtocolHandler{dbus_object_->GetObjectManager().get(),
-                              object_path,
-                              handler,
-                              this}
-  };
+                              object_path, handler, this}};
   protocol_handler_map_.emplace(handler, std::move(dbus_protocol_handler));
 }
 

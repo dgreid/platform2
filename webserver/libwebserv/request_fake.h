@@ -26,7 +26,7 @@ namespace libwebserv {
 class RequestFake : public Request {
  public:
   RequestFake(const std::string& url, const std::string& method)
-    : Request(url, method) {}
+      : Request(url, method) {}
 
   void SetDataStream(brillo::StreamPtr data_stream) {
     data_stream_ = std::move(data_stream);

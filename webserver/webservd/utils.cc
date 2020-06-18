@@ -71,11 +71,11 @@ X509Ptr CreateCertificate(int serial_number,
   return cert;
 }
 
-std::unique_ptr<RSA, void(*)(RSA*)> GenerateRSAKeyPair(int key_length_bits) {
+std::unique_ptr<RSA, void (*)(RSA*)> GenerateRSAKeyPair(int key_length_bits) {
   // Create RSA key pair.
-  auto rsa_key_pair = std::unique_ptr<RSA, void(*)(RSA*)>{RSA_new(), RSA_free};
+  auto rsa_key_pair = std::unique_ptr<RSA, void (*)(RSA*)>{RSA_new(), RSA_free};
   CHECK(rsa_key_pair.get());
-  auto big_num = std::unique_ptr<BIGNUM, void(*)(BIGNUM*)>{BN_new(), BN_free};
+  auto big_num = std::unique_ptr<BIGNUM, void (*)(BIGNUM*)>{BN_new(), BN_free};
   CHECK(big_num.get());
   CHECK(BN_set_word(big_num.get(), 65537));
   CHECK(RSA_generate_key_ex(rsa_key_pair.get(), key_length_bits, big_num.get(),
@@ -85,7 +85,7 @@ std::unique_ptr<RSA, void(*)(RSA*)> GenerateRSAKeyPair(int key_length_bits) {
 
 brillo::SecureBlob StoreRSAPrivateKey(RSA* rsa_key_pair) {
   auto bio =
-      std::unique_ptr<BIO, void(*)(BIO*)>{BIO_new(BIO_s_mem()), BIO_vfree};
+      std::unique_ptr<BIO, void (*)(BIO*)>{BIO_new(BIO_s_mem()), BIO_vfree};
   CHECK(bio);
   CHECK(PEM_write_bio_RSAPrivateKey(bio.get(), rsa_key_pair, nullptr, nullptr,
                                     0, nullptr, nullptr));
@@ -99,9 +99,9 @@ brillo::SecureBlob StoreRSAPrivateKey(RSA* rsa_key_pair) {
 }
 
 bool ValidateRSAPrivateKey(const brillo::SecureBlob& key) {
-  std::unique_ptr<BIO, void(*)(BIO*)> bio{
+  std::unique_ptr<BIO, void (*)(BIO*)> bio{
       BIO_new_mem_buf(const_cast<uint8_t*>(key.data()), key.size()), BIO_vfree};
-  std::unique_ptr<RSA, void(*)(RSA*)> rsa_key{
+  std::unique_ptr<RSA, void (*)(RSA*)> rsa_key{
       PEM_read_bio_RSAPrivateKey(bio.get(), nullptr, nullptr, nullptr),
       RSA_free};
   return rsa_key.get() != nullptr;
@@ -109,7 +109,7 @@ bool ValidateRSAPrivateKey(const brillo::SecureBlob& key) {
 
 brillo::Blob StoreCertificate(X509* cert) {
   auto bio =
-      std::unique_ptr<BIO, void(*)(BIO*)>{BIO_new(BIO_s_mem()), BIO_vfree};
+      std::unique_ptr<BIO, void (*)(BIO*)>{BIO_new(BIO_s_mem()), BIO_vfree};
   CHECK(bio);
   CHECK(PEM_write_bio_X509(bio.get(), cert));
   uint8_t* buffer = nullptr;
@@ -120,14 +120,14 @@ brillo::Blob StoreCertificate(X509* cert) {
 }
 
 bool StoreCertificate(X509* cert, const base::FilePath& file) {
-  std::unique_ptr<BIO, void(*)(BIO*)> bio{
+  std::unique_ptr<BIO, void (*)(BIO*)> bio{
       BIO_new_file(file.value().c_str(), "w"), BIO_vfree};
   return bio && PEM_write_bio_X509(bio.get(), cert) != 0;
 }
 
 X509Ptr LoadAndValidateCertificate(const base::FilePath& file) {
   X509Ptr cert{nullptr, X509_free};
-  std::unique_ptr<BIO, void(*)(BIO*)> bio{
+  std::unique_ptr<BIO, void (*)(BIO*)> bio{
       BIO_new_file(file.value().c_str(), "r"), BIO_vfree};
   if (!bio)
     return cert;
@@ -167,8 +167,8 @@ int CreateNetworkInterfaceSocket(const std::string& if_name) {
   // Now, specify that we want this socket to bind only to a particular
   // network interface. Note, this call requires root privileges, so this
   // should be done before the privileges are dropped.
-  if (setsockopt(socket_fd, SOL_SOCKET, SO_BINDTODEVICE,
-                 if_name.c_str(), if_name.size()) < 0) {
+  if (setsockopt(socket_fd, SOL_SOCKET, SO_BINDTODEVICE, if_name.c_str(),
+                 if_name.size()) < 0) {
     PLOG(WARNING) << "Failed to bind socket (SO_BINDTODEVICE) to " << if_name;
     close(socket_fd);
     return -1;

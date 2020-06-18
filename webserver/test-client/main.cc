@@ -20,17 +20,16 @@
 using WebservTestClientBaseClass = brillo::DBusDaemon;
 using brillo::dbus_utils::AsyncEventSequencer;
 
-using libwebserv::Server;
 using libwebserv::ProtocolHandler;
-using libwebserv::RequestHandlerInterface;
 using libwebserv::Request;
+using libwebserv::RequestHandlerInterface;
 using libwebserv::Response;
+using libwebserv::Server;
 
 namespace {
 
 void LogServerOnlineStatus(bool online) {
-  LOG(INFO) << "Webserver is "
-            << ((online) ? "online" : "offline");
+  LOG(INFO) << "Webserver is " << ((online) ? "online" : "offline");
 }
 
 class PingRequestHandler : public RequestHandlerInterface {
@@ -71,8 +70,7 @@ class WebservTestClient : public WebservTestClientBaseClass {
     // requests until the library does some async book keeping.
     ProtocolHandler* http_handler = webserver_->GetDefaultHttpHandler();
     http_handler->AddHandler(
-        PingRequestHandler::kUrl,
-        PingRequestHandler::kMethods,
+        PingRequestHandler::kUrl, PingRequestHandler::kMethods,
         std::unique_ptr<RequestHandlerInterface>(new PingRequestHandler()));
 
     return exit_code;

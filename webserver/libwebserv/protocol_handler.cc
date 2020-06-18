@@ -6,7 +6,7 @@
 
 namespace libwebserv {
 
-const char ProtocolHandler::kHttp[] =  "http";
+const char ProtocolHandler::kHttp[] = "http";
 const char ProtocolHandler::kHttps[] = "https";
 
 }  // namespace libwebserv

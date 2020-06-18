@@ -23,8 +23,8 @@
 namespace brillo {
 namespace dbus_utils {
 class ExportedObjectManager;
-}  // dbus_utils
-}  // brillo
+}  // namespace dbus_utils
+}  // namespace brillo
 
 namespace webservd {
 
@@ -36,11 +36,10 @@ class Server;
 class DBusProtocolHandler final
     : public org::chromium::WebServer::ProtocolHandlerInterface {
  public:
-  DBusProtocolHandler(
-      brillo::dbus_utils::ExportedObjectManager* object_manager,
-      const dbus::ObjectPath& object_path,
-      ProtocolHandler* protocol_handler,
-      Server* server);
+  DBusProtocolHandler(brillo::dbus_utils::ExportedObjectManager* object_manager,
+                      const dbus::ObjectPath& object_path,
+                      ProtocolHandler* protocol_handler,
+                      Server* server);
   ~DBusProtocolHandler();
 
   void RegisterAsync(
@@ -50,13 +49,12 @@ class DBusProtocolHandler final
   brillo::dbus_utils::ExportedObjectManager* GetObjectManager() const;
 
   // Overrides from org::chromium::WebServer::DBusProtocolHandlerInterface.
-  bool AddRequestHandler(
-      brillo::ErrorPtr* error,
-      dbus::Message* message,
-      const std::string& in_url,
-      const std::string& in_method,
-      const std::string& in_service_name,
-      std::string* out_request_handler_id) override;
+  bool AddRequestHandler(brillo::ErrorPtr* error,
+                         dbus::Message* message,
+                         const std::string& in_url,
+                         const std::string& in_method,
+                         const std::string& in_service_name,
+                         std::string* out_request_handler_id) override;
 
   bool RemoveRequestHandler(brillo::ErrorPtr* error,
                             const std::string& in_request_handler_id) override;

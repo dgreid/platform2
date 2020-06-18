@@ -26,7 +26,8 @@ class PermissionBrokerFirewall : public FirewallInterface {
   void WaitForServiceAsync(scoped_refptr<dbus::Bus> bus,
                            const base::Closure& callback) override;
   void PunchTcpHoleAsync(
-      uint16_t port, const std::string& interface_name,
+      uint16_t port,
+      const std::string& interface_name,
       const base::Callback<void(bool)>& success_cb,
       const base::Callback<void(brillo::Error*)>& failure_cb) override;
 
