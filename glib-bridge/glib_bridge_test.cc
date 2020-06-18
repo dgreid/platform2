@@ -61,7 +61,7 @@ class GlibBridgeTest : public ::testing::Test {
  private:
   base::MessageLoopForIO message_loop_;
   base::RunLoop run_loop_;
-  base::FileDescriptorWatcher watcher_{&message_loop_};
+  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
   std::unique_ptr<GlibBridge> glib_bridge_;
 
   DISALLOW_COPY_AND_ASSIGN(GlibBridgeTest);
