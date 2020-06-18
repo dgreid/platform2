@@ -2,20 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate protoc_rust;
-
 use std::env;
 use std::fmt::Write as FmtWrite;
 use std::fs;
 use std::io::Write;
-use std::path::{Path, PathBuf};
-
-fn paths_to_strs<P: AsRef<Path>>(paths: &[P]) -> Vec<&str> {
-    paths
-        .iter()
-        .map(|p| p.as_ref().as_os_str().to_str().unwrap())
-        .collect()
-}
+use std::path::PathBuf;
 
 fn main() {
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
@@ -44,13 +35,12 @@ fn main() {
         vmplugin_dispatcher_dir,
     ];
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: out_dir.as_os_str().to_str().unwrap(),
-        input: &paths_to_strs(&input_files),
-        includes: &paths_to_strs(&include_dirs),
-        customize: Default::default(),
-    })
-    .expect("protoc");
+    protoc_rust::Codegen::new()
+        .out_dir(&out_dir)
+        .inputs(&input_files)
+        .includes(&include_dirs)
+        .run()
+        .expect("protoc");
 
     let mut path_include_mods = String::new();
     for input_file in input_files.iter() {

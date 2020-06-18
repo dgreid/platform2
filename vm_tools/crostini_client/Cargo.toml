@@ -20,7 +20,7 @@ overflow-checks = true
 dbus = "0.8"
 getopts = "0.2"
 libc = "0.2.44"
-protobuf = "2.3"
+protobuf = "2.16"
 
 [build-dependencies]
-protoc-rust = "2.3"
+protoc-rust = "2.16"
