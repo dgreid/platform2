@@ -488,7 +488,7 @@ int main(int argc, char* argv[]) {
   }
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   dbus::Bus::Options bus_options;
   bus_options.bus_type = dbus::Bus::SYSTEM;
   scoped_refptr<dbus::Bus> bus(new dbus::Bus(bus_options));

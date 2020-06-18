@@ -29,7 +29,7 @@ constexpr char kHelpMessage[] = "bio_wash resets the SBP.";
 
 int DoBioWash(const bool factory_init = false) {
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   std::vector<std::unique_ptr<biod::BiometricsManager>> managers;
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;

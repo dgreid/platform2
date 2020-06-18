@@ -51,7 +51,7 @@ int main(int argc, char* argv[]) {
   biod::LogVersion();
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
   biod::BiometricsDaemon bio_daemon;
   base::RunLoop().Run();
   return 0;
