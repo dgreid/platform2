@@ -141,6 +141,21 @@ def GetBluetoothFiles(config):
     print(files.source)
     print(files.dest)
 
+def GetCameraFiles(config):
+  """Print a list of camera files across all devices
+
+  The output is one line for the source file and one line for the install file.
+  e.g.:
+    sw_build_config/platform/chromeos-config/camera/camera_config_${design}.json
+    /etc/camera/camera_config_${design}.json
+
+  Args:
+    config: A CrosConfig instance
+  """
+  for files in config.GetCameraFiles():
+    print(files.source)
+    print(files.dest)
+
 def GetFirmwareBuildTargets(config, target_type):
   """Lists all firmware build-targets of the given type, for all models.
 
@@ -309,6 +324,11 @@ def GetParser(description):
       'get-bluetooth-files',
       help='Lists pairs of bluetooth files in sequence: first line is '
       'the source file, second line is the full install pathname')
+  # Parser: get-camera-files
+  subparsers.add_parser(
+      'get-camera-files',
+      help='Lists pairs of camera files in sequence: first line is '
+      'the source file, second line is the full install pathname')
   # Parser: get-firmware-build-targets
   build_target_parser = subparsers.add_parser(
       'get-firmware-build-targets',
@@ -409,6 +429,8 @@ def main(argv=None):
     GetAudioFiles(config)
   elif opts.subcommand == 'get-bluetooth-files':
     GetBluetoothFiles(config)
+  elif opts.subcommand == 'get-camera-files':
+    GetCameraFiles(config)
   elif opts.subcommand == 'get-firmware-build-targets':
     GetFirmwareBuildTargets(config, opts.type)
   elif opts.subcommand == 'get-mosys-platform':

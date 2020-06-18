@@ -240,6 +240,15 @@ class DeviceConfig(object):
     """
     pass
 
+  def GetCameraFiles(self):
+    """Get a list of camera config files
+
+    Returns:
+      List of BaseFile objects representing the camera files referenced
+      by this device.
+    """
+    pass
+
   def GetThermalFiles(self):
     """Get a list of thermal files
 
@@ -334,6 +343,7 @@ class CrosConfigBaseImpl(object):
     bluetooth_files = self.GetBluetoothFiles()
     if bluetooth_files:
       result['GetBluetoothFiles'] = bluetooth_files
+    result['GetCameraFiles'] = self.GetCameraFiles()
     result['GetThermalFiles'] = self.GetThermalFiles()
     result['GetFirmwareInfo'] = self.GetFirmwareInfo()
     for target in ['coreboot', 'ec']:
@@ -470,6 +480,20 @@ class CrosConfigBaseImpl(object):
     file_set = set()
     for device in self.GetDeviceConfigs():
       for files in device.GetBluetoothFiles():
+        file_set.add(files)
+
+    return sorted(file_set, key=lambda files: files.source)
+
+  def GetCameraFiles(self):
+    """Get a list of unique camera files for all devices
+
+    Returns:
+      List of BaseFile objects representing all the camera files referenced
+      by all devices
+    """
+    file_set = set()
+    for device in self.GetDeviceConfigs():
+      for files in device.GetCameraFiles():
         file_set.add(files)
 
     return sorted(file_set, key=lambda files: files.source)

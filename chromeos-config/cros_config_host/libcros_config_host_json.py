@@ -133,6 +133,9 @@ class DeviceConfigJson(DeviceConfig):
   def GetBluetoothFiles(self):
     return self._GetSystemFileV2('/bluetooth/config')
 
+  def GetCameraFiles(self):
+    return self._GetSystemFileV2('/camera/config-file')
+
   def GetThermalFiles(self):
     return self._GetFiles('/thermal')
 
