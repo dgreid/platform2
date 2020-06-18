@@ -43,7 +43,7 @@ void SendAndWait(const MethodType& method,
 
 int TakeOwnership(bool finalize) {
   base::MessageLoopForIO loop;
-  base::FileDescriptorWatcher watcher(&loop);
+  base::FileDescriptorWatcher watcher(loop.task_runner());
   base::Time start_time = base::Time::Now();
   ::tpm_manager::TpmOwnershipDBusProxy proxy;
   if (!proxy.Initialize()) {
@@ -73,7 +73,7 @@ int TakeOwnership(bool finalize) {
 int VerifyEK(bool is_cros_core) {
   attestation::DBusProxy proxy;
   base::MessageLoopForIO loop;
-  base::FileDescriptorWatcher watcher(&loop);
+  base::FileDescriptorWatcher watcher(loop.task_runner());
   if (!proxy.Initialize()) {
     LOG(ERROR) << "Failed to start attestation proxy";
     return -1;
@@ -119,7 +119,7 @@ int GetRandom(unsigned int random_bytes_count) {
 bool GetVersionInfo(cryptohome::Tpm::TpmVersionInfo* version_info) {
   ::tpm_manager::TpmOwnershipDBusProxy proxy;
   base::MessageLoopForIO loop;
-  base::FileDescriptorWatcher watcher(&loop);
+  base::FileDescriptorWatcher watcher(loop.task_runner());
   if (!proxy.Initialize()) {
     LOG(ERROR) << "Failed to start tpm ownership proxy";
     return false;
