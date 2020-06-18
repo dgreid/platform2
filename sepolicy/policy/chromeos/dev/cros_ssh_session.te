@@ -19,4 +19,4 @@ auditallow cros_ssh_session cros_audit_sanity_test_file:file create;
 # need to create or read files in this directory, and in particular for tests
 # that test SELinux violation handling, it is important that we not create
 # spurious audit log entries.
-allow cros_ssh_session cros_run_crash_reporter:dir rw_dir_perms;
+rw_dir_file(cros_ssh_session, cros_run_crash_reporter);
