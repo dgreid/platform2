@@ -6,8 +6,8 @@ syntax = "proto3";
 
 option cc_enable_arenas = true;
 
-// This file defines services for tremplin, the container springboard service.
 package vm_tools.cicerone;
+option go_package = "vm_crash";
 
 import "common.proto";
 
@@ -26,10 +26,17 @@ message CrashReport {
   string process_tree = 3;
 }
 
-// Service that is notified of events from tremplin.
+// Message sent when a VM service has stopped unexpectedly.
+message FailureReport {
+  // Name of the process that failed.
+  string failed_process = 1;
+}
+
+// Service that is notified of crashes inside the VM.
 service CrashListener {
   rpc CheckMetricsConsent(EmptyMessage) returns (MetricsConsentResponse);
   rpc SendCrashReport(CrashReport) returns (EmptyMessage);
+  rpc SendFailureReport(FailureReport) returns (EmptyMessage);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.

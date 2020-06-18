@@ -11,6 +11,7 @@ group("all") {
     ":fuzzer-protos",
     ":tremplin-gorpcs",
     ":tremplin-rpcs",
+    ":vm-crash-gorpcs",
     ":vm-crash-rpcs",
     ":vm-gorpcs",
     ":vm-rpcs",
@@ -53,6 +54,16 @@ proto_library("vm-crash-rpcs") {
     "protobuf",
   ]
   standalone = true
+}
+
+goproto_library("vm-crash-gorpcs") {
+  proto_in_dir = "./"
+  proto_out_dir = "go/src/chromiumos/vm_tools/vm_crash"
+  gen_grpc = true
+  sources = [
+    "${proto_in_dir}/common.proto",
+    "${proto_in_dir}/vm_crash.proto",
+  ]
 }
 
 proto_library("fuzzer-protos") {

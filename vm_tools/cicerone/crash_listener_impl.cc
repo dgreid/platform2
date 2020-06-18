@@ -23,6 +23,31 @@
 
 namespace {
 
+// These values are logged to UMA. Entries should not be renumbered and numeric
+// values should never be reused. Please keep in sync with
+// CrostiniFailureClasses in src/tools/metrics/histograms/enums.xml and the copy
+// in src/chrome/browser/chromeos/crostini/crostini_stability_monitor.h
+enum class FailureClasses {
+  ConciergeStopped = 0,
+  CiceroneStopped = 1,
+  SeneschalStopped = 2,
+  ChunneldStopped = 3,
+  VmStopped = 4,
+  VmSyslogStopped = 5,
+  VshdStopped = 6,
+  LxcFsStopped = 7,
+  TremplinStopped = 8,
+  NdproxydStopped = 9,
+  McastdStopped = 10,
+  LxdStopped = 11,
+  GarconStopped = 12,
+  SommelierStopped = 13,
+  SommelierXStopped = 14,
+  CrosSftpStopped = 15,
+  CrosNotificationdStopped = 16,
+  kMaxValue = CrosNotificationdStopped,
+};
+
 // In testing, crash_reporter uses a mock consent system to avoid flake in the
 // real metrics consent. The in-VM crash_reporter can't check this itself for
 // the same reason it can't check the actual metrics consent state, so we need
@@ -162,6 +187,95 @@ void CrashListenerImpl::GetVirtualMachineForCidOrToken(
     base::WaitableEvent* event) {
   *ret_value = service_->GetVirtualMachineForCidOrToken(cid, "", vm_out,
                                                         owner_id_out, name_out);
+  event->Signal();
+}
+
+grpc::Status CrashListenerImpl::SendFailureReport(
+    grpc::ServerContext* ctx,
+    const FailureReport* failure_report,
+    EmptyMessage* response) {
+  const std::string histogram = "Crostini.Stability";
+  const std::string service = failure_report->failed_process();
+  FailureClasses sample;
+
+  if (!ShouldRecordFailures(ctx)) {
+    // VM couldn't be found, or is shutting down. This isn't an error, but it
+    // means we shouldn't record this service stopping because it's not a
+    // failure.
+    return grpc::Status::OK;
+  }
+  // Report is from a running VM, so no services should be stopping.
+
+  if (service == "vm_syslog") {
+    sample = FailureClasses::VmSyslogStopped;
+  } else if (service == "vshd") {
+    sample = FailureClasses::VshdStopped;
+  } else if (service == "lxcfs") {
+    sample = FailureClasses::LxcFsStopped;
+  } else if (service == "tremplin") {
+    sample = FailureClasses::TremplinStopped;
+  } else if (service == "ndproxyd") {
+    sample = FailureClasses::NdproxydStopped;
+  } else if (service == "mcastd") {
+    sample = FailureClasses::McastdStopped;
+  } else if (service == "lxd") {
+    sample = FailureClasses::LxdStopped;
+  } else if (service == "cros-garcon") {
+    sample = FailureClasses::GarconStopped;
+  } else if (service == "sommelier") {
+    sample = FailureClasses::SommelierStopped;
+  } else if (service == "sommelier-x") {
+    sample = FailureClasses::SommelierXStopped;
+  } else if (service == "cros-sftp") {
+    sample = FailureClasses::CrosSftpStopped;
+  } else if (service == "cros-notificationd") {
+    sample = FailureClasses::CrosNotificationdStopped;
+  } else {
+    return {grpc::INVALID_ARGUMENT, "Unknown service, ignoring"};
+  }
+
+  if (metrics_.SendEnumToUMA(histogram, static_cast<int>(sample),
+                             static_cast<int>(FailureClasses::kMaxValue))) {
+    return grpc::Status::OK;
+  } else {
+    return {grpc::UNKNOWN, "Failed to record event in stability histogram"};
+  }
+}
+
+bool CrashListenerImpl::ShouldRecordFailures(grpc::ServerContext* ctx) {
+  uint32_t cid = 0;
+  std::string peer_address = ctx->peer();
+  if (sscanf(peer_address.c_str(), "vsock:%u", &cid) != 1) {
+    LOG(WARNING) << "Failed to parse peer address " << peer_address;
+    return false;
+  }
+
+  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::AUTOMATIC,
+                            base::WaitableEvent::InitialState::NOT_SIGNALED);
+  bool is_stopping_or_stopped;
+  task_runner_->PostTask(
+      FROM_HERE, base::BindOnce(&CrashListenerImpl::GetVmStoppingOnDBusThread,
+                                base::Unretained(this), cid,
+                                &is_stopping_or_stopped, &event));
+
+  event.Wait();
+
+  return !is_stopping_or_stopped;
+}
+
+void CrashListenerImpl::GetVmStoppingOnDBusThread(const uint32_t cid,
+                                                  bool* is_stopping_or_stopped,
+                                                  base::WaitableEvent* event) {
+  VirtualMachine* vm = nullptr;
+  std::string owner_id, name;
+  bool ret =
+      service_->GetVirtualMachineForCidOrToken(cid, "", &vm, &owner_id, &name);
+  if (ret) {
+    *is_stopping_or_stopped = vm->is_stopping();
+  } else {
+    // VM couldn't be found, so it must have stopped.
+    *is_stopping_or_stopped = true;
+  }
   event->Signal();
 }
 

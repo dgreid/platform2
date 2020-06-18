@@ -317,6 +317,12 @@ DEFINE_PROTO_FUZZER(
         break;
 
       case vm_tools::container::ContainerListenerFuzzerSingleAction::
+          kSendFailureReportRequest:
+        crash_listener->SendFailureReport(
+            &context, &action.send_failure_report_request(), &response);
+        break;
+
+      case vm_tools::container::ContainerListenerFuzzerSingleAction::
           kUpdateListeningPorts:
         tremplin_listener->UpdateListeningPorts(
             &context, &action.update_listening_ports(), &tremplin_response);

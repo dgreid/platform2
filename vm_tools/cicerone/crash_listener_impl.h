@@ -38,6 +38,10 @@ class CrashListenerImpl final : public CrashListener::Service {
                                const CrashReport* crash_report,
                                EmptyMessage* response) override;
 
+  grpc::Status SendFailureReport(grpc::ServerContext* ctx,
+                                 const FailureReport* failure_report,
+                                 EmptyMessage* response) override;
+
  private:
   base::Optional<pid_t> GetPidFromPeerAddress(grpc::ServerContext* ctx);
 
@@ -47,6 +51,12 @@ class CrashListenerImpl final : public CrashListener::Service {
                                       std::string* name_out,
                                       bool* ret_value,
                                       base::WaitableEvent* event);
+
+  bool ShouldRecordFailures(grpc::ServerContext* ctx);
+
+  void GetVmStoppingOnDBusThread(const uint32_t cid,
+                                 bool* is_stopping_or_stopped,
+                                 base::WaitableEvent* event);
 
   MetricsLibrary metrics_{};
 
