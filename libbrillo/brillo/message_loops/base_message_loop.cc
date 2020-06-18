@@ -49,12 +49,14 @@ BaseMessageLoop::BaseMessageLoop() {
          "base::MessageLoop is already created for this thread.";
   owned_base_loop_.reset(new base::MessageLoopForIO());
   base_loop_ = owned_base_loop_.get();
-  watcher_ = std::make_unique<base::FileDescriptorWatcher>(base_loop_);
+  watcher_ =
+      std::make_unique<base::FileDescriptorWatcher>(base_loop_->task_runner());
 }
 
 BaseMessageLoop::BaseMessageLoop(base::MessageLoopForIO* base_loop)
     : base_loop_(base_loop),
-      watcher_(std::make_unique<base::FileDescriptorWatcher>(base_loop_)) {}
+      watcher_(std::make_unique<base::FileDescriptorWatcher>(
+          base_loop_->task_runner())) {}
 
 BaseMessageLoop::~BaseMessageLoop() {
   // Note all pending canceled delayed tasks when destroying the message loop.
