@@ -352,10 +352,6 @@ TEST_F(SuspendDelayControllerTest, DarkResumeNoExternalDelays) {
   controller_.PrepareForSuspend(kSuspendId, true);
   EXPECT_FALSE(controller_.ReadyForSuspend());
 
-  // Delay longer than kDarkResumeMinDelay so calls fired by timer can be
-  // correctly executed.
-  observer_.set_timeout(kDarkResumeMinDelay +
-                        base::TimeDelta::FromMilliseconds(10));
   // The observer should be notified that it's safe to suspend after
   // |kDarkResumeMinDelay| since no other delays are registered.
   EXPECT_TRUE(observer_.RunUntilReadyForSuspend());
