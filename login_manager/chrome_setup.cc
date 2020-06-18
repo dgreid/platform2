@@ -193,6 +193,8 @@ void AddArcFlags(ChromiumCommandBuilder* builder,
     builder->AddArg("--enable-ndk-translation");
   if (builder->UseFlagIsSet("ndk_translation64"))
     builder->AddArg("--enable-ndk-translation64");
+  if (builder->UseFlagIsSet("arc_native_bridge_64bit_support_experiment"))
+    builder->AddArg("--arc-enable-native-bridge-64bit-support-experiment");
 }
 
 void AddCrostiniFlags(ChromiumCommandBuilder* builder) {
