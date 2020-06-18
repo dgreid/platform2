@@ -312,7 +312,7 @@ int main(int argc, char* argv[]) {
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Reporter");
 
   base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(&message_loop);
+  base::FileDescriptorWatcher watcher(message_loop.task_runner());
 
   // In certain cases, /dev/log may not be available: log to stderr instead.
   if (FLAGS_log_to_stderr) {
