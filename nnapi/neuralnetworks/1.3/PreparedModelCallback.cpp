@@ -15,6 +15,7 @@
 #define LOG_TAG "android.hardware.neuralnetworks@1.3::PreparedModel"
 
 #include <android/hardware/neuralnetworks/1.3/IPreparedModelCallback.h>
+#include <hidl/HidlTransportSupport.h>
 #include <hidl/Status.h>
 
 namespace android {
@@ -123,16 +124,12 @@ IPreparedModelCallback::notifySyspropsChanged() {
 ::android::hardware::Return<::android::sp<
     ::android::hardware::neuralnetworks::V1_3::IPreparedModelCallback>>
 IPreparedModelCallback::castFrom(
-    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
-    bool /*emitError*/) {
-  return nullptr;
-  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
-  //                  pulling in too many dependencies from hidl/transport .
-  // return ::android::hardware::details::castInterface<IPreparedModelCallback,
-  // ::android::hidl::base::V1_0::IBase, BpHwPreparedModelCallback>(
-  //         parent,
-  //         "android.hardware.neuralnetworks@1.3::IPreparedModelCallback",
-  //         emitError);
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& parent,
+    bool emitError) {
+  return ::android::hardware::details::castInterface<
+      IPreparedModelCallback, ::android::hidl::base::V1_0::IBase>(
+      parent, "android.hardware.neuralnetworks@1.3::IPreparedModelCallback",
+      emitError);
 }
 
 }  // namespace V1_3

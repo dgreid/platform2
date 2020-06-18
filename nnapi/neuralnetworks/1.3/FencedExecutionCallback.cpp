@@ -15,6 +15,7 @@
 #define LOG_TAG "android.hardware.neuralnetworks@1.3::FencedExecutionCallback"
 
 #include <android/hardware/neuralnetworks/1.3/IFencedExecutionCallback.h>
+#include <hidl/HidlTransportSupport.h>
 #include <hidl/Status.h>
 
 #include <utility>
@@ -122,17 +123,12 @@ IFencedExecutionCallback::castFrom(
 ::android::hardware::Return<::android::sp<
     ::android::hardware::neuralnetworks::V1_3::IFencedExecutionCallback>>
 IFencedExecutionCallback::castFrom(
-    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
-    bool /*emitError*/) {
-  return nullptr;
-  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
-  //                  pulling in too many dependencies from hidl/transport .
-  // return
-  // ::android::hardware::details::castInterface<IFencedExecutionCallback,
-  // ::android::hidl::base::V1_0::IBase, BpHwFencedExecutionCallback>(
-  //         parent,
-  //         "android.hardware.neuralnetworks@1.3::IFencedExecutionCallback",
-  //         emitError);
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& parent,
+    bool emitError) {
+  return ::android::hardware::details::castInterface<
+      IFencedExecutionCallback, ::android::hidl::base::V1_0::IBase>(
+      parent, "android.hardware.neuralnetworks@1.3::IFencedExecutionCallback",
+      emitError);
 }
 
 }  // namespace V1_3

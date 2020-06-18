@@ -15,6 +15,7 @@
 #define LOG_TAG "android.hardware.neuralnetworks@1.0::PreparedModel"
 
 #include <android/hardware/neuralnetworks/1.0/IPreparedModel.h>
+#include <hidl/HidlTransportSupport.h>
 #include <hidl/Status.h>
 
 namespace android {
@@ -117,15 +118,11 @@ IPreparedModel::castFrom(
 ::android::hardware::Return<
     ::android::sp<::android::hardware::neuralnetworks::V1_0::IPreparedModel>>
 IPreparedModel::castFrom(
-    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
-    bool /*emitError*/) {
-  return nullptr;
-  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
-  //                  pulling in too many dependencies from hidl/transport .
-  // return ::android::hardware::details::castInterface<IPreparedModel,
-  // ::android::hidl::base::V1_0::IBase, BpHwPreparedModel>(
-  //         parent, "android.hardware.neuralnetworks@1.0::IPreparedModel",
-  //         emitError);
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& parent,
+    bool emitError) {
+  return ::android::hardware::details::castInterface<
+      IPreparedModel, ::android::hidl::base::V1_0::IBase>(
+      parent, "android.hardware.neuralnetworks@1.0::IPreparedModel", emitError);
 }
 
 }  // namespace V1_0

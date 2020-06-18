@@ -15,6 +15,7 @@
 #define LOG_TAG "android.hardware.neuralnetworks@1.3::Buffer"
 
 #include <android/hardware/neuralnetworks/1.3/IBuffer.h>
+#include <hidl/HidlTransportSupport.h>
 #include <hidl/Status.h>
 
 namespace android {
@@ -114,14 +115,11 @@ IBuffer::castFrom(
 ::android::hardware::Return<
     ::android::sp<::android::hardware::neuralnetworks::V1_3::IBuffer>>
 IBuffer::castFrom(
-    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
-    bool /*emitError*/) {
-  return nullptr;
-  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
-  //                  pulling in too many dependencies from hidl/transport .
-  // return ::android::hardware::details::castInterface<IBuffer,
-  // ::android::hidl::base::V1_0::IBase, BpHwBuffer>(
-  //         parent, "android.hardware.neuralnetworks@1.3::IBuffer", emitError);
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& parent,
+    bool emitError) {
+  return ::android::hardware::details::castInterface<
+      IBuffer, ::android::hidl::base::V1_0::IBase>(
+      parent, "android.hardware.neuralnetworks@1.3::IBuffer", emitError);
 }
 
 }  // namespace V1_3

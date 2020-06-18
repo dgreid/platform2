@@ -231,6 +231,7 @@ static_library("libhidl") {
     "${libhidl_src}/libhidlmemory/include",
     "${libhidl_src}/transport/allocator/1.0/default",
     "${libhidl_src}/transport/memory/1.0/default",
+    "${libhidl_src}/transport/include",
     "libhidl",
   ]
   deps = [
@@ -246,6 +247,7 @@ static_library("libhidl") {
     "${libhidl_src}/transport/allocator/1.0/default/AshmemAllocator.cpp",
     "${libhidl_src}/transport/memory/1.0/default/AshmemMapper.cpp",
     "${libhidl_src}/transport/memory/1.0/default/AshmemMemory.cpp",
+    "${libhidl_src}/transport/HidlTransportUtils.cpp",
     "libhidl/allocator/IAllocator.cpp",
     "libhidl/allocator/ashmem_allocator.cpp",
     "libhidl/base/IBase.cpp",
@@ -420,6 +422,7 @@ static_library("neuralnetworks") {
   include_dirs = [
     "${libhidl_src}/base/include",
     "${libhidl_src}/adapter/include",
+    "${libhidl_src}/transport/include",
   ]
   sources = [
     "neuralnetworks/1.0/ADevice.cpp",

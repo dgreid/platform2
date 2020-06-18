@@ -15,6 +15,7 @@
 #define LOG_TAG "android.hardware.neuralnetworks@1.2::BurstCallback"
 
 #include <android/hardware/neuralnetworks/1.2/IBurstCallback.h>
+#include <hidl/HidlTransportSupport.h>
 #include <hidl/Status.h>
 
 namespace android {
@@ -116,15 +117,11 @@ IBurstCallback::castFrom(
 ::android::hardware::Return<
     ::android::sp<::android::hardware::neuralnetworks::V1_2::IBurstCallback>>
 IBurstCallback::castFrom(
-    const ::android::sp<::android::hidl::base::V1_0::IBase>& /*parent*/,
-    bool /*emitError*/) {
-  return nullptr;
-  // TODO(jmpollock): b/159130631 Make this actually do a valid cast without
-  //                  pulling in too many dependencies from hidl/transport .
-  // return ::android::hardware::details::castInterface<IBurstCallback,
-  // ::android::hidl::base::V1_0::IBase, BpHwBurstCallback>(
-  //         parent, "android.hardware.neuralnetworks@1.2::IBurstCallback",
-  //         emitError);
+    const ::android::sp<::android::hidl::base::V1_0::IBase>& parent,
+    bool emitError) {
+  return ::android::hardware::details::castInterface<
+      IBurstCallback, ::android::hidl::base::V1_0::IBase>(
+      parent, "android.hardware.neuralnetworks@1.2::IBurstCallback", emitError);
 }
 
 }  // namespace V1_2
