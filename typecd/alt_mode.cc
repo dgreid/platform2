@@ -6,7 +6,7 @@
 
 #include <string>
 
-#include <base/strings/string_util.h>
+#include "typecd/utils.h"
 
 namespace typecd {
 
@@ -28,45 +28,18 @@ bool AltMode::UpdateValuesFromSysfs() {
   auto mode_index_path = syspath_.Append("mode");
 
   // Only proceed if we can read all the attributes.
-  std::string svid_str;
-  std::string vdo_str;
-  std::string mode_index_str;
-  if (!base::ReadFileToString(svid_path, &svid_str)) {
-    LOG(ERROR) << "Couldn't read SVID from path " << svid_path;
-    return false;
-  }
-  base::TrimWhitespaceASCII(svid_str, base::TRIM_TRAILING, &svid_str);
-
-  if (!base::ReadFileToString(vdo_path, &vdo_str)) {
-    LOG(ERROR) << "Couldn't read VDO from path " << vdo_path;
-    return false;
-  }
-  base::TrimWhitespaceASCII(vdo_str, base::TRIM_TRAILING, &vdo_str);
-
-  if (!base::ReadFileToString(mode_index_path, &mode_index_str)) {
-    LOG(ERROR) << "Couldn't read mode index from path " << mode_index_path;
-    return false;
-  }
-  base::TrimWhitespaceASCII(mode_index_str, base::TRIM_TRAILING,
-                            &mode_index_str);
-
   uint32_t svid;
-  if (!base::HexStringToUInt(svid_str.c_str(), &svid)) {
-    LOG(ERROR) << "Error parsing svid " << svid_str;
-    return false;
-  }
-
   uint32_t vdo;
-  if (!base::HexStringToUInt(vdo_str, &vdo)) {
-    LOG(ERROR) << "Error parsing vdo " << vdo_str;
-    return false;
-  }
-
   uint32_t mode_index;
-  if (!base::HexStringToUInt(mode_index_str, &mode_index)) {
-    LOG(ERROR) << "Error parsing mode " << mode_index_str;
+
+  if (!ReadHexFromPath(svid_path, &svid))
     return false;
-  }
+
+  if (!ReadHexFromPath(vdo_path, &vdo))
+    return false;
+
+  if (!ReadHexFromPath(mode_index_path, &mode_index))
+    return false;
 
   svid_ = svid;
   vdo_ = vdo;

@@ -37,6 +37,7 @@ static_library("typecd_common") {
     "port.cc",
     "port_manager.cc",
     "udev_monitor.cc",
+    "utils.cc",
   ]
 }
 
