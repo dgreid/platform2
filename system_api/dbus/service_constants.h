@@ -457,10 +457,7 @@ const char kCreateSecureMessageMethod[] = "CreateSecureMessage";
 const char kUnwrapSecureMessageMethod[] = "UnwrapSecureMessage";
 }  // namespace easy_unlock
 
-namespace arc_oemcrypto {
-const char kArcOemCryptoServiceInterface[] = "org.chromium.ArcOemCrypto";
-const char kArcOemCryptoServiceName[] = "org.chromium.ArcOemCrypto";
-const char kArcOemCryptoServicePath[] = "/org/chromium/ArcOemCrypto";
+namespace cdm_oemcrypto {
 const char kCdmFactoryDaemonServiceInterface[] =
     "org.chromium.CdmFactoryDaemon";
 const char kCdmFactoryDaemonServiceName[] = "org.chromium.CdmFactoryDaemon";
@@ -469,7 +466,7 @@ const char kCdmFactoryDaemonServicePath[] = "/org/chromium/CdmFactoryDaemon";
 const char kBootstrapMojoConnection[] = "BootstrapMojoConnection";
 const char kBootstrapCdmFactoryDaemonMojoConnection[] =
     "BootstrapCdmFactoryDaemonMojoConnection";
-}  // namespace arc_oemcrypto
+}  // namespace cdm_oemcrypto
 
 namespace midis {
 constexpr char kMidisServiceName[] = "org.chromium.Midis";
