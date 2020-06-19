@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod dbus_constants;
 pub mod disk;
 pub mod frontends;
 pub mod lsb_release;

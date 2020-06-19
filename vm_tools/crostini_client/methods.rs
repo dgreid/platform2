@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::error::Error;
 use std::fmt;
 use std::fs::OpenOptions;
@@ -20,15 +21,15 @@ use dbus::{
 };
 use protobuf::Message as ProtoMessage;
 
-use crate::dbus_constants::*;
 use crate::disk::{DiskInfo, DiskOpType, VmDiskImageType};
 use crate::lsb_release::{LsbRelease, ReleaseChannel};
-use crate::proto::system_api::cicerone_service::{self, *};
+use crate::proto::system_api::cicerone_service::*;
 use crate::proto::system_api::concierge_service::*;
 use crate::proto::system_api::dlcservice::*;
 use crate::proto::system_api::seneschal_service::*;
 use crate::proto::system_api::vm_plugin_dispatcher;
 use crate::proto::system_api::vm_plugin_dispatcher::VmErrorCode;
+use crate::proto::system_api::*;
 
 const REMOVABLE_MEDIA_ROOT: &str = "/media/removable";
 const CRYPTOHOME_USER: &str = "/home/user";
@@ -420,10 +421,10 @@ impl Methods {
 
     fn get_dlc_state(&mut self, name: &str) -> Result<DlcState_State, Box<dyn Error>> {
         let method = Message::new_method_call(
-            DLC_SERVICE_NAME,
-            DLC_SERVICE_PATH,
+            DLC_SERVICE_SERVICE_NAME,
+            DLC_SERVICE_SERVICE_PATH,
             DLC_SERVICE_INTERFACE,
-            DLC_GET_STATE_METHOD,
+            GET_DLC_STATE_METHOD,
         )?
         .append1(name);
 
@@ -440,10 +441,10 @@ impl Methods {
 
     fn init_dlc_install(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
         let method = Message::new_method_call(
-            DLC_SERVICE_NAME,
-            DLC_SERVICE_PATH,
+            DLC_SERVICE_SERVICE_NAME,
+            DLC_SERVICE_SERVICE_PATH,
             DLC_SERVICE_INTERFACE,
-            DLC_INSTALL_METHOD,
+            INSTALL_DLC_METHOD,
         )?
         .append1(name);
 
@@ -488,7 +489,7 @@ impl Methods {
         let method = Message::new_method_call(
             CHROME_FEATURES_SERVICE_NAME,
             CHROME_FEATURES_SERVICE_PATH,
-            CHROME_FEATURES_INTERFACE,
+            CHROME_FEATURES_SERVICE_INTERFACE,
             feature_name,
         )?
         .append1(user_id_hash);
@@ -521,7 +522,10 @@ impl Methods {
         let enabled = match self.crostini_enabled {
             Some(value) => value,
             None => {
-                let value = self.is_chrome_feature_enabled(user_id_hash, IS_CROSTINI_ENABLED)?;
+                let value = self.is_chrome_feature_enabled(
+                    user_id_hash,
+                    CHROME_FEATURES_SERVICE_IS_CROSTINI_ENABLED_METHOD,
+                )?;
                 self.crostini_enabled = Some(value);
                 value
             }
@@ -533,7 +537,10 @@ impl Methods {
         let enabled = match self.plugin_vm_enabled {
             Some(value) => value,
             None => {
-                let value = self.is_chrome_feature_enabled(user_id_hash, IS_PLUGIN_VM_ENABLED)?;
+                let value = self.is_chrome_feature_enabled(
+                    user_id_hash,
+                    CHROME_FEATURES_SERVICE_IS_PLUGIN_VM_ENABLED_METHOD,
+                )?;
                 self.plugin_vm_enabled = Some(value);
                 value
             }
@@ -1197,7 +1204,7 @@ impl Methods {
                 VM_PLUGIN_DISPATCHER_SERVICE_NAME,
                 VM_PLUGIN_DISPATCHER_SERVICE_PATH,
                 VM_PLUGIN_DISPATCHER_INTERFACE,
-                SHOW_PLUGIN_VM_METHOD,
+                SHOW_VM_METHOD,
             )?,
             &request,
         )?;
@@ -1594,7 +1601,7 @@ impl Methods {
                 VM_PLUGIN_DISPATCHER_SERVICE_NAME,
                 VM_PLUGIN_DISPATCHER_SERVICE_PATH,
                 VM_PLUGIN_DISPATCHER_INTERFACE,
-                SEND_PVM_PROBLEM_REPORT_METHOD,
+                SEND_PROBLEM_REPORT_METHOD,
             )?,
             &request,
         )?;
@@ -1739,8 +1746,11 @@ impl Methods {
     ) -> Result<String, Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let vm_info = self.get_vm_info(name, user_id_hash)?;
-        let vm_path =
-            self.share_path_with_vm(vm_info.seneschal_server_handle, user_id_hash, path)?;
+        let vm_path = self.share_path_with_vm(
+            vm_info.seneschal_server_handle.try_into()?,
+            user_id_hash,
+            path,
+        )?;
         Ok(format!("{}/{}", MNT_SHARED_ROOT, vm_path))
     }
 
@@ -1752,7 +1762,7 @@ impl Methods {
     ) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let vm_info = self.get_vm_info(name, user_id_hash)?;
-        self.unshare_path_with_vm(vm_info.seneschal_server_handle, path)
+        self.unshare_path_with_vm(vm_info.seneschal_server_handle.try_into()?, path)
     }
 
     pub fn vsh_exec(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
