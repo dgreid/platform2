@@ -186,7 +186,6 @@ constexpr uid_t kMediaUid = AID_MEDIA_RW + kShiftUid;
 constexpr gid_t kMediaGid = AID_MEDIA_RW + kShiftGid;
 constexpr uid_t kShellUid = AID_SHELL + kShiftUid;
 constexpr uid_t kShellGid = AID_SHELL + kShiftGid;
-constexpr gid_t kLogGid = AID_LOG + kShiftGid;
 constexpr gid_t kSdcardRwGid = AID_SDCARD_RW + kShiftGid;
 constexpr gid_t kEverybodyGid = AID_EVERYBODY + kShiftGid;
 
@@ -794,9 +793,6 @@ void ArcSetup::UnmountSdcard() {
 }
 
 void ArcSetup::CreateContainerFilesAndDirectories() {
-  EXIT_IF(!InstallDirectory(0755, kShellUid, kLogGid,
-                            base::FilePath("/run/arc/bugreport")));
-
   // If the log file exists, change the UID/GID here. We used to use
   // android-root for the file, but now we use just root. The Upstart
   // job does not (and cannot efficiently) do it.
@@ -1640,13 +1636,6 @@ void ArcSetup::UnmountOnStop() {
           arc_paths_->system_lib64_arm64_directory_relative)));
 }
 
-void ArcSetup::RemoveBugreportPipe() {
-  // This function is for Mode::STOP. Use IGNORE_ERRORS to make sure to run all
-  // clean up code.
-  IGNORE_ERRORS(base::DeleteFile(base::FilePath("/run/arc/bugreport/pipe"),
-                                 false /* recursive */));
-}
-
 void ArcSetup::RemoveAndroidKmsgFifo() {
   // This function is for Mode::STOP. Use IGNORE_ERRORS to make sure to run all
   // clean up code.
@@ -2037,7 +2026,6 @@ void ArcSetup::RestoreContextOnPreChroot(const base::FilePath& rootfs) {
         "dev",
         "oem/etc",
         "var/run/arc/apkcache",
-        "var/run/arc/bugreport",
         "var/run/arc/dalvik-cache",
         "var/run/camera",
         "var/run/chrome",
@@ -2224,7 +2212,6 @@ void ArcSetup::OnStop() {
   StopNetworking();
   CleanUpBinFmtMiscSetUp();
   UnmountOnStop();
-  RemoveBugreportPipe();
   RemoveAndroidKmsgFifo();
 }
 

@@ -220,10 +220,6 @@ ignore all other flags).
 * `/proc/sys/kernel/kptr_restrict`: Same as with `/proc/sys/vm/mmap_rnd_bits`.
 * `/oem/etc`: This is bind-mounted from host's `/run/arc/oem/etc` and holds
   `platform.xml` file.
-* `/var/run/arc/bugreport`: This is bind-mounted from host's
-  `/run/arc/bugreport`. The container creates a pipe file in the directory to
-  allow host's `debugd` to read it. When it is read, Android's `bugreport`
-  output is sent to the host side.
 * `/var/run/arc/apkcache`: This is bind-mounted from host's
   `/mnt/stateful_partition/unencrypted/apkcache. The host directory is for
   storing APK files specified by the device's policy and downloaded on the host

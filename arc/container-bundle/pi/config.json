@@ -437,14 +437,6 @@
 			]
 		},
 		{
-			"destination": "/var/run/arc/bugreport",
-			"type": "bind",
-			"source": "/run/arc/bugreport",
-			"options": [
-				"bind"
-			]
-		},
-		{
 			"destination": "/var/run/arc/apkcache",
 			"type": "bind",
 			"source": "/mnt/stateful_partition/unencrypted/apkcache",
