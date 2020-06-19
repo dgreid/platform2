@@ -20,7 +20,7 @@
 #include <base/stl_util.h>
 #include <base/task/single_thread_task_executor.h>
 
-#include "vm_tools/syslog/collector.h"
+#include "vm_tools/syslog/guest_collector.h"
 
 using std::string;
 
@@ -116,7 +116,7 @@ int main(int argc, char** argv) {
   base::RunLoop run_loop;
 
   std::unique_ptr<vm_tools::syslog::Collector> collector =
-      vm_tools::syslog::Collector::Create(run_loop.QuitClosure());
+      vm_tools::syslog::GuestCollector::Create(run_loop.QuitClosure());
   CHECK(collector);
 
   run_loop.Run();

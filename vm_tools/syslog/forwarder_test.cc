@@ -125,9 +125,7 @@ TEST(ForwarderTest, EndToEnd) {
     record->set_content(test_case.content);
   }
 
-  grpc::ServerContext ctx;
-  vm_tools::EmptyMessage response;
-  grpc::Status status = forwarder->CollectUserLogs(&ctx, &request, &response);
+  grpc::Status status = forwarder->ForwardLogs(0, request);
 
   ASSERT_TRUE(status.ok());
 

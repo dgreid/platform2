@@ -29,49 +29,30 @@ Forwarder::Forwarder(base::ScopedFD destination, bool is_socket_destination)
     : destination_(std::move(destination)),
       is_socket_destination_(is_socket_destination) {}
 
-grpc::Status Forwarder::CollectKernelLogs(grpc::ServerContext* ctx,
-                                          const vm_tools::LogRequest* request,
-                                          vm_tools::EmptyMessage* response) {
-  DCHECK(ctx);
-  DCHECK(request);
-
-  return ForwardLogs(ctx, request, true /*is_kernel*/);
+void Forwarder::SetFileDestination(base::ScopedFD destination) {
+  CHECK(destination.is_valid());
+  is_socket_destination_ = false;
+  destination_.swap(destination);
 }
 
-grpc::Status Forwarder::CollectUserLogs(grpc::ServerContext* ctx,
-                                        const vm_tools::LogRequest* request,
-                                        vm_tools::EmptyMessage* response) {
-  DCHECK(ctx);
-  DCHECK(request);
-
-  return ForwardLogs(ctx, request, false /*is_kernel*/);
-}
-
-grpc::Status Forwarder::ForwardLogs(grpc::ServerContext* ctx,
-                                    const vm_tools::LogRequest* request,
-                                    bool is_kernel) {
-  // CID 0 is reserved so we use it to indicate an unknown peer.
-  uint64_t cid = 0;
-  if (sscanf(ctx->peer().c_str(), "vsock:%" PRIu64, &cid) != 1) {
-    LOG(WARNING) << "Failed to parse peer address " << ctx->peer();
-  }
-
-  string prefix = base::StringPrintf(" VM(%" PRIu64 "): %s", cid,
-                                     is_kernel ? "kernel: " : "");
+grpc::Status Forwarder::ForwardLogs(int64_t cid,
+                                    const vm_tools::LogRequest& request) {
+  CHECK(destination_.is_valid());
+  string prefix = base::StringPrintf(" VM(%" PRId64 "): ", cid);
 
   std::vector<string> priorities, timestamps, contents;
-  priorities.reserve(request->records_size());
-  timestamps.reserve(request->records_size());
-  contents.reserve(request->records_size());
+  priorities.reserve(request.records_size());
+  timestamps.reserve(request.records_size());
+  contents.reserve(request.records_size());
 
   constexpr uint8_t kIovCount = 4;
   std::vector<std::array<struct iovec, kIovCount>> iovs;
-  iovs.reserve(request->records_size());
+  iovs.reserve(request.records_size());
 
   std::vector<struct mmsghdr> msgs;
-  msgs.reserve(request->records_size());
+  msgs.reserve(request.records_size());
 
-  for (const vm_tools::LogRecord& record : request->records()) {
+  for (const vm_tools::LogRecord& record : request.records()) {
     priorities.emplace_back(ParseProtoSeverity(record.severity()));
     timestamps.emplace_back(ParseProtoTimestamp(record.timestamp()));
     contents.emplace_back(ScrubProtoContent(record.content()));
@@ -127,7 +108,7 @@ grpc::Status Forwarder::ForwardLogs(grpc::ServerContext* ctx,
   } else {
     // Write messages to file
     std::ostringstream lines_stream;
-    for (int i = 0; i < request->records_size(); ++i) {
+    for (int i = 0; i < request.records_size(); ++i) {
       lines_stream << timestamps[i] << " " << priorities[i] << " " << prefix
                    << contents[i] << "\n";
     }

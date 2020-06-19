@@ -9,6 +9,7 @@
 
 #include <base/callback.h>
 #include <base/files/file_descriptor_watcher_posix.h>
+#include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
@@ -20,63 +21,40 @@
 namespace vm_tools {
 namespace syslog {
 
-// Responsible for listening on /dev/log for any userspace applications that
-// wish to log messages with the system syslog.  TODO(chirantan):  This
-// currently doesn't handle kernel oops or flushing during shutdown.
 class Collector {
  public:
-  // Create a new, initialized Collector.
-  static std::unique_ptr<Collector> Create(base::Closure shutdown_closure);
-  ~Collector() = default;
+  virtual ~Collector();
 
-  static std::unique_ptr<Collector> CreateForTesting(
-      base::ScopedFD syslog_fd,
-      base::Time boot_time,
-      std::unique_ptr<vm_tools::LogCollector::Stub> stub);
-
- private:
-  // Private default constructor.  Use the static factory function to create new
-  // instances of this class.
-  explicit Collector(base::Closure shutdown_closure);
-
-  // Initializes this Collector.  Starts listening on the syslog socket
-  // and sets up timers to periodically flush logs out.
-  bool Init();
+  void SetSyslogFDForTesting(base::ScopedFD syslog_fd);
 
   // Called periodically to flush any logs that have been buffered.
   void FlushLogs();
 
-  // Reads one log record from the socket and adds it to |syslog_request_|.
-  // Returns true if there may still be more data to read from the socket.
-  bool ReadOneSyslogRecord();
+ protected:
+  // Override SendUserLogs to deliver logs to listening services.
+  virtual bool SendUserLogs() = 0;
 
-  // Initializes this Collector for tests.  Starts listening on the
-  // provided file descriptor instead of creating a socket and binding to a
-  // path on the file system.
-  bool InitForTesting(base::ScopedFD syslog_fd,
-                      base::Time boot_time,
-                      std::unique_ptr<vm_tools::LogCollector::Stub> stub);
+  bool BindLogSocket(const char* name);
+
+  bool StartWatcher(base::TimeDelta flush_period);
 
   // Called when |syslog_fd_| becomes readable.
   void OnSyslogReadable();
 
-  // Called when |signal_fd_| becomes readable.
-  void OnSignalReadable();
+  const LogRequest& syslog_request() const { return *syslog_request_; }
 
-  // File descriptor bound to /dev/log.
+  // Periodic interval for flushing buffered logs.
+  static constexpr base::TimeDelta kFlushPeriod =
+      base::TimeDelta::FromMilliseconds(5000);
+
+  // Periodic interval for flushing buffered logs during testing.
+  static constexpr base::TimeDelta kFlushPeriodForTesting =
+      base::TimeDelta::FromMilliseconds(500);
+
+ private:
+  // File descriptor bound to logging socket.
   base::ScopedFD syslog_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> syslog_controller_;
-
-  // File descriptor for receiving signals.
-  base::ScopedFD signal_fd_;
-  std::unique_ptr<base::FileDescriptorWatcher::Controller> signal_controller_;
-
-  // Closure for stopping the MessageLoop.  Posted to the thread's TaskRunner
-  // when this program receives a SIGTERM.
-  base::Closure shutdown_closure_;
-
-  // Time that the VM booted.  Used to convert kernel timestamps to localtime.
-  base::Time boot_time_;
 
   // Shared arena used for allocating log records.
   google::protobuf::Arena arena_;
@@ -87,15 +65,14 @@ class Collector {
   // Size of all the currently buffered log records.
   size_t buffered_size_;
 
-  // Connection to the LogCollector service on the host.
-  std::unique_ptr<vm_tools::LogCollector::Stub> stub_;
-
   // Timer used for periodically flushing buffered log records.
   base::RepeatingTimer timer_;
 
-  base::WeakPtrFactory<Collector> weak_factory_;
+  // Reads one log record from the socket and adds it to |syslog_request_|.
+  // Returns true if there may still be more data to read from the socket.
+  bool ReadOneSyslogRecord();
 
-  DISALLOW_COPY_AND_ASSIGN(Collector);
+  base::WeakPtrFactory<Collector> weak_factory_{this};
 };
 
 }  // namespace syslog

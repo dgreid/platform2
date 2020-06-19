@@ -17,28 +17,21 @@ namespace syslog {
 
 // Responsible for collecting log records from the VM, scrubbing them,
 // and then forwarding them to the host syslog daemon.
-class Forwarder final : public LogCollector::Service {
+class Forwarder {
  public:
   explicit Forwarder(base::ScopedFD destination,
                      bool is_socket_destination = true);
-  ~Forwarder() override = default;
+  ~Forwarder() = default;
 
-  // vm_tools::LogCollector::Service overrides.
-  grpc::Status CollectKernelLogs(grpc::ServerContext* ctx,
-                                 const vm_tools::LogRequest* request,
-                                 vm_tools::EmptyMessage* response) override;
-  grpc::Status CollectUserLogs(grpc::ServerContext* ctx,
-                               const vm_tools::LogRequest* request,
-                               vm_tools::EmptyMessage* response) override;
+  // Common implementation for actually forwarding logs to the syslog daemon.
+  grpc::Status ForwardLogs(int64_t cid, const vm_tools::LogRequest& request);
+
+  void SetFileDestination(base::ScopedFD destination);
+  bool is_socket_destination() const { return is_socket_destination_; }
 
  private:
-  // Common implementation for actually forwarding logs to the syslog daemon.
-  grpc::Status ForwardLogs(grpc::ServerContext* ctx,
-                           const vm_tools::LogRequest* request,
-                           bool is_kernel);
-
   base::ScopedFD destination_;
-  const bool is_socket_destination_;
+  bool is_socket_destination_;
 
   DISALLOW_COPY_AND_ASSIGN(Forwarder);
 };

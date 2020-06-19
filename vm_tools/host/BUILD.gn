@@ -61,7 +61,11 @@ executable("maitred_client") {
 
 static_library("libforwarder") {
   sources = [
+    "../syslog/collector.cc",
     "../syslog/forwarder.cc",
+    "../syslog/host_collector.cc",
+    "../syslog/log_pipe.cc",
+    "../syslog/parser.cc",
     "../syslog/rotator.cc",
     "../syslog/scrubber.cc",
   ]
@@ -69,6 +73,7 @@ static_library("libforwarder") {
   all_dependent_pkg_deps = [
     "grpc++",
     "protobuf",
+    "system_api",
     "vm_protos",
   ]
 }
@@ -253,6 +258,7 @@ if (use.test) {
   executable("syslog_forwarder_test") {
     sources = [
       "../syslog/forwarder_test.cc",
+      "../syslog/log_pipe_test.cc",
       "../syslog/rotator_test.cc",
       "../syslog/scrubber_test.cc",
     ]

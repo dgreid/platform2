@@ -33,7 +33,7 @@
 #include <vm_protos/proto_bindings/vm_host.grpc.pb.h>
 #include <vm_protos/proto_bindings/vm_host.pb.h>
 
-#include "vm_tools/syslog/collector.h"
+#include "vm_tools/syslog/guest_collector.h"
 
 using std::string;
 
@@ -146,9 +146,6 @@ class CollectorTest : public ::testing::Test {
   // Socket that tests will use to send the server syslog records.
   base::ScopedFD syslog_socket_;
 
-  // Fake boot time to use for kernel log messages.
-  base::Time boot_time_;
-
   // LogRequest that is expected from the server for user logs.
   std::list<std::unique_ptr<vm_tools::LogRequest>> expected_user_requests_;
 
@@ -219,12 +216,9 @@ void CollectorTest::SetUp() {
           grpc::InsecureChannelCredentials()));
   ASSERT_TRUE(stub);
 
-  // Use the current time as the boot time.
-  boot_time_ = base::Time::Now();
-
   // Create the syslog server.
-  collector_ = Collector::CreateForTesting(base::ScopedFD(syslog_fds[0]),
-                                           boot_time_, std::move(stub));
+  collector_ = GuestCollector::CreateForTesting(base::ScopedFD(syslog_fds[0]),
+                                                std::move(stub));
   ASSERT_TRUE(collector_);
 
   // Store the other end of the socket.

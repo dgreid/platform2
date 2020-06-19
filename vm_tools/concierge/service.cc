@@ -461,7 +461,7 @@ KernelVersionAndMajorRevision GetKernelVersion() {
 
 base::FilePath GetVmLogPath(const std::string& owner_id,
                             const std::string& vm_name,
-                            bool log_to_cryptohome = false) {
+                            bool log_to_cryptohome = true) {
   if (!log_to_cryptohome) {
     return base::FilePath();
   }
@@ -469,14 +469,12 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
   base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
                         &encoded_vm_name);
 
-  base::FilePath path =
-      base::FilePath(kCryptohomeRoot)
-          .Append(kCrosvmDir)
-          .Append(owner_id)
-          .Append(kCrosvmLogDir)
-          .Append(base::StringPrintf(
-              "%s-%s-%" PRId64 ".log", kCrosvmDir, encoded_vm_name.c_str(),
-              base::Time::Now().ToDeltaSinceWindowsEpoch().InMicroseconds()));
+  base::FilePath path = base::FilePath(kCryptohomeRoot)
+                            .Append(kCrosvmDir)
+                            .Append(owner_id)
+                            .Append(kCrosvmLogDir)
+                            .Append(encoded_vm_name)
+                            .AddExtension(".lsock");
 
   base::FilePath parent_dir = path.DirName();
   if (!base::DirectoryExists(parent_dir)) {
@@ -1196,6 +1194,10 @@ std::unique_ptr<dbus::Response> Service::StartVm(
           : std::min(static_cast<int32_t>(sysconf(_SC_NPROCESSORS_ONLN)),
                      static_cast<int32_t>(request.cpus()));
 
+  // Notify VmLogForwarder that a vm is starting up.
+  VmId vm_id(request.owner_id(), request.name());
+  SendVmStartingUpSignal(vm_id, vsock_cid);
+
   auto vm = TerminaVm::Create(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
       std::move(network_client), std::move(server_proxy),
@@ -1276,7 +1278,6 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   // Notify cicerone that we have started a VM.
   // We must notify cicerone now before calling StartTermina, but we will only
   // send the VmStartedSignal on success.
-  VmId vm_id(request.owner_id(), request.name());
   NotifyCiceroneOfVmStarted(vm_id, vm->cid(), vm->GetInfo().pid, "");
 
   string failure_reason;
@@ -2934,6 +2935,16 @@ void Service::SendVmStartedSignal(const VmId& vm_id,
   proto.set_name(vm_id.name());
   proto.mutable_vm_info()->CopyFrom(vm_info);
   proto.set_status(status);
+  dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
+  exported_object_->SendSignal(&signal);
+}
+
+void Service::SendVmStartingUpSignal(const VmId& vm_id, int64_t cid) {
+  dbus::Signal signal(kVmConciergeInterface, kVmStartingUpSignal);
+  vm_tools::concierge::VmStartedSignal proto;
+  proto.set_owner_id(vm_id.owner_id());
+  proto.set_name(vm_id.name());
+  proto.mutable_vm_info()->set_cid(cid);
   dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
   exported_object_->SendSignal(&signal);
 }

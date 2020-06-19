@@ -44,6 +44,7 @@ const char kContainerStartupFailedSignal[] = "ContainerStartupFailed";
 const char kDiskImageProgressSignal[] = "DiskImageProgress";
 const char kDnsSettingsChangedSignal[] = "DnsSettingsChanged";
 const char kVmStartedSignal[] = "VmStartedSignal";
+const char kVmStartingUpSignal[] = "VmStartingUpSignal";
 const char kVmStoppedSignal[] = "VmStoppedSignal";
 
 }  // namespace concierge

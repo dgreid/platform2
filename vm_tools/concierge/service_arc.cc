@@ -172,6 +172,9 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
     return dbus_response;
   }
 
+  VmId vm_id(request.owner_id(), request.name());
+  SendVmStartingUpSignal(vm_id, vsock_cid);
+
   auto vm = ArcVm::Create(
       std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
       std::move(*pstore_path), pstore_size, std::move(disks), vsock_cid,
@@ -197,7 +200,6 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   vm_info->set_seneschal_server_handle(seneschal_server_handle);
   writer.AppendProtoAsArrayOfBytes(response);
 
-  VmId vm_id(request.owner_id(), request.name());
   SendVmStartedSignal(vm_id, *vm_info, response.status());
 
   vms_[vm_id] = std::move(vm);

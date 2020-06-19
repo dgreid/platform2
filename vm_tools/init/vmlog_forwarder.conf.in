@@ -20,5 +20,5 @@ end script
 
 # When forwarding to /dev/log (the default), we run as syslog.
 # When forwarding to the user's cryptohome/ we run as user crosvm.
-exec minijail0 -l -p -r -v -N -n -c 0 -u syslog -g syslog \
-     -- /usr/bin/vmlog_forwarder
+exec minijail0 -l -p -r -v -N -n -c 0  -G -u crosvm -g crosvm \
+     -- /usr/bin/vmlog_forwarder --log_destination=/cryptohome/crosvm/log

@@ -175,7 +175,7 @@ std::string TerminaVm::GetCrosVmSerial(std::string hardware,
   if (log_path_.empty()) {
     return common_params + ",type=syslog";
   }
-  return common_params + ",type=file,path=" + log_path_.value();
+  return common_params + ",type=unix,path=" + log_path_.value();
 }
 
 bool TerminaVm::Start(base::FilePath kernel,
