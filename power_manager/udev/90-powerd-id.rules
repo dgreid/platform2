@@ -3,6 +3,7 @@ SUBSYSTEM=="input", ENV{ID_INPUT_KEYBOARD}=="1",    DRIVERS=="atkbd",        ENV
 SUBSYSTEM=="input", ENV{ID_INPUT_KEYBOARD}=="1",    DRIVERS=="cros-ec-keyb", ENV{POWERD_ROLE}="internal_keyboard"
 SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1",    SUBSYSTEMS=="i2c",       ENV{POWERD_ROLE}="internal_touchpad"
 SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHPAD}=="1",    SUBSYSTEMS=="serio",     ENV{POWERD_ROLE}="internal_touchpad"
+SUBSYSTEM=="input", ENV{ID_INPUT_MOUSE}=="1",       DRIVERS=="psmouse",      ENV{POWERD_ROLE}="internal_touchpad"
 SUBSYSTEM=="input", ENV{ID_INPUT_TOUCHSCREEN}=="1", SUBSYSTEMS=="i2c",       ENV{POWERD_ROLE}="internal_touchscreen"
 SUBSYSTEM=="input", ATTRS{name}=="cros_fp_input",                            ENV{POWERD_ROLE}="cros_fingerprint"
 # Product is BUSTYPE/VENDOR/PRODUCT/VERSION. Bus type 0x5 is Bluetooth
