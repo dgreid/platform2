@@ -1478,11 +1478,7 @@ void ArcSetup::SetUpCameraProperty(const base::FilePath& build_prop) {
   const base::FilePath camera_prop_directory("/var/cache/camera");
   const base::FilePath camera_prop_file =
       base::FilePath(camera_prop_directory).Append("camera.prop");
-  if (base::PathExists(camera_prop_file))
-    return;
-
-  if (!brillo::MkdirRecursively(camera_prop_directory, 0755).is_valid())
-    return;
+  EXIT_IF(!brillo::MkdirRecursively(camera_prop_directory, 0755).is_valid());
 
   std::string content;
   EXIT_IF(!base::ReadFileToString(build_prop, &content));
