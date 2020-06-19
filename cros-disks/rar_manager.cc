@@ -50,11 +50,6 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
   DCHECK(applied_options);
   DCHECK(error);
 
-  if (filesystem_type != ".rar2fs")
-    return ArchiveManager::DoMount(source_path, filesystem_type,
-                                   original_options, mount_path,
-                                   applied_options, error);
-
   metrics()->RecordArchiveType("rar");
 
   // Get appropriate UID and GID.
