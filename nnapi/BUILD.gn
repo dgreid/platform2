@@ -125,9 +125,6 @@ if (use.test) {
       "${libbase_src}/chrono_utils_test.cpp",
       "${libbase_src}/endian_test.cpp",
       "${libbase_src}/errors_test.cpp",
-
-      # TODO(b/157009593) - Expected unit tests are failing.
-      # "${libbase_src}/expected_test.cpp",
       "${libbase_src}/logging_test.cpp",
       "${libbase_src}/macros_test.cpp",
       "${libbase_src}/mapped_file_test.cpp",
@@ -137,9 +134,6 @@ if (use.test) {
       "${libbase_src}/parseint_test.cpp",
       "${libbase_src}/process_test.cpp",
       "${libbase_src}/properties_test.cpp",
-
-      # TODO(b/157089900): android-base/format.h requires libfmt.
-      # "${libbase_src}/result_test.cpp",
       "${libbase_src}/scopeguard_test.cpp",
       "${libbase_src}/stringprintf_test.cpp",
       "${libbase_src}/strings_test.cpp",
