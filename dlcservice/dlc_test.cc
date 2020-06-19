@@ -5,10 +5,8 @@
 #include <base/files/file_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <metrics/metrics_library_mock.h>
 
 #include "dlcservice/boot/mock_boot_device.h"
-#include "dlcservice/metrics.h"
 #include "dlcservice/prefs.h"
 #include "dlcservice/system_state.h"
 #include "dlcservice/test_utils.h"
@@ -42,18 +40,13 @@ class DlcBaseTestRemovable : public DlcBaseTest {
         .WillOnce(Return("/dev/sdb5"));
     EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_)).WillOnce(Return(true));
 
-    auto mock_metrics_library =
-        std::make_unique<testing::StrictMock<MetricsLibraryMock>>();
-    metrics_library_ = mock_metrics_library.get();
-
     SystemState::Initialize(
         std::move(mock_image_loader_proxy_),
         std::move(mock_update_engine_proxy_),
         std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
-        std::make_unique<BootSlot>(std::move(mock_boot_device)),
-        std::make_unique<Metrics>(std::move(mock_metrics_library)),
-        manifest_path_, preloaded_content_path_, content_path_, prefs_path_,
-        users_path_, &clock_, /*for_test=*/true);
+        std::make_unique<BootSlot>(move(mock_boot_device)), manifest_path_,
+        preloaded_content_path_, content_path_, prefs_path_, users_path_,
+        &clock_, /*for_test=*/true);
   }
 
  private:

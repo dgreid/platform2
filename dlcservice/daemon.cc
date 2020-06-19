@@ -15,7 +15,6 @@
 #include "dlcservice/boot/boot_device.h"
 #include "dlcservice/boot/boot_slot.h"
 #include "dlcservice/dlc_service.h"
-#include "dlcservice/metrics.h"
 #include "dlcservice/system_state.h"
 
 namespace dlcservice {
@@ -52,10 +51,6 @@ void Daemon::RegisterDBusObjectsAsync(
 
   bus_for_proxies_ = dbus_connection_for_proxies_.Connect();
   CHECK(bus_for_proxies_);
-  std::unique_ptr<MetricsLibraryInterface> metrics_library =
-      std::make_unique<MetricsLibrary>();
-  auto metrics = std::make_unique<Metrics>(std::move(metrics_library));
-  metrics->Init();
 
   dlc_service_ = std::make_unique<DlcService>();
 
@@ -71,7 +66,7 @@ void Daemon::RegisterDBusObjectsAsync(
           bus_for_proxies_),
       dbus_adaptor_.get(),
       std::make_unique<BootSlot>(std::make_unique<BootDevice>()),
-      std::move(metrics), base::FilePath(imageloader::kDlcManifestRootpath),
+      base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
       base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath),
