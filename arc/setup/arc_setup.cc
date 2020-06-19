@@ -96,6 +96,8 @@ constexpr char kApkCacheDir[] = "/mnt/stateful_partition/unencrypted/apkcache";
 constexpr char kArcBridgeSocketContext[] = "u:object_r:arc_bridge_socket:s0";
 constexpr char kArcBridgeSocketPath[] = "/run/chrome/arc_bridge.sock";
 constexpr char kBinFmtMiscDirectory[] = "/proc/sys/fs/binfmt_misc";
+constexpr char kBuildPropFile[] = "/usr/share/arc/properties/build.prop";
+constexpr char kBuildPropFileVm[] = "/usr/share/arcvm/properties/build.prop";
 constexpr char kCameraProfileDir[] =
     "/mnt/stateful_partition/encrypted/var/cache/camera";
 constexpr char kCrasSocketDirectory[] = "/run/cras";
@@ -1470,7 +1472,7 @@ void ArcSetup::MakeMountPointsReadOnly() {
                                  remount_flags, media_mount_options.c_str()));
 }
 
-void ArcSetup::SetUpCameraProperty() {
+void ArcSetup::SetUpCameraProperty(const base::FilePath& build_prop) {
   // Camera HAL V3 needs two properties from build.prop for picture taking.
   // Copy the information to /var/cache.
   const base::FilePath camera_prop_directory("/var/cache/camera");
@@ -1482,8 +1484,6 @@ void ArcSetup::SetUpCameraProperty() {
   if (!brillo::MkdirRecursively(camera_prop_directory, 0755).is_valid())
     return;
 
-  const base::FilePath build_prop =
-      arc_paths_->android_rootfs_directory.Append("system/build.prop");
   std::string content;
   EXIT_IF(!base::ReadFileToString(build_prop, &content));
 
@@ -2133,7 +2133,7 @@ void ArcSetup::OnSetup() {
   if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q)
     SetUpTestharness(is_dev_mode);
   MakeMountPointsReadOnly();
-  SetUpCameraProperty();
+  SetUpCameraProperty(base::FilePath(kBuildPropFile));
   SetUpSharedApkDirectory();
 
   // These should be the last thing OnSetup() does because the job and
@@ -2309,6 +2309,7 @@ void ArcSetup::OnRemoveStaleData() {
 
 void ArcSetup::OnApplyPerBoardConfig() {
   ApplyPerBoardConfigurationsInternal(base::FilePath(kArcVmPerBoardConfigPath));
+  SetUpCameraProperty(base::FilePath(kBuildPropFileVm));
 
   // Unlike ARC container, ARCVM's platform.xml has to be owned by chronos.
   brillo::SafeFD fd;

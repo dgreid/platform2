@@ -237,7 +237,7 @@ class ArcSetup {
   void MakeMountPointsReadOnly();
 
   // Sets up a subset property file for camera.
-  void SetUpCameraProperty();
+  void SetUpCameraProperty(const base::FilePath& build_prop);
 
   // Sets up a default apps.
   void SetUpDefaultApps();
