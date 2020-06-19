@@ -1486,13 +1486,21 @@ void ArcSetup::SetUpCameraProperty(const base::FilePath& build_prop) {
   std::vector<std::string> properties = base::SplitString(
       content, "\n", base::WhitespaceHandling::TRIM_WHITESPACE,
       base::SplitResult::SPLIT_WANT_ALL);
-  const std::string kManufacturer = "ro.product.manufacturer";
-  const std::string kModel = "ro.product.model";
+  const std::string kSystemManufacturer = "ro.product.system.manufacturer=";
+  const std::string kManufacturer = "ro.product.manufacturer=";
+  const std::string kModel = "ro.product.model=";
   std::string camera_properties;
   for (const auto& property : properties) {
     if (!property.compare(0, kManufacturer.length(), kManufacturer) ||
         !property.compare(0, kModel.length(), kModel)) {
       camera_properties += property + "\n";
+    } else if (!property.compare(0, kSystemManufacturer.length(),
+                                 kSystemManufacturer)) {
+      // Android Q+ only has |kSystemManufacturer| in /system/build.prop, and
+      // |kSystemManufacturer| is copied to |kManufacturer| at boot time. Do
+      // the same here.
+      camera_properties +=
+          kManufacturer + property.substr(kSystemManufacturer.length()) + "\n";
     }
   }
   EXIT_IF(!WriteToFile(camera_prop_file, 0644, camera_properties));
