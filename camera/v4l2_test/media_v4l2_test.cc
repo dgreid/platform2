@@ -197,7 +197,7 @@ class V4L2TestEnvironment : public ::testing::Environment {
     // The WFC maximum supported resoltuion requirement is waived on some
     // models (b/158564147).
     if ((model == "blacktip360" && usb_info_ == "0408:5192") ||
-        (model == "garg360" && usb_info_ == "0408:5192")) {
+        (model == "garg360" && usb_info_ == "0408:5194")) {
       AddNegativeGtestFilter("V4L2Test.MaximumSupportedResolution");
     }
 
