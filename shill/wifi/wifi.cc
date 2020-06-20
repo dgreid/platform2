@@ -3233,7 +3233,9 @@ void WiFi::ReportConnectedToServiceAfterWake() {
 
 bool WiFi::RequestRoam(const std::string& addr, Error* error) {
   if (!supplicant_interface_proxy_->Roam(addr)) {
-    LOG(WARNING) << "Request roam to " << addr << " failed.";
+    Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
+                          StringPrintf("%s: requested roam to %s failed",
+                                       link_name().c_str(), addr.c_str()));
     return false;
   }
   return true;
