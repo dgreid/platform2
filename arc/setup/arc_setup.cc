@@ -1488,11 +1488,13 @@ void ArcSetup::SetUpCameraProperty(const base::FilePath& build_prop) {
       base::SplitResult::SPLIT_WANT_ALL);
   const std::string kSystemManufacturer = "ro.product.system.manufacturer=";
   const std::string kManufacturer = "ro.product.manufacturer=";
+  const std::string kSystemModel = "ro.product.system.model=";
   const std::string kModel = "ro.product.model=";
   std::string camera_properties;
   for (const auto& property : properties) {
     if (!property.compare(0, kManufacturer.length(), kManufacturer) ||
         !property.compare(0, kModel.length(), kModel)) {
+      // For Android P.
       camera_properties += property + "\n";
     } else if (!property.compare(0, kSystemManufacturer.length(),
                                  kSystemManufacturer)) {
@@ -1501,6 +1503,10 @@ void ArcSetup::SetUpCameraProperty(const base::FilePath& build_prop) {
       // the same here.
       camera_properties +=
           kManufacturer + property.substr(kSystemManufacturer.length()) + "\n";
+    } else if (!property.compare(0, kSystemModel.length(), kSystemModel)) {
+      // Do the same for |kSystemModel| for Android Q+.
+      camera_properties +=
+          kModel + property.substr(kSystemModel.length()) + "\n";
     }
   }
   EXIT_IF(!WriteToFile(camera_prop_file, 0644, camera_properties));
