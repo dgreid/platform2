@@ -42,6 +42,7 @@ clock_getres: 1
 getresuid: 1
 getresgid: 1
 prctl: arg0 == PR_SET_NAME
+setsockopt: 1
 epoll_create1: 1
 epoll_ctl: 1
 epoll_pwait: 1
