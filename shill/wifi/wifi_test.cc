@@ -2511,8 +2511,9 @@ MATCHER_P(WiFiAddedArgs, bgscan, "") {
              WPASupplicant::kNetworkPropertyScanSSID) &&
          arg.template Contains<uint32_t>(
              WPASupplicant::kNetworkPropertyDisableVHT) &&
-         arg.template Contains<string>(WPASupplicant::kNetworkPropertyBgscan) ==
-             bgscan;
+         arg.template Contains<string>(WPASupplicant::kNetworkPropertyBgscan) &&
+         arg.template Get<string>(WPASupplicant::kNetworkPropertyBgscan)
+                 .empty() != bgscan;
 }
 
 TEST_F(WiFiMainTest, AddNetworkArgs) {
@@ -2533,6 +2534,7 @@ TEST_F(WiFiMainTest, AddNetworkArgsNoBgscan) {
   EXPECT_CALL(*service, GetSupplicantConfigurationParameters());
   EXPECT_CALL(*GetSupplicantInterfaceProxy(),
               AddNetwork(WiFiAddedArgs(false), _));
+  EXPECT_TRUE(SetBgscanMethod(WPASupplicant::kNetworkBgscanMethodNone));
   InitiateConnect(service);
 }
 
@@ -2540,13 +2542,20 @@ TEST_F(WiFiMainTest, AppendBgscan) {
   StartWiFi();
   MockWiFiServiceRefPtr service = MakeMockService(kSecurityNone);
   {
-    // 1 endpoint, default bgscan method -- background scan disabled.
+    // 1 endpoint, default bgscan method -- background scan frequency very
+    // reduced.
     KeyValueStore params;
     EXPECT_CALL(*service, GetEndpointCount()).WillOnce(Return(1));
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
-    EXPECT_FALSE(
-        params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
+    string config_string;
+    EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
+    config_string = params.Get<string>(WPASupplicant::kNetworkPropertyBgscan);
+    vector<string> elements = base::SplitString(
+        config_string, ":", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+    EXPECT_EQ(WiFi::kDefaultBgscanMethod, elements[0]);
+    EXPECT_EQ(StringPrintf("%d", WiFi::kSingleEndpointBgscanIntervalSeconds),
+              elements[3]);
   }
   {
     // 2 endpoints, default bgscan method -- background scan frequency reduced.
@@ -2588,8 +2597,9 @@ TEST_F(WiFiMainTest, AppendBgscan) {
     AppendBgscan(service.get(), &params);
     Mock::VerifyAndClearExpectations(service.get());
     string config_string;
-    EXPECT_FALSE(
-        params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_TRUE(params.Contains<string>(WPASupplicant::kNetworkPropertyBgscan));
+    EXPECT_TRUE(
+        params.Get<string>(WPASupplicant::kNetworkPropertyBgscan).empty());
   }
 }
 
