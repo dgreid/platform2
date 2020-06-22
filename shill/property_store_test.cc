@@ -108,7 +108,7 @@ class PropertyStoreTypedTest : public PropertyStoreTest {
   bool SetProperty(PropertyStore* store, const string& name, Error* error);
 };
 
-TYPED_TEST_CASE(PropertyStoreTypedTest, PropertyStoreTest::PropertyTypes);
+TYPED_TEST_SUITE(PropertyStoreTypedTest, PropertyStoreTest::PropertyTypes);
 
 TYPED_TEST(PropertyStoreTypedTest, RegisterProperty) {
   PropertyStore store(Bind(&PropertyStoreTest::TestCallback, Unretained(this)));

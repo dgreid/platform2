@@ -101,7 +101,7 @@ class TimeoutSetTest : public Test {
 };
 
 typedef ::testing::Types<char, int, float, IPAddress> TestTypes;
-TYPED_TEST_CASE(TimeoutSetTest, TestTypes);
+TYPED_TEST_SUITE(TimeoutSetTest, TestTypes);
 
 TYPED_TEST(TimeoutSetTest, EmptyInsertion) {
   EXPECT_TRUE(this->elements_.IsEmpty());

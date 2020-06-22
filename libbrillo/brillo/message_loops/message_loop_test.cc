@@ -71,7 +71,7 @@ void MessageLoopTest<BaseMessageLoop>::MessageLoopSetUp() {
 // This setups gtest to run each one of the following TYPED_TEST test cases on
 // on each implementation.
 typedef ::testing::Types<BaseMessageLoop> MessageLoopTypes;
-TYPED_TEST_CASE(MessageLoopTest, MessageLoopTypes);
+TYPED_TEST_SUITE(MessageLoopTest, MessageLoopTypes);
 
 
 TYPED_TEST(MessageLoopTest, CancelTaskInvalidValuesTest) {

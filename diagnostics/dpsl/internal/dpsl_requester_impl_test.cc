@@ -681,7 +681,7 @@ using DpslRequesterImplServerTestTypes =
                      GetDriveSystemDataTestParam,
                      RequestBluetoothDataNotificationTestParam,
                      GetStatefulPartitionAvailableCapacityTestParam>;
-TYPED_TEST_CASE(DpslRequesterImplServerTest, DpslRequesterImplServerTestTypes);
+TYPED_TEST_SUITE(DpslRequesterImplServerTest, DpslRequesterImplServerTestTypes);
 
 TYPED_TEST(DpslRequesterImplServerTest, CallGrpcMethodFromMainThread) {
   typename TypeParam::Request request;

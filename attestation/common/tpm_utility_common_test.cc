@@ -63,7 +63,7 @@ using TpmUtilitiesUnderTest = Types<>;
 using TpmUtilitiesUnderTest = Types<TpmUtilityV1>;
 #endif
 
-TYPED_TEST_CASE(TpmUtilityCommonTest, TpmUtilitiesUnderTest);
+TYPED_TEST_SUITE(TpmUtilityCommonTest, TpmUtilitiesUnderTest);
 
 TYPED_TEST(TpmUtilityCommonTest, HasTpmManagerUtility) {
   EXPECT_THAT(this->tpm_manager_utility_backup_, NotNull());
