@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
@@ -16,6 +17,11 @@ pkg_config("target_defaults") {
   ]
 }
 
+generate_mojom_bindings("arc_sensor_service_mojo_bindings") {
+  mojo_root = "${platform2_root}"
+  sources = [ "sensor_service.mojom" ]
+}
+
 generate_dbus_adaptors("arc_sensor_service_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/arc/vm/sensor_service/dbus_adaptors"
@@ -23,7 +29,16 @@ generate_dbus_adaptors("arc_sensor_service_adaptors") {
 }
 
 executable("arc_sensor_service") {
-  sources = [ "arc_sensor_service.cc" ]
+  sources = [
+    "arc_sensor_service.cc",
+    "sensor_device_impl.cc",
+    "sensor_device_impl.h",
+    "sensor_service_impl.cc",
+    "sensor_service_impl.h",
+  ]
   configs += [ ":target_defaults" ]
-  deps = [ ":arc_sensor_service_adaptors" ]
+  deps = [
+    ":arc_sensor_service_adaptors",
+    ":arc_sensor_service_mojo_bindings",
+  ]
 }

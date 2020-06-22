@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 
 #include <base/command_line.h>
 #include <base/logging.h>
@@ -13,8 +14,12 @@
 #include <brillo/syslog_logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
+#include <mojo/core/embedder/embedder.h>
+#include <mojo/core/embedder/scoped_ipc_support.h>
+#include <mojo/public/cpp/system/invitation.h>
 
 #include "arc/vm/sensor_service/dbus_adaptors/org.chromium.ArcSensorService.h"
+#include "arc/vm/sensor_service/sensor_service_impl.h"
 
 namespace {
 
@@ -40,12 +45,24 @@ class DBusAdaptor : public org::chromium::ArcSensorServiceAdaptor,
   bool BootstrapMojoConnection(brillo::ErrorPtr* error,
                                const base::ScopedFD& in_handle,
                                const std::string& in_token) override {
-    // TODO(hashimoto): Accept the mojo invitation and use the attached pipe.
+    mojo::IncomingInvitation invitation =
+        mojo::IncomingInvitation::Accept(mojo::PlatformChannelEndpoint(
+            mojo::PlatformHandle(base::ScopedFD(dup(in_handle.get())))));
+    mojo::ScopedMessagePipeHandle child_pipe =
+        invitation.ExtractMessagePipe(in_token);
+
+    service_ = std::make_unique<arc::SensorServiceImpl>();
+    if (!service_->Initialize(mojo::InterfaceRequest<arc::mojom::SensorService>(
+            std::move(child_pipe)))) {
+      LOG(ERROR) << "Failed to initialize SensorServiceImpl.";
+      return false;
+    }
     return true;
   }
 
  private:
   brillo::dbus_utils::DBusObject dbus_object_;
+  std::unique_ptr<arc::SensorServiceImpl> service_;
 };
 
 class Daemon : public brillo::DBusServiceDaemon {
@@ -77,6 +94,10 @@ int main(int argc, char** argv) {
   base::Thread mojo_ipc_thread("mojo IPC thread");
   CHECK(mojo_ipc_thread.StartWithOptions(
       base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+  mojo::core::Init();
+  mojo::core::ScopedIPCSupport ipc_support(
+      mojo_ipc_thread.task_runner(),
+      mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
 
   return Daemon().Run();
 }
