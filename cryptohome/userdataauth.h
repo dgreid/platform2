@@ -774,6 +774,29 @@ class UserDataAuth {
   // tpm_manager. This will notify |tpm_| about the emitted signal.
   void OnOwnershipTakenSignal(const tpm_manager::OwnershipTakenSignal& signal);
 
+  // =============== Stateful Recovery related Helpers ===============
+
+  // This is a utility function for stateful recovery functionality to call when
+  // it wants to mount a user's home directory. The user specified by
+  // |username|'s home is mounted with |passkey|, and if successfully mounted,
+  // the function returns true and set |out_home_path| to the mounted home.
+  // Otherwise, return false. Note that this function must log any error itself,
+  // no logging will be done by the caller.
+  bool StatefulRecoveryMount(const std::string& username,
+                             const std::string& passkey,
+                             FilePath* out_home_path);
+
+  // This is a utility function for stateful recovery to unmount all user's home
+  // directories. It'll return true if all the user's home directories are
+  // successfully unmounted. Otherwise, it'll return false. Note that this
+  // function must log any error itself, no logging will be done by the caller.
+  bool StatefulRecoveryUnmount();
+
+  // This is a utility function for stateful recovery to check if a user is the
+  // owner. It'll return true if the user specified by |username| is the owner,
+  // and false otherwise.
+  bool StatefulRecoveryIsOwner(const std::string& username);
+
   // =============== Threading Related Variables ===============
 
   // The task runner that belongs to the thread that created this UserDataAuth

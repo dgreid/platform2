@@ -25,6 +25,7 @@
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_impl.h"
 #include "cryptohome/obfuscated_username.h"
+#include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/userdataauth.h"
@@ -282,7 +283,107 @@ bool UserDataAuth::Initialize() {
                                       base::Unretained(this)));
   }
 
+  // Do Stateful Recovery if requested.
+  auto mountfn =
+      base::Bind(&UserDataAuth::StatefulRecoveryMount, base::Unretained(this));
+  auto unmountfn = base::Bind(&UserDataAuth::StatefulRecoveryUnmount,
+                              base::Unretained(this));
+  auto isownerfn = base::Bind(&UserDataAuth::StatefulRecoveryIsOwner,
+                              base::Unretained(this));
+  StatefulRecovery recovery(platform_, mountfn, unmountfn, isownerfn);
+  if (recovery.Requested()) {
+    if (recovery.Recover()) {
+      LOG(INFO) << "Stateful recovery was performed successfully.";
+    } else {
+      LOG(ERROR) << "Stateful recovery failed.";
+    }
+    recovery.PerformReboot();
+  }
   return true;
+}
+
+bool UserDataAuth::StatefulRecoveryMount(const std::string& username,
+                                         const std::string& passkey,
+                                         FilePath* out_home_path) {
+  user_data_auth::MountRequest mount_req;
+  mount_req.mutable_account()->set_account_id(username);
+  mount_req.mutable_authorization()->mutable_key()->set_secret(passkey);
+
+  bool mount_path_retrieved = false;
+  // This will store the mount_reply when it finished.
+  user_data_auth::MountReply mount_reply;
+  // This will be used to let code outside of the callback know that we're
+  // done.
+  base::WaitableEvent done_event(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
+  auto on_done = base::BindOnce(
+      [](UserDataAuth* uda, std::string username, FilePath* out_home_path,
+         bool* mount_path_retrieved,
+         user_data_auth::MountReply* mount_reply_ptr,
+         base::WaitableEvent* done_event_ptr,
+         const user_data_auth::MountReply& reply) {
+        *mount_reply_ptr = reply;
+        // After the mount is successful, we need to obtain the user
+        // mount.
+        scoped_refptr<cryptohome::Mount> mount = uda->GetMountForUser(username);
+        if (!mount.get() || !mount->IsMounted()) {
+          LOG(ERROR) << "Failed to get mount in stateful recovery.";
+        }
+        *out_home_path = mount->mount_point();
+        *mount_path_retrieved = true;
+        done_event_ptr->Signal();
+      },
+      base::Unretained(this), username, base::Unretained(out_home_path),
+      base::Unretained(&mount_path_retrieved), base::Unretained(&mount_reply),
+      base::Unretained(&done_event));
+
+  PostTaskToMountThread(
+      FROM_HERE, base::BindOnce(&UserDataAuth::DoMount, base::Unretained(this),
+                                mount_req, std::move(on_done)));
+
+  done_event.Wait();
+
+  if (mount_reply.error()) {
+    LOG(ERROR) << "Mount during stateful recovery failed: "
+               << mount_reply.error();
+    return false;
+  }
+  if (!mount_path_retrieved) {
+    LOG(ERROR) << "Failed to get user home path in stateful recovery.";
+    return false;
+  }
+  LOG(INFO) << "Mount succeeded during stateful recovery.";
+  return true;
+}
+
+bool UserDataAuth::StatefulRecoveryUnmount() {
+  bool result;
+  base::WaitableEvent done_event(
+      base::WaitableEvent::ResetPolicy::MANUAL,
+      base::WaitableEvent::InitialState::NOT_SIGNALED);
+
+  PostTaskToMountThread(
+      FROM_HERE, base::Bind(
+                     [](UserDataAuth* uda, base::WaitableEvent* done_event_ptr,
+                        bool* result_ptr) {
+                       *result_ptr = uda->Unmount();
+                       done_event_ptr->Signal();
+                     },
+                     base::Unretained(this), base::Unretained(&done_event),
+                     base::Unretained(&result)));
+
+  done_event.Wait();
+  return result;
+}
+
+bool UserDataAuth::StatefulRecoveryIsOwner(const std::string& username) {
+  std::string owner;
+  if (homedirs_->GetPlainOwner(&owner) && username.length() &&
+      username == owner) {
+    return true;
+  }
+  return false;
 }
 
 bool UserDataAuth::PostDBusInitialize() {
