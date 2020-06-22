@@ -90,7 +90,7 @@ base::Optional<int64_t> IioChannelImpl::Convert(const uint8_t* src) const {
   if (len == 0)
     return 0;
 
-  int64_t value;
+  int64_t value = 0;
   iio_channel_convert(channel_, &value, src);
 
   if (format->is_signed && len < CHAR_BIT * sizeof(int64_t)) {
