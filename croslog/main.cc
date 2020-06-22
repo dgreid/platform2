@@ -110,6 +110,8 @@ int main(int argc, char* argv[]) {
     case croslog::SourceMode::JOURNAL_LOG:
       return LaunchJournalctlAndWait(config) ? 0 : 1;
     case croslog::SourceMode::PLAINTEXT_LOG: {
+      base::MessageLoopForIO message_loop_;
+
       // TODO(yoshiki): Implement the reader of plaintext logs.
       croslog::ViewerPlaintext viewer;
       return viewer.Run(config) ? 0 : 1;
