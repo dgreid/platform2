@@ -55,6 +55,7 @@ const char PortalDetector::kDefaultHttpsUrl[] =
 const std::vector<string> PortalDetector::kDefaultFallbackHttpUrls{
     "http://www.google.com/gen_204",
     "http://play.googleapis.com/generate_204",
+    "http://connectivitycheck.gstatic.com/generate_204",
 };
 
 PortalDetector::PortalDetector(
