@@ -428,6 +428,7 @@ if (use.test) {
       "disk_cleanup_routines_unittest.cc",
       "disk_cleanup_unittest.cc",
       "fake_le_credential_backend.cc",
+      "fido/make_credential_response_test.cc",
       "fingerprint_manager_unittest.cc",
       "firmware_management_parameters_unittest.cc",
       "homedirs_unittest.cc",
@@ -484,6 +485,7 @@ if (use.test) {
       "libs:cryptohome-proto",
       "libs:libcrostpm",
       "libs:libcryptohome",
+      "libs:libfido",
       "//common-mk/testrunner",
     ]
 

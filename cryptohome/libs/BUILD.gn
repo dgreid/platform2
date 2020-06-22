@@ -448,3 +448,25 @@ proto_library("namespace-mounter-ipc-proto") {
   sources = [ "${proto_in_dir}/namespace_mounter_ipc.proto" ]
   configs = [ ":cryptohome-proto_config" ]
 }
+
+pkg_config("libfido_config") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "openssl",
+  ]
+}
+
+static_library("libfido") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "../fido/attested_credential_data.cc",
+    "../fido/authenticator_data.cc",
+    "../fido/ec_public_key.cc",
+    "../fido/fido_constants.cc",
+    "../fido/fido_parsing_utils.cc",
+    "../fido/public_key.cc",
+  ]
+  libs = [ "cbor" ]
+  all_dependent_configs = [ ":libfido_config" ]
+}
