@@ -616,15 +616,14 @@ AwbModeToTemperatureMap MetadataHandler::GetAvailableAwbTemperatures(
                                             kControlAutoWhiteBalance))
     return available_awb_temperatures;
 
-  ControlRange range;
-  if (V4L2CameraDevice::QueryControl(device_info.device_path,
-                                     kControlWhiteBalanceTemperature,
-                                     &range) != 0)
+  ControlInfo info;
+  if (V4L2CameraDevice::QueryControl(
+          device_info.device_path, kControlWhiteBalanceTemperature, &info) != 0)
     return available_awb_temperatures;
 
   for (auto& mode_temperature : GetAwbModeTemperatureMap()) {
     uint32_t temperature =
-        GetAwbTemperatureByMode(range, mode_temperature.first);
+        GetAwbTemperatureByMode(info.range, mode_temperature.first);
     if (!temperature)
       continue;
     available_awb_temperatures[mode_temperature.first] = temperature;
@@ -683,7 +682,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
                                       ANDROID_LENS_FOCUS_DISTANCE,
                                   });
   }
-  update_static(ANDROID_REQUEST_AVAILABLE_REQUEST_KEYS, available_request_keys);
 
   // TODO(shik): All properties listed for capture requests can also be queried
   // on the capture result, to determine the final values used for capture. We
@@ -721,6 +719,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
       ANDROID_NOISE_REDUCTION_MODE,
       ANDROID_REQUEST_PIPELINE_DEPTH,
       ANDROID_SCALER_CROP_REGION,
+      ANDROID_SENSOR_EXPOSURE_TIME,
       ANDROID_SENSOR_ROLLING_SHUTTER_SKEW,
       ANDROID_SENSOR_TEST_PATTERN_MODE,
       ANDROID_SENSOR_TIMESTAMP,
@@ -737,7 +736,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
                                      ANDROID_LENS_FOCUS_DISTANCE,
                                  });
   }
-  update_static(ANDROID_REQUEST_AVAILABLE_RESULT_KEYS, available_result_keys);
 
   // TODO(shik): The HAL must not have any tags in its static info that are not
   // listed either here or in the vendor tag list.  Some request/result metadata
@@ -809,8 +807,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
             ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
         });
   }
-  update_static(ANDROID_REQUEST_AVAILABLE_CHARACTERISTICS_KEYS,
-                available_characteristics_keys);
 
   update_static(ANDROID_SENSOR_ORIENTATION, device_info.sensor_orientation);
   update_static(ANDROID_LENS_FACING,
@@ -929,55 +925,55 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(kVendorTagTimestampSync, timestamp_sync);
   }
 
-  ControlRange range;
+  ControlInfo info;
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path,
-                                     kControlBrightness, &range) == 0) {
-    update_static(
-        kVendorTagControlBrightnessRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     kControlBrightness, &info) == 0) {
+    update_static(kVendorTagControlBrightnessRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlContrast,
-                                     &range) == 0) {
-    update_static(
-        kVendorTagControlContrastRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     &info) == 0) {
+    update_static(kVendorTagControlContrastRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlPan,
-                                     &range) == 0) {
-    update_static(
-        kVendorTagControlPanRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     &info) == 0) {
+    update_static(kVendorTagControlPanRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path,
-                                     kControlSaturation, &range) == 0) {
-    update_static(
-        kVendorTagControlSaturationRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     kControlSaturation, &info) == 0) {
+    update_static(kVendorTagControlSaturationRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlSharpness,
-                                     &range) == 0) {
-    update_static(
-        kVendorTagControlSharpnessRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     &info) == 0) {
+    update_static(kVendorTagControlSharpnessRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlTilt,
-                                     &range) == 0) {
-    update_static(
-        kVendorTagControlTiltRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     &info) == 0) {
+    update_static(kVendorTagControlTiltRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlZoom,
-                                     &range) == 0) {
-    update_static(
-        kVendorTagControlZoomRange,
-        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+                                     &info) == 0) {
+    update_static(kVendorTagControlZoomRange,
+                  std::vector<int32_t>{info.range.minimum, info.range.maximum,
+                                       info.range.step});
   }
 
   std::vector<uint8_t> available_awb_modes;
@@ -986,6 +982,28 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
 
   update_static(ANDROID_CONTROL_AWB_AVAILABLE_MODES, available_awb_modes);
 
+  // Check if device supports manual exposure control.
+  ControlRange range;
+  if (V4L2CameraDevice::IsManualExposureTimeSupported(device_info.device_path,
+                                                      &range)) {
+    update_static(ANDROID_CONTROL_AE_AVAILABLE_MODES,
+                  std::vector<uint8_t>{ANDROID_CONTROL_AE_MODE_OFF,
+                                       ANDROID_CONTROL_AE_MODE_ON});
+    // The unit of the range is 100 us.
+    update_static(ANDROID_SENSOR_INFO_EXPOSURE_TIME_RANGE,
+                  std::vector<int64_t>{
+                      range.minimum * 100 * 1000 /* ns */,
+                      range.maximum * 100 * 1000 /* ns */
+                  });
+    available_characteristics_keys.push_back(
+        ANDROID_SENSOR_INFO_EXPOSURE_TIME_RANGE);
+    available_request_keys.push_back(ANDROID_SENSOR_EXPOSURE_TIME);
+  }
+
+  update_static(ANDROID_REQUEST_AVAILABLE_CHARACTERISTICS_KEYS,
+                available_characteristics_keys);
+  update_static(ANDROID_REQUEST_AVAILABLE_REQUEST_KEYS, available_request_keys);
+  update_static(ANDROID_REQUEST_AVAILABLE_RESULT_KEYS, available_result_keys);
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
 }
 
@@ -1120,15 +1138,12 @@ int MetadataHandler::PreHandleRequest(int frame_number,
     if (awb_temperature_.count(mode))
       device_->SetColorTemperature(awb_temperature_[mode]);
     else
-      LOGF(WARNING) << "Unsupported awb mode:" << mode;
+      LOGF(WARNING) << "Unsupported AWB mode:" << mode;
   }
 
   const int64_t rolling_shutter_skew =
       sensor_handler_->GetRollingShutterSkew(resolution);
   update_request(ANDROID_SENSOR_ROLLING_SHUTTER_SKEW, rolling_shutter_skew);
-
-  const int64_t exposure_time = sensor_handler_->GetExposureTime(resolution);
-  update_request(ANDROID_SENSOR_EXPOSURE_TIME, exposure_time);
 
   if (metadata->exists(kVendorTagControlBrightness)) {
     camera_metadata_entry entry = metadata->find(kVendorTagControlBrightness);
@@ -1163,6 +1178,37 @@ int MetadataHandler::PreHandleRequest(int frame_number,
   if (metadata->exists(kVendorTagControlZoom)) {
     camera_metadata_entry entry = metadata->find(kVendorTagControlZoom);
     device_->SetControlValue(kControlZoom, entry.data.i32[0]);
+  }
+
+  if (metadata->exists(ANDROID_CONTROL_AE_MODE)) {
+    camera_metadata_entry entry = metadata->find(ANDROID_CONTROL_AE_MODE);
+    int32_t exposure_time;
+    switch (entry.data.u8[0]) {
+      case ANDROID_CONTROL_AE_MODE_ON:
+        device_->SetExposureTimeHundredUs(kExposureTimeAuto);
+        update_request(ANDROID_SENSOR_EXPOSURE_TIME,
+                       sensor_handler_->GetExposureTime(resolution));
+        break;
+
+      case ANDROID_CONTROL_AE_MODE_OFF:
+        if (metadata->exists(ANDROID_SENSOR_EXPOSURE_TIME)) {
+          entry = metadata->find(ANDROID_SENSOR_EXPOSURE_TIME);
+          exposure_time =
+              static_cast<int32_t>(entry.data.i64[0] / (100 * 1000));  // ns
+          device_->SetExposureTimeHundredUs(exposure_time);
+          device_->GetControlValue(kControlExposureTime, &exposure_time);
+          update_request(
+              ANDROID_SENSOR_EXPOSURE_TIME,
+              base::strict_cast<int64_t>(exposure_time) * 100 * 1000);  // ns
+        } else {
+          LOGF(WARNING) << "There is no ANDROID_SENSOR_EXPOSURE_TIME metadata";
+        }
+        break;
+
+      default:
+        LOGF(WARNING) << "Unsupport AE mode " << entry.data.u8[0];
+        break;
+    }
   }
 
   current_frame_number_ = frame_number;

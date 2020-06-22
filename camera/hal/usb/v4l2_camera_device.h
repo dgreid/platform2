@@ -29,11 +29,20 @@ struct ControlRange {
   int32_t default_value;
 };
 
+struct ControlInfo {
+  ControlRange range;
+
+  // For V4L2_CTRL_TYPE_MENU
+  std::vector<std::string> menu_items;
+};
+
 enum ControlType {
   kControlAutoWhiteBalance,
   kControlBrightness,
   kControlContrast,
+  kControlExposureAuto,
   kControlExposureAutoPriority,  // 0 for constant frame rate
+  kControlExposureTime,
   kControlPan,
   kControlSaturation,
   kControlSharpness,
@@ -43,6 +52,7 @@ enum ControlType {
 };
 
 constexpr uint32_t kColorTemperatureAuto = 0;
+constexpr uint32_t kExposureTimeAuto = 0;
 
 // The class is thread-safe.
 class V4L2CameraDevice {
@@ -109,6 +119,11 @@ class V4L2CameraDevice {
   // white balance mode.
   int SetColorTemperature(uint32_t color_temperature);
 
+  // Return 0 if device set exposure time successfully. Otherwise, return
+  // |-errno|. Set |exposure_time| to |kExposureTimeAuto| means auto exposure
+  // time. The unit of v4l2 is 100 microseconds.
+  int SetExposureTimeHundredUs(uint32_t exposure_time);
+
   // TODO(shik): Change the type of |device_path| to base::FilePath.
 
   // Whether the device supports updating frame rate.
@@ -144,6 +159,11 @@ class V4L2CameraDevice {
 
   static bool IsAutoFocusSupported(const std::string& device_path);
 
+  // If the device supports manual exposure time, returns the exposure time
+  // range to |exposure_time_range|.
+  static bool IsManualExposureTimeSupported(const std::string& device_path,
+                                            ControlRange* exposure_time_range);
+
   static bool IsConstantFrameRateSupported(const std::string& device_path);
 
   static bool IsCameraDevice(const std::string& device_path);
@@ -160,10 +180,21 @@ class V4L2CameraDevice {
 
   // Query control.
   // Return 0 if operation successfully. Otherwise, return |-errno|.
-  // The control range value is stored in |range|.
+  // The control info is stored in |info|.
   static int QueryControl(const std::string& device_path,
                           ControlType type,
-                          ControlRange* range);
+                          ControlInfo* info);
+
+  // Return 0 if operation successfully. Otherwise, return |-errno|.
+  // The returned value is stored in |value|.
+  static int GetControlValue(const std::string& device_path,
+                             ControlType type,
+                             int32_t* value);
+
+  // Return 0 if operation successfully. Otherwise, return |-errno|.
+  static int SetControlValue(const std::string& device_path,
+                             ControlType type,
+                             int32_t value);
 
  private:
   static std::vector<float> GetFrameRateList(int fd,
@@ -173,8 +204,8 @@ class V4L2CameraDevice {
 
   // Query the control of |type|.
   // Return 0 if operation successfully. Otherwise, return |-errno|.
-  // The control range value is stored in |range|.
-  static int QueryControl(int fd, ControlType type, ControlRange* range);
+  // The control info is stored in |info|.
+  static int QueryControl(int fd, ControlType type, ControlInfo* info);
 
   // Return 0 if set control successfully. Otherwise, return |-errno|.
   static int SetControlValue(int fd, ControlType type, int32_t value);
@@ -187,7 +218,7 @@ class V4L2CameraDevice {
   // device resumed. But camera device may not be ready immediately.
   static int RetryDeviceOpen(const std::string& device_path, int flags);
 
-  int QueryControl(ControlType type, ControlRange* range);
+  int QueryControl(ControlType type, ControlInfo* info);
 
   // Set power frequency supported from device.
   int SetPowerLineFrequency(PowerLineFrequency setting);
@@ -209,6 +240,10 @@ class V4L2CameraDevice {
   bool autofocus_supported_;
 
   bool white_balance_control_supported_;
+
+  bool manual_exposure_time_supported_;
+  int manual_exposure_time_type_;
+  int auto_exposure_time_type_;
 
   bool can_update_frame_rate_;
   float frame_rate_;

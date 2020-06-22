@@ -36,6 +36,13 @@ namespace {
 // Since cameras might report non-integer fps but in Android Camera 3 API we
 // can only set fps range with integer in metadata.
 constexpr float kFpsDifferenceThreshold = 1.0f;
+// The following exposure type strings are from UVC driver.
+constexpr char kExposureTypeMenuStringAuto[] = "Auto Mode";
+constexpr char kExposureTypeMenuStringManual[] = "Manual Mode";
+constexpr char kExposureTypeMenuStringShutterPriority[] =
+    "Shutter Priority Mode";
+constexpr char kExposureTypeMenuStringAperturePriority[] =
+    "Aperture Priority Mode";
 
 const int ControlTypeToCid(ControlType type) {
   switch (type) {
@@ -48,8 +55,14 @@ const int ControlTypeToCid(ControlType type) {
     case kControlContrast:
       return V4L2_CID_CONTRAST;
 
+    case kControlExposureAuto:
+      return V4L2_CID_EXPOSURE_AUTO;
+
     case kControlExposureAutoPriority:
       return V4L2_CID_EXPOSURE_AUTO_PRIORITY;
+
+    case kControlExposureTime:
+      return V4L2_CID_EXPOSURE_ABSOLUTE;
 
     case kControlPan:
       return V4L2_CID_PAN_ABSOLUTE;
@@ -86,8 +99,14 @@ const std::string ControlTypeToString(ControlType type) {
     case kControlContrast:
       return "contrast";
 
+    case kControlExposureAuto:
+      return "exposure auto (0,3:auto, 1,2:manual)";
+
     case kControlExposureAutoPriority:
       return "exposure_auto_priority";
+
+    case kControlExposureTime:
+      return "exposure time";
 
     case kControlPan:
       return "pan";
@@ -123,6 +142,12 @@ const std::string CidToString(int cid) {
 
     case V4L2_CID_CONTRAST:
       return "V4L2_CID_CONTRAST";
+
+    case V4L2_CID_EXPOSURE_ABSOLUTE:
+      return "V4L2_CID_EXPOSURE_ABSOLUTE";
+
+    case V4L2_CID_EXPOSURE_AUTO:
+      return "V4L2_CID_EXPOSURE_AUTO";
 
     case V4L2_CID_PAN_ABSOLUTE:
       return "V4L2_CID_PAN_ABSOLUTE";
@@ -229,19 +254,93 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
   }
 
   // Query the initial auto white balance state.
+  int32_t value;
   white_balance_control_supported_ =
       IsControlSupported(kControlAutoWhiteBalance) &&
       IsControlSupported(kControlWhiteBalanceTemperature);
   if (white_balance_control_supported_) {
     LOGF(INFO) << "Device " << device_info_.camera_id
                << " supports white balance control";
-    int32_t value;
     if (GetControlValue(kControlAutoWhiteBalance, &value) == 0) {
       if (value) {
-        LOGF(INFO) << "Current white balance control is AUTO";
+        LOGF(INFO) << "Current white balance control is Auto";
       } else if (GetControlValue(kControlWhiteBalanceTemperature, &value) ==
                  0) {
         LOGF(INFO) << "Current white balance temperature is " << value;
+      }
+    }
+  }
+
+  ControlInfo info;
+  ControlRange range;
+  manual_exposure_time_supported_ =
+      IsManualExposureTimeSupported(device_path, &range);
+  if (manual_exposure_time_supported_ &&
+      QueryControl(kControlExposureAuto, &info) == 0) {
+    if (GetControlValue(kControlExposureAuto, &value) == 0) {
+      switch (value) {
+        case V4L2_EXPOSURE_AUTO:
+          LOGF(INFO) << "Current exposure type is Auto";
+          auto_exposure_time_type_ = V4L2_EXPOSURE_AUTO;
+          // Prefer switching between AUTO<->SHUTTER_PRIORITY
+          if (base::Contains(info.menu_items,
+                             kExposureTypeMenuStringShutterPriority)) {
+            manual_exposure_time_type_ = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+          } else if (base::Contains(info.menu_items,
+                                    kExposureTypeMenuStringManual)) {
+            manual_exposure_time_type_ = V4L2_EXPOSURE_MANUAL;
+          } else {
+            NOTREACHED() << "No manual exposure time type supported";
+          }
+          break;
+
+        case V4L2_EXPOSURE_MANUAL:
+          LOGF(INFO) << "Current exposure type is Manual";
+          manual_exposure_time_type_ = V4L2_EXPOSURE_MANUAL;
+          // Prefer switching between APERTURE_PRIORITY<->MANUAL
+          if (base::Contains(info.menu_items,
+                             kExposureTypeMenuStringAperturePriority)) {
+            auto_exposure_time_type_ = V4L2_EXPOSURE_APERTURE_PRIORITY;
+          } else if (base::Contains(info.menu_items,
+                                    kExposureTypeMenuStringAuto)) {
+            auto_exposure_time_type_ = V4L2_EXPOSURE_AUTO;
+          } else {
+            NOTREACHED() << "No auto exposure time type supported";
+          }
+          break;
+
+        case V4L2_EXPOSURE_SHUTTER_PRIORITY:
+          LOGF(INFO) << "Current exposure type is Shutter Priority";
+          manual_exposure_time_type_ = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+          // Prefer switching between AUTO<->SHUTTER_PRIORITY
+          if (base::Contains(info.menu_items, kExposureTypeMenuStringAuto)) {
+            auto_exposure_time_type_ = V4L2_EXPOSURE_AUTO;
+          } else if (base::Contains(info.menu_items,
+                                    kExposureTypeMenuStringAperturePriority)) {
+            auto_exposure_time_type_ = V4L2_EXPOSURE_APERTURE_PRIORITY;
+          } else {
+            NOTREACHED() << "No auto exposure time type supported";
+          }
+          break;
+
+        case V4L2_EXPOSURE_APERTURE_PRIORITY:
+          LOGF(INFO) << "Current exposure type is Aperture Priority";
+          auto_exposure_time_type_ = V4L2_EXPOSURE_APERTURE_PRIORITY;
+          // Prefer switching between APERTURE_PRIORITY<->MANUAL
+          if (base::Contains(info.menu_items, kExposureTypeMenuStringManual)) {
+            manual_exposure_time_type_ = V4L2_EXPOSURE_MANUAL;
+          } else if (base::Contains(info.menu_items,
+                                    kExposureTypeMenuStringShutterPriority)) {
+            manual_exposure_time_type_ = V4L2_EXPOSURE_SHUTTER_PRIORITY;
+          } else {
+            NOTREACHED() << "No manual exposure time type supported";
+          }
+          break;
+
+        default:
+          LOGF(WARNING) << "Unknown exposure type " << value;
+          manual_exposure_time_supported_ = false;
+          break;
       }
     }
   }
@@ -546,6 +645,28 @@ int V4L2CameraDevice::SetAutoFocus(bool enable) {
   return ret;
 }
 
+int V4L2CameraDevice::SetExposureTimeHundredUs(uint32_t exposure_time) {
+  if (!manual_exposure_time_supported_) {
+    if (exposure_time != kExposureTimeAuto) {
+      LOGF(WARNING)
+          << "Setting manual exposure time when device doesn't support";
+    }
+    return 0;
+  }
+
+  if (exposure_time == kExposureTimeAuto) {
+    if (control_values_.count(kControlExposureTime))
+      control_values_.erase(kControlExposureTime);
+    return SetControlValue(kControlExposureAuto, auto_exposure_time_type_);
+  }
+
+  int ret = SetControlValue(kControlExposureAuto, manual_exposure_time_type_);
+  if (ret != 0)
+    return ret;
+
+  return SetControlValue(kControlExposureTime, exposure_time);
+}
+
 bool V4L2CameraDevice::CanUpdateFrameRate() {
   return can_update_frame_rate_;
 }
@@ -597,8 +718,12 @@ int V4L2CameraDevice::SetFrameRate(float frame_rate) {
 }
 
 int V4L2CameraDevice::SetColorTemperature(uint32_t color_temperature) {
-  if (!white_balance_control_supported_)
+  if (!white_balance_control_supported_) {
+    if (color_temperature != kColorTemperatureAuto) {
+      LOGF(WARNING) << "Setting color temperature when device doesn't support";
+    }
     return 0;
+  }
 
   if (color_temperature == kColorTemperatureAuto) {
     if (control_values_.count(kControlWhiteBalanceTemperature))
@@ -657,13 +782,13 @@ int V4L2CameraDevice::GetControlValue(ControlType type, int32_t* value) {
 }
 
 bool V4L2CameraDevice::IsControlSupported(ControlType type) {
-  ControlRange range;
+  ControlInfo info;
 
-  return QueryControl(device_fd_.get(), type, &range) == 0;
+  return QueryControl(device_fd_.get(), type, &info) == 0;
 }
 
-int V4L2CameraDevice::QueryControl(ControlType type, ControlRange* range) {
-  return QueryControl(device_fd_.get(), type, range);
+int V4L2CameraDevice::QueryControl(ControlType type, ControlInfo* info) {
+  return QueryControl(device_fd_.get(), type, info);
 }
 
 // static
@@ -735,11 +860,10 @@ const SupportedFormats V4L2CameraDevice::GetDeviceSupportedFormats(
 // static
 int V4L2CameraDevice::QueryControl(int fd,
                                    ControlType type,
-                                   ControlRange* range) {
-  if (!range) {
-    LOGF(ERROR) << "range argument is null";
-    return -EINVAL;
-  }
+                                   ControlInfo* info) {
+  DCHECK(info);
+
+  info->menu_items.clear();
 
   int control_id = ControlTypeToCid(type);
   v4l2_queryctrl query_ctrl = {.id = static_cast<__u32>(control_id)};
@@ -771,10 +895,10 @@ int V4L2CameraDevice::QueryControl(int fd,
       return -EINVAL;
 
     default:
-      range->minimum = query_ctrl.minimum;
-      range->maximum = query_ctrl.maximum;
-      range->step = query_ctrl.step;
-      range->default_value = query_ctrl.default_value;
+      info->range.minimum = query_ctrl.minimum;
+      info->range.maximum = query_ctrl.maximum;
+      info->range.step = query_ctrl.step;
+      info->range.default_value = query_ctrl.default_value;
       return 0;
   }
 
@@ -816,10 +940,22 @@ int V4L2CameraDevice::QueryControl(int fd,
     return -EINVAL;
   }
 
-  range->minimum = query_ctrl.minimum;
-  range->maximum = query_ctrl.maximum;
-  range->step = query_ctrl.step;
-  range->default_value = query_ctrl.default_value;
+  // Fill the query info
+  info->range.minimum = query_ctrl.minimum;
+  info->range.maximum = query_ctrl.maximum;
+  info->range.step = query_ctrl.step;
+  info->range.default_value = query_ctrl.default_value;
+  if (query_ctrl.type == V4L2_CTRL_TYPE_MENU) {
+    for (int i = query_ctrl.minimum; i <= query_ctrl.maximum; i++) {
+      v4l2_querymenu qmenu = {};
+      qmenu.id = query_ctrl.id;
+      qmenu.index = i;
+      if (HANDLE_EINTR(ioctl(fd, VIDIOC_QUERYMENU, &qmenu)) == 0) {
+        info->menu_items.emplace_back(
+            reinterpret_cast<const char*>(qmenu.name));
+      }
+    }
+  }
 
   return 0;
 }
@@ -843,10 +979,7 @@ int V4L2CameraDevice::SetControlValue(int fd, ControlType type, int32_t value) {
 int V4L2CameraDevice::GetControlValue(int fd,
                                       ControlType type,
                                       int32_t* value) {
-  if (!value) {
-    LOGF(ERROR) << "value argument is null";
-    return -EINVAL;
-  }
+  DCHECK(value);
 
   int control_id = ControlTypeToCid(type);
   v4l2_control current = {.id = static_cast<__u32>(control_id)};
@@ -979,30 +1112,63 @@ std::string V4L2CameraDevice::GetModelName(const std::string& device_path) {
 // static
 bool V4L2CameraDevice::IsControlSupported(const std::string& device_path,
                                           ControlType type) {
-  ControlRange range;
-  return QueryControl(device_path, type, &range) == 0;
+  ControlInfo info;
+  return QueryControl(device_path, type, &info) == 0;
 }
 
 // static
 int V4L2CameraDevice::QueryControl(const std::string& device_path,
                                    ControlType type,
-                                   ControlRange* range) {
+                                   ControlInfo* info) {
   base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
   if (!fd.is_valid()) {
     PLOGF(ERROR) << "Failed to open " << device_path;
     return -errno;
   }
 
-  int ret = QueryControl(fd.get(), type, range);
+  int ret = QueryControl(fd.get(), type, info);
   if (ret != 0) {
     return ret;
   }
 
   LOGF(INFO) << ControlTypeToString(type) << "(min,max,step,default) = "
-             << "(" << range->minimum << "," << range->maximum << ","
-             << range->step << "," << range->default_value << ")";
+             << "(" << info->range.minimum << "," << info->range.maximum << ","
+             << info->range.step << "," << info->range.default_value << ")";
+
+  if (!info->menu_items.empty()) {
+    LOGF(INFO) << ControlTypeToString(type) << " " << info->menu_items.size()
+               << " menu items:";
+    for (const auto& item : info->menu_items)
+      LOGF(INFO) << "    " << item;
+  }
 
   return 0;
+}
+
+// static
+int V4L2CameraDevice::GetControlValue(const std::string& device_path,
+                                      ControlType type,
+                                      int32_t* value) {
+  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
+  if (!fd.is_valid()) {
+    PLOGF(ERROR) << "Failed to open " << device_path;
+    return -errno;
+  }
+
+  return GetControlValue(fd.get(), type, value);
+}
+
+// static
+int V4L2CameraDevice::SetControlValue(const std::string& device_path,
+                                      ControlType type,
+                                      int32_t value) {
+  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
+  if (!fd.is_valid()) {
+    PLOGF(ERROR) << "Failed to open " << device_path;
+    return -errno;
+  }
+
+  return SetControlValue(fd.get(), type, value);
 }
 
 // static
@@ -1125,6 +1291,42 @@ bool V4L2CameraDevice::IsAutoFocusSupported(const std::string& device_path) {
     return false;
   }
   return !(query_ctrl.flags & V4L2_CTRL_FLAG_DISABLED);
+}
+
+// static
+bool V4L2CameraDevice::IsManualExposureTimeSupported(
+    const std::string& device_path, ControlRange* exposure_time_range) {
+  ControlInfo info;
+
+  DCHECK(exposure_time_range);
+
+  if (QueryControl(device_path, kControlExposureAuto, &info) != 0)
+    return false;
+
+  bool found_manual_type = false;
+  bool found_auto_type = false;
+  for (const auto& item : info.menu_items) {
+    if (item == kExposureTypeMenuStringManual) {
+      found_manual_type = true;
+    } else if (item == kExposureTypeMenuStringShutterPriority) {
+      found_manual_type = true;
+    } else if (item == kExposureTypeMenuStringAuto) {
+      found_auto_type = true;
+    } else if (item == kExposureTypeMenuStringAperturePriority) {
+      found_auto_type = true;
+    }
+  }
+
+  if (!found_manual_type || !found_auto_type)
+    return false;
+
+  if (QueryControl(device_path, kControlExposureTime, &info) != 0) {
+    LOG(WARNING) << "Can't get exposure time range";
+    return false;
+  }
+  *exposure_time_range = info.range;
+
+  return true;
 }
 
 // static
