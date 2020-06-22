@@ -1070,6 +1070,22 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   void CompleteFingerprintCheckKeyEx(DBusGMethodInvocation* context,
                                      FingerprintScanStatus status);
 
+  // This is a utility function for stateful recovery functionality to call when
+  // it wants to mount a user's home directory. The user specified by
+  // |username|'s home is mounted with |passkey|, and if successfully mounted,
+  // returns true and set out_home_path to the mounted home. Otherwise, returns
+  // false. Note that this function must log any error itself, no logging will
+  // be done by the caller.
+  bool StatefulRecoveryMount(const std::string& username,
+                             const std::string& passkey,
+                             FilePath* out_home_path);
+
+  // This is a utility function for stateful recovery to unmount all user's home
+  // directories. It'll return true if all the user's home directories are
+  // successfully unmounted. Otherwise, it'll return false. Note that this
+  // function must log any error itself, no logging will be done by the caller.
+  bool StatefulRecoveryUnmount();
+
   brillo::DBusConnection system_dbus_connection_;
 
   // Tracks Mount objects for each user by username.

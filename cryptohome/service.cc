@@ -796,7 +796,12 @@ bool Service::Initialize() {
                                  base::Unretained(this)));
 
   // TODO(keescook,ellyjones) Make this mock-able.
-  StatefulRecovery recovery(platform_, this);
+  auto mountfn =
+      base::Bind(&Service::StatefulRecoveryMount, base::Unretained(this));
+  auto unmountfn =
+      base::Bind(&Service::StatefulRecoveryUnmount, base::Unretained(this));
+  auto isownerfn = base::Bind(&Service::IsOwner, base::Unretained(this));
+  StatefulRecovery recovery(platform_, mountfn, unmountfn, isownerfn);
   if (recovery.Requested()) {
     if (recovery.Recover())
       LOG(INFO) << "A stateful recovery was performed successfully.";
@@ -806,6 +811,41 @@ bool Service::Initialize() {
   boot_attributes_->Load();
 
   return result;
+}
+
+bool Service::StatefulRecoveryMount(const std::string& username,
+                                    const std::string& passkey,
+                                    FilePath* out_home_path) {
+  gint error_code;
+  gboolean result;
+  GError* error = NULL;
+
+  if (!Mount(username.c_str(), passkey.c_str(), false, false, &error_code,
+             &result, &error) ||
+      !result) {
+    LOG(ERROR) << "Could not authenticate user '" << username
+               << "' for stateful recovery: "
+               << (error ? error->message : "[null]") << " (code:" << error_code
+               << ")";
+    return false;
+  }
+
+  if (!GetMountPointForUser(username.c_str(), out_home_path)) {
+    LOG(ERROR) << "Mount point missing after successful mount call!?";
+    return false;
+  }
+  return true;
+}
+
+bool Service::StatefulRecoveryUnmount() {
+  gboolean result;
+  GError* error = NULL;
+  if (!Unmount(&result, &error) || !result) {
+    LOG(ERROR) << "Failed to unmount after stateful recovery: "
+               << (error ? error->message : "[null]");
+    return false;
+  }
+  return true;
 }
 
 bool Service::IsOwner(const std::string &userid) {

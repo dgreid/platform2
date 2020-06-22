@@ -35,9 +35,15 @@ const char StatefulRecovery::kRecoverFilesystemDetails[] =
 const char StatefulRecovery::kFlagFile[] =
   "/mnt/stateful_partition/decrypt_stateful";
 
-StatefulRecovery::StatefulRecovery(Platform *platform, Service *service)
-    : requested_(false), platform_(platform), service_(service) { }
-StatefulRecovery::~StatefulRecovery() { }
+StatefulRecovery::StatefulRecovery(Platform* platform,
+                                   MountFunction mountfn,
+                                   UnmountFunction unmountfn,
+                                   IsOwnerFunction isownerfn)
+    : requested_(false),
+      platform_(platform),
+      mountfn_(mountfn),
+      unmountfn_(unmountfn),
+      isownerfn_(isownerfn) {}
 
 bool StatefulRecovery::Requested() {
   requested_ = ParseFlagFile();
@@ -75,28 +81,17 @@ bool StatefulRecovery::CopyPartitionInfo() {
 
 bool StatefulRecovery::CopyUserContents() {
   int rc;
-  gint error_code;
-  gboolean result;
-  GError *error = NULL;
   FilePath path;
 
-  if (!service_->Mount(user_.c_str(), passkey_.c_str(), false, false,
-                       &error_code, &result, &error) || !result) {
-    LOG(ERROR) << "Could not authenticate user '" << user_
-               << "' for stateful recovery: "
-               << (error ? error->message : "[null]")
-               << " (code:" << error_code << ")";
-    return false;
-  }
-
-  if (!service_->GetMountPointForUser(user_.c_str(), &path)) {
-    LOG(ERROR) << "Mount point missing after successful mount call!?";
+  if (!mountfn_.Run(user_, passkey_, &path)) {
+    // mountfn_ logged the error already.
     return false;
   }
 
   rc = platform_->Copy(path, FilePath(kRecoverDestination));
 
-  service_->Unmount(&result, &error);
+  unmountfn_.Run();
+  // If it failed, unmountfn_ would log the error.
 
   if (rc)
     return true;
@@ -137,7 +132,7 @@ bool StatefulRecovery::RecoverV2() {
   if (CopyUserContents()) {
     wrote_data = true;
     // If user authenticated, check if they are the owner.
-    if (service_->IsOwner(user_)) {
+    if (isownerfn_.Run(user_)) {
       is_authenticated_owner = true;
     }
   }

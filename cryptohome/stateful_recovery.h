@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include <base/callback.h>
 #include <base/files/file_path.h>
 
 namespace cryptohome {
@@ -26,8 +27,31 @@ class Service;
 //
 class StatefulRecovery {
  public:
-  explicit StatefulRecovery(Platform *platform, Service *service);
-  ~StatefulRecovery();
+  // MountFunction is a function prototype that will mount the cryptohome for
+  // the specified username and passkey. If the mounting is successful, true is
+  // returned and out_home_path is set to the home path for the home directory
+  // for the target user. Otherwise, false is returned and out_home_path is
+  // unchanged. Note that it is the responsibility of the function to log any
+  // detailed error should any arises.
+  typedef base::Callback<bool(const std::string& username,
+                              const std::string& passkey,
+                              base::FilePath* out_home_path)>
+      MountFunction;
+
+  // UnmountFunction is a function that unmount all cryptohome. It returns true
+  // on success and false on failure. Note that it is the responsibility of the
+  // function to log any detailed error should any arises.
+  typedef base::Callback<bool()> UnmountFunction;
+
+  // IsOwnerFunction is a function that returns true if the given user is the
+  // owner, and false otherwise.
+  typedef base::Callback<bool(const std::string& username)> IsOwnerFunction;
+
+  explicit StatefulRecovery(Platform* platform,
+                            MountFunction mountfn,
+                            UnmountFunction unmountfn,
+                            IsOwnerFunction isownerfn);
+  virtual ~StatefulRecovery() = default;
 
   // Returns true if recovery was requested by the device user.
   virtual bool Requested();
@@ -62,7 +86,9 @@ class StatefulRecovery {
 
   bool requested_;
   Platform *platform_;
-  Service *service_;
+  MountFunction mountfn_;
+  UnmountFunction unmountfn_;
+  IsOwnerFunction isownerfn_;
   std::string version_;
   std::string user_;
   std::string passkey_;

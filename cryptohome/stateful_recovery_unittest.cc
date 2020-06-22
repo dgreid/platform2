@@ -7,6 +7,8 @@
 #include <base/files/file_util.h>
 #include <gtest/gtest.h>
 
+#include <memory>
+
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_service.h"
 
@@ -22,423 +24,445 @@ using ::testing::SetArgPointee;
 using ::testing::StrEq;
 using ::testing::_;
 
-TEST(StatefulRecovery, ValidRequestV1) {
+// MockSRHandlers is a class that contains the 3 functions required to create
+// the StatefulRecovery object. This mock object is created to simplify testing.
+class MockSRHandlers {
+ public:
+  MOCK_METHOD(bool,
+              Mount,
+              (const std::string& username,
+               const std::string& passkey,
+               base::FilePath* out_home_path),
+              ());
+  MOCK_METHOD(bool, Unmount, (), ());
+  MOCK_METHOD(bool, IsOwner, (const std::string& username), ());
+};
+
+// StatefulRecoveryTest is a test fixture for all Stateful Recovery unit tests.
+class StatefulRecoveryTest : public ::testing::Test {
+ public:
+  StatefulRecoveryTest() {}
+
+  ~StatefulRecoveryTest() override = default;
+
+  void SetUp() override {
+    platform_.reset(new MockPlatform());
+    handlers_.reset(new MockSRHandlers());
+  }
+
+  void Initialize() {
+    auto mount =
+        base::Bind(&MockSRHandlers::Mount, base::Unretained(handlers_.get()));
+    auto unmount =
+        base::Bind(&MockSRHandlers::Unmount, base::Unretained(handlers_.get()));
+    auto is_owner =
+        base::Bind(&MockSRHandlers::IsOwner, base::Unretained(handlers_.get()));
+    recovery_.reset(
+        new StatefulRecovery(platform_.get(), mount, unmount, is_owner));
+  }
+
+ protected:
+  // Handlers for Mount, Unmount and IsOwner.
+  std::unique_ptr<MockSRHandlers> handlers_;
+
+  // Mock platform object.
+  std::unique_ptr<MockPlatform> platform_;
+
+  // The Stateful Recovery that we want to test.
+  std::unique_ptr<StatefulRecovery> recovery_;
+};
+
+TEST_F(StatefulRecoveryTest, ValidRequestV1) {
+  std::string flag_content = "1";
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      *platform_,
+      WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReportFilesystemDetails(
+                  FilePath(StatefulRecovery::kRecoverSource),
+                  FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_TRUE(recovery_->Recover());
+}
+
+TEST_F(StatefulRecoveryTest, ValidRequestV1WriteProtected) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      ReportFilesystemDetails(FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      Copy(FilePath(StatefulRecovery::kRecoverSource),
-           FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_TRUE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, ValidRequestV1WriteProtected) {
+TEST_F(StatefulRecoveryTest, ValidRequestV2) {
   MockPlatform platform;
   MockService service;
-  std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(true));
-
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
-}
-
-TEST(StatefulRecovery, ValidRequestV2) {
-  MockPlatform platform;
-  MockService service;
-  gboolean result = true;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
   FilePath mount_path("/home/.shadow/hashhashash/mount");
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
   // CopyUserContents
-  EXPECT_CALL(service, Mount(StrEq(user), StrEq(passkey), false, false,
-                             _, _, _))
-    .WillOnce(DoAll(SetArgPointee<5>(result), Return(true)));
-  EXPECT_CALL(service, GetMountPointForUser(StrEq(user), _))
-    .WillOnce(DoAll(SetArgPointee<1>(mount_path), Return(true)));
-  EXPECT_CALL(platform,
-      Copy(mount_path, FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(service, Unmount(_, _))
-    .WillOnce(DoAll(SetArgPointee<0>(result), Return(true)));
+  EXPECT_CALL(*handlers_, Mount(StrEq(user), StrEq(passkey), _))
+      .WillOnce(DoAll(SetArgPointee<2>(mount_path), Return(true)));
+  EXPECT_CALL(*platform_,
+              Copy(mount_path, FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*handlers_, Unmount()).WillOnce(Return(true));
 
-  EXPECT_CALL(service, IsOwner(_))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(true));
+  EXPECT_CALL(*handlers_, IsOwner(_)).WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(true));
 
   // CopyPartitionInfo
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      *platform_,
       WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, ReportFilesystemDetails(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReportFilesystemDetails(
+                  FilePath(StatefulRecovery::kRecoverSource),
+                  FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
+      .WillOnce(Return(true));
 
   // CopyPartitionContents
-  EXPECT_CALL(platform, Copy(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_TRUE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_TRUE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, ValidRequestV2NotOwner) {
+TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwner) {
   MockPlatform platform;
   MockService service;
-  gboolean result = true;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
   FilePath mount_path("/home/.shadow/hashhashash/mount");
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
   // CopyUserContents
-  EXPECT_CALL(service, Mount(StrEq(user), StrEq(passkey), false, false,
-                             _, _, _))
-    .WillOnce(DoAll(SetArgPointee<5>(result), Return(true)));
-  EXPECT_CALL(service, GetMountPointForUser(StrEq(user), _))
-    .WillOnce(DoAll(SetArgPointee<1>(mount_path), Return(true)));
-  EXPECT_CALL(platform, Copy(
-        mount_path,
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(service, Unmount(_, _))
-    .WillOnce(DoAll(SetArgPointee<0>(result), Return(true)));
+  EXPECT_CALL(*handlers_, Mount(StrEq(user), StrEq(passkey), _))
+      .WillOnce(DoAll(SetArgPointee<2>(mount_path), Return(true)));
+  EXPECT_CALL(*platform_,
+              Copy(mount_path, FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*handlers_, Unmount()).WillOnce(Return(true));
 
-  EXPECT_CALL(service, IsOwner(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(true));
+  EXPECT_CALL(*handlers_, IsOwner(_)).WillOnce(Return(false));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_TRUE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_TRUE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, ValidRequestV2BadUser) {
+TEST_F(StatefulRecoveryTest, ValidRequestV2BadUser) {
   MockPlatform platform;
   MockService service;
-  gboolean result = true;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
   // CopyUserContents
-  EXPECT_CALL(service, Mount(StrEq(user), StrEq(passkey), false, false,
-                             _, _, _))
-    .WillOnce(DoAll(SetArgPointee<5>(result), Return(false)));
+  EXPECT_CALL(*handlers_, Mount(StrEq(user), StrEq(passkey), _))
+      .WillOnce(Return(false));
 
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, ValidRequestV2BadUserNotWriteProtected) {
+TEST_F(StatefulRecoveryTest, ValidRequestV2BadUserNotWriteProtected) {
   MockPlatform platform;
   MockService service;
-  gboolean result = true;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
   FilePath mount_path("/home/.shadow/hashhashash/mount");
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
   // CopyUserContents
-  EXPECT_CALL(service, Mount(StrEq(user), StrEq(passkey), false, false,
-                             _, _, _))
-    .WillOnce(DoAll(SetArgPointee<5>(result), Return(false)));
+  EXPECT_CALL(*handlers_, Mount(StrEq(user), StrEq(passkey), _))
+      .WillOnce(Return(false));
 
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
 
   // CopyPartitionInfo
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      *platform_,
       WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, ReportFilesystemDetails(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReportFilesystemDetails(
+                  FilePath(StatefulRecovery::kRecoverSource),
+                  FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
+      .WillOnce(Return(true));
 
   // CopyPartitionContents
-  EXPECT_CALL(platform, Copy(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_TRUE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_TRUE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, ValidRequestV2NotOwnerNotWriteProtected) {
+TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwnerNotWriteProtected) {
   MockPlatform platform;
   MockService service;
-  gboolean result = true;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
   FilePath mount_path("/home/.shadow/hashhashash/mount");
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
   // CopyUserContents
-  EXPECT_CALL(service, Mount(StrEq(user), StrEq(passkey), false, false,
-                             _, _, _))
-    .WillOnce(DoAll(SetArgPointee<5>(result), Return(true)));
-  EXPECT_CALL(service, GetMountPointForUser(StrEq(user), _))
-    .WillOnce(DoAll(SetArgPointee<1>(mount_path), Return(true)));
-  EXPECT_CALL(platform,
-      Copy(mount_path, FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(service, Unmount(_, _))
-    .WillOnce(DoAll(SetArgPointee<0>(result), Return(true)));
+  EXPECT_CALL(*handlers_, Mount(StrEq(user), StrEq(passkey), _))
+      .WillOnce(DoAll(SetArgPointee<2>(mount_path), Return(true)));
+  EXPECT_CALL(*platform_,
+              Copy(mount_path, FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*handlers_, Unmount()).WillOnce(Return(true));
 
-  EXPECT_CALL(service, IsOwner(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
+  EXPECT_CALL(*handlers_, IsOwner(_)).WillOnce(Return(false));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
 
   // CopyPartitionInfo
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, WriteStringToFile(
-        FilePath(StatefulRecovery::kRecoverBlockUsage), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, ReportFilesystemDetails(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      *platform_,
+      WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReportFilesystemDetails(
+                  FilePath(StatefulRecovery::kRecoverSource),
+                  FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
+      .WillOnce(Return(true));
 
   // CopyPartitionContents
-  EXPECT_CALL(platform, Copy(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_TRUE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_TRUE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, InvalidFlagFileContents) {
+TEST_F(StatefulRecoveryTest, InvalidFlagFileContents) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "0 hello";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_FALSE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  Initialize();
+  EXPECT_FALSE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, UnreadableFlagFile) {
+TEST_F(StatefulRecoveryTest, UnreadableFlagFile) {
   MockPlatform platform;
   MockService service;
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(Return(false));
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_FALSE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(Return(false));
+  Initialize();
+  EXPECT_FALSE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, UncopyableData) {
-  MockPlatform platform;
-  MockService service;
-  std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, CreateDirectory(
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform, Copy(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(false));
-
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
-}
-
-TEST(StatefulRecovery, DirectoryCreationFailure) {
+TEST_F(StatefulRecoveryTest, UncopyableData) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, CreateDirectory(
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(false));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(false));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, StatVFSFailure) {
+TEST_F(StatefulRecoveryTest, DirectoryCreationFailure) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, CreateDirectory(
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform, Copy(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(false));
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(false));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, FilesystemDetailsFailure) {
+TEST_F(StatefulRecoveryTest, StatVFSFailure) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, FirmwareWriteProtected())
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform,
-      Copy(FilePath(StatefulRecovery::kRecoverSource),
-            FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(false));
+
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
+}
+
+TEST_F(StatefulRecoveryTest, FilesystemDetailsFailure) {
+  MockPlatform platform;
+  MockService service;
+  std::string flag_content = "1";
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_, FirmwareWriteProtected()).WillOnce(Return(false));
+  EXPECT_CALL(*platform_, Copy(FilePath(StatefulRecovery::kRecoverSource),
+                               FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              StatVFS(FilePath(StatefulRecovery::kRecoverSource), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      *platform_,
       WriteStringToFile(FilePath(StatefulRecovery::kRecoverBlockUsage), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform, ReportFilesystemDetails(
-        FilePath(StatefulRecovery::kRecoverSource),
-        FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
-    .WillOnce(Return(false));
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              ReportFilesystemDetails(
+                  FilePath(StatefulRecovery::kRecoverSource),
+                  FilePath(StatefulRecovery::kRecoverFilesystemDetails)))
+      .WillOnce(Return(false));
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
-TEST(StatefulRecovery, MountsParseOk) {
+TEST_F(StatefulRecoveryTest, MountsParseOk) {
   Platform platform;
   FilePath mount_info;
   FILE *fp;
@@ -460,8 +484,7 @@ TEST(StatefulRecovery, MountsParseOk) {
   platform.set_mount_info_path(mount_info);
 
   /* Fails if item is missing. */
-  EXPECT_FALSE(platform.FindFilesystemDevice(
-        FilePath("monkey"), &device_out));
+  EXPECT_FALSE(platform.FindFilesystemDevice(FilePath("monkey"), &device_out));
 
   /* Works normally. */
   device_out.clear();
@@ -472,40 +495,40 @@ TEST(StatefulRecovery, MountsParseOk) {
   EXPECT_TRUE(base::DeleteFile(mount_info, false));
 }
 
-TEST(StatefulRecovery, UsageReportOk) {
+TEST_F(StatefulRecoveryTest, UsageReportOk) {
   Platform platform;
 
   struct statvfs vfs;
   /* Reporting on a valid location produces output. */
-  EXPECT_TRUE(platform.StatVFS(FilePath("/"), &vfs));
+  EXPECT_TRUE(platform_->StatVFS(FilePath("/"), &vfs));
   EXPECT_NE(vfs.f_blocks, 0);
 
   /* Reporting on an invalid location fails. */
-  EXPECT_FALSE(platform.StatVFS(FilePath("/this/is/very/wrong"), &vfs));
+  EXPECT_FALSE(platform_->StatVFS(FilePath("/this/is/very/wrong"), &vfs));
 
   /* TODO(keescook): mockable tune2fs, since it's not installed in chroot. */
 }
 
-TEST(StatefulRecovery, DestinationRecreateFailure) {
+TEST_F(StatefulRecoveryTest, DestinationRecreateFailure) {
   MockPlatform platform;
   MockService service;
   std::string flag_content = "1";
-  EXPECT_CALL(platform,
-      ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
-    .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
-  EXPECT_CALL(platform,
-      DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform,
-      CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform,
-      Copy(_, FilePath(StatefulRecovery::kRecoverDestination)))
-    .Times(0);
+  EXPECT_CALL(*platform_,
+              ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
+      .WillOnce(DoAll(SetArgPointee<1>(flag_content), Return(true)));
+  EXPECT_CALL(*platform_,
+              DeleteFile(FilePath(StatefulRecovery::kRecoverDestination), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*platform_,
+              CreateDirectory(FilePath(StatefulRecovery::kRecoverDestination)))
+      .WillOnce(Return(false));
+  EXPECT_CALL(*platform_,
+              Copy(_, FilePath(StatefulRecovery::kRecoverDestination)))
+      .Times(0);
 
-  StatefulRecovery recovery(&platform, &service);
-  EXPECT_TRUE(recovery.Requested());
-  EXPECT_FALSE(recovery.Recover());
+  Initialize();
+  EXPECT_TRUE(recovery_->Requested());
+  EXPECT_FALSE(recovery_->Recover());
 }
 
 }  // namespace cryptohome
