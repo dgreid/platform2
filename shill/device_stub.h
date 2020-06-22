@@ -15,7 +15,7 @@
 
 namespace shill {
 
-// Non-functional Device subclass used for non-operable or blacklisted devices
+// Non-functional Device subclass used for non-operable or blocked devices
 class DeviceStub : public Device {
  public:
   DeviceStub(Manager* manager,

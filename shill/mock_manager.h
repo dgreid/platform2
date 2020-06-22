@@ -123,7 +123,7 @@ class MockManager : public Manager {
               (const std::string&),
               (const, override));
   MOCK_METHOD(void,
-              SetBlacklistedDevices,
+              SetBlockedDevices,
               (const std::vector<std::string>&),
               (override));
   MOCK_METHOD(void,

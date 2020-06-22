@@ -46,9 +46,9 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   explicit DeviceInfo(Manager* manager);
   virtual ~DeviceInfo();
 
-  virtual void AddDeviceToBlackList(const std::string& device_name);
-  virtual void RemoveDeviceFromBlackList(const std::string& device_name);
-  virtual bool IsDeviceBlackListed(const std::string& device_name);
+  virtual void BlockDevice(const std::string& device_name);
+  virtual void AllowDevice(const std::string& device_name);
+  virtual bool IsDeviceBlocked(const std::string& device_name);
   void Start();
   void Stop();
 
@@ -214,9 +214,9 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   // in |msg| if one is provided.  Returns false otherwise.
   bool GetLinkNameFromMessage(const RTNLMessage& msg, std::string* link_name);
 
-  // Returns true if |msg| pertains to a blacklisted device whose link name
+  // Returns true if |msg| pertains to a blocked device whose link name
   // is now different from the name it was assigned before.
-  bool IsRenamedBlacklistedDevice(const RTNLMessage& msg);
+  bool IsRenamedBlockedDevice(const RTNLMessage& msg);
 
   void AddLinkMsgHandler(const RTNLMessage& msg);
   void DelLinkMsgHandler(const RTNLMessage& msg);
@@ -249,7 +249,7 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   std::unique_ptr<RTNLListener> link_listener_;
   std::unique_ptr<RTNLListener> address_listener_;
   std::unique_ptr<RTNLListener> rdnss_listener_;
-  std::set<std::string> black_list_;
+  std::set<std::string> blocked_list_;
   base::FilePath device_info_root_;
 
   // Keep track of devices that require a delayed call to CreateDevice().

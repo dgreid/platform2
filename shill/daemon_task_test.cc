@@ -193,7 +193,7 @@ TEST_F(DaemonTaskTest, QuitWithoutTerminationActions) {
 TEST_F(DaemonTaskTest, ApplySettings) {
   DaemonTask::Settings settings;
   vector<string> kEmptyStringList;
-  EXPECT_CALL(*manager_, SetBlacklistedDevices(kEmptyStringList));
+  EXPECT_CALL(*manager_, SetBlockedDevices(kEmptyStringList));
   EXPECT_CALL(*manager_, SetDHCPv6EnabledDevices(kEmptyStringList));
   EXPECT_CALL(*manager_, SetTechnologyOrder("", _));
   EXPECT_CALL(*manager_, SetIgnoreUnknownEthernet(false));
@@ -205,8 +205,8 @@ TEST_F(DaemonTaskTest, ApplySettings) {
   ApplySettings(settings);
   Mock::VerifyAndClearExpectations(manager_);
 
-  vector<string> kBlacklistedDevices = {"eth0", "eth1"};
-  settings.device_blacklist = kBlacklistedDevices;
+  vector<string> kBlockedDevices = {"eth0", "eth1"};
+  settings.devices_blocked = kBlockedDevices;
   settings.default_technology_order = "wifi,ethernet";
   vector<string> kDHCPv6EnabledDevices{"eth2", "eth3"};
   settings.dhcpv6_enabled_devices = kDHCPv6EnabledDevices;
@@ -217,7 +217,7 @@ TEST_F(DaemonTaskTest, ApplySettings) {
   settings.prepend_dns_servers = "8.8.8.8,8.8.4.4";
   settings.minimum_mtu = 256;
   settings.accept_hostname_from = "eth*";
-  EXPECT_CALL(*manager_, SetBlacklistedDevices(kBlacklistedDevices));
+  EXPECT_CALL(*manager_, SetBlockedDevices(kBlockedDevices));
   EXPECT_CALL(*manager_, SetDHCPv6EnabledDevices(kDHCPv6EnabledDevices));
   EXPECT_CALL(*manager_, SetTechnologyOrder("wifi,ethernet", _));
   EXPECT_CALL(*manager_, SetIgnoreUnknownEthernet(false));

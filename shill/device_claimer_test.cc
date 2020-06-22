@@ -39,7 +39,7 @@ TEST_F(DeviceClaimerTest, ClaimAndReleaseDevices) {
 
   // Claim device 1.
   Error error;
-  EXPECT_CALL(device_info_, AddDeviceToBlackList(kTestDevice1Name)).Times(1);
+  EXPECT_CALL(device_info_, BlockDevice(kTestDevice1Name)).Times(1);
   EXPECT_TRUE(device_claimer_.Claim(kTestDevice1Name, &error));
   EXPECT_EQ(Error::kSuccess, error.type());
   EXPECT_TRUE(device_claimer_.DevicesClaimed());
@@ -47,7 +47,7 @@ TEST_F(DeviceClaimerTest, ClaimAndReleaseDevices) {
 
   // Claim device 2.
   error.Reset();
-  EXPECT_CALL(device_info_, AddDeviceToBlackList(kTestDevice2Name)).Times(1);
+  EXPECT_CALL(device_info_, BlockDevice(kTestDevice2Name)).Times(1);
   EXPECT_TRUE(device_claimer_.Claim(kTestDevice2Name, &error));
   EXPECT_EQ(Error::kSuccess, error.type());
   EXPECT_TRUE(device_claimer_.DevicesClaimed());
@@ -57,15 +57,14 @@ TEST_F(DeviceClaimerTest, ClaimAndReleaseDevices) {
   const char kDuplicateDevice1Error[] =
       "Device test_device1 had already been claimed";
   error.Reset();
-  EXPECT_CALL(device_info_, AddDeviceToBlackList(_)).Times(0);
+  EXPECT_CALL(device_info_, BlockDevice(_)).Times(0);
   EXPECT_FALSE(device_claimer_.Claim(kTestDevice1Name, &error));
   EXPECT_EQ(string(kDuplicateDevice1Error), error.message());
   Mock::VerifyAndClearExpectations(&device_info_);
 
   // Release device 1.
   error.Reset();
-  EXPECT_CALL(device_info_, RemoveDeviceFromBlackList(kTestDevice1Name))
-      .Times(1);
+  EXPECT_CALL(device_info_, AllowDevice(kTestDevice1Name)).Times(1);
   EXPECT_TRUE(device_claimer_.Release(kTestDevice1Name, &error));
   EXPECT_EQ(Error::kSuccess, error.type());
   // Should still have one device claimed.
@@ -77,7 +76,7 @@ TEST_F(DeviceClaimerTest, ClaimAndReleaseDevices) {
   const char kDevice1NotClaimedError[] =
       "Device test_device1 have not been claimed";
   error.Reset();
-  EXPECT_CALL(device_info_, RemoveDeviceFromBlackList(_)).Times(0);
+  EXPECT_CALL(device_info_, AllowDevice(_)).Times(0);
   EXPECT_FALSE(device_claimer_.Release(kTestDevice1Name, &error));
   EXPECT_EQ(string(kDevice1NotClaimedError), error.message());
   // Should still have one device claimed.
@@ -86,8 +85,7 @@ TEST_F(DeviceClaimerTest, ClaimAndReleaseDevices) {
 
   // Release device 2
   error.Reset();
-  EXPECT_CALL(device_info_, RemoveDeviceFromBlackList(kTestDevice2Name))
-      .Times(1);
+  EXPECT_CALL(device_info_, AllowDevice(kTestDevice2Name)).Times(1);
   EXPECT_TRUE(device_claimer_.Release(kTestDevice2Name, &error));
   EXPECT_EQ(Error::kSuccess, error.type());
   Mock::VerifyAndClearExpectations(&device_info_);

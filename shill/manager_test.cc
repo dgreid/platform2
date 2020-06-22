@@ -4021,13 +4021,13 @@ TEST_F(ManagerTest, IsTechnologyProhibited) {
                                           enable_technology_callback);
 }
 
-TEST_F(ManagerTest, ClaimBlacklistedDevice) {
+TEST_F(ManagerTest, ClaimBlockedDevice) {
   const string kClaimerName = "test_claimer";
   const string kDeviceName = "test_device";
 
-  // Set blacklisted devices.
-  vector<string> blacklisted_devices = {kDeviceName};
-  manager()->SetBlacklistedDevices(blacklisted_devices);
+  // Set blocked devices.
+  vector<string> blocked_devices = {kDeviceName};
+  manager()->SetBlockedDevices(blocked_devices);
 
   Error error;
   manager()->ClaimDevice(kClaimerName, kDeviceName, &error);
@@ -4037,13 +4037,13 @@ TEST_F(ManagerTest, ClaimBlacklistedDevice) {
   EXPECT_EQ(nullptr, manager()->device_claimer_);
 }
 
-TEST_F(ManagerTest, ReleaseBlacklistedDevice) {
+TEST_F(ManagerTest, ReleaseBlockedDevice) {
   const string kClaimerName = "test_claimer";
   const string kDeviceName = "test_device";
 
-  // Set blacklisted devices.
-  vector<string> blacklisted_devices = {kDeviceName};
-  manager()->SetBlacklistedDevices(blacklisted_devices);
+  // Set blocked devices.
+  vector<string> blocked_devices = {kDeviceName};
+  manager()->SetBlockedDevices(blocked_devices);
 
   Error error;
   bool claimer_removed;
@@ -4053,35 +4053,35 @@ TEST_F(ManagerTest, ReleaseBlacklistedDevice) {
   EXPECT_EQ("Not allowed to release unmanaged device", error.message());
 }
 
-TEST_F(ManagerTest, BlacklistedDeviceIsNotManaged) {
+TEST_F(ManagerTest, BlockedDeviceIsNotManaged) {
   const string kDeviceName = "test_device";
 
-  vector<string> blacklisted_devices = {kDeviceName};
-  manager()->SetBlacklistedDevices(blacklisted_devices);
+  vector<string> blocked_devices = {kDeviceName};
+  manager()->SetBlockedDevices(blocked_devices);
   EXPECT_FALSE(manager()->DeviceManagementAllowed(kDeviceName));
 }
 
-TEST_F(ManagerTest, NonBlacklistedDeviceIsManaged) {
+TEST_F(ManagerTest, NonBlockedDeviceIsManaged) {
   const string kDeviceName = "test_device";
 
-  vector<string> blacklisted_devices = {"other_device"};
-  manager()->SetBlacklistedDevices(blacklisted_devices);
+  vector<string> blocked_devices = {"other_device"};
+  manager()->SetBlockedDevices(blocked_devices);
   EXPECT_TRUE(manager()->DeviceManagementAllowed(kDeviceName));
 }
 
-TEST_F(ManagerTest, WhitelistedDeviceIsManaged) {
+TEST_F(ManagerTest, AllowedDeviceIsManaged) {
   const string kDeviceName = "test_device";
 
-  vector<string> whitelisted_devices = {kDeviceName};
-  manager()->SetWhitelistedDevices(whitelisted_devices);
+  vector<string> allowed_devices = {kDeviceName};
+  manager()->SetAllowedDevices(allowed_devices);
   EXPECT_TRUE(manager()->DeviceManagementAllowed(kDeviceName));
 }
 
-TEST_F(ManagerTest, NonWhitelistedDeviceIsNotManaged) {
+TEST_F(ManagerTest, NonAllowedDeviceIsNotManaged) {
   const string kDeviceName = "test_device";
 
-  vector<string> whitelisted_devices = {"other_device"};
-  manager()->SetWhitelistedDevices(whitelisted_devices);
+  vector<string> allowed_devices = {"other_device"};
+  manager()->SetAllowedDevices(allowed_devices);
   EXPECT_FALSE(manager()->DeviceManagementAllowed(kDeviceName));
 }
 
@@ -4097,7 +4097,7 @@ TEST_F(ManagerTest, ClaimDeviceWithoutClaimer) {
   Error error;
   manager()->ClaimDevice(kClaimerName, kDeviceName, &error);
   EXPECT_TRUE(error.IsSuccess());
-  EXPECT_TRUE(manager()->device_info()->IsDeviceBlackListed(kDeviceName));
+  EXPECT_TRUE(manager()->device_info()->IsDeviceBlocked(kDeviceName));
   // Verify device claimer is created.
   EXPECT_NE(nullptr, manager()->device_claimer_);
 }

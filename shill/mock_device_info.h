@@ -25,12 +25,9 @@ class MockDeviceInfo : public DeviceInfo {
   explicit MockDeviceInfo(Manager* manager);
   ~MockDeviceInfo() override;
 
-  MOCK_METHOD(bool, IsDeviceBlackListed, (const std::string&), (override));
-  MOCK_METHOD(void, AddDeviceToBlackList, (const std::string&), (override));
-  MOCK_METHOD(void,
-              RemoveDeviceFromBlackList,
-              (const std::string&),
-              (override));
+  MOCK_METHOD(bool, IsDeviceBlocked, (const std::string&), (override));
+  MOCK_METHOD(void, BlockDevice, (const std::string&), (override));
+  MOCK_METHOD(void, AllowDevice, (const std::string&), (override));
   MOCK_METHOD(DeviceRefPtr, GetDevice, (int), (const, override));
   MOCK_METHOD(int, GetIndex, (const std::string&), (const, override));
   MOCK_METHOD(bool, GetMacAddress, (int, ByteString*), (const, override));

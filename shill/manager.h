@@ -111,13 +111,13 @@ class Manager : public base::SupportsWeakPtr<Manager> {
 
   void RegisterAsync(const base::Callback<void(bool)>& completion_callback);
 
-  virtual void SetBlacklistedDevices(
-      const std::vector<std::string>& blacklisted_devices);
-  virtual void SetWhitelistedDevices(
-      const std::vector<std::string>& whitelisted_devices);
+  virtual void SetBlockedDevices(
+      const std::vector<std::string>& blockeded_devices);
+  virtual void SetAllowedDevices(
+      const std::vector<std::string>& allowed_devices);
 
-  // Returns true if |device_name| is either not in the blacklist, or in the
-  // whitelist, depending on which list was supplied in startup settings.
+  // Returns true if |device_name| is either not in the blocked list, or in the
+  // allowed list, depending on which list was supplied in startup settings.
   virtual bool DeviceManagementAllowed(const std::string& device_name);
 
   virtual void Start();
@@ -439,7 +439,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   void ReportServicesOnSameNetwork(int connection_id);
 
   // Running in passive mode, manager will not manage any devices (all devices
-  // are blacklisted) by default. Remote application can specify devices for
+  // are blocked) by default. Remote application can specify devices for
   // shill to manage through ReleaseInterface/ClaimInterface DBus API using
   // default claimer (with "" as claimer_name).
   virtual void SetPassiveMode();
@@ -541,7 +541,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   FRIEND_TEST(DeviceTest, AcquireIPConfigWithSelectedService);
   FRIEND_TEST(DeviceTest, StartProhibited);
   FRIEND_TEST(ManagerTest, AvailableTechnologies);
-  FRIEND_TEST(ManagerTest, ClaimBlacklistedDevice);
+  FRIEND_TEST(ManagerTest, ClaimBlockedDevice);
   FRIEND_TEST(ManagerTest, ClaimDeviceWithoutClaimer);
   FRIEND_TEST(ManagerTest, ConnectedTechnologies);
   FRIEND_TEST(ManagerTest, ConnectionStatusCheck);
@@ -568,7 +568,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   FRIEND_TEST(ManagerTest, UpdateBlackholeUserTraffic);
   FRIEND_TEST(ManagerTest, RegisterKnownService);
   FRIEND_TEST(ManagerTest, RegisterUnknownService);
-  FRIEND_TEST(ManagerTest, ReleaseBlacklistedDevice);
+  FRIEND_TEST(ManagerTest, ReleaseBlockedDevice);
   FRIEND_TEST(ManagerTest, RunTerminationActions);
   FRIEND_TEST(ManagerTest, ServiceRegistration);
   FRIEND_TEST(ManagerTest, SetAlwaysOnVpnPackage);
@@ -837,11 +837,11 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // to Manager::InsertUserProfile() and Manager::PopAllUserProfiles().
   bool has_user_session_;
 
-  // List of blacklisted devices specified from command line.
-  std::vector<std::string> blacklisted_devices_;
+  // List of blocked devices specified from command line.
+  std::vector<std::string> blocked_devices_;
 
-  // List of whitelisted devices specified from command line.
-  std::vector<std::string> whitelisted_devices_;
+  // List of allowed devices specified from command line.
+  std::vector<std::string> allowed_devices_;
 
   // List of DHCPv6 enabled devices.
   std::vector<std::string> dhcpv6_enabled_devices_;

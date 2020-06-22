@@ -388,14 +388,14 @@ Methods
 
 			Assign the ownership of a device |interface_name| to the
 			claimer |claimer_name|. The specified device will be
-			added to the blacklist. Any current connection on that device
+			added to the block list. Any current connection on that device
 			will be terminated, and shill will stop managing that device.
 
 		void ReleaseInterface(string claimer_name, string interface_name)
 
 			Take the ownership of a device |interface_name| from
 			claimer |claimer_name| back to shill. The specified device
-			will be removed from the blacklist and managed by shill.
+			will be removed from the block list and managed by shill.
 
 Signals		PropertyChanged(string name, variant value)
 

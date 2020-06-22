@@ -214,8 +214,8 @@ void Modem::CreateDeviceFromModemProperties(
     interface_index = kFakeDevInterfaceIndex;
   }
 
-  if (modem_info_->manager()->device_info()->IsDeviceBlackListed(link_name_)) {
-    LOG(INFO) << "Not creating cellular device for blacklisted interface "
+  if (modem_info_->manager()->device_info()->IsDeviceBlocked(link_name_)) {
+    LOG(INFO) << "Not creating cellular device for blocked interface "
               << link_name_ << ".";
     return;
   }

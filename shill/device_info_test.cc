@@ -628,10 +628,10 @@ TEST_F(DeviceInfoTest, CreateDeviceUnknown) {
                   .get());
 }
 
-TEST_F(DeviceInfoTest, DeviceBlackList) {
+TEST_F(DeviceInfoTest, BlockedDevices) {
   // Manager is not running by default.
   EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink)).Times(0);
-  device_info_.AddDeviceToBlackList(kTestDeviceName);
+  device_info_.BlockDevice(kTestDeviceName);
   unique_ptr<RTNLMessage> message = BuildLinkMessage(RTNLMessage::kModeAdd);
   SendMessageToDeviceInfo(*message);
 
@@ -640,10 +640,10 @@ TEST_F(DeviceInfoTest, DeviceBlackList) {
   EXPECT_TRUE(device->technology() == Technology::kBlacklisted);
 }
 
-TEST_F(DeviceInfoTest, AddDeviceToBlackListWithManagerRunning) {
+TEST_F(DeviceInfoTest, BlockDeviceWithManagerRunning) {
   SetManagerRunning(true);
   EXPECT_CALL(rtnl_handler_, RequestDump(RTNLHandler::kRequestLink)).Times(1);
-  device_info_.AddDeviceToBlackList(kTestDeviceName);
+  device_info_.BlockDevice(kTestDeviceName);
   unique_ptr<RTNLMessage> message = BuildLinkMessage(RTNLMessage::kModeAdd);
   SendMessageToDeviceInfo(*message);
 
@@ -652,8 +652,8 @@ TEST_F(DeviceInfoTest, AddDeviceToBlackListWithManagerRunning) {
   EXPECT_TRUE(device->technology() == Technology::kBlacklisted);
 }
 
-TEST_F(DeviceInfoTest, RenamedBlacklistedDevice) {
-  device_info_.AddDeviceToBlackList(kTestDeviceName);
+TEST_F(DeviceInfoTest, RenamedBlockedDevice) {
+  device_info_.BlockDevice(kTestDeviceName);
   unique_ptr<RTNLMessage> message = BuildLinkMessage(RTNLMessage::kModeAdd);
   SendMessageToDeviceInfo(*message);
 
@@ -680,7 +680,7 @@ TEST_F(DeviceInfoTest, RenamedBlacklistedDevice) {
   EXPECT_TRUE(renamed_device->technology() == Technology::kUnknown);
 }
 
-TEST_F(DeviceInfoTest, RenamedNonBlacklistedDevice) {
+TEST_F(DeviceInfoTest, RenamedNonBlockedDevice) {
   const char kInitialDeviceName[] = "initial-device";
   unique_ptr<RTNLMessage> initial_message = BuildLinkMessageWithInterfaceName(
       RTNLMessage::kModeAdd, kInitialDeviceName);
@@ -696,7 +696,7 @@ TEST_F(DeviceInfoTest, RenamedNonBlacklistedDevice) {
 
   // Rename the test device.
   const char kRenamedDeviceName[] = "renamed-device";
-  device_info_.AddDeviceToBlackList(kRenamedDeviceName);
+  device_info_.BlockDevice(kRenamedDeviceName);
   unique_ptr<RTNLMessage> rename_message = BuildLinkMessageWithInterfaceName(
       RTNLMessage::kModeAdd, kRenamedDeviceName);
   EXPECT_CALL(manager_, DeregisterDevice(_)).Times(0);

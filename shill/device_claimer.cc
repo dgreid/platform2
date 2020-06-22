@@ -22,7 +22,7 @@ DeviceClaimer::~DeviceClaimer() {
   // Release claimed devices if there is any.
   if (DevicesClaimed()) {
     for (const auto& device : claimed_device_names_) {
-      device_info_->RemoveDeviceFromBlackList(device);
+      device_info_->AllowDevice(device);
     }
     // Clear claimed device list.
     claimed_device_names_.clear();
@@ -38,8 +38,8 @@ bool DeviceClaimer::Claim(const string& device_name, Error* error) {
     return false;
   }
 
-  // Add device to the black list.
-  device_info_->AddDeviceToBlackList(device_name);
+  // Block the device.
+  device_info_->BlockDevice(device_name);
 
   claimed_device_names_.insert(device_name);
   released_device_names_.erase(device_name);
@@ -54,8 +54,8 @@ bool DeviceClaimer::Release(const std::string& device_name, Error* error) {
     return false;
   }
 
-  // Remove the device from the black list.
-  device_info_->RemoveDeviceFromBlackList(device_name);
+  // Unblock the device.
+  device_info_->AllowDevice(device_name);
 
   claimed_device_names_.erase(device_name);
   released_device_names_.insert(device_name);

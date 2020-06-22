@@ -282,12 +282,12 @@ void Manager::RegisterAsync(const Callback<void(bool)>& completion_callback) {
   adaptor_->RegisterAsync(completion_callback);
 }
 
-void Manager::SetBlacklistedDevices(const vector<string>& blacklisted_devices) {
-  blacklisted_devices_ = blacklisted_devices;
+void Manager::SetBlockedDevices(const vector<string>& blocked_devices) {
+  blocked_devices_ = blocked_devices;
 }
 
-void Manager::SetWhitelistedDevices(const vector<string>& whitelisted_devices) {
-  whitelisted_devices_ = whitelisted_devices;
+void Manager::SetAllowedDevices(const vector<string>& allowed_devices) {
+  allowed_devices_ = allowed_devices;
 }
 
 void Manager::Start() {
@@ -691,14 +691,14 @@ void Manager::RemoveProfile(const string& name, Error* error) {
 }
 
 bool Manager::DeviceManagementAllowed(const string& device_name) {
-  if (base::Contains(blacklisted_devices_, device_name)) {
+  if (base::Contains(blocked_devices_, device_name)) {
     return false;
   }
-  if (whitelisted_devices_.empty()) {
-    // If no whitelist is specified, all devices are considered whitelisted.
+  if (allowed_devices_.empty()) {
+    // If no list is specified, all devices are allowed.
     return true;
   }
-  if (base::Contains(whitelisted_devices_, device_name)) {
+  if (base::Contains(allowed_devices_, device_name)) {
     return true;
   }
   return false;

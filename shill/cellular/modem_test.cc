@@ -184,14 +184,14 @@ TEST_F(ModemTest, CreateDeviceEarlyFailures) {
   modem_->CreateDeviceFromModemProperties(properties);
   EXPECT_EQ(nullptr, modem_->device_);
 
-  // The params are good, but the device is blacklisted.
+  // The params are good, but the device is blocked.
   EXPECT_CALL(*modem_, GetLinkName(_, _))
       .WillOnce(DoAll(SetArgPointee<1>(string(kLinkName)), Return(true)));
   EXPECT_CALL(rtnl_handler_, GetInterfaceIndex(StrEq(kLinkName)))
       .WillOnce(Return(kTestInterfaceIndex));
   EXPECT_CALL(device_info_, GetMacAddress(kTestInterfaceIndex, _))
       .WillOnce(DoAll(SetArgPointee<1>(expected_address_), Return(true)));
-  EXPECT_CALL(device_info_, IsDeviceBlackListed(kLinkName))
+  EXPECT_CALL(device_info_, IsDeviceBlocked(kLinkName))
       .WillRepeatedly(Return(true));
   modem_->CreateDeviceFromModemProperties(properties);
   EXPECT_EQ(nullptr, modem_->device_);

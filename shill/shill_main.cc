@@ -176,13 +176,13 @@ int main(int argc, char** argv) {
   }
 
   if (cl->HasSwitch(switches::kDeviceBlackList)) {
-    settings.device_blacklist =
+    settings.devices_blocked =
         base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceBlackList),
                           ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   }
 
   if (cl->HasSwitch(switches::kDeviceWhiteList)) {
-    settings.device_whitelist =
+    settings.devices_allowed =
         base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceWhiteList),
                           ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   }

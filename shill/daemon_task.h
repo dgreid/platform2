@@ -47,8 +47,8 @@ class DaemonTask {
           use_portal_list(false) {}
     std::string accept_hostname_from;
     std::string default_technology_order;
-    std::vector<std::string> device_blacklist;
-    std::vector<std::string> device_whitelist;
+    std::vector<std::string> devices_blocked;
+    std::vector<std::string> devices_allowed;
     std::vector<std::string> dhcpv6_enabled_devices;
     bool ignore_unknown_ethernet;
     int minimum_mtu;

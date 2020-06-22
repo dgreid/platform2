@@ -183,8 +183,8 @@ DeviceInfo::DeviceInfo(Manager* manager)
 
 DeviceInfo::~DeviceInfo() = default;
 
-void DeviceInfo::AddDeviceToBlackList(const string& device_name) {
-  black_list_.insert(device_name);
+void DeviceInfo::BlockDevice(const string& device_name) {
+  blocked_list_.insert(device_name);
   // Remove the current device info if it exist, since it will be out-dated.
   DeregisterDevice(GetIndex(device_name));
   // Request link info update to allow device info to be recreated.
@@ -193,8 +193,8 @@ void DeviceInfo::AddDeviceToBlackList(const string& device_name) {
   }
 }
 
-void DeviceInfo::RemoveDeviceFromBlackList(const string& device_name) {
-  black_list_.erase(device_name);
+void DeviceInfo::AllowDevice(const string& device_name) {
+  blocked_list_.erase(device_name);
   // Remove the current device info if it exist, since it will be out-dated.
   DeregisterDevice(GetIndex(device_name));
   // Request link info update to allow device info to be recreated.
@@ -203,8 +203,8 @@ void DeviceInfo::RemoveDeviceFromBlackList(const string& device_name) {
   }
 }
 
-bool DeviceInfo::IsDeviceBlackListed(const string& device_name) {
-  return base::Contains(black_list_, device_name);
+bool DeviceInfo::IsDeviceBlocked(const string& device_name) {
+  return base::Contains(blocked_list_, device_name);
 }
 
 void DeviceInfo::Start() {
@@ -679,7 +679,7 @@ bool DeviceInfo::GetLinkNameFromMessage(const RTNLMessage& msg,
   return true;
 }
 
-bool DeviceInfo::IsRenamedBlacklistedDevice(const RTNLMessage& msg) {
+bool DeviceInfo::IsRenamedBlockedDevice(const RTNLMessage& msg) {
   int interface_index = msg.interface_index();
   const Info* info = GetInfo(interface_index);
   if (!info)
@@ -708,8 +708,8 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
   unsigned int flags = msg.link_status().flags;
   unsigned int change = msg.link_status().change;
 
-  if (IsRenamedBlacklistedDevice(msg)) {
-    // Treat renamed blacklisted devices as new devices.
+  if (IsRenamedBlockedDevice(msg)) {
+    // Treat renamed blocked devices as new devices.
     DeregisterDevice(dev_index);
   }
 
@@ -738,11 +738,11 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
     if (!link_name.empty()) {
       if (link_name == kArcBridge) {
         technology = Technology::kArcBridge;
-      } else if (IsDeviceBlackListed(link_name)) {
+      } else if (IsDeviceBlocked(link_name)) {
         technology = Technology::kBlacklisted;
       } else if (!manager_->DeviceManagementAllowed(link_name)) {
         technology = Technology::kBlacklisted;
-        AddDeviceToBlackList(link_name);
+        BlockDevice(link_name);
       } else {
         technology = GetDeviceTechnology(link_name, msg.link_status().kind);
       }
