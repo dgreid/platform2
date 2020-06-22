@@ -37,7 +37,7 @@ DenyClaimedUsbDeviceRule::DenyClaimedUsbDeviceRule()
 DenyClaimedUsbDeviceRule::~DenyClaimedUsbDeviceRule() = default;
 
 bool DenyClaimedUsbDeviceRule::LoadPolicy() {
-  usb_whitelist_.clear();
+  usb_allow_list_.clear();
 
   auto policy_provider = std::make_unique<policy::PolicyProvider>();
   policy_provider->Reload();
@@ -47,7 +47,7 @@ bool DenyClaimedUsbDeviceRule::LoadPolicy() {
     return false;
 
   const policy::DevicePolicy* policy = &policy_provider->GetDevicePolicy();
-  return policy->GetUsbDetachableWhitelist(&usb_whitelist_);
+  return policy->GetUsbDetachableWhitelist(&usb_allow_list_);
 }
 
 bool DenyClaimedUsbDeviceRule::IsDeviceDetachableByPolicy(udev_device* device) {
@@ -57,13 +57,13 @@ bool DenyClaimedUsbDeviceRule::IsDeviceDetachableByPolicy(udev_device* device) {
   if (!policy_loaded_)
     return false;
 
-  // Check whether this USB device is whitelisted.
+  // Check whether this USB device is allowed.
   uint32_t vendor_id, product_id;
   if (!GetUIntSysattr(device, "idVendor", &vendor_id) ||
       !GetUIntSysattr(device, "idProduct", &product_id))
     return false;
 
-  for (const DevicePolicy::UsbDeviceId& id : usb_whitelist_) {
+  for (const DevicePolicy::UsbDeviceId& id : usb_allow_list_) {
     if (id.vendor_id == vendor_id &&
         (!id.product_id || id.product_id == product_id))
       return true;

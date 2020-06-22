@@ -146,7 +146,7 @@ Rule::Result DenyClaimedHidrawDeviceRule::ProcessHidrawDevice(
     // Add an exception to the rule for Logitech Unifying receiver. This hidraw
     // device is a parent of devices that have input subsystem. Yet the traffic
     // to those children is not available on the hidraw node of the receiver,
-    // so it is safe to whitelist it.
+    // so it is safe to allow it.
     if (strcmp(hid_parent_driver, kLogitechUnifyingReceiverDriver) == 0) {
       LOG(INFO) << "Found Logitech Unifying receiver. Skipping rule.";
       return IGNORE;
@@ -290,7 +290,7 @@ bool DenyClaimedHidrawDeviceRule::ShouldInputCapabilitiesExcludeHidAccess(
         has_absolute_mouse_axes = true;
     }
 
-    // Remove whitelisted capabilities. Any other absolute pointer capabilities
+    // Remove allowed capabilities. Any other absolute pointer capabilities
     // exclude access.
     for (size_t i = 0; i < base::size(kAllowedAbsCapabilities); ++i)
       UnsetCapabilityBit(&capabilities, kAllowedAbsCapabilities[i]);

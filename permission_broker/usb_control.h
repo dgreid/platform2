@@ -28,10 +28,10 @@ class UsbControl {
   ~UsbControl();
 
   // Based on |vid| and |pid| of a USB device, this function determines if the
-  // device type can be controlled by the API. The UsbControl implements a
-  // whitelisting mechanism, meaning that if a device is *not* whitelisted, it
+  // device type can be controlled by the API. The UsbControl implements an
+  // allow/deny mechanism, meaning that if a device is *not* allowed, it
   // cannot be controlled.
-  bool IsDeviceWhitelisted(uint16_t vid, uint16_t pid) const;
+  bool IsDeviceAllowed(uint16_t vid, uint16_t pid) const;
   // When called, this function will find all the USB devices identified by
   // |vid| and |pid| and will try to power-cycle them using the VBUS subsystem.
   // The |delay| determines the delay between powering all the devices found on

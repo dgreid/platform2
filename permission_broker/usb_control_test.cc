@@ -34,21 +34,21 @@ class UsbControlTest : public testing::Test {
   DISALLOW_COPY_AND_ASSIGN(UsbControlTest);
 };
 
-TEST_F(UsbControlTest, DeviceNotWhitelisted) {
+TEST_F(UsbControlTest, DeviceNotAllowed) {
   auto manager = std::make_unique<FakeUsbDeviceManager>(
       std::vector<std::unique_ptr<UsbDeviceInterface>>());
   UsbControl usb_control(std::move(manager));
 
-  EXPECT_FALSE(usb_control.IsDeviceWhitelisted(0x0, 0x0011));
-  EXPECT_FALSE(usb_control.IsDeviceWhitelisted(0x2bd9, 0x0));
+  EXPECT_FALSE(usb_control.IsDeviceAllowed(0x0, 0x0011));
+  EXPECT_FALSE(usb_control.IsDeviceAllowed(0x2bd9, 0x0));
 }
 
-TEST_F(UsbControlTest, DeviceWhitelisted) {
+TEST_F(UsbControlTest, DeviceAllowed) {
   auto manager = std::make_unique<FakeUsbDeviceManager>(
       std::vector<std::unique_ptr<UsbDeviceInterface>>());
   UsbControl usb_control(std::move(manager));
 
-  EXPECT_TRUE(usb_control.IsDeviceWhitelisted(0x2bd9, 0x0011));
+  EXPECT_TRUE(usb_control.IsDeviceAllowed(0x2bd9, 0x0011));
 }
 
 void TestResultCallback(std::shared_ptr<bool> result_out, bool result) {
@@ -151,8 +151,8 @@ TEST_F(UsbControlTest, DeviceNotFound) {
   EXPECT_FALSE(*result);
 }
 
-TEST_F(UsbControlTest, PowerCycleNotWhitelistedDevice) {
-  // Set up a target device that was not whitelisted.
+TEST_F(UsbControlTest, PowerCycleNotAllowedDevice) {
+  // Set up a target device that was not allowed.
   FakeUsbDevice::State state(false, false);
   UsbDeviceInfo info(0x1234, 0x5678);
   UsbDeviceInfo parent_info;
@@ -164,7 +164,7 @@ TEST_F(UsbControlTest, PowerCycleNotWhitelistedDevice) {
   auto manager = std::make_unique<FakeUsbDeviceManager>(std::move(devices));
 
   // Test that usb_control unable to powercycle the device that is not
-  // whitelisted.
+  // allowed.
   UsbControl usb_control(std::move(manager));
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
   usb_control.PowerCycleUsbPorts(

@@ -63,7 +63,7 @@ bool DenyFwUpdateHidrawDeviceRule::IsFwUpdateDevice(
     // Split the path by colons (:). We are searching for the pattern:
     // ####:####:####.####
     // All devices that match this pattern need to be checked to ensure that
-    // none are blacklisted.
+    // none are disallowed.
     std::vector<std::string> chunks =
         base::SplitString(dir, ":", base::WhitespaceHandling::TRIM_WHITESPACE,
                           base::SplitResult::SPLIT_WANT_NONEMPTY);

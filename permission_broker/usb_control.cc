@@ -23,9 +23,9 @@
 
 namespace permission_broker {
 
-// TODO(b/110247560): reimplement with a file-based whitelist (see
+// TODO(b/110247560): reimplement with a file-based approach (see
 // go/usb-power_ctl).
-const UsbDeviceInfo kDeviceWhitelist[] = {
+const UsbDeviceInfo kDeviceAllowList[] = {
     // Huddly camera VID and PID.
     UsbDeviceInfo(0x2bd9, 0x0011, 0xEF /* Miscellaneous */),
     // MIMO VUE HD VID and PID.
@@ -94,11 +94,11 @@ UsbControl::UsbControl(std::unique_ptr<UsbDeviceManagerInterface> manager)
 
 UsbControl::~UsbControl() = default;
 
-bool UsbControl::IsDeviceWhitelisted(uint16_t vid, uint16_t pid) const {
+bool UsbControl::IsDeviceAllowed(uint16_t vid, uint16_t pid) const {
   return std::find(
-      std::begin(kDeviceWhitelist),
-      std::end(kDeviceWhitelist),
-      UsbDeviceInfo(vid, pid)) != std::end(kDeviceWhitelist);
+      std::begin(kDeviceAllowList),
+      std::end(kDeviceAllowList),
+      UsbDeviceInfo(vid, pid)) != std::end(kDeviceAllowList);
 }
 
 void UsbControl::PowerCycleUsbPorts(
@@ -107,8 +107,8 @@ void UsbControl::PowerCycleUsbPorts(
     uint16_t pid,
     base::TimeDelta delay) {
 
-  if (!IsDeviceWhitelisted(vid, pid)) {
-    LOG(ERROR) << "The device is not whitelisted for USB control "
+  if (!IsDeviceAllowed(vid, pid)) {
+    LOG(ERROR) << "The device is not allowed for USB control "
                << DeviceInfoString(vid, pid);
     callback.Run(false);
     return;

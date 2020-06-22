@@ -26,9 +26,9 @@ class  DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
   DenyClaimedUsbDeviceRuleMockPolicy() = default;
   ~DenyClaimedUsbDeviceRuleMockPolicy() override = default;
 
-  void SetMockedUsbWhitelist(
-      const std::vector<policy::DevicePolicy::UsbDeviceId>& whitelist) {
-    usb_whitelist_ = whitelist;
+  void SetMockedUsbAllowList(
+      const std::vector<policy::DevicePolicy::UsbDeviceId>& allowed) {
+    usb_allow_list_ = allowed;
   }
 
  private:
@@ -88,10 +88,10 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
           auto it = unclaimed_devices_.find(path);
           if (it == unclaimed_devices_.end()) {
             claimed_devices_.insert(path);
-           if (strcmp(driver, "hub") != 0) {
-             detachable_whitelist_.push_back(id);
-             detachable_devices_.insert(path);
-           }
+            if (strcmp(driver, "hub") != 0) {
+              detachable_allow_list_.push_back(id);
+              detachable_devices_.insert(path);
+            }
           } else {
             partially_claimed_devices_.insert(path);
             unclaimed_devices_.erase(it);
@@ -114,7 +114,7 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
   set<string> unclaimed_devices_;
   set<string> partially_claimed_devices_;
   set<string> detachable_devices_;
-  std::vector<policy::DevicePolicy::UsbDeviceId> detachable_whitelist_;
+  std::vector<policy::DevicePolicy::UsbDeviceId> detachable_allow_list_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(DenyClaimedUsbDeviceRuleTest);
@@ -162,7 +162,7 @@ TEST_F(DenyClaimedUsbDeviceRuleTest,
     LOG(WARNING) << "Tests incomplete because there are no detachable "
                  << "devices connected.";
 
-  rule_.SetMockedUsbWhitelist(detachable_whitelist_);
+  rule_.SetMockedUsbAllowList(detachable_allow_list_);
 
   for (const string& device : detachable_devices_)
     EXPECT_EQ(Rule::ALLOW_WITH_DETACH,

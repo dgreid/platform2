@@ -35,7 +35,7 @@ class DenyClaimedUsbDeviceRule : public UsbSubsystemUdevRule {
   Result ProcessUsbDevice(udev_device* device) override;
 
  protected:
-  std::vector<policy::DevicePolicy::UsbDeviceId> usb_whitelist_;
+  std::vector<policy::DevicePolicy::UsbDeviceId> usb_allow_list_;
 
  private:
   bool policy_loaded_;
@@ -43,7 +43,7 @@ class DenyClaimedUsbDeviceRule : public UsbSubsystemUdevRule {
   // Loads the device settings policy and returns success.
   virtual bool LoadPolicy();
 
-  // Returns whether a USB device is whitelisted inside the device settings
+  // Returns whether a USB device is allowed inside the device settings
   // to be detached from its kernel driver.
   bool IsDeviceDetachableByPolicy(udev_device* device);
 

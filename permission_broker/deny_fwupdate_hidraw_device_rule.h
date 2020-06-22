@@ -21,7 +21,7 @@ using RangeListMap = std::unordered_map<int, std::vector<ProductIdRange>>;
 
 // DenyFwUpdateHidrawDeviceRule encapsulates the policy that a hidraw device
 // that is used to update the device's firmware should not be accessible by
-// Chrome. These devices are blacklisted explicitly using vendor and
+// Chrome. These devices are disallowed explicitly using vendor and
 // product IDs.
 class DenyFwUpdateHidrawDeviceRule : public HidrawSubsystemUdevRule {
  public:
