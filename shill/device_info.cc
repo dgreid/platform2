@@ -268,7 +268,7 @@ void DeviceInfo::RegisterDevice(const DeviceRefPtr& device) {
   } else {
     metrics()->RegisterDevice(device->interface_index(), device->technology());
   }
-  if (device->technology() != Technology::kBlacklisted &&
+  if (device->technology() != Technology::kBlocked &&
       device->technology() != Technology::kUnknown) {
     routing_table_->RegisterDevice(device->interface_index(),
                                    device->link_name());
@@ -685,7 +685,7 @@ bool DeviceInfo::IsRenamedBlockedDevice(const RTNLMessage& msg) {
   if (!info)
     return false;
 
-  if (!info->device || info->device->technology() != Technology::kBlacklisted)
+  if (!info->device || info->device->technology() != Technology::kBlocked)
     return false;
 
   string interface_name;
@@ -739,9 +739,9 @@ void DeviceInfo::AddLinkMsgHandler(const RTNLMessage& msg) {
       if (link_name == kArcBridge) {
         technology = Technology::kArcBridge;
       } else if (IsDeviceBlocked(link_name)) {
-        technology = Technology::kBlacklisted;
+        technology = Technology::kBlocked;
       } else if (!manager_->DeviceManagementAllowed(link_name)) {
-        technology = Technology::kBlacklisted;
+        technology = Technology::kBlocked;
         BlockDevice(link_name);
       } else {
         technology = GetDeviceTechnology(link_name, msg.link_status().kind);

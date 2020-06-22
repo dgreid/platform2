@@ -33,7 +33,7 @@ class Technology {
     kCellular,
     kVPN,
     kTunnel,
-    kBlacklisted,
+    kBlocked,
     kLoopback,
     kCDCEthernet,      // Only for internal use in DeviceInfo.
     kVirtioEthernet,   // Only for internal use in DeviceInfo.

@@ -637,7 +637,7 @@ TEST_F(DeviceInfoTest, BlockedDevices) {
 
   DeviceRefPtr device = device_info_.GetDevice(kTestDeviceIndex);
   ASSERT_NE(nullptr, device);
-  EXPECT_TRUE(device->technology() == Technology::kBlacklisted);
+  EXPECT_TRUE(device->technology() == Technology::kBlocked);
 }
 
 TEST_F(DeviceInfoTest, BlockDeviceWithManagerRunning) {
@@ -649,7 +649,7 @@ TEST_F(DeviceInfoTest, BlockDeviceWithManagerRunning) {
 
   DeviceRefPtr device = device_info_.GetDevice(kTestDeviceIndex);
   ASSERT_NE(nullptr, device);
-  EXPECT_TRUE(device->technology() == Technology::kBlacklisted);
+  EXPECT_TRUE(device->technology() == Technology::kBlocked);
 }
 
 TEST_F(DeviceInfoTest, RenamedBlockedDevice) {
@@ -659,7 +659,7 @@ TEST_F(DeviceInfoTest, RenamedBlockedDevice) {
 
   DeviceRefPtr device = device_info_.GetDevice(kTestDeviceIndex);
   ASSERT_NE(nullptr, device);
-  EXPECT_TRUE(device->technology() == Technology::kBlacklisted);
+  EXPECT_TRUE(device->technology() == Technology::kBlocked);
 
   // Rename the test device.
   const char kRenamedDeviceName[] = "renamed-device";
