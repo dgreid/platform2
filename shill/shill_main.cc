@@ -34,8 +34,12 @@ namespace switches {
 // Don't daemon()ize; run in foreground.
 const char kForeground[] = "foreground";
 // Don't attempt to manage these devices.
+const char kDevicesBlocked[] = "devices-blocked";
+// TODO(garrick): This flag is now deprecated. Remove when all usages are gone.
 const char kDeviceBlackList[] = "device-black-list";
 // Manage only these devices.
+const char kDevicesAllowed[] = "devices-allowed";
+// TODO(garrick): This flag is now deprecated. Remove when all usages are gone.
 const char kDeviceWhiteList[] = "device-white-list";
 // Ignore Ethernet-like devices that don't have any driver information.
 const char kIgnoreUnknownEthernet[] = "ignore-unknown-ethernet";
@@ -67,9 +71,9 @@ const char kHelpMessage[] =
     "Available Switches: \n"
     "  --foreground\n"
     "    Don\'t daemon()ize; run in foreground.\n"
-    "  --device-black-list=device1,device2\n"
+    "  --devices-blocked=device1,device2\n"
     "    Do not manage devices named device1 or device2\n"
-    "  --device-white-list=device1,device2\n"
+    "  --devices-allowed=device1,device2\n"
     "    Manage only devices named device1 and device2\n"
     "  --ignore-unknown-ethernet\n"
     "    Ignore Ethernet-like devices that do not report a driver\n"
@@ -175,12 +179,26 @@ int main(int argc, char** argv) {
     settings.default_technology_order = kDefaultTechnologyOrder;
   }
 
+  if (cl->HasSwitch(switches::kDevicesBlocked)) {
+    settings.devices_blocked =
+        base::SplitString(cl->GetSwitchValueASCII(switches::kDevicesBlocked),
+                          ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  }
+
+  // TODO(garrick): Remove when flag is unused.
   if (cl->HasSwitch(switches::kDeviceBlackList)) {
     settings.devices_blocked =
         base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceBlackList),
                           ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   }
 
+  if (cl->HasSwitch(switches::kDevicesAllowed)) {
+    settings.devices_allowed =
+        base::SplitString(cl->GetSwitchValueASCII(switches::kDevicesAllowed),
+                          ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+  }
+
+  // TODO(garrick): Remove when flag is unused.
   if (cl->HasSwitch(switches::kDeviceWhiteList)) {
     settings.devices_allowed =
         base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceWhiteList),

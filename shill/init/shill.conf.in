@@ -27,14 +27,14 @@ env SHILL_PASSIVE_MODE=
 env SHILL_PREPEND_DNS_SERVERS=
 env SHILL_ACCEPT_HOSTNAME_FROM=
 env SHILL_MINIMUM_MTU=
-env BLACKLISTED_DEVICES=
+env BLOCKED_DEVICES=
 env DHCPV6_ENABLED_DEVICES=
 
 # Hook for mod_for_test_scripts/100setupTestingInterface.
 env SHILL_TEST_DEVICES=""
 
 # Allow the parameters to be overridden by upstart commands and events.
-import BLACKLISTED_DEVICES
+import BLOCKED_DEVICES
 import DHCPV6_ENABLED_DEVICES
 import SHILL_ACCEPT_HOSTNAME_FROM
 import SHILL_LOG_LEVEL

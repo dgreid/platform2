@@ -9,12 +9,12 @@ if [ -n "${SHILL_LOG_VMODULES}" ]; then
   ARGS="${ARGS} --vmodule=${SHILL_LOG_VMODULES}"
 fi
 
-if [ -n "${BLACKLISTED_DEVICES}" ] && [ -n "${SHILL_TEST_DEVICES}" ]; then
-  ARGS="${ARGS} --device-black-list=${BLACKLISTED_DEVICES},${SHILL_TEST_DEVICES}"
-elif [ -n "${BLACKLISTED_DEVICES}" ]; then
-  ARGS="${ARGS} --device-black-list=${BLACKLISTED_DEVICES}"
+if [ -n "${BLOCKED_DEVICES}" ] && [ -n "${SHILL_TEST_DEVICES}" ]; then
+  ARGS="${ARGS} --devices-blocked=${BLOCKED_DEVICES},${SHILL_TEST_DEVICES}"
+elif [ -n "${BLOCKED_DEVICES}" ]; then
+  ARGS="${ARGS} --devices-blocked=${BLOCKED_DEVICES}"
 elif [ -n "${SHILL_TEST_DEVICES}" ]; then
-  ARGS="${ARGS} --device-black-list=${SHILL_TEST_DEVICES}"
+  ARGS="${ARGS} --devices-blocked=${SHILL_TEST_DEVICES}"
 fi
 
 if [ -n "${SHILL_PASSIVE_MODE}" ]; then
