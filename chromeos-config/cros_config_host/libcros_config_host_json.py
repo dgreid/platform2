@@ -68,12 +68,7 @@ class DeviceConfigJson(DeviceConfig):
     return ''
 
   def GetValue(self, source, name):
-    if name in source:
-      val = source[name]
-      if isinstance(val, six.string_types):
-        return val
-      return source[name]
-    return None
+    return source.get(name, None)
 
   def _GetFiles(self, path):
     result = []
