@@ -37,6 +37,7 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
 bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
 
 bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result);
+bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result);
 
 VmOpResult ShutdownVm(dbus::ObjectProxy* proxy, const VmId& vm_id);
 VmOpResult SuspendVm(dbus::ObjectProxy* proxy, const VmId& vm_id);

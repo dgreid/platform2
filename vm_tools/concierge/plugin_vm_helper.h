@@ -12,6 +12,10 @@
 
 #include "vm_tools/common/vm_id.h"
 
+namespace dbus {
+class ObjectProxy;
+};  // namespace dbus
+
 namespace vm_tools {
 namespace concierge {
 namespace pvm {
@@ -28,6 +32,11 @@ bool AttachIso(const VmId& vm_id,
 bool CreateCdromDevice(const VmId& vm_id, const std::string& iso_name);
 
 void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path);
+
+bool ToggleSharedProfile(dbus::ObjectProxy* dispatcher_proxy,
+                         const VmId& vm_id,
+                         std::vector<std::string> params,
+                         std::string* failure_message);
 
 }  // namespace helper
 }  // namespace pvm

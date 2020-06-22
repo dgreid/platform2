@@ -6,6 +6,7 @@
 #include <utility>
 
 #include <base/guid.h>
+#include <base/optional.h>
 #include <base/time/time.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
@@ -44,6 +45,51 @@ VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result) {
     default:
       return VmOpResult::INTERNAL_ERROR;
   }
+}
+
+base::Optional<vm_tools::plugin_dispatcher::VmInfo> GetVmInfo(
+    dbus::ObjectProxy* proxy, const VmId& vm_id) {
+  dbus::MethodCall method_call(
+      vm_tools::plugin_dispatcher::kVmPluginDispatcherInterface,
+      vm_tools::plugin_dispatcher::kListVmsMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  vm_tools::plugin_dispatcher::ListVmRequest request;
+
+  request.set_owner_id(vm_id.owner_id());
+  request.set_vm_name_uuid(vm_id.name());
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode ListVmRequest protobuf";
+    return base::nullopt;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send ListVm message to dispatcher service";
+    return base::nullopt;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  vm_tools::plugin_dispatcher::ListVmResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse ListVmResponse protobuf";
+    return base::nullopt;
+  }
+
+  if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
+    LOG(ERROR) << "Failed to get VM info: " << response.error();
+    return base::nullopt;
+  }
+
+  for (const auto& vm_info : response.vm_info()) {
+    if (vm_info.name() == vm_id.name()) {
+      return vm_info;
+    }
+  }
+
+  return base::nullopt;
 }
 
 }  // namespace
@@ -148,48 +194,18 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
   LOG(INFO) << "Checking whether VM " << vm_id << " is registered";
 
-  dbus::MethodCall method_call(
-      vm_tools::plugin_dispatcher::kVmPluginDispatcherInterface,
-      vm_tools::plugin_dispatcher::kListVmsMethod);
-  dbus::MessageWriter writer(&method_call);
+  return !!GetVmInfo(proxy, vm_id);
+}
 
-  vm_tools::plugin_dispatcher::ListVmRequest request;
+bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
+  LOG(INFO) << "Checking whether VM " << vm_id << " is shut down";
 
-  request.set_owner_id(vm_id.owner_id());
-  request.set_vm_name_uuid(vm_id.name());
-
-  if (!writer.AppendProtoAsArrayOfBytes(request)) {
-    LOG(ERROR) << "Failed to encode ListVmRequest protobuf";
+  const auto info = GetVmInfo(proxy, vm_id);
+  if (!info)
     return false;
-  }
 
-  std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
-      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
-  if (!dbus_response) {
-    LOG(ERROR) << "Failed to send ListVm message to dispatcher service";
-    return false;
-  }
-
-  dbus::MessageReader reader(dbus_response.get());
-  vm_tools::plugin_dispatcher::ListVmResponse response;
-  if (!reader.PopArrayOfBytesAsProto(&response)) {
-    LOG(ERROR) << "Failed to parse ListVmResponse protobuf";
-    return false;
-  }
-
-  if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
-    LOG(ERROR) << "Failed to get VM info: " << response.error();
-    return false;
-  }
-
-  *result = false;
-  for (const auto& vm_info : response.vm_info()) {
-    if (vm_info.name() == vm_id.name()) {
-      *result = true;
-      break;
-    }
-  }
-
+  *result =
+      info.value().state() == vm_tools::plugin_dispatcher::VM_STATE_STOPPED;
   return true;
 }
 

@@ -165,6 +165,9 @@ class Service final {
   std::unique_ptr<dbus::Response> SetVmCpuRestriction(
       dbus::MethodCall* method_call);
 
+  // Handles a request to adjust parameters of a given VM.
+  std::unique_ptr<dbus::Response> AdjustVm(dbus::MethodCall* method_call);
+
   // Writes DnsConfigResponse protobuf into DBus message.
   void ComposeDnsResponse(dbus::MessageWriter* writer);
 

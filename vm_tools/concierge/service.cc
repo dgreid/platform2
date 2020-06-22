@@ -64,6 +64,7 @@
 
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/plugin_vm.h"
+#include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
 #include "vm_tools/concierge/ssh_keys.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
@@ -827,6 +828,7 @@ bool Service::Init() {
       {kGetVmInfoMethod, &Service::GetVmInfo},
       {kGetVmEnterpriseReportingInfoMethod,
        &Service::GetVmEnterpriseReportingInfo},
+      {kAdjustVmMethod, &Service::AdjustVm},
       {kCreateDiskImageMethod, &Service::CreateDiskImage},
       {kDestroyDiskImageMethod, &Service::DestroyDiskImage},
       {kResizeDiskImageMethod, &Service::ResizeDiskImage},
@@ -2099,6 +2101,62 @@ std::unique_ptr<dbus::Response> Service::GetVmEnterpriseReportingInfo(
   if (!iter->second->GetVmEnterpriseReportingInfo(&response)) {
     LOG(ERROR) << "Failed to get VM enterprise reporting info";
   }
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::AdjustVm(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received AdjustVm request";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  AdjustVmRequest request;
+  AdjustVmResponse response;
+
+  response.set_success(false);
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    const std::string error_message =
+        "Unable to parse AdjustVmRequest from message";
+    LOG(ERROR) << error_message;
+    response.set_failure_reason(error_message);
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  StorageLocation location;
+  if (!CheckVmExists(request.name(), request.owner_id(), nullptr, &location)) {
+    response.set_failure_reason("Requested VM does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  std::vector<string> params(
+      std::make_move_iterator(request.mutable_params()->begin()),
+      std::make_move_iterator(request.mutable_params()->end()));
+
+  string failure_reason;
+  bool success = false;
+  if (request.operation() == "shared-profile") {
+    if (location != STORAGE_CRYPTOHOME_PLUGINVM) {
+      failure_reason = "Operation is not supported for the VM";
+    } else {
+      success = pvm::helper::ToggleSharedProfile(
+          vmplugin_service_proxy_, VmId(request.owner_id(), request.name()),
+          std::move(params), &failure_reason);
+    }
+  } else {
+    failure_reason = "Unrecognized operation";
+  }
+
+  response.set_success(success);
+  response.set_failure_reason(failure_reason);
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
 }

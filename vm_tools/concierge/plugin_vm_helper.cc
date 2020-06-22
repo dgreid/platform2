@@ -20,6 +20,9 @@
 #include <base/logging.h>
 #include <base/values.h>
 #include <chromeos/scoped_minijail.h>
+#include <dbus/object_proxy.h>
+
+#include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -320,6 +323,41 @@ void CleanUpAfterInstall(const VmId& vm_id, const base::FilePath& iso_path) {
       }
     }
   }
+}
+
+bool ToggleSharedProfile(dbus::ObjectProxy* dispatcher_proxy,
+                         const VmId& vm_id,
+                         std::vector<std::string> params,
+                         std::string* failure_message) {
+  if (params.size() != 1 || (params[0] != "on" && params[0] != "off")) {
+    *failure_message = "Invalid setting for the shared profile option";
+    return false;
+  }
+
+  bool is_shut_down;
+  if (!dispatcher::IsVmShutDown(dispatcher_proxy, vm_id, &is_shut_down)) {
+    *failure_message = "Unable to query VM state";
+    return false;
+  }
+
+  if (!is_shut_down) {
+    *failure_message = "The VM is not shut down";
+    return false;
+  }
+
+  std::vector<std::string> args = {
+      "set",
+      vm_id.name(),
+      "--shared-profile",
+      params[0],
+  };
+
+  if (!ExecutePvmHelper(vm_id.owner_id(), std::move(args))) {
+    *failure_message = "Failed to toggle shared profile option";
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace helper
