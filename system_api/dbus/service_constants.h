@@ -553,6 +553,19 @@ constexpr char kUnmountMethod[] = "Unmount";
 constexpr char kOpenFileMethod[] = "OpenFile";
 }  // namespace appfuse
 
+namespace sensor {
+// D-Bus service constants.
+constexpr char kArcSensorServiceInterface[] =
+    "org.chromium.ArcSensorService";
+constexpr char kArcSensorServiceServicePath[] =
+    "/org/chromium/ArcSensorService";
+constexpr char kArcSensorServiceServiceName[] =
+    "org.chromium.ArcSensorService";
+
+// Method names.
+constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
+}  // namespace sensor
+
 }  // namespace arc
 
 namespace libvda {

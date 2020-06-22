@@ -1,0 +1,29 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":arc_sensor_service" ]
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+generate_dbus_adaptors("arc_sensor_service_adaptors") {
+  dbus_service_config = "dbus_bindings/dbus-service-config.json"
+  dbus_adaptors_out_dir = "include/arc/vm/sensor_service/dbus_adaptors"
+  sources = [ "dbus_bindings/org.chromium.ArcSensorService.xml" ]
+}
+
+executable("arc_sensor_service") {
+  sources = [ "arc_sensor_service.cc" ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":arc_sensor_service_adaptors" ]
+}
