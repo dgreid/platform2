@@ -43,6 +43,8 @@ class CrosCameraConnectorClient : public brillo::Daemon {
 
   void RestartCaptureOnThread();
 
+  scoped_refptr<base::SequencedTaskRunner> client_runner_;
+
   std::list<int> camera_device_list_;
   std::map<int, std::vector<cros_cam_format_info_t>> format_info_map_;
 

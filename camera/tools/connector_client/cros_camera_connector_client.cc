@@ -14,6 +14,7 @@
 #include <base/files/file.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/threading/sequenced_task_runner_handle.h>
 
 #include "cros-camera/common.h"
 #include "tools/connector_client/cros_camera_connector_client.h"
@@ -75,7 +76,9 @@ int OnCaptureResultAvailable(void* context,
 }
 
 CrosCameraConnectorClient::CrosCameraConnectorClient()
-    : capture_thread_("CamConnClient"), num_restarts_(0) {}
+    : client_runner_(base::SequencedTaskRunnerHandle::Get()),
+      capture_thread_("CamConnClient"),
+      num_restarts_(0) {}
 
 int CrosCameraConnectorClient::OnInit() {
   int res = brillo::Daemon::OnInit();
@@ -203,7 +206,10 @@ void CrosCameraConnectorClient::RestartCaptureOnThread() {
     request_device_iter_++;
     if (request_device_iter_ == camera_device_list_.end()) {
       LOGF(INFO) << "Finished all captures";
-      Quit();
+      client_runner_->PostTask(FROM_HERE,
+                               base::BindOnce(&CrosCameraConnectorClient::Quit,
+                                              base::Unretained(this)));
+
       return;
     }
     request_format_iter_ = format_info_map_[*request_device_iter_].begin();
