@@ -11,6 +11,7 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
+#include <base/observer_list.h>
 #include <base/observer_list_types.h>
 
 namespace base {
