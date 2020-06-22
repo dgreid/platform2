@@ -382,19 +382,18 @@ class CrosConfigBaseImpl(object):
       uris.update(set(device.GetFirmwareUris()))
     return sorted(list(uris))
 
-  def _GetSymlinkedFiles(self, func_name):
-    """Get a list of Symbolic linked files for all devices
+  def _GetFiles(self, func_name):
+    """Get a list of unique files for all devices.
 
-    These files may come from ${FILESDIR} or from a tar file in BCS.
+    Args:
+      func_name: name of method to invoke on a DeviceConfig to retrieve files.
 
     Returns:
-      List of SymlinkedFile objects representing all the firmware referenced
-      by all devices
+      list of files sorted by source.
     """
     file_set = set()
     for device in self.GetDeviceConfigs():
-      GetFirmwareFiles = getattr(device, func_name)
-      for files in GetFirmwareFiles():
+      for files in getattr(device, func_name)():
         file_set.add(files)
 
     return sorted(file_set, key=lambda files: files.source)
@@ -408,7 +407,7 @@ class CrosConfigBaseImpl(object):
       List of SymlinkedFile objects representing all the touch firmware
       referenced by all devices
     """
-    return self._GetSymlinkedFiles('GetTouchFirmwareFiles')
+    return self._GetFiles('GetTouchFirmwareFiles')
 
   def GetDetachableBaseFirmwareFiles(self):
     """Get a list of unique detachable base firmware files for all devices
@@ -419,7 +418,7 @@ class CrosConfigBaseImpl(object):
       List of SymlinkedFile objects representing all the detachable base
       firmware referenced by all devices
     """
-    return self._GetSymlinkedFiles('GetDetachableBaseFirmwareFiles')
+    return self._GetFiles('GetDetachableBaseFirmwareFiles')
 
   def GetBcsUri(self, overlay, path):
     """Form a valid BCS URI for downloading files.
@@ -449,12 +448,7 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the arc++ files referenced
       by all devices
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetArcFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetArcFiles')
 
   def GetAudioFiles(self):
     """Get a list of unique audio files for all models
@@ -463,12 +457,7 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the audio files referenced
       by all models
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetAudioFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetAudioFiles')
 
   def GetBluetoothFiles(self):
     """Get a list of unique bluetooth files for all devices
@@ -477,12 +466,7 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the bluetooth files referenced
       by all devices
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetBluetoothFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetBluetoothFiles')
 
   def GetCameraFiles(self):
     """Get a list of unique camera files for all devices
@@ -491,12 +475,7 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the camera files referenced
       by all devices
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetCameraFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetCameraFiles')
 
   def GetFirmwareBuildTargets(self, target_type):
     """Returns a list of all firmware build-targets of the given target type.
@@ -573,12 +552,7 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the audio files referenced
       by all devices
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetThermalFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetThermalFiles')
 
   def ShowTree(self, base_path, tree):
     print(u'%-10s%s' % ('Size', 'Path'))
@@ -636,9 +610,4 @@ class CrosConfigBaseImpl(object):
       List of BaseFile objects representing all the autobrightness files
       referenced by all devices
     """
-    file_set = set()
-    for device in self.GetDeviceConfigs():
-      for files in device.GetAutobrightnessFiles():
-        file_set.add(files)
-
-    return sorted(file_set, key=lambda files: files.source)
+    return self._GetFiles('GetAutobrightnessFiles')
