@@ -42,9 +42,6 @@
 #       contains it.
 #       If not given, /usr/src/libmojo-${libbase_ver}/mojo/mojom_bindings_generator.py
 #       is used.
-#   use_once_callback (optional, defaults to true)
-#       If set to false, generated classes will use const
-#       base::RepeatingCallback& instead of base::OnceCallback.
 #   All flags which can be interpreted by static_library target:
 #       The values are used as if static_library does. Note that some flags
 #       may be modified in order to reflect the parameters described above
@@ -184,9 +181,6 @@ template("generate_mojom_bindings_gen") {
              "--generators",
              "c++",
            ] + mojo_extra_args
-    if (!defined(invoker.use_once_callback) || invoker.use_once_callback) {
-      args += [ "--use_once_callback" ]
-    }
     if (defined(invoker.disallow_native_types) &&
         invoker.disallow_native_types) {
       args += [ "--disallow_native_types" ]
@@ -222,7 +216,6 @@ template("generate_mojom_bindings") {
                              "sources",
                              "disallow_native_types",
                              "disallow_interfaces",
-                             "use_once_callback",
                            ])
   }
 
