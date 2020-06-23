@@ -572,11 +572,12 @@ class UserDataAuth {
   scoped_refptr<cryptohome::Mount> GetMountForUser(const std::string& username);
 
   // Filters out active mounts from |mounts|, populating |active_mounts| set.
-  // If |include_busy_mount| is false, then stale mounts with open files will be
-  // treated as active mount, and be moved from |mounts| to |active_mounts|.
-  // Otherwise,  all stale mounts are included in |mounts|. Returns true if
-  // |include_busy_mount| is true and there's at least one stale mount with open
-  // file(s) and treated as active mount during the process.
+  // If |include_busy_mount| is false, then stale mounts with open files and
+  // mount points connected to children of the mount source will be treated as
+  // active mount, and be moved from |mounts| to |active_mounts|. Otherwise, all
+  // stale mounts are included in |mounts|. Returns true if |include_busy_mount|
+  // is true and there's at least one stale mount with open file(s) and treated
+  // as active mount during the process.
   bool FilterActiveMounts(
       std::multimap<const base::FilePath, const base::FilePath>* mounts,
       std::multimap<const base::FilePath, const base::FilePath>* active_mounts,

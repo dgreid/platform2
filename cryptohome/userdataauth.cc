@@ -12,6 +12,7 @@
 #include <chaps/isolate.h>
 #include <chaps/token_manager_client.h>
 #include <dbus/cryptohome/dbus-constants.h>
+#include <set>
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
@@ -538,11 +539,13 @@ bool UserDataAuth::RemoveAllMounts(bool unmount) {
 bool UserDataAuth::FilterActiveMounts(
     std::multimap<const FilePath, const FilePath>* mounts,
     std::multimap<const FilePath, const FilePath>* active_mounts,
-    bool force) {
+    bool include_busy_mount) {
   // Note: This can only run in mount_thread_
   AssertOnMountThread();
 
   bool skipped = false;
+  std::set<const FilePath> children_to_preserve;
+
   for (auto match = mounts->begin(); match != mounts->end();) {
     // curr->first is the source device of the group that we are processing in
     // this outer loop.
@@ -566,24 +569,46 @@ bool UserDataAuth::FilterActiveMounts(
       for (const auto& mount_pair : mounts_) {
         if (mount_pair.second->OwnsMountPoint(match->second)) {
           keep = true;
-          break;
+          // If !include_busy_mount, other mount points not owned scanned after
+          // should be preserved as well.
+          if (include_busy_mount)
+            break;
+        }
+      }
+
+      // Ignore mounts pointing to children of used mounts.
+      if (!include_busy_mount) {
+        if (children_to_preserve.find(match->second) !=
+            children_to_preserve.end()) {
+          keep = true;
+          skipped = true;
+          LOG(WARNING) << "Stale mount " << match->second.value() << " from "
+                       << match->first.value() << " is a just a child.";
         }
       }
 
       // Optionally, ignore mounts with open files.
-      if (!force) {
+      if (!keep && !include_busy_mount) {
         std::vector<ProcessInformation> processes;
         platform_->GetProcessesWithOpenFiles(match->second, &processes);
         if (processes.size()) {
           LOG(WARNING) << "Stale mount " << match->second.value() << " from "
-                       << match->first.value() << " has active holders.";
+                       << match->first.value() << " has " << processes.size()
+                       << " active holders. "
+                       << "First one " << processes[0].get_cmd_line()[0];
           keep = true;
           skipped = true;
         }
       }
     }
-    // Delete anything that shouldn't be unmounted.
     if (keep) {
+      std::multimap<const FilePath, const FilePath> children;
+      LOG(WARNING) << "Looking for children of " << curr->first;
+      platform_->GetMountsBySourcePrefix(curr->first, &children);
+      for (const auto& child : children) {
+        children_to_preserve.insert(child.second);
+      }
+
       active_mounts->insert(curr, match);
       mounts->erase(curr, match);
     }
