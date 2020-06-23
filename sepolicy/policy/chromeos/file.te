@@ -26,7 +26,6 @@ type cros_arc_apply_per_board_config_exec, exec_type, file_type, cros_file_type,
 type cros_arc_camera_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_keymasterd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_obb_mounter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
-type cros_arc_oemcrypto_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_setup_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arcvm_boot_notification_server_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_atrusd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -44,6 +43,7 @@ type cros_btdispatch_exec, exec_type, file_type, cros_file_type, cros_system_fil
 type cros_camera_algo_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_camera_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_capsh_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_cdm_oemcrypto_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cecservice_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_chapsd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_chromeos_cleanup_logs_exec, exec_type, file_type, cros_file_type, cros_system_file_type;

@@ -99,7 +99,6 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/apk-cache-cleaner-jailed u:object_r:cros_apk_cache_cleaner_jailed_exec:s0
 /usr/sbin/arc-apply-per-board-config u:object_r:cros_arc_apply_per_board_config_exec:s0
 /usr/sbin/arc-keymasterd        u:object_r:cros_arc_keymasterd_exec:s0
-/usr/sbin/arc-oemcrypto         u:object_r:cros_arc_oemcrypto_exec:s0
 /usr/sbin/arc-setup             u:object_r:cros_arc_setup_exec:s0
 /usr/sbin/arcvm_boot_notification_server u:object_r:cros_arcvm_boot_notification_server_exec:s0
 /usr/sbin/atrusd                u:object_r:cros_atrusd_exec:s0
@@ -108,6 +107,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/sbin/bootlockboxd          u:object_r:cros_bootlockboxd_exec:s0
 /usr/sbin/bootstat              u:object_r:cros_bootstat_exec:s0
 /usr/sbin/brcm_patchram_plus    u:object_r:cros_brcm_patchram_plus_exec:s0
+/usr/sbin/cdm-oemcrypto         u:object_r:cros_cdm_oemcrypto_exec:s0
 /usr/sbin/cecservice            u:object_r:cros_cecservice_exec:s0
 /usr/sbin/chapsd                u:object_r:cros_chapsd_exec:s0
 /usr/sbin/chromeos-cleanup-logs u:object_r:cros_chromeos_cleanup_logs_exec:s0
