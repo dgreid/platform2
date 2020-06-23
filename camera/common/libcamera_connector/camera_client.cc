@@ -85,8 +85,9 @@ int CameraClient::Exit() {
     if (capture_started_) {
       auto future = cros::Future<int>::Create(nullptr);
       stop_callback_ = cros::GetFutureCallback(future);
-      client_ops_.StopCapture(
-          base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
+      client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
+                                         base::Unretained(this),
+                                         /*is_local_stop=*/false));
       ret = future->Get();
     }
   }
@@ -124,8 +125,15 @@ int CameraClient::StartCapture(const cros_cam_capture_request_t* request,
                                cros_cam_capture_cb_t callback,
                                void* context) {
   VLOGF_ENTER();
+
+  base::AutoLock l(capture_started_lock_);
+  if (capture_started_) {
+    LOGF(WARNING) << "Capture already started";
+    return -EINVAL;
+  }
   if (!IsDeviceActive(request->id)) {
-    LOGF(ERROR) << "Cannot start capture on an inactive device";
+    LOGF(ERROR) << "Cannot start capture on an inactive device: "
+                << request->id;
     return -ENODEV;
   }
 
@@ -139,40 +147,38 @@ int CameraClient::StartCapture(const cros_cam_capture_request_t* request,
 
   auto future = cros::Future<int>::Create(nullptr);
   start_callback_ = cros::GetFutureCallback(future);
-  base::AutoLock l(capture_started_lock_);
-  if (capture_started_) {
-    LOGF(WARNING) << "Capture already started";
-    return -EINVAL;
-  }
 
-  client_ops_.Init(base::BindOnce(&CameraClient::OnDeviceOpsReceived,
-                                  base::Unretained(this)));
+  client_ops_.Init(
+      base::BindOnce(&CameraClient::OnDeviceOpsReceived,
+                     base::Unretained(this)),
+      base::Bind(&CameraClient::SendCaptureResult, base::Unretained(this)));
 
   return future->Get();
 }
 
 int CameraClient::StopCapture(int id) {
   VLOGF_ENTER();
-  if (!IsDeviceActive(id)) {
-    LOGF(ERROR) << "Cannot stop capture on an inactive device";
-    return -ENODEV;
-  }
-
-  LOGF(INFO) << "Stopping capture";
-
-  // TODO(lnishan): Support multi-device streaming.
-  CHECK_EQ(request_camera_id_, id);
 
   base::AutoLock l(capture_started_lock_);
   if (!capture_started_) {
     LOGF(WARNING) << "Capture already stopped";
     return -EPERM;
   }
+  if (!IsDeviceActive(id)) {
+    LOGF(ERROR) << "Cannot stop capture on an inactive device: " << id;
+    return -ENODEV;
+  }
+
+  // TODO(lnishan): Support multi-device streaming.
+  CHECK_EQ(request_camera_id_, id);
+
+  LOGF(INFO) << "Stopping capture";
 
   auto future = cros::Future<int>::Create(nullptr);
   stop_callback_ = cros::GetFutureCallback(future);
-  client_ops_.StopCapture(
-      base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
+  client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
+                                     base::Unretained(this),
+                                     /*is_local_stop=*/false));
   return future->Get();
 }
 
@@ -339,32 +345,69 @@ void CameraClient::OnOpenedDevice(int32_t result) {
   } else {
     LOGF(INFO) << "Camera opened successfully";
     client_ops_.StartCapture(
-        request_camera_id_, &request_format_, request_callback_,
-        request_context_, camera_info_map_[request_camera_id_].jpeg_max_size);
-    // Caller should hold the |capture_started_lock_| until the device is
-    // opened.
+        request_camera_id_, &request_format_,
+        camera_info_map_[request_camera_id_].jpeg_max_size);
+    // Caller should hold |capture_started_lock_| until the device is opened.
     CHECK(!capture_started_lock_.Try());
     capture_started_ = true;
   }
   std::move(start_callback_).Run(result);
 }
 
-void CameraClient::OnClosedDevice(int32_t result) {
+void CameraClient::OnClosedDevice(bool is_local_stop, int32_t result) {
   if (result != 0) {
     LOGF(ERROR) << "Failed to close camera " << request_camera_id_;
   } else {
     LOGF(INFO) << "Camera closed successfully";
   }
-  // Caller should hold the |capture_started_lock_| until the device is closed.
+  // Caller should hold |capture_started_lock_| until the device is closed.
   CHECK(!capture_started_lock_.Try());
   // Capture is marked stopped regardless of the result. When an error takes
   // place, we don't want to close or use the camera again.
   capture_started_ = false;
-  std::move(stop_callback_).Run(result);
+  if (is_local_stop) {
+    // If the stop was initiated through CameraClientOps, the root
+    // StopCapture() would be called on |ops_thread_| holding
+    // |capture_started_lock_|. We release it here to allow further
+    // StartCapture() and StopCapture() calls to resume.
+    capture_started_lock_.Release();
+  } else {
+    // If the stop was initiated by a client (through StopCapture()) or Exit()
+    // call, it would come from a different thread, and thus we cannot release
+    // |capture_started_lock_| here. The caller would set a future callback,
+    // |stop_callback_| and wait on it.
+    std::move(stop_callback_).Run(result);
+  }
 }
 
 bool CameraClient::IsDeviceActive(int device) {
   return camera_info_map_.find(device) != camera_info_map_.end();
+}
+
+void CameraClient::SendCaptureResult(const cros_cam_capture_result_t& result) {
+  // Make sure cameras aren't being opened or stopped. It's very important we
+  // don't wait on the lock here. If we waited on the lock, the thread owned by
+  // CameraClientOps would be blocked. If StopCapture() was the one which
+  // acquired the lock, it would hold it until device is closed. Since
+  // Camera3DeviceOps::Close() is done on CameraClientOps thread, it would not
+  // be able to continue if we were to wait on the lock here, causing deadlock.
+  if (!capture_started_lock_.Try()) {
+    VLOGF(1) << "Capture is being started or stopped. Dropping a frame.";
+    return;
+  }
+  if (!capture_started_) {
+    LOGF(INFO) << "Camera already closed. Skipping a capture result.";
+    capture_started_lock_.Release();
+    return;
+  }
+  int ret = (*request_callback_)(request_context_, &result);
+  if (ret != 0) {
+    client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
+                                       base::Unretained(this),
+                                       /*is_local_stop=*/true));
+    return;
+  }
+  capture_started_lock_.Release();
 }
 
 }  // namespace cros

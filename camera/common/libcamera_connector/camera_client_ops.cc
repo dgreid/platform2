@@ -27,7 +27,7 @@ namespace cros {
 CameraClientOps::CameraClientOps()
     : ops_thread_("CamClientOps"),
       camera3_callback_ops_(this),
-      request_callback_(nullptr) {
+      capture_started_(false) {
   ops_thread_.Start();
 }
 
@@ -35,33 +35,34 @@ CameraClientOps::~CameraClientOps() {
   ops_thread_.Stop();
 }
 
-void CameraClientOps::Init(DeviceOpsInitCallback init_callback) {
+void CameraClientOps::Init(DeviceOpsInitCallback init_callback,
+                           CaptureResultCallback result_callback) {
   VLOGF_ENTER();
 
   ops_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraClientOps::InitOnThread, base::Unretained(this),
-                     std::move(init_callback)));
+                     std::move(init_callback), std::move(result_callback)));
 }
 
-void CameraClientOps::InitOnThread(DeviceOpsInitCallback init_callback) {
+void CameraClientOps::InitOnThread(DeviceOpsInitCallback init_callback,
+                                   CaptureResultCallback result_callback) {
   VLOGF_ENTER();
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
+  result_callback_ = std::move(result_callback);
   std::move(init_callback).Run(mojo::MakeRequest(&device_ops_));
 }
 
 void CameraClientOps::StartCapture(int32_t camera_id,
                                    const cros_cam_format_info_t* format,
-                                   cros_cam_capture_cb_t callback,
-                                   void* context,
                                    int32_t jpeg_max_size) {
   VLOGF_ENTER();
 
   ops_thread_.task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&CameraClientOps::StartCaptureOnThread,
-                                base::Unretained(this), camera_id, format,
-                                callback, context, jpeg_max_size));
+      FROM_HERE,
+      base::BindOnce(&CameraClientOps::StartCaptureOnThread,
+                     base::Unretained(this), camera_id, format, jpeg_max_size));
 }
 
 void CameraClientOps::StopCapture(
@@ -77,6 +78,7 @@ void CameraClientOps::StopCapture(
 void CameraClientOps::ProcessCaptureResult(
     mojom::Camera3CaptureResultPtr result) {
   VLOGF_ENTER();
+  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
   if (result->output_buffers) {
     CHECK_EQ(result->output_buffers->size(), 1u);
@@ -124,21 +126,7 @@ void CameraClientOps::ProcessCaptureResult(
                      {.size = 0},
                      {.size = 0}}};
       cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
-      if (request_callback_lock_.Try()) {
-        if (request_callback_) {
-          int ret = (*request_callback_)(request_context_, &result);
-          if (ret != 0) {
-            LOGF(INFO)
-                << "Request callback returned non-zero, stopping capture";
-            buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
-            StopCapture(base::DoNothing());
-          }
-        }
-        request_callback_lock_.Release();
-      } else {
-        LOGF(WARNING)
-            << "Start/Stop capture is in progress, dropping this frame";
-      }
+      SendCaptureResult(result);
 
       munmap(data, mapped_size);
       buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
@@ -176,21 +164,7 @@ void CameraClientOps::ProcessCaptureResult(
               {.size = 0},
               {.size = 0}}};
       cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
-      if (request_callback_lock_.Try()) {
-        if (request_callback_) {
-          int ret = (*request_callback_)(request_context_, &result);
-          if (ret != 0) {
-            LOGF(INFO)
-                << "Request callback returned non-zero, stopping capture";
-            buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
-            StopCapture(base::DoNothing());
-          }
-        }
-        request_callback_lock_.Release();
-      } else {
-        LOGF(WARNING)
-            << "Start/Stop capture is in progress, dropping this frame";
-      }
+      SendCaptureResult(result);
 
       munmap(y_ptr, y_mapped_size);
       munmap(cb_ptr, cb_mapped_size);
@@ -205,17 +179,14 @@ void CameraClientOps::Notify(mojom::Camera3NotifyMsgPtr msg) {
 
 void CameraClientOps::StartCaptureOnThread(int32_t camera_id,
                                            const cros_cam_format_info_t* format,
-                                           cros_cam_capture_cb_t callback,
-                                           void* context,
                                            int32_t jpeg_max_size) {
+  VLOGF_ENTER();
+  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+
+  capture_started_ = true;
   // TODO(b/151047930): Check whether this format info is actually supported.
   request_camera_id_ = camera_id;
   request_format_ = *format;
-  {
-    base::AutoLock l(request_callback_lock_);
-    request_callback_ = callback;
-  }
-  request_context_ = context;
   jpeg_max_size_ = jpeg_max_size;
 
   InitializeDevice();
@@ -226,8 +197,7 @@ void CameraClientOps::StopCaptureOnThread(
   VLOGF_ENTER();
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
-  base::AutoLock l(request_callback_lock_);
-  request_callback_ = nullptr;
+  capture_started_ = false;
   device_ops_->Close(std::move(close_callback));
   camera3_callback_ops_.Close();
 }
@@ -250,6 +220,7 @@ void CameraClientOps::OnInitializedDevice(int32_t result) {
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
   if (result != 0) {
+    // TODO(b/151047930): Handle this gracefully.
     LOGF(FATAL) << "Failed to initialize device: "
                 << base::safe_strerror(-result);
   }
@@ -294,10 +265,10 @@ void CameraClientOps::OnConfiguredStreams(
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
   if (result != 0) {
-    LOGF(ERROR)
+    // TODO(b/151047930): Handle this gracefully.
+    LOGF(FATAL)
         << "Failed to configure streams. Please check your capture parameters: "
         << base::safe_strerror(-result);
-    std::move(start_callback_).Run(-EINVAL);
   }
   LOGF(INFO) << "Stream configured successfully";
   stream_config_ = std::move(updated_config);
@@ -324,8 +295,8 @@ void CameraClientOps::OnConstructedDefaultRequestSettings(
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
   if (settings.is_null()) {
-    LOGF(ERROR) << "Failed to construct the specified capture template";
-    std::move(start_callback_).Run(-EINVAL);
+    // TODO(b/151047930): Handle this gracefully.
+    LOGF(FATAL) << "Failed to construct the specified capture template";
   }
   LOGF(INFO) << "Gotten request template for capture";
   request_settings_ = std::move(settings);
@@ -374,21 +345,16 @@ void CameraClientOps::ProcessCaptureRequestOnThread(
   VLOGF_ENTER();
   DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
 
-  if (request_callback_lock_.Try()) {
-    if (request_callback_) {
-      device_ops_->ProcessCaptureRequest(
-          std::move(request),
-          base::Bind(&CameraClientOps::OnProcessedCaptureRequest,
-                     base::Unretained(this)));
-    } else {
-      LOGF(WARNING) << "Capture is stopped. Skipping a capture request";
-      buffer_manager_.ReleaseBuffer(request->output_buffers[0]->buffer_id);
-    }
-    request_callback_lock_.Release();
-  } else {
-    LOGF(WARNING) << "Capture is being stopped. Skipping a capture request";
+  if (!capture_started_) {
+    LOGF(WARNING) << "Capture is stopped. Skipping a capture request";
     buffer_manager_.ReleaseBuffer(request->output_buffers[0]->buffer_id);
+    return;
   }
+
+  device_ops_->ProcessCaptureRequest(
+      std::move(request),
+      base::Bind(&CameraClientOps::OnProcessedCaptureRequest,
+                 base::Unretained(this)));
 }
 
 void CameraClientOps::OnProcessedCaptureRequest(int32_t result) {
@@ -401,6 +367,13 @@ void CameraClientOps::OnProcessedCaptureRequest(int32_t result) {
     return;
   }
   ConstructCaptureRequestOnThread();
+}
+
+void CameraClientOps::SendCaptureResult(
+    const cros_cam_capture_result_t& result) {
+  if (!capture_started_)
+    return;
+  result_callback_.Run(result);
 }
 
 }  // namespace cros

@@ -28,16 +28,17 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
 
   using DeviceOpsInitCallback =
       base::OnceCallback<void(mojom::Camera3DeviceOpsRequest)>;
+  using CaptureResultCallback =
+      base::Callback<void(const cros_cam_capture_result_t&)>;
 
   CameraClientOps();
   ~CameraClientOps();
 
-  void Init(DeviceOpsInitCallback init_callback);
+  void Init(DeviceOpsInitCallback init_callback,
+            CaptureResultCallback result_callback);
 
   void StartCapture(int32_t camera_id,
                     const cros_cam_format_info_t* format,
-                    cros_cam_capture_cb_t callback,
-                    void* context,
                     int32_t jpeg_max_size);
 
   void StopCapture(mojom::Camera3DeviceOps::CloseCallback close_callback);
@@ -52,12 +53,11 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
   void Notify(mojom::Camera3NotifyMsgPtr msg) override;
 
  private:
-  void InitOnThread(DeviceOpsInitCallback init_callback);
+  void InitOnThread(DeviceOpsInitCallback init_callback,
+                    CaptureResultCallback result_callback);
 
   void StartCaptureOnThread(int32_t camera_id,
                             const cros_cam_format_info_t* format,
-                            cros_cam_capture_cb_t callback,
-                            void* context,
                             int32_t jpeg_max_size);
 
   void StopCaptureOnThread(
@@ -87,17 +87,18 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
 
   void OnProcessedCaptureRequest(int32_t result);
 
+  void SendCaptureResult(const cros_cam_capture_result_t& result);
+
   base::Thread ops_thread_;
 
   mojom::Camera3DeviceOpsPtr device_ops_;
   mojo::Binding<mojom::Camera3CallbackOps> camera3_callback_ops_;
 
+  CaptureResultCallback result_callback_;
+  bool capture_started_;
+
   int32_t request_camera_id_;
   cros_cam_format_info_t request_format_;
-  cros_cam_capture_cb_t request_callback_;
-  base::Lock request_callback_lock_;
-  void* request_context_;
-  IntOnceCallback start_callback_;
   int32_t jpeg_max_size_;
 
   StreamBufferManager buffer_manager_;

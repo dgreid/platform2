@@ -81,14 +81,8 @@ class FrameCapturer {
     }
 
     // Wait until |duration_| passed or |num_frames_| captured.
-    capture_done_.TimedWait(duration_);
-
-    // TODO(b/151047930): Check the return value and only call this when
-    // TimedWait() return false. There is a bug in libcamera_connector so we
-    // cannot do this yet, otherwise the next cros_cam_start_capture() will
-    // fail.
-    cros_cam_stop_capture(id);
-    if (!capture_done_.IsSignaled()) {
+    if (!capture_done_.TimedWait(duration_)) {
+      cros_cam_stop_capture(id);
       capture_done_.Signal();
     }
 

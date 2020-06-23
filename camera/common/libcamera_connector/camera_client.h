@@ -88,9 +88,11 @@ class CameraClient final : public mojom::CameraHalClient {
 
   void OnOpenedDevice(int32_t result);
 
-  void OnClosedDevice(int32_t result);
+  void OnClosedDevice(bool is_local_stop, int32_t result);
 
   bool IsDeviceActive(int device);
+
+  void SendCaptureResult(const cros_cam_capture_result_t& result);
 
   base::Thread ipc_thread_;
 
