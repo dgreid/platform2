@@ -30,6 +30,7 @@
 #include <brillo/syslog_logging.h>
 
 #include "cryptohome/cryptohome_common.h"
+#include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/mount_constants.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/mount_utils.h"
@@ -87,6 +88,8 @@ int main(int argc, char** argv) {
 
   brillo::InitLog(brillo::kLogToSyslog);
 
+  cryptohome::ScopedMetricsInitializer metrics;
+
   constexpr uid_t uid = 1000;  // UID for 'chronos'.
   constexpr gid_t gid = 1000;  // GID for 'chronos'.
   constexpr gid_t access_gid = 1001;  // GID for 'chronos-access'.
@@ -127,10 +130,13 @@ int main(int argc, char** argv) {
   base::ScopedClosureRunner tear_down_runner(
       base::Bind(&TearDown, base::Unretained(&mounter)));
 
+  cryptohome::ReportTimerStart(cryptohome::kPerformEphemeralMountTimer);
   if (!mounter.PerformEphemeralMount(request.username())) {
     cryptohome::ForkAndCrash("PerformEphemeralMount failed");
     return EX_SOFTWARE;
   }
+
+  cryptohome::ReportTimerStop(cryptohome::kPerformEphemeralMountTimer);
   VLOG(1) << "PerformEphemeralMount succeeded";
 
   cryptohome::OutOfProcessMountResponse response;

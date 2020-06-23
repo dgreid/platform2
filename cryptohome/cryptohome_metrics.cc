@@ -118,6 +118,9 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     // unlock.
     {"Cryptohome.TimeSessionUnlock", 0, 4000, 50},
     {"Cryptohome.TimeToMountGuestEx", 0, 4000, 50},
+    // This is only being reported from the out-of-process helper so it's
+    // covered by the same 3-second timeout.
+    {"Cryptohome.TimeToPerformEphemeralMount", 0, 3000, 50},
 };
 
 static_assert(base::size(kTimerHistogramParams) == cryptohome::kNumTimerTypes,
