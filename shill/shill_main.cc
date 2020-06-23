@@ -35,12 +35,8 @@ namespace switches {
 const char kForeground[] = "foreground";
 // Don't attempt to manage these devices.
 const char kDevicesBlocked[] = "devices-blocked";
-// TODO(garrick): This flag is now deprecated. Remove when all usages are gone.
-const char kDeviceBlackList[] = "device-black-list";
 // Manage only these devices.
 const char kDevicesAllowed[] = "devices-allowed";
-// TODO(garrick): This flag is now deprecated. Remove when all usages are gone.
-const char kDeviceWhiteList[] = "device-white-list";
 // Ignore Ethernet-like devices that don't have any driver information.
 const char kIgnoreUnknownEthernet[] = "ignore-unknown-ethernet";
 // Technologies to enable for portal check at startup.
@@ -185,23 +181,9 @@ int main(int argc, char** argv) {
                           ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   }
 
-  // TODO(garrick): Remove when flag is unused.
-  if (cl->HasSwitch(switches::kDeviceBlackList)) {
-    settings.devices_blocked =
-        base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceBlackList),
-                          ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
-  }
-
   if (cl->HasSwitch(switches::kDevicesAllowed)) {
     settings.devices_allowed =
         base::SplitString(cl->GetSwitchValueASCII(switches::kDevicesAllowed),
-                          ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
-  }
-
-  // TODO(garrick): Remove when flag is unused.
-  if (cl->HasSwitch(switches::kDeviceWhiteList)) {
-    settings.devices_allowed =
-        base::SplitString(cl->GetSwitchValueASCII(switches::kDeviceWhiteList),
                           ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   }
 
