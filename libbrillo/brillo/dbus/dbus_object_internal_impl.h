@@ -79,7 +79,7 @@ class SimpleDBusInterfaceMethodHandler
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
-    DBusMethodResponse<R> method_response(method_call, sender);
+    DBusMethodResponse<R> method_response(method_call, std::move(sender));
     auto invoke_callback = [this, &method_response](const Args&... args) {
       method_response.Return(handler_.Run(args...));
     };
@@ -113,7 +113,7 @@ class SimpleDBusInterfaceMethodHandler<void, Args...>
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
-    DBusMethodResponseBase method_response(method_call, sender);
+    DBusMethodResponseBase method_response(method_call, std::move(sender));
     auto invoke_callback = [this, &method_response](const Args&... args) {
       handler_.Run(args...);
       auto response = method_response.CreateCustomResponse();
@@ -159,7 +159,7 @@ class SimpleDBusInterfaceMethodHandlerWithError
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
-    DBusMethodResponseBase method_response(method_call, sender);
+    DBusMethodResponseBase method_response(method_call, std::move(sender));
     auto invoke_callback = [this, &method_response](const Args&... args) {
       ErrorPtr error;
       if (!handler_.Run(&error, args...)) {
@@ -210,7 +210,7 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
-    DBusMethodResponseBase method_response(method_call, sender);
+    DBusMethodResponseBase method_response(method_call, std::move(sender));
     auto invoke_callback =
         [this, method_call, &method_response](const Args&... args) {
       ErrorPtr error;
@@ -261,7 +261,8 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
     auto invoke_callback = [this, method_call, &sender](const Args&... args) {
-      std::unique_ptr<Response> response(new Response(method_call, sender));
+      auto response =
+          std::make_unique<Response>(method_call, std::move(sender));
       handler_.Run(std::move(response), args...);
     };
 
@@ -270,7 +271,7 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
     if (!DBusParamReader<false, Args...>::Invoke(
             invoke_callback, &reader, &param_reader_error)) {
       // Error parsing method arguments.
-      DBusMethodResponseBase method_response(method_call, sender);
+      DBusMethodResponseBase method_response(method_call, std::move(sender));
       method_response.ReplyWithError(param_reader_error.get());
     }
   }
@@ -308,7 +309,8 @@ class DBusInterfaceMethodHandlerWithMessage
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
     auto invoke_callback = [this, method_call, &sender](const Args&... args) {
-      std::unique_ptr<Response> response(new Response(method_call, sender));
+      auto response =
+          std::make_unique<Response>(method_call, std::move(sender));
       handler_.Run(std::move(response), method_call, args...);
     };
 
@@ -317,7 +319,7 @@ class DBusInterfaceMethodHandlerWithMessage
     if (!DBusParamReader<false, Args...>::Invoke(
             invoke_callback, &reader, &param_reader_error)) {
       // Error parsing method arguments.
-      DBusMethodResponseBase method_response(method_call, sender);
+      DBusMethodResponseBase method_response(method_call, std::move(sender));
       method_response.ReplyWithError(param_reader_error.get());
     }
   }
@@ -348,7 +350,7 @@ class RawDBusInterfaceMethodHandler
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
-    handler_.Run(method_call, sender);
+    handler_.Run(method_call, std::move(sender));
   }
 
  private:

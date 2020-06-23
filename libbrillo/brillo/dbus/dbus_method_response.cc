@@ -11,8 +11,7 @@ namespace dbus_utils {
 
 DBusMethodResponseBase::DBusMethodResponseBase(dbus::MethodCall* method_call,
                                                ResponseSender sender)
-    : sender_(sender), method_call_(method_call) {
-}
+    : sender_(std::move(sender)), method_call_(method_call) {}
 
 DBusMethodResponseBase::~DBusMethodResponseBase() {
   if (method_call_) {
@@ -45,7 +44,7 @@ void DBusMethodResponseBase::SendRawResponse(
     std::unique_ptr<dbus::Response> response) {
   CheckCanSendResponse();
   method_call_ = nullptr;  // Mark response as sent.
-  sender_.Run(std::move(response));
+  std::move(sender_).Run(std::move(response));
 }
 
 std::unique_ptr<dbus::Response>

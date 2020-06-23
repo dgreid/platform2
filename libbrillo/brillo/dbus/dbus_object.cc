@@ -193,11 +193,11 @@ void DBusInterface::HandleMethodCall(dbus::MethodCall* method_call,
         dbus::ErrorResponse::FromMethodCall(method_call,
                                             DBUS_ERROR_UNKNOWN_METHOD,
                                             "Unknown method: " + method_name);
-    sender.Run(std::move(response));
+    std::move(sender).Run(std::move(response));
     return;
   }
   VLOG(1) << "Dispatching DBus method call: " << method_name;
-  pair->second->HandleMethod(method_call, sender);
+  pair->second->HandleMethod(method_call, std::move(sender));
 }
 
 void DBusInterface::AddHandlerImpl(

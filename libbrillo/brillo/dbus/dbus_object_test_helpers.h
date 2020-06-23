@@ -30,7 +30,7 @@ class DBusInterfaceTestHelper final {
   static void HandleMethodCall(DBusInterface* itf,
                                ::dbus::MethodCall* method_call,
                                ResponseSender sender) {
-    itf->HandleMethodCall(method_call, sender);
+    itf->HandleMethodCall(method_call, std::move(sender));
   }
 };
 
