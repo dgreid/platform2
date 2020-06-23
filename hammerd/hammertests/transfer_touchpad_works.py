@@ -32,11 +32,9 @@ def main(argv):
     sys.exit('Test takes no args!')
   updater = hammerd_api.FirmwareUpdater(common.BASE_VENDOR_ID,
                                         common.BASE_PRODUCT_ID,
-                                        common.BASE_BUS,
-                                        common.BASE_PORT)
-
-# Use unlocked image on dut to verify that TransferTouchpadFirmware call works
                                         common.BASE_USB_PATH)
+
+  # Use unlocked image on dut to verify that TransferTouchpadFirmware call works
   with open(common.IMAGE, 'rb') as f:
     ec_image = f.read()
   updater.LoadEcImage(ec_image)
