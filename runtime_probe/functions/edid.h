@@ -25,10 +25,10 @@ class EdidFunction : public ProbeFunction {
   static constexpr auto function_name = "edid";
   std::string GetFunctionName() const override { return function_name; }
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value);
 
-  /* Override `Eval` function, which should return a list of DictionaryValue */
+  /* Override `Eval` function, which should return a list of Value */
   DataType Eval() const override;
 
   int EvalInHelper(std::string* output) const override;

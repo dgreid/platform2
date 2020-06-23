@@ -31,13 +31,12 @@ class ProbeConfig {
    */
 
  public:
-  static std::unique_ptr<ProbeConfig> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeConfig> FromValue(const base::Value& dv);
 
   /* Evaluates the probe config.
    *
    * @param category: specifies the components to probe.
-   * @return DictionaryValue with the following format:
+   * @return base::Value with the following format:
    *   {
    *     <category:string>: [
    *       {
@@ -48,17 +47,16 @@ class ProbeConfig {
    *     ]
    *   }
    */
-  std::unique_ptr<base::DictionaryValue> Eval(
-      const std::vector<std::string>& category) const;
+  base::Value Eval(const std::vector<std::string>& category) const;
 
   /* Evaluates the probe config.
    *
    * This is the same as calling `this->eval({keys of category_})`.
    */
-  std::unique_ptr<base::DictionaryValue> Eval() const;
+  base::Value Eval() const;
 
  private:
-  /* Must call `FromDictionaryValue()` to create an instance. */
+  /* Must call `FromValue()` to create an instance. */
   ProbeConfig() = default;
 
   std::map<std::string, std::unique_ptr<ComponentCategory>> category_;

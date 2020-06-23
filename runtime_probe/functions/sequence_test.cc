@@ -31,11 +31,11 @@ class MockProbeFunction : public ProbeFunction {
 TEST(SequenceFunctionTest, TestEvalFailTooManyResults) {
   auto mock_probe_function_1 = std::make_unique<MockProbeFunction>();
 
-  base::DictionaryValue a;
-  a.SetBoolean("a", true);
+  base::Value a(base::Value::Type::DICTIONARY);
+  a.SetBoolKey("a", true);
 
-  base::DictionaryValue b;
-  b.SetBoolean("b", true);
+  base::Value b(base::Value::Type::DICTIONARY);
+  b.SetBoolKey("b", true);
 
   DataType val;
   // val{std::move(a), std::move(b)} implicitly calls the copy constructor which
@@ -69,9 +69,9 @@ TEST(SequenceFunctionTest, TestEvalFailTooManyResults) {
 TEST(SequenceFunctionTest, TestEvalSuccess) {
   auto mock_probe_function_1 = std::make_unique<MockProbeFunction>();
 
-  base::DictionaryValue a;
-  a.SetBoolean("a", true);
-  a.SetBoolean("c", false);
+  base::Value a(base::Value::Type::DICTIONARY);
+  a.SetBoolKey("a", true);
+  a.SetBoolKey("c", false);
 
   DataType val_a;
   val_a.push_back(std::move(a));
@@ -81,9 +81,9 @@ TEST(SequenceFunctionTest, TestEvalSuccess) {
 
   auto mock_probe_function_2 = std::make_unique<MockProbeFunction>();
 
-  base::DictionaryValue b;
-  b.SetBoolean("b", true);
-  b.SetBoolean("c", true);
+  base::Value b(base::Value::Type::DICTIONARY);
+  b.SetBoolKey("b", true);
+  b.SetBoolKey("c", true);
 
   DataType val_b;
   val_b.push_back(std::move(b));
@@ -107,11 +107,10 @@ TEST(SequenceFunctionTest, TestEvalSuccess) {
   std::set<std::string> result_keys;
   LOG(ERROR) << results[0];
 
-  for (base::DictionaryValue::Iterator it{results[0]}; !it.IsAtEnd();
-       it.Advance()) {
-    ASSERT_TRUE(it.value().is_bool()) << "unexpected result: " << results[0];
-    ASSERT_TRUE(it.value().GetBool()) << "unexpected result: " << results[0];
-    result_keys.insert(it.key());
+  for (const auto& entry : results[0].DictItems()) {
+    ASSERT_TRUE(entry.second.is_bool()) << "unexpected result: " << results[0];
+    ASSERT_TRUE(entry.second.GetBool()) << "unexpected result: " << results[0];
+    result_keys.insert(entry.first);
   }
 
   ASSERT_THAT(result_keys, ::testing::UnorderedElementsAre("a", "b", "c"));

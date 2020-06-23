@@ -72,8 +72,8 @@ int main(int argc, char* argv[]) {
   if (!probe_config_data)
     return ExitStatus::kConfigFileSyntaxError;
 
-  auto probe_config = runtime_probe::ProbeConfig::FromDictionaryValue(
-      probe_config_data.value().config_dv);
+  auto probe_config =
+      runtime_probe::ProbeConfig::FromValue(probe_config_data.value().config);
 
   if (!probe_config) {
     LOG(ERROR) << "Failed to parse from argument from ProbeConfig\n";
@@ -82,9 +82,9 @@ int main(int argc, char* argv[]) {
   const auto probe_result = probe_config->Eval();
   if (FLAGS_to_stdout) {
     LOG(INFO) << "Dumping probe results to stdout";
-    std::cout << *probe_result;
+    std::cout << probe_result;
   } else {
-    LOG(INFO) << *probe_result;
+    LOG(INFO) << probe_result;
   }
 
   return ExitStatus::kSuccess;

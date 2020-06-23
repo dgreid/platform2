@@ -5,11 +5,12 @@
 
 #include "runtime_probe/functions/sequence.h"
 
+#include <utility>
+
 namespace runtime_probe {
 
 SequenceFunction::DataType SequenceFunction::Eval() const {
-  DataType return_value{};
-  return_value.emplace_back();  // initially, there is an empty dict in list.
+  base::Value result(base::Value::Type::DICTIONARY);
 
   for (const auto& func : functions_) {
     const auto& probe_results = func->Eval();
@@ -18,14 +19,16 @@ SequenceFunction::DataType SequenceFunction::Eval() const {
       return {};
 
     if (probe_results.size() > 1) {
-      LOG(ERROR) << "Subfunction call generates more than one results";
+      LOG(ERROR) << "Subfunction call generates more than one results.";
       return {};
     }
 
-    return_value.back().MergeDictionary(&probe_results[0]);
+    result.MergeDictionary(&probe_results[0]);
   }
 
-  return return_value;
+  DataType results;
+  results.push_back(std::move(result));
+  return results;
 }
 
 }  // namespace runtime_probe

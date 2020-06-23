@@ -13,53 +13,54 @@ namespace runtime_probe {
 
 namespace {
 
-void FilterDictionaryValueByKey(base::DictionaryValue* dv,
-                                const std::set<std::string>& keys) {
+void FilterValueByKey(base::Value* dv, const std::set<std::string>& keys) {
   std::vector<std::string> keys_to_delete;
-  for (base::DictionaryValue::Iterator it{*dv}; !it.IsAtEnd(); it.Advance()) {
-    if (keys.find(it.key()) == keys.end()) {
-      keys_to_delete.push_back(it.key());
+  for (const auto& entry : dv->DictItems()) {
+    if (keys.find(entry.first) == keys.end()) {
+      keys_to_delete.push_back(entry.first);
     }
   }
   for (const auto& k : keys_to_delete) {
-    dv->Remove(k, nullptr);
+    dv->RemoveKey(k);
   }
 }
 
 }  // namespace
 
-std::unique_ptr<ProbeStatement> ProbeStatement::FromDictionaryValue(
-    std::string component_name, const base::DictionaryValue& dict_value) {
-  std::unique_ptr<ProbeStatement> instance{new ProbeStatement};
-
-  instance->component_name_ = component_name;
+std::unique_ptr<ProbeStatement> ProbeStatement::FromValue(
+    std::string component_name, const base::Value& dv) {
+  if (!dv.is_dict()) {
+    LOG(ERROR) << "ProbeStatement::FromValue takes a dictionary as parameter";
+    return nullptr;
+  }
 
   // Parse required field "eval"
-  const base::Value* eval_value =
-      dict_value.FindKeyOfType("eval", base::Value::Type::DICTIONARY);
+  const auto* eval_value = dv.FindDictKey("eval");
   if (!eval_value) {
-    LOG(ERROR) << "eval should be a DictionaryValue: " << *eval_value;
+    LOG(ERROR) << "\"eval\" should be a dictionary: " << *eval_value;
     return nullptr;
   }
-
-  instance->eval_ = ProbeFunction::FromValue(*eval_value);
-  // Check the required field eval
-  if (!instance->eval_) {
-    LOG(ERROR) << "Failed to parse " << dict_value << " as ProbeStatement";
+  auto function = ProbeFunction::FromValue(*eval_value);
+  if (!function) {
+    LOG(ERROR) << "Component " << component_name
+               << " doesn't contain a valid probe function.";
     return nullptr;
   }
+  std::unique_ptr<ProbeStatement> instance{new ProbeStatement()};
+  instance->component_name_ = component_name;
+  instance->eval_ = std::move(function);
 
   // Parse optional field "keys"
-  const base::Value* keys_value =
-      dict_value.FindKeyOfType("keys", base::Value::Type::LIST);
+  const auto* keys_value = dv.FindListKey("keys");
   if (!keys_value) {
-    VLOG(1) << "keys does not exist or is not a ListValue";
+    VLOG(3) << "\"keys\" does not exist or is not a list";
   } else {
     for (const auto& v : keys_value->GetList()) {
       // Currently, destroy all previously inserted valid elems
       if (!v.is_string()) {
-        LOG(ERROR) << "keys should be a list of string: " << *keys_value;
+        LOG(ERROR) << "\"keys\" should be a list of string: " << *keys_value;
         instance->key_.clear();
+        break;
       }
       instance->key_.insert(v.GetString());
     }
@@ -67,19 +68,25 @@ std::unique_ptr<ProbeStatement> ProbeStatement::FromDictionaryValue(
 
   // Parse optional field "expect"
   // TODO(b:121354690): Make expect useful
-  const base::DictionaryValue* expect_dict_value;
-  if (!dict_value.GetDictionary("expect", &expect_dict_value)) {
-    VLOG(1) << "expect does not exist or is not a DictionaryValue";
+  const auto* expect_value = dv.FindDictKey("expect");
+  if (!expect_value) {
+    VLOG(3) << "\"expect\" does not exist or is not a dictionary";
   } else {
-    instance->expect_ =
-        ProbeResultChecker::FromDictionaryValue(*expect_dict_value);
-    if (!instance->expect_)
-      VLOG(1) << "Failed to parse attribute expect: " << *expect_dict_value;
+    auto checker = ProbeResultChecker::FromValue(*expect_value);
+    if (!checker) {
+      VLOG(1) << "Component " << component_name
+              << " doesn't contain a valid checker.";
+    } else {
+      instance->expect_ = std::move(checker);
+    }
   }
 
   // Parse optional field "information"
-  if (!dict_value.GetDictionary("information", &instance->information_)) {
-    VLOG(1) << "information does not exist or is not a DictionaryValue";
+  const auto* information = dv.FindDictKey("information");
+  if (!information) {
+    VLOG(3) << "\"information\" does not exist or is not a dictionary";
+  } else {
+    instance->information_ = information->Clone();
   }
 
   return instance;
@@ -89,9 +96,8 @@ ProbeFunction::DataType ProbeStatement::Eval() const {
   auto results = eval_->Eval();
 
   if (!key_.empty()) {
-    std::for_each(results.begin(), results.end(), [this](auto& result) {
-      FilterDictionaryValueByKey(&result, key_);
-    });
+    std::for_each(results.begin(), results.end(),
+                  [this](auto& result) { FilterValueByKey(&result, key_); });
   }
 
   if (expect_) {

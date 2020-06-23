@@ -15,7 +15,7 @@ namespace runtime_probe {
 
 // Data structure to store different data extraced from probe config file.
 struct ProbeConfigData {
-  base::DictionaryValue config_dv;
+  base::Value config;
   std::string sha1_hash;
 };
 // Parse |config_file_path|, the path of file containing probe config in json

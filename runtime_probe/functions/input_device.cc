@@ -53,7 +53,7 @@ base::Value LoadInputDevices() {
         for (const auto& keyVal : keyVals) {
           base::StringPiece key, value;
           std::tie(key, value) = keyVal;
-          data.SetKey(base::ToLowerASCII(key), base::Value(value));
+          data.SetStringKey(base::ToLowerASCII(key), value);
         }
       } else if (prefix == 'N' || prefix == 'S') {
         base::StringPairs keyVals;
@@ -63,8 +63,8 @@ base::Value LoadInputDevices() {
         }
         base::StringPiece key, value;
         std::tie(key, value) = keyVals[0];
-        data.SetKey(base::ToLowerASCII(key),
-                    base::Value(base::TrimString(value, "\"", base::TRIM_ALL)));
+        data.SetStringKey(base::ToLowerASCII(key),
+                          base::TrimString(value, "\"", base::TRIM_ALL));
       } else if (prefix == 'H') {
         base::StringPairs keyVals;
         if (!base::SplitStringIntoKeyValuePairs(content, '=', '\n', &keyVals)) {
@@ -76,7 +76,7 @@ base::Value LoadInputDevices() {
             value, " ", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
         for (const auto& handler : handlers) {
           if (kEventPatternRe.FullMatch(handler.as_string())) {
-            data.SetKey("event", base::Value(handler));
+            data.SetStringKey("event", handler);
             break;
           }
         }
@@ -92,35 +92,28 @@ base::Value LoadInputDevices() {
 
 }  // namespace
 
-std::unique_ptr<ProbeFunction> InputDeviceFunction::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  auto instance = std::make_unique<InputDeviceFunction>();
-
+std::unique_ptr<ProbeFunction> InputDeviceFunction::FromValue(
+    const base::Value& dict_value) {
   if (dict_value.DictSize() != 0) {
     LOG(ERROR) << function_name << " does not take any arguments.";
     return nullptr;
   }
-  return instance;
+  return std::make_unique<InputDeviceFunction>();
 }
 
 InputDeviceFunction::DataType InputDeviceFunction::Eval() const {
-  DataType result;
-
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve sysfs results.";
-    return result;
+    return {};
+  }
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return {};
   }
 
-  auto helper_results = std::move(*json_output);
-  if (!helper_results.is_list()) {
-    return result;
-  }
-  for (auto& helper_result : helper_results.GetList()) {
-    result.push_back(
-        std::move(static_cast<base::DictionaryValue&>(helper_result)));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 
 int InputDeviceFunction::EvalInHelper(std::string* output) const {

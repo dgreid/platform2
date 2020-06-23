@@ -26,35 +26,34 @@ namespace {
 constexpr char kSysfsDrmPath[] = "/sys/class/drm/*";
 }  // namespace
 
-std::unique_ptr<ProbeFunction> EdidFunction::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  auto instance = std::make_unique<EdidFunction>();
+std::unique_ptr<ProbeFunction> EdidFunction::FromValue(
+    const base::Value& dict_value) {
+  if (dict_value.DictSize() != 0)
+    return nullptr;
 
+  auto instance = std::make_unique<EdidFunction>();
   bool result = true;
+
   result &= PARSE_ARGUMENT(dir_path, {kSysfsDrmPath});
 
-  if (dict_value.DictSize() != 0 && !result) {
+  if (!result)
     return nullptr;
-  }
   return instance;
 }
 
 EdidFunction::DataType EdidFunction::Eval() const {
-  DataType result;
-
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve edid results.";
-    return result;
+    return {};
+  }
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return {};
   }
 
-  auto edid_results = std::move(*json_output);
-  for (auto& edid_result : edid_results.GetList()) {
-    result.push_back(
-        std::move(static_cast<base::DictionaryValue&>(edid_result)));
-  }
-
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 
 int EdidFunction::EvalInHelper(std::string* output) const {
@@ -69,10 +68,10 @@ int EdidFunction::EvalInHelper(std::string* output) const {
 
       auto node_res = EvalInHelperByPath(edid_path);
       if (node_res.DictEmpty()) {
-        evaluated_path.SetKey(edid_path.value(), base::Value(false));
+        evaluated_path.SetBoolKey(edid_path.value(), false);
         continue;
       }
-      evaluated_path.SetKey(edid_path.value(), base::Value(true));
+      evaluated_path.SetBoolKey(edid_path.value(), true);
       result.GetList().push_back(std::move(node_res));
     }
   }
@@ -126,12 +125,11 @@ base::Value EdidFunction::EvalInHelperByPath(
   if (!edid) {
     return res;
   }
-  res.SetKey("vendor", base::Value(edid->vendor));
-  res.SetKey("product_id",
-             base::Value(base::StringPrintf("%04x", edid->product_id)));
-  res.SetKey("width", base::Value(edid->width));
-  res.SetKey("height", base::Value(edid->height));
-  res.SetKey("path", base::Value(edid_path.value()));
+  res.SetStringKey("vendor", edid->vendor);
+  res.SetStringKey("product_id", base::StringPrintf("%04x", edid->product_id));
+  res.SetIntKey("width", edid->width);
+  res.SetIntKey("height", edid->height);
+  res.SetStringKey("path", edid_path.value());
   return res;
 }
 

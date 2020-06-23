@@ -33,9 +33,9 @@ class SequenceFunction : public ProbeFunction {
  public:
   static constexpr auto function_name = "sequence";
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
-    std::unique_ptr<SequenceFunction> instance{new SequenceFunction()};
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
+    auto instance = std::make_unique<SequenceFunction>();
 
     bool result = true;
 

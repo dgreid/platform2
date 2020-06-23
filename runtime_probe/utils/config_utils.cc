@@ -15,8 +15,6 @@
 
 #include "runtime_probe/utils/config_utils.h"
 
-using base::DictionaryValue;
-
 namespace {
 
 const char kCrosConfigModelNamePath[] = "/";
@@ -81,10 +79,7 @@ base::Optional<ProbeConfigData> ParseProbeConfig(
                << config_json;
     return base::nullopt;
   }
-  base::DictionaryValue* dict_val;
-  json_val->GetAsDictionary(&dict_val);
-
-  return ProbeConfigData{.config_dv = std::move(*dict_val),
+  return ProbeConfigData{.config = std::move(*json_val),
                          .sha1_hash = std::move(probe_config_sha1_hash)};
 }
 

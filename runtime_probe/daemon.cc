@@ -136,14 +136,14 @@ void Daemon::ProbeCategories(
   VLOG(2) << "SHA1 checksum returned with protocol buffer: "
           << reply.probe_config_checksum();
 
-  const auto probe_config = runtime_probe::ProbeConfig::FromDictionaryValue(
-      probe_config_data.value().config_dv);
+  const auto probe_config =
+      runtime_probe::ProbeConfig::FromValue(probe_config_data.value().config);
   if (!probe_config) {
     reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_INCOMPLETE_PROBE_FUNCTION);
     return SendProbeResult(reply, method_call, &response_sender);
   }
 
-  std::unique_ptr<base::DictionaryValue> probe_result;
+  base::Value probe_result;
   if (request.probe_default_category()) {
     probe_result = probe_config->Eval();
   } else {
@@ -161,7 +161,7 @@ void Daemon::ProbeCategories(
 
   // TODO(itspeter): Report assigned but not in the probe config's category.
   std::string output_js;
-  base::JSONWriter::Write(*probe_result, &output_js);
+  base::JSONWriter::Write(probe_result, &output_js);
   VLOG(3) << "Raw JSON probe result\n" << output_js;
 
   // Convert JSON to Protocol Buffer.

@@ -19,16 +19,13 @@ class CellularNetworkFunction : public NetworkFunction {
   static constexpr auto function_name = "cellular_network";
   std::string GetFunctionName() const override { return function_name; }
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
-    std::unique_ptr<CellularNetworkFunction> instance{
-        new CellularNetworkFunction()};
-
-    if (dict_value.size() != 0) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
+    if (dict_value.DictSize() != 0) {
       LOG(ERROR) << function_name << " dooes not take any arguement";
       return nullptr;
     }
-    return instance;
+    return std::make_unique<CellularNetworkFunction>();
   }
 
  protected:

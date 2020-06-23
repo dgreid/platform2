@@ -58,29 +58,16 @@ class ProbeFunction {
   //      }
 
  public:
-  using DataType = std::vector<base::DictionaryValue>;
+  using DataType = std::vector<base::Value>;
 
   // Convert |value| to ProbeFunction.  Returns nullptr on failure.
-  static std::unique_ptr<ProbeFunction> FromValue(const base::Value& value) {
-    std::unique_ptr<ProbeFunction> retval;
-
-    if (value.is_dict()) {
-      const base::DictionaryValue* dict_value;
-      value.GetAsDictionary(&dict_value);
-      retval = FromDictionaryValue(*dict_value);
-    }
-
-    if (retval == nullptr) {
-      LOG(ERROR) << "Failed to parse " << value << " as ProbeFunction";
-    }
-    return retval;
-  }
+  static std::unique_ptr<ProbeFunction> FromValue(const base::Value& dv);
 
   virtual std::string GetFunctionName() const { return {}; }
 
   // Evaluates this entire probe function.
   //
-  // Output will be a list of base::DictionaryValue.
+  // Output will be a list of base::Value.
   virtual DataType Eval() const = 0;
 
   // Serializes this probe function and passes it to helper. The output of the
@@ -107,14 +94,13 @@ class ProbeFunction {
   // in sandbox environment and we might want to preserve the exit code.
   virtual int EvalInHelper(std::string* output) const;
 
-  // Function prototype of |FromDictionaryValue| that should be implemented by
-  // each derived class.  See `functions/sysfs.h` about how to implement this
+  // Function prototype of |FromValue| that should be implemented by each
+  // derived class.  See `functions/sysfs.h` about how to implement this
   // function.
-  using FactoryFunctionType = std::function<std::unique_ptr<ProbeFunction>(
-      const base::DictionaryValue&)>;
+  using FactoryFunctionType =
+      std::function<std::unique_ptr<ProbeFunction>(const base::Value&)>;
 
-  // Mapping from |function_name| to |FromDictionaryValue| of each derived
-  // classes.
+  // Mapping from |function_name| to |FromValue| of each derived classes.
   static std::map<std::string_view, FactoryFunctionType> registered_functions_;
 
   template <class T>
@@ -122,7 +108,7 @@ class ProbeFunction {
     Register() {
       static_assert(std::is_base_of<ProbeFunction, T>::value,
                     "Registered type must inherit ProbeFunction");
-      registered_functions_[T::function_name] = T::FromDictionaryValue;
+      registered_functions_[T::function_name] = T::FromValue;
     }
   };
 
@@ -132,9 +118,7 @@ class ProbeFunction {
   ProbeFunction() = default;
 
  private:
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
-  std::unique_ptr<base::DictionaryValue> raw_value_;
+  base::Optional<base::Value> raw_value_;
 
   // Each probe function must define their own args type.
 };

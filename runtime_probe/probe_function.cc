@@ -89,44 +89,45 @@ bool ReadNonblockingPipeToString(int fd, std::string* out) {
 
 using DataType = typename ProbeFunction::DataType;
 
-std::unique_ptr<ProbeFunction> ProbeFunction::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  if (dict_value.size() == 0) {
-    LOG(ERROR) << "No function name in ProbeFunction dict";
+std::unique_ptr<ProbeFunction> ProbeFunction::FromValue(const base::Value& dv) {
+  if (!dv.is_dict()) {
+    LOG(ERROR) << "ProbeFunction::FromValue takes a dictionary as parameter";
     return nullptr;
   }
 
-  if (dict_value.size() > 1) {
-    LOG(ERROR) << "More than 1 function names specified in a "
-               << "ProbeFunction dictionary: " << dict_value;
+  if (dv.DictSize() == 0) {
+    LOG(ERROR) << "No function name found in the ProbeFunction dictionary";
     return nullptr;
   }
 
-  auto it = base::DictionaryValue::Iterator{dict_value};
+  if (dv.DictSize() > 1) {
+    LOG(ERROR) << "More than 1 function names specified in the ProbeFunction"
+                  " dictionary";
+    return nullptr;
+  }
+
+  const auto& it = dv.DictItems().begin();
 
   // function_name is the only key exists in the dictionary */
-  const auto& function_name = it.key();
-  const auto& kwargs = it.value();
+  const auto& function_name = it->first;
+  const auto& kwargs = it->second;
 
   if (registered_functions_.find(function_name) ==
       registered_functions_.end()) {
     // TODO(stimim): Should report an error.
-    LOG(ERROR) << "function `" << function_name << "` not found";
+    LOG(ERROR) << "Function \"" << function_name << "\" not found";
     return nullptr;
   }
 
   if (!kwargs.is_dict()) {
     // TODO(stimim): implement syntax sugar.
-    LOG(ERROR) << "function argument must be an dictionary";
+    LOG(ERROR) << "Function argument should be a dictionary";
     return nullptr;
   }
 
-  const base::DictionaryValue* dict_args;
-  kwargs.GetAsDictionary(&dict_args);
-
   std::unique_ptr<ProbeFunction> ret_value =
-      registered_functions_[function_name](*dict_args);
-  ret_value->raw_value_ = dict_value.CreateDeepCopy();
+      registered_functions_[function_name](kwargs);
+  ret_value->raw_value_ = dv.Clone();
 
   return ret_value;
 }
@@ -136,6 +137,7 @@ constexpr auto kDebugdRunProbeHelperDefaultTimeoutMs = 10 * 1000;  // in ms
 
 bool ProbeFunction::InvokeHelper(std::string* result) const {
   std::string tmp_json_string;
+  CHECK(raw_value_.has_value());
   base::JSONWriter::Write(*raw_value_, &tmp_json_string);
 
   dbus::Bus::Options ops;

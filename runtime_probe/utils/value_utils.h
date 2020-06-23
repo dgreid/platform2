@@ -11,8 +11,7 @@
 
 namespace runtime_probe {
 // Append the given |prefix| to each key in the |dict_value|.
-void PrependToDVKey(base::DictionaryValue* dict_value,
-                    const std::string& prefix);
+void PrependToDVKey(base::Value* dict_value, const std::string& prefix);
 
 // Change the name of key |old_key| to |new_key|.
 bool RenameKey(base::Value* dv,

@@ -24,19 +24,19 @@ class GenericStorageFunction : public StorageFunction {
   static constexpr auto function_name = "generic_storage";
   std::string GetFunctionName() const override { return function_name; }
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value);
 
  protected:
-  base::DictionaryValue EvalByDV(
-      const base::DictionaryValue& storage_dv) const override;
+  base::Optional<base::Value> EvalByDV(
+      const base::Value& storage_dv) const override;
   // Eval the storage indicated by |node_path| inside the
   // runtime_probe_helper.
-  base::DictionaryValue EvalInHelperByPath(
+  base::Optional<base::Value> EvalInHelperByPath(
       const base::FilePath& node_path) const override;
 
  private:
-  // Use FromDictionaryValue to ensure the arg is correctly parsed.
+  // Use FromValue to ensure the arg is correctly parsed.
   GenericStorageFunction() = default;
 
   static ProbeFunction::Register<GenericStorageFunction> register_;

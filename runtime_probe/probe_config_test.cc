@@ -32,14 +32,11 @@ TEST(ProbeConfigTest, LoadConfig) {
       }
     }
   })";
+  auto dict_value = base::JSONReader::Read(config_content);
 
-  auto val = base::JSONReader::Read(config_content);
-  base::DictionaryValue* dict_value = nullptr;
-  val->GetAsDictionary(&dict_value);
+  EXPECT_TRUE(dict_value.has_value());
 
-  EXPECT_NE(dict_value, nullptr);
-
-  auto probe_config = ProbeConfig::FromDictionaryValue(*dict_value);
+  auto probe_config = ProbeConfig::FromValue(*dict_value);
 
   EXPECT_NE(probe_config, nullptr);
 
@@ -57,7 +54,7 @@ TEST(ProbeConfigTest, LoadConfig) {
   EXPECT_EQ(probe_statement->component_name_, "generic");
   EXPECT_EQ(probe_statement->key_.size(), 0);
   EXPECT_NE(probe_statement->expect_, nullptr);
-  EXPECT_EQ(probe_statement->information_->size(), 0);
+  EXPECT_EQ(probe_statement->information_->DictSize(), 0);
   EXPECT_NE(probe_statement->eval_, nullptr);
 
   const SysfsFunction* probe_function =

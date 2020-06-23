@@ -208,47 +208,45 @@ bool MmcStorageFunction::CheckStorageTypeMatch(
   return true;
 }
 
-base::DictionaryValue MmcStorageFunction::EvalByDV(
-    const base::DictionaryValue& storage_dv) const {
-  std::string node_path;
+base::Optional<base::Value> MmcStorageFunction::EvalByDV(
+    const base::Value& storage_dv) const {
+  auto* node_path = storage_dv.FindStringKey("path");
 
-  if (!storage_dv.GetString("path", &node_path)) {
+  if (!node_path) {
     LOG(ERROR) << "No path in storage probe result";
-    return {};
+    return base::nullopt;
   }
-  base::DictionaryValue mmc_res{};
-  const std::string storage_fw_version =
-      GetStorageFwVersion(base::FilePath(node_path));
+  base::Value mmc_res(base::Value::Type::DICTIONARY);
+  auto storage_fw_version = GetStorageFwVersion(base::FilePath(*node_path));
   if (!storage_fw_version.empty())
-    mmc_res.SetString("storage_fw_version", storage_fw_version);
+    mmc_res.SetStringKey("storage_fw_version", storage_fw_version);
   return mmc_res;
 }
 
-base::DictionaryValue MmcStorageFunction::EvalInHelperByPath(
+base::Optional<base::Value> MmcStorageFunction::EvalInHelperByPath(
     const base::FilePath& node_path) const {
   VLOG(2) << "Processnig the node \"" << node_path.value() << "\"";
 
   if (!CheckStorageTypeMatch(node_path))
-    return {};
+    return base::nullopt;
 
   const auto mmc_path = node_path.Append("device");
 
   if (!base::PathExists(mmc_path)) {
     VLOG(1) << "eMMC-specific path does not exist on storage device \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
 
-  base::DictionaryValue mmc_res =
-      MapFilesToDict(mmc_path, kMmcFields, kMmcOptionalFields);
+  auto mmc_res = MapFilesToDict(mmc_path, kMmcFields, kMmcOptionalFields);
 
-  if (mmc_res.empty()) {
+  if (!mmc_res) {
     VLOG(1) << "eMMC-specific fields do not exist on storage \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
-  PrependToDVKey(&mmc_res, kMmcPrefix);
-  mmc_res.SetString("type", kMmcType);
+  PrependToDVKey(&*mmc_res, kMmcPrefix);
+  mmc_res->SetStringKey("type", kMmcType);
   return mmc_res;
 }
 

@@ -49,18 +49,17 @@ class FieldConverter {
     INVALID_VALUE = 4,
   };
 
-  // Try to find |field_name| in dict_value, and convert it to expected type.
+  // Try to find |field_name| in |dict_value|, and convert it to expected type.
   //
   // @return |ReturnCode| to indicate success or reason of failure.
   virtual ReturnCode Convert(const std::string& field_name,
-                             base::DictionaryValue* const dict_value) const = 0;
+                             base::Value* dict_value) const = 0;
 
   // Check if value of |field_name| in dict_value is valid.
   //
   // @return |ReturnCode| to indicate success or reason of failure.
-  virtual ReturnCode Validate(
-      const std::string& field_name,
-      base::DictionaryValue* const dict_value) const = 0;
+  virtual ReturnCode Validate(const std::string& field_name,
+                              base::Value* dict_value) const = 0;
 
   virtual std::string ToString() const = 0;
 
@@ -76,10 +75,10 @@ class FieldConverter {
 class StringFieldConverter : public FieldConverter {
  public:
   ReturnCode Convert(const std::string& field_name,
-                     base::DictionaryValue* const dict_value) const override;
+                     base::Value* dict_value) const override;
 
   ReturnCode Validate(const std::string& field_name,
-                      base::DictionaryValue* const dict_value) const override;
+                      base::Value* dict_value) const override;
 
   std::string ToString() const override;
 
@@ -128,10 +127,10 @@ class IntegerFieldConverter : public FieldConverter {
   using OperandType = int;
 
   ReturnCode Convert(const std::string& field_name,
-                     base::DictionaryValue* const dict_value) const override;
+                     base::Value* dict_value) const override;
 
   ReturnCode Validate(const std::string& field_name,
-                      base::DictionaryValue* const dict_value) const override;
+                      base::Value* dict_value) const override;
 
   std::string ToString() const override;
 
@@ -165,10 +164,10 @@ class HexFieldConverter : public FieldConverter {
   using OperandType = int;
 
   ReturnCode Convert(const std::string& field_name,
-                     base::DictionaryValue* const dict_value) const override;
+                     base::Value* dict_value) const override;
 
   ReturnCode Validate(const std::string& field_name,
-                      base::DictionaryValue* const dict_value) const override;
+                      base::Value* dict_value) const override;
 
   std::string ToString() const override;
 
@@ -199,10 +198,10 @@ class DoubleFieldConverter : public FieldConverter {
   using OperandType = double;
 
   ReturnCode Convert(const std::string& field_name,
-                     base::DictionaryValue* const dict_value) const override;
+                     base::Value* dict_value) const override;
 
   ReturnCode Validate(const std::string& field_name,
-                      base::DictionaryValue* const dict_value) const override;
+                      base::Value* dict_value) const override;
 
   std::string ToString() const override;
 
@@ -225,7 +224,7 @@ class DoubleFieldConverter : public FieldConverter {
 
 // Holds |expect| attribute of a |ProbeStatement|.
 //
-// |expect| attribute should be a |DictionaryValue| with following format:
+// |expect| attribute should be a |Value| with following format:
 // {
 //   <key_of_probe_result>: [<required:bool>, <expected_type:string>,
 //                           <optional_validate_rule:string>]
@@ -244,19 +243,19 @@ class DoubleFieldConverter : public FieldConverter {
 // TODO(b/121354690): Handle |optional_validate_rule|.
 class ProbeResultChecker {
  public:
-  static std::unique_ptr<ProbeResultChecker> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeResultChecker> FromValue(
+      const base::Value& dict_value);
 
   // Apply |expect| rules to |probe_result|
   //
   // @return |true| if all required fields are converted successfully.
-  bool Apply(base::DictionaryValue* probe_result) const;
+  bool Apply(base::Value* probe_result) const;
 
  private:
   std::map<std::string, std::unique_ptr<FieldConverter>> required_fields_;
   std::map<std::string, std::unique_ptr<FieldConverter>> optional_fields_;
 
-  FRIEND_TEST(ProbeResultCheckerTest, TestFromDictionaryValue);
+  FRIEND_TEST(ProbeResultCheckerTest, TestFromValue);
 };
 
 }  // namespace runtime_probe

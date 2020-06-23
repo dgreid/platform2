@@ -48,8 +48,8 @@ class ProbeStatement {
    * "expect" rules.  See |ProbeStatement.Eval()| for more details.
    */
  public:
-  static std::unique_ptr<ProbeStatement> FromDictionaryValue(
-      std::string component_name, const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeStatement> FromValue(std::string component_name,
+                                                   const base::Value& dv);
 
   /* Evaluate the probe statement.
    *
@@ -61,10 +61,10 @@ class ProbeStatement {
    */
   ProbeFunction::DataType Eval() const;
 
-  std::unique_ptr<base::DictionaryValue> GetInformation() const {
-    if (information_ != nullptr)
-      return information_->CreateDeepCopy();
-    return nullptr;
+  base::Optional<base::Value> GetInformation() const {
+    if (information_)
+      return information_->Clone();
+    return base::nullopt;
   }
 
  private:
@@ -74,7 +74,7 @@ class ProbeStatement {
   std::unique_ptr<ProbeFunction> eval_;
   std::set<std::string> key_;
   std::unique_ptr<ProbeResultChecker> expect_;
-  const base::DictionaryValue* information_ = nullptr;
+  base::Optional<base::Value> information_;
 
   FRIEND_TEST(ProbeConfigTest, LoadConfig);
   FRIEND_TEST(ProbeStatementTest, TestEval);

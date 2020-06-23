@@ -24,7 +24,7 @@ class ShellFunction : public ProbeFunction {
 
   /* Define a parser for this function.
    *
-   * This function takes the arguments in `const base::DictionaryValue&` type.
+   * This function takes the arguments in `const base::Value&` type.
    * This function should parse the `dict_value`, if the `dict_value` has
    * correct format, this function should return a new instance of
    * `ShellFunction` whose members are decided by `dict_value`.
@@ -34,12 +34,12 @@ class ShellFunction : public ProbeFunction {
    * @return pointer to new `ShellFunction` instance on success, nullptr
    *   otherwise.
    */
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
     /* Create an instance of ShellFunction.
      * **NOTE: The name should always be "instance" for PARSE_ARGUMENT to work**
      */
-    std::unique_ptr<ShellFunction> instance{new ShellFunction()};
+    auto instance = std::make_unique<ShellFunction>();
 
     bool result = true;
 
@@ -53,7 +53,7 @@ class ShellFunction : public ProbeFunction {
     return nullptr;
   }
 
-  /* Override `Eval` function, which should return a list of DictionaryValue  */
+  /* Override `Eval` function, which should return a list of Value  */
   DataType Eval() const override {
     VLOG(1) << "command: " << command_;
     /* TODO(stimim): implement this */

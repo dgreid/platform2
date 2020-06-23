@@ -58,12 +58,12 @@ bool NvmeStorageFunction::CheckStorageTypeMatch(
   return true;
 }
 
-base::DictionaryValue NvmeStorageFunction::EvalInHelperByPath(
+base::Optional<base::Value> NvmeStorageFunction::EvalInHelperByPath(
     const base::FilePath& node_path) const {
   VLOG(2) << "Processnig the node \"" << node_path.value() << "\"";
 
   if (!CheckStorageTypeMatch(node_path))
-    return {};
+    return base::nullopt;
 
   // For NVMe device, "<node_path>/device/device/.." is exactly where we want to
   // look at.
@@ -72,21 +72,21 @@ base::DictionaryValue NvmeStorageFunction::EvalInHelperByPath(
   if (!base::PathExists(nvme_path)) {
     VLOG(1) << "NVMe-speific path does not exist on storage device \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
 
-  base::DictionaryValue nvme_res = MapFilesToDict(nvme_path, kNvmeFields, {});
+  auto nvme_res = MapFilesToDict(nvme_path, kNvmeFields, {});
 
-  if (nvme_res.empty()) {
+  if (!nvme_res) {
     VLOG(1) << "Cannot find NVMe-specific fields on storage \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
-  PrependToDVKey(&nvme_res, kNvmePrefix);
-  nvme_res.SetString("type", kNvmeType);
+  PrependToDVKey(&*nvme_res, kNvmePrefix);
+  nvme_res->SetStringKey("type", kNvmeType);
   const std::string storage_fw_version = GetStorageFwVersion(node_path);
   if (!storage_fw_version.empty())
-    nvme_res.SetString("storage_fw_version", storage_fw_version);
+    nvme_res->SetStringKey("storage_fw_version", storage_fw_version);
   return nvme_res;
 }
 

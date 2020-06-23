@@ -13,30 +13,30 @@
 namespace runtime_probe {
 
 // Append the given |prefix| to each key in the |dict_value|.
-void PrependToDVKey(base::DictionaryValue* dict_value,
-                    const std::string& prefix) {
+void PrependToDVKey(base::Value* dict_value, const std::string& prefix) {
+  if (!dict_value->is_dict())
+    return;
   if (prefix.empty())
     return;
   std::vector<std::string> original_keys;
-  for (base::DictionaryValue::Iterator it(*dict_value); !it.IsAtEnd();
-       it.Advance()) {
-    original_keys.push_back(it.key());
+  for (const auto& entry : dict_value->DictItems()) {
+    original_keys.push_back(entry.first);
   }
   for (const auto& key : original_keys) {
-    std::unique_ptr<base::Value> tmp;
-    dict_value->Remove(key, &tmp);
-    dict_value->SetString(prefix + key, tmp->GetString());
+    auto value = dict_value->ExtractKey(key);
+    dict_value->SetKey(prefix + key, std::move(*value));
   }
 }
 
 bool RenameKey(base::Value* dv,
                const std::string& old_key,
                const std::string& new_key) {
-  auto value = dv->FindKey(old_key);
+  if (!dv->is_dict())
+    return false;
+  auto value = dv->ExtractKey(old_key);
   if (!value)
     return false;
   dv->SetKey(new_key, std::move(*value));
-  dv->RemoveKey(old_key);
   return true;
 }
 

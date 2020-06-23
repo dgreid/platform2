@@ -84,12 +84,12 @@ bool ReadUsbSysfs(const base::FilePath& path, base::Value* res) {
       LOG(ERROR) << "Failed to read the required field " << field.key_name;
       return false;
     }
-    res->SetKey(field.key_name, base::Value(content));
+    res->SetStringKey(field.key_name, content);
   }
   for (const auto& field : kOptionalFields) {
     std::string content;
     if (ReadSysfs(path, field, &content)) {
-      res->SetKey(field.key_name, base::Value(content));
+      res->SetStringKey(field.key_name, content);
     }
   }
   return true;
@@ -101,31 +101,28 @@ bool ExploreAsUsbCamera(const base::FilePath& path, base::Value* res) {
 
 }  // namespace
 
-std::unique_ptr<ProbeFunction> UsbCameraFunction::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  auto instance = std::make_unique<UsbCameraFunction>();
-
+std::unique_ptr<ProbeFunction> UsbCameraFunction::FromValue(
+    const base::Value& dict_value) {
   if (dict_value.DictSize() != 0) {
     LOG(ERROR) << function_name << " does not take any arguments.";
     return nullptr;
   }
-  return instance;
+  return std::make_unique<UsbCameraFunction>();
 }
 
 UsbCameraFunction::DataType UsbCameraFunction::Eval() const {
-  DataType result;
-
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve usb camera results.";
-    return result;
+    return {};
+  }
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return {};
   }
 
-  for (auto& camera_result : json_output->GetList()) {
-    result.push_back(
-        std::move(static_cast<base::DictionaryValue&>(camera_result)));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 
 int UsbCameraFunction::EvalInHelper(std::string* output) const {
@@ -140,9 +137,9 @@ int UsbCameraFunction::EvalInHelper(std::string* output) const {
   for (auto video_path = path_it.Next(); !video_path.empty();
        video_path = path_it.Next()) {
     base::Value res(base::Value::Type::DICTIONARY);
-    res.SetKey("path", base::Value(video_path.value()));
+    res.SetStringKey("path", video_path.value());
     if (ExploreAsUsbCamera(video_path, &res)) {
-      res.SetKey("bus_type", base::Value("usb"));
+      res.SetStringKey("bus_type", "usb");
       result.GetList().push_back(std::move(res));
     }
   }

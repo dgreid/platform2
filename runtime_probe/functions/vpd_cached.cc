@@ -12,28 +12,19 @@
 
 namespace runtime_probe {
 
-using base::DictionaryValue;
-using base::Value;
-
 VPDCached::DataType VPDCached::Eval() const {
-  DataType result;
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve cached vpd information.";
-    return result;
+    return {};
   }
-
   if (!json_output->is_list()) {
     LOG(ERROR) << "Failed to parse json output as list.";
-    return result;
+    return {};
   }
 
-  for (auto& helper_result : json_output->GetList()) {
-    base::DictionaryValue* result_dict = nullptr;
-    if (helper_result.GetAsDictionary(&result_dict))
-      result.push_back(std::move(*result_dict));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 int VPDCached::EvalInHelper(std::string* output) const {
   constexpr char kSysfsVPDCached[] = "/sys/firmware/vpd/ro/";
@@ -46,24 +37,25 @@ int VPDCached::EvalInHelper(std::string* output) const {
   // sku_number is allowed to be exposed as stated in b/130322365#c28
   allowed_optional_keys.push_back("sku_number");
 
-  base::ListValue result{};
-
   const base::FilePath vpd_ro_path{kSysfsVPDCached};
   const auto dict_value =
       MapFilesToDict(vpd_ro_path, allowed_require_keys, allowed_optional_keys);
+  base::Value dict_with_prefix(base::Value::Type::DICTIONARY);
 
-  DictionaryValue dict_with_prefix;
-  std::string vpd_value;
-  if (!dict_value.GetString(vpd_name_, &vpd_value)) {
-    LOG(WARNING) << "vpd field " << vpd_name_
-                 << " does not exist or is not allowed to be probed.";
-  } else {
-    // Add vpd_ prefix to every field.
-    dict_with_prefix.SetString("vpd_" + vpd_name_, vpd_value);
+  if (dict_value) {
+    auto* vpd_value = dict_value->FindStringKey(vpd_name_);
+    if (!vpd_value) {
+      LOG(WARNING) << "vpd field " << vpd_name_
+                   << " does not exist or is not allowed to be probed.";
+    } else {
+      // Add vpd_ prefix to every field.
+      dict_with_prefix.SetStringKey("vpd_" + vpd_name_, *vpd_value);
+    }
   }
 
-  if (!dict_with_prefix.empty()) {
-    result.Append(dict_with_prefix.CreateDeepCopy());
+  base::Value result(base::Value::Type::LIST);
+  if (!dict_with_prefix.DictEmpty()) {
+    result.GetList().push_back(std::move(dict_with_prefix));
   }
 
   if (!base::JSONWriter::Write(result, output)) {

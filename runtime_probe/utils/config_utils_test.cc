@@ -28,11 +28,11 @@ TEST(ConfigParserTest, ReadFromFile) {
   // File is not in JSON format. The returned object should evaluate to false.
   EXPECT_FALSE(ParseProbeConfig(GetTestDataPath("test.txt")));
   // testdata/probe_config.json is a valid JSON file. The returned object should
-  // evaluate to true and contains non-empty DictionaryValue,
+  // evaluate to true and contains non-empty Value,
   const auto probe_config_data =
       ParseProbeConfig(GetTestDataPath("probe_config.json"));
   EXPECT_TRUE(probe_config_data);
-  EXPECT_FALSE(probe_config_data.value().config_dv.empty());
+  EXPECT_FALSE(probe_config_data.value().config.DictEmpty());
   // Calculated by sha1sum testdata/probe_config.json
   EXPECT_EQ(probe_config_data.value().sha1_hash,
             "B4B67B8FB7B094783926CC581850C492C5A246A4");

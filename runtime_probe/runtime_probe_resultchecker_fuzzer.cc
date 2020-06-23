@@ -36,9 +36,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     rule = R"(, ")" + ops[op] + JsonSafe(str) + R"(" )";
   }
 
-  const auto json_string = R"({
+  const auto expect_string = R"({
     "str": [true, "str")" + rule +
-                           R"(],
+                             R"(],
     "int": [true, "int"],
     "double": [true, "double"],
     "hex": [true, "hex"]
@@ -57,18 +57,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     "hex": ")" + JsonSafe(str[3]) + R"("
   })";
 
-  auto probe_result_val = base::JSONReader::Read(probe_result_string);
-  base::DictionaryValue* probe_result = nullptr;
-  probe_result_val->GetAsDictionary(&probe_result);
+  auto expect = base::JSONReader::Read(expect_string);
+  if (!expect.has_value())
+    return 0;
 
-  auto checker_val = base::JSONReader::Read(json_string);
-  base::DictionaryValue* checker_dict = nullptr;
-  checker_val->GetAsDictionary(&checker_dict);
-  auto checker = ProbeResultChecker::FromDictionaryValue(*checker_dict);
+  auto probe_result = base::JSONReader::Read(probe_result_string);
+  if (!probe_result.has_value())
+    return 0;
 
-  if (checker != nullptr && probe_result != nullptr)
-    checker->Apply(probe_result);
+  auto checker = ProbeResultChecker::FromValue(*expect);
+  if (checker == nullptr)
+    return 0;
 
+  checker->Apply(&*probe_result);
   return 0;
 }
 

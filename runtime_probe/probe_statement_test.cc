@@ -28,26 +28,24 @@ TEST(ProbeStatementTest, TestEval) {
   auto expect_string = R"({
     "expected_field": [true, "str"]
   })";
-  auto val = base::JSONReader::Read(expect_string);
-  base::DictionaryValue* expect = nullptr;
-  val->GetAsDictionary(&expect);
+  auto expect = base::JSONReader::Read(expect_string);
+  ASSERT_TRUE(expect.has_value());
+  ASSERT_TRUE(expect->is_dict());
 
-  probe_statement.expect_ = ProbeResultChecker::FromDictionaryValue(*expect);
+  probe_statement.expect_ = ProbeResultChecker::FromValue(*expect);
 
   // Set up |eval_|
   auto mock_eval = std::make_unique<MockProbeFunction>();
 
-  base::DictionaryValue good_result;
-  good_result.SetString("expected_field", "expected");
-  good_result.SetString("optional_field", "optional");
+  base::Value good_result(base::Value::Type::DICTIONARY);
+  good_result.SetStringKey("expected_field", "expected");
+  good_result.SetStringKey("optional_field", "optional");
 
-  base::DictionaryValue good_result2;  // duplicate due to copy limit
-  good_result2.SetString("expected_field", "expected");
-  good_result2.SetString("optional_field", "optional");
+  auto good_result2 = good_result.Clone();
 
   // bad_result is empty, which doesn't have expected field
-  base::DictionaryValue bad_result;
-  bad_result.SetString("optional_field", "optional");
+  base::Value bad_result(base::Value::Type::DICTIONARY);
+  bad_result.SetStringKey("optional_field", "optional");
 
   ProbeFunction::DataType val_a;
   // val_a{std::move(x), std::move(y)} implicitly calls the copy constructor
@@ -69,12 +67,13 @@ TEST(ProbeStatementTest, TestEval) {
     auto results = probe_statement.Eval();
     ASSERT_EQ(results.size(), 1);
 
-    std::string str_value;
-    ASSERT_TRUE(results[0].GetString("expected_field", &str_value));
-    ASSERT_EQ(str_value, "expected");
+    auto* str_value = results[0].FindStringKey("expected_field");
+    ASSERT_NE(str_value, nullptr);
+    ASSERT_EQ(*str_value, "expected");
 
-    ASSERT_TRUE(results[0].GetString("optional_field", &str_value));
-    ASSERT_EQ(str_value, "optional");
+    str_value = results[0].FindStringKey("optional_field");
+    ASSERT_NE(str_value, nullptr);
+    ASSERT_EQ(*str_value, "optional");
   }
 }
 

@@ -12,54 +12,50 @@
 
 namespace runtime_probe {
 
-std::unique_ptr<ComponentCategory> ComponentCategory::FromDictionaryValue(
-    const std::string& category_name, const base::DictionaryValue& dict_value) {
-  std::unique_ptr<ComponentCategory> instance{new ComponentCategory};
-
-  instance->category_name_ = category_name;
-
-  for (base::DictionaryValue::Iterator it{dict_value}; !it.IsAtEnd();
-       it.Advance()) {
-    const auto component_name = it.key();
-    const base::DictionaryValue* probe_statement_dict_value;
-
-    if (!it.value().GetAsDictionary(&probe_statement_dict_value)) {
-      LOG(ERROR) << "Component " << component_name
-                 << " doesn't map to a DictionaryValue: " << it.value();
-      instance = nullptr;
-      break;
-    }
-
-    instance->component_[component_name] = ProbeStatement::FromDictionaryValue(
-        component_name, *probe_statement_dict_value);
-
-    if (!instance->component_[component_name]) {
-      instance = nullptr;
-      break;
-    }
+std::unique_ptr<ComponentCategory> ComponentCategory::FromValue(
+    const std::string& category_name, const base::Value& dv) {
+  if (!dv.is_dict()) {
+    LOG(ERROR) << "ComponentCategory::FromValue takes a dictionary as"
+               << " parameter";
+    return nullptr;
   }
 
-  if (!instance)
-    LOG(ERROR) << "Failed to parse " << dict_value << " as ComponentCategory";
+  std::unique_ptr<ComponentCategory> instance{new ComponentCategory()};
+  instance->category_name_ = category_name;
+
+  for (const auto& entry : dv.DictItems()) {
+    const auto& component_name = entry.first;
+    const auto& value = entry.second;
+    auto probe_statement = ProbeStatement::FromValue(component_name, value);
+    if (!probe_statement) {
+      LOG(ERROR) << "Component " << component_name
+                 << " doesn't contain a valid probe statement.";
+      return nullptr;
+    }
+    instance->component_[component_name] = std::move(probe_statement);
+  }
+
   return instance;
 }
 
-std::unique_ptr<base::ListValue> ComponentCategory::Eval() const {
-  std::unique_ptr<base::ListValue> result{new base::ListValue};
+base::Value ComponentCategory::Eval() const {
+  base::Value::ListStorage results;
 
-  for (const auto& kv : component_) {
-    for (const auto& probe_statement_dv : kv.second->Eval()) {
-      std::unique_ptr<base::DictionaryValue> tmp{new base::DictionaryValue};
-      tmp->SetString("name", kv.first);
-      tmp->Set("values", probe_statement_dv.CreateDeepCopy());
-      auto information_dv = kv.second->GetInformation();
+  for (const auto& entry : component_) {
+    const auto& component_name = entry.first;
+    const auto& probe_statement = entry.second;
+    for (auto& probe_statement_dv : probe_statement->Eval()) {
+      base::Value result(base::Value::Type::DICTIONARY);
+      result.SetStringKey("name", component_name);
+      result.SetKey("values", std::move(probe_statement_dv));
+      auto information_dv = probe_statement->GetInformation();
       if (information_dv)
-        tmp->Set("information", std::move(information_dv));
-      result->Append(std::move(tmp));
+        result.SetKey("information", std::move(*information_dv));
+      results.push_back(std::move(result));
     }
   }
 
-  return result;
+  return base::Value(std::move(results));
 }
 
 }  // namespace runtime_probe

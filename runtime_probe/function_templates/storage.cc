@@ -114,53 +114,51 @@ int32_t StorageFunction::GetStorageLogicalBlockSize(
 }
 
 StorageFunction::DataType StorageFunction::Eval() const {
-  DataType result{};
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR)
         << "Failed to invoke helper to retrieve cached storage information.";
-    return result;
+    return {};
   }
 
-  for (auto& value : json_output->GetList()) {
-    base::DictionaryValue* storage_res;
-    value.GetAsDictionary(&storage_res);
-    const auto storage_aux_res = EvalByDV(*storage_res);
-    if (!storage_aux_res.empty())
-      storage_res->MergeDictionary(&storage_aux_res);
-    result.push_back(std::move(*storage_res));
+  DataType results(std::move(json_output->GetList()));
+  for (auto& storage_res : results) {
+    const auto storage_aux_res = EvalByDV(storage_res);
+    if (storage_aux_res)
+      storage_res.MergeDictionary(&*storage_aux_res);
   }
-  return result;
+  return results;
 }
 
 int StorageFunction::EvalInHelper(std::string* output) const {
   const auto storage_nodes_path_list = GetFixedDevices();
-  base::ListValue result{};
+  base::Value result(base::Value::Type::LIST);
 
   for (const auto& node_path : storage_nodes_path_list) {
     VLOG(2) << "Processnig the node " << node_path.value();
 
     // Get type specific fields and their values.
     auto node_res = EvalInHelperByPath(node_path);
-    if (node_res.empty())
+    if (!node_res)
       continue;
 
     // Report the absolute path we probe the reported info from.
-    node_res.SetString("path", node_path.value());
+    node_res->SetStringKey("path", node_path.value());
 
     // Get size of storage.
     const auto sector_count = GetStorageSectorCount(node_path);
     const int32_t logical_block_size = GetStorageLogicalBlockSize(node_path);
     if (!sector_count) {
-      node_res.SetString("sectors", "-1");
-      node_res.SetString("size", "-1");
+      node_res->SetStringKey("sectors", "-1");
+      node_res->SetStringKey("size", "-1");
     } else {
-      node_res.SetString("sectors", base::NumberToString(sector_count.value()));
-      node_res.SetString("size", base::NumberToString(sector_count.value() *
-                                                      logical_block_size));
+      node_res->SetStringKey("sectors",
+                             base::NumberToString(sector_count.value()));
+      node_res->SetStringKey("size", base::NumberToString(sector_count.value() *
+                                                          logical_block_size));
     }
 
-    result.Append(node_res.CreateDeepCopy());
+    result.GetList().push_back(std::move(*node_res));
   }
   if (!base::JSONWriter::Write(result, output)) {
     LOG(ERROR) << "Failed to serialize storage probed result to json string";
@@ -168,6 +166,11 @@ int StorageFunction::EvalInHelper(std::string* output) const {
   }
 
   return 0;
+}
+
+base::Optional<base::Value> StorageFunction::EvalByDV(
+    const base::Value& storage_dv) const {
+  return base::nullopt;
 }
 
 }  // namespace runtime_probe

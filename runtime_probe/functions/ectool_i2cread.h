@@ -37,15 +37,14 @@ class EctoolI2Cread : public ProbeFunction {
   //
   // @return pointer to new `EctoolI2Cread` instance on success, nullptr
   //   otherwise.
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
-    std::unique_ptr<EctoolI2Cread> instance{new EctoolI2Cread()};
-
-    if (dict_value.size() != 5) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
+    if (dict_value.DictSize() != 5) {
       LOG(ERROR) << function_name << " expect 5 arguments.";
       return nullptr;
     }
 
+    auto instance = std::make_unique<EctoolI2Cread>();
     bool result = true;
 
     result &= PARSE_ARGUMENT(size);

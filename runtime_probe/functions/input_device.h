@@ -20,8 +20,8 @@ class InputDeviceFunction : public ProbeFunction {
 
   std::string GetFunctionName() const override { return function_name; }
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value);
 
   DataType Eval() const override;
 

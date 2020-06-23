@@ -39,16 +39,13 @@ TEST(SysfsFunctionTest, TestRead) {
   base::CreateDirectory(dir_c);
   base::WriteFile(dir_c.Append("2"), "c2", strlen("c2"));
 
-  base::DictionaryValue* dict_value = nullptr;
   auto json_val = base::JSONReader::Read(R"({
       "keys": ["1"],
       "optional_keys": ["2"]
   })");
-  json_val->GetAsDictionary(&dict_value);
-
-  dict_value->SetString("dir_path", temp_dir.GetPath().Append("D*").value());
-  auto p = SysfsFunction::FromDictionaryValue(*dict_value);
-  ASSERT_TRUE(p) << "Failed to create SysfsFunction: " << dict_value;
+  json_val->SetStringKey("dir_path", temp_dir.GetPath().Append("D*").value());
+  auto p = SysfsFunction::FromValue(*json_val);
+  ASSERT_TRUE(p) << "Failed to create SysfsFunction: " << *json_val;
 
   auto f = dynamic_cast<SysfsFunction*>(p.get());
   ASSERT_TRUE(f) << "Loaded function is not a SysfsFunction";
@@ -58,21 +55,18 @@ TEST(SysfsFunctionTest, TestRead) {
   ASSERT_EQ(results.size(), 2);
 
   for (auto& result : results) {
-    ASSERT_TRUE(result.HasKey("1")) << "result: " << result;
+    auto* value_1 = result.FindStringKey("1");
+    ASSERT_TRUE(value_1) << "result: " << result;
 
-    std::string value_1;
-    result.GetString("1", &value_1);
+    ASSERT_EQ(value_1->at(1), '1') << "result: " << result;
 
-    ASSERT_EQ(value_1.at(1), '1') << "result: " << result;
-
-    switch (value_1.at(0)) {
+    switch (value_1->at(0)) {
       case 'a':
         break;
       case 'b': {
-        ASSERT_TRUE(result.HasKey("2")) << "result: " << result;
-        std::string value_2;
-        result.GetString("2", &value_2);
-        ASSERT_EQ(value_2, "b2") << "result: " << result;
+        auto* value_2 = result.FindStringKey("2");
+        ASSERT_TRUE(value_2) << "result: " << result;
+        ASSERT_EQ(*value_2, "b2") << "result: " << result;
       } break;
       default:
         ASSERT_TRUE(false) << "result: " << result;

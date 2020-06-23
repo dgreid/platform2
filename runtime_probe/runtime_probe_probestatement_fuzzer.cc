@@ -105,15 +105,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       return 0;
   }
 
-  base::DictionaryValue* dict = nullptr;
-  auto val = base::JSONReader::Read(eval_str);
-  val->GetAsDictionary(&dict);
+  auto eval = base::JSONReader::Read(eval_str);
+  if (!eval.has_value())
+    return 0;
   if (op == 0 || op == 1) {  // Fuzz Eval
-    auto probe_statement = ProbeStatement::FromDictionaryValue("nop", *dict);
+    auto probe_statement = ProbeStatement::FromValue("nop", *eval);
+
     if (probe_statement != nullptr)
       auto results = probe_statement->Eval();
   } else {  // Fuzz EvalInHelper
-    auto probe_function = runtime_probe::ProbeFunction::FromValue(*dict);
+    auto probe_function = runtime_probe::ProbeFunction::FromValue(*eval);
 
     if (probe_function != nullptr) {
       string output;

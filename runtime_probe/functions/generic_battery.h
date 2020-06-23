@@ -37,15 +37,13 @@ class GenericBattery : public ProbeFunction {
    * @return pointer to new `GenericBattery` instance on success, nullptr
    *   otherwise.
    */
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
-    std::unique_ptr<GenericBattery> instance{new GenericBattery()};
-
-    if (dict_value.size() != 0) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
+    if (dict_value.DictSize() != 0) {
       LOG(ERROR) << function_name << " doesn't take any argument.";
       return nullptr;
     }
-    return instance;
+    return std::make_unique<GenericBattery>();
   }
 
   std::string GetFunctionName() const override { return function_name; }

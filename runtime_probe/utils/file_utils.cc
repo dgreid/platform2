@@ -11,11 +11,11 @@
 
 #include "runtime_probe/utils/file_utils.h"
 
-using base::DictionaryValue;
 using base::FilePath;
 using base::PathExists;
 using base::ReadFileToStringWithMaxSize;
 using base::TrimWhitespaceASCII;
+using base::Value;
 using base::TrimPositions::TRIM_ALL;
 using std::pair;
 using std::string;
@@ -48,10 +48,10 @@ string GetFileName(const pair<string, string>& key) {
 namespace runtime_probe {
 
 template <typename KeyType>
-DictionaryValue MapFilesToDict(const FilePath& dir_path,
-                               const vector<KeyType>& keys,
-                               const vector<KeyType>& optional_keys) {
-  DictionaryValue ret;
+base::Optional<Value> MapFilesToDict(const FilePath& dir_path,
+                                     const vector<KeyType>& keys,
+                                     const vector<KeyType>& optional_keys) {
+  Value ret(Value::Type::DICTIONARY);
 
   for (const auto& key : keys) {
     string file_name = GetFileName(key);
@@ -60,16 +60,18 @@ DictionaryValue MapFilesToDict(const FilePath& dir_path,
     string content;
 
     /* missing file */
-    if (!PathExists(file_path))
-      return {};
+    if (!PathExists(file_path)) {
+      LOG(ERROR) << file_path.value() << " doesn't exist";
+      return base::nullopt;
+    }
 
     /* file exists, but somehow we can't read it */
     if (!ReadFileToStringWithMaxSize(file_path, &content, kReadFileMaxSize)) {
       LOG(ERROR) << file_path.value() << " exists, but we can't read it";
-      return {};
+      return base::nullopt;
     }
 
-    ret.SetString(key_name, TrimWhitespaceASCII(content, TRIM_ALL));
+    ret.SetStringKey(key_name, TrimWhitespaceASCII(content, TRIM_ALL));
   }
 
   for (const auto& key : optional_keys) {
@@ -82,20 +84,20 @@ DictionaryValue MapFilesToDict(const FilePath& dir_path,
       continue;
 
     if (ReadFileToStringWithMaxSize(file_path, &content, kReadFileMaxSize))
-      ret.SetString(key_name, TrimWhitespaceASCII(content, TRIM_ALL));
+      ret.SetStringKey(key_name, TrimWhitespaceASCII(content, TRIM_ALL));
   }
 
   return ret;
 }
 
 // Explicit template instantiation
-template DictionaryValue MapFilesToDict<string>(
+template base::Optional<Value> MapFilesToDict<string>(
     const FilePath& dir_path,
     const vector<string>& keys,
     const vector<string>& optional_keys);
 
 // Explicit template instantiation
-template DictionaryValue MapFilesToDict<pair<string, string>>(
+template base::Optional<Value> MapFilesToDict<pair<string, string>>(
     const FilePath& dir_path,
     const vector<pair<string, string>>& keys,
     const vector<pair<string, string>>& optional_keys);

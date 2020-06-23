@@ -53,8 +53,8 @@ SysfsFunction::DataType SysfsFunction::Eval() const {
       break;
 
     auto dict_value = MapFilesToDict(sysfs_path, keys_, optional_keys_);
-    if (!dict_value.empty())
-      result.push_back(std::move(dict_value));
+    if (dict_value)
+      result.push_back(std::move(*dict_value));
   }
   return result;
 }

@@ -21,25 +21,19 @@ class AtaStorageFunction : public StorageFunction {
   static constexpr auto function_name = "ata_storage";
   std::string GetFunctionName() const override { return function_name; }
 
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
-    std::unique_ptr<AtaStorageFunction> instance{new AtaStorageFunction()};
-
-    if (dict_value.size() != 0) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
+    if (dict_value.DictSize() != 0) {
       LOG(ERROR) << function_name << " does not take any argument";
       return nullptr;
     }
-    return instance;
+    return std::make_unique<AtaStorageFunction>();
   }
 
  protected:
-  base::DictionaryValue EvalByDV(
-      const base::DictionaryValue& storage_dv) const override {
-    return {};
-  }
   // Eval the ATA storage indicated by |node_path| inside the
   // runtime_probe_helper.
-  base::DictionaryValue EvalInHelperByPath(
+  base::Optional<base::Value> EvalInHelperByPath(
       const base::FilePath& node_path) const override;
 
  private:

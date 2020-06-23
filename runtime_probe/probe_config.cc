@@ -4,6 +4,7 @@
  */
 
 #include <memory>
+#include <utility>
 
 #include <base/values.h>
 #include <brillo/map_utils.h>
@@ -13,43 +14,35 @@
 
 namespace runtime_probe {
 
-std::unique_ptr<ProbeConfig> ProbeConfig::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  std::unique_ptr<ProbeConfig> instance{new ProbeConfig};
-
-  for (base::DictionaryValue::Iterator it{dict_value}; !it.IsAtEnd();
-       it.Advance()) {
-    const auto category = it.key();
-    const base::DictionaryValue* components;
-
-    if (!it.value().GetAsDictionary(&components)) {
-      LOG(ERROR) << "Category " << category
-                 << " is not a DictionaryValue: " << it.value();
-      instance = nullptr;
-      break;
-    }
-
-    instance->category_[category] =
-        ComponentCategory::FromDictionaryValue(category, *components);
-
-    if (!instance->category_[category]) {
-      instance = nullptr;
-      break;
-    }
+std::unique_ptr<ProbeConfig> ProbeConfig::FromValue(const base::Value& dv) {
+  if (!dv.is_dict()) {
+    LOG(ERROR) << "ProbeConfig::FromValue takes a dictionary as parameter";
+    return nullptr;
   }
 
-  if (!instance)
-    LOG(ERROR) << "Failed to parse " << dict_value << " as ProbeConfig";
+  std::unique_ptr<ProbeConfig> instance{new ProbeConfig()};
+
+  for (const auto& entry : dv.DictItems()) {
+    const auto& category_name = entry.first;
+    const auto& value = entry.second;
+    auto category = ComponentCategory::FromValue(category_name, value);
+    if (!category) {
+      LOG(ERROR) << "Category " << category_name
+                 << " doesn't contain a valid probe statement.";
+      return nullptr;
+    }
+    instance->category_[category_name] = std::move(category);
+  }
+
   return instance;
 }
 
-std::unique_ptr<base::DictionaryValue> ProbeConfig::Eval() const {
+base::Value ProbeConfig::Eval() const {
   return Eval(brillo::GetMapKeysAsVector(category_));
 }
 
-std::unique_ptr<base::DictionaryValue> ProbeConfig::Eval(
-    const std::vector<std::string>& category) const {
-  std::unique_ptr<base::DictionaryValue> result{new base::DictionaryValue};
+base::Value ProbeConfig::Eval(const std::vector<std::string>& category) const {
+  base::Value result(base::Value::Type::DICTIONARY);
 
   for (const auto& c : category) {
     auto it = category_.find(c);
@@ -58,7 +51,7 @@ std::unique_ptr<base::DictionaryValue> ProbeConfig::Eval(
       continue;
     }
 
-    result->Set(c, it->second->Eval());
+    result.SetKey(c, it->second->Eval());
   }
 
   return result;

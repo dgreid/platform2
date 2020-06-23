@@ -21,24 +21,18 @@
 namespace runtime_probe {
 
 GenericBattery::DataType GenericBattery::Eval() const {
-  DataType result{};
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve battery sysfs results.";
-    return result;
+    return {};
   }
-
   if (!json_output->is_list()) {
     LOG(ERROR) << "Failed to parse json output as list.";
-    return result;
+    return {};
   }
 
-  for (auto& battery_result : json_output->GetList()) {
-    base::DictionaryValue* result_dict = nullptr;
-    if (battery_result.GetAsDictionary(&result_dict))
-      result.push_back(std::move(*result_dict));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 int GenericBattery::EvalInHelper(std::string* output) const {
   constexpr char kSysfsBatteryPath[] = "/sys/class/power_supply/BAT*";
@@ -53,7 +47,7 @@ int GenericBattery::EvalInHelper(std::string* output) const {
       "serial_number",      "status",
       "voltage_min_design", "voltage_now"};
 
-  base::ListValue result;
+  base::Value result(base::Value::Type::LIST);
 
   const base::FilePath glob_path{kSysfsBatteryPath};
   const auto glob_root = glob_path.DirName();
@@ -69,15 +63,17 @@ int GenericBattery::EvalInHelper(std::string* output) const {
       break;
 
     auto dict_value = MapFilesToDict(battery_path, keys, optional_keys);
-    if (!dict_value.empty()) {
-      std::string power_supply_type;
-      if (dict_value.GetString("type", &power_supply_type) &&
-          power_supply_type != kSysfsExpectedType) {
-        LOG(ERROR) << "power_supply_type [" << power_supply_type << "] is not ["
-                   << kSysfsExpectedType << "] for " << battery_path.value();
+    if (dict_value) {
+      auto* power_supply_type = dict_value->FindStringKey("type");
+      if (!power_supply_type)
+        continue;
+      if (*power_supply_type != kSysfsExpectedType) {
+        LOG(ERROR) << "power_supply_type [" << *power_supply_type
+                   << "] is not [" << kSysfsExpectedType << "] for "
+                   << battery_path.value();
         continue;
       }
-      dict_value.SetString("path", battery_path.value());
+      dict_value->SetStringKey("path", battery_path.value());
 
       pcrecpp::RE re(R"(BAT(\d+)$)", pcrecpp::RE_Options());
       int32_t battery_index;
@@ -85,14 +81,15 @@ int GenericBattery::EvalInHelper(std::string* output) const {
         VLOG(1) << "Can't extract index from " << battery_path.value();
       } else {
         // The extracted index starts from 0. Shift it to start from 1.
-        dict_value.SetString("index", base::NumberToString(battery_index + 1));
+        dict_value->SetStringKey("index",
+                                 base::NumberToString(battery_index + 1));
       }
 
-      result.Append(dict_value.CreateDeepCopy());
+      result.GetList().push_back(std::move(*dict_value));
     }
   }
 
-  if (result.GetSize() > 1) {
+  if (result.GetList().size() > 1) {
     LOG(ERROR) << "Multiple batteries is not supported yet.";
     return -1;
   }

@@ -74,7 +74,7 @@ std::vector<brillo::VariantDictionary> NetworkFunction::GetDevicesProps(
       continue;
     }
     auto device_type = device_props[shill::kTypeProperty].TryGet<std::string>();
-    if (type == base::nullopt || device_type == type) {
+    if (!type || device_type == type) {
       devices_props.push_back(std::move(device_props));
     }
   }
@@ -83,34 +83,26 @@ std::vector<brillo::VariantDictionary> NetworkFunction::GetDevicesProps(
 }
 
 NetworkFunction::DataType NetworkFunction::Eval() const {
-  DataType result{};
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR)
         << "Failed to invoke helper to retrieve cached network information.";
-    return result;
+    return {};
   }
 
   if (!json_output->is_list()) {
     LOG(ERROR) << "Failed to parse output from " << GetFunctionName()
                << "::EvalInHelper.";
-    return result;
+    return {};
   }
 
-  for (auto& value : json_output->GetList()) {
-    base::DictionaryValue* network_res;
-    if (!value.GetAsDictionary(&network_res)) {
-      DLOG(INFO) << "Unable to get result. Skipped.";
-      continue;
-    }
-    result.push_back(std::move(*network_res));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 
 int NetworkFunction::EvalInHelper(std::string* output) const {
   const auto devices_props = GetDevicesProps(GetNetworkType());
-  base::ListValue result{};
+  base::Value result(base::Value::Type::LIST);
 
   for (const auto& device_props : devices_props) {
     base::FilePath node_path(
@@ -123,24 +115,24 @@ int NetworkFunction::EvalInHelper(std::string* output) const {
 
     // Get type specific fields and their values.
     auto node_res = EvalInHelperByPath(node_path);
-    if (node_res.empty())
+    if (!node_res)
       continue;
 
     // Report the absolute path we probe the reported info from.
-    DLOG_IF(INFO, node_res.HasKey("path"))
+    DLOG_IF(INFO, node_res->FindStringKey("path"))
         << "Attribute \"path\" already existed. Overrided.";
-    node_res.SetString("path", node_path.value());
+    node_res->SetStringKey("path", node_path.value());
 
-    DLOG_IF(INFO, node_res.HasKey("type"))
+    DLOG_IF(INFO, node_res->FindStringKey("type"))
         << "Attribute \"type\" already existed. Overrided.";
     // Align with the category name.
     if (device_type == shill::kTypeWifi) {
-      node_res.SetString("type", kTypeWireless);
+      node_res->SetStringKey("type", kTypeWireless);
     } else {
-      node_res.SetString("type", device_type);
+      node_res->SetStringKey("type", device_type);
     }
 
-    result.Append(node_res.CreateDeepCopy());
+    result.GetList().push_back(std::move(*node_res));
   }
   if (!base::JSONWriter::Write(result, output)) {
     LOG(ERROR) << "Failed to serialize network probed result to json string.";
@@ -150,45 +142,47 @@ int NetworkFunction::EvalInHelper(std::string* output) const {
   return 0;
 }
 
-base::DictionaryValue NetworkFunction::EvalInHelperByPath(
+base::Optional<base::Value> NetworkFunction::EvalInHelperByPath(
     const base::FilePath& node_path) const {
-  base::DictionaryValue res;
-
-  const base::FilePath dev_path = node_path.Append("device");
-  const base::FilePath dev_real_path = base::MakeAbsoluteFilePath(dev_path);
-
-  const base::FilePath dev_subsystem_path = dev_path.Append("subsystem");
+  const auto dev_path = node_path.Append("device");
+  const auto dev_subsystem_path = dev_path.Append("subsystem");
   base::FilePath dev_subsystem_link_path;
   if (!base::ReadSymbolicLink(dev_subsystem_path, &dev_subsystem_link_path)) {
-    LOG(ERROR) << "Cannot get real path of " << dev_subsystem_path.value()
-               << ".";
-    return {};
+    LOG(ERROR) << "Cannot get real path of " << dev_subsystem_path.value();
+    return base::nullopt;
   }
 
   auto bus_type_idx = dev_subsystem_link_path.value().find_last_of('/') + 1;
   const std::string bus_type =
       dev_subsystem_link_path.value().substr(bus_type_idx);
 
-  res.SetString("bus_type", bus_type);
-
+  const std::vector<FieldType>*fields, *optional_fields;
+  base::FilePath field_path;
   if (bus_type == kBusTypePci) {
-    auto pci_res =
-        MapFilesToDict(dev_real_path, kPciFields, kPciOptionalFields);
-    PrependToDVKey(&pci_res, std::string(kBusTypePci) + "_");
-    res.MergeDictionary(&pci_res);
+    field_path = dev_path;
+    fields = &kPciFields;
+    optional_fields = &kPciOptionalFields;
   } else if (bus_type == kBusTypeSdio) {
-    auto sdio_res =
-        MapFilesToDict(dev_real_path, kSdioFields, kSdioOptionalFields);
-    PrependToDVKey(&sdio_res, std::string(kBusTypeSdio) + "_");
-    res.MergeDictionary(&sdio_res);
+    field_path = dev_path;
+    fields = &kSdioFields;
+    optional_fields = &kSdioOptionalFields;
   } else if (bus_type == kBusTypeUsb) {
-    const base::FilePath usb_real_path =
-        base::MakeAbsoluteFilePath(dev_real_path.Append(".."));
-    auto usb_res =
-        MapFilesToDict(usb_real_path, kUsbFields, kUsbOptionalFields);
-    PrependToDVKey(&usb_res, std::string(kBusTypeUsb) + "_");
-    res.MergeDictionary(&usb_res);
+    field_path = base::MakeAbsoluteFilePath(dev_path.Append(".."));
+    fields = &kUsbFields;
+    optional_fields = &kUsbOptionalFields;
+  } else {
+    LOG(ERROR) << "Unknown bus_type " << bus_type;
+    return base::nullopt;
   }
+
+  auto res = MapFilesToDict(field_path, *fields, *optional_fields);
+  if (!res) {
+    LOG(ERROR) << "Cannot find " << bus_type << "-specific fields on network \""
+               << dev_path.value() << "\"";
+    return base::nullopt;
+  }
+  PrependToDVKey(&*res, std::string(bus_type) + "_");
+  res->SetStringKey("bus_type", bus_type);
 
   return res;
 }

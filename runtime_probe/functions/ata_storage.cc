@@ -48,33 +48,33 @@ bool AtaStorageFunction::CheckStorageTypeMatch(
   return true;
 }
 
-base::DictionaryValue AtaStorageFunction::EvalInHelperByPath(
+base::Optional<base::Value> AtaStorageFunction::EvalInHelperByPath(
     const base::FilePath& node_path) const {
   VLOG(2) << "Processnig the node \"" << node_path.value() << "\"";
 
   if (!CheckStorageTypeMatch(node_path))
-    return {};
+    return base::nullopt;
 
   const auto ata_path = node_path.Append("device");
 
   if (!base::PathExists(ata_path)) {
     VLOG(1) << "ATA-specific path does not exist on storage device \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
 
-  base::DictionaryValue ata_res = MapFilesToDict(ata_path, kAtaFields, {});
+  auto ata_res = MapFilesToDict(ata_path, kAtaFields, {});
 
-  if (ata_res.empty()) {
+  if (!ata_res) {
     VLOG(1) << "ATA-specific fields do not exist on storage \""
             << node_path.value() << "\"";
-    return {};
+    return base::nullopt;
   }
-  PrependToDVKey(&ata_res, kAtaPrefix);
-  ata_res.SetString("type", kAtaType);
+  PrependToDVKey(&*ata_res, kAtaPrefix);
+  ata_res->SetStringKey("type", kAtaType);
   const std::string storage_fw_version = GetStorageFwVersion(node_path);
   if (!storage_fw_version.empty())
-    ata_res.SetString("storage_fw_version", storage_fw_version);
+    ata_res->SetStringKey("storage_fw_version", storage_fw_version);
   return ata_res;
 }
 

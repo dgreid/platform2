@@ -24,11 +24,11 @@ class NetworkFunction : public ProbeFunction {
   std::string GetFunctionName() const override = 0;
 
   // Must be implemented by derived function instead of
-  // ProbeFunction::FromDictionaryValue.
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) = delete;
+  // ProbeFunction::FromValue.
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) = delete;
 
-  // Override `Eval` function, which should return a list of DictionaryValue.
+  // Override `Eval` function, which should return a list of Value.
   DataType Eval() const final;
 
   int EvalInHelper(std::string* output) const override;
@@ -36,12 +36,11 @@ class NetworkFunction : public ProbeFunction {
  protected:
   virtual base::Optional<std::string> GetNetworkType() const = 0;
 
-  // Eval the network indicated by |node_path| in runtime_probe_helper. Return
-  // empty DictionaryValue if network type indicated by |node_path| does not
-  // match the target type. On the other hand, if the network type matches the
-  // target type, the return DictionaryValue must contain at least the
-  // "bus_type" key.
-  base::DictionaryValue EvalInHelperByPath(
+  // Evals the network indicated by |node_path| in runtime_probe_helper.
+  // Returns a dictionary type Value with device attributes of |node_path|,
+  // which must contain at least the "bus_type" key. On error, it returns
+  // base::nullopt.
+  base::Optional<base::Value> EvalInHelperByPath(
       const base::FilePath& node_path) const;
 
   // Get paths of all physical network.

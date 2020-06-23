@@ -32,37 +32,41 @@ namespace runtime_probe {
 class ProbeFunction;
 
 template <typename T>
-bool ParseArgument(const char* function_name,
-                   const char* member_name,
-                   T* member,
-                   const base::Value& value);
+bool ParseArgumentInternal(const char* function_name,
+                           const char* member_name,
+                           T* member,
+                           const base::Value& value);
 
 template <typename T>
 bool ParseArgument(const char* function_name,
                    const char* member_name,
                    T* member,
-                   const base::DictionaryValue& dict_value) {
-  const base::Value* value;
-  if (!dict_value.Get(member_name, &value)) {
-    LOG(ERROR) << function_name << ": `" << member_name << "`not found";
-    return false;
+                   const base::Value& value) {
+  if (value.is_dict()) {
+    auto* real_value = value.FindKey(member_name);
+    if (!real_value) {
+      LOG(ERROR) << function_name << ": `" << member_name << "` not found";
+      return false;
+    }
+    return ParseArgumentInternal(function_name, member_name, member,
+                                 *real_value);
   }
-
-  return ParseArgument(function_name, member_name, member, *value);
+  return ParseArgumentInternal(function_name, member_name, member, value);
 }
 
 template <typename T>
 bool ParseArgument(const char* function_name,
                    const char* member_name,
                    T* member,
-                   const base::DictionaryValue& dict_value,
+                   const base::Value& value,
                    const T&& default_value) {
-  if (!dict_value.HasKey(member_name)) {
+  CHECK(value.is_dict());
+  if (!value.FindKey(member_name)) {
     *member = default_value;
     return true;
   }
 
-  return ParseArgument(function_name, member_name, member, dict_value);
+  return ParseArgument(function_name, member_name, member, value);
 }
 
 template <>
@@ -70,7 +74,7 @@ bool ParseArgument<std::vector<std::unique_ptr<ProbeFunction>>>(
     const char* function_name,
     const char* member_name,
     std::vector<std::unique_ptr<ProbeFunction>>* member,
-    const base::DictionaryValue& dict_value,
+    const base::Value& dict_value,
     const std::vector<std::unique_ptr<ProbeFunction>>&& default_value) = delete;
 
 /* We assume that |function_name|, |instance|, |dict_value| are available in the

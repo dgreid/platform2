@@ -23,15 +23,14 @@ EctoolI2Cread::DataType EctoolI2Cread::Eval() const {
       R"(^Read from I2C port [\d]+ at .* offset .* = (.+)$)";
 
   std::string ectool_output;
-
   if (!InvokeHelper(&ectool_output))
     return result;
 
   pcrecpp::RE re(kRegexPattern);
   std::string reg_value;
   if (re.PartialMatch(ectool_output, &reg_value)) {
-    base::DictionaryValue dict_value;
-    dict_value.SetString(key_, reg_value);
+    base::Value dict_value(base::Value::Type::DICTIONARY);
+    dict_value.SetStringKey(key_, reg_value);
     result.push_back(std::move(dict_value));
   }
   return result;

@@ -62,7 +62,7 @@ class SysfsFunction : public ProbeFunction {
 
   /* Define a parser for this function.
    *
-   * This function takes the arguments in `const base::DictionaryValue&` type.
+   * This function takes the arguments in `const base::Value&` type.
    * This function should parse the `dict_value`, if the `dict_value` has
    * correct format, this function should return a new instance of
    * `SysfsFunction` whose members are decided by `dict_value`.
@@ -72,12 +72,12 @@ class SysfsFunction : public ProbeFunction {
    * @return pointer to new `SysfsFunction` instance on success, nullptr
    *   otherwise.
    */
-  static std::unique_ptr<ProbeFunction> FromDictionaryValue(
-      const base::DictionaryValue& dict_value) {
+  static std::unique_ptr<ProbeFunction> FromValue(
+      const base::Value& dict_value) {
     /* Create an instance of SysfsFunction.
      * **NOTE: The name should always be "instance" for PARSE_ARGUMENT to work**
      */
-    std::unique_ptr<SysfsFunction> instance{new SysfsFunction()};
+    auto instance = std::make_unique<SysfsFunction>();
 
     bool result = true;
 
@@ -100,7 +100,7 @@ class SysfsFunction : public ProbeFunction {
     return nullptr;
   }
 
-  /* Override `Eval` function, which should return a list of DictionaryValue  */
+  /* Override `Eval` function, which should return a list of Value  */
   DataType Eval() const override;
 
  private:

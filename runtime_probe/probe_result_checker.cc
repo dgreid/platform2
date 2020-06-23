@@ -217,25 +217,23 @@ std::unique_ptr<DoubleFieldConverter> DoubleFieldConverter::Build(
   return BuildNumericConverter<DoubleFieldConverter>(validate_rule);
 }
 
-ReturnCode StringFieldConverter::Convert(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  const base::Value* value;
-
+ReturnCode StringFieldConverter::Convert(const std::string& field_name,
+                                         base::Value* dict_value) const {
   CHECK(dict_value);
 
-  if (!dict_value->Get(field_name, &value))
+  auto* value = dict_value->FindKey(field_name);
+  if (!value)
     return ReturnCode::FIELD_NOT_FOUND;
 
   switch (value->type()) {
     case base::Value::Type::DOUBLE:
-      dict_value->SetString(field_name, std::to_string(value->GetDouble()));
+      dict_value->SetStringKey(field_name, std::to_string(value->GetDouble()));
       return ReturnCode::OK;
     case base::Value::Type::INTEGER:
-      dict_value->SetString(field_name, std::to_string(value->GetInt()));
+      dict_value->SetStringKey(field_name, std::to_string(value->GetInt()));
       return ReturnCode::OK;
     case base::Value::Type::NONE:
-      dict_value->SetString(field_name, "null");
+      dict_value->SetStringKey(field_name, "null");
       return ReturnCode::OK;
     case base::Value::Type::STRING:
       return ReturnCode::OK;
@@ -244,27 +242,25 @@ ReturnCode StringFieldConverter::Convert(
   }
 }
 
-ReturnCode IntegerFieldConverter::Convert(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  const base::Value* value;
-
+ReturnCode IntegerFieldConverter::Convert(const std::string& field_name,
+                                          base::Value* dict_value) const {
   CHECK(dict_value);
 
-  if (!dict_value->Get(field_name, &value))
+  auto* value = dict_value->FindKey(field_name);
+  if (!value)
     return ReturnCode::FIELD_NOT_FOUND;
 
   switch (value->type()) {
     case base::Value::Type::DOUBLE:
-      dict_value->SetInteger(field_name, value->GetDouble());
+      dict_value->SetIntKey(field_name, static_cast<int>(value->GetDouble()));
       return ReturnCode::OK;
     case base::Value::Type::INTEGER:
       return ReturnCode::OK;
     case base::Value::Type::STRING: {
-      std::string string_value = value->GetString();
+      const auto& string_value = value->GetString();
       int int_value;
       if (StringToInt(string_value, &int_value)) {
-        dict_value->SetInteger(field_name, int_value);
+        dict_value->SetIntKey(field_name, int_value);
         return ReturnCode::OK;
       } else {
         LOG(ERROR) << "Failed to convert '" << string_value << "' to integer.";
@@ -276,27 +272,25 @@ ReturnCode IntegerFieldConverter::Convert(
   }
 }
 
-ReturnCode HexFieldConverter::Convert(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  const base::Value* value;
-
+ReturnCode HexFieldConverter::Convert(const std::string& field_name,
+                                      base::Value* dict_value) const {
   CHECK(dict_value);
 
-  if (!dict_value->Get(field_name, &value))
+  auto* value = dict_value->FindKey(field_name);
+  if (!value)
     return ReturnCode::FIELD_NOT_FOUND;
 
   switch (value->type()) {
     case base::Value::Type::DOUBLE:
-      dict_value->SetInteger(field_name, value->GetDouble());
+      dict_value->SetIntKey(field_name, static_cast<int>(value->GetDouble()));
       return ReturnCode::OK;
     case base::Value::Type::INTEGER:
       return ReturnCode::OK;
     case base::Value::Type::STRING: {
-      std::string string_value = value->GetString();
+      const auto& string_value = value->GetString();
       int int_value;
       if (HexStringToInt(string_value, &int_value)) {
-        dict_value->SetInteger(field_name, int_value);
+        dict_value->SetIntKey(field_name, int_value);
         return ReturnCode::OK;
       } else {
         LOG(ERROR) << "Failed to convert '" << string_value << "' to integer.";
@@ -308,27 +302,25 @@ ReturnCode HexFieldConverter::Convert(
   }
 }
 
-ReturnCode DoubleFieldConverter::Convert(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  const base::Value* value;
-
+ReturnCode DoubleFieldConverter::Convert(const std::string& field_name,
+                                         base::Value* dict_value) const {
   CHECK(dict_value);
 
-  if (!dict_value->Get(field_name, &value))
+  auto* value = dict_value->FindKey(field_name);
+  if (!value)
     return ReturnCode::FIELD_NOT_FOUND;
 
   switch (value->type()) {
     case base::Value::Type::DOUBLE:
       return ReturnCode::OK;
     case base::Value::Type::INTEGER:
-      dict_value->SetDouble(field_name, value->GetInt());
+      dict_value->SetDoubleKey(field_name, value->GetDouble());
       return ReturnCode::OK;
     case base::Value::Type::STRING: {
-      std::string string_value = value->GetString();
+      const auto& string_value = value->GetString();
       double double_value;
       if (StringToDouble(string_value, &double_value)) {
-        dict_value->SetDouble(field_name, double_value);
+        dict_value->SetDoubleKey(field_name, double_value);
         return ReturnCode::OK;
       } else {
         LOG(ERROR) << "Failed to convert '" << string_value << "' to double.";
@@ -340,14 +332,17 @@ ReturnCode DoubleFieldConverter::Convert(
   }
 }
 
-ReturnCode StringFieldConverter::Validate(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  std::string value;
+ReturnCode StringFieldConverter::Validate(const std::string& field_name,
+                                          base::Value* dict_value) const {
+  CHECK(dict_value);
 
-  if (!dict_value->GetString(field_name, &value))
+  auto* value_ = dict_value->FindKey(field_name);
+  if (!value_)
     return ReturnCode::FIELD_NOT_FOUND;
+  if (!value_->is_string())
+    return ReturnCode::INCOMPATIBLE_VALUE;
 
+  const auto& value = value_->GetString();
   bool is_valid = true;
   switch (operator_) {
     case ValidatorOperator::NOP:
@@ -367,70 +362,82 @@ ReturnCode StringFieldConverter::Validate(
   return is_valid ? ReturnCode::OK : ReturnCode::INVALID_VALUE;
 }
 
-ReturnCode IntegerFieldConverter::Validate(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  int value;
-  if (!dict_value->GetInteger(field_name, &value))
+ReturnCode IntegerFieldConverter::Validate(const std::string& field_name,
+                                           base::Value* dict_value) const {
+  CHECK(dict_value);
+
+  auto* value_ = dict_value->FindKey(field_name);
+  if (!value_)
     return ReturnCode::FIELD_NOT_FOUND;
+  if (!value_->is_int())
+    return ReturnCode::INCOMPATIBLE_VALUE;
+  const auto value = value_->GetInt();
 
   return CheckNumber(operator_, value, operand_);
 }
 
-ReturnCode HexFieldConverter::Validate(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  int value;
-  if (!dict_value->GetInteger(field_name, &value))
+ReturnCode HexFieldConverter::Validate(const std::string& field_name,
+                                       base::Value* dict_value) const {
+  CHECK(dict_value);
+
+  auto* value_ = dict_value->FindKey(field_name);
+  if (!value_)
     return ReturnCode::FIELD_NOT_FOUND;
+  if (!value_->is_int())
+    return ReturnCode::INCOMPATIBLE_VALUE;
+  const auto value = value_->GetInt();
 
   return CheckNumber(operator_, value, operand_);
 }
 
-ReturnCode DoubleFieldConverter::Validate(
-    const std::string& field_name,
-    base::DictionaryValue* const dict_value) const {
-  double value;
-  if (!dict_value->GetDouble(field_name, &value))
+ReturnCode DoubleFieldConverter::Validate(const std::string& field_name,
+                                          base::Value* dict_value) const {
+  CHECK(dict_value);
+
+  auto* value_ = dict_value->FindKey(field_name);
+  if (!value_)
     return ReturnCode::FIELD_NOT_FOUND;
+  if (!value_->is_double() && !value_->is_int())
+    return ReturnCode::INCOMPATIBLE_VALUE;
+  const auto value = value_->GetDouble();
 
   return CheckNumber(operator_, value, operand_);
 }
 
-std::unique_ptr<ProbeResultChecker> ProbeResultChecker::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  std::unique_ptr<ProbeResultChecker> instance{new ProbeResultChecker};
-
-  for (base::DictionaryValue::Iterator it{dict_value}; !it.IsAtEnd();
-       it.Advance()) {
-    const auto& key = it.key();
-    auto print_error_and_return = [&it]() {
-      LOG(ERROR) << "'expect' attribute should be a DictionaryValue whose "
-                 << "values are [<required:bool>, <expected_type:string>, "
-                 << "<optional_validate_rule:string>], got: " << it.value();
+std::unique_ptr<ProbeResultChecker> ProbeResultChecker::FromValue(
+    const base::Value& dict_value) {
+  std::unique_ptr<ProbeResultChecker> instance{new ProbeResultChecker()};
+  for (const auto& entry : dict_value.DictItems()) {
+    const auto& key = entry.first;
+    const auto& val = entry.second;
+    auto print_error_and_return = [&val]() {
+      LOG(ERROR) << "'expect' attribute should be a list whose values are"
+                 << "[<required:bool>, <expected_type:string>, "
+                 << "<optional_validate_rule:string>], got: " << val;
       return nullptr;
     };
 
-    const base::ListValue* list_value;
+    const auto& list_value = val.GetList();
 
-    if (!it.value().GetAsList(&list_value) || list_value->GetSize() < 2 ||
-        list_value->GetSize() > 3) {
+    if (list_value.size() < 2 || list_value.size() > 3)
       return print_error_and_return();
-    }
 
-    bool required;
-    if (!list_value->GetBoolean(0, &required))
+    if (!list_value[0].is_bool())
       return print_error_and_return();
+    bool required = list_value[0].GetBool();
     auto* target =
         required ? &instance->required_fields_ : &instance->optional_fields_;
 
-    std::string expect_type;
-    if (!list_value->GetString(1, &expect_type))
+    if (!list_value[1].is_string())
       return print_error_and_return();
+    const auto& expect_type = list_value[1].GetString();
 
     std::string validate_rule;
-    if (list_value->GetSize() == 3 && !list_value->GetString(2, &validate_rule))
-      return print_error_and_return();
+    if (list_value.size() == 3) {
+      if (!list_value[2].is_string())
+        return print_error_and_return();
+      validate_rule = list_value[2].GetString();
+    }
 
     std::unique_ptr<FieldConverter> converter = nullptr;
     if (expect_type == "str") {
@@ -455,27 +462,27 @@ std::unique_ptr<ProbeResultChecker> ProbeResultChecker::FromDictionaryValue(
   return instance;
 }
 
-bool ProbeResultChecker::Apply(base::DictionaryValue* probe_result) const {
+bool ProbeResultChecker::Apply(base::Value* probe_result) const {
   bool success = true;
 
   CHECK(probe_result != nullptr);
 
   // Try to convert and validate each required fields.
   // Any failures will cause the final result be |false|.
-  for (const auto& it : required_fields_) {
-    if (!probe_result->HasKey(it.first)) {
-      LOG(ERROR) << "Missing key: " << it.first;
+  for (const auto& entry : required_fields_) {
+    const auto& key = entry.first;
+    const auto& converter = entry.second;
+    if (!probe_result->FindKey(key)) {
+      LOG(ERROR) << "Missing key: " << key;
       success = false;
       break;
     }
 
-    auto return_code = it.second->Convert(it.first, probe_result);
+    auto return_code = converter->Convert(key, probe_result);
     if (return_code != ReturnCode::OK) {
-      const base::Value* value;
-
-      probe_result->Get(it.first, &value);
-      LOG(ERROR) << "Failed to apply " << it.second->ToString() << " on "
-                 << value << "(ReturnCode = " << static_cast<int>(return_code)
+      auto* value = probe_result->FindKey(key);
+      LOG(ERROR) << "Failed to apply " << converter->ToString() << " on "
+                 << *value << "(ReturnCode = " << static_cast<int>(return_code)
                  << ")";
 
       success = false;
@@ -492,21 +499,23 @@ bool ProbeResultChecker::Apply(base::DictionaryValue* probe_result) const {
 
   // Try to convert and validate each optional fields.
   // For failures, just remove them from probe_result and continue.
-  for (const auto& it : optional_fields_) {
-    if (!probe_result->HasKey(it.first))
+  for (const auto& entry : optional_fields_) {
+    const auto& key = entry.first;
+    const auto& converter = entry.second;
+    if (!probe_result->FindKey(key))
       continue;
 
-    auto return_code = it.second->Convert(it.first, probe_result);
+    auto return_code = converter->Convert(key, probe_result);
     if (return_code != ReturnCode::OK) {
-      VLOG(1) << "Optional field '" << it.first << "' has unexpected value, "
+      VLOG(1) << "Optional field '" << key << "' has unexpected value, "
               << "remove it from probe result.";
-      probe_result->Remove(it.first, nullptr);
+      probe_result->RemoveKey(key);
     }
   }
 
   // Now all fields should have the correct type, let's validate them.
-  for (const auto& it : required_fields_) {
-    auto return_code = it.second->Validate(it.first, probe_result);
+  for (const auto& entry : required_fields_) {
+    auto return_code = entry.second->Validate(entry.first, probe_result);
     if (return_code != ReturnCode::OK) {
       success = false;
       break;

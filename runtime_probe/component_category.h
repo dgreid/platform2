@@ -27,12 +27,11 @@ class ComponentCategory {
    *
    */
  public:
-  static std::unique_ptr<ComponentCategory> FromDictionaryValue(
-      const std::string& category_name,
-      const base::DictionaryValue& dict_value);
+  static std::unique_ptr<ComponentCategory> FromValue(
+      const std::string& category_name, const base::Value& dv);
 
-  /* Evaluates this category. */
-  std::unique_ptr<base::ListValue> Eval() const;
+  /* Evaluates this category and return a base::Value with type list. */
+  base::Value Eval() const;
 
  private:
   std::string category_name_;

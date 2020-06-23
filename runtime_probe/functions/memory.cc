@@ -83,12 +83,12 @@ base::Value GetMemoryInfo() {
     // The field "slot" denotes to the entry number instead of the physical slot
     // number, which refers to mosys' output. To be compatible with current
     // HWID, we still preserve this field.
-    info.SetKey("slot", base::Value(entry));
-    info.SetKey("path", base::Value(dmi_path.value()));
-    info.SetKey("size", base::Value(dmi_memory->size));
-    info.SetKey("speed", base::Value(dmi_memory->speed));
-    info.SetKey("locator", base::Value(dmi_memory->locator));
-    info.SetKey("part", base::Value(dmi_memory->part_number));
+    info.SetIntKey("slot", entry);
+    info.SetStringKey("path", dmi_path.value());
+    info.SetIntKey("size", dmi_memory->size);
+    info.SetIntKey("speed", dmi_memory->speed);
+    info.SetStringKey("locator", dmi_memory->locator);
+    info.SetStringKey("part", dmi_memory->part_number);
     results.GetList().push_back(std::move(info));
   }
 
@@ -124,36 +124,28 @@ std::unique_ptr<DmiMemory> DmiMemory::From(const std::vector<uint8_t>& blob) {
   return dmi_memory;
 }
 
-std::unique_ptr<ProbeFunction> MemoryFunction::FromDictionaryValue(
-    const base::DictionaryValue& dict_value) {
-  auto instance = std::make_unique<MemoryFunction>();
-
+std::unique_ptr<ProbeFunction> MemoryFunction::FromValue(
+    const base::Value& dict_value) {
   if (dict_value.DictSize() != 0) {
     LOG(ERROR) << function_name << " does not take any arguments.";
     return nullptr;
   }
-  return instance;
+  return std::make_unique<MemoryFunction>();
 }
 
 MemoryFunction::DataType MemoryFunction::Eval() const {
-  DataType result;
-
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {
     LOG(ERROR) << "Failed to invoke helper to retrieve memory results.";
-    return result;
+    return {};
+  }
+  if (!json_output->is_list()) {
+    LOG(ERROR) << "Failed to parse json output as list.";
+    return {};
   }
 
-  if (!json_output->is_list()) {
-    return result;
-  }
-  for (auto& helper_result : json_output->GetList()) {
-    base::DictionaryValue* dv;
-    if (!helper_result.GetAsDictionary(&dv))
-      continue;
-    result.push_back(std::move(*dv));
-  }
-  return result;
+  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
+  return DataType(std::move(json_output->GetList()));
 }
 
 int MemoryFunction::EvalInHelper(std::string* output) const {
