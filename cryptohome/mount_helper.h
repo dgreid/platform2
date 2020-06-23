@@ -31,12 +31,12 @@ namespace cryptohome {
 
 extern const char kDefaultHomeDir[];
 
-// Objects that implement EphemeralMountHelperInterface can perform an ephemeral
-// mount operation. This interface will be used as we transition all cryptohome
-// mounts to be performed out-of-process.
-class EphemeralMountHelperInterface {
+// Objects that implement MountHelperInterface can perform mount operations.
+// This interface will be used as we transition all cryptohome mounts to be
+// performed out-of-process.
+class MountHelperInterface {
  public:
-  virtual ~EphemeralMountHelperInterface() {}
+  virtual ~MountHelperInterface() {}
 
   // Ephemeral mounts cannot be performed twice, so cryptohome needs to be able
   // to check whether an ephemeral mount can be performed.
@@ -55,7 +55,7 @@ class EphemeralMountHelperInterface {
   virtual void TearDownEphemeralMount() = 0;
 };
 
-class MountHelper : public EphemeralMountHelperInterface {
+class MountHelper : public MountHelperInterface {
  public:
   MountHelper(uid_t uid,
               gid_t gid,

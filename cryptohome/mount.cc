@@ -689,7 +689,7 @@ void Mount::CleanUpEphemeral() {
 
 bool Mount::MountEphemeralCryptohome(
     const std::string& username,
-    EphemeralMountHelperInterface* ephemeral_mounter,
+    MountHelperInterface* ephemeral_mounter,
     base::Closure cleanup) {
   // Ephemeral cryptohome can't be mounted twice.
   CHECK(ephemeral_mounter->CanPerformEphemeralMount());
@@ -1158,7 +1158,7 @@ bool Mount::MountGuestCryptohome() {
 
   current_user_->Reset();
 
-  EphemeralMountHelperInterface* ephemeral_mounter = nullptr;
+  MountHelperInterface* ephemeral_mounter = nullptr;
   base::Closure cleanup;
 
   if (mount_guest_session_out_of_process_) {

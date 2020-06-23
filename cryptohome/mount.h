@@ -548,7 +548,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //             of failure
   bool MountEphemeralCryptohome(
       const std::string& username,
-      EphemeralMountHelperInterface* ephemeral_mounter,
+      MountHelperInterface* ephemeral_mounter,
       base::Closure cleanup);
 
   // Returns the user's salt

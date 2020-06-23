@@ -31,7 +31,7 @@ using base::FilePath;
 
 namespace cryptohome {
 
-class OutOfProcessMountHelper : public EphemeralMountHelperInterface {
+class OutOfProcessMountHelper : public MountHelperInterface {
  public:
   OutOfProcessMountHelper(const brillo::SecureBlob& system_salt,
                           std::unique_ptr<MountNamespace> chrome_mnt_ns,
