@@ -23,6 +23,7 @@ BASE_TABLE = {
     'nocturne': 'whiskers',
     'kodama': 'magnemite',
     'krane': 'masterball',
+    'kakadu': 'moonball',
 }
 
 board_name_cmd = 'mosys platform model'
@@ -57,6 +58,12 @@ elif BASE_NAME == 'magnemite':
 elif BASE_NAME == 'masterball':
   BASE_VENDOR_ID = 0x18d1
   BASE_PRODUCT_ID = 0x503c
+  BASE_USB_PATH = '1-1.1'
+  BASE_CONN_GPIO = 'EN_PP3300_POGO'
+  TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
+elif BASE_NAME == 'moonball':
+  BASE_VENDOR_ID = 0x18d1
+  BASE_PRODUCT_ID = 0x5044
   BASE_USB_PATH = '1-1.1'
   BASE_CONN_GPIO = 'EN_PP3300_POGO'
   TP = '/lib/firmware/%s-touch.fw' % BASE_NAME
