@@ -233,6 +233,22 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
         Ok(())
     }
 
+    fn adjust(&mut self) -> VmcResult {
+        if self.args.len() < 2 {
+            return Err(ExpectedName.into());
+        }
+
+        let vm_name = self.args[0];
+        let user_id_hash = get_user_hash(self.environ)?;
+        let operation = &self.args[1];
+
+        try_command!(self
+            .backend
+            .vm_adjust(vm_name, &user_id_hash, operation, &self.args[2..]));
+
+        Ok(())
+    }
+
     fn destroy(&mut self) -> VmcResult {
         if self.args.len() != 1 {
             return Err(ExpectedName.into());
@@ -586,6 +602,7 @@ const USAGE: &str = r#"
    [ start [--enable-gpu] [--enable-audio-capture] <name> |
      stop <name> |
      create [-p] <name> [<source media> [<removable storage name>]] [-- additional parameters]
+     adjust <name> <operation> [additional parameters] |
      destroy <name> |
      disk-op-status <command UUID> |
      export [-d] <vm name> <file name> [<removable storage name>] |
@@ -642,6 +659,7 @@ impl Frontend for Vmc {
             "start" => command.start(),
             "stop" => command.stop(),
             "create" => command.create(),
+            "adjust" => command.adjust(),
             "destroy" => command.destroy(),
             "export" => command.export(),
             "import" => command.import(),
@@ -700,6 +718,8 @@ mod tests {
             ],
             &["vmc", "create", "-p", "termina", "--"],
             &["vmc", "create", "-p", "termina", "--", "param"],
+            &["vmc", "adjust", "termina", "op"],
+            &["vmc", "adjust", "termina", "op", "param"],
             &["vmc", "destroy", "termina"],
             &["vmc", "disk-op-status", "12345"],
             &["vmc", "export", "termina", "file name"],
@@ -752,6 +772,8 @@ mod tests {
                 "removable media",
                 "extra args",
             ],
+            &["vmc", "adjust"],
+            &["vmc", "adjust", "termina"],
             &["vmc", "destroy"],
             &["vmc", "destroy", "termina", "extra args"],
             &["vmc", "disk-op-status"],

@@ -62,6 +62,7 @@ const START_VM_METHOD: &str = "StartVm";
 const STOP_VM_METHOD: &str = "StopVm";
 const STOP_ALL_VMS_METHOD: &str = "StopAllVms";
 const GET_VM_INFO_METHOD: &str = "GetVmInfo";
+const ADJUST_VM_METHOD: &str = "AdjustVm";
 const CREATE_DISK_IMAGE_METHOD: &str = "CreateDiskImage";
 const DESTROY_DISK_IMAGE_METHOD: &str = "DestroyDiskImage";
 const EXPORT_DISK_IMAGE_METHOD: &str = "ExportDiskImage";
@@ -160,6 +161,7 @@ enum ChromeOSError {
     CrostiniVmDisabled,
     ExportPathExists,
     ImportPathDoesNotExist,
+    FailedAdjustVm(String),
     FailedAttachUsb(String),
     FailedComponentUpdater(String),
     FailedCreateContainer(CreateLxdContainerResponse_Status, String),
@@ -206,6 +208,7 @@ impl fmt::Display for ChromeOSError {
             CrostiniVmDisabled => write!(f, "Crostini VMs are currently disabled"),
             ExportPathExists => write!(f, "disk export path already exists"),
             ImportPathDoesNotExist => write!(f, "disk import path does not exist"),
+            FailedAdjustVm(reason) => write!(f, "failed to adjust vm: {}", reason),
             FailedAttachUsb(reason) => write!(f, "failed to attach usb device to vm: {}", reason),
             FailedDetachUsb(reason) => write!(f, "failed to detach usb device from vm: {}", reason),
             FailedComponentUpdater(name) => {
@@ -594,6 +597,40 @@ impl ChromeOS {
             self.start_concierge()
         } else {
             Err(NoVmTechnologyEnabled.into())
+        }
+    }
+
+    /// Request that concierge adjust an existing VM.
+    fn adjust_vm(
+        &mut self,
+        vm_name: &str,
+        user_id_hash: &str,
+        operation: &str,
+        params: &[&str],
+    ) -> Result<(), Box<dyn Error>> {
+        let mut request = AdjustVmRequest::new();
+        request.name = vm_name.to_owned();
+        request.owner_id = user_id_hash.to_owned();
+        request.operation = operation.to_owned();
+
+        for param in params {
+            request.mut_params().push(param.to_string());
+        }
+
+        let response: AdjustVmResponse = self.sync_protobus(
+            Message::new_method_call(
+                VM_CONCIERGE_SERVICE_NAME,
+                VM_CONCIERGE_SERVICE_PATH,
+                VM_CONCIERGE_INTERFACE,
+                ADJUST_VM_METHOD,
+            )?,
+            &request,
+        )?;
+
+        if response.success {
+            Ok(())
+        } else {
+            Err(FailedAdjustVm(response.failure_reason).into())
         }
     }
 
@@ -1574,6 +1611,17 @@ impl Backend for ChromeOS {
             removable_media,
             params,
         )
+    }
+
+    fn vm_adjust(
+        &mut self,
+        name: &str,
+        user_id_hash: &str,
+        operation: &str,
+        params: &[&str],
+    ) -> Result<(), Box<dyn Error>> {
+        self.start_vm_infrastructure(user_id_hash)?;
+        self.adjust_vm(name, user_id_hash, operation, params)
     }
 
     fn vm_start(

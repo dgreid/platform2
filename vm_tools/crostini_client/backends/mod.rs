@@ -238,6 +238,14 @@ impl_backend! {
             removable_media: Option<&str>,
             params: &[&str],
         ) -> Result<Option<String>, Box<dyn Error>>;
+        /// Adjusts settings of a VM called `name` with the given `user_id_hash`.
+        fn vm_adjust(
+            &mut self,
+            name: &str,
+            user_id_hash: &str,
+            operation: &str,
+            params: &[&str],
+        ) -> Result<(), Box<dyn Error>>;
         /// Starts a VM called `name` with the given `user_id_hash`.
         fn vm_start(
             &mut self,
