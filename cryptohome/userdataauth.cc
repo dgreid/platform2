@@ -66,6 +66,7 @@ user_data_auth::CryptohomeErrorCode MountErrorToCryptohomeError(
   static const std::unordered_map<MountError,
                                   user_data_auth::CryptohomeErrorCode>
       error_code_lut = {
+          {MOUNT_ERROR_NONE, user_data_auth::CRYPTOHOME_ERROR_NOT_SET},
           {MOUNT_ERROR_FATAL, user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL},
           {MOUNT_ERROR_KEY_FAILURE,
            user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED},
@@ -73,8 +74,12 @@ user_data_auth::CryptohomeErrorCode MountErrorToCryptohomeError(
            user_data_auth::CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY},
           {MOUNT_ERROR_TPM_COMM_ERROR,
            user_data_auth::CRYPTOHOME_ERROR_TPM_COMM_ERROR},
+          {MOUNT_ERROR_UNPRIVILEGED_KEY,
+           user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED},
           {MOUNT_ERROR_TPM_DEFEND_LOCK,
            user_data_auth::CRYPTOHOME_ERROR_TPM_DEFEND_LOCK},
+          {MOUNT_ERROR_TPM_UPDATE_REQUIRED,
+           user_data_auth::CRYPTOHOME_ERROR_TPM_UPDATE_REQUIRED},
           {MOUNT_ERROR_USER_DOES_NOT_EXIST,
            user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND},
           {MOUNT_ERROR_TPM_NEEDS_REBOOT,
@@ -90,7 +95,7 @@ user_data_auth::CryptohomeErrorCode MountErrorToCryptohomeError(
     return error_code_lut.at(code);
   }
 
-  return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
+  return user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL;
 }
 
 // Returns whether the Chrome OS image is a test one.
