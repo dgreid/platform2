@@ -17,8 +17,6 @@ import json
 import os
 import sys
 
-import six
-
 # pylint: disable=wrong-import-position
 this_dir = os.path.dirname(__file__)
 sys.path.insert(0, this_dir)
