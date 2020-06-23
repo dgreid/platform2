@@ -66,7 +66,7 @@ class DBusAdaptor : public org::chromium::DlcServiceInterfaceAdaptor,
   void DlcStateChanged(const DlcState& dlc_state) override;
 
  private:
-  std::unique_ptr<DBusService> dbus_service_{};
+  std::unique_ptr<DBusService> dbus_service_;
 
   DBusAdaptor(const DBusAdaptor&) = delete;
   DBusAdaptor& operator=(const DBusAdaptor&) = delete;

@@ -99,19 +99,19 @@ class SystemState {
 
  private:
   std::unique_ptr<org::chromium::ImageLoaderInterfaceProxyInterface>
-      image_loader_proxy_{};
+      image_loader_proxy_;
   std::unique_ptr<org::chromium::UpdateEngineInterfaceProxyInterface>
-      update_engine_proxy_{};
+      update_engine_proxy_;
   std::unique_ptr<org::chromium::SessionManagerInterfaceProxyInterface>
-      session_manager_proxy_{};
+      session_manager_proxy_;
   StateChangeReporterInterface* state_change_reporter_;
 
-  std::unique_ptr<Metrics> metrics_{};
+  std::unique_ptr<Metrics> metrics_;
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;
   base::FilePath prefs_dir_;
-  BootSlot::Slot active_boot_slot_{};
+  BootSlot::Slot active_boot_slot_;
   base::FilePath users_dir_;
   base::Clock* clock_;
   bool is_device_removable_;

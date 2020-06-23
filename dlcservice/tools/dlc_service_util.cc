@@ -366,7 +366,7 @@ class DlcServiceUtil : public brillo::Daemon {
     PrintToFileOrStdout(dump, dict);
   }
 
-  std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_{};
+  std::unique_ptr<DlcServiceInterfaceProxy> dlc_service_proxy_;
 
   // argc and argv passed to main().
   int argc_;

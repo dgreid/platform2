@@ -135,7 +135,7 @@ class DlcService : public DlcServiceInterface {
   // Called when the session state changes (user logs in or logs out).
   void OnSessionStateChangedSignal(const std::string& state);
 
-  std::unique_ptr<DlcManager> dlc_manager_{};
+  std::unique_ptr<DlcManager> dlc_manager_;
 
   // Holds the ML task id of the delayed |PeriodicInstallCheck()| if an install
   // is in progress.
