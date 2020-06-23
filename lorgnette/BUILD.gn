@@ -3,10 +3,14 @@
 # found in the LICENSE file.
 
 import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/generate-dbus-proxies.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
-  deps = [ ":lorgnette" ]
+  deps = [
+    ":lorgnette",
+    ":lorgnette_cli",
+  ]
   if (use.test) {
     deps += [ ":lorgnette_unittest" ]
   }
@@ -35,9 +39,14 @@ config("target_defaults") {
 }
 
 generate_dbus_adaptors("lorgnette-adaptors") {
+  sources = [ "dbus_bindings/org.chromium.lorgnette.Manager.xml" ]
   dbus_adaptors_out_dir = "include/lorgnette/dbus_adaptors"
   new_fd_bindings = true
+}
+
+generate_dbus_proxies("lorgnette-proxies") {
   sources = [ "dbus_bindings/org.chromium.lorgnette.Manager.xml" ]
+  proxy_output_file = "include/lorgnette/dbus-proxies.h"
 }
 
 pkg_config("liblorgnette_config") {
@@ -62,6 +71,12 @@ executable("lorgnette") {
   configs += [ ":target_defaults" ]
   deps = [ ":liblorgnette" ]
   sources = [ "main.cc" ]
+}
+
+executable("lorgnette_cli") {
+  configs += [ ":target_defaults" ]
+  deps = [ ":lorgnette-proxies" ]
+  sources = [ "lorgnette_cli.cc" ]
 }
 
 if (use.test) {
