@@ -151,27 +151,21 @@ bool DecodeWeeklyTimeFromValue(const base::DictionaryValue& dict_value,
   return true;
 }
 
-std::unique_ptr<base::ListValue> DecodeListValueFromJSON(
+base::Optional<base::Value> DecodeListValueFromJSON(
     const std::string& json_string) {
-  std::string error;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  std::unique_ptr<base::Value> decoded_json =
-      base::JSONReader::ReadAndReturnErrorDeprecated(
-          json_string, base::JSON_ALLOW_TRAILING_COMMAS, nullptr, &error);
-  if (!decoded_json) {
-    LOG(ERROR) << "Invalid JSON string: " << error;
-    return nullptr;
+  auto decoded_json = base::JSONReader::ReadAndReturnValueWithError(
+      json_string, base::JSON_ALLOW_TRAILING_COMMAS);
+  if (decoded_json.error_code != base::JSONReader::JSON_NO_ERROR) {
+    LOG(ERROR) << "Invalid JSON string: " << decoded_json.error_message;
+    return base::nullopt;
   }
 
-  std::unique_ptr<base::ListValue> list_val =
-      base::ListValue::From(std::move(decoded_json));
-  if (!list_val) {
+  if (!decoded_json.value->is_list()) {
     LOG(ERROR) << "JSON string is not a list";
-    return nullptr;
+    return base::nullopt;
   }
 
-  return list_val;
+  return std::move(decoded_json.value);
 }
 
 }  // namespace
@@ -557,12 +551,12 @@ bool DevicePolicyImpl::GetDeviceUpdateStagingSchedule(
   if (!proto.has_staging_schedule())
     return false;
 
-  std::unique_ptr<base::ListValue> list_val =
+  base::Optional<base::Value> list_val =
       DecodeListValueFromJSON(proto.staging_schedule());
   if (!list_val)
     return false;
 
-  for (const auto& pair_value : *list_val) {
+  for (const auto& pair_value : list_val->GetList()) {
     const base::DictionaryValue* day_percentage_pair;
     if (!pair_value.GetAsDictionary(&day_percentage_pair))
       return false;
@@ -651,12 +645,12 @@ bool DevicePolicyImpl::GetDisallowedTimeIntervals(
     return false;
   }
 
-  std::unique_ptr<base::ListValue> list_val =
+  base::Optional<base::Value> list_val =
       DecodeListValueFromJSON(proto.disallowed_time_intervals());
   if (!list_val)
     return false;
 
-  for (const auto& interval_value : *list_val) {
+  for (const auto& interval_value : list_val->GetList()) {
     const base::DictionaryValue* interval_dict;
     if (!interval_value.GetAsDictionary(&interval_dict)) {
       LOG(ERROR) << "Invalid JSON string given. Interval is not a dict.";

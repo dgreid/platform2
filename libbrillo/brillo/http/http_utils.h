@@ -304,6 +304,7 @@ BRILLO_EXPORT RequestID PatchJson(
 // Given an http::Response object, parse the body data into Json object.
 // Returns null if failed. Optional |error| can be passed in to
 // get the extended error information as to why the parse failed.
+// TODO(crbug.com/1099111): change return type to base::Optional<base::Value>
 BRILLO_EXPORT std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
     Response* response,
     int* status_code,

@@ -395,19 +395,17 @@ std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
   }
 
   std::string json = response->ExtractDataAsString();
-  std::string error_message;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
-      json, base::JSON_PARSE_RFC, nullptr, &error_message);
-  if (!value) {
+  auto json_result =
+      base::JSONReader::ReadAndReturnValueWithError(json, base::JSON_PARSE_RFC);
+  if (json_result.error_code != base::JSONReader::JSON_NO_ERROR) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kParseError,
                                "Error '%s' occurred parsing JSON string '%s'",
-                               error_message.c_str(), json.c_str());
+                               json_result.error_message.c_str(), json.c_str());
     return result;
   }
-  result = base::DictionaryValue::From(std::move(value));
+  result = base::DictionaryValue::From(
+      std::make_unique<base::Value>(std::move(*json_result.value)));
   if (!result) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::json::kDomain,
                                brillo::errors::json::kObjectExpected,

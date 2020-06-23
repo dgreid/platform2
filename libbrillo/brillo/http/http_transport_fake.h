@@ -142,7 +142,7 @@ class ServerRequestResponseBase {
   void SetData(StreamPtr stream);
   const std::vector<uint8_t>& GetData() const { return data_; }
   std::string GetDataAsString() const;
-  std::unique_ptr<base::DictionaryValue> GetDataAsJson() const;
+  base::Optional<base::Value> GetDataAsJson() const;
   // Parses the data into a JSON object and writes it back to JSON to normalize
   // its string representation (no pretty print, extra spaces, etc).
   std::string GetDataAsNormalizedJsonString() const;

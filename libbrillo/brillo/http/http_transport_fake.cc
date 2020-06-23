@@ -173,18 +173,16 @@ std::string ServerRequestResponseBase::GetDataAsString() const {
   return std::string(chars, data_.size());
 }
 
-std::unique_ptr<base::DictionaryValue>
-ServerRequestResponseBase::GetDataAsJson() const {
-  std::unique_ptr<base::DictionaryValue> result;
+base::Optional<base::Value> ServerRequestResponseBase::GetDataAsJson() const {
   if (brillo::mime::RemoveParameters(
           GetHeader(request_header::kContentType)) ==
       brillo::mime::application::kJson) {
-    // TODO(crbug.com/1054279): use base::JSONReader::Read after uprev to
-    // r680000.
-    auto value = base::JSONReader::ReadDeprecated(GetDataAsString());
-    result = base::DictionaryValue::From(std::move(value));
+    auto value = base::JSONReader::Read(GetDataAsString());
+    if (!value->is_dict())
+      return base::nullopt;
+    return value;
   }
-  return result;
+  return base::nullopt;
 }
 
 std::string ServerRequestResponseBase::GetDataAsNormalizedJsonString() const {

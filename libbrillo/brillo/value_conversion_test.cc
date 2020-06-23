@@ -28,15 +28,13 @@ namespace brillo {
 
 namespace {
 
-std::unique_ptr<base::Value> ParseValue(std::string json) {
+base::Optional<base::Value> ParseValue(std::string json) {
   std::replace(json.begin(), json.end(), '\'', '"');
-  std::string message;
-  // TODO(crbug.com/1054279): use base::JSONReader::ReadAndReturnValueWithError
-  // after uprev to r680000.
-  auto value = base::JSONReader::ReadAndReturnErrorDeprecated(
-      json, base::JSON_PARSE_RFC, nullptr, &message);
-  CHECK(value) << "Failed to load JSON: " << message << ", " << json;
-  return value;
+  auto result =
+      base::JSONReader::ReadAndReturnValueWithError(json, base::JSON_PARSE_RFC);
+  CHECK_EQ(result.error_code, base::JSONReader::JSON_NO_ERROR)
+      << "Failed to load JSON: " << result.error_message << ", " << json;
+  return std::move(result.value);
 }
 
 inline bool IsEqualValue(const base::Value& val1, const base::Value& val2) {
