@@ -198,6 +198,18 @@ base::Optional<SourceType> GuessSourceType(const std::string& name) {
   return base::nullopt;
 }
 
+base::Optional<ColorMode> ColorModeFromDbusString(const std::string& mode) {
+  if (mode == kScanPropertyModeColor) {
+    return MODE_COLOR;
+  } else if (mode == kScanPropertyModeGray) {
+    return MODE_GRAYSCALE;
+  } else if (mode == kScanPropertyModeLineart) {
+    return MODE_LINEART;
+  } else {
+    return base::nullopt;
+  }
+}
+
 }  // namespace
 
 const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
@@ -352,15 +364,16 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
 
   if (color_mode_string != "") {
-    ColorMode color_mode;
-    if (!ColorMode_Parse(color_mode_string, &color_mode)) {
+    base::Optional<ColorMode> color_mode =
+        ColorModeFromDbusString(color_mode_string);
+    if (!color_mode.has_value()) {
       brillo::Error::AddToPrintf(
           error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
           "Invalid color mode: %s", color_mode_string.c_str());
       return false;
     }
 
-    if (!device->SetColorMode(error, color_mode)) {
+    if (!device->SetColorMode(error, color_mode.value())) {
       return false;
     }
   }
