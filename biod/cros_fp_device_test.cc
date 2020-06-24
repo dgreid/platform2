@@ -29,6 +29,12 @@ class MockEcCommandFactory : public EcCommandFactoryInterface {
     EXPECT_CALL(*cmd, Run).WillOnce(testing::Return(true));
     return cmd;
   }
+
+  std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() override {
+    // Should never be called for this test.
+    EXPECT_TRUE(false);
+    return nullptr;
+  }
 };
 
 class CrosFpDevice_ResetContext : public testing::Test {

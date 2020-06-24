@@ -10,15 +10,23 @@
 
 #include "biod/cros_fp_device_interface.h"
 #include "biod/fp_context_command_factory.h"
+#include "biod/fp_info_command.h"
 
 namespace biod {
 
 class EcCommandFactoryInterface {
  public:
   virtual ~EcCommandFactoryInterface() = default;
+
   virtual std::unique_ptr<EcCommandInterface> FpContextCommand(
       CrosFpDeviceInterface* cros_fp, const std::string& user_id) = 0;
-  // TODO(https://crbug.com/1011010): Add factory methods for all of the EC
+
+  virtual std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() = 0;
+  static_assert(std::is_base_of<EcCommandInterface, biod::FpInfoCommand>::value,
+                "All commands created by this class should derive from "
+                "EcCommandInterface");
+
+  // TODO(b/144956297): Add factory methods for all of the EC
   // commands we use so that we can easily mock them for testing.
 };
 
@@ -32,6 +40,8 @@ class EcCommandFactory : public EcCommandFactoryInterface {
 
   std::unique_ptr<EcCommandInterface> FpContextCommand(
       CrosFpDeviceInterface* cros_fp, const std::string& user_id) override;
+
+  std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() override;
 };
 
 }  // namespace biod

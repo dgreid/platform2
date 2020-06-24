@@ -3,12 +3,17 @@
 // found in the LICENSE file.
 
 #include "biod/ec_command_factory.h"
+#include "biod/fp_info_command.h"
 
 namespace biod {
 
 std::unique_ptr<EcCommandInterface> EcCommandFactory::FpContextCommand(
     CrosFpDeviceInterface* cros_fp, const std::string& user_id) {
   return FpContextCommandFactory::Create(cros_fp, user_id);
+}
+
+std::unique_ptr<FpInfoCommand> EcCommandFactory::FpInfoCommand() {
+  return std::make_unique<biod::FpInfoCommand>();
 }
 
 }  // namespace biod

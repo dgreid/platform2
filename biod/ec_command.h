@@ -125,7 +125,7 @@ class EcCommand : public EcCommandInterface {
     return false;
   }
 
-  I* Resp() { return &data_.resp; }
+  virtual I* Resp() { return &data_.resp; }
   uint32_t RespSize() const { return data_.cmd.insize; }
   O* Req() { return &data_.req; }
   uint32_t Result() const { return data_.cmd.result; }
