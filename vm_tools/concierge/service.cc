@@ -2068,6 +2068,7 @@ std::unique_ptr<dbus::Response> Service::GetVmInfo(
   vm_info->set_pid(vm.pid);
   vm_info->set_cid(vm.cid);
   vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
+  vm_info->set_permission_token(vm.permission_token);
 
   response.set_success(true);
   writer.AppendProtoAsArrayOfBytes(response);

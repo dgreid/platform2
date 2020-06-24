@@ -206,6 +206,7 @@ VmInterface::Info PluginVm::GetInfo() {
       .pid = process_.pid(),
       .cid = 0,
       .seneschal_server_handle = seneschal_server_handle(),
+      .permission_token = permission_token_,
       .status = VmInterface::Status::RUNNING,
   };
 

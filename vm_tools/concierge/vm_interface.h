@@ -44,6 +44,11 @@ class VmInterface {
     // if one exists, 0 otherwise.
     uint32_t seneschal_server_handle;
 
+    // Token assigned to the VM when registering with permission service.
+    // Used to identify the VM to service providers and fetching set of
+    // permissions granted to the VM.
+    std::string permission_token;
+
     // The current status of the VM.
     Status status;
   };
