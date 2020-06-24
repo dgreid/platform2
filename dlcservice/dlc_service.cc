@@ -160,7 +160,12 @@ bool DlcService::InstallWithUpdateEngine(const DlcId& id,
 }
 
 bool DlcService::Uninstall(const string& id, brillo::ErrorPtr* err) {
-  return dlc_manager_->Uninstall(id, err);
+  bool result = dlc_manager_->Uninstall(id, err);
+  SystemState::Get()->metrics()->SendUninstallResult(err);
+  if (!result)
+    Error::ConvertToDbusError(err);
+
+  return result;
 }
 
 bool DlcService::Purge(const string& id, brillo::ErrorPtr* err) {

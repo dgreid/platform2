@@ -11,6 +11,7 @@
 #include "dlcservice/metrics.h"
 
 using dlcservice::metrics::InstallResult;
+using dlcservice::metrics::UninstallResult;
 
 namespace dlcservice {
 
@@ -56,7 +57,7 @@ TEST_F(MetricsTest, SendInstallResultSuccess_InstallAlreadyInstalledDlc) {
   metrics_->SendInstallResultSuccess(false);
 }
 
-TEST_F(MetricsTest, SendInstallResultSuccess_UnknownError) {
+TEST_F(MetricsTest, SendInstallResult_UnknownError) {
   EXPECT_CALL(*metrics_library_,
               SendEnumToUMA(metrics::kMetricInstallResult, 0 /*kUnknownError*/,
                             static_cast<int>(InstallResult::kNumConstants)))
@@ -68,7 +69,7 @@ TEST_F(MetricsTest, SendInstallResultSuccess_UnknownError) {
   metrics_->SendInstallResultFailure(&err);
 }
 
-TEST_F(MetricsTest, SendInstallResultSuccess_Failures) {
+TEST_F(MetricsTest, SendInstallResult_Failures) {
   const int num_consts = static_cast<int>(InstallResult::kNumConstants);
 
   EXPECT_CALL(*metrics_library_,
@@ -128,4 +129,47 @@ TEST_F(MetricsTest, SendInstallResultSuccess_Failures) {
   EXPECT_EQ(10, static_cast<int>(InstallResult::kNumConstants));
 }
 
+TEST_F(MetricsTest, SendUninstallResult_Success) {
+  EXPECT_CALL(*metrics_library_,
+              SendEnumToUMA(metrics::kMetricUninstallResult, 1 /*kSuccess*/,
+                            static_cast<int>(UninstallResult::kNumConstants)))
+      .Times(2);
+  metrics_->SendUninstallResult(nullptr);
+  brillo::ErrorPtr err;
+  metrics_->SendUninstallResult(&err);
+}
+
+TEST_F(MetricsTest, SendUninstallResult_UnknownError) {
+  EXPECT_CALL(
+      *metrics_library_,
+      SendEnumToUMA(metrics::kMetricUninstallResult, 0 /*kUnknownError*/,
+                    static_cast<int>(UninstallResult::kNumConstants)))
+      .Times(2);
+  auto err = brillo::Error::Create(FROM_HERE, "domain", "some error", "msg");
+  metrics_->SendUninstallResult(&err);
+  err = brillo::Error::Create(
+      FROM_HERE, "dbus", "org.chromium.DlcServiceInterface.INTERNAL", "msg");
+  metrics_->SendUninstallResult(&err);
+}
+
+TEST_F(MetricsTest, SendUninstallResult_Failures) {
+  const int num_consts = static_cast<int>(UninstallResult::kNumConstants);
+
+  EXPECT_CALL(*metrics_library_,
+              SendEnumToUMA(metrics::kMetricUninstallResult,
+                            2 /*kFailedInvalidDlc*/, num_consts));
+  auto err = brillo::Error::Create(FROM_HERE, "dbus", kErrorInvalidDlc, "msg");
+  metrics_->SendUninstallResult(&err);
+  testing::Mock::VerifyAndClearExpectations(&metrics_library_);
+
+  EXPECT_CALL(*metrics_library_,
+              SendEnumToUMA(metrics::kMetricUninstallResult,
+                            3 /*kFailedUpdateEngineBusy*/, num_consts));
+  err = brillo::Error::Create(FROM_HERE, "dbus", kErrorBusy, "msg");
+  metrics_->SendUninstallResult(&err);
+  testing::Mock::VerifyAndClearExpectations(&metrics_library_);
+
+  // Check that all values were tested.
+  EXPECT_EQ(4, static_cast<int>(UninstallResult::kNumConstants));
+}
 }  // namespace dlcservice

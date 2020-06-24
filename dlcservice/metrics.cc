@@ -11,6 +11,7 @@
 #include "dlcservice/metrics.h"
 
 using dlcservice::metrics::InstallResult;
+using dlcservice::metrics::UninstallResult;
 using std::map;
 using std::string;
 
@@ -19,11 +20,11 @@ namespace dlcservice {
 namespace metrics {
 
 const char kMetricInstallResult[] = "DlcService.InstallResult";
-
+const char kMetricUninstallResult[] = "DlcService.UninstallResult";
 }
 
-// To obsolete a metric enum value, just remove it from the map initialization.
-// Never remove it from |InstallResult| enum.
+// IMPORTANT: To obsolete a metric enum value, just remove it from the map
+// initialization and comment it out on the Enum.
 Metrics::InstallResultMap Metrics::install_result_ = {
     {error::kFailedToCreateDirectory, InstallResult::kFailedToCreateDirectory},
     {error::kFailedInstallInUpdateEngine,
@@ -33,6 +34,11 @@ Metrics::InstallResultMap Metrics::install_result_ = {
     {kErrorBusy, InstallResult::kFailedUpdateEngineBusy},  // dbus error
     {error::kFailedToVerifyImage, InstallResult::kFailedToVerifyImage},
     {error::kFailedToMountImage, InstallResult::kFailedToMountImage},
+};
+
+Metrics::UninstallResultMap Metrics::uninstall_result_ = {
+    {kErrorInvalidDlc, UninstallResult::kFailedInvalidDlc},  // dbus error
+    {kErrorBusy, UninstallResult::kFailedUpdateEngineBusy},  // dbus error
 };
 
 void Metrics::Init() {
@@ -59,11 +65,31 @@ void Metrics::SendInstallResultFailure(brillo::ErrorPtr* err) {
   SendInstallResult(res);
 }
 
-void Metrics::SendInstallResult(InstallResult install_result) {
+void Metrics::SendInstallResult(InstallResult result) {
   metrics_library_->SendEnumToUMA(
-      metrics::kMetricInstallResult, static_cast<int>(install_result),
+      metrics::kMetricInstallResult, static_cast<int>(result),
       static_cast<int>(InstallResult::kNumConstants));
-  LOG(INFO) << "InstallResult metric sent:" << static_cast<int>(install_result);
+  // TODO(andrewlassalle): Remove log after 2020-12-25
+  LOG(INFO) << "InstallResult metric sent:" << static_cast<int>(result);
+}
+
+void Metrics::SendUninstallResult(brillo::ErrorPtr* err) {
+  UninstallResult res = UninstallResult::kUnknownError;
+  if (err && err->get()) {
+    const string error_code = Error::GetRootErrorCode(*err);
+    auto it = uninstall_result_.find(error_code);
+    if (it != uninstall_result_.end())
+      res = it->second;
+  } else {
+    res = UninstallResult::kSuccess;
+  }
+  SendUninstallResult(res);
+}
+
+void Metrics::SendUninstallResult(UninstallResult result) {
+  metrics_library_->SendEnumToUMA(
+      metrics::kMetricUninstallResult, static_cast<int>(result),
+      static_cast<int>(UninstallResult::kNumConstants));
 }
 
 }  // namespace dlcservice

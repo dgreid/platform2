@@ -17,7 +17,12 @@ class MockMetrics : public Metrics {
 
   MOCK_METHOD(void,
               SendInstallResult,
-              (metrics::InstallResult install_result),
+              (metrics::InstallResult result),
+              (override));
+
+  MOCK_METHOD(void,
+              SendUninstallResult,
+              (metrics::UninstallResult result),
               (override));
 
  private:
