@@ -172,6 +172,7 @@ TEST_F(DlcServiceTest, UninstallTestForUserDlc) {
   EXPECT_TRUE(base::PathExists(dlc_prefs_path));
 
   EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, &err_));
+  EXPECT_TRUE(err_.get() == nullptr);
   // Uninstall should not delete the DLC right away.
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   EXPECT_TRUE(base::PathExists(dlc_prefs_path));
@@ -205,6 +206,7 @@ TEST_F(DlcServiceTest, UninstallNotInstalledIsValid) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
   EXPECT_TRUE(dlc_service_->Uninstall(kSecondDlc, &err_));
+  EXPECT_TRUE(err_.get() == nullptr);
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED);
 }
 
@@ -256,6 +258,7 @@ TEST_F(DlcServiceTest, UninstallImageLoaderFailureTest) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
 
   EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, &err_));
+  EXPECT_TRUE(err_.get() == nullptr);
   EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kFirstDlc)));
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED, kErrorInternal);
 }
@@ -311,6 +314,7 @@ TEST_F(DlcServiceTest, UninstallInstallingButInstalledFails) {
   // |kFirstDlc| was installed, so there should be no problem uninstalling it
   // |even if |kSecondDlc| is installing.
   EXPECT_TRUE(dlc_service_->Uninstall(kFirstDlc, &err_));
+  EXPECT_TRUE(err_.get() == nullptr);
   CheckDlcState(kFirstDlc, DlcState::NOT_INSTALLED);
 }
 

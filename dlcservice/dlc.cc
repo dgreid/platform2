@@ -525,11 +525,13 @@ bool DlcBase::Uninstall(ErrorPtr* err) {
       // session.
       LOG(WARNING) << "Trying to uninstall not installed DLC=" << id_;
       FALLTHROUGH;
-    case DlcState::INSTALLED:
+    case DlcState::INSTALLED: {
       ref_count_->UninstalledDlc();
-      Unmount(err);
+      ErrorPtr tmp_err;
+      Unmount(&tmp_err);
       ChangeState(DlcState::NOT_INSTALLED);
       break;
+    }
     case DlcState::INSTALLING:
       // We cannot uninstall the image while it is being installed by the
       // update_engine.
