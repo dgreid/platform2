@@ -93,7 +93,7 @@ TEST_F(ECCollectorTest, TestNoCrash) {
 TEST_F(ECCollectorTest, TestStale) {
   PreparePanicInfo(true, true);
   ASSERT_FALSE(collector_.Collect());
-  ASSERT_TRUE(FindLog("Old EC crash"));
+  ASSERT_TRUE(FindLog("Stale EC crash"));
   EXPECT_EQ(collector_.get_bytes_written(), 0);
 }
 

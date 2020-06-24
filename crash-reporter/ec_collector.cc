@@ -51,8 +51,10 @@ bool ECCollector::Collect() {
     return false;
   }
 
+  // Check if the EC crash has already been fetched before, in a previous AP
+  // boot (EC sets this flag when the AP fetches the panic information).
   if (data[PANIC_DATA_FLAGS_BYTE] & PANIC_DATA_FLAG_OLD_HOSTCMD) {
-    LOG(INFO) << "Old EC crash: not reporting.";
+    LOG(INFO) << "Stale EC crash: already fetched, not reporting.";
     return false;
   }
 
