@@ -27,6 +27,8 @@ constexpr uint8_t kQmiUimService = 0xB;
 constexpr uint8_t kEsimSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
 
+constexpr auto kInitRetryDelay = base::TimeDelta::FromSeconds(10);
+
 bool CheckMessageSuccess(QmiUimCommand cmd, const uim_qmi_result& qmi_result) {
   if (qmi_result.result == 0) {
     return true;
@@ -93,9 +95,6 @@ ModemQrtr::~ModemQrtr() {
 
 void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
                           ResponseCallback cb) {
-  if (current_state_ == State::kUninitialized) {
-    Initialize();
-  }
   for (size_t i = 0; i < apdus.size(); ++i) {
     ResponseCallback callback =
         (i == apdus.size() - 1 ? std::move(cb) : nullptr);
@@ -122,32 +121,33 @@ bool ModemQrtr::IsSimValidAfterDisable() {
 }
 
 void ModemQrtr::Initialize() {
-  CHECK(socket_->IsValid());
+  CHECK(current_state_ == State::kUninitialized);
+  LOG(INFO) << "Initializing ModemQrtr";
 
-  if (current_state_.IsInitialized()) {
-    LOG(WARNING)
-        << "Attempt to initialize already-initialized ModemQrtr instance";
-    return;
-  } else if (current_state_ != State::kUninitialized) {
-    LOG(WARNING)
-        << "Attempt to initialize a ModemQrtr instance that is already "
-        << "initializing";
+  // StartService should result in a received QRTR_TYPE_NEW_SERVER
+  // packet. Don't send other packets until that occurs.
+  if (!socket_->StartService(kQmiUimService, 1, 0)) {
+    LOG(ERROR) << "Failed starting UIM service during ModemQrtr initialization";
+    RetryInitialization();
     return;
   }
 
   current_state_.Transition(State::kInitializeStarted);
-  // StartService should result in a received QRTR_TYPE_NEW_SERVER
-  // packet. Don't send other packets until that occurs.
-  if (!socket_->StartService(kQmiUimService, 1, 0)) {
-    LOG(ERROR) << "Starting uim service failed during ModemQrtr initialization";
-    return;
-  }
-  // Place Reset request on the tx queue
-  tx_queue_.push_back(
+
+  // Note: we use push_front so that SendApdus could be called prior to a
+  // successful initialization.
+  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
+                        QmiUimCommand::kOpenLogicalChannel});
+  tx_queue_.push_front(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
-  // Place OpenLogicalChannel request on the tx queue
-  tx_queue_.push_back({std::unique_ptr<TxInfo>(), AllocateId(),
-                       QmiUimCommand::kOpenLogicalChannel});
+}
+
+void ModemQrtr::RetryInitialization() {
+  LOG(INFO) << "Retrying ModemQrtr initialization in "
+            << kInitRetryDelay.InSeconds() << " seconds";
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE, base::Bind(&ModemQrtr::Initialize, base::Unretained(this)),
+      kInitRetryDelay);
 }
 
 void ModemQrtr::FinalizeInitialization() {
@@ -156,6 +156,7 @@ void ModemQrtr::FinalizeInitialization() {
     // TODO(akhouderchah) Call lpa library and flush kSendApdu requests from the
     // queue.
     Shutdown();
+    RetryInitialization();
     return;
   }
   LOG(INFO) << "ModemQrtr initialization successful";

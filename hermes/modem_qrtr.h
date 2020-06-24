@@ -43,6 +43,8 @@ class ModemQrtr : public lpa::card::EuiccCard {
       Executor* executor);
   virtual ~ModemQrtr();
 
+  void Initialize();
+
   // lpa::card::EuiccCard overrides.
   void SendApdus(std::vector<lpa::card::Apdu> apdus,
                  ResponseCallback cb) override;
@@ -60,7 +62,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
   ModemQrtr(std::unique_ptr<SocketInterface> socket,
             Logger* logger,
             Executor* executor);
-  void Initialize();
+  void RetryInitialization();
   void FinalizeInitialization();
   void Shutdown();
   uint16_t AllocateId();

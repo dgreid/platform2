@@ -221,9 +221,12 @@ class ModemQrtrTest : public testing::Test {
     ASSERT_NE(modem_, nullptr);
 
     receive_ids_.clear();
+
+    SimulateInitialization();
   }
 
   void TearDown() override {
+    EXPECT_CALL(*socket_, StopService(_, _, _));
     EXPECT_CALL(*socket_, Close());
     modem_.reset(nullptr);
     fd_.reset();
@@ -233,26 +236,7 @@ class ModemQrtrTest : public testing::Test {
   // ModemQrtr::SendApdus.
   void SendApdus(std::vector<lpa::card::Apdu> commands,
                  ModemQrtr::ResponseCallback cb) {
-    EXPECT_CALL(*socket_, StartService(_, _, _))
-        // Add a receive transaction id when new_lookup is called.
-        .WillOnce(WithoutArgs(Invoke([this]() {
-          this->receive_ids_.push_back(0);
-          return true;
-        })));
-
-    {
-      ::testing::InSequence dummy;
-
-      // Expect RESET and OPEN_LOGICAL_CHANNEL request after receiving
-      // NEW_SERVER.
-      EXPECT_SEND(*socket_, kQrtrResetReq);
-      EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
-    }
-
     modem_->SendApdus(std::move(commands), std::move(cb));
-    SimulateInitialization();
-
-    EXPECT_CALL(*socket_, StopService(_, _, _));
   }
 
   // Cause |modem_| to receive the provided data.
@@ -271,6 +255,23 @@ class ModemQrtrTest : public testing::Test {
   }
 
   void SimulateInitialization() {
+    EXPECT_CALL(*socket_, StartService(_, _, _))
+        // Add a receive transaction id when new_lookup is called.
+        .WillOnce(WithoutArgs(Invoke([this]() {
+          this->receive_ids_.push_back(0);
+          return true;
+        })));
+    modem_->Initialize();
+
+    {
+      ::testing::InSequence dummy;
+
+      // Expect RESET and OPEN_LOGICAL_CHANNEL request after receiving
+      // NEW_SERVER.
+      EXPECT_SEND(*socket_, kQrtrResetReq);
+      EXPECT_SEND(*socket_, kQrtrOpenLogicalChannelReq);
+    }
+
     // Receive NEW_SERVER response from sock_new_lookup
     ModemReceiveData(kQrtrNewServerResp.begin(), kQrtrNewServerResp.end());
     // Receive RESET response from RESET request
