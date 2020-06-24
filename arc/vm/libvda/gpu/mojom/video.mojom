@@ -6,9 +6,9 @@
 
 module arc.mojom;
 
-import "video_decode_accelerator.mojom";
-import "video_encode_accelerator.mojom";
-import "video_protected_buffer_allocator.mojom";
+import "arc/vm/libvda/gpu/mojom/video_decode_accelerator.mojom";
+import "arc/vm/libvda/gpu/mojom/video_encode_accelerator.mojom";
+import "arc/vm/libvda/gpu/mojom/video_protected_buffer_allocator.mojom";
 
 // Deprecated method IDs: 0
 // Next method ID: 2

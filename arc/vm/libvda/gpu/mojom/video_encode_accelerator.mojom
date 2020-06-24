@@ -7,7 +7,7 @@
 
 module arc.mojom;
 
-import "video_common.mojom";
+import "arc/vm/libvda/gpu/mojom/video_common.mojom";
 
 // Next MinVersion: 4
 

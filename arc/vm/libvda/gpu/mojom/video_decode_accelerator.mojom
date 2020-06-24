@@ -17,8 +17,8 @@
 
 module arc.mojom;
 
-import "gfx.mojom";
-import "video_common.mojom";
+import "arc/vm/libvda/gpu/mojom/gfx.mojom";
+import "arc/vm/libvda/gpu/mojom/video_common.mojom";
 
 // Information of the bitstream buffer.
 struct BitstreamBuffer {
