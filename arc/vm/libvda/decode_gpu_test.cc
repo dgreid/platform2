@@ -15,7 +15,7 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/threading/platform_thread.h>
@@ -166,17 +166,22 @@ TEST_F(LibvdaGpuTest, DecodeFileGpu) {
     size_t data_size = data.size();
     ASSERT_NE(data_size, 0);
 
-    base::SharedMemory shm;
-    ASSERT_EQ(shm.CreateAndMapAnonymous(data_size), true);
+    base::WritableSharedMemoryRegion shm_region =
+        base::WritableSharedMemoryRegion::Create(data_size);
+    base::WritableSharedMemoryMapping shm_mapping = shm_region.Map();
 
-    memcpy(shm.memory(), data.data(), data_size);
+    base::subtle::PlatformSharedMemoryRegion platform_shm =
+        base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+            std::move(shm_region));
 
-    base::SharedMemoryHandle handle(shm.TakeHandle());
-    ASSERT_GT(handle.GetHandle(), 0);
+    memcpy(shm_mapping.GetMemoryAs<uint8_t>(), data.data(), data_size);
+
+    base::ScopedFD handle(std::move(platform_shm.PassPlatformHandle().fd));
+    ASSERT_GT(handle.get(), 0);
 
     int32_t bitstream_id = next_bitstream_id;
     next_bitstream_id = (next_bitstream_id + 1) & 0x3FFFFFFF;
-    vda_decode(session->ctx, bitstream_id, handle.GetHandle(), 0 /* offset */,
+    vda_decode(session->ctx, bitstream_id, handle.get(), 0 /* offset */,
                data_size /* bytes_used */);
     waiting_decodes++;
 
