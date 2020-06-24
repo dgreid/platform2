@@ -66,6 +66,7 @@ void PrintUsage() {
   puts("             [--ecc] [--print_time] [--sess_*]");
   puts("                    - Signs the hash of data using the loaded key.");
   puts("  --key_info --handle=<H> - Prints information about the loaded key.");
+  puts("  --key_test_short_ecc --handle=<H>.");
   puts("  --sess_* - group of options providing parameters for auth session:");
   puts("      --sess_salted");
   puts("      --sess_encrypted");
@@ -337,6 +338,94 @@ int KeyInfo(bool print_time, const TrunksFactory& factory, uint32_t handle) {
   }
   printf("Key name: %s\n", HexEncode(key_name).c_str());
 
+  return 0;
+}
+
+void PrintEccPoint(const char* name, const trunks::TPM2B_ECC_POINT& point) {
+  printf("%s point: [%u]", name, point.size);
+  printf("  X=[%u] %s, ", point.point.x.size, HexEncode(point.point.x).c_str());
+  printf("  Y=[%u] %s\n", point.point.y.size, HexEncode(point.point.y).c_str());
+}
+
+int KeyTestShortEcc(const TrunksFactory& factory, uint32_t handle) {
+  std::unique_ptr<trunks::TpmUtility> tpm_utility = factory.GetTpmUtility();
+  std::string name;
+  trunks::TPM_RC rc = tpm_utility->GetKeyName(handle, &name);
+  if (rc != trunks::TPM_RC_SUCCESS) {
+    LOG(ERROR) << "Error during GetKeyName: "
+               << trunks::GetErrorString(rc);
+    return -1;
+  }
+
+  trunks::HmacAuthorizationDelegate delegate;
+  std::unique_ptr<trunks::SessionManager> session_manager =
+      factory.GetSessionManager();
+  rc = session_manager->StartSession(trunks::TPM_SE_HMAC, trunks::TPM_RH_NULL,
+                                     "", false, false, &delegate);
+  if (rc != trunks::TPM_RC_SUCCESS) {
+    LOG(ERROR) << "Error during StartSession: "
+               << trunks::GetErrorString(rc);
+    return -1;
+  }
+
+  trunks::TPM2B_ECC_POINT z_point;
+  trunks::TPM2B_ECC_POINT pub_point;
+
+  do {
+    rc = factory.GetTpm()->ECDH_KeyGenSync(handle, name, &z_point, &pub_point,
+                                           nullptr);
+    if (rc != trunks::TPM_RC_SUCCESS) {
+      LOG(ERROR) << "Error during ECDH_KeyGen: "
+                 << trunks::GetErrorString(rc);
+      return -1;
+    }
+  } while (pub_point.point.x.buffer[0] && pub_point.point.y.buffer[0]);
+  PrintEccPoint("z", z_point);
+  PrintEccPoint("pub", pub_point);
+
+  trunks::TPM2B_ECC_POINT out1_point;
+  rc = factory.GetTpm()->ECDH_ZGenSync(handle, name, pub_point, &out1_point,
+                                       &delegate);
+  if (rc != trunks::TPM_RC_SUCCESS) {
+    LOG(ERROR) << "Error during ECDH_ZGen (pass 1): "
+               << trunks::GetErrorString(rc);
+    return -1;
+  }
+  PrintEccPoint("out1", out1_point);
+
+  if (pub_point.point.x.buffer[0] == 0) {
+    pub_point.point.x.size--;
+    memmove(pub_point.point.x.buffer, pub_point.point.x.buffer + 1,
+            pub_point.point.x.size);
+  }
+  if (pub_point.point.y.buffer[0] == 0) {
+    pub_point.point.y.size--;
+    memmove(pub_point.point.y.buffer, pub_point.point.y.buffer + 1,
+            pub_point.point.y.size);
+  }
+  PrintEccPoint("shortened pub", pub_point);
+
+  trunks::TPM2B_ECC_POINT out2_point;
+  rc = factory.GetTpm()->ECDH_ZGenSync(handle, name, pub_point, &out2_point,
+                                       &delegate);
+  if (rc != trunks::TPM_RC_SUCCESS) {
+    LOG(ERROR) << "Error during ECDH_ZGen (pass 2): "
+               << trunks::GetErrorString(rc);
+    return -1;
+  }
+  PrintEccPoint("out2", out2_point);
+
+  if (out1_point.point.x.size != out2_point.point.x.size ||
+      out1_point.point.y.size != out2_point.point.y.size ||
+      memcmp(out1_point.point.x.buffer, out2_point.point.x.buffer,
+             out1_point.point.x.size) ||
+      memcmp(out1_point.point.y.buffer, out2_point.point.y.buffer,
+             out1_point.point.y.size)) {
+    LOG(ERROR) << "Different out points produced by pass 1 and pass 2";
+    return -1;
+  }
+
+  printf("SUCCESS\n");
   return 0;
 }
 
@@ -617,6 +706,10 @@ int main(int argc, char** argv) {
   if (cl->HasSwitch("key_info") && cl->HasSwitch("handle")) {
     uint32_t handle = std::stoul(cl->GetSwitchValueASCII("handle"), nullptr, 0);
     return KeyInfo(print_time, factory, handle);
+  }
+  if (cl->HasSwitch("key_test_short_ecc") && cl->HasSwitch("handle")) {
+    uint32_t handle = std::stoul(cl->GetSwitchValueASCII("handle"), nullptr, 0);
+    return KeyTestShortEcc(factory, handle);
   }
 
   puts("Invalid options!");
