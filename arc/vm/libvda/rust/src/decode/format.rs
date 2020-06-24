@@ -27,4 +27,13 @@ impl InputFormat {
             max_height: f.max_height,
         })
     }
+
+    // The callers must guarantee that `data` is valid for |`len`| elements when
+    // both `data` and `len` are valid.
+    pub(crate) unsafe fn from_raw_parts(
+        data: *const bindings::vda_input_format_t,
+        len: usize,
+    ) -> Result<Vec<Self>> {
+        validate_formats(data, len, Self::new)
+    }
 }

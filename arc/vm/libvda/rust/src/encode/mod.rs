@@ -3,3 +3,12 @@
 // found in the LICENSE file.
 
 mod bindings;
+mod event;
+mod format;
+mod session;
+mod vea_instance;
+
+pub use event::*;
+pub use format::*;
+pub use session::*;
+pub use vea_instance::*;

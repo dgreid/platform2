@@ -9,9 +9,14 @@ use std::fmt::{self, Display};
 
 use super::format;
 use crate::decode;
+use crate::encode;
 
 #[derive(Debug)]
 pub enum Error {
+    // Encode session error. The error code provided is specific
+    // to the implementation type (`VeaImplType`).
+    EncodeSessionFailure(i32),
+    EncodeSessionInitFailure(encode::Config),
     GetCapabilitiesFailure,
     InstanceInitFailure,
     InvalidCapabilities(String),
@@ -33,6 +38,10 @@ impl Display for Error {
         use self::Error::*;
 
         match self {
+            EncodeSessionFailure(e) => write!(f, "encode session error: {}", e),
+            EncodeSessionInitFailure(c) => {
+                write!(f, "failed to initialize encode session with config {:?}", c)
+            }
             GetCapabilitiesFailure => write!(f, "failed to get capabilities"),
             InstanceInitFailure => write!(f, "failed to initialize VDA instance"),
             InvalidCapabilities(e) => write!(f, "obtained capabilities are invalid: {}", e),

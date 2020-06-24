@@ -6,7 +6,6 @@
 //! VideoDecodeAccelerator.
 
 use std::os::raw::c_void;
-use std::slice;
 
 use super::bindings;
 use super::format::*;
@@ -34,27 +33,6 @@ pub struct VdaInstance {
 }
 
 impl VdaInstance {
-    // The callers must garantee that `ptr` is valid for |`num`| elements when both `ptr` and `num`
-    // are valid.
-    unsafe fn validate_formats<T, U, F>(ptr: *const T, num: usize, f: F) -> Result<Vec<U>>
-    where
-        F: FnMut(&T) -> Result<U>,
-    {
-        if num == 0 {
-            return Err(Error::InvalidCapabilities("num must not be 0".to_string()));
-        }
-        if ptr.is_null() {
-            return Err(Error::InvalidCapabilities(
-                "input_formats must not be NULL".to_string(),
-            ));
-        }
-
-        slice::from_raw_parts(ptr, num)
-            .iter()
-            .map(f)
-            .collect::<Result<Vec<_>>>()
-    }
-
     /// Creates VdaInstance. `typ` specifies which backend will be used.
     pub fn new(typ: VdaImplType) -> Result<Self> {
         let impl_type = match typ {
@@ -79,19 +57,13 @@ impl VdaInstance {
 
         // Safe because `input_formats` is valid for |`num_input_formats`| elements if both are valid.
         let input_formats = unsafe {
-            Self::validate_formats(
-                vda_cap.input_formats,
-                vda_cap.num_input_formats,
-                InputFormat::new,
-            )?
+            InputFormat::from_raw_parts(vda_cap.input_formats, vda_cap.num_input_formats)?
         };
 
         // Output formats
         // Safe because `output_formats` is valid for |`num_output_formats`| elements if both are valid.
         let output_formats = unsafe {
-            Self::validate_formats(vda_cap.output_formats, vda_cap.num_output_formats, |f| {
-                PixelFormat::new(*f)
-            })?
+            PixelFormat::from_raw_parts(vda_cap.output_formats, vda_cap.num_output_formats)?
         };
 
         Ok(VdaInstance {

@@ -20,6 +20,36 @@ pub struct FramePlane {
     pub stride: i32,
 }
 
+impl FramePlane {
+    pub fn to_raw_frame_plane(&self) -> bindings::video_frame_plane_t {
+        bindings::video_frame_plane_t {
+            offset: self.offset,
+            stride: self.stride,
+        }
+    }
+}
+
+// The callers must guarantee that `ptr` is valid for |`num`| elements when both `ptr` and `num`
+// are valid.
+pub(crate) unsafe fn validate_formats<T, U, F>(ptr: *const T, num: usize, f: F) -> Result<Vec<U>>
+where
+    F: FnMut(&T) -> Result<U>,
+{
+    if num == 0 {
+        return Err(Error::InvalidCapabilities("num must not be 0".to_string()));
+    }
+    if ptr.is_null() {
+        return Err(Error::InvalidCapabilities(
+            "pointer must not be NULL".to_string(),
+        ));
+    }
+
+    std::slice::from_raw_parts(ptr, num)
+        .iter()
+        .map(f)
+        .collect::<Result<Vec<_>>>()
+}
+
 /// Represents a video codec.
 #[derive(Debug, Clone, Copy, N)]
 #[repr(i32)]
@@ -30,6 +60,10 @@ pub enum Profile {
 }
 
 impl Profile {
+    pub(crate) fn new(p: bindings::video_codec_profile_t) -> Result<Self> {
+        Self::n(p).ok_or(Error::UnknownProfile(p))
+    }
+
     pub(crate) fn to_raw_profile(self) -> bindings::video_codec_profile_t {
         match self {
             Profile::VP8 => bindings::video_codec_profile_VP8PROFILE_MIN,
@@ -37,10 +71,19 @@ impl Profile {
             Profile::H264 => bindings::video_codec_profile_H264PROFILE_MAIN,
         }
     }
+
+    // The callers must guarantee that `data` is valid for |`len`| elements when
+    // both `data` and `len` are valid.
+    pub(crate) unsafe fn from_raw_parts(
+        data: *const bindings::video_codec_profile_t,
+        len: usize,
+    ) -> Result<Vec<Self>> {
+        validate_formats(data, len, |p| Self::new(*p))
+    }
 }
 
 /// Represents a raw pixel format.
-#[derive(Debug, N)]
+#[derive(Debug, Clone, Copy, N)]
 #[repr(u32)]
 pub enum PixelFormat {
     YV12 = bindings::video_pixel_format_YV12,
@@ -57,5 +100,12 @@ impl PixelFormat {
             PixelFormat::YV12 => bindings::video_pixel_format_YV12,
             PixelFormat::NV12 => bindings::video_pixel_format_NV12,
         }
+    }
+
+    pub(crate) unsafe fn from_raw_parts(
+        data: *const bindings::video_pixel_format_t,
+        len: usize,
+    ) -> Result<Vec<Self>> {
+        validate_formats(data, len, |f| Self::new(*f))
     }
 }

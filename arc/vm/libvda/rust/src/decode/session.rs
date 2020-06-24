@@ -118,13 +118,7 @@ impl<'a> Session<'a> {
         output_buffer: BufferFd,
         planes: &[FramePlane],
     ) -> Result<()> {
-        let mut planes: Vec<_> = planes
-            .iter()
-            .map(|p| bindings::video_frame_plane {
-                offset: p.offset,
-                stride: p.stride,
-            })
-            .collect();
+        let mut planes: Vec<_> = planes.iter().map(FramePlane::to_raw_frame_plane).collect();
 
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
         let r = unsafe {
