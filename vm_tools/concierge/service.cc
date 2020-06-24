@@ -2143,7 +2143,7 @@ std::unique_ptr<dbus::Response> Service::AdjustVm(
 
   string failure_reason;
   bool success = false;
-  if (request.operation() == "shared-profile") {
+  if (request.operation() == "pvm.shared-profile") {
     if (location != STORAGE_CRYPTOHOME_PLUGINVM) {
       failure_reason = "Operation is not supported for the VM";
     } else {
