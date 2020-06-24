@@ -29,7 +29,6 @@ class InternalBacklight : public BacklightInterface {
   // Base names of backlight files within sysfs directories.
   static const char kBrightnessFilename[];
   static const char kMaxBrightnessFilename[];
-  static const char kActualBrightnessFilename[];
   static const char kBlPowerFilename[];
   static const char kScaleFilename[];
 
@@ -90,9 +89,8 @@ class InternalBacklight : public BacklightInterface {
   // Device directory.
   base::FilePath device_path_;
 
-  // Paths to the actual_brightness, brightness, and max_brightness files under
+  // Paths to the brightness, and max_brightness files under
   // /sys/class/backlight.
-  base::FilePath actual_brightness_path_;
   base::FilePath brightness_path_;
   base::FilePath max_brightness_path_;
 

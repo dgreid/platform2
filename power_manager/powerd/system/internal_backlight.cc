@@ -31,7 +31,6 @@ const int kTransitionIntervalMs = 20;
 
 const char InternalBacklight::kBrightnessFilename[] = "brightness";
 const char InternalBacklight::kMaxBrightnessFilename[] = "max_brightness";
-const char InternalBacklight::kActualBrightnessFilename[] = "actual_brightness";
 const char InternalBacklight::kBlPowerFilename[] = "bl_power";
 const char InternalBacklight::kScaleFilename[] = "scale";
 
@@ -82,13 +81,6 @@ bool InternalBacklight::Init(const base::FilePath& base_path,
     max_brightness_path_ = max_brightness_path;
     max_brightness_level_ = max_level;
 
-    // Technically all screen backlights should implement actual_brightness,
-    // but we'll handle ones that don't. This allows us to work with keyboard
-    // backlights too.
-    actual_brightness_path_ = device_path.Append(kActualBrightnessFilename);
-    if (!base::PathExists(actual_brightness_path_))
-      actual_brightness_path_ = brightness_path_;
-
     const base::FilePath power_path = device_path.Append(kBlPowerFilename);
     if (base::PathExists(power_path))
       bl_power_path_ = power_path;
@@ -110,7 +102,7 @@ bool InternalBacklight::Init(const base::FilePath& base_path,
   if (max_brightness_level_ <= 0)
     return false;
 
-  util::ReadInt64File(actual_brightness_path_, &current_brightness_level_);
+  util::ReadInt64File(brightness_path_, &current_brightness_level_);
   return true;
 }
 

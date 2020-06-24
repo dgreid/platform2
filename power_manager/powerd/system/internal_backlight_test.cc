@@ -36,19 +36,13 @@ class InternalBacklightTest : public ::testing::Test {
   // dir.
   void PopulateBacklightDir(const base::FilePath& path,
                             int64_t brightness,
-                            int64_t max_brightness,
-                            int64_t actual_brightness) {
+                            int64_t max_brightness) {
     ASSERT_TRUE(base::CreateDirectory(path));
     ASSERT_TRUE(util::WriteInt64File(
         path.Append(InternalBacklight::kBrightnessFilename), brightness));
     ASSERT_TRUE(util::WriteInt64File(
         path.Append(InternalBacklight::kMaxBrightnessFilename),
         max_brightness));
-    if (actual_brightness >= 0) {
-      ASSERT_TRUE(util::WriteInt64File(
-          path.Append(InternalBacklight::kActualBrightnessFilename),
-          actual_brightness));
-    }
   }
 
   // Reads and returns an int64_t value from |path|. -1 is returned on error.
@@ -73,47 +67,30 @@ TEST_F(InternalBacklightTest, BasicTest) {
   base::FilePath this_test_path = test_path_.Append("basic_test");
   const int64_t kBrightness = 128;
   const int64_t kMaxBrightness = 255;
-  const int64_t kActualBrightness = 127;
 
   base::FilePath my_path = this_test_path.Append("pwm-backlight");
-  PopulateBacklightDir(my_path, kBrightness, kMaxBrightness, kActualBrightness);
-
-  InternalBacklight backlight;
-  ASSERT_TRUE(backlight.Init(this_test_path, "*"));
-  EXPECT_EQ(kActualBrightness, backlight.GetCurrentBrightnessLevel());
-  EXPECT_EQ(kMaxBrightness, backlight.GetMaxBrightnessLevel());
-  EXPECT_TRUE(backlight.DeviceExists());
-}
-
-// Make sure things work OK when there is no actual_brightness file.
-TEST_F(InternalBacklightTest, NoActualBrightnessTest) {
-  base::FilePath this_test_path =
-      test_path_.Append("no_actual_brightness_test");
-  const int64_t kBrightness = 128;
-  const int64_t kMaxBrightness = 255;
-
-  base::FilePath my_path = this_test_path.Append("pwm-backlight");
-  PopulateBacklightDir(my_path, kBrightness, kMaxBrightness, -1);
+  PopulateBacklightDir(my_path, kBrightness, kMaxBrightness);
 
   InternalBacklight backlight;
   ASSERT_TRUE(backlight.Init(this_test_path, "*"));
   EXPECT_EQ(kBrightness, backlight.GetCurrentBrightnessLevel());
   EXPECT_EQ(kMaxBrightness, backlight.GetMaxBrightnessLevel());
+  EXPECT_TRUE(backlight.DeviceExists());
 }
 
 // Test that we pick the device with the greatest granularity.
 TEST_F(InternalBacklightTest, GranularityTest) {
   const base::FilePath this_test_path = test_path_.Append("granularity_test");
   const base::FilePath a_path = this_test_path.Append("a");
-  PopulateBacklightDir(a_path, 10, 127, 11);
+  PopulateBacklightDir(a_path, 10, 127);
   const base::FilePath b_path = this_test_path.Append("b");
-  PopulateBacklightDir(b_path, 20, 255, 21);
+  PopulateBacklightDir(b_path, 20, 255);
   const base::FilePath c_path = this_test_path.Append("c");
-  PopulateBacklightDir(c_path, 30, 63, 31);
+  PopulateBacklightDir(c_path, 30, 63);
 
   InternalBacklight backlight;
   ASSERT_TRUE(backlight.Init(this_test_path, "*"));
-  EXPECT_EQ(21, backlight.GetCurrentBrightnessLevel());
+  EXPECT_EQ(20, backlight.GetCurrentBrightnessLevel());
   EXPECT_EQ(255, backlight.GetMaxBrightnessLevel());
 }
 
@@ -124,7 +101,7 @@ TEST_F(InternalBacklightTest, NoDotDirsTest) {
   // We'll just create one dir and it will have a dot in it.  Then, we can
   // be sure that we didn't just get lucky...
   base::FilePath my_path = this_test_path.Append(".pwm-backlight");
-  PopulateBacklightDir(my_path, 128, 255, 127);
+  PopulateBacklightDir(my_path, 128, 255);
 
   InternalBacklight backlight;
   EXPECT_FALSE(backlight.Init(this_test_path, "*"));
@@ -138,13 +115,13 @@ TEST_F(InternalBacklightTest, GlobTest) {
   // .no::kbd_backlight so that we know that dirs starting with a "." are
   // ignored.
   base::FilePath my_path = this_test_path.Append("my::kbd_backlight");
-  PopulateBacklightDir(my_path, 1, 2, -1);
+  PopulateBacklightDir(my_path, 1, 2);
 
   base::FilePath ignore1_path = this_test_path.Append("ignore1");
-  PopulateBacklightDir(ignore1_path, 3, 4, -1);
+  PopulateBacklightDir(ignore1_path, 3, 4);
 
   base::FilePath ignore2_path = this_test_path.Append(".no::kbd_backlight");
-  PopulateBacklightDir(ignore2_path, 5, 6, -1);
+  PopulateBacklightDir(ignore2_path, 5, 6);
 
   InternalBacklight backlight;
   ASSERT_TRUE(backlight.Init(this_test_path, "*:kbd_backlight"));
@@ -156,7 +133,7 @@ TEST_F(InternalBacklightTest, GlobTest) {
 TEST_F(InternalBacklightTest, Transitions) {
   const int kMaxBrightness = 100;
   base::FilePath backlight_dir = test_path_.Append("transitions_test");
-  PopulateBacklightDir(backlight_dir, 50, kMaxBrightness, 50);
+  PopulateBacklightDir(backlight_dir, 50, kMaxBrightness);
 
   InternalBacklight backlight;
   const base::TimeTicks kStartTime = base::TimeTicks::FromInternalValue(10000);
@@ -204,8 +181,7 @@ TEST_F(InternalBacklightTest, InterruptTransition) {
   // Make the backlight start at its max level.
   const int kMaxBrightness = 100;
   base::FilePath backlight_dir = test_path_.Append("backlight");
-  PopulateBacklightDir(backlight_dir, kMaxBrightness, kMaxBrightness,
-                       kMaxBrightness);
+  PopulateBacklightDir(backlight_dir, kMaxBrightness, kMaxBrightness);
   InternalBacklight backlight;
   backlight.clock()->set_current_time_for_testing(
       base::TimeTicks::FromInternalValue(10000));
@@ -264,7 +240,7 @@ TEST_F(InternalBacklightTest, InterruptTransition) {
 TEST_F(InternalBacklightTest, BlPower) {
   const int kMaxBrightness = 100;
   const base::FilePath kDir = test_path_.Append("backlight");
-  PopulateBacklightDir(kDir, kMaxBrightness, kMaxBrightness, kMaxBrightness);
+  PopulateBacklightDir(kDir, kMaxBrightness, kMaxBrightness);
 
   const base::FilePath kPowerFile =
       kDir.Append(InternalBacklight::kBlPowerFilename);
