@@ -441,4 +441,19 @@ TEST_F(DevicePolicyImplTest, GetChannelDowngradeBehaviorNotSet) {
   EXPECT_FALSE(device_policy_.GetChannelDowngradeBehavior(&value));
 }
 
+// Device minimum required version should only be used in enterprise devices.
+TEST_F(DevicePolicyImplTest, GetHighestDeviceMinimumVersion_SetConsumer) {
+  em::ChromeDeviceSettingsProto device_policy_proto;
+  device_policy_proto.mutable_device_minimum_version()->set_value(
+      "{\"requirements\" : [{\"chromeos_version\" : \"12215\", "
+      "\"warning_period\" : 7, \"aue_warning_period\" : 14},  "
+      "{\"chromeos_version\" : \"13315.60.12\", \"warning_period\" : 5, "
+      "\"aue_warning_period\" : 13}], \"unmanaged_user_restricted\" : true}");
+  InitializePolicy(InstallAttributesReader::kDeviceModeConsumer,
+                   device_policy_proto);
+
+  base::Version version;
+  ASSERT_FALSE(device_policy_.GetHighestDeviceMinimumVersion(&version));
+}
+
 }  // namespace policy

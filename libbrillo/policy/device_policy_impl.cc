@@ -175,6 +175,25 @@ base::Optional<base::Value> DecodeListValueFromJSON(
   return std::move(decoded_json.value);
 }
 
+base::Optional<base::Value> DecodeDictValueFromJSON(
+    const std::string& json_string, const std::string& entry_name) {
+  auto decoded_json = base::JSONReader::ReadAndReturnValueWithError(
+      json_string, base::JSON_ALLOW_TRAILING_COMMAS);
+  if (decoded_json.error_code != base::JSONReader::JSON_NO_ERROR) {
+    LOG(ERROR) << "Invalid JSON string in " << entry_name << ": "
+               << decoded_json.error_message;
+    return base::nullopt;
+  }
+
+  if (!decoded_json.value->is_dict()) {
+    LOG(ERROR) << "Invalid JSON string in " << entry_name << ": "
+               << "JSON string is not a dictionary";
+    return base::nullopt;
+  }
+
+  return std::move(decoded_json.value);
+}
+
 }  // namespace
 
 DevicePolicyImpl::DevicePolicyImpl()
@@ -737,6 +756,65 @@ bool DevicePolicyImpl::GetChannelDowngradeBehavior(
     return false;
 
   *channel_downgrade_behavior_out = proto.channel_downgrade_behavior();
+  return true;
+}
+
+bool DevicePolicyImpl::GetHighestDeviceMinimumVersion(
+    base::Version* version_out) const {
+  if (!IsEnterpriseEnrolled())
+    return false;
+
+  if (!device_policy_.has_device_minimum_version())
+    return false;
+
+  const em::StringPolicyProto& policy_string(
+      device_policy_.device_minimum_version());
+  if (!policy_string.has_value())
+    return false;
+
+  const base::Optional<base::Value> decoded_policy =
+      DecodeDictValueFromJSON(policy_string.value(), "device_minimum_version");
+  if (!decoded_policy)
+    return false;
+
+  const base::Value* requirements_entries =
+      decoded_policy->FindListKey("requirements");
+  if (!requirements_entries || requirements_entries->GetList().empty())
+    return false;
+
+  base::Version highest_version("0");
+  bool valid_version_found = false;
+  for (const auto& version_value : requirements_entries->GetList()) {
+    if (!version_value.is_dict()) {
+      LOG(WARNING) << "Invalid JSON string given. Version is not a dictionary.";
+      continue;
+    }
+
+    const std::string* version_str =
+        version_value.FindStringKey("chromeos_version");
+    if (!version_str) {
+      LOG(WARNING) << " Invalid JSON string given. Version is missing.";
+      continue;
+    }
+
+    base::Version version(*version_str);
+    if (!version.IsValid()) {
+      LOG(WARNING) << "Invalid JSON string given. String is not a version.";
+      continue;
+    }
+
+    if (version > highest_version) {
+      valid_version_found = true;
+      highest_version = version;
+    }
+  }
+
+  if (!valid_version_found) {
+    LOG(ERROR) << "No valid entry found in device_minimum_version";
+    return false;
+  }
+
+  *version_out = highest_version;
   return true;
 }
 

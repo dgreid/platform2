@@ -122,6 +122,10 @@ class MockDevicePolicy : public DevicePolicy {
   MOCK_METHOD(bool, GetCustomerId, (std::string*), (const, override));
   MOCK_METHOD(bool, VerifyPolicySignature, (), (override));
   MOCK_METHOD(bool, GetChannelDowngradeBehavior, (int*), (const, override));
+  MOCK_METHOD(bool,
+              GetHighestDeviceMinimumVersion,
+              (base::Version*),
+              (const, override));
 };
 }  // namespace policy
 

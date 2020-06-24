@@ -193,6 +193,11 @@ TEST(PolicyTest, DevicePolicyAllSetTest) {
   EXPECT_EQ(3, intervals[1].end_day_of_week);
   EXPECT_EQ(base::TimeDelta::FromMinutes(20), intervals[1].end_time);
 
+  base::Version device_minimum_version;
+  const base::Version expected_minimum_version("13315.60.12");
+  ASSERT_TRUE(policy.GetHighestDeviceMinimumVersion(&device_minimum_version));
+  EXPECT_EQ(expected_minimum_version, device_minimum_version);
+
   // Reloading the protobuf should succeed.
   EXPECT_TRUE(provider.Reload());
 }
@@ -223,6 +228,7 @@ TEST(PolicyTest, DevicePolicyNoneSetTest) {
   std::string string_value;
   std::vector<DevicePolicy::UsbDeviceId> list_device;
   std::vector<DevicePolicy::WeeklyTimeInterval> intervals;
+  base::Version device_minimum_version;
 
   EXPECT_FALSE(policy.GetPolicyRefreshRate(&int_value));
   EXPECT_FALSE(policy.GetUserWhitelist(&list_value));
@@ -252,6 +258,7 @@ TEST(PolicyTest, DevicePolicyNoneSetTest) {
   EXPECT_FALSE(policy.GetUsbDetachableWhitelist(&list_device));
   EXPECT_FALSE(policy.GetSecondFactorAuthenticationMode(&int_value));
   EXPECT_FALSE(policy.GetDisallowedTimeIntervals(&intervals));
+  EXPECT_FALSE(policy.GetHighestDeviceMinimumVersion(&device_minimum_version));
 }
 
 // Verify that the library will correctly recognize and signal missing files.

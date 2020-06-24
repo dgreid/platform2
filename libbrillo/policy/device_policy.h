@@ -14,6 +14,7 @@
 
 #include <base/macros.h>
 #include <base/time/time.h>
+#include <base/version.h>
 
 #pragma GCC visibility push(default)
 
@@ -255,6 +256,15 @@ class DevicePolicy {
   // enum. Returns true on success.
   virtual bool GetChannelDowngradeBehavior(
       int* channel_downgrade_behavior_out) const = 0;
+
+  // Writes the value of Chrome OS minimum required version. This value
+  // is taken from the list of versions of device_minimum_version field of the
+  // ChromeDeviceSettingsProto. The value is the highest version listed in
+  // policy. Returns true if the policy is a valid JSON dictionary containing at
+  // least one valid version entry. Returns false if the policy is not set or no
+  // version can be parsed from it.
+  virtual bool GetHighestDeviceMinimumVersion(
+      base::Version* versions_out) const = 0;
 
  private:
   // Verifies that the policy signature is correct.
