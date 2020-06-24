@@ -90,6 +90,8 @@ class VaultKeyset {
   virtual void set_reset_secret(const brillo::SecureBlob& reset_secret);
   virtual bool IsLECredential() const;
   virtual bool IsSignatureChallengeProtected() const;
+  virtual int GetFscryptPolicyVersion();
+  virtual void SetFscryptPolicyVersion(int policy_version);
 
  private:
   brillo::SecureBlob fek_;

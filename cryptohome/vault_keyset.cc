@@ -346,4 +346,12 @@ bool VaultKeyset::IsSignatureChallengeProtected() const {
          SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED;
 }
 
+int VaultKeyset::GetFscryptPolicyVersion() {
+  return serialized_.fscrypt_policy_version();
+}
+
+void VaultKeyset::SetFscryptPolicyVersion(int policy_version) {
+  serialized_.set_fscrypt_policy_version(policy_version);
+}
+
 }  // namespace cryptohome

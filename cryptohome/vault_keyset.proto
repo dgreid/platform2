@@ -132,4 +132,7 @@ message SerializedVaultKeyset {
 
   // Set if the timestamp has been moved to its own file.
   optional bool timestamp_file_exists = 19;
+
+  // Set if the vault keyset should be used with fscrypt v2 encryption policies.
+  optional int32 fscrypt_policy_version = 20;
 }
