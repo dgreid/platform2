@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -12,6 +12,8 @@
 """
 
 from __future__ import print_function
+
+
 import ctypes
 import sys
 import time
@@ -71,7 +73,7 @@ def main(argv):
     assert updater.CurrentSection() == 0, 'Not in RO: Cannot inject entropy'
 
     print('Inject entropy and sys jump to RW')
-    updater.InjectEntropyWithPayload('\x87' * hammerd_api.ENTROPY_SIZE)
+    updater.InjectEntropyWithPayload(b'\x87' * hammerd_api.ENTROPY_SIZE)
     updater.SendSubcommand(hammerd_api.UpdateExtraCommand.ImmediateReset)
     updater.CloseUsb()
     time.sleep(0.5)

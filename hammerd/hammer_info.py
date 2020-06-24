@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright 2017 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,6 +11,7 @@ import argparse
 import collections
 import ctypes
 import shlex
+import sys
 
 import hammerd_api
 
@@ -122,7 +123,7 @@ def main():
   else:
     print('Invalid args.field: "%s", should be one of %s' %
           (args.field, ', '.join(info.keys())))
-    exit(1)
+    sys.exit(1)
 
 
 if __name__ == '__main__':

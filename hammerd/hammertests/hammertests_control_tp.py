@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright 2018 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -20,7 +20,7 @@ def main(argv):
     sys.exit('Test takes no args!')
   iterations = 1
   output_to_stdout = ' 2>&1 | tee '
-  python_prefix = 'python2 '
+  python_prefix = 'python3 '
   test_list = ['transfer_touchpad_works']
 
   for test in test_list:

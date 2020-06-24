@@ -27,7 +27,8 @@ BASE_TABLE = {
 }
 
 board_name_cmd = 'mosys platform model'
-BOARD_NAME = subprocess.check_output(board_name_cmd, shell=True)
+BOARD_NAME = subprocess.check_output(board_name_cmd, shell=True,
+                                     encoding='utf-8')
 BASE_NAME = BASE_TABLE[BOARD_NAME.rstrip()]
 
 # Device-dependent information.
@@ -125,7 +126,7 @@ def disable_hammerd():
 
 
 def enable_hammerd():
-  print ('Enabling hammerd')
+  print('Enabling hammerd')
   subprocess.call('umount /lib/udev/rules.d/99-hammerd.rules', shell=True)
   subprocess.call('initctl restart udev', shell=True)
 

@@ -110,11 +110,11 @@ class WrapperMetaclass(type):
   which is a list of (method name, [arg0 type, arg1 type, ...], return type).
   Also, each class should initiate the instance to "self.object" field.
   """
-  def __new__(mcs, name, bases, dct):
+  def __new__(cls, name, bases, dct):
     for method_name, argtypes, restype in dct['METHODS']:
       dct[method_name] = WrapperMetaclass.GenerateMethod(
           name, method_name, argtypes, restype)
-    return super(WrapperMetaclass, mcs).__new__(mcs, name, bases, dct)
+    return super(WrapperMetaclass, cls).__new__(cls, name, bases, dct)
 
   @staticmethod
   def GenerateMethod(cls_name, method_name, argtypes, restype):
@@ -129,10 +129,16 @@ class WrapperMetaclass(type):
       for idx, arg_type in enumerate(argtypes[1:]):
         if arg_type == ctypes.POINTER(ByteString):
           args[idx] = WrapperMetaclass.ConvertString(args[idx])
+        elif arg_type == ctypes.c_char_p:
+          args[idx] = args[idx].encode('utf-8')
       func = getattr(_DLL, '%s_%s' % (cls_name, method_name))
       func.argtypes = argtypes
       func.restype = restype
-      return func(self.object, *args)
+
+      ret = func(self.object, *args)
+      if restype == ctypes.c_char_p:
+        ret = ret.decode('utf-8')
+      return ret
     return method
 
   @staticmethod
@@ -151,9 +157,8 @@ class WrapperMetaclass(type):
     return ctypes.byref(ByteString(buffer_ptr, buffer_size))
 
 
-class FirmwareUpdater(object):
+class FirmwareUpdater(object, metaclass=WrapperMetaclass):
   """The wrapper of FirmwareUpdater class."""
-  __metaclass__ = WrapperMetaclass
 
   METHODS = [
       ('LoadEcImage',
@@ -193,12 +198,13 @@ class FirmwareUpdater(object):
     func = _DLL.FirmwareUpdater_New
     func.argtypes = [ctypes.c_uint16, ctypes.c_uint16, ctypes.c_char_p]
     func.restype = ctypes.c_void_p
+    if path is not None:
+      path = path.encode('utf-8')
     self.object = func(vendor_id, product_id, path)
 
 
-class PairManager(object):
+class PairManager(object, metaclass=WrapperMetaclass):
   """The wrapper of FirmwareUpdater class."""
-  __metaclass__ = WrapperMetaclass
 
   METHODS = [
       ('PairChallenge', [ctypes.c_voidp, ctypes.c_voidp,
