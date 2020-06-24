@@ -460,6 +460,19 @@ cmd_vsh() (
 
 )
 
+# TODO(crbug/1098598): Remove the borealis command when necessary.
+USAGE_borealis=''
+HELP_borealis=''
+# Borealis is WIP so we don't want to pollute crosh's help output.
+unset USAGE_borealis HELP_borealis
+EXEC_borealis='/usr/bin/borealis'
+cmd_borealis() (
+  "${EXEC_borealis}" "$@"
+)
+help_borealis() (
+  cmd_borealis --help
+)
+
 # Set the vars to pass the unittests ...
 USAGE_ssh=''
 HELP_ssh=''
