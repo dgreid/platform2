@@ -673,12 +673,25 @@ class UserDataAuth {
       base::OnceCallback<void(const user_data_auth::MountReply&)> on_done);
 
   // Called on Mount thread. This triggers the credentials verification steps
-  // that are specific to challenge-response keys, before scheduling
-  // CompleteChallengeResponseCheckKey().
+  // that are specific to challenge-response keys, going through
+  // {TryLightweightChallengeResponseCheckKeyEx(),
+  // OnLightweightChallengeResponseCheckKeyExDone()} and/or
+  // {DoFullChallengeResponseCheckKeyEx(),
+  // OnFullChallengeResponseCheckKeyExDone()}.
   void DoChallengeResponseCheckKey(
       const user_data_auth::CheckKeyRequest& request,
       base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done);
-  void CompleteChallengeResponseCheckKey(
+  void TryLightweightChallengeResponseCheckKey(
+      const user_data_auth::CheckKeyRequest& request,
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done);
+  void OnLightweightChallengeResponseCheckKeyDone(
+      const user_data_auth::CheckKeyRequest& request,
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
+      bool is_key_valid);
+  void DoFullChallengeResponseCheckKey(
+      const user_data_auth::CheckKeyRequest& request,
+      base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done);
+  void OnFullChallengeResponseCheckKeyDone(
       base::OnceCallback<void(user_data_auth::CryptohomeErrorCode)> on_done,
       std::unique_ptr<Credentials> credentials);
 
