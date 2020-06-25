@@ -34,6 +34,8 @@ static_library("libcroslog_static") {
     "multiplexer.h",
     "severity.cc",
     "severity.h",
+    "viewer_journal.cc",
+    "viewer_journal.h",
     "viewer_plaintext.cc",
     "viewer_plaintext.h",
   ]
