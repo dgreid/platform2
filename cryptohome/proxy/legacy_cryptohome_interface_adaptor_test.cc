@@ -7,8 +7,8 @@
 #include <attestation-client-test/attestation/dbus-proxy-mocks.h>
 #include <base/files/file_util.h>
 #include <base/strings/string_number_conversions.h>
+#include <brillo/dbus/mock_dbus_method_response.h>
 #include <chromeos/constants/cryptohome.h>
-#include <chromeos/libhwsec/mock_dbus_method_response.h>
 #include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
 #include "cryptohome/mock_platform.h"
@@ -18,7 +18,7 @@ namespace cryptohome {
 
 namespace {
 
-using ::hwsec::MockDBusMethodResponse;
+using ::brillo::dbus_utils::MockDBusMethodResponse;
 
 using ::testing::_;
 using ::testing::DoAll;
