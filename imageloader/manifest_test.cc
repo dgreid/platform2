@@ -23,32 +23,34 @@ TEST(ManifestTest, ParseManifest) {
   const std::string size = R"("42")";
   const std::string preload_allowed = R"(true)";
   const std::string used_by = R"("foo-user")";
+  const std::string mount_file_required = R"(true)";
   const std::string description = R"("foo-description")";
   const std::string manifest_version = R"(1)";
   const std::string manifest_raw = std::string() + R"(
     {
-    "fs-type":)" + fs_type + R"(,
-    "is-removable":)" + is_removable +
-                                   R"(,
-    "image-sha256-hash":)" + image_sha256_hash +
-                                   R"(,
-    "table-sha256-hash":)" + table_sha256_hash +
-                                   R"(,
-    "version":)" + version + R"(,
-    "id":)" + id + R"(,
-    "name":)" + name + R"(,
-    "image-type":)" + image_type + R"(,
-    "pre-allocated-size":)" + preallocated_size +
-                                   R"(,
-    "size":)" + size + R"(,
-    "preload-allowed":)" + preload_allowed +
-                                   R"(,
-    "used-by":)" + used_by +
-                                   R"(,
     "description":)" + description +
                                    R"(,
+    "fs-type":)" + fs_type + R"(,
+    "id":)" + id + R"(,
+    "image-sha256-hash":)" + image_sha256_hash +
+                                   R"(,
+    "image-type":)" + image_type + R"(,
+    "is-removable":)" + is_removable +
+                                   R"(,
     "manifest-version":)" + manifest_version +
-                                   R"(
+                                   R"(,
+    "mount-file-required":)" + mount_file_required +
+                                   R"(,
+    "name":)" + name + R"(,
+    "pre-allocated-size":)" + preallocated_size +
+                                   R"(,
+    "preload-allowed":)" + preload_allowed +
+                                   R"(,
+    "size":)" + size + R"(,
+    "table-sha256-hash":)" + table_sha256_hash +
+                                   R"(,
+    "used-by":)" + used_by + R"(,
+    "version":)" + version + R"(
     }
   )";
   Manifest manifest;
@@ -67,6 +69,7 @@ TEST(ManifestTest, ParseManifest) {
   EXPECT_EQ(manifest.size(), 42);
   EXPECT_EQ(manifest.preload_allowed(), true);
   EXPECT_EQ(manifest.used_by(), "foo-user");
+  EXPECT_EQ(manifest.mount_file_required(), true);
   EXPECT_EQ(manifest.description(), "foo-description");
 }
 

@@ -36,6 +36,7 @@ constexpr char kImageType[] = "image-type";
 constexpr char kPreallocatedSize[] = "pre-allocated-size";
 constexpr char kSize[] = "size";
 constexpr char kPreloadAllowed[] = "preload-allowed";
+constexpr char kMountFileRequired[] = "mount-file-required";
 constexpr char kUsedBy[] = "used-by";
 constexpr char kDescription[] = "description";
 
@@ -160,6 +161,11 @@ bool Manifest::ParseManifest(const std::string& manifest_raw) {
   if (!manifest_dict->GetBoolean(kPreloadAllowed, &preload_allowed_)) {
     // If |preaload-allowed| field does not exist, by default it is false.
     preload_allowed_ = false;
+  }
+
+  if (!manifest_dict->GetBoolean(kMountFileRequired, &mount_file_required_)) {
+    // If 'mount-file-required' field does not exist, by default it is false.
+    mount_file_required_ = false;
   }
 
   // All of these fields are optional.
