@@ -1031,7 +1031,8 @@ impl Methods {
         vm_name: &str,
         user_id_hash: &str,
         features: VmFeatures,
-        disk_image_path: String,
+        stateful_disk_path: String,
+        extra_disk_path: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
         let mut request = StartVmRequest::new();
         request.start_termina = true;
@@ -1043,26 +1044,39 @@ impl Methods {
         request.name = vm_name.to_owned();
         {
             let disk_image = request.mut_disks().push_default();
-            disk_image.path = disk_image_path;
+            disk_image.path = stateful_disk_path;
             disk_image.writable = true;
             disk_image.do_mount = false;
         }
-
         let tremplin_started = ProtobusSignalWatcher::new(
             self.connection.connection.as_ref(),
             VM_CICERONE_INTERFACE,
             TREMPLIN_STARTED_SIGNAL,
         )?;
 
-        let response: StartVmResponse = self.sync_protobus(
-            Message::new_method_call(
-                VM_CONCIERGE_SERVICE_NAME,
-                VM_CONCIERGE_SERVICE_PATH,
-                VM_CONCIERGE_INTERFACE,
-                START_VM_METHOD,
-            )?,
-            &request,
+        let message = Message::new_method_call(
+            VM_CONCIERGE_SERVICE_NAME,
+            VM_CONCIERGE_SERVICE_PATH,
+            VM_CONCIERGE_INTERFACE,
+            START_VM_METHOD,
         )?;
+
+        let response: StartVmResponse = match extra_disk_path {
+            None => self.sync_protobus(message, &request)?,
+            Some(path) => {
+                request.use_fd_for_storage = true;
+
+                let file = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .custom_flags(libc::O_NOFOLLOW)
+                    .open(&path)?;
+                let raw_fd = file.into_raw_fd();
+                // Safe because `raw_fd` is a valid and we are the unique owner of this descriptor.
+                let owned_fd = unsafe { OwnedFd::new(raw_fd) };
+                self.sync_protobus_timeout(message, &request, &[owned_fd], DEFAULT_TIMEOUT_MS)?
+            }
+        };
 
         match response.status {
             VmStatus::VM_STATUS_STARTING => {
@@ -1646,6 +1660,7 @@ impl Methods {
         name: &str,
         user_id_hash: &str,
         features: VmFeatures,
+        extra_disk: Option<String>,
     ) -> Result<(), Box<dyn Error>> {
         self.notify_vm_starting()?;
         self.start_vm_infrastructure(user_id_hash)?;
@@ -1665,7 +1680,8 @@ impl Methods {
             }
 
             let disk_image_path = self.create_disk_image(name, user_id_hash)?;
-            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path)?;
+
+            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path, extra_disk)?;
             self.start_lxd(name, user_id_hash)
         }
     }

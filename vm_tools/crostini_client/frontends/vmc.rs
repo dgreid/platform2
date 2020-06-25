@@ -194,6 +194,13 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             "untrusted",
             "treat this VM as untrusted, only valid in developer mode",
         );
+        opts.optopt(
+            "",
+            "extra-disk",
+            "path to an extra disk image. Only valid on untrusted VMs.",
+            "PATH",
+        );
+
         let matches = opts.parse(self.args)?;
 
         if matches.free.len() != 1 {
@@ -209,8 +216,12 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             run_as_untrusted: matches.opt_present("untrusted"),
         };
 
+        let extra_disk = matches.opt_str("extra-disk");
+
         self.metrics_send_sample("Vm.VmcStart");
-        try_command!(self.methods.vm_start(vm_name, &user_id_hash, features));
+        try_command!(self
+            .methods
+            .vm_start(vm_name, &user_id_hash, features, extra_disk));
         self.metrics_send_sample("Vm.VmcStartSuccess");
         try_command!(self.methods.vsh_exec(vm_name, &user_id_hash));
 
@@ -705,7 +716,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 }
 
 const USAGE: &str = r#"
-   [ start [--enable-gpu] [--enable-audio-capture] [--untrusted] <name> |
+   [ start [--enable-gpu] [--enable-audio-capture] [--untrusted] [--extra-disk PATH] <name> |
      stop <name> |
      create [-p] <name> [<source media> [<removable storage name>]] [-- additional parameters]
      create-extra-disk --size SIZE [--removable-media] <host disk path> |
@@ -865,6 +876,17 @@ mod tests {
                 "--enable-gpu",
                 "--enable-audio-capture",
             ],
+            &["vmc", "start", "termina", "--extra-disk=foo.img"],
+            &["vmc", "start", "termina", "--extra-disk", "foo.img"],
+            &[
+                "vmc",
+                "start",
+                "termina",
+                "--extra-disk",
+                "foo.img",
+                "--enable-audio-capture",
+                "--enable-gpu",
+            ],
             &["vmc", "stop", "termina"],
             &["vmc", "create", "termina"],
             &["vmc", "create", "-p", "termina"],
@@ -959,6 +981,7 @@ mod tests {
             &["vmc", "start"],
             &["vmc", "start", "--i-made-this-up", "termina"],
             &["vmc", "start", "termina", "extra args"],
+            &["vmc", "start", "termina", "--extra-disk"],
             &["vmc", "stop"],
             &["vmc", "stop", "termina", "extra args"],
             &["vmc", "create"],
