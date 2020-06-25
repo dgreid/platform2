@@ -354,12 +354,11 @@ class MountTest
 
   // Sets expectations for cryptohome key setup for dircrypto.
   void ExpectCryptohomeKeySetupForDircrypto(const TestUser& user) {
-    const key_serial_t kDirCryptoKeyId = 12345;
-    EXPECT_CALL(platform_, AddDirCryptoKeyToKeyring(_, _, _))
-        .WillOnce(DoAll(SetArgPointee<2>(kDirCryptoKeyId), Return(true)));
+    EXPECT_CALL(platform_, AddDirCryptoKeyToKeyring(_, _))
+        .WillOnce(Return(true));
     EXPECT_CALL(platform_, SetDirCryptoKey(user.vault_mount_path, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, InvalidateDirCryptoKey(kDirCryptoKeyId, kImageDir))
+    EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, kImageDir))
         .WillRepeatedly(Return(true));
   }
 
@@ -2716,12 +2715,11 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
     EXPECT_CALL(platform_, AddEcryptfsAuthToken(_, _, _))
         .WillRepeatedly(Return(true));
   } else {
-    const key_serial_t kDirCryptoKeyId = 12345;
-    EXPECT_CALL(platform_, AddDirCryptoKeyToKeyring(_, _, _))
-        .WillRepeatedly(DoAll(SetArgPointee<2>(kDirCryptoKeyId), Return(true)));
+    EXPECT_CALL(platform_, AddDirCryptoKeyToKeyring(_, _))
+        .WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, SetDirCryptoKey(user->vault_mount_path, _))
         .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, InvalidateDirCryptoKey(kDirCryptoKeyId, kImageDir))
+    EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, kImageDir))
         .WillRepeatedly(Return(true));
   }
 

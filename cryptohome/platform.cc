@@ -76,9 +76,6 @@ extern "C" {
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/dircrypto_util.h"
 
-// Add missing chromeos specific partition wide drop cache.
-#define FS_IOC_DROP_CACHE  _IO('f', 129)
-
 using base::FilePath;
 using base::SplitString;
 using base::StringPrintf;
@@ -1421,72 +1418,27 @@ dircrypto::KeyState Platform::GetDirCryptoKeyState(const FilePath& dir) {
 }
 
 bool Platform::SetDirCryptoKey(const FilePath& dir,
-                               const brillo::SecureBlob& key_sig) {
-  return dircrypto::SetDirectoryKey(dir, key_sig);
+                               const dircrypto::KeyReference& key_reference) {
+  return dircrypto::SetDirectoryKey(dir, key_reference);
 }
 
-bool Platform::AddDirCryptoKeyToKeyring(const brillo::SecureBlob& key,
-                                        const brillo::SecureBlob& key_sig,
-                                        key_serial_t* key_id) {
-  *key_id = dircrypto::AddKeyToKeyring(key, key_sig);
-  if (*key_id == dircrypto::kInvalidKeySerial)
-    return false;
-
-  /* Set the permission on the key.
-   * Possessor: (everyone given the key is in a session keyring belonging to
-   * init):
-   * -- View, Search
-   * User: (root)
-   * -- View, Search, Write, Setattr
-   * Group, Other:
-   * -- None
-   */
-  const key_perm_t kPermissions = KEY_POS_VIEW | KEY_POS_SEARCH |
-      KEY_USR_VIEW | KEY_USR_WRITE | KEY_USR_SEARCH | KEY_USR_SETATTR;
-  if (keyctl_setperm(*key_id, kPermissions) != 0) {
-    PLOG(ERROR) << "Could not change permission on key " << *key_id;
-    return false;
-  }
-  return true;
+bool Platform::AddDirCryptoKeyToKeyring(
+    const brillo::SecureBlob& key, dircrypto::KeyReference* key_reference) {
+  return dircrypto::AddKeyToKeyring(key, key_reference);
 }
 
-bool Platform::InvalidateDirCryptoKey(key_serial_t key_id,
-                                      const FilePath& shadow_root) {
+bool Platform::InvalidateDirCryptoKey(
+    const dircrypto::KeyReference& key_reference, const FilePath& shadow_root) {
   // Unlink the key.
   // NOTE: Even after this, the key will still stay valid as long as the
   // encrypted contents are on the page cache.
-  if (!dircrypto::UnlinkKey(key_id)) {
+  if (!dircrypto::UnlinkKey(key_reference)) {
     LOG(ERROR) << "Failed to unlink the key.";
   }
   // Run Sync() to make all dirty cache clear.
   Sync();
 
-  // First, attempt to selectively drop caches for shadow root mount point.
-  // This can fail if the directory does not support the operation or if
-  // the process does not have the correct capabilities (CAP_SYS_ADMIN).
-  if (!DropMountCaches(shadow_root)) {
-    LOG(ERROR) << "Failed to drop cache for user mount.";
-    // Use drop_caches to drop all clear cache. Otherwise, cached decrypted data
-    // will stay visible. This should invalidate the key provided no one touches
-    // the encrypted directories while this function is running.
-    constexpr char kData = '3';
-    if (base::WriteFile(FilePath("/proc/sys/vm/drop_caches"),
-                        &kData, sizeof(kData))
-        != sizeof(kData)) {
-      LOG(ERROR) << "Failed to drop all caches.";
-      return false;
-    }
-  }
-
-  // At this point, the key should be invalidated, but try to invalidate it just
-  // in case.
-  // If the key was already invaldated, this should fail with ENOKEY.
-  if (keyctl_invalidate(key_id) == 0) {
-    LOG(ERROR) << "We ended up invalidating key " << key_id;
-  } else if (errno != ENOKEY) {
-    PLOG(ERROR) << "Failed to invalidate key" << key_id;
-  }
-  return true;
+  return dircrypto::InvalidateSessionKey(key_reference, shadow_root);
 }
 
 bool Platform::ClearUserKeyring() {
@@ -1726,22 +1678,6 @@ FilePath FileEnumerator::Next() {
 
 FileEnumerator::FileInfo FileEnumerator::GetInfo() {
   return FileInfo(enumerator_->GetInfo());
-}
-
-bool Platform::DropMountCaches(const FilePath& dir) {
-  base::ScopedFD fd(HANDLE_EINTR(open(dir.value().c_str(),
-                                      O_RDONLY | O_DIRECTORY)));
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Invalid directory: " << dir.value();
-    return false;
-  }
-
-  if (ioctl(fd.get(), FS_IOC_DROP_CACHE, nullptr) < 0) {
-    PLOG(ERROR) << "Failed: drop cache for mount point. Dir:" << dir.value();
-    return false;
-  }
-
-  return true;
 }
 
 }  // namespace cryptohome
