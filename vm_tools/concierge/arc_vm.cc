@@ -62,10 +62,13 @@ constexpr char kKeyToOverrideKernelPath[] = "KERNEL_PATH";
 constexpr char kOemEtcSharedDir[] = "/run/arcvm/host_generated/oem/etc";
 constexpr char kOemEtcSharedDirTag[] = "oem_etc";
 
+constexpr char kMediaSharedDir[] = "/run/arcvm/media";
+constexpr char kMediaSharedDirTag[] = "media";
+
 // Uid and gid mappings for the android data directory. This is a
 // comma-separated list of 3 values: <start of range inside the user namespace>
 // <start of range outside the user namespace> <count>. The values are taken
-// from platform2/arc/container-bundles/rvc/config.json.
+// from platform2/arc/container-bundle/pi/config.json.
 constexpr char kAndroidUidMap[] =
     "0 655360 5000,5000 600 50,5050 660410 1994950";
 constexpr char kAndroidGidMap[] =
@@ -225,6 +228,10 @@ bool ArcVm::Start(base::FilePath kernel,
   std::string shared_data_media =
       CreateSharedDataParam(data_dir.Append("media"), "data_media", false);
 
+  std::string shared_media = base::StringPrintf(
+      "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s", kMediaSharedDir,
+      kMediaSharedDirTag, kAndroidUidMap, kAndroidGidMap);
+
   // Build up the process arguments.
   // clang-format off
   base::StringPairs args = {
@@ -250,6 +257,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--shared-dir",     std::move(oem_etc_shared_dir) },
     { "--shared-dir",     std::move(shared_data) },
     { "--shared-dir",     std::move(shared_data_media) },
+    { "--shared-dir",     std::move(shared_media) },
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
