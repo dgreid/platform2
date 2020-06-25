@@ -4,6 +4,8 @@
 
 import("//common-mk/pkg_config.gni")
 
+# gnlint: disable=GnLintVisibilityFlags
+
 arect_src = "../aosp/frameworks/native/libs/arect"
 libbase_src = "../aosp/system/core/base"
 libcutils_src = "../aosp/system/core/libcutils"
@@ -51,14 +53,8 @@ config("target_defaults") {
   ]
 }
 
-static_library("libnnapi-support") {
-  configs += [
-    "//common-mk:nouse_thin_archive",
-    "//common-mk:pic",
-    ":target_defaults",
-  ]
-  configs -= [ "//common-mk:use_thin_archive" ]
-  complete_static_lib = true
+shared_library("libnnapi-support") {
+  configs += [ ":target_defaults" ]
   deps = [
     ":libbase",
     ":libcutils",
@@ -83,6 +79,7 @@ generate_pkg_config("libnnapi-support_pc") {
 static_library("libbase") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   sources = [
@@ -144,6 +141,7 @@ if (use.test) {
 static_library("libcutils") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   include_dirs = [ "${libcutils_src}/include" ]
@@ -152,7 +150,6 @@ static_library("libcutils") {
   sources = [
     "${libcutils_src}/config_utils.cpp",
     "${libcutils_src}/hashmap.cpp",
-    "${libcutils_src}/klog.cpp",
     "${libcutils_src}/load_file.cpp",
     "${libcutils_src}/native_handle.cpp",
     "${libcutils_src}/threads.cpp",
@@ -182,6 +179,7 @@ if (use.test) {
 static_library("libfmq") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   deps = [
@@ -217,6 +215,7 @@ if (use.test) {
 static_library("libhidl") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   include_dirs = [
@@ -237,7 +236,6 @@ static_library("libhidl") {
     "${libhidl_src}/base/HidlInternal.cpp",
     "${libhidl_src}/base/HidlSupport.cpp",
     "${libhidl_src}/base/Status.cpp",
-    "${libhidl_src}/libhidlmemory/HidlMemoryToken.cpp",
     "${libhidl_src}/libhidlmemory/mapping.cpp",
     "${libhidl_src}/transport/HidlTransportUtils.cpp",
     "${libhidl_src}/transport/allocator/1.0/default/AshmemAllocator.cpp",
@@ -280,6 +278,7 @@ if (use.test) {
 static_library("libhwbuf") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   include_dirs = [
@@ -311,6 +310,7 @@ if (use.test) {
 static_library("liblog") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   include_dirs = [ "${liblog_src}/include" ]
@@ -347,6 +347,7 @@ if (use.test) {
 static_library("libnative") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   include_dirs = [ "${native_src}/include" ]
@@ -357,6 +358,7 @@ static_library("libnative") {
 static_library("libutils") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   deps = [ ":liblog" ]
@@ -404,6 +406,7 @@ if (use.test) {
 static_library("neuralnetworks") {
   configs += [
     "//common-mk:pic",
+    "//common-mk:visibility_default",
     ":target_defaults",
   ]
   cflags_cc = [
