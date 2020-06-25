@@ -41,6 +41,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/file_utils.h>
 
 using std::string;
 
@@ -501,9 +502,42 @@ grpc::Status ServiceImpl::Mount(grpc::ServerContext* ctx,
                                 const MountRequest* request,
                                 MountResponse* response) {
   LOG(INFO) << "Received mount request";
+
+  const base::FilePath target_path = base::FilePath(request->target());
+  if (request->create_target()) {
+    // Create a mount point if it doesn't exist.
+    if (!brillo::MkdirRecursively(target_path, 0755).is_valid()) {
+      PLOG(ERROR) << "Failed to create " << request->target();
+      return grpc::Status(grpc::INTERNAL,
+                          base::StringPrintf("failed to create a directory: %s",
+                                             request->target().c_str()));
+    }
+  }
+
   int ret = mount(request->source().c_str(), request->target().c_str(),
                   request->fstype().c_str(), request->mountflags(),
                   request->options().c_str());
+
+  if (ret < 0 && errno == EINVAL && request->mkfs_if_needed()) {
+    // When the source has an invalid superblock (e.g. not formatted), run
+    // mkfs.btrfs and retry mount.
+
+    LOG(INFO) << "Formatting" << request->source() << " as btrfs";
+
+    Init::ProcessLaunchInfo launch_info;
+    if (!init_->Spawn({"mkfs.btrfs", request->source().c_str()}, lxd_env_,
+                      false /*respawn*/, false /*use_console*/,
+                      true /*wait_for_exit*/, &launch_info)) {
+      return grpc::Status(grpc::INTERNAL, "failed to spawn mkfs.btrfs");
+    }
+    if (launch_info.status != Init::ProcessStatus::EXITED) {
+      return grpc::Status(grpc::INTERNAL, "mkfs.btrfs did not complete");
+    }
+
+    ret = mount(request->source().c_str(), request->target().c_str(),
+                request->fstype().c_str(), request->mountflags(),
+                request->options().c_str());
+  }
 
   if (ret < 0) {
     response->set_error(errno);
@@ -513,6 +547,20 @@ grpc::Status ServiceImpl::Mount(grpc::ServerContext* ctx,
     response->set_error(0);
     LOG(INFO) << "Mounted \"" << request->source() << "\" on \""
               << request->target() << "\"";
+  }
+
+  if (request->permissions() != 0) {
+    ret = chmod(request->target().c_str(), request->permissions());
+
+    if (ret < 0) {
+      response->set_error(errno);
+      PLOG(ERROR) << "Failed to change the mode of \""
+                  << "\"" << request->target() << "\"";
+
+      // Unmount the disk. Since this is cleanup, we ignore its return value.
+      umount(request->target().c_str());
+      return grpc::Status(grpc::INTERNAL, "failed to change the mode");
+    }
   }
 
   return grpc::Status::OK;

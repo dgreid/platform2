@@ -129,6 +129,14 @@ constexpr struct {
         .failure_is_fatal = true,
     },
     {
+        .source = "tmpfs",
+        .target = "/mnt/external",
+        .fstype = "tmpfs",
+        .flags = MS_NOSUID | MS_NODEV | MS_NOEXEC,
+        .data = "mode=0755",
+        .failure_is_fatal = true,
+    },
+    {
         .source = "run",
         .target = "/run",
         .fstype = "tmpfs",

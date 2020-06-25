@@ -1042,44 +1042,6 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     }
   }
 
-  std::vector<TerminaVm::Disk> disks;
-  base::ScopedFD storage_fd;
-  // Check if an opened storage image was passed over D-BUS.
-  if (request.use_fd_for_storage()) {
-    if (!reader.PopFileDescriptor(&storage_fd)) {
-      LOG(ERROR) << "use_fd_for_storage is set but no fd found";
-
-      response.set_failure_reason("use_fd_for_storage is set but no fd found");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-    // Clear close-on-exec as this FD needs to be passed to crosvm.
-    int raw_fd = storage_fd.get();
-    int flags = fcntl(raw_fd, F_GETFD);
-    if (flags == -1) {
-      LOG(ERROR) << "Failed to get flags for passed fd";
-
-      response.set_failure_reason("Failed to get flags for passed fd");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-    flags &= ~FD_CLOEXEC;
-    if (fcntl(raw_fd, F_SETFD, flags) == -1) {
-      LOG(ERROR) << "Failed to clear close-on-exec flag for fd";
-
-      response.set_failure_reason("Failed to clear close-on-exec flag for fd");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-
-    base::FilePath fd_path = base::FilePath(kProcFileDescriptorsPath)
-                                 .Append(base::NumberToString(raw_fd));
-    disks.push_back(TerminaVm::Disk{
-        .path = std::move(fd_path),
-        .writable = true,
-    });
-  }
-
   // Track the next available virtio-blk device name.
   // Assume that the rootfs filesystem was assigned /dev/pmem0 if
   // pmem is used, /dev/vda otherwise.
@@ -1089,6 +1051,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
                   USE_PMEM_DEVICE_FOR_ROOTFS;
   string rootfs_device = use_pmem ? "/dev/pmem0" : "/dev/vda";
   unsigned char disk_letter = use_pmem ? 'a' : 'b';
+  std::vector<TerminaVm::Disk> disks;
 
   // In newer components, the /opt/google/cros-containers directory
   // is split into its own disk image(vm_tools.img).  Detect whether it exists
@@ -1134,6 +1097,52 @@ std::unique_ptr<dbus::Response> Service::StartVm(
         .path = base::FilePath(disk.path()),
         .writable = disk.writable(),
         .sparse = !IsDiskUserChosenSize(disk.path()),
+    });
+  }
+
+  base::ScopedFD storage_fd;
+  // Check if an opened storage image was passed over D-BUS.
+  if (request.use_fd_for_storage()) {
+    // We only allow untrusted VMs to mount extra storage.
+    if (!is_untrusted_vm) {
+      LOG(ERROR) << "use_fd_for_storage is set for a trusted VM";
+
+      response.set_failure_reason("use_fd_for_storage is set for a trusted VM");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+
+    if (!reader.PopFileDescriptor(&storage_fd)) {
+      LOG(ERROR) << "use_fd_for_storage is set but no fd found";
+
+      response.set_failure_reason("use_fd_for_storage is set but no fd found");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+    // Clear close-on-exec as this FD needs to be passed to crosvm.
+    int raw_fd = storage_fd.get();
+    int flags = fcntl(raw_fd, F_GETFD);
+    if (flags == -1) {
+      LOG(ERROR) << "Failed to get flags for passed fd";
+
+      response.set_failure_reason("Failed to get flags for passed fd");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+    flags &= ~FD_CLOEXEC;
+    if (fcntl(raw_fd, F_SETFD, flags) == -1) {
+      LOG(ERROR) << "Failed to clear close-on-exec flag for fd";
+
+      response.set_failure_reason("Failed to clear close-on-exec flag for fd");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+
+    base::FilePath fd_path = base::FilePath(kProcFileDescriptorsPath)
+                                 .Append(base::NumberToString(raw_fd));
+    disks.push_back(TerminaVm::Disk{
+        .path = std::move(fd_path),
+        .writable = true,
     });
   }
 
@@ -1308,6 +1317,25 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   response.set_mount_result((StartVmResponse::MountResult)mount_result);
 
   LOG(INFO) << "Started VM with pid " << vm->pid();
+
+  // Mount an extra disk in the VM. We mount them after calling StartTermina
+  // because /mnt/external is set up there.
+  if (request.use_fd_for_storage()) {
+    const string external_disk_path =
+        base::StringPrintf("/dev/vd%c", disk_letter++);
+
+    // To support multiple extra disks in the future easily, we use integers for
+    // names of mount points. Since we support only one extra disk for now,
+    // |target_dir| is always "0".
+    if (!vm->MountExternalDisk(std::move(external_disk_path),
+                               /* target_dir= */ "0")) {
+      LOG(ERROR) << "Failed to mount " << external_disk_path;
+
+      response.set_failure_reason("Failed to mount extra disk");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+  }
 
   VmInfo* vm_info = response.mutable_vm_info();
   response.set_success(true);

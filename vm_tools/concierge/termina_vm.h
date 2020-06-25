@@ -112,6 +112,12 @@ class TerminaVm final : public VmBaseImpl {
   // listening on the vsock port |port| and mounts the file system on |target|.
   bool Mount9P(uint32_t port, std::string target);
 
+  // Mounts an extra disk device inside the VM an an external disk.  |source|
+  // must be a valid path inside the VM.  |target| is a name of mount point
+  // which will be created under /mnt/external inside the VM. Returns true on
+  // success.
+  bool MountExternalDisk(std::string source, std::string target_dir);
+
   // Sets the resolv.conf in the VM to |config|. Returns true if successful,
   // false if the resolv.conf in the guest could not be updated.
   bool SetResolvConfig(const std::vector<std::string>& nameservers,

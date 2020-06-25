@@ -7,6 +7,7 @@
 #include <arpa/inet.h>
 #include <linux/capability.h>
 #include <signal.h>
+#include <sys/mount.h>
 #include <sys/wait.h>
 #include <unistd.h>
 
@@ -534,6 +535,40 @@ bool TerminaVm::Mount9P(uint32_t port, string target) {
   if (!status.ok() || response.error() != 0) {
     LOG(ERROR) << "Failed to mount 9P server on " << request.target()
                << " inside VM " << vsock_cid_ << ": "
+               << (status.ok() ? strerror(response.error())
+                               : status.error_message());
+    return false;
+  }
+
+  return true;
+}
+
+bool TerminaVm::MountExternalDisk(string source, std::string target_dir) {
+  const string target = "/mnt/external/" + target_dir;
+
+  LOG(INFO) << "Mounting an external disk on " << target;
+
+  vm_tools::MountRequest request;
+  vm_tools::MountResponse response;
+
+  request.set_source(std::move(source));
+  request.set_target(std::move(target));
+  request.set_fstype("btrfs");
+  request.set_options("");
+  request.set_create_target(true);
+  request.set_permissions(0777);
+  request.set_mkfs_if_needed(true);
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = stub_->Mount(&ctx, request, &response);
+  if (!status.ok() || response.error() != 0) {
+    LOG(ERROR) << "Failed to mount an external disk " << request.source()
+               << " on " << request.target() << " inside VM " << vsock_cid_
+               << ": "
                << (status.ok() ? strerror(response.error())
                                : status.error_message());
     return false;

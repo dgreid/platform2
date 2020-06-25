@@ -102,6 +102,18 @@ message MountRequest {
   string fstype = 3;
   uint64 mountflags = 4;
   string options = 5;
+
+  // If |create_target| is true and the |target| directory doesn't exist,
+  // maitred creates it. If |target| does exist, this value is ignored.
+  bool create_target = 6;
+
+  // If |permissions| is a non-zero value, maitred runs chmod with the value for
+  // the mounted directory.
+  uint32 permissions = 7;
+
+  // If |mkfs_if_necessary| is true and maitred fails to mount the device,
+  // maitred runs mkfs.btrfs to the device and tries to mount it again.
+  bool mkfs_if_needed = 8;
 }
 
 // Request to mount a 9P filesystem via a vsock socket using the trans=fd

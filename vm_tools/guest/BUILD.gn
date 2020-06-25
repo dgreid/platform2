@@ -63,6 +63,7 @@ static_library("libmaitred") {
   defines = [ "USE_VM_BOREALIS=${use.vm_borealis}" ]
   pkg_deps = [
     "grpc++",
+    "libbrillo",
     "protobuf",
     "vm_protos",
   ]
