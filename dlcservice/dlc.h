@@ -184,6 +184,7 @@ class DlcBase {
   base::FilePath content_id_path_;
   base::FilePath content_package_path_;
   base::FilePath prefs_path_;
+  base::FilePath prefs_package_path_;
   base::FilePath preloaded_image_path_;
 
   // True if the pref |kDlcPrefVerified| exists.

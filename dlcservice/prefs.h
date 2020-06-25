@@ -15,6 +15,7 @@
 namespace dlcservice {
 
 extern const char kDlcPrefVerified[];
+extern const char kDlcRootMount[];
 
 // |Prefs| class can be used to persist key value pairs to disk.
 class Prefs {

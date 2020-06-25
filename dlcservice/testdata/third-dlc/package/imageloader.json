@@ -6,6 +6,7 @@
   "image-type": "dlc",
   "is-removable": true,
   "manifest-version": 1,
+  "mount-file-required": false,
   "name": "Third Dlc",
   "pre-allocated-size": "8192",
   "preload-allowed": true,

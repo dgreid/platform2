@@ -530,4 +530,102 @@ TEST_F(DlcBaseTest, InstallIncreasesRefCount) {
   EXPECT_TRUE(base::PathExists(ref_count_file));
 }
 
+TEST_F(DlcBaseTest, MountFileCreated) {
+  // |kFirstDlc| has 'mount-file-required' as true in the manifest.
+  DlcBase dlc(kFirstDlc);
+  SetUpDlcWithSlots(kFirstDlc);
+  InstallWithUpdateEngine({kFirstDlc});
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_TRUE(
+      Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), kFirstDlc, kPackage))
+          .Exists(kDlcRootMount));
+}
+
+TEST_F(DlcBaseTest, MountFileNotCreated) {
+  // |kSecondDlc| has 'mount-file-required' as false in the manifest.
+  DlcBase dlc(kSecondDlc);
+  SetUpDlcWithSlots(kSecondDlc);
+  InstallWithUpdateEngine({kSecondDlc});
+  dlc.Initialize();
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kSecondDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+
+  EXPECT_TRUE(dlc.Install(&err_));
+  EXPECT_FALSE(Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), kSecondDlc,
+                               kPackage))
+                   .Exists(kDlcRootMount));
+}
+
+TEST_F(DlcBaseTest, MountFileRequiredDeletionOnUninstall) {
+  DlcBase dlc(kFirstDlc);
+  SetUpDlcWithSlots(kFirstDlc);
+  InstallWithUpdateEngine({kFirstDlc});
+  dlc.Initialize();
+
+  // Process |Install()|.
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+  EXPECT_TRUE(dlc.Install(&err_));
+
+  // Process |Uninstall()| + check.
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_TRUE(dlc.Uninstall(&err_));
+  EXPECT_FALSE(
+      Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), kFirstDlc, kPackage))
+          .Exists(kDlcRootMount));
+}
+
+TEST_F(DlcBaseTest, MountFileRequiredDeletionOnPurge) {
+  DlcBase dlc(kFirstDlc);
+  SetUpDlcWithSlots(kFirstDlc);
+  InstallWithUpdateEngine({kFirstDlc});
+  dlc.Initialize();
+
+  // Process |Install()|.
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kFirstDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+  EXPECT_TRUE(dlc.Install(&err_));
+
+  // Process |Purge()| + check.
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_TRUE(dlc.Purge(&err_));
+  EXPECT_FALSE(
+      Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), kFirstDlc, kPackage))
+          .Exists(kDlcRootMount));
+}
+
 }  // namespace dlcservice

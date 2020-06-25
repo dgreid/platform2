@@ -6,6 +6,7 @@
   "image-type": "dlc",
   "is-removable": true,
   "manifest-version": 1,
+  "mount-file-required": true,
   "name": "First Dlc",
   "pre-allocated-size": "8192",
   "size": "4096",

@@ -16,6 +16,7 @@ using std::string;
 namespace dlcservice {
 
 const char kDlcPrefVerified[] = "verified";
+const char kDlcRootMount[] = "root_mount";
 
 Prefs::Prefs(const base::FilePath& prefs_root) : prefs_root_(prefs_root) {}
 

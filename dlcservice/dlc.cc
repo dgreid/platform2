@@ -50,9 +50,10 @@ bool DlcBase::Initialize() {
   }
 
   const auto& content_dir = system_state->content_dir();
-  content_id_path_ = content_dir.Append(id_);
-  content_package_path_ = content_id_path_.Append(package_);
-  prefs_path_ = system_state->dlc_prefs_dir().Append(id_);
+  content_id_path_ = JoinPaths(content_dir, id_);
+  content_package_path_ = JoinPaths(content_id_path_, package_);
+  prefs_path_ = JoinPaths(system_state->dlc_prefs_dir(), id_);
+  prefs_package_path_ = JoinPaths(prefs_path_, package_);
   preloaded_image_path_ = JoinPaths(system_state->preloaded_content_dir(), id_,
                                     package_, kDlcImageFileName);
   ref_count_ = RefCountInterface::Create(manifest_.used_by(), prefs_path_);
@@ -460,6 +461,14 @@ bool DlcBase::Mount(ErrorPtr* err) {
     return false;
   }
   mount_point_ = FilePath(mount_point);
+
+  // Creates a file which holds the root mount path, allowing for indirect
+  // access for processes/scripts which can't access DBus.
+  if (manifest_.mount_file_required() &&
+      Prefs(prefs_package_path_).SetKey(kDlcRootMount, GetRoot().value()))
+    LOG(ERROR) << "Failed to create indirect root mount file: "
+               << JoinPaths(prefs_package_path_, kDlcRootMount);
+
   ChangeState(DlcState::INSTALLED);
   return true;
 }
@@ -478,6 +487,12 @@ bool DlcBase::Unmount(ErrorPtr* err) {
     *err = Error::Create(FROM_HERE, state_.last_error_code(),
                          "Imageloader UnloadDlcImage() call failed.");
     return false;
+  }
+
+  if (manifest_.mount_file_required()) {
+    if (!Prefs(prefs_package_path_).Delete(kDlcRootMount))
+      LOG(ERROR) << "Failed to delete indirect root mount file: "
+                 << JoinPaths(prefs_package_path_, kDlcRootMount);
   }
 
   // TODO(crbug.com/1069162): Currently, when we do unmount, we remove the DLC
