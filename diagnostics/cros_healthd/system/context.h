@@ -12,10 +12,12 @@
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 #include <dbus/bus.h>
 #include <dbus/object_proxy.h>
+#include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/common/system/debugd_adapter.h"
 #include "diagnostics/common/system/powerd_adapter.h"
+#include "diagnostics/cros_healthd/executor/executor_adapter.h"
 #include "diagnostics/cros_healthd/system/system_config_interface.h"
 
 namespace org {
@@ -32,7 +34,11 @@ namespace diagnostics {
 // the context object is passed.
 class Context {
  public:
+  // The no-arg constructor exists so that MockContext doesn't need to specify a
+  // Mojo endpoint.
   Context();
+  // All production uses should use this constructor.
+  explicit Context(mojo::PlatformChannelEndpoint endpoint);
   Context(const Context&) = delete;
   Context& operator=(const Context&) = delete;
   virtual ~Context();
@@ -64,10 +70,16 @@ class Context {
   // Use the object returned by system_config() to determine which conditional
   // features a device supports.
   SystemConfigInterface* system_config() const;
+  // Use the object returned by executor() to make calls to the root-level
+  // executor.
+  ExecutorAdapter* executor() const;
 
  private:
   // Allows MockContext to override the default helper objects.
   friend class MockContext;
+
+  // Used to connect to the root-level executor via Mojo.
+  mojo::PlatformChannelEndpoint endpoint_;
 
   // This should be the only connection to D-Bus. Use |connection_| to get the
   // |dbus_bus_|.
@@ -87,6 +99,7 @@ class Context {
   dbus::ObjectProxy* power_manager_proxy_;
   std::unique_ptr<PowerdAdapter> powerd_adapter_;
   std::unique_ptr<SystemConfigInterface> system_config_;
+  std::unique_ptr<ExecutorAdapter> executor_;
 };
 
 }  // namespace diagnostics

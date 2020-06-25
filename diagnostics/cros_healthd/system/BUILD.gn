@@ -12,13 +12,17 @@ pkg_config("libcros_healthd_system_pkg_deps") {
     "libchrome-${libbase_ver}",
     "libcros_config",
     "libdebugd-client",
+    "libmojo-${libbase_ver}",
     "system_api",
   ]
 }
 
 source_set("libcros_healthd_system") {
   configs += [ ":libcros_healthd_system_pkg_deps" ]
-  deps = [ "//diagnostics/common:libcommon" ]
+  deps = [
+    "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/executor:libcros_healthd_executor",
+  ]
   sources = [
     "context.cc",
     "system_config.cc",

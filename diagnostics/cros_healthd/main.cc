@@ -11,6 +11,7 @@
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 #include <mojo/core/embedder/embedder.h>
+#include <mojo/public/cpp/platform/platform_channel.h>
 
 #include "diagnostics/cros_healthd/cros_healthd.h"
 #include "diagnostics/cros_healthd/executor/executor.h"
@@ -27,6 +28,10 @@ int main(int argc, char** argv) {
   // use it.
   mojo::core::Init();
 
+  // The parent and child processes will each keep one end of this message pipe
+  // and use it to bootstrap a Mojo connection to each other.
+  mojo::PlatformChannel channel;
+
   // The root-level parent process will continue on as the executor, and the
   // child will become the sandboxed cros_healthd daemon.
   pid_t pid = fork();
@@ -40,13 +45,13 @@ int main(int argc, char** argv) {
       LOG(FATAL) << "Executor must run as root";
 
     // Run the root-level executor.
-    return diagnostics::Executor().Run();
+    return diagnostics::Executor(channel.TakeLocalEndpoint()).Run();
   } else {
     // Sandbox the child process.
     diagnostics::ConfigureAndEnterMinijail();
 
     // Set up the context cros_healthd will run in.
-    diagnostics::Context context;
+    diagnostics::Context context{channel.TakeRemoteEndpoint()};
 
     // Run the cros_healthd daemon.
     return diagnostics::CrosHealthd(&context).Run();

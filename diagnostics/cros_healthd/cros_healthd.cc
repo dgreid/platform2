@@ -30,6 +30,11 @@ CrosHealthd::CrosHealthd(Context* context)
       context_(context) {
   DCHECK(context_);
 
+  ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
+      base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
+      mojo::core::ScopedIPCSupport::ShutdownPolicy::
+          CLEAN /* blocking shutdown */);
+
   CHECK(context_->Initialize()) << "Failed to initialize context.";
 
   backlight_fetcher_ = std::make_unique<BacklightFetcher>(context_);
@@ -68,16 +73,7 @@ CrosHealthd::~CrosHealthd() = default;
 
 int CrosHealthd::OnInit() {
   VLOG(0) << "Starting";
-  const int exit_code = DBusServiceDaemon::OnInit();
-  if (exit_code != EXIT_SUCCESS)
-    return exit_code;
-
-  ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
-      base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
-      mojo::core::ScopedIPCSupport::ShutdownPolicy::
-          CLEAN /* blocking shutdown */);
-
-  return EXIT_SUCCESS;
+  return DBusServiceDaemon::OnInit();
 }
 
 void CrosHealthd::RegisterDBusObjectsAsync(

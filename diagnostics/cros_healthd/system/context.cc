@@ -4,6 +4,8 @@
 
 #include "diagnostics/cros_healthd/system/context.h"
 
+#include <utility>
+
 #include <base/logging.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
 #include <dbus/power_manager/dbus-constants.h>
@@ -17,6 +19,10 @@
 namespace diagnostics {
 
 Context::Context() = default;
+
+Context::Context(mojo::PlatformChannelEndpoint endpoint)
+    : endpoint_(std::move(endpoint)) {}
+
 Context::~Context() = default;
 
 bool Context::Initialize() {
@@ -49,6 +55,10 @@ bool Context::Initialize() {
 
   system_config_ = std::make_unique<SystemConfig>(cros_config_.get());
 
+  // Create and connect the adapter for the root-level executor.
+  executor_ = std::make_unique<ExecutorAdapter>();
+  executor_->Connect(std::move(endpoint_));
+
   return true;
 }
 
@@ -74,6 +84,10 @@ PowerdAdapter* Context::powerd_adapter() const {
 
 SystemConfigInterface* Context::system_config() const {
   return system_config_.get();
+}
+
+ExecutorAdapter* Context::executor() const {
+  return executor_.get();
 }
 
 }  // namespace diagnostics
