@@ -18,6 +18,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <base/values.h>
 #include <brillo/userdb_utils.h>
@@ -36,6 +37,9 @@ using chromeos::ui::ChromiumCommandBuilder;
 using chromeos::ui::util::EnsureDirectoryExists;
 
 namespace login_manager {
+
+constexpr char kUiPath[] = "/ui";
+constexpr char kSerializedAshFlagsProperty[] = "serialized-ash-flags";
 
 const char kWallpaperProperty[] = "wallpaper";
 
@@ -578,6 +582,23 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
 
 }  // namespace
 
+void AddSerializedAshFlags(ChromiumCommandBuilder* builder,
+                           brillo::CrosConfigInterface* cros_config) {
+  using std::string_literals::operator""s;
+  std::string serialized_ash_flags;
+
+  if (!cros_config->GetString(kUiPath, kSerializedAshFlagsProperty,
+                              &serialized_ash_flags)) {
+    return;
+  }
+
+  for (const auto& flag :
+       base::SplitString(serialized_ash_flags, "\0"s, base::KEEP_WHITESPACE,
+                         base::SPLIT_WANT_NONEMPTY)) {
+    builder->AddArg(flag);
+  }
+}
+
 void SetUpRegulatoryLabelFlag(ChromiumCommandBuilder* builder,
                               brillo::CrosConfigInterface* cros_config) {
   std::string subdir;
@@ -820,6 +841,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
   // app_shell, content_shell, etc.) rather than just to Chrome belong in the
   // ChromiumCommandBuilder class instead.
   CreateDirectories(&builder);
+  AddSerializedAshFlags(&builder, cros_config);
   AddSystemFlags(&builder);
   AddUiFlags(&builder, cros_config);
   AddArcFlags(&builder, &disallowed_prefixes, cros_config);
