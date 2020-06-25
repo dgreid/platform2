@@ -193,9 +193,9 @@ class FileChangeWatcherImpl : public FileChangeWatcher,
     watchers_observer_.erase(inotify_wd);
     watchers_inotify_.erase(path);
 
-    auto inotify_wd_it = std::find(
-        unexpectedly_removed_inotify_wds_.begin(),
-        unexpectedly_removed_inotify_wds_.end(), inotify_wd);
+    auto inotify_wd_it =
+        std::find(unexpectedly_removed_inotify_wds_.begin(),
+                  unexpectedly_removed_inotify_wds_.end(), inotify_wd);
     bool already_removed_unexpectedly =
         inotify_wd_it != unexpectedly_removed_inotify_wds_.end();
 
