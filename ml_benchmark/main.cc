@@ -14,8 +14,9 @@
 
 #include "proto/benchmark_config.pb.h"
 
-using BenchmarkConfig = chrome::ml_benchmark::CrOSBenchmarkConfig;
-using BenchmarkResults = chrome::ml_benchmark::BenchmarkResults;
+using chrome::ml_benchmark::CrOSBenchmarkConfig;
+using chrome::ml_benchmark::SodaBenchmarkConfig;
+using chrome::ml_benchmark::BenchmarkResults;
 
 typedef int32_t (*benchmark_fn)(const void* config_bytes,
                                 int32_t config_bytes_size,
@@ -31,7 +32,6 @@ constexpr char kConfigFilePath[] = "benchmark.config";
 constexpr char kBenchmarkFunctionName[] = "benchmark_start";
 constexpr char kFreeBenchmarkFunctionName[] = "free_benchmark_results";
 
-// TODO(franklinh) - Drive this using the config file instead
 constexpr char kSodaDriverName[] = "SoDA";
 constexpr char kSodaDriverPath[] = "libsoda_benchmark_driver.so";
 
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
 
   base::FilePath workspace_config_path = workspace_path.Append(kConfigFilePath);
 
-  BenchmarkConfig benchmark_config;
+  CrOSBenchmarkConfig benchmark_config;
 
   CHECK(brillo::ReadTextProtobuf(workspace_config_path, &benchmark_config))
       << "Could not read the benchmark config file";
@@ -130,7 +130,14 @@ int main(int argc, char* argv[]) {
 
   // Execute benchmarks
   if (benchmark_config.has_soda_config()) {
-    base::FilePath soda_path(kSodaDriverPath);
+    auto soda_config = benchmark_config.soda_config();
+
+    base::FilePath soda_path;
+    if (soda_config.soda_driver_path().empty()) {
+      soda_path = base::FilePath(kSodaDriverPath);
+    } else {
+      soda_path = base::FilePath(soda_config.soda_driver_path());
+    }
 
     benchmark_and_report_results(kSodaDriverName,
         soda_path,

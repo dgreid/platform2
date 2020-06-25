@@ -29,6 +29,8 @@ message SodaBenchmarkConfig {
   int32 num_runs = 3;
   // Input files to test
   repeated string input_filename = 4;
+  // The path to load the benchmarking library
+  string soda_driver_path = 5;
 }
 
 enum BenchmarkReturnStatus {
