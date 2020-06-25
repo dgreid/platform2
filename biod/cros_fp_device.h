@@ -16,6 +16,7 @@
 #include "biod/biod_metrics.h"
 #include "biod/cros_fp_device_interface.h"
 #include "biod/ec_command_factory.h"
+#include "biod/fp_info_command.h"
 #include "biod/fp_mode.h"
 #include "biod/uinput_device.h"
 
@@ -62,8 +63,8 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   // if no entropy had been added before.
   bool InitEntropy(bool reset) override;
 
-  int MaxTemplateCount() override { return info_.template_max; }
-  int TemplateVersion() override { return info_.template_version; }
+  int MaxTemplateCount() override;
+  int TemplateVersion() override;
 
   EcCmdVersionSupportStatus EcCmdVersionSupported(uint16_t cmd,
                                                   uint32_t ver) override;
@@ -104,7 +105,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
   ssize_t max_read_size_ = 0;
   ssize_t max_write_size_ = 0;
-  struct ec_response_fp_info info_ = {};
+  std::unique_ptr<FpInfoCommand> info_;
 
   std::unique_ptr<EcCommandFactoryInterface> ec_command_factory_;
   MkbpCallback mkbp_event_;

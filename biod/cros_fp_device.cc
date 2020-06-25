@@ -275,13 +275,13 @@ bool CrosFpDevice::FpReadMatchSecret(uint16_t index,
 }
 
 bool CrosFpDevice::UpdateFpInfo() {
-  EcCommand<EmptyParam, struct ec_response_fp_info> cmd(EC_CMD_FP_INFO,
-                                                        kVersionOne);
-  if (!cmd.Run(cros_fd_.get())) {
+  info_ = ec_command_factory_->FpInfoCommand();
+
+  if (!info_->Run(cros_fd_.get())) {
     LOG(ERROR) << "Failed to get FP information.";
     return false;
   }
-  info_ = *cmd.Resp();
+
   return true;
 }
 
@@ -470,30 +470,37 @@ bool CrosFpDevice::Init() {
     return false;
 
   LOG(INFO) << "CROS FP Sensor Info ";
-  LOG(INFO) << "  Vendor ID  : " << FourCC(info_.vendor_id);
-  LOG(INFO) << "  Product ID : " << info_.product_id;
-  LOG(INFO) << "  Model ID   : 0x" << std::hex << info_.model_id;
-  LOG(INFO) << "  Version    : " << info_.version;
+  LOG(INFO) << "  Vendor ID  : " << FourCC(info_->sensor_id()->vendor_id);
+  LOG(INFO) << "  Product ID : " << info_->sensor_id()->product_id;
+  LOG(INFO) << "  Model ID   : 0x" << std::hex << info_->sensor_id()->model_id;
+  LOG(INFO) << "  Version    : " << info_->sensor_id()->version;
   std::string error_flags;
-  if (info_.errors & FP_ERROR_NO_IRQ)
+  if ((info_->GetFpSensorErrors() & FpSensorErrors::kNoIrq) !=
+      FpSensorErrors::kNone)
     error_flags += "NO_IRQ ";
-  if (info_.errors & FP_ERROR_SPI_COMM)
+  if ((info_->GetFpSensorErrors() & FpSensorErrors::kSpiCommunication) !=
+      FpSensorErrors::kNone)
     error_flags += "SPI_COMM ";
-  if (info_.errors & FP_ERROR_BAD_HWID)
+  if ((info_->GetFpSensorErrors() & FpSensorErrors::kBadHardwareID) !=
+      FpSensorErrors::kNone)
     error_flags += "BAD_HWID ";
-  if (info_.errors & FP_ERROR_INIT_FAIL)
+  if ((info_->GetFpSensorErrors() & FpSensorErrors::kInitializationFailure) !=
+      FpSensorErrors::kNone)
     error_flags += "INIT_FAIL";
   LOG(INFO) << "  Errors     : " << error_flags;
   LOG(INFO) << "CROS FP Image Info ";
   // Prints the pixel format in FOURCC format.
-  LOG(INFO) << "  Pixel Format     : " << FourCC(info_.pixel_format);
-  LOG(INFO) << "  Image Data Size  : " << info_.frame_size;
-  LOG(INFO) << "  Image Dimensions : " << info_.width << "x" << info_.height
-            << " " << info_.bpp << " bpp";
+  LOG(INFO) << "  Pixel Format     : "
+            << FourCC(info_->sensor_image()->pixel_format);
+  LOG(INFO) << "  Image Data Size  : " << info_->sensor_image()->frame_size;
+  LOG(INFO) << "  Image Dimensions : " << info_->sensor_image()->width << "x"
+            << info_->sensor_image()->height << " "
+            << info_->sensor_image()->bpp << " bpp";
   LOG(INFO) << "CROS FP Finger Template Info ";
-  LOG(INFO) << "  Template data format  : " << info_.template_version;
-  LOG(INFO) << "  Template Data Size    : " << info_.template_size;
-  LOG(INFO) << "  Max number of fingers : " << info_.template_max;
+  LOG(INFO) << "  Template data format  : " << info_->template_info()->version;
+  LOG(INFO) << "  Template Data Size    : " << info_->template_info()->size;
+  LOG(INFO) << "  Max number of fingers : "
+            << info_->template_info()->max_templates;
 
   watcher_ = base::FileDescriptorWatcher::WatchReadable(
       cros_fd_.get(), base::BindRepeating(&CrosFpDevice::OnEventReadable,
@@ -516,14 +523,14 @@ bool CrosFpDevice::GetDirtyMap(std::bitset<32>* bitmap) {
   if (!UpdateFpInfo())
     return false;
 
-  *bitmap = std::bitset<32>(info_.template_dirty);
+  *bitmap = info_->template_info()->dirty;
   return true;
 }
 
 bool CrosFpDevice::GetIndexOfLastTemplate(int* index) {
   if (!UpdateFpInfo())
     return false;
-  *index = info_.template_valid - 1;
+  *index = info_->template_info()->num_valid - 1;
   if (*index < 0 || *index >= MaxTemplateCount()) {
     LOG(ERROR) << "Invalid index of last template: " << *index << ".";
     return false;
@@ -545,10 +552,11 @@ bool CrosFpDevice::GetTemplate(int index, VendorTemplate* out) {
     if (!GetIndexOfLastTemplate(&index))
       return false;
     // Is the last one really a new created one ?
-    if (!(info_.template_dirty & (1 << index)))
+    const auto& dirty = info_->template_info()->dirty;
+    if (index >= dirty.size() || !dirty.test(index))
       return false;
   }
-  out->resize(static_cast<size_t>(info_.template_size));
+  out->resize(static_cast<size_t>(info_->template_info()->size));
   // In the EC_CMD_FP_FRAME host command, the templates are indexed starting
   // from 1 (aka FP_FRAME_INDEX_TEMPLATE), as 0 (aka FP_FRAME_INDEX_RAW_IMAGE)
   // is used for the finger image.
@@ -695,6 +703,24 @@ bool CrosFpDevice::UpdateEntropy(bool reset) {
     return false;
   }
   return true;
+}
+
+int CrosFpDevice::MaxTemplateCount() {
+  if (!info_ || !info_->template_info()) {
+    UpdateFpInfo();
+  }
+  CHECK(info_);
+  CHECK(info_->template_info());
+  return info_->template_info()->max_templates;
+}
+
+int CrosFpDevice::TemplateVersion() {
+  if (!info_ || !info_->template_info()) {
+    UpdateFpInfo();
+  }
+  CHECK(info_);
+  CHECK(info_->template_info());
+  return info_->template_info()->version;
 }
 
 }  // namespace biod
