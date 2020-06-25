@@ -1,0 +1,14 @@
+// Copyright 2020 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// API exposed by cros_healthd's root-level executor. This is used by the
+// sandboxed cros_healthd daemon when it needs to perform a high-privilege
+// operation.
+
+module chromeos.cros_healthd_executor.mojom;
+
+// Root-level executor interface exposed to the cros_healthd daemon. In
+// production, this is implemented by the Executor daemon.
+interface Executor {
+};
