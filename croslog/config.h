@@ -10,6 +10,8 @@
 #include <base/command_line.h>
 #include <base/optional.h>
 
+#include "croslog/severity.h"
+
 namespace croslog {
 
 enum class SourceMode { JOURNAL_LOG, PLAINTEXT_LOG };
@@ -28,8 +30,8 @@ struct Config {
   // String to show message for the specified syslog identifier
   // (SYSLOG_IDENTIFIER).
   std::string identifier;
-  // String to filter output by message priorities or priority ranges.
-  std::string priority;
+  // Severity value to filter output by message priorities or priority ranges.
+  Severity severity = Severity::UNSPECIFIED;
   // Regexp string to filter output to entries where the MESSAGE= field matches
   // with.
   std::string grep;

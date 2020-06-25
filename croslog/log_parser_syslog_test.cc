@@ -43,6 +43,49 @@ class LogParserSyslogTest : public ::testing::Test {
 
 TEST_F(LogParserSyslogTest, Parse) {
   LogParserSyslog parser;
+
+  {
+    std::string maybe_line =
+        "2020-05-25T14:15:22.402258+09:00 ERROR tag[0123]: MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("ERROR", s.substr(33, 5));
+    EXPECT_EQ(Severity::ERROR, e->severity());
+
+    EXPECT_EQ("tag", e->tag());
+    EXPECT_EQ(123, e->pid());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
+  }
+
+  {
+    std::string maybe_line =
+        "2020-05-25T14:15:22.402258+09:00 INFO kernel: MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ(Severity::INFO, e->severity());
+
+    EXPECT_EQ("kernel", e->tag());
+    EXPECT_EQ(-1, e->pid());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
+  }
+}
+
+TEST_F(LogParserSyslogTest, ParseFromFile) {
+  LogParserSyslog parser;
   LogLineReader reader(LogLineReader::Backend::FILE);
   reader.OpenFile(base::FilePath("./testdata/TEST_NORMAL_LOG1"));
   {
@@ -52,6 +95,17 @@ TEST_F(LogParserSyslogTest, Parse) {
     EXPECT_TRUE(e.has_value());
     const std::string& s = e->entire_line();
     EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("INFO", s.substr(33, 4));
+    EXPECT_EQ(Severity::INFO, e->severity());
+
+    EXPECT_EQ("sshd[5963]", s.substr(38, 10));
+    EXPECT_EQ("sshd", e->tag());
+    EXPECT_EQ(5963, e->pid());
+
+    EXPECT_EQ("Accepted", s.substr(50, 8));
+    EXPECT_EQ("Accepted", e->message().substr(0, 8));
+
     EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
     EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
   }
@@ -63,8 +117,101 @@ TEST_F(LogParserSyslogTest, Parse) {
     EXPECT_TRUE(e.has_value());
     const std::string& s = e->entire_line();
     EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("INFO", s.substr(33, 4));
+    EXPECT_EQ(Severity::INFO, e->severity());
+
+    EXPECT_EQ("sshd[5965]", s.substr(38, 10));
+    EXPECT_EQ("sshd", e->tag());
+    EXPECT_EQ(5965, e->pid());
+
+    EXPECT_EQ("Accepted", s.substr(50, 8));
+    EXPECT_EQ("Accepted", e->message().substr(0, 8));
+
     EXPECT_EQ("2020-05-25T14:15:22.402260+09:00", s.substr(0, 32));
     EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402260, +9), e->time());
+  }
+}
+
+TEST_F(LogParserSyslogTest, ParseInvalid) {
+  LogParserSyslog parser;
+
+  {
+    // Without semicollon.
+    std::string maybe_line =
+        "2020-05-25T14:15:22.402258+09:00 ERROR tag[0123] MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("ERROR", s.substr(33, 5));
+    EXPECT_EQ(Severity::ERROR, e->severity());
+
+    EXPECT_EQ("tag", e->tag());
+    EXPECT_EQ(123, e->pid());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
+  }
+
+  {
+    // Without semicollon and pid.
+    std::string maybe_line =
+        "2020-05-25T14:15:22.402258+09:00 ERROR tag MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("ERROR", s.substr(33, 5));
+    EXPECT_EQ(Severity::ERROR, e->severity());
+
+    EXPECT_EQ("tag", e->tag());
+    EXPECT_EQ(-1, e->pid());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
+  }
+
+  {
+    // Without tag.
+    std::string maybe_line = "2020-05-25T14:15:22.402258+09:00 ERROR MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ("ERROR", s.substr(33, 5));
+    EXPECT_EQ(Severity::ERROR, e->severity());
+
+    EXPECT_TRUE(e->tag().empty());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
+  }
+
+  {
+    // Without tag and priority.
+    std::string maybe_line = "2020-05-25T14:15:22.402258+09:00 MESSAGE";
+
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line));
+    EXPECT_TRUE(e.has_value());
+    const std::string& s = e->entire_line();
+    EXPECT_GT(s.size(), 32);
+
+    EXPECT_EQ(Severity::UNSPECIFIED, e->severity());
+    EXPECT_TRUE(e->tag().empty());
+    EXPECT_EQ("MESSAGE", e->message());
+
+    EXPECT_EQ("2020-05-25T14:15:22.402258+09:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2020, 5, 25, 14, 15, 22, 402258, +9), e->time());
   }
 }
 

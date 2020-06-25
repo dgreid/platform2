@@ -26,6 +26,8 @@ static_library("libcroslog_static") {
     "log_parser_syslog.h",
     "multiplexer.cc",
     "multiplexer.h",
+    "severity.cc",
+    "severity.h",
     "viewer_plaintext.cc",
     "viewer_plaintext.h",
   ]
@@ -33,7 +35,10 @@ static_library("libcroslog_static") {
 }
 
 pkg_config("target_defaults") {
-  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  pkg_deps = [
+    "libchrome-${libbase_ver}",
+    "re2",
+  ]
 }
 
 executable("croslog") {
@@ -57,6 +62,7 @@ if (use.test) {
       "log_parser_syslog_test.cc",
       "multiplexer_test.cc",
       "testrunner.cc",
+      "viewer_plaintext_test.cc",
     ]
     run_test = true
     defines = [ "UNIT_TEST" ]

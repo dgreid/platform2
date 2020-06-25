@@ -14,6 +14,7 @@
 #include <base/strings/string_number_conversions.h>
 
 #include "croslog/config.h"
+#include "croslog/severity.h"
 #include "croslog/viewer_plaintext.h"
 
 namespace {
@@ -48,9 +49,10 @@ bool LaunchJournalctlAndWait(const croslog::Config& config) {
     journalctl_command_line.push_back(config.identifier);
   }
 
-  if (!config.priority.empty()) {
+  if (config.severity != croslog::Severity::UNSPECIFIED) {
     journalctl_command_line.push_back("--priority");
-    journalctl_command_line.push_back(config.priority);
+    journalctl_command_line.push_back(
+        base::NumberToString(static_cast<int>(config.severity)));
   }
 
   if (!config.grep.empty()) {
@@ -110,11 +112,13 @@ int main(int argc, char* argv[]) {
     case croslog::SourceMode::JOURNAL_LOG:
       return LaunchJournalctlAndWait(config) ? 0 : 1;
     case croslog::SourceMode::PLAINTEXT_LOG: {
+      // Do not use them directly.
       base::MessageLoopForIO message_loop_;
+      base::AtExitManager at_exit_manager_;
 
       // TODO(yoshiki): Implement the reader of plaintext logs.
-      croslog::ViewerPlaintext viewer;
-      return viewer.Run(config) ? 0 : 1;
+      croslog::ViewerPlaintext viewer(config);
+      return viewer.Run() ? 0 : 1;
     }
   }
 }

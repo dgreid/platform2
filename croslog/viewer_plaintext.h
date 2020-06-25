@@ -10,6 +10,7 @@
 #include "base/bind.h"
 #include "base/message_loop/message_loop.h"
 #include "base/run_loop.h"
+#include "re2/re2.h"
 
 #include "croslog/config.h"
 #include "croslog/file_change_watcher.h"
@@ -19,27 +20,32 @@ namespace croslog {
 
 class ViewerPlaintext : public Multiplexer::Observer {
  public:
-  ViewerPlaintext();
+  explicit ViewerPlaintext(const croslog::Config& config);
 
   // Run the plaintext viewer. This may run the runloop to retrieve update
   // events.
-  bool Run(const croslog::Config& config);
+  bool Run();
 
  private:
-  // Do not use them directly.
-  base::AtExitManager at_exit_manager_;
+  FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
 
   base::RunLoop run_loop_;
   base::Closure quit_closure_{run_loop_.QuitWhenIdleClosure()};
 
+  const croslog::Config config_;
+  base::Optional<RE2> config_grep_;
+
+  Multiplexer multiplexer_;
+
   void OnLogFileChanged() override;
+
+  bool ShouldFilterOutEntry(const LogEntry& e);
 
   void ReadRemainingLogs();
 
+  void WriteLog(const LogEntry& entry);
   void WriteOutput(const std::string& str);
   void WriteOutput(const char* str, size_t size);
-
-  Multiplexer multiplexer_;
 
   DISALLOW_COPY_AND_ASSIGN(ViewerPlaintext);
 };

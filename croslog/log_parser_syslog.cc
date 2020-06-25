@@ -8,6 +8,8 @@
 #include <string>
 #include <utility>
 
+#include "base/strings/string_number_conversions.h"
+
 namespace {
 // The length of time string like "2020-05-25T00:00:00.000000+00:00".
 constexpr size_t kTimeStringLength = 32;
@@ -38,7 +40,61 @@ MaybeLogEntry LogParserSyslog::Parse(std::string&& entire_line) {
     return base::nullopt;
   }
 
-  return LogEntry{time, std::move(entire_line)};
+  int pos = kTimeStringLength;
+
+  std::string severity_str;
+  DCHECK_EQ(' ', entire_line[pos]);
+  if (entire_line[pos] == ' ') {
+    for (int i = pos + 1; i < entire_line.size(); i++) {
+      if (entire_line[i] == ' ') {
+        severity_str = entire_line.substr(pos + 1, i - pos - 1);
+        pos = i;
+        break;
+      }
+    }
+  }
+
+  Severity severity = Severity::UNSPECIFIED;
+  if (!severity_str.empty()) {
+    severity = SeverityFromString(severity_str);
+  }
+
+  std::string tag;
+  if (entire_line[pos] == ' ') {
+    for (int i = pos + 1; i < entire_line.size(); i++) {
+      if (entire_line[i] == '[' || entire_line[i] == ':' ||
+          entire_line[i] == ' ') {
+        tag = entire_line.substr(pos + 1, i - pos - 1);
+        pos = i;
+        break;
+      }
+    }
+  }
+
+  int pid = -1;
+  if (entire_line[pos] == '[') {
+    for (int i = pos + 1; i < entire_line.size(); i++) {
+      if (entire_line[i] == ']') {
+        std::string pid_str = entire_line.substr(pos + 1, i - pos - 1);
+        if (!base::StringToInt(pid_str, &pid))
+          pid = -1;
+        pos = i;
+        break;
+      }
+    }
+    DCHECK_EQ(']', entire_line[pos]);
+    pos++;
+  }
+
+  if (entire_line[pos] == ':')
+    pos++;
+  DCHECK_EQ(' ', entire_line[pos]);
+  pos++;
+
+  std::string message = entire_line.substr(pos, entire_line.size() - pos);
+
+  return LogEntry{time, severity,           std::move(tag),
+                  pid,  std::move(message), std::move(entire_line)};
 }
 
 }  // namespace croslog

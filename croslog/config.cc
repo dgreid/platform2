@@ -61,8 +61,12 @@ bool Config::ParseCommandLineArgs(const base::CommandLine* command_line) {
   if (command_line->HasSwitch("identifier"))
     identifier = command_line->GetSwitchValueASCII("identifier");
 
-  if (command_line->HasSwitch("priority"))
-    priority = command_line->GetSwitchValueASCII("priority");
+  if (command_line->HasSwitch("priority")) {
+    // Supports only single proority, but doesn't support range.
+    const std::string& severity_str =
+        command_line->GetSwitchValueASCII("priority");
+    severity = SeverityFromString(severity_str);
+  }
 
   if (command_line->HasSwitch("grep"))
     grep = command_line->GetSwitchValueASCII("grep");
