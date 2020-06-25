@@ -331,17 +331,15 @@ class MockPlatform : public Platform {
               (override));
   MOCK_METHOD(bool,
               SetDirCryptoKey,
-              (const base::FilePath&, const brillo::SecureBlob&),
+              (const base::FilePath&, const dircrypto::KeyReference&),
               (override));
   MOCK_METHOD(bool,
               AddDirCryptoKeyToKeyring,
-              (const brillo::SecureBlob&,
-               const brillo::SecureBlob&,
-               key_serial_t*),
+              (const brillo::SecureBlob& key, dircrypto::KeyReference*),
               (override));
   MOCK_METHOD(bool,
               InvalidateDirCryptoKey,
-              (key_serial_t, const base::FilePath&),
+              (const dircrypto::KeyReference&, const base::FilePath&),
               (override));
   MOCK_METHOD(bool, ClearUserKeyring, (), (override));
   MOCK_METHOD(bool,
