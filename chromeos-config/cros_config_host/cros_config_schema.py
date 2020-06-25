@@ -399,16 +399,69 @@ def _GetElementToIntMap(schema_yaml, hwprop):
   return dict((element, i) for (i, element) in enumerate(
       schema_json['typeDefs'][hwprop]['enum']))
 
+
+def _GenerateInferredAshFlags(device_config):
+  """Generate runtime-packed ash flags into a single device config.
+
+  Chrome flags are packed into /ui:serialized-ash-flags in the
+  resultant runtime-only configuration, as a string of null-terminated
+  strings.
+
+  Args:
+    device_config: transformed configuration for a single device.
+
+  Returns:
+    Config for a single device with /ui:serialized-ash-flags added.
+  """
+  ash_flags = set()
+  ash_flags |= set(device_config.get('ui', {}).get('extra-ash-flags', []))
+
+  if not ash_flags:
+    return device_config
+
+  serialized_ash_flags = ''
+  for flag in sorted(ash_flags):
+    serialized_ash_flags += '%s\0' % flag
+
+  device_config = copy.deepcopy(device_config)
+  device_config.setdefault('ui', {})
+  device_config['ui']['serialized-ash-flags'] = serialized_ash_flags
+  return device_config
+
+
+def _GenerateInferredElements(json_config):
+  """Generates runtime-only elements.
+
+  These are elements which can be inferred from a config containing
+  build-only elements which only appear at runtime.  For example, this
+  can be used to generate an application-specific representation of an
+  otherwise abstracted configuration.
+
+  Args:
+    json_config: transformed config dictionary to use.
+
+  Returns:
+    Config dictionary, with inferred elements potentially added.
+  """
+  configs = []
+  for config in json_config[CHROMEOS][CONFIGS]:
+    config = _GenerateInferredAshFlags(config)
+    configs.append(config)
+  return {CHROMEOS: {CONFIGS: configs}}
+
+
 def FilterBuildElements(config, build_only_elements):
   """Removes build only elements from the schema.
 
-  Removes build only elements from the schema in preparation for the platform.
+  Removes build only elements from the schema in preparation for the
+  platform, and generates any runtime-only inferred elements.
 
   Args:
     config: Config (transformed) that will be filtered
     build_only_elements: List of strings of paths of fields to be filtered
   """
   json_config = json.loads(config)
+  json_config = _GenerateInferredElements(json_config)
   for config in json_config[CHROMEOS][CONFIGS]:
     _FilterBuildElements(config, '', build_only_elements)
 

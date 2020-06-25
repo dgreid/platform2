@@ -345,6 +345,17 @@
             }
           ]
         },
+        "ui": {
+          "extra-ash-flags": [
+            "--foo-flag",
+            "--bar-flag=baz",
+            "--bam"
+          ],
+          "power-button": {
+            "edge": "left",
+            "position": "0.3"
+          }
+        },
         "wallpaper": "default"
       },
       {

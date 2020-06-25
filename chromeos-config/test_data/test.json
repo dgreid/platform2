@@ -152,6 +152,13 @@
         "name": "another",
         "thermal": {},
         "touch": {},
+        "ui": {
+          "power-button": {
+            "edge": "left",
+            "position": "0.3"
+          },
+          "serialized-ash-flags": "--bam\u0000--bar-flag=baz\u0000--foo-flag\u0000"
+        },
         "wallpaper": "default"
       },
       {

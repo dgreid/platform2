@@ -79,7 +79,7 @@ some_base_config: &some_base_config
     set-wifi-transmit-power-for-tablet-mode: "1"
     suspend-to-idle: "0"
     touchpad-wakeup: "1"
-  ui:
+  ui: &ui_common
     power-button:
       edge: "left"
       position: "0.3"
@@ -198,6 +198,12 @@ chromeos:
                 depthcharge: "another"
                 libpayload: "another"
               firmware-config: 0xFFFFFFFF
+            ui:
+              <<: *ui_common
+              extra-ash-flags:
+                - --foo-flag
+                - --bar-flag=baz
+                - --bam
             firmware-signing:
               key-id: "{{$key-id}}"
               signature-id: "{{$name}}"
