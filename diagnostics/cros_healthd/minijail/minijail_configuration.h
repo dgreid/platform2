@@ -12,6 +12,10 @@ namespace diagnostics {
 // start without a sandbox.
 void ConfigureAndEnterMinijail();
 
+// Enters a new mount namespace. We don't want anyone other than our descendants
+// to see our tmpfs.
+void NewMountNamespace();
+
 }  // namespace diagnostics
 
 #endif  // DIAGNOSTICS_CROS_HEALTHD_MINIJAIL_MINIJAIL_CONFIGURATION_H_

@@ -4,6 +4,8 @@
 
 #include "diagnostics/cros_healthd/minijail/minijail_configuration.h"
 
+#include <sys/mount.h>
+
 #include <string>
 
 #include <base/files/file_path.h>
@@ -130,6 +132,33 @@ void ConfigureAndEnterMinijail() {
   minijail_parse_seccomp_filters(jail.get(), kSeccompFilterPath);
 
   minijail_enter(jail.get());
+}
+
+void NewMountNamespace() {
+  ScopedMinijail j(minijail_new());
+
+  // Create a minimalistic mount namespace with just the bare minimum required.
+  minijail_namespace_vfs(j.get());
+  if (minijail_enter_pivot_root(j.get(), "/mnt/empty"))
+    LOG(FATAL) << "minijail_enter_pivot_root() failed";
+
+  minijail_bind(j.get(), "/", "/", 0);
+
+  if (minijail_mount_with_data(j.get(), "tmpfs", "/run", "tmpfs",
+                               MS_NOSUID | MS_NOEXEC | MS_NODEV, nullptr)) {
+    LOG(FATAL) << "minijail_mount_with_data(\"/run\") failed";
+  }
+
+  // Mount /run/systemd/journal to be able to log to journald.
+  if (minijail_bind(j.get(), "/run/systemd/journal", "/run/systemd/journal", 0))
+    LOG(FATAL) << "minijail_bind(\"/run/systemd/journal\") failed";
+
+  if (minijail_mount_with_data(j.get(), "/dev", "/dev", "bind",
+                               MS_BIND | MS_REC, nullptr)) {
+    LOG(FATAL) << "minijail_mount_with_data(\"/dev\") failed";
+  }
+
+  minijail_enter(j.get());
 }
 
 }  // namespace diagnostics

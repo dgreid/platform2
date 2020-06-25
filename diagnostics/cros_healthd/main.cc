@@ -44,6 +44,9 @@ int main(int argc, char** argv) {
     if (getuid() != 0)
       LOG(FATAL) << "Executor must run as root";
 
+    // Put the root-level executor in a light sandbox.
+    diagnostics::NewMountNamespace();
+
     // Run the root-level executor.
     return diagnostics::Executor(channel.TakeLocalEndpoint()).Run();
   } else {
