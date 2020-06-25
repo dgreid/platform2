@@ -10,16 +10,18 @@
 
 #include <base/strings/string_number_conversions.h>
 #include <base/time/time.h>
+#include <brillo/dbus/mock_dbus_method_response.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "libhwsec/mock_dbus_method_response.h"
 #include "u2fd/mock_tpm_vendor_cmd.h"
 #include "u2fd/mock_user_state.h"
 #include "u2fd/util.h"
 
 namespace u2f {
 namespace {
+
+using ::brillo::dbus_utils::MockDBusMethodResponse;
 
 using ::testing::_;
 using ::testing::MatchesRegex;
@@ -311,7 +313,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialUninitialized) {
   // Use an uninitialized WebAuthnHandler object.
   handler_.reset(new WebAuthnHandler());
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const MakeCredentialResponse& resp) {
@@ -327,7 +329,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialUninitialized) {
 
 TEST_F(WebAuthnHandlerTest, MakeCredentialEmptyRpId) {
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const MakeCredentialResponse& resp) {
@@ -349,7 +351,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialNoSecret) {
 
   ExpectGetUserSecretFails();
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const MakeCredentialResponse& resp) {
@@ -374,7 +376,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceNoPresence) {
       .WillRepeatedly(Return(kCr50StatusNotAllowed));
 
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const MakeCredentialResponse& resp) {
@@ -425,7 +427,7 @@ TEST_F(WebAuthnHandlerTest, MakeCredentialPresenceSuccess) {
           "(AB){32}");  // y coordinate, from kU2fGenerateResponse
 
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<MakeCredentialResponse>>();
+      std::make_unique<MockDBusMethodResponse<MakeCredentialResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const std::string& expected_authenticator_data,
@@ -449,7 +451,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionUninitialized) {
   // Use an uninitialized WebAuthnHandler object.
   handler_.reset(new WebAuthnHandler());
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -465,7 +467,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionUninitialized) {
 
 TEST_F(WebAuthnHandlerTest, GetAssertionEmptyRpId) {
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -483,7 +485,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionEmptyRpId) {
 
 TEST_F(WebAuthnHandlerTest, GetAssertionWrongClientDataHashLength) {
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -511,7 +513,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionNoSecret) {
   // Since we don't have user secret, we won't even pass DoU2fSignCheckOnly, and
   // the TPM won't receive any command.
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -542,7 +544,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
       .WillOnce(Return(kCr50StatusPasswordRequired));
 
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -574,7 +576,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceNoPresence) {
       .WillRepeatedly(Return(kCr50StatusNotAllowed));
 
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
@@ -609,7 +611,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
                       Return(kCr50StatusSuccess)));
 
   auto mock_method_response =
-      std::make_unique<hwsec::MockDBusMethodResponse<GetAssertionResponse>>();
+      std::make_unique<MockDBusMethodResponse<GetAssertionResponse>>();
   bool called = false;
   mock_method_response->set_return_callback(base::Bind(
       [](bool* called_ptr, const GetAssertionResponse& resp) {
