@@ -609,9 +609,9 @@ cmd_bt_console() (
   fi
 
   if [ $# -eq 0 ]; then
-    "${EXEC_bt_console}"
+    "${EXEC_bt_console}" --restricted
   else
-    "${EXEC_bt_console}" --agent="$1"
+    "${EXEC_bt_console}" --restricted --agent="$1"
   fi
 )
 
