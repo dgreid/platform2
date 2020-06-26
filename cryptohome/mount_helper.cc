@@ -334,8 +334,12 @@ bool MountHelper::SetUpGroupAccess(const FilePath& home_dir) const {
   constexpr mode_t kDefaultMode = S_IXGRP;
   constexpr mode_t kWritableMode = kDefaultMode | S_IWGRP;
   for (const auto& accessible : kGroupAccessiblePaths) {
-    if (!platform_->FileExists(accessible.path) && accessible.optional)
-      continue;
+    if (!platform_->DirectoryExists(accessible.path)) {
+      if (accessible.optional)
+        continue;
+      else
+        return false;
+    }
 
     if (!platform_->SetGroupAccessible(
             accessible.path, default_access_gid_,
@@ -655,6 +659,8 @@ bool MountHelper::CreateTrackedSubdirectories(const Credentials& credentials,
 
     // Create pass-through directory.
     if (!platform_->DirectoryExists(tracked_dir_path)) {
+      // Delete the existing file or symbolic link if any.
+      platform_->DeleteFile(tracked_dir_path, false /* recursive */);
       VLOG(1) << "Creating pass-through directory " << tracked_dir_path.value();
       platform_->CreateDirectory(tracked_dir_path);
       if (!platform_->SetOwnership(tracked_dir_path, default_uid_, default_gid_,

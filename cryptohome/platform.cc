@@ -590,7 +590,8 @@ int Platform::Access(const FilePath& path, uint32_t flag) {
 }
 
 bool Platform::DirectoryExists(const FilePath& path) {
-  return base::DirectoryExists(path);
+  struct stat buf = {};
+  return Stat(path, &buf) && S_ISDIR(buf.st_mode);
 }
 
 bool Platform::GetFileSize(const FilePath& path, int64_t* size) {

@@ -374,16 +374,15 @@ void TestUser::InjectUserPaths(MockPlatform* platform,
       Property(&FilePath::value, StartsWith(vault_path.value()))))
       .WillRepeatedly(Return(is_ecryptfs));
   FilePath new_user_path = MountHelper::GetNewUserPath(username);
-  EXPECT_CALL(*platform,
-      FileExists(
-        Property(&FilePath::value,
-          AnyOf(StartsWith(legacy_user_mount_path.value()),
-                StartsWith(vault_mount_path.value()),
-                StartsWith(user_mount_path.value()),
-                StartsWith(root_mount_path.value()),
-                StartsWith(new_user_path.value()),
-                StartsWith(keyset_path.value())))))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(*platform, DirectoryExists(Property(
+                             &FilePath::value,
+                             AnyOf(StartsWith(legacy_user_mount_path.value()),
+                                   StartsWith(vault_mount_path.value()),
+                                   StartsWith(user_mount_path.value()),
+                                   StartsWith(root_mount_path.value()),
+                                   StartsWith(new_user_path.value()),
+                                   StartsWith(keyset_path.value())))))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(*platform,
       SetGroupAccessible(
         Property(&FilePath::value,

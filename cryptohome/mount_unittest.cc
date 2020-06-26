@@ -1729,12 +1729,14 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
   ExpectCryptohomeMount(*user);
 
   // Fake successful mount to /home/chronos/user/*
-  EXPECT_CALL(platform_,
-      FileExists(
-        Property(&FilePath::value, AnyOf(
-            StartsWith(user->legacy_user_mount_path.value()),
-            StartsWith(user->vault_mount_path.value())))))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(Property(
+                             &FilePath::value,
+                             StartsWith(user->legacy_user_mount_path.value()))))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(Property(
+                             &FilePath::value,
+                             StartsWith(user->user_vault_mount_path.value()))))
+      .WillRepeatedly(Return(true));
 
   mount_args.create_if_missing = true;
   error = MOUNT_ERROR_NONE;
@@ -2176,6 +2178,8 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
         .WillOnce(Return(true));
       EXPECT_CALL(platform_, DeleteFile(userside_dir, true))
         .WillOnce(Return(true));
+      EXPECT_CALL(platform_, DeleteFile(tracked_dir_path, false))
+          .WillOnce(Return(true));
       EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
         .WillOnce(Return(false))
         .WillOnce(Return(false));
@@ -2514,20 +2518,22 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   const FilePath myfiles_path = base_path.Append("MyFiles");
   const FilePath myfiles_downloads_path = myfiles_path.Append("Downloads");
   const FilePath gcache_path = base_path.Append("GCache");
+  const FilePath gcache_v1_path = base_path.Append("GCache").Append("v1");
   const FilePath gcache_v2_path = base_path.Append("GCache").Append("v2");
-  const auto gcache_dirs = Property(
-      &FilePath::value, StartsWith(base_path.Append("GCache").value()));
 
   // Expecting Downloads to not exist and then be created.
   EXPECT_CALL(platform_, DirectoryExists(downloads_path))
-      .WillOnce(Return(false));
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(downloads_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
               SetOwnership(downloads_path, chronos_uid_, chronos_gid_, _))
       .WillOnce(Return(true));
   // Expecting MyFiles to not exist and then be created.
-  EXPECT_CALL(platform_, DirectoryExists(myfiles_path)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, DirectoryExists(myfiles_path))
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(myfiles_path)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
               SetOwnership(myfiles_path, chronos_uid_, chronos_gid_, _))
@@ -2535,7 +2541,8 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
   // Expecting MyFiles/Downloads to not exist and then be created, with right
   // user and group.
   EXPECT_CALL(platform_, DirectoryExists(myfiles_downloads_path))
-      .WillOnce(Return(false));
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(myfiles_downloads_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, SetOwnership(myfiles_downloads_path, chronos_uid_,
@@ -2543,13 +2550,16 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
       .WillOnce(Return(true));
 
   // Expect GCache and Gcache/v2 to be created with the right user and group.
-  EXPECT_CALL(platform_, DirectoryExists(gcache_path)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, DirectoryExists(gcache_path))
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(gcache_path)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
               SetOwnership(gcache_path, chronos_uid_, chronos_gid_, _))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(gcache_v2_path))
-      .WillOnce(Return(false));
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, CreateDirectory(gcache_v2_path))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_,
@@ -2561,13 +2571,12 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
 
   // Expectaction for Mount::SetupGroupAccess
   // These files should exist. Then get group accessible called on them.
-  EXPECT_CALL(platform_,
-              FileExists(AnyOf(base_path, myfiles_path, downloads_path,
-                               myfiles_downloads_path, gcache_dirs)))
+  EXPECT_CALL(platform_, DirectoryExists(AnyOf(base_path, gcache_v1_path)))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_,
               SetGroupAccessible(AnyOf(base_path, myfiles_path, downloads_path,
-                                       myfiles_downloads_path, gcache_dirs),
+                                       myfiles_downloads_path, gcache_path,
+                                       gcache_v1_path, gcache_v2_path),
                                  shared_gid_, _))
       .WillRepeatedly(Return(true));
 
@@ -2585,30 +2594,17 @@ TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists) {
   const FilePath downloads_path = base_path.Append("Downloads");
   const FilePath myfiles_path = base_path.Append("MyFiles");
   const FilePath myfiles_downloads_path = myfiles_path.Append("Downloads");
-  const FilePath gcache_path = base_path.Append("GCache");
-  const FilePath gcache_v2_path = base_path.Append("GCache").Append("v2");
   const auto gcache_dirs = Property(
       &FilePath::value, StartsWith(base_path.Append("GCache").value()));
 
-  // Expecting Downloads and MyFiles/Downloads to exist thus CreateDirectory
-  // isn't called.
-  EXPECT_CALL(platform_, DirectoryExists(downloads_path))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(myfiles_path))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(myfiles_downloads_path))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(gcache_path)).WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(gcache_v2_path))
-      .WillOnce(Return(true));
   EXPECT_CALL(platform_, SetOwnership(base_path, chronos_uid_, shared_gid_, _))
       .WillOnce(Return(true));
 
-  // Expectaction for Mount::SetupGroupAccess.
-  // These files should exist, then SetGroupAccessible is called on them.
+  // Expecting Downloads and MyFiles/Downloads to exist thus CreateDirectory
+  // isn't called.
   EXPECT_CALL(platform_,
-              FileExists(AnyOf(base_path, myfiles_path, downloads_path,
-                               myfiles_downloads_path, gcache_dirs)))
+              DirectoryExists(AnyOf(base_path, myfiles_path, downloads_path,
+                                    myfiles_downloads_path, gcache_dirs)))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_,
               SetGroupAccessible(AnyOf(base_path, myfiles_path, downloads_path,
@@ -2649,11 +2645,10 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
     .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
                           Return(true)));
-  EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value,
-                 StartsWith(user->user_vault_path.value()))))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(Property(
+                             &FilePath::value,
+                             StartsWith(user->user_vault_mount_path.value()))))
+      .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, Mount(_, _, kEphemeralMountType,
                                kDefaultMountFlags, _)).Times(0);
