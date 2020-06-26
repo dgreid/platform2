@@ -690,6 +690,23 @@ properties:
                     we simply use the model name as the value.
                   type: string
               additionalProperties: false
+            cross-device:
+              type: object
+              description: Contains properties to configure cross-device features
+                between ChromeOS devices and other devices, such as Instant
+                Tethering and Smart Lock.
+              properties:
+                instant-tethering:
+                  type: object
+                  description: Contains properties to configure the Instant Tethering
+                    cross-device feature.
+                  properties:
+                    disable-instant-tethering:
+                      description: Disables the Instant Tethering feature.
+                        false by default
+                      type: boolean
+                  additionalProperties: false
+              additionalProperties: false
             hardware-properties:
               type: object
               description: Contains boolean flags or enums for hardware properties
