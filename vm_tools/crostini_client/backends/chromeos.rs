@@ -202,9 +202,9 @@ impl fmt::Display for ChromeOSError {
             BadDiskImageStatus(s, reason) => {
                 write!(f, "bad disk image status: `{:?}`: {}", s, reason)
             }
-            BadPluginVmStatus(s) => write!(f, "bad plugin VM status: `{:?}`", s),
+            BadPluginVmStatus(s) => write!(f, "bad VM status: `{:?}`", s),
             BadVmStatus(s, reason) => write!(f, "bad VM status: `{:?}`: {}", s, reason),
-            BadVmPluginDispatcherStatus => write!(f, "failed to start Plugin VM dispatcher"),
+            BadVmPluginDispatcherStatus => write!(f, "failed to start Parallels dispatcher"),
             CrostiniVmDisabled => write!(f, "Crostini VMs are currently disabled"),
             ExportPathExists => write!(f, "disk export path already exists"),
             ImportPathDoesNotExist => write!(f, "disk import path does not exist"),
@@ -263,9 +263,9 @@ impl fmt::Display for ChromeOSError {
             InvalidExportPath => write!(f, "disk export path is invalid"),
             InvalidImportPath => write!(f, "disk import path is invalid"),
             InvalidSourcePath => write!(f, "source media path is invalid"),
-            NoVmTechnologyEnabled => write!(f, "neither Crostini nor Plugin VMs are enabled"),
-            NotAvailableForPluginVm => write!(f, "this command is not available for Plugin VM"),
-            PluginVmDisabled => write!(f, "Plugin VMs are currently disabled"),
+            NoVmTechnologyEnabled => write!(f, "neither Crostini nor Parallels VMs are enabled"),
+            NotAvailableForPluginVm => write!(f, "this command is not available for Parallels VM"),
+            PluginVmDisabled => write!(f, "Parallels VMs are currently disabled"),
             RetrieveActiveSessions => write!(f, "failed to retrieve active sessions"),
             SourcePathDoesNotExist => write!(f, "source media path does not exist"),
             TpmOnStable => write!(f, "TPM device is not available on stable channel"),
@@ -468,7 +468,7 @@ impl ChromeOS {
         if self.get_dlc_state(name)? != DlcState_State::INSTALLED {
             return Err(FailedDlcInstall(
                 name.to_owned(),
-                "Failed to install Plugin VM DLC".to_string(),
+                "Failed to install Parallels DLC".to_string(),
             )
             .into());
         }
@@ -588,7 +588,7 @@ impl ChromeOS {
         }
     }
 
-    /// Starts all necessary VM services (concierge and optionally the Plugin VM dispatcher).
+    /// Starts all necessary VM services (concierge and optionally the Parallels dispatcher).
     fn start_vm_infrastructure(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         if self.is_plugin_vm_enabled(user_id_hash)? {
             // Starting the dispatcher will also start concierge.
@@ -1047,7 +1047,7 @@ impl ChromeOS {
         }
     }
 
-    /// Checks if VM with given name/disk is Plugin VM.
+    /// Checks if VM with given name/disk is running in Parallels.
     fn is_plugin_vm(&mut self, vm_name: &str, user_id_hash: &str) -> Result<bool, Box<dyn Error>> {
         let (images, _) = self.list_disk_images(
             user_id_hash,
@@ -1163,7 +1163,7 @@ impl ChromeOS {
         }
     }
 
-    /// Request that dispatcher start given Plugin VM.
+    /// Request that dispatcher start given Parallels VM.
     fn start_plugin_vm(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         let mut request = vm_plugin_dispatcher::StartVmRequest::new();
         request.owner_id = user_id_hash.to_owned();
@@ -1185,7 +1185,7 @@ impl ChromeOS {
         }
     }
 
-    /// Request that dispatcher starts application responsible for rendering Plugin VM window.
+    /// Request that dispatcher starts application responsible for rendering Parallels VM window.
     fn show_plugin_vm(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         let mut request = vm_plugin_dispatcher::ShowVmRequest::new();
         request.owner_id = user_id_hash.to_owned();
