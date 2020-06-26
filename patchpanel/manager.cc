@@ -47,7 +47,7 @@ constexpr int kArcVmMultinetMinChromeMilestone = 99;    // DISABLED
 // Time interval between epoll checks on file descriptors committed by callers
 // of ConnectNamespace DBus API.
 constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
-    base::TimeDelta::FromSeconds(30);
+    base::TimeDelta::FromSeconds(5);
 
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns nullptr, an empty response is
