@@ -47,8 +47,9 @@ VmOpResult ConvertDispatcherResult(plugin_dispatcher::VmErrorCode result) {
   }
 }
 
-base::Optional<vm_tools::plugin_dispatcher::VmInfo> GetVmInfo(
-    dbus::ObjectProxy* proxy, const VmId& vm_id) {
+bool GetVmInfo(dbus::ObjectProxy* proxy,
+               const VmId& vm_id,
+               base::Optional<vm_tools::plugin_dispatcher::VmInfo>* info) {
   dbus::MethodCall method_call(
       vm_tools::plugin_dispatcher::kVmPluginDispatcherInterface,
       vm_tools::plugin_dispatcher::kListVmsMethod);
@@ -61,35 +62,37 @@ base::Optional<vm_tools::plugin_dispatcher::VmInfo> GetVmInfo(
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode ListVmRequest protobuf";
-    return base::nullopt;
+    return false;
   }
 
   std::unique_ptr<dbus::Response> dbus_response = proxy->CallMethodAndBlock(
       &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
   if (!dbus_response) {
     LOG(ERROR) << "Failed to send ListVm message to dispatcher service";
-    return base::nullopt;
+    return false;
   }
 
   dbus::MessageReader reader(dbus_response.get());
   vm_tools::plugin_dispatcher::ListVmResponse response;
   if (!reader.PopArrayOfBytesAsProto(&response)) {
     LOG(ERROR) << "Failed to parse ListVmResponse protobuf";
-    return base::nullopt;
+    return false;
   }
 
   if (response.error() != vm_tools::plugin_dispatcher::VM_SUCCESS) {
     LOG(ERROR) << "Failed to get VM info: " << response.error();
-    return base::nullopt;
+    return false;
   }
 
+  *info = base::nullopt;
   for (const auto& vm_info : response.vm_info()) {
     if (vm_info.name() == vm_id.name()) {
-      return vm_info;
+      *info = vm_info;
+      break;
     }
   }
 
-  return base::nullopt;
+  return info;
 }
 
 }  // namespace
@@ -194,17 +197,23 @@ bool UnregisterVm(dbus::ObjectProxy* proxy, const VmId& vm_id) {
 bool IsVmRegistered(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
   LOG(INFO) << "Checking whether VM " << vm_id << " is registered";
 
-  return !!GetVmInfo(proxy, vm_id);
+  base::Optional<vm_tools::plugin_dispatcher::VmInfo> info;
+  if (!GetVmInfo(proxy, vm_id, &info))
+    return false;
+
+  *result = info.has_value();
+  return true;
 }
 
 bool IsVmShutDown(dbus::ObjectProxy* proxy, const VmId& vm_id, bool* result) {
   LOG(INFO) << "Checking whether VM " << vm_id << " is shut down";
 
-  const auto info = GetVmInfo(proxy, vm_id);
-  if (!info)
+  base::Optional<vm_tools::plugin_dispatcher::VmInfo> info;
+  if (!GetVmInfo(proxy, vm_id, &info))
     return false;
 
   *result =
+      info.has_value() &&
       info.value().state() == vm_tools::plugin_dispatcher::VM_STATE_STOPPED;
   return true;
 }
