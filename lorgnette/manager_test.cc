@@ -73,6 +73,18 @@ class ManagerTest : public testing::Test {
         << path_a << " and " << path_b << " are not the same image";
   }
 
+  void SetUpTestDevice(const std::string& name,
+                       const base::FilePath& image_path,
+                       const ScanParameters& parameters) {
+    std::string contents;
+    ASSERT_TRUE(base::ReadFileToString(image_path, &contents));
+    std::vector<uint8_t> image_data(contents.begin(), contents.end());
+    std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+    device->SetScanData(image_data);
+    device->SetScanParameters(parameters);
+    sane_client_->SetDeviceForName(name, std::move(device));
+  }
+
   SaneClientFake* sane_client_;
   Manager manager_;
   MetricsLibraryMock* metrics_library_;  // Owned by manager_.
@@ -108,22 +120,14 @@ TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
 }
 
 TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/bw.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-
   ScanParameters parameters;
   parameters.format = kGrayscale;
   parameters.bytes_per_line = 11;
   parameters.pixels_per_line = 85;
   parameters.lines = 29;
   parameters.depth = 1;
-  device->SetScanParameters(parameters);
-
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/bw.pnm"),
+                  parameters);
 
   base::File scan(output_path_,
                   base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -139,22 +143,14 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
 }
 
 TEST_F(ManagerTest, ScanGrayscaleSuccess) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/gray.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-
   ScanParameters parameters;
   parameters.format = kGrayscale;
   parameters.pixels_per_line = 32;
   parameters.lines = 32;
   parameters.depth = 8;
   parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
-  device->SetScanParameters(parameters);
-
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/gray.pnm"),
+                  parameters);
 
   base::File scan(output_path_,
                   base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -170,22 +166,14 @@ TEST_F(ManagerTest, ScanGrayscaleSuccess) {
 }
 
 TEST_F(ManagerTest, ScanColorSuccess) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-
   ScanParameters parameters;
   parameters.format = kRGB;
   parameters.bytes_per_line = 98 * 3;
   parameters.pixels_per_line = 98;
   parameters.lines = 50;
   parameters.depth = 8;
-  device->SetScanParameters(parameters);
-
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  parameters);
 
   base::File scan(output_path_,
                   base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -201,16 +189,6 @@ TEST_F(ManagerTest, ScanColorSuccess) {
 }
 
 TEST_F(ManagerTest, Scan16BitColorSuccess) {
-  std::string contents;
-  // Note: technically, color16.pnm does not really contain PNM data, since
-  // NetPBM assumes big endian 16-bit samples. Since SANE provides
-  // endian-native samples, color16.pnm stores the samples as little-endian.
-  ASSERT_TRUE(base::ReadFileToString(
-      base::FilePath("./test_images/color16.pnm"), &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-
   ScanParameters parameters;
   parameters.format = kRGB;
   parameters.pixels_per_line = 32;
@@ -218,9 +196,11 @@ TEST_F(ManagerTest, Scan16BitColorSuccess) {
   parameters.depth = 16;
   parameters.bytes_per_line =
       parameters.pixels_per_line * parameters.depth / 8 * 3;
-  device->SetScanParameters(parameters);
-
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+  // Note: technically, color16.pnm does not really contain PNM data, since
+  // NetPBM assumes big endian 16-bit samples. Since SANE provides
+  // endian-native samples, color16.pnm stores the samples as little-endian.
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color16.pnm"),
+                  parameters);
 
   base::File scan(output_path_,
                   base::File::FLAG_CREATE | base::File::FLAG_WRITE);
@@ -291,15 +271,8 @@ TEST_F(ManagerTest, ScanFailToRead) {
 }
 
 TEST_F(ManagerTest, ScanFailBadFd) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-  device->SetStartScanResult(true);
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
-
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  ScanParameters());
   base::ScopedFD scan_fd;
   ExpectScanFailure();
   EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd,
@@ -307,14 +280,8 @@ TEST_F(ManagerTest, ScanFailBadFd) {
 }
 
 TEST_F(ManagerTest, ScanFailBadArgs) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
-  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
-  device->SetScanData(image_data);
-  device->SetStartScanResult(true);
-  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  ScanParameters());
 
   base::File scan(output_path_,
                   base::File::FLAG_CREATE | base::File::FLAG_WRITE);
