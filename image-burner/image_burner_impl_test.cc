@@ -48,6 +48,9 @@ class ImageBurnerImplTest : public ::testing::Test {
     EXPECT_CALL(path_getter_, GetRootPath(_))
         .Times(AtMost(1))
         .WillRepeatedly(DoAll(SetArgPointee<0>("/dev/sda"), Return(true)));
+    EXPECT_CALL(path_getter_, IsBlockDevice(_))
+        .Times(AtMost(1))
+        .WillRepeatedly(Return(true));
     burner_->SetDataBlockSize(kTestDataBlockSize);
   }
 
@@ -157,6 +160,13 @@ TEST_F(ImageBurnerImplTest, TargetEqualsPrefix1) {
 TEST_F(ImageBurnerImplTest, TargetEqualsPrefix2) {
   SetFinishedSignalExpectation("/dev/mmcblk", false);
   EXPECT_EQ(burner_->BurnImage("some_path", "/dev/mmcblk"),
+            imageburn::IMAGEBURN_ERROR_INVALID_TARGET_PATH);
+}
+
+TEST_F(ImageBurnerImplTest, TargetNotBlockDevice) {
+  SetFinishedSignalExpectation("/dev/sdb", false);
+  EXPECT_CALL(path_getter_, IsBlockDevice(_)).WillOnce(Return(false));
+  EXPECT_EQ(burner_->BurnImage("some_path", "/dev/sdb"),
             imageburn::IMAGEBURN_ERROR_INVALID_TARGET_PATH);
 }
 

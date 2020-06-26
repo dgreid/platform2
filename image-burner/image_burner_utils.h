@@ -55,6 +55,7 @@ class BurnPathGetter : public PathGetter {
 
   bool GetRealPath(const char* path, std::string* real_path) override;
   bool GetRootPath(std::string* path) override;
+  bool IsBlockDevice(const char* path) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(BurnPathGetter);

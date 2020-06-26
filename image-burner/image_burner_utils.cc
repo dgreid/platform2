@@ -140,4 +140,9 @@ bool BurnPathGetter::GetRootPath(std::string* path) {
   return true;
 }
 
+bool BurnPathGetter::IsBlockDevice(const char* path) {
+  struct stat st = {};
+  return lstat(path, &st) == 0 && S_ISBLK(st.st_mode);
+}
+
 }  // namespace imageburn
