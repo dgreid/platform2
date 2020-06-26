@@ -125,6 +125,23 @@ struct Script {
   std::vector<Pipeline> pipelines;
 };
 
+// Helper function. Returns string value of given StringAtom.
+std::string Value(const StringAtom& str);
+
+// Helper functions. Return positions in the executed script corresponding to
+// the beginning of an element given as a parameter.
+std::string::const_iterator Position(const PipeSegment& segment);
+std::string::const_iterator Position(const Command& cmd);
+std::string::const_iterator Position(const Script& script);
+
+// Helper function. Builds an error message containing full script. |source| is
+// a script and |position| is a position in this script where the error
+// occurred. |msg| contains an error message. The function returns a complete
+// error message.
+std::string CreateErrorLog(const std::string& source,
+                           std::string::const_iterator position,
+                           const std::string& msg);
+
 }  // namespace foomatic_shell
 
 #endif  // FOOMATIC_SHELL_GRAMMAR_H_

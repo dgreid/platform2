@@ -7,13 +7,17 @@
 #include <set>
 
 #include <base/logging.h>
+#include <base/no_destructor.h>
 
 namespace foomatic_shell {
 
 namespace {
 
 // A set of allowed environment variables that may be set for executed commands.
-const std::set<std::string> kAllowedVariables = {"NOPDF"};
+const std::set<std::string> AllowedVariables() {
+  static const base::NoDestructor<std::set<std::string>> variables({"NOPDF"});
+  return *variables;
+}
 
 bool HasPrefix(const std::string& str, const std::string& prefix) {
   if (prefix.size() > str.size())
@@ -56,7 +60,7 @@ bool Verifier::VerifyCommand(Command* command) {
 
   // Verify variables set for this command.
   for (auto& var : command->variables_with_values) {
-    if (kAllowedVariables.count(var.variable.value) == 0) {
+    if (AllowedVariables().count(var.variable.value) == 0) {
       message_ = "variable " + var.variable.value + " is not allowed";
       return false;
     }
