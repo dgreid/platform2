@@ -137,7 +137,7 @@ void VPNProvider::AddAllowedInterface(const std::string& interface_name) {
   if (base::Contains(allowed_iifs_, interface_name))
     return;
 
-  // Add to the list of interfaces whitelisted via |SetDefaultRoutingPolicy|
+  // Add to the list of allowed nterfaces via |SetDefaultRoutingPolicy|
   // when connecting.
   allowed_iifs_.push_back(interface_name);
 

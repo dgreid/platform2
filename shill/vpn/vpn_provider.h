@@ -61,7 +61,7 @@ class VPNProvider : public ProviderInterface {
   // Disconnect any other active VPN services.
   virtual void DisconnectAll();
 
-  // Default lists of whitelisted input interfaces, for VPNs that
+  // Default lists of allowed input interfaces, for VPNs that
   // do not want to handle all system traffic.
   const std::vector<std::string>& allowed_iifs() const { return allowed_iifs_; }
 
@@ -71,10 +71,10 @@ class VPNProvider : public ProviderInterface {
 
   VirtualDeviceRefPtr arc_device() const { return arc_device_; }
 
-  // Adds |interface_name| to the list of whitelisted networking interfaces
+  // Adds |interface_name| to the list of allowed networking interfaces
   // |allowed_iifs_| that route traffic through VPNs.
   void AddAllowedInterface(const std::string& interface_name);
-  // Removes |interface_name| from the list of whitelisted networking interfaces
+  // Removes |interface_name| from the list of allowed networking interfaces
   // |allowed_iifs_| that route traffic through VPNs.
   void RemoveAllowedInterface(const std::string& interface_name);
 
@@ -116,7 +116,7 @@ class VPNProvider : public ProviderInterface {
 
   Manager* manager_;
   std::vector<VPNServiceRefPtr> services_;
-  // List of whitelisted networking interfaces that route traffic through VPNs
+  // List of allowed networking interfaces that route traffic through VPNs
   // via policy-based routing rules.
   std::vector<std::string> allowed_iifs_;
 

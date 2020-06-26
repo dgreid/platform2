@@ -51,7 +51,7 @@ class SetWakeOnPacketConnMessage;
 //      connectivity while suspended, and to wake from suspend in a low-power
 //      state (dark resume) to maintain or re-establish WiFi connectivity.
 //   2) Packet: this feature allows the CrOS device to wake from suspend upon
-//      receiving network packets from any whitelisted hosts.
+//      receiving network packets from any allowed hosts.
 // Either or both of these features can be enabled/disabled by assigning the
 // appropriate value to |wake_on_wifi_features_enabled_|.
 //
@@ -148,7 +148,7 @@ class SetWakeOnPacketConnMessage;
 //                  +----------------------------+     +-----------+
 //
 // *  if necessary (as indicated by caller of BeforeSuspendActions).
-// ** if we need to whitelist more SSIDs than our NIC supports.
+// ** if we need to allow more SSIDs than our NIC supports.
 //
 // OnAfterResume
 // ==============
@@ -219,7 +219,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   //
   // Arguments:
   //  - |is_connected|: whether the WiFi device is connected.
-  //  - |ssid_whitelist|: list of SSIDs that the NIC will be programmed to wake
+  //  - |allowed_ssids|: list of SSIDs that the NIC will be programmed to wake
   //    the system on if the NIC is programmed to wake on SSID.
   //  - |done_callback|: callback to invoke when suspend  actions have
   //    completed.
@@ -231,7 +231,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   //  - |time_to_next_lease_renewal|: number of seconds until next DHCP lease
   //    renewal is due.
   void OnBeforeSuspend(bool is_connected,
-                       const std::vector<ByteString>& ssid_whitelist,
+                       const std::vector<ByteString>& allowed_ssids,
                        const ResultCallback& done_callback,
                        const base::Closure& renew_dhcp_lease_callback,
                        const base::Closure& remove_supplicant_networks_callback,
@@ -243,7 +243,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   //
   // Arguments:
   //  - |is_connected|: whether the WiFi device is connected.
-  //  - |ssid_whitelist|: list of SSIDs that the NIC will be programmed to wake
+  //  - |allowed_ssids|: list of SSIDs that the NIC will be programmed to wake
   //    the system on if the NIC is programmed to wake on SSID.
   //  - |done_callback|: callback to invoke when dark resume actions have
   //    completed.
@@ -254,7 +254,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   //    to remove all networks from WPA supplicant.
   void OnDarkResume(
       bool is_connected,
-      const std::vector<ByteString>& ssid_whitelist,
+      const std::vector<ByteString>& allowed_ssids,
       const ResultCallback& done_callback,
       const base::Closure& renew_dhcp_lease_callback,
       const InitiateScanCallback& initiate_scan_callback,
@@ -272,7 +272,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   // for auto-connect after a scan. |initiate_scan_callback| is used for dark
   // resume scan retries.
   void OnNoAutoConnectableServicesAfterScan(
-      const std::vector<ByteString>& ssid_whitelist,
+      const std::vector<ByteString>& allowed_ssids,
       const base::Closure& remove_supplicant_networks_callback,
       const InitiateScanCallback& initiate_scan_callback) override;
   // Called by WiFi when it is notified by the kernel that a scan has started.
@@ -437,7 +437,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   // to wake on packets from the IP addresses in |addrs| and on all IP packets
   // of type belonging tp |wake_on_packet_types_|. If |trigs| contains
   // the kSSID trigger, the message is configured to program the NIC to wake on
-  // the SSIDs in |ssid_whitelist|.
+  // the SSIDs in |allowed_ssids|.
   // Returns true iff |msg| is successfully configured.
   // NOTE: Assumes that |msg| has not been altered since construction.
   static bool ConfigureSetWakeOnWiFiSettingsMessage(
@@ -449,7 +449,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
       const std::string& mac_address,
       uint32_t min_pattern_len,
       uint32_t net_detect_scan_period_seconds,
-      const std::vector<ByteString>& ssid_whitelist,
+      const std::vector<ByteString>& allowed_ssids,
       Error* error);
   // Helper function to ConfigureSetWakeOnWiFiSettingsMessage that creates a
   // single nested attribute inside the attribute list referenced by |patterns|
@@ -479,7 +479,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   //   present and set.
   // - kIPAddress: checks that source IP addresses in |msg| match those reported
   //   in |addrs|.
-  // - kSSID: checks that the SSIDs in |ssid_whitelist| and the scan interval
+  // - kSSID: checks that the SSIDs in |allowed_ssids| and the scan interval
   //   |net_detect_scan_period_seconds| match those reported in |msg|.
   // Note: finding a trigger is in |msg| that is not expected based on the flags
   // in |trig| also counts as a mismatch.
@@ -491,7 +491,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
       const std::set<uint8_t>& wake_on_packet_types,
       const std::string& mac_address,
       uint32_t min_pattern_len,
-      const std::vector<ByteString>& ssid_whitelist);
+      const std::vector<ByteString>& allowed_ssids);
   // Handler for NL80211 message error responses from NIC wake on WiFi setting
   // programming attempts.
   void OnWakeOnWiFiSettingsErrorResponse(
@@ -504,10 +504,10 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   void RequestWakeOnPacketSettings();
   // Verify that the wake on WiFi settings programmed into the NIC match
   // those recorded locally for this device in |wake_on_packet_connections_|,
-  // |wake_on_wifi_triggers_|, and |wake_on_ssid_whitelist_|.
+  // |wake_on_wifi_triggers_|, and |wake_on_allowed_ssids_|.
   void VerifyWakeOnWiFiSettings(const Nl80211Message& nl80211_message);
   // Sends an NL80211 message to program the NIC with wake on WiFi settings
-  // configured in |wake_on_packet_connections_|, |wake_on_ssid_whitelist_|, and
+  // configured in |wake_on_packet_connections_|, |wake_on_allowed_ssids_|, and
   // |wake_on_wifi_triggers_|. If |wake_on_wifi_triggers_| is empty, calls
   // WakeOnWiFi::DisableWakeOnWiFi.
   void ApplyWakeOnWiFiSettings();
@@ -606,7 +606,7 @@ class WakeOnWiFi : public WakeOnWiFiInterface {
   // Keeps track of SSIDs that this device will wake on the appearance of while
   // the device is suspended. Only used if the NIC is programmed to wake on
   // SSIDs.
-  std::vector<ByteString> wake_on_ssid_whitelist_;
+  std::vector<ByteString> wake_on_allowed_ssids_;
   // List of layer 4 packets(IPv4/IPv6) types that can wake the device. Only
   // used if the NIC is programmed to wake on IP address patterns.
   std::set<uint8_t> wake_on_packet_types_;

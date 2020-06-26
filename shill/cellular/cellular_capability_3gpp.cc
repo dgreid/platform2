@@ -1047,7 +1047,7 @@ void CellularCapability3gpp::OnGetLocationReply(
 }
 
 bool CellularCapability3gpp::IsLocationUpdateSupported() const {
-  // Whitelist modems as they're tested / needed
+  // Allow modems as they're tested / needed
   return cellular()->mm_plugin() == kTelitMMPlugin;
 }
 

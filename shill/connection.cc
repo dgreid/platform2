@@ -424,7 +424,7 @@ void Connection::AllowTrafficThrough(uint32_t table_id,
 void Connection::AddInputInterfaceToRoutingTable(
     const std::string& interface_name) {
   if (base::Contains(allowed_iifs_, interface_name))
-    return;  // interface already whitelisted
+    return;  // interface already allowed
 
   allowed_iifs_.push_back(interface_name);
   UpdateRoutingPolicy();

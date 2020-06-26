@@ -459,7 +459,7 @@ bool WakeOnWiFi::ConfigureSetWakeOnWiFiSettingsMessage(
     const std::string& mac_address,
     uint32_t pattern_min_len,
     uint32_t net_detect_scan_period_seconds,
-    const vector<ByteString>& ssid_whitelist,
+    const vector<ByteString>& allowed_ssids,
     Error* error) {
 #if defined(DISABLE_WAKE_ON_WIFI)
   return false;
@@ -637,7 +637,7 @@ bool WakeOnWiFi::ConfigureSetWakeOnWiFiSettingsMessage(
           return false;
         }
         int ssid_num = 0;
-        for (const ByteString& ssid_bytes : ssid_whitelist) {
+        for (const ByteString& ssid_bytes : allowed_ssids) {
           if (!ssids->CreateNestedAttribute(
                   ssid_num, "NL80211_ATTR_SCHED_SCAN_MATCH_SINGLE")) {
             Error::PopulateAndLog(FROM_HERE, error, Error::kOperationFailed,
@@ -775,7 +775,7 @@ bool WakeOnWiFi::WakeOnWiFiSettingsMatch(
     const set<uint8_t>& wake_on_packet_types,
     const std::string& mac_address,
     uint32_t min_pattern_len,
-    const vector<ByteString>& ssid_whitelist) {
+    const vector<ByteString>& allowed_ssids) {
 #if defined(DISABLE_WAKE_ON_WIFI)
   return false;
 #else
@@ -918,8 +918,7 @@ bool WakeOnWiFi::WakeOnWiFiSettingsMatch(
       }
       case kWakeTriggerSSID: {
         set<ByteString, decltype(&ByteString::IsLessThan)> expected_ssids(
-            ssid_whitelist.begin(), ssid_whitelist.end(),
-            ByteString::IsLessThan);
+            allowed_ssids.begin(), allowed_ssids.end(), ByteString::IsLessThan);
         AttributeListConstRefPtr scan_attributes;
         if (!triggers->ConstGetNestedAttributeList(
                 NL80211_WOWLAN_TRIG_NET_DETECT, &scan_attributes)) {
@@ -1188,7 +1187,7 @@ void WakeOnWiFi::VerifyWakeOnWiFiSettings(
   if (WakeOnWiFiSettingsMatch(
           nl80211_message, wake_on_wifi_triggers_, wake_on_packet_connections_,
           net_detect_scan_period_seconds_, wake_on_packet_types_, mac_address_,
-          min_pattern_len_, wake_on_ssid_whitelist_)) {
+          min_pattern_len_, wake_on_allowed_ssids_)) {
     SLOG(this, 2) << __func__ << ": "
                   << "Wake on WiFi settings successfully verified";
     metrics_->NotifyVerifyWakeOnWiFiSettingsResult(
@@ -1221,7 +1220,7 @@ void WakeOnWiFi::ApplyWakeOnWiFiSettings() {
   if (!ConfigureSetWakeOnWiFiSettingsMessage(
           &set_wowlan_msg, wake_on_wifi_triggers_, wake_on_packet_connections_,
           wiphy_index_, wake_on_packet_types_, mac_address_, min_pattern_len_,
-          net_detect_scan_period_seconds_, wake_on_ssid_whitelist_, &error)) {
+          net_detect_scan_period_seconds_, wake_on_allowed_ssids_, &error)) {
     LOG(ERROR) << error.message();
     RunAndResetSuspendActionsDoneCallback(
         Error(Error::kOperationFailed, error.message()));
@@ -1506,7 +1505,7 @@ void WakeOnWiFi::OnWakeupReasonReceived(const NetlinkMessage& netlink_message) {
 
 void WakeOnWiFi::OnBeforeSuspend(
     bool is_connected,
-    const vector<ByteString>& ssid_whitelist,
+    const vector<ByteString>& allowed_ssids,
     const ResultCallback& done_callback,
     const Closure& renew_dhcp_lease_callback,
     const Closure& remove_supplicant_networks_callback,
@@ -1520,7 +1519,7 @@ void WakeOnWiFi::OnBeforeSuspend(
   LOG(INFO) << __func__ << ": Wake on WiFi features enabled: "
             << wake_on_wifi_features_enabled_;
   suspend_actions_done_callback_ = done_callback;
-  wake_on_ssid_whitelist_ = ssid_whitelist;
+  wake_on_allowed_ssids_ = allowed_ssids;
   dark_resume_history_.Clear();
   if (have_dhcp_lease && is_connected &&
       time_to_next_lease_renewal < kImmediateDHCPLeaseRenewalThresholdSeconds) {
@@ -1558,7 +1557,7 @@ void WakeOnWiFi::OnAfterResume() {
 
 void WakeOnWiFi::OnDarkResume(
     bool is_connected,
-    const vector<ByteString>& ssid_whitelist,
+    const vector<ByteString>& allowed_ssids,
     const ResultCallback& done_callback,
     const Closure& renew_dhcp_lease_callback,
     const InitiateScanCallback& initiate_scan_callback,
@@ -1571,7 +1570,7 @@ void WakeOnWiFi::OnDarkResume(
   metrics_->NotifyWakeOnWiFiOnDarkResume(last_wake_reason_);
   dark_resume_scan_retries_left_ = 0;
   suspend_actions_done_callback_ = done_callback;
-  wake_on_ssid_whitelist_ = ssid_whitelist;
+  wake_on_allowed_ssids_ = allowed_ssids;
 
   if (last_wake_reason_ == kWakeTriggerSSID ||
       last_wake_reason_ == kWakeTriggerDisconnect ||
@@ -1706,13 +1705,13 @@ void WakeOnWiFi::BeforeSuspendActions(
       remove_supplicant_networks_callback.Run();
       dhcp_lease_renewal_timer_->Stop();
       wake_on_wifi_triggers_.erase(kWakeTriggerDisconnect);
-      if (!wake_on_ssid_whitelist_.empty()) {
+      if (!wake_on_allowed_ssids_.empty()) {
         SLOG(this, 3) << __func__ << ": "
                       << "Enabling wake on SSID";
         wake_on_wifi_triggers_.insert(kWakeTriggerSSID);
       }
       int num_extra_ssids =
-          wake_on_ssid_whitelist_.size() - wake_on_wifi_max_ssids_;
+          wake_on_allowed_ssids_.size() - wake_on_wifi_max_ssids_;
       if (num_extra_ssids > 0 || force_wake_to_scan_timer_) {
         SLOG(this, 3) << __func__ << ": "
                       << "Starting wake to scan timer - "
@@ -1731,7 +1730,7 @@ void WakeOnWiFi::BeforeSuspendActions(
             base::TimeDelta::FromSeconds(wake_to_scan_period_seconds_),
             Bind(&WakeOnWiFi::OnTimerWakeDoNothing, base::Unretained(this)));
         // Trim SSID list to the max size that the NIC supports.
-        wake_on_ssid_whitelist_.resize(wake_on_wifi_max_ssids_);
+        wake_on_allowed_ssids_.resize(wake_on_wifi_max_ssids_);
       }
     }
   }
@@ -1870,7 +1869,7 @@ void WakeOnWiFi::ReportConnectedToServiceAfterWake(bool is_connected,
 }
 
 void WakeOnWiFi::OnNoAutoConnectableServicesAfterScan(
-    const vector<ByteString>& ssid_whitelist,
+    const vector<ByteString>& allowed_ssids,
     const Closure& remove_supplicant_networks_callback,
     const InitiateScanCallback& initiate_scan_callback) {
 #if !defined(DISABLE_WAKE_ON_WIFI)
@@ -1889,7 +1888,7 @@ void WakeOnWiFi::OnNoAutoConnectableServicesAfterScan(
     // retry, but we consider this acceptable.
     initiate_scan_callback.Run(last_ssid_match_freqs_);
   } else {
-    wake_on_ssid_whitelist_ = ssid_whitelist;
+    wake_on_allowed_ssids_ = allowed_ssids;
     // Assume that if there are no services available for auto-connect, then we
     // cannot be connected. Therefore, no need for lease renewal parameters.
     BeforeSuspendActions(false, false, 0, remove_supplicant_networks_callback);

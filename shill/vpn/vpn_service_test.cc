@@ -428,7 +428,7 @@ TEST_F(VPNServiceTest, GetTethering) {
   EXPECT_CALL(device_info_, FlushAddresses(0));
 }
 
-// Test that adding/removing VM whitelisted interfaces to/from the VPN provider
+// Test that adding/removing VM allowed interfaces to/from the VPN provider
 // list triggers calls to the active VPN connection to update the routing table.
 TEST_F(VPNServiceTest, AddRemoveVMInterface) {
   const std::string kTestVMTapInterfaceName = "vmtap0";

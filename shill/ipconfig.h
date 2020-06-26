@@ -72,7 +72,7 @@ class IPConfig : public base::RefCounted<IPConfig> {
     // IPv6 prefix delegated from a DHCPv6 server.
     Stringmaps dhcpv6_delegated_prefixes;
     // If |allowed_uids| and/or |allowed_iifs| is set, IP policy rules will
-    // be created so that only traffic from the whitelisted UIDs and/or
+    // be created so that only traffic from the allowed UIDs and/or
     // input interfaces can use this connection.  If neither is set,
     // all system traffic can use this connection.
     std::vector<uint32_t> allowed_uids;

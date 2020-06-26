@@ -619,7 +619,7 @@ TEST_F(DeviceInfoTest, CreateDeviceCDCEthernet) {
 TEST_F(DeviceInfoTest, CreateDeviceUnknown) {
   IPAddress address = CreateInterfaceAddress();
 
-  // An unknown (blacklisted, unhandled, etc) device won't be flushed or
+  // An unknown (blocked, unhandled, etc) device won't be flushed or
   // registered.
   EXPECT_CALL(routing_table_, FlushRoutes(_)).Times(0);
   EXPECT_CALL(rtnl_handler_, RemoveInterfaceAddress(_, _)).Times(0);
@@ -707,7 +707,7 @@ TEST_F(DeviceInfoTest, RenamedNonBlockedDevice) {
   ASSERT_NE(nullptr, renamed_device);
 
   // Expect that the the presence of a renamed device does not cause a new
-  // Device entry to be created if the initial device was not blacklisted.
+  // Device entry to be created if the initial device was not blocked.
   EXPECT_EQ(initial_device, renamed_device);
   EXPECT_TRUE(initial_device->technology() == Technology::kUnknown);
 }
@@ -1700,14 +1700,14 @@ TEST_F(DeviceInfoMockedGetUserId, AddRemoveAllowedInterface) {
   unique_ptr<RTNLMessage> message_add = BuildLinkMessageWithInterfaceName(
       RTNLMessage::kModeAdd, kVmTapTestDeviceName, kVmTapTestDeviceIndex);
   test_device_info_.LinkMsgHandler(*message_add);
-  // Test that the new interface belonging to a virtual machine is whitelisted
+  // Test that the new interface belonging to a virtual machine is allowed
   // in the VPN provider.
   EXPECT_EQ(1, vpn_provider->allowed_iifs().size());
 
   unique_ptr<RTNLMessage> message_remove = BuildLinkMessageWithInterfaceName(
       RTNLMessage::kModeDelete, kVmTapTestDeviceName, kVmTapTestDeviceIndex);
   test_device_info_.LinkMsgHandler(*message_remove);
-  // Test that the whitelisted interface was removed from the VPN provider
+  // Test that the allowed interface was removed from the VPN provider
   // list of allowed interfaces when rtnetlink signaled that the interface is
   // down.
   EXPECT_EQ(0, vpn_provider->allowed_iifs().size());

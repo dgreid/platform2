@@ -63,11 +63,11 @@ class Connection : public base::RefCounted<Connection> {
   // address+gateway have been configured.
   virtual void UpdateGatewayMetric(const IPConfigRefPtr& config);
 
-  // Adds |interface_name| to the whitelisted input interfaces that are
+  // Adds |interface_name| to the allowed input interfaces that are
   // allowed to use the connection and updates the routing table.
   virtual void AddInputInterfaceToRoutingTable(
       const std::string& interface_name);
-  // Removes |interface_name| from the whitelisted input interfaces and
+  // Removes |interface_name| from the allowed input interfaces and
   // updates the routing table.
   virtual void RemoveInputInterfaceFromRoutingTable(
       const std::string& interface_name);
@@ -107,7 +107,7 @@ class Connection : public base::RefCounted<Connection> {
 
   // Flush and (re)create routing policy rules for the connection.  If
   // |allowed_uids_| or |allowed_iifs_| is set, rules will be created
-  // to restrict traffic to the whitelisted UIDs or input interfaces.
+  // to restrict traffic to the allowed UIDs or input interfaces.
   // Otherwise, all system traffic will be allowed to use the connection.
   // The rule priority will be set to |priority_| so that Manager's service
   // sort ranking is respected.
