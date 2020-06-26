@@ -168,7 +168,7 @@ void UserRefCount::SessionChanged(const string& state) {
             &username, &sanitized_username, &err)) {
       LOG(ERROR) << "Failed to get the primary session's username with error: "
                  << Error::ToString(err);
-      primary_session_username_.release();
+      primary_session_username_.reset();
       return;
     }
     primary_session_username_ = std::make_unique<string>(sanitized_username);
