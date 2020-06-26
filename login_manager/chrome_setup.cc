@@ -63,6 +63,9 @@ constexpr char kFingerprintSensorLocationField[] = "sensor-location";
 constexpr char kArcScalePath[] = "/arc";
 constexpr char kArcScaleProperty[] = "scale";
 
+constexpr char kInstantTetheringPath[] = "/cross-device/instant-tethering";
+constexpr char kDisableInstantTetheringProperty[] = "disable-instant-tethering";
+
 constexpr char kOzoneNNPalmPropertiesPath[] = "/nnpalm";
 constexpr char kOzoneNNPalmCompatibleProperty[] = "touch-compatible";
 constexpr char kOzoneNNPalmRadiusProperty[] = "radius-polynomial";
@@ -499,9 +502,6 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   if (builder->UseFlagIsSet("allow_consumer_kiosk"))
     builder->AddArg("--enable-consumer-kiosk");
 
-  if (builder->UseFlagIsSet("disable_instant_tethering"))
-    builder->AddFeatureDisableOverride("InstantTethering");
-
   if (builder->UseFlagIsSet("biod"))
     builder->AddFeatureEnableOverride("QuickUnlockFingerprint");
 
@@ -514,6 +514,7 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   SetUpArcBuildPropertiesFlag(builder, cros_config);
   SetUpAutoNightLightFlag(builder, cros_config);
   SetUpAllowAmbientEQFlag(builder, cros_config);
+  SetUpInstantTetheringFlag(builder, cros_config);
 }
 
 // Adds enterprise-related flags to the command line.
@@ -789,6 +790,24 @@ void SetUpAllowAmbientEQFlag(ChromiumCommandBuilder* builder,
     return;
 
   builder->AddFeatureEnableOverride("AllowAmbientEQ");
+}
+
+void SetUpInstantTetheringFlag(ChromiumCommandBuilder* builder,
+                               brillo::CrosConfigInterface* cros_config) {
+  if (builder->UseFlagIsSet("disable_instant_tethering")) {
+    builder->AddFeatureDisableOverride("InstantTethering");
+    return;
+  }
+
+  std::string disable_instant_tethering_str;
+  if (!cros_config || !cros_config->GetString(kInstantTetheringPath,
+                                              kDisableInstantTetheringProperty,
+                                              &disable_instant_tethering_str)) {
+    return;
+  }
+
+  if (disable_instant_tethering_str == "true")
+    builder->AddFeatureDisableOverride("InstantTethering");
 }
 
 void SelectCrashHandler(ChromiumCommandBuilder* builder,

@@ -59,6 +59,12 @@ extern const char kAllowAmbientEQField[];
 // AllowAmbientEQ feature to enable on Chrome.
 extern const char kAllowAmbientEQFeature[];
 
+// Path to instant tethering prefs in cros_config.
+extern const char kInstantTetheringPath[];
+
+// Property to disable the Instant Tethering feature.
+extern const char kDisableInstantTetheringProperty[];
+
 // Path to get nnpalm data from cros_config.
 extern const char kOzoneNNPalmPropertiesPath[];
 
@@ -161,6 +167,11 @@ void SetUpArcBuildPropertiesFlag(chromeos::ui::ChromiumCommandBuilder* builder,
 // |cros_config|. Do not add flag is allow-ambient-eq is set to 0 or not set.
 void SetUpAllowAmbientEQFlag(chromeos::ui::ChromiumCommandBuilder* builder,
                              brillo::CrosConfigInterface* cros_config);
+
+// Disable instant tethering flag with value read from |cros_config| or USE
+// flags.
+void SetUpInstantTetheringFlag(chromeos::ui::ChromiumCommandBuilder* builder,
+                               brillo::CrosConfigInterface* cros_config);
 
 // Determine which Chrome crash handler this board wants to use. We pass this
 // information to BrowserJob instead of just setting the command line flags
