@@ -4,6 +4,16 @@
 
 import("//common-mk/pkg_config.gni")
 
+# The majority of this code is a fork of upstream repo's in AOSP.
+# We are selectively pulling in the pieces of those libs and building
+# them into a shared library to use in our system, and to make those
+# symbols visible from the lib, we use //common-mk:visibility_default.
+# The linter suggests we should explicitly export the symbols we need,
+# but in this case we are achieving that by only pulling in the files we
+# need, and additionally, upstream will not want to accept us annotating
+# all of their code for our fairly specific purpose of build architecture.
+# So we disable the linter in this case.
+
 # gnlint: disable=GnLintVisibilityFlags
 
 arect_src = "../aosp/frameworks/native/libs/arect"
