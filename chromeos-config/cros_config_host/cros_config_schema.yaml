@@ -334,12 +334,9 @@ properties:
                 count:
                   type: integer
                   description: Specified the number of cameras on the model.
-                config-path:
-                  type: string
-                  description: Specified the camera configuration file path on the model.
                 config-file:
                   <<: *system_file_v2
-                  description: Defines camera\_config.json.
+                  description: Defines the camera configuration file.
                 clock:
                   type: string
                   description: Specified the camera clock on the model.

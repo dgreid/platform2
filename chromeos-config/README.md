@@ -408,8 +408,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | clock | string |  | False |  | False | Specified the camera clock on the model. |
-| config-file | [config-file](#config_file) |  | False |  | False | Defines camera\_config.json. |
-| config-path | string |  | False |  | False | Specified the camera configuration file path on the model. |
+| config-file | [config-file](#config_file) |  | False |  | False | Defines the camera configuration file. |
 | count | integer |  | False |  | False | Specified the number of cameras on the model. |
 | legacy-usb | boolean |  | False |  | False | Indicates if the device has legacy usb cameras. |
 | zsl-lookback | integer |  | False |  | False | Specifies the duration to look back for Zero-Shutter Lag (ZSL) in milliseconds. |
