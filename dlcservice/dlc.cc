@@ -338,6 +338,9 @@ bool DlcBase::Install(ErrorPtr* err) {
           LOG(ERROR)
               << "Preloading failed, so assuming installation failed for DLC="
               << id_;
+          ErrorPtr tmp_err;
+          if (!CancelInstall(*err, &tmp_err))
+            LOG(ERROR) << "Failed to cancel the install from preloading.";
           return false;
         }
         LOG(INFO) << "Preloading DLC=" << id_;

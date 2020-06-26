@@ -266,6 +266,21 @@ TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
 }
 
 // TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
+TEST_F(DlcBaseTest, InstallingCorruptPreloadedImageCleansUp) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+  base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
+  EXPECT_TRUE(ResizeFile(image_path, 10));
+
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+
+  EXPECT_FALSE(dlc.Install(&err_));
+  for (const auto& path : {dlc.GetImagePath(BootSlot::Slot::A),
+                           dlc.GetImagePath(BootSlot::Slot::B)})
+    EXPECT_FALSE(base::PathExists(path));
+}
+
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
