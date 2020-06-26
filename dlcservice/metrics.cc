@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <map>
-
 #include <base/logging.h>
 #include <dbus/dlcservice/dbus-constants.h>
 
@@ -12,7 +10,6 @@
 
 using dlcservice::metrics::InstallResult;
 using dlcservice::metrics::UninstallResult;
-using std::map;
 using std::string;
 
 namespace dlcservice {

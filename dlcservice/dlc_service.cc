@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <memory>
 #include <utility>
-#include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -27,7 +26,6 @@ using base::Callback;
 using brillo::ErrorPtr;
 using brillo::MessageLoop;
 using std::string;
-using std::vector;
 using update_engine::Operation;
 using update_engine::StatusResult;
 

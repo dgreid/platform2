@@ -5,7 +5,6 @@
 #include "dlcservice/dbus_adaptors/dbus_adaptor.h"
 
 #include <memory>
-#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -19,7 +18,6 @@
 #include "dlcservice/error.h"
 #include "dlcservice/utils.h"
 
-using std::set;
 using std::string;
 using std::unique_ptr;
 using std::vector;

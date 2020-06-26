@@ -26,7 +26,6 @@
 
 using base::FilePath;
 using crypto::SecureHash;
-using std::pair;
 using std::set;
 using std::string;
 using std::unique_ptr;
