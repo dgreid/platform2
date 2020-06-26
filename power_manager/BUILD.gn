@@ -381,6 +381,7 @@ if (use.test) {
       "powerd/system/arc_timer_manager_test.cc",
       "powerd/system/async_file_reader_test.cc",
       "powerd/system/audio_client_test.cc",
+      "powerd/system/cros_ec_ioctl_test.cc",
       "powerd/system/display/display_watcher_test.cc",
       "powerd/system/display/external_display_test.cc",
       "powerd/system/input_watcher_test.cc",

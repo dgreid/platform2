@@ -8,6 +8,8 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 
+#include <base/logging.h>
+#include <base/macros.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/ec/cros_ec_dev.h>
 #include <chromeos/ec/ec_commands.h>
@@ -37,22 +39,24 @@ class IoctlCommand {
             {req},
         }) {}
 
+  virtual ~IoctlCommand() = default;
+
   void SetReq(const Request& req) { data_.req = req; }
 
   // Runs an EC command.
-  // @param ec_fd file descriptor for the EC device
+  // @param ec_fd file descriptor for the EC device.
   // @return true if command runs successfully and response size is same as
-  // expected, false otherwise
+  // expected, false otherwise.
   bool Run(int ec_fd) {
     data_.cmd.result = 0xff;
     int ret = ioctl(ec_fd, CROS_EC_DEV_IOCXCMD_V2, &data_);
     if (ret >= 0) {
-      VLOG(1) << base::StringPrintf(
-          "CROS EC ioctl command 0x%x succeeded. cmd : ", data_.cmd.command);
+      VLOG(1) << base::StringPrintf("CROS EC ioctl command 0x%x succeeded",
+                                    data_.cmd.command);
       return static_cast<uint32_t>(ret) == data_.cmd.insize;
     }
-    PLOG(ERROR) << base::StringPrintf(
-        "CROS EC ioctl command 0x%x failed. cmd : ", data_.cmd.command);
+    PLOG(ERROR) << base::StringPrintf("CROS EC ioctl command 0x%x failed",
+                                      data_.cmd.command);
     return false;
   }
 
@@ -60,14 +64,20 @@ class IoctlCommand {
   Request* Req() { return &data_.req; }
   uint16_t Result() { return data_.cmd.result; }
 
- private:
-  struct {
+  struct Data {
     struct cros_ec_command_v2 cmd;
     union {
       Request req;
       Response resp;
     };
-  } data_;
+  };
+
+ private:
+  virtual int ioctl(int fd, uint32_t request, Data* data) {
+    return ::ioctl(fd, request, data);
+  }
+
+  Data data_;
 
   DISALLOW_COPY_AND_ASSIGN(IoctlCommand);
 };
