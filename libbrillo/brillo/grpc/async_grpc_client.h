@@ -103,18 +103,19 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
                                const RequestType& request,
                                grpc::CompletionQueue* cq);
 
-  // Call RPC represented by |async_rpc_start|. Pass |request| as the
-  // request. Call |on_reply_callback| on the task runner passed to the
-  // constructor when a response is available.
+  // Call RPC represented by |async_rpc_start|. Pass |request| as the request
+  // with |rpc_deadline| as a timeout. Call |on_reply_callback| on the task
+  // runner passed to the constructor when a response is available.
   template <typename AsyncServiceStub,
             typename RequestType,
             typename ResponseType>
   void CallRpc(AsyncRequestFnPtr<AsyncServiceStub, RequestType, ResponseType>
                    async_rpc_start,
+               base::TimeDelta rpc_deadline,
                const RequestType& request,
                ReplyCallback<ResponseType> on_reply_callback) {
     std::unique_ptr<RpcState<ResponseType>> rpc_state =
-        std::make_unique<RpcState<ResponseType>>(rpc_deadline_);
+        std::make_unique<RpcState<ResponseType>>(rpc_deadline);
     RpcState<ResponseType>* rpc_state_unowned = rpc_state.get();
 
     std::unique_ptr<grpc::ClientAsyncResponseReader<ResponseType>> rpc =
@@ -132,9 +133,21 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
                 rpc_state_unowned->tag());
   }
 
+  // Same as above with the default deadline set by
+  // |SetDefaultRpcDeadlineForTesting|
+  template <typename AsyncServiceStub,
+            typename RequestType,
+            typename ResponseType>
+  void CallRpc(AsyncRequestFnPtr<AsyncServiceStub, RequestType, ResponseType>
+                   async_rpc_start,
+               const RequestType& request,
+               ReplyCallback<ResponseType> on_reply_callback) {
+    CallRpc(async_rpc_start, default_rpc_deadline_, request, on_reply_callback);
+  }
+
   // Sets the request deadline for future requests made with this client.
-  void SetRpcDeadlineForTesting(base::TimeDelta rpc_deadline) {
-    rpc_deadline_ = rpc_deadline;
+  void SetDefaultRpcDeadlineForTesting(base::TimeDelta default_rpc_deadline) {
+    default_rpc_deadline_ = default_rpc_deadline;
   }
 
  private:
@@ -172,7 +185,7 @@ class AsyncGrpcClient final : public internal::AsyncGrpcClientBase {
                           std::move(rpc_state->response));
   }
 
-  base::TimeDelta rpc_deadline_ = kRpcDeadline;
+  base::TimeDelta default_rpc_deadline_ = kDefaultRpcDeadline;
   std::unique_ptr<typename ServiceType::Stub> stub_;
 
   DISALLOW_COPY_AND_ASSIGN(AsyncGrpcClient);

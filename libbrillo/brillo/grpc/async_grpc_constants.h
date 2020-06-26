@@ -26,9 +26,9 @@ BRILLO_EXPORT extern const base::TimeDelta kInitialGrpcReconnectBackoffTime;
 // Sets GRPC_ARG_MAX_RECONNECT_BACKOFF_MS
 BRILLO_EXPORT extern const base::TimeDelta kMaxGrpcReconnectBackoffTime;
 
-// Use this constant to set the deadline for RPC requests performed by the
-// GRPC client.
-BRILLO_EXPORT extern const base::TimeDelta kRpcDeadline;
+// Use this constant to set the default deadline for RPC requests performed by
+// the GRPC client.
+BRILLO_EXPORT extern const base::TimeDelta kDefaultRpcDeadline;
 
 }  // namespace brillo
 

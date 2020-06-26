@@ -600,7 +600,8 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
 TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
   ShutDownServer();
 
-  client_->SetRpcDeadlineForTesting(base::TimeDelta::FromMilliseconds(50));
+  client_->SetDefaultRpcDeadlineForTesting(
+    base::TimeDelta::FromMilliseconds(50));
 
   base::TimeTicks start = base::TimeTicks::Now();
 
@@ -616,6 +617,31 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
   base::TimeDelta duration = base::TimeTicks::Now() - start;
 
   EXPECT_GT(duration.InMilliseconds(), 40);  // Forgiving time comparison.
+}
+
+// Like RpcServerStopped. Pass context deadline to CallRpc directly.
+TEST_F(AsyncGrpcClientServerTest, RpcServerStopped_PerRequestTimeout) {
+  ShutDownServer();
+
+  client_->SetDefaultRpcDeadlineForTesting(
+    base::TimeDelta::FromMilliseconds(50));
+
+  base::TimeTicks start = base::TimeTicks::Now();
+
+  RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
+  test_rpcs::EchoIntRpcRequest request;
+  request.set_int_to_echo(1);
+  client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc,
+                   base::TimeDelta::FromMilliseconds(200),
+                   request,
+                   rpc_reply.MakeWriter());
+
+  rpc_reply.Wait();
+  EXPECT_TRUE(rpc_reply.IsError());
+
+  base::TimeDelta duration = base::TimeTicks::Now() - start;
+
+  EXPECT_GT(duration.InMilliseconds(), 180);  // Forgiving time comparison.
 }
 
 // Send a request to a server that starts after the request is made. The client

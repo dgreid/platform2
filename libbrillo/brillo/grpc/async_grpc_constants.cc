@@ -15,6 +15,6 @@ const base::TimeDelta kInitialGrpcReconnectBackoffTime =
 const base::TimeDelta kMaxGrpcReconnectBackoffTime =
     base::TimeDelta::FromSeconds(5);
 
-const base::TimeDelta kRpcDeadline = base::TimeDelta::FromMinutes(1);
+const base::TimeDelta kDefaultRpcDeadline = base::TimeDelta::FromMinutes(1);
 
 }  // namespace brillo
