@@ -130,11 +130,13 @@ to install/uninstall a DLC. For calling the dlcservice API inside Chrome,
 use [system_api] to send API calls. For calling dlcservice API outside of
 Chrome, use generated D-Bus bindings.
 
-If your daemon uses minijail, you will have to add `/run/imageloader/` to your
-minijail parameters to allow it access to that path by bind mounting the path,
-and depending on your current Seccomp filters, you might have to add some
-permissions to it. See
-[sandboxing].
+If your daemon uses minijail, you will have to:
+*   Bind mount `/run/imageloader/` by passing the parameter
+    `-b /run/imageloader/` to minijail.
+*   Set the parameters `-v -Kslave` to allow propagation of the mount namespace
+    of the mounted DLC image to your service.
+*   Depending on your current Seccomp filters, you might have to add some
+    permissions to it. See [sandboxing].
 
 On a locally built test build|image, calling dlcservice API does not download
 the DLC (no DLC is being served). You need to
