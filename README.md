@@ -45,7 +45,6 @@ copies.
 | [crash-reporter](./crash-reporter/) | The system crash handler & reporter |
 | [cros-disks](./cros-disks/) | Daemon for mounting removable media (e.g. USB sticks and SD cards) |
 | [cros-fuzz](./cros-fuzz/) | Support crate for fuzzing rust code |
-| [cros_component](./cros_component/) ||
 | [crosdns](./crosdns/) | Hostname resolution service for Chrome OS |
 | [crosh](./crosh/) | The Chromium OS shell |
 | [croslog](./croslog/) | The log manipulation command |
