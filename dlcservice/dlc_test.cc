@@ -36,23 +36,9 @@ class DlcBaseTestRemovable : public DlcBaseTest {
   DlcBaseTestRemovable() = default;
 
   void SetUp() override {
-    SetUpFilesAndDirectories();
-
-    auto mock_boot_device = std::make_unique<MockBootDevice>();
-    EXPECT_CALL(*mock_boot_device, GetBootDevice())
-        .WillOnce(Return("/dev/sdb5"));
-    EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_)).WillOnce(Return(true));
-
-    auto mock_metrics = std::make_unique<testing::StrictMock<MockMetrics>>();
-    mock_metrics_ = mock_metrics.get();
-
-    SystemState::Initialize(
-        std::move(mock_image_loader_proxy_),
-        std::move(mock_update_engine_proxy_),
-        std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
-        std::make_unique<BootSlot>(std::move(mock_boot_device)),
-        std::move(mock_metrics), manifest_path_, preloaded_content_path_,
-        content_path_, prefs_path_, users_path_, &clock_, /*for_test=*/true);
+    ON_CALL(*mock_boot_device_ptr_, IsRemovableDevice(_))
+        .WillByDefault(Return(true));
+    DlcBaseTest::SetUp();
   }
 
  private:
@@ -210,6 +196,7 @@ TEST_F(DlcBaseTest, MakeReadyForUpdateNotVerfied) {
   EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
@@ -231,6 +218,7 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_TRUE(base::PathExists(image_path));
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
@@ -252,6 +240,7 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_TRUE(base::PathExists(image_path));
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, PreloadCopyShouldMarkUnverified) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
@@ -263,6 +252,7 @@ TEST_F(DlcBaseTest, PreloadCopyShouldMarkUnverified) {
   EXPECT_FALSE(dlc.IsVerified());
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
@@ -275,6 +265,7 @@ TEST_F(DlcBaseTest, PreloadCopyFailOnInvalidFileSize) {
   EXPECT_TRUE(dlc.IsVerified());
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();
@@ -301,6 +292,7 @@ TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc) {
   EXPECT_TRUE(dlc.IsInstalled());
 }
 
+// TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, PreloadingSkippedOnAlreadyExistingAndVerifiableDlc) {
   DlcBase dlc(kThirdDlc);
   dlc.Initialize();

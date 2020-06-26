@@ -19,6 +19,7 @@
 #include <update_engine/proto_bindings/update_engine.pb.h>
 #include <update_engine/dbus-proxy-mocks.h>
 
+#include "dlcservice/boot/mock_boot_device.h"
 #include "dlcservice/dlc.h"
 #include "dlcservice/dlc_service.h"
 #include "dlcservice/mock_metrics.h"
@@ -85,8 +86,10 @@ class BaseTest : public testing::Test {
   std::unique_ptr<SessionManagerProxyMock> mock_session_manager_proxy_;
   SessionManagerProxyMock* mock_session_manager_proxy_ptr_;
 
-  MockMetrics* mock_metrics_;
+  std::unique_ptr<MockBootDevice> mock_boot_device_;
+  MockBootDevice* mock_boot_device_ptr_;
 
+  MockMetrics* mock_metrics_;
   MockStateChangeReporter mock_state_change_reporter_;
 
   base::SimpleTestClock clock_;

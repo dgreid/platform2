@@ -20,7 +20,6 @@
 #include <update_engine/dbus-proxy-mocks.h>
 
 #include "dlcservice/boot/boot_slot.h"
-#include "dlcservice/boot/mock_boot_device.h"
 #include "dlcservice/dlc.h"
 #include "dlcservice/metrics.h"
 #include "dlcservice/system_state.h"
@@ -54,6 +53,14 @@ BaseTest::BaseTest() {
   mock_session_manager_proxy_ =
       std::make_unique<StrictMock<SessionManagerProxyMock>>();
   mock_session_manager_proxy_ptr_ = mock_session_manager_proxy_.get();
+
+  mock_boot_device_ = std::make_unique<MockBootDevice>();
+  mock_boot_device_ptr_ = mock_boot_device_.get();
+  EXPECT_CALL(*mock_boot_device_, GetBootDevice())
+      .WillOnce(Return("/dev/sdb5"));
+  ON_CALL(*mock_boot_device_, IsRemovableDevice(_))
+      .WillByDefault(Return(false));
+  EXPECT_CALL(*mock_boot_device_, IsRemovableDevice(_)).Times(1);
 }
 
 void BaseTest::SetUp() {
@@ -61,17 +68,13 @@ void BaseTest::SetUp() {
 
   SetUpFilesAndDirectories();
 
-  auto mock_boot_device = std::make_unique<MockBootDevice>();
-  EXPECT_CALL(*mock_boot_device, GetBootDevice()).WillOnce(Return("/dev/sdb5"));
-  EXPECT_CALL(*mock_boot_device, IsRemovableDevice(_)).WillOnce(Return(false));
-
   auto mock_metrics = std::make_unique<testing::StrictMock<MockMetrics>>();
   mock_metrics_ = mock_metrics.get();
 
   SystemState::Initialize(
       std::move(mock_image_loader_proxy_), std::move(mock_update_engine_proxy_),
       std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
-      std::make_unique<BootSlot>(std::move(mock_boot_device)),
+      std::make_unique<BootSlot>(std::move(mock_boot_device_)),
       std::move(mock_metrics), manifest_path_, preloaded_content_path_,
       content_path_, prefs_path_, users_path_, &clock_, /*for_test=*/true);
 }
