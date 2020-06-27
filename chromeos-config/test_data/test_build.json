@@ -55,6 +55,10 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
+        },
         "firmware": {
           "bcs-overlay": "overlay-some-private",
           "build-targets": {
@@ -191,6 +195,10 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
+        },
         "firmware": {
           "bcs-overlay": "overlay-some-private",
           "build-targets": {
@@ -298,6 +306,10 @@
             "ucm-suffix": "another"
           }
         },
+        "fingerprint": {
+          "board": "dartmonkey",
+          "ro-version": "VERSION3"
+        },
         "firmware": {
           "bcs-overlay": "overlay-another-private",
           "build-targets": {
@@ -365,6 +377,10 @@
         "wallpaper": "default"
       },
       {
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
+        },
         "firmware": {
           "no-firmware": true
         },
@@ -405,6 +421,10 @@
         "brand-code": "WLBA",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
         },
         "firmware": {
           "bcs-overlay": "overlay-some-private",
@@ -501,6 +521,10 @@
         "brand-code": "WLBA",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
         },
         "firmware": {
           "bcs-overlay": "overlay-some-private",
@@ -598,6 +622,10 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
+        },
         "firmware": {
           "bcs-overlay": "overlay-some-private",
           "build-targets": {
@@ -693,6 +721,10 @@
         "brand-code": "WLBB",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper",
+          "ro-version": "VERSION1"
         },
         "firmware": {
           "bcs-overlay": "overlay-some-private",

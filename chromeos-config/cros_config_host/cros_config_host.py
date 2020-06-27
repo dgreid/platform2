@@ -189,6 +189,33 @@ def GetMosysPlatform(config):
   return 1
 
 
+def GetFingerprintFirmwareROVersion(config, fpmcu):
+  """Get the read-only versions of the fingerprint firmware for this board.
+
+  cros_config_schema validates there is only one value for "ro-version" in the
+  fingerprint object containing a "board" (fpmcu). This function finds and
+  prints the value of the first "ro-version".
+
+  Args:
+    config: A CrosConfig instance.
+    fpmcu: "FPMCU board".
+
+  Returns:
+    Exit code: 0 always since the ro-version does not have to be specified.
+  """
+  devices = config.GetDeviceConfigs()
+  for device in devices:
+    identity = device.GetProperties('/fingerprint')
+    board = identity.get('board')
+    if board == fpmcu:
+      ro_version = identity.get('ro-version')
+      if ro_version is not None:
+        print(ro_version)
+        return 0
+
+  return 0
+
+
 def GetThermalFiles(config):
   """Print a list of thermal files across all models
 
@@ -344,6 +371,11 @@ def GetParser(description):
   subparsers.add_parser(
       'get-mosys-platform',
       help='Get the name of the mosys platform compiled for this device.')
+  # Parser: get-fpmcu-firmware-ro-version
+  fpmcu_firmware_ro_parser = subparsers.add_parser(
+      'get-fpmcu-firmware-ro-version',
+      help='Get the fingerprint firmware RO version for this device.')
+  fpmcu_firmware_ro_parser.add_argument('fpmcu', help='FPMCU "board"')
   # Parser: get-thermal-files
   subparsers.add_parser(
       'get-thermal-files',
@@ -438,6 +470,8 @@ def main(argv=None):
     GetFirmwareBuildTargets(config, opts.type)
   elif opts.subcommand == 'get-mosys-platform':
     return GetMosysPlatform(config)
+  elif opts.subcommand == 'get-fpmcu-firmware-ro-version':
+    return GetFingerprintFirmwareROVersion(config, opts.fpmcu)
   elif opts.subcommand == 'get-thermal-files':
     GetThermalFiles(config)
   elif opts.subcommand == 'file-tree':

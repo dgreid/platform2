@@ -30,6 +30,9 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper"
+        },
         "firmware": {},
         "hardware-properties": {
           "has-base-accelerometer": true,
@@ -101,6 +104,9 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper"
+        },
         "firmware": {},
         "hardware-properties": {
           "is-lid-convertible": false
@@ -145,6 +151,9 @@
             "ucm-suffix": "another"
           }
         },
+        "fingerprint": {
+          "board": "dartmonkey"
+        },
         "firmware": {
           "firmware-config": 4294967295
         },
@@ -168,6 +177,9 @@
         "wallpaper": "default"
       },
       {
+        "fingerprint": {
+          "board": "bloonchipper"
+        },
         "firmware": {},
         "identity": {
           "customization-id": "SomeCustomization",
@@ -199,6 +211,9 @@
         "brand-code": "WLBA",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper"
         },
         "firmware": {},
         "hardware-properties": {
@@ -257,6 +272,9 @@
         "brand-code": "WLBA",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper"
         },
         "firmware": {},
         "hardware-properties": {
@@ -316,6 +334,9 @@
         "camera": {
           "count": 1
         },
+        "fingerprint": {
+          "board": "bloonchipper"
+        },
         "firmware": {},
         "hardware-properties": {
           "is-lid-convertible": false
@@ -373,6 +394,9 @@
         "brand-code": "WLBB",
         "camera": {
           "count": 1
+        },
+        "fingerprint": {
+          "board": "bloonchipper"
         },
         "firmware": {},
         "hardware-properties": {

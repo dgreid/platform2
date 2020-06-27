@@ -684,6 +684,33 @@ def _ValidateSingleMosysPlatform(configs):
         'You are using: %s' % ', '.join(platform_names))
 
 
+def _ValidateConsistentFingerprintFirmwareROVersion(configs):
+  """Validate all /fingerprint:ro-version entries.
+
+  A given Chrome OS board can only have a single RO version for a given FPMCU
+  board. See
+  http://go/cros-fingerprint-firmware-branching-and-signing#single-ro-per-mcu for details.  # pylint: disable=line-too-long
+
+  Args:
+    configs: The transformed config to be validated.
+  """
+  expected_ro_version = collections.defaultdict(set)
+  for device in configs[CHROMEOS][CONFIGS]:
+    fingerprint = device.get('fingerprint')
+    if fingerprint is None:
+      return
+
+    fpmcu = fingerprint.get('board')
+    ro_version = fingerprint.get('ro-version')
+    expected_ro_version[fpmcu].add(ro_version)
+
+  for versions in expected_ro_version.values():
+    if len(versions) != 1:
+      raise ValidationError(
+          'You may not use different fingerprint firmware RO versions on the '
+          'same board: %s' % expected_ro_version)
+
+
 def ValidateConfig(config):
   """Validates a transformed cros config for general business rules.
 
@@ -698,6 +725,7 @@ def ValidateConfig(config):
   _ValidateWhitelabelBrandChangesOnly(json_config)
   _ValidateHardwarePropertiesAreValidType(json_config)
   _ValidateSingleMosysPlatform(json_config)
+  _ValidateConsistentFingerprintFirmwareROVersion(json_config)
 
 
 def MergeConfigs(configs):

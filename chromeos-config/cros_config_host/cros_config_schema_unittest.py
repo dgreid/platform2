@@ -246,6 +246,50 @@ class ValidateConfigSchemaTests(cros_test_lib.TestCase):
     self.assertIn('is not valid', str(ctx.exception))
 
 
+class ValidateFingerprintSchema(cros_test_lib.TestCase):
+
+  def setUp(self):
+    self._schema = cros_config_schema.ReadSchema()
+
+  def testROVersion(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 1},
+                 'name': 'foo',
+                 'fingerprint': {
+                     'board': 'dartmonkey',
+                     'ro-version': '123'}
+                 },
+            ],
+        },
+    }
+    libcros_schema.ValidateConfigSchema(self._schema,
+                                        libcros_schema.FormatJson(config))
+
+  def testROVersionMissingBoardName(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 1},
+                 'name': 'foo',
+                 'fingerprint': {
+                     # "ro-version" only allowed if "board" is also specified.
+                     'ro-version': '123'}
+                 },
+            ],
+        },
+    }
+    with self.assertRaises(jsonschema.exceptions.ValidationError) as ctx:
+      libcros_schema.ValidateConfigSchema(self._schema,
+                                          libcros_schema.FormatJson(config))
+
+    self.assertEqual(ctx.exception.message,
+                     "'board' is a dependency of 'ro-version'")
+
+
 WHITELABEL_CONFIG = """
 chromeos:
   devices:
@@ -430,6 +474,78 @@ chromeos:
     except cros_config_schema.ValidationError:
       self.fail('Removing the offending config should have cleared the '
                 'ValidationError.')
+
+  def testMultipleFingerprintFirmwareROVersionInvalid(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 1},
+                 'fingerprint': {
+                     'board': 'bloonchipper',
+                     'ro-version': '123'}
+                 },
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 2},
+                 'fingerprint': {
+                     'board': 'bloonchipper',
+                     'ro-version': '123'}
+                 },
+                # This causes the ValidationError.
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 3},
+                 'fingerprint': {
+                     'board': 'bloonchipper',
+                     'ro-version': '456'}
+                 }
+            ],
+        },
+    }
+    with self.assertRaises(cros_config_schema.ValidationError) as ctx:
+      cros_config_schema.ValidateConfig(json.dumps(config))
+
+    self.assertRegex(str(ctx.exception), re.compile(
+        'You may not use different fingerprint firmware RO versions on the '
+        'same board:.*'))
+
+  def testMultipleFingerprintFirmwareROVersionsValid(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 1},
+                 'fingerprint': {
+                     'board': 'bloonchipper',
+                     'ro-version': '123'}
+                 },
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 2},
+                 'fingerprint': {
+                     'board': 'dartmonkey',
+                     'ro-version': '456'}
+                 },
+            ],
+        },
+    }
+    cros_config_schema.ValidateConfig(json.dumps(config))
+
+  def testFingerprintFirmwareROVersionsValid(self):
+    config = {
+        'chromeos': {
+            'configs': [
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 1},
+                 'fingerprint': {
+                     'ro-version': '123'}
+                 },
+                # This device does not have fingerprint
+                {'identity': {'platform-name': 'foo',
+                              'sku-id': 2},
+                 },
+            ],
+        },
+    }
+    cros_config_schema.ValidateConfig(json.dumps(config))
 
 
 class FilterBuildElements(cros_test_lib.TestCase):

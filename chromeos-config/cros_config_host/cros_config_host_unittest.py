@@ -99,6 +99,20 @@ class CrosConfigHostTest(unittest.TestCase):
     output = subprocess.check_output(call_args, encoding='utf-8')
     self.assertEqual(output, 'Some\n')
 
+  def testGetFingerprintFirmwareROVersionFound(self):
+    call_args = '{} -c {} get-fpmcu-firmware-ro-version bloonchipper'.format(
+        CLI_FILE, self.conf_file).split()
+    output = subprocess.check_output(call_args, encoding='utf-8')
+    self.assertEqual(output, 'VERSION1\n')
+
+  def testGetFingerprintFirmwareROVersionNotSpecified(self):
+    # If the ro-version is not specified, nothing is returned and the exit code
+    # should be 0.
+    call_args = '{} -c {} get-fpmcu-firmware-ro-version some_fpmcu'.format(
+        CLI_FILE, self.conf_file).split()
+    output = subprocess.check_output(call_args, encoding='utf-8')
+    self.assertEqual(output, '')
+
   def testGetTouchFirmwareFiles(self):
     call_args = '{} -c {} get-touch-firmware-files'.format(
         CLI_FILE, self.conf_file).split()

@@ -68,6 +68,9 @@ some_base_config: &some_base_config
     ec-ro-image: "bcs://Some_EC.1111.11.1.tbz2"
     main-ro-image: "bcs://Some.1111.11.1.tbz2"
     main-rw-image: "bcs://Some_RW.1111.11.1.tbz2"
+  fingerprint:
+    board: "bloonchipper"
+    ro-version: "VERSION1"
   power:
     allow-ambient-eq: "1"
     charging-ports: |
@@ -184,6 +187,9 @@ chromeos:
             identity:
               platform-name: "Some"
               smbios-name-match: "Another"
+            fingerprint:
+              board: "dartmonkey"
+              ro-version: "VERSION3"
             firmware:
               bcs-overlay: "overlay-another-private"
 
@@ -236,6 +242,9 @@ chromeos:
               platform-name: "Some"
               smbios-name-match: "SomeCustomization"
               customization-id: "SomeCustomization"
+            fingerprint:
+              board: "bloonchipper"
+              ro-version: "VERSION1"
             firmware:
               no-firmware: true
             firmware-signing:

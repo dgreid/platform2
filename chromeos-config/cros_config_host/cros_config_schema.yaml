@@ -375,7 +375,16 @@ properties:
                   enum:
                     - stand-alone
                     - on-power-button
+                ro-version:
+                  description: RO version for the fingerprint firmware for the
+                    FPMCU specified by the "board" property. If not specified,
+                    the default RO version for the FPMCU is used.
+                  type: string
+                  build-only-element: true
               additionalProperties: false
+              dependencies:
+                ro-version:
+                  - board
             firmware:
               type: object
               properties:

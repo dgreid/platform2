@@ -491,6 +491,7 @@ In the tables below,
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | board | string |  | False |  | False | Specifies the fingerprint board in use. |
 | fingerprint-sensor-type | string |  | False |  | False | Type of FP sensor. Currently describes whether FP is overlapped on the power button or not. |
+| ro-version | string |  | False |  | True | RO version for the fingerprint firmware for the FPMCU specified by the "board" property. If not specified, the default RO version for the FPMCU is used. |
 | sensor-location | string |  | False |  | False | Specifies the location of the fingerprint sensor. |
 
 ### firmware
