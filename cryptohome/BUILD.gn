@@ -444,7 +444,6 @@ if (use.test) {
       "mock_mount.cc",
       "mock_pkcs11_init.cc",
       "mock_platform.cc",
-      "mock_service.cc",
       "mock_signature_sealing_backend.cc",
       "mock_tpm.cc",
       "mock_tpm_init.cc",

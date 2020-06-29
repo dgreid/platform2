@@ -5,8 +5,7 @@
 #ifndef CRYPTOHOME_MOCK_SERVICE_H_
 #define CRYPTOHOME_MOCK_SERVICE_H_
 
-#include "cryptohome/service.h"
-#include "cryptohome/service_monolithic.h"
+#include "cryptohome/service_distributed.h"
 
 #include <memory>
 #include <string>
@@ -16,11 +15,10 @@
 
 namespace cryptohome {
 
-class MockService : public ServiceMonolithic {
+class MockService : public ServiceDistributed {
  public:
-  explicit MockService(const std::string& abe_data);
-  MockService();  // For convenience in unit tests.
-  virtual ~MockService();
+  MockService() = default;  // For convenience in unit tests.
+  ~MockService() override = default;
 
   MOCK_METHOD(gboolean,
               Mount,

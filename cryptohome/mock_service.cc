@@ -6,9 +6,4 @@
 
 namespace cryptohome {
 
-MockService::MockService(const std::string& abe_data) :
-  ServiceMonolithic(abe_data) {}
-MockService::MockService() : MockService(std::string()) {}
-MockService::~MockService() {}
-
 }  // namespace cryptohome
