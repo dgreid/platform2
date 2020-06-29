@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include <attestation/proto_bindings/interface.pb.h>
 #include <base/command_line.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
@@ -33,7 +34,6 @@
 #include <chromeos/dbus/service_constants.h>
 #include <google/protobuf/message_lite.h>
 
-#include "cryptohome/attestation.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mount.h"
@@ -73,21 +73,17 @@ namespace switches {
   static const char kAttestationServerSwitch[] = "attestation-server";
   static struct {
     const char *name;
-    const cryptohome::Attestation::PCAType pca_type;
-  } kAttestationServers[] = {
-    { "default",  cryptohome::Attestation::kDefaultPCA },
-    { "test",     cryptohome::Attestation::kTestPCA },
-    { nullptr,    cryptohome::Attestation::kMaxPCAType }
-  };
+    const int aca_type;
+  } kAttestationServers[] = {{"default", attestation::DEFAULT_ACA},
+                             {"test", attestation::TEST_ACA},
+                             {nullptr, attestation::ACAType_ARRAYSIZE}};
   static const char kVaServerSwitch[] = "va-server";
   static struct {
     const char *name;
-    const cryptohome::Attestation::VAType va_type;
-  } kVaServers[] = {
-    { "default",  cryptohome::Attestation::kDefaultVA },
-    { "test",     cryptohome::Attestation::kTestVA },
-    { nullptr,    cryptohome::Attestation::kMaxVAType }
-  };
+    const int va_type;
+  } kVaServers[] = {{"default", attestation::DEFAULT_VA},
+                    {"test", attestation::TEST_VA},
+                    {nullptr, attestation::VAType_ARRAYSIZE}};
   static const char kWaitOwnershipTimeoutSwitch[] = "wait-ownership-timeout";
   static const char kActionSwitch[] = "action";
   static const char* kActions[] = {"mount_ex",
@@ -714,13 +710,13 @@ bool MakeProtoDBusCall(const std::string& name,
 
 std::string GetPCAName(int pca_type) {
   switch (pca_type) {
-    case cryptohome::Attestation::kDefaultPCA:
-      return "the default PCA";
-    case cryptohome::Attestation::kTestPCA:
-      return "the test PCA";
+    case attestation::DEFAULT_ACA:
+      return "the default ACA";
+    case attestation::TEST_ACA:
+      return "the test ACA";
     default: {
       std::ostringstream stream;
-      stream << "PCA " << pca_type;
+      stream << "ACA " << pca_type;
       return stream.str();
     }
   }
@@ -734,26 +730,25 @@ int main(int argc, char **argv) {
   else
     brillo::InitLog(brillo::kLogToStderr);
 
-  cryptohome::Attestation::PCAType pca_type =
-      cryptohome::Attestation::kMaxPCAType;
+  int pca_type = attestation::ACAType_ARRAYSIZE;
   if (cl->HasSwitch(switches::kAttestationServerSwitch)) {
     std::string server =
         cl->GetSwitchValueASCII(switches::kAttestationServerSwitch);
     for (int i = 0; switches::kAttestationServers[i].name; ++i) {
       if (server == switches::kAttestationServers[i].name) {
-        pca_type = switches::kAttestationServers[i].pca_type;
+        pca_type = switches::kAttestationServers[i].aca_type;
         break;
       }
     }
-    if (pca_type == cryptohome::Attestation::kMaxPCAType) {
+    if (pca_type == attestation::ACAType_ARRAYSIZE) {
       printf("Invalid attestation server: %s\n", server.c_str());
       return 1;
     }
   } else {
-    pca_type = cryptohome::Attestation::kDefaultPCA;
+    pca_type = attestation::DEFAULT_ACA;
   }
 
-  cryptohome::Attestation::VAType va_type = cryptohome::Attestation::kMaxVAType;
+  int va_type = attestation::VAType_ARRAYSIZE;
   std::string va_server(cl->HasSwitch(switches::kVaServerSwitch) ?
       cl->GetSwitchValueASCII(switches::kVaServerSwitch) :
       cl->GetSwitchValueASCII(switches::kAttestationServerSwitch));
@@ -764,12 +759,12 @@ int main(int argc, char **argv) {
         break;
       }
     }
-    if (va_type == cryptohome::Attestation::kMaxVAType) {
+    if (va_type == attestation::VAType_ARRAYSIZE) {
       printf("Invalid Verified Access server: %s\n", va_server.c_str());
       return 1;
     }
   } else {
-    va_type = cryptohome::Attestation::kDefaultVA;
+    va_type = attestation::DEFAULT_VA;
   }
 
   if (IsMixingOldAndNewFileSwitches(cl)) {
