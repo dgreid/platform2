@@ -10,7 +10,6 @@
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
 
 #include "attestation/client/dbus_proxy.h"
-#include "cryptohome/attestation.h"
 #include "cryptohome/cryptolib.h"
 #include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 
@@ -23,33 +22,23 @@ namespace cryptohome {
 // A helper function which maps an integer to a valid ACAType.
 gboolean ServiceDistributed::ConvertIntegerToACAType(gint type,
     attestation::ACAType* aca_type, GError** error) {
-  switch (type) {
-    case Attestation::kDefaultPCA:
-      *aca_type = attestation::DEFAULT_ACA;
-      return TRUE;
-    case Attestation::kTestPCA:
-      *aca_type = attestation::TEST_ACA;
-      return TRUE;
-    default:
-      ReportUnsupportedACAType(error, type);
-      return FALSE;
+  if (!attestation::ACAType_IsValid(type)) {
+    ReportUnsupportedACAType(error, type);
+    return FALSE;
   }
+  *aca_type = static_cast< ::attestation::ACAType>(type);
+  return TRUE;
 }
 
 // A helper function which maps an integer to a valid VAType.
 gboolean ServiceDistributed::ConvertIntegerToVAType(gint type,
     attestation::VAType* va_type, GError** error) {
-  switch (type) {
-    case Attestation::kDefaultVA:
-      *va_type = attestation::DEFAULT_VA;
-      return TRUE;
-    case Attestation::kTestVA:
-      *va_type = attestation::TEST_VA;
-      return TRUE;
-    default:
-      ReportUnsupportedVAType(error, type);
-      return FALSE;
+  if (!attestation::VAType_IsValid(type)) {
+    ReportUnsupportedVAType(error, type);
+    return FALSE;
   }
+  *va_type = static_cast< ::attestation::VAType>(type);
+  return TRUE;
 }
 
 // A helper function which maps an integer to a valid KeyType.
