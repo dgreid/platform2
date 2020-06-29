@@ -71,6 +71,7 @@ const char kAmbientColorTemperatureChangedSignal[] =
     "AmbientColorTemperatureChanged";
 const char kLidClosedSignal[] = "LidClosed";
 const char kLidOpenedSignal[] = "LidOpened";
+const char kThermalEventSignal[] = "ThermalEvent";
 
 // Values
 const int kBrightnessTransitionGradual = 1;
