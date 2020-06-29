@@ -69,7 +69,6 @@
 #include "cryptohome/obfuscated_username.h"
 #include "cryptohome/platform.h"
 #include "cryptohome/service_distributed.h"
-#include "cryptohome/service_monolithic.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
 #include "key.pb.h"           // NOLINT(build/include)
@@ -174,14 +173,6 @@ const char kMountThreadName[] = "MountThread";
 const char kTpmInitStatusEventType[] = "TpmInitStatus";
 const char kDircryptoMigrationProgressEventType[] =
     "DircryptoMigrationProgress";
-
-const char kAttestationMode[] = "attestation_mode";
-
-#if USE_TPM2
-const bool kUseInternalAttestationModeByDefault = false;
-#else
-const bool kUseInternalAttestationModeByDefault = true;
-#endif
 
 const char kAutoInitializeTpmSwitch[] = "auto_initialize_tpm";
 
@@ -330,21 +321,8 @@ void Service::StopTasks() {
   mount_thread_.Stop();
 }
 
-Service* Service::CreateDefault(const std::string& abe_data) {
-  bool use_monolithic = kUseInternalAttestationModeByDefault;
-  base::CommandLine* cmd_line = base::CommandLine::ForCurrentProcess();
-
-  if (cmd_line->HasSwitch(kAttestationMode)) {
-    std::string name = cmd_line->GetSwitchValueASCII(kAttestationMode);
-    if (name == "internal")
-      use_monolithic = true;
-    else if (name == "dbus")
-      use_monolithic = false;
-  }
-  if (use_monolithic)
-    return new ServiceMonolithic(abe_data);
-  else
-    return new ServiceDistributed();
+Service* Service::CreateDefault(const std::string& /*abe_data*/) {
+  return new ServiceDistributed();
 }
 
 static bool PrefixPresent(const std::vector<FilePath>& prefixes,

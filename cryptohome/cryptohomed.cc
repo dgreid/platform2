@@ -32,6 +32,8 @@ static const char* kAttestationBasedEnrollmentDataFile = "ABE_DATA_FILE";
 }
 
 namespace switches {
+static const char* kAttestationMode = "attestation_mode";
+static const char* kDistributedModeOption = "dbus";
 // Keeps std* open for debugging.
 static const char* kNoCloseOnDaemonize = "noclose";
 static const char* kNoLegacyMount = "nolegacymount";
@@ -44,6 +46,7 @@ static const char* kAggressiveThreshold =
   "aggressive_cleanup_threshold";
 static const char* kTargetFreeSpace =
   "target_free_space";
+
 }  // namespace switches
 
 static std::string ReadAbeDataFileContents(cryptohome::Platform* platform) {
@@ -91,6 +94,16 @@ int main(int argc, char** argv) {
   std::string abe_data = ReadAbeDataFileContents(&platform);
 
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
+  // Sanity check of attestation mode. Historically we had monolithic and
+  // distributed mode, and now the monolithic mode has been obsoleted, so we
+  // expect either the switch is missing or explicitly set to distributed mode.
+  if (cl->HasSwitch(switches::kAttestationMode) &&
+      cl->GetSwitchValueASCII(switches::kAttestationMode) !=
+          switches::kDistributedModeOption) {
+    LOG(FATAL) << "Unrecognized or obsoleted " << switches::kAttestationMode
+               << " option: "
+               << cl->GetSwitchValueASCII(switches::kAttestationMode);
+  }
   int noclose = cl->HasSwitch(switches::kNoCloseOnDaemonize);
   bool nolegacymount = cl->HasSwitch(switches::kNoLegacyMount);
   bool direncryption = cl->HasSwitch(switches::kDirEncryption);
