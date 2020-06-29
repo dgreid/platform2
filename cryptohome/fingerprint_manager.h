@@ -8,7 +8,7 @@
 #include <memory>
 #include <string>
 
-#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
+#include <biod/biod_proxy/biometrics_manager_proxy_base.h>
 
 namespace cryptohome {
 

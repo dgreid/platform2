@@ -8,11 +8,10 @@
 #include <vector>
 
 #include <base/test/bind_test_util.h>
+#include <biod/biod_proxy/mock_biometrics_manager_proxy_base.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-
-#include "biod/biod_proxy/mock_biometrics_manager_proxy_base.h"
 
 namespace cryptohome {
 

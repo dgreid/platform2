@@ -5,7 +5,7 @@
 #ifndef BIOD_BIOD_PROXY_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
 #define BIOD_BIOD_PROXY_MOCK_BIOMETRICS_MANAGER_PROXY_BASE_H_
 
-#include "biod/biod_proxy/biometrics_manager_proxy_base.h"
+#include <biod/biod_proxy/biometrics_manager_proxy_base.h>
 #include <gmock/gmock.h>
 
 namespace biod {

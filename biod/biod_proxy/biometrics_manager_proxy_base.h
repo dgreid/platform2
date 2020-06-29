@@ -9,17 +9,17 @@
 #include <string>
 
 #include <base/memory/weak_ptr.h>
+#include <brillo/brillo_export.h>
 #include <dbus/bus.h>
 #include <dbus/object_manager.h>
 
-#include "biod/biod_export.h"
 #include "biod/proto_bindings/constants.pb.h"
 
 namespace biod {
 
-BIOD_EXPORT const char* ScanResultToString(ScanResult result);
+BRILLO_EXPORT const char* ScanResultToString(ScanResult result);
 
-class BIOD_EXPORT BiometricsManagerProxyBase {
+class BRILLO_EXPORT BiometricsManagerProxyBase {
  public:
   using FinishCallback = base::Callback<void(bool success)>;
   using SignalCallback = dbus::ObjectProxy::SignalCallback;
