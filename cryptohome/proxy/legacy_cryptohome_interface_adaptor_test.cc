@@ -11,7 +11,6 @@
 #include <chromeos/libhwsec/mock_dbus_method_response.h>
 #include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
-#include "cryptohome/attestation.h"
 #include "cryptohome/mock_platform.h"
 #include "user_data_auth/dbus-proxy-mocks.h"
 
@@ -28,39 +27,6 @@ using ::testing::InvokeArgument;
 using ::testing::NiceMock;
 using ::testing::Return;
 using ::testing::SaveArg;
-
-namespace {
-
-static_assert(static_cast<int>(Attestation::kDefaultVA) ==
-                  static_cast<int>(attestation::VAType::DEFAULT_VA),
-              "Mismatch in enum value of DEFAULT_VA between that defined in "
-              "attestation.h and system_api/dbus/attestation/interface.proto");
-static_assert(static_cast<int>(Attestation::kTestVA) ==
-                  static_cast<int>(attestation::VAType::TEST_VA),
-              "Mismatch in enum value of TEST_VA between that defined in "
-              "attestation.h and system_api/dbus/attestation/interface.proto");
-static_assert(
-    static_cast<int>(Attestation::kMaxVAType) == 2,
-    "Number of elements in VAType enum defined in attestation.h is incorrect.");
-static_assert(static_cast<int>(attestation::VAType_MAX) == 1,
-              "Numbef or elements in VAType enum defined in "
-              "system_api/dbus/attestation/interface.proto is incorrect.");
-
-static_assert(static_cast<int>(Attestation::kDefaultPCA) ==
-                  static_cast<int>(attestation::ACAType::DEFAULT_ACA),
-              "Mismatch in enum value of DEFAULT_ACA between that defined in "
-              "attestation.h and system_api/dbus/attestation/interface.proto");
-static_assert(static_cast<int>(Attestation::kTestPCA) ==
-                  static_cast<int>(attestation::ACAType::TEST_ACA),
-              "Mismatch in enum value of DEFAULT_ACA between that defined in "
-              "attestation.h and system_api/dbus/attestation/interface.proto");
-static_assert(
-    static_cast<int>(Attestation::kMaxPCAType) == 2,
-    "Number of elements in VAType enum defined in attestation.h is incorrect.");
-static_assert(static_cast<int>(attestation::ACAType_MAX) == 1,
-              "Numbef or elements in VAType enum defined in "
-              "system_api/dbus/attestation/interface.proto is incorrect.");
-}  // namespace
 
 // A mock adaptor that is used for testing. This is added so that we can capture
 // the Send*() functions used for sending signals.
