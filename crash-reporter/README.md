@@ -178,7 +178,7 @@ to provide special consideration for those.
 
 We enforce a limit of about 32 crashes per spool directory.
 This is to avoid filling up the underlying storage especially if a daemon
-"goes crazy" and generates a lot of crashes quickly.
+goes into a crash loop and generates a lot of crashes quickly.
 
 ## Collectors
 
