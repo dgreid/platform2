@@ -160,6 +160,7 @@ class DeviceConfig(object):
 
   def GetFirmwareConfig(self):
     """Returns a map hierarchy of the firmware config."""
+    return {}
 
   def GetFirmwareUris(self):
     """Returns a list of (string) firmware URIs.
