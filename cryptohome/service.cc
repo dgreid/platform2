@@ -1097,6 +1097,10 @@ void Service::ConfigureOwnedTpm(bool status, bool took_ownership) {
 }
 
 void Service::CreateFingerprintManager() {
+  if (fingerprint_manager_.get() != nullptr) {
+    return;
+  }
+
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;
 
