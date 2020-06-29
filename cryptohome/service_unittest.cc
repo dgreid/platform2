@@ -2027,18 +2027,14 @@ void ImmediatelySignalOwnership(TpmInit::OwnershipCallback callback) {
 }
 
 TEST_F(ServiceTestNotInitialized, CheckTpmInitRace) {
-  NiceMock<MockTpm> tpm;
-  NiceMock<MockTpmInit> tpm_init;
-
   // Emulate quick tpm initialization by calling the ownership callback from
   // TpmInit::Init(). In reality, it is called from the thread created by
   // TpmInit::AsyncTakeOwnership(), but since it's guarded by a command line
   // switch, call it from Init() instead. It should be safe to call the
   // ownership callback from the main thread.
-  EXPECT_CALL(tpm_init, Init(_))
-    .WillOnce(Invoke(ImmediatelySignalOwnership));
-  service_.set_tpm(&tpm);
-  service_.set_tpm_init(&tpm_init);
+  EXPECT_CALL(tpm_init_, Init(_)).WillOnce(Invoke(ImmediatelySignalOwnership));
+  service_.set_tpm(&tpm_);
+  service_.set_tpm_init(&tpm_init_);
   service_.set_initialize_tpm(true);
   service_.Initialize();
 }
