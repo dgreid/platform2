@@ -1413,7 +1413,7 @@ void WakeOnWiFi::ParseWakeOnWiFiCapabilities(
                                                  &wake_on_wifi_max_ssids_)) {
       wake_on_wifi_triggers_supported_.insert(WakeOnWiFi::kWakeTriggerSSID);
       SLOG(this, 7) << "Waking on up to " << wake_on_wifi_max_ssids_
-                    << " whitelisted SSIDs supported by this WiFi device";
+                    << " SSIDs supported by this WiFi device";
     }
   }
 #endif  // DISABLE_WAKE_ON_WIFI

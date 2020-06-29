@@ -1047,9 +1047,9 @@ class WakeOnWiFiTest : public ::testing::Test {
 
   void AllowSSID(const uint8_t* ssid,
                  int num_bytes,
-                 vector<ByteString>* whitelist) {
+                 vector<ByteString>* allowed) {
     vector<uint8_t> ssid_vector(ssid, ssid + num_bytes);
-    whitelist->push_back(ByteString(ssid_vector));
+    allowed->push_back(ByteString(ssid_vector));
   }
 
   vector<ByteString>* GetWakeOnAllowedSSIDs() {
@@ -1415,14 +1415,14 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, ConfigureDisableWakeOnWiFiMessage) {
 TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
   IPAddressStore all_addresses;
   set<WakeOnWiFi::WakeOnWiFiTrigger> trigs;
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   const uint32_t interval = kNetDetectScanIntervalSeconds;
 
   GetWakeOnPacketConnMessage msg0;
   NetlinkPacket packet0(kResponseNoIPAddresses, sizeof(kResponseNoIPAddresses));
   msg0.InitFromPacket(&packet0, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   trigs.insert(WakeOnWiFi::kWakeTriggerPattern);
   all_addresses.AddUnique(
@@ -1431,9 +1431,9 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
   NetlinkPacket packet1(kResponseIPV40, sizeof(kResponseIPV40));
   msg1.InitFromPacket(&packet1, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   // Test matching of wake on disconnect trigger.
   trigs.insert(WakeOnWiFi::kWakeTriggerDisconnect);
@@ -1442,11 +1442,11 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
                         sizeof(kResponseIPV40WakeOnDisconnect));
   msg2.InitFromPacket(&packet2, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   trigs.erase(WakeOnWiFi::kWakeTriggerDisconnect);
   all_addresses.AddUnique(
@@ -1455,13 +1455,13 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
   NetlinkPacket packet3(kResponseIPV401, sizeof(kResponseIPV401));
   msg3.InitFromPacket(&packet3, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address0, sizeof(kIPV6Address0))));
@@ -1469,15 +1469,15 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
   NetlinkPacket packet4(kResponseIPV401IPV60, sizeof(kResponseIPV401IPV60));
   msg4.InitFromPacket(&packet4, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address1, sizeof(kIPV6Address1))));
@@ -1485,57 +1485,57 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, WakeOnWiFiSettingsMatch) {
   NetlinkPacket packet5(kResponseIPV401IPV601, sizeof(kResponseIPV401IPV601));
   msg5.InitFromPacket(&packet5, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg5, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   // Test matching of wake on SSID trigger.
   all_addresses.Clear();
   trigs.clear();
   trigs.insert(WakeOnWiFi::kWakeTriggerSSID);
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
-  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &whitelist);
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
+  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &allowed);
   GetWakeOnPacketConnMessage msg6;
   NetlinkPacket packet6(kResponseWakeOnSSID, sizeof(kResponseWakeOnSSID));
   msg6.InitFromPacket(&packet6, NetlinkMessage::MessageContext());
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg6, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg5, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   // Test that we get a mismatch if triggers are present in the message that we
   // don't expect.
   trigs.clear();
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg6, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg5, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -1543,7 +1543,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   IPAddressStore all_addresses;
   set<WakeOnWiFi::WakeOnWiFiTrigger> trigs;
   const int index = 1;  // wiphy device number
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   const uint32_t interval = kNetDetectScanIntervalSeconds;
   SetWakeOnPacketConnMessage msg0;
   Error e;
@@ -1552,120 +1552,118 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
       IPAddress(string(kIPV4Address0, sizeof(kIPV4Address0))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg0, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg1;
   all_addresses.AddUnique(
       IPAddress(string(kIPV4Address1, sizeof(kIPV4Address1))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg1, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg2;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address0, sizeof(kIPV6Address0))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg2, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg3;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address1, sizeof(kIPV6Address1))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg3, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg4;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address2, sizeof(kIPV6Address2))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg4, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg5;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address3, sizeof(kIPV6Address3))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg5, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg5, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg6;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address4, sizeof(kIPV6Address4))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg6, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg6, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg7;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address5, sizeof(kIPV6Address5))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg7, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg7, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg8;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address6, sizeof(kIPV6Address6))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg8, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg8, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg9;
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address7, sizeof(kIPV6Address7))));
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(&msg9, trigs, all_addresses,
                                                     index, {}, kHardwareAddress,
-                                                    interval, whitelist, &e));
+                                                    interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg9, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg10;
   uint8_t proto_tcp = static_cast<uint8_t>(IPPROTO_TCP);
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(
       &msg10, trigs, all_addresses, index, {proto_tcp}, kHardwareAddress,
-      interval, whitelist, &e));
+      interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg10, trigs, all_addresses, interval,
-                                      {proto_tcp}, kHardwareAddress,
-                                      whitelist));
+                                      {proto_tcp}, kHardwareAddress, allowed));
   SetWakeOnPacketConnMessage msg11;
   all_addresses.Clear();
   uint8_t proto_udp = static_cast<uint8_t>(IPPROTO_UDP);
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(
       &msg11, trigs, all_addresses, index, {proto_udp}, kHardwareAddress,
-      interval, whitelist, &e));
+      interval, allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg11, trigs, all_addresses, interval,
-                                      {proto_udp}, kHardwareAddress,
-                                      whitelist));
+                                      {proto_udp}, kHardwareAddress, allowed));
 
   SetWakeOnPacketConnMessage msg12;
   all_addresses.Clear();
   trigs.clear();
   trigs.insert(WakeOnWiFi::kWakeTriggerSSID);
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
-  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &whitelist);
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
+  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &allowed);
   EXPECT_TRUE(ConfigureSetWakeOnWiFiSettingsMessage(
       &msg12, trigs, all_addresses, index, {}, kHardwareAddress, interval,
-      whitelist, &e));
+      allowed, &e));
   EXPECT_TRUE(WakeOnWiFiSettingsMatch(msg12, trigs, all_addresses, interval, {},
-                                      kHardwareAddress, whitelist));
+                                      kHardwareAddress, allowed));
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher, RequestWakeOnPacketSettings) {
@@ -2175,7 +2173,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   SetSuspendActionsDoneCallback();
   EnableWakeOnWiFiFeaturesPacketDarkConnect();
 
-  // Do not start wake to scan timer if there are less whitelisted SSIDs (2)
+  // Do not start wake to scan timer if there are less alloweded SSIDs (2)
   // than net detect SSIDs we support (10).
   SetInDarkResume(true);
   GetWakeOnWiFiTriggers()->clear();
@@ -2200,8 +2198,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
   EXPECT_TRUE(GetLastSSIDMatchFreqs().empty());
 
-  // Start wake to scan timer if there are more whitelisted SSIDs (2) than
-  // net detect SSIDs we support (1). Also, truncate the wake on SSID whitelist
+  // Start wake to scan timer if there are more alloweded SSIDs (2) than
+  // net detect SSIDs we support (1). Also, truncate the wake on SSID list
   // so that it only contains as many SSIDs as we support (1).
   SetInDarkResume(true);
   GetWakeOnWiFiTriggers()->clear();
@@ -2227,7 +2225,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   EXPECT_TRUE(GetLastSSIDMatchFreqs().empty());
 
   // Neither add the wake on SSID trigger nor start the wake to scan timer if
-  // there are no whitelisted SSIDs.
+  // there are no alloweded SSIDs.
   SetInDarkResume(true);
   GetWakeOnAllowedSSIDs()->clear();
   StopWakeToScanTimer();
@@ -2516,33 +2514,33 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, AddRemoveWakeOnPacketOfType) {
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_SetsWakeOnAllowedSSIDs) {
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EXPECT_TRUE(GetWakeOnAllowedSSIDs()->empty());
-  OnBeforeSuspend(true, whitelist, true, 0);
+  OnBeforeSuspend(true, allowed, true, 0);
   EXPECT_FALSE(GetWakeOnAllowedSSIDs()->empty());
   EXPECT_EQ(1, GetWakeOnAllowedSSIDs()->size());
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnBeforeSuspend_SetsDoneCallback) {
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   EXPECT_TRUE(SuspendActionsCallbackIsNull());
-  OnBeforeSuspend(true, whitelist, true, 0);
+  OnBeforeSuspend(true, allowed, true, 0);
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   bool is_connected;
   bool have_dhcp_lease;
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   // If we are connected the time to next lease renewal is short enough, we will
   // initiate DHCP lease renewal immediately.
   is_connected = true;
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(1);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
   // No immediate DHCP lease renewal because we are not connected.
@@ -2550,7 +2548,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
   // No immediate DHCP lease renewal because the time to the next lease renewal
@@ -2559,7 +2557,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   have_dhcp_lease = true;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
 
   // No immediate DHCP lease renewal because we do not have a DHCP lease that
@@ -2568,25 +2566,25 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher, OnBeforeSuspend_DHCPLeaseRenewal) {
   have_dhcp_lease = false;
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, 0)).Times(1);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_ResetsDarkResumeScanRetries) {
   const bool is_connected = true;
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   SetDarkResumeScanRetriesLeft(3);
   EXPECT_EQ(3, GetDarkResumeScanRetriesLeft());
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_EQ(0, GetDarkResumeScanRetriesLeft());
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_SetsWakeOnAllowedSSIDs) {
   const bool is_connected = true;
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EXPECT_TRUE(GetWakeOnAllowedSSIDs()->empty());
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(GetWakeOnAllowedSSIDs()->empty());
   EXPECT_EQ(1, GetWakeOnAllowedSSIDs()->size());
 }
@@ -2598,15 +2596,15 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // before suspending again.
   const bool is_connected = true;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Renew DHCP lease if we are connected in dark resume.
   EXPECT_CALL(*this, RenewDHCPLeaseCallback());
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Trigger timeout callback.
   // Since we timeout, we are disconnected before suspend.
@@ -2624,20 +2622,20 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // we could not find any services available for autoconnect.
   const bool is_connected = true;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Renew DHCP lease if we are connected in dark resume.
   EXPECT_CALL(*this, RenewDHCPLeaseCallback());
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
   SetExpectationsDisconnectedBeforeSuspend();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   VerifyStateDisconnectedBeforeSuspend();
 }
@@ -2651,15 +2649,15 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const bool have_dhcp_lease = true;
   const uint32_t time_to_next_lease_renewal = 10;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Renew DHCP lease if we are connected in dark resume.
   EXPECT_CALL(*this, RenewDHCPLeaseCallback());
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Lease obtained.
   // Since a lease is obtained, we are connected before suspend.
@@ -2679,8 +2677,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // actions before suspending again.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Initiate scan if we are not connected in dark resume.
@@ -2689,7 +2687,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Trigger timeout callback.
   // Since we timeout, we are disconnected before suspend.
@@ -2708,8 +2706,8 @@ TEST_F(
   // because we could not find any services available for autoconnect.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Initiate scan if we are not connected in dark resume.
@@ -2718,12 +2716,12 @@ TEST_F(
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
   SetExpectationsDisconnectedBeforeSuspend();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   VerifyStateDisconnectedBeforeSuspend();
 }
@@ -2737,8 +2735,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const bool have_dhcp_lease = true;
   const uint32_t time_to_next_lease_renewal = 10;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerUnsupported);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Initiate scan if we are not connected in dark resume.
@@ -2747,7 +2745,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(
                             WakeOnWiFi::kWakeTriggerUnsupported));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
   // Lease obtained.
   // Since a lease is obtained, we are connected before suspend.
@@ -2766,14 +2764,14 @@ TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_WakeReasonPattern) {
   // and go back to sleep connected if we wake on pattern.
   const bool is_connected = true;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerPattern);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerPattern));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartWakeToScanTimer();
@@ -2791,8 +2789,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // find any networks available for autoconnect.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerDisconnect);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2801,12 +2799,12 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerDisconnect));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
   SetExpectationsDisconnectedBeforeSuspend();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   VerifyStateDisconnectedBeforeSuspend();
@@ -2819,8 +2817,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // suspending again.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerDisconnect);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2829,7 +2827,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerDisconnect));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
@@ -2849,8 +2847,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const bool have_dhcp_lease = true;
   const uint32_t time_to_next_lease_renewal = 10;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerDisconnect);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2859,7 +2857,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerDisconnect));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StopDHCPLeaseRenewalTimer();
@@ -2879,8 +2877,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   // networks available for autoconnect.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerSSID);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2889,12 +2887,12 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(_));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerSSID));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
   SetExpectationsDisconnectedBeforeSuspend();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_EQ(WakeOnWiFi::kWakeTriggerUnsupported, GetLastWakeReason());
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   VerifyStateDisconnectedBeforeSuspend();
@@ -2906,8 +2904,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_WakeReasonSSID_Timeout) {
   // again.
   const bool is_connected = false;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerSSID);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2916,7 +2914,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_WakeReasonSSID_Timeout) {
   EXPECT_CALL(*this, InitiateScanCallback(GetLastSSIDMatchFreqs()));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerSSID));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StartDHCPLeaseRenewalTimer();
@@ -2936,8 +2934,8 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   const bool have_dhcp_lease = true;
   const uint32_t time_to_next_lease_renewal = 10;
   SetLastWakeReason(WakeOnWiFi::kWakeTriggerSSID);
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   InitStateForDarkResume();
   EXPECT_TRUE(DarkResumeActionsTimeOutCallbackIsCancelled());
@@ -2946,7 +2944,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(*this, InitiateScanCallback(GetLastSSIDMatchFreqs()));
   EXPECT_CALL(metrics_,
               NotifyWakeOnWiFiOnDarkResume(WakeOnWiFi::kWakeTriggerSSID));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(DarkResumeActionsTimeOutCallbackIsCancelled());
 
   StopDHCPLeaseRenewalTimer();
@@ -2961,17 +2959,17 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_Connected_DoNotRecordEvent) {
   const bool is_connected = true;
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   EXPECT_TRUE(GetDarkResumeHistory()->Empty());
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_TRUE(GetDarkResumeHistory()->Empty());
 }
 
 TEST_F(WakeOnWiFiTestWithDispatcher, OnDarkResume_NotConnected_RecordEvent) {
   const bool is_connected = false;
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   EXPECT_TRUE(GetDarkResumeHistory()->Empty());
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_EQ(1, GetDarkResumeHistory()->Size());
 }
 
@@ -2983,7 +2981,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   CHECK_EQ(static_cast<const unsigned int>(
                WakeOnWiFi::kMaxDarkResumesPerPeriodShort),
            base::size(kTimeSeconds));
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
 
   // This test assumes that throttling takes place when 3 dark resumes have
   // been triggered in the last 1 minute.
@@ -3001,7 +2999,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
     EXPECT_CALL(metrics_, NotifyWakeOnWiFiThrottled()).Times(0);
     EXPECT_CALL(time_, GetNow())
         .WillRepeatedly(Return(GetTimestampBootTime(kTimeSeconds[i])));
-    OnDarkResume(is_connected, whitelist);
+    OnDarkResume(is_connected, allowed);
   }
   SetInDarkResume(false);  // this happens after BeforeSuspendActions
   EXPECT_EQ(WakeOnWiFi::kMaxDarkResumesPerPeriodShort - 1,
@@ -3020,7 +3018,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(time_, GetNow())
       .WillRepeatedly(Return(GetTimestampBootTime(
           kTimeSeconds[WakeOnWiFi::kMaxDarkResumesPerPeriodShort - 1])));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_TRUE(WakeToScanTimerIsRunning());
@@ -3037,7 +3035,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   CHECK_EQ(
       static_cast<const unsigned int>(WakeOnWiFi::kMaxDarkResumesPerPeriodLong),
       base::size(kTimeSeconds));
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
 
   // This test assumes that throttling takes place when 3 dark resumes have been
   // triggered in the last 1 minute, or when 10 dark resumes have been triggered
@@ -3058,7 +3056,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
     EXPECT_CALL(metrics_, NotifyWakeOnWiFiThrottled()).Times(0);
     EXPECT_CALL(time_, GetNow())
         .WillRepeatedly(Return(GetTimestampBootTime(kTimeSeconds[i])));
-    OnDarkResume(is_connected, whitelist);
+    OnDarkResume(is_connected, allowed);
   }
   SetInDarkResume(false);  // this happens after BeforeSuspendActions
   EXPECT_EQ(WakeOnWiFi::kMaxDarkResumesPerPeriodLong - 1,
@@ -3077,7 +3075,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   EXPECT_CALL(time_, GetNow())
       .WillRepeatedly(Return(GetTimestampBootTime(
           kTimeSeconds[WakeOnWiFi::kMaxDarkResumesPerPeriodLong - 1])));
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
   EXPECT_FALSE(SuspendActionsCallbackIsNull());
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_TRUE(WakeToScanTimerIsRunning());
@@ -3237,8 +3235,8 @@ TEST_F(
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
        OnNoAutoConnectableServicesAfterScan_InDarkResume) {
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EnableWakeOnWiFiFeaturesDarkConnect();
   SetInDarkResume(true);
 
@@ -3246,7 +3244,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   GetWakeOnWiFiTriggers()->clear();
   StartDHCPLeaseRenewalTimer();
   StopWakeToScanTimer();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_FALSE(WakeToScanTimerIsRunning());
   EXPECT_EQ(GetWakeOnWiFiTriggers()->size(), 1);
@@ -3256,8 +3254,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
        OnNoAutoConnectableServicesAfterScan_NotInDarkResume) {
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EnableWakeOnWiFiFeaturesDarkConnect();
   SetInDarkResume(false);
 
@@ -3265,15 +3263,15 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   GetWakeOnWiFiTriggers()->clear();
   StartDHCPLeaseRenewalTimer();
   StopWakeToScanTimer();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_TRUE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_EQ(GetWakeOnWiFiTriggers()->size(), 0);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
        OnNoAutoConnectableServicesAfterScan_Retry) {
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EnableWakeOnWiFiFeaturesDarkConnect();
   SetInDarkResume(true);
   SetDarkResumeScanRetriesLeft(1);
@@ -3282,7 +3280,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   EXPECT_EQ(1, GetDarkResumeScanRetriesLeft());
   EXPECT_CALL(metrics_, NotifyDarkResumeScanRetry());
   EXPECT_CALL(*this, InitiateScanCallback(GetLastSSIDMatchFreqs()));
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_EQ(0, GetDarkResumeScanRetriesLeft());
 
   // Still no auto-connectable services after retry. No more retries, so perform
@@ -3291,7 +3289,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   StartDHCPLeaseRenewalTimer();
   StopWakeToScanTimer();
   EXPECT_CALL(*this, InitiateScanCallback(GetLastSSIDMatchFreqs())).Times(0);
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_FALSE(WakeToScanTimerIsRunning());
   EXPECT_EQ(GetWakeOnWiFiTriggers()->size(), 1);
@@ -3537,33 +3535,33 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
        WakeOnWiFiDisabled_OnBeforeSuspend_ReportsDoneImmediately) {
   const bool is_connected = true;
   const bool have_dhcp_lease = true;
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalShort);
 
   EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(*this, RenewDHCPLeaseCallback()).Times(0);
-  OnBeforeSuspend(is_connected, whitelist, have_dhcp_lease,
+  OnBeforeSuspend(is_connected, allowed, have_dhcp_lease,
                   kTimeToNextLeaseRenewalLong);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
        WakeOnWiFiDisabled_OnDarkResume_ReportsDoneImmediately) {
   const bool is_connected = true;
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
   EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, _)).Times(0);
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(_)).Times(0);
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
 
   EXPECT_CALL(*this, DoneCallback(ErrorTypeIs(Error::kSuccess))).Times(1);
   EXPECT_CALL(mock_dispatcher_, PostDelayedTask(_, _, _)).Times(0);
   EXPECT_CALL(metrics_, NotifyWakeOnWiFiOnDarkResume(_)).Times(0);
-  OnDarkResume(is_connected, whitelist);
+  OnDarkResume(is_connected, allowed);
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -3675,8 +3673,8 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
 
 TEST_F(WakeOnWiFiTestWithDispatcher,
        WakeOnWiFiDisabled_OnNoAutoConnectableServicesAfterScan) {
-  vector<ByteString> whitelist;
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
+  vector<ByteString> allowed;
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
 
   // Do nothing (i.e. do not invoke WakeOnWiFi::BeforeSuspendActions) if wake
   // on WiFi is not supported, whether or not we are in dark resume.
@@ -3684,7 +3682,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   GetWakeOnWiFiTriggers()->clear();
   StartDHCPLeaseRenewalTimer();
   StopWakeToScanTimer();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(WakeToScanTimerIsRunning());
   EXPECT_TRUE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_EQ(GetWakeOnWiFiTriggers()->size(), 0);
@@ -3693,7 +3691,7 @@ TEST_F(WakeOnWiFiTestWithDispatcher,
   GetWakeOnWiFiTriggers()->clear();
   StartDHCPLeaseRenewalTimer();
   StopWakeToScanTimer();
-  OnNoAutoConnectableServicesAfterScan(whitelist);
+  OnNoAutoConnectableServicesAfterScan(allowed);
   EXPECT_FALSE(WakeToScanTimerIsRunning());
   EXPECT_TRUE(DHCPLeaseRenewalTimerIsRunning());
   EXPECT_EQ(GetWakeOnWiFiTriggers()->size(), 0);
@@ -3732,16 +3730,16 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   set<WakeOnWiFi::WakeOnWiFiTrigger> one_trig;
   one_trig.insert(WakeOnWiFi::kWakeTriggerPattern);
   const int index = 1;  // wiphy device number
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   const uint32_t interval = kNetDetectScanIntervalSeconds;
   SetWakeOnPacketConnMessage msg;
   Error e;
   EXPECT_FALSE(ConfigureSetWakeOnWiFiSettingsMessage(
       &msg, no_trigs, no_addresses, index, {}, kHardwareAddress, interval,
-      whitelist, &e));
+      allowed, &e));
   EXPECT_FALSE(ConfigureSetWakeOnWiFiSettingsMessage(
       &msg, one_trig, one_address, index, {}, kHardwareAddress, interval,
-      whitelist, &e));
+      allowed, &e));
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
@@ -3751,14 +3749,14 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   // expect it to return true.
   IPAddressStore all_addresses;
   set<WakeOnWiFi::WakeOnWiFiTrigger> trigs;
-  vector<ByteString> whitelist;
+  vector<ByteString> allowed;
   const uint32_t interval = kNetDetectScanIntervalSeconds;
 
   GetWakeOnPacketConnMessage msg0;
   NetlinkPacket packet0(kResponseNoIPAddresses, sizeof(kResponseNoIPAddresses));
   msg0.InitFromPacket(&packet0, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg0, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   trigs.insert(WakeOnWiFi::kWakeTriggerPattern);
   all_addresses.AddUnique(
@@ -3767,7 +3765,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   NetlinkPacket packet1(kResponseIPV40, sizeof(kResponseIPV40));
   msg1.InitFromPacket(&packet1, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg1, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   trigs.insert(WakeOnWiFi::kWakeTriggerDisconnect);
   GetWakeOnPacketConnMessage msg2;
@@ -3775,7 +3773,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
                         sizeof(kResponseIPV40WakeOnDisconnect));
   msg2.InitFromPacket(&packet2, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg2, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   trigs.erase(WakeOnWiFi::kWakeTriggerDisconnect);
   all_addresses.AddUnique(
@@ -3784,7 +3782,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   NetlinkPacket packet3(kResponseIPV401, sizeof(kResponseIPV401));
   msg3.InitFromPacket(&packet3, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg3, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address0, sizeof(kIPV6Address0))));
@@ -3792,7 +3790,7 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   NetlinkPacket packet4(kResponseIPV401IPV60, sizeof(kResponseIPV401IPV60));
   msg4.InitFromPacket(&packet4, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg4, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   all_addresses.AddUnique(
       IPAddress(string(kIPV6Address1, sizeof(kIPV6Address1))));
@@ -3800,18 +3798,18 @@ TEST_F(WakeOnWiFiTestWithMockDispatcher,
   NetlinkPacket packet5(kResponseIPV401IPV601, sizeof(kResponseIPV401IPV601));
   msg5.InitFromPacket(&packet5, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg5, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 
   all_addresses.Clear();
   trigs.clear();
   trigs.insert(WakeOnWiFi::kWakeTriggerSSID);
-  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &whitelist);
-  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &whitelist);
+  AllowSSID(kSSIDBytes1, sizeof(kSSIDBytes1), &allowed);
+  AllowSSID(kSSIDBytes2, sizeof(kSSIDBytes2), &allowed);
   GetWakeOnPacketConnMessage msg6;
   NetlinkPacket packet6(kResponseWakeOnSSID, sizeof(kResponseWakeOnSSID));
   msg6.InitFromPacket(&packet6, NetlinkMessage::MessageContext());
   EXPECT_FALSE(WakeOnWiFiSettingsMatch(msg6, trigs, all_addresses, interval, {},
-                                       kHardwareAddress, whitelist));
+                                       kHardwareAddress, allowed));
 }
 
 TEST_F(WakeOnWiFiTestWithMockDispatcher,
