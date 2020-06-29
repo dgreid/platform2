@@ -305,7 +305,17 @@ class ServiceDistributed : public Service {
   base::WeakPtr<ServiceDistributed> GetWeakPtr();
 
   // Message loop thread servicing dbus communications with attestationd.
-  base::Thread attestation_thread_{"attestation_thread"};
+  class AttestationThread : public base::Thread {
+   public:
+    explicit AttestationThread(ServiceDistributed* service)
+        : base::Thread{"attestation_thread"}, service_{service} {}
+    void CleanUp() override {
+      service_->attestation_interface_ = nullptr;
+      service_->default_attestation_interface_.reset();
+    }
+    ServiceDistributed* service_;
+  };
+  AttestationThread attestation_thread_{this};
 
   // Declared last, so that weak pointers are destroyed first.
   base::WeakPtrFactory<ServiceDistributed> weak_factory_;
