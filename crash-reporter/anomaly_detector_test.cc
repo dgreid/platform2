@@ -202,6 +202,13 @@ TEST(AnomalyDetectorTest, SELinuxViolation) {
   ParserTest<SELinuxParser>("TEST_SELINUX", {selinux_violation});
 }
 
+TEST(AnomalyDetectorTest, SELinuxViolationPermissive) {
+  ParserRun selinux_violation = {.find_this = "permissive=0",
+                                 .replace_with = "permissive=1",
+                                 .expected_size = 0};
+  ParserTest<SELinuxParser>("TEST_SELINUX", {selinux_violation});
+}
+
 TEST(AnomalyDetectorTest, SuspendFailure) {
   ParserRun suspend_failure = {
       .expected_text =

@@ -88,10 +88,18 @@ std::string GetField(const std::string& line, std::string pattern) {
 constexpr LazyRE2 granted = {"avc:[ ]*granted"};
 
 MaybeCrashReport SELinuxParser::ParseLogEntry(const std::string& line) {
+  // Ignore permissive "errors". These are extremely common and don't have any
+  // real impact. The noise from them would crowd out other crashes that have
+  // a more significant impact.
+  if (line.find("permissive=1") != std::string::npos) {
+    return base::nullopt;
+  }
+
   std::string only_alpha = OnlyAsciiAlpha(line);
   uint32_t hash = StringHash(only_alpha.c_str());
   if (WasAlreadySeen(hash))
     return base::nullopt;
+
   std::string signature;
 
   // This case is strange: the '-' is only added if 'granted' was present.
