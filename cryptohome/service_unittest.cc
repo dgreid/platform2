@@ -4,7 +4,7 @@
 //
 // Unit tests for Service and ServiceMonolithic
 
-#include "cryptohome/service_monolithic.h"
+#include "cryptohome/service_distributed.h"
 
 #include <map>
 #include <memory>
@@ -44,6 +44,7 @@
 #include "cryptohome/mock_arc_disk_quota.h"
 #include "cryptohome/mock_attestation.h"
 #include "cryptohome/mock_crypto.h"
+#include "cryptohome/mock_fingerprint_manager.h"
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_install_attributes.h"
@@ -164,6 +165,23 @@ bool GetInstallAttributesIsFirstInstall(Service* service) {
 
 }  // namespace
 
+// We use this subclass to bypass those objects that are lack of proper
+// mechanism in |ServiceDistributed|.
+class ServiceDistributedNoRealDBus : public ServiceDistributed {
+ public:
+  ServiceDistributedNoRealDBus() {
+    // We don't use |fingerprint_manager_|, so we just let |this| takes the
+    // ownership of the mock; by doing this, we can bypass the construction of
+    // real |FingerprintManager|.
+    fingerprint_manager_ = std::make_unique<NiceMock<MockFingerprintManager>>();
+  }
+  ~ServiceDistributedNoRealDBus() = default;
+
+ protected:
+  // The signal doesn't work in unittets.
+  void ConnectOwnershipTakenSignal() override {}
+};
+
 // Tests that need to do more setup work before calling Service::Initialize can
 // use this instead of ServiceTest.
 class ServiceTestNotInitialized : public ::testing::Test {
@@ -173,7 +191,6 @@ class ServiceTestNotInitialized : public ::testing::Test {
 
   void SetUp() override {
     service_.set_crypto(&crypto_);
-    service_.set_attestation(&attest_);
     service_.set_homedirs(&homedirs_);
     service_.set_install_attrs(&attrs_);
     service_.set_initialize_tpm(false);
@@ -191,6 +208,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
     tpm_init_.set_tpm(&tpm_);
+
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
     ON_CALL(homedirs_, AmountOfFreeDiskSpace()).WillByDefault(
         Return(kFreeSpaceThresholdToTriggerCleanup));
@@ -257,7 +275,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
   // Declare service_ last so it gets destroyed before all the mocks. This is
   // important because otherwise the background thread may call into mocks that
   // have already been destroyed.
-  ServiceMonolithic service_{std::string()};
+  ServiceDistributedNoRealDBus service_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ServiceTestNotInitialized);
