@@ -277,51 +277,6 @@ class ServiceTest : public ServiceTestNotInitialized {
   DISALLOW_COPY_AND_ASSIGN(ServiceTest);
 };
 
-TEST_F(ServiceTest, ValidAbeDataTest) {
-  brillo::SecureBlob abe_data;
-  ASSERT_TRUE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "2eac34fa74994262b907c15a3a1462e349e5108ca0d0e807f4b1a3ee741a5594",
-      &abe_data));
-  ASSERT_EQ(32, abe_data.size());
-}
-
-TEST_F(ServiceTest, ValidAbeDataTestTrailingNewlines) {
-  brillo::SecureBlob abe_data;
-  ASSERT_TRUE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "2eac34fa74994262b907c15a3a1462e349e5108ca0d0e807f4b1a3ee741a5594\n\n",
-      &abe_data));
-  ASSERT_EQ(32, abe_data.size());
-}
-
-TEST_F(ServiceTest, ValidAbeDataTestEmpty) {
-  brillo::SecureBlob abe_data;
-  ASSERT_TRUE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "", &abe_data));
-  ASSERT_EQ(0, abe_data.size());
-}
-
-TEST_F(ServiceTest, ValidAbeDataTestNewlines) {
-  brillo::SecureBlob abe_data;
-  ASSERT_TRUE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "\n", &abe_data));
-  ASSERT_EQ(0, abe_data.size());
-}
-
-TEST_F(ServiceTest, InvalidAbeDataTestShort) {
-  brillo::SecureBlob abe_data;
-  ASSERT_FALSE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "2eac34fa74994262b907c15a3a1462e349e5108c",
-      &abe_data));
-  ASSERT_EQ(0, abe_data.size());
-}
-
-TEST_F(ServiceTest, InvalidAbeDataTestNotHex) {
-  brillo::SecureBlob abe_data;
-  ASSERT_FALSE(ServiceMonolithic::GetAttestationBasedEnterpriseEnrollmentData(
-      "garbage", &abe_data));
-  ASSERT_EQ(0, abe_data.size());
-}
-
 TEST_F(ServiceTestNotInitialized, CheckAsyncTestCredentials) {
   // Setup a real homedirs instance (making this a pseudo-integration test).
   test_helper_.InjectSystemSalt(&platform_, FilePath(kSaltFile));
