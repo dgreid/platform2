@@ -597,6 +597,7 @@ class Metrics : public DefaultServiceObserver {
   static const int kMetricNetworkPhyModeMax;
   static const char kMetricNetworkSecuritySuffix[];
   static const int kMetricNetworkSecurityMax;
+  static const char kMetricNetworkServiceErrorSuffix[];
   static const char kMetricNetworkServiceErrors[];
   static const char kMetricNetworkSignalStrengthSuffix[];
   static const int kMetricNetworkSignalStrengthMin;

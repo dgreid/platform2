@@ -170,6 +170,12 @@ TEST_F(MetricsTest, TimeToOnline) {
 TEST_F(MetricsTest, ServiceFailure) {
   EXPECT_CALL(*service_, failure())
       .WillRepeatedly(Return(Service::kFailureBadPassphrase));
+  EXPECT_CALL(*service_, technology())
+      .WillRepeatedly(Return(Technology::kWifi));
+  EXPECT_CALL(library_,
+              SendEnumToUMA("Network.Shill.Wifi.ServiceErrors",
+                            Metrics::kNetworkServiceErrorBadPassphrase,
+                            Metrics::kNetworkServiceErrorMax));
   EXPECT_CALL(library_,
               SendEnumToUMA(Metrics::kMetricNetworkServiceErrors,
                             Metrics::kNetworkServiceErrorBadPassphrase,
