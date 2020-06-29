@@ -23,7 +23,7 @@ class MainTest(cros_test_lib.TempDirTestCase):
     output_file = os.path.join(self.tempdir, 'output')
     power_manager_prefs_gen_schema.Main(output=output_file)
 
-    changed = subprocess.run(
+    changed = subprocess.run(  # pylint: disable=subprocess-run-check
         ['diff', SCHEMA_FILE, output_file]).returncode != 0
 
     regen_cmd = ('To regenerate the schema, run:\n'
