@@ -333,13 +333,13 @@ def GenerateMosysCBindings(config):
               .customization = "%s"}}"""
   structs = []
   json_config = json.loads(config)
-  for config in json_config[CHROMEOS][CONFIGS]:
-    identity = config['identity']
-    name = config['name']
+  for device_config in json_config[CHROMEOS][CONFIGS]:
+    identity = device_config['identity']
+    name = device_config['name']
     whitelabel_tag = identity.get('whitelabel-tag', '')
     customization_id = identity.get('customization-id', '')
     customization = customization_id or whitelabel_tag or name
-    brand_code = config.get('brand-code', '')
+    brand_code = device_config.get('brand-code', '')
     platform_name = identity.get('platform-name', '')
     sku_id = identity.get('sku-id', -1)
     if _IsLegacyMigration(platform_name):
@@ -462,8 +462,8 @@ def FilterBuildElements(config, build_only_elements):
   """
   json_config = json.loads(config)
   json_config = _GenerateInferredElements(json_config)
-  for config in json_config[CHROMEOS][CONFIGS]:
-    _FilterBuildElements(config, '', build_only_elements)
+  for device_config in json_config[CHROMEOS][CONFIGS]:
+    _FilterBuildElements(device_config, '', build_only_elements)
 
   return libcros_schema.FormatJson(json_config)
 
