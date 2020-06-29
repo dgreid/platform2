@@ -136,7 +136,6 @@ class DeviceConfig(object):
     Returns:
       Name of he config
     """
-    pass
 
   def GetProperties(self, path):
     """Returns a map of properties at the given config path.
@@ -147,7 +146,6 @@ class DeviceConfig(object):
     Returns:
       A map of properties at the given config path.
     """
-    pass
 
   def GetProperty(self, path, name):
     """Returns the name value at a given path.
@@ -159,11 +157,9 @@ class DeviceConfig(object):
     Returns:
       Requested value or empty string if not present.
     """
-    pass
 
   def GetFirmwareConfig(self):
     """Returns a map hierarchy of the firmware config."""
-    pass
 
   def GetFirmwareUris(self):
     """Returns a list of (string) firmware URIs.
@@ -203,7 +199,6 @@ class DeviceConfig(object):
       List of SymlinkedFile objects representing the touch firmware referenced
         by this model
     """
-    pass
 
   def GetDetachableBaseFirmwareFiles(self):
     """Get a list of unique detachable base firmware files
@@ -212,7 +207,6 @@ class DeviceConfig(object):
       List of SymlinkedFile objects representing the detachable base firmware
         referenced by this model
     """
-    pass
 
   def GetArcFiles(self):
     """Get a list of arc++ files for this device
@@ -220,7 +214,6 @@ class DeviceConfig(object):
     Returns:
       List of BaseFile objects representing the arc++ files needed.
     """
-    pass
 
   def GetAudioFiles(self):
     """Get a list of audio files
@@ -229,7 +222,6 @@ class DeviceConfig(object):
       List of BaseFile objects representing the audio files referenced
       by this device.
     """
-    pass
 
   def GetBluetoothFiles(self):
     """Get a list of bluetooth config files
@@ -238,7 +230,6 @@ class DeviceConfig(object):
       List of BaseFile objects representing the bluetooth files referenced
       by this device.
     """
-    pass
 
   def GetCameraFiles(self):
     """Get a list of camera config files
@@ -247,7 +238,6 @@ class DeviceConfig(object):
       List of BaseFile objects representing the camera files referenced
       by this device.
     """
-    pass
 
   def GetThermalFiles(self):
     """Get a list of thermal files
@@ -256,7 +246,6 @@ class DeviceConfig(object):
       List of BaseFile objects representing the thermal files referenced
       by this device.
     """
-    pass
 
   def GetFirmwareInfo(self):
     """Gets the FirmewareInfo instance for a given device.
@@ -264,7 +253,6 @@ class DeviceConfig(object):
     Returns:
       Returns the FirmwareInfo instance.
     """
-    pass
 
   def GetFirmwareConfigs(self):
     """Gets unique firmware configs for all devices.
@@ -272,7 +260,6 @@ class DeviceConfig(object):
     Returns:
       Dictionary of FirmwareImage objects grouped by config name.
     """
-    pass
 
   def GetFirmwareConfigsByDevice(self):
     """Gets firmware config name for all devices.
@@ -280,7 +267,6 @@ class DeviceConfig(object):
     Returns:
       Dictionary of firmware config names grouped by device.
     """
-    pass
 
   def GetDeviceSignerInfo(self):
     """Gets firmware signer info for all devices.
@@ -288,11 +274,9 @@ class DeviceConfig(object):
     Returns:
       Dictionary of DeviceSignerInfo grouped by device.
     """
-    pass
 
   def GetWallpaperFiles(self):
     """Get a set of wallpaper files used for this model"""
-    pass
 
   def GetAutobrightnessFiles(self):
     """Get a list of autobrightness files
@@ -301,7 +285,6 @@ class DeviceConfig(object):
       List of BaseFile objects representing the autobrightness files referenced
       by this device.
     """
-    pass
 
 
 class CrosConfigBaseImpl(object):
@@ -324,7 +307,6 @@ class CrosConfigBaseImpl(object):
     Returns:
       A list of (DeviceConfig) instances.
     """
-    pass
 
   def GetFullConfig(self):
     """Returns a full dict of every config returned from every API.
