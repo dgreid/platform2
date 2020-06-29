@@ -169,7 +169,6 @@ pkg_config("libcrostpm_dependent_config") {
 static_library("libcrostpm") {
   configs += [ ":target_defaults" ]
   sources = [
-    "../attestation.cc",
     "../bootlockbox/boot_lockbox.cc",
     "../challenge_credential_auth_block.cc",
     "../crc32.c",
@@ -269,7 +268,6 @@ static_library("libcryptohome") {
   ]
   sources = [
     "../arc_disk_quota.cc",
-    "../attestation_task.cc",
     "../bootlockbox/boot_attributes.cc",
     "../challenge_credentials/challenge_credentials_constants.cc",
     "../challenge_credentials/challenge_credentials_decrypt_operation.cc",
@@ -301,7 +299,6 @@ static_library("libcryptohome") {
     "../out_of_process_mount_helper.cc",
     "../service.cc",
     "../service_distributed.cc",
-    "../service_monolithic.cc",
     "../service_userdataauth.cc",
     "../stateful_recovery.cc",
     "../user_oldest_activity_timestamp_cache.cc",

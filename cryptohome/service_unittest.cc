@@ -42,7 +42,6 @@
 #include "cryptohome/interface.h"
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_arc_disk_quota.h"
-#include "cryptohome/mock_attestation.h"
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_fingerprint_manager.h"
 #include "cryptohome/mock_firmware_management_parameters.h"
@@ -259,7 +258,6 @@ class ServiceTestNotInitialized : public ::testing::Test {
   NiceMock<MockTpm> tpm_;
   NiceMock<MockTpmInit> tpm_init_;
   NiceMock<MockCrypto> crypto_;
-  NiceMock<MockAttestation> attest_;
   NiceMock<MockHomeDirs> homedirs_;
   NiceMock<MockInstallAttributes> attrs_;
   NiceMock<MockBootLockbox> lockbox_;

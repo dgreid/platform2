@@ -413,7 +413,6 @@ if (use.test) {
     ]
     sources = [
       "arc_disk_quota_unittest.cc",
-      "attestation_unittest.cc",
       "auth_block_unittest.cc",
       "boot_attributes_unittest.cc",
       "bootlockbox/boot_lockbox_unittest.cc",
