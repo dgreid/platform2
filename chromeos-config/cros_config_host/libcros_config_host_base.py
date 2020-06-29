@@ -61,7 +61,7 @@ FirmwareInfo = namedtuple('FirmwareInfo', [
 ])
 
 # Represents the firmware image for a model:
-#   type: one of ‘ap’, ‘ec’, ‘pd’, ‘rw’.
+#   type\: one of ‘ap’, ‘ec’, ‘pd’, ‘rw’.
 #   build_target: The build target for given firmware image.
 #   image_uri: The BCS image URI.
 FirmwareImage = namedtuple('FirmwareImage',
