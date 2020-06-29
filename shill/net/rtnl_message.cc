@@ -627,54 +627,38 @@ ByteString RTNLMessage::Encode() const {
   hdr.hdr.nlmsg_seq = seq_;
   hdr.hdr.nlmsg_pid = pid_;
 
+  switch (type_) {
+    case kTypeLink:
+      if (!EncodeLink(&hdr)) {
+        return ByteString();
+      }
+      break;
+
+    case kTypeAddress:
+      if (!EncodeAddress(&hdr)) {
+        return ByteString();
+      }
+      break;
+
+    case kTypeRoute:
+    case kTypeRule:
+      if (!EncodeRoute(&hdr)) {
+        return ByteString();
+      }
+      break;
+
+    case kTypeNeighbor:
+      if (!EncodeNeighbor(&hdr)) {
+        return ByteString();
+      }
+      break;
+
+    default:
+      NOTREACHED();
+  }
+
   if (mode_ == kModeGet) {
-    if (type_ == kTypeLink) {
-      hdr.hdr.nlmsg_type = RTM_GETLINK;
-    } else if (type_ == kTypeAddress) {
-      hdr.hdr.nlmsg_type = RTM_GETADDR;
-    } else if (type_ == kTypeRoute) {
-      hdr.hdr.nlmsg_type = RTM_GETROUTE;
-    } else if (type_ == kTypeRule) {
-      hdr.hdr.nlmsg_type = RTM_GETRULE;
-    } else if (type_ == kTypeNeighbor) {
-      hdr.hdr.nlmsg_type = RTM_GETNEIGH;
-    } else {
-      NOTIMPLEMENTED();
-      return ByteString();
-    }
-    hdr.hdr.nlmsg_len = NLMSG_LENGTH(sizeof(hdr.ifi));
-    hdr.hdr.nlmsg_flags = NLM_F_REQUEST | NLM_F_DUMP;
-    hdr.ifi.ifi_family = family_;
-  } else {
-    switch (type_) {
-      case kTypeLink:
-        if (!EncodeLink(&hdr)) {
-          return ByteString();
-        }
-        break;
-
-      case kTypeAddress:
-        if (!EncodeAddress(&hdr)) {
-          return ByteString();
-        }
-        break;
-
-      case kTypeRoute:
-      case kTypeRule:
-        if (!EncodeRoute(&hdr)) {
-          return ByteString();
-        }
-        break;
-
-      case kTypeNeighbor:
-        if (!EncodeNeighbor(&hdr)) {
-          return ByteString();
-        }
-        break;
-
-      default:
-        NOTREACHED();
-    }
+    hdr.hdr.nlmsg_flags |= NLM_F_REQUEST | NLM_F_DUMP;
   }
 
   size_t header_length = hdr.hdr.nlmsg_len;
@@ -694,6 +678,7 @@ bool RTNLMessage::EncodeLink(RTNLHeader* hdr) const {
     case kModeDelete:
       hdr->hdr.nlmsg_type = RTM_DELLINK;
       break;
+    case kModeGet:
     case kModeQuery:
       hdr->hdr.nlmsg_type = RTM_GETLINK;
       break;
@@ -718,6 +703,7 @@ bool RTNLMessage::EncodeAddress(RTNLHeader* hdr) const {
     case kModeDelete:
       hdr->hdr.nlmsg_type = RTM_DELADDR;
       break;
+    case kModeGet:
     case kModeQuery:
       hdr->hdr.nlmsg_type = RTM_GETADDR;
       break;
@@ -743,6 +729,7 @@ bool RTNLMessage::EncodeRoute(RTNLHeader* hdr) const {
     case kModeDelete:
       hdr->hdr.nlmsg_type = (type_ == kTypeRoute) ? RTM_DELROUTE : RTM_DELRULE;
       break;
+    case kModeGet:
     case kModeQuery:
       hdr->hdr.nlmsg_type = (type_ == kTypeRoute) ? RTM_GETROUTE : RTM_GETRULE;
       break;
@@ -770,6 +757,7 @@ bool RTNLMessage::EncodeNeighbor(RTNLHeader* hdr) const {
     case kModeDelete:
       hdr->hdr.nlmsg_type = RTM_DELNEIGH;
       break;
+    case kModeGet:
     case kModeQuery:
       hdr->hdr.nlmsg_type = RTM_GETNEIGH;
       break;

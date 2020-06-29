@@ -1048,4 +1048,32 @@ TEST_F(RTNLMessageTest, GetStringAttribute) {
   EXPECT_EQ("\xff\xff\xff\xff", msg.GetStringAttribute(8));
 }
 
+TEST_F(RTNLMessageTest, EncodeGetMessageLength) {
+  // The message length of kModeGet should be correct: when there is no
+  // attribute, it should be a nlmsg header plus a specific struct for the given
+  // RTNL message type.
+  RTNLMessage msg_link(RTNLMessage::kTypeLink, RTNLMessage::kModeGet, 0, 0, 0,
+                       0, IPAddress::kFamilyIPv4);
+  EXPECT_EQ(NLMSG_LENGTH(sizeof(struct ifinfomsg)),
+            msg_link.Encode().GetLength());
+
+  RTNLMessage msg_address(RTNLMessage::kTypeAddress, RTNLMessage::kModeGet, 0,
+                          0, 0, 0, IPAddress::kFamilyIPv4);
+  EXPECT_EQ(NLMSG_LENGTH(sizeof(struct ifaddrmsg)),
+            msg_address.Encode().GetLength());
+
+  RTNLMessage msg_route(RTNLMessage::kTypeRoute, RTNLMessage::kModeGet, 0, 0, 0,
+                        0, IPAddress::kFamilyIPv4);
+  EXPECT_EQ(NLMSG_LENGTH(sizeof(struct rtmsg)), msg_route.Encode().GetLength());
+
+  RTNLMessage msg_rule(RTNLMessage::kTypeRule, RTNLMessage::kModeGet, 0, 0, 0,
+                       0, IPAddress::kFamilyIPv4);
+  EXPECT_EQ(NLMSG_LENGTH(sizeof(struct rtmsg)), msg_rule.Encode().GetLength());
+
+  RTNLMessage msg_neighor(RTNLMessage::kTypeNeighbor, RTNLMessage::kModeGet, 0,
+                          0, 0, 0, IPAddress::kFamilyIPv4);
+  EXPECT_EQ(NLMSG_LENGTH(sizeof(struct ndmsg)),
+            msg_neighor.Encode().GetLength());
+}
+
 }  // namespace shill
