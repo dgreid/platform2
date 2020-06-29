@@ -15,7 +15,6 @@
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
 
-#include "cryptohome/attestation.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/interface.h"
 
