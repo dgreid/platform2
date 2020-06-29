@@ -357,7 +357,7 @@ class CrosConfigHostTest(unittest.TestCase):
                        sig_id='whitelabel-whitelabel2',
                        brand_code='WLBB'))])
     result = CrosConfig(self.filepath).GetFirmwareInfo()
-    self._assertEqualsNamedTuplesDict(result, expected)
+    self._assertEqualsNamedTuplesDict(expected, result)
 
   def testFirmwareConfigs(self):
     """Test access to firmware configs."""
@@ -393,7 +393,7 @@ class CrosConfigHostTest(unittest.TestCase):
     }
 
     result = CrosConfig(self.filepath).GetFirmwareConfigs()
-    self._assertEqualsListNamedTuplesDict(result, expected)
+    self._assertEqualsListNamedTuplesDict(expected, result)
 
   def testFirmwareConfigsByDevice(self):
     """Test access to firmware config names."""
