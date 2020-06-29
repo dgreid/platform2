@@ -15,6 +15,7 @@
 namespace croslog {
 
 enum class SourceMode { JOURNAL_LOG, PLAINTEXT_LOG };
+enum class OutputMode { SHORT, EXPORT, JSON };
 
 struct Config {
   bool ParseCommandLineArgs(const base::CommandLine* command_line);
@@ -22,7 +23,7 @@ struct Config {
   // Source of logs: see |SourceMode| enum class.
   SourceMode source = SourceMode::JOURNAL_LOG;
   // Formatting of logs which are shown.
-  std::string output;
+  OutputMode output = OutputMode::SHORT;
   // Number to limit the lines of logs shown
   int lines = -1;
   // Boot ID to show messages only from the specific boot.

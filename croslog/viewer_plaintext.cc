@@ -100,10 +100,63 @@ void ViewerPlaintext::ReadRemainingLogs() {
   }
 }
 
+std::vector<std::pair<std::string, std::string>>
+ViewerPlaintext::GenerateKeyValues(const LogEntry& e) {
+  std::vector<std::pair<std::string, std::string>> kvs;
+  kvs.push_back(std::make_pair(
+      "PRIORITY", base::NumberToString(static_cast<int>(e.severity()))));
+  kvs.push_back(std::make_pair("SYSLOG_IDENTIFIER", e.tag()));
+  if (e.pid() != -1) {
+    kvs.push_back(std::make_pair("SYSLOG_PID", base::NumberToString(e.pid())));
+    kvs.push_back(std::make_pair("_PID", base::NumberToString(e.pid())));
+  }
+  kvs.push_back(std::make_pair("MESSAGE", e.message()));
+  return kvs;
+}
+
 void ViewerPlaintext::WriteLog(const LogEntry& entry) {
+  if (config_.output == OutputMode::EXPORT)
+    return WriteLogInExportFormat(entry);
+  if (config_.output == OutputMode::JSON)
+    return WriteLogInJsonFormat(entry);
+
   const std::string& s = entry.entire_line();
   WriteOutput(s);
   WriteOutput("\n", 1);
+}
+
+void ViewerPlaintext::WriteLogInExportFormat(const LogEntry& entry) {
+  const auto&& kvs = GenerateKeyValues(entry);
+  for (const auto& kv : kvs) {
+    WriteOutput(kv.first);
+    WriteOutput("=", 1);
+    WriteOutput(kv.second);
+    WriteOutput("\n", 1);
+  }
+  WriteOutput("\n", 1);
+}
+
+void ViewerPlaintext::WriteLogInJsonFormat(const LogEntry& entry) {
+  const auto&& kvs = GenerateKeyValues(entry);
+  bool first = true;
+  WriteOutput("{", 1);
+  for (const auto& kv : kvs) {
+    std::string escaped_value;
+    bool ret_value = base::EscapeJSONString(kv.second, true, &escaped_value);
+    if (!ret_value)
+      escaped_value = "<<INVALID>>";
+
+    if (!first)
+      WriteOutput(", \"", 3);
+    else
+      WriteOutput("\"", 1);
+    // All keys are hard-corded and unnecessary to escape.
+    WriteOutput(kv.first);
+    WriteOutput("\": ", 3);
+    WriteOutput(escaped_value);
+    first = false;
+  }
+  WriteOutput("}\n", 2);
 }
 
 void ViewerPlaintext::WriteOutput(const std::string& str) {

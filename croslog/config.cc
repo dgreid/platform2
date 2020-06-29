@@ -33,8 +33,17 @@ bool Config::ParseCommandLineArgs(const base::CommandLine* command_line) {
     }
   }
 
-  if (command_line->HasSwitch("output"))
-    output = command_line->GetSwitchValueASCII("output");
+  if (command_line->HasSwitch("output")) {
+    const std::string& output_str = command_line->GetSwitchValueASCII("output");
+
+    if (base::CompareCaseInsensitiveASCII(output_str, "short") == 0) {
+      output = OutputMode::SHORT;
+    } else if (base::CompareCaseInsensitiveASCII(output_str, "export") == 0) {
+      output = OutputMode::EXPORT;
+    } else if (base::CompareCaseInsensitiveASCII(output_str, "json") == 0) {
+      output = OutputMode::JSON;
+    }
+  }
 
   if (command_line->HasSwitch("lines")) {
     const std::string& lines_str = command_line->GetSwitchValueASCII("lines");

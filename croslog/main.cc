@@ -28,9 +28,16 @@ void ShowUsage() {
 bool LaunchJournalctlAndWait(const croslog::Config& config) {
   std::vector<std::string> journalctl_command_line = {kJournalctlCmdPath};
 
-  if (!config.output.empty()) {
+  if (config.output != croslog::OutputMode::SHORT) {
     journalctl_command_line.push_back("--output");
-    journalctl_command_line.push_back(config.output);
+    std::string output_mode;
+    if (config.output == croslog::OutputMode::EXPORT)
+      output_mode = "export";
+    else if (config.output == croslog::OutputMode::JSON)
+      output_mode = "json";
+    else
+      output_mode = "short";
+    journalctl_command_line.push_back(output_mode);
   }
 
   if (config.lines >= 0) {

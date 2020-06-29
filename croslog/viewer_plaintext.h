@@ -6,6 +6,8 @@
 #define CROSLOG_VIEWER_PLAINTEXT_H_
 
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "base/bind.h"
 #include "base/message_loop/message_loop.h"
@@ -43,7 +45,12 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
   void ReadRemainingLogs();
 
+  std::vector<std::pair<std::string, std::string>> GenerateKeyValues(
+      const LogEntry& entry);
+
   void WriteLog(const LogEntry& entry);
+  void WriteLogInExportFormat(const LogEntry& entry);
+  void WriteLogInJsonFormat(const LogEntry& entry);
   void WriteOutput(const std::string& str);
   void WriteOutput(const char* str, size_t size);
 
