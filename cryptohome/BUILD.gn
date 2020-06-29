@@ -303,16 +303,15 @@ executable("tpm-manager") {
     "protobuf",
   ]
 
+  libs = [
+    "tpm_manager",
+    "attestation",
+  ]
+
   if (use.tpm2) {
-    sources += [ "tpm_manager_v2.cc" ]
-    libs = [
-      "trunks",
-      "tpm_manager",
-      "attestation",
-    ]
+    libs += [ "trunks" ]
   } else {
-    sources += [ "tpm_manager_v1.cc" ]
-    libs = [
+    libs += [
       "chaps",
       "scrypt",
     ]
