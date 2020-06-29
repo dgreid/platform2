@@ -8,6 +8,7 @@ import("../sommelier/wayland_protocol.gni")
 group("guest") {
   deps = [
     ":garcon",
+    ":guest_service_failure_notifier",
     ":maitred",
     ":upgrade_container",
     ":virtwl_guest_proxy",
@@ -120,6 +121,16 @@ executable("garcon") {
   deps = [
     ":libgarcon",
     ":libvm_tools_common",
+  ]
+}
+
+executable("guest_service_failure_notifier") {
+  sources = [ "../guest_service_failure_notifier/main.cc" ]
+  configs += [ ":target_defaults" ]
+  pkg_deps = [
+    "grpc++",
+    "protobuf",
+    "vm_protos",
   ]
 }
 
