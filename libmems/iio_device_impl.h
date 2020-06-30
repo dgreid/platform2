@@ -57,6 +57,7 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
   IioDevice* GetTrigger() override;
 
   std::vector<IioChannel*> GetAllChannels() override;
+  IioChannel* GetChannel(int32_t index) override;
   IioChannel* GetChannel(const std::string& name) override;
 
   base::Optional<size_t> GetSampleSize() const override;
@@ -69,6 +70,11 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
   base::Optional<IioSample> ReadSample() override;
 
  private:
+  struct ChannelData {
+    std::string chn_id;
+    std::unique_ptr<IioChannelImpl> chn;
+  };
+
   static void IioBufferDeleter(iio_buffer* buffer);
 
   void EnableAllChannels();
@@ -82,7 +88,7 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
   using ScopedBuffer = std::unique_ptr<iio_buffer, decltype(&IioBufferDeleter)>;
   ScopedBuffer buffer_;
 
-  std::map<std::string, std::unique_ptr<IioChannelImpl>> channels_;
+  std::vector<ChannelData> channels_;
   DISALLOW_COPY_AND_ASSIGN(IioDeviceImpl);
 };
 

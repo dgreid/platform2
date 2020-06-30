@@ -27,7 +27,8 @@ class IioChannel;
 // configure channels, trigger and buffer for a sensor.
 class LIBMEMS_EXPORT IioDevice {
  public:
-  using IioSample = base::flat_map<std::string, int64_t>;
+  // first is channel index; second is the channel's value
+  using IioSample = base::flat_map<int32_t, int64_t>;
 
   virtual ~IioDevice() = default;
 
@@ -99,6 +100,10 @@ class LIBMEMS_EXPORT IioDevice {
 
   // Returns all channels belonging to this device.
   virtual std::vector<IioChannel*> GetAllChannels() = 0;
+
+  // Finds the IIO channel |index| as the index in this device and returns it.
+  // It will return nullptr if no such channel can be found.
+  virtual IioChannel* GetChannel(int32_t index) = 0;
 
   // Finds the IIO channel |name| as id or name for this device and returns it.
   // It will return nullptr if no such channel can be found.

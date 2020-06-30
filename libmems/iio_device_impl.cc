@@ -42,6 +42,21 @@ IioDeviceImpl::IioDeviceImpl(IioContextImpl* ctx, iio_device* dev)
   CHECK(context_);
   CHECK(device_);
 
+  uint32_t chn_count = iio_device_get_channels_count(device_);
+  channels_.resize(chn_count);
+
+  for (uint32_t i = 0; i < chn_count; ++i) {
+    iio_channel* channel = iio_device_get_channel(device_, i);
+    if (channel == nullptr) {
+      LOG(WARNING) << "Unable to get " << i
+                   << "th channel from device: " << GetId();
+      continue;
+    }
+
+    channels_[i].chn = std::make_unique<IioChannelImpl>(channel);
+    channels_[i].chn_id = channels_[i].chn->GetId();
+  }
+
   EnableAllChannels();
 }
 
@@ -206,33 +221,26 @@ IioDevice* IioDeviceImpl::GetTrigger() {
 
 std::vector<IioChannel*> IioDeviceImpl::GetAllChannels() {
   std::vector<IioChannel*> channels;
-  uint32_t chn_count = iio_device_get_channels_count(device_);
-
-  for (int i = 0; i < chn_count; ++i) {
-    iio_channel* channel = iio_device_get_channel(device_, i);
-    if (channel == nullptr) {
-      LOG(WARNING) << "Unable to get " << i
-                   << "th channel from device: " << GetId();
-      continue;
-    }
-
-    channels.push_back(GetChannel(iio_channel_get_id(channel)));
-  }
+  for (const ChannelData& channel_data : channels_)
+    channels.push_back(channel_data.chn.get());
 
   return channels;
 }
 
-IioChannel* IioDeviceImpl::GetChannel(const std::string& name) {
-  auto k = channels_.find(name);
-  if (k != channels_.end())
-    return k->second.get();
-  iio_channel* channel = iio_device_find_channel(device_, name.c_str(), true);
-  if (channel == nullptr)
-    channel = iio_device_find_channel(device_, name.c_str(), false);
-  if (channel == nullptr)
+IioChannel* IioDeviceImpl::GetChannel(int32_t index) {
+  if (index < 0 || index >= channels_.size())
     return nullptr;
-  channels_.emplace(name, std::make_unique<IioChannelImpl>(channel));
-  return channels_[name].get();
+
+  return channels_[index].chn.get();
+}
+
+IioChannel* IioDeviceImpl::GetChannel(const std::string& name) {
+  for (size_t i = 0; i < channels_.size(); ++i) {
+    if (channels_[i].chn_id == name)
+      return channels_[i].chn.get();
+  }
+
+  return nullptr;
 }
 
 base::Optional<size_t> IioDeviceImpl::GetSampleSize() const {
@@ -344,11 +352,12 @@ bool IioDeviceImpl::CreateBuffer() {
 }
 
 IioDevice::IioSample IioDeviceImpl::DeserializeSample(const uint8_t* src) {
-  IioSample event;
+  IioSample sample;
   int64_t pos = 0;
 
-  for (IioChannel* chn_base : GetAllChannels()) {
-    IioChannelImpl* chn = dynamic_cast<IioChannelImpl*>(chn_base);
+  auto channels = GetAllChannels();
+  for (int32_t i = 0; i < channels.size(); ++i) {
+    IioChannelImpl* chn = dynamic_cast<IioChannelImpl*>(channels[i]);
     if (!chn->IsEnabled())
       continue;
 
@@ -366,10 +375,10 @@ IioDevice::IioSample IioDeviceImpl::DeserializeSample(const uint8_t* src) {
     pos += len;
 
     if (value.has_value())
-      event[chn->GetId()] = value.value();
+      sample[i] = value.value();
   }
 
-  return event;
+  return sample;
 }
 
 }  // namespace libmems

@@ -201,11 +201,12 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   bool SetTrigger(IioDevice* trigger) override;
   IioDevice* GetTrigger() override { return trigger_; }
 
-  void AddChannel(FakeIioChannel* chan) {
-    channels_.emplace(chan->GetId(), chan);
+  void AddChannel(FakeIioChannel* chn) {
+    channels_.push_back({chn->GetId(), chn});
   }
 
   std::vector<IioChannel*> GetAllChannels() override;
+  IioChannel* GetChannel(int32_t index) override;
   IioChannel* GetChannel(const std::string& id) override;
 
   bool EnableBuffer(size_t n) override;
@@ -236,6 +237,11 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   void ResumeReadingSamples();
 
  private:
+  struct ChannelData {
+    std::string chn_id;
+    FakeIioChannel* chn;
+  };
+
   bool CreateBuffer();
   bool WriteByte();
   bool ReadByte();
@@ -249,7 +255,7 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, double> double_attributes_;
   IioDevice* trigger_;
-  std::map<std::string, FakeIioChannel*> channels_;
+  std::vector<ChannelData> channels_;
 
   // For |EnableBuffer|, |DisableBuffer|, and |IsBufferEnabled|.
   size_t buffer_length_ = 0;

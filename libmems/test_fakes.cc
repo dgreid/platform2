@@ -125,17 +125,26 @@ bool FakeIioDevice::SetTrigger(IioDevice* trigger) {
 
 std::vector<IioChannel*> FakeIioDevice::GetAllChannels() {
   std::vector<IioChannel*> channels;
-  for (auto channel : channels_)
-    channels.push_back(channel.second);
+  for (const auto& channel_data : channels_)
+    channels.push_back(channel_data.chn);
 
   return channels;
 }
 
-IioChannel* FakeIioDevice::GetChannel(const std::string& id) {
-  auto k = channels_.find(id);
-  if (k == channels_.end())
+IioChannel* FakeIioDevice::GetChannel(int32_t index) {
+  if (index < 0 || index >= channels_.size())
     return nullptr;
-  return k->second;
+
+  return channels_[index].chn;
+}
+
+IioChannel* FakeIioDevice::GetChannel(const std::string& id) {
+  for (size_t i = 0; i < channels_.size(); ++i) {
+    if (id == channels_[i].chn_id)
+      return channels_[i].chn;
+  }
+
+  return nullptr;
 }
 
 bool FakeIioDevice::EnableBuffer(size_t n) {
@@ -192,14 +201,14 @@ base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
   }
 
   IioDevice::IioSample sample;
-  for (auto channel : channels_) {
-    auto value = channel.second->GetData(sample_index_);
+  for (int32_t i = 0; i < channels_.size(); ++i) {
+    auto value = channels_[i].chn->GetData(sample_index_);
     if (!value.has_value()) {
-      LOG(ERROR) << "Channel: " << channel.second->GetId() << " has no sample";
+      LOG(ERROR) << "Channel: " << channels_[i].chn_id << " has no sample";
       return base::nullopt;
     }
 
-    sample[channel.second->GetId()] = value.value();
+    sample[i] = value.value();
   }
 
   sample_index_ += 1;
