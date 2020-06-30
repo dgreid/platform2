@@ -15,6 +15,7 @@
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/service.h"
 #include "vm_tools/concierge/shared_data.h"
+#include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -23,11 +24,12 @@ namespace {
 
 bool GetPluginStatefulDirectory(const std::string& vm_id,
                                 const std::string& cryptohome_id,
+                                bool create,
                                 base::FilePath* path_out) {
   return GetPluginDirectory(base::FilePath(kCryptohomeRoot)
                                 .Append(kPluginVmDir)
                                 .Append(cryptohome_id),
-                            "pvm", vm_id, true /* create */, path_out);
+                            "pvm", vm_id, create, path_out);
 }
 
 bool GetPluginRuntimeDirectory(const std::string& vm_id,
@@ -112,7 +114,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   // Get the stateful directory.
   base::FilePath stateful_dir;
   if (!GetPluginStatefulDirectory(request.name(), request.owner_id(),
-                                  &stateful_dir)) {
+                                  true /* create */, &stateful_dir)) {
     LOG(ERROR) << "Unable to create stateful directory for VM";
 
     response.set_failure_reason("Unable to create stateful directory");
@@ -267,6 +269,92 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
 
   vms_[vm_id] = std::move(vm);
   return dbus_response;
+}
+
+bool Service::RenamePluginVm(const std::string& owner_id,
+                             const std::string& old_name,
+                             const std::string& new_name,
+                             std::string* failure_reason) {
+  base::FilePath old_dir;
+  if (!GetPluginStatefulDirectory(old_name, owner_id, false /* create */,
+                                  &old_dir)) {
+    *failure_reason = "unable to determine current VM directory";
+    return false;
+  }
+
+  base::FilePath old_iso_dir;
+  if (!GetPluginIsoDirectory(old_name, owner_id, false /* create */,
+                             &old_iso_dir)) {
+    *failure_reason = "unable to determine current VM ISO directory";
+    return false;
+  }
+
+  base::FilePath new_dir;
+  if (!GetPluginStatefulDirectory(new_name, owner_id, false /* create */,
+                                  &new_dir)) {
+    *failure_reason = "unable to determine new VM directory";
+    return false;
+  }
+
+  base::FilePath new_iso_dir;
+  if (!GetPluginIsoDirectory(new_name, owner_id, false /* create */,
+                             &new_iso_dir)) {
+    *failure_reason = "unable to determine new VM ISO directory";
+    return false;
+  }
+
+  VmId old_id(owner_id, old_name);
+  bool registered;
+  if (!pvm::dispatcher::IsVmRegistered(vmplugin_service_proxy_, old_id,
+                                       &registered)) {
+    *failure_reason = "failed to check Plugin VM registration status";
+    return false;
+  }
+
+  // This is unexpected: the VM is not registered. Better leave it alone.
+  if (!registered) {
+    *failure_reason = "the VM is not registered";
+    return false;
+  }
+
+  bool is_shut_down;
+  if (!pvm::dispatcher::IsVmShutDown(vmplugin_service_proxy_, old_id,
+                                     &is_shut_down)) {
+    *failure_reason = "failed to check Plugin VM state";
+    return false;
+  }
+
+  if (!is_shut_down) {
+    *failure_reason = "VM is not shut down";
+    return false;
+  }
+
+  base::File::Error move_error;
+  if (base::PathExists(old_iso_dir) &&
+      !base::ReplaceFile(old_iso_dir, new_iso_dir, &move_error)) {
+    *failure_reason = std::string("failed to rename VM ISO directory: ") +
+                      base::File::ErrorToString(move_error);
+    return false;
+  }
+
+  if (!pvm::dispatcher::UnregisterVm(vmplugin_service_proxy_, old_id)) {
+    *failure_reason = "failed to temporarily unregister VM";
+    return false;
+  }
+
+  if (!base::ReplaceFile(old_dir, new_dir, &move_error)) {
+    *failure_reason = std::string("failed to rename VM directory: ") +
+                      base::File::ErrorToString(move_error);
+    return false;
+  }
+
+  if (!pvm::dispatcher::RegisterVm(vmplugin_service_proxy_,
+                                   VmId(owner_id, new_name), new_dir)) {
+    *failure_reason = "Failed to re-register renamed VM";
+    return false;
+  }
+
+  return true;
 }
 
 }  // namespace concierge

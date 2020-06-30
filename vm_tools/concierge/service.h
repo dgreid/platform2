@@ -238,6 +238,12 @@ class Service final {
                     DiskImageStatus* status,
                     std::string* failure_reason);
 
+  // Executes rename operation of a Plugin VM.
+  bool RenamePluginVm(const std::string& owner_id,
+                      const std::string& old_name,
+                      const std::string& new_name,
+                      std::string* failure_reason);
+
   using VmMap = std::map<VmId, std::unique_ptr<VmInterface>>;
 
   // Returns an iterator to vm with key (|owner_id|, |vm_name|). If no such
