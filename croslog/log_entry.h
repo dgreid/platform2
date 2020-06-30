@@ -23,6 +23,7 @@ class LogEntry {
            int pid,
            std::string&& message,
            std::string&& entire_string);
+  LogEntry(LogEntry&& other) = default;
 
   const std::string& entire_line() const { return entire_line_; }
   base::Time time() const { return time_; }
@@ -32,12 +33,14 @@ class LogEntry {
   const std::string& message() const { return message_; }
 
  private:
-  base::Time time_;
-  Severity severity_;
-  std::string tag_;
-  int pid_;
-  std::string message_;
-  std::string entire_line_;
+  const base::Time time_;
+  const Severity severity_;
+  const std::string tag_;
+  const int pid_;
+  const std::string message_;
+  const std::string entire_line_;
+
+  DISALLOW_COPY_AND_ASSIGN(LogEntry);
 };
 
 }  // namespace croslog

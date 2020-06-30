@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include "base/optional.h"
 #include "base/strings/string_util.h"
 
 #include "croslog/log_parser_syslog.h"
@@ -62,18 +63,29 @@ MaybeLogEntry Multiplexer::Forward() {
     }
 
     if (!source->cache_next_forward.has_value()) {
-      base::Optional<std::string> log = source->reader.Forward();
-      if (log.has_value())
-        source->cache_next_forward =
-            source->parser->Parse(std::move(log.value()));
-      else
-        source->cache_next_backward = base::nullopt;
+      while (true) {
+        base::Optional<std::string> log = source->reader.Forward();
+        if (!log.has_value()) {
+          // No more entry
+          break;
+        }
+        base::Optional<LogEntry> next_value =
+            source->parser->Parse(std::move(*log));
+        if (!next_value.has_value()) {
+          // Parse failed. Go to the next line
+          continue;
+        }
+        // Reading an entry succeeds. Use this.
+        source->cache_next_forward.emplace(std::move(*next_value));
+        break;
+      }
     }
   }
 
   Multiplexer::LogSource* next_source = nullptr;
   for (auto&& source : sources_) {
     if (!source->cache_next_forward.has_value()) {
+      // This source doesn't have a next entry.
       continue;
     }
 
@@ -87,8 +99,8 @@ MaybeLogEntry Multiplexer::Forward() {
     return base::nullopt;
   }
 
-  MaybeLogEntry entry;
-  entry.swap(next_source->cache_next_forward);
+  MaybeLogEntry entry = std::move(next_source->cache_next_forward);
+  next_source->cache_next_forward.reset();
   return entry;
 }
 
@@ -101,18 +113,29 @@ MaybeLogEntry Multiplexer::Backward() {
     }
 
     if (!source->cache_next_backward.has_value()) {
-      base::Optional<std::string> log = source->reader.Backward();
-      if (log.has_value())
-        source->cache_next_backward =
-            source->parser->Parse(std::move(log.value()));
-      else
-        source->cache_next_backward = base::nullopt;
+      while (true) {
+        base::Optional<std::string> log = source->reader.Backward();
+        if (!log.has_value()) {
+          // No more entry
+          break;
+        }
+        base::Optional<LogEntry> next_value =
+            source->parser->Parse(std::move(*log));
+        if (!next_value.has_value()) {
+          // Parse failed. Go to the next line
+          continue;
+        }
+        // Reading an entry succeeds. Use this.
+        source->cache_next_backward.emplace(std::move(*next_value));
+        break;
+      }
     }
   }
 
   Multiplexer::LogSource* next_source = nullptr;
   for (auto&& source : sources_) {
     if (!source->cache_next_backward.has_value()) {
+      // This source doesn't have a next entry.
       continue;
     }
 
@@ -126,8 +149,8 @@ MaybeLogEntry Multiplexer::Backward() {
     return base::nullopt;
   }
 
-  MaybeLogEntry entry;
-  entry.swap(next_source->cache_next_backward);
+  MaybeLogEntry entry = std::move(next_source->cache_next_backward);
+  next_source->cache_next_backward.reset();
   return entry;
 }
 
