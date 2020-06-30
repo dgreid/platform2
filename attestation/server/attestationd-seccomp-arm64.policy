@@ -37,6 +37,8 @@ openat: 1
 read: 1
 write: 1
 close: 1
+# For device policy to walk through the directory of interest.
+getdents64: 1
 
 inotify_init1: 1
 inotify_add_watch: 1
