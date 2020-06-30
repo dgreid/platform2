@@ -79,13 +79,13 @@ class CrosConfigHostTest(unittest.TestCase):
     call_args = '{} -c {} --model=another get /dne wallpaper'.format(
         CLI_FILE, self.conf_file).split()
     with self.assertRaises(subprocess.CalledProcessError):
-      subprocess.check_call(call_args)
+      subprocess.run(call_args, check=True, stderr=subprocess.DEVNULL)
 
   def testGetPropSingleWrongProp(self):
     call_args = '{} -c {} --model=another get / dne'.format(
         CLI_FILE, self.conf_file).split()
     with self.assertRaises(subprocess.CalledProcessError):
-      subprocess.check_call(call_args)
+      subprocess.run(call_args, check=True, stderr=subprocess.DEVNULL)
 
   def testGetFirmwareUris(self):
     call_args = '{} -c {} get-firmware-uris'.format(
