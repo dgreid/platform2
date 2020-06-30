@@ -53,6 +53,10 @@ class TestObserver : public UdevMonitor::Observer {
                                int port_num,
                                bool added) override {};
 
+  void OnCableAddedOrRemoved(const base::FilePath& path,
+                             int port_num,
+                             bool added) override {};
+
   int GetNumPorts() { return num_ports_; }
   int GetNumPartners() { return num_partners_; }
 

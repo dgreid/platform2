@@ -11,6 +11,7 @@
 
 #include <gtest/gtest_prod.h>
 
+#include "typecd/cable.h"
 #include "typecd/partner.h"
 
 namespace typecd {
@@ -25,6 +26,9 @@ class Port {
 
   void AddPartner(const base::FilePath& path);
   void RemovePartner();
+
+  void AddCable(const base::FilePath& path);
+  void RemoveCable();
   // Add/remove an alternate mode for the partner.
   void AddRemovePartnerAltMode(const base::FilePath& path, bool added);
 
@@ -36,6 +40,7 @@ class Port {
   base::FilePath syspath_;
   // Port number as described by the Type C connector class framework.
   int port_num_;
+  std::unique_ptr<Cable> cable_;
   std::unique_ptr<Partner> partner_;
 };
 

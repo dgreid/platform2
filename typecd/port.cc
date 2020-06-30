@@ -5,13 +5,32 @@
 #include "typecd/port.h"
 
 #include <base/logging.h>
-#include <re2/re2.h>
 
 namespace typecd {
 
 Port::Port(const base::FilePath& syspath, int port_num)
     : syspath_(syspath), port_num_(port_num) {
   LOG(INFO) << "Port " << port_num_ << " enumerated.";
+}
+
+void Port::AddCable(const base::FilePath& path) {
+  if (cable_) {
+    LOG(WARNING) << "Cable already exists for port " << port_num_;
+    return;
+  }
+  cable_ = std::make_unique<Cable>(path);
+
+  LOG(INFO) << "Cable enumerated for port " << port_num_;
+}
+
+void Port::RemoveCable() {
+  if (!cable_) {
+    LOG(WARNING) << "No partner present for port " << port_num_;
+    return;
+  }
+  cable_.reset();
+
+  LOG(INFO) << "Cable removed for port " << port_num_;
 }
 
 void Port::AddPartner(const base::FilePath& path) {

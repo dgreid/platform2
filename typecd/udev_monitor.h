@@ -57,8 +57,8 @@ class UdevMonitor {
     // disconnected.
     //
     // The |path| argument refers to the sysfs device path of the port partner.
-    // The |port_num| argmnet refers to the port's index number.
-    // The |added| argument is set to true if the port was added, and false
+    // The |port_num| argument refers to the port's index number.
+    // The |added| argument is set to true if the partner was added, and false
     // otherwise.
     virtual void OnPartnerAddedOrRemoved(const base::FilePath& path,
                                          int port_num,
@@ -74,6 +74,17 @@ class UdevMonitor {
     virtual void OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
                                                 int port_num,
                                                 bool added) = 0;
+
+    // Callback that is executed when a port cable is connected or
+    // disconnected.
+    //
+    // The |path| argument refers to the sysfs device path of the port cable.
+    // The |port_num| argument refers to the port's index number.
+    // The |added| argument is set to true if the cable was added, and false
+    // otherwise.
+    virtual void OnCableAddedOrRemoved(const base::FilePath& path,
+                                       int port_num,
+                                       bool added) = 0;
   };
 
   void AddObserver(Observer* obs);

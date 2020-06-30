@@ -63,4 +63,22 @@ void PortManager::OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
   port->AddRemovePartnerAltMode(path, added);
 }
 
+void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
+                                        int port_num,
+                                        bool added) {
+  auto it = ports_.find(port_num);
+  if (it == ports_.end()) {
+    LOG(WARNING) << "Cable add/remove attempted for non-existent port "
+                 << port_num;
+    return;
+  }
+
+  auto port = it->second.get();
+  if (added) {
+    port->AddCable(path);
+  } else {
+    port->RemoveCable();
+  }
+}
+
 }  // namespace typecd
