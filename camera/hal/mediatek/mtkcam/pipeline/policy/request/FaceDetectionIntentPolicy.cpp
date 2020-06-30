@@ -50,11 +50,33 @@ FunctionType_FaceDetectionIntentPolicy makePolicy_FDIntent_Default() {
       return -EINVAL;
     }
 
-    char value[PROPERTY_VALUE_MAX];
-    property_get("vendor.debug.camera.fd.enable", value, "1");
-    int FDMetaEn = atoi(value);
-    out.isFdEnabled = in.isFdEnabled_LastFrame || FDMetaEn;
-    out.isFDMetaEn = FDMetaEn;
+    IMetadata::IEntry const& entryFdMode =
+        pMetadata->entryFor(MTK_STATISTICS_FACE_DETECT_MODE);
+    IMetadata::IEntry const& entryFaceScene =
+        pMetadata->entryFor(MTK_CONTROL_SCENE_MODE);
+
+    bool FDMetaEn = (!entryFdMode.isEmpty() &&
+                     MTK_STATISTICS_FACE_DETECT_MODE_OFF !=
+                         entryFdMode.itemAt(0, Type2Type<MUINT8>())) ||
+                    (!entryFaceScene.isEmpty() &&
+                     MTK_CONTROL_SCENE_MODE_FACE_PRIORITY ==
+                         entryFaceScene.itemAt(0, Type2Type<MUINT8>()));
+
+    bool isFDScene = !entryFaceScene.isEmpty() &&
+                     MTK_CONTROL_SCENE_MODE_FACE_PRIORITY ==
+                         entryFaceScene.itemAt(0, Type2Type<MUINT8>());
+
+    out.hasFDMeta = !entryFdMode.isEmpty() || isFDScene;
+    MY_LOGI("has fd meta(%d), FDMetaEn(%d)", out.hasFDMeta, FDMetaEn);
+
+    if (out.hasFDMeta) {
+      out.isFdEnabled = FDMetaEn;
+      out.isFDMetaEn = FDMetaEn;
+    } else {
+      out.isFdEnabled = false;
+      out.isFDMetaEn = false;
+    }
+
     return OK;
   };
 }

@@ -991,8 +991,15 @@ FdNodeImp::ReturnFDResult(IMetadata* pOutMetadataResult,
   std::lock_guard<std::mutex> _l(mResultLock);
   {
     {
-      FDEn = 1;
-      FDMode = MTK_STATISTICS_FACE_DETECT_MODE_SIMPLE;
+      IMetadata::IEntry const& entryMode =
+          pInpMetadataRequest->entryFor(MTK_STATISTICS_FACE_DETECT_MODE);
+      if (!entryMode.isEmpty() &&
+          MTK_STATISTICS_FACE_DETECT_MODE_OFF !=
+              entryMode.itemAt(0, Type2Type<MUINT8>())) {
+        FDEn = 1;
+        FDMode = entryMode.itemAt(0, Type2Type<MUINT8>());
+        pOutMetadataResult->update(MTK_STATISTICS_FACE_DETECT_MODE, entryMode);
+      }
     }
     {
       IMetadata::IEntry const& entryMode =
@@ -1300,7 +1307,14 @@ FdNodeImp::onProcessFrame(
 // ASDEn = 1; //Pass
 //****************************************************//
 {
-  { FDEn = 1; }
+  {
+    IMetadata::IEntry const& entryMode =
+        pInpMetadataRequest->entryFor(MTK_STATISTICS_FACE_DETECT_MODE);
+    if (!entryMode.isEmpty() && MTK_STATISTICS_FACE_DETECT_MODE_OFF !=
+                                    entryMode.itemAt(0, Type2Type<MUINT8>())) {
+      FDEn = 1;
+    }
+  }
   {
     IMetadata::IEntry const& entryMode =
         pInpMetadataRequest->entryFor(MTK_CONTROL_SCENE_MODE);

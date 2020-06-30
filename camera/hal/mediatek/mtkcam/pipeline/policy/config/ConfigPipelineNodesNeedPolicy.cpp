@@ -61,21 +61,17 @@ makePolicy_Configuration_PipelineNodesNeed_Default() {
       pOut->needP2CaptureNode = false;
     }
 
-    if (pParsedAppImageStreamInfo->hasVideoConsumer) {
-      pOut->needFDNode = false;
+    char value[PROPERTY_VALUE_MAX];
+    property_get("vendor.debug.camera.fd.enable", value, "1");
+    int FDEnable = atoi(value);
+    if (FDEnable == 1) {
+      pOut->needFDNode =
+          (pParsedAppConfiguration->operationMode == 0 /*NORMAL_MODE*/ &&
+           pOut->needP2StreamNode)
+              ? true
+              : false;
     } else {
-      char value[PROPERTY_VALUE_MAX];
-      property_get("vendor.debug.camera.fd.enable", value, "1");
-      int FDEnable = atoi(value);
-      if (FDEnable == 1) {
-        pOut->needFDNode =
-            (pParsedAppConfiguration->operationMode == 0 /*NORMAL_MODE*/ &&
-             pOut->needP2StreamNode)
-                ? true
-                : false;
-      } else {
-        pOut->needFDNode = false;
-      }
+      pOut->needFDNode = false;
     }
 
     pOut->needJpegNode =

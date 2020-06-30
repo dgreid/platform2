@@ -117,7 +117,7 @@ auto RequestSettingPolicyMediator_Default::evaluateRequest(
     fdIn.pRequest_AppControl = in.pRequest_AppControl;
     fdIn.pRequest_ParsedAppMetaControl = in.pRequest_ParsedAppMetaControl;
     mPolicyTable->fFaceDetectionIntent(fdOut, fdIn);
-    misFdEnabled = fdOut.isFDMetaEn;
+    misFdEnabled = fdOut.hasFDMeta;
   }
 
   // (2.1) are any capture streams updated?

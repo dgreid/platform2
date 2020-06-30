@@ -39,6 +39,7 @@ struct RequestOutputParams {
    */
   bool isFdEnabled = false;
   bool isFDMetaEn = false;
+  bool hasFDMeta = false;
 };
 
 /**

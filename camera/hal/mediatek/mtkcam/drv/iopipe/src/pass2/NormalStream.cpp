@@ -309,6 +309,8 @@ status_t NormalStream::_applyPortPolicy(MSize img_size,
     *port = NSImageio::NSIspio::EPortIndex_WROTO;
   } else if (img_size.w <= 192 && img_size.h <= 144) {
     *port = NSImageio::NSIspio::EPortIndex_IMG2O;
+  } else if (img_fmt == eImgFmt_YUY2) {
+    *port = NSImageio::NSIspio::EPortIndex_IMG2O;
   } else {
     if (largest_w > 0) {
       if (img_size.w < largest_w)

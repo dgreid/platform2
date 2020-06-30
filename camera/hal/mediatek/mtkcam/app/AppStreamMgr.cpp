@@ -532,11 +532,14 @@ NSCam::v3::Imp::AppStreamMgr::createImageStreamInfo(
   } else if (formatToAllocate == HAL_PIXEL_FORMAT_RAW_OPAQUE) {
     usageForAllocator |= GRALLOC_USAGE_HW_CAMERA_ZSL;
   } else if (formatToAllocate == HAL_PIXEL_FORMAT_YCbCr_420_888) {
-    if (mHasImplemt && !mHasVideoEnc && stream->width <= 1920
-          && stream->height <= 1080) {
+    if (mHasImplemt && !mHasVideoEnc) {
+      if ((stream->width <= 1920 && stream->height <= 1080) ||
           // testPreviewFpsRange will check this size
-      usageForConsumer |= GRALLOC_USAGE_HW_VIDEO_ENCODER;
-      mHasVideoEnc = true;
+          (!mInputType.test(TYPE_IMPLEMENTATION_DEFINED) &&
+           !mInputType.test(TYPE_YUV))) {
+        usageForConsumer |= GRALLOC_USAGE_HW_VIDEO_ENCODER;
+        mHasVideoEnc = true;
+      }
     } else if (!mHasImplemt && !mInputType.test(TYPE_YUV)) {
       usageForConsumer |= GRALLOC_USAGE_HW_COMPOSER;
       mHasImplemt = true;
