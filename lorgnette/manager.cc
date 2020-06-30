@@ -36,6 +36,8 @@ namespace lorgnette {
 
 namespace {
 
+constexpr base::TimeDelta kDefaultProgressSignalInterval =
+    base::TimeDelta::FromMilliseconds(20);
 constexpr size_t kUUIDStringLength = 37;
 
 std::string SerializeError(const brillo::ErrorPtr& error_ptr) {
@@ -73,6 +75,13 @@ bool ValidateParams(brillo::ErrorPtr* error, const ScanParameters& params) {
     brillo::Error::AddTo(
         error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
         "Cannot handle scanning of files with unknown lengths");
+    return false;
+  }
+
+  if (params.lines == 0) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "Cannot scan an image with 0 lines");
     return false;
   }
   return true;
@@ -237,7 +246,8 @@ Manager::Manager(base::Callback<void()> activity_callback,
     : org::chromium::lorgnette::ManagerAdaptor(this),
       activity_callback_(activity_callback),
       metrics_library_(new MetricsLibrary),
-      sane_client_(std::move(sane_client)) {
+      sane_client_(std::move(sane_client)),
+      progress_signal_interval_(kDefaultProgressSignalInterval) {
   // Set signal sender to be the real D-Bus call by default.
   status_signal_sender_ = base::BindRepeating(
       [](Manager* manager, const ScanStatusChangedSignal& signal) {
@@ -396,7 +406,7 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (!RunScanLoop(error, std::move(device), outfd)) {
+  if (!RunScanLoop(error, std::move(device), outfd, base::nullopt)) {
     return false;
   }
 
@@ -445,7 +455,7 @@ void Manager::StartScan(
   ScanStatusChangedSignal result_signal;
   result_signal.set_scan_uuid(uuid);
 
-  if (!RunScanLoop(&error, std::move(device), outfd)) {
+  if (!RunScanLoop(&error, std::move(device), outfd, uuid)) {
     result_signal.set_failure_reason(SerializeError(error));
     result_signal.set_state(SCAN_STATE_FAILED);
     status_signal_sender_.Run(result_signal);
@@ -460,6 +470,10 @@ void Manager::StartScan(
 
   if (!activity_callback_.is_null())
     activity_callback_.Run();
+}
+
+void Manager::SetProgressSignalInterval(base::TimeDelta interval) {
+  progress_signal_interval_ = interval;
 }
 
 void Manager::SetScanStatusChangedSignalSenderForTest(
@@ -534,7 +548,8 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 
 bool Manager::RunScanLoop(brillo::ErrorPtr* error,
                           std::unique_ptr<SaneDevice> device,
-                          const base::ScopedFD& outfd) {
+                          const base::ScopedFD& outfd,
+                          base::Optional<std::string> scan_uuid) {
   // Automatically report a scan failure if we exit early. This will be
   // cancelled once scanning has succeeded.
   base::ScopedClosureRunner report_scan_failure(base::BindOnce(
@@ -579,6 +594,9 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     return false;
   }
 
+  base::TimeTicks last_progress_sent_time = base::TimeTicks::Now();
+  uint32_t last_progress_value = 0;
+  size_t rows_written = 0;
   const size_t buffer_length =
       std::max(ALIGN_UP(params.bytes_per_line, 4 * 1024), 1024 * 1024);
   std::vector<uint8_t> image_buffer(buffer_length, '\0');
@@ -619,6 +637,19 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
         return false;
       }
       bytes_converted += params.bytes_per_line;
+      rows_written++;
+      uint32_t progress = rows_written * 100 / params.lines;
+      base::TimeTicks now = base::TimeTicks::Now();
+      if (scan_uuid.has_value() && progress != last_progress_value &&
+          now - last_progress_sent_time >= progress_signal_interval_) {
+        ScanStatusChangedSignal result_signal;
+        result_signal.set_scan_uuid(scan_uuid.value());
+        result_signal.set_state(SCAN_STATE_IN_PROGRESS);
+        result_signal.set_progress(progress);
+        status_signal_sender_.Run(result_signal);
+        last_progress_value = progress;
+        last_progress_sent_time = now;
+      }
     }
 
     // Shift any unconverted data in image_buffer to the start of image_buffer.

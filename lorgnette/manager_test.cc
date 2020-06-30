@@ -16,6 +16,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/time/time.h>
 #include <brillo/any.h>
 #include <brillo/dbus/mock_dbus_method_response.h>
 #include <brillo/process/process.h>
@@ -47,6 +48,7 @@ class ManagerTest : public testing::Test {
                  std::unique_ptr<SaneClient>(sane_client_)),
         metrics_library_(new MetricsLibraryMock) {
     manager_.metrics_library_.reset(metrics_library_);
+    manager_.SetProgressSignalInterval(base::TimeDelta::FromSeconds(0));
   }
 
   void SetUp() override {
@@ -97,6 +99,18 @@ class ManagerTest : public testing::Test {
     diff.AddArg(path_b);
     EXPECT_EQ(diff.Run(), 0)
         << path_a << " and " << path_b << " are not the same image";
+  }
+
+  void ValidateProgressSignals(const std::string& scan_uuid) {
+    int progress = 0;
+    for (auto it = signals_.begin();
+         it != signals_.end() && next(it) != signals_.end(); it++) {
+      const ScanStatusChangedSignal& signal = *it;
+      EXPECT_EQ(signal.scan_uuid(), scan_uuid);
+      EXPECT_EQ(signal.state(), SCAN_STATE_IN_PROGRESS);
+      EXPECT_GT(signal.progress(), progress);
+      progress = signal.progress();
+    }
   }
 
   void SetUpTestDevice(const std::string& name,
@@ -322,6 +336,7 @@ TEST_F(ManagerTest, StartScanBlackAndWhiteSuccess) {
   EXPECT_GE(signals_.size(), 1);
   EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
   EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
+  ValidateProgressSignals(response_.scan_uuid());
 
   CompareImages("./test_images/bw.png", output_path_.value());
 }
@@ -350,6 +365,7 @@ TEST_F(ManagerTest, StartScanGrayscaleSuccess) {
   EXPECT_GE(signals_.size(), 1);
   EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
   EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
+  ValidateProgressSignals(response_.scan_uuid());
 
   CompareImages("./test_images/gray.png", output_path_.value());
 }
@@ -378,6 +394,7 @@ TEST_F(ManagerTest, StartScanColorSuccess) {
   EXPECT_GE(signals_.size(), 1);
   EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
   EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
+  ValidateProgressSignals(response_.scan_uuid());
 
   CompareImages("./test_images/color.png", output_path_.value());
 }
@@ -410,6 +427,7 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
   EXPECT_GE(signals_.size(), 1);
   EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
   EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
+  ValidateProgressSignals(response_.scan_uuid());
 
   CompareImages("./test_images/color16.png", output_path_.value());
 }
