@@ -34,6 +34,7 @@ static_library("typecd_common") {
   sources = [
     "alt_mode.cc",
     "partner.cc",
+    "peripheral.cc",
     "port.cc",
     "port_manager.cc",
     "udev_monitor.cc",
