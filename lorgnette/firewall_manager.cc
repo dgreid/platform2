@@ -139,22 +139,19 @@ void FirewallManager::RequestUdpPortAccess(uint16_t port) {
   // Pass the read end of the pipe to permission_broker, for it to monitor this
   // process.
   brillo::ErrorPtr error;
-  if (!permission_broker_proxy_->RequestUdpPortAccess(port,
-                                                      interface_,
-                                                      lifeline_read_fd_,
-                                                      &allowed,
-                                                      &error)) {
-    LOG(ERROR) << "Failed to request UDP port access: "
-               << error->GetCode() << " " << error->GetMessage();
+  if (!permission_broker_proxy_->RequestUdpPortAccess(
+          port, interface_, lifeline_read_fd_, &allowed, &error)) {
+    LOG(ERROR) << "Failed to request UDP port access: " << error->GetCode()
+               << " " << error->GetMessage();
     return;
   }
   if (!allowed) {
-    LOG(ERROR) << "Access request for UDP port " << port
-               << " on interface " << interface_ << " is denied";
+    LOG(ERROR) << "Access request for UDP port " << port << " on interface "
+               << interface_ << " is denied";
     return;
   }
-  LOG(INFO) << "Access granted for UDP port " << port
-            << " on interface " << interface_;
+  LOG(INFO) << "Access granted for UDP port " << port << " on interface "
+            << interface_;
   requested_ports_.insert(port);
 }
 
@@ -162,8 +159,7 @@ void FirewallManager::ReleaseUdpPortAccess(uint16_t port) {
   brillo::ErrorPtr error;
   bool success;
   if (requested_ports_.find(port) == requested_ports_.end()) {
-    LOG(ERROR) << "UDP access has not been requested for port: "
-               << port;
+    LOG(ERROR) << "UDP access has not been requested for port: " << port;
     return;
   }
   if (!permission_broker_proxy_) {
@@ -171,21 +167,19 @@ void FirewallManager::ReleaseUdpPortAccess(uint16_t port) {
     return;
   }
 
-  if (!permission_broker_proxy_->ReleaseUdpPort(port,
-                                                interface_,
-                                                &success,
+  if (!permission_broker_proxy_->ReleaseUdpPort(port, interface_, &success,
                                                 &error)) {
-    LOG(ERROR) << "Failed to release UDP port access: "
-               << error->GetCode() << " " << error->GetMessage();
+    LOG(ERROR) << "Failed to release UDP port access: " << error->GetCode()
+               << " " << error->GetMessage();
     return;
   }
   if (!success) {
-    LOG(ERROR) << "Release request for UDP port " << port
-               << " on interface " << interface_ << " is denied";
+    LOG(ERROR) << "Release request for UDP port " << port << " on interface "
+               << interface_ << " is denied";
     return;
   }
-  LOG(INFO) << "Access released for UDP port " << port
-            << " on interface " << interface_;
+  LOG(INFO) << "Access released for UDP port " << port << " on interface "
+            << interface_;
   requested_ports_.erase(port);
 }
 

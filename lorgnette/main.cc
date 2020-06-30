@@ -21,8 +21,8 @@ const char* kLoggerCommand = "/usr/bin/logger";
 // Always logs to the syslog and logs to stderr if
 // we are connected to a tty.
 void SetupLogging(const char* daemon_name) {
-  brillo::InitLog(
-      brillo::kLogToSyslog | brillo::kLogToStderrIfTty | brillo::kLogHeader);
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty |
+                  brillo::kLogHeader);
 
   if (!isatty(STDIN_FILENO)) {
     brillo::ProcessImpl logger;

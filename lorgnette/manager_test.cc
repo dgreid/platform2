@@ -21,8 +21,8 @@
 #include <brillo/process/process.h>
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
-#include <gtest/gtest.h>
 #include <gmock/gmock.h>
+#include <gtest/gtest.h>
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <metrics/metrics_library_mock.h>
 #include <sane/sane.h>

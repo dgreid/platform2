@@ -56,7 +56,7 @@ static bool GetTimeMonotonic(struct timeval* tv) {
   return true;
 }
 
-static bool CreateBroadcastSocket(int *broadcast_socket, uint16_t *port) {
+static bool CreateBroadcastSocket(int* broadcast_socket, uint16_t* port) {
   int sock = HANDLE_EINTR(socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
   if (sock < 0) {
     PLOG(ERROR) << "socket() returns " << sock;
@@ -65,8 +65,8 @@ static bool CreateBroadcastSocket(int *broadcast_socket, uint16_t *port) {
   base::ScopedFD scoped_socket(sock);
   CHECK(sock < FD_SETSIZE);
 
-  int result = HANDLE_EINTR(
-      fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK));
+  int result =
+      HANDLE_EINTR(fcntl(sock, F_SETFL, fcntl(sock, F_GETFL) | O_NONBLOCK));
   if (result < 0) {
     PLOG(ERROR) << "fcntl(NONBLOCK) returns " << result;
     return false;
@@ -84,18 +84,17 @@ static bool CreateBroadcastSocket(int *broadcast_socket, uint16_t *port) {
   }
 
   int broadcast_enable = 1;
-  result = HANDLE_EINTR(
-      setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable,
-                 sizeof(broadcast_enable)));
+  result =
+      HANDLE_EINTR(setsockopt(sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable,
+                              sizeof(broadcast_enable)));
   if (result != kSyscallSuccess) {
     PLOG(ERROR) << "setsockopt(SO_BROADCAST) returns " << result;
     return false;
   }
 
   socklen_t local_len = sizeof(local);
-  result = HANDLE_EINTR(
-      getsockname(sock, reinterpret_cast<struct sockaddr*>(&local),
-                  &local_len));
+  result = HANDLE_EINTR(getsockname(
+      sock, reinterpret_cast<struct sockaddr*>(&local), &local_len));
   if (result != kSyscallSuccess || local.sin_port == 0) {
     PLOG(ERROR) << "getsockname() returns " << result;
     return false;
@@ -115,18 +114,17 @@ static std::vector<ScannerInfo> SendProbeAndListen(uint16_t probe_socket) {
   broadcast.sin_family = AF_INET;
   broadcast.sin_addr.s_addr = INADDR_BROADCAST;
   broadcast.sin_port = htons(kEpsonProbePort);
-  int result = HANDLE_EINTR(
-      sendto(probe_socket, kProbePacket, sizeof(kProbePacket), 0,
-             reinterpret_cast<struct sockaddr*>(&broadcast),
-             sizeof(broadcast)));
+  int result = HANDLE_EINTR(sendto(
+      probe_socket, kProbePacket, sizeof(kProbePacket), 0,
+      reinterpret_cast<struct sockaddr*>(&broadcast), sizeof(broadcast)));
   if (result != sizeof(kProbePacket)) {
-    LOG(ERROR) << "sendto() returns " << result
-               << ": " << (result < 0 ? strerror(errno) : "");
+    LOG(ERROR) << "sendto() returns " << result << ": "
+               << (result < 0 ? strerror(errno) : "");
     return scanners;
   }
 
   std::unordered_set<std::string> names;
-  struct timeval maximum_wait_duration = { kReplyWaitTimeSeconds, 0 };
+  struct timeval maximum_wait_duration = {kReplyWaitTimeSeconds, 0};
   struct timeval now, end_time;
   CHECK(GetTimeMonotonic(&now));
   timeradd(&now, &maximum_wait_duration, &end_time);
@@ -153,10 +151,9 @@ static std::vector<ScannerInfo> SendProbeAndListen(uint16_t probe_socket) {
     socklen_t remote_len = sizeof(remote);
 
     char response[kExpectedReplySize];
-    result = HANDLE_EINTR(
-        recvfrom(probe_socket, response, sizeof(response), 0,
-                 reinterpret_cast<struct sockaddr*>(&remote),
-                 &remote_len));
+    result = HANDLE_EINTR(recvfrom(probe_socket, response, sizeof(response), 0,
+                                   reinterpret_cast<struct sockaddr*>(&remote),
+                                   &remote_len));
     if (result < 0) {
       PLOG(ERROR) << "recvfrom() returns " << result;
       break;
@@ -178,8 +175,7 @@ static std::vector<ScannerInfo> SendProbeAndListen(uint16_t probe_socket) {
         info.set_type(kScannerTypeFlatbed);
         scanners.push_back(info);
       } else {
-        LOG(INFO) << "Not adding device " << device_name
-                  << "; already in list";
+        LOG(INFO) << "Not adding device " << device_name << "; already in list";
       }
     } else {
       LOG(ERROR) << "Unexpected reply; length was " << result;

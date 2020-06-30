@@ -61,9 +61,8 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   Manager& operator=(const Manager&) = delete;
   virtual ~Manager();
 
-  void RegisterAsync(
-      brillo::dbus_utils::ExportedObjectManager* object_manager,
-      brillo::dbus_utils::AsyncEventSequencer* sequencer);
+  void RegisterAsync(brillo::dbus_utils::ExportedObjectManager* object_manager,
+                     brillo::dbus_utils::AsyncEventSequencer* sequencer);
 
   // Implementation of MethodInterface.
   bool ListScanners(brillo::ErrorPtr* error,

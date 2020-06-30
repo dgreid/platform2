@@ -56,11 +56,10 @@ void Daemon::OnShutdown(int* return_code) {
 }
 
 void Daemon::PostponeShutdown() {
-  shutdown_callback_.Reset(base::Bind(&brillo::Daemon::Quit,
-                                      base::Unretained(this)));
+  shutdown_callback_.Reset(
+      base::Bind(&brillo::Daemon::Quit, base::Unretained(this)));
   base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      shutdown_callback_.callback(),
+      FROM_HERE, shutdown_callback_.callback(),
       base::TimeDelta::FromMilliseconds(kShutdownTimeoutMilliseconds));
 }
 

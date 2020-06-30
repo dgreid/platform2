@@ -255,7 +255,7 @@ void Manager::RegisterAsync(
   scoped_refptr<dbus::Bus> bus =
       object_manager ? object_manager->GetBus() : nullptr;
   dbus_object_.reset(new brillo::dbus_utils::DBusObject(
-        object_manager, bus, dbus::ObjectPath(kManagerServicePath)));
+      object_manager, bus, dbus::ObjectPath(kManagerServicePath)));
   RegisterWithDBusObject(dbus_object_.get());
   dbus_object_->RegisterAsync(
       sequencer->GetHandler("Manager.RegisterAsync() failed.", true));
