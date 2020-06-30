@@ -256,7 +256,7 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     fi
   fi
 
-  # Check if we enable ext4 crypto.
+  # Check if we enable ext4 features.
   if [ "${FS_FORMAT_STATE}" = "ext4" ]; then
     # Enable directory encryption for existing install.
     if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
@@ -270,10 +270,21 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
         tune2fs -O encrypt "${STATE_DEV}" || :
       fi
     fi
-  fi
 
-  # Enable/disable quota feature.
-  if [ "${FS_FORMAT_STATE}" = "ext4" ]; then
+    # Enable fs-verity for existing install.
+    if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
+         grep -qe "^Filesystem features:.* verity.*"; then
+      # The stateful partition is not set for fs-verity.
+      # Check if we should migrate.
+      if ext4_fsverity_supported; then
+        # Ensure to replay the journal first so it doesn't overwrite the flag.
+        e2fsck -p -E journal_only "${STATE_DEV}" || :
+        # The kernel support fs-verity, do it!
+        tune2fs -O verity "${STATE_DEV}" || :
+      fi
+    fi
+
+    # Enable/disable quota feature.
     if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
          grep -qe "^Reserved blocks gid.*20119"; then
       # Add Android's AID_RESERVED_DISK to resgid.

@@ -379,3 +379,11 @@ ext4_dir_encryption_supported() {
   # Return true if kernel support ext4 directory encryption.
   "${direncryption_enabled}" && [ -e /sys/fs/ext4/features/encryption ]
 }
+
+ext4_fsverity_supported() {
+  # Can be set in the ebuild.
+  local fsverity_enabled=false
+
+  # Return true if kernel supports fs-verity in ext4.
+  "${fsverity_enabled}" && [ -e /sys/fs/ext4/features/verity ]
+}

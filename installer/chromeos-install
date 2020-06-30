@@ -463,6 +463,11 @@ wipe_stateful() {
     set -- "$@" -O encrypt
   fi
 
+  # Check if the kernel we are going to install support ext4 fs-verity.
+  if ext4_fsverity_supported; then
+    set -- "$@" -O verity
+  fi
+
   local num_4k_sectors
   if [ "${DST_BLKSIZE}" -gt 4096 ]; then
     num_4k_sectors=$(( NUM_STATEFUL_SECTORS * (DST_BLKSIZE / 4096) ))
