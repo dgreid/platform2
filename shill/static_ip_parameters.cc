@@ -289,4 +289,10 @@ void StaticIPParameters::SetIPConfig(base::WeakPtr<IPConfig> ipconfig) {
   ipconfig_ = ipconfig;
 }
 
+void StaticIPParameters::Reset() {
+  ClearSavedParameters();
+  SetIPConfig(nullptr);
+  args_ = KeyValueStore();
+}
+
 }  // namespace shill

@@ -691,6 +691,7 @@ bool Service::Unload() {
     Error error;  // Ignored.
     Disconnect(&error, __func__);
   }
+  static_ip_parameters_.Reset();
   return false;
 }
 

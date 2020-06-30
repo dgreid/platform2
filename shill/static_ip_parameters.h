@@ -59,6 +59,9 @@ class StaticIPParameters {
   // Set the IPConfig object to update when static IP changes.
   void SetIPConfig(base::WeakPtr<IPConfig> ipconfig);
 
+  // Reset the IPConfig object to defaults (e.g. when a service is unloaded).
+  void Reset();
+
  private:
   friend class StaticIPParametersTest;
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithStatic);

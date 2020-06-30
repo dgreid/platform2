@@ -19,6 +19,8 @@
 #include "shill/dhcp/mock_dhcp_properties.h"
 #include "shill/ethernet/ethernet_service.h"
 #include "shill/event_dispatcher.h"
+#include "shill/fake_store.h"
+#include "shill/ipconfig.h"
 #include "shill/manager.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_connection.h"
@@ -74,7 +76,7 @@ class ServiceTest : public PropertyStoreTest {
         service2_(new ServiceUnderTest(&mock_manager_)),
         storage_id_(ServiceUnderTest::kStorageId),
 #if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-        eap_(new MockEapCredentials()),
+        eap_(new NiceMock<MockEapCredentials>()),
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
         power_manager_(new MockPowerManager(control_interface())) {
     ON_CALL(*control_interface(), CreatePowerManagerProxy(_, _, _))
@@ -189,8 +191,8 @@ class ServiceTest : public PropertyStoreTest {
     return SortingOrderIs(service0, service1, kShouldCompareConnectivityState);
   }
 
-  MockManager mock_manager_;
-  MockTime time_;
+  NiceMock<MockManager> mock_manager_;
+  NiceMock<MockTime> time_;
   scoped_refptr<ServiceUnderTest> service_;
   scoped_refptr<ServiceUnderTest> service2_;
   string storage_id_;
@@ -646,6 +648,25 @@ TEST_F(ServiceTest, Unload) {
   EXPECT_EQ(string(""), service_->guid_);
   EXPECT_FALSE(service_->explicitly_disconnected_);
   EXPECT_FALSE(service_->has_ever_connected_);
+}
+
+// Tests that static IP configs are set, stored and unloaded correctly.
+TEST_F(ServiceTest, StaticIPConfigs) {
+  const char kTestIpAddress[] = "1.2.3.4";
+  const int32_t kTestPrefixlen = 5;
+  EXPECT_FALSE(service_->HasStaticIPAddress());
+  KeyValueStore static_ip_configs;
+  static_ip_configs.Set(kAddressProperty, std::string(kTestIpAddress));
+  static_ip_configs.Set(kPrefixlenProperty, kTestPrefixlen);
+  service_->mutable_store()->SetKeyValueStoreProperty(
+      kStaticIPConfigProperty, static_ip_configs, /*error=*/nullptr);
+  EXPECT_TRUE(service_->HasStaticIPAddress());
+  FakeStore storage;
+  ASSERT_TRUE(service_->Save(&storage));
+  service_->Unload();
+  EXPECT_FALSE(service_->HasStaticIPAddress());
+  ASSERT_TRUE(service_->Load(&storage));
+  EXPECT_TRUE(service_->HasStaticIPAddress());
 }
 
 TEST_F(ServiceTest, State) {
