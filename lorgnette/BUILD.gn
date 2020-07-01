@@ -78,7 +78,10 @@ executable("lorgnette") {
 executable("lorgnette_cli") {
   configs += [ ":target_defaults" ]
   deps = [ ":lorgnette-proxies" ]
-  sources = [ "lorgnette_cli.cc" ]
+  sources = [
+    "guess_source.cc",
+    "lorgnette_cli.cc",
+  ]
 }
 
 if (use.test) {

@@ -9,11 +9,11 @@
 base::Optional<lorgnette::SourceType> GuessSourceType(const std::string& name) {
   std::string lowercase = base::ToLowerASCII(name);
 
-  if (lowercase == "fb" || lowercase == "flatbed")
+  if (lowercase == "fb" || lowercase == "flatbed" || lowercase == "platen")
     return lorgnette::SOURCE_PLATEN;
 
   if (lowercase == "adf" || lowercase == "adf front" ||
-      lowercase == "automatic document feeder")
+      lowercase == "adf simplex" || lowercase == "automatic document feeder")
     return lorgnette::SOURCE_ADF_SIMPLEX;
 
   if (lowercase == "adf duplex")
