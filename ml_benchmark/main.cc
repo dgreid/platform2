@@ -5,100 +5,50 @@
 #include <string>
 
 #include <base/command_line.h>
-#include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
-#include <base/native_library.h>
-#include <base/scoped_native_library.h>
 #include <brillo/proto_file_io.h>
 
+#include "ml_benchmark/shared_library_benchmark.h"
+#include "ml_benchmark/shared_library_benchmark_functions.h"
 #include "proto/benchmark_config.pb.h"
 
 using chrome::ml_benchmark::CrOSBenchmarkConfig;
 using chrome::ml_benchmark::SodaBenchmarkConfig;
 using chrome::ml_benchmark::BenchmarkResults;
-
-typedef int32_t (*benchmark_fn)(const void* config_bytes,
-                                int32_t config_bytes_size,
-                                void** results_bytes,
-                                int32_t* results_bytes_size);
-
-typedef void (*free_benchmark_results_fn)(void* results_bytes);
+using ml_benchmark::SharedLibraryBenchmark;
+using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
 
 constexpr char kWorkspacePath[] = "workspace_path";
 constexpr char kConfigFilePath[] = "benchmark.config";
-constexpr char kBenchmarkFunctionName[] = "benchmark_start";
-constexpr char kFreeBenchmarkFunctionName[] = "free_benchmark_results";
 
 constexpr char kSodaDriverName[] = "SoDA";
 constexpr char kSodaDriverPath[] = "libsoda_benchmark_driver.so";
 
 void benchmark_and_report_results(const std::string& driver_name,
                                   const base::FilePath& driver_file_path,
-                                  const void* config_bytes,
-                                  int32_t config_bytes_size) {
-  base::NativeLibrary test_driver_library =
-      base::LoadNativeLibrary(driver_file_path, nullptr);
-
-  if (test_driver_library == nullptr) {
-    LOG(ERROR) << "Failed to load " << driver_name << " driver\n";
+                                  const CrOSBenchmarkConfig& config) {
+  auto functions = std::make_unique<SharedLibraryBenchmarkFunctions>(
+      driver_file_path);
+  if (functions == nullptr || !functions->valid()) {
+    LOG(ERROR) << "Unable to load the " << driver_name << " benchmark";
     return;
   }
 
-  base::ScopedNativeLibrary test_driver(test_driver_library);
-
-  auto benchmark_function = reinterpret_cast<benchmark_fn>(
-      test_driver.GetFunctionPointer(kBenchmarkFunctionName));
-
-  if (benchmark_function == nullptr) {
-    LOG(ERROR) << "Unable to load the benchmark function from the "
-               << driver_name << " driver\n";
-    return;
-  }
-
-  auto free_results_function = reinterpret_cast<free_benchmark_results_fn>
-    (test_driver.GetFunctionPointer(kFreeBenchmarkFunctionName));
-
-  if (free_results_function == nullptr) {
-    LOG(ERROR) << "Unable to load the free function from the "
-               << driver_name << " driver\n";
-    return;
-  }
-
-  void* results_buffer = nullptr;
-  int32_t results_size = 0;
-  LOG(INFO) << "Starting the " << driver_name << " benchmark\n";
-  int32_t ret = benchmark_function(
-      config_bytes,
-      config_bytes_size,
-      &results_buffer,
-      &results_size);
-
-  // memory management via RAII
-  std::unique_ptr<void, free_benchmark_results_fn> buffer_(
-      results_buffer,
-      free_results_function);
-
-  if (results_buffer == nullptr || results_size == 0) {
-    LOG(ERROR)  << "Cannot parse the results from the test driver: "
-                << "Driver did not return a buffer or a correct size";
-    return;
-  }
-
+  LOG(INFO) << "Starting the " << driver_name << " benchmark";
+  SharedLibraryBenchmark benchmark(std::move(functions));
   BenchmarkResults results;
-  if (!results.ParseFromArray(results_buffer, results_size)) {
-    LOG(ERROR)  << "Cannot parse the results from the test driver: "
-                << "Driver did not return a valid result";
-    return;
+  if (!benchmark.ExecuteBenchmark(config, &results)) {
+    LOG(ERROR) << "Unable to execute the " << driver_name << " benchmark";
   }
 
-  if (ret == chrome::ml_benchmark::OK) {
-    LOG(INFO) << driver_name << " finished\n";
+  if (results.status() == chrome::ml_benchmark::OK) {
+    LOG(INFO) << driver_name << " finished";
     LOG(INFO) << results.results_message();
   } else {
-    LOG(ERROR) << driver_name << " failed execution\n";
+    LOG(ERROR) << driver_name << " Encountered an error";
     LOG(ERROR) << "Reason: " << results.results_message();
   }
 }
@@ -122,15 +72,9 @@ int main(int argc, char* argv[]) {
   CHECK(brillo::ReadTextProtobuf(workspace_config_path, &benchmark_config))
       << "Could not read the benchmark config file";
 
-  size_t config_bytes_size = benchmark_config.ByteSizeLong();
-  auto config_bytes = std::make_unique<uint8_t[]>(config_bytes_size);
-  CHECK(benchmark_config.SerializeToArray(config_bytes.get(),
-                                          config_bytes_size))
-    << "Unable to serialize config to a binary protobuf";
-
   // Execute benchmarks
   if (benchmark_config.has_soda_config()) {
-    auto soda_config = benchmark_config.soda_config();
+    const auto& soda_config = benchmark_config.soda_config();
 
     base::FilePath soda_path;
     if (soda_config.soda_driver_path().empty()) {
@@ -141,9 +85,8 @@ int main(int argc, char* argv[]) {
 
     benchmark_and_report_results(kSodaDriverName,
         soda_path,
-        config_bytes.get(),
-        config_bytes_size);
+        benchmark_config);
   }
 
-  LOG(INFO) << "Benchmark finished, exiting\n";
+  LOG(INFO) << "Benchmark finished, exiting";
 }

@@ -27,10 +27,23 @@ proto_library("ml_benchmark_config_proto") {
   sources = [ "${proto_in_dir}/benchmark_config.proto" ]
 }
 
+static_library("libmlbenchmark") {
+  sources = [
+    "shared_library_benchmark.cc",
+    "shared_library_benchmark_functions.cc",
+  ]
+  configs += [ ":target_defaults" ]
+  deps = [ ":ml_benchmark_config_proto" ]
+  pkg_deps = [ "protobuf" ]
+}
+
 executable("ml_benchmark") {
   sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
-  deps = [ ":ml_benchmark_config_proto" ]
+  deps = [
+    ":libmlbenchmark",
+    ":ml_benchmark_config_proto",
+  ]
   pkg_deps = [ "protobuf" ]
 }
 
@@ -40,12 +53,17 @@ if (use.test) {
   }
 
   executable("ml_benchmark_test") {
-    sources = [ "ml_benchmark_test.cc" ]
+    sources = [ "shared_library_benchmark_test.cc" ]
     configs += [
       "//common-mk:test",
       ":ml_benchmark_test_config",
       ":target_defaults",
     ]
-    deps = [ "//common-mk/testrunner" ]
+    deps = [
+      ":libmlbenchmark",
+      ":ml_benchmark_config_proto",
+      "//common-mk/testrunner",
+    ]
+    pkg_deps = [ "protobuf" ]
   }
 }
