@@ -452,11 +452,15 @@ base::FilePath GetUserDBDir() {
   }
 
   base::FilePath UserDir =
-      base::FilePath(kUserDbParentDir).Append(hashed_username);
+      base::FilePath(kUserDbBaseDir).Append(hashed_username);
   if (!base::DirectoryExists(UserDir)) {
     LOG(ERROR) << "User daemon-store directory doesn't exist.";
     return base::FilePath("");
   }
+
+  // A sub directory is used so permissions can be enforced by usb_bouncer
+  // without affecting the daemon-store mount point.
+  UserDir = UserDir.Append(kUserDbParentDir);
 
   return UserDir;
 }

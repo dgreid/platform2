@@ -62,7 +62,7 @@ EntryManagerTestUtil::EntryManagerTestUtil() {
            -1);
 
   CreateTestDir(std::string("sys") + kDefaultDevpath, true /*force_empty*/);
-  CreateTestDir(kUserDbParentDir, true /*force_empty*/);
+  CreateTestDir(kUserDbBaseDir, true /*force_empty*/);
 
   RecreateEntryManager(base::FilePath() /*userdb_dir*/);
 }

@@ -35,7 +35,8 @@ constexpr char kUsbBouncerUser[] = "usb_bouncer";
 constexpr char kUsbBouncerGroup[] = "usb_bouncer";
 
 constexpr char kDefaultDbName[] = "devices.proto";
-constexpr char kUserDbParentDir[] = "/run/daemon-store/usb_bouncer";
+constexpr char kUserDbBaseDir[] = "/run/daemon-store/usb_bouncer";
+constexpr char kUserDbParentDir[] = "device-db";
 
 constexpr char kDBusPath[] = "/run/dbus/system_bus_socket";
 

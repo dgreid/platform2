@@ -104,13 +104,13 @@ void DropPrivileges(SeccompEnforcement seccomp) {
 
   minijail_remount_mode(j.get(), MS_SLAVE);
   // minijail_bind was not used because the MS_REC flag is needed.
-  if (!base::DirectoryExists(base::FilePath(usb_bouncer::kUserDbParentDir))) {
-    LOG(WARNING) << "Path '" << usb_bouncer::kUserDbParentDir
+  if (!base::DirectoryExists(base::FilePath(usb_bouncer::kUserDbBaseDir))) {
+    LOG(WARNING) << "Path '" << usb_bouncer::kUserDbBaseDir
                  << "' doesn't exist; userdb will be inaccessible this run.";
-  } else if (minijail_mount(j.get(), usb_bouncer::kUserDbParentDir,
-                            usb_bouncer::kUserDbParentDir, "none",
+  } else if (minijail_mount(j.get(), usb_bouncer::kUserDbBaseDir,
+                            usb_bouncer::kUserDbBaseDir, "none",
                             MS_BIND | MS_REC) != 0) {
-    PLOG(FATAL) << "minijail_mount('/" << usb_bouncer::kUserDbParentDir
+    PLOG(FATAL) << "minijail_mount('/" << usb_bouncer::kUserDbBaseDir
                 << "') failed";
   }
 
