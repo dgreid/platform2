@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/logging.h>
@@ -15,6 +16,7 @@
 #include <gtest/gtest.h>
 
 #include "glib-bridge/glib_bridge.h"
+#include "glib-bridge/glib_scopers.h"
 
 namespace glib_bridge {
 
@@ -74,10 +76,11 @@ TEST_F(GlibBridgeTest, ReadFileCallback) {
   };
   UserData user_data{this, 0};
 
-  GFile* dev_file = g_file_new_for_path("/dev/zero");
-  ASSERT_NE(dev_file, nullptr);
-  GFileInputStream* istream = g_file_read(dev_file, nullptr, nullptr);
-  ASSERT_NE(istream, nullptr);
+  ScopedGObject<GFile> dev_file(g_file_new_for_path("/dev/zero"));
+  ASSERT_TRUE(dev_file);
+  ScopedGObject<GFileInputStream> istream(
+      g_file_read(dev_file.get(), nullptr, nullptr));
+  ASSERT_TRUE(istream);
 
   constexpr int kBufSize = 64;
   char buf[kBufSize];
@@ -90,7 +93,7 @@ TEST_F(GlibBridgeTest, ReadFileCallback) {
     ud->test->Finish();
   };
   g_input_stream_read_async(
-      reinterpret_cast<GInputStream*>(istream), buf, kBufSize,
+      reinterpret_cast<GInputStream*>(istream.get()), buf, kBufSize,
       G_PRIORITY_DEFAULT, nullptr,
       static_cast<GAsyncReadyCallback>(read_results_ready), &user_data);
   Start();
@@ -99,9 +102,6 @@ TEST_F(GlibBridgeTest, ReadFileCallback) {
   char expected_buf[kBufSize];
   memset(expected_buf, 0, kBufSize);
   ASSERT_EQ(memcmp(buf, expected_buf, kBufSize), 0);
-
-  g_object_unref(istream);
-  g_object_unref(dev_file);
 }
 
 TEST_F(GlibBridgeTest, WriteFileCallback) {
@@ -111,11 +111,11 @@ TEST_F(GlibBridgeTest, WriteFileCallback) {
   };
   UserData user_data{this, 0};
 
-  GFile* dev_file = g_file_new_for_path("/dev/null");
-  ASSERT_NE(dev_file, nullptr);
-  GFileOutputStream* ostream =
-      g_file_append_to(dev_file, G_FILE_CREATE_NONE, nullptr, nullptr);
-  ASSERT_NE(ostream, nullptr);
+  ScopedGObject<GFile> dev_file(g_file_new_for_path("/dev/null"));
+  ASSERT_TRUE(dev_file);
+  ScopedGObject<GFileOutputStream> ostream(
+      g_file_append_to(dev_file.get(), G_FILE_CREATE_NONE, nullptr, nullptr));
+  ASSERT_TRUE(ostream);
 
   const std::string buf("foobar");
   auto write_done = [](GObject* source, GAsyncResult* res, gpointer user_data) {
@@ -125,15 +125,12 @@ TEST_F(GlibBridgeTest, WriteFileCallback) {
     ud->test->Finish();
   };
   g_output_stream_write_async(
-      reinterpret_cast<GOutputStream*>(ostream), buf.data(), buf.size(),
+      reinterpret_cast<GOutputStream*>(ostream.get()), buf.data(), buf.size(),
       G_PRIORITY_DEFAULT, nullptr, static_cast<GAsyncReadyCallback>(write_done),
       &user_data);
   Start();
 
   ASSERT_EQ(user_data.bytes_written, buf.size());
-
-  g_object_unref(ostream);
-  g_object_unref(dev_file);
 }
 
 TEST_F(GlibBridgeTest, IdleCallback) {
@@ -240,11 +237,16 @@ constexpr int kBufSize = 64;
 
 struct UserData;
 struct IoJob {
-  IoJob(GFile* file, GFileInputStream* istream, UserData* user_data)
-      : file(file), istream(istream), buf(kBufSize, 1), user_data(user_data) {}
+  IoJob(ScopedGObject<GFile> file,
+        ScopedGObject<GFileInputStream> istream,
+        UserData* user_data)
+      : file(std::move(file)),
+        istream(std::move(istream)),
+        buf(kBufSize, 1),
+        user_data(user_data) {}
 
-  GFile* file;
-  GFileInputStream* istream;
+  ScopedGObject<GFile> file;
+  ScopedGObject<GFileInputStream> istream;
   std::vector<char> buf;
   bool complete = false;
   UserData* user_data;
@@ -278,16 +280,18 @@ TEST_F(GlibBridgeTest, MultipleReadAndIdleCallbacks) {
   UserData user_data{this};
   constexpr int kNumFiles = 5;
   for (int i = 0; i < kNumFiles; i++) {
-    GFile* dev_file = g_file_new_for_path("/dev/zero");
-    ASSERT_NE(dev_file, nullptr);
-    GFileInputStream* istream = g_file_read(dev_file, nullptr, nullptr);
-    ASSERT_NE(istream, nullptr);
-    user_data.io_jobs.emplace_back(dev_file, istream, &user_data);
+    ScopedGObject<GFile> dev_file(g_file_new_for_path("/dev/zero"));
+    ASSERT_TRUE(dev_file);
+    ScopedGObject<GFileInputStream> istream(
+        g_file_read(dev_file.get(), nullptr, nullptr));
+    ASSERT_TRUE(istream);
+    user_data.io_jobs.emplace_back(std::move(dev_file), std::move(istream),
+                                   &user_data);
   }
 
   for (IoJob& io_job : user_data.io_jobs) {
     g_input_stream_read_async(
-        reinterpret_cast<GInputStream*>(io_job.istream), &io_job.buf[0],
+        reinterpret_cast<GInputStream*>(io_job.istream.get()), &io_job.buf[0],
         io_job.buf.size(), G_PRIORITY_DEFAULT, nullptr,
         static_cast<GAsyncReadyCallback>(&ReadResultsReady), &io_job);
   }
@@ -298,9 +302,6 @@ TEST_F(GlibBridgeTest, MultipleReadAndIdleCallbacks) {
     all_complete &= io_job.complete;
     std::vector<char> expected_buf(io_job.buf.size(), 0);
     ASSERT_EQ(io_job.buf, expected_buf);
-
-    g_object_unref(io_job.istream);
-    g_object_unref(io_job.file);
   }
   ASSERT_TRUE(all_complete);
 }
