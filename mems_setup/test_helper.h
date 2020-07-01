@@ -28,16 +28,17 @@ namespace testing {
 class FakeSysfsTrigger : public libmems::fakes::FakeIioDevice {
  public:
   FakeSysfsTrigger(libmems::fakes::FakeIioContext* ctx,
-                   libmems::fakes::FakeIioDevice* trigger)
+                   std::unique_ptr<libmems::fakes::FakeIioDevice> trigger)
       : FakeIioDevice(ctx, "iio_sysfs_trigger", -1),
         mock_context_(ctx),
-        mock_trigger_(trigger) {}
+        mock_trigger_(std::move(trigger)) {}
 
   bool WriteNumberAttribute(const std::string& name, int64_t value) override;
+  void AddMockTrigger();
 
  private:
   libmems::fakes::FakeIioContext* mock_context_;
-  libmems::fakes::FakeIioDevice* mock_trigger_;
+  std::unique_ptr<libmems::fakes::FakeIioDevice> mock_trigger_;
 };
 
 class SensorTestBase : public ::testing::Test {
@@ -47,11 +48,10 @@ class SensorTestBase : public ::testing::Test {
  protected:
   std::unique_ptr<libmems::fakes::FakeIioContext> mock_context_;
   std::unique_ptr<mems_setup::fakes::FakeDelegate> mock_delegate_;
-  std::unique_ptr<libmems::fakes::FakeIioDevice> mock_device_;
-  std::unique_ptr<libmems::fakes::FakeIioChannel> mock_calib_channel_;
+  libmems::fakes::FakeIioDevice* mock_device_;
 
-  std::unique_ptr<libmems::fakes::FakeIioDevice> mock_trigger1_;
-  std::unique_ptr<FakeSysfsTrigger> mock_sysfs_trigger_;
+  libmems::fakes::FakeIioDevice* mock_trigger1_;
+  FakeSysfsTrigger* mock_sysfs_trigger_;
 
   std::unique_ptr<Configuration> config_;
 
@@ -65,8 +65,6 @@ class SensorTestBase : public ::testing::Test {
 
   void ConfigureVpd(
       std::initializer_list<std::pair<const char*, const char*>> values);
-
-  std::vector<std::unique_ptr<libmems::fakes::FakeIioChannel>> channels_;
 };
 
 }  // namespace testing
