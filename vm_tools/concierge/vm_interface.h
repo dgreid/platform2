@@ -92,7 +92,7 @@ class VmInterface {
   // SuspendDone will not be propagated to this VM. Otherwise,
   // HandleSuspendImminent and HandleSuspendDone will be invoked when these
   // messages received.
-  virtual bool UsesExternalSuspendSignals() { return true; }
+  virtual bool UsesExternalSuspendSignals() { return false; }
 
   // Update resolv.conf data.
   virtual bool SetResolvConfig(
