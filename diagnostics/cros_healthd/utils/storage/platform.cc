@@ -13,6 +13,7 @@
 #include <base/logging.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
+#include <base/strings/stringprintf.h>
 #include <base/posix/eintr_wrapper.h>
 #include <rootdev/rootdev.h>
 
@@ -52,13 +53,19 @@ StatusOr<uint64_t> Platform::GetDeviceSizeBytes(
     const base::FilePath& dev_path) const {
   base::ScopedFD fd(HANDLE_EINTR(
       open(dev_path.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
-  if (!fd.is_valid())
-    return Status(-EINVAL, "Failed to open: " + dev_path.value());
+  if (!fd.is_valid()) {
+    return Status(
+        StatusCode::kInternal,
+        base::StringPrintf("Failed to open %s", dev_path.value().c_str()));
+  }
 
   uint64_t size;
   auto ret = ioctl(fd.get(), BLKGETSIZE64, &size);
-  if (ret != 0)
-    return Status(ret, "Failed to query size: " + dev_path.value());
+  if (ret != 0) {
+    return Status(StatusCode::kInternal,
+                  base::StringPrintf("Failed to query size of %s : %d",
+                                     dev_path.value().c_str(), ret));
+  }
   return size;
 }
 
@@ -66,14 +73,24 @@ StatusOr<uint64_t> Platform::GetDeviceBlockSizeBytes(
     const base::FilePath& dev_path) const {
   base::ScopedFD fd(HANDLE_EINTR(
       open(dev_path.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
-  if (!fd.is_valid())
-    return Status(-EINVAL, "Failed to open: " + dev_path.value());
+  if (!fd.is_valid()) {
+    return Status(
+        StatusCode::kInternal,
+        base::StringPrintf("Failed to open %s", dev_path.value().c_str()));
+  }
 
   int blksize;
   auto ret = ioctl(fd.get(), BLKSSZGET, &blksize);
-  if (ret != 0 || blksize <= 0) {
-    return Status(ret ?: -EINVAL,
-                  "Failed to query block size: " + dev_path.value());
+  if (ret != 0) {
+    return Status(StatusCode::kInternal,
+                  base::StringPrintf("Failed to query block size of %s : %d",
+                                     dev_path.value().c_str(), ret));
+  }
+  if (blksize <= 0) {
+    return Status(
+        StatusCode::kInternal,
+        base::StringPrintf("Ioctl returned invalid blocksize for %s: %d",
+                           dev_path.value().c_str(), blksize));
   }
   return static_cast<uint64_t>(blksize);
 }

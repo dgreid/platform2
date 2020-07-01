@@ -11,28 +11,38 @@
 
 namespace diagnostics {
 
+// Canonical error codes, copied from absl.
+enum class StatusCode : int {
+  kOk = 0,
+  kInvalidArgument = 3,
+  kInternal = 13,
+  kUnavailable = 14,
+};
+
+// TODO(chromium:1102627, dlunev): use absl status instead when the dependency
+// is available.
 class Status {
  public:
-  Status(int code, const std::string& message)
+  static Status OkStatus() { return Status(StatusCode::kOk, ""); }
+
+  Status(StatusCode code, const std::string& message)
       : code_(code), message_(message) {}
   Status(const Status&) = default;
   Status(Status&&) = default;
   Status& operator=(const Status&) = default;
   Status& operator=(Status&&) = default;
 
-  int code() const { return code_; }
+  StatusCode code() const { return code_; }
   const std::string& message() const { return message_; }
 
   const std::string ToString() const {
     return base::StringPrintf("%s : %d", message_.c_str(), code_);
   }
 
-  bool ok() const { return code_ == 0; }
-
-  static Status OkStatus() { return Status(0, ""); }
+  bool ok() const { return code_ == StatusCode::kOk; }
 
  private:
-  int code_;
+  StatusCode code_;
   std::string message_;
 };
 
