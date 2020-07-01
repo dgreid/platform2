@@ -5,6 +5,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -13,7 +14,7 @@ TEST(DiskIoStat, Extended) {
   constexpr char kPath[] =
       "cros_healthd/utils/storage/testdata/sys/block/nvme0n1";
   DiskIoStat iostat{base::FilePath(kPath)};
-  ASSERT_FALSE(iostat.Update().has_value());
+  ASSERT_TRUE(iostat.Update().ok());
 
   EXPECT_EQ(144016, iostat.GetReadTime().InMilliseconds());
   EXPECT_EQ(22155414, iostat.GetWriteTime().InMilliseconds());
@@ -29,7 +30,7 @@ TEST(DiskIoStat, Legacy) {
   constexpr char kPath[] =
       "cros_healthd/utils/storage/testdata/sys/block/mmcblk0";
   DiskIoStat iostat{base::FilePath(kPath)};
-  ASSERT_FALSE(iostat.Update().has_value());
+  ASSERT_TRUE(iostat.Update().ok());
 
   EXPECT_EQ(184023, iostat.GetReadTime().InMilliseconds());
   EXPECT_EQ(13849275, iostat.GetWriteTime().InMilliseconds());
@@ -40,11 +41,22 @@ TEST(DiskIoStat, Legacy) {
 }
 
 // Tests missing stat file.
-TEST(DiskIoStat, Failed) {
+TEST(DiskIoStat, NotFound) {
+  constexpr char kPath[] = "cros_healthd/utils/storage/testdata/sys/block/sda1";
+  DiskIoStat iostat{base::FilePath(kPath)};
+  auto status = iostat.Update();
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(StatusCode::kUnavailable, status.code());
+}
+
+// Tests mis-formatted stat file.
+TEST(DiskIoStat, WrongFormat) {
   constexpr char kPath[] =
       "cros_healthd/utils/storage/testdata/sys/block/nvme0n2";
   DiskIoStat iostat{base::FilePath(kPath)};
-  EXPECT_TRUE(iostat.Update().has_value());
+  auto status = iostat.Update();
+  ASSERT_FALSE(status.ok());
+  EXPECT_EQ(StatusCode::kInvalidArgument, status.code());
 }
 
 }  // namespace diagnostics

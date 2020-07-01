@@ -13,13 +13,11 @@
 #include <base/optional.h>
 #include <base/time/time.h>
 
-#include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
 namespace {
-
-namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 constexpr char kStatFile[] = "stat";
 
@@ -28,13 +26,13 @@ constexpr char kStatFile[] = "stat";
 DiskIoStat::DiskIoStat(const base::FilePath& dev_sys_path)
     : dev_sys_path_(dev_sys_path) {}
 
-base::Optional<mojo_ipc::ProbeErrorPtr> DiskIoStat::Update() {
+Status DiskIoStat::Update() {
   base::FilePath stat_path = dev_sys_path_.Append(kStatFile);
 
   std::string stat_string;
   if (!ReadFileToString(stat_path, &stat_string)) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kFileReadError,
-                                  "Unable to read " + stat_path.value());
+    return Status(StatusCode::kUnavailable,
+                  "Unable to read " + stat_path.value());
   }
 
   std::stringstream stat_stream(stat_string);
@@ -43,8 +41,8 @@ base::Optional<mojo_ipc::ProbeErrorPtr> DiskIoStat::Update() {
       io_ticks >> time_in_queue;
 
   if (stat_stream.fail() || stat_stream.bad()) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
-                                  "Failed to parse " + stat_path.value());
+    return Status(StatusCode::kInvalidArgument,
+                  "Failed to parse " + stat_path.value());
   }
 
   // Might not be present on older kernels, thus we consider those fields
@@ -55,7 +53,7 @@ base::Optional<mojo_ipc::ProbeErrorPtr> DiskIoStat::Update() {
     extended_iostat_ = true;
   iostat_populated_ = true;
 
-  return base::nullopt;
+  return Status::OkStatus();
 }
 
 base::TimeDelta DiskIoStat::GetReadTime() const {

@@ -21,6 +21,8 @@
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/emmc_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/nvme_device_adapter.h"
+#include "diagnostics/cros_healthd/utils/storage/status_macros.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
@@ -55,6 +57,20 @@ std::unique_ptr<StorageDeviceAdapter> CreateAdapter(
   return std::make_unique<DefaultDeviceAdapter>(dev_sys_path);
 }
 
+mojo_ipc::ErrorType StatusCodeToMojoError(StatusCode code) {
+  switch (code) {
+    case StatusCode::kUnavailable:
+      return mojo_ipc::ErrorType::kFileReadError;
+    case StatusCode::kInvalidArgument:
+      return mojo_ipc::ErrorType::kParseError;
+    case StatusCode::kInternal:
+      return mojo_ipc::ErrorType::kSystemUtilityError;
+    default:
+      NOTREACHED() << "Unexpected error code: " << static_cast<int>(code);
+      return mojo_ipc::ErrorType::kSystemUtilityError;
+  }
+}
+
 }  // namespace
 
 StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
@@ -74,28 +90,25 @@ StorageDeviceInfo::StorageDeviceInfo(const base::FilePath& dev_sys_path,
 base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
 StorageDeviceInfo::PopulateDeviceInfo(
     mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
-  DCHECK(output_info);
+  auto status = PopulateDeviceInfoImpl(output_info);
+  if (status.ok())
+    return base::nullopt;
+  return CreateAndLogProbeError(StatusCodeToMojoError(status.code()),
+                                status.message());
+}
 
-  auto error = iostat_.Update();
-  if (error.has_value())
-    return error;
+Status StorageDeviceInfo::PopulateDeviceInfoImpl(
+    mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
+  DCHECK(output_info);
 
   output_info->path = dev_node_path_.value();
   output_info->type = subsystem_;
 
-  auto res = platform_->GetDeviceSizeBytes(dev_node_path_);
-  if (!res.ok()) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  res.status().ToString());
-  }
-  output_info->size = res.value();
-
-  res = platform_->GetDeviceBlockSizeBytes(dev_node_path_);
-  if (!res.ok()) {
-    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
-                                  res.status().ToString());
-  }
-  uint64_t sector_size = res.value();
+  RETURN_IF_ERROR(iostat_.Update());
+  ASSIGN_OR_RETURN(output_info->size,
+                   platform_->GetDeviceSizeBytes(dev_node_path_));
+  ASSIGN_OR_RETURN(uint64_t sector_size,
+                   platform_->GetDeviceBlockSizeBytes(dev_node_path_));
 
   output_info->read_time_seconds_since_last_boot =
       static_cast<uint64_t>(iostat_.GetReadTime().InSeconds());
@@ -119,7 +132,7 @@ StorageDeviceInfo::PopulateDeviceInfo(
 
   output_info->name = adapter_->GetModel();
 
-  return base::nullopt;
+  return Status::OkStatus();
 }
 
 void StorageDeviceInfo::PopulateLegacyFields(

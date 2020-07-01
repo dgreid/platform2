@@ -40,6 +40,7 @@ class StorageDeviceInfo {
   base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
   PopulateDeviceInfo(
       chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
+
   // PopulateLegaceInfo fills the fields of Mojo's data structure representing
   // a block device. It is responsible for population of fields which are kept
   // for compatibility with the existing applications and will be gradually
@@ -55,6 +56,11 @@ class StorageDeviceInfo {
   const std::unique_ptr<const Platform> platform_;
 
   DiskIoStat iostat_;
+
+  // Implementation of the field population. The separation is used for uniform
+  // error propagation via Status.
+  Status PopulateDeviceInfoImpl(
+      chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
 };
 
 }  // namespace diagnostics

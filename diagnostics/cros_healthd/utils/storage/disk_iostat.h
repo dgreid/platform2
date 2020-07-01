@@ -11,7 +11,7 @@
 #include <base/optional.h>
 #include <base/time/time.h>
 
-#include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -33,7 +33,7 @@ class DiskIoStat {
 
   // Retrieves current I/O statistics for the device.
   // Must be called before using getters of the class.
-  base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr> Update();
+  Status Update();
 
  private:
   const base::FilePath dev_sys_path_;
