@@ -20,9 +20,21 @@
 #include "system-proxy/proxy_connect_job.h"
 
 namespace {
-void NullProxyResolver(
+void ResolveProxyCallback(
+    base::OnceClosure quit_task,
     const std::string&,
-    base::OnceCallback<void(const std::list<std::string>&)>) {}
+    base::OnceCallback<void(const std::list<std::string>&)>
+        on_proxy_resolution_callback) {
+  // Exit the fuzzer if the input fed to the test is a valid HTTP CONNECT
+  // request.
+  std::move(quit_task).Run();
+}
+void NullAuthenticationRequiredCallback(
+    const std::string& proxy_url,
+    const std::string& scheme,
+    const std::string& realm,
+    base::OnceCallback<void(const std::string& credentials)>
+        on_auth_acquired_callback) {}
 
 void OnConnectionSetupFinished(base::OnceClosure quit_task,
                                std::unique_ptr<patchpanel::SocketForwarder>,
@@ -33,7 +45,7 @@ void OnConnectionSetupFinished(base::OnceClosure quit_task,
 
 struct Environment {
   Environment() {
-    logging::SetMinLogLevel(logging::LOG_INFO);  // Disable logging.
+    logging::SetMinLogLevel(logging::LOG_FATAL);  // Disable logging.
   }
 };
 
@@ -59,7 +71,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   auto connect_job = std::make_unique<system_proxy::ProxyConnectJob>(
       std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
-      base::BindOnce(&NullProxyResolver),
+      base::BindOnce(&ResolveProxyCallback, run_loop.QuitClosure()),
+      base::BindOnce(&NullAuthenticationRequiredCallback),
       base::BindOnce(&OnConnectionSetupFinished, run_loop.QuitClosure()));
   connect_job->Start();
   cros_client_socket.SendTo(data, size);
