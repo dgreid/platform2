@@ -102,6 +102,8 @@ force_flash() {
 HERMES=org.chromium.Hermes
 HERMES_MANAGER_OBJECT=/org/chromium/Hermes/Manager
 HERMES_MANAGER_IFACE=org.chromium.Hermes.Manager
+
+HERMES_EUICC_IFACE=org.chromium.Hermes.Euicc
 HERMES_PROFILE_IFACE=org.chromium.Hermes.Profile
 
 esim() {
@@ -134,18 +136,40 @@ esim() {
   esac
 }
 
-esim_profiles() {
+all_euiccs() {
   dbus_property "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
-                "${HERMES_MANAGER_IFACE}" Profiles |
+    "${HERMES_MANAGER_IFACE}" AvailableEuiccs |
     sed 's|^/[[:digit:]]* ||'
 }
 
+default_euicc() {
+  all_euiccs | head -1
+}
+
+euicc_or_default() {
+  if [ "$1" = "-euicc" ]; then
+    echo "/org/chromium/Hermes/euicc/$2"
+    shift 2
+  else
+    default_euicc
+  fi
+}
+
 esim_profile_from_iccid() {
-  local iccid="$1"
+  local euicc="$1"
+  [ -z "${euicc}" ] && error_exit "No euicc provided."
+
+  local iccid="$2"
   [ -z "${iccid}" ] && error_exit "No iccid provided."
 
+  local profiles
+  profiles=$(dbus_property "${HERMES}" "${euicc}" \
+    "${HERMES_EUICC_IFACE}" "InstalledProfiles" |
+               sed 's|^/[[:digit:]]* ||')
+  [ -z "${profiles}" ] && error_exit "${euicc} has no installed profiles."
+
   local profile
-  for profile in $(esim_profiles); do
+  for profile in ${profiles}; do
     local current
     current=$(dbus_property "${HERMES}" "${profile}" \
                             "${HERMES_PROFILE_IFACE}" Iccid)
@@ -158,43 +182,73 @@ esim_profile_from_iccid() {
 }
 
 esim_status() {
-  local profile
-  for profile in $(esim_profiles); do
-    echo "${profile}"
-    dbus_properties "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}" |
-        stripindexes
-    echo
+  local euicc
+  for euicc in $(all_euiccs); do
+    echo "${euicc}"
+    dbus_properties "${HERMES}" "${euicc}" "${HERMES_EUICC_IFACE}" |
+      stripindexes
+
+    local profile_type
+    for profile_type in "InstalledProfiles" "PendingProfiles"; do
+      echo "${profile_type}:" | indent 1
+      local profile
+      for profile in $(dbus_property "${HERMES}" "${euicc}" \
+        "${HERMES_EUICC_IFACE}" "${profile_type}" |
+                         sed 's|^/[[:digit:]]* ||'); do
+        echo "${profile}" | indent 2
+        dbus_properties "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}" |
+          stripindexes | indent 3
+        echo
+      done
+    done
+    echo ""
   done
 }
 
 esim_install() {
+  local euicc
+  euicc=$(euicc_or_default "$@")
+  [ -z "${euicc}" ] && error_exit "No euicc found."
+
   local activation_code="$1"
   local confirmation_code="$2"
   [ -z "${activation_code}" ] && error_exit "No activation_code provided."
 
-  dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
-            "${HERMES_MANAGER_IFACE}.InstallProfileFromActivationCode" \
+  dbus_call "${HERMES}" "${euicc}" \
+            "${HERMES_EUICC_IFACE}.InstallProfileFromActivationCode" \
             string:"${activation_code}" string:"${confirmation_code}"
 }
 
 esim_uninstall() {
+  local euicc
+  euicc=$(euicc_or_default "$@")
+  [ -z "${euicc}" ] && error_exit "No euicc found."
+
   local profile
-  profile=$(esim_profile_from_iccid "$@")
+  profile=$(esim_profile_from_iccid "${euicc}" "$@")
   [ -z "${profile}" ] && exit 1
-  dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
-            "${HERMES_MANAGER_IFACE}.UninstallProfile" objpath:"${profile}"
+  dbus_call "${HERMES}" "${euicc}" \
+            "${HERMES_EUICC_IFACE}.UninstallProfile" objpath:"${profile}"
 }
 
 esim_enable() {
+  local euicc
+  euicc=$(euicc_or_default "$@")
+  [ -z "${euicc}" ] && error_exit "No euicc found."
+
   local profile
-  profile=$(esim_profile_from_iccid "$@")
+  profile=$(esim_profile_from_iccid "${euicc}" "$@")
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Enable"
 }
 
 esim_disable() {
+  local euicc
+  euicc=$(euicc_or_default "$@")
+  [ -z "${euicc}" ] && error_exit "No euicc found."
+
   local profile
-  profile=$(esim_profile_from_iccid "$@")
+  profile=$(esim_profile_from_iccid "${euicc}" "$@")
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Disable"
 }
