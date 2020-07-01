@@ -41,7 +41,6 @@ config("target_defaults") {
 generate_dbus_adaptors("lorgnette-adaptors") {
   sources = [ "dbus_bindings/org.chromium.lorgnette.Manager.xml" ]
   dbus_adaptors_out_dir = "include/lorgnette/dbus_adaptors"
-  new_fd_bindings = true
 }
 
 generate_dbus_proxies("lorgnette-proxies") {

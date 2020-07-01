@@ -38,7 +38,6 @@ pkg_config("target_defaults") {
 generate_dbus_adaptors("smbproviderd_adaptors") {
   dbus_adaptors_out_dir = "include/dbus_adaptors"
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
-  new_fd_bindings = true
   sources = [ "dbus_bindings/org.chromium.SmbProvider.xml" ]
 }
 

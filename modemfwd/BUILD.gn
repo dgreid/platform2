@@ -60,7 +60,6 @@ generate_dbus_proxies("modemmanager_proxies") {
 generate_dbus_adaptors("modemfwd_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/modemfwd/dbus_adaptors"
-  new_fd_bindings = true
   sources = [ "dbus_bindings/org.chromium.Modemfwd.xml" ]
 }
 

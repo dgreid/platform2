@@ -27,7 +27,6 @@ group("all") {
 
 # D-Bus code generator.
 generate_dbus_adaptors("dbus_code_generator") {
-  new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/system_proxy"
   sources = [ "dbus_bindings/org.chromium.SystemProxy.xml" ]

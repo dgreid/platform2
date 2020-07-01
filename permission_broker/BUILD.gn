@@ -39,7 +39,6 @@ config("target_defaults") {
 generate_dbus_adaptors("permission_broker_adaptors") {
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/permission_broker/dbus_adaptors"
-  new_fd_bindings = true
   sources = [ "dbus_bindings/org.chromium.PermissionBroker.xml" ]
 }
 

@@ -7,11 +7,7 @@ template("generate_dbus_adaptors") {
                          [
                            "dbus_adaptors_out_dir",
                            "dbus_service_config",
-                           "new_fd_bindings",
                          ])
-  if (!defined(new_fd_bindings)) {
-    new_fd_bindings = true
-  }
   h_dir = "${root_gen_dir}/${dbus_adaptors_out_dir}"
 
   if (!defined(dbus_service_config) || dbus_service_config == "") {
@@ -30,8 +26,5 @@ template("generate_dbus_adaptors") {
       "--service-config=${service_config}",
       "--adaptor=${h_dir}/{{source_name_part}}.h",
     ]
-    if (new_fd_bindings) {
-      args += [ "--new-fd-bindings" ]
-    }
   }
 }

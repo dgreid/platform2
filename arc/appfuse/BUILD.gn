@@ -37,7 +37,6 @@ static_library("libarcappfuse") {
 }
 
 generate_dbus_adaptors("arc-appfuse-provider-adaptors") {
-  new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/appfuse/dbus_adaptors"
   sources = [ "dbus_bindings/org.chromium.ArcAppfuseProvider.xml" ]

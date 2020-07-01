@@ -35,8 +35,6 @@ pkg_config("target_defaults") {
 }
 
 generate_dbus_adaptors("generate_webservd_adaptors") {
-  new_fd_bindings = true
-
   # Not using dbus_service_config here deliberately in order not to
   # get tied to some constant service name, since it will be
   # provided by the consumer of libwebserv library.
@@ -93,7 +91,6 @@ pkg_config("webservd_common_config") {
 }
 
 generate_dbus_adaptors("generate_libwebserv_adaptors") {
-  new_fd_bindings = true
   dbus_service_config = "webservd/dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/dbus_bindings"
   sources = [
@@ -109,7 +106,6 @@ generate_dbus_proxies("generate_libwebserv_proxies") {
   dbus_service_config = ""
   mock_output_file = "include/libwebserv/dbus-mocks.h"
   proxy_output_file = "include/libwebserv/dbus-proxies.h"
-  new_fd_bindings = true
   sources = [
     "libwebserv/dbus_bindings/org.chromium.WebServer.RequestHandler.dbus-xml",
   ]

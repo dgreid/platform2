@@ -63,7 +63,6 @@ pkg_config("target_defaults") {
 }
 
 generate_dbus_adaptors("session_manager-adaptors") {
-  new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/login_manager/dbus_adaptors"
   sources = [ "dbus_bindings/org.chromium.SessionManagerInterface.xml" ]

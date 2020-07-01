@@ -59,7 +59,6 @@ proto_library("external-proto") {
 }
 
 generate_dbus_adaptors("debugd-adaptors") {
-  new_fd_bindings = true
   dbus_service_config = "dbus_bindings/dbus-service-config.json"
   dbus_adaptors_out_dir = "include/debugd/dbus_adaptors"
   sources = [ "dbus_bindings/org.chromium.debugd.xml" ]

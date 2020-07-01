@@ -30,14 +30,12 @@ pkg_config("target_defaults") {
 generate_dbus_adaptors("crosdns_adaptors") {
   dbus_adaptors_out_dir = "include/crosdns/dbus_adaptors"
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
-  new_fd_bindings = true
   sources = [ "dbus_adaptors/org.chromium.CrosDns.xml" ]
 }
 
 generate_dbus_proxies("crosdns_proxies") {
   dbus_service_config = "dbus_adaptors/dbus-service-config.json"
   proxy_output_file = "include/crosdns/dbus_adaptors/dbus-proxies.h"
-  new_fd_bindings = true
   sources = [ "dbus_adaptors/org.chromium.CrosDns.xml" ]
 }
 
