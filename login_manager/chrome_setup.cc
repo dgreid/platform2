@@ -653,12 +653,7 @@ void SetUpFingerprintSensorLocationFlag(
   if (!cros_config ||
       !cros_config->GetString(kFingerprintPath, kFingerprintSensorLocationField,
                               &fingerprint_sensor_location)) {
-    // TODO(rsorokin): Remove this after nocturne supports unibuild.
-    // crbug.com/893725.
-    if (builder->UseFlagIsSet("nocturne"))
-      fingerprint_sensor_location = "power-button-top-left";
-    else
-      return;
+    return;
   }
 
   if (fingerprint_sensor_location != "none") {
@@ -686,14 +681,7 @@ void SetUpPowerButtonPositionFlag(ChromiumCommandBuilder* builder,
                               &edge_as_string) ||
       !cros_config->GetString(kPowerButtonPositionPath,
                               kPowerButtonPositionField, &position_as_string)) {
-    // TODO(minch): Remove this after nocturne supports unibuild.
-    // crbug.com/893725.
-    if (builder->UseFlagIsSet("nocturne")) {
-      edge_as_string = "top";
-      position_as_string = "0.1";
-    } else {
-      return;
-    }
+    return;
   }
 
   double position_as_double = 0;
