@@ -756,11 +756,6 @@ std::unique_ptr<Service> Service::Create(base::Closure quit_closure) {
 Service::Service(base::Closure quit_closure)
     : next_seneschal_server_port_(kFirstSeneschalServerPort),
       quit_closure_(std::move(quit_closure)),
-#ifdef __arm__
-      resync_vm_clocks_on_resume_(true),
-#else
-      resync_vm_clocks_on_resume_(false),
-#endif
       host_kernel_version_(GetKernelVersion()),
       weak_ptr_factory_(this) {
 }
@@ -2008,14 +2003,12 @@ std::unique_ptr<dbus::Response> Service::ResumeVm(
 
   vm->Resume();
 
-  if (resync_vm_clocks_on_resume_) {
-    string failure_reason;
-    if (vm->SetTime(&failure_reason)) {
-      LOG(INFO) << "Successfully set VM clock in " << iter->first << ".";
-    } else {
-      LOG(ERROR) << "Failed to set VM clock in " << iter->first << ": "
-                 << failure_reason;
-    }
+  string failure_reason;
+  if (vm->SetTime(&failure_reason)) {
+    LOG(INFO) << "Successfully set VM clock in " << iter->first << ".";
+  } else {
+    LOG(ERROR) << "Failed to set VM clock in " << iter->first << ": "
+               << failure_reason;
   }
 
   vm->SetResolvConfig(nameservers_, search_domains_);
@@ -3569,39 +3562,20 @@ void Service::HandleSuspendImminent() {
 }
 
 void Service::HandleSuspendDone() {
-  for (const auto& pair : vms_) {
-    auto& vm = pair.second;
-    if (vm->UsesExternalSuspendSignals()) {
-      continue;
-    }
-    vm->Resume();
-  }
-
-  // Now that all VMs have been woken up, resync the VM clocks if necessary.
-  if (resync_vm_clocks_on_resume_) {
-    int successes = 0;
-    for (auto& vm_entry : vms_) {
-      auto& vm = vm_entry.second;
-      if (vm->UsesExternalSuspendSignals()) {
-        continue;
-      }
-      string failure_reason;
-      if (vm->SetTime(&failure_reason)) {
-        successes++;
-      } else {
-        LOG(ERROR) << "Failed to set VM clock in " << vm_entry.first << ": "
-                   << failure_reason;
-      }
-    }
-
-    LOG(INFO) << "Successfully set " << successes << " VM clocks.";
-  }
-
-  for (auto& vm_entry : vms_) {
+  for (const auto& vm_entry : vms_) {
     auto& vm = vm_entry.second;
     if (vm->UsesExternalSuspendSignals()) {
       continue;
     }
+
+    vm->Resume();
+
+    string failure_reason;
+    if (!vm->SetTime(&failure_reason)) {
+      LOG(ERROR) << "Failed to set VM clock in " << vm_entry.first << ": "
+                 << failure_reason;
+    }
+
     vm->SetResolvConfig(nameservers_, search_domains_);
   }
 }

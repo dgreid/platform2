@@ -296,9 +296,6 @@ class Service final {
   // Signal must be connected before we can call SetTremplinStarted in a VM.
   bool is_tremplin_started_signal_connected_ = false;
 
-  // Whether we should re-synchronize VM clocks on resume from sleep.
-  const bool resync_vm_clocks_on_resume_;
-
   // List of currently executing operations to import/export disk images.
   struct DiskOpInfo {
     std::unique_ptr<DiskImageOperation> op;
