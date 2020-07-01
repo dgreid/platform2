@@ -88,13 +88,12 @@ TEST_F(GlibBridgeTest, ReadFileCallback) {
   auto read_results_ready = [](GObject* source, GAsyncResult* res,
                                gpointer user_data) {
     UserData* ud = reinterpret_cast<UserData*>(user_data);
-    ud->bytes_read = g_input_stream_read_finish(
-        reinterpret_cast<GInputStream*>(source), res, nullptr);
+    ud->bytes_read =
+        g_input_stream_read_finish(G_INPUT_STREAM(source), res, nullptr);
     ud->test->Finish();
   };
   g_input_stream_read_async(
-      reinterpret_cast<GInputStream*>(istream.get()), buf, kBufSize,
-      G_PRIORITY_DEFAULT, nullptr,
+      G_INPUT_STREAM(istream.get()), buf, kBufSize, G_PRIORITY_DEFAULT, nullptr,
       static_cast<GAsyncReadyCallback>(read_results_ready), &user_data);
   Start();
 
@@ -124,10 +123,10 @@ TEST_F(GlibBridgeTest, WriteFileCallback) {
         reinterpret_cast<GOutputStream*>(source), res, nullptr);
     ud->test->Finish();
   };
-  g_output_stream_write_async(
-      reinterpret_cast<GOutputStream*>(ostream.get()), buf.data(), buf.size(),
-      G_PRIORITY_DEFAULT, nullptr, static_cast<GAsyncReadyCallback>(write_done),
-      &user_data);
+  g_output_stream_write_async(G_OUTPUT_STREAM(ostream.get()), buf.data(),
+                              buf.size(), G_PRIORITY_DEFAULT, nullptr,
+                              static_cast<GAsyncReadyCallback>(write_done),
+                              &user_data);
   Start();
 
   ASSERT_EQ(user_data.bytes_written, buf.size());
@@ -270,8 +269,7 @@ gboolean AllCompleteCheck(gpointer user_data) {
 void ReadResultsReady(GObject* source, GAsyncResult* res, gpointer user_data) {
   IoJob* job = reinterpret_cast<IoJob*>(user_data);
   job->complete =
-      g_input_stream_read_finish(reinterpret_cast<GInputStream*>(source), res,
-                                 nullptr) >= 0;
+      g_input_stream_read_finish(G_INPUT_STREAM(source), res, nullptr) >= 0;
   ScheduleIdleCallback(static_cast<GSourceFunc>(&AllCompleteCheck),
                        job->user_data);
 }
@@ -291,8 +289,8 @@ TEST_F(GlibBridgeTest, MultipleReadAndIdleCallbacks) {
 
   for (IoJob& io_job : user_data.io_jobs) {
     g_input_stream_read_async(
-        reinterpret_cast<GInputStream*>(io_job.istream.get()), &io_job.buf[0],
-        io_job.buf.size(), G_PRIORITY_DEFAULT, nullptr,
+        G_INPUT_STREAM(io_job.istream.get()), &io_job.buf[0], io_job.buf.size(),
+        G_PRIORITY_DEFAULT, nullptr,
         static_cast<GAsyncReadyCallback>(&ReadResultsReady), &io_job);
   }
   Start();
