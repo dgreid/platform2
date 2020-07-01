@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/cros_healthd/utils/storage/default_device_adapter.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -16,7 +17,8 @@ TEST(DefaultDeviceAdapterTest, ModelFile) {
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("model_file_test", adapter.GetDeviceName());
-  EXPECT_EQ("test0_model", adapter.GetModel());
+  ASSERT_TRUE(adapter.GetModel().ok());
+  EXPECT_EQ("test0_model", adapter.GetModel().value());
 }
 
 TEST(DefaultDeviceAdapterTest, NameFile) {
@@ -25,7 +27,8 @@ TEST(DefaultDeviceAdapterTest, NameFile) {
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("name_file_test", adapter.GetDeviceName());
-  EXPECT_EQ("test1_model", adapter.GetModel());
+  ASSERT_TRUE(adapter.GetModel().ok());
+  EXPECT_EQ("test1_model", adapter.GetModel().value());
 }
 
 // Test when device is present, but data is missing.
@@ -36,7 +39,9 @@ TEST(DefaultDeviceAdapterTest, NoData) {
   DefaultDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("missing_model_and_name_test", adapter.GetDeviceName());
-  EXPECT_EQ("", adapter.GetModel());
+  auto model_or = adapter.GetModel();
+  ASSERT_FALSE(model_or.ok());
+  EXPECT_EQ(StatusCode::kUnavailable, model_or.status().code());
 }
 
 }  // namespace diagnostics

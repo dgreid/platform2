@@ -9,6 +9,7 @@
 
 #include <base/files/file_path.h>
 
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
 
 namespace diagnostics {
@@ -24,7 +25,7 @@ class EmmcDeviceAdapter : public StorageDeviceAdapter {
   ~EmmcDeviceAdapter() override = default;
 
   std::string GetDeviceName() const override;
-  std::string GetModel() const override;
+  StatusOr<std::string> GetModel() const override;
 
  private:
   const base::FilePath dev_sys_path_;

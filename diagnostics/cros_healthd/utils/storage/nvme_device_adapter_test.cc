@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/cros_healthd/utils/storage/nvme_device_adapter.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -16,7 +17,8 @@ TEST(NvmeDeviceAdapterTest, OkData) {
   NvmeDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("nvme0n1", adapter.GetDeviceName());
-  EXPECT_EQ("test_nvme_model", adapter.GetModel());
+  ASSERT_TRUE(adapter.GetModel().ok());
+  EXPECT_EQ("test_nvme_model", adapter.GetModel().value());
 }
 
 // Test when device is present, but data is missing.
@@ -26,7 +28,9 @@ TEST(NvmeDeviceAdapterTest, NoData) {
   NvmeDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("nvme0n2", adapter.GetDeviceName());
-  EXPECT_EQ("", adapter.GetModel());
+  auto model_or = adapter.GetModel();
+  ASSERT_FALSE(model_or.ok());
+  EXPECT_EQ(StatusCode::kUnavailable, model_or.status().code());
 }
 
 }  // namespace diagnostics

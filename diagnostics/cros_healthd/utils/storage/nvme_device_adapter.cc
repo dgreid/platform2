@@ -6,7 +6,10 @@
 
 #include <string>
 
+#include <base/strings/stringprintf.h>
+
 #include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -23,10 +26,13 @@ std::string NvmeDeviceAdapter::GetDeviceName() const {
   return dev_sys_path_.BaseName().value();
 }
 
-std::string NvmeDeviceAdapter::GetModel() const {
+StatusOr<std::string> NvmeDeviceAdapter::GetModel() const {
   std::string model;
   if (!ReadAndTrimString(dev_sys_path_, kModelFile, &model)) {
-    return "";
+    return Status(
+        StatusCode::kUnavailable,
+        base::StringPrintf("Failed to read %s/%s",
+                           dev_sys_path_.value().c_str(), kModelFile));
   }
   return model;
 }

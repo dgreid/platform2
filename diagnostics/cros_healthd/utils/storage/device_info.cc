@@ -104,9 +104,11 @@ Status StorageDeviceInfo::PopulateDeviceInfoImpl(
   output_info->path = dev_node_path_.value();
   output_info->type = subsystem_;
 
-  RETURN_IF_ERROR(iostat_.Update());
   ASSIGN_OR_RETURN(output_info->size,
                    platform_->GetDeviceSizeBytes(dev_node_path_));
+  ASSIGN_OR_RETURN(output_info->name, adapter_->GetModel());
+
+  RETURN_IF_ERROR(iostat_.Update());
   ASSIGN_OR_RETURN(uint64_t sector_size,
                    platform_->GetDeviceBlockSizeBytes(dev_node_path_));
 
@@ -129,8 +131,6 @@ Status StorageDeviceInfo::PopulateDeviceInfoImpl(
       sector_size * iostat_.GetWrittenSectors();
   output_info->bytes_read_since_last_boot =
       sector_size * iostat_.GetReadSectors();
-
-  output_info->name = adapter_->GetModel();
 
   return Status::OkStatus();
 }

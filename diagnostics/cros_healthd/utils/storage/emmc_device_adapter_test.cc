@@ -7,6 +7,7 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/cros_healthd/utils/storage/emmc_device_adapter.h"
+#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
@@ -16,7 +17,8 @@ TEST(EmmcDeviceAdapterTest, OkData) {
   EmmcDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("mmcblk0", adapter.GetDeviceName());
-  EXPECT_EQ("test_mmc_model", adapter.GetModel());
+  ASSERT_TRUE(adapter.GetModel().ok());
+  EXPECT_EQ("test_mmc_model", adapter.GetModel().value());
 }
 
 // Test when device is present, but data is missing.
@@ -26,7 +28,9 @@ TEST(EmmcDeviceAdapterTest, NoData) {
   EmmcDeviceAdapter adapter{base::FilePath(kPath)};
 
   EXPECT_EQ("mmcblk1", adapter.GetDeviceName());
-  EXPECT_EQ("", adapter.GetModel());
+  auto model_or = adapter.GetModel();
+  ASSERT_FALSE(model_or.ok());
+  EXPECT_EQ(StatusCode::kUnavailable, model_or.status().code());
 }
 
 }  // namespace diagnostics
