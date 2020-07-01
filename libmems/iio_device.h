@@ -7,6 +7,7 @@
 
 #include <iio.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -30,7 +31,7 @@ class LIBMEMS_EXPORT IioDevice {
   // first is channel index; second is the channel's value
   using IioSample = base::flat_map<int32_t, int64_t>;
 
-  virtual ~IioDevice() = default;
+  virtual ~IioDevice();
 
   // Returns the IIO context that contains this device.
   virtual IioContext* GetContext() const = 0;
@@ -99,15 +100,15 @@ class LIBMEMS_EXPORT IioDevice {
   virtual IioDevice* GetTrigger() = 0;
 
   // Returns all channels belonging to this device.
-  virtual std::vector<IioChannel*> GetAllChannels() = 0;
+  std::vector<IioChannel*> GetAllChannels();
 
   // Finds the IIO channel |index| as the index in this device and returns it.
   // It will return nullptr if no such channel can be found.
-  virtual IioChannel* GetChannel(int32_t index) = 0;
+  IioChannel* GetChannel(int32_t index);
 
   // Finds the IIO channel |name| as id or name for this device and returns it.
   // It will return nullptr if no such channel can be found.
-  virtual IioChannel* GetChannel(const std::string& name) = 0;
+  IioChannel* GetChannel(const std::string& name);
 
   // Returns the sample size in this device.
   // Returns base::nullopt on failure.
@@ -143,10 +144,16 @@ class LIBMEMS_EXPORT IioDevice {
   virtual base::Optional<IioSample> ReadSample() = 0;
 
  protected:
-  IioDevice() = default;
+  struct ChannelData {
+    std::string chn_id;
+    std::unique_ptr<IioChannel> chn;
+  };
 
   static base::Optional<int> GetIdAfterPrefix(const char* id_str,
                                               const char* prefix);
+
+  IioDevice() = default;
+  std::vector<ChannelData> channels_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(IioDevice);

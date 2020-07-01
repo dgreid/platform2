@@ -219,30 +219,6 @@ IioDevice* IioDeviceImpl::GetTrigger() {
   return trigger_device;
 }
 
-std::vector<IioChannel*> IioDeviceImpl::GetAllChannels() {
-  std::vector<IioChannel*> channels;
-  for (const ChannelData& channel_data : channels_)
-    channels.push_back(channel_data.chn.get());
-
-  return channels;
-}
-
-IioChannel* IioDeviceImpl::GetChannel(int32_t index) {
-  if (index < 0 || index >= channels_.size())
-    return nullptr;
-
-  return channels_[index].chn.get();
-}
-
-IioChannel* IioDeviceImpl::GetChannel(const std::string& name) {
-  for (size_t i = 0; i < channels_.size(); ++i) {
-    if (channels_[i].chn_id == name)
-      return channels_[i].chn.get();
-  }
-
-  return nullptr;
-}
-
 base::Optional<size_t> IioDeviceImpl::GetSampleSize() const {
   ssize_t sample_size = iio_device_get_sample_size(device_);
   if (sample_size < 0) {

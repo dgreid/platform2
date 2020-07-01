@@ -8,7 +8,11 @@
 
 #include <base/strings/string_number_conversions.h>
 
+#include "libmems/iio_channel.h"
+
 namespace libmems {
+
+IioDevice::~IioDevice() = default;
 
 bool IioDevice::IsSingleSensor() const {
   return ReadStringAttribute("location").has_value();
@@ -29,6 +33,30 @@ base::Optional<int> IioDevice::GetIdAfterPrefix(const char* id_str,
     return value;
 
   return base::nullopt;
+}
+
+std::vector<IioChannel*> IioDevice::GetAllChannels() {
+  std::vector<IioChannel*> channels;
+  for (const auto& channel_data : channels_)
+    channels.push_back(channel_data.chn.get());
+
+  return channels;
+}
+
+IioChannel* IioDevice::GetChannel(int32_t index) {
+  if (index < 0 || index >= channels_.size())
+    return nullptr;
+
+  return channels_[index].chn.get();
+}
+
+IioChannel* IioDevice::GetChannel(const std::string& name) {
+  for (size_t i = 0; i < channels_.size(); ++i) {
+    if (channels_[i].chn_id == name)
+      return channels_[i].chn.get();
+  }
+
+  return nullptr;
 }
 
 }  // namespace libmems

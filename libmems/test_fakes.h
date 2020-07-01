@@ -201,13 +201,9 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   bool SetTrigger(IioDevice* trigger) override;
   IioDevice* GetTrigger() override { return trigger_; }
 
-  void AddChannel(FakeIioChannel* chn) {
-    channels_.push_back({chn->GetId(), chn});
+  void AddChannel(std::unique_ptr<FakeIioChannel> chn) {
+    channels_.push_back({chn->GetId(), std::move(chn)});
   }
-
-  std::vector<IioChannel*> GetAllChannels() override;
-  IioChannel* GetChannel(int32_t index) override;
-  IioChannel* GetChannel(const std::string& id) override;
 
   bool EnableBuffer(size_t n) override;
   bool DisableBuffer() override;
@@ -255,7 +251,6 @@ class LIBMEMS_EXPORT FakeIioDevice : public IioDevice {
   std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, double> double_attributes_;
   IioDevice* trigger_;
-  std::vector<ChannelData> channels_;
 
   // For |EnableBuffer|, |DisableBuffer|, and |IsBufferEnabled|.
   size_t buffer_length_ = 0;
@@ -280,8 +275,8 @@ class LIBMEMS_EXPORT FakeIioContext : public IioContext {
  public:
   FakeIioContext() = default;
 
-  void AddDevice(FakeIioDevice* device);
-  void AddTrigger(FakeIioDevice* trigger);
+  void AddDevice(std::unique_ptr<FakeIioDevice> device);
+  void AddTrigger(std::unique_ptr<FakeIioDevice> trigger);
 
   iio_context* GetCurrentContext() const override { return nullptr; };
   void Reload() override {}
@@ -299,16 +294,16 @@ class LIBMEMS_EXPORT FakeIioContext : public IioContext {
   std::vector<IioDevice*> GetAllTriggers() override;
 
  private:
-  IioDevice* GetFakeById(int id,
-                         const std::map<int, FakeIioDevice*>& devices_map);
+  IioDevice* GetFakeById(
+      int id, const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map);
   std::vector<IioDevice*> GetFakeByName(
       const std::string& name,
-      const std::map<int, FakeIioDevice*>& devices_map);
+      const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map);
   std::vector<IioDevice*> GetFakeAll(
-      const std::map<int, FakeIioDevice*>& devices_map);
+      const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map);
 
-  std::map<int, FakeIioDevice*> devices_;
-  std::map<int, FakeIioDevice*> triggers_;
+  std::map<int, std::unique_ptr<FakeIioDevice>> devices_;
+  std::map<int, std::unique_ptr<FakeIioDevice>> triggers_;
 
   uint32_t timeout_;
 };

@@ -123,30 +123,6 @@ bool FakeIioDevice::SetTrigger(IioDevice* trigger) {
   return true;
 }
 
-std::vector<IioChannel*> FakeIioDevice::GetAllChannels() {
-  std::vector<IioChannel*> channels;
-  for (const auto& channel_data : channels_)
-    channels.push_back(channel_data.chn);
-
-  return channels;
-}
-
-IioChannel* FakeIioDevice::GetChannel(int32_t index) {
-  if (index < 0 || index >= channels_.size())
-    return nullptr;
-
-  return channels_[index].chn;
-}
-
-IioChannel* FakeIioDevice::GetChannel(const std::string& id) {
-  for (size_t i = 0; i < channels_.size(); ++i) {
-    if (id == channels_[i].chn_id)
-      return channels_[i].chn;
-  }
-
-  return nullptr;
-}
-
 bool FakeIioDevice::EnableBuffer(size_t n) {
   buffer_length_ = n;
   buffer_enabled_ = true;
@@ -201,8 +177,10 @@ base::Optional<IioDevice::IioSample> FakeIioDevice::ReadSample() {
   }
 
   IioDevice::IioSample sample;
-  for (int32_t i = 0; i < channels_.size(); ++i) {
-    auto value = channels_[i].chn->GetData(sample_index_);
+  auto channels = GetAllChannels();
+  for (int32_t i = 0; i < channels.size(); ++i) {
+    FakeIioChannel* chn = dynamic_cast<FakeIioChannel*>(channels[i]);
+    auto value = chn->GetData(sample_index_);
     if (!value.has_value()) {
       LOG(ERROR) << "Channel: " << channels_[i].chn_id << " has no sample";
       return base::nullopt;
@@ -315,14 +293,14 @@ void FakeIioDevice::SetPause() {
     CHECK(ReadByte());
 }
 
-void FakeIioContext::AddDevice(FakeIioDevice* device) {
-  CHECK(device);
-  devices_.emplace(device->GetId(), device);
+void FakeIioContext::AddDevice(std::unique_ptr<FakeIioDevice> device) {
+  CHECK(device.get());
+  devices_.emplace(device->GetId(), std::move(device));
 }
 
-void FakeIioContext::AddTrigger(FakeIioDevice* trigger) {
-  CHECK(trigger);
-  triggers_.emplace(trigger->GetId(), trigger);
+void FakeIioContext::AddTrigger(std::unique_ptr<FakeIioDevice> trigger) {
+  CHECK(trigger.get());
+  triggers_.emplace(trigger->GetId(), std::move(trigger));
 }
 
 std::vector<IioDevice*> FakeIioContext::GetDevicesByName(
@@ -352,27 +330,28 @@ std::vector<IioDevice*> FakeIioContext::GetAllTriggers() {
 }
 
 IioDevice* FakeIioContext::GetFakeById(
-    int id, const std::map<int, FakeIioDevice*>& devices_map) {
+    int id, const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map) {
   auto k = devices_map.find(id);
-  return (k == devices_map.end()) ? nullptr : k->second;
+  return (k == devices_map.end()) ? nullptr : k->second.get();
 }
 
 std::vector<IioDevice*> FakeIioContext::GetFakeByName(
-    const std::string& name, const std::map<int, FakeIioDevice*>& devices_map) {
+    const std::string& name,
+    const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map) {
   std::vector<IioDevice*> devices;
   for (auto const& it : devices_map) {
     if (name.compare(it.second->GetName()) == 0)
-      devices.push_back(it.second);
+      devices.push_back(it.second.get());
   }
 
   return devices;
 }
 
 std::vector<IioDevice*> FakeIioContext::GetFakeAll(
-    const std::map<int, FakeIioDevice*>& devices_map) {
+    const std::map<int, std::unique_ptr<FakeIioDevice>>& devices_map) {
   std::vector<IioDevice*> devices;
   for (auto const& it : devices_map)
-    devices.push_back(it.second);
+    devices.push_back(it.second.get());
 
   return devices;
 }
