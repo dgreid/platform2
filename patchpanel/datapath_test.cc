@@ -498,6 +498,12 @@ TEST(DatapathTest, AddIPv4Route) {
 
 TEST(DatapathTest, AddSNATMarkRules) {
   MockProcessRunner runner;
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("filter"),
+               ElementsAre("-A", "FORWARD", "-m", "mark", "--mark", "1", "-m",
+                           "state", "--state", "INVALID", "-j", "DROP", "-w"),
+               true));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-m", "mark",
                                            "--mark", "1", "-j", "ACCEPT", "-w"),
@@ -513,6 +519,12 @@ TEST(DatapathTest, AddSNATMarkRules) {
 
 TEST(DatapathTest, RemoveSNATMarkRules) {
   MockProcessRunner runner;
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("filter"),
+               ElementsAre("-D", "FORWARD", "-m", "mark", "--mark", "1", "-m",
+                           "state", "--state", "INVALID", "-j", "DROP", "-w"),
+               true));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-D", "FORWARD", "-m", "mark",
                                            "--mark", "1", "-j", "ACCEPT", "-w"),

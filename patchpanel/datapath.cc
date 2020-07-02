@@ -17,8 +17,8 @@
 
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
+#include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
-#include "base/posix/eintr_wrapper.h"
 #include <brillo/userdb_utils.h>
 
 #include "patchpanel/net_util.h"
@@ -425,6 +425,13 @@ void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
 }
 
 bool Datapath::AddSNATMarkRules() {
+  // chromium:1050579: INVALID packets cannot be tracked by conntrack therefore
+  // need to be explicitly dropped.
+  if (process_runner_->iptables(
+          "filter", {"-A", "FORWARD", "-m", "mark", "--mark", "1", "-m",
+                     "state", "--state", "INVALID", "-j", "DROP", "-w"}) != 0) {
+    return false;
+  }
   if (process_runner_->iptables(
           "filter", {"-A", "FORWARD", "-m", "mark", "--mark", "1", "-j",
                      "ACCEPT", "-w"}) != 0) {
@@ -444,6 +451,9 @@ void Datapath::RemoveSNATMarkRules() {
                                     "1", "-j", "MASQUERADE", "-w"});
   process_runner_->iptables("filter", {"-D", "FORWARD", "-m", "mark", "--mark",
                                        "1", "-j", "ACCEPT", "-w"});
+  process_runner_->iptables(
+      "filter", {"-D", "FORWARD", "-m", "mark", "--mark", "1", "-m", "state",
+                 "--state", "INVALID", "-j", "DROP", "-w"});
 }
 
 bool Datapath::AddInterfaceSNAT(const std::string& ifname) {
