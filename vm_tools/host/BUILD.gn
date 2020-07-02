@@ -45,10 +45,6 @@ config("host_target_defaults") {
   defines = [
     "USE_CROSVM_WL_DMABUF=${use.crosvm_wl_dmabuf}",
     "USE_PMEM_DEVICE_FOR_ROOTFS=${use.amd64}",
-
-    # Enable virtio-video decoder device only on x86 platforms.
-    # TODO(b/151399776): Remove this variable once ARM is supported.
-    "USE_VIRTIO_VIDEO_DECODER=${use.amd64}",
   ]
 }
 

@@ -235,6 +235,7 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--cid",             std::to_string(vsock_cid_) },
     { "--socket",          GetVmSocketPath() },
     { "--gpu",             "" },
+    { "--video-decoder",   ""},
     { "--wayland-sock",    kWaylandSocket },
     { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
     { "--wayland-dmabuf",  "" },
@@ -253,11 +254,6 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
-
-  // Enable virtio-video decoder device on x86 platforms.
-  // TODO(b/151399776): Enable video decoder on all platforms.
-  if (USE_VIRTIO_VIDEO_DECODER)
-    args.emplace_back("--video-decoder", "");
 
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));
