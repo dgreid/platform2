@@ -196,7 +196,7 @@ class Cellular : public Device,
                  Error* error,
                  const ResultCallback& callback) override;
   void Reset(Error* error, const ResultCallback& callback) override;
-  bool IsIPv6Allowed() const override;
+  bool IsIPv6DisabledByDefault() const override;
   void DropConnection() override;
   void SetServiceState(Service::ConnectState state) override;
   void SetServiceFailure(Service::ConnectFailure failure_state) override;

@@ -23,9 +23,9 @@
 #include <base/files/file_util.h>
 #include <base/memory/ref_counted.h>
 #include <base/stl_util.h>
-#include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 
 #include "shill/connection.h"
@@ -152,6 +152,7 @@ Device::Device(Manager* manager,
       rtnl_handler_(RTNLHandler::GetInstance()),
       time_(Time::GetInstance()),
       last_link_monitor_failed_time_(0),
+      ipv6_disabled_(false),
       is_loose_routing_(false),
       is_multi_homed_(false),
       fixed_ip_params_(false),
@@ -182,6 +183,8 @@ Device::Device(Manager* manager,
   // kDBusObjectProperty: Register in Cellular
 
   store_.RegisterConstString(kInterfaceProperty, &link_name_);
+  HelpRegisterDerivedBool(kIPv6DisabledProperty, &Device::GetIPv6Disabled,
+                          &Device::SetIPv6Disabled, &Device::ClearIPv6Disabled);
   HelpRegisterConstDerivedRpcIdentifier(
       kSelectedServiceProperty, &Device::GetSelectedServiceRpcIdentifier);
   HelpRegisterConstDerivedRpcIdentifiers(kIPConfigsProperty,
@@ -287,20 +290,40 @@ void Device::RefreshIPConfig(Error* /*error*/) {
   }
 }
 
-bool Device::IsIPv6Allowed() const {
+bool Device::GetIPv6Disabled(Error* error) {
+  return ipv6_disabled_;
+}
+
+bool Device::SetIPv6Disabled(const bool& disabling, Error* /*error*/) {
+  if (disabling == ipv6_disabled_)
+    return false;
+  ipv6_disabled_ = disabling;
+  if (ipv6_disabled_) {
+    StopIPv6();
+  } else {
+    StartIPv6();
+  }
   return true;
 }
 
-void Device::DisableIPv6() {
+void Device::ClearIPv6Disabled(Error* error) {
+  SetIPv6Disabled(IsIPv6DisabledByDefault(), error);
+}
+
+bool Device::IsIPv6DisabledByDefault() const {
+  return false;
+}
+
+void Device::StopIPv6() {
   SLOG(this, 2) << __func__;
   SetIPFlag(IPAddress::kFamilyIPv6, kIPFlagDisableIPv6, "1");
 }
 
-void Device::EnableIPv6() {
+void Device::StartIPv6() {
   SLOG(this, 2) << __func__;
-  if (!IsIPv6Allowed()) {
+  if (ipv6_disabled_) {
     LOG(INFO) << "Skip enabling IPv6 on " << link_name_
-              << " as it is not allowed.";
+              << " as it is disabled.";
     return;
   }
   SetIPFlag(IPAddress::kFamilyIPv6, kIPFlagDisableIPv6, "0");
@@ -512,7 +535,7 @@ void Device::ResetConnection() {
 }
 
 void Device::DestroyIPConfig() {
-  DisableIPv6();
+  StopIPv6();
   bool ipconfig_changed = false;
   if (ipconfig_) {
     ipconfig_->ReleaseIP(IPConfig::kReleaseReasonDisconnect);
@@ -772,7 +795,7 @@ bool Device::AcquireIPConfig() {
 
 bool Device::AcquireIPConfigWithLeaseName(const string& lease_name) {
   DestroyIPConfig();
-  EnableIPv6();
+  StartIPv6();
   bool arp_gateway = manager_->GetArpGateway() && ShouldUseArpGateway();
   DHCPConfigRefPtr dhcp_config;
   if (selected_service_) {
@@ -849,7 +872,7 @@ void Device::UpdateBlackholeUserTraffic() {
 
 void Device::AssignIPConfig(const IPConfig::Properties& properties) {
   DestroyIPConfig();
-  EnableIPv6();
+  StartIPv6();
   ipconfig_ = new IPConfig(control_interface(), link_name_);
   ipconfig_->set_properties(properties);
   dispatcher()->PostTask(FROM_HERE, Bind(&Device::OnIPConfigUpdated,
@@ -858,6 +881,15 @@ void Device::AssignIPConfig(const IPConfig::Properties& properties) {
 
 void Device::DestroyIPConfigLease(const string& name) {
   dhcp_provider_->DestroyLease(name);
+}
+
+void Device::HelpRegisterDerivedBool(const string& name,
+                                     bool (Device::*get)(Error* error),
+                                     bool (Device::*set)(const bool&, Error*),
+                                     void (Device::*clear)(Error*)) {
+  store_.RegisterDerivedBool(
+      name,
+      BoolAccessor(new CustomAccessor<Device, bool>(this, get, set, clear)));
 }
 
 void Device::HelpRegisterConstDerivedString(

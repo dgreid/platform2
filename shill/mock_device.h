@@ -45,8 +45,6 @@ class MockDevice : public Device {
   MOCK_METHOD(void, Scan, (Error*, const std::string&), (override));
   MOCK_METHOD(bool, Load, (const StoreInterface*), (override));
   MOCK_METHOD(bool, Save, (StoreInterface*), (override));
-  MOCK_METHOD(void, DisableIPv6, (), (override));
-  MOCK_METHOD(void, EnableIPv6, (), (override));
   MOCK_METHOD(void, EnableIPv6Privacy, (), (override));
   MOCK_METHOD(void, SetLooseRouting, (bool), (override));
   MOCK_METHOD(void, SetIsMultiHomed, (bool), (override));

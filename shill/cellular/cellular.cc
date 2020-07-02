@@ -165,6 +165,9 @@ Cellular::Cellular(ModemInfo* modem_info,
       weak_ptr_factory_(this) {
   RegisterProperties();
 
+  Error error;
+  SetIPv6Disabled(IsIPv6DisabledByDefault(), &error);
+
   // TODO(pprabhu) Split MobileOperatorInfo into a context that stores the
   // costly database, and lighter objects that |Cellular| can own.
   // crbug.com/363874
@@ -363,7 +366,7 @@ void Cellular::Stop(Error* error, const EnabledStateChangedCallback& callback) {
   // this device using the old IP, we need to make sure we prevent further
   // packets from going out.
   if (manager() && manager()->device_info() && socket_destroyer_) {
-    DisableIPv6();
+    StopIPv6();
 
     for (const auto& address :
          manager()->device_info()->GetAddresses(interface_index())) {
@@ -474,7 +477,7 @@ void Cellular::Reset(Error* error, const ResultCallback& callback) {
   capability_->Reset(error, callback);
 }
 
-bool Cellular::IsIPv6Allowed() const {
+bool Cellular::IsIPv6DisabledByDefault() const {
   // A cellular device is disabled before the system goes into suspend mode.
   // However, outstanding TCP sockets may not be nuked when the associated
   // network interface goes down. When the system resumes from suspend, the
@@ -485,7 +488,7 @@ bool Cellular::IsIPv6Allowed() const {
   // the same modem within a connection session and may drop the connection.
   // Here we disable IPv6 support on cellular devices to work around the issue.
   //
-  return false;
+  return true;
 }
 
 void Cellular::DropConnection() {
@@ -577,7 +580,7 @@ void Cellular::OnAfterResume() {
   }
 
   // Re-enable IPv6 so we can renegotiate an IP address.
-  EnableIPv6();
+  StartIPv6();
 
   // TODO(quiche): Consider if this should be conditional. If, e.g.,
   // the device was still disabling when we suspended, will trying to

@@ -124,13 +124,13 @@ class Device : public base::RefCounted<Device> {
   virtual void Reset(Error* error, const ResultCallback& callback);
   virtual void RefreshIPConfig(Error* error);
 
-  // Returns true if IPv6 is allowed and should be enabled when the device
+  // Returns false if IPv6 is allowed and should be enabled when the device
   // tries to acquire an IP configuration. The default implementation allows
   // IPv6, which can be overridden by a derived class.
-  virtual bool IsIPv6Allowed() const;
+  virtual bool IsIPv6DisabledByDefault() const;
 
-  mockable void DisableIPv6();
-  mockable void EnableIPv6();
+  void StopIPv6();
+  void StartIPv6();
   mockable void EnableIPv6Privacy();
 
   // Returns true if the selected service on the device (if any) is connected.
@@ -301,7 +301,8 @@ class Device : public base::RefCounted<Device> {
   // Programs the NIC to wake on every packet of IP protocol type belonging to
   // |packet_types|. |error| indicates the result of the operation.
   virtual void AddWakeOnPacketOfTypes(
-      const std::vector<std::string>& packet_types, Error* error);
+      const std::vector<std::string>& packet_types,
+      Error* error);
   // Removes a rule previously programmed into the NIC to wake the system from
   // suspend upon receiving packets from |ip_endpoint|. |error| indicates the
   // result of the operation.
@@ -311,7 +312,8 @@ class Device : public base::RefCounted<Device> {
   // protocol type belonging to |packet_types|.
   // |error| indicates the result of the operation.
   virtual void RemoveWakeOnPacketOfTypes(
-      const std::vector<std::string>& packet_types, Error* error);
+      const std::vector<std::string>& packet_types,
+      Error* error);
   // Removes all wake-on-packet rules programmed into the NIC. |error| indicates
   // the result of the operation.
   virtual void RemoveAllWakeOnPacketConnections(Error* error);
@@ -371,7 +373,6 @@ class Device : public base::RefCounted<Device> {
   FRIEND_TEST(DeviceTest, DestroyIPConfig);
   FRIEND_TEST(DeviceTest, DestroyIPConfigNULL);
   FRIEND_TEST(DeviceTest, ConfigWithMinimumMTU);
-  FRIEND_TEST(DeviceTest, EnableIPv6);
   FRIEND_TEST(DeviceTest, GetProperties);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Config);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Connection);
@@ -393,6 +394,8 @@ class Device : public base::RefCounted<Device> {
   FRIEND_TEST(DeviceTest, SetEnabledPersistent);
   FRIEND_TEST(DeviceTest, ShouldUseArpGateway);
   FRIEND_TEST(DeviceTest, Start);
+  FRIEND_TEST(DeviceTest, StartIPv6);
+  FRIEND_TEST(DeviceTest, StartIPv6Disabled);
   FRIEND_TEST(DeviceTest, Stop);
   FRIEND_TEST(DeviceTest, StopWithFixedIpParams);
   FRIEND_TEST(DeviceTest, StopWithNetworkInterfaceDisabledAfterward);
@@ -522,6 +525,16 @@ class Device : public base::RefCounted<Device> {
   // Indicates if the selected service is configured with a static IP address.
   bool IsUsingStaticIP() const;
 
+  // RPC getter, setter, and clear method for the "IPv6Disabled" property.
+  bool GetIPv6Disabled(Error* error);
+  bool SetIPv6Disabled(const bool& connect, Error* error);
+  void ClearIPv6Disabled(Error* error);
+
+  void HelpRegisterDerivedBool(const std::string& name,
+                               bool (Device::*get)(Error* error),
+                               bool (Device::*set)(const bool& value,
+                                                   Error* error),
+                               void (Device::*clear)(Error* error));
   void HelpRegisterConstDerivedString(const std::string& name,
                                       std::string (Device::*get)(Error*));
 
@@ -860,6 +873,8 @@ class Device : public base::RefCounted<Device> {
   base::CancelableClosure reliable_link_callback_;
 
   std::unique_ptr<PortalDetector> connection_tester_;
+
+  bool ipv6_disabled_;
 
   // Track whether packets from non-optimal routes will be accepted by this
   // device.  This is referred to as "loose mode" (see RFC3704).

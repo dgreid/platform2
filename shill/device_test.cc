@@ -80,8 +80,6 @@ class TestDevice : public Device {
              int interface_index,
              Technology technology)
       : Device(manager, link_name, address, interface_index, technology) {
-    ON_CALL(*this, IsIPv6Allowed())
-        .WillByDefault(Invoke(this, &TestDevice::DeviceIsIPv6Allowed));
     ON_CALL(*this, SetIPFlag(_, _, _))
         .WillByDefault(Invoke(this, &TestDevice::DeviceSetIPFlag));
     ON_CALL(*this, IsTrafficMonitorEnabled())
@@ -107,7 +105,6 @@ class TestDevice : public Device {
     DCHECK(error);
   }
 
-  MOCK_METHOD(bool, IsIPv6Allowed, (), (const, override));
   MOCK_METHOD(bool, IsTrafficMonitorEnabled, (), (const, override));
   MOCK_METHOD(bool,
               ShouldBringNetworkInterfaceDownAfterDisabled,
@@ -127,8 +124,6 @@ class TestDevice : public Device {
               StartConnectionDiagnosticsAfterPortalDetection,
               (const PortalDetector::Result&, const PortalDetector::Result&),
               (override));
-
-  virtual bool DeviceIsIPv6Allowed() const { return Device::IsIPv6Allowed(); }
 
   virtual bool DeviceIsTrafficMonitorEnabled() const {
     return Device::IsTrafficMonitorEnabled();
@@ -465,7 +460,7 @@ TEST_F(DeviceTest, ConfigWithMinimumMTU) {
   device_->AcquireIPConfig();
 }
 
-TEST_F(DeviceTest, EnableIPv6) {
+TEST_F(DeviceTest, StartIPv6) {
   EXPECT_CALL(*device_,
               SetIPFlag(IPAddress::kFamilyIPv6,
                         StrEq(Device::kIPFlagDisableIPv6), StrEq("0")))
@@ -475,13 +470,21 @@ TEST_F(DeviceTest, EnableIPv6) {
       SetIPFlag(IPAddress::kFamilyIPv6,
                 StrEq(Device::kIPFlagAcceptRouterAdvertisements), StrEq("2")))
       .WillOnce(Return(true));
-  device_->EnableIPv6();
+  device_->StartIPv6();
 }
 
-TEST_F(DeviceTest, EnableIPv6NotAllowed) {
-  EXPECT_CALL(*device_, IsIPv6Allowed()).WillOnce(Return(false));
+TEST_F(DeviceTest, StartIPv6Disabled) {
+  Error error;
+  EXPECT_CALL(*device_,
+              SetIPFlag(IPAddress::kFamilyIPv6,
+                        StrEq(Device::kIPFlagDisableIPv6), StrEq("1")))
+      .WillOnce(Return(true));
+  device_->SetIPv6Disabled(true, &error);
+  Mock::VerifyAndClearExpectations(device_.get());
   EXPECT_CALL(*device_, SetIPFlag(_, _, _)).Times(0);
-  device_->EnableIPv6();
+  device_->StartIPv6();
+  Mock::VerifyAndClearExpectations(device_.get());
+  device_->SetIPv6Disabled(false, &error);
 }
 
 TEST_F(DeviceTest, MultiHomed) {
