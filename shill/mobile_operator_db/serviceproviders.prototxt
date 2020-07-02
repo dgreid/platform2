@@ -7202,32 +7202,33 @@ mno {
     uuid : "06e5465c-1f7e-41c3-ac84-abb1446ad19a"
     country : "jp"
     localized_name {
-      name : "Softbank Mobile"
+      name : "SoftBank"
     }
-    mccmnc : "44004"
-    mccmnc : "44006"
     mccmnc : "44020"
-    mccmnc : "44040"
-    mccmnc : "44041"
-    mccmnc : "44042"
-    mccmnc : "44043"
-    mccmnc : "44044"
-    mccmnc : "44045"
-    mccmnc : "44046"
-    mccmnc : "44047"
-    mccmnc : "44048"
-    mccmnc : "44090"
-    mccmnc : "44092"
-    mccmnc : "44093"
-    mccmnc : "44094"
-    mccmnc : "44095"
-    mccmnc : "44096"
-    mccmnc : "44097"
-    mccmnc : "44098"
     mobile_apn {
-      apn : "softbank"
-      username : "ai@softbank"
-      password : "softbank"
+      apn : "plus.acs.jp.v6"
+      localized_name {
+        name : "SoftBank(4G LTE)"
+      }
+      username : "ym"
+      password : "ym"
+    }
+  }
+  mvno {
+    mvno_filter {
+      type: IMSI
+      regex: "44020919[0-9]{7}"
+    }
+    data {
+      uuid : "81f75c0a-0365-43eb-83e7-4fb43256434d"
+      localized_name {
+        name : "SoftBank(ai+ 4G LTE)"
+      }
+      mobile_apn {
+        apn : "plus.4g"
+        username : "plus"
+        password : "4g"
+      }
     }
   }
 }
