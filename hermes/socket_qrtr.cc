@@ -74,7 +74,7 @@ bool SocketQrtr::StopService(uint32_t service,
 int SocketQrtr::Recv(void* buf, size_t size, void* metadata) {
   uint32_t node, port;
   int ret = qrtr_recvfrom(socket_.get(), buf, size, &node, &port);
-  LOG(INFO) << node << ", " << port;
+  VLOG(2) << "Receiving packet from node: " << node << " port: " << port;
   if (metadata) {
     PacketMetadata* data = reinterpret_cast<PacketMetadata*>(metadata);
     data->node = node;
@@ -91,6 +91,7 @@ int SocketQrtr::Send(const void* data, size_t size, const void* metadata) {
     node = data->node;
     port = data->port;
   }
+  VLOG(2) << "Sending packet to node: " << node << " port: " << port;
   return qrtr_sendto(socket_.get(), node, port, data, size);
 }
 

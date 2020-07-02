@@ -483,7 +483,6 @@ void ModemQrtr::OnDataAvailable(SocketInterface* socket) {
   }
   VLOG(2) << "ModemQrtr recevied raw data (" << bytes_received
           << " bytes): " << base::HexEncode(buffer_.data(), bytes_received);
-  LOG(INFO) << data.port;
   ProcessQrtrPacket(data.node, data.port, bytes_received);
 }
 
