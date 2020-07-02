@@ -726,6 +726,9 @@ int RunOci(const base::FilePath& bundle_dir,
         oci_config->linux_config.cpu.realtimePeriod);
   }
 
+  container_config_set_core_sched(config.get(),
+                                  oci_config->linux_config.coreSched);
+
   if (!oci_config->linux_config.altSyscall.empty()) {
     container_config_alt_syscall_table(
         config.get(), oci_config->linux_config.altSyscall.c_str());

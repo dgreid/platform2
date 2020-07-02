@@ -531,6 +531,7 @@
 	},
 	"linux": {
 		"altSyscall": "android",
+		"coreSched": true,
 		"cgroupsPath": "/session_manager_containers",
 		"cpu": {
 			"realtimeRuntime": 200000,

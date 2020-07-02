@@ -710,6 +710,11 @@ bool ParseLinuxConfigDict(const base::DictionaryValue& runtime_root_dict,
     config_out->linux_config.altSyscall = std::string();  // Optional
   }
 
+  if (!linux_dict->GetBoolean("coreSched",
+                              &config_out->linux_config.coreSched)) {
+    config_out->linux_config.coreSched = false;  // Optional
+  }
+
   const base::ListValue* skip_securebits_list;
   if (linux_dict->GetList("skipSecurebits", &skip_securebits_list)) {
     if (!ParseSkipSecurebitsMask(*skip_securebits_list,

@@ -146,6 +146,7 @@ struct OciLinux {
   OciCpu cpu;                                         // Optional
   std::string altSyscall;       // Optional, Chrome OS extension.
   uint64_t skipSecurebits = 0;  // Optional, Chrome OS extension.
+  bool coreSched = 0;           // Optional, Chrome OS extension.
   // Unused: maskedPaths, readonlyPaths, mountLabel, sysctl
 };
 
