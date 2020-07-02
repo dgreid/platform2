@@ -33,20 +33,6 @@ namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
-mojo_ipc::ErrorType StatusCodeToMojoError(StatusCode code) {
-  switch (code) {
-    case StatusCode::kUnavailable:
-      return mojo_ipc::ErrorType::kFileReadError;
-    case StatusCode::kInvalidArgument:
-      return mojo_ipc::ErrorType::kParseError;
-    case StatusCode::kInternal:
-      return mojo_ipc::ErrorType::kSystemUtilityError;
-    default:
-      NOTREACHED() << "Unexpected error code: " << static_cast<int>(code);
-      return mojo_ipc::ErrorType::kSystemUtilityError;
-  }
-}
-
 // Creates a specific adapter for device's data retrieval.
 std::unique_ptr<StorageDeviceAdapter> CreateDeviceSpecificAdapter(
     const base::FilePath& dev_sys_path, const std::string& subsystem) {
@@ -89,12 +75,12 @@ StorageDeviceInfo::StorageDeviceInfo(
     const base::FilePath& dev_node_path,
     const std::string& subsystem,
     std::unique_ptr<StorageDeviceAdapter> adapter,
-    std::unique_ptr<Platform> platform)
+    const Platform* platform)
     : dev_sys_path_(dev_sys_path),
       dev_node_path_(dev_node_path),
       subsystem_(subsystem),
       adapter_(std::move(adapter)),
-      platform_(std::move(platform)),
+      platform_(platform),
       iostat_(dev_sys_path) {
   DCHECK(adapter_);
   DCHECK(platform_);
@@ -104,26 +90,15 @@ std::unique_ptr<StorageDeviceInfo> StorageDeviceInfo::Create(
     const base::FilePath& dev_sys_path,
     const base::FilePath& dev_node_path,
     const std::string& subsystem,
-    std::unique_ptr<Platform> platform) {
+    const Platform* platform) {
   auto adapter = CreateAdapter(dev_sys_path, subsystem);
   if (!adapter)
     return nullptr;
-  return std::unique_ptr<StorageDeviceInfo>(
-      new StorageDeviceInfo(dev_sys_path, dev_node_path, subsystem,
-                            std::move(adapter), std::move(platform)));
+  return std::unique_ptr<StorageDeviceInfo>(new StorageDeviceInfo(
+      dev_sys_path, dev_node_path, subsystem, std::move(adapter), platform));
 }
 
-base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
-StorageDeviceInfo::PopulateDeviceInfo(
-    mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
-  auto status = PopulateDeviceInfoImpl(output_info);
-  if (status.ok())
-    return base::nullopt;
-  return CreateAndLogProbeError(StatusCodeToMojoError(status.code()),
-                                status.message());
-}
-
-Status StorageDeviceInfo::PopulateDeviceInfoImpl(
+Status StorageDeviceInfo::PopulateDeviceInfo(
     mojo_ipc::NonRemovableBlockDeviceInfo* output_info) {
   DCHECK(output_info);
 

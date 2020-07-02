@@ -5,6 +5,8 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUS_MACROS_H_
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUS_MACROS_H_
 
+#include <utility>
+
 #include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 #define RETURN_IF_ERROR(rexpr) \
@@ -25,7 +27,7 @@
   if (!statusor.ok()) {                                            \
     return (statusor.status());                                    \
   }                                                                \
-  lhs = statusor.value()
+  lhs = std::move(statusor).value()
 
 // Internal helper for concatenating macro values.
 #define STATUS_MACROS_IMPL_CONCAT_INNER_(x, y) x##y

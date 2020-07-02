@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUSOR_H_
 
 #include <string>
+#include <utility>
 
 #include <base/strings/stringprintf.h>
 
@@ -54,6 +55,8 @@ class StatusOr {
       : status_(status) {}
   StatusOr(const valueType& value)  // NOLINT(runtime/explicit)
       : status_(Status::OkStatus()), value_(value) {}
+  StatusOr(valueType&& value)  // NOLINT(runtime/explicit)
+      : status_(Status::OkStatus()), value_(std::move(value)) {}
 
   StatusOr(const StatusOr<valueType>&) = default;
   StatusOr(StatusOr<valueType>&&) = default;
@@ -63,9 +66,25 @@ class StatusOr {
   bool ok() const { return status_.ok(); }
 
   const Status& status() const { return status_; }
-  const valueType& value() const {
+
+  const valueType& value() const& {
     DCHECK(ok());
     return value_;
+  }
+
+  valueType& value() & {
+    DCHECK(ok());
+    return value_;
+  }
+
+  const valueType&& value() const&& {
+    DCHECK(ok());
+    return std::move(value_);
+  }
+
+  valueType&& value() && {
+    DCHECK(ok());
+    return std::move(value_);
   }
 
  private:

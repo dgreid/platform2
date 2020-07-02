@@ -36,18 +36,16 @@ TEST(StorageDeviceInfoTest, PopulateTest) {
   constexpr uint64_t kBlockSize = 512;
   auto mock_platform = std::make_unique<StrictMock<MockPlatform>>();
 
-  EXPECT_CALL(*mock_platform.get(),
-              GetDeviceSizeBytes(base::FilePath(kDevnode)))
+  EXPECT_CALL(*mock_platform, GetDeviceSizeBytes(base::FilePath(kDevnode)))
       .WillOnce(Return(kSize));
-  EXPECT_CALL(*mock_platform.get(),
-              GetDeviceBlockSizeBytes(base::FilePath(kDevnode)))
+  EXPECT_CALL(*mock_platform, GetDeviceBlockSizeBytes(base::FilePath(kDevnode)))
       .WillOnce(Return(kBlockSize));
 
   auto dev_info =
       StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
-                                kSubsystem, std::move(mock_platform));
+                                kSubsystem, mock_platform.get());
   mojo_ipc::NonRemovableBlockDeviceInfo info;
-  EXPECT_FALSE(dev_info->PopulateDeviceInfo(&info).has_value());
+  EXPECT_TRUE(dev_info->PopulateDeviceInfo(&info).ok());
 
   EXPECT_EQ(kDevnode, info.path);
   EXPECT_EQ(kSubsystem, info.type);
@@ -71,7 +69,7 @@ TEST(StorageDeviceInfoTest, PopulateLegacyTest) {
 
   auto dev_info =
       StorageDeviceInfo::Create(base::FilePath(kPath), base::FilePath(kDevnode),
-                                kSubsystem, std::move(mock_platform));
+                                kSubsystem, mock_platform.get());
   mojo_ipc::NonRemovableBlockDeviceInfo info;
   dev_info->PopulateLegacyFields(&info);
 

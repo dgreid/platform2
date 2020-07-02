@@ -22,19 +22,19 @@
 namespace diagnostics {
 
 // StorageDeviceInfo encapsulates the logic for retrieving info about an
-// individual storage device.
+// individual storage device. Should not leave longer than its parent
+// StorageDeviceManager.
 class StorageDeviceInfo {
  public:
   static std::unique_ptr<StorageDeviceInfo> Create(
       const base::FilePath& dev_sys_path,
       const base::FilePath& dev_node_path,
       const std::string& subsystem,
-      std::unique_ptr<Platform> platform = std::make_unique<Platform>());
+      const Platform* platform);
 
   // PopulateDeviceInfo fills the fields of Mojo's data structure representing
   // a block device. It is responsible for population of most of the info.
-  base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
-  PopulateDeviceInfo(
+  Status PopulateDeviceInfo(
       chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
 
   // PopulateLegaceInfo fills the fields of Mojo's data structure representing
@@ -49,7 +49,8 @@ class StorageDeviceInfo {
   const base::FilePath dev_node_path_;
   const std::string subsystem_;
   const std::unique_ptr<const StorageDeviceAdapter> adapter_;
-  const std::unique_ptr<const Platform> platform_;
+  // platform_ is owned by the StorageDeviceManager.
+  const Platform* platform_;
 
   DiskIoStat iostat_;
 
@@ -57,16 +58,11 @@ class StorageDeviceInfo {
                     const base::FilePath& dev_node_path,
                     const std::string& subsystem,
                     std::unique_ptr<StorageDeviceAdapter> adapter,
-                    std::unique_ptr<Platform> platform);
+                    const Platform* platform);
   StorageDeviceInfo(const StorageDeviceInfo&) = delete;
   StorageDeviceInfo(StorageDeviceInfo&&) = delete;
   StorageDeviceInfo& operator=(const StorageDeviceInfo&) = delete;
   StorageDeviceInfo& operator=(StorageDeviceInfo&&) = delete;
-
-  // Implementation of the field population. The separation is used for uniform
-  // error propagation via Status.
-  Status PopulateDeviceInfoImpl(
-      chromeos::cros_healthd::mojom::NonRemovableBlockDeviceInfo* output_info);
 };
 
 }  // namespace diagnostics
