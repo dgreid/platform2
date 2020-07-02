@@ -69,11 +69,13 @@ StatusOr<uint64_t> Platform::GetDeviceBlockSizeBytes(
   if (!fd.is_valid())
     return Status(-EINVAL, "Failed to open: " + dev_path.value());
 
-  uint64_t blksize;
+  int blksize;
   auto ret = ioctl(fd.get(), BLKSSZGET, &blksize);
-  if (ret != 0)
-    return Status(ret, "Failed to query block size: " + dev_path.value());
-  return blksize;
+  if (ret != 0 || blksize <= 0) {
+    return Status(ret ?: -EINVAL,
+                  "Failed to query block size: " + dev_path.value());
+  }
+  return static_cast<uint64_t>(blksize);
 }
 
 }  // namespace diagnostics
