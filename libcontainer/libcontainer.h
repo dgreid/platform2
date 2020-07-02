@@ -220,6 +220,10 @@ BRILLO_EXPORT int container_config_get_cpu_rt_runtime(
 BRILLO_EXPORT int container_config_get_cpu_rt_period(
     struct container_config* c);
 
+/* Set core scheduling policy to disable sibling core sharing. */
+BRILLO_EXPORT int container_config_set_core_sched(struct container_config* c,
+                                                  int enable);
+
 /*
  * Configure the owner of cgroups created for the container.
  *

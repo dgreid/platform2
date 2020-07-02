@@ -9,6 +9,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mount.h>
+#include <sys/prctl.h>
 #include <sys/stat.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
@@ -46,6 +47,11 @@
 #include "libcontainer/libcontainer_util.h"
 
 #define QUOTE(s) ('"' + std::string(s) + '"')
+
+// Not available in sys/prctl.h yet, but supported on some kernels.
+#ifndef PR_SET_CORE_SCHED
+#define PR_SET_CORE_SCHED 0x200
+#endif
 
 namespace {
 
@@ -204,6 +210,9 @@ struct container_config {
 
   // The mask of securebits to skip when restricting caps.
   uint64_t securebits_skip_mask = 0x0;
+
+  // Core Scheduling policy
+  bool core_sched = false;
 
   // Whether the container needs an extra process to be run as init.
   bool do_init = false;
@@ -371,7 +380,9 @@ void DumpConfig(std::ostream* stream,
           << "uid_map: " << QUOTE(c->uid_map) << std::endl
           << "gid: " << c->gid << std::endl
           << "gid_map: " << QUOTE(c->gid_map) << std::endl
-          << "alt_syscall_table: " << QUOTE(c->alt_syscall_table) << std::endl;
+          << "alt_syscall_table: " << QUOTE(c->alt_syscall_table) << std::endl
+          << "core_sched:" << (c->core_sched ? "enable" : "disable")
+          << std::endl;
 
   auto mount_sorted = c->mounts;
   if (sort_vectors) {
@@ -744,6 +755,16 @@ bool DeviceSetup(struct container* c, const struct container_config* config) {
   return true;
 }
 
+int SetCoreSched(void* payload) {
+  int ret = prctl(PR_SET_CORE_SCHED, 1);
+  if (ret != 0 && errno != EINVAL) {
+    // Bubble error, minijail will abort child process.
+    return -errno;
+  }
+  // Success or unsupported on this kernel, continue.
+  return 0;
+}
+
 int Setexeccon(void* payload) {
   char* init_domain = reinterpret_cast<char*>(payload);
   pid_t tid = syscall(SYS_gettid);
@@ -1045,6 +1066,11 @@ int container_config_add_device(struct container_config* c,
       copy_minor != 0, uid, gid,
   });
 
+  return 0;
+}
+
+int container_config_set_core_sched(struct container_config* c, int enable) {
+  c->core_sched = enable;
   return 0;
 }
 
@@ -1439,6 +1465,13 @@ int container_start(struct container* c,
 
   if (!config->alt_syscall_table.empty())
     minijail_use_alt_syscall(c->jail.get(), config->alt_syscall_table.c_str());
+
+  if (config->core_sched) {
+    if (minijail_add_hook(c->jail.get(), &SetCoreSched, nullptr,
+                          MINIJAIL_HOOK_EVENT_PRE_DROP_CAPS) != 0) {
+      return -1;
+    }
+  }
 
   for (int i = 0; i < config->num_rlimits; i++) {
     const Rlimit& lim = config->rlimits[i];
