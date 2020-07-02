@@ -210,7 +210,9 @@ TEST_F(U2fMessageHandlerTest, RegisterSuccess) {
       "(EE){32}"  // User Secret
       "03";       // U2F_AUTH_ENFORCE
 
-  struct u2f_generate_resp cr50_response = {.keyHandle = {[0 ... 63] = 0xFD}};
+  struct u2f_generate_resp cr50_response = {
+      .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
+                    .hmac = {[0 ... 31] = 0xFD}}};
 
   EXPECT_CALL(
       mock_tpm_proxy_,
@@ -312,7 +314,8 @@ constexpr char kCr50ExpectedGenReqRegex[] =
 
 // Dummy generate response.
 constexpr struct u2f_generate_resp kCr50GenResp = {
-    .keyHandle = {[0 ... 63] = 0xFD}};  // cr50_gen_resp
+    .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
+                  .hmac = {[0 ... 31] = 0xFD}}};  // cr50_gen_resp
 
 // Example of a cert that would be returned by cr50.
 constexpr char kDummyG2fCert[] =

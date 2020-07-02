@@ -334,7 +334,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSign(
     sign_req.flags |= SIGN_LEGACY_KH;
   util::VectorToObject(app_id, sign_req.appId);
   util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(key_handle, sign_req.keyHandle);
+  util::VectorToObject(key_handle, &sign_req.keyHandle);
   util::VectorToObject(hash, sign_req.hash);
 
   struct u2f_sign_resp sign_resp = {};
@@ -373,7 +373,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fSignCheckOnly(
   };
   util::VectorToObject(app_id, sign_req.appId);
   util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(key_handle, sign_req.keyHandle);
+  util::VectorToObject(key_handle, &sign_req.keyHandle);
 
   Cr50CmdStatus sign_status =
       static_cast<Cr50CmdStatus>(proxy_->SendU2fSign(sign_req, nullptr));

@@ -43,7 +43,7 @@ constexpr char kUserSecret[65] = {[0 ... 63] = 'E', '\0'};
 constexpr char kRpId[] = "example.com";
 const std::vector<uint8_t> kRpIdHash = util::Sha256(std::string(kRpId));
 // Dummy key handle (credential ID).
-const std::vector<uint8_t> kKeyHandle(U2F_FIXED_KH_SIZE, 0xab);
+const std::vector<uint8_t> kKeyHandle(sizeof(struct u2f_key_handle), 0xab);
 // Dummy hash to sign.
 const std::vector<uint8_t> kHashToSign(U2F_P256_SIZE, 0xcd);
 
@@ -96,7 +96,8 @@ const struct u2f_generate_resp kU2fGenerateResponse = {
     .pubKey = {.pointFormat = 0xAB,
                .x = {[0 ... 31] = 0xAB},
                .y = {[0 ... 31] = 0xAB}},
-    .keyHandle = {[0 ... 63] = 0xFD}};
+    .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
+                  .hmac = {[0 ... 31] = 0xFD}}};
 
 // Dummy cr50 U2F_SIGN_RESP.
 const struct u2f_sign_resp kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
@@ -506,7 +507,8 @@ TEST_F(WebAuthnHandlerTest, GetAssertionNoSecret) {
   GetAssertionRequest request;
   request.set_rp_id(kRpId);
   request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
-  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_allowed_credential_id(
+      std::string(sizeof(struct u2f_key_handle), 0xab));
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   ExpectGetUserSecretFails();
@@ -530,7 +532,8 @@ TEST_F(WebAuthnHandlerTest, GetAssertionInvalidKeyHandle) {
   GetAssertionRequest request;
   request.set_rp_id(kRpId);
   request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
-  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_allowed_credential_id(
+      std::string(sizeof(struct u2f_key_handle), 0xab));
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   // We will only get user secret once because DoU2fSignCheckOnly will fail and
@@ -561,7 +564,8 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceNoPresence) {
   GetAssertionRequest request;
   request.set_rp_id(kRpId);
   request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
-  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_allowed_credential_id(
+      std::string(sizeof(struct u2f_key_handle), 0xab));
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   ExpectGetUserSecretForTimes(2);
@@ -594,7 +598,8 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
   GetAssertionRequest request;
   request.set_rp_id(kRpId);
   request.set_client_data_hash(std::string(SHA256_DIGEST_LENGTH, 0xcd));
-  request.add_allowed_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_allowed_credential_id(
+      std::string(sizeof(struct u2f_key_handle), 0xab));
   request.set_verification_type(VerificationType::VERIFICATION_USER_PRESENCE);
 
   ExpectGetUserSecretForTimes(2);
@@ -619,7 +624,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
         ASSERT_EQ(resp.assertion_size(), 1);
         auto assertion = resp.assertion(0);
         EXPECT_EQ(assertion.credential_id(),
-                  std::string(U2F_FIXED_KH_SIZE, 0xab));
+                  std::string(sizeof(struct u2f_key_handle), 0xab));
         EXPECT_THAT(
             base::HexEncode(assertion.authenticator_data().data(),
                             assertion.authenticator_data().size()),
@@ -642,7 +647,7 @@ TEST_F(WebAuthnHandlerTest, GetAssertionPresenceSuccess) {
 TEST_F(WebAuthnHandlerTest, HasCredentialsNoMatch) {
   HasCredentialsRequest request;
   request.set_rp_id(kRpId);
-  request.add_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_credential_id(std::string(sizeof(struct u2f_key_handle), 0xab));
 
   ExpectGetUserSecret();
   EXPECT_CALL(
@@ -658,7 +663,7 @@ TEST_F(WebAuthnHandlerTest, HasCredentialsNoMatch) {
 TEST_F(WebAuthnHandlerTest, HasCredentialsOneMatch) {
   HasCredentialsRequest request;
   request.set_rp_id(kRpId);
-  request.add_credential_id(std::string(U2F_FIXED_KH_SIZE, 0xab));
+  request.add_credential_id(std::string(sizeof(struct u2f_key_handle), 0xab));
 
   ExpectGetUserSecret();
   EXPECT_CALL(

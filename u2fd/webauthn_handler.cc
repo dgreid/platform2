@@ -341,7 +341,8 @@ void WebAuthnHandler::GetAssertion(
   // TODO(louiscollard): Support multiple credentials.
   // TODO(louiscollard): Support resident credentials.
   if (request.allowed_credential_id().size() != 1 ||
-      request.allowed_credential_id().Get(0).size() != U2F_FIXED_KH_SIZE) {
+      request.allowed_credential_id().Get(0).size() !=
+          sizeof(struct u2f_key_handle)) {
     response.set_status(GetAssertionResponse::INVALID_REQUEST);
     method_response->Return(response);
     return;
@@ -424,7 +425,7 @@ GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(
   };
   util::VectorToObject(rp_id_hash, sign_req.appId);
   util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(credential_id, sign_req.keyHandle);
+  util::VectorToObject(credential_id, &sign_req.keyHandle);
   util::VectorToObject(hash_to_sign, sign_req.hash);
 
   struct u2f_sign_resp sign_resp = {};
@@ -493,7 +494,7 @@ WebAuthnHandler::DoU2fSignCheckOnly(const std::vector<uint8_t>& rp_id_hash,
   struct u2f_sign_req sign_req = {.flags = U2F_AUTH_CHECK_ONLY};
   util::VectorToObject(rp_id_hash, sign_req.appId);
   util::VectorToObject(*user_secret, sign_req.userSecret);
-  util::VectorToObject(credential_id, sign_req.keyHandle);
+  util::VectorToObject(credential_id, &sign_req.keyHandle);
 
   struct u2f_sign_resp sign_resp;
   base::AutoLock(tpm_proxy_->GetLock());
