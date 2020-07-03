@@ -90,7 +90,7 @@ class DiagActions final {
   void RemoveRoutine();
 
   // Used to send mojo requests to cros_healthd.
-  CrosHealthdMojoAdapter adapter_;
+  std::unique_ptr<CrosHealthdMojoAdapter> adapter_;
   // ID of the routine being run.
   int32_t id_ = chromeos::cros_healthd::mojom::kFailedToStartId;
 

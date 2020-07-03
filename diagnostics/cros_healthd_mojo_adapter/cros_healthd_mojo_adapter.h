@@ -5,14 +5,13 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_MOJO_ADAPTER_CROS_HEALTHD_MOJO_ADAPTER_H_
 #define DIAGNOSTICS_CROS_HEALTHD_MOJO_ADAPTER_CROS_HEALTHD_MOJO_ADAPTER_H_
 
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <base/optional.h>
 
-#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate.h"
-#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate_impl.h"
 #include "mojo/cros_healthd.mojom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 #include "mojo/cros_healthd_events.mojom.h"
@@ -22,128 +21,102 @@ namespace diagnostics {
 
 // Provides a mojo connection to cros_healthd. See mojo/cros_healthd.mojom for
 // details on cros_healthd's mojo interface. This should only be used by
-// processes whose only mojo connection is to cros_healthd.
-class CrosHealthdMojoAdapter final {
+// processes whose only mojo connection is to cros_healthd. This is a public
+// interface of the class providing the functionality.
+class CrosHealthdMojoAdapter {
  public:
-  // Override |delegate| for testing only.
-  explicit CrosHealthdMojoAdapter(
-      CrosHealthdMojoAdapterDelegate* delegate = nullptr);
-  CrosHealthdMojoAdapter(const CrosHealthdMojoAdapter&) = delete;
-  CrosHealthdMojoAdapter& operator=(const CrosHealthdMojoAdapter&) = delete;
-  ~CrosHealthdMojoAdapter();
+  virtual ~CrosHealthdMojoAdapter() {}
+
+  // Creates an instance of CrosHealthdMojoAdapter.
+  static std::unique_ptr<CrosHealthdMojoAdapter> Create();
 
   // Gets telemetry information from cros_healthd.
-  chromeos::cros_healthd::mojom::TelemetryInfoPtr GetTelemetryInfo(
+  virtual chromeos::cros_healthd::mojom::TelemetryInfoPtr GetTelemetryInfo(
       const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>&
-          categories_to_probe);
+          categories_to_probe) = 0;
 
   // Runs the urandom routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunUrandomRoutine(
-      uint32_t length_seconds);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunUrandomRoutine(uint32_t length_seconds) = 0;
 
   // Runs the battery capacity routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah) = 0;
 
   // Runs the battery health routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryHealthRoutine(
-      uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryHealthRoutine(uint32_t maximum_cycle_count,
+                          uint32_t percent_battery_wear_allowed) = 0;
 
   // Runs the smartctl-check routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunSmartctlCheckRoutine();
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunSmartctlCheckRoutine() = 0;
 
   // Runs the AC power routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunAcPowerRoutine(
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunAcPowerRoutine(
       chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
-      const base::Optional<std::string>& expected_power_type);
+      const base::Optional<std::string>& expected_power_type) = 0;
 
   // Runs the CPU cache routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuCacheRoutine(
-      base::TimeDelta exec_duration);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunCpuCacheRoutine(base::TimeDelta exec_duration) = 0;
 
   // Runs the CPU stress routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
-      base::TimeDelta exec_duration);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunCpuStressRoutine(base::TimeDelta exec_duration) = 0;
 
   // Runs the NvmeWearLevel routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
-      uint32_t wear_level_threshold);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunNvmeWearLevelRoutine(uint32_t wear_level_threshold) = 0;
 
   // Runs the NvmeSelfTest routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeSelfTestRoutine(
-      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunNvmeSelfTestRoutine(chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum
+                             nvme_self_test_type) = 0;
 
   // Runs the disk read routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunDiskReadRoutine(
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunDiskReadRoutine(
       chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
       base::TimeDelta exec_duration,
-      uint32_t file_size_mb);
+      uint32_t file_size_mb) = 0;
 
   // Runs the prime search routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
-      base::TimeDelta exec_duration, uint64_t max_num);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunPrimeSearchRoutine(base::TimeDelta exec_duration, uint64_t max_num) = 0;
 
   // Runs the battery discharge routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunBatteryDischargeRoutine(base::TimeDelta exec_duration,
-                             uint32_t maximum_discharge_percent_allowed);
+                             uint32_t maximum_discharge_percent_allowed) = 0;
 
   // Returns which routines are available on the platform.
-  std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
-  GetAvailableRoutines();
+  virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
+  GetAvailableRoutines() = 0;
 
   // Gets an update for the specified routine.
-  chromeos::cros_healthd::mojom::RoutineUpdatePtr GetRoutineUpdate(
+  virtual chromeos::cros_healthd::mojom::RoutineUpdatePtr GetRoutineUpdate(
       int32_t id,
       chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
-      bool include_output);
+      bool include_output) = 0;
 
   // Runs the floating-point-accuracy routine.
-  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration) = 0;
 
   // Subscribes the client to Bluetooth events.
-  void AddBluetoothObserver(
-      chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer);
+  virtual void AddBluetoothObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr
+          observer) = 0;
 
   // Subscribes the client to lid events.
-  void AddLidObserver(
-      chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer);
+  virtual void AddLidObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer) = 0;
 
   // Subscribes the client to power events.
-  void AddPowerObserver(
-      chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer);
-
- private:
-  // Establishes a mojo connection with cros_healthd.
-  void Connect();
-
-  // Default delegate implementation.
-  std::unique_ptr<CrosHealthdMojoAdapterDelegateImpl> delegate_impl_;
-  // Unowned. Must outlive this instance.
-  CrosHealthdMojoAdapterDelegate* delegate_;
-
-  // Binds to an implementation of CrosHealthdServiceFactory. The implementation
-  // is provided by cros_healthd. Allows calling cros_healthd's mojo factory
-  // methods.
-  chromeos::cros_healthd::mojom::CrosHealthdServiceFactoryPtr
-      cros_healthd_service_factory_;
-  // Binds to an implementation of CrosHealthdProbeService. The implementation
-  // is provided by cros_healthd. Allows calling cros_healthd's probe-related
-  // mojo methods.
-  chromeos::cros_healthd::mojom::CrosHealthdProbeServicePtr
-      cros_healthd_probe_service_;
-  // Binds to an implementation of CrosHealthdDiagnosticsService. The
-  // implementation is provided by cros_healthd. Allows calling cros_healthd's
-  // diagnostics-related mojo methods.
-  chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServicePtr
-      cros_healthd_diagnostics_service_;
-  // Binds to an implementation of CrosHealthdEventService. The
-  // implementation is provided by cros_healthd. Allows calling cros_healthd's
-  // event-related mojo methods.
-  chromeos::cros_healthd::mojom::CrosHealthdEventServicePtr
-      cros_healthd_event_service_;
+  virtual void AddPowerObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) = 0;
 };
 
 }  // namespace diagnostics

@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <map>
+#include <memory>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -407,10 +408,11 @@ int telem_main(int argc, char** argv) {
   }
 
   // Probe and display the category.
-  CrosHealthdMojoAdapter adapter;
+  std::unique_ptr<CrosHealthdMojoAdapter> adapter =
+      CrosHealthdMojoAdapter::Create();
   const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
       categories_to_probe = {iterator->second};
-  DisplayTelemetryInfo(adapter.GetTelemetryInfo(categories_to_probe));
+  DisplayTelemetryInfo(adapter->GetTelemetryInfo(categories_to_probe));
 
   return EXIT_SUCCESS;
 }

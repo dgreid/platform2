@@ -4,16 +4,15 @@
 
 #include <gtest/gtest.h>
 
-#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
-
 namespace diagnostics {
 
-class CrosHealthdMojoAdapterTest : public testing::Test {
+class CrosHealthdMojoAdapterImplTest : public testing::Test {
  protected:
-  CrosHealthdMojoAdapterTest() = default;
-  CrosHealthdMojoAdapterTest(const CrosHealthdMojoAdapterTest&) = delete;
-  CrosHealthdMojoAdapterTest& operator=(const CrosHealthdMojoAdapterTest&) =
+  CrosHealthdMojoAdapterImplTest() = default;
+  CrosHealthdMojoAdapterImplTest(const CrosHealthdMojoAdapterImplTest&) =
       delete;
+  CrosHealthdMojoAdapterImplTest& operator=(
+      const CrosHealthdMojoAdapterImplTest&) = delete;
 };
 
 }  // namespace diagnostics

@@ -2,18 +2,161 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
-
+#include <memory>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
+#include <base/optional.h>
 #include <base/run_loop.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate.h"
+#include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter_delegate_impl.h"
+#include "mojo/cros_healthd.mojom.h"
+#include "mojo/cros_healthd_diagnostics.mojom.h"
+#include "mojo/cros_healthd_events.mojom.h"
+#include "mojo/cros_healthd_probe.mojom.h"
+
 namespace diagnostics {
+
 namespace {
+
+// Provides a mojo connection to cros_healthd. See mojo/cros_healthd.mojom for
+// details on cros_healthd's mojo interface. This should only be used by
+// processes whose only mojo connection is to cros_healthd.
+class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
+ public:
+  // Override |delegate| for testing only.
+  explicit CrosHealthdMojoAdapterImpl(
+      CrosHealthdMojoAdapterDelegate* delegate = nullptr);
+  CrosHealthdMojoAdapterImpl(const CrosHealthdMojoAdapterImpl&) = delete;
+  CrosHealthdMojoAdapterImpl& operator=(const CrosHealthdMojoAdapterImpl&) =
+      delete;
+  ~CrosHealthdMojoAdapterImpl() override;
+
+  // Gets telemetry information from cros_healthd.
+  chromeos::cros_healthd::mojom::TelemetryInfoPtr GetTelemetryInfo(
+      const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>&
+          categories_to_probe) override;
+
+  // Runs the urandom routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunUrandomRoutine(
+      uint32_t length_seconds) override;
+
+  // Runs the battery capacity routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryCapacityRoutine(uint32_t low_mah, uint32_t high_mah) override;
+
+  // Runs the battery health routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryHealthRoutine(
+      uint32_t maximum_cycle_count,
+      uint32_t percent_battery_wear_allowed) override;
+
+  // Runs the smartctl-check routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunSmartctlCheckRoutine()
+      override;
+
+  // Runs the AC power routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunAcPowerRoutine(
+      chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
+      const base::Optional<std::string>& expected_power_type) override;
+
+  // Runs the CPU cache routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuCacheRoutine(
+      base::TimeDelta exec_duration) override;
+
+  // Runs the CPU stress routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunCpuStressRoutine(
+      base::TimeDelta exec_duration) override;
+
+  // Runs the NvmeWearLevel routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeWearLevelRoutine(
+      uint32_t wear_level_threshold) override;
+
+  // Runs the NvmeSelfTest routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunNvmeSelfTestRoutine(
+      chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type)
+      override;
+
+  // Runs the disk read routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunDiskReadRoutine(
+      chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
+      base::TimeDelta exec_duration,
+      uint32_t file_size_mb) override;
+
+  // Runs the prime search routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunPrimeSearchRoutine(
+      base::TimeDelta exec_duration, uint64_t max_num) override;
+
+  // Runs the battery discharge routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryDischargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t maximum_discharge_percent_allowed) override;
+
+  // Returns which routines are available on the platform.
+  std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
+  GetAvailableRoutines() override;
+
+  // Gets an update for the specified routine.
+  chromeos::cros_healthd::mojom::RoutineUpdatePtr GetRoutineUpdate(
+      int32_t id,
+      chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
+      bool include_output) override;
+
+  // Runs the floating-point-accuracy routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration) override;
+
+  // Subscribes the client to Bluetooth events.
+  void AddBluetoothObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer)
+      override;
+
+  // Subscribes the client to lid events.
+  void AddLidObserver(chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr
+                          observer) override;
+
+  // Subscribes the client to power events.
+  void AddPowerObserver(
+      chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer)
+      override;
+
+ private:
+  // Establishes a mojo connection with cros_healthd.
+  void Connect();
+
+  // Default delegate implementation.
+  std::unique_ptr<CrosHealthdMojoAdapterDelegateImpl> delegate_impl_;
+  // Unowned. Must outlive this instance.
+  CrosHealthdMojoAdapterDelegate* delegate_;
+
+  // Binds to an implementation of CrosHealthdServiceFactory. The implementation
+  // is provided by cros_healthd. Allows calling cros_healthd's mojo factory
+  // methods.
+  chromeos::cros_healthd::mojom::CrosHealthdServiceFactoryPtr
+      cros_healthd_service_factory_;
+  // Binds to an implementation of CrosHealthdProbeService. The implementation
+  // is provided by cros_healthd. Allows calling cros_healthd's probe-related
+  // mojo methods.
+  chromeos::cros_healthd::mojom::CrosHealthdProbeServicePtr
+      cros_healthd_probe_service_;
+  // Binds to an implementation of CrosHealthdDiagnosticsService. The
+  // implementation is provided by cros_healthd. Allows calling cros_healthd's
+  // diagnostics-related mojo methods.
+  chromeos::cros_healthd::mojom::CrosHealthdDiagnosticsServicePtr
+      cros_healthd_diagnostics_service_;
+  // Binds to an implementation of CrosHealthdEventService. The
+  // implementation is provided by cros_healthd. Allows calling cros_healthd's
+  // event-related mojo methods.
+  chromeos::cros_healthd::mojom::CrosHealthdEventServicePtr
+      cros_healthd_event_service_;
+};
+
 // Saves |response| to |response_destination|.
 template <class T>
 void OnMojoResponseReceived(T* response_destination,
@@ -22,9 +165,8 @@ void OnMojoResponseReceived(T* response_destination,
   *response_destination = std::move(response);
   quit_closure.Run();
 }
-}  // namespace
 
-CrosHealthdMojoAdapter::CrosHealthdMojoAdapter(
+CrosHealthdMojoAdapterImpl::CrosHealthdMojoAdapterImpl(
     CrosHealthdMojoAdapterDelegate* delegate) {
   if (delegate) {
     delegate_ = delegate;
@@ -35,10 +177,10 @@ CrosHealthdMojoAdapter::CrosHealthdMojoAdapter(
   DCHECK(delegate_);
 }
 
-CrosHealthdMojoAdapter::~CrosHealthdMojoAdapter() = default;
+CrosHealthdMojoAdapterImpl::~CrosHealthdMojoAdapterImpl() = default;
 
 chromeos::cros_healthd::mojom::TelemetryInfoPtr
-CrosHealthdMojoAdapter::GetTelemetryInfo(
+CrosHealthdMojoAdapterImpl::GetTelemetryInfo(
     const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>&
         categories_to_probe) {
   if (!cros_healthd_service_factory_.is_bound())
@@ -57,7 +199,7 @@ CrosHealthdMojoAdapter::GetTelemetryInfo(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunUrandomRoutine(uint32_t length_seconds) {
+CrosHealthdMojoAdapterImpl::RunUrandomRoutine(uint32_t length_seconds) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -74,8 +216,8 @@ CrosHealthdMojoAdapter::RunUrandomRoutine(uint32_t length_seconds) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunBatteryCapacityRoutine(uint32_t low_mah,
-                                                  uint32_t high_mah) {
+CrosHealthdMojoAdapterImpl::RunBatteryCapacityRoutine(uint32_t low_mah,
+                                                      uint32_t high_mah) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -92,7 +234,7 @@ CrosHealthdMojoAdapter::RunBatteryCapacityRoutine(uint32_t low_mah,
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunBatteryHealthRoutine(
+CrosHealthdMojoAdapterImpl::RunBatteryHealthRoutine(
     uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -110,7 +252,7 @@ CrosHealthdMojoAdapter::RunBatteryHealthRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunSmartctlCheckRoutine() {
+CrosHealthdMojoAdapterImpl::RunSmartctlCheckRoutine() {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -126,7 +268,7 @@ CrosHealthdMojoAdapter::RunSmartctlCheckRoutine() {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunAcPowerRoutine(
+CrosHealthdMojoAdapterImpl::RunAcPowerRoutine(
     chromeos::cros_healthd::mojom::AcPowerStatusEnum expected_status,
     const base::Optional<std::string>& expected_power_type) {
   if (!cros_healthd_service_factory_.is_bound())
@@ -145,7 +287,7 @@ CrosHealthdMojoAdapter::RunAcPowerRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
+CrosHealthdMojoAdapterImpl::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -162,7 +304,7 @@ CrosHealthdMojoAdapter::RunCpuCacheRoutine(base::TimeDelta exec_duration) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunCpuStressRoutine(base::TimeDelta exec_duration) {
+CrosHealthdMojoAdapterImpl::RunCpuStressRoutine(base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -179,7 +321,7 @@ CrosHealthdMojoAdapter::RunCpuStressRoutine(base::TimeDelta exec_duration) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunFloatingPointAccuracyRoutine(
+CrosHealthdMojoAdapterImpl::RunFloatingPointAccuracyRoutine(
     base::TimeDelta exec_duration) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -197,7 +339,8 @@ CrosHealthdMojoAdapter::RunFloatingPointAccuracyRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
+CrosHealthdMojoAdapterImpl::RunNvmeWearLevelRoutine(
+    uint32_t wear_level_threshold) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -214,7 +357,7 @@ CrosHealthdMojoAdapter::RunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunNvmeSelfTestRoutine(
+CrosHealthdMojoAdapterImpl::RunNvmeSelfTestRoutine(
     chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -232,7 +375,7 @@ CrosHealthdMojoAdapter::RunNvmeSelfTestRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunDiskReadRoutine(
+CrosHealthdMojoAdapterImpl::RunDiskReadRoutine(
     chromeos::cros_healthd::mojom::DiskReadRoutineTypeEnum type,
     base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
@@ -252,8 +395,8 @@ CrosHealthdMojoAdapter::RunDiskReadRoutine(
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunPrimeSearchRoutine(base::TimeDelta exec_duration,
-                                              uint64_t max_num) {
+CrosHealthdMojoAdapterImpl::RunPrimeSearchRoutine(base::TimeDelta exec_duration,
+                                                  uint64_t max_num) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -270,7 +413,7 @@ CrosHealthdMojoAdapter::RunPrimeSearchRoutine(base::TimeDelta exec_duration,
 }
 
 chromeos::cros_healthd::mojom::RunRoutineResponsePtr
-CrosHealthdMojoAdapter::RunBatteryDischargeRoutine(
+CrosHealthdMojoAdapterImpl::RunBatteryDischargeRoutine(
     base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -288,7 +431,7 @@ CrosHealthdMojoAdapter::RunBatteryDischargeRoutine(
 }
 
 std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
-CrosHealthdMojoAdapter::GetAvailableRoutines() {
+CrosHealthdMojoAdapterImpl::GetAvailableRoutines() {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
 
@@ -309,7 +452,7 @@ CrosHealthdMojoAdapter::GetAvailableRoutines() {
 }
 
 chromeos::cros_healthd::mojom::RoutineUpdatePtr
-CrosHealthdMojoAdapter::GetRoutineUpdate(
+CrosHealthdMojoAdapterImpl::GetRoutineUpdate(
     int32_t id,
     chromeos::cros_healthd::mojom::DiagnosticRoutineCommandEnum command,
     bool include_output) {
@@ -328,7 +471,7 @@ CrosHealthdMojoAdapter::GetRoutineUpdate(
   return response;
 }
 
-void CrosHealthdMojoAdapter::AddBluetoothObserver(
+void CrosHealthdMojoAdapterImpl::AddBluetoothObserver(
     chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -336,7 +479,7 @@ void CrosHealthdMojoAdapter::AddBluetoothObserver(
   cros_healthd_event_service_->AddBluetoothObserver(std::move(observer));
 }
 
-void CrosHealthdMojoAdapter::AddLidObserver(
+void CrosHealthdMojoAdapterImpl::AddLidObserver(
     chromeos::cros_healthd::mojom::CrosHealthdLidObserverPtr observer) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -344,7 +487,7 @@ void CrosHealthdMojoAdapter::AddLidObserver(
   cros_healthd_event_service_->AddLidObserver(std::move(observer));
 }
 
-void CrosHealthdMojoAdapter::AddPowerObserver(
+void CrosHealthdMojoAdapterImpl::AddPowerObserver(
     chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
   if (!cros_healthd_service_factory_.is_bound())
     Connect();
@@ -352,7 +495,7 @@ void CrosHealthdMojoAdapter::AddPowerObserver(
   cros_healthd_event_service_->AddPowerObserver(std::move(observer));
 }
 
-void CrosHealthdMojoAdapter::Connect() {
+void CrosHealthdMojoAdapterImpl::Connect() {
   cros_healthd_service_factory_ = delegate_->GetCrosHealthdServiceFactory();
 
   // Bind the probe, diagnostics and event services.
@@ -362,6 +505,12 @@ void CrosHealthdMojoAdapter::Connect() {
       mojo::MakeRequest(&cros_healthd_diagnostics_service_));
   cros_healthd_service_factory_->GetEventService(
       mojo::MakeRequest(&cros_healthd_event_service_));
+}
+
+}  // namespace
+
+std::unique_ptr<CrosHealthdMojoAdapter> CrosHealthdMojoAdapter::Create() {
+  return std::make_unique<CrosHealthdMojoAdapterImpl>();
 }
 
 }  // namespace diagnostics

@@ -34,7 +34,7 @@ class EventSubscriber final {
 
  private:
   // Allows mojo communication with cros_healthd.
-  CrosHealthdMojoAdapter mojo_adapter_;
+  std::unique_ptr<CrosHealthdMojoAdapter> mojo_adapter_;
 
   // Used to subscribe to Bluetooth events.
   std::unique_ptr<BluetoothSubscriber> bluetooth_subscriber_;

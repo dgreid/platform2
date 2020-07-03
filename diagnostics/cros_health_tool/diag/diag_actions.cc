@@ -95,8 +95,11 @@ std::string GetSwitchFromRoutine(mojo_ipc::DiagnosticRoutineEnum routine) {
 DiagActions::DiagActions(base::TimeDelta polling_interval,
                          base::TimeDelta maximum_execution_time,
                          const base::TickClock* tick_clock)
-    : kPollingInterval(polling_interval),
+    : adapter_(CrosHealthdMojoAdapter::Create()),
+      kPollingInterval(polling_interval),
       kMaximumExecutionTime(maximum_execution_time) {
+  DCHECK(adapter_);
+
   if (tick_clock) {
     tick_clock_ = tick_clock;
   } else {
@@ -109,7 +112,7 @@ DiagActions::DiagActions(base::TimeDelta polling_interval,
 DiagActions::~DiagActions() = default;
 
 bool DiagActions::ActionGetRoutines() {
-  auto reply = adapter_.GetAvailableRoutines();
+  auto reply = adapter_->GetAvailableRoutines();
   for (auto routine : reply) {
     std::cout << "Available routine: " << GetSwitchFromRoutine(routine)
               << std::endl;
@@ -122,7 +125,7 @@ bool DiagActions::ActionRunAcPowerRoutine(
     mojo_ipc::AcPowerStatusEnum expected_status,
     const base::Optional<std::string>& expected_power_type) {
   auto response =
-      adapter_.RunAcPowerRoutine(expected_status, expected_power_type);
+      adapter_->RunAcPowerRoutine(expected_status, expected_power_type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -130,7 +133,7 @@ bool DiagActions::ActionRunAcPowerRoutine(
 
 bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
                                                   uint32_t high_mah) {
-  auto response = adapter_.RunBatteryCapacityRoutine(low_mah, high_mah);
+  auto response = adapter_->RunBatteryCapacityRoutine(low_mah, high_mah);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -138,7 +141,7 @@ bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
 
 bool DiagActions::ActionRunBatteryDischargeRoutine(
     base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
-  auto response = adapter_.RunBatteryDischargeRoutine(
+  auto response = adapter_->RunBatteryDischargeRoutine(
       exec_duration, maximum_discharge_percent_allowed);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -147,7 +150,7 @@ bool DiagActions::ActionRunBatteryDischargeRoutine(
 
 bool DiagActions::ActionRunBatteryHealthRoutine(
     uint32_t maximum_cycle_count, uint32_t percent_battery_wear_allowed) {
-  auto response = adapter_.RunBatteryHealthRoutine(
+  auto response = adapter_->RunBatteryHealthRoutine(
       maximum_cycle_count, percent_battery_wear_allowed);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
@@ -155,14 +158,14 @@ bool DiagActions::ActionRunBatteryHealthRoutine(
 }
 
 bool DiagActions::ActionRunCpuCacheRoutine(base::TimeDelta exec_duration) {
-  auto response = adapter_.RunCpuCacheRoutine(exec_duration);
+  auto response = adapter_->RunCpuCacheRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunCpuStressRoutine(base::TimeDelta exec_duration) {
-  auto response = adapter_.RunCpuStressRoutine(exec_duration);
+  auto response = adapter_->RunCpuStressRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -173,7 +176,7 @@ bool DiagActions::ActionRunDiskReadRoutine(
     base::TimeDelta exec_duration,
     uint32_t file_size_mb) {
   auto response =
-      adapter_.RunDiskReadRoutine(type, exec_duration, file_size_mb);
+      adapter_->RunDiskReadRoutine(type, exec_duration, file_size_mb);
   id_ = response->id;
   CHECK(response) << "No RunRoutineResponse received.";
   return PollRoutineAndProcessResult();
@@ -181,7 +184,7 @@ bool DiagActions::ActionRunDiskReadRoutine(
 
 bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
     base::TimeDelta exec_duration) {
-  auto response = adapter_.RunFloatingPointAccuracyRoutine(exec_duration);
+  auto response = adapter_->RunFloatingPointAccuracyRoutine(exec_duration);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -189,14 +192,14 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
 
 bool DiagActions::ActionRunNvmeSelfTestRoutine(
     mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type) {
-  auto response = adapter_.RunNvmeSelfTestRoutine(nvme_self_test_type);
+  auto response = adapter_->RunNvmeSelfTestRoutine(nvme_self_test_type);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
-  auto response = adapter_.RunNvmeWearLevelRoutine(wear_level_threshold);
+  auto response = adapter_->RunNvmeWearLevelRoutine(wear_level_threshold);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -204,21 +207,21 @@ bool DiagActions::ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold) {
 
 bool DiagActions::ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
                                               uint64_t max_num) {
-  auto response = adapter_.RunPrimeSearchRoutine(exec_duration, max_num);
+  auto response = adapter_->RunPrimeSearchRoutine(exec_duration, max_num);
   id_ = response->id;
   CHECK(response) << "No RunRoutineResponse received.";
   return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunSmartctlCheckRoutine() {
-  auto response = adapter_.RunSmartctlCheckRoutine();
+  auto response = adapter_->RunSmartctlCheckRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
 }
 
 bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
-  auto response = adapter_.RunUrandomRoutine(length_seconds);
+  auto response = adapter_->RunUrandomRoutine(length_seconds);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();
@@ -237,14 +240,14 @@ bool DiagActions::PollRoutineAndProcessResult() {
   do {
     // Poll the routine until it's either interactive and requires user input,
     // or it's noninteractive but no longer running.
-    response = adapter_.GetRoutineUpdate(
+    response = adapter_->GetRoutineUpdate(
         id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
     std::cout << "Progress: " << response->progress_percent << std::endl;
 
     if (force_cancel_ && !response.is_null() &&
         response->progress_percent >= cancellation_percent_) {
-      response = adapter_.GetRoutineUpdate(
+      response = adapter_->GetRoutineUpdate(
           id_, mojo_ipc::DiagnosticRoutineCommandEnum::kCancel,
           true /* include_output */);
       force_cancel_ = false;
@@ -320,7 +323,7 @@ bool DiagActions::ProcessInteractiveResultAndContinue(
   std::string dummy;
   std::getline(std::cin, dummy);
 
-  auto response = adapter_.GetRoutineUpdate(
+  auto response = adapter_->GetRoutineUpdate(
       id_, mojo_ipc::DiagnosticRoutineCommandEnum::kContinue,
       false /* include_output */);
   return PollRoutineAndProcessResult();
@@ -357,7 +360,7 @@ bool DiagActions::ProcessNonInteractiveResultAndEnd(
 }
 
 void DiagActions::RemoveRoutine() {
-  auto response = adapter_.GetRoutineUpdate(
+  auto response = adapter_->GetRoutineUpdate(
       id_, mojo_ipc::DiagnosticRoutineCommandEnum::kRemove,
       false /* include_output */);
 
