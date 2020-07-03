@@ -181,7 +181,8 @@ TEST_F(LibvdaGpuTest, DecodeFileGpu) {
 
     int32_t bitstream_id = next_bitstream_id;
     next_bitstream_id = (next_bitstream_id + 1) & 0x3FFFFFFF;
-    vda_decode(session->ctx, bitstream_id, handle.get(), 0 /* offset */,
+    // Pass ownership of handle to vda_decode.
+    vda_decode(session->ctx, bitstream_id, handle.release(), 0 /* offset */,
                data_size /* bytes_used */);
     waiting_decodes++;
 
