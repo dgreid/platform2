@@ -18,6 +18,8 @@
 #include <vector>
 
 #include <base/bind.h>
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <mojo/public/cpp/system/platform_handle.h>
 
@@ -164,12 +166,17 @@ void CameraAlgorithmBridgeImpl::IPCBridge::Initialize(
     Destroy();
   }
 
+  constexpr char kGpuAlgoJobFilePath[] = "/etc/init/cros-camera-gpu-algo.conf";
   switch (algo_backend_) {
     case CameraAlgorithmBackend::kVendorCpu:
       interface_ptr_ = mojo_manager_->CreateCameraAlgorithmOpsPtr(
           cros::constants::kCrosCameraAlgoSocketPathString, "vendor_cpu");
       break;
     case CameraAlgorithmBackend::kGoogleGpu:
+      if (!base::PathExists(base::FilePath(kGpuAlgoJobFilePath))) {
+        cb.Run(-EINVAL);
+        return;
+      }
       interface_ptr_ = mojo_manager_->CreateCameraAlgorithmOpsPtr(
           cros::constants::kCrosCameraGPUAlgoSocketPathString, "google_gpu");
       break;
