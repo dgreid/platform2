@@ -28,6 +28,7 @@
 #include <metrics/metrics_library_mock.h>
 #include <sane/sane.h>
 
+#include "lorgnette/enums.h"
 #include "lorgnette/sane_client_fake.h"
 #include "lorgnette/sane_client_impl.h"
 
@@ -78,16 +79,22 @@ class ManagerTest : public testing::Test {
         base::Unretained(&signals_)));
   }
 
-  void ExpectScanSuccess() {
-    EXPECT_CALL(*metrics_library_, SendEnumToUMA(Manager::kMetricScanResult,
-                                                 Manager::kBooleanMetricSuccess,
-                                                 Manager::kBooleanMetricMax));
+  void ExpectScanRequest(DocumentScanSaneBackend backend) {
+    EXPECT_CALL(*metrics_library_,
+                SendEnumToUMA(Manager::kMetricScanRequested, backend,
+                              DocumentScanSaneBackend::kMaxValue));
   }
 
-  void ExpectScanFailure() {
-    EXPECT_CALL(*metrics_library_, SendEnumToUMA(Manager::kMetricScanResult,
-                                                 Manager::kBooleanMetricFailure,
-                                                 Manager::kBooleanMetricMax));
+  void ExpectScanSuccess(DocumentScanSaneBackend backend) {
+    EXPECT_CALL(*metrics_library_,
+                SendEnumToUMA(Manager::kMetricScanSucceeded, backend,
+                              DocumentScanSaneBackend::kMaxValue));
+  }
+
+  void ExpectScanFailure(DocumentScanSaneBackend backend) {
+    EXPECT_CALL(*metrics_library_,
+                SendEnumToUMA(Manager::kMetricScanFailed, backend,
+                              DocumentScanSaneBackend::kMaxValue));
   }
 
   void CompareImages(const std::string& path_a, const std::string& path_b) {
@@ -177,7 +184,8 @@ TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
   brillo::VariantDictionary args;
   args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeLineart));
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
   CompareImages("./test_images/bw.png", output_path_.value());
 }
@@ -189,14 +197,16 @@ TEST_F(ManagerTest, ScanGrayscaleSuccess) {
   parameters.lines = 32;
   parameters.depth = 8;
   parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
-  SetUpTestDevice("TestDevice", base::FilePath("./test_images/gray.pnm"),
-                  parameters);
+  SetUpTestDevice("airscan:TestDevice",
+                  base::FilePath("./test_images/gray.pnm"), parameters);
 
   brillo::VariantDictionary args;
   args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeGray));
 
-  ExpectScanSuccess();
-  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+  ExpectScanRequest(kAirscanOther);
+  ExpectScanSuccess(kAirscanOther);
+  EXPECT_TRUE(
+      manager_.ScanImage(nullptr, "airscan:TestDevice", scan_fd_, args));
   CompareImages("./test_images/gray.png", output_path_.value());
 }
 
@@ -213,7 +223,8 @@ TEST_F(ManagerTest, ScanColorSuccess) {
   brillo::VariantDictionary args;
   args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeColor));
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
   CompareImages("./test_images/color.png", output_path_.value());
 }
@@ -235,7 +246,8 @@ TEST_F(ManagerTest, Scan16BitColorSuccess) {
   brillo::VariantDictionary args;
   args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeColor));
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
   CompareImages("./test_images/color16.png", output_path_.value());
 }
@@ -260,7 +272,8 @@ TEST_F(ManagerTest, ScanFailToStart) {
   device->SetStartScanResult(false);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_,
                                   brillo::VariantDictionary()));
 }
@@ -275,7 +288,8 @@ TEST_F(ManagerTest, ScanFailToRead) {
   device->SetReadScanDataResult(false);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_,
                                   brillo::VariantDictionary()));
 }
@@ -283,7 +297,8 @@ TEST_F(ManagerTest, ScanFailToRead) {
 TEST_F(ManagerTest, ScanFailBadFd) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
                   ScanParameters());
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", base::ScopedFD(),
                                   brillo::VariantDictionary()));
 }
@@ -326,7 +341,8 @@ TEST_F(ManagerTest, StartScanBlackAndWhiteSuccess) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_LINEART);
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -355,7 +371,8 @@ TEST_F(ManagerTest, StartScanGrayscaleSuccess) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_GRAYSCALE);
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -384,7 +401,8 @@ TEST_F(ManagerTest, StartScanColorSuccess) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_COLOR);
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -417,7 +435,8 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_COLOR);
 
-  ExpectScanSuccess();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -464,7 +483,8 @@ TEST_F(ManagerTest, StartScanFailToStart) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_COLOR);
 
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -487,7 +507,8 @@ TEST_F(ManagerTest, StartScanFailToRead) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_COLOR);
 
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      scan_fd_);
 
@@ -508,7 +529,8 @@ TEST_F(ManagerTest, StartScanFailBadFd) {
   request.set_device_name("TestDevice");
   request.mutable_settings()->set_color_mode(MODE_COLOR);
 
-  ExpectScanFailure();
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
   manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
                      base::ScopedFD());
 

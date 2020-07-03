@@ -96,7 +96,9 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
     kBooleanMetricMax
   };
 
-  static const char kMetricScanResult[];
+  static const char kMetricScanRequested[];
+  static const char kMetricScanSucceeded[];
+  static const char kMetricScanFailed[];
 
   bool StartScanInternal(brillo::ErrorPtr* error,
                          const StartScanRequest& request,
@@ -105,6 +107,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   bool RunScanLoop(brillo::ErrorPtr* error,
                    std::unique_ptr<SaneDevice> device,
                    const base::ScopedFD& outfd,
+                   const std::string& device_name,
                    base::Optional<std::string> scan_uuid);
 
   static bool ExtractScanOptions(
@@ -112,6 +115,10 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
       const brillo::VariantDictionary& scan_properties,
       uint32_t* resolution_out,
       std::string* mode_out);
+
+  void ReportScanRequested(const std::string& device_name);
+  void ReportScanSucceeded(const std::string& device_name);
+  void ReportScanFailed(const std::string& device_name);
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::Callback<void()> activity_callback_;

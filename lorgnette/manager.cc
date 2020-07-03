@@ -24,6 +24,7 @@
 #include <uuid/uuid.h>
 
 #include "lorgnette/daemon.h"
+#include "lorgnette/enums.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
 #include "lorgnette/sane_client.h"
@@ -237,9 +238,20 @@ base::Optional<ColorMode> ColorModeFromDbusString(const std::string& mode) {
   }
 }
 
+DocumentScanSaneBackend BackendFromDeviceName(const std::string& device_name) {
+  size_t colon_index = device_name.find(":");
+  if (colon_index != std::string::npos) {
+    return SaneBackendFromString(device_name.substr(0, colon_index));
+  } else {
+    return SaneBackendFromString(device_name);
+  }
+}
+
 }  // namespace
 
-const char Manager::kMetricScanResult[] = "DocumentScan.ScanResult";
+const char Manager::kMetricScanRequested[] = "DocumentScan.ScanRequested";
+const char Manager::kMetricScanSucceeded[] = "DocumentScan.ScanSucceeded";
+const char Manager::kMetricScanFailed[] = "DocumentScan.ScanFailed";
 
 Manager::Manager(base::Callback<void()> activity_callback,
                  std::unique_ptr<SaneClient> sane_client)
@@ -406,7 +418,8 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (!RunScanLoop(error, std::move(device), outfd, base::nullopt)) {
+  if (!RunScanLoop(error, std::move(device), outfd, device_name,
+                   base::nullopt)) {
     return false;
   }
 
@@ -455,7 +468,8 @@ void Manager::StartScan(
   ScanStatusChangedSignal result_signal;
   result_signal.set_scan_uuid(uuid);
 
-  if (!RunScanLoop(&error, std::move(device), outfd, uuid)) {
+  if (!RunScanLoop(&error, std::move(device), outfd, request.device_name(),
+                   uuid)) {
     result_signal.set_failure_reason(SerializeError(error));
     result_signal.set_state(SCAN_STATE_FAILED);
     status_signal_sender_.Run(result_signal);
@@ -511,6 +525,8 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     return false;
   }
 
+  ReportScanRequested(request.device_name());
+
   const ScanSettings& settings = request.settings();
 
   if (settings.resolution() != 0) {
@@ -537,8 +553,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   }
 
   if (!device->StartScan(error)) {
-    metrics_library_->SendEnumToUMA(kMetricScanResult, kBooleanMetricFailure,
-                                    kBooleanMetricMax);
+    ReportScanFailed(request.device_name());
     return false;
   }
 
@@ -549,15 +564,15 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 bool Manager::RunScanLoop(brillo::ErrorPtr* error,
                           std::unique_ptr<SaneDevice> device,
                           const base::ScopedFD& outfd,
+                          const std::string& device_name,
                           base::Optional<std::string> scan_uuid) {
   // Automatically report a scan failure if we exit early. This will be
   // cancelled once scanning has succeeded.
   base::ScopedClosureRunner report_scan_failure(base::BindOnce(
-      [](MetricsLibraryInterface* metrics_library) {
-        metrics_library->SendEnumToUMA(kMetricScanResult, kBooleanMetricFailure,
-                                       kBooleanMetricMax);
+      [](Manager* manager, std::string device_name) {
+        manager->ReportScanFailed(device_name);
       },
-      metrics_library_.get()));
+      base::Unretained(this), device_name));
 
   ScanParameters params;
   if (!device->GetScanParameters(error, &params)) {
@@ -676,8 +691,7 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   }
 
   (void)report_scan_failure.Release();
-  metrics_library_->SendEnumToUMA(kMetricScanResult, kBooleanMetricSuccess,
-                                  kBooleanMetricMax);
+  ReportScanSucceeded(device_name);
 
   return true;
 }
@@ -719,6 +733,24 @@ bool Manager::ExtractScanOptions(
   if (mode_out)
     *mode_out = mode;
   return true;
+}
+
+void Manager::ReportScanRequested(const std::string& device_name) {
+  DocumentScanSaneBackend backend = BackendFromDeviceName(device_name);
+  metrics_library_->SendEnumToUMA(kMetricScanRequested, backend,
+                                  DocumentScanSaneBackend::kMaxValue);
+}
+
+void Manager::ReportScanSucceeded(const std::string& device_name) {
+  DocumentScanSaneBackend backend = BackendFromDeviceName(device_name);
+  metrics_library_->SendEnumToUMA(kMetricScanSucceeded, backend,
+                                  DocumentScanSaneBackend::kMaxValue);
+}
+
+void Manager::ReportScanFailed(const std::string& device_name) {
+  DocumentScanSaneBackend backend = BackendFromDeviceName(device_name);
+  metrics_library_->SendEnumToUMA(kMetricScanFailed, backend,
+                                  DocumentScanSaneBackend::kMaxValue);
 }
 
 }  // namespace lorgnette

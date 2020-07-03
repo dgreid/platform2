@@ -59,6 +59,7 @@ static_library("liblorgnette") {
   deps = [ ":lorgnette-adaptors" ]
   sources = [
     "daemon.cc",
+    "enums.cc",
     "epson_probe.cc",
     "firewall_manager.cc",
     "manager.cc",
