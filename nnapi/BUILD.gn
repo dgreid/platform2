@@ -144,6 +144,7 @@ if (use.test) {
       "${libbase_src}/scopeguard_test.cpp",
       "${libbase_src}/stringprintf_test.cpp",
       "${libbase_src}/strings_test.cpp",
+      "libbase/tests/properties_test.cpp",
     ]
   }
 }
