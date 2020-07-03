@@ -278,7 +278,14 @@ Design doc for model publishing: [go/cros-ml-service-models].
 
 ## Log your model on UMA {#log-your-model-on-uma}
 
-### Introduction to the metrics
+There are two categories of models: flatbuffer models and binary models.
+In flatbuffer models, a tflite flatbuffer or a built-in id (pointing to a
+flatbuffer file in /opt/google/chrome/ml_models) is passed to ml-service; in
+binary models a ml library .so is directly loaded to ml-service.
+
+The UMA metrics for them are handled slightly different.
+
+### Introduction to the metrics for flatbuffer models.
 
 There are 9 "request performance metric" histograms and 3 “request event” enums
 histograms that model owner MUST config to be logged on go/uma-.
@@ -310,7 +317,7 @@ MachineLearningService.**MetricModelName**.**RequestEventName**.Event
 
 where **MetricModelName** and **RequestEventName** are same as defined above.
 
-### Enable the logging
+### Enable the logging for flatbuffer models.
 
 There are two tasks to enable the logging:
 
@@ -332,6 +339,43 @@ There are two tasks to enable the logging:
 In reviewing the CL of modifying histograms.xml, you need to specify one
 reviewer from the owners of histograms.xml. The owners can be found at
 [metrics-owner].
+
+### Introduction to the metrics for binary models.
+
+Since binary models follow slightly different loading and inferencing approaches,
+their metrics are also different from flatbuffer models.
+
+Binary models usually have their own **RequestEventName** defined; therefore
+each RequestEventName defines another group of histograms as:
+MachineLearningService.**MetricModelName**.**RequestEventName**.**ResourceName**
+where the ResourceName can be either CpuTimeMicrosec or TotalMemoryDeltaKb.
+
+For example, see TextClassifier, HandwritingModel in histograms.xml.
+
+### Enable the logging for binary models.
+
+There are three tasks to enable the logging for binary models.
+
+* Add every **MetricModelName**.**RequestEventName** (except LoadModelResult) to
+```<histogram_suffixes name="MachineLearningServiceRequests" separator="."></>```.
+This will generates
+MachineLearningService.**MetricModelName**.**RequestEventName**.CpuTimeMicrosec
+MachineLearningService.**MetricModelName**.**RequestEventName**.TotalMemoryDeltaKb
+For example, see TextClassifier.Annotate, TextClassifier.SuggestSelection in
+histograms.xml.
+
+* If any extra enum is also logged by RequestMetrics::RecordRequestEvent, then an
+extra histogram
+MachineLearningService.**MetricModelName**.**RequestEventName**.Event has to be
+manually added with additional enum (added to enums.xml) associated with it.
+For example, see TextClassifier, HandwritingModel in histograms.xml.
+
+* Add **MetricModelName** to the
+```<histogram_suffixes name="MachineLearningServiceLoadModelResult" separator="."></>```.
+This handle the specific RequestEvent LoadModelResult by generating
+MachineLearningService.**MetricModelName**.LoadModelResult.CpuTimeMicrosec
+MachineLearningService.**MetricModelName**.LoadModelResult.Event
+MachineLearningService.**MetricModelName**.LoadModelResult.TotalMemoryDeltaKb
 
 ### Further readings on histograms.xml
 1. [Histograms readme][hist-readme]
