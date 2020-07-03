@@ -110,12 +110,14 @@ std::string GetModelId(const DeviceInfo& info) {
 
 CameraHal::CameraHal()
     : task_runner_(nullptr),
-      udev_watcher_(this, "video4linux"),
+      udev_watcher_(std::make_unique<UdevWatcher>(this, "video4linux")),
       cros_device_config_(CrosDeviceConfig::Get()) {
   thread_checker_.DetachFromThread();
 }
 
-CameraHal::~CameraHal() {}
+CameraHal::~CameraHal() {
+  udev_watcher_.reset();
+}
 
 int CameraHal::GetNumberOfCameras() const {
   return num_builtin_cameras_;
@@ -206,11 +208,10 @@ int CameraHal::SetCallbacks(const camera_module_callbacks_t* callbacks) {
   callbacks_ = callbacks;
 
   // Some external cameras might be detected before SetCallbacks, we should
-  // enumerate existing devices again after we return from SetCallbacks().
-  base::ThreadTaskRunnerHandle::Get()->PostTask(
-      FROM_HERE,
-      base::Bind(base::IgnoreResult(&UdevWatcher::EnumerateExistingDevices),
-                 base::Unretained(&udev_watcher_)));
+  // enumerate existing devices again after setting the callbacks.
+  if (!udev_watcher_->EnumerateExistingDevices()) {
+    LOGF(ERROR) << "Failed to EnumerateExistingDevices()";
+  }
 
   return 0;
 }
@@ -218,12 +219,12 @@ int CameraHal::SetCallbacks(const camera_module_callbacks_t* callbacks) {
 int CameraHal::Init() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
-  if (!udev_watcher_.Start(base::ThreadTaskRunnerHandle::Get())) {
+  if (!udev_watcher_->Start(base::ThreadTaskRunnerHandle::Get())) {
     LOGF(ERROR) << "Failed to Start()";
     return -ENODEV;
   }
 
-  if (!udev_watcher_.EnumerateExistingDevices()) {
+  if (!udev_watcher_->EnumerateExistingDevices()) {
     LOGF(ERROR) << "Failed to EnumerateExistingDevices()";
     return -ENODEV;
   }

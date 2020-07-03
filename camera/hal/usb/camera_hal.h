@@ -81,7 +81,7 @@ class CameraHal : public UdevWatcher::Observer {
   CameraCharacteristics characteristics_;
 
   // Used to watch (un)plug events of external cameras.
-  UdevWatcher udev_watcher_;
+  std::unique_ptr<UdevWatcher> udev_watcher_;
 
   // Used to access to the master configuration for Chrome OS.
   CrosDeviceConfig cros_device_config_;

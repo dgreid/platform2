@@ -489,8 +489,7 @@ void CameraHalAdapter::StartOnThread(base::Callback<void(bool)> callback) {
   // get_vendor_tag_ops() first, which should be fine as it just set some
   // function pointers in the struct.
   //
-  // Note that camera HALs should NOT run any callback before set_callbacks()
-  // returns.
+  // Note that camera HALs MAY run callbacks before set_callbacks() returns.
 
   for (const auto& m : camera_modules_) {
     if (m->get_vendor_tag_ops) {
