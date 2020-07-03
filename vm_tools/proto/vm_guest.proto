@@ -273,4 +273,7 @@ service Maitred {
 
   // Gets information about the valid range of parameters to ResizeFilesystem.
   rpc GetResizeBounds(EmptyMessage) returns (GetResizeBoundsResponse);
+
+  // Prepares to suspend the VM.
+  rpc PrepareToSuspend(EmptyMessage) returns (EmptyMessage);
 }

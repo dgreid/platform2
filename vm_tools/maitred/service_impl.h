@@ -93,6 +93,10 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
       const EmptyMessage* request,
       vm_tools::GetResizeBoundsResponse* response) override;
 
+  grpc::Status PrepareToSuspend(grpc::ServerContext* ctx,
+                                const EmptyMessage* request,
+                                EmptyMessage* response) override;
+
  private:
   std::unique_ptr<vm_tools::maitred::Init> init_;
 

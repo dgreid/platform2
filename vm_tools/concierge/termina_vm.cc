@@ -486,6 +486,21 @@ bool TerminaVm::ListUsbDevice(std::vector<UsbDevice>* device) {
 }
 
 void TerminaVm::HandleSuspendImminent() {
+  LOG(INFO) << "Preparing to suspend";
+
+  vm_tools::EmptyMessage request;
+  vm_tools::EmptyMessage response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = stub_->PrepareToSuspend(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(ERROR) << "Failed to prepare for suspending" << status.error_message();
+  }
+
   RunCrosvmCommand("suspend");
 }
 

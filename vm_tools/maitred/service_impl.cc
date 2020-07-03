@@ -882,5 +882,17 @@ grpc::Status ServiceImpl::GetKernelVersion(
   return grpc::Status::OK;
 }
 
+grpc::Status ServiceImpl::PrepareToSuspend(grpc::ServerContext* ctx,
+                                           const EmptyMessage* request,
+                                           EmptyMessage* response) {
+  LOG(INFO) << "Received request to prepare to suspend.";
+
+  // Commit filesystem caches to disks. This is important especially when a disk
+  // is on external storage which can be unplugged while the device is asleep.
+  sync();
+
+  return grpc::Status::OK;
+}
+
 }  // namespace maitred
 }  // namespace vm_tools
