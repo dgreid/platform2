@@ -59,7 +59,7 @@ class Technology {
 
   Technology() : Technology(kUnknown) {}
   // Not explicit so that Types can be passed to methods taking Technologies.
-  Technology(Type type) : type_(type) {}
+  Technology(Type type) : type_(type) {}  // NOLINT(runtime/explicit)
 
   // Allow for Technology to be used as a Type (useful for
   // comparisons/switch-cases involving Types).
