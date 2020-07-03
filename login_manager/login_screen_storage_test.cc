@@ -170,6 +170,27 @@ INSTANTIATE_TEST_SUITE_P(
         testing::Values(std::vector<uint8_t>{0xb1, 0x0b},
                         GenerateLongTestValue())));
 
+TEST_F(LoginScreenStorageTestBase, RetrieveInvalidData) {
+  const base::FilePath path = GetKeyPath(kTestKey);
+
+  // Make the storage subdirectory
+  EXPECT_TRUE(base::CreateDirectory(path.DirName()));
+
+  // Create an empty file
+  base::ScopedFILE file(base::OpenFile(GetKeyPath(kTestKey), "w"));
+  EXPECT_NE(file, nullptr);
+  file.reset();
+
+  brillo::ErrorPtr error;
+  base::ScopedFD out_value_fd;
+  uint64_t value_size;
+  // CreateSharedMemoryWithData should fail because it can't create
+  // zero-sized shared memory, check that Retrieve propagates that
+  // failure.
+  EXPECT_FALSE(
+      storage_->Retrieve(&error, kTestKey, &value_size, &out_value_fd));
+}
+
 class LoginScreenStorageTestPersistent : public LoginScreenStorageTestBase {
  protected:
   const std::vector<uint8_t> test_value_{0xb1, 0x0b};

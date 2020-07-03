@@ -161,7 +161,7 @@ bool LoginScreenStorage::CreateSharedMemoryWithData(
     const std::vector<uint8_t>& data,
     base::ScopedFD* out_shared_memory_fd) {
   *out_shared_memory_fd = shared_memory_util_->WriteDataToSharedMemory(data);
-  if (!out_shared_memory_fd->get()) {
+  if (!out_shared_memory_fd->is_valid()) {
     *error = CreateError(DBUS_ERROR_IO_ERROR, "couldn't create shared memory.");
     return false;
   }

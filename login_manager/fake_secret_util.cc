@@ -12,6 +12,12 @@ namespace secret_util {
 
 base::ScopedFD FakeSharedMemoryUtil::WriteDataToSharedMemory(
     const std::vector<uint8_t>& data) {
+  // Return an invalid file descriptor if the input is empty to match
+  // the behavior of base::SharedMemory::Create.
+  if (data.empty()) {
+    return base::ScopedFD();
+  }
+
   base::ScopedFD fd(open("/dev/null", O_RDONLY));
   data_[fd.get()] = data;
   return fd;
