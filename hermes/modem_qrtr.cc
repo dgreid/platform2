@@ -27,8 +27,14 @@ constexpr uint8_t kQmiUimService = 0xB;
 constexpr uint8_t kEsimSlot = 0x01;
 constexpr uint8_t kInvalidChannel = -1;
 
-bool DecodeSuccessful(const uim_qmi_result& qmi_result) {
-  return (qmi_result.result == 0);
+bool CheckMessageSuccess(QmiUimCommand cmd, const uim_qmi_result& qmi_result) {
+  if (qmi_result.result == 0) {
+    return true;
+  }
+
+  LOG(ERROR) << cmd.ToString()
+             << " response contained error: " << qmi_result.error;
+  return false;
 }
 
 }  // namespace
@@ -364,7 +370,7 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
   }
 
   // TODO(akhouderchah) try to avoid the unnecessary copy from *_resp to vector
-  switch (static_cast<QmiUimCommand>(qmi_type)) {
+  switch (qmi_type) {
     case QmiUimCommand::kReset:
       // TODO(akhouderchah) implement a service reset
       break;
@@ -383,27 +389,26 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
 }
 
 void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
+  QmiUimCommand cmd(QmiUimCommand::kOpenLogicalChannel);
+  if (current_state_ != State::kLogicalChannelPending) {
+    LOG(ERROR) << "Received unexpected QMI UIM response: " << cmd.ToString()
+               << " in state " << current_state_;
+    return;
+  }
+
   uim_open_logical_channel_resp resp;
   unsigned int id;
-  if (qmi_decode_message(
-          &resp, &id, &packet, QMI_RESPONSE,
-          static_cast<uint16_t>(QmiUimCommand::kOpenLogicalChannel),
-          uim_open_logical_channel_resp_ei) < 0) {
-    LOG(ERROR) << "Failed to decode QMI UIM response kOpenLogicalChannel";
+  if (qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+                         uim_open_logical_channel_resp_ei) < 0) {
+    LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
+    return;
+  } else if (!CheckMessageSuccess(cmd, resp.result)) {
     return;
   }
-  if (current_state_ != State::kLogicalChannelPending) {
-    LOG(ERROR) << "Received unexpected QMI UIM response: "
-               << "kOpenLogicalChannel in state " << current_state_;
-    return;
-  }
-  if (!DecodeSuccessful(resp.result)) {
-    LOG(ERROR) << "kOpenLogicalChannel response indicating error";
-    return;
-  }
+
   if (!resp.channel_id_valid) {
-    LOG(ERROR) << "QMI UIM response for kOpenLogicalChannel contained an "
-               << "invalid channel id";
+    LOG(ERROR) << "QMI UIM response for " << cmd.ToString()
+               << " contained an invalid channel id";
     return;
   }
 
@@ -412,6 +417,7 @@ void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
 }
 
 void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
+  QmiUimCommand cmd(QmiUimCommand::kSendApdu);
   CHECK(tx_queue_.size());
   // Ensure that the queued element is for a kSendApdu command
   TxInfo* base_info = tx_queue_[0].info_.get();
@@ -422,14 +428,11 @@ void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
   uim_send_apdu_resp resp;
   unsigned int id;
   ApduTxInfo* info = static_cast<ApduTxInfo*>(base_info);
-  qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE,
-                     static_cast<uint16_t>(QmiUimCommand::kSendApdu),
-                     uim_send_apdu_resp_ei);
-  if (!DecodeSuccessful(resp.result)) {
-    LOG(ERROR) << "Failed to decode received QMI UIM response: kSendApdu";
+  if (!qmi_decode_message(&resp, &id, &packet, QMI_RESPONSE, cmd,
+                          uim_send_apdu_resp_ei)) {
+    LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
-  } else if (resp.result.error) {
-    LOG(ERROR) << "kSendApdu response contained error: " << resp.result.error;
+  } else if (!CheckMessageSuccess(cmd, resp.result)) {
     return;
   }
 

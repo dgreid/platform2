@@ -9,13 +9,38 @@
 
 #include <cstdint>
 
+#include <base/logging.h>
 #include <libqrtr.h>
 
-enum class QmiUimCommand : uint16_t {
-  kReset = 0x00,
-  kSendApdu = 0x3B,
-  kOpenLogicalChannel = 0x42,
+class QmiUimCommand {
+ public:
+  enum Code : uint16_t {
+    kReset = 0x00,
+    kSendApdu = 0x3B,
+    kOpenLogicalChannel = 0x42,
+  };
+
+  QmiUimCommand(Code code) : code_(code) {}  // NOLINT(runtime/explicit)
+  operator Code() const { return code_; }
+
+  const char* ToString() {
+    switch (code_) {
+      case kReset:
+        return "Reset";
+      case kSendApdu:
+        return "SendApdu";
+      case kOpenLogicalChannel:
+        return "OpenLogicalChannel";
+      default:
+        CHECK(false) << "Unrecognized value: " << code_;
+        return "";
+    }
+  }
+
+ private:
+  Code code_;
 };
+
 constexpr int kBufferDataSize = 260;
 
 struct uim_qmi_result {
