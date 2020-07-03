@@ -216,9 +216,9 @@ class V4L2TestEnvironment : public ::testing::Environment {
       // There is no facing information when running certification test.
       AddNegativeGtestFilter("V4L2Test.MaximumSupportedResolution");
     } else if (test_list == kHalv3TestList) {
-      // This camera module does not support 1080p 30fps and got waived.
-      // Please see http://b/115453284 for the detail.
-      if (usb_info_ == "0bda:5647") {
+      // The camera modules do not support 1080p 30fps and got waived.
+      // Please see http://b/142289821 and http://b/115453284 for the detail.
+      if (usb_info_ == "04f2:b6b5" || usb_info_ == "0bda:5647") {
         AddNegativeGtestFilter(
             "V4L2Test/V4L2TestWithResolution.Resolutions/1920x1080");
         AddNegativeGtestFilter("V4L2Test.CroppingResolution");
