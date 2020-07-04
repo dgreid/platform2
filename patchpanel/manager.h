@@ -143,6 +143,10 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<dbus::Response> OnConnectNamespace(
       dbus::MethodCall* method_call);
 
+  // Handles DBus requests for creating iptables rules by permission_broker.
+  std::unique_ptr<dbus::Response> OnModifyPortRule(
+      dbus::MethodCall* method_call);
+
   void ConnectNamespace(base::ScopedFD client_fd,
                         const patchpanel::ConnectNamespaceRequest& request,
                         patchpanel::ConnectNamespaceResponse& response);

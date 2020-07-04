@@ -15,15 +15,19 @@
 #include <base/macros.h>
 #include <brillo/errors/error.h>
 #include <gtest/gtest_prod.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 namespace permission_broker {
+
+using patchpanel::ModifyPortRuleRequest;
+using Operation = patchpanel::ModifyPortRuleRequest::Operation;
+using Protocol = patchpanel::ModifyPortRuleRequest::Protocol;
+using RuleType = patchpanel::ModifyPortRuleRequest::RuleType;
 
 extern const char kIpTablesPath[];
 extern const char kIp6TablesPath[];
 
-enum ProtocolEnum { kProtocolTcp, kProtocolUdp };
-
-const char* ProtocolName(ProtocolEnum proto);
+const std::string ProtocolName(Protocol proto);
 
 class Firewall {
  public:
@@ -32,21 +36,21 @@ class Firewall {
   Firewall() = default;
   ~Firewall() = default;
 
-  bool AddAcceptRules(ProtocolEnum protocol,
+  bool AddAcceptRules(Protocol protocol,
                       uint16_t port,
                       const std::string& interface);
-  bool DeleteAcceptRules(ProtocolEnum protocol,
+  bool DeleteAcceptRules(Protocol protocol,
                          uint16_t port,
                          const std::string& interface);
-  bool AddLoopbackLockdownRules(ProtocolEnum protocol, uint16_t port);
-  bool DeleteLoopbackLockdownRules(ProtocolEnum protocol, uint16_t port);
-  bool AddIpv4ForwardRule(ProtocolEnum protocol,
+  bool AddLoopbackLockdownRules(Protocol protocol, uint16_t port);
+  bool DeleteLoopbackLockdownRules(Protocol protocol, uint16_t port);
+  bool AddIpv4ForwardRule(Protocol protocol,
                           const std::string& input_ip,
                           uint16_t port,
                           const std::string& interface,
                           const std::string& dst_ip,
                           uint16_t dst_port);
-  bool DeleteIpv4ForwardRule(ProtocolEnum protocol,
+  bool DeleteIpv4ForwardRule(Protocol protocol,
                              const std::string& input_ip,
                              uint16_t port,
                              const std::string& interface,
@@ -57,16 +61,16 @@ class Firewall {
   friend class FirewallTest;
   // Adds ACCEPT chain rules to the filter INPUT chain.
   virtual bool AddAcceptRule(const std::string& executable_path,
-                             ProtocolEnum protocol,
+                             Protocol protocol,
                              uint16_t port,
                              const std::string& interface);
   // Removes ACCEPT chain rules from the filter INPUT chain.
   virtual bool DeleteAcceptRule(const std::string& executable_path,
-                                ProtocolEnum protocol,
+                                Protocol protocol,
                                 uint16_t port,
                                 const std::string& interface);
   // Adds or removes MASQUERADE chain rules to/from the nat PREROUTING chain.
-  virtual bool ModifyIpv4DNATRule(ProtocolEnum protocol,
+  virtual bool ModifyIpv4DNATRule(Protocol protocol,
                                   const std::string& input_ip,
                                   uint16_t port,
                                   const std::string& interface,
@@ -74,16 +78,16 @@ class Firewall {
                                   uint16_t dst_port,
                                   const std::string& operation);
   // Adds or removes ACCEPT chain rules to/from the filter FORWARD chain.
-  virtual bool ModifyIpv4ForwardChain(ProtocolEnum protocol,
+  virtual bool ModifyIpv4ForwardChain(Protocol protocol,
                                       const std::string& interface,
                                       const std::string& dst_ip,
                                       uint16_t dst_port,
                                       const std::string& operation);
   virtual bool AddLoopbackLockdownRule(const std::string& executable_path,
-                                       ProtocolEnum protocol,
+                                       Protocol protocol,
                                        uint16_t port);
   virtual bool DeleteLoopbackLockdownRule(const std::string& executable_path,
-                                          ProtocolEnum protocol,
+                                          Protocol protocol,
                                           uint16_t port);
 
   // Even though permission_broker runs as a regular user, it can still add

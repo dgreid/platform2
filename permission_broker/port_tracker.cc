@@ -9,6 +9,7 @@
 #include <sys/epoll.h>
 #include <unistd.h>
 
+#include <memory>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -18,6 +19,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <chromeos/patchpanel/client.h>
 
 namespace permission_broker {
 
@@ -111,12 +113,41 @@ PortTracker::~PortTracker() {
   }
 }
 
+bool PortTracker::ModifyPortRule(Operation op, const PortRule& rule) {
+  std::unique_ptr<patchpanel::Client> patchpanel_client =
+      patchpanel::Client::New();
+  if (!patchpanel_client) {
+    LOG(ERROR) << "Failed to open patchpanel client";
+    return false;
+  }
+
+  RuleType type;
+  switch (rule.type) {
+    case kAccessRule:
+      type = ModifyPortRuleRequest::ACCESS;
+      break;
+    case kLockdownRule:
+      type = ModifyPortRuleRequest::LOCKDOWN;
+      break;
+    case kForwardingRule:
+    case kAdbForwardingRule:
+      type = ModifyPortRuleRequest::FORWARDING;
+      break;
+    default:
+      type = ModifyPortRuleRequest::INVALID_RULE_TYPE;
+      break;
+  }
+
+  return patchpanel_client->ModifyPortRule(
+      op, type, rule.proto, rule.input_ifname, rule.input_dst_ip,
+      rule.input_dst_port, rule.dst_ip, rule.dst_port);
+}
 bool PortTracker::AllowTcpPortAccess(uint16_t port,
                                      const std::string& iface,
                                      int dbus_fd) {
   PortRule rule = {
       .type = kAccessRule,
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = port,
       .input_ifname = iface,
   };
@@ -128,7 +159,7 @@ bool PortTracker::AllowUdpPortAccess(uint16_t port,
                                      int dbus_fd) {
   PortRule rule = {
       .type = kAccessRule,
-      .proto = kProtocolUdp,
+      .proto = ModifyPortRuleRequest::UDP,
       .input_dst_port = port,
       .input_ifname = iface,
   };
@@ -137,7 +168,7 @@ bool PortTracker::AllowUdpPortAccess(uint16_t port,
 
 bool PortTracker::RevokeTcpPortAccess(uint16_t port, const std::string& iface) {
   PortRuleKey key = {
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = port,
       .input_ifname = iface,
   };
@@ -146,7 +177,7 @@ bool PortTracker::RevokeTcpPortAccess(uint16_t port, const std::string& iface) {
 
 bool PortTracker::RevokeUdpPortAccess(uint16_t port, const std::string& iface) {
   PortRuleKey key = {
-      .proto = kProtocolUdp,
+      .proto = ModifyPortRuleRequest::UDP,
       .input_dst_port = port,
       .input_ifname = iface,
   };
@@ -245,7 +276,7 @@ void PortTracker::RevokeAllPortRules() {
 bool PortTracker::LockDownLoopbackTcpPort(uint16_t port, int dbus_fd) {
   PortRule rule = {
       .type = kLockdownRule,
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = port,
       .input_ifname = kLocalhost,
   };
@@ -254,7 +285,7 @@ bool PortTracker::LockDownLoopbackTcpPort(uint16_t port, int dbus_fd) {
 
 bool PortTracker::ReleaseLoopbackTcpPort(uint16_t port) {
   PortRuleKey key = {
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = port,
       .input_ifname = kLocalhost,
   };
@@ -268,7 +299,7 @@ bool PortTracker::StartTcpPortForwarding(uint16_t input_dst_port,
                                          int dbus_fd) {
   PortRule rule = {
       .type = kForwardingRule,
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = input_dst_port,
       .input_ifname = input_ifname,
       .dst_ip = dst_ip,
@@ -284,7 +315,7 @@ bool PortTracker::StartUdpPortForwarding(uint16_t input_dst_port,
                                          int dbus_fd) {
   PortRule rule = {
       .type = kForwardingRule,
-      .proto = kProtocolUdp,
+      .proto = ModifyPortRuleRequest::UDP,
       .input_dst_port = input_dst_port,
       .input_ifname = input_ifname,
       .dst_ip = dst_ip,
@@ -296,7 +327,7 @@ bool PortTracker::StartUdpPortForwarding(uint16_t input_dst_port,
 bool PortTracker::StopTcpPortForwarding(uint16_t input_dst_port,
                                         const std::string& input_ifname) {
   PortRuleKey key = {
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = input_dst_port,
       .input_ifname = input_ifname,
   };
@@ -306,7 +337,7 @@ bool PortTracker::StopTcpPortForwarding(uint16_t input_dst_port,
 bool PortTracker::StopUdpPortForwarding(uint16_t input_dst_port,
                                         const std::string& input_ifname) {
   PortRuleKey key = {
-      .proto = kProtocolUdp,
+      .proto = ModifyPortRuleRequest::UDP,
       .input_dst_port = input_dst_port,
       .input_ifname = input_ifname,
   };
@@ -317,7 +348,7 @@ bool PortTracker::StartAdbPortForwarding(const std::string& input_ifname,
                                          int dbus_fd) {
   PortRule rule = {
       .type = kAdbForwardingRule,
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_ip = kArcAddr,
       .input_dst_port = kAdbServerPort,
       .input_ifname = input_ifname,
@@ -329,7 +360,7 @@ bool PortTracker::StartAdbPortForwarding(const std::string& input_ifname,
 
 bool PortTracker::StopAdbPortForwarding(const std::string& input_ifname) {
   PortRuleKey key = {
-      .proto = kProtocolTcp,
+      .proto = ModifyPortRuleRequest::TCP,
       .input_dst_port = kAdbServerPort,
       .input_ifname = input_ifname,
   };
@@ -349,8 +380,8 @@ bool PortTracker::ValidatePortRule(const PortRule& rule) {
   }
 
   switch (rule.proto) {
-    case kProtocolTcp:
-    case kProtocolUdp:
+    case ModifyPortRuleRequest::TCP:
+    case ModifyPortRuleRequest::UDP:
       break;
     default:
       CHECK(false) << "Unknown L4 protocol value " << rule.proto;

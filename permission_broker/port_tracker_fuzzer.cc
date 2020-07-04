@@ -46,7 +46,7 @@ class FakePortTracker : public PortTracker {
 // Helper struct for keeping track of randomly generated request.
 struct FuzzRequest {
   PortTracker::PortRuleType type;
-  ProtocolEnum proto;
+  Protocol proto;
   uint16_t port;
   std::string ifname;
 };
@@ -68,7 +68,8 @@ bool operator<(const FuzzRequest& lhs, const FuzzRequest& rhs) {
 struct FuzzRequest MakeRandomRequest(FuzzedDataProvider& provider) {
   return {
       .type = provider.ConsumeEnum<PortTracker::PortRuleType>(),
-      .proto = provider.ConsumeBool() ? kProtocolTcp : kProtocolUdp,
+      .proto = provider.ConsumeBool() ? ModifyPortRuleRequest::TCP
+                                      : ModifyPortRuleRequest::UDP,
       .port = provider.ConsumeIntegral<uint16_t>(),
       .ifname = provider.ConsumeRandomLengthString(IFNAMSIZ - 1),
   };
@@ -83,7 +84,7 @@ bool AddRule(FuzzedDataProvider& provider,
       // Ignore random rule generated with this default type value.
       return false;
     case PortTracker::kAccessRule:
-      if (request.proto == kProtocolTcp) {
+      if (request.proto == ModifyPortRuleRequest::TCP) {
         return port_tracker.AllowTcpPortAccess(request.port, request.ifname,
                                                dbus_fd);
       } else {
@@ -91,7 +92,7 @@ bool AddRule(FuzzedDataProvider& provider,
                                                dbus_fd);
       }
     case PortTracker::kLockdownRule:
-      if (request.proto == kProtocolUdp) {
+      if (request.proto == ModifyPortRuleRequest::UDP) {
         // Invalid lockdown rule request, ignore.
         return false;
       }
@@ -103,7 +104,7 @@ bool AddRule(FuzzedDataProvider& provider,
       inet_ntop(AF_INET, &ip_addr, buffer, INET_ADDRSTRLEN);
       std::string dst_ip = buffer;
       uint16_t dst_port = provider.ConsumeIntegral<uint16_t>();
-      if (request.proto == kProtocolTcp) {
+      if (request.proto == ModifyPortRuleRequest::TCP) {
         return port_tracker.StartTcpPortForwarding(request.port, request.ifname,
                                                    dst_ip, dst_port, dbus_fd);
       } else {
@@ -123,19 +124,19 @@ bool RemoveRule(FakePortTracker& port_tracker, const FuzzRequest& request) {
       // Ignore random rule generated with this default type value.
       return false;
     case PortTracker::kAccessRule:
-      if (request.proto == kProtocolTcp) {
+      if (request.proto == ModifyPortRuleRequest::TCP) {
         return port_tracker.RevokeTcpPortAccess(request.port, request.ifname);
       } else {
         return port_tracker.RevokeUdpPortAccess(request.port, request.ifname);
       }
     case PortTracker::kLockdownRule:
-      if (request.proto == kProtocolUdp) {
+      if (request.proto == ModifyPortRuleRequest::UDP) {
         // Invalid lockdown rule request, ignore.
         return false;
       }
       return port_tracker.ReleaseLoopbackTcpPort(request.port);
     case PortTracker::kForwardingRule:
-      if (request.proto == kProtocolTcp) {
+      if (request.proto == ModifyPortRuleRequest::TCP) {
         return port_tracker.StopTcpPortForwarding(request.port, request.ifname);
       } else {
         return port_tracker.StopUdpPortForwarding(request.port, request.ifname);

@@ -23,10 +23,16 @@ pkg_config("target_defaults_deps") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libpatchpanel-client",
     "libsession_manager-client",
     "libudev",
     "libusb-1.0",
   ]
+  if (use.fuzzer) {
+    pkg_deps += [ "protobuf" ]
+  } else {
+    pkg_deps += [ "protobuf-lite" ]
+  }
 }
 
 config("target_defaults") {

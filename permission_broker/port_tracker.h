@@ -14,6 +14,7 @@
 #include <base/macros.h>
 #include <base/message_loop/message_loop.h>
 #include <base/sequenced_task_runner.h>
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "permission_broker/firewall.h"
 
@@ -22,7 +23,7 @@ namespace permission_broker {
 class PortTracker {
  public:
   struct PortRuleKey {
-    ProtocolEnum proto;
+    Protocol proto;
     uint16_t input_dst_port;
     std::string input_ifname;
 
@@ -62,7 +63,7 @@ class PortTracker {
   struct PortRule {
     int lifeline_fd;
     PortRuleType type;
-    ProtocolEnum proto;
+    Protocol proto;
     std::string input_dst_ip;
     uint16_t input_dst_port;
     std::string input_ifname;
@@ -106,6 +107,9 @@ class PortTracker {
               Firewall* firewall);
 
  private:
+  // Call patchpanel's DBus API to create or remove firewall rule.
+  virtual bool ModifyPortRule(Operation op, const PortRule& rule);
+
   // Helper functions for process lifetime tracking.
   virtual int AddLifelineFd(int dbus_fd);
   virtual bool DeleteLifelineFd(int fd);

@@ -12,6 +12,9 @@
 
 #include "permission_broker/firewall.h"
 
+using patchpanel::ModifyPortRuleRequest;
+using Protocol = patchpanel::ModifyPortRuleRequest::Protocol;
+
 namespace permission_broker {
 
 class FakeFirewall : public Firewall {
@@ -41,9 +44,8 @@ void FuzzAcceptRules(permission_broker::FakeFirewall& fake_firewall,
                      size_t size) {
   FuzzedDataProvider data_provider(data, size);
   while (data_provider.remaining_bytes() > 0) {
-    permission_broker::ProtocolEnum proto =
-        data_provider.ConsumeBool() ? permission_broker::kProtocolTcp
-                                    : permission_broker::kProtocolUdp;
+    Protocol proto = data_provider.ConsumeBool() ? ModifyPortRuleRequest::TCP
+                                                 : ModifyPortRuleRequest::UDP;
     uint16_t port = data_provider.ConsumeIntegral<uint16_t>();
     std::string iface = data_provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     if (data_provider.ConsumeBool()) {
@@ -59,9 +61,8 @@ void FuzzForwardRules(permission_broker::FakeFirewall& fake_firewall,
                       size_t size) {
   FuzzedDataProvider data_provider(data, size);
   while (data_provider.remaining_bytes() > 0) {
-    permission_broker::ProtocolEnum proto =
-        data_provider.ConsumeBool() ? permission_broker::kProtocolTcp
-                                    : permission_broker::kProtocolUdp;
+    Protocol proto = data_provider.ConsumeBool() ? ModifyPortRuleRequest::TCP
+                                                 : ModifyPortRuleRequest::UDP;
     uint16_t forwarded_port = data_provider.ConsumeIntegral<uint16_t>();
     uint16_t dst_port = data_provider.ConsumeIntegral<uint16_t>();
     struct in_addr input_ip_addr = {
@@ -92,9 +93,8 @@ void FuzzLoopbackLockdownRules(permission_broker::FakeFirewall& fake_firewall,
                                size_t size) {
   FuzzedDataProvider data_provider(data, size);
   while (data_provider.remaining_bytes() > 0) {
-    permission_broker::ProtocolEnum proto =
-        data_provider.ConsumeBool() ? permission_broker::kProtocolTcp
-                                    : permission_broker::kProtocolUdp;
+    Protocol proto = data_provider.ConsumeBool() ? ModifyPortRuleRequest::TCP
+                                                 : ModifyPortRuleRequest::UDP;
     uint16_t port = data_provider.ConsumeIntegral<uint16_t>();
     if (data_provider.ConsumeBool()) {
       fake_firewall.AddLoopbackLockdownRules(proto, port);

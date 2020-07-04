@@ -58,19 +58,14 @@ namespace permission_broker {
 const char kIpTablesPath[] = "/sbin/iptables";
 const char kIp6TablesPath[] = "/sbin/ip6tables";
 
-const char* ProtocolName(ProtocolEnum proto) {
-  switch (proto) {
-    case kProtocolTcp:
-      return "tcp";
-    case kProtocolUdp:
-      return "udp";
-    default:
-      NOTREACHED() << "Unexpected L4 protocol value " << proto;
-      return "unknown";
+const std::string ProtocolName(Protocol proto) {
+  if (proto == ModifyPortRuleRequest::INVALID_PROTOCOL) {
+    NOTREACHED() << "Unexpected L4 protocol value";
   }
+  return base::ToLowerASCII(ModifyPortRuleRequest::Protocol_Name(proto));
 }
 
-bool Firewall::AddAcceptRules(ProtocolEnum protocol,
+bool Firewall::AddAcceptRules(Protocol protocol,
                               uint16_t port,
                               const std::string& interface) {
   if (port == 0U) {
@@ -98,7 +93,7 @@ bool Firewall::AddAcceptRules(ProtocolEnum protocol,
   return true;
 }
 
-bool Firewall::DeleteAcceptRules(ProtocolEnum protocol,
+bool Firewall::DeleteAcceptRules(Protocol protocol,
                                  uint16_t port,
                                  const std::string& interface) {
   if (port == 0U) {
@@ -118,7 +113,7 @@ bool Firewall::DeleteAcceptRules(ProtocolEnum protocol,
   return ip4_success && ip6_success;
 }
 
-bool Firewall::AddIpv4ForwardRule(ProtocolEnum protocol,
+bool Firewall::AddIpv4ForwardRule(Protocol protocol,
                                   const std::string& input_ip,
                                   uint16_t port,
                                   const std::string& interface,
@@ -136,7 +131,7 @@ bool Firewall::AddIpv4ForwardRule(ProtocolEnum protocol,
   return true;
 }
 
-bool Firewall::DeleteIpv4ForwardRule(ProtocolEnum protocol,
+bool Firewall::DeleteIpv4ForwardRule(Protocol protocol,
                                      const std::string& input_ip,
                                      uint16_t port,
                                      const std::string& interface,
@@ -152,7 +147,7 @@ bool Firewall::DeleteIpv4ForwardRule(ProtocolEnum protocol,
   return success;
 }
 
-bool Firewall::ModifyIpv4DNATRule(ProtocolEnum protocol,
+bool Firewall::ModifyIpv4DNATRule(Protocol protocol,
                                   const std::string& input_ip,
                                   uint16_t port,
                                   const std::string& interface,
@@ -215,7 +210,7 @@ bool Firewall::ModifyIpv4DNATRule(ProtocolEnum protocol,
   return RunInMinijail(argv) == 0;
 }
 
-bool Firewall::ModifyIpv4ForwardChain(ProtocolEnum protocol,
+bool Firewall::ModifyIpv4ForwardChain(Protocol protocol,
                                       const std::string& interface,
                                       const std::string& dst_ip,
                                       uint16_t dst_port,
@@ -262,7 +257,7 @@ bool Firewall::ModifyIpv4ForwardChain(ProtocolEnum protocol,
   return RunInMinijail(argv) == 0;
 }
 
-bool Firewall::AddLoopbackLockdownRules(ProtocolEnum protocol, uint16_t port) {
+bool Firewall::AddLoopbackLockdownRules(Protocol protocol, uint16_t port) {
   if (port == 0U) {
     LOG(ERROR) << "Port 0 is not a valid port";
     return false;
@@ -284,8 +279,7 @@ bool Firewall::AddLoopbackLockdownRules(ProtocolEnum protocol, uint16_t port) {
   return true;
 }
 
-bool Firewall::DeleteLoopbackLockdownRules(ProtocolEnum protocol,
-                                           uint16_t port) {
+bool Firewall::DeleteLoopbackLockdownRules(Protocol protocol, uint16_t port) {
   if (port == 0U) {
     LOG(ERROR) << "Port 0 is not a valid port";
     return false;
@@ -297,7 +291,7 @@ bool Firewall::DeleteLoopbackLockdownRules(ProtocolEnum protocol,
 }
 
 bool Firewall::AddAcceptRule(const std::string& executable_path,
-                             ProtocolEnum protocol,
+                             Protocol protocol,
                              uint16_t port,
                              const std::string& interface) {
   std::vector<std::string> argv{executable_path,
@@ -319,7 +313,7 @@ bool Firewall::AddAcceptRule(const std::string& executable_path,
 }
 
 bool Firewall::DeleteAcceptRule(const std::string& executable_path,
-                                ProtocolEnum protocol,
+                                Protocol protocol,
                                 uint16_t port,
                                 const std::string& interface) {
   std::vector<std::string> argv{executable_path,
@@ -341,7 +335,7 @@ bool Firewall::DeleteAcceptRule(const std::string& executable_path,
 }
 
 bool Firewall::AddLoopbackLockdownRule(const std::string& executable_path,
-                                       ProtocolEnum protocol,
+                                       Protocol protocol,
                                        uint16_t port) {
   std::vector<std::string> argv{
       executable_path,
@@ -367,7 +361,7 @@ bool Firewall::AddLoopbackLockdownRule(const std::string& executable_path,
 }
 
 bool Firewall::DeleteLoopbackLockdownRule(const std::string& executable_path,
-                                          ProtocolEnum protocol,
+                                          Protocol protocol,
                                           uint16_t port) {
   std::vector<std::string> argv{
       executable_path,

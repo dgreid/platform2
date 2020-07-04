@@ -196,6 +196,7 @@ void Manager::InitialSetup() {
       {patchpanel::kPluginVmShutdownMethod, &Manager::OnPluginVmShutdown},
       {patchpanel::kSetVpnIntentMethod, &Manager::OnSetVpnIntent},
       {patchpanel::kConnectNamespaceMethod, &Manager::OnConnectNamespace},
+      {patchpanel::kModifyPortRuleMethod, &Manager::OnModifyPortRule},
   };
 
   for (const auto& kv : kServiceMethods) {
@@ -770,6 +771,28 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
   if (success)
     ConnectNamespace(std::move(client_fd), request, response);
 
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnModifyPortRule(
+    dbus::MethodCall* method_call) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::ModifyPortRuleRequest request;
+  patchpanel::ModifyPortRuleResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse ModifyPortRequest";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  // TODO(b/160129667): Handle ModifyPortRule request.
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
 }
