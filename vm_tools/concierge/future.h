@@ -290,7 +290,7 @@ class Promise {
 
  private:
   // Lock state_.mutex before calling this
-  void SetValueHelper();
+  void SetValueHelperLocked();
 
   std::shared_ptr<internal::SharedState<T, Error>> state_;
   DISALLOW_COPY_AND_ASSIGN(Promise);
@@ -299,7 +299,7 @@ class Promise {
 // ------ Promise impl ------
 
 template <typename T, typename Error>
-void Promise<T, Error>::SetValueHelper() {
+void Promise<T, Error>::SetValueHelperLocked() {
   DCHECK(!state_->done);
   state_->done = true;
 
@@ -315,7 +315,7 @@ typename std::enable_if_t<std::is_void<U>::value>
 Promise<T, Error>::SetValue() {
   base::AutoLock guard(state_->mutex);
   state_->ret = vm_tools::Resolve<void, Error>();
-  SetValueHelper();
+  SetValueHelperLocked();
 }
 
 template <typename T, typename Error>
@@ -324,7 +324,7 @@ typename std::enable_if_t<!std::is_void<U>::value> Promise<T, Error>::SetValue(
     U val) {
   base::AutoLock guard(state_->mutex);
   state_->ret = vm_tools::Resolve<T, Error>(std::move(val));
-  SetValueHelper();
+  SetValueHelperLocked();
 }
 
 template <typename T, typename Error>
@@ -357,7 +357,7 @@ template <typename T, typename Error>
 void Promise<T, Error>::SetResult(GetResult<T, Error> ret) {
   base::AutoLock guard(state_->mutex);
   state_->ret = std::move(ret);
-  SetValueHelper();
+  SetValueHelperLocked();
 }
 
 // ------ Future impl ------
@@ -480,14 +480,15 @@ Future<T, Error> Future<T, Error>::OnReject(
 
 template <typename T, typename Error>
 GetResult<T, Error> Future<T, Error>::Get(base::RunLoop::Type type) {
-  if (!IsDone()) {
-    base::RunLoop loop(type);
-    {
-      base::AutoLock guard(state_->mutex);
+  {
+    base::ReleasableAutoLock lock(&state_->mutex);
+    if (!state_->done) {
+      base::RunLoop loop(type);
       DCHECK(state_->then_func.is_null());
       state_->then_func = loop.QuitClosure();
+      lock.Release();
+      loop.Run();
     }
-    loop.Run();
   }
   return GetHelper();
 }
