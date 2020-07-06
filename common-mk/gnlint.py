@@ -641,6 +641,15 @@ def RunLinters(name, gndata, settings=None):
   return issues
 
 
+def GetGnPath():
+  """Get path to gn executable.
+
+  Returns:
+    Path string.
+  """
+  return os.path.join(chromite_root, 'chroot', 'usr', 'bin', 'gn')
+
+
 def CheckGnFile(gnfile):
   """Check |gnfile| for common mistakes.
 
@@ -662,7 +671,12 @@ def CheckGnFile(gnfile):
   issues += settings.issues
 
   # Parse and check
-  gn_path = os.path.join(chromite_root, 'chroot', 'usr', 'bin', 'gn')
+  gn_path = GetGnPath()
+  if not os.path.exists(gn_path):
+    logging.error(
+        'gn command not found: "%s"; make sure it is installed.', gn_path)
+    sys.exit(1)
+
   try:
     command_result = cros_build_lib.run(
         [gn_path, 'format', '--dump-tree=json', gnfile],

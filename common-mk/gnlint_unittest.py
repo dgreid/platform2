@@ -88,6 +88,7 @@ class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
     content = '# gn file\n'
     gnfile = os.path.join(self.tempdir, 'asdf')
     osutils.WriteFile(gnfile, content)
+    self.assertExists(gnlint.GetGnPath())
     ret = gnlint.CheckGnFile(gnfile)
     self.assertEqual(ret, [])
 
@@ -100,6 +101,7 @@ class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
     gn_options = '#gnlint: disable=GnLintVisibilityFlags\n'
     gnfile = os.path.join(self.tempdir, 'asdf')
     osutils.WriteFile(gnfile, static_library_with_visibility_flag)
+    self.assertExists(gnlint.GetGnPath())
     ret = gnlint.CheckGnFile(gnfile)
     self.assertEqual(len(ret), 1)
     osutils.WriteFile(gnfile, gn_options+static_library_with_visibility_flag)
@@ -111,6 +113,7 @@ class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
     content = 'executable("foo"){\n}\n'   # no space after ')'
     gnfile = os.path.join(self.tempdir, 'asdf')
     osutils.WriteFile(gnfile, content)
+    self.assertExists(gnlint.GetGnPath())
     ret = gnlint.CheckGnFile(gnfile)
     self.assertEqual(len(ret), 1)
 
