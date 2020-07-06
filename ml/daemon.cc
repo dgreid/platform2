@@ -65,8 +65,9 @@ void Daemon::BootstrapMojoConnection(
       Metrics::MojoConnectionEvent::kBootstrapRequested);
   if (machine_learning_service_) {
     LOG(ERROR) << "MachineLearningService already instantiated";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED, "Bootstrap already completed"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_FAILED, "Bootstrap already completed"));
     return;
   }
 
@@ -75,24 +76,27 @@ void Daemon::BootstrapMojoConnection(
 
   if (!reader.PopFileDescriptor(&file_handle)) {
     LOG(ERROR) << "Couldn't extract file descriptor from D-Bus call";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, "Expected file descriptor"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, "Expected file descriptor"));
     return;
   }
 
   if (!file_handle.is_valid()) {
     LOG(ERROR) << "ScopedFD extracted from D-Bus call was invalid (i.e. empty)";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS,
-        "Invalid (empty) file descriptor"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS,
+            "Invalid (empty) file descriptor"));
     return;
   }
 
   if (!base::SetCloseOnExec(file_handle.get())) {
     PLOG(ERROR) << "Failed setting FD_CLOEXEC on file descriptor";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED,
-        "Failed setting FD_CLOEXEC on file descriptor"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_FAILED,
+            "Failed setting FD_CLOEXEC on file descriptor"));
     return;
   }
 
@@ -110,7 +114,7 @@ void Daemon::BootstrapMojoConnection(
       Metrics::MojoConnectionEvent::kBootstrapSucceeded);
 
   // Send success response.
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Daemon::OnConnectionError() {
