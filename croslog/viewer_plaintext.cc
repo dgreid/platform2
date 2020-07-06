@@ -13,6 +13,7 @@
 #include "base/strings/string_number_conversions.h"
 
 #include "croslog/cursor_util.h"
+#include "croslog/log_parser_audit.h"
 #include "croslog/log_parser_syslog.h"
 #include "croslog/severity.h"
 
@@ -25,6 +26,8 @@ const char* kLogSources[] = {
     "/var/log/messages",
     "/var/log/net.log",
 };
+
+const char kAuditLogSources[] = "/var/log/audit/audit.log";
 
 }  // anonymous namespace
 
@@ -55,9 +58,13 @@ bool ViewerPlaintext::Run() {
                            install_change_watcher);
   }
 
-  if (config_.follow) {
-    multiplexer_.AddObserver(this);
+  if (base::PathExists(base::FilePath(kAuditLogSources))) {
+    multiplexer_.AddSource(base::FilePath(kAuditLogSources),
+                           std::make_unique<LogParserAudit>(),
+                           install_change_watcher);
   }
+
+  multiplexer_.AddObserver(this);
 
   if (config_.lines >= 0) {
     multiplexer_.SetLinesFromLast(config_.lines);

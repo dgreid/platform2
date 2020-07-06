@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CROSLOG_LOG_PARSER_SYSLOG_H_
-#define CROSLOG_LOG_PARSER_SYSLOG_H_
+#ifndef CROSLOG_LOG_PARSER_AUDIT_H_
+#define CROSLOG_LOG_PARSER_AUDIT_H_
 
 #include "croslog/log_parser.h"
 
@@ -11,16 +11,16 @@
 
 namespace croslog {
 
-class LogParserSyslog : public LogParser {
+class LogParserAudit : public LogParser {
  public:
-  LogParserSyslog();
+  LogParserAudit();
 
   MaybeLogEntry Parse(std::string&& entire_line) override;
 
  private:
-  DISALLOW_COPY_AND_ASSIGN(LogParserSyslog);
+  DISALLOW_COPY_AND_ASSIGN(LogParserAudit);
 };
 
 }  // namespace croslog
 
-#endif  // CROSLOG_LOG_PARSER_SYSLOG_H_
+#endif  // CROSLOG_LOG_PARSER_AUDIT_H_
