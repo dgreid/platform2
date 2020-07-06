@@ -12,6 +12,7 @@
 #include "base/json/string_escape.h"
 #include "base/strings/string_number_conversions.h"
 
+#include "croslog/cursor_util.h"
 #include "croslog/log_parser_syslog.h"
 #include "croslog/severity.h"
 
@@ -29,12 +30,21 @@ const char* kLogSources[] = {
 
 ViewerPlaintext::ViewerPlaintext(const croslog::Config& config)
     : config_(config) {
-  if (config.grep.empty())
-    return;
+  if (!config.grep.empty()) {
+    config_grep_.emplace(config.grep);
+    if (!config_grep_->ok())
+      config_grep_.reset();
+  }
 
-  config_grep_.emplace(config.grep);
-  if (!config_grep_->ok())
-    config_grep_.reset();
+  if (!config_.cursor.empty()) {
+    if (ParseCursor(config_.after_cursor, &config_cursor_time_))
+      config_cursor_mode_ = CursorMode::NEWER;
+  } else if (!config_.after_cursor.empty()) {
+    if (ParseCursor(config_.cursor, &config_cursor_time_))
+      config_cursor_mode_ = CursorMode::SAME_AND_NEWER;
+  }
+
+  config_show_cursor_ = config_.show_cursor && !config_.follow;
 }
 
 bool ViewerPlaintext::Run() {
@@ -72,6 +82,17 @@ void ViewerPlaintext::OnLogFileChanged() {
 }
 
 bool ViewerPlaintext::ShouldFilterOutEntry(const LogEntry& e) {
+  if (config_cursor_mode_ != CursorMode::UNSPECIFIED) {
+    if ((config_cursor_mode_ == CursorMode::NEWER &&
+         config_cursor_time_ >= e.time()) ||
+        (config_cursor_mode_ == CursorMode::SAME_AND_NEWER &&
+         config_cursor_time_ > e.time())) {
+      // TODO(yoshiki): Consider the case that multiple logs have the same
+      // time.
+      return true;
+    }
+  }
+
   const std::string& tag = e.tag();
   if (!config_.identifier.empty() && config_.identifier != tag)
     return true;
@@ -88,15 +109,36 @@ bool ViewerPlaintext::ShouldFilterOutEntry(const LogEntry& e) {
 }
 
 void ViewerPlaintext::ReadRemainingLogs() {
+  base::Time last_shown_log_time;
+
   while (true) {
     const MaybeLogEntry& e = multiplexer_.Forward();
     if (!e.has_value())
       break;
 
+    // Shoe the last cursor regardless of visibility.
+    if (config_show_cursor_)
+      last_shown_log_time = e->time();
+
     if (ShouldFilterOutEntry(*e))
       continue;
 
     WriteLog(*e);
+  }
+
+  if (config_show_cursor_) {
+    if (last_shown_log_time.is_null()) {
+      multiplexer_.SetLinesFromLast(1);
+      const MaybeLogEntry& e = multiplexer_.Forward();
+      if (e.has_value())
+        last_shown_log_time = e->time();
+    }
+
+    if (!last_shown_log_time.is_null()) {
+      WriteOutput("-- cursor: ");
+      WriteOutput(GenerateCursor(last_shown_log_time));
+      WriteOutput("\n", 1);
+    }
   }
 }
 

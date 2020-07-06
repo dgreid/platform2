@@ -15,6 +15,8 @@ static_library("libcroslog_static") {
   sources = [
     "config.cc",
     "config.h",
+    "cursor_util.cc",
+    "cursor_util.h",
     "file_change_watcher.cc",
     "file_change_watcher.h",
     "log_entry.cc",
@@ -57,6 +59,7 @@ if (use.test) {
   executable("croslog_testrunner") {
     sources = [
       "config_test.cc",
+      "cursor_util_test.cc",
       "file_change_watcher_test.cc",
       "log_line_reader_test.cc",
       "log_parser_syslog_test.cc",

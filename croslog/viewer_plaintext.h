@@ -31,11 +31,16 @@ class ViewerPlaintext : public Multiplexer::Observer {
  private:
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
 
+  enum class CursorMode { UNSPECIFIED, SAME_AND_NEWER, NEWER };
+
   base::RunLoop run_loop_;
   base::Closure quit_closure_{run_loop_.QuitWhenIdleClosure()};
 
   const croslog::Config config_;
   base::Optional<RE2> config_grep_;
+  CursorMode config_cursor_mode_ = CursorMode::UNSPECIFIED;
+  base::Time config_cursor_time_;
+  bool config_show_cursor_ = false;
 
   Multiplexer multiplexer_;
 

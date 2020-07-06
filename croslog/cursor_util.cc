@@ -5,17 +5,16 @@
 #include "croslog/cursor_util.h"
 
 #include <string>
+#include <inttypes.h>
 
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/stringprintf.h>
 
 namespace croslog {
 
 std::string GenerateCursor(const base::Time& time) {
   int64_t time_value = time.ToDeltaSinceWindowsEpoch().InMicroseconds();
-  uint8_t buffer[sizeof(int64_t)];
-  std::reverse_copy(reinterpret_cast<uint8_t*>(&time_value),
-                    reinterpret_cast<uint8_t*>(&time_value + 1), buffer);
-  return "time=" + base::HexEncode(buffer, sizeof(int64_t));
+  return "time=" + base::StringPrintf("%016" PRIX64, time_value);
 }
 
 bool ParseCursor(const std::string& cursor_str, base::Time* output) {
