@@ -58,12 +58,4 @@ base::FilePath GetCpuFreqDirectoryPath(const base::FilePath& root_dir,
   }
 }
 
-base::FilePath GetProcCpuInfoPath(const base::FilePath& root_dir) {
-  return root_dir.Append("proc/cpuinfo");
-}
-
-base::FilePath GetProcStatPath(const base::FilePath& root_dir) {
-  return root_dir.Append("proc/stat");
-}
-
 }  // namespace diagnostics

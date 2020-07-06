@@ -59,15 +59,4 @@ TEST(CpuFileHelpers, GetCpuFreqDirectoryPath) {
   EXPECT_EQ(freq_dir, temp_dir.GetPath().Append(cpufreq_path));
 }
 
-TEST(CpuFileHelpers, GetProcCpuInfoPath) {
-  const auto cpuinfo_path =
-      GetProcCpuInfoPath(base::FilePath(kProductionRootDir));
-  EXPECT_EQ(cpuinfo_path.value(), "/proc/cpuinfo");
-}
-
-TEST(CpuFileHelpers, GetProcStatPath) {
-  const auto stat_path = GetProcStatPath(base::FilePath(kProductionRootDir));
-  EXPECT_EQ(stat_path.value(), "/proc/stat");
-}
-
 }  // namespace diagnostics

@@ -38,14 +38,6 @@ base::FilePath GetCStateDirectoryPath(const base::FilePath& root_dir,
 base::FilePath GetCpuFreqDirectoryPath(const base::FilePath& root_dir,
                                        const std::string& logical_id);
 
-// Returns an absolute path to the cpuinfo file on procfs. On a real device,
-// this will be /proc/cpuinfo.
-base::FilePath GetProcCpuInfoPath(const base::FilePath& root_dir);
-
-// Returns an absolute path to the stat file on procfs. On a real device, this
-// will be /proc/stat.
-base::FilePath GetProcStatPath(const base::FilePath& root_dir);
-
 }  // namespace diagnostics
 
 #endif  // DIAGNOSTICS_CROS_HEALTHD_UTILS_CPU_FILE_HELPERS_H_

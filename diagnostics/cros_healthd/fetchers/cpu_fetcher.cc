@@ -23,6 +23,7 @@
 #include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/cpu_file_helpers.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/procfs_utils.h"
 
 namespace diagnostics {
 

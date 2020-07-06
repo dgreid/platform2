@@ -14,6 +14,7 @@ source_set("libcros_healthd_utils") {
   sources = [
     "cpu_file_helpers.cc",
     "helper_tool_utils.cc",
+    "procfs_utils.cc",
   ]
 }
 
@@ -38,6 +39,7 @@ if (use.test) {
     sources = [
       "cpu_file_helpers_test.cc",
       "helper_tool_utils_test.cc",
+      "procfs_utils_test.cc",
     ]
   }
 }
