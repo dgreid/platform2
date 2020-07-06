@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <array>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <base/threading/sequenced_task_runner_handle.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread.h>
@@ -31,7 +31,7 @@ class FutureTest : public ::testing::Test {
 
  protected:
   // Both single and multi threaded usage of future is tested
-  base::test::ScopedTaskEnvironment task_environment_;
+  base::test::TaskEnvironment task_environment_;
   base::Thread worker_thread_{"worker thread"};
   scoped_refptr<base::SequencedTaskRunner> task_runner_;
 };

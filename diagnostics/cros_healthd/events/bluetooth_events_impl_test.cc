@@ -8,7 +8,7 @@
 
 #include <base/bind.h>
 #include <base/run_loop.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <dbus/object_path.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -126,11 +126,11 @@ class BluetoothEventsImplTest : public testing::Test {
 
     // Make sure |bluetooth_events_impl_| gets a chance to observe the
     // connection error.
-    scoped_task_environment_.RunUntilIdle();
+    task_environment_.RunUntilIdle();
   }
 
  private:
-  base::test::ScopedTaskEnvironment scoped_task_environment_;
+  base::test::TaskEnvironment task_environment_;
 
   MockContext mock_context_;
   BluetoothEventsImpl bluetooth_events_impl_{&mock_context_};

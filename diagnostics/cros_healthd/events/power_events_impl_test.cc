@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <base/run_loop.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -83,20 +83,18 @@ class PowerEventsImplTest : public testing::Test {
 
   MockCrosHealthdPowerObserver* mock_observer() { return observer_.get(); }
 
-  base::test::ScopedTaskEnvironment* scoped_task_environment() {
-    return &scoped_task_environment_;
-  }
+  base::test::TaskEnvironment* task_environment() { return &task_environment_; }
 
   void DestroyMojoObserver() {
     observer_.reset();
 
     // Make sure |power_events_impl_| gets a chance to observe the connection
     // error.
-    scoped_task_environment_.RunUntilIdle();
+    task_environment_.RunUntilIdle();
   }
 
  private:
-  base::test::ScopedTaskEnvironment scoped_task_environment_;
+  base::test::TaskEnvironment task_environment_;
   MockContext mock_context_;
   std::unique_ptr<StrictMock<MockCrosHealthdPowerObserver>> observer_;
   PowerEventsImpl power_events_impl_{&mock_context_};
@@ -190,7 +188,7 @@ TEST_F(PowerEventsImplTest, IgnorePayloadWithoutExternalPower) {
   power_manager::PowerSupplyProperties power_supply;
   fake_adapter()->EmitPowerSupplyPollSignal(power_supply);
 
-  scoped_task_environment()->RunUntilIdle();
+  task_environment()->RunUntilIdle();
 }
 
 // Test that multiple of the same powerd events in a row are only reported once.
@@ -211,7 +209,7 @@ TEST_F(PowerEventsImplTest, MultipleIdenticalPayloadsReportedOnlyOnce) {
   // A second identical call should be ignored.
   fake_adapter()->EmitPowerSupplyPollSignal(power_supply);
 
-  scoped_task_environment()->RunUntilIdle();
+  task_environment()->RunUntilIdle();
 
   // Changing the type of external power should again be reported.
   base::RunLoop run_loop2;

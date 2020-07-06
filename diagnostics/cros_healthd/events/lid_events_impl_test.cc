@@ -6,7 +6,7 @@
 #include <utility>
 
 #include <base/run_loop.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -85,11 +85,11 @@ class LidEventsImplTest : public testing::Test {
 
     // Make sure |lid_events_impl_| gets a chance to observe the connection
     // error.
-    scoped_task_environment_.RunUntilIdle();
+    task_environment_.RunUntilIdle();
   }
 
  private:
-  base::test::ScopedTaskEnvironment scoped_task_environment_;
+  base::test::TaskEnvironment task_environment_;
   MockContext mock_context_;
   std::unique_ptr<StrictMock<MockCrosHealthdLidObserver>> observer_;
   LidEventsImpl lid_events_impl_{&mock_context_};

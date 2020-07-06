@@ -7,7 +7,7 @@
 #include <memory>
 #include <linux/rtnetlink.h>
 
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 
@@ -92,12 +92,11 @@ class NeighborLinkMonitorTest : public testing::Test {
   }
 
   void FastForwardOneActiveProbeInterval() {
-    scoped_task_environment_.FastForwardBy(
-        NeighborLinkMonitor::kActiveProbeInterval);
+    task_environment_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
   }
 
-  base::test::ScopedTaskEnvironment scoped_task_environment_{
-      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
   std::unique_ptr<NeighborLinkMonitor> link_monitor_;
 };
@@ -213,7 +212,7 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
   link_monitor_->OnNeighborMessage(*addr_7_is_reachable);
 
   // Nothing should happen within one interval.
-  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromSeconds(30));
+  task_environment_.FastForwardBy(base::TimeDelta::FromSeconds(30));
 
   // Checks if probe requests sent for both addresses when the timer is
   // triggered.

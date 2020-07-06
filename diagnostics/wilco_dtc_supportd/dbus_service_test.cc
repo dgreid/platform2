@@ -4,7 +4,7 @@
 
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <brillo/errors/error.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -52,7 +52,7 @@ class MockCallback {
 // Tests for the DBusService class.
 class DBusServiceTest : public testing::Test {
  protected:
-  base::test::ScopedTaskEnvironment scoped_task_environment_;
+  base::test::TaskEnvironment task_environment_;
 
   StrictMock<MockCallback> mock_callback_;
   GrpcClientManager grpc_client_manager_;

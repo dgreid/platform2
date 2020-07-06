@@ -5,7 +5,7 @@
 #include "typecd/udev_monitor.h"
 
 #include <base/files/file_util.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <brillo/udev/mock_udev.h>
 #include <brillo/udev/mock_udev_device.h>
 #include <brillo/udev/mock_udev_enumerate.h>
@@ -66,9 +66,8 @@ class TestObserver : public UdevMonitor::Observer {
 class UdevMonitorTest : public ::testing::Test {
  public:
   UdevMonitorTest()
-      : task_environment_(
-            base::test::ScopedTaskEnvironment::MainThreadType::IO,
-            base::test::ScopedTaskEnvironment::ExecutionMode::ASYNC) {}
+      : task_environment_(base::test::TaskEnvironment::MainThreadType::IO,
+                          base::test::TaskEnvironment::ExecutionMode::ASYNC) {}
 
  protected:
   void SetUp() override {
@@ -84,7 +83,7 @@ class UdevMonitorTest : public ::testing::Test {
   }
 
   // Add a task environment to keep the FileDescriptorWatcher code happy.
-  base::test::ScopedTaskEnvironment task_environment_;
+  base::test::TaskEnvironment task_environment_;
   std::unique_ptr<TestObserver> observer_;
   std::unique_ptr<UdevMonitor> monitor_;
 };

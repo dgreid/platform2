@@ -10,7 +10,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 #include <base/time/time.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -62,7 +62,7 @@ class BatteryDischargeRoutineTest : public testing::Test {
   void CreateRoutine(uint32_t maximum_discharge_percent_allowed) {
     routine_ = std::make_unique<BatteryDischargeRoutine>(
         kFullDuration, maximum_discharge_percent_allowed, temp_dir_.GetPath(),
-        scoped_task_environment_.GetMockTickClock());
+        task_environment_.GetMockTickClock());
   }
 
   void StartRoutineAndVerifyInteractiveResponse() {
@@ -95,14 +95,14 @@ class BatteryDischargeRoutineTest : public testing::Test {
   }
 
   void FastForwardBy(base::TimeDelta time) {
-    scoped_task_environment_.FastForwardBy(time);
+    task_environment_.FastForwardBy(time);
   }
 
   const base::FilePath GetTempPath() { return temp_dir_.GetPath(); }
 
  private:
-  base::test::ScopedTaskEnvironment scoped_task_environment_{
-      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<BatteryDischargeRoutine> routine_;
 };
