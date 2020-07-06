@@ -103,7 +103,6 @@ copies.
 | [policy_utils](./policy_utils/) | Tools and related library to set or override device policies |
 | [power_manager](./power_manager/) | Userspace power management daemon and associated tools |
 | [print_tools](./print_tools/) | Various tools related to the native printing system |
-| [qmi2cpp](./qmi2cpp/) | Chrome OS QMI IDL Compiler |
 | [regions](./regions/) ||
 | [run_oci](./run_oci/) | Minimalistic container runtime |
 | [runtime_probe](./runtime_probe/) | Runtime probe tool for ChromeOS |
