@@ -1222,8 +1222,6 @@ bool SessionManagerImpl::StartArcMiniContainer(
                          request.arc_file_picker_experiment()),
       base::StringPrintf("ARC_CUSTOM_TABS_EXPERIMENT=%d",
                          request.arc_custom_tabs_experiment()),
-      base::StringPrintf("ARC_PRINT_SPOOLER_EXPERIMENT=%d",
-                         request.arc_print_spooler_experiment()),
       base::StringPrintf("DISABLE_SYSTEM_DEFAULT_APP=%d",
                          request.disable_system_default_app())};
   if (request.lcd_density() > 0) {

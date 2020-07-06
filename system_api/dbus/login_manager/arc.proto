@@ -44,7 +44,8 @@ message StartArcMiniContainerRequest {
   optional bool arc_custom_tabs_experiment = 5 [default = false];
 
   // Experiment flag for ARC Print Spooler.
-  optional bool arc_print_spooler_experiment = 6 [default = false];
+  optional bool arc_print_spooler_experiment = 6
+      [default = false, deprecated = true];
 
   // Next ID to use: 9
 }

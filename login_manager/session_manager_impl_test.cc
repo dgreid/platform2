@@ -482,11 +482,6 @@ class SessionManagerImplTest : public ::testing::Test,
       return *this;
     }
 
-    StartArcInstanceExpectationsBuilder& SetArcPrintSpoolerExperiment(bool v) {
-      arc_print_spooler_experiment_ = v;
-      return *this;
-    }
-
     StartArcInstanceExpectationsBuilder& SetDisableSystemDefaultApp(bool v) {
       disable_system_default_app_ = v;
       return *this;
@@ -513,8 +508,6 @@ class SessionManagerImplTest : public ::testing::Test,
               std::to_string(arc_file_picker_experiment_),
           "ARC_CUSTOM_TABS_EXPERIMENT=" +
               std::to_string(arc_custom_tab_experiment_),
-          "ARC_PRINT_SPOOLER_EXPERIMENT=" +
-              std::to_string(arc_print_spooler_experiment_),
           "DISABLE_SYSTEM_DEFAULT_APP=" +
               std::to_string(disable_system_default_app_),
       });
@@ -543,7 +536,6 @@ class SessionManagerImplTest : public ::testing::Test,
     bool native_bridge_experiment_ = false;
     bool arc_file_picker_experiment_ = false;
     bool arc_custom_tab_experiment_ = false;
-    bool arc_print_spooler_experiment_ = false;
 
     bool disable_system_default_app_ = false;
     StartArcMiniContainerRequest_PlayStoreAutoUpdate play_store_auto_update_ =
@@ -2789,23 +2781,6 @@ TEST_F(SessionManagerImplTest, ArcCustomTabsExperiment) {
   brillo::ErrorPtr error;
   StartArcMiniContainerRequest request;
   request.set_arc_custom_tabs_experiment(true);
-  // Use for login screen mode for minimalistic test.
-  EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
-  EXPECT_FALSE(error.get());
-}
-
-TEST_F(SessionManagerImplTest, ArcPrintSpoolerExperiment) {
-  EXPECT_CALL(*init_controller_,
-              TriggerImpulse(SessionManagerImpl::kStartArcInstanceImpulse,
-                             StartArcInstanceExpectationsBuilder()
-                                 .SetArcPrintSpoolerExperiment(true)
-                                 .Build(),
-                             InitDaemonController::TriggerMode::ASYNC))
-      .WillOnce(Return(ByMove(dbus::Response::CreateEmpty())));
-
-  brillo::ErrorPtr error;
-  StartArcMiniContainerRequest request;
-  request.set_arc_print_spooler_experiment(true);
   // Use for login screen mode for minimalistic test.
   EXPECT_TRUE(impl_->StartArcMiniContainer(&error, SerializeAsBlob(request)));
   EXPECT_FALSE(error.get());
