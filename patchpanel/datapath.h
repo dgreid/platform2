@@ -107,16 +107,6 @@ class Datapath {
 
   virtual void RemoveInterface(const std::string& ifname);
 
-  // Create (or flush and delete) pre-routing rules supporting legacy (ARC N)
-  // single networking DNAT configuration.
-  virtual bool AddLegacyIPv4DNAT(const std::string& ipv4_addr);
-  virtual void RemoveLegacyIPv4DNAT();
-
-  // Enable ingress traffic from a specific physical device to the legacy
-  // single networkng DNAT configuration.
-  virtual bool AddLegacyIPv4InboundDNAT(const std::string& ifname);
-  virtual void RemoveLegacyIPv4InboundDNAT();
-
   // Create (or delete) pre-routing rules allowing direct ingress on |ifname|
   // to guest desintation |ipv4_addr|.
   virtual bool AddInboundIPv4DNAT(const std::string& ifname,
