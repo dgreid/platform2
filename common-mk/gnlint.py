@@ -77,9 +77,11 @@ chromite_root = os.path.join(os.path.dirname(os.path.realpath(__file__)),
                              '..', '..', '..')
 sys.path.insert(0, chromite_root)
 
+# pylint: disable=wrong-import-position
 from chromite.lib import commandline
 from chromite.lib import cros_build_lib
 from chromite.lib import cros_logging as logging
+# pylint: enable=wrong-import-position
 
 
 # Object holding the result of a lint check.

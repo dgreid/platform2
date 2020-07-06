@@ -21,8 +21,9 @@ import ebuild_function
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 '..', '..', '..'))
-
-from chromite.lib import cros_test_lib  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+from chromite.lib import cros_test_lib
+# pylint: enable=wrong-import-position
 
 
 class DoCommandTests(cros_test_lib.TestCase):

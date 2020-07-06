@@ -15,12 +15,13 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 '..', '..', '..'))
 
+# pylint: disable=wrong-import-position
 from chromite.lib import commandline
 from chromite.lib import cros_logging as logging
 from chromite.lib import cros_test_lib
 from chromite.lib import osutils
-
 import gnlint
+# pylint: enable=wrong-import-position
 
 
 class LintTestCase(cros_test_lib.TestCase):

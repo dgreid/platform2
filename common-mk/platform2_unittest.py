@@ -15,9 +15,10 @@ import mock
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                 '..', '..', '..'))
-
-import platform2  # pylint: disable=wrong-import-position
-from chromite.lib import cros_test_lib  # pylint: disable=wrong-import-position
+# pylint: disable=wrong-import-position
+import platform2
+from chromite.lib import cros_test_lib
+# pylint: enable=wrong-import-position
 
 PLATFORM_SUBDIR = 'platform'
 SYSROOT = '/'
