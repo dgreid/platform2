@@ -43,9 +43,6 @@ class ArcService {
     // Enables the datapath for a physical Device. This is never called for
     // the ARC management device.
     virtual bool OnStartDevice(Device* device) = 0;
-    // Disables the datapath for a physical Device. This is never called for
-    // the ARC management device.
-    virtual void OnStopDevice(Device* device) = 0;
 
    protected:
     Impl() = default;
@@ -54,7 +51,7 @@ class ArcService {
   // Encapsulates all ARC++ container-specific logic.
   class ContainerImpl : public Impl {
    public:
-    ContainerImpl(Datapath* datapath, TrafficForwarder* forwarder);
+    ContainerImpl(Datapath* datapath);
     ~ContainerImpl() = default;
 
     uint32_t id() const override;
@@ -66,12 +63,10 @@ class ArcService {
     void Stop(uint32_t pid) override;
     bool IsStarted(uint32_t* pid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
-    void OnStopDevice(Device* device) override;
 
    private:
     uint32_t pid_;
     Datapath* datapath_;
-    TrafficForwarder* forwarder_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
     DISALLOW_COPY_AND_ASSIGN(ContainerImpl);
@@ -83,9 +78,7 @@ class ArcService {
     // |configs| is an optional list of device configurations that, if provided,
     // will be used to pre-allocated and associate them, when necessary, to
     // devices as they are added. The caller retains ownership of the pointers.
-    VmImpl(Datapath* datapath,
-           TrafficForwarder* forwarder,
-           const std::vector<Device::Config*>& configs);
+    VmImpl(Datapath* datapath, const std::vector<Device::Config*>& configs);
     ~VmImpl() = default;
 
     uint32_t id() const override;
@@ -95,12 +88,10 @@ class ArcService {
     void Stop(uint32_t cid) override;
     bool IsStarted(uint32_t* cid = nullptr) const override;
     bool OnStartDevice(Device* device) override;
-    void OnStopDevice(Device* device) override;
 
    private:
     uint32_t cid_;
     Datapath* datapath_;
-    TrafficForwarder* forwarder_;
     std::vector<Device::Config*> configs_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);

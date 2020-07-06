@@ -324,9 +324,9 @@ bool ArcService::Start(uint32_t id) {
     // Append arc0 config separately from ArcService::ReallocateAddressConfigs()
     // so that VmImpl::Start() can create the necessary tap device.
     configs.insert(configs.begin(), arc_device_config.get());
-    impl_ = std::make_unique<VmImpl>(datapath_, forwarder_, configs);
+    impl_ = std::make_unique<VmImpl>(datapath_, configs);
   } else {
-    impl_ = std::make_unique<ContainerImpl>(datapath_, forwarder_);
+    impl_ = std::make_unique<ContainerImpl>(datapath_);
     if (!datapath_->NetnsAttachName(kArcNetnsName, id)) {
       LOG(ERROR) << "Failed to attach name " << kArcNetnsName << " to pid "
                  << id;
@@ -480,8 +480,14 @@ void ArcService::StartDevice(Device* device) {
     LOG(ERROR) << "Failed to configure egress traffic rules for "
                << device->phys_ifname();
 
-  if (!impl_->OnStartDevice(device))
+  if (!impl_->OnStartDevice(device)) {
     LOG(ERROR) << "Failed to start device " << device->phys_ifname();
+    return;
+  }
+
+  forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
+                              device->options().ipv6_enabled,
+                              device->options().fwd_multicast);
 }
 
 void ArcService::RemoveDevice(const std::string& ifname) {
@@ -504,7 +510,12 @@ void ArcService::StopDevice(Device* device) {
 
   LOG(INFO) << "Removing device " << *device;
 
-  impl_->OnStopDevice(device);
+  forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
+                             device->options().ipv6_enabled,
+                             device->options().fwd_multicast);
+  // TAP devices are removed in VmImpl::Stop().
+  if (guest_ == GuestMessage::ARC)
+    datapath_->RemoveInterface(ArcVethHostName(device->phys_ifname()));
 
   const auto& config = device->config();
   datapath_->RemoveOutboundIPv4(device->host_ifname());
@@ -522,9 +533,8 @@ std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
 
 // ARC++ specific functions.
 
-ArcService::ContainerImpl::ContainerImpl(Datapath* datapath,
-                                         TrafficForwarder* forwarder)
-    : pid_(kInvalidPID), datapath_(datapath), forwarder_(forwarder) {
+ArcService::ContainerImpl::ContainerImpl(Datapath* datapath)
+    : pid_(kInvalidPID), datapath_(datapath) {
   OneTimeSetup(*datapath_);
 }
 
@@ -580,29 +590,14 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
     LOG(ERROR) << "Failed to bridge interface " << veth_ifname;
     return false;
   }
-
-  forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
-                              device->options().ipv6_enabled,
-                              device->options().fwd_multicast);
   return true;
-}
-
-void ArcService::ContainerImpl::OnStopDevice(Device* device) {
-  forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
-                             device->options().ipv6_enabled,
-                             device->options().fwd_multicast);
-  datapath_->RemoveInterface(ArcVethHostName(device->phys_ifname()));
 }
 
 // VM specific functions
 
 ArcService::VmImpl::VmImpl(Datapath* datapath,
-                           TrafficForwarder* forwarder,
                            const std::vector<Device::Config*>& configs)
-    : cid_(kInvalidCID),
-      datapath_(datapath),
-      forwarder_(forwarder),
-      configs_(configs) {}
+    : cid_(kInvalidCID), datapath_(datapath), configs_(configs) {}
 
 uint32_t ArcService::VmImpl::id() const {
   return cid_;
@@ -678,17 +673,6 @@ bool ArcService::VmImpl::OnStartDevice(Device* device) {
     LOG(ERROR) << "Failed to bridge TAP device " << tap;
     return false;
   }
-
-  forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
-                              device->options().ipv6_enabled,
-                              device->options().fwd_multicast);
   return true;
-}
-
-void ArcService::VmImpl::OnStopDevice(Device* device) {
-  forwarder_->StopForwarding(device->phys_ifname(), device->host_ifname(),
-                             device->options().ipv6_enabled,
-                             device->options().fwd_multicast);
-  // TAP devices are removed in VmImpl::Stop().
 }
 }  // namespace patchpanel
