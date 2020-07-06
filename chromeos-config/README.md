@@ -5,11 +5,12 @@ the master configuration for Chrome OS.
 
 [TOC]
 
-## Internal Documentation
+## Design Documentation
 
-See the [design doc](http://go/cros-unified-build-design) for information about
-the design. This is accessible only within Google. A public page will be
-published to chromium.org once the feature is complete and launched.
+See the [design doc](https://docs.google.com/document/d/1zonifFp8UpE6ISxsnzUrUb9ikx1pXeqs0UzW08ce6aY/edit)
+for information about the design. This is accessible from the
+[public page](https://dev.chromium.org/chromium-os/chromiumos-design-docs)
+too ('Unified Builds').
 
 ## Important classes
 
