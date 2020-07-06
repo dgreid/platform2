@@ -322,6 +322,7 @@ static void InitCameraModuleByFacing(int facing, void** cam_hal_handle) {
   struct CleanupModule {
     void operator()(void** cam_hal_handle) {
       if (*cam_hal_handle) {
+        set_camera_metadata_vendor_ops(nullptr);
         ASSERT_EQ(0, dlclose(*cam_hal_handle))
             << "Failed to close camera hal when probing facing";
         g_cam_module = NULL;
