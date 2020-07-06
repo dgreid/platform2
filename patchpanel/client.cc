@@ -15,6 +15,35 @@
 
 namespace patchpanel {
 
+namespace {
+
+std::ostream& operator<<(std::ostream& stream,
+                         const ModifyPortRuleRequest& request) {
+  stream << "{ operation: "
+         << ModifyPortRuleRequest::Operation_Name(request.op())
+         << ", rule type: "
+         << ModifyPortRuleRequest::RuleType_Name(request.type())
+         << ", protocol: "
+         << ModifyPortRuleRequest::Protocol_Name(request.proto());
+  if (!request.input_ifname().empty()) {
+    stream << ", input interface name: " << request.input_ifname();
+  }
+  if (!request.input_dst_ip().empty()) {
+    stream << ", input destination IP: " << request.input_dst_ip();
+  }
+  stream << ", input destination port: " << request.input_dst_port();
+  if (!request.dst_ip().empty()) {
+    stream << ", destination IP: " << request.dst_ip();
+  }
+  if (request.dst_port() != 0) {
+    stream << ", destination port: " << request.dst_port();
+  }
+  stream << " }";
+  return stream;
+}
+
+}  // namespace
+
 // static
 std::unique_ptr<Client> Client::New() {
   dbus::Bus::Options opts;
@@ -406,6 +435,56 @@ Client::ConnectNamespace(pid_t pid,
             << " subnet=" << subnet_info;
 
   return std::make_pair(std::move(fd_local), std::move(response));
+}
+
+bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
+                            ModifyPortRuleRequest::RuleType type,
+                            ModifyPortRuleRequest::Protocol proto,
+                            const std::string& input_ifname,
+                            const std::string& input_dst_ip,
+                            uint32_t input_dst_port,
+                            const std::string& dst_ip,
+                            uint32_t dst_port) {
+  dbus::MethodCall method_call(kPatchPanelInterface, kModifyPortRuleMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  ModifyPortRuleRequest request;
+  ModifyPortRuleResponse response;
+
+  request.set_op(op);
+  request.set_type(type);
+  request.set_proto(proto);
+  request.set_input_ifname(input_ifname);
+  request.set_input_dst_ip(input_dst_ip);
+  request.set_input_dst_port(input_dst_port);
+  request.set_dst_ip(dst_ip);
+  request.set_dst_port(dst_port);
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode ModifyPortRuleRequest proto " << request;
+    return false;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR)
+        << "Failed to send ModifyPortRuleRequest message to patchpanel service "
+        << request;
+    return false;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse ModifyPortRuleResponse proto " << request;
+    return false;
+  }
+
+  if (!response.success()) {
+    LOG(ERROR) << "ModifyPortRuleRequest failed " << request;
+    return false;
+  }
+  return true;
 }
 
 }  // namespace patchpanel

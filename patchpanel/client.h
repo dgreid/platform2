@@ -6,6 +6,7 @@
 #define PATCHPANEL_CLIENT_H_
 
 #include <memory>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -64,6 +65,17 @@ class BRILLO_EXPORT Client {
   ConnectNamespace(pid_t pid,
                    const std::string& outbound_ifname,
                    bool forward_user_traffic);
+
+  // Sends a ModifyPortRuleRequest to modify iptables ingress rules.
+  // This should only be called by permission_broker's 'devbroker'.
+  bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation op,
+                      patchpanel::ModifyPortRuleRequest::RuleType type,
+                      patchpanel::ModifyPortRuleRequest::Protocol proto,
+                      const std::string& input_ifname,
+                      const std::string& input_dst_ip,
+                      uint32_t input_dst_port,
+                      const std::string& dst_ip,
+                      uint32_t dst_port);
 
  private:
   scoped_refptr<dbus::Bus> bus_;
