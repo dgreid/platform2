@@ -1,3 +1,4 @@
 set noparent
 apronin@chromium.org
-louiscollard@chromium.org
+
+per-file webauthn_handler* = yichengli@chromium.org
