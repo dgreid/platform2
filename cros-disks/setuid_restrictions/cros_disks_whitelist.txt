@@ -1,6 +1,4 @@
 # Allow cros-disks to change UID to the following users.
-# avfs
-213:301
 # chronos (for DriveFS)
 213:1000
 # fuse-exfat
