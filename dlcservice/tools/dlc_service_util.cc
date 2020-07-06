@@ -163,7 +163,7 @@ class DlcServiceUtil : public brillo::Daemon {
       DlcState state;
       if (!GetDlcState(dlc_id_, &state))
         return EX_SOFTWARE;
-      PrintDLCState(FLAGS_dump, state);
+      PrintDlcState(FLAGS_dump, state);
       Quit();
       return EX_OK;
     }
@@ -263,10 +263,13 @@ class DlcServiceUtil : public brillo::Daemon {
   }
 
   // Prints the DLC state.
-  void PrintDLCState(const string& dump, const DlcState& state) {
+  void PrintDlcState(const string& dump, const DlcState& state) {
     DictionaryValue dict;
+    dict.SetKey("id", Value(state.id()));
+    dict.SetKey("last_error_code", Value(state.last_error_code()));
+    dict.SetKey("progress", Value(state.progress()));
+    dict.SetKey("root_path", Value(state.root_path()));
     dict.SetKey("state", Value(state.state()));
-
     PrintToFileOrStdout(dump, dict);
   }
 
