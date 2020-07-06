@@ -4,6 +4,7 @@ from_minijail_static(cros_anomaly_detector, cros_anomaly_detector_exec);
 cros_dbus_client(cros_anomaly_detector)
 uma_writer(cros_anomaly_detector)
 
+allow cros_anomaly_detector cros_var_log:file r_file_perms;
 allow cros_anomaly_detector cros_syslog:file r_file_perms;
 allow cros_anomaly_detector cros_var_log_upstart:file r_file_perms;
 r_dir_file(cros_anomaly_detector, cros_var_log_audit);
