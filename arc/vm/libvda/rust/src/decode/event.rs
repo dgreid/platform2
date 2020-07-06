@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,7 +7,7 @@
 use enumn::N;
 use std::fmt::{self, Display};
 
-use crate::decode_bindings;
+use super::bindings;
 use crate::error::*;
 
 /// Represents a response from libvda.
@@ -16,17 +16,17 @@ use crate::error::*;
 #[derive(Debug, Clone, Copy, N)]
 #[repr(u32)]
 pub enum Response {
-    Success = decode_bindings::vda_result_SUCCESS,
-    IllegalState = decode_bindings::vda_result_ILLEGAL_STATE,
-    InvalidArgument = decode_bindings::vda_result_INVALID_ARGUMENT,
-    UnreadableInput = decode_bindings::vda_result_UNREADABLE_INPUT,
-    PlatformFailure = decode_bindings::vda_result_PLATFORM_FAILURE,
-    InsufficientResources = decode_bindings::vda_result_INSUFFICIENT_RESOURCES,
-    Cancelled = decode_bindings::vda_result_CANCELLED,
+    Success = bindings::vda_result_SUCCESS,
+    IllegalState = bindings::vda_result_ILLEGAL_STATE,
+    InvalidArgument = bindings::vda_result_INVALID_ARGUMENT,
+    UnreadableInput = bindings::vda_result_UNREADABLE_INPUT,
+    PlatformFailure = bindings::vda_result_PLATFORM_FAILURE,
+    InsufficientResources = bindings::vda_result_INSUFFICIENT_RESOURCES,
+    Cancelled = bindings::vda_result_CANCELLED,
 }
 
 impl Response {
-    pub(crate) fn new(res: decode_bindings::vda_result_t) -> Response {
+    pub(crate) fn new(res: bindings::vda_result_t) -> Response {
         Response::n(res).unwrap_or_else(|| panic!("Unknown response is reported from VDA: {}", res))
     }
 }
@@ -92,12 +92,12 @@ pub enum Event {
 impl Event {
     /// Creates a new `Event` from a `vda_event_t` instance.
     /// This function is safe if `event` was a value read from libvda's pipe.
-    pub(crate) unsafe fn new(event: decode_bindings::vda_event_t) -> Result<Event> {
+    pub(crate) unsafe fn new(event: bindings::vda_event_t) -> Result<Event> {
         use self::Event::*;
 
         let data = event.event_data;
         match event.event_type {
-            decode_bindings::vda_event_type_PROVIDE_PICTURE_BUFFERS => {
+            bindings::vda_event_type_PROVIDE_PICTURE_BUFFERS => {
                 let d = data.provide_picture_buffers;
                 Ok(ProvidePictureBuffers {
                     min_num_buffers: d.min_num_buffers,
@@ -109,7 +109,7 @@ impl Event {
                     visible_rect_bottom: d.visible_rect_bottom,
                 })
             }
-            decode_bindings::vda_event_type_PICTURE_READY => {
+            bindings::vda_event_type_PICTURE_READY => {
                 let d = data.picture_ready;
                 Ok(PictureReady {
                     buffer_id: d.picture_buffer_id,
@@ -120,18 +120,16 @@ impl Event {
                     bottom: d.crop_bottom,
                 })
             }
-            decode_bindings::vda_event_type_NOTIFY_END_OF_BITSTREAM_BUFFER => {
+            bindings::vda_event_type_NOTIFY_END_OF_BITSTREAM_BUFFER => {
                 Ok(NotifyEndOfBitstreamBuffer {
                     bitstream_id: data.bitstream_id,
                 })
             }
-            decode_bindings::vda_event_type_NOTIFY_ERROR => {
-                Ok(NotifyError(Response::new(data.result)))
-            }
-            decode_bindings::vda_event_type_RESET_RESPONSE => {
+            bindings::vda_event_type_NOTIFY_ERROR => Ok(NotifyError(Response::new(data.result))),
+            bindings::vda_event_type_RESET_RESPONSE => {
                 Ok(ResetResponse(Response::new(data.result)))
             }
-            decode_bindings::vda_event_type_FLUSH_RESPONSE => {
+            bindings::vda_event_type_FLUSH_RESPONSE => {
                 Ok(FlushResponse(Response::new(data.result)))
             }
             t => panic!("Unknown event is reported from VDA: {}", t),

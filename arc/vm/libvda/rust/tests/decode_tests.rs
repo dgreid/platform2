@@ -1,9 +1,10 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Integration tests using LibVDA fake implemenation.
+//! Integration tests using LibVDA fake decode implemenation.
 
+use libvda::decode::*;
 use libvda::*;
 
 fn create_vda_instance() -> VdaInstance {

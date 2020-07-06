@@ -35,8 +35,8 @@ environment first.
 
 ## Updating generated bindings
 
-`src/common_bindings.rs` is automatically generated from `libvda_common.h`.
-`src/decode_bindings.rs` is automatically generated from `libvda_decode.h`.
-`src/encode_bindings.rs` is automatically generated from `libvda_encode.h`.
+`src/bindings.rs` is automatically generated from `libvda_common.h`.
+`src/decode/bindings.rs` is automatically generated from `libvda_decode.h`.
+`src/encode/bindings.rs` is automatically generated from `libvda_encode.h`.
 
 See the header of the bindings file for the generation command.

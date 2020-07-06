@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,30 +7,20 @@ use std::io::Read;
 use std::marker::PhantomData;
 use std::mem;
 use std::os::raw::c_void;
-use std::os::unix::io::{FromRawFd, RawFd};
+use std::os::unix::io::FromRawFd;
 
-use crate::decode_bindings;
+use super::bindings;
+use super::event::*;
+use super::vda_instance::VdaInstance;
 use crate::error::*;
-use crate::event::*;
-use crate::format::{PixelFormat, Profile};
-use crate::vda_instance::VdaInstance;
-
-/// Represents a FD for bitstream/frame buffer.
-/// Files described by BufferFd must be accessed from outside of this crate.
-pub type BufferFd = RawFd;
-
-/// Represents a video frame plane.
-pub struct FramePlane {
-    pub offset: i32,
-    pub stride: i32,
-}
+use crate::format::{BufferFd, FramePlane, PixelFormat, Profile};
 
 /// Represents a decode session.
 pub struct Session<'a> {
     // Pipe file to be notified decode session events.
     pipe: File,
     vda_ptr: *mut c_void,
-    raw_ptr: *mut decode_bindings::vda_session_info_t,
+    raw_ptr: *mut bindings::vda_session_info_t,
     // `phantom` gurantees that `Session` won't outlive the lifetime of `VdaInstance` that owns
     // `vda_ptr`.
     phantom: PhantomData<&'a VdaInstance>,
@@ -40,12 +30,12 @@ impl<'a> Session<'a> {
     /// Creates a new `Session`.
     ///
     /// This function is safe if `vda_ptr` is a non-NULL pointer obtained from
-    /// `decode_bindings::initialize`.
+    /// `bindings::initialize`.
     pub(crate) unsafe fn new(vda_ptr: *mut c_void, profile: Profile) -> Option<Self> {
         // `init_decode_session` is safe if `vda_ptr` is a non-NULL pointer from
-        // `decode_bindings::initialize`.
-        let raw_ptr: *mut decode_bindings::vda_session_info_t =
-            decode_bindings::init_decode_session(vda_ptr, profile.to_raw_profile());
+        // `bindings::initialize`.
+        let raw_ptr: *mut bindings::vda_session_info_t =
+            bindings::init_decode_session(vda_ptr, profile.to_raw_profile());
 
         if raw_ptr.is_null() {
             return None;
@@ -71,7 +61,7 @@ impl<'a> Session<'a> {
 
     /// Reads an `Event` object from a pipe provided a decode session.
     pub fn read_event(&mut self) -> Result<Event> {
-        const BUF_SIZE: usize = mem::size_of::<decode_bindings::vda_event_t>();
+        const BUF_SIZE: usize = mem::size_of::<bindings::vda_event_t>();
         let mut buf = [0u8; BUF_SIZE];
 
         self.pipe
@@ -79,8 +69,7 @@ impl<'a> Session<'a> {
             .map_err(Error::ReadEventFailure)?;
 
         // Safe because libvda must have written vda_event_t to the pipe.
-        let vda_event =
-            unsafe { mem::transmute::<[u8; BUF_SIZE], decode_bindings::vda_event_t>(buf) };
+        let vda_event = unsafe { mem::transmute::<[u8; BUF_SIZE], bindings::vda_event_t>(buf) };
 
         // Safe because `vda_event` is a value read from `self.pipe`.
         unsafe { Event::new(vda_event) }
@@ -98,7 +87,7 @@ impl<'a> Session<'a> {
     ) -> Result<()> {
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
         let r = unsafe {
-            decode_bindings::vda_decode((*self.raw_ptr).ctx, bitstream_id, fd, offset, bytes_used)
+            bindings::vda_decode((*self.raw_ptr).ctx, bitstream_id, fd, offset, bytes_used)
         };
         Response::new(r).into()
     }
@@ -110,7 +99,7 @@ impl<'a> Session<'a> {
     pub fn set_output_buffer_count(&self, num_output_buffers: usize) -> Result<()> {
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
         let r = unsafe {
-            decode_bindings::vda_set_output_buffer_count((*self.raw_ptr).ctx, num_output_buffers)
+            bindings::vda_set_output_buffer_count((*self.raw_ptr).ctx, num_output_buffers)
         };
         Response::new(r).into()
     }
@@ -131,7 +120,7 @@ impl<'a> Session<'a> {
     ) -> Result<()> {
         let mut planes: Vec<_> = planes
             .iter()
-            .map(|p| decode_bindings::video_frame_plane {
+            .map(|p| bindings::video_frame_plane {
                 offset: p.offset,
                 stride: p.stride,
             })
@@ -139,7 +128,7 @@ impl<'a> Session<'a> {
 
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
         let r = unsafe {
-            decode_bindings::vda_use_output_buffer(
+            bindings::vda_use_output_buffer(
                 (*self.raw_ptr).ctx,
                 picture_buffer_id,
                 format.to_raw_pixel_format(),
@@ -156,9 +145,8 @@ impl<'a> Session<'a> {
     /// `picture_buffer_id` must be a value for which `use_output_buffer` has been called already.
     pub fn reuse_output_buffer(&self, picture_buffer_id: i32) -> Result<()> {
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
-        let r = unsafe {
-            decode_bindings::vda_reuse_output_buffer((*self.raw_ptr).ctx, picture_buffer_id)
-        };
+        let r =
+            unsafe { bindings::vda_reuse_output_buffer((*self.raw_ptr).ctx, picture_buffer_id) };
         Response::new(r).into()
     }
 
@@ -167,7 +155,7 @@ impl<'a> Session<'a> {
     /// When this operation has completed, `Event::FlushResponse` will be notified.
     pub fn flush(&self) -> Result<()> {
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
-        let r = unsafe { decode_bindings::vda_flush((*self.raw_ptr).ctx) };
+        let r = unsafe { bindings::vda_flush((*self.raw_ptr).ctx) };
         Response::new(r).into()
     }
 
@@ -176,7 +164,7 @@ impl<'a> Session<'a> {
     /// When this operation has completed, Event::ResetResponse will be notified.
     pub fn reset(&self) -> Result<()> {
         // Safe because `raw_ptr` is valid and a libvda's API is called properly.
-        let r = unsafe { decode_bindings::vda_reset((*self.raw_ptr).ctx) };
+        let r = unsafe { bindings::vda_reset((*self.raw_ptr).ctx) };
         Response::new(r).into()
     }
 }
@@ -187,7 +175,7 @@ impl<'a> Drop for Session<'a> {
         // Also, `vda_ptr` is valid because `phantom` guranteed that `VdaInstance` owning `vda_ptr`
         // is not dropped yet.
         unsafe {
-            decode_bindings::close_decode_session(self.vda_ptr, self.raw_ptr);
+            bindings::close_decode_session(self.vda_ptr, self.raw_ptr);
         }
     }
 }

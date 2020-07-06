@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -8,10 +8,11 @@
 use std::os::raw::c_void;
 use std::slice;
 
-use crate::decode_bindings;
+use super::bindings;
+use super::format::*;
+use super::session::*;
 use crate::error::*;
 use crate::format::*;
-use crate::session::*;
 
 /// Represents a backend implementation of libvda.
 pub enum VdaImplType {
@@ -57,19 +58,19 @@ impl VdaInstance {
     /// Creates VdaInstance. `typ` specifies which backend will be used.
     pub fn new(typ: VdaImplType) -> Result<Self> {
         let impl_type = match typ {
-            VdaImplType::Fake => decode_bindings::vda_impl_type_FAKE,
-            VdaImplType::Gavda => decode_bindings::vda_impl_type_GAVDA,
+            VdaImplType::Fake => bindings::vda_impl_type_FAKE,
+            VdaImplType::Gavda => bindings::vda_impl_type_GAVDA,
         };
 
         // Safe because libvda's API is called properly.
-        let raw_ptr = unsafe { decode_bindings::initialize(impl_type) };
+        let raw_ptr = unsafe { bindings::initialize(impl_type) };
         if raw_ptr.is_null() {
             return Err(Error::InstanceInitFailure);
         }
 
         // Get available input/output formats.
         // Safe because libvda's API is called properly.
-        let vda_cap_ptr = unsafe { decode_bindings::get_vda_capabilities(raw_ptr) };
+        let vda_cap_ptr = unsafe { bindings::get_vda_capabilities(raw_ptr) };
         if vda_cap_ptr.is_null() {
             return Err(Error::GetCapabilitiesFailure);
         }
@@ -109,7 +110,7 @@ impl VdaInstance {
 
     /// Opens a new `Session` for a given `Profile`.
     pub fn open_session<'a>(&'a self, profile: Profile) -> Result<Session<'a>> {
-        // Safe because `self.raw_ptr` is a non-NULL pointer obtained from `decode_bindings::initialize`
+        // Safe because `self.raw_ptr` is a non-NULL pointer obtained from `bindings::initialize`
         // in `VdaInstance::new`.
         unsafe { Session::new(self.raw_ptr, profile).ok_or(Error::SessionInitFailure(profile)) }
     }
@@ -118,6 +119,6 @@ impl VdaInstance {
 impl Drop for VdaInstance {
     fn drop(&mut self) {
         // Safe because libvda's API is called properly.
-        unsafe { decode_bindings::deinitialize(self.raw_ptr) }
+        unsafe { bindings::deinitialize(self.raw_ptr) }
     }
 }

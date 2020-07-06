@@ -1,4 +1,4 @@
-// Copyright 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -7,15 +7,15 @@
 use std::error;
 use std::fmt::{self, Display};
 
-use crate::event;
-use crate::format;
+use super::format;
+use crate::decode;
 
 #[derive(Debug)]
 pub enum Error {
     GetCapabilitiesFailure,
     InstanceInitFailure,
     InvalidCapabilities(String),
-    LibVdaFailure(event::Response),
+    LibVdaFailure(decode::Response),
     ReadEventFailure(std::io::Error),
     SessionIdAlreadyUsed(u32),
     SessionInitFailure(format::Profile),
