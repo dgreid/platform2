@@ -147,6 +147,8 @@ class VmExportOperation : public DiskImageOperation {
       base::ScopedFD out_digest_fd,
       ArchiveFormat out_fmt);
 
+  ~VmExportOperation() override;
+
  protected:
   bool ExecuteIo(uint64_t io_limit) override;
   void Finalize() override;
@@ -218,6 +220,8 @@ class PluginVmImportOperation : public DiskImageOperation {
       uint64_t source_size,
       const VmId vm_id,
       dbus::ObjectProxy* vmplugin_service_proxy);
+
+  ~PluginVmImportOperation() override;
 
  protected:
   bool ExecuteIo(uint64_t io_limit) override;

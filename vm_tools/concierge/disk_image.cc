@@ -225,6 +225,13 @@ VmExportOperation::VmExportOperation(const VmId vm_id,
   }
 }
 
+VmExportOperation::~VmExportOperation() {
+  // Ensure that the archive reader and writers are destroyed first, as these
+  // can invoke callbacks that rely on data in this object.
+  in_.reset();
+  out_.reset();
+}
+
 bool VmExportOperation::PrepareInput() {
   in_ = ArchiveReader(archive_read_disk_new());
   if (!in_) {
@@ -509,6 +516,13 @@ PluginVmImportOperation::PluginVmImportOperation(
       in_fd_(std::move(in_fd)),
       copying_data_(false) {
   set_source_size(source_size);
+}
+
+PluginVmImportOperation::~PluginVmImportOperation() {
+  // Ensure that the archive reader and writers are destroyed first, as these
+  // can invoke callbacks that rely on data in this object.
+  in_.reset();
+  out_.reset();
 }
 
 bool PluginVmImportOperation::PrepareInput() {
