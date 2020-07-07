@@ -283,6 +283,7 @@ if (use.test) {
 
   executable("concierge_test") {
     sources = [
+      "../concierge/future_test.cc",
       "../concierge/power_manager_client_test.cc",
       "../concierge/termina_vm_test.cc",
       "../concierge/untrusted_vm_utils_test.cc",
