@@ -61,7 +61,6 @@ class SandboxedWorker {
 
  private:
   friend class SystemProxyAdaptorTest;
-  FRIEND_TEST(SystemProxyAdaptorTest, SetSystemTrafficCredentials);
   FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
   FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);

@@ -141,14 +141,6 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
   return SerializeProto(response);
 }
 
-std::vector<uint8_t> SystemProxyAdaptor::SetSystemTrafficCredentials(
-    const std::vector<uint8_t>& request_blob) {
-  SetSystemTrafficCredentialsResponse response;
-  response.set_error_message("Deprecated. Please use SetAuthenticationDetails");
-
-  return SerializeProto(response);
-}
-
 std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
   LOG(INFO) << "Received shutdown request.";
 
