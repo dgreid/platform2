@@ -302,6 +302,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   void set_mount_guest_session_out_of_process(bool oop) {
     mount_guest_session_out_of_process_ = oop;
   }
+  void set_mount_non_ephemeral_session_out_of_process(bool oop) {
+    mount_non_ephemeral_session_out_of_process_ = oop;
+  }
   void set_mount_guest_session_non_root_namespace(bool non_root_ns) {
     mount_guest_session_non_root_namespace_ = non_root_ns;
   }
@@ -695,6 +698,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // operations, but will perform these operations out-of-process.
   // This is currently only used for Guest sessions.
   bool mount_guest_session_out_of_process_;
+  // Use the |out-of-process mounter_| for non-ephemeral sessions.
+  bool mount_non_ephemeral_session_out_of_process_;
   bool mount_guest_session_non_root_namespace_;
   std::unique_ptr<OutOfProcessMountHelper> out_of_process_mounter_;
 
