@@ -12,7 +12,13 @@ namespace diagnostics {
 bool ReadAndTrimString(const base::FilePath& directory,
                        const std::string& filename,
                        std::string* out) {
-  if (!base::ReadFileToString(directory.Append(filename), out))
+  return ReadAndTrimString(directory.Append(filename), out);
+}
+
+bool ReadAndTrimString(const base::FilePath& file_path, std::string* out) {
+  DCHECK(out);
+
+  if (!base::ReadFileToString(file_path, out))
     return false;
 
   base::TrimWhitespaceASCII(*out, base::TRIM_TRAILING, out);

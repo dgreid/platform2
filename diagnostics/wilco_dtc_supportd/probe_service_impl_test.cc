@@ -35,6 +35,10 @@ class MockCallback {
 class MockProbeService : public mojo_ipc::CrosHealthdProbeService {
  public:
   MOCK_METHOD(void,
+              ProbeProcessInfo,
+              (uint32_t, ProbeProcessInfoCallback),
+              (override));
+  MOCK_METHOD(void,
               ProbeTelemetryInfo,
               (const std::vector<mojo_ipc::ProbeCategoryEnum>&,
                ProbeTelemetryInfoCallback),

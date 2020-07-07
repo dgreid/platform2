@@ -4,6 +4,8 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
 
+#include <sys/types.h>
+
 #include <string>
 #include <utility>
 #include <vector>
@@ -18,6 +20,7 @@
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/memory_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/process_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/stateful_partition_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/timezone_fetcher.h"
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -220,6 +223,12 @@ void CrosHealthdMojoService::AddLidObserver(
 void CrosHealthdMojoService::AddPowerObserver(
     chromeos::cros_healthd::mojom::CrosHealthdPowerObserverPtr observer) {
   power_events_->AddObserver(std::move(observer));
+}
+
+void CrosHealthdMojoService::ProbeProcessInfo(
+    uint32_t process_id, ProbeProcessInfoCallback callback) {
+  std::move(callback).Run(
+      ProcessFetcher(static_cast<pid_t>(process_id)).FetchProcessInfo());
 }
 
 void CrosHealthdMojoService::ProbeTelemetryInfo(

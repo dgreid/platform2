@@ -18,6 +18,10 @@ bool ReadAndTrimString(const base::FilePath& directory,
                        const std::string& filename,
                        std::string* out);
 
+// Like ReadAndTrimString() above, but expects |file_path| to be the full path
+// to the file to be read.
+bool ReadAndTrimString(const base::FilePath& file_path, std::string* out);
+
 // Reads an integer value from a file and converts it using the provided
 // function. Returns true on success.
 template <typename T>

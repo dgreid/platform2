@@ -5,11 +5,22 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_PROCFS_UTILS_H_
 #define DIAGNOSTICS_CROS_HEALTHD_UTILS_PROCFS_UTILS_H_
 
-#include <cstdint>
+#include <sys/types.h>
 
 #include <base/files/file_path.h>
 
 namespace diagnostics {
+
+// Indices of fields of interest in /proc/[pid]/stat. These should be kept in
+// numerical order. Note that this is not an enum class so that it can be
+// implicitly converted to ints when used as an index into an array or vector.
+enum ProcPidStatIndices {
+  kState = 2,
+  kPriority = 17,
+  kNice = 18,
+  kStartTime = 21,
+  kMaxValue = kStartTime,  // Must be updated whenever a larger index is added.
+};
 
 // Files read from a process subdirectory of procfs.
 extern const char kProcessCmdlineFile[];
@@ -19,7 +30,7 @@ extern const char kProcessStatusFile[];
 // Returns an absolute path to the procfs subdirectory containing files related
 // to the process with ID |pid|. On a real device, this will be /proc/|pid|.
 base::FilePath GetProcProcessDirectoryPath(const base::FilePath& root_dir,
-                                           int32_t pid);
+                                           pid_t pid);
 
 // Returns an absolute path to the cpuinfo file in procfs. On a real device,
 // this will be /proc/cpuinfo.

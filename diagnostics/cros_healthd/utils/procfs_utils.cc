@@ -15,7 +15,7 @@ const char kProcessStatFile[] = "stat";
 const char kProcessStatusFile[] = "status";
 
 base::FilePath GetProcProcessDirectoryPath(const base::FilePath& root_dir,
-                                           int32_t pid) {
+                                           pid_t pid) {
   return root_dir.Append("proc").Append(std::to_string(pid));
 }
 

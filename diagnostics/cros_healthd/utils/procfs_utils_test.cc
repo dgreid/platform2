@@ -4,7 +4,7 @@
 
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
 
-#include <cstdint>
+#include <sys/types.h>
 
 #include <base/files/file_path.h>
 #include <gtest/gtest.h>
@@ -19,7 +19,7 @@ namespace {
 constexpr char kProductionRootDir[] = "/";
 
 // Process ID to test with.
-constexpr int32_t kProcessId = 42;
+constexpr pid_t kProcessId = 42;
 
 }  // namespace
 

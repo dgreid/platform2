@@ -11,6 +11,11 @@ namespace diagnostics {
 FakeProbeService::FakeProbeService() = default;
 FakeProbeService::~FakeProbeService() = default;
 
+void FakeProbeService::ProbeProcessInfo(uint32_t process_id,
+                                        ProbeProcessInfoCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 void FakeProbeService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     ProbeTelemetryInfoCallback callback) {

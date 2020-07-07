@@ -127,6 +127,8 @@ class CrosHealthdMojoService final
       override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdProbeService overrides:
+  void ProbeProcessInfo(uint32_t process_id,
+                        ProbeProcessInfoCallback callback) override;
   void ProbeTelemetryInfo(const std::vector<ProbeCategoryEnum>& categories,
                           ProbeTelemetryInfoCallback callback) override;
 
