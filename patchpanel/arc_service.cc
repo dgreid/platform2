@@ -335,9 +335,10 @@ bool ArcService::Start(uint32_t id) {
 
       config->set_tap_ifname(tap);
     }
-    impl_ = std::make_unique<VmImpl>(datapath_);
+    impl_ = std::make_unique<VmImpl>();
   } else {
-    impl_ = std::make_unique<ContainerImpl>(datapath_);
+    impl_ = std::make_unique<ContainerImpl>();
+    OneTimeSetup(*datapath_);
     if (!datapath_->NetnsAttachName(kArcNetnsName, id)) {
       LOG(ERROR) << "Failed to attach name " << kArcNetnsName << " to pid "
                  << id;
@@ -495,8 +496,29 @@ void ArcService::StartDevice(Device* device) {
     LOG(ERROR) << "Failed to configure egress traffic rules for "
                << device->phys_ifname();
 
-  if (!impl_->OnStartDevice(device)) {
-    LOG(ERROR) << "Failed to start device " << device->phys_ifname();
+  std::string virtual_device_ifname;
+  if (guest_ == GuestMessage::ARC_VM) {
+    virtual_device_ifname = device->config().tap_ifname();
+    if (virtual_device_ifname.empty()) {
+      LOG(ERROR) << "No TAP device for " << *device;
+      return;
+    }
+  } else {
+    virtual_device_ifname = ArcVethHostName(device->guest_ifname());
+    if (!datapath_->ConnectVethPair(
+            impl_->id(), kArcNetnsName, virtual_device_ifname, device->guest_ifname(),
+            device->config().mac_addr(), device->config().guest_ipv4_addr(), 30,
+            device->options().fwd_multicast)) {
+      LOG(ERROR) << "Cannot create virtual link for device " << *device;
+      return;
+    }
+  }
+
+  if (!datapath_->AddToBridge(device->host_ifname(), virtual_device_ifname)) {
+    if (guest_ == GuestMessage::ARC) {
+      datapath_->RemoveInterface(virtual_device_ifname);
+    }
+    LOG(ERROR) << "Failed to bridge interface " << virtual_device_ifname;
     return;
   }
 
@@ -549,10 +571,7 @@ std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
 
 // ARC++ specific functions.
 
-ArcService::ContainerImpl::ContainerImpl(Datapath* datapath)
-    : pid_(kInvalidPID), datapath_(datapath) {
-  OneTimeSetup(*datapath_);
-}
+ArcService::ContainerImpl::ContainerImpl() : pid_(kInvalidPID) {}
 
 uint32_t ArcService::ContainerImpl::id() const {
   return pid_;
@@ -589,30 +608,9 @@ bool ArcService::ContainerImpl::IsStarted(uint32_t* pid) const {
   return pid_ != kInvalidPID;
 }
 
-bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
-  // Set up the virtual pair inside the container namespace.
-  const std::string veth_ifname = ArcVethHostName(device->guest_ifname());
-  const auto& config = device->config();
-  if (!datapath_->ConnectVethPair(pid_, kArcNetnsName, veth_ifname,
-                                  device->guest_ifname(), config.mac_addr(),
-                                  config.guest_ipv4_addr(), 30,
-                                  device->options().fwd_multicast)) {
-    LOG(ERROR) << "Cannot create virtual link for device "
-               << device->phys_ifname();
-    return false;
-  }
-  if (!datapath_->AddToBridge(device->host_ifname(), veth_ifname)) {
-    datapath_->RemoveInterface(veth_ifname);
-    LOG(ERROR) << "Failed to bridge interface " << veth_ifname;
-    return false;
-  }
-  return true;
-}
-
 // VM specific functions
 
-ArcService::VmImpl::VmImpl(Datapath* datapath)
-    : cid_(kInvalidCID), datapath_(datapath) {}
+ArcService::VmImpl::VmImpl() : cid_(kInvalidCID) {}
 
 uint32_t ArcService::VmImpl::id() const {
   return cid_;
@@ -649,18 +647,5 @@ bool ArcService::VmImpl::IsStarted(uint32_t* cid) const {
     *cid = cid_;
 
   return cid_ != kInvalidCID;
-}
-
-bool ArcService::VmImpl::OnStartDevice(Device* device) {
-  const std::string& tap = device->config().tap_ifname();
-  if (tap.empty()) {
-    LOG(ERROR) << "No TAP device for: " << *device;
-    return false;
-  }
-  if (!datapath_->AddToBridge(device->host_ifname(), tap)) {
-    LOG(ERROR) << "Failed to bridge TAP device " << tap;
-    return false;
-  }
-  return true;
 }
 }  // namespace patchpanel

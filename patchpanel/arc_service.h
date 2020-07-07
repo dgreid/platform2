@@ -35,9 +35,6 @@ class ArcService {
     virtual bool Start(uint32_t id) = 0;
     virtual void Stop(uint32_t id) = 0;
     virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
-    // Enables the datapath for a physical Device. This is never called for
-    // the ARC management device.
-    virtual bool OnStartDevice(Device* device) = 0;
 
    protected:
     Impl() = default;
@@ -46,7 +43,7 @@ class ArcService {
   // Encapsulates all ARC++ container-specific logic.
   class ContainerImpl : public Impl {
    public:
-    ContainerImpl(Datapath* datapath);
+    ContainerImpl();
     ~ContainerImpl() = default;
 
     uint32_t id() const override;
@@ -54,11 +51,9 @@ class ArcService {
     bool Start(uint32_t pid) override;
     void Stop(uint32_t pid) override;
     bool IsStarted(uint32_t* pid = nullptr) const override;
-    bool OnStartDevice(Device* device) override;
 
    private:
     uint32_t pid_;
-    Datapath* datapath_;
 
     base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
     DISALLOW_COPY_AND_ASSIGN(ContainerImpl);
@@ -67,7 +62,7 @@ class ArcService {
   // Encapsulates all ARC VM-specific logic.
   class VmImpl : public Impl {
    public:
-    VmImpl(Datapath* datapath);
+    VmImpl();
     ~VmImpl() = default;
 
     uint32_t id() const override;
@@ -75,11 +70,9 @@ class ArcService {
     bool Start(uint32_t cid) override;
     void Stop(uint32_t cid) override;
     bool IsStarted(uint32_t* cid = nullptr) const override;
-    bool OnStartDevice(Device* device) override;
 
    private:
     uint32_t cid_;
-    Datapath* datapath_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
