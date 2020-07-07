@@ -329,7 +329,7 @@ executable("homedirs_initializer") {
 
   # NOSORT
   pkg_deps = [
-    "libbrillo-${libbase_ver}",
+    "libbrillo",
     "libchrome-${libbase_ver}",
     "openssl",
 
