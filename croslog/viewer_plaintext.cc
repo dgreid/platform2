@@ -22,9 +22,16 @@ namespace croslog {
 namespace {
 
 const char* kLogSources[] = {
-    // TOOD(yoshiki): add all sources.
+    // Log files from rsyslog:
+    // clang-format off
+    "/var/log/arc.log",
+    "/var/log/boot.log",
+    "/var/log/hammerd.log",
     "/var/log/messages",
     "/var/log/net.log",
+    "/var/log/secure",
+    "/var/log/upstart.log",
+    // clang-format on
 };
 
 const char kAuditLogSources[] = "/var/log/audit/audit.log";
@@ -53,8 +60,10 @@ ViewerPlaintext::ViewerPlaintext(const croslog::Config& config)
 bool ViewerPlaintext::Run() {
   bool install_change_watcher = config_.follow;
   for (size_t i = 0; i < base::size(kLogSources); i++) {
-    multiplexer_.AddSource(base::FilePath(kLogSources[i]),
-                           std::make_unique<LogParserSyslog>(),
+    base::FilePath path(kLogSources[i]);
+    if (!base::PathExists(path))
+      continue;
+    multiplexer_.AddSource(path, std::make_unique<LogParserSyslog>(),
                            install_change_watcher);
   }
 
