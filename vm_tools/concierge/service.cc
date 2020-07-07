@@ -1892,8 +1892,12 @@ std::unique_ptr<dbus::Response> Service::StopAllVms(
 
   // Spawn a thread for each VM to shut it down.
   for (auto& iter : vms_) {
+    // Copy out cid from the VM object, as we will need it after the VM has been
+    // destructed.
+    auto cid = iter.second->GetInfo().cid;
+
     // Notify that we are about to stop a VM.
-    NotifyVmStopping(iter.first, iter.second->GetInfo().cid);
+    NotifyVmStopping(iter.first, cid);
 
     // Resetting the unique_ptr will call the destructor for that VM,
     // which will try stopping it normally (and then forcibly) it if
@@ -1901,7 +1905,7 @@ std::unique_ptr<dbus::Response> Service::StopAllVms(
     iter.second.reset();
 
     // Notify that we have stopped a VM.
-    NotifyVmStopped(iter.first, iter.second->GetInfo().cid);
+    NotifyVmStopped(iter.first, cid);
   }
 
   vms_.clear();
