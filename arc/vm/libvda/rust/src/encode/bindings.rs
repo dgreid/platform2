@@ -22,6 +22,10 @@ bindgen arc/vm/libvda/libvda_encode.h \
   -I .
  */
 
+#![allow(non_camel_case_types)]
+#![allow(non_upper_case_globals)]
+#![allow(dead_code)]
+
 pub use crate::bindings::*;
 
 pub type __uint8_t = ::std::os::raw::c_uchar;
