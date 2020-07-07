@@ -221,7 +221,7 @@ ArcService::~ArcService() {
 }
 
 void ArcService::AllocateAddressConfigs() {
-  configs_.clear();
+  available_configs_.clear();
   // The first usable subnet is the "other" ARC device subnet.
   // As a temporary workaround, for ARCVM, allocate fixed MAC addresses.
   uint8_t mac_addr_index = 2;
@@ -250,13 +250,13 @@ void ArcService::AllocateAddressConfigs() {
     MacAddress mac_addr = (guest_ == GuestMessage::ARC_VM)
                               ? addr_mgr_->GenerateMacAddress(mac_addr_index++)
                               : addr_mgr_->GenerateMacAddress();
-    configs_[itype].emplace_back(std::make_unique<Device::Config>(
+    available_configs_[itype].emplace_back(std::make_unique<Device::Config>(
         mac_addr, std::move(ipv4_subnet), std::move(host_ipv4_addr),
         std::move(guest_ipv4_addr)));
   }
 }
 
-std::vector<Device::Config*> ArcService::ReallocateAddressConfigs() {
+void ArcService::ReallocateAddressConfigs() {
   std::vector<std::string> existing_devices;
   for (const auto& d : devices_) {
     existing_devices.emplace_back(d.first);
@@ -265,15 +265,13 @@ std::vector<Device::Config*> ArcService::ReallocateAddressConfigs() {
     RemoveDevice(d);
   }
   AllocateAddressConfigs();
-  std::vector<Device::Config*> configs;
-  for (const auto& kv : configs_) {
+  all_configs_.clear();
+  for (const auto& kv : available_configs_)
     for (const auto& c : kv.second)
-      configs.push_back(c.get());
-  }
+      all_configs_.emplace_back(c.get());
   for (const auto& d : existing_devices) {
     AddDevice(d);
   }
-  return configs;
 }
 
 std::unique_ptr<Device::Config> ArcService::AcquireConfig(
@@ -284,7 +282,7 @@ std::unique_ptr<Device::Config> ArcService::AcquireConfig(
     return nullptr;
   }
 
-  auto& configs = configs_[itype];
+  auto& configs = available_configs_[itype];
   if (configs.empty()) {
     LOG(ERROR) << "No more addresses available. Cannot make device for "
                << ifname;
@@ -304,7 +302,7 @@ void ArcService::ReleaseConfig(const std::string& ifname,
     return;
   }
 
-  configs_[itype].push_front(std::move(config));
+  available_configs_[itype].push_front(std::move(config));
 }
 
 bool ArcService::Start(uint32_t id) {
@@ -317,14 +315,27 @@ bool ArcService::Start(uint32_t id) {
     }
   }
 
-  auto configs = ReallocateAddressConfigs();
+  ReallocateAddressConfigs();
   std::unique_ptr<Device::Config> arc_device_config =
       MakeArcConfig(addr_mgr_, AddressManager::Guest::ARC, guest_);
   if (guest_ == GuestMessage::ARC_VM) {
     // Append arc0 config separately from ArcService::ReallocateAddressConfigs()
     // so that VmImpl::Start() can create the necessary tap device.
-    configs.insert(configs.begin(), arc_device_config.get());
-    impl_ = std::make_unique<VmImpl>(datapath_, configs);
+    all_configs_.insert(all_configs_.begin(), arc_device_config.get());
+    // Allocate TAP devices for all configs.
+    for (auto* config : all_configs_) {
+      auto mac = config->mac_addr();
+      auto tap = datapath_->AddTAP("" /* auto-generate name */, &mac,
+                                   nullptr /* no ipv4 subnet */,
+                                   vm_tools::kCrosVmUser);
+      if (tap.empty()) {
+        LOG(ERROR) << "Failed to create TAP device";
+        continue;
+      }
+
+      config->set_tap_ifname(tap);
+    }
+    impl_ = std::make_unique<VmImpl>(datapath_);
   } else {
     impl_ = std::make_unique<ContainerImpl>(datapath_);
     if (!datapath_->NetnsAttachName(kArcNetnsName, id)) {
@@ -359,7 +370,6 @@ bool ArcService::Start(uint32_t id) {
   std::string arc_device_ifname;
   if (guest_ == GuestMessage::ARC_VM) {
     arc_device_ifname = arc_device_->config().tap_ifname();
-    // The tap device associated with arc_device is created by VmImpl::Start().
   } else {
     arc_device_ifname = ArcVethHostName(arc_device_->guest_ifname());
     if (!datapath_->ConnectVethPair(
@@ -404,6 +414,11 @@ void ArcService::Stop(uint32_t id) {
     datapath_->RemoveInterface(ArcVethHostName(arc_device_->phys_ifname()));
     if (!datapath_->NetnsDeleteName(kArcNetnsName))
       LOG(WARNING) << "Failed to delete netns name " << kArcNetnsName;
+  } else {
+    // Destroy pre allocated TAP devices, including the ARC management device.
+    for (const auto* config : all_configs_)
+      if (!config->tap_ifname().empty())
+        datapath_->RemoveInterface(config->tap_ifname());
   }
 
   if (impl_) {
@@ -525,10 +540,11 @@ void ArcService::StopDevice(Device* device) {
 }
 
 std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
-  if (impl_)
-    return impl_->GetDeviceConfigs();
+  std::vector<const Device::Config*> configs;
+  for (auto* c : all_configs_)
+    configs.emplace_back(c);
 
-  return {};
+  return configs;
 }
 
 // ARC++ specific functions.
@@ -595,21 +611,11 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
 
 // VM specific functions
 
-ArcService::VmImpl::VmImpl(Datapath* datapath,
-                           const std::vector<Device::Config*>& configs)
-    : cid_(kInvalidCID), datapath_(datapath), configs_(configs) {}
+ArcService::VmImpl::VmImpl(Datapath* datapath)
+    : cid_(kInvalidCID), datapath_(datapath) {}
 
 uint32_t ArcService::VmImpl::id() const {
   return cid_;
-}
-
-std::vector<const Device::Config*> ArcService::VmImpl::GetDeviceConfigs()
-    const {
-  std::vector<const Device::Config*> configs;
-  for (const auto* c : configs_)
-    configs.emplace_back(c);
-
-  return configs;
 }
 
 bool ArcService::VmImpl::Start(uint32_t cid) {
@@ -624,20 +630,6 @@ bool ArcService::VmImpl::Start(uint32_t cid) {
   }
   cid_ = cid;
 
-  // Allocate TAP devices for all configs.
-  for (auto* config : configs_) {
-    auto mac = config->mac_addr();
-    auto tap =
-        datapath_->AddTAP("" /* auto-generate name */, &mac,
-                          nullptr /* no ipv4 subnet */, vm_tools::kCrosVmUser);
-    if (tap.empty()) {
-      LOG(ERROR) << "Failed to create TAP device";
-      continue;
-    }
-
-    config->set_tap_ifname(tap);
-  }
-
   LOG(INFO) << "ARCVM network service started {cid: " << cid_ << "}";
   return true;
 }
@@ -647,10 +639,6 @@ void ArcService::VmImpl::Stop(uint32_t cid) {
     LOG(ERROR) << "Mismatched ARCVM CIDs " << cid_ << " != " << cid;
     return;
   }
-
-  for (auto* config : configs_)
-    if (!config->tap_ifname().empty())
-      datapath_->RemoveInterface(config->tap_ifname());
 
   LOG(INFO) << "ARCVM network service stopped {cid: " << cid_ << "}";
   cid_ = kInvalidCID;

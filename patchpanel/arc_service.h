@@ -32,11 +32,6 @@ class ArcService {
 
     virtual uint32_t id() const = 0;
 
-    // Returns the list of device configurations that were provided to the
-    // implementation at creation time plus the one for the ARC device, if
-    // applicable. Currently only ARCVM supports this method.
-    virtual std::vector<const Device::Config*> GetDeviceConfigs() const = 0;
-
     virtual bool Start(uint32_t id) = 0;
     virtual void Stop(uint32_t id) = 0;
     virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
@@ -55,9 +50,6 @@ class ArcService {
     ~ContainerImpl() = default;
 
     uint32_t id() const override;
-    std::vector<const Device::Config*> GetDeviceConfigs() const override {
-      return {};
-    }
 
     bool Start(uint32_t pid) override;
     void Stop(uint32_t pid) override;
@@ -75,14 +67,10 @@ class ArcService {
   // Encapsulates all ARC VM-specific logic.
   class VmImpl : public Impl {
    public:
-    // |configs| is an optional list of device configurations that, if provided,
-    // will be used to pre-allocated and associate them, when necessary, to
-    // devices as they are added. The caller retains ownership of the pointers.
-    VmImpl(Datapath* datapath, const std::vector<Device::Config*>& configs);
+    VmImpl(Datapath* datapath);
     ~VmImpl() = default;
 
     uint32_t id() const override;
-    std::vector<const Device::Config*> GetDeviceConfigs() const override;
 
     bool Start(uint32_t cid) override;
     void Stop(uint32_t cid) override;
@@ -92,7 +80,6 @@ class ArcService {
    private:
     uint32_t cid_;
     Datapath* datapath_;
-    std::vector<Device::Config*> configs_;
 
     DISALLOW_COPY_AND_ASSIGN(VmImpl);
   };
@@ -151,8 +138,7 @@ class ArcService {
   // address configurations and re-add existing devices. This is necessary to
   // properly handle the IPv4 addressing binding difference between ARC++ and
   // ARCVM.
-  // Returns the list of all configurations ordered by type.
-  std::vector<Device::Config*> ReallocateAddressConfigs();
+  void ReallocateAddressConfigs();
 
   // Reserve a configuration for an interface.
   std::unique_ptr<Device::Config> AcquireConfig(const std::string& ifname);
@@ -169,7 +155,11 @@ class ArcService {
   std::unique_ptr<Impl> impl_;
   // A set of preallocated device configurations keyed by technology type and
   // used for setting up ARCVM tap devices at VM booting time.
-  std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>> configs_;
+  std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>>
+      available_configs_;
+  // The list of all Device configurations. Also includes ARC management device
+  // for ARCVM.
+  std::vector<Device::Config*> all_configs_;
   // The ARC device configurations corresponding to the host physical devices,
   // keyed by device interface name.
   std::map<std::string, std::unique_ptr<Device>> devices_;
