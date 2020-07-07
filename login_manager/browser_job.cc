@@ -58,6 +58,9 @@ constexpr char kEnableBlinkFeaturesFlag[] = "--enable-blink-features=";
 constexpr char kDisableBlinkFeaturesFlag[] = "--disable-blink-features=";
 constexpr char kSafeModeFlag[] = "--safe-mode";
 
+constexpr char kSessionManagerSafeModeEnabled[] =
+    "SessionManager.SafeModeEnabled";
+
 // Erases all occurrences of |arg| within |args|. Returns true if any entries
 // were removed or false otherwise.
 bool RemoveArgs(std::vector<std::string>* args, const std::string& arg) {
@@ -350,6 +353,7 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
     LOG(WARNING) << "Dropping extra arguments and setting safe-mode switch due "
                     "to crashy browser.";
     to_return.emplace_back(kSafeModeFlag);
+    login_metrics_->ReportCrosEvent(kSessionManagerSafeModeEnabled);
   } else {
     to_return.insert(to_return.end(), extra_arguments_.begin(),
                      extra_arguments_.end());

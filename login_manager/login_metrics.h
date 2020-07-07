@@ -6,6 +6,7 @@
 #define LOGIN_MANAGER_LOGIN_METRICS_H_
 
 #include <memory>
+#include <string>
 
 #include <base/files/file_path.h>
 #include <base/macros.h>
@@ -139,6 +140,11 @@ class LoginMetrics {
   // Submits to UMA the time to backup ARC bug report.
   virtual void SendArcBugReportBackupTime(
       base::TimeDelta arc_bug_report_backup_time);
+
+  // CrOS events are translated to an enum and reported to the generic
+  // "Platform.CrOSEvent" enum histogram. The |event| string must be registered
+  // in metrics/metrics_library.cc:kCrosEventNames.
+  virtual void ReportCrosEvent(const std::string& event);
 
  private:
   friend class LoginMetricsTest;

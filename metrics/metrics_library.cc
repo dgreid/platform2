@@ -75,6 +75,7 @@ const char* kCrosEventNames[] = {
     "Crash.Chrome.MissedCrashes",               // 26
     "Crash.Collector.CollectionCount",          // 27
     "Cryptohome.DoubleMountRequest",            // 28
+    "SessionManager.SafeModeEnabled",           // 29
 };
 
 }  // namespace

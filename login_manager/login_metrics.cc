@@ -156,6 +156,10 @@ void LoginMetrics::SendArcBugReportBackupTime(
       static_cast<int>(base::TimeDelta::FromSeconds(60).InMilliseconds()), 50);
 }
 
+void LoginMetrics::ReportCrosEvent(const std::string& event) {
+  metrics_lib_.SendCrosEventToUMA(event);
+}
+
 // static
 // Code for incognito, owner and any other user are 0, 1 and 2
 // respectively in normal mode. In developer mode they are 3, 4 and 5.
