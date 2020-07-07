@@ -236,18 +236,32 @@ bool VaultKeyset::Load(const FilePath& filename) {
     }
     if (serialized_.has_timestamp_file_exists() &&
         serialized_.timestamp_file_exists()) {
+      bool set_from_file_successfully = false;
       FilePath timestamp_path = filename.AddExtension("timestamp");
       brillo::Blob tcontents;
-      if (!platform_->ReadFile(timestamp_path, &tcontents)) {
+      if (platform_->ReadFile(timestamp_path, &tcontents)) {
+        cryptohome::Timestamp timestamp;
+        if (timestamp.ParseFromArray(tcontents.data(), tcontents.size())) {
+          serialized_.set_last_activity_timestamp(timestamp.timestamp());
+          set_from_file_successfully = true;
+        } else {
+          LOG(WARNING) << "Failure to parse timestamp file: " << timestamp_path;
+        }
+      } else {
         LOG(WARNING) << "Failure to read timestamp file: " << timestamp_path;
-        return false;
       }
-      cryptohome::Timestamp timestamp;
-      if (!timestamp.ParseFromArray(tcontents.data(), tcontents.size())) {
-        LOG(WARNING) << "Failure to parse timestamp file: " << timestamp_path;
-        return false;
+
+      if (!set_from_file_successfully) {
+        // We don't fail the VaultKeyset load here because if it fails, the user
+        // may have to recreate their entire cryptohome for this minor error.
+        // Instead, we log the error (because it's minor), and let it pass with
+        // a reasonable default value for last_activity_timestamp, and that is
+        // the current time.
+        LOG(WARNING) << "Not failing attempt to Load() due to timestamp file "
+                        "problem. Setting last activity timestamp to now";
+        serialized_.set_last_activity_timestamp(
+            platform_->GetCurrentTime().ToInternalValue());
       }
-      serialized_.set_last_activity_timestamp(timestamp.timestamp());
     }
   }
   return loaded_;
