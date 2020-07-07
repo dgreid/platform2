@@ -323,7 +323,7 @@ ssize_t VmExportOperation::OutputFileWriteCallback(archive* a,
     return -1;
   }
 
-  op->sha256_->Update(buf, length);
+  op->sha256_->Update(buf, bytes_written);
   return bytes_written;
 }
 
