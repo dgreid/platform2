@@ -133,8 +133,20 @@ void TpmManagerService::InitializeTask() {
   // is.
   TpmStatus::TpmOwnershipStatus ownership_status;
   if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
-    LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
-    return;
+    LOG(ERROR) << __func__
+               << ": failed to get tpm ownership status, maybe it's the "
+                  "dictionary attack lockout.";
+    // GetStatus could fail because the TPM is under DA lockout, so we'll try to
+    // reset lockout then try again.
+    ResetDictionaryAttackCounterIfNeeded();
+    if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+      LOG(ERROR) << __func__
+                 << ": get tpm ownership status still failed. Giving up.";
+      return;
+    }
+    LOG(INFO) << __func__
+              << ": get tpm ownership status suceeded after dictionary attack "
+                 "lockout reset.";
   }
   // The precondition of DA reset is not satisfied; resets the timer so it
   // doesn't get triggered immediately.

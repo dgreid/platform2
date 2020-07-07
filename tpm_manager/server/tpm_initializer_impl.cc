@@ -140,17 +140,24 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
 
   TpmStatus::TpmOwnershipStatus ownership_status;
   if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
-    LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
-    return DictionaryAttackResetStatus::kResetAttemptFailed;
-  }
-  if (ownership_status != TpmStatus::kTpmOwned) {
-    LOG(ERROR) << __func__ << ": TPM is not initialized yet.";
-    return DictionaryAttackResetStatus::kResetAttemptFailed;
+    // Can't tell if we really can't get tpm ownership status or lockout is in
+    // our way, so let's still go ahead.
+    LOG(WARNING) << __func__
+                 << ": failed to get tpm ownership status, but that could be "
+                    "caused by a locked out TPM, so proceeding anyway.";
+  } else {
+    if (ownership_status != TpmStatus::kTpmOwned) {
+      LOG(ERROR) << __func__ << ": TPM is not initialized yet.";
+      return DictionaryAttackResetStatus::kResetAttemptFailed;
+    }
   }
 
   std::string owner_password;
   AuthDelegate owner_delegate;
   if (!ReadOwnerAuthFromLocalData(&owner_password, &owner_delegate)) {
+    // Note that if it failed here, it could be because the TPM is not owned,
+    // but we tried anyway because we can't get the TPM status. See comments
+    // above on CheckAndNotifyIfTpmOwned().
     LOG(ERROR) << __func__ << ": failed to get owner auth.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
