@@ -28,6 +28,8 @@ const QuirksMap& GetQuirksMap() {
       {{"0bda", "5646"}, kQuirkReportLeastFpsRanges},
       // Liteon AR CCD 8BA842N2A (b/147397859)
       {{"0bda", "5647"}, kQuirkReportLeastFpsRanges},
+      // Genesys Logic, Inc. (b/160544169)
+      {{"05e3", "f11a"}, kQuirkReportLeastFpsRanges},
       // Logitech Tap HDMI Capture (b/146590270)
       {{"046d", "0876"}, kQuirkRestartOnTimeout},
       // IPEVO Ziggi-HD Plus
