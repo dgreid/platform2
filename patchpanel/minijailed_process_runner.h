@@ -29,10 +29,6 @@ class MinijailedProcessRunner {
   // |pid| identifies the pid of the current namespace.
   virtual int RestoreDefaultNamespace(const std::string& ifname, pid_t pid);
 
-  // Writes out a file that the ARC boot process uses to discover when
-  // the host networking is ready.
-  virtual int WriteSentinelToContainer(pid_t con_pid);
-
   // Runs brctl.
   virtual int brctl(const std::string& cmd,
                     const std::vector<std::string>& argv,

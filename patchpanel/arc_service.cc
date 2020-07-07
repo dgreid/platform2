@@ -611,9 +611,6 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
     forwarder_->StartForwarding(device->phys_ifname(), device->host_ifname(),
                                 device->options().ipv6_enabled,
                                 device->options().fwd_multicast);
-  } else {
-    // Signal the container that the network device is ready.
-    datapath_->runner().WriteSentinelToContainer(pid_);
   }
 
   return true;
