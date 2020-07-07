@@ -7,9 +7,11 @@
 #include <utility>
 
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <brillo/scoped_mount_namespace.h>
 
 #include "cros-disks/error_logger.h"
 #include "cros-disks/fuse_helper.h"
@@ -70,6 +72,19 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
         base::NumberToString(uid), base::NumberToString(gid));
 
     *applied_options = params.mount_options;
+  }
+
+  // Determine which mount namespace to use.
+  {
+    // Attempt to enter the Chrome mount namespace, if it exists.
+    auto guard = brillo::ScopedMountNamespace::CreateFromPath(
+        base::FilePath(kChromeMountNamespacePath));
+
+    // Check if the source path exists in Chrome's mount namespace.
+    if (guard && base::PathExists(base::FilePath(source_path))) {
+      // The source path exists in Chrome's mount namespace.
+      params.mount_namespace = kChromeMountNamespacePath;
+    }
   }
 
   // To access Play Files.
