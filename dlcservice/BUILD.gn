@@ -69,10 +69,20 @@ proto_library("ref_count-proto") {
   sources = [ "ref_count.proto" ]
 }
 
+# DLC boot related files.
+static_library("libdlcservice_boot") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "boot/boot_device.cc",
+    "boot/boot_slot.cc",
+  ]
+}
+
 # DLC utils related files.
 static_library("libdlcservice_utils") {
   configs += [ ":target_defaults" ]
   sources = [ "utils.cc" ]
+  deps = [ ":libdlcservice_boot" ]
 }
 
 # DLC service related files.
@@ -80,8 +90,6 @@ static_library("libdlcservice") {
   configs += [ ":target_defaults" ]
   libs = [ "rootdev" ]
   sources = [
-    "boot/boot_device.cc",
-    "boot/boot_slot.cc",
     "daemon.cc",
     "dbus_adaptors/dbus_adaptor.cc",
     "dlc.cc",
