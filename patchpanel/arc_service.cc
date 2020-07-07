@@ -32,8 +32,7 @@
 
 namespace patchpanel {
 namespace {
-constexpr pid_t kInvalidPID = 0;
-constexpr uint32_t kInvalidCID = 0;
+constexpr uint32_t kInvalidId = 0;
 constexpr char kArcNetnsName[] = "arc_netns";
 constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
@@ -207,7 +206,8 @@ ArcService::ArcService(ShillClient* shill_client,
       datapath_(datapath),
       addr_mgr_(addr_mgr),
       forwarder_(forwarder),
-      guest_(guest) {
+      guest_(guest),
+      id_(kInvalidId) {
   AllocateAddressConfigs();
   shill_client_->RegisterDevicesChangedHandler(
       base::Bind(&ArcService::OnDevicesChanged, weak_factory_.GetWeakPtr()));
@@ -215,9 +215,13 @@ ArcService::ArcService(ShillClient* shill_client,
 }
 
 ArcService::~ArcService() {
-  if (impl_) {
-    Stop(impl_->id());
+  if (IsStarted()) {
+    Stop(id_);
   }
+}
+
+bool ArcService::IsStarted() const {
+  return id_ != kInvalidId;
 }
 
 void ArcService::AllocateAddressConfigs() {
@@ -306,13 +310,10 @@ void ArcService::ReleaseConfig(const std::string& ifname,
 }
 
 bool ArcService::Start(uint32_t id) {
-  if (impl_) {
-    uint32_t prev_id;
-    if (impl_->IsStarted(&prev_id)) {
-      LOG(WARNING) << "Already running - did something crash?"
-                   << " Stopping and restarting...";
-      Stop(prev_id);
-    }
+  if (IsStarted()) {
+    LOG(WARNING) << "Already running - did something crash?"
+                 << " Stopping and restarting...";
+    Stop(id_);
   }
 
   ReallocateAddressConfigs();
@@ -335,9 +336,7 @@ bool ArcService::Start(uint32_t id) {
 
       config->set_tap_ifname(tap);
     }
-    impl_ = std::make_unique<VmImpl>();
   } else {
-    impl_ = std::make_unique<ContainerImpl>();
     OneTimeSetup(*datapath_);
     if (!datapath_->NetnsAttachName(kArcNetnsName, id)) {
       LOG(ERROR) << "Failed to attach name " << kArcNetnsName << " to pid "
@@ -345,10 +344,7 @@ bool ArcService::Start(uint32_t id) {
       return false;
     }
   }
-  if (!impl_->Start(id)) {
-    impl_.reset();
-    return false;
-  }
+  id_ = id;
 
   // Create the bridge for the management device arc0.
   // Per crbug/1008686 this device cannot be deleted and then re-added.
@@ -373,11 +369,11 @@ bool ArcService::Start(uint32_t id) {
     arc_device_ifname = arc_device_->config().tap_ifname();
   } else {
     arc_device_ifname = ArcVethHostName(arc_device_->guest_ifname());
-    if (!datapath_->ConnectVethPair(
-            impl_->id(), kArcNetnsName, arc_device_ifname,
-            arc_device_->guest_ifname(), arc_device_->config().mac_addr(),
-            arc_device_->config().guest_ipv4_addr(), 30,
-            arc_device_->options().fwd_multicast)) {
+    if (!datapath_->ConnectVethPair(id, kArcNetnsName, arc_device_ifname,
+                                    arc_device_->guest_ifname(),
+                                    arc_device_->config().mac_addr(),
+                                    arc_device_->config().guest_ipv4_addr(), 30,
+                                    arc_device_->options().fwd_multicast)) {
       LOG(ERROR) << "Cannot create virtual link for device "
                  << arc_device_->phys_ifname();
       return false;
@@ -399,6 +395,17 @@ bool ArcService::Start(uint32_t id) {
 }
 
 void ArcService::Stop(uint32_t id) {
+  if (!IsStarted()) {
+    LOG(ERROR) << "ArcService was not running";
+    return;
+  }
+
+  // After the ARC container has stopped, the pid is not known anymore.
+  if (guest_ == GuestMessage::ARC_VM && id_ != id) {
+    LOG(ERROR) << "Mismatched ARCVM CIDs " << id_ << " != " << id;
+    return;
+  }
+
   // Stop Shill <-> ARC mapped devices.
   for (const auto& d : devices_)
     StopDevice(d.second.get());
@@ -422,13 +429,9 @@ void ArcService::Stop(uint32_t id) {
         datapath_->RemoveInterface(config->tap_ifname());
   }
 
-  if (impl_) {
-    impl_->Stop(id);
-    impl_.reset();
-  }
-
   LOG(INFO) << "Stopped ARC management device " << *arc_device_.get();
   arc_device_.reset();
+  id_ = kInvalidId;
 }
 
 void ArcService::OnDevicesChanged(const std::set<std::string>& added,
@@ -472,7 +475,7 @@ void ArcService::AddDevice(const std::string& ifname) {
 }
 
 void ArcService::StartDevice(Device* device) {
-  if (!impl_ || !impl_->IsStarted())
+  if (!IsStarted())
     return;
 
   const auto& config = device->config();
@@ -506,7 +509,7 @@ void ArcService::StartDevice(Device* device) {
   } else {
     virtual_device_ifname = ArcVethHostName(device->guest_ifname());
     if (!datapath_->ConnectVethPair(
-            impl_->id(), kArcNetnsName, virtual_device_ifname, device->guest_ifname(),
+            id_, kArcNetnsName, virtual_device_ifname, device->guest_ifname(),
             device->config().mac_addr(), device->config().guest_ipv4_addr(), 30,
             device->options().fwd_multicast)) {
       LOG(ERROR) << "Cannot create virtual link for device " << *device;
@@ -542,7 +545,7 @@ void ArcService::RemoveDevice(const std::string& ifname) {
 }
 
 void ArcService::StopDevice(Device* device) {
-  if (!impl_ || !impl_->IsStarted())
+  if (!IsStarted())
     return;
 
   LOG(INFO) << "Removing device " << *device;
@@ -567,85 +570,5 @@ std::vector<const Device::Config*> ArcService::GetDeviceConfigs() const {
     configs.emplace_back(c);
 
   return configs;
-}
-
-// ARC++ specific functions.
-
-ArcService::ContainerImpl::ContainerImpl() : pid_(kInvalidPID) {}
-
-uint32_t ArcService::ContainerImpl::id() const {
-  return pid_;
-}
-
-bool ArcService::ContainerImpl::Start(uint32_t pid) {
-  // This could happen if something crashes and the stop signal is not sent.
-  // It can probably be addressed by stopping and restarting the service.
-  if (pid_ != kInvalidPID)
-    return false;
-
-  if (pid == kInvalidPID) {
-    LOG(ERROR) << "Cannot start service - invalid container PID";
-    return false;
-  }
-  pid_ = pid;
-
-  LOG(INFO) << "ARC++ network service started {pid: " << pid_ << "}";
-  return true;
-}
-
-void ArcService::ContainerImpl::Stop(uint32_t /*pid*/) {
-  if (!IsStarted())
-    return;
-
-  LOG(INFO) << "ARC++ network service stopped {pid: " << pid_ << "}";
-  pid_ = kInvalidPID;
-}
-
-bool ArcService::ContainerImpl::IsStarted(uint32_t* pid) const {
-  if (pid)
-    *pid = pid_;
-
-  return pid_ != kInvalidPID;
-}
-
-// VM specific functions
-
-ArcService::VmImpl::VmImpl() : cid_(kInvalidCID) {}
-
-uint32_t ArcService::VmImpl::id() const {
-  return cid_;
-}
-
-bool ArcService::VmImpl::Start(uint32_t cid) {
-  // This can happen if concierge crashes and doesn't send the vm down RPC.
-  // It can probably be addressed by stopping and restarting the service.
-  if (cid_ != kInvalidCID)
-    return false;
-
-  if (cid == kInvalidCID) {
-    LOG(ERROR) << "Invalid VM cid " << cid;
-    return false;
-  }
-  cid_ = cid;
-
-  LOG(INFO) << "ARCVM network service started {cid: " << cid_ << "}";
-  return true;
-}
-
-void ArcService::VmImpl::Stop(uint32_t cid) {
-  if (cid_ != cid) {
-    LOG(ERROR) << "Mismatched ARCVM CIDs " << cid_ << " != " << cid;
-    return;
-  }
-
-  LOG(INFO) << "ARCVM network service stopped {cid: " << cid_ << "}";
-  cid_ = kInvalidCID;
-}
-
-bool ArcService::VmImpl::IsStarted(uint32_t* cid) const {
-  if (cid)
-    *cid = cid_;
-
-  return cid_ != kInvalidCID;
 }
 }  // namespace patchpanel

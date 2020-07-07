@@ -86,7 +86,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   void InitialSetup();
 
   bool StartArc(pid_t pid);
-  void StopArc(pid_t pid);
+  void StopArc();
   bool StartArcVm(uint32_t cid);
   void StopArcVm(uint32_t cid);
   bool StartCrosVm(uint64_t vm_id,

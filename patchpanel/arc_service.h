@@ -26,57 +26,6 @@ namespace patchpanel {
 
 class ArcService {
  public:
-  class Impl {
-   public:
-    virtual ~Impl() = default;
-
-    virtual uint32_t id() const = 0;
-
-    virtual bool Start(uint32_t id) = 0;
-    virtual void Stop(uint32_t id) = 0;
-    virtual bool IsStarted(uint32_t* id = nullptr) const = 0;
-
-   protected:
-    Impl() = default;
-  };
-
-  // Encapsulates all ARC++ container-specific logic.
-  class ContainerImpl : public Impl {
-   public:
-    ContainerImpl();
-    ~ContainerImpl() = default;
-
-    uint32_t id() const override;
-
-    bool Start(uint32_t pid) override;
-    void Stop(uint32_t pid) override;
-    bool IsStarted(uint32_t* pid = nullptr) const override;
-
-   private:
-    uint32_t pid_;
-
-    base::WeakPtrFactory<ContainerImpl> weak_factory_{this};
-    DISALLOW_COPY_AND_ASSIGN(ContainerImpl);
-  };
-
-  // Encapsulates all ARC VM-specific logic.
-  class VmImpl : public Impl {
-   public:
-    VmImpl();
-    ~VmImpl() = default;
-
-    uint32_t id() const override;
-
-    bool Start(uint32_t cid) override;
-    void Stop(uint32_t cid) override;
-    bool IsStarted(uint32_t* cid = nullptr) const override;
-
-   private:
-    uint32_t cid_;
-
-    DISALLOW_COPY_AND_ASSIGN(VmImpl);
-  };
-
   enum class InterfaceType {
     UNKNOWN,
     ETHERNET,
@@ -101,6 +50,9 @@ class ArcService {
   std::vector<const Device::Config*> GetDeviceConfigs() const;
 
  private:
+  // Returns true if the service has been started for ARC container or ARCVM.
+  bool IsStarted() const;
+
   // Callback from ShillClient, invoked whenever the device list changes.
   // |devices_| will contain all devices currently connected to shill
   // (e.g. "eth0", "wlan0", etc).
@@ -108,16 +60,16 @@ class ArcService {
                         const std::set<std::string>& removed);
 
   // Build and configure an ARC device for the interface |name| provided by
-  // Shill. The new device will be added to |devices_|. If an implementation is
+  // Shill. The new device will be added to |devices_|. If ArcService is
   // already running, the device will be started.
   void AddDevice(const std::string& ifname);
 
-  // Deletes the ARC device; if an implementation is running, the device will be
+  // Deletes the ARC device; if ArcService is running, the device will be
   // stopped first.
   void RemoveDevice(const std::string& ifname);
 
   // Starts a device by setting up the bridge and configuring some NAT rules,
-  // then invoking the implementation-specific start routine.
+  // then invoking the container or VM specific start routine.
   void StartDevice(Device* device);
 
   // Stops and cleans up any virtual interfaces and associated datapath.
@@ -145,7 +97,6 @@ class ArcService {
   AddressManager* addr_mgr_;
   TrafficForwarder* forwarder_;
   GuestMessage::GuestType guest_;
-  std::unique_ptr<Impl> impl_;
   // A set of preallocated device configurations keyed by technology type and
   // used for setting up ARCVM tap devices at VM booting time.
   std::map<InterfaceType, std::deque<std::unique_ptr<Device::Config>>>
@@ -159,6 +110,8 @@ class ArcService {
   // The ARC management device used for legacy adb-over-tcp support and VPN
   // forwarding.
   std::unique_ptr<Device> arc_device_;
+  // The PID of the ARC container instance or the CID of ARCVM instance.
+  uint32_t id_;
 
   FRIEND_TEST(ArcServiceTest, ContainerImpl_OnStartDevice);
   FRIEND_TEST(ArcServiceTest, ContainerImpl_FailsToConfigureInterface);

@@ -364,13 +364,15 @@ bool Manager::StartArc(pid_t pid) {
   return true;
 }
 
-void Manager::StopArc(pid_t pid) {
+void Manager::StopArc() {
   GuestMessage msg;
   msg.set_event(GuestMessage::STOP);
   msg.set_type(GuestMessage::ARC);
   SendGuestMessage(msg);
 
-  arc_svc_->Stop(pid);
+  // After the ARC container has stopped, the pid is not known anymore.
+  // The pid argument is ignored by ArcService.
+  arc_svc_->Stop(0);
 }
 
 bool Manager::StartArcVm(uint32_t cid) {
@@ -467,7 +469,7 @@ std::unique_ptr<dbus::Response> Manager::OnArcShutdown(
     return dbus_response;
   }
 
-  StopArc(request.pid());
+  StopArc();
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
