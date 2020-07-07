@@ -42,12 +42,10 @@ constexpr char kKrb5CCEnvKey[] = "KRB5CCNAME";
 constexpr char kKrb5ConfEnvKey[] = "KRB5_CONFIG";
 constexpr char kCredentialsColonSeparator[] = ":";
 
-// Returns the URL encoded value of |text|. It also verifies if the string was
-// already encoded and, if true it returns it unmodified.
+// Returns the URL encoded value of |text|.
 std::string UrlEncode(const std::string& text) {
-  if (text == brillo::data_encoding::UrlDecode(text.c_str()))
-    return brillo::data_encoding::UrlEncode(text.c_str(), false);
-  return text;
+  return brillo::data_encoding::UrlEncode(text.c_str(),
+                                          /* encodeSpaceAsPlus= */ false);
 }
 
 }  // namespace
