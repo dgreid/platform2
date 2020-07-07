@@ -15,7 +15,6 @@
 #include <base/unguessable_token.h>
 #include <dbus/cros_healthd/dbus-constants.h>
 #include <dbus/object_path.h>
-#include <mojo/core/embedder/embedder.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 #include <mojo/public/cpp/system/invitation.h>
@@ -70,8 +69,6 @@ int CrosHealthd::OnInit() {
   if (exit_code != EXIT_SUCCESS)
     return exit_code;
 
-  // Init the Mojo Embedder API.
-  mojo::core::Init();
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       base::ThreadTaskRunnerHandle::Get() /* io_thread_task_runner */,
       mojo::core::ScopedIPCSupport::ShutdownPolicy::

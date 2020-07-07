@@ -1,0 +1,19 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides utilities used by cros_healthd's root-level executor.
+pkg_config("libcros_healthd_executor_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+source_set("libcros_healthd_executor") {
+  configs += [ ":libcros_healthd_executor_pkg_deps" ]
+  sources = [ "executor.cc" ]
+}

@@ -35,6 +35,7 @@ source_set("libcros_healthd") {
 executable("cros_healthd") {
   deps = [
     ":libcros_healthd",
+    "executor:libcros_healthd_executor",
     "minijail:libcros_healthd_minijail",
   ]
   sources = [ "main.cc" ]
