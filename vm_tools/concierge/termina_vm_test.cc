@@ -23,10 +23,10 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/single_thread_task_runner.h>
 #include <base/strings/stringprintf.h>
+#include <base/test/task_environment.h>
 #include <base/threading/thread.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <google/protobuf/message.h>
@@ -110,8 +110,9 @@ class TerminaVmTest : public ::testing::Test {
 
   // The message loop for the current thread.  Declared here because it must be
   // the last thing to be cleaned up.
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_;
+  base::FileDescriptorWatcher watcher_{
+      task_environment_.GetMainThreadTaskRunner()};
 
  protected:
   // Actual virtual machine being tested.

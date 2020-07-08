@@ -43,7 +43,7 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_piece.h>
@@ -1355,7 +1355,7 @@ bool Init::Setup() {
   }
 
   // Start the worker.
-  base::Thread::Options opts(base::MessageLoop::TYPE_IO, 0 /*stack_size*/);
+  base::Thread::Options opts(base::MessagePumpType::IO, 0 /*stack_size*/);
   if (!worker_thread_.StartWithOptions(opts)) {
     LOG(ERROR) << "Failed to start worker thread";
     return false;

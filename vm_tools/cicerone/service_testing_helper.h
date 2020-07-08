@@ -12,7 +12,7 @@
 
 #include <base/files/scoped_temp_dir.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/threading/thread.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <dbus/mock_bus.h>
@@ -270,7 +270,7 @@ class ServiceTestingHelper {
   scoped_refptr<base::TaskRunner> dbus_task_runner_;
 
   // This needs to exist for Service to start up & shut down right.
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_;
 
   // Mocks
   scoped_refptr<dbus::MockBus> mock_bus_;

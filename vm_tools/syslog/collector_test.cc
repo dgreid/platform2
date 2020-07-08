@@ -13,7 +13,6 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
@@ -21,7 +20,7 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <base/single_thread_task_runner.h>
 #include <base/threading/thread.h>
@@ -137,8 +136,8 @@ class CollectorTest : public ::testing::Test {
 
   // The message loop for the current thread.  Declared here because it must be
   // the last thing to be cleaned up.
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  // TODO(crbug/1094927): Use SingleThreadTaskEnvironment
+  base::test::TaskEnvironment task_environment_;
 
  protected:
   // Actual Collector being tested.
@@ -180,7 +179,10 @@ class CollectorTest : public ::testing::Test {
 };
 
 CollectorTest::CollectorTest()
-    : failed_(false),
+    : task_environment_(
+          base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+          base::test::TaskEnvironment::MainThreadType::IO),
+      failed_(false),
       server_thread_("gRPC LogCollector Thread"),
       weak_factory_(this) {}
 

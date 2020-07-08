@@ -33,10 +33,11 @@ const int kSyslogCritical = LOG_CRIT;
 #include <base/command_line.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/task_runner.h>
 #include <base/threading/thread.h>
 #include <vm_protos/proto_bindings/container_guest.grpc.pb.h>
@@ -163,8 +164,8 @@ void PrintUsage() {
 
 int main(int argc, char** argv) {
   base::AtExitManager at_exit;
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
   base::CommandLine::Init(argc, argv);
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   logging::InitLogging(logging::LoggingSettings());
@@ -241,7 +242,7 @@ int main(int argc, char** argv) {
   // Thread that D-Bus communication runs on.
   base::Thread dbus_thread{"D-Bus Thread"};
   if (!dbus_thread.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Failed starting the D-Bus thread";
     return -1;
   }
@@ -251,7 +252,7 @@ int main(int argc, char** argv) {
   // |garcon_service_tasks_thread|.
   base::Thread garcon_service_tasks_thread{"Garcon Service Tasks Thread"};
   if (!garcon_service_tasks_thread.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Failed starting the garcon service tasks thread";
     return -1;
   }

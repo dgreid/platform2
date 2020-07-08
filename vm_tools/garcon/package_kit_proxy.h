@@ -12,7 +12,6 @@
 #include <base/callback_forward.h>
 #include <base/files/file_path.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/observer_list.h>
 #include <base/observer_list_types.h>
 #include <base/sequence_checker.h>

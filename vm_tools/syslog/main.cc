@@ -14,10 +14,11 @@
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/run_loop.h>
 #include <base/stl_util.h>
+#include <base/task/single_thread_task_executor.h>
 
 #include "vm_tools/syslog/collector.h"
 
@@ -110,8 +111,8 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
   base::RunLoop run_loop;
 
   std::unique_ptr<vm_tools::syslog::Collector> collector =

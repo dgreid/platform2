@@ -552,7 +552,7 @@ void ServiceTestingHelper::SetupDBus(MockType mock_type) {
   SetDbusCallbackNames();
 
   base::Thread::Options dbus_thread_options;
-  dbus_thread_options.message_loop_type = base::MessageLoop::TYPE_IO;
+  dbus_thread_options.message_loop_type = base::MessagePumpType::IO;
   CHECK(dbus_thread_.StartWithOptions(dbus_thread_options));
 
   dbus::Bus::Options opts;

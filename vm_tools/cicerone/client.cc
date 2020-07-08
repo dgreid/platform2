@@ -19,13 +19,14 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_piece.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -983,8 +984,8 @@ int main(int argc, char** argv) {
   brillo::FlagHelper::Init(argc, argv, "vm_cicerone client tool");
   brillo::InitLog(brillo::kLogToStderrIfTty);
 
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
 
   dbus::Bus::Options opts;
   opts.bus_type = dbus::Bus::SYSTEM;
