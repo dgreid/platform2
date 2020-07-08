@@ -123,6 +123,10 @@ void GlibBridge::OnEvent(int fd, int flag) {
   if (flag & G_IO_OUT)
     watchers_[fd].writer.reset();
 
+  // Avoid posting the dispatch task if it's already posted
+  if (state_ == State::kReadyForDispatch)
+    return;
+
   base::SequencedTaskRunnerHandle::Get()->PostTask(
       FROM_HERE,
       base::Bind(&GlibBridge::Dispatch, weak_ptr_factory_.GetWeakPtr()));
