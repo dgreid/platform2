@@ -37,6 +37,7 @@ executable("cros_healthd") {
     ":libcros_healthd",
     "executor:libcros_healthd_executor",
     "minijail:libcros_healthd_minijail",
+    "system:libcros_healthd_system",
   ]
   sources = [ "main.cc" ]
 }

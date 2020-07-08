@@ -15,6 +15,7 @@
 #include "diagnostics/cros_healthd/cros_healthd.h"
 #include "diagnostics/cros_healthd/executor/executor.h"
 #include "diagnostics/cros_healthd/minijail/minijail_configuration.h"
+#include "diagnostics/cros_healthd/system/context.h"
 
 int main(int argc, char** argv) {
   brillo::FlagHelper::Init(
@@ -44,7 +45,10 @@ int main(int argc, char** argv) {
     // Sandbox the child process.
     diagnostics::ConfigureAndEnterMinijail();
 
+    // Set up the context cros_healthd will run in.
+    diagnostics::Context context;
+
     // Run the cros_healthd daemon.
-    return diagnostics::CrosHealthd().Run();
+    return diagnostics::CrosHealthd(&context).Run();
   }
 }

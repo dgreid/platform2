@@ -36,7 +36,7 @@ class CrosHealthd final
     : public brillo::DBusServiceDaemon,
       public chromeos::cros_healthd::mojom::CrosHealthdServiceFactory {
  public:
-  CrosHealthd();
+  explicit CrosHealthd(Context* context);
   CrosHealthd(const CrosHealthd&) = delete;
   CrosHealthd& operator=(const CrosHealthd&) = delete;
   ~CrosHealthd() override;
@@ -76,7 +76,7 @@ class CrosHealthd final
 
   // Provides access to helper objects. Used by various telemetry fetchers,
   // event implementations and diagnostic routines.
-  Context context_;
+  Context* const context_ = nullptr;
 
   // |backlight_fetcher_| is responsible for collecting metrics related to
   // the device's backlights. It uses |cros_config_| to determine whether or not

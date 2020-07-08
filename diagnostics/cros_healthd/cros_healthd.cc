@@ -25,31 +25,34 @@
 
 namespace diagnostics {
 
-CrosHealthd::CrosHealthd()
-    : DBusServiceDaemon(kCrosHealthdServiceName /* service_name */) {
-  CHECK(context_.Initialize()) << "Failed to initialize context.";
+CrosHealthd::CrosHealthd(Context* context)
+    : DBusServiceDaemon(kCrosHealthdServiceName /* service_name */),
+      context_(context) {
+  DCHECK(context_);
 
-  backlight_fetcher_ = std::make_unique<BacklightFetcher>(&context_);
+  CHECK(context_->Initialize()) << "Failed to initialize context.";
 
-  battery_fetcher_ = std::make_unique<BatteryFetcher>(&context_);
+  backlight_fetcher_ = std::make_unique<BacklightFetcher>(context_);
+
+  battery_fetcher_ = std::make_unique<BatteryFetcher>(context_);
 
   bluetooth_fetcher_ =
-      std::make_unique<BluetoothFetcher>(context_.bluetooth_client());
+      std::make_unique<BluetoothFetcher>(context_->bluetooth_client());
 
-  cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(&context_);
+  cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(context_);
 
   disk_fetcher_ = std::make_unique<DiskFetcher>();
 
-  fan_fetcher_ = std::make_unique<FanFetcher>(&context_);
+  fan_fetcher_ = std::make_unique<FanFetcher>(context_);
 
-  bluetooth_events_ = std::make_unique<BluetoothEventsImpl>(&context_);
+  bluetooth_events_ = std::make_unique<BluetoothEventsImpl>(context_);
 
-  lid_events_ = std::make_unique<LidEventsImpl>(&context_);
+  lid_events_ = std::make_unique<LidEventsImpl>(context_);
 
-  power_events_ = std::make_unique<PowerEventsImpl>(&context_);
+  power_events_ = std::make_unique<PowerEventsImpl>(context_);
 
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
-      &context_, &routine_factory_impl_);
+      context_, &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       backlight_fetcher_.get(), battery_fetcher_.get(),
