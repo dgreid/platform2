@@ -35,8 +35,26 @@ namespace ippusb_manager {
 
 namespace {
 
-constexpr char kRunDir[] = "/run/ippusb/";
+constexpr char kRunDir[] = "/run/ippusb";
 constexpr char kManagerSocketPath[] = "/run/ippusb/ippusb_manager.sock";
+
+// Convenience container that holds
+// *  the main socket on which ippusbxd communicates and
+// *  the ippusbxd keep-alive socket.
+struct IppusbxdSocketPaths {
+  explicit IppusbxdSocketPaths(const UsbPrinterInfo* const printer_info)
+      : main_socket(base::StringPrintf("%s/%04x_%04x.sock",
+                                       kRunDir,
+                                       printer_info->vid(),
+                                       printer_info->pid())),
+        keepalive_socket(base::StringPrintf("%s/%04x_%04x_keep_alive.sock",
+                                            kRunDir,
+                                            printer_info->vid(),
+                                            printer_info->pid())) {}
+
+  base::FilePath main_socket;
+  base::FilePath keepalive_socket;
+};
 
 // Get the file descriptor of the socket created by upstart.
 base::ScopedFD GetFileDescriptor() {
@@ -55,22 +73,13 @@ base::ScopedFD GetFileDescriptor() {
   return base::ScopedFD(fd);
 }
 
-// Determines whether the ippusbxd sockets at |socket_path| and
-// |keep_alive_path| exist on the filesystem.
-bool SocketsExist(const std::string& socket_path,
-                  const std::string& keep_alive_path) {
-  return access(socket_path.c_str(), F_OK) == 0 &&
-         access(keep_alive_path.c_str(), F_OK) == 0;
-}
-
-// Wait up to a maximum of |timeout| seconds for the sockets at |socket_path|
-// and |keep_alive_path| to be closed. Will return true if the sockets are
-// closed before the timeout period, false otherwise.
-bool WaitForSocketsClose(const std::string& socket_path,
-                         const std::string& keep_alive_path,
-                         int timeout) {
+// Wait up to a maximum of |timeout| seconds for the |socket_paths| to
+// disappear. Will return true if the sockets are closed before the
+// timeout period, false otherwise.
+bool WaitForSocketsClose(const IppusbxdSocketPaths& socket_paths, int timeout) {
   base::ElapsedTimer timer;
-  while (SocketsExist(socket_path, keep_alive_path)) {
+  while (base::PathExists(socket_paths.main_socket) ||
+         base::PathExists(socket_paths.keepalive_socket)) {
     if (timer.Elapsed().InSeconds() > timeout) {
       return false;
     }
@@ -101,36 +110,38 @@ bool CheckKeepAlive(const std::string& keep_alive_path) {
 
   // send 'keep-alive' message.
   if (!keep_alive_connection->SendMessage("keep-alive")) {
+    DLOG(ERROR) << "Failed to send keep-alive to ippusbxd";
     return false;
   }
 
   // Verify acknowledgement of 'keep-alive' message.
   std::string response;
   if (!keep_alive_connection->GetMessage(&response) || response != "ack") {
+    DLOG(ERROR) << "Expected keep-alive ``ack'' from ippusbxd but got ``"
+                << response << "''";
     return false;
   }
 
   return true;
 }
 
-// Uses minijail to start a new instance of the XD program, using
-// |socket_path| as the socket for communication, and the printer described by
+// Uses minijail to start a new instance of ippusbxd using the
+// specified |socket_paths| and the printer described by
 // |printer_info| for printing.
-void SpawnXD(const std::string& socket_path,
-             const std::string& keep_alive_path,
-             UsbPrinterInfo* printer_info) {
+void SpawnXD(const IppusbxdSocketPaths socket_paths,
+             std::unique_ptr<UsbPrinterInfo> printer_info) {
   std::vector<std::string> string_args = {
       "/usr/bin/ippusbxd",
       "-n",
       "-l",
       base::StringPrintf("--bus-device=%03d:%03d", printer_info->bus(),
                          printer_info->device()),
-      "--uds-path=" + socket_path,
-      "--keep-alive=" + keep_alive_path,
+      "--uds-path=" + socket_paths.main_socket.value(),
+      "--keep-alive=" + socket_paths.keepalive_socket.value(),
       "--no-broadcast",
   };
 
-  LOG(INFO) << "Keep alive path: " << keep_alive_path;
+  LOG(INFO) << "Keep alive path: " << socket_paths.keepalive_socket;
 
   // This vector does not modify the underlying strings, it's just used for
   // compatibility with the call to execve() which libminijail makes.
@@ -157,6 +168,34 @@ void SpawnXD(const std::string& socket_path,
   // creates.
   umask(0117);
   minijail_run(jail.get(), ptr_args[0], ptr_args.data());
+}
+
+// Attempts to ensure that an instance of ippusbxd, appropriately bound
+// to the specified |socket_paths|, is running. Returns whether or not
+// that is so.
+bool CheckOrSpawnIppusbxd(const IppusbxdSocketPaths& socket_paths,
+                          std::unique_ptr<UsbPrinterInfo> printer_info) {
+  LOG(INFO) << "Checking to see if ippusbxd is already running";
+
+  // Leap before you look: if we can squeak a keep-alive message to
+  // an already-running ippusbxd instance, we're good.
+  if (CheckKeepAlive(socket_paths.main_socket.value())) {
+    return true;
+  }
+  LOG(INFO) << "Couldn't contact ippusbxd. Waiting for sockets to be closed "
+               "before launching a new process";
+
+  // Wait a maximum of 3 seconds for the ippusbxd sockets to be closed before
+  // spawning the new process.
+  if (!WaitForSocketsClose(socket_paths, /*timeout=*/3)) {
+    LOG(ERROR) << "The sockets at " << socket_paths.main_socket << " and "
+               << socket_paths.keepalive_socket << " still exist";
+    return false;
+  }
+
+  LOG(INFO) << "Launching a new instance of ippusbxd";
+  SpawnXD(socket_paths, std::move(printer_info));
+  return true;
 }
 
 }  // namespace
@@ -217,33 +256,16 @@ int ippusb_manager_main(int argc, char* argv[]) {
   LOG(INFO) << "Found device on " << static_cast<int>(printer_info->bus())
             << " " << static_cast<int>(printer_info->device());
 
-  std::string socket_name = base::StringPrintf(
-      "%04x_%04x.sock", printer_info->vid(), printer_info->pid());
-  std::string keep_alive_name = base::StringPrintf(
-      "%04x_%04x_keep_alive.sock", printer_info->vid(), printer_info->pid());
-  std::string socket_path =  kRunDir + socket_name;
-  std::string keep_alive_path = kRunDir + keep_alive_name;
-
-  LOG(INFO) << "Checking to see if ippusbxd is already running";
-
-  // Only spawn a new instance of XD if either of it's designated sockets do not
-  // exist or we are unable to successfully send a 'keep-alive' message.
-  if (!SocketsExist(socket_path, keep_alive_path) ||
-      !CheckKeepAlive(keep_alive_path)) {
-    LOG(INFO) << "Couldn't contact ippusbxd. Waiting for sockets to be closed "
-                 "before launching a new process";
-    // Wait a maximum of 3 seconds for the ippusbxd sockets to be closed before
-    // spawning the new process.
-    if (!WaitForSocketsClose(socket_path, keep_alive_path, /*timeout=*/3)) {
-      LOG(ERROR) << "The sockets at " << socket_path << " and "
-                 << keep_alive_path << " still exist";
-      return 1;
-    }
-    LOG(INFO) << "Launching a new instance of ippusbxd";
-    SpawnXD(socket_path, keep_alive_path, printer_info.get());
+  const IppusbxdSocketPaths socket_paths =
+      IppusbxdSocketPaths(printer_info.get());
+  if (!CheckOrSpawnIppusbxd(socket_paths, std::move(printer_info))) {
+    return 1;
   }
 
-  ippusb_socket->SendMessage(socket_name);
+  // Sends the basename of the ippusbxd socket to the listener.
+  std::string main_socket_basename =
+      socket_paths.main_socket.BaseName().value();
+  ippusb_socket->SendMessage(main_socket_basename);
   ippusb_socket->CloseConnection();
   ippusb_socket->CloseSocket();
 
