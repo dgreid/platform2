@@ -60,7 +60,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
-  virtual bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic);
+  virtual void ConnectNamespace(SandboxedWorker* worker, bool user_traffic);
   // Triggers the |WorkerActive| signal.
   void OnNamespaceConnected(SandboxedWorker* worker, bool user_traffic);
 
@@ -84,6 +84,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   void ShutDownTask();
 
+  void ConnectNamespaceTask(SandboxedWorker* worker, bool user_traffic);
+
   bool StartWorker(SandboxedWorker* worker, bool user_traffic);
 
   // Checks if a worker process exists and if not creates one and sends a
@@ -96,6 +98,12 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   // The callback of |GetChromeProxyServersAsync|.
   void OnGetProxyServers(bool success, const std::vector<std::string>& servers);
+
+  // The number of tries left for setting up the network namespace of the
+  // System-proxy worker for system traffic. TODO(acostinas, b/160736881) Remove
+  // when patchpaneld creates the veth pair directly across the host and worker
+  // network namespaces.
+  int netns_reconnect_attempts_available_;
 
   // Worker that authenticates and forwards to a remote web proxy traffic
   // coming form Chrome OS system services.

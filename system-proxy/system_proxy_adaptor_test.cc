@@ -86,9 +86,8 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
     return std::make_unique<FakeSandboxedWorker>(
         weak_ptr_factory_.GetWeakPtr());
   }
-  bool ConnectNamespace(SandboxedWorker* worker, bool user_traffic) override {
+  void ConnectNamespace(SandboxedWorker* worker, bool user_traffic) override {
     OnNamespaceConnected(worker, user_traffic);
-    return true;
   }
 
  private:

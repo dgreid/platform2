@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/location.h>
+#include <base/time/time.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/message_loop.h>
 #include <chromeos/dbus/service_constants.h>
@@ -27,6 +28,13 @@ constexpr char kNoCredentialsSpecifiedError[] =
 constexpr char kOnlySystemTrafficSupportedError[] =
     "Only system services traffic is currenly supported";
 constexpr char kFailedToStartWorkerError[] = "Failed to start worker process";
+// Time delay for calling patchpanel::ConnectNamespace(). Patchpanel needs to
+// enter the network namespace of the worker process to configure it and fails
+// if it's soon after the process starts. See https://crbug.com/1095170 for
+// details.
+constexpr base::TimeDelta kConnectNamespaceDelay =
+    base::TimeDelta::FromSeconds(1);
+constexpr int kNetworkNamespaceReconnectAttempts = 3;
 
 // Serializes |proto| to a vector of bytes.
 std::vector<uint8_t> SerializeProto(
@@ -54,6 +62,7 @@ std::string DeserializeProto(const base::Location& from_here,
 SystemProxyAdaptor::SystemProxyAdaptor(
     std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object)
     : org::chromium::SystemProxyAdaptor(this),
+      netns_reconnect_attempts_available_(kNetworkNamespaceReconnectAttempts),
       dbus_object_(std::move(dbus_object)),
       weak_ptr_factory_(this) {
   kerberos_client_ = std::make_unique<KerberosClient>(dbus_object_->GetBus());
@@ -240,18 +249,32 @@ void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool is_available) {
     return;
   }
   if (system_services_worker_) {
-    DCHECK(system_services_worker_->IsRunning());
     ConnectNamespace(system_services_worker_.get(), /* user_traffic= */ false);
   }
 }
 
-bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
+void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
                                           bool user_traffic) {
+  DCHECK(system_services_worker_->IsRunning());
+  DCHECK_GT(netns_reconnect_attempts_available_, 0);
+  --netns_reconnect_attempts_available_;
+  // TODO(b/160736881, acostinas): Remove the delay after patchpanel
+  // implements "ip netns" to create the veth pair across network namespaces.
+  brillo::MessageLoop::current()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&SystemProxyAdaptor::ConnectNamespaceTask,
+                 weak_ptr_factory_.GetWeakPtr(), worker,
+                 /* user_traffic= */ false),
+      kConnectNamespaceDelay);
+}
+
+void SystemProxyAdaptor::ConnectNamespaceTask(SandboxedWorker* worker,
+                                              bool user_traffic) {
   std::unique_ptr<patchpanel::Client> patchpanel_client =
       patchpanel::Client::New();
   if (!patchpanel_client) {
     LOG(ERROR) << "Failed to open networking service client";
-    return false;
+    return;
   }
 
   std::pair<base::ScopedFD, patchpanel::ConnectNamespaceResponse> result =
@@ -259,17 +282,21 @@ bool SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
           worker->pid(), "" /* outbound_ifname */, user_traffic);
 
   if (!result.first.is_valid()) {
-    LOG(ERROR) << "Failed to setup network namespace";
-    return false;
+    LOG(ERROR) << "Failed to setup network namespace on attempt "
+               << kNetworkNamespaceReconnectAttempts -
+                      netns_reconnect_attempts_available_;
+    if (netns_reconnect_attempts_available_ > 0) {
+      ConnectNamespace(worker, user_traffic);
+    }
+    return;
   }
 
   worker->SetNetNamespaceLifelineFd(std::move(result.first));
   if (!worker->SetListeningAddress(result.second.host_ipv4_address(),
                                    kProxyPort)) {
-    return false;
+    return;
   }
   OnNamespaceConnected(worker, user_traffic);
-  return true;
 }
 
 void SystemProxyAdaptor::OnNamespaceConnected(SandboxedWorker* worker,
