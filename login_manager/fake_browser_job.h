@@ -56,6 +56,10 @@ class FakeBrowserJob : public BrowserJobInterface {
               (const std::vector<std::string>&),
               (override));
   MOCK_METHOD(void,
+              SetFeatureFlags,
+              (const std::vector<std::string>&),
+              (override));
+  MOCK_METHOD(void,
               SetTestArguments,
               (const std::vector<std::string>&),
               (override));

@@ -20,6 +20,7 @@
 #include <base/optional.h>
 #include <base/stl_util.h>
 #include <base/strings/string_util.h>
+#include <chromeos/switches/chrome_switches.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -520,6 +521,15 @@ TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
   ExpectArgsToContainAll(job_args, new_test_args);
   ExpectArgsToContainAll(job_args, new_extra_args);
   EXPECT_THAT(job_args, Not(IsSupersetOf(extra_args)));
+}
+
+TEST_F(BrowserJobTest, FeatureFlags) {
+  job_->SetFeatureFlags({"one", "two", "three"});
+  std::vector<std::string> job_args = job_->ExportArgv();
+  // Also verify that the elements appear in alphabetical order.
+  EXPECT_THAT(job_args,
+              Contains(base::StringPrintf("--%s=[\"one\",\"three\",\"two\"]",
+                                          chromeos::switches::kFeatureFlags)));
 }
 
 TEST_F(BrowserJobTest, ExportArgv) {

@@ -16,11 +16,13 @@
 #include <queue>
 #include <utility>
 
+#include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/rand_util.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/values.h>
 #include <chromeos/switches/chrome_switches.h>
 
 #include "login_manager/file_checker.h"
@@ -359,6 +361,11 @@ void BrowserJob::SetExtraArguments(const std::vector<std::string>& arguments) {
                std::back_inserter(extra_arguments_), is_not_unsafe);
 }
 
+void BrowserJob::SetFeatureFlags(
+    const std::vector<std::string>& feature_flags) {
+  feature_flags_ = feature_flags;
+}
+
 void BrowserJob::SetTestArguments(const std::vector<std::string>& arguments) {
   test_arguments_ = arguments;
 }
@@ -385,6 +392,20 @@ std::vector<std::string> BrowserJob::ExportArgv() const {
   } else {
     to_return.insert(to_return.end(), extra_arguments_.begin(),
                      extra_arguments_.end());
+
+    // Encode feature flags.
+    std::vector<base::Value> feature_flag_list;
+    for (const auto& feature_flag : feature_flags_) {
+      feature_flag_list.emplace_back(base::Value(feature_flag));
+    }
+    if (!feature_flag_list.empty()) {
+      std::sort(feature_flag_list.begin(), feature_flag_list.end());
+      std::string encoded;
+      base::JSONWriter::Write(base::Value(std::move(feature_flag_list)),
+                              &encoded);
+      to_return.push_back(base::StringPrintf(
+          "--%s=%s", chromeos::switches::kFeatureFlags, encoded.c_str()));
+    }
   }
 
   if (!extra_one_time_arguments_.empty()) {

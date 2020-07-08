@@ -78,6 +78,10 @@ class BrowserJobInterface : public ChildJobInterface {
   // SetArguments()).
   virtual void SetExtraArguments(const std::vector<std::string>& arguments) = 0;
 
+  // Set feature flags to pass to the browser on startup.
+  virtual void SetFeatureFlags(
+      const std::vector<std::string>& feature_flags) = 0;
+
   // Sets command line arguments for integration tests. These are in addition to
   // the arguments from BrowserJob's constructor / SetArguments() and the
   // arguments from SetExtraArguments,
@@ -149,6 +153,7 @@ class BrowserJob : public BrowserJobInterface {
   const std::string GetName() const override;
   void SetArguments(const std::vector<std::string>& arguments) override;
   void SetExtraArguments(const std::vector<std::string>& arguments) override;
+  void SetFeatureFlags(const std::vector<std::string>& feature_flags) override;
   void SetTestArguments(const std::vector<std::string>& arguments) override;
   void SetAdditionalEnvironmentVariables(
       const std::vector<std::string>& env_vars) override;
@@ -187,6 +192,9 @@ class BrowserJob : public BrowserJobInterface {
 
   // Login-related arguments to pass to exec.  Managed wholly by this class.
   std::vector<std::string> login_arguments_;
+
+  // Feature flags to pass to the browser.
+  std::vector<std::string> feature_flags_;
 
   // Extra arguments to pass to exec.
   std::vector<std::string> extra_arguments_;

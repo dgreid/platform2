@@ -242,7 +242,8 @@ bool SessionManagerService::Initialize() {
     return false;
 
   // Set any flags that were specified system-wide.
-  browser_->SetExtraArguments(impl_->GetStartUpFlags());
+  browser_->SetExtraArguments(impl_->GetStartUpSwitches());
+  browser_->SetFeatureFlags(impl_->GetFeatureFlags());
 
   CHECK(impl_->StartDBusService())
       << "Unable to start " << kSessionManagerServiceName << " D-Bus service.";
@@ -332,6 +333,13 @@ void SessionManagerService::SetBrowserSessionForUser(
 void SessionManagerService::SetFlagsForUser(
     const std::string& account_id, const std::vector<std::string>& flags) {
   browser_->SetExtraArguments(flags);
+}
+
+void SessionManagerService::SetFeatureFlagsForUser(
+    const std::string& account_id,
+    const std::vector<std::string>& feature_flags) {
+  browser_->SetExtraArguments({});
+  browser_->SetFeatureFlags(feature_flags);
 }
 
 bool SessionManagerService::IsBrowser(pid_t pid) {

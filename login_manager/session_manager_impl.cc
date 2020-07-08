@@ -1126,6 +1126,12 @@ void SessionManagerImpl::SetFlagsForUser(
   manager_->SetFlagsForUser(in_account_id, in_flags);
 }
 
+void SessionManagerImpl::SetFeatureFlagsForUser(
+    const std::string& in_account_id,
+    const std::vector<std::string>& in_flags) {
+  manager_->SetFeatureFlagsForUser(in_account_id, in_flags);
+}
+
 void SessionManagerImpl::GetServerBackedStateKeys(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
         std::vector<std::vector<uint8_t>>>> response) {

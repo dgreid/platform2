@@ -157,6 +157,9 @@ class SessionManagerService
                                 const std::string& userhash) override;
   void SetFlagsForUser(const std::string& account_id,
                        const std::vector<std::string>& flags) override;
+  void SetFeatureFlagsForUser(
+      const std::string& account_id,
+      const std::vector<std::string>& feature_flags) override;
   bool IsBrowser(pid_t pid) override;
   base::TimeTicks GetLastBrowserRestartTime() override;
 

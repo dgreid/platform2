@@ -59,6 +59,12 @@ class ProcessManagerServiceInterface {
   virtual void SetFlagsForUser(const std::string& username,
                                const std::vector<std::string>& flags) = 0;
 
+  // Sets feature flags that session manager should apply the next time it
+  // restarts Chrome inside an existing session.
+  virtual void SetFeatureFlagsForUser(
+      const std::string& username,
+      const std::vector<std::string>& feature_flags) = 0;
+
   // Check if |pid| is the currently-managed browser process.
   virtual bool IsBrowser(pid_t pid) = 0;
 

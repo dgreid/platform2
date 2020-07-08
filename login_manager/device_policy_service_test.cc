@@ -17,6 +17,7 @@
 #include <base/memory/ptr_util.h>
 #include <base/run_loop.h>
 #include <brillo/message_loops/fake_message_loop.h>
+#include <chromeos/switches/chrome_switches.h>
 #include <crypto/scoped_nss_types.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -1128,29 +1129,52 @@ TEST_F(DevicePolicyServiceTest, GetSettings) {
             settings.SerializeAsString());
 }
 
-TEST_F(DevicePolicyServiceTest, StartUpFlagsSanitizer) {
+TEST_F(DevicePolicyServiceTest, StartUpSwitchesSanitizer) {
   MockNssUtil nss;
   InitService(&nss, true);
 
   em::ChromeDeviceSettingsProto settings;
+
+  // The flags field is deprecated and slated to be removed. Until that happens,
+  // suppress deprecation warnings.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
   // Some valid flags.
-  settings.mutable_start_up_flags()->add_flags("a");
-  settings.mutable_start_up_flags()->add_flags("bb");
-  settings.mutable_start_up_flags()->add_flags("-c");
-  settings.mutable_start_up_flags()->add_flags("--d");
+  settings.mutable_feature_flags()->add_switches("a");
+  settings.mutable_feature_flags()->add_switches("bb");
+  settings.mutable_feature_flags()->add_switches("-c");
+  settings.mutable_feature_flags()->add_switches("--d");
   // Some invalid ones.
-  settings.mutable_start_up_flags()->add_flags("");
-  settings.mutable_start_up_flags()->add_flags("-");
-  settings.mutable_start_up_flags()->add_flags("--");
-  settings.mutable_start_up_flags()->add_flags("--policy-switches-end");
-  settings.mutable_start_up_flags()->add_flags("--policy-switches-begin");
+  settings.mutable_feature_flags()->add_switches("");
+  settings.mutable_feature_flags()->add_switches("-");
+  settings.mutable_feature_flags()->add_switches("--");
+  settings.mutable_feature_flags()->add_switches("--policy-switches-end");
+  settings.mutable_feature_flags()->add_switches("--policy-switches-begin");
+#pragma GCC diagnostic pop
+
   ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
   SetExpectationsAndStorePolicy(MakeChromePolicyNamespace(), store_,
                                 policy_proto_);
 
-  EXPECT_THAT(service_->GetStartUpFlags(),
+  EXPECT_THAT(service_->GetStartUpSwitches(),
               ElementsAre("--policy-switches-begin", "--a", "--bb", "-c", "--d",
                           "--policy-switches-end"));
+}
+
+TEST_F(DevicePolicyServiceTest, FeatureFlags) {
+  MockNssUtil nss;
+  InitService(&nss, true);
+
+  em::ChromeDeviceSettingsProto settings;
+
+  settings.mutable_feature_flags()->add_feature_flags("first");
+  settings.mutable_feature_flags()->add_feature_flags("second");
+
+  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
+  SetExpectationsAndStorePolicy(MakeChromePolicyNamespace(), store_,
+                                policy_proto_);
+
+  EXPECT_THAT(service_->GetFeatureFlags(), ElementsAre("first", "second"));
 }
 
 TEST_F(DevicePolicyServiceTest, PersistPolicyMultipleNamespaces) {

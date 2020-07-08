@@ -16,6 +16,7 @@
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
 #include <chromeos/switches/chrome_switches.h>
 #include <crypto/rsa_private_key.h>
@@ -273,40 +274,55 @@ void DevicePolicyService::ReportPolicyFileMetrics(bool key_success,
   metrics_->SendPolicyFilesStatus(status);
 }
 
-std::vector<std::string> DevicePolicyService::GetStartUpFlags() {
+std::vector<std::string> DevicePolicyService::GetStartUpSwitches() {
   std::vector<std::string> policy_args;
   const em::ChromeDeviceSettingsProto& policy = GetSettings();
-  if (policy.has_start_up_flags()) {
-    const em::StartUpFlagsProto& flags_proto = policy.start_up_flags();
-    const RepeatedPtrField<std::string>& flags = flags_proto.flags();
-    for (RepeatedPtrField<std::string>::const_iterator it = flags.begin();
-         it != flags.end(); ++it) {
-      std::string flag(*it);
-      const int prefix_length = GetSwitchPrefixLength(flag);
-      const std::string unprefixed_flag(flag.substr(prefix_length));
-      // Ignore empty or invalid flags.
-      if (unprefixed_flag.empty() ||
-          unprefixed_flag == chromeos::switches::kPolicySwitchesBegin ||
-          unprefixed_flag == chromeos::switches::kPolicySwitchesEnd) {
+
+  // TODO(crbug.com/1104193): Raw switches in device settings are deprecated,
+  // remove this function once it is no longer needed.
+  if (policy.has_feature_flags()) {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    const auto& switches = policy.feature_flags().switches();
+#pragma GCC diagnostic pop
+    for (const auto& switch_value : switches) {
+      const int prefix_length = GetSwitchPrefixLength(switch_value);
+      const std::string unprefixed_switch(switch_value.substr(prefix_length));
+      // Ignore empty or invalid switches.
+      if (unprefixed_switch.empty() ||
+          unprefixed_switch == chromeos::switches::kPolicySwitchesBegin ||
+          unprefixed_switch == chromeos::switches::kPolicySwitchesEnd) {
         continue;
       }
-      // Ensure the added flag has the proper prefix.
+      // Ensure the added switch has the proper prefix.
+      std::string prefixed_switch = switch_value;
       if (!prefix_length)
-        flag = std::string("--").append(flag);
-      policy_args.push_back(flag);
+        prefixed_switch = std::string("--").append(switch_value);
+      policy_args.push_back(prefixed_switch);
+    }
+
+    // Add sentinel values to mark which switches were filled from policy and
+    // should not apply to user sessions.
+    if (!policy_args.empty()) {
+      policy_args.insert(
+          policy_args.begin(),
+          std::string("--").append(chromeos::switches::kPolicySwitchesBegin));
+      policy_args.push_back(
+          std::string("--").append(chromeos::switches::kPolicySwitchesEnd));
     }
   }
 
-  // Add sentinel values to mark which flags were filled from policy and should
-  // not apply to user sessions.
-  if (!policy_args.empty()) {
-    policy_args.insert(
-        policy_args.begin(),
-        std::string("--").append(chromeos::switches::kPolicySwitchesBegin));
-    policy_args.push_back(
-        std::string("--").append(chromeos::switches::kPolicySwitchesEnd));
-  }
   return policy_args;
+}
+
+std::vector<std::string> DevicePolicyService::GetFeatureFlags() {
+  std::vector<std::string> feature_flags;
+  const em::ChromeDeviceSettingsProto& settings = GetSettings();
+  for (const auto& feature_flag : settings.feature_flags().feature_flags()) {
+    feature_flags.push_back(feature_flag);
+  }
+
+  return feature_flags;
 }
 
 const em::ChromeDeviceSettingsProto& DevicePolicyService::GetSettings() {

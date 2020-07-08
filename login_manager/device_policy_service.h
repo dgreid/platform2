@@ -91,9 +91,12 @@ class DevicePolicyService : public PolicyService {
   // device policy, report the state of these files via |metrics_|.
   virtual void ReportPolicyFileMetrics(bool key_success, bool policy_success);
 
-  // Gets the value of the StartUpFlags policy as a vector of strings to be
-  // supplied to Chrome when it is started.
-  virtual std::vector<std::string> GetStartUpFlags();
+  // Gets extra startup switches specified in device settings to pass to Chrome.
+  virtual std::vector<std::string> GetStartUpSwitches();
+
+  // Gets feature flags specified in device settings to pass to Chrome on
+  // startup.
+  virtual std::vector<std::string> GetFeatureFlags();
 
   // Returns the currently active device settings.
   const enterprise_management::ChromeDeviceSettingsProto& GetSettings();

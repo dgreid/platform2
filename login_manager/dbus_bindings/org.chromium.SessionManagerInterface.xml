@@ -507,11 +507,25 @@
         @account_id: Account ID of the user to set flags for.
         @flags: array of flags to be set for the user.
 
-        Sets browser @flags to be applied on next in-session restart.
+        Sets browser @flags to be applied on next in-session restart. @flags are
+        added as switches to the browser command line.
     -->
     <method name="SetFlagsForUser">
       <arg type="s" name="account_id" direction="in" />
       <arg type="as" name="flags" direction="in" />
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+    </method>
+
+    <!--
+        SetFeatureFlagsForUser:
+        @account_id: Account ID of the user to set flags for.
+        @flags: array of feature flags to be set for the user.
+
+        Sets feature flags to pass on browser startup for in-session restarts.
+    -->
+    <method name="SetFeatureFlagsForUser">
+      <arg type="s" name="account_id" direction="in" />
+      <arg type="as" name="feature_flags" direction="in" />
       <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
     </method>
 

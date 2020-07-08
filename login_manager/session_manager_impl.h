@@ -184,8 +184,11 @@ class SessionManagerImpl
   void AnnounceSessionStoppingIfNeeded() override;
   void AnnounceSessionStopped() override;
   bool ShouldEndSession(std::string* reason_out) override;
-  std::vector<std::string> GetStartUpFlags() override {
-    return device_policy_->GetStartUpFlags();
+  std::vector<std::string> GetStartUpSwitches() override {
+    return device_policy_->GetStartUpSwitches();
+  }
+  std::vector<std::string> GetFeatureFlags() override {
+    return device_policy_->GetFeatureFlags();
   }
 
   // Starts a 'Powerwash' of the device by touching a flag file, then
@@ -274,6 +277,9 @@ class SessionManagerImpl
                               const std::string& update_mode) override;
   void SetFlagsForUser(const std::string& in_account_id,
                        const std::vector<std::string>& in_flags) override;
+  void SetFeatureFlagsForUser(
+      const std::string& in_account_id,
+      const std::vector<std::string>& in_feature_flags) override;
 
   void GetServerBackedStateKeys(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
