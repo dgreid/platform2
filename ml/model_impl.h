@@ -27,15 +27,15 @@ namespace ml {
 // used concurrently from different sequences.
 class ModelImpl : public chromeos::machine_learning::mojom::Model {
  public:
-  // Creates an instance bound to |request|.
+  // Creates an instance bound to `request`.
   //
-  // The |required_inputs| and |required_outputs| arguments specify a mapping
+  // The `required_inputs` and `required_outputs` arguments specify a mapping
   // from required input / output tensor names to their indices in the TF lite
   // graph, and must outlive this object.
-  // |model_string| is optional string data that this class can take ownership
-  // of (presumably the backing data for |model|) and that is guaranteed to be
-  // destroyed *after* |model|. This is required by function
-  // |tflite::FlatBufferModel::BuildFromBuffer|.
+  // `model_string` is optional string data that this class can take ownership
+  // of (presumably the backing data for `model`) and that is guaranteed to be
+  // destroyed *after* `model`. This is required by function
+  // `tflite::FlatBufferModel::BuildFromBuffer`.
   //
   // The RAM of the returned model is not owned by the caller. The model object
   // will be deleted when the corresponding mojo connection meets error.
@@ -47,7 +47,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
       chromeos::machine_learning::mojom::ModelRequest request,
       const std::string& metrics_model_name);
 
-  // Use when constructed from file where no need to pass the |model_string|.
+  // Use when constructed from file where no need to pass the `model_string`.
   // The RAM of the returned model is not owned by the caller. The model object
   // will be deleted when the corresponding mojo connection meets error.
   static ModelImpl* Create(
@@ -60,7 +60,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   int num_graph_executors_for_testing() const;
 
  private:
-  // Constructor is private, call |Create| to create objects.
+  // Constructor is private, call `Create` to create objects.
   ModelImpl(std::map<std::string, int> required_inputs,
             std::map<std::string, int> required_outputs,
             std::unique_ptr<tflite::FlatBufferModel> model,
@@ -85,7 +85,7 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   const std::map<std::string, int> required_inputs_;
   const std::map<std::string, int> required_outputs_;
 
-  // Must be above |model_|.
+  // Must be above `model_`.
   const std::unique_ptr<std::string> model_string_;
 
   const std::unique_ptr<tflite::FlatBufferModel> model_;

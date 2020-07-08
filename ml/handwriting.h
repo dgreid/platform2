@@ -40,26 +40,26 @@ class HandwritingLibrary {
   static HandwritingLibrary* GetInstance();
 
   // Get whether the library is successfully initialized.
-  // Initially, the status is |Status::kUninitialized| (this value should never
+  // Initially, the status is `Status::kUninitialized` (this value should never
   // be returned).
-  // If libhandwriting.so can not be loaded, return |kLoadLibraryFailed|. This
+  // If libhandwriting.so can not be loaded, return `kLoadLibraryFailed`. This
   // usually means on-device handwriting is not supported.
   // If the functions can not be successfully looked up, return
-  // |kFunctionLookupFailed|.
-  // Return |Status::kOk| if everything works fine.
+  // `kFunctionLookupFailed`.
+  // Return `Status::kOk` if everything works fine.
   Status GetStatus() const;
 
   // The following public member functions define the interface functions of
-  // the libhandwriting.so library. Function |InitHandwritingRecognizerLibrary|
-  // and |DeleteHandwritingResultData| do not need interfaces because the client
+  // the libhandwriting.so library. Function `InitHandwritingRecognizerLibrary`
+  // and `DeleteHandwritingResultData` do not need interfaces because the client
   // won't call it.
 
   // Creates and returns a handwriting recognizer which is needed for using the
   // other interface. The memory is owned by the user and should be deleted
-  // using |DestroyHandwritingRecognizer| after usage.
+  // using `DestroyHandwritingRecognizer` after usage.
   HandwritingRecognizer CreateHandwritingRecognizer() const;
   // Load the models and other configuration files with options.
-  // |model_path| stores the paths to the data files of the model (machine
+  // `model_path` stores the paths to the data files of the model (machine
   // learning models, configurations etc.). Please see the unit test for
   // examples.
   // Returns true if HandwritingRecognizer is correctly loaded and
@@ -69,7 +69,7 @@ class HandwritingLibrary {
       const chrome_knowledge::HandwritingRecognizerOptions& options,
       const chrome_knowledge::HandwritingRecognizerModelPaths& model_path)
       const;
-  // Sends the specified |request| to |recognizer|, if succeeds, |result| (which
+  // Sends the specified `request` to `recognizer`, if succeeds, `result` (which
   // should not be null) is populated with the recognition result.
   // Returns true if succeeds, otherwise returns false.
   bool RecognizeHandwriting(
@@ -77,7 +77,7 @@ class HandwritingLibrary {
       const chrome_knowledge::HandwritingRecognizerRequest& request,
       chrome_knowledge::HandwritingRecognizerResult* result) const;
   // Destroys the handwriting recognizer created by
-  // |CreateHandwritingRecognizer|. Must be called if the handwriting recognizer
+  // `CreateHandwritingRecognizer`. Must be called if the handwriting recognizer
   // will not be used anymore, otherwise there will be memory leak.
   void DestroyHandwritingRecognizer(HandwritingRecognizer recognizer) const;
 
@@ -92,7 +92,7 @@ class HandwritingLibrary {
 
   // Store the interface function pointers.
   // TODO(honglinyu) as pointed out by cjmcdonald@, we should group the pointers
-  // into a single |HandwritingInterface| struct and make it optional, i.e.,
+  // into a single `HandwritingInterface` struct and make it optional, i.e.,
   // declaring something like |base::Optional<HandwritingInterface> interface_|.
   CreateHandwritingRecognizerFn create_handwriting_recognizer_;
   LoadHandwritingRecognizerFn load_handwriting_recognizer_;

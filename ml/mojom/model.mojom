@@ -59,7 +59,7 @@ enum CreateGraphExecutorResult {
 
 // Model specification for builtin models.
 // Because ml-service can retrieve a builtin model's content and metadata, only
-// an |id| is needed to specify it.
+// an `id` is needed to specify it.
 struct BuiltinModelSpec {
   BuiltinModelId id;
 };
@@ -77,7 +77,7 @@ struct FlatBufferModelSpec {
   // Used in naming the UMA metric histograms of the model. An example of the
   // names of the histograms is:
   //
-  // MachineLearningService.|metrics_model_name|.ExecuteResult.CpuTimeMicrosec
+  // MachineLearningService.`metrics_model_name`.ExecuteResult.CpuTimeMicrosec
   //
   // This variable must NOT be empty.
   string metrics_model_name;

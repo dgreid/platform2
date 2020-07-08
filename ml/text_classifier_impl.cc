@@ -47,8 +47,8 @@ bool TextClassifierImpl::Create(
     return false;
   }
 
-  // Use a connection error handler to strongly bind |text_classifier_impl| to
-  // |request|.
+  // Use a connection error handler to strongly bind `text_classifier_impl` to
+  // `request`.
   text_classifier_impl->SetConnectionErrorHandler(base::Bind(
       &DeleteTextClassifierImpl, base::Unretained(text_classifier_impl)));
   return true;

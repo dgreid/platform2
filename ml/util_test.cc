@@ -21,7 +21,7 @@ namespace {
 
 // Represents a temp status file valid for the lifetime of this object.
 // The constructor creates a temp file named "status" in a temp folder and
-// writes |content| to that file.
+// writes `content` to that file.
 // Use GetPath() to obtain the path fo the temporary file.
 class ScopedTempStatusFile {
  public:

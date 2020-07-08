@@ -28,9 +28,9 @@ using ::chromeos::machine_learning::mojom::ValueList;
 // Base name for UMA metrics related to graph execution
 constexpr char kMetricsRequestName[] = "ExecuteResult";
 
-// Verifies |tensor| is valid (i.e. is of type |TensorType| and of the correct
-// shape for this input) and copies its data into the graph |interpreter| at
-// position |index|.
+// Verifies `tensor` is valid (i.e. is of type `TensorType` and of the correct
+// shape for this input) and copies its data into the graph `interpreter` at
+// position `index`.
 template <typename TensorType, typename MemoryType>
 ExecuteResult PopulateInput(const TensorPtr& tensor,
                             const int index,
@@ -90,7 +90,7 @@ constexpr decltype(&InvalidInput) kPopulateInputFns[] = {
     &PopulateInput<int64_t, bool>,     // kTfLiteBool
 };
 
-// Copies data from position |index| in the graph |interpreter| into the given
+// Copies data from position `index` in the graph `interpreter` into the given
 // tensor object.
 template <typename TensorType, typename MemoryType>
 ExecuteResult PopulateOutput(const int index,
@@ -140,7 +140,7 @@ ExecuteResult InvalidOutput(int, const tflite::Interpreter&, const TensorPtr&) {
 //
 // This table is indexed by TfLiteType, the possible values of which can be
 // found at <tensorflow/lite/context.h>. See the caveats discussed in
-// the comment above |kPopulateInputFns|.
+// the comment above `kPopulateInputFns`.
 constexpr decltype(&InvalidOutput) kPopulateOutputFns[] = {
     &InvalidOutput,                     // kTfLiteNoType
     &PopulateOutput<double, float>,     // kTfLiteFloat32

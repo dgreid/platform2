@@ -67,7 +67,7 @@ void Metrics::StartCollectingProcessMetrics() {
     return;
   }
 
-  // Baseline the CPU usage counter in |process_metrics_| to be zero as of now.
+  // Baseline the CPU usage counter in `process_metrics_` to be zero as of now.
   process_metrics_->GetPlatformIndependentCPUUsage();
 
   cumulative_metrics_ = std::make_unique<chromeos_metrics::CumulativeMetrics>(

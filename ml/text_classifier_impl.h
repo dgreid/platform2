@@ -25,7 +25,7 @@ namespace ml {
 class TextClassifierImpl
     : public chromeos::machine_learning::mojom::TextClassifier {
  public:
-  // Interface to create new |TextClassifierImpl| object. This function will
+  // Interface to create new `TextClassifierImpl` object. This function will
   // automatically achieve strong binding.The model object will be deleted when
   // the corresponding mojo connection meets error.
   // Will return false if it fails to create the annotator object, otherwise
@@ -35,7 +35,7 @@ class TextClassifierImpl
       chromeos::machine_learning::mojom::TextClassifierRequest request);
 
  private:
-  // A private constructor, call |TextClassifierImpl::Create| to create new
+  // A private constructor, call `TextClassifierImpl::Create` to create new
   // objects.
   explicit TextClassifierImpl(
       std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,

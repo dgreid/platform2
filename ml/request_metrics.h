@@ -36,11 +36,11 @@ class RequestMetrics {
  public:
   // Creates a RequestMetrics with the specified model and request names.
   // Records UMA metrics named with the prefix
-  // "MachineLearningService.|model_name|.|request_name|."
+  // "MachineLearningService.`model_name`.`request_name`."
   RequestMetrics(const std::string& model_name,
                  const std::string& request_name);
 
-  // Logs (to UMA) the specified |event| associated with this request.
+  // Logs (to UMA) the specified `event` associated with this request.
   void RecordRequestEvent(RequestEventEnum event);
 
   // When you want to record metrics of some action, call Start func at the

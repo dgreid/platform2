@@ -31,7 +31,7 @@ class HandwritingRecognizerImpl
   ~HandwritingRecognizerImpl();
 
  private:
-  // Creates a HandwritingRecognizer and Binds to |request| inside so that
+  // Creates a HandwritingRecognizer and Binds to `request` inside so that
   // Recognize can be called on the other side for a particular handwriting
   // reconition query.
   HandwritingRecognizerImpl(

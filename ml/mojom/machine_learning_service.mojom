@@ -49,7 +49,7 @@ interface MachineLearningService {
   // Create and initialize a handwriting recognizer.
   LoadHandwritingModel(HandwritingRecognizer& request)
       => (LoadModelResult result);
-  // Create and initialize a handwriting recognizer with given |spec|.
+  // Create and initialize a handwriting recognizer with given `spec`.
   LoadHandwritingModelWithSpec(HandwritingRecognizerSpec spec,
                                HandwritingRecognizer& request)
       => (LoadModelResult result);

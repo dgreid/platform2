@@ -47,8 +47,8 @@ union ValueList {
   Int64List int64_list;
 };
 
-// A Tensor is a multi-dimensional array with dimensions |shape|, flattened into
-// the one-dimensional array |data|.
+// A Tensor is a multi-dimensional array with dimensions `shape`, flattened into
+// the one-dimensional array `data`.
 // It is used for both the inputs (in the form of a map<string, Tensor>) and
 // outputs (in the form of an array<Tensor>) of ML inference.
 struct Tensor {

@@ -21,13 +21,13 @@ namespace ml {
 class MachineLearningServiceImpl
     : public chromeos::machine_learning::mojom::MachineLearningService {
  public:
-  // Creates an instance bound to |pipe|. The specified
-  // |connection_error_handler| will be invoked if the binding encounters a
+  // Creates an instance bound to `pipe`. The specified
+  // `connection_error_handler` will be invoked if the binding encounters a
   // connection error.
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
                              base::Closure connection_error_handler);
 
-  // A interface to change |text_classifier_model_filename_| for testing. Should
+  // A interface to change `text_classifier_model_filename_` for testing. Should
   // not be used outside of tests.
   void SetTextClassifierModelFilenameForTesting(const std::string& filename);
 

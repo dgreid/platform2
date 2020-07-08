@@ -228,7 +228,7 @@ class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
             std::move(pipe), base::Closure(), GetTestModelDir()) {}
 };
 
-// Loads builtin model specified by |model_id|, binding the impl to |model|.
+// Loads builtin model specified by `model_id`, binding the impl to `model`.
 // Returns true on success.
 bool LoadBuiltinModelForTesting(const MachineLearningServicePtr& ml_service,
                                 BuiltinModelId model_id,
@@ -250,7 +250,7 @@ bool LoadBuiltinModelForTesting(const MachineLearningServicePtr& ml_service,
   return model_callback_done;
 }
 
-// Loads flatbuffer model specified by |spec|, binding the impl to |model|.
+// Loads flatbuffer model specified by `spec`, binding the impl to `model`.
 // Returns true on success.
 bool LoadFlatBufferModelForTesting(const MachineLearningServicePtr& ml_service,
                                    FlatBufferModelSpecPtr spec,
@@ -268,7 +268,7 @@ bool LoadFlatBufferModelForTesting(const MachineLearningServicePtr& ml_service,
   return model_callback_done;
 }
 
-// Creates graph executor of |model|, binding the impl to |graph_executor|.
+// Creates graph executor of `model`, binding the impl to `graph_executor`.
 // Returns true on success.
 bool CreateGraphExecutorForTesting(const ModelPtr& model,
                                    GraphExecutorPtr* graph_executor) {
@@ -285,8 +285,8 @@ bool CreateGraphExecutorForTesting(const ModelPtr& model,
   return ge_callback_done;
 }
 
-// Checks that |result| is OK and that |outputs| contains a tensor matching
-// |expected_shape| and |expected_value|. Sets |infer_callback_done| to true so
+// Checks that `result` is OK and that `outputs` contains a tensor matching
+// `expected_shape` and `expected_value`. Sets `infer_callback_done` to true so
 // that this function can be used to verify that a Mojo callback has been run.
 // TODO(alanlxl): currently the output size of all models are 1, and value types
 // are all double. Parameterization may be necessary for future models.
@@ -1020,7 +1020,7 @@ class HandwritingRecognizerTest : public testing::Test {
     }
   }
 
-  // recognizer_ should be loaded successfully for this |language|.
+  // recognizer_ should be loaded successfully for this `language`.
   void LoadRecognizerWithLanguage(const std::string& langauge) {
     bool model_callback_done = false;
     ml_service_->LoadHandwritingModelWithSpec(

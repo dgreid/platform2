@@ -36,9 +36,9 @@ enum ExecuteResult {
 // API for performing inference on a TensorFlow graph. A given graph can be
 // executed multiple times with a single instance of GraphExecutor.
 interface GraphExecutor {
-  // Initializes input node values as specified in |inputs|, then executes the
-  // graph. The returned |outputs| are the values for the nodes specified in
-  // |output_names|.
+  // Initializes input node values as specified in `inputs`, then executes the
+  // graph. The returned `outputs` are the values for the nodes specified in
+  // `output_names`.
   Execute(map<string, Tensor> inputs, array<string> output_names)
        => (ExecuteResult result, array<Tensor>? outputs);
 };

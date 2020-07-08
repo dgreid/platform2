@@ -39,8 +39,8 @@ using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 
 constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
-// Base name for UMA metrics related to model loading (|LoadBuiltinModel|,
-// |LoadFlatBufferModel|, |LoadTextClassifier| or LoadHandwritingModel).
+// Base name for UMA metrics related to model loading (`LoadBuiltinModel`,
+// `LoadFlatBufferModel`, `LoadTextClassifier` or LoadHandwritingModel).
 constexpr char kMetricsRequestName[] = "LoadModelResult";
 
 constexpr char kTextClassifierModelFile[] =
@@ -129,7 +129,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
                                                   kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
-  // Take the ownership of the content of |model_string| because |ModelImpl| has
+  // Take the ownership of the content of `model_string` because `ModelImpl` has
   // to hold the memory.
   auto model_string_impl =
       std::make_unique<std::string>(std::move(spec->model_string));

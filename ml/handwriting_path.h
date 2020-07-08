@@ -12,11 +12,11 @@
 
 namespace ml {
 
-// Returns model paths based on the |spec|.
+// Returns model paths based on the `spec`.
 base::Optional<chrome_knowledge::HandwritingRecognizerModelPaths> GetModelPaths(
     chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec);
 
-// Returns labeled request path based on the |spec|.
+// Returns labeled request path based on the `spec`.
 std::string GetLabeledRequestsPathForTesting(
     chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec);
 

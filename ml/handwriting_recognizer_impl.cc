@@ -26,8 +26,8 @@ bool HandwritingRecognizerImpl::Create(HandwritingRecognizerSpecPtr spec,
   auto recognizer_impl =
       new HandwritingRecognizerImpl(std::move(spec), std::move(request));
 
-  // Set the connection error handler to strongly bind |recognizer_impl| to
-  // delete |recognizer_impl| when the connection is gone.
+  // Set the connection error handler to strongly bind `recognizer_impl` to
+  // delete `recognizer_impl` when the connection is gone.
   recognizer_impl->binding_.set_connection_error_handler(base::Bind(
       [](const HandwritingRecognizerImpl* const recognizer_impl) {
         delete recognizer_impl;

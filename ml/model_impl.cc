@@ -46,7 +46,7 @@ ModelImpl* ModelImpl::Create(
   auto model_impl = new ModelImpl(
       std::move(required_inputs), std::move(required_outputs), std::move(model),
       std::move(model_string), std::move(request), metrics_model_name);
-  // Use a connection error handler to strongly bind |model_impl| to |request|.
+  // Use a connection error handler to strongly bind `model_impl` to `request`.
   model_impl->set_connection_error_handler(
       base::Bind(&DeleteModelImpl, base::Unretained(model_impl)));
 
@@ -62,7 +62,7 @@ ModelImpl* ModelImpl::Create(
   auto model_impl = new ModelImpl(
       std::move(required_inputs), std::move(required_outputs), std::move(model),
       nullptr, std::move(request), metrics_model_name);
-  // Use a connection error handler to strongly bind |model_impl| to |request|.
+  // Use a connection error handler to strongly bind `model_impl` to `request`.
   model_impl->set_connection_error_handler(
       base::Bind(&DeleteModelImpl, base::Unretained(model_impl)));
 

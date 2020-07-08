@@ -22,7 +22,7 @@ class Metrics {
  public:
   // These values are persisted to logs. Entries should not be renumbered and
   // numeric values should never be reused.
-  // |kMaxValue| must equal to the maximum value in this enum.
+  // `kMaxValue` must equal to the maximum value in this enum.
   enum class MojoConnectionEvent {
     kBootstrapRequested = 0,
     kBootstrapSucceeded = 1,
@@ -46,8 +46,8 @@ class Metrics {
   void RecordMojoConnectionEvent(MojoConnectionEvent event);
 
  private:
-  // Fetches process metrics (e.g. RAM) and updates |cumulative_metrics|.
-  // If |record_current_metrics| is true, also logs current process metrics.
+  // Fetches process metrics (e.g. RAM) and updates `cumulative_metrics`.
+  // If `record_current_metrics` is true, also logs current process metrics.
   void UpdateAndRecordMetrics(
       bool record_current_metrics,
       chromeos_metrics::CumulativeMetrics* cumulative_metrics);

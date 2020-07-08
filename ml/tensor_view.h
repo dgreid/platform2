@@ -77,7 +77,7 @@ class TensorView {
   // Allocate memory for the members of the tensor object (including values).
   void Allocate() {
     tensor_->shape = chromeos::machine_learning::mojom::Int64List::New();
-    // TODO(hidehiko): assigning std::vector<>() to |value| is unneeded
+    // TODO(hidehiko): assigning std::vector<>() to `value` is unneeded
     // on libmojo uprev. Remove them after the uprev.
     tensor_->shape->value = std::vector<int64_t>();
     tensor_->data = chromeos::machine_learning::mojom::ValueList::New();

@@ -32,15 +32,15 @@ namespace ml {
 class GraphExecutorImpl
     : public chromeos::machine_learning::mojom::GraphExecutor {
  public:
-  // Creates an instance bound to |request|.
+  // Creates an instance bound to `request`.
   //
-  // The |required_inputs| and |required_outputs| arguments specify a mapping
+  // The `required_inputs` and `required_outputs` arguments specify a mapping
   // from required input / output tensor names to their indices in the TF lite
   // graph, and must outlive this object.
   //
-  // UMA metrics will be logged with the specified |metrics_model_name|.
+  // UMA metrics will be logged with the specified `metrics_model_name`.
   //
-  // As is standard, |interpreter| must outlive the model with which it was
+  // As is standard, `interpreter` must outlive the model with which it was
   // constructed.
   GraphExecutorImpl(
       const std::map<std::string, int>& required_inputs,
