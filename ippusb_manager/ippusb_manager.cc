@@ -131,14 +131,11 @@ bool CheckKeepAlive(const std::string& keep_alive_path) {
 void SpawnXD(const IppusbxdSocketPaths socket_paths,
              std::unique_ptr<UsbPrinterInfo> printer_info) {
   std::vector<std::string> string_args = {
-      "/usr/bin/ippusbxd",
-      "-n",
-      "-l",
+      "/usr/bin/ippusb_bridge",
       base::StringPrintf("--bus-device=%03d:%03d", printer_info->bus(),
                          printer_info->device()),
-      "--uds-path=" + socket_paths.main_socket.value(),
+      "--unix-socket=" + socket_paths.main_socket.value(),
       "--keep-alive=" + socket_paths.keepalive_socket.value(),
-      "--no-broadcast",
   };
 
   LOG(INFO) << "Keep alive path: " << socket_paths.keepalive_socket;
@@ -160,9 +157,8 @@ void SpawnXD(const IppusbxdSocketPaths socket_paths,
   minijail_namespace_pids(jail.get());
   minijail_namespace_vfs(jail.get());
 
-  minijail_log_seccomp_filter_failures(jail.get());
-  minijail_parse_seccomp_filters(jail.get(),
-                                 "/usr/share/policy/ippusbxd-seccomp.policy");
+  minijail_parse_seccomp_filters(
+      jail.get(), "/usr/share/policy/ippusb-bridge-seccomp.policy");
 
   // Change the umask to 660 so XD will be able to write to the socket that it
   // creates.

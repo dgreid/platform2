@@ -50,7 +50,7 @@ listen: 1
 lseek: 1
 lstat: 1
 madvise: 1
-mmap: arg2 in ~PROT_WRITE || arg2 in ~PROT_EXEC
+mmap2: arg2 in ~PROT_WRITE || arg2 in ~PROT_EXEC
 mprotect: arg2 in ~PROT_WRITE || arg2 in ~PROT_EXEC
 munmap: 1
 nanosleep: 1

@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 accept: 1
+accept4: 1
 access: 1
 arch_prctl: 1
 bind: 1
@@ -14,6 +15,11 @@ clock_gettime: 1
 clone: 1
 close: 1
 connect: 1
+dup: 1
+epoll_create1: 1
+epoll_ctl: 1
+epoll_wait: 1
+eventfd2: 1
 execve: 1
 exit: 1
 exit_group: 1
@@ -59,6 +65,7 @@ rt_sigaction: 1
 rt_sigprocmask: 1
 rt_sigreturn: 1
 rt_sigtimedwait: 1
+sched_getaffinity: 1
 sendmsg: 1
 sendto: 1
 setgroups: 1
@@ -69,6 +76,7 @@ set_robust_list: 1
 setsockopt: 1
 set_tid_address: 1
 shutdown: 1
+sigaltstack: 1
 # AF_UNIX = 1, AF_NETLINK = 16
 socket: arg0 == 1 || arg0 == 16
 stat: 1
