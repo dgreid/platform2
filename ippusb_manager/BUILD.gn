@@ -38,10 +38,6 @@ if (use.test) {
   }
   executable("ippusb_manager_testrunner") {
     configs += [
-      # This config should be at the top in the configs list, especially before
-      # the config for libchrome-${libbase-ver} to avoid weird heap-buffer-overflow
-      # error from happening when ASAN is enabled.
-      # TODO(crbug.com/887845): Remove this note after library order issue is resolved.
       "//common-mk:test",
       ":target_defaults",
       ":test_config",
