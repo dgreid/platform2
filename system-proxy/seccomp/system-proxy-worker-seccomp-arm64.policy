@@ -51,7 +51,6 @@ recvfrom: 1
 sendto:1
 getsockopt: arg1 == SOL_SOCKET
 socketpair: 1
-alarm: 1
 setsockopt: 1
 sendmmsg: 1
 getpeername: 1
