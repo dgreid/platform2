@@ -33,24 +33,28 @@ enum LoadModelResult {
 };
 
 // Top-level interface between Chromium and the ML Service daemon.
+// Next ordinal: 6
 interface MachineLearningService {
+  // Binds another pipe to this instance.
+  Clone@5(MachineLearningService& request);
+
   // The BuiltinModelId inside BuiltinModelSpec is used to specify the model to
   // be loaded.
-  LoadBuiltinModel(BuiltinModelSpec spec, Model& request)
+  LoadBuiltinModel@0(BuiltinModelSpec spec, Model& request)
       => (LoadModelResult result);
   // The FlatbufferModelSpec contains both of the flatbuffer content and the
   // metadata.
-  LoadFlatBufferModel(FlatBufferModelSpec spec,
-                      Model& request)
+  LoadFlatBufferModel@1(FlatBufferModelSpec spec,
+                        Model& request)
       => (LoadModelResult result);
   // Create a new TextClassifier.
-  LoadTextClassifier(TextClassifier& request)
+  LoadTextClassifier@2(TextClassifier& request)
       => (LoadModelResult result);
   // Create and initialize a handwriting recognizer.
-  LoadHandwritingModel(HandwritingRecognizer& request)
+  LoadHandwritingModel@3(HandwritingRecognizer& request)
       => (LoadModelResult result);
   // Create and initialize a handwriting recognizer with given `spec`.
-  LoadHandwritingModelWithSpec(HandwritingRecognizerSpec spec,
-                               HandwritingRecognizer& request)
+  LoadHandwritingModelWithSpec@4(HandwritingRecognizerSpec spec,
+                                 HandwritingRecognizer& request)
       => (LoadModelResult result);
 };

@@ -12,6 +12,7 @@
 #include <base/callback_forward.h>
 #include <base/macros.h>
 #include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "ml/model_metadata.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
@@ -40,28 +41,22 @@ class MachineLearningServiceImpl
 
  private:
   // chromeos::machine_learning::mojom::MachineLearningService:
+  void Clone(chromeos::machine_learning::mojom::MachineLearningServiceRequest
+                 request) override;
   void LoadBuiltinModel(
       chromeos::machine_learning::mojom::BuiltinModelSpecPtr spec,
       chromeos::machine_learning::mojom::ModelRequest request,
       LoadBuiltinModelCallback callback) override;
-
-  // chromeos::machine_learning::mojom::MachineLearningService:
   void LoadFlatBufferModel(
       chromeos::machine_learning::mojom::FlatBufferModelSpecPtr spec,
       chromeos::machine_learning::mojom::ModelRequest request,
       LoadFlatBufferModelCallback callback) override;
-
-  // chromeos::machine_learning::mojom::MachineLearningService:
   void LoadTextClassifier(
       chromeos::machine_learning::mojom::TextClassifierRequest request,
       LoadTextClassifierCallback callback) override;
-
-  // chromeos::machine_learning::mojom::MachineLearningService:
   void LoadHandwritingModel(
       chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
       LoadHandwritingModelCallback callback) override;
-
-  // chromeos::machine_learning::mojom::MachineLearningService:
   void LoadHandwritingModelWithSpec(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
@@ -82,8 +77,13 @@ class MachineLearningServiceImpl
 
   const std::string model_dir_;
 
+  // Primordial binding bootstrapped over D-Bus. Once opened, is never closed.
   mojo::Binding<chromeos::machine_learning::mojom::MachineLearningService>
       binding_;
+
+  // Additional bindings obtained via `Clone`.
+  mojo::BindingSet<chromeos::machine_learning::mojom::MachineLearningService>
+      clone_bindings_;
 
   DISALLOW_COPY_AND_ASSIGN(MachineLearningServiceImpl);
 };

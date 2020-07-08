@@ -36,6 +36,7 @@ using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
+using ::chromeos::machine_learning::mojom::MachineLearningServiceRequest;
 using ::chromeos::machine_learning::mojom::ModelRequest;
 
 constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
@@ -74,6 +75,10 @@ MachineLearningServiceImpl::MachineLearningServiceImpl(
 void MachineLearningServiceImpl::SetTextClassifierModelFilenameForTesting(
     const std::string& filename) {
   text_classifier_model_filename_ = filename;
+}
+
+void MachineLearningServiceImpl::Clone(MachineLearningServiceRequest request) {
+  clone_bindings_.AddBinding(this, std::move(request));
 }
 
 void MachineLearningServiceImpl::LoadBuiltinModel(

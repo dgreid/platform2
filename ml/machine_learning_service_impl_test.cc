@@ -314,6 +314,35 @@ void CheckOutputTensor(const std::vector<int64_t> expected_shape,
   *infer_callback_done = true;
 }
 
+// Tests that Clone() connects to a working impl.
+TEST(MachineLearningServiceImplTest, Clone) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  // Call Clone to bind another MachineLearningService.
+  MachineLearningServicePtr ml_service_2;
+  ml_service->Clone(mojo::MakeRequest(&ml_service_2));
+
+  // Verify that the new MachineLearningService works with a simple call:
+  // Loading the TEST_MODEL.
+  BuiltinModelSpecPtr spec = BuiltinModelSpec::New();
+  spec->id = BuiltinModelId::TEST_MODEL;
+  ModelPtr model;
+  bool model_callback_done = false;
+  ml_service_2->LoadBuiltinModel(
+      std::move(spec), mojo::MakeRequest(&model),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  EXPECT_TRUE(model_callback_done);
+  EXPECT_TRUE(model.is_bound());
+}
+
 TEST(MachineLearningServiceImplTest, TestBadModel) {
   MachineLearningServicePtr ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
