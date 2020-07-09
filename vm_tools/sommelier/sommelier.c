@@ -1635,7 +1635,8 @@ static void sl_handle_map_request(struct sl_context* ctx,
   if (!window)
     return;
 
-  assert(!sl_is_our_window(ctx, event->window));
+  if (sl_is_our_window(ctx, event->window))
+    return;
 
   window->managed = 1;
   if (window->frame_id == XCB_WINDOW_NONE)
@@ -1905,7 +1906,8 @@ static void sl_handle_configure_request(struct sl_context* ctx,
   int height = window->height;
   uint32_t values[7];
 
-  assert(!sl_is_our_window(ctx, event->window));
+  if (sl_is_our_window(ctx, event->window))
+    return;
 
   if (!window->managed) {
     int i = 0;
