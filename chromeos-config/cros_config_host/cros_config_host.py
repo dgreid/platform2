@@ -228,7 +228,10 @@ def GetFirmwareBuildCombinations(config, targets):
   for name, target_values in d.items():
     print(name)
     for value in target_values:
-      print(value)
+      if value:
+        print(value)
+      else:
+        print()
 
 
 def GetWallpaperFiles(config):

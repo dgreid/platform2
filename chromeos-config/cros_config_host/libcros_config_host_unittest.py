@@ -187,10 +187,10 @@ class CrosConfigHostTest(unittest.TestCase):
     result = config.GetFirmwareBuildCombinations(['coreboot', 'depthcharge'])
     self.assertEqual(result, expected)
 
-    # Should not explode when devices do not specify requested target.
+    # Unspecified targets should be represented as None.
     expected = OrderedDict(
         [('another', ['another_base']),
-         ('some', [])])
+         ('some', [None])])
     result = config.GetFirmwareBuildCombinations(['base'])
     self.assertEqual(result, expected)
 
