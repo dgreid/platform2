@@ -123,6 +123,15 @@ void AddNegativeGtestFilter(const std::string& pattern) {
   }
 }
 
+// This is for Android SurfaceViewPreviewTest CTS test cases.
+bool CheckTimestampsInOrder(const std::vector<int64_t>& timestamps) {
+  for (size_t i = 1; i < timestamps.size(); i++) {
+    if (timestamps[i - 1] >= timestamps[i])
+      return false;
+  }
+  return true;
+}
+
 // This is for Android testCameraToSurfaceTextureMetadata CTS test case.
 bool CheckConstantFramerate(const std::vector<int64_t>& timestamps,
                             float require_fps) {
@@ -211,6 +220,11 @@ class V4L2TestEnvironment : public ::testing::Environment {
       // avoid alarm. Please see http://crbug.com/737874 for detail.
       if (base::SysInfo::GetLsbReleaseBoard() == "snappy") {
         AddNegativeGtestFilter("V4L2Test.MaximumSupportedResolution");
+      }
+      // The camera module sometimes generate out-of-order buffer timestamps.
+      // See b/158957477 for detail.
+      if (usb_info_ == "0c45:6a05") {
+        check_timestamps_in_order_ = false;
       }
     } else if (test_list == kCertificationTestList) {
       // There is no facing information when running certification test.
@@ -309,6 +323,7 @@ class V4L2TestEnvironment : public ::testing::Environment {
   bool check_1280x960_ = false;
   bool check_1600x1200_ = false;
   bool check_constant_framerate_ = false;
+  bool check_timestamps_in_order_ = true;
 
   bool support_constant_framerate_ = false;
   uint32_t skip_frames_ = 0;
@@ -516,6 +531,15 @@ class V4L2Test : public ::testing::Test {
         ASSERT_EQ(height, fmt.fmt.pix.height);
         ASSERT_EQ(test_format->fourcc, fmt.fmt.pix.pixelformat);
         ASSERT_FLOAT_EQ(kDefaultFrameRate, dev_.GetFrameRate());
+
+        if (g_env->check_timestamps_in_order_) {
+          ASSERT_TRUE(CheckTimestampsInOrder(dev_.GetFrameTimestamps()))
+              << base::StringPrintf(
+                     "Capture test %dx%d (%08X) failed because frame "
+                     "timestamps are out of order",
+                     test_format->width, test_format->height,
+                     test_format->fourcc);
+        }
 
         if (constant_framerate == V4L2Device::ENABLE_CONSTANT_FRAMERATE) {
           float actual_fps = (dev_.GetNumFrames() - 1) / duration.InSecondsF();
