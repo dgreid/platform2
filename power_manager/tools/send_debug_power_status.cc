@@ -5,9 +5,10 @@
 #include <base/at_exit.h>
 #include <base/command_line.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
 #include <base/strings/string_split.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/bus.h>
@@ -62,7 +63,7 @@ int main(int argc, char* argv[]) {
       "Emits a fake D-Bus signal describing the current power supply status.\n"
       "Run this as the \"power\" user after stopping powerd.");
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   power_manager::PowerSupplyProperties proto;
   proto.set_battery_percent(FLAGS_battery_percent);

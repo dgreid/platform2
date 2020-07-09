@@ -6,9 +6,9 @@
 
 #include <base/at_exit.h>
 #include <base/command_line.h>
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
+#include <base/test/test_timeouts.h>
 
 int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
@@ -17,8 +17,11 @@ int main(int argc, char** argv) {
   logging::InitLogging(settings);
   logging::SetMinLogLevel(logging::LOG_WARNING);
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  TestTimeouts::Initialize();
+  // TODO(crbug/1094927): Use SingleThreadkTaskEnvironment.
+  base::test::TaskEnvironment task_environment(
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO);
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }

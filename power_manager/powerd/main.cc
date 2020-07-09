@@ -18,10 +18,11 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/flag_helper.h>
@@ -337,9 +338,9 @@ int main(int argc, char* argv[]) {
   }
 
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
   // This is used in AlarmTimer.
-  base::FileDescriptorWatcher watcher{message_loop.task_runner()};
+  base::FileDescriptorWatcher watcher{task_executor.task_runner()};
 
   power_manager::DaemonDelegateImpl delegate;
   // Extra parens to avoid http://en.wikipedia.org/wiki/Most_vexing_parse.

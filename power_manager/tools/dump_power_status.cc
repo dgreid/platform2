@@ -8,8 +8,9 @@
 #include <base/at_exit.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 
 #include "power_manager/common/battery_percentage_converter.h"
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
       "untrimmed and may contain whitespace or be empty, but any newlines\n"
       "are replaced with spaces.");
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
   logging::SetMinLogLevel(logging::LOG_WARNING);
 
   power_manager::Prefs prefs;

@@ -74,6 +74,10 @@ pkg_config("target_defaults") {
   }
 }
 
+pkg_config("libchrome_test_config") {
+  pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+}
+
 pkg_config("libutil_dependent_config") {
   pkg_deps = [ "libmetrics-${libbase_ver}" ]
 }
@@ -342,6 +346,7 @@ if (use.test) {
     configs += [
       "//common-mk:test",
       ":target_defaults",
+      ":libchrome_test_config",
     ]
     sources = [
       "common/activity_logger_test.cc",
@@ -366,6 +371,7 @@ if (use.test) {
       "//common-mk:test",
       ":power_manager_system_test_config",
       ":target_defaults",
+      ":libchrome_test_config",
     ]
     sources = [
       "common/testrunner.cc",
@@ -402,6 +408,7 @@ if (use.test) {
     configs += [
       "//common-mk:test",
       ":target_defaults",
+      ":libchrome_test_config",
     ]
     sources = [
       "common/testrunner.cc",
@@ -436,6 +443,7 @@ if (use.test) {
     configs += [
       "//common-mk:test",
       ":target_defaults",
+      ":libchrome_test_config",
     ]
     sources = [
       "common/testrunner.cc",

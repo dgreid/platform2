@@ -18,10 +18,11 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/threading/thread_task_runner_handle.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 #include <brillo/file_utils.h>
@@ -165,8 +166,8 @@ int main(int argc, char* argv[]) {
   brillo::FlagHelper::Init(argc, argv,
                            "Instruct powerd to suspend the system.");
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
 
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;

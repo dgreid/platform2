@@ -8,7 +8,8 @@
 #include <base/at_exit.h>
 #include <base/format_macros.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 
 #include "power_manager/common/power_constants.h"
@@ -42,7 +43,7 @@ int main(int argc, char* argv[]) {
                            "Check the device's power-related configuration");
 
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
   logging::SetMinLogLevel(logging::LOG_WARNING);
 
   if (FLAGS_ambient_light_sensor + FLAGS_hover_detection +

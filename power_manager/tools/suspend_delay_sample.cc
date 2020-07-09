@@ -9,9 +9,10 @@
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <base/memory/scoped_refptr.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
@@ -189,7 +190,7 @@ int main(int argc, char* argv[]) {
       "Exercise powerd's functionality that permits other processes to\n"
       "perform last-minute work before the system suspends.");
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   SuspendDelayRegisterer suspend_delay_registerer(
       FLAGS_delay_ms, FLAGS_timeout_ms, FLAGS_dark_suspend);
