@@ -5,6 +5,8 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_MOJO_ADAPTER_CROS_HEALTHD_MOJO_ADAPTER_H_
 #define DIAGNOSTICS_CROS_HEALTHD_MOJO_ADAPTER_CROS_HEALTHD_MOJO_ADAPTER_H_
 
+#include <sys/types.h>
+
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -34,6 +36,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::TelemetryInfoPtr GetTelemetryInfo(
       const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>&
           categories_to_probe) = 0;
+
+  // Gets information about a specific process from cros_healthd.
+  virtual chromeos::cros_healthd::mojom::ProcessResultPtr GetProcessInfo(
+      pid_t pid) = 0;
 
   // Runs the urandom routine.
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr

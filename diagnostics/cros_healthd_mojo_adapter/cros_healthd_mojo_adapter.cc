@@ -43,6 +43,10 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
       const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>&
           categories_to_probe) override;
 
+  // Gets information about a specific process on the device from cros_healthd.
+  chromeos::cros_healthd::mojom::ProcessResultPtr GetProcessInfo(
+      pid_t pid) override;
+
   // Runs the urandom routine.
   chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunUrandomRoutine(
       uint32_t length_seconds) override;
@@ -193,6 +197,22 @@ CrosHealthdMojoAdapterImpl::GetTelemetryInfo(
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::TelemetryInfoPtr>,
                  &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
+chromeos::cros_healthd::mojom::ProcessResultPtr
+CrosHealthdMojoAdapterImpl::GetProcessInfo(pid_t pid) {
+  if (!cros_healthd_probe_service_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::ProcessResultPtr response;
+  base::RunLoop run_loop;
+  cros_healthd_probe_service_->ProbeProcessInfo(
+      pid, base::Bind(&OnMojoResponseReceived<
+                          chromeos::cros_healthd::mojom::ProcessResultPtr>,
+                      &response, run_loop.QuitClosure()));
   run_loop.Run();
 
   return response;

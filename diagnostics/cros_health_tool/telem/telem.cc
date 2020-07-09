@@ -4,6 +4,8 @@
 
 #include "diagnostics/cros_health_tool/telem/telem.h"
 
+#include <sys/types.h>
+
 #include <cstdlib>
 #include <iostream>
 #include <map>
@@ -50,6 +52,26 @@ constexpr std::pair<const char*,
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBluetooth},
         {"system", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kSystem}};
 
+std::string ProcessStateToString(
+    chromeos::cros_healthd::mojom::ProcessState state) {
+  switch (state) {
+    case chromeos::cros_healthd::mojom::ProcessState::kRunning:
+      return "Running";
+    case chromeos::cros_healthd::mojom::ProcessState::kSleeping:
+      return "Sleeping";
+    case chromeos::cros_healthd::mojom::ProcessState::kWaiting:
+      return "Waiting";
+    case chromeos::cros_healthd::mojom::ProcessState::kZombie:
+      return "Zombie";
+    case chromeos::cros_healthd::mojom::ProcessState::kStopped:
+      return "Stopped";
+    case chromeos::cros_healthd::mojom::ProcessState::kTracingStop:
+      return "Tracing Stop";
+    case chromeos::cros_healthd::mojom::ProcessState::kDead:
+      return "Dead";
+  }
+}
+
 std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
   switch (type) {
     case chromeos::cros_healthd::mojom::ErrorType::kFileReadError:
@@ -77,6 +99,30 @@ std::string GetArchitectureString(CpuArchitectureEnum architecture) {
     case CpuArchitectureEnum::kArmv7l:
       return "armv7l";
   }
+}
+
+void DisplayProcessInfo(
+    const chromeos::cros_healthd::mojom::ProcessResultPtr& process_result) {
+  if (process_result.is_null())
+    return;
+
+  if (process_result->is_error()) {
+    DisplayError(process_result->get_error());
+    return;
+  }
+
+  const auto& process = process_result->get_process_info();
+
+  std::cout << "command,user_id,priority,nice,uptime_ticks,state" << std::endl;
+
+  // The int8_t fields need to be cast to a larger int type, otherwise they will
+  // be treated as chars and display garbage. Also, wrap the command in quotes,
+  // because the command-line options included in the command sometimes have
+  // their own commas.
+  std::cout << "\"" << process->command << "\"," << process->user_id << ","
+            << static_cast<int>(process->priority) << ","
+            << static_cast<int>(process->nice) << "," << process->uptime_ticks
+            << "," << ProcessStateToString(process->state) << std::endl;
 }
 
 void DisplayBatteryInfo(
@@ -388,10 +434,11 @@ std::string GetCategoryHelp() {
 // 'telem' sub-command for cros-health-tool:
 //
 // Test driver for cros_healthd's telemetry collection. Supports requesting a
-// single category at a time.
+// single category and/or process at a time.
 int telem_main(int argc, char** argv) {
   std::string category_help = GetCategoryHelp();
   DEFINE_string(category, "", category_help.c_str());
+  DEFINE_uint32(process, 0, "Process ID to probe.");
   brillo::FlagHelper::Init(argc, argv, "telem - Device telemetry tool.");
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
 
@@ -405,24 +452,35 @@ int telem_main(int argc, char** argv) {
 
   base::MessageLoopForIO message_loop;
 
-  // Make sure at least one category is specified.
-  if (FLAGS_category == "") {
-    LOG(ERROR) << "No category specified.";
-    return EXIT_FAILURE;
-  }
-  // Validate the category flag.
-  auto iterator = switch_to_category.find(FLAGS_category);
-  if (iterator == switch_to_category.end()) {
-    LOG(ERROR) << "Invalid category: " << FLAGS_category;
+  std::unique_ptr<CrosHealthdMojoAdapter> adapter =
+      CrosHealthdMojoAdapter::Create();
+
+  // Make sure at least one flag is specified.
+  if (FLAGS_category == "" && FLAGS_process == 0) {
+    LOG(ERROR) << "No category or process specified.";
     return EXIT_FAILURE;
   }
 
-  // Probe and display the category.
-  std::unique_ptr<CrosHealthdMojoAdapter> adapter =
-      CrosHealthdMojoAdapter::Create();
-  const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
-      categories_to_probe = {iterator->second};
-  DisplayTelemetryInfo(adapter->GetTelemetryInfo(categories_to_probe));
+  // Probe a process, if requested.
+  if (FLAGS_process != 0) {
+    DisplayProcessInfo(
+        adapter->GetProcessInfo(static_cast<pid_t>(FLAGS_process)));
+  }
+
+  // Probe category info, if requested.
+  if (FLAGS_category != "") {
+    // Validate the category flag.
+    auto iterator = switch_to_category.find(FLAGS_category);
+    if (iterator == switch_to_category.end()) {
+      LOG(ERROR) << "Invalid category: " << FLAGS_category;
+      return EXIT_FAILURE;
+    }
+
+    // Probe and display the category.
+    const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+        categories_to_probe = {iterator->second};
+    DisplayTelemetryInfo(adapter->GetTelemetryInfo(categories_to_probe));
+  }
 
   return EXIT_SUCCESS;
 }
