@@ -68,7 +68,8 @@ EntryManager::EntryManager(const std::string& root_dir,
     user_db_ = RuleDBStorage(user_db_dir);
     // In the case of the user_db being created from scratch replace it with the
     // global db which represents the current state of the system.
-    if (user_db_.Get().entries_size() == 0) {
+    if (global_db_.Valid() && user_db_.Valid() &&
+        user_db_.Get().entries_size() == 0) {
       user_db_.Get() = global_db_.Get();
     }
   }
