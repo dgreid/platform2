@@ -234,7 +234,9 @@ std::string TranslateUrlForHost(const std::string& url,
       {"/mnt/chromeos/GoogleDrive/Computers",
        container.drivefs_mount_path() + "/Computers"},
       {"/mnt/chromeos/PlayFiles", "/run/arc/sdcard/write/emulated/0"},
-      {"/mnt/chromeos/removable", "/media/removable"}};
+      {"/mnt/chromeos/removable", "/media/removable"},
+      {"/mnt/chromeos/archive", "/media/archive"},
+  };
 
   for (const auto& replacement : replacements) {
     auto back = sizeof(kUrlFileScheme) + replacement.first.length() - 1;
