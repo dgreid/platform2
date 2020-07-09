@@ -47,6 +47,9 @@ constexpr char kMetricsRequestName[] = "LoadModelResult";
 constexpr char kTextClassifierModelFile[] =
     "mlservice-model-text_classifier_en-v706.fb";
 
+constexpr char kLanguageIdentificationModelFile[] =
+    "mlservice-model-language_identification-20190924.smfb";
+
 constexpr char kIcuDataFilePath[] = "/opt/google/chrome/icudtl.dat";
 
 }  // namespace
@@ -182,7 +185,9 @@ void MachineLearningServiceImpl::LoadTextClassifier(
   }
 
   // Create the TextClassifier.
-  if (!TextClassifierImpl::Create(&scoped_mmap, std::move(request))) {
+  if (!TextClassifierImpl::Create(&scoped_mmap,
+                                  model_dir_ + kLanguageIdentificationModelFile,
+                                  std::move(request))) {
     LOG(ERROR) << "Failed to create TextClassifierImpl object.";
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);

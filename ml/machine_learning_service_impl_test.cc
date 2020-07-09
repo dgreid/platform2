@@ -211,6 +211,7 @@ using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequest;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequestPtr;
 using ::chromeos::machine_learning::mojom::TextClassifierPtr;
+using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequest;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 using ::testing::DoubleEq;
@@ -1025,6 +1026,72 @@ TEST(TextClassifierSelectionTest, WrongInput) {
             *infer_callback_done = true;
             EXPECT_EQ(suggested_span->start_offset, 30);
             EXPECT_EQ(suggested_span->end_offset, 26);
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier language identification with some valid inputs.
+TEST(TextClassifierLangIdTest, ValidInput) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  bool infer_callback_done = false;
+  text_classifier->FindLanguages(
+      "Bonjour",
+      base::Bind(
+          [](bool* infer_callback_done, std::vector<TextLanguagePtr> result) {
+            *infer_callback_done = true;
+            ASSERT_GT(result.size(), 0);
+            EXPECT_EQ(result[0]->locale, "fr");
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests text classifier language identification with empty input.
+// Empty input should produce empty result.
+TEST(TextClassifierLangIdTest, EmptyInput) {
+  MachineLearningServicePtr ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      mojo::MakeRequest(&ml_service).PassMessagePipe());
+
+  TextClassifierPtr text_classifier;
+  bool model_callback_done = false;
+  ml_service->LoadTextClassifier(
+      mojo::MakeRequest(&text_classifier),
+      base::Bind(
+          [](bool* model_callback_done, const LoadModelResult result) {
+            EXPECT_EQ(result, LoadModelResult::OK);
+            *model_callback_done = true;
+          },
+          &model_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(model_callback_done);
+
+  bool infer_callback_done = false;
+  text_classifier->FindLanguages(
+      "",
+      base::Bind(
+          [](bool* infer_callback_done, std::vector<TextLanguagePtr> result) {
+            *infer_callback_done = true;
+            EXPECT_EQ(result.size(), 0);
           },
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();

@@ -26,19 +26,21 @@ class TextClassifierImpl
     : public chromeos::machine_learning::mojom::TextClassifier {
  public:
   // Interface to create new `TextClassifierImpl` object. This function will
-  // automatically achieve strong binding.The model object will be deleted when
+  // automatically achieve strong binding. The model object will be deleted when
   // the corresponding mojo connection meets error.
   // Will return false if it fails to create the annotator object, otherwise
   // return true.
   static bool Create(
-      std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
+      std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+      const std::string& langid_model_path,
       chromeos::machine_learning::mojom::TextClassifierRequest request);
 
  private:
   // A private constructor, call `TextClassifierImpl::Create` to create new
   // objects.
   explicit TextClassifierImpl(
-      std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
+      std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+      const std::string& langid_model_path,
       chromeos::machine_learning::mojom::TextClassifierRequest request);
 
   void SetConnectionErrorHandler(base::Closure connection_error_handler);
@@ -53,7 +55,14 @@ class TextClassifierImpl
       chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr request,
       SuggestSelectionCallback callback) override;
 
+  // chromeos::machine_learning::mojom::TextClassifier:
+  void FindLanguages(const std::string& text,
+                     FindLanguagesCallback callback) override;
+
   std::unique_ptr<libtextclassifier3::Annotator> annotator_;
+
+  std::unique_ptr<libtextclassifier3::mobile::lang_id::LangId>
+      language_identifier_;
 
   mojo::Binding<chromeos::machine_learning::mojom::TextClassifier> binding_;
 

@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/logging.h>
+#include <lang_id/lang-id-wrapper.h>
 #include <utils/utf8/unicodetext.h>
 
 #include "ml/mojom/text_classifier.mojom.h"
@@ -18,6 +19,9 @@ namespace ml {
 namespace {
 
 using ::chromeos::machine_learning::mojom::CodepointSpan;
+using ::chromeos::machine_learning::mojom::FindLanguagesResult;
+using ::chromeos::machine_learning::mojom::TextLanguage;
+using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::SuggestSelectionResult;
 using ::chromeos::machine_learning::mojom::TextAnnotation;
 using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
@@ -38,10 +42,13 @@ void DeleteTextClassifierImpl(
 }  // namespace
 
 bool TextClassifierImpl::Create(
-    std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
+    std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+    const std::string& langid_model_path,
     TextClassifierRequest request) {
-  auto text_classifier_impl = new TextClassifierImpl(mmap, std::move(request));
-  if (text_classifier_impl->annotator_ == nullptr) {
+  auto text_classifier_impl = new TextClassifierImpl(
+      annotator_model_mmap, langid_model_path, std::move(request));
+  if (text_classifier_impl->annotator_ == nullptr ||
+      text_classifier_impl->language_identifier_ == nullptr) {
     // Fails to create annotator, return nullptr.
     delete text_classifier_impl;
     return false;
@@ -55,10 +62,13 @@ bool TextClassifierImpl::Create(
 }
 
 TextClassifierImpl::TextClassifierImpl(
-    std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
+    std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+    const std::string& langid_model_path,
     TextClassifierRequest request)
     : annotator_(libtextclassifier3::Annotator::FromScopedMmap(
-          mmap, nullptr, nullptr)),
+          annotator_model_mmap, nullptr, nullptr)),
+      language_identifier_(
+          libtextclassifier3::langid::LoadFromPath(langid_model_path)),
       binding_(this, std::move(request)) {}
 
 void TextClassifierImpl::SetConnectionErrorHandler(
@@ -165,6 +175,27 @@ void TextClassifierImpl::SuggestSelection(
 
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(SuggestSelectionResult::OK);
+}
+
+void TextClassifierImpl::FindLanguages(const std::string& text,
+                                       FindLanguagesCallback callback) {
+  RequestMetrics<FindLanguagesResult> request_metrics("TextClassifier",
+                                                      "FindLanguages");
+  request_metrics.StartRecordingPerformanceMetrics();
+
+  const std::vector<std::pair<std::string, float>> languages =
+      libtextclassifier3::langid::GetPredictions(language_identifier_.get(),
+                                                 text);
+
+  std::vector<TextLanguagePtr> langid_result;
+  for (const auto& lang : languages) {
+    langid_result.emplace_back(TextLanguage::New(lang.first, lang.second));
+  }
+
+  std::move(callback).Run(std::move(langid_result));
+
+  request_metrics.FinishRecordingPerformanceMetrics();
+  request_metrics.RecordRequestEvent(FindLanguagesResult::OK);
 }
 
 }  // namespace ml

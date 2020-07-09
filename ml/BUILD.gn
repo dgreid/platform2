@@ -78,6 +78,7 @@ static_library("ml_common") {
     "icuuc-chrome",
     "tensorflowlite",
     "textclassifier",
+    "utf",
   ]
   pkg_deps = [ "protobuf" ]
   deps = [ ":ml_handwriting_proto" ]
