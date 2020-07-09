@@ -15,8 +15,7 @@
 #include <base/stl_util.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <mojo/public/cpp/bindings/binding.h>
-#include <mojo/public/cpp/bindings/interface_request.h>
+#include <mojo/public/cpp/bindings/remote.h>
 
 #include "ml/handwriting.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
@@ -194,23 +193,21 @@ using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpec;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
-using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQuery;
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
-using ::chromeos::machine_learning::mojom::HandwritingRecognizerPtr;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizer;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResultPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
-using ::chromeos::machine_learning::mojom::MachineLearningServicePtr;
+using ::chromeos::machine_learning::mojom::MachineLearningService;
 using ::chromeos::machine_learning::mojom::Model;
-using ::chromeos::machine_learning::mojom::ModelPtr;
-using ::chromeos::machine_learning::mojom::ModelRequest;
 using ::chromeos::machine_learning::mojom::TensorPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequest;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequestPtr;
-using ::chromeos::machine_learning::mojom::TextClassifierPtr;
+using ::chromeos::machine_learning::mojom::TextClassifier;
 using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequest;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
@@ -231,16 +228,17 @@ class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
 
 // Loads builtin model specified by `model_id`, binding the impl to `model`.
 // Returns true on success.
-bool LoadBuiltinModelForTesting(const MachineLearningServicePtr& ml_service,
-                                BuiltinModelId model_id,
-                                ModelPtr* model) {
+bool LoadBuiltinModelForTesting(
+    const mojo::Remote<MachineLearningService>& ml_service,
+    BuiltinModelId model_id,
+    mojo::Remote<Model>* model) {
   // Set up model spec.
   BuiltinModelSpecPtr spec = BuiltinModelSpec::New();
   spec->id = model_id;
 
   bool model_callback_done = false;
   ml_service->LoadBuiltinModel(
-      std::move(spec), mojo::MakeRequest(model),
+      std::move(spec), model->BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -253,12 +251,13 @@ bool LoadBuiltinModelForTesting(const MachineLearningServicePtr& ml_service,
 
 // Loads flatbuffer model specified by `spec`, binding the impl to `model`.
 // Returns true on success.
-bool LoadFlatBufferModelForTesting(const MachineLearningServicePtr& ml_service,
-                                   FlatBufferModelSpecPtr spec,
-                                   ModelPtr* model) {
+bool LoadFlatBufferModelForTesting(
+    const mojo::Remote<MachineLearningService>& ml_service,
+    FlatBufferModelSpecPtr spec,
+    mojo::Remote<Model>* model) {
   bool model_callback_done = false;
   ml_service->LoadFlatBufferModel(
-      std::move(spec), mojo::MakeRequest(model),
+      std::move(spec), model->BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -271,11 +270,12 @@ bool LoadFlatBufferModelForTesting(const MachineLearningServicePtr& ml_service,
 
 // Creates graph executor of `model`, binding the impl to `graph_executor`.
 // Returns true on success.
-bool CreateGraphExecutorForTesting(const ModelPtr& model,
-                                   GraphExecutorPtr* graph_executor) {
+bool CreateGraphExecutorForTesting(
+    const mojo::Remote<Model>& model,
+    mojo::Remote<GraphExecutor>* graph_executor) {
   bool ge_callback_done = false;
   model->CreateGraphExecutor(
-      mojo::MakeRequest(graph_executor),
+      graph_executor->BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* ge_callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result, CreateGraphExecutorResult::OK);
@@ -317,22 +317,22 @@ void CheckOutputTensor(const std::vector<int64_t> expected_shape,
 
 // Tests that Clone() connects to a working impl.
 TEST(MachineLearningServiceImplTest, Clone) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Call Clone to bind another MachineLearningService.
-  MachineLearningServicePtr ml_service_2;
-  ml_service->Clone(mojo::MakeRequest(&ml_service_2));
+  mojo::Remote<MachineLearningService> ml_service_2;
+  ml_service->Clone(ml_service_2.BindNewPipeAndPassReceiver());
 
   // Verify that the new MachineLearningService works with a simple call:
   // Loading the TEST_MODEL.
   BuiltinModelSpecPtr spec = BuiltinModelSpec::New();
   spec->id = BuiltinModelId::TEST_MODEL;
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_callback_done = false;
   ml_service_2->LoadBuiltinModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -345,19 +345,19 @@ TEST(MachineLearningServiceImplTest, Clone) {
 }
 
 TEST(MachineLearningServiceImplTest, TestBadModel) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Set up model spec to specify an invalid model.
   BuiltinModelSpecPtr spec = BuiltinModelSpec::New();
   spec->id = BuiltinModelId::UNSUPPORTED_UNKNOWN;
 
   // Load model.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_callback_done = false;
   ml_service->LoadBuiltinModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::MODEL_SPEC_ERROR);
@@ -370,9 +370,9 @@ TEST(MachineLearningServiceImplTest, TestBadModel) {
 
 // Tests loading an empty model through the downloaded model api.
 TEST(MachineLearningServiceImplTest, EmptyModelString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   FlatBufferModelSpecPtr spec = FlatBufferModelSpec::New();
   spec->model_string = "";
@@ -382,10 +382,10 @@ TEST(MachineLearningServiceImplTest, EmptyModelString) {
   spec->metrics_model_name = "TestModel";
 
   // Load model from an empty model string.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_callback_done = false;
   ml_service->LoadFlatBufferModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::LOAD_MODEL_ERROR);
@@ -398,9 +398,9 @@ TEST(MachineLearningServiceImplTest, EmptyModelString) {
 
 // Tests loading a bad model string through the downloaded model api.
 TEST(MachineLearningServiceImplTest, BadModelString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   FlatBufferModelSpecPtr spec = FlatBufferModelSpec::New();
   spec->model_string = "bad model string";
@@ -410,10 +410,10 @@ TEST(MachineLearningServiceImplTest, BadModelString) {
   spec->metrics_model_name = "TestModel";
 
   // Load model from an empty model string.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_callback_done = false;
   ml_service->LoadFlatBufferModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::LOAD_MODEL_ERROR);
@@ -426,9 +426,9 @@ TEST(MachineLearningServiceImplTest, BadModelString) {
 
 // Tests loading TEST_MODEL through the builtin model api.
 TEST(MachineLearningServiceImplTest, TestModel) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Leave loading model and creating graph executor inline here to demonstrate
   // the usage details.
@@ -437,10 +437,10 @@ TEST(MachineLearningServiceImplTest, TestModel) {
   spec->id = BuiltinModelId::TEST_MODEL;
 
   // Load model.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_callback_done = false;
   ml_service->LoadBuiltinModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -452,10 +452,10 @@ TEST(MachineLearningServiceImplTest, TestModel) {
   ASSERT_TRUE(model.is_bound());
 
   // Get graph executor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   bool ge_callback_done = false;
   model->CreateGraphExecutor(
-      mojo::MakeRequest(&graph_executor),
+      graph_executor.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* ge_callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result, CreateGraphExecutorResult::OK);
@@ -485,9 +485,9 @@ TEST(MachineLearningServiceImplTest, TestModel) {
 
 // Tests loading TEST_MODEL through the downloaded model api.
 TEST(MachineLearningServiceImplTest, TestModelString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load the TEST_MODEL model file into string.
   std::string model_string;
@@ -504,14 +504,14 @@ TEST(MachineLearningServiceImplTest, TestModelString) {
   spec->metrics_model_name = "TestModel";
 
   // Load model.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadFlatBufferModelForTesting(
       ml_service, std::move(spec), &model));
   ASSERT_NE(model.get(), nullptr);
   ASSERT_TRUE(model.is_bound());
 
   // Get graph executor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -535,18 +535,18 @@ TEST(MachineLearningServiceImplTest, TestModelString) {
 // Tests that the Smart Dim (20181115) model file loads correctly and produces
 // the expected inference result.
 TEST(BuiltinModelInferenceTest, SmartDim20181115) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load model.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadBuiltinModelForTesting(
       ml_service, BuiltinModelId::SMART_DIM_20181115, &model));
   ASSERT_TRUE(model.is_bound());
 
   // Get graph executor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -573,17 +573,17 @@ TEST(BuiltinModelInferenceTest, SmartDim20181115) {
 // Tests that the Smart Dim (20190221) model file loads correctly and produces
 // the expected inference result.
 TEST(BuiltinModelInferenceTest, SmartDim20190221) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load model and create graph executor.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadBuiltinModelForTesting(
       ml_service, BuiltinModelId::SMART_DIM_20190221, &model));
   ASSERT_TRUE(model.is_bound());
 
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -610,17 +610,17 @@ TEST(BuiltinModelInferenceTest, SmartDim20190221) {
 // Tests that the Smart Dim (20190521) model file loads correctly and produces
 // the expected inference result.
 TEST(BuiltinModelInferenceTest, SmartDim20190521) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load model and create graph executor.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadBuiltinModelForTesting(
       ml_service, BuiltinModelId::SMART_DIM_20190521, &model));
   ASSERT_TRUE(model.is_bound());
 
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -647,17 +647,17 @@ TEST(BuiltinModelInferenceTest, SmartDim20190521) {
 // Tests that the Top Cat (20190722) model file loads correctly and produces
 // the expected inference result.
 TEST(BuiltinModelInferenceTest, TopCat20190722) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load model and create graph executor.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadBuiltinModelForTesting(
       ml_service, BuiltinModelId::TOP_CAT_20190722, &model));
   ASSERT_TRUE(model.is_bound());
 
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -684,17 +684,17 @@ TEST(BuiltinModelInferenceTest, TopCat20190722) {
 // Tests that the Search Ranker (20190923) model file loads correctly and
 // produces the expected inference result.
 TEST(BuiltinModelInferenceTest, SearchRanker20190923) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load model and create graph executor.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadBuiltinModelForTesting(
       ml_service, BuiltinModelId::SEARCH_RANKER_20190923, &model));
   ASSERT_TRUE(model.is_bound());
 
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -721,9 +721,9 @@ TEST(BuiltinModelInferenceTest, SearchRanker20190923) {
 // Tests that the Smart Dim (20200206) model file loads correctly and
 // produces the expected inference result.
 TEST(DownloadableModelInferenceTest, SmartDim20200206) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   // Load SmartDim model into string.
   std::string model_string;
@@ -739,14 +739,14 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
   spec->metrics_model_name = "SmartDimModel_20200206";
 
   // Load model.
-  ModelPtr model;
+  mojo::Remote<Model> model;
   ASSERT_TRUE(LoadFlatBufferModelForTesting(
       ml_service, std::move(spec), &model));
   ASSERT_NE(model.get(), nullptr);
   ASSERT_TRUE(model.is_bound());
 
   // Get graph executor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   ASSERT_TRUE(CreateGraphExecutorForTesting(model, &graph_executor));
   ASSERT_TRUE(graph_executor.is_bound());
 
@@ -772,17 +772,17 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
 
 // Test when text classifier can not find the model file.
 TEST(LoadTextClassifierTest, BadModelFilename) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
   ml_service_impl.SetTextClassifierModelFilenameForTesting(
       "bad_model_filename");
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::LOAD_MODEL_ERROR);
@@ -795,14 +795,14 @@ TEST(LoadTextClassifierTest, BadModelFilename) {
 
 // Tests loading text classifier only.
 TEST(LoadTextClassifierTest, NoInference) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -815,14 +815,14 @@ TEST(LoadTextClassifierTest, NoInference) {
 
 // Tests text classifier annotator for empty string.
 TEST(TextClassifierAnnotateTest, EmptyString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -850,14 +850,14 @@ TEST(TextClassifierAnnotateTest, EmptyString) {
 
 // Tests text classifier annotator for a complex string.
 TEST(TextClassifierAnnotateTest, ComplexString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -916,14 +916,14 @@ TEST(TextClassifierAnnotateTest, ComplexString) {
 // Tests text classifier selection suggestion for an empty string.
 // In this situation, text classifier will return the input span.
 TEST(TextClassifierSelectionTest, EmptyString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -955,14 +955,14 @@ TEST(TextClassifierSelectionTest, EmptyString) {
 
 // Tests text classifier selection suggestion for a complex string.
 TEST(TextClassifierSelectionTest, ComplexString) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -995,14 +995,14 @@ TEST(TextClassifierSelectionTest, ComplexString) {
 // Tests text classifier selection suggestion with wrong inputs.
 // In this situation, text classifier will return the input span.
 TEST(TextClassifierSelectionTest, WrongInput) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -1034,14 +1034,14 @@ TEST(TextClassifierSelectionTest, WrongInput) {
 
 // Tests text classifier language identification with some valid inputs.
 TEST(TextClassifierLangIdTest, ValidInput) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -1068,14 +1068,14 @@ TEST(TextClassifierLangIdTest, ValidInput) {
 // Tests text classifier language identification with empty input.
 // Empty input should produce empty result.
 TEST(TextClassifierLangIdTest, EmptyInput) {
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImplForTesting ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
 
-  TextClassifierPtr text_classifier;
+  mojo::Remote<TextClassifier> text_classifier;
   bool model_callback_done = false;
   ml_service->LoadTextClassifier(
-      mojo::MakeRequest(&text_classifier),
+      text_classifier.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             EXPECT_EQ(result, LoadModelResult::OK);
@@ -1104,7 +1104,7 @@ class HandwritingRecognizerTest : public testing::Test {
   void SetUp() override {
     // Set ml_service.
     ml_service_impl_ = std::make_unique<MachineLearningServiceImplForTesting>(
-        mojo::MakeRequest(&ml_service_).PassMessagePipe());
+        ml_service_.BindNewPipeAndPassReceiver().PassPipe());
 
     // Set default request.
     request_.set_max_num_results(1);
@@ -1121,7 +1121,7 @@ class HandwritingRecognizerTest : public testing::Test {
     bool model_callback_done = false;
     ml_service_->LoadHandwritingModelWithSpec(
         HandwritingRecognizerSpec::New(langauge),
-        mojo::MakeRequest(&recognizer_),
+        recognizer_.BindNewPipeAndPassReceiver(),
         base::Bind(
             [](bool* model_callback_done, const LoadModelResult result) {
               ASSERT_EQ(result, LoadModelResult::OK);
@@ -1157,8 +1157,8 @@ class HandwritingRecognizerTest : public testing::Test {
   }
 
   std::unique_ptr<MachineLearningServiceImplForTesting> ml_service_impl_;
-  MachineLearningServicePtr ml_service_;
-  HandwritingRecognizerPtr recognizer_;
+  mojo::Remote<MachineLearningService> ml_service_;
+  mojo::Remote<HandwritingRecognizer> recognizer_;
   chrome_knowledge::HandwritingRecognizerRequest request_;
 };
 
@@ -1227,7 +1227,7 @@ TEST_F(HandwritingRecognizerTest, LoadHandwritingModelShouldUseEnAsDefault) {
   // Load Recognizer without a spec should succeed.
   bool model_callback_done = false;
   ml_service_->LoadHandwritingModel(
-      mojo::MakeRequest(&recognizer_),
+      recognizer_.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* model_callback_done, const LoadModelResult result) {
             ASSERT_EQ(result, LoadModelResult::OK);

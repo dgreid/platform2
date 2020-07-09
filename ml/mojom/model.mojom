@@ -87,13 +87,13 @@ struct FlatBufferModelSpec {
 // interface pipe. The Model interface pipe can be used to acquire multiple
 // separate GraphExecutor instances.
 interface Model {
-  CreateGraphExecutor(GraphExecutor& request) =>
+  CreateGraphExecutor(pending_receiver<GraphExecutor> receiver) =>
       (CreateGraphExecutorResult result);
 
   // This function is temporary. We plan to rationalize this interface and
   // sync it with the interfaces at chromeos/service/machine_learning.
   // See crbug/1081597.
   CreateGraphExecutorWithOptions(GraphExecutorOptions options,
-                                 GraphExecutor& request) =>
+                                 pending_receiver<GraphExecutor> receiver) =>
       (CreateGraphExecutorResult result);
 };

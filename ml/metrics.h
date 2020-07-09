@@ -26,8 +26,8 @@ class Metrics {
   enum class MojoConnectionEvent {
     kBootstrapRequested = 0,
     kBootstrapSucceeded = 1,
-    kConnectionError = 2,
-    kMaxValue = kConnectionError
+    kConnectionClosed = 2,
+    kMaxValue = kConnectionClosed
   };
 
   Metrics();

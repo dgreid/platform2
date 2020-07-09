@@ -7,7 +7,8 @@
 
 #include <base/callback_forward.h>
 #include <base/macros.h>
-#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/pending_receiver.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 
 #include "chrome/knowledge/handwriting/interface.pb.h"
 #include "ml/handwriting.h"
@@ -19,24 +20,26 @@ namespace ml {
 class HandwritingRecognizerImpl
     : public chromeos::machine_learning::mojom::HandwritingRecognizer {
  public:
-  // Constructs a HandwritingRecognizerImpl; and set_connection_error_handler so
+  // Constructs a HandwritingRecognizerImpl; and set disconnect handler so
   // that the HandwritingRecognizerImpl will be deleted when the mojom
   // connection is destroyed.
   // Returns whether the object is create successfully.
   static bool Create(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
-      chromeos::machine_learning::mojom::HandwritingRecognizerRequest request);
+      mojo::PendingReceiver<
+          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver);
 
   // Called when mojom connection is destroyed.
   ~HandwritingRecognizerImpl();
 
  private:
-  // Creates a HandwritingRecognizer and Binds to `request` inside so that
+  // Creates a HandwritingRecognizer and Binds to `receiver` inside so that
   // Recognize can be called on the other side for a particular handwriting
   // reconition query.
   HandwritingRecognizerImpl(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
-      chromeos::machine_learning::mojom::HandwritingRecognizerRequest request);
+      mojo::PendingReceiver<
+          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver);
 
   // mojom::HandwritingRecognizer:
   void Recognize(
@@ -48,8 +51,8 @@ class HandwritingRecognizerImpl
   // the HandwritingLibrary.
   ::HandwritingRecognizer recognizer_;
 
-  mojo::Binding<chromeos::machine_learning::mojom::HandwritingRecognizer>
-      binding_;
+  mojo::Receiver<chromeos::machine_learning::mojom::HandwritingRecognizer>
+      receiver_;
 
   DISALLOW_COPY_AND_ASSIGN(HandwritingRecognizerImpl);
 };

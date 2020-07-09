@@ -108,7 +108,7 @@ void Daemon::BootstrapMojoConnection(
   // Bind primordial message pipe to a MachineLearningService implementation.
   machine_learning_service_ = std::make_unique<MachineLearningServiceImpl>(
       invitation.ExtractMessagePipe(kBootstrapMojoConnectionChannelToken),
-      base::Bind(&Daemon::OnConnectionError, base::Unretained(this)));
+      base::Bind(&Daemon::OnMojoDisconnection, base::Unretained(this)));
 
   metrics_.RecordMojoConnectionEvent(
       Metrics::MojoConnectionEvent::kBootstrapSucceeded);
@@ -117,11 +117,12 @@ void Daemon::BootstrapMojoConnection(
   std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
-void Daemon::OnConnectionError() {
+void Daemon::OnMojoDisconnection() {
   metrics_.RecordMojoConnectionEvent(
-      Metrics::MojoConnectionEvent::kConnectionError);
-  // Die upon Mojo error. Reconnection can occur when the daemon is restarted.
-  // (A future Mojo API may enable Mojo re-bootstrap without a process restart.)
+      Metrics::MojoConnectionEvent::kConnectionClosed);
+  // Die upon disconnection . Reconnection can occur when the daemon is
+  // restarted. (A future Mojo API may enable Mojo re-bootstrap without a
+  // process restart.)
   Quit();
 }
 

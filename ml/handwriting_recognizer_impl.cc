@@ -15,20 +15,21 @@ namespace {
 
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerCandidatePtr;
-using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizer;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 
 }  // namespace
 
-bool HandwritingRecognizerImpl::Create(HandwritingRecognizerSpecPtr spec,
-                                       HandwritingRecognizerRequest request) {
+bool HandwritingRecognizerImpl::Create(
+    HandwritingRecognizerSpecPtr spec,
+    mojo::PendingReceiver<HandwritingRecognizer> receiver) {
   auto recognizer_impl =
-      new HandwritingRecognizerImpl(std::move(spec), std::move(request));
+      new HandwritingRecognizerImpl(std::move(spec), std::move(receiver));
 
-  // Set the connection error handler to strongly bind `recognizer_impl` to
-  // delete `recognizer_impl` when the connection is gone.
-  recognizer_impl->binding_.set_connection_error_handler(base::Bind(
+  // Set the disconnection handler to strongly bind `recognizer_impl` to delete
+  // `recognizer_impl` when the connection is gone.
+  recognizer_impl->receiver_.set_disconnect_handler(base::Bind(
       [](const HandwritingRecognizerImpl* const recognizer_impl) {
         delete recognizer_impl;
       },
@@ -38,8 +39,9 @@ bool HandwritingRecognizerImpl::Create(HandwritingRecognizerSpecPtr spec,
 }
 
 HandwritingRecognizerImpl::HandwritingRecognizerImpl(
-    HandwritingRecognizerSpecPtr spec, HandwritingRecognizerRequest request)
-    : binding_(this, std::move(request)) {
+    HandwritingRecognizerSpecPtr spec,
+    mojo::PendingReceiver<HandwritingRecognizer> receiver)
+    : receiver_(this, std::move(receiver)) {
   auto* const hwr_library = ml::HandwritingLibrary::GetInstance();
   DCHECK(hwr_library->GetStatus() == ml::HandwritingLibrary::Status::kOk)
       << "HandwritingRecognizerImpl should be created only if "

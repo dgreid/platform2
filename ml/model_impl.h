@@ -11,7 +11,8 @@
 #include <string>
 
 #include <base/macros.h>
-#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/pending_receiver.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 #include <tensorflow/lite/model.h>
 
 #include "ml/graph_executor_impl.h"
@@ -27,7 +28,7 @@ namespace ml {
 // used concurrently from different sequences.
 class ModelImpl : public chromeos::machine_learning::mojom::Model {
  public:
-  // Creates an instance bound to `request`.
+  // Creates an instance bound to `receiver`.
   //
   // The `required_inputs` and `required_outputs` arguments specify a mapping
   // from required input / output tensor names to their indices in the TF lite
@@ -38,45 +39,48 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
   // `tflite::FlatBufferModel::BuildFromBuffer`.
   //
   // The RAM of the returned model is not owned by the caller. The model object
-  // will be deleted when the corresponding mojo connection meets error.
+  // will be deleted when the corresponding mojo connection is closed.
   static ModelImpl* Create(
       std::map<std::string, int> required_inputs,
       std::map<std::string, int> required_outputs,
       std::unique_ptr<tflite::FlatBufferModel> model,
       std::unique_ptr<std::string> model_string,
-      chromeos::machine_learning::mojom::ModelRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       const std::string& metrics_model_name);
 
   // Use when constructed from file where no need to pass the `model_string`.
   // The RAM of the returned model is not owned by the caller. The model object
-  // will be deleted when the corresponding mojo connection meets error.
+  // will be deleted when the corresponding mojo connection is closed.
   static ModelImpl* Create(
       std::map<std::string, int> required_inputs,
       std::map<std::string, int> required_outputs,
       std::unique_ptr<tflite::FlatBufferModel> model,
-      chromeos::machine_learning::mojom::ModelRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       const std::string& metrics_model_name);
 
   int num_graph_executors_for_testing() const;
 
  private:
   // Constructor is private, call `Create` to create objects.
-  ModelImpl(std::map<std::string, int> required_inputs,
-            std::map<std::string, int> required_outputs,
-            std::unique_ptr<tflite::FlatBufferModel> model,
-            std::unique_ptr<std::string> model_string,
-            chromeos::machine_learning::mojom::ModelRequest request,
-            const std::string& metrics_model_name);
+  ModelImpl(
+      std::map<std::string, int> required_inputs,
+      std::map<std::string, int> required_outputs,
+      std::unique_ptr<tflite::FlatBufferModel> model,
+      std::unique_ptr<std::string> model_string,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
+      const std::string& metrics_model_name);
 
-  void set_connection_error_handler(base::Closure connection_error_handler);
+  void set_disconnect_handler(base::Closure disconnect_handler);
 
   // chromeos::machine_learning::mojom::Model:
   void CreateGraphExecutor(
-      chromeos::machine_learning::mojom::GraphExecutorRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::GraphExecutor>
+          receiver,
       CreateGraphExecutorCallback callback) override;
   void CreateGraphExecutorWithOptions(
       chromeos::machine_learning::mojom::GraphExecutorOptionsPtr options,
-      chromeos::machine_learning::mojom::GraphExecutorRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::GraphExecutor>
+          receiver,
       CreateGraphExecutorCallback callback) override;
 
   // Remove a graph executor from our hosted set.
@@ -90,14 +94,14 @@ class ModelImpl : public chromeos::machine_learning::mojom::Model {
 
   const std::unique_ptr<tflite::FlatBufferModel> model_;
 
-  mojo::Binding<chromeos::machine_learning::mojom::Model> binding_;
+  mojo::Receiver<chromeos::machine_learning::mojom::Model> receiver_;
 
-  // Emulate a strong binding set: hold a set of GraphExecutors, specific
-  // elements of which are erased on connection error.
+  // Emulate a strongly bound receiver set: hold a set of GraphExecutors,
+  // specific elements of which are erased on connection closure.
   //
   // That is, when a pipe to a GraphExecutorImpl closes, that object is removed
-  // from this set (by its binding connection error handler). Further, when a
-  // ModelImpl is destoyed, its entire collection of GraphExecutorImpls is also
+  // from this set (by its binding disconnection handler). Further, when a
+  // ModelImpl is destroyed, its entire collection of GraphExecutorImpls is also
   // destroyed.
   std::list<GraphExecutorImpl> graph_executors_;
 

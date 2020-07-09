@@ -16,8 +16,7 @@
 
 namespace {
 
-// Callback for self-owned ModelImpl's to delete themselves upon connection
-// error.
+// Callback for self-owned ModelImpl's to delete themselves upon disconnection.
 void DeleteModelImpl(const ml::ModelImpl* const model_impl) {
   delete model_impl;
 }
@@ -30,40 +29,38 @@ using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::GraphExecutorOptions;
 using ::chromeos::machine_learning::mojom::GraphExecutorOptionsPtr;
-using ::chromeos::machine_learning::mojom::GraphExecutorRequest;
-using ::chromeos::machine_learning::mojom::ModelRequest;
+using ::chromeos::machine_learning::mojom::GraphExecutor;
+using ::chromeos::machine_learning::mojom::Model;
 
 // Base name for UMA metrics related to CreateGraphExecutor calls
 constexpr char kMetricsRequestName[] = "CreateGraphExecutorResult";
 
-ModelImpl* ModelImpl::Create(
-    std::map<std::string, int> required_inputs,
-    std::map<std::string, int> required_outputs,
-    std::unique_ptr<tflite::FlatBufferModel> model,
-    std::unique_ptr<std::string> model_string,
-    chromeos::machine_learning::mojom::ModelRequest request,
-    const std::string& metrics_model_name) {
+ModelImpl* ModelImpl::Create(std::map<std::string, int> required_inputs,
+                             std::map<std::string, int> required_outputs,
+                             std::unique_ptr<tflite::FlatBufferModel> model,
+                             std::unique_ptr<std::string> model_string,
+                             mojo::PendingReceiver<Model> receiver,
+                             const std::string& metrics_model_name) {
   auto model_impl = new ModelImpl(
       std::move(required_inputs), std::move(required_outputs), std::move(model),
-      std::move(model_string), std::move(request), metrics_model_name);
-  // Use a connection error handler to strongly bind `model_impl` to `request`.
-  model_impl->set_connection_error_handler(
+      std::move(model_string), std::move(receiver), metrics_model_name);
+  // Use a disconnection handler to strongly bind `model_impl` to `receiver`.
+  model_impl->set_disconnect_handler(
       base::Bind(&DeleteModelImpl, base::Unretained(model_impl)));
 
   return model_impl;
 }
 
-ModelImpl* ModelImpl::Create(
-    std::map<std::string, int> required_inputs,
-    std::map<std::string, int> required_outputs,
-    std::unique_ptr<tflite::FlatBufferModel> model,
-    chromeos::machine_learning::mojom::ModelRequest request,
-    const std::string& metrics_model_name) {
+ModelImpl* ModelImpl::Create(std::map<std::string, int> required_inputs,
+                             std::map<std::string, int> required_outputs,
+                             std::unique_ptr<tflite::FlatBufferModel> model,
+                             mojo::PendingReceiver<Model> receiver,
+                             const std::string& metrics_model_name) {
   auto model_impl = new ModelImpl(
       std::move(required_inputs), std::move(required_outputs), std::move(model),
-      nullptr, std::move(request), metrics_model_name);
-  // Use a connection error handler to strongly bind `model_impl` to `request`.
-  model_impl->set_connection_error_handler(
+      nullptr, std::move(receiver), metrics_model_name);
+  // Use a disconnection handler to strongly bind `model_impl` to `receiver`.
+  model_impl->set_disconnect_handler(
       base::Bind(&DeleteModelImpl, base::Unretained(model_impl)));
 
   return model_impl;
@@ -73,34 +70,34 @@ ModelImpl::ModelImpl(std::map<std::string, int> required_inputs,
                      std::map<std::string, int> required_outputs,
                      std::unique_ptr<tflite::FlatBufferModel> model,
                      std::unique_ptr<std::string> model_string,
-                     ModelRequest request,
+                     mojo::PendingReceiver<Model> receiver,
                      const std::string& metrics_model_name)
     : required_inputs_(std::move(required_inputs)),
       required_outputs_(std::move(required_outputs)),
       model_string_(std::move(model_string)),
       model_(std::move(model)),
-      binding_(this, std::move(request)),
+      receiver_(this, std::move(receiver)),
       metrics_model_name_(metrics_model_name) {}
 
-void ModelImpl::set_connection_error_handler(
-    base::Closure connection_error_handler) {
-  binding_.set_connection_error_handler(std::move(connection_error_handler));
+void ModelImpl::set_disconnect_handler(base::Closure disconnect_handler) {
+  receiver_.set_disconnect_handler(std::move(disconnect_handler));
 }
 
 int ModelImpl::num_graph_executors_for_testing() const {
   return graph_executors_.size();
 }
 
-void ModelImpl::CreateGraphExecutor(GraphExecutorRequest request,
-                                    CreateGraphExecutorCallback callback) {
+void ModelImpl::CreateGraphExecutor(
+    mojo::PendingReceiver<GraphExecutor> receiver,
+    CreateGraphExecutorCallback callback) {
   auto options = GraphExecutorOptions::New(/*use_nnapi=*/false);
-  CreateGraphExecutorWithOptions(std::move(options), std::move(request),
+  CreateGraphExecutorWithOptions(std::move(options), std::move(receiver),
                                  std::move(callback));
 }
 
 void ModelImpl::CreateGraphExecutorWithOptions(
     GraphExecutorOptionsPtr options,
-    GraphExecutorRequest request,
+    mojo::PendingReceiver<GraphExecutor> receiver,
     CreateGraphExecutorCallback callback) {
   DCHECK(!metrics_model_name_.empty());
 
@@ -160,9 +157,9 @@ void ModelImpl::CreateGraphExecutorWithOptions(
 
   // Add graph executor and schedule its deletion on pipe closure.
   graph_executors_.emplace_front(required_inputs_, required_outputs_,
-                                 std::move(interpreter), std::move(request),
+                                 std::move(interpreter), std::move(receiver),
                                  metrics_model_name_);
-  graph_executors_.front().set_connection_error_handler(
+  graph_executors_.front().set_disconnect_handler(
       base::Bind(&ModelImpl::EraseGraphExecutor, base::Unretained(this),
                  graph_executors_.begin()));
 

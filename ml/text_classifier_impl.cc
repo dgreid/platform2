@@ -27,7 +27,7 @@ using ::chromeos::machine_learning::mojom::TextAnnotation;
 using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequestPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationResult;
-using ::chromeos::machine_learning::mojom::TextClassifierRequest;
+using ::chromeos::machine_learning::mojom::TextClassifier;
 using ::chromeos::machine_learning::mojom::TextEntity;
 using ::chromeos::machine_learning::mojom::TextEntityData;
 using ::chromeos::machine_learning::mojom::TextEntityPtr;
@@ -44,9 +44,9 @@ void DeleteTextClassifierImpl(
 bool TextClassifierImpl::Create(
     std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
     const std::string& langid_model_path,
-    TextClassifierRequest request) {
+    mojo::PendingReceiver<TextClassifier> receiver) {
   auto text_classifier_impl = new TextClassifierImpl(
-      annotator_model_mmap, langid_model_path, std::move(request));
+      annotator_model_mmap, langid_model_path, std::move(receiver));
   if (text_classifier_impl->annotator_ == nullptr ||
       text_classifier_impl->language_identifier_ == nullptr) {
     // Fails to create annotator, return nullptr.
@@ -54,9 +54,9 @@ bool TextClassifierImpl::Create(
     return false;
   }
 
-  // Use a connection error handler to strongly bind `text_classifier_impl` to
-  // `request`.
-  text_classifier_impl->SetConnectionErrorHandler(base::Bind(
+  // Use a disconnection handler to strongly bind `text_classifier_impl` to
+  // `receiver`.
+  text_classifier_impl->SetDisconnectionHandler(base::Bind(
       &DeleteTextClassifierImpl, base::Unretained(text_classifier_impl)));
   return true;
 }
@@ -64,16 +64,16 @@ bool TextClassifierImpl::Create(
 TextClassifierImpl::TextClassifierImpl(
     std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
     const std::string& langid_model_path,
-    TextClassifierRequest request)
+    mojo::PendingReceiver<TextClassifier> receiver)
     : annotator_(libtextclassifier3::Annotator::FromScopedMmap(
           annotator_model_mmap, nullptr, nullptr)),
       language_identifier_(
           libtextclassifier3::langid::LoadFromPath(langid_model_path)),
-      binding_(this, std::move(request)) {}
+      receiver_(this, std::move(receiver)) {}
 
-void TextClassifierImpl::SetConnectionErrorHandler(
-    base::Closure connection_error_handler) {
-  binding_.set_connection_error_handler(std::move(connection_error_handler));
+void TextClassifierImpl::SetDisconnectionHandler(
+    base::Closure disconnect_handler) {
+  receiver_.set_disconnect_handler(std::move(disconnect_handler));
 }
 
 void TextClassifierImpl::Annotate(TextAnnotationRequestPtr request,

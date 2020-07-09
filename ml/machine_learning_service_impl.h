@@ -11,8 +11,9 @@
 
 #include <base/callback_forward.h>
 #include <base/macros.h>
-#include <mojo/public/cpp/bindings/binding.h>
-#include <mojo/public/cpp/bindings/binding_set.h>
+#include <mojo/public/cpp/bindings/pending_receiver.h>
+#include <mojo/public/cpp/bindings/receiver.h>
+#include <mojo/public/cpp/bindings/receiver_set.h>
 
 #include "ml/model_metadata.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
@@ -22,11 +23,10 @@ namespace ml {
 class MachineLearningServiceImpl
     : public chromeos::machine_learning::mojom::MachineLearningService {
  public:
-  // Creates an instance bound to `pipe`. The specified
-  // `connection_error_handler` will be invoked if the binding encounters a
-  // connection error.
+  // Creates an instance bound to `pipe`. The specified `disconnect_handler`
+  // will be invoked if the binding encounters a connection error or is closed.
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
-                             base::Closure connection_error_handler);
+                             base::Closure disconnect_handler);
 
   // A interface to change `text_classifier_model_filename_` for testing. Should
   // not be used outside of tests.
@@ -36,30 +36,34 @@ class MachineLearningServiceImpl
   // Testing constructor that allows overriding of the model dir. Should not be
   // used outside of tests.
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
-                             base::Closure connection_error_handler,
+                             base::Closure disconnect_handler,
                              const std::string& model_dir);
 
  private:
   // chromeos::machine_learning::mojom::MachineLearningService:
-  void Clone(chromeos::machine_learning::mojom::MachineLearningServiceRequest
-                 request) override;
+  void Clone(mojo::PendingReceiver<
+             chromeos::machine_learning::mojom::MachineLearningService>
+                 receiver) override;
   void LoadBuiltinModel(
       chromeos::machine_learning::mojom::BuiltinModelSpecPtr spec,
-      chromeos::machine_learning::mojom::ModelRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       LoadBuiltinModelCallback callback) override;
   void LoadFlatBufferModel(
       chromeos::machine_learning::mojom::FlatBufferModelSpecPtr spec,
-      chromeos::machine_learning::mojom::ModelRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::Model> receiver,
       LoadFlatBufferModelCallback callback) override;
   void LoadTextClassifier(
-      chromeos::machine_learning::mojom::TextClassifierRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
+          receiver,
       LoadTextClassifierCallback callback) override;
   void LoadHandwritingModel(
-      chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
+      mojo::PendingReceiver<
+          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
       LoadHandwritingModelCallback callback) override;
   void LoadHandwritingModelWithSpec(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
-      chromeos::machine_learning::mojom::HandwritingRecognizerRequest request,
+      mojo::PendingReceiver<
+          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
       LoadHandwritingModelCallback callback) override;
 
   // Init the icu data if it is not initialized yet.
@@ -77,13 +81,13 @@ class MachineLearningServiceImpl
 
   const std::string model_dir_;
 
-  // Primordial binding bootstrapped over D-Bus. Once opened, is never closed.
-  mojo::Binding<chromeos::machine_learning::mojom::MachineLearningService>
-      binding_;
+  // Primordial receiver bootstrapped over D-Bus. Once opened, is never closed.
+  mojo::Receiver<chromeos::machine_learning::mojom::MachineLearningService>
+      receiver_;
 
-  // Additional bindings obtained via `Clone`.
-  mojo::BindingSet<chromeos::machine_learning::mojom::MachineLearningService>
-      clone_bindings_;
+  // Additional receivers bound via `Clone`.
+  mojo::ReceiverSet<chromeos::machine_learning::mojom::MachineLearningService>
+      clone_receivers_;
 
   DISALLOW_COPY_AND_ASSIGN(MachineLearningServiceImpl);
 };

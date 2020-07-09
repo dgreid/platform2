@@ -32,12 +32,13 @@ namespace {
 using ::chromeos::machine_learning::mojom::BuiltinModelId;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
 using ::chromeos::machine_learning::mojom::FlatBufferModelSpecPtr;
-using ::chromeos::machine_learning::mojom::HandwritingRecognizerRequest;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizer;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
-using ::chromeos::machine_learning::mojom::MachineLearningServiceRequest;
-using ::chromeos::machine_learning::mojom::ModelRequest;
+using ::chromeos::machine_learning::mojom::MachineLearningService;
+using ::chromeos::machine_learning::mojom::Model;
+using ::chromeos::machine_learning::mojom::TextClassifier;
 
 constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
 // Base name for UMA metrics related to model loading (`LoadBuiltinModel`,
@@ -56,37 +57,37 @@ constexpr char kIcuDataFilePath[] = "/opt/google/chrome/icudtl.dat";
 
 MachineLearningServiceImpl::MachineLearningServiceImpl(
     mojo::ScopedMessagePipeHandle pipe,
-    base::Closure connection_error_handler,
+    base::Closure disconnect_handler,
     const std::string& model_dir)
     : icu_data_(nullptr),
       text_classifier_model_filename_(kTextClassifierModelFile),
       builtin_model_metadata_(GetBuiltinModelMetadata()),
       model_dir_(model_dir),
-      binding_(this,
-               mojo::InterfaceRequest<
-                   chromeos::machine_learning::mojom::MachineLearningService>(
-                   std::move(pipe))) {
-  binding_.set_connection_error_handler(std::move(connection_error_handler));
+      receiver_(this,
+                mojo::InterfaceRequest<
+                    chromeos::machine_learning::mojom::MachineLearningService>(
+                    std::move(pipe))) {
+  receiver_.set_disconnect_handler(std::move(disconnect_handler));
 }
 
 MachineLearningServiceImpl::MachineLearningServiceImpl(
-    mojo::ScopedMessagePipeHandle pipe, base::Closure connection_error_handler)
-    : MachineLearningServiceImpl(std::move(pipe),
-                                 std::move(connection_error_handler),
-                                 kSystemModelDir) {}
+    mojo::ScopedMessagePipeHandle pipe, base::Closure disconnect_handler)
+    : MachineLearningServiceImpl(
+          std::move(pipe), std::move(disconnect_handler), kSystemModelDir) {}
 
 void MachineLearningServiceImpl::SetTextClassifierModelFilenameForTesting(
     const std::string& filename) {
   text_classifier_model_filename_ = filename;
 }
 
-void MachineLearningServiceImpl::Clone(MachineLearningServiceRequest request) {
-  clone_bindings_.AddBinding(this, std::move(request));
+void MachineLearningServiceImpl::Clone(
+    mojo::PendingReceiver<MachineLearningService> receiver) {
+  clone_receivers_.Add(this, std::move(receiver));
 }
 
 void MachineLearningServiceImpl::LoadBuiltinModel(
     BuiltinModelSpecPtr spec,
-    ModelRequest request,
+    mojo::PendingReceiver<Model> receiver,
     LoadBuiltinModelCallback callback) {
   // Unsupported models do not have metadata entries.
   const auto metadata_lookup = builtin_model_metadata_.find(spec->id);
@@ -118,7 +119,7 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
   }
 
   ModelImpl::Create(metadata.required_inputs, metadata.required_outputs,
-                    std::move(model), std::move(request),
+                    std::move(model), std::move(receiver),
                     metadata.metrics_model_name);
 
   std::move(callback).Run(LoadModelResult::OK);
@@ -129,7 +130,7 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
 
 void MachineLearningServiceImpl::LoadFlatBufferModel(
     FlatBufferModelSpecPtr spec,
-    ModelRequest request,
+    mojo::PendingReceiver<Model> receiver,
     LoadFlatBufferModelCallback callback) {
   DCHECK(!spec->metrics_model_name.empty());
 
@@ -156,7 +157,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
   ModelImpl::Create(
       std::map<std::string, int>(spec->inputs.begin(), spec->inputs.end()),
       std::map<std::string, int>(spec->outputs.begin(), spec->outputs.end()),
-      std::move(model), std::move(model_string_impl), std::move(request),
+      std::move(model), std::move(model_string_impl), std::move(receiver),
       spec->metrics_model_name);
 
   std::move(callback).Run(LoadModelResult::OK);
@@ -166,7 +167,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
 }
 
 void MachineLearningServiceImpl::LoadTextClassifier(
-    chromeos::machine_learning::mojom::TextClassifierRequest request,
+    mojo::PendingReceiver<TextClassifier> receiver,
     LoadTextClassifierCallback callback) {
   RequestMetrics<LoadModelResult> request_metrics("TextClassifier",
                                                   kMetricsRequestName);
@@ -187,7 +188,7 @@ void MachineLearningServiceImpl::LoadTextClassifier(
   // Create the TextClassifier.
   if (!TextClassifierImpl::Create(&scoped_mmap,
                                   model_dir_ + kLanguageIdentificationModelFile,
-                                  std::move(request))) {
+                                  std::move(receiver))) {
     LOG(ERROR) << "Failed to create TextClassifierImpl object.";
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
@@ -204,16 +205,16 @@ void MachineLearningServiceImpl::LoadTextClassifier(
 }
 
 void MachineLearningServiceImpl::LoadHandwritingModel(
-    HandwritingRecognizerRequest request,
+    mojo::PendingReceiver<HandwritingRecognizer> receiver,
     LoadHandwritingModelCallback callback) {
   // Use english as default language.
   LoadHandwritingModelWithSpec(HandwritingRecognizerSpec::New("en"),
-                               std::move(request), std::move(callback));
+                               std::move(receiver), std::move(callback));
 }
 
 void MachineLearningServiceImpl::LoadHandwritingModelWithSpec(
     HandwritingRecognizerSpecPtr spec,
-    HandwritingRecognizerRequest request,
+    mojo::PendingReceiver<HandwritingRecognizer> receiver,
     LoadHandwritingModelCallback callback) {
   RequestMetrics<LoadModelResult> request_metrics("HandwritingModel",
                                                   kMetricsRequestName);
@@ -253,7 +254,8 @@ void MachineLearningServiceImpl::LoadHandwritingModelWithSpec(
   }
 
   // Create HandwritingRecognizer.
-  if (!HandwritingRecognizerImpl::Create(std::move(spec), std::move(request))) {
+  if (!HandwritingRecognizerImpl::Create(std::move(spec),
+                                         std::move(receiver))) {
     LOG(ERROR) << "LoadHandwritingRecognizer returned false.";
     std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
     request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);

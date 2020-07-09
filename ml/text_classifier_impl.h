@@ -12,7 +12,8 @@
 
 #include <annotator/annotator.h>
 #include <base/macros.h>
-#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/pending_receiver.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 #include <tensorflow/lite/model.h>
 #include <utils/memory/mmap.h>
 
@@ -26,24 +27,26 @@ class TextClassifierImpl
     : public chromeos::machine_learning::mojom::TextClassifier {
  public:
   // Interface to create new `TextClassifierImpl` object. This function will
-  // automatically achieve strong binding. The model object will be deleted when
-  // the corresponding mojo connection meets error.
+  // automatically achieve strong binding.The model object will be deleted when
+  // the corresponding mojo connection is closed.
   // Will return false if it fails to create the annotator object, otherwise
   // return true.
   static bool Create(
-      std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+      std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
       const std::string& langid_model_path,
-      chromeos::machine_learning::mojom::TextClassifierRequest request);
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
+          receiver);
 
  private:
   // A private constructor, call `TextClassifierImpl::Create` to create new
   // objects.
   explicit TextClassifierImpl(
-      std::unique_ptr<libtextclassifier3::ScopedMmap>* annotator_model_mmap,
+      std::unique_ptr<libtextclassifier3::ScopedMmap>* mmap,
       const std::string& langid_model_path,
-      chromeos::machine_learning::mojom::TextClassifierRequest request);
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
+          receiver);
 
-  void SetConnectionErrorHandler(base::Closure connection_error_handler);
+  void SetDisconnectionHandler(base::Closure disconnect_handler);
 
   // chromeos::machine_learning::mojom::TextClassifier:
   void Annotate(
@@ -64,7 +67,7 @@ class TextClassifierImpl
   std::unique_ptr<libtextclassifier3::mobile::lang_id::LangId>
       language_identifier_;
 
-  mojo::Binding<chromeos::machine_learning::mojom::TextClassifier> binding_;
+  mojo::Receiver<chromeos::machine_learning::mojom::TextClassifier> receiver_;
 
   DISALLOW_COPY_AND_ASSIGN(TextClassifierImpl);
 };

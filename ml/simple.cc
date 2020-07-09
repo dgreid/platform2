@@ -12,7 +12,7 @@
 
 #include <base/bind.h>
 #include <base/run_loop.h>
-#include <mojo/public/cpp/bindings/interface_request.h>
+#include <mojo/public/cpp/bindings/remote.h>
 
 #include "ml/machine_learning_service_impl.h"
 #include "ml/mojom/graph_executor.mojom.h"
@@ -25,11 +25,11 @@ using ::chromeos::machine_learning::mojom::BuiltinModelSpec;
 using ::chromeos::machine_learning::mojom::BuiltinModelSpecPtr;
 using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
-using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::GraphExecutorOptions;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
-using ::chromeos::machine_learning::mojom::MachineLearningServicePtr;
-using ::chromeos::machine_learning::mojom::ModelPtr;
+using ::chromeos::machine_learning::mojom::MachineLearningService;
+using ::chromeos::machine_learning::mojom::Model;
 using ::chromeos::machine_learning::mojom::TensorPtr;
 
 namespace ml {
@@ -52,17 +52,18 @@ AddResult Add(const double x, const double y, const bool use_nnapi) {
   AddResult result = {"Not completed.", -1.0};
 
   // Create ML Service
-  MachineLearningServicePtr ml_service;
+  mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImpl ml_service_impl(
-      mojo::MakeRequest(&ml_service).PassMessagePipe(), base::Closure());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe(),
+      base::Closure());
 
   // Load model.
   BuiltinModelSpecPtr spec = BuiltinModelSpec::New();
   spec->id = BuiltinModelId::TEST_MODEL;
-  ModelPtr model;
+  mojo::Remote<Model> model;
   bool model_load_ok = false;
   ml_service->LoadBuiltinModel(
-      std::move(spec), mojo::MakeRequest(&model),
+      std::move(spec), model.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* const model_load_ok, const LoadModelResult result) {
             *model_load_ok = result == LoadModelResult::OK;
@@ -75,11 +76,11 @@ AddResult Add(const double x, const double y, const bool use_nnapi) {
   }
 
   // Get graph executor for model.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   bool graph_executor_ok = false;
   auto options = GraphExecutorOptions::New(use_nnapi);
   model->CreateGraphExecutorWithOptions(
-      std::move(options), mojo::MakeRequest(&graph_executor),
+      std::move(options), graph_executor.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* const graph_executor_ok,
              const CreateGraphExecutorResult result) {

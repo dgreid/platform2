@@ -13,7 +13,8 @@
 #include <base/callback_forward.h>
 #include <base/containers/flat_map.h>
 #include <base/macros.h>
-#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/pending_receiver.h>
+#include <mojo/public/cpp/bindings/receiver.h>
 #include <tensorflow/lite/model.h>
 
 #include "ml/mojom/graph_executor.mojom.h"
@@ -32,7 +33,7 @@ namespace ml {
 class GraphExecutorImpl
     : public chromeos::machine_learning::mojom::GraphExecutor {
  public:
-  // Creates an instance bound to `request`.
+  // Creates an instance bound to `receiver`.
   //
   // The `required_inputs` and `required_outputs` arguments specify a mapping
   // from required input / output tensor names to their indices in the TF lite
@@ -46,10 +47,11 @@ class GraphExecutorImpl
       const std::map<std::string, int>& required_inputs,
       const std::map<std::string, int>& required_outputs,
       std::unique_ptr<tflite::Interpreter> interpreter,
-      chromeos::machine_learning::mojom::GraphExecutorRequest request,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::GraphExecutor>
+          receiver,
       const std::string& metrics_model_name);
 
-  void set_connection_error_handler(base::Closure connection_error_handler);
+  void set_disconnect_handler(base::Closure disconnect_handler);
 
  private:
   // chromeos::machine_learning::mojom::GraphExecutor:
@@ -64,7 +66,7 @@ class GraphExecutorImpl
 
   const std::unique_ptr<tflite::Interpreter> interpreter_;
 
-  mojo::Binding<chromeos::machine_learning::mojom::GraphExecutor> binding_;
+  mojo::Receiver<chromeos::machine_learning::mojom::GraphExecutor> receiver_;
 
   // Model name as it should appear in UMA histogram names.
   const std::string metrics_model_name_;

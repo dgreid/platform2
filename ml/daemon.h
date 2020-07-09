@@ -43,8 +43,8 @@ class Daemon : public brillo::DBusDaemon {
       dbus::MethodCall* method_call,
       dbus::ExportedObject::ResponseSender response_sender);
 
-  // Responds to Mojo connection errors by quitting the daemon.
-  void OnConnectionError();
+  // Responds to Mojo disconnection by quitting the daemon.
+  void OnMojoDisconnection();
 
   // IPC Support
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;

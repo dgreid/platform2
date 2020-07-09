@@ -13,7 +13,7 @@
 #include <base/run_loop.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <mojo/public/cpp/bindings/interface_request.h>
+#include <mojo/public/cpp/bindings/remote.h>
 #include <tensorflow/lite/model.h>
 
 #include "ml/model_impl.h"
@@ -27,10 +27,8 @@ namespace {
 
 using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::ExecuteResult;
-using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
+using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::Model;
-using ::chromeos::machine_learning::mojom::ModelPtr;
-using ::chromeos::machine_learning::mojom::ModelRequest;
 using ::chromeos::machine_learning::mojom::TensorPtr;
 using ::testing::ElementsAre;
 
@@ -48,16 +46,16 @@ class ModelImplTest : public testing::Test {
 // Test loading an invalid model.
 TEST_F(ModelImplTest, TestBadModel) {
   // Pass nullptr instead of a valid model.
-  ModelPtr model_ptr;
+  mojo::Remote<Model> model;
   ModelImpl::Create(model_inputs_, model_outputs_, nullptr /*model*/,
-                    mojo::MakeRequest(&model_ptr), "TestModel");
-  ASSERT_TRUE(model_ptr.is_bound());
+                    model.BindNewPipeAndPassReceiver(), "TestModel");
+  ASSERT_TRUE(model.is_bound());
 
   // Ensure that creating a graph executor fails.
   bool callback_done = false;
-  GraphExecutorPtr graph_executor_ptr;
-  model_ptr->CreateGraphExecutor(
-      mojo::MakeRequest(&graph_executor_ptr),
+  mojo::Remote<GraphExecutor> graph_executor;
+  model->CreateGraphExecutor(
+      graph_executor.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result,
@@ -73,21 +71,21 @@ TEST_F(ModelImplTest, TestBadModel) {
 // Test loading the valid example model.
 TEST_F(ModelImplTest, TestExampleModel) {
   // Read the example TF model from disk.
-  std::unique_ptr<tflite::FlatBufferModel> model =
+  std::unique_ptr<tflite::FlatBufferModel> tflite_model =
       tflite::FlatBufferModel::BuildFromFile(model_path_.c_str());
-  ASSERT_NE(model.get(), nullptr);
+  ASSERT_NE(tflite_model.get(), nullptr);
 
   // Create model object.
-  ModelPtr model_ptr;
-  ModelImpl::Create(model_inputs_, model_outputs_, std::move(model),
-                    mojo::MakeRequest(&model_ptr), "TestModel");
-  ASSERT_TRUE(model_ptr.is_bound());
+  mojo::Remote<Model> model;
+  ModelImpl::Create(model_inputs_, model_outputs_, std::move(tflite_model),
+                    model.BindNewPipeAndPassReceiver(), "TestModel");
+  ASSERT_TRUE(model.is_bound());
 
   // Create a graph executor.
   bool cge_callback_done = false;
-  GraphExecutorPtr graph_executor_ptr;
-  model_ptr->CreateGraphExecutor(
-      mojo::MakeRequest(&graph_executor_ptr),
+  mojo::Remote<GraphExecutor> graph_executor;
+  model->CreateGraphExecutor(
+      graph_executor.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* cge_callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result, CreateGraphExecutorResult::OK);
@@ -106,7 +104,7 @@ TEST_F(ModelImplTest, TestExampleModel) {
 
   // Execute graph.
   bool exe_callback_done = false;
-  graph_executor_ptr->Execute(
+  graph_executor->Execute(
       std::move(inputs), std::move(outputs),
       base::Bind(
           [](bool* exe_callback_done, const ExecuteResult result,
@@ -136,22 +134,22 @@ TEST_F(ModelImplTest, TestExampleModel) {
 
 TEST_F(ModelImplTest, TestGraphExecutorCleanup) {
   // Read the example TF model from disk.
-  std::unique_ptr<tflite::FlatBufferModel> model =
+  std::unique_ptr<tflite::FlatBufferModel> tflite_model =
       tflite::FlatBufferModel::BuildFromFile(model_path_.c_str());
-  ASSERT_NE(model.get(), nullptr);
+  ASSERT_NE(tflite_model.get(), nullptr);
 
   // Create model object.
-  ModelPtr model_ptr;
+  mojo::Remote<Model> model;
   const ModelImpl* model_impl =
-      ModelImpl::Create(model_inputs_, model_outputs_, std::move(model),
-                        mojo::MakeRequest(&model_ptr), "TestModel");
-  ASSERT_TRUE(model_ptr.is_bound());
+      ModelImpl::Create(model_inputs_, model_outputs_, std::move(tflite_model),
+                        model.BindNewPipeAndPassReceiver(), "TestModel");
+  ASSERT_TRUE(model.is_bound());
 
   // Create one graph executor.
   bool cge1_callback_done = false;
-  GraphExecutorPtr graph_executor_1_ptr;
-  model_ptr->CreateGraphExecutor(
-      mojo::MakeRequest(&graph_executor_1_ptr),
+  mojo::Remote<GraphExecutor> graph_executor_1;
+  model->CreateGraphExecutor(
+      graph_executor_1.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* cge1_callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result, CreateGraphExecutorResult::OK);
@@ -161,14 +159,14 @@ TEST_F(ModelImplTest, TestGraphExecutorCleanup) {
 
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(cge1_callback_done);
-  ASSERT_TRUE(graph_executor_1_ptr.is_bound());
+  ASSERT_TRUE(graph_executor_1.is_bound());
   ASSERT_EQ(model_impl->num_graph_executors_for_testing(), 1);
 
   // Create another graph executor.
   bool cge2_callback_done = false;
-  GraphExecutorPtr graph_executor_2_ptr;
-  model_ptr->CreateGraphExecutor(
-      mojo::MakeRequest(&graph_executor_2_ptr),
+  mojo::Remote<GraphExecutor> graph_executor_2;
+  model->CreateGraphExecutor(
+      graph_executor_2.BindNewPipeAndPassReceiver(),
       base::Bind(
           [](bool* cge2_callback_done, const CreateGraphExecutorResult result) {
             EXPECT_EQ(result, CreateGraphExecutorResult::OK);
@@ -178,17 +176,17 @@ TEST_F(ModelImplTest, TestGraphExecutorCleanup) {
 
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(cge2_callback_done);
-  ASSERT_TRUE(graph_executor_2_ptr.is_bound());
+  ASSERT_TRUE(graph_executor_2.is_bound());
   ASSERT_EQ(model_impl->num_graph_executors_for_testing(), 2);
 
   // Destroy one graph executor.
-  graph_executor_1_ptr.reset();
+  graph_executor_1.reset();
   base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(graph_executor_2_ptr.is_bound());
+  ASSERT_TRUE(graph_executor_2.is_bound());
   ASSERT_EQ(model_impl->num_graph_executors_for_testing(), 1);
 
   // Destroy the other graph executor.
-  graph_executor_2_ptr.reset();
+  graph_executor_2.reset();
   base::RunLoop().RunUntilIdle();
   ASSERT_EQ(model_impl->num_graph_executors_for_testing(), 0);
 }

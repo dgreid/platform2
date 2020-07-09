@@ -19,7 +19,7 @@ namespace ml {
 namespace {
 
 using ::chromeos::machine_learning::mojom::ExecuteResult;
-using ::chromeos::machine_learning::mojom::GraphExecutorRequest;
+using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::Int64List;
 using ::chromeos::machine_learning::mojom::Tensor;
 using ::chromeos::machine_learning::mojom::TensorPtr;
@@ -157,17 +157,17 @@ GraphExecutorImpl::GraphExecutorImpl(
     const std::map<std::string, int>& required_inputs,
     const std::map<std::string, int>& required_outputs,
     std::unique_ptr<tflite::Interpreter> interpreter,
-    GraphExecutorRequest request,
+    mojo::PendingReceiver<GraphExecutor> receiver,
     const std::string& metrics_model_name)
     : required_inputs_(required_inputs),
       required_outputs_(required_outputs),
       interpreter_(std::move(interpreter)),
-      binding_(this, std::move(request)),
+      receiver_(this, std::move(receiver)),
       metrics_model_name_(metrics_model_name) {}
 
-void GraphExecutorImpl::set_connection_error_handler(
-    base::Closure connection_error_handler) {
-  binding_.set_connection_error_handler(std::move(connection_error_handler));
+void GraphExecutorImpl::set_disconnect_handler(
+    base::Closure disconnect_handler) {
+  receiver_.set_disconnect_handler(std::move(disconnect_handler));
 }
 
 void GraphExecutorImpl::Execute(base::flat_map<std::string, TensorPtr> tensors,

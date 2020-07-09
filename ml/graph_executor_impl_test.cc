@@ -15,6 +15,7 @@
 #include <brillo/test_helpers.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <mojo/public/cpp/bindings/remote.h>
 #include <tensorflow/lite/context.h>
 #include <tensorflow/lite/interpreter.h>
 
@@ -29,7 +30,6 @@ namespace {
 
 using ::chromeos::machine_learning::mojom::ExecuteResult;
 using ::chromeos::machine_learning::mojom::GraphExecutor;
-using ::chromeos::machine_learning::mojom::GraphExecutorPtr;
 using ::chromeos::machine_learning::mojom::Int64List;
 using ::chromeos::machine_learning::mojom::StringList;
 using ::chromeos::machine_learning::mojom::Tensor;
@@ -79,12 +79,12 @@ std::unique_ptr<tflite::Interpreter> IdentityInterpreter() {
 // Test two normal executions of a graph.
 TEST(GraphExecutorTest, TestOk) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Execute once.
@@ -196,12 +196,12 @@ TEST(GraphExecutorTest, TestNarrowing) {
   CHECK_EQ(interpreter->AllocateTensors(), kTfLiteOk);
 
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, std::move(interpreter),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // We represent bools with int64 tensors.
@@ -241,12 +241,12 @@ TEST(GraphExecutorTest, TestNarrowing) {
 // Test graph execution where the client requests a bad output tensor name.
 TEST(GraphExecutorTest, TestInvalidOutputName) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   base::flat_map<std::string, TensorPtr> inputs;
@@ -274,12 +274,12 @@ TEST(GraphExecutorTest, TestInvalidOutputName) {
 // Test graph execution where the client does not request an output.
 TEST(GraphExecutorTest, TestMissingOutputName) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   base::flat_map<std::string, TensorPtr> inputs;
@@ -305,12 +305,12 @@ TEST(GraphExecutorTest, TestMissingOutputName) {
 // Test graph execution where the client requests the same output name twice.
 TEST(GraphExecutorTest, TestDuplicateOutputName) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   base::flat_map<std::string, TensorPtr> inputs;
@@ -338,12 +338,12 @@ TEST(GraphExecutorTest, TestDuplicateOutputName) {
 // Test graph execution where the client supplies a bad input tensor name.
 TEST(GraphExecutorTest, TestInvalidInputName) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Specify a value for the output tensor (which isn't in our "inputs" list).
@@ -371,12 +371,12 @@ TEST(GraphExecutorTest, TestInvalidInputName) {
 // Test graph execution where the client does not supply an input.
 TEST(GraphExecutorTest, TestMissingInputName) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Specify a value for the output tensor (which isn't in our "inputs" list).
@@ -402,12 +402,12 @@ TEST(GraphExecutorTest, TestMissingInputName) {
 // Test graph execution where the client supplies input of incorrect type.
 TEST(GraphExecutorTest, TestWrongInputType) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Give an int tensor when a float tensor is expected.
@@ -435,12 +435,12 @@ TEST(GraphExecutorTest, TestWrongInputType) {
 // Test graph execution where the client supplies input of incorrect shape.
 TEST(GraphExecutorTest, TestWrongInputShape) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Give a 1x1 tensor when a scalar is expected.
@@ -469,12 +469,12 @@ TEST(GraphExecutorTest, TestWrongInputShape) {
 // mismatched shape and values).
 TEST(GraphExecutorTest, TestInvalidInputFormat) {
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, IdentityInterpreter(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Give a tensor with scalar shape but multiple values.
@@ -523,12 +523,12 @@ TEST(GraphExecutorTest, TestInvalidInputNodeType) {
   ASSERT_EQ(interpreter->AllocateTensors(), kTfLiteOk);
 
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, std::move(interpreter),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Graph execution should fail before we get to input type checking.
@@ -556,11 +556,11 @@ TEST(GraphExecutorTest, TestInvalidInputNodeType) {
 // Test graph execution where TF lite invocation fails.
 TEST(GraphExecutorTest, TestExecutionFailure) {
   // Use an uninitialized interpreter, which induces an execution failure.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> inputs_outputs;
   const GraphExecutorImpl graph_executor_impl(
       inputs_outputs, inputs_outputs, std::make_unique<tflite::Interpreter>(),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   bool callback_done = false;
@@ -604,12 +604,12 @@ TEST(GraphExecutorTest, TestInvalidOutputNodeType) {
   ASSERT_EQ(interpreter->AllocateTensors(), kTfLiteOk);
 
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, std::move(interpreter),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Populate input.
@@ -659,12 +659,12 @@ TEST(GraphExecutorTest, TestInvalidOutputNodeShape) {
   ASSERT_EQ(interpreter->AllocateTensors(), kTfLiteOk);
 
   // Create GraphExecutor.
-  GraphExecutorPtr graph_executor;
+  mojo::Remote<GraphExecutor> graph_executor;
   const std::map<std::string, int> input_names = {{"in_tensor", 0}};
   const std::map<std::string, int> output_names = {{"out_tensor", 1}};
   const GraphExecutorImpl graph_executor_impl(
       input_names, output_names, std::move(interpreter),
-      mojo::MakeRequest(&graph_executor), "TestModel");
+      graph_executor.BindNewPipeAndPassReceiver(), "TestModel");
   ASSERT_TRUE(graph_executor.is_bound());
 
   // Populate input.
