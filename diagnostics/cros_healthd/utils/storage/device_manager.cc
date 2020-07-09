@@ -17,9 +17,9 @@
 #include <brillo/udev/udev.h>
 #include <brillo/udev/udev_device.h>
 
+#include "diagnostics/common/status_macros.h"
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/device_info.h"
-#include "diagnostics/cros_healthd/utils/storage/status_macros.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {

@@ -7,7 +7,7 @@
 
 #include <cstdint>
 #include <string>
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/statusor.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {

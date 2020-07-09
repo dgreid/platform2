@@ -10,7 +10,7 @@
 
 #include <base/files/file_path.h>
 
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/statusor.h"
 
 namespace diagnostics {
 

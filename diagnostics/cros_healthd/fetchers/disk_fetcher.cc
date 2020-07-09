@@ -10,12 +10,12 @@
 #include <base/optional.h>
 #include <brillo/udev/udev.h>
 
+#include "diagnostics/common/status_macros.h"
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/device_lister.h"
 #include "diagnostics/cros_healthd/utils/storage/device_manager.h"
 #include "diagnostics/cros_healthd/utils/storage/device_resolver.h"
-#include "diagnostics/cros_healthd/utils/storage/status_macros.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 

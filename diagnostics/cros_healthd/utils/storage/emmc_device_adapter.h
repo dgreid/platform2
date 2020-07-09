@@ -9,7 +9,7 @@
 
 #include <base/files/file_path.h>
 
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 

@@ -10,9 +10,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/device_info.h"
 #include "diagnostics/cros_healthd/utils/storage/mock/mock_platform.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 using testing::_;

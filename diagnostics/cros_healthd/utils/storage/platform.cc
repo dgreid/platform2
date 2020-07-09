@@ -17,8 +17,8 @@
 #include <base/posix/eintr_wrapper.h>
 #include <rootdev/rootdev.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 

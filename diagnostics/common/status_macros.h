@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUS_MACROS_H_
-#define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUS_MACROS_H_
+#ifndef DIAGNOSTICS_COMMON_STATUS_MACROS_H_
+#define DIAGNOSTICS_COMMON_STATUS_MACROS_H_
 
 #include <utility>
 
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/statusor.h"
 
 #define RETURN_IF_ERROR(rexpr) \
   do {                         \
@@ -33,4 +33,4 @@
 #define STATUS_MACROS_IMPL_CONCAT_INNER_(x, y) x##y
 #define STATUS_MACROS_IMPL_CONCAT_(x, y) STATUS_MACROS_IMPL_CONCAT_INNER_(x, y)
 
-#endif  // DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUS_MACROS_H_
+#endif  // DIAGNOSTICS_COMMON_STATUS_MACROS_H_

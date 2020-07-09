@@ -12,10 +12,10 @@
 #include <base/files/file_path.h>
 #include <base/optional.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/storage_device_adapter.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 

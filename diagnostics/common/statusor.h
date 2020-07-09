@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUSOR_H_
-#define DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUSOR_H_
+#ifndef DIAGNOSTICS_COMMON_STATUSOR_H_
+#define DIAGNOSTICS_COMMON_STATUSOR_H_
 
 #include <string>
 #include <utility>
@@ -94,4 +94,4 @@ class StatusOr {
 
 }  // namespace diagnostics
 
-#endif  // DIAGNOSTICS_CROS_HEALTHD_UTILS_STORAGE_STATUSOR_H_
+#endif  // DIAGNOSTICS_COMMON_STATUSOR_H_

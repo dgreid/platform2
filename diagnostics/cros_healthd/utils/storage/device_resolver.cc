@@ -12,8 +12,8 @@
 
 #include <libmount/libmount.h>
 
-#include "diagnostics/cros_healthd/utils/storage/status_macros.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/status_macros.h"
+#include "diagnostics/common/statusor.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {

@@ -4,8 +4,8 @@
 
 #include <gtest/gtest.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 

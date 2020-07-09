@@ -15,7 +15,7 @@
 #include <base/strings/stringprintf.h>
 
 #include "diagnostics/common/file_utils.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
+#include "diagnostics/common/statusor.h"
 
 namespace diagnostics {
 

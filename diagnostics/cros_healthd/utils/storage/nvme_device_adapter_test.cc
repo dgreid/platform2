@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/storage/nvme_device_adapter.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 

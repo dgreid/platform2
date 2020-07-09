@@ -15,11 +15,11 @@
 #include <brillo/udev/udev.h>
 #include <brillo/udev/udev_device.h>
 
+#include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/device_info.h"
 #include "diagnostics/cros_healthd/utils/storage/device_lister.h"
 #include "diagnostics/cros_healthd/utils/storage/device_resolver.h"
-#include "diagnostics/cros_healthd/utils/storage/statusor.h"
 
 namespace diagnostics {
 
