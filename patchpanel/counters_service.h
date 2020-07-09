@@ -21,8 +21,6 @@ namespace patchpanel {
 // IPv6}. These counters will never be removed after they are set up, and thus
 // they represent the traffic usage from boot time.
 //
-// TODO(jiejiang): The following will be implemented in the following patches.
-//
 // Implementation details
 //
 // Rules: All the rules/chains for accounting are in (INPUT, FORWARD or
@@ -44,6 +42,8 @@ namespace patchpanel {
 //   chain, which matches packets with this new interface.
 // The above rules and chains will never be removed once created, so we will
 // check if one rule exists before creating it.
+//
+// TODO(jiejiang): Query will be implemented in future patches.
 //
 // Query: Two commands (iptables and ip6tables) will be executed in the mangle
 // table to get all the chains and rules. And then we perform a text parsing on
@@ -68,6 +68,13 @@ class CountersService {
   // an rvalue (e.g., `IptablesNewRule({"-I", "INPUT", ...})`), so no extra copy
   // should happen in such cases.
   void IptablesNewRule(std::vector<std::string> params);
+
+  // Installs the required chains and rules for the given shill device.
+  void SetupChainsAndRules(const std::string& ifname);
+  // Installs the accounting rules in the given accounting chain. Currently we
+  // only need one rule to match all the traffic, without distinguishing
+  // different sources.
+  void SetupAccountingRules(const std::string& chain_name);
 
   void OnDeviceChanged(const std::set<std::string>& added,
                        const std::set<std::string>& removed);

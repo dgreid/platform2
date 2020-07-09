@@ -184,6 +184,7 @@ if (use.test) {
       "address_manager_test.cc",
       "arc_service_test.cc",
       "client_test.cc",
+      "counters_service_test.cc",
       "datapath_test.cc",
       "mac_address_generator_test.cc",
       "minijailed_process_runner_test.cc",
