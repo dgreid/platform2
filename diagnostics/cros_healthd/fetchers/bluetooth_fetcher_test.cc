@@ -12,8 +12,9 @@
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
-#include "diagnostics/common/system/mock_bluetooth_client.h"
+#include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 
 namespace diagnostics {
 
@@ -57,10 +58,12 @@ class BluetoothUtilsTest : public ::testing::Test {
   BluetoothUtilsTest& operator=(const BluetoothUtilsTest&) = delete;
   ~BluetoothUtilsTest() = default;
 
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
+
   BluetoothFetcher* bluetooth_fetcher() { return &bluetooth_fetcher_; }
 
-  MockBluetoothClient* mock_bluetooth_client() {
-    return &mock_bluetooth_client_;
+  FakeBluetoothClient* fake_bluetooth_client() {
+    return mock_context_.fake_bluetooth_client();
   }
 
   dbus::ObjectPath adapter_path() {
@@ -72,8 +75,8 @@ class BluetoothUtilsTest : public ::testing::Test {
   }
 
  private:
-  StrictMock<MockBluetoothClient> mock_bluetooth_client_;
-  BluetoothFetcher bluetooth_fetcher_{&mock_bluetooth_client_};
+  MockContext mock_context_;
+  BluetoothFetcher bluetooth_fetcher_{&mock_context_};
 };
 
 // Test that Bluetooth info can be fetched successfully.
@@ -83,13 +86,13 @@ TEST_F(BluetoothUtilsTest, FetchBluetoothInfo) {
   const std::unique_ptr<BluetoothClient::DeviceProperties> kDeviceProperties =
       GetDeviceProperties();
 
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapters())
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapters())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{adapter_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapterProperties(adapter_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapterProperties(adapter_path()))
       .WillOnce(Return(kAdapterProperties.get()));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDevices())
+  EXPECT_CALL(*fake_bluetooth_client(), GetDevices())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{device_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDeviceProperties(device_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetDeviceProperties(device_path()))
       .WillOnce(Return(kDeviceProperties.get()));
 
   auto bluetooth_result = bluetooth_fetcher()->FetchBluetoothInfo();
@@ -104,9 +107,9 @@ TEST_F(BluetoothUtilsTest, FetchBluetoothInfo) {
 
 // Test that getting no adapter and device objects is handled gracefully.
 TEST_F(BluetoothUtilsTest, NoObjects) {
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapters())
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapters())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDevices())
+  EXPECT_CALL(*fake_bluetooth_client(), GetDevices())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{}));
 
   auto bluetooth_result = bluetooth_fetcher()->FetchBluetoothInfo();
@@ -117,13 +120,13 @@ TEST_F(BluetoothUtilsTest, NoObjects) {
 
 // Test that getting no adapter and device properties is handled gracefully.
 TEST_F(BluetoothUtilsTest, NoProperties) {
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapters())
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapters())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{adapter_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapterProperties(adapter_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapterProperties(adapter_path()))
       .WillOnce(Return(nullptr));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDevices())
+  EXPECT_CALL(*fake_bluetooth_client(), GetDevices())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{device_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDeviceProperties(device_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetDeviceProperties(device_path()))
       .WillOnce(Return(nullptr));
 
   auto bluetooth_result = bluetooth_fetcher()->FetchBluetoothInfo();
@@ -139,14 +142,14 @@ TEST_F(BluetoothUtilsTest, NumConnectedDevices) {
   const std::unique_ptr<BluetoothClient::DeviceProperties> kDeviceProperties =
       GetDeviceProperties();
 
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapters())
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapters())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{adapter_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapterProperties(adapter_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapterProperties(adapter_path()))
       .WillOnce(Return(kAdapterProperties.get()));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDevices())
+  EXPECT_CALL(*fake_bluetooth_client(), GetDevices())
       .WillOnce(
           Return(std::vector<dbus::ObjectPath>{device_path(), device_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDeviceProperties(device_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetDeviceProperties(device_path()))
       .Times(2)
       .WillRepeatedly(Return(kDeviceProperties.get()));
 
@@ -165,13 +168,13 @@ TEST_F(BluetoothUtilsTest, DisconnectedDevice) {
       GetDeviceProperties();
   device_properties->connected.ReplaceValue(false);
 
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapters())
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapters())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{adapter_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetAdapterProperties(adapter_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetAdapterProperties(adapter_path()))
       .WillOnce(Return(kAdapterProperties.get()));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDevices())
+  EXPECT_CALL(*fake_bluetooth_client(), GetDevices())
       .WillOnce(Return(std::vector<dbus::ObjectPath>{device_path()}));
-  EXPECT_CALL(*mock_bluetooth_client(), GetDeviceProperties(device_path()))
+  EXPECT_CALL(*fake_bluetooth_client(), GetDeviceProperties(device_path()))
       .WillOnce(Return(device_properties.get()));
 
   auto bluetooth_result = bluetooth_fetcher()->FetchBluetoothInfo();

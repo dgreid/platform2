@@ -12,6 +12,7 @@
 
 #include <dbus/object_path.h>
 
+#include "diagnostics/common/system/bluetooth_client.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 
 namespace diagnostics {
@@ -22,19 +23,21 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 }  // namespace
 
-BluetoothFetcher::BluetoothFetcher(BluetoothClient* bluetooth_client)
-    : bluetooth_client_(bluetooth_client) {
-  DCHECK(bluetooth_client_);
+BluetoothFetcher::BluetoothFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
 }
 
 BluetoothFetcher::~BluetoothFetcher() = default;
 
 mojo_ipc::BluetoothResultPtr BluetoothFetcher::FetchBluetoothInfo() {
+  BluetoothClient* bluetooth_client = context_->bluetooth_client();
+  DCHECK(bluetooth_client);
+
   std::map<dbus::ObjectPath, uint32_t> num_connected_devices;
-  std::vector<dbus::ObjectPath> devices = bluetooth_client_->GetDevices();
+  std::vector<dbus::ObjectPath> devices = bluetooth_client->GetDevices();
   for (const auto& device : devices) {
     const BluetoothClient::DeviceProperties* device_properties =
-        bluetooth_client_->GetDeviceProperties(device);
+        bluetooth_client->GetDeviceProperties(device);
     if (!device_properties || !device_properties->connected.value())
       continue;
 
@@ -43,10 +46,10 @@ mojo_ipc::BluetoothResultPtr BluetoothFetcher::FetchBluetoothInfo() {
   }
 
   std::vector<mojo_ipc::BluetoothAdapterInfoPtr> adapter_info;
-  std::vector<dbus::ObjectPath> adapters = bluetooth_client_->GetAdapters();
+  std::vector<dbus::ObjectPath> adapters = bluetooth_client->GetAdapters();
   for (const auto& adapter : adapters) {
     const BluetoothClient::AdapterProperties* adapter_properties =
-        bluetooth_client_->GetAdapterProperties(adapter);
+        bluetooth_client->GetAdapterProperties(adapter);
     if (!adapter_properties)
       continue;
 

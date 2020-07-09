@@ -41,8 +41,7 @@ CrosHealthd::CrosHealthd(Context* context)
 
   battery_fetcher_ = std::make_unique<BatteryFetcher>(context_);
 
-  bluetooth_fetcher_ =
-      std::make_unique<BluetoothFetcher>(context_->bluetooth_client());
+  bluetooth_fetcher_ = std::make_unique<BluetoothFetcher>(context_);
 
   cached_vpd_fetcher_ = std::make_unique<CachedVpdFetcher>(context_);
 

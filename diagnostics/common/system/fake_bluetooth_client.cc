@@ -11,29 +11,6 @@ namespace diagnostics {
 FakeBluetoothClient::FakeBluetoothClient() = default;
 FakeBluetoothClient::~FakeBluetoothClient() = default;
 
-std::vector<dbus::ObjectPath> FakeBluetoothClient::GetAdapters() {
-  NOTIMPLEMENTED() << "Use MockBluetoothClient to get adapters";
-  return {};
-}
-
-std::vector<dbus::ObjectPath> FakeBluetoothClient::GetDevices() {
-  NOTIMPLEMENTED() << "Use MockBluetoothClient to get devices";
-  return {};
-}
-
-const BluetoothClient::AdapterProperties*
-FakeBluetoothClient::GetAdapterProperties(
-    const dbus::ObjectPath& adapter_path) {
-  NOTIMPLEMENTED() << "Use MockBluetoothClient to get adapter properties";
-  return nullptr;
-}
-
-const BluetoothClient::DeviceProperties*
-FakeBluetoothClient::GetDeviceProperties(const dbus::ObjectPath& device_path) {
-  NOTIMPLEMENTED() << "Use MockBluetoothClient to get device properties";
-  return nullptr;
-}
-
 bool FakeBluetoothClient::HasObserver(Observer* observer) const {
   return observers_.HasObserver(observer);
 }

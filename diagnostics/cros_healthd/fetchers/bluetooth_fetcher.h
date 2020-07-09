@@ -5,7 +5,7 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_FETCHERS_BLUETOOTH_FETCHER_H_
 #define DIAGNOSTICS_CROS_HEALTHD_FETCHERS_BLUETOOTH_FETCHER_H_
 
-#include "diagnostics/common/system/bluetooth_client.h"
+#include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -14,7 +14,7 @@ namespace diagnostics {
 // information.
 class BluetoothFetcher {
  public:
-  explicit BluetoothFetcher(BluetoothClient* bluetooth_client);
+  explicit BluetoothFetcher(Context* context);
   BluetoothFetcher(const BluetoothFetcher&) = delete;
   BluetoothFetcher& operator=(const BluetoothFetcher&) = delete;
   ~BluetoothFetcher();
@@ -24,7 +24,7 @@ class BluetoothFetcher {
 
  private:
   // Unowned pointer that outlives this BluetoothFetcher instance.
-  BluetoothClient* const bluetooth_client_ = nullptr;
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

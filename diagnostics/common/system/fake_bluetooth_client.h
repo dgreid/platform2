@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <dbus/object_path.h>
+#include <gmock/gmock.h>
 
 #include "diagnostics/common/system/bluetooth_client.h"
 
@@ -21,12 +22,16 @@ class FakeBluetoothClient : public BluetoothClient {
   ~FakeBluetoothClient() override;
 
   // BluetoothClient overrides:
-  std::vector<dbus::ObjectPath> GetAdapters() override;
-  std::vector<dbus::ObjectPath> GetDevices() override;
-  const BluetoothClient::AdapterProperties* GetAdapterProperties(
-      const dbus::ObjectPath& adapter_path) override;
-  const BluetoothClient::DeviceProperties* GetDeviceProperties(
-      const dbus::ObjectPath& device_path) override;
+  MOCK_METHOD(std::vector<dbus::ObjectPath>, GetAdapters, (), (override));
+  MOCK_METHOD(std::vector<dbus::ObjectPath>, GetDevices, (), (override));
+  MOCK_METHOD(const BluetoothClient::AdapterProperties*,
+              GetAdapterProperties,
+              (const dbus::ObjectPath&),
+              (override));
+  MOCK_METHOD(const BluetoothClient::DeviceProperties*,
+              GetDeviceProperties,
+              (const dbus::ObjectPath&),
+              (override));
 
   bool HasObserver(Observer* observer) const;
 

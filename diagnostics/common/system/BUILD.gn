@@ -38,7 +38,6 @@ if (use.test || use.fuzzer) {
     sources = [
       "fake_bluetooth_client.cc",
       "fake_powerd_adapter.cc",
-      "mock_bluetooth_client.cc",
       "mock_debugd_adapter.cc",
     ]
   }
