@@ -239,7 +239,8 @@ bool WriteResolvConf(const std::vector<string> nameservers,
 ServiceImpl::ServiceImpl(std::unique_ptr<vm_tools::maitred::Init> init)
     : init_(std::move(init)),
       lxd_env_({{"LXD_DIR", "/mnt/stateful/lxd"},
-                {"LXD_CONF", "/mnt/stateful/lxd_conf"}}) {
+                {"LXD_CONF", "/mnt/stateful/lxd_conf"},
+                {"GOTRACEBACK", "crash"}}) {
   if (!USE_ALLOW_PRIVILEGED_CONTAINERS)
     lxd_env_.emplace("LXD_UNPRIVILEGED_ONLY", "true");
 }
