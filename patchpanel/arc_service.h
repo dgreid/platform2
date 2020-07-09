@@ -49,41 +49,27 @@ class ArcService {
   // configurations, if any, are currently associated to TAP devices.
   std::vector<const Device::Config*> GetDeviceConfigs() const;
 
- private:
-  // Returns true if the service has been started for ARC container or ARCVM.
-  bool IsStarted() const;
-
   // Callback from ShillClient, invoked whenever the device list changes.
-  // |devices_| will contain all devices currently connected to shill
+  // |shill_devices_| will contain all devices currently connected to shill
   // (e.g. "eth0", "wlan0", etc).
   void OnDevicesChanged(const std::set<std::string>& added,
                         const std::set<std::string>& removed);
 
-  // Build and configure an ARC device for the interface |name| provided by
-  // Shill. The new device will be added to |devices_|. If ArcService is
-  // already running, the device will be started.
+ private:
+  // Returns true if the service has been started for ARC container or ARCVM.
+  bool IsStarted() const;
+
+  // Build and configure the ARC datapath for the physical device |ifname|
+  // provided by Shill.
   void AddDevice(const std::string& ifname);
 
-  // Deletes the ARC device; if ArcService is running, the device will be
-  // stopped first.
+  // Teardown the ARC datapath associated with the physical device |ifname| and
+  // stops forwarding services.
   void RemoveDevice(const std::string& ifname);
-
-  // Starts a device by setting up the bridge and configuring some NAT rules,
-  // then invoking the container or VM specific start routine.
-  void StartDevice(Device* device);
-
-  // Stops and cleans up any virtual interfaces and associated datapath.
-  void StopDevice(Device* device);
 
   // Creates device configurations for all available IPv4 subnets which will be
   // assigned to devices as they are added.
   void AllocateAddressConfigs();
-
-  // This function will temporarily remove existing devices, reallocate
-  // address configurations and re-add existing devices. This is necessary to
-  // properly handle the IPv4 addressing binding difference between ARC++ and
-  // ARCVM.
-  void ReallocateAddressConfigs();
 
   // Reserve a configuration for an interface.
   std::unique_ptr<Device::Config> AcquireConfig(const std::string& ifname);
@@ -112,24 +98,11 @@ class ArcService {
   std::unique_ptr<Device> arc_device_;
   // The PID of the ARC container instance or the CID of ARCVM instance.
   uint32_t id_;
+  // All devices currently managed by shill.
+  std::set<std::string> shill_devices_;
 
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_OnStartDevice);
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_FailsToConfigureInterface);
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_OnStopDevice);
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_Start);
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_FailsToCreateInterface);
-  FRIEND_TEST(ArcServiceTest, ContainerImpl_Stop);
   FRIEND_TEST(ArcServiceTest, NotStarted_AddDevice);
   FRIEND_TEST(ArcServiceTest, NotStarted_AddRemoveDevice);
-  FRIEND_TEST(ArcServiceTest, StableArcVmMacAddrs);
-  FRIEND_TEST(ArcServiceTest, StopDevice);
-  FRIEND_TEST(ArcServiceTest, VerifyAddrConfigs);
-  FRIEND_TEST(ArcServiceTest, VerifyAddrOrder);
-  FRIEND_TEST(ArcServiceTest, VmImpl_Start);
-  FRIEND_TEST(ArcServiceTest, VmImpl_StartDevice);
-  FRIEND_TEST(ArcServiceTest, VmImpl_StartMultipleDevices);
-  FRIEND_TEST(ArcServiceTest, VmImpl_Stop);
-  FRIEND_TEST(ArcServiceTest, VmImpl_StopDevice);
 
   base::WeakPtrFactory<ArcService> weak_factory_{this};
   DISALLOW_COPY_AND_ASSIGN(ArcService);

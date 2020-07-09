@@ -94,8 +94,9 @@ TEST_F(ArcServiceTest, NotStarted_AddDevice) {
   EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0"))).Times(0);
 
   auto svc = NewService(GuestMessage::ARC);
-  svc->AddDevice("eth0");
-  EXPECT_TRUE(svc->devices_.find("eth0") != svc->devices_.end());
+  svc->OnDevicesChanged({"eth0"}, {});
+  EXPECT_TRUE(svc->devices_.find("eth0") == svc->devices_.end());
+  EXPECT_FALSE(svc->shill_devices_.find("eth0") == svc->shill_devices_.end());
 }
 
 TEST_F(ArcServiceTest, NotStarted_AddRemoveDevice) {
@@ -107,9 +108,10 @@ TEST_F(ArcServiceTest, NotStarted_AddRemoveDevice) {
   EXPECT_CALL(*datapath_, RemoveBridge(StrEq("arc_eth0"))).Times(0);
 
   auto svc = NewService(GuestMessage::ARC);
-  svc->AddDevice("eth0");
-  svc->RemoveDevice("eth0");
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->OnDevicesChanged({}, {"eth0"});
   EXPECT_TRUE(svc->devices_.find("eth0") == svc->devices_.end());
+  EXPECT_TRUE(svc->shill_devices_.find("eth0") == svc->shill_devices_.end());
 }
 
 TEST_F(ArcServiceTest, VerifyAddrConfigs) {
@@ -129,14 +131,18 @@ TEST_F(ArcServiceTest, VerifyAddrConfigs) {
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(_, _))
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddVirtualInterfacePair(StrEq("arc_netns"), _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(_, true))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
 
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
-  svc->AddDevice("eth1");
-  svc->AddDevice("wlan0");
-  svc->AddDevice("wlan1");
-  svc->AddDevice("wwan0");
+  svc->OnDevicesChanged({"eth0", "eth1", "wlan0", "wlan1", "wwan0"}, {});
 }
 
 TEST_F(ArcServiceTest, VerifyAddrOrder) {
@@ -152,13 +158,20 @@ TEST_F(ArcServiceTest, VerifyAddrOrder) {
   EXPECT_CALL(*datapath_, AddInboundIPv4DNAT(_, _))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(*datapath_, AddOutboundIPv4(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddVirtualInterfacePair(StrEq("arc_netns"), _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(_, true))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(_, _)).WillRepeatedly(Return(true));
 
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
-  svc->AddDevice("wlan0");
-  svc->AddDevice("eth0");
-  svc->RemoveDevice("eth0");
-  svc->AddDevice("eth0");
+  svc->OnDevicesChanged({"wlan0"}, {});
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->OnDevicesChanged({}, {"eth0"});
+  svc->OnDevicesChanged({"eth0"}, {});
 }
 
 TEST_F(ArcServiceTest, StableArcVmMacAddrs) {
@@ -206,13 +219,14 @@ TEST_F(ArcServiceTest, ContainerImpl_Start) {
 TEST_F(ArcServiceTest, ContainerImpl_FailsToCreateInterface) {
   EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
-      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
                                       StrEq("arc0")))
       .WillOnce(Return(false));
+
   EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _)).Times(0);
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true)).Times(0);
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30)).Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
 
   auto svc = NewService(GuestMessage::ARC);
@@ -222,8 +236,6 @@ TEST_F(ArcServiceTest, ContainerImpl_FailsToCreateInterface) {
 TEST_F(ArcServiceTest, ContainerImpl_FailsToConfigureInterface) {
   EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
       .WillOnce(Return(true));
-  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
-      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
                                       StrEq("arc0")))
@@ -231,9 +243,9 @@ TEST_F(ArcServiceTest, ContainerImpl_FailsToConfigureInterface) {
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
       .WillOnce(Return(false));
+
   EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true)).Times(0);
-  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
-      .Times(0);
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30)).Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
 
   auto svc = NewService(GuestMessage::ARC);
@@ -306,7 +318,52 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
 
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
+  svc->OnDevicesChanged({"eth0"}, {});
+}
+
+TEST_F(ArcServiceTest, ContainerImpl_StartAfterDevice) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
+  // Expectations for arc0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetharc0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arcbr0"), StrEq("vetharc0")))
+      .WillOnce(Return(true));
+  // Expectations for eth0 setup.
+  EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_,
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetheth0"),
+                                      StrEq("eth0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("eth0"), _, kFirstEthGuestIP,
+                                             30, true, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, ToggleInterface(StrEq("vetheth0"), true))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddToBridge(StrEq("arc_eth0"), StrEq("vetheth0")))
+      .WillOnce(Return(true));
+  EXPECT_CALL(forwarder_,
+              StartForwarding(StrEq("eth0"), StrEq("arc_eth0"), _, _));
+  EXPECT_CALL(
+      *datapath_,
+      AddInboundIPv4DNAT(StrEq("eth0"), IPv4AddressToString(kFirstEthGuestIP)))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, AddOutboundIPv4(StrEq("arc_eth0")))
+      .WillOnce(Return(true));
+
+  auto svc = NewService(GuestMessage::ARC);
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->Start(kTestPID);
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_Stop) {
@@ -381,8 +438,8 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStopDevice) {
 
   auto svc = NewService(GuestMessage::ARC);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
-  svc->RemoveDevice("eth0");
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->OnDevicesChanged({}, {"eth0"});
 }
 
 // VM Impl
@@ -433,7 +490,7 @@ TEST_F(ArcServiceTest, VmImpl_StartDevice) {
 
   auto svc = NewService(GuestMessage::ARC_VM);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
+  svc->OnDevicesChanged({"eth0"}, {});
 }
 
 TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
@@ -483,9 +540,9 @@ TEST_F(ArcServiceTest, VmImpl_StartMultipleDevices) {
 
   auto svc = NewService(GuestMessage::ARC_VM);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
-  svc->AddDevice("wlan0");
-  svc->AddDevice("eth1");
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->OnDevicesChanged({"wlan0"}, {});
+  svc->OnDevicesChanged({"eth1"}, {});
 }
 
 TEST_F(ArcServiceTest, VmImpl_Stop) {
@@ -553,8 +610,8 @@ TEST_F(ArcServiceTest, VmImpl_StopDevice) {
 
   auto svc = NewService(GuestMessage::ARC_VM);
   svc->Start(kTestPID);
-  svc->AddDevice("eth0");
-  svc->RemoveDevice("eth0");
+  svc->OnDevicesChanged({"eth0"}, {});
+  svc->OnDevicesChanged({}, {"eth0"});
 }
 
 }  // namespace patchpanel
