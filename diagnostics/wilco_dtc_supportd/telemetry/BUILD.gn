@@ -28,7 +28,10 @@ if (use.test) {
     deps = [ "//diagnostics/common:libcommon_test_utils" ]
     sources = [
       "bluetooth_event_service_impl_test.cc",
-      "ec_service_test.cc",
+
+      # TODO: crbug.com/1100960
+      # Disabling the test as it is causing flaky compiler crash in CQ.
+      #"ec_service_test.cc",
       "ec_service_test_utils.cc",
       "ec_service_test_utils_test.cc",
       "fake_bluetooth_event_service.cc",
