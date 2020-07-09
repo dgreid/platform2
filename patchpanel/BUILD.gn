@@ -64,6 +64,7 @@ libpatchpanel_sources = [
   "adb_proxy.cc",
   "arc_service.cc",
   "broadcast_forwarder.cc",
+  "counters_service.cc",
   "crostini_service.cc",
   "datapath.cc",
   "device.cc",
