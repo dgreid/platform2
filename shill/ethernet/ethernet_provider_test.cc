@@ -175,7 +175,7 @@ TEST_F(EthernetProviderTest, MultipleServices) {
   provider_.Stop();
   EXPECT_EQ(provider_.services_.size(), 0);
   EXPECT_EQ(ethernet_service1, provider_.service());
-  EXPECT_TRUE(ethernet_service1->HasEthernet());
+  EXPECT_FALSE(ethernet_service1->HasEthernet());
 }
 
 }  // namespace shill

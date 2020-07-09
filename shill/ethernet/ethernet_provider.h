@@ -43,6 +43,7 @@ class EthernetProvider : public ProviderInterface {
   virtual EthernetServiceRefPtr CreateService(base::WeakPtr<Ethernet> ethernet);
   bool LoadGenericEthernetService();
   virtual void RefreshGenericEthernetService();
+  // |service| should be non-null in both Register- and DeregisterService.
   virtual void RegisterService(EthernetServiceRefPtr service);
   virtual void DeregisterService(EthernetServiceRefPtr service);
 

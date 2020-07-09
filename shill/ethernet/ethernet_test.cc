@@ -102,7 +102,6 @@ class EthernetTest : public testing::Test {
   ~EthernetTest() override {}
 
   void SetUp() override {
-    SetService(mock_service_);
     ethernet_->rtnl_handler_ = &rtnl_handler_;
     ethernet_->sockets_.reset(mock_sockets_);  // Transfers ownership.
 
@@ -133,7 +132,6 @@ class EthernetTest : public testing::Test {
 #endif  // DISABLE_WIRED_8021X
     ethernet_->set_dhcp_provider(nullptr);
     ethernet_->sockets_.reset();
-    ethernet_->Stop(nullptr, EnabledStateChangedCallback());
     Mock::VerifyAndClearExpectations(&manager_);
   }
 
@@ -156,9 +154,16 @@ class EthernetTest : public testing::Test {
   }
   const PropertyStore& GetStore() { return ethernet_->store(); }
   void StartEthernet() {
+    EXPECT_CALL(ethernet_provider_, CreateService(_))
+        .WillOnce(Return(mock_service_));
+    EXPECT_CALL(ethernet_provider_, RegisterService(Eq(mock_service_)));
     EXPECT_CALL(rtnl_handler_,
                 SetInterfaceFlags(kInterfaceIndex, IFF_UP, IFF_UP));
     ethernet_->Start(nullptr, EnabledStateChangedCallback());
+  }
+  void StopEthernet() {
+    EXPECT_CALL(ethernet_provider_, DeregisterService(Eq(mock_service_)));
+    ethernet_->Stop(nullptr, EnabledStateChangedCallback());
   }
   void SetUsbEthernetMacAddressSource(const std::string& source,
                                       Error* error,
@@ -269,24 +274,18 @@ TEST_F(EthernetTest, Construct) {
   EXPECT_TRUE(GetStore().Contains(kEapAuthenticationCompletedProperty));
   EXPECT_TRUE(GetStore().Contains(kEapAuthenticatorDetectedProperty));
 #endif  // DISABLE_WIRED_8021X
-  EXPECT_NE(nullptr, GetService());
+  EXPECT_EQ(nullptr, GetService());
 }
 
 TEST_F(EthernetTest, StartStop) {
-  Service* service = GetService().get();
-  EXPECT_CALL(ethernet_provider_, RegisterService(Eq(service)));
   StartEthernet();
-
-  EXPECT_CALL(ethernet_provider_, DeregisterService(Eq(service))).Times(2);
-  ethernet_->Stop(nullptr, EnabledStateChangedCallback());
-
-  // Ethernet device retains its service.
-  EXPECT_NE(nullptr, GetService());
+  Service* service = GetService().get();
+  EXPECT_EQ(service, mock_service_);
+  StopEthernet();
 }
 
 TEST_F(EthernetTest, LinkEvent) {
   StartEthernet();
-  SetService(mock_service_);
 
   // Link-down event while already down.
   EXPECT_CALL(manager_, DeregisterService(_)).Times(0);
@@ -355,11 +354,12 @@ TEST_F(EthernetTest, LinkEvent) {
   EXPECT_CALL(manager_, UpdateEnabledTechnologies()).Times(AnyNumber());
   EXPECT_CALL(manager_, ethernet_provider())
       .WillRepeatedly(Return(&ethernet_provider_));
+
+  StopEthernet();
 }
 
 TEST_F(EthernetTest, ConnectToLinkDown) {
   StartEthernet();
-  SetService(mock_service_);
   SetLinkUp(false);
   EXPECT_EQ(nullptr, GetSelectedService());
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _)).Times(0);
@@ -368,11 +368,11 @@ TEST_F(EthernetTest, ConnectToLinkDown) {
   EXPECT_CALL(*mock_service_, SetState(_)).Times(0);
   ethernet_->ConnectTo(mock_service_.get());
   EXPECT_EQ(nullptr, GetSelectedService());
+  StopEthernet();
 }
 
 TEST_F(EthernetTest, ConnectToFailure) {
   StartEthernet();
-  SetService(mock_service_);
   SetLinkUp(true);
   EXPECT_EQ(nullptr, GetSelectedService());
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _))
@@ -383,11 +383,11 @@ TEST_F(EthernetTest, ConnectToFailure) {
   EXPECT_CALL(*mock_service_, SetState(Service::kStateFailure));
   ethernet_->ConnectTo(mock_service_.get());
   EXPECT_EQ(mock_service_, GetSelectedService());
+  StopEthernet();
 }
 
 TEST_F(EthernetTest, ConnectToSuccess) {
   StartEthernet();
-  SetService(mock_service_);
   SetLinkUp(true);
   EXPECT_EQ(nullptr, GetSelectedService());
   EXPECT_CALL(dhcp_provider_, CreateIPv4Config(_, _, _, _))
@@ -403,6 +403,7 @@ TEST_F(EthernetTest, ConnectToSuccess) {
   EXPECT_CALL(*mock_service_, SetState(Service::kStateIdle));
   ethernet_->DisconnectFrom(mock_service_.get());
   EXPECT_EQ(nullptr, GetSelectedService());
+  StopEthernet();
 }
 
 #if !defined(DISABLE_WIRED_8021X)
@@ -564,6 +565,7 @@ TEST_F(EthernetTest, StopSupplicant) {
 }
 
 TEST_F(EthernetTest, Certification) {
+  StartEthernet();
   const string kSubjectName("subject-name");
   const uint32_t kDepth = 123;
   // Should not crash due to no service_.
@@ -571,6 +573,7 @@ TEST_F(EthernetTest, Certification) {
   EXPECT_CALL(*mock_service_, AddEAPCertification(kSubjectName, kDepth));
   SetService(mock_service_);
   TriggerCertification(kSubjectName, kDepth);
+  StopEthernet();
 }
 #endif  // DISABLE_WIRED_8021X
 
@@ -607,8 +610,6 @@ TEST_F(EthernetTest, TogglePPPoE) {
     EXPECT_TRUE(error.IsSuccess());
     EXPECT_EQ(GetService()->technology(), transition.second);
   }
-
-  EXPECT_CALL(ethernet_provider_, DeregisterService(_));
 }
 
 #else
@@ -728,6 +729,7 @@ TEST_F(EthernetTest, SetMacAddressNoServiceStorageIdentifierChange) {
 }
 
 TEST_F(EthernetTest, SetMacAddressServiceStorageIdentifierChange) {
+  StartEthernet();
   constexpr char kMacAddress[] = "123456abcdef";
 
   scoped_refptr<StrictMock<MockProfile>> mock_profile(
@@ -741,6 +743,7 @@ TEST_F(EthernetTest, SetMacAddressServiceStorageIdentifierChange) {
 
   // Must set nullptr to avoid mock objects leakage.
   mock_service_->set_profile(nullptr);
+  StopEthernet();
 }
 
 }  // namespace shill

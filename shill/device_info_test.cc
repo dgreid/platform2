@@ -454,10 +454,6 @@ TEST_F(DeviceInfoTest, CreateDeviceEthernet) {
   IPAddress address = CreateInterfaceAddress();
 
   // An Ethernet device should cause routes and addresses to be flushed.
-  StrictMock<MockEthernetProvider> ethernet_provider;
-  EXPECT_CALL(manager_, ethernet_provider())
-      .WillOnce(Return(&ethernet_provider));
-  EXPECT_CALL(ethernet_provider, CreateService(_));
   EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
   EXPECT_CALL(rtnl_handler_,
               RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));
@@ -478,10 +474,6 @@ TEST_F(DeviceInfoTest, CreateDeviceVirtioEthernet) {
   IPAddress address = CreateInterfaceAddress();
 
   // VirtioEthernet is identical to Ethernet from the perspective of this test.
-  StrictMock<MockEthernetProvider> ethernet_provider;
-  EXPECT_CALL(manager_, ethernet_provider())
-      .WillOnce(Return(&ethernet_provider));
-  EXPECT_CALL(ethernet_provider, CreateService(_));
   EXPECT_CALL(routing_table_, FlushRoutes(kTestDeviceIndex)).Times(1);
   EXPECT_CALL(rtnl_handler_,
               RemoveInterfaceAddress(kTestDeviceIndex, IsIPAddress(address)));

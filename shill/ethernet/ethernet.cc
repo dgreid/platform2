@@ -121,7 +121,6 @@ Ethernet::Ethernet(Manager* manager,
   eap_listener_->set_request_received_callback(
       base::Bind(&Ethernet::OnEapDetected, weak_ptr_factory_.GetWeakPtr()));
 #endif  // DISABLE_WIRED_8021X
-  service_ = CreateEthernetService();
   SLOG(this, 2) << "Ethernet device " << link_name << " initialized.";
 
   if (bus_type_ == kDeviceBusTypeUsb) {
@@ -139,9 +138,10 @@ void Ethernet::Start(Error* error,
   rtnl_handler()->SetInterfaceFlags(interface_index(), IFF_UP, IFF_UP);
   OnEnabledStateChanged(EnabledStateChangedCallback(), Error());
   LOG(INFO) << "Registering " << link_name() << " with manager.";
-  if (!manager()->HasService(service_)) {
-    RegisterService(service_);
+  if (!service_) {
+    service_ = CreateEthernetService();
   }
+  RegisterService(service_);
   if (error)
     error->Reset();  // indicate immediate completion
 }
@@ -149,6 +149,13 @@ void Ethernet::Start(Error* error,
 void Ethernet::Stop(Error* error,
                     const EnabledStateChangedCallback& /*callback*/) {
   DeregisterService(service_);
+  // EthernetProvider::DeregisterService will ResetEthernet() when the Service
+  // being deregistered is the only Service remaining (instead of releasing the
+  // Service entirely) so that the ethernet_any service continues to live. When
+  // this happens, disassociate the EthernetService here as well.
+  if (!service_->HasEthernet()) {
+    service_ = nullptr;
+  }
 #if !defined(DISABLE_WIRED_8021X)
   StopSupplicant();
 #endif  // DISABLE_WIRED_8021X
@@ -165,8 +172,10 @@ void Ethernet::LinkEvent(unsigned int flags, unsigned int change) {
     // We SetupWakeOnLan() here, instead of in Start(), because with
     // r8139, "ethtool -s eth0 wol g" fails when no cable is plugged
     // in.
-    manager()->UpdateService(service_);
-    service_->OnVisibilityChanged();
+    if (service_) {
+      manager()->UpdateService(service_);
+      service_->OnVisibilityChanged();
+    }
     SetupWakeOnLan();
 #if !defined(DISABLE_WIRED_8021X)
     eap_listener_->Start();
@@ -175,8 +184,10 @@ void Ethernet::LinkEvent(unsigned int flags, unsigned int change) {
     link_up_ = false;
     adaptor()->EmitBoolChanged(kLinkUpProperty, link_up_);
     DropConnection();
-    manager()->UpdateService(service_);
-    service_->OnVisibilityChanged();
+    if (service_) {
+      manager()->UpdateService(service_);
+      service_->OnVisibilityChanged();
+    }
 #if !defined(DISABLE_WIRED_8021X)
     is_eap_detected_ = false;
     adaptor()->EmitBoolChanged(kEapAuthenticatorDetectedProperty,
@@ -215,6 +226,7 @@ bool Ethernet::Save(StoreInterface* storage) {
 }
 
 void Ethernet::ConnectTo(EthernetService* service) {
+  CHECK(service_) << "Service should not be null";
   CHECK(service == service_.get()) << "Ethernet was asked to connect the "
                                    << "wrong service?";
   CHECK(!GetPPPoEMode(nullptr)) << "We should never connect in PPPoE mode!";
@@ -239,6 +251,7 @@ std::string Ethernet::GetStorageIdentifier() const {
 }
 
 void Ethernet::DisconnectFrom(EthernetService* service) {
+  CHECK(service_) << "Service should not be null";
   CHECK(service == service_.get()) << "Ethernet was asked to disconnect the "
                                    << "wrong service?";
   DropConnection();
@@ -364,7 +377,9 @@ bool Ethernet::StartEapAuthentication() {
   params.Set<uint32_t>(WPASupplicant::kNetworkPropertyEapolFlags, 0);
   params.Set<uint32_t>(WPASupplicant::kNetworkPropertyScanSSID, 0);
 
-  service_->ClearEAPCertification();
+  if (service_) {
+    service_->ClearEAPCertification();
+  }
   eap_state_handler_.Reset();
 
   if (!supplicant_network_path_.value().empty()) {
@@ -409,8 +424,10 @@ void Ethernet::SetIsEapAuthenticated(bool is_eap_authenticated) {
 
   // If our EAP authentication state changes, we have now joined a different
   // network.  Restart the DHCP process and any other connection state.
-  DisconnectFrom(service_.get());
-  ConnectTo(service_.get());
+  if (service_) {
+    DisconnectFrom(service_.get());
+    ConnectTo(service_.get());
+  }
   is_eap_authenticated_ = is_eap_authenticated;
   adaptor()->EmitBoolChanged(kEapAuthenticationCompletedProperty,
                              is_eap_authenticated_);
@@ -695,7 +712,10 @@ void Ethernet::OnSetInterfaceMacResponse(const std::string& mac_address_source,
 void Ethernet::set_mac_address(const std::string& new_mac_address) {
   SLOG(this, 2) << __func__ << " " << new_mac_address;
 
-  ProfileRefPtr profile = service_->profile();
+  ProfileRefPtr profile;
+  if (service_) {
+    profile = service_->profile();
+  }
   // Abandon and adopt service if service storage identifier will change after
   // changing ethernet MAC address.
   if (permanent_mac_address_.empty() && profile &&
@@ -707,8 +727,10 @@ void Ethernet::set_mac_address(const std::string& new_mac_address) {
     Device::set_mac_address(new_mac_address);
   }
 
-  DisconnectFrom(service_.get());
-  ConnectTo(service_.get());
+  if (service_) {
+    DisconnectFrom(service_.get());
+    ConnectTo(service_.get());
+  }
 }
 
 std::string Ethernet::GetPermanentMacAddressFromKernel() {

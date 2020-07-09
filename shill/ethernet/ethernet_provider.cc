@@ -75,6 +75,7 @@ EthernetServiceRefPtr EthernetProvider::CreateService(
 
 void EthernetProvider::RegisterService(EthernetServiceRefPtr service) {
   SLOG(this, 2) << __func__;
+  CHECK(service);
   // Add the service to the services_ list and register it with the Manager.
   // A service is registered with the Manager if and only if it is also
   // registered with the EthernetProvider.
@@ -88,6 +89,7 @@ void EthernetProvider::RegisterService(EthernetServiceRefPtr service) {
 
 void EthernetProvider::DeregisterService(EthernetServiceRefPtr service) {
   SLOG(this, 2) << __func__;
+  CHECK(service);
   // Remove the service from the services_ list if it is not the only remaining
   // service. Otherwise, turn it into the ethernet_any service. A service is
   // deregistered with the Manager if and only if it is also deregistered with
@@ -130,10 +132,18 @@ void EthernetProvider::RefreshGenericEthernetService() {
 
   // The first Ethernet service has changed. Remove the ethernet_any storage ID
   // from the old ethernet_any service and configure it according to its new
-  // storage ID (MAC address of the associated device).
+  // storage ID (MAC address of the associated device). If it has no associated
+  // Device, release the service as there should no longer be any other
+  // references to it.
   service_->ResetStorageIdentifier();
-  if (service_->HasEthernet() && base::Contains(services_, service_)) {
-    manager_->MatchProfileWithService(service_);
+  if (base::Contains(services_, service_)) {
+    if (service_->HasEthernet()) {
+      manager_->MatchProfileWithService(service_);
+    } else {
+      // There's no associated Device and it's no longer the ethernet_any
+      // service. Get rid of this service completely.
+      DeregisterService(service_);
+    }
   }
 
   // Set the storage ID of the new first Ethernet service to be ethernet_any and
@@ -162,8 +172,7 @@ void EthernetProvider::Stop() {
   SLOG(this, 2) << __func__;
   while (!services_.empty()) {
     EthernetServiceRefPtr service = services_.back();
-    base::Erase(services_, service);
-    manager_->DeregisterService(service);
+    DeregisterService(service);
   }
   // Do not destroy the service, since devices may or may not have been
   // removed as the provider is stopped, and we'd like them to continue
