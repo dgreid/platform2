@@ -9,6 +9,10 @@ namespace diagnostics {
 FakeSystemConfig::FakeSystemConfig() = default;
 FakeSystemConfig::~FakeSystemConfig() = default;
 
+bool FakeSystemConfig::FioSupported() {
+  return fio_supported_;
+}
+
 bool FakeSystemConfig::HasBacklight() {
   return has_backlight_;
 }
@@ -31,6 +35,10 @@ bool FakeSystemConfig::NvmeSupported() {
 
 bool FakeSystemConfig::SmartCtlSupported() {
   return smart_ctrl_supported_;
+}
+
+void FakeSystemConfig::SetFioSupported(bool value) {
+  fio_supported_ = value;
 }
 
 void FakeSystemConfig::SetHasBacklight(bool value) {

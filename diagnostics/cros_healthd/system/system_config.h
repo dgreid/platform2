@@ -25,6 +25,7 @@ class SystemConfig final : public SystemConfigInterface {
   ~SystemConfig() override;
 
   // SystemConfigInterface overrides:
+  bool FioSupported() override;
   bool HasBacklight() override;
   bool HasBattery() override;
   bool HasSmartBattery() override;

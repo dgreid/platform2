@@ -32,6 +32,8 @@ extern const char kHasSkuNumberProperty[];
 extern const char kNvmeToolPath[];
 // Smartctl utility program path relative to the root directory.
 extern const char kSmartctlToolPath[];
+// Fio utility program path relative to the root directory.
+extern const char kFioToolPath[];
 
 }  // namespace diagnostics
 

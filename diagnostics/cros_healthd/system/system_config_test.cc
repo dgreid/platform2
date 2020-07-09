@@ -35,6 +35,15 @@ class SystemConfigTest : public ::testing::Test {
   std::unique_ptr<SystemConfig> system_config_;
 };
 
+TEST_F(SystemConfigTest, FioSupportedTrue) {
+  WriteFileAndCreateParentDirs(GetTempPath().AppendASCII(kFioToolPath), "");
+  ASSERT_TRUE(system_config()->FioSupported());
+}
+
+TEST_F(SystemConfigTest, FioSupportedFalse) {
+  ASSERT_FALSE(system_config()->FioSupported());
+}
+
 TEST_F(SystemConfigTest, TestBacklightTrue) {
   fake_cros_config()->SetString(kBacklightPropertiesPath, kHasBacklightProperty,
                                 "");

@@ -11,6 +11,9 @@ class SystemConfigInterface {
  public:
   virtual ~SystemConfigInterface() = default;
 
+  // Returns if the device has the fio utility.
+  virtual bool FioSupported() = 0;
+
   // Returns if the device has a backlight.
   virtual bool HasBacklight() = 0;
 

@@ -233,7 +233,6 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
       mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
-      mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch};
 
   if (context_->system_config()->HasBattery()) {
@@ -251,6 +250,10 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
 
   if (context_->system_config()->SmartCtlSupported()) {
     available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck);
+  }
+
+  if (context_->system_config()->FioSupported()) {
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kDiskRead);
   }
 }
 
