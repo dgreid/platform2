@@ -15,7 +15,9 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/location.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/posix/eintr_wrapper.h>
+#include <base/task/single_thread_task_executor.h>
 #include <gtest/gtest.h>
 
 #include <brillo/message_loops/base_message_loop.h>
@@ -51,7 +53,7 @@ class MessageLoopTest : public ::testing::Test {
     EXPECT_TRUE(this->loop_.get());
   }
 
-  std::unique_ptr<base::MessageLoopForIO> base_loop_;
+  std::unique_ptr<base::SingleThreadTaskExecutor> base_loop_;
 
   std::unique_ptr<MessageLoop> loop_;
 
@@ -63,8 +65,9 @@ class MessageLoopTest : public ::testing::Test {
 
 template <>
 void MessageLoopTest<BaseMessageLoop>::MessageLoopSetUp() {
-  base_loop_.reset(new base::MessageLoopForIO());
-  loop_.reset(new BaseMessageLoop(base_loop_.get()));
+  base_loop_.reset(
+      new base::SingleThreadTaskExecutor(base::MessagePumpType::IO));
+  loop_.reset(new BaseMessageLoop(base_loop_->task_runner()));
   loop_->SetAsCurrent();
 }
 

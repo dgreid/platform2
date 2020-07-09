@@ -26,6 +26,7 @@
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include <brillo/location_logging.h>
@@ -45,18 +46,22 @@ const int BaseMessageLoop::kUninitializedMinor = -2;
 
 BaseMessageLoop::BaseMessageLoop() {
   CHECK(!base::ThreadTaskRunnerHandle::IsSet())
-      << "You can't create a base::MessageLoopForIO when another "
-         "base::MessageLoop is already created for this thread.";
-  owned_base_loop_.reset(new base::MessageLoopForIO());
-  base_loop_ = owned_base_loop_.get();
-  watcher_ =
-      std::make_unique<base::FileDescriptorWatcher>(base_loop_->task_runner());
+      << "You can't create a base::SingleThreadTaskExecutor when another "
+         "base::MessageLoop or base::SingleThreadTaskExecutor is already "
+         "created for this thread.";
+  owned_task_executor_.reset(
+      new base::SingleThreadTaskExecutor(base::MessagePumpType::IO));
+  task_runner_ = owned_task_executor_->task_runner();
+  watcher_ = std::make_unique<base::FileDescriptorWatcher>(task_runner_);
 }
 
+BaseMessageLoop::BaseMessageLoop(
+    scoped_refptr<base::SingleThreadTaskRunner> task_runner)
+    : task_runner_(task_runner),
+      watcher_(std::make_unique<base::FileDescriptorWatcher>(task_runner)) {}
+
 BaseMessageLoop::BaseMessageLoop(base::MessageLoopForIO* base_loop)
-    : base_loop_(base_loop),
-      watcher_(std::make_unique<base::FileDescriptorWatcher>(
-          base_loop_->task_runner())) {}
+    : BaseMessageLoop(base_loop->task_runner()) {}
 
 BaseMessageLoop::~BaseMessageLoop() {
   // Note all pending canceled delayed tasks when destroying the message loop.
@@ -80,7 +85,7 @@ MessageLoop::TaskId BaseMessageLoop::PostDelayedTask(
     base::OnceClosure task,
     base::TimeDelta delay) {
   TaskId task_id =  NextTaskId();
-  bool base_scheduled = base_loop_->task_runner()->PostDelayedTask(
+  bool base_scheduled = task_runner_->PostDelayedTask(
       from_here,
       base::BindOnce(&BaseMessageLoop::OnRanPostedTask,
                      weak_ptr_factory_.GetWeakPtr(), task_id),
