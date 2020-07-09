@@ -25,7 +25,7 @@ TEST_F(ConfigTest, ParseCommandLineSourceMode) {
     Config config;
     base::CommandLine command_line_without_source(kCrosLogProgramPath);
     EXPECT_TRUE(config.ParseCommandLineArgs(&command_line_without_source));
-    EXPECT_EQ(SourceMode::JOURNAL_LOG, config.source);
+    EXPECT_EQ(SourceMode::PLAINTEXT_LOG, config.source);
   }
 
   {
@@ -50,7 +50,7 @@ TEST_F(ConfigTest, ParseCommandLineSourceMode) {
     command_line_with_invalid_source.AppendSwitchASCII("source", "invalid");
     EXPECT_FALSE(
         config.ParseCommandLineArgs(&command_line_with_invalid_source));
-    EXPECT_EQ(SourceMode::JOURNAL_LOG, config.source);
+    EXPECT_EQ(SourceMode::PLAINTEXT_LOG, config.source);
   }
 }
 

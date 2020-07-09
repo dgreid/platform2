@@ -21,7 +21,7 @@ struct Config {
   bool ParseCommandLineArgs(const base::CommandLine* command_line);
 
   // Source of logs: see |SourceMode| enum class.
-  SourceMode source = SourceMode::JOURNAL_LOG;
+  SourceMode source = SourceMode::PLAINTEXT_LOG;
   // Formatting of logs which are shown.
   OutputMode output = OutputMode::SHORT;
   // Number to limit the lines of logs shown
