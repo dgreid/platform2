@@ -893,6 +893,72 @@ TEST_F(CrashCollectorTest, MetaData) {
   EXPECT_EQ(collector_.get_bytes_written(), expected_meta.size());
 }
 
+TEST_F(CrashCollectorTest, ErrorCollectionMetaData) {
+  // Set up metadata the collector will read
+  FilePath lsb_release = paths::Get("/etc/lsb-release");
+  std::string contents;
+  collector_.set_lsb_release_for_test(lsb_release);
+  const char kLsbContents[] =
+      "CHROMEOS_RELEASE_BOARD=lumpy\n"
+      "CHROMEOS_RELEASE_VERSION=6727.0.2015_01_26_0853\n"
+      "CHROMEOS_RELEASE_NAME=Chromium OS\n"
+      "CHROMEOS_RELEASE_CHROME_MILESTONE=82\n"
+      "CHROMEOS_RELEASE_DESCRIPTION=6727.0.2015_01_26_0853 (Test Build - foo)";
+  ASSERT_TRUE(test_util::CreateFile(lsb_release, kLsbContents));
+  base::Time os_time = base::Time::Now() - base::TimeDelta::FromDays(123);
+  // ext2/ext3 seem to have a timestamp granularity of 1s so round this time
+  // value down to the nearest second.
+  os_time = base::TimeDelta::FromSeconds(
+                (os_time - base::Time::UnixEpoch()).InSeconds()) +
+            base::Time::UnixEpoch();
+  ASSERT_TRUE(base::TouchFile(lsb_release, os_time, os_time));
+
+  std::unique_ptr<base::SimpleTestClock> test_clock =
+      std::make_unique<base::SimpleTestClock>();
+  test_clock->SetNow(base::Time::UnixEpoch() +
+                     base::TimeDelta::FromMilliseconds(kFakeNow));
+  collector_.set_test_clock(std::move(test_clock));
+
+  const char kKernelName[] = "Linux";
+  const char kKernelVersion[] = "3.8.11 #1 SMP Wed Aug 22 02:18:30 PDT 2018";
+  collector_.set_test_kernel_info(kKernelName, kKernelVersion);
+  collector_.set_crash_directory_for_test(test_dir_);
+
+  collector_.EnqueueCollectionErrorLog(
+      CrashCollector::kErrorUnsupported32BitCoreFile);
+
+  base::FilePath meta_file_path;
+  ASSERT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_dir_, "crash_reporter_failure.*.meta", &meta_file_path));
+
+  base::FilePath base_name = meta_file_path.BaseName().RemoveExtension();
+  base::FilePath pslog_name = base_name.AddExtension("pslog");
+  base::FilePath log_name = base_name.AddExtension("log");
+
+  EXPECT_TRUE(base::ReadFileToString(meta_file_path, &contents));
+  std::string expected_meta = StringPrintf(
+      "upload_var_collector=crash_reporter_failure\n"
+      "sig=crash_reporter-user-collection_unsupported-32bit-core-file\n"
+      "error_type=unsupported-32bit-core-file\n"
+      "upload_file_pslog=%s\n"
+      "upload_var_reportTimeMillis=%" PRId64
+      "\n"
+      "exec_name=crash_reporter_failure\n"
+      "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"
+      "ver=6727.0.2015_01_26_0853\n"
+      "upload_var_cros_milestone=82\n"
+      "os_millis=%" PRId64
+      "\n"
+      "upload_var_osName=%s\n"
+      "upload_var_osVersion=%s\n"
+      "payload=%s\n"
+      "done=1\n",
+      pslog_name.value().c_str(), kFakeNow,
+      (os_time - base::Time::UnixEpoch()).InMilliseconds(), kKernelName,
+      kKernelVersion, log_name.value().c_str());
+  EXPECT_EQ(expected_meta, contents);
+}
+
 // Test target of symlink is not overwritten.
 TEST_F(CrashCollectorTest, MetaDataDoesntOverwriteSymlink) {
   const char kSymlinkTarget[] = "important_file";

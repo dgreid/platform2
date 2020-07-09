@@ -29,6 +29,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/run_loop.h>
 #include <base/scoped_clear_last_error.h>
+#include <base/strings/strcat.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -1449,8 +1450,10 @@ void CrashCollector::EnqueueCollectionErrorLog(ErrorType error_type) {
     LOG(ERROR) << "Could not even get log directory; out of space?";
     return;
   }
-  AddCrashMetaData("sig", kCollectionErrorSignature);
-  AddCrashMetaData("error_type", GetErrorTypeSignature(error_type));
+
+  std::string type = GetErrorTypeSignature(error_type);
+  AddCrashMetaData("sig", base::StrCat({kCollectionErrorSignature, "_", type}));
+  AddCrashMetaData("error_type", type);
   FilePath log_path = GetCrashPath(crash_path, basename, "log");
 
   std::string error_log = brillo::GetLog();

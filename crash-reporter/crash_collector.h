@@ -192,6 +192,7 @@ class CrashCollector {
   FRIEND_TEST(CrashCollectorTest, GetUptime);
   FRIEND_TEST(CrashCollectorTest, Initialize);
   FRIEND_TEST(CrashCollectorTest, MetaData);
+  FRIEND_TEST(CrashCollectorTest, ErrorCollectionMetaData);
   FRIEND_TEST(CrashCollectorTest, MetaDataDoesntCreateSymlink);
   FRIEND_TEST(CrashCollectorTest, MetaDataDoesntOverwriteSymlink);
   FRIEND_TEST(CrashCollectorTest, CollectionLogsToUMA);
