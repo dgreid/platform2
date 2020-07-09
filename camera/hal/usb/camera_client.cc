@@ -889,8 +889,9 @@ bool CameraClient::RequestHandler::IsExternalCamera() {
 }
 
 uint64_t CameraClient::RequestHandler::CurrentBufferTimestamp() {
-  return IsExternalCamera() ? current_buffer_timestamp_in_user_
-                            : current_buffer_timestamp_in_v4l2_;
+  return device_info_.quirks & kQuirkUserSpaceTimestamp
+             ? current_buffer_timestamp_in_user_
+             : current_buffer_timestamp_in_v4l2_;
 }
 
 bool CameraClient::RequestHandler::ShouldEnableConstantFrameRate(

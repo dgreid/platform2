@@ -202,10 +202,9 @@ class CameraClient {
     // Returns true if the connected device is an external camera.
     bool IsExternalCamera();
 
-    // Returns the current buffer timestamp.  For built-in camera, it uses
-    // hardware timestamp from v4l2 buffer; for external camera, it uses
-    // software timestamp from userspace, because the hardware timestamp is not
-    // reliable and sometimes even jump backwards.
+    // Returns the current buffer timestamp. It chooses hardware timestamp from
+    // v4l2 buffer or software timestamp from userspace based on the device
+    // specific quirks.
     uint64_t CurrentBufferTimestamp();
 
     // Check whether we should enable constant frame rate according to metadata.

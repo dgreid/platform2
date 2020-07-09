@@ -428,6 +428,10 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
       VLOGF(1) << "Use a new id " << info.camera_id << " for camera "
                << model_id;
     }
+
+    // Uses software timestamp from userspace for external cameras, because the
+    // hardware timestamp is not reliable and sometimes even jump backwards.
+    info.quirks |= kQuirkUserSpaceTimestamp;
   }
 
   android::CameraMetadata static_metadata, request_template;

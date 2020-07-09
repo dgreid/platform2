@@ -34,6 +34,8 @@ const QuirksMap& GetQuirksMap() {
       {{"046d", "0876"}, kQuirkRestartOnTimeout},
       // IPEVO Ziggi-HD Plus
       {{"1778", "0225"}, kQuirkDisableFrameRateSetting},
+      // Chicony CNFFH37 (b/158957477)
+      {{"0c45", "6a05"}, kQuirkUserSpaceTimestamp},
   });
   return *kQuirksMap;
 }

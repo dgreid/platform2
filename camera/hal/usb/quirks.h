@@ -22,6 +22,7 @@ enum : uint32_t {
   kQuirkReportLeastFpsRanges = 1 << 3,
   kQuirkDisableFrameRateSetting = 1 << 4,
   kQuirkV1Device = 1 << 5,
+  kQuirkUserSpaceTimestamp = 1 << 6,
 };
 
 uint32_t GetQuirks(const std::string& vid, const std::string& pid);
