@@ -31,10 +31,6 @@ class FakeProcessRunner : public MinijailedProcessRunner {
     return 0;
   }
 
-  int RestoreDefaultNamespace(const std::string& ifname, pid_t pid) override {
-    return 0;
-  }
-
   void Capture(bool on, std::vector<std::string>* runs = nullptr) {
     capture_ = on;
     if (runs)

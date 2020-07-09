@@ -60,17 +60,6 @@ MATCHER_P2(IsProcessArgs, program, args, "") {
   return arg[index] == nullptr;
 }
 
-TEST_F(MinijailProcessRunnerTest, RestoreDefaultNamespace) {
-  const std::vector<std::string> args = {
-      "-t", "12345", "-n", "--", "/bin/ip", "link", "set", "foo", "netns", "1",
-  };
-  EXPECT_CALL(mj_, New());
-  EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
-  EXPECT_CALL(mj_, RunPipesAndDestroy(
-                       _, IsProcessArgs("/usr/bin/nsenter", args), _, _, _, _));
-  runner_.RestoreDefaultNamespace("foo", 12345);
-}
-
 TEST_F(MinijailProcessRunnerTest, modprobe_all) {
   uint64_t caps = CAP_TO_MASK(CAP_SYS_MODULE);
 

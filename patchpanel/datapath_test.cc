@@ -60,8 +60,6 @@ class MockProcessRunner : public MinijailedProcessRunner {
   MockProcessRunner() = default;
   ~MockProcessRunner() = default;
 
-  MOCK_METHOD2(RestoreDefaultNamespace,
-               int(const std::string& ifname, pid_t pid));
   MOCK_METHOD1(WriteSentinelToContainer, int(pid_t pid));
   MOCK_METHOD3(brctl,
                int(const std::string& cmd,
@@ -98,6 +96,12 @@ class MockProcessRunner : public MinijailedProcessRunner {
                int(const std::string& key,
                    const std::string& value,
                    bool log_failures));
+  MOCK_METHOD3(ip_netns_attach,
+               int(const std::string& netns_name,
+                   pid_t netns_pid,
+                   bool log_failures));
+  MOCK_METHOD2(ip_netns_delete,
+               int(const std::string& netns_name, bool log_failures));
 };
 
 TEST(DatapathTest, AddTAP) {
@@ -149,6 +153,21 @@ TEST(DatapathTest, RemoveTAP) {
   datapath.RemoveTAP("foo0");
 }
 
+TEST(DatapathTest, NetnsAttachName) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), false));
+  EXPECT_CALL(runner, ip_netns_attach(StrEq("netns_foo"), 1234, true));
+  Datapath datapath(&runner);
+  EXPECT_TRUE(datapath.NetnsAttachName("netns_foo", 1234));
+}
+
+TEST(DatapathTest, NetnsDeleteName) {
+  MockProcessRunner runner;
+  EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), true));
+  Datapath datapath(&runner);
+  EXPECT_TRUE(datapath.NetnsDeleteName("netns_foo"));
+}
+
 TEST(DatapathTest, AddBridge) {
   MockProcessRunner runner;
   Datapath datapath(&runner);
@@ -170,7 +189,7 @@ TEST(DatapathTest, ConnectVethPair) {
   MockProcessRunner runner;
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
                          ElementsAre("veth_foo", "type", "veth", "peer", "name",
-                                     "peer_foo"),
+                                     "peer_foo", "netns", "netns_foo"),
                          true));
   EXPECT_CALL(runner, ip(StrEq("addr"), StrEq("add"),
                          ElementsAre("100.115.92.169/30", "brd",
@@ -182,12 +201,11 @@ TEST(DatapathTest, ConnectVethPair) {
                                      "01:02:03:04:05:06", "multicast", "on"),
                          true))
       .WillOnce(Return(0));
-  EXPECT_CALL(runner, RestoreDefaultNamespace(StrEq("veth_foo"), kTestPID));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
                          ElementsAre("veth_foo", "up"), true));
   Datapath datapath(&runner);
-  EXPECT_TRUE(datapath.ConnectVethPair(kTestPID, "veth_foo", "peer_foo",
-                                       {1, 2, 3, 4, 5, 6},
+  EXPECT_TRUE(datapath.ConnectVethPair(kTestPID, "netns_foo", "veth_foo",
+                                       "peer_foo", {1, 2, 3, 4, 5, 6},
                                        Ipv4Addr(100, 115, 92, 169), 30, true));
 }
 
@@ -195,10 +213,11 @@ TEST(DatapathTest, AddVirtualInterfacePair) {
   MockProcessRunner runner;
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
                          ElementsAre("veth_foo", "type", "veth", "peer", "name",
-                                     "peer_foo"),
+                                     "peer_foo", "netns", "netns_foo"),
                          true));
   Datapath datapath(&runner);
-  EXPECT_TRUE(datapath.AddVirtualInterfacePair("veth_foo", "peer_foo"));
+  EXPECT_TRUE(
+      datapath.AddVirtualInterfacePair("netns_foo", "veth_foo", "peer_foo"));
 }
 
 TEST(DatapathTest, ToggleInterface) {

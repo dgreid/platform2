@@ -35,7 +35,6 @@ constexpr char kIpPath[] = "/bin/ip";
 constexpr char kIptablesPath[] = "/sbin/iptables";
 constexpr char kIp6tablesPath[] = "/sbin/ip6tables";
 constexpr char kModprobePath[] = "/sbin/modprobe";
-constexpr char kNsEnterPath[] = "/usr/bin/nsenter";
 constexpr char kSysctlPath[] = "/usr/sbin/sysctl";
 
 // An empty string will be returned if read fails.
@@ -139,13 +138,6 @@ int MinijailedProcessRunner::Run(const std::vector<std::string>& argv,
   return RunSyncDestroy(argv, mj_, jail, log_failures, nullptr);
 }
 
-int MinijailedProcessRunner::RestoreDefaultNamespace(const std::string& ifname,
-                                                     pid_t pid) {
-  return RunSync({kNsEnterPath, "-t", base::NumberToString(pid), "-n", "--",
-                  kIpPath, "link", "set", ifname, "netns", "1"},
-                 mj_, true, nullptr);
-}
-
 int MinijailedProcessRunner::brctl(const std::string& cmd,
                                    const std::vector<std::string>& argv,
                                    bool log_failures) {
@@ -233,6 +225,20 @@ int MinijailedProcessRunner::sysctl_w(const std::string& key,
                                       const std::string& value,
                                       bool log_failures) {
   std::vector<std::string> args = {kSysctlPath, "-w", key + "=" + value};
+  return RunSync(args, mj_, log_failures, nullptr);
+}
+
+int MinijailedProcessRunner::ip_netns_attach(const std::string& netns_name,
+                                             pid_t netns_pid,
+                                             bool log_failures) {
+  std::vector<std::string> args = {kIpPath, "netns", "attach", netns_name,
+                                   std::to_string(netns_pid)};
+  return RunSync(args, mj_, log_failures, nullptr);
+}
+
+int MinijailedProcessRunner::ip_netns_delete(const std::string& netns_name,
+                                             bool log_failures) {
+  std::vector<std::string> args = {kIpPath, "netns", "delete", netns_name};
   return RunSync(args, mj_, log_failures, nullptr);
 }
 

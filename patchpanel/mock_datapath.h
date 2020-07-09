@@ -20,6 +20,10 @@ class MockDatapath : public Datapath {
   explicit MockDatapath(MinijailedProcessRunner* runner) : Datapath(runner) {}
   ~MockDatapath() = default;
 
+  MOCK_METHOD2(NetnsAttachName,
+               bool(const std::string& netns_name, pid_t netns_pid));
+  MOCK_METHOD1(NetnsDeleteName, bool(const std::string& netns_name));
+
   MOCK_METHOD3(AddBridge,
                bool(const std::string& ifname,
                     uint32_t ipv4_addr,
@@ -27,13 +31,15 @@ class MockDatapath : public Datapath {
   MOCK_METHOD1(RemoveBridge, void(const std::string& ifname));
   MOCK_METHOD2(AddToBridge,
                bool(const std::string& br_ifname, const std::string& ifname));
+
   MOCK_METHOD4(AddTAP,
                std::string(const std::string& name,
                            const MacAddress* mac_addr,
                            const SubnetAddress* ipv4_addr,
                            const std::string& user));
-  MOCK_METHOD2(AddVirtualInterfacePair,
-               bool(const std::string& veth_ifname,
+  MOCK_METHOD3(AddVirtualInterfacePair,
+               bool(const std::string& netns_name,
+                    const std::string& veth_ifname,
                     const std::string& peer_ifname));
   MOCK_METHOD2(ToggleInterface, bool(const std::string& ifname, bool up));
   MOCK_METHOD6(ConfigureInterface,

@@ -34,6 +34,7 @@ namespace patchpanel {
 namespace {
 constexpr pid_t kInvalidPID = 0;
 constexpr uint32_t kInvalidCID = 0;
+constexpr char kArcNetnsName[] = "arc_netns";
 constexpr char kArcIfname[] = "arc0";
 constexpr char kArcBridge[] = "arcbr0";
 constexpr std::array<const char*, 2> kEthernetInterfacePrefixes{{"eth", "usb"}};
@@ -326,6 +327,11 @@ bool ArcService::Start(uint32_t id) {
     impl_ = std::make_unique<VmImpl>(datapath_, forwarder_, configs);
   } else {
     impl_ = std::make_unique<ContainerImpl>(datapath_, forwarder_);
+    if (!datapath_->NetnsAttachName(kArcNetnsName, id)) {
+      LOG(ERROR) << "Failed to attach name " << kArcNetnsName << " to pid "
+                 << id;
+      return false;
+    }
   }
   if (!impl_->Start(id)) {
     impl_.reset();
@@ -356,11 +362,11 @@ bool ArcService::Start(uint32_t id) {
     // The tap device associated with arc_device is created by VmImpl::Start().
   } else {
     arc_device_ifname = ArcVethHostName(arc_device_->guest_ifname());
-    if (!datapath_->ConnectVethPair(impl_->id(), arc_device_ifname,
-                                    arc_device_->guest_ifname(),
-                                    arc_device_->config().mac_addr(),
-                                    arc_device_->config().guest_ipv4_addr(), 30,
-                                    arc_device_->options().fwd_multicast)) {
+    if (!datapath_->ConnectVethPair(
+            impl_->id(), kArcNetnsName, arc_device_ifname,
+            arc_device_->guest_ifname(), arc_device_->config().mac_addr(),
+            arc_device_->config().guest_ipv4_addr(), 30,
+            arc_device_->options().fwd_multicast)) {
       LOG(ERROR) << "Cannot create virtual link for device "
                  << arc_device_->phys_ifname();
       return false;
@@ -372,7 +378,7 @@ bool ArcService::Start(uint32_t id) {
                << kArcBridge;
     return false;
   }
-  LOG(INFO) << "Started ARC management device " << arc_device_.get();
+  LOG(INFO) << "Started ARC management device " << *arc_device_.get();
 
   // Start already known Shill <-> ARC mapped devices.
   for (const auto& d : devices_)
@@ -394,15 +400,18 @@ void ArcService::Stop(uint32_t id) {
     LOG(ERROR) << "Failed to bring down arc bridge "
                << "- it may not restart correctly";
 
-  if (guest_ == GuestMessage::ARC)
+  if (guest_ == GuestMessage::ARC) {
     datapath_->RemoveInterface(ArcVethHostName(arc_device_->phys_ifname()));
+    if (!datapath_->NetnsDeleteName(kArcNetnsName))
+      LOG(WARNING) << "Failed to delete netns name " << kArcNetnsName;
+  }
 
   if (impl_) {
     impl_->Stop(id);
     impl_.reset();
   }
 
-  LOG(INFO) << "Stopped ARC management device " << arc_device_.get();
+  LOG(INFO) << "Stopped ARC management device " << *arc_device_.get();
   arc_device_.reset();
 }
 
@@ -558,9 +567,10 @@ bool ArcService::ContainerImpl::OnStartDevice(Device* device) {
   // Set up the virtual pair inside the container namespace.
   const std::string veth_ifname = ArcVethHostName(device->guest_ifname());
   const auto& config = device->config();
-  if (!datapath_->ConnectVethPair(pid_, veth_ifname, device->guest_ifname(),
-                                  config.mac_addr(), config.guest_ipv4_addr(),
-                                  30, device->options().fwd_multicast)) {
+  if (!datapath_->ConnectVethPair(pid_, kArcNetnsName, veth_ifname,
+                                  device->guest_ifname(), config.mac_addr(),
+                                  config.guest_ipv4_addr(), 30,
+                                  device->options().fwd_multicast)) {
     LOG(ERROR) << "Cannot create virtual link for device "
                << device->phys_ifname();
     return false;

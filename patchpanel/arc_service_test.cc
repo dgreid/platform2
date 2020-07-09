@@ -113,6 +113,8 @@ TEST_F(ArcServiceTest, NotStarted_AddRemoveDevice) {
 }
 
 TEST_F(ArcServiceTest, VerifyAddrConfigs) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
@@ -138,6 +140,8 @@ TEST_F(ArcServiceTest, VerifyAddrConfigs) {
 }
 
 TEST_F(ArcServiceTest, VerifyAddrOrder) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
@@ -177,11 +181,14 @@ TEST_F(ArcServiceTest, StableArcVmMacAddrs) {
 // ContainerImpl
 
 TEST_F(ArcServiceTest, ContainerImpl_Start) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   // Expectations for arc0 setup.
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -197,10 +204,13 @@ TEST_F(ArcServiceTest, ContainerImpl_Start) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_FailsToCreateInterface) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(false));
   EXPECT_CALL(*datapath_, ConfigureInterface(_, _, _, _, _, _)).Times(0);
   EXPECT_CALL(*datapath_, RemoveBridge(_)).Times(0);
@@ -210,10 +220,13 @@ TEST_F(ArcServiceTest, ContainerImpl_FailsToCreateInterface) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_FailsToConfigureInterface) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -228,10 +241,13 @@ TEST_F(ArcServiceTest, ContainerImpl_FailsToConfigureInterface) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_FailsToAddInterfaceToBridge) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -249,11 +265,14 @@ TEST_F(ArcServiceTest, ContainerImpl_FailsToAddInterfaceToBridge) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   // Expectations for arc0 setup.
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -266,7 +285,8 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetheth0"), StrEq("eth0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetheth0"),
+                                      StrEq("eth0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("eth0"), _, kFirstEthGuestIP,
                                              30, true, _))
@@ -290,11 +310,16 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStartDevice) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_Stop) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*datapath_, NetnsDeleteName(StrEq("arc_netns")))
+      .WillOnce(Return(true));
   // Expectations for arc0 setup.
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -316,11 +341,14 @@ TEST_F(ArcServiceTest, ContainerImpl_Stop) {
 }
 
 TEST_F(ArcServiceTest, ContainerImpl_OnStopDevice) {
+  EXPECT_CALL(*datapath_, NetnsAttachName(StrEq("arc_netns"), kTestPID))
+      .WillOnce(Return(true));
   // Expectations for arc0 setup.
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arcbr0"), kArcHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetharc0"), StrEq("arc0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetharc0"),
+                                      StrEq("arc0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
               ConfigureInterface(StrEq("arc0"), _, kArcGuestIP, 30, true, _))
@@ -333,7 +361,8 @@ TEST_F(ArcServiceTest, ContainerImpl_OnStopDevice) {
   EXPECT_CALL(*datapath_, AddBridge(StrEq("arc_eth0"), kFirstEthHostIP, 30))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_,
-              AddVirtualInterfacePair(StrEq("vetheth0"), StrEq("eth0")))
+              AddVirtualInterfacePair(StrEq("arc_netns"), StrEq("vetheth0"),
+                                      StrEq("eth0")))
       .WillOnce(Return(true));
   EXPECT_CALL(*datapath_, ConfigureInterface(StrEq("eth0"), _, kFirstEthGuestIP,
                                              30, true, _))

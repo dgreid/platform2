@@ -38,6 +38,8 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   struct ConnectNamespaceInfo {
     // The pid of the client network namespace.
     pid_t pid;
+    // The name attached to the client network namespace.
+    std::string netns_name;
     // Name of the shill device for routing outbound traffic from the client
     // namespace. Empty if outbound traffic should be forwarded to the highest
     // priority network (physical or virtual).

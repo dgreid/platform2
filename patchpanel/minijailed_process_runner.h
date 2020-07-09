@@ -6,6 +6,8 @@
 #define PATCHPANEL_MINIJAILED_PROCESS_RUNNER_H_
 
 #include <memory>
+#include <sys/types.h>
+
 #include <string>
 #include <vector>
 
@@ -35,10 +37,6 @@ class MinijailedProcessRunner {
   MinijailedProcessRunner(brillo::Minijail* mj,
                           std::unique_ptr<SyscallImpl> syscall);
   virtual ~MinijailedProcessRunner() = default;
-
-  // Moves interface |ifname| back into the default namespace
-  // |pid| identifies the pid of the current namespace.
-  virtual int RestoreDefaultNamespace(const std::string& ifname, pid_t pid);
 
   // Runs brctl.
   virtual int brctl(const std::string& cmd,
@@ -81,6 +79,16 @@ class MinijailedProcessRunner {
   virtual int sysctl_w(const std::string& key,
                        const std::string& value,
                        bool log_failures = true);
+
+  // Attaches a name to the network namespace of the given pid
+  // TODO(hugobenichi) How can patchpanel create a |netns_name| file in
+  // /run/netns without running ip as root ?
+  virtual int ip_netns_attach(const std::string& netns_name,
+                              pid_t netns_pid,
+                              bool log_failures = true);
+
+  virtual int ip_netns_delete(const std::string& netns_name,
+                              bool log_failures = true);
 
  protected:
   // Runs a process (argv[0]) with optional arguments (argv[1]...)

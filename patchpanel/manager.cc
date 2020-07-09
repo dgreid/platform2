@@ -784,25 +784,32 @@ void Manager::ConnectNamespace(
   }
 
   const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
+  const std::string netns_name = "connected_netns_" + ifname_id;
   const std::string host_ifname = "arc_ns" + ifname_id;
   const std::string client_ifname = "veth" + ifname_id;
   const uint32_t host_ipv4_addr = subnet->AddressAtOffset(0);
   const uint32_t client_ipv4_addr = subnet->AddressAtOffset(1);
 
   // Veth interface configuration and client routing configuration:
-  //  - create veth pair inside client namespace.
+  //  - attach a name to the client namespace.
+  //  - create veth pair across the current namespace and the client namespace.
   //  - configure IPv4 address on remote veth inside client namespace.
   //  - configure IPv4 address on local veth inside host namespace.
   //  - add a default IPv4 /0 route sending traffic to that remote veth.
-  //  - bring back one veth to the host namespace, and set it up.
   pid_t pid = request.pid();
-  if (!datapath_->ConnectVethPair(pid, host_ifname, client_ifname,
+  if (!datapath_->NetnsAttachName(netns_name, pid)) {
+    LOG(ERROR) << "ConnectNamespaceRequest: failed to attach name "
+               << netns_name << " to namespace pid " << pid;
+    return;
+  }
+  if (!datapath_->ConnectVethPair(pid, netns_name, host_ifname, client_ifname,
                                   addr_mgr_.GenerateMacAddress(),
                                   client_ipv4_addr, subnet->PrefixLength(),
                                   false /* enable_multicast */)) {
     LOG(ERROR) << "ConnectNamespaceRequest: failed to create veth pair for "
                   "namespace pid "
                << pid;
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
   if (!datapath_->ConfigureInterface(
@@ -812,22 +819,22 @@ void Manager::ConnectNamespace(
     LOG(ERROR) << "ConnectNamespaceRequest: cannot configure host interface "
                << host_ifname;
     datapath_->RemoveInterface(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
+  bool peer_route_setup_success;
   {
     ScopedNS ns(pid);
-    if (!ns.IsValid()) {
-      LOG(ERROR) << "ConnectNamespaceRequest: cannot enter client pid " << pid;
-      datapath_->RemoveInterface(host_ifname);
-      return;
-    }
-    if (!datapath_->AddIPv4Route(host_ipv4_addr, INADDR_ANY, INADDR_ANY)) {
-      LOG(ERROR)
-          << "ConnectNamespaceRequest: failed to add default /0 route to "
-          << host_ifname << " inside namespace pid " << pid;
-      datapath_->RemoveInterface(host_ifname);
-      return;
-    }
+    peer_route_setup_success =
+        ns.IsValid() &&
+        datapath_->AddIPv4Route(host_ipv4_addr, INADDR_ANY, INADDR_ANY);
+  }
+  if (!peer_route_setup_success) {
+    LOG(ERROR) << "ConnectNamespaceRequest: failed to add default /0 route to "
+               << host_ifname << " inside namespace pid " << pid;
+    datapath_->RemoveInterface(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
+    return;
   }
 
   // Host namespace routing configuration
@@ -846,6 +853,7 @@ void Manager::ConnectNamespace(
     LOG(ERROR)
         << "ConnectNamespaceRequest: failed to set route to client namespace";
     datapath_->RemoveInterface(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
   if (!datapath_->AddOutboundIPv4(host_ifname)) {
@@ -855,6 +863,7 @@ void Manager::ConnectNamespace(
     datapath_->RemoveInterface(host_ifname);
     datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
                                subnet->Netmask());
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
   if (!datapath_->AddOutboundIPv4SNATMark(host_ifname)) {
@@ -865,6 +874,7 @@ void Manager::ConnectNamespace(
     datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
                                subnet->Netmask());
     datapath_->RemoveOutboundIPv4(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
 
@@ -878,6 +888,7 @@ void Manager::ConnectNamespace(
                                subnet->Netmask());
     datapath_->RemoveOutboundIPv4(host_ifname);
     datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
 
@@ -895,6 +906,7 @@ void Manager::ConnectNamespace(
                                subnet->Netmask());
     datapath_->RemoveOutboundIPv4(host_ifname);
     datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
+    datapath_->NetnsDeleteName(netns_name);
     return;
   }
 
@@ -913,6 +925,7 @@ void Manager::ConnectNamespace(
   connected_namespaces_[fdkey] = {};
   ConnectNamespaceInfo& ns_info = connected_namespaces_[fdkey];
   ns_info.pid = request.pid();
+  ns_info.netns_name = std::move(netns_name);
   ns_info.outbound_ifname = request.outbound_physical_device();
   ns_info.host_ifname = std::move(host_ifname);
   ns_info.client_ifname = std::move(client_ifname);
@@ -944,6 +957,7 @@ void Manager::DisconnectNamespace(int client_fd) {
   //  - destroy veth pair.
   //  - remove forwarding rules on host namespace.
   //  - remove SNAT marking rule on host namespace.
+  //  Delete the network namespace attached to the client namespace.
   //  Note that the default route set inside the client namespace by patchpanel
   //  is not destroyed: it is assumed the client will also teardown its
   //  namespace if it triggered DisconnectNamespace.
@@ -953,6 +967,7 @@ void Manager::DisconnectNamespace(int client_fd) {
   datapath_->DeleteIPv4Route(it->second.client_subnet->AddressAtOffset(0),
                              it->second.client_subnet->BaseAddress(),
                              it->second.client_subnet->Netmask());
+  datapath_->NetnsDeleteName(it->second.netns_name);
 
   LOG(INFO) << "Disconnected network namespace " << it->second;
 

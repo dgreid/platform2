@@ -6,6 +6,7 @@
 #define PATCHPANEL_DATAPATH_H_
 
 #include <net/route.h>
+#include <sys/types.h>
 
 #include <string>
 
@@ -40,6 +41,14 @@ class Datapath {
   Datapath(MinijailedProcessRunner* process_runner, ioctl_t ioctl_hook);
   virtual ~Datapath() = default;
 
+  // Attaches the name |netns_name| to a network namespace identified by
+  // |netns_pid|. If |netns_name| had already been created, it will be deleted
+  // first.
+  virtual bool NetnsAttachName(const std::string& netns_name, pid_t netns_pid);
+
+  // Deletes the name |netns_name| of a network namespace.
+  virtual bool NetnsDeleteName(const std::string& netns_name);
+
   virtual bool AddBridge(const std::string& ifname,
                          uint32_t ipv4_addr,
                          uint32_t ipv4_prefix_len);
@@ -72,6 +81,7 @@ class Datapath {
   // namespace corresponding to |pid|, and set up the remote interface
   // |peer_ifname| according // to the given parameters.
   virtual bool ConnectVethPair(pid_t pid,
+                               const std::string& netns_name,
                                const std::string& veth_ifname,
                                const std::string& peer_ifname,
                                const MacAddress& remote_mac_addr,
@@ -80,7 +90,8 @@ class Datapath {
                                bool remote_multicast_flag);
 
   // Creates a virtual interface pair.
-  virtual bool AddVirtualInterfacePair(const std::string& veth_ifname,
+  virtual bool AddVirtualInterfacePair(const std::string& netns_ifname,
+                                       const std::string& veth_ifname,
                                        const std::string& peer_ifname);
 
   // Sets the link status.

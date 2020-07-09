@@ -67,6 +67,18 @@ MinijailedProcessRunner& Datapath::runner() const {
   return *process_runner_;
 }
 
+bool Datapath::NetnsAttachName(const std::string& netns_name, pid_t netns_pid) {
+  // Try first to delete any netns with name |netns_name| in case patchpanel
+  // did not exit cleanly.
+  if (process_runner_->ip_netns_delete(netns_name, false /*log_failures*/) == 0)
+    LOG(INFO) << "Deleted left over network namespace name " << netns_name;
+  return process_runner_->ip_netns_attach(netns_name, netns_pid) == 0;
+}
+
+bool Datapath::NetnsDeleteName(const std::string& netns_name) {
+  return process_runner_->ip_netns_delete(netns_name) == 0;
+}
+
 bool Datapath::AddBridge(const std::string& ifname,
                          uint32_t ipv4_addr,
                          uint32_t ipv4_prefix_len) {
@@ -218,25 +230,27 @@ void Datapath::RemoveTAP(const std::string& ifname) {
   process_runner_->ip("tuntap", "del", {ifname, "mode", "tap"});
 }
 
-bool Datapath::ConnectVethPair(pid_t pid,
+bool Datapath::ConnectVethPair(pid_t netns_pid,
+                               const std::string& netns_name,
                                const std::string& veth_ifname,
                                const std::string& peer_ifname,
                                const MacAddress& remote_mac_addr,
                                uint32_t remote_ipv4_addr,
                                uint32_t remote_ipv4_prefix_len,
                                bool remote_multicast_flag) {
-  // Set up the virtual pair inside the remote namespace.
+  // Set up the virtual pair across the current namespace and |netns_name|.
+  if (!AddVirtualInterfacePair(netns_name, veth_ifname, peer_ifname)) {
+    LOG(ERROR) << "Failed to create veth pair " << veth_ifname << ","
+               << peer_ifname;
+    return false;
+  }
+
+  // Configure the remote veth in namespace |netns_name|.
   {
-    ScopedNS ns(pid);
-    if (!ns.IsValid() && pid != kTestPID) {
+    ScopedNS ns(netns_pid);
+    if (!ns.IsValid() && netns_pid != kTestPID) {
       LOG(ERROR)
           << "Cannot create virtual link -- invalid container namespace?";
-      return false;
-    }
-
-    if (!AddVirtualInterfacePair(veth_ifname, peer_ifname)) {
-      LOG(ERROR) << "Failed to create veth pair " << veth_ifname << ","
-                 << peer_ifname;
       return false;
     }
 
@@ -249,32 +263,21 @@ bool Datapath::ConnectVethPair(pid_t pid,
     }
   }
 
-  // Now pull the local end out into the local namespace.
-  if (runner().RestoreDefaultNamespace(veth_ifname, pid) != 0) {
-    LOG(ERROR) << "Failed to prepare interface " << veth_ifname;
-    {
-      ScopedNS ns(pid);
-      if (ns.IsValid()) {
-        RemoveInterface(peer_ifname);
-      } else {
-        LOG(ERROR) << "Failed to re-enter container namespace pid " << pid;
-      }
-    }
-    return false;
-  }
   if (!ToggleInterface(veth_ifname, true /*up*/)) {
     LOG(ERROR) << "Failed to bring up interface " << veth_ifname;
     RemoveInterface(veth_ifname);
     return false;
   }
+
   return true;
 }
 
-bool Datapath::AddVirtualInterfacePair(const std::string& veth_ifname,
+bool Datapath::AddVirtualInterfacePair(const std::string& netns_name,
+                                       const std::string& veth_ifname,
                                        const std::string& peer_ifname) {
-  return process_runner_->ip(
-             "link", "add",
-             {veth_ifname, "type", "veth", "peer", "name", peer_ifname}) == 0;
+  return process_runner_->ip("link", "add",
+                             {veth_ifname, "type", "veth", "peer", "name",
+                              peer_ifname, "netns", netns_name}) == 0;
 }
 
 bool Datapath::ToggleInterface(const std::string& ifname, bool up) {
