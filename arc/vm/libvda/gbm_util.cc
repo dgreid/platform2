@@ -52,7 +52,7 @@ std::vector<video_pixel_format_t> GetSupportedRawFormats(
   }
 
   std::vector<video_pixel_format_t> formats;
-  constexpr video_pixel_format_t pixel_formats[] = {YV12, NV12};
+  constexpr video_pixel_format_t pixel_formats[] = {NV12, YV12};
   for (video_pixel_format_t pixel_format : pixel_formats) {
     // VEA has NV12 hardcoded as the only allowed format on many devices,
     // only check NV12 for now.
