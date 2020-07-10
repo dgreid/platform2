@@ -18,7 +18,7 @@ source_set("libcros_healthd_executor") {
   deps = [ "//diagnostics/mojo:cros_healthd_executor_mojo_bindings" ]
   sources = [
     "executor.cc",
-    "executor_adapter.cc",
+    "executor_adapter_impl.cc",
     "executor_constants.cc",
     "executor_mojo_service.cc",
   ]

@@ -14,6 +14,7 @@
 #include "diagnostics/common/system/bluetooth_client_impl.h"
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
+#include "diagnostics/cros_healthd/executor/executor_adapter_impl.h"
 #include "diagnostics/cros_healthd/system/system_config.h"
 #include "diagnostics/cros_healthd/system/system_utilities_impl.h"
 
@@ -58,7 +59,7 @@ bool Context::Initialize() {
   system_utils_ = std::make_unique<SystemUtilitiesImpl>();
 
   // Create and connect the adapter for the root-level executor.
-  executor_ = std::make_unique<ExecutorAdapter>();
+  executor_ = std::make_unique<ExecutorAdapterImpl>();
   executor_->Connect(std::move(endpoint_));
 
   return true;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "diagnostics/cros_healthd/executor/executor_adapter.h"
+#include "diagnostics/cros_healthd/executor/executor_adapter_impl.h"
 
 #include <utility>
 
@@ -20,10 +20,10 @@ namespace executor_ipc = ::chromeos::cros_healthd_executor::mojom;
 
 }  // namespace
 
-ExecutorAdapter::ExecutorAdapter() = default;
-ExecutorAdapter::~ExecutorAdapter() = default;
+ExecutorAdapterImpl::ExecutorAdapterImpl() = default;
+ExecutorAdapterImpl::~ExecutorAdapterImpl() = default;
 
-void ExecutorAdapter::Connect(mojo::PlatformChannelEndpoint endpoint) {
+void ExecutorAdapterImpl::Connect(mojo::PlatformChannelEndpoint endpoint) {
   DCHECK(endpoint.is_valid());
 
   // Accept an invitation from the executor.

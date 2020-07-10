@@ -7,24 +7,15 @@
 
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 
-#include "mojo/cros_healthd_executor.mojom.h"
-
 namespace diagnostics {
 
 // Provides a convenient way to access the root-level executor.
-class ExecutorAdapter final {
+class ExecutorAdapter {
  public:
-  ExecutorAdapter();
-  ExecutorAdapter(const ExecutorAdapter&) = delete;
-  ExecutorAdapter& operator=(const ExecutorAdapter&) = delete;
-  ~ExecutorAdapter();
+  virtual ~ExecutorAdapter() = default;
 
   // Establishes a Mojo connection with the executor.
-  void Connect(mojo::PlatformChannelEndpoint endpoint);
-
- private:
-  // Mojo endpoint to call the executor's methods.
-  chromeos::cros_healthd_executor::mojom::ExecutorPtr executor_;
+  virtual void Connect(mojo::PlatformChannelEndpoint endpoint) = 0;
 };
 
 }  // namespace diagnostics
