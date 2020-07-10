@@ -7,8 +7,11 @@
 
 #include <memory>
 
+#include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 #include <brillo/daemons/dbus_daemon.h>
+#include <brillo/dbus/async_event_sequencer.h>
+#include <brillo/dbus/dbus_object.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
 namespace ocr {
@@ -16,7 +19,7 @@ namespace ocr {
 // Optical Character Recognition daemon with D-Bus support.
 // The primary function of the D-Bus interface is to receive Mojo
 // bootstrap requests from clients.
-class OcrDaemon : public brillo::DBusDaemon {
+class OcrDaemon : public brillo::DBusServiceDaemon {
  public:
   OcrDaemon();
   ~OcrDaemon() override;
@@ -24,14 +27,25 @@ class OcrDaemon : public brillo::DBusDaemon {
   OcrDaemon& operator=(const OcrDaemon&) = delete;
 
  protected:
-  // brillo:DBusDaemon:
+  // brillo:DBusServiceDaemon:
   int OnInit() override;
+  void RegisterDBusObjectsAsync(
+      brillo::dbus_utils::AsyncEventSequencer* sequencer) override;
 
  private:
+  // Implementation of org.chromium.OpticalCharacterRecognition interface:
+  void BootstrapMojoConnection(const base::ScopedFD& mojo_fd);
+
+  // Responds to Mojo connection errors by quitting the daemon.
+  void OnConnectionError();
+
   // As long as this object is alive, all Mojo API surfaces relevant to IPC
   // connections are usable and message pipes which span a process boundary
   // will continue to function.
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
+
+  // D-Bus object that supports the OpticalCharacterRecognition interface.
+  std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
 
   // Member variables should appear before the WeakPtrFactory to ensure
   // that any WeakPtrs to OcrDaemon are invalidated before its member

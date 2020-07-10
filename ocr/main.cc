@@ -18,9 +18,9 @@ int main(int argc, char* argv[]) {
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
 
   // Run the OCR service.
-  VLOG(0) << "ocr_service now starting";
+  VLOG(1) << "ocr_service now starting";
   ocr::OcrDaemon daemon;
   int result = daemon.Run();
-  VLOG(0) << "ocr_service stopping with exit code " << result;
+  VLOG(1) << "ocr_service stopping with exit code " << result;
   return result;
 }
