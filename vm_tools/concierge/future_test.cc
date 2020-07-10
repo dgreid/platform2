@@ -332,31 +332,49 @@ TEST_F(FutureTest, Collect) {
 }
 
 TEST_F(FutureTest, Flatten) {
+  // Worker thread
+  AsyncNoReject(task_runner_,
+                base::BindOnce([]() { return ResolvedFuture(true); }))
+      .Flatten()
+      .Get();
+
   // Same thread
+  EXPECT_TRUE(
+      AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
+                    base::BindOnce([]() { return ResolvedFuture(true); }))
+          .Flatten()
+          .Get()
+          .val);
+
+  AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
+                base::BindOnce([]() { return ResolvedFuture<void>(); }))
+      .Flatten()
+      .Get();
+
   {
-    auto ret =
-        Flatten(AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
-                              base::BindOnce([]() { return 2; }))
-                    .ThenNoReject(base::BindOnce([](int x) {
-                      return AsyncNoReject(
-                          base::SequencedTaskRunnerHandle::Get(),
-                          base::BindOnce([](int x) { return x * 3; }, x));
-                    })))
-            .Get();
+    auto ret = AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
+                             base::BindOnce([]() { return 2; }))
+                   .ThenNoReject(base::BindOnce([](int x) {
+                     return AsyncNoReject(
+                         base::SequencedTaskRunnerHandle::Get(),
+                         base::BindOnce([](int x) { return x * 3; }, x));
+                   }))
+                   .Flatten()
+                   .Get();
     EXPECT_EQ(ret.val, 6);
     EXPECT_FALSE(ret.rejected);
   }
 
   {
-    auto ret =
-        Flatten(AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
-                              base::BindOnce([]() { return 2; }))
-                    .ThenNoReject(base::BindOnce([](int x) {
-                      return Async(base::SequencedTaskRunnerHandle::Get(),
-                                   base::BindOnce(
-                                       [](int x) { return Reject<int>(); }, x));
-                    })))
-            .Get();
+    auto ret = AsyncNoReject(base::SequencedTaskRunnerHandle::Get(),
+                             base::BindOnce([]() { return 2; }))
+                   .ThenNoReject(base::BindOnce([](int x) {
+                     return Async(base::SequencedTaskRunnerHandle::Get(),
+                                  base::BindOnce(
+                                      [](int x) { return Reject<int>(); }, x));
+                   }))
+                   .Flatten()
+                   .Get();
     EXPECT_TRUE(ret.rejected);
   }
 }

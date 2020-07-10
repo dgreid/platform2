@@ -42,6 +42,9 @@
 namespace vm_tools {
 
 template <typename T, typename Error>
+class Future;
+
+template <typename T, typename Error>
 class Promise;
 
 // A struct to store both the value and the error for |Future::Get|.
@@ -134,6 +137,21 @@ struct SharedState {
   base::OnceClosure then_func;
 };
 
+template <typename F>
+struct get_future_type;
+
+template <template <typename, typename> class F, typename T, typename Error>
+struct get_future_type<F<T, Error>> {
+  using type = T;
+};
+
+template <class T, class Error, class U = T>
+struct is_future : std::false_type {};
+
+template <class F, class Error>
+struct is_future<F, Error, Future<typename get_future_type<F>::type, Error>>
+    : std::true_type {};
+
 };  // namespace internal
 
 // Error: User defined error type used in |Reject| and |OnReject|.
@@ -193,6 +211,14 @@ class Future {
   bool IsDone() const {
     base::AutoLock guard(state_->mutex);
     return state_->done;
+  }
+
+  // Flatten a nested future. Useful when making an async call within an async
+  // function.
+  template <typename U = T, typename UError = Error>
+  typename std::enable_if_t<internal::is_future<U, UError>::value, T>
+  Flatten() {
+    return std::move(*this).Then(base::BindOnce([](T f) { return f.Get(); }));
   }
 
  private:
@@ -507,14 +533,6 @@ GetResult<T, Error> Future<T, Error>::GetHelper() {
 
 /* ------ Non class method declarations ------*/
 
-// Flatten a nested future. Useful when making an async call inside an async
-// function.
-//
-// TODO(woodychow): Make this a member function of Future with some template
-//                  magic
-template <typename T, typename Error>
-Future<T, Error> Flatten(Future<Future<T, Error>, Error> f);
-
 // Post |func| to |task_runner|, and return a future that will be ready upon
 // completion of the posted |func|
 template <typename T, typename Error = void>
@@ -531,6 +549,18 @@ template <typename T, typename Error>
 Future<std::vector<T>, Error> Collect(
     scoped_refptr<base::TaskRunner> task_runner,
     std::vector<Future<T, Error>> futures);
+
+// Returns a future that has already been resolved with the given |val|.
+// This is useful for removing boilerplate code
+template <typename T, typename Error = void>
+std::enable_if_t<!std::is_void<T>::value, Future<T, Error>> ResolvedFuture(
+    T val,
+    scoped_refptr<base::TaskRunner> task_runner =
+        base::SequencedTaskRunnerHandle::Get());
+template <typename T, typename Error = void>
+std::enable_if_t<std::is_void<T>::value, Future<T, Error>> ResolvedFuture(
+    scoped_refptr<base::TaskRunner> task_runner =
+        base::SequencedTaskRunnerHandle::Get());
 
 /* ------ Non class method implementation ------ */
 
@@ -656,6 +686,24 @@ Future<std::vector<T>, void> Collect(
   }
 
   return ctx->promise.GetFuture(task_runner);
+}
+
+template <typename T, typename Error>
+std::enable_if_t<!std::is_void<T>::value, Future<T, Error>> ResolvedFuture(
+    T val, scoped_refptr<base::TaskRunner> task_runner) {
+  Promise<T, Error> promise;
+  Future<T, Error> future = promise.GetFuture(task_runner);
+  promise.SetValue(std::move(val));
+  return future;
+}
+
+template <typename T, typename Error>
+std::enable_if_t<std::is_void<T>::value, Future<T, Error>> ResolvedFuture(
+    scoped_refptr<base::TaskRunner> task_runner) {
+  Promise<void, Error> promise;
+  Future<void, Error> future = promise.GetFuture(task_runner);
+  promise.SetValue();
+  return future;
 }
 
 }  // namespace vm_tools
