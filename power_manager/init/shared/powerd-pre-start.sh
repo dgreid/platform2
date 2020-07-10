@@ -62,3 +62,6 @@ if [ -e "/sys/power/pm_debug_messages" ]; then
   echo 1 > /sys/power/pm_debug_messages
 fi
 
+if [ -e "/usr/share/cros/init/optional/powerd-pre-start-wilco.sh" ]; then
+  /usr/share/cros/init/optional/powerd-pre-start-wilco.sh || true
+fi
