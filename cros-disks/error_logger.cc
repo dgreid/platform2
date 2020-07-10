@@ -68,6 +68,8 @@ std::ostream& operator<<(std::ostream& out, const MountErrorType error) {
       return out << "MOUNT_ERROR_MOUNT_PROGRAM_NOT_FOUND";
     case MOUNT_ERROR_MOUNT_PROGRAM_FAILED:
       return out << "MOUNT_ERROR_MOUNT_PROGRAM_FAILED";
+    case MOUNT_ERROR_NEED_PASSWORD:
+      return out << "MOUNT_ERROR_NEED_PASSWORD";
     case MOUNT_ERROR_INVALID_DEVICE_PATH:
       return out << "MOUNT_ERROR_INVALID_DEVICE_PATH";
     case MOUNT_ERROR_UNKNOWN_FILESYSTEM:
