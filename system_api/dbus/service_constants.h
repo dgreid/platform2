@@ -10,6 +10,7 @@
 // We use relative includes here to make this compatible with both the
 // Chromium OS and Chromium environment.
 #include "anomaly_detector/dbus-constants.h"
+#include "arc-data-snapshotd/dbus-constants.h"
 #include "authpolicy/dbus-constants.h"
 #include "biod/dbus-constants.h"
 #include "bluetooth/dbus-constants.h"

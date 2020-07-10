@@ -1,0 +1,44 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/generate-dbus-adaptors.gni")
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":arc-data-snapshotd" ]
+  if (use.test) {
+    deps += [ ":arc-data-snapshotd_test" ]
+  }
+}
+
+pkg_config("common_pkg_deps") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "system_api",
+  ]
+}
+
+source_set("libarc-data-snapshotd") {
+  configs += [ ":common_pkg_deps" ]
+  sources = [ "dbus_adaptor.cc" ]
+}
+
+generate_dbus_adaptors("data_snapshotd_adaptors") {
+  dbus_service_config = "dbus_bindings/dbus-service-config.json"
+  dbus_adaptors_out_dir = "include/dbus_adaptors"
+  sources = [ "dbus_bindings/org.chromium.ArcDataSnapshotd.xml" ]
+}
+
+executable("arc-data-snapshotd") {
+  configs += [ ":common_pkg_deps" ]
+  deps = [
+    ":data_snapshotd_adaptors",
+    ":libarc-data-snapshotd",
+  ]
+  sources = [
+    "daemon.cc",
+    "main.cc",
+  ]
+}
