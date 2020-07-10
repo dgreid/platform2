@@ -20,6 +20,7 @@
 #include <base/bind.h>
 #include <base/files/file.h>
 #include <base/files/file_path.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/timer/elapsed_timer.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/system/sys_info.h>
@@ -203,7 +204,7 @@ class MigrationHelper::WorkerPool {
       job_threads_[i] = std::make_unique<base::Thread>(
           "MigrationHelper worker #" + base::NumberToString(i));
       base::Thread::Options options;
-      options.message_loop_type = base::MessageLoop::TYPE_IO;
+      options.message_loop_type = base::MessagePumpType::IO;
       if (!job_threads_[i]->StartWithOptions(options)) {
         LOG(ERROR) << "Failed to start a job thread.";
         return false;

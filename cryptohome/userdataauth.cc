@@ -4,6 +4,7 @@
 
 #include <base/bind.h>
 #include <base/json/json_writer.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/strings/string_util.h>
 #include <base/system/sys_info.h>
 #include <base/threading/thread_task_runner_handle.h>
@@ -233,7 +234,7 @@ bool UserDataAuth::Initialize() {
 
   if (!disable_threading_) {
     base::Thread::Options options;
-    options.message_loop_type = base::MessageLoop::TYPE_IO;
+    options.message_loop_type = base::MessagePumpType::IO;
     mount_thread_.StartWithOptions(options);
   }
 

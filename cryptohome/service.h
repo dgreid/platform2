@@ -17,7 +17,7 @@
 #include <base/location.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/task_observer.h>
 #include <base/threading/thread.h>
 #include <brillo/dbus/dbus_connection.h>
 #include <brillo/glib/abstract_dbus_service.h>
@@ -83,7 +83,7 @@ class MountTaskObserverBridge : public MountTaskObserver {
 };
 
 // MountThreadObserver
-class MountThreadObserver : public base::MessageLoop::TaskObserver {
+class MountThreadObserver : public base::TaskObserver {
  public:
   // This method is called when post a task
   void PostTask();

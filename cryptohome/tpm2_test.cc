@@ -15,11 +15,11 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/memory/ptr_util.h>
 #include <base/memory/ref_counted.h>
 #include <base/run_loop.h>
 #include <base/single_thread_task_runner.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
@@ -398,7 +398,7 @@ TEST_F(Tpm2Test, GetDictionaryAttackInfoError) {
 }
 
 TEST_F(Tpm2Test, ResetDictionaryAttackMitigation) {
-  base::MessageLoop message_loop;
+  base::SingleThreadTaskExecutor task_executor;
   base::RunLoop run_loop;
   const auto run_loop_quit_closure = base::Bind(
       [](base::Closure main_thread_quit_closure,

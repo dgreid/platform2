@@ -5,6 +5,7 @@
 #include "cryptohome/service_distributed.h"
 
 #include <base/bind.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/strings/string_number_conversions.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
 #include <tpm_manager-client/tpm_manager/dbus-constants.h>
@@ -84,7 +85,7 @@ bool ServiceDistributed::PrepareInterface() {
     return true;
   }
   if (!attestation_thread_.StartWithOptions(base::Thread::Options(
-          base::MessageLoopForIO::TYPE_IO, 0 /* Default stack size. */))) {
+          base::MessagePumpType::IO, 0 /* Default stack size. */))) {
     LOG(ERROR) << "Failed to start attestation thread.";
     return false;
   }

@@ -6,6 +6,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/message_loop/message_pump_type.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
 #include <trunks/error_codes.h>
 #include <trunks/password_authorization_delegate.h>
@@ -88,7 +89,7 @@ void TPM2NVSpaceUtility::ShutdownTask() {
 
 bool TPM2NVSpaceUtility::Initialize() {
   if (!tpm_manager_thread_.StartWithOptions(base::Thread::Options(
-          base::MessageLoopForIO::TYPE_IO, 0 /* Default stack size */))) {
+          base::MessagePumpType::IO, 0 /* Default stack size */))) {
     LOG(ERROR) << "Failed to start tpm manager thread";
     return false;
   }

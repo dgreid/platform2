@@ -16,6 +16,7 @@
 #include <base/json/json_writer.h>
 #include <base/logging.h>
 #include <base/message_loop/message_loop_current.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/optional.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
@@ -112,7 +113,7 @@ bool KeyHasWrappedAuthorizationSecrets(const Key& k) {
 }
 
 void AddTaskObserverToThread(base::Thread* thread,
-                             base::MessageLoop::TaskObserver* task_observer) {
+                             base::TaskObserver* task_observer) {
   // Since MessageLoopCurrent::AddTaskObserver need to be executed in the same
   // thread of that message loop. So we need to wrap it and post as a task.
 
@@ -126,7 +127,7 @@ void AddTaskObserverToThread(base::Thread* thread,
   task_runner->PostTask(
       FROM_HERE,
       base::BindOnce(
-          [](base::MessageLoop::TaskObserver* task_observer) {
+          [](base::TaskObserver* task_observer) {
             base::MessageLoopCurrent::Get().AddTaskObserver(task_observer);
           },
           base::Unretained(task_observer)));
@@ -750,7 +751,7 @@ bool Service::Initialize() {
   }
 
   base::Thread::Options options;
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
+  options.message_loop_type = base::MessagePumpType::IO;
   mount_thread_.StartWithOptions(options);
 
   // Add task observer, message_loop is only availible after the thread start.

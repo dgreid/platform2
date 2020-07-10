@@ -5,6 +5,7 @@
 #include <string>
 
 #include <base/synchronization/waitable_event.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/threading/thread.h>
 #include <brillo/dbus/dbus_connection.h>
 #include <brillo/dbus/introspectable_helper.h>
@@ -40,7 +41,7 @@ class ServiceBlocker {
     // Start the dbus thread. Note that this will need to be an I/O thread
     // because ListenForServiceOwnerChange() needs it.
     base::Thread::Options options;
-    options.message_loop_type = base::MessageLoop::TYPE_IO;
+    options.message_loop_type = base::MessagePumpType::IO;
     dbus_thread_.StartWithOptions(options);
 
     dbus_thread_.task_runner()->PostTask(

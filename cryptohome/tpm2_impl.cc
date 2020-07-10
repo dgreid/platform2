@@ -14,6 +14,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/numerics/safe_conversions.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
@@ -1482,7 +1483,7 @@ void Tpm2Impl::InitializeClientsOnTpmManagerThread(
 bool Tpm2Impl::InitializeTpmManagerClients() {
   if (!tpm_manager_thread_.IsRunning() &&
       !tpm_manager_thread_.StartWithOptions(base::Thread::Options(
-          base::MessageLoopForIO::TYPE_IO, 0 /* Default stack size. */))) {
+          base::MessagePumpType::IO, 0 /* Default stack size. */))) {
     LOG(ERROR) << "Failed to start tpm_manager thread.";
     return false;
   }
