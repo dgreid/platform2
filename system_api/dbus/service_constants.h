@@ -176,6 +176,14 @@ const char kScreenLockServiceInterface[] =
     "org.chromium.ScreenLockServiceInterface";
 const char kScreenLockServiceShowLockScreenMethod[] = "ShowLockScreen";
 
+const char kUserAuthenticationServiceName[] =
+    "org.chromium.UserAuthenticationService";
+const char kUserAuthenticationServicePath[] =
+    "/org/chromium/UserAuthenticationService";
+const char kUserAuthenticationServiceInterface[] =
+    "org.chromium.UserAuthenticationServiceInterface";
+const char kUserAuthenticationServiceShowAuthDialogMethod[] = "ShowAuthDialog";
+
 constexpr char kVirtualFileRequestServiceName[] =
     "org.chromium.VirtualFileRequestService";
 constexpr char kVirtualFileRequestServicePath[] =
