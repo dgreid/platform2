@@ -59,6 +59,13 @@ constexpr const char kArcAddr[] = "100.115.92.2";
 constexpr const uint16_t kAdbServerPort = 5555;
 constexpr const uint16_t kAdbProxyPort = 5550;
 
+const std::string ProtocolName(Protocol proto) {
+  if (proto == ModifyPortRuleRequest::INVALID_PROTOCOL) {
+    NOTREACHED() << "Unexpected L4 protocol value";
+  }
+  return base::ToLowerASCII(ModifyPortRuleRequest::Protocol_Name(proto));
+}
+
 std::string RuleTypeName(PortTracker::PortRuleType type) {
   switch (type) {
     case PortTracker::kUnknownRule:
@@ -95,15 +102,13 @@ std::ostream& operator<<(std::ostream& stream,
 }
 }  // namespace
 
-PortTracker::PortTracker(Firewall* firewall)
+PortTracker::PortTracker()
     : task_runner_{base::ThreadTaskRunnerHandle::Get()},
-      epfd_{kInvalidHandle},
-      firewall_{firewall} {}
+      epfd_{kInvalidHandle} {}
 
 // Test-only.
-PortTracker::PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner,
-                         Firewall* firewall)
-    : task_runner_{task_runner}, epfd_{kInvalidHandle}, firewall_{firewall} {}
+PortTracker::PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner)
+    : task_runner_{task_runner}, epfd_{kInvalidHandle} {}
 
 PortTracker::~PortTracker() {
   RevokeAllPortRules();
@@ -224,28 +229,7 @@ bool PortTracker::AddPortRule(const PortRule& rule, int dbus_fd) {
   port_rules_[key].lifeline_fd = lifeline_fd;
   lifeline_fds_[lifeline_fd] = key;
 
-  bool success = false;
-  switch (rule.type) {
-    case kAccessRule:
-      success = firewall_->AddAcceptRules(rule.proto, rule.input_dst_port,
-                                          rule.input_ifname);
-      break;
-    case kLockdownRule:
-      success =
-          firewall_->AddLoopbackLockdownRules(rule.proto, rule.input_dst_port);
-      break;
-    case kForwardingRule:
-    case kAdbForwardingRule:
-      success = firewall_->AddIpv4ForwardRule(
-          rule.proto, rule.input_dst_ip, rule.input_dst_port, rule.input_ifname,
-          rule.dst_ip, rule.dst_port);
-      break;
-    default:
-      LOG(ERROR) << "Unknown port rule type " << rule.type;
-      break;
-  }
-
-  if (!success) {
+  if (!ModifyPortRule(ModifyPortRuleRequest::CREATE, rule)) {
     // If we fail to punch the hole in the firewall, stop tracking the lifetime
     // of the process.
     LOG(ERROR) << "Failed to create rule " << rule;
@@ -572,22 +556,7 @@ bool PortTracker::RevokePortRule(const PortRuleKey key) {
   }
   port_rules_.erase(key);
   lifeline_fds_.erase(rule.lifeline_fd);
-  switch (rule.type) {
-    case kAccessRule:
-      return deleted && firewall_->DeleteAcceptRules(
-                            key.proto, key.input_dst_port, key.input_ifname);
-    case kLockdownRule:
-      return deleted && firewall_->DeleteLoopbackLockdownRules(
-                            key.proto, key.input_dst_port);
-    case kForwardingRule:
-    case kAdbForwardingRule:
-      return deleted && firewall_->DeleteIpv4ForwardRule(
-                            rule.proto, rule.input_dst_ip, rule.input_dst_port,
-                            rule.input_ifname, rule.dst_ip, rule.dst_port);
-    default:
-      LOG(ERROR) << "Unknown port rule entry type " << rule.type;
-      return false;
-  }
+  return deleted && ModifyPortRule(ModifyPortRuleRequest::DELETE, rule);
 }
 
 bool PortTracker::InitializeEpollOnce() {

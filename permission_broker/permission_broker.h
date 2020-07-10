@@ -19,7 +19,6 @@
 #include <session_manager/dbus-proxies.h>
 
 #include "permission_broker/dbus_adaptors/org.chromium.PermissionBroker.h"
-#include "permission_broker/firewall.h"
 #include "permission_broker/port_tracker.h"
 #include "permission_broker/rule_engine.h"
 #include "permission_broker/usb_control.h"
@@ -97,7 +96,6 @@ class PermissionBroker : public org::chromium::PermissionBrokerAdaptor,
 
   RuleEngine rule_engine_;
   brillo::dbus_utils::DBusObject dbus_object_;
-  Firewall firewall_;
   PortTracker port_tracker_;
   UsbControl usb_control_;
   UsbDriverTracker usb_driver_tracker_;

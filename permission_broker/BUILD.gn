@@ -11,10 +11,7 @@ group("all") {
     deps += [ ":permission_broker_test" ]
   }
   if (use.fuzzer) {
-    deps += [
-      ":firewall_fuzzer",
-      ":port_tracker_fuzzer",
-    ]
+    deps += [ ":port_tracker_fuzzer" ]
   }
 }
 
@@ -64,7 +61,6 @@ static_library("libpermission_broker") {
     "deny_unsafe_hidraw_device_rule.cc",
     "deny_usb_device_class_rule.cc",
     "deny_usb_vendor_id_rule.cc",
-    "firewall.cc",
     "hidraw_subsystem_udev_rule.cc",
     "libusb_wrapper.cc",
     "permission_broker.cc",
@@ -112,9 +108,7 @@ if (use.test) {
       "deny_usb_device_class_rule_test.cc",
       "deny_usb_vendor_id_rule_test.cc",
       "fake_libusb_wrapper.cc",
-      "firewall_test.cc",
       "group_tty_device_rule_test.cc",
-      "mock_firewall.cc",
       "port_tracker_test.cc",
       "rule_engine_test.cc",
       "rule_test.cc",
@@ -127,15 +121,6 @@ if (use.test) {
 if (use.fuzzer) {
   pkg_config("permission_broker_fuzzer_config") {
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
-  }
-  executable("firewall_fuzzer") {
-    configs += [
-      "//common-mk/common_fuzzer:common_fuzzer",
-      ":permission_broker_fuzzer_config",
-      ":target_defaults",
-    ]
-    deps = [ ":libpermission_broker" ]
-    sources = [ "firewall_fuzzer.cc" ]
   }
   executable("port_tracker_fuzzer") {
     configs += [

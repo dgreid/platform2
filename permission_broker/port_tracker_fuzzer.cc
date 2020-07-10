@@ -14,24 +14,15 @@
 
 namespace permission_broker {
 
-class FakeFirewall : public Firewall {
- public:
-  FakeFirewall() = default;
-  ~FakeFirewall() = default;
-
- private:
-  // The fake's implementation always succeeds.
-  int RunInMinijail(const std::vector<std::string>& argv) override { return 0; }
-
-  DISALLOW_COPY_AND_ASSIGN(FakeFirewall);
-};
-
 class FakePortTracker : public PortTracker {
  public:
-  explicit FakePortTracker(Firewall* firewall)
-      : PortTracker(nullptr, firewall), next_fd_{1} {}
+  FakePortTracker() : PortTracker(nullptr), next_fd_{1} {}
   ~FakePortTracker() override = default;
 
+  bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation,
+                      const PortRule& rule) override {
+    return true;
+  }
   int AddLifelineFd(int dbus_fd) override { return next_fd_++; }
   bool DeleteLifelineFd(int fd) override { return true; }
   void CheckLifelineFds(bool reschedule_check) override {}
@@ -155,8 +146,7 @@ struct Environment {
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   static Environment env;
 
-  permission_broker::FakeFirewall firewall;
-  permission_broker::FakePortTracker port_tracker(&firewall);
+  permission_broker::FakePortTracker port_tracker;
   std::set<permission_broker::FuzzRequest> existing_rules;
   FuzzedDataProvider provider(data, size);
 

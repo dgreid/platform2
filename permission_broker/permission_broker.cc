@@ -72,7 +72,7 @@ PermissionBroker::PermissionBroker(scoped_refptr<dbus::Bus> bus,
       rule_engine_(udev_run_path, poll_interval),
       dbus_object_(
           nullptr, bus, dbus::ObjectPath(kPermissionBrokerServicePath)),
-      port_tracker_(&firewall_),
+      port_tracker_(),
       usb_control_(std::make_unique<UsbDeviceManager>()),
       session_manager_proxy_(
           new org::chromium::SessionManagerInterfaceProxy(bus)) {

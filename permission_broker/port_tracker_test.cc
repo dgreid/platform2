@@ -9,8 +9,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "permission_broker/mock_firewall.h"
-
 using ::testing::_;
 using ::testing::Return;
 using ::testing::SetArgPointee;
@@ -19,9 +17,13 @@ namespace permission_broker {
 
 class MockPortTracker : public PortTracker {
  public:
-  explicit MockPortTracker(Firewall* firewall)
-      : PortTracker(nullptr, firewall) {}
+  MockPortTracker() : PortTracker(nullptr) {}
   ~MockPortTracker() override = default;
+
+  MOCK_METHOD(bool,
+              ModifyPortRule,
+              (patchpanel::ModifyPortRuleRequest::Operation, const PortRule&),
+              (override));
 
   MOCK_METHOD(int, AddLifelineFd, (int), (override));
   MOCK_METHOD(bool, DeleteLifelineFd, (int), (override));
@@ -36,29 +38,10 @@ class MockPortTracker : public PortTracker {
 
 class PortTrackerTest : public testing::Test {
  public:
-  PortTrackerTest() : port_tracker_{&mock_firewall_} {}
+  PortTrackerTest() = default;
   ~PortTrackerTest() override = default;
 
  protected:
-  void SetMockExpectations(MockFirewall* firewall, bool success) {
-    // Empty criterion matches all commands.
-    firewall->SetRunInMinijailFailCriterion(std::vector<std::string>(), true,
-                                            success);
-  }
-
-  void SetMockExpectationsPerExecutable(MockFirewall* firewall,
-                                        bool ip4_success,
-                                        bool ip6_success) {
-    if (!ip4_success)
-      firewall->SetRunInMinijailFailCriterion(
-          std::vector<std::string>({kIpTablesPath}), true /* repeat */,
-          false /* omit_failure */);
-    if (!ip6_success)
-      firewall->SetRunInMinijailFailCriterion(
-          std::vector<std::string>({kIp6TablesPath}), true, false);
-  }
-
-  MockFirewall mock_firewall_;
   MockPortTracker port_tracker_;
 
   uint16_t tcp_port = 8080;
@@ -81,21 +64,21 @@ class PortTrackerTest : public testing::Test {
 };
 
 TEST_F(PortTrackerTest, AllowTcpPortAccess_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   ASSERT_TRUE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
 }
 
 TEST_F(PortTrackerTest, AllowUdpPortAccess_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   ASSERT_TRUE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
 }
 
 TEST_F(PortTrackerTest, AllowTcpPortAccess_Twice) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
@@ -104,7 +87,7 @@ TEST_F(PortTrackerTest, AllowTcpPortAccess_Twice) {
 }
 
 TEST_F(PortTrackerTest, AllowUdpPortAccess_Twice) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
@@ -113,8 +96,9 @@ TEST_F(PortTrackerTest, AllowUdpPortAccess_Twice) {
 }
 
 TEST_F(PortTrackerTest, AllowTcpPortAccess_FirewallFailure) {
-  // Make 'iptables' fail.
-  SetMockExpectations(&mock_firewall_, false /* success */);
+  // Make DBus call to patchpanel fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   EXPECT_CALL(port_tracker_, DeleteLifelineFd(tracked_fd))
@@ -124,8 +108,9 @@ TEST_F(PortTrackerTest, AllowTcpPortAccess_FirewallFailure) {
 }
 
 TEST_F(PortTrackerTest, AllowUdpPortAccess_FirewallFailure) {
-  // Make 'iptables' fail.
-  SetMockExpectations(&mock_firewall_, false /* success */);
+  // Make DBus call to patchpanel fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   EXPECT_CALL(port_tracker_, DeleteLifelineFd(tracked_fd))
@@ -135,7 +120,7 @@ TEST_F(PortTrackerTest, AllowUdpPortAccess_FirewallFailure) {
 }
 
 TEST_F(PortTrackerTest, AllowTcpPortAccess_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   // Make epoll(7) fail.
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(-1));
   ASSERT_FALSE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
@@ -143,14 +128,14 @@ TEST_F(PortTrackerTest, AllowTcpPortAccess_EpollFailure) {
 }
 
 TEST_F(PortTrackerTest, AllowUdpPortAccess_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   // Make epoll(7) fail.
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(-1));
   ASSERT_FALSE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
 }
 
 TEST_F(PortTrackerTest, RevokeTcpPortAccess_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   ASSERT_TRUE(port_tracker_.AllowTcpPortAccess(tcp_port, interface, dbus_fd));
@@ -162,7 +147,7 @@ TEST_F(PortTrackerTest, RevokeTcpPortAccess_Success) {
 }
 
 TEST_F(PortTrackerTest, RevokeUdpPortAccess_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   ASSERT_TRUE(port_tracker_.AllowUdpPortAccess(udp_port, interface, dbus_fd));
@@ -174,10 +159,10 @@ TEST_F(PortTrackerTest, RevokeUdpPortAccess_Success) {
 }
 
 TEST_F(PortTrackerTest, RevokeTcpPortAccess_FirewallFailure) {
-  // Make plugging the firewall hole fail.
-  mock_firewall_.SetRunInMinijailFailCriterion(
-      std::vector<std::string>({"-D", "-p", "tcp"}), true /* repeat */,
-      false /* omit_failure */);
+  // Make revoke iptables rules DBus call fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillOnce(Return(true))
+      .WillOnce(Return(false));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
@@ -190,10 +175,10 @@ TEST_F(PortTrackerTest, RevokeTcpPortAccess_FirewallFailure) {
 }
 
 TEST_F(PortTrackerTest, RevokeUdpPortAccess_DbusFailure) {
-  // Make plugging the firewall hole fail.
-  mock_firewall_.SetRunInMinijailFailCriterion(
-      std::vector<std::string>({"-D", "-p", "udp"}), true /* repeat */,
-      false /* omit_failure */);
+  // Make revoke iptables rules DBus call fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillOnce(Return(true))
+      .WillOnce(Return(false));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
@@ -206,7 +191,7 @@ TEST_F(PortTrackerTest, RevokeUdpPortAccess_DbusFailure) {
 }
 
 TEST_F(PortTrackerTest, RevokeTcpPortAccess_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
@@ -220,7 +205,7 @@ TEST_F(PortTrackerTest, RevokeTcpPortAccess_EpollFailure) {
 }
 
 TEST_F(PortTrackerTest, RevokeUdpPortAccess_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
@@ -234,14 +219,14 @@ TEST_F(PortTrackerTest, RevokeUdpPortAccess_EpollFailure) {
 }
 
 TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
 }
 
 TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_Twice) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(0));
   EXPECT_CALL(port_tracker_, CheckLifelineFds(false));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
@@ -250,8 +235,9 @@ TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_Twice) {
 }
 
 TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_FirewallFailure) {
-  // Make 'iptables' fail.
-  SetMockExpectations(&mock_firewall_, false /* success */);
+  // Make DBus call to patchpanel fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   EXPECT_CALL(port_tracker_, DeleteLifelineFd(tracked_fd))
@@ -261,7 +247,7 @@ TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_FirewallFailure) {
 }
 
 TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   // Make epoll(7) fail.
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(-1));
   ASSERT_FALSE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
@@ -269,7 +255,7 @@ TEST_F(PortTrackerTest, LockDownLoopbackTcpPort_EpollFailure) {
 }
 
 TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_Success) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
@@ -281,11 +267,10 @@ TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_Success) {
 }
 
 TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_FirewallFailure) {
-  // Make releasing the lockdown fail.
-  mock_firewall_.SetRunInMinijailFailCriterion(
-      std::vector<std::string>({"-D", "-p", "tcp"}), true /* repeat */,
-      false /* omit_failure */);
-
+  // Make revoke iptables rules DBus call fail.
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillOnce(Return(true))
+      .WillOnce(Return(false));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
@@ -297,8 +282,7 @@ TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_FirewallFailure) {
 }
 
 TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_EpollFailure) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
-
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd))
       .WillOnce(Return(tracked_fd));
   ASSERT_TRUE(port_tracker_.LockDownLoopbackTcpPort(tcp_port, dbus_fd));
@@ -311,7 +295,7 @@ TEST_F(PortTrackerTest, ReleaseLoopbackTcpPort_EpollFailure) {
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_BaseSuccessCase) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(5));
   ASSERT_TRUE(port_tracker_.StartTcpPortForwarding(
       tcp_port, "eth0", crosvm_addr, tcp_port, dbus_fd));
@@ -329,19 +313,18 @@ TEST_F(PortTrackerTest, StartPortForwarding_BaseSuccessCase) {
       udp_port, "wlan0", pluginvm_addr, udp_port, dbus_fd));
 
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(8, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartAdbPortForwarding_BaseSuccessCase) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(7));
   ASSERT_TRUE(port_tracker_.StartAdbPortForwarding("vmtap0", dbus_fd));
 
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(2, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_LifelineFdFailure) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(-1));
   ASSERT_FALSE(port_tracker_.StartTcpPortForwarding(
       tcp_port, "eth0", crosvm_addr, tcp_port, dbus_fd));
@@ -354,6 +337,7 @@ TEST_F(PortTrackerTest, StartPortForwarding_LifelineFdFailure) {
 }
 
 TEST_F(PortTrackerTest, StartAdbPortForwarding_LifelineFdFailure) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(-1));
   ASSERT_FALSE(port_tracker_.StartAdbPortForwarding("vmtap0", dbus_fd));
 
@@ -361,7 +345,8 @@ TEST_F(PortTrackerTest, StartAdbPortForwarding_LifelineFdFailure) {
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_IptablesFailure) {
-  SetMockExpectations(&mock_firewall_, false /* failure */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(5));
   EXPECT_CALL(port_tracker_, DeleteLifelineFd(5)).WillOnce(Return(true));
@@ -377,7 +362,8 @@ TEST_F(PortTrackerTest, StartPortForwarding_IptablesFailure) {
 }
 
 TEST_F(PortTrackerTest, StartAdbPortForwarding_IptablesFailure) {
-  SetMockExpectations(&mock_firewall_, false /* failure */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _))
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(7));
   EXPECT_CALL(port_tracker_, DeleteLifelineFd(7)).WillOnce(Return(true));
@@ -387,6 +373,8 @@ TEST_F(PortTrackerTest, StartAdbPortForwarding_IptablesFailure) {
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_InputPortValidation) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
+
   ASSERT_FALSE(port_tracker_.StartTcpPortForwarding(
       reserved_port, "eth0", crosvm_addr, tcp_port, dbus_fd));
   ASSERT_FALSE(port_tracker_.StartUdpPortForwarding(
@@ -400,10 +388,11 @@ TEST_F(PortTrackerTest, StartPortForwarding_InputPortValidation) {
   ASSERT_TRUE(port_tracker_.StartUdpPortForwarding(
       tcp_port, "eth0", crosvm_addr, reserved_port, dbus_fd));
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(4, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_InputInterfaceValidation) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
+
   ASSERT_FALSE(port_tracker_.StartTcpPortForwarding(tcp_port, "", crosvm_addr,
                                                     tcp_port, dbus_fd));
   ASSERT_FALSE(port_tracker_.StartUdpPortForwarding(tcp_port, "", crosvm_addr,
@@ -436,10 +425,11 @@ TEST_F(PortTrackerTest, StartPortForwarding_InputInterfaceValidation) {
       tcp_port, "mlan0", crosvm_addr, tcp_port, dbus_fd));
 
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(10, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartAdbPortForwarding_InputInterfaceValidation) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
+
   ASSERT_FALSE(port_tracker_.StartAdbPortForwarding("", dbus_fd));
   ASSERT_FALSE(port_tracker_.StartAdbPortForwarding("lo", dbus_fd));
   ASSERT_FALSE(port_tracker_.StartAdbPortForwarding("iface0", dbus_fd));
@@ -448,10 +438,11 @@ TEST_F(PortTrackerTest, StartAdbPortForwarding_InputInterfaceValidation) {
   ASSERT_TRUE(port_tracker_.StartAdbPortForwarding("vmtap1", dbus_fd));
 
   ASSERT_TRUE(port_tracker_.HasActiveRules());
-  ASSERT_EQ(4, mock_firewall_.CountActiveCommands());
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_TargetIpAddressValidation) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
+
   ASSERT_FALSE(port_tracker_.StartTcpPortForwarding(
       tcp_port, "eth0", "not_an_ip", tcp_port, dbus_fd));
   ASSERT_FALSE(port_tracker_.StartTcpPortForwarding(tcp_port, "eth0", ipv4_any,
@@ -469,6 +460,7 @@ TEST_F(PortTrackerTest, StartPortForwarding_TargetIpAddressValidation) {
 }
 
 TEST_F(PortTrackerTest, StopPortForwarding) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   // Cannot stop before starting.
   ASSERT_FALSE(port_tracker_.StopTcpPortForwarding(tcp_port, "eth0"));
   ASSERT_FALSE(port_tracker_.StopUdpPortForwarding(tcp_port, "eth0"));
@@ -493,6 +485,7 @@ TEST_F(PortTrackerTest, StopPortForwarding) {
 }
 
 TEST_F(PortTrackerTest, StopAdbPortForwarding) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   // Cannot stop before starting.
   ASSERT_FALSE(port_tracker_.StopAdbPortForwarding("vmtap0"));
 
@@ -509,6 +502,7 @@ TEST_F(PortTrackerTest, StopAdbPortForwarding) {
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_PreventOverwrite) {
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(5));
   ASSERT_TRUE(port_tracker_.StartTcpPortForwarding(
       tcp_port, "eth0", crosvm_addr, tcp_port, dbus_fd));
@@ -546,7 +540,7 @@ TEST_F(PortTrackerTest, StartPortForwarding_PreventOverwrite) {
 }
 
 TEST_F(PortTrackerTest, StartPortForwarding_PreventForwardingOpenPort) {
-  SetMockExpectations(&mock_firewall_, true /* success */);
+  EXPECT_CALL(port_tracker_, ModifyPortRule(_, _)).WillRepeatedly(Return(true));
 
   // Open TCP port, that port cannot be forwarded for the same interface.
   EXPECT_CALL(port_tracker_, AddLifelineFd(dbus_fd)).WillOnce(Return(5));

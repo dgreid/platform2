@@ -16,9 +16,12 @@
 #include <base/sequenced_task_runner.h>
 #include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
-#include "permission_broker/firewall.h"
-
 namespace permission_broker {
+
+using patchpanel::ModifyPortRuleRequest;
+using Operation = patchpanel::ModifyPortRuleRequest::Operation;
+using Protocol = patchpanel::ModifyPortRuleRequest::Protocol;
+using RuleType = patchpanel::ModifyPortRuleRequest::RuleType;
 
 class PortTracker {
  public:
@@ -71,7 +74,7 @@ class PortTracker {
     uint16_t dst_port;
   };
 
-  explicit PortTracker(Firewall* firewall);
+  PortTracker();
   virtual ~PortTracker();
 
   bool AllowTcpPortAccess(uint16_t port, const std::string& iface, int dbus_fd);
@@ -103,8 +106,7 @@ class PortTracker {
   void RevokeAllPortRules();
 
  protected:
-  PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner,
-              Firewall* firewall);
+  explicit PortTracker(scoped_refptr<base::SequencedTaskRunner> task_runner);
 
  private:
   // Call patchpanel's DBus API to create or remove firewall rule.
@@ -137,10 +139,6 @@ class PortTracker {
   // For each fd (process), keep track of which rule (protocol, port, interface)
   // it requested.
   std::map<int, PortRuleKey> lifeline_fds_;
-
-  // |firewall_| is owned by the PermissionBroker object owning this instance
-  // of PortTracker.
-  Firewall* firewall_;
 
   DISALLOW_COPY_AND_ASSIGN(PortTracker);
 };
