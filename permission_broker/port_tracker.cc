@@ -204,14 +204,10 @@ bool PortTracker::AddPortRule(const PortRule& rule, int dbus_fd) {
           firewall_->AddLoopbackLockdownRules(rule.proto, rule.input_dst_port);
       break;
     case kForwardingRule:
-      success = firewall_->AddIpv4ForwardRule(
-          rule.proto, "" /* input_dst_ip */, rule.input_dst_port,
-          rule.input_ifname, rule.dst_ip, rule.dst_port);
-      break;
     case kAdbForwardingRule:
       success = firewall_->AddIpv4ForwardRule(
-          rule.proto, kArcAddr, rule.input_dst_port, rule.input_ifname,
-          kLocalhostAddr, kAdbProxyPort);
+          rule.proto, rule.input_dst_ip, rule.input_dst_port, rule.input_ifname,
+          rule.dst_ip, rule.dst_port);
       break;
     default:
       LOG(ERROR) << "Unknown port rule type " << rule.type;
@@ -322,8 +318,11 @@ bool PortTracker::StartAdbPortForwarding(const std::string& input_ifname,
   PortRule rule = {
       .type = kAdbForwardingRule,
       .proto = kProtocolTcp,
+      .input_dst_ip = kArcAddr,
       .input_dst_port = kAdbServerPort,
       .input_ifname = input_ifname,
+      .dst_ip = kLocalhostAddr,
+      .dst_port = kAdbProxyPort,
   };
   return AddPortRule(rule, dbus_fd);
 }
@@ -550,14 +549,10 @@ bool PortTracker::RevokePortRule(const PortRuleKey key) {
       return deleted && firewall_->DeleteLoopbackLockdownRules(
                             key.proto, key.input_dst_port);
     case kForwardingRule:
-      return deleted &&
-             firewall_->DeleteIpv4ForwardRule(
-                 rule.proto, "" /* input_dst_ip */, rule.input_dst_port,
-                 rule.input_ifname, rule.dst_ip, rule.dst_port);
     case kAdbForwardingRule:
       return deleted && firewall_->DeleteIpv4ForwardRule(
-                            rule.proto, kArcAddr, rule.input_dst_port,
-                            rule.input_ifname, kLocalhostAddr, kAdbProxyPort);
+                            rule.proto, rule.input_dst_ip, rule.input_dst_port,
+                            rule.input_ifname, rule.dst_ip, rule.dst_port);
     default:
       LOG(ERROR) << "Unknown port rule entry type " << rule.type;
       return false;

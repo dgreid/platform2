@@ -63,6 +63,7 @@ class PortTracker {
     int lifeline_fd;
     PortRuleType type;
     ProtocolEnum proto;
+    std::string input_dst_ip;
     uint16_t input_dst_port;
     std::string input_ifname;
     std::string dst_ip;
