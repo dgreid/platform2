@@ -5,9 +5,13 @@
 #ifndef PATCHPANEL_COUNTERS_SERVICE_H_
 #define PATCHPANEL_COUNTERS_SERVICE_H_
 
+#include <map>
 #include <set>
 #include <string>
+#include <utility>
 #include <vector>
+
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/shill_client.h"
@@ -43,16 +47,38 @@ namespace patchpanel {
 // The above rules and chains will never be removed once created, so we will
 // check if one rule exists before creating it.
 //
-// TODO(jiejiang): Query will be implemented in future patches.
-//
 // Query: Two commands (iptables and ip6tables) will be executed in the mangle
 // table to get all the chains and rules. And then we perform a text parsing on
 // the output to get the counters. Counters for the same entry will be merged
 // before return.
 class CountersService {
  public:
+  using SourceDevice = std::pair<TrafficCounter::Source, std::string>;
+  struct Counter {
+    Counter() = default;
+    Counter(uint64_t rx_bytes,
+            uint64_t rx_packets,
+            uint64_t tx_bytes,
+            uint64_t tx_packets);
+
+    uint64_t rx_bytes = 0;
+    uint64_t rx_packets = 0;
+    uint64_t tx_bytes = 0;
+    uint64_t tx_packets = 0;
+  };
+
   CountersService(ShillClient* shill_client, MinijailedProcessRunner* runner);
   ~CountersService() = default;
+
+  // Collects and returns counters from all the existing iptables rules.
+  // |devices| is the set of interfaces for which counters should be returned,
+  // any unknown interfaces will be ignored. If |devices| is empty, counters for
+  // all known interfaces will be returned. An empty map will be returned on
+  // any failure. Note that currently all traffic to/from an interface will be
+  // counted by (UNKNOWN, ifname), i.e., no other sources except for UNKNOWN are
+  // used.
+  std::map<SourceDevice, Counter> GetCounters(
+      const std::set<std::string>& devices);
 
  private:
   // TODO(b/161060333): Move the following two functions elsewhere.

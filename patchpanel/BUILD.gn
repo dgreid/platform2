@@ -33,6 +33,7 @@ pkg_config("target_defaults") {
     "libshill-client",
     "libshill-net-${libbase_ver}",
     "protobuf-lite",
+    "re2",
     "system_api",
   ]
   if (use.fuzzer) {
