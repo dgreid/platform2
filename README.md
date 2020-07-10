@@ -96,6 +96,7 @@ copies.
 | [modemfwd](./modemfwd/) | Daemon for managing modem firmware updaters |
 | [mtpd](./mtpd/) | Daemon for handling Media Transfer Protocol (MTP) with devices (e.g. phones) |
 | [nnapi](./nnapi/) | Implementation of the Android [Neural Networks API](https://developer.android.com/ndk/guides/neuralnetworks) |
+| [ocr](./ocr/) | Optical Character Recognition (OCR) service for Chrome OS |
 | [oobe_config](./oobe_config/) | Utilities for saving and restoring OOBE config state |
 | [p2p](./p2p/) | Service for sharing files between CrOS devices (e.g. updates) |
 | [patchpanel](./patchpanel/) | Platform networking daemons |

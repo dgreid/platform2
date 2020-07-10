@@ -1,0 +1,37 @@
+# Copyright 2020 The Chromium OS Authors.  All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# The target named "all" is the root target built
+# by the platform2 build system.
+group("all") {
+  deps = [ ":ocr_service" ]
+}
+
+pkg_config("target_defaults") {
+  cflags_c = [
+    "-Wextra",
+    "-Wshadow",
+  ]
+  cflags_cc = [ "-Woverloaded-virtual" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+    "system_api",
+    "tesseract",
+  ]
+}
+
+source_set("libocr") {
+  configs += [ ":target_defaults" ]
+  sources = [ "daemon.cc" ]
+}
+
+executable("ocr_service") {
+  configs += [ ":target_defaults" ]
+  deps = [ ":libocr" ]
+  sources = [ "main.cc" ]
+}
