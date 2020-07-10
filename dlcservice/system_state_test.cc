@@ -13,7 +13,7 @@ namespace dlcservice {
 class SystemStateTest : public BaseTest {};
 
 TEST_F(SystemStateTest, GettersTest) {
-  auto system_state = SystemState::Get();
+  auto* system_state = SystemState::Get();
   const auto temp_path = scoped_temp_dir_.GetPath();
 
   EXPECT_EQ(system_state->manifest_dir(), temp_path.Append("rootfs"));

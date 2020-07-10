@@ -50,7 +50,7 @@ void DlcManager::Initialize() {
 }
 
 void DlcManager::CleanupUnsupportedDlcs() {
-  auto system_state = SystemState::Get();
+  auto* system_state = SystemState::Get();
   // Delete deprecated DLC(s) in content directory.
   for (const auto& id : ScanDirectory(system_state->content_dir())) {
     brillo::ErrorPtr tmp_err;

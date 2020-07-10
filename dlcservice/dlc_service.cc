@@ -43,7 +43,7 @@ DlcService::~DlcService() {
 }
 
 void DlcService::Initialize() {
-  auto system_state = SystemState::Get();
+  auto* system_state = SystemState::Get();
   const auto prefs_dir = system_state->dlc_prefs_dir();
   if (!base::PathExists(prefs_dir)) {
     CHECK(CreateDir(prefs_dir))
@@ -208,7 +208,7 @@ void DlcService::PeriodicInstallCheck() {
     return;
 
   const int kNotSeenStatusDelay = 10;
-  auto system_state = SystemState::Get();
+  auto* system_state = SystemState::Get();
   if ((system_state->clock()->Now() -
        system_state->update_engine_status_timestamp()) >
       base::TimeDelta::FromSeconds(kNotSeenStatusDelay)) {
