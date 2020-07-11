@@ -21,6 +21,7 @@
 #include "patchpanel/address_manager.h"
 #include "patchpanel/arc_service.h"
 #include "patchpanel/crostini_service.h"
+#include "patchpanel/firewall.h"
 #include "patchpanel/helper_process.h"
 #include "patchpanel/network_monitor_service.h"
 #include "patchpanel/routing_service.h"
@@ -156,6 +157,8 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   // fd found.
   void CheckConnectedNamespaces();
 
+  bool ModifyPortRule(const patchpanel::ModifyPortRuleRequest& request);
+
   // Dispatch |msg| to child processes.
   void SendGuestMessage(const GuestMessage& msg);
 
@@ -170,6 +173,9 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
 
   // DBus service.
   dbus::ExportedObject* dbus_svc_path_;  // Owned by |bus_|.
+
+  // Firewall service.
+  Firewall firewall_;
 
   // Other services.
   brillo::ProcessReaper process_reaper_;
