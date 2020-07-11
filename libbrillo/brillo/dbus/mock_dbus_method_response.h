@@ -17,7 +17,7 @@ namespace brillo {
 
 namespace dbus_utils {
 
-namespace MockDBusMethodResponseUtils {
+namespace internal {
 
 // CreateSaveArgsOnceFn is simple helper template for generating function that
 // will save the content of its parameter into the pointers given to
@@ -64,7 +64,7 @@ base::Callback<void(const First&, const Rest&...)> CreateSaveArgsOnceFn(
       CreateSaveArgsOnceFn<Rest...>(rest_dest...), first_dest);
 }
 
-}  // namespace MockDBusMethodResponseUtils
+}  // namespace internal
 
 // Mock DBusMethodResponse for capturing the output of async dbus calls.
 // There are 2 ways to use this class:
@@ -181,8 +181,7 @@ class MockDBusMethodResponse
   // into |destination|.
   void save_return_args(base::Optional<Types>*... destination) {
     set_return_callback(
-        MockDBusMethodResponseUtils::CreateSaveArgsOnceFn<Types...>(
-            destination...));
+        internal::CreateSaveArgsOnceFn<Types...>(destination...));
   }
 
  private:
