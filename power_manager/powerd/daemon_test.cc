@@ -43,6 +43,7 @@
 #include "power_manager/powerd/system/power_supply_stub.h"
 #include "power_manager/powerd/system/suspend_configurator_stub.h"
 #include "power_manager/powerd/system/suspend_freezer_stub.h"
+#include "power_manager/powerd/system/thermal/thermal_device.h"
 #include "power_manager/powerd/system/udev_stub.h"
 #include "power_manager/powerd/system/user_proximity_watcher_stub.h"
 #include "power_manager/proto_bindings/backlight.pb.h"
@@ -311,6 +312,12 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
     EXPECT_EQ(prefs_, prefs);
     return std::move(passed_suspend_freezer_);
   }
+  std::vector<std::unique_ptr<system::ThermalDeviceInterface>>
+  CreateThermalDevices() override {
+    // Not using pass_* pattern because this is a vector, not just an
+    // object.
+    return std::vector<std::unique_ptr<system::ThermalDeviceInterface>>();
+  }
 
   pid_t GetPid() override { return pid_; }
   void Launch(const std::string& command) override {
@@ -379,9 +386,9 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
       passed_suspend_configurator_;
   std::unique_ptr<system::SuspendFreezerInterface> passed_suspend_freezer_;
 
-  // Pointers to objects originally stored in |passed_*| members. These allow
-  // continued access by tests even after the corresponding Create* method has
-  // been called and ownership has been transferred to |daemon_|.
+  // Pointers to objects originally stored in |passed_*| members. These
+  // allow continued access by tests even after the corresponding Create*
+  // method has been called and ownership has been transferred to |daemon_|.
   FakePrefs* prefs_;
   system::DBusWrapperStub* dbus_wrapper_;
   system::UdevStub* udev_;
@@ -690,8 +697,8 @@ TEST_F(DaemonTest, DeferShutdownWhileFlashromRunning) {
   ASSERT_TRUE(daemon_->TriggerRetryShutdownTimerForTesting());
   EXPECT_EQ(0, async_commands_.size());
 
-  // Now remove the lockfile. The next time the timer fires, Daemon should start
-  // shutting down.
+  // Now remove the lockfile. The next time the timer fires, Daemon should
+  // start shutting down.
   lockfile_checker_->set_files_to_return({});
   ASSERT_TRUE(daemon_->TriggerRetryShutdownTimerForTesting());
   ASSERT_EQ(1, async_commands_.size());
@@ -703,8 +710,8 @@ TEST_F(DaemonTest, DeferShutdownWhileFlashromRunning) {
 }
 
 TEST_F(DaemonTest, ForceLidOpenForDockedModeReboot) {
-  // During initialization, we should always stop forcing the lid open to undo
-  // a force request that might've been sent earlier.
+  // During initialization, we should always stop forcing the lid open to
+  // undo a force request that might've been sent earlier.
   prefs_->SetInt64(kUseLidPref, 1);
   Init();
   ASSERT_EQ(1, async_commands_.size());
@@ -740,10 +747,10 @@ TEST_F(DaemonTest, DontForceLidOpenForNormalReboot) {
 }
 
 TEST_F(DaemonTest, DontResetForceLidOpenWhenNotUsingLid) {
-  // When starting while configured to not use the lid, powerd shouldn't stop
-  // forcing the lid open. This lets developers tell the EC to force the lid
-  // open without having powerd continually undo their setting whenever they
-  // reboot.
+  // When starting while configured to not use the lid, powerd shouldn't
+  // stop forcing the lid open. This lets developers tell the EC to force
+  // the lid open without having powerd continually undo their setting
+  // whenever they reboot.
   prefs_->SetInt64(kUseLidPref, 0);
   Init();
   EXPECT_EQ(0, async_commands_.size());
@@ -775,11 +782,12 @@ TEST_F(DaemonTest, FactoryMode) {
 
   Init();
 
-  // kNoForceLidOpenCommand shouldn't be executed at startup in factory mode.
+  // kNoForceLidOpenCommand shouldn't be executed at startup in factory
+  // mode.
   EXPECT_EQ(std::vector<std::string>(), async_commands_);
 
-  // Check that Daemon didn't initialize most objects related to adjusting the
-  // display or keyboard backlights.
+  // Check that Daemon didn't initialize most objects related to adjusting
+  // the display or keyboard backlights.
   EXPECT_TRUE(passed_ambient_light_sensor_manager_);
   EXPECT_TRUE(passed_internal_backlight_);
   EXPECT_TRUE(passed_keyboard_backlight_);
@@ -809,7 +817,8 @@ TEST_F(DaemonTest, FactoryMode) {
   EXPECT_FALSE(
       dbus_wrapper_->IsMethodExported(kDecreaseKeyboardBrightnessMethod));
 
-  // powerd shouldn't shut the system down in response to a low battery charge.
+  // powerd shouldn't shut the system down in response to a low battery
+  // charge.
   system::PowerStatus status;
   status.battery_is_present = true;
   status.battery_below_shutdown_threshold = true;

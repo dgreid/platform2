@@ -259,5 +259,13 @@
       </tp:docstring>
       <arg name="color_temp" type="u" />
     </signal>
+
+    <signal name="ThermalEvent">
+      <tp:docstring>
+        The |serialized_proto| arg is a serialized
+        power_manager::ThermalEvent protobuf.
+      </tp:docstring>
+      <arg name="serialized_proto" type="ay" />
+    </signal>
   </interface>
 </node>

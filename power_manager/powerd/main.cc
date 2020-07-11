@@ -55,6 +55,8 @@
 #include "power_manager/powerd/system/sar_watcher.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
 #include "power_manager/powerd/system/suspend_freezer.h"
+#include "power_manager/powerd/system/thermal/thermal_device.h"
+#include "power_manager/powerd/system/thermal/thermal_device_factory.h"
 #include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/wilco_charge_controller_helper.h"
 
@@ -260,6 +262,11 @@ class DaemonDelegateImpl : public DaemonDelegate {
     auto suspend_freezer = std::make_unique<system::SuspendFreezer>();
     suspend_freezer->Init(prefs);
     return suspend_freezer;
+  }
+
+  std::vector<std::unique_ptr<system::ThermalDeviceInterface>>
+  CreateThermalDevices() override {
+    return system::ThermalDeviceFactory::CreateThermalDevices();
   }
 
   pid_t GetPid() override { return getpid(); }

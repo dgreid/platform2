@@ -36,9 +36,10 @@ class InputWatcherInterface;
 class LockfileCheckerInterface;
 class PeripheralBatteryWatcher;
 class PowerSupplyInterface;
-class UserProximityWatcherInterface;
 class SuspendConfiguratorInterface;
+class ThermalDeviceInterface;
 class UdevInterface;
+class UserProximityWatcherInterface;
 class WakeupSourceIdentifierInterface;
 }  // namespace system
 
@@ -153,6 +154,9 @@ class DaemonDelegate {
 
   virtual std::unique_ptr<system::SuspendFreezerInterface> CreateSuspendFreezer(
       PrefsInterface* prefs) = 0;
+
+  virtual std::vector<std::unique_ptr<system::ThermalDeviceInterface>>
+  CreateThermalDevices() = 0;
 
   // Returns the process's PID.
   virtual pid_t GetPid() = 0;

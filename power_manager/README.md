@@ -36,6 +36,8 @@ is available:
     systems shut down and reboot.
 -   [Suspend and Resume](docs/suspend_resume.md) describes powerd's process for
     suspending and resuming the system.
+-   [Thermal](docs/thermal.md) describes how powerd monitors system thermal
+    state to provide thermal hinting to Chrome.
 -   [udev Usage](docs/udev.md) describes how powerd uses the udev system to
     learn about hardware changes.
 

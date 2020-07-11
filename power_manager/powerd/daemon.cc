@@ -40,6 +40,7 @@
 #include "power_manager/powerd/policy/keyboard_backlight_controller.h"
 #include "power_manager/powerd/policy/shutdown_from_suspend.h"
 #include "power_manager/powerd/policy/state_controller.h"
+#include "power_manager/powerd/policy/thermal_event_handler.h"
 #include "power_manager/powerd/system/acpi_wakeup_helper_interface.h"
 #include "power_manager/powerd/system/ambient_light_sensor_manager.h"
 #include "power_manager/powerd/system/arc_timer_manager.h"
@@ -59,6 +60,7 @@
 #include "power_manager/powerd/system/smart_discharge_configurator.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
 #include "power_manager/powerd/system/suspend_freezer.h"
+#include "power_manager/powerd/system/thermal/thermal_device.h"
 #include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/user_proximity_watcher_interface.h"
 #include "power_manager/powerd/system/wake_on_dp_configurator.h"
@@ -467,6 +469,15 @@ void Daemon::Init() {
   prefs_->GetInt64(kHibernatePowerUaPref, &hibernate_ua);
   system::ConfigureSmartDischarge(to_zero_hr, cutoff_ua, hibernate_ua);
 
+  thermal_devices_ = delegate_->CreateThermalDevices();
+  std::vector<system::ThermalDeviceInterface*> weak_thermal_device;
+  for (const auto& thermal_device : thermal_devices_) {
+    weak_thermal_device.push_back(thermal_device.get());
+  }
+  thermal_event_handler_ = std::make_unique<policy::ThermalEventHandler>(
+      weak_thermal_device, dbus_wrapper_.get());
+  thermal_event_handler_->Init();
+
   // Call this last to ensure that all of our members are already initialized.
   OnPowerStatusUpdate();
 }
@@ -851,6 +862,7 @@ void Daemon::OnPowerStatusUpdate() {
   for (auto controller : all_backlight_controllers_)
     controller->HandlePowerSourceChange(power_source);
   state_controller_->HandlePowerSourceChange(power_source);
+  thermal_event_handler_->HandlePowerSourceChange(power_source);
 
   if (status.battery_is_present && status.battery_below_shutdown_threshold) {
     if (factory_mode_) {
