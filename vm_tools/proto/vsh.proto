@@ -44,6 +44,8 @@ message SetupConnectionRequest {
   // The logic here is inverted from a sane value to keep backwards
   // compatibility with the current behavior (always allocate a pty).
   bool nopty = 8;
+  // Directory to set for current working directory.
+  string cwd = 9;
 }
 
 // Response to a SetupConnectionRequest.

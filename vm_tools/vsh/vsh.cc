@@ -241,6 +241,7 @@ int main(int argc, char** argv) {
   DEFINE_string(vm_name, "", "Target VM name");
   DEFINE_string(user, "", "Target user in the VM");
   DEFINE_string(target_container, "", "Target container");
+  DEFINE_string(cwd, "", "Current working directory");
 
   brillo::FlagHelper::Init(argc, argv, kVshUsage);
 
@@ -301,7 +302,7 @@ int main(int argc, char** argv) {
 
     client = VshClient::Create(std::move(sock_fd), std::move(stdout_fd),
                                std::move(stderr_fd), FLAGS_user,
-                               FLAGS_target_container, interactive);
+                               FLAGS_target_container, FLAGS_cwd, interactive);
 
     if (!client) {
       return EXIT_FAILURE;
@@ -354,7 +355,7 @@ int main(int argc, char** argv) {
         FLAGS_user.empty() ? string("chronos") : std::move(FLAGS_user);
     client = VshClient::Create(std::move(sock_fd), std::move(stdout_fd),
                                std::move(stderr_fd), user,
-                               FLAGS_target_container, interactive);
+                               FLAGS_target_container, FLAGS_cwd, interactive);
   }
 
   if (!client) {

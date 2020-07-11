@@ -54,11 +54,12 @@ std::unique_ptr<VshClient> VshClient::Create(base::ScopedFD sock_fd,
                                              base::ScopedFD stderr_fd,
                                              const std::string& user,
                                              const std::string& container,
+                                             const std::string& cwd,
                                              bool interactive) {
   auto client = std::unique_ptr<VshClient>(new VshClient(
       std::move(sock_fd), std::move(stdout_fd), std::move(stderr_fd)));
 
-  if (!client->Init(user, container, interactive)) {
+  if (!client->Init(user, container, cwd, interactive)) {
     return nullptr;
   }
 
@@ -85,6 +86,7 @@ VshClient::VshClient(base::ScopedFD sock_fd,
 
 bool VshClient::Init(const std::string& user,
                      const std::string& container,
+                     const std::string& cwd,
                      bool interactive) {
   // Set up the connection with the guest. The setup process is:
   //
@@ -104,6 +106,7 @@ bool VshClient::Init(const std::string& user,
   }
 
   connection_request.set_user(user);
+  connection_request.set_cwd(cwd);
   connection_request.set_nopty(!interactive);
 
   auto env = connection_request.mutable_env();

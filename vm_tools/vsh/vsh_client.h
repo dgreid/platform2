@@ -31,6 +31,7 @@ class VshClient {
                                            base::ScopedFD stderr_fd,
                                            const std::string& user,
                                            const std::string& container,
+                                           const std::string& cwd,
                                            bool interactive);
 
   static std::unique_ptr<VshClient> CreateForTesting(base::ScopedFD sock_fd,
@@ -50,6 +51,7 @@ class VshClient {
 
   bool Init(const std::string& user,
             const std::string& container,
+            const std::string& cwd,
             bool interactive);
 
   bool HandleSignal(const struct signalfd_siginfo& siginfo);

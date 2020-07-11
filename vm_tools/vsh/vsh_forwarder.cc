@@ -416,6 +416,12 @@ void VshForwarder::PrepareExec(
       return;
     }
   }
+  // Attempt to change to cwd if set.
+  if (!connection_request.cwd().empty()) {
+    if (chdir(connection_request.cwd().c_str()) < 0) {
+      PLOG(WARNING) << "Failed to set cwd to: " << connection_request.cwd();
+    }
+  }
 
   // Get shell from passwd file and prefix argv[0] with "-" to indicate a
   // login shell.
