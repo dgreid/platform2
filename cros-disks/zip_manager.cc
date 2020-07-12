@@ -4,8 +4,7 @@
 
 #include "cros-disks/zip_manager.h"
 
-#include <algorithm>
-#include <memory>
+#include <utility>
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
@@ -35,45 +34,54 @@ bool ZipManager::CanMount(const std::string& source_path) const {
 
 std::unique_ptr<MountPoint> ZipManager::DoMount(
     const std::string& source_path,
-    const std::string& filesystem_type,
-    const std::vector<std::string>& original_options,
+    const std::string& /*filesystem_type*/,
+    const std::vector<std::string>& options,
     const base::FilePath& mount_path,
     MountOptions* const applied_options,
     MountErrorType* const error) {
   DCHECK(applied_options);
   DCHECK(error);
 
-  // Get appropriate UID and GID.
-  uid_t files_uid;
-  gid_t files_gid;
-  if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &files_uid,
-                                     nullptr) ||
-      !platform()->GetGroupId(FUSEHelper::kFilesGroup, &files_gid)) {
-    *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
-  }
+  FUSEMounter::Params params{
+      .bind_paths = {{source_path}},
+      .filesystem_type = "zipfs",
+      // TODO(crbug.com/912236) .metrics = metrics(),
+      .mount_group = FUSEHelper::kFilesGroup,
+      .mount_program = "/usr/bin/fuse-zip",
+      .mount_user = "fuse-zip",
+      .platform = platform(),
+      .process_reaper = process_reaper(),
+      .seccomp_policy = "/usr/share/policy/fuse-zip-seccomp.policy",
+  };
 
   // Prepare FUSE mount options.
-  MountOptions options;
-  // FUSE umask option in octal 0222 == r-x r-x r-x
-  options.WhitelistOptionPrefix("umask=");
-  options.Initialize({"umask=0222", MountOptions::kOptionReadOnly}, true,
-                     base::NumberToString(files_uid),
-                     base::NumberToString(files_gid));
+  {
+    uid_t uid;
+    gid_t gid;
+    if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &uid, nullptr) ||
+        !platform()->GetGroupId(FUSEHelper::kFilesGroup, &gid)) {
+      *error = MOUNT_ERROR_INTERNAL;
+      return nullptr;
+    }
 
-  *applied_options = options;
+    params.mount_options.WhitelistOptionPrefix("umask=");
+    params.mount_options.Initialize(
+        {"umask=0222", MountOptions::kOptionReadOnly}, true,
+        base::NumberToString(uid), base::NumberToString(gid));
 
-  // Run fuse-zip.
-  FUSEMounter mounter(
-      "zipfs", options, platform(), process_reaper(), "/usr/bin/fuse-zip",
-      "fuse-zip", "/usr/share/policy/fuse-zip-seccomp.policy", {{source_path}},
-      false /* permit_network_access */, FUSEHelper::kFilesGroup);
+    *applied_options = params.mount_options;
+  }
 
   // To access Play Files.
-  if (!mounter.AddGroup("android-everybody"))
-    LOG(INFO) << "Group 'android-everybody' does not exist";
+  {
+    gid_t gid;
+    if (params.platform->GetGroupId("android-everybody", &gid))
+      params.supplementary_groups.push_back(gid);
+  }
 
-  return mounter.Mount(source_path, mount_path, {}, error);
+  // Run fuse-zip.
+  const FUSEMounter mounter(std::move(params));
+  return mounter.Mount(source_path, mount_path, options, error);
 }
 
 }  // namespace cros_disks

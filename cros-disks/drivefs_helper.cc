@@ -4,6 +4,8 @@
 
 #include "cros-disks/drivefs_helper.h"
 
+#include <utility>
+
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
@@ -102,23 +104,23 @@ bool EnsureOwnership(const Platform& platform,
 
 class DrivefsMounter : public FUSEMounter {
  public:
-  DrivefsMounter(const std::string& filesystem_type,
-                 const MountOptions& mount_options,
+  DrivefsMounter(std::string filesystem_type,
+                 MountOptions mount_options,
                  const Platform* platform,
                  brillo::ProcessReaper* process_reaper,
-                 const std::string& mount_program_path,
-                 const std::string& mount_user,
-                 const std::string& seccomp_policy,
-                 const std::vector<BindPath>& accessible_paths)
-      : FUSEMounter(filesystem_type,
-                    mount_options,
-                    platform,
-                    process_reaper,
-                    mount_program_path,
-                    mount_user,
-                    seccomp_policy,
-                    accessible_paths,
-                    true /* permit_network_access */) {}
+                 std::string mount_program,
+                 std::string mount_user,
+                 std::string seccomp_policy,
+                 BindPaths bind_paths)
+      : FUSEMounter({.bind_paths = std::move(bind_paths),
+                     .filesystem_type = std::move(filesystem_type),
+                     .mount_options = std::move(mount_options),
+                     .mount_program = std::move(mount_program),
+                     .mount_user = std::move(mount_user),
+                     .network_access = true,
+                     .platform = platform,
+                     .process_reaper = process_reaper,
+                     .seccomp_policy = seccomp_policy}) {}
 
   // FUSEMounter overrides:
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -187,13 +189,11 @@ std::unique_ptr<FUSEMounter> DrivefsHelper::CreateMounter(
       platform()->PathExists(kSeccompPolicyFile) ? kSeccompPolicyFile : "";
 
   // Bind datadir and DBus communication socket into the sandbox.
-  std::vector<FUSEMounter::BindPath> paths = {
-      {data_dir.value(), true /* writable */},
-      {kDbusSocketPath, true},
-  };
+  FUSEMounter::BindPaths paths = {{.path = data_dir.value(), .writable = true},
+                                  {.path = kDbusSocketPath, .writable = true}};
   if (!my_files_path.empty()) {
     paths.push_back(
-        {my_files_path.value(), true /* writable */, true /* recursive */});
+        {.path = my_files_path.value(), .writable = true, .recursive = true});
   }
   return std::make_unique<DrivefsMounter>(
       type(), mount_options, platform(), process_reaper(),

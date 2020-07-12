@@ -4,6 +4,8 @@
 
 #include "cros-disks/smbfs_helper.h"
 
+#include <utility>
+
 #include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
@@ -29,23 +31,23 @@ const char kDaemonStorePath[] = "/run/daemon-store/smbfs";
 
 class SmbfsMounter : public FUSEMounter {
  public:
-  SmbfsMounter(const std::string& filesystem_type,
-               const MountOptions& mount_options,
+  SmbfsMounter(std::string filesystem_type,
+               MountOptions mount_options,
                const Platform* platform,
                brillo::ProcessReaper* process_reaper,
-               const std::string& mount_program_path,
-               const std::string& mount_user,
-               const std::string& seccomp_policy,
-               const std::vector<BindPath>& accessible_paths)
-      : FUSEMounter(filesystem_type,
-                    mount_options,
-                    platform,
-                    process_reaper,
-                    mount_program_path,
-                    mount_user,
-                    seccomp_policy,
-                    accessible_paths,
-                    true /* permit_network_access */) {}
+               std::string mount_program,
+               std::string mount_user,
+               std::string seccomp_policy,
+               BindPaths bind_paths)
+      : FUSEMounter({.bind_paths = std::move(bind_paths),
+                     .filesystem_type = std::move(filesystem_type),
+                     .mount_options = std::move(mount_options),
+                     .mount_program = std::move(mount_program),
+                     .mount_user = std::move(mount_user),
+                     .network_access = true,
+                     .platform = platform,
+                     .process_reaper = process_reaper,
+                     .seccomp_policy = seccomp_policy}) {}
 
   // FUSEMounter overrides:
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -91,7 +93,7 @@ std::unique_ptr<FUSEMounter> SmbfsHelper::CreateMounter(
                            base::NumberToString(files_gid));
 
   // Bind DBus communication socket and daemon-store into the sandbox.
-  std::vector<FUSEMounter::BindPath> paths = {
+  FUSEMounter::BindPaths paths = {
       {kDbusSocketPath, true},
       // Need to use recursive binding because the daemon-store directory in
       // their cryptohome is bind mounted inside |kDaemonStorePath|.

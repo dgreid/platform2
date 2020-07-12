@@ -87,15 +87,12 @@ class MockHelper : public FUSEHelper {
 class MockMounter : public FUSEMounter {
  public:
   MockMounter(const Platform* platform, brillo::ProcessReaper* process_reaper)
-      : FUSEMounter("fuse",
-                    MountOptions(),
-                    platform,
-                    process_reaper,
-                    "/bin/sh",
-                    "root",
-                    "",
-                    {},
-                    false) {}
+      : FUSEMounter({.filesystem_type = "fuse",
+                     .mount_program = "/bin/sh",
+                     .mount_user = "root",
+                     .platform = platform,
+                     .process_reaper = process_reaper}) {}
+
   MOCK_METHOD(std::unique_ptr<MountPoint>,
               Mount,
               (const std::string&,

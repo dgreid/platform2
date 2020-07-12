@@ -137,15 +137,11 @@ class FUSEMounterForTesting : public FUSEMounter {
  public:
   FUSEMounterForTesting(const Platform* platform,
                         brillo::ProcessReaper* process_reaper)
-      : FUSEMounter(kFUSEType,
-                    MountOptions(),
-                    platform,
-                    process_reaper,
-                    kMountProgram,
-                    kMountUser,
-                    {},
-                    {},
-                    false) {}
+      : FUSEMounter({.filesystem_type = kFUSEType,
+                     .mount_program = kMountProgram,
+                     .mount_user = kMountUser,
+                     .platform = platform,
+                     .process_reaper = process_reaper}) {}
 
   MOCK_METHOD(int, InvokeMountTool, (const std::vector<std::string>&), (const));
 

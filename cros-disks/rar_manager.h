@@ -63,15 +63,13 @@ class RarManager : public ArchiveManager {
   static IndexRange ParseDigits(base::StringPiece path);
 
   // Adds bind paths using old naming scheme.
-  void AddPathsWithOldNamingScheme(
-      std::vector<FUSEMounter::BindPath>* bind_paths,
-      base::StringPiece original_path) const;
+  void AddPathsWithOldNamingScheme(FUSEMounter::BindPaths* bind_paths,
+                                   base::StringPiece original_path) const;
 
   // Adds bind paths using new naming scheme.
-  void AddPathsWithNewNamingScheme(
-      std::vector<FUSEMounter::BindPath>* bind_paths,
-      base::StringPiece original_path,
-      const IndexRange& digits) const;
+  void AddPathsWithNewNamingScheme(FUSEMounter::BindPaths* bind_paths,
+                                   base::StringPiece original_path,
+                                   const IndexRange& digits) const;
 
   // Prepares the bind paths for the given RAR file path.
   //
@@ -111,8 +109,7 @@ class RarManager : public ArchiveManager {
   // basename.part001.rar
   // ...
   // etc.
-  std::vector<FUSEMounter::BindPath> GetBindPaths(
-      base::StringPiece original_path) const;
+  FUSEMounter::BindPaths GetBindPaths(base::StringPiece original_path) const;
 
   FRIEND_TEST(RarManagerTest, CanMount);
   FRIEND_TEST(RarManagerTest, SuggestMountPath);

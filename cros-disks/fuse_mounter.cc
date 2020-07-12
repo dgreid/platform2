@@ -109,8 +109,8 @@ void CleanUpCallback(base::OnceClosure cleanup,
 
 MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
                                       const Platform* platform,
-                                      bool network_ns,
-                                      const base::FilePath& seccomp) {
+                                      bool network_access,
+                                      const std::string& seccomp_policy) {
   sandbox->SetCapabilities(0);
   sandbox->SetNoNewPrivileges();
 
@@ -130,16 +130,16 @@ MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
 
   sandbox->NewPidNamespace();
 
-  if (network_ns) {
+  if (!network_access) {
     sandbox->NewNetworkNamespace();
   }
 
-  if (!seccomp.empty()) {
-    if (!platform->PathExists(seccomp.value())) {
-      LOG(ERROR) << "Seccomp policy " << quote(seccomp) << " is missing";
+  if (!seccomp_policy.empty()) {
+    if (!platform->PathExists(seccomp_policy)) {
+      LOG(ERROR) << "Seccomp policy " << quote(seccomp_policy) << " is missing";
       return MOUNT_ERROR_INTERNAL;
     }
-    sandbox->LoadSeccompFilterPolicy(seccomp.value());
+    sandbox->LoadSeccompFilterPolicy(seccomp_policy);
   }
 
   // Prepare mounts for pivot_root.
@@ -162,7 +162,7 @@ MountErrorType ConfigureCommonSandbox(SandboxedProcess* sandbox,
     return MOUNT_ERROR_INTERNAL;
   }
 
-  if (!network_ns) {
+  if (network_access) {
     // Network DNS configs are in /run/shill.
     if (!sandbox->BindMount("/run/shill", "/run/shill", false, false)) {
       LOG(ERROR) << "Can't bind /run/shill";
@@ -264,38 +264,20 @@ MountErrorType MountFuseDevice(const Platform* platform,
 
 }  // namespace
 
-FUSEMounter::FUSEMounter(const std::string& filesystem_type,
-                         const MountOptions& mount_options,
-                         const Platform* platform,
-                         brillo::ProcessReaper* process_reaper,
-                         const std::string& mount_program_path,
-                         const std::string& mount_user,
-                         const std::string& seccomp_policy,
-                         const std::vector<BindPath>& accessible_paths,
-                         bool permit_network_access,
-                         const std::string& mount_group,
-                         const std::string& mount_namespace_path,
-                         Metrics* metrics)
-    : MounterCompat(filesystem_type, mount_options),
-      platform_(platform),
-      process_reaper_(process_reaper),
-      metrics_(metrics),
-      mount_program_path_(mount_program_path),
-      mount_user_(mount_user),
-      mount_group_(mount_group),
-      seccomp_policy_(seccomp_policy),
-      accessible_paths_(accessible_paths),
-      permit_network_access_(permit_network_access),
-      mount_namespace_path_(mount_namespace_path) {}
-
-bool FUSEMounter::AddGroup(const std::string& group) {
-  gid_t gid;
-  if (!platform_->GetGroupId(group, &gid))
-    return false;
-
-  supplementary_groups_.emplace_back(gid);
-  return true;
-}
+FUSEMounter::FUSEMounter(Params params)
+    : MounterCompat(std::move(params.filesystem_type),
+                    std::move(params.mount_options)),
+      platform_(params.platform),
+      process_reaper_(params.process_reaper),
+      metrics_(params.metrics),
+      mount_program_(std::move(params.mount_program)),
+      mount_user_(std::move(params.mount_user)),
+      mount_group_(std::move(params.mount_group)),
+      seccomp_policy_(std::move(params.seccomp_policy)),
+      bind_paths_(std::move(params.bind_paths)),
+      network_access_(params.network_access),
+      mount_namespace_(std::move(params.mount_namespace)),
+      supplementary_groups_(std::move(params.supplementary_groups)) {}
 
 std::unique_ptr<MountPoint> FUSEMounter::Mount(
     const std::string& source,
@@ -304,8 +286,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
   *error = ConfigureCommonSandbox(mount_process.get(), platform_,
-                                  !permit_network_access_,
-                                  base::FilePath(seccomp_policy_));
+                                  network_access_, seccomp_policy_);
   if (*error != MOUNT_ERROR_NONE) {
     return nullptr;
   }
@@ -328,12 +309,12 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   mount_process->SetGroupId(mount_group_id);
   mount_process->SetSupplementaryGroupIds(supplementary_groups_);
 
-  if (!platform_->PathExists(mount_program_path_)) {
-    LOG(ERROR) << "Cannot find mount program " << quote(mount_program_path_);
+  if (!platform_->PathExists(mount_program_)) {
+    LOG(ERROR) << "Cannot find mount program " << quote(mount_program_);
     *error = MOUNT_ERROR_MOUNT_PROGRAM_NOT_FOUND;
     return nullptr;
   }
-  mount_process->AddArgument(mount_program_path_);
+  mount_process->AddArgument(mount_program_);
 
   const base::File fuse_file = base::File(
       base::FilePath(kFuseDeviceFile),
@@ -385,14 +366,14 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   }
 
   // Enter mount namespace in the sandbox if necessary.
-  if (!mount_namespace_path_.empty())
-    mount_process->EnterExistingMountNamespace(mount_namespace_path_);
+  if (!mount_namespace_.empty())
+    mount_process->EnterExistingMountNamespace(mount_namespace_);
 
   // This is for additional data dirs.
-  for (const auto& path : accessible_paths_) {
-    if (!mount_process->BindMount(path.path, path.path, path.writable,
-                                  path.recursive)) {
-      LOG(ERROR) << "Can't bind " << quote(path.path);
+  for (const BindPath& bind_path : bind_paths_) {
+    if (!mount_process->BindMount(bind_path.path, bind_path.path,
+                                  bind_path.writable, bind_path.recursive)) {
+      LOG(ERROR) << "Cannot bind-mount " << quote(bind_path.path);
       *error = MOUNT_ERROR_INVALID_ARGUMENT;
       return nullptr;
     }
@@ -413,17 +394,17 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   const int return_code = mount_process->Run(&output);
 
   if (metrics_)
-    metrics_->RecordFuseMounterErrorCode(mount_program_path_, return_code);
+    metrics_->RecordFuseMounterErrorCode(mount_program_, return_code);
 
   if (return_code != 0) {
     if (!output.empty()) {
-      LOG(ERROR) << "FUSE mount program " << quote(mount_program_path_)
+      LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
                  << " outputted " << output.size() << " lines:";
       for (const std::string& line : output) {
         LOG(ERROR) << line;
       }
     }
-    LOG(ERROR) << "FUSE mount program " << quote(mount_program_path_)
+    LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
                << " returned error code " << return_code;
     *error = MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
     return nullptr;

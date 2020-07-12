@@ -22,9 +22,8 @@ class MountPoint;
 // Interface for mounting a given filesystem.
 class Mounter {
  public:
-  explicit Mounter(const std::string& filesystem_type)
-      : filesystem_type_(filesystem_type) {}
-  virtual ~Mounter() = default;
+  explicit Mounter(std::string filesystem_type);
+  virtual ~Mounter();
 
   // Mounts the filesystem. On failure returns nullptr and |error| is
   // set accordingly. Both |source| and |options| are just some strings
@@ -57,10 +56,8 @@ class Mounter {
 // TODO(crbug.com/933018): Remove when done.
 class MounterCompat : public Mounter {
  public:
-  MounterCompat(std::unique_ptr<Mounter> mounter,
-                const MountOptions& mount_options);
-  MounterCompat(const std::string& filesystem_type,
-                const MountOptions& mount_options);
+  MounterCompat(std::unique_ptr<Mounter> mounter, MountOptions mount_options);
+  MounterCompat(std::string filesystem_type, MountOptions mount_options);
   ~MounterCompat() override;
 
   // Mounter overrides.

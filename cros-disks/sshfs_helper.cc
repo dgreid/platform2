@@ -5,6 +5,7 @@
 #include "cros-disks/sshfs_helper.h"
 
 #include <algorithm>
+#include <utility>
 
 #include <base/base64.h>
 #include <base/files/file_path.h>
@@ -43,7 +44,8 @@ const char* const kEnforcedOptions[] = {
 };
 
 const char* const kFilteredOptions[] = {
-    kOptionIdentityFile, kOptionUserKnownHostsFile,
+    kOptionIdentityFile,
+    kOptionUserKnownHostsFile,
 };
 
 struct Base64FileMapping {
@@ -59,23 +61,23 @@ const Base64FileMapping kWrittenFiles[] = {
 
 class SshfsMounter : public FUSEMounter {
  public:
-  SshfsMounter(const std::string& filesystem_type,
-               const MountOptions& mount_options,
+  SshfsMounter(std::string filesystem_type,
+               MountOptions mount_options,
                const Platform* platform,
                brillo::ProcessReaper* process_reaper,
-               const std::string& mount_program_path,
-               const std::string& mount_user,
-               const std::string& seccomp_policy,
-               const std::vector<BindPath>& accessible_paths)
-      : FUSEMounter(filesystem_type,
-                    mount_options,
-                    platform,
-                    process_reaper,
-                    mount_program_path,
-                    mount_user,
-                    seccomp_policy,
-                    accessible_paths,
-                    true /* permit_network_access */) {}
+               std::string mount_program,
+               std::string mount_user,
+               std::string seccomp_policy,
+               BindPaths bind_paths)
+      : FUSEMounter({.bind_paths = std::move(bind_paths),
+                     .filesystem_type = std::move(filesystem_type),
+                     .mount_options = std::move(mount_options),
+                     .mount_program = std::move(mount_program),
+                     .mount_user = std::move(mount_user),
+                     .network_access = true,
+                     .platform = platform,
+                     .process_reaper = process_reaper,
+                     .seccomp_policy = std::move(seccomp_policy)}) {}
 
   // FUSEMounter overrides:
   std::unique_ptr<MountPoint> Mount(const std::string& source_path,
@@ -147,7 +149,7 @@ std::unique_ptr<FUSEMounter> SshfsHelper::CreateMounter(
 
   return std::make_unique<SshfsMounter>(
       type(), mount_options, platform(), process_reaper(),
-      program_path().value(), user(), "", std::vector<FUSEMounter::BindPath>());
+      program_path().value(), user(), "", FUSEMounter::BindPaths());
 }
 
 bool SshfsHelper::PrepareWorkingDirectory(

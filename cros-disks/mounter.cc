@@ -18,16 +18,21 @@
 
 namespace cros_disks {
 
+Mounter::Mounter(std::string filesystem_type)
+    : filesystem_type_(std::move(filesystem_type)) {}
+
+Mounter::~Mounter() = default;
+
 MounterCompat::MounterCompat(std::unique_ptr<Mounter> mounter,
-                             const MountOptions& mount_options)
+                             MountOptions mount_options)
     : Mounter(mounter->filesystem_type()),
       mounter_(std::move(mounter)),
-      mount_options_(mount_options) {}
+      mount_options_(std::move(mount_options)) {}
 
-MounterCompat::MounterCompat(const std::string& filesystem_type,
-                             const MountOptions& mount_options)
-    : Mounter(filesystem_type),
-      mount_options_(mount_options) {}
+MounterCompat::MounterCompat(std::string filesystem_type,
+                             MountOptions mount_options)
+    : Mounter(std::move(filesystem_type)),
+      mount_options_(std::move(mount_options)) {}
 
 MounterCompat::~MounterCompat() = default;
 

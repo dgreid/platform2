@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <memory>
+#include <utility>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -42,8 +43,8 @@ bool RarManager::CanMount(const std::string& source_path) const {
 
 std::unique_ptr<MountPoint> RarManager::DoMount(
     const std::string& source_path,
-    const std::string& filesystem_type,
-    const std::vector<std::string>& original_options,
+    const std::string& /*filesystem_type*/,
+    const std::vector<std::string>& options,
     const base::FilePath& mount_path,
     MountOptions* const applied_options,
     MountErrorType* const error) {
@@ -52,33 +53,35 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
 
   metrics()->RecordArchiveType("rar");
 
-  // Get appropriate UID and GID.
-  uid_t files_uid;
-  gid_t files_gid;
-  if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &files_uid,
-                                     nullptr) ||
-      !platform()->GetGroupId(FUSEHelper::kFilesGroup, &files_gid)) {
-    *error = MOUNT_ERROR_INTERNAL;
-    return nullptr;
-  }
+  FUSEMounter::Params params{
+      .filesystem_type = "rarfs",
+      .metrics = metrics(),
+      .mount_group = FUSEHelper::kFilesGroup,
+      .mount_program = "/usr/bin/rar2fs",
+      .mount_user = "fuse-rar2fs",
+      .platform = platform(),
+      .process_reaper = process_reaper(),
+      .seccomp_policy = "/usr/share/policy/rar2fs-seccomp.policy",
+  };
 
   // Prepare FUSE mount options.
-  MountOptions options;
-  options.WhitelistOptionPrefix("locale=");
-  options.WhitelistOptionPrefix("umask=");
-  options.Initialize(
-      {
-          "locale=en_US.UTF8",
-          "umask=0222",  // umask in octal: 0222 == r-x r-x r-x
-          MountOptions::kOptionReadOnly,
-      },
-      true, base::NumberToString(files_uid), base::NumberToString(files_gid));
+  {
+    uid_t uid;
+    gid_t gid;
+    if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &uid, nullptr) ||
+        !platform()->GetGroupId(FUSEHelper::kFilesGroup, &gid)) {
+      *error = MOUNT_ERROR_INTERNAL;
+      return nullptr;
+    }
 
-  *applied_options = options;
+    params.mount_options.WhitelistOptionPrefix("locale=");
+    params.mount_options.WhitelistOptionPrefix("umask=");
+    params.mount_options.Initialize(
+        {"locale=en_US.UTF8", "umask=0222", MountOptions::kOptionReadOnly},
+        true, base::NumberToString(uid), base::NumberToString(gid));
 
-  // Mount namespace to use when running rar2fs.
-  std::string mount_namespace_path;
-  std::vector<FUSEMounter::BindPath> bind_paths;
+    *applied_options = params.mount_options;
+  }
 
   // Determine which mount namespace to use.
   {
@@ -86,32 +89,28 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
     auto guard = brillo::ScopedMountNamespace::CreateFromPath(
         base::FilePath(kChromeMountNamespacePath));
 
-    if (guard) {
-      // Check if the source path exists in Chrome's mount namespace.
-      if (base::PathExists(base::FilePath(source_path))) {
-        // The source path exists in Chrome's mount namespace.
-        mount_namespace_path = kChromeMountNamespacePath;
-      } else {
-        // Use the default mount namespace.
-        guard.reset();
-      }
+    // Check if the source path exists in Chrome's mount namespace.
+    if (guard && base::PathExists(base::FilePath(source_path))) {
+      // The source path exists in Chrome's mount namespace.
+      params.mount_namespace = kChromeMountNamespacePath;
+    } else {
+      // Use the default mount namespace.
+      guard.reset();
     }
 
-    bind_paths = GetBindPaths(source_path);
+    params.bind_paths = GetBindPaths(source_path);
+  }
+
+  // To access Play Files.
+  {
+    gid_t gid;
+    if (params.platform->GetGroupId("android-everybody", &gid))
+      params.supplementary_groups.push_back(gid);
   }
 
   // Run rar2fs.
-  FUSEMounter mounter("rarfs", options, platform(), process_reaper(),
-                      "/usr/bin/rar2fs", "fuse-rar2fs",
-                      "/usr/share/policy/rar2fs-seccomp.policy", bind_paths,
-                      false /* permit_network_access */,
-                      FUSEHelper::kFilesGroup, mount_namespace_path, metrics());
-
-  // To access Play Files.
-  if (!mounter.AddGroup("android-everybody"))
-    LOG(INFO) << "Group 'android-everybody' does not exist";
-
-  return mounter.Mount(source_path, mount_path, {}, error);
+  const FUSEMounter mounter(std::move(params));
+  return mounter.Mount(source_path, mount_path, options, error);
 }
 
 bool RarManager::Increment(const std::string::iterator begin,
@@ -160,7 +159,7 @@ RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
 }
 
 void RarManager::AddPathsWithOldNamingScheme(
-    std::vector<FUSEMounter::BindPath>* const bind_paths,
+    FUSEMounter::BindPaths* const bind_paths,
     const base::StringPiece original_path) const {
   DCHECK(bind_paths);
 
@@ -192,7 +191,7 @@ void RarManager::AddPathsWithOldNamingScheme(
 }
 
 void RarManager::AddPathsWithNewNamingScheme(
-    std::vector<FUSEMounter::BindPath>* const bind_paths,
+    FUSEMounter::BindPaths* const bind_paths,
     const base::StringPiece original_path,
     const IndexRange& digits) const {
   DCHECK(bind_paths);
@@ -216,10 +215,9 @@ void RarManager::AddPathsWithNewNamingScheme(
   }
 }
 
-std::vector<FUSEMounter::BindPath> RarManager::GetBindPaths(
+FUSEMounter::BindPaths RarManager::GetBindPaths(
     const base::StringPiece original_path) const {
-  std::vector<FUSEMounter::BindPath> bind_paths = {
-      {std::string(original_path)}};
+  FUSEMounter::BindPaths bind_paths = {{std::string(original_path)}};
 
   // Delimit the digit range assuming original_path uses the new naming scheme.
   const IndexRange digits = ParseDigits(original_path);

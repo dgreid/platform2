@@ -36,22 +36,53 @@ class FUSEMounter : public MounterCompat {
     bool recursive = false;
   };
 
-  FUSEMounter(const std::string& filesystem_type,
-              const MountOptions& mount_options,
-              const Platform* platform,
-              brillo::ProcessReaper* process_reaper,
-              const std::string& mount_program_path,
-              const std::string& mount_user,
-              const std::string& seccomp_policy,
-              const std::vector<BindPath>& accessible_paths,
-              bool permit_network_access,
-              const std::string& mount_group = {},
-              const std::string& mount_namespace_path = {},
-              Metrics* metrics = nullptr);
+  using BindPaths = std::vector<BindPath>;
 
-  // Adds a supplementary group to run the FUSE mount program with.
-  // Returns whether the given group exists.
-  [[nodiscard]] bool AddGroup(const std::string& group);
+  // Parameters passed to FUSEMounter's constructor.
+  // Members are kept in alphabetical order.
+  struct Params {
+    // Paths the FUSE mount program needs to access (beyond basic /proc, /dev,
+    // etc).
+    BindPaths bind_paths;
+
+    // Filesystem type.
+    std::string filesystem_type;
+
+    // Optional object that collects UMA metrics.
+    Metrics* metrics = nullptr;
+
+    // Optional group to run the FUSE mount program as.
+    std::string mount_group;
+
+    // Optional mount namespace where the source path exists.
+    std::string mount_namespace;
+
+    // FUSE mount options.
+    MountOptions mount_options;
+
+    // Path of the FUSE mount program.
+    std::string mount_program;
+
+    // User to run the FUSE mount program as.
+    std::string mount_user;
+
+    // Whether the FUSE mount program needs to access the network.
+    bool network_access = false;
+
+    // Object that provides platform service.
+    const Platform* platform = nullptr;
+
+    // Process reaper to monitor FUSE daemons.
+    brillo::ProcessReaper* process_reaper = nullptr;
+
+    // Optional path to BPF seccomp filter policy.
+    std::string seccomp_policy;
+
+    // Supplementary groups to run the mount program with.
+    std::vector<gid_t> supplementary_groups;
+  };
+
+  explicit FUSEMounter(Params params);
 
   // MounterCompat overrides.
   std::unique_ptr<MountPoint> Mount(const std::string& source,
@@ -73,7 +104,7 @@ class FUSEMounter : public MounterCompat {
   Metrics* const metrics_;
 
   // Path of the FUSE mount program.
-  const std::string mount_program_path_;
+  const std::string mount_program_;
 
   // User to run the FUSE mount program as.
   const std::string mount_user_;
@@ -84,18 +115,18 @@ class FUSEMounter : public MounterCompat {
   // If not empty the path to BPF seccomp filter policy.
   const std::string seccomp_policy_;
 
-  // Directories the FUSE module should be able to access (beyond basic
-  // /proc, /dev, etc).
-  const std::vector<BindPath> accessible_paths_;
+  // Paths the FUSE mount program needs to access (beyond basic /proc, /dev,
+  // etc).
+  const BindPaths bind_paths_;
 
-  // Whether to leave network access to the mount program.
-  const bool permit_network_access_;
+  // Whether to FUSE mount program needs to access the network.
+  const bool network_access_;
 
   // If not empty, mount namespace where the source path exists.
-  const std::string mount_namespace_path_;
+  const std::string mount_namespace_;
 
   // Supplementary groups to run the FUSE mount program with.
-  std::vector<gid_t> supplementary_groups_;
+  const std::vector<gid_t> supplementary_groups_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FUSEMounter);

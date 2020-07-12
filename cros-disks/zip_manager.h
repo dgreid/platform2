@@ -9,11 +9,7 @@
 #include <string>
 #include <vector>
 
-#include <base/strings/string_piece.h>
-#include <gtest/gtest_prod.h>
-
 #include "cros-disks/archive_manager.h"
-#include "cros-disks/fuse_mounter.h"
 
 namespace cros_disks {
 
