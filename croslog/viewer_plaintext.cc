@@ -11,6 +11,7 @@
 #include "base/files/file_util.h"
 #include "base/json/string_escape.h"
 #include "base/strings/string_number_conversions.h"
+#include "base/strings/string_util.h"
 
 #include "croslog/cursor_util.h"
 #include "croslog/log_parser_audit.h"
@@ -40,8 +41,19 @@ const char kAuditLogSources[] = "/var/log/audit/audit.log";
 
 ViewerPlaintext::ViewerPlaintext(const croslog::Config& config)
     : config_(config) {
-  if (!config.grep.empty()) {
-    config_grep_.emplace(config.grep);
+  Initialize();
+}
+
+// For test
+ViewerPlaintext::ViewerPlaintext(const croslog::Config& config,
+                                 BootRecords&& boot_logs)
+    : config_(config), boot_records_{std::move(boot_logs)} {
+  Initialize();
+}
+
+void ViewerPlaintext::Initialize() {
+  if (!config_.grep.empty()) {
+    config_grep_.emplace(config_.grep);
     if (!config_grep_->ok())
       config_grep_.reset();
   }
@@ -55,6 +67,13 @@ ViewerPlaintext::ViewerPlaintext(const croslog::Config& config)
   }
 
   config_show_cursor_ = config_.show_cursor && !config_.follow;
+
+  config_boot_range_.reset();
+  if (config_.boot.has_value()) {
+    auto range = boot_records_.GetBootRange(*config_.boot);
+    if (range.has_value())
+      config_boot_range_.emplace(*range);
+  }
 }
 
 bool ViewerPlaintext::Run() {
@@ -121,6 +140,13 @@ bool ViewerPlaintext::ShouldFilterOutEntry(const LogEntry& e) {
   if (config_grep_.has_value() && !RE2::PartialMatch(message, *config_grep_))
     return true;
 
+  if (config_.boot.has_value()) {
+    if (!config_boot_range_.has_value() ||
+        !config_boot_range_->Contains(e.time())) {
+      return true;
+    }
+  }
+
   return false;
 }
 
@@ -164,6 +190,11 @@ ViewerPlaintext::GenerateKeyValues(const LogEntry& e) {
   kvs.push_back(std::make_pair(
       "PRIORITY", base::NumberToString(static_cast<int>(e.severity()))));
   kvs.push_back(std::make_pair("SYSLOG_IDENTIFIER", e.tag()));
+
+  const std::string& boot_id = GetBootIdAt(e.time());
+  if (!boot_id.empty())
+    kvs.push_back(std::make_pair("_BOOT_ID", boot_id));
+
   if (e.pid() != -1) {
     kvs.push_back(std::make_pair("SYSLOG_PID", base::NumberToString(e.pid())));
     kvs.push_back(std::make_pair("_PID", base::NumberToString(e.pid())));
@@ -192,6 +223,30 @@ void ViewerPlaintext::WriteLogInExportFormat(const LogEntry& entry) {
     WriteOutput("\n", 1);
   }
   WriteOutput("\n", 1);
+}
+
+std::string ViewerPlaintext::GetBootIdAt(base::Time time) {
+  const auto& boot_ranges = boot_records_.boot_ranges();
+  DCHECK_GE(cache_boot_range_index_, -1);
+  DCHECK_LT(cache_boot_range_index_, boot_ranges.size());
+
+  // First, tries to reuse the index used at the last time. In most case, the
+  // logs are read sequentially and the boot id is likely to be same as the
+  // previous.
+  if (cache_boot_range_index_ != -1 &&
+      boot_ranges[cache_boot_range_index_].Contains(time)) {
+    return boot_ranges[cache_boot_range_index_].boot_id();
+  }
+
+  // Otherwise, searches the boot id sequentially from the boot log.
+  for (int i = 0; i < boot_ranges.size(); i++) {
+    const auto& boot_range = boot_ranges[i];
+    if (boot_range.Contains(time)) {
+      cache_boot_range_index_ = i;
+      return boot_range.boot_id();
+    }
+  }
+  return base::EmptyString();
 }
 
 void ViewerPlaintext::WriteLogInJsonFormat(const LogEntry& entry) {

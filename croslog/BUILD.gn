@@ -13,6 +13,8 @@ group("all") {
 
 static_library("libcroslog_static") {
   sources = [
+    "boot_records.cc",
+    "boot_records.h",
     "config.cc",
     "config.h",
     "cursor_util.cc",
@@ -60,6 +62,7 @@ if (use.test) {
 
   executable("croslog_testrunner") {
     sources = [
+      "boot_records_test.cc",
       "config_test.cc",
       "cursor_util_test.cc",
       "file_change_watcher_test.cc",

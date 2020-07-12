@@ -14,6 +14,7 @@
 #include "base/run_loop.h"
 #include "re2/re2.h"
 
+#include "croslog/boot_records.h"
 #include "croslog/config.h"
 #include "croslog/file_change_watcher.h"
 #include "croslog/multiplexer.h"
@@ -30,6 +31,7 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
  private:
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
+  FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId);
 
   enum class CursorMode { UNSPECIFIED, SAME_AND_NEWER, NEWER };
 
@@ -38,11 +40,21 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
   const croslog::Config config_;
   base::Optional<RE2> config_grep_;
+
   CursorMode config_cursor_mode_ = CursorMode::UNSPECIFIED;
   base::Time config_cursor_time_;
   bool config_show_cursor_ = false;
 
+  base::Optional<BootRecords::BootRange> config_boot_range_;
+  int cache_boot_range_index_ = -1;
+
+  BootRecords boot_records_;
   Multiplexer multiplexer_;
+
+  // FOR TEST: Initialize with the custom boot logs.
+  ViewerPlaintext(const croslog::Config& config, BootRecords&& boot_logs);
+
+  void Initialize();
 
   void OnLogFileChanged() override;
 
@@ -50,6 +62,7 @@ class ViewerPlaintext : public Multiplexer::Observer {
 
   void ReadRemainingLogs();
 
+  std::string GetBootIdAt(base::Time time);
   std::vector<std::pair<std::string, std::string>> GenerateKeyValues(
       const LogEntry& entry);
 

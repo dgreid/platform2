@@ -12,6 +12,20 @@ class ViewerPlaintextTest : public ::testing::Test {
  public:
   ViewerPlaintextTest() = default;
 
+  static std::vector<BootRecords::BootEntry> GenerateBootLog(base::Time now) {
+    std::vector<BootRecords::BootEntry> boot_entries;
+    boot_entries.emplace_back(now + base::TimeDelta::FromSeconds(0),
+                              "46640bbceeb149a696171d1ea34516ad");
+    boot_entries.emplace_back(now + base::TimeDelta::FromSeconds(2),
+                              "9fa644cb05dc4e3ebe3be322ac8d1e86");
+    return boot_entries;
+  }
+
+  static LogEntry GenerateLogEntry(base::Time time) {
+    return LogEntry{time, Severity::ERROR, "TAG",
+                    1234, "MESSAGE",       "ENTIRE STRING"};
+  }
+
  private:
   DISALLOW_COPY_AND_ASSIGN(ViewerPlaintextTest);
 };
@@ -75,6 +89,83 @@ TEST_F(ViewerPlaintextTest, ShouldFilterOutEntry) {
     EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
     EXPECT_FALSE(v.ShouldFilterOutEntry(e4));
     EXPECT_TRUE(v.ShouldFilterOutEntry(e5));
+  }
+}
+
+TEST_F(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId) {
+  base::Time now = base::Time::Now();
+
+  // First boot.
+  {
+    Config c;
+    c.boot = "46640bbceeb149a696171d1ea34516ad";
+
+    LogEntry e1 = GenerateLogEntry(now - base::TimeDelta::FromSeconds(2));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e2));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e3));
+  }
+
+  // Second (last) boot.
+  {
+    Config c;
+    c.boot = "9fa644cb05dc4e3ebe3be322ac8d1e86";
+
+    LogEntry e1 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(4));
+
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e2));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
+  }
+
+  // Last (second) boot.
+  {
+    Config c;
+    c.boot = "";
+
+    LogEntry e1 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(4));
+
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e2));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
+  }
+
+  // Last (second) boot.
+  {
+    Config c;
+    c.boot = "0";
+
+    LogEntry e1 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(4));
+
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e2));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
+  }
+
+  // Invalid boot.
+  {
+    Config c;
+    c.boot = "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+
+    LogEntry e1 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e2));
   }
 }
 
