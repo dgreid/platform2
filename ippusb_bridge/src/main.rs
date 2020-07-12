@@ -6,7 +6,7 @@ use std::fmt;
 use std::os::unix::io::IntoRawFd;
 use std::sync::atomic::{AtomicBool, AtomicI32, Ordering};
 
-use sys_util::{register_signal_handler, EventFd};
+use sys_util::{error, info, register_signal_handler, syslog, EventFd, PollContext, PollToken};
 
 mod arguments;
 use arguments::Args;
@@ -17,7 +17,9 @@ mod listeners;
 pub enum Error {
     EventFd(sys_util::Error),
     ParseArgs(arguments::Error),
+    PollEvents(sys_util::Error),
     RegisterHandler(sys_util::Error),
+    Syslog(syslog::Error),
     SysUtil(sys_util::Error),
 }
 
@@ -29,7 +31,9 @@ impl fmt::Display for Error {
         match self {
             EventFd(err) => write!(f, "Failed to create/duplicate EventFd: {}", err),
             ParseArgs(err) => write!(f, "Failed to parse arguments: {}", err),
+            PollEvents(err) => write!(f, "Failed to poll for events: {}", err),
             RegisterHandler(err) => write!(f, "Registering SIGINT handler failed: {}", err),
+            Syslog(err) => write!(f, "Failed to initalize syslog: {}", err),
             SysUtil(err) => write!(f, "Sysutil error: {}", err),
         }
     }
@@ -73,7 +77,40 @@ fn add_sigint_handler(shutdown_fd: EventFd) -> sys_util::Result<()> {
     unsafe { register_signal_handler(SIGINT, sigint_handler) }
 }
 
+struct Daemon {
+    shutdown: EventFd,
+}
+
+impl Daemon {
+    fn new(shutdown: EventFd) -> Self {
+        Self { shutdown }
+    }
+
+    fn run(&mut self) -> Result<()> {
+        #[derive(PollToken)]
+        enum Token {
+            Shutdown,
+        }
+
+        let poll_ctx: PollContext<Token> =
+            PollContext::build_with(&[(&self.shutdown, Token::Shutdown)])
+                .map_err(Error::SysUtil)?;
+
+        'poll: loop {
+            let events = poll_ctx.wait().map_err(Error::PollEvents)?;
+            for event in &events {
+                match event.token() {
+                    Token::Shutdown => break 'poll,
+                }
+            }
+        }
+
+        Ok(())
+    }
+}
+
 fn run() -> Result<()> {
+    syslog::init().map_err(Error::Syslog)?;
     let argv: Vec<String> = std::env::args().collect();
     let _args = match Args::parse(&argv).map_err(Error::ParseArgs)? {
         None => return Ok(()),
@@ -81,7 +118,13 @@ fn run() -> Result<()> {
     };
 
     let shutdown_fd = EventFd::new().map_err(Error::EventFd)?;
-    add_sigint_handler(shutdown_fd).map_err(Error::RegisterHandler)?;
+    let sigint_shutdown_fd = shutdown_fd.try_clone().map_err(Error::EventFd)?;
+    add_sigint_handler(sigint_shutdown_fd).map_err(Error::RegisterHandler)?;
+
+    let mut daemon = Daemon::new(shutdown_fd);
+    daemon.run()?;
+
+    info!("Shutting down.");
     Ok(())
 }
 
@@ -89,6 +132,6 @@ fn main() {
     // Use run() instead of returning a Result from main() so that we can print
     // errors using Display instead of Debug.
     if let Err(e) = run() {
-        eprintln!("{}", e);
+        error!("{}", e);
     }
 }
