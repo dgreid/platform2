@@ -17,6 +17,7 @@ TEST_F(MetricsTest, GetArchiveType) {
   EXPECT_EQ(Metrics::kArchiveUnknown, metrics_.GetArchiveType(""));
   EXPECT_EQ(Metrics::kArchiveUnknown, metrics_.GetArchiveType("txt"));
   EXPECT_EQ(Metrics::kArchiveZip, metrics_.GetArchiveType("zip"));
+  EXPECT_EQ(Metrics::kArchiveRar, metrics_.GetArchiveType("rar"));
 }
 
 TEST_F(MetricsTest, GetFilesystemType) {
