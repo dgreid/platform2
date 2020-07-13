@@ -31,6 +31,7 @@ extern "C" {
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/double_wrapped_compat_auth_block.h"
 #include "cryptohome/key_objects.h"
 #include "cryptohome/le_credential_manager_impl.h"
 #include "cryptohome/libscrypt_compat.h"
@@ -487,29 +488,19 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
   }
 
-  // For non-LE credentials: Check if the vault keyset was Scrypt-wrapped
-  // (start with Scrypt to avoid reaching to TPM if both flags are set)
-  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
-    bool should_try_tpm = false;
-    if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
-      LOG(ERROR) << "Keyset wrapped with both TPM and Scrypt?";
-      ReportCryptohomeError(cryptohome::kBothTpmAndScryptWrappedKeyset);
-      // Fallback for the bug when both flags were set: try both methods
-      should_try_tpm = true;
-    }
+  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED &&
+      flags & SerializedVaultKeyset::TPM_WRAPPED) {
+    LOG(ERROR) << "Keyset wrapped with both TPM and Scrypt?";
+    ReportCryptohomeError(cryptohome::kBothTpmAndScryptWrappedKeyset);
 
     AuthInput auth_input = {vault_key};
     AuthBlockState auth_state = {serialized};
     KeyBlobs vkk_data;
-    LibScryptCompatAuthBlock auth_block;
-    if (auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
-      if (UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error)) {
-        return true;
-      }
-    }
-
-    if (!should_try_tpm)
+    DoubleWrappedCompatAuthBlock auth_block(tpm_, tpm_init_);
+    if (!auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
+    }
+    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
   }
 
   if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
@@ -521,6 +512,21 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     AuthBlockState auth_state = { serialized };
     TpmAuthBlock tpm_auth(tpm_, tpm_init_);
     if (!tpm_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
+      return false;
+    }
+
+    return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
+  }
+
+  if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    KeyBlobs vkk_data;
+    AuthInput auth_input;
+    auth_input.user_input = vault_key;
+    auth_input.locked_to_single_user = locked_to_single_user;
+
+    AuthBlockState auth_state = { serialized };
+    LibScryptCompatAuthBlock auth_block;
+    if (!auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
     }
 

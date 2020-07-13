@@ -175,6 +175,7 @@ static_library("libcrostpm") {
     "../crc8.c",
     "../crypto.cc",
     "../crypto_error.cc",
+    "../double_wrapped_compat_auth_block.cc",
     "../firmware_management_parameters.cc",
     "../install_attributes.cc",
     "../le_credential_manager_impl.cc",
