@@ -179,7 +179,7 @@ bool CheckOrSpawnIppusbxd(const IppusbxdSocketPaths& socket_paths,
 
   // Leap before you look: if we can squeak a keep-alive message to
   // an already-running ippusbxd instance, we're good.
-  if (CheckKeepAlive(socket_paths.main_socket.value())) {
+  if (CheckKeepAlive(socket_paths.keepalive_socket.value())) {
     return true;
   }
   LOG(INFO) << "Couldn't contact ippusbxd. Waiting for sockets to be closed "
