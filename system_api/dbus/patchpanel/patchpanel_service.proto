@@ -269,3 +269,55 @@ message TrafficCountersRequest {
 message TrafficCountersResponse {
   repeated TrafficCounter counters = 1;
 }
+
+// Request for opening and closing firewall port. If the request is valid,
+// PatchPanel will run iptables commands following the request.
+message ModifyPortRuleRequest {
+  enum Operation {
+    INVALID_OPERATION = 0;
+    CREATE = 1;
+    DELETE = 2;
+  }
+
+  enum RuleType {
+    INVALID_RULE_TYPE = 0;
+    ACCESS = 1;     // Equivalent of iptables 'ACCEPT'
+    LOCKDOWN = 2;   // Equivalent of iptables 'DROP'
+    FORWARDING = 3; // Equivalent of iptables 'DNAT'
+  }
+
+  enum Protocol {
+    INVALID_PROTOCOL = 0;
+    TCP = 1;
+    UDP = 2;
+  }
+
+  // Arguments specifying the type of operation, rule and protocol.
+  Operation op = 1;
+  RuleType type = 2;
+  Protocol proto = 3;
+
+  // A network interface name, or empty if unspecified. This is optional for
+  // ACCESS and FORWARDING, and is ignored for other rule types.
+  string input_ifname = 4;
+
+  // An IPv4 address, or empty if unspecified. This is optional for FORWARDING,
+  // and is ignored for other rule types.
+  string input_dst_ip = 5;
+
+  // A port value in-between 1 and 65535. This is required for all rule types.
+  uint32 input_dst_port = 6;
+
+  // An IPv4 address, or empty if unspecified. This is required for FORWARDING,
+  // and is ignored for other rule types.
+  string dst_ip = 7;
+
+  // A port value between 1 and 65535. This is required for FORWARDING, and is
+  // ignored for other rule types.
+  uint32 dst_port = 8;
+}
+
+// Response to a ModifyPortRuleRequest.
+message ModifyPortRuleResponse {
+  bool success = 1;
+}
