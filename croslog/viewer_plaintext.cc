@@ -37,6 +37,10 @@ const char* kLogSources[] = {
 
 const char kAuditLogSources[] = "/var/log/audit/audit.log";
 
+int64_t ToMicrosecondsSinceUnixEpoch(base::Time time) {
+  return (time - base::Time::UnixEpoch()).InMicroseconds();
+}
+
 }  // anonymous namespace
 
 ViewerPlaintext::ViewerPlaintext(const croslog::Config& config)
@@ -194,6 +198,11 @@ ViewerPlaintext::GenerateKeyValues(const LogEntry& e) {
   const std::string& boot_id = GetBootIdAt(e.time());
   if (!boot_id.empty())
     kvs.push_back(std::make_pair("_BOOT_ID", boot_id));
+
+  std::string timestamp =
+      base::NumberToString(ToMicrosecondsSinceUnixEpoch(e.time()));
+  kvs.push_back(std::make_pair("__REALTIME_TIMESTAMP", timestamp));
+  kvs.push_back(std::make_pair("_SOURCE_REALTIME_TIMESTAMP", timestamp));
 
   if (e.pid() != -1) {
     kvs.push_back(std::make_pair("SYSLOG_PID", base::NumberToString(e.pid())));
