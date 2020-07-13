@@ -277,7 +277,8 @@ FUSEMounter::FUSEMounter(Params params)
       bind_paths_(std::move(params.bind_paths)),
       network_access_(params.network_access),
       mount_namespace_(std::move(params.mount_namespace)),
-      supplementary_groups_(std::move(params.supplementary_groups)) {}
+      supplementary_groups_(std::move(params.supplementary_groups)),
+      password_needed_code_(params.password_needed_code) {}
 
 std::unique_ptr<MountPoint> FUSEMounter::Mount(
     const std::string& source,
@@ -406,7 +407,9 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     }
     LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
                << " returned error code " << return_code;
-    *error = MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
+    *error = return_code == password_needed_code_
+                 ? MOUNT_ERROR_NEED_PASSWORD
+                 : MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
     return nullptr;
   }
 

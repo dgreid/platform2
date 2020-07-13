@@ -14,6 +14,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "cros-disks/error_logger.h"
 #include "cros-disks/mount_options.h"
 #include "cros-disks/mount_point.h"
 #include "cros-disks/platform.h"
@@ -39,6 +40,7 @@ const char kFUSEType[] = "fuse";
 const char kMountProgram[] = "dummy";
 const char kSomeSource[] = "/dev/dummy";
 const char kMountDir[] = "/mnt";
+const int kPasswordNeededCode = 42;
 
 // Mock Platform implementation for testing.
 class MockFUSEPlatform : public Platform {
@@ -140,6 +142,7 @@ class FUSEMounterForTesting : public FUSEMounter {
       : FUSEMounter({.filesystem_type = kFUSEType,
                      .mount_program = kMountProgram,
                      .mount_user = kMountUser,
+                     .password_needed_code = kPasswordNeededCode,
                      .platform = platform,
                      .process_reaper = process_reaper}) {}
 
@@ -261,6 +264,18 @@ TEST_F(FUSEMounterTest, AppFailed) {
       mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
   EXPECT_FALSE(mount_point);
   EXPECT_EQ(MOUNT_ERROR_MOUNT_PROGRAM_FAILED, error);
+}
+
+TEST_F(FUSEMounterTest, AppNeedsPassword) {
+  EXPECT_CALL(platform_, Unmount(_, _)).WillOnce(Return(MOUNT_ERROR_NONE));
+  EXPECT_CALL(mounter_, InvokeMountTool(_))
+      .WillOnce(Return(kPasswordNeededCode));
+
+  MountErrorType error = MOUNT_ERROR_UNKNOWN;
+  auto mount_point =
+      mounter_.Mount(kSomeSource, base::FilePath(kMountDir), {}, &error);
+  EXPECT_FALSE(mount_point);
+  EXPECT_EQ(MOUNT_ERROR_NEED_PASSWORD, error);
 }
 
 }  // namespace cros_disks

@@ -69,6 +69,9 @@ class FUSEMounter : public MounterCompat {
     // Whether the FUSE mount program needs to access the network.
     bool network_access = false;
 
+    // Code returned by the FUSE mount program to ask for a password.
+    int password_needed_code = -1;
+
     // Object that provides platform service.
     const Platform* platform = nullptr;
 
@@ -127,6 +130,9 @@ class FUSEMounter : public MounterCompat {
 
   // Supplementary groups to run the FUSE mount program with.
   const std::vector<gid_t> supplementary_groups_;
+
+  // Code returned by the FUSE mount program to ask for a password.
+  const int password_needed_code_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FUSEMounter);

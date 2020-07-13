@@ -51,6 +51,7 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
       .mount_group = FUSEHelper::kFilesGroup,
       .mount_program = "/usr/bin/fuse-zip",
       .mount_user = "fuse-zip",
+      .password_needed_code = 36,  // ZIP_ER_BASE + ZIP_ER_NOPASSWD
       .platform = platform(),
       .process_reaper = process_reaper(),
       .seccomp_policy = "/usr/share/policy/fuse-zip-seccomp.policy",
