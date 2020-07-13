@@ -49,6 +49,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/arc-appfuse-provider   u:object_r:cros_arc_appfuse_provider_exec:s0
 /usr/bin/arc-obb-mounter        u:object_r:cros_arc_obb_mounter_exec:s0
 /usr/bin/arc_camera_service     u:object_r:cros_arc_camera_service_exec:s0
+/usr/bin/arc_sensor_service     u:object_r:cros_arc_sensor_service_exec:s0
 /usr/bin/biod                   u:object_r:cros_biod_exec:s0
 /usr/bin/btdispatch             u:object_r:cros_btdispatch_exec:s0
 /usr/bin/chrt                   u:object_r:cros_chrt_exec:s0
