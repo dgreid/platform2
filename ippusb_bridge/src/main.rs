@@ -17,7 +17,7 @@ use sys_util::{error, info, register_signal_handler, syslog, EventFd, PollContex
 
 use crate::arguments::Args;
 use crate::listeners::{Accept, ScopedUnixListener};
-use crate::usb_connector::UsbConnector;
+use crate::usb_connector::{UnplugDetector, UsbConnector};
 
 #[derive(Debug)]
 pub enum Error {
@@ -145,6 +145,8 @@ fn run() -> Result<()> {
     add_sigint_handler(sigint_shutdown_fd).map_err(Error::RegisterHandler)?;
 
     let usb = UsbConnector::new(args.bus_device).map_err(Error::CreateUsbConnector)?;
+    let unplug_shutdown_fd = shutdown_fd.try_clone().map_err(Error::EventFd)?;
+    let _unplug = UnplugDetector::new(usb.device(), unplug_shutdown_fd, &SHUTDOWN);
 
     if let Some(unix_socket_path) = args.unix_socket {
         info!("Listening on {}", unix_socket_path.display());

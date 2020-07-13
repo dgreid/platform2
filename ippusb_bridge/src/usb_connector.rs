@@ -5,13 +5,14 @@
 use std::collections::VecDeque;
 use std::fmt;
 use std::io::{self, Read, Write};
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use std::vec::Vec;
 
-use rusb::{Direction, GlobalContext, TransferType, UsbContext};
+use rusb::{Direction, GlobalContext, Registration, TransferType, UsbContext};
 use sync::{Condvar, Mutex};
-use sys_util::{debug, info};
+use sys_util::{debug, error, info, EventFd};
 
 const USB_TRANSFER_TIMEOUT: Duration = Duration::from_secs(30);
 
@@ -23,6 +24,7 @@ pub enum Error {
     OpenDevice(rusb::Error),
     ReadConfigDescriptor(rusb::Error),
     ReadDeviceDescriptor(rusb::Error),
+    RegisterCallback(rusb::Error),
     SetActiveConfig(rusb::Error),
     SetAlternateSetting(rusb::Error),
     NoDevice,
@@ -42,6 +44,7 @@ impl fmt::Display for Error {
             OpenDevice(err) => write!(f, "Failed to open device: {}", err),
             ReadConfigDescriptor(err) => write!(f, "Failed to read config descriptor: {}", err),
             ReadDeviceDescriptor(err) => write!(f, "Failed to read device descriptor: {}", err),
+            RegisterCallback(err) => write!(f, "Failed to register for hotplug callback: {}", err),
             SetActiveConfig(err) => write!(f, "Failed to set active config: {}", err),
             SetAlternateSetting(err) => write!(f, "Failed to set alternate setting: {}", err),
             NoDevice => write!(f, "No valid IPP USB device found."),
@@ -212,6 +215,98 @@ impl InterfaceManager {
     }
 }
 
+pub struct UnplugDetector {
+    registration: Registration,
+    event_thread_run: Arc<AtomicBool>,
+    // This is always Some until the destructor runs.
+    event_thread: Option<std::thread::JoinHandle<()>>,
+}
+
+impl UnplugDetector {
+    pub fn new(
+        device: rusb::Device<GlobalContext>,
+        shutdown_fd: EventFd,
+        shutdown: &'static AtomicBool,
+    ) -> Result<Self> {
+        let handler = CallbackHandler::new(device, shutdown_fd, shutdown);
+        let context = GlobalContext::default();
+        let registration = context
+            .register_callback(None, None, None, Box::new(handler))
+            .map_err(Error::RegisterCallback)?;
+
+        // Spawn thread to handle triggering the plug/unplug events.
+        // While this is technically busy looping, the thread wakes up
+        // only once every 60 seconds unless an event is detected.
+        // When the callback is unregistered in Drop, an unplug event will
+        // be triggered so we will wake up immediately.
+        let run = Arc::new(AtomicBool::new(true));
+        let thread_run = run.clone();
+        let event_thread = std::thread::spawn(move || {
+            while thread_run.load(Ordering::Relaxed) {
+                let result = context.handle_events(None);
+                if let Err(e) = result {
+                    error!("Failed to handle libusb events: {}", e);
+                }
+            }
+            info!("Shutting down libusb event thread.");
+        });
+
+        Ok(Self {
+            registration,
+            event_thread_run: run,
+            event_thread: Some(event_thread),
+        })
+    }
+}
+
+impl Drop for UnplugDetector {
+    fn drop(&mut self) {
+        self.event_thread_run.store(false, Ordering::Relaxed);
+        let context = GlobalContext::default();
+        context.unregister_callback(self.registration);
+
+        // Calling unregister_callback wakes the event thread, so this should complete quickly.
+        // Unwrap is safe because event_thread only becomes None at drop.
+        let _ = self.event_thread.take().unwrap().join();
+    }
+}
+
+struct CallbackHandler {
+    device: rusb::Device<GlobalContext>,
+    shutdown_fd: EventFd,
+    shutdown: &'static AtomicBool,
+}
+
+impl CallbackHandler {
+    fn new(
+        device: rusb::Device<GlobalContext>,
+        shutdown_fd: EventFd,
+        shutdown: &'static AtomicBool,
+    ) -> Self {
+        Self {
+            device,
+            shutdown_fd,
+            shutdown,
+        }
+    }
+}
+
+impl rusb::Hotplug<GlobalContext> for CallbackHandler {
+    fn device_arrived(&mut self, _device: rusb::Device<GlobalContext>) {
+        // Do nothing.
+    }
+
+    fn device_left(&mut self, device: rusb::Device<GlobalContext>) {
+        if device == self.device {
+            info!("Device was unplugged, shutting down");
+            self.shutdown.store(true, Ordering::Relaxed);
+            if let Err(e) = self.shutdown_fd.write(1) {
+                error!("Failed to trigger shutdown: {}", e);
+            }
+        }
+    }
+}
+
 /// A UsbConnector represents an active connection to an IPPUSB device.
 /// Users can temporarily request a UsbConnection from the UsbConnector using
 /// get_connection(), and use that UsbConnection to perform I/O to the device.
@@ -288,6 +383,10 @@ impl UsbConnector {
             handle: Arc::new(handle),
             manager: InterfaceManager::new(connections),
         })
+    }
+
+    pub fn device(&self) -> rusb::Device<GlobalContext> {
+        self.handle.device()
     }
 
     pub fn get_connection(&mut self) -> UsbConnection {
