@@ -54,15 +54,8 @@ void Metrics::RecordDeviceMediaType(DeviceMediaType device_media_type) {
     LOG(WARNING) << "Failed to send device media type sample to UMA";
 }
 
-void Metrics::RecordFuseMounterErrorCode(const std::string& mounter_path,
+void Metrics::RecordFuseMounterErrorCode(const std::string& mounter_name,
                                          const int error_code) {
-  // Extract the mounter program name.
-  std::string mounter_name = base::FilePath(mounter_path).BaseName().value();
-  if (mounter_name.empty())
-    return;
-
-  // Make its first letter an uppercase.
-  mounter_name.front() = base::ToUpperASCII(mounter_name.front());
   metrics_library_.SendSparseToUMA("CrosDisks.Fuse." + mounter_name,
                                    error_code);
 }

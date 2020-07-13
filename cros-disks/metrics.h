@@ -31,7 +31,7 @@ class Metrics {
   void RecordDeviceMediaType(DeviceMediaType device_media_type);
 
   // Records the error code returned by a FUSE mounter program.
-  void RecordFuseMounterErrorCode(const std::string& mounter_path,
+  void RecordFuseMounterErrorCode(const std::string& mounter_name,
                                   int error_code);
 
  private:

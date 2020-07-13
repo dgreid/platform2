@@ -270,6 +270,7 @@ FUSEMounter::FUSEMounter(Params params)
       platform_(params.platform),
       process_reaper_(params.process_reaper),
       metrics_(params.metrics),
+      metrics_name_(std::move(params.metrics_name)),
       mount_program_(std::move(params.mount_program)),
       mount_user_(std::move(params.mount_user)),
       mount_group_(std::move(params.mount_group)),
@@ -394,8 +395,8 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   std::vector<std::string> output;
   const int return_code = mount_process->Run(&output);
 
-  if (metrics_)
-    metrics_->RecordFuseMounterErrorCode(mount_program_, return_code);
+  if (metrics_ && !metrics_name_.empty())
+    metrics_->RecordFuseMounterErrorCode(metrics_name_, return_code);
 
   if (return_code != 0) {
     if (!output.empty()) {

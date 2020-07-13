@@ -44,10 +44,13 @@ std::unique_ptr<MountPoint> ZipManager::DoMount(
   DCHECK(applied_options);
   DCHECK(error);
 
+  metrics()->RecordArchiveType("zip");
+
   FUSEMounter::Params params{
       .bind_paths = {{source_path}},
       .filesystem_type = "zipfs",
-      // TODO(crbug.com/912236) .metrics = metrics(),
+      .metrics = metrics(),
+      .metrics_name = "FuseZip",
       .mount_group = FUSEHelper::kFilesGroup,
       .mount_program = "/usr/bin/fuse-zip",
       .mount_user = "fuse-zip",

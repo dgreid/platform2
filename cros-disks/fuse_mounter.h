@@ -51,6 +51,10 @@ class FUSEMounter : public MounterCompat {
     // Optional object that collects UMA metrics.
     Metrics* metrics = nullptr;
 
+    // Name of the UMA histogram recording the FUSE mount program return code.
+    // Not recorded if empty or if metrics is null.
+    std::string metrics_name;
+
     // Optional group to run the FUSE mount program as.
     std::string mount_group;
 
@@ -105,6 +109,10 @@ class FUSEMounter : public MounterCompat {
 
   // An object that collects UMA metrics.
   Metrics* const metrics_;
+
+  // Name of the UMA histogram recording the FUSE mount program return code.
+  // Not recorded if empty or if metrics is null.
+  const std::string metrics_name_;
 
   // Path of the FUSE mount program.
   const std::string mount_program_;

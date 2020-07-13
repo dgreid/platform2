@@ -56,6 +56,7 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
   FUSEMounter::Params params{
       .filesystem_type = "rarfs",
       .metrics = metrics(),
+      .metrics_name = "Rar2fs",
       .mount_group = FUSEHelper::kFilesGroup,
       .mount_program = "/usr/bin/rar2fs",
       .mount_user = "fuse-rar2fs",
