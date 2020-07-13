@@ -22,27 +22,6 @@ module chromeos.machine_learning.mojom;
 //       under mojo folder, that is, "mojo/public/mojom/base/time.mojom".
 import "ml/mojom/time.mojom";
 
-// These values are persisted to logs. Entries should not be renumbered and
-// numeric values should never be reused.
-enum TextAnnotationResult {
-  OK = 0,
-  ERROR = 1,
-};
-
-// These values are persisted to logs. Entries should not be renumbered and
-// numeric values should never be reused.
-enum SuggestSelectionResult {
-  OK = 0,
-  ERROR = 1,
-};
-
-// These values are persisted to logs. Entries should not be renumbered and
-// numeric values should never be reused.
-enum FindLanguagesResult {
-  OK = 0,
-  ERROR = 1,
-};
-
 // Enum for specifying the annotation usecase.
 // Must be consistent with `AnnotationUsecase` in model.fb in libtextclassifier.
 enum AnnotationUsecase {

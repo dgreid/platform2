@@ -19,18 +19,15 @@ namespace ml {
 namespace {
 
 using ::chromeos::machine_learning::mojom::CodepointSpan;
-using ::chromeos::machine_learning::mojom::FindLanguagesResult;
-using ::chromeos::machine_learning::mojom::TextLanguage;
-using ::chromeos::machine_learning::mojom::TextLanguagePtr;
-using ::chromeos::machine_learning::mojom::SuggestSelectionResult;
 using ::chromeos::machine_learning::mojom::TextAnnotation;
 using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequestPtr;
-using ::chromeos::machine_learning::mojom::TextAnnotationResult;
 using ::chromeos::machine_learning::mojom::TextClassifier;
 using ::chromeos::machine_learning::mojom::TextEntity;
 using ::chromeos::machine_learning::mojom::TextEntityData;
 using ::chromeos::machine_learning::mojom::TextEntityPtr;
+using ::chromeos::machine_learning::mojom::TextLanguage;
+using ::chromeos::machine_learning::mojom::TextLanguagePtr;
 using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 
 // To avoid passing a lambda as a base::Closure.
@@ -190,7 +187,6 @@ void TextClassifierImpl::FindLanguages(const std::string& text,
   std::move(callback).Run(std::move(langid_result));
 
   request_metrics.FinishRecordingPerformanceMetrics();
-  request_metrics.RecordRequestEvent(FindLanguagesResult::OK);
 }
 
 }  // namespace ml
