@@ -36,7 +36,7 @@ bool PrintProto(const google::protobuf::Message& message) {
   }
 
   // Embed the body and name of the proto in a base::Value.
-  base::Value value;
+  base::Value value(base::Value::Type::DICTIONARY);
   value.SetStringKey("name", message.GetDescriptor()->name());
   value.SetKey("body", std::move(*body));
 
