@@ -40,8 +40,10 @@
 #include "vm_tools/concierge/vsock_cid_pool.h"
 
 namespace vm_tools {
-
 namespace concierge {
+
+// Used to represent kernel version.
+using KernelVersionAndMajorRevision = std::pair<int, int>;
 
 // VM Launcher Service responsible for responding to DBus method calls for
 // starting, stopping, and otherwise managing VMs.

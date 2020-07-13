@@ -865,8 +865,7 @@ bool Service::Init() {
     return false;
   }
   untrusted_vm_utils_ = std::make_unique<UntrustedVMUtils>(
-      debugd_proxy, host_kernel_version_,
-      kMinKernelVersionForUntrustedAndNestedVM, base::FilePath(kL1TFFilePath),
+      debugd_proxy, base::FilePath(kL1TFFilePath),
       base::FilePath(kMDSFilePath));
 
   using ServiceMethod =
@@ -1243,38 +1242,43 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     return dbus_response;
   }
 
-  // For untrusted VMs check if mitigations are present in the host. Skip the
+  // For untrusted VMs -
+  // 1. Definitely disable SMT to protect the host.
+  // 2. Check if l1tf and mds mitigations are present on the host. Skip the
   // checks if untrusted VMs are requested in developer mode on insecure
   // kernels. This is done to support testing by developers.
-  if (is_untrusted_vm && !skip_untrusted_vm_host_checks) {
-    switch (untrusted_vm_utils_->CheckUntrustedVMMitigationStatus()) {
-      case UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE:
-        break;
-
-      // If the host kernel version isn't supported or the host doesn't have
-      // l1tf and mds mitigations then fail to start an untrusted VM.
-      case UntrustedVMUtils::MitigationStatus::VULNERABLE: {
-        LOG(ERROR) << "Host vulnerable against untrusted VM";
-        response.set_failure_reason("Host vulnerable against untrusted VM");
-        writer.AppendProtoAsArrayOfBytes(response);
-        return dbus_response;
-      }
-
-      // This case is handled immediately after.
-      case UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED:
-        break;
-    }
-  }
-
-  // Nested virtualization is turned on for all host kernels that support
-  // untrusted VMs. For security purposes this requires that SMT is disabled for
-  // both trusted and untrusted VMs.
-  if (host_kernel_version_ >= kMinKernelVersionForUntrustedAndNestedVM) {
+  if (is_untrusted_vm) {
     if (!untrusted_vm_utils_->DisableSMT()) {
-      LOG(ERROR) << "Failed to disable SMT";
-      response.set_failure_reason("Failed to disable SMT");
+      LOG(ERROR) << "Failed to disable SMT to protect against untrusted VMs";
+      response.set_failure_reason(
+          "Failed to disable SMT to protect against untrusted VMs");
       writer.AppendProtoAsArrayOfBytes(response);
       return dbus_response;
+    }
+
+    if (!skip_untrusted_vm_host_checks) {
+      switch (untrusted_vm_utils_->CheckUntrustedVMMitigationStatus()) {
+        case UntrustedVMUtils::MitigationStatus::NOT_VULNERABLE:
+          break;
+
+        // If the host kernel version isn't supported or the host doesn't have
+        // l1tf and mds mitigations then fail to start an untrusted VM.
+        case UntrustedVMUtils::MitigationStatus::VULNERABLE: {
+          LOG(ERROR) << "Host vulnerable against untrusted VM";
+          response.set_failure_reason("Host vulnerable against untrusted VM");
+          writer.AppendProtoAsArrayOfBytes(response);
+          return dbus_response;
+        }
+
+        // This should never happen as SMT is disabled before.
+        case UntrustedVMUtils::MitigationStatus::
+            VULNERABLE_DUE_TO_SMT_ENABLED: {
+          LOG(ERROR) << "SMT state mismatch";
+          response.set_failure_reason("SMT state mismatch");
+          writer.AppendProtoAsArrayOfBytes(response);
+          return dbus_response;
+        }
+      }
     }
   }
 
@@ -1516,7 +1520,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   // Mount the 9p server.
   if (!vm->Mount9P(seneschal_server_port, "/mnt/shared")) {
-    LOG(ERROR) << "Failed to mount " << request.shared_directory();
+    LOG(ERROR) << "Failed to mount shared directory";
 
     response.set_failure_reason("Failed to mount shared directory");
     writer.AppendProtoAsArrayOfBytes(response);

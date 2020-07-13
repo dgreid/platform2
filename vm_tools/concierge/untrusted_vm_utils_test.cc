@@ -26,15 +26,6 @@ using ::testing::Return;
 namespace vm_tools {
 namespace concierge {
 
-namespace {
-
-// The minimum kernel version of the host which supports untrusted VMs or a
-// trusted VM with nested VM support.
-constexpr KernelVersionAndMajorRevision kMinKernelVersion =
-    std::make_pair(4, 10);
-
-}  // namespace
-
 // Test fixture for actually testing the VirtualMachine functionality.
 class UntrustedVMUtilsTest : public ::testing::Test {
  public:
@@ -64,8 +55,7 @@ class UntrustedVMUtilsTest : public ::testing::Test {
     // Set a kernel version that supports untrusted VMs by default. Individual
     // test cases can override this if testing for related error scenarios.
     untrusted_vm_utils_ = std::make_unique<UntrustedVMUtils>(
-        debugd_proxy_.get(), kMinKernelVersion, kMinKernelVersion,
-        l1tf_status_path_, mds_status_path_);
+        debugd_proxy_.get(), l1tf_status_path_, mds_status_path_);
   }
 
  protected:
@@ -124,24 +114,6 @@ class UntrustedVMUtilsTest : public ::testing::Test {
 
   DISALLOW_COPY_AND_ASSIGN(UntrustedVMUtilsTest);
 };
-
-// Check if lower kernel versions always yield |VULNERABLE| status.
-TEST_F(UntrustedVMUtilsTest, CheckLowerKernelVersion) {
-  untrusted_vm_utils_->SetKernelVersionForTesting(
-      std::make_pair(kMinKernelVersion.first, kMinKernelVersion.second - 1));
-  EXPECT_EQ(untrusted_vm_utils_->CheckUntrustedVMMitigationStatus(),
-            UntrustedVMUtils::MitigationStatus::VULNERABLE);
-
-  untrusted_vm_utils_->SetKernelVersionForTesting(std::make_pair(
-      kMinKernelVersion.first - 1, kMinKernelVersion.second + 1));
-  EXPECT_EQ(untrusted_vm_utils_->CheckUntrustedVMMitigationStatus(),
-            UntrustedVMUtils::MitigationStatus::VULNERABLE);
-
-  untrusted_vm_utils_->SetKernelVersionForTesting(std::make_pair(
-      kMinKernelVersion.first - 1, kMinKernelVersion.second - 1));
-  EXPECT_EQ(untrusted_vm_utils_->CheckUntrustedVMMitigationStatus(),
-            UntrustedVMUtils::MitigationStatus::VULNERABLE);
-}
 
 // Checks mitigation status for all L1TF statuses.
 TEST_F(UntrustedVMUtilsTest, CheckL1TFStatus) {

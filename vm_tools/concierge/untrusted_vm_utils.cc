@@ -127,13 +127,9 @@ UntrustedVMUtils::MitigationStatus GetMDSMitigationStatus(
 
 UntrustedVMUtils::UntrustedVMUtils(
     dbus::ObjectProxy* debugd_proxy,
-    KernelVersionAndMajorRevision host_kernel_version,
-    KernelVersionAndMajorRevision min_needed_version,
     const base::FilePath& l1tf_status_path,
     const base::FilePath& mds_status_path)
     : debugd_proxy_(debugd_proxy),
-      host_kernel_version_(host_kernel_version),
-      min_needed_version_(min_needed_version),
       l1tf_status_path_(l1tf_status_path),
       mds_status_path_(mds_status_path) {
   DCHECK(!l1tf_status_path.empty());
@@ -142,9 +138,6 @@ UntrustedVMUtils::UntrustedVMUtils(
 
 UntrustedVMUtils::MitigationStatus
 UntrustedVMUtils::CheckUntrustedVMMitigationStatus() {
-  if (host_kernel_version_ < min_needed_version_)
-    return MitigationStatus::VULNERABLE;
-
   MitigationStatus status = GetL1TFMitigationStatus(l1tf_status_path_);
   if (status != MitigationStatus::NOT_VULNERABLE)
     return status;
@@ -180,11 +173,6 @@ bool UntrustedVMUtils::DisableSMT() {
     return false;
   }
   return result;
-}
-
-void UntrustedVMUtils::SetKernelVersionForTesting(
-    KernelVersionAndMajorRevision host_kernel_version) {
-  host_kernel_version_ = host_kernel_version;
 }
 
 }  // namespace concierge
