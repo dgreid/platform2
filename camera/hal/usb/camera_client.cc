@@ -921,27 +921,6 @@ bool CameraClient::RequestHandler::ShouldEnableConstantFrameRate(
     }
   }
 
-  if (metadata.exists(ANDROID_COLOR_CORRECTION_ABERRATION_MODE)) {
-    camera_metadata_ro_entry entry =
-        metadata.find(ANDROID_COLOR_CORRECTION_ABERRATION_MODE);
-    switch (entry.data.u8[0]) {
-      case ANDROID_COLOR_CORRECTION_ABERRATION_MODE_OFF:
-      case ANDROID_COLOR_CORRECTION_ABERRATION_MODE_FAST:
-        return true;
-    }
-  }
-
-  if (metadata.exists(ANDROID_NOISE_REDUCTION_MODE)) {
-    camera_metadata_ro_entry entry =
-        metadata.find(ANDROID_NOISE_REDUCTION_MODE);
-    switch (entry.data.u8[0]) {
-      case ANDROID_NOISE_REDUCTION_MODE_OFF:
-      case ANDROID_NOISE_REDUCTION_MODE_FAST:
-      case ANDROID_NOISE_REDUCTION_MODE_MINIMAL:
-        return true;
-    }
-  }
-
   return false;
 }
 
