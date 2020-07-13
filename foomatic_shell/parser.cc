@@ -4,9 +4,10 @@
 
 #include "foomatic_shell/parser.h"
 
-#include <base/logging.h>
 #include <string>
 #include <vector>
+
+#include <base/logging.h>
 
 namespace foomatic_shell {
 
@@ -14,12 +15,12 @@ namespace {
 
 // Returns true if |token| may be a prefix of PipeSegment.
 // Corresponding grammar rules:
-//  PipeSegment = c( Script c) | Command
-//  Command = *( Variable c= StringAtom Space ) Application *( Space Parameter )
-//  Variable = NativeString
-//  Application = NativeString
+//  Command = {Variable,"=",StringAtom,Space}, Application, {Space,Parameter} ;
+//  Variable = NativeString ;
+//  Application = NativeString ;
+//  Parameter = StringAtom ;
 bool MatchAPrefixOfPipeSegment(const Token& token) {
-  // Check if the token may be a prefix of: c( Script c)
+  // Check if the token may be a prefix of: "(", Script, ")"
   if (token.type == Token::kByte && *token.begin == '(')
     return true;
   // Check if the token may be a prefix of a Command.
@@ -122,10 +123,10 @@ std::string::const_iterator Parser::GetPosition() const {
 }
 
 // Parses the following (see grammar.h for details):
-//  Script = OptSpace *( SepP OptSpace ) Pipeline
-//           *( +( SepP OptSpace ) Pipeline ) *( SepP OptSpace )
+//  Script = OptSpace, {SepP,OptSpace}, Pipeline,
+//           { {SepP,OptSpace}-, Pipeline }, {SepP,OptSpace} ;
 // or:
-//  Script = OptSpace *( SepP OptSpace )
+//  Script = OptSpace , { SepP , OptSpace } ;
 // If succeed, the method shifts the current position to the first token after
 // the end of a whole Script. The resultant Script is saved in |out|. |out| must
 // contain a pointer to an empty Script structure. Returns false in case of an
@@ -137,7 +138,7 @@ bool Parser::ParseScript(Script* out) {
   if (tokens_->CurrentTokenIsSpace())
     tokens_->MoveToNext();
 
-  // Parsing: *( SepP OptSpace )
+  // Parsing: { SepP , OptSpace }
   while (tokens_->CurrentTokenIsByte('\n') ||
          tokens_->CurrentTokenIsByte(';')) {
     tokens_->MoveToNext();
@@ -156,10 +157,10 @@ bool Parser::ParseScript(Script* out) {
   if (!ParsePipeline(&out->pipelines.back()))
     return false;
 
-  // Parsing: *( +( SepP OptSpace ) Pipeline ) *( SepP OptSpace )
+  // Parsing: { {SepP,OptSpace}-, Pipeline }, {SepP,OptSpace}
   while (tokens_->CurrentTokenIsByte('\n') ||
          tokens_->CurrentTokenIsByte(';')) {
-    // Parsing: +( SepP OptSpace ) or *( SepP OptSpace )
+    // Parsing: {SepP,OptSpace}- or {SepP,OptSpace}
     do {
       tokens_->MoveToNext();
       if (tokens_->CurrentTokenIsSpace())
@@ -182,7 +183,7 @@ bool Parser::ParseScript(Script* out) {
 }
 
 // Parses the following (see grammar.h for details):
-//  Pipeline = PipeSegment OptSpace *( c| OptSpace PipeSegment OptSpace )
+//  Pipeline = PipeSegment, OptSpace, {"|",OptSpace,PipeSegment,OptSpace} ;
 // The current token must be a first token of a Pipeline. If succeed, the
 // method shifts the current position to the first token after the end of a
 // whole Pipeline. The resultant Pipeline is saved in |out|. |out| must
@@ -201,7 +202,7 @@ bool Parser::ParsePipeline(Pipeline* out) {
   if (tokens_->CurrentTokenIsSpace())
     tokens_->MoveToNext();
 
-  // Parsing: *( c| OptSpace PipeSegment OptSpace )
+  // Parsing: {"|",OptSpace,PipeSegment,OptSpace}
   while (tokens_->CurrentTokenIsByte('|')) {
     tokens_->MoveToNext();
     // Parsing: OptSpace
@@ -224,7 +225,7 @@ bool Parser::ParsePipeline(Pipeline* out) {
 }
 
 // Parses the following (see grammar.h for details):
-//  PipeSegment = c( Script c) | Command
+//  PipeSegment = ("(",Script,")") | Command ;
 // The current token must be a first token of a PipeSegment. If succeed, the
 // method shifts the current position to the first token after the end of a
 // whole PipeSegment. The resultant PipeSegment is saved in |out|. |out| must
@@ -235,7 +236,7 @@ bool Parser::ParsePipeSegment(PipeSegment* out) {
   DCHECK(MatchAPrefixOfPipeSegment(tokens_->GetCurrentToken()));
 
   if (tokens_->CurrentTokenIsByte('(')) {
-    // Parsing: c( Script c)
+    // Parsing: "(", Script, ")"
     tokens_->MoveToNext();
     out->script = std::make_unique<Script>();
     if (!ParseScript(out->script.get()))
@@ -254,7 +255,7 @@ bool Parser::ParsePipeSegment(PipeSegment* out) {
 }
 
 // Parses the following (see grammar.h for details):
-//  Command = *( Variable c= StringAtom Space ) Application *( Space Parameter )
+//  Command = {Variable,"=",StringAtom,Space}, Application, {Space,Parameter} ;
 // The current token must be of type NativeString. If succeed, the method
 // shifts the current position to the first token after the end of a whole
 // command statement. The resultant command is saved in |out|. |out| must
@@ -264,17 +265,17 @@ bool Parser::ParseCommand(Command* out) {
   DCHECK(out != nullptr);
   DCHECK(tokens_->CurrentTokenIsNativeString());
 
-  // Parsing: *( Variable c= StringAtom Space ) Application
+  // Parsing: {Variable,"=",StringAtom,Space}, Application
   while (true) {
     // Save the current token (NativeString) and check the next one.
-    // If the next token is c=, we are inside variable definition:
-    // Variable c= StringAtom Space
+    // If the next token is "=", we are inside variable definition:
+    // Variable,"=",StringAtom,Space
     // Otherwise, we just parsed Application.
     const Token& first = tokens_->GetCurrentToken();
     tokens_->MoveToNext();
     if (tokens_->CurrentTokenIsByte('=')) {
       // The token |first| is a Variable.
-      // Parsing: c= StringAtom Space
+      // Parsing: "=",StringAtom,Space
       tokens_->MoveToNext();
       if (!tokens_->CurrentTokenIsAnyString()) {
         message_ = "Variable assignment with missing value";
@@ -305,7 +306,7 @@ bool Parser::ParseCommand(Command* out) {
     }
   }
 
-  // Parsing: *( Space Parameter )
+  // Parsing: {Space,Parameter}
   while (true) {
     // If the current token is not a Space, it does not match.
     if (!tokens_->CurrentTokenIsSpace())
@@ -328,8 +329,8 @@ bool Parser::ParseCommand(Command* out) {
 }
 
 // Parses the following (see grammar.h for details):
-//  StringAtom = +( LiteralString | ExecutedString | InterpretedString |
-//            | NativeString | c= )
+//  StringAtom = { LiteralString | ExecutedString | InterpretedString
+//              | NativeString | "=" }- ;
 // The current token must be the first token of the string. The method shifts
 // the current position to the first token after the end of the string. The
 // resultant string is saved in |out|. |out| must contain pointer to the empty

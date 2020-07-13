@@ -35,6 +35,10 @@ class Scanner {
   // when the method ParseWholeInput(...) fails.
   std::string::const_iterator GetPosition() const;
 
+  // Returns an error message if the call ParseWholeInput(...) failed.
+  // Returns an empty string if the call succeeded.
+  const std::string& GetMessage() const { return message_; }
+
  private:
   bool ParseLiteralString(std::vector<Token>* tokens);
   bool ParseExecutedString(std::vector<Token>* tokens);

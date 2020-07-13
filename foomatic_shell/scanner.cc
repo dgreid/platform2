@@ -4,9 +4,10 @@
 
 #include "foomatic_shell/scanner.h"
 
-#include <base/logging.h>
 #include <string>
 #include <vector>
+
+#include <base/logging.h>
 
 namespace foomatic_shell {
 
@@ -86,7 +87,7 @@ Scanner::Scanner(const std::string& data)
 Scanner::~Scanner() {}
 
 // Parses the following (see grammar.h for details):
-//   LiteralString = c' *( ByteCommon | c" | c` | c\ ) c'
+//   LiteralString = "'" , { ByteCommon | '"' | "`" | "\" } , "'" ;
 // The current position must be one the opening '. It moves cursor to the first
 // character after the closing '. The resultant token is added to |tokens|.
 // |tokens| must not be nullptr. Returns false in case of an error.
@@ -124,7 +125,7 @@ bool Scanner::ParseLiteralString(std::vector<Token>* tokens) {
 }
 
 // Parses the following (see grammar.h for details):
-//   ExecutedString = c` *( ByteCommon | c' | c" | c\ ByteAny ) c`
+//   ExecutedString = "`" , { ByteCommon | "'" | '"' | ("\",ByteAny) } , "`" ;
 // The current position must be one the opening `. It moves cursor to the first
 // character after the closing `. The resultant token is added to |tokens|.
 // |tokens| must not be nullptr. Returns false in case of an error.
@@ -169,8 +170,8 @@ bool Scanner::ParseExecutedString(std::vector<Token>* tokens) {
 }
 
 // Parses the following (see grammar.h for details):
-//   InterpretedString = c" *( ByteCommon | c' | c\ | c\ c" | c\ c` | c\ c\ |
-//                           | ExecutedString ) c"
+//   InterpretedString = '"' , { ByteCommon | "'" | "\" | ("\",'"') | ("\","`")
+//                       | ("\","\") | ExecutedString } , '"' ;
 // The current position must be one the opening ". It moves cursor to the first
 // character after the closing ". If the string contains one or more
 // ExecutedString, it is split into a sequence of consecutive tokens of types
@@ -234,7 +235,7 @@ bool Scanner::ParseInterpretedString(std::vector<Token>* tokens) {
 }
 
 // Parses the following (see grammar.h for details):
-//   NativeString = +( ByteNative | c\ ByteAny )
+//   NativeString = { ByteNative | ("\",ByteAny) }- ;
 // The current position must be one the first character of NativeString. It
 // moves cursor to the first character after the end of the string. The
 // resultant token is added to |tokens|. |tokens| must not be nullptr. Returns
@@ -314,7 +315,7 @@ bool Scanner::ParseWholeInput(std::vector<Token>* tokens) {
 
     if (data_->CurrentCharIsOneOf(" \t")) {
       // It is a Space token.
-      //  Space = +( ByteSpace )
+      //   Space = { " " | Tabulator }- ;
       token.type = Token::Type::kSpace;
       token.begin = data_->GetCurrentPosition();
       // Move forward until we find the first character not being part of
