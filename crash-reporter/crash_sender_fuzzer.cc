@@ -14,6 +14,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
+#include <base/time/time.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "crash-reporter/crash_sender_util.h"
@@ -120,7 +121,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   util::RemoveOrphanedCrashFiles(test_dir);
   sender.RemoveAndPickCrashFiles(test_dir, &reports_to_send);
   util::SortReports(&reports_to_send);
-  sender.SendCrashes(reports_to_send);
+
+  base::TimeDelta sleep;
+  sender.SendCrashes(reports_to_send, &sleep);
 
   return 0;
 }

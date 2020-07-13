@@ -30,6 +30,10 @@
 #include "crash-reporter/util.h"
 
 namespace {
+
+const char kSenderRuntimeName[] = "CrashReport.Sender.Runtime";
+const char kSenderActiveRuntimeName[] = "CrashReport.Sender.ActiveRuntime";
+
 // Sets up the minijail sandbox.
 //
 // crash_sender currently needs to run as root:
@@ -65,6 +69,12 @@ void SetUpSandbox(struct minijail* jail) {
 int RunChildMain(int argc, char* argv[]) {
   util::CommandLineFlags flags;
   util::ParseCommandLine(argc, argv, &flags);
+
+  base::Time start;
+  if (flags.max_spread_time.is_zero()) {
+    // We want a monotonic time, so use SystemTime
+    start = base::Time::NowFromSystemTime();
+  }
 
   if (util::DoesPauseFileExist() && !flags.ignore_pause_file) {
     LOG(INFO) << "Exiting early due to " << paths::kPauseCrashSending;
@@ -134,7 +144,18 @@ int RunChildMain(int argc, char* argv[]) {
   lock_file.Close();
 
   util::SortReports(&reports_to_send);
-  sender.SendCrashes(reports_to_send);
+  base::TimeDelta sleeping_time;
+  sender.SendCrashes(reports_to_send, &sleeping_time);
+
+  if (flags.max_spread_time.is_zero()) {
+    base::TimeDelta runtime = base::Time::NowFromSystemTime() - start;
+    MetricsLibrary metrics_lib;
+    metrics_lib.SendToUMA(kSenderRuntimeName, runtime.InMilliseconds(),
+                          /*min=*/100, /*max=*/120'000, /*nbuckets=*/50);
+    base::TimeDelta active = runtime - sleeping_time;
+    metrics_lib.SendToUMA(kSenderActiveRuntimeName, active.InMilliseconds(),
+                          /*min=*/100, /*max=*/120'000, /*nbuckets=*/50);
+  }
 
   return EXIT_SUCCESS;
 }

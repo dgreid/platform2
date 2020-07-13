@@ -728,11 +728,16 @@ void Sender::RemoveAndPickCrashFiles(const base::FilePath& crash_dir,
   }
 }
 
-void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files) {
+void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files,
+                         base::TimeDelta* total_sleep_time) {
   if (crash_meta_files.empty())
     return;
 
   std::string client_id = GetClientId();
+
+  if (total_sleep_time) {
+    *total_sleep_time = base::TimeDelta();
+  }
 
   base::File lock(AcquireLockFileOrDie());
   for (const auto& pair : crash_meta_files) {
@@ -753,6 +758,9 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files) {
       base::PlatformThread::Sleep(sleep_time);
     } else if (!sleep_function_.is_null()) {
       sleep_function_.Run(sleep_time);
+    }
+    if (total_sleep_time) {
+      *total_sleep_time += sleep_time;
     }
     lock = AcquireLockFileOrDie();
 

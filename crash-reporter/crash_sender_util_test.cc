@@ -10,6 +10,7 @@
 #include <unistd.h>
 
 #include <memory>
+#include <numeric>
 #include <string>
 #include <utility>
 #include <vector>
@@ -1469,19 +1470,23 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   ASSERT_TRUE(sender.Init());
 
   // Send crashes.
-  sender.SendCrashes(crashes_to_send);
+  base::TimeDelta total_sleep_time;
+  sender.SendCrashes(crashes_to_send, &total_sleep_time);
 
   // The Chrome uploads.log file shouldn't exist because we had nothing to
   // upload, but we will have slept once until we determined we shouldn't be
   // doing uploads.
   EXPECT_FALSE(base::PathExists(paths::Get(paths::kChromeCrashLog)));
   EXPECT_EQ(1, sleep_times.size());
+  EXPECT_EQ(total_sleep_time,
+            std::accumulate(sleep_times.begin(), sleep_times.end(),
+                            base::TimeDelta()));
   sleep_times.clear();
 
   // Exit from guest mode/re-enable metrics, and send crashes again.
   raw_metrics_lib->set_guest_mode(false);
   raw_metrics_lib->set_metrics_enabled(true);
-  sender.SendCrashes(crashes_to_send);
+  sender.SendCrashes(crashes_to_send, &total_sleep_time);
 
   // Check the upload log from crash_sender.
   std::string contents;
@@ -1494,6 +1499,9 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // crash rate.
   ASSERT_EQ(2, rows.size());
   EXPECT_EQ(3, sleep_times.size());
+  EXPECT_EQ(total_sleep_time,
+            std::accumulate(sleep_times.begin(), sleep_times.end(),
+                            base::TimeDelta()));
 
   // Each line of the uploads.log file is "{"upload_time":<value>,"upload_id":
   // <value>,"local_id":<value>,"capture_time":<value>,"state":<value>,"source":
@@ -1572,7 +1580,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
                 std::make_unique<test_util::AdvancingClock>(), options);
   ASSERT_TRUE(sender.Init());
 
-  sender.SendCrashes(crashes_to_send);
+  sender.SendCrashes(crashes_to_send, nullptr);
 
   // The followings should be kept since the crash report was not uploaded.
   EXPECT_TRUE(base::PathExists(system_meta_file));

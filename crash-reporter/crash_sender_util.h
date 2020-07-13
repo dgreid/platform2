@@ -270,7 +270,9 @@ class Sender {
   // - Checks if the device enters guest mode, and stops if entered.
   // - Enforces the rate limit per 24 hours.
   // - Removes crash files that are successfully uploaded.
-  void SendCrashes(const std::vector<MetaFile>& crash_meta_files);
+  // |total_sleep_time|: if nonnull, set to the total amount of time sleeping.
+  void SendCrashes(const std::vector<MetaFile>& crash_meta_files,
+                   base::TimeDelta* total_sleep_time);
 
   // Get a list of all directories that might hold user-specific crashes.
   std::vector<base::FilePath> GetUserCrashDirectories();
