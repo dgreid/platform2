@@ -15,7 +15,6 @@
 
 #include "hal/usb_v1/arc_camera_dbus_daemon.h"
 #include "hal/usb_v1/arc_camera_service.h"
-#include "hal/usb_v1/arc_camera_service_provider.h"
 
 int main(int argc, char* argv[]) {
   // Init CommandLine for InitLogging.
@@ -43,33 +42,10 @@ int main(int argc, char* argv[]) {
     return daemon.Run();
   }
 
-  // TODO(hashimoto): Enable D-Bus mode to remove the old code.
-  const bool shouldRunDBusDaemon = true;
-  if (shouldRunDBusDaemon) {
-    // ArcCameraDBusDaemon waits for connection from container forever.
-    // Once it accepted a connection, it forks a child process and passes the
-    // fd. ArcCameraService uses this fd to communicate with container.
-    LOG(INFO) << "Starting ARC camera D-Bus daemon";
-    arc::ArcCameraDBusDaemon dbus_daemon;
-    return dbus_daemon.Run();
-  }
-  // ArcCameraServiceProvider.Start() waits connection from container forever.
-  // Once provider accepted a connection, it forks a child process and returns
-  // the fd. ArcCameraService uses this fd to communicate with container.
-  LOG(INFO) << "Starting ARC camera service provider";
-  arc::ArcCameraServiceProvider provider;
-  int fd = provider.Start();
-
-  if (fd < 0) {
-    LOG(ERROR) << "Start ARC camera service failed";
-    return 1;
-  }
-  brillo::Daemon daemon;
-  VLOG(1) << "Starting ARC camera service";
-  arc::ArcCameraServiceImpl service(
-      base::Bind(&brillo::Daemon::Quit, base::Unretained(&daemon)));
-  LOG_ASSERT(service.StartWithSocketFD(base::ScopedFD(fd)));
-  daemon.Run();
-
-  return 0;
+  // ArcCameraDBusDaemon waits for connection from container forever.
+  // Once it accepted a connection, it forks a child process and passes the
+  // fd. ArcCameraService uses this fd to communicate with container.
+  LOG(INFO) << "Starting ARC camera D-Bus daemon";
+  arc::ArcCameraDBusDaemon dbus_daemon;
+  return dbus_daemon.Run();
 }

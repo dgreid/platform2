@@ -26,7 +26,6 @@ executable("arc_camera_service") {
     "arc_camera_dbus_daemon.cc",
     "arc_camera_main.cc",
     "arc_camera_service.cc",
-    "arc_camera_service_provider.cc",
     "camera_characteristics.cc",
     "ipc_util.cc",
     "v4l2_camera_device.cc",
