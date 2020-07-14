@@ -22,6 +22,7 @@
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_updater.h"
 #include "biod/update_reason.h"
+#include "biod/update_status.h"
 
 using UpdateStatus = biod::updater::UpdateStatus;
 using UpdateReason = biod::updater::UpdateReason;

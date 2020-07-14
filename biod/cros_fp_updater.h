@@ -16,6 +16,7 @@
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_firmware.h"
 #include "biod/update_reason.h"
+#include "biod/update_status.h"
 
 namespace biod {
 
@@ -66,15 +67,6 @@ std::string FindFirmwareFileStatusToString(FindFirmwareFileStatus status);
 // Checks for external firmware disable mechanism.
 bool UpdateDisallowed();
 bool FingerprintUnsupported(brillo::CrosConfigInterface* cros_config);
-
-enum class UpdateStatus {
-  kUpdateNotNecessary,
-  kUpdateSucceeded,
-  kUpdateFailedGetVersion,
-  kUpdateFailedFlashProtect,
-  kUpdateFailedRO,
-  kUpdateFailedRW,
-};
 
 struct UpdateResult {
   UpdateStatus status;

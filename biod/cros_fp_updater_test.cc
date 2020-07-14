@@ -19,6 +19,8 @@
 #include <cros_config/fake_cros_config.h>
 
 #include "biod/cros_fp_firmware.h"
+#include "biod/update_reason.h"
+#include "biod/update_status.h"
 #include "biod/utils.h"
 
 using ::testing::_;
