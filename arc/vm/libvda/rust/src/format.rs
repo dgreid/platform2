@@ -71,15 +71,6 @@ impl Profile {
             Profile::H264 => bindings::video_codec_profile_H264PROFILE_MAIN,
         }
     }
-
-    // The callers must guarantee that `data` is valid for |`len`| elements when
-    // both `data` and `len` are valid.
-    pub(crate) unsafe fn from_raw_parts(
-        data: *const bindings::video_codec_profile_t,
-        len: usize,
-    ) -> Result<Vec<Self>> {
-        validate_formats(data, len, |p| Self::new(*p))
-    }
 }
 
 /// Represents a raw pixel format.

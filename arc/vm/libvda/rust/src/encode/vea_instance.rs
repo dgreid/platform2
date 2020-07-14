@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use std::os::raw::c_void;
-use std::slice;
 
 use super::bindings;
 use super::format::OutputProfile;
