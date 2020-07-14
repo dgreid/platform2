@@ -147,7 +147,8 @@ int CameraHal::OpenDevice(int id,
     LOGF(ERROR) << "Camera " << id << " is already opened";
     return -EBUSY;
   }
-  if (!cameras_.empty() && cros_device_config_.model_name == "treeya360") {
+  if (!cameras_.empty() && (cros_device_config_.model_name == "treeya360" ||
+                            cros_device_config_.model_name == "nuwani360")) {
     // It cannot open multiple cameras at the same time due to USB bandwidth
     // limitation (b/147333530).
     // TODO(shik): Use |conflicting_devices| to implement this logic after we
