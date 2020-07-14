@@ -18,7 +18,7 @@ import "vm_crash.proto";
 // This is used for fuzz testing; we get some fuzzed examples of this message
 // and then call the correct rpc handler based on which of the oneof is set.
 message ContainerListenerFuzzerSingleAction {
-  // Next id: 47
+  // Next id: 49
   // Skip [100-109]
   oneof input {
     // Calls to the ContainerListener service.
@@ -106,6 +106,8 @@ message ContainerListenerFuzzerSingleAction {
       tremplin_host_network_changed_response = 41;
   int32 tremplin_start_lxd_status = 43;
   vm_tools.tremplin.StartLxdResponse tremplin_start_lxd_response = 44;
+  int32 tremplin_get_debug_info_status = 47;
+  vm_tools.tremplin.GetDebugInfoResponse tremplin_get_debug_info_response = 48;
 }
 
 // A list of fuzzer actions. This is the actual input to the fuzzer.

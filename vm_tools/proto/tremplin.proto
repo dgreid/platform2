@@ -813,6 +813,16 @@ message HostNetworkChangedRequest {}
 // The response to the host network changing.
 message HostNetworkChangedResponse {}
 
+// Request for Tremplin to collect and report debug info e.g. additional error
+// logs which aren't in syslog, current state.
+message GetDebugInfoRequest {}
+
+// The response containing a bunch of debug info.
+message GetDebugInfoResponse {
+  // Debug information in arbitrary format.
+  string debug_information = 1;
+}
+
 // Tremplin service methods.
 service Tremplin {
   rpc StartLxd(StartLxdRequest) returns (StartLxdResponse);
@@ -837,6 +847,7 @@ service Tremplin {
       returns (CancelUpgradeContainerResponse);
   rpc HostNetworkChanged(HostNetworkChangedRequest)
       returns (HostNetworkChangedResponse);
+  rpc GetDebugInfo(GetDebugInfoRequest) returns (GetDebugInfoResponse);
 
   // If adding more rpc's, please update ContainerListenerFuzzerSingleAction as
   // well.
