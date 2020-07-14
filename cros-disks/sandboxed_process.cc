@@ -26,9 +26,9 @@
 namespace cros_disks {
 namespace {
 
-int Exec(char* const args[]) {
+int Exec(char* const args[], char* const env[]) {
   const char* const path = args[0];
-  execv(path, args);
+  execve(path, args, env);
   const int ret =
       (errno == ENOENT ? MINIJAIL_ERR_NO_COMMAND : MINIJAIL_ERR_NO_ACCESS);
   PLOG(ERROR) << "Cannot exec " << quote(path);
@@ -157,6 +157,8 @@ pid_t SandboxedProcess::StartImpl(base::ScopedFD in_fd,
                                   base::ScopedFD err_fd) {
   char* const* const args = GetArguments();
   DCHECK(args && args[0]);
+  char* const* const env = GetEnvironment();
+  DCHECK(env);
 
   pid_t child_pid = kInvalidProcessId;
 
@@ -165,9 +167,10 @@ pid_t SandboxedProcess::StartImpl(base::ScopedFD in_fd,
     minijail_preserve_fd(jail_, out_fd.get(), STDOUT_FILENO);
     minijail_preserve_fd(jail_, err_fd.get(), STDERR_FILENO);
 
-    const int ret = minijail_run_pid(jail_, args[0], args, &child_pid);
+    const int ret = minijail_run_env_pid_pipes(
+        jail_, args[0], args, env, &child_pid, nullptr, nullptr, nullptr);
     if (ret < 0) {
-      LOG(ERROR) << "Cannot run minijail_run_pid_pipes: "
+      LOG(ERROR) << "Cannot start minijail process: "
                  << base::safe_strerror(-ret);
       return kInvalidProcessId;
     }
@@ -186,7 +189,7 @@ pid_t SandboxedProcess::StartImpl(base::ScopedFD in_fd,
 
     if (child_pid == 0) {
       // In child process.
-      init.RunInsideSandboxNoReturn(base::BindOnce(Exec, args));
+      init.RunInsideSandboxNoReturn(base::BindOnce(Exec, args, env));
       NOTREACHED();
     } else {
       // In parent process.

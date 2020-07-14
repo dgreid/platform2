@@ -10,6 +10,7 @@
 
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
+#include <base/strings/string_piece.h>
 
 #include <gtest/gtest_prod.h>
 
@@ -27,9 +28,14 @@ class Process {
 
   virtual ~Process();
 
-  // Adds an argument to the end of the argument list. Any argument added by
-  // this method does not affect the process that has been started by Start().
-  void AddArgument(const std::string& argument);
+  // Adds an argument to the end of the argument list.
+  // Precondition: Start() has not been called yet.
+  void AddArgument(std::string argument);
+
+  // Adds a variable to the environment that will be passed to the process.
+  // Precondition: Start() has not been called yet.
+  // Precondition: `name` is not empty and doesn't contain '='.
+  void AddEnvironmentVariable(base::StringPiece name, base::StringPiece value);
 
   // Starts the process. The started process has its stdin, stdout and stderr
   // connected to /dev/null. Returns true in case of success. Once started, the
@@ -51,6 +57,7 @@ class Process {
   pid_t pid() const { return pid_; }
 
   const std::vector<std::string>& arguments() const { return arguments_; }
+  const std::vector<std::string>& environment() const { return environment_; }
 
  protected:
   Process();
@@ -61,6 +68,10 @@ class Process {
   // calls to AddArgument() are not allowed. The returned array of arguments is
   // owned by this Process object.
   char* const* GetArguments();
+
+  // Gets the environment to pass to the subprocess. The returned array of
+  // environment variables is owned by this Process object.
+  char* const* GetEnvironment();
 
   // Starts a process, and connects to its stdin, stdout and stderr the given
   // file descriptors.
@@ -102,6 +113,12 @@ class Process {
   // Process arguments.
   std::vector<std::string> arguments_;
   std::vector<char*> arguments_array_;
+
+  // Extra environment variables.
+  std::vector<std::string> environment_;
+
+  // Full environment for the subprocess.
+  std::vector<char*> environment_array_;
 
   // Process ID (default to kInvalidProcessId when the process has not started).
   pid_t pid_ = kInvalidProcessId;

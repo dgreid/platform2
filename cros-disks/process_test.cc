@@ -600,6 +600,55 @@ TEST_P(ProcessRunTest, WaitUndisturbedBySignals) {
   EXPECT_GT(AlarmGuard::count(), 0);
 }
 
+TEST_P(ProcessRunTest, PassCurrentEnvironment) {
+  EXPECT_EQ(setenv("OLD_VAR_1", "Old 1", 0), 0);
+  EXPECT_EQ(setenv("OLD_VAR_2", "Old 2", 0), 0);
+  Process& process = *process_;
+  process.AddArgument("/bin/sh");
+  process.AddArgument("-c");
+  process.AddArgument("set");
+
+  std::vector<std::string> output;
+  EXPECT_EQ(process.Run(&output), 0);
+  EXPECT_THAT(output, Contains("OUT: OLD_VAR_1='Old 1'"));
+  EXPECT_THAT(output, Contains("OUT: OLD_VAR_2='Old 2'"));
+  EXPECT_EQ(unsetenv("OLD_VAR_1"), 0);
+  EXPECT_EQ(unsetenv("OLD_VAR_2"), 0);
+}
+
+TEST_P(ProcessRunTest, AppendExtraEnvironment) {
+  EXPECT_EQ(setenv("OLD_VAR_1", "Old 1", 0), 0);
+  EXPECT_EQ(setenv("OLD_VAR_2", "Old 2", 0), 0);
+  Process& process = *process_;
+  EXPECT_THAT(process.environment(), IsEmpty());
+  process.AddEnvironmentVariable("MY_VAR_1", "");
+  process.AddEnvironmentVariable("MY_VAR_2", " ");
+  process.AddEnvironmentVariable("MY_VAR_3", "=");
+  process.AddEnvironmentVariable("MY_VAR_4",
+                                 R"(abc 123 ~`!@#$%^&*()_-+={[}]|\:;"'<,>.?/)");
+  EXPECT_THAT(
+      process.environment(),
+      ElementsAre("MY_VAR_1=", "MY_VAR_2= ", "MY_VAR_3==",
+                  R"(MY_VAR_4=abc 123 ~`!@#$%^&*()_-+={[}]|\:;"'<,>.?/)"));
+  process.AddArgument("/bin/sh");
+  process.AddArgument("-c");
+  process.AddArgument("set");
+
+  std::vector<std::string> output;
+  EXPECT_EQ(process.Run(&output), 0);
+  EXPECT_THAT(output, Contains("OUT: OLD_VAR_1='Old 1'"));
+  EXPECT_THAT(output, Contains("OUT: OLD_VAR_2='Old 2'"));
+  EXPECT_THAT(output, Contains("OUT: MY_VAR_1=''"));
+  EXPECT_THAT(output, Contains("OUT: MY_VAR_2=' '"));
+  EXPECT_THAT(output, Contains("OUT: MY_VAR_3='='"));
+  EXPECT_THAT(
+      output,
+      Contains(
+          R"(OUT: MY_VAR_4='abc 123 ~`!@#$%^&*()_-+={[}]|\:;"'"'"'<,>.?/')"));
+  EXPECT_EQ(unsetenv("OLD_VAR_1"), 0);
+  EXPECT_EQ(unsetenv("OLD_VAR_2"), 0);
+}
+
 INSTANTIATE_TEST_SUITE_P(ProcessRun,
                          ProcessRunTest,
                          Values(ProcessFactory{

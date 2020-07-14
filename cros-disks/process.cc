@@ -116,9 +116,9 @@ Process::Process() = default;
 
 Process::~Process() = default;
 
-void Process::AddArgument(const std::string& argument) {
+void Process::AddArgument(std::string argument) {
   DCHECK(arguments_array_.empty());
-  arguments_.push_back(argument);
+  arguments_.push_back(std::move(argument));
 }
 
 char* const* Process::GetArguments() {
@@ -137,13 +137,52 @@ void Process::BuildArgumentsArray() {
   arguments_array_.push_back(nullptr);
 }
 
+void Process::AddEnvironmentVariable(const base::StringPiece name,
+                                     const base::StringPiece value) {
+  DCHECK(environment_array_.empty());
+  DCHECK(!name.empty());
+  std::string s;
+  s.reserve(name.size() + value.size() + 1);
+  name.AppendToString(&s);
+  s += '=';
+  value.AppendToString(&s);
+  environment_.push_back(std::move(s));
+}
+
+char* const* Process::GetEnvironment() {
+  // If there are no extra environment variables, just use the current
+  // environment.
+  if (environment_.empty()) {
+    return environ;
+  }
+
+  if (environment_array_.empty()) {
+    // Prepare the new environment.
+    for (std::string& s : environment_) {
+      // TODO(fdegros) Remove const_cast when using C++17
+      environment_array_.push_back(const_cast<char*>(s.data()));
+    }
+
+    // Append the current environment.
+    for (char* const* p = environ; *p; ++p) {
+      environment_array_.push_back(*p);
+    }
+
+    environment_array_.push_back(nullptr);
+  }
+
+  return environment_array_.data();
+}
+
 bool Process::Start(base::ScopedFD in_fd,
                     base::ScopedFD out_fd,
                     base::ScopedFD err_fd) {
   CHECK_EQ(kInvalidProcessId, pid_);
   CHECK(!finished());
   CHECK(!arguments_.empty()) << "No arguments provided";
-  LOG(INFO) << "Starting process " << quote(arguments_);
+  LOG(INFO) << "Starting program " << quote(arguments_.front())
+            << " with arguments " << quote(arguments_)
+            << " and extra environment " << quote(environment_);
   pid_ = StartImpl(std::move(in_fd), std::move(out_fd), std::move(err_fd));
   return pid_ != kInvalidProcessId;
 }
