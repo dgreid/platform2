@@ -78,8 +78,7 @@ void TextClassifierImpl::SetDisconnectionHandler(
 
 void TextClassifierImpl::Annotate(TextAnnotationRequestPtr request,
                                   AnnotateCallback callback) {
-  RequestMetrics<TextAnnotationResult> request_metrics("TextClassifier",
-                                                       "Annotate");
+  RequestMetrics request_metrics("TextClassifier", "Annotate");
   request_metrics.StartRecordingPerformanceMetrics();
 
   // Parse and set up the options.
@@ -142,13 +141,11 @@ void TextClassifierImpl::Annotate(TextAnnotationRequestPtr request,
   std::move(callback).Run(std::move(annotations));
 
   request_metrics.FinishRecordingPerformanceMetrics();
-  request_metrics.RecordRequestEvent(TextAnnotationResult::OK);
 }
 
 void TextClassifierImpl::SuggestSelection(
     TextSuggestSelectionRequestPtr request, SuggestSelectionCallback callback) {
-  RequestMetrics<SuggestSelectionResult> request_metrics("TextClassifier",
-                                                         "SuggestSelection");
+  RequestMetrics request_metrics("TextClassifier", "SuggestSelection");
   request_metrics.StartRecordingPerformanceMetrics();
 
   libtextclassifier3::SelectionOptions option;
@@ -174,13 +171,11 @@ void TextClassifierImpl::SuggestSelection(
   std::move(callback).Run(std::move(result_span));
 
   request_metrics.FinishRecordingPerformanceMetrics();
-  request_metrics.RecordRequestEvent(SuggestSelectionResult::OK);
 }
 
 void TextClassifierImpl::FindLanguages(const std::string& text,
                                        FindLanguagesCallback callback) {
-  RequestMetrics<FindLanguagesResult> request_metrics("TextClassifier",
-                                                      "FindLanguages");
+  RequestMetrics request_metrics("TextClassifier", "FindLanguages");
   request_metrics.StartRecordingPerformanceMetrics();
 
   const std::vector<std::pair<std::string, float>> languages =

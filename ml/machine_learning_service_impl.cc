@@ -103,8 +103,8 @@ void MachineLearningServiceImpl::LoadBuiltinModel(
 
   DCHECK(!metadata.metrics_model_name.empty());
 
-  RequestMetrics<LoadModelResult> request_metrics(metadata.metrics_model_name,
-                                                  kMetricsRequestName);
+  RequestMetrics request_metrics(metadata.metrics_model_name,
+                                 kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
   // Attempt to load model.
@@ -134,8 +134,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
     LoadFlatBufferModelCallback callback) {
   DCHECK(!spec->metrics_model_name.empty());
 
-  RequestMetrics<LoadModelResult> request_metrics(spec->metrics_model_name,
-                                                  kMetricsRequestName);
+  RequestMetrics request_metrics(spec->metrics_model_name, kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
   // Take the ownership of the content of `model_string` because `ModelImpl` has
@@ -169,8 +168,7 @@ void MachineLearningServiceImpl::LoadFlatBufferModel(
 void MachineLearningServiceImpl::LoadTextClassifier(
     mojo::PendingReceiver<TextClassifier> receiver,
     LoadTextClassifierCallback callback) {
-  RequestMetrics<LoadModelResult> request_metrics("TextClassifier",
-                                                  kMetricsRequestName);
+  RequestMetrics request_metrics("TextClassifier", kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
   // Attempt to load model.
@@ -216,8 +214,7 @@ void MachineLearningServiceImpl::LoadHandwritingModelWithSpec(
     HandwritingRecognizerSpecPtr spec,
     mojo::PendingReceiver<HandwritingRecognizer> receiver,
     LoadHandwritingModelCallback callback) {
-  RequestMetrics<LoadModelResult> request_metrics("HandwritingModel",
-                                                  kMetricsRequestName);
+  RequestMetrics request_metrics("HandwritingModel", kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
   // Load HandwritingLibrary.

@@ -101,8 +101,7 @@ void ModelImpl::CreateGraphExecutorWithOptions(
     CreateGraphExecutorCallback callback) {
   DCHECK(!metrics_model_name_.empty());
 
-  RequestMetrics<CreateGraphExecutorResult> request_metrics(
-      metrics_model_name_, kMetricsRequestName);
+  RequestMetrics request_metrics(metrics_model_name_, kMetricsRequestName);
   request_metrics.StartRecordingPerformanceMetrics();
 
   if (model_ == nullptr) {

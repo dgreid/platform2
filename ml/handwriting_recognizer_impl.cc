@@ -9,6 +9,7 @@
 
 #include "ml/handwriting_path.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
+#include "ml/request_metrics.h"
 
 namespace ml {
 namespace {
@@ -67,6 +68,9 @@ HandwritingRecognizerImpl::~HandwritingRecognizerImpl() {
 
 void HandwritingRecognizerImpl::Recognize(HandwritingRecognitionQueryPtr query,
                                           RecognizeCallback callback) {
+  RequestMetrics request_metrics("HandwritingModel", "Recognize");
+  request_metrics.StartRecordingPerformanceMetrics();
+
   chrome_knowledge::HandwritingRecognizerResult result_proto;
 
   if (ml::HandwritingLibrary::GetInstance()->RecognizeHandwriting(
@@ -74,11 +78,15 @@ void HandwritingRecognizerImpl::Recognize(HandwritingRecognitionQueryPtr query,
           &result_proto)) {
     // Recognition succeeded, run callback on the result.
     std::move(callback).Run(HandwritingRecognizerResultFromProto(result_proto));
+    request_metrics.FinishRecordingPerformanceMetrics();
+    request_metrics.RecordRequestEvent(HandwritingRecognizerResult::Status::OK);
   } else {
     // Recognition failed, run callback on empty result and status = ERROR.
     std::move(callback).Run(HandwritingRecognizerResult::New(
         HandwritingRecognizerResult::Status::ERROR,
         std::vector<HandwritingRecognizerCandidatePtr>()));
+    request_metrics.RecordRequestEvent(
+        HandwritingRecognizerResult::Status::ERROR);
   }
 }
 

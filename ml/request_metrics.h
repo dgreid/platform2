@@ -5,17 +5,11 @@
 #ifndef ML_REQUEST_METRICS_H_
 #define ML_REQUEST_METRICS_H_
 
-#include <algorithm>
 #include <memory>
 #include <string>
-#include <vector>
 
-#include <base/bind.h>
-#include <base/files/file_path.h>
-#include <base/logging.h>
 #include <base/macros.h>
 #include <base/process/process_metrics.h>
-#include <base/system/sys_info.h>
 #include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
@@ -31,7 +25,6 @@ namespace ml {
 // specific actions, currently we reuse the enum classes defined in mojoms. The
 // enum class generally contains an OK and several different Errors, besides,
 // there should be a kMax which shares the value of the highest enumerator.
-template <class RequestEventEnum>
 class RequestMetrics {
  public:
   // Creates a RequestMetrics with the specified model and request names.
@@ -41,6 +34,7 @@ class RequestMetrics {
                  const std::string& request_name);
 
   // Logs (to UMA) the specified `event` associated with this request.
+  template <class RequestEventEnum>
   void RecordRequestEvent(RequestEventEnum event);
 
   // When you want to record metrics of some action, call Start func at the
@@ -77,78 +71,11 @@ constexpr int kCpuTimeMaxMicrosec = 1800000000;  // 30 min
 constexpr int kCpuTimeBuckets = 100;
 
 template <class RequestEventEnum>
-RequestMetrics<RequestEventEnum>::RequestMetrics(
-    const std::string& model_name, const std::string& request_name)
-    : name_base_(std::string(kGlobalMetricsPrefix) + model_name + "." +
-                 request_name),
-      process_metrics_(nullptr) {}
-
-template <class RequestEventEnum>
-void RequestMetrics<RequestEventEnum>::RecordRequestEvent(
-    RequestEventEnum event) {
+void RequestMetrics::RecordRequestEvent(RequestEventEnum event) {
   metrics_library_.SendEnumToUMA(
       name_base_ + kEventSuffix, static_cast<int>(event),
       static_cast<int>(RequestEventEnum::kMaxValue) + 1);
   process_metrics_.reset(nullptr);
-}
-
-template <class RequestEventEnum>
-void RequestMetrics<RequestEventEnum>::StartRecordingPerformanceMetrics() {
-  DCHECK(process_metrics_ == nullptr);
-  process_metrics_ = base::ProcessMetrics::CreateCurrentProcessMetrics();
-  // Call GetPlatformIndependentCPUUsage in order to set the "zero" point of the
-  // CPU usage counter of process_metrics_.
-  process_metrics_->GetPlatformIndependentCPUUsage();
-  timer_.Start();
-  // Query memory usage.
-  size_t usage = 0;
-  if (!GetTotalProcessMemoryUsage(&usage)) {
-    LOG(DFATAL) << "Getting process memory usage failed.";
-    return;
-  }
-  initial_memory_ = static_cast<int64_t>(usage);
-}
-
-template <class RequestEventEnum>
-void RequestMetrics<RequestEventEnum>::FinishRecordingPerformanceMetrics() {
-  DCHECK(process_metrics_ != nullptr);
-  // To get CPU time, we multiply elapsed (wall) time by CPU usage percentage.
-  timer_.Stop();
-  base::TimeDelta elapsed_time;
-  DCHECK(timer_.GetElapsedTime(&elapsed_time));
-  const int64_t elapsed_time_microsec = elapsed_time.InMicroseconds();
-
-  // CPU usage, 12.34 means 12.34%, and the range is 0 to 100 * numCPUCores.
-  // That's to say it can exceed 100 when there're multi CPUs.
-  // For example, if the device has 4 CPUs and the process fully uses 2 of
-  // them, the percent will be 200%.
-  const double cpu_usage_percent =
-      process_metrics_->GetPlatformIndependentCPUUsage();
-
-  // CPU time, as mentioned above, "100 microseconds" means "1 CPU core fully
-  // utilized for 100 microseconds".
-  const int64_t cpu_time_microsec =
-      static_cast<int64_t>(cpu_usage_percent * elapsed_time_microsec / 100.);
-
-  // Memory usage
-  size_t usage = 0;
-  if (!GetTotalProcessMemoryUsage(&usage)) {
-    LOG(DFATAL) << "Getting process memory usage failed.";
-    return;
-  }
-  const int64_t memory_usage_kb =
-      static_cast<int64_t>(usage) - initial_memory_;
-
-  metrics_library_.SendToUMA(name_base_ + kTotalMemoryDeltaSuffix,
-                             memory_usage_kb,
-                             kMemoryDeltaMinKb,
-                             kMemoryDeltaMaxKb,
-                             kMemoryDeltaBuckets);
-  metrics_library_.SendToUMA(name_base_ + kCpuTimeSuffix,
-                             cpu_time_microsec,
-                             kCpuTimeMinMicrosec,
-                             kCpuTimeMaxMicrosec,
-                             kCpuTimeBuckets);
 }
 
 // Records a generic model specification error event during a model loading
