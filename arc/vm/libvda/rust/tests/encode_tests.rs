@@ -16,7 +16,7 @@ fn create_config() -> Config {
         input_format: PixelFormat::YV12,
         input_visible_height: 320,
         input_visible_width: 192,
-        output_profile: Profile::H264,
+        output_profile: Profile::H264ProfileBaseline,
         initial_bitrate: 100,
         initial_framerate: None,
         h264_output_level: None,

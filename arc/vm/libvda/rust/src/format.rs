@@ -54,9 +54,34 @@ where
 #[derive(Debug, Clone, Copy, N)]
 #[repr(i32)]
 pub enum Profile {
+    H264ProfileBaseline = bindings::video_codec_profile_H264PROFILE_BASELINE,
+    H264ProfileMain = bindings::video_codec_profile_H264PROFILE_MAIN,
+    H264ProfileExtended = bindings::video_codec_profile_H264PROFILE_EXTENDED,
+    H264ProfileHigh = bindings::video_codec_profile_H264PROFILE_HIGH,
+    H264ProfileHigh10Profile = bindings::video_codec_profile_H264PROFILE_HIGH10PROFILE,
+    H264ProfileHigh422Profile = bindings::video_codec_profile_H264PROFILE_HIGH422PROFILE,
+    H264ProfileHigh444PredictiveProfile =
+        bindings::video_codec_profile_H264PROFILE_HIGH444PREDICTIVEPROFILE,
+    H264ProfileScalableBaseline = bindings::video_codec_profile_H264PROFILE_SCALABLEBASELINE,
+    H264ProfileScalableHigh = bindings::video_codec_profile_H264PROFILE_SCALABLEHIGH,
+    H264ProfileStereoHigh = bindings::video_codec_profile_H264PROFILE_STEREOHIGH,
+    H264ProfileMultiviewHigh = bindings::video_codec_profile_H264PROFILE_MULTIVIEWHIGH,
     VP8 = bindings::video_codec_profile_VP8PROFILE_MIN,
     VP9Profile0 = bindings::video_codec_profile_VP9PROFILE_PROFILE0,
-    H264 = bindings::video_codec_profile_H264PROFILE_MAIN,
+    VP9Profile1 = bindings::video_codec_profile_VP9PROFILE_PROFILE1,
+    VP9Profile2 = bindings::video_codec_profile_VP9PROFILE_PROFILE2,
+    VP9Profile3 = bindings::video_codec_profile_VP9PROFILE_PROFILE3,
+    HevcProfileMain = bindings::video_codec_profile_HEVCPROFILE_MAIN,
+    HevcProfileMain10 = bindings::video_codec_profile_HEVCPROFILE_MAIN10,
+    HevcProfileMainStillPicture = bindings::video_codec_profile_HEVCPROFILE_MAIN_STILL_PICTURE,
+    DolbyVisionProfile0 = bindings::video_codec_profile_DOLBYVISION_PROFILE0,
+    DolbyVisionProfile4 = bindings::video_codec_profile_DOLBYVISION_PROFILE4,
+    DolbyVisionProfile5 = bindings::video_codec_profile_DOLBYVISION_PROFILE5,
+    DolbyVisionProfile7 = bindings::video_codec_profile_DOLBYVISION_PROFILE7,
+    Theora = bindings::video_codec_profile_THEORAPROFILE_ANY,
+    Av1ProfileMain = bindings::video_codec_profile_AV1PROFILE_PROFILE_MAIN,
+    Av1ProfileHigh = bindings::video_codec_profile_AV1PROFILE_PROFILE_HIGH,
+    Av1ProfilePro = bindings::video_codec_profile_AV1PROFILE_PROFILE_PRO,
 }
 
 impl Profile {
@@ -65,11 +90,7 @@ impl Profile {
     }
 
     pub(crate) fn to_raw_profile(self) -> bindings::video_codec_profile_t {
-        match self {
-            Profile::VP8 => bindings::video_codec_profile_VP8PROFILE_MIN,
-            Profile::VP9Profile0 => bindings::video_codec_profile_VP9PROFILE_PROFILE0,
-            Profile::H264 => bindings::video_codec_profile_H264PROFILE_MAIN,
-        }
+        self as bindings::video_codec_profile_t
     }
 }
 
