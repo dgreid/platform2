@@ -12,6 +12,7 @@ use std::process::{self, Stdio};
 
 use dbus::{BusType, Connection};
 use remain::sorted;
+use sys_util::error;
 use tlsdate_dbus::OrgTorprojectTlsdate;
 
 use crate::dispatcher::{self, Arguments, Command, Dispatcher};
@@ -95,7 +96,7 @@ E.g., set_time 10 February 2012 11:21am
             Ok(())
         }
         Err(err) => {
-            eprintln!("{}", err);
+            error!("{}", err);
             Err(dispatcher::Error::CommandReturnedError)
         }
     }

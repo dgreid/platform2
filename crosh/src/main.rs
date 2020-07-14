@@ -14,15 +14,13 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
 
 use libc::{c_int, fork, kill, pid_t, waitpid, SIGHUP, SIGINT, SIGKILL, WIFSTOPPED};
-
 use rustyline::completion::Completer;
 use rustyline::config::Configurer;
 use rustyline::error::ReadlineError;
 use rustyline::highlight::Highlighter;
 use rustyline::hint::Hinter;
 use rustyline::{CompletionType, Config, Context, Editor, Helper};
-
-use sys_util::error;
+use sys_util::{error, syslog};
 
 use crate::dispatcher::{CompletionResult, Dispatcher};
 
@@ -132,12 +130,12 @@ fn handle_cmd(dispatcher: &Dispatcher, args: Vec<String>) -> Result<(), ()> {
         code = waitpid(pid, &mut status, 0);
         // This should only happen if the child process is ptraced.
         if WIFSTOPPED(status) && kill(-pid, SIGKILL) != 0 {
-            eprintln!("kill failed.");
+            error!("kill failed.");
         }
     }
     COMMAND_RUNNING_PID.store(-1, Ordering::Release);
     if code != pid {
-        eprintln!("waitpid failed.");
+        error!("waitpid failed.");
         return Err(());
     }
     match status {
@@ -183,7 +181,7 @@ fn dispatch_cmd(dispatcher: &Dispatcher, args: Vec<String>) {
         _ => match dispatcher.handle_command(args) {
             Ok(_) => 0,
             Err(e) => {
-                eprintln!("ERROR: {}", e);
+                error!("ERROR: {}", e);
                 1
             }
         },
@@ -196,7 +194,7 @@ unsafe extern "C" fn sigint_handler() {
     if command_pid >= 0 {
         let _ = stdout().flush();
         if kill(command_pid, SIGINT) != 0 {
-            eprintln!("kill failed.");
+            error!("kill failed.");
         } else {
             command_pid = -1;
         }
@@ -247,7 +245,7 @@ fn input_loop(dispatcher: Dispatcher) {
 
     if let Some(h) = history_path.as_ref() {
         if let Err(e) = editor.load_history(h) {
-            eprintln!("Error loading history: {}", e);
+            error!("Error loading history: {}", e);
         }
     }
 
@@ -279,7 +277,7 @@ fn input_loop(dispatcher: Dispatcher) {
                 let _ = handle_cmd(editor.helper().unwrap().dispatcher(), tokens);
                 if let Some(h) = history_path.as_ref() {
                     if let Err(e) = editor.save_history(h) {
-                        eprintln!("Error persisting history: {}", e);
+                        error!("Error persisting history: {}", e);
                     }
                 }
             }
@@ -290,7 +288,7 @@ fn input_loop(dispatcher: Dispatcher) {
                 break;
             }
             Err(err) => {
-                eprintln!("ReadLine error: {}", err);
+                error!("ReadLine error: {}", err);
                 break;
             }
         }
@@ -313,6 +311,8 @@ fn setup_dispatcher() -> Dispatcher {
     legacy::register(&mut dispatcher);
 
     if let Err(err) = dispatcher.validate() {
+        // Use error! too so that the message is included in the syslog.
+        error!("FATAL: {}", err);
         panic!("FATAL: {}", err);
     }
 
@@ -321,6 +321,11 @@ fn setup_dispatcher() -> Dispatcher {
 
 fn main() -> Result<(), ()> {
     let mut args = std::env::args();
+
+    if let Err(e) = syslog::init() {
+        eprintln!("failed to initiailize syslog: {}", e);
+        return Err(());
+    }
 
     if args.next().is_none() {
         error!("expected executable name.");
@@ -332,12 +337,12 @@ fn main() -> Result<(), ()> {
     let mut command_args: Vec<String> = Vec::new();
 
     util::set_dev_commands_included(util::is_dev_mode().unwrap_or_else(|_| {
-        eprintln!("Could not locate 'crossystem'; assuming devmode is off.");
+        error!("Could not locate 'crossystem'; assuming devmode is off.");
         false
     }));
 
     util::set_usb_commands_included(util::is_removable().unwrap_or_else(|_| {
-        eprintln!("Could not query filesystem; assuming not removable.");
+        error!("Could not query filesystem; assuming not removable.");
         false
     }));
 

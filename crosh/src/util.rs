@@ -17,6 +17,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use dbus::{BusType, Connection, Message};
 use libc::{c_int, sigaction, SA_RESTART, SIG_DFL};
 use regex::Regex;
+use sys_util::error;
 use system_api::OrgChromiumSessionManagerInterface;
 
 // 25 seconds is the default timeout for dbus-send.
@@ -59,7 +60,7 @@ pub fn get_user_id_hash() -> Result<String, ()> {
     }
 
     let connection = Connection::get_private(BusType::System).map_err(|err| {
-        eprintln!("ERROR: Failed to get D-Bus connection: {}", err);
+        error!("ERROR: Failed to get D-Bus connection: {}", err);
     })?;
     let conn_path = connection.with_path(
         "org.chromium.SessionManager",
@@ -86,19 +87,19 @@ pub fn is_chrome_feature_enabled(method_name: &str) -> Result<bool, ()> {
     .append1(get_user_id_hash()?);
 
     let connection = Connection::get_private(BusType::System).or_else(|err| {
-        eprintln!("ERROR: Failed to get D-Bus connection: {}", err);
+        error!("ERROR: Failed to get D-Bus connection: {}", err);
         Err(())
     })?;
 
     let reply = connection
         .send_with_reply_and_block(method, TIMEOUT_MILLIS)
         .or_else(|err| {
-            eprintln!("ERROR: D-Bus method call failed: {}", err);
+            error!("ERROR: D-Bus method call failed: {}", err);
             Err(())
         })?;
 
     reply.get1::<bool>().ok_or_else(|| {
-        eprintln!("ERROR: Got unexpected result: {:?}", &reply);
+        error!("ERROR: Got unexpected result: {:?}", &reply);
     })
 }
 
@@ -146,7 +147,7 @@ pub fn set_signal_handlers(signums: &[c_int], handler: unsafe extern "C" fn()) {
 
             let ret = sigaction(signum, &sigact, null_mut());
             if ret < 0 {
-                eprintln!("sigaction failed for {}", signum);
+                error!("sigaction failed for {}", signum);
             }
         }
     }
@@ -160,7 +161,7 @@ pub fn clear_signal_handlers(signums: &[c_int]) {
 
             let ret = sigaction(signum, &sigact, null_mut());
             if ret < 0 {
-                eprintln!("sigaction failed for {}", signum);
+                error!("sigaction failed for {}", signum);
             }
         }
     }

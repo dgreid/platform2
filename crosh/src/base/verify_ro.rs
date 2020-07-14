@@ -14,7 +14,7 @@ use std::time::Duration;
 
 use dbus::{BusType, Connection, OwnedFd};
 use libc::SIGINT;
-use sys_util::pipe;
+use sys_util::{error, pipe};
 use system_api::OrgChromiumDebugd;
 
 use crate::dispatcher::{self, Arguments, Command, Dispatcher};
@@ -41,7 +41,7 @@ pub fn register(dispatcher: &mut Dispatcher) {
 
 fn stop_verify_ro(handle: &str) -> Result<(), dispatcher::Error> {
     let connection = Connection::get_private(BusType::System).map_err(|err| {
-        eprintln!("ERROR: Failed to get D-Bus connection: {}", err);
+        error!("ERROR: Failed to get D-Bus connection: {}", err);
         dispatcher::Error::CommandReturnedError
     })?;
     let conn_path = connection.with_path(
@@ -90,7 +90,7 @@ fn execute_verify_ro(_cmd: &Command, args: &Arguments) -> Result<(), dispatcher:
     }
 
     let connection = Connection::get_private(BusType::System).map_err(|err| {
-        eprintln!("ERROR: Failed to get D-Bus connection: {}", err);
+        error!("ERROR: Failed to get D-Bus connection: {}", err);
         dispatcher::Error::CommandReturnedError
     })?;
     let conn_path = connection.with_path(
