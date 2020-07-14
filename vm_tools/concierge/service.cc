@@ -1712,6 +1712,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
   vm_info->set_pid(info.pid);
   vm_info->set_cid(info.cid);
   vm_info->set_seneschal_server_handle(info.seneschal_server_handle);
+  vm_info->set_permission_token(info.permission_token);
   switch (info.status) {
     case VmInterface::Status::STARTING: {
       response.set_status(VM_STATUS_STARTING);
