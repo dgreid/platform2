@@ -191,7 +191,7 @@ class CrashCollector {
   FRIEND_TEST(CrashCollectorTest, GetProcessTree);
   FRIEND_TEST(CrashCollectorTest, GetUptime);
   FRIEND_TEST(CrashCollectorTest, Initialize);
-  FRIEND_TEST(CrashCollectorTest, MetaData);
+  FRIEND_TEST(CrashCollectorParameterizedTest, MetaData);
   FRIEND_TEST(CrashCollectorTest, ErrorCollectionMetaData);
   FRIEND_TEST(CrashCollectorTest, MetaDataDoesntCreateSymlink);
   FRIEND_TEST(CrashCollectorTest, MetaDataDoesntOverwriteSymlink);

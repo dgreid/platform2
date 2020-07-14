@@ -85,6 +85,11 @@ constexpr char kAnomalyDetectorReady[] = "anomaly-detector-ready";
 // found on the method documentation of `utils::SkipCrashCollection`
 constexpr char kFilterInFile[] = "filter-in";
 
+// Base name of the file containing the name of the in-progress tast test, if
+// any.  If there is a tast test name here when a crash happens, it's added to
+// the .meta file.
+constexpr char kInProgressTestName[] = "test-in-prog";
+
 // Base name of file whose existence indicates uploading of device coredumps is
 // allowed.
 constexpr char kDeviceCoredumpUploadAllowed[] =

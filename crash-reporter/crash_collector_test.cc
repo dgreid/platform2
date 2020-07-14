@@ -837,7 +837,19 @@ TEST_F(CrashCollectorTest, CheckHasCapacityStrangeNames) {
   EXPECT_TRUE(CheckHasCapacity());
 }
 
-TEST_F(CrashCollectorTest, MetaData) {
+class CrashCollectorParameterizedTest
+    : public CrashCollectorTest,
+      public ::testing::WithParamInterface<bool> {};
+
+TEST_P(CrashCollectorParameterizedTest, MetaData) {
+  bool test_in_prog = GetParam();
+  if (test_in_prog) {
+    ASSERT_TRUE(
+        test_util::CreateFile(paths::GetAt(paths::kSystemRunStateDirectory,
+                                           paths::kInProgressTestName),
+                              "some.Test"));
+  }
+
   const char kMetaFileBasename[] = "generated.meta";
   FilePath meta_file = test_dir_.Append(kMetaFileBasename);
   FilePath lsb_release = paths::Get("/etc/lsb-release");
@@ -875,6 +887,7 @@ TEST_F(CrashCollectorTest, MetaData) {
   std::string expected_meta = StringPrintf(
       "upload_var_collector=mock\n"
       "foo=bar\n"
+      "%s"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
       "exec_name=kernel\n"
@@ -887,11 +900,16 @@ TEST_F(CrashCollectorTest, MetaData) {
       "upload_var_osVersion=%s\n"
       "payload=%s\n"
       "done=1\n",
+      test_in_prog ? "upload_var_in_progress_tast_test=some.Test\n" : "",
       kFakeNow, (os_time - base::Time::UnixEpoch()).InMilliseconds(),
       kKernelName, kKernelVersion, kPayloadName);
   EXPECT_EQ(expected_meta, contents);
   EXPECT_EQ(collector_.get_bytes_written(), expected_meta.size());
 }
+
+INSTANTIATE_TEST_SUITE_P(CrashCollectorInstantiation,
+                         CrashCollectorParameterizedTest,
+                         testing::Bool());
 
 TEST_F(CrashCollectorTest, ErrorCollectionMetaData) {
   // Set up metadata the collector will read

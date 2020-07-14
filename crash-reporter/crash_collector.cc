@@ -1271,6 +1271,13 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
 
   std::string version_info = lsb_release_info + kernel_info;
 
+  std::string in_progress_test;
+  if (base::ReadFileToString(paths::GetAt(paths::kSystemRunStateDirectory,
+                                          paths::kInProgressTestName),
+                             &in_progress_test)) {
+    AddCrashMetaUploadData("in_progress_tast_test", in_progress_test);
+  }
+
   base::Time now = test_clock_ ? test_clock_->Now() : base::Time::Now();
   int64_t now_millis = (now - base::Time::UnixEpoch()).InMilliseconds();
   std::string meta_data =
