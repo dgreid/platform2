@@ -1,0 +1,19 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+# Library that provides cros_healthd's network diagnostics adapter functionality.
+pkg_config("libnetwork_diagnostics_pkg_deps") {
+  pkg_deps = [
+    "libchrome-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+source_set("libnetwork_diagnostics_adapter") {
+  configs += [ ":libnetwork_diagnostics_pkg_deps" ]
+  deps = [ "//diagnostics/mojo:network_diagnostics_mojo_bindings" ]
+  sources = [ "network_diagnostics_adapter_impl.cc" ]
+}

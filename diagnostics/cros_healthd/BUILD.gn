@@ -19,10 +19,12 @@ source_set("libcros_healthd") {
   deps = [
     "events:libcros_healthd_events",
     "fetchers:libcros_healthd_fetchers",
+    "network_diagnostics:libnetwork_diagnostics_adapter",
     "process:libcros_healthd_process",
     "routines:libdiag_routine",
     "system:libcros_healthd_system",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
+    "//diagnostics/mojo:network_diagnostics_mojo_bindings",
   ]
   sources = [
     "cros_healthd.cc",

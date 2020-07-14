@@ -178,6 +178,14 @@ void CrosHealthd::SendNetworkHealthService(
   context_->network_health_adapter()->SetServiceRemote(std::move(remote));
 }
 
+void CrosHealthd::SendNetworkDiagnosticsRoutines(
+    mojo::PendingRemote<
+        chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines>
+        network_diagnostics_routines) {
+  context_->network_diagnostics_adapter()->SetNetworkDiagnosticsRoutines(
+      std::move(network_diagnostics_routines));
+}
+
 void CrosHealthd::ShutDownDueToMojoError(const std::string& debug_reason) {
   // Our daemon has to be restarted to be prepared for future Mojo connection
   // bootstraps. We can't do this without a restart since Mojo EDK gives no

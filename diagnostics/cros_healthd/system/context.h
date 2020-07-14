@@ -19,6 +19,7 @@
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/executor/executor_adapter.h"
 #include "diagnostics/cros_healthd/network/network_health_adapter.h"
+#include "diagnostics/cros_healthd/network_diagnostics/network_diagnostics_adapter.h"
 #include "diagnostics/cros_healthd/system/system_config_interface.h"
 #include "diagnostics/cros_healthd/system/system_utilities.h"
 
@@ -66,6 +67,11 @@ class Context {
   // NetworkHealthService. Example: cros_healthd calls out to the
   // NetworkHealthService to get network telemetry data.
   NetworkHealthAdapter* network_health_adapter() const;
+  // Use the object returned by network_diagnostics_adapter() to make calls to
+  // the NetworkDiagnosticsRoutines interface implemented by the browser.
+  // Example: cros_healthd calls out to the NetworkDiagnosticsRoutines interface
+  // with async callbacks when it needs to run network diagnostics.
+  NetworkDiagnosticsAdapter* network_diagnostics_adapter() const;
   // Use the object returned by power_manager_proxy() to make calls to
   // power_manager. Example: cros_healthd calls out to power_manager when it
   // needs to collect battery metrics like cycle count.
@@ -104,6 +110,7 @@ class Context {
   std::unique_ptr<org::chromium::debugdProxyInterface> debugd_proxy_;
   std::unique_ptr<DebugdAdapter> debugd_adapter_;
   std::unique_ptr<NetworkHealthAdapter> network_health_adapter_;
+  std::unique_ptr<NetworkDiagnosticsAdapter> network_diagnostics_adapter_;
   // Owned by |dbus_bus_|.
   dbus::ObjectProxy* power_manager_proxy_;
   std::unique_ptr<PowerdAdapter> powerd_adapter_;
