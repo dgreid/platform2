@@ -29,13 +29,15 @@ class MockProcessRunner : public MinijailedProcessRunner {
               iptables,
               (const std::string& table,
                const std::vector<std::string>& argv,
-               bool log_failures),
+               bool log_failures,
+               std::string* output),
               (override));
   MOCK_METHOD(int,
               ip6tables,
               (const std::string& table,
                const std::vector<std::string>& argv,
-               bool log_failures),
+               bool log_failures,
+               std::string* output),
               (override));
 };
 
@@ -55,9 +57,9 @@ class CountersServiceTest : public testing::Test {
 
 TEST_F(CountersServiceTest, OnNewDevice) {
   // Makes the check commands return 1 (not found).
-  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _))
+  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
       .WillRepeatedly(Return(1));
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _))
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
       .WillRepeatedly(Return(1));
 
   // The following commands are expected when eth0 comes up.
@@ -81,8 +83,8 @@ TEST_F(CountersServiceTest, OnNewDevice) {
   };
 
   for (const auto& rule : expected_calls) {
-    EXPECT_CALL(runner_, iptables("mangle", ElementsAreArray(rule), _));
-    EXPECT_CALL(runner_, ip6tables("mangle", ElementsAreArray(rule), _));
+    EXPECT_CALL(runner_, iptables("mangle", ElementsAreArray(rule), _, _));
+    EXPECT_CALL(runner_, ip6tables("mangle", ElementsAreArray(rule), _, _));
   }
 
   std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/device/eth0")};
@@ -92,15 +94,15 @@ TEST_F(CountersServiceTest, OnNewDevice) {
 
 TEST_F(CountersServiceTest, OnSameDeviceAppearAgain) {
   // Makes the check commands return 0 (we already have these rules).
-  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _))
+  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
       .WillRepeatedly(Return(0));
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _))
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
       .WillRepeatedly(Return(0));
 
   // Creating chains commands are expected but no more creating rules command
   // (with "-I" or "-A") should come.
-  EXPECT_CALL(runner_, iptables(_, Contains("-N"), _)).Times(AnyNumber());
-  EXPECT_CALL(runner_, ip6tables(_, Contains("-N"), _)).Times(AnyNumber());
+  EXPECT_CALL(runner_, iptables(_, Contains("-N"), _, _)).Times(AnyNumber());
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-N"), _, _)).Times(AnyNumber());
 
   std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/device/eth0")};
   fake_shill_client_->NotifyManagerPropertyChange(shill::kDevicesProperty,

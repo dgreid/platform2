@@ -5,6 +5,7 @@
 #ifndef PATCHPANEL_MINIJAILED_PROCESS_RUNNER_H_
 #define PATCHPANEL_MINIJAILED_PROCESS_RUNNER_H_
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -20,9 +21,19 @@ void EnterChildProcessJail();
 // Enforces the expected processes are run with the correct privileges.
 class MinijailedProcessRunner {
  public:
+  // For mocking waitpid().
+  class SyscallImpl {
+   public:
+    virtual pid_t WaitPID(pid_t pid, int* wstatus, int options = 0);
+    virtual ~SyscallImpl() = default;
+  };
+
   // Ownership of |mj| is not assumed and must be managed by the caller.
   // If |mj| is null, the default instance will be used.
   explicit MinijailedProcessRunner(brillo::Minijail* mj = nullptr);
+  // Provided for testing only.
+  MinijailedProcessRunner(brillo::Minijail* mj,
+                          std::unique_ptr<SyscallImpl> syscall);
   virtual ~MinijailedProcessRunner() = default;
 
   // Moves interface |ifname| back into the default namespace
@@ -50,14 +61,17 @@ class MinijailedProcessRunner {
                   const std::vector<std::string>& args,
                   bool log_failures = true);
 
-  // Runs iptables.
+  // Runs iptables. If |output| is not nullptr, it will be filled with the
+  // result from stdout of iptables command.
   virtual int iptables(const std::string& table,
                        const std::vector<std::string>& argv,
-                       bool log_failures = true);
+                       bool log_failures = true,
+                       std::string* output = nullptr);
 
   virtual int ip6tables(const std::string& table,
                         const std::vector<std::string>& argv,
-                        bool log_failures = true);
+                        bool log_failures = true,
+                        std::string* output = nullptr);
 
   // Installs all |modules| via modprobe.
   virtual int modprobe_all(const std::vector<std::string>& modules,
@@ -76,7 +90,19 @@ class MinijailedProcessRunner {
                   bool log_failures = true);
 
  private:
+  int RunSyncDestroy(const std::vector<std::string>& argv,
+                     brillo::Minijail* mj,
+                     minijail* jail,
+                     bool log_failures,
+                     int* fd_stdout);
+  int RunSync(const std::vector<std::string>& argv,
+              brillo::Minijail* mj,
+              bool log_failures,
+              int* fd_stdout);
+
   brillo::Minijail* mj_;
+
+  std::unique_ptr<SyscallImpl> syscall_;
 
   DISALLOW_COPY_AND_ASSIGN(MinijailedProcessRunner);
 };

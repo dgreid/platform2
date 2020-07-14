@@ -5,8 +5,11 @@
 #include "patchpanel/minijailed_process_runner.h"
 
 #include <linux/capability.h>
+#include <sys/wait.h>
+#include <utility>
 
 #include <base/logging.h>
+#include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/process/process.h>
@@ -35,18 +38,53 @@ constexpr char kModprobePath[] = "/sbin/modprobe";
 constexpr char kNsEnterPath[] = "/usr/bin/nsenter";
 constexpr char kSysctlPath[] = "/usr/sbin/sysctl";
 
-int RunSyncDestroy(const std::vector<std::string>& argv,
-                   brillo::Minijail* mj,
-                   minijail* jail,
-                   bool log_failures) {
+// An empty string will be returned if read fails.
+std::string ReadBlockingFDToString(int fd) {
+  static constexpr int kBufSize = 2048;
+  char buf[kBufSize] = {0};
+  std::string output;
+  while (true) {
+    ssize_t cnt = HANDLE_EINTR(read(fd, buf, kBufSize));
+    if (cnt == -1) {
+      PLOG(ERROR) << __func__ << " failed";
+      return {};
+    }
+
+    if (cnt == 0)
+      return output;
+
+    output.append({buf, static_cast<size_t>(cnt)});
+  }
+}
+
+}  // namespace
+
+pid_t MinijailedProcessRunner::SyscallImpl::WaitPID(pid_t pid,
+                                                    int* wstatus,
+                                                    int options) {
+  return waitpid(pid, wstatus, options);
+}
+
+int MinijailedProcessRunner::RunSyncDestroy(
+    const std::vector<std::string>& argv,
+    brillo::Minijail* mj,
+    minijail* jail,
+    bool log_failures,
+    int* fd_stdout) {
   std::vector<char*> args;
   for (const auto& arg : argv) {
     args.push_back(const_cast<char*>(arg.c_str()));
   }
   args.push_back(nullptr);
 
-  int status;
-  bool ran = mj->RunSyncAndDestroy(jail, args, &status);
+  pid_t pid;
+  int status = 0;
+  bool ran = mj->RunPipesAndDestroy(jail, args, &pid, nullptr /*stdin*/,
+                                    fd_stdout, nullptr /*stderr*/);
+  if (ran) {
+    ran = syscall_->WaitPID(pid, &status) == pid;
+  }
+
   if (!ran) {
     LOG(ERROR) << "Could not execute '" << base::JoinString(argv, " ") << "'";
   } else if (log_failures && (!WIFEXITED(status) || WEXITSTATUS(status) != 0)) {
@@ -64,13 +102,12 @@ int RunSyncDestroy(const std::vector<std::string>& argv,
   return ran && WIFEXITED(status) ? WEXITSTATUS(status) : -1;
 }
 
-int RunSync(const std::vector<std::string>& argv,
-            brillo::Minijail* mj,
-            bool log_failures) {
-  return RunSyncDestroy(argv, mj, mj->New(), log_failures);
+int MinijailedProcessRunner::RunSync(const std::vector<std::string>& argv,
+                                     brillo::Minijail* mj,
+                                     bool log_failures,
+                                     int* fd_stdout) {
+  return RunSyncDestroy(argv, mj, mj->New(), log_failures, fd_stdout);
 }
-
-}  // namespace
 
 void EnterChildProcessJail() {
   brillo::Minijail* m = brillo::Minijail::GetInstance();
@@ -87,21 +124,26 @@ void EnterChildProcessJail() {
 
 MinijailedProcessRunner::MinijailedProcessRunner(brillo::Minijail* mj) {
   mj_ = mj ? mj : brillo::Minijail::GetInstance();
+  syscall_ = std::make_unique<SyscallImpl>();
 }
+
+MinijailedProcessRunner::MinijailedProcessRunner(
+    brillo::Minijail* mj, std::unique_ptr<SyscallImpl> syscall)
+    : mj_(mj), syscall_(std::move(syscall)) {}
 
 int MinijailedProcessRunner::Run(const std::vector<std::string>& argv,
                                  bool log_failures) {
   minijail* jail = mj_->New();
   CHECK(mj_->DropRoot(jail, kUnprivilegedUser, kUnprivilegedUser));
   mj_->UseCapabilities(jail, kNetRawAdminCapMask);
-  return RunSyncDestroy(argv, mj_, jail, log_failures);
+  return RunSyncDestroy(argv, mj_, jail, log_failures, nullptr);
 }
 
 int MinijailedProcessRunner::RestoreDefaultNamespace(const std::string& ifname,
                                                      pid_t pid) {
   return RunSync({kNsEnterPath, "-t", base::NumberToString(pid), "-n", "--",
                   kIpPath, "link", "set", ifname, "netns", "1"},
-                 mj_, true);
+                 mj_, true, nullptr);
 }
 
 int MinijailedProcessRunner::brctl(const std::string& cmd,
@@ -120,7 +162,7 @@ int MinijailedProcessRunner::chown(const std::string& uid,
   CHECK(mj_->DropRoot(jail, kUnprivilegedUser, kUnprivilegedUser));
   mj_->UseCapabilities(jail, kChownCapMask);
   std::vector<std::string> args = {kChownPath, uid + ":" + gid, file};
-  return RunSyncDestroy(args, mj_, jail, log_failures);
+  return RunSyncDestroy(args, mj_, jail, log_failures, nullptr);
 }
 
 int MinijailedProcessRunner::ip(const std::string& obj,
@@ -143,18 +185,38 @@ int MinijailedProcessRunner::ip6(const std::string& obj,
 
 int MinijailedProcessRunner::iptables(const std::string& table,
                                       const std::vector<std::string>& argv,
-                                      bool log_failures) {
+                                      bool log_failures,
+                                      std::string* output) {
   std::vector<std::string> args = {kIptablesPath, "-t", table};
   args.insert(args.end(), argv.begin(), argv.end());
-  return RunSync(args, mj_, log_failures);
+  if (!output) {
+    return RunSync(args, mj_, log_failures, nullptr);
+  }
+
+  int fd_stdout;
+  int ret = RunSync(args, mj_, log_failures, &fd_stdout);
+  if (ret == 0) {
+    *output = ReadBlockingFDToString(fd_stdout);
+  }
+  return ret;
 }
 
 int MinijailedProcessRunner::ip6tables(const std::string& table,
                                        const std::vector<std::string>& argv,
-                                       bool log_failures) {
+                                       bool log_failures,
+                                       std::string* output) {
   std::vector<std::string> args = {kIp6tablesPath, "-t", table};
   args.insert(args.end(), argv.begin(), argv.end());
-  return RunSync(args, mj_, log_failures);
+  if (!output) {
+    return RunSync(args, mj_, log_failures, nullptr);
+  }
+
+  int fd_stdout;
+  int ret = RunSync(args, mj_, log_failures, &fd_stdout);
+  if (ret == 0) {
+    *output = ReadBlockingFDToString(fd_stdout);
+  }
+  return ret;
 }
 
 int MinijailedProcessRunner::modprobe_all(
@@ -164,14 +226,14 @@ int MinijailedProcessRunner::modprobe_all(
   mj_->UseCapabilities(jail, kModprobeCapMask);
   std::vector<std::string> args = {kModprobePath, "-a"};
   args.insert(args.end(), modules.begin(), modules.end());
-  return RunSyncDestroy(args, mj_, jail, log_failures);
+  return RunSyncDestroy(args, mj_, jail, log_failures, nullptr);
 }
 
 int MinijailedProcessRunner::sysctl_w(const std::string& key,
                                       const std::string& value,
                                       bool log_failures) {
   std::vector<std::string> args = {kSysctlPath, "-w", key + "=" + value};
-  return RunSync(args, mj_, log_failures);
+  return RunSync(args, mj_, log_failures, nullptr);
 }
 
 }  // namespace patchpanel

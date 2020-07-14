@@ -82,14 +82,16 @@ class MockProcessRunner : public MinijailedProcessRunner {
                    const std::string& cmd,
                    const std::vector<std::string>& args,
                    bool log_failures));
-  MOCK_METHOD3(iptables,
+  MOCK_METHOD4(iptables,
                int(const std::string& table,
                    const std::vector<std::string>& argv,
-                   bool log_failures));
-  MOCK_METHOD3(ip6tables,
+                   bool log_failures,
+                   std::string* output));
+  MOCK_METHOD4(ip6tables,
                int(const std::string& table,
                    const std::vector<std::string>& argv,
-                   bool log_failures));
+                   bool log_failures,
+                   std::string* output));
   MOCK_METHOD2(modprobe_all,
                int(const std::vector<std::string>& modules, bool log_failures));
   MOCK_METHOD3(sysctl_w,
@@ -160,7 +162,7 @@ TEST(DatapathTest, AddBridge) {
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-A", "PREROUTING", "-i", "br", "-j",
                                            "MARK", "--set-mark", "1", "-w"),
-                               true));
+                               true, nullptr));
   datapath.AddBridge("br", Ipv4Addr(1, 1, 1, 1), 30);
 }
 
@@ -242,7 +244,7 @@ TEST(DatapathTest, RemoveBridge) {
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "PREROUTING", "-i", "br", "-j",
                                            "MARK", "--set-mark", "1", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("set"), ElementsAre("br", "down"), true));
   EXPECT_CALL(runner, brctl(StrEq("delbr"), ElementsAre("br"), true));
@@ -252,27 +254,28 @@ TEST(DatapathTest, RemoveBridge) {
 
 TEST(DatapathTest, AddLegacyIPv4DNAT) {
   MockProcessRunner runner;
-  EXPECT_CALL(runner, iptables(StrEq("nat"),
-                               ElementsAre("-N", "dnat_arc", "-w"), true));
+  EXPECT_CALL(runner,
+              iptables(StrEq("nat"), ElementsAre("-N", "dnat_arc", "-w"), true,
+                       nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "dnat_arc", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
-                               true));
-  EXPECT_CALL(runner,
-              iptables(StrEq("nat"), ElementsAre("-N", "try_arc", "-w"), true));
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"), ElementsAre("-N", "try_arc", "-w"),
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-A", "PREROUTING", "-m", "socket",
                                    "--nowildcard", "-j", "ACCEPT", "-w"),
-                       true));
+                       true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "PREROUTING", "-p", "tcp",
                                            "-j", "try_arc", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "PREROUTING", "-p", "udp",
                                            "-j", "try_arc", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.AddLegacyIPv4DNAT("1.2.3.4");
 }
@@ -282,24 +285,26 @@ TEST(DatapathTest, RemoveLegacyIPv4DNAT) {
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "PREROUTING", "-p", "udp",
                                            "-j", "try_arc", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "PREROUTING", "-p", "tcp",
                                            "-j", "try_arc", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-D", "PREROUTING", "-m", "socket",
                                    "--nowildcard", "-j", "ACCEPT", "-w"),
-                       true));
+                       true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"), ElementsAre("-F", "try_arc", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"), ElementsAre("-X", "try_arc", "-w"),
+                               true, nullptr));
   EXPECT_CALL(runner,
-              iptables(StrEq("nat"), ElementsAre("-F", "try_arc", "-w"), true));
+              iptables(StrEq("nat"), ElementsAre("-F", "dnat_arc", "-w"), true,
+                       nullptr));
   EXPECT_CALL(runner,
-              iptables(StrEq("nat"), ElementsAre("-X", "try_arc", "-w"), true));
-  EXPECT_CALL(runner, iptables(StrEq("nat"),
-                               ElementsAre("-F", "dnat_arc", "-w"), true));
-  EXPECT_CALL(runner, iptables(StrEq("nat"),
-                               ElementsAre("-X", "dnat_arc", "-w"), true));
+              iptables(StrEq("nat"), ElementsAre("-X", "dnat_arc", "-w"), true,
+                       nullptr));
   Datapath datapath(&runner);
   datapath.RemoveLegacyIPv4DNAT();
 }
@@ -309,15 +314,15 @@ TEST(DatapathTest, AddLegacyIPv4InboundDNAT) {
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "try_arc", "-i", "wlan0", "-j",
                                            "dnat_arc", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.AddLegacyIPv4InboundDNAT("wlan0");
 }
 
 TEST(DatapathTest, RemoveLegacyIPv4InboundDNAT) {
   MockProcessRunner runner;
-  EXPECT_CALL(runner,
-              iptables(StrEq("nat"), ElementsAre("-F", "try_arc", "-w"), true));
+  EXPECT_CALL(runner, iptables(StrEq("nat"), ElementsAre("-F", "try_arc", "-w"),
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveLegacyIPv4InboundDNAT();
 }
@@ -328,17 +333,17 @@ TEST(DatapathTest, AddInboundIPv4DNAT) {
                                ElementsAre("-A", "PREROUTING", "-i", "eth0",
                                            "-m", "socket", "--nowildcard", "-j",
                                            "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "PREROUTING", "-i", "eth0",
                                            "-p", "tcp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "PREROUTING", "-i", "eth0",
                                            "-p", "udp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.AddInboundIPv4DNAT("eth0", "1.2.3.4");
 }
@@ -349,17 +354,17 @@ TEST(DatapathTest, RemoveInboundIPv4DNAT) {
                                ElementsAre("-D", "PREROUTING", "-i", "eth0",
                                            "-m", "socket", "--nowildcard", "-j",
                                            "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "PREROUTING", "-i", "eth0",
                                            "-p", "tcp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "PREROUTING", "-i", "eth0",
                                            "-p", "udp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveInboundIPv4DNAT("eth0", "1.2.3.4");
 }
@@ -369,7 +374,7 @@ TEST(DatapathTest, AddOutboundIPv4) {
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-o", "eth0", "-j",
                                            "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.AddOutboundIPv4("eth0");
 }
@@ -379,7 +384,7 @@ TEST(DatapathTest, RemoveInboundIPv4) {
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-D", "FORWARD", "-o", "eth0", "-j",
                                            "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveOutboundIPv4("eth0");
 }
@@ -400,21 +405,21 @@ TEST(DatapathTest, AddIPv6Forwarding) {
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
-                                false))
+                                false, nullptr))
       .WillOnce(Return(1));
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-A", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
-                                true));
+                                true, nullptr));
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
-                                false))
+                                false, nullptr))
       .WillOnce(Return(1));
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-A", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
-                                true));
+                                true, nullptr));
   Datapath datapath(&runner);
   datapath.AddIPv6Forwarding("eth0", "arc_eth0");
 }
@@ -424,11 +429,11 @@ TEST(DatapathTest, AddIPv6ForwardingRuleExists) {
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
-                                false));
+                                false, nullptr));
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
-                                false));
+                                false, nullptr));
   Datapath datapath(&runner);
   datapath.AddIPv6Forwarding("eth0", "arc_eth0");
 }
@@ -438,11 +443,11 @@ TEST(DatapathTest, RemoveIPv6Forwarding) {
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-D", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
-                                true));
+                                true, nullptr));
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-D", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
-                                true));
+                                true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveIPv6Forwarding("eth0", "arc_eth0");
 }
@@ -503,16 +508,16 @@ TEST(DatapathTest, AddSNATMarkRules) {
       iptables(StrEq("filter"),
                ElementsAre("-A", "FORWARD", "-m", "mark", "--mark", "1", "-m",
                            "state", "--state", "INVALID", "-j", "DROP", "-w"),
-               true));
+               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-m", "mark",
                                            "--mark", "1", "-j", "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-A", "POSTROUTING", "-m", "mark", "--mark",
                                    "1", "-j", "MASQUERADE", "-w"),
-                       true));
+                       true, nullptr));
   Datapath datapath(&runner);
   datapath.AddSNATMarkRules();
 }
@@ -524,16 +529,16 @@ TEST(DatapathTest, RemoveSNATMarkRules) {
       iptables(StrEq("filter"),
                ElementsAre("-D", "FORWARD", "-m", "mark", "--mark", "1", "-m",
                            "state", "--state", "INVALID", "-j", "DROP", "-w"),
-               true));
+               true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-D", "FORWARD", "-m", "mark",
                                            "--mark", "1", "-j", "ACCEPT", "-w"),
-                               true));
+                               true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-D", "POSTROUTING", "-m", "mark", "--mark",
                                    "1", "-j", "MASQUERADE", "-w"),
-                       true));
+                       true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveSNATMarkRules();
 }
@@ -544,7 +549,7 @@ TEST(DatapathTest, AddForwardEstablishedRule) {
               iptables(StrEq("filter"),
                        ElementsAre("-A", "FORWARD", "-m", "state", "--state",
                                    "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
-                       true));
+                       true, nullptr));
   Datapath datapath(&runner);
   datapath.AddForwardEstablishedRule();
 }
@@ -555,7 +560,7 @@ TEST(DatapathTest, RemoveForwardEstablishedRule) {
               iptables(StrEq("filter"),
                        ElementsAre("-D", "FORWARD", "-m", "state", "--state",
                                    "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
-                       true));
+                       true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveForwardEstablishedRule();
 }
@@ -565,7 +570,7 @@ TEST(DatapathTest, AddInterfaceSNAT) {
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "POSTROUTING", "-o", "wwan+",
                                            "-j", "MASQUERADE", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.AddInterfaceSNAT("wwan+");
 }
@@ -575,7 +580,7 @@ TEST(DatapathTest, RemoveInterfaceSNAT) {
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "POSTROUTING", "-o", "wwan+",
                                            "-j", "MASQUERADE", "-w"),
-                               true));
+                               true, nullptr));
   Datapath datapath(&runner);
   datapath.RemoveInterfaceSNAT("wwan+");
 }

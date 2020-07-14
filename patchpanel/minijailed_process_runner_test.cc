@@ -5,6 +5,7 @@
 #include "patchpanel/minijailed_process_runner.h"
 
 #include <linux/capability.h>
+#include <memory>
 
 #include <brillo/minijail/mock_minijail.h>
 #include <gmock/gmock.h>
@@ -20,15 +21,24 @@ using testing::SetArgPointee;
 using testing::StrEq;
 
 namespace patchpanel {
+namespace {
+
+constexpr pid_t kFakePid = 123;
+
+class FakeSyscallImpl : public MinijailedProcessRunner::SyscallImpl {
+ public:
+  pid_t WaitPID(pid_t pid, int* wstatus, int options) override { return pid; }
+};
 
 class MinijailProcessRunnerTest : public testing::Test {
  protected:
-  MinijailProcessRunnerTest() : runner_(&mj_) {}
+  MinijailProcessRunnerTest()
+      : runner_(&mj_, std::make_unique<FakeSyscallImpl>()) {}
 
   void SetUp() override {
     ON_CALL(mj_, DropRoot(_, _, _)).WillByDefault(Return(true));
-    ON_CALL(mj_, RunSyncAndDestroy(_, _, _))
-        .WillByDefault(DoAll(SetArgPointee<2>(0), Return(true)));
+    ON_CALL(mj_, RunPipesAndDestroy(_, _, _, _, _, _))
+        .WillByDefault(DoAll(SetArgPointee<2>(kFakePid), Return(true)));
   }
 
   brillo::MockMinijail mj_;
@@ -56,8 +66,8 @@ TEST_F(MinijailProcessRunnerTest, RestoreDefaultNamespace) {
   };
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, _, _)).Times(0);
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/usr/bin/nsenter", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(
+                       _, IsProcessArgs("/usr/bin/nsenter", args), _, _, _, _));
   runner_.RestoreDefaultNamespace("foo", 12345);
 }
 
@@ -68,16 +78,16 @@ TEST_F(MinijailProcessRunnerTest, modprobe_all) {
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, StrEq("nobody"), StrEq("nobody")));
   EXPECT_CALL(mj_, UseCapabilities(_, Eq(caps)));
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/sbin/modprobe", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(_, IsProcessArgs("/sbin/modprobe", args),
+                                      _, _, _, _));
   runner_.modprobe_all({"module1", "module2"});
 }
 
 TEST_F(MinijailProcessRunnerTest, sysctl_w) {
   const std::vector<std::string> args = {"-w", "a.b.c=1"};
   EXPECT_CALL(mj_, New());
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/usr/sbin/sysctl", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(
+                       _, IsProcessArgs("/usr/sbin/sysctl", args), _, _, _, _));
   runner_.sysctl_w("a.b.c", "1");
 }
 
@@ -88,7 +98,8 @@ TEST_F(MinijailProcessRunnerTest, chown) {
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, StrEq("nobody"), StrEq("nobody")));
   EXPECT_CALL(mj_, UseCapabilities(_, Eq(caps)));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(_, IsProcessArgs("/bin/chown", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(_, IsProcessArgs("/bin/chown", args), _,
+                                      _, _, _));
   runner_.chown("12345", "23456", "foo");
 }
 
@@ -99,7 +110,8 @@ TEST_F(MinijailProcessRunnerTest, brctl) {
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, StrEq("nobody"), StrEq("nobody")));
   EXPECT_CALL(mj_, UseCapabilities(_, Eq(caps)));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(_, IsProcessArgs("/sbin/brctl", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(_, IsProcessArgs("/sbin/brctl", args), _,
+                                      _, _, _));
   runner_.brctl("cmd", {"arg", "arg"});
 }
 
@@ -110,7 +122,8 @@ TEST_F(MinijailProcessRunnerTest, ip) {
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, StrEq("nobody"), StrEq("nobody")));
   EXPECT_CALL(mj_, UseCapabilities(_, Eq(caps)));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(_, IsProcessArgs("/bin/ip", args), _));
+  EXPECT_CALL(
+      mj_, RunPipesAndDestroy(_, IsProcessArgs("/bin/ip", args), _, _, _, _));
   runner_.ip("obj", "cmd", {"arg", "arg"});
 }
 
@@ -121,7 +134,8 @@ TEST_F(MinijailProcessRunnerTest, ip6) {
   EXPECT_CALL(mj_, New());
   EXPECT_CALL(mj_, DropRoot(_, StrEq("nobody"), StrEq("nobody")));
   EXPECT_CALL(mj_, UseCapabilities(_, Eq(caps)));
-  EXPECT_CALL(mj_, RunSyncAndDestroy(_, IsProcessArgs("/bin/ip", args), _));
+  EXPECT_CALL(
+      mj_, RunPipesAndDestroy(_, IsProcessArgs("/bin/ip", args), _, _, _, _));
   runner_.ip6("obj", "cmd", {"arg", "arg"});
 }
 
@@ -129,8 +143,8 @@ TEST_F(MinijailProcessRunnerTest, iptables) {
   const std::vector<std::string> args = {"-t", "table", "arg", "arg"};
 
   EXPECT_CALL(mj_, New());
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/sbin/iptables", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(_, IsProcessArgs("/sbin/iptables", args),
+                                      _, _, _, _));
   runner_.iptables("table", {"arg", "arg"});
 }
 
@@ -138,9 +152,10 @@ TEST_F(MinijailProcessRunnerTest, ip6tables) {
   const std::vector<std::string> args = {"-t", "table", "arg", "arg"};
 
   EXPECT_CALL(mj_, New());
-  EXPECT_CALL(mj_,
-              RunSyncAndDestroy(_, IsProcessArgs("/sbin/ip6tables", args), _));
+  EXPECT_CALL(mj_, RunPipesAndDestroy(_, IsProcessArgs("/sbin/ip6tables", args),
+                                      _, _, _, _));
   runner_.ip6tables("table", {"arg", "arg"});
 }
 
+}  // namespace
 }  // namespace patchpanel
