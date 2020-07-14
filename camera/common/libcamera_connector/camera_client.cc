@@ -11,6 +11,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/containers/flat_set.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/posix/safe_strerror.h>
@@ -23,6 +24,8 @@
 #include "cros-camera/future.h"
 
 namespace {
+
+constexpr int32_t kDefaultFps = 30;
 
 std::string GetCameraName(const cros::mojom::CameraInfoPtr& info) {
   switch (info->facing) {
@@ -49,6 +52,31 @@ int GetCameraFacing(const cros::mojom::CameraInfoPtr& info) {
       LOGF(ERROR) << "unknown facing " << info->facing;
       return CROS_CAM_FACING_EXTERNAL;
   }
+}
+
+base::flat_set<int32_t> GetAvailableFramerates(
+    const cros::mojom::CameraMetadataPtr& static_metadata) {
+  base::flat_set<int32_t> candidates;
+  auto available_fps_ranges = cros::GetMetadataEntryAsSpan<int32_t>(
+      static_metadata, cros::mojom::CameraMetadataTag::
+                           ANDROID_CONTROL_AE_AVAILABLE_TARGET_FPS_RANGES);
+  if (available_fps_ranges.empty()) {
+    // If there is no available target fps ranges listed in metadata, we set a
+    // default fps as candidate.
+    LOG(WARNING) << "No available fps ranges in metadata. Set default fps as "
+                    "candidate.";
+    candidates.insert(kDefaultFps);
+    return candidates;
+  }
+
+  // The available target fps ranges are stored as pairs int32s: (min, max) x n.
+  const size_t kRangeMaxOffset = 1;
+  const size_t kRangeSize = 2;
+
+  for (size_t i = 0; i < available_fps_ranges.size(); i += kRangeSize) {
+    candidates.insert(available_fps_ranges[i + kRangeMaxOffset]);
+  }
+  return candidates;
 }
 
 }  // namespace
@@ -253,6 +281,8 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
   camera_info.name = GetCameraName(info);
 
   auto& format_info = camera_info_map_[camera_id].format_info;
+  auto candidate_fps_set =
+      GetAvailableFramerates(info->static_camera_characteristics);
   auto min_frame_durations = GetMetadataEntryAsSpan<int64_t>(
       info->static_camera_characteristics,
       mojom::CameraMetadataTag::ANDROID_SCALER_AVAILABLE_MIN_FRAME_DURATIONS);
@@ -268,13 +298,18 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
       continue;
     }
 
-    cros_cam_format_info_t info = {
-        .fourcc = fourcc,
-        .width = static_cast<int>(width),
-        .height = static_cast<int>(height),
-        .fps = static_cast<int>(round(1e9 / duration_ns)),
-    };
-    format_info.push_back(std::move(info));
+    int max_fps = 1e9 / duration_ns;
+    for (auto fps : candidate_fps_set) {
+      if (fps > max_fps) {
+        continue;
+      }
+      cros_cam_format_info_t info = {.fourcc = fourcc,
+                                     .width = static_cast<int>(width),
+                                     .height = static_cast<int>(height),
+                                     .fps = fps};
+
+      format_info.push_back(std::move(info));
+    }
   }
 
   camera_info.jpeg_max_size = GetMetadataEntryAsSpan<int32_t>(
