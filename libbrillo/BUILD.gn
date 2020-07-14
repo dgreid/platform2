@@ -255,28 +255,6 @@ foreach(attr, libbrillo_sublibs) {
   }
 }
 
-generate_pkg_config("libbrillo-${libbase_ver}_pc") {
-  name = "libbrillo"
-  output_name = "libbrillo-${libbase_ver}"
-  description = "brillo base library"
-  version = libbase_ver
-  requires = []
-  requires_private = default_pkg_deps
-  foreach(sublib, libbrillo_sublibs) {
-    if (defined(sublib.pkg_deps)) {
-      requires_private += sublib.pkg_deps
-    }
-    if (defined(sublib.public_pkg_deps)) {
-      requires += sublib.public_pkg_deps
-    }
-    if (defined(sublib.all_dependent_pkg_deps)) {
-      requires_private += sublib.all_dependent_pkg_deps
-    }
-  }
-  defines = [ "USE_RTTI_FOR_TYPE_TAGS" ]
-  libs = [ "-lbrillo" ]
-}
-
 generate_pkg_config("libbrillo_pc") {
   name = "libbrillo"
   output_name = "libbrillo"
@@ -301,7 +279,6 @@ generate_pkg_config("libbrillo_pc") {
 
 action("libbrillo") {
   deps = [
-    ":libbrillo-${libbase_ver}_pc",
     ":libbrillo_pc",
   ]
   foreach(sublib, libbrillo_sublibs) {
@@ -325,32 +302,6 @@ action("libbrillo") {
 }
 
 libbrillo_test_deps = [ "libbrillo-http" ]
-
-generate_pkg_config("libbrillo-test-${libbase_ver}_pc") {
-  name = "libbrillo-test"
-  output_name = "libbrillo-test-${libbase_ver}"
-  description = "brillo test library"
-  version = libbase_ver
-
-  # Because libbrillo-test is static, we have to depend directly on everything.
-  requires = [ "libbrillo" ] + default_pkg_deps
-  foreach(name, libbrillo_test_deps) {
-    foreach(t, libbrillo_sublibs) {
-      if ("lib" + t.library_name == name) {
-        if (defined(t.pkg_deps)) {
-          requires += t.pkg_deps
-        }
-        if (defined(t.public_pkg_deps)) {
-          requires += t.public_pkg_deps
-        }
-        if (defined(t.all_dependent_pkg_deps)) {
-          requires += t.all_dependent_pkg_deps
-        }
-      }
-    }
-  }
-  libs = [ "-lbrillo-test" ]
-}
 
 generate_pkg_config("libbrillo-test_pc") {
   name = "libbrillo-test"
@@ -386,7 +337,6 @@ static_library("libbrillo-test") {
   ]
   deps = [
     ":libbrillo-http",
-    ":libbrillo-test-${libbase_ver}_pc",
     ":libbrillo-test_pc",
   ]
   foreach(name, libbrillo_test_deps) {
@@ -447,15 +397,6 @@ if (use.dbus) {
   ]
 }
 
-generate_pkg_config("libbrillo-glib-${libbase_ver}_pc") {
-  name = "libbrillo-glib"
-  output_name = "libbrillo-glib-${libbase_ver}"
-  description = "brillo glib wrapper library"
-  version = libbase_ver
-  requires_private = libbrillo_glib_pkg_deps
-  libs = [ "-lbrillo-glib" ]
-}
-
 generate_pkg_config("libbrillo-glib_pc") {
   name = "libbrillo-glib"
   output_name = "libbrillo-glib"
@@ -469,7 +410,6 @@ shared_library("libbrillo-glib") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libbrillo",
-    ":libbrillo-glib-${libbase_ver}_pc",
     ":libbrillo-glib_pc",
   ]
   all_dependent_pkg_deps = libbrillo_glib_pkg_deps
@@ -489,7 +429,6 @@ if (use.test) {
   static_library("libbrillo_static") {
     configs += [ ":target_defaults" ]
     deps = [
-      ":libbrillo-${libbase_ver}_pc",
       ":libbrillo_pc",
       ":libinstallattributes",
       ":libpolicy",
