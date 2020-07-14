@@ -453,14 +453,6 @@
 			]
 		},
 		{
-			"destination": "/var/run/camera",
-			"type": "bind",
-			"source": "/run/camera",
-			"options": [
-				"bind"
-			]
-		},
-		{
 			"destination": "/var/run/arc/obb",
 			"type": "bind",
 			"source": "/run/arc/obb",

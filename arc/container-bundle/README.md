@@ -228,7 +228,6 @@ ignore all other flags).
   `/mnt/stateful_partition/unencrypted/art-data/dalvik-cache`. The host
   directory is for storing boot*.art files compiled on the host side. This
   allows the container to load the files right away without building them.
-* `/var/run/camera`: Holds the arc-camera UNIX domain socket.
 * `/var/run/arc/obb`: This is bind-mounted from host's `/run/arc/obb`. A daemon
   running outside the container called `/usr/bin/arc-obb-mounter` mounts an OBB
   image file as a FUSE file system to the directory when requested.

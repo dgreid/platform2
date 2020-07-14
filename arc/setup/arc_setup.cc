@@ -2023,7 +2023,6 @@ void ArcSetup::RestoreContextOnPreChroot(const base::FilePath& rootfs) {
         "oem/etc",
         "var/run/arc/apkcache",
         "var/run/arc/dalvik-cache",
-        "var/run/camera",
         "var/run/chrome",
         "var/run/cras"};
 
