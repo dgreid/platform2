@@ -178,7 +178,7 @@ TEST_F(DlcBaseTest, MakeReadyForUpdate) {
   base::DeleteFile(inactive_image_path, /*recursive=*/false);
   EXPECT_FALSE(base::PathExists(inactive_image_path));
 
-  auto prefs = Prefs(dlc, SystemState::Get()->inactive_boot_slot());
+  Prefs prefs(dlc, SystemState::Get()->inactive_boot_slot());
   EXPECT_TRUE(prefs.Create(kDlcPrefVerified));
   EXPECT_TRUE(dlc.MakeReadyForUpdate());
   EXPECT_TRUE(base::PathExists(inactive_image_path));
@@ -189,7 +189,7 @@ TEST_F(DlcBaseTest, MakeReadyForUpdateNotVerfied) {
   DlcBase dlc(kSecondDlc);
   dlc.Initialize();
 
-  auto prefs = Prefs(dlc, SystemState::Get()->inactive_boot_slot());
+  Prefs prefs(dlc, SystemState::Get()->inactive_boot_slot());
   EXPECT_TRUE(prefs.Create(kDlcPrefVerified));
   // Since DLC is not verfied, it should return false.
   EXPECT_FALSE(dlc.MakeReadyForUpdate());

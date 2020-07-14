@@ -92,7 +92,6 @@ class Metrics {
   typedef std::map<std::string, metrics::UninstallResult> UninstallResultMap;
   static UninstallResultMap uninstall_result_;
 
-  // Not copyable or movable.
   Metrics(const Metrics&) = delete;
   Metrics& operator=(const Metrics&) = delete;
 };

@@ -62,6 +62,9 @@ class Error {
   // error in the chain which is in the DBus domain, will be returned. If no
   // error is in the DBus domain, return |kErrorInternal|.
   static void ConvertToDbusError(brillo::ErrorPtr* error);
+
+  Error(const Error&) = delete;
+  Error& operator=(const Error&) = delete;
 };
 
 }  // namespace dlcservice

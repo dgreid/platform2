@@ -45,6 +45,9 @@ class Prefs {
 
  private:
   base::FilePath prefs_root_;
+
+  Prefs(const Prefs&) = delete;
+  Prefs& operator=(const Prefs&) = delete;
 };
 
 }  // namespace dlcservice

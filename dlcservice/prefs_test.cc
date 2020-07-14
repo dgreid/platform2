@@ -23,18 +23,17 @@ class PrefsTest : public BaseTest {};
 
 TEST_F(PrefsTest, DlcBaseCreateAndDelete) {
   auto active_boot_slot = SystemState::Get()->active_boot_slot();
-  auto prefs = Prefs(DlcBase("id"), active_boot_slot);
+  Prefs prefs(DlcBase("id"), active_boot_slot);
   string key = "key";
   EXPECT_TRUE(prefs.Create(key));
   EXPECT_TRUE(prefs.Exists(key));
-  auto prefs_non_dlcbase =
-      Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), "id",
-                      BootSlot::ToString(active_boot_slot)));
+  Prefs prefs_non_dlcbase(JoinPaths(SystemState::Get()->dlc_prefs_dir(), "id",
+                                    BootSlot::ToString(active_boot_slot)));
   EXPECT_TRUE(prefs_non_dlcbase.Exists(key));
 }
 
 TEST_F(PrefsTest, CreateAndDelete) {
-  auto prefs = Prefs(FilePath(SystemState::Get()->prefs_dir()));
+  Prefs prefs(FilePath(SystemState::Get()->prefs_dir()));
   string key = "key";
   EXPECT_TRUE(prefs.Create(key));
   EXPECT_TRUE(prefs.Exists(key));
@@ -43,7 +42,7 @@ TEST_F(PrefsTest, CreateAndDelete) {
 }
 
 TEST_F(PrefsTest, SetAndGetThenDelete) {
-  auto prefs = Prefs(FilePath(SystemState::Get()->prefs_dir()));
+  Prefs prefs(FilePath(SystemState::Get()->prefs_dir()));
   string key = "key", value = "value";
   EXPECT_TRUE(prefs.SetKey(key, value));
   string actual_value;
@@ -54,7 +53,7 @@ TEST_F(PrefsTest, SetAndGetThenDelete) {
 }
 
 TEST_F(PrefsTest, RepeatedSet) {
-  auto prefs = Prefs(FilePath(SystemState::Get()->prefs_dir()));
+  Prefs prefs(FilePath(SystemState::Get()->prefs_dir()));
   string key = "key", value = "value";
   EXPECT_TRUE(prefs.SetKey(key, value));
   EXPECT_TRUE(prefs.SetKey(key, value));
