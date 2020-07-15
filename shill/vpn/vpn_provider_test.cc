@@ -398,8 +398,8 @@ TEST_F(VPNProviderTest, HasActiveService) {
 TEST_F(VPNProviderTest, SetDefaultRoutingPolicy) {
   manager_.user_traffic_uids_.push_back(1000);
   RoutingPolicyEntry::FwMark expected_fwmark;
-  expected_fwmark.value = 0x80000000;
-  expected_fwmark.mask = 0xc0000000;
+  expected_fwmark.value = 0x00008000;
+  expected_fwmark.mask = 0x0000c000;
 
   IPConfig::Properties properties;
   provider_.SetDefaultRoutingPolicy(&properties);

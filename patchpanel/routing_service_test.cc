@@ -5,8 +5,10 @@
 #include "patchpanel/routing_service.h"
 
 #include <algorithm>
+#include <memory>
 #include <sstream>
 
+#include <base/strings/stringprintf.h>
 #include <gtest/gtest.h>
 
 namespace patchpanel {
@@ -17,9 +19,7 @@ auto& DEFAULT_ROUTING = patchpanel::SetVpnIntentRequest::DEFAULT_ROUTING;
 auto& ROUTE_ON_VPN = patchpanel::SetVpnIntentRequest::ROUTE_ON_VPN;
 
 std::string hex(uint32_t val) {
-  std::stringstream ss;
-  ss << "0x" << std::hex << val;
-  return ss.str();
+  return base::StringPrintf("0x%08x", val);
 }
 
 struct sockopt_data {
@@ -30,15 +30,19 @@ struct sockopt_data {
   socklen_t optlen;
 };
 
-void SetOptval(sockopt_data& sockopt, uint32_t optval) {
-  sockopt.optlen = sizeof(optval);
-  memcpy(sockopt.optval, &optval, sizeof(optval));
+void SetOptval(sockopt_data* sockopt, uint32_t optval) {
+  sockopt->optlen = sizeof(optval);
+  memcpy(sockopt->optval, &optval, sizeof(optval));
 }
 
 uint32_t GetOptval(const sockopt_data& sockopt) {
   uint32_t optval;
   memcpy(&optval, sockopt.optval, sizeof(optval));
   return optval;
+}
+
+Fwmark fwmark(uint32_t fwmark) {
+  return {.fwmark = fwmark};
 }
 
 class TestableRoutingService : public RoutingService {
@@ -91,6 +95,77 @@ class RoutingServiceTest : public testing::Test {
 
 }  // namespace
 
+TEST_F(RoutingServiceTest, FwmarkSize) {
+  EXPECT_EQ(sizeof(uint32_t), sizeof(Fwmark));
+}
+
+TEST_F(RoutingServiceTest, FwmarkOperators) {
+  EXPECT_EQ(fwmark(0x00000000), fwmark(0x00000000) | fwmark(0x00000000));
+  EXPECT_EQ(fwmark(0x00000000), fwmark(0x00000000) & fwmark(0x00000000));
+  EXPECT_EQ(fwmark(0x00110034), fwmark(0x00110034) | fwmark(0x00000000));
+  EXPECT_EQ(fwmark(0x00000000), fwmark(0x00110034) & fwmark(0x00000000));
+  EXPECT_EQ(fwmark(0x1234abcd), fwmark(0x12340000) | fwmark(0x0000abcd));
+  EXPECT_EQ(fwmark(0x00000000), fwmark(0x12340000) & fwmark(0x0000abcd));
+  EXPECT_EQ(fwmark(0x00120000), fwmark(0x00120000) & fwmark(0x00120000));
+  EXPECT_EQ(fwmark(0x12fffbcd), fwmark(0x1234abcd) | fwmark(0x00fff000));
+  EXPECT_EQ(fwmark(0x0034a000), fwmark(0x1234abcd) & fwmark(0x00fff000));
+  EXPECT_EQ(fwmark(0x0000ffff), ~fwmark(0xffff0000));
+  EXPECT_EQ(fwmark(0x12345678), ~~fwmark(0x12345678));
+  EXPECT_EQ(fwmark(0x55443322), ~fwmark(0xaabbccdd));
+}
+
+TEST_F(RoutingServiceTest, FwmarkAndMaskConstants) {
+  EXPECT_EQ("0x00003f00", kFwmarkAllSourcesMask.ToString());
+  EXPECT_EQ("0xffff0000", kFwmarkRoutingMask.ToString());
+  EXPECT_EQ("0x00000001", kFwmarkLegacySNAT.ToString());
+  EXPECT_EQ("0x0000c000", kFwmarkVpnMask.ToString());
+  EXPECT_EQ("0x00008000", kFwmarkRouteOnVpn.ToString());
+  EXPECT_EQ("0x00004000", kFwmarkBypassVpn.ToString());
+  EXPECT_EQ("0x00002000", kFwmarkForwardedSourcesMask.ToString());
+
+  EXPECT_EQ(0x00003f00, kFwmarkAllSourcesMask.Value());
+  EXPECT_EQ(0xffff0000, kFwmarkRoutingMask.Value());
+  EXPECT_EQ(0x00000001, kFwmarkLegacySNAT.Value());
+  EXPECT_EQ(0x0000c000, kFwmarkVpnMask.Value());
+  EXPECT_EQ(0x00008000, kFwmarkRouteOnVpn.Value());
+  EXPECT_EQ(0x00004000, kFwmarkBypassVpn.Value());
+  EXPECT_EQ(0x00002000, kFwmarkForwardedSourcesMask.Value());
+}
+
+TEST_F(RoutingServiceTest, FwmarkSources) {
+  EXPECT_EQ("0x00000000", Fwmark::FromSource(UNKNOWN).ToString());
+  EXPECT_EQ("0x00000100", Fwmark::FromSource(CHROME).ToString());
+  EXPECT_EQ("0x00000200", Fwmark::FromSource(USER).ToString());
+  EXPECT_EQ("0x00000300", Fwmark::FromSource(UPDATE_ENGINE).ToString());
+  EXPECT_EQ("0x00000400", Fwmark::FromSource(SYSTEM).ToString());
+  EXPECT_EQ("0x00000500", Fwmark::FromSource(HOST_VPN).ToString());
+  EXPECT_EQ("0x00002000", Fwmark::FromSource(ARC).ToString());
+  EXPECT_EQ("0x00002100", Fwmark::FromSource(CROSVM).ToString());
+  EXPECT_EQ("0x00002200", Fwmark::FromSource(PLUGINVM).ToString());
+  EXPECT_EQ("0x00002300", Fwmark::FromSource(TETHER_DOWNSTREAM).ToString());
+  EXPECT_EQ("0x00002400", Fwmark::FromSource(ARC_VPN).ToString());
+
+  for (auto ts : kLocalSources) {
+    EXPECT_EQ(
+        "0x00000000",
+        (Fwmark::FromSource(ts) & kFwmarkForwardedSourcesMask).ToString());
+  }
+  for (auto ts : kForwardedSources) {
+    EXPECT_EQ(
+        kFwmarkForwardedSourcesMask.ToString(),
+        (Fwmark::FromSource(ts) & kFwmarkForwardedSourcesMask).ToString());
+  }
+
+  for (auto ts : kLocalSources) {
+    EXPECT_EQ("0x00000000",
+              (Fwmark::FromSource(ts) & ~kFwmarkAllSourcesMask).ToString());
+  }
+  for (auto ts : kForwardedSources) {
+    EXPECT_EQ("0x00000000",
+              (Fwmark::FromSource(ts) & ~kFwmarkAllSourcesMask).ToString());
+  }
+}
+
 TEST_F(RoutingServiceTest, SetVpnFwmark) {
   auto svc = std::make_unique<TestableRoutingService>();
   svc->getsockopt_ret = 0;
@@ -101,22 +176,22 @@ TEST_F(RoutingServiceTest, SetVpnFwmark) {
     uint32_t initial_fwmark;
     uint32_t expected_fwmark;
   } testcases[] = {
-      {ROUTE_ON_VPN, 0x0, 0x80000000},
-      {BYPASS_VPN, 0x0, 0x40000000},
-      {ROUTE_ON_VPN, 0x1, 0x80000001},
-      {BYPASS_VPN, 0x00abcdef, 0x40abcdef},
-      {ROUTE_ON_VPN, 0x11223344, 0x91223344},
-      {BYPASS_VPN, 0x11223344, 0x51223344},
-      {ROUTE_ON_VPN, 0x80000000, 0x80000000},
-      {BYPASS_VPN, 0x40000000, 0x40000000},
-      {BYPASS_VPN, 0x80000000, 0x40000000},
-      {ROUTE_ON_VPN, 0x40000000, 0x80000000},
-      {DEFAULT_ROUTING, 0x80000000, 0x00000000},
-      {DEFAULT_ROUTING, 0x40000000, 0x00000000},
+      {ROUTE_ON_VPN, 0x0, 0x00008000},
+      {BYPASS_VPN, 0x0, 0x00004000},
+      {ROUTE_ON_VPN, 0x1, 0x00008001},
+      {BYPASS_VPN, 0xabcd00ef, 0xabcd40ef},
+      {ROUTE_ON_VPN, 0x11223344, 0x1122b344},
+      {BYPASS_VPN, 0x11223344, 0x11227344},
+      {ROUTE_ON_VPN, 0x00008000, 0x00008000},
+      {BYPASS_VPN, 0x00004000, 0x00004000},
+      {BYPASS_VPN, 0x00008000, 0x00004000},
+      {ROUTE_ON_VPN, 0x00004000, 0x00008000},
+      {DEFAULT_ROUTING, 0x00008000, 0x00000000},
+      {DEFAULT_ROUTING, 0x00004000, 0x00000000},
   };
 
   for (const auto& tt : testcases) {
-    SetOptval(svc->sockopt, tt.initial_fwmark);
+    SetOptval(&svc->sockopt, tt.initial_fwmark);
     EXPECT_TRUE(svc->SetVpnFwmark(4, tt.policy));
     EXPECT_EQ(4, svc->sockopt.sockfd);
     EXPECT_EQ(SOL_SOCKET, svc->sockopt.level);
@@ -158,8 +233,9 @@ TEST_F(RoutingServiceTest, SetFwmark) {
   };
 
   for (const auto& tt : testcases) {
-    SetOptval(svc->sockopt, tt.initial_fwmark);
-    EXPECT_TRUE(svc->SetFwmark(4, tt.fwmark_value, tt.fwmark_mask));
+    SetOptval(&svc->sockopt, tt.initial_fwmark);
+    EXPECT_TRUE(
+        svc->SetFwmark(4, fwmark(tt.fwmark_value), fwmark(tt.fwmark_mask)));
     EXPECT_EQ(4, svc->sockopt.sockfd);
     EXPECT_EQ(SOL_SOCKET, svc->sockopt.level);
     EXPECT_EQ(SO_MARK, svc->sockopt.optname);
@@ -171,17 +247,17 @@ TEST_F(RoutingServiceTest, SetFwmark_Failures) {
   auto svc = std::make_unique<TestableRoutingService>();
   svc->getsockopt_ret = -1;
   svc->setsockopt_ret = 0;
-  EXPECT_FALSE(svc->SetFwmark(4, 0x1, 0x1));
+  EXPECT_FALSE(svc->SetFwmark(4, fwmark(0x1), fwmark(0x01)));
 
   svc = std::make_unique<TestableRoutingService>();
   svc->getsockopt_ret = 0;
   svc->setsockopt_ret = -1;
-  EXPECT_FALSE(svc->SetFwmark(5, 0x1, 0x1));
+  EXPECT_FALSE(svc->SetFwmark(5, fwmark(0x1), fwmark(0x01)));
 
   svc = std::make_unique<TestableRoutingService>();
   svc->getsockopt_ret = 0;
   svc->setsockopt_ret = 0;
-  EXPECT_TRUE(svc->SetFwmark(6, 0x1, 0x1));
+  EXPECT_TRUE(svc->SetFwmark(6, fwmark(0x1), fwmark(0x01)));
 }
 
 }  // namespace patchpanel

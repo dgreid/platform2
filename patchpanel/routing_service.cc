@@ -8,15 +8,6 @@
 
 #include <base/logging.h>
 
-namespace {
-// TODO(hugobenichi) Formalize the semantics of fwmark bits with a bitfield
-// struct.
-constexpr const uint32_t kFwmarkRouteOnVpnBit = 0x80000000;  // 1st MSB
-constexpr const uint32_t kFwmarkBypassVpnBit = 0x40000000;   // 2nd MSB
-constexpr const uint32_t kFwmarkVpnMask =
-    kFwmarkBypassVpnBit | kFwmarkRouteOnVpnBit;
-}  // namespace
-
 namespace patchpanel {
 
 RoutingService::RoutingService() {}
@@ -31,21 +22,23 @@ int RoutingService::SetSockopt(
   return setsockopt(sockfd, level, optname, optval, optlen);
 }
 
-bool RoutingService::SetFwmark(int sockfd, uint32_t mark, uint32_t mask) {
+bool RoutingService::SetFwmark(int sockfd, Fwmark mark, Fwmark mask) {
   uint32_t fwmark_value = 0;
   socklen_t fwmark_len = sizeof(fwmark_value);
   if (GetSockopt(sockfd, SOL_SOCKET, SO_MARK, &fwmark_value, &fwmark_len) < 0) {
-    PLOG(ERROR) << "SetFwmark mark=0x" << std::hex << mark << " mask=0x"
-                << std::hex << mask << " getsockopt SOL_SOCKET SO_MARK failed";
+    PLOG(ERROR) << "SetFwmark mark=" << mark.ToString()
+                << " mask=" << mask.ToString()
+                << " getsockopt SOL_SOCKET SO_MARK failed";
     return false;
   }
 
-  fwmark_value = (mark & mask) | (fwmark_value & ~mask);
+  fwmark_value = (mark & mask).Value() | (fwmark_value & ~mask.Value());
 
   fwmark_len = sizeof(fwmark_value);
   if (SetSockopt(sockfd, SOL_SOCKET, SO_MARK, &fwmark_value, fwmark_len) < 0) {
-    PLOG(ERROR) << "SetFwmark mark=0x" << std::hex << mark << " mask=0x"
-                << std::hex << mask << " setsockopt SOL_SOCKET SO_MARK failed";
+    PLOG(ERROR) << "SetFwmark mark=" << mark.ToString()
+                << " mask=" << mask.ToString()
+                << " setsockopt SOL_SOCKET SO_MARK failed";
     return false;
   }
 
@@ -54,21 +47,23 @@ bool RoutingService::SetFwmark(int sockfd, uint32_t mark, uint32_t mask) {
 
 bool RoutingService::SetVpnFwmark(
     int sockfd, patchpanel::SetVpnIntentRequest::VpnRoutingPolicy policy) {
-  uint32_t mark;
+  Fwmark mark = {};
   switch (policy) {
     case patchpanel::SetVpnIntentRequest::DEFAULT_ROUTING:
-      mark = 0;
       break;
     case patchpanel::SetVpnIntentRequest::ROUTE_ON_VPN:
-      mark = kFwmarkRouteOnVpnBit;
+      mark = kFwmarkRouteOnVpn;
       break;
     case patchpanel::SetVpnIntentRequest::BYPASS_VPN:
-      mark = kFwmarkBypassVpnBit;
+      mark = kFwmarkBypassVpn;
       break;
     default:
       LOG(ERROR) << "Incorrect SetVpnIntent policy value " << policy;
       return false;
   }
+  LOG(INFO) << "SetFwmark mark=" << mark.ToString()
+            << " mask=" << kFwmarkVpnMask.ToString()
+            << " getsockopt SOL_SOCKET SO_MARK";
   return SetFwmark(sockfd, mark, kFwmarkVpnMask);
 }
 

@@ -41,8 +41,8 @@ namespace {
 
 // TODO(b/151879931) Import these from libarcnetwork after platform2/arc/network
 // has been moved to platform2/patchpanel
-constexpr const uint32_t kFwMarkRouteOnVpnBit = 0x80000000;  // 1st MSB
-constexpr const uint32_t kFwMarkBypassVpnBit = 0x40000000;   // 2nd MSB
+constexpr const uint32_t kFwMarkRouteOnVpnBit = 0x00008000;
+constexpr const uint32_t kFwMarkBypassVpnBit = 0x00004000;
 constexpr const uint32_t kFwMarkVpnMask =
     kFwMarkBypassVpnBit | kFwMarkRouteOnVpnBit;
 
