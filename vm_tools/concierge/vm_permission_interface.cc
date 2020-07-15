@@ -25,6 +25,11 @@ namespace {
 bool QueryVmPermission(dbus::ObjectProxy* proxy,
                        const std::string& vm_token,
                        vm_permission_service::Permission::Kind permission) {
+  // TODO(dtor): remove when we remove Camera/Mic Chrome flags and
+  // always have non-empty token.
+  if (vm_token.empty())
+    return false;
+
   dbus::MethodCall method_call(
       chromeos::kVmPermissionServiceInterface,
       chromeos::kVmPermissionServiceGetPermissionsMethod);
@@ -110,11 +115,16 @@ bool RegisterVm(dbus::ObjectProxy* proxy,
       proxy->CallMethodAndBlockWithErrorDetails(
           &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error);
   if (!dbus_response) {
-    if (dbus_error.is_set()) {
+    if (!dbus_error.is_set()) {
+      LOG(ERROR) << "Failed to send RegisterVm message to permission service";
+    } else if (strcmp(dbus_error.name(), DBUS_ERROR_NOT_SUPPORTED) == 0) {
+      // TODO(dtor): remove when we remove Camera/Mic Chrome flags stop
+      // returning DBUS_ERROR_NOT_SUPPORTED.
+      *token = std::string();
+      return true;
+    } else {
       LOG(ERROR) << "RegisterVm call failed: " << dbus_error.name() << " ("
                  << dbus_error.message() << ")";
-    } else {
-      LOG(ERROR) << "Failed to send RegisterVm message to permission service";
     }
     return false;
   }
