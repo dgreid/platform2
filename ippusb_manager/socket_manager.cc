@@ -21,6 +21,7 @@
 
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
+#include <base/posix/eintr_wrapper.h>
 
 namespace ippusb_manager {
 
@@ -40,8 +41,8 @@ void SocketManager::CloseSocket() {
 bool SocketManager::GetMessage(int fd, std::string* msg) {
   uint8_t message_length;
   // Receive the length of the message which is stored in the first byte.
-  if (recv(fd, &message_length, 1, 0) < 0) {
-    LOG(ERROR) << "Failed to get message length";
+  if (HANDLE_EINTR(recv(fd, &message_length, 1, 0)) < 0) {
+    PLOG(ERROR) << "Failed to get message length";
     return false;
   }
 
@@ -50,10 +51,10 @@ bool SocketManager::GetMessage(int fd, std::string* msg) {
   size_t total_size = 0;
 
   while (total_size < message_length) {
-    gotten_size = recv(fd, buf.get() + total_size, message_length - total_size,
-                       MSG_DONTWAIT);
+    gotten_size = HANDLE_EINTR(recv(fd, buf.get() + total_size,
+                                    message_length - total_size, MSG_DONTWAIT));
     if (gotten_size < 0) {
-      LOG(ERROR) << "Failed to receive message: " << std::strerror(errno);
+      PLOG(ERROR) << "Failed to receive message: " << std::strerror(errno);
       return false;
     }
     total_size += gotten_size;
@@ -78,19 +79,20 @@ bool SocketManager::SendMessage(int fd, const std::string& msg) {
 
   // Send the length of the message in the first byte.
   uint8_t message_length = static_cast<uint8_t>(remaining);
-  if (send(fd, &message_length, 1, MSG_NOSIGNAL) < 0) {
-    LOG(ERROR) << "Failed to send message length";
+  if (HANDLE_EINTR(send(fd, &message_length, 1, MSG_NOSIGNAL)) < 0) {
+    PLOG(ERROR) << "Failed to send message length";
     return false;
   }
 
   while (remaining > 0) {
-    ssize_t sent = send(fd, msg.data() + total, remaining, MSG_NOSIGNAL);
+    ssize_t sent =
+        HANDLE_EINTR(send(fd, msg.data() + total, remaining, MSG_NOSIGNAL));
     if (sent < 0) {
       if (errno == EPIPE) {
         LOG(INFO) << "Client closed socket";
         return false;
       }
-      LOG(ERROR) << "Failed to send data over UDS";
+      PLOG(ERROR) << "Failed to send data over UDS";
       return false;
     }
 
@@ -114,17 +116,17 @@ bool ServerSocketManager::OpenConnection() {
   poll_fd.fd = GetFd();
   poll_fd.events = POLLIN;
 
-  int retval = poll(&poll_fd, 1, 0);
+  int retval = HANDLE_EINTR(poll(&poll_fd, 1, 0));
   if (retval < 1) {
-    LOG(INFO) << "The connection isn't ready to be opened yet";
+    PLOG(INFO) << "The connection isn't ready to be opened yet";
     return false;
   }
 
   LOG(INFO) << "Socket is ready - attempting to connect";
 
-  int connection_fd = accept(GetFd(), nullptr, nullptr);
+  int connection_fd = HANDLE_EINTR(accept(GetFd(), nullptr, nullptr));
   if (connection_fd < 0) {
-    LOG(ERROR) << "Failed to open connection";
+    PLOG(ERROR) << "Failed to open connection";
     return false;
   }
   connection_fd_ = base::ScopedFD(connection_fd);
@@ -170,7 +172,7 @@ std::unique_ptr<ServerSocketManager> ServerSocketManager::Create(
   // Set options for the socket.
   int val = 1;
   if (setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR, &val, sizeof(val)) < 0) {
-    LOG(ERROR) << "Failed to set socket options";
+    PLOG(ERROR) << "Failed to set socket options";
     return nullptr;
   }
 
@@ -179,7 +181,7 @@ std::unique_ptr<ServerSocketManager> ServerSocketManager::Create(
   socklen_t addrlen = sizeof(addr);
   if (getsockname(fd.get(), reinterpret_cast<struct sockaddr*>(&addr),
                   &addrlen) < 0) {
-    LOG(ERROR) << "Failed to get socket name";
+    PLOG(ERROR) << "Failed to get socket name";
     return nullptr;
   }
 
@@ -192,7 +194,7 @@ std::unique_ptr<ServerSocketManager> ServerSocketManager::Create(
 
   // Attempt to listen on the socket for connections.
   if (listen(fd.get(), 0)) {
-    LOG(ERROR) << "Failed to listen on socket";
+    PLOG(ERROR) << "Failed to listen on socket";
     return nullptr;
   }
 
@@ -204,7 +206,7 @@ std::unique_ptr<ClientSocketManager> ClientSocketManager::Create(
     const char* socket_path) {
   int fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0);
   if (fd < 0) {
-    LOG(ERROR) << "Failed to open socket: " << socket_path;
+    PLOG(ERROR) << "Failed to open socket: " << socket_path;
     return nullptr;
   }
 
