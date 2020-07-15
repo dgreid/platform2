@@ -9,6 +9,7 @@
 
 #include <base/files/file_path.h>
 #include <brillo/brillo_export.h>
+#include <brillo/secure_blob.h>
 
 namespace brillo {
 namespace cryptohome {
@@ -58,6 +59,11 @@ BRILLO_EXPORT bool IsSanitizedUserName(const std::string& sanitized);
 // Returns a sanitized form of |username|. For x != y, SanitizeUserName(x) !=
 // SanitizeUserName(y).
 BRILLO_EXPORT std::string SanitizeUserName(const std::string& username);
+
+// Returns a sanitized form of |username| with the salt provided. For x != y,
+// SanitizeUserName(x) != SanitizeUserName(y).
+BRILLO_EXPORT std::string SanitizeUserNameWithSalt(const std::string& username,
+                                                   const SecureBlob& salt);
 
 // Overrides the common prefix under which the mount points for user homes are
 // created. This is used for testing only.

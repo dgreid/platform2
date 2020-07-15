@@ -76,13 +76,18 @@ std::string SanitizeUserName(const std::string& username) {
   if (!EnsureSystemSaltIsLoaded())
     return std::string();
 
+  return SanitizeUserNameWithSalt(username, SecureBlob(*salt));
+}
+
+std::string SanitizeUserNameWithSalt(const std::string& username,
+                                     const SecureBlob& salt) {
   unsigned char binmd[SHA_DIGEST_LENGTH];
   std::string lowercase(username);
   std::transform(
       lowercase.begin(), lowercase.end(), lowercase.begin(), ::tolower);
   SHA_CTX ctx;
   SHA1_Init(&ctx);
-  SHA1_Update(&ctx, salt->data(), salt->size());
+  SHA1_Update(&ctx, salt.data(), salt.size());
   SHA1_Update(&ctx, lowercase.data(), lowercase.size());
   SHA1_Final(binmd, &ctx);
   std::string final = base::HexEncode(binmd, sizeof(binmd));

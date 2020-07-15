@@ -166,7 +166,10 @@ libbrillo_sublibs = [
   {
     library_name = "brillo-cryptohome"
     all_dependent_pkg_deps = [ "openssl" ]
-    sources = [ "brillo/cryptohome.cc" ]
+    sources = [
+      "brillo/cryptohome.cc",
+      "brillo/secure_blob.cc",
+    ]
   },
 
   {
@@ -475,6 +478,7 @@ if (use.test) {
       "brillo/asynchronous_signal_handler_test.cc",
       "brillo/backoff_entry_test.cc",
       "brillo/blkdev_utils/loop_device_test.cc",
+      "brillo/cryptohome_test.cc",
       "brillo/data_encoding_test.cc",
       "brillo/enum_flags_test.cc",
       "brillo/errors/error_codes_test.cc",
