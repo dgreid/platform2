@@ -20,10 +20,10 @@
 #include "diagnostics/cros_healthd/fetchers/backlight_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
 #include "mojo/cros_healthd.mojom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -44,10 +44,10 @@ class CrosHealthdMojoService final
   // |backlight_fetcher| - BacklightFetcher implementation.
   // |battery_fetcher| - BatteryFetcher implementation.
   // |bluetooth_fetcher| - BluetoothFetcher implementation.
-  // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
   // |cpu_fetcher| - CpuFetcher implementation.
   // |disk_fetcher| - DiskFetcher implementation.
   // |fan_fetcher| - FanFetcher implementation.
+  // |system_fetcher| - SystemFetcher implementation.
   // |bluetooth_events| - BluetoothEvents implementation.
   // |lid_events| - LidEvents implementation.
   // |power_events| - PowerEvents implementation.
@@ -55,10 +55,10 @@ class CrosHealthdMojoService final
   CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
                          BatteryFetcher* battery_fetcher,
                          BluetoothFetcher* bluetooth_fetcher,
-                         CachedVpdFetcher* cached_vpd_fetcher,
                          CpuFetcher* cpu_fetcher,
                          DiskFetcher* disk_fetcher,
                          FanFetcher* fan_fetcher,
+                         SystemFetcher* system_fetcher,
                          BluetoothEvents* bluetooth_events,
                          LidEvents* lid_events,
                          PowerEvents* power_events,
@@ -155,14 +155,14 @@ class CrosHealthdMojoService final
   BatteryFetcher* battery_fetcher_;
   // Unowned. The Bluetooth fetcher should outlive this instance.
   BluetoothFetcher* bluetooth_fetcher_;
-  // Unowned. The cached VPD fetcher should outlive this instance.
-  CachedVpdFetcher* cached_vpd_fetcher_;
   // Unowned. The CPU fetcher should outlive this instance.
   CpuFetcher* cpu_fetcher_;
   // Unowned. The disk fetcher should outlive this instance.
   DiskFetcher* disk_fetcher_;
   // Unowned. The fan fetcher should outlive this instance.
   FanFetcher* fan_fetcher_;
+  // Unowned. The system fetcher should outlive this instance.
+  SystemFetcher* const system_fetcher_ = nullptr;
   // Unowned. The BluetoothEvents instance should outlive this instance.
   BluetoothEvents* const bluetooth_events_ = nullptr;
   // Unowned. The lid events should outlive this instance.

@@ -30,7 +30,7 @@ group("all") {
   if (use.fuzzer) {
     deps += [
       "//diagnostics/cros_healthd/fetchers:fetch_block_device_fuzzer",
-      "//diagnostics/cros_healthd/fetchers:fetch_cached_vpd_fuzzer",
+      "//diagnostics/cros_healthd/fetchers:fetch_system_info_fuzzer",
     ]
   }
 }

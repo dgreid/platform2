@@ -11,7 +11,7 @@
 #include <base/logging.h>
 #include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 
-#include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
 
 namespace diagnostics {
@@ -31,10 +31,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   MockContext mock_context;
   mock_context.Initialize();
-  mock_context.fake_system_config()->SetHasSkuNumberProperty(true);
-  CachedVpdFetcher cached_vpd_fetcher{&mock_context};
-  auto cached_vpd_info =
-      cached_vpd_fetcher.FetchCachedVpdInfo(base::FilePath(file_path));
+  mock_context.fake_system_config()->SetHasSkuNumber(true);
+  mock_context.fake_system_config()->SetMarketingName("fake_marketing_name");
+  SystemFetcher system_fetcher{&mock_context};
+  auto system_info = system_fetcher.FetchSystemInfo(base::FilePath(file_path));
 
   return 0;
 }

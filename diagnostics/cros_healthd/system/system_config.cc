@@ -39,7 +39,7 @@ bool SystemConfig::HasBattery() {
   return psu_type != "AC_only";
 }
 
-bool SystemConfig::HasSkuNumberProperty() {
+bool SystemConfig::HasSkuNumber() {
   std::string has_sku_number;
   cros_config_->GetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
                           &has_sku_number);
@@ -59,6 +59,13 @@ bool SystemConfig::NvmeSupported() {
 
 bool SystemConfig::SmartCtlSupported() {
   return base::PathExists(root_dir_.AppendASCII(kSmartctlToolPath));
+}
+
+std::string SystemConfig::GetMarketingName() {
+  std::string marketing_name;
+  cros_config_->GetString(kArcBuildPropertiesPath, kMarketingNameProperty,
+                          &marketing_name);
+  return marketing_name;
 }
 
 }  // namespace diagnostics

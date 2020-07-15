@@ -25,7 +25,7 @@ bool FakeSystemConfig::HasSmartBattery() {
   return has_smart_battery_;
 }
 
-bool FakeSystemConfig::HasSkuNumberProperty() {
+bool FakeSystemConfig::HasSkuNumber() {
   return has_sku_number_property_;
 }
 
@@ -41,6 +41,10 @@ void FakeSystemConfig::SetFioSupported(bool value) {
   fio_supported_ = value;
 }
 
+std::string FakeSystemConfig::GetMarketingName() {
+  return marketing_name_;
+}
+
 void FakeSystemConfig::SetHasBacklight(bool value) {
   has_backlight_ = value;
 }
@@ -53,7 +57,7 @@ void FakeSystemConfig::SetHasSmartBattery(bool value) {
   has_smart_battery_ = value;
 }
 
-void FakeSystemConfig::SetHasSkuNumberProperty(bool value) {
+void FakeSystemConfig::SetHasSkuNumber(bool value) {
   has_sku_number_property_ = value;
 }
 
@@ -63,6 +67,10 @@ void FakeSystemConfig::SetNvmeSupported(bool value) {
 
 void FakeSystemConfig::SetSmartCtrlSupported(bool value) {
   smart_ctrl_supported_ = value;
+}
+
+void FakeSystemConfig::SetMarketingName(const std::string& value) {
+  marketing_name_ = value;
 }
 
 }  // namespace diagnostics

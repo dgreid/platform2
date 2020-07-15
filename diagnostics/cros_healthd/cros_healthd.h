@@ -23,10 +23,10 @@
 #include "diagnostics/cros_healthd/fetchers/backlight_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -89,9 +89,6 @@ class CrosHealthd final
   std::unique_ptr<BatteryFetcher> battery_fetcher_;
   // |bluetooth_fetcher_| is responsible for collecting Bluetooth information.
   std::unique_ptr<BluetoothFetcher> bluetooth_fetcher_;
-  // |cached_vpd_fetcher_| is responsible for collecting cached VPD metrics and
-  // uses |cros_config_| to determine which of those metrics a device supports.
-  std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
   // |cpu_fetcher_| is responsible for collecting CPU information.
   std::unique_ptr<CpuFetcher> cpu_fetcher_;
   // |disk_fetcher_| is responsible for collecting disk information.
@@ -99,6 +96,8 @@ class CrosHealthd final
   // |fan_fetcher_| is responsible for collecting fan information using
   // |debugd_proxy_|.
   std::unique_ptr<FanFetcher> fan_fetcher_;
+  // |system_fetcher_| is responsible for collecting system information.
+  std::unique_ptr<SystemFetcher> system_fetcher_;
 
   // Provides support for Bluetooth-related events.
   std::unique_ptr<BluetoothEvents> bluetooth_events_;

@@ -5,6 +5,8 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_SYSTEM_SYSTEM_CONFIG_INTERFACE_H_
 #define DIAGNOSTICS_CROS_HEALTHD_SYSTEM_SYSTEM_CONFIG_INTERFACE_H_
 
+#include <string>
+
 namespace diagnostics {
 
 class SystemConfigInterface {
@@ -21,7 +23,7 @@ class SystemConfigInterface {
   virtual bool HasBattery() = 0;
 
   // Returns if the device has a SKU number in the VPD fields.
-  virtual bool HasSkuNumberProperty() = 0;
+  virtual bool HasSkuNumber() = 0;
 
   // Returns if the device has a battery with SMART features.
   virtual bool HasSmartBattery() = 0;
@@ -31,6 +33,9 @@ class SystemConfigInterface {
 
   // Returns if the device has support for smartctl.
   virtual bool SmartCtlSupported() = 0;
+
+  // Returns the marketing name associated with this device.
+  virtual std::string GetMarketingName() = 0;
 };
 
 }  // namespace diagnostics

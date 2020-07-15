@@ -14,6 +14,8 @@ const char kBacklightPropertiesPath[] = "/cros-healthd/backlight";
 const char kHasBacklightProperty[] = "has-backlight";
 const char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
 const char kHasSkuNumberProperty[] = "has-sku-number";
+const char kArcBuildPropertiesPath[] = "/arc/build-properties";
+const char kMarketingNameProperty[] = "marketing-name";
 
 const char kNvmeToolPath[] = "usr/sbin/nvme";
 const char kSmartctlToolPath[] = "usr/sbin/smartctl";

@@ -37,8 +37,6 @@ constexpr std::pair<const char*,
         {"battery", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBattery},
         {"storage", chromeos::cros_healthd::mojom::ProbeCategoryEnum::
                         kNonRemovableBlockDevices},
-        {"cached_vpd",
-         chromeos::cros_healthd::mojom::ProbeCategoryEnum::kCachedVpdData},
         {"cpu", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kCpu},
         {"timezone",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kTimezone},
@@ -50,7 +48,7 @@ constexpr std::pair<const char*,
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition},
         {"bluetooth",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBluetooth},
-};
+        {"system", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kSystem}};
 
 std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
   switch (type) {
@@ -160,19 +158,6 @@ void DisplayBluetoothInfo(
               << (adapter->powered ? "true" : "false") << ","
               << adapter->num_connected_devices << std::endl;
   }
-}
-
-void DisplayCachedVpdInfo(
-    const chromeos::cros_healthd::mojom::CachedVpdResultPtr& vpd_result) {
-  if (vpd_result->is_error()) {
-    DisplayError(vpd_result->get_error());
-    return;
-  }
-
-  const auto& vpd = vpd_result->get_vpd_info();
-  std::cout << "sku_number" << std::endl;
-  std::string sku_number = vpd->sku_number.value_or("NA");
-  std::cout << sku_number << std::endl;
 }
 
 void DisplayCpuInfo(
@@ -316,6 +301,31 @@ void DisplayStatefulPartitionInfo(
             << stateful_partition_info->total_space << std::endl;
 }
 
+void DisplaySystemInfo(
+    const chromeos::cros_healthd::mojom::SystemResultPtr& system_result) {
+  if (system_result->is_error()) {
+    DisplayError(system_result->get_error());
+    return;
+  }
+
+  const auto& system_info = system_result->get_system_info();
+  std::cout << "first_power_date,manufacture_date,product_sku_number,"
+            << "marketing_name,bios_version,board_name,board_version,"
+            << "chassis_type,product_name" << std::endl;
+  std::string chassis_type =
+      !system_info->chassis_type.is_null()
+          ? std::to_string(system_info->chassis_type->value)
+          : "NA";
+  std::cout << system_info->first_power_date.value_or("NA") << ","
+            << system_info->manufacture_date.value_or("NA") << ","
+            << system_info->product_sku_number.value_or("NA") << ","
+            << system_info->marketing_name << ","
+            << system_info->bios_version.value_or("NA") << ","
+            << system_info->board_name.value_or("NA") << ","
+            << system_info->board_version.value_or("NA") << "," << chassis_type
+            << "," << system_info->product_name.value_or("NA") << std::endl;
+}
+
 // Displays the retrieved telemetry information to the console.
 void DisplayTelemetryInfo(
     const chromeos::cros_healthd::mojom::TelemetryInfoPtr& info) {
@@ -326,10 +336,6 @@ void DisplayTelemetryInfo(
   const auto& block_device_result = info->block_device_result;
   if (block_device_result)
     DisplayBlockDeviceInfo(block_device_result);
-
-  const auto& vpd_result = info->vpd_result;
-  if (vpd_result)
-    DisplayCachedVpdInfo(vpd_result);
 
   const auto& cpu_result = info->cpu_result;
   if (cpu_result)
@@ -358,6 +364,10 @@ void DisplayTelemetryInfo(
   const auto& bluetooth_result = info->bluetooth_result;
   if (bluetooth_result)
     DisplayBluetoothInfo(bluetooth_result);
+
+  const auto& system_result = info->system_result;
+  if (system_result)
+    DisplaySystemInfo(system_result);
 }
 
 // Create a stringified list of the category names for use in help.

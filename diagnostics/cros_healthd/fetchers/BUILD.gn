@@ -33,12 +33,12 @@ source_set("libcros_healthd_fetchers") {
     "backlight_fetcher.cc",
     "battery_fetcher.cc",
     "bluetooth_fetcher.cc",
-    "cached_vpd_fetcher.cc",
     "cpu_fetcher.cc",
     "disk_fetcher.cc",
     "fan_fetcher.cc",
     "memory_fetcher.cc",
     "stateful_partition_fetcher.cc",
+    "system_fetcher.cc",
     "timezone_fetcher.cc",
   ]
 }
@@ -72,11 +72,11 @@ if (use.test) {
       "backlight_fetcher_test.cc",
       "battery_fetcher_test.cc",
       "bluetooth_fetcher_test.cc",
-      "cached_vpd_fetcher_test.cc",
       "cpu_fetcher_test.cc",
       "fan_fetcher_test.cc",
       "memory_fetcher_test.cc",
       "stateful_partition_fetcher_test.cc",
+      "system_fetcher_test.cc",
       "timezone_fetcher_test.cc",
     ]
   }
@@ -96,22 +96,22 @@ if (use.fuzzer) {
     sources = [ "fetch_block_device_fuzzer.cc" ]
   }
 
-  pkg_config("fetch_cached_vpd_fuzzer_pkg_deps") {
+  pkg_config("fetch_system_info_fuzzer_pkg_deps") {
     pkg_deps = [
       "libchrome-${libbase_ver}",
       "libcros_config",
     ]
   }
 
-  executable("fetch_cached_vpd_fuzzer") {
+  executable("fetch_system_info_fuzzer") {
     configs += [
-      ":fetch_cached_vpd_fuzzer_pkg_deps",
+      ":fetch_system_info_fuzzer_pkg_deps",
       "//common-mk/common_fuzzer:common_fuzzer",
     ]
     deps = [
       ":libcros_healthd_fetchers",
       "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
     ]
-    sources = [ "fetch_cached_vpd_fuzzer.cc" ]
+    sources = [ "fetch_system_info_fuzzer.cc" ]
   }
 }

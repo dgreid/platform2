@@ -34,6 +34,10 @@ extern const char kNvmeToolPath[];
 extern const char kSmartctlToolPath[];
 // Fio utility program path relative to the root directory.
 extern const char kFioToolPath[];
+// The path to check a device's master configuration ARC build properties.
+extern const char kArcBuildPropertiesPath[];
+// The master configuration property that specifies a device's marketing name.
+extern const char kMarketingNameProperty[];
 
 }  // namespace diagnostics
 

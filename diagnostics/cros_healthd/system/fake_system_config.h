@@ -5,6 +5,8 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_SYSTEM_FAKE_SYSTEM_CONFIG_H_
 #define DIAGNOSTICS_CROS_HEALTHD_SYSTEM_FAKE_SYSTEM_CONFIG_H_
 
+#include <string>
+
 #include "diagnostics/cros_healthd/system/system_config_interface.h"
 
 namespace diagnostics {
@@ -21,18 +23,20 @@ class FakeSystemConfig final : public SystemConfigInterface {
   bool HasBacklight() override;
   bool HasBattery() override;
   bool HasSmartBattery() override;
-  bool HasSkuNumberProperty() override;
+  bool HasSkuNumber() override;
   bool NvmeSupported() override;
   bool SmartCtlSupported() override;
+  std::string GetMarketingName() override;
 
   // Setters for FakeSystemConfig attributes.
   void SetFioSupported(bool value);
   void SetHasBacklight(bool value);
   void SetHasBattery(bool value);
   void SetHasSmartBattery(bool value);
-  void SetHasSkuNumberProperty(bool value);
+  void SetHasSkuNumber(bool value);
   void SetNvmeSupported(bool value);
   void SetSmartCtrlSupported(bool value);
+  void SetMarketingName(const std::string& value);
 
  private:
   bool fio_supported_ = true;
@@ -42,6 +46,7 @@ class FakeSystemConfig final : public SystemConfigInterface {
   bool has_sku_number_property_ = true;
   bool nvme_supported_ = true;
   bool smart_ctrl_supported_ = true;
+  std::string marketing_name_;
 };
 
 }  // namespace diagnostics

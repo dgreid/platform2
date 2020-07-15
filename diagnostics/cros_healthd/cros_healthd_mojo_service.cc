@@ -29,10 +29,10 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     BacklightFetcher* backlight_fetcher,
     BatteryFetcher* battery_fetcher,
     BluetoothFetcher* bluetooth_fetcher,
-    CachedVpdFetcher* cached_vpd_fetcher,
     CpuFetcher* cpu_fetcher,
     DiskFetcher* disk_fetcher,
     FanFetcher* fan_fetcher,
+    SystemFetcher* system_fetcher,
     BluetoothEvents* bluetooth_events,
     LidEvents* lid_events,
     PowerEvents* power_events,
@@ -40,10 +40,10 @@ CrosHealthdMojoService::CrosHealthdMojoService(
     : backlight_fetcher_(backlight_fetcher),
       battery_fetcher_(battery_fetcher),
       bluetooth_fetcher_(bluetooth_fetcher),
-      cached_vpd_fetcher_(cached_vpd_fetcher),
       cpu_fetcher_(cpu_fetcher),
       disk_fetcher_(disk_fetcher),
       fan_fetcher_(fan_fetcher),
+      system_fetcher_(system_fetcher),
       bluetooth_events_(bluetooth_events),
       lid_events_(lid_events),
       power_events_(power_events),
@@ -51,10 +51,10 @@ CrosHealthdMojoService::CrosHealthdMojoService(
   DCHECK(backlight_fetcher_);
   DCHECK(battery_fetcher_);
   DCHECK(bluetooth_fetcher_);
-  DCHECK(cached_vpd_fetcher_);
   DCHECK(cpu_fetcher_);
   DCHECK(disk_fetcher_);
   DCHECK(fan_fetcher_);
+  DCHECK(system_fetcher_);
   DCHECK(bluetooth_events_);
   DCHECK(lid_events_);
   DCHECK(power_events_);
@@ -232,11 +232,6 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
         telemetry_info.battery_result = battery_fetcher_->FetchBatteryInfo();
         break;
       }
-      case ProbeCategoryEnum::kCachedVpdData: {
-        telemetry_info.vpd_result =
-            cached_vpd_fetcher_->FetchCachedVpdInfo(base::FilePath("/"));
-        break;
-      }
       case ProbeCategoryEnum::kCpu: {
         telemetry_info.cpu_result =
             cpu_fetcher_->FetchCpuInfo(base::FilePath("/"));
@@ -274,6 +269,11 @@ void CrosHealthdMojoService::ProbeTelemetryInfo(
       case ProbeCategoryEnum::kBluetooth: {
         telemetry_info.bluetooth_result =
             bluetooth_fetcher_->FetchBluetoothInfo();
+        break;
+      }
+      case ProbeCategoryEnum::kSystem: {
+        telemetry_info.system_result =
+            system_fetcher_->FetchSystemInfo(base::FilePath("/"));
         break;
       }
     }

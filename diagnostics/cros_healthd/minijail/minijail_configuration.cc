@@ -90,7 +90,16 @@ void ConfigureAndEnterMinijail() {
                                                    // system's power supplies.
   BindMountIfPathExists(
       jail.get(),
-      base::FilePath("/sys/firmware/vpd/ro"));  // Files with cached VPD.
+      base::FilePath("/sys/firmware/vpd/ro"));  // Files with R/O cached VPD.
+
+  BindMountIfPathExists(
+      jail.get(),
+      base::FilePath("/sys/firmware/vpd/rw"));  // Files with R/W cached VPD.
+
+  BindMountIfPathExists(
+      jail.get(),
+      base::FilePath("/sys/class/dmi/id"));  // Files related to the
+                                             // system's DMI information.
 
   // Create a new tmpfs filesystem for /var and mount necessary files.
   minijail_mount_with_data(jail.get(), "tmpfs", "/var", "tmpfs", 0, "");

@@ -15,6 +15,13 @@
 
 namespace diagnostics {
 
+namespace {
+
+// Fake marketing name used for testing cros config.
+constexpr char kFakeMarketingName[] = "chromebook X 1234";
+
+}  // namespace
+
 class SystemConfigTest : public ::testing::Test {
  protected:
   void SetUp() override {
@@ -70,13 +77,13 @@ TEST_F(SystemConfigTest, TestBatteryFalse) {
 TEST_F(SystemConfigTest, TestSkuNumberTrue) {
   fake_cros_config()->SetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
                                 "true");
-  EXPECT_TRUE(system_config()->HasSkuNumberProperty());
+  EXPECT_TRUE(system_config()->HasSkuNumber());
 }
 
 TEST_F(SystemConfigTest, TestSkuNumberFalse) {
   fake_cros_config()->SetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
                                 "");
-  EXPECT_FALSE(system_config()->HasSkuNumberProperty());
+  EXPECT_FALSE(system_config()->HasSkuNumber());
 }
 
 TEST_F(SystemConfigTest, TestSmartBatteryTrue) {
@@ -108,6 +115,12 @@ TEST_F(SystemConfigTest, SmartCtlSupportedTrue) {
 
 TEST_F(SystemConfigTest, SmartCtlSupportedFalse) {
   ASSERT_FALSE(system_config()->SmartCtlSupported());
+}
+
+TEST_F(SystemConfigTest, CorrectMarketingName) {
+  fake_cros_config()->SetString(kArcBuildPropertiesPath, kMarketingNameProperty,
+                                kFakeMarketingName);
+  EXPECT_EQ(system_config()->GetMarketingName(), kFakeMarketingName);
 }
 
 }  // namespace diagnostics

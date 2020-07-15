@@ -29,9 +29,10 @@ class SystemConfig final : public SystemConfigInterface {
   bool HasBacklight() override;
   bool HasBattery() override;
   bool HasSmartBattery() override;
-  bool HasSkuNumberProperty() override;
+  bool HasSkuNumber() override;
   bool NvmeSupported() override;
   bool SmartCtlSupported() override;
+  std::string GetMarketingName() override;
 
  private:
   // Unowned pointer. The CrosConfigInterface should outlive this instance.
