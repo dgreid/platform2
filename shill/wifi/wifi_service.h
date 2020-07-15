@@ -157,6 +157,9 @@ class WiFiService : public Service {
   void set_expecting_disconnect(bool val) { expecting_disconnect_ = val; }
   bool expecting_disconnect() const { return expecting_disconnect_; }
 
+  void set_bgscan_string(const std::string& val) { bgscan_string_ = val; }
+  std::string bgscan_string() const { return bgscan_string_; }
+
  protected:
   // Inherited from Service.
   void OnConnect(Error* error) override;
@@ -336,6 +339,8 @@ class WiFiService : public Service {
   // Flag indicating if service disconnect is initiated by user for
   // connecting to other service.
   bool expecting_disconnect_;
+  // The background scan configuration parameters.
+  std::string bgscan_string_;
   std::unique_ptr<CertificateFile> certificate_file_;
   // Bare pointer is safe because WiFi service instances are owned by
   // the WiFiProvider and are guaranteed to be deallocated by the time

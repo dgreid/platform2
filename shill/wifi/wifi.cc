@@ -81,6 +81,11 @@ const uint16_t WiFi::kDefaultScanIntervalSeconds = 60;
 
 // Scan interval while connected.
 const uint16_t WiFi::kBackgroundScanIntervalSeconds = 360;
+// Default background scan interval when there is only one endpoint on the
+// network. We'd like to strike a balance between 1) not triggering too
+// frequently with poor signal, 2) hardly triggering at all with good signal,
+// and 3) being able to discover additional APs that weren't initially visible.
+const int WiFi::kSingleEndpointBgscanIntervalSeconds = 86400;
 // Age (in seconds) beyond which a BSS cache entry will not be preserved,
 // across a suspend/resume.
 const time_t WiFi::kMaxBSSResumeAgeSeconds = 10;
@@ -105,6 +110,7 @@ const std::vector<unsigned char> WiFi::kRandomMacMask{255, 255, 255, 0, 0, 0};
 
 namespace {
 const uint16_t kDefaultBgscanShortIntervalSeconds = 64;
+const uint16_t kSingleEndpointBgscanShortIntervalSeconds = 360;
 const int32_t kDefaultBgscanSignalThresholdDbm = -72;
 // Delay between scans when supplicant finds "No suitable network".
 const time_t kRescanIntervalSeconds = 1;
@@ -430,7 +436,7 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
     const uint32_t scan_ssid = 1;  // "True": Use directed probe.
     service_params.Set<uint32_t>(WPASupplicant::kNetworkPropertyScanSSID,
                                  scan_ssid);
-    AppendBgscan(service, &service_params);
+    string bgscan_string = AppendBgscan(service, &service_params);
     service_params.Set<uint32_t>(WPASupplicant::kNetworkPropertyDisableVHT,
                                  provider_->disable_vht());
     if (!supplicant_interface_proxy_->AddNetwork(service_params,
@@ -441,6 +447,7 @@ void WiFi::ConnectTo(WiFiService* service, Error* error) {
       return;
     }
     CHECK(!network_rpcid.value().empty());  // No DBus path should be empty.
+    service->set_bgscan_string(bgscan_string);
     rpcid_by_service_[service] = network_rpcid;
   }
 
@@ -598,34 +605,74 @@ void WiFi::NotifyEndpointChanged(const WiFiEndpointConstRefPtr& endpoint) {
   provider_->OnEndpointUpdated(endpoint);
 }
 
-void WiFi::AppendBgscan(WiFiService* service,
-                        KeyValueStore* service_params) const {
-  int scan_interval = kBackgroundScanIntervalSeconds;
+string WiFi::AppendBgscan(WiFiService* service,
+                          KeyValueStore* service_params) const {
   string method = bgscan_method_;
+  int short_interval = bgscan_short_interval_seconds_;
+  int signal_threshold = bgscan_signal_threshold_dbm_;
+  int scan_interval = kBackgroundScanIntervalSeconds;
   if (method.empty()) {
-    // If multiple APs are detected for this SSID, configure the default method.
-    // Otherwise, disable background scanning completely.
-    if (service->GetEndpointCount() > 1) {
-      method = kDefaultBgscanMethod;
-    } else {
-      LOG(INFO) << "Background scan disabled -- single Endpoint for Service.";
-      return;
+    // If multiple APs are detected for this SSID, configure the default method
+    // with pre-set parameters. Otherwise, use extended scan intervals.
+    method = kDefaultBgscanMethod;
+    if (service->GetEndpointCount() <= 1) {
+      LOG(INFO) << "Background scan intervals extended -- single Endpoint for "
+                << "Service.";
+      short_interval = kSingleEndpointBgscanShortIntervalSeconds;
+      scan_interval = kSingleEndpointBgscanIntervalSeconds;
     }
-  } else if (method.compare(WPASupplicant::kNetworkBgscanMethodNone) == 0) {
+  } else if (method == WPASupplicant::kNetworkBgscanMethodNone) {
     LOG(INFO) << "Background scan disabled -- chose None method.";
-    return;
   } else {
     // If the background scan method was explicitly specified, honor the
     // configured background scan interval.
     scan_interval = scan_interval_seconds_;
   }
-  DCHECK(!method.empty());
-  string config_string = StringPrintf(
-      "%s:%d:%d:%d", method.c_str(), bgscan_short_interval_seconds_,
-      bgscan_signal_threshold_dbm_, scan_interval);
-  LOG(INFO) << "Background scan: " << config_string;
+  string config_string;
+  if (method != WPASupplicant::kNetworkBgscanMethodNone) {
+    config_string = StringPrintf("%s:%d:%d:%d", method.c_str(), short_interval,
+                                 signal_threshold, scan_interval);
+  }
+  LOG(INFO) << "Background scan: '" << config_string << "'";
   service_params->Set<string>(WPASupplicant::kNetworkPropertyBgscan,
                               config_string);
+  return config_string;
+}
+
+bool WiFi::ReconfigureBgscan(WiFiService* service) {
+  LOG(INFO) << __func__ << " for " << service->log_name();
+  KeyValueStore bgscan_params;
+  string bgscan_string = AppendBgscan(service, &bgscan_params);
+  if (service->bgscan_string() == bgscan_string) {
+    LOG(INFO) << "No change in bgscan parameters.";
+    return false;
+  }
+
+  Error unused_error;
+  RpcIdentifier id = FindNetworkRpcidForService(service, &unused_error);
+  if (id.value().empty()) {
+    return false;
+  }
+
+  std::unique_ptr<SupplicantNetworkProxyInterface> network_proxy =
+      control_interface()->CreateSupplicantNetworkProxy(id);
+  if (!network_proxy->SetProperties(bgscan_params)) {
+    LOG(ERROR) << "SetProperties for " << id.value() << " failed.";
+    return false;
+  }
+  service->set_bgscan_string(bgscan_string);
+  return true;
+}
+
+bool WiFi::ReconfigureBgscanForRelevantServices() {
+  bool ret = true;
+  if (current_service_) {
+    ret = ReconfigureBgscan(current_service_.get()) && ret;
+  }
+  if (pending_service_) {
+    ret = ReconfigureBgscan(pending_service_.get()) && ret;
+  }
+  return ret;
 }
 
 string WiFi::GetBgscanMethod(Error* /* error */) {
@@ -646,10 +693,7 @@ bool WiFi::SetBgscanMethod(const string& method, Error* error) {
     return false;
   }
   bgscan_method_ = method;
-  // We do not update kNetworkPropertyBgscan for |pending_service_| or
-  // |current_service_|, because supplicant does not allow for
-  // reconfiguration without disconnect and reconnect.
-  return true;
+  return ReconfigureBgscanForRelevantServices();
 }
 
 bool WiFi::SetBgscanShortInterval(const uint16_t& seconds, Error* /*error*/) {
@@ -657,10 +701,7 @@ bool WiFi::SetBgscanShortInterval(const uint16_t& seconds, Error* /*error*/) {
     return false;
   }
   bgscan_short_interval_seconds_ = seconds;
-  // We do not update kNetworkPropertyBgscan for |pending_service_| or
-  // |current_service_|, because supplicant does not allow for
-  // reconfiguration without disconnect and reconnect.
-  return true;
+  return ReconfigureBgscanForRelevantServices();
 }
 
 bool WiFi::SetBgscanSignalThreshold(const int32_t& dbm, Error* /*error*/) {
@@ -668,10 +709,7 @@ bool WiFi::SetBgscanSignalThreshold(const int32_t& dbm, Error* /*error*/) {
     return false;
   }
   bgscan_signal_threshold_dbm_ = dbm;
-  // We do not update kNetworkPropertyBgscan for |pending_service_| or
-  // |current_service_|, because supplicant does not allow for
-  // reconfiguration without disconnect and reconnect.
-  return true;
+  return ReconfigureBgscanForRelevantServices();
 }
 
 bool WiFi::SetScanInterval(const uint16_t& seconds, Error* /*error*/) {
@@ -684,10 +722,8 @@ bool WiFi::SetScanInterval(const uint16_t& seconds, Error* /*error*/) {
   }
   // The scan interval affects both foreground scans (handled by
   // |scan_timer_callback_|), and background scans (handled by
-  // supplicant). However, we do not update |pending_service_| or
-  // |current_service_|, because supplicant does not allow for
-  // reconfiguration without disconnect and reconnect.
-  return true;
+  // supplicant).
+  return ReconfigureBgscanForRelevantServices();
 }
 
 bool WiFi::GetRandomMacEnabled(Error* /*error*/) {
@@ -1474,6 +1510,13 @@ void WiFi::BSSAddedTask(const RpcIdentifier& path,
   }
 
   provider_->OnEndpointAdded(endpoint);
+  // Adding a single endpoint can change the bgscan parameters for no more than
+  // one active Service. Try pending_service_ only if current_service_ doesn't
+  // change.
+  if ((!current_service_ || !ReconfigureBgscan(current_service_.get())) &&
+      pending_service_) {
+    ReconfigureBgscan(pending_service_.get());
+  }
 
   // Do this last, to maintain the invariant that any Endpoint we
   // know about has a corresponding Service.
@@ -1500,6 +1543,13 @@ void WiFi::BSSRemovedTask(const RpcIdentifier& path) {
 
   WiFiServiceRefPtr service = provider_->OnEndpointRemoved(endpoint);
   if (!service) {
+    // Removing a single endpoint can change the bgscan parameters for no more
+    // than one active Service. Try pending_service_ only if current_service_
+    // doesn't change.
+    if ((!current_service_ || !ReconfigureBgscan(current_service_.get())) &&
+        pending_service_) {
+      ReconfigureBgscan(pending_service_.get());
+    }
     return;
   }
   Error unused_error;

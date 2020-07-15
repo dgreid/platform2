@@ -30,6 +30,8 @@ class SupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
   // async method. Failures will be logged in the callback.
   bool SetEnabled(bool enabled) override;
 
+  bool SetProperties(const KeyValueStore& props) override;
+
  private:
   class PropertySet : public dbus::PropertySet {
    public:
@@ -37,6 +39,7 @@ class SupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
                 const std::string& interface_name,
                 const PropertyChangedCallback& callback);
     brillo::dbus_utils::Property<bool> enabled;
+    brillo::dbus_utils::Property<brillo::VariantDictionary> properties;
 
    private:
     DISALLOW_COPY_AND_ASSIGN(PropertySet);

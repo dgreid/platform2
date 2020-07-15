@@ -320,6 +320,7 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   using ReverseServiceMap = std::map<const WiFiService*, RpcIdentifier>;
 
   static const char* const kDefaultBgscanMethod;
+  static const int kSingleEndpointBgscanIntervalSeconds;
   static const uint16_t kBackgroundScanIntervalSeconds;
   static const uint16_t kDefaultScanIntervalSeconds;
   static const time_t kMaxBSSResumeAgeSeconds;
@@ -345,7 +346,10 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   static const std::vector<unsigned char> kRandomMacMask;
 
   void GetPhyInfo();
-  void AppendBgscan(WiFiService* service, KeyValueStore* service_params) const;
+  std::string AppendBgscan(WiFiService* service,
+                           KeyValueStore* service_params) const;
+  bool ReconfigureBgscan(WiFiService* service);
+  bool ReconfigureBgscanForRelevantServices();
   std::string GetBgscanMethod(Error* error);
   uint16_t GetBgscanShortInterval(Error* /* error */) {
     return bgscan_short_interval_seconds_;
