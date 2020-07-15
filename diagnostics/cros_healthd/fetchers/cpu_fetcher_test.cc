@@ -18,7 +18,9 @@
 
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
+#include "diagnostics/cros_healthd/system/fake_system_utilities.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
+#include "diagnostics/cros_healthd/system/system_utilities_constants.h"
 #include "diagnostics/cros_healthd/utils/cpu_file_helpers.h"
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -30,6 +32,12 @@ namespace {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 using ::testing::UnorderedElementsAreArray;
+
+// POD struct for ParseCpuArchitectureTest.
+struct ParseCpuArchitectureTestParams {
+  std::string uname_machine;
+  mojo_ipc::CpuArchitectureEnum expected_mojo_enum;
+};
 
 // No other logical IDs should be used, or the logic for writing C-state files
 // will break.
@@ -194,9 +202,16 @@ class CpuFetcherTest : public testing::Test {
     WriteCStateData(kSecondCStates, kSecondLogicalId);
     // Write C-state data for the third logical CPU.
     WriteCStateData(kThirdCStates, kThirdLogicalId);
+
+    // Set the fake uname response.
+    fake_system_utils()->SetUnameResponse(/*ret_code=*/0, kUnameMachineX86_64);
   }
 
   const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
+
+  FakeSystemUtilities* fake_system_utils() const {
+    return mock_context_.fake_system_utils();
+  }
 
   mojo_ipc::CpuResultPtr FetchCpuInfo() {
     return cpu_fetcher_.FetchCpuInfo(temp_dir_path());
@@ -291,6 +306,7 @@ TEST_F(CpuFetcherTest, TestFetchCpuInfo) {
   ASSERT_TRUE(cpu_result->is_cpu_info());
   const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
   const auto& physical_cpus = cpu_info->physical_cpus;
   ASSERT_EQ(physical_cpus.size(), 2);
   const auto& first_physical_cpu = physical_cpus[0];
@@ -324,6 +340,7 @@ TEST_F(CpuFetcherTest, NoPhysicalIdCpuinfoFile) {
   ASSERT_TRUE(cpu_result->is_cpu_info());
   const auto& cpu_info = cpu_result->get_cpu_info();
   EXPECT_EQ(cpu_info->num_total_threads, kExpectedNumTotalThreads);
+  EXPECT_EQ(cpu_info->architecture, mojo_ipc::CpuArchitectureEnum::kX86_64);
   const auto& physical_cpus = cpu_info->physical_cpus;
   ASSERT_EQ(physical_cpus.size(), 3);
   const auto& first_physical_cpu = physical_cpus[0];
@@ -546,5 +563,55 @@ TEST_F(CpuFetcherTest, IncorrectlyFormattedCStateTimeFile) {
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
+
+// Test that we handle uname failing.
+TEST_F(CpuFetcherTest, UnameFailure) {
+  fake_system_utils()->SetUnameResponse(-1, base::nullopt);
+
+  auto cpu_result = FetchCpuInfo();
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  EXPECT_EQ(cpu_result->get_cpu_info()->architecture,
+            mojo_ipc::CpuArchitectureEnum::kUnknown);
+}
+
+// Tests that CpuFetcher can correctly parse each known architecture.
+//
+// This is a parameterized test with the following parameters (accessed
+// through the ParseCpuArchitectureTestParams POD struct):
+// * |raw_state| - written to /proc/|kPid|/stat's process state field.
+// * |expected_mojo_state| - expected value of the returned ProcessInfo's state
+//                           field.
+class ParseCpuArchitectureTest
+    : public CpuFetcherTest,
+      public testing::WithParamInterface<ParseCpuArchitectureTestParams> {
+ protected:
+  // Accessors to the test parameters returned by gtest's GetParam():
+  ParseCpuArchitectureTestParams params() const { return GetParam(); }
+};
+
+// Test that we can parse the given uname response for CPU architecture.
+TEST_P(ParseCpuArchitectureTest, ParseUnameResponse) {
+  fake_system_utils()->SetUnameResponse(0, params().uname_machine);
+
+  auto cpu_result = FetchCpuInfo();
+
+  ASSERT_TRUE(cpu_result->is_cpu_info());
+  EXPECT_EQ(cpu_result->get_cpu_info()->architecture,
+            params().expected_mojo_enum);
+}
+
+INSTANTIATE_TEST_SUITE_P(
+    ,
+    ParseCpuArchitectureTest,
+    testing::Values(
+        ParseCpuArchitectureTestParams{kUnameMachineX86_64,
+                                       mojo_ipc::CpuArchitectureEnum::kX86_64},
+        ParseCpuArchitectureTestParams{kUnameMachineAArch64,
+                                       mojo_ipc::CpuArchitectureEnum::kAArch64},
+        ParseCpuArchitectureTestParams{kUnameMachineArmv7l,
+                                       mojo_ipc::CpuArchitectureEnum::kArmv7l},
+        ParseCpuArchitectureTestParams{
+            "Unknown uname machine", mojo_ipc::CpuArchitectureEnum::kUnknown}));
 
 }  // namespace diagnostics
