@@ -149,6 +149,13 @@ static void sl_host_shm_pool_create_host_buffer(struct wl_client* client,
         offset + sl_offset_for_shm_format_plane(format, height, stride, 1),
         stride, sl_y_subsampling_for_shm_format_plane(format, 0),
         sl_y_subsampling_for_shm_format_plane(format, 1));
+    // In the case of mmaps created from the client buffer, we want to be able
+    // to close the FD when the client releases the shm pool (i.e. when it's
+    // done transferring) as opposed to when the pool is freed (i.e. when we're
+    // done drawing).
+    // We do this by removing the handle to the FD after it has been mmapped,
+    // which prevents a double-close.
+    host_buffer->shm_mmap->fd = -1;
     host_buffer->shm_mmap->buffer_resource = host_buffer->resource;
   }
 }

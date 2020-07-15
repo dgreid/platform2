@@ -262,7 +262,8 @@ struct sl_mmap* sl_mmap_ref(struct sl_mmap* map) {
 void sl_mmap_unref(struct sl_mmap* map) {
   if (map->refcount-- == 1) {
     munmap(map->addr, map->size + map->offset[0]);
-    close(map->fd);
+    if (map->fd != -1)
+      close(map->fd);
     free(map);
   }
 }
@@ -755,11 +756,10 @@ void sl_window_update(struct sl_window* window) {
     }
 
     zaura_surface_set_frame(window->aura_surface,
-                            window->decorated
-                                ? ZAURA_SURFACE_FRAME_TYPE_NORMAL
-                                : window->depth == 32
-                                      ? ZAURA_SURFACE_FRAME_TYPE_NONE
-                                      : ZAURA_SURFACE_FRAME_TYPE_SHADOW);
+                            window->decorated ? ZAURA_SURFACE_FRAME_TYPE_NORMAL
+                            : window->depth == 32
+                                ? ZAURA_SURFACE_FRAME_TYPE_NONE
+                                : ZAURA_SURFACE_FRAME_TYPE_SHADOW);
 
     frame_color = window->dark_frame ? ctx->dark_frame_color : ctx->frame_color;
     zaura_surface_set_frame_colors(window->aura_surface, frame_color,
@@ -2522,11 +2522,10 @@ static void sl_handle_property_notify(struct sl_context* ctx,
       return;
 
     zaura_surface_set_frame(window->aura_surface,
-                            window->decorated
-                                ? ZAURA_SURFACE_FRAME_TYPE_NORMAL
-                                : window->depth == 32
-                                      ? ZAURA_SURFACE_FRAME_TYPE_NONE
-                                      : ZAURA_SURFACE_FRAME_TYPE_SHADOW);
+                            window->decorated ? ZAURA_SURFACE_FRAME_TYPE_NORMAL
+                            : window->depth == 32
+                                ? ZAURA_SURFACE_FRAME_TYPE_NONE
+                                : ZAURA_SURFACE_FRAME_TYPE_SHADOW);
   } else if (event->atom == ctx->atoms[ATOM_GTK_THEME_VARIANT].value) {
     struct sl_window* window;
     uint32_t frame_color;
