@@ -11,7 +11,8 @@ namespace iioservice {
 
 // Default size of StringPiece for mojo MessagePipe.
 const int kUnixTokenSize = 32;
-const char kIioserviceSocketPathString[] = "/run/iioservice/iioservice.sock";
+const char kIioserviceServerSocketPathString[] = "/run/iioservice/server.sock";
+const char kIioserviceClientSocketPathString[] = "/run/iioservice/client.sock";
 
 }  // namespace iioservice
 

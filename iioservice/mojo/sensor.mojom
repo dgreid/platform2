@@ -49,7 +49,7 @@ interface SensorService {
   // successfully binding of |device_request|, the caller will have an
   // established Mojo channel to iioservice.
   // If failed, the request won't be bound and will be destroyed directly.
-  GetDevice@2(int32 iio_device_id, SensorDevice& device_request);
+  GetDevice@2(int32 iio_device_id, pending_receiver<SensorDevice> device_request);
 };
 
 // SensorDevice, an interface sending requests for a physical device
@@ -73,7 +73,7 @@ interface SensorDevice {
   // Starts reading samples with the frequency set by |SetFrequency|. Samples or
   // errors will be pushed to the observer. It's the user's responsibility to
   // keep |observer| active while reading.
-  StartReadingSamples@3(SensorDeviceSamplesObserver observer);
+  StartReadingSamples@3(pending_remote<SensorDeviceSamplesObserver> observer);
 
   // Stops reading samples in this device. Reading can be restarted by calling
   // |StartReadingSamples| again.

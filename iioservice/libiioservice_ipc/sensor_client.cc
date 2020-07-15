@@ -45,7 +45,8 @@ SensorClient::ScopedSensorClient SensorClient::Create(
   return client;
 }
 
-void SensorClient::SetUpChannel(mojom::SensorServicePtr sensor_service_ptr) {
+void SensorClient::SetUpChannel(
+    mojo::PendingRemote<mojom::SensorService> sensor_service_ptr) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   LOGF(INFO) << "Received SensorService from sensor HAL dispatcher";
@@ -58,7 +59,7 @@ SensorClient::SensorClient(
     SensorServiceReceivedCallback sensor_service_received_callback,
     InitOnFailureCallback init_on_failure_callback)
     : ipc_task_runner_(ipc_task_runner),
-      sensor_hal_client_(this),
+      receiver_(this),
       sensor_service_received_callback_(
           std::move(sensor_service_received_callback)),
       init_on_failure_callback_(std::move(init_on_failure_callback)) {
@@ -72,42 +73,33 @@ void SensorClient::InitOnThread() {
 
   mojo::ScopedMessagePipeHandle child_pipe;
   MojoResult res = CreateMojoChannelToParentByUnixDomainSocket(
-      kIioserviceSocketPathString, &child_pipe);
+      kIioserviceClientSocketPathString, &child_pipe);
   if (res != MOJO_RESULT_OK) {
-    LOGF(ERROR) << "Failed to create mojo channel to dispatcher";
+    LOGF(ERROR) << "Failed to create mojo channel to broker";
     std::move(init_on_failure_callback_).Run();  // -ENODEV
     return;
   }
 
-  dispatcher_ = mojo::MakeProxy(
-      mojom::SensorHalDispatcherPtrInfo(std::move(child_pipe), 0u),
-      ipc_task_runner_);
+  receiver_.Bind(
+      mojo::PendingReceiver<mojom::SensorHalClient>(std::move(child_pipe)));
 
-  if (!dispatcher_.is_bound()) {
-    LOGF(ERROR) << "Failed to make a proxy to dispatcher";
+  if (!receiver_.is_bound()) {
+    LOGF(ERROR) << "Failed to connect to broker";
     std::move(init_on_failure_callback_).Run();  // -ENODEV
     return;
   }
 
-  dispatcher_.set_connection_error_handler(
-      base::BindOnce(&SensorClient::OnDispatcherError, base::Unretained(this)));
-  LOGF(INFO) << "Connected to Sensor Dispatcher";
-
-  RegisterClient();
+  receiver_.set_disconnect_handler(
+      base::BindOnce(&SensorClient::OnClientError, base::Unretained(this)));
+  LOGF(INFO) << "Connected to broker";
 }
 
-void SensorClient::RegisterClient() {
+void SensorClient::OnClientError() {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
-  mojom::SensorHalClientPtr client_ptr;
-  sensor_hal_client_.Bind(mojo::MakeRequest(&client_ptr));
-  dispatcher_->RegisterClient(std::move(client_ptr));
-}
-
-void SensorClient::OnDispatcherError() {
-  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
-
-  LOGF(FATAL) << "Connection to sensor dispatcher lost";
+  LOGF(ERROR) << "Connection to broker lost";
+  receiver_.reset();
+  InitOnThread();
 }
 
 }  // namespace iioservice

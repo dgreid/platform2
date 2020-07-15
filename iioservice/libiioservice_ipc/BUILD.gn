@@ -10,8 +10,8 @@ group("all") {
 
 generate_mojom_bindings("libiioservice_ipc_mojom") {
   sources = [
+    "//iioservice/mojo/cros_sensor_service.mojom",
     "//iioservice/mojo/sensor.mojom",
-    "//iioservice/mojo/sensor_service.mojom",
   ]
   mojo_root = "//iioservice"
   use_pic = true

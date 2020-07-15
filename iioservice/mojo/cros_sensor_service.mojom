@@ -8,24 +8,6 @@ module cros.mojom;
 
 import "mojo/sensor.mojom";
 
-// The CrOS sensor HAL Mojo dispatcher.  The dispatcher acts as a proxy and
-// waits for the server and the clients to register.  There can only be one
-// server registered, with multiple clients requesting connections to the
-// server.  For each client, the dispatcher is responsible for creating a Mojo
-// channel to the server and pass the established Mojo channel to the client in
-// order to set up a Mojo channel between the client and the server.
-//
-// Next method ID: 2
-interface SensorHalDispatcher {
-  // A SensorHalServer calls RegisterServer to register itself with the
-  // dispatcher.
-  RegisterServer@0(SensorHalServer server);
-
-  // A SensorHalClient calls RegisterClient to register itself with the
-  // dispatcher.
-  RegisterClient@1(SensorHalClient client);
-};
-
 // The CrOS sensor HAL Mojo server.
 //
 // Next method ID: 1
@@ -34,7 +16,7 @@ interface SensorHalServer {
   // HAL adapter.  Upon successfully binding of |sensor_context_request|, the
   // caller will have an established Mojo channel to the sensor HAL adapter
   // process.
-  CreateChannel@0(SensorService& sensor_service_request);
+  CreateChannel@0(pending_receiver<SensorService> sensor_service_request);
 };
 
 // The CrOS sensor HAL Mojo client.
@@ -48,5 +30,5 @@ interface SensorHalClient {
   // SensorHalServer which holds the original Mojo channel crashes,
   // SensorHalDispatcher will call SetUpChannel again once a new SensorHalServer
   // reconnects.
-  SetUpChannel@0(SensorService sensor_service_ptr);
+  SetUpChannel@0(pending_remote<SensorService> sensor_service_ptr);
 };
