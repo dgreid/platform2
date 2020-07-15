@@ -21,6 +21,7 @@
 #include <re2/re2.h>
 
 #include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/system/system_utilities_constants.h"
 #include "diagnostics/cros_healthd/utils/cpu_file_helpers.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
@@ -54,11 +55,11 @@ mojo_ipc::CpuArchitectureEnum GetArchitecture() {
   std::stringstream ss;
   ss << buf.machine;
   std::string machine = ss.str();
-  if (machine == "x86_64")
+  if (machine == kUnameMachineX86_64)
     return mojo_ipc::CpuArchitectureEnum::kX86_64;
-  else if (machine == "aarch64")
+  else if (machine == kUnameMachineAArch64)
     return mojo_ipc::CpuArchitectureEnum::kAArch64;
-  else if (machine == "armv7l")
+  else if (machine == kUnameMachineArmv7l)
     return mojo_ipc::CpuArchitectureEnum::kArmv7l;
 
   return mojo_ipc::CpuArchitectureEnum::kUnknown;

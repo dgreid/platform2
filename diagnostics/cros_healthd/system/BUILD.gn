@@ -27,6 +27,7 @@ source_set("libcros_healthd_system") {
     "context.cc",
     "system_config.cc",
     "system_config_constants.cc",
+    "system_utilities_constants.cc",
     "system_utilities_impl.cc",
   ]
 }
