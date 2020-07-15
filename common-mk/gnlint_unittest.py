@@ -10,6 +10,7 @@ from __future__ import print_function
 
 import os
 import sys
+import unittest
 
 # Find chromite!
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.realpath(__file__)),
@@ -84,6 +85,8 @@ class UtilityTests(cros_test_lib.MockTestCase):
 class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
   """Tests for utility funcs that access the filesystem."""
 
+  @unittest.skipIf(not os.path.exists(gnlint.GetGnPath()),
+                   'Skipping since gn is not available: crbug.com/1078990.')
   def testCheckGnFile(self):
     """Check CheckGnFile tails down correctly."""
     content = '# gn file\n'
@@ -93,6 +96,8 @@ class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
     ret = gnlint.CheckGnFile(gnfile)
     self.assertEqual(ret, [])
 
+  @unittest.skipIf(not os.path.exists(gnlint.GetGnPath()),
+                   'Skipping since gn is not available: crbug.com/1078990.')
   def testGnFileOption(self):
     """Check CheckGnFile processes file options correctly."""
     static_library_with_visibility_flag = (
@@ -109,6 +114,8 @@ class FilesystemUtilityTests(cros_test_lib.MockTempDirTestCase):
     ret = gnlint.CheckGnFile(gnfile)
     self.assertEqual(ret, [])
 
+  @unittest.skipIf(not os.path.exists(gnlint.GetGnPath()),
+                   'Skipping since gn is not available: crbug.com/1078990.')
   def testCheckFormatDetectError(self):
     """Check CheckGnFile detects non-standard format."""
     content = 'executable("foo"){\n}\n'   # no space after ')'
