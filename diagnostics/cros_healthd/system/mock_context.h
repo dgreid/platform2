@@ -15,7 +15,7 @@
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/cros_healthd/system/fake_system_config.h"
-#include "diagnostics/cros_healthd/system/mock_system_utilities.h"
+#include "diagnostics/cros_healthd/system/fake_system_utilities.h"
 
 namespace org {
 namespace chromium {
@@ -43,7 +43,7 @@ class MockContext final : public Context {
   dbus::MockObjectProxy* mock_power_manager_proxy() const;
   FakePowerdAdapter* fake_powerd_adapter() const;
   FakeSystemConfig* fake_system_config() const;
-  MockSystemUtilities* mock_system_utils() const;
+  FakeSystemUtilities* fake_system_utils() const;
 
  private:
   // Used to create a mock power manager proxy.

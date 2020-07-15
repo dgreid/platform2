@@ -57,8 +57,8 @@ if (use.test || use.fuzzer) {
     ]
     sources = [
       "fake_system_config.cc",
+      "fake_system_utilities.cc",
       "mock_context.cc",
-      "mock_system_utilities.cc",
     ]
   }
 }

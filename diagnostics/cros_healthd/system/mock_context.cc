@@ -31,7 +31,7 @@ bool MockContext::Initialize() {
   power_manager_proxy_ = mock_power_manager_proxy_.get();
   powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
   system_config_ = std::make_unique<FakeSystemConfig>();
-  system_utils_ = std::make_unique<MockSystemUtilities>();
+  system_utils_ = std::make_unique<FakeSystemUtilities>();
 
   return true;
 }
@@ -62,8 +62,8 @@ FakeSystemConfig* MockContext::fake_system_config() const {
   return static_cast<FakeSystemConfig*>(system_config_.get());
 }
 
-MockSystemUtilities* MockContext::mock_system_utils() const {
-  return static_cast<MockSystemUtilities*>(system_utils_.get());
+FakeSystemUtilities* MockContext::fake_system_utils() const {
+  return static_cast<FakeSystemUtilities*>(system_utils_.get());
 }
 
 }  // namespace diagnostics
