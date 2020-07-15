@@ -107,7 +107,7 @@ void FakeDiagnosticRoutine::PopulateStatusUpdate(
   DCHECK(response);
 
   response->progress_percent = progress_percent_;
-  response->output = CreateReadOnlySharedMemoryMojoHandle(output_);
+  response->output = CreateReadOnlySharedMemoryRegionMojoHandle(output_);
 }
 
 mojo_ipc::DiagnosticRoutineStatusEnum FakeDiagnosticRoutine::GetStatus() {

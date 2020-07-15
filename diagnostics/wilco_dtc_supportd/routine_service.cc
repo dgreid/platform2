@@ -178,15 +178,14 @@ void SetGrpcUpdateFromMojoUpdate(
     return;
   }
 
-  auto shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(mojo_update->output));
-  if (!shared_memory) {
+  auto shm_mapping = GetReadOnlySharedMemoryMappingFromMojoHandle(
+      std::move(mojo_update->output));
+  if (!shm_mapping.IsValid()) {
     PLOG(ERROR) << "Failed to read data from mojo handle";
     return;
   }
-  grpc_update->set_output(
-      std::string(static_cast<const char*>(shared_memory->memory()),
-                  shared_memory->mapped_size()));
+  grpc_update->set_output(std::string(shm_mapping.GetMemoryAs<const char>(),
+                                      shm_mapping.mapped_size()));
 }
 
 // Converts from gRPC's GetRoutineUpdateRequest::Command to mojo's

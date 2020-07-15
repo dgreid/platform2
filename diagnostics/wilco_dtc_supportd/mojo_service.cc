@@ -29,7 +29,7 @@ void ForwardMojoJsonResponse(
     return;
   }
   mojo::ScopedHandle response_json_message_handle =
-      CreateReadOnlySharedMemoryMojoHandle(
+      CreateReadOnlySharedMemoryRegionMojoHandle(
           base::StringPiece(response_json_message));
   std::move(mojo_response_callback)
       .Run(std::move(response_json_message_handle));
@@ -38,19 +38,18 @@ void ForwardMojoJsonResponse(
 void ForwardMojoSendtoUiResponse(
     const MojoService::MojomSendWilcoDtcMessageToUiCallback& callback,
     mojo::ScopedHandle response_body_handle) {
-  auto shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(response_body_handle));
-  if (!shared_memory) {
+  auto shm_mapping = GetReadOnlySharedMemoryMappingFromMojoHandle(
+      std::move(response_body_handle));
+  if (!shm_mapping.IsValid()) {
     LOG(ERROR) << "Failed to read data from mojo handle";
     callback.Run(grpc::Status(grpc::StatusCode::UNKNOWN,
                               "Failed to read data from mojo handle"),
                  base::StringPiece());
     return;
   }
-  callback.Run(
-      grpc::Status::OK,
-      base::StringPiece(static_cast<const char*>(shared_memory->memory()),
-                        shared_memory->mapped_size()));
+  callback.Run(grpc::Status::OK,
+               base::StringPiece(shm_mapping.GetMemoryAs<const char>(),
+                                 shm_mapping.mapped_size()));
 }
 
 void ForwardMojoWebResponse(
@@ -62,19 +61,18 @@ void ForwardMojoWebResponse(
     callback.Run(status, http_status, base::StringPiece());
     return;
   }
-  auto shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(response_body_handle));
-  if (!shared_memory) {
+  auto shm_mapping = GetReadOnlySharedMemoryMappingFromMojoHandle(
+      std::move(response_body_handle));
+  if (!shm_mapping.IsValid()) {
     LOG(ERROR) << "Failed to read data from mojo handle";
     callback.Run(
         MojoService::MojomWilcoDtcSupportdWebRequestStatus::kNetworkError, 0,
         base::StringPiece());
     return;
   }
-  callback.Run(
-      status, http_status,
-      base::StringPiece(static_cast<const char*>(shared_memory->memory()),
-                        shared_memory->mapped_size()));
+  callback.Run(status, http_status,
+               base::StringPiece(shm_mapping.GetMemoryAs<const char>(),
+                                 shm_mapping.mapped_size()));
 }
 
 }  // namespace
@@ -95,16 +93,15 @@ MojoService::~MojoService() = default;
 
 void MojoService::SendUiMessageToWilcoDtc(
     mojo::ScopedHandle json_message, SendUiMessageToWilcoDtcCallback callback) {
-  std::unique_ptr<base::SharedMemory> shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(json_message));
-  if (!shared_memory) {
+  auto shm_mapping =
+      GetReadOnlySharedMemoryMappingFromMojoHandle(std::move(json_message));
+  if (!shm_mapping.IsValid()) {
     LOG(ERROR) << "Failed to read data from mojo handle";
     std::move(callback).Run(mojo::ScopedHandle() /* response_json_message */);
     return;
   }
-  base::StringPiece json_message_content(
-      static_cast<const char*>(shared_memory->memory()),
-      shared_memory->mapped_size());
+  base::StringPiece json_message_content(shm_mapping.GetMemoryAs<const char>(),
+                                         shm_mapping.mapped_size());
 
   std::string json_error_message;
   if (!IsJsonValid(json_message_content, &json_error_message)) {
@@ -127,7 +124,7 @@ void MojoService::SendWilcoDtcMessageToUi(
     const MojomSendWilcoDtcMessageToUiCallback& callback) {
   VLOG(1) << "SendWilcoDtcMessageToUi json_message=" << json_message;
   mojo::ScopedHandle json_message_mojo_handle =
-      CreateReadOnlySharedMemoryMojoHandle(json_message);
+      CreateReadOnlySharedMemoryRegionMojoHandle(json_message);
   if (!json_message_mojo_handle.is_valid()) {
     LOG(ERROR) << "Failed to create a mojo handle.";
     callback.Run(grpc::Status(grpc::StatusCode::UNKNOWN,
@@ -148,7 +145,8 @@ void MojoService::PerformWebRequest(
     const std::string& request_body,
     const MojomPerformWebRequestCallback& callback) {
   DCHECK(client_ptr_);
-  mojo::ScopedHandle url_handle = CreateReadOnlySharedMemoryMojoHandle(url);
+  mojo::ScopedHandle url_handle =
+      CreateReadOnlySharedMemoryRegionMojoHandle(url);
   if (!url_handle.is_valid()) {
     LOG(ERROR) << "Failed to create a mojo handle.";
     callback.Run(MojomWilcoDtcSupportdWebRequestStatus::kNetworkError, 0,
@@ -158,7 +156,8 @@ void MojoService::PerformWebRequest(
 
   std::vector<mojo::ScopedHandle> header_handles;
   for (const auto& header : headers) {
-    header_handles.push_back(CreateReadOnlySharedMemoryMojoHandle(header));
+    header_handles.push_back(
+        CreateReadOnlySharedMemoryRegionMojoHandle(header));
     if (!header_handles.back().is_valid()) {
       LOG(ERROR) << "Failed to create a mojo handle.";
       callback.Run(MojomWilcoDtcSupportdWebRequestStatus::kNetworkError, 0,
@@ -167,7 +166,7 @@ void MojoService::PerformWebRequest(
     }
   }
   mojo::ScopedHandle request_body_handle =
-      CreateReadOnlySharedMemoryMojoHandle(request_body);
+      CreateReadOnlySharedMemoryRegionMojoHandle(request_body);
   // Invalid handle for an empty |request_body| does not cause an error.
   if (!request_body.empty() && !request_body_handle.is_valid()) {
     LOG(ERROR) << "Failed to create a mojo handle.";

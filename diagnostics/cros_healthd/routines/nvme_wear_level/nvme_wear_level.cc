@@ -88,8 +88,8 @@ void NvmeWearLevelRoutine::PopulateStatusUpdate(
     // raw data with output.
     if (status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kPassed &&
         status_ != mojo_ipc::DiagnosticRoutineStatusEnum::kCancelled) {
-      response->output =
-          CreateReadOnlySharedMemoryMojoHandle("Raw debugd data: " + output_);
+      response->output = CreateReadOnlySharedMemoryRegionMojoHandle(
+          "Raw debugd data: " + output_);
     }
   }
 }

@@ -23,6 +23,7 @@ eventfd2: 1
 execve: 1
 exit: 1
 exit_group: 1
+fallocate: 1
 fcntl: 1
 fstat: 1
 ftruncate: 1

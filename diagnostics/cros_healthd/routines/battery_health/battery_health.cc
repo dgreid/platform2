@@ -128,7 +128,7 @@ void BatteryHealthRoutine::PopulateStatusUpdate(
     for (const auto& key_val : battery_health_log_)
       output += key_val.first + ": " + key_val.second + "\n";
     response->output =
-        CreateReadOnlySharedMemoryMojoHandle(base::StringPiece(output));
+        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output));
   }
 }
 

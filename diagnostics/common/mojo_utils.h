@@ -5,22 +5,20 @@
 #ifndef DIAGNOSTICS_COMMON_MOJO_UTILS_H_
 #define DIAGNOSTICS_COMMON_MOJO_UTILS_H_
 
-#include <memory>
-
-#include <base/memory/shared_memory.h>
+#include <base/memory/read_only_shared_memory_region.h>
 #include <base/strings/string_piece.h>
 #include <mojo/public/cpp/system/handle.h>
 
 namespace diagnostics {
 
 // Allows to get access to the buffer in read only shared memory. It converts
-// mojo::Handle to base::SharedMemory.
+// mojo::Handle to base::ReadOnlySharedMemoryRegion.
 //
 // |handle| must be a valid mojo handle of the non-empty buffer in the shared
 // memory.
 //
-// Returns nullptr if error.
-std::unique_ptr<base::SharedMemory> GetReadOnlySharedMemoryFromMojoHandle(
+// Returns invalid |base::ReadOnlySharedMemoryMapping| if error.
+base::ReadOnlySharedMemoryMapping GetReadOnlySharedMemoryMappingFromMojoHandle(
     mojo::ScopedHandle handle);
 
 // Allocates buffer in shared memory, copies |content| to the buffer and
@@ -29,7 +27,7 @@ std::unique_ptr<base::SharedMemory> GetReadOnlySharedMemoryFromMojoHandle(
 // Allocated shared memory is read only for another process.
 //
 // Returns invalid |mojo::ScopedHandle| if error happened or |content| is empty.
-mojo::ScopedHandle CreateReadOnlySharedMemoryMojoHandle(
+mojo::ScopedHandle CreateReadOnlySharedMemoryRegionMojoHandle(
     base::StringPiece content);
 
 }  // namespace diagnostics

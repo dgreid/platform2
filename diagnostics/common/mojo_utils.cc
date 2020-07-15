@@ -10,60 +10,64 @@
 #include <utility>
 
 #include <base/files/file.h>
-#include <base/memory/shared_memory_handle.h>
+#include <base/posix/eintr_wrapper.h>
 #include <mojo/public/c/system/types.h>
 #include <mojo/public/cpp/system/platform_handle.h>
 
 namespace diagnostics {
 
-std::unique_ptr<base::SharedMemory> GetReadOnlySharedMemoryFromMojoHandle(
+base::ReadOnlySharedMemoryMapping GetReadOnlySharedMemoryMappingFromMojoHandle(
     mojo::ScopedHandle handle) {
   base::PlatformFile platform_file;
   auto result = mojo::UnwrapPlatformFile(std::move(handle), &platform_file);
   if (result != MOJO_RESULT_OK) {
-    return nullptr;
+    return base::ReadOnlySharedMemoryMapping();
   }
 
   const int fd(HANDLE_EINTR(dup(platform_file)));
   if (fd < 0) {
-    return nullptr;
+    return base::ReadOnlySharedMemoryMapping();
   }
 
   const int64_t file_size = base::File(fd).GetLength();
   if (file_size <= 0) {
-    return nullptr;
+    return base::ReadOnlySharedMemoryMapping();
   }
 
-  auto shared_memory = std::make_unique<base::SharedMemory>(
-      base::SharedMemoryHandle(
-          base::FileDescriptor(platform_file, true /* iauto_close */),
-          file_size, base::UnguessableToken::Create()),
-      true /* read_only */);
-
-  if (!shared_memory->Map(file_size)) {
-    return nullptr;
-  }
-  return shared_memory;
+  // Use of base::subtle::PlatformSharedMemoryRegion is necessary on process
+  // boundaries to converting between SharedMemoryRegion and its handle (fd).
+  base::ReadOnlySharedMemoryRegion shm_region =
+      base::ReadOnlySharedMemoryRegion::Deserialize(
+          base::subtle::PlatformSharedMemoryRegion::Take(
+              base::subtle::ScopedFDPair(base::ScopedFD(platform_file),
+                                         base::ScopedFD()),
+              base::subtle::PlatformSharedMemoryRegion::Mode::kReadOnly,
+              file_size, base::UnguessableToken::Create()));
+  return shm_region.Map();
 }
 
-mojo::ScopedHandle CreateReadOnlySharedMemoryMojoHandle(
+mojo::ScopedHandle CreateReadOnlySharedMemoryRegionMojoHandle(
     base::StringPiece content) {
   if (content.empty())
     return mojo::ScopedHandle();
-  base::SharedMemory shared_memory;
-  base::SharedMemoryCreateOptions options;
-  options.size = content.length();
-  options.share_read_only = true;
-  if (!shared_memory.Create(base::SharedMemoryCreateOptions(options)) ||
-      !shared_memory.Map(content.length())) {
+  base::MappedReadOnlyRegion region_mapping =
+      base::ReadOnlySharedMemoryRegion::Create(content.length());
+  base::ReadOnlySharedMemoryRegion read_only_region =
+      std::move(region_mapping.region);
+  base::WritableSharedMemoryMapping writable_mapping =
+      std::move(region_mapping.mapping);
+  if (!read_only_region.IsValid() || !writable_mapping.IsValid()) {
     return mojo::ScopedHandle();
   }
-  memcpy(shared_memory.memory(), content.data(), content.length());
-  base::SharedMemoryHandle handle = shared_memory.GetReadOnlyHandle();
-  if (!handle.IsValid()) {
-    return mojo::ScopedHandle();
-  }
-  return mojo::WrapPlatformFile(handle.GetHandle());
+  memcpy(writable_mapping.GetMemoryAs<char>(), content.data(),
+         content.length());
+
+  // Use of base::subtle::PlatformSharedMemoryRegion is necessary on process
+  // boundaries to converting between SharedMemoryRegion and its handle (fd).
+  base::subtle::PlatformSharedMemoryRegion platform_shm =
+      base::ReadOnlySharedMemoryRegion::TakeHandleForSerialization(
+          std::move(read_only_region));
+  return mojo::WrapPlatformFile(platform_shm.PassPlatformHandle().fd.release());
 }
 
 }  // namespace diagnostics

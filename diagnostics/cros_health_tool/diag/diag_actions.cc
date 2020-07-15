@@ -278,13 +278,13 @@ bool DiagActions::PollRoutineAndProcessResult() {
   // in some form. Print the update to the console to let the user know.
   std::cout << "Progress: " << response->progress_percent << std::endl;
   if (response->output.is_valid()) {
-    auto shared_memory = diagnostics::GetReadOnlySharedMemoryFromMojoHandle(
-        std::move(response->output));
-    if (shared_memory) {
+    auto shm_mapping =
+        diagnostics::GetReadOnlySharedMemoryMappingFromMojoHandle(
+            std::move(response->output));
+    if (shm_mapping.IsValid()) {
       std::cout << "Output: "
-                << std::string(
-                       static_cast<const char*>(shared_memory->memory()),
-                       shared_memory->mapped_size())
+                << std::string(shm_mapping.GetMemoryAs<const char>(),
+                               shm_mapping.mapped_size())
                 << std::endl;
     } else {
       LOG(ERROR) << "Failed to read output.";

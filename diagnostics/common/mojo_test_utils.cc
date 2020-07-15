@@ -83,10 +83,11 @@ bool FakeMojoFdGenerator::IsDuplicateFd(int another_fd) const {
 std::string GetStringFromMojoHandle(mojo::ScopedHandle handle) {
   if (!handle.is_valid())
     return "";
-  auto shared_memory = GetReadOnlySharedMemoryFromMojoHandle(std::move(handle));
-  DCHECK(shared_memory);
-  return std::string(static_cast<const char*>(shared_memory->memory()),
-                     shared_memory->mapped_size());
+  auto shm_mapping =
+      GetReadOnlySharedMemoryMappingFromMojoHandle(std::move(handle));
+  DCHECK(shm_mapping.IsValid());
+  return std::string(shm_mapping.GetMemoryAs<const char>(),
+                     shm_mapping.mapped_size());
 }
 
 }  // namespace diagnostics

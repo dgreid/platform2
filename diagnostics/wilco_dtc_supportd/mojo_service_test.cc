@@ -94,7 +94,7 @@ TEST_F(MojoServiceTest, SendWilcoDtcMessageToUi) {
           Invoke([kJsonMessageFromUi](
                      MockMojoClient::SendWilcoDtcMessageToUiCallback callback) {
             std::move(callback).Run(
-                CreateReadOnlySharedMemoryMojoHandle(kJsonMessageFromUi));
+                CreateReadOnlySharedMemoryRegionMojoHandle(kJsonMessageFromUi));
           })));
 
   base::RunLoop run_loop;
@@ -144,7 +144,7 @@ TEST_F(MojoServiceTest, PerformWebRequest) {
                      MockMojoClient::MojoPerformWebRequestCallback callback) {
             std::move(callback).Run(
                 kWebRequestStatus, kHttpStatusOk,
-                CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
+                CreateReadOnlySharedMemoryRegionMojoHandle(kBodyResponse));
           })));
 
   base::RunLoop run_loop;

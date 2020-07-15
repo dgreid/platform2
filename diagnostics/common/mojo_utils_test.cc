@@ -27,29 +27,30 @@ class MojoUtilsTest : public testing::Test {
 TEST_F(MojoUtilsTest, CreateMojoHandleAndRetrieveContent) {
   const base::StringPiece content("{\"key\": \"value\"}");
 
-  mojo::ScopedHandle handle = CreateReadOnlySharedMemoryMojoHandle(content);
+  mojo::ScopedHandle handle =
+      CreateReadOnlySharedMemoryRegionMojoHandle(content);
   EXPECT_TRUE(handle.is_valid());
 
-  std::unique_ptr<base::SharedMemory> shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(handle));
-  ASSERT_TRUE(shared_memory);
+  auto shm_mapping =
+      GetReadOnlySharedMemoryMappingFromMojoHandle(std::move(handle));
+  ASSERT_TRUE(shm_mapping.IsValid());
 
-  base::StringPiece actual(static_cast<char*>(shared_memory->memory()),
-                           shared_memory->mapped_size());
+  base::StringPiece actual(shm_mapping.GetMemoryAs<char>(),
+                           shm_mapping.mapped_size());
   EXPECT_EQ(content, actual);
 }
 
-TEST_F(MojoUtilsTest, GetReadOnlySharedMemoryFromMojoInvalidHandle) {
+TEST_F(MojoUtilsTest, GetReadOnlySharedMemoryRegionFromMojoInvalidHandle) {
   mojo::ScopedHandle handle;
   EXPECT_FALSE(handle.is_valid());
 
-  std::unique_ptr<base::SharedMemory> shared_memory =
-      GetReadOnlySharedMemoryFromMojoHandle(std::move(handle));
-  EXPECT_FALSE(shared_memory);
+  auto shm_mapping =
+      GetReadOnlySharedMemoryMappingFromMojoHandle(std::move(handle));
+  EXPECT_FALSE(shm_mapping.IsValid());
 }
 
 TEST_F(MojoUtilsTest, CreateReadOnlySharedMemoryFromEmptyContent) {
-  mojo::ScopedHandle handle = CreateReadOnlySharedMemoryMojoHandle("");
+  mojo::ScopedHandle handle = CreateReadOnlySharedMemoryRegionMojoHandle("");
   // Cannot create valid handle using empty content line.
   EXPECT_FALSE(handle.is_valid());
 }

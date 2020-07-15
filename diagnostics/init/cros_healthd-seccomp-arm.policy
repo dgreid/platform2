@@ -76,6 +76,7 @@ getsockname: 1
 statfs: 1
 ftruncate: 1
 ftruncate64: 1
+fallocate: 1
 shmget: 1
 shmat: 1
 setsid: 1

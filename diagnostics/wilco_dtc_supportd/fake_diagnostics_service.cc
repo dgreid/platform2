@@ -150,7 +150,7 @@ void FakeDiagnosticsService::SetInteractiveUpdate(
     const std::string& output) {
   routine_update_response_.progress_percent = progress_percent;
   routine_update_response_.output =
-      CreateReadOnlySharedMemoryMojoHandle(output);
+      CreateReadOnlySharedMemoryRegionMojoHandle(output);
   mojo_ipc::InteractiveRoutineUpdate interactive_update;
   interactive_update.user_message = user_message;
   routine_update_response_.routine_update_union->set_interactive_update(
@@ -164,7 +164,7 @@ void FakeDiagnosticsService::SetNonInteractiveUpdate(
     const std::string& output) {
   routine_update_response_.progress_percent = progress_percent;
   routine_update_response_.output =
-      CreateReadOnlySharedMemoryMojoHandle(output);
+      CreateReadOnlySharedMemoryRegionMojoHandle(output);
   mojo_ipc::NonInteractiveRoutineUpdate noninteractive_update;
   noninteractive_update.status = status;
   noninteractive_update.status_message = status_message;

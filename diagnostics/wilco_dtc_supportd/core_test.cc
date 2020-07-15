@@ -745,14 +745,12 @@ class BootstrappedCoreTest : public StartedCoreTest {
         [](const base::Closure& callback,
            const std::string& expected_response_json_message,
            mojo::ScopedHandle response_json_message_handle) {
-          std::unique_ptr<base::SharedMemory> shared_memory =
-              GetReadOnlySharedMemoryFromMojoHandle(
-                  std::move(response_json_message_handle));
-          ASSERT_TRUE(shared_memory);
-          ASSERT_EQ(
-              expected_response_json_message,
-              std::string(static_cast<const char*>(shared_memory->memory()),
-                          shared_memory->mapped_size()));
+          auto shm_mapping = GetReadOnlySharedMemoryMappingFromMojoHandle(
+              std::move(response_json_message_handle));
+          ASSERT_TRUE(shm_mapping.IsValid());
+          ASSERT_EQ(expected_response_json_message,
+                    std::string(shm_mapping.GetMemoryAs<const char>(),
+                                shm_mapping.mapped_size()));
           callback.Run();
         },
         callback, expected_response_json_message);
@@ -915,7 +913,7 @@ TEST_F(BootstrappedCoreTest, SendWilcoDtcMessageToUi) {
           Invoke([kFakeMessageFromUi](
                      base::OnceCallback<void(mojo::ScopedHandle)> callback) {
             std::move(callback).Run(
-                CreateReadOnlySharedMemoryMojoHandle(kFakeMessageFromUi));
+                CreateReadOnlySharedMemoryRegionMojoHandle(kFakeMessageFromUi));
           })));
 
   std::unique_ptr<grpc_api::SendMessageToUiResponse> response;
@@ -1024,7 +1022,7 @@ TEST_F(BootstrappedCoreTest, PerformWebRequestToBrowser) {
                        MockMojoClient::MojoPerformWebRequestCallback callback) {
               std::move(callback).Run(
                   MojomWilcoDtcSupportdWebRequestStatus::kOk, kHttpStatusOk,
-                  CreateReadOnlySharedMemoryMojoHandle(kBodyResponse));
+                  CreateReadOnlySharedMemoryRegionMojoHandle(kBodyResponse));
             })));
     fake_wilco_dtc()->PerformWebRequest(
         request, MakeAsyncResponseWriter(run_loop.QuitClosure(), &response));

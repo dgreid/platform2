@@ -199,12 +199,12 @@ TEST_F(BatteryHealthRoutineTest, GoodParameters) {
   base::StringPairs actual_output_pairs;
   ASSERT_TRUE(base::SplitStringIntoKeyValuePairs(ConstructOutput(), ':', '\n',
                                                  &expected_output_pairs));
-  auto shared_memory = diagnostics::GetReadOnlySharedMemoryFromMojoHandle(
+  auto shm_mapping = diagnostics::GetReadOnlySharedMemoryMappingFromMojoHandle(
       std::move(update()->output));
-  ASSERT_TRUE(shared_memory);
+  ASSERT_TRUE(shm_mapping.IsValid());
   ASSERT_TRUE(base::SplitStringIntoKeyValuePairs(
-      base::StringPiece(static_cast<const char*>(shared_memory->memory()),
-                        shared_memory->mapped_size()),
+      base::StringPiece(shm_mapping.GetMemoryAs<const char>(),
+                        shm_mapping.mapped_size()),
       ':', '\n', &actual_output_pairs));
   EXPECT_THAT(actual_output_pairs,
               UnorderedElementsAreArray(expected_output_pairs));

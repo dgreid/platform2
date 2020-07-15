@@ -123,7 +123,7 @@ void BatteryDischargeRoutine::PopulateStatusUpdate(
   response->progress_percent = progress_percent_;
   if (include_output) {
     response->output =
-        CreateReadOnlySharedMemoryMojoHandle(base::StringPiece(output_));
+        CreateReadOnlySharedMemoryRegionMojoHandle(base::StringPiece(output_));
   }
 }
 

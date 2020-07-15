@@ -52,8 +52,8 @@ bool FakeBrowser::BootstrapMojoConnection(
 bool FakeBrowser::SendUiMessageToWilcoDtc(
     const std::string& json_message,
     const base::Callback<void(mojo::ScopedHandle)>& callback) {
-  mojo::ScopedHandle handle =
-      CreateReadOnlySharedMemoryMojoHandle(base::StringPiece(json_message));
+  mojo::ScopedHandle handle = CreateReadOnlySharedMemoryRegionMojoHandle(
+      base::StringPiece(json_message));
   if (!handle.is_valid()) {
     return false;
   }
