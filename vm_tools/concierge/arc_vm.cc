@@ -238,7 +238,6 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--video-decoder",   ""},
     { "--wayland-sock",    kWaylandSocket },
     { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
-    { "--wayland-dmabuf",  "" },
     { "--serial",          "type=syslog,hardware=serial,num=1,earlycon=true" },
     { "--serial",          "type=syslog,hardware=virtio-console,num=1,"
                            "console=true" },
@@ -254,6 +253,9 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--params",         base::JoinString(params, " ") },
   };
   // clang-format on
+
+  if (USE_CROSVM_WL_DMABUF)
+    args.emplace_back("--wayland-dmabuf", "");
 
   for (const auto& fd : tap_fds) {
     args.emplace_back("--tap-fd", std::to_string(fd.get()));
