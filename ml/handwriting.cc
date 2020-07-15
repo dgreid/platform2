@@ -13,7 +13,8 @@
 namespace ml {
 
 namespace {
-constexpr char kHandwritingLibraryPath[] = "/usr/lib64/libhandwriting.so";
+constexpr char kHandwritingLibraryPath[] =
+    "/opt/google/chrome/ml_models/handwriting/lib64/libhandwriting.so";
 
 // Returns whether HandwritingLibrary is supported.
 constexpr bool IsHandwritingLibrarySupported() {
