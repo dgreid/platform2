@@ -15,6 +15,7 @@
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/system/system_config.h"
+#include "diagnostics/cros_healthd/system/system_utilities_impl.h"
 
 namespace diagnostics {
 
@@ -54,6 +55,7 @@ bool Context::Initialize() {
   }
 
   system_config_ = std::make_unique<SystemConfig>(cros_config_.get());
+  system_utils_ = std::make_unique<SystemUtilitiesImpl>();
 
   // Create and connect the adapter for the root-level executor.
   executor_ = std::make_unique<ExecutorAdapter>();
@@ -88,6 +90,10 @@ SystemConfigInterface* Context::system_config() const {
 
 ExecutorAdapter* Context::executor() const {
   return executor_.get();
+}
+
+SystemUtilities* Context::system_utils() const {
+  return system_utils_.get();
 }
 
 }  // namespace diagnostics

@@ -19,6 +19,7 @@
 #include "diagnostics/common/system/powerd_adapter.h"
 #include "diagnostics/cros_healthd/executor/executor_adapter.h"
 #include "diagnostics/cros_healthd/system/system_config_interface.h"
+#include "diagnostics/cros_healthd/system/system_utilities.h"
 
 namespace org {
 namespace chromium {
@@ -73,6 +74,8 @@ class Context {
   // Use the object returned by executor() to make calls to the root-level
   // executor.
   ExecutorAdapter* executor() const;
+  // Use the object returned by system_utils() to access system utilities.
+  SystemUtilities* system_utils() const;
 
  private:
   // Allows MockContext to override the default helper objects.
@@ -100,6 +103,7 @@ class Context {
   std::unique_ptr<PowerdAdapter> powerd_adapter_;
   std::unique_ptr<SystemConfigInterface> system_config_;
   std::unique_ptr<ExecutorAdapter> executor_;
+  std::unique_ptr<SystemUtilities> system_utils_;
 };
 
 }  // namespace diagnostics
