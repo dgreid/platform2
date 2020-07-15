@@ -21,6 +21,7 @@
 #include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
 #include "mojo/cros_healthd.mojom.h"
@@ -44,6 +45,7 @@ class CrosHealthdMojoService final
   // |battery_fetcher| - BatteryFetcher implementation.
   // |bluetooth_fetcher| - BluetoothFetcher implementation.
   // |cached_vpd_fetcher| - CachedVpdFetcher implementation.
+  // |cpu_fetcher| - CpuFetcher implementation.
   // |disk_fetcher| - DiskFetcher implementation.
   // |fan_fetcher| - FanFetcher implementation.
   // |bluetooth_events| - BluetoothEvents implementation.
@@ -54,6 +56,7 @@ class CrosHealthdMojoService final
                          BatteryFetcher* battery_fetcher,
                          BluetoothFetcher* bluetooth_fetcher,
                          CachedVpdFetcher* cached_vpd_fetcher,
+                         CpuFetcher* cpu_fetcher,
                          DiskFetcher* disk_fetcher,
                          FanFetcher* fan_fetcher,
                          BluetoothEvents* bluetooth_events,
@@ -154,6 +157,8 @@ class CrosHealthdMojoService final
   BluetoothFetcher* bluetooth_fetcher_;
   // Unowned. The cached VPD fetcher should outlive this instance.
   CachedVpdFetcher* cached_vpd_fetcher_;
+  // Unowned. The CPU fetcher should outlive this instance.
+  CpuFetcher* cpu_fetcher_;
   // Unowned. The disk fetcher should outlive this instance.
   DiskFetcher* disk_fetcher_;
   // Unowned. The fan fetcher should outlive this instance.

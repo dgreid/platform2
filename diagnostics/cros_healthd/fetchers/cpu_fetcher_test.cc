@@ -18,6 +18,7 @@
 
 #include "diagnostics/common/file_test_utils.h"
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
+#include "diagnostics/cros_healthd/system/mock_context.h"
 #include "diagnostics/cros_healthd/utils/cpu_file_helpers.h"
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
 #include "mojo/cros_healthd_probe.mojom.h"
@@ -149,12 +150,14 @@ void VerifyLogicalCpu(
 
 }  // namespace
 
-class CpuUtilsTest : public testing::Test {
+class CpuFetcherTest : public testing::Test {
  protected:
-  CpuUtilsTest() = default;
+  CpuFetcherTest() = default;
 
   void SetUp() override {
     ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
+
+    ASSERT_TRUE(mock_context_.Initialize());
 
     // Set up valid files for two physical CPUs, the first of which has two
     // logical CPUs. Individual tests are expected to override this
@@ -194,6 +197,10 @@ class CpuUtilsTest : public testing::Test {
   }
 
   const base::FilePath& temp_dir_path() const { return temp_dir_.GetPath(); }
+
+  mojo_ipc::CpuResultPtr FetchCpuInfo() {
+    return cpu_fetcher_.FetchCpuInfo(temp_dir_path());
+  }
 
   const std::vector<std::pair<std::string, uint64_t>>& GetCStateVector(
       const std::string& logical_id) {
@@ -262,6 +269,8 @@ class CpuUtilsTest : public testing::Test {
   }
 
   base::ScopedTempDir temp_dir_;
+  MockContext mock_context_;
+  CpuFetcher cpu_fetcher_{&mock_context_};
   // Records the next C-state file to be written.
   std::map<std::string, int> c_states_written = {
       {kFirstLogicalId, 0}, {kSecondLogicalId, 0}, {kThirdLogicalId, 0}};
@@ -276,8 +285,8 @@ class CpuUtilsTest : public testing::Test {
 };
 
 // Test that CPU info can be read when it exists.
-TEST_F(CpuUtilsTest, TestFetchCpuInfo) {
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+TEST_F(CpuFetcherTest, TestFetchCpuInfo) {
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_cpu_info());
   const auto& cpu_info = cpu_result->get_cpu_info();
@@ -306,11 +315,11 @@ TEST_F(CpuUtilsTest, TestFetchCpuInfo) {
 }
 
 // Test that we handle a cpuinfo file for processors without physical_ids.
-TEST_F(CpuUtilsTest, NoPhysicalIdCpuinfoFile) {
+TEST_F(CpuFetcherTest, NoPhysicalIdCpuinfoFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcCpuInfoPath(temp_dir_path()),
                                            kNoPhysicalIdCpuinfoContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_cpu_info());
   const auto& cpu_info = cpu_result->get_cpu_info();
@@ -342,42 +351,42 @@ TEST_F(CpuUtilsTest, NoPhysicalIdCpuinfoFile) {
 }
 
 // Test that we handle a missing cpuinfo file.
-TEST_F(CpuUtilsTest, MissingCpuinfoFile) {
+TEST_F(CpuFetcherTest, MissingCpuinfoFile) {
   ASSERT_TRUE(base::DeleteFile(GetProcCpuInfoPath(temp_dir_path()), false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted cpuinfo file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedCpuinfoFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedCpuinfoFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcCpuInfoPath(temp_dir_path()),
                                            kBadCpuinfoContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
 }
 
 // Test that we handle a missing stat file.
-TEST_F(CpuUtilsTest, MissingStatFile) {
+TEST_F(CpuFetcherTest, MissingStatFile) {
   ASSERT_TRUE(base::DeleteFile(GetProcStatPath(temp_dir_path()), false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted stat file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedStatFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedStatFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcStatPath(temp_dir_path()),
                                            kBadStatContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
@@ -385,154 +394,154 @@ TEST_F(CpuUtilsTest, IncorrectlyFormattedStatFile) {
 
 // Test that we handle a stat file which is missing an entry for an existing
 // logical CPU.
-TEST_F(CpuUtilsTest, StatFileMissingLogicalCpuEntry) {
+TEST_F(CpuFetcherTest, StatFileMissingLogicalCpuEntry) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(GetProcStatPath(temp_dir_path()),
                                            kMissingLogicalCpuStatContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
 }
 
 // Test that we handle a missing present file.
-TEST_F(CpuUtilsTest, MissingPresentFile) {
+TEST_F(CpuFetcherTest, MissingPresentFile) {
   ASSERT_TRUE(base::DeleteFile(
       GetCpuDirectoryPath(temp_dir_path()).Append(kCpuPresentFile), false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted present file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedPresentFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedPresentFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       GetCpuDirectoryPath(temp_dir_path()).Append(kCpuPresentFile),
       kBadPresentContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kParseError);
 }
 
 // Test that we handle a missing cpuinfo_max_freq file.
-TEST_F(CpuUtilsTest, MissingCpuinfoMaxFreqFile) {
+TEST_F(CpuFetcherTest, MissingCpuinfoMaxFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kCpuinfoMaxFreqFile),
                        false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted cpuinfo_max_freq file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedCpuinfoMaxFreqFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedCpuinfoMaxFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
           .Append(kCpuinfoMaxFreqFile),
       kNonIntegralFileContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle a missing scaling_max_freq file.
-TEST_F(CpuUtilsTest, MissingScalingMaxFreqFile) {
+TEST_F(CpuFetcherTest, MissingScalingMaxFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kCpuScalingMaxFreqFile),
                        false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted scaling_max_freq file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedScalingMaxFreqFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedScalingMaxFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
           .Append(kCpuScalingMaxFreqFile),
       kNonIntegralFileContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle a missing scaling_cur_freq file.
-TEST_F(CpuUtilsTest, MissingScalingCurFreqFile) {
+TEST_F(CpuFetcherTest, MissingScalingCurFreqFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kCpuScalingCurFreqFile),
                        false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted scaling_cur_freq file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedScalingCurFreqFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedScalingCurFreqFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       GetCpuFreqDirectoryPath(temp_dir_path(), kFirstLogicalId)
           .Append(kCpuScalingCurFreqFile),
       kNonIntegralFileContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle a missing C-state name file.
-TEST_F(CpuUtilsTest, MissingCStateNameFile) {
+TEST_F(CpuFetcherTest, MissingCStateNameFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCStateDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kFirstCStateDir)
                            .Append(kCStateNameFile),
                        false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle a missing C-state time file.
-TEST_F(CpuUtilsTest, MissingCStateTimeFile) {
+TEST_F(CpuFetcherTest, MissingCStateTimeFile) {
   ASSERT_TRUE(
       base::DeleteFile(GetCStateDirectoryPath(temp_dir_path(), kFirstLogicalId)
                            .Append(kFirstCStateDir)
                            .Append(kCStateTimeFile),
                        false));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);
 }
 
 // Test that we handle an incorrectly-formatted C-state time file.
-TEST_F(CpuUtilsTest, IncorrectlyFormattedCStateTimeFile) {
+TEST_F(CpuFetcherTest, IncorrectlyFormattedCStateTimeFile) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
       GetCStateDirectoryPath(temp_dir_path(), kFirstLogicalId)
           .Append(kFirstCStateDir)
           .Append(kCStateTimeFile),
       kNonIntegralFileContents));
 
-  auto cpu_result = FetchCpuInfo(temp_dir_path());
+  auto cpu_result = FetchCpuInfo();
 
   ASSERT_TRUE(cpu_result->is_error());
   EXPECT_EQ(cpu_result->get_error()->type, mojo_ipc::ErrorType::kFileReadError);

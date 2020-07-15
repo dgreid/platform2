@@ -24,6 +24,7 @@
 #include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
 #include "diagnostics/cros_healthd/system/context.h"
@@ -91,6 +92,8 @@ class CrosHealthd final
   // |cached_vpd_fetcher_| is responsible for collecting cached VPD metrics and
   // uses |cros_config_| to determine which of those metrics a device supports.
   std::unique_ptr<CachedVpdFetcher> cached_vpd_fetcher_;
+  // |cpu_fetcher_| is responsible for collecting CPU information.
+  std::unique_ptr<CpuFetcher> cpu_fetcher_;
   // |disk_fetcher_| is responsible for collecting disk information.
   std::unique_ptr<DiskFetcher> disk_fetcher_;
   // |fan_fetcher_| is responsible for collecting fan information using

@@ -24,6 +24,7 @@
 #include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/cached_vpd_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
@@ -127,9 +128,7 @@ class CrosHealthdMojoServiceTest : public testing::Test {
  protected:
   CrosHealthdMojoServiceTest() { mojo::core::Init(); }
 
-  void SetUp() override {
-    ASSERT_TRUE(mock_context_.Initialize());
-  }
+  void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
   CrosHealthdMojoService* service() { return &service_; }
 
@@ -143,16 +142,17 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   BatteryFetcher battery_fetcher_{&mock_context_};
   BluetoothFetcher bluetooth_fetcher_{&mock_context_};
   CachedVpdFetcher cached_vpd_fetcher_{&mock_context_};
+  CpuFetcher cpu_fetcher_{&mock_context_};
   DiskFetcher disk_fetcher_;
   FanFetcher fan_fetcher_{&mock_context_};
   BluetoothEventsImpl bluetooth_events_{&mock_context_};
   LidEventsImpl lid_events_{&mock_context_};
   PowerEventsImpl power_events_{&mock_context_};
-  CrosHealthdMojoService service_{&backlight_fetcher_, &battery_fetcher_,
-                                  &bluetooth_fetcher_, &cached_vpd_fetcher_,
-                                  &disk_fetcher_,      &fan_fetcher_,
-                                  &bluetooth_events_,  &lid_events_,
-                                  &power_events_,      &routine_service_};
+  CrosHealthdMojoService service_{
+      &backlight_fetcher_,  &battery_fetcher_,  &bluetooth_fetcher_,
+      &cached_vpd_fetcher_, &cpu_fetcher_,      &disk_fetcher_,
+      &fan_fetcher_,        &bluetooth_events_, &lid_events_,
+      &power_events_,       &routine_service_};
 };
 
 // Test that we can request the battery capacity routine.

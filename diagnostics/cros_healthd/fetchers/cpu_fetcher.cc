@@ -11,6 +11,7 @@
 #include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
@@ -45,25 +46,6 @@ constexpr char kProcessorIdKey[] = "processor";
 
 // Regex used to parse /proc/stat.
 constexpr char kRelativeStatFileRegex[] = R"(cpu(\d+)\s+\d+ \d+ \d+ (\d+))";
-
-// Uses uname to obtain the CPU architecture.
-mojo_ipc::CpuArchitectureEnum GetArchitecture() {
-  struct utsname buf;
-  if (uname(&buf))
-    return mojo_ipc::CpuArchitectureEnum::kUnknown;
-
-  std::stringstream ss;
-  ss << buf.machine;
-  std::string machine = ss.str();
-  if (machine == kUnameMachineX86_64)
-    return mojo_ipc::CpuArchitectureEnum::kX86_64;
-  else if (machine == kUnameMachineAArch64)
-    return mojo_ipc::CpuArchitectureEnum::kAArch64;
-  else if (machine == kUnameMachineArmv7l)
-    return mojo_ipc::CpuArchitectureEnum::kArmv7l;
-
-  return mojo_ipc::CpuArchitectureEnum::kUnknown;
-}
 
 // Gets the time spent in each C-state for the logical processor whose ID is
 // |logical_id|. Returns base::nullopt if a required sysfs node was not found.
@@ -280,7 +262,14 @@ mojo_ipc::CpuResultPtr GetCpuInfoFromProcessorInfo(
 
 }  // namespace
 
-mojo_ipc::CpuResultPtr FetchCpuInfo(const base::FilePath& root_dir) {
+CpuFetcher::CpuFetcher(Context* context) : context_(context) {
+  DCHECK(context_);
+}
+
+CpuFetcher::~CpuFetcher() = default;
+
+mojo_ipc::CpuResultPtr CpuFetcher::FetchCpuInfo(
+    const base::FilePath& root_dir) {
   std::string stat_contents;
   auto stat_file = GetProcStatPath(root_dir);
   if (!ReadFileToString(stat_file, &stat_contents)) {
@@ -309,6 +298,24 @@ mojo_ipc::CpuResultPtr FetchCpuInfo(const base::FilePath& root_dir) {
       base::SPLIT_WANT_NONEMPTY);
   return GetCpuInfoFromProcessorInfo(processor_info, idle_times.value(),
                                      root_dir, GetArchitecture());
+}
+
+mojo_ipc::CpuArchitectureEnum CpuFetcher::GetArchitecture() {
+  struct utsname buf;
+  if (context_->system_utils()->Uname(&buf))
+    return mojo_ipc::CpuArchitectureEnum::kUnknown;
+
+  std::stringstream ss;
+  ss << buf.machine;
+  std::string machine = ss.str();
+  if (machine == kUnameMachineX86_64)
+    return mojo_ipc::CpuArchitectureEnum::kX86_64;
+  else if (machine == kUnameMachineAArch64)
+    return mojo_ipc::CpuArchitectureEnum::kAArch64;
+  else if (machine == kUnameMachineArmv7l)
+    return mojo_ipc::CpuArchitectureEnum::kArmv7l;
+
+  return mojo_ipc::CpuArchitectureEnum::kUnknown;
 }
 
 }  // namespace diagnostics
