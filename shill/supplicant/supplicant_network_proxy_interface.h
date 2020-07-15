@@ -5,8 +5,6 @@
 #ifndef SHILL_SUPPLICANT_SUPPLICANT_NETWORK_PROXY_INTERFACE_H_
 #define SHILL_SUPPLICANT_SUPPLICANT_NETWORK_PROXY_INTERFACE_H_
 
-#include "shill/key_value_store.h"
-
 namespace shill {
 
 // SupplicantNetworkProxyInterface declares only the subset of
@@ -16,7 +14,6 @@ class SupplicantNetworkProxyInterface {
   virtual ~SupplicantNetworkProxyInterface() = default;
 
   virtual bool SetEnabled(bool enabled) = 0;
-  virtual bool SetProperties(const KeyValueStore& props) = 0;
 };
 
 }  // namespace shill

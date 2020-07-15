@@ -35,7 +35,6 @@ SupplicantNetworkProxy::PropertySet::PropertySet(
     const PropertyChangedCallback& callback)
     : dbus::PropertySet(object_proxy, interface_name, callback) {
   RegisterProperty(kPropertyEnabled, &enabled);
-  RegisterProperty(kPropertyProperties, &properties);
 }
 
 SupplicantNetworkProxy::SupplicantNetworkProxy(
@@ -69,17 +68,6 @@ bool SupplicantNetworkProxy::SetEnabled(bool enabled) {
   SLOG(&network_proxy_->GetObjectPath(), 2) << __func__;
   if (!properties_->enabled.SetAndBlock(enabled)) {
     LOG(ERROR) << "Failed to SetEnabled: " << enabled;
-    return false;
-  }
-  return true;
-}
-
-bool SupplicantNetworkProxy::SetProperties(const KeyValueStore& props) {
-  SLOG(&network_proxy_->GetObjectPath(), 2) << __func__;
-  brillo::VariantDictionary dict =
-      KeyValueStore::ConvertToVariantDictionary(props);
-  if (!properties_->properties.SetAndBlock(dict)) {
-    LOG(ERROR) << "Failed to SetProperties";
     return false;
   }
   return true;

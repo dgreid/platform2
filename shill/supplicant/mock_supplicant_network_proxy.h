@@ -8,7 +8,6 @@
 #include <base/macros.h>
 #include <gmock/gmock.h>
 
-#include "shill/key_value_store.h"
 #include "shill/supplicant/supplicant_network_proxy_interface.h"
 
 namespace shill {
@@ -19,7 +18,6 @@ class MockSupplicantNetworkProxy : public SupplicantNetworkProxyInterface {
   ~MockSupplicantNetworkProxy() override;
 
   MOCK_METHOD(bool, SetEnabled, (bool), (override));
-  MOCK_METHOD(bool, SetProperties, (const KeyValueStore&), (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockSupplicantNetworkProxy);
