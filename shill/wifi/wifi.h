@@ -107,7 +107,6 @@ class Nl80211Message;
 class SupplicantEAPStateHandler;
 class SupplicantInterfaceProxyInterface;
 class SupplicantProcessProxyInterface;
-class TDLSManager;
 class WakeOnWiFiInterface;
 class WiFiProvider;
 class WiFiService;
@@ -164,7 +163,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
                 const std::string& parameter) override;
   void PropertiesChanged(const KeyValueStore& properties) override;
   void ScanDone(const bool& success) override;
-  void TDLSDiscoverResponse(const std::string& peer_address) override;
 
   // Called by WiFiService.
   virtual void ConnectTo(WiFiService* service, Error* error);
@@ -218,11 +216,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
 
   // Called by a WiFiService when it unloads to destroy its lease file.
   virtual void DestroyServiceLease(const WiFiService& service);
-
-  // Perform TDLS |operation| on |peer|.
-  std::string PerformTDLSOperation(const std::string& operation,
-                                   const std::string& peer,
-                                   Error* error) override;
 
   // Overridden from Device superclass.
   bool IsTrafficMonitorEnabled() const override;
@@ -724,8 +717,6 @@ class WiFi : public Device, public SupplicantEventDelegateInterface {
   uint32_t wiphy_index_;
 
   std::unique_ptr<WakeOnWiFiInterface> wake_on_wifi_;
-
-  std::unique_ptr<TDLSManager> tdls_manager_;
 
   // Netlink broadcast handler, for scan results.
   NetlinkManager::NetlinkMessageHandler netlink_handler_;

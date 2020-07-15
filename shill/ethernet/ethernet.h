@@ -80,7 +80,6 @@ class Ethernet
                 const std::string& parameter) override;
   void PropertiesChanged(const KeyValueStore& properties) override;
   void ScanDone(const bool& /*success*/) override;
-  void TDLSDiscoverResponse(const std::string& peer_address) override;
 #endif  // DISABLE_WIRED_8021X
 
   std::string GetStorageIdentifier() const override;

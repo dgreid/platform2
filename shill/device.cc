@@ -1334,12 +1334,6 @@ bool Device::SetIPFlag(IPAddress::Family family,
   return true;
 }
 
-string Device::PerformTDLSOperation(const string& /* operation */,
-                                    const string& /* peer */,
-                                    Error* /* error */) {
-  return "";
-}
-
 void Device::ResetByteCounters() {
   manager_->device_info()->GetByteCounts(
       interface_index_, &receive_byte_offset_, &transmit_byte_offset_);

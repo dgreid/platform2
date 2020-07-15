@@ -48,10 +48,6 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
   bool Roam(const std::string& addr) override;
   bool Scan(const KeyValueStore& args) override;
   bool SelectNetwork(const RpcIdentifier& network) override;
-  bool TDLSDiscover(const std::string& peer) override;
-  bool TDLSSetup(const std::string& peer) override;
-  bool TDLSStatus(const std::string& peer, std::string* status) override;
-  bool TDLSTeardown(const std::string& peer) override;
   bool EnableMacAddressRandomization(const std::vector<unsigned char>& mask,
                                      bool sched_scan) override;
   bool DisableMacAddressRandomization() override;
@@ -99,7 +95,6 @@ class SupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
   void NetworkSelected(const dbus::ObjectPath& network);
   void PropertiesChanged(const brillo::VariantDictionary& properties);
   void ScanDone(bool success);
-  void TDLSDiscoverResponse(const std::string& peer_address);
 
   // Callback invoked when the value of property |property_name| is changed.
   void OnPropertyChanged(const std::string& property_name);

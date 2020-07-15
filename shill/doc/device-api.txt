@@ -143,47 +143,7 @@ Methods		dict GetProperties()
 		string PerformTDLSOperation(string operation,
 					    string peer) [readwrite]
 
-			(WiFi only) Perform a TDLS operation on a peer
-			station.  The |peer| argument should be a mac
-			address specified in traditional colon-separated
-			hexidecimal notation, e.g., "aa:bb:cc:dd:ee:ff",
-			or an IPv4 address on the same subnet of this
-			device, e.g., "192.168.1.1".  The |operation|
-			parameter should be one of the following:
-
-				"Discover" : Perform TDLS discovery with |peer|.
-				"Setup" : Setup TDLS peering with |peer|.
-				"Status" : Return TDLS status for |peer|.
-				"Teardown" : Tear down TDLS peering with |peer|.
-
-			The method returns without an error if the operation
-			is initiated successfully with the supplicant, but
-			before it is clear whether the operation actually
-			succeeded.
-
-			All methods except "Status" return an empty string.
-			For "Status", the returned string can be one of:
-
-				"Connected" : The TDLS link is active.
-				"Disabled" : TDLS is disabled on this device.
-				"Disconnected" : The TDLS link has been
-						 disconnected.
-				"Nonexistent" : No information is known
-						about this TDLS peer.
-				"Unknown" : The TDLS link is in an unknown
-					    state.
-
-			Possible Errors:
-				[service].Error.InProgress
-					An IP-to-MAC address lookup is being
-					performed.  The caller should retry
-					this operation.
-				[service].Error.InvalidArguments
-					The |operation| is unknown or the
-					|peer| address is misformatted or
-					does not belong to the local subnet.
-				[service].Error.OperationFailed
-					The TDLS or ARP operation failed.
+			Deprecated.
 
 		void SetUsbEthernetMacAddressSource(string source)
 

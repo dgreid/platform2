@@ -311,10 +311,6 @@ void Ethernet::ScanDone(const bool& /*success*/) {
   NOTREACHED() << __func__ << " is not implented for Ethernet";
 }
 
-void Ethernet::TDLSDiscoverResponse(const std::string& peer_address) {
-  NOTREACHED() << __func__ << " is not implented for Ethernet";
-}
-
 EthernetEapProvider* Ethernet::GetEapProvider() {
   EthernetEapProvider* eap_provider = manager()->ethernet_eap_provider();
   CHECK(eap_provider);

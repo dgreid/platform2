@@ -67,7 +67,6 @@
 #include "shill/test_event_dispatcher.h"
 #include "shill/testing.h"
 #include "shill/wifi/mock_mac80211_monitor.h"
-#include "shill/wifi/mock_tdls_manager.h"
 #include "shill/wifi/mock_wake_on_wifi.h"
 #include "shill/wifi/mock_wifi_provider.h"
 #include "shill/wifi/mock_wifi_service.h"
@@ -1079,20 +1078,6 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
 
   bool SetBgscanSignalThreshold(const int32_t& threshold, Error* error) {
     return wifi_->SetBgscanSignalThreshold(threshold, error);
-  }
-
-  void SetTDLSManager(TDLSManager* tdls_manager) {
-    wifi_->tdls_manager_.reset(tdls_manager);
-  }
-
-  void TDLSDiscoverResponse(const string& peer_address) {
-    wifi_->TDLSDiscoverResponse(peer_address);
-  }
-
-  string PerformTDLSOperation(const string& operation,
-                              const string& peer,
-                              Error* error) {
-    return wifi_->PerformTDLSOperation(operation, peer, error);
   }
 
   void TimeoutPendingConnection() { wifi_->PendingTimeoutHandler(); }
@@ -3851,31 +3836,6 @@ TEST_F(WiFiMainTest, BackgroundScan) {
   event_dispatcher_
       ->DispatchPendingEvents();  // Launch UpdateScanStateAfterScanDone
   VerifyScanState(WiFi::kScanIdle, WiFi::kScanMethodNone);
-}
-
-TEST_F(WiFiMainTest, TDLSDiscoverResponse) {
-  const char kPeer[] = "peer";
-  MockTDLSManager* tdls_manager = new StrictMock<MockTDLSManager>();
-  SetTDLSManager(tdls_manager);
-
-  EXPECT_CALL(*tdls_manager, OnDiscoverResponseReceived(kPeer));
-  TDLSDiscoverResponse(kPeer);
-  Mock::VerifyAndClearExpectations(tdls_manager);
-}
-
-TEST_F(WiFiMainTest, PerformTDLSOperation) {
-  const char kPeerMac[] = "00:11:22:33:44:55";
-  MockTDLSManager* tdls_manager = new StrictMock<MockTDLSManager>();
-  SetTDLSManager(tdls_manager);
-
-  Error error;
-  // No address resolution is performed since MAC address is provided.
-  EXPECT_CALL(*tdls_manager,
-              PerformOperation(kPeerMac, kTDLSStatusOperation, &error))
-      .WillOnce(Return(kTDLSConnectedState));
-  EXPECT_EQ(kTDLSConnectedState,
-            PerformTDLSOperation(kTDLSStatusOperation, kPeerMac, &error));
-  EXPECT_TRUE(error.IsSuccess());
 }
 
 TEST_F(WiFiMainTest, OnNewWiphy) {

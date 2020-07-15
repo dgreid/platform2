@@ -53,7 +53,6 @@
 #include "shill/supplicant/wpa_supplicant.h"
 #include "shill/technology.h"
 #include "shill/wifi/mac80211_monitor.h"
-#include "shill/wifi/tdls_manager.h"
 #include "shill/wifi/wake_on_wifi.h"
 #include "shill/wifi/wifi_endpoint.h"
 #include "shill/wifi/wifi_provider.h"
@@ -270,7 +269,6 @@ void WiFi::Stop(Error* error, const EnabledStateChangedCallback& /*callback*/) {
   supplicant_interface_path_ = RpcIdentifier("");
   SetSupplicantInterfaceProxy(nullptr);
   pending_scan_results_.reset();
-  tdls_manager_.reset();
   current_service_ = nullptr;  // breaks a reference cycle
   pending_service_ = nullptr;  // breaks a reference cycle
   is_debugging_connection_ = false;
@@ -2585,11 +2583,8 @@ void WiFi::SetSupplicantInterfaceProxy(
     std::unique_ptr<SupplicantInterfaceProxyInterface> proxy) {
   if (proxy) {
     supplicant_interface_proxy_ = std::move(proxy);
-    tdls_manager_ = std::make_unique<TDLSManager>(
-        dispatcher(), supplicant_interface_proxy_.get(), link_name());
   } else {
     supplicant_interface_proxy_.reset();
-    tdls_manager_.reset();
   }
 }
 
@@ -3195,34 +3190,6 @@ void WiFi::StopRequestingStationInfo() {
   SLOG(this, 2) << "WiFi Device " << link_name() << ": " << __func__;
   request_station_info_callback_.Cancel();
   link_statistics_.Clear();
-}
-
-void WiFi::TDLSDiscoverResponse(const string& peer_address) {
-  LOG(INFO) << __func__ << " TDLS discover response from " << peer_address;
-
-  if (!tdls_manager_) {
-    LOG(ERROR) << "TDLS manager not setup - not connected to supplicant";
-    return;
-  }
-  tdls_manager_->OnDiscoverResponseReceived(peer_address);
-}
-
-string WiFi::PerformTDLSOperation(const string& operation,
-                                  const string& peer,
-                                  Error* error) {
-  SLOG(this, 2) << "TDLS command received: " << operation << " for peer "
-                << peer;
-  if (!tdls_manager_) {
-    LOG(ERROR) << "TDLS manager not setup - not connected to supplicant";
-    return "";
-  }
-
-  string peer_mac_address;
-  if (!ResolvePeerMacAddress(peer, &peer_mac_address, error)) {
-    return "";
-  }
-
-  return tdls_manager_->PerformOperation(peer_mac_address, operation, error);
 }
 
 // Traffic monitor is enabled for wifi.

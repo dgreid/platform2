@@ -106,10 +106,6 @@ SupplicantInterfaceProxy::SupplicantInterfaceProxy(
       base::Bind(&SupplicantInterfaceProxy::PropertiesChanged,
                  weak_factory_.GetWeakPtr()),
       on_connected_callback);
-  interface_proxy_->RegisterTDLSDiscoverResponseSignalHandler(
-      base::Bind(&SupplicantInterfaceProxy::TDLSDiscoverResponse,
-                 weak_factory_.GetWeakPtr()),
-      on_connected_callback);
 
   // Connect property signals and initialize cached values. Based on
   // recommendations from src/dbus/property.h.
@@ -326,50 +322,6 @@ bool SupplicantInterfaceProxy::DisableMacAddressRandomization() {
   return true;
 }
 
-bool SupplicantInterfaceProxy::TDLSDiscover(const string& peer) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << peer;
-  brillo::ErrorPtr error;
-  if (!interface_proxy_->TDLSDiscover(peer, &error)) {
-    LOG(ERROR) << "Failed to perform TDLS discover: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
-  }
-  return true;
-}
-
-bool SupplicantInterfaceProxy::TDLSSetup(const string& peer) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << peer;
-  brillo::ErrorPtr error;
-  if (!interface_proxy_->TDLSSetup(peer, &error)) {
-    LOG(ERROR) << "Failed to perform TDLS setup: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
-  }
-  return true;
-}
-
-bool SupplicantInterfaceProxy::TDLSStatus(const string& peer, string* status) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << peer;
-  brillo::ErrorPtr error;
-  if (!interface_proxy_->TDLSStatus(peer, status, &error)) {
-    LOG(ERROR) << "Failed to retrieve TDLS status: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
-  }
-  return true;
-}
-
-bool SupplicantInterfaceProxy::TDLSTeardown(const string& peer) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << peer;
-  brillo::ErrorPtr error;
-  if (!interface_proxy_->TDLSTeardown(peer, &error)) {
-    LOG(ERROR) << "Failed to perform TDLS teardown: " << error->GetCode() << " "
-               << error->GetMessage();
-    return false;
-  }
-  return true;
-}
-
 bool SupplicantInterfaceProxy::SetFastReauth(bool enabled) {
   SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << enabled;
   if (!properties_->fast_reauth.SetAndBlock(enabled)) {
@@ -464,13 +416,6 @@ void SupplicantInterfaceProxy::PropertiesChanged(
 void SupplicantInterfaceProxy::ScanDone(bool success) {
   SLOG(&interface_proxy_->GetObjectPath(), 2) << __func__ << ": " << success;
   delegate_->ScanDone(success);
-}
-
-void SupplicantInterfaceProxy::TDLSDiscoverResponse(
-    const std::string& peer_address) {
-  SLOG(&interface_proxy_->GetObjectPath(), 2)
-      << __func__ << ": " << peer_address;
-  delegate_->TDLSDiscoverResponse(peer_address);
 }
 
 void SupplicantInterfaceProxy::OnPropertyChanged(

@@ -1185,11 +1185,6 @@ TEST_F(DeviceTest, ShouldUseArpGateway) {
   EXPECT_FALSE(device_->ShouldUseArpGateway());
 }
 
-TEST_F(DeviceTest, PerformTDLSOperation) {
-  EXPECT_EQ(
-      "", device_->PerformTDLSOperation("do something", "to someone", nullptr));
-}
-
 TEST_F(DeviceTest, IsConnectedViaTether) {
   EXPECT_FALSE(device_->IsConnectedViaTether());
 

@@ -55,6 +55,7 @@ const char kAddWakeOnPacketConnectionFunction[] = "AddWakeOnPacketConnection";
 const char kAddWakeOnPacketOfTypesFunction[] = "AddWakeOnPacketOfTypes";
 const char kChangePinFunction[] = "ChangePin";
 const char kEnterPinFunction[] = "EnterPin";
+// Deprecated: crbug.com/938698.
 const char kPerformTDLSOperationFunction[] = "PerformTDLSOperation";
 const char kRegisterFunction[] = "Register";
 const char kRemoveAllWakeOnPacketConnectionsFunction[] =
@@ -674,12 +675,14 @@ const char kReceiveBitrateProperty[] = "ReceiveBitrate";
 const char kTransmitBitrateProperty[] = "TransmitBitrate";
 const char kTransmitRetriesProperty[] = "TransmitRetries";
 
+// Deprecated: crbug.com/938698.
 // WiFi TDLS operations.
 const char kTDLSDiscoverOperation[] = "Discover";
 const char kTDLSSetupOperation[] = "Setup";
 const char kTDLSStatusOperation[] = "Status";
 const char kTDLSTeardownOperation[] = "Teardown";
 
+// Deprecated: crbug.com/938698.
 // WiFi TDLS states.
 const char kTDLSConnectedState[] = "Connected";
 const char kTDLSDisabledState[] = "Disabled";

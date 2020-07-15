@@ -223,8 +223,9 @@ bool DeviceDBusAdaptor::PerformTDLSOperation(brillo::ErrorPtr* error,
   SLOG(this, 2) << __func__;
 
   Error e;
-  *out_state = device_->PerformTDLSOperation(operation, peer, &e);
-  return !e.ToChromeosError(error);
+  Error::PopulateAndLog(FROM_HERE, &e, Error::kNotSupported,
+                        "PerformTDLSOperation is deprecated");
+  return false;
 }
 
 bool DeviceDBusAdaptor::ResetByteCounters(brillo::ErrorPtr* error) {

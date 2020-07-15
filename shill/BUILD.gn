@@ -452,7 +452,6 @@ static_library("libshill") {
   if (use.wifi) {
     sources += [
       "wifi/mac80211_monitor.cc",
-      "wifi/tdls_manager.cc",
       "wifi/wake_on_wifi.cc",
       "wifi/wifi.cc",
       "wifi/wifi_endpoint.cc",
@@ -855,12 +854,10 @@ if (use.test) {
         "supplicant/mock_supplicant_bss_proxy.cc",
         "wifi/mac80211_monitor_test.cc",
         "wifi/mock_mac80211_monitor.cc",
-        "wifi/mock_tdls_manager.cc",
         "wifi/mock_wake_on_wifi.cc",
         "wifi/mock_wifi.cc",
         "wifi/mock_wifi_provider.cc",
         "wifi/mock_wifi_service.cc",
-        "wifi/tdls_manager_test.cc",
         "wifi/wake_on_wifi_test.cc",
         "wifi/wifi_endpoint_test.cc",
         "wifi/wifi_provider_test.cc",

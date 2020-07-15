@@ -43,10 +43,6 @@ class MockSupplicantInterfaceProxy : public SupplicantInterfaceProxyInterface {
   MOCK_METHOD(bool, SetFastReauth, (bool), (override));
   MOCK_METHOD(bool, SetScanInterval, (int32_t), (override));
   MOCK_METHOD(bool, SetScan, (bool), (override));
-  MOCK_METHOD(bool, TDLSDiscover, (const std::string&), (override));
-  MOCK_METHOD(bool, TDLSSetup, (const std::string&), (override));
-  MOCK_METHOD(bool, TDLSStatus, (const std::string&, std::string*), (override));
-  MOCK_METHOD(bool, TDLSTeardown, (const std::string&), (override));
   MOCK_METHOD(bool,
               EnableMacAddressRandomization,
               (const std::vector<unsigned char>&, bool),

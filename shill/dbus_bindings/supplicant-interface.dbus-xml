@@ -49,19 +49,6 @@
     <method name="Roam">
       <arg name="addr" type="s" direction="in"/>
     </method>
-    <method name="TDLSDiscover">
-      <arg name="peer" type="s" direction="in"/>
-    </method>
-    <method name="TDLSSetup">
-      <arg name="peer" type="s" direction="in"/>
-    </method>
-    <method name="TDLSStatus">
-      <arg name="peer" type="s" direction="in"/>
-      <arg name="status" type="s" direction="out"/>
-    </method>
-    <method name="TDLSTeardown">
-      <arg name="peer" type="s" direction="in"/>
-    </method>
     <property name="Capabilities" type="a{sv}" access="read"/>
     <property name="State" type="s" access="read"/>
     <property name="Scanning" type="b" access="read"/>
@@ -114,9 +101,6 @@
     </signal>
     <signal name="PropertiesChanged">
       <arg name="properties" type="a{sv}"/>
-    </signal>
-    <signal name="TDLSDiscoverResponse">
-      <arg name="peer_address" type="s"/>
     </signal>
   </interface>
 </node>

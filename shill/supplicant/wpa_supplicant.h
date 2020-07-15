@@ -142,10 +142,6 @@ class WPASupplicant {
   static const char kSecurityMethodPropertyKeyManagement[];
   static const char kSecurityModeRSN[];
   static const char kSecurityModeWPA[];
-  static const char kTDLSStateConnected[];
-  static const char kTDLSStateDisabled[];
-  static const char kTDLSStatePeerDoesNotExist[];
-  static const char kTDLSStatePeerNotConnected[];
 
   static const char kFlagDisableEapTLS1p1[];
   static const char kFlagDisableEapTLS1p2[];
