@@ -67,8 +67,8 @@ const char* const kLocalhostReplaceNames[] = {"localhost", "127.0.0.1"};
 // Path of system timezone file.
 constexpr char kLocaltimePath[] = "/etc/localtime";
 
-// TCP4 ports blacklisted from tunneling to the container.
-const uint16_t kBlacklistedPorts[] = {
+// TCP4 ports restricted from tunneling to the container.
+const uint16_t kRestrictedPorts[] = {
     2222,  // cros-sftp service
     5355,  // link-local mDNS
 };
@@ -843,14 +843,14 @@ void Service::SendListeningPorts() {
       Container* c = vm_pair.second->GetContainerForName(container_name);
       std::vector<uint16_t> listening_ports = c->listening_tcp4_ports();
       for (uint16_t port : listening_ports) {
-        bool is_blacklisted = false;
-        for (uint16_t blacklisted_port : kBlacklistedPorts) {
-          if (port == blacklisted_port) {
-            is_blacklisted = true;
+        bool is_restricted = false;
+        for (uint16_t restricted_port : kRestrictedPorts) {
+          if (port == restricted_port) {
+            is_restricted = true;
             break;
           }
         }
-        if (is_blacklisted)
+        if (is_restricted)
           continue;
 
         chunneld::UpdateListeningPortsRequest_Tcp4ForwardTarget target;

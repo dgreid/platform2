@@ -8,8 +8,8 @@ and for providing any services those VMs may need while they are running.
 ## chunnel
 
 `chunnel` tunnels traffic for servers that listen on `localhost`. This is a
-common developer use case since `localhost` is whitelisted as a secure origin
-in Chrome.
+common developer use case since `localhost` is allowed as a secure origin in
+Chrome.
 
 The `chunneld` binary runs on the Chrome OS host, and receives updates from
 `vm_cicerone` notifying it of ports that should be listened to. When Chrome

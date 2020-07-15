@@ -41,8 +41,8 @@ message SetupConnectionRequest {
   // Initial window size (cols) of the pty.
   int32 window_cols = 7;
   // True if using a noninteractive client and a pty should not be allocated.
-  // The logic here is inverted from a sane value to keep backwards
-  // compatibility with the current behavior (always allocate a pty).
+  // The logic here is inverted to keep backwards compatibility with the
+  // current behavior (always allocate a pty).
   bool nopty = 8;
   // Directory to set for current working directory.
   string cwd = 9;

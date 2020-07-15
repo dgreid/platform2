@@ -209,7 +209,7 @@ bool VshForwarder::Init() {
     // populate the stdin/stdout/stderr file descriptors.
     ptm_fd_.reset(HANDLE_EINTR(posix_openpt(O_RDWR | O_NOCTTY | O_CLOEXEC)));
     if (!ptm_fd_.is_valid()) {
-      PLOG(ERROR) << "Failed to open pseudoterminal master";
+      PLOG(ERROR) << "Failed to open pseudoterminal";
       SendConnectionResponse(FAILED, "could not allocate pty");
       return false;
     }
@@ -357,7 +357,7 @@ void VshForwarder::PrepareExec(
   if (interactive_) {
     pty.reset(HANDLE_EINTR(open(pts, O_RDWR | O_CLOEXEC | O_NOCTTY)));
     if (!pty.is_valid()) {
-      PLOG(ERROR) << "Failed to open pseudoterminal slave";
+      PLOG(ERROR) << "Failed to open pseudoterminal device";
       return;
     }
 
