@@ -16,6 +16,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <memory>
 #include <string>
 #include <utility>
@@ -281,10 +282,31 @@ FUSEMounter::FUSEMounter(Params params)
       supplementary_groups_(std::move(params.supplementary_groups)),
       password_needed_code_(params.password_needed_code) {}
 
+void FUSEMounter::CopyPassword(const std::vector<std::string>& options,
+                               Process* const process) const {
+  DCHECK(process);
+
+  // Is the process "password-aware"?
+  if (password_needed_code_ <= 0)
+    return;
+
+  // Is there a password available in options?
+  const base::StringPiece prefix = "password=";
+  const auto it = std::find_if(
+      options.cbegin(), options.cend(),
+      [prefix](const base::StringPiece s) { return s.starts_with(prefix); });
+  if (it == options.cend())
+    return;
+
+  // Pass the password as environment variable.
+  process->AddEnvironmentVariable("PASSWORD",
+                                  base::StringPiece(*it).substr(prefix.size()));
+}
+
 std::unique_ptr<MountPoint> FUSEMounter::Mount(
     const std::string& source,
     const base::FilePath& target_path,
-    std::vector<std::string> /*options*/,
+    std::vector<std::string> options,
     MountErrorType* error) const {
   auto mount_process = CreateSandboxedProcess();
   *error = ConfigureCommonSandbox(mount_process.get(), platform_,
@@ -391,6 +413,8 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
   }
   mount_process->AddArgument(
       base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
+
+  CopyPassword(options, mount_process.get());
 
   std::vector<std::string> output;
   const int return_code = mount_process->Run(&output);
