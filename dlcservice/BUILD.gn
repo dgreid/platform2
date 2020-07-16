@@ -150,6 +150,7 @@ if (use.test) {
       "ref_count_test.cc",
       "system_state_test.cc",
       "test_utils.cc",
+      "unique_queue_test.cc",
       "utils_test.cc",
     ]
     deps = [
