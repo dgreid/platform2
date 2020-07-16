@@ -202,19 +202,38 @@ std::string TranslateUrlForHost(const std::string& url,
   if (at_check != std::string::npos && at_check < back) {
     front = at_check + 1;
   }
+
+  // HTTP and HTTPS are by default served on privileged ports (80 and 443).
+  // If the port is manually specified, then parse it and check if it's
+  // privileged or not.
+  bool privileged_port = true;
   auto port_check = url.find(':', front);
   if (port_check != std::string::npos && port_check < back) {
+    std::string port_substr = url.substr(port_check + 1, back - port_check - 1);
+    int port = 0;
+    if (base::StringToInt(port_substr, &port) && port > 1023) {
+      privileged_port = false;
+    }
+
     back = port_check;
   }
+
   // We don't care about URL validity, but our logic should ensure that front
   // is less than back at this point and this checks that.
   CHECK_LE(front, back);
-  std::string hostname = url.substr(front, back - front);
-  for (const auto host_check : kLocalhostReplaceNames) {
-    if (hostname == host_check) {
-      // Replace the hostname with the alternate hostname which will be the
-      // container's IP address.
-      return url.substr(0, front) + alt_host + url.substr(back);
+
+  // Unprivileged ports are tunneled automatically by chunnel, so rewriting the
+  // hostname is not necessary. Privileged ports are likely owned by system
+  // daemons listening on all interfaces, so rewriting the hostname is the only
+  // workable option.
+  if (privileged_port) {
+    std::string hostname = url.substr(front, back - front);
+    for (const auto host_check : kLocalhostReplaceNames) {
+      if (hostname == host_check) {
+        // Replace the hostname with the alternate hostname which will be the
+        // container's IP address.
+        return url.substr(0, front) + alt_host + url.substr(back);
+      }
     }
   }
 
