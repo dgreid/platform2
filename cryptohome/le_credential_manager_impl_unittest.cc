@@ -111,12 +111,11 @@ class LECredentialManagerImplUnitTest : public testing::Test {
     CorruptFile(leaf_cache);
   }
 
-  // Corrupts all versions of any one leaf. We corrupt all the versions, since
-  // it is tedious to find which is the most recent one.
-  void CorruptHashTree() {
-    base::FileEnumerator dirs(
-        CredDirPath(), false, base::FileEnumerator::DIRECTORIES);
-    base::FilePath leaf_dir = dirs.Next();
+  // Corrupts all versions of the |label| leaf. We corrupt all the versions,
+  // since it is tedious to find which is the most recent one.
+  void CorruptHashTreeWithLabel(uint64_t label) {
+    base::FilePath leaf_dir = CredDirPath().Append(std::to_string(label));
+    ASSERT_TRUE(base::PathExists(leaf_dir));
     ASSERT_FALSE(leaf_dir.empty());
 
     base::FileEnumerator files(leaf_dir, false, base::FileEnumerator::FILES);
@@ -777,8 +776,10 @@ TEST_F(LECredentialManagerImplUnitTest, FailedSyncDiskCorrupted) {
             le_mgr_->CheckCredential(label1, kLeSecret1, &he_secret,
                                      &reset_secret));
 
+  // Corrupt the content of two label folders and the cache file.
   le_mgr_.reset();
-  CorruptHashTree();
+  CorruptHashTreeWithLabel(label1);
+  CorruptHashTreeWithLabel(label2);
   CorruptLeafCache();
 
   // Now re-initialize the LE Manager.
@@ -790,6 +791,9 @@ TEST_F(LECredentialManagerImplUnitTest, FailedSyncDiskCorrupted) {
   EXPECT_EQ(LE_CRED_ERROR_HASH_TREE,
             le_mgr_->CheckCredential(label1, kLeSecret1, &he_secret,
                                      &reset_secret));
+  EXPECT_EQ(
+      LE_CRED_ERROR_HASH_TREE,
+      le_mgr_->CheckCredential(label2, kLeSecret1, &he_secret, &reset_secret));
   EXPECT_EQ(LE_CRED_ERROR_HASH_TREE,
             le_mgr_->InsertCredential(kLeSecret2, kHeSecret1, kResetSecret1,
                                       stub_delay_sched, stub_pcr_criteria,

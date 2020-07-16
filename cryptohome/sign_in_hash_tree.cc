@@ -90,7 +90,11 @@ std::vector<SignInHashTree::Label> SignInHashTree::GetAuxiliaryLabels(
 }
 
 void SignInHashTree::PopulateLeafCache() {
-  for (uint64_t i = 0; i < (1 << leaf_length_); i++) {
+  // Get all of the GetLabelData succeed before UpdateLeafCache.
+  uint64_t num_max_labels = 1 << leaf_length_;
+  std::vector<std::vector<uint8_t>> hmac_history;
+  hmac_history.reserve(num_max_labels);
+  for (uint64_t i = 0; i < num_max_labels; i++) {
     std::vector<uint8_t> hmac, cred_metadata;
     bool metadata_lost;
     Label label(i, leaf_length_, bits_per_level_);
@@ -98,6 +102,16 @@ void SignInHashTree::PopulateLeafCache() {
       LOG(ERROR) << "Error getting leaf HMAC, can't regenerate HashCache.";
       return;
     }
+    // There may exist label that failed to get data in the later iterations
+    // of this loop, write the label data into cache earlier would cause a
+    // flakiness to the hash tree. Just put the hmac into a temporary vector
+    // without direct writing to the cache here.
+    hmac_history.push_back(std::move(hmac));
+  }
+  // Only write to the cache when every label is valid.
+  for (uint64_t i = 0; i < num_max_labels; i++) {
+    const std::vector<uint8_t>& hmac = hmac_history[i];
+    Label label(i, leaf_length_, bits_per_level_);
     UpdateLeafCache(label.value(), hmac.data(), hmac.size());
   }
 }
