@@ -80,8 +80,7 @@ std::unique_ptr<ChapsProxyImpl> ChapsProxyImpl::Create(bool shadow_at_exit) {
     at_exit = std::make_unique<ProxyAtExitManager>();
   }
 
-  base::Thread::Options options;
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
+  base::Thread::Options options(base::MessagePumpType::IO, 0);
   auto dbus_thread = std::make_unique<base::Thread>(kDBusThreadName);
   dbus_thread->StartWithOptions(options);
 

@@ -141,7 +141,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   int OnInit() override {
 #if USE_TPM2
     CHECK(tpm_background_thread_.StartWithOptions(base::Thread::Options(
-        base::MessageLoop::TYPE_IO, 0 /* use default stack size */)));
+        base::MessagePumpType::IO, 0 /* use default stack size */)));
     tpm_.reset(new TPM2UtilityImpl(tpm_background_thread_.task_runner()));
 #else
     // Instantiate a TPM1.2 Utility.
@@ -162,7 +162,7 @@ class Daemon : public brillo::DBusServiceDaemon {
     WaitableEvent init_started(WaitableEvent::ResetPolicy::MANUAL,
                                WaitableEvent::InitialState::NOT_SIGNALED);
     CHECK(async_init_thread_.StartWithOptions(base::Thread::Options(
-        base::MessageLoop::TYPE_IO, 0 /* use default stack size */)));
+        base::MessagePumpType::IO, 0 /* use default stack size */)));
     async_init_thread_.task_runner()->PostTask(
         FROM_HERE, base::Bind(&InitAsync, &init_started, &lock_, tpm_.get(),
                               slot_manager_.get()));

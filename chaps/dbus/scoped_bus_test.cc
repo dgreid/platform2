@@ -35,8 +35,7 @@ TEST(TestScopedBus, SameThread) {
 }
 
 TEST(TestScopedBus, DifferentThread) {
-  base::Thread::Options options;
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
+  base::Thread::Options options(base::MessagePumpType::IO, 0);
   base::Thread bus_thread("bus_thread");
   bus_thread.StartWithOptions(options);
 

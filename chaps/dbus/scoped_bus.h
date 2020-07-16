@@ -6,6 +6,7 @@
 #define CHAPS_DBUS_SCOPED_BUS_H_
 
 #include <base/memory/ref_counted.h>
+#include <base/single_thread_task_runner.h>
 #include <dbus/bus.h>
 
 namespace chaps {

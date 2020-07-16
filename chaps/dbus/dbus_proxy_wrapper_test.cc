@@ -39,8 +39,7 @@ class TestProxyWrapperConstruction : public ::testing::Test {
 
  protected:
   void SetUp() override {
-    base::Thread::Options options;
-    options.message_loop_type = base::MessageLoop::TYPE_IO;
+    base::Thread::Options options(base::MessagePumpType::IO, 0);
     dbus_thread_.StartWithOptions(options);
   }
 
