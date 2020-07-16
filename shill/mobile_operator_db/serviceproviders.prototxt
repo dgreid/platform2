@@ -7089,7 +7089,6 @@ mno {
     mccmnc : "44003"
     mccmnc : "44009"
     mccmnc : "44010"
-    mccmnc : "44011"
     mccmnc : "44012"
     mccmnc : "44013"
     mccmnc : "44014"
@@ -7143,22 +7142,6 @@ mno {
         name : "SPモード"
       }
       authentication : CHAP
-    }
-    mobile_apn {
-      apn : "rmobile.co"
-      localized_name {
-        name : "楽天モバイル"
-      }
-      username : "rm"
-      password : "0000"
-    }
-    mobile_apn {
-      apn : "rmobile.jp"
-      localized_name {
-        name : "楽天モバイル"
-      }
-      username : "rm"
-      password : "0000"
     }
     mobile_apn {
       apn : "lte-d.ocn.ne.jp"
@@ -7281,6 +7264,20 @@ mno {
       apn : "emb.ne.jp"
       username : "em"
       password : "em"
+    }
+  }
+}
+
+mno {
+  data {
+    uuid : "7248391b-ad39-43fa-900c-1972e0060d53"
+    country : "jp"
+    localized_name {
+      name : "楽天(rakuten.jp)"
+    }
+    mccmnc : "44011"
+    mobile_apn {
+      apn : "rakuten.jp"
     }
   }
 }
