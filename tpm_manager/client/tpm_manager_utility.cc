@@ -8,6 +8,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/message_loop/message_pump_type.h>
 
 namespace tpm_manager {
 
@@ -19,7 +20,7 @@ TpmManagerUtility::TpmManagerUtility(
 bool TpmManagerUtility::Initialize() {
   if (!tpm_manager_thread_.IsRunning() &&
       !tpm_manager_thread_.StartWithOptions(base::Thread::Options(
-          base::MessageLoopForIO::TYPE_IO, 0 /* Uses default stack size. */))) {
+          base::MessagePumpType::IO, 0 /* Uses default stack size. */))) {
     LOG(ERROR) << "Failed to start tpm_manager thread.";
     return false;
   }

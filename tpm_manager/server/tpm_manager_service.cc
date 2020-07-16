@@ -11,6 +11,7 @@
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/command_line.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/synchronization/lock.h>
 
 namespace {
@@ -80,7 +81,7 @@ bool TpmManagerService::Initialize() {
   worker_thread_.reset(
       new ServiceWorkerThread("TpmManager Service Worker", this));
   worker_thread_->StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
+      base::Thread::Options(base::MessagePumpType::IO, 0));
   base::Closure task =
       base::Bind(&TpmManagerService::InitializeTask, base::Unretained(this));
   worker_thread_->task_runner()->PostNonNestableTask(FROM_HERE, task);

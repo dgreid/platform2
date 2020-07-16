@@ -9,6 +9,7 @@
 #include <base/run_loop.h>
 #include <base/synchronization/lock.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/test/task_environment.h>
 #include <base/threading/platform_thread.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -98,7 +99,8 @@ class TpmManagerServiceTestBase : public testing::Test {
   std::unique_ptr<TpmManagerService> service_;
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::RunLoop run_loop_;
 };
 
