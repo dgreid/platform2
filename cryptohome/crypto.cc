@@ -39,8 +39,9 @@ extern "C" {
 #include "cryptohome/libscrypt_compat_auth_block.h"
 #include "cryptohome/pin_weaver_auth_block.h"
 #include "cryptohome/platform.h"
-#include "cryptohome/tpm_auth_block.h"
+#include "cryptohome/tpm_bound_to_pcr_auth_block.h"
 #include "cryptohome/tpm_init.h"
+#include "cryptohome/tpm_not_bound_to_pcr_auth_block.h"
 #include "cryptohome/vault_keyset.h"
 
 using base::FilePath;
@@ -503,14 +504,20 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   }
 
   if (flags & SerializedVaultKeyset::TPM_WRAPPED) {
+    std::unique_ptr<AuthBlock> tpm_auth;
+    if (flags & SerializedVaultKeyset::PCR_BOUND) {
+      tpm_auth = std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
+    } else {
+      tpm_auth = std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
+    }
+
     KeyBlobs vkk_data;
     AuthInput auth_input;
     auth_input.user_input = vault_key;
     auth_input.locked_to_single_user = locked_to_single_user;
 
     AuthBlockState auth_state = { serialized };
-    TpmAuthBlock tpm_auth(tpm_, tpm_init_);
-    if (!tpm_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
+    if (!tpm_auth->Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
     }
 

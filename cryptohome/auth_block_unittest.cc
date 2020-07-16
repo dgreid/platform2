@@ -22,7 +22,8 @@
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
 #include "cryptohome/pin_weaver_auth_block.h"
-#include "cryptohome/tpm_auth_block.h"
+#include "cryptohome/tpm_bound_to_pcr_auth_block.h"
+#include "cryptohome/tpm_not_bound_to_pcr_auth_block.h"
 #include "cryptohome/vault_keyset.h"
 
 using ::testing::_;
@@ -200,7 +201,7 @@ TEST(TPMAuthBlockTest, DecryptBoundToPcrTest) {
       .Times(Exactly(1));
 
   CryptoError error = CryptoError::CE_NONE;
-  TpmAuthBlock tpm_auth_block(&tpm, &tpm_init);
+  TpmBoundToPcrAuthBlock tpm_auth_block(&tpm, &tpm_init);
   EXPECT_TRUE(tpm_auth_block.DecryptTpmBoundToPcr(vault_key, tpm_key, salt,
                                                   &error, &vkk_iv, &vkk_key));
   EXPECT_EQ(CryptoError::CE_NONE, error);
@@ -228,7 +229,7 @@ TEST(TPMAuthBlockTest, DecryptNotBoundToPcrTest) {
   EXPECT_CALL(tpm, DecryptBlob(_, tpm_key, aes_key, _, _)).Times(Exactly(1));
 
   CryptoError error = CryptoError::CE_NONE;
-  TpmAuthBlock tpm_auth_block(&tpm, &tpm_init);
+  TpmNotBoundToPcrAuthBlock tpm_auth_block(&tpm, &tpm_init);
   EXPECT_TRUE(tpm_auth_block.DecryptTpmNotBoundToPcr(
       serialized, vault_key, tpm_key, salt, &error, &vkk_iv, &vkk_key));
   EXPECT_EQ(CryptoError::CE_NONE, error);
@@ -252,7 +253,7 @@ TEST(TpmAuthBlockTest, DeriveTest) {
   NiceMock<MockTpmInit> tpm_init;
   EXPECT_CALL(tpm, UnsealWithAuthorization(_, _, _, _, _)).Times(Exactly(1));
 
-  TpmAuthBlock auth_block(&tpm, &tpm_init);
+  TpmBoundToPcrAuthBlock auth_block(&tpm, &tpm_init);
 
   KeyBlobs key_out_data;
   AuthInput auth_input;

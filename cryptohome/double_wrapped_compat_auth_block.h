@@ -13,7 +13,7 @@
 #include <base/macros.h>
 
 #include "cryptohome/libscrypt_compat_auth_block.h"
-#include "cryptohome/tpm_auth_block.h"
+#include "cryptohome/tpm_not_bound_to_pcr_auth_block.h"
 
 namespace cryptohome {
 
@@ -27,9 +27,9 @@ class DoubleWrappedCompatAuthBlock : public AuthBlock {
   // This auth block represents legacy keysets left in an inconsistent state, so
   // calling Create() here is FATAL.
   bool Create(const AuthInput& user_input,
-                      AuthBlockState* state,
-                      KeyBlobs* key_blobs,
-                      CryptoError* error) override;
+              AuthBlockState* state,
+              KeyBlobs* key_blobs,
+              CryptoError* error) override;
 
   // First tries to derive the keys with scrypt, and falls back to the TPM.
   bool Derive(const AuthInput& auth_input,
@@ -38,7 +38,7 @@ class DoubleWrappedCompatAuthBlock : public AuthBlock {
               CryptoError* error) override;
 
  private:
-  TpmAuthBlock tpm_auth_block_;
+  TpmNotBoundToPcrAuthBlock tpm_auth_block_;
   LibScryptCompatAuthBlock lib_scrypt_compat_auth_block_;
 
   DISALLOW_COPY_AND_ASSIGN(DoubleWrappedCompatAuthBlock);

@@ -188,8 +188,10 @@ static_library("libcrostpm") {
     "../pkcs11_keystore.cc",
     "../sign_in_hash_tree.cc",
     "../tpm.cc",
-    "../tpm_auth_block.cc",
+    "../tpm_auth_block_utils.cc",
+    "../tpm_bound_to_pcr_auth_block.cc",
     "../tpm_init.cc",
+    "../tpm_not_bound_to_pcr_auth_block.cc",
     "../tpm_persistent_state.cc",
     "../vault_keyset.cc",
   ]

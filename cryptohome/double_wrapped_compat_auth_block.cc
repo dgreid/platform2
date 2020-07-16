@@ -9,8 +9,8 @@
 
 #include "cryptohome/libscrypt_compat_auth_block.h"
 #include "cryptohome/tpm.h"
-#include "cryptohome/tpm_auth_block.h"
 #include "cryptohome/tpm_init.h"
+#include "cryptohome/tpm_not_bound_to_pcr_auth_block.h"
 
 namespace cryptohome {
 

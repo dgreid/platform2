@@ -269,21 +269,6 @@ class Crypto {
                                   const std::string& obfuscated_username,
                                   SerializedVaultKeyset* serialized) const;
 
-  // DecryptTPM takes a user credential, which is TPM protected, and produces
-  // the resulting vault keyset key (VKK) and IV.
-  //
-  // |serialized| is the vault keyset (VK) stored in protobuf format.
-  // |key| is the passkey used for decryption.
-  // |error| is populated with any errors returned.
-  // |key_out_data| is the struct populated with the VKK and IV.
-  //
-  // Returns true on success, and false on failure.
-  bool DecryptTPM(const SerializedVaultKeyset& serialized,
-                  const brillo::SecureBlob& key,
-                  bool locked_to_single_user,
-                  CryptoError* error,
-                  KeyBlobs* key_out_data) const;
-
   // This function consumes the Vault Keyset Key (VKK) and IV, and produces the
   // unwrapped secrets from the Vault Keyset.
   // |serialized| is the serialized vault keyset protobuf.
@@ -310,34 +295,6 @@ class Crypto {
   bool EncryptAuthorizationData(SerializedVaultKeyset* serialized,
                                 const brillo::SecureBlob& vkk_key,
                                 const brillo::SecureBlob& vkk_iv) const;
-
-  bool IsTPMPubkeyHash(const std::string& hash, CryptoError* error) const;
-
-  // Returns the tpm_key data taken from |serialized|, specifically if the
-  // keyset is PCR_BOUND and |locked_to_single_user| the data is taken from
-  // extended_tpm_key. Otherwise the data from tpm_key is used.
-  brillo::SecureBlob GetTpmKeyFromSerialized(
-      const SerializedVaultKeyset& serialized,
-      bool locked_to_single_user) const;
-
-  // Decrypt the |vault_key| that is not bound to PCR, returning the |vkk_iv|
-  // and |vkk_key|.
-  bool DecryptTpmNotBoundToPcr(const SerializedVaultKeyset& serialized,
-                               const brillo::SecureBlob& vault_key,
-                               const brillo::SecureBlob& tpm_key,
-                               const brillo::SecureBlob& salt,
-                               CryptoError* error,
-                               brillo::SecureBlob* vkk_iv,
-                               brillo::SecureBlob* vkk_key) const;
-
-  // Decrypt the |vault_key| that is bound to PCR, returning the |vkk_iv|
-  // and |vkk_key|.
-  bool DecryptTpmBoundToPcr(const brillo::SecureBlob& vault_key,
-                            const brillo::SecureBlob& tpm_key,
-                            const brillo::SecureBlob& salt,
-                            CryptoError* error,
-                            brillo::SecureBlob* vkk_iv,
-                            brillo::SecureBlob* vkk_key) const;
 
   // If set, the TPM will be used during the encryption of the vault keyset
   bool use_tpm_;
