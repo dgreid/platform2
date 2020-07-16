@@ -8,6 +8,9 @@
 #include <utility>
 #include <vector>
 
+#include <base/bind.h>
+#include <base/callback.h>
+
 #include "shill/callbacks.h"
 #include "shill/dbus/dbus_service_watcher_factory.h"
 #include "shill/device.h"
@@ -18,7 +21,6 @@
 #include "shill/manager.h"
 #include "shill/property_store.h"
 
-using base::Unretained;
 using std::string;
 using std::vector;
 
@@ -396,8 +398,8 @@ bool ManagerDBusAdaptor::ClaimInterface(brillo::ErrorPtr* error,
     watcher_for_device_claimer_ =
         dbus_service_watcher_factory_->CreateDBusServiceWatcher(
             proxy_bus_, claimer,
-            Bind(&ManagerDBusAdaptor::OnDeviceClaimerVanished,
-                 Unretained(this)));
+            base::Bind(&ManagerDBusAdaptor::OnDeviceClaimerVanished,
+                       base::Unretained(this)));
   }
   return !e.ToChromeosError(error);
 }

@@ -16,17 +16,18 @@
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "shill/callbacks.h"
-#include "shill/error.h"
-#include "shill/property_store.h"
 
 namespace shill {
+
+class Error;
+class PropertyStore;
 
 template <typename... Types>
 using DBusMethodResponsePtr =
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<Types...>>;
 
 // Superclass for all DBus-backed Adaptor objects
-class DBusAdaptor : public base::SupportsWeakPtr<DBusAdaptor> {
+class DBusAdaptor {
  public:
   static const char kNullPath[];
 
@@ -119,6 +120,7 @@ class DBusAdaptor : public base::SupportsWeakPtr<DBusAdaptor> {
 
   dbus::ObjectPath dbus_path_;
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
+  base::WeakPtrFactory<DBusAdaptor> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(DBusAdaptor);
 };

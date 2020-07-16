@@ -12,17 +12,15 @@
 
 #include "shill/error.h"
 #include "shill/logging.h"
+#include "shill/property_store.h"
 
-using base::Bind;
-using base::Passed;
 using brillo::dbus_utils::DBusObject;
-using std::string;
 
 namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
-static string ObjectID(DBusAdaptor* d) {
+static std::string ObjectID(DBusAdaptor* d) {
   if (d == nullptr)
     return "(dbus_adaptor)";
   return d->dbus_path().value();
@@ -86,8 +84,8 @@ bool DBusAdaptor::ClearProperty(PropertyStore* store,
 }
 
 // static
-string DBusAdaptor::SanitizePathElement(const string& object_path) {
-  string sanitized_path(object_path);
+std::string DBusAdaptor::SanitizePathElement(const std::string& object_path) {
+  std::string sanitized_path(object_path);
 
   for (auto& c : sanitized_path) {
     // The D-Bus specification
@@ -104,20 +102,20 @@ string DBusAdaptor::SanitizePathElement(const string& object_path) {
 
 ResultCallback DBusAdaptor::GetMethodReplyCallback(
     DBusMethodResponsePtr<> response) {
-  return Bind(&DBusAdaptor::MethodReplyCallback, AsWeakPtr(),
-              Passed(&response));
+  return base::Bind(&DBusAdaptor::MethodReplyCallback,
+                    weak_factory_.GetWeakPtr(), base::Passed(&response));
 }
 
 ResultStringCallback DBusAdaptor::GetStringMethodReplyCallback(
-    DBusMethodResponsePtr<string> response) {
-  return Bind(&DBusAdaptor::StringMethodReplyCallback, AsWeakPtr(),
-              Passed(&response));
+    DBusMethodResponsePtr<std::string> response) {
+  return base::Bind(&DBusAdaptor::StringMethodReplyCallback,
+                    weak_factory_.GetWeakPtr(), base::Passed(&response));
 }
 
 ResultBoolCallback DBusAdaptor::GetBoolMethodReplyCallback(
     DBusMethodResponsePtr<bool> response) {
-  return Bind(&DBusAdaptor::BoolMethodReplyCallback, AsWeakPtr(),
-              Passed(&response));
+  return base::Bind(&DBusAdaptor::BoolMethodReplyCallback,
+                    weak_factory_.GetWeakPtr(), base::Passed(&response));
 }
 
 void DBusAdaptor::ReturnResultOrDefer(const ResultCallback& callback,
@@ -140,9 +138,9 @@ void DBusAdaptor::MethodReplyCallback(DBusMethodResponsePtr<> response,
 }
 
 void DBusAdaptor::StringMethodReplyCallback(
-    DBusMethodResponsePtr<string> response,
+    DBusMethodResponsePtr<std::string> response,
     const Error& error,
-    const string& returned) {
+    const std::string& returned) {
   TypedMethodReplyCallback(std::move(response), error, returned);
 }
 
