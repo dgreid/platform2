@@ -190,6 +190,9 @@ class DlcServiceUtil : public brillo::Daemon {
 
   // Callback invoked on receiving |OnDlcStateChanged| signal.
   void OnDlcStateChanged(const DlcState& dlc_state) {
+    // Ignore the status as it's not the one we care about.
+    if (dlc_state.id() != dlc_id_)
+      return;
     switch (dlc_state.state()) {
       case DlcState::INSTALLED:
         LOG(INFO) << "Install successful for DLC: " << dlc_id_;
