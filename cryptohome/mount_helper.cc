@@ -21,6 +21,7 @@
 
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/homedirs.h"
+#include "cryptohome/mount_constants.h"
 
 using base::FilePath;
 using base::StringPrintf;
@@ -620,14 +621,13 @@ bool MountHelper::MountHomesAndDaemonStores(
   return true;
 }
 
-bool MountHelper::CreateTrackedSubdirectories(const Credentials& credentials,
-                                              const MountType& mount_type,
-                                              bool is_pristine) const {
+bool MountHelper::CreateTrackedSubdirectories(
+    const std::string& obfuscated_username,
+    const MountType& mount_type,
+    bool is_pristine) const {
   brillo::ScopedUmask scoped_umask(kDefaultUmask);
 
   // Add the subdirectories if they do not exist.
-  const std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
   const FilePath dest_dir(
       mount_type == MountType::ECRYPTFS
           ? HomeDirs::GetEcryptfsUserVaultPath(shadow_root_,
@@ -691,14 +691,12 @@ bool MountHelper::CreateTrackedSubdirectories(const Credentials& credentials,
 }
 
 bool MountHelper::PerformMount(const Options& mount_opts,
-                               const Credentials& credentials,
+                               const std::string& username,
                                const std::string& fek_signature,
                                const std::string& fnek_signature,
                                bool is_pristine,
                                MountError* error) {
-  const std::string username = credentials.username();
-  const std::string obfuscated_username =
-      credentials.GetObfuscatedUsername(system_salt_);
+  const std::string obfuscated_username = SanitizeUserName(username);
   const FilePath vault_path =
       HomeDirs::GetEcryptfsUserVaultPath(shadow_root_, obfuscated_username);
   const FilePath mount_point =
@@ -730,7 +728,8 @@ bool MountHelper::PerformMount(const Options& mount_opts,
 
   // Move the tracked subdirectories from <mount_point_>/user to <vault_path>
   // as passthrough directories.
-  CreateTrackedSubdirectories(credentials, mount_opts.type, is_pristine);
+  CreateTrackedSubdirectories(obfuscated_username, mount_opts.type,
+                              is_pristine);
 
   const FilePath user_home = GetMountedUserHomePath(obfuscated_username);
   const FilePath root_home = GetMountedRootHomePath(obfuscated_username);

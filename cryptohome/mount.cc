@@ -633,7 +633,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   MountHelper::Options mount_opts = {
       mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
 
-  if (!mounter_->PerformMount(mount_opts, credentials, key_signature,
+  if (!mounter_->PerformMount(mount_opts, credentials.username(), key_signature,
                               fnek_signature, created, mount_error)) {
     LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
@@ -816,8 +816,8 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
 
 bool Mount::CreateTrackedSubdirectories(const Credentials& credentials,
                                         bool is_new) const {
-  return mounter_->CreateTrackedSubdirectories(credentials, mount_type_,
-                                               is_new);
+  return mounter_->CreateTrackedSubdirectories(
+      credentials.GetObfuscatedUsername(system_salt_), mount_type_, is_new);
 }
 
 bool Mount::UpdateCurrentUserActivityTimestamp(int time_shift_sec) {
