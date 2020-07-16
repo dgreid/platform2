@@ -92,7 +92,8 @@ int GetLogFlags() {
 }
 void InitLog(int init_flags) {
   logging::LoggingSettings settings;
-  settings.logging_dest = logging::LOG_TO_SYSTEM_DEBUG_LOG;
+  settings.logging_dest =
+      logging::LOG_TO_SYSTEM_DEBUG_LOG | logging::LOG_TO_STDERR;
   logging::InitLogging(settings);
 
   const bool kOptionPID = false;
