@@ -1732,12 +1732,6 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			c) some scan results may have expired from the
 			   cache.
 
-		boolean WiFi.FTEnabled [readwrite]
-
-			(WiFi only) If true, Fast Transition will be
-			enabled. This property instructs shill to pass
-			the FT key management suites to wpa_supplicant.
-
 		string WiFi.PhyMode [readonly]
 
 			(WiFi only) If the service state is

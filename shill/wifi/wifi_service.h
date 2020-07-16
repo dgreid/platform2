@@ -183,7 +183,6 @@ class WiFiService : public Service {
   FRIEND_TEST(WiFiServiceTest, ConnectTaskPSK);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskRawPMK);
   FRIEND_TEST(WiFiServiceTest, ConnectTaskWEP);
-  FRIEND_TEST(WiFiServiceTest, ConnectTaskFT);
   FRIEND_TEST(WiFiServiceTest, GetTethering);
   FRIEND_TEST(WiFiServiceTest, IsAutoConnectable);
   FRIEND_TEST(WiFiServiceTest, LoadHidden);
@@ -306,7 +305,6 @@ class WiFiService : public Service {
   // with this service instead.
   const std::string mode_;
   bool hidden_ssid_;
-  bool ft_enabled_;
   uint16_t frequency_;
   std::vector<uint16_t> frequency_list_;
   uint16_t physical_mode_;

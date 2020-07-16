@@ -640,5 +640,4 @@ Properties 	object ActiveProfile [readonly]
 		bool WiFi.GlobalFTEnabled [readwrite]
 
 			Specifies whether or not 802.11r Fast BSS Transition should be
-			used. This global switch, in addition to the WiFi.FTEnabled service
-			property, needs to be turned on in order for FT to be used.
+			used.

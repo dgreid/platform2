@@ -561,15 +561,8 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
     WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
 
     manager()->ft_enabled_ = false;
-    wifi_service->ft_enabled_ = false;
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-    EXPECT_EQ("WPA-PSK", params.Get<string>(
-                             WPASupplicant::kNetworkPropertyEapKeyManagement));
-
-    wifi_service->ft_enabled_ = true;
-    wifi_service->Connect(nullptr, "in test");
-    params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ("WPA-PSK", params.Get<string>(
                              WPASupplicant::kNetworkPropertyEapKeyManagement));
 
@@ -587,15 +580,8 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
     wifi_service->OnEapCredentialsChanged(Service::kReasonCredentialsLoaded);
 
     manager()->ft_enabled_ = false;
-    wifi_service->ft_enabled_ = false;
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
-    EXPECT_EQ("WPA-EAP", params.Get<string>(
-                             WPASupplicant::kNetworkPropertyEapKeyManagement));
-
-    wifi_service->ft_enabled_ = true;
-    wifi_service->Connect(nullptr, "in test");
-    params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ("WPA-EAP", params.Get<string>(
                              WPASupplicant::kNetworkPropertyEapKeyManagement));
 

@@ -74,7 +74,6 @@ WiFiService::WiFiService(Manager* manager,
       security_(security_class),
       mode_(mode),
       hidden_ssid_(hidden_ssid),
-      ft_enabled_(true),
       frequency_(0),
       physical_mode_(Metrics::kWiFiNetworkPhyModeUndef),
       raw_signal_strength_(0),
@@ -106,7 +105,6 @@ WiFiService::WiFiService(Manager* manager,
   store->RegisterConstUint16s(kWifiFrequencyListProperty, &frequency_list_);
   store->RegisterConstUint16(kWifiPhyMode, &physical_mode_);
   store->RegisterConstString(kWifiBSsid, &bssid_);
-  store->RegisterBool(kWifiFTEnabled, &ft_enabled_);
   store->RegisterConstString(kCountryProperty, &country_code_);
   store->RegisterConstStringmap(kWifiVendorInformationProperty,
                                 &vendor_information_);
@@ -611,7 +609,7 @@ KeyValueStore WiFiService::GetSupplicantConfigurationParameters() const {
   }
 
   string key_mgmt = key_management();
-  if (manager()->ft_enabled() && ft_enabled_) {
+  if (manager()->ft_enabled()) {
     if (key_mgmt == WPASupplicant::kKeyManagementWPAPSK)
       key_mgmt =
           base::StringPrintf("%s %s", WPASupplicant::kKeyManagementWPAPSK,

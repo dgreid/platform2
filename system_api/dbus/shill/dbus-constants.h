@@ -210,7 +210,6 @@ const char kSecurityClassProperty[] = "SecurityClass";
 const char kSecurityProperty[] = "Security";
 const char kSSIDProperty[] = "SSID";
 const char kWifiBSsid[] = "WiFi.BSSID";
-const char kWifiFTEnabled[] = "WiFi.FTEnabled";
 const char kWifiFrequencyListProperty[] = "WiFi.FrequencyList";
 const char kWifiFrequency[] = "WiFi.Frequency";
 const char kWifiHexSsid[] = "WiFi.HexSSID";
