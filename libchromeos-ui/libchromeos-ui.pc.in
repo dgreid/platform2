@@ -3,5 +3,5 @@ bslot=@BSLOT@
 Name: libchromeos-ui
 Description: Chrome OS ui library
 Version: ${bslot}
-Requires.private: libbrillo-${bslot}
+Requires.private: libbrillo
 Libs: -lchromeos-ui-${bslot}
