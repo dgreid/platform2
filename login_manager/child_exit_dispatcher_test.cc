@@ -15,8 +15,9 @@
 #include <string>
 #include <vector>
 
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/test/bind_test_util.h>
 #include <brillo/asynchronous_signal_handler.h>
 #include <brillo/message_loops/base_message_loop.h>
@@ -78,8 +79,8 @@ class ChildExitDispatcherTest : public ::testing::Test {
   }
 
  protected:
-  base::MessageLoopForIO loop_;
-  brillo::BaseMessageLoop brillo_loop_{&loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   SystemUtilsImpl system_utils_;
   brillo::AsynchronousSignalHandler signal_handler_;
 

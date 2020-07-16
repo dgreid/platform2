@@ -22,13 +22,14 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/system/sys_info.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/namespaces/mount_namespace.h>
@@ -295,8 +296,8 @@ int main(int argc, char* argv[]) {
       std::make_unique<login_manager::Subprocess>(uid, &system));
   bool should_run_browser = browser_job->ShouldRunBrowser();
 
-  base::MessageLoopForIO message_loop;
-  brillo::BaseMessageLoop brillo_loop(&message_loop);
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  brillo::BaseMessageLoop brillo_loop(task_executor.task_runner());
   brillo_loop.SetAsCurrent();
 
   scoped_refptr<SessionManagerService> manager = new SessionManagerService(

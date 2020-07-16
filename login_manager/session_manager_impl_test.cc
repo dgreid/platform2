@@ -32,7 +32,7 @@
 #include <base/memory/ptr_util.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/strings/string_util.h>
@@ -967,7 +967,7 @@ class SessionManagerImplTest : public ::testing::Test,
 
   string fake_salt_ = "fake salt";
 
-  base::MessageLoop loop;
+  base::SingleThreadTaskExecutor task_executor;
 
   // Used by fake closures that simulate calling chrome and powerd to lock
   // the screen and restart the device.
