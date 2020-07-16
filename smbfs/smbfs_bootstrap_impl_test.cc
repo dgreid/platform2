@@ -11,9 +11,9 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/test/bind_test_util.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -111,7 +111,9 @@ class TestSmbFsBootstrapImpl : public testing::Test {
   }
 
  protected:
-  base::MessageLoopForIO message_loop_;
+  base::test::TaskEnvironment task_environment{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
   MockBootstrapDelegate mock_delegate_;
 
   mojom::SmbFsDelegatePtr smbfs_delegate_ptr_;

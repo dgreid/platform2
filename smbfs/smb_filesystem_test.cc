@@ -9,8 +9,8 @@
 
 #include <utility>
 
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -61,7 +61,9 @@ class TestSmbFilesystem : public SmbFilesystem {
 
 class SmbFilesystemTest : public testing::Test {
  protected:
-  base::MessageLoopForIO message_loop_;
+  base::test::TaskEnvironment task_environment{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 };
 
 TEST_F(SmbFilesystemTest, SetResolvedAddress) {
