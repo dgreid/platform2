@@ -45,6 +45,13 @@ class TRUNKS_EXPORT TrunksDBusProxy : public CommandTransceiver {
   void set_init_attempt_delay(base::TimeDelta init_attempt_delay) {
     init_attempt_delay_ = init_attempt_delay;
   }
+  base::PlatformThreadId origin_thread_id_for_testing() {
+    return origin_thread_id_;
+  }
+  void set_origin_thread_id_for_testing(
+      base::PlatformThreadId testing_thread_id) {
+    origin_thread_id_ = testing_thread_id;
+  }
 
  private:
   friend class TrunksDBusProxyTest;

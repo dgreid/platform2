@@ -236,21 +236,14 @@ TEST_F(TrunksDBusProxyTest, SendCommandFailureWrongThread) {
   // Attempting to send from a wrong thread should return TRUNKS_RC_IPC_ERROR
   // without sending the command.
   EXPECT_TRUE(proxy_.Init());
+  // xor 1 would change the thread id without overflow.
+  base::PlatformThreadId fake_id = proxy_.origin_thread_id_for_testing() ^ 1;
+  proxy_.set_origin_thread_id_for_testing(fake_id);
   set_next_response("response");
-  base::Thread other_thread("trunks_dbus_proxy_test other thread");
-  ASSERT_TRUE(other_thread.Start());
-  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                            base::WaitableEvent::InitialState::NOT_SIGNALED);
-  auto thread_task = [](TrunksDBusProxy* proxy, base::WaitableEvent* event) {
-    auto callback = [](const std::string& response) {
-      EXPECT_EQ(CreateErrorResponse(TRUNKS_RC_IPC_ERROR), response);
-    };
-    proxy->SendCommand("command", base::Bind(callback));
-    event->Signal();
+  auto callback = [](const std::string& response) {
+    EXPECT_EQ(CreateErrorResponse(TRUNKS_RC_IPC_ERROR), response);
   };
-  other_thread.task_runner()->PostTask(
-      FROM_HERE, base::Bind(thread_task, &proxy_, &event));
-  EXPECT_TRUE(event.TimedWait(base::TimeDelta::FromMilliseconds(100)));
+  proxy_.SendCommand("command", base::Bind(callback));
   EXPECT_EQ("", last_command());
 }
 
@@ -258,19 +251,12 @@ TEST_F(TrunksDBusProxyTest, SendCommandAndWaitFailureWrongThread) {
   // Attempting to send from a wrong thread should return TRUNKS_RC_IPC_ERROR
   // without sending the command.
   EXPECT_TRUE(proxy_.Init());
+  // xor 1 would change the thread id without overflow.
+  base::PlatformThreadId fake_id = proxy_.origin_thread_id_for_testing() ^ 1;
+  proxy_.set_origin_thread_id_for_testing(fake_id);
   set_next_response("response");
-  base::Thread other_thread("trunks_dbus_proxy_test other thread");
-  ASSERT_TRUE(other_thread.Start());
-  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                            base::WaitableEvent::InitialState::NOT_SIGNALED);
-  auto thread_task = [](TrunksDBusProxy* proxy, base::WaitableEvent* event) {
-    EXPECT_EQ(CreateErrorResponse(TRUNKS_RC_IPC_ERROR),
-              proxy->SendCommandAndWait("command"));
-    event->Signal();
-  };
-  other_thread.task_runner()->PostTask(
-      FROM_HERE, base::Bind(thread_task, &proxy_, &event));
-  EXPECT_TRUE(event.TimedWait(base::TimeDelta::FromMilliseconds(100)));
+  EXPECT_EQ(CreateErrorResponse(TRUNKS_RC_IPC_ERROR),
+            proxy_.SendCommandAndWait("command"));
   EXPECT_EQ("", last_command());
 }
 
