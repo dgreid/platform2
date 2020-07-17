@@ -23,7 +23,8 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/disk_cleanup.h"
 #include "cryptohome/key_challenge_service.h"
-#include "cryptohome/key_challenge_service_impl.h"
+#include "cryptohome/key_challenge_service_factory.h"
+#include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/obfuscated_username.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
@@ -1395,9 +1396,10 @@ bool UserDataAuth::InitForChallengeResponseAuth(
     return false;
   }
 
-  challenge_credentials_helper_ =
+  default_challenge_credentials_helper_ =
       std::make_unique<ChallengeCredentialsHelperImpl>(tpm_, delegate_blob,
                                                        delegate_secret);
+  challenge_credentials_helper_ = default_challenge_credentials_helper_.get();
 
   return true;
 }
@@ -1434,11 +1436,18 @@ void UserDataAuth::DoChallengeResponseMount(
     return;
   }
 
-  // KeyChallengeServiceImpl is tasked with contacting the challenge response
-  // DBus service that'll provide the response once we send the challenge.
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      mount_thread_bus_,
-      request.authorization().key_delegate().dbus_service_name());
+  // KeyChallengeService is tasked with contacting the challenge response D-Bus
+  // service that'll provide the response once we send the challenge.
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          mount_thread_bus_,
+          request.authorization().key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    std::move(on_done).Run(reply);
+    return;
+  }
 
   if (!homedirs_->Exists(obfuscated_username) &&
       !mount_args.create_if_missing) {
@@ -2013,9 +2022,19 @@ void UserDataAuth::TryLightweightChallengeResponseCheckKey(
     return;
   }
 
+  // KeyChallengeService is tasked with contacting the challenge response D-Bus
+  // service that'll provide the response once we send the challenge.
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          mount_thread_bus_, authorization.key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    OnLightweightChallengeResponseCheckKeyDone(request, std::move(on_done),
+                                               /*success=*/false);
+    return;
+  }
+
   // Attempt the lightweight check against the found user session.
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      mount_thread_bus_, authorization.key_delegate().dbus_service_name());
   challenge_credentials_helper_->VerifyKey(
       account_id, *found_session_key_data, std::move(key_challenge_service),
       base::BindOnce(&UserDataAuth::OnLightweightChallengeResponseCheckKeyDone,
@@ -2052,8 +2071,17 @@ void UserDataAuth::DoFullChallengeResponseCheckKey(
   const std::string& account_id = GetAccountId(identifier);
   const std::string obfuscated_username =
       BuildObfuscatedUsername(account_id, system_salt_);
-  auto key_challenge_service = std::make_unique<KeyChallengeServiceImpl>(
-      mount_thread_bus_, authorization.key_delegate().dbus_service_name());
+
+  // KeyChallengeService is tasked with contacting the challenge response D-Bus
+  // service that'll provide the response once we send the challenge.
+  std::unique_ptr<KeyChallengeService> key_challenge_service =
+      key_challenge_service_factory_->New(
+          mount_thread_bus_, authorization.key_delegate().dbus_service_name());
+  if (!key_challenge_service) {
+    LOG(ERROR) << "Failed to create key challenge service";
+    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    return;
+  }
 
   if (!homedirs_->Exists(obfuscated_username)) {
     std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);

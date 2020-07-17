@@ -27,6 +27,8 @@
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/homedirs.h"
 #include "cryptohome/install_attributes.h"
+#include "cryptohome/key_challenge_service_factory.h"
+#include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_factory.h"
 #include "cryptohome/pkcs11_init.h"
@@ -512,6 +514,18 @@ class UserDataAuth {
     mount_factory_ = mount_factory;
   }
 
+  // Override |challenge_credentials_helper_| for testing purpose
+  void set_challenge_credentials_helper(
+      ChallengeCredentialsHelper* challenge_credentials_helper) {
+    challenge_credentials_helper_ = challenge_credentials_helper;
+  }
+
+  // Override |key_challenge_service_factory_| for testing purpose
+  void set_key_challenge_service_factory(
+      KeyChallengeServiceFactory* key_challenge_service_factory) {
+    key_challenge_service_factory_ = key_challenge_service_factory;
+  }
+
   // Retrieve the mount associated with a given user, for testing purpose only.
   cryptohome::Mount* get_mount_for_user(const std::string& username) {
     if (mounts_.count(username) == 0)
@@ -967,10 +981,26 @@ class UserDataAuth {
   // This holds the salt that is used to derive the passkey for public mounts.
   brillo::SecureBlob public_mount_salt_;
 
-  // Challenge credential helper utility class. This class is required for doing
-  // a challenge response style login, and is only lazily created when mounting
-  // a mount that requires challenge response login type is performed.
-  std::unique_ptr<ChallengeCredentialsHelper> challenge_credentials_helper_;
+  // Default challenge credential helper utility object. This object is required
+  // for doing a challenge response style login, and is only lazily created when
+  // mounting a mount that requires challenge response login type is performed.
+  std::unique_ptr<ChallengeCredentialsHelper>
+      default_challenge_credentials_helper_;
+
+  // Actual challenge credential helper utility object used by this class.
+  // Usually set to |default_challenge_credentials_helper_|, but can be
+  // overridden for testing.
+  ChallengeCredentialsHelper* challenge_credentials_helper_ = nullptr;
+
+  // Default factory of key challenge services. This object is required for
+  // doing a challenge response style login.
+  KeyChallengeServiceFactoryImpl default_key_challenge_service_factory_;
+
+  // Actual factory of key challenge services that is used by this class.
+  // Usually set to |default_key_challenge_service_factory_|, but can be
+  // overridden for testing.
+  KeyChallengeServiceFactory* key_challenge_service_factory_ =
+      &default_key_challenge_service_factory_;
 
   // Guest user's username.
   std::string guest_user_;

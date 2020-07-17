@@ -17,6 +17,8 @@
 #include <metrics/metrics_library_mock.h>
 #include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
+#include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
+#include "cryptohome/challenge_credentials/mock_challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
@@ -28,6 +30,8 @@
 #include "cryptohome/mock_firmware_management_parameters.h"
 #include "cryptohome/mock_homedirs.h"
 #include "cryptohome/mock_install_attributes.h"
+#include "cryptohome/mock_key_challenge_service.h"
+#include "cryptohome/mock_key_challenge_service_factory.h"
 #include "cryptohome/mock_le_credential_backend.h"
 #include "cryptohome/mock_mount.h"
 #include "cryptohome/mock_mount_factory.h"
@@ -35,6 +39,7 @@
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
+#include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/obfuscated_username.h"
 #include "cryptohome/protobuf_test_utils.h"
@@ -50,6 +55,7 @@ using ::testing::ElementsAreArray;
 using ::testing::EndsWith;
 using ::testing::Eq;
 using ::testing::Invoke;
+using ::testing::InvokeWithoutArgs;
 using ::testing::Mock;
 using ::testing::NiceMock;
 using ::testing::Pointee;
@@ -109,6 +115,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_pkcs11_init(&pkcs11_init_);
     userdataauth_->set_mount_factory(&mount_factory_);
     userdataauth_->set_tpm_ownership_proxy(&tpm_ownership_proxy_);
+    userdataauth_->set_challenge_credentials_helper(
+        &challenge_credentials_helper_);
+    userdataauth_->set_key_challenge_service_factory(
+        &key_challenge_service_factory_);
     userdataauth_->set_disable_threading(true);
     homedirs_.set_crypto(&crypto_);
     homedirs_.set_platform(&platform_);
@@ -200,6 +210,14 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // Mock tpm ownership proxy object, will be passed to UserDataAuth for its
   // internal use.
   NiceMock<org::chromium::TpmOwnershipProxyMock> tpm_ownership_proxy_;
+
+  // Mock challenge credential helper utility object, will be passed to
+  // UserDataAuth for its internal use.
+  NiceMock<MockChallengeCredentialsHelper> challenge_credentials_helper_;
+
+  // Mock factory of key challenge services, will be passed to UserDataAuth for
+  // its internal use.
+  NiceMock<MockKeyChallengeServiceFactory> key_challenge_service_factory_;
 
   // Mock Mount Factory object, will be passed to UserDataAuth for its internal
   // use.
@@ -2704,6 +2722,116 @@ TEST_F(UserDataAuthExTest, RenameInvalidArguments) {
   rename_homedir_req_->mutable_id_to()->set_account_id(kUsername1);
   EXPECT_EQ(userdataauth_->Rename(*rename_homedir_req_),
             user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+}
+
+class ChallengeResponseUserDataAuthExTest : public UserDataAuthExTest {
+ public:
+  static constexpr const char* kUser = "chromeos-user";
+  static constexpr const char* kKeyLabel = "key";
+  static constexpr const char* kKeyDelegateDBusService = "key-delegate-service";
+  static constexpr const char* kSpkiDer = "fake-spki";
+  static constexpr ChallengeSignatureAlgorithm kAlgorithm =
+      CHALLENGE_RSASSA_PKCS1_V1_5_SHA256;
+  static constexpr const char* kPasskey = "passkey";
+
+  // GMock actions that perform reply to ChallengeCredentialsHelper operations:
+
+  struct ReplyToVerifyKey {
+    void operator()(const std::string& account_id,
+                    const KeyData& key_data,
+                    std::unique_ptr<KeyChallengeService> key_challenge_service,
+                    ChallengeCredentialsHelper::VerifyKeyCallback callback) {
+      std::move(callback).Run(is_key_valid);
+    }
+
+    bool is_key_valid = false;
+  };
+
+  struct ReplyToDecrypt {
+    void operator()(const std::string& account_id,
+                    const KeyData& key_data,
+                    const SerializedVaultKeyset_SignatureChallengeInfo&
+                        keyset_challenge_info,
+                    std::unique_ptr<KeyChallengeService> key_challenge_service,
+                    ChallengeCredentialsHelper::DecryptCallback callback) {
+      std::unique_ptr<Credentials> credentials_to_pass;
+      if (credentials)
+        credentials_to_pass = std::make_unique<Credentials>(*credentials);
+      std::move(callback).Run(std::move(credentials_to_pass));
+    }
+
+    base::Optional<Credentials> credentials;
+  };
+
+  ChallengeResponseUserDataAuthExTest() {
+    key_data_.set_label(kKeyLabel);
+    key_data_.set_type(KeyData::KEY_TYPE_CHALLENGE_RESPONSE);
+    ChallengePublicKeyInfo* const key_public_info =
+        key_data_.add_challenge_response_key();
+    key_public_info->set_public_key_spki_der(kSpkiDer);
+    key_public_info->add_signature_algorithm(kAlgorithm);
+
+    PrepareArguments();
+    check_req_->mutable_account_id()->set_account_id(kUser);
+    *check_req_->mutable_authorization_request()
+         ->mutable_key()
+         ->mutable_data() = key_data_;
+    check_req_->mutable_authorization_request()
+        ->mutable_key_delegate()
+        ->set_dbus_service_name(kKeyDelegateDBusService);
+
+    ON_CALL(key_challenge_service_factory_,
+            New(/*bus=*/_, kKeyDelegateDBusService))
+        .WillByDefault(InvokeWithoutArgs(
+            []() { return std::make_unique<MockKeyChallengeService>(); }));
+  }
+
+  void SetUpActiveUserSession() {
+    EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(homedirs_, GetVaultKeyset(_, kKeyLabel))
+        .WillRepeatedly(
+            Invoke(this, &UserDataAuthExTest::GetNiceMockVaultKeyset));
+
+    SetupMount(kUser);
+    EXPECT_CALL(*mount_, AreSameUser(_)).WillRepeatedly(Return(true));
+    user_session_.set_key_data(key_data_);
+    EXPECT_CALL(*mount_, GetCurrentUserSession())
+        .WillRepeatedly(Return(&user_session_));
+  }
+
+ protected:
+  KeyData key_data_;
+  NiceMock<MockUserSession> user_session_;
+};
+
+// Tests the CheckKey lightweight check scenario for challenge-response
+// credentials, where the credentials are verified without going through full
+// decryption.
+TEST_F(ChallengeResponseUserDataAuthExTest, LightweightCheckKey) {
+  SetUpActiveUserSession();
+
+  // Simulate a successful key verification.
+  EXPECT_CALL(challenge_credentials_helper_,
+              VerifyKey(kUser, ProtobufEquals(key_data_), _, _))
+      .WillOnce(ReplyToVerifyKey{/*is_key_valid=*/true});
+
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+}
+
+// Tests the CheckKey full check scenario for challenge-response credentials,
+// with falling back from the failed lightweight check.
+TEST_F(ChallengeResponseUserDataAuthExTest, FallbackLightweightCheckKey) {
+  SetUpActiveUserSession();
+
+  // Simulate a failure in the lightweight check and a successful decryption.
+  EXPECT_CALL(challenge_credentials_helper_,
+              VerifyKey(kUser, ProtobufEquals(key_data_), _, _))
+      .WillOnce(ReplyToVerifyKey{/*is_key_valid=*/false});
+  EXPECT_CALL(challenge_credentials_helper_,
+              Decrypt(kUser, ProtobufEquals(key_data_), _, _, _))
+      .WillOnce(ReplyToDecrypt{Credentials(kUser, SecureBlob(kPasskey))});
+
+  CallCheckKeyAndVerify(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 // ================ Tests requiring fully threaded environment ================
