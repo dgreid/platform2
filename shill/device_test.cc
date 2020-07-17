@@ -361,7 +361,8 @@ TEST_F(DeviceTest, AcquireIPConfigWithSelectedService) {
                                                  "DHCPProperty.VendorClass", _))
       .WillOnce(DoAll(SetArgPointee<2>(string("vendorclass")), Return(true)));
 
-  auto manager_dhcp_properties = std::make_unique<DhcpProperties>();
+  auto manager_dhcp_properties =
+      std::make_unique<DhcpProperties>(/*manager=*/nullptr);
   manager_dhcp_properties->Load(&default_profile_storage,
                                 default_profile_storage_id);
 
@@ -400,7 +401,8 @@ TEST_F(DeviceTest, AcquireIPConfigWithoutSelectedService) {
   device_->dhcp_provider_ = dhcp_provider.get();
   scoped_refptr<MockDHCPConfig> dhcp_config(
       new MockDHCPConfig(control_interface(), kDeviceName));
-  auto manager_dhcp_properties = std::make_unique<DhcpProperties>();
+  auto manager_dhcp_properties =
+      std::make_unique<DhcpProperties>(/*manager=*/nullptr);
   device_->manager_->dhcp_properties_ = std::move(manager_dhcp_properties);
 #ifndef DISABLE_DHCPV6
   device_->dhcpv6_config_ = new IPConfig(control_interface(), "randomname");

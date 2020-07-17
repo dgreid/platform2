@@ -15,6 +15,7 @@
 namespace shill {
 
 class Error;
+class Manager;
 class PropertyStore;
 class StoreInterface;
 
@@ -23,8 +24,7 @@ class DhcpProperties {
   static const char kHostnameProperty[];
   static const char kVendorClassProperty[];
 
-  DhcpProperties();
-
+  explicit DhcpProperties(Manager* manager);
   virtual ~DhcpProperties();
 
   // Adds property accessors to the DhcpProperty parameters in |this|
@@ -44,20 +44,8 @@ class DhcpProperties {
   const KeyValueStore& properties() const { return properties_; }
 
  private:
-  FRIEND_TEST(DhcpPropertiesTest, ClearMappedStringPropertyNoExistingValue);
-  FRIEND_TEST(DhcpPropertiesTest, ClearMappedStringPropertyWithSetValue);
-  FRIEND_TEST(DhcpPropertiesTest, Ctor);
-  FRIEND_TEST(DhcpPropertiesTest, GetMappedStringPropertyNoExistingValue);
-  FRIEND_TEST(DhcpPropertiesTest, GetMappedStringPropertyWithSetValue);
-  FRIEND_TEST(DhcpPropertiesTest, GetValueForProperty);
-  FRIEND_TEST(DhcpPropertiesTest, Load);
-  FRIEND_TEST(DhcpPropertiesTest, LoadEmpty);
-  FRIEND_TEST(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired);
-  FRIEND_TEST(DhcpPropertiesTest, SaveWithValuesSet);
-  FRIEND_TEST(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted);
-  FRIEND_TEST(DhcpPropertiesTest, SetMappedStringPropertyNoExistingValue);
-  FRIEND_TEST(DhcpPropertiesTest, SetMappedStringPropertyOverrideExisting);
-  FRIEND_TEST(DhcpPropertiesTest, SetMappedStringPropertySameAsExistingValue);
+  friend class DhcpPropertiesTest;
+  FRIEND_TEST(DhcpPropertiesTest, DhcpPropertyChanged);
 
   void ClearMappedStringProperty(const size_t& index, Error* error);
   std::string GetMappedStringProperty(const size_t& index, Error* error);
@@ -67,6 +55,9 @@ class DhcpProperties {
 
   // KeyValueStore tracking values for DhcpProperties settings.
   KeyValueStore properties_;
+
+  // Unowned Manager. May be null in tests.
+  Manager* manager_;
 
   DISALLOW_COPY_AND_ASSIGN(DhcpProperties);
 };

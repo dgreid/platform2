@@ -102,7 +102,7 @@ DHCPv4ConfigRefPtr DHCPv4ConfigTest::CreateMockMinijailConfig(
     const string& lease_suffix,
     bool arp_gateway) {
   MockStore storage;
-  DhcpProperties dhcp_props;
+  DhcpProperties dhcp_props(/*manager=*/nullptr);
   if (!hostname.empty()) {
     EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
         .WillOnce(DoAll(SetArgPointee<2>(string(kHostName)), Return(true)));
@@ -132,7 +132,7 @@ DHCPv4ConfigRefPtr DHCPv4ConfigTest::CreateRunningConfig(
     const string& lease_suffix,
     bool arp_gateway) {
   MockStore storage;
-  DhcpProperties dhcp_props;
+  DhcpProperties dhcp_props(/*manager=*/nullptr);
   if (!hostname.empty()) {
     EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
         .WillOnce(DoAll(SetArgPointee<2>(string(kHostName)), Return(true)));

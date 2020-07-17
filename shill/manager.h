@@ -27,6 +27,7 @@
 #include "shill/geolocation_info.h"
 #include "shill/hook_table.h"
 #include "shill/metrics.h"
+#include "shill/mockable.h"
 #include "shill/net/ip_address.h"
 #include "shill/power_manager.h"
 #include "shill/profile.h"
@@ -77,7 +78,6 @@ class Manager {
     std::string portal_http_url;
     std::string portal_https_url;
     std::vector<std::string> portal_fallback_http_urls;
-    std::string host_name;
     // Whether to ARP for the default gateway in the DHCP client after
     // acquiring a lease.
     bool arp_gateway;
@@ -113,6 +113,9 @@ class Manager {
   virtual ~Manager();
 
   void RegisterAsync(const base::Callback<void(bool)>& completion_callback);
+
+  mockable void OnDhcpPropertyChanged(const std::string& key,
+                                      const std::string& value);
 
   virtual void SetBlockedDevices(
       const std::vector<std::string>& blockeded_devices);

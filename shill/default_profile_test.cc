@@ -100,9 +100,6 @@ TEST_F(DefaultProfileTest, Save) {
                                   DefaultProfile::kDefaultId))
       .WillOnce(Return(true));
   EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageHostName, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList, ""))
       .WillOnce(Return(true));
   EXPECT_CALL(*storage,
@@ -147,10 +144,6 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
                                 &manager_props.arp_gateway))
       .WillOnce(Return(false));
   EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageHostName,
-                                  &manager_props.host_name))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList,
                                   &manager_props.check_portal_list))
       .WillOnce(Return(false));
@@ -183,7 +176,6 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
   profile_->LoadManagerProperties(&manager_props,
                                   manager()->dhcp_properties_.get());
   EXPECT_TRUE(manager_props.arp_gateway);
-  EXPECT_EQ("", manager_props.host_name);
   EXPECT_EQ(PortalDetector::kDefaultCheckPortalList,
             manager_props.check_portal_list);
   EXPECT_EQ(Resolver::kDefaultIgnoredSearchList,
@@ -203,13 +195,9 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
 
 TEST_F(DefaultProfileTest, LoadManagerProperties) {
   auto storage = std::make_unique<MockStore>();
-  const string host_name("hostname");
   EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
                                 DefaultProfile::kStorageArpGateway, _))
       .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
-  EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageHostName, _))
-      .WillOnce(DoAll(SetArgPointee<2>(host_name), Return(true)));
   const string portal_list("technology1,technology2");
   EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
                                   DefaultProfile::kStorageCheckPortalList, _))
@@ -250,7 +238,6 @@ TEST_F(DefaultProfileTest, LoadManagerProperties) {
   profile_->LoadManagerProperties(&manager_props,
                                   manager()->dhcp_properties_.get());
   EXPECT_FALSE(manager_props.arp_gateway);
-  EXPECT_EQ(host_name, manager_props.host_name);
   EXPECT_EQ(portal_list, manager_props.check_portal_list);
   EXPECT_EQ(ignored_paths, manager_props.ignored_dns_search_paths);
   EXPECT_EQ(link_monitor_technologies, manager_props.link_monitor_technologies);

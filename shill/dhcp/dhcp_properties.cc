@@ -13,6 +13,7 @@
 
 #include "shill/key_value_store.h"
 #include "shill/logging.h"
+#include "shill/manager.h"
 #include "shill/property_accessor.h"
 #include "shill/property_store.h"
 #include "shill/store_interface.h"
@@ -45,7 +46,7 @@ std::string GetFullPropertyName(const std::string& property_name) {
 const char DhcpProperties::kHostnameProperty[] = "Hostname";
 const char DhcpProperties::kVendorClassProperty[] = "VendorClass";
 
-DhcpProperties::DhcpProperties() = default;
+DhcpProperties::DhcpProperties(Manager* manager) : manager_(manager) {}
 
 DhcpProperties::~DhcpProperties() = default;
 
@@ -115,8 +116,10 @@ void DhcpProperties::ClearMappedStringProperty(const size_t& index,
 string DhcpProperties::GetMappedStringProperty(const size_t& index,
                                                Error* error) {
   CHECK(index < base::size(kPropertyNames));
-  if (properties_.Contains<string>(kPropertyNames[index])) {
-    return properties_.Get<string>(kPropertyNames[index]);
+  const std::string& key = kPropertyNames[index];
+  SLOG(this, 3) << __func__ << ": " << key;
+  if (properties_.Contains<string>(key)) {
+    return properties_.Get<string>(key);
   }
   error->Populate(Error::kNotFound, "Property is not set");
   return string();
@@ -126,11 +129,15 @@ bool DhcpProperties::SetMappedStringProperty(const size_t& index,
                                              const string& value,
                                              Error* error) {
   CHECK(index < base::size(kPropertyNames));
-  if (properties_.Contains<string>(kPropertyNames[index]) &&
-      properties_.Get<string>(kPropertyNames[index]) == value) {
+  const std::string& key = kPropertyNames[index];
+  SLOG(this, 3) << __func__ << ": " << key << " = " << value;
+  if (properties_.Contains<string>(key) &&
+      properties_.Get<string>(key) == value) {
     return false;
   }
-  properties_.Set<string>(kPropertyNames[index], value);
+  properties_.Set<string>(key, value);
+  if (manager_)
+    manager_->OnDhcpPropertyChanged(kPropertyPrefix + key, value);
   return true;
 }
 

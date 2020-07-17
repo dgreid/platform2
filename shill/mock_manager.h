@@ -25,6 +25,10 @@ class MockManager : public Manager {
               Metrics* metrics);
   ~MockManager() override;
 
+  MOCK_METHOD(void,
+              OnDhcpPropertyChanged,
+              (const std::string&, const std::string&),
+              (override));
   MOCK_METHOD(DeviceInfo*, device_info, (), (override));
 #if !defined(DISABLE_CELLULAR)
   MOCK_METHOD(ModemInfo*, modem_info, (), (override));

@@ -8,7 +8,8 @@
 
 namespace shill {
 
-MockDhcpProperties::MockDhcpProperties() = default;
+MockDhcpProperties::MockDhcpProperties()
+    : DhcpProperties(/*delegate=*/nullptr) {}
 
 MockDhcpProperties::~MockDhcpProperties() = default;
 

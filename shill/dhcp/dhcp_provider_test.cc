@@ -51,7 +51,7 @@ class DHCPProviderTest : public Test {
 };
 
 TEST_F(DHCPProviderTest, CreateIPv4Config) {
-  DhcpProperties dhcp_props;
+  DhcpProperties dhcp_props(/*manager=*/nullptr);
 
   DHCPConfigRefPtr config = provider_->CreateIPv4Config(
       kDeviceName, kStorageIdentifier, kArpGateway, dhcp_props);
@@ -78,7 +78,7 @@ TEST_F(DHCPProviderTest, BindAndUnbind) {
   int kPid = 999;
   EXPECT_EQ(nullptr, provider_->GetConfig(kPid));
   EXPECT_FALSE(provider_->IsRecentlyUnbound(kPid));
-  DhcpProperties dhcp_props;
+  DhcpProperties dhcp_props(/*manager=*/nullptr);
 
   DHCPConfigRefPtr config = provider_->CreateIPv4Config(
       kDeviceName, kStorageIdentifier, kArpGateway, dhcp_props);

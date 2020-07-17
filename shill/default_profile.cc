@@ -39,8 +39,6 @@ const char DefaultProfile::kStorageCheckPortalList[] = "CheckPortalList";
 // static
 const char DefaultProfile::kStorageConnectionIdSalt[] = "ConnectionIdSalt";
 // static
-const char DefaultProfile::kStorageHostName[] = "DHCPProperty.Hostname";
-// static
 const char DefaultProfile::kStorageIgnoredDNSSearchPaths[] =
     "IgnoredDNSSearchPaths";
 // static
@@ -107,7 +105,6 @@ void DefaultProfile::LoadManagerProperties(Manager::Properties* manager_props,
                                            DhcpProperties* dhcp_properties) {
   storage()->GetBool(kStorageId, kStorageArpGateway,
                      &manager_props->arp_gateway);
-  storage()->GetString(kStorageId, kStorageHostName, &manager_props->host_name);
   if (!storage()->GetString(kStorageId, kStorageCheckPortalList,
                             &manager_props->check_portal_list)) {
     manager_props->check_portal_list = PortalDetector::kDefaultCheckPortalList;
@@ -173,7 +170,6 @@ bool DefaultProfile::Save() {
   storage()->DeleteKey(kStorageId, kStorageOfflineMode);
 
   storage()->SetBool(kStorageId, kStorageArpGateway, props_.arp_gateway);
-  storage()->SetString(kStorageId, kStorageHostName, props_.host_name);
   storage()->SetString(kStorageId, kStorageName, GetFriendlyName());
   storage()->SetString(kStorageId, kStorageCheckPortalList,
                        props_.check_portal_list);

@@ -201,7 +201,7 @@ Manager::Manager(ControlInterface* control_interface,
       suppress_autoconnect_(false),
       is_connected_state_(false),
       has_user_session_(false),
-      dhcp_properties_(new DhcpProperties()),
+      dhcp_properties_(new DhcpProperties(this)),
       network_throttling_enabled_(false),
       download_rate_kbits_(0),
       upload_rate_kbits_(0),
@@ -237,7 +237,6 @@ Manager::Manager(ControlInterface* control_interface,
   HelpRegisterDerivedString(kIgnoredDNSSearchPathsProperty,
                             &Manager::GetIgnoredDNSSearchPaths,
                             &Manager::SetIgnoredDNSSearchPaths);
-  store_.RegisterString(kDhcpPropertyHostnameProperty, &props_.host_name);
   store_.RegisterString(kLinkMonitorTechnologiesProperty,
                         &props_.link_monitor_technologies);
   store_.RegisterString(kNoAutoConnectTechnologiesProperty,
@@ -276,6 +275,13 @@ Manager::~Manager() = default;
 
 void Manager::RegisterAsync(const Callback<void(bool)>& completion_callback) {
   adaptor_->RegisterAsync(completion_callback);
+}
+
+void Manager::OnDhcpPropertyChanged(const std::string& key,
+                                    const std::string& value) {
+  adaptor_->EmitStringChanged(key, value);
+  if (profiles_.size() > 0)
+    profiles_.front()->Save();
 }
 
 void Manager::SetBlockedDevices(const vector<string>& blocked_devices) {
@@ -1474,6 +1480,7 @@ void Manager::PersistService(const ServiceRefPtr& to_update) {
 }
 
 void Manager::LoadProperties(const scoped_refptr<DefaultProfile>& profile) {
+  SLOG(this, 2) << __func__;
   profile->LoadManagerProperties(&props_, dhcp_properties_.get());
   SetIgnoredDNSSearchPaths(props_.ignored_dns_search_paths, nullptr);
 }
