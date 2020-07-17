@@ -294,11 +294,6 @@ Service::Service()
       chaps_client_(default_chaps_client_.get()),
       boot_lockbox_(nullptr),
       boot_attributes_(nullptr),
-      default_key_challenge_service_factory_(
-          std::make_unique<KeyChallengeServiceFactoryImpl>(
-              &system_dbus_connection_)),
-      key_challenge_service_factory_(
-          default_key_challenge_service_factory_.get()),
       firmware_management_parameters_(nullptr),
       low_disk_notification_period_ms_(kLowDiskNotificationPeriodMS),
       upload_alerts_period_ms_(kUploadAlertsPeriodMS),
@@ -2488,6 +2483,7 @@ void Service::TryLightweightChallengeResponseCheckKeyEx(
 
   std::unique_ptr<KeyChallengeService> key_challenge_service =
       key_challenge_service_factory_->New(
+          system_dbus_connection_.Connect(),
           authorization->key_delegate().dbus_service_name());
   if (!key_challenge_service) {
     LOG(ERROR) << "Failed to create key challenge service";
@@ -2559,6 +2555,7 @@ void Service::DoFullChallengeResponseCheckKeyEx(
 
   std::unique_ptr<KeyChallengeService> key_challenge_service =
       key_challenge_service_factory_->New(
+          system_dbus_connection_.Connect(),
           authorization->key_delegate().dbus_service_name());
   if (!key_challenge_service) {
     LOG(ERROR) << "Failed to create key challenge service";
@@ -2641,6 +2638,7 @@ void Service::DoChallengeResponseMountEx(
   }
   std::unique_ptr<KeyChallengeService> key_challenge_service =
       key_challenge_service_factory_->New(
+          system_dbus_connection_.Connect(),
           authorization->key_delegate().dbus_service_name());
   if (!key_challenge_service) {
     LOG(ERROR) << "Failed to create key challenge service";

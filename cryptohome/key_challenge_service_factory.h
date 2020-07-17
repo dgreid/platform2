@@ -8,6 +8,9 @@
 #include <memory>
 #include <string>
 
+#include <base/memory/ref_counted.h>
+#include <dbus/bus.h>
+
 #include "cryptohome/key_challenge_service.h"
 
 namespace cryptohome {
@@ -21,6 +24,7 @@ class KeyChallengeServiceFactory {
   virtual ~KeyChallengeServiceFactory() = default;
 
   virtual std::unique_ptr<KeyChallengeService> New(
+      scoped_refptr<::dbus::Bus> bus,
       const std::string& key_delegate_dbus_service_name) = 0;
 };
 

@@ -8,7 +8,8 @@
 #include <memory>
 #include <string>
 
-#include <brillo/dbus/dbus_connection.h>
+#include <base/memory/ref_counted.h>
+#include <dbus/bus.h>
 
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_factory.h"
@@ -19,9 +20,7 @@ namespace cryptohome {
 // instances of KeyChallengeService that talk to the system D-Bus bus.
 class KeyChallengeServiceFactoryImpl final : public KeyChallengeServiceFactory {
  public:
-  // |system_dbus_connection| is an unowned pointer that must outlive |this|.
-  explicit KeyChallengeServiceFactoryImpl(
-      brillo::DBusConnection* system_dbus_connection);
+  KeyChallengeServiceFactoryImpl();
   KeyChallengeServiceFactoryImpl(const KeyChallengeServiceFactoryImpl&) =
       delete;
   KeyChallengeServiceFactoryImpl& operator=(
@@ -29,11 +28,8 @@ class KeyChallengeServiceFactoryImpl final : public KeyChallengeServiceFactory {
   ~KeyChallengeServiceFactoryImpl() override;
 
   std::unique_ptr<KeyChallengeService> New(
+      scoped_refptr<::dbus::Bus> bus,
       const std::string& key_delegate_dbus_service_name) override;
-
- private:
-  // Unowned.
-  brillo::DBusConnection* const system_dbus_connection_;
 };
 
 }  // namespace cryptohome

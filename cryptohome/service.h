@@ -35,6 +35,7 @@
 #include "cryptohome/firmware_management_parameters.h"
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/key_challenge_service_factory.h"
+#include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_factory.h"
@@ -1113,9 +1114,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   std::unique_ptr<BootAttributes> default_boot_attributes_;
   // After construction, this should only be used on the mount thread.
   BootAttributes* boot_attributes_;
-  std::unique_ptr<KeyChallengeServiceFactory>
-      default_key_challenge_service_factory_;
-  KeyChallengeServiceFactory* key_challenge_service_factory_;
+  KeyChallengeServiceFactoryImpl default_key_challenge_service_factory_;
+  KeyChallengeServiceFactory* key_challenge_service_factory_ =
+      &default_key_challenge_service_factory_;
   std::unique_ptr<FirmwareManagementParameters>
       default_firmware_management_params_;
   FirmwareManagementParameters* firmware_management_parameters_;

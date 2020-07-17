@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+#include <base/memory/ref_counted.h>
+#include <dbus/bus.h>
 #include <gmock/gmock.h>
 
 #include "cryptohome/key_challenge_service.h"
@@ -20,7 +22,9 @@ class MockKeyChallengeServiceFactory : public KeyChallengeServiceFactory {
   MockKeyChallengeServiceFactory() = default;
   ~MockKeyChallengeServiceFactory() override = default;
 
-  MOCK_METHOD(std::unique_ptr<KeyChallengeService>, New, (const std::string&));
+  MOCK_METHOD(std::unique_ptr<KeyChallengeService>,
+              New,
+              (scoped_refptr<::dbus::Bus> bus, const std::string&));
 };
 
 }  // namespace cryptohome
