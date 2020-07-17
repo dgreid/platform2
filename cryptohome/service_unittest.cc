@@ -213,8 +213,11 @@ class ServiceTestNotInitialized : public ::testing::Test {
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     ON_CALL(homedirs_, disk_cleanup()).WillByDefault(Return(&cleanup_));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
+    // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
+    ON_CALL(cleanup_, GetFreeDiskSpaceState(_))
+        .WillByDefault(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup));
     ON_CALL(boot_attributes_, Load()).WillByDefault(Return(true));
     // Empty token list by default.  The effect is that there are no attempts
     // to unload tokens unless a test explicitly sets up the token list.
@@ -443,6 +446,10 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallbackFirst) {
   // Checks that DoAutoCleanup() is called first right after init.
   // Service will schedule first cleanup right after its init.
   EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(1);
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
+      .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup + 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveThreshold));
   service_.set_low_disk_notification_period_ms(1000);  // 1s - long enough
   service_.Initialize();
   // short delay to see the first invocation

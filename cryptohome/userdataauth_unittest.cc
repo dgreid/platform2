@@ -125,8 +125,11 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     ON_CALL(homedirs_, disk_cleanup).WillByDefault(Return(&cleanup_));
     ON_CALL(homedirs_, shadow_root()).WillByDefault(ReturnRef(kShadowRoot));
     ON_CALL(homedirs_, Init(_, _, _)).WillByDefault(Return(true));
+    // Return valid values for the amount of free space.
     ON_CALL(cleanup_, AmountOfFreeDiskSpace())
         .WillByDefault(Return(kFreeSpaceThresholdToTriggerCleanup));
+    ON_CALL(cleanup_, GetFreeDiskSpaceState(_))
+        .WillByDefault(Return(DiskCleanup::FreeSpaceState::kNeedNormalCleanup));
     // Empty token list by default.  The effect is that there are no attempts
     // to unload tokens unless a test explicitly sets up the token list.
     ON_CALL(chaps_client_, GetTokenList(_, _)).WillByDefault(Return(true));
@@ -3183,6 +3186,10 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallbackFirst) {
   // Checks that DoAutoCleanup() is called first right after init.
   // Service will schedule first cleanup right after its init.
   EXPECT_CALL(cleanup_, FreeDiskSpace()).Times(1);
+  EXPECT_CALL(cleanup_, AmountOfFreeDiskSpace())
+      .WillRepeatedly(Return(kFreeSpaceThresholdToTriggerCleanup + 1));
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveThreshold));
 
   InitializeUserDataAuth();
 
