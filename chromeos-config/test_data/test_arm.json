@@ -9,6 +9,10 @@
           "device-tree-compatible-match": "google,some"
         },
         "name": "some",
+        "ui": {
+          "help-content-id": "some",
+          "serialized-ash-flags": "--device-help-content-id=some\u0000"
+        },
         "wallpaper": "some-wallpaper"
       },
       {
@@ -20,6 +24,10 @@
           "whitelabel-tag": "whitelabel1"
         },
         "name": "whitelabel",
+        "ui": {
+          "help-content-id": "whitelabel1",
+          "serialized-ash-flags": "--device-help-content-id=whitelabel1\u0000"
+        },
         "wallpaper": "whitelabel1-wallpaper"
       },
       {
@@ -31,6 +39,10 @@
           "whitelabel-tag": "whitelabel2"
         },
         "name": "whitelabel",
+        "ui": {
+          "help-content-id": "whitelabel2",
+          "serialized-ash-flags": "--device-help-content-id=whitelabel2\u0000"
+        },
         "wallpaper": "whitelabel2-wallpaper"
       },
       {
@@ -42,6 +54,10 @@
           "whitelabel-tag": ""
         },
         "name": "whitelabel",
+        "ui": {
+          "help-content-id": "whitelabel",
+          "serialized-ash-flags": "--device-help-content-id=whitelabel\u0000"
+        },
         "wallpaper": "whitelabel-default-wallpaper"
       },
       {
@@ -53,7 +69,11 @@
           "platform-name": "Another",
           "sku-id": 8
         },
-        "name": "another1"
+        "name": "another1",
+        "ui": {
+          "help-content-id": "another1",
+          "serialized-ash-flags": "--device-help-content-id=another1\u0000"
+        }
       },
       {
         "firmware": {
@@ -64,7 +84,11 @@
           "platform-name": "Another",
           "sku-id": 9
         },
-        "name": "another2"
+        "name": "another2",
+        "ui": {
+          "help-content-id": "another2",
+          "serialized-ash-flags": "--device-help-content-id=another2\u0000"
+        }
       }
     ]
   }

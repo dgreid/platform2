@@ -306,13 +306,6 @@ def TransformConfig(config, model_filter_regex=None):
 
   return libcros_schema.FormatJson(json_config)
 
-def _IsLegacyMigration(platform_name):
-  """Determines if the platform was migrated from FDT impl.
-
-  Args:
-    platform_name: Platform name to be checked
-  """
-  return platform_name in ['Coral', 'Fizz']
 
 def GenerateMosysCBindings(config):
   """Generates Mosys C struct bindings
@@ -333,22 +326,20 @@ def GenerateMosysCBindings(config):
               .customization = "%s"}}"""
   structs = []
   json_config = json.loads(config)
+
+  # TODO(crbug.com/1106930): remove when customization id gets
+  # decoupled from mosys.
+  json_config = _GenerateInferredElements(json_config)
+
   for device_config in json_config[CHROMEOS][CONFIGS]:
     identity = device_config['identity']
     name = device_config['name']
     whitelabel_tag = identity.get('whitelabel-tag', '')
     customization_id = identity.get('customization-id', '')
-    customization = customization_id or whitelabel_tag or name
+    help_content_id = device_config.get('ui', {}).get('help-content-id', '')
     brand_code = device_config.get('brand-code', '')
     platform_name = identity.get('platform-name', '')
     sku_id = identity.get('sku-id', -1)
-    if _IsLegacyMigration(platform_name):
-      # The mosys device-tree impl hard-coded this logic.
-      # Since we've already launched without this on new platforms,
-      # we have to keep to special backwards compatibility.
-      if whitelabel_tag:
-        customization = ('%s-%s' % (name, customization))
-      customization = customization.upper()
 
     # At most one of <device_tree_compatible_match> and <smbios-name-match>
     # should be set (depends on whether this is for ARM or x86). This is used as
@@ -363,7 +354,7 @@ def GenerateMosysCBindings(config):
                          whitelabel_tag,
                          brand_code,
                          name,
-                         customization))
+                         help_content_id))
 
   file_format = """\
 #include "lib/cros_config_struct.h"
@@ -416,6 +407,10 @@ def _GenerateInferredAshFlags(device_config):
   ash_flags = set()
   ash_flags |= set(device_config.get('ui', {}).get('extra-ash-flags', []))
 
+  help_content_id = device_config.get('ui', {}).get('help-content-id')
+  if help_content_id:
+    ash_flags.add('--device-help-content-id=%s' % help_content_id)
+
   if not ash_flags:
     return device_config
 
@@ -445,6 +440,21 @@ def _GenerateInferredElements(json_config):
   """
   configs = []
   for config in json_config[CHROMEOS][CONFIGS]:
+    ui_elements = config.get('ui', {})
+    if 'help-content-id' not in ui_elements:
+      customization_id = config.get('identity', {}).get('customization-id')
+      whitelabel_tag = config.get('identity', {}).get('whitelabel-tag')
+      model_name = config.get('name')
+      ui_elements['help-content-id'] = (
+          customization_id or whitelabel_tag or model_name)
+      # TODO(crbug.com/1106930): remove when Fizz and Coral specify
+      # help-content-id
+      if config.get('identity', {}).get('platform-name') in ('Fizz', 'Coral'):
+        fake_customization_id = model_name
+        if whitelabel_tag:
+          fake_customization_id = ('%s-%s' % (model_name, whitelabel_tag))
+        ui_elements['help-content-id'] = fake_customization_id.upper()
+    config['ui'] = ui_elements
     config = _GenerateInferredAshFlags(config)
     configs.append(config)
   return {CHROMEOS: {CONFIGS: configs}}
@@ -614,6 +624,9 @@ def _ValidateWhitelabelBrandChangesOnly(json_config):
         stylus = hw_props.get('stylus-category', 'none')
         if stylus == 'none' or stylus == EXTERNAL_STYLUS:
           hw_props.pop('stylus-category', None)
+
+      # Remove /ui:help-content-id
+      wl_minus_brand.get('ui', {})['help-content-id'] = ''
 
       config_list.append(wl_minus_brand)
       whitelabels[name] = config_list

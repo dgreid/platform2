@@ -674,6 +674,10 @@ properties:
                       property is not set, flags will be determined by other
                       cros_config properties. Serialized to a null byte
                       separated string when written to configfs.img
+                help-content-id:
+                  description: Identifier passed to the Showoff app to identify
+                    any device-specific help content to be displayed.
+                  type: string
               additionalProperties: false
             auto-night-light:
               description: Whether the auto-night-light feature is enabled on the device, which

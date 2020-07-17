@@ -68,10 +68,12 @@
         },
         "touch": {},
         "ui": {
+          "help-content-id": "some",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=some\u0000"
         },
         "wallpaper": "some"
       },
@@ -137,10 +139,12 @@
         "thermal": {},
         "touch": {},
         "ui": {
+          "help-content-id": "some",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=some\u0000"
         },
         "wallpaper": "some"
       },
@@ -168,11 +172,12 @@
         "thermal": {},
         "touch": {},
         "ui": {
+          "help-content-id": "another",
           "power-button": {
             "edge": "left",
             "position": "0.3"
           },
-          "serialized-ash-flags": "--bam\u0000--bar-flag=baz\u0000--foo-flag\u0000"
+          "serialized-ash-flags": "--bam\u0000--bar-flag=baz\u0000--device-help-content-id=another\u0000--foo-flag\u0000"
         },
         "wallpaper": "default"
       },
@@ -186,7 +191,11 @@
           "platform-name": "Some",
           "smbios-name-match": "SomeCustomization"
         },
-        "name": "some_customization"
+        "name": "some_customization",
+        "ui": {
+          "help-content-id": "SomeCustomization",
+          "serialized-ash-flags": "--device-help-content-id=SomeCustomization\u0000"
+        }
       },
       {
         "arc": {
@@ -242,10 +251,12 @@
         },
         "touch": {},
         "ui": {
+          "help-content-id": "whitelabel1",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=whitelabel1\u0000"
         },
         "wallpaper": "wallpaper-wl1"
       },
@@ -303,10 +314,12 @@
         },
         "touch": {},
         "ui": {
+          "help-content-id": "whitelabel1",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=whitelabel1\u0000"
         },
         "wallpaper": "wallpaper-wl1"
       },
@@ -364,10 +377,12 @@
         },
         "touch": {},
         "ui": {
+          "help-content-id": "whitelabel2",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=whitelabel2\u0000"
         },
         "wallpaper": "wallpaper-wl2"
       },
@@ -425,10 +440,12 @@
         },
         "touch": {},
         "ui": {
+          "help-content-id": "whitelabel2",
           "power-button": {
             "edge": "left",
             "position": "0.3"
-          }
+          },
+          "serialized-ash-flags": "--device-help-content-id=whitelabel2\u0000"
         },
         "wallpaper": "wallpaper-wl2"
       }
