@@ -46,6 +46,15 @@ class DlcBaseTestRemovable : public DlcBaseTest {
   DlcBaseTestRemovable& operator=(const DlcBaseTestRemovable&) = delete;
 };
 
+TEST_F(DlcBaseTest, InitializationClearsMountFile) {
+  Prefs prefs(
+      JoinPaths(SystemState::Get()->dlc_prefs_dir(), kFirstDlc, kPackage));
+  EXPECT_TRUE(prefs.Create(kDlcRootMount));
+  DlcBase dlc(kFirstDlc);
+  dlc.Initialize();
+  EXPECT_FALSE(prefs.Exists(kDlcRootMount));
+}
+
 TEST_F(DlcBaseTest, CreateDlc) {
   DlcBase dlc(kFirstDlc);
   dlc.Initialize();

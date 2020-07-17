@@ -63,6 +63,12 @@ bool DlcBase::Initialize() {
   state_.set_progress(0);
   state_.set_last_error_code(kErrorNone);
 
+  if (manifest_.mount_file_required()) {
+    if (!Prefs(prefs_package_path_).Delete(kDlcRootMount))
+      LOG(ERROR)
+          << "Failed to delete indirect root mount file during Initialization: "
+          << JoinPaths(prefs_package_path_, kDlcRootMount);
+  }
   is_verified_ =
       Prefs(*this, system_state->active_boot_slot()).Exists(kDlcPrefVerified);
   return true;
