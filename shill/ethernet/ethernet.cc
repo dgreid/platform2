@@ -528,12 +528,35 @@ bool Ethernet::ConfigurePPPoEMode(const bool& enable, Error* error) {
   }
   return false;
 #else
-  CHECK(service_);
+  if (!service_) {
+    // If |service_| is null, we haven't started this Device yet.
+    if (enable) {
+      // Create a PPPoEService but let Start() register it.
+      service_ = CreatePPPoEService();
+    } else {
+      // Reset |service_| and let Start() create and register a standard
+      // EthernetService.
+      service_ = nullptr;
+    }
+    return true;
+  }
 
   EthernetServiceRefPtr service = nullptr;
   if (enable && service_->technology() != Technology::kPPPoE) {
     service = CreatePPPoEService();
+    if (!manager()->HasService(service_)) {
+      // |service_| is unregistered, which means the Device is not started.
+      // Create a PPPoEService, but let Start() register it.
+      service_ = service;
+      return true;
+    }
   } else if (!enable && service_->technology() == Technology::kPPPoE) {
+    if (!manager()->HasService(service_)) {
+      // |service_| is unregistered, which means ths Device is not started. Let
+      // Start() create and register a standard EthernetService.
+      service_ = nullptr;
+      return true;
+    }
     service = CreateEthernetService();
   } else {
     return false;

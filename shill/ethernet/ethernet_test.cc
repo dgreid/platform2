@@ -591,6 +591,7 @@ TEST_F(EthernetTest, TogglePPPoE) {
   EXPECT_CALL(ethernet_provider_, CreateService(_))
       .WillRepeatedly(Return(mock_service_));
   EXPECT_CALL(*mock_service_, Disconnect(_, _));
+  EXPECT_CALL(manager_, HasService(_)).WillRepeatedly(Return(true));
 
   InSequence sequence;
   EXPECT_CALL(ethernet_provider_, DeregisterService(Eq(mock_service_)));
