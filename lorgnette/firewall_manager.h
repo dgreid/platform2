@@ -9,6 +9,8 @@
 #include <set>
 #include <string>
 
+#include <base/memory/weak_ptr.h>
+
 #include "permission_broker/dbus-proxies.h"
 
 // Class for managing required firewall rules for lorgnette.
@@ -62,6 +64,9 @@ class FirewallManager final {
 
   // The set of ports for which access has been requested.
   std::set<uint16_t> requested_ports_;
+
+  // Keep as the last member variable.
+  base::WeakPtrFactory<FirewallManager> weak_factory_{this};
 };
 
 }  // namespace lorgnette

@@ -12,6 +12,7 @@
 
 #include <base/callback.h>
 #include <base/files/scoped_file.h>
+#include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/time/time.h>
 #include <brillo/variant_dictionary.h>
@@ -134,6 +135,9 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   // for testing in order to track the signals sent from StartScan.
   StatusSignalSender status_signal_sender_;
   base::TimeDelta progress_signal_interval_;
+
+  // Keep as the last member variable.
+  base::WeakPtrFactory<Manager> weak_factory_{this};
 };
 
 }  // namespace lorgnette

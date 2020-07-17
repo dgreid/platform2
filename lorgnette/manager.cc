@@ -262,10 +262,13 @@ Manager::Manager(base::Callback<void()> activity_callback,
       progress_signal_interval_(kDefaultProgressSignalInterval) {
   // Set signal sender to be the real D-Bus call by default.
   status_signal_sender_ = base::BindRepeating(
-      [](Manager* manager, const ScanStatusChangedSignal& signal) {
-        manager->SendScanStatusChangedSignal(impl::SerializeProto(signal));
+      [](base::WeakPtr<Manager> manager,
+         const ScanStatusChangedSignal& signal) {
+        if (manager) {
+          manager->SendScanStatusChangedSignal(impl::SerializeProto(signal));
+        }
       },
-      base::Unretained(this));
+      weak_factory_.GetWeakPtr());
 }
 
 Manager::~Manager() {}
@@ -569,10 +572,12 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   // Automatically report a scan failure if we exit early. This will be
   // cancelled once scanning has succeeded.
   base::ScopedClosureRunner report_scan_failure(base::BindOnce(
-      [](Manager* manager, std::string device_name) {
-        manager->ReportScanFailed(device_name);
+      [](base::WeakPtr<Manager> manager, std::string device_name) {
+        if (manager) {
+          manager->ReportScanFailed(device_name);
+        }
       },
-      base::Unretained(this), device_name));
+      weak_factory_.GetWeakPtr(), device_name));
 
   ScanParameters params;
   if (!device->GetScanParameters(error, &params)) {

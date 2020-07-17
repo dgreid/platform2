@@ -12,6 +12,7 @@
 #include <base/files/file.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/memory/ref_counted.h>
+#include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/strings/string_util.h>
@@ -62,6 +63,8 @@ class SignalHandler {
                            const std::string& signal_name,
                            bool signal_connected);
 
+  base::WeakPtr<SignalHandler> GetWeakPtr();
+
  private:
   base::Lock lock_;
   base::ConditionVariable cvar_;
@@ -69,6 +72,8 @@ class SignalHandler {
 
   bool connected_callback_called_;
   bool connection_status_;
+
+  base::WeakPtrFactory<SignalHandler> weak_factory_{this};
 };
 
 bool SignalHandler::WaitUntilConnected() {
@@ -112,6 +117,10 @@ void SignalHandler::OnConnectedCallback(const std::string& interface_name,
     LOG(ERROR) << "Failed to connect to ScanStatusChanged signal";
   }
   cvar_.Signal();
+}
+
+base::WeakPtr<SignalHandler> SignalHandler::GetWeakPtr() {
+  return weak_factory_.GetWeakPtr();
 }
 
 base::Optional<std::vector<std::string>> ListScanners(ManagerProxy* manager) {
@@ -334,9 +343,9 @@ int main(int argc, char** argv) {
   SignalHandler handler(run_loop.QuitClosure());
   manager->RegisterScanStatusChangedSignalHandler(
       base::BindRepeating(&SignalHandler::HandleScanStatusChangedSignal,
-                          base::Unretained(&handler)),
+                          handler.GetWeakPtr()),
       base::BindOnce(&SignalHandler::OnConnectedCallback,
-                     base::Unretained(&handler)));
+                     handler.GetWeakPtr()));
 
   if (!handler.WaitUntilConnected()) {
     return 1;

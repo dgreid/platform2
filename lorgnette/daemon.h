@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <base/cancelable_callback.h>
+#include <base/memory/weak_ptr.h>
 #include <brillo/daemons/dbus_daemon.h>
 
 #include "lorgnette/manager.h"
@@ -43,6 +44,9 @@ class Daemon : public brillo::DBusServiceDaemon {
   std::unique_ptr<Manager> manager_;
   base::Closure startup_callback_;
   base::CancelableClosure shutdown_callback_;
+
+  // Keep as the last member variable.
+  base::WeakPtrFactory<Daemon> weak_factory_{this};
 };
 
 }  // namespace lorgnette
