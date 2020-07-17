@@ -30,6 +30,7 @@
 #include <dbus/message.h>
 #include <metrics/metrics_library.h>
 
+#include "crash-reporter/crash_reporter_parser.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/util.h"
 #include "metrics_event/proto_bindings/metrics_event.pb.h"

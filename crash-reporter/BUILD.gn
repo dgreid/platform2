@@ -199,6 +199,7 @@ executable("anomaly_detector") {
     "anomaly_detector_log_reader.cc",
     "anomaly_detector_main.cc",
     "anomaly_detector_text_file_reader.cc",
+    "crash_reporter_parser.cc",
   ]
   deps = [ ":libcrash" ]
   libs = [
@@ -342,6 +343,9 @@ if (use.test) {
     sources = [
       "anomaly_detector.cc",
       "anomaly_detector_test.cc",
+      "anomaly_detector_test_utils.cc",
+      "crash_reporter_parser.cc",
+      "crash_reporter_parser_test.cc",
       "test_util.cc",
     ]
     deps = [
