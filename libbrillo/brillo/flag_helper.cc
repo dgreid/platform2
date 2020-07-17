@@ -12,13 +12,20 @@
 #include <string>
 #include <utility>
 
-#include <base/base_switches.h>
 #include <base/command_line.h>
 #include <base/logging.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
 
 namespace brillo {
+
+namespace {
+
+// Standard logging switches.
+constexpr char kV[] = "v";
+constexpr char kVModule[] = "vmodule";
+
+}  // namespace
 
 Flag::Flag(const char* name,
            const char* default_value,
@@ -227,7 +234,7 @@ void FlagHelper::UpdateFlagValues() {
   for (const auto& pair : switch_map) {
     const std::string& key = pair.first;
     // Make sure we allow the standard logging switches (--v and --vmodule).
-    if (key == switches::kV || key == switches::kVModule)
+    if (key == kV || key == kVModule)
       continue;
 
     const std::string& value = pair.second;
