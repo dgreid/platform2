@@ -20,6 +20,7 @@
 
 #include "patchpanel/address_manager.h"
 #include "patchpanel/arc_service.h"
+#include "patchpanel/counters_service.h"
 #include "patchpanel/crostini_service.h"
 #include "patchpanel/firewall.h"
 #include "patchpanel/helper_process.h"
@@ -144,6 +145,10 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<dbus::Response> OnConnectNamespace(
       dbus::MethodCall* method_call);
 
+  // Handles DBus requests for querying traffic counters.
+  std::unique_ptr<dbus::Response> OnGetTrafficCounters(
+      dbus::MethodCall* method_call);
+
   // Handles DBus requests for creating iptables rules by permission_broker.
   std::unique_ptr<dbus::Response> OnModifyPortRule(
       dbus::MethodCall* method_call);
@@ -182,6 +187,7 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   std::unique_ptr<HelperProcess> adb_proxy_;
   std::unique_ptr<HelperProcess> mcast_proxy_;
   std::unique_ptr<HelperProcess> nd_proxy_;
+  std::unique_ptr<CountersService> counters_svc_;
   std::unique_ptr<NetworkMonitorService> network_monitor_svc_;
 
   AddressManager addr_mgr_;

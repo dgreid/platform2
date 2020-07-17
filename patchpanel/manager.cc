@@ -196,6 +196,7 @@ void Manager::InitialSetup() {
       {patchpanel::kPluginVmShutdownMethod, &Manager::OnPluginVmShutdown},
       {patchpanel::kSetVpnIntentMethod, &Manager::OnSetVpnIntent},
       {patchpanel::kConnectNamespaceMethod, &Manager::OnConnectNamespace},
+      {patchpanel::kGetTrafficCountersMethod, &Manager::OnGetTrafficCounters},
       {patchpanel::kModifyPortRuleMethod, &Manager::OnModifyPortRule},
   };
 
@@ -280,6 +281,9 @@ void Manager::InitialSetup() {
   network_monitor_svc_ =
       std::make_unique<NetworkMonitorService>(shill_client_.get());
   network_monitor_svc_->Start();
+
+  counters_svc_ =
+      std::make_unique<CountersService>(shill_client_.get(), runner_.get());
 
   nd_proxy_->Listen();
 }
@@ -770,6 +774,42 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
 
   if (success)
     ConnectNamespace(std::move(client_fd), request, response);
+
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Manager::OnGetTrafficCounters(
+    dbus::MethodCall* method_call) {
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  patchpanel::TrafficCountersRequest request;
+  patchpanel::TrafficCountersResponse response;
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse TrafficCountersRequest";
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  const std::set<std::string> devices{request.devices().begin(),
+                                      request.devices().end()};
+  const auto counters = counters_svc_->GetCounters(devices);
+  for (const auto& kv : counters) {
+    auto* traffic_counter = response.add_counters();
+    const auto& source_and_device = kv.first;
+    const auto& counter = kv.second;
+    traffic_counter->set_source(source_and_device.first);
+    traffic_counter->set_device(source_and_device.second);
+    traffic_counter->set_rx_bytes(counter.rx_bytes);
+    traffic_counter->set_rx_packets(counter.rx_packets);
+    traffic_counter->set_tx_bytes(counter.tx_bytes);
+    traffic_counter->set_tx_packets(counter.tx_packets);
+  }
 
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
