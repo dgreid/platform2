@@ -234,7 +234,8 @@ bool Throttler::StartTCForCommands(const std::vector<std::string>& commands) {
   };
   tc_pid_ = process_manager_->StartProcessInMinijailWithPipes(
       FROM_HERE, base::FilePath(kTCPath), args, {}, kTCUser, kTCGroup, capmask,
-      false, false, base::Bind(&Throttler::OnProcessExited, AsWeakPtr()),
+      false, false,
+      base::Bind(&Throttler::OnProcessExited, weak_factory_.GetWeakPtr()),
       std_fds);
 
   SLOG(this, 1) << "Spawned tc with pid: " << tc_pid_;
@@ -246,7 +247,7 @@ bool Throttler::StartTCForCommands(const std::vector<std::string>& commands) {
   }
   tc_stdin_handler_.reset(io_handler_factory_->CreateIOReadyHandler(
       tc_stdin_, IOHandler::kModeOutput,
-      Bind(&Throttler::WriteTCCommands, AsWeakPtr())));
+      Bind(&Throttler::WriteTCCommands, weak_factory_.GetWeakPtr())));
   return true;
 }
 

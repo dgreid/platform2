@@ -35,7 +35,7 @@ class IOHandlerFactory;
 // The implementation spawns the 'tc' process in a minijail and writes
 // commands to its stdin.
 
-class Throttler : public base::SupportsWeakPtr<Throttler> {
+class Throttler {
  public:
   Throttler(EventDispatcher* dispatcher, Manager* manager);
   virtual ~Throttler();
@@ -113,6 +113,8 @@ class Throttler : public base::SupportsWeakPtr<Throttler> {
   IOHandlerFactory* io_handler_factory_;
   // For spawning 'tc'
   ProcessManager* process_manager_;
+
+  base::WeakPtrFactory<Throttler> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(Throttler);
 };

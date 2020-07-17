@@ -48,6 +48,7 @@
 #include "shill/net/rtnl_message.h"
 #include "shill/net/shill_time.h"
 #include "shill/net/sockets.h"
+#include "shill/power_manager.h"
 #include "shill/routing_table.h"
 #include "shill/vpn/vpn_provider.h"
 
@@ -62,7 +63,6 @@
 #include "shill/wifi/wifi.h"
 #endif  // DISABLE_WIFI
 
-using base::Bind;
 using base::FileEnumerator;
 using base::FilePath;
 using base::StringPrintf;
@@ -208,19 +208,19 @@ bool DeviceInfo::IsDeviceBlocked(const string& device_name) {
 }
 
 void DeviceInfo::Start() {
-  link_listener_.reset(
-      new RTNLListener(RTNLHandler::kRequestLink,
-                       Bind(&DeviceInfo::LinkMsgHandler, Unretained(this))));
-  address_listener_.reset(
-      new RTNLListener(RTNLHandler::kRequestAddr,
-                       Bind(&DeviceInfo::AddressMsgHandler, Unretained(this))));
-  rdnss_listener_.reset(
-      new RTNLListener(RTNLHandler::kRequestRdnss,
-                       Bind(&DeviceInfo::RdnssMsgHandler, Unretained(this))));
+  link_listener_.reset(new RTNLListener(
+      RTNLHandler::kRequestLink,
+      base::Bind(&DeviceInfo::LinkMsgHandler, Unretained(this))));
+  address_listener_.reset(new RTNLListener(
+      RTNLHandler::kRequestAddr,
+      base::Bind(&DeviceInfo::AddressMsgHandler, Unretained(this))));
+  rdnss_listener_.reset(new RTNLListener(
+      RTNLHandler::kRequestRdnss,
+      base::Bind(&DeviceInfo::RdnssMsgHandler, Unretained(this))));
   rtnl_handler_->RequestDump(RTNLHandler::kRequestLink |
                              RTNLHandler::kRequestAddr);
-  request_link_statistics_callback_.Reset(
-      Bind(&DeviceInfo::RequestLinkStatistics, AsWeakPtr()));
+  request_link_statistics_callback_.Reset(base::Bind(
+      &DeviceInfo::RequestLinkStatistics, weak_factory_.GetWeakPtr()));
   dispatcher()->PostDelayedTask(FROM_HERE,
                                 request_link_statistics_callback_.callback(),
                                 kRequestLinkStatisticsIntervalMilliseconds);
@@ -1223,8 +1223,8 @@ void DeviceInfo::RdnssMsgHandler(const RTNLMessage& msg) {
 
 void DeviceInfo::DelayDeviceCreation(int interface_index) {
   delayed_devices_.insert(interface_index);
-  delayed_devices_callback_.Reset(
-      Bind(&DeviceInfo::DelayedDeviceCreationTask, AsWeakPtr()));
+  delayed_devices_callback_.Reset(base::Bind(
+      &DeviceInfo::DelayedDeviceCreationTask, weak_factory_.GetWeakPtr()));
   dispatcher()->PostDelayedTask(FROM_HERE, delayed_devices_callback_.callback(),
                                 kDelayedDeviceCreationSeconds * 1000);
 }
@@ -1326,9 +1326,11 @@ void DeviceInfo::GetWiFiInterfaceInfo(int interface_index) {
     return;
   }
   netlink_manager_->SendNl80211Message(
-      &msg, Bind(&DeviceInfo::OnWiFiInterfaceInfoReceived, AsWeakPtr()),
-      Bind(&NetlinkManager::OnAckDoNothing),
-      Bind(&NetlinkManager::OnNetlinkMessageError));
+      &msg,
+      base::Bind(&DeviceInfo::OnWiFiInterfaceInfoReceived,
+                 weak_factory_.GetWeakPtr()),
+      base::Bind(&NetlinkManager::OnAckDoNothing),
+      base::Bind(&NetlinkManager::OnNetlinkMessageError));
 }
 
 void DeviceInfo::OnWiFiInterfaceInfoReceived(const Nl80211Message& msg) {
@@ -1370,12 +1372,18 @@ void DeviceInfo::OnWiFiInterfaceInfoReceived(const Nl80211Message& msg) {
   string address = info->mac_address.HexEncode();
   auto wake_on_wifi = std::make_unique<WakeOnWiFi>(
       netlink_manager_, dispatcher(), metrics(), address,
-      base::Bind(&Manager::RecordDarkResumeWakeReason, manager_->AsWeakPtr()));
+      base::Bind(&DeviceInfo::RecordDarkResumeWakeReason,
+                 weak_factory_.GetWeakPtr()));
   DeviceRefPtr device = new WiFi(manager_, info->name, address, interface_index,
                                  std::move(wake_on_wifi));
   device->EnableIPv6Privacy();
   RegisterDevice(device);
 }
+
+void DeviceInfo::RecordDarkResumeWakeReason(const std::string& wake_reason) {
+  manager_->power_manager()->RecordDarkResumeWakeReason(wake_reason);
+}
+
 #endif  // DISABLE_WIFI
 
 bool DeviceInfo::SetHostname(const std::string& hostname) const {

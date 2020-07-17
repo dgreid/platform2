@@ -303,9 +303,9 @@ void Manager::Start() {
   power_manager_.reset(new PowerManager(control_interface_));
   power_manager_->Start(
       base::TimeDelta::FromMilliseconds(kTerminationActionsTimeoutMilliseconds),
-      Bind(&Manager::OnSuspendImminent, AsWeakPtr()),
-      Bind(&Manager::OnSuspendDone, AsWeakPtr()),
-      Bind(&Manager::OnDarkSuspendImminent, AsWeakPtr()));
+      Bind(&Manager::OnSuspendImminent, weak_factory_.GetWeakPtr()),
+      Bind(&Manager::OnSuspendDone, weak_factory_.GetWeakPtr()),
+      Bind(&Manager::OnDarkSuspendImminent, weak_factory_.GetWeakPtr()));
   upstart_.reset(new Upstart(control_interface_));
 
   CHECK(base::CreateDirectory(run_path_)) << run_path_.value();
@@ -1159,10 +1159,6 @@ bool Manager::IsSuspending() {
   return false;
 }
 
-void Manager::RecordDarkResumeWakeReason(const string& wake_reason) {
-  power_manager_->RecordDarkResumeWakeReason(wake_reason);
-}
-
 void Manager::RegisterDevice(const DeviceRefPtr& to_manage) {
   LOG(INFO) << "Device " << to_manage->link_name() << " registered.";
   // Manager is running in passive mode when default claimer is created, which
@@ -1585,8 +1581,8 @@ void Manager::OnSuspendImminent() {
     return;
   }
   auto result_aggregator(base::MakeRefCounted<ResultAggregator>(
-      Bind(&Manager::OnSuspendActionsComplete, AsWeakPtr()), dispatcher_,
-      kTerminationActionsTimeoutMilliseconds));
+      Bind(&Manager::OnSuspendActionsComplete, weak_factory_.GetWeakPtr()),
+      dispatcher_, kTerminationActionsTimeoutMilliseconds));
   for (const auto& service : services_) {
     ResultCallback aggregator_callback(
         Bind(&ResultAggregator::ReportResult, result_aggregator));
@@ -1622,8 +1618,8 @@ void Manager::OnDarkSuspendImminent() {
     return;
   }
   auto result_aggregator(base::MakeRefCounted<ResultAggregator>(
-      Bind(&Manager::OnDarkResumeActionsComplete, AsWeakPtr()), dispatcher_,
-      kTerminationActionsTimeoutMilliseconds));
+      Bind(&Manager::OnDarkResumeActionsComplete, weak_factory_.GetWeakPtr()),
+      dispatcher_, kTerminationActionsTimeoutMilliseconds));
   for (const auto& device : devices_) {
     ResultCallback aggregator_callback(
         Bind(&ResultAggregator::ReportResult, result_aggregator));
@@ -1697,7 +1693,8 @@ void Manager::SortServices() {
   // an outer loop that may also be traversing the services_ list.
   // Defer this work to the event loop.
   if (sort_services_task_.IsCancelled()) {
-    sort_services_task_.Reset(Bind(&Manager::SortServicesTask, AsWeakPtr()));
+    sort_services_task_.Reset(
+        Bind(&Manager::SortServicesTask, weak_factory_.GetWeakPtr()));
     dispatcher_->PostTask(FROM_HERE, sort_services_task_.callback());
   }
 }
@@ -1707,7 +1704,7 @@ void Manager::SortServicesTask() {
   sort_services_task_.Cancel();
 
   sort(services_.begin(), services_.end(),
-       [& order = technology_order_](ServiceRefPtr a, ServiceRefPtr b) {
+       [&order = technology_order_](ServiceRefPtr a, ServiceRefPtr b) {
          return Service::Compare(a, b, true /* compare connectivity */, order)
              .first;
        });
@@ -1903,15 +1900,15 @@ void Manager::AutoConnect() {
 }
 
 void Manager::ConnectToBestServices(Error* /*error*/) {
-  dispatcher_->PostTask(FROM_HERE,
-                        Bind(&Manager::ConnectToBestServicesTask, AsWeakPtr()));
+  dispatcher_->PostTask(FROM_HERE, Bind(&Manager::ConnectToBestServicesTask,
+                                        weak_factory_.GetWeakPtr()));
 }
 
 void Manager::ConnectToBestServicesTask() {
   vector<ServiceRefPtr> services_copy = services_;
   constexpr bool kCompareConnectivityState = false;
   sort(services_copy.begin(), services_copy.end(),
-       [& order = technology_order_](ServiceRefPtr a, ServiceRefPtr b) {
+       [&order = technology_order_](ServiceRefPtr a, ServiceRefPtr b) {
          return Service::Compare(a, b, kCompareConnectivityState, order).first;
        });
   set<Technology> connecting_technologies;

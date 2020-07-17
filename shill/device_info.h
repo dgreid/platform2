@@ -41,7 +41,7 @@ class NetlinkManager;
 class Nl80211Message;
 #endif  // DISABLE_WIFI
 
-class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
+class DeviceInfo {
  public:
   explicit DeviceInfo(Manager* manager);
   virtual ~DeviceInfo();
@@ -234,7 +234,11 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   // Use nl80211 to get information on |interface_index|.
   void GetWiFiInterfaceInfo(int interface_index);
   void OnWiFiInterfaceInfoReceived(const Nl80211Message& message);
+  void RecordDarkResumeWakeReason(const std::string& wake_reason);
 #endif  // DISABLE_WIFI
+
+  // Returns whether a device with name |interface_name| is guest.
+  bool IsGuestDevice(const std::string& interface_name);
 
   void set_sockets_for_test(std::unique_ptr<Sockets> sockets);
 
@@ -270,9 +274,7 @@ class DeviceInfo : public base::SupportsWeakPtr<DeviceInfo> {
   std::unique_ptr<Sockets> sockets_;
 
   Time* time_;
-
-  // Returns whether a device with name |interface_name| is guest.
-  bool IsGuestDevice(const std::string& interface_name);
+  base::WeakPtrFactory<DeviceInfo> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(DeviceInfo);
 };

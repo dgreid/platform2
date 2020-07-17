@@ -65,7 +65,7 @@ class EthernetEapProvider;
 class SupplicantManager;
 #endif  // !DISABLE_WIFI || !DISABLE_WIRED_8021X
 
-class Manager : public base::SupportsWeakPtr<Manager> {
+class Manager {
  public:
   struct Properties {
    public:
@@ -475,8 +475,6 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // power_manager->suspending() is true), false otherwise.
   virtual bool IsSuspending();
 
-  void RecordDarkResumeWakeReason(const std::string& wake_reason);
-
   // Called when service's inner device changed.
   virtual void OnInnerDevicesChanged();
 
@@ -865,6 +863,7 @@ class Manager : public base::SupportsWeakPtr<Manager> {
   // shill/manager.cc.
   bool should_blackhole_user_traffic_;
   std::vector<uint32_t> user_traffic_uids_;
+  base::WeakPtrFactory<Manager> weak_factory_{this};
 
   DISALLOW_COPY_AND_ASSIGN(Manager);
 };
