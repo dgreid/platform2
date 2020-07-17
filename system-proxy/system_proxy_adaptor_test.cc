@@ -61,7 +61,10 @@ class FakeSandboxedWorker : public SandboxedWorker {
   ~FakeSandboxedWorker() override = default;
 
   bool Start() override { return is_running_ = true; }
-  bool Stop() override { return is_running_ = false; }
+  bool Stop() override {
+    is_running_ = false;
+    return true;
+  }
   bool IsRunning() override { return is_running_; }
 
   std::string local_proxy_host_and_port() override {
@@ -83,6 +86,7 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
 
  protected:
   std::unique_ptr<SandboxedWorker> CreateWorker() override {
+    ++create_worker_count_;
     return std::make_unique<FakeSandboxedWorker>(
         weak_ptr_factory_.GetWeakPtr());
   }
@@ -96,7 +100,10 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentialsRestartService);
 
+  int create_worker_count_ = 0;
   base::WeakPtrFactory<FakeSystemProxyAdaptor> weak_ptr_factory_;
 };
 
@@ -297,7 +304,7 @@ TEST_F(SystemProxyAdaptorTest, ShutDown) {
   EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
 
   adaptor_->ShutDown();
-  EXPECT_FALSE(adaptor_->system_services_worker_->IsRunning());
+  EXPECT_FALSE(adaptor_->system_services_worker_);
 }
 
 TEST_F(SystemProxyAdaptorTest, ConnectNamespace) {
@@ -412,6 +419,50 @@ TEST_F(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials) {
   EXPECT_EQ(reply.password(), "");
   EXPECT_EQ(reply.protection_space().SerializeAsString(),
             protection_space.SerializeAsString());
+}
+
+TEST_F(SystemProxyAdaptorTest, ClearUserCredentials) {
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+
+  int fds[2];
+  ASSERT_TRUE(base::CreateLocalNonBlockingPipe(fds));
+  base::ScopedFD read_scoped_fd(fds[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
+
+  ClearUserCredentialsRequest request;
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  adaptor_->ClearUserCredentials(proto_blob);
+  brillo_loop_.RunOnce(false);
+
+  // Expect that a request to clear user credentials has been sent to the
+  // worker.
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
+  EXPECT_TRUE(config.has_clear_user_credentials());
+}
+
+// Tests that the sandboxed worker is restarted if the request to clear the
+// credentials fails.
+TEST_F(SystemProxyAdaptorTest, ClearUserCredentialsRestartService) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .WillOnce(Return(mock_patchpanel_proxy_.get()));
+
+  adaptor_->system_services_worker_ = adaptor_->CreateWorker();
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+  EXPECT_EQ(1, adaptor_->create_worker_count_);
+
+  ClearUserCredentialsRequest request;
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  // This request will fail because we didn't set up a communication pipe.
+  adaptor_->ClearUserCredentials(proto_blob);
+  brillo_loop_.RunOnce(false);
+
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+  EXPECT_EQ(2, adaptor_->create_worker_count_);
 }
 
 }  // namespace system_proxy

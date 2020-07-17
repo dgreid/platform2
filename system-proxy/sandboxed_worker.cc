@@ -142,6 +142,19 @@ bool SandboxedWorker::SetKerberosEnabled(bool enabled,
   return true;
 }
 
+bool SandboxedWorker::ClearUserCredentials() {
+  worker::ClearUserCredentials clear_user_credentials;
+  worker::WorkerConfigs configs;
+  *configs.mutable_clear_user_credentials() = clear_user_credentials;
+
+  if (!WriteProtobuf(stdin_pipe_.get(), configs)) {
+    LOG(ERROR) << "Failed to send request to clear user credentials for worker "
+               << pid_;
+    return false;
+  }
+  return true;
+}
+
 bool SandboxedWorker::Stop() {
   if (is_being_terminated_)
     return true;

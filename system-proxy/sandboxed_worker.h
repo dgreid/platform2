@@ -45,6 +45,10 @@ class SandboxedWorker {
   // pipes and sets |local_proxy_host_and_port_|.
   bool SetListeningAddress(uint32_t addr, int port);
 
+  // Sends a request to clear the user credentials to the worker via
+  // communication pipes.
+  bool ClearUserCredentials();
+
   // Terminates the child process by sending a SIGTERM signal.
   virtual bool Stop();
 
@@ -66,6 +70,7 @@ class SandboxedWorker {
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentials);
 
   void OnMessageReceived();
   void OnErrorReceived();

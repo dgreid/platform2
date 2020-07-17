@@ -67,6 +67,8 @@ message KerberosConfig {
   optional bytes krb5conf_path = 3;
 }
 
+message ClearUserCredentials {}
+
 message WorkerConfigs {
   oneof params {
     Credentials credentials = 1;
@@ -74,5 +76,6 @@ message WorkerConfigs {
     SocketAddress listening_address = 2;
     ProxyResolutionReply proxy_resolution_reply = 3;
     KerberosConfig kerberos_config = 4;
+    ClearUserCredentials clear_user_credentials = 5;
   }
 }

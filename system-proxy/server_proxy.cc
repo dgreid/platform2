@@ -198,6 +198,10 @@ void ServerProxy::HandleStdinReadable() {
       unsetenv(kKrb5CCEnvKey);
     }
   }
+
+  if (config.has_clear_user_credentials()) {
+    auth_cache_.clear();
+  }
 }
 
 bool ServerProxy::HandleSignal(const struct signalfd_siginfo& siginfo) {

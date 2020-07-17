@@ -1,10 +1,12 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 
-<node name="/org/chromium/SystemProxy" xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
+<node name="/org/chromium/SystemProxy"
+  xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
   <interface name="org.chromium.SystemProxy">
     <method name="SetAuthenticationDetails">
       <tp:docstring>
-        Sets the credentails for authenticating system services and ARC++ apps to the remote web proxy and the Kerberos availability flag.
+        Sets the credentails for authenticating system services and ARC++ apps
+        to the remote web proxy and the Kerberos availability flag.
       </tp:docstring>
       <arg name="request" type="ay" direction="in">
         <tp:docstring>
@@ -20,7 +22,8 @@
     </method>
     <method name="ShutDown">
       <tp:docstring>
-        Shuts down the daemon. The daemon will exit with code 0 which prevents an Upstart respawn.
+        Shuts down the daemon. The daemon will exit with code 0 which prevents
+        an Upstart respawn.
       </tp:docstring>
       <arg name="response" type="ay" direction="out">
         <tp:docstring>
@@ -31,7 +34,8 @@
     </method>
     <signal name="WorkerActive">
       <tp:docstring>
-        Signal emitted when a system proxy worker is active and accepting traffic.
+        Signal emitted when a system proxy worker is active and accepting
+        traffic.
       </tp:docstring>
       <arg name="details" type="ay">
         <tp:docstring>
@@ -42,7 +46,8 @@
     </signal>
     <signal name="AuthenticationRequired">
       <tp:docstring>
-        Signal emitted when a system proxy worker requires credentials for proxy authentication.
+        Signal emitted when a system proxy worker requires credentials for
+        proxy authentication.
       </tp:docstring>
       <arg name="details" type="ay">
         <tp:docstring>
@@ -51,5 +56,23 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </signal>
+    <method name="ClearUserCredentials">
+      <tp:docstring>
+        Removes the user credentials from System-proxy. Credentials set for
+        system services via policy will still be available for proxy
+        authentication.
+      </tp:docstring>
+      <arg name="request" type="ay" direction="in">
+        <tp:docstring>
+          Serialized ClearUserCredentialsRequest message.
+        </tp:docstring>
+      </arg>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized ClearUserCredentialsResponse message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+    </method>
   </interface>
 </node>

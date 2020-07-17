@@ -77,6 +77,7 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequests);
   FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials);
   FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsNoCredentials);
+  FRIEND_TEST(ServerProxyTest, ClearUserCredentials);
 
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
 

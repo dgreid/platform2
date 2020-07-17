@@ -8,6 +8,7 @@
 #include <vector>
 
 #include <base/location.h>
+#include <base/strings/stringprintf.h>
 #include <base/time/time.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/message_loop.h>
@@ -145,15 +146,13 @@ std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
   LOG(INFO) << "Received shutdown request.";
 
   std::string error_message;
-  if (system_services_worker_ && system_services_worker_->IsRunning()) {
-    if (!system_services_worker_->Stop())
-      error_message =
-          "Failure to terminate worker process for system services traffic.";
+  if (!ResetWorker(/* user_traffic=*/false)) {
+    error_message =
+        "Failure to terminate worker process for system services traffic.";
   }
 
-  if (arc_worker_ && arc_worker_->IsRunning()) {
-    if (!arc_worker_->Stop())
-      error_message += "Failure to terminate worker process for arc traffic.";
+  if (!ResetWorker(/* user_traffic=*/true)) {
+    error_message += "Failure to terminate worker process for arc traffic.";
   }
 
   ShutDownResponse response;
@@ -165,6 +164,35 @@ std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
                             weak_ptr_factory_.GetWeakPtr()));
 
   return SerializeProto(response);
+}
+
+std::vector<uint8_t> SystemProxyAdaptor::ClearUserCredentials(
+    const std::vector<uint8_t>& request_blob) {
+  LOG(INFO) << "Received request to clear user credentials.";
+  std::string error_message;
+  ClearUserCredentials(/*user_traffic=*/false, &error_message);
+  ClearUserCredentials(/*user_traffic=*/true, &error_message);
+
+  ClearUserCredentialsResponse response;
+  if (!error_message.empty())
+    response.set_error_message(error_message);
+  return SerializeProto(response);
+}
+
+void SystemProxyAdaptor::ClearUserCredentials(bool user_traffic,
+                                              std::string* error_message) {
+  SandboxedWorker* worker = GetWorker(user_traffic);
+  if (!worker) {
+    return;
+  }
+  if (!worker->ClearUserCredentials()) {
+    error_message->append(
+        base::StringPrintf("Failure to clear user credentials for worker with "
+                           "pid %s. Restarting worker.",
+                           std::to_string(worker->pid()).c_str()));
+    ResetWorker(user_traffic);
+    CreateWorkerIfNeeded(user_traffic);
+  }
 }
 
 void SystemProxyAdaptor::GetChromeProxyServersAsync(
@@ -234,6 +262,27 @@ bool SystemProxyAdaptor::StartWorker(SandboxedWorker* worker,
   return worker->Start();
 }
 
+bool SystemProxyAdaptor::ResetWorker(bool user_traffic) {
+  SandboxedWorker* worker =
+      user_traffic ? arc_worker_.get() : system_services_worker_.get();
+  if (!worker) {
+    return true;
+  }
+  if (!worker->Stop()) {
+    return false;
+  }
+  if (user_traffic) {
+    arc_worker_.reset();
+  } else {
+    system_services_worker_.reset();
+  }
+  return true;
+}
+
+SandboxedWorker* SystemProxyAdaptor::GetWorker(bool user_traffic) {
+  return user_traffic ? arc_worker_.get() : system_services_worker_.get();
+}
+
 // Called when the patchpanel D-Bus service becomes available.
 void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool is_available) {
   if (!is_available) {
@@ -247,7 +296,7 @@ void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool is_available) {
 
 void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
                                           bool user_traffic) {
-  DCHECK(system_services_worker_->IsRunning());
+  DCHECK(worker->IsRunning());
   DCHECK_GT(netns_reconnect_attempts_available_, 0);
   --netns_reconnect_attempts_available_;
   // TODO(b/160736881, acostinas): Remove the delay after patchpanel
@@ -255,8 +304,7 @@ void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
   brillo::MessageLoop::current()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&SystemProxyAdaptor::ConnectNamespaceTask,
-                 weak_ptr_factory_.GetWeakPtr(), worker,
-                 /* user_traffic= */ false),
+                 weak_ptr_factory_.GetWeakPtr(), worker, user_traffic),
       kConnectNamespaceDelay);
 }
 

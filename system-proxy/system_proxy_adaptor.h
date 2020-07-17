@@ -48,6 +48,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   std::vector<uint8_t> SetAuthenticationDetails(
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDown() override;
+  std::vector<uint8_t> ClearUserCredentials(
+      const std::vector<uint8_t>& request_blob) override;
 
   void GetChromeProxyServersAsync(
       const std::string& target_url,
@@ -71,6 +73,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentials);
+  FRIEND_TEST(SystemProxyAdaptorTest, ClearUserCredentialsRestartService);
 
   void SetCredentialsTask(SandboxedWorker* worker,
                           const worker::Credentials& credentials);
@@ -85,10 +89,23 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   bool StartWorker(SandboxedWorker* worker, bool user_traffic);
 
+  // Terminates the worker process for traffic indicated by |user_traffic| and
+  // frees the SandboxedWorker associated with it.
+  bool ResetWorker(bool user_traffic);
+
+  // Returns a pointer to the worker process associated with |user_traffic|. Can
+  // return nullptr.
+  SandboxedWorker* GetWorker(bool user_traffic);
+
   // Checks if a worker process exists and if not creates one and sends a
   // request to patchpanel to setup the network namespace for it. Returns true
   // if the worker exists or was created successfully, false otherwise.
   bool CreateWorkerIfNeeded(bool user_traffic);
+
+  // Sends a request to the worker process associated with |user_traffic| to
+  // clear the cached user credentials. If sending the request fails, the worker
+  // will be restarted.
+  void ClearUserCredentials(bool user_traffic, std::string* error_message);
 
   // Called when the patchpanel D-Bus service becomes available.
   void OnPatchpanelServiceAvailable(bool is_available);

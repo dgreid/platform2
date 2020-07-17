@@ -436,4 +436,27 @@ TEST_F(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials) {
   EXPECT_EQ("test_user:test_pwd", actual_credentials);
 }
 
+// This test verifies that the stored credentials are removed when receiving a
+// |ClearUserCredentials| request.
+TEST_F(ServerProxyTest, ClearUserCredentials) {
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(kFakeProxyAddress);
+  protection_space.set_scheme("Basic");
+  protection_space.set_realm("Proxy test realm");
+  // Add an entry in the cache.
+  server_proxy_->auth_cache_[protection_space.SerializeAsString()] =
+      "test_user:test_pwd";
+
+  worker::ClearUserCredentials clear_user_credentials;
+  worker::WorkerConfigs configs;
+  *configs.mutable_clear_user_credentials() = clear_user_credentials;
+  // Redirect the worker stdin and stdout pipes.
+  RedirectStdPipes();
+  // Send the config to the worker's stdin input.
+  EXPECT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
+  brillo_loop_.RunOnce(false);
+  // Expect that the credentials were cleared.
+  EXPECT_EQ(0, server_proxy_->auth_cache_.size());
+}
+
 }  // namespace system_proxy
