@@ -20,6 +20,15 @@ static struct config_map all_configs[] = {
               .customization = "some"}},
 
     {.platform_name = "Some",
+     .firmware_name_match = "Some",
+     .sku_id = 2,
+     .customization_id = "",
+     .whitelabel_tag = "",
+     .info = {.brand = "",
+              .model = "some2",
+              .customization = "some2"}},
+
+    {.platform_name = "Some",
      .firmware_name_match = "Another",
      .sku_id = -1,
      .customization_id = "",
@@ -75,6 +84,6 @@ static struct config_map all_configs[] = {
 };
 
 const struct config_map *cros_config_get_config_map(int *num_entries) {
-  *num_entries = 8;
+  *num_entries = 9;
   return &all_configs[0];
 }

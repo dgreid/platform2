@@ -173,6 +173,19 @@ chromeos:
               files:
                 - source: "some_notouch/dptf.dv"
                   destination: "/etc/dptf/some_notouch/dptf.dv"
+    - $name: "some2"
+      products:
+        - $key-id: "SOME"
+      skus:
+        - $sku-id: 2
+          config:
+            <<: *some_config
+            firmware:
+              # if image-name is present, then coreboot build-target is not
+              # required to be present
+              image-name: "some2"
+              build-targets:
+                zephyr-ec: "experimental/some2"
     - $name: "another"
       products:
         - $key-id: "ANOTHER"

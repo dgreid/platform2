@@ -183,15 +183,17 @@ class CrosConfigHostTest(unittest.TestCase):
     config = CrosConfig(self.filepath)
     expected = OrderedDict(
         [('another', ['another', 'another']),
-         ('some', ['some', 'some'])])
+         ('some', ['some', 'some']),
+         ('some2', [None, None])])
     result = config.GetFirmwareBuildCombinations(['coreboot', 'depthcharge'])
     self.assertEqual(result, expected)
 
     # Unspecified targets should be represented as None.
     expected = OrderedDict(
-        [('another', ['another_base']),
-         ('some', [None])])
-    result = config.GetFirmwareBuildCombinations(['base'])
+        [('another', [None]),
+         ('some', [None]),
+         ('some2', ['experimental/some2'])])
+    result = config.GetFirmwareBuildCombinations(['zephyr-ec'])
     self.assertEqual(result, expected)
 
     os.environ['FW_NAME'] = 'another'
@@ -273,6 +275,10 @@ class CrosConfigHostTest(unittest.TestCase):
                 dest='/etc/cras/some/dsp.ini'),
        BaseFile(source='cras-config/some/a-card',
                 dest='/etc/cras/some/a-card'),
+       BaseFile(source='cras-config/some2/dsp.ini',
+                dest='/etc/cras/some2/dsp.ini'),
+       BaseFile(source='cras-config/some2/a-card',
+                dest='/etc/cras/some2/a-card'),
        BaseFile(source='topology/another-tplg.bin',
                 dest='/lib/firmware/another-tplg.bin'),
        BaseFile(source='topology/some-tplg.bin',
@@ -284,7 +290,11 @@ class CrosConfigHostTest(unittest.TestCase):
        BaseFile(source='ucm-config/a-card.some/HiFi.conf',
                 dest='/usr/share/alsa/ucm/a-card.some/HiFi.conf'),
        BaseFile(source='ucm-config/a-card.some/a-card.some.conf',
-                dest='/usr/share/alsa/ucm/a-card.some/a-card.some.conf')]
+                dest='/usr/share/alsa/ucm/a-card.some/a-card.some.conf'),
+       BaseFile(source='ucm-config/a-card.some2/HiFi.conf',
+                dest='/usr/share/alsa/ucm/a-card.some2/HiFi.conf'),
+       BaseFile(source='ucm-config/a-card.some2/a-card.some2.conf',
+                dest='/usr/share/alsa/ucm/a-card.some2/a-card.some2.conf')]
 
     self.assertEqual(audio_files, sorted(expected))
 
@@ -316,6 +326,19 @@ class CrosConfigHostTest(unittest.TestCase):
                        ec_image_uri='bcs://Some_EC.1111.11.1.tbz2',
                        pd_image_uri='',
                        sig_id='some',
+                       brand_code='')),
+         ('some2',
+          FirmwareInfo(model='some2',
+                       shared_model='some2',
+                       key_id='SOME',
+                       have_image=True,
+                       bios_build_target=None,
+                       ec_build_target=None,
+                       main_image_uri='',
+                       main_rw_image_uri='',
+                       ec_image_uri='',
+                       pd_image_uri='',
+                       sig_id='some2',
                        brand_code='')),
          ('whitelabel',
           FirmwareInfo(model='whitelabel',
@@ -389,7 +412,9 @@ class CrosConfigHostTest(unittest.TestCase):
                 type='ec',
                 build_target='another',
                 image_uri='bcs://Another_EC.1111.11.1.tbz2')
-        ]
+        ],
+        'some2': [
+        ],
     }
 
     result = CrosConfig(self.filepath).GetFirmwareConfigs()
@@ -399,6 +424,7 @@ class CrosConfigHostTest(unittest.TestCase):
     """Test access to firmware config names."""
     expected = {
         'some': 'some',
+        'some2': 'some2',
         'another': 'another',
         'whitelabel': 'some',
         'whitelabel-whitelabel1': 'some',
@@ -419,6 +445,8 @@ class CrosConfigHostTest(unittest.TestCase):
                 key_id='WHITELABEL1', sig_id='whitelabel-whitelabel1'),
         'some':
             DeviceSignerInfo(key_id='SOME', sig_id='some'),
+        'some2':
+            DeviceSignerInfo(key_id='SOME', sig_id='some2'),
         'whitelabel':
             DeviceSignerInfo(
                 key_id='WHITELABEL1', sig_id='sig-id-in-customization-id'),

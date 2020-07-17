@@ -460,6 +460,26 @@ class CrosConfigBaseImpl(object):
     """
     return self._GetFiles('GetCameraFiles')
 
+  def _GetFirmwareGroupingName(self, config):
+    """Gets the name of group of firmware build targets
+
+    Historically this maps to the name of the coreboot build target.
+
+    Args:
+      config: config object that contains /firmware node
+
+    Returns:
+      A string of the firmware group name
+    """
+    # Use coreboot as key if it exist to support historical use case of
+    # grouping firmware build targets by coreboot name
+    key = config.GetProperty('/firmware/build-targets', 'coreboot')
+    if key:
+      return key
+    # Otherwise use the image-name. There are very few cases of having an
+    # image-name without also having a coreboot image
+    return config.GetProperty('/firmware', 'image-name')
+
   def GetFirmwareBuildTargets(self, target_type):
     """Returns a list of all firmware build-targets of the given target type.
 
@@ -477,8 +497,8 @@ class CrosConfigBaseImpl(object):
       if not device_targets:
         continue
 
-      # TODO(teravest): Add a name field and use here instead of coreboot.
-      key = device_targets['coreboot']
+      key = self._GetFirmwareGroupingName(device)
+
       if firmware_filter and key != firmware_filter:
         continue
       if target_type in device_targets:
@@ -516,9 +536,8 @@ class CrosConfigBaseImpl(object):
         continue
       targets = [device_targets.get(c) for c in components]
 
-      # Always name firmware combinations after the 'coreboot' name.
-      # TODO(teravest): Add a 'name' field.
-      key = device_targets['coreboot']
+      key = self._GetFirmwareGroupingName(device)
+
       if firmware_filter and key != firmware_filter:
         continue
 

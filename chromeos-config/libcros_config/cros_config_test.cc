@@ -142,11 +142,19 @@ TEST_F(CrosConfigTest, CheckDeviceIndex1) {
 }
 
 TEST_F(CrosConfigTest, CheckDeviceIndex2) {
-  InitConfig("Another", 0);
+  InitConfig("Some", 2);
 
   int device_index;
   ASSERT_TRUE(cros_config_.GetDeviceIndex(&device_index));
   EXPECT_EQ(2, device_index);
+}
+
+TEST_F(CrosConfigTest, CheckDeviceIndex3) {
+  InitConfig("Another", 0);
+
+  int device_index;
+  ASSERT_TRUE(cros_config_.GetDeviceIndex(&device_index));
+  EXPECT_EQ(3, device_index);
 }
 
 TEST_F(CrosConfigTest, CheckWriteFallbackFS) {
