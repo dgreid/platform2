@@ -51,6 +51,13 @@ bool SandboxedWorker::Start() {
   minijail_no_new_privs(jail_.get());
   minijail_use_seccomp_filter(jail_.get());
   minijail_parse_seccomp_filters(jail_.get(), kSeccompFilterPath);
+  // Required to forward SIGTERM to the child process.
+  minijail_forward_signals(jail_.get());
+  // Resets the signal mask to ensure signals are not unintentionally blocked.
+  minijail_reset_signal_mask(jail_.get());
+  // Resets the signal handlers to the default behaviours. This is needed so
+  // that the child process terminates when receiving the SIGTERM signal.
+  minijail_reset_signal_handlers(jail_.get());
 
   int child_stdin = -1, child_stdout = -1, child_stderr = -1;
 
