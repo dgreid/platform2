@@ -413,6 +413,10 @@ properties:
                     ish: *firmware_build_target
                     libpayload: *firmware_build_target
                     u-boot: *firmware_build_target
+                    zephyr-ec:
+                      type: string
+                      description: Specifies the list of Zephyr-based firmware
+                        targets to build.
                   additionalProperties: false
                 ec-ro-image: *bcs_file_name
                 pd-ro-image: *bcs_file_name
