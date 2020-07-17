@@ -63,12 +63,21 @@ class Parser {
 
 class ServiceParser : public Parser {
  public:
+  explicit ServiceParser(bool testonly_send_all);
+
   MaybeCrashReport ParseLogEntry(const std::string& line) override;
+
+ private:
+  const bool testonly_send_all_;
 };
 
 class SELinuxParser : public Parser {
  public:
+  explicit SELinuxParser(bool testonly_send_all);
   MaybeCrashReport ParseLogEntry(const std::string& line) override;
+
+ private:
+  const bool testonly_send_all_;
 };
 
 class KernelParser : public Parser {

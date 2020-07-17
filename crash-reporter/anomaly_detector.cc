@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <anomaly_detector/proto_bindings/anomaly_detector.pb.h>
+#include <base/rand_util.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
@@ -14,6 +15,8 @@
 #include <dbus/exported_object.h>
 #include <dbus/message.h>
 #include <re2/re2.h>
+
+#include "crash-reporter/util.h"
 
 namespace {
 
@@ -57,11 +60,20 @@ void Parser::PeriodicUpdate() {}
 constexpr LazyRE2 service_failure = {
     R"((\S+) \S+ process \(\d+\) terminated with status (\d+))"};
 
+ServiceParser::ServiceParser(bool testonly_send_all)
+    : testonly_send_all_(testonly_send_all) {}
+
 MaybeCrashReport ServiceParser::ParseLogEntry(const std::string& line) {
   std::string service_name;
   std::string exit_status;
   if (!RE2::FullMatch(line, *service_failure, &service_name, &exit_status))
     return base::nullopt;
+
+  // We only want to report 2% of service failures due to noise.
+  if (!testonly_send_all_ &&
+      base::RandGenerator(util::GetServiceFailureWeight()) != 0) {
+    return base::nullopt;
+  }
 
   uint32_t hash = StringHash(service_name.c_str());
 
@@ -87,11 +99,20 @@ std::string GetField(const std::string& line, std::string pattern) {
 
 constexpr LazyRE2 granted = {"avc:[ ]*granted"};
 
+SELinuxParser::SELinuxParser(bool testonly_send_all)
+    : testonly_send_all_(testonly_send_all) {}
+
 MaybeCrashReport SELinuxParser::ParseLogEntry(const std::string& line) {
   // Ignore permissive "errors". These are extremely common and don't have any
   // real impact. The noise from them would crowd out other crashes that have
   // a more significant impact.
   if (line.find("permissive=1") != std::string::npos) {
+    return base::nullopt;
+  }
+
+  // We only want to report 0.1% of selinux violations due to noise.
+  if (!testonly_send_all_ &&
+      base::RandGenerator(util::GetSelinuxWeight()) != 0) {
     return base::nullopt;
   }
 

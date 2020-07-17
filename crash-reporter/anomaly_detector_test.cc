@@ -95,7 +95,8 @@ TEST(AnomalyDetectorTest, CrashReporterCrashRateLimit) {
 TEST(AnomalyDetectorTest, ServiceFailure) {
   ParserRun one{.expected_text = "-exit2-"s};
   ParserRun two{.find_this = "crash-crash"s, .replace_with = "fresh-fresh"s};
-  ParserTest<ServiceParser>("TEST_SERVICE_FAILURE", {one, two});
+  ServiceParser parser(true);
+  ParserTest("TEST_SERVICE_FAILURE", {one, two}, &parser);
 }
 
 TEST(AnomalyDetectorTest, ServiceFailureArc) {
@@ -104,7 +105,8 @@ TEST(AnomalyDetectorTest, ServiceFailureArc) {
       .replace_with = "arc-crash"s,
       .expected_text = "-exit2-arc-"s,
       .expected_flag = "--arc_service_failure=arc-crash"s};
-  ParserTest<ServiceParser>("TEST_SERVICE_FAILURE", {service_failure});
+  ServiceParser parser(true);
+  ParserTest("TEST_SERVICE_FAILURE", {service_failure}, &parser);
 }
 
 TEST(AnomalyDetectorTest, SELinuxViolation) {
@@ -112,14 +114,16 @@ TEST(AnomalyDetectorTest, SELinuxViolation) {
       .expected_text =
           "-selinux-u:r:init:s0-u:r:kernel:s0-module_request-init-"s,
       .expected_flag = "--selinux_violation"s};
-  ParserTest<SELinuxParser>("TEST_SELINUX", {selinux_violation});
+  SELinuxParser parser(true);
+  ParserTest("TEST_SELINUX", {selinux_violation}, &parser);
 }
 
 TEST(AnomalyDetectorTest, SELinuxViolationPermissive) {
   ParserRun selinux_violation = {.find_this = "permissive=0",
                                  .replace_with = "permissive=1",
                                  .expected_size = 0};
-  ParserTest<SELinuxParser>("TEST_SELINUX", {selinux_violation});
+  SELinuxParser parser(true);
+  ParserTest("TEST_SELINUX", {selinux_violation}, &parser);
 }
 
 TEST(AnomalyDetectorTest, SuspendFailure) {

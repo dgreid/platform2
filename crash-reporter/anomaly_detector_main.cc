@@ -11,7 +11,6 @@
 #include "crash-reporter/anomaly_detector_log_reader.h"
 
 #include <memory>
-#include <random>
 #include <string>
 
 #include <base/at_exit.h>
@@ -122,20 +121,11 @@ int main(int argc, char* argv[]) {
       dbus::ObjectPath(anomaly_detector::kAnomalyEventServicePath));
   CHECK(exported_object);
 
-  // We only want to report 0.1% of selinux violations. Set up the random
-  // distribution.
-  std::default_random_engine gen((std::random_device())());
-  std::bernoulli_distribution drop_audit_report(1.0 -
-                                                1.0 / util::GetSelinuxWeight());
-  // Only report 2% of service failures due to noise.
-  // TODO(https://crbug.com/1017491): Remove this once the rate of service
-  // failures is acceptably low.
-  std::bernoulli_distribution drop_service_failure_report(
-      1.0 - 1.0 / util::GetServiceFailureWeight());
-
   std::map<std::string, std::unique_ptr<anomaly::Parser>> parsers;
-  parsers["audit"] = std::make_unique<anomaly::SELinuxParser>();
-  parsers["init"] = std::make_unique<anomaly::ServiceParser>();
+  parsers["audit"] =
+      std::make_unique<anomaly::SELinuxParser>(FLAGS_testonly_send_all);
+  parsers["init"] =
+      std::make_unique<anomaly::ServiceParser>(FLAGS_testonly_send_all);
   parsers["kernel"] = std::make_unique<anomaly::KernelParser>();
   parsers["powerd_suspend"] = std::make_unique<anomaly::SuspendParser>();
   parsers["crash_reporter"] = std::make_unique<anomaly::CrashReporterParser>(
@@ -179,16 +169,6 @@ int main(int argc, char* argv[]) {
         }
 
         if (crash_report) {
-          if (!FLAGS_testonly_send_all) {
-            if (entry.tag == "audit" && drop_audit_report(gen)) {
-              continue;
-            } else if (entry.tag == "init" &&
-                       drop_service_failure_report(gen)) {
-              LOG(INFO) << "Dropping service failure report: "
-                        << crash_report->text;
-              continue;
-            }
-          }
           RunCrashReporter(crash_report->flag, crash_report->text);
         }
 
