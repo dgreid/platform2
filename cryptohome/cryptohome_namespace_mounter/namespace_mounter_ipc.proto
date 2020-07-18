@@ -10,12 +10,48 @@ option optimize_for = LITE_RUNTIME;
 package cryptohome;
 
 message OutOfProcessMountRequest {
+  // MountType is defined in platform2/cryptohome/mount_constants.h.
+  enum MountType {
+    // Not mounted.
+    NONE = 0;
+    // Encrypted with ecryptfs.
+    ECRYPTFS = 1;
+    // Encrypted with dircrypto.
+    DIR_CRYPTO = 2;
+    // Ephemeral mount.
+    EPHEMERAL = 3;
+  }
+  // Username used in login.
   string username = 1;
+  // The global system salt that is used to obfuscate the username.
   string system_salt = 2;
+  // Whether to make the legacy home directory (/home/chronos/user) available.
   bool legacy_home = 3;
+  // OOP mounter will be entering Chrome mount namespace defined by
+  // |mount_namespace_path| path.
   string mount_namespace_path = 4;
+  // Mount type for the current user. The type is set to dircrypto when
+  // migrating to dircrypto even if there is an eCryptfs vault.
+  MountType type = 5;
+  // Whether migration from eCryptfs to dircrypto is needed.
+  bool to_migrate_from_ecryptfs = 6;
+  // Only mount in shadow tree, don't expose the usual /home/(user) directories.
+  bool shadow_only = 7;
+  // File encryption key (FEK) used to encrypt the file contents when the file
+  // is persisted to the lower filesystem by eCryptfs.
+  string fek_signature = 8;
+  // File name encryption key (FNEK) used to encrypt the file name when the file
+  // is persisted to the lower filesystem by eCryptfs.
+  string fnek_signature = 9;
+  // True, if the cryptohome is being created.
+  bool is_pristine = 10;
 }
 
 message OutOfProcessMountResponse {
+  // Paths bind-mounted by MountHelper::MountHomesAndDaemonStores().
   repeated string paths = 1;
+  // Mount error returned from PerformMount() or PerformEphemeralMount(). Enum
+  // values for MountError are defined in
+  // /platform2/system_api/dbus/cryptohome/dbus-constants.h
+  uint32 mount_error = 2;
 }
