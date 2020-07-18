@@ -31,6 +31,11 @@ using base::FilePath;
 
 namespace cryptohome {
 
+// Forward declare classes in
+// cryptohome/namespace_mounter/namespace_mounter_ipc.proto
+class OutOfProcessMountRequest;
+class OutOfProcessMountResponse;
+
 class OutOfProcessMountHelper : public MountHelperInterface {
  public:
   OutOfProcessMountHelper(const brillo::SecureBlob& system_salt,
@@ -62,7 +67,21 @@ class OutOfProcessMountHelper : public MountHelperInterface {
   // Returns whether |path| is the destination of an existing mount.
   bool IsPathMounted(const base::FilePath& path) const override;
 
+  // Carries out dircrypto mount(2) operations for a regular cryptohome.
+  bool PerformMount(const Options& mount_opts,
+                    const std::string& username,
+                    const std::string& fek_signature,
+                    const std::string& fnek_signature,
+                    bool is_pristine,
+                    MountError* error) override;
+
  private:
+  // Launches an out-of-process helper, sends |request|, and waits until it
+  // receives |response|. The timeout for receiving |response| is
+  // |kOutOfProcessHelperMountTimeout| seconds.
+  bool LaunchOutOfProcessHelper(const OutOfProcessMountRequest& request,
+                                OutOfProcessMountResponse* response);
+
   // Kills the out-of-process helper if it's still running, and Reset()s the
   // Process instance to close all pipe file descriptors.
   void KillOutOfProcessHelperIfNecessary();

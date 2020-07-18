@@ -59,6 +59,14 @@ class MountHelperInterface {
 
   // Tears down the existing ephemeral mount.
   virtual void TearDownEphemeralMount() = 0;
+
+  // Carries out mount operations for a regular cryptohome.
+  virtual bool PerformMount(const Options& mount_opts,
+                            const std::string& username,
+                            const std::string& fek_signature,
+                            const std::string& fnek_signature,
+                            bool is_pristine,
+                            MountError* error) = 0;
 };
 
 class MountHelper : public MountHelperInterface {
@@ -119,7 +127,7 @@ class MountHelper : public MountHelperInterface {
                     const std::string& fek_signature,
                     const std::string& fnek_signature,
                     bool is_pristine,
-                    MountError* error);
+                    MountError* error) override;
 
   // Carries out dircrypto mount(2) operations for an ephemeral cryptohome.
   // Does not clean up on failure.

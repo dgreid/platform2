@@ -9,6 +9,7 @@
 #include <sysexits.h>
 
 #include <algorithm>
+#include <map>
 #include <memory>
 #include <utility>
 #include <vector>
@@ -71,6 +72,22 @@ bool WaitForHelper(int read_from_helper, const base::TimeDelta& timeout) {
   return (poll_fd.revents & POLLIN) == POLLIN;
 }
 
+std::map<cryptohome::MountType, cryptohome::OutOfProcessMountRequest_MountType>
+    mount_type = {
+        // Not mounted.
+        {cryptohome::MountType::NONE,
+         cryptohome::OutOfProcessMountRequest_MountType_NONE},
+        // Encrypted with ecryptfs.
+        {cryptohome::MountType::ECRYPTFS,
+         cryptohome::OutOfProcessMountRequest_MountType_ECRYPTFS},
+        // Encrypted with dircrypto.
+        {cryptohome::MountType::DIR_CRYPTO,
+         cryptohome::OutOfProcessMountRequest_MountType_DIR_CRYPTO},
+        // Ephemeral mount.
+        {cryptohome::MountType::EPHEMERAL,
+         cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL},
+};
+
 }  // namespace
 
 namespace cryptohome {
@@ -118,6 +135,32 @@ void OutOfProcessMountHelper::KillOutOfProcessHelperIfNecessary() {
 
 bool OutOfProcessMountHelper::PerformEphemeralMount(
     const std::string& username) {
+  OutOfProcessMountRequest request;
+  request.set_username(username);
+  request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
+  request.set_legacy_home(legacy_home_);
+  request.set_mount_namespace_path(
+      chrome_mnt_ns_ ? chrome_mnt_ns_->path().value() : "");
+  request.set_type(cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL);
+
+  OutOfProcessMountResponse response;
+  if (!LaunchOutOfProcessHelper(request, &response)) {
+    return false;
+  }
+
+  username_ = request.username();
+  if (response.paths_size() > 0) {
+    for (int i = 0; i < response.paths_size(); i++) {
+      mounted_paths_.insert(response.paths(i));
+    }
+  }
+
+  return true;
+}
+
+bool OutOfProcessMountHelper::LaunchOutOfProcessHelper(
+    const OutOfProcessMountRequest& request,
+    OutOfProcessMountResponse* response) {
   std::unique_ptr<brillo::Process> mount_helper =
       platform_->CreateProcessInstance();
 
@@ -144,13 +187,6 @@ bool OutOfProcessMountHelper::PerformEphemeralMount(
       base::Bind(&OutOfProcessMountHelper::KillOutOfProcessHelperIfNecessary,
                  base::Unretained(this)));
 
-  OutOfProcessMountRequest request;
-  request.set_username(username);
-  request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
-  request.set_legacy_home(legacy_home_);
-  request.set_mount_namespace_path(
-      chrome_mnt_ns_ ? chrome_mnt_ns_->path().value() : "");
-
   if (!WriteProtobuf(write_to_helper_, request)) {
     LOG(ERROR) << "Failed to write request protobuf";
     ReportOOPMountOperationResult(
@@ -167,8 +203,7 @@ bool OutOfProcessMountHelper::PerformEphemeralMount(
     return false;
   }
 
-  OutOfProcessMountResponse response;
-  if (!ReadProtobuf(read_from_helper, &response)) {
+  if (!ReadProtobuf(read_from_helper, response)) {
     LOG(ERROR) << "Failed to read response protobuf";
     ReportOOPMountOperationResult(
         OOPMountOperationResult::kFailedToReadResponseProtobuf);
@@ -181,16 +216,6 @@ bool OutOfProcessMountHelper::PerformEphemeralMount(
 
   // OOP mount helper started successfully, release the clean-up closure.
   ignore_result(kill_runner.Release());
-
-  // Once the clean-up closure is released, store the username and the mounted
-  // paths.
-  username_ = username;
-
-  if (response.paths_size() > 0) {
-    for (int i = 0; i < response.paths_size(); i++) {
-      mounted_paths_.insert(response.paths(i));
-    }
-  }
 
   LOG(INFO) << "OOP mount helper started successfully";
   ReportOOPMountOperationResult(OOPMountOperationResult::kSuccess);
@@ -210,6 +235,41 @@ void OutOfProcessMountHelper::TearDownEphemeralMount() {
   KillOutOfProcessHelperIfNecessary();
   mounted_paths_.clear();
   username_.clear();
+}
+
+bool OutOfProcessMountHelper::PerformMount(const Options& mount_opts,
+                                           const std::string& username,
+                                           const std::string& fek_signature,
+                                           const std::string& fnek_signature,
+                                           bool is_pristine,
+                                           MountError* error) {
+  OutOfProcessMountRequest request;
+  request.set_username(username);
+  request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
+  request.set_legacy_home(legacy_home_);
+  request.set_mount_namespace_path(
+      chrome_mnt_ns_ ? chrome_mnt_ns_->path().value() : "");
+  request.set_type(mount_type[mount_opts.type]);
+  request.set_to_migrate_from_ecryptfs(mount_opts.to_migrate_from_ecryptfs);
+  request.set_shadow_only(mount_opts.shadow_only);
+  request.set_fek_signature(fek_signature);
+  request.set_fnek_signature(fnek_signature);
+  request.set_is_pristine(is_pristine);
+
+  OutOfProcessMountResponse response;
+  if (!LaunchOutOfProcessHelper(request, &response)) {
+    return false;
+  }
+
+  username_ = request.username();
+  if (response.paths_size() > 0) {
+    for (int i = 0; i < response.paths_size(); i++) {
+      mounted_paths_.insert(response.paths(i));
+    }
+  }
+
+  *error = static_cast<MountError>(response.mount_error());
+  return true;
 }
 
 }  // namespace cryptohome
