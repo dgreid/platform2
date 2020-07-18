@@ -143,6 +143,10 @@ void SandboxedProcess::SetSupplementaryGroupIds(base::span<const gid_t> gids) {
   minijail_set_supplementary_gids(jail_, gids.size(), gids.data());
 }
 
+bool SandboxedProcess::AddToCgroup(const std::string& cgroup) {
+  return minijail_add_to_cgroup(jail_, cgroup.c_str()) == 0;
+}
+
 void SandboxedProcess::CloseOpenFds() {
   minijail_close_open_fds(jail_);
 }

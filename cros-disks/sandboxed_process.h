@@ -85,6 +85,9 @@ class SandboxedProcess : public Process {
   // Sets supplementary group IDs of the process to be sandboxed.
   void SetSupplementaryGroupIds(base::span<const gid_t> gids);
 
+  // Adds the minijail to |cgroup|.
+  bool AddToCgroup(const std::string& cgroup);
+
   // Close all open fds on fork.
   void CloseOpenFds();
 
