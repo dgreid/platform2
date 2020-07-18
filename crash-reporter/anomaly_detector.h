@@ -21,6 +21,7 @@
 #include <base/time/time.h>
 #include <dbus/bus.h>
 
+#include <ostream>
 #include <string>
 #include <vector>
 
@@ -33,6 +34,10 @@ struct CrashReport {
   std::string text;
   std::vector<std::string> flags;
 };
+
+// Aids for testing
+bool operator==(const CrashReport& lhs, const CrashReport& rhs);
+std::ostream& operator<<(std::ostream& out, const CrashReport& cr);
 
 using MaybeCrashReport = base::Optional<CrashReport>;
 
@@ -48,7 +53,7 @@ class Parser {
 
   // Called once every 10-20 seconds to allow Parser to update state in ways
   // that aren't always tied to receiving a message.
-  virtual void PeriodicUpdate();
+  virtual MaybeCrashReport PeriodicUpdate();
 
  protected:
   enum class LineType {

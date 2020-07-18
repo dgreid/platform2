@@ -32,6 +32,7 @@
 #include "crash-reporter/generic_failure_collector.h"
 #include "crash-reporter/kernel_collector.h"
 #include "crash-reporter/kernel_warning_collector.h"
+#include "crash-reporter/missed_crash_collector.h"
 #include "crash-reporter/mount_failure_collector.h"
 #include "crash-reporter/paths.h"
 #include "crash-reporter/selinux_violation_collector.h"
@@ -267,6 +268,8 @@ int main(int argc, char* argv[]) {
               "Report collected kernel wifi warning");
   DEFINE_bool(kernel_suspend_warning, false,
               "Report collected kernel suspend warning");
+  DEFINE_bool(missed_chrome_crash, false,
+              "Report that we missed a Chrome crash");
   DEFINE_bool(log_to_stderr, false, "Log to stderr instead of syslog.");
   DEFINE_string(arc_service_failure, "",
                 "The specific ARC service name that failed");
@@ -469,6 +472,17 @@ int main(int argc, char* argv[]) {
           .cb = base::BindRepeating(&MountFailureCollector::Collect,
                                     base::Unretained(&mount_failure_collector),
                                     FLAGS_mount_failure),
+      }},
+  });
+
+  MissedCrashCollector missed_crash_collector;
+  collectors.push_back({
+      .collector = &missed_crash_collector,
+      .handlers = {{
+          .should_handle = FLAGS_missed_chrome_crash,
+          .cb = base::BindRepeating(&MissedCrashCollector::Collect,
+                                    base::Unretained(&missed_crash_collector),
+                                    FLAGS_pid),
       }},
   });
 

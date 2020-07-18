@@ -11,7 +11,6 @@
 #include "crash-reporter/anomaly_detector_log_reader.h"
 
 #include <memory>
-#include <numeric>
 #include <string>
 
 #include <base/at_exit.h>
@@ -20,6 +19,7 @@
 #include <base/memory/ref_counted.h>
 #include <base/message_loop/message_loop.h>
 #include <base/strings/strcat.h>
+#include <base/strings/string_util.h>
 #include <base/time/default_clock.h>
 #include <base/threading/platform_thread.h>
 #include <brillo/flag_helper.h>
@@ -50,8 +50,6 @@
 constexpr base::TimeDelta kTimeBetweenPeriodicUpdates =
     base::TimeDelta::FromSeconds(10);
 
-const base::FilePath kMessageLogPath("/var/log/messages");
-
 const base::FilePath kAuditLogPath("/var/log/audit/audit.log");
 
 const base::FilePath kUpstartLogPath("/var/log/upstart.log");
@@ -78,11 +76,8 @@ scoped_refptr<dbus::Bus> SetUpDBus(void) {
 // Callback to run crash-reporter.
 void RunCrashReporter(const std::vector<std::string>& flags,
                       const std::string& input) {
-  LOG(INFO) << "anomaly_detector invoking crash_reporter with"
-            << std::accumulate(flags.begin(), flags.end(), std::string(),
-                               [](const std::string& a, const std::string& b) {
-                                 return base::StrCat({a, " ", b});
-                               });
+  LOG(INFO) << "anomaly_detector invoking crash_reporter with "
+            << base::JoinString(flags, " ");
   brillo::ProcessImpl cmd;
   cmd.AddArg("/sbin/crash_reporter");
   for (const std::string& flag : flags) {
@@ -139,7 +134,7 @@ int main(int argc, char* argv[]) {
   parsers["powerd_suspend"] = std::make_unique<anomaly::SuspendParser>();
   parsers["crash_reporter"] = std::make_unique<anomaly::CrashReporterParser>(
       std::make_unique<base::DefaultClock>(),
-      std::make_unique<MetricsLibrary>());
+      std::make_unique<MetricsLibrary>(), FLAGS_testonly_send_all);
   auto termina_parser = std::make_unique<anomaly::TerminaParser>(dbus);
 
   base::Time last_periodic_update = base::Time::Now();
@@ -149,7 +144,7 @@ int main(int argc, char* argv[]) {
   // give up and logs the error. Note that some boards do not have SELinux and
   // thus no audit.log.
   anomaly::AuditReader audit_reader(kAuditLogPath, anomaly::kAuditLogPattern);
-  anomaly::MessageReader message_reader(kMessageLogPath,
+  anomaly::MessageReader message_reader(base::FilePath(paths::kMessageLogPath),
                                         anomaly::kMessageLogPattern);
   anomaly::MessageReader upstart_reader(kUpstartLogPath,
                                         anomaly::kUpstartLogPattern);
@@ -195,7 +190,11 @@ int main(int argc, char* argv[]) {
     if (last_periodic_update <=
         base::Time::Now() - kTimeBetweenPeriodicUpdates) {
       for (const auto& parser : parsers) {
-        parser.second->PeriodicUpdate();
+        anomaly::MaybeCrashReport crash_report =
+            parser.second->PeriodicUpdate();
+        if (crash_report) {
+          RunCrashReporter(crash_report->flags, crash_report->text);
+        }
       }
       last_periodic_update = base::Time::Now();
     }

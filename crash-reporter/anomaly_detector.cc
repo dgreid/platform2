@@ -8,6 +8,7 @@
 
 #include <anomaly_detector/proto_bindings/anomaly_detector.pb.h>
 #include <base/rand_util.h>
+#include <base/strings/strcat.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
@@ -45,6 +46,16 @@ namespace anomaly {
 CrashReport::CrashReport(std::string t, std::vector<std::string> f)
     : text(std::move(t)), flags(std::move(f)) {}
 
+bool operator==(const CrashReport& lhs, const CrashReport& rhs) {
+  return lhs.text == rhs.text && lhs.flags == rhs.flags;
+}
+
+std::ostream& operator<<(std::ostream& out, const CrashReport& cr) {
+  out << "{.text='" << cr.text << "', .flags={"
+      << base::JoinString(cr.flags, " ") << "}}";
+  return out;
+}
+
 Parser::~Parser() {}
 
 // We expect only a handful of different anomalies per boot session, so the
@@ -58,7 +69,9 @@ bool Parser::WasAlreadySeen(uint32_t hash) {
   return return_val;
 }
 
-void Parser::PeriodicUpdate() {}
+MaybeCrashReport Parser::PeriodicUpdate() {
+  return base::nullopt;
+}
 
 constexpr LazyRE2 service_failure = {
     R"((\S+) \S+ process \(\d+\) terminated with status (\d+))"};

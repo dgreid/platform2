@@ -38,6 +38,18 @@ constexpr char kOobeCompletePath[] = "/home/chronos/.oobe_completed";
 // Directory where system configuration files are located.
 constexpr char kEtcDirectory[] = "/etc";
 
+// The system file that gives the number of file descriptors in use.
+constexpr char kProcFileNr[] = "/proc/sys/fs/file-nr";
+
+// The system file that gives information about the amount of memory in use.
+constexpr char kProcMeminfo[] = "/proc/meminfo";
+
+// Main system log path.
+constexpr char kMessageLogPath[] = "/var/log/messages";
+
+// Directory containing system Chrome logs (when the user isn't logged in).
+constexpr char kSystemChromeLogDirectory[] = "/var/log/chrome";
+
 // Directory where per-user crashes are saved before the user logs in.
 //
 // Normally this path is not used.  Unfortunately, there are a few edge cases
