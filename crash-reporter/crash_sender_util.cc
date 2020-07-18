@@ -56,6 +56,7 @@ constexpr char kUploadVarPrefix[] = "upload_var_";
 constexpr char kUploadTextPrefix[] = "upload_text_";
 constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
+constexpr char kAlreadyUploadedExt[] = ".alreadyuploaded";
 
 // Keys used in uploads.log file. (All timestamps are measured in seconds.)
 constexpr char kJsonLogKeyUploadId[] = "upload_id";
@@ -139,6 +140,12 @@ void ParseCommandLine(int argc,
   DEFINE_bool(test_mode, false,
               "Do not upload crashes; instead, log a special message if the "
               "crash is valid. Used by tast test ChromeCrashLoop.");
+  DEFINE_bool(delete_crashes, true,
+              "Instead of removing crashes after uploading them, create a new "
+              "file indicating that they have been uploaded. Used by "
+              "integration testing frameworks to provide data to the crash "
+              "server while also capturing crashes in a framework-specific "
+              "way.");
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Sender");
   if (FLAGS_max_spread_time < 0) {
     LOG(ERROR) << "Invalid value for max spread time: "
@@ -152,6 +159,7 @@ void ParseCommandLine(int argc,
   flags->allow_dev_sending = FLAGS_dev;
   flags->ignore_pause_file = FLAGS_ignore_pause_file;
   flags->test_mode = FLAGS_test_mode;
+  flags->delete_crashes = FLAGS_delete_crashes;
   if (flags->test_mode) {
     // The pause file is intended to pause the cronjob crash_sender during
     // tests, not the crash_sender invoked by the test code.
@@ -258,7 +266,7 @@ void SortReports(std::vector<MetaFile>* reports) {
             });
 }
 
-void RemoveReportFiles(const base::FilePath& meta_file) {
+void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes) {
   if (meta_file.Extension() != ".meta") {
     LOG(ERROR) << "Not a meta file: " << meta_file.value();
     return;
@@ -267,11 +275,29 @@ void RemoveReportFiles(const base::FilePath& meta_file) {
   const std::string pattern =
       meta_file.BaseName().RemoveExtension().value() + ".*";
 
-  base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
-                            base::FileEnumerator::FILES, pattern);
-  for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
-    if (!base::DeleteFile(file, false /* recursive */))
-      PLOG(WARNING) << "Failed to remove " << file.value();
+  bool add_uploaded_file = !delete_crashes;
+  if (delete_crashes) {
+    base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
+                              base::FileEnumerator::FILES, pattern);
+    for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
+      if (!base::DeleteFile(file, false /* recursive */)) {
+        PLOG(WARNING) << "Failed to remove " << file.value();
+        // We may have failed to remove the file due to incorrect selinux config
+        // on the directory. However, we may still be able to add files to it,
+        // so mark the crash as uploaded to prevent uploading it again.
+        // See https://crbug.com/1060019.
+        if (file.Extension() == ".meta") {
+          add_uploaded_file = true;
+        }
+      }
+    }
+  }
+  if (add_uploaded_file) {
+    base::File f(meta_file.ReplaceExtension(kAlreadyUploadedExt),
+                 base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+    if (!f.IsValid()) {
+      LOG(ERROR) << "Failed to mark crash as uploaded";
+    }
   }
 }
 
@@ -347,6 +373,10 @@ bool IsCompleteMetadata(const brillo::KeyValueStore& metadata) {
   if (!metadata.GetString("done", &value))
     return false;
   return value == "1";
+}
+
+bool IsAlreadyUploaded(const base::FilePath& meta_file) {
+  return base::PathExists(meta_file.ReplaceExtension(kAlreadyUploadedExt));
 }
 
 bool IsTimestampNewEnough(const base::FilePath& timestamp_file) {
@@ -521,6 +551,7 @@ Sender::Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
       sleep_function_(options.sleep_function),
       allow_dev_sending_(options.allow_dev_sending),
       test_mode_(options.test_mode),
+      delete_crashes_(options.delete_crashes),
       clock_(std::move(clock)) {}
 
 bool Sender::Init() {
@@ -693,6 +724,11 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     }
   }
 
+  if (IsAlreadyUploaded(meta_file)) {
+    *reason = "Not uploading already-uploaded crash";
+    return kIgnore;
+  }
+
   if (info->payload_kind == "devcore" && !IsDeviceCoredumpUploadAllowed()) {
     *reason = "Device coredump upload not allowed";
     return kIgnore;
@@ -713,7 +749,7 @@ void Sender::RemoveAndPickCrashFiles(const base::FilePath& crash_dir,
     switch (ChooseAction(meta_file, &reason, &info)) {
       case kRemove:
         LOG(INFO) << "Removing: " << reason;
-        RemoveReportFiles(meta_file);
+        RemoveReportFiles(meta_file, delete_crashes_);
         break;
       case kIgnore:
         LOG(INFO) << "Ignoring: " << reason;
@@ -811,7 +847,7 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files,
     }
     LOG(INFO) << "Successfully sent crash " << meta_file.value()
               << " and removing.";
-    RemoveReportFiles(meta_file);
+    RemoveReportFiles(meta_file, delete_crashes_);
   }
 }
 

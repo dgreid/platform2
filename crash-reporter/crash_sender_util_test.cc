@@ -323,6 +323,18 @@ class CrashSenderUtilTest : public testing::Test {
     if (!CreateFile(absolute_log_, "", now))
       return false;
 
+    // These should be skipped, since the `alreadyuploaded` file exists.
+    uploaded_meta_ = crash_directory.Append("uploaded.meta");
+    uploaded_log_ = crash_directory.Append("uploaded.log");
+    uploaded_already_ = crash_directory.Append("uploaded.alreadyuploaded");
+    if (!CreateFile(uploaded_meta_, "payload=uploaded.log\ndone=1\n",
+                    good_meta_time))
+      return false;
+    if (!CreateFile(uploaded_log_, "", now))
+      return false;
+    if (!CreateFile(uploaded_already_, "", now))
+      return false;
+
     // This should be ignored as corrupt. Payload can't be /.
     root_payload_meta_ = crash_directory.Append("root_payload.meta");
     if (!test_util::CreateFile(root_payload_meta_,
@@ -457,6 +469,9 @@ class CrashSenderUtilTest : public testing::Test {
   base::FilePath good_log_;
   base::FilePath absolute_meta_;
   base::FilePath absolute_log_;
+  base::FilePath uploaded_meta_;
+  base::FilePath uploaded_log_;
+  base::FilePath uploaded_already_;
   base::FilePath root_payload_meta_;
   base::FilePath devcore_meta_;
   base::FilePath devcore_devcore_;
@@ -711,6 +726,11 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_EQ("log", info.payload_kind);
   EXPECT_TRUE(info.metadata.GetString("payload", &value));
 
+  // The following file should be ignored.
+  EXPECT_EQ(Sender::kIgnore,
+            sender.ChooseAction(uploaded_meta_, &reason, &info));
+  EXPECT_THAT(reason, HasSubstr("Not uploading already-uploaded crash"));
+
   // The following files should be ignored.
   EXPECT_EQ(Sender::kIgnore,
             sender.ChooseAction(new_incomplete_meta_, &reason, &info));
@@ -822,6 +842,8 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
   EXPECT_TRUE(base::PathExists(good_log_));
   EXPECT_TRUE(base::PathExists(absolute_meta_));
   EXPECT_TRUE(base::PathExists(absolute_log_));
+  EXPECT_TRUE(base::PathExists(uploaded_meta_));
+  EXPECT_TRUE(base::PathExists(uploaded_log_));
   EXPECT_TRUE(base::PathExists(new_incomplete_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_log_));
@@ -892,6 +914,8 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
 
   const base::FilePath foo_meta = crash_directory.Append("foo.meta");
   const base::FilePath foo_log = crash_directory.Append("foo.log");
+  const base::FilePath foo_uploaded =
+      crash_directory.Append("foo.alreadyuploaded");
   const base::FilePath foo_dmp = crash_directory.Append("foo.dmp");
   const base::FilePath bar_log = crash_directory.Append("bar.log");
 
@@ -899,11 +923,30 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   ASSERT_TRUE(test_util::CreateFile(foo_log, ""));
   ASSERT_TRUE(test_util::CreateFile(foo_dmp, ""));
   ASSERT_TRUE(test_util::CreateFile(bar_log, ""));
+  EXPECT_FALSE(base::PathExists(foo_uploaded));
+
+  // This should create the alreadyuploaded file.
+  RemoveReportFiles(foo_meta, false);
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
+  EXPECT_TRUE(base::PathExists(foo_uploaded));
+
+  ASSERT_TRUE(test_util::CreateFile(foo_uploaded, "asdf"));
+  base::File::Info uploaded_info;
+  ASSERT_TRUE(base::GetFileInfo(foo_uploaded, &uploaded_info));
+  // This should not update the alreadyuploaded file, since it already exists
+  RemoveReportFiles(foo_meta, false);
+  ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
+  EXPECT_TRUE(base::PathExists(foo_uploaded));
+  base::File::Info new_uploaded_info;
+  ASSERT_TRUE(base::GetFileInfo(foo_uploaded, &new_uploaded_info));
+  EXPECT_EQ(new_uploaded_info.last_modified, uploaded_info.last_modified);
+  EXPECT_EQ(new_uploaded_info.size, uploaded_info.size);
 
   // This should remove foo.*.
-  RemoveReportFiles(foo_meta);
+  RemoveReportFiles(foo_meta, true);
   // This should do nothing because the suffix is not ".meta".
-  RemoveReportFiles(bar_log);
+  RemoveReportFiles(bar_log, true);
 
   // Check what files were removed.
   EXPECT_FALSE(base::PathExists(foo_meta));

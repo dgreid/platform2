@@ -52,6 +52,7 @@ struct CommandLineFlags {
   bool allow_dev_sending = false;
   bool ignore_pause_file = false;
   bool test_mode = false;
+  bool delete_crashes = true;
 };
 
 // Crash information obtained in ChooseAction().
@@ -125,7 +126,7 @@ void SortReports(std::vector<MetaFile>* reports);
 
 // Removes report files associated with the given meta file.
 // More specifically, if "foo.meta" is given, "foo.*" will be removed.
-void RemoveReportFiles(const base::FilePath& meta_file);
+void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes);
 
 // Returns the list of meta data files (files with ".meta" suffix), sorted by
 // the timestamp in the old-to-new order.
@@ -148,6 +149,9 @@ bool ParseMetadata(const std::string& raw_metadata,
 
 // Returns true if the metadata is complete.
 bool IsCompleteMetadata(const brillo::KeyValueStore& metadata);
+
+// Returns true if the metadata indicates that the crash was already uploaded.
+bool IsAlreadyUploaded(const base::FilePath& meta_file);
 
 // Returns true if the given timestamp file is new enough, indicating that there
 // was a recent attempt to send a crash report.
@@ -235,6 +239,11 @@ class Sender {
     // If true, just log the kTestModeSuccessful message if the crash report
     // looks legible instead of actually uploading it.
     bool test_mode = false;
+
+    // If true, delete crash files after sending them.
+    // Else, create a new file in the spool directory with the same basename
+    // and a special extension to indicate that the crash was already uploaded.
+    bool delete_crashes = true;
   };
 
   Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
@@ -333,6 +342,7 @@ class Sender {
   base::Callback<void(base::TimeDelta)> sleep_function_;
   bool allow_dev_sending_;
   const bool test_mode_;
+  const bool delete_crashes_;
   std::unique_ptr<base::Clock> clock_;
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<brillo::OsReleaseReader> os_release_reader_;
