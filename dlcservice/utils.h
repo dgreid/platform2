@@ -15,7 +15,6 @@
 #include <libimageloader/manifest.h>
 
 #include "dlcservice/boot/boot_slot.h"
-#include "dlcservice/dlc.h"
 
 namespace dlcservice {
 
@@ -92,9 +91,6 @@ bool GetDlcManifest(const base::FilePath& dlc_manifest_path,
 
 // Scans a directory and returns all its subdirectory names in a list.
 std::set<std::string> ScanDirectory(const base::FilePath& dir);
-
-DlcIdList ToDlcIdList(const DlcMap& dlcs,
-                      const std::function<bool(const DlcBase&)>& filter);
 
 }  // namespace dlcservice
 

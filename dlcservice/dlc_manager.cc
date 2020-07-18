@@ -22,6 +22,18 @@ using brillo::MessageLoop;
 
 namespace dlcservice {
 
+namespace {
+DlcIdList ToDlcIdList(const DlcMap& dlcs,
+                      const std::function<bool(const DlcBase&)>& filter) {
+  DlcIdList list;
+  for (const auto& pair : dlcs) {
+    if (filter(pair.second))
+      list.push_back(pair.first);
+  }
+  return list;
+}
+}  // namespace
+
 DlcManager::~DlcManager() {
   if (cleanup_dangling_task_id_ != MessageLoop::kTaskIdNull) {
     MessageLoop::current()->CancelTask(cleanup_dangling_task_id_);

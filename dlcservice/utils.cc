@@ -21,9 +21,6 @@
 #include <crypto/secure_hash.h>
 #include <crypto/sha2.h>
 
-#include "dlcservice/dlc.h"
-#include "dlcservice/dlc_service.h"
-
 using base::FilePath;
 using crypto::SecureHash;
 using std::set;
@@ -289,16 +286,6 @@ set<string> ScanDirectory(const FilePath& dir) {
     result.emplace(dir_path.BaseName().value());
   }
   return result;
-}
-
-DlcIdList ToDlcIdList(const DlcMap& dlcs,
-                      const std::function<bool(const DlcBase&)>& filter) {
-  DlcIdList list;
-  for (const auto& pair : dlcs) {
-    if (filter(pair.second))
-      list.push_back(pair.first);
-  }
-  return list;
 }
 
 }  // namespace dlcservice
