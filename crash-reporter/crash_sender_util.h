@@ -53,6 +53,7 @@ struct CommandLineFlags {
   bool ignore_pause_file = false;
   bool test_mode = false;
   bool delete_crashes = true;
+  bool ignore_test_image = false;
 };
 
 // Crash information obtained in ChooseAction().

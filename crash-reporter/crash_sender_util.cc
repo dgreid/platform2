@@ -146,6 +146,9 @@ void ParseCommandLine(int argc,
               "integration testing frameworks to provide data to the crash "
               "server while also capturing crashes in a framework-specific "
               "way.");
+  DEFINE_bool(ignore_test_image, false,
+              "Upload crashes to the crash server even if running on a test "
+              "image, but do NOT ignore official image check.");
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Sender");
   if (FLAGS_max_spread_time < 0) {
     LOG(ERROR) << "Invalid value for max spread time: "
@@ -160,6 +163,7 @@ void ParseCommandLine(int argc,
   flags->ignore_pause_file = FLAGS_ignore_pause_file;
   flags->test_mode = FLAGS_test_mode;
   flags->delete_crashes = FLAGS_delete_crashes;
+  flags->ignore_test_image = FLAGS_ignore_test_image;
   if (flags->test_mode) {
     // The pause file is intended to pause the cronjob crash_sender during
     // tests, not the crash_sender invoked by the test code.

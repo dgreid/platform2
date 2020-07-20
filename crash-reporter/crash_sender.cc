@@ -90,7 +90,10 @@ int RunChildMain(int argc, char* argv[]) {
               << "crashes to staging server at go/crash-staging";
   } else {
     // Normal mode (not test, not dev).
-    if (util::IsTestImage()) {
+    if (flags.ignore_test_image) {
+      LOG(INFO) << "--ignore_test_image flag present, ignoring test image "
+                << "check and uploading crashes as normal.";
+    } else if (util::IsTestImage()) {
       LOG(INFO) << "Exiting early due to test image.";
       return EXIT_FAILURE;
     }
