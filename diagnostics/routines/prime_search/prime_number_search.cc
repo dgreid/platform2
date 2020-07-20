@@ -8,36 +8,32 @@
 
 #include <base/stl_util.h>
 
-#include "diagnostics/routines/prime_search/prime_number_list.h"
-
 namespace diagnostics {
 
 PrimeNumberSearch::PrimeNumberSearch(uint64_t max_num) : max_num_(max_num) {
-  expected_prime_num_count_ = 0;
-  for (auto prime : diagnostics::kPrimeNumberList) {
-    if (prime <= max_num_)
-      expected_prime_num_count_++;
-    else
-      break;
+  // Create a Sieve of Eratosthenes. This creates a bitfield of prime numbers
+  // from 0 - |max_number|.
+  // https://en.wikipedia.org/wiki/Sieve_of_Eratosthenes
+  for (uint64_t i = 2;
+       i <= static_cast<uint64_t>(std::sqrt(static_cast<double>(max_num_)));
+       i++) {
+    if (prime_sieve_[i]) {
+      for (uint64_t j = (i * i); j <= max_num_; j += i)
+        prime_sieve_[j] = 0;
+    }
   }
 }
 
 bool PrimeNumberSearch::Run() {
-  uint64_t prime_num_count = 0;
   for (uint64_t num = 2; num <= max_num_; num++) {
-    if (!IsPrime(num)) {
-      continue;
-    }
-    if (prime_num_count >= base::size(diagnostics::kPrimeNumberList) ||
-        kPrimeNumberList[prime_num_count++] != num) {
-      LOG(ERROR) << "incorrect number " << num << " is calculated as "
-                 << prime_num_count << "th prime number";
+    bool sieve_prime = prime_sieve_[num];
+    bool func_prime = IsPrime(num);
+
+    if (sieve_prime != func_prime) {
+      LOG(ERROR) << "prime number mismatch: " << num
+                 << ". sieve: " << sieve_prime << " IsPrime(): " << func_prime;
       return false;
     }
-  }
-  if (prime_num_count != expected_prime_num_count_) {
-    LOG(ERROR) << "incorrect total calculated prime number amount";
-    return false;
   }
 
   return true;

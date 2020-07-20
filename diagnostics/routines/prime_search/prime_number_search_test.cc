@@ -29,6 +29,7 @@ class MockPrimeNumberSearchTest : public PrimeNumberSearch {
 
 }  // namespace
 
+// Tests if different numbers are prime by using the IsPrime() calculation.
 TEST(PrimeNumberSearchTest, IsPrime) {
   PrimeNumberSearch prime_search(4);
 
@@ -37,6 +38,7 @@ TEST(PrimeNumberSearchTest, IsPrime) {
   EXPECT_TRUE(prime_search.IsPrime(2));
   EXPECT_TRUE(prime_search.IsPrime(3));
   EXPECT_FALSE(prime_search.IsPrime(4));
+  EXPECT_TRUE(prime_search.IsPrime(5));
   EXPECT_TRUE(prime_search.IsPrime(999983));
   EXPECT_FALSE(prime_search.IsPrime(999984));
   EXPECT_TRUE(prime_search.IsPrime(360289));
@@ -47,6 +49,12 @@ TEST(PrimeNumberSearchTest, IsPrime) {
   EXPECT_FALSE(prime_search.IsPrime(828588));
   EXPECT_TRUE(prime_search.IsPrime(87119));
   EXPECT_FALSE(prime_search.IsPrime(87120));
+}
+
+// Test that all values under kMaxPrimeNumber are calculated correctly.
+TEST(PrimeNumbersSearchTest, RunFull) {
+  PrimeNumberSearch prime_search(kMaxPrimeNumber);
+  EXPECT_TRUE(prime_search.Run());
 }
 
 // Test Run() returns true when IsPrime() calculates
@@ -65,10 +73,8 @@ TEST(PrimeNumberSearchTest, RunPass) {
   EXPECT_TRUE(prime_search.Run());
 }
 
-// Test Run() returns false when IsPrime() miscalculate a prime number as
-// nonprime when no more prime number between miscalculated number to max_num.
-// The error will be discovered by unexpected amount of calculated prime numbers
-// when Run() finished the traversing of the whole number sequences.
+// Test Run() returns false when IsPrime() miscalculates a prime number as
+// nonprime.
 TEST(PrimeNumberSearchTest,
      RunFailUnexpectedPrimeNumberFollowedWithNoMorePrime) {
   MockPrimeNumberSearchTest prime_search(6);
@@ -78,45 +84,6 @@ TEST(PrimeNumberSearchTest,
   EXPECT_CALL(prime_search, IsPrime(4)).WillOnce(Return(false));
   // 5 should be prime number and is miscalcuated here.
   EXPECT_CALL(prime_search, IsPrime(5)).WillOnce(Return(false));
-  EXPECT_CALL(prime_search, IsPrime(6)).WillOnce(Return(false));
-
-  EXPECT_FALSE(prime_search.Run());
-}
-
-// Test Run() returns false when IsPrime() miscalculate a prime number as
-// nonprime when there is still some prime numbers between miscalculate number
-// to max_num. The error will be discovered by detecting the next correctedly
-// calculated prime number's misposistioning in the prime number table.
-TEST(PrimeNumberSearchTest, RunFailUnexpectedPrimeNumberFollowedWithPrime) {
-  MockPrimeNumberSearchTest prime_search(8);
-
-  EXPECT_CALL(prime_search, IsPrime(2)).WillOnce(Return(true));
-  EXPECT_CALL(prime_search, IsPrime(3)).WillOnce(Return(true));
-  EXPECT_CALL(prime_search, IsPrime(4)).WillOnce(Return(false));
-  // 5 should be prime number and is miscalcuated here.
-  EXPECT_CALL(prime_search, IsPrime(5)).WillOnce(Return(false));
-  EXPECT_CALL(prime_search, IsPrime(6)).WillOnce(Return(false));
-  EXPECT_CALL(prime_search, IsPrime(7)).WillOnce(Return(true));
-  // Run() shall stop when mispositioned prime number is discovered.
-  EXPECT_CALL(prime_search, IsPrime(8)).Times(0);
-
-  EXPECT_FALSE(prime_search.Run());
-}
-
-// Test Run() returns false when IsPrime() miscalculate a nonprime number as
-// prime. The error will be discovered by detecting the inequality between this
-// miscalculated prime number and the expected value in prime number table.
-TEST(PrimeNumberSearchTest, RunFailUnexpectedNonPrimeNumber) {
-  MockPrimeNumberSearchTest prime_search(7);
-
-  EXPECT_CALL(prime_search, IsPrime(2)).WillOnce(Return(true));
-  EXPECT_CALL(prime_search, IsPrime(3)).WillOnce(Return(true));
-  EXPECT_CALL(prime_search, IsPrime(4)).WillOnce(Return(false));
-  EXPECT_CALL(prime_search, IsPrime(5)).WillOnce(Return(true));
-  // 6 should be nonprime number and is miscalcuated here.
-  EXPECT_CALL(prime_search, IsPrime(6)).WillOnce(Return(true));
-  // Run() shall stop when unequal prime number value is discovered.
-  EXPECT_CALL(prime_search, IsPrime(7)).Times(0);
 
   EXPECT_FALSE(prime_search.Run());
 }

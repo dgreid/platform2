@@ -5,9 +5,13 @@
 #ifndef DIAGNOSTICS_ROUTINES_PRIME_SEARCH_PRIME_NUMBER_SEARCH_H_
 #define DIAGNOSTICS_ROUTINES_PRIME_SEARCH_PRIME_NUMBER_SEARCH_H_
 
+#include <bitset>
 #include <cstdint>
 
 namespace diagnostics {
+
+// Largest number that routine will calculate prime numbers up to.
+constexpr uint64_t kMaxPrimeNumber = 1000000;
 
 class PrimeNumberSearch {
  public:
@@ -24,8 +28,8 @@ class PrimeNumberSearch {
 
  private:
   const uint64_t max_num_ = 0;
-
-  uint64_t expected_prime_num_count_ = 0;
+  std::bitset<kMaxPrimeNumber + 1> prime_sieve_ =
+      std::bitset<kMaxPrimeNumber + 1>().set();
 };
 
 }  // namespace diagnostics
