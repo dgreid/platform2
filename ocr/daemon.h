@@ -6,6 +6,7 @@
 #define OCR_DAEMON_H_
 
 #include <memory>
+#include <string>
 
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
@@ -13,6 +14,8 @@
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/dbus/dbus_object.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
+
+#include "ocr/ocr_service_impl.h"
 
 namespace ocr {
 
@@ -34,10 +37,16 @@ class OcrDaemon : public brillo::DBusServiceDaemon {
 
  private:
   // Implementation of org.chromium.OpticalCharacterRecognition interface:
-  void BootstrapMojoConnection(const base::ScopedFD& mojo_fd);
+  // Bootstraps a Mojo connection to the OCR service. The client
+  // passes a file descriptor |mojo_fd|, representing a Unix socket.
+  // We only accept invitations from Chrome and send invitations to other
+  // processes.
+  std::string BootstrapMojoConnection(const base::ScopedFD& mojo_fd,
+                                      bool should_accept_invitation);
 
-  // Responds to Mojo connection errors by quitting the daemon.
-  void OnConnectionError();
+  // Responds to Mojo connection errors with Chrome by quitting the daemon.
+  // Ignores disconnection errors from other clients.
+  void OnDisconnect(bool should_quit);
 
   // As long as this object is alive, all Mojo API surfaces relevant to IPC
   // connections are usable and message pipes which span a process boundary
@@ -46,6 +55,13 @@ class OcrDaemon : public brillo::DBusServiceDaemon {
 
   // D-Bus object that supports the OpticalCharacterRecognition interface.
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
+
+  // Maintains the Mojo connection with OCR service clients.
+  std::unique_ptr<OcrServiceImpl> ocr_service_impl_;
+
+  // Whether binding of the Mojo service was attempted. This flag is needed for
+  // detecting repeated Mojo bootstrapping attempts.
+  bool mojo_service_bind_attempted_ = false;
 
   // Member variables should appear before the WeakPtrFactory to ensure
   // that any WeakPtrs to OcrDaemon are invalidated before its member

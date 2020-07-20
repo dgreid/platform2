@@ -2,12 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
 
 # The target named "all" is the root target built
 # by the platform2 build system.
 group("all") {
   deps = [ ":ocr_service" ]
+  if (use.test) {
+    deps += [ ":ocr_service_test" ]
+  }
+}
+
+generate_mojom_bindings("ocr_mojo_bindings") {
+  mojo_root = "${platform2_root}"
+  sources = [ "mojo/ocr_service.mojom" ]
 }
 
 pkg_config("target_defaults") {
@@ -27,11 +36,29 @@ pkg_config("target_defaults") {
 
 source_set("libocr") {
   configs += [ ":target_defaults" ]
-  sources = [ "daemon.cc" ]
+  deps = [ ":ocr_mojo_bindings" ]
+  sources = [
+    "daemon.cc",
+    "ocr_service_impl.cc",
+  ]
 }
 
 executable("ocr_service") {
   configs += [ ":target_defaults" ]
   deps = [ ":libocr" ]
   sources = [ "main.cc" ]
+}
+
+if (use.test) {
+  executable("ocr_service_test") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    deps = [
+      ":libocr",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "ocr_service_impl_test.cc" ]
+  }
 }
