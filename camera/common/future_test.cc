@@ -21,7 +21,7 @@ class FutureTest : public ::testing::Test {
 
   virtual void SetUp() {
     if (!thread_.StartWithOptions(
-            base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+            base::Thread::Options(base::MessagePumpType::IO, 0))) {
       LOGF(ERROR) << "Test thread failed to start";
       exit(-1);
     }

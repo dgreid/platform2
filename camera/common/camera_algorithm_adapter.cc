@@ -54,7 +54,7 @@ void CameraAlgorithmAdapter::Run(std::string pipe_name,
   auto future = cros::Future<void>::Create(&relay_);
   ipc_lost_cb_ = cros::GetFutureCallback(future);
   ipc_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
+      base::Thread::Options(base::MessagePumpType::IO, 0));
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&CameraAlgorithmAdapter::InitializeOnIpcThread,

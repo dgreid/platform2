@@ -47,7 +47,7 @@ int CameraServiceConnector::Init(const cros_cam_init_option_t* option) {
 
   mojo::core::Init();
   bool ret = ipc_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
+      base::Thread::Options(base::MessagePumpType::IO, 0));
   if (!ret) {
     LOGF(ERROR) << "Failed to start IPC thread";
     return -ENODEV;

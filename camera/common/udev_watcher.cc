@@ -71,7 +71,7 @@ bool UdevWatcher::Start(
   }
 
   if (!thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOGF(ERROR) << "thread start failed";
     return false;
   }

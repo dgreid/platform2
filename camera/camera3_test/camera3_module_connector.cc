@@ -170,7 +170,7 @@ int CameraHalClient::Start(camera_module_callbacks_t* callbacks) {
   camera_module_callbacks_ = callbacks;
   mojo::core::Init();
   if (!ipc_thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOGF(ERROR) << "Failed to start thread";
     return -EIO;
   }

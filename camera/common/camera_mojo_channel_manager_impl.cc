@@ -72,7 +72,7 @@ CameraMojoChannelManagerImpl::CameraMojoChannelManagerImpl()
     : ipc_thread_("MojoIpcThread"), bound_socket_inode_num_(kInvalidInodeNum) {
   instance_ = this;
   if (!ipc_thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOGF(ERROR) << "Failed to start IPC Thread";
     return;
   }

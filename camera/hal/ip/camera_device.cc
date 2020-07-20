@@ -153,7 +153,7 @@ int CameraDevice::Init(mojom::IpCameraDevicePtr ip_device,
 
   if (jpeg_) {
     if (!jpeg_thread_.StartWithOptions(
-            base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+            base::Thread::Options(base::MessagePumpType::IO, 0))) {
       LOGF(ERROR) << "Failed to start jpeg processing thread";
       return -ENODEV;
     }

@@ -33,7 +33,7 @@ ArcCameraServiceImpl::ArcCameraServiceImpl(base::Closure quit_cb)
       ipc_thread_("Mojo IPC thread") {
   mojo::core::Init();
   if (!ipc_thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Mojo IPC thread failed to start";
     return;
   }
