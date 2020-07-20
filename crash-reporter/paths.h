@@ -47,9 +47,9 @@ constexpr char kEtcDirectory[] = "/etc";
 // so there is no per-user dir for us to stash things in.  Instead we fallback
 // to this path as it is at least encrypted on a per-system basis.
 //
-// This also comes up when running autotests.  The GUI is sitting at the login
-// screen while tests are sshing in, changing users, and triggering crashes as
-// the user (purposefully).
+// This also comes up when running integration tests.  The GUI is sitting at the
+// login screen while tests are sshing in, changing users, and triggering
+// crashes as the user (purposefully).
 constexpr char kFallbackUserCrashDirectory[] = "/home/chronos/crash";
 
 // The paths /home/root/<hash>/crash are bind mounted to

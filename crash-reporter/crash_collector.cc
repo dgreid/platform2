@@ -1332,7 +1332,7 @@ bool CrashCollector::ShouldHandleChromeCrashes() {
   if (!util::IsCrashTestInProgress() && util::IsDeveloperImage()) {
     // Check if there's an override to indicate we should indeed collect
     // chrome crashes.  This allows the crashes to still be tracked when
-    // they occur in autotests.  See "crosbug.com/17987".
+    // they occur in integration tests.  See "crosbug.com/17987".
     if (base::PathExists(FilePath(kCollectChromeFile)))
       return true;
   }

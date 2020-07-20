@@ -164,7 +164,8 @@ void RecordCrashDone() {
     // For testing purposes, emit a message to log so that we
     // know when the test has received all the messages from this run.
     // The string is referenced in
-    // third_party/autotest/files/client/cros/crash/crash_test.py
+    // third_party/autotest/files/client/cros/crash/crash_test.py and
+    // platform/tast-tests/src/chromiumos/tast/local/crash/sender.go
     LOG(INFO) << "crash_sender done. (mock)";
   }
 }
@@ -684,8 +685,6 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
   if (!IsCompleteMetadata(info->metadata)) {
     const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
     if (delta.InHours() >= 24) {
-      // TODO(satorux): logging_CrashSender.py expects the following string as
-      // error message. Revise the autotest once the rewrite to C++ is complete.
       *reason = "Removing old incomplete metadata";
       return kRemove;
     } else {

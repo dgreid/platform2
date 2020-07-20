@@ -173,8 +173,8 @@ The [crash_sender] program will also delete reports after it uploads them.
 
 These directories are only read by the [crash_sender] program for uploading,
 and by feedback reports.
-Test frameworks (e.g. autotest) also offload crash reports, but we don't need
-to provide special consideration for those.
+Test frameworks (e.g. autotest, tast) also offload crash reports, but we don't
+need to provide special consideration for those.
 
 We enforce a limit of about 32 crashes per spool directory.
 This is to avoid filling up the underlying storage especially if a daemon
@@ -395,7 +395,7 @@ we should be able to switch to its more standard existing IPC methods.
 *   `/run/crash_reporter/filter-in`: Used by integration tests to tell the
     crash_reporter to ignore invocations unless the command line contains
     the contents of this file as a substring.
-*   `/mnt/stateful_partition/etc/collect_chrome_crashes`: Used by autotests
+*   `/mnt/stateful_partition/etc/collect_chrome_crashes`: Used by tast tests
     to let [crash_reporter] collect browser crashes directly (normally it
     ignores them and lets Chrome handle things).
     *This should be moved to `/run/crash-reporter/collect_chrome_crashes`.*

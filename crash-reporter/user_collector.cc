@@ -114,7 +114,8 @@ void UserCollector::FinishCrash(const base::FilePath& meta_path,
 // Return the string that should be used for the kernel's core_pattern file.
 // Note that if you change the format of the enabled pattern, you'll probably
 // also need to change the UserCollectorBase::ParseCrashAttributes function, the
-// user_collector_test.cc unittest, and the logging_UserCrash.py autotest.
+// user_collector_test.cc unittest, the logging_UserCrash.py autotest,
+// and the platform.UserCrash tast test.
 std::string UserCollector::GetPattern(bool enabled, bool early) const {
   if (enabled) {
     // Combine the crash attributes into one parameter to try to reduce the size
