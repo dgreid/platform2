@@ -30,13 +30,13 @@ component_infos: {
   component_uuid: "storage_C"
   qualification_status: UNQUALIFIED
 }
-generic_component_value_whitelists {
+generic_component_value_allowlists {
   component_category: battery
   # Field |techonlogy| is not allowed.
   field_names: "manufacturer"
   field_names: "model_name"
 }
-generic_component_value_whitelists {
+generic_component_value_allowlists {
   component_category: storage
   field_names: "type"
 }

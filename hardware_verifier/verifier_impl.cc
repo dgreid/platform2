@@ -123,16 +123,16 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
   }
 
   // A dictionary which maps component_category to the field names in the
-  // whitelist.
-  std::map<int, std::set<std::string>> generic_comp_value_whitelists;
+  // allowlist.
+  std::map<int, std::set<std::string>> generic_comp_value_allowlists;
   for (const auto& spec_info :
-       hw_verification_spec.generic_component_value_whitelists()) {
-    const auto& insert_result = generic_comp_value_whitelists.emplace(
+       hw_verification_spec.generic_component_value_allowlists()) {
+    const auto& insert_result = generic_comp_value_allowlists.emplace(
         spec_info.component_category(),
         std::set<std::string>(spec_info.field_names().cbegin(),
                               spec_info.field_names().cend()));
     if (!insert_result.second) {
-      LOG(ERROR) << "Duplicated whitelist tables for category (num="
+      LOG(ERROR) << "Duplicated allowlist tables for category (num="
                  << spec_info.component_category() << ") are detected in the "
                  << "verification spec.";
       return base::nullopt;
@@ -150,9 +150,9 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
     const auto& comp_name_to_qual_status =
         qual_status_dict[comp_category_info.enum_value];
 
-    // the default whitelist is empty.
-    const auto& generic_comp_value_whitelist =
-        generic_comp_value_whitelists[comp_category_info.enum_value];
+    // the default allowlist is empty.
+    const auto& generic_comp_value_allowlist =
+        generic_comp_value_allowlists[comp_category_info.enum_value];
 
     const auto& num_comps = probe_result_refl->FieldSize(
         probe_result, comp_category_info.probe_result_comp_field);
@@ -172,7 +172,7 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
                   << comp_category_info.enum_name << ") category.";
         } else {
           // Duplicate the original values and filter the fields by the
-          // whitelist.
+          // allowlist.
           auto* dup_comp_values = generic_device_info_refl->AddMessage(
               generic_device_info, comp_category_info.report_comp_values_field);
           dup_comp_values->CopyFrom(comp_refl->GetMessage(
@@ -182,7 +182,7 @@ base::Optional<HwVerificationReport> VerifierImpl::Verify(
           const auto* dup_comp_values_desc = dup_comp_values->GetDescriptor();
           for (int j = 0; j < dup_comp_values_desc->field_count(); ++j) {
             const auto* field = dup_comp_values_desc->field(j);
-            if (!generic_comp_value_whitelist.count(field->name())) {
+            if (!generic_comp_value_allowlist.count(field->name())) {
               dup_comp_values_refl->ClearField(dup_comp_values, field);
             }
           }

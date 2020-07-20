@@ -41,7 +41,7 @@ message HwVerificationSpec {
   // A list of all known components and their qualification status.
   repeated ComponentInfo component_infos = 1;
 
-  message GenericComponentValueWhitelist {
+  message GenericComponentValueAllowlist {
     // required
     runtime_probe.ProbeRequest.SupportCategory component_category = 1;
 
@@ -49,8 +49,8 @@ message HwVerificationSpec {
     repeated string field_names = 2;
   }
 
-  // Records the whitelist of the generic component values of each category.
-  repeated GenericComponentValueWhitelist generic_component_value_whitelists =
+  // Records the allowlist of the generic component values of each category.
+  repeated GenericComponentValueAllowlist generic_component_value_allowlists =
       2;
 }
 
