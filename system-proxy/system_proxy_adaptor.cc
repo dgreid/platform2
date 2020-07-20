@@ -17,7 +17,6 @@
 #include <dbus/object_proxy.h>
 
 #include "system-proxy/kerberos_client.h"
-#include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 #include "system-proxy/sandboxed_worker.h"
 
 namespace system_proxy {
@@ -142,6 +141,7 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
   return SerializeProto(response);
 }
 
+// TODO(acostinas, crbug.com/1109144): Deprecated in favor of |ShutDownProcess|.
 std::vector<uint8_t> SystemProxyAdaptor::ShutDown() {
   LOG(INFO) << "Received shutdown request.";
 
@@ -193,6 +193,36 @@ void SystemProxyAdaptor::ClearUserCredentials(bool user_traffic,
     ResetWorker(user_traffic);
     CreateWorkerIfNeeded(user_traffic);
   }
+}
+
+std::vector<uint8_t> SystemProxyAdaptor::ShutDownProcess(
+    const std::vector<uint8_t>& request_blob) {
+  LOG(INFO) << "Received shutdown request.";
+  ShutDownRequest request;
+  std::string error_message =
+      DeserializeProto(FROM_HERE, &request, request_blob);
+
+  if (IncludesSystemTraffic(request.traffic_type()) &&
+      !ResetWorker(/* user_traffic=*/false)) {
+    error_message =
+        "Failure to terminate worker process for system services traffic.";
+  }
+
+  if (IncludesUserTraffic(request.traffic_type()) &&
+      !ResetWorker(/* user_traffic=*/true)) {
+    error_message += "Failure to terminate worker process for arc traffic.";
+  }
+
+  ShutDownResponse response;
+  if (!error_message.empty())
+    response.set_error_message(error_message);
+
+  if (request.traffic_type() == TrafficOrigin::ALL) {
+    brillo::MessageLoop::current()->PostTask(
+        FROM_HERE, base::Bind(&SystemProxyAdaptor::ShutDownTask,
+                              weak_ptr_factory_.GetWeakPtr()));
+  }
+  return SerializeProto(response);
 }
 
 void SystemProxyAdaptor::GetChromeProxyServersAsync(
@@ -281,6 +311,14 @@ bool SystemProxyAdaptor::ResetWorker(bool user_traffic) {
 
 SandboxedWorker* SystemProxyAdaptor::GetWorker(bool user_traffic) {
   return user_traffic ? arc_worker_.get() : system_services_worker_.get();
+}
+
+bool SystemProxyAdaptor::IncludesSystemTraffic(TrafficOrigin traffic_origin) {
+  return traffic_origin != TrafficOrigin::USER;
+}
+
+bool SystemProxyAdaptor::IncludesUserTraffic(TrafficOrigin traffic_origin) {
+  return traffic_origin != TrafficOrigin::SYSTEM;
 }
 
 // Called when the patchpanel D-Bus service becomes available.

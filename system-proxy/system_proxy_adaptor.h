@@ -16,6 +16,7 @@
 
 #include "bindings/worker_common.pb.h"
 #include "system_proxy/org.chromium.SystemProxy.h"
+#include "system_proxy/proto_bindings/system_proxy_service.pb.h"
 
 namespace brillo {
 namespace dbus_utils {
@@ -49,6 +50,8 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
       const std::vector<uint8_t>& request_blob) override;
   std::vector<uint8_t> ShutDown() override;
   std::vector<uint8_t> ClearUserCredentials(
+      const std::vector<uint8_t>& request_blob) override;
+  std::vector<uint8_t> ShutDownProcess(
       const std::vector<uint8_t>& request_blob) override;
 
   void GetChromeProxyServersAsync(
@@ -96,6 +99,13 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   // Returns a pointer to the worker process associated with |user_traffic|. Can
   // return nullptr.
   SandboxedWorker* GetWorker(bool user_traffic);
+
+  // Return true if |traffic_origin| represents the traffic originating from
+  // system services or if it includes all traffic.
+  bool IncludesSystemTraffic(TrafficOrigin traffic_origin);
+  // Return true if |traffic_origin| represents the traffic originating from ARC
+  // or if it includes all traffic.
+  bool IncludesUserTraffic(TrafficOrigin traffic_origin);
 
   // Checks if a worker process exists and if not creates one and sends a
   // request to patchpanel to setup the network namespace for it. Returns true

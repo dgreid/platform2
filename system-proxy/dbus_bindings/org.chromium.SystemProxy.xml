@@ -74,5 +74,22 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
     </method>
+    <method name="ShutDownProcess">
+      <tp:docstring>
+        Shuts down the System-proxy service or just one of the worker processes,
+        depending on the argument.
+      </tp:docstring>
+      <arg name="request" type="ay" direction="in">
+        <tp:docstring>
+          Serialized ShutDownRequest message.
+        </tp:docstring>
+      </arg>
+      <arg name="response" type="ay" direction="out">
+        <tp:docstring>
+          Serialized ShutDownResponse message.
+        </tp:docstring>
+      </arg>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+    </method>
   </interface>
 </node>

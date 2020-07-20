@@ -286,24 +286,15 @@ TEST_F(SystemProxyAdaptorTest, KerberosEnabled) {
 TEST_F(SystemProxyAdaptorTest, ShutDown) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
       .WillOnce(Return(mock_patchpanel_proxy_.get()));
-  EXPECT_FALSE(adaptor_->system_services_worker_.get());
-  SetAuthenticationDetailsRequest request;
-  Credentials credentials;
-  credentials.set_username(kUser);
-  credentials.set_password(kPassword);
-  *request.mutable_credentials() = credentials;
-  request.set_traffic_type(TrafficOrigin::SYSTEM);
+  adaptor_->CreateWorkerIfNeeded(/*user_traffic=*/false);
+  EXPECT_TRUE(adaptor_->system_services_worker_);
+
+  ShutDownRequest request;
+  request.set_traffic_type(TrafficOrigin::ALL);
   std::vector<uint8_t> proto_blob(request.ByteSizeLong());
   request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  adaptor_->ShutDownProcess(proto_blob);
 
-  // First create a worker object.
-  adaptor_->SetAuthenticationDetails(proto_blob);
-  brillo_loop_.RunOnce(false);
-
-  EXPECT_TRUE(adaptor_->system_services_worker_.get());
-  EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
-
-  adaptor_->ShutDown();
   EXPECT_FALSE(adaptor_->system_services_worker_);
 }
 
