@@ -16,8 +16,8 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/base_message_loop.h>
@@ -198,8 +198,8 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   scoped_refptr<dbus::MockObjectProxy> mock_patchpanel_proxy_;
   scoped_refptr<dbus::MockObjectProxy> mock_kerberos_proxy_;
 
-  base::MessageLoopForIO loop_;
-  brillo::BaseMessageLoop brillo_loop_{&loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
 };
 
 TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {

@@ -17,6 +17,7 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/test/test_mock_time_task_runner.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <chromeos/patchpanel/socket.h>
@@ -123,8 +124,9 @@ class ProxyConnectJobTest : public ::testing::Test {
   std::string remote_proxy_url_ = kProxyServerUrl;
   bool forwarder_created_ = false;
   std::unique_ptr<ProxyConnectJob> connect_job_;
-  base::MessageLoopForIO loop_;
-  brillo::BaseMessageLoop brillo_loop_{&loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  std::unique_ptr<brillo::BaseMessageLoop> brillo_loop_{
+      std::make_unique<brillo::BaseMessageLoop>(task_executor_.task_runner())};
   std::unique_ptr<patchpanel::Socket> cros_client_socket_;
 
  private:
@@ -142,7 +144,7 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnection) {
   connect_job_->Start();
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
@@ -161,7 +163,7 @@ TEST_F(ProxyConnectJobTest, TunnelFailedBadGatewayFromRemote) {
   connect_job_->Start();
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   EXPECT_FALSE(forwarder_created_);
 
@@ -183,7 +185,7 @@ TEST_F(ProxyConnectJobTest, SuccessfulConnectionAltEnding) {
   connect_job_->Start();
   char validConnRequest[] = "CONNECT www.example.server.com:443 HTTP/1.1\r\n\n";
   cros_client_socket_->SendTo(validConnRequest, std::strlen(validConnRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   EXPECT_EQ("www.example.server.com:443", connect_job_->target_url_);
   EXPECT_EQ(1, connect_job_->proxy_servers_.size());
@@ -196,7 +198,7 @@ TEST_F(ProxyConnectJobTest, BadHttpRequestWrongMethod) {
   connect_job_->Start();
   char badConnRequest[] = "GET www.example.server.com:443 HTTP/1.1\r\n\r\n";
   cros_client_socket_->SendTo(badConnRequest, std::strlen(badConnRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   EXPECT_EQ("", connect_job_->target_url_);
   EXPECT_EQ(0, connect_job_->proxy_servers_.size());
@@ -214,7 +216,7 @@ TEST_F(ProxyConnectJobTest, BadHttpRequestNoEmptyLine) {
   // No empty line after http message.
   char badConnRequest[] = "CONNECT www.example.server.com:443 HTTP/1.1\r\n";
   cros_client_socket_->SendTo(badConnRequest, std::strlen(badConnRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   EXPECT_EQ("", connect_job_->target_url_);
   EXPECT_EQ(0, connect_job_->proxy_servers_.size());
@@ -231,7 +233,8 @@ TEST_F(ProxyConnectJobTest, WaitClientConnectTimeout) {
   // Add a TaskRunner where we can control time.
   scoped_refptr<base::TestMockTimeTaskRunner> task_runner{
       new base::TestMockTimeTaskRunner()};
-  loop_.SetTaskRunner(task_runner);
+  brillo_loop_ = nullptr;
+  brillo_loop_ = std::make_unique<brillo::BaseMessageLoop>(task_runner);
   base::TestMockTimeTaskRunner::ScopedContext scoped_context(task_runner.get());
 
   connect_job_->Start();
@@ -257,7 +260,8 @@ TEST_F(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled) {
   // Add a TaskRunner where we can control time.
   scoped_refptr<base::TestMockTimeTaskRunner> task_runner{
       new base::TestMockTimeTaskRunner()};
-  loop_.SetTaskRunner(task_runner);
+  brillo_loop_ = nullptr;
+  brillo_loop_ = std::make_unique<brillo::BaseMessageLoop>(task_runner);
   base::TestMockTimeTaskRunner::ScopedContext scoped_context(task_runner.get());
 
   // Create a proxy connect job and start the client connect timeout counter.
@@ -300,7 +304,7 @@ TEST_F(ProxyConnectJobTest, ResendWithCredentials) {
 
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   ASSERT_TRUE(AuthRequested());
   EXPECT_TRUE(forwarder_created_);
@@ -322,7 +326,7 @@ TEST_F(ProxyConnectJobTest, NoCredentials) {
 
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   ASSERT_TRUE(AuthRequested());
   EXPECT_EQ("", connect_job_->credentials_);
@@ -343,7 +347,7 @@ TEST_F(ProxyConnectJobTest, KerberosAuth) {
 
   cros_client_socket_->SendTo(kValidConnectRequest,
                               std::strlen(kValidConnectRequest));
-  brillo_loop_.RunOnce(false);
+  brillo_loop_->RunOnce(false);
 
   ASSERT_FALSE(AuthRequested());
   EXPECT_EQ("", connect_job_->credentials_);

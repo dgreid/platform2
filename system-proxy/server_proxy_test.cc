@@ -17,8 +17,8 @@
 #include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <chromeos/patchpanel/socket.h>
@@ -107,8 +107,8 @@ class ServerProxyTest : public ::testing::Test {
   }
   // SystemProxyAdaptor instance that creates fake worker processes.
   std::unique_ptr<MockServerProxy> server_proxy_;
-  base::MessageLoopForIO loop_;
-  brillo::BaseMessageLoop brillo_loop_{&loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   base::ScopedFD stdin_read_fd_, stdin_write_fd_, stdout_read_fd_,
       stdout_write_fd_;
 };

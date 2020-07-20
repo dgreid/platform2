@@ -11,8 +11,8 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/test/test_mock_time_task_runner.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <libprotobuf-mutator/src/libfuzzer/libfuzzer_macro.h>
@@ -59,8 +59,8 @@ DEFINE_PROTO_FUZZER(const system_proxy::worker::WorkerConfigs& configs) {
   static Environment env;
 
   // Mock main task runner
-  base::MessageLoopForIO message_loop;
-  brillo::BaseMessageLoop brillo_loop(&message_loop);
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  brillo::BaseMessageLoop brillo_loop(task_executor.task_runner());
   brillo_loop.SetAsCurrent();
   base::RunLoop run_loop;
 
