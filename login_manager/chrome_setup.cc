@@ -525,10 +525,6 @@ void AddEnterpriseFlags(ChromiumCommandBuilder* builder) {
 
 // Adds patterns to the --vmodule flag.
 void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
-  // TODO(xiaochu): Remove after https://crbug.com/851151 is fixed.
-  builder->AddVmodulePattern("component_updater_service=1");
-  builder->AddVmodulePattern("update_engine=1");
-
   // Turn on logging about external displays being connected and disconnected.
   // Different behavior is seen from different displays and these messages are
   // used to determine what happened within feedback reports.
@@ -545,40 +541,11 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
   // mode detection and internal input device event blocking logic.
   builder->AddVmodulePattern("*/ash/wm/tablet_mode/*=1");
 
-  // TODO(https://crbug.com/938973, https://crbug.com/942689): Needed for
-  // investigating issues with non-autolaunching public session.
-  builder->AddVmodulePattern("existing_user_controller=2");
-
-  // TODO(burunduk): Remove after investigation of not-installed forced
-  // extensions in https://crbug.com/904600 and https://crbug.com/917700.
-  builder->AddVmodulePattern("extension_downloader=2");
-  builder->AddVmodulePattern("*/forced_extensions/installation_tracker*=2");
-
   // TODO(https://crbug.com/943790): Remove after model development is complete.
   builder->AddVmodulePattern("*/chromeos/power/auto_screen_brightness/*=1");
 
-  // TODO(https://crbug.com/826982): Remove after App List + App Service
-  // integration roll out is complete.
-  builder->AddVmodulePattern("app_list_syncable_service=1");
-
   if (builder->UseFlagIsSet("cheets"))
     builder->AddVmodulePattern("*arc/*=1");
-
-  // TODO(sinhak): Remove after login issues have been resolved and Chrome OS
-  // Account Manager is stable. https://crbug.com/952570
-  builder->AddVmodulePattern("*/chromeos/components/account_manager/*=1");
-  builder->AddVmodulePattern("*/chrome/browser/chromeos/account_manager/*=1");
-
-  // TODO(afakhry|yjliu): Remove after https://crbug.com/1015474 is fixed.
-  builder->AddVmodulePattern("*night_light*=1");
-
-  // TODO(https://crbug.com/1011221): Remove after bug in launcher zero-state
-  // search results has been fixed.
-  builder->AddVmodulePattern("*/search_result_ranker/*=1");
-
-  // TODO(https://crbug.com/1046860): Remove after the smart card login feature
-  // is stabilized.
-  builder->AddVmodulePattern("certificate_provider*=1");
 }
 
 }  // namespace
