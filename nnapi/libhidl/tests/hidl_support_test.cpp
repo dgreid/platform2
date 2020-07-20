@@ -164,6 +164,8 @@ TEST(LibHidlTest, MemoryTest) {
     hidl_memory mem6 = mem5;  // NOLINT, test copying
     EXPECT_EQ(nullptr, mem5.handle());
     EXPECT_EQ(nullptr, mem6.handle());
+
+    native_handle_delete(testHandle);
 }
 
 TEST(LibHidlTest, VecInitTest) {
@@ -204,7 +206,7 @@ TEST(LibHidlTest, VecReleaseTest) {
     empty.resize(0);
     int32_t* data = empty.releaseData();
     EXPECT_NE(nullptr, data);
-    delete data;
+    delete[] data;
 }
 
 TEST(LibHidlTest, VecIterTest) {
