@@ -27,6 +27,7 @@ group("all") {
     ":system_api-metrics_event-protos",
     ":system_api-oobe_config-protos",
     ":system_api-patchpanel-protos",
+    ":system_api-plugin_vm_service-goprotos",
     ":system_api-plugin_vm_service-protos",
     ":system_api-power_manager-goprotos",
     ":system_api-power_manager-protos",
@@ -263,6 +264,14 @@ proto_library("system_api-plugin_vm_service-protos") {
     "${proto_in_dir}/plugin_vm_service.proto",
   ]
   standalone = true
+}
+
+goproto_library("system_api-plugin_vm_service-goprotos") {
+  proto_in_dir = "dbus/plugin_vm_service"
+  proto_out_dir = "go/src/chromiumos/system_api/plugin_vm_service_proto"
+  sources = [
+    "${proto_in_dir}/plugin_vm_service.proto",
+  ]
 }
 
 proto_library("system_api-smbprovider-protos") {
