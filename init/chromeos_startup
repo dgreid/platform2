@@ -455,12 +455,6 @@ done
 # /mnt/stateful_partition above.
 mount_or_fail --bind /mnt/stateful_partition/home /home
 
-# Make /home/root a shared mountpoint (which requires a bind-mount.)
-# TODO(crbug.com/1069501): Remove once all non-chronos system services are using
-# daemon-store.
-mount_or_fail --bind /home/root /home/root
-mount --make-shared /home/root
-
 if ! do_mount_var_and_home_chronos; then
   add_clobber_crash_report "encstateful"
   cleanup_mounts "var and home"

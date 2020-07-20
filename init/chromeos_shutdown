@@ -154,12 +154,6 @@ umount -n /var/run /var/lock
 umount_var_and_home_chronos
 rc="$?"
 
-# Undo the /home/root bind-mount (see crbug.com/1069501).
-if mountpoint -q /home/root; then
-  umount -n /home/root
-  : "$(( rc |= $? ))"
-fi
-
 # Check if /home is mounted before attempting to umount().
 if mountpoint -q /home; then
   umount -n /home
