@@ -60,18 +60,30 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   void RequestAuthenticationCredentials(
       const worker::ProtectionSpace& protection_space);
+  // Returns true if |proxy| points to one of the local proxy workers. The
+  // method only matches against host and port, but not scheme.
+  // TODO(acostinas, crbug.com/1109207) Add an option to the proxy resolution
+  // service in Chrome that allows fetching only the addresses of "real"
+  // proxies.
+  bool IsLocalProxy(const std::string& proxy);
 
  protected:
   virtual std::unique_ptr<SandboxedWorker> CreateWorker();
-  virtual void ConnectNamespace(SandboxedWorker* worker, bool user_traffic);
+  virtual void ConnectNamespace(bool user_traffic);
   // Triggers the |WorkerActive| signal.
   void OnNamespaceConnected(SandboxedWorker* worker, bool user_traffic);
+  // Returns a pointer to the worker process associated with |user_traffic|. Can
+  // return nullptr.
+  SandboxedWorker* GetWorker(bool user_traffic);
 
  private:
   friend class SystemProxyAdaptorTest;
   FRIEND_TEST(SystemProxyAdaptorTest, SetAuthenticationDetails);
+  FRIEND_TEST(SystemProxyAdaptorTest,
+              SetAuthenticationDetailsOnlySystemTraffic);
   FRIEND_TEST(SystemProxyAdaptorTest, KerberosEnabled);
   FRIEND_TEST(SystemProxyAdaptorTest, ShutDown);
+  FRIEND_TEST(SystemProxyAdaptorTest, ShutDownArc);
   FRIEND_TEST(SystemProxyAdaptorTest, ConnectNamespace);
   FRIEND_TEST(SystemProxyAdaptorTest, ProxyResolutionFilter);
   FRIEND_TEST(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired);
@@ -90,15 +102,11 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
 
   void ConnectNamespaceTask(SandboxedWorker* worker, bool user_traffic);
 
-  bool StartWorker(SandboxedWorker* worker, bool user_traffic);
-
   // Terminates the worker process for traffic indicated by |user_traffic| and
   // frees the SandboxedWorker associated with it.
   bool ResetWorker(bool user_traffic);
 
-  // Returns a pointer to the worker process associated with |user_traffic|. Can
-  // return nullptr.
-  SandboxedWorker* GetWorker(bool user_traffic);
+  void SetWorker(bool user_traffic, std::unique_ptr<SandboxedWorker> worker);
 
   // Return true if |traffic_origin| represents the traffic originating from
   // system services or if it includes all traffic.
@@ -110,7 +118,13 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   // Checks if a worker process exists and if not creates one and sends a
   // request to patchpanel to setup the network namespace for it. Returns true
   // if the worker exists or was created successfully, false otherwise.
-  bool CreateWorkerIfNeeded(bool user_traffic);
+  SandboxedWorker* CreateWorkerIfNeeded(bool user_traffic);
+
+  // If setting the authentication details to |worker| fails, it  updates
+  // |error_message| with an appropriate error message.
+  void SetAuthenticationDetails(SetAuthenticationDetailsRequest auth_details,
+                                bool user_traffic,
+                                std::string* error_message);
 
   // Sends a request to the worker process associated with |user_traffic| to
   // clear the cached user credentials. If sending the request fails, the worker
@@ -118,7 +132,7 @@ class SystemProxyAdaptor : public org::chromium::SystemProxyAdaptor,
   void ClearUserCredentials(bool user_traffic, std::string* error_message);
 
   // Called when the patchpanel D-Bus service becomes available.
-  void OnPatchpanelServiceAvailable(bool is_available);
+  void OnPatchpanelServiceAvailable(bool user_traffic, bool is_available);
 
   // The callback of |GetChromeProxyServersAsync|.
   void OnGetProxyServers(bool success, const std::vector<std::string>& servers);

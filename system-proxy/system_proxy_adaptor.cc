@@ -23,10 +23,6 @@ namespace system_proxy {
 namespace {
 
 constexpr int kProxyPort = 3128;
-constexpr char kNoCredentialsSpecifiedError[] =
-    "No authentication credentials specified";
-constexpr char kOnlySystemTrafficSupportedError[] =
-    "Only system services traffic is currenly supported";
 constexpr char kFailedToStartWorkerError[] = "Failed to start worker process";
 // Time delay for calling patchpanel::ConnectNamespace(). Patchpanel needs to
 // enter the network namespace of the worker process to configure it and fails
@@ -82,7 +78,7 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
   LOG(INFO) << "Received set authentication details request.";
 
   SetAuthenticationDetailsRequest request;
-  const std::string error_message =
+  std::string error_message =
       DeserializeProto(FROM_HERE, &request, request_blob);
 
   SetAuthenticationDetailsResponse response;
@@ -91,54 +87,61 @@ std::vector<uint8_t> SystemProxyAdaptor::SetAuthenticationDetails(
     return SerializeProto(response);
   }
 
-  if (request.traffic_type() != TrafficOrigin::SYSTEM) {
-    response.set_error_message(kOnlySystemTrafficSupportedError);
-    return SerializeProto(response);
+  if (IncludesSystemTraffic(request.traffic_type())) {
+    SetAuthenticationDetails(request, /*user_traffic=*/false, &error_message);
+  }
+  if (IncludesUserTraffic(request.traffic_type())) {
+    SetAuthenticationDetails(request, /*user_traffic=*/true, &error_message);
+  }
+  if (!error_message.empty()) {
+    response.set_error_message(error_message);
+  }
+  return SerializeProto(response);
+}
+
+void SystemProxyAdaptor::SetAuthenticationDetails(
+    SetAuthenticationDetailsRequest auth_details,
+    bool user_traffic,
+    std::string* error_message) {
+  SandboxedWorker* worker = CreateWorkerIfNeeded(user_traffic);
+  if (!worker) {
+    error_message->append(kFailedToStartWorkerError);
+    return;
   }
 
-  if (!CreateWorkerIfNeeded(/* user_traffic */ false)) {
-    response.set_error_message(kFailedToStartWorkerError);
-    return SerializeProto(response);
-  }
-
-  if (request.has_credentials()) {
-    if (!((request.credentials().has_username() &&
-           request.credentials().has_password()) ||
-          request.has_protection_space())) {
-      response.set_error_message(kNoCredentialsSpecifiedError);
-      return SerializeProto(response);
-    }
+  if (auth_details.has_credentials() || auth_details.has_protection_space()) {
     worker::Credentials credentials;
-    if (request.has_protection_space()) {
+    if (auth_details.has_protection_space()) {
       worker::ProtectionSpace protection_space;
-      protection_space.set_origin(request.protection_space().origin());
-      protection_space.set_scheme(request.protection_space().scheme());
-      protection_space.set_realm(request.protection_space().realm());
+      protection_space.set_origin(auth_details.protection_space().origin());
+      protection_space.set_scheme(auth_details.protection_space().scheme());
+      protection_space.set_realm(auth_details.protection_space().realm());
       *credentials.mutable_protection_space() = protection_space;
     }
-    if (request.credentials().has_username()) {
-      credentials.set_username(request.credentials().username());
-      credentials.set_password(request.credentials().password());
-    }
-    brillo::MessageLoop::current()->PostTask(
-        FROM_HERE, base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
-                              weak_ptr_factory_.GetWeakPtr(),
-                              system_services_worker_.get(), credentials));
-  }
 
-  if (request.has_kerberos_enabled()) {
-    std::string principal_name = request.has_active_principal_name()
-                                     ? request.active_principal_name()
+    if (auth_details.has_credentials()) {
+      if (auth_details.credentials().has_username() &&
+          auth_details.credentials().has_password()) {
+        credentials.set_username(auth_details.credentials().username());
+        credentials.set_password(auth_details.credentials().password());
+      }
+    }
+
+    brillo::MessageLoop::current()->PostTask(
+        FROM_HERE,
+        base::Bind(&SystemProxyAdaptor::SetCredentialsTask,
+                   weak_ptr_factory_.GetWeakPtr(), worker, credentials));
+  }
+  if (auth_details.has_kerberos_enabled()) {
+    std::string principal_name = auth_details.has_active_principal_name()
+                                     ? auth_details.active_principal_name()
                                      : std::string();
 
     brillo::MessageLoop::current()->PostTask(
         FROM_HERE, base::Bind(&SystemProxyAdaptor::SetKerberosEnabledTask,
-                              weak_ptr_factory_.GetWeakPtr(),
-                              system_services_worker_.get(),
-                              request.kerberos_enabled(), principal_name));
+                              weak_ptr_factory_.GetWeakPtr(), worker,
+                              auth_details.kerberos_enabled(), principal_name));
   }
-
-  return SerializeProto(response);
 }
 
 // TODO(acostinas, crbug.com/1109144): Deprecated in favor of |ShutDownProcess|.
@@ -232,24 +235,32 @@ void SystemProxyAdaptor::GetChromeProxyServersAsync(
                                            move(callback));
 }
 
+bool SystemProxyAdaptor::IsLocalProxy(const std::string& proxy) {
+  if (system_services_worker_ &&
+      proxy.find(system_services_worker_->local_proxy_host_and_port()) !=
+          std::string::npos) {
+    return true;
+  }
+  return arc_worker_ && proxy.find(arc_worker_->local_proxy_host_and_port()) !=
+                            std::string::npos;
+}
+
 std::unique_ptr<SandboxedWorker> SystemProxyAdaptor::CreateWorker() {
   return std::make_unique<SandboxedWorker>(weak_ptr_factory_.GetWeakPtr());
 }
 
-bool SystemProxyAdaptor::CreateWorkerIfNeeded(bool user_traffic) {
-  if (user_traffic) {
-    // Not supported at the moment.
-    return false;
+SandboxedWorker* SystemProxyAdaptor::CreateWorkerIfNeeded(bool user_traffic) {
+  SandboxedWorker* worker = GetWorker(user_traffic);
+  if (worker) {
+    // A worker for traffic indicated by |user_traffic| already exists.
+    return worker;
   }
-  if (system_services_worker_) {
-    return true;
-  }
+  SetWorker(user_traffic, CreateWorker());
+  worker = GetWorker(user_traffic);
 
-  system_services_worker_ = CreateWorker();
-  if (!StartWorker(system_services_worker_.get(),
-                   /* user_traffic= */ false)) {
-    system_services_worker_.reset();
-    return false;
+  if (!worker->Start()) {
+    ResetWorker(user_traffic);
+    return nullptr;
   }
   // patchpanel_proxy is owned by |dbus_object_->bus_|.
   dbus::ObjectProxy* patchpanel_proxy = dbus_object_->GetBus()->GetObjectProxy(
@@ -257,8 +268,8 @@ bool SystemProxyAdaptor::CreateWorkerIfNeeded(bool user_traffic) {
       dbus::ObjectPath(patchpanel::kPatchPanelServicePath));
   patchpanel_proxy->WaitForServiceToBeAvailable(
       base::Bind(&SystemProxyAdaptor::OnPatchpanelServiceAvailable,
-                 weak_ptr_factory_.GetWeakPtr()));
-  return true;
+                 weak_ptr_factory_.GetWeakPtr(), user_traffic));
+  return worker;
 }
 
 void SystemProxyAdaptor::SetCredentialsTask(
@@ -272,7 +283,6 @@ void SystemProxyAdaptor::SetKerberosEnabledTask(
     bool kerberos_enabled,
     const std::string& principal_name) {
   DCHECK(worker);
-
   worker->SetKerberosEnabled(kerberos_enabled,
                              kerberos_client_->krb5_conf_path(),
                              kerberos_client_->krb5_ccache_path());
@@ -286,10 +296,13 @@ void SystemProxyAdaptor::ShutDownTask() {
   brillo::MessageLoop::current()->BreakLoop();
 }
 
-bool SystemProxyAdaptor::StartWorker(SandboxedWorker* worker,
-                                     bool user_traffic) {
-  DCHECK(worker);
-  return worker->Start();
+void SystemProxyAdaptor::SetWorker(bool user_traffic,
+                                   std::unique_ptr<SandboxedWorker> worker) {
+  if (user_traffic) {
+    arc_worker_ = std::move(worker);
+  } else {
+    system_services_worker_ = std::move(worker);
+  }
 }
 
 bool SystemProxyAdaptor::ResetWorker(bool user_traffic) {
@@ -321,22 +334,20 @@ bool SystemProxyAdaptor::IncludesUserTraffic(TrafficOrigin traffic_origin) {
   return traffic_origin != TrafficOrigin::SYSTEM;
 }
 
-// Called when the patchpanel D-Bus service becomes available.
-void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool is_available) {
+void SystemProxyAdaptor::OnPatchpanelServiceAvailable(bool user_traffic,
+                                                      bool is_available) {
   if (!is_available) {
     LOG(ERROR) << "Patchpanel service not available";
     return;
   }
-  if (system_services_worker_) {
-    ConnectNamespace(system_services_worker_.get(), /* user_traffic= */ false);
-  }
+  ConnectNamespace(user_traffic);
 }
 
-void SystemProxyAdaptor::ConnectNamespace(SandboxedWorker* worker,
-                                          bool user_traffic) {
-  DCHECK(worker->IsRunning());
+void SystemProxyAdaptor::ConnectNamespace(bool user_traffic) {
   DCHECK_GT(netns_reconnect_attempts_available_, 0);
   --netns_reconnect_attempts_available_;
+  SandboxedWorker* worker = GetWorker(user_traffic);
+  DCHECK(worker);
   // TODO(b/160736881, acostinas): Remove the delay after patchpanel
   // implements "ip netns" to create the veth pair across network namespaces.
   brillo::MessageLoop::current()->PostDelayedTask(
@@ -364,7 +375,7 @@ void SystemProxyAdaptor::ConnectNamespaceTask(SandboxedWorker* worker,
                << kNetworkNamespaceReconnectAttempts -
                       netns_reconnect_attempts_available_;
     if (netns_reconnect_attempts_available_ > 0) {
-      ConnectNamespace(worker, user_traffic);
+      ConnectNamespace(user_traffic);
     }
     return;
   }

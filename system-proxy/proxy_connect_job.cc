@@ -39,9 +39,10 @@ namespace {
 // popular http server implementations (Apache, IIS, Tomcat) set the lower limit
 // to 8000.
 constexpr int kMaxHttpRequestHeadersSize = 8000;
-constexpr base::TimeDelta kCurlConnectTimeout = base::TimeDelta::FromMinutes(2);
+constexpr base::TimeDelta kCurlConnectTimeout =
+    base::TimeDelta::FromSeconds(30);
 constexpr base::TimeDelta kWaitClientConnectTimeout =
-    base::TimeDelta::FromMinutes(2);
+    base::TimeDelta::FromSeconds(15);
 constexpr size_t kMaxBadRequestPrintSize = 120;
 
 constexpr int64_t kHttpCodeProxyAuthRequired = 407;

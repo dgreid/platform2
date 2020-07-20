@@ -90,8 +90,8 @@ class FakeSystemProxyAdaptor : public SystemProxyAdaptor {
     return std::make_unique<FakeSandboxedWorker>(
         weak_ptr_factory_.GetWeakPtr());
   }
-  void ConnectNamespace(SandboxedWorker* worker, bool user_traffic) override {
-    OnNamespaceConnected(worker, user_traffic);
+  void ConnectNamespace(bool user_traffic) override {
+    OnNamespaceConnected(GetWorker(user_traffic), user_traffic);
   }
 
  private:
@@ -209,7 +209,65 @@ class SystemProxyAdaptorTest : public ::testing::Test {
   brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
 };
 
+// Verifies if System-proxy starts the system and user traffic workers and sets
+// the credentials for both workers.
 TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .Times(2)
+      .WillRepeatedly(Return(mock_patchpanel_proxy_.get()));
+
+  EXPECT_FALSE(adaptor_->system_services_worker_.get());
+  SetAuthenticationDetailsRequest request;
+  Credentials credentials;
+  credentials.set_username(kUser);
+  credentials.set_password(kPassword);
+  *request.mutable_credentials() = credentials;
+  request.set_traffic_type(TrafficOrigin::ALL);
+
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+
+  // First create a worker object.
+  adaptor_->SetAuthenticationDetails(proto_blob);
+  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+
+  ASSERT_TRUE(adaptor_->system_services_worker_.get());
+  EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
+  ASSERT_TRUE(adaptor_->arc_worker_.get());
+  EXPECT_TRUE(adaptor_->arc_worker_->IsRunning());
+
+  // Verify that credentials were set for user and system traffic.
+  int fds_system[2], fds_user[2];
+  EXPECT_TRUE(base::CreateLocalNonBlockingPipe(fds_system));
+  base::ScopedFD read_scoped_fd_system(fds_system[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->system_services_worker_->stdin_pipe_.reset(fds_system[1]);
+  EXPECT_TRUE(base::CreateLocalNonBlockingPipe(fds_user));
+  base::ScopedFD read_scoped_fd_user(fds_user[0]);
+  // Reset the worker stdin pipe to read the input from the other endpoint.
+  adaptor_->arc_worker_->stdin_pipe_.reset(fds_user[1]);
+
+  adaptor_->SetAuthenticationDetails(proto_blob);
+  // Process the tasks which send credentials to both workers via communication
+  // pipes.
+  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
+
+  worker::WorkerConfigs config;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd_system.get(), &config));
+  EXPECT_TRUE(config.has_credentials());
+  EXPECT_EQ(config.credentials().username(), kUser);
+  EXPECT_EQ(config.credentials().password(), kPassword);
+
+  worker::WorkerConfigs config_user;
+  ASSERT_TRUE(ReadProtobuf(read_scoped_fd_user.get(), &config_user));
+  EXPECT_TRUE(config_user.has_credentials());
+  EXPECT_EQ(config_user.credentials().username(), kUser);
+  EXPECT_EQ(config_user.credentials().password(), kPassword);
+}
+
+// Verifies if System-proxy only starts the worker which tunnels system traffic.
+TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetailsOnlySystemTraffic) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
       .WillOnce(Return(mock_patchpanel_proxy_.get()));
 
@@ -224,27 +282,12 @@ TEST_F(SystemProxyAdaptorTest, SetAuthenticationDetails) {
   std::vector<uint8_t> proto_blob(request.ByteSizeLong());
   request.SerializeToArray(proto_blob.data(), proto_blob.size());
 
-  // First create a worker object.
   adaptor_->SetAuthenticationDetails(proto_blob);
   ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
 
   ASSERT_TRUE(adaptor_->system_services_worker_.get());
   EXPECT_TRUE(adaptor_->system_services_worker_->IsRunning());
-
-  int fds[2];
-  EXPECT_TRUE(base::CreateLocalNonBlockingPipe(fds));
-  base::ScopedFD read_scoped_fd(fds[0]);
-  // Reset the worker stdin pipe to read the input from the other endpoint.
-  adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
-
-  adaptor_->SetAuthenticationDetails(proto_blob);
-  ASSERT_TRUE(brillo_loop_.RunOnce(/*may_block=*/false));
-
-  worker::WorkerConfigs config;
-  ASSERT_TRUE(ReadProtobuf(read_scoped_fd.get(), &config));
-  EXPECT_TRUE(config.has_credentials());
-  EXPECT_EQ(config.credentials().username(), kUser);
-  EXPECT_EQ(config.credentials().password(), kPassword);
+  EXPECT_FALSE(adaptor_->arc_worker_);
 }
 
 TEST_F(SystemProxyAdaptorTest, KerberosEnabled) {
@@ -285,9 +328,12 @@ TEST_F(SystemProxyAdaptorTest, KerberosEnabled) {
 
 TEST_F(SystemProxyAdaptorTest, ShutDown) {
   EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
-      .WillOnce(Return(mock_patchpanel_proxy_.get()));
+      .Times(2)
+      .WillRepeatedly(Return(mock_patchpanel_proxy_.get()));
   adaptor_->CreateWorkerIfNeeded(/*user_traffic=*/false);
+  adaptor_->CreateWorkerIfNeeded(/*user_traffic=*/true);
   EXPECT_TRUE(adaptor_->system_services_worker_);
+  EXPECT_TRUE(adaptor_->arc_worker_);
 
   ShutDownRequest request;
   request.set_traffic_type(TrafficOrigin::ALL);
@@ -296,6 +342,27 @@ TEST_F(SystemProxyAdaptorTest, ShutDown) {
   adaptor_->ShutDownProcess(proto_blob);
 
   EXPECT_FALSE(adaptor_->system_services_worker_);
+  EXPECT_FALSE(adaptor_->arc_worker_);
+}
+
+// Verifies that only the worker that tunnels ARC traffic is shut down.
+TEST_F(SystemProxyAdaptorTest, ShutDownArc) {
+  EXPECT_CALL(*bus_, GetObjectProxy(patchpanel::kPatchPanelServiceName, _))
+      .Times(2)
+      .WillRepeatedly(Return(mock_patchpanel_proxy_.get()));
+  adaptor_->CreateWorkerIfNeeded(/*user_traffic=*/false);
+  adaptor_->CreateWorkerIfNeeded(/*user_traffic=*/true);
+  EXPECT_TRUE(adaptor_->system_services_worker_);
+  EXPECT_TRUE(adaptor_->arc_worker_);
+
+  ShutDownRequest request;
+  request.set_traffic_type(TrafficOrigin::USER);
+  std::vector<uint8_t> proto_blob(request.ByteSizeLong());
+  request.SerializeToArray(proto_blob.data(), proto_blob.size());
+  adaptor_->ShutDownProcess(proto_blob);
+
+  EXPECT_TRUE(adaptor_->system_services_worker_);
+  EXPECT_FALSE(adaptor_->arc_worker_);
 }
 
 TEST_F(SystemProxyAdaptorTest, ConnectNamespace) {
@@ -304,8 +371,7 @@ TEST_F(SystemProxyAdaptorTest, ConnectNamespace) {
       .WillOnce(Invoke(this, &SystemProxyAdaptorTest::OnWorkerActive));
 
   adaptor_->system_services_worker_ = adaptor_->CreateWorker();
-  adaptor_->ConnectNamespace(adaptor_->system_services_worker_.get(),
-                             /* user_traffic= */ false);
+  adaptor_->ConnectNamespace(/* user_traffic= */ false);
   EXPECT_TRUE(active_worker_signal_called_);
 }
 

@@ -28,7 +28,7 @@ namespace {
 constexpr char kSystemProxyWorkerBin[] = "/usr/sbin/system_proxy_worker";
 constexpr char kSeccompFilterPath[] =
     "/usr/share/policy/system-proxy-worker-seccomp.policy";
-constexpr int kMaxWorkerMessageSize = 2048;
+constexpr int kMaxWorkerMessageSize = 4096;
 // Size of the buffer array used to read data from the worker's stderr.
 constexpr int kWorkerBufferSize = 1024;
 constexpr char kPrefixDirect[] = "direct://";
@@ -271,7 +271,7 @@ void SandboxedWorker::OnProxyResolved(
         base::StartsWith(proxy, kPrefixDirect,
                          base::CompareCase::INSENSITIVE_ASCII)) {
       // Make sure the local proxy doesn't try to connect to itself.
-      if (proxy.find(local_proxy_host_and_port()) == std::string::npos) {
+      if (!adaptor_->IsLocalProxy(proxy)) {
         reply.add_proxy_servers(proxy);
       }
     }
