@@ -61,6 +61,10 @@ class ImageProcessor {
   // Temporary I420 buffer that is used when there is no direct way to convert
   // format F to format F' and need two-steps conversion (F -> I420 -> F').
   std::unique_ptr<SharedFrameBuffer> temp_i420_buffer_;
+
+  // Temporary I420 buffer which is used for gray scale image. That is to say,
+  // the U plane and V plane are all filled with 0x80.
+  std::unique_ptr<SharedFrameBuffer> temp_i420_buffer_gray_;
 };
 
 }  // namespace cros

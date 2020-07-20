@@ -27,15 +27,13 @@ std::vector<uint32_t> GetSupportedFourCCs(bool prefer_mjpeg) {
   // The preference of supported fourccs in the list is from high to low.
   if (prefer_mjpeg) {
     return {
-        V4L2_PIX_FMT_MJPEG,
-        V4L2_PIX_FMT_YUYV,
-        V4L2_PIX_FMT_RGB24,
+        V4L2_PIX_FMT_MJPEG, V4L2_PIX_FMT_YUYV, V4L2_PIX_FMT_RGB24,
+        V4L2_PIX_FMT_Y16,   V4L2_PIX_FMT_Z16,
     };
   }
   return {
-      V4L2_PIX_FMT_YUYV,
-      V4L2_PIX_FMT_MJPEG,
-      V4L2_PIX_FMT_RGB24,
+      V4L2_PIX_FMT_YUYV, V4L2_PIX_FMT_MJPEG, V4L2_PIX_FMT_RGB24,
+      V4L2_PIX_FMT_Y16,  V4L2_PIX_FMT_Z16,
   };
 }
 

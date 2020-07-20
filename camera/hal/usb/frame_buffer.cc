@@ -201,6 +201,10 @@ int V4L2FrameBuffer::Map() {
   data_[0] = static_cast<uint8_t*>(addr);
   is_mapped_ = true;
   switch (fourcc_) {
+    case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Z16:
+      stride_[0] = width_;
+      break;
     case V4L2_PIX_FMT_RGB24:
       stride_[0] = width_ * 3;
       break;

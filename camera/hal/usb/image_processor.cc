@@ -88,6 +88,9 @@ size_t ImageProcessor::GetConvertedSize(const FrameBuffer& frame) {
     case V4L2_PIX_FMT_RGBX32:
     case V4L2_PIX_FMT_RGB24:
       return frame.GetStride() * frame.GetHeight();
+    case V4L2_PIX_FMT_Y16:
+    case V4L2_PIX_FMT_Z16:
+      return 2 * frame.GetStride() * frame.GetHeight();
     default:
       LOGF(ERROR) << "Pixel format " << FormatToString(frame.GetFourcc())
                   << " is unsupported.";
@@ -339,6 +342,83 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
       }
       default: {
         LOGF(ERROR) << "Not implemented: RGB24 -> " << out_frame->GetFourcc();
+        return -EINVAL;
+      }
+    }
+  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_Y16 ||
+             in_frame.GetFourcc() == V4L2_PIX_FMT_Z16) {
+    if (!temp_i420_buffer_gray_ ||
+        temp_i420_buffer_gray_->GetWidth() != in_frame.GetWidth() ||
+        temp_i420_buffer_gray_->GetHeight() != in_frame.GetHeight()) {
+      if (!SharedFrameBuffer::Reallocate(
+              in_frame.GetWidth(), in_frame.GetHeight(), V4L2_PIX_FMT_YUV420,
+              &temp_i420_buffer_gray_)) {
+        return -EINVAL;
+      }
+
+      // Fill UV plane with 0x80 to display in gray scale.
+      memset(temp_i420_buffer_gray_->GetData(FrameBuffer::UPLANE), 0x80,
+             temp_i420_buffer_gray_->GetStride(FrameBuffer::UPLANE) *
+                 in_frame.GetHeight() / 2);
+      memset(temp_i420_buffer_gray_->GetData(FrameBuffer::VPLANE), 0x80,
+             temp_i420_buffer_gray_->GetStride(FrameBuffer::VPLANE) *
+                 in_frame.GetHeight() / 2);
+    }
+
+    switch (out_frame->GetFourcc()) {
+      case V4L2_PIX_FMT_YUV420:     // YU12
+      case V4L2_PIX_FMT_YUV420M:    // YM12, multiple planes YU12
+      case V4L2_PIX_FMT_YVU420:     // YV12
+      case V4L2_PIX_FMT_YVU420M: {  // YM21, multiple planes YV12
+        libyuv::Convert16To8Plane(
+            reinterpret_cast<const uint16_t*>(in_frame.GetData()),
+            in_frame.GetStride(), out_frame->GetData(FrameBuffer::YPLANE),
+            out_frame->GetStride(FrameBuffer::YPLANE),
+            256,  // scale
+            in_frame.GetWidth(), in_frame.GetHeight());
+        libyuv::CopyPlane(
+            temp_i420_buffer_gray_->GetData(FrameBuffer::UPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::UPLANE),
+            out_frame->GetData(FrameBuffer::UPLANE),
+            out_frame->GetStride(FrameBuffer::UPLANE),
+            out_frame->GetStride(FrameBuffer::UPLANE),
+            out_frame->GetHeight() / 2);
+        libyuv::CopyPlane(
+            temp_i420_buffer_gray_->GetData(FrameBuffer::VPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::VPLANE),
+            out_frame->GetData(FrameBuffer::VPLANE),
+            out_frame->GetStride(FrameBuffer::VPLANE),
+            out_frame->GetStride(FrameBuffer::VPLANE),
+            out_frame->GetHeight() / 2);
+        return 0;
+      }
+      case V4L2_PIX_FMT_NV12:     // NV12
+      case V4L2_PIX_FMT_NV12M: {  // NM12
+        libyuv::Convert16To8Plane(
+            reinterpret_cast<const uint16_t*>(in_frame.GetData()),
+            in_frame.GetStride(),
+            temp_i420_buffer_gray_->GetData(FrameBuffer::YPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::YPLANE),
+            256,  // scale
+            in_frame.GetWidth(), in_frame.GetHeight());
+
+        int res = libyuv::I420ToNV12(
+            temp_i420_buffer_gray_->GetData(FrameBuffer::YPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::YPLANE),
+            temp_i420_buffer_gray_->GetData(FrameBuffer::UPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::UPLANE),
+            temp_i420_buffer_gray_->GetData(FrameBuffer::VPLANE),
+            temp_i420_buffer_gray_->GetStride(FrameBuffer::VPLANE),
+            out_frame->GetData(FrameBuffer::YPLANE),
+            out_frame->GetStride(FrameBuffer::YPLANE),
+            out_frame->GetData(FrameBuffer::UPLANE),
+            out_frame->GetStride(FrameBuffer::UPLANE), out_frame->GetWidth(),
+            out_frame->GetHeight());
+        LOGF_IF(ERROR, res) << "I420ToNV12() returns " << res;
+        return res ? -EINVAL : 0;
+      }
+      default: {
+        LOGF(ERROR) << "Not implemented: Y16/Z16 -> " << out_frame->GetFourcc();
         return -EINVAL;
       }
     }
