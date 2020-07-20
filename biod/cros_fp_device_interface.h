@@ -9,14 +9,11 @@
 #include <string>
 #include <vector>
 
-#include <base/message_loop/message_loop.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/ec/ec_commands.h>
 
 #include "biod/ec_command.h"
 #include "biod/fp_mode.h"
-
-using MessageLoopForIO = base::MessageLoopForIO;
 
 using VendorTemplate = std::vector<uint8_t>;
 

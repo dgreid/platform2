@@ -12,10 +12,10 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 
 #include <brillo/flag_helper.h>
 
@@ -487,8 +487,8 @@ int main(int argc, char* argv[]) {
     return 1;
   }
 
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
   dbus::Bus::Options bus_options;
   bus_options.bus_type = dbus::Bus::SYSTEM;
   scoped_refptr<dbus::Bus> bus(new dbus::Bus(bus_options));

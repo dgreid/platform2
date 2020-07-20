@@ -10,10 +10,10 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/daemons/daemon.h>
 #include <brillo/flag_helper.h>
@@ -50,8 +50,8 @@ int main(int argc, char* argv[]) {
 
   biod::LogVersion();
 
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
   biod::BiometricsDaemon bio_daemon;
   base::RunLoop().Run();
   return 0;

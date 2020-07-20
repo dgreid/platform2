@@ -11,8 +11,8 @@
 
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/process/process.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 #include <dbus/bus.h>
@@ -28,8 +28,8 @@ static int64_t kTimeoutSeconds = 30;
 constexpr char kHelpMessage[] = "bio_wash resets the SBP.";
 
 int DoBioWash(const bool factory_init = false) {
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
   std::vector<std::unique_ptr<biod::BiometricsManager>> managers;
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;
