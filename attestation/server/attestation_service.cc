@@ -409,7 +409,7 @@ bool AttestationService::InitializeWithCallback(
   if (!worker_thread_) {
     worker_thread_.reset(new ServiceWorkerThread(this));
     worker_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0));
+        base::Thread::Options(base::MessagePumpType::IO, 0));
     LOG(INFO) << "Attestation service started.";
   }
   // Creates |default_pca_agent_proxy_| here if needed; unlike other objects,

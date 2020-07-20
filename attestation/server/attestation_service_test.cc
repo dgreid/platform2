@@ -9,11 +9,11 @@
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/test/task_environment.h>
 #include <brillo/data_encoding.h>
 #include <brillo/errors/error.h>
 #include <gmock/gmock.h>
@@ -327,7 +327,8 @@ class AttestationServiceBaseTest : public testing::Test {
   const int identity_ = AttestationService::kFirstIdentity;
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::RunLoop run_loop_;
 };
 
