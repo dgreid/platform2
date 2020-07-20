@@ -8,9 +8,9 @@
 #include <sys/socket.h>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gtest/gtest.h>
 
 namespace arc {
@@ -89,7 +89,8 @@ class DataFilterTest : public testing::Test {
     run_loop_.Quit();
   }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::RunLoop run_loop_;
   DataFilter data_filter_;
   base::ScopedFD fd_app_;  // App-side FD connected to the filter.

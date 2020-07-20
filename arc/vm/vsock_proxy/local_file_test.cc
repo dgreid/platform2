@@ -17,16 +17,15 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
+#include <base/test/task_environment.h>
 #include <gtest/gtest.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
@@ -47,7 +46,8 @@ class LocalFileTest : public testing::Test {
   LocalFileTest& operator=(const LocalFileTest&) = delete;
 
  protected:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 };
 
 TEST_F(LocalFileTest, ReadErrorIoctl) {
@@ -84,7 +84,7 @@ TEST_F(LocalFileTest, Pread) {
 
   LocalFile stream(std::move(fd), false,
                    base::BindOnce([]() { ADD_FAILURE(); }),
-                   message_loop_.task_runner());
+                   task_environment_.GetMainThreadTaskRunner());
   arc_proxy::PreadResponse response;
   stream.Pread(
       10, 10,
@@ -106,7 +106,7 @@ TEST_F(LocalFileTest, PreadError) {
   // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
   LocalFile stream{base::ScopedFD(), false,
                    base::BindOnce([]() { ADD_FAILURE(); }),
-                   message_loop_.task_runner()};
+                   task_environment_.GetMainThreadTaskRunner()};
   arc_proxy::PreadResponse response;
   stream.Pread(
       10, 10,
@@ -129,7 +129,7 @@ TEST_F(LocalFileTest, Fstat) {
 
   LocalFile stream(std::move(fd), false,
                    base::BindOnce([]() { ADD_FAILURE(); }),
-                   message_loop_.task_runner());
+                   task_environment_.GetMainThreadTaskRunner());
   arc_proxy::FstatResponse response;
   stream.Fstat(
       base::BindOnce(&StoreArgument<arc_proxy::FstatResponse>, &response));
@@ -142,7 +142,7 @@ TEST_F(LocalFileTest, FstatError) {
   // Use -1 (invalid file descriptor) to let pread(2) return error in Pread().
   LocalFile stream{base::ScopedFD(), false,
                    base::BindOnce([]() { ADD_FAILURE(); }),
-                   message_loop_.task_runner()};
+                   task_environment_.GetMainThreadTaskRunner()};
   arc_proxy::FstatResponse response;
   stream.Fstat(
       base::BindOnce(&StoreArgument<arc_proxy::FstatResponse>, &response));
@@ -170,8 +170,9 @@ class SocketStreamTest : public testing::Test {
   base::ScopedFD socket_;              // Paired with stream_.
 
  private:
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   DISALLOW_COPY_AND_ASSIGN(SocketStreamTest);
 };
@@ -295,8 +296,9 @@ class SocketSeqpacketTest : public testing::Test {
   base::ScopedFD socket_;                 // Paired with seqpacket_.
 
  private:
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   DISALLOW_COPY_AND_ASSIGN(SocketSeqpacketTest);
 };
@@ -356,8 +358,9 @@ class PipeStreamTest : public testing::Test {
   base::ScopedFD write_fd_;
 
  private:
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   DISALLOW_COPY_AND_ASSIGN(PipeStreamTest);
 };

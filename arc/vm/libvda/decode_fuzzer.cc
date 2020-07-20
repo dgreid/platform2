@@ -43,7 +43,7 @@ class ReadEventThread {
  public:
   explicit ReadEventThread(int fd) : fd_(fd), thread_("ReadEventThread") {
     CHECK(thread_.StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+        base::Thread::Options(base::MessagePumpType::IO, 0)));
     thread_.task_runner()->PostTask(
         FROM_HERE, base::BindOnce(&ReadEventThread::StartWatching,
                                   base::Unretained(this)));

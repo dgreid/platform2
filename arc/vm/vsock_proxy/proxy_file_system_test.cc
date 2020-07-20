@@ -13,12 +13,12 @@
 
 #include <base/bind.h>
 #include <base/bind_helpers.h>
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/test/task_environment.h>
 #include <base/threading/thread.h>
 #include <gtest/gtest.h>
 
@@ -41,8 +41,7 @@ class ProxyFileSystemTest : public testing::Test,
 
     ASSERT_TRUE(delegate_thread_.Start());
 
-    base::Thread::Options options;
-    options.message_loop_type = base::MessageLoop::TYPE_IO;
+    base::Thread::Options options(base::MessagePumpType::IO, 0);
     ASSERT_TRUE(file_system_thread_.StartWithOptions(options));
 
     file_system_ = std::make_unique<ProxyFileSystem>(
@@ -85,8 +84,9 @@ class ProxyFileSystemTest : public testing::Test,
   }
 
  protected:
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   // Mount point for ProxyFileSystem.
   base::ScopedTempDir mount_dir_;

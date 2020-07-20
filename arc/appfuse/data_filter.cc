@@ -71,8 +71,7 @@ base::ScopedFD DataFilter::Start(base::ScopedFD fd_dev) {
   base::ScopedFD socket_for_filter(raw_socks[0]);
   base::ScopedFD socket_for_app(raw_socks[1]);
 
-  base::Thread::Options options;
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
+  base::Thread::Options options(base::MessagePumpType::IO, 0);
   if (!watch_thread_.StartWithOptions(options)) {
     LOG(ERROR) << "Failed to start a data filter thread.";
     return base::ScopedFD();

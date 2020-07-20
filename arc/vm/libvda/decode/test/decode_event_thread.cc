@@ -60,7 +60,7 @@ void DecodeEventThread::Start() {
             << ", gbm format " << gbm_format_;
 
   ASSERT_TRUE(thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+      base::Thread::Options(base::MessagePumpType::IO, 0)));
 
   thread_.task_runner()->PostTask(
       FROM_HERE, base::BindOnce(&DecodeEventThread::StartWatching,

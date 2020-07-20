@@ -16,15 +16,14 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/posix/unix_domain_socket.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gtest/gtest.h>
 
 #include "arc/vm/vsock_proxy/file_descriptor_util.h"
@@ -129,8 +128,9 @@ class VSockProxyTest : public testing::Test {
   }
 
  private:
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
 
   std::unique_ptr<TestDelegate> server_delegate_;
   std::unique_ptr<TestDelegate> client_delegate_;

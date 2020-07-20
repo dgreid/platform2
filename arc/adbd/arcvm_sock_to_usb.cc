@@ -14,7 +14,6 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/posix/eintr_wrapper.h>
 
 #define EXIT_IF(f, msg)                        \
@@ -38,7 +37,7 @@ ArcVmSockToUsb::~ArcVmSockToUsb() = default;
 
 bool ArcVmSockToUsb::Start() {
   if (!thread_.StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Failed to start thread";
     return false;
   }

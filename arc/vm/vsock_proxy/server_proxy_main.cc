@@ -7,8 +7,8 @@
 #include <base/command_line.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread.h>
 
 #include "arc/vm/vsock_proxy/server_proxy.h"
@@ -23,12 +23,11 @@ int main(int argc, char** argv) {
     LOG(ERROR) << "Mount path is not specified.";
     return 1;
   }
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher_{task_executor.task_runner()};
 
   base::Thread proxy_file_system_thread{"ProxyFileSystem"};
-  base::Thread::Options options;
-  options.message_loop_type = base::MessageLoop::TYPE_IO;
+  base::Thread::Options options(base::MessagePumpType::IO, 0);
   if (!proxy_file_system_thread.StartWithOptions(options)) {
     LOG(ERROR) << "Failed to start ProxyFileSystem thread.";
     return 1;

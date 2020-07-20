@@ -93,7 +93,7 @@ int main(int argc, char** argv) {
 
   base::Thread mojo_ipc_thread("mojo IPC thread");
   CHECK(mojo_ipc_thread.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+      base::Thread::Options(base::MessagePumpType::IO, 0)));
   mojo::core::Init();
   mojo::core::ScopedIPCSupport ipc_support(
       mojo_ipc_thread.task_runner(),

@@ -10,11 +10,11 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/stl_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/syslog_logging.h>
 #include <dbus/bus.h>
 
@@ -86,8 +86,8 @@ int main(int argc, char** argv) {
   CHECK(DropUnnecessaryCapabilities());
 
   base::AtExitManager at_exit_manager;
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
 
   // Connect the bus.
   dbus::Bus::Options options;

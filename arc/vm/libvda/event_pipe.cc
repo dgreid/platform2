@@ -42,8 +42,7 @@ EventPipe::EventPipe() : event_write_thread_("EventWriteThread") {
   event_write_fd_.reset(pipe_fds[1]);
 
   // Start the dedicated event write thread for this session context.
-  CHECK(event_write_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_DEFAULT, 0)));
+  CHECK(event_write_thread_.Start());
 }
 
 EventPipe::~EventPipe() = default;

@@ -77,7 +77,7 @@ VafConnection::VafConnection() : ipc_thread_("VafConnectionIpcThread") {
 
   mojo::core::Init();
   CHECK(ipc_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+      base::Thread::Options(base::MessagePumpType::IO, 0)));
   ipc_support_ = std::make_unique<mojo::core::ScopedIPCSupport>(
       ipc_thread_.task_runner(),
       mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
