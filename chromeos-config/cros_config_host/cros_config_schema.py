@@ -626,7 +626,9 @@ def _ValidateWhitelabelBrandChangesOnly(json_config):
           hw_props.pop('stylus-category', None)
 
       # Remove /ui:help-content-id
-      wl_minus_brand.get('ui', {})['help-content-id'] = ''
+      if 'ui' not in wl_minus_brand:
+        wl_minus_brand['ui'] = {}
+      wl_minus_brand['ui']['help-content-id'] = ''
 
       config_list.append(wl_minus_brand)
       whitelabels[name] = config_list
@@ -635,13 +637,8 @@ def _ValidateWhitelabelBrandChangesOnly(json_config):
   # configs that have had their branding data stripped.
   for device_name, configs in whitelabels.items():
     base_config = configs[0]
-    compare_index = 1
-    while compare_index < len(configs):
-      compare_config = configs[compare_index]
-      compare_index = compare_index + 1
-      base_str = str(base_config)
-      compare_str = str(compare_config)
-      if base_str != compare_str:
+    for compare_config in configs[1:]:
+      if base_config != compare_config:
         raise ValidationError(
             'Whitelabel configs can only change branding attributes '
             'or use an external stylus for (%s).\n'
@@ -649,8 +646,8 @@ def _ValidateWhitelabelBrandChangesOnly(json_config):
             'Example 1: %s\n'
             'Example 2: %s' % (device_name,
                                ', '.join(BRAND_ELEMENTS),
-                               base_str,
-                               compare_str))
+                               base_config,
+                               compare_config))
 
 
 def _ValidateHardwarePropertiesAreValidType(json_config):
