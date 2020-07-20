@@ -119,11 +119,11 @@ See the example: [dummy-dlc config]
 
 ## Write platform code to request DLC
 
-A DLC is downloaded (from the Internet) and installed at runtime by
-dlcservice. Any feature should not rely on the existence of a DLC and
-thus has to request (install) the DLC from dlcservice before using the
-DLC. Once a DLC is installed, dlcservice keeps it available and mounted
-across device reboot and update.
+A DLC is downloaded (from Omaha server) and installed at runtime by dlcservice.
+No feature should rely on the existence of a DLC and thus needs to request
+(install) the DLC from dlcservice before using the DLC. Once a DLC is
+installed, dlcservice keeps it available and mounted. The DLC will remain
+mounted as long as the device or UI does not restart.
 
 Chrome (and other system daemons that can access D-Bus) calls the dlcservice API
 to install/uninstall a DLC. For calling the dlcservice API inside Chrome,
