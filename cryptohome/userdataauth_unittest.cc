@@ -3096,7 +3096,7 @@ TEST_F(UserDataAuthTestThreaded,
   // destructed and the time |platform_| object gets destructed in test fixture
   // destructor, thus accessing the already destructed local variable
   // |current_time|.
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClear(mount_.get());
   Mock::VerifyAndClear(&platform_);
 }
 
@@ -3178,7 +3178,7 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   // destructed and the time |platform_| object gets destructed in test fixture
   // destructor, thus accessing the already destructed local variable
   // |current_time|.
-  Mock::VerifyAndClear(&homedirs_);
+  Mock::VerifyAndClear(&cleanup_);
   Mock::VerifyAndClear(&platform_);
 }
 

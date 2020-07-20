@@ -438,8 +438,8 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallback) {
   PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(period_ms * 5));
 
   // Cleanup invocable lambdas so they don't capture this test variables anymore
-  Mock::VerifyAndClear(&homedirs_);
   Mock::VerifyAndClear(&platform_);
+  Mock::VerifyAndClear(&cleanup_);
 }
 
 TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallbackFirst) {
