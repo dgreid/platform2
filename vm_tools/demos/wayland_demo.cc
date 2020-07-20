@@ -11,7 +11,7 @@
 
 #include "base/command_line.h"
 #include "base/logging.h"
-#include "base/memory/shared_memory.h"
+#include "base/memory/writable_shared_memory_region.h"
 #include "base/strings/string_number_conversions.h"
 #include "brillo/syslog_logging.h"
 
@@ -295,12 +295,17 @@ int main(int argc, char* argv[]) {
 
   size_t stride = data.width * 4 /* 32bpp */;
   size_t shm_size = stride * data.height;
-  base::SharedMemory shared_mem;
-  shared_mem.CreateAndMapAnonymous(shm_size);
-  data.shm_ptr = shared_mem.memory();
+  base::WritableSharedMemoryRegion shm_region =
+      base::WritableSharedMemoryRegion::Create(shm_size);
+  base::WritableSharedMemoryMapping shm_mapping = shm_region.Map();
+  data.shm_ptr = shm_mapping.memory();
+  base::subtle::PlatformSharedMemoryRegion platform_region =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(shm_region));
+  base::ScopedFD handle = std::move(platform_region.PassPlatformHandle().fd);
 
   struct wl_shm_pool* pool =
-      wl_shm_create_pool(data.shm, shared_mem.handle().GetHandle(), shm_size);
+      wl_shm_create_pool(data.shm, handle.get(), shm_size);
   data.buffer = wl_shm_pool_create_buffer(pool, 0, data.width, data.height,
                                           stride, WL_SHM_FORMAT_XRGB8888);
   wl_shm_pool_destroy(pool);
