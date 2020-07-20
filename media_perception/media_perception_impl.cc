@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "base/logging.h"
+#include "base/callback_helpers.h"
 #include "media_perception/media_perception_mojom.pb.h"
 #include "media_perception/perception_interface.pb.h"
 #include "media_perception/proto_mojom_conversion.h"
@@ -80,7 +81,8 @@ void MediaPerceptionImpl::SetTemplateArguments(
 void MediaPerceptionImpl::GetVideoDevices(GetVideoDevicesCallback callback) {
   // Get the list of video devices from the VideoCaptureServiceClient and
   // convert them to mojom objects.
-  vidcap_client_->GetDevices([&](std::vector<SerializedVideoDevice> devices) {
+  auto repeating_callback = base::AdaptCallbackForRepeating(std::move(callback));
+  vidcap_client_->GetDevices([repeating_callback](std::vector<SerializedVideoDevice> devices) {
     std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
         mojom_devices;
     for (const SerializedVideoDevice& device : devices) {
@@ -88,7 +90,7 @@ void MediaPerceptionImpl::GetVideoDevices(GetVideoDevicesCallback callback) {
       mojom_devices.push_back(
           chromeos::media_perception::mojom::ToMojom(video_device));
     }
-    std::move(callback).Run(std::move(mojom_devices));
+    repeating_callback.Run(std::move(mojom_devices));
   });
 }
 

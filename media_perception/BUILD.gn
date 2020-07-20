@@ -55,6 +55,7 @@ generate_mojom_bindings("media_perception_mojo_bindings") {
     "mojom/mailbox_holder.mojom",
     "mojom/media_perception.mojom",
     "mojom/media_perception_service.mojom",
+    "mojom/native_handle_types.mojom",
     "mojom/occupancy_trigger.mojom",
     "mojom/one_touch_autozoom.mojom",
     "mojom/pipeline.mojom",
