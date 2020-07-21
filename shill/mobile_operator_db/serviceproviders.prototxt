@@ -3360,6 +3360,7 @@ mno {
     localized_name {
       name : "Telia"
     }
+    mccmnc : "23820"
     mccmnc : "23830"
     mobile_apn {
       apn : "www.internet.mtelia.dk"
