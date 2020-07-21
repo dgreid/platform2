@@ -1431,21 +1431,12 @@ bool Platform::SetDirCryptoKey(const FilePath& dir,
 
 bool Platform::AddDirCryptoKeyToKeyring(
     const brillo::SecureBlob& key, dircrypto::KeyReference* key_reference) {
-  return dircrypto::AddKeyToKeyring(key, key_reference);
+  return dircrypto::AddDirectoryKey(key, key_reference);
 }
 
 bool Platform::InvalidateDirCryptoKey(
     const dircrypto::KeyReference& key_reference, const FilePath& shadow_root) {
-  // Unlink the key.
-  // NOTE: Even after this, the key will still stay valid as long as the
-  // encrypted contents are on the page cache.
-  if (!dircrypto::UnlinkKey(key_reference)) {
-    LOG(ERROR) << "Failed to unlink the key.";
-  }
-  // Run Sync() to make all dirty cache clear.
-  Sync();
-
-  return dircrypto::InvalidateSessionKey(key_reference, shadow_root);
+  return dircrypto::RemoveDirectoryKey(key_reference, shadow_root);
 }
 
 bool Platform::ClearUserKeyring() {

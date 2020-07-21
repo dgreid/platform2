@@ -106,8 +106,8 @@ bool EncryptedRebootVault::CreateVault() {
   brillo::SecureBlob transient_encryption_key =
       cryptohome::CryptoLib::CreateSecureRandomBlob(kEncryptionKeySize);
 
-  // The key descriptor needs to be exactly 8 bytes.
-  if (!dircrypto::AddKeyToKeyring(transient_encryption_key, &key_reference_)) {
+  // The key descriptor needs to be exactly 8 bytes for v1 encryption policies.
+  if (!dircrypto::AddDirectoryKey(transient_encryption_key, &key_reference_)) {
     LOG(ERROR) << "Failed to add pmsg-key";
     return false;
   }
@@ -141,7 +141,7 @@ bool EncryptedRebootVault::Validate() {
 }
 
 bool EncryptedRebootVault::PurgeVault() {
-  if (!dircrypto::UnlinkKey(key_reference_)) {
+  if (!dircrypto::RemoveDirectoryKey(key_reference_, vault_path_)) {
     LOG(WARNING) << "Failed to unlink encryption key from keyring.";
   }
   return base::DeleteFile(vault_path_, true /* recursively */);
@@ -173,7 +173,7 @@ bool EncryptedRebootVault::UnlockVault() {
   }
 
   // Unlock vault.
-  if (!dircrypto::AddKeyToKeyring(transient_encryption_key, &key_reference_)) {
+  if (!dircrypto::AddDirectoryKey(transient_encryption_key, &key_reference_)) {
     LOG(ERROR) << "Failed to add key to keyring.";
     return false;
   }
