@@ -85,10 +85,18 @@ bool BiodStorage::WriteRecord(const BiometricsManager::Record& record,
     return false;
   }
 
-  FilePath record_storage_filename = root_path_.Append(kBiod)
-                                         .Append(record.GetUserId())
-                                         .Append(biometrics_manager_name_)
-                                         .Append(kRecordFileName + record_id);
+  std::vector<FilePath> paths = {FilePath(kBiod), FilePath(record.GetUserId()),
+                                 FilePath(biometrics_manager_name_),
+                                 FilePath(kRecordFileName + record_id)};
+
+  FilePath record_storage_filename = root_path_;
+  for (const auto& path : paths) {
+    if (path.IsAbsolute()) {
+      LOG(ERROR) << "Path component must not be absolute: '" << path << "'";
+      return false;
+    }
+    record_storage_filename = record_storage_filename.Append(path);
+  }
 
   {
     brillo::ScopedUmask owner_only_umask(~(0700));

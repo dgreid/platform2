@@ -186,6 +186,14 @@ TEST_P(BiodStorageTest, WriteAndReadRecords) {
       std::is_permutation(kRecords.begin(), kRecords.end(), records_.begin()));
 }
 
+TEST_F(BiodStorageBaseTest, WriteRecord_InvalidAbsolutePath) {
+  auto record =
+      TestRecord(kRecordId1, "/absolutepath", kLabel1, kValidationVal1, kData1);
+
+  EXPECT_FALSE(biod_storage_->WriteRecord(
+      record, std::make_unique<base::Value>(record.GetData())));
+}
+
 TEST_F(BiodStorageBaseTest, WriteRecord_CheckUmask) {
   auto record =
       TestRecord(kRecordId1, kUserId1, kLabel1, kValidationVal1, kData1);
