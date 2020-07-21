@@ -370,27 +370,6 @@ const struct config_map *cros_config_get_config_map(int *num_entries) {
   return file_format % (',\n'.join(structs), len(structs))
 
 
-def _GetElementToIntMap(schema_yaml, hwprop):
-  """Returns a mapping of an enum's elements to a distinct integer.
-
-  Used in the c_template to assign an integer to
-  the stylus category type.
-
-  Args:
-    schema_yaml: Cros_config_schema in yaml format.
-    hwprop: String representing the hardware property
-    of the enum (ex. stylus-category)
-  """
-  schema_json_from_yaml = libcros_schema.FormatJson(schema_yaml)
-  schema_json = json.loads(schema_json_from_yaml)
-  if hwprop not in schema_json['typeDefs']:
-    raise ValidationError('Hardware property not found: %s' % str(hwprop))
-  if 'enum' not in schema_json['typeDefs'][hwprop]:
-    raise ValidationError('Hardware property is not an enum: %s' % str(hwprop))
-  return dict((element, i) for (i, element) in enumerate(
-      schema_json['typeDefs'][hwprop]['enum']))
-
-
 def _GenerateInferredAshFlags(device_config):
   """Generate runtime-packed ash flags into a single device config.
 
