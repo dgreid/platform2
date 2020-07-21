@@ -426,13 +426,6 @@ def _GenerateInferredElements(json_config):
       model_name = config.get('name')
       ui_elements['help-content-id'] = (
           customization_id or whitelabel_tag or model_name)
-      # TODO(crbug.com/1106930): remove when Fizz and Coral specify
-      # help-content-id
-      if config.get('identity', {}).get('platform-name') in ('Fizz', 'Coral'):
-        fake_customization_id = model_name
-        if whitelabel_tag:
-          fake_customization_id = ('%s-%s' % (model_name, whitelabel_tag))
-        ui_elements['help-content-id'] = fake_customization_id.upper()
     config['ui'] = ui_elements
     config = _GenerateInferredAshFlags(config)
     configs.append(config)
