@@ -234,6 +234,12 @@ void AddPluginVmFlags(ChromiumCommandBuilder* builder) {
   }
 }
 
+void AddBorealisFlags(ChromiumCommandBuilder* builder) {
+  if (builder->UseFlagIsSet("borealis_host")) {
+    builder->AddFeatureEnableOverride("Borealis");
+  }
+}
+
 void AddLacrosFlags(ChromiumCommandBuilder* builder) {
   if (builder->UseFlagIsSet("lacros"))
     builder->AddFeatureEnableOverride("LacrosSupport");
@@ -821,6 +827,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
   AddArcFlags(&builder, &disallowed_prefixes, cros_config);
   AddCrostiniFlags(&builder);
   AddPluginVmFlags(&builder);
+  AddBorealisFlags(&builder);
   AddLacrosFlags(&builder);
   AddEnterpriseFlags(&builder);
   AddVmodulePatterns(&builder);
