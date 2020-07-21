@@ -495,6 +495,16 @@ constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
 constexpr char kBootstrapMojoConnectionChannelToken[] = "ml-service-bootstrap";
 }  // namespace ml
 
+namespace iioservice {
+constexpr char kIioserviceServiceName[] = "org.chromium.Iioservice";
+constexpr char kIioserviceServicePath[] = "/org/chromium/Iioservice";
+constexpr char kIioserviceInterfaceName[] = "org.chromium.Iioservice";
+// Methods
+constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
+// Token identifying the primordial Mojo pipe passed to BootstrapMojoConnection.
+constexpr char kBootstrapMojoConnectionChannelToken[] = "iioservice-bootstrap";
+}  // namespace iioservice
+
 namespace virtual_file_provider {
 constexpr char kVirtualFileProviderServiceName[] =
     "org.chromium.VirtualFileProvider";
