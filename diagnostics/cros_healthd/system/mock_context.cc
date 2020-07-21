@@ -32,6 +32,7 @@ bool MockContext::Initialize() {
   powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
   system_config_ = std::make_unique<FakeSystemConfig>();
   system_utils_ = std::make_unique<FakeSystemUtilities>();
+  executor_ = std::make_unique<MockExecutorAdapter>();
 
   return true;
 }
@@ -64,6 +65,10 @@ FakeSystemConfig* MockContext::fake_system_config() const {
 
 FakeSystemUtilities* MockContext::fake_system_utils() const {
   return static_cast<FakeSystemUtilities*>(system_utils_.get());
+}
+
+MockExecutorAdapter* MockContext::mock_executor() const {
+  return static_cast<MockExecutorAdapter*>(executor_.get());
 }
 
 }  // namespace diagnostics

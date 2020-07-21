@@ -13,6 +13,7 @@
 #include "diagnostics/common/system/fake_bluetooth_client.h"
 #include "diagnostics/common/system/fake_powerd_adapter.h"
 #include "diagnostics/common/system/mock_debugd_adapter.h"
+#include "diagnostics/cros_healthd/executor/mock_executor_adapter.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/cros_healthd/system/fake_system_config.h"
 #include "diagnostics/cros_healthd/system/fake_system_utilities.h"
@@ -44,6 +45,7 @@ class MockContext final : public Context {
   FakePowerdAdapter* fake_powerd_adapter() const;
   FakeSystemConfig* fake_system_config() const;
   FakeSystemUtilities* fake_system_utils() const;
+  MockExecutorAdapter* mock_executor() const;
 
  private:
   // Used to create a mock power manager proxy.

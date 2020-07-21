@@ -54,6 +54,7 @@ if (use.test || use.fuzzer) {
     deps = [
       ":libcros_healthd_system",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/executor:libcros_healthd_executor_test_utils",
     ]
     sources = [
       "fake_system_config.cc",

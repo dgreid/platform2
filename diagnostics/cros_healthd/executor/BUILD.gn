@@ -23,3 +23,10 @@ source_set("libcros_healthd_executor") {
     "executor_mojo_service.cc",
   ]
 }
+
+if (use.test) {
+  source_set("libcros_healthd_executor_test_utils") {
+    deps = [ "//diagnostics/mojo:cros_healthd_executor_mojo_bindings" ]
+    sources = [ "mock_executor_adapter.cc" ]
+  }
+}
