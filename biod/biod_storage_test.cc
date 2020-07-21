@@ -13,6 +13,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <testing/gtest/include/gtest/gtest.h>
+#include <base/strings/string_util.h>
 
 namespace biod {
 
@@ -44,6 +45,8 @@ const char kData3[] = "Hello, world3!";
 constexpr int kPermissions600 =
     base::FILE_PERMISSION_READ_BY_USER | base::FILE_PERMISSION_WRITE_BY_USER;
 constexpr int kPermissions700 = base::FILE_PERMISSION_USER_MASK;
+
+const char kInvalidUTF8[] = "\xed\xa0\x80\xed\xbf\xbf";
 
 // Flag to control whether to run tests with positive match secret support.
 // This can't be a member of the test fixture because it's accessed in the
@@ -190,6 +193,39 @@ TEST_F(BiodStorageBaseTest, WriteRecord_InvalidAbsolutePath) {
   auto record =
       TestRecord(kRecordId1, "/absolutepath", kLabel1, kValidationVal1, kData1);
 
+  EXPECT_FALSE(biod_storage_->WriteRecord(
+      record, std::make_unique<base::Value>(record.GetData())));
+}
+
+TEST_F(BiodStorageBaseTest, WriteRecord_RecordIdNotUTF8) {
+  EXPECT_FALSE(base::IsStringUTF8(kInvalidUTF8));
+
+  auto record =
+      TestRecord(kInvalidUTF8, kUserId1, kLabel1, kValidationVal1, kData1);
+
+  EXPECT_FALSE(record.IsValidUTF8());
+  EXPECT_FALSE(biod_storage_->WriteRecord(
+      record, std::make_unique<base::Value>(record.GetData())));
+}
+
+TEST_F(BiodStorageBaseTest, WriteRecord_UserIdNotUTF8) {
+  EXPECT_FALSE(base::IsStringUTF8(kInvalidUTF8));
+
+  auto record =
+      TestRecord(kRecordId1, kInvalidUTF8, kLabel1, kValidationVal1, kData1);
+
+  EXPECT_FALSE(record.IsValidUTF8());
+  EXPECT_FALSE(biod_storage_->WriteRecord(
+      record, std::make_unique<base::Value>(record.GetData())));
+}
+
+TEST_F(BiodStorageBaseTest, WriteRecord_LabelNotUTF8) {
+  EXPECT_FALSE(base::IsStringUTF8(kInvalidUTF8));
+
+  auto record =
+      TestRecord(kRecordId1, kUserId1, kInvalidUTF8, kValidationVal1, kData1);
+
+  EXPECT_FALSE(record.IsValidUTF8());
   EXPECT_FALSE(biod_storage_->WriteRecord(
       record, std::make_unique<base::Value>(record.GetData())));
 }

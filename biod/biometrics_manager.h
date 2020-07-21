@@ -15,6 +15,7 @@
 #include <base/callback.h>
 #include <base/memory/weak_ptr.h>
 #include <chromeos/dbus/service_constants.h>
+#include <base/strings/string_util.h>
 
 #include "biod/proto_bindings/constants.pb.h"
 
@@ -124,6 +125,30 @@ class BiometricsManager {
                                  validation_val_bytes.end());
       base::Base64Encode(validation_val, &validation_val);
       return validation_val;
+    }
+
+    virtual bool IsValidUTF8() const {
+      if (!base::IsStringUTF8(GetLabel())) {
+        LOG(ERROR) << "Label is not valid UTF8";
+        return false;
+      }
+
+      if (!base::IsStringUTF8(GetId())) {
+        LOG(ERROR) << "Record ID is not valid UTF8";
+        return false;
+      }
+
+      if (!base::IsStringUTF8(GetValidationValBase64())) {
+        LOG(ERROR) << "Validation value is not valid UTF8";
+        return false;
+      }
+
+      if (!base::IsStringUTF8(GetUserId())) {
+        LOG(ERROR) << "User ID is not valid UTF8";
+        return false;
+      }
+
+      return true;
     }
   };
 

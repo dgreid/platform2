@@ -61,6 +61,11 @@ bool BiodStorage::WriteRecord(const BiometricsManager::Record& record,
     return false;
   }
 
+  if (!record.IsValidUTF8()) {
+    LOG(ERROR) << "Record contains invalid UTF8.";
+    return false;
+  }
+
   const std::string& record_id(record.GetId());
   base::DictionaryValue record_value;
   record_value.SetString(kLabel, record.GetLabel());
