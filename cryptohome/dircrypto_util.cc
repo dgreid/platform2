@@ -12,7 +12,6 @@
 
 extern "C" {
 #include <ext2fs/ext2_fs.h>
-#include <linux/fscrypt.h>
 #include <keyutils.h>
 }
 
@@ -34,6 +33,7 @@ namespace {
 constexpr char kKeyType[] = "logon";
 constexpr char kKeyNamePrefix[] = "ext4:";
 constexpr char kKeyringName[] = "dircrypt";
+constexpr char kStatefulPartitionPath[] = "/mnt/stateful_partition";
 
 key_serial_t GetSessionKeyring() {
   key_serial_t keyring =
@@ -61,9 +61,19 @@ key_serial_t KeyReferenceToKeySerial(const brillo::SecureBlob& key_reference) {
   return key;
 }
 
+base::ScopedFD GetStatefulPartitionScopedFd() {
+  base::ScopedFD fd = base::ScopedFD(
+      HANDLE_EINTR(open(kStatefulPartitionPath, O_RDONLY | O_DIRECTORY)));
+
+  if (!fd.is_valid())
+    PLOG(ERROR) << "Failed to open file descriptor " << kStatefulPartitionPath;
+
+  return fd;
+}
+
 bool DropMountCaches(const base::FilePath& dir) {
-  base::ScopedFD fd(HANDLE_EINTR(open(dir.value().c_str(),
-                                      O_RDONLY | O_DIRECTORY)));
+  base::ScopedFD fd(
+      HANDLE_EINTR(open(dir.value().c_str(), O_RDONLY | O_DIRECTORY)));
   if (!fd.is_valid()) {
     PLOG(ERROR) << "Invalid directory: " << dir.value();
     return false;
@@ -77,58 +87,32 @@ bool DropMountCaches(const base::FilePath& dir) {
   return true;
 }
 
+void BuildFscryptKeySpec(const KeyReference& key_reference,
+                         struct fscrypt_key_specifier* key_spec) {
+  switch (key_reference.policy_version) {
+    case FSCRYPT_POLICY_V1:
+      key_spec->type = FSCRYPT_KEY_SPEC_TYPE_DESCRIPTOR;
+      DCHECK_EQ(FSCRYPT_KEY_DESCRIPTOR_SIZE, key_reference.reference.size());
+      memcpy(key_spec->u.descriptor, key_reference.reference.char_data(),
+             key_reference.reference.size());
+      break;
+    case FSCRYPT_POLICY_V2:
+      key_spec->type = FSCRYPT_KEY_SPEC_TYPE_IDENTIFIER;
+      break;
+    default:
+      NOTREACHED() << "Invalid policy version";
+  }
+}
+
 }  // namespace
 
-bool SetDirectoryKey(const base::FilePath& dir,
-                     const KeyReference& key_reference) {
-  DCHECK_EQ(static_cast<size_t>(FS_KEY_DESCRIPTOR_SIZE),
-            key_reference.reference.size());
-  base::ScopedFD fd(HANDLE_EINTR(open(dir.value().c_str(),
-                                      O_RDONLY | O_DIRECTORY)));
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Fscrypt: Invalid directory " << dir.value();
-    return false;
-  }
-  struct fscrypt_policy policy = {};
-  policy.version = 0;
-  policy.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
-  policy.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
-  policy.flags = 0;
-  memcpy(policy.master_key_descriptor, key_reference.reference.data(),
-         FS_KEY_DESCRIPTOR_SIZE);
-  if (ioctl(fd.get(), FS_IOC_SET_ENCRYPTION_POLICY, &policy) < 0) {
-    PLOG(ERROR) << "Failed to set the encryption policy of " << dir.value();
-    return false;
-  }
-  return true;
-}
+// Kernel versions before 5.4 do not support the fscrypt key management ioctls.
+// In absence of these ioctls, we fall back to the legacy interface of adding
+// removing keys.
+namespace legacy {
 
-KeyState GetDirectoryKeyState(const base::FilePath& dir) {
-  base::ScopedFD fd(HANDLE_EINTR(open(dir.value().c_str(),
-                                      O_RDONLY | O_DIRECTORY)));
-  if (!fd.is_valid()) {
-    PLOG(ERROR) << "Fscrypt: Invalid directory " << dir.value();
-    return KeyState::UNKNOWN;
-  }
-  struct fscrypt_policy policy = {};
-  if (ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY, &policy) < 0) {
-    switch (errno) {
-      case ENODATA:
-      case ENOENT:
-        return KeyState::NO_KEY;
-      case ENOTTY:
-      case EOPNOTSUPP:
-        return KeyState::NOT_SUPPORTED;
-      default:
-        PLOG(ERROR) << "Failed to get the encryption policy of " << dir.value();
-        return KeyState::UNKNOWN;
-    }
-  }
-  return KeyState::ENCRYPTED;
-}
-
-bool AddKeyToKeyring(const brillo::SecureBlob& key,
-                     KeyReference* key_reference) {
+static bool AddKeyToSessionKeyring(const brillo::SecureBlob& key,
+                                   KeyReference* key_reference) {
   if (key.size() > FS_MAX_KEY_SIZE ||
       key_reference->reference.size() != FS_KEY_DESCRIPTOR_SIZE) {
     LOG(ERROR) << "Invalid arguments: key.size() = " << key.size()
@@ -173,9 +157,9 @@ bool AddKeyToKeyring(const brillo::SecureBlob& key,
   return true;
 }
 
-bool UnlinkKey(const KeyReference& key_reference) {
-  key_serial_t keyring = GetSessionKeyring(),
-               key = KeyReferenceToKeySerial(key_reference.reference);
+static bool UnlinkSessionKey(const KeyReference& key_reference) {
+  key_serial_t keyring = GetSessionKeyring();
+  key_serial_t key = KeyReferenceToKeySerial(key_reference.reference);
 
   if (key == kInvalidKeySerial || keyring == kInvalidKeySerial)
     return false;
@@ -187,8 +171,8 @@ bool UnlinkKey(const KeyReference& key_reference) {
   return true;
 }
 
-bool InvalidateSessionKey(const KeyReference& key_reference,
-                          const base::FilePath& mount_path) {
+static bool InvalidateSessionKey(const KeyReference& key_reference,
+                                 const base::FilePath& mount_path) {
   // First, attempt to selectively drop caches for mount point.
   // This can fail if the directory does not support the operation or if
   // the process does not have the correct capabilities (CAP_SYS_ADMIN).
@@ -220,6 +204,206 @@ bool InvalidateSessionKey(const KeyReference& key_reference,
     PLOG(ERROR) << "Failed to invalidate key" << key;
   }
   return true;
+}
+
+static bool RemoveSessionKey(const KeyReference& key_reference,
+                             const base::FilePath& dir) {
+  // Unlink the key.
+  // NOTE: Even after this, the key will still stay valid as long as the
+  // encrypted contents are on the page cache.
+  if (!UnlinkSessionKey(key_reference)) {
+    LOG(ERROR) << "Failed to unlink the key.";
+  }
+  // Run Sync() to make all dirty cache clear.
+  sync();
+
+  return InvalidateSessionKey(key_reference, dir);
+}
+
+}  // namespace legacy
+
+bool CheckFscryptKeyIoctlSupport() {
+  base::ScopedFD fd = GetStatefulPartitionScopedFd();
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open stateful partition";
+    return false;
+  }
+
+  errno = 0;
+  bool ret = false;
+
+  ioctl(fd.get(), FS_IOC_ADD_ENCRYPTION_KEY, nullptr);
+  if (errno != EOPNOTSUPP && errno != ENOTTY)
+    ret = true;
+
+  if (!ret)
+    VLOG(3) << "fscrypt v2 encryption policies not supported; "
+            << "falling back to v1 encryption policies.";
+
+  return ret;
+}
+
+bool SetDirectoryKey(const base::FilePath& dir,
+                     const KeyReference& key_reference) {
+  base::ScopedFD fd(
+      HANDLE_EINTR(open(dir.value().c_str(), O_RDONLY | O_DIRECTORY)));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Fscrypt: Invalid directory " << dir.value();
+    return false;
+  }
+
+  union {
+    struct fscrypt_policy_v1 v1;
+    struct fscrypt_policy_v2 v2;
+  } policy;
+
+  memset(&policy, 0, sizeof(policy));
+
+  switch (key_reference.policy_version) {
+    case FSCRYPT_POLICY_V1:
+      DCHECK_EQ(static_cast<size_t>(FSCRYPT_KEY_DESCRIPTOR_SIZE),
+                key_reference.reference.size());
+      policy.v1.version = FSCRYPT_POLICY_V1;
+      policy.v1.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
+      policy.v1.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
+      policy.v1.flags = 0;
+      memcpy(policy.v1.master_key_descriptor, key_reference.reference.data(),
+             key_reference.reference.size());
+      break;
+    case FSCRYPT_POLICY_V2:
+      DCHECK_EQ(static_cast<size_t>(FSCRYPT_KEY_IDENTIFIER_SIZE),
+                key_reference.reference.size());
+      policy.v2.version = FSCRYPT_POLICY_V2;
+      policy.v2.contents_encryption_mode = FS_ENCRYPTION_MODE_AES_256_XTS;
+      policy.v2.filenames_encryption_mode = FS_ENCRYPTION_MODE_AES_256_CTS;
+      policy.v2.flags = FSCRYPT_POLICY_FLAGS_PAD_16;
+      memcpy(policy.v2.master_key_identifier, key_reference.reference.data(),
+             key_reference.reference.size());
+      break;
+    default:
+      NOTREACHED() << "Invalid encryption policy version";
+  }
+
+  if (ioctl(fd.get(), FS_IOC_SET_ENCRYPTION_POLICY, &policy) < 0) {
+    PLOG(ERROR) << "Failed to set the encryption policy of " << dir.value();
+    return false;
+  }
+  return true;
+}
+
+KeyState GetDirectoryKeyState(const base::FilePath& dir) {
+  base::ScopedFD fd(
+      HANDLE_EINTR(open(dir.value().c_str(), O_RDONLY | O_DIRECTORY)));
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Fscrypt: Invalid directory " << dir.value();
+    return KeyState::UNKNOWN;
+  }
+
+  int err = 0;
+  struct fscrypt_get_policy_ex_arg arg = {};
+  memset(&arg, 0, sizeof(arg));
+  arg.policy_size = sizeof(arg.policy);
+
+  // FS_IOC_GET_ENCRYPTION_POLICY only supports v1 policies.
+  if (CheckFscryptKeyIoctlSupport())
+    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
+  else
+    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY, &(arg.policy.v1));
+
+  if (err < 0) {
+    switch (errno) {
+      case ENODATA:
+      case ENOENT:
+        return KeyState::NO_KEY;
+      case ENOTTY:
+      case EOPNOTSUPP:
+        return KeyState::NOT_SUPPORTED;
+      default:
+        PLOG(ERROR) << "Failed to get the encryption policy of " << dir.value();
+        return KeyState::UNKNOWN;
+    }
+  }
+  return KeyState::ENCRYPTED;
+}
+
+static bool AddFscryptKey(const brillo::SecureBlob& key,
+                          KeyReference* key_reference) {
+  brillo::SecureBlob add_key_arg(sizeof(struct fscrypt_add_key_arg) +
+                                 key.size());
+  struct fscrypt_add_key_arg* arg =
+      (struct fscrypt_add_key_arg*)add_key_arg.data();
+
+  BuildFscryptKeySpec(*key_reference, &(arg->key_spec));
+
+  arg->raw_size = key.size();
+  memcpy(arg->raw, key.char_data(), key.size());
+
+  base::ScopedFD fd = GetStatefulPartitionScopedFd();
+  if (!fd.is_valid())
+    return false;
+
+  if (ioctl(fd.get(), FS_IOC_ADD_ENCRYPTION_KEY, arg) < 0) {
+    PLOG(ERROR) << "Failed to add encryption key";
+    return false;
+  }
+
+  // For v2 policies, store the returned key identifier in the key reference.
+  if (key_reference->policy_version == FSCRYPT_POLICY_V2) {
+    key_reference->reference.resize(FSCRYPT_KEY_IDENTIFIER_SIZE);
+    memcpy(key_reference->reference.char_data(), arg->key_spec.u.identifier,
+           FSCRYPT_KEY_IDENTIFIER_SIZE);
+  }
+
+  return true;
+}
+
+static bool RemoveFscryptKey(const KeyReference& key_reference) {
+  struct fscrypt_remove_key_arg arg;
+  memset(&arg, 0, sizeof(fscrypt_remove_key_arg));
+
+  BuildFscryptKeySpec(key_reference, &arg.key_spec);
+
+  // Set the identifier for v2 policies.
+  if (key_reference.policy_version == FSCRYPT_POLICY_V2) {
+    memcpy(arg.key_spec.u.identifier, key_reference.reference.char_data(),
+           FSCRYPT_KEY_IDENTIFIER_SIZE);
+  }
+
+  auto fd = GetStatefulPartitionScopedFd();
+  if (!fd.is_valid())
+    return false;
+
+  if (ioctl(fd.get(), FS_IOC_REMOVE_ENCRYPTION_KEY, &arg) < 0) {
+    PLOG(ERROR) << "Failed to add encryption key";
+    return false;
+  }
+
+  // Check removal status flags if there are files still open after removing the
+  // encryption key.
+  if (arg.removal_status_flags & FSCRYPT_KEY_REMOVAL_STATUS_FLAG_OTHER_USERS) {
+    LOG(ERROR) << "Failed to remove fscrypt key: still used by other users.";
+  } else if (arg.removal_status_flags &
+             FSCRYPT_KEY_REMOVAL_STATUS_FLAG_FILES_BUSY) {
+    LOG(ERROR)
+        << "Some files are still in use after removing encryption key; these "
+           "files were not locked.";
+  }
+
+  return true;
+}
+
+bool AddDirectoryKey(const brillo::SecureBlob& key,
+                     KeyReference* key_reference) {
+  return CheckFscryptKeyIoctlSupport()
+             ? AddFscryptKey(key, key_reference)
+             : legacy::AddKeyToSessionKeyring(key, key_reference);
+}
+
+bool RemoveDirectoryKey(const KeyReference& key_reference,
+                        const base::FilePath& dir) {
+  return CheckFscryptKeyIoctlSupport()
+             ? RemoveFscryptKey(key_reference)
+             : legacy::RemoveSessionKey(key_reference, dir);
 }
 
 }  // namespace dircrypto
