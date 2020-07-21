@@ -109,7 +109,9 @@ fn read_ippusb_device_info<T: UsbContext>(
                     continue;
                 }
                 info!(
-                    "Found IPPUSB interface. config {}, interface {}, alternate {}",
+                    "Device {}:{} - Found IPPUSB interface. config {}, interface {}, alternate {}",
+                    device.bus_number(),
+                    device.address(),
                     config.number(),
                     interface.number(),
                     alternate.setting_number()
@@ -342,6 +344,11 @@ impl UsbConnector {
             }
         };
 
+        info!(
+            "Selected device {}:{}",
+            device.bus_number(),
+            device.address()
+        );
         let mut handle = device.open().map_err(Error::OpenDevice)?;
         handle
             .set_auto_detach_kernel_driver(true)
