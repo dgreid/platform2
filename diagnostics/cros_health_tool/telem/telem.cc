@@ -20,6 +20,7 @@
 #include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/strings/stringprintf.h>
+#include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -419,7 +420,7 @@ void DisplayTelemetryInfo(
 // Create a stringified list of the category names for use in help.
 std::string GetCategoryHelp() {
   std::stringstream ss;
-  ss << "Category to probe: [";
+  ss << "Category or categories to probe, as comma-separated list: [";
   const char* sep = "";
   for (auto pair : kCategorySwitches) {
     ss << sep << pair.first;
@@ -434,7 +435,7 @@ std::string GetCategoryHelp() {
 // 'telem' sub-command for cros-health-tool:
 //
 // Test driver for cros_healthd's telemetry collection. Supports requesting a
-// single category and/or process at a time.
+// comma-separate list of categories and/or a single process at a time.
 int telem_main(int argc, char** argv) {
   std::string category_help = GetCategoryHelp();
   DEFINE_string(category, "", category_help.c_str());
@@ -470,15 +471,20 @@ int telem_main(int argc, char** argv) {
   // Probe category info, if requested.
   if (FLAGS_category != "") {
     // Validate the category flag.
-    auto iterator = switch_to_category.find(FLAGS_category);
-    if (iterator == switch_to_category.end()) {
-      LOG(ERROR) << "Invalid category: " << FLAGS_category;
-      return EXIT_FAILURE;
+    std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
+        categories_to_probe;
+    std::vector<std::string> input_categories = base::SplitString(
+        FLAGS_category, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+    for (const auto& category : input_categories) {
+      auto iterator = switch_to_category.find(category);
+      if (iterator == switch_to_category.end()) {
+        LOG(ERROR) << "Invalid category: " << category;
+        return EXIT_FAILURE;
+      }
+      categories_to_probe.push_back(iterator->second);
     }
 
-    // Probe and display the category.
-    const std::vector<chromeos::cros_healthd::mojom::ProbeCategoryEnum>
-        categories_to_probe = {iterator->second};
+    // Probe and display the category or categories.
     DisplayTelemetryInfo(adapter->GetTelemetryInfo(categories_to_probe));
   }
 
