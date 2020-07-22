@@ -12,6 +12,7 @@
 #include <memory>
 #include <numeric>
 #include <string>
+#include <tuple>
 #include <utility>
 #include <vector>
 
@@ -27,6 +28,7 @@
 #include <base/stl_util.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/strings/strcat.h>
 #include <base/time/time.h>
 #include <base/values.h>
 #include <brillo/flag_helper.h>
@@ -167,7 +169,7 @@ bool GetShillProperties(
 }
 
 class CrashSenderUtilTest : public testing::Test {
- private:
+ protected:
   void SetUp() override {
     // Grab executable path before TearDown() can reset base::CommandLine.
     if (build_directory_ == nullptr) {
@@ -201,7 +203,6 @@ class CrashSenderUtilTest : public testing::Test {
     brillo::FlagHelper::ResetForTesting();
   }
 
- protected:
   // Checks to see if a file is locked by AcquireLockFileOrDie().
   bool IsFileLocked(const base::FilePath& file_name) {
     // AcquireLockFileOrDie creates the file when it runs, so count the file
@@ -1262,12 +1263,27 @@ TEST_F(CrashSenderUtilTest, GetUserCrashDirectories) {
                            paths::Get("/run/daemon-store/crash/hash2")));
 }
 
-class CreateCrashFormDataTest : public CrashSenderUtilTest {
- public:
-  void TestCreateCrashFormData(bool absolute_paths);
+enum MissingFile {
+  kNone,
+  kPayloadFile,
+  kLogFile,
+  kTextFile,
+  kBinFile,
 };
 
-void CreateCrashFormDataTest::TestCreateCrashFormData(bool absolute_paths) {
+class CreateCrashFormDataTest
+    : public CrashSenderUtilTest,
+      public ::testing::WithParamInterface<std::tuple<bool, MissingFile>> {
+ protected:
+  void SetUp() override {
+    std::tie(absolute_paths_, missing_file_) = GetParam();
+    CrashSenderUtilTest::SetUp();
+  }
+  bool absolute_paths_;
+  MissingFile missing_file_;
+};
+
+TEST_P(CreateCrashFormDataTest, TestCreateCrashFormData) {
   const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
   ASSERT_TRUE(base::CreateDirectory(system_dir));
 
@@ -1275,32 +1291,42 @@ void CreateCrashFormDataTest::TestCreateCrashFormData(bool absolute_paths) {
   const base::FilePath payload_file_absolute =
       system_dir.Append(payload_file_relative);
   const std::string payload_contents = "foobar_payload";
-  ASSERT_TRUE(test_util::CreateFile(payload_file_absolute, payload_contents));
+  if (missing_file_ != kPayloadFile) {
+    ASSERT_TRUE(test_util::CreateFile(payload_file_absolute, payload_contents));
+  }
   const base::FilePath& payload_file =
-      absolute_paths ? payload_file_absolute : payload_file_relative;
+      absolute_paths_ ? payload_file_absolute : payload_file_relative;
 
   const base::FilePath log_file_relative("0.0.0.0.log");
   const base::FilePath log_file_absolute = system_dir.Append(log_file_relative);
   const std::string log_contents = "foobar_log";
-  ASSERT_TRUE(test_util::CreateFile(log_file_absolute, log_contents));
+  if (missing_file_ != kLogFile) {
+    ASSERT_TRUE(test_util::CreateFile(log_file_absolute, log_contents));
+  }
   const base::FilePath& log_file =
-      absolute_paths ? log_file_absolute : log_file_relative;
+      absolute_paths_ ? log_file_absolute : log_file_relative;
 
   const base::FilePath text_var_file_relative("data.txt");
   const base::FilePath text_var_file_absolute =
       system_dir.Append(text_var_file_relative);
   const std::string text_var_contents = "upload_text_contents";
-  ASSERT_TRUE(test_util::CreateFile(text_var_file_absolute, text_var_contents));
+  if (missing_file_ != kTextFile) {
+    ASSERT_TRUE(
+        test_util::CreateFile(text_var_file_absolute, text_var_contents));
+  }
   const base::FilePath& text_var_file =
-      absolute_paths ? text_var_file_absolute : text_var_file_relative;
+      absolute_paths_ ? text_var_file_absolute : text_var_file_relative;
 
   const base::FilePath file_var_file_relative("data.bin");
   const base::FilePath file_var_file_absolute =
       system_dir.Append(file_var_file_relative);
   const std::string file_var_contents = "upload_file_contents";
-  ASSERT_TRUE(test_util::CreateFile(file_var_file_absolute, file_var_contents));
+  if (missing_file_ != kBinFile) {
+    ASSERT_TRUE(
+        test_util::CreateFile(file_var_file_absolute, file_var_contents));
+  }
   const base::FilePath& file_var_file =
-      absolute_paths ? file_var_file_absolute : file_var_file_relative;
+      absolute_paths_ ? file_var_file_absolute : file_var_file_relative;
 
   brillo::KeyValueStore metadata;
   metadata.SetString("exec_name", "fake_exec_name");
@@ -1331,90 +1357,99 @@ void CreateCrashFormDataTest::TestCreateCrashFormData(bool absolute_paths) {
 
   std::unique_ptr<brillo::http::FormData> form_data =
       sender.CreateCrashFormData(details, nullptr);
+  if (missing_file_ == kPayloadFile) {
+    EXPECT_EQ(form_data, nullptr);
+    return;
+  }
 
   brillo::StreamPtr stream = form_data->ExtractDataStream();
   std::vector<uint8_t> data(stream->GetSize());
   ASSERT_TRUE(stream->ReadAllBlocking(data.data(), data.size(), nullptr));
 
-  const char expected_data[] =
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"exec_name\"\r\n"
-      "\r\n"
-      "fake_exec_name\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"board\"\r\n"
-      "\r\n"
-      "undefined\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"hwclass\"\r\n"
-      "\r\n"
-      "undefined\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"prod\"\r\n"
-      "\r\n"
-      "fake_product\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"ver\"\r\n"
-      "\r\n"
-      "fake_version\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"sig\"\r\n"
-      "\r\n"
-      "fake_sig\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"sig2\"\r\n"
-      "\r\n"
-      "fake_sig\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"upload_file_fake_payload\"; "
-      "filename=\"0.0.0.0.payload\"\r\n"
-      "Content-Transfer-Encoding: binary\r\n"
-      "\r\n"
-      "foobar_payload\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"foofile\"; "
-      "filename=\"data.bin\"\r\n"
-      "Content-Transfer-Encoding: binary\r\n"
-      "\r\n"
-      "upload_file_contents\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"log\"; "
-      "filename=\"0.0.0.0.log\"\r\n"
-      "Content-Transfer-Encoding: binary\r\n"
-      "\r\n"
-      "foobar_log\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"footext\"\r\n"
-      "\r\n"
-      "upload_text_contents\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"foovar\"\r\n"
-      "\r\n"
-      "bar\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"boot_mode\"\r\n"
-      "\r\n"
-      "missing-crossystem\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"error_type\"\r\n"
-      "\r\n"
-      "fake_error\r\n"
-      "--boundary\r\n"
-      "Content-Disposition: form-data; name=\"guid\"\r\n"
-      "\r\n"
-      "00112233445566778899aabbccddeeff\r\n"
-      "--boundary--\r\n";
+  std::string expected_data = base::StrCat(
+      {"--boundary\r\n"
+       "Content-Disposition: form-data; name=\"exec_name\"\r\n"
+       "\r\n"
+       "fake_exec_name\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"board\"\r\n"
+       "\r\n"
+       "undefined\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"hwclass\"\r\n"
+       "\r\n"
+       "undefined\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"prod\"\r\n"
+       "\r\n"
+       "fake_product\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"ver\"\r\n"
+       "\r\n"
+       "fake_version\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"sig\"\r\n"
+       "\r\n"
+       "fake_sig\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"sig2\"\r\n"
+       "\r\n"
+       "fake_sig\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"upload_file_fake_payload\"; "
+       "filename=\"0.0.0.0.payload\"\r\n"
+       "Content-Transfer-Encoding: binary\r\n"
+       "\r\n"
+       "foobar_payload\r\n",
+       missing_file_ == kBinFile
+           ? ""
+           : "--boundary\r\n"
+             "Content-Disposition: form-data; name=\"foofile\"; "
+             "filename=\"data.bin\"\r\n"
+             "Content-Transfer-Encoding: binary\r\n"
+             "\r\n"
+             "upload_file_contents\r\n",
+       missing_file_ == kLogFile
+           ? ""
+           : "--boundary\r\n"
+             "Content-Disposition: form-data; name=\"log\"; "
+             "filename=\"0.0.0.0.log\"\r\n"
+             "Content-Transfer-Encoding: binary\r\n"
+             "\r\n"
+             "foobar_log\r\n",
+       missing_file_ == kTextFile
+           ? ""
+           : "--boundary\r\n"
+             "Content-Disposition: form-data; name=\"footext\"\r\n"
+             "\r\n"
+             "upload_text_contents\r\n",
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"foovar\"\r\n"
+       "\r\n"
+       "bar\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"boot_mode\"\r\n"
+       "\r\n"
+       "missing-crossystem\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"error_type\"\r\n"
+       "\r\n"
+       "fake_error\r\n"
+       "--boundary\r\n"
+       "Content-Disposition: form-data; name=\"guid\"\r\n"
+       "\r\n"
+       "00112233445566778899aabbccddeeff\r\n"
+       "--boundary--\r\n"});
 
   EXPECT_EQ(expected_data, std::string(data.begin(), data.end()));
 }
 
-TEST_F(CreateCrashFormDataTest, HandlesAbsolutePaths) {
-  TestCreateCrashFormData(true);
-}
-
-TEST_F(CreateCrashFormDataTest, HandlesRelativePaths) {
-  TestCreateCrashFormData(false);
-}
+INSTANTIATE_TEST_SUITE_P(
+    CreateCrashFormDataInstantiation,
+    CreateCrashFormDataTest,
+    testing::Combine(
+        testing::Bool(),
+        testing::Values(kNone, kPayloadFile, kLogFile, kTextFile, kBinFile)));
 
 TEST_F(CrashSenderUtilTest, SendCrashes) {
   // Set up the mock session manager client.

@@ -934,7 +934,6 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
     }
     std::string value;
     details.metadata.GetString(key, &value);
-    brillo::ErrorPtr error;
     bool is_upload_var =
         base::StartsWith(key, kUploadVarPrefix, base::CompareCase::SENSITIVE);
     bool is_upload_text =
@@ -956,9 +955,10 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
                                   value_content);
         } else {
           LOG(ERROR) << "Failed attaching file contents from "
-                     << value_file.value() << " of: " << error->GetMessage();
+                     << value_file.value();
         }
       } else {  // not is_upload_text so must be is_upload_file
+        brillo::ErrorPtr error;
         if (base::PathExists(value_file) &&
             !form_data->AddFileField(key.substr(sizeof(kUploadFilePrefix) - 1),
                                      value_file, {}, &error)) {
