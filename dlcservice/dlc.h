@@ -130,6 +130,7 @@ class DlcBase {
   FRIEND_TEST(DlcBaseTest, PreloadCopyFailOnInvalidFileSize);
   FRIEND_TEST(DlcBaseTest, InstallingCorruptPreloadedImageCleansUp);
   FRIEND_TEST(DlcBaseTest, PreloadingSkippedOnAlreadyVerifiedDlc);
+  FRIEND_TEST(DlcBaseTest, UnmountClearsMountPoint);
 
   // Returns the path to the DLC image given the slot number.
   base::FilePath GetImagePath(BootSlot::Slot slot) const;

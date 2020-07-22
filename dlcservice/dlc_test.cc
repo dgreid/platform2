@@ -26,6 +26,23 @@ class DlcBaseTest : public BaseTest {
  public:
   DlcBaseTest() = default;
 
+  std::unique_ptr<DlcBase> Install(const DlcId& id) {
+    auto dlc = std::make_unique<DlcBase>(id);
+    dlc->Initialize();
+    EXPECT_CALL(*mock_update_engine_proxy_ptr_, SetDlcActiveValue(_, id, _, _))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
+        .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+    EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+    EXPECT_CALL(*mock_metrics_,
+                SendInstallResult(InstallResult::kSuccessNewInstall));
+    EXPECT_TRUE(dlc->Install(&err_));
+    InstallWithUpdateEngine({id});
+    dlc->InstallCompleted(&err_);
+    dlc->FinishInstall(/*installed_by_ue=*/true, &err_);
+    return dlc;
+  }
+
  private:
   DlcBaseTest(const DlcBaseTest&) = delete;
   DlcBaseTest& operator=(const DlcBaseTest&) = delete;
@@ -650,6 +667,15 @@ TEST_F(DlcBaseTest, MountFileRequiredDeletionOnPurge) {
   EXPECT_FALSE(
       Prefs(JoinPaths(SystemState::Get()->dlc_prefs_dir(), kFirstDlc, kPackage))
           .Exists(kDlcRootMount));
+}
+
+TEST_F(DlcBaseTest, UnmountClearsMountPoint) {
+  auto dlc = Install(kFirstDlc);
+
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_, UnloadDlcImage(_, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  EXPECT_TRUE(dlc->Unmount(&err_));
+  EXPECT_TRUE(dlc->GetRoot().empty());
 }
 
 }  // namespace dlcservice
