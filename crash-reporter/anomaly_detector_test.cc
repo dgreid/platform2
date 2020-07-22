@@ -17,8 +17,6 @@
 
 namespace {
 
-using std::string_literals::operator""s;
-
 using ::testing::_;
 using ::testing::Eq;
 using ::testing::IsEmpty;
@@ -39,10 +37,9 @@ const ParserRun empty{.expected_size = 0};
 
 TEST(AnomalyDetectorTest, KernelWarning) {
   ParserRun second{
-      .find_this = "ttm_bo_vm.c"s,
-      .replace_with = "file_one.c"s,
-      .expected_text =
-          "0x19e/0x1ab [ttm]()\n[ 3955.309298] Modules linked in"s};
+      .find_this = "ttm_bo_vm.c",
+      .replace_with = "file_one.c",
+      .expected_text = "0x19e/0x1ab [ttm]()\n[ 3955.309298] Modules linked in"};
   ParserTest<KernelParser>("TEST_WARNING", {simple_run, second});
 }
 
@@ -52,7 +49,7 @@ TEST(AnomalyDetectorTest, KernelWarningNoDuplicate) {
 }
 
 TEST(AnomalyDetectorTest, KernelWarningHeader) {
-  ParserRun warning_message{.expected_text = "Test Warning message asdfghjkl"s};
+  ParserRun warning_message{.expected_text = "Test Warning message asdfghjkl"};
   ParserTest<KernelParser>("TEST_WARNING_HEADER", {warning_message});
 }
 
@@ -61,50 +58,51 @@ TEST(AnomalyDetectorTest, KernelWarningOld) {
 }
 
 TEST(AnomalyDetectorTest, KernelWarningOldARM64) {
-  ParserRun unknown_function{.expected_text = "-unknown-function\n"s};
+  ParserRun unknown_function{.expected_text = "-unknown-function\n"};
   ParserTest<KernelParser>("TEST_WARNING_OLD_ARM64", {unknown_function});
 }
 
 TEST(AnomalyDetectorTest, KernelWarningWifi) {
-  ParserRun wifi_warning = {.find_this = "gpu/drm/ttm"s,
-                            .replace_with = "net/wireless"s,
-                            .expected_flag = "--kernel_wifi_warning"s};
+  ParserRun wifi_warning = {.find_this = "gpu/drm/ttm",
+                            .replace_with = "net/wireless",
+                            .expected_flags = {{"--kernel_wifi_warning"}}};
   ParserTest<KernelParser>("TEST_WARNING", {wifi_warning});
 }
 
 TEST(AnomalyDetectorTest, KernelWarningSuspend) {
-  ParserRun suspend_warning = {.find_this = "gpu/drm/ttm"s,
-                               .replace_with = "idle"s,
-                               .expected_flag = "--kernel_suspend_warning"s};
+  ParserRun suspend_warning = {
+      .find_this = "gpu/drm/ttm",
+      .replace_with = "idle",
+      .expected_flags = {{"--kernel_suspend_warning"}}};
   ParserTest<KernelParser>("TEST_WARNING", {suspend_warning});
 }
 
 TEST(AnomalyDetectorTest, CrashReporterCrash) {
-  ParserRun crash_reporter_crash = {.expected_flag =
-                                        "--crash_reporter_crashed"s};
+  ParserRun crash_reporter_crash = {
+      .expected_flags = {{"--crash_reporter_crashed"}}};
   ParserTest<KernelParser>("TEST_CR_CRASH", {crash_reporter_crash});
 }
 
 TEST(AnomalyDetectorTest, CrashReporterCrashRateLimit) {
-  ParserRun crash_reporter_crash = {.expected_flag =
-                                        "--crash_reporter_crashed"s};
+  ParserRun crash_reporter_crash = {
+      .expected_flags = {{"--crash_reporter_crashed"}}};
   ParserTest<KernelParser>("TEST_CR_CRASH",
                            {crash_reporter_crash, empty, empty});
 }
 
 TEST(AnomalyDetectorTest, ServiceFailure) {
-  ParserRun one{.expected_text = "-exit2-"s};
-  ParserRun two{.find_this = "crash-crash"s, .replace_with = "fresh-fresh"s};
+  ParserRun one{.expected_text = "-exit2-"};
+  ParserRun two{.find_this = "crash-crash", .replace_with = "fresh-fresh"};
   ServiceParser parser(true);
   ParserTest("TEST_SERVICE_FAILURE", {one, two}, &parser);
 }
 
 TEST(AnomalyDetectorTest, ServiceFailureArc) {
   ParserRun service_failure = {
-      .find_this = "crash-crash"s,
-      .replace_with = "arc-crash"s,
-      .expected_text = "-exit2-arc-"s,
-      .expected_flag = "--arc_service_failure=arc-crash"s};
+      .find_this = "crash-crash",
+      .replace_with = "arc-crash",
+      .expected_text = "-exit2-arc-",
+      .expected_flags = {{"--arc_service_failure=arc-crash"}}};
   ServiceParser parser(true);
   ParserTest("TEST_SERVICE_FAILURE", {service_failure}, &parser);
 }
@@ -112,8 +110,8 @@ TEST(AnomalyDetectorTest, ServiceFailureArc) {
 TEST(AnomalyDetectorTest, SELinuxViolation) {
   ParserRun selinux_violation = {
       .expected_text =
-          "-selinux-u:r:init:s0-u:r:kernel:s0-module_request-init-"s,
-      .expected_flag = "--selinux_violation"s};
+          "-selinux-u:r:init:s0-u:r:kernel:s0-module_request-init-",
+      .expected_flags = {{"--selinux_violation"}}};
   SELinuxParser parser(true);
   ParserTest("TEST_SELINUX", {selinux_violation}, &parser);
 }
@@ -129,8 +127,8 @@ TEST(AnomalyDetectorTest, SELinuxViolationPermissive) {
 TEST(AnomalyDetectorTest, SuspendFailure) {
   ParserRun suspend_failure = {
       .expected_text =
-          "-suspend failure: device: dummy_dev step: suspend errno: -22"s,
-      .expected_flag = "--suspend_failure"s};
+          "-suspend failure: device: dummy_dev step: suspend errno: -22",
+      .expected_flags = {{"--suspend_failure"}}};
   ParserTest<SuspendParser>("TEST_SUSPEND_FAILURE", {suspend_failure});
 }
 

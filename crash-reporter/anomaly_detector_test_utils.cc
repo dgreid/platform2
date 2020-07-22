@@ -17,6 +17,7 @@
 
 using ::testing::HasSubstr;
 using ::testing::SizeIs;
+using ::testing::UnorderedElementsAreArray;
 
 namespace anomaly {
 
@@ -46,6 +47,9 @@ std::vector<std::string> GetTestLogMessages(base::FilePath input_file) {
   auto log_msgs = base::SplitString(contents, "\n", base::KEEP_WHITESPACE,
                                     base::SPLIT_WANT_ALL);
   EXPECT_GT(log_msgs.size(), 0);
+  if (log_msgs.size() == 0) {
+    return log_msgs;
+  }
   // Handle likely newline at end of file.
   if (log_msgs.back().empty())
     log_msgs.pop_back();
@@ -65,8 +69,9 @@ void ParserTest(const std::string& input_file_name,
     ASSERT_THAT(crash_reports, SizeIs(run.expected_size));
     if (run.expected_text)
       EXPECT_THAT(crash_reports[0].text, HasSubstr(*run.expected_text));
-    if (run.expected_flag)
-      EXPECT_EQ(crash_reports[0].flag, *run.expected_flag);
+    if (run.expected_flags)
+      EXPECT_THAT(crash_reports[0].flags,
+                  UnorderedElementsAreArray(*run.expected_flags));
   }
 }
 

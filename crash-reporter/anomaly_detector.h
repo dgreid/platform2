@@ -29,8 +29,9 @@
 namespace anomaly {
 
 struct CrashReport {
+  CrashReport(std::string t, std::vector<std::string> f);
   std::string text;
-  std::string flag;
+  std::vector<std::string> flags;
 };
 
 using MaybeCrashReport = base::Optional<CrashReport>;

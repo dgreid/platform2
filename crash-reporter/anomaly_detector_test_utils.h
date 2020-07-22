@@ -21,7 +21,7 @@ struct ParserRun {
   base::Optional<std::string> find_this = base::nullopt;
   base::Optional<std::string> replace_with = base::nullopt;
   base::Optional<std::string> expected_text = base::nullopt;
-  base::Optional<std::string> expected_flag = base::nullopt;
+  base::Optional<std::vector<std::string>> expected_flags = base::nullopt;
   size_t expected_size = 1;
 };
 

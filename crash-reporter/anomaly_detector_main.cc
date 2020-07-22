@@ -11,6 +11,7 @@
 #include "crash-reporter/anomaly_detector_log_reader.h"
 
 #include <memory>
+#include <numeric>
 #include <string>
 
 #include <base/at_exit.h>
@@ -18,6 +19,7 @@
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
 #include <base/message_loop/message_loop.h>
+#include <base/strings/strcat.h>
 #include <base/time/default_clock.h>
 #include <base/threading/platform_thread.h>
 #include <brillo/flag_helper.h>
@@ -74,11 +76,18 @@ scoped_refptr<dbus::Bus> SetUpDBus(void) {
 }
 
 // Callback to run crash-reporter.
-void RunCrashReporter(const std::string& flag, const std::string& input) {
-  LOG(INFO) << "anomaly_detector invoking crash_reporter with " << flag;
+void RunCrashReporter(const std::vector<std::string>& flags,
+                      const std::string& input) {
+  LOG(INFO) << "anomaly_detector invoking crash_reporter with"
+            << std::accumulate(flags.begin(), flags.end(), std::string(),
+                               [](const std::string& a, const std::string& b) {
+                                 return base::StrCat({a, " ", b});
+                               });
   brillo::ProcessImpl cmd;
   cmd.AddArg("/sbin/crash_reporter");
-  cmd.AddArg(flag);
+  for (const std::string& flag : flags) {
+    cmd.AddArg(flag);
+  }
   cmd.RedirectUsingPipe(STDIN_FILENO, true);
   CHECK(cmd.Start());
   int stdin_fd = cmd.GetPipe(STDIN_FILENO);
@@ -169,7 +178,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (crash_report) {
-          RunCrashReporter(crash_report->flag, crash_report->text);
+          RunCrashReporter(crash_report->flags, crash_report->text);
         }
 
         // Handle OOM messages.

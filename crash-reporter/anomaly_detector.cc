@@ -42,6 +42,9 @@ std::string OnlyAsciiAlpha(std::string s) {
 
 namespace anomaly {
 
+CrashReport::CrashReport(std::string t, std::vector<std::string> f)
+    : text(std::move(t)), flags(std::move(f)) {}
+
 Parser::~Parser() {}
 
 // We expect only a handful of different anomalies per boot session, so the
@@ -87,7 +90,7 @@ MaybeCrashReport ServiceParser::ParseLogEntry(const std::string& line) {
     flag = "--arc_service_failure=" + service_name;
   else
     flag = "--service_failure=" + service_name;
-  return {{std::move(text), std::move(flag)}};
+  return CrashReport(std::move(text), {std::move(flag)});
 }
 
 std::string GetField(const std::string& line, std::string pattern) {
@@ -150,7 +153,7 @@ MaybeCrashReport SELinuxParser::ParseLogEntry(const std::string& line) {
   text += "\n";
   text += line;
 
-  return {{std::move(text), "--selinux_violation"}};
+  return CrashReport(std::move(text), {"--selinux_violation"});
 }
 
 std::string DetermineFlag(const std::string& info) {
@@ -210,7 +213,7 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
       last_line_ = LineType::None;
       std::string text_tmp;
       text_tmp.swap(text_);
-      return {{std::move(text_tmp), std::move(flag_)}};
+      return CrashReport(std::move(text_tmp), {std::move(flag_)});
     }
     text_ += line + "\n";
   }
@@ -222,7 +225,7 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
         (base::TimeTicks::Now() - crash_reporter_last_crashed_) >
             base::TimeDelta::FromHours(1)) {
       crash_reporter_last_crashed_ = base::TimeTicks::Now();
-      return {{"", "--crash_reporter_crashed"}};
+      return CrashReport("", {"--crash_reporter_crashed"});
     }
   }
 
@@ -269,7 +272,7 @@ MaybeCrashReport SuspendParser::ParseLogEntry(const std::string& line) {
   std::string text = base::StringPrintf(
       "%08x-suspend failure: device: %s step: %s errno: %s\n", hash,
       dev_str_.c_str(), step_str_.c_str(), errno_str_.c_str());
-  return {{std::move(text), "--suspend_failure"}};
+  return CrashReport(std::move(text), {"--suspend_failure"});
 }
 
 TerminaParser::TerminaParser(scoped_refptr<dbus::Bus> dbus) : dbus_(dbus) {}
