@@ -67,6 +67,7 @@
 #include "vm_tools/concierge/plugin_vm.h"
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
+#include "vm_tools/concierge/shared_data.h"
 #include "vm_tools/concierge/ssh_keys.h"
 #include "vm_tools/concierge/vm_permission_interface.h"
 #include "vm_tools/concierge/vmplugin_dispatcher_interface.h"
@@ -77,9 +78,6 @@ namespace vm_tools {
 namespace concierge {
 
 namespace {
-
-// Path to the runtime directory used by VMs.
-constexpr char kRuntimeDir[] = "/run/vm";
 
 // Default path to VM kernel image and rootfs.
 constexpr char kVmDefaultPath[] = "/run/imageloader/cros-termina";
@@ -99,26 +97,14 @@ constexpr char kToolsMountPath[] = "/opt/google/cros-containers";
 // Filesystem type of VM tools image.
 constexpr char kToolsFsType[] = "ext4";
 
-// Maximum number of extra disks to be mounted inside the VM.
-constexpr int kMaxExtraDisks = 10;
-
 // How long we should wait for a VM to start up.
 // While this timeout might be high, it's meant to be a final failure point, not
 // the lower bound of how long it takes.  On a loaded system (like extracting
 // large compressed files), it could take 10 seconds to boot.
 constexpr base::TimeDelta kVmStartupTimeout = base::TimeDelta::FromSeconds(30);
 
-// crosvm directory name.
-constexpr char kCrosvmDir[] = "crosvm";
-
 // crosvm log directory name.
 constexpr char kCrosvmLogDir[] = "log";
-
-// Plugin VM directory name.
-constexpr char kPluginVmDir[] = "pvm";
-
-// Daemon store base path.
-constexpr char kCryptohomeRoot[] = "/run/daemon-store";
 
 // Extended attribute indicating that user has picked a disk size and it should
 // not be resized.
@@ -134,9 +120,6 @@ constexpr char kQcowImageExtension[] = ".qcow2";
 // File extension for Plugin VMs disk types
 constexpr char kPluginVmImageExtension[] = ".pvm";
 
-// File extension for pstore backend file
-constexpr char kPstoreExtension[] = ".pstore";
-
 // Valid file extensions for disk images
 constexpr const char* kDiskImageExtensions[] = {kRawImageExtension,
                                                 kQcowImageExtension, nullptr};
@@ -150,9 +133,6 @@ constexpr char kDefaultContainerName[] = "penguin";
 
 // Path to process file descriptors.
 constexpr char kProcFileDescriptorsPath[] = "/proc/self/fd/";
-
-// Only allow hex digits in the cryptohome id.
-constexpr char kValidCryptoHomeCharacters[] = "abcdefABCDEF0123456789";
 
 constexpr uint64_t kMinimumDiskSize = 1ll * 1024 * 1024 * 1024;  // 1 GiB
 constexpr uint64_t kDiskSizeMask = ~4095ll;  // Round to disk block size.
@@ -193,9 +173,6 @@ struct UntrustedVMCheckResult {
   // untrusted VMs.
   bool skip_host_checks;
 };
-
-// Android data directory.
-constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data/data";
 
 // Passes |method_call| to |handler| and passes the response to
 // |response_sender|. If |handler| returns NULL, an empty response is created
@@ -309,54 +286,6 @@ base::FilePath GetLatestVMPath() {
   }
 
   return latest_path;
-}
-
-// Gets the path to the file given the name, user id, location, and extension.
-base::Optional<base::FilePath> GetFilePathFromName(
-    const std::string& cryptohome_id,
-    const std::string& vm_name,
-    StorageLocation storage_location,
-    const std::string& extension,
-    bool create_parent_dir) {
-  if (!base::ContainsOnlyChars(cryptohome_id, kValidCryptoHomeCharacters)) {
-    LOG(ERROR) << "Invalid cryptohome_id specified";
-    return base::nullopt;
-  }
-  // Base64 encode the given disk name to ensure it only has valid characters.
-  std::string encoded_name;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
-                        &encoded_name);
-
-  base::FilePath storage_dir = base::FilePath(kCryptohomeRoot);
-  switch (storage_location) {
-    case STORAGE_CRYPTOHOME_ROOT: {
-      storage_dir = storage_dir.Append(kCrosvmDir);
-      break;
-    }
-    case STORAGE_CRYPTOHOME_PLUGINVM: {
-      storage_dir = storage_dir.Append(kPluginVmDir);
-      break;
-    }
-    default: {
-      LOG(ERROR) << "Unknown storage location type";
-      return base::nullopt;
-    }
-  }
-  storage_dir = storage_dir.Append(cryptohome_id);
-
-  if (!base::DirectoryExists(storage_dir)) {
-    if (!create_parent_dir) {
-      return base::nullopt;
-    }
-    base::File::Error dir_error;
-
-    if (!base::CreateDirectoryAndGetError(storage_dir, &dir_error)) {
-      LOG(ERROR) << "Failed to create storage directory " << storage_dir << ": "
-                 << base::File::ErrorToString(dir_error);
-      return base::nullopt;
-    }
-  }
-  return storage_dir.Append(encoded_name).AddExtension(extension);
 }
 
 // Gets the path to a VM disk given the name, user id, and location.
@@ -484,108 +413,6 @@ bool SetUserChosenSizeAttr(const base::ScopedFD& fd) {
   constexpr char val[] = "1";
   return fsetxattr(fd.get(), kDiskImageUserChosenSizeXattr, val, sizeof(val),
                    0) == 0;
-}
-
-bool GetPluginDirectory(const base::FilePath& prefix,
-                        const string& extension,
-                        const string& vm_id,
-                        bool create,
-                        base::FilePath* path_out) {
-  string dirname;
-  base::Base64UrlEncode(vm_id, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
-                        &dirname);
-
-  base::FilePath path = prefix.Append(dirname).AddExtension(extension);
-  if (create && !base::DirectoryExists(path)) {
-    base::File::Error dir_error;
-    if (!base::CreateDirectoryAndGetError(path, &dir_error)) {
-      LOG(ERROR) << "Failed to create plugin directory " << path.value() << ": "
-                 << base::File::ErrorToString(dir_error);
-      return false;
-    }
-  }
-
-  *path_out = path;
-  return true;
-}
-
-bool GetPluginStatefulDirectory(const string& vm_id,
-                                const string& cryptohome_id,
-                                base::FilePath* path_out) {
-  return GetPluginDirectory(base::FilePath(kCryptohomeRoot)
-                                .Append(kPluginVmDir)
-                                .Append(cryptohome_id),
-                            "pvm", vm_id, true /* create */, path_out);
-}
-
-bool GetPluginIsoDirectory(const string& vm_id,
-                           const string& cryptohome_id,
-                           bool create,
-                           base::FilePath* path_out) {
-  return GetPluginDirectory(base::FilePath(kCryptohomeRoot)
-                                .Append(kPluginVmDir)
-                                .Append(cryptohome_id),
-                            "iso", vm_id, create, path_out);
-}
-
-bool GetPluginRuntimeDirectory(const string& vm_id,
-                               base::ScopedTempDir* runtime_dir_out) {
-  base::FilePath path;
-  if (GetPluginDirectory(base::FilePath("/run/pvm"), "", vm_id,
-                         true /*create */, &path)) {
-    // Take ownership of directory
-    CHECK(runtime_dir_out->Set(path));
-    return true;
-  }
-
-  return false;
-}
-
-bool GetPluginRootDirectory(const string& vm_id,
-                            base::ScopedTempDir* root_dir_out) {
-  base::FilePath path;
-  if (!base::CreateTemporaryDirInDir(base::FilePath(kRuntimeDir), "vm.",
-                                     &path)) {
-    PLOG(ERROR) << "Unable to create root directory for VM";
-    return false;
-  }
-
-  // Take ownership of directory
-  CHECK(root_dir_out->Set(path));
-  return true;
-}
-
-bool CreatePluginRootHierarchy(const base::FilePath& root_path) {
-  base::FilePath etc_dir(root_path.Append("etc"));
-  base::File::Error dir_error;
-  if (!CreateDirectoryAndGetError(etc_dir, &dir_error)) {
-    LOG(ERROR) << "Unable to create /etc in root directory for VM "
-               << base::File::ErrorToString(dir_error);
-    return false;
-  }
-
-  // Note that this will be dangling (or rather point to concierge's timezone
-  // instance) until crosvm bind mounts /var/lib/timezone and
-  // /usr/share/zoneinfo into plugin jail.
-  if (!base::CreateSymbolicLink(base::FilePath("/var/lib/timezone/localtime"),
-                                etc_dir.Append("localtime"))) {
-    PLOG(ERROR) << "Unable to create /etc/localtime symlink";
-    return false;
-  }
-
-  return true;
-}
-
-bool GetPlugin9PSocketPath(const string& vm_id, base::FilePath* path_out) {
-  base::FilePath runtime_dir;
-  if (!GetPluginDirectory(base::FilePath("/run/pvm"), "", vm_id,
-                          true /* create */, &runtime_dir)) {
-    LOG(ERROR) << "Unable to get runtime directory for 9P socket";
-    return false;
-  }
-
-  *path_out = runtime_dir.Append("9p.sock");
-  return true;
 }
 
 void FormatDiskImageStatus(const DiskImageOperation* op,
@@ -1082,77 +909,6 @@ void Service::HandleSigterm() {
   base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure_);
 }
 
-template <class StartXXRequest>
-std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
-    dbus::MethodCall* method_call,
-    dbus::MessageReader* reader,
-    dbus::MessageWriter* writer,
-    bool allow_zero_cpus) {
-  DCHECK(sequence_checker_.CalledOnValidSequence());
-
-  StartXXRequest request;
-  StartVmResponse response;
-  // We change to a success status later if necessary.
-  response.set_status(VM_STATUS_FAILURE);
-
-  if (!reader->PopArrayOfBytesAsProto(&request)) {
-    LOG(ERROR) << "Unable to parse StartVmRequest from message";
-    response.set_failure_reason("Unable to parse protobuf");
-    writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
-  }
-
-  // Check the CPU count.
-  if ((request.cpus() == 0 && !allow_zero_cpus) ||
-      request.cpus() > base::SysInfo::NumberOfProcessors()) {
-    LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
-    response.set_failure_reason("Invalid CPU count");
-    writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
-  }
-
-  // Make sure the VM has a name.
-  if (request.name().empty()) {
-    LOG(ERROR) << "Ignoring request with empty name";
-    response.set_failure_reason("Missing VM name");
-    writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
-  }
-
-  auto iter = FindVm(request.owner_id(), request.name());
-  if (iter != vms_.end()) {
-    LOG(INFO) << "VM with requested name is already running";
-
-    VmInterface::Info vm = iter->second->GetInfo();
-
-    VmInfo* vm_info = response.mutable_vm_info();
-    vm_info->set_ipv4_address(vm.ipv4_address);
-    vm_info->set_pid(vm.pid);
-    vm_info->set_cid(vm.cid);
-    vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
-    switch (vm.status) {
-      case VmInterface::Status::STARTING: {
-        response.set_status(VM_STATUS_STARTING);
-        break;
-      }
-      case VmInterface::Status::RUNNING: {
-        response.set_status(VM_STATUS_RUNNING);
-        break;
-      }
-      default: {
-        response.set_status(VM_STATUS_UNKNOWN);
-        break;
-      }
-    }
-    response.set_success(true);
-
-    writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
-  }
-
-  return {true, request, response};
-}
-
 std::unique_ptr<dbus::Response> Service::StartVm(
     dbus::MethodCall* method_call) {
   LOG(INFO) << "Received StartVm request";
@@ -1564,365 +1320,6 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   vm_info->set_seneschal_server_handle(seneschal_server_handle);
   writer.AppendProtoAsArrayOfBytes(response);
 
-  SendVmStartedSignal(vm_id, *vm_info, response.status());
-
-  vms_[vm_id] = std::move(vm);
-  return dbus_response;
-}
-
-std::unique_ptr<dbus::Response> Service::StartPluginVm(
-    dbus::MethodCall* method_call) {
-  LOG(INFO) << "Received StartPluginVm request";
-
-  bool success;
-  std::unique_ptr<dbus::Response> dbus_response(
-      dbus::Response::FromMethodCall(method_call));
-  dbus::MessageReader reader(method_call);
-  dbus::MessageWriter writer(dbus_response.get());
-  StartPluginVmRequest request;
-  StartVmResponse response;
-  std::tie(success, request, response) =
-      StartVmHelper<StartPluginVmRequest>(method_call, &reader, &writer);
-
-  if (!success) {
-    return dbus_response;
-  }
-
-  // Get the stateful directory.
-  base::FilePath stateful_dir;
-  if (!GetPluginStatefulDirectory(request.name(), request.owner_id(),
-                                  &stateful_dir)) {
-    LOG(ERROR) << "Unable to create stateful directory for VM";
-
-    response.set_failure_reason("Unable to create stateful directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Get the directory for ISO images.
-  base::FilePath iso_dir;
-  if (!GetPluginIsoDirectory(request.name(), request.owner_id(),
-                             true /* create */, &iso_dir)) {
-    LOG(ERROR) << "Unable to create directory holding ISOs for VM";
-
-    response.set_failure_reason("Unable to create ISO directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Create the runtime directory.
-  base::ScopedTempDir runtime_dir;
-  if (!GetPluginRuntimeDirectory(request.name(), &runtime_dir)) {
-    LOG(ERROR) << "Unable to create runtime directory for VM";
-
-    response.set_failure_reason("Unable to create runtime directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Create the root directory.
-  base::ScopedTempDir root_dir;
-  if (!GetPluginRootDirectory(request.name(), &root_dir)) {
-    LOG(ERROR) << "Unable to create runtime directory for VM";
-
-    response.set_failure_reason("Unable to create runtime directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  if (!CreatePluginRootHierarchy(root_dir.GetPath())) {
-    response.set_failure_reason("Unable to create plugin root hierarchy");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  if (!PluginVm::WriteResolvConf(root_dir.GetPath().Append("etc"), nameservers_,
-                                 search_domains_)) {
-    LOG(ERROR) << "Unable to seed resolv.conf for the Plugin VM";
-
-    response.set_failure_reason("Unable to seed resolv.conf");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Generate the token used by cicerone to identify the VM and write it to
-  // a VM specific directory that gets mounted into the VM.
-  std::string vm_token = base::GenerateGUID();
-  if (base::WriteFile(runtime_dir.GetPath().Append("cicerone.token"),
-                      vm_token.c_str(),
-                      vm_token.length()) != vm_token.length()) {
-    PLOG(ERROR) << "Failure writing out cicerone token to file";
-
-    response.set_failure_reason("Unable to set cicerone token");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  base::FilePath p9_socket_path;
-  if (!GetPlugin9PSocketPath(request.name(), &p9_socket_path)) {
-    response.set_failure_reason("Internal error: unable to get 9P directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  base::ScopedFD p9_socket =
-      PluginVm::CreateUnixSocket(p9_socket_path, SOCK_STREAM);
-  if (!p9_socket.is_valid()) {
-    LOG(ERROR) << "Failed creating 9P socket for file sharing";
-
-    response.set_failure_reason("Internal error: unable to create 9P socket");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  std::unique_ptr<patchpanel::Client> network_client =
-      patchpanel::Client::New();
-  if (!network_client) {
-    LOG(ERROR) << "Unable to open networking service client";
-
-    response.set_failure_reason("Unable to open network service client");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy =
-      SeneschalServerProxy::CreateFdProxy(seneschal_service_proxy_, p9_socket);
-  if (!seneschal_server_proxy) {
-    LOG(ERROR) << "Unable to start shared directory server";
-
-    response.set_failure_reason("Unable to start shared directory server");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Build the plugin params.
-  std::vector<string> params(
-      std::make_move_iterator(request.mutable_params()->begin()),
-      std::make_move_iterator(request.mutable_params()->end()));
-
-  // Now start the VM.
-  VmId vm_id(request.owner_id(), request.name());
-  std::unique_ptr<PluginVm> vm = PluginVm::Create(
-      vm_id, request.cpus(), std::move(params), std::move(stateful_dir),
-      std::move(iso_dir), root_dir.Take(), runtime_dir.Take(),
-      std::move(network_client), request.subnet_index(),
-      request.net_options().enable_vnet_hdr(),
-      std::move(seneschal_server_proxy), vm_permission_service_proxy_,
-      vmplugin_service_proxy_);
-  if (!vm) {
-    LOG(ERROR) << "Unable to start VM";
-    response.set_failure_reason("Unable to start VM");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  VmInterface::Info info = vm->GetInfo();
-
-  VmInfo* vm_info = response.mutable_vm_info();
-  vm_info->set_ipv4_address(info.ipv4_address);
-  vm_info->set_pid(info.pid);
-  vm_info->set_cid(info.cid);
-  vm_info->set_seneschal_server_handle(info.seneschal_server_handle);
-  vm_info->set_permission_token(info.permission_token);
-  switch (info.status) {
-    case VmInterface::Status::STARTING: {
-      response.set_status(VM_STATUS_STARTING);
-      break;
-    }
-    case VmInterface::Status::RUNNING: {
-      response.set_status(VM_STATUS_RUNNING);
-      break;
-    }
-    default: {
-      response.set_status(VM_STATUS_UNKNOWN);
-      break;
-    }
-  }
-  response.set_success(true);
-  writer.AppendProtoAsArrayOfBytes(response);
-
-  NotifyCiceroneOfVmStarted(vm_id, 0 /* cid */, info.pid, std::move(vm_token));
-  SendVmStartedSignal(vm_id, *vm_info, response.status());
-
-  vms_[vm_id] = std::move(vm);
-  return dbus_response;
-}
-
-std::unique_ptr<dbus::Response> Service::StartArcVm(
-    dbus::MethodCall* method_call) {
-  LOG(INFO) << "Received StartArcVm request";
-  bool success;
-  std::unique_ptr<dbus::Response> dbus_response(
-      dbus::Response::FromMethodCall(method_call));
-  dbus::MessageReader reader(method_call);
-  dbus::MessageWriter writer(dbus_response.get());
-  StartArcVmRequest request;
-  StartVmResponse response;
-  std::tie(success, request, response) =
-      StartVmHelper<StartArcVmRequest>(method_call, &reader, &writer);
-
-  if (!success) {
-    return dbus_response;
-  }
-
-  if (request.disks_size() > kMaxExtraDisks) {
-    LOG(ERROR) << "Rejecting request with " << request.disks_size()
-               << " extra disks";
-
-    response.set_failure_reason("Too many extra disks");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  const base::FilePath kernel(request.vm().kernel());
-  const base::FilePath rootfs(request.vm().rootfs());
-  const base::FilePath fstab(request.fstab());
-
-  if (!base::PathExists(kernel)) {
-    LOG(ERROR) << "Missing VM kernel path: " << kernel.value();
-
-    response.set_failure_reason("Kernel path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  if (!base::PathExists(rootfs)) {
-    LOG(ERROR) << "Missing VM rootfs path: " << rootfs.value();
-
-    response.set_failure_reason("Rootfs path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  if (!base::PathExists(fstab)) {
-    LOG(ERROR) << "Missing VM fstab path: " << fstab.value();
-
-    response.set_failure_reason("Fstab path does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  std::vector<ArcVm::Disk> disks;
-  for (const auto& disk : request.disks()) {
-    if (!base::PathExists(base::FilePath(disk.path()))) {
-      LOG(ERROR) << "Missing disk path: " << disk.path();
-      response.set_failure_reason("One or more disk paths do not exist");
-      writer.AppendProtoAsArrayOfBytes(response);
-      return dbus_response;
-    }
-    disks.push_back(ArcVm::Disk{
-        .path = base::FilePath(disk.path()),
-        .writable = disk.writable(),
-    });
-  }
-
-  // Create the runtime directory.
-  base::FilePath runtime_dir;
-  if (!base::CreateTemporaryDirInDir(base::FilePath(kRuntimeDir), "vm.",
-                                     &runtime_dir)) {
-    PLOG(ERROR) << "Unable to create runtime directory for VM";
-
-    response.set_failure_reason(
-        "Internal error: unable to create runtime directory");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Allocate resources for the VM.
-  uint32_t vsock_cid = vsock_cid_pool_.Allocate();
-  if (vsock_cid == 0) {
-    LOG(ERROR) << "Unable to allocate vsock context id";
-
-    response.set_failure_reason("Unable to allocate vsock cid");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  std::unique_ptr<patchpanel::Client> network_client =
-      patchpanel::Client::New();
-  if (!network_client) {
-    LOG(ERROR) << "Unable to open networking service client";
-
-    response.set_failure_reason("Unable to open network service client");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // Map the chronos user (1000) and the chronos-access group (1001) to the
-  // AID_EXTERNAL_STORAGE user and group (1077).
-  uint32_t seneschal_server_port = next_seneschal_server_port_++;
-  std::unique_ptr<SeneschalServerProxy> server_proxy =
-      SeneschalServerProxy::CreateVsockProxy(seneschal_service_proxy_,
-                                             seneschal_server_port, vsock_cid,
-                                             {{1000, 1077}}, {{1001, 1077}});
-  if (!server_proxy) {
-    LOG(ERROR) << "Unable to start shared directory server";
-
-    response.set_failure_reason("Unable to start shared directory server");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  uint32_t seneschal_server_handle = server_proxy->handle();
-
-  // Build the plugin params.
-  std::vector<string> params(
-      std::make_move_iterator(request.mutable_params()->begin()),
-      std::make_move_iterator(request.mutable_params()->end()));
-  params.emplace_back(base::StringPrintf("androidboot.seneschal_server_port=%d",
-                                         seneschal_server_port));
-
-  // Start the VM and build the response.
-  ArcVmFeatures features;
-  features.rootfs_writable = request.rootfs_writable();
-
-  const auto pstore_path = GetFilePathFromName(
-      request.owner_id(), request.name(), STORAGE_CRYPTOHOME_ROOT,
-      kPstoreExtension, true /* create_parent_dir */);
-  if (!pstore_path) {
-    LOG(ERROR) << "Failed to get pstore path";
-
-    response.set_failure_reason("Failed to get pstore path");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-  const uint32_t pstore_size = 1024 * 1024;
-
-  base::FilePath data_dir = base::FilePath(kAndroidDataDir);
-  if (!base::PathExists(data_dir)) {
-    LOG(WARNING) << "Android data directory does not exist";
-
-    response.set_failure_reason("Android data directory does not exist");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  auto vm = ArcVm::Create(
-      std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
-      std::move(*pstore_path), pstore_size, std::move(disks), vsock_cid,
-      std::move(data_dir), std::move(network_client), std::move(server_proxy),
-      std::move(runtime_dir), features, std::move(params));
-  if (!vm) {
-    LOG(ERROR) << "Unable to start VM";
-
-    response.set_failure_reason("Unable to start VM");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
-  // ARCVM is ready.
-  LOG(INFO) << "Started VM with pid " << vm->pid();
-
-  VmInfo* vm_info = response.mutable_vm_info();
-  response.set_success(true);
-  response.set_status(VM_STATUS_RUNNING);
-  vm_info->set_ipv4_address(vm->IPv4Address());
-  vm_info->set_pid(vm->pid());
-  vm_info->set_cid(vsock_cid);
-  vm_info->set_seneschal_server_handle(seneschal_server_handle);
-  writer.AppendProtoAsArrayOfBytes(response);
-
-  VmId vm_id(request.owner_id(), request.name());
   SendVmStartedSignal(vm_id, *vm_info, response.status());
 
   vms_[vm_id] = std::move(vm);
