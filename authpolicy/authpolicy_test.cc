@@ -14,10 +14,10 @@
 #include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/test/simple_test_clock.h>
+#include <base/test/task_environment.h>
 #include <brillo/asan.h>
 #include <brillo/dbus/dbus_method_invoker.h>
 #include <brillo/file_utils.h>
@@ -409,8 +409,6 @@ class AuthPolicyTest : public testing::Test {
   void SetUp() override {
     // The message loop registers a task runner with the current thread, which
     // is used by TgtManager to post automatic TGT renewal tasks.
-    message_loop_ = std::make_unique<base::MessageLoop>();
-
     const ObjectPath object_path(std::string("/object/path"));
     auto dbus_object =
         std::make_unique<DBusObject>(nullptr, mock_bus_, object_path);
@@ -451,7 +449,7 @@ class AuthPolicyTest : public testing::Test {
         .WillOnce(Return(mock_exported_object_.get()));
     EXPECT_CALL(*mock_bus_, GetDBusTaskRunner())
         .Times(1)
-        .WillOnce(Return(message_loop_->task_runner().get()));
+        .WillOnce(Return(task_environment_.GetMainThreadTaskRunner().get()));
     EXPECT_CALL(*mock_exported_object_, ExportMethod(_, _, _, _))
         .Times(AnyNumber());
     EXPECT_CALL(*mock_exported_object_, SendSignal(_))
@@ -998,7 +996,8 @@ class AuthPolicyTest : public testing::Test {
     session_state_changed_callback_.Run(&signal);
   }
 
-  std::unique_ptr<base::MessageLoop> message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   scoped_refptr<MockBus> mock_bus_ = new MockBus(dbus::Bus::Options());
   scoped_refptr<MockExportedObject> mock_exported_object_;
