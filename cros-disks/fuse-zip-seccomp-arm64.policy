@@ -14,6 +14,7 @@ exit_group: 1
 faccessat: 1
 fcntl: 1
 fstat: 1
+futex: 1
 getcwd: 1
 getdents64: 1
 geteuid: 1
