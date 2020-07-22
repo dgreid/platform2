@@ -474,9 +474,14 @@ bool DlcBase::Mount(ErrorPtr* err) {
   // Creates a file which holds the root mount path, allowing for indirect
   // access for processes/scripts which can't access DBus.
   if (manifest_.mount_file_required() &&
-      Prefs(prefs_package_path_).SetKey(kDlcRootMount, GetRoot().value()))
+      !Prefs(prefs_package_path_).SetKey(kDlcRootMount, GetRoot().value())) {
+    // TODO(kimjae): Test this by injecting |Prefs| class.
     LOG(ERROR) << "Failed to create indirect root mount file: "
                << JoinPaths(prefs_package_path_, kDlcRootMount);
+    ErrorPtr tmp_err;
+    Unmount(&tmp_err);
+    return false;
+  }
 
   ChangeState(DlcState::INSTALLED);
   return true;
