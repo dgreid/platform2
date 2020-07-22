@@ -805,6 +805,13 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
         credentials.challenge_credentials_keyset_info();
   }
 
+  // Set the fscrypt policy version, depending on whether the fscrypt key ioctls
+  // are supported.
+  if (mount_type_ == MountType::DIR_CRYPTO &&
+      dircrypto::CheckFscryptKeyIoctlSupport()) {
+    serialized.set_fscrypt_policy_version(FSCRYPT_POLICY_V2);
+  }
+
   // TODO(wad) move to storage by label-derivative and not number.
   if (!StoreVaultKeysetForUser(
        credentials.GetObfuscatedUsername(system_salt_),
