@@ -70,6 +70,7 @@ class BootRecords {
   FRIEND_TEST(BootRecordsTest, Load);
   FRIEND_TEST(BootRecordsTest, GetBootRange);
   FRIEND_TEST(BootRecordsTest, LoadFromFile);
+  FRIEND_TEST(ViewerPlaintextTest, GetBootIdAt);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId);
 

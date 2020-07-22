@@ -169,4 +169,48 @@ TEST_F(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId) {
   }
 }
 
+TEST_F(ViewerPlaintextTest, GetBootIdAt) {
+  base::Time now = base::Time::Now();
+
+  {
+    Config c;
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+
+    // Found no corresponding boot (before the 1st boot).
+    EXPECT_TRUE(v.GetBootIdAt(now - base::TimeDelta::FromSeconds(100)).empty());
+
+    // Found the 1st boot.
+    EXPECT_EQ("46640bbceeb149a696171d1ea34516ad", v.GetBootIdAt(now));
+    EXPECT_EQ("46640bbceeb149a696171d1ea34516ad",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(1)));
+
+    // Found the 2nd (current) boot.
+    EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(2)));
+    EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(3)));
+    EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(100)));
+  }
+
+  {
+    Config c;
+    ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
+
+    // Found the 2nd (current) boot.
+    EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(100)));
+    EXPECT_EQ("9fa644cb05dc4e3ebe3be322ac8d1e86",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(2)));
+
+    // Found the 1st boot.
+    EXPECT_EQ("46640bbceeb149a696171d1ea34516ad",
+              v.GetBootIdAt(now + base::TimeDelta::FromSeconds(1)));
+    EXPECT_EQ("46640bbceeb149a696171d1ea34516ad", v.GetBootIdAt(now));
+
+    // Found no corresponding boot (before the 1st boot).
+    EXPECT_TRUE(v.GetBootIdAt(now - base::TimeDelta::FromSeconds(100)).empty());
+  }
+}
+
 }  // namespace croslog

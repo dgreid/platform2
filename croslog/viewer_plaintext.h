@@ -30,6 +30,7 @@ class ViewerPlaintext : public Multiplexer::Observer {
   bool Run();
 
  private:
+  FRIEND_TEST(ViewerPlaintextTest, GetBootIdAt);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId);
 

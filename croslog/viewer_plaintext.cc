@@ -237,7 +237,7 @@ void ViewerPlaintext::WriteLogInExportFormat(const LogEntry& entry) {
 std::string ViewerPlaintext::GetBootIdAt(base::Time time) {
   const auto& boot_ranges = boot_records_.boot_ranges();
   DCHECK_GE(cache_boot_range_index_, -1);
-  DCHECK_LT(cache_boot_range_index_, boot_ranges.size());
+  DCHECK_LT(cache_boot_range_index_, static_cast<int>(boot_ranges.size()));
 
   // First, tries to reuse the index used at the last time. In most case, the
   // logs are read sequentially and the boot id is likely to be same as the
