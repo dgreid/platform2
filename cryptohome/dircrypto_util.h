@@ -52,6 +52,9 @@ bool RemoveDirectoryKey(const KeyReference& key_reference,
 // Returns the directory's key state, or returns UNKNOWN on errors.
 KeyState GetDirectoryKeyState(const base::FilePath& dir);
 
+// Returns the directory's policy version or returns -1.
+int GetDirectoryPolicyVersion(const base::FilePath& dir);
+
 }  // namespace dircrypto
 
 #endif  // CRYPTOHOME_DIRCRYPTO_UTIL_H_
