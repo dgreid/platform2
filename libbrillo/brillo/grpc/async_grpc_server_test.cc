@@ -9,8 +9,8 @@
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <gtest/gtest.h>
 
@@ -67,7 +67,7 @@ class AsyncGrpcServerTest : public ::testing::Test {
     loop.Run();
   }
 
-  base::MessageLoopForIO message_loop_;
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
   base::ScopedTempDir temp_dir_;
   std::unique_ptr<AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>
       server_;

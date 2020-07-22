@@ -10,7 +10,7 @@
 
 #include <base/bind.h>
 #include <base/location.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/asynchronous_signal_handler.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
@@ -51,8 +51,8 @@ class ProcessReaperTest : public ::testing::Test {
   }
 
  protected:
-  base::MessageLoopForIO base_loop_;
-  brillo::BaseMessageLoop brillo_loop_{&base_loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  brillo::BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   brillo::AsynchronousSignalHandler async_signal_handler_;
 
   // ProcessReaper under test.

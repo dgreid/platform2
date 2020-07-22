@@ -14,8 +14,8 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <gmock/gmock.h>
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
@@ -183,14 +183,14 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
 
     // Create the AsyncGrpcClient.
     client_ = std::make_unique<AsyncGrpcClient<test_rpcs::ExampleService>>(
-        message_loop_.task_runner(), GetDomainSocketAddress());
+        task_executor_.task_runner(), GetDomainSocketAddress());
   }
 
   void StartServer() {
     // Create and start the AsyncGrpcServer.
     server_ = std::make_unique<
         AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>(
-        message_loop_.task_runner(),
+        task_executor_.task_runner(),
         std::vector<std::string>{GetDomainSocketAddress()});
     server_->RegisterHandler(
         &test_rpcs::ExampleService::AsyncService::RequestEmptyRpc,
@@ -208,7 +208,7 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
   // shutdown by ShutDownSecondClient.
   void CreateSecondClient() {
     client2_ = std::make_unique<AsyncGrpcClient<test_rpcs::ExampleService>>(
-        message_loop_.task_runner(), GetDomainSocketAddress());
+        task_executor_.task_runner(), GetDomainSocketAddress());
   }
 
   // Shutdown the second AsyncGrpcClient.
@@ -243,7 +243,7 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
     server_.reset();
   }
 
-  base::MessageLoopForIO message_loop_;
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
   std::unique_ptr<AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>
       server_;
   std::unique_ptr<AsyncGrpcClient<test_rpcs::ExampleService>> client_;

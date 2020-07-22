@@ -15,9 +15,9 @@
 #include <base/bind.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/message_loop/message_loop.h>
 #include <base/rand_util.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/errors/error_codes.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/message_loops/message_loop_utils.h>
@@ -1039,8 +1039,8 @@ TEST_F(FileStreamTest, FromFileDescriptor_ReadAsync) {
   bool succeeded = false;
   bool failed = false;
   char buffer[100];
-  base::MessageLoopForIO base_loop;
-  BaseMessageLoop brillo_loop{&base_loop};
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  BaseMessageLoop brillo_loop{task_executor.task_runner()};
   brillo_loop.SetAsCurrent();
 
   auto success_callback = [](bool* succeeded, char* buffer, size_t size) {
@@ -1087,8 +1087,8 @@ TEST_F(FileStreamTest, FromFileDescriptor_WriteAsync) {
   bool succeeded = false;
   bool failed = false;
   const std::string data{"abracadabra"};
-  base::MessageLoopForIO base_loop;
-  BaseMessageLoop brillo_loop{&base_loop};
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  BaseMessageLoop brillo_loop{task_executor.task_runner()};
   brillo_loop.SetAsCurrent();
 
   ASSERT_EQ(0, pipe(fds));

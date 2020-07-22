@@ -21,6 +21,7 @@
 #include <base/location.h>
 #include <base/run_loop.h>
 #include <base/memory/weak_ptr.h>
+#include <base/message_loop/message_loop.h>
 #include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <gtest/gtest_prod.h>

@@ -6,8 +6,8 @@
 
 #include <base/at_exit.h>
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/http/http_connection_curl.h>
 #include <brillo/http/http_request.h>
@@ -225,7 +225,7 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
   // relies on a message loop to run all the async tasks.
   // For this, create a temporary I/O message loop and run it ourselves for the
   // duration of the test.
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
   base::RunLoop run_loop;
 
   // Initial expectations for creating a CURL connection.
@@ -308,7 +308,7 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
 
   // Just in case something goes wrong and |success_callback| isn't called,
   // post a time-out quit closure to abort the message loop after 1 second.
-  message_loop.task_runner()->PostDelayedTask(
+  task_executor.task_runner()->PostDelayedTask(
       FROM_HERE, run_loop.QuitClosure(), base::TimeDelta::FromSeconds(1));
   run_loop.Run();
   EXPECT_EQ(1, success_call_count);

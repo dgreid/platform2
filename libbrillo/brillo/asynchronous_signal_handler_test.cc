@@ -12,8 +12,8 @@
 
 #include <base/bind.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
 
@@ -38,8 +38,8 @@ class AsynchronousSignalHandlerTest : public ::testing::Test {
   }
 
  protected:
-  base::MessageLoopForIO base_loop_;
-  BaseMessageLoop brillo_loop_{&base_loop_};
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  BaseMessageLoop brillo_loop_{task_executor_.task_runner()};
   std::vector<struct signalfd_siginfo> infos_;
   AsynchronousSignalHandler handler_;
 
