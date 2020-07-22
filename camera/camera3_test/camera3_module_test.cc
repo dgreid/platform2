@@ -339,7 +339,8 @@ static void InitCameraModuleByFacing(
     int facing,
     cros::CameraMojoChannelManager* mojo_manager,
     void** cam_hal_handle,
-    cros::cros_camera_hal_t** cros_camera_hal) {
+    cros::cros_camera_hal_t** cros_camera_hal,
+    base::FilePath* camera_hal_path) {
   // Do cleanup when exit from ASSERT_XX
   struct CleanupModule {
     void operator()(void** cam_hal_handle) {
@@ -364,6 +365,7 @@ static void InitCameraModuleByFacing(
         if (info.facing == facing) {
           base::CommandLine::ForCurrentProcess()->AppendSwitchASCII(
               "camera_ids", std::to_string(i));
+          *camera_hal_path = hal_path;
           cleanup_ptr.release();
           return;
         }
@@ -1322,7 +1324,7 @@ bool InitializeTest(int* argc,
   if (facing != -ENOENT) {
     camera3_test::GetModuleThread().Start();
     camera3_test::InitCameraModuleByFacing(facing, mojo_manager, cam_hal_handle,
-                                           cros_camera_hal);
+                                           cros_camera_hal, &camera_hal_path);
   } else if (!camera_hal_path.empty()) {
     camera3_test::GetModuleThread().Start();
     camera3_test::InitCameraModuleByHalPath(camera_hal_path, mojo_manager,
