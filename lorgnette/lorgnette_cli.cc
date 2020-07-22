@@ -294,7 +294,7 @@ int main(int argc, char** argv) {
 
   // Create a task executor for this thread. This will automatically be bound
   // to the current thread so that it is usable by other code for posting tasks.
-  base::SingleThreadTaskExecutor executor(base::MessageLoop::TYPE_IO);
+  base::SingleThreadTaskExecutor executor(base::MessagePumpType::IO);
 
   // Create a FileDescriptorWatcher instance for this thread. The libbase D-Bus
   // bindings use this internally via thread-local storage, but do not properly
