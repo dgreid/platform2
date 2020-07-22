@@ -37,19 +37,7 @@ CrosHealthd::CrosHealthd(Context* context)
 
   CHECK(context_->Initialize()) << "Failed to initialize context.";
 
-  backlight_fetcher_ = std::make_unique<BacklightFetcher>(context_);
-
-  battery_fetcher_ = std::make_unique<BatteryFetcher>(context_);
-
-  bluetooth_fetcher_ = std::make_unique<BluetoothFetcher>(context_);
-
-  cpu_fetcher_ = std::make_unique<CpuFetcher>(context_);
-
-  disk_fetcher_ = std::make_unique<DiskFetcher>();
-
-  fan_fetcher_ = std::make_unique<FanFetcher>(context_);
-
-  system_fetcher_ = std::make_unique<SystemFetcher>(context_);
+  fetch_aggregator_ = std::make_unique<FetchAggregator>(context_);
 
   bluetooth_events_ = std::make_unique<BluetoothEventsImpl>(context_);
 
@@ -61,10 +49,8 @@ CrosHealthd::CrosHealthd(Context* context)
       context_, &routine_factory_impl_);
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
-      backlight_fetcher_.get(), battery_fetcher_.get(),
-      bluetooth_fetcher_.get(), cpu_fetcher_.get(), disk_fetcher_.get(),
-      fan_fetcher_.get(), system_fetcher_.get(), bluetooth_events_.get(),
-      lid_events_.get(), power_events_.get(), routine_service_.get());
+      fetch_aggregator_.get(), bluetooth_events_.get(), lid_events_.get(),
+      power_events_.get(), routine_service_.get());
 
   binding_set_.set_connection_error_handler(
       base::Bind(&CrosHealthd::OnDisconnect, base::Unretained(this)));

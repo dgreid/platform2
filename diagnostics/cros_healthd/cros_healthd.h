@@ -20,13 +20,7 @@
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
-#include "diagnostics/cros_healthd/fetchers/backlight_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
+#include "diagnostics/cros_healthd/fetch_aggregator.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -79,25 +73,9 @@ class CrosHealthd final
   // event implementations and diagnostic routines.
   Context* const context_ = nullptr;
 
-  // |backlight_fetcher_| is responsible for collecting metrics related to
-  // the device's backlights. It uses |cros_config_| to determine whether or not
-  // the device has a backlight.
-  std::unique_ptr<BacklightFetcher> backlight_fetcher_;
-  // |battery_fetcher_| is responsible for collecting all battery metrics (smart
-  // and regular) by using the available D-Bus proxies. It also uses
-  // |cros_config_| to determine which of those metrics a device supports.
-  std::unique_ptr<BatteryFetcher> battery_fetcher_;
-  // |bluetooth_fetcher_| is responsible for collecting Bluetooth information.
-  std::unique_ptr<BluetoothFetcher> bluetooth_fetcher_;
-  // |cpu_fetcher_| is responsible for collecting CPU information.
-  std::unique_ptr<CpuFetcher> cpu_fetcher_;
-  // |disk_fetcher_| is responsible for collecting disk information.
-  std::unique_ptr<DiskFetcher> disk_fetcher_;
-  // |fan_fetcher_| is responsible for collecting fan information using
-  // |debugd_proxy_|.
-  std::unique_ptr<FanFetcher> fan_fetcher_;
-  // |system_fetcher_| is responsible for collecting system information.
-  std::unique_ptr<SystemFetcher> system_fetcher_;
+  // |fetch_aggregator_| is responsible for fulfulling all ProbeTelemetryInfo
+  // requests.
+  std::unique_ptr<FetchAggregator> fetch_aggregator_;
 
   // Provides support for Bluetooth-related events.
   std::unique_ptr<BluetoothEvents> bluetooth_events_;

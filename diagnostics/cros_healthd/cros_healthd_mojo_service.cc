@@ -17,47 +17,24 @@
 #include <dbus/cros_healthd/dbus-constants.h>
 #include <mojo/public/cpp/bindings/interface_request.h>
 
-#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/memory_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/process_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/stateful_partition_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/timezone_fetcher.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 CrosHealthdMojoService::CrosHealthdMojoService(
-    BacklightFetcher* backlight_fetcher,
-    BatteryFetcher* battery_fetcher,
-    BluetoothFetcher* bluetooth_fetcher,
-    CpuFetcher* cpu_fetcher,
-    DiskFetcher* disk_fetcher,
-    FanFetcher* fan_fetcher,
-    SystemFetcher* system_fetcher,
+    FetchAggregator* fetch_aggregator,
     BluetoothEvents* bluetooth_events,
     LidEvents* lid_events,
     PowerEvents* power_events,
     CrosHealthdRoutineService* routine_service)
-    : backlight_fetcher_(backlight_fetcher),
-      battery_fetcher_(battery_fetcher),
-      bluetooth_fetcher_(bluetooth_fetcher),
-      cpu_fetcher_(cpu_fetcher),
-      disk_fetcher_(disk_fetcher),
-      fan_fetcher_(fan_fetcher),
-      system_fetcher_(system_fetcher),
+    : fetch_aggregator_(fetch_aggregator),
       bluetooth_events_(bluetooth_events),
       lid_events_(lid_events),
       power_events_(power_events),
       routine_service_(routine_service) {
-  DCHECK(backlight_fetcher_);
-  DCHECK(battery_fetcher_);
-  DCHECK(bluetooth_fetcher_);
-  DCHECK(cpu_fetcher_);
-  DCHECK(disk_fetcher_);
-  DCHECK(fan_fetcher_);
-  DCHECK(system_fetcher_);
+  DCHECK(fetch_aggregator_);
   DCHECK(bluetooth_events_);
   DCHECK(lid_events_);
   DCHECK(power_events_);
@@ -234,61 +211,7 @@ void CrosHealthdMojoService::ProbeProcessInfo(
 void CrosHealthdMojoService::ProbeTelemetryInfo(
     const std::vector<ProbeCategoryEnum>& categories,
     ProbeTelemetryInfoCallback callback) {
-  chromeos::cros_healthd::mojom::TelemetryInfo telemetry_info;
-  for (const auto category : categories) {
-    switch (category) {
-      case ProbeCategoryEnum::kBattery: {
-        telemetry_info.battery_result = battery_fetcher_->FetchBatteryInfo();
-        break;
-      }
-      case ProbeCategoryEnum::kCpu: {
-        telemetry_info.cpu_result =
-            cpu_fetcher_->FetchCpuInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kNonRemovableBlockDevices: {
-        telemetry_info.block_device_result =
-            disk_fetcher_->FetchNonRemovableBlockDevicesInfo(
-                base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kTimezone: {
-        telemetry_info.timezone_result = FetchTimezoneInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kMemory: {
-        telemetry_info.memory_result = FetchMemoryInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kBacklight: {
-        telemetry_info.backlight_result =
-            backlight_fetcher_->FetchBacklightInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kFan: {
-        telemetry_info.fan_result =
-            fan_fetcher_->FetchFanInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kStatefulPartition: {
-        telemetry_info.stateful_partition_result =
-            FetchStatefulPartitionInfo(base::FilePath("/"));
-        break;
-      }
-      case ProbeCategoryEnum::kBluetooth: {
-        telemetry_info.bluetooth_result =
-            bluetooth_fetcher_->FetchBluetoothInfo();
-        break;
-      }
-      case ProbeCategoryEnum::kSystem: {
-        telemetry_info.system_result =
-            system_fetcher_->FetchSystemInfo(base::FilePath("/"));
-        break;
-      }
-    }
-  }
-
-  std::move(callback).Run(telemetry_info.Clone());
+  return fetch_aggregator_->Run(categories, std::move(callback));
 }
 
 void CrosHealthdMojoService::AddProbeBinding(

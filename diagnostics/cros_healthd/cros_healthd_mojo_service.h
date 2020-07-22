@@ -17,13 +17,7 @@
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
 #include "diagnostics/cros_healthd/events/power_events.h"
-#include "diagnostics/cros_healthd/fetchers/backlight_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
+#include "diagnostics/cros_healthd/fetch_aggregator.h"
 #include "mojo/cros_healthd.mojom.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -41,24 +35,12 @@ class CrosHealthdMojoService final
   using ProbeCategoryEnum = chromeos::cros_healthd::mojom::ProbeCategoryEnum;
   using RunRoutineResponse = chromeos::cros_healthd::mojom::RunRoutineResponse;
 
-  // |backlight_fetcher| - BacklightFetcher implementation.
-  // |battery_fetcher| - BatteryFetcher implementation.
-  // |bluetooth_fetcher| - BluetoothFetcher implementation.
-  // |cpu_fetcher| - CpuFetcher implementation.
-  // |disk_fetcher| - DiskFetcher implementation.
-  // |fan_fetcher| - FanFetcher implementation.
-  // |system_fetcher| - SystemFetcher implementation.
+  // |fetch_aggregator| - responsible for fulfilling probe requests.
   // |bluetooth_events| - BluetoothEvents implementation.
   // |lid_events| - LidEvents implementation.
   // |power_events| - PowerEvents implementation.
   // |routine_service| - CrosHealthdRoutineService implementation.
-  CrosHealthdMojoService(BacklightFetcher* backlight_fetcher,
-                         BatteryFetcher* battery_fetcher,
-                         BluetoothFetcher* bluetooth_fetcher,
-                         CpuFetcher* cpu_fetcher,
-                         DiskFetcher* disk_fetcher,
-                         FanFetcher* fan_fetcher,
-                         SystemFetcher* system_fetcher,
+  CrosHealthdMojoService(FetchAggregator* fetch_aggregator,
                          BluetoothEvents* bluetooth_events,
                          LidEvents* lid_events,
                          PowerEvents* power_events,
@@ -151,20 +133,8 @@ class CrosHealthdMojoService final
   mojo::BindingSet<chromeos::cros_healthd::mojom::CrosHealthdEventService>
       event_binding_set_;
 
-  // Unowned. The backlight fetcher should outlive this instance.
-  BacklightFetcher* backlight_fetcher_;
-  // Unowned. The battery fetcher should outlive this instance.
-  BatteryFetcher* battery_fetcher_;
-  // Unowned. The Bluetooth fetcher should outlive this instance.
-  BluetoothFetcher* bluetooth_fetcher_;
-  // Unowned. The CPU fetcher should outlive this instance.
-  CpuFetcher* cpu_fetcher_;
-  // Unowned. The disk fetcher should outlive this instance.
-  DiskFetcher* disk_fetcher_;
-  // Unowned. The fan fetcher should outlive this instance.
-  FanFetcher* fan_fetcher_;
-  // Unowned. The system fetcher should outlive this instance.
-  SystemFetcher* const system_fetcher_ = nullptr;
+  // Unowned. The FetchAggregator instance should outlive this instance.
+  FetchAggregator* fetch_aggregator_;
   // Unowned. The BluetoothEvents instance should outlive this instance.
   BluetoothEvents* const bluetooth_events_ = nullptr;
   // Unowned. The lid events should outlive this instance.

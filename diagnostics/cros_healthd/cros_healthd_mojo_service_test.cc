@@ -20,13 +20,7 @@
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/lid_events_impl.h"
 #include "diagnostics/cros_healthd/events/power_events_impl.h"
-#include "diagnostics/cros_healthd/fetchers/backlight_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/battery_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/bluetooth_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
-#include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
+#include "diagnostics/cros_healthd/fetch_aggregator.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
 #include "mojo/cros_healthd.mojom.h"
 
@@ -138,21 +132,13 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   base::MessageLoop message_loop_;
   StrictMock<MockCrosHealthdRoutineService> routine_service_;
   MockContext mock_context_;
-  BacklightFetcher backlight_fetcher_{&mock_context_};
-  BatteryFetcher battery_fetcher_{&mock_context_};
-  BluetoothFetcher bluetooth_fetcher_{&mock_context_};
-  CpuFetcher cpu_fetcher_{&mock_context_};
-  DiskFetcher disk_fetcher_;
-  FanFetcher fan_fetcher_{&mock_context_};
-  SystemFetcher system_fetcher_{&mock_context_};
+  FetchAggregator fetch_aggregator_{&mock_context_};
   BluetoothEventsImpl bluetooth_events_{&mock_context_};
   LidEventsImpl lid_events_{&mock_context_};
   PowerEventsImpl power_events_{&mock_context_};
-  CrosHealthdMojoService service_{
-      &backlight_fetcher_, &battery_fetcher_,  &bluetooth_fetcher_,
-      &cpu_fetcher_,       &disk_fetcher_,     &fan_fetcher_,
-      &system_fetcher_,    &bluetooth_events_, &lid_events_,
-      &power_events_,      &routine_service_};
+  CrosHealthdMojoService service_{&fetch_aggregator_, &bluetooth_events_,
+                                  &lid_events_, &power_events_,
+                                  &routine_service_};
 };
 
 // Test that we can request the battery capacity routine.

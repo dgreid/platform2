@@ -29,6 +29,7 @@ source_set("libcros_healthd") {
     "cros_healthd_mojo_service.cc",
     "cros_healthd_routine_factory_impl.cc",
     "cros_healthd_routine_service_impl.cc",
+    "fetch_aggregator.cc",
   ]
 }
 
