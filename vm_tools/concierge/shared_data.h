@@ -8,6 +8,7 @@
 #include <string>
 #include <tuple>
 
+#include <base/optional.h>
 #include <base/system/sys_info.h>
 
 #include "vm_tools/concierge/service.h"
@@ -53,11 +54,11 @@ bool GetPluginIsoDirectory(const std::string& vm_id,
                            base::FilePath* path_out);
 
 template <class StartXXRequest>
-std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
-    dbus::MethodCall* method_call,
-    dbus::MessageReader* reader,
-    dbus::MessageWriter* writer,
-    bool allow_zero_cpus) {
+base::Optional<std::tuple<StartXXRequest, StartVmResponse>>
+Service::StartVmHelper(dbus::MethodCall* method_call,
+                       dbus::MessageReader* reader,
+                       dbus::MessageWriter* writer,
+                       bool allow_zero_cpus) {
   DCHECK(sequence_checker_.CalledOnValidSequence());
 
   StartXXRequest request;
@@ -69,7 +70,7 @@ std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
     LOG(ERROR) << "Unable to parse StartVmRequest from message";
     response.set_failure_reason("Unable to parse protobuf");
     writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
+    return base::nullopt;
   }
 
   // Check the CPU count.
@@ -78,7 +79,7 @@ std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
     LOG(ERROR) << "Invalid number of CPUs: " << request.cpus();
     response.set_failure_reason("Invalid CPU count");
     writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
+    return base::nullopt;
   }
 
   // Make sure the VM has a name.
@@ -86,7 +87,7 @@ std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
     LOG(ERROR) << "Ignoring request with empty name";
     response.set_failure_reason("Missing VM name");
     writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
+    return base::nullopt;
   }
 
   auto iter = FindVm(request.owner_id(), request.name());
@@ -117,10 +118,10 @@ std::tuple<bool, StartXXRequest, StartVmResponse> Service::StartVmHelper(
     response.set_success(true);
 
     writer->AppendProtoAsArrayOfBytes(response);
-    return {false, request, response};
+    return base::nullopt;
   }
 
-  return {true, request, response};
+  return std::make_tuple(request, response);
 }
 
 }  // namespace concierge

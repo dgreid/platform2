@@ -96,19 +96,18 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
     dbus::MethodCall* method_call) {
   LOG(INFO) << "Received StartPluginVm request";
 
-  bool success;
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
   StartPluginVmRequest request;
   StartVmResponse response;
-  std::tie(success, request, response) =
-      StartVmHelper<StartPluginVmRequest>(method_call, &reader, &writer);
-
-  if (!success) {
+  auto helper_result = StartVmHelper<StartPluginVmRequest>(
+      method_call, &reader, &writer, true /* allow_zero_cpus */);
+  if (!helper_result) {
     return dbus_response;
   }
+  std::tie(request, response) = *helper_result;
 
   // Get the stateful directory.
   base::FilePath stateful_dir;

@@ -26,19 +26,18 @@ constexpr char kPstoreExtension[] = ".pstore";
 std::unique_ptr<dbus::Response> Service::StartArcVm(
     dbus::MethodCall* method_call) {
   LOG(INFO) << "Received StartArcVm request";
-  bool success;
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
   StartArcVmRequest request;
   StartVmResponse response;
-  std::tie(success, request, response) =
-      StartVmHelper<StartArcVmRequest>(method_call, &reader, &writer);
-
-  if (!success) {
+  auto helper_result = StartVmHelper<StartArcVmRequest>(
+      method_call, &reader, &writer, true /* allow_zero_cpus */);
+  if (!helper_result) {
     return dbus_response;
   }
+  std::tie(request, response) = *helper_result;
 
   if (request.disks_size() > kMaxExtraDisks) {
     LOG(ERROR) << "Rejecting request with " << request.disks_size()

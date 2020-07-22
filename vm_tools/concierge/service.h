@@ -69,7 +69,7 @@ class Service final {
 
   // Helper function that is used by StartVm, StartPluginVm and StartArcVm
   template <class StartXXRequest>
-  std::tuple<bool, StartXXRequest, StartVmResponse> StartVmHelper(
+  base::Optional<std::tuple<StartXXRequest, StartVmResponse>> StartVmHelper(
       dbus::MethodCall* method_call,
       dbus::MessageReader* reader,
       dbus::MessageWriter* writer,

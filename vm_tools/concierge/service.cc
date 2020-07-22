@@ -913,19 +913,18 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     dbus::MethodCall* method_call) {
   LOG(INFO) << "Received StartVm request";
 
-  bool success;
   std::unique_ptr<dbus::Response> dbus_response(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageReader reader(method_call);
   dbus::MessageWriter writer(dbus_response.get());
   StartVmRequest request;
   StartVmResponse response;
-  std::tie(success, request, response) = StartVmHelper<StartVmRequest>(
+  auto helper_result = StartVmHelper<StartVmRequest>(
       method_call, &reader, &writer, true /* allow_zero_cpus */);
-
-  if (!success) {
+  if (!helper_result) {
     return dbus_response;
   }
+  std::tie(request, response) = *helper_result;
 
   // Make sure we have our signal connected if starting a Termina VM.
   if (request.start_termina() && !is_tremplin_started_signal_connected_) {
