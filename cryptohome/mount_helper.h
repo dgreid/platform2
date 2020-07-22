@@ -38,6 +38,12 @@ class MountHelperInterface {
  public:
   virtual ~MountHelperInterface() {}
 
+  struct Options {
+    MountType type = MountType::NONE;
+    bool to_migrate_from_ecryptfs = false;
+    bool shadow_only = false;
+  };
+
   // Ephemeral mounts cannot be performed twice, so cryptohome needs to be able
   // to check whether an ephemeral mount can be performed.
   virtual bool CanPerformEphemeralMount() const = 0;
@@ -74,12 +80,6 @@ class MountHelper : public MountHelperInterface {
         legacy_mount_(legacy_mount),
         platform_(platform) {}
   ~MountHelper() = default;
-
-  struct Options {
-    MountType type = MountType::NONE;
-    bool to_migrate_from_ecryptfs = false;
-    bool shadow_only = false;
-  };
 
   // Returns the temporary user path while we're migrating for
   // http://crbug.com/224291.
