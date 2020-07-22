@@ -23,6 +23,11 @@ namespace cros {
 // How precise the float-to-rational conversion for EXIF tags would be.
 static const int kRationalPrecision = 10000;
 
+// Since the structure of the App1 segment is like:
+//   0xFF [1 byte marker] [2 bytes size] [data]
+// And it should not be larger than 64K.
+static const int kApp1MaxDataSize = 65532;
+
 static bool SetExifTags(const android::CameraMetadata& static_metadata,
                         const android::CameraMetadata& request_metadata,
                         const FrameBuffer& in_frame,
@@ -497,7 +502,7 @@ int CachedFrame::CompressNV12(const android::CameraMetadata& static_metadata,
         i420_data = temp_i420_frame_->GetData();
       }
       uint32_t thumbnail_data_size = 0;
-      thumbnail.resize(thumbnail_width * thumbnail_height * 1.5);
+      thumbnail.resize(kApp1MaxDataSize);
       if (jpeg_compressor_->GenerateThumbnail(
               i420_data, in_frame.GetWidth(), in_frame.GetHeight(),
               thumbnail_width, thumbnail_height, thumbnail_jpeg_quality,
