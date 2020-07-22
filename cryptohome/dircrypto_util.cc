@@ -291,26 +291,43 @@ bool SetDirectoryKey(const base::FilePath& dir,
   return true;
 }
 
-KeyState GetDirectoryKeyState(const base::FilePath& dir) {
+static int GetDirectoryPolicy(const base::FilePath& dir,
+                              struct fscrypt_get_policy_ex_arg* arg) {
   base::ScopedFD fd(
       HANDLE_EINTR(open(dir.value().c_str(), O_RDONLY | O_DIRECTORY)));
   if (!fd.is_valid()) {
     PLOG(ERROR) << "Fscrypt: Invalid directory " << dir.value();
-    return KeyState::UNKNOWN;
+    errno = EINVAL;
+    return -1;
   }
 
   int err = 0;
+  // FS_IOC_GET_ENCRYPTION_POLICY only supports v1 policies.
+  if (CheckFscryptKeyIoctlSupport())
+    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY_EX, arg);
+  else
+    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY, &(arg->policy.v1));
+
+  return err;
+}
+
+int GetDirectoryPolicyVersion(const base::FilePath& dir) {
   struct fscrypt_get_policy_ex_arg arg = {};
   memset(&arg, 0, sizeof(arg));
   arg.policy_size = sizeof(arg.policy);
 
-  // FS_IOC_GET_ENCRYPTION_POLICY only supports v1 policies.
-  if (CheckFscryptKeyIoctlSupport())
-    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY_EX, &arg);
-  else
-    err = ioctl(fd.get(), FS_IOC_GET_ENCRYPTION_POLICY, &(arg.policy.v1));
+  if (GetDirectoryPolicy(dir, &arg) < 0)
+    return -1;
 
-  if (err < 0) {
+  return arg.policy.version;
+}
+
+KeyState GetDirectoryKeyState(const base::FilePath& dir) {
+  struct fscrypt_get_policy_ex_arg arg = {};
+  memset(&arg, 0, sizeof(arg));
+  arg.policy_size = sizeof(arg.policy);
+
+  if (GetDirectoryPolicy(dir, &arg) < 0) {
     switch (errno) {
       case ENODATA:
       case ENOENT:
