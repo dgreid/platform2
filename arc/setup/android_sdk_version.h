@@ -14,8 +14,6 @@ enum class AndroidSdkVersion {
   ANDROID_M = 23,
   ANDROID_N_MR1 = 25,
   ANDROID_P = 28,
-  ANDROID_Q = 29,
-  ANDROID_MASTER = INT_MAX,
 };
 
 }  // namespace arc

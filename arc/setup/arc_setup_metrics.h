@@ -56,7 +56,7 @@ enum class ArcSdkVersionUpgradeType {
   // M_TO_N is deprecated
   M_TO_P = 4,
   N_TO_P = 5,
-  P_TO_Q = 6,
+  // P_TO_Q is deprecated
   COUNT
 };
 

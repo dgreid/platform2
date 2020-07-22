@@ -101,7 +101,6 @@ constexpr char kBuildPropFileVm[] = "/usr/share/arcvm/properties/build.prop";
 constexpr char kCameraProfileDir[] =
     "/mnt/stateful_partition/encrypted/var/cache/camera";
 constexpr char kCrasSocketDirectory[] = "/run/cras";
-constexpr char kTestharnessDirectory[] = "/run/arc/testharness";
 constexpr char kDebugfsDirectory[] = "/run/arc/debugfs";
 constexpr char kFakeKptrRestrict[] = "/run/arc/fake_kptr_restrict";
 constexpr char kFakeMmapRndBits[] = "/run/arc/fake_mmap_rnd_bits";
@@ -274,10 +273,6 @@ ArcSdkVersionUpgradeType GetUpgradeType(AndroidSdkVersion system_sdk_version,
       system_sdk_version == AndroidSdkVersion::ANDROID_P) {
     return ArcSdkVersionUpgradeType::N_TO_P;
   }
-  if (data_sdk_version == AndroidSdkVersion::ANDROID_P &&
-      system_sdk_version == AndroidSdkVersion::ANDROID_Q) {
-    return ArcSdkVersionUpgradeType::P_TO_Q;
-  }
   if (data_sdk_version < system_sdk_version) {
     LOG(ERROR) << "Unexpected Upgrade: data_sdk_version="
                << static_cast<int>(data_sdk_version) << " system_sdk_version="
@@ -364,9 +359,6 @@ const std::vector<EsdfsMount> GetEsdfsMounts(AndroidSdkVersion version) {
       {"read/emulated", 0027, kEverybodyGid},
       {"write/emulated", 0007, kEverybodyGid},
   };
-  if (version >= AndroidSdkVersion::ANDROID_Q)
-    mounts.push_back({"full/emulated", 0007, kEverybodyGid});
-
   return mounts;
 }
 
@@ -410,9 +402,7 @@ std::string CreateEsdfsMountOpts(uid_t fsuid,
 
 // Return path of layout_version based on |sdk_version|.
 std::string GetInstalldLayoutRelativePath(AndroidSdkVersion sdk_version) {
-  return sdk_version > AndroidSdkVersion::ANDROID_Q
-             ? "data/misc/installd/layout_version"
-             : "data/.layout_version";
+  return "data/.layout_version";
 }
 
 // Wait upto kInstalldTimeout for the sdcard source directory to be setup.
@@ -545,7 +535,6 @@ struct ArcPaths {
   const base::FilePath binfmt_misc_directory{kBinFmtMiscDirectory};
   const base::FilePath camera_profile_dir{kCameraProfileDir};
   const base::FilePath cras_socket_directory{kCrasSocketDirectory};
-  const base::FilePath testharness_directory{kTestharnessDirectory};
   const base::FilePath debugfs_directory{kDebugfsDirectory};
   const base::FilePath fake_kptr_restrict{kFakeKptrRestrict};
   const base::FilePath fake_mmap_rnd_bits{kFakeMmapRndBits};
@@ -942,11 +931,6 @@ void ArcSetup::SetUpSharedTmpfsForExternalStorage() {
   EXIT_IF(
       !InstallDirectory(0755, kRootUid, kRootGid,
                         arc_paths_->sdcard_mount_directory.Append("write")));
-  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
-    EXIT_IF(
-        !InstallDirectory(0755, kRootUid, kRootGid,
-                          arc_paths_->sdcard_mount_directory.Append("full")));
-  }
 
   // Create the mount directories. In original Android, these are created in
   // EmulatedVolume.cpp just before /system/bin/sdcard is fork()/exec()'ed.
@@ -963,11 +947,6 @@ void ArcSetup::SetUpSharedTmpfsForExternalStorage() {
   EXIT_IF(!InstallDirectory(
       0755, kRootUid, kRootGid,
       arc_paths_->sdcard_mount_directory.Append("write/emulated")));
-  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
-    EXIT_IF(!InstallDirectory(
-        0755, kRootUid, kRootGid,
-        arc_paths_->sdcard_mount_directory.Append("full/emulated")));
-  }
 }
 
 void ArcSetup::SetUpFilesystemForObbMounter() {
@@ -1542,8 +1521,8 @@ AndroidSdkVersion ArcSetup::SdkVersionFromString(
   const std::string version_codename_str =
       GetSystemBuildPropertyOrDie("ro.build.version.codename");
   if (version_codename_str != "REL") {
-    LOG(INFO) << "Not a release version; classifying as Android Master.";
-    return AndroidSdkVersion::ANDROID_MASTER;
+    LOG(INFO) << "Not a release version; classifying as Android Unknown.";
+    return AndroidSdkVersion::UNKNOWN;
   }
   int version;
   if (base::StringToInt(version_str, &version)) {
@@ -1554,8 +1533,6 @@ AndroidSdkVersion ArcSetup::SdkVersionFromString(
         return AndroidSdkVersion::ANDROID_N_MR1;
       case 28:
         return AndroidSdkVersion::ANDROID_P;
-      case 29:
-        return AndroidSdkVersion::ANDROID_Q;
     }
   }
 
@@ -1901,27 +1878,6 @@ void ArcSetup::EnsureContainerDirectories() {
                             base::FilePath("/run/arc/host_generated")));
 }
 
-void ArcSetup::SetUpTestharness(bool is_dev_mode) {
-  if (base::DirectoryExists(arc_paths_->testharness_directory))
-    return;
-
-  if (is_dev_mode) {
-    EXIT_IF(!InstallDirectory(07770, kSystemUid, kSystemGid,
-                              arc_paths_->testharness_directory));
-    const base::FilePath key_file =
-        arc_paths_->testharness_directory.Append("keys");
-    EXIT_IF(!WriteToFile(key_file, 0777, ""));
-    EXIT_IF(!Chown(kSystemUid, kSystemGid, key_file));
-  } else {
-    // Even in non-Developer mode, we still need the directory so
-    // config.json bind-mounting can happen correctly.
-    // We will just restrict access to it and make sure no key file
-    // is generated.
-    EXIT_IF(!InstallDirectory(0000, kHostRootUid, kHostRootGid,
-                              arc_paths_->testharness_directory));
-  }
-}
-
 void ArcSetup::StartNetworking() {
   if (!patchpanel::Client::New()->NotifyArcStartup(
           config_.GetIntOrDie("CONTAINER_PID"))) {
@@ -1979,24 +1935,12 @@ void ArcSetup::BindMountInContainerNamespaceOnPreChroot(
     EXIT_IF(!arc_mounter_->BindMount(
         rootfs.Append("vendor/lib/arm"),
         rootfs.Append(arc_paths_->system_lib_arm_directory_relative)));
-    // Since Android Qt, we need to do the same for system_bin_arm.
-    if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
-      EXIT_IF(!arc_mounter_->BindMount(
-          rootfs.Append("vendor/bin/arm"),
-          rootfs.Append(arc_paths_->system_bin_arm_directory_relative)));
-    }
 
     if (kUseHoudini64) {
       // Bind mount arm64 directory for houdini64.
       EXIT_IF(!arc_mounter_->BindMount(
           rootfs.Append("vendor/lib64/arm64"),
           rootfs.Append(arc_paths_->system_lib64_arm64_directory_relative)));
-      // Since Android Qt, we need to do the same for system_bin_arm.
-      if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q) {
-        EXIT_IF(!arc_mounter_->BindMount(
-            rootfs.Append("vendor/bin/arm64"),
-            rootfs.Append(arc_paths_->system_bin_arm64_directory_relative)));
-      }
     }
   }
 
@@ -2016,17 +1960,13 @@ void ArcSetup::RestoreContextOnPreChroot(const base::FilePath& rootfs) {
     // some of entries in the directory are on a read-only filesystem.
     // Note: The array is for directories. Do no add files to the array. Add
     // them to |kPaths| below instead.
-    std::vector<const char*> directories{
-        "dev",
-        "oem/etc",
-        "var/run/arc/apkcache",
-        "var/run/arc/dalvik-cache",
-        "var/run/chrome",
-        "var/run/cras"};
-
-    // var/run/arc/adb only exists on P or above, skip it otherwise.
-    if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_P)
-      directories.push_back("var/run/arc/adb");
+    std::vector<const char*> directories{"dev",
+                                         "oem/etc",
+                                         "var/run/arc/adb",
+                                         "var/run/arc/apkcache",
+                                         "var/run/arc/dalvik-cache",
+                                         "var/run/chrome",
+                                         "var/run/cras"};
 
     // Transform |kDirectories| because the mount points are visible only in
     // |rootfs|. Note that Chrome OS' file_contexts does recognize paths with
@@ -2069,7 +2009,7 @@ void ArcSetup::OnSetup() {
   // directories are empty and read-only which is the best for security.
 
   // Unconditionally generate host-side code here.
-  if (GetSdkVersion() <= AndroidSdkVersion::ANDROID_P) {
+  {
     base::ElapsedTimer timer;
     EXIT_IF(!GenerateHostSideCode(arc_paths_->art_dalvik_cache_directory));
     EXIT_IF(!Chown(kRootUid, kRootGid, arc_paths_->art_dalvik_cache_directory));
@@ -2114,15 +2054,11 @@ void ArcSetup::OnSetup() {
   SetUpMountPointForDebugFilesystem(is_dev_mode);
   SetUpMountPointsForMedia();
   SetUpMountPointForAdbd();
-  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_P)
-    SetUpMountPointForAdbdUnixSocket();
+  SetUpMountPointForAdbdUnixSocket();
   CleanUpStaleMountPoints();
   RestoreContext();
   SetUpGraphicsSysfsContext();
-  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_P)
-    SetUpPowerSysfsContext();
-  if (GetSdkVersion() >= AndroidSdkVersion::ANDROID_Q)
-    SetUpTestharness(is_dev_mode);
+  SetUpPowerSysfsContext();
   MakeMountPointsReadOnly();
   SetUpCameraProperty(base::FilePath(kBuildPropFile));
   SetUpSharedApkDirectory();
@@ -2169,15 +2105,12 @@ void ArcSetup::OnBootContinue() {
   // don't exist, this has to be done before calling ShareAndroidData().
   SetUpAndroidData(arc_paths_->android_mutable_source);
 
-  if (GetSdkVersion() <= AndroidSdkVersion::ANDROID_P) {
-    if (!InstallLinksToHostSideCode()) {
-      arc_setup_metrics_->SendBootContinueCodeInstallationResult(
-          ArcBootContinueCodeInstallationResult::
-              ERROR_CANNOT_INSTALL_HOST_CODE);
-    } else {
-      arc_setup_metrics_->SendBootContinueCodeInstallationResult(
-          ArcBootContinueCodeInstallationResult::SUCCESS);
-    }
+  if (!InstallLinksToHostSideCode()) {
+    arc_setup_metrics_->SendBootContinueCodeInstallationResult(
+        ArcBootContinueCodeInstallationResult::ERROR_CANNOT_INSTALL_HOST_CODE);
+  } else {
+    arc_setup_metrics_->SendBootContinueCodeInstallationResult(
+        ArcBootContinueCodeInstallationResult::SUCCESS);
   }
 
   // Set up /run/arc/shared_mounts/{cache,data,demo_apps} to expose the user's
@@ -2349,21 +2282,11 @@ void ArcSetup::OnUpdateRestoreconLast() {
   std::vector<base::FilePath> target_directories = {
       arc_paths_->android_mutable_source.Append("data")};
 
-  switch (GetSdkVersion()) {
-    case AndroidSdkVersion::ANDROID_P:
-    case AndroidSdkVersion::ANDROID_Q:
-    case AndroidSdkVersion::ANDROID_MASTER:
-      // The order of files to read is important. Do not reorder.
-      context_files.push_back(
-          arc_paths_->android_rootfs_directory.Append("plat_file_contexts"));
-      context_files.push_back(
-          arc_paths_->android_rootfs_directory.Append("vendor_file_contexts"));
-      break;
-    case AndroidSdkVersion::ANDROID_M:
-    case AndroidSdkVersion::ANDROID_N_MR1:
-    case AndroidSdkVersion::UNKNOWN:
-      NOTREACHED();
-  }
+  // The order of files to read is important. Do not reorder.
+  context_files.push_back(
+      arc_paths_->android_rootfs_directory.Append("plat_file_contexts"));
+  context_files.push_back(
+      arc_paths_->android_rootfs_directory.Append("vendor_file_contexts"));
 
   std::string hash;
   EXIT_IF(!GetSha1HashOfFiles(context_files, &hash));

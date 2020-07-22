@@ -224,9 +224,6 @@ class ArcSetup {
   // TODO(ejcaruso, b/78300746): remove this when we can use genfs_contexts
   void SetUpPowerSysfsContext();
 
-  // Initialize the testharness directory and key file inside for testharness.
-  void SetUpTestharness(bool is_dev_mode);
-
   // Notifies networking service that the container is starting.
   void StartNetworking();
 
