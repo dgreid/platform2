@@ -5,12 +5,11 @@
 #ifndef ML_REQUEST_METRICS_H_
 #define ML_REQUEST_METRICS_H_
 
+#include <ctime>
 #include <memory>
 #include <string>
 
 #include <base/macros.h>
-#include <base/process/process_metrics.h>
-#include <base/time/time.h>
 #include <metrics/metrics_library.h>
 
 #include "metrics/timer.h"
@@ -46,12 +45,29 @@ class RequestMetrics {
   void FinishRecordingPerformanceMetrics();
 
  private:
+  enum class Status {
+    kNotStarted = 0,
+    kRecording = 1,
+    kEventSent = 2,
+    kFinished = 3
+  };
+
   MetricsLibrary metrics_library_;
 
   const std::string name_base_;
-  std::unique_ptr<base::ProcessMetrics> process_metrics_;
-  chromeos_metrics::Timer timer_;
+  std::clock_t initial_cpu_clock_;
   int64_t initial_memory_;
+
+  // The `status_` serves as a safe guard to ensure the correct usage of the
+  // objects of this class, specifically,
+  // 1. `status_` is initialized to `kNotStarted` at construction.
+  // 2. `StartRecordingPerformanceMetrics()` must be called when
+  // `status_=kNotStarted`. And it sets `status_` to `kRecording`.
+  // 3. `RecordRequestEvent()` must be called when `status_=kRecording` or
+  // `status_=kFinished`, and it sets `status_` to `kEventSent`.
+  // 4. `FinishRecordingPerformanceMetrics()` must be called when
+  // `status_=kRecording` and it sets `status_` to `kEventFinished`.
+  Status status_;
 
   DISALLOW_COPY_AND_ASSIGN(RequestMetrics);
 };
@@ -72,10 +88,11 @@ constexpr int kCpuTimeBuckets = 100;
 
 template <class RequestEventEnum>
 void RequestMetrics::RecordRequestEvent(RequestEventEnum event) {
+  DCHECK(status_ == Status::kRecording || status_ == Status::kFinished);
   metrics_library_.SendEnumToUMA(
       name_base_ + kEventSuffix, static_cast<int>(event),
       static_cast<int>(RequestEventEnum::kMaxValue) + 1);
-  process_metrics_.reset(nullptr);
+  status_ = Status::kEventSent;
 }
 
 // Records a generic model specification error event during a model loading
