@@ -4,6 +4,7 @@
 
 #include "media_perception/mojo_connector.h"
 
+#include <algorithm>
 #include <map>
 #include <utility>
 #include <vector>
@@ -57,6 +58,11 @@ media::mojom::VideoCapturePixelFormat GetVideoCapturePixelFormatFromPixelFormat(
     default:
       return media::mojom::VideoCapturePixelFormat::UNKNOWN;
   }
+}
+
+bool DeviceIdIsOverviewStreamIpAddress(const std::string& device_id) {
+  // Check for the existence of four "." characters.
+  return std::count(device_id.begin(), device_id.end(), '.') == 4;
 }
 
 constexpr char kConnectorPipe[] = "mpp-connector-pipe";
@@ -176,7 +182,10 @@ std::string MojoConnector::GetObfuscatedDeviceId(
   std::map<std::string, std::string>::iterator it =
       unique_id_map_.find(unique_id);
   if (it == unique_id_map_.end()) {
-    std::string obfuscated_id = std::to_string(unique_device_counter_);
+    // If the device ID is an IP address there is no need to obfuscate it
+    // and we need it to send PTZ commands via the IP peripheral service.
+    std::string obfuscated_id = DeviceIdIsOverviewStreamIpAddress(device_id) ? device_id :
+        std::to_string(unique_device_counter_);
     unique_id_map_.insert(
         std::make_pair(unique_id, obfuscated_id));
     // Increment the counter so the next obfuscated id is different.

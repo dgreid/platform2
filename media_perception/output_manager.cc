@@ -5,6 +5,7 @@
 #include "media_perception/output_manager.h"
 
 #include <functional>
+#include <dbus/object_proxy.h>
 
 #include "media_perception/frame_perception.pb.h"
 #include "media_perception/hotword_detection.pb.h"
@@ -30,6 +31,10 @@ OutputManager::OutputManager(
     const PerceptionInterfaces& interfaces,
     chromeos::media_perception::mojom::PerceptionInterfacesPtr*
     interfaces_ptr) {
+  // Save the configuration name in case we need to reference it later.
+  configuration_name_ = configuration_name;
+  rtanalytics_ = rtanalytics;
+
   for (const PerceptionInterface& interface : interfaces.interface()) {
     // Frame perception interface setup.
     if (interface.interface_type() ==
@@ -240,6 +245,40 @@ OutputManager::OutputManager(
       continue;
     }
 
+    // Falcon Autozoom outputs setup.
+    if (interface.interface_type() ==
+        PerceptionInterfaceType::INTERFACE_FALCON_AUTOZOOM) {
+
+      // Falcon Autozoom outputs setup.
+      for (const PipelineOutput& output : interface.output()) {
+        if (output.output_type() ==
+            PipelineOutputType::OUTPUT_INDEXED_TRANSITIONS) {
+          SerializedSuccessStatus serialized_status =
+              rtanalytics->SetPipelineOutputHandler(
+                  configuration_name, output.stream_name(),
+                  std::bind(&OutputManager::HandleIndexedTransitions,
+                            this, std::placeholders::_1));
+          SuccessStatus status = Serialized<SuccessStatus>(
+              serialized_status).Deserialize();
+          if (!status.success()) {
+            LOG(ERROR) << "Failed to set output handler for "
+                       << configuration_name << " with output "
+                       << output.stream_name();
+            continue;
+          }
+          // Setup D-Bus connection.
+          bus_ = dbus_connection_.Connect();
+          if (bus_ == nullptr) {
+            LOG(FATAL) << "Unable to connect to Dbus from OutputManager.";
+          }
+          dbus_proxy_ = bus_->GetObjectProxy(
+              "org.chromium.IpPeripheralService",
+              dbus::ObjectPath("/org/chromium/IpPeripheralService"));
+        }
+      }
+      continue;
+    }
+
   }
 }
 
@@ -344,6 +383,50 @@ void OutputManager::HandleSmartFraming(
     LOG(WARNING)
         << "Got smart framing but handler ptr is not bound.";
   }
+}
+
+void OutputManager::HandleIndexedTransitions(
+    const std::vector<uint8_t>& bytes) {
+  std::string falcon_ip = rtanalytics_->GetFalconIp(configuration_name_);
+  std::size_t found = falcon_ip.find_last_of(".");
+  if (found == -1) {
+    LOG(ERROR) << "Device id is not an IP address.";
+    return;
+  }
+
+  falcon_ip = falcon_ip.substr(0, found);
+  // Send indexed transitions bytes over D-bus to the IP peripheral service.
+  if (bytes.size() == 0) {
+    dbus::MethodCall method_call("org.chromium.IpPeripheralService.FalconGrpc",
+                                   "ResetPTZTransition");
+    dbus::MessageWriter writer(&method_call);
+    writer.AppendString(falcon_ip);
+    dbus_proxy_->CallMethod(
+        &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        base::BindOnce([](dbus::Response* response) { }));
+  } else {
+    dbus::MethodCall method_call("org.chromium.IpPeripheralService.FalconGrpc",
+                                   "DoPTZTransition");
+    dbus::MessageWriter writer(&method_call);
+    writer.AppendString(falcon_ip);
+    writer.AppendArrayOfBytes(bytes.data(), bytes.size());
+    dbus_proxy_->CallMethod(
+        &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        base::BindOnce(&OutputManager::HandleFalconPtzTransitionResponse,
+                       weak_ptr_factory_.GetWeakPtr()));
+  }
+}
+
+void OutputManager::HandleFalconPtzTransitionResponse(dbus::Response* response) {
+  dbus::MessageReader reader(response);
+  // Return the response to rtanalytics.
+  const uint8_t* bytes = nullptr;
+  size_t size;
+  reader.PopArrayOfBytes(&bytes, &size);
+  std::vector<uint8_t> serialized_response;
+  serialized_response.assign(bytes, bytes + size);
+  rtanalytics_->RespondToFalconPtzTransition(
+      configuration_name_, serialized_response);
 }
 
 }  // namespace mri

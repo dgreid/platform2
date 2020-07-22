@@ -27,6 +27,7 @@ using SerializedVideoDevice = std::vector<uint8_t>;
 using SerializedAudioDevice = std::vector<uint8_t>;
 using SerializedVirtualVideoDevice = std::vector<uint8_t>;
 using PipelineOutputHandler = std::function<void(const std::vector<uint8_t>&)>;
+using SerializedIndexedTransitionsResponse = std::vector<uint8_t>;
 
 class Rtanalytics {
  public:
@@ -94,6 +95,15 @@ class Rtanalytics {
   virtual SerializedSuccessStatus SetPipelineOutputHandler(
       const std::string& configuration_name, const std::string& output_stream,
       PipelineOutputHandler output_handler) = 0;
+
+  // Asks for the active Falcon camera IP for a configuration name.
+  virtual std::string GetFalconIp(const std::string& configuration_name) = 0;
+
+  // Sends the response from the Falcon camera over D-Bus back to the processing
+  // pipelines.
+  virtual void RespondToFalconPtzTransition(
+      const std::string& configuration_name,
+      const SerializedIndexedTransitionsResponse& response) = 0;
 };
 
 }  // namespace mri
