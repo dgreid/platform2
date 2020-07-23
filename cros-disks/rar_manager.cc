@@ -61,6 +61,9 @@ std::unique_ptr<MountPoint> RarManager::DoMount(
       .mount_namespace = std::move(mount_namespace.name),
       .mount_program = "/usr/bin/rar2fs",
       .mount_user = "fuse-rar2fs",
+      .password_needed_codes = {12,   // ERAR_BAD_DATA
+                                22,   // ERAR_MISSING_PASSWORD
+                                24},  // ERAR_BAD_PASSWORD
       .platform = platform(),
       .process_reaper = process_reaper(),
       .seccomp_policy = "/usr/share/policy/rar2fs-seccomp.policy",
