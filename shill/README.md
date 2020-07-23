@@ -44,7 +44,7 @@ In addition, Shill provides a D-Bus service for use by D-Bus clients. One of the
 largest clients is Chrome, which provides an actual UI for the underlying
 network functionality provided by Shill. Chrome both drives some part of Shill
 state (e.g., a user pressing a Connect button for a WiFi network, which causes
-Chrome to call the Connect D-Bus method and reads Shill state (e.g., to
+Chrome to call the Connect D-Bus method) and reads Shill state (e.g., to
 display the proper network icon and provide accurate and up-to-date network
 information). Policy-derived network configuration is also applied to Shill
 through Chrome.
