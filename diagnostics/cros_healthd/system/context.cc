@@ -15,6 +15,7 @@
 #include "diagnostics/common/system/debugd_adapter_impl.h"
 #include "diagnostics/common/system/powerd_adapter_impl.h"
 #include "diagnostics/cros_healthd/executor/executor_adapter_impl.h"
+#include "diagnostics/cros_healthd/network/network_health_adapter_impl.h"
 #include "diagnostics/cros_healthd/system/system_config.h"
 #include "diagnostics/cros_healthd/system/system_utilities_impl.h"
 
@@ -40,6 +41,8 @@ bool Context::Initialize() {
   debugd_proxy_ = std::make_unique<org::chromium::debugdProxy>(dbus_bus_);
   debugd_adapter_ = std::make_unique<DebugdAdapterImpl>(
       std::make_unique<org::chromium::debugdProxy>(dbus_bus_));
+  // Create the NetworkHealthAdapter.
+  network_health_adapter_ = std::make_unique<NetworkHealthAdapterImpl>();
   // TODO(crbug/1074476): Remove |power_manager_proxy_| once |powerd_adapter_|
   // supports all the methods we call on |power_manager_proxy_|.
   power_manager_proxy_ = dbus_bus_->GetObjectProxy(
@@ -75,6 +78,10 @@ org::chromium::debugdProxyInterface* Context::debugd_proxy() const {
 
 DebugdAdapter* Context::debugd_adapter() const {
   return debugd_adapter_.get();
+}
+
+NetworkHealthAdapter* Context::network_health_adapter() const {
+  return network_health_adapter_.get();
 }
 
 dbus::ObjectProxy* Context::power_manager_proxy() const {

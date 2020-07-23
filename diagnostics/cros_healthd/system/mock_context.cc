@@ -28,6 +28,7 @@ bool MockContext::Initialize() {
   debugd_proxy_ =
       std::make_unique<testing::StrictMock<org::chromium::debugdProxyMock>>();
   debugd_adapter_ = std::make_unique<testing::StrictMock<MockDebugdAdapter>>();
+  network_health_adapter_ = std::make_unique<FakeNetworkHealthAdapter>();
   power_manager_proxy_ = mock_power_manager_proxy_.get();
   powerd_adapter_ = std::make_unique<FakePowerdAdapter>();
   system_config_ = std::make_unique<FakeSystemConfig>();
@@ -49,6 +50,10 @@ org::chromium::debugdProxyMock* MockContext::mock_debugd_proxy() const {
 MockDebugdAdapter* MockContext::mock_debugd_adapter() const {
   return static_cast<testing::StrictMock<MockDebugdAdapter>*>(
       debugd_adapter_.get());
+}
+
+FakeNetworkHealthAdapter* MockContext::fake_network_health_adapter() const {
+  return static_cast<FakeNetworkHealthAdapter*>(network_health_adapter_.get());
 }
 
 dbus::MockObjectProxy* MockContext::mock_power_manager_proxy() const {

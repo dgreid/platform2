@@ -172,6 +172,12 @@ void CrosHealthd::GetEventService(
   mojo_service_->AddEventBinding(std::move(service));
 }
 
+void CrosHealthd::SendNetworkHealthService(
+    mojo::PendingRemote<chromeos::network_health::mojom::NetworkHealthService>
+        remote) {
+  context_->network_health_adapter()->SetServiceRemote(std::move(remote));
+}
+
 void CrosHealthd::ShutDownDueToMojoError(const std::string& debug_reason) {
   // Our daemon has to be restarted to be prepared for future Mojo connection
   // bootstraps. We can't do this without a restart since Mojo EDK gives no

@@ -20,6 +20,7 @@ group("all") {
       "//diagnostics/cros_healthd:cros_healthd_test",
       "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
       "//diagnostics/cros_healthd/fetchers:libcros_healthd_fetchers_test",
+      "//diagnostics/cros_healthd/network:network_test",
       "//diagnostics/cros_healthd/routines:routine_test",
       "//diagnostics/cros_healthd/system:system_config_test",
       "//diagnostics/cros_healthd/utils:libcros_healthd_utils_test",

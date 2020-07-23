@@ -1,0 +1,43 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+pkg_config("libnetwork_health_pkg_deps") {
+  pkg_deps = [
+    "libchrome-${libbase_ver}",
+    "libchrome-test-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+source_set("libnetwork_health_adapter") {
+  configs += [ ":libnetwork_health_pkg_deps" ]
+  deps = [ "//diagnostics/mojo:network_health_mojo_bindings" ]
+  sources = [ "network_health_adapter_impl.cc" ]
+}
+
+if (use.test) {
+  executable("network_test") {
+    configs += [
+      ":libnetwork_health_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":libnetwork_health_adapter",
+      "//common-mk/testrunner:testrunner",
+      "//diagnostics/mojo:network_health_mojo_bindings",
+    ]
+    sources = [ "network_health_adapter_impl_test.cc" ]
+  }
+
+  source_set("libnetwork_health_adapter_test_utils") {
+    configs += [ ":libnetwork_health_pkg_deps" ]
+    deps = [
+      ":libnetwork_health_adapter",
+      "//diagnostics/mojo:cros_healthd_mojo_bindings",
+    ]
+    sources = [ "fake_network_health_adapter.cc" ]
+  }
+}

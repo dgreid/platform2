@@ -52,6 +52,9 @@ class CrosHealthd final
   void GetEventService(
       chromeos::cros_healthd::mojom::CrosHealthdEventServiceRequest service)
       override;
+  void SendNetworkHealthService(
+      mojo::PendingRemote<chromeos::network_health::mojom::NetworkHealthService>
+          remote) override;
 
   // Implementation of the "org.chromium.CrosHealthdInterface" D-Bus interface
   // exposed by the cros_healthd daemon (see constants for the API methods at

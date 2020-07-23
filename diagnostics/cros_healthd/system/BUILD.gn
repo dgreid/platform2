@@ -22,6 +22,7 @@ source_set("libcros_healthd_system") {
   deps = [
     "//diagnostics/common:libcommon",
     "//diagnostics/cros_healthd/executor:libcros_healthd_executor",
+    "//diagnostics/cros_healthd/network:libnetwork_health_adapter",
   ]
   sources = [
     "context.cc",
@@ -55,6 +56,7 @@ if (use.test || use.fuzzer) {
       ":libcros_healthd_system",
       "//diagnostics/common:libcommon_test_utils",
       "//diagnostics/cros_healthd/executor:libcros_healthd_executor_test_utils",
+      "//diagnostics/cros_healthd/network:libnetwork_health_adapter_test_utils",
     ]
     sources = [
       "fake_system_config.cc",
