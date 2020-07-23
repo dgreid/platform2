@@ -27,12 +27,16 @@
 
 #include "diagnostics/cros_healthd_mojo_adapter/cros_healthd_mojo_adapter.h"
 #include "mojo/cros_healthd_probe.mojom.h"
+#include "mojo/network_health.mojom.h"
+#include "mojo/network_types.mojom.h"
 
 namespace diagnostics {
 
 namespace {
 
 using chromeos::cros_healthd::mojom::CpuArchitectureEnum;
+using chromeos::network_config::mojom::NetworkType;
+using chromeos::network_health::mojom::NetworkState;
 
 constexpr std::pair<const char*,
                     chromeos::cros_healthd::mojom::ProbeCategoryEnum>
@@ -51,7 +55,9 @@ constexpr std::pair<const char*,
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kStatefulPartition},
         {"bluetooth",
          chromeos::cros_healthd::mojom::ProbeCategoryEnum::kBluetooth},
-        {"system", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kSystem}};
+        {"system", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kSystem},
+        {"network", chromeos::cros_healthd::mojom::ProbeCategoryEnum::kNetwork},
+};
 
 std::string ProcessStateToString(
     chromeos::cros_healthd::mojom::ProcessState state) {
@@ -101,6 +107,48 @@ std::string GetArchitectureString(CpuArchitectureEnum architecture) {
       return "aarch64";
     case CpuArchitectureEnum::kArmv7l:
       return "armv7l";
+  }
+}
+
+std::string NetworkTypeToString(NetworkType type) {
+  switch (type) {
+    case NetworkType::kAll:
+      return "Unknown";
+    case NetworkType::kCellular:
+      return "Cellular";
+    case NetworkType::kEthernet:
+      return "Ethernet";
+    case NetworkType::kMobile:
+      return "Mobile";
+    case NetworkType::kTether:
+      return "Tether";
+    case NetworkType::kVPN:
+      return "VPN";
+    case NetworkType::kWireless:
+      return "Wireless";
+    case NetworkType::kWiFi:
+      return "WiFi";
+  }
+}
+
+std::string NetworkStateToString(NetworkState state) {
+  switch (state) {
+    case NetworkState::kUninitialized:
+      return "Uninitialized";
+    case NetworkState::kDisabled:
+      return "Disabled";
+    case NetworkState::kProhibited:
+      return "Prohibited";
+    case NetworkState::kNotConnected:
+      return "Not Connected";
+    case NetworkState::kConnecting:
+      return "Connecting";
+    case NetworkState::kPortal:
+      return "Portal";
+    case NetworkState::kConnected:
+      return "Connected";
+    case NetworkState::kOnline:
+      return "Online";
   }
 }
 
@@ -289,6 +337,24 @@ void DisplayFanInfo(
   }
 }
 
+void DisplayNetworkInfo(
+    const chromeos::cros_healthd::mojom::NetworkResultPtr& network_result) {
+  if (network_result->is_error()) {
+    DisplayError(network_result->get_error());
+    return;
+  }
+
+  const auto& network_health = network_result->get_network_health();
+  std::cout << "type,state,guid,name,mac_address" << std::endl;
+  for (const auto& network : network_health->networks) {
+    std::cout << NetworkTypeToString(network->type) << ","
+              << NetworkStateToString(network->state) << ","
+              << network->guid.value_or("N/A") << ","
+              << network->name.value_or("N/A") << ","
+              << network->mac_address.value_or("N/A") << std::endl;
+  }
+}
+
 void DisplayTimezoneInfo(
     const chromeos::cros_healthd::mojom::TimezoneResultPtr& timezone_result) {
   if (timezone_result->is_error()) {
@@ -417,6 +483,10 @@ void DisplayTelemetryInfo(
   const auto& system_result = info->system_result;
   if (system_result)
     DisplaySystemInfo(system_result);
+
+  const auto& network_result = info->network_result;
+  if (network_result)
+    DisplayNetworkInfo(network_result);
 }
 
 // Create a stringified list of the category names for use in help.
