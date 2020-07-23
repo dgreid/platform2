@@ -64,16 +64,10 @@ void CleanUpGuestDaemonDirectories(cryptohome::Platform* platform) {
   }
 }
 
-void TearDown(cryptohome::MountHelper* mounter) {
-  mounter->TearDownEphemeralMount();
-}
-
-bool TearDownFromSignal(cryptohome::MountHelper* mounter,
-                        base::Closure quit_closure,
-                        const struct signalfd_siginfo&) {
+bool HandleSignal(base::RepeatingClosure quit_closure,
+                  const struct signalfd_siginfo&) {
   VLOG(1) << "Got signal";
-  TearDown(mounter);
-  quit_closure.Run();
+  std::move(quit_closure).Run();
   return true;  // unregister the handler
 }
 
@@ -125,10 +119,11 @@ int main(int argc, char** argv) {
       FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
       request.legacy_home(), &platform);
 
-  // If PerformEphemeralMount fails, or reporting back to cryptohome fails,
-  // attempt to clean up.
+  // A failure in PerformEphemeralMount might still require clean-up so set up
+  // the clean-up routine now.
   base::ScopedClosureRunner tear_down_runner(
-      base::Bind(&TearDown, base::Unretained(&mounter)));
+      base::BindOnce(&cryptohome::MountHelper::TearDownEphemeralMount,
+                     base::Unretained(&mounter)));
 
   cryptohome::ReportTimerStart(cryptohome::kPerformEphemeralMountTimer);
   if (!mounter.PerformEphemeralMount(request.username())) {
@@ -150,17 +145,14 @@ int main(int argc, char** argv) {
   }
   VLOG(1) << "Sent protobuf";
 
-  // Mount and ack succeeded, release the closure without running it.
-  ignore_result(tear_down_runner.Release());
-
   base::RunLoop run_loop;
 
-  // Clean up mounts when we get signalled.
+  // Quit the run loop when signalled.
   sig_handler.RegisterHandler(
-      SIGTERM, base::Bind(&TearDownFromSignal, base::Unretained(&mounter),
-                          run_loop.QuitClosure()));
+      SIGTERM, base::Bind(&HandleSignal, run_loop.QuitClosure()));
 
   run_loop.Run();
 
+  // |tear_down_runner| will clean up the mount now.
   return EX_OK;
 }
