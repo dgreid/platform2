@@ -727,20 +727,35 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_EQ("log", info.payload_kind);
   EXPECT_TRUE(info.metadata.GetString("payload", &value));
 
+  const base::FilePath processing = good_meta_.ReplaceExtension(".processing");
+  // ChooseAction was successful, so it should remove the file.
+  EXPECT_FALSE(base::PathExists(processing));
+
+  // If a ".processing" file exists, the meta file shouldn't be uploaded.
+  ASSERT_TRUE(test_util::CreateFile(processing, ""));
+  EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
+  EXPECT_THAT(reason, HasSubstr(".processing file already exists"));
+  ASSERT_TRUE(base::DeleteFile(processing, /*recursive=*/false));
+
   // The following file should be ignored.
   EXPECT_EQ(Sender::kIgnore,
             sender.ChooseAction(uploaded_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Not uploading already-uploaded crash"));
+  EXPECT_FALSE(
+      base::PathExists(uploaded_meta_.ReplaceExtension(".processing")));
 
   // The following files should be ignored.
   EXPECT_EQ(Sender::kIgnore,
             sender.ChooseAction(new_incomplete_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Recent incomplete metadata"));
+  EXPECT_FALSE(
+      base::PathExists(new_incomplete_meta_.ReplaceExtension(".processing")));
 
   // Device coredump should be ignored by default.
   EXPECT_EQ(Sender::kIgnore,
             sender.ChooseAction(devcore_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Device coredump upload not allowed"));
+  EXPECT_FALSE(base::PathExists(devcore_meta_.ReplaceExtension(".processing")));
 
   // Device coredump should be sent, if uploading is allowed.
   CreateDeviceCoredumpUploadAllowedFile();
@@ -749,47 +764,86 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   // The following files should be removed.
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(empty_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Payload is not found"));
+  EXPECT_FALSE(base::PathExists(empty_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(corrupted_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Corrupted metadata"));
+  EXPECT_FALSE(
+      base::PathExists(corrupted_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(nonexistent_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Missing payload"));
+  EXPECT_FALSE(
+      base::PathExists(nonexistent_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(unknown_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Unknown kind"));
+  EXPECT_FALSE(base::PathExists(unknown_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(old_incomplete_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Removing old incomplete metadata"));
+  EXPECT_FALSE(
+      base::PathExists(old_incomplete_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(old_os_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Old OS version"));
+  EXPECT_FALSE(base::PathExists(old_os_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(root_payload_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("payload path is absolute"));
+  EXPECT_FALSE(
+      base::PathExists(root_payload_meta_.ReplaceExtension(".processing")));
 
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(large_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Metadata file is unusually large"));
+  EXPECT_FALSE(base::PathExists(large_meta_.ReplaceExtension(".processing")));
 
   ASSERT_TRUE(SetConditions(kUnofficialBuild, kSignInMode, kMetricsEnabled,
                             raw_metrics_lib));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Not an official OS version"));
+  EXPECT_FALSE(base::PathExists(good_meta_.ReplaceExtension(".processing")));
 
   ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsDisabled,
                             raw_metrics_lib));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Crash reporting is disabled"));
+  EXPECT_FALSE(base::PathExists(good_meta_.ReplaceExtension(".processing")));
 
   // Valid crash files should be kept in the guest mode.
   ASSERT_TRUE(SetConditions(kOfficialBuild, kGuestMode, kMetricsDisabled,
                             raw_metrics_lib));
   EXPECT_EQ(Sender::kIgnore, sender.ChooseAction(good_meta_, &reason, &info));
+}
+
+TEST_F(CrashSenderUtilDeathTest, ChooseActionCrash) {
+  ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsEnabled));
+
+  const base::FilePath crash_directory =
+      paths::Get(paths::kSystemCrashDirectory);
+  ASSERT_TRUE(CreateDirectory(crash_directory));
+  ASSERT_TRUE(CreateTestCrashFiles(crash_directory));
+
+  Sender::Options options;
+  Sender sender(std::move(metrics_lib_),
+                std::make_unique<test_util::AdvancingClock>(), options);
+  ASSERT_TRUE(sender.Init());
+
+  ASSERT_TRUE(SetMockCrashSending(true));
+  sender.SetCrashDuringSendForTesting(true);
+
+  std::string reason;
+  CrashInfo info;
+  EXPECT_DEATH(sender.ChooseAction(good_meta_, &reason, &info),
+               "crashing as requested");
+
+  // ChooseAction crashed so the file should remain.
+  EXPECT_TRUE(base::PathExists(good_meta_.ReplaceExtension(".processing")));
 }
 
 TEST_F(CrashSenderUtilTest, ChooseActionDevMode) {
@@ -1466,6 +1520,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   ASSERT_TRUE(base::CreateDirectory(system_dir));
   const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
   const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_processing =
+      system_dir.Append("0.0.0.0.processing");
   const char system_meta[] =
       "payload=0.0.0.0.log\n"
       "exec_name=exec_foo\n"
@@ -1488,6 +1544,7 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   ASSERT_TRUE(base::CreateDirectory(user_dir));
   const base::FilePath user_meta_file = user_dir.Append("0.0.0.0.meta");
   const base::FilePath user_log = user_dir.Append("0.0.0.0.log");
+  const base::FilePath user_processing = user_dir.Append("0.0.0.0.processing");
   const char user_meta[] =
       "payload=0.0.0.0.log\n"
       "exec_name=exec_bar\n"
@@ -1551,6 +1608,10 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   base::TimeDelta total_sleep_time;
   sender.SendCrashes(crashes_to_send, &total_sleep_time);
 
+  // We shouldn't be processing any crashes still.
+  EXPECT_FALSE(base::PathExists(system_processing));
+  EXPECT_FALSE(base::PathExists(user_processing));
+
   // The Chrome uploads.log file shouldn't exist because we had nothing to
   // upload, but we will have slept once until we determined we shouldn't be
   // doing uploads.
@@ -1565,6 +1626,10 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   raw_metrics_lib->set_guest_mode(false);
   raw_metrics_lib->set_metrics_enabled(true);
   sender.SendCrashes(crashes_to_send, &total_sleep_time);
+
+  // We shouldn't be processing any crashes still.
+  EXPECT_FALSE(base::PathExists(system_processing));
+  EXPECT_FALSE(base::PathExists(user_processing));
 
   // Check the upload log from crash_sender.
   std::string contents;
@@ -1629,6 +1694,8 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
   ASSERT_TRUE(base::CreateDirectory(system_dir));
   const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
   const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_processing =
+      system_dir.Append("0.0.0.0.processing");
   const char system_meta[] =
       "payload=0.0.0.0.log\n"
       "done=1\n";
@@ -1660,6 +1727,10 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
 
   sender.SendCrashes(crashes_to_send, nullptr);
 
+  // We shouldn't be processing the crash still -- sending failed, but didn't
+  // crash.
+  EXPECT_FALSE(base::PathExists(system_processing));
+
   // The followings should be kept since the crash report was not uploaded.
   EXPECT_TRUE(base::PathExists(system_meta_file));
   EXPECT_TRUE(base::PathExists(system_log));
@@ -1667,6 +1738,55 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
   // The Chrome uploads.log file shouldn't exist because we had nothing to
   // report.
   EXPECT_FALSE(base::PathExists(paths::Get(paths::kChromeCrashLog)));
+}
+
+// Verify behavior when SendCrashes itself crashes.
+TEST_F(CrashSenderUtilDeathTest, SendCrashes_Crash) {
+  // Set up the mock session manager client.
+  auto mock =
+      std::make_unique<org::chromium::SessionManagerInterfaceProxyMock>();
+  test_util::SetActiveSessions(mock.get(), {{"user", "hash"}});
+  std::vector<MetaFile> crashes_to_send;
+
+  // Create the system crash directory, and crash files in it.
+  const base::FilePath system_dir = paths::Get(paths::kSystemCrashDirectory);
+  ASSERT_TRUE(base::CreateDirectory(system_dir));
+  const base::FilePath system_meta_file = system_dir.Append("0.0.0.0.meta");
+  const base::FilePath system_log = system_dir.Append("0.0.0.0.log");
+  const base::FilePath system_processing =
+      system_dir.Append("0.0.0.0.processing");
+  const char system_meta[] =
+      "payload=0.0.0.0.log\n"
+      "done=1\n";
+  ASSERT_TRUE(test_util::CreateFile(system_meta_file, system_meta));
+  ASSERT_TRUE(test_util::CreateFile(system_log, ""));
+  CrashInfo system_info;
+  EXPECT_TRUE(system_info.metadata.LoadFromString(system_meta));
+  system_info.payload_file = system_log;
+  system_info.payload_kind = "log";
+  EXPECT_TRUE(base::Time::FromString("25 Apr 2018 1:23:44 GMT",
+                                     &system_info.last_modified));
+  crashes_to_send.emplace_back(system_meta_file, std::move(system_info));
+
+  ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsEnabled));
+
+  std::vector<base::TimeDelta> sleep_times;
+  Sender::Options options;
+  options.session_manager_proxy = mock.release();
+  options.max_crash_rate = 2;
+  options.sleep_function = base::Bind(&FakeSleep, &sleep_times);
+  options.always_write_uploads_log = true;
+  Sender sender(std::move(metrics_lib_),
+                std::make_unique<test_util::AdvancingClock>(), options);
+  ASSERT_TRUE(sender.Init());
+
+  ASSERT_TRUE(SetMockCrashSending(true));
+  sender.SetCrashDuringSendForTesting(true);
+  EXPECT_DEATH(sender.SendCrashes(crashes_to_send, nullptr),
+               "crashing as requested");
+
+  // We crashed, so the ".processing" file should still exist.
+  EXPECT_TRUE(base::PathExists(system_processing));
 }
 
 TEST_F(CrashSenderUtilTest, LockFile) {

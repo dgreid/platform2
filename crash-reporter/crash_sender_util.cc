@@ -57,6 +57,7 @@ constexpr char kUploadTextPrefix[] = "upload_text_";
 constexpr char kUploadFilePrefix[] = "upload_file_";
 constexpr char kOsTimestamp[] = "os_millis";
 constexpr char kAlreadyUploadedExt[] = ".alreadyuploaded";
+constexpr char kProcessingExt[] = ".processing";
 
 // Keys used in uploads.log file. (All timestamps are measured in seconds.)
 constexpr char kJsonLogKeyUploadId[] = "upload_id";
@@ -112,6 +113,38 @@ void MetadataToCrashInfo(const brillo::KeyValueStore& metadata,
   info->payload_file = GetBaseNameFromMetadata(metadata, "payload");
   info->payload_kind = GetKindFromPayloadPath(info->payload_file);
 }
+
+// This class assists us in recovering from crashes while processing crashes.
+// When it is constructed, it attempts to create a ".processing" file for the
+// given metadata file, and when it is destructed it removes it.
+// If crash_sender crashes, or otherwise exits without running the destructor,
+// the .processing file will still exist. ChooseAction uses the existence of
+// this file to determine that the crash may be malformed and avoid processing
+// it again.
+class ScopedProcessingFile {
+ public:
+  explicit ScopedProcessingFile(const base::FilePath& meta_file)
+      : processing_file_(meta_file.ReplaceExtension(kProcessingExt)) {
+    base::File f(processing_file_,
+                 base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+    if (!f.IsValid()) {
+      LOG(ERROR) << "Failed to mark crash as being processed";
+    }
+  }
+
+  // Disallow copy and assign (and implicitly, move).
+  ScopedProcessingFile(const ScopedProcessingFile& other) = delete;
+  ScopedProcessingFile& operator=(const ScopedProcessingFile& other) = delete;
+
+  ~ScopedProcessingFile() {
+    if (!base::DeleteFile(processing_file_, /*recursive=*/false)) {
+      LOG(ERROR) << "Failed to remove .processing file. Crash will be deleted.";
+    }
+  }
+
+ private:
+  const base::FilePath processing_file_;
+};
 
 }  // namespace
 
@@ -649,6 +682,17 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     return kRemove;
   }
 
+  if (base::PathExists(meta_file.ReplaceExtension(kProcessingExt))) {
+    *reason = ".processing file already exists for: " + meta_file.value();
+    return kRemove;
+  }
+
+  ScopedProcessingFile f(meta_file);
+
+  if (IsMock()) {
+    CHECK(!crash_during_testing_) << "crashing as requested";
+  }
+
   std::string raw_metadata;
   if (!base::ReadFileToStringWithMaxSize(meta_file, &raw_metadata,
                                          kMaxMetaFileSize)) {
@@ -803,51 +847,62 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files,
     }
     lock = AcquireLockFileOrDie();
 
-    // This should be checked inside of the loop, since the device can disable
-    // metrics while sending crash reports with an interval up to
-    // max_spread_time_ between sends. We only need to check if metrics are
-    // enabled and not guest mode because in guest mode, it always indicates
-    // that metrics are disabled.
-    if (!HasCrashUploadingConsent()) {
-      LOG(INFO) << "Metrics disabled or guest mode entered, delaying crash "
-                << "sending";
-      return;
-    }
+    {
+      // Mark the crash as being processed so that if we crash, we don't try to
+      // send the crash again.
+      // This is in a scope so that RemoveReportFiles doesn't try to remove
+      // the .processing file (causing a LOG(ERROR) in the ScopedProcessingFile
+      // destructor).
+      ScopedProcessingFile processing(meta_file);
 
-    // User-specific crash reports become inaccessible if the user signs out
-    // while sleeping, thus we need to check if the metadata is still
-    // accessible.
-    if (!base::PathExists(meta_file)) {
-      LOG(INFO) << "Metadata is no longer accessible: " << meta_file.value();
-      continue;
-    }
+      // This should be checked inside of the loop, since the device can disable
+      // metrics while sending crash reports with an interval up to
+      // max_spread_time_ between sends. We only need to check if metrics are
+      // enabled and not guest mode because in guest mode, it always indicates
+      // that metrics are disabled.
+      if (!HasCrashUploadingConsent()) {
+        LOG(INFO) << "Metrics disabled or guest mode entered, delaying crash "
+                  << "sending";
+        return;
+      }
 
-    const base::FilePath timestamps_dir =
-        paths::Get(paths::kTimestampsDirectory);
-    if (!IsBelowRate(timestamps_dir, max_crash_rate_, max_crash_bytes_)) {
-      LOG(WARNING) << "Cannot send more crashes. Sending " << meta_file.value()
-                   << " would exceed the max daily rate of " << max_crash_rate_
-                   << " crashes and " << max_crash_bytes_ << " bytes";
-      return;
-    }
+      // User-specific crash reports become inaccessible if the user signs out
+      // while sleeping, thus we need to check if the metadata is still
+      // accessible.
+      if (!base::PathExists(meta_file)) {
+        LOG(INFO) << "Metadata is no longer accessible: " << meta_file.value();
+        continue;
+      }
 
-    // If we are offline, then don't try to send any crashes.
-    if (!IsMock() && !IsNetworkOnline()) {
-      LOG(INFO) << "Stopping crash sending; network is offline";
-      return;
-    }
+      const base::FilePath timestamps_dir =
+          paths::Get(paths::kTimestampsDirectory);
+      if (!IsBelowRate(timestamps_dir, max_crash_rate_, max_crash_bytes_)) {
+        LOG(WARNING) << "Cannot send more crashes. Sending "
+                     << meta_file.value()
+                     << " would exceed the max daily rate of "
+                     << max_crash_rate_ << " crashes and " << max_crash_bytes_
+                     << " bytes";
+        return;
+      }
 
-    const CrashDetails details = {
-        .meta_file = meta_file,
-        .payload_file = info.payload_file,
-        .payload_kind = info.payload_kind,
-        .client_id = client_id,
-        .metadata = info.metadata,
-    };
-    if (!RequestToSendCrash(details)) {
-      LOG(WARNING) << "Failed to send " << meta_file.value()
-                   << ", not removing; will retry later";
-      continue;
+      // If we are offline, then don't try to send any crashes.
+      if (!IsMock() && !IsNetworkOnline()) {
+        LOG(INFO) << "Stopping crash sending; network is offline";
+        return;
+      }
+
+      const CrashDetails details = {
+          .meta_file = meta_file,
+          .payload_file = info.payload_file,
+          .payload_kind = info.payload_kind,
+          .client_id = client_id,
+          .metadata = info.metadata,
+      };
+      if (!RequestToSendCrash(details)) {
+        LOG(WARNING) << "Failed to send " << meta_file.value()
+                     << ", not removing; will retry later";
+        continue;
+      }
     }
     LOG(INFO) << "Successfully sent crash " << meta_file.value()
               << " and removing.";
@@ -1148,6 +1203,7 @@ bool Sender::RequestToSendCrash(const CrashDetails& details) {
       LOG(INFO) << "Mocking unsuccessful send";
       return false;
     }
+    CHECK(!crash_during_testing_) << "crashing as requested";
     LOG(INFO) << "Mocking successful send";
 
     if (!always_write_uploads_log_)

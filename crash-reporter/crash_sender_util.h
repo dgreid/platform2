@@ -301,6 +301,11 @@ class Sender {
   // completed successfully.
   const base::FilePath& temp_dir() const { return scoped_temp_dir_.GetPath(); }
 
+  // For tests only, crash while sending crashes.
+  void SetCrashDuringSendForTesting(bool crash) {
+    crash_during_testing_ = crash;
+  }
+
  private:
   friend class IsNetworkOnlineTest;
 
@@ -347,6 +352,7 @@ class Sender {
   std::unique_ptr<base::Clock> clock_;
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<brillo::OsReleaseReader> os_release_reader_;
+  bool crash_during_testing_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(Sender);
 };
