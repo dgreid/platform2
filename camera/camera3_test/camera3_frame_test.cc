@@ -1172,8 +1172,8 @@ TEST_P(Camera3SimpleCaptureFrames, Camera3ResultAllKeysTest) {
   }
 
   struct timespec timeout;
-  GetTimeOfTimeout(kDefaultTimeoutMs, &timeout);
   for (int32_t i = 0; i < num_frames_; i++) {
+    GetTimeOfTimeout(kDefaultTimeoutMs, &timeout);
     WaitShutterAndCaptureResult(timeout);
   }
 
@@ -1200,8 +1200,8 @@ TEST_P(Camera3SimpleCaptureFrames, Camera3PartialResultTest) {
   }
 
   struct timespec timeout;
-  GetTimeOfTimeout(kDefaultTimeoutMs, &timeout);
   for (int32_t i = 0; i < num_frames_; i++) {
+    GetTimeOfTimeout(kDefaultTimeoutMs, &timeout);
     WaitShutterAndCaptureResult(timeout);
   }
 
