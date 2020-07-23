@@ -8,7 +8,24 @@
 
 module chromeos.cros_healthd_executor.mojom;
 
+// Provides the result of running a process.
+struct ProcessResult {
+  // Return code received from the process (0=success). If this is non-zero then
+  // stdout and/or stderr may be empty.
+  int32 return_code;
+  // Contents of stdout from running the process.
+  string out;
+  // Contents of stderr from running the process. If this is non-empty it may
+  // indicate there is a problem, even if |return_code| is 0.
+  string err;
+};
+
 // Root-level executor interface exposed to the cros_healthd daemon. In
 // production, this is implemented by the Executor daemon.
 interface Executor {
+  // Obtains fan speed by running ectool and returns the result.
+  //
+  // The response:
+  // * |result| - contains information received from running the tool.
+  GetFanSpeed() => (ProcessResult result);
 };

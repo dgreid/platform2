@@ -9,6 +9,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/callback.h>
 #include <base/logging.h>
 
 #include "diagnostics/cros_healthd/fetchers/memory_fetcher.h"
@@ -92,8 +93,11 @@ void FetchAggregator::Run(
         break;
       }
       case mojo_ipc::ProbeCategoryEnum::kFan: {
-        WrapFetchProbeData(category, itr, &info->fan_result,
-                           fan_fetcher_->FetchFanInfo(base::FilePath("/")));
+        fan_fetcher_->FetchFanInfo(
+            base::FilePath("/"),
+            base::BindOnce(
+                &FetchAggregator::WrapFetchProbeData<mojo_ipc::FanResultPtr>,
+                weak_factory_.GetWeakPtr(), category, itr, &info->fan_result));
         break;
       }
       case mojo_ipc::ProbeCategoryEnum::kStatefulPartition: {

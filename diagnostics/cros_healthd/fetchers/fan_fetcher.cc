@@ -5,10 +5,13 @@
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
 
 #include <cstdint>
+#include <cstdlib>
 #include <string>
 #include <utility>
 
+#include <base/bind.h>
 #include <base/files/file_util.h>
+#include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
@@ -23,6 +26,7 @@ namespace diagnostics {
 
 namespace {
 
+namespace executor_ipc = chromeos::cros_healthd_executor::mojom;
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 
 constexpr auto kFanStalledRegex = R"(Fan \d+ stalled!)";
@@ -36,28 +40,38 @@ FanFetcher::FanFetcher(Context* context) : context_(context) {
 
 FanFetcher::~FanFetcher() = default;
 
-mojo_ipc::FanResultPtr FanFetcher::FetchFanInfo(
-    const base::FilePath& root_dir) {
-  std::vector<mojo_ipc::FanInfoPtr> fan_info;
-
+void FanFetcher::FetchFanInfo(const base::FilePath& root_dir,
+                              FetchFanInfoCallback callback) {
   // Devices without a Google EC, and therefore ectool, cannot obtain fan info.
   if (!base::PathExists(root_dir.Append(kRelativeCrosEcPath))) {
     LOG(INFO) << "Device does not have a Google EC.";
-    return mojo_ipc::FanResult::NewFanInfo(std::move(fan_info));
+    std::move(callback).Run(mojo_ipc::FanResult::NewFanInfo({}));
+    return;
   }
 
-  std::string debugd_result;
-  brillo::ErrorPtr error;
-  if (!context_->debugd_proxy()->CollectFanSpeed(
-          &debugd_result, &error, kDebugdDBusTimeout.InMilliseconds())) {
-    return mojo_ipc::FanResult::NewError(CreateAndLogProbeError(
-        mojo_ipc::ErrorType::kSystemUtilityError,
-        "Failed to collect fan speed from debugd: " + error->GetCode() + " " +
-            error->GetMessage()));
+  context_->executor()->GetFanSpeed(
+      base::BindOnce(&FanFetcher::HandleFanSpeedResponse,
+                     weak_factory_.GetWeakPtr(), std::move(callback)));
+}
+
+void FanFetcher::HandleFanSpeedResponse(FetchFanInfoCallback callback,
+                                        executor_ipc::ProcessResultPtr result) {
+  std::string err = result->err;
+  int32_t return_code = result->return_code;
+  if (!err.empty() || return_code != EXIT_SUCCESS) {
+    std::move(callback).Run(
+        mojo_ipc::FanResult::NewError(CreateAndLogProbeError(
+            mojo_ipc::ErrorType::kSystemUtilityError,
+            base::StringPrintf(
+                "GetFanSpeed failed with return code: %d and error: %s",
+                return_code, err.c_str()))));
+    return;
   }
 
+  std::vector<mojo_ipc::FanInfoPtr> fan_info;
+  std::string output = result->out;
   std::vector<std::string> lines = base::SplitString(
-      debugd_result, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
+      output, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : lines) {
     if (RE2::FullMatch(line, kFanStalledRegex)) {
       fan_info.push_back(mojo_ipc::FanInfo::New(0));
@@ -66,22 +80,25 @@ mojo_ipc::FanResultPtr FanFetcher::FetchFanInfo(
 
     std::string regex_result;
     if (!RE2::FullMatch(line, kFanSpeedRegex, &regex_result)) {
-      return mojo_ipc::FanResult::NewError(
+      std::move(callback).Run(mojo_ipc::FanResult::NewError(
           CreateAndLogProbeError(mojo_ipc::ErrorType::kParseError,
-                                 "Line does not match regex: " + line));
+                                 "Line does not match regex: " + line)));
+      return;
     }
 
     uint32_t speed;
     if (base::StringToUint(regex_result, &speed)) {
       fan_info.push_back(mojo_ipc::FanInfo::New(speed));
     } else {
-      return mojo_ipc::FanResult::NewError(CreateAndLogProbeError(
-          mojo_ipc::ErrorType::kParseError,
-          "Failed to convert regex result to integer: " + regex_result));
+      std::move(callback).Run(
+          mojo_ipc::FanResult::NewError(CreateAndLogProbeError(
+              mojo_ipc::ErrorType::kParseError,
+              "Failed to convert regex result to integer: " + regex_result)));
+      return;
     }
   }
 
-  return mojo_ipc::FanResult::NewFanInfo(std::move(fan_info));
+  std::move(callback).Run(mojo_ipc::FanResult::NewFanInfo(std::move(fan_info)));
 }
 
 }  // namespace diagnostics

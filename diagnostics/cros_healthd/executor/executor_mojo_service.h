@@ -21,6 +21,9 @@ class ExecutorMojoService final
   ExecutorMojoService(const ExecutorMojoService&) = delete;
   ExecutorMojoService& operator=(const ExecutorMojoService&) = delete;
 
+  // chromeos::cros_healthd_executor::mojom::Executor overrides:
+  void GetFanSpeed(GetFanSpeedCallback callback) override;
+
  private:
   // Provides a Mojo endpoint that cros_healthd can call to access the
   // executor's Mojo methods.

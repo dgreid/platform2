@@ -15,7 +15,10 @@ pkg_config("libcros_healthd_executor_pkg_deps") {
 
 source_set("libcros_healthd_executor") {
   configs += [ ":libcros_healthd_executor_pkg_deps" ]
-  deps = [ "//diagnostics/mojo:cros_healthd_executor_mojo_bindings" ]
+  deps = [
+    "//diagnostics/cros_healthd/process:libcros_healthd_process",
+    "//diagnostics/mojo:cros_healthd_executor_mojo_bindings",
+  ]
   sources = [
     "executor.cc",
     "executor_adapter_impl.cc",

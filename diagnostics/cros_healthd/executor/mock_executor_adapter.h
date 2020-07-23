@@ -22,6 +22,7 @@ class MockExecutorAdapter final : public ExecutorAdapter {
 
   // ExecutorAdapter overrides:
   MOCK_METHOD(void, Connect, (mojo::PlatformChannelEndpoint), (override));
+  MOCK_METHOD(void, GetFanSpeed, (Executor::GetFanSpeedCallback), (override));
 };
 
 }  // namespace diagnostics

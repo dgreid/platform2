@@ -139,10 +139,16 @@ void NewMountNamespace() {
 
   // Create a minimalistic mount namespace with just the bare minimum required.
   minijail_namespace_vfs(j.get());
+  minijail_mount_tmp(j.get());
   if (minijail_enter_pivot_root(j.get(), "/mnt/empty"))
     LOG(FATAL) << "minijail_enter_pivot_root() failed";
 
   minijail_bind(j.get(), "/", "/", 0);
+
+  if (minijail_mount_with_data(j.get(), "none", "/proc", "proc",
+                               MS_NOSUID | MS_NOEXEC | MS_NODEV, nullptr)) {
+    LOG(FATAL) << "minijail_mount_with_data(\"/proc\") failed";
+  }
 
   if (minijail_mount_with_data(j.get(), "tmpfs", "/run", "tmpfs",
                                MS_NOSUID | MS_NOEXEC | MS_NODEV, nullptr)) {

@@ -39,4 +39,10 @@ void ExecutorAdapterImpl::Connect(mojo::PlatformChannelEndpoint endpoint) {
                                  base::kNullProcessHandle, std::move(endpoint));
 }
 
+void ExecutorAdapterImpl::GetFanSpeed(Executor::GetFanSpeedCallback callback) {
+  DCHECK(executor_.is_bound());
+
+  executor_->GetFanSpeed(std::move(callback));
+}
+
 }  // namespace diagnostics
