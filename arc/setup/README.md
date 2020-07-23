@@ -48,7 +48,7 @@ Several scripts modify the variables in `config.json`:
 * `arc-setup-9999.ebuild` rewrites `USE_ESDFS` at package build time depending
    on the type of the BOARD.
 * `board_specific_setup.sh` rewrites `ANDROID_DEBUGGABLE` at image build time.
-* `setup_writable_android_mount.sh` which is a debug script in Android master
-  rewrites `WRITABLE_MOUNT`.
+* `setup_writable_android_mount.sh` which is a debug script in Android
+  repository rewrites `WRITABLE_MOUNT`.
 
 Be careful when adding, removing, or renaming the entries.

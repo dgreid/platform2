@@ -3,8 +3,7 @@
 This document outlines the process by which Android runs in a Linux container in
 Chrome OS.
 
-This document explains how the container for Android master works unless
-otherwise noted. The container for N may work in a slightly different way.
+This document explains how the container for Android P works.
 
 ## config.json
 

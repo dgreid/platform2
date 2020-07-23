@@ -128,7 +128,7 @@ constexpr char kObbRootfsImage[] =
     "/opt/google/containers/arc-obb-mounter/rootfs.squashfs";
 constexpr char kOemMountDirectory[] = "/run/arc/oem";
 constexpr char kPlatformXmlFileRelative[] = "etc/permissions/platform.xml";
-constexpr char kRestoreconWhitelistSync[] = "/sys/kernel/debug/sync";
+constexpr char kRestoreconAllowlistSync[] = "/sys/kernel/debug/sync";
 constexpr char kSdcardConfigfsDirectory[] = "/sys/kernel/config/sdcardfs";
 constexpr char kSdcardMountDirectory[] = "/run/arc/sdcard";
 constexpr char kSdcardRootfsDirectory[] =
@@ -576,7 +576,7 @@ struct ArcPaths {
       kSystemLibArm64DirectoryRelative};
   const base::FilePath usb_devices_directory{kUsbDevicesDirectory};
 
-  const base::FilePath restorecon_whitelist_sync{kRestoreconWhitelistSync};
+  const base::FilePath restorecon_allowlist_sync{kRestoreconAllowlistSync};
 
   const base::FilePath android_data_directory;
   const base::FilePath android_data_old_directory;
@@ -1356,8 +1356,8 @@ void ArcSetup::RestoreContext() {
       arc_paths_->sdcard_mount_directory, arc_paths_->sysfs_cpu,
       arc_paths_->sysfs_tracing,
   };
-  if (base::DirectoryExists(arc_paths_->restorecon_whitelist_sync))
-    directories.push_back(arc_paths_->restorecon_whitelist_sync);
+  if (base::DirectoryExists(arc_paths_->restorecon_allowlist_sync))
+    directories.push_back(arc_paths_->restorecon_allowlist_sync);
   // usbfs does not exist on test VMs without any USB emulation, skip it there.
   if (base::DirectoryExists(arc_paths_->usb_devices_directory))
     directories.push_back(arc_paths_->usb_devices_directory);
@@ -1717,7 +1717,7 @@ void ArcSetup::MountSharedAndroidDirectories() {
   // First, make the original data directory a mount point and also make it
   // executable. This has to be done *before* passing the directory into
   // the shared mount point because the new flags won't be propagated if the
-  // mount point has already been shared with the slave.
+  // mount point has already been shared with the MS_SLAVE one.
   EXIT_IF(!arc_mounter_->BindMount(data_directory, data_directory));
   EXIT_IF(
       !arc_mounter_->Remount(data_directory, MS_NOSUID | MS_NODEV, "seclabel"));

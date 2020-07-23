@@ -335,7 +335,7 @@ bool VSockProxy::OnConnectRequest(arc_proxy::ConnectRequest* request) {
   // Currently, this actually uses only on ArcBridgeService's initial
   // connection establishment, and the request comes from the guest to the host
   // including the |path|.
-  // TODO(hidehiko): Consider whitelist the path which is allowed to access.
+  // TODO(hidehiko): Consider allowlist the path which is allowed to access.
   auto result = ConnectUnixDomainSocket(base::FilePath(request->path()));
   response->set_cookie(request->cookie());
   response->set_error_code(result.first);

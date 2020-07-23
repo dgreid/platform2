@@ -1,4 +1,4 @@
-# Whitelist /home to be exempt from the policy that blocks opening of FIFOs on
+# Allowlist /home to be exempt from the policy that blocks opening of FIFOs on
 # the stateful file system. FIFOs are used legitimately by Android in /data,
 # which resides under /home. For example, java.io.tmpdir is expected to support
 # FIFOs, and is set by the Android framework to use
