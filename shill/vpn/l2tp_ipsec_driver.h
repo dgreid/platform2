@@ -33,7 +33,7 @@ class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
   ~L2TPIPSecDriver() override;
 
   // Method to return service RPC identifier.
-  const RpcIdentifier& GetServiceRpcIdentifier();
+  const RpcIdentifier& GetServiceRpcIdentifier() const;
 
  protected:
   // Inherited from VPNDriver.

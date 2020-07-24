@@ -142,7 +142,7 @@ L2TPIPSecDriver::~L2TPIPSecDriver() {
   IdleService();
 }
 
-const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() {
+const RpcIdentifier& L2TPIPSecDriver::GetServiceRpcIdentifier() const {
   static RpcIdentifier null_identifier("(l2tp_ipsec_driver)");
   if (service() == nullptr)
     return null_identifier;

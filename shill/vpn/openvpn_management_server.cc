@@ -151,7 +151,7 @@ void OpenVPNManagementServer::Restart() {
   SendSignal("SIGUSR1");
 }
 
-const RpcIdentifier& OpenVPNManagementServer::GetServiceRpcIdentifier() {
+const RpcIdentifier& OpenVPNManagementServer::GetServiceRpcIdentifier() const {
   return driver_->GetServiceRpcIdentifier();
 }
 

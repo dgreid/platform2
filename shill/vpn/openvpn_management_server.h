@@ -55,7 +55,7 @@ class OpenVPNManagementServer {
   const std::string& state() const { return state_; }
 
   // Method to get service identifier for logging.
-  virtual const RpcIdentifier& GetServiceRpcIdentifier();
+  const RpcIdentifier& GetServiceRpcIdentifier() const;
 
  private:
   friend class OpenVPNDriverTest;
