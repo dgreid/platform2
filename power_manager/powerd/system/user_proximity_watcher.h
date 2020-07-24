@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef POWER_MANAGER_POWERD_SYSTEM_SAR_WATCHER_H_
-#define POWER_MANAGER_POWERD_SYSTEM_SAR_WATCHER_H_
+#ifndef POWER_MANAGER_POWERD_SYSTEM_USER_PROXIMITY_WATCHER_H_
+#define POWER_MANAGER_POWERD_SYSTEM_USER_PROXIMITY_WATCHER_H_
 
 #include <memory>
 #include <string>
@@ -17,6 +17,7 @@
 #include <cros_config/cros_config.h>
 
 #include "power_manager/common/power_constants.h"
+#include "power_manager/powerd/system/udev.h"
 #include "power_manager/powerd/system/udev_subsystem_observer.h"
 #include "power_manager/powerd/system/user_proximity_watcher_interface.h"
 
@@ -32,9 +33,12 @@ class UdevInterface;
 
 // Concrete implementation of UserProximityWatcherInterface: detects proximity
 // sensors and reports proximity events.
-class SarWatcher : public UserProximityWatcherInterface,
-                   public UdevSubsystemObserver {
+class UserProximityWatcher : public UserProximityWatcherInterface,
+                             public UdevSubsystemObserver {
  public:
+  // Sensor type for proximity detection.
+  enum class SensorType { UNKNOWN, SAR };
+
   // udev subsystem to watch.
   static const char kIioUdevSubsystem[];
 
@@ -46,11 +50,11 @@ class SarWatcher : public UserProximityWatcherInterface,
 
   void set_open_iio_events_func_for_testing(OpenIioEventsFunc f);
 
-  SarWatcher();
-  SarWatcher(const SarWatcher&) = delete;
-  SarWatcher& operator=(const SarWatcher&) = delete;
+  UserProximityWatcher();
+  UserProximityWatcher(const UserProximityWatcher&) = delete;
+  UserProximityWatcher& operator=(const UserProximityWatcher&) = delete;
 
-  ~SarWatcher() override;
+  ~UserProximityWatcher() override;
 
   // Returns true on success.
   bool Init(PrefsInterface* prefs, UdevInterface* udev);
@@ -67,6 +71,7 @@ class SarWatcher : public UserProximityWatcherInterface,
 
  private:
   struct SensorInfo {
+    SensorType type;
     std::string syspath;
     std::string devlink;
     int event_fd;
@@ -79,13 +84,12 @@ class SarWatcher : public UserProximityWatcherInterface,
   // data for. The allowed roles are filtered based on whether the preferences
   // allow using proximity sensor as an input for a given subsystem. The
   // return value is a bitwise combination of SensorRole values.
-  uint32_t GetUsableSensorRoles(const std::string& path);
+  uint32_t GetUsableSensorRoles(const SensorType type, const std::string& path);
 
   // Determines whether |dev| represents a proximity sensor connected via
   // the IIO subsystem. If so, |devlink_out| is the path to the file to be used
   // to read proximity events from this device.
-  bool IsIioProximitySensor(const UdevDeviceInfo& dev,
-                            std::string* devlink_out);
+  bool IsIioSarSensor(const UdevDeviceInfo& dev, std::string* devlink_out);
 
   // Sets proximity IIO attributes for rising, falling, or either direction
   bool SetIioRisingFallingValue(const std::string& syspath,
@@ -97,12 +101,14 @@ class SarWatcher : public UserProximityWatcherInterface,
 
   // Configures the proximity sensor for usage based on values read from
   // cros_config
-  bool ConfigureSensor(const std::string& syspath, uint32_t role);
+  bool ConfigureSarSensor(const std::string& syspath, uint32_t role);
 
   // Opens a file descriptor suitable for listening to proximity events for
   // the sensor at |devlink|, and notifies registered observers that a new
   // valid proximity sensor exists.
-  bool OnSensorDetected(const std::string& syspath, const std::string& devlink);
+  bool OnSensorDetected(const SensorType type,
+                        const std::string& syspath,
+                        const std::string& devlink);
 
   // Check new udev device. If the device of |device_info| is a proximity
   // sensor, start listening to proximity events for it.
@@ -123,4 +129,4 @@ class SarWatcher : public UserProximityWatcherInterface,
 }  // namespace system
 }  // namespace power_manager
 
-#endif  // POWER_MANAGER_POWERD_SYSTEM_SAR_WATCHER_H_
+#endif  // POWER_MANAGER_POWERD_SYSTEM_USER_PROXIMITY_WATCHER_H_

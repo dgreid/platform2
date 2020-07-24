@@ -53,11 +53,11 @@
 #include "power_manager/powerd/system/peripheral_battery_watcher.h"
 #include "power_manager/powerd/system/pluggable_internal_backlight.h"
 #include "power_manager/powerd/system/power_supply.h"
-#include "power_manager/powerd/system/sar_watcher.h"
 #include "power_manager/powerd/system/suspend_configurator.h"
 #include "power_manager/powerd/system/thermal/thermal_device.h"
 #include "power_manager/powerd/system/thermal/thermal_device_factory.h"
 #include "power_manager/powerd/system/udev.h"
+#include "power_manager/powerd/system/user_proximity_watcher.h"
 #include "power_manager/powerd/system/wilco_charge_controller_helper.h"
 
 #ifndef VCSID
@@ -215,7 +215,7 @@ class DaemonDelegateImpl : public DaemonDelegate {
   std::unique_ptr<system::UserProximityWatcherInterface>
   CreateUserProximityWatcher(PrefsInterface* prefs,
                              system::UdevInterface* udev) override {
-    auto watcher = std::make_unique<system::SarWatcher>();
+    auto watcher = std::make_unique<system::UserProximityWatcher>();
     watcher->Init(prefs, udev);
     return watcher;
   }

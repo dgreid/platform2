@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "power_manager/powerd/system/sar_watcher.h"
+#include "power_manager/powerd/system/user_proximity_watcher.h"
 
 #include <fcntl.h>
 #include <linux/iio/events.h>
@@ -13,7 +13,6 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include <memory>
 #include <utility>
 #include <vector>
 
@@ -57,25 +56,26 @@ int OpenIioFd(const base::FilePath& path) {
 
 }  // namespace
 
-const char SarWatcher::kIioUdevSubsystem[] = "iio";
+const char UserProximityWatcher::kIioUdevSubsystem[] = "iio";
 
-const char SarWatcher::kIioUdevDevice[] = "iio_device";
+const char UserProximityWatcher::kIioUdevDevice[] = "iio_device";
 
-void SarWatcher::set_open_iio_events_func_for_testing(OpenIioEventsFunc f) {
+void UserProximityWatcher::set_open_iio_events_func_for_testing(
+    OpenIioEventsFunc f) {
   open_iio_events_func_ = f;
 }
 
-SarWatcher::SarWatcher() : open_iio_events_func_(base::Bind(&OpenIioFd)) {}
+UserProximityWatcher::UserProximityWatcher()
+    : open_iio_events_func_(base::Bind(&OpenIioFd)) {}
 
-SarWatcher::~SarWatcher() {
+UserProximityWatcher::~UserProximityWatcher() {
   if (udev_)
     udev_->RemoveSubsystemObserver(kIioUdevSubsystem, this);
 }
 
-bool SarWatcher::Init(PrefsInterface* prefs, UdevInterface* udev) {
+bool UserProximityWatcher::Init(PrefsInterface* prefs, UdevInterface* udev) {
   prefs->GetBool(kSetCellularTransmitPowerForProximityPref,
                  &use_proximity_for_cellular_);
-
   prefs->GetBool(kSetWifiTransmitPowerForProximityPref,
                  &use_proximity_for_wifi_);
 
@@ -93,7 +93,7 @@ bool SarWatcher::Init(PrefsInterface* prefs, UdevInterface* udev) {
   return true;
 }
 
-void SarWatcher::AddObserver(UserProximityObserver* observer) {
+void UserProximityWatcher::AddObserver(UserProximityObserver* observer) {
   DCHECK(observer);
   observers_.AddObserver(observer);
 #if USE_TROGDOR_SAR_HACK
@@ -104,18 +104,18 @@ void SarWatcher::AddObserver(UserProximityObserver* observer) {
 #endif  // USE_TROGDOR_SAR_HACK
 }
 
-void SarWatcher::RemoveObserver(UserProximityObserver* observer) {
+void UserProximityWatcher::RemoveObserver(UserProximityObserver* observer) {
   DCHECK(observer);
   observers_.RemoveObserver(observer);
 }
 
-void SarWatcher::OnUdevEvent(const UdevEvent& event) {
+void UserProximityWatcher::OnUdevEvent(const UdevEvent& event) {
   if (event.action != UdevEvent::Action::ADD)
     return;
   OnNewUdevDevice(event.device_info);
 }
 
-void SarWatcher::OnFileCanReadWithoutBlocking(int fd) {
+void UserProximityWatcher::OnFileCanReadWithoutBlocking(int fd) {
   if (sensors_.find(fd) == sensors_.end()) {
     LOG(WARNING) << "Notified about FD " << fd << "which is not a sensor";
     return;
@@ -140,15 +140,13 @@ void SarWatcher::OnFileCanReadWithoutBlocking(int fd) {
       return;
   }
 
-  for (auto& observer : observers_) {
+  for (auto& observer : observers_)
     observer.OnProximityEvent(fd, proximity);
-  }
 }
 
-bool SarWatcher::IsIioProximitySensor(const UdevDeviceInfo& dev,
-                                      std::string* devlink_out) {
+bool UserProximityWatcher::IsIioSarSensor(const UdevDeviceInfo& dev,
+                                          std::string* devlink_out) {
   DCHECK(udev_);
-
   if (dev.subsystem != kIioUdevSubsystem || dev.devtype != kIioUdevDevice)
     return false;
 
@@ -169,30 +167,34 @@ bool SarWatcher::IsIioProximitySensor(const UdevDeviceInfo& dev,
   return false;
 }
 
-uint32_t SarWatcher::GetUsableSensorRoles(const std::string& path) {
+uint32_t UserProximityWatcher::GetUsableSensorRoles(const SensorType type,
+                                                    const std::string& path) {
   uint32_t responsibility = UserProximityObserver::SensorRole::SENSOR_ROLE_NONE;
 
-  const auto proximity_index = path.find("proximity-");
-  if (proximity_index == std::string::npos)
-    return responsibility;
+  if (type == SensorType::SAR) {
+    const auto proximity_index = path.find("proximity-");
+    if (proximity_index == std::string::npos)
+      return responsibility;
 
-  if (use_proximity_for_cellular_ &&
-      path.find("-lte", proximity_index) != std::string::npos)
-    responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_LTE;
+    if (use_proximity_for_cellular_ &&
+        path.find("-lte", proximity_index) != std::string::npos)
+      responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_LTE;
 
-  if (use_proximity_for_wifi_ &&
-      path.find("-wifi", proximity_index) != std::string::npos)
-    responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI;
+    if (use_proximity_for_wifi_ &&
+        path.find("-wifi", proximity_index) != std::string::npos)
+      responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI;
+  }
 
   return responsibility;
 }
 
-bool SarWatcher::SetIioRisingFallingValue(const std::string& syspath,
-                                          brillo::CrosConfigInterface* config,
-                                          const std::string& config_path,
-                                          const std::string& config_name,
-                                          const std::string& path_prefix,
-                                          const std::string& postfix) {
+bool UserProximityWatcher::SetIioRisingFallingValue(
+    const std::string& syspath,
+    brillo::CrosConfigInterface* config,
+    const std::string& config_path,
+    const std::string& config_name,
+    const std::string& path_prefix,
+    const std::string& postfix) {
   std::string rising_value, falling_value;
   std::string rising_config = "thresh-rising" + config_name;
   std::string falling_config = "thresh-falling" + config_name;
@@ -231,7 +233,8 @@ bool SarWatcher::SetIioRisingFallingValue(const std::string& syspath,
   return true;
 }
 
-bool SarWatcher::ConfigureSensor(const std::string& syspath, uint32_t role) {
+bool UserProximityWatcher::ConfigureSarSensor(const std::string& syspath,
+                                              uint32_t role) {
   auto config = std::make_unique<brillo::CrosConfig>();
   if (!config->Init()) {
     /* Ignore on non-unibuild boards */
@@ -313,17 +316,19 @@ bool SarWatcher::ConfigureSensor(const std::string& syspath, uint32_t role) {
   return true;
 }
 
-bool SarWatcher::OnSensorDetected(const std::string& syspath,
-                                  const std::string& devlink) {
-  uint32_t role = GetUsableSensorRoles(devlink);
+bool UserProximityWatcher::OnSensorDetected(const SensorType type,
+                                            const std::string& syspath,
+                                            const std::string& devlink) {
+  DCHECK(type != SensorType::UNKNOWN);
+  uint32_t role = GetUsableSensorRoles(type, devlink);
 
   if (role == UserProximityObserver::SensorRole::SENSOR_ROLE_NONE) {
     LOG(INFO) << "Sensor at " << devlink << " not usable for any subsystem";
     return true;
   }
 
-  if (!ConfigureSensor(syspath, role)) {
-    LOG(WARNING) << "Unable to configure sensor at " << devlink;
+  if (type == SensorType::SAR && !ConfigureSarSensor(syspath, role)) {
+    LOG(WARNING) << "Unable to configure sar sensor at " << devlink;
     return false;
   }
 
@@ -334,13 +339,15 @@ bool SarWatcher::OnSensorDetected(const std::string& syspath,
   }
 
   SensorInfo info;
+  info.type = type;
   info.syspath = syspath;
   info.devlink = devlink;
   info.event_fd = event_fd;
   info.role = role;
   info.controller = base::FileDescriptorWatcher::WatchReadable(
-      event_fd, base::BindRepeating(&SarWatcher::OnFileCanReadWithoutBlocking,
-                                    base::Unretained(this), event_fd));
+      event_fd,
+      base::BindRepeating(&UserProximityWatcher::OnFileCanReadWithoutBlocking,
+                          base::Unretained(this), event_fd));
   sensors_.emplace(event_fd, std::move(info));
 
   for (auto& observer : observers_) {
@@ -350,11 +357,15 @@ bool SarWatcher::OnSensorDetected(const std::string& syspath,
   return true;
 }
 
-void SarWatcher::OnNewUdevDevice(const UdevDeviceInfo& device_info) {
+void UserProximityWatcher::OnNewUdevDevice(const UdevDeviceInfo& device_info) {
   std::string devlink;
-  if (!IsIioProximitySensor(device_info, &devlink))
+  SensorType type = SensorType::UNKNOWN;
+  if (IsIioSarSensor(device_info, &devlink))
+    type = SensorType::SAR;
+  else
     return;
-  if (!OnSensorDetected(device_info.syspath, devlink))
+
+  if (!OnSensorDetected(type, device_info.syspath, devlink))
     LOG(ERROR) << "Unable to setup proximity sensor " << device_info.syspath;
 }
 
