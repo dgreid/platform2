@@ -1664,10 +1664,19 @@ cmd_diag() (
   # diag does its own parameter validation. Aside from a single D-Bus command to
   # bootstrap a mojo connection to cros_healthd, diag only sends mojo commands
   # and does no work itself.
-  cros-health-tool diag "$@"
+  local action="$1"
+  shift
+  if [ "${action}" = "list" ]; then
+    cros-health-tool diag "--action=get_routines"
+  else
+    # Aside listing available routines, the only other valid option is running a
+    # routine. This is a safe assumption to make, because diag will validate the
+    # --routine flag and fail on any invalid routines.
+    cros-health-tool diag "--action=run_routine" "--routine=${action}" "$@"
+  fi
 )
 help_diag() (
-  cmd_diag --help
+  cros-health-tool diag "--crosh_help=true"
 )
 
 USAGE_dump_emk=''

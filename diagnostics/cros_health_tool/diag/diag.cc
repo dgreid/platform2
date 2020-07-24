@@ -55,6 +55,7 @@ const struct {
 }  // namespace
 
 int diag_main(int argc, char** argv) {
+  DEFINE_bool(crosh_help, false, "Display help specific to crosh usage.");
   DEFINE_string(action, "",
                 "Action to perform. Options are:\n\tget_routines - retrieve "
                 "available routines.\n\trun_routine - run specified routine.");
@@ -104,6 +105,11 @@ int diag_main(int argc, char** argv) {
   base::AtExitManager at_exit_manager;
 
   base::MessageLoopForIO message_loop;
+
+  if (FLAGS_crosh_help) {
+    std::cout << "Usage: [list|routine]" << std::endl;
+    return EXIT_SUCCESS;
+  }
 
   if (FLAGS_action == "") {
     std::cout << "--action must be specified. Use --help for help on usage."
