@@ -72,9 +72,9 @@
 #include "cryptohome/service_distributed.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
-#include "key.pb.h"           // NOLINT(build/include)
-#include "rpc.pb.h"           // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "key.pb.h"           // NOLINT(build/include_directory)
+#include "rpc.pb.h"           // NOLINT(build/include_directory)
+#include "vault_keyset.pb.h"  // NOLINT(build/include_directory)
 
 using base::FilePath;
 using brillo::Blob;
@@ -318,7 +318,7 @@ void Service::StopTasks() {
   mount_thread_.Stop();
 }
 
-Service* Service::CreateDefault(const std::string& /*abe_data*/) {
+Service* Service::CreateDefault() {
   return new ServiceDistributed();
 }
 

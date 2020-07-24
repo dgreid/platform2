@@ -27,10 +27,6 @@
 #include "cryptohome/platform.h"
 #include "cryptohome/userdataauth.h"
 
-namespace env {
-static const char* kAttestationBasedEnrollmentDataFile = "ABE_DATA_FILE";
-}
-
 namespace switches {
 static const char* kAttestationMode = "attestation_mode";
 static const char* kDistributedModeOption = "dbus";
@@ -48,22 +44,6 @@ static const char* kTargetFreeSpace =
   "target_free_space";
 
 }  // namespace switches
-
-static std::string ReadAbeDataFileContents(cryptohome::Platform* platform) {
-  std::string data;
-
-  const char* abe_data_file =
-      std::getenv(env::kAttestationBasedEnrollmentDataFile);
-  if (!abe_data_file)
-    return data;
-
-  base::FilePath file_path(abe_data_file);
-  if (!platform->ReadFileToString(file_path, &data))
-    LOG(FATAL) << "Could not read attestation-based enterprise enrollment data"
-                  " in: "
-               << file_path.value();
-  return data;
-}
 
 uint64_t ReadCleanupThreshold(const base::CommandLine* cl,
     const char* switch_name, uint64_t default_value) {
@@ -91,7 +71,6 @@ int main(int argc, char** argv) {
 
   // Read the file before we daemonize so it can be deleted as soon as we exit.
   cryptohome::Platform platform;
-  std::string abe_data = ReadAbeDataFileContents(&platform);
 
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   // Sanity check of attestation mode. Historically we had monolithic and
@@ -157,7 +136,7 @@ int main(int argc, char** argv) {
     // Note the startup sequence is as following:
     // 1. UserDataAuthDaemon constructor => UserDataAuth constructor
     // 2. UserDataAuthDaemon::OnInit() (called by Daemon::Run())
-    // 3. UserDataAuthDaemon::RegisterDBusObjectAsync() (called by 2.)
+    // 3. UserDataAuthDaemon::RegisterDBusObjectsAsync() (called by 2.)
     // 4. UserDataAuth::Initialize() (called by 3.)
     // 5. UserDataAuth::PostDBusInitialize() (called by 3.)
     // Daemon::OnInit() needs to be called before Initialize(), because
@@ -179,7 +158,7 @@ int main(int argc, char** argv) {
     // Create an AtExitManager
     base::AtExitManager exit_manager;
 
-    cryptohome::Service* service = cryptohome::Service::CreateDefault(abe_data);
+    cryptohome::Service* service = cryptohome::Service::CreateDefault();
 
     service->set_legacy_mount(!nolegacymount);
     service->set_force_ecryptfs(!direncryption);

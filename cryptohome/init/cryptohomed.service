@@ -9,8 +9,8 @@
 [Unit]
 Description=Cryptohome Daemon
 PartOf=boot-services.target
-After=boot-services.target tcsd.service chapsd.service
-Requisite=tcsd.service chapsd.service
+After=boot-services.target tpm_managerd.service chapsd.service
+Requisite=tpm_managerd.service chapsd.service
 
 [Service]
 BusName=org.chromium.Cryptohome

@@ -43,7 +43,7 @@
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/tpm_init.h"
 
-#include "rpc.pb.h"  // NOLINT(build/include)
+#include "rpc.pb.h"  // NOLINT(build/include_directory)
 
 namespace chaps {
 class TokenManagerClient;
@@ -111,7 +111,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual ~Service();
 
   // Create the right Service based on command-line flags and TPM version.
-  static Service* CreateDefault(const std::string& abe_data);
+  static Service* CreateDefault();
 
   // From brillo::dbus::AbstractDbusService
   // Setup the wrapped GObject and the GMainLoop
