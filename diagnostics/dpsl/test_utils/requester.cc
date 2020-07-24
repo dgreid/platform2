@@ -180,7 +180,7 @@ EXAMPLE USAGE
         FLAGS_message_body, callback);
   } else {
     std::cerr
-        << "Provided --message_name did not match any available routine\n";
+        << "Provided --message_name did not match any available gRPC request\n";
     return EXIT_FAILURE;
   }
   if (!request_succeeded) {
