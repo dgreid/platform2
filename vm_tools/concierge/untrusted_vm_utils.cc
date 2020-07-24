@@ -91,7 +91,7 @@ UntrustedVMUtils::MitigationStatus GetMDSMitigationStatus(
   LOG(INFO) << "mds status: " << mds_status;
 
   std::vector<base::StringPiece> mds_statuses = base::SplitStringPiece(
-      mds_status, ",;", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
+      mds_status, ";", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   const size_t num_statuses = mds_statuses.size();
   // The sysfs file should always return up to 2 statuses and no more.
   if (num_statuses > 2) {

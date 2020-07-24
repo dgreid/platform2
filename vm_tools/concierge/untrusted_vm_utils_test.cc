@@ -161,8 +161,12 @@ TEST_F(UntrustedVMUtilsTest, CheckMDSStatus) {
   CheckMDSStatus("Some gibberish; some more gibberish",
                  UntrustedVMUtils::MitigationStatus::VULNERABLE);
 
-  CheckMDSStatus("Vulnerable: Clear CPU buffers attempted; no microcode",
+  CheckMDSStatus("Vulnerable: Clear CPU buffers attempted, no microcode",
                  UntrustedVMUtils::MitigationStatus::VULNERABLE);
+
+  CheckMDSStatus(
+      "Vulnerable: Clear CPU buffers attempted, no microcode; SMT enabled",
+      UntrustedVMUtils::MitigationStatus::VULNERABLE);
 
   CheckMDSStatus("Vulnerable; SMT disabled",
                  UntrustedVMUtils::MitigationStatus::VULNERABLE);
