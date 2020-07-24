@@ -614,13 +614,13 @@ string WiFi::AppendBgscan(WiFiService* service,
     // with pre-set parameters. Otherwise, use extended scan intervals.
     method = kDefaultBgscanMethod;
     if (service->GetEndpointCount() <= 1) {
-      LOG(INFO) << "Background scan intervals extended -- single Endpoint for "
-                << "Service.";
+      SLOG(nullptr, 3) << "Background scan intervals extended -- single "
+                       << "Endpoint for Service.";
       short_interval = kSingleEndpointBgscanShortIntervalSeconds;
       scan_interval = kSingleEndpointBgscanIntervalSeconds;
     }
   } else if (method == WPASupplicant::kNetworkBgscanMethodNone) {
-    LOG(INFO) << "Background scan disabled -- chose None method.";
+    SLOG(nullptr, 3) << "Background scan disabled -- chose None method.";
   } else {
     // If the background scan method was explicitly specified, honor the
     // configured background scan interval.
@@ -631,18 +631,18 @@ string WiFi::AppendBgscan(WiFiService* service,
     config_string = StringPrintf("%s:%d:%d:%d", method.c_str(), short_interval,
                                  signal_threshold, scan_interval);
   }
-  LOG(INFO) << "Background scan: '" << config_string << "'";
+  SLOG(nullptr, 3) << "Background scan: '" << config_string << "'";
   service_params->Set<string>(WPASupplicant::kNetworkPropertyBgscan,
                               config_string);
   return config_string;
 }
 
 bool WiFi::ReconfigureBgscan(WiFiService* service) {
-  LOG(INFO) << __func__ << " for " << service->log_name();
+  SLOG(this, 3) << __func__ << " for " << service->log_name();
   KeyValueStore bgscan_params;
   string bgscan_string = AppendBgscan(service, &bgscan_params);
   if (service->bgscan_string() == bgscan_string) {
-    LOG(INFO) << "No change in bgscan parameters.";
+    SLOG(this, 3) << "No change in bgscan parameters.";
     return false;
   }
 
@@ -658,6 +658,7 @@ bool WiFi::ReconfigureBgscan(WiFiService* service) {
     LOG(ERROR) << "SetProperties for " << id.value() << " failed.";
     return false;
   }
+  LOG(INFO) << "Updated bgscan parameters: " << bgscan_string;
   service->set_bgscan_string(bgscan_string);
   return true;
 }
