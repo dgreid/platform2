@@ -192,7 +192,6 @@ bool DlcBase::CreateDlc(ErrorPtr* err) {
     }
   }
 
-  ChangeState(DlcState::INSTALLING);
   return true;
 }
 
@@ -323,6 +322,9 @@ bool DlcBase::Install(ErrorPtr* err) {
           LOG(ERROR) << "Failed to cancel the install correctly.";
         return false;
       }
+      // Only set the DLC installing after creation is successful to have finer
+      // control of state changes.
+      ChangeState(DlcState::INSTALLING);
 
       // Finish the installation for verified images so they can be mounted.
       if (IsVerified()) {
