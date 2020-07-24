@@ -355,12 +355,9 @@ bool DlcBase::Install(ErrorPtr* err) {
         break;
       }
 
-      if (!IsVerified()) {
-        // By now if the image is not verified, it needs to be installed
-        // through update_engine. So don't go any further.
-        return true;
-      }
-      break;
+      // By now the image is not verified, so it needs to be installed
+      // through update_engine. So don't go any further.
+      return true;
     }
     case DlcState::INSTALLING:
       // If the image is already in this state, nothing need to be done. It is
