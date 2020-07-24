@@ -6,27 +6,18 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 #include <brillo/cryptohome.h>
-#include <brillo/scoped_mount_namespace.h>
 
+#include "cros-disks/fuse_helper.h"
 #include "cros-disks/platform.h"
 
 namespace cros_disks {
 
-const char* const ArchiveManager::kChromeMountNamespacePath =
-    "/run/namespaces/mnt_chrome";
-
 bool ArchiveManager::ResolvePath(const std::string& path,
                                  std::string* real_path) {
-  auto guard = brillo::ScopedMountNamespace::CreateFromPath(
-      base::FilePath(kChromeMountNamespacePath));
-
-  // If the path doesn't exist in Chrome's mount namespace, exit the namespace,
-  // so that GetRealPath() below gets executed in cros-disks's mount namespace.
-  if (!base::PathExists(base::FilePath(path)))
-    guard.reset();
-
+  const MountNamespace mount_namespace = GetMountNamespaceFor(path);
   return platform()->GetRealPath(path, real_path);
 }
 
@@ -59,6 +50,51 @@ std::string ArchiveManager::SuggestMountPath(
   // Use the archive name to name the mount directory.
   base::FilePath base_name = base::FilePath(source_path).BaseName();
   return mount_root().Append(base_name).value();
+}
+
+std::vector<gid_t> ArchiveManager::GetSupplementaryGroups() const {
+  std::vector<gid_t> groups;
+
+  // To access Play Files.
+  gid_t gid;
+  if (platform()->GetGroupId("android-everybody", &gid))
+    groups.push_back(gid);
+
+  return groups;
+}
+
+MountErrorType ArchiveManager::GetMountOptions(
+    MountOptions* const options) const {
+  DCHECK(options);
+
+  uid_t uid;
+  gid_t gid;
+  if (!platform()->GetUserAndGroupId(FUSEHelper::kFilesUser, &uid, nullptr) ||
+      !platform()->GetGroupId(FUSEHelper::kFilesGroup, &gid))
+    return MOUNT_ERROR_INTERNAL;
+
+  options->SetReadOnlyOption();
+  options->EnforceOption("umask=0222");
+  options->Initialize({}, true, base::NumberToString(uid),
+                      base::NumberToString(gid));
+
+  return MOUNT_ERROR_NONE;
+}
+
+ArchiveManager::MountNamespace ArchiveManager::GetMountNamespaceFor(
+    const std::string& path) {
+  const char* const chrome_namespace = "/run/namespaces/mnt_chrome";
+  // Try to enter Chrome's mount namespace.
+  MountNamespace result{.guard = brillo::ScopedMountNamespace::CreateFromPath(
+                            base::FilePath(chrome_namespace))};
+  // Check if the given path exists in Chrome's mount namespace.
+  if (result.guard && base::PathExists(base::FilePath(path))) {
+    result.name = chrome_namespace;
+  } else {
+    // The path doesn't exist in Chrome's mount namespace. Exit the namespace.
+    result.guard.reset();
+  }
+  return result;
 }
 
 }  // namespace cros_disks

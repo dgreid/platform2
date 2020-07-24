@@ -10,9 +10,11 @@
 #include <string>
 #include <vector>
 
+#include <brillo/scoped_mount_namespace.h>
 #include <gtest/gtest_prod.h>
 
 #include "cros-disks/mount_manager.h"
+#include "cros-disks/mount_options.h"
 
 namespace cros_disks {
 
@@ -23,11 +25,13 @@ class ArchiveManager : public MountManager {
   using MountManager::MountManager;
 
   // MountManager overrides
-  bool ResolvePath(const std::string& path, std::string* real_path) final;
-
   MountSourceType GetMountSourceType() const final {
     return MOUNT_SOURCE_ARCHIVE;
   }
+
+  bool ResolvePath(const std::string& path, std::string* real_path) final;
+
+  std::string SuggestMountPath(const std::string& source_path) const final;
 
   // Checks if the given file path is in an allowed location to be mounted as an
   // archive. The following paths can be mounted:
@@ -39,11 +43,20 @@ class ArchiveManager : public MountManager {
   //     /run/arc/sdcard/write/emulated/0/<dir>/...<file>
   static bool IsInAllowedFolder(const std::string& source_path);
 
- protected:
-  // Returns a suggested mount path for a source path.
-  std::string SuggestMountPath(const std::string& source_path) const override;
+  // Gets a list of supplementary group IDs the FUSE mounter program should run
+  // with in order to access files in all the required locations.
+  std::vector<gid_t> GetSupplementaryGroups() const;
 
-  static const char* const kChromeMountNamespacePath;
+  // Gets FUSE mount options.
+  MountErrorType GetMountOptions(MountOptions* options) const;
+
+ protected:
+  struct MountNamespace {
+    std::unique_ptr<brillo::ScopedMountNamespace> guard;
+    std::string name;
+  };
+
+  static MountNamespace GetMountNamespaceFor(const std::string& path);
 };
 
 }  // namespace cros_disks

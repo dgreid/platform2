@@ -159,6 +159,7 @@ if (use.test) {
       "udev_device_test.cc",
       "uri_test.cc",
       "usb_device_info_test.cc",
+      "zip_manager_test.cc",
     ]
     configs += [
       "//common-mk:test",

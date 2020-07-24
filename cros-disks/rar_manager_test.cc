@@ -62,44 +62,11 @@ TEST_F(RarManagerTest, CanMount) {
   EXPECT_TRUE(
       m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
                  "/MyFiles/blah.rar"));
-  EXPECT_TRUE(
-      m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
-                 "/MyFiles/x/blah.rar"));
-  EXPECT_TRUE(
-      m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
-                 "/MyFiles/Downloads/blah.rar"));
-  EXPECT_TRUE(
-      m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
-                 "/MyFiles/Downloads/x/blah.rar"));
-  EXPECT_FALSE(
-      m.CanMount("/home/chronos/u-0123456789abcdef0123456789abcdef01234567"
-                 "/x/blah.rar"));
-  EXPECT_FALSE(m.CanMount("/home/chronos/user/MyFiles/blah.rar"));
-  EXPECT_FALSE(
-      m.CanMount("/home/x/u-0123456789abcdef0123456789abcdef01234567"
-                 "/MyFiles/blah.rar"));
-  EXPECT_TRUE(m.CanMount("/media/archive/y/blah.rar"));
   EXPECT_TRUE(m.CanMount("/media/fuse/y/blah.rar"));
   EXPECT_TRUE(m.CanMount("/media/removable/y/blah.rar"));
-  EXPECT_FALSE(m.CanMount("/media/x/y/blah.rar"));
-  EXPECT_FALSE(m.CanMount("/media/x/blah.rar"));
   EXPECT_TRUE(m.CanMount("/media/fuse/y/Blah.Rar"));
   EXPECT_TRUE(m.CanMount("/media/fuse/y/BLAH.RAR"));
-  EXPECT_FALSE(m.CanMount("x/media/fuse/y/blah.rar"));
-  EXPECT_FALSE(m.CanMount("media/fuse/y/blah.rar"));
-  EXPECT_FALSE(m.CanMount("/media/fuse/y/blah.ram"));
-  EXPECT_FALSE(m.CanMount("file:///media/fuse/y/blah.rar"));
-  EXPECT_FALSE(m.CanMount("ssh:///media/fuse/y/blah.rar"));
-}
-
-TEST_F(RarManagerTest, SuggestMountPath) {
-  const RarManager& m = manager_;
-  const std::string expected_mount_path =
-      std::string(kMountRootDirectory) + "/doc.rar";
-  EXPECT_EQ(m.SuggestMountPath("/home/chronos/user/Downloads/doc.rar"),
-            expected_mount_path);
-  EXPECT_EQ(m.SuggestMountPath("/media/archive/test.rar/doc.rar"),
-            expected_mount_path);
+  EXPECT_FALSE(m.CanMount("/media/fuse/y/blah.rarx"));
 }
 
 TEST_F(RarManagerTest, Increment) {
