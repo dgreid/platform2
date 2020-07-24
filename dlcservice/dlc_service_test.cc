@@ -374,6 +374,34 @@ TEST_F(DlcServiceTest, InstallAlreadyInstalledValid) {
   CheckDlcState(kFirstDlc, DlcState::INSTALLED);
 }
 
+TEST_F(DlcServiceTest, InstallAlreadyInstalledWhileAnotherInstalling) {
+  Install(kFirstDlc);
+
+  // Keep |kSecondDlc| installing.
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+
+  EXPECT_TRUE(dlc_service_->Install(kSecondDlc, kDefaultOmahaUrl, &err_));
+  CheckDlcState(kSecondDlc, DlcState::INSTALLING);
+
+  // |kFirstDlc| can quickly be installed again even though another install is
+  // ongoing.
+  SetMountPath(mount_path_.value());
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(true, kFirstDlc, _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mock_image_loader_proxy_ptr_,
+              LoadDlcImage(kFirstDlc, _, _, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(mount_path_.value()), Return(true)));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(*mock_metrics_,
+              SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+
+  EXPECT_TRUE(dlc_service_->Install(kFirstDlc, kDefaultOmahaUrl, &err_));
+  CheckDlcState(kFirstDlc, DlcState::INSTALLED);
+}
+
 TEST_F(DlcServiceTest, InstallCannotSetDlcActiveValue) {
   SetMountPath(mount_path_.value());
   EXPECT_CALL(*mock_update_engine_proxy_ptr_, AttemptInstall(_, _, _, _))
