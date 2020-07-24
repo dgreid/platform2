@@ -5,12 +5,14 @@
 #include "sommelier.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client.h>
 #include <wayland-server-core.h>
+#include <wayland-util.h>
 
 #include "relative-pointer-unstable-v1-server-protocol.h"
 #include "relative-pointer-unstable-v1-client-protocol.h"
@@ -27,6 +29,14 @@ struct sl_host_relative_pointer {
   struct zwp_relative_pointer_v1* proxy;
 };
 
+// Like ceil(), but strictly increases the magnitude of the input value (i.e.
+// trunc() but for increasing the magnitude).
+wl_fixed_t magnitude_ceil(wl_fixed_t val) {
+  double temp = wl_fixed_to_double(val);
+  temp = temp > 0 ? ceil(temp) : floor(temp);
+  return wl_fixed_from_double(temp);
+}
+
 static void sl_relative_pointer_relative_motion(
     void* data,
     struct zwp_relative_pointer_v1* relative_pointer,
@@ -38,6 +48,14 @@ static void sl_relative_pointer_relative_motion(
     wl_fixed_t dy_unaccel) {
   struct sl_host_relative_pointer* host =
       zwp_relative_pointer_v1_get_user_data(relative_pointer);
+
+  // Unfortunately, many x11 toolkits truncate RawMotion events. We force them
+  // to interpret cursor movement by rounding to the next greater-magnitude
+  // value.
+  if (host->ctx->xwayland) {
+    dx_unaccel = magnitude_ceil(dx_unaccel);
+    dy_unaccel = magnitude_ceil(dy_unaccel);
+  }
 
   zwp_relative_pointer_v1_send_relative_motion(
       host->resource, utime_hi, utime_lo, dx, dy, dx_unaccel, dy_unaccel);
