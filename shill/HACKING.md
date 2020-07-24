@@ -23,7 +23,7 @@ To keep the shill source code consistent, please follow the conventions below:
     RATIONALE: The naming convention makes the relationship between the signal
     handler and the task function obvious, at-a-glance.
 
-*   When adding verbose log messages for debug purposes, use the `SLOG` marco
+*   When adding verbose log messages for debug purposes, use the `SLOG` macro
     and its variants (see `logging.h` for details).
 
     *   Choose the appropriate scope and verbose level for log messages. E.g.
