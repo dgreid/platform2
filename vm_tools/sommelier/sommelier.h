@@ -209,6 +209,9 @@ struct sl_host_pointer {
   struct wl_resource* focus_resource;
   struct wl_listener focus_resource_listener;
   uint32_t focus_serial;
+  uint32_t time;
+  wl_fixed_t axis_delta[2];
+  int32_t axis_discrete[2];
 };
 
 struct sl_relative_pointer_manager {

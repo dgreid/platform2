@@ -5,11 +5,13 @@
 #include "sommelier.h"
 
 #include <assert.h>
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/mman.h>
 #include <unistd.h>
 #include <wayland-client.h>
+#include <wayland-util.h>
 
 #include "keyboard-extension-unstable-v1-client-protocol.h"
 
@@ -175,11 +177,42 @@ static void sl_pointer_axis(void* data,
   struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
   double scale = host->seat->ctx->scale;
 
-  wl_pointer_send_axis(host->resource, time, axis, value * scale);
+  host->time = time;
+  host->axis_delta[axis] += value * scale;
 }
 
 static void sl_pointer_frame(void* data, struct wl_pointer* pointer) {
   struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
+
+  // Many X apps (e.g. VS Code, Firefox, Chromium) only allow scrolls to happen
+  // in multiples of 5 units. This value comes from the smooth scrolling
+  // extension of X, which says that 5 smooth scroll units is equal to 1 tick of
+  // discrete scrolling.
+  //
+  // To avoid the experience of scrolling and seeing nothing happen, we replace
+  // scroll amounts < 5 with 5 units, for discrete scrolls for X apps
+  // only. Other clients should continue to see smaller scrolls as they can
+  // handle them correctly, and for non-discrete scrolling (such as touch-pads)
+  // we don't want to do this because it would lead to erratic jumps.
+  const int kDiscreteScrollUnit = 5;
+
+  for (int axis = 0; axis < 2; axis++) {
+    if (host->axis_discrete[axis] != 0) {
+      wl_pointer_send_axis_discrete(host->resource, axis,
+                                    host->axis_discrete[axis]);
+
+      double axis_delta = wl_fixed_to_double(host->axis_delta[axis]);
+      if (fabs(axis_delta) < kDiscreteScrollUnit && host->seat->ctx->xwayland) {
+        axis_delta = copysign(kDiscreteScrollUnit, axis_delta);
+        host->axis_delta[axis] = wl_fixed_from_double(axis_delta);
+      }
+    }
+    wl_pointer_send_axis(host->resource, host->time, axis,
+                         host->axis_delta[axis]);
+
+    host->axis_delta[axis] = wl_fixed_from_int(0);
+    host->axis_discrete[axis] = 0;
+  }
 
   wl_pointer_send_frame(host->resource);
 }
@@ -207,7 +240,7 @@ static void sl_pointer_axis_discrete(void* data,
                                      int32_t discrete) {
   struct sl_host_pointer* host = wl_pointer_get_user_data(pointer);
 
-  wl_pointer_send_axis_discrete(host->resource, axis, discrete);
+  host->axis_discrete[axis] += discrete;
 }
 
 static const struct wl_pointer_listener sl_pointer_listener = {
@@ -584,6 +617,11 @@ static void sl_host_seat_get_host_pointer(struct wl_client* client,
       sl_pointer_focus_resource_destroyed;
   host_pointer->focus_resource = NULL;
   host_pointer->focus_serial = 0;
+  host_pointer->time = 0;
+  host_pointer->axis_delta[0] = wl_fixed_from_int(0);
+  host_pointer->axis_delta[1] = wl_fixed_from_int(0);
+  host_pointer->axis_discrete[0] = 0;
+  host_pointer->axis_discrete[1] = 0;
 }
 
 static void sl_destroy_host_keyboard(struct wl_resource* resource) {
