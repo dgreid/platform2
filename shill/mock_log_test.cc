@@ -16,7 +16,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kManager;
-static string ObjectID(testing::Test* m) {
+static string ObjectID(const testing::Test* m) {
   return "(mock_log_test)";
 }
 }  // namespace Logging

@@ -28,7 +28,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kPPP;
-static string ObjectID(PPPDevice* p) {
+static string ObjectID(const PPPDevice* p) {
   return p->link_name();
 }
 }  // namespace Logging

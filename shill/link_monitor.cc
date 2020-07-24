@@ -22,7 +22,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kLink;
-static std::string ObjectID(Connection* c) {
+static std::string ObjectID(const Connection* c) {
   return c->interface_name();
 }
 }  // namespace Logging

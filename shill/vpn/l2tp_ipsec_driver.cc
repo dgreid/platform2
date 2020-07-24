@@ -57,7 +57,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
-static string ObjectID(L2TPIPSecDriver* l) {
+static string ObjectID(const L2TPIPSecDriver* l) {
   return l->GetServiceRpcIdentifier().value();
 }
 }  // namespace Logging

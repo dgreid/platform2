@@ -29,7 +29,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPConfig* d) {
+static string ObjectID(const DHCPConfig* d) {
   if (d == nullptr)
     return "(dhcp_config)";
   else

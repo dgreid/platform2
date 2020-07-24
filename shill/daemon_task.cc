@@ -33,7 +33,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDaemon;
-static std::string ObjectID(DaemonTask* d) {
+static std::string ObjectID(const DaemonTask* d) {
   return "(chromeos_daemon)";
 }
 }  // namespace Logging

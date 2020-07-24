@@ -19,7 +19,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kEthernet;
-static string ObjectID(VirtioEthernet* v) {
+static string ObjectID(const VirtioEthernet* v) {
   return v->GetRpcIdentifier().value();
 }
 }  // namespace Logging

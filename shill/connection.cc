@@ -29,7 +29,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kConnection;
-static string ObjectID(Connection* c) {
+static string ObjectID(const Connection* c) {
   if (c == nullptr)
     return "(connection)";
   return c->interface_name();

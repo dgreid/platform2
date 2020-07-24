@@ -23,7 +23,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kLink;
-static string ObjectID(ConnectionInfoReader* c) {
+static string ObjectID(const ConnectionInfoReader* c) {
   return "(connection_info_reader)";
 }
 }  // namespace Logging

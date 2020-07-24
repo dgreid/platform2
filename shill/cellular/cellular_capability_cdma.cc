@@ -23,7 +23,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kCellular;
-static string ObjectID(CellularCapabilityCdma* c) {
+static string ObjectID(const CellularCapabilityCdma* c) {
   return c->cellular()->GetRpcIdentifier().value();
 }
 }  // namespace Logging

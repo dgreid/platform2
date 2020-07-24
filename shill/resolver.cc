@@ -24,7 +24,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kResolver;
-static string ObjectID(Resolver* r) {
+static string ObjectID(const Resolver* r) {
   return "(resolver)";
 }
 }  // namespace Logging

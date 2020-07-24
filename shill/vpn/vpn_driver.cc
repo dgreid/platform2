@@ -26,7 +26,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
-static string ObjectID(VPNDriver* v) {
+static string ObjectID(const VPNDriver* v) {
   return "(vpn_driver)";
 }
 }  // namespace Logging

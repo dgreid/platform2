@@ -67,7 +67,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDevice;
-static string ObjectID(Device* d) {
+static string ObjectID(const Device* d) {
   return d->GetRpcIdentifier().value();
 }
 }  // namespace Logging

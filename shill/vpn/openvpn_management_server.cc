@@ -33,7 +33,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kVPN;
-static string ObjectID(OpenVPNManagementServer* o) {
+static string ObjectID(const OpenVPNManagementServer* o) {
   return o->GetServiceRpcIdentifier().value();
 }
 }  // namespace Logging

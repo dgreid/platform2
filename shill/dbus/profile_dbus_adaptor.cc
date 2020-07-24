@@ -17,7 +17,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDBus;
-static string ObjectID(ProfileDBusAdaptor* p) {
+static string ObjectID(const ProfileDBusAdaptor* p) {
   return p->GetRpcIdentifier().value();
 }
 }  // namespace Logging

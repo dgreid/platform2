@@ -28,7 +28,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kModem;
-static string ObjectID(Modem* m) {
+static string ObjectID(const Modem* m) {
   return m->path().value().c_str();
 }
 }  // namespace Logging

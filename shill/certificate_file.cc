@@ -26,7 +26,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kCrypto;
-static string ObjectID(CertificateFile* c) {
+static string ObjectID(const CertificateFile* c) {
   return "(certificate_file)";
 }
 }  // namespace Logging

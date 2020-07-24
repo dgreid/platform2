@@ -41,7 +41,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kWiFi;
-static string ObjectID(WiFiProvider* w) {
+static string ObjectID(const WiFiProvider* w) {
   return "(wifi_provider)";
 }
 }  // namespace Logging

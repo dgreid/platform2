@@ -24,7 +24,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kCellular;
-static string ObjectID(CellularService* c) {
+static string ObjectID(const CellularService* c) {
   return c->log_name();
 }
 }  // namespace Logging

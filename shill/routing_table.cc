@@ -44,7 +44,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kRoute;
-static string ObjectID(RoutingTable* r) {
+static string ObjectID(const RoutingTable* r) {
   return "(routing_table)";
 }
 }  // namespace Logging

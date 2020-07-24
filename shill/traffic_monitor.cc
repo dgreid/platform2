@@ -24,7 +24,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kLink;
-static string ObjectID(Device* d) {
+static string ObjectID(const Device* d) {
   return d->link_name();
 }
 }  // namespace Logging

@@ -24,7 +24,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kInet;
-static string ObjectID(IPConfig* i) {
+static string ObjectID(const IPConfig* i) {
   return i->GetRpcIdentifier().value();
 }
 }  // namespace Logging

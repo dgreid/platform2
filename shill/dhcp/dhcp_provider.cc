@@ -29,7 +29,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPProvider* d) {
+static string ObjectID(const DHCPProvider* d) {
   return "(dhcp_provider)";
 }
 }  // namespace Logging

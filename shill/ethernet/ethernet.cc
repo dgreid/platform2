@@ -58,7 +58,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kEthernet;
-static string ObjectID(Ethernet* e) {
+static string ObjectID(const Ethernet* e) {
   return e->GetRpcIdentifier().value();
 }
 }  // namespace Logging

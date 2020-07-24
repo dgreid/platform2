@@ -20,7 +20,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPv6Config* d) {
+static string ObjectID(const DHCPv6Config* d) {
   if (d == nullptr)
     return "(DHCPv6_config)";
   else

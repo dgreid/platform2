@@ -13,7 +13,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPCDProxy* d) {
+static string ObjectID(const DHCPCDProxy* d) {
   return "(dhcpcd_proxy)";
 }
 }  // namespace Logging

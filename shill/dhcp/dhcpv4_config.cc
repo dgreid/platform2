@@ -24,7 +24,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPv4Config* d) {
+static string ObjectID(const DHCPv4Config* d) {
   if (d == nullptr)
     return "(DHCPv4_config)";
   else

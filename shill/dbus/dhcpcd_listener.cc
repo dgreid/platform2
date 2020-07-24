@@ -25,7 +25,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDHCP;
-static string ObjectID(DHCPCDListener* d) {
+static string ObjectID(const DHCPCDListener* d) {
   return "(dhcpcd_listener)";
 }
 }  // namespace Logging

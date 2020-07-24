@@ -17,7 +17,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kTC;
-static std::string ObjectID(Throttler* t) {
+static std::string ObjectID(const Throttler* t) {
   return "throttler";
 }
 }  // namespace Logging

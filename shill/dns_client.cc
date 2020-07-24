@@ -37,7 +37,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kDNS;
-static string ObjectID(DnsClient* d) {
+static string ObjectID(const DnsClient* d) {
   return d->interface_name();
 }
 }  // namespace Logging

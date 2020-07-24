@@ -26,7 +26,7 @@ using std::vector;
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kWiFi;
-static string ObjectID(Mac80211Monitor* m) {
+static string ObjectID(const Mac80211Monitor* m) {
   return m->link_name();
 }
 }  // namespace Logging

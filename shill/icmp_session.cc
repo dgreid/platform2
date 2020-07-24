@@ -25,7 +25,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kWiFi;
-static std::string ObjectID(IcmpSession* i) {
+static std::string ObjectID(const IcmpSession* i) {
   return "(icmp_session)";
 }
 }  // namespace Logging

@@ -42,7 +42,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kWiFi;
-static std::string ObjectID(WakeOnWiFi* w) {
+static std::string ObjectID(const WakeOnWiFi* w) {
   return "(wake_on_wifi)";
 }
 }  // namespace Logging

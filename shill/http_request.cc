@@ -35,7 +35,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kHTTP;
-static string ObjectID(HttpRequest* r) {
+static string ObjectID(const HttpRequest* r) {
   return r->interface_name();
 }
 }  // namespace Logging

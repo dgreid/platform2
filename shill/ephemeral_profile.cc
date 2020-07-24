@@ -14,7 +14,7 @@ namespace shill {
 
 namespace Logging {
 static auto kModuleLogScope = ScopeLogger::kProfile;
-static std::string ObjectID(EphemeralProfile* e) {
+static std::string ObjectID(const EphemeralProfile* e) {
   return e->GetRpcIdentifier().value();
 }
 }  // namespace Logging
