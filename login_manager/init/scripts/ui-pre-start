@@ -13,13 +13,23 @@ set -e
 # As configured, we won't have a lot of volume in these traces, they will only
 # be written in cases where the display configuration changes, or an error
 # occurs. As such, there is no performance impact during steady-state operation.
+#
+# TODO(seanpaul): Once we've finished moving over to the upstream tracefs
+#                 implementation, remove the block initializing the downstream
+#                 debugfs code. Tracked in b/163580546.
 DRM_TRACE_DIR="/sys/kernel/debug/dri"
 DRM_TRACE_MASK="${DRM_TRACE_DIR}/trace_mask"
-if [ -w $DRM_TRACE_MASK ]; then
+if [ -w "${DRM_TRACE_MASK}" ]; then
   # 64kB per-cpu of drm logs.
   echo 64 > "${DRM_TRACE_DIR}/trace_size_kb"
   # 0x106 corresponds to (DRM_UT_DRIVER | DRM_UT_KMS | DRM_UT_DP).
   echo 0x106 > "${DRM_TRACE_MASK}"
+fi
+DRM_TRACEFS_INSTANCE="/sys/kernel/debug/tracing/instances/drm"
+DRM_TRACEFS_BUF_SIZE="${DRM_TRACEFS_INSTANCE}/buffer_size_kb"
+if [ -w "${DRM_TRACEFS_BUF_SIZE}" ]; then
+  # 64kB per-cpu of drm logs.
+  echo 64 > "${DRM_TRACEFS_BUF_SIZE}"
 fi
 
 mkdir -p $UI_LOG_DIR

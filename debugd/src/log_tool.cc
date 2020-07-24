@@ -326,7 +326,12 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "cros_tp frame", "/usr/sbin/ectool --name=cros_tp tpframeget",
     kRoot, kRoot},
   {kCommand, "crostini", "/usr/bin/cicerone_client --get_info"},
-  {kFile, "drm_trace", "/sys/kernel/debug/dri/trace",
+  // TODO(seanpaul): Once we've finished moving over to the upstream tracefs
+  //                 implementation, remove drm_trace_legacy. Tracked in
+  //                 b/163580546.
+  {kFile, "drm_trace_legacy", "/sys/kernel/debug/dri/trace",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
+  {kFile, "drm_trace", "/sys/kernel/debug/tracing/instances/drm/trace",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
   // Stuff pulled out of the original list. These need access to the running X
   // session, which we'd rather not give to debugd, or return info specific to
