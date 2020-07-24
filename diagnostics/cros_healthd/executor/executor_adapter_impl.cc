@@ -26,14 +26,17 @@ ExecutorAdapterImpl::~ExecutorAdapterImpl() = default;
 void ExecutorAdapterImpl::Connect(mojo::PlatformChannelEndpoint endpoint) {
   DCHECK(endpoint.is_valid());
 
-  // Accept an invitation from the executor.
-  mojo::IncomingInvitation invitation =
-      mojo::IncomingInvitation::Accept(std::move(endpoint));
+  mojo::OutgoingInvitation invitation;
+  // Attach a message pipe to be extracted by the receiver. The other end of the
+  // pipe is returned for us to use locally.
   mojo::ScopedMessagePipeHandle pipe =
-      invitation.ExtractMessagePipe(kExecutorPipeName);
+      invitation.AttachMessagePipe(kExecutorPipeName);
 
   executor_.Bind(
       executor_ipc::ExecutorPtrInfo(std::move(pipe), 0u /* version */));
+
+  mojo::OutgoingInvitation::Send(std::move(invitation),
+                                 base::kNullProcessHandle, std::move(endpoint));
 }
 
 }  // namespace diagnostics

@@ -30,17 +30,13 @@ Executor::Executor(mojo::PlatformChannelEndpoint endpoint) {
       mojo::core::ScopedIPCSupport::ShutdownPolicy::
           CLEAN /* blocking shutdown */);
 
-  mojo::OutgoingInvitation invitation;
-  // Attach a message pipe to be extracted by the receiver. The other end of the
-  // pipe is returned for us to use locally.
+  mojo::IncomingInvitation invitation =
+      mojo::IncomingInvitation::Accept(std::move(endpoint));
   mojo::ScopedMessagePipeHandle pipe =
-      invitation.AttachMessagePipe(kExecutorPipeName);
+      invitation.ExtractMessagePipe(kExecutorPipeName);
 
   mojo_service_ = std::make_unique<ExecutorMojoService>(
       executor_ipc::ExecutorRequest(std::move(pipe)));
-
-  mojo::OutgoingInvitation::Send(std::move(invitation),
-                                 base::kNullProcessHandle, std::move(endpoint));
 }
 
 Executor::~Executor() = default;
