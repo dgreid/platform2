@@ -41,6 +41,12 @@ class PortManager : public UdevMonitor::Observer {
                              int port_num,
                              bool added) override;
 
+  // The central function which contains the main mode entry logic. This decides
+  // which partner mode we select, based on partner/cable characteristics as
+  // well as host properties and any other device specific policy we choose to
+  // implement.
+  void RunModeEntry(int port_num);
+
   std::map<int, std::unique_ptr<Port>> ports_;
 };
 

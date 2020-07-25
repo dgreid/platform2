@@ -153,6 +153,12 @@ bool Port::CanEnterTBTCompatibilityMode() {
   return true;
 }
 
+bool Port::CanEnterUSB4() {
+  // TODO(b/152251292) needs to be implemented.
+  NOTIMPLEMENTED();
+  return false;
+}
+
 bool Port::IsPartnerAltModePresent(uint16_t altmode_sid) {
   auto num_alt_modes = partner_->GetNumAltModes();
   for (int i = 0; i < num_alt_modes; i++) {
@@ -164,6 +170,27 @@ bool Port::IsPartnerAltModePresent(uint16_t altmode_sid) {
   }
 
   return false;
+}
+
+bool Port::IsPartnerDiscoveryComplete() {
+  // TODO(b/152251292) needs to be implemented.
+  NOTIMPLEMENTED();
+  return true;
+}
+
+void Port::EnterDPAltMode() {
+  // TODO(b/152251292) needs to be implemented.
+  NOTIMPLEMENTED();
+}
+
+void Port::EnterTBTCompatibilityMode() {
+  // TODO(b/152251292) needs to be implemented.
+  NOTIMPLEMENTED();
+}
+
+void Port::EnterUSB4() {
+  // TODO(b/152251292) needs to be implemented.
+  NOTIMPLEMENTED();
 }
 
 }  // namespace typecd

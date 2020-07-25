@@ -81,4 +81,44 @@ void PortManager::OnCableAddedOrRemoved(const base::FilePath& path,
   }
 }
 
+void PortManager::RunModeEntry(int port_num) {
+  auto it = ports_.find(port_num);
+  if (it == ports_.end()) {
+    LOG(WARNING) << "Mode entry attempted for non-existent port " << port_num;
+    return;
+  }
+
+  auto port = it->second.get();
+
+  if (port->GetDataRole() != "dfp") {
+    LOG(WARNING) << "Can't switch modes because data role is not DFP on port "
+                 << port_num;
+    return;
+  }
+
+  // TODO(b/152251292): Check for Cable Discovery complete too.
+  if (!port->IsPartnerDiscoveryComplete()) {
+    LOG(WARNING)
+        << "Can't switch modes Partner/Cable discovery not complete for port "
+        << port_num;
+    return;
+  }
+
+  // If the host supports USB4 and we can enter USB4 in this partner, do so.
+  if (port->CanEnterUSB4()) {
+    port->EnterUSB4();
+    return;
+  }
+
+  if (port->CanEnterTBTCompatibilityMode()) {
+    port->EnterTBTCompatibilityMode();
+    return;
+  }
+
+  if (port->CanEnterDPAltMode()) {
+    port->EnterDPAltMode();
+    return;
+  }
+}
+
 }  // namespace typecd

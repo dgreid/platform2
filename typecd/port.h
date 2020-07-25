@@ -46,6 +46,32 @@ class Port {
   // (if applicable) Cable.
   bool CanEnterTBTCompatibilityMode();
 
+  // Returns whether the partner can enter USB4. This should check the following
+  // attributes for USB4 support:
+  // - Partner(SOP) PD identity.
+  // - Cable speed.
+  // - Cable type.
+  bool CanEnterUSB4();
+
+  // Returns true when all PD discovery information (PD Identity VDOs, all
+  // Discover Mode data) for a partner has been processed.
+  //
+  // NOTE: Any mode entry decision logic should only run if this function
+  // returns true.
+  bool IsPartnerDiscoveryComplete();
+
+  // Send the necessary messages to the Chrome EC to initiate an entry into USB4
+  // mode.
+  void EnterUSB4();
+
+  // Send the necessary messages to the Chrome EC to initiate an entry into
+  // Thunderbolt Compatibility mode.
+  void EnterTBTCompatibilityMode();
+
+  // Send the necessary messages to the Chrome EC to initiate an entry into DP
+  // AltMode
+  void EnterDPAltMode();
+
  private:
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);
