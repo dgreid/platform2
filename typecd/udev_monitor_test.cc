@@ -50,8 +50,8 @@ class TestObserver : public UdevMonitor::Observer {
   };
 
   void OnPartnerAltModeAddedOrRemoved(const base::FilePath& path,
-                               int port_num,
-                               bool added) override {};
+                                      int port_num,
+                                      bool added) override{};
 
   void OnCableAddedOrRemoved(const base::FilePath& path,
                              int port_num,
@@ -70,8 +70,9 @@ class TestObserver : public UdevMonitor::Observer {
 class UdevMonitorTest : public ::testing::Test {
  public:
   UdevMonitorTest()
-      : task_environment_(base::test::TaskEnvironment::MainThreadType::IO,
-                          base::test::TaskEnvironment::ExecutionMode::ASYNC) {}
+      : task_environment_(
+            base::test::TaskEnvironment::MainThreadType::IO,
+            base::test::TaskEnvironment::ThreadPoolExecutionMode::ASYNC) {}
 
  protected:
   void SetUp() override {
