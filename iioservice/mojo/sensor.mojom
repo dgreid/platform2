@@ -16,6 +16,7 @@ enum DeviceType {
   ANGL = 6,
   ACPI_ALS = 7,
   BARO = 8,
+  MAX = 9,
 };
 
 enum ObserverErrorType {
