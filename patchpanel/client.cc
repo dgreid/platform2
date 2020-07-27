@@ -437,6 +437,39 @@ Client::ConnectNamespace(pid_t pid,
   return std::make_pair(std::move(fd_local), std::move(response));
 }
 
+std::vector<TrafficCounter> Client::GetTrafficCounters(
+    const std::set<std::string>& devices) {
+  dbus::MethodCall method_call(kPatchPanelInterface, kGetTrafficCountersMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  TrafficCountersRequest request;
+  for (const auto& device : devices) {
+    request.add_devices(device);
+  }
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode TrafficCountersRequest proto";
+    return {};
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response = proxy_->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send TrafficCountersRequest message to patchpanel "
+                  "service";
+    return {};
+  }
+
+  TrafficCountersResponse response;
+  dbus::MessageReader reader(dbus_response.get());
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse TrafficCountersResponse proto";
+    return {};
+  }
+
+  return {response.counters().begin(), response.counters().end()};
+}
+
 bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
                             ModifyPortRuleRequest::RuleType type,
                             ModifyPortRuleRequest::Protocol proto,

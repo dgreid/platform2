@@ -66,6 +66,13 @@ class BRILLO_EXPORT Client {
                    const std::string& outbound_ifname,
                    bool forward_user_traffic);
 
+  // Gets the traffic counters kept by patchpanel. |devices| is the set of
+  // interfaces (shill devices) for which counters should be returned, any
+  // unknown interfaces will be ignored. If |devices| is empty, counters for all
+  // known interfaces will be returned.
+  std::vector<TrafficCounter> GetTrafficCounters(
+      const std::set<std::string>& devices);
+
   // Sends a ModifyPortRuleRequest to modify iptables ingress rules.
   // This should only be called by permission_broker's 'devbroker'.
   bool ModifyPortRule(patchpanel::ModifyPortRuleRequest::Operation op,

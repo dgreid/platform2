@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <net/if.h>
+
 #include <base/logging.h>
 #include <dbus/message.h>
 #include <fuzzer/FuzzedDataProvider.h>
@@ -71,7 +73,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     client.NotifyArcVmStartup(provider.ConsumeIntegral<uint32_t>());
     client.NotifyArcVmShutdown(provider.ConsumeIntegral<uint32_t>());
     NetworkDevice device;
-    device.set_ifname(provider.ConsumeRandomLengthString(100));
+    device.set_ifname(provider.ConsumeRandomLengthString(IFNAMSIZ * 2));
     device.set_ipv4_addr(provider.ConsumeIntegral<uint32_t>());
     device.mutable_ipv4_subnet()->set_base_addr(
         provider.ConsumeIntegral<uint32_t>());
@@ -94,6 +96,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     client.ConnectNamespace(provider.ConsumeIntegral<pid_t>(),
                             provider.ConsumeRandomLengthString(100),
                             provider.ConsumeBool());
+    std::set<std::string> devices_for_counters;
+    for (int i = 0; i < 10; i++) {
+      if (provider.ConsumeBool()) {
+        devices_for_counters.insert(
+            provider.ConsumeRandomLengthString(IFNAMSIZ * 2));
+      }
+    }
+    client.GetTrafficCounters(devices_for_counters);
   }
   bus->ShutdownAndBlock();
   return 0;
