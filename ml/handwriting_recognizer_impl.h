@@ -50,6 +50,7 @@ class HandwritingRecognizerImpl
   // Pointer to the internal implementation of HandwritingRecognizer inside
   // the HandwritingLibrary.
   ::HandwritingRecognizer recognizer_;
+  const ml::HandwritingLibrary* const library_;
 
   mojo::Receiver<chromeos::machine_learning::mojom::HandwritingRecognizer>
       receiver_;

@@ -88,7 +88,6 @@ static_library("ml_common") {
     "daemon.cc",
     "graph_executor_impl.cc",
     "handwriting.cc",
-    "handwriting_path.cc",
     "handwriting_proto_mojom_conversion.cc",
     "handwriting_recognizer_impl.cc",
     "machine_learning_service_impl.cc",
@@ -100,9 +99,10 @@ static_library("ml_common") {
     "text_classifier_impl.cc",
     "util.cc",
   ]
-  if (use.ondevice_handwriting) {
-    defines = [ "ML_SUPPORT_HANDWRITING" ]
-  }
+  defines = [
+    "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
+    "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
+  ]
 }
 
 static_library("ml_cmdline_common") {
@@ -139,9 +139,10 @@ if (use.test) {
       "testrunner.cc",
       "util_test.cc",
     ]
-    if (use.ondevice_handwriting) {
-      defines = [ "ML_SUPPORT_HANDWRITING" ]
-    }
+    defines = [
+      "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
+      "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
+    ]
   }
   executable("ml_cmdline_test") {
     configs += [ "//common-mk:test" ]

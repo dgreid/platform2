@@ -7,7 +7,6 @@
 #include <utility>
 #include <vector>
 
-#include "ml/handwriting_path.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
 #include "ml/request_metrics.h"
 
@@ -42,28 +41,20 @@ bool HandwritingRecognizerImpl::Create(
 HandwritingRecognizerImpl::HandwritingRecognizerImpl(
     HandwritingRecognizerSpecPtr spec,
     mojo::PendingReceiver<HandwritingRecognizer> receiver)
-    : receiver_(this, std::move(receiver)) {
-  auto* const hwr_library = ml::HandwritingLibrary::GetInstance();
-  DCHECK(hwr_library->GetStatus() == ml::HandwritingLibrary::Status::kOk)
+    : library_(ml::HandwritingLibrary::GetInstance()),
+      receiver_(this, std::move(receiver)) {
+  DCHECK(library_->GetStatus() == ml::HandwritingLibrary::Status::kOk)
       << "HandwritingRecognizerImpl should be created only if "
          "HandwritingLibrary is initialized successfully.";
 
-  const auto model_path = GetModelPaths(std::move(spec));
-  if (!model_path.has_value()) {
-    successfully_loaded_ = false;
-    return;
-  }
+  recognizer_ = library_->CreateHandwritingRecognizer();
 
-  recognizer_ = hwr_library->CreateHandwritingRecognizer();
-
-  successfully_loaded_ = hwr_library->LoadHandwritingRecognizer(
-      recognizer_, chrome_knowledge::HandwritingRecognizerOptions(),
-      model_path.value());
+  successfully_loaded_ =
+      library_->LoadHandwritingRecognizer(recognizer_, std::move(spec));
 }
 
 HandwritingRecognizerImpl::~HandwritingRecognizerImpl() {
-  ml::HandwritingLibrary::GetInstance()->DestroyHandwritingRecognizer(
-      recognizer_);
+  library_->DestroyHandwritingRecognizer(recognizer_);
 }
 
 void HandwritingRecognizerImpl::Recognize(HandwritingRecognitionQueryPtr query,
@@ -73,7 +64,7 @@ void HandwritingRecognizerImpl::Recognize(HandwritingRecognitionQueryPtr query,
 
   chrome_knowledge::HandwritingRecognizerResult result_proto;
 
-  if (ml::HandwritingLibrary::GetInstance()->RecognizeHandwriting(
+  if (library_->RecognizeHandwriting(
           recognizer_, HandwritingRecognitionQueryToProto(std::move(query)),
           &result_proto)) {
     // Recognition succeeded, run callback on the result.

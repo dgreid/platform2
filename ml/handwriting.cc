@@ -11,24 +11,39 @@
 #include <base/native_library.h>
 
 namespace ml {
-
 namespace {
-constexpr char kHandwritingLibraryPath[] =
-    "/opt/google/chrome/ml_models/handwriting/lib64/libhandwriting.so";
 
-// Returns whether HandwritingLibrary is supported.
-constexpr bool IsHandwritingLibrarySupported() {
-#ifdef ML_SUPPORT_HANDWRITING
-  // Currently HandwritingLibrary is supported only when the "sanitizer" is not
-  // enabled (see https://crbug.com/1082632).
-  #if __has_feature(address_sanitizer)
-    return false;
-  #else
-    return true;
-  #endif
-#else
-  return false;
-#endif
+using chrome_knowledge::HandwritingRecognizerModelPaths;
+using chrome_knowledge::HandwritingRecognizerOptions;
+using chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
+
+constexpr char kHandwritingLibraryRelativePath[] = "libhandwriting.so";
+// Default handwriting model directory on rootfs.
+constexpr char kHandwritingDefaultModelDir[] =
+    "/opt/google/chrome/ml_models/handwriting/";
+
+// A list of supported language code.
+constexpr char kLanguageCodeEn[] = "en";
+constexpr char kLanguageCodeGesture[] = "gesture_in_context";
+
+// Returns HandwritingRecognizerModelPaths based on the `spec`.
+HandwritingRecognizerModelPaths GetModelPaths(
+    HandwritingRecognizerSpecPtr spec) {
+  HandwritingRecognizerModelPaths paths;
+  const std::string model_path = kHandwritingDefaultModelDir;
+  if (spec->language == kLanguageCodeEn) {
+    paths.set_reco_model_path(model_path + "latin_indy.tflite");
+    paths.set_seg_model_path(model_path + "latin_indy_seg.tflite");
+    paths.set_conf_model_path(model_path + "latin_indy_conf.tflite");
+    paths.set_fst_lm_path(model_path + "latin_indy.compact.fst");
+    paths.set_recospec_path(model_path + "latin_indy.pb");
+    return paths;
+  }
+
+  DCHECK_EQ(spec->language, kLanguageCodeGesture);
+  paths.set_reco_model_path(model_path + "gic.reco_model.tflite");
+  paths.set_recospec_path(model_path + "gic.recospec.pb");
+  return paths;
 }
 
 }  // namespace
@@ -49,8 +64,9 @@ HandwritingLibrary::HandwritingLibrary()
   base::NativeLibraryOptions native_library_options;
   native_library_options.prefer_own_symbols = true;
   library_.emplace(base::LoadNativeLibraryWithOptions(
-      base::FilePath(kHandwritingLibraryPath), native_library_options,
-      nullptr));
+      base::FilePath(kHandwritingDefaultModelDir)
+          .Append(kHandwritingLibraryRelativePath),
+      native_library_options, nullptr));
   if (!library_->is_valid()) {
     status_ = Status::kLoadLibraryFailed;
     return;
@@ -98,11 +114,15 @@ HandwritingRecognizer HandwritingLibrary::CreateHandwritingRecognizer() const {
 
 bool HandwritingLibrary::LoadHandwritingRecognizer(
     HandwritingRecognizer const recognizer,
-    const chrome_knowledge::HandwritingRecognizerOptions& options,
-    const chrome_knowledge::HandwritingRecognizerModelPaths& model_path) const {
+    HandwritingRecognizerSpecPtr spec) const {
   DCHECK(status_ == Status::kOk);
-  const std::string options_pb = options.SerializeAsString();
-  const std::string paths_pb = model_path.SerializeAsString();
+
+  // options is not used for now.
+  const std::string options_pb =
+      HandwritingRecognizerOptions().SerializeAsString();
+
+  const std::string paths_pb =
+      GetModelPaths(std::move(spec)).SerializeAsString();
   return (*load_handwriting_recognizer_)(recognizer, options_pb.data(),
                                          options_pb.size(), paths_pb.data(),
                                          paths_pb.size());

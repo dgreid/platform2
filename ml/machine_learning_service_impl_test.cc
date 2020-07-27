@@ -1102,6 +1102,10 @@ TEST(TextClassifierLangIdTest, EmptyInput) {
 class HandwritingRecognizerTest : public testing::Test {
  protected:
   void SetUp() override {
+    // Nothing to test on an unsupported platform.
+    if (!ml::HandwritingLibrary::IsHandwritingLibraryUnitTestSupported()) {
+      return;
+    }
     // Set ml_service.
     ml_service_impl_ = std::make_unique<MachineLearningServiceImplForTesting>(
         ml_service_.BindNewPipeAndPassReceiver().PassPipe());
@@ -1165,8 +1169,7 @@ class HandwritingRecognizerTest : public testing::Test {
 // Tests that the HandwritingRecognizer recognition returns expected scores.
 TEST_F(HandwritingRecognizerTest, GetExpectedScores) {
   // Nothing to test on an unsupported platform.
-  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
-      ml::HandwritingLibrary::Status::kNotSupported) {
+  if (!ml::HandwritingLibrary::IsHandwritingLibraryUnitTestSupported()) {
     return;
   }
 
@@ -1187,8 +1190,7 @@ TEST_F(HandwritingRecognizerTest, GetExpectedScores) {
 // Tests that the HandwritingRecognizer Recognition should fail on empty ink.
 TEST_F(HandwritingRecognizerTest, FailOnEmptyInk) {
   // Nothing to test on an unsupported platform.
-  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
-      ml::HandwritingLibrary::Status::kNotSupported) {
+  if (!ml::HandwritingLibrary::IsHandwritingLibraryUnitTestSupported()) {
     return;
   }
 
@@ -1214,32 +1216,6 @@ TEST_F(HandwritingRecognizerTest, FailOnEmptyInk) {
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
-}
-
-// Tests that LoadHandwritingModel without a spec produces expected result.
-TEST_F(HandwritingRecognizerTest, LoadHandwritingModelShouldUseEnAsDefault) {
-  // Nothing to test on an unsupported platform.
-  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
-      ml::HandwritingLibrary::Status::kNotSupported) {
-    return;
-  }
-
-  // Load Recognizer without a spec should succeed.
-  bool model_callback_done = false;
-  ml_service_->LoadHandwritingModel(
-      recognizer_.BindNewPipeAndPassReceiver(),
-      base::Bind(
-          [](bool* model_callback_done, const LoadModelResult result) {
-            ASSERT_EQ(result, LoadModelResult::OK);
-            *model_callback_done = true;
-          },
-          &model_callback_done));
-  base::RunLoop().RunUntilIdle();
-  ASSERT_TRUE(model_callback_done);
-  ASSERT_TRUE(recognizer_.is_bound());
-
-  // Run recognize on the default request should produce the expected result.
-  ExpectRecognizeResult("a", 0.50640869f);
 }
 
 }  // namespace

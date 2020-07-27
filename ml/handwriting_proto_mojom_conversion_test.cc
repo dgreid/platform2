@@ -2,14 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <base/files/file_path.h>
-#include <base/files/file_util.h>
 #include <gtest/gtest.h>
 #include <string>
 
-#include "chrome/knowledge/handwriting/validate.pb.h"
 #include "ml/handwriting.h"
-#include "ml/handwriting_path.h"
 #include "ml/handwriting_proto_mojom_conversion.h"
 
 namespace ml {
@@ -70,44 +66,6 @@ TEST(HandwritingProtoMojomConversionTest, RequestProtoToQuery) {
   EXPECT_TRUE(query.Equals(query_constructed));
 
   EXPECT_EQ(proto.SerializeAsString(), proto_constructed.SerializeAsString());
-}
-
-// Tests proto->mojom->proto returns same result as expected.
-TEST(HandwritingProtoMojomConversionTest, RequestProtoToQueryRealExamples) {
-  // Nothing to test on an unsupported platform.
-  if (ml::HandwritingLibrary::GetInstance()->GetStatus() ==
-      ml::HandwritingLibrary::Status::kNotSupported) {
-    return;
-  }
-  chrome_knowledge::HandwritingRecognizerLabeledRequests test_data;
-  std::string buf;
-  ASSERT_TRUE(
-      base::ReadFileToString(base::FilePath(GetLabeledRequestsPathForTesting(
-                                 HandwritingRecognizerSpec::New("en"))),
-                             &buf));
-  ASSERT_TRUE(test_data.ParseFromString(buf));
-  ASSERT_GT(test_data.labeled_requests().size(), 0);
-  for (auto const& labeled_request : test_data.labeled_requests()) {
-    chrome_knowledge::HandwritingRecognizerRequest proto_constructed =
-        HandwritingRecognitionQueryToProto(
-            HandwritingRecognitionQueryFromProtoForTesting(
-                labeled_request.request()));
-
-    chrome_knowledge::HandwritingRecognizerRequest proto_expected =
-        labeled_request.request();
-    // This is a known issue. When we convert proto->mojom, a default value is
-    // added for mojom struct which is added later on to the proto when we do
-    // mojom->proto.
-    // We know having these two fields set is not an problem.
-    if (!proto_expected.has_max_num_results()) {
-      proto_expected.set_max_num_results(0);
-    }
-    if (!proto_expected.has_return_segmentation()) {
-      proto_expected.set_return_segmentation(false);
-    }
-
-    EXPECT_EQ(proto_constructed.DebugString(), proto_expected.DebugString());
-  }
 }
 
 }  // namespace ml

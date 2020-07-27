@@ -56,15 +56,12 @@ class MachineLearningServiceImpl
       mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
           receiver,
       LoadTextClassifierCallback callback) override;
-  void LoadHandwritingModel(
-      mojo::PendingReceiver<
-          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
-      LoadHandwritingModelCallback callback) override;
+  void RemovedFunction_3() override;
   void LoadHandwritingModelWithSpec(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       mojo::PendingReceiver<
           chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
-      LoadHandwritingModelCallback callback) override;
+      LoadHandwritingModelWithSpecCallback callback) override;
 
   // Init the icu data if it is not initialized yet.
   void InitIcuIfNeeded();

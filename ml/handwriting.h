@@ -5,12 +5,15 @@
 #ifndef ML_HANDWRITING_H_
 #define ML_HANDWRITING_H_
 
+#include <string>
+
 #include <base/no_destructor.h>
 #include <base/optional.h>
 #include <base/scoped_native_library.h>
 #include <chromeos/libhandwriting/interface.h>
 
 #include "chrome/knowledge/handwriting/interface.pb.h"
+#include "ml/mojom/handwriting_recognizer.mojom.h"
 
 namespace ml {
 // A singleton proxy class for the handwriting DSO.
@@ -37,6 +40,18 @@ class HandwritingLibrary {
 
   ~HandwritingLibrary() = default;
 
+  // Returns whether HandwritingLibrary is supported.
+  static constexpr bool IsHandwritingLibrarySupported() {
+    return (IsUseLibHandwritingEnabled() || IsUseLibHandwritingDlcEnabled()) &&
+           !IsAsan();
+  }
+
+  // Returns whether HandwritingLibrary is supported for unit tests.
+  static constexpr bool IsHandwritingLibraryUnitTestSupported() {
+    return IsUseLibHandwritingEnabled() && !IsAsan();
+  }
+
+  // Gets the singleton HandwritingLibrary.
   static HandwritingLibrary* GetInstance();
 
   // Get whether the library is successfully initialized.
@@ -58,16 +73,13 @@ class HandwritingLibrary {
   // other interface. The memory is owned by the user and should be deleted
   // using `DestroyHandwritingRecognizer` after usage.
   HandwritingRecognizer CreateHandwritingRecognizer() const;
-  // Load the models and other configuration files with options.
-  // `model_path` stores the paths to the data files of the model (machine
-  // learning models, configurations etc.). Please see the unit test for
-  // examples.
+  // Load the models with `spec` stores the language, the path to the data files
+  // of the model (machine learning models, configurations etc.).
   // Returns true if HandwritingRecognizer is correctly loaded and
   // initialized. Returns false otherwise.
   bool LoadHandwritingRecognizer(
       HandwritingRecognizer recognizer,
-      const chrome_knowledge::HandwritingRecognizerOptions& options,
-      const chrome_knowledge::HandwritingRecognizerModelPaths& model_path)
+      chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec)
       const;
   // Sends the specified `request` to `recognizer`, if succeeds, `result` (which
   // should not be null) is populated with the recognition result.
@@ -83,9 +95,24 @@ class HandwritingLibrary {
 
  private:
   friend class base::NoDestructor<HandwritingLibrary>;
+  FRIEND_TEST(HandwritingLibraryTest, CanLoadLibrary);
 
   // Initialize the handwriting library.
-  HandwritingLibrary();
+  explicit HandwritingLibrary();
+
+  // Currently HandwritingLibrary is supported only when the "sanitizer" is not
+  // enabled (see https://crbug.com/1082632).
+  static constexpr bool IsAsan() { return __has_feature(address_sanitizer); }
+
+  // Returns bool of use.ondevice_handwriting.
+  static constexpr bool IsUseLibHandwritingEnabled() {
+    return USE_ONDEVICE_HANDWRITING;
+  }
+
+  // Returns bool of use.ondevice_handwriting_dlc.
+  static constexpr bool IsUseLibHandwritingDlcEnabled() {
+    return USE_ONDEVICE_HANDWRITING_DLC;
+  }
 
   base::Optional<base::ScopedNativeLibrary> library_;
   Status status_;
