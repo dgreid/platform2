@@ -401,14 +401,11 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
       return false;
     }
 
-    // This callback will be executed in the destructor at the latest so |this|
-    // will always be valid.
-    base::Closure cleanup = base::Bind(
-        [](Mount* m) {
-          m->UnmountAndDropKeys();
-          m->CleanUpEphemeral();
-        },
-        base::Unretained(this));
+    // Ephemeral mounts don't require dropping keys since they're not dircrypto
+    // mounts. This callback will be executed in the destructor at the latest so
+    // |mounter_| will always be valid.
+    base::Closure cleanup = base::Bind(&MountHelper::TearDownEphemeralMount,
+                                       base::Unretained(mounter_.get()));
 
     // Ephemeral cryptohomes for regular users are mounted in-process.
     if (!MountEphemeralCryptohome(credentials.username(), mounter_.get(),
@@ -679,12 +676,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
       true);
 
   return true;
-}
-
-void Mount::CleanUpEphemeral() {
-  if (!mounter_->CleanUpEphemeral()) {
-    ReportCryptohomeError(kEphemeralCleanUpFailed);
-  }
 }
 
 bool Mount::MountEphemeralCryptohome(
@@ -1170,13 +1161,9 @@ bool Mount::MountGuestCryptohome() {
   } else {
     ephemeral_mounter = mounter_.get();
     // This callback will be executed in the destructor at the latest so
-    // |this| will always be valid.
-    cleanup = base::Bind(
-        [](Mount* m) {
-          m->UnmountAndDropKeys();
-          m->CleanUpEphemeral();
-        },
-        base::Unretained(this));
+    // |mounter_| will always be valid.
+    cleanup = base::Bind(&MountHelper::TearDownEphemeralMount,
+                         base::Unretained(mounter_.get()));
   }
   return MountEphemeralCryptohome(kGuestUserName, ephemeral_mounter,
                                   std::move(cleanup));
