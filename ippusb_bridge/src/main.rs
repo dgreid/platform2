@@ -249,7 +249,7 @@ impl<A: Accept> Daemon<A> {
         std::thread::spawn(move || {
             let mut buf = [0u8; 12];
             match stream.read_exact(&mut buf) {
-                Ok(()) if &buf == "\x0bkeep-alive\0".as_bytes() => {
+                Ok(()) if &buf == b"\x0bkeep-alive\0" => {
                     info!("Got keep alive message");
                     *thread_last_keep_alive.lock() = Instant::now();
                     if let Err(e) = stream.write_all(b"\x04ack\0") {

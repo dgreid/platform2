@@ -114,7 +114,7 @@ where
     W: Write,
 {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if self.buf.len() > 0 {
+        if !self.buf.is_empty() {
             let written = self.writer.write(&self.buf)?;
             self.buf.drain(..written);
         }

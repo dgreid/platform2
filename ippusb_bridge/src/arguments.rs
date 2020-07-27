@@ -7,8 +7,6 @@ use std::num::ParseIntError;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use getopts;
-
 #[derive(Debug)]
 pub enum Error {
     GetOpts(getopts::Fail),
@@ -75,7 +73,7 @@ impl Args {
         let bus_device = matches
             .opt_str("bus-device")
             .map(|param| {
-                let tokens = param.split(":").collect::<Vec<_>>();
+                let tokens = param.split(':').collect::<Vec<_>>();
                 if tokens.len() != 2 {
                     return Err(Error::InvalidArgument(
                         "bus-device".to_string(),

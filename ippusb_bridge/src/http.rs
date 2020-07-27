@@ -69,9 +69,9 @@ impl<R> ResponseReader<R>
 where
     R: BufRead + Sized,
 {
-    fn new<'reader>(reader: R) -> ResponseReader<R> {
+    fn new(reader: R) -> ResponseReader<R> {
         ResponseReader {
-            reader: reader,
+            reader,
             // Assume body is empty unless we see a header to the contrary.
             body_length: BodyLength::Exactly(0),
             header_was_read: false,
@@ -88,11 +88,13 @@ where
         let mut response = httparse::Response::new(&mut headers);
         let (status, headers) = match response.parse(&buf).map_err(Error::ParseResponse)? {
             httparse::Status::Complete(i) if i == buf.len() => {
-                let code = response.code.ok_or(Error::EmptyField("code".to_owned()))?;
+                let code = response
+                    .code
+                    .ok_or_else(|| Error::EmptyField("code".to_owned()))?;
                 let status = tiny_http::StatusCode::from(code);
                 let version = response
                     .version
-                    .ok_or(Error::EmptyField("version".to_owned()))?;
+                    .ok_or_else(|| Error::EmptyField("version".to_owned()))?;
                 debug!(
                     "> HTTP/1.{} {} {}",
                     version,
@@ -171,7 +173,7 @@ where
     }
 }
 
-fn is_end_to_end(header: &&Header) -> bool {
+fn is_end_to_end(header: &Header) -> bool {
     match header.field.as_str().as_str() {
         "Connection"
         | "Expect" // Technically end-to-end, but we want to filter it.
@@ -196,7 +198,7 @@ fn supports_request_body(method: &Method) -> bool {
 fn serialize_request_header(request: &tiny_http::Request, chunked: bool) -> String {
     let mut serialized_header = format!("{} {} HTTP/1.1\r\n", request.method(), request.url());
     let mut have_content_length = false;
-    for header in request.headers().iter().filter(is_end_to_end) {
+    for header in request.headers().iter().filter(|&h| is_end_to_end(h)) {
         if header.field.as_str() == "Content-Length" {
             have_content_length = true;
             // Do not add the content_length header if we're going to be using
