@@ -403,9 +403,9 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
 
     // Ephemeral mounts don't require dropping keys since they're not dircrypto
     // mounts. This callback will be executed in the destructor at the latest so
-    // |mounter_| will always be valid.
-    base::Closure cleanup = base::Bind(&MountHelper::TearDownEphemeralMount,
-                                       base::Unretained(mounter_.get()));
+    // |this| will always be valid.
+    base::Closure cleanup =
+        base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
 
     // Ephemeral cryptohomes for regular users are mounted in-process.
     if (!MountEphemeralCryptohome(credentials.username(), mounter_.get(),
@@ -703,6 +703,12 @@ bool Mount::MountEphemeralCryptohome(
 
   mount_type_ = MountType::EPHEMERAL;
   return true;
+}
+
+void Mount::TearDownEphemeralMount() {
+  if (!mounter_->TearDownEphemeralMount()) {
+    ReportCryptohomeError(kEphemeralCleanUpFailed);
+  }
 }
 
 void Mount::UnmountAndDropKeys() {
@@ -1164,16 +1170,19 @@ bool Mount::MountGuestCryptohome() {
     // Ephemeral cryptohomes for Guest sessions are mounted out-of-process.
     ephemeral_mounter = out_of_process_mounter_.get();
     // This callback will be executed in the destructor at the latest so
-    // |out_of_process_mounter_| will always be valid.
-    cleanup = base::Bind(&OutOfProcessMountHelper::TearDownEphemeralMount,
-                         base::Unretained(out_of_process_mounter_.get()));
+    // |out_of_process_mounter_| will always be valid. Error repoting is done in
+    // the helper process in cryptohome_namespace_mounter.cc.
+    cleanup = base::Bind(
+        base::IgnoreResult(&OutOfProcessMountHelper::TearDownEphemeralMount),
+        base::Unretained(out_of_process_mounter_.get()));
   } else {
     ephemeral_mounter = mounter_.get();
     // This callback will be executed in the destructor at the latest so
-    // |mounter_| will always be valid.
-    cleanup = base::Bind(&MountHelper::TearDownEphemeralMount,
-                         base::Unretained(mounter_.get()));
+    // |this| will always be valid.
+    cleanup =
+        base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
   }
+
   return MountEphemeralCryptohome(kGuestUserName, ephemeral_mounter,
                                   std::move(cleanup));
 }

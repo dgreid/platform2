@@ -71,6 +71,13 @@ bool HandleSignal(base::RepeatingClosure quit_closure,
   return true;  // unregister the handler
 }
 
+void TearDownEphemeralAndReportError(
+    cryptohome::MountHelperInterface* mounter) {
+  if (!mounter->TearDownEphemeralMount()) {
+    ReportCryptohomeError(cryptohome::kEphemeralCleanUpFailed);
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -121,9 +128,8 @@ int main(int argc, char** argv) {
 
   // A failure in PerformEphemeralMount might still require clean-up so set up
   // the clean-up routine now.
-  base::ScopedClosureRunner tear_down_runner(
-      base::BindOnce(&cryptohome::MountHelper::TearDownEphemeralMount,
-                     base::Unretained(&mounter)));
+  base::ScopedClosureRunner tear_down_runner(base::BindOnce(
+      &TearDownEphemeralAndReportError, &mounter));
 
   cryptohome::ReportTimerStart(cryptohome::kPerformEphemeralMountTimer);
   if (!mounter.PerformEphemeralMount(request.username())) {

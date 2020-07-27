@@ -855,9 +855,9 @@ bool MountHelper::PerformEphemeralMount(const std::string& username) {
   return true;
 }
 
-void MountHelper::TearDownEphemeralMount() {
+bool MountHelper::TearDownEphemeralMount() {
   UnmountAll();
-  CleanUpEphemeral();
+  return CleanUpEphemeral();
 }
 
 void MountHelper::UnmountAll() {

@@ -222,10 +222,10 @@ bool OutOfProcessMountHelper::LaunchOutOfProcessHelper(
   return true;
 }
 
-void OutOfProcessMountHelper::TearDownEphemeralMount() {
+bool OutOfProcessMountHelper::TearDownEphemeralMount() {
   if (!helper_process_) {
     LOG(WARNING) << "Can't tear down mount, OOP mount helper is not running";
-    return;
+    return false;
   }
 
   // While currently a MountHelper instance is not used for more than one
@@ -235,6 +235,7 @@ void OutOfProcessMountHelper::TearDownEphemeralMount() {
   KillOutOfProcessHelperIfNecessary();
   mounted_paths_.clear();
   username_.clear();
+  return true;
 }
 
 bool OutOfProcessMountHelper::PerformMount(const Options& mount_opts,

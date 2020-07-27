@@ -56,7 +56,7 @@ class OutOfProcessMountHelper : public MountHelperInterface {
 
   // Tears down an ephemeral cryptohome mount by terminating the out-of-process
   // helper.
-  void TearDownEphemeralMount() override;
+  bool TearDownEphemeralMount() override;
 
   // Returns whether an ephemeral mount operation can be performed.
   bool CanPerformEphemeralMount() const override;
