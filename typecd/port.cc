@@ -4,7 +4,14 @@
 
 #include "typecd/port.h"
 
+#include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/string_util.h>
+#include <re2/re2.h>
+
+namespace {
+constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
+}  // namespace
 
 namespace typecd {
 
@@ -67,6 +74,36 @@ void Port::AddRemovePartnerAltMode(const base::FilePath& path, bool added) {
   } else {
     partner_->RemoveAltMode(path);
   }
+}
+
+std::string Port::GetDataRole() {
+  std::string data_role;
+  std::string sysfs_str;
+  auto path = syspath_.Append("data_role");
+
+  if (!base::ReadFileToString(path, &sysfs_str)) {
+    LOG(ERROR) << "Couldn't read sysfs path " << path;
+    goto end;
+  }
+
+  // First check for a dual role port, in which case the current role is in
+  // box-brackets. For example: [host] device
+  if (!RE2::FullMatch(sysfs_str, kDataRoleDRPRegex, &data_role)) {
+    LOG(INFO)
+        << "Couldn't determine role, assuming DRP(Dual Role Port) for port "
+        << port_num_;
+  }
+
+  if (data_role == "")
+    data_role = sysfs_str;
+
+  base::TrimWhitespaceASCII(data_role, base::TRIM_ALL, &data_role);
+
+  if (data_role != "host" && data_role != "device")
+    data_role = "";
+
+end:
+  return data_role;
 }
 
 }  // namespace typecd

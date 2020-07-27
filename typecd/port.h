@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include <gtest/gtest_prod.h>
@@ -31,6 +32,10 @@ class Port {
   void RemoveCable();
   // Add/remove an alternate mode for the partner.
   void AddRemovePartnerAltMode(const base::FilePath& path, bool added);
+
+  // Read and return the current port data role from sysfs.
+  // Returns either "host" or "device" on success, empty string on failure.
+  std::string GetDataRole();
 
  private:
   friend class PortTest;
