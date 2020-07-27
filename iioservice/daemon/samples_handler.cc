@@ -26,6 +26,12 @@
 
 namespace iioservice {
 
+namespace {
+
+constexpr char kNoBatchChannels[][10] = {"timestamp", "count"};
+
+}
+
 // static
 void SamplesHandler::SamplesHandlerDeleter(SamplesHandler* handler) {
   if (handler == nullptr)
@@ -235,6 +241,16 @@ SamplesHandler::SamplesHandler(
       on_sample_updated_callback_(std::move(on_sample_updated_callback)),
       on_error_occurred_callback_(std::move(on_error_occurred_callback)) {
   DCHECK_GE(dev_max_frequency_, dev_min_frequency_);
+
+  auto channels = iio_device_->GetAllChannels();
+  for (size_t i = 0; i < channels.size(); ++i) {
+    for (size_t j = 0; j < base::size(kNoBatchChannels); ++j) {
+      if (strcmp(channels[i]->GetId(), kNoBatchChannels[j]) == 0) {
+        no_batch_chn_indices.emplace(i);
+        break;
+      }
+    }
+  }
 }
 
 SamplesHandler::SamplesHandler(
@@ -256,6 +272,16 @@ SamplesHandler::SamplesHandler(
       on_sample_updated_callback_(std::move(on_sample_updated_callback)),
       on_error_occurred_callback_(std::move(on_error_occurred_callback)) {
   DCHECK_GE(dev_max_frequency_, dev_min_frequency_);
+
+  auto channels = iio_device_->GetAllChannels();
+  for (size_t i = 0; i < channels.size(); ++i) {
+    for (size_t j = 0; j < base::size(kNoBatchChannels); ++j) {
+      if (strcmp(channels[i]->GetId(), kNoBatchChannels[j]) == 0) {
+        no_batch_chn_indices.emplace(i);
+        break;
+      }
+    }
+  }
 }
 
 void SamplesHandler::SetSampleWatcherOnThread() {
@@ -542,8 +568,11 @@ void SamplesHandler::UpdateChannelsEnabledOnThread(
       client_data->enabled_chn_indices.emplace(chn_index);
     }
   } else {
-    for (int32_t chn_index : iio_chn_indices)
+    for (int32_t chn_index : iio_chn_indices) {
       client_data->enabled_chn_indices.erase(chn_index);
+      // remove cached chn's moving average
+      clients_map_[client_data].chns.erase(chn_index);
+    }
   }
 
   ipc_task_runner_->PostTask(
@@ -649,10 +678,33 @@ void SamplesHandler::OnSampleAvailableWithoutBlocking() {
     int step =
         std::max(1, static_cast<int>(dev_frequency_ / client.first->frequency));
 
+    // Update moving averages for channels
+    for (int32_t chn_index : client.first->enabled_chn_indices) {
+      if (no_batch_chn_indices.find(chn_index) != no_batch_chn_indices.end())
+        continue;
+
+      if (sample->find(chn_index) == sample->end()) {
+        LOG(ERROR) << "Missing chn index: " << chn_index << " in sample";
+        continue;
+      }
+
+      int size = samples_cnt_ - client.second.sample_index + 1;
+      if (client.second.chns.find(chn_index) == client.second.chns.end() &&
+          size != 1) {
+        // A new enabled channel: fill up previous sample points with the
+        // current value
+        client.second.chns[chn_index] =
+            sample.value()[chn_index] * (size * (size - 1) / 2);
+      }
+
+      client.second.chns[chn_index] += sample.value()[chn_index] * size;
+    }
+
     if (client.second.sample_index + step - 1 <= samples_cnt_) {
       // Send a sample to the client
       int64_t size = samples_cnt_ - client.second.sample_index + 1;
       DCHECK_GE(size, 1);
+      int64_t denom = ((size + 1) * size / 2);
 
       libmems::IioDevice::IioSample client_sample;
       for (int32_t chn_index : client.first->enabled_chn_indices) {
@@ -661,10 +713,24 @@ void SamplesHandler::OnSampleAvailableWithoutBlocking() {
           continue;
         }
 
-        client_sample[chn_index] = sample.value()[chn_index];
+        if (no_batch_chn_indices.find(chn_index) !=
+            no_batch_chn_indices.end()) {
+          // Use the current value directly
+          client_sample[chn_index] = sample.value()[chn_index];
+          continue;
+        }
+
+        if (client.second.chns.find(chn_index) == client.second.chns.end()) {
+          LOG(ERROR) << "Missed chn index: " << chn_index
+                     << " in moving averages";
+          continue;
+        }
+
+        client_sample[chn_index] = client.second.chns[chn_index] / denom;
       }
 
       client.second.sample_index = samples_cnt_ + 1;
+      client.second.chns.clear();
 
       ipc_task_runner_->PostTask(
           FROM_HERE,

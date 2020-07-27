@@ -90,6 +90,8 @@ class SamplesHandler {
   struct SampleData {
     // The starting index of the next sample.
     uint64_t sample_index = 0;
+    // Moving averages of channels except for channels that have no batch mode
+    std::map<int32_t, int64_t> chns;
   };
 
   static const uint32_t kNumReadFailedLogsBeforeGivingUp = 100;
@@ -185,6 +187,8 @@ class SamplesHandler {
   base::RepeatingCallback<void(mojo::ReceiverId,
                                cros::mojom::ObserverErrorType)>
       on_error_occurred_callback_;
+
+  std::set<int32_t> no_batch_chn_indices;
 
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
 

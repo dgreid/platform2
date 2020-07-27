@@ -22,6 +22,21 @@ namespace iioservice {
 
 namespace fakes {
 
+namespace {
+
+int64_t CalcMovingAverage(const std::vector<int64_t>& values) {
+  int64_t size = values.size();
+  int64_t value_total = 0, sum = 0;
+  for (int64_t i = size - 1; i >= 0; --i) {
+    sum += values[i];
+    value_total += sum;
+  }
+
+  return value_total / ((size + 1) * size / 2);
+}
+
+}  // namespace
+
 // static
 FakeSamplesHandler::ScopedFakeSamplesHandler FakeSamplesHandler::CreateWithFifo(
     scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner,
@@ -143,9 +158,29 @@ void FakeSamplesObserver::OnSampleUpdated(
 
       CHECK(it != sample.end());
 
-      CHECK_EQ(it->second,
-               libmems::fakes::kFakeAccelSamples[sample_index_ + step - 1]
-                                                [chnIndex]);
+      // Check timestamp channel
+      if (strncmp(libmems::fakes::kFakeAccelChns[chnIndex],
+                  libmems::kTimestampAttr,
+                  strlen(libmems::kTimestampAttr)) == 0) {
+        CHECK_EQ(it->second,
+                 libmems::fakes::kFakeAccelSamples[sample_index_ + step - 1]
+                                                  [chnIndex]);
+        continue;
+      }
+
+      // Check other channels
+      std::vector<int64_t> values;
+      for (int index = 0; index < step; ++index) {
+        if (chnIndex == 1 && sample_index_ + index < pause_index_) {
+          values.push_back(
+              libmems::fakes::kFakeAccelSamples[pause_index_][chnIndex]);
+        } else {
+          values.push_back(libmems::fakes::kFakeAccelSamples[sample_index_ +
+                                                             index][chnIndex]);
+        }
+      }
+
+      CHECK_EQ(it->second, CalcMovingAverage(values));
     }
   } else {
     auto channels = device_->GetAllChannels();
