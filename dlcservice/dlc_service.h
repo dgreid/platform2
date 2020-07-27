@@ -12,6 +12,7 @@
 
 #include <base/files/file_path.h>
 #include <base/memory/weak_ptr.h>
+#include <base/optional.h>
 #include <brillo/message_loops/message_loop.h>
 #include <dlcservice/proto_bindings/dlcservice.pb.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
@@ -92,7 +93,11 @@ class DlcService : public DlcServiceInterface {
                                const std::string& omaha_url,
                                brillo::ErrorPtr* err);
 
-  // Cancels the current running install.
+  // Finishes the currently running installation. Returns true if the
+  // installation finished successfully, false otherwise.
+  bool FinishInstall(brillo::ErrorPtr* err);
+
+  // Cancels the currently running installation.
   // The |err_in| argument is the error that causes the install to be cancelled.
   void CancelInstall(const brillo::ErrorPtr& err_in);
 
@@ -134,6 +139,9 @@ class DlcService : public DlcServiceInterface {
 
   // Called when the session state changes (user logs in or logs out).
   void OnSessionStateChangedSignal(const std::string& state);
+
+  // Holds the DLC that is being installed by update_engine.
+  base::Optional<DlcId> installing_dlc_id_;
 
   std::unique_ptr<DlcManager> dlc_manager_;
 

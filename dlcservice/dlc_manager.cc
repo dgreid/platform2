@@ -123,12 +123,6 @@ void DlcManager::PostCleanupDanglingDlcs(const base::TimeDelta& timeout) {
       timeout);
 }
 
-bool DlcManager::IsInstalling() {
-  return std::any_of(
-      supported_.begin(), supported_.end(),
-      [](const auto& pair) { return pair.second.IsInstalling(); });
-}
-
 DlcBase* DlcManager::GetDlc(const DlcId& id, brillo::ErrorPtr* err) {
   const auto& iter = supported_.find(id);
   if (iter == supported_.end()) {
@@ -245,22 +239,21 @@ bool DlcManager::Purge(const DlcId& id, ErrorPtr* err) {
   return dlc->Purge(err);
 }
 
-bool DlcManager::FinishInstall(ErrorPtr* err) {
+bool DlcManager::FinishInstall(const DlcId& id, ErrorPtr* err) {
   DCHECK(err);
-  bool ret = true;
-  for (auto& pair : supported_) {
-    auto& dlc = pair.second;
-    ErrorPtr tmp_err;
-    // Only try to finish install for DLCs that were in installing phase. Other
-    // DLCs should not be finished this route.
-    if (dlc.IsInstalling() &&
-        !dlc.FinishInstall(/*installed_by_ue=*/true, &tmp_err))
-      ret = false;
+  auto dlc = GetDlc(id, err);
+  if (!dlc) {
+    *err = Error::Create(FROM_HERE, kErrorInvalidDlc,
+                         "Finishing installation for invalid DLC.");
+    return false;
   }
-  if (!ret)
-    *err = Error::Create(FROM_HERE, kErrorInternal,
-                         "Not all DLC(s) successfully mounted.");
-  return ret;
+  if (!dlc->IsInstalling()) {
+    *err = Error::Create(
+        FROM_HERE, kErrorInternal,
+        "Finishing installation for a DLC that is not being installed.");
+    return false;
+  }
+  return dlc->FinishInstall(/*installed_by_ue=*/true, err);
 }
 
 bool DlcManager::CancelInstall(const DlcId& id,
@@ -269,21 +262,11 @@ bool DlcManager::CancelInstall(const DlcId& id,
   DCHECK(err);
   auto* dlc = GetDlc(id, err);
   if (dlc == nullptr) {
+    *err = Error::Create(FROM_HERE, kErrorInvalidDlc,
+                         "Cancelling installation for invalid DLC.");
     return false;
   }
   return !dlc->IsInstalling() || dlc->CancelInstall(err_in, err);
-}
-
-bool DlcManager::CancelInstall(const ErrorPtr& err_in, ErrorPtr* err) {
-  DCHECK(err);
-  bool ret = true;
-  for (auto& pr : supported_) {
-    if (!CancelInstall(pr.first, err_in, err)) {
-      LOG(ERROR) << "Failed during install cancellation.";
-      ret = false;
-    }
-  }
-  return ret;
 }
 
 void DlcManager::ChangeProgress(double progress) {

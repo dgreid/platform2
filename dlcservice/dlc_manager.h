@@ -28,11 +28,6 @@ class DlcManager {
   // Initializes the state of DlcManager.
   void Initialize();
 
-  // Returns true when an install is currently running.  If the desire is to
-  // |Install()| again, then |FinishInstall()| or |CancelInstall()| should be
-  // called before |Install()|'ing again.
-  bool IsInstalling();
-
   // Returns the list of installed DLCs.
   DlcIdList GetInstalled();
 
@@ -74,12 +69,11 @@ class DlcManager {
   // If there were missing DLC(s) that were newly installed, this call will go
   // ahead and mount those DLC(s) to be ready for use.
   // Args:
-  //   dlc_module_list: Will contain all the DLC(s) and their root mount points
-  //                    when returned true, otherwise unmodified.
+  //   id: The DLC to finish the installation for.
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool FinishInstall(brillo::ErrorPtr* err);
+  bool FinishInstall(const DlcId& id, brillo::ErrorPtr* err);
 
   // Install Step 2b:
   // If for any reason, the init'ed DLC(s) should not follow through with
@@ -87,13 +81,11 @@ class DlcManager {
   // which case the errors will reflect the causes and provide insight in ways
   // dlcservice can be put into a valid state again.
   // Args:
+  //   id: The DLC to cancel the installation for.
   //   err_in: The error that caused the install to be cancelled.
   //   err: The error that's set when returned false.
   // Return:
   //   True on success, otherwise false.
-  bool CancelInstall(const brillo::ErrorPtr& err_in, brillo::ErrorPtr* err);
-
-  // Same as above, but we know exactly which DLC should be cancelled.
   bool CancelInstall(const DlcId& id,
                      const brillo::ErrorPtr& err_in,
                      brillo::ErrorPtr* err);

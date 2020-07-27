@@ -106,10 +106,7 @@ bool DlcService::InstallInternal(const DlcId& id,
   if (!InstallWithUpdateEngine(id, omaha_url, err)) {
     // dlcservice must cancel the install as update_engine won't be able to
     // install the initialized DLC.
-    ErrorPtr tmp_err;
-    if (!dlc_manager_->CancelInstall(id, *err, &tmp_err))
-      LOG(ERROR) << "Failed to cancel install.";
-
+    CancelInstall(*err);
     return false;
   }
 
@@ -135,6 +132,7 @@ bool DlcService::InstallWithUpdateEngine(const DlcId& id,
   LOG(INFO) << "Sending request to update_engine to install DLC=" << id;
   // Invokes update_engine to install the DLC.
   ErrorPtr tmp_err;
+  installing_dlc_id_ = id;
   if (!SystemState::Get()->update_engine()->AttemptInstall(omaha_url, {id},
                                                            &tmp_err)) {
     // TODO(kimjae): need update engine to propagate correct error message by
@@ -194,17 +192,33 @@ bool DlcService::UpdateCompleted(const DlcIdList& ids, ErrorPtr* err) {
   return dlc_manager_->UpdateCompleted(ids, err);
 }
 
+bool DlcService::FinishInstall(ErrorPtr* err) {
+  if (!installing_dlc_id_) {
+    LOG(ERROR) << "No DLC installation to finish.";
+    return false;
+  }
+  auto id = installing_dlc_id_.value();
+  installing_dlc_id_.reset();
+  return dlc_manager_->FinishInstall(id, err);
+}
+
 void DlcService::CancelInstall(const ErrorPtr& err_in) {
+  if (!installing_dlc_id_) {
+    LOG(ERROR) << "No DLC installation to cancel.";
+    return;
+  }
+  auto id = installing_dlc_id_.value();
+  installing_dlc_id_.reset();
   ErrorPtr tmp_err;
-  if (!dlc_manager_->CancelInstall(err_in, &tmp_err))
-    LOG(ERROR) << "Failed to cancel install.";
+  if (!dlc_manager_->CancelInstall(id, err_in, &tmp_err))
+    LOG(ERROR) << "Failed to cancel install for DLC=" << id;
 }
 
 void DlcService::PeriodicInstallCheck() {
   periodic_install_check_id_ = MessageLoop::kTaskIdNull;
 
   // If we're not installing anything anymore, no need to schedule again.
-  if (!dlc_manager_->IsInstalling())
+  if (!installing_dlc_id_)
     return;
 
   const int kNotSeenStatusDelay = 10;
@@ -238,7 +252,7 @@ void DlcService::SchedulePeriodicInstallCheck() {
 
 bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
   // If we are not installing any DLC(s), no need to even handle status result.
-  if (!dlc_manager_->IsInstalling())
+  if (!installing_dlc_id_)
     return true;
 
   const StatusResult& status = SystemState::Get()->update_engine_status();
@@ -263,7 +277,7 @@ bool DlcService::HandleStatusResult(brillo::ErrorPtr* err) {
           << "Signal from update_engine, proceeding to complete installation.";
       // Send metrics in |DlcBase::FinishInstall| and not here since we might
       // be executing this call for multiple DLCs.
-      if (!dlc_manager_->FinishInstall(err)) {
+      if (!FinishInstall(err)) {
         LOG(ERROR) << "Failed to finish install.";
         return false;
       }

@@ -41,7 +41,7 @@ class DlcManagerTest : public BaseTest {
 
     InstallWithUpdateEngine({id});
     EXPECT_TRUE(dlc_manager_->InstallCompleted({id}, &err_));
-    EXPECT_TRUE(dlc_manager_->FinishInstall(&err_));
+    EXPECT_TRUE(dlc_manager_->FinishInstall(id, &err_));
     CheckDlcState(id, DlcState::INSTALLED);
   }
 
