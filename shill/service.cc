@@ -59,6 +59,11 @@ const char kServiceSortEtc[] = "Etc";
 const char kServiceSortSerialNumber[] = "SerialNumber";
 const char kServiceSortTechnology[] = "Technology";
 
+std::valarray<uint64_t> CounterToValArray(
+    const patchpanel::TrafficCounter& counter) {
+  return std::valarray<uint64_t>{counter.rx_bytes(), counter.tx_bytes(),
+                                 counter.rx_packets(), counter.tx_packets()};
+}
 }  // namespace
 
 namespace Logging {
@@ -107,6 +112,8 @@ const char Service::kStorageConnectionId[] = "ConnectionId";
 const char Service::kStorageLinkMonitorDisabled[] = "LinkMonitorDisabled";
 const char Service::kStorageManagedCredentials[] = "ManagedCredentials";
 const char Service::kStorageMeteredOverride[] = "MeteredOverride";
+
+const size_t Service::kTrafficCounterArraySize = 4;
 
 const uint8_t Service::kStrengthMax = 100;
 const uint8_t Service::kStrengthMin = 0;
@@ -1174,6 +1181,34 @@ bool Service::IsMetered() const {
 
 bool Service::IsMeteredByServiceProperties() const {
   return false;
+}
+
+void Service::InitializeTrafficCounterSnapshot(
+    const vector<patchpanel::TrafficCounter>& counters) {
+  for (const auto& counter : counters) {
+    traffic_counter_snapshot_[counter.source()] = CounterToValArray(counter);
+  }
+}
+
+void Service::RefreshTrafficCounters(
+    const vector<patchpanel::TrafficCounter>& counters) {
+  for (const auto& counter : counters) {
+    std::valarray<uint64_t> counter_array = CounterToValArray(counter);
+    if (current_traffic_counters_.find(counter.source()) ==
+        current_traffic_counters_.end()) {
+      current_traffic_counters_[counter.source()] =
+          std::valarray<uint64_t>(kTrafficCounterArraySize);
+    }
+    if (traffic_counter_snapshot_[counter.source()].size() ==
+        kTrafficCounterArraySize) {
+      current_traffic_counters_[counter.source()] +=
+          counter_array - traffic_counter_snapshot_[counter.source()];
+    } else {
+      LOG(WARNING) << "Uninitialized traffic counter snapshot for source "
+                   << patchpanel::TrafficCounter::Source_Name(counter.source());
+    }
+    traffic_counter_snapshot_[counter.source()] = counter_array;
+  }
 }
 
 // static

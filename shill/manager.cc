@@ -25,6 +25,7 @@
 #include <base/strings/string_util.h>
 #include <brillo/userdb_utils.h>
 #include <chromeos/dbus/service_constants.h>
+#include <chromeos/patchpanel/dbus/client.h>
 
 #include "shill/adaptor_interfaces.h"
 #include "shill/callbacks.h"
@@ -73,6 +74,7 @@
 #endif  // !DISABLE_WIFI || !DISABLE_WIRED_8021X
 
 using base::Bind;
+using base::BindOnce;
 using base::Callback;
 using base::StringPrintf;
 using base::Unretained;
@@ -108,6 +110,10 @@ constexpr int kDeviceStatusCheckIntervalMilliseconds =
 // Interval for attempting to initialize patchpanel connection.
 constexpr base::TimeDelta kInitPatchpanelClientInterval =
     base::TimeDelta::FromMinutes(1);
+
+// Interval for polling patchpanel and refreshing traffic counters.
+constexpr base::TimeDelta kTrafficCounterRefreshInterval =
+    base::TimeDelta::FromMinutes(5);
 
 // Technologies to probe for.
 const char* const kProbeTechnologies[] = {
@@ -200,6 +206,7 @@ Manager::Manager(ControlInterface* control_interface,
       use_startup_portal_list_(false),
       device_status_check_task_(
           Bind(&Manager::DeviceStatusCheckTask, base::Unretained(this))),
+      pending_traffic_counter_request_(false),
       termination_actions_(dispatcher),
       is_wake_on_lan_enabled_(true),
       ignore_unknown_ethernet_(false),
@@ -373,6 +380,7 @@ void Manager::Stop() {
   device_status_check_task_.Cancel();
   sort_services_task_.Cancel();
   init_patchpanel_client_task_.Cancel();
+  refresh_traffic_counter_task_.Cancel();
   if (metrics_) {
     RemoveDefaultServiceObserver(metrics_);
   }
@@ -1729,6 +1737,9 @@ void Manager::SortServicesTask() {
   SLOG(this, 4) << "In " << __func__;
   sort_services_task_.Cancel();
 
+  // Refresh all traffic counters before the sort.
+  RefreshAllTrafficCountersTask();
+
   sort(services_.begin(), services_.end(),
        [&order = technology_order_](ServiceRefPtr a, ServiceRefPtr b) {
          return Service::Compare(a, b, true /* compare connectivity */, order)
@@ -2682,9 +2693,7 @@ void Manager::ComputeUserTrafficUids() {
 }
 
 void Manager::InitializePatchpanelClient() {
-  if (patchpanel_client_) {
-    return;
-  }
+  DCHECK(!patchpanel_client_);
   init_patchpanel_client_task_.Cancel();
   patchpanel_client_ = patchpanel::Client::New();
   if (!patchpanel_client_) {
@@ -2698,11 +2707,52 @@ void Manager::InitializePatchpanelClient() {
   }
 
   // Kick off any patchpanel related communication below.
+
+  // Start task for refreshing traffic counters.
+  refresh_traffic_counter_task_.Reset(Bind(
+      &Manager::RefreshAllTrafficCountersTask, weak_factory_.GetWeakPtr()));
+  dispatcher_->PostDelayedTask(FROM_HERE,
+                               refresh_traffic_counter_task_.callback(),
+                               kTrafficCounterRefreshInterval.InMilliseconds());
 }
 
-patchpanel::Client* Manager::patchpanel_client() {
-  InitializePatchpanelClient();
-  return patchpanel_client_.get();
+void Manager::RefreshAllTrafficCountersCallback(
+    const vector<patchpanel::TrafficCounter>& counters) {
+  map<string, vector<patchpanel::TrafficCounter>> counter_map;
+  for (const auto& counter : counters) {
+    string link_name = counter.device();
+    counter_map[link_name].push_back(counter);
+  }
+  for (const auto& device : devices_) {
+    if (device->selected_service()) {
+      device->selected_service()->RefreshTrafficCounters(
+          counter_map[device->link_name()]);
+    }
+  }
+  pending_traffic_counter_request_ = false;
+}
+
+void Manager::RefreshAllTrafficCountersTask() {
+  SLOG(this, 2) << __func__;
+  refresh_traffic_counter_task_.Reset(Bind(
+      &Manager::RefreshAllTrafficCountersTask, weak_factory_.GetWeakPtr()));
+  dispatcher_->PostDelayedTask(FROM_HERE,
+                               refresh_traffic_counter_task_.callback(),
+                               kTrafficCounterRefreshInterval.InMilliseconds());
+
+  if (pending_traffic_counter_request_) {
+    return;
+  }
+
+  patchpanel::Client* client = patchpanel_client();
+  if (!client) {
+    return;
+  }
+  pending_traffic_counter_request_ = true;
+  client->GetTrafficCounters(
+      set<string>() /* all devices */,
+      BindOnce(&Manager::RefreshAllTrafficCountersCallback,
+               weak_factory_.GetWeakPtr()));
 }
 
 string Manager::GetAlwaysOnVpnPackage(Error* /*error*/) {

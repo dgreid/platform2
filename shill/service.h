@@ -12,6 +12,7 @@
 #include <set>
 #include <string>
 #include <utility>
+#include <valarray>
 #include <vector>
 
 #include <base/cancelable_callback.h>
@@ -19,6 +20,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "shill/adaptor_interfaces.h"
 #include "shill/callbacks.h"
@@ -57,6 +59,11 @@ class EapCredentials;
 // becomes populated over time.
 class Service : public base::RefCounted<Service> {
  public:
+  // Map from traffic source to a valarray containing {rx_bytes, tx_bytes,
+  // rx_packets, tx_packets} in that order.
+  using TrafficCounterMap =
+      std::map<patchpanel::TrafficCounter::Source, std::valarray<uint64_t>>;
+
   static const char kCheckPortalAuto[];
   static const char kCheckPortalFalse[];
   static const char kCheckPortalTrue[];
@@ -562,6 +569,16 @@ class Service : public base::RefCounted<Service> {
   // metered backhaul for internet connectivity.
   virtual std::string GetTethering(Error* error) const;
 
+  // Initializes the traffic_counter_snapshot_ map to the counter values. The
+  // snapshots should never be updated without also refreshing the counters.
+  mockable void InitializeTrafficCounterSnapshot(
+      const std::vector<patchpanel::TrafficCounter>& counters);
+  // Increment the current_traffic_counters_ map by the difference between the
+  // counter values and the traffic_counter_snapshot_ values, and then update
+  // the snapshots as well in one atomic step.
+  mockable void RefreshTrafficCounters(
+      const std::vector<patchpanel::TrafficCounter>& counters);
+
   void set_connection_id(int connection_id) { connection_id_ = connection_id; }
   int connection_id() const { return connection_id_; }
 
@@ -695,7 +712,9 @@ class Service : public base::RefCounted<Service> {
   FRIEND_TEST(DeviceTest, AcquireIPConfigWithoutSelectedService);
   FRIEND_TEST(DeviceTest, AcquireIPConfigWithSelectedService);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithStatic);
+  FRIEND_TEST(DeviceTest, FetchTrafficCounters);
   FRIEND_TEST(ManagerTest, ConnectToBestServices);
+  FRIEND_TEST(ManagerTest, RefreshAllTrafficCountersTask);
   FRIEND_TEST(ServiceTest, AutoConnectLogging);
   FRIEND_TEST(ServiceTest, CalculateState);
   FRIEND_TEST(ServiceTest, CalculateTechnology);
@@ -722,6 +741,7 @@ class Service : public base::RefCounted<Service> {
   FRIEND_TEST(ServiceTest, SetProperty);
   FRIEND_TEST(ServiceTest, State);
   FRIEND_TEST(ServiceTest, StateResetAfterFailure);
+  FRIEND_TEST(ServiceTest, TrafficCounters);
   FRIEND_TEST(ServiceTest, UniqueAttributes);
   FRIEND_TEST(ServiceTest, Unload);
   FRIEND_TEST(ServiceTest, UserInitiatedConnectionResult);
@@ -755,6 +775,10 @@ class Service : public base::RefCounted<Service> {
   static const int kReportMisconnectsThreshold;
   static const int kMaxDisconnectEventHistory;
   static const int kMaxMisconnectEventHistory;
+
+  // The components of this array are rx_bytes, tx_bytes, rx_packets, tx_packets
+  // in that order.
+  static const size_t kTrafficCounterArraySize;
 
   bool GetAutoConnect(Error* error);
 
@@ -933,6 +957,11 @@ class Service : public base::RefCounted<Service> {
   // Flag indicating if this service is unreliable (experiencing multiple
   // link monitor failures in a short period of time).
   bool unreliable_;
+
+  // Current traffic counter values.
+  TrafficCounterMap current_traffic_counters_;
+  // Snapshot of the counter values from the last time they were refreshed.
+  TrafficCounterMap traffic_counter_snapshot_;
 
   DISALLOW_COPY_AND_ASSIGN(Service);
 };

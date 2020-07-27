@@ -18,6 +18,7 @@
 #include <base/callback.h>
 #include <base/macros.h>
 #include <chromeos/dbus/service_constants.h>
+#include <chromeos/patchpanel/dbus/fake_client.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -165,6 +166,10 @@ class DeviceTest : public testing::Test {
     DHCPProvider::GetInstance()->control_interface_ = control_interface();
     DHCPProvider::GetInstance()->dispatcher_ = dispatcher();
     device_->time_ = &time_;
+
+    auto client = std::make_unique<patchpanel::FakeClient>();
+    patchpanel_client_ = client.get();
+    manager_.patchpanel_client_ = std::move(client);
   }
   ~DeviceTest() override = default;
 
@@ -188,6 +193,21 @@ class DeviceTest : public testing::Test {
 
   void OnIPConfigExpired(const IPConfigRefPtr& ipconfig) {
     device_->OnIPConfigExpired(ipconfig);
+  }
+
+  patchpanel::TrafficCounter CreateCounter(
+      const std::valarray<uint64_t>& vals,
+      patchpanel::TrafficCounter::Source source,
+      const std::string& device_name) {
+    EXPECT_EQ(4, vals.size());
+    patchpanel::TrafficCounter counter;
+    counter.set_rx_bytes(vals[0]);
+    counter.set_tx_bytes(vals[1]);
+    counter.set_rx_packets(vals[2]);
+    counter.set_tx_packets(vals[3]);
+    counter.set_source(source);
+    counter.set_device(device_name);
+    return counter;
   }
 
   void SelectService(const ServiceRefPtr service) {
@@ -273,6 +293,7 @@ class DeviceTest : public testing::Test {
   NiceMock<MockDeviceInfo> device_info_;
   MockTime time_;
   StrictMock<MockRTNLHandler> rtnl_handler_;
+  patchpanel::FakeClient* patchpanel_client_;
 };
 
 const char DeviceTest::kDeviceName[] = "testdevice";
@@ -1712,6 +1733,55 @@ TEST_F(DeviceTest, SetMacAddress) {
   EXPECT_NE(mac_address, device_->mac_address());
   device_->device_set_mac_address(mac_address);
   EXPECT_EQ(mac_address, device_->mac_address());
+}
+
+TEST_F(DeviceTest, FetchTrafficCounters) {
+  auto source0 = patchpanel::TrafficCounter::CHROME;
+  auto source1 = patchpanel::TrafficCounter::USER;
+  std::valarray<uint64_t> counter_arr0{2842, 1243, 240598, 43095};
+  std::valarray<uint64_t> counter_arr1{4554666, 43543, 5999, 500000};
+  patchpanel::TrafficCounter counter0 =
+      CreateCounter(counter_arr0, source0, kDeviceName);
+  patchpanel::TrafficCounter counter1 =
+      CreateCounter(counter_arr1, source1, kDeviceName);
+  vector<patchpanel::TrafficCounter> counters{counter0, counter1};
+  patchpanel_client_->set_stored_traffic_counters(counters);
+
+  EXPECT_EQ(nullptr, device_->selected_service_);
+  scoped_refptr<MockService> service0(new NiceMock<MockService>(manager()));
+  EXPECT_TRUE(service0->traffic_counter_snapshot_.empty());
+  EXPECT_TRUE(service0->current_traffic_counters_.empty());
+  SelectService(service0);
+  EXPECT_EQ(service0, device_->selected_service_);
+  EXPECT_TRUE(service0->current_traffic_counters_.empty());
+  EXPECT_EQ(2, service0->traffic_counter_snapshot_.size());
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(counter_arr0[i], service0->traffic_counter_snapshot_[source0][i]);
+    EXPECT_EQ(counter_arr1[i], service0->traffic_counter_snapshot_[source1][i]);
+  }
+
+  std::valarray<uint64_t> counter_diff0{12, 98, 34, 76};
+  std::valarray<uint64_t> counter_diff1{324534, 23434, 785676, 256};
+  std::valarray<uint64_t> new_total0 = counter_arr0 + counter_diff0;
+  std::valarray<uint64_t> new_total1 = counter_arr1 + counter_diff1;
+  counter0 = CreateCounter(new_total0, source0, kDeviceName);
+  counter1 = CreateCounter(new_total1, source1, kDeviceName);
+  counters = {counter0, counter1};
+  patchpanel_client_->set_stored_traffic_counters(counters);
+
+  scoped_refptr<MockService> service1(new NiceMock<MockService>(manager()));
+  SelectService(service1);
+  EXPECT_EQ(service1, device_->selected_service_);
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(counter_diff0[i],
+              service0->current_traffic_counters_[source0][i]);
+    EXPECT_EQ(counter_diff1[i],
+              service0->current_traffic_counters_[source1][i]);
+
+    EXPECT_EQ(new_total0[i], service1->traffic_counter_snapshot_[source0][i]);
+    EXPECT_EQ(new_total1[i], service1->traffic_counter_snapshot_[source1][i]);
+  }
+  EXPECT_TRUE(service1->current_traffic_counters_.empty());
 }
 
 class DevicePortalDetectionTest : public DeviceTest {

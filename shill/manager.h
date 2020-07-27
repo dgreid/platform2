@@ -19,6 +19,7 @@
 #include <chromeos/dbus/service_constants.h>
 #include <chromeos/patchpanel/dbus/client.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "shill/default_service_observer.h"
 #include "shill/device.h"
@@ -520,12 +521,13 @@ class Manager {
     return supplicant_manager_.get();
   }
 #endif  // !DISABLE_WIFI || !DISABLE_WIRED_8021X
-  patchpanel::Client* patchpanel_client();
+  patchpanel::Client* patchpanel_client() { return patchpanel_client_.get(); }
 
  private:
   friend class ArcVpnDriverTest;
   friend class CellularTest;
   friend class DeviceInfoTest;
+  friend class DeviceTest;
   friend class L2TPIPSecDriverTest;
   friend class ManagerAdaptorInterface;
   friend class ManagerTest;
@@ -573,6 +575,7 @@ class Manager {
   FRIEND_TEST(ManagerTest,
               UpdateDefaultServicesWithDefaultServiceCallbacksRemoved);
   FRIEND_TEST(ManagerTest, UpdateBlackholeUserTraffic);
+  FRIEND_TEST(ManagerTest, RefreshAllTrafficCountersTask);
   FRIEND_TEST(ManagerTest, RegisterKnownService);
   FRIEND_TEST(ManagerTest, RegisterUnknownService);
   FRIEND_TEST(ManagerTest, ReleaseBlockedDevice);
@@ -730,6 +733,10 @@ class Manager {
   // Initializes patchpanel_client_ if it has not already been initialized.
   void InitializePatchpanelClient();
 
+  void RefreshAllTrafficCountersCallback(
+      const std::vector<patchpanel::TrafficCounter>& counters);
+  void RefreshAllTrafficCountersTask();
+
   // Returns the names of all of the devices that have been claimed by the
   // current DeviceClaimer.  Returns an empty vector if no DeviceClaimer is set.
   std::vector<std::string> ClaimedDevices(Error* error);
@@ -816,6 +823,12 @@ class Manager {
 
   // Task for initializing patchpanel connection.
   base::CancelableClosure init_patchpanel_client_task_;
+
+  // Task for periodically refreshing traffic counters.
+  base::CancelableClosure refresh_traffic_counter_task_;
+
+  // Whether we're currently waiting on a traffic counter fetch from patchpanel.
+  bool pending_traffic_counter_request_;
 
   // Actions to take when shill is terminating.
   HookTable termination_actions_;

@@ -13,7 +13,9 @@
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/weak_ptr.h>
+#include <chromeos/patchpanel/dbus/client.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
+#include <patchpanel/proto_bindings/patchpanel_service.pb.h>
 
 #include "shill/adaptor_interfaces.h"
 #include "shill/callbacks.h"
@@ -348,6 +350,10 @@ class Device : public base::RefCounted<Device> {
   // the active connection with the right setting.
   mockable void UpdateBlackholeUserTraffic();
 
+  // Asynchronously get all the traffic counters for this device.
+  void FetchTrafficCounters(
+      patchpanel::Client::GetTrafficCountersCallback callback);
+
  protected:
   friend class base::RefCounted<Device>;
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);
@@ -362,6 +368,7 @@ class Device : public base::RefCounted<Device> {
   FRIEND_TEST(DeviceTest, DestroyIPConfig);
   FRIEND_TEST(DeviceTest, DestroyIPConfigNULL);
   FRIEND_TEST(DeviceTest, ConfigWithMinimumMTU);
+  FRIEND_TEST(DeviceTest, FetchTrafficCounters);
   FRIEND_TEST(DeviceTest, GetProperties);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Config);
   FRIEND_TEST(DeviceTest, IPConfigUpdatedFailureWithIPv6Connection);
@@ -392,6 +399,7 @@ class Device : public base::RefCounted<Device> {
   FRIEND_TEST(ManagerTest, DefaultTechnology);
   FRIEND_TEST(ManagerTest, DeviceRegistrationAndStart);
   FRIEND_TEST(ManagerTest, GetEnabledDeviceWithTechnology);
+  FRIEND_TEST(ManagerTest, RefreshAllTrafficCountersTask);
   FRIEND_TEST(ManagerTest, SetEnabledStateForTechnology);
   FRIEND_TEST(WiFiMainTest, UseArpGateway);
 
@@ -782,6 +790,13 @@ class Device : public base::RefCounted<Device> {
   // Returns true if any of the addresses for this Device are on the same
   // network prefix as |address|.
   bool HasDirectConnectivityTo(const IPAddress& address) const;
+
+  // Atomically update the counters of the old service and the snapshot of the
+  // new service.
+  void GetTrafficCountersCallback(
+      const ServiceRefPtr& old_service,
+      const ServiceRefPtr& new_service,
+      const std::vector<patchpanel::TrafficCounter>& counters);
 
   // Use for unit test.
   void set_traffic_monitor_for_test(

@@ -56,6 +56,7 @@
 #include "shill/traffic_monitor.h"
 
 using base::Bind;
+using base::BindOnce;
 using base::Callback;
 using base::FilePath;
 using base::StringPrintf;
@@ -524,6 +525,10 @@ void Device::ResetConnection() {
     return;
   }
 
+  // Refresh traffic counters before deselecting the service.
+  FetchTrafficCounters(BindOnce(&Device::GetTrafficCountersCallback,
+                                AsWeakPtr(), selected_service_,
+                                /*new_service=*/nullptr));
   selected_service_->set_unreliable(false);
   reliable_link_callback_.Cancel();
   selected_service_ = nullptr;
@@ -860,6 +865,15 @@ void Device::UpdateBlackholeUserTraffic() {
     if (updated) {
       SetupConnection(ipconfig_);
     }
+  }
+}
+
+void Device::FetchTrafficCounters(
+    patchpanel::Client::GetTrafficCountersCallback callback) {
+  set<string> devices{link_name_};
+  patchpanel::Client* client = manager_->patchpanel_client();
+  if (client) {
+    client->GetTrafficCounters(devices, std::move(callback));
   }
 }
 
@@ -1246,6 +1260,25 @@ void Device::DestroyConnection() {
   connection_ = nullptr;
 }
 
+void Device::GetTrafficCountersCallback(
+    const ServiceRefPtr& old_service,
+    const ServiceRefPtr& new_service,
+    const std::vector<patchpanel::TrafficCounter>& counters) {
+  if (counters.size() == 0) {
+    LOG(WARNING) << "No counters found for " << link_name_;
+  }
+  if (old_service) {
+    old_service->RefreshTrafficCounters(counters);
+  }
+  if (new_service) {
+    // Update the snapshot values, which will be used in future refreshes to
+    // diff against the counter values. Snapshot must be initialized before
+    // layer 3 configuration to ensure that we capture all traffic for the
+    // service.
+    new_service->InitializeTrafficCounterSnapshot(counters);
+  }
+}
+
 void Device::SelectService(const ServiceRefPtr& service) {
   SLOG(this, 2) << __func__ << ": service "
                 << (service ? service->log_name() : "*reset*") << " on "
@@ -1257,7 +1290,9 @@ void Device::SelectService(const ServiceRefPtr& service) {
     return;
   }
 
+  ServiceRefPtr old_service;
   if (selected_service_) {
+    old_service = selected_service_;
     if (selected_service_->state() != Service::kStateFailure) {
       selected_service_->SetState(Service::kStateIdle);
     }
@@ -1275,6 +1310,8 @@ void Device::SelectService(const ServiceRefPtr& service) {
   last_link_monitor_failed_time_ = 0;
 
   selected_service_ = service;
+  FetchTrafficCounters(BindOnce(&Device::GetTrafficCountersCallback,
+                                AsWeakPtr(), old_service, selected_service_));
   adaptor_->EmitRpcIdentifierChanged(kSelectedServiceProperty,
                                      GetSelectedServiceRpcIdentifier(nullptr));
 }

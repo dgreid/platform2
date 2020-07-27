@@ -2169,4 +2169,71 @@ TEST_F(ServiceTest, DelayedDisconnectWithAdditionalConnect) {
   EXPECT_FALSE(HasPendingConnect());
 }
 
+TEST_F(ServiceTest, TrafficCounters) {
+  patchpanel::TrafficCounter counter0, counter1;
+  counter0.set_source(patchpanel::TrafficCounter::CHROME);
+  counter0.set_rx_bytes(12);
+  counter0.set_tx_bytes(34);
+  counter0.set_rx_packets(56);
+  counter0.set_tx_packets(78);
+  counter1.set_source(patchpanel::TrafficCounter::USER);
+  counter1.set_rx_bytes(90);
+  counter1.set_tx_bytes(87);
+  counter1.set_rx_packets(65);
+  counter1.set_tx_packets(43);
+
+  service_->InitializeTrafficCounterSnapshot({counter0, counter1});
+  EXPECT_EQ(service_->traffic_counter_snapshot_.size(), 2);
+  vector<uint64_t> chrome_counters{12, 34, 56, 78};
+  vector<uint64_t> user_counters{90, 87, 65, 43};
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(
+        service_
+            ->traffic_counter_snapshot_[patchpanel::TrafficCounter::CHROME][i],
+        chrome_counters[i]);
+    EXPECT_EQ(
+        service_
+            ->traffic_counter_snapshot_[patchpanel::TrafficCounter::USER][i],
+        user_counters[i]);
+  }
+  EXPECT_EQ(service_->current_traffic_counters_.size(), 0);
+
+  counter0.set_rx_bytes(20);
+  counter0.set_tx_bytes(40);
+  counter0.set_rx_packets(60);
+  counter0.set_tx_packets(80);
+  counter1.set_rx_bytes(100);
+  counter1.set_tx_bytes(90);
+  counter1.set_rx_packets(80);
+  counter1.set_tx_packets(70);
+
+  service_->RefreshTrafficCounters({counter0, counter1});
+  EXPECT_EQ(service_->traffic_counter_snapshot_.size(), 2);
+  chrome_counters = {20, 40, 60, 80};
+  user_counters = {100, 90, 80, 70};
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(
+        service_
+            ->traffic_counter_snapshot_[patchpanel::TrafficCounter::CHROME][i],
+        chrome_counters[i]);
+    EXPECT_EQ(
+        service_
+            ->traffic_counter_snapshot_[patchpanel::TrafficCounter::USER][i],
+        user_counters[i]);
+  }
+  EXPECT_EQ(service_->current_traffic_counters_.size(), 2);
+  vector<uint64_t> chrome_counters_diff{8, 6, 4, 2};
+  vector<uint64_t> user_counters_diff{10, 3, 15, 27};
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(
+        service_
+            ->current_traffic_counters_[patchpanel::TrafficCounter::CHROME][i],
+        chrome_counters_diff[i]);
+    EXPECT_EQ(
+        service_
+            ->current_traffic_counters_[patchpanel::TrafficCounter::USER][i],
+        user_counters_diff[i]);
+  }
+}
+
 }  // namespace shill

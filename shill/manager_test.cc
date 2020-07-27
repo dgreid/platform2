@@ -4421,4 +4421,32 @@ TEST_F(ManagerTest, UpdateBlackholeUserTraffic) {
   manager()->SetAlwaysOnVpnPackage("", nullptr);
 }
 
+TEST_F(ManagerTest, RefreshAllTrafficCountersTask) {
+  patchpanel::TrafficCounter counter0, counter1;
+  counter0.set_device(mock_devices_[0]->link_name());
+  counter0.set_source(patchpanel::TrafficCounter::VPN);
+  counter1.set_device(mock_devices_[2]->link_name());
+  counter1.set_source(patchpanel::TrafficCounter::UPDATE_ENGINE);
+  vector<patchpanel::TrafficCounter> counters{counter0, counter1};
+  patchpanel_client_->set_stored_traffic_counters(counters);
+
+  manager()->RegisterDevice(mock_devices_[0]);
+  manager()->RegisterDevice(mock_devices_[1]);
+  manager()->RegisterDevice(mock_devices_[2]);
+
+  MockServiceRefPtr service0(new NiceMock<MockService>(manager()));
+  MockServiceRefPtr service1(new NiceMock<MockService>(manager()));
+  MockServiceRefPtr service2(new NiceMock<MockService>(manager()));
+
+  mock_devices_[0]->SelectService(service0);
+  mock_devices_[1]->SelectService(service1);
+  mock_devices_[2]->SelectService(service2);
+
+  manager()->RefreshAllTrafficCountersTask();
+
+  EXPECT_EQ(1, service0->current_traffic_counters_.size());
+  EXPECT_TRUE(service1->current_traffic_counters_.empty());
+  EXPECT_EQ(1, service2->current_traffic_counters_.size());
+}
+
 }  // namespace shill
