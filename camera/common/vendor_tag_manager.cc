@@ -27,6 +27,10 @@ int VendorTagManager::GetTagCount() const {
 }
 
 void VendorTagManager::GetAllTags(uint32_t* tag_array) const {
+  if (tags_.empty()) {
+    // No-op and tag_array might be null in this case.
+    return;
+  }
   DCHECK_NE(tag_array, nullptr);
   uint32_t* ptr = tag_array;
   for (const auto& tag : tags_) {
