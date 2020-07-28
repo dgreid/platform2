@@ -213,7 +213,8 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
         WriteNewFile(minidump, data.c_str() + at, size);
       } else {
         // Some other file.
-        FilePath path = GetCrashPath(dir, basename + "-" + filename, "other");
+        FilePath path =
+            GetCrashPath(dir, basename + "-" + Sanitize(filename), "other");
         if (WriteNewFile(path, data.c_str() + at, size) >= 0) {
           AddCrashMetaUploadFile(desc, path.BaseName().value());
         }

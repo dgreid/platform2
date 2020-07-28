@@ -55,6 +55,7 @@ class ChromeCollector : public CrashCollector {
   FRIEND_TEST(ChromeCollectorTest, File);
   FRIEND_TEST(ChromeCollectorTest, HandleCrash);
   FRIEND_TEST(ChromeCollectorTest, HandleCrashWithEmbeddedNuls);
+  FRIEND_TEST(ChromeCollectorTest, HandleCrashWithWeirdFilename);
 
   // Handle a specific chrome crash with dump data.
   // Returns true on success.

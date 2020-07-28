@@ -65,6 +65,12 @@ const char kCrashFormatWithDumpFileWithEmbeddedNulBytes[] =
     "upload_file_minidump\"; filename=\"dump\":20:"
     "\00012345678\000\a\bcd\x0e\x0fghij"
     "value3:2:ok";
+const char kCrashFormatWithWeirdFilename[] =
+    "value1:10:abcdefghij"
+    "value2:5:12345"
+    "dotdotfile\"; filename=\"../a.txt\":15:12345\n789\n12345"
+    "upload_file_minidump\"; filename=\"dump\":20:0123456789abcdefghij"
+    "value3:2:ok";
 
 const char kSampleDriErrorStateEncoded[] =
     "<base64>: SXQgYXBwZWFycyB0byBiZSBzb21lIHNvcnQgb2YgZXJyb3IgZGF0YS4=";
@@ -228,7 +234,7 @@ TEST_F(ChromeCollectorTest, File) {
   EXPECT_TRUE(meta.find("value1=abcdefghij") != std::string::npos);
   EXPECT_TRUE(meta.find("value2=12345") != std::string::npos);
   EXPECT_TRUE(meta.find("value3=ok") != std::string::npos);
-  ExpectFileEquals("12345\n789\n12345", dir.Append("base-foo.txt.other"));
+  ExpectFileEquals("12345\n789\n12345", dir.Append("base-foo_txt.other"));
 }
 
 TEST_F(ChromeCollectorTest, HandleCrash) {
@@ -259,7 +265,7 @@ TEST_F(ChromeCollectorTest, HandleCrash) {
 
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
   std::string other_file_contents;
   EXPECT_TRUE(base::ReadFileToString(other_file, &other_file_contents));
   EXPECT_EQ(other_file_contents, "12345\n789\n12345");
@@ -312,7 +318,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithEmbeddedNuls) {
 
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
   std::string other_file_contents;
   EXPECT_TRUE(base::ReadFileToString(other_file, &other_file_contents));
   std::string expected_other_contents("12\00045\n789\n12\00045", 15);
@@ -329,6 +335,58 @@ TEST_F(ChromeCollectorTest, HandleCrashWithEmbeddedNuls) {
   EXPECT_THAT(meta_file_contents,
               HasSubstr("payload=" + output_dump_file.BaseName().value()));
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_file_some_file=" +
+                                            other_file.BaseName().value()));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value1=abcdefghij"));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value2=12345"));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value3=ok"));
+}
+
+TEST_F(ChromeCollectorTest, HandleCrashWithWeirdFilename) {
+  const FilePath& dir = scoped_temp_dir_.GetPath();
+  FilePath input_dump_file = dir.Append("test.dmp");
+  std::string input(kCrashFormatWithWeirdFilename,
+                    sizeof(kCrashFormatWithWeirdFilename) - 1);
+  ASSERT_TRUE(test_util::CreateFile(input_dump_file, input));
+  SetUpDriErrorStateToReturn("<empty>");
+
+  FilePath log_file;
+  {
+    base::ScopedFILE output(
+        base::CreateAndOpenTemporaryFileInDir(dir, &log_file));
+    ASSERT_TRUE(output.get());
+    base::AutoReset<FILE*> auto_reset_file_ptr(&collector_.output_file_ptr_,
+                                               output.get());
+    EXPECT_TRUE(
+        collector_.HandleCrash(input_dump_file, 123, 456, "chrome_test"));
+  }
+  ExpectFileEquals(ChromeCollector::kSuccessMagic, log_file);
+
+  base::FilePath output_dump_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "chrome_test.*.123.dmp", &output_dump_file));
+  std::string output_dump_file_contents;
+  EXPECT_TRUE(
+      base::ReadFileToString(output_dump_file, &output_dump_file_contents));
+  EXPECT_EQ(output_dump_file_contents, "0123456789abcdefghij");
+
+  base::FilePath other_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "chrome_test.*.123-___a_txt.other", &other_file));
+  std::string other_file_contents;
+  EXPECT_TRUE(base::ReadFileToString(other_file, &other_file_contents));
+  EXPECT_EQ(other_file_contents, "12345\n789\n12345");
+
+  base::FilePath meta_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "chrome_test.*.123.meta", &meta_file));
+  std::string meta_file_contents;
+  EXPECT_TRUE(base::ReadFileToString(meta_file, &meta_file_contents));
+  EXPECT_EQ(collector_.get_bytes_written(),
+            meta_file_contents.size() + output_dump_file_contents.size() +
+                other_file_contents.size());
+  EXPECT_THAT(meta_file_contents,
+              HasSubstr("payload=" + output_dump_file.BaseName().value()));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_file_dotdotfile=" +
                                             other_file.BaseName().value()));
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value1=abcdefghij"));
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value2=12345"));
@@ -375,7 +433,7 @@ TEST_F(ChromeCollectorTest, HandleCrashWithLogsAndDriErrorState) {
 
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
   std::string other_file_contents;
   EXPECT_TRUE(base::ReadFileToString(other_file, &other_file_contents));
   EXPECT_EQ(other_file_contents, "12345\n789\n12345");
@@ -426,7 +484,7 @@ TEST_F(ChromeCollectorTest, HandleCrashSkipsSupplementalFilesIfDumpFileLarge) {
       test_crash_directory_, "chrome_test.*.123.dmp", &output_dump_file));
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
 
   base::FilePath meta_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -477,7 +535,7 @@ TEST_F(ChromeCollectorTest, HandleCrashSkipsLargeLogFiles) {
       test_crash_directory_, "chrome_test.*.123.dmp", &output_dump_file));
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
 
   base::FilePath meta_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -533,7 +591,7 @@ TEST_F(ChromeCollectorTest, HandleCrashSkipsLargeDriErrorFiles) {
       test_crash_directory_, "chrome_test.*.123.dmp", &output_dump_file));
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
 
   base::FilePath meta_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -580,7 +638,7 @@ TEST_F(ChromeCollectorTest, HandleCrashSkipsLargeLogsAndLargeDriErrorFiles) {
       test_crash_directory_, "chrome_test.*.123.dmp", &output_dump_file));
   base::FilePath other_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
-      test_crash_directory_, "chrome_test.*.123-foo.txt.other", &other_file));
+      test_crash_directory_, "chrome_test.*.123-foo_txt.other", &other_file));
 
   base::FilePath meta_file;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
