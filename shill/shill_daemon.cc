@@ -11,10 +11,9 @@
 
 namespace shill {
 
-ShillDaemon::ShillDaemon(const base::Closure& startup_callback,
-                         const shill::DaemonTask::Settings& settings,
+ShillDaemon::ShillDaemon(const shill::DaemonTask::Settings& settings,
                          Config* config)
-    : daemon_task_(settings, config), startup_callback_(startup_callback) {}
+    : daemon_task_(settings, config) {}
 
 ShillDaemon::~ShillDaemon() = default;
 
@@ -26,9 +25,6 @@ int ShillDaemon::OnInit() {
   }
 
   daemon_task_.Init();
-
-  // Signal that we've acquired all resources.
-  startup_callback_.Run();
 
   return EX_OK;
 }

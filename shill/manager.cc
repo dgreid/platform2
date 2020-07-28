@@ -1114,7 +1114,7 @@ void Manager::SetPassiveMode() {
 }
 
 void Manager::SetIgnoreUnknownEthernet(bool ignore) {
-  LOG(INFO) << __func__ << "(" << ignore << ")";
+  SLOG(this, 2) << __func__ << "(" << ignore << ")";
   ignore_unknown_ethernet_ = ignore;
 }
 

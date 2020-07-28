@@ -142,11 +142,6 @@ void SetupLogging(bool foreground, const char* daemon_name) {
   }
 }
 
-void OnStartup(const char* daemon_name, base::CommandLine* cl) {
-  SetupLogging(cl->HasSwitch(switches::kForeground), daemon_name);
-  shill::SetLogLevelFromCommandLine(cl);
-}
-
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -225,9 +220,15 @@ int main(int argc, char** argv) {
 #endif  // DISABLE_DHCPV6
 
   shill::Config config;
+  // Construct the daemon first, so we get our AtExitManager.
+  shill::ShillDaemon daemon(settings, &config);
 
-  shill::ShillDaemon daemon(base::Bind(&OnStartup, argv[0], cl), settings,
-                            &config);
+  // Configure logging before we start anything else, so early log messages go
+  // to a consistent place.
+  SetupLogging(cl->HasSwitch(switches::kForeground), argv[0]);
+  shill::SetLogLevelFromCommandLine(cl);
+
+  // Go for it!
   daemon.Run();
 
   LOG(INFO) << "Process exiting.";

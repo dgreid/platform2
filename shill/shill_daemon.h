@@ -5,7 +5,6 @@
 #ifndef SHILL_SHILL_DAEMON_H_
 #define SHILL_SHILL_DAEMON_H_
 
-#include <base/callback.h>
 #include <base/macros.h>
 #include <brillo/daemons/daemon.h>
 
@@ -20,9 +19,7 @@ class Config;
 // to DaemonTask, and additionally overrides methods of brillo::Daemon.
 class ShillDaemon : public brillo::Daemon {
  public:
-  ShillDaemon(const base::Closure& startup_callback,
-              const shill::DaemonTask::Settings& settings,
-              Config* config);
+  ShillDaemon(const shill::DaemonTask::Settings& settings, Config* config);
   virtual ~ShillDaemon();
 
  private:
@@ -31,7 +28,6 @@ class ShillDaemon : public brillo::Daemon {
   void OnShutdown(int* return_code) override;
 
   DaemonTask daemon_task_;
-  base::Closure startup_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(ShillDaemon);
 };
