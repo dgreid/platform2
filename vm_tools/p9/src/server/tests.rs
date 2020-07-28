@@ -919,7 +919,7 @@ macro_rules! open_test {
             }
 
             // Check that we can write to the file.
-            if $flags & P9_RDWR != 0 || $flags & P9_WRONLY != 0 || $flags & P9_APPEND != 0 {
+            if $flags & P9_RDWR != 0 || $flags & P9_WRONLY != 0 {
                 write(&mut server, &test_dir, name, fid, $flags);
             }
 
@@ -950,11 +950,7 @@ open_test!(read_only_file_open, _P9_RDONLY);
 open_test!(read_write_file_open, P9_RDWR);
 open_test!(write_only_file_open, P9_WRONLY);
 
-open_test!(
-    create_read_only_file_open,
-    P9_CREATE | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
-);
+open_test!(create_read_only_file_open, P9_CREATE | _P9_RDONLY);
 open_test!(create_read_write_file_open, P9_CREATE | P9_RDWR);
 open_test!(create_write_only_file_open, P9_CREATE | P9_WRONLY);
 
@@ -962,11 +958,7 @@ open_test!(append_read_only_file_open, P9_APPEND | _P9_RDONLY);
 open_test!(append_read_write_file_open, P9_APPEND | P9_RDWR);
 open_test!(append_write_only_file_open, P9_APPEND | P9_WRONLY);
 
-open_test!(
-    trunc_read_only_file_open,
-    P9_TRUNC | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
-);
+open_test!(trunc_read_only_file_open, P9_TRUNC | _P9_RDONLY);
 open_test!(trunc_read_write_file_open, P9_TRUNC | P9_RDWR);
 open_test!(trunc_write_only_file_open, P9_TRUNC | P9_WRONLY);
 
@@ -985,8 +977,7 @@ open_test!(
 
 open_test!(
     create_trunc_read_only_file_open,
-    P9_CREATE | P9_TRUNC | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
+    P9_CREATE | P9_TRUNC | _P9_RDONLY
 );
 open_test!(
     create_trunc_read_write_file_open,
@@ -999,40 +990,34 @@ open_test!(
 
 open_test!(
     append_trunc_read_only_file_open,
-    P9_APPEND | P9_TRUNC | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
+    P9_APPEND | P9_TRUNC | _P9_RDONLY
 );
 open_test!(
     append_trunc_read_write_file_open,
-    P9_APPEND | P9_TRUNC | P9_RDWR,
-    io::ErrorKind::InvalidInput
+    P9_APPEND | P9_TRUNC | P9_RDWR
 );
 open_test!(
     append_trunc_wronly_file_open,
-    P9_APPEND | P9_TRUNC | P9_WRONLY,
-    io::ErrorKind::InvalidInput
+    P9_APPEND | P9_TRUNC | P9_WRONLY
 );
 
 open_test!(
     create_append_trunc_read_only_file_open,
-    P9_CREATE | P9_APPEND | P9_TRUNC | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
+    P9_CREATE | P9_APPEND | P9_TRUNC | _P9_RDONLY
 );
 open_test!(
     create_append_trunc_read_write_file_open,
-    P9_CREATE | P9_APPEND | P9_TRUNC | P9_RDWR,
-    io::ErrorKind::InvalidInput
+    P9_CREATE | P9_APPEND | P9_TRUNC | P9_RDWR
 );
 open_test!(
     create_append_trunc_wronly_file_open,
-    P9_CREATE | P9_APPEND | P9_TRUNC | P9_WRONLY,
-    io::ErrorKind::InvalidInput
+    P9_CREATE | P9_APPEND | P9_TRUNC | P9_WRONLY
 );
 
 open_test!(
     create_excl_read_only_file_open,
     P9_CREATE | P9_EXCL | _P9_RDONLY,
-    io::ErrorKind::InvalidInput
+    io::ErrorKind::AlreadyExists
 );
 open_test!(
     create_excl_read_write_file_open,
@@ -1063,7 +1048,7 @@ macro_rules! create_test {
             check_attr(&mut server, fid, &md);
 
             // Check that we can write to the file.
-            if $flags & P9_RDWR != 0 || $flags & P9_WRONLY != 0 || $flags & P9_APPEND != 0 {
+            if $flags & P9_RDWR != 0 || $flags & P9_WRONLY != 0 {
                 write(&mut server, &test_dir, name, fid, $flags);
             }
 
@@ -1089,12 +1074,7 @@ macro_rules! create_test {
     };
 }
 
-create_test!(
-    read_only_file_create,
-    _P9_RDONLY,
-    0o600u32,
-    io::ErrorKind::InvalidInput
-);
+create_test!(read_only_file_create, _P9_RDONLY, 0o600u32);
 create_test!(read_write_file_create, P9_RDWR, 0o600u32);
 create_test!(write_only_file_create, P9_WRONLY, 0o600u32);
 

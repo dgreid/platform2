@@ -39,8 +39,12 @@ const _P9_CLOEXEC: u32 = 0o02000000;
 const P9_SYNC: u32 = 0o04000000;
 
 // Mapping from 9P flags to libc flags.
-const MAPPED_FLAGS: [(u32, i32); 10] = [
+const MAPPED_FLAGS: [(u32, i32); 14] = [
+    (P9_CREATE, libc::O_CREAT),
+    (P9_EXCL, libc::O_EXCL),
     (P9_NOCTTY, libc::O_NOCTTY),
+    (P9_TRUNC, libc::O_TRUNC),
+    (P9_APPEND, libc::O_APPEND),
     (P9_NONBLOCK, libc::O_NONBLOCK),
     (P9_DSYNC, libc::O_DSYNC),
     (P9_FASYNC, 0), // Unsupported
@@ -528,13 +532,10 @@ impl Server {
             }
         }
 
+        // MAPPED_FLAGS will handle append, create[_new], and truncate.
         let file = fs::OpenOptions::new()
             .read((lopen.flags & P9_NOACCESS) == 0 || (lopen.flags & P9_RDWR) != 0)
             .write((lopen.flags & P9_WRONLY) != 0 || (lopen.flags & P9_RDWR) != 0)
-            .append((lopen.flags & P9_APPEND) != 0)
-            .truncate((lopen.flags & P9_TRUNC) != 0)
-            .create((lopen.flags & P9_CREATE) != 0)
-            .create_new((lopen.flags & P9_CREATE) != 0 && (lopen.flags & P9_EXCL) != 0)
             .custom_flags(custom_flags)
             .open(&fid.path)?;
 
@@ -567,14 +568,11 @@ impl Server {
             }
         }
 
-        // The file must not already exist, which is why we unconditionally set
-        // `create_new(true)`.  This is also why we don't set `truncate`.  If
-        // the file does not exist then it doesn't need to be truncated.
+        // Set O_CREAT|O_EXCL, MAPPED_FLAGS will handle append and truncate.
+        custom_flags |= libc::O_CREAT | libc::O_EXCL;
         let file = fs::OpenOptions::new()
             .read((lcreate.flags & P9_NOACCESS) == 0 || (lcreate.flags & P9_RDWR) != 0)
             .write((lcreate.flags & P9_WRONLY) != 0 || (lcreate.flags & P9_RDWR) != 0)
-            .append((lcreate.flags & P9_APPEND) != 0)
-            .create_new(true)
             .custom_flags(custom_flags)
             .mode(lcreate.mode & 0o755)
             .open(&path)?;
