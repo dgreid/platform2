@@ -149,8 +149,9 @@ const char* const kUserTrafficUsernames[] = {
     // be active.
     // TODO(https://crbug.com/1065378): Find a way for tlsdate to try both with
     // and without VPN explicitly.
-    "tlsdate",  // tlsdate daemon (secure time sync)
-    "pluginvm"  // plugin vm problem report utility (b/160916677)
+    "tlsdate",    // tlsdate daemon (secure time sync)
+    "pluginvm",   // plugin vm problem report utility (b/160916677)
+    "fuse-smbfs"  // smbfs SMB filesystem daemon
 };
 
 }  // namespace
