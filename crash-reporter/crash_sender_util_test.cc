@@ -740,10 +740,16 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   std::string reason;
   CrashInfo info;
   // The following files should be sent.
+  EXPECT_CALL(*raw_metrics_lib,
+              SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason", _, _))
+      .Times(0);
   EXPECT_EQ(Sender::kSend, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_EQ(Sender::kSend,
             sender.ChooseAction(recent_os_meta_, &reason, &info));
   EXPECT_EQ(Sender::kSend, sender.ChooseAction(absolute_meta_, &reason, &info));
+  // Verify that RemoveReason wasn't sent
+  testing::Mock::VerifyAndClearExpectations(raw_metrics_lib);
+
   // Sanity check that the valid crash info is returned.
   std::string value;
   EXPECT_EQ(absolute_log_.value(), info.payload_file.value());
@@ -756,6 +762,13 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
 
   // If a ".processing" file exists, the meta file shouldn't be uploaded.
   ASSERT_TRUE(test_util::CreateFile(processing, ""));
+
+  // Following calls should be in order.
+  testing::InSequence seq;
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kProcessingFileExists, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr(".processing file already exists"));
   ASSERT_TRUE(base::DeleteFile(processing, /*recursive=*/false));
@@ -785,47 +798,82 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_EQ(Sender::kSend, sender.ChooseAction(devcore_meta_, &reason, &info));
 
   // The following files should be removed.
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kPayloadUnspecified, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(empty_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Payload is not found"));
   EXPECT_FALSE(base::PathExists(empty_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kUnparseableMetaFile, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(corrupted_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Corrupted metadata"));
   EXPECT_FALSE(
       base::PathExists(corrupted_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kPayloadNonexistent, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(nonexistent_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Missing payload"));
   EXPECT_FALSE(
       base::PathExists(nonexistent_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kPayloadKindUnknown, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(unknown_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Unknown kind"));
   EXPECT_FALSE(base::PathExists(unknown_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kOldIncompleteMeta, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(old_incomplete_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Removing old incomplete metadata"));
   EXPECT_FALSE(
       base::PathExists(old_incomplete_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kOSVersionTooOld, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(old_os_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Old OS version"));
   EXPECT_FALSE(base::PathExists(old_os_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kPayloadAbsolute, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(root_payload_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("payload path is absolute"));
   EXPECT_FALSE(
       base::PathExists(root_payload_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(*raw_metrics_lib,
+              SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                            Sender::kLargeMetaFile, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(large_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Metadata file is unusually large"));
   EXPECT_FALSE(base::PathExists(large_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kNotOfficialImage, Sender::kSendReasonCount));
   ASSERT_TRUE(SetConditions(kUnofficialBuild, kSignInMode, kMetricsEnabled,
                             raw_metrics_lib));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
@@ -834,6 +882,10 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
 
   ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsDisabled,
                             raw_metrics_lib));
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kNoMetricsConsent, Sender::kSendReasonCount));
   EXPECT_EQ(Sender::kRemove, sender.ChooseAction(good_meta_, &reason, &info));
   EXPECT_THAT(reason, HasSubstr("Crash reporting is disabled"));
   EXPECT_FALSE(base::PathExists(good_meta_.ReplaceExtension(".processing")));
@@ -1007,9 +1059,15 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
 
 TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   Sender::Options options;
+  MetricsLibraryMock* raw_metrics_lib = metrics_lib_.get();
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
   ASSERT_TRUE(sender.Init());
+
+  EXPECT_CALL(*raw_metrics_lib,
+              SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                            Sender::kTotalRemoval, Sender::kSendReasonCount))
+      .Times(3);
 
   const base::FilePath crash_directory =
       paths::Get(paths::kSystemCrashDirectory);
@@ -1685,8 +1743,14 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   ASSERT_TRUE(sender.Init());
 
   // Send crashes.
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kFinishedUploading, Sender::kSendReasonCount))
+      .Times(0);
   base::TimeDelta total_sleep_time;
   sender.SendCrashes(crashes_to_send, &total_sleep_time);
+  testing::Mock::VerifyAndClearExpectations(raw_metrics_lib);
 
   // We shouldn't be processing any crashes still.
   EXPECT_FALSE(base::PathExists(system_processing));
@@ -1705,6 +1769,16 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   // Exit from guest mode/re-enable metrics, and send crashes again.
   raw_metrics_lib->set_guest_mode(false);
   raw_metrics_lib->set_metrics_enabled(true);
+  // 2 times because there are 2 valid crashes to send
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kFinishedUploading, Sender::kSendReasonCount))
+      .Times(2);
+  EXPECT_CALL(*raw_metrics_lib,
+              SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                            Sender::kTotalRemoval, Sender::kSendReasonCount))
+      .Times(2);
   sender.SendCrashes(crashes_to_send, &total_sleep_time);
 
   // We shouldn't be processing any crashes still.

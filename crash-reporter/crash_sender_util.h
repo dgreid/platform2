@@ -248,6 +248,26 @@ class Sender {
     bool upload_old_reports = false;
   };
 
+  // These values are persisted to logs. Entries should not be renumbered and
+  // numeric values should never be reused
+  enum CrashRemoveReason {
+    kTotalRemoval = 0,
+    kNotOfficialImage = 1,
+    kNoMetricsConsent = 2,
+    kProcessingFileExists = 3,
+    kLargeMetaFile = 4,
+    kUnparseableMetaFile = 5,
+    kPayloadUnspecified = 6,
+    kPayloadAbsolute = 7,
+    kPayloadNonexistent = 8,
+    kPayloadKindUnknown = 9,
+    kOSVersionTooOld = 10,
+    kOldIncompleteMeta = 11,
+    kFinishedUploading = 12,
+    // Keep kSendReasonCount one larger than any other enum value.
+    kSendReasonCount = 13,
+  };
+
   Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
          std::unique_ptr<base::Clock> clock,
          const Options& options);
@@ -315,6 +335,9 @@ class Sender {
   // Removes report files associated with the given meta file.
   // More specifically, if "foo.meta" is given, "foo.*" will be removed.
   void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes);
+
+  // Send the specified reason for removing a crash to UMA.
+  void SendCrashRemoveReasonToUMA(CrashRemoveReason reason);
 
   // Creates a JSON entity with the required fields for uploads.log file.
   std::unique_ptr<base::Value> CreateJsonEntity(const std::string& report_id,

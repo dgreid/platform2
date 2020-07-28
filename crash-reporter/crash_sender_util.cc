@@ -90,6 +90,10 @@ constexpr char kUMAFailedCrashRemoval[] = "Crash.Sender.FailedCrashRemoval";
 constexpr char kUMAAttemptedCrashRemoval[] =
     "Crash.Sender.AttemptedCrashRemoval";
 
+// UMA enum to track reasons crash_sender attempts to delete a crash.
+constexpr char kCrashSenderRemoveHistName[] =
+    "Platform.CrOS.CrashSenderRemoveReason";
+
 // Returns true if the given report kind is known.
 // TODO(satorux): Move collector constants to a common file.
 bool IsKnownKind(const std::string& kind) {
@@ -633,6 +637,7 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
                                     CrashInfo* info) {
   if (!IsMock() && !IsOfficialImage() && !allow_dev_sending_ && !test_mode_) {
     *reason = "Not an official OS version";
+    SendCrashRemoveReasonToUMA(kNotOfficialImage);
     return kRemove;
   }
 
@@ -653,11 +658,16 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
   }
   if (!HasCrashUploadingConsent()) {
     *reason = "Crash reporting is disabled";
+    // Note that this will probably not actually be sent (since there's no
+    // consent). Record it for completion and in case the user later enables
+    // metrics consent.
+    SendCrashRemoveReasonToUMA(kNoMetricsConsent);
     return kRemove;
   }
 
   if (base::PathExists(meta_file.ReplaceExtension(kProcessingExt))) {
     *reason = ".processing file already exists for: " + meta_file.value();
+    SendCrashRemoveReasonToUMA(kProcessingFileExists);
     return kRemove;
   }
 
@@ -676,11 +686,13 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     }
 
     *reason = "Metadata file is unusually large: " + meta_file.value();
+    SendCrashRemoveReasonToUMA(kLargeMetaFile);
     return kRemove;
   }
 
   if (!ParseMetadata(raw_metadata, &info->metadata)) {
     *reason = "Corrupted metadata: " + raw_metadata;
+    SendCrashRemoveReasonToUMA(kUnparseableMetaFile);
     return kRemove;
   }
 
@@ -688,6 +700,7 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
 
   if (info->payload_file.empty()) {
     *reason = "Payload is not found in the meta data: " + raw_metadata;
+    SendCrashRemoveReasonToUMA(kPayloadUnspecified);
     return kRemove;
   }
 
@@ -695,6 +708,7 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
   if (info->payload_file.IsAbsolute()) {
     *reason =
         "Corrupt meta: payload path is absolute: " + info->payload_file.value();
+    SendCrashRemoveReasonToUMA(kPayloadAbsolute);
     return kRemove;
   }
 
@@ -703,11 +717,13 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
 
   if (!base::PathExists(info->payload_file)) {
     *reason = "Missing payload: " + info->payload_file.value();
+    SendCrashRemoveReasonToUMA(kPayloadNonexistent);
     return kRemove;
   }
 
   if (!IsKnownKind(info->payload_kind)) {
     *reason = "Unknown kind: " + info->payload_kind;
+    SendCrashRemoveReasonToUMA(kPayloadKindUnknown);
     return kRemove;
   }
 
@@ -725,6 +741,7 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
               base::TimeDelta::FromMilliseconds(os_millis),
           clock_.get())) {
     *reason = "Old OS version";
+    SendCrashRemoveReasonToUMA(kOSVersionTooOld);
     return kRemove;
   }
 
@@ -740,6 +757,7 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
     if (delta.InHours() >= 24) {
       *reason = "Removing old incomplete metadata";
+      SendCrashRemoveReasonToUMA(kOldIncompleteMeta);
       return kRemove;
     } else {
       *reason = "Recent incomplete metadata";
@@ -881,6 +899,7 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files,
     }
     LOG(INFO) << "Successfully sent crash " << meta_file.value()
               << " and removing.";
+    SendCrashRemoveReasonToUMA(kFinishedUploading);
     RemoveReportFiles(meta_file, delete_crashes_);
   }
 }
@@ -1053,6 +1072,7 @@ void Sender::RemoveReportFiles(const base::FilePath& meta_file,
     LOG(ERROR) << "Not a meta file: " << meta_file.value();
     return;
   }
+  SendCrashRemoveReasonToUMA(kTotalRemoval);
 
   const std::string pattern =
       meta_file.BaseName().RemoveExtension().value() + ".*";
@@ -1087,6 +1107,11 @@ void Sender::RemoveReportFiles(const base::FilePath& meta_file,
       LOG(ERROR) << "Failed to mark crash as uploaded";
     }
   }
+}
+
+void Sender::SendCrashRemoveReasonToUMA(CrashRemoveReason reason) {
+  metrics_lib_->SendEnumToUMA(kCrashSenderRemoveHistName, reason,
+                              kSendReasonCount);
 }
 
 std::unique_ptr<base::Value> Sender::CreateJsonEntity(
