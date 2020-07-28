@@ -120,11 +120,11 @@ base::Optional<gid_t> DelegateImpl::FindGroupId(const char* group) {
   const auto max_len = sysconf(_SC_GETGR_R_SIZE_MAX);
   if (max_len != -1) len = max_len;
 
-  std::unique_ptr<char> buf(new char[len]);
+  std::vector<char> buf(len);
   struct group result;
   struct group *resultp;
 
-  int err = getgrnam_r(group, &result, buf.get(), len, &resultp);
+  int err = getgrnam_r(group, &result, buf.data(), len, &resultp);
   if (err)
     return base::nullopt;
   else
