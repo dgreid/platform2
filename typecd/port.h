@@ -37,9 +37,15 @@ class Port {
   // Returns either "host" or "device" on success, empty string on failure.
   std::string GetDataRole();
 
+  // Check whether we can enter DP Alt Mode. This should check for the presence
+  // of required attributes on the Partner and (if applicable) Cable.
+  bool CanEnterDPAltMode();
+
  private:
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);
+  FRIEND_TEST(PortTest, TestDPAltModeEntryCheckTrue);
+  FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalse);
 
   // Sysfs path used to access partner PD information.
   base::FilePath syspath_;

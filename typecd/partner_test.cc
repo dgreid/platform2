@@ -12,6 +12,7 @@
 
 #include "typecd/alt_mode.h"
 #include "typecd/test_constants.h"
+#include "typecd/test_utils.h"
 
 namespace {
 
@@ -38,37 +39,20 @@ TEST_F(PartnerTest, TestAltModeManualAddition) {
   std::string mode0_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
   auto mode0_path = temp_dir.Append(mode0_dirname);
-  ASSERT_TRUE(base::CreateDirectory(mode0_path));
-
-  auto mode0_svid = base::StringPrintf("%x", kDPSVID);
-  ASSERT_TRUE(base::WriteFile(mode0_path.Append("svid"), mode0_svid.c_str(),
-                              mode0_svid.length()));
-  auto mode0_vdo = base::StringPrintf("%#x", kDPVDO);
-  ASSERT_TRUE(base::WriteFile(mode0_path.Append("vdo"), mode0_vdo.c_str(),
-                              mode0_vdo.length()));
-  auto mode0_vdo_index = base::StringPrintf("%x", kDPVDOIndex);
-  ASSERT_TRUE(base::WriteFile(mode0_path.Append("mode"),
-                              mode0_vdo_index.c_str(),
-                              mode0_vdo_index.length()));
+  ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
 
   EXPECT_TRUE(p.AddAltMode(mode0_path));
 
   std::string mode1_dirname =
       base::StringPrintf("port%d-partner.%d", 0, kTBTAltModeIndex);
   auto mode1_path = temp_dir.Append(mode1_dirname);
-  ASSERT_TRUE(base::CreateDirectory(mode1_path));
+  ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
 
-  // Add extra white spaces to ensure malformed strings can be parsed.
+  // Add extra white spaces to ensure malformed strings can be parsed. We can do
+  // this by overwriting whatever the pre-existing SVID syspath file is.
   auto mode1_svid = base::StringPrintf("%x    ", kTBTSVID);
   ASSERT_TRUE(base::WriteFile(mode1_path.Append("svid"), mode1_svid.c_str(),
                               mode1_svid.length()));
-  auto mode1_vdo = base::StringPrintf("%#x", kTBTVDO);
-  ASSERT_TRUE(base::WriteFile(mode1_path.Append("vdo"), mode1_vdo.c_str(),
-                              mode1_vdo.length()));
-  auto mode1_vdo_index = base::StringPrintf("%x", kTBTVDOIndex);
-  ASSERT_TRUE(base::WriteFile(mode1_path.Append("mode"),
-                              mode1_vdo_index.c_str(),
-                              mode1_vdo_index.length()));
 
   EXPECT_TRUE(p.AddAltMode(mode1_path));
   // Trying to add an existing alt mode again should fail.

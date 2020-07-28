@@ -15,7 +15,8 @@ constexpr char kPartnerAltModeRegex[] = R"(port(\d+)-partner.(\d+))";
 
 namespace typecd {
 
-Partner::Partner(const base::FilePath& syspath) : Peripheral(syspath) {}
+Partner::Partner(const base::FilePath& syspath)
+    : Peripheral(syspath), num_alt_modes_(-1) {}
 
 bool Partner::AddAltMode(const base::FilePath& mode_syspath) {
   int port, index;
@@ -65,15 +66,22 @@ void Partner::RemoveAltMode(const base::FilePath& mode_syspath) {
 bool Partner::IsAltModePresent(int index) {
   auto it = alt_modes_.find(index);
   if (it != alt_modes_.end()) {
-    LOG(ERROR) << "Alt mode already registered at index " << index;
     return true;
   }
 
+  LOG(INFO) << "Alt mode not found at index " << index;
   return false;
 }
 
 void Partner::UpdateAltModesFromSysfs() {
   NOTIMPLEMENTED();
+}
+
+AltMode* Partner::GetAltMode(int index) {
+  if (!IsAltModePresent(index))
+    return nullptr;
+
+  return alt_modes_.find(index)->second.get();
 }
 
 }  // namespace typecd

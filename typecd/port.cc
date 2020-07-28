@@ -13,6 +13,10 @@ namespace {
 constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
 }  // namespace
 
+namespace {
+const uint16_t kDPAltModeSID = 0xff01;
+}  // namespace
+
 namespace typecd {
 
 Port::Port(const base::FilePath& syspath, int port_num)
@@ -104,6 +108,19 @@ std::string Port::GetDataRole() {
 
 end:
   return data_role;
+}
+
+bool Port::CanEnterDPAltMode() {
+  auto num_alt_modes = partner_->GetNumAltModes();
+  for (int i = 0; i < num_alt_modes; i++) {
+    auto alt_mode = partner_->GetAltMode(i);
+    if (!alt_mode)
+      continue;
+    if (alt_mode->GetSVID() == kDPAltModeSID)
+      return true;
+  }
+
+  return false;
 }
 
 }  // namespace typecd

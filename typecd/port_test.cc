@@ -4,10 +4,14 @@
 
 #include "typecd/port.h"
 
+#include <string>
+
+#include <base/strings/stringprintf.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "typecd/test_constants.h"
+#include "typecd/test_utils.h"
 
 namespace {
 constexpr char kInvalidDataRole1[] = "xsadft [hasdr]";
@@ -66,6 +70,62 @@ TEST_F(PortTest, TestGetDataRole) {
   ASSERT_TRUE(base::WriteFile(port_path.Append("data_role"), kInvalidDataRole2,
                               strlen(kInvalidDataRole2)));
   EXPECT_EQ("", port->GetDataRole());
+}
+
+// Check that DP Alt Mode Entry checks work as expected for true cases.
+TEST_F(PortTest, TestDPAltModeEntryCheckTrue) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+
+  // Set up fake sysfs paths for 2 alt modes.
+  base::FilePath temp_dir;
+  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+
+  // Set the number of alt modes supported.
+  port->partner_->SetNumAltModes(2);
+
+  // Add the DP alt mode.
+  std::string mode0_dirname =
+      base::StringPrintf("port%d-partner.%d", 0, kDPAltModeIndex);
+  auto mode0_path = temp_dir.Append(mode0_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode0_path, kDPSVID, kDPVDO, kDPVDOIndex));
+  port->AddRemovePartnerAltMode(mode0_path, true);
+
+  // Add the TBT alt mode.
+  std::string mode1_dirname =
+      base::StringPrintf("port%d-partner.%d", 0, kTBTAltModeIndex);
+  auto mode1_path = temp_dir.Append(mode1_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode1_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
+  port->AddRemovePartnerAltMode(mode1_path, true);
+
+  EXPECT_TRUE(port->CanEnterDPAltMode());
+}
+
+// Check that DP Alt Mode Entry checks work as expected for false cases.
+TEST_F(PortTest, TestDPAltModeEntryCheckFalse) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  port->partner_->SetNumAltModes(0);
+
+  // Check the case where the partner doesn't support any alt modes.
+  EXPECT_FALSE(port->CanEnterDPAltMode());
+
+  port->partner_->SetNumAltModes(1);
+
+  // Set up fake sysfs paths for 1 alt mode.
+  base::FilePath temp_dir;
+  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+
+  // Add the TBT alt mode.
+  std::string mode_dirname =
+      base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  EXPECT_FALSE(port->CanEnterDPAltMode());
 }
 
 }  // namespace typecd

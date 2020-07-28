@@ -38,6 +38,26 @@ class Partner : public Peripheral {
   // Previously added altmodes should be unaffected by this function.
   void UpdateAltModesFromSysfs();
 
+  // Return the total number of AltModes supported by the partner. If this value
+  // hasn't been populated yet, the default value is -1, signifying that
+  // discovery is not yet complete.
+  int GetNumAltModes() { return num_alt_modes_; }
+
+  // Set the total number of AltModes supported by the partner. This value
+  // should be populated either:
+  // - From the corresponding file in sysfs
+  //   <or>
+  // - When an appropriate signal is received from the kernel about completion
+  //   of partner Discovery.
+  //
+  // Since neither of the above have been implemented yet, we can call this
+  // function explicitly for the sake of unit tests.
+  void SetNumAltModes(int num_alt_modes) { num_alt_modes_ = num_alt_modes; }
+
+  // Return the AltMode with index |index|, and nullptr if such an AltMode
+  // doesn't exist.
+  AltMode* GetAltMode(int index);
+
  private:
   // A map representing all the alternate modes supported by the partner.
   // The key is the index of the alternate mode as determined by the connector
@@ -45,6 +65,7 @@ class Partner : public Peripheral {
   // mode which has the directory
   // "/sys/class/typec/port1-partner/port1-partner.0" will use an key of "0".
   std::map<int, std::unique_ptr<AltMode>> alt_modes_;
+  int num_alt_modes_;
 
   DISALLOW_COPY_AND_ASSIGN(Partner);
 };
