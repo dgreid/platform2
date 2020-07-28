@@ -81,6 +81,8 @@ std::string ErrorTypeToString(chromeos::cros_healthd::mojom::ErrorType type) {
       return "Parse Error";
     case chromeos::cros_healthd::mojom::ErrorType::kSystemUtilityError:
       return "Error running system utility";
+    case chromeos::cros_healthd::mojom::ErrorType::kServiceUnavailable:
+      return "External service not aviailable";
   }
 }
 

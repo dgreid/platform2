@@ -20,6 +20,7 @@
 #include "diagnostics/cros_healthd/fetchers/cpu_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/disk_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/fan_fetcher.h"
+#include "diagnostics/cros_healthd/fetchers/network_fetcher.h"
 #include "diagnostics/cros_healthd/fetchers/system_fetcher.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "mojo/cros_healthd.mojom.h"
@@ -95,6 +96,8 @@ class FetchAggregator final {
   std::unique_ptr<FanFetcher> const fan_fetcher_ = nullptr;
   // Unowned. The system fetcher should outlive this instance.
   std::unique_ptr<SystemFetcher> const system_fetcher_ = nullptr;
+  // Unowned. The network fetcher should outlive this instance.
+  std::unique_ptr<NetworkFetcher> const network_fetcher_ = nullptr;
 
   // Must be the last member of the class.
   base::WeakPtrFactory<FetchAggregator> weak_factory_{this};
