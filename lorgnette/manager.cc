@@ -310,8 +310,17 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
   std::vector<ScannerInfo> probed_scanners =
       epson_probe::ProbeForScanners(firewall_manager_.get());
   activity_callback_.Run();
-  scanners.insert(scanners.end(), probed_scanners.begin(),
-                  probed_scanners.end());
+  for (const ScannerInfo& scanner : probed_scanners) {
+    brillo::ErrorPtr error;
+    std::unique_ptr<SaneDevice> device =
+        sane_client_->ConnectToDevice(&error, scanner.name());
+    if (device) {
+      scanners.push_back(scanner);
+    } else {
+      LOG(INFO) << "Got reponse from Epson scanner " << scanner.name()
+                << " that isn't usable for scanning.";
+    }
+  }
 
   ListScannersResponse response;
   for (ScannerInfo& scanner : scanners) {
