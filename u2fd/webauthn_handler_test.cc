@@ -52,7 +52,8 @@ const std::string ExpectedU2fGenerateRequestRegex() {
   static const std::string request_regex =
       base::HexEncode(kRpIdHash.data(), kRpIdHash.size()) +  // AppId
       std::string("(EE){32}") +                              // User Secret
-      std::string("03");                                     // U2F_AUTH_ENFORCE
+      std::string("03") +                                    // U2F_AUTH_ENFORCE
+      std::string("(00){32}");  // Auth time secret hash
   return request_regex;
 }
 
