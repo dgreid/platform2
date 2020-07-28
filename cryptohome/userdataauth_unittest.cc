@@ -3101,7 +3101,7 @@ TEST_F(UserDataAuthTestThreaded,
 }
 
 TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
-  constexpr int kTimesFreeDiskSpaceCalled = 3;
+  constexpr int kTimesFreeDiskSpaceCalled = 5;
   // Checks that DoAutoCleanup() is called periodically.
   // Service will schedule periodic clean-ups.
   SetupMount("some-user-to-clean-up");
@@ -3127,12 +3127,15 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
           done.Signal();
         }
       }));
+  // Silence the GetFreeDiskSpaceState errors.
+  EXPECT_CALL(cleanup_, GetFreeDiskSpaceState(_))
+      .WillRepeatedly(Return(DiskCleanup::FreeSpaceState::kAboveTarget));
 
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillRepeatedly(Invoke([&lock, &current_time]() {
         base::AutoLock scoped_lock(lock);
         current_time +=
-            base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS / 5 + 1000);
+            base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS / 30 + 1000);
         return current_time;
       }));
   const int period_ms = 1;
@@ -3141,12 +3144,6 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   userdataauth_->set_low_disk_notification_period_ms(period_ms);
 
   InitializeUserDataAuth();
-
-  // Advance time once so that the first call gets triggered.
-  {
-    base::AutoLock scoped_lock(lock);
-    current_time += base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS);
-  }
 
   // Wait for at most 5 seconds. 5 seconds is most likely enough, a period this
   // long is to avoid flakiness.
@@ -3166,11 +3163,13 @@ TEST_F(UserDataAuthTestThreaded, CheckAutoCleanupCallback) {
   EXPECT_LT(current_time,
             base::Time::UnixEpoch() +
                 base::TimeDelta::FromMilliseconds(
-                    kAutoCleanupPeriodMS * kTimesFreeDiskSpaceCalled * 2));
+                    kAutoCleanupPeriodMS * (kTimesFreeDiskSpaceCalled + 1)));
+  // Note that the first run happens right after InitializeUserDataAuth(), so
+  // x run only takes x-1 times the period.
   EXPECT_GT(current_time,
             base::Time::UnixEpoch() +
-                base::TimeDelta::FromMilliseconds(kAutoCleanupPeriodMS *
-                                                  kTimesFreeDiskSpaceCalled));
+                base::TimeDelta::FromMilliseconds(
+                    kAutoCleanupPeriodMS * (kTimesFreeDiskSpaceCalled - 1)));
 
   // Cleanup invocable lambdas so they don't capture this test variables
   // anymore. If this is not done then the periodic callbacks might call
