@@ -247,6 +247,21 @@ DocumentScanSaneBackend BackendFromDeviceName(const std::string& device_name) {
   }
 }
 
+// Uses |firwewall_manager| to request port access if |device_name| corresponds
+// to a SANE backend that needs the access when connecting to a device. The
+// caller should keep the returned object alive as long as port access is
+// needed.
+base::ScopedClosureRunner RequestPortAccessIfNeeded(
+    const std::string& device_name, FirewallManager* firewall_manager) {
+  if (BackendFromDeviceName(device_name) != kPixma)
+    return base::ScopedClosureRunner();
+
+  firewall_manager->RequestScannerPortAccess();
+  return base::ScopedClosureRunner(
+      base::BindOnce([](FirewallManager* fm) { fm->ReleaseAllPortsAccess(); },
+                     firewall_manager));
+}
+
 }  // namespace
 
 const char Manager::kMetricScanRequested[] = "DocumentScan.ScanRequested";
@@ -351,6 +366,8 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
     return false;
   }
 
+  base::ScopedClosureRunner release_ports =
+      RequestPortAccessIfNeeded(device_name, firewall_manager_.get());
   std::unique_ptr<SaneDevice> device =
       sane_client_->ConnectToDevice(error, device_name);
   if (!device)
@@ -531,6 +548,8 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 
   LOG(INFO) << "Scanning image from device " << request.device_name();
 
+  base::ScopedClosureRunner release_ports =
+      RequestPortAccessIfNeeded(request.device_name(), firewall_manager_.get());
   std::unique_ptr<SaneDevice> device =
       sane_client_->ConnectToDevice(error, request.device_name());
   if (!device) {
