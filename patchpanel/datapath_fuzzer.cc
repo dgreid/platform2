@@ -58,6 +58,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   Datapath datapath(&runner, ioctl_stub);
 
   while (provider.remaining_bytes() > 0) {
+    std::string netns_name = provider.ConsumeRandomLengthString(10);
     std::string ifname = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     std::string bridge = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     uint32_t addr = provider.ConsumeIntegral<uint32_t>();
@@ -74,7 +75,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     datapath.RemoveBridge(ifname);
     datapath.AddInboundIPv4DNAT(ifname, addr_str);
     datapath.RemoveInboundIPv4DNAT(ifname, addr_str);
-    datapath.AddVirtualInterfacePair(ifname, bridge);
+    datapath.AddVirtualInterfacePair(netns_name, ifname, bridge);
     datapath.ToggleInterface(ifname, provider.ConsumeBool());
     datapath.ConfigureInterface(ifname, mac, addr, prefix_len,
                                 provider.ConsumeBool(), provider.ConsumeBool());

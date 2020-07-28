@@ -90,7 +90,7 @@ class Datapath {
                                bool remote_multicast_flag);
 
   // Creates a virtual interface pair.
-  virtual bool AddVirtualInterfacePair(const std::string& netns_ifname,
+  virtual bool AddVirtualInterfacePair(const std::string& netns_name,
                                        const std::string& veth_ifname,
                                        const std::string& peer_ifname);
 
