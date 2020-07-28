@@ -182,6 +182,8 @@ void ParseCommandLine(int argc,
   DEFINE_bool(ignore_test_image, false,
               "Upload crashes to the crash server even if running on a test "
               "image, but do NOT ignore official image check.");
+  DEFINE_bool(upload_old_reports, false,
+              "If set, ignore the timestamp check and upload older reports.");
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Sender");
   if (FLAGS_max_spread_time < 0) {
     LOG(ERROR) << "Invalid value for max spread time: "
@@ -197,6 +199,7 @@ void ParseCommandLine(int argc,
   flags->test_mode = FLAGS_test_mode;
   flags->delete_crashes = FLAGS_delete_crashes;
   flags->ignore_test_image = FLAGS_ignore_test_image;
+  flags->upload_old_reports = FLAGS_upload_old_reports;
   if (flags->test_mode) {
     // The pause file is intended to pause the cronjob crash_sender during
     // tests, not the crash_sender invoked by the test code.
@@ -589,6 +592,7 @@ Sender::Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
       allow_dev_sending_(options.allow_dev_sending),
       test_mode_(options.test_mode),
       delete_crashes_(options.delete_crashes),
+      upload_old_reports_(options.upload_old_reports),
       clock_(std::move(clock)) {}
 
 bool Sender::Init() {
@@ -737,12 +741,13 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     return kRemove;
   }
 
-  // If we have an OS timestamp in the metadata and it's too old to upload then
-  // remove the report. We wouldn't have gotten here if the current OS version
-  // is too old, so this is an old report from before an OS update.
+  // If we have an OS timestamp in the metadata and it's too old to upload and
+  // upload_old_reports flag is not set then remove the report. We wouldn't have
+  // gotten here if the current OS version is too old, so this is an old report
+  // from before an OS update.
   std::string os_timestamp_str;
   int64_t os_millis;
-  if (!allow_dev_sending_ && !test_mode_ &&
+  if (!allow_dev_sending_ && !test_mode_ && !upload_old_reports_ &&
       info->metadata.GetString(kOsTimestamp, &os_timestamp_str) &&
       base::StringToInt64(os_timestamp_str, &os_millis) &&
       util::IsOsTimestampTooOldForUploads(

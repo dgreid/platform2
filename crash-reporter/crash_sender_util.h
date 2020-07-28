@@ -54,6 +54,7 @@ struct CommandLineFlags {
   bool test_mode = false;
   bool delete_crashes = true;
   bool ignore_test_image = false;
+  bool upload_old_reports = false;
 };
 
 // Crash information obtained in ChooseAction().
@@ -245,6 +246,9 @@ class Sender {
     // Else, create a new file in the spool directory with the same basename
     // and a special extension to indicate that the crash was already uploaded.
     bool delete_crashes = true;
+
+    // If true, ignore timestamp check and upload old reports.
+    bool upload_old_reports = false;
   };
 
   Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
@@ -349,6 +353,7 @@ class Sender {
   bool allow_dev_sending_;
   const bool test_mode_;
   const bool delete_crashes_;
+  const bool upload_old_reports_;
   std::unique_ptr<base::Clock> clock_;
   scoped_refptr<dbus::Bus> bus_;
   std::unique_ptr<brillo::OsReleaseReader> os_release_reader_;

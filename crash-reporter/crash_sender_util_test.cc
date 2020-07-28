@@ -507,6 +507,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_NoFlags) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilDeathTest, ParseCommandLine_InvalidMaxSpreadTime) {
@@ -532,6 +533,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_ValidMaxSpreadTime) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnoreRateLimits) {
@@ -547,6 +549,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnoreRateLimits) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnoreHoldOffTime) {
@@ -562,6 +565,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnoreHoldOffTime) {
   EXPECT_TRUE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, ParseCommandLine_CrashDirectory) {
@@ -577,6 +581,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_CrashDirectory) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, ParseCommandLine_Dev) {
@@ -592,6 +597,7 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_Dev) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_TRUE(flags.allow_dev_sending);
   EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnorePauseFile) {
@@ -607,6 +613,23 @@ TEST_F(CrashSenderUtilTest, ParseCommandLine_IgnorePauseFile) {
   EXPECT_FALSE(flags.ignore_hold_off_time);
   EXPECT_FALSE(flags.allow_dev_sending);
   EXPECT_TRUE(flags.ignore_pause_file);
+  EXPECT_FALSE(flags.upload_old_reports);
+}
+
+TEST_F(CrashSenderUtilTest, ParseCommandLine_UploadOldReports) {
+  const char* argv[] = {"crash_sender", "--upload_old_reports"};
+  base::CommandLine command_line(base::size(argv), argv);
+  brillo::FlagHelper::GetInstance()->set_command_line_for_testing(
+      &command_line);
+  CommandLineFlags flags;
+  ParseCommandLine(base::size(argv), argv, &flags);
+  EXPECT_EQ(flags.max_spread_time.InSeconds(), kMaxSpreadTimeInSeconds);
+  EXPECT_TRUE(flags.crash_directory.empty());
+  EXPECT_FALSE(flags.ignore_rate_limits);
+  EXPECT_FALSE(flags.ignore_hold_off_time);
+  EXPECT_FALSE(flags.allow_dev_sending);
+  EXPECT_FALSE(flags.ignore_pause_file);
+  EXPECT_TRUE(flags.upload_old_reports);
 }
 
 TEST_F(CrashSenderUtilTest, IsMock) {
@@ -865,6 +888,26 @@ TEST_F(CrashSenderUtilTest, ChooseActionDevMode) {
   CrashInfo info;
 
   EXPECT_EQ(Sender::kSend, sender.ChooseAction(good_meta_, &reason, &info));
+  EXPECT_EQ(Sender::kSend, sender.ChooseAction(old_os_meta_, &reason, &info));
+}
+
+TEST_F(CrashSenderUtilTest, ChooseActionUploadOldReports) {
+  ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsEnabled));
+
+  const base::FilePath crash_directory =
+      paths::Get(paths::kSystemCrashDirectory);
+  ASSERT_TRUE(CreateDirectory(crash_directory));
+  ASSERT_TRUE(CreateTestCrashFiles(crash_directory));
+
+  Sender::Options options;
+  options.upload_old_reports = true;
+  Sender sender(std::move(metrics_lib_),
+                std::make_unique<test_util::AdvancingClock>(), options);
+  ASSERT_TRUE(sender.Init());
+
+  std::string reason;
+  CrashInfo info;
+
   EXPECT_EQ(Sender::kSend, sender.ChooseAction(old_os_meta_, &reason, &info));
 }
 
