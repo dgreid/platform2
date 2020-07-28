@@ -4,13 +4,14 @@
 
 #include "login_manager/secret_util.h"
 
+#include <unistd.h>
+
 #include <utility>
 
 #include <base/file_descriptor_posix.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
-#include <base/memory/shared_memory_handle.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/read_only_shared_memory_region.h>
 #include <base/process/process_handle.h>
 #include <base/strings/string_number_conversions.h>
 #include <crypto/sha2.h>
@@ -59,38 +60,39 @@ base::ScopedFD SharedMemoryUtil::WriteDataToSharedMemory(
     const std::vector<uint8_t>& data) {
   size_t data_size = data.size();
   CHECK_LE(data_size, kSharedMemorySecretSizeLimit);
-  base::SharedMemory shared_memory;
-  base::SharedMemoryCreateOptions options;
-  options.size = data.size();
-  options.share_read_only = true;
-  if (!shared_memory.Create(options) || !shared_memory.Map(data.size()))
+  // Creates a new base::ReadOnlySharedMemoryRegion instance mapped to a
+  // base::WritableSharedMemoryMapping, which is the only way to modify the
+  // content of the newly created region.
+  auto shmem = base::ReadOnlySharedMemoryRegion::Create(data.size());
+  if (!shmem.IsValid())
     return base::ScopedFD();
-  memcpy(shared_memory.memory(), data.data(), data.size());
-  base::SharedMemoryHandle read_only_handle = shared_memory.GetReadOnlyHandle();
-  if (!read_only_handle.IsValid())
+  memcpy(shmem.mapping.GetMemoryAs<uint8_t>(), data.data(), data.size());
+  base::subtle::PlatformSharedMemoryRegion platform_shm =
+      base::ReadOnlySharedMemoryRegion::TakeHandleForSerialization(
+          std::move(shmem.region));
+  if (!platform_shm.IsValid())
     return base::ScopedFD();
-  return base::ScopedFD(read_only_handle.Release());
+  return base::ScopedFD(std::move(platform_shm.PassPlatformHandle().fd));
 }
 
 bool SharedMemoryUtil::ReadDataFromSharedMemory(
     const base::ScopedFD& in_data_fd,
     size_t data_size,
     std::vector<uint8_t>* out_data) {
-  // |shared_memory.TakeHandle()| must be called before leaving this function,
-  // otherwise the file descriptor will be closed twice (once here and once by
-  // session manager).
-  base::SharedMemory shared_memory(
-      base::SharedMemoryHandle::ImportHandle(in_data_fd.get(), data_size),
-      /*read_only=*/true);
-  if (!shared_memory.Map(data_size)) {
-    shared_memory.TakeHandle();
+  base::ScopedFD dup_in_data_fd(dup(in_data_fd.get()));
+  base::ReadOnlySharedMemoryRegion shm_region =
+      base::ReadOnlySharedMemoryRegion::Deserialize(
+          base::subtle::PlatformSharedMemoryRegion::Take(
+              std::move(dup_in_data_fd),
+              base::subtle::PlatformSharedMemoryRegion::Mode::kReadOnly,
+              data_size, base::UnguessableToken::Create()));
+  if (!shm_region.IsValid())
     return false;
-  }
-  out_data->assign(
-      reinterpret_cast<uint8_t*>(shared_memory.memory()),
-      reinterpret_cast<uint8_t*>(shared_memory.memory()) + data_size);
-  shared_memory.Unmap();
-  shared_memory.TakeHandle();
+  base::ReadOnlySharedMemoryMapping shm_mapping = shm_region.Map();
+  if (!shm_mapping.IsValid())
+    return false;
+  out_data->assign(shm_mapping.GetMemoryAs<uint8_t>(),
+                   shm_mapping.GetMemoryAs<uint8_t>() + data_size);
   return true;
 }
 

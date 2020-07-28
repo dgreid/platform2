@@ -35,6 +35,9 @@ class SharedMemoryUtil {
   // Reads data from the |in_data_fd| shared memory region. Writes the result
   // to |out_data|. Returns 'true' if the data was successfully read, 'false'
   // otherwise.
+  // TODO(crbug.com/1124567): change D-Bus generator to generate
+  // SessionManagerImpl::LoginScreenStorageStore so that base::ScopedFD instead
+  // of const base::ScopedFD& would be used here.
   virtual bool ReadDataFromSharedMemory(const base::ScopedFD& in_data_fd,
                                         size_t data_size,
                                         std::vector<uint8_t>* out_data);
