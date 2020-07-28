@@ -39,9 +39,9 @@ class CameraMetadataInspector {
   // The factory function that creates a CameraMetadataInspector from the
   // command line switches of the current process:
   // --metadata_inspector_output=<path/to/output/file>
-  // --metadata_inspector_whitelist=<regex_filter> (optional)
-  // --metadata_inspector_blacklist=<regex_filter> (optional)
-  // See the comments of |output_file_|, |whitelist_| and |blacklist_| below for
+  // --metadata_inspector_allowlist=<regex_filter> (optional)
+  // --metadata_inspector_denylist=<regex_filter> (optional)
+  // See the comments of |output_file_|, |allowlist_| and |denylist_| below for
   // more details.  Returns nullptr on error.
   static std::unique_ptr<CameraMetadataInspector> Create(
       int partial_result_count);
@@ -65,15 +65,15 @@ class CameraMetadataInspector {
   // The private constructor used in the factory function.
   CameraMetadataInspector(int partial_result_count,
                           base::File output_file,
-                          std::unique_ptr<RE2> whitelist,
-                          std::unique_ptr<RE2> blacklist,
+                          std::unique_ptr<RE2> allowlist,
+                          std::unique_ptr<RE2> denylist,
                           std::unique_ptr<base::Thread> thread);
 
   // Writes and flushes |msg| to |output_file_|.
   void Write(base::StringPiece msg);
 
-  // Returns true if |key| should be ignored according to |whitelist_| and
-  // |blacklist_|.
+  // Returns true if |key| should be ignored according to |allowlist_| and
+  // |denylist_|.
   bool ShouldIgnoreKey(const std::string& key);
 
   // Converts a metadata into the stringified DataMap.
@@ -100,12 +100,12 @@ class CameraMetadataInspector {
 
   // If specified, only metadata with keys matching the regular expression
   // filter would be logged.
-  std::unique_ptr<RE2> whitelist_;
+  std::unique_ptr<RE2> allowlist_;
 
   // If specified, only metadata with keys not matching the regular expression
-  // filter would be logged.  Blacklist could be used with whitelist, and only
-  // keys (in whitelist && not in the blacklist) would be logged.
-  std::unique_ptr<RE2> blacklist_;
+  // filter would be logged.  Denylist could be used with allowlist, and only
+  // keys (in allowlist && not in the denylist) would be logged.
+  std::unique_ptr<RE2> denylist_;
 
   // The latest DataMap for each kind of metadata.
   DataMap latest_map[static_cast<size_t>(Kind::kNumberOfKinds)];

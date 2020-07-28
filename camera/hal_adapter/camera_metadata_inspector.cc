@@ -184,19 +184,18 @@ std::unique_ptr<CameraMetadataInspector> CameraMetadataInspector::Create(
     return std::make_unique<RE2>(value, option);
   };
 
-  std::unique_ptr<RE2> whitelist =
-      GetRE2FromSwitch("metadata_inspector_whitelist");
-  if (whitelist && !whitelist->ok()) {
-    LOGF(ERROR) << "Failed to build regex for whitelist: "
-                << whitelist->error();
+  std::unique_ptr<RE2> allowlist =
+      GetRE2FromSwitch("metadata_inspector_allowlist");
+  if (allowlist && !allowlist->ok()) {
+    LOGF(ERROR) << "Failed to build regex for allowlist: "
+                << allowlist->error();
     return nullptr;
   }
 
-  std::unique_ptr<RE2> blacklist =
-      GetRE2FromSwitch("metadata_inspector_blacklist");
-  if (blacklist && !blacklist->ok()) {
-    LOGF(ERROR) << "Failed to build regex for blacklist: "
-                << blacklist->error();
+  std::unique_ptr<RE2> denylist =
+      GetRE2FromSwitch("metadata_inspector_denylist");
+  if (denylist && !denylist->ok()) {
+    LOGF(ERROR) << "Failed to build regex for denylist: " << denylist->error();
     return nullptr;
   }
 
@@ -207,20 +206,20 @@ std::unique_ptr<CameraMetadataInspector> CameraMetadataInspector::Create(
   }
 
   return base::WrapUnique(new CameraMetadataInspector(
-      partial_result_count, std::move(output_file), std::move(whitelist),
-      std::move(blacklist), std::move(thread)));
+      partial_result_count, std::move(output_file), std::move(allowlist),
+      std::move(denylist), std::move(thread)));
 }
 
 CameraMetadataInspector::CameraMetadataInspector(
     int partial_result_count,
     base::File output_file,
-    std::unique_ptr<RE2> whitelist,
-    std::unique_ptr<RE2> blacklist,
+    std::unique_ptr<RE2> allowlist,
+    std::unique_ptr<RE2> denylist,
     std::unique_ptr<base::Thread> thread)
     : partial_result_count_(partial_result_count),
       output_file_(std::move(output_file)),
-      whitelist_(std::move(whitelist)),
-      blacklist_(std::move(blacklist)),
+      allowlist_(std::move(allowlist)),
+      denylist_(std::move(denylist)),
       thread_(std::move(thread)) {
   result_sequence_checker_.DetachFromSequence();
 }
@@ -234,10 +233,10 @@ bool CameraMetadataInspector::ShouldIgnoreKey(const std::string& key) {
   if (key.empty()) {
     return true;
   }
-  if (whitelist_ && !RE2::PartialMatch(key, *whitelist_)) {
+  if (allowlist_ && !RE2::PartialMatch(key, *allowlist_)) {
     return true;
   }
-  if (blacklist_ && RE2::PartialMatch(key, *blacklist_)) {
+  if (denylist_ && RE2::PartialMatch(key, *denylist_)) {
     return true;
   }
   return false;
