@@ -25,7 +25,7 @@ typedef struct camera_buffer_handle {
   native_handle_t base;
   // The fds for each plane.
   int fds[kMaxPlanes];
-  // Should be kCameraBufferMagic.  This is for basic sanity check.
+  // Should be kCameraBufferMagic.  This is for basic consistency check.
   uint32_t magic;
   // Used to identify the buffer object on the other end of the IPC channel
   // (e.g. the Android container or Chrome browser process.)

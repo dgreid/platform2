@@ -2022,7 +2022,7 @@ status_t GraphConfig::getMediaCtlData(MediaCtlConfig *mediaCtlConfig)
         }
     }
 
-    /* sanity check, we have at least one CSI-BE */
+    /* consistency check, we have at least one CSI-BE */
     if (CC_UNLIKELY(csiBESocOutput == nullptr && csiBEOutput == nullptr)) {
         LOGE("Error: CSI BE Output nullptr");
         return UNKNOWN_ERROR;

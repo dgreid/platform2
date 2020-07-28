@@ -276,7 +276,8 @@ status_t Rk3aRunner::applyTonemaps(RequestCtrlState &reqState)
     int lutSize = results.gamma_y.gamma_y_cnt;
 
     /*
-     * Sanity check. If gbce isn't producing a lut, we can't overwrite it.
+     * Basic consistency check. If gbce isn't producing a lut, we can't
+     * overwrite it.
      */
     if (lutSize <= 0) {
         LOGE("Bad gamma lut size (%d) in gbce results", lutSize);

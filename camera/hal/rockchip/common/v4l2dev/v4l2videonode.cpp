@@ -531,8 +531,8 @@ status_t V4L2VideoNode::setBlock(bool block)
 }
 
 /**
- * queries the capabilities of the device and it does some basic sanity checks
- * based on the direction of the video device node
+ * queries the capabilities of the device and it does some basic consistency
+ * checks based on the direction of the video device node
  *
  * \param cap: [OUT] V4L2 capability structure
  *

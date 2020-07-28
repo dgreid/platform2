@@ -1072,7 +1072,7 @@ status_t GraphConfig::getCio2MediaCtlData(int *cio2Format, MediaCtlConfig *media
     retErr = getDimensions(csiBEOutput, csiBEOutW, csiBEOutH);
     CheckError(retErr != OK, UNKNOWN_ERROR, "Failed to get values from csi be output");
 
-    /* sanity check, we have at least one CSI-BE */
+    /* consistency check, we have at least one CSI-BE */
     CheckError(csiBEOutput == nullptr, UNKNOWN_ERROR, "CSI BE Output nullptr");
 
     /* Set sensor pixel array parameter to the attributes in 'sensor_mode' node,
