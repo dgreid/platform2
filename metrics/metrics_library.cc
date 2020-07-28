@@ -78,6 +78,12 @@ const char* kCrosEventNames[] = {
     "SessionManager.SafeModeEnabled",           // 29
 };
 
+// Update this to be last entry + 1 when you add new entries to the end. Checks
+// that no one tries to remove entries from the middle or misnumbers during a
+// merge conflict.
+static_assert(base::size(kCrosEventNames) == 30,
+              "CrosEvent enums not lining up properly");
+
 }  // namespace
 
 time_t MetricsLibrary::cached_enabled_time_ = 0;
