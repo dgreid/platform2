@@ -49,7 +49,7 @@ class BRILLO_EXPORT MessageLoop {
   // In case of an error scheduling the task, the kTaskIdNull is returned.
   // Note that once the call is executed or canceled, the TaskId could be reused
   // at a later point.
-  // This methond can only be called from the same thread running the main loop.
+  // This method can only be called from the same thread running the main loop.
   virtual TaskId PostDelayedTask(const base::Location& from_here,
                                  base::OnceClosure task,
                                  base::TimeDelta delay) = 0;
@@ -59,7 +59,7 @@ class BRILLO_EXPORT MessageLoop {
   }
 
   // A convenience method to schedule a call with no delay.
-  // This methond can only be called from the same thread running the main loop.
+  // This method can only be called from the same thread running the main loop.
   TaskId PostTask(base::OnceClosure task) {
     return PostDelayedTask(std::move(task), base::TimeDelta());
   }
