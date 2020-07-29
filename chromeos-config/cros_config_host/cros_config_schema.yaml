@@ -251,6 +251,11 @@ properties:
                     android cdd.
                   enum:
                     - 280
+                camera-characteristics:
+                  <<: *system_file_v2
+                  description: |
+                    Defines camera_chacteristics.conf file provided to ARC
+                    during initialization.
               additionalProperties: false
             nnpalm:
               type: object

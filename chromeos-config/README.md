@@ -351,6 +351,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | build-properties | [build-properties](#build_properties) |  | True |  | False |  |
+| camera-characteristics | [camera-characteristics](#camera_characteristics) |  | False |  | False | Defines camera_chacteristics.conf file provided to ARC during initialization.  |
 | hardware-features | [hardware-features](#hardware_features) |  | False |  | False | Defines hardware_features.xml file provided to ARC during initialization.  |
 | media-profiles | [media-profiles](#media_profiles) |  | False |  | False | Defines media_profiles.xml file provided to ARC during initialization.  |
 | scale | integer |  | False |  | False | The screen density value in dpi that will be used for ARC apps. This value should be from the list of DPIs in android cdd. |
@@ -365,6 +366,12 @@ In the tables below,
 | oem | string |  | False |  | False | Original Equipment Manufacturer for this model. This generally means the OEM name printed on the device. |
 | pai-regions | string | ```(^([a-zA-Z0-9\.\-]+,)*[a-zA-Z0-9\.\-]+$)|(^\*$)``` | False |  | False | (Optional) Comma-separated allow list of region codes that can be appended to 'ro.oem.key1' for the purpose of targeting Play Auto Install applications by region. The value(s) should match the values that would be returned by `cros_region_data region_code` for the relevant region(s). If the device's region code is not in the allow list, or if there is no allow list, 'ro.oem.key1' will not include the region code. The allow list can also be a single '*' character to indicate that the region code should always be appended.  |
 | product | string |  | True |  | False | Product name to report in 'ro.product.name'. This may be the device name, or it can be something else, to allow several devices to be grouped into one product. |
+
+### camera-characteristics
+| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
+| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
+| build-path | string |  | True |  | True | Source of the file relative to the build system. |
+| system-path | string |  | True |  | False | Installation path for the file on the system image. |
 
 ### hardware-features
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
