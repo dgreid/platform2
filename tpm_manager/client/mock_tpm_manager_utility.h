@@ -8,6 +8,7 @@
 #include "tpm_manager/client/tpm_manager_utility.h"
 
 #include <string>
+#include <vector>
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -29,7 +30,13 @@ class TPM_MANAGER_EXPORT MockTpmManagerUtility : public TpmManagerUtility {
     ON_CALL(*this, GetDictionaryAttackInfo(_, _, _, _))
         .WillByDefault(Return(true));
     ON_CALL(*this, ResetDictionaryAttackLock()).WillByDefault(Return(true));
+    ON_CALL(*this, DefineSpace(_, _, _, _, _)).WillByDefault(Return(true));
+    ON_CALL(*this, DestroySpace(_)).WillByDefault(Return(true));
+    ON_CALL(*this, WriteSpace(_, _, _)).WillByDefault(Return(true));
     ON_CALL(*this, ReadSpace(_, _, _)).WillByDefault(Return(true));
+    ON_CALL(*this, ListSpaces(_)).WillByDefault(Return(true));
+    ON_CALL(*this, GetSpaceInfo(_, _, _, _)).WillByDefault(Return(true));
+    ON_CALL(*this, LockSpace(_)).WillByDefault(Return(true));
     ON_CALL(*this, GetOwnershipTakenSignalStatus(_, _, _))
         .WillByDefault(Return(true));
   }
@@ -50,7 +57,22 @@ class TPM_MANAGER_EXPORT MockTpmManagerUtility : public TpmManagerUtility {
               (int*, int*, bool*, int*),
               (override));
   MOCK_METHOD(bool, ResetDictionaryAttackLock, (), (override));
+  MOCK_METHOD(bool,
+              DefineSpace,
+              (uint32_t, size_t, bool, bool, bool),
+              (override));
+  MOCK_METHOD(bool, DestroySpace, (uint32_t), (override));
+  MOCK_METHOD(bool,
+              WriteSpace,
+              (uint32_t, const std::string&, bool),
+              (override));
   MOCK_METHOD(bool, ReadSpace, (uint32_t, bool, std::string*), (override));
+  MOCK_METHOD(bool, ListSpaces, (std::vector<uint32_t>*), (override));
+  MOCK_METHOD(bool,
+              GetSpaceInfo,
+              (uint32_t, uint32_t*, bool*, bool*),
+              (override));
+  MOCK_METHOD(bool, LockSpace, (uint32_t), (override));
   MOCK_METHOD(bool,
               GetOwnershipTakenSignalStatus,
               (bool*, bool*, LocalData*),

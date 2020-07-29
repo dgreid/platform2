@@ -87,7 +87,30 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   // |true| iff the operation succeeds.
   virtual bool ResetDictionaryAttackLock();
 
-  // Blocking call of |TpmOwnershipDBusProxy::ReadSpace|. Returns |true| iff
+  // Blocking call of |TpmNvramDBusProxy::DefineSpace|. Returns
+  // |true| iff the operation succeeds. This call sends a request to define
+  // the nvram at |index|.
+  virtual bool DefineSpace(uint32_t index,
+                           size_t size,
+                           bool write_define,
+                           bool bind_to_pcr0,
+                           bool firmware_readable);
+
+  // Blocking call of |TpmNvramDBusProxy::DestroySpace|. Returns
+  // |true| iff the operation succeeds. This call sends a request to destroy
+  // the nvram at |index|.
+  virtual bool DestroySpace(uint32_t index);
+
+  // Blocking call of |TpmNvramDBusProxy::WriteSpace|. Returns
+  // |true| iff the operation succeeds. This call sends a request to write the
+  // content of the nvram at |index|. If |use_owner_auth| is set, the request
+  // tells the service to use owner authorization. Note: currently the arbitrary
+  // auth value is not supported since we got no use case for now.
+  virtual bool WriteSpace(uint32_t index,
+                          const std::string& data,
+                          bool use_owner_auth);
+
+  // Blocking call of |TpmNvramDBusProxy::ReadSpace|. Returns |true| iff
   // the operation succeeds. This call sends a request to read the content of
   // the nvram at |index| and stores the output data in |output|. If
   // |use_owner_auth| is set, the request tells the service to use owner
@@ -96,6 +119,24 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   virtual bool ReadSpace(uint32_t index,
                          bool use_owner_auth,
                          std::string* output);
+
+  // Blocking call of |TpmNvramDBusProxy::ListSpaces|. Returns
+  // |true| iff the operation succeeds. This call stores the space id in
+  // |spaces|.
+  virtual bool ListSpaces(std::vector<uint32_t>* spaces);
+
+  // Blocking call of |TpmNvramDBusProxy::GetSpaceInfo|. Returns
+  // |true| iff the operation succeeds. This call stores |size|,
+  // |is_read_locked|, |is_write_locked| information of nvram at |index|.
+  virtual bool GetSpaceInfo(uint32_t index,
+                            uint32_t* size,
+                            bool* is_read_locked,
+                            bool* is_write_locked);
+
+  // Blocking call of |TpmNvramDBusProxy::LockSpace|. Returns
+  // |true| iff the operation succeeds. This call sends a request to lock
+  // the nvram at |index|.
+  virtual bool LockSpace(uint32_t index);
 
   // Gets the current status of the ownership taken signal. Returns |true| iff
   // the signal is connected, no matter if it's connected successfully or not.
@@ -161,6 +202,28 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   template <typename ReplyProtoType, typename MethodType>
   void SendTpmManagerRequestAndWait(const MethodType& method,
                                     ReplyProtoType* reply_proto);
+
+  // Sends a request to tpm_managerd and waits for a response. And these are
+  // wraps of SendTpmManagerRequestAndWait.
+  //
+  // Example usage:
+  //
+  // tpm_manager::TakeOwnershipReply reply;
+  // SendTpmOwnerRequestAndWait(
+  //     &tpm_manager::TpmOwnershipInterface::TakeOwnership,
+  //     tpm_manager::GetTpmStatusRequest(), &reply);
+  template <typename ReplyProtoType,
+            typename RequestProtoType,
+            typename MethodType>
+  void SendTpmOwnerRequestAndWait(const MethodType& method,
+                                  const RequestProtoType& request_proto,
+                                  ReplyProtoType* reply_proto);
+  template <typename ReplyProtoType,
+            typename RequestProtoType,
+            typename MethodType>
+  void SendTpmNvramRequestAndWait(const MethodType& method,
+                                  const RequestProtoType& request_proto,
+                                  ReplyProtoType* reply_proto);
 
   // |tpm_owner_| and |tpm_nvram_| typically point to |default_tpm_owner_| and
   // |default_tpm_nvram_| respectively, created/destroyed on the

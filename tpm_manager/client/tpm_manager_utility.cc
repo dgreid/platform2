@@ -47,12 +47,10 @@ bool TpmManagerUtility::Initialize() {
 }
 
 bool TpmManagerUtility::TakeOwnership() {
-  tpm_manager::TakeOwnershipReply reply;
   tpm_manager::TakeOwnershipRequest request;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::TakeOwnership,
-                 base::Unretained(tpm_owner_), request),
-      &reply);
+  tpm_manager::TakeOwnershipReply reply;
+  SendTpmOwnerRequestAndWait(&tpm_manager::TpmOwnershipInterface::TakeOwnership,
+                             request, &reply);
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to take ownership.";
     return false;
@@ -64,11 +62,8 @@ bool TpmManagerUtility::GetTpmStatus(bool* is_enabled,
                                      bool* is_owned,
                                      LocalData* local_data) {
   tpm_manager::GetTpmStatusReply tpm_status;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::GetTpmStatus,
-                 base::Unretained(tpm_owner_),
-                 tpm_manager::GetTpmStatusRequest()),
-      &tpm_status);
+  SendTpmOwnerRequestAndWait(&tpm_manager::TpmOwnershipInterface::GetTpmStatus,
+                             tpm_manager::GetTpmStatusRequest(), &tpm_status);
   if (tpm_status.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to read TPM state from tpm_managerd.";
     return false;
@@ -92,11 +87,9 @@ bool TpmManagerUtility::GetVersionInfo(uint32_t* family,
   }
 
   tpm_manager::GetVersionInfoReply version_info;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::GetVersionInfo,
-                 base::Unretained(tpm_owner_),
-                 tpm_manager::GetVersionInfoRequest()),
-      &version_info);
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::GetVersionInfo,
+      tpm_manager::GetVersionInfoRequest(), &version_info);
   if (version_info.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": failed to get version info from tpm_managerd.";
     return false;
@@ -112,12 +105,11 @@ bool TpmManagerUtility::GetVersionInfo(uint32_t* family,
 }
 
 bool TpmManagerUtility::RemoveOwnerDependency(const std::string& dependency) {
-  tpm_manager::RemoveOwnerDependencyReply reply;
   tpm_manager::RemoveOwnerDependencyRequest request;
+  tpm_manager::RemoveOwnerDependencyReply reply;
   request.set_owner_dependency(dependency);
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::RemoveOwnerDependency,
-                 base::Unretained(tpm_owner_), request),
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::RemoveOwnerDependency, request,
       &reply);
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to remove the dependency of "
@@ -128,11 +120,10 @@ bool TpmManagerUtility::RemoveOwnerDependency(const std::string& dependency) {
 }
 
 bool TpmManagerUtility::ClearStoredOwnerPassword() {
-  tpm_manager::ClearStoredOwnerPasswordReply reply;
   tpm_manager::ClearStoredOwnerPasswordRequest request;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::ClearStoredOwnerPassword,
-                 base::Unretained(tpm_owner_), request),
+  tpm_manager::ClearStoredOwnerPasswordReply reply;
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::ClearStoredOwnerPassword, request,
       &reply);
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to clear owner password. ";
@@ -174,6 +165,30 @@ void TpmManagerUtility::SendTpmManagerRequestAndWait(
   event.Wait();
 }
 
+template <typename ReplyProtoType,
+          typename RequestProtoType,
+          typename MethodType>
+void TpmManagerUtility::SendTpmOwnerRequestAndWait(
+    const MethodType& method,
+    const RequestProtoType& request_proto,
+    ReplyProtoType* reply_proto) {
+  SendTpmManagerRequestAndWait(
+      base::Bind(method, base::Unretained(tpm_owner_), request_proto),
+      reply_proto);
+}
+
+template <typename ReplyProtoType,
+          typename RequestProtoType,
+          typename MethodType>
+void TpmManagerUtility::SendTpmNvramRequestAndWait(
+    const MethodType& method,
+    const RequestProtoType& request_proto,
+    ReplyProtoType* reply_proto) {
+  SendTpmManagerRequestAndWait(
+      base::Bind(method, base::Unretained(tpm_nvram_), request_proto),
+      reply_proto);
+}
+
 void TpmManagerUtility::ShutdownTask() {
   tpm_owner_ = nullptr;
   tpm_nvram_ = nullptr;
@@ -185,11 +200,10 @@ bool TpmManagerUtility::GetDictionaryAttackInfo(int* counter,
                                                 int* threshold,
                                                 bool* lockout,
                                                 int* seconds_remaining) {
-  tpm_manager::GetDictionaryAttackInfoReply reply;
   tpm_manager::GetDictionaryAttackInfoRequest request;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfo,
-                 base::Unretained(tpm_owner_), request),
+  tpm_manager::GetDictionaryAttackInfoReply reply;
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfo, request,
       &reply);
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__
@@ -206,14 +220,77 @@ bool TpmManagerUtility::GetDictionaryAttackInfo(int* counter,
 }
 
 bool TpmManagerUtility::ResetDictionaryAttackLock() {
-  tpm_manager::ResetDictionaryAttackLockReply reply;
   tpm_manager::ResetDictionaryAttackLockRequest request;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmOwnershipInterface::ResetDictionaryAttackLock,
-                 base::Unretained(tpm_owner_), request),
+  tpm_manager::ResetDictionaryAttackLockReply reply;
+  SendTpmOwnerRequestAndWait(
+      &tpm_manager::TpmOwnershipInterface::ResetDictionaryAttackLock, request,
       &reply);
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to reset DA lock.";
+    return false;
+  }
+  return true;
+}
+
+bool TpmManagerUtility::DefineSpace(uint32_t index,
+                                    size_t size,
+                                    bool write_define,
+                                    bool bind_to_pcr0,
+                                    bool firmware_readable) {
+  tpm_manager::DefineSpaceRequest request;
+  request.set_index(index);
+  request.set_size(size);
+  if (write_define) {
+    request.add_attributes(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK);
+  }
+  if (bind_to_pcr0) {
+    request.set_policy(tpm_manager::NVRAM_POLICY_PCR0);
+  }
+  if (firmware_readable) {
+    request.add_attributes(tpm_manager::NVRAM_PLATFORM_READ);
+  }
+  tpm_manager::DefineSpaceReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::DefineSpace,
+                             request, &reply);
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__
+               << "Failed to define nvram space: " << reply.result();
+    return false;
+  }
+  return true;
+}
+
+bool TpmManagerUtility::DestroySpace(uint32_t index) {
+  tpm_manager::DestroySpaceRequest request;
+  request.set_index(index);
+  tpm_manager::DestroySpaceReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::DestroySpace,
+                             request, &reply);
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__
+               << "Failed to destroy nvram space: " << reply.result();
+    return false;
+  }
+  return true;
+}
+
+bool TpmManagerUtility::WriteSpace(uint32_t index,
+                                   const std::string& data,
+                                   bool use_owner_auth) {
+  tpm_manager::WriteSpaceRequest request;
+  request.set_index(index);
+  request.set_data(data);
+  request.set_use_owner_authorization(use_owner_auth);
+  tpm_manager::WriteSpaceReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::WriteSpace,
+                             request, &reply);
+  if (reply.result() == tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST) {
+    LOG(ERROR) << __func__ << ": NV Index [" << index << "] does not exist.";
+    return false;
+  }
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__ << ": Failed to write NV index [" << index << "]"
+               << reply.result();
     return false;
   }
   return true;
@@ -225,21 +302,70 @@ bool TpmManagerUtility::ReadSpace(uint32_t index,
   tpm_manager::ReadSpaceRequest request;
   request.set_index(index);
   request.set_use_owner_authorization(use_owner_auth);
-  tpm_manager::ReadSpaceReply response;
-  SendTpmManagerRequestAndWait(
-      base::Bind(&tpm_manager::TpmNvramInterface::ReadSpace,
-                 base::Unretained(tpm_nvram_), request),
-      &response);
-  if (response.result() == tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST) {
+  tpm_manager::ReadSpaceReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::ReadSpace,
+                             request, &reply);
+  if (reply.result() == tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST) {
     LOG(ERROR) << __func__ << ": NV Index [" << index << "] does not exist.";
     return false;
   }
-  if (response.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to read NV index [" << index << "]"
-               << response.result();
+               << reply.result();
     return false;
   }
-  *output = response.data();
+  *output = reply.data();
+  return true;
+}
+
+bool TpmManagerUtility::ListSpaces(std::vector<uint32_t>* spaces) {
+  tpm_manager::ListSpacesRequest request;
+  tpm_manager::ListSpacesReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::ListSpaces,
+                             request, &reply);
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__ << "Failed to list nvram spaces: " << reply.result();
+    return false;
+  }
+  spaces->clear();
+  spaces->reserve(reply.index_list_size());
+  for (int i = 0; i < reply.index_list_size(); ++i) {
+    spaces->push_back(reply.index_list(i));
+  }
+  return true;
+}
+
+bool TpmManagerUtility::GetSpaceInfo(uint32_t index,
+                                     uint32_t* size,
+                                     bool* is_read_locked,
+                                     bool* is_write_locked) {
+  tpm_manager::GetSpaceInfoRequest request;
+  request.set_index(index);
+  tpm_manager::GetSpaceInfoReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::GetSpaceInfo,
+                             request, &reply);
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__ << "Failed to get space info for space " << index
+               << ": " << reply.result();
+    return false;
+  }
+  *size = reply.size();
+  *is_read_locked = reply.is_read_locked();
+  *is_write_locked = reply.is_write_locked();
+  return true;
+}
+
+bool TpmManagerUtility::LockSpace(uint32_t index) {
+  tpm_manager::LockSpaceRequest request;
+  request.set_index(index);
+  request.set_lock_write(true);
+  tpm_manager::LockSpaceReply reply;
+  SendTpmNvramRequestAndWait(&tpm_manager::TpmNvramInterface::LockSpace,
+                             request, &reply);
+  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
+    LOG(ERROR) << __func__ << "Failed to lock nvram space: " << reply.result();
+    return false;
+  }
   return true;
 }
 

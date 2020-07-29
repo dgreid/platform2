@@ -7,6 +7,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include <set>
 #include <string>
 #include <tuple>
 
@@ -62,6 +63,14 @@ class TpmManagerUtilityTest : public Test {
     ON_CALL(mock_tpm_owner_, ResetDictionaryAttackLock(_, _))
         .WillByDefault(InvokeCallbackArgument<1>(
             ByRef(reset_dictionary_attack_lock_reply_)));
+    ON_CALL(mock_tpm_nvram_, DestroySpace(_, _))
+        .WillByDefault(InvokeCallbackArgument<1>(ByRef(destroy_space_reply_)));
+    ON_CALL(mock_tpm_nvram_, ListSpaces(_, _))
+        .WillByDefault(InvokeCallbackArgument<1>(ByRef(list_spaces_reply_)));
+    ON_CALL(mock_tpm_nvram_, GetSpaceInfo(_, _))
+        .WillByDefault(InvokeCallbackArgument<1>(ByRef(get_space_info_reply_)));
+    ON_CALL(mock_tpm_nvram_, LockSpace(_, _))
+        .WillByDefault(InvokeCallbackArgument<1>(ByRef(lock_space_reply_)));
   }
   void SetUp() override { ASSERT_TRUE(tpm_manager_utility_.Initialize()); }
 
@@ -69,6 +78,16 @@ class TpmManagerUtilityTest : public Test {
                         tpm_manager::NvramResult result,
                         base::Optional<std::string> value,
                         bool expect_success);
+
+  void RunDefineSpaceTest(bool write_define,
+                          bool bind_to_pcr0,
+                          bool firmware_readable,
+                          tpm_manager::NvramResult result,
+                          bool expect_success);
+
+  void RunWriteSpaceTest(bool use_owner_auth,
+                         tpm_manager::NvramResult result,
+                         bool expect_success);
 
   NiceMock<tpm_manager::MockTpmOwnershipInterface> mock_tpm_owner_;
   NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_nvram_;
@@ -83,6 +102,10 @@ class TpmManagerUtilityTest : public Test {
   tpm_manager::GetDictionaryAttackInfoReply get_dictionary_attack_info_reply_;
   tpm_manager::ResetDictionaryAttackLockReply
       reset_dictionary_attack_lock_reply_;
+  tpm_manager::DestroySpaceReply destroy_space_reply_;
+  tpm_manager::ListSpacesReply list_spaces_reply_;
+  tpm_manager::GetSpaceInfoReply get_space_info_reply_;
+  tpm_manager::LockSpaceReply lock_space_reply_;
 };
 
 TEST_F(TpmManagerUtilityTest, TakeOwnership) {
@@ -318,6 +341,74 @@ TEST_F(TpmManagerUtilityTest, OwnershipTakenSignal) {
       nullptr, nullptr, nullptr));
 }
 
+void TpmManagerUtilityTest::RunDefineSpaceTest(bool write_define,
+                                               bool bind_to_pcr0,
+                                               bool firmware_readable,
+                                               tpm_manager::NvramResult result,
+                                               bool expect_success) {
+  constexpr uint32_t kNvIndex = 0x0123456;
+  constexpr size_t kSize = 0x1234;
+
+  tpm_manager::DefineSpaceRequest request;
+
+  tpm_manager::DefineSpaceReply reply;
+  reply.set_result(result);
+
+  EXPECT_CALL(mock_tpm_nvram_, DefineSpace(_, _))
+      .WillOnce(
+          DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
+
+  std::string output;
+  EXPECT_EQ(expect_success,
+            tpm_manager_utility_.DefineSpace(kNvIndex, kSize, write_define,
+                                             bind_to_pcr0, firmware_readable));
+
+  EXPECT_EQ(kNvIndex, request.index());
+  EXPECT_EQ(kSize, request.size());
+  EXPECT_EQ(bind_to_pcr0, request.policy() == tpm_manager::NVRAM_POLICY_PCR0);
+  std::set<tpm_manager::NvramSpaceAttribute> attrs;
+  for (auto attr : request.attributes()) {
+    EXPECT_TRUE(attrs.insert(tpm_manager::NvramSpaceAttribute(attr)).second);
+  }
+  EXPECT_EQ(
+      write_define,
+      attrs.find(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK) != attrs.end());
+  EXPECT_EQ(firmware_readable,
+            attrs.find(tpm_manager::NVRAM_PLATFORM_READ) != attrs.end());
+}
+
+TEST_F(TpmManagerUtilityTest, DefineSpace) {
+  for (bool write_define : {true, false}) {
+    for (bool bind_to_pcr0 : {true, false}) {
+      for (bool firmware_readable : {true, false}) {
+        RunDefineSpaceTest(write_define, bind_to_pcr0, firmware_readable,
+                           tpm_manager::NVRAM_RESULT_SUCCESS,
+                           true /* success */);
+      }
+    }
+  }
+}
+
+TEST_F(TpmManagerUtilityTest, DefineSpaceDeviceError) {
+  RunDefineSpaceTest(false, false, false,
+                     tpm_manager::NVRAM_RESULT_DEVICE_ERROR,
+                     false /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, DestroySpace) {
+  destroy_space_reply_.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
+  EXPECT_TRUE(tpm_manager_utility_.DestroySpace(0x123456));
+}
+
+TEST_F(TpmManagerUtilityTest, DestroySpaceFail) {
+  destroy_space_reply_.set_result(tpm_manager::NVRAM_RESULT_DEVICE_ERROR);
+  EXPECT_FALSE(tpm_manager_utility_.DestroySpace(0x123456));
+  destroy_space_reply_.set_result(tpm_manager::NVRAM_RESULT_OPERATION_DISABLED);
+  EXPECT_FALSE(tpm_manager_utility_.DestroySpace(0x123456));
+  destroy_space_reply_.set_result(tpm_manager::NVRAM_RESULT_ACCESS_DENIED);
+  EXPECT_FALSE(tpm_manager_utility_.DestroySpace(0x123456));
+}
+
 void TpmManagerUtilityTest::RunReadSpaceTest(bool use_owner_auth,
                                              tpm_manager::NvramResult result,
                                              base::Optional<std::string> value,
@@ -367,6 +458,118 @@ TEST_F(TpmManagerUtilityTest, ReadSpaceError) {
   RunReadSpaceTest(false /* owner auth */,
                    tpm_manager::NVRAM_RESULT_ACCESS_DENIED, {},
                    false /* success */);
+}
+
+void TpmManagerUtilityTest::RunWriteSpaceTest(bool use_owner_auth,
+                                              tpm_manager::NvramResult result,
+                                              bool expect_success) {
+  constexpr uint32_t kNvIndex = 0x0123456;
+  const std::string kData = "write space test";
+  tpm_manager::WriteSpaceRequest request;
+
+  tpm_manager::WriteSpaceReply reply;
+  reply.set_result(result);
+
+  EXPECT_CALL(mock_tpm_nvram_, WriteSpace(_, _))
+      .WillOnce(
+          DoAll(SaveArg<0>(&request), InvokeCallbackArgument<1>(ByRef(reply))));
+
+  EXPECT_EQ(expect_success,
+            tpm_manager_utility_.WriteSpace(kNvIndex, kData, use_owner_auth));
+
+  EXPECT_EQ(kNvIndex, request.index());
+  EXPECT_EQ(use_owner_auth, request.use_owner_authorization());
+}
+
+TEST_F(TpmManagerUtilityTest, WriteSpace) {
+  RunWriteSpaceTest(false /* owner auth */, tpm_manager::NVRAM_RESULT_SUCCESS,
+                    true /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, WriteSpaceOwnerAuth) {
+  RunWriteSpaceTest(true /* owner auth */, tpm_manager::NVRAM_RESULT_SUCCESS,
+                    true /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, WriteSpaceNvRamSpaceDoesNotExist) {
+  RunWriteSpaceTest(false /* owner auth */,
+                    tpm_manager::NVRAM_RESULT_SPACE_DOES_NOT_EXIST,
+                    false /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, WriteSpaceError) {
+  RunWriteSpaceTest(false /* owner auth */,
+                    tpm_manager::NVRAM_RESULT_ACCESS_DENIED,
+                    false /* success */);
+}
+
+TEST_F(TpmManagerUtilityTest, ListSpaces) {
+  const std::vector<uint32_t> expect = {1, 5, 7};
+  std::vector<uint32_t> result;
+  list_spaces_reply_.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
+  for (uint32_t index : expect) {
+    list_spaces_reply_.add_index_list(index);
+  }
+  EXPECT_TRUE(tpm_manager_utility_.ListSpaces(&result));
+  EXPECT_EQ(result, expect);
+}
+
+TEST_F(TpmManagerUtilityTest, ListSpacesFail) {
+  std::vector<uint32_t> result;
+  list_spaces_reply_.set_result(tpm_manager::NVRAM_RESULT_DEVICE_ERROR);
+  EXPECT_FALSE(tpm_manager_utility_.ListSpaces(&result));
+  list_spaces_reply_.set_result(tpm_manager::NVRAM_RESULT_ACCESS_DENIED);
+  EXPECT_FALSE(tpm_manager_utility_.ListSpaces(&result));
+}
+
+TEST_F(TpmManagerUtilityTest, GetSpaceInfo) {
+  constexpr uint32_t kSize = 0x9487;
+  constexpr bool kReadLocked = true;
+  constexpr bool kWriteLocked = true;
+  get_space_info_reply_.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
+  get_space_info_reply_.set_size(kSize);
+  get_space_info_reply_.set_is_read_locked(kReadLocked);
+  get_space_info_reply_.set_is_write_locked(kWriteLocked);
+  uint32_t size = 0;
+  bool is_read_locked = false;
+  bool is_write_locked = false;
+  EXPECT_TRUE(tpm_manager_utility_.GetSpaceInfo(
+      0x123456, &size, &is_read_locked, &is_write_locked));
+  EXPECT_EQ(kSize, size);
+  EXPECT_EQ(kReadLocked, is_read_locked);
+  EXPECT_EQ(kWriteLocked, is_write_locked);
+}
+
+TEST_F(TpmManagerUtilityTest, GetSpaceInfoFail) {
+  uint32_t size = 0;
+  bool is_read_locked = false;
+  bool is_write_locked = false;
+  get_space_info_reply_.set_result(tpm_manager::NVRAM_RESULT_DEVICE_ERROR);
+  EXPECT_FALSE(tpm_manager_utility_.GetSpaceInfo(
+      0x123456, &size, &is_read_locked, &is_write_locked));
+  get_space_info_reply_.set_result(tpm_manager::NVRAM_RESULT_ACCESS_DENIED);
+  EXPECT_FALSE(tpm_manager_utility_.GetSpaceInfo(
+      0x123456, &size, &is_read_locked, &is_write_locked));
+}
+
+TEST_F(TpmManagerUtilityTest, LockSpace) {
+  tpm_manager::LockSpaceRequest request;
+  lock_space_reply_.set_result(tpm_manager::NVRAM_RESULT_SUCCESS);
+  EXPECT_CALL(mock_tpm_nvram_, LockSpace(_, _))
+      .WillOnce(DoAll(SaveArg<0>(&request),
+                      InvokeCallbackArgument<1>(ByRef(lock_space_reply_))));
+  EXPECT_TRUE(tpm_manager_utility_.LockSpace(0x123456));
+  EXPECT_TRUE(request.lock_write());
+  EXPECT_FALSE(request.lock_read());
+}
+
+TEST_F(TpmManagerUtilityTest, LockSpaceFail) {
+  lock_space_reply_.set_result(tpm_manager::NVRAM_RESULT_DEVICE_ERROR);
+  EXPECT_FALSE(tpm_manager_utility_.LockSpace(0x123456));
+  lock_space_reply_.set_result(tpm_manager::NVRAM_RESULT_OPERATION_DISABLED);
+  EXPECT_FALSE(tpm_manager_utility_.LockSpace(0x123456));
+  lock_space_reply_.set_result(tpm_manager::NVRAM_RESULT_ACCESS_DENIED);
+  EXPECT_FALSE(tpm_manager_utility_.LockSpace(0x123456));
 }
 
 }  // namespace tpm_manager
