@@ -558,6 +558,10 @@ void AddVmodulePatterns(ChromiumCommandBuilder* builder) {
   // TODO(https://crbug.com/943790): Remove after model development is complete.
   builder->AddVmodulePattern("*/chromeos/power/auto_screen_brightness/*=1");
 
+  // TODO(https://crbug.com/1106586,https://crbug.com/1102123): Remove after
+  // issues with night light are closed.
+  builder->AddVmodulePattern("*night_light*=1");
+
   if (builder->UseFlagIsSet("cheets"))
     builder->AddVmodulePattern("*arc/*=1");
 }
