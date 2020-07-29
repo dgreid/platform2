@@ -132,7 +132,14 @@ class WebAuthnHandlerTest : public ::testing::Test {
   void SetUp() override { CreateHandler(); }
 
   void TearDown() override {
-    EXPECT_EQ(presence_requested_expected_, presence_requested_count_);
+    if (presence_requested_expected_ == kMaxRetries) {
+      // Due to clock and scheduling variances, the actual retries before
+      // timeout could be one less.
+      EXPECT_TRUE(presence_requested_count_ == kMaxRetries ||
+                  presence_requested_count_ == kMaxRetries - 1);
+    } else {
+      EXPECT_EQ(presence_requested_expected_, presence_requested_count_);
+    }
   }
 
  protected:
