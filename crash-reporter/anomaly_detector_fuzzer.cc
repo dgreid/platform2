@@ -14,6 +14,7 @@
 #include <gmock/gmock.h>
 #include <metrics/metrics_library_mock.h>
 
+#include "crash-reporter/crash_reporter_parser.h"
 #include "crash-reporter/test_util.h"
 
 namespace {
@@ -33,13 +34,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider stream(data, size);
 
   std::map<std::string, std::unique_ptr<anomaly::Parser>> parsers;
-  parsers["audit"] = std::make_unique<anomaly::SELinuxParser>();
-  parsers["init"] = std::make_unique<anomaly::ServiceParser>();
+  parsers["audit"] =
+      std::make_unique<anomaly::SELinuxParser>(stream.ConsumeBool());
+  parsers["init"] =
+      std::make_unique<anomaly::ServiceParser>(stream.ConsumeBool());
   parsers["kernel"] = std::make_unique<anomaly::KernelParser>();
   parsers["powerd_suspend"] = std::make_unique<anomaly::SuspendParser>();
   parsers["crash_reporter"] = std::make_unique<anomaly::CrashReporterParser>(
       std::make_unique<test_util::AdvancingClock>(),
-      std::make_unique<testing::NiceMock<MetricsLibraryMock>>());
+      std::make_unique<testing::NiceMock<MetricsLibraryMock>>(),
+      stream.ConsumeBool());
 
   const std::string journalTags[] = {"audit", "init", "kernel",
                                      "powerd_suspend", "crash_reporter"};

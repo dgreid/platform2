@@ -411,10 +411,14 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer:common_fuzzer",
       ":anomaly_detector_config",
     ]
-    deps = [ ":libcrash_test_util" ]
+    deps = [
+      ":libcrash",
+      ":libcrash_test_util",
+    ]
     sources = [
       "anomaly_detector.cc",
       "anomaly_detector_fuzzer.cc",
+      "crash_reporter_parser.cc",
     ]
     libs = [ "system_api-anomaly_detector-protos" ]
   }
