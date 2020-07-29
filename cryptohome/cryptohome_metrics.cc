@@ -122,6 +122,9 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     // This is only being reported from the out-of-process helper so it's
     // covered by the same 3-second timeout.
     {"Cryptohome.TimeToPerformEphemeralMount", 0, 3000, 50},
+    // Non-ephemeral mounts are currently mounted in-process but it makes sense
+    // to keep the same scale for them as ephemeral mounts.
+    {"Cryptohome.TimeToPerformMount", 0, 3000, 50},
 };
 
 static_assert(base::size(kTimerHistogramParams) == cryptohome::kNumTimerTypes,

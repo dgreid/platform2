@@ -615,11 +615,14 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   MountHelper::Options mount_opts = {
       mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
 
+  cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
   if (!helper->PerformMount(mount_opts, credentials.username(), key_signature,
                             fnek_signature, created, mount_error)) {
     LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
   }
+
+  cryptohome::ReportTimerStop(cryptohome::kPerformMountTimer);
 
   if (!UserSignInEffects(true /* is_mount */, is_owner)) {
     LOG(ERROR) << "Failed to set user type, aborting mount";

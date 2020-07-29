@@ -91,6 +91,7 @@ enum TimerType {
   kSessionUnlockTimer,
   kMountGuestExTimer,
   kPerformEphemeralMountTimer,
+  kPerformMountTimer,
   kNumTimerTypes  // For the number of timer types.
 };
 

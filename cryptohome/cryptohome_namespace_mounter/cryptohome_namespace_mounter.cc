@@ -174,12 +174,15 @@ int main(int argc, char** argv) {
     mount_options.shadow_only = request.shadow_only();
 
     cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
+    cryptohome::ReportTimerStart(cryptohome::kPerformMountTimer);
     if (!mounter.PerformMount(mount_options, request.username(),
                               request.fek_signature(), request.fnek_signature(),
                               request.is_pristine(), &error)) {
       cryptohome::ForkAndCrash("PerformMount failed");
       return EX_SOFTWARE;
     }
+
+    cryptohome::ReportTimerStop(cryptohome::kPerformMountTimer);
     response.set_mount_error(static_cast<uint32_t>(error));
     VLOG(1) << "PerformMount succeeded";
   }
