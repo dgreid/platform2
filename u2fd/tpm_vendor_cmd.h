@@ -13,6 +13,14 @@
 
 namespace u2f {
 
+// Temporary workaround before cr50 5.6/6.6 takes effect in ChromeOS.
+// TODO(yichengli): Remove once cr50 5.6/6.6 is in effect.
+struct legacy_u2f_generate_req {
+  uint8_t appId[U2F_APPID_SIZE]; /* Application id */
+  uint8_t userSecret[U2F_P256_SIZE];
+  uint8_t flags;
+};
+
 // The TPM response code is all zero for success.
 // Errors are a little complicated:
 //
@@ -42,7 +50,7 @@ class TpmVendorCommandProxy : public trunks::TrunksDBusProxy {
   // resp_out with the reply.
   // Returns the TPM response code, or kVendorRcInvalidResponse if the
   // response was invalid.
-  virtual uint32_t SendU2fGenerate(const struct u2f_generate_req& req,
+  virtual uint32_t SendU2fGenerate(const struct legacy_u2f_generate_req& req,
                                    u2f_generate_resp* resp_out);
 
   // Sends the VENDOR_CC_U2F_SIGN command to cr50, and populates

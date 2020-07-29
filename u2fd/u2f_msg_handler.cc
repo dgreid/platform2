@@ -293,7 +293,7 @@ U2fMessageHandler::Cr50CmdStatus U2fMessageHandler::DoU2fGenerate(
     return Cr50CmdStatus::kInvalidState;
   }
 
-  struct u2f_generate_req generate_req = {
+  struct legacy_u2f_generate_req generate_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   util::VectorToObject(app_id, generate_req.appId);
