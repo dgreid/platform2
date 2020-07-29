@@ -128,18 +128,10 @@ bool DiskCleanupRoutines::DeleteUserAndroidCache(
         std::make_pair(next_path.DirName(), inode);
     if (cache_inodes.find(parent_inode_pair) != cache_inodes.end()) {
       VLOG(1) << "Deleting Android Cache " << next_path.value();
-      std::vector<FilePath> entry_list;
-      if (!platform_->EnumerateDirectoryEntries(next_path, false,
-                                                &entry_list)) {
-        PLOG(WARNING) << "Failed to list " << next_path.value();
+      if (!DeleteDirectoryContents(next_path)) {
+        LOG(ERROR) << "Failed to remove android cache " << next_path.value();
         ret = false;
-        continue;
       }
-      for (const FilePath& entry : entry_list)
-        if (!platform_->DeleteFile(entry, true)) {
-          PLOG(WARNING) << "Failed to remove " << entry.value();
-          ret = false;
-        }
       cache_inodes.erase(parent_inode_pair);
     }
     for (const char* attribute :

@@ -290,8 +290,13 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
     for (const auto& entryToDelete : entriesToDelete)
       entries.push_back(entry.Append(entryToDelete));
 
-    EXPECT_CALL(platform_, EnumerateDirectoryEntries(entry, false, _))
-        .WillOnce(DoAll(SetArgPointee<2>(entries), Return(true)));
+    EXPECT_CALL(platform_,
+                GetFileEnumerator(entry, false,
+                                  base::FileEnumerator::FILES |
+                                      base::FileEnumerator::DIRECTORIES |
+                                      base::FileEnumerator::SHOW_SYM_LINKS))
+        .WillRepeatedly(InvokeWithoutArgs(
+            std::bind(CreateMockFileEnumeratorWithEntries, entries)));
 
     for (const auto& entry : entries)
       EXPECT_CALL(platform_, DeleteFile(entry, true)).WillOnce(Return(true));
