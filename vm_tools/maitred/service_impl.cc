@@ -642,9 +642,16 @@ grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
     return grpc::Status(grpc::INTERNAL, "lxcfs did not launch");
   }
 
-  if (!init_->Spawn({"tremplin", "-lxd_subnet", request->lxd_ipv4_subnet()},
-                    lxd_env_, true /*respawn*/, true /*use_console*/,
-                    false /*wait_for_exit*/, &launch_info)) {
+  std::vector<std::string> tremplin_argv{"tremplin", "-lxd_subnet",
+                                         request->lxd_ipv4_subnet()};
+  for (const auto feature : request->feature()) {
+    tremplin_argv.emplace_back("-feature");
+    tremplin_argv.emplace_back(request->Feature_Name(feature));
+  }
+
+  if (!init_->Spawn(tremplin_argv, lxd_env_, true /*respawn*/,
+                    true /*use_console*/, false /*wait_for_exit*/,
+                    &launch_info)) {
     return grpc::Status(grpc::INTERNAL, "failed to spawn tremplin");
   }
   if (launch_info.status != Init::ProcessStatus::LAUNCHED) {

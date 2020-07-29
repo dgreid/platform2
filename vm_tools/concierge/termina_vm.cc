@@ -37,6 +37,9 @@ namespace vm_tools {
 namespace concierge {
 namespace {
 
+// Features to enable.
+constexpr StartTerminaRequest_Feature kEnabledTerminaFeatures[] = {};
+
 // Name of the control socket used for controlling crosvm.
 constexpr char kCrosvmSocket[] = "crosvm.sock";
 
@@ -433,6 +436,9 @@ bool TerminaVm::StartTermina(std::string lxd_subnet,
   request.mutable_lxd_ipv4_subnet()->swap(lxd_subnet);
   request.set_stateful_device(StatefulDevice());
   request.set_allow_privileged_containers(allow_privileged_containers);
+  for (const auto feature : kEnabledTerminaFeatures) {
+    request.add_feature(feature);
+  }
 
   grpc::ClientContext ctx;
   ctx.set_deadline(gpr_time_add(
