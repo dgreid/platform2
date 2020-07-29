@@ -170,10 +170,6 @@ executable("crash_sender") {
 }
 
 pkg_config("anomaly_detector_config") {
-  # Laikitu uses systemd, while the rest of Chrome OS uses only the journald
-  # part of it, which has a different pkg-config name, but the same library.
-  libs = [ "systemd" ]
-
   # NOSORT
   pkg_deps = [
     "libbrillo",
