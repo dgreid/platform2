@@ -125,6 +125,7 @@ message StartTerminaRequest {
   enum Feature {
     UNKNOWN = 0;
     USED_BY_TESTS = 1;
+    START_LXD = 2;
   }
   // The address for tremplin to connect to.
   uint32 tremplin_ipv4_address = 1;
