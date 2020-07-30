@@ -430,6 +430,11 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
 
   if (builder->UseFlagIsSet("enable_heuristic_palm_detection_filter"))
     builder->AddFeatureEnableOverride("EnableHeuristicPalmDetectionFilter");
+
+  if (builder->UseFlagIsSet("ondevice_handwriting"))
+    builder->AddArg("--ondevice_handwriting=use_rootfs");
+  else if (builder->UseFlagIsSet("ondevice_handwriting_dlc"))
+    builder->AddArg("--ondevice_handwriting=use_dlc");
 }
 
 // Adds UI-related flags to the command line.
