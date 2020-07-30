@@ -13,8 +13,6 @@ group("all") {
 }
 
 pkg_config("target_defaults") {
-  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
-  libs = [ "tensorflowlite" ]
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
