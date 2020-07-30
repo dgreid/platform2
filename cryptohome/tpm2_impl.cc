@@ -103,23 +103,6 @@ Tpm::TpmRetryAction ResultToRetryAction(TPM_RC result) {
   return action;
 }
 
-// Sets owner_dependency field in RemoveOwnerDependencyRequest based on
-// the provided TpmPersistentState::TpmOwnerDependency value
-void SetOwnerDependency(TpmPersistentState::TpmOwnerDependency dependency,
-                        std::string* dependency_field) {
-  switch (dependency) {
-    case TpmPersistentState::TpmOwnerDependency::kInstallAttributes:
-      dependency_field->assign(tpm_manager::kTpmOwnerDependency_Nvram);
-      break;
-    case TpmPersistentState::TpmOwnerDependency::kAttestation:
-      dependency_field->assign(tpm_manager::kTpmOwnerDependency_Attestation);
-      break;
-    default:
-      dependency_field->clear();
-      break;
-  }
-}
-
 // Returns the total number of bits set in the first |size| elements from
 // |array|.
 int CountSetBits(const uint8_t* array, size_t size) {
@@ -132,6 +115,20 @@ int CountSetBits(const uint8_t* array, size_t size) {
     }
   }
   return res;
+}
+
+std::string OwnerDependencyEnumClassToString(
+    TpmPersistentState::TpmOwnerDependency dependency) {
+  switch (dependency) {
+    case TpmPersistentState::TpmOwnerDependency::kInstallAttributes:
+      return tpm_manager::kTpmOwnerDependency_Nvram;
+    case TpmPersistentState::TpmOwnerDependency::kAttestation:
+      return tpm_manager::kTpmOwnerDependency_Attestation;
+    default:
+      NOTREACHED() << __func__ << ": Unexpected enum class value: "
+                   << static_cast<int>(dependency);
+      return "";
+  }
 }
 
 }  // namespace
@@ -240,34 +237,62 @@ const TpmAlerts h1AlertsMap[trunks::kH1AlertsSize] = {
 };
 
 Tpm2Impl::Tpm2Impl(TrunksFactory* factory,
-                   tpm_manager::TpmOwnershipInterface* tpm_owner,
-                   tpm_manager::TpmNvramInterface* tpm_nvram)
-    : has_external_trunks_context_(true),
-      tpm_owner_(tpm_owner),
-      tpm_nvram_(tpm_nvram) {
+                   tpm_manager::TpmManagerUtility* tpm_manager_utility)
+    : tpm_manager_utility_(tpm_manager_utility),
+      has_external_trunks_context_(true) {
   external_trunks_context_.factory = factory;
   external_trunks_context_.tpm_state = factory->GetTpmState();
   external_trunks_context_.tpm_utility = factory->GetTpmUtility();
 }
 
 bool Tpm2Impl::GetOwnerPassword(brillo::SecureBlob* owner_password) {
-  if (!UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED)) {
-    return false;
+  if (IsOwned()) {
+    *owner_password =
+        brillo::SecureBlob(last_tpm_manager_data_.owner_password());
+    if (owner_password->empty()) {
+      LOG(WARNING) << __func__
+                   << ": Trying to get owner password after it is cleared.";
+    }
+  } else {
+    LOG(ERROR)
+        << __func__
+        << ": Cannot get owner password until TPM is confirmed to be owned.";
+    owner_password->clear();
   }
-  SecureBlob tmp(tpm_status_.local_data().owner_password());
-  owner_password->swap(tmp);
-  return true;
+  return !owner_password->empty();
 }
 
 void Tpm2Impl::SetOwnerPassword(const SecureBlob& /* owner_password */) {
   LOG(ERROR) << __func__ << ": Not implemented.";
 }
 
-bool Tpm2Impl::IsEnabled() {
-  if (!UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED)) {
+bool Tpm2Impl::InitializeTpmManagerUtility() {
+  if (!tpm_manager_utility_) {
+    tpm_manager_utility_ = tpm_manager::TpmManagerUtility::GetSingleton();
+    if (!tpm_manager_utility_) {
+      LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
+    }
+  }
+  return tpm_manager_utility_ && tpm_manager_utility_->Initialize();
+}
+
+bool Tpm2Impl::CacheTpmManagerStatus() {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  return tpm_status_.enabled();
+  return tpm_manager_utility_->GetTpmStatus(&is_enabled_, &is_owned_,
+                                            &last_tpm_manager_data_);
+}
+
+bool Tpm2Impl::IsEnabled() {
+  if (!is_enabled_) {
+    if (!CacheTpmManagerStatus()) {
+      LOG(ERROR) << __func__ << ": Failed to call |UpdateTpmStatus|.";
+      return false;
+    }
+  }
+  return is_enabled_;
 }
 
 void Tpm2Impl::SetIsEnabled(bool /* enabled */) {
@@ -275,16 +300,12 @@ void Tpm2Impl::SetIsEnabled(bool /* enabled */) {
 }
 
 bool Tpm2Impl::IsOwned() {
-  if (is_owned_ || has_checked_owned_) {
-    return is_owned_;
+  if (!is_owned_) {
+    if (!UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED)) {
+      LOG(ERROR) << __func__ << ": Failed to call |UpdateTpmStatus|.";
+      return false;
+    }
   }
-
-  if (!UpdateTpmStatus(RefreshType::REFRESH_IF_NEEDED)) {
-    return false;
-  }
-
-  has_checked_owned_ = true;
-  is_owned_ = tpm_status_.owned();
   return is_owned_;
 }
 
@@ -297,10 +318,10 @@ bool Tpm2Impl::PerformEnabledOwnedCheck(bool* enabled, bool* owned) {
     return false;
   }
   if (enabled) {
-    *enabled = tpm_status_.enabled();
+    *enabled = is_enabled_;
   }
   if (owned) {
-    *owned = tpm_status_.owned();
+    *owned = is_owned_;
   }
   return true;
 }
@@ -392,101 +413,60 @@ bool Tpm2Impl::GetAlertsData(Tpm::AlertsData* alerts) {
 }
 
 bool Tpm2Impl::DefineNvram(uint32_t index, size_t length, uint32_t flags) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::DefineSpaceRequest request;
-  request.set_index(index);
-  request.set_size(length);
-  if (flags & Tpm::kTpmNvramWriteDefine) {
-    request.add_attributes(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK);
-  }
-  if (flags & Tpm::kTpmNvramBindToPCR0) {
-    request.set_policy(tpm_manager::NVRAM_POLICY_PCR0);
-  }
-  if (flags & Tpm::kTpmNvramFirmwareReadable) {
-    request.add_attributes(tpm_manager::NVRAM_PLATFORM_READ);
-  }
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::DefineSpace,
-                           base::Unretained(tpm_nvram_), request);
-  tpm_manager::DefineSpaceReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to define nvram space: " << reply.result();
-    return false;
-  }
-  return true;
+  const bool write_define = flags & Tpm::kTpmNvramWriteDefine;
+  const bool bind_to_pcr0 = flags & Tpm::kTpmNvramBindToPCR0;
+  const bool firmware_readable = flags & Tpm::kTpmNvramFirmwareReadable;
+
+  return tpm_manager_utility_->DefineSpace(index, length, write_define,
+                                           bind_to_pcr0, firmware_readable);
 }
 
 bool Tpm2Impl::DestroyNvram(uint32_t index) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::DestroySpaceRequest request;
-  request.set_index(index);
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::DestroySpace,
-                           base::Unretained(tpm_nvram_), request);
-  tpm_manager::DestroySpaceReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to destroy nvram space: " << reply.result();
-    return false;
-  }
-  return true;
+  return tpm_manager_utility_->DestroySpace(index);
 }
 
 bool Tpm2Impl::WriteNvram(uint32_t index, const SecureBlob& blob) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::WriteSpaceRequest write_request;
-  write_request.set_index(index);
-  write_request.set_data(blob.to_string());
-  auto write_method = base::Bind(&tpm_manager::TpmNvramInterface::WriteSpace,
-                                 base::Unretained(tpm_nvram_), write_request);
-  tpm_manager::WriteSpaceReply write_reply;
-  SendTpmManagerRequestAndWait(write_method, &write_reply);
-  if (write_reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to write nvram space: " << write_reply.result();
-    return false;
-  }
-  return true;
+  tpm_manager::WriteSpaceRequest request;
+  request.set_index(index);
+  request.set_data(blob.to_string());
+  return tpm_manager_utility_->WriteSpace(index, blob.to_string(), false);
 }
 
 bool Tpm2Impl::ReadNvram(uint32_t index, SecureBlob* blob) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
     return false;
   }
-  tpm_manager::ReadSpaceRequest request;
-  request.set_index(index);
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::ReadSpace,
-                           base::Unretained(tpm_nvram_), request);
-  tpm_manager::ReadSpaceReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to read nvram space: " << reply.result();
-    return false;
-  }
-  SecureBlob tmp(reply.data());
+
+  std::string output;
+  const bool result = tpm_manager_utility_->ReadSpace(index, false, &output);
+  SecureBlob tmp(output);
   blob->swap(tmp);
-  return true;
+  return result;
 }
 
 bool Tpm2Impl::IsNvramDefined(uint32_t index) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::ListSpaces,
-                           base::Unretained(tpm_nvram_),
-                           tpm_manager::ListSpacesRequest());
-  tpm_manager::ListSpacesReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to list nvram spaces: " << reply.result();
+  std::vector<uint32_t> spaces;
+  if (!tpm_manager_utility_->ListSpaces(&spaces)) {
     return false;
   }
-  for (int i = 0; i < reply.index_list_size(); ++i) {
-    if (index == reply.index_list(i)) {
+  for (uint32_t space : spaces) {
+    if (index == space) {
       return true;
     }
   }
@@ -494,57 +474,41 @@ bool Tpm2Impl::IsNvramDefined(uint32_t index) {
 }
 
 bool Tpm2Impl::IsNvramLocked(uint32_t index) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::GetSpaceInfoRequest request;
-  request.set_index(index);
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::GetSpaceInfo,
-                           base::Unretained(tpm_nvram_), request);
-  tpm_manager::GetSpaceInfoReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to get space info for space " << index << ": "
-               << reply.result();
+  uint32_t size;
+  bool is_read_locked;
+  bool is_write_locked;
+  if (!tpm_manager_utility_->GetSpaceInfo(index, &size, &is_read_locked,
+                                          &is_write_locked)) {
     return false;
   }
-  return reply.is_write_locked();
+  return is_write_locked;
 }
 
 bool Tpm2Impl::WriteLockNvram(uint32_t index) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::LockSpaceRequest lock_request;
-  lock_request.set_index(index);
-  lock_request.set_lock_write(true);
-  auto lock_method = base::Bind(&tpm_manager::TpmNvramInterface::LockSpace,
-                                base::Unretained(tpm_nvram_), lock_request);
-  tpm_manager::LockSpaceReply lock_reply;
-  SendTpmManagerRequestAndWait(lock_method, &lock_reply);
-  if (lock_reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to lock nvram space: " << lock_reply.result();
-    return false;
-  }
-  return true;
+  return tpm_manager_utility_->LockSpace(index);
 }
 
 unsigned int Tpm2Impl::GetNvramSize(uint32_t index) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::GetSpaceInfoRequest request;
-  request.set_index(index);
-  auto method = base::Bind(&tpm_manager::TpmNvramInterface::GetSpaceInfo,
-                           base::Unretained(tpm_nvram_), request);
-  tpm_manager::GetSpaceInfoReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.result() != tpm_manager::NVRAM_RESULT_SUCCESS) {
-    LOG(ERROR) << "Failed to get space info for space " << index << ": "
-               << reply.result();
+  uint32_t size;
+  bool is_read_locked;
+  bool is_write_locked;
+  if (!tpm_manager_utility_->GetSpaceInfo(index, &size, &is_read_locked,
+                                          &is_write_locked)) {
     return 0;
   }
-  return reply.size();
+  return size;
 }
 
 bool Tpm2Impl::IsEndorsementKeyAvailable() {
@@ -694,17 +658,17 @@ bool Tpm2Impl::ActivateIdentity(const brillo::Blob& delegate_blob,
   return false;
 }
 
-bool Tpm2Impl::TakeOwnership(int max_timeout_tries,
-                             const SecureBlob& owner_password) {
-  if (!InitializeTpmManagerClients()) {
+bool Tpm2Impl::TakeOwnership(int /*max_timeout_tries*/,
+                             const SecureBlob& /*owner_password*/) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::TakeOwnership,
-                           base::Unretained(tpm_owner_),
-                           tpm_manager::TakeOwnershipRequest());
-  tpm_manager::TakeOwnershipReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  return (reply.status() == tpm_manager::STATUS_SUCCESS);
+  if (IsOwned()) {
+    LOG(INFO) << __func__ << ": TPM is already owned.";
+    return true;
+  }
+  return tpm_manager_utility_->TakeOwnership();
 }
 
 bool Tpm2Impl::InitializeSrk(const SecureBlob& owner_password) {
@@ -1291,55 +1255,21 @@ bool Tpm2Impl::GetDictionaryAttackInfo(int* counter,
                                        int* threshold,
                                        bool* lockout,
                                        int* seconds_remaining) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-
-  tpm_manager::GetDictionaryAttackInfoReply da_info;
-  auto method =
-      base::Bind(&tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfo,
-                 base::Unretained(tpm_owner_),
-                 tpm_manager::GetDictionaryAttackInfoRequest());
-  SendTpmManagerRequestAndWait(method, &da_info);
-
-  if (da_info.status() != tpm_manager::STATUS_SUCCESS) {
-    LOG(ERROR) << __func__ << ": failed to get DA info from tpm_managerd.";
-    return false;
-  }
-
-  *counter = da_info.dictionary_attack_counter();
-  *threshold = da_info.dictionary_attack_threshold();
-  *lockout = da_info.dictionary_attack_lockout_in_effect();
-  *seconds_remaining = da_info.dictionary_attack_lockout_seconds_remaining();
-
-  return true;
+  return tpm_manager_utility_->GetDictionaryAttackInfo(
+      counter, threshold, lockout, seconds_remaining);
 }
 
 bool Tpm2Impl::ResetDictionaryAttackMitigation(
     const Blob& /* delegate_blob */, const Blob& /* delegate_secret */) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-
-  auto method =
-      base::Bind(&tpm_manager::TpmOwnershipInterface::ResetDictionaryAttackLock,
-                 base::Unretained(tpm_owner_),
-                 tpm_manager::ResetDictionaryAttackLockRequest());
-
-  auto callback =
-      base::Bind([](const tpm_manager::ResetDictionaryAttackLockReply& reply) {
-        if (reply.status() == tpm_manager::STATUS_SUCCESS) {
-          LOG(INFO) << "Successfully reset DA lock.";
-        } else {
-          LOG(ERROR) << "Failed to reset DA lock from tpm_managerd.";
-        }
-      });
-
-  if (!SendTpmManagerRequest(method, callback)) {
-    LOG(ERROR) << __func__ << "Failed to post a new task to reset DA lock.";
-  }
-
-  return true;
+  return tpm_manager_utility_->ResetDictionaryAttackLock();
 }
 
 void Tpm2Impl::DeclareTpmFirmwareStable() {
@@ -1425,8 +1355,7 @@ bool Tpm2Impl::LoadPublicKeyFromSpki(
 }
 
 void Tpm2Impl::HandleOwnershipTakenEvent() {
-  is_owned_ = true;
-  has_checked_owned_ = true;
+  // Not necessary, tpm_manager client takes care of this.
 }
 
 bool Tpm2Impl::PublicAreaToPublicKeyDER(const trunks::TPMT_PUBLIC& public_area,
@@ -1454,44 +1383,6 @@ bool Tpm2Impl::PublicAreaToPublicKeyDER(const trunks::TPMT_PUBLIC& public_area,
   der_length = i2d_RSAPublicKey(rsa.get(), &der_buffer);
   if (der_length < 0) {
     LOG(ERROR) << "Failed to DER-encode public key.";
-    return false;
-  }
-  return true;
-}
-
-void Tpm2Impl::InitializeClientsOnTpmManagerThread(
-    base::WaitableEvent* completion) {
-  CHECK(completion);
-  CHECK(tpm_manager_thread_.task_runner()->RunsTasksInCurrentSequence());
-
-  default_tpm_owner_ = std::make_unique<tpm_manager::TpmOwnershipDBusProxy>();
-  default_tpm_nvram_ = std::make_unique<tpm_manager::TpmNvramDBusProxy>();
-  if (default_tpm_owner_->Initialize()) {
-    tpm_owner_ = default_tpm_owner_.get();
-  }
-  if (default_tpm_nvram_->Initialize()) {
-    tpm_nvram_ = default_tpm_nvram_.get();
-  }
-  completion->Signal();
-}
-
-bool Tpm2Impl::InitializeTpmManagerClients() {
-  if (!tpm_manager_thread_.IsRunning() &&
-      !tpm_manager_thread_.StartWithOptions(base::Thread::Options(
-          base::MessagePumpType::IO, 0 /* Default stack size. */))) {
-    LOG(ERROR) << "Failed to start tpm_manager thread.";
-    return false;
-  }
-  if (!tpm_owner_ || !tpm_nvram_) {
-    base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                              base::WaitableEvent::InitialState::NOT_SIGNALED);
-    tpm_manager_thread_.task_runner()->PostTask(
-        FROM_HERE, base::Bind(&Tpm2Impl::InitializeClientsOnTpmManagerThread,
-                              base::Unretained(this), &event));
-    event.Wait();
-  }
-  if (!tpm_owner_ || !tpm_nvram_) {
-    LOG(ERROR) << "Failed to initialize tpm_managerd clients.";
     return false;
   }
   return true;
@@ -1528,124 +1419,83 @@ bool Tpm2Impl::GetAuthValue(TpmKeyHandle key_handle,
   return true;
 }
 
-template <typename ReplyProtoType, typename MethodType>
-bool Tpm2Impl::SendTpmManagerRequest(
-    const MethodType& method,
-    const base::Callback<void(const ReplyProtoType&)>& callback) {
-  return tpm_manager_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(method, callback));
-}
-
-template <typename ReplyProtoType, typename MethodType>
-void Tpm2Impl::SendTpmManagerRequestAndWait(const MethodType& method,
-                                            ReplyProtoType* reply_proto) {
-  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                            base::WaitableEvent::InitialState::NOT_SIGNALED);
-  auto callback = base::Bind(
-      [](ReplyProtoType* target, base::WaitableEvent* completion,
-         const ReplyProtoType& reply) {
-        *target = reply;
-        completion->Signal();
-      },
-      reply_proto, &event);
-  tpm_manager_thread_.task_runner()->PostTask(FROM_HERE,
-                                              base::Bind(method, callback));
-  event.Wait();
-}
-
 bool Tpm2Impl::UpdateTpmStatus(RefreshType refresh_type) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  if (refresh_type != RefreshType::FORCE_REFRESH &&
-      tpm_status_.status() == tpm_manager::STATUS_SUCCESS &&
-      tpm_status_.enabled() && tpm_status_.owned()) {
-    // We have a valid status and we're not waiting on ownership so we don't
-    // need to refresh our cached status.
-    return true;
-  }
 
-  tpm_manager::GetTpmStatusRequest request;
-  auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::GetTpmStatus,
-                           base::Unretained(tpm_owner_), request);
-  SendTpmManagerRequestAndWait(method, &tpm_status_);
-  return (tpm_status_.status() == tpm_manager::STATUS_SUCCESS);
+  bool is_successful = false;
+  bool has_received = false;
+
+  // Repeats data copy into |last_tpm_manager_data_|; reasonable trade-off due
+  // to low ROI to avoid that.
+  const bool is_connected = tpm_manager_utility_->GetOwnershipTakenSignalStatus(
+      &is_successful, &has_received, &last_tpm_manager_data_);
+
+  // When we need explicitly query tpm status either because the signal is not
+  // ready for any reason, or because the signal is not received yet so we need
+  // to run it once in case the signal is sent by tpm_manager before already.
+  if (refresh_type == RefreshType::FORCE_REFRESH || !is_connected ||
+      !is_successful || (!has_received && shall_cache_tpm_manager_status_)) {
+    // Retains |shall_cache_tpm_manager_status_| to be |true| if the signal
+    // cannot be relied on (yet). Actually |!is_successful| suffices to update
+    // |shall_cache_tpm_manager_status_|; by design, uses the redundancy just to
+    // avoid confusion.
+    shall_cache_tpm_manager_status_ &= (!is_connected || !is_successful);
+    return CacheTpmManagerStatus();
+  } else if (has_received) {
+    is_enabled_ = true;
+    is_owned_ = true;
+  }
+  return true;
 }
 
 bool Tpm2Impl::RemoveOwnerDependency(
     TpmPersistentState::TpmOwnerDependency dependency) {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::RemoveOwnerDependencyRequest request;
-  SetOwnerDependency(dependency, request.mutable_owner_dependency());
-  if (request.owner_dependency().empty()) {
-    VLOG(1) << "Ignoring unused owner dependency "
-            << static_cast<int>(dependency);
-    return true;
-  }
-  auto method =
-      base::Bind(&tpm_manager::TpmOwnershipInterface::RemoveOwnerDependency,
-                 base::Unretained(tpm_owner_), request);
-  tpm_manager::RemoveOwnerDependencyReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  return (reply.status() == tpm_manager::STATUS_SUCCESS);
+  return tpm_manager_utility_->RemoveOwnerDependency(
+      OwnerDependencyEnumClassToString(dependency));
 }
 
 bool Tpm2Impl::ClearStoredPassword() {
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": Failed to initialize |TpmManagerUtility|.";
     return false;
   }
-  tpm_manager::ClearStoredOwnerPasswordRequest request;
-  auto method =
-      base::Bind(&tpm_manager::TpmOwnershipInterface::ClearStoredOwnerPassword,
-                 base::Unretained(tpm_owner_), request);
-  tpm_manager::ClearStoredOwnerPasswordReply reply;
-  SendTpmManagerRequestAndWait(method, &reply);
-  if (reply.status() != tpm_manager::STATUS_SUCCESS) {
-    LOG(WARNING) << "Failed to clear stored owner password.";
-    return false;
-  }
-  tpm_status_.mutable_local_data()->clear_owner_password();
-  return true;
+  return tpm_manager_utility_->ClearStoredOwnerPassword();
 }
 
 bool Tpm2Impl::GetVersionInfo(TpmVersionInfo* version_info) {
   if (!version_info) {
-    LOG(ERROR) << "version_info is uninitialized.";
+    LOG(ERROR) << __func__ << "version_info is not initialized.";
     return false;
   }
 
+  // Version info on a device never changes. Returns from cache directly if we
+  // have the cache.
   if (version_info_) {
     *version_info = *version_info_;
     return true;
   }
 
-  // This is the first time we request for version info.
-  if (!InitializeTpmManagerClients()) {
+  if (!InitializeTpmManagerUtility()) {
+    LOG(ERROR) << __func__ << ": failed to initialize |TpmManagerUtility|.";
     return false;
   }
 
-  tpm_manager::GetVersionInfoRequest request;
-  tpm_manager::GetVersionInfoReply reply;
-  auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::GetVersionInfo,
-                           base::Unretained(tpm_owner_), request);
-  SendTpmManagerRequestAndWait(method, &reply);
-
-  if (reply.status() != tpm_manager::STATUS_SUCCESS) {
-    LOG(ERROR) << "Failed to get version info from tpm_manager.";
+  if (!tpm_manager_utility_->GetVersionInfo(
+          &version_info->family, &version_info->spec_level,
+          &version_info->manufacturer, &version_info->tpm_model,
+          &version_info->firmware_version, &version_info->vendor_specific)) {
+    LOG(ERROR) << __func__ << ": failed to get version info from tpm_manager.";
     return false;
   }
 
-  version_info_ = std::make_unique<TpmVersionInfo>();
-  version_info_->family = reply.family();
-  version_info_->spec_level = reply.spec_level();
-  version_info_->manufacturer = reply.manufacturer();
-  version_info_->tpm_model = reply.tpm_model();
-  version_info_->firmware_version = reply.firmware_version();
-  version_info_->vendor_specific = reply.vendor_specific();
-
-  *version_info = *version_info_;
+  version_info_ = *version_info;
   return true;
 }
 

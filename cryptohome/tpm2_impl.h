@@ -15,8 +15,7 @@
 #include <base/macros.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread.h>
-#include <tpm_manager/client/tpm_nvram_dbus_proxy.h>
-#include <tpm_manager/client/tpm_ownership_dbus_proxy.h>
+#include <tpm_manager/client/tpm_manager_utility.h>
 #include <tpm_manager/common/tpm_nvram_interface.h>
 #include <tpm_manager/common/tpm_ownership_interface.h>
 #include <tpm_manager/proto_bindings/tpm_manager.pb.h>
@@ -60,8 +59,7 @@ class Tpm2Impl : public Tpm {
   Tpm2Impl() = default;
   // Does not take ownership of pointers.
   Tpm2Impl(trunks::TrunksFactory* factory,
-           tpm_manager::TpmOwnershipInterface* tpm_owner,
-           tpm_manager::TpmNvramInterface* tpm_nvram);
+           tpm_manager::TpmManagerUtility* tpm_manager_utility);
   virtual ~Tpm2Impl() = default;
 
   // Tpm methods
@@ -240,16 +238,17 @@ class Tpm2Impl : public Tpm {
       bool use_extended_pcr) const override;
 
  private:
+  // Initializes |tpm_manager_utility_|; returns |true| iff successful.
+  bool InitializeTpmManagerUtility();
+
+  // Calls |TpmManagerUtility::GetTpmStatus| and stores the result into
+  // |is_enabled_|, |is_owned_|, and |last_tpm_manager_data_| for later use.
+  bool CacheTpmManagerStatus();
+
   // This method given a Tpm generated public area, returns the DER encoded
   // public key.
   bool PublicAreaToPublicKeyDER(const trunks::TPMT_PUBLIC& public_area,
                                 brillo::SecureBlob* public_key_der);
-
-  // Starts tpm_manager_thread_ and initiates initialization of
-  // default_tpm_owner_ and default_tpm_nvram_ if necessary. Returns true if the
-  // thread was started and both tpm_owner_ and tpm_nvram_ are valid.
-  bool InitializeTpmManagerClients();
-  void InitializeClientsOnTpmManagerThread(base::WaitableEvent* completion);
 
   // Derive the |auth_value| by decrypting the |pass_blob| using |key_handle|
   // and hashing the result. The input |pass_blob| must have 256 bytes, the
@@ -258,27 +257,6 @@ class Tpm2Impl : public Tpm {
                     const brillo::SecureBlob& pass_blob,
                     std::string* auth_value);
 
-  // Posts a task to |tpm_manager_thread_| to send a request to tpm_managerd.
-  // |method| will be called on |tpm_manager_thread_|. This function doesn't
-  // wait for the call to return but instead returns immediately after posting
-  // the task. |callback| will be called when an reply from tpm_managerd is
-  // received.
-  //
-  // Returns if the new task is successfully posted to |tpm_manager_thread_|.
-  template <typename ReplyProtoType, typename MethodType>
-  bool SendTpmManagerRequest(
-      const MethodType& method,
-      const base::Callback<void(const ReplyProtoType&)>& callback);
-
-  // Sends a request to the TPM Manager daemon that expects a ReplyProtoType and
-  // waits for a reply. The |method| will be called on the |tpm_manager_thread_|
-  // and must take a callback argument as defined in TpmOwnershipInterface or
-  // TpmNvramInterface. InitializeTpmManagerClients() must be called
-  // successfully before calling this method.
-  template <typename ReplyProtoType, typename MethodType>
-  void SendTpmManagerRequestAndWait(const MethodType& method,
-                                    ReplyProtoType* reply_proto);
-
   // Updates tpm_status_ according to the requested |refresh_type|. Returns
   // true on success. Use |REFRESH_IF_NEEDED| for most calls. Use
   // |FORCE_REFRESH| for calls which are querying a field that can change at any
@@ -286,17 +264,17 @@ class Tpm2Impl : public Tpm {
   enum class RefreshType { REFRESH_IF_NEEDED, FORCE_REFRESH };
   bool UpdateTpmStatus(RefreshType refresh_type);
 
+  //  wrapped tpm_manager proxy to get information from |tpm_manager|.
+  tpm_manager::TpmManagerUtility* tpm_manager_utility_{nullptr};
+
   // Per-thread trunks object management.
   std::map<base::PlatformThreadId, std::unique_ptr<TrunksClientContext>>
       trunks_contexts_;
   TrunksClientContext external_trunks_context_;
   bool has_external_trunks_context_ = false;
 
-  // The most recent status from tpm_managerd.
-  tpm_manager::GetTpmStatusReply tpm_status_;
-
-  // Cached version info.
-  std::unique_ptr<TpmVersionInfo> version_info_;
+  // Cache of TPM version info, base::nullopt if cache doesn't exist.
+  base::Optional<TpmVersionInfo> version_info_;
 
   // True, if the tpm firmware has been already successfully declared stable.
   bool fw_declared_stable_ = false;
@@ -304,22 +282,23 @@ class Tpm2Impl : public Tpm {
   // Indicates if the TPM is being owned
   bool is_being_owned_ = false;
 
+  // Indicates if the TPM is already enabled.
+  bool is_enabled_ = false;
+
   // Indicates if the TPM is already owned.
   bool is_owned_ = false;
 
-  // Indicates if we've already checked whether the TPM is owned from TPM status
-  bool has_checked_owned_ = false;
+  // This flag indicates |CacheTpmManagerStatus| shall be called when the
+  // ownership taken signal is confirmed to be connected.
+  bool shall_cache_tpm_manager_status_ = false;
+
+  // Records |LocalData| from tpm_manager last time we query, either by
+  // explicitly requesting the update or from dbus signal.
+  tpm_manager::LocalData last_tpm_manager_data_;
 
   // Specifies the currently set user type.
   Tpm::UserType cur_user_type_ = Tpm::UserType::Unknown;
 
-  // A message loop thread dedicated for asynchronous communication with
-  // tpm_managerd.
-  base::Thread tpm_manager_thread_{"tpm_manager_thread"};
-  tpm_manager::TpmOwnershipInterface* tpm_owner_ = nullptr;
-  std::unique_ptr<tpm_manager::TpmOwnershipDBusProxy> default_tpm_owner_;
-  tpm_manager::TpmNvramInterface* tpm_nvram_ = nullptr;
-  std::unique_ptr<tpm_manager::TpmNvramDBusProxy> default_tpm_nvram_;
 #if USE_PINWEAVER
   PinweaverLECredentialBackend le_credential_backend_{this};
 #endif

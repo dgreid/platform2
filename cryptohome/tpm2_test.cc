@@ -29,9 +29,10 @@
 #include <openssl/evp.h>
 #include <openssl/rsa.h>
 #include <openssl/x509.h>
+#include <tpm_manager-client/tpm_manager/dbus-constants.h>
+#include <tpm_manager/client/mock_tpm_manager_utility.h>
 #include <tpm_manager/common/mock_tpm_nvram_interface.h>
 #include <tpm_manager/common/mock_tpm_ownership_interface.h>
-#include <tpm_manager-client/tpm_manager/dbus-constants.h>
 #include <trunks/mock_authorization_delegate.h>
 #include <trunks/mock_blob_parser.h>
 #include <trunks/mock_hmac_session.h>
@@ -54,6 +55,7 @@ using brillo::BlobToString;
 using brillo::SecureBlob;
 using testing::_;
 using testing::DoAll;
+using testing::ElementsAreArray;
 using testing::InSequence;
 using testing::Invoke;
 using testing::InvokeWithoutArgs;
@@ -63,6 +65,8 @@ using testing::SaveArg;
 using testing::SetArgPointee;
 using testing::Values;
 using testing::WithArg;
+using tpm_manager::LocalData;
+using tpm_manager::MockTpmManagerUtility;
 using tpm_manager::NVRAM_RESULT_IPC_ERROR;
 using trunks::TPM_ALG_ID;
 using trunks::TPM_RC;
@@ -96,54 +100,10 @@ class Tpm2Test : public testing::Test {
     factory_.set_hmac_session(&mock_hmac_session_);
     factory_.set_policy_session(&mock_policy_session_);
     factory_.set_trial_session(&mock_trial_session_);
-    tpm_ = std::make_unique<Tpm2Impl>(&factory_, &mock_tpm_owner_,
-                                      &mock_tpm_nvram_);
-    // Setup default status data.
-    tpm_status_.set_status(tpm_manager::STATUS_SUCCESS);
-    tpm_status_.set_enabled(true);
-    tpm_status_.set_owned(true);
-    tpm_status_.mutable_local_data()->set_owner_password(kDefaultPassword);
-    ON_CALL(mock_tpm_owner_, GetTpmStatus(_, _))
-        .WillByDefault(WithArg<1>(Invoke(this, &Tpm2Test::FakeGetTpmStatus)));
-    ON_CALL(mock_tpm_owner_, GetVersionInfo(_, _))
-        .WillByDefault(WithArg<1>(Invoke(this, &Tpm2Test::FakeGetVersionInfo)));
-    ON_CALL(mock_tpm_owner_, GetDictionaryAttackInfo(_, _))
-        .WillByDefault(
-            WithArg<1>(Invoke(this, &Tpm2Test::FakeGetDictionaryAttackInfo)));
-    ON_CALL(mock_tpm_owner_, ResetDictionaryAttackLock(_, _))
-        .WillByDefault(
-            WithArg<1>(Invoke(this, &Tpm2Test::FakeResetDictionaryAttackLock)));
-    ON_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeRemoveOwnerDependency));
-    ON_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeClearStoredOwnerPassword));
-    SetupFakeNvram();
+    tpm_ = std::make_unique<Tpm2Impl>(&factory_, &mock_tpm_manager_utility_);
   }
 
  protected:
-  tpm_manager::GetTpmStatusReply tpm_status_;
-  tpm_manager::GetVersionInfoReply version_info_;
-  tpm_manager::GetDictionaryAttackInfoReply da_info_;
-  tpm_manager::DefineSpaceRequest last_define_space_request;
-  tpm_manager::DestroySpaceRequest last_destroy_space_request;
-  tpm_manager::WriteSpaceRequest last_write_space_request;
-  tpm_manager::ReadSpaceRequest last_read_space_request;
-  tpm_manager::LockSpaceRequest last_lock_space_request;
-  tpm_manager::ListSpacesRequest last_list_spaces_request;
-  tpm_manager::GetSpaceInfoRequest last_get_space_info_request;
-  tpm_manager::RemoveOwnerDependencyRequest
-      last_remove_owner_dependency_request;
-  tpm_manager::DefineSpaceReply next_define_space_reply;
-  tpm_manager::DestroySpaceReply next_destroy_space_reply;
-  tpm_manager::WriteSpaceReply next_write_space_reply;
-  tpm_manager::ReadSpaceReply next_read_space_reply;
-  tpm_manager::LockSpaceReply next_lock_space_reply;
-  tpm_manager::ListSpacesReply next_list_spaces_reply;
-  tpm_manager::GetSpaceInfoReply next_get_space_info_reply;
-  tpm_manager::RemoveOwnerDependencyReply next_remove_owner_dependency_reply;
-  tpm_manager::ClearStoredOwnerPasswordReply next_clear_stored_password_reply;
-  tpm_manager::ResetDictionaryAttackLockReply reset_da_lock_reply;
-
   std::unique_ptr<Tpm2Impl> tpm_;
   NiceMock<trunks::MockAuthorizationDelegate> mock_authorization_delegate_;
   NiceMock<trunks::MockBlobParser> mock_blob_parser_;
@@ -153,115 +113,9 @@ class Tpm2Test : public testing::Test {
   NiceMock<trunks::MockHmacSession> mock_hmac_session_;
   NiceMock<trunks::MockPolicySession> mock_policy_session_;
   NiceMock<trunks::MockPolicySession> mock_trial_session_;
-  NiceMock<tpm_manager::MockTpmOwnershipInterface> mock_tpm_owner_;
-  NiceMock<tpm_manager::MockTpmNvramInterface> mock_tpm_nvram_;
+  NiceMock<tpm_manager::MockTpmManagerUtility> mock_tpm_manager_utility_;
 
  private:
-  void SetupFakeNvram() {
-    ON_CALL(mock_tpm_nvram_, DefineSpace(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeDefineSpace));
-    ON_CALL(mock_tpm_nvram_, DestroySpace(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeDestroySpace));
-    ON_CALL(mock_tpm_nvram_, WriteSpace(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeWriteSpace));
-    ON_CALL(mock_tpm_nvram_, ReadSpace(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeReadSpace));
-    ON_CALL(mock_tpm_nvram_, LockSpace(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeLockSpace));
-    ON_CALL(mock_tpm_nvram_, ListSpaces(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeListSpaces));
-    ON_CALL(mock_tpm_nvram_, GetSpaceInfo(_, _))
-        .WillByDefault(Invoke(this, &Tpm2Test::FakeGetSpaceInfo));
-  }
-
-  void FakeGetTpmStatus(
-      const tpm_manager::TpmOwnershipInterface::GetTpmStatusCallback&
-          callback) {
-    callback.Run(tpm_status_);
-  }
-
-  void FakeGetVersionInfo(
-      const tpm_manager::TpmOwnershipInterface::GetVersionInfoCallback&
-          callback) {
-    callback.Run(version_info_);
-  }
-
-  void FakeGetDictionaryAttackInfo(
-      const tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfoCallback&
-          callback) {
-    callback.Run(da_info_);
-  }
-
-  void FakeResetDictionaryAttackLock(
-      const tpm_manager::TpmOwnershipInterface::
-          ResetDictionaryAttackLockCallback& callback) {
-    callback.Run(reset_da_lock_reply);
-  }
-
-  void FakeRemoveOwnerDependency(
-      const tpm_manager::RemoveOwnerDependencyRequest& request,
-      const tpm_manager::TpmOwnershipInterface::RemoveOwnerDependencyCallback&
-          callback) {
-    last_remove_owner_dependency_request = request;
-    callback.Run(next_remove_owner_dependency_reply);
-  }
-
-  void FakeClearStoredOwnerPassword(
-      const tpm_manager::ClearStoredOwnerPasswordRequest& /* request */,
-      const tpm_manager::TpmOwnershipInterface::
-          ClearStoredOwnerPasswordCallback& callback) {
-    callback.Run(next_clear_stored_password_reply);
-  }
-
-  void FakeDefineSpace(
-      const tpm_manager::DefineSpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::DefineSpaceCallback& callback) {
-    last_define_space_request = request;
-    callback.Run(next_define_space_reply);
-  }
-
-  void FakeDestroySpace(
-      const tpm_manager::DestroySpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::DestroySpaceCallback& callback) {
-    last_destroy_space_request = request;
-    callback.Run(next_destroy_space_reply);
-  }
-
-  void FakeWriteSpace(
-      const tpm_manager::WriteSpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::WriteSpaceCallback& callback) {
-    last_write_space_request = request;
-    callback.Run(next_write_space_reply);
-  }
-
-  void FakeReadSpace(
-      const tpm_manager::ReadSpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::ReadSpaceCallback& callback) {
-    last_read_space_request = request;
-    callback.Run(next_read_space_reply);
-  }
-
-  void FakeLockSpace(
-      const tpm_manager::LockSpaceRequest& request,
-      const tpm_manager::TpmNvramInterface::LockSpaceCallback& callback) {
-    last_lock_space_request = request;
-    callback.Run(next_lock_space_reply);
-  }
-
-  void FakeListSpaces(
-      const tpm_manager::ListSpacesRequest& request,
-      const tpm_manager::TpmNvramInterface::ListSpacesCallback& callback) {
-    last_list_spaces_request = request;
-    callback.Run(next_list_spaces_reply);
-  }
-
-  void FakeGetSpaceInfo(
-      const tpm_manager::GetSpaceInfoRequest& request,
-      const tpm_manager::TpmNvramInterface::GetSpaceInfoCallback& callback) {
-    last_get_space_info_request = request;
-    callback.Run(next_get_space_info_reply);
-  }
-
   trunks::TrunksFactoryForTest factory_;
 };
 
@@ -295,124 +149,284 @@ TEST_F(Tpm2Test, GetPcrMapExtended) {
   EXPECT_EQ(expected_result, result_str);
 }
 
-TEST_F(Tpm2Test, GetOwnerPassword) {
-  brillo::SecureBlob owner_password;
-  EXPECT_TRUE(tpm_->GetOwnerPassword(&owner_password));
-  EXPECT_EQ(kDefaultPassword, owner_password.to_string());
+TEST_F(Tpm2Test, TakeOwnership) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_manager_utility_, TakeOwnership())
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->TakeOwnership(0, SecureBlob{}));
+  EXPECT_CALL(mock_tpm_manager_utility_, TakeOwnership())
+      .WillOnce(Return(true));
+  EXPECT_TRUE(tpm_->TakeOwnership(0, SecureBlob{}));
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<1>(true), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_utility_, TakeOwnership()).Times(0);
+  EXPECT_TRUE(tpm_->TakeOwnership(0, SecureBlob{}));
 }
 
-TEST_F(Tpm2Test, EnabledOwnedCheckSuccess) {
-  bool enabled = false;
-  bool owned = false;
-  EXPECT_TRUE(tpm_->PerformEnabledOwnedCheck(&enabled, &owned));
-  EXPECT_TRUE(enabled);
-  EXPECT_TRUE(owned);
+TEST_F(Tpm2Test, Enabled) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .Times(0);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->IsEnabled());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(false), Return(true)));
+  EXPECT_FALSE(tpm_->IsEnabled());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(true), Return(true)));
+  EXPECT_TRUE(tpm_->IsEnabled());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_TRUE(tpm_->IsEnabled());
 }
 
-TEST_F(Tpm2Test, EnabledOwnedCheckStateError) {
-  tpm_status_.set_status(tpm_manager::STATUS_NOT_AVAILABLE);
+TEST_F(Tpm2Test, OwnedWithoutSignal) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->IsOwned());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<1>(false), Return(true)));
+  EXPECT_FALSE(tpm_->IsOwned());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<1>(true), Return(true)));
+  EXPECT_TRUE(tpm_->IsOwned());
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_TRUE(tpm_->IsOwned());
+}
+
+TEST_F(Tpm2Test, GetOwnerPasswordWithoutSignal) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillRepeatedly(Return(false));
+  SecureBlob result_owner_password;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+  LocalData expected_local_data;
+  expected_local_data.set_owner_password(kDefaultPassword);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true),
+                      SetArgPointee<2>(expected_local_data), Return(true)));
+  EXPECT_TRUE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_EQ(result_owner_password.to_string(),
+            expected_local_data.owner_password());
+
+  result_owner_password.clear();
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_TRUE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_EQ(result_owner_password.to_string(),
+            expected_local_data.owner_password());
+}
+
+TEST_F(Tpm2Test, GetOwnerPasswordEmpty) {
+  SecureBlob result_owner_password;
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true),
+                      SetArgPointee<2>(LocalData{}), Return(true)));
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+}
+
+TEST_F(Tpm2Test, GetDictionaryAttackInfo) {
+  int result_counter = 0;
+  int result_threshold = 0;
+  bool result_lockout = false;
+  int result_seconds_remaining = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->GetDictionaryAttackInfo(&result_counter, &result_threshold,
+                                             &result_lockout,
+                                             &result_seconds_remaining));
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetDictionaryAttackInfo(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(123), SetArgPointee<1>(456),
+                      SetArgPointee<2>(true), SetArgPointee<3>(789),
+                      Return(true)));
+  EXPECT_TRUE(tpm_->GetDictionaryAttackInfo(&result_counter, &result_threshold,
+                                            &result_lockout,
+                                            &result_seconds_remaining));
+  EXPECT_EQ(result_counter, 123);
+  EXPECT_EQ(result_threshold, 456);
+  EXPECT_TRUE(result_lockout);
+  EXPECT_EQ(result_seconds_remaining, 789);
+}
+
+TEST_F(Tpm2Test, ResetDictionaryAttackMitigation) {
+  EXPECT_CALL(mock_tpm_manager_utility_, ResetDictionaryAttackLock())
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->ResetDictionaryAttackMitigation(Blob{}, Blob{}));
+  EXPECT_CALL(mock_tpm_manager_utility_, ResetDictionaryAttackLock())
+      .WillOnce(Return(true));
+  EXPECT_TRUE(tpm_->ResetDictionaryAttackMitigation(Blob{}, Blob{}));
+}
+
+TEST_F(Tpm2Test, SignalCache) {
+  brillo::SecureBlob result_owner_password;
+  ON_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillByDefault(Return(false));
+
+  ON_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillByDefault(Return(false));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(2);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .Times(2);
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_FALSE(tpm_->IsOwned());
+
+  ON_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillByDefault(DoAll(SetArgPointee<0>(false), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(2);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .Times(2);
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_FALSE(tpm_->IsOwned());
+
+  ON_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillByDefault(
+          DoAll(SetArgPointee<0>(true), SetArgPointee<1>(false), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .Times(2);
+  EXPECT_FALSE(tpm_->IsOwned());
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+
+  LocalData expected_local_data;
+  expected_local_data.set_owner_password("owner password");
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillOnce(DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true),
+                      SetArgPointee<2>(expected_local_data), Return(true)));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _)).Times(0);
+  EXPECT_TRUE(tpm_->IsOwned());
+  EXPECT_TRUE(tpm_->IsEnabled());
+  EXPECT_TRUE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_THAT(result_owner_password,
+              ElementsAreArray(expected_local_data.owner_password()));
+}
+
+TEST_F(Tpm2Test, RemoveTpmOwnerDependency) {
+  EXPECT_CALL(mock_tpm_manager_utility_,
+              RemoveOwnerDependency(tpm_manager::kTpmOwnerDependency_Nvram))
+      .WillOnce(Return(true));
+  EXPECT_TRUE(tpm_->RemoveOwnerDependency(
+      TpmPersistentState::TpmOwnerDependency::kInstallAttributes));
+  EXPECT_CALL(
+      mock_tpm_manager_utility_,
+      RemoveOwnerDependency(tpm_manager::kTpmOwnerDependency_Attestation))
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->RemoveOwnerDependency(
+      TpmPersistentState::TpmOwnerDependency::kAttestation));
+}
+
+TEST_F(Tpm2Test, RemoveTpmOwnerDependencyInvalidEnum) {
+  EXPECT_DEBUG_DEATH(
+      tpm_->RemoveOwnerDependency(
+          static_cast<TpmPersistentState::TpmOwnerDependency>(999)),
+      ".*Unexpected enum class value: 999");
+}
+
+TEST_F(Tpm2Test, ClearStoredPassword) {
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
+      .WillOnce(Return(true));
+  EXPECT_TRUE(tpm_->ClearStoredPassword());
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
+      .WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->ClearStoredPassword());
+}
+
+TEST_F(Tpm2Test, GetVersionInfoCache) {
+  Tpm::TpmVersionInfo expected_version_info;
+  expected_version_info.family = 1;
+  expected_version_info.spec_level = 2;
+  expected_version_info.manufacturer = 3;
+  expected_version_info.tpm_model = 4;
+  expected_version_info.firmware_version = 5;
+  expected_version_info.vendor_specific = "aa";
+
+  EXPECT_CALL(mock_tpm_manager_utility_, GetVersionInfo(_, _, _, _, _, _))
+      .WillOnce(Return(false))
+      .WillOnce(DoAll(SetArgPointee<0>(expected_version_info.family),
+                      SetArgPointee<1>(expected_version_info.spec_level),
+                      SetArgPointee<2>(expected_version_info.manufacturer),
+                      SetArgPointee<3>(expected_version_info.tpm_model),
+                      SetArgPointee<4>(expected_version_info.firmware_version),
+                      SetArgPointee<5>(expected_version_info.vendor_specific),
+                      Return(true)));
+
+  Tpm::TpmVersionInfo actual_version_info;
+  // Requests from tpm_manager, failed, not cached
+  EXPECT_FALSE(tpm_->GetVersionInfo(&actual_version_info));
+
+  // Requests from tpm_manager, succeeded, cached
+  EXPECT_TRUE(tpm_->GetVersionInfo(&actual_version_info));
+  EXPECT_EQ(expected_version_info.GetFingerprint(),
+            actual_version_info.GetFingerprint());
+
+  // Returns from cache
+  EXPECT_TRUE(tpm_->GetVersionInfo(&actual_version_info));
+  EXPECT_EQ(expected_version_info.GetFingerprint(),
+            actual_version_info.GetFingerprint());
+}
+
+TEST_F(Tpm2Test, GetVersionInfoBadInput) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetVersionInfo(_, _, _, _, _, _))
+      .Times(0);
+  EXPECT_FALSE(tpm_->GetVersionInfo(nullptr));
+}
+
+TEST_F(Tpm2Test, PerformEnabledOwnedCheckWithoutSignal) {
+  EXPECT_CALL(mock_tpm_manager_utility_, GetOwnershipTakenSignalStatus(_, _, _))
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(Return(false));
   bool enabled = false;
   bool owned = false;
   EXPECT_FALSE(tpm_->PerformEnabledOwnedCheck(&enabled, &owned));
   EXPECT_FALSE(enabled);
   EXPECT_FALSE(owned);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<0>(true), SetArgPointee<1>(false), Return(true)));
+  EXPECT_TRUE(tpm_->PerformEnabledOwnedCheck(&enabled, &owned));
+  EXPECT_TRUE(enabled);
+  EXPECT_FALSE(owned);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true), Return(true)));
+  EXPECT_TRUE(tpm_->PerformEnabledOwnedCheck(&enabled, &owned));
+  EXPECT_TRUE(enabled);
+  EXPECT_TRUE(owned);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true), Return(true)));
+  EXPECT_TRUE(tpm_->PerformEnabledOwnedCheck(&enabled, &owned));
+  EXPECT_TRUE(enabled);
+  EXPECT_TRUE(owned);
 }
 
-TEST_F(Tpm2Test, GetVersionInfo) {
-  tpm_manager::GetVersionInfoRequest expected_request;
-  EXPECT_CALL(mock_tpm_owner_,
-              GetVersionInfo(ProtobufEquals(expected_request), _))
-      .Times(1);
-
-  version_info_.set_status(tpm_manager::STATUS_SUCCESS);
-  version_info_.set_family(11);
-  version_info_.set_spec_level(22);
-  version_info_.set_manufacturer(33);
-  version_info_.set_tpm_model(44);
-  version_info_.set_firmware_version(55);
-  version_info_.set_vendor_specific("abc");
-
-  Tpm::TpmVersionInfo actual_info;
-
-  // First call fetches version info from tpm manager.
-  EXPECT_TRUE(tpm_->GetVersionInfo(&actual_info));
-  EXPECT_EQ(11, actual_info.family);
-  EXPECT_EQ(22, actual_info.spec_level);
-  EXPECT_EQ(33, actual_info.manufacturer);
-  EXPECT_EQ(44, actual_info.tpm_model);
-  EXPECT_EQ(55, actual_info.firmware_version);
-  EXPECT_EQ("abc", actual_info.vendor_specific);
-
-  // Second call returns from cache directly.
-  EXPECT_TRUE(tpm_->GetVersionInfo(&actual_info));
-  EXPECT_EQ(11, actual_info.family);
-  EXPECT_EQ(22, actual_info.spec_level);
-  EXPECT_EQ(33, actual_info.manufacturer);
-  EXPECT_EQ(44, actual_info.tpm_model);
-  EXPECT_EQ(55, actual_info.firmware_version);
-  EXPECT_EQ("abc", actual_info.vendor_specific);
-}
-
-TEST_F(Tpm2Test, GetVersionInfoError) {
-  EXPECT_FALSE(tpm_->GetVersionInfo(nullptr));
-
-  version_info_.set_status(tpm_manager::STATUS_DEVICE_ERROR);
-
-  Tpm::TpmVersionInfo info;
-  EXPECT_FALSE(tpm_->GetVersionInfo(&info));
-}
-
-TEST_F(Tpm2Test, GetDictionaryAttackInfo) {
-  da_info_.set_status(tpm_manager::STATUS_SUCCESS);
-  da_info_.set_dictionary_attack_counter(3);
-  da_info_.set_dictionary_attack_threshold(4);
-  da_info_.set_dictionary_attack_lockout_in_effect(true);
-  da_info_.set_dictionary_attack_lockout_seconds_remaining(5);
-
-  int counter;
-  int threshold;
-  bool lockout;
-  int seconds_remaining;
-
-  EXPECT_TRUE(tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
-                                            &seconds_remaining));
-  EXPECT_EQ(3, counter);
-  EXPECT_EQ(4, threshold);
-  EXPECT_TRUE(lockout);
-  EXPECT_EQ(5, seconds_remaining);
-}
-
-TEST_F(Tpm2Test, GetDictionaryAttackInfoError) {
-  da_info_.set_status(tpm_manager::STATUS_DEVICE_ERROR);
-
-  int counter;
-  int threshold;
-  bool lockout;
-  int seconds_remaining;
-  EXPECT_FALSE(tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
-                                             &seconds_remaining));
-}
-
-TEST_F(Tpm2Test, ResetDictionaryAttackMitigation) {
-  base::SingleThreadTaskExecutor task_executor;
-  base::RunLoop run_loop;
-  const auto run_loop_quit_closure = base::Bind(
-      [](base::Closure main_thread_quit_closure,
-         scoped_refptr<base::SingleThreadTaskRunner> main_thread_task_runner) {
-        main_thread_task_runner->PostTask(FROM_HERE, main_thread_quit_closure);
-      },
-      run_loop.QuitClosure(), base::ThreadTaskRunnerHandle::Get());
-
-  const tpm_manager::ResetDictionaryAttackLockRequest expected_request;
-  EXPECT_CALL(mock_tpm_owner_,
-              ResetDictionaryAttackLock(ProtobufEquals(expected_request), _))
-      .WillOnce(InvokeWithoutArgs([&]() { run_loop_quit_closure.Run(); }));
-
-  const brillo::Blob unused;
-  EXPECT_TRUE(tpm_->ResetDictionaryAttackMitigation(unused, unused));
-
-  // Wait till the mock ResetDictionaryAttackLock gets called.
-  run_loop.Run();
+TEST_F(Tpm2Test, BadTpmManagerUtility) {
+  EXPECT_CALL(mock_tpm_manager_utility_, Initialize())
+      .WillRepeatedly(Return(false));
+  EXPECT_FALSE(tpm_->TakeOwnership(0, SecureBlob{}));
+  SecureBlob result_owner_password;
+  EXPECT_FALSE(tpm_->GetOwnerPassword(&result_owner_password));
+  EXPECT_FALSE(tpm_->IsEnabled());
+  EXPECT_FALSE(tpm_->IsOwned());
+  EXPECT_FALSE(tpm_->ResetDictionaryAttackMitigation(Blob{}, Blob{}));
+  int result_counter;
+  int result_threshold;
+  bool result_lockout;
+  int result_seconds_remaining;
+  EXPECT_FALSE(tpm_->GetDictionaryAttackInfo(&result_counter, &result_threshold,
+                                             &result_lockout,
+                                             &result_seconds_remaining));
 }
 
 TEST_F(Tpm2Test, GetRandomDataSuccess) {
@@ -445,154 +459,224 @@ TEST_F(Tpm2Test, GetRandomDataBadLength) {
 }
 
 TEST_F(Tpm2Test, DefineNvramSuccess) {
-  uint32_t index = 2;
-  size_t length = 5;
-  EXPECT_TRUE(tpm_->DefineNvram(index, length, Tpm::kTpmNvramWriteDefine));
-  EXPECT_EQ(index, last_define_space_request.index());
-  EXPECT_EQ(length, last_define_space_request.size());
-  ASSERT_EQ(1, last_define_space_request.attributes_size());
-  EXPECT_EQ(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK,
-            last_define_space_request.attributes(0));
-  EXPECT_EQ(tpm_manager::NVRAM_POLICY_NONE, last_define_space_request.policy());
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
+  EXPECT_TRUE(tpm_->DefineNvram(kIndex, kLength, Tpm::kTpmNvramWriteDefine));
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_FALSE(bind_to_pcr0);
+  ASSERT_FALSE(firmware_readable);
 }
 
 TEST_F(Tpm2Test, DefineNvramSuccessWithPolicy) {
-  uint32_t index = 2;
-  size_t length = 5;
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
   EXPECT_TRUE(tpm_->DefineNvram(
-      index, length, Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramBindToPCR0));
-  EXPECT_EQ(index, last_define_space_request.index());
-  EXPECT_EQ(length, last_define_space_request.size());
-  ASSERT_EQ(1, last_define_space_request.attributes_size());
-  EXPECT_EQ(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK,
-            last_define_space_request.attributes(0));
-  EXPECT_EQ(tpm_manager::NVRAM_POLICY_PCR0, last_define_space_request.policy());
+      kIndex, kLength, Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramBindToPCR0));
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_TRUE(bind_to_pcr0);
+  ASSERT_FALSE(firmware_readable);
 }
 
 TEST_F(Tpm2Test, DefineNvramSuccessFirmwareReadable) {
-  uint32_t index = 2;
-  size_t length = 5;
+  constexpr uint32_t kIndex = 2;
+  constexpr size_t kLength = 5;
+  uint32_t index = 0;
+  size_t length = 0;
+  bool write_define = false;
+  bool bind_to_pcr0 = false;
+  bool firmware_readable = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&length),
+                      SaveArg<2>(&write_define), SaveArg<3>(&bind_to_pcr0),
+                      SaveArg<4>(&firmware_readable), Return(true)));
   EXPECT_TRUE(tpm_->DefineNvram(
-      index, length,
+      kIndex, kLength,
       Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramFirmwareReadable));
-  EXPECT_EQ(index, last_define_space_request.index());
-  EXPECT_EQ(length, last_define_space_request.size());
-  ASSERT_EQ(2, last_define_space_request.attributes_size());
-  EXPECT_EQ(tpm_manager::NVRAM_PERSISTENT_WRITE_LOCK,
-            last_define_space_request.attributes(0));
-  EXPECT_EQ(tpm_manager::NVRAM_PLATFORM_READ,
-            last_define_space_request.attributes(1));
-  EXPECT_EQ(tpm_manager::NVRAM_POLICY_NONE, last_define_space_request.policy());
+  EXPECT_EQ(kIndex, index);
+  EXPECT_EQ(kLength, length);
+  ASSERT_TRUE(write_define);
+  ASSERT_FALSE(bind_to_pcr0);
+  ASSERT_TRUE(firmware_readable);
 }
 
 TEST_F(Tpm2Test, DefineNvramFailure) {
-  next_define_space_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, DefineSpace(_, _, _, _, _))
+      .WillOnce(Return(false));
   EXPECT_FALSE(tpm_->DefineNvram(0, 0, 0));
 }
 
 TEST_F(Tpm2Test, DestroyNvramSuccess) {
-  uint32_t index = 2;
-  EXPECT_TRUE(tpm_->DestroyNvram(index));
-  EXPECT_EQ(index, last_destroy_space_request.index());
+  constexpr uint32_t kIndex = 2;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, DestroySpace(_))
+      .WillOnce(DoAll(SaveArg<0>(&index), Return(true)));
+  EXPECT_TRUE(tpm_->DestroyNvram(kIndex));
+  EXPECT_EQ(kIndex, index);
 }
 
 TEST_F(Tpm2Test, DestroyNvramFailure) {
-  next_destroy_space_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, DestroySpace(_))
+      .WillOnce(Return(false));
   EXPECT_FALSE(tpm_->DestroyNvram(0));
 }
 
 TEST_F(Tpm2Test, WriteNvramSuccess) {
-  uint32_t index = 2;
-  std::string data("nvram_data");
-  EXPECT_TRUE(tpm_->WriteNvram(index, SecureBlob(data)));
-  EXPECT_EQ(index, last_write_space_request.index());
-  EXPECT_EQ(data, last_write_space_request.data());
+  constexpr uint32_t kIndex = 2;
+  const std::string kData("nvram_data");
+  constexpr bool kUserOwnerAuth = false;
+  uint32_t index = 0;
+  std::string data = "";
+  bool user_owner_auth = false;
+  EXPECT_CALL(mock_tpm_manager_utility_, WriteSpace(_, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&data),
+                      SaveArg<2>(&user_owner_auth), Return(true)));
+  EXPECT_TRUE(tpm_->WriteNvram(kIndex, SecureBlob(kData)));
+  EXPECT_EQ(index, kIndex);
+  EXPECT_EQ(data, kData);
+  EXPECT_EQ(user_owner_auth, kUserOwnerAuth);
 }
 
 TEST_F(Tpm2Test, WriteNvramFailure) {
-  next_write_space_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, WriteSpace(_, _, _))
+      .WillOnce(Return(false));
   EXPECT_FALSE(tpm_->WriteNvram(0, SecureBlob()));
 }
 
 TEST_F(Tpm2Test, WriteLockNvramSuccess) {
-  uint32_t index = 2;
-  EXPECT_TRUE(tpm_->WriteLockNvram(index));
-  EXPECT_EQ(index, last_lock_space_request.index());
-  EXPECT_TRUE(last_lock_space_request.lock_write());
-  EXPECT_FALSE(last_lock_space_request.lock_read());
+  constexpr uint32_t kIndex = 2;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, LockSpace(_))
+      .WillOnce(DoAll(SaveArg<0>(&index), Return(true)));
+  EXPECT_TRUE(tpm_->WriteLockNvram(kIndex));
+  EXPECT_EQ(kIndex, index);
 }
 
 TEST_F(Tpm2Test, WriteLockNvramFailure) {
-  next_lock_space_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, LockSpace(_)).WillOnce(Return(false));
   EXPECT_FALSE(tpm_->WriteLockNvram(0));
 }
 
 TEST_F(Tpm2Test, ReadNvramSuccess) {
-  uint32_t index = 2;
+  constexpr uint32_t kIndex = 2;
+  constexpr bool kUserOwnerAuth = false;
+  const std::string nvram_data("nvram_data");
+  uint32_t index = 0;
+  bool user_owner_auth = false;
   SecureBlob read_data;
-  std::string nvram_data("nvram_data");
-  next_read_space_reply.set_data(nvram_data);
-  EXPECT_TRUE(tpm_->ReadNvram(index, &read_data));
+  EXPECT_CALL(mock_tpm_manager_utility_, ReadSpace(_, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SaveArg<1>(&user_owner_auth),
+                      SetArgPointee<2>(nvram_data), Return(true)));
+  EXPECT_TRUE(tpm_->ReadNvram(kIndex, &read_data));
+  EXPECT_EQ(index, kIndex);
+  EXPECT_EQ(user_owner_auth, kUserOwnerAuth);
   EXPECT_EQ(nvram_data, read_data.to_string());
-  EXPECT_EQ(index, last_read_space_request.index());
 }
 
 TEST_F(Tpm2Test, ReadNvramFailure) {
-  next_read_space_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, ReadSpace(_, _, _))
+      .WillOnce(Return(false));
   SecureBlob read_data;
   EXPECT_FALSE(tpm_->ReadNvram(0, &read_data));
 }
 
 TEST_F(Tpm2Test, IsNvramDefinedSuccess) {
-  uint32_t index = 2;
-  next_list_spaces_reply.add_index_list(index);
-  EXPECT_TRUE(tpm_->IsNvramDefined(index));
+  constexpr uint32_t kIndex = 2;
+  std::vector<uint32_t> spaces;
+  spaces.push_back(kIndex);
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_))
+      .WillOnce(DoAll(SetArgPointee<0>(spaces), Return(true)));
+  EXPECT_TRUE(tpm_->IsNvramDefined(kIndex));
 }
 
 TEST_F(Tpm2Test, IsNvramDefinedFailure) {
-  uint32_t index = 2;
-  next_list_spaces_reply.set_result(NVRAM_RESULT_IPC_ERROR);
-  next_list_spaces_reply.add_index_list(index);
-  EXPECT_FALSE(tpm_->IsNvramDefined(index));
+  constexpr uint32_t kIndex = 2;
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_)).WillOnce(Return(false));
+  EXPECT_FALSE(tpm_->IsNvramDefined(kIndex));
 }
 
 TEST_F(Tpm2Test, IsNvramDefinedUnknownHandle) {
-  uint32_t index = 2;
-  next_list_spaces_reply.add_index_list(index + 1);
-  EXPECT_FALSE(tpm_->IsNvramDefined(index));
+  constexpr uint32_t kIndex = 2;
+  std::vector<uint32_t> spaces;
+  spaces.push_back(kIndex);
+  EXPECT_CALL(mock_tpm_manager_utility_, ListSpaces(_))
+      .WillOnce(DoAll(SetArgPointee<0>(spaces), Return(true)));
+  EXPECT_FALSE(tpm_->IsNvramDefined(kIndex + 1));
 }
 
 TEST_F(Tpm2Test, IsNvramLockedSuccess) {
-  uint32_t index = 2;
-  next_get_space_info_reply.set_is_write_locked(true);
-  EXPECT_TRUE(tpm_->IsNvramLocked(index));
-  EXPECT_EQ(index, last_get_space_info_request.index());
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = true;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_TRUE(tpm_->IsNvramLocked(kIndex));
+  EXPECT_EQ(kIndex, index);
 }
 
 TEST_F(Tpm2Test, IsNvramLockedNotLocked) {
-  next_get_space_info_reply.set_is_write_locked(false);
-  EXPECT_FALSE(tpm_->IsNvramLocked(0));
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = false;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_FALSE(tpm_->IsNvramLocked(kIndex));
+  EXPECT_EQ(kIndex, index);
 }
 
 TEST_F(Tpm2Test, IsNvramLockedFailure) {
-  next_get_space_info_reply.set_is_write_locked(true);
-  next_get_space_info_reply.set_result(NVRAM_RESULT_IPC_ERROR);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(Return(false));
   EXPECT_FALSE(tpm_->IsNvramLocked(0));
 }
 
 TEST_F(Tpm2Test, GetNvramSizeSuccess) {
-  uint32_t index = 2;
-  unsigned int size = 42;
-  next_get_space_info_reply.set_size(size);
-  EXPECT_EQ(tpm_->GetNvramSize(index), size);
+  constexpr uint32_t kIndex = 2;
+  constexpr uint32_t kSize = 5;
+  constexpr uint32_t kIsReadLocked = false;
+  constexpr uint32_t kIsWriteLocked = true;
+  uint32_t index = 0;
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(DoAll(SaveArg<0>(&index), SetArgPointee<1>(kSize),
+                      SetArgPointee<2>(kIsReadLocked),
+                      SetArgPointee<3>(kIsWriteLocked), Return(true)));
+  EXPECT_EQ(tpm_->GetNvramSize(kIndex), kSize);
+  EXPECT_EQ(kIndex, index);
 }
 
 TEST_F(Tpm2Test, GetNvramSizeFailure) {
-  uint32_t index = 2;
-  unsigned int size = 42;
-  next_get_space_info_reply.set_size(size);
-  next_get_space_info_reply.set_result(NVRAM_RESULT_IPC_ERROR);
-  EXPECT_EQ(tpm_->GetNvramSize(index), 0);
+  EXPECT_CALL(mock_tpm_manager_utility_, GetSpaceInfo(_, _, _, _))
+      .WillOnce(Return(false));
+  EXPECT_EQ(tpm_->GetNvramSize(0), 0);
 }
 
 TEST_F(Tpm2Test, SealToPCR0Success) {
@@ -1407,54 +1491,38 @@ TEST_F(Tpm2Test, SetUserTypeCaching) {
 }
 
 TEST_F(Tpm2Test, RemoveOwnerDependencySuccess) {
+  std::string dependency;
+  EXPECT_CALL(mock_tpm_manager_utility_, RemoveOwnerDependency(_))
+      .WillOnce(DoAll(SaveArg<0>(&dependency), Return(true)));
   EXPECT_TRUE(tpm_->RemoveOwnerDependency(
       TpmPersistentState::TpmOwnerDependency::kInstallAttributes));
-  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Nvram,
-            last_remove_owner_dependency_request.owner_dependency());
+  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Nvram, dependency);
+  EXPECT_CALL(mock_tpm_manager_utility_, RemoveOwnerDependency(_))
+      .WillOnce(DoAll(SaveArg<0>(&dependency), Return(true)));
   EXPECT_TRUE(tpm_->RemoveOwnerDependency(
       TpmPersistentState::TpmOwnerDependency::kAttestation));
-  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Attestation,
-            last_remove_owner_dependency_request.owner_dependency());
+  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Attestation, dependency);
 }
 
 TEST_F(Tpm2Test, RemoveOwnerDependencyFailure) {
-  next_remove_owner_dependency_reply.set_status(
-      tpm_manager::STATUS_DEVICE_ERROR);
+  std::string dependency;
+  EXPECT_CALL(mock_tpm_manager_utility_, RemoveOwnerDependency(_))
+      .WillOnce(DoAll(SaveArg<0>(&dependency), Return(false)));
   EXPECT_FALSE(tpm_->RemoveOwnerDependency(
       TpmPersistentState::TpmOwnerDependency::kInstallAttributes));
-  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Nvram,
-            last_remove_owner_dependency_request.owner_dependency());
-}
-
-TEST_F(Tpm2Test, RemoveOwnerDependencyUnknown) {
-  TpmPersistentState::TpmOwnerDependency unknown_dep =
-      static_cast<TpmPersistentState::TpmOwnerDependency>(100);
-  EXPECT_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _)).Times(0);
-  EXPECT_TRUE(tpm_->RemoveOwnerDependency(unknown_dep));
+  EXPECT_EQ(tpm_manager::kTpmOwnerDependency_Nvram, dependency);
 }
 
 TEST_F(Tpm2Test, ClearStoredPasswordSuccess) {
-  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _)).Times(1);
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
+      .WillOnce(Return(true));
   EXPECT_TRUE(tpm_->ClearStoredPassword());
 }
 
 TEST_F(Tpm2Test, ClearStoredPasswordFailure) {
-  next_clear_stored_password_reply.set_status(tpm_manager::STATUS_DEVICE_ERROR);
-  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _)).Times(1);
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
+      .WillOnce(Return(false));
   EXPECT_FALSE(tpm_->ClearStoredPassword());
-}
-
-TEST_F(Tpm2Test, HandleOwnershipTakenEvent) {
-  tpm_status_.set_owned(false);
-
-  EXPECT_CALL(mock_tpm_owner_, GetTpmStatus(_, _)).Times(1);
-
-  EXPECT_FALSE(tpm_->IsOwned());
-  EXPECT_FALSE(tpm_->IsOwned());
-
-  tpm_->HandleOwnershipTakenEvent();
-  EXPECT_TRUE(tpm_->IsOwned());
-  EXPECT_TRUE(tpm_->IsOwned());
 }
 
 namespace {
