@@ -7,6 +7,7 @@
 #include <metrics/metrics_library.h>
 
 #include "biod/biod_storage.h"
+#include "biod/fp_sensor_errors.h"
 #include "biod/updater/update_reason.h"
 #include "biod/utils.h"
 
@@ -48,6 +49,12 @@ constexpr char kRecordFormatVersionMetric[] =
     "Fingerprint.Unlock.RecordFormatVersion";
 constexpr char kMigrationForPositiveMatchSecretResult[] =
     "Fingerprint.Unlock.MigrationForPositiveMatchSecretResult";
+constexpr char kNumDeadPixels[] = "Fingerprint.Sensor.NumDeadPixels";
+
+// See
+// https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#count-histograms_choosing-number-of-buckets
+constexpr int kDefaultNumBuckets = 50;
+
 }  // namespace metrics
 
 BiodMetrics::BiodMetrics() : metrics_lib_(std::make_unique<MetricsLibrary>()) {}
@@ -169,6 +176,14 @@ bool BiodMetrics::SendSetContextMode(const FpMode& mode) {
 
 bool BiodMetrics::SendSetContextSuccess(bool success) {
   return metrics_lib_->SendBoolToUMA(metrics::kSetContextSuccess, success);
+}
+
+bool BiodMetrics::SendDeadPixelCount(int num_dead_pixels) {
+  constexpr int min_dead = 0;
+  constexpr int max_dead = kMaxDeadPixels;
+  return metrics_lib_->SendToUMA(metrics::kNumDeadPixels, num_dead_pixels,
+                                 min_dead, max_dead,
+                                 metrics::kDefaultNumBuckets);
 }
 
 }  // namespace biod

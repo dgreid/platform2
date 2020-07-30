@@ -31,6 +31,7 @@ extern const char kUpdaterStatus[];
 extern const char kUpdaterReason[];
 extern const char kUpdaterDurationNoUpdate[];
 extern const char kUpdaterDurationUpdate[];
+extern const char kNumDeadPixels[];
 
 }  // namespace metrics
 
@@ -74,6 +75,7 @@ class BiodMetricsInterface {
   virtual bool SendPositiveMatchSecretCorrect(bool correct) = 0;
   virtual bool SendRecordFormatVersion(int version) = 0;
   virtual bool SendMigrationForPositiveMatchSecretResult(bool success) = 0;
+  virtual bool SendDeadPixelCount(int num_dead_pixels) = 0;
 };
 
 class BiodMetrics : public BiodMetricsInterface {
@@ -120,6 +122,8 @@ class BiodMetrics : public BiodMetricsInterface {
 
   // Migration of templates to have positive match secret succeeded or not?
   bool SendMigrationForPositiveMatchSecretResult(bool success) override;
+
+  bool SendDeadPixelCount(int num_dead_pixels) override;
 
   void SetMetricsLibraryForTesting(
       std::unique_ptr<MetricsLibraryInterface> metrics_lib);

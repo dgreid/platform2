@@ -200,5 +200,19 @@ TEST_F(BiodMetricsTest, SendResetContextMode) {
   testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
 }
 
+TEST_F(BiodMetricsTest, SendDeadPixelCount) {
+  constexpr int kExpectedNumDead = 5;
+  constexpr int kExpectedMin = 0;
+  constexpr int kExpectedMax = 1022;
+  constexpr int kExpectedNumBuckets = 50;
+
+  EXPECT_CALL(*GetMetricsLibraryMock(),
+              SendToUMA(metrics::kNumDeadPixels, kExpectedNumDead, kExpectedMin,
+                        kExpectedMax, kExpectedNumBuckets))
+      .Times(1);
+  biod_metrics_.SendDeadPixelCount(5);
+  testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
+}
+
 }  // namespace
 }  // namespace biod

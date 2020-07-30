@@ -6,8 +6,13 @@
 #define BIOD_FP_SENSOR_ERRORS_H_
 
 #include <brillo/enum_flags.h>
+#include <chromeos/ec/ec_commands.h>
 
 namespace biod {
+
+static constexpr int kMaxDeadPixels = FP_ERROR_DEAD_PIXELS_UNKNOWN - 1;
+static_assert(kMaxDeadPixels > 0,
+              "Max number of dead pixels must be greater than zero");
 
 enum class FpSensorErrors {
   kNone = 0,
