@@ -222,7 +222,7 @@ bool Ethernet::Load(const StoreInterface* storage) {
 bool Ethernet::Save(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   storage->SetBool(id, kPPPoEProperty, GetPPPoEMode(nullptr));
-  return true;
+  return Device::Save(storage);
 }
 
 void Ethernet::ConnectTo(EthernetService* service) {
