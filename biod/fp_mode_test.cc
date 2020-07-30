@@ -42,11 +42,12 @@ TEST(FpModeTest, EnumVal) {
   EXPECT_EQ(FpMode(Mode::kMatch).EnumVal(), 9);
   EXPECT_EQ(FpMode(Mode::kResetSensor).EnumVal(), 10);
   EXPECT_EQ(FpMode(Mode::kDontChange).EnumVal(), 11);
-  EXPECT_EQ(FpMode(Mode::kModeInvalid).EnumVal(), 12);
+  EXPECT_EQ(FpMode(Mode::kSensorMaintenance).EnumVal(), 12);
+  EXPECT_EQ(FpMode(Mode::kModeInvalid).EnumVal(), 13);
 }
 
 TEST(FpModeTest, MaxEnumVal) {
-  EXPECT_EQ(FpMode().MaxEnumVal(), 12);
+  EXPECT_EQ(FpMode().MaxEnumVal(), 13);
 }
 
 TEST(FpModeTest, RawVal) {
@@ -61,6 +62,7 @@ TEST(FpModeTest, RawVal) {
   EXPECT_EQ(FpMode(Mode::kEnrollImage).RawVal(), 0x20);
   EXPECT_EQ(FpMode(Mode::kMatch).RawVal(), 0x40);
   EXPECT_EQ(FpMode(Mode::kResetSensor).RawVal(), 0x80);
+  EXPECT_EQ(FpMode(Mode::kSensorMaintenance).RawVal(), 0x100);
   EXPECT_EQ(FpMode(Mode::kDontChange).RawVal(), 0x80000000);
 
   EXPECT_EQ(FpMode(Mode::kEnrollSessionFingerUp).RawVal(), 0x14);

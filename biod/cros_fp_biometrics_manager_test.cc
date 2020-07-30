@@ -11,11 +11,14 @@
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
 #include <gtest/gtest.h>
+#include <base/test/scoped_task_environment.h>
 
 #include "biod/biod_crypto.h"
 #include "biod/biod_crypto_test_data.h"
 #include "biod/cros_fp_device_interface.h"
 #include "biod/mock_biod_metrics.h"
+#include "biod/mock_cros_fp_biometrics_manager.h"
+#include "biod/mock_cros_fp_device.h"
 
 namespace biod {
 
@@ -179,6 +182,8 @@ class CrosFpBiometricsManagerPeer {
   }
 
  private:
+  base::test::ScopedTaskEnvironment scoped_task_environment_{
+      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
   std::unique_ptr<CrosFpBiometricsManager> cros_fp_biometrics_manager_;
   FakeCrosFpDevice* fake_cros_dev_;
 };
@@ -317,6 +322,81 @@ TEST_F(CrosFpBiometricsManagerTest, TestInsertEmptyPositiveMatchSalt) {
   EXPECT_EQ(tmpl.size(), metadata_size + FP_POSITIVE_MATCH_SALT_BYTES);
   EXPECT_TRUE(
       BytesAreZeros(tmpl.data() + metadata_size, FP_POSITIVE_MATCH_SALT_BYTES));
+}
+
+class CrosFpBiometricsManagerMockTest : public ::testing::Test {
+ protected:
+  CrosFpBiometricsManagerMockTest() {
+    dbus::Bus::Options options;
+    options.bus_type = dbus::Bus::SYSTEM;
+    const scoped_refptr<dbus::MockBus> mock_bus = new dbus::MockBus(options);
+
+    // Set EXPECT_CALL, otherwise gmock forces an failure due to "uninteresting
+    // call" because we use StrictMock.
+    // https://github.com/google/googletest/blob/fb49e6c164490a227bbb7cf5223b846c836a0305/googlemock/docs/cook_book.md#the-nice-the-strict-and-the-naggy-nicestrictnaggy
+    power_manager_proxy_ = new dbus::MockObjectProxy(
+        mock_bus.get(), power_manager::kPowerManagerServiceName,
+        dbus::ObjectPath(power_manager::kPowerManagerServicePath));
+    EXPECT_CALL(*mock_bus,
+                GetObjectProxy(
+                    power_manager::kPowerManagerServiceName,
+                    dbus::ObjectPath(power_manager::kPowerManagerServicePath)))
+        .WillOnce(testing::Return(power_manager_proxy_.get()));
+
+    // Keep a pointer to the mocks so they can be used in the tests. The
+    // pointers must come after the MockCrosFpBiometricsManager pointer in the
+    // class so that MockCrosFpBiometricsManager outlives the bare pointers,
+    // since MockCrosFpBiometricsManager maintains ownership of the underlying
+    // objects.
+    auto mock_cros_fp_dev = std::make_unique<MockCrosFpDevice>();
+    mock_cros_dev_ = mock_cros_fp_dev.get();
+    auto mock_biod_metrics = std::make_unique<metrics::MockBiodMetrics>();
+    mock_metrics_ = mock_biod_metrics.get();
+
+    mock_ = MockCrosFpBiometricsManager::Create(
+        mock_bus, std::move(mock_cros_fp_dev), std::move(mock_biod_metrics));
+    EXPECT_TRUE(mock_);
+  }
+
+  base::test::ScopedTaskEnvironment scoped_task_environment_{
+      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
+  scoped_refptr<dbus::MockObjectProxy> power_manager_proxy_;
+  std::unique_ptr<MockCrosFpBiometricsManager> mock_;
+  MockCrosFpDevice* mock_cros_dev_;
+  metrics::MockBiodMetrics* mock_metrics_;
+};
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_TooShort) {
+  EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(0);
+  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromHours(12));
+}
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Once) {
+  EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(1);
+  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromDays(1));
+}
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Multiple) {
+  EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(2);
+  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromDays(2));
+}
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestOnMaintenanceTimerFired) {
+  constexpr int kNumDeadPixels = 1;
+
+  EXPECT_NE(mock_cros_dev_, nullptr);
+  EXPECT_NE(mock_metrics_, nullptr);
+
+  EXPECT_CALL(*mock_metrics_, SendDeadPixelCount(kNumDeadPixels)).Times(1);
+
+  EXPECT_CALL(*mock_cros_dev_, DeadPixelCount)
+      .WillOnce(testing::Return(kNumDeadPixels));
+
+  EXPECT_CALL(*mock_cros_dev_,
+              SetFpMode(FpMode(FpMode::Mode::kSensorMaintenance)))
+      .Times(1);
+
+  mock_->OnMaintenanceTimerFiredDelegate();
 }
 
 }  // namespace biod

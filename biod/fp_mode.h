@@ -26,6 +26,7 @@ class FpMode {
     kMatch,
     kResetSensor,
     kDontChange,
+    kSensorMaintenance,
 
     kModeInvalid  // must be last item
   };

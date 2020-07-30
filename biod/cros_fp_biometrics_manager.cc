@@ -20,6 +20,7 @@
 #include <base/time/time.h>
 #include <crypto/random.h>
 #include <metrics/metrics_library.h>
+#include <base/timer/timer.h>
 
 #include "biod/biod_crypto.h"
 #include "biod/biod_metrics.h"
@@ -350,7 +351,8 @@ CrosFpBiometricsManager::CrosFpBiometricsManager(
       biod_storage_(kCrosFpBiometricsManagerName,
                     base::Bind(&CrosFpBiometricsManager::LoadRecord,
                                base::Unretained(this))),
-      use_positive_match_secret_(false) {}
+      use_positive_match_secret_(false),
+      maintenance_timer_(std::make_unique<base::RepeatingTimer>()) {}
 
 CrosFpBiometricsManager::~CrosFpBiometricsManager() {}
 
@@ -359,6 +361,12 @@ bool CrosFpBiometricsManager::Init() {
       &CrosFpBiometricsManager::OnMkbpEvent, base::Unretained(this)));
 
   use_positive_match_secret_ = cros_dev_->SupportsPositiveMatchSecret();
+
+  maintenance_timer_->Start(
+      FROM_HERE, base::TimeDelta::FromDays(1),
+      base::Bind(&CrosFpBiometricsManager::OnMaintenanceTimerFired,
+                 base::Unretained(this)));
+
   return true;
 }
 
@@ -887,4 +895,18 @@ bool CrosFpBiometricsManager::WriteRecord(
   return biod_storage_.WriteRecord(record,
                                    std::make_unique<base::Value>(tmpl_base64));
 }
+
+void CrosFpBiometricsManager::OnMaintenanceTimerFired() {
+  LOG(INFO) << "Maintenance timer fired";
+
+  // Report the number of dead pixels
+  cros_dev_->UpdateFpInfo();
+  biod_metrics_->SendDeadPixelCount(cros_dev_->DeadPixelCount());
+
+  // The maintenance operation can take a couple hundred milliseconds, so it's
+  // an asynchronous mode (the state is cleared by the FPMCU after it is
+  // finished with the operation).
+  cros_dev_->SetFpMode(FpMode(FpMode::Mode::kSensorMaintenance));
+}
+
 }  // namespace biod

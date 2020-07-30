@@ -76,6 +76,8 @@ uint32_t FpMode::EnumToRawVal(Mode mode) const {
       return FP_MODE_RESET_SENSOR;
     case Mode::kDontChange:
       return FP_MODE_DONT_CHANGE;
+    case Mode::kSensorMaintenance:
+      return FP_MODE_SENSOR_MAINTENANCE;
   }
 }
 }  // namespace biod

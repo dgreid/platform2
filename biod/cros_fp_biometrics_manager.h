@@ -14,6 +14,7 @@
 
 #include <base/values.h>
 #include <dbus/bus.h>
+#include <base/timer/timer.h>
 
 #include "biod/biod_storage.h"
 #include "biod/cros_fp_device.h"
@@ -66,6 +67,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
 
   void EndEnrollSession() override;
   void EndAuthSession() override;
+
+  virtual void OnMaintenanceTimerFired();
 
  private:
   // For testing.
@@ -176,6 +179,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
   BiodStorage biod_storage_;
 
   bool use_positive_match_secret_;
+
+  std::unique_ptr<base::RepeatingTimer> maintenance_timer_;
 
   DISALLOW_COPY_AND_ASSIGN(CrosFpBiometricsManager);
 };
