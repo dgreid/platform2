@@ -14,6 +14,7 @@
 
 #include "diagnostics/common/status_macros.h"
 #include "diagnostics/common/statusor.h"
+#include "diagnostics/cros_healthd/utils/storage/platform.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -37,15 +38,16 @@ int ParserErrCb(struct libmnt_table* unused, const char* filename, int line) {
 }  // namespace
 
 StatusOr<std::unique_ptr<StorageDeviceResolver>> StorageDeviceResolver::Create(
-    const base::FilePath& rootfs) {
+    const base::FilePath& rootfs, const std::string& root_device) {
   ASSIGN_OR_RETURN(auto devs, GetSwapDevices(rootfs));
   return std::unique_ptr<StorageDeviceResolver>(
-      new StorageDeviceResolver(devs));
+      new StorageDeviceResolver(devs, root_device));
 }
 
 StorageDeviceResolver::StorageDeviceResolver(
-    const std::set<std::string>& swap_backing_devices)
-    : swap_backing_devices_(swap_backing_devices) {}
+    const std::set<std::string>& swap_backing_devices,
+    const std::string& root_device)
+    : swap_backing_devices_(swap_backing_devices), root_device_(root_device) {}
 
 // GetSwapDevices parses /proc/swaps via libmount to retrieve the list of swap
 // devices and then call into a method to find out the backing physical devices.
@@ -132,10 +134,11 @@ StatusOr<std::set<std::string>> StorageDeviceResolver::ResolveDevices(
 
 mojo_ipc::StorageDevicePurpose StorageDeviceResolver::GetDevicePurpose(
     const std::string& dev_name) const {
-  if (swap_backing_devices_.find(dev_name) != swap_backing_devices_.end()) {
+  if (swap_backing_devices_.find(dev_name) != swap_backing_devices_.end())
     return mojo_ipc::StorageDevicePurpose::kSwapDevice;
-  }
-  return mojo_ipc::StorageDevicePurpose::kBootDevice;
+  if (dev_name == root_device_)
+    return mojo_ipc::StorageDevicePurpose::kBootDevice;
+  return mojo_ipc::StorageDevicePurpose::kUnknown;
 }
 
 }  // namespace diagnostics

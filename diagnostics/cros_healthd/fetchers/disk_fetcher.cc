@@ -51,10 +51,12 @@ Status DiskFetcher::InitManager(const base::FilePath& root) {
   if (!udev)
     return Status(StatusCode::kInternal, "Unable to create udev interface");
 
-  ASSIGN_OR_RETURN(auto resolver, StorageDeviceResolver::Create(root));
+  auto platform = std::make_unique<Platform>();
+  ASSIGN_OR_RETURN(auto resolver, StorageDeviceResolver::Create(
+                                      root, platform->GetRootDeviceName()));
   manager_.reset(new StorageDeviceManager(
       std::make_unique<StorageDeviceLister>(), std::move(resolver),
-      std::move(udev), std::make_unique<Platform>()));
+      std::move(udev), std::move(platform)));
 
   return Status::OkStatus();
 }

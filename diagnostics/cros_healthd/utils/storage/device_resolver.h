@@ -13,6 +13,7 @@
 #include <base/files/file_path.h>
 
 #include "diagnostics/common/statusor.h"
+#include "diagnostics/cros_healthd/utils/storage/platform.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 
 namespace diagnostics {
@@ -21,7 +22,7 @@ namespace diagnostics {
 class StorageDeviceResolver {
  public:
   static StatusOr<std::unique_ptr<StorageDeviceResolver>> Create(
-      const base::FilePath& rootfs);
+      const base::FilePath& rootfs, const std::string& root_device);
 
   virtual ~StorageDeviceResolver() = default;
 
@@ -38,9 +39,11 @@ class StorageDeviceResolver {
       const base::FilePath& rootfs, const std::list<std::string>& swap_devs);
 
   explicit StorageDeviceResolver(
-      const std::set<std::string>& swap_backing_devices);
+      const std::set<std::string>& swap_backing_devices,
+      const std::string& root_device_);
 
   const std::set<std::string> swap_backing_devices_;
+  const std::string root_device_;
 };
 
 }  // namespace diagnostics
