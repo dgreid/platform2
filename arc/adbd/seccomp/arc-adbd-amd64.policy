@@ -38,6 +38,8 @@ rt_sigprocmask: 1
 munmap: 1
 tgkill: 1
 sendto: 1
+gettid:1
+futex:1
 
 # For modprobe(8)
 clone: 1
