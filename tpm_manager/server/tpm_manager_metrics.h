@@ -23,6 +23,10 @@ class TpmManagerMetrics : private MetricsLibrary {
 
   virtual void ReportDictionaryAttackCounter(int counter);
 
+  // Reports the TPM version fingerprint to the
+  // "Platform.TPM.VersionFingerprint" histogram.
+  virtual void ReportVersionFingerprint(int fingerprint);
+
   void set_metrics_library_for_testing(
       MetricsLibraryInterface* metrics_library) {
     metrics_library_ = metrics_library;

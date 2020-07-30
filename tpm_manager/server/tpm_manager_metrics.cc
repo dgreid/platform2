@@ -24,4 +24,8 @@ void TpmManagerMetrics::ReportDictionaryAttackCounter(int counter) {
                                   kDictionaryAttackCounterNumBuckets);
 }
 
+void TpmManagerMetrics::ReportVersionFingerprint(int fingerprint) {
+  metrics_library_->SendSparseToUMA(kTPMVersionFingerprint, fingerprint);
+}
+
 }  // namespace tpm_manager

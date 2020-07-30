@@ -169,7 +169,6 @@ class TpmInit {
 
   bool take_ownership_called_ = false;
   bool took_ownership_ = false;
-  bool statistics_reported_ = false;
   int64_t initialization_time_ = 0;
   Platform* platform_ = nullptr;
   TpmPersistentState tpm_persistent_state_;

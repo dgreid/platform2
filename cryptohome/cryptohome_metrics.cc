@@ -71,7 +71,6 @@ constexpr char kCryptohomeParallelTasksPrefix[] = "Cryptohome.ParallelTasks";
 constexpr char kCryptohomeLESyncOutcomeHistogramSuffix[] = ".SyncOutcome";
 constexpr char kHomedirEncryptionTypeHistogram[] =
     "Cryptohome.HomedirEncryptionType";
-constexpr char kTPMVersionFingerprint[] = "Platform.TPM.VersionFingerprint";
 constexpr char kDircryptoMigrationNoSpaceFailureFreeSpaceInMbHistogram[] =
     "Cryptohome.DircryptoMigrationNoSpaceFailureFreeSpaceInMb";
 constexpr char kDircryptoMigrationInitialFreeSpaceInMbHistogram[] =
@@ -433,14 +432,6 @@ void ReportLESyncOutcome(LECredError result) {
                              .append(kCryptohomeLESyncOutcomeHistogramSuffix);
 
   g_metrics->SendEnumToUMA(hist_str, result, LE_CRED_ERROR_MAX);
-}
-
-void ReportVersionFingerprint(int fingerprint) {
-  if (!g_metrics) {
-    return;
-  }
-
-  g_metrics->SendSparseToUMA(kTPMVersionFingerprint, fingerprint);
 }
 
 void ReportDircryptoMigrationFailedNoSpace(int initial_migration_free_space_mb,

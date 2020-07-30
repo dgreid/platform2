@@ -91,6 +91,8 @@ class TpmManagerService : public TpmNvramInterface,
   // any other method in this class. Returns true on success.
   bool Initialize();
 
+  void ReportVersionFingerprint();
+
   // TpmOwnershipInterface methods.
   void GetTpmStatus(const GetTpmStatusRequest& request,
                     const GetTpmStatusCallback& callback) override;

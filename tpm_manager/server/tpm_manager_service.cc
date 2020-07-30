@@ -6,13 +6,17 @@
 
 #include <memory>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/command_line.h>
 #include <base/message_loop/message_pump_type.h>
+#include <base/strings/stringprintf.h>
 #include <base/synchronization/lock.h>
+#include <crypto/sha2.h>
+#include <inttypes.h>
 
 namespace {
 
@@ -37,6 +41,29 @@ bool ClearOwnerPasswordIfPossible(tpm_manager::LocalData* local_data) {
     return true;
   }
   return false;
+}
+
+int GetFingerprint(uint32_t family,
+                   uint64_t spec_level,
+                   uint32_t manufacturer,
+                   uint32_t tpm_model,
+                   uint64_t firmware_version,
+                   std::string vendor_specific) {
+  // The exact encoding doesn't matter as long as its unambiguous, stable and
+  // contains all information present in the version fields.
+  std::string encoded_parameters =
+      base::StringPrintf("%08" PRIx32 "%016" PRIx64 "%08" PRIx32 "%08" PRIx32
+                         "%016" PRIx64 "%016zx",
+                         family, spec_level, manufacturer, tpm_model,
+                         firmware_version, vendor_specific.size());
+  encoded_parameters.append(vendor_specific);
+  std::string hash = crypto::SHA256HashString(encoded_parameters);
+
+  // Return the first 31 bits from |hash|.
+  int result =
+      static_cast<uint8_t>(hash[0]) | static_cast<uint8_t>(hash[1]) << 8 |
+      static_cast<uint8_t>(hash[2]) << 16 | static_cast<uint8_t>(hash[3]) << 24;
+  return result & 0x7fffffff;
 }
 
 }  // namespace
@@ -85,8 +112,29 @@ bool TpmManagerService::Initialize() {
   base::Closure task =
       base::Bind(&TpmManagerService::InitializeTask, base::Unretained(this));
   worker_thread_->task_runner()->PostNonNestableTask(FROM_HERE, task);
+  ReportVersionFingerprint();
   VLOG(1) << "Worker thread started.";
   return true;
+}
+
+void TpmManagerService::ReportVersionFingerprint() {
+  auto callback = base::Bind(
+      [](tpm_manager::TpmManagerMetrics* tpm_manager_metrics,
+         const tpm_manager::GetVersionInfoReply& reply) {
+        if (reply.status() == STATUS_SUCCESS) {
+          uint32_t family = reply.family();
+          uint64_t spec_level = reply.spec_level();
+          uint32_t manufacturer = reply.manufacturer();
+          uint32_t tpm_model = reply.tpm_model();
+          uint64_t firmware_version = reply.firmware_version();
+          std::string vendor_specific = reply.vendor_specific();
+          tpm_manager_metrics->ReportVersionFingerprint(
+              GetFingerprint(family, spec_level, manufacturer, tpm_model,
+                             firmware_version, vendor_specific));
+        }
+      },
+      base::Unretained(tpm_manager_metrics_));
+  GetVersionInfo(tpm_manager::GetVersionInfoRequest(), callback);
 }
 
 void TpmManagerService::InitializeTask() {

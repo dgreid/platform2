@@ -173,15 +173,6 @@ bool TpmInit::SetupTpm(bool load_key) {
     RestoreTpmStateFromStorage();
   }
 
-  // Collect version statistics.
-  if (!statistics_reported_) {
-    Tpm::TpmVersionInfo version_info;
-    if (get_tpm()->GetVersionInfo(&version_info)) {
-      ReportVersionFingerprint(version_info.GetFingerprint());
-      statistics_reported_ = true;
-    }
-  }
-
   if (load_key) {
     // load cryptohome key
     LoadOrCreateCryptohomeKey(&cryptohome_key_);

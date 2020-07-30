@@ -412,10 +412,6 @@ void ReportLEResult(const char* type, const char* action, LECredError result);
 // to the "Cryptohome.LECredential.SyncOutcome" enum histogram.
 void ReportLESyncOutcome(LECredError result);
 
-// Reports the TPM version fingerprint to the "Platform.TPM.VersionFingerprint"
-// histogram.
-void ReportVersionFingerprint(int fingerprint);
-
 // Reports the free space in MB when the migration fails and what the free space
 // was initially when the migration was started.
 void ReportDircryptoMigrationFailedNoSpace(int initial_migration_free_space_mb,

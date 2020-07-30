@@ -23,6 +23,7 @@
 
 using testing::_;
 using testing::AtLeast;
+using testing::AtMost;
 using testing::Ge;
 using testing::Invoke;
 using testing::Le;
@@ -55,6 +56,8 @@ class TpmManagerServiceTestBase : public testing::Test {
  public:
   ~TpmManagerServiceTestBase() override = default;
   void SetUp() override {
+    EXPECT_CALL(mock_tpm_manager_metrics_, ReportVersionFingerprint(_))
+        .Times(AtMost(1));
     service_.reset(new TpmManagerService(
         wait_for_ownership, perform_preinit, &mock_local_data_store_,
         &mock_tpm_status_, &mock_tpm_initializer_, &mock_tpm_nvram_,
@@ -365,7 +368,7 @@ TEST_F(TpmManagerServiceTest, GetTpmStatusNoTpm) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, GetVersionInfoSuccess) {
+TEST_F(TpmManagerServiceTest_Preinit, GetVersionInfoSuccess) {
   EXPECT_CALL(mock_tpm_status_, GetVersionInfo(_, _, _, _, _, _))
       .WillOnce(Invoke([](uint32_t* family, uint64_t* spec_level,
                           uint32_t* manufacturer, uint32_t* tpm_model,
@@ -379,6 +382,8 @@ TEST_F(TpmManagerServiceTest, GetVersionInfoSuccess) {
         *vendor_specific = {'a', 'b'};
         return true;
       }));
+
+  SetupService();
 
   auto callback = [](TpmManagerServiceTestBase* self, int* call_count,
                      base::Lock* call_count_lock,
@@ -413,9 +418,12 @@ TEST_F(TpmManagerServiceTest, GetVersionInfoSuccess) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, GetVersionInfoError) {
+TEST_F(TpmManagerServiceTest_Preinit, GetVersionInfoError) {
   EXPECT_CALL(mock_tpm_status_, GetVersionInfo(_, _, _, _, _, _))
+      .WillOnce(Return(false))
       .WillOnce(Return(false));
+
+  SetupService();
 
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetVersionInfoReply& reply) {

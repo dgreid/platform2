@@ -11,6 +11,7 @@ constexpr char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
 constexpr char kDictionaryAttackCounterHistogram[] =
     "Platform.TPM.DictionaryAttackCounter";
+constexpr char kTPMVersionFingerprint[] = "Platform.TPM.VersionFingerprint";
 
 }  // namespace tpm_manager
 
