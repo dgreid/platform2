@@ -17,6 +17,9 @@ fi
 # Source blocksize
 SRC_BLKSIZE=512
 
+# Copy the rootfs in chunks to optimize disk cache usage.
+NUM_ROOTFS_CHUNKS=4
+
 # Helpful constants.
 HARDWARE_DIAGNOSTICS_PATH=/tmp/hardware_diagnostics.log
 TMPMNT=/tmp/install-mount-point
@@ -74,12 +77,13 @@ die() {
 fast_dd() {
   # Usage: fast_dd <count> <seek> <skip> other dd args
   # Note: <count> and <seek> are in units of SRC_BLKSIZE, while <skip> is in
-  # units of DST_BLKSIZE. Supply 0 for <count> to not include any count=
-  # argument in dd.
+  # units of DST_BLKSIZE.
   local user_count="$1"
   local user_seek="$2"
   local user_skip="$3"
-  shift 3
+  local chunk_num="$4"
+  local total_chunks="$5"
+  shift 5
   # Provide some simple progress updates to the user.
   set -- "$@" status=progress
   # Find the largest block size that all the parameters are a factor of.
@@ -110,13 +114,24 @@ fast_dd() {
   local count_common=$((user_count * SRC_BLKSIZE / block_size))
   local seek_common=$((user_seek * DST_BLKSIZE / block_size))
   local skip_common=$((user_skip * SRC_BLKSIZE / block_size))
-  local count_arg=""
-  if [ "${count_common}" -ne 0 ]; then
-    count_arg="count=${count_common}"
+
+  if [ "${total_chunks}" -ne 1 ]; then
+    # Divide the count by the number of chunks, rounding up.  This is the
+    # chunk size.
+    local chunk_size=$(((count_common + total_chunks - 1) / total_chunks))
+
+    : $(( seek_common += chunk_size * (chunk_num - 1) ))
+    : $(( skip_common += chunk_size * (chunk_num - 1) ))
+
+    if [ "${chunk_num}" -ne "${total_chunks}" ]; then
+      count_common="${chunk_size}"
+    else
+      : $(( count_common -= chunk_size * (chunk_num - 1) ))
+    fi
   fi
 
   dd "$@" bs="${block_size}" seek="${seek_common}" skip="${skip_common}" \
-      "${count_arg}"
+      "count=${count_common}"
 }
 
 # Get the specified env var for the specified partition.
@@ -187,6 +202,8 @@ write_partition() {
   local user_skip="$4"
   local src="$5"
   local dst="$6"
+  local chunk_num="$7"
+  local total_chunks="$8"
   local format fs_format
 
   if [ "${user_count}" -eq 0 ]; then
@@ -197,6 +214,12 @@ write_partition() {
   format="$(get_format "${user_part}")"
   case ${format} in
   nand)
+    if [ "${chunk_num}" -ne 1 ]; then
+      return
+    elif [ "${total_chunks}" -ne 1 ]; then
+      echo "Chunking not supported for NAND; will install all in one go"
+    fi
+
     flash_erase "/dev/mtd${user_part}" 0 0
     nandwrite --input-skip $((user_skip * SRC_BLKSIZE)) \
       --input-size $((user_count * SRC_BLKSIZE)) \
@@ -204,6 +227,12 @@ write_partition() {
     ;;
 
   ubi)
+    if [ "${chunk_num}" -ne 1 ]; then
+      return
+    elif [ "${total_chunks}" -ne 1 ]; then
+      echo "Chunking not supported for UBI; will install all in one go"
+    fi
+
     local phy_ubi="/dev/ubi${user_part}"
     local log_ubi="${phy_ubi}_0"
     local sysfs_name="/sys/class/mtd/mtd${user_part}/name"
@@ -238,7 +267,7 @@ write_partition() {
 
   *)
     fast_dd "${user_count}" "${user_seek}" "${user_skip}" \
-      if="${src}" of="${dst}" conv=notrunc
+      "${chunk_num}" "${total_chunks}" if="${src}" of="${dst}" conv=notrunc
     ;;
   esac
 }
@@ -672,10 +701,14 @@ install_stateful() {
 # $1 - Partition number we are copying to.
 # $2 - src image
 # $3 - dst image.
+# $4 - chunk_num
+# $5 - total_chunks
 copy_partition() {
   local part_num=$1
   local src=$2
   local dst=$3
+  local chunk_num=$4
+  local total_chunks=$5
   local part_size
   local src_offset
   local dst_offset
@@ -684,7 +717,12 @@ copy_partition() {
   src_offset="$(partoffset "${src}" "${part_num}")"
   dst_offset="$(partoffset "${dst}" "${part_num}")"
 
-  echo "Installing partition ${part_num} to ${dst}"
+  local chunk_status=""
+  if [ "${total_chunks}" -ne 1 ]; then
+    chunk_status=", chunk ${chunk_num} of ${total_chunks}"
+  fi
+
+  echo "Installing partition ${part_num} to ${dst}${chunk_status}"
 
   case "${part_num}" in
   "${PARTITION_NUM_STATE}")
@@ -695,14 +733,14 @@ copy_partition() {
     part_size=$(partsize "${src}" "${PARTITION_NUM_ROOT_A}")
     src_offset=$(partoffset "${src}" "${PARTITION_NUM_ROOT_A}")
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
     ;;
   "${PARTITION_NUM_KERN_A}"|"${PARTITION_NUM_KERN_B}")
     # Use kernel B from the source into both kernel A and B in the destination.
     part_size="$(partsize "${src}" "${PARTITION_NUM_KERN_B}")"
     src_offset="$(partoffset "${src}" "${PARTITION_NUM_KERN_B}")"
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
     ;;
   *)
     local src_part_size
@@ -717,7 +755,7 @@ copy_partition() {
       return
     fi
     write_partition "${part_num}" "${part_size}" "${dst_offset}" \
-      "${src_offset}" "${src}" "${dst}"
+      "${src_offset}" "${src}" "${dst}" "${chunk_num}" "${total_chunks}"
     ;;
   esac
 }
@@ -962,14 +1000,35 @@ main() {
     wipe_stateful
   fi
 
-  # Install the content. Do so in reverse order to have stateful get installed
-  # last. The order shouldn't matter but legacy behavior has us go in reverse
-  # order.
-  local current_part
-  for current_part in $(seq "${PARTITION_NUM_EFI_SYSTEM}" -1 \
-      "${PARTITION_NUM_STATE}"); do
-    copy_partition "${current_part}" "${SRC}" "${DST}"
+  # First do the easy ones.  Do so in reverse order to have stateful
+  # get installed last. The order shouldn't matter but legacy behavior has
+  # us go in reverse order.
+  copy_partition "${PARTITION_NUM_EFI_SYSTEM}" "${SRC}" "${DST}" 1 1 # 12
+  copy_partition "${PARTITION_NUM_RWFW}" "${SRC}" "${DST}" 1 1       # 11
+  copy_partition 10 "${SRC}" "${DST}" 1 1                            # 10
+  copy_partition 9 "${SRC}" "${DST}" 1 1                             # 9
+  copy_partition "${PARTITION_NUM_OEM}" "${SRC}" "${DST}" 1 1        # 8
+  copy_partition "${PARTITION_NUM_ROOT_C}" "${SRC}" "${DST}" 1 1     # 7
+  copy_partition "${PARTITION_NUM_KERN_C}" "${SRC}" "${DST}" 1 1     # 6
+  copy_partition "${PARTITION_NUM_KERN_B}" "${SRC}" "${DST}" 1 1     # 4
+  copy_partition "${PARTITION_NUM_KERN_A}" "${SRC}" "${DST}" 1 1     # 2
+
+  # We want to chunk up the root filesystem.  We do this because we're
+  # going to read the source once and write it to the destination twice.
+  # If the rootfs is big and we don't have extra RAM, we can blow out
+  # the amount of free RAM and by the time we write the second
+  # destination we won't have the source cached.  Doing it in chunks
+  # prevents this.
+  local chunk_num
+  for chunk_num in $(seq "${NUM_ROOTFS_CHUNKS}"); do
+    copy_partition "${PARTITION_NUM_ROOT_B}" "${SRC}" "${DST}" \
+       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 3
+    copy_partition "${PARTITION_NUM_ROOT_A}" "${SRC}" "${DST}" \
+       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 5
   done
+
+  # Last is stateful.
+  copy_partition "${PARTITION_NUM_STATE}" "${SRC}" "${DST}" 1 1      # 1
 
   do_post_install
 
