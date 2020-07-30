@@ -13,8 +13,8 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_tokenizer.h>
 
-#include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 
 namespace diagnostics {
 

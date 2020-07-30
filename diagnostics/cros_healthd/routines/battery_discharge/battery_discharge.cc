@@ -16,9 +16,9 @@
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
 
-#include "diagnostics/common/file_utils.h"
 #include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge_constants.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {

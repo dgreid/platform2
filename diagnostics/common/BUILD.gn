@@ -15,10 +15,7 @@ pkg_config("libcommon_pkg_deps") {
 source_set("libcommon") {
   configs += [ ":libcommon_pkg_deps" ]
   public_deps = [ "system:libsystem" ]
-  sources = [
-    "file_utils.cc",
-    "mojo_utils.cc",
-  ]
+  sources = [ "mojo_utils.cc" ]
 }
 
 if (use.test || use.fuzzer) {

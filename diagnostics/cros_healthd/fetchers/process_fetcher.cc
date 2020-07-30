@@ -18,8 +18,8 @@
 #include <base/strings/string_split.h>
 #include <re2/re2.h>
 
-#include "diagnostics/common/file_utils.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "diagnostics/cros_healthd/utils/procfs_utils.h"
 #include "mojo/cros_healthd_probe.mojom.h"
 

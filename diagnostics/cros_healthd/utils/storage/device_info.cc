@@ -15,10 +15,10 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 
-#include "diagnostics/common/file_utils.h"
 #include "diagnostics/common/status_macros.h"
 #include "diagnostics/common/statusor.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/caching_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/default_device_adapter.h"
 #include "diagnostics/cros_healthd/utils/storage/disk_iostat.h"

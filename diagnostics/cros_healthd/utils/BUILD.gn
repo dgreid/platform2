@@ -13,6 +13,7 @@ source_set("libcros_healthd_utils") {
   configs += [ ":libcros_healthd_utils_pkg_deps" ]
   sources = [
     "cpu_file_helpers.cc",
+    "file_utils.cc",
     "helper_tool_utils.cc",
     "procfs_utils.cc",
   ]

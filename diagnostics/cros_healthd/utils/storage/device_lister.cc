@@ -17,7 +17,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_util.h>
 
-#include "diagnostics/common/file_utils.h"
+#include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "diagnostics/cros_healthd/utils/storage/platform.h"
 
 namespace diagnostics {
