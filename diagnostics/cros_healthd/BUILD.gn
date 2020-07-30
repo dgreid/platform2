@@ -20,9 +20,9 @@ source_set("libcros_healthd") {
     "events:libcros_healthd_events",
     "fetchers:libcros_healthd_fetchers",
     "process:libcros_healthd_process",
+    "routines:libdiag_routine",
     "system:libcros_healthd_system",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
-    "//diagnostics/routines:libdiag_routine",
   ]
   sources = [
     "cros_healthd.cc",
@@ -58,10 +58,10 @@ if (use.test) {
     ]
     deps = [
       ":libcros_healthd",
+      "routines:libroutine_test_utils",
       "system:libcros_healthd_system_test_utils",
       "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
-      "//diagnostics/routines:libroutine_test_utils",
     ]
     sources = [
       "cros_healthd_mojo_service_test.cc",

@@ -8,10 +8,10 @@ group("all") {
   deps = [
     "//diagnostics/cros_health_tool:cros-health-tool",
     "//diagnostics/cros_healthd:cros_healthd",
-    "//diagnostics/routines:floating-point-accuracy",
-    "//diagnostics/routines:prime-search",
-    "//diagnostics/routines:smartctl-check",
-    "//diagnostics/routines:urandom",
+    "//diagnostics/cros_healthd/routines:floating-point-accuracy",
+    "//diagnostics/cros_healthd/routines:prime-search",
+    "//diagnostics/cros_healthd/routines:smartctl-check",
+    "//diagnostics/cros_healthd/routines:urandom",
     "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd",
   ]
   if (use.test) {
@@ -20,10 +20,10 @@ group("all") {
       "//diagnostics/cros_healthd:cros_healthd_test",
       "//diagnostics/cros_healthd/events:libcros_healthd_events_test",
       "//diagnostics/cros_healthd/fetchers:libcros_healthd_fetchers_test",
+      "//diagnostics/cros_healthd/routines:routine_test",
       "//diagnostics/cros_healthd/system:system_config_test",
       "//diagnostics/cros_healthd/utils:libcros_healthd_utils_test",
       "//diagnostics/cros_healthd_mojo_adapter:cros_healthd_mojo_adapter_test",
-      "//diagnostics/routines:routine_test",
       "//diagnostics/wilco_dtc_supportd:wilco_dtc_supportd_test",
     ]
   }

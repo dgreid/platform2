@@ -13,7 +13,7 @@
 #include <base/time/time.h>
 
 #include "diagnostics/common/system/debugd_adapter_impl.h"
-#include "diagnostics/routines/diag_routine.h"
+#include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "mojo/cros_healthd.mojom.h"
 
 namespace diagnostics {

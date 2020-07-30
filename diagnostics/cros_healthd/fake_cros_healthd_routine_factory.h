@@ -12,7 +12,7 @@
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
-#include "diagnostics/routines/diag_routine.h"
+#include "diagnostics/cros_healthd/routines/diag_routine.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {

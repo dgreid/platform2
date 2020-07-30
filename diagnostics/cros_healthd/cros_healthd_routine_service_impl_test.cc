@@ -16,8 +16,8 @@
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/fake_cros_healthd_routine_factory.h"
+#include "diagnostics/cros_healthd/routines/routine_test_utils.h"
 #include "diagnostics/cros_healthd/system/mock_context.h"
-#include "diagnostics/routines/routine_test_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 using testing::StrictMock;

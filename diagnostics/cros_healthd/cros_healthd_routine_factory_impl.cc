@@ -4,19 +4,19 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 
-#include "diagnostics/routines/ac_power/ac_power.h"
-#include "diagnostics/routines/battery_capacity/battery_capacity.h"
-#include "diagnostics/routines/battery_discharge/battery_discharge.h"
-#include "diagnostics/routines/battery_health/battery_health.h"
-#include "diagnostics/routines/cpu_cache/cpu_cache.h"
-#include "diagnostics/routines/cpu_stress/cpu_stress.h"
-#include "diagnostics/routines/disk_read/disk_read.h"
-#include "diagnostics/routines/floating_point/floating_point_accuracy.h"
-#include "diagnostics/routines/nvme_self_test/nvme_self_test.h"
-#include "diagnostics/routines/nvme_wear_level/nvme_wear_level.h"
-#include "diagnostics/routines/prime_search/prime_search.h"
-#include "diagnostics/routines/smartctl_check/smartctl_check.h"
-#include "diagnostics/routines/urandom/urandom.h"
+#include "diagnostics/cros_healthd/routines/ac_power/ac_power.h"
+#include "diagnostics/cros_healthd/routines/battery_capacity/battery_capacity.h"
+#include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge.h"
+#include "diagnostics/cros_healthd/routines/battery_health/battery_health.h"
+#include "diagnostics/cros_healthd/routines/cpu_cache/cpu_cache.h"
+#include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
+#include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
+#include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
+#include "diagnostics/cros_healthd/routines/nvme_self_test/nvme_self_test.h"
+#include "diagnostics/cros_healthd/routines/nvme_wear_level/nvme_wear_level.h"
+#include "diagnostics/cros_healthd/routines/prime_search/prime_search.h"
+#include "diagnostics/cros_healthd/routines/smartctl_check/smartctl_check.h"
+#include "diagnostics/cros_healthd/routines/urandom/urandom.h"
 
 namespace diagnostics {
 
