@@ -4,7 +4,6 @@
 
 use std::ffi::CStr;
 
-use libc;
 use log::{self, Level, LevelFilter, Metadata, Record, SetLoggerError};
 
 static LOGGER: SyslogLogger = SyslogLogger;
