@@ -23,9 +23,9 @@ namespace {
 const uint8_t kEmptyBuffer[] = {};
 }  // anonymous namespace
 
-// 256 MB limit.
+// 1 GB limit.
 // TODO(yoshiki): adjust it to an appropriate value.
-constexpr size_t kMaxFileSize = 256l * 1024 * 1024 - 1;
+constexpr size_t kMaxFileSize = 1024l * 1024 * 1024 - 1;
 
 LogLineReader::LogLineReader(Backend backend_mode)
     : backend_mode_(backend_mode) {}
