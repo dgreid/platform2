@@ -9,7 +9,7 @@
 #include <string>
 
 #include <base/files/file_descriptor_watcher_posix.h>
-#include <mojo/public/cpp/bindings/binding.h>
+#include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "arc/vm/sensor_service/sensor_service.mojom.h"
 
@@ -41,7 +41,7 @@ class SensorDeviceImpl : public mojom::SensorDevice {
 
   const base::FilePath iio_sysfs_dir_;
   const base::FilePath device_file_;
-  mojo::Binding<mojom::SensorDevice> binding_{this};
+  mojo::BindingSet<mojom::SensorDevice> bindings_;
 
   base::ScopedFD device_fd_, pipe_write_end_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> device_fd_watcher_;
