@@ -50,6 +50,14 @@ def CheckSubdirs():
       logging.error('*** Project "%s" needs an OWNERS file', proj)
       ret = 1
       continue
+
+    data = path.read_text()
+    for i, line in enumerate(data.splitlines(), start=1):
+      if line.strip().startswith('set noparent'):
+        logging.error('*** %s:%i: Do not use "noparent" in top level projects',
+                      path, i)
+        ret = 1
+
   return ret
 
 

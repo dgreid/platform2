@@ -1,4 +1,3 @@
-set noparent
 include /metrics/OWNERS
 
 # COMPONENT: OS>Systems>CrashReporting
