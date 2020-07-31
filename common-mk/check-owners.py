@@ -42,26 +42,13 @@ def GetActiveProjects():
 
 def CheckSubdirs():
   """Check the subdir OWNERS files exist."""
-  # Legacy projects that don't have an OWNERS file.
-  # Someone should claim them :D.
-  LEGACYLIST = (
-      'container_utils',
-      'cros-fuzz',
-      'screenshot',
-  )
-
   ret = 0
   for proj in GetActiveProjects():
     path = os.path.join(TOP_DIR, proj, 'OWNERS')
-    if os.path.exists(path):
-      if proj in LEGACYLIST:
-        logging.error('*** Project "%s" is in no-OWNERS LEGACYLIST, but '
-                      ' actually has one. Please remove it from LEGACYLIST!',
-                      proj)
-    else:
-      if not proj in LEGACYLIST:
-        logging.error('*** Project "%s" needs an OWNERS file', proj)
-        ret = 1
+    if not os.path.exists(path):
+      logging.error('*** Project "%s" needs an OWNERS file', proj)
+      ret = 1
+      continue
   return ret
 
 
