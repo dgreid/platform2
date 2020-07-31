@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/callback.h>
 #include <base/macros.h>
@@ -14,6 +15,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/synchronization/lock.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <base/threading/thread.h>
 
 #include "tpm_manager/common/tpm_nvram_interface.h"
@@ -138,6 +140,8 @@ class TpmManagerService : public TpmNvramInterface,
     dictionary_attack_timer_ = timer;
   }
 
+  void MarkTpmStatusCacheDirty();
+
  private:
   // A relay callback which allows the use of weak pointer semantics for a reply
   // to TaskRunner::PostTaskAndReply.
@@ -157,11 +161,23 @@ class TpmManagerService : public TpmNvramInterface,
                               const ReplyCallbackType& callback,
                               TaskType task);
 
+  // This templated method posts the provided |TaskType| to the background
+  // thread . When |TaskType| finishes executing, the |ReplyCallbackType| is
+  // called with the |ReplyProtobufType|.
+  template <typename ReplyProtobufType,
+            typename ReplyCallbackType,
+            typename TaskType>
+  void PostTaskToWorkerThreadWithoutRequest(const ReplyCallbackType& callback,
+                                            TaskType task);
+
   // Synchronously initializes the TPM according to the current configuration.
   // If an initialization process was interrupted it will be continued. If the
   // TPM is already initialized or cannot yet be initialized, this method has no
   // effect.
-  void InitializeTask();
+  void InitializeTask(const std::shared_ptr<GetTpmStatusReply>& result);
+
+  // Updating TPM status cache and calling all pending GetTpmStatus callback.
+  void UpdateTpmStatusCallback(const GetTpmStatusReply& reply);
 
   // Calling the callback which is registered by SetOwnershipTakenCallback if it
   // exists.
@@ -277,6 +293,20 @@ class TpmManagerService : public TpmNvramInterface,
   // Cache of TPM version info, base::nullopt if cache doesn't exist.
   base::Optional<GetVersionInfoReply> version_info_cache_;
 
+  // Cache of TPM status.
+  GetTpmStatusReply get_tpm_status_cache_;
+
+  // Callback to return the pending GetTpmStatus requests.
+  std::vector<GetTpmStatusCallback> get_tpm_status_waiting_callbacks_;
+
+  // If |update_tpm_status_pending_| is true, which means there is a tpm status
+  // update pending.
+  bool update_tpm_status_pending_;
+
+  // If |update_tpm_status_cache_dirty_| is true, we can't use the data in
+  // |get_tpm_status_cache_|.
+  bool update_tpm_status_cache_dirty_;
+
   // Lock for |version_info_cache_|, which might be accessed from both the main
   // and worker threads.
   base::Lock version_info_cache_lock_;
@@ -319,6 +349,8 @@ class TpmManagerService : public TpmNvramInterface,
   // Whether to perform pre-initialization (where available) if initialization
   // itself needs to wait for 'TakeOwnership' first.
   bool perform_preinit_;
+  // Origin task runner to run the task on origin thread.
+  scoped_refptr<base::TaskRunner> origin_task_runner_;
   // Background thread to allow processing of potentially lengthy TPM requests
   // in the background.
   std::unique_ptr<ServiceWorkerThread> worker_thread_;

@@ -9,6 +9,7 @@
 #include <base/run_loop.h>
 #include <base/synchronization/lock.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/test/bind_test_util.h>
 #include <base/test/task_environment.h>
 #include <base/threading/platform_thread.h>
 #include <gmock/gmock.h>
@@ -119,9 +120,9 @@ class TpmManagerServiceTest_Preinit
     : public TpmManagerServiceTestBase<true, true, false> {};
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitialize) {
-  // Called in InitializeTask() and GetTpmStatus()
+  // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
-      .Times(2)
+      .Times(1)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
 
@@ -133,9 +134,9 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitialize) {
 }
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, NoNeedToInitialize) {
-  // Called in InitializeTask() and GetTpmStatus()
+  // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
-      .Times(2)
+      .Times(1)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
@@ -145,8 +146,6 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, NoNeedToInitialize) {
 }
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeNoTpm) {
-  // Called in GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_)).Times(1);
   EXPECT_CALL(mock_tpm_status_, IsTpmEnabled()).WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
   EXPECT_CALL(mock_tpm_initializer_, PreInitializeTpm()).Times(0);
@@ -155,9 +154,9 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeNoTpm) {
 }
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeFailure) {
-  // Called in InitializeTask() and GetTpmStatus()
+  // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
-      .Times(2)
+      .Times(1)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm())
@@ -174,16 +173,16 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership,
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm())
       .Times(2)
       .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackResetStatus(_))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(_))
+      .Times(1);
   SetupService();
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     self->Quit();
   };
-  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackResetStatus(_))
-      .Times(1);
-  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(_))
-      .Times(1);
   TakeOwnershipRequest request;
   service_->TakeOwnership(request, base::Bind(callback, this));
   Run();
@@ -200,9 +199,9 @@ TEST_F(TpmManagerServiceTest_Preinit, NoAutoInitialize) {
 }
 
 TEST_F(TpmManagerServiceTest_Preinit, TpmAlreadyOwned) {
-  // Called in InitializeTask() and GetTpmStatus()
+  // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
-      .Times(2)
+      .Times(1)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
@@ -212,13 +211,19 @@ TEST_F(TpmManagerServiceTest_Preinit, TpmAlreadyOwned) {
 }
 
 TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusOwnershipStatusFailure) {
-  // Called in InitializeTask() and GetTpmStatus()
+  // Called in InitializeTask()
   EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
-      .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)))
-      .WillOnce(Return(false));
+      .Times(2)
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(1);
+
   SetupService();
 
-  EXPECT_CALL(mock_local_data_store_, Read(_)).Times(0);
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -319,11 +324,13 @@ TEST_F(TpmManagerServiceTest_Preinit,
               Ge(base::TimeDelta::FromMilliseconds(55)));
 }
 
-TEST_F(TpmManagerServiceTest, GetTpmStatusSuccess) {
+TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusSuccess) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   EXPECT_CALL(mock_local_data_store_, Read(_))
       .WillRepeatedly(DoAll(SetArgPointee<0>(local_data), Return(true)));
+
+  SetupService();
 
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
@@ -338,8 +345,11 @@ TEST_F(TpmManagerServiceTest, GetTpmStatusSuccess) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, GetTpmStatusLocalDataFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusLocalDataFailure) {
   EXPECT_CALL(mock_local_data_store_, Read(_)).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -353,14 +363,17 @@ TEST_F(TpmManagerServiceTest, GetTpmStatusLocalDataFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, GetTpmStatusNoTpm) {
+TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusNoTpm) {
   EXPECT_CALL(mock_tpm_status_, IsTpmEnabled()).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const GetTpmStatusReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     EXPECT_FALSE(reply.enabled());
-    EXPECT_TRUE(reply.owned());
-    EXPECT_TRUE(reply.has_local_data());
+    EXPECT_FALSE(reply.owned());
+    EXPECT_FALSE(reply.has_local_data());
     self->Quit();
   };
   GetTpmStatusRequest request;
@@ -568,9 +581,12 @@ TEST_F(TpmManagerServiceTest, TakeOwnershipSuccess) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, TakeOwnershipFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, TakeOwnershipFailure) {
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm())
       .WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -581,9 +597,12 @@ TEST_F(TpmManagerServiceTest, TakeOwnershipFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, TakeOwnershipNoTpm) {
+TEST_F(TpmManagerServiceTest_Preinit, TakeOwnershipNoTpm) {
   EXPECT_CALL(mock_tpm_status_, IsTpmEnabled()).WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const TakeOwnershipReply& reply) {
     EXPECT_EQ(STATUS_NOT_AVAILABLE, reply.status());
@@ -594,8 +613,11 @@ TEST_F(TpmManagerServiceTest, TakeOwnershipNoTpm) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyReadFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, RemoveOwnerDependencyReadFailure) {
   EXPECT_CALL(mock_local_data_store_, Read(_)).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const RemoveOwnerDependencyReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -607,8 +629,11 @@ TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyReadFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyWriteFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, RemoveOwnerDependencyWriteFailure) {
   EXPECT_CALL(mock_local_data_store_, Write(_)).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const RemoveOwnerDependencyReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -620,15 +645,19 @@ TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyWriteFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyNotCleared) {
+TEST_F(TpmManagerServiceTest_Preinit, RemoveOwnerDependencyNotCleared) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   local_data.add_owner_dependency(kOwnerDependency);
   local_data.add_owner_dependency(kOtherDependency);
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_))
       .WillOnce(DoAll(SaveArg<0>(&local_data), Return(true)));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const RemoveOwnerDependencyReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -645,14 +674,18 @@ TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyNotCleared) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyCleared) {
+TEST_F(TpmManagerServiceTest_Preinit, RemoveOwnerDependencyCleared) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   local_data.add_owner_dependency(kOwnerDependency);
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_))
       .WillOnce(DoAll(SaveArg<0>(&local_data), Return(true)));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const RemoveOwnerDependencyReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -667,14 +700,18 @@ TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyCleared) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyNotPresent) {
+TEST_F(TpmManagerServiceTest_Preinit, RemoveOwnerDependencyNotPresent) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   local_data.add_owner_dependency(kOwnerDependency);
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_))
       .WillOnce(DoAll(SaveArg<0>(&local_data), Return(true)));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const RemoveOwnerDependencyReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -691,8 +728,11 @@ TEST_F(TpmManagerServiceTest, RemoveOwnerDependencyNotPresent) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordReadFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, ClearStoredOwnerPasswordReadFailure) {
   EXPECT_CALL(mock_local_data_store_, Read(_)).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const ClearStoredOwnerPasswordReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -703,12 +743,16 @@ TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordReadFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordWriteFailure) {
+TEST_F(TpmManagerServiceTest_Preinit, ClearStoredOwnerPasswordWriteFailure) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_)).WillRepeatedly(Return(false));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self,
                      const ClearStoredOwnerPasswordReply& reply) {
     EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
@@ -719,14 +763,19 @@ TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordWriteFailure) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordRemainingDependencies) {
+TEST_F(TpmManagerServiceTest_Preinit,
+       ClearStoredOwnerPasswordRemainingDependencies) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   local_data.add_owner_dependency(kOwnerDependency);
   local_data.add_owner_dependency(kOtherDependency);
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_)).Times(0);
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const ClearStoredOwnerPasswordReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -740,15 +789,19 @@ TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordRemainingDependencies) {
   Run();
 }
 
-TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordNoDependencies) {
+TEST_F(TpmManagerServiceTest_Preinit, ClearStoredOwnerPasswordNoDependencies) {
   LocalData local_data;
   local_data.set_owner_password(kOwnerPassword);
   local_data.set_endorsement_password("endorsement password");
   local_data.set_lockout_password("lockout password");
   EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
   EXPECT_CALL(mock_local_data_store_, Write(_))
       .WillOnce(DoAll(SaveArg<0>(&local_data), Return(true)));
+
+  SetupService();
+
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const ClearStoredOwnerPasswordReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -955,6 +1008,118 @@ TEST_F(TpmManagerServiceTest, ReadWriteSpaceSuccess) {
   read_request.set_index(nvram_index);
   service_->ReadSpace(read_request, base::Bind(read_callback, nvram_data));
   RunServiceWorkerAndQuit();
+}
+
+TEST_F(TpmManagerServiceTest_Preinit, UpdateTpmStatusAfterTakeOwnership) {
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
+      .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)))
+      .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
+  LocalData local_data;
+  local_data.set_owner_password(kOwnerPassword);
+  EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(Return(true))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
+
+  EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).WillOnce(Return(true));
+
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(1);
+
+  SetupService();
+
+  auto callback_owned = [](TpmManagerServiceTestBase* self,
+                           const GetTpmStatusReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_TRUE(reply.enabled());
+    EXPECT_TRUE(reply.owned());
+    EXPECT_EQ(kOwnerPassword, reply.local_data().owner_password());
+    self->Quit();
+  };
+
+  auto callback_unowned = [](const GetTpmStatusReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_TRUE(reply.enabled());
+    EXPECT_FALSE(reply.owned());
+    EXPECT_EQ("", reply.local_data().owner_password());
+  };
+
+  auto callback_taken = [&](const TakeOwnershipReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    GetTpmStatusRequest request;
+    service_->GetTpmStatus(request, base::Bind(callback_owned, this));
+  };
+
+  GetTpmStatusRequest get_request;
+  service_->GetTpmStatus(get_request, base::Bind(callback_unowned));
+  TakeOwnershipRequest take_request;
+  service_->TakeOwnership(take_request,
+                          base::BindLambdaForTesting(callback_taken));
+  Run();
+}
+
+TEST_F(TpmManagerServiceTest_Preinit, RetryGetTpmStatusUntilSuccess) {
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
+      .WillRepeatedly(Return(false));  // Called in InitializeTask()
+
+  EXPECT_CALL(mock_tpm_manager_metrics_, ReportDictionaryAttackCounter(0))
+      .Times(1);
+  EXPECT_CALL(mock_tpm_manager_metrics_,
+              ReportDictionaryAttackResetStatus(
+                  DictionaryAttackResetStatus::kResetNotNecessary))
+      .Times(1);
+
+  LocalData local_data;
+  local_data.set_owner_password(kOwnerPassword);
+  EXPECT_CALL(mock_local_data_store_, Read(_))
+      .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
+
+  SetupService();
+
+  auto callback_owned = [](TpmManagerServiceTestBase* self,
+                           const GetTpmStatusReply& reply) {
+    EXPECT_EQ(STATUS_SUCCESS, reply.status());
+    EXPECT_TRUE(reply.enabled());
+    EXPECT_TRUE(reply.owned());
+    EXPECT_EQ(kOwnerPassword, reply.local_data().owner_password());
+    self->Quit();
+  };
+
+  int counter = 3;
+  base::Callback<void(const GetTpmStatusReply&)> callback_fail;
+  auto callback_fail_lambda = [&](const GetTpmStatusReply& reply) {
+    EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
+    GetTpmStatusRequest request;
+    counter--;
+    if (counter) {
+      service_->GetTpmStatus(request, base::Bind(callback_fail));
+    } else {
+      service_->GetTpmStatus(request, base::Bind(callback_owned, this));
+    }
+  };
+  callback_fail = base::BindLambdaForTesting(callback_fail_lambda);
+
+  auto callback_first_fail = [&](const GetTpmStatusReply& reply) {
+    EXPECT_EQ(STATUS_DEVICE_ERROR, reply.status());
+
+    // Overwrite the GetTpmOwned return mode
+    EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
+        .WillOnce(Return(false))  // Called in GetTpmStatusTask()
+        .WillOnce(Return(false))  // Called in GetTpmStatusTask()
+        .WillOnce(Return(false))  // Called in GetTpmStatusTask()
+        .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
+
+    GetTpmStatusRequest request;
+    service_->GetTpmStatus(request, base::Bind(callback_fail));
+  };
+
+  GetTpmStatusRequest request;
+  service_->GetTpmStatus(request,
+                         base::BindLambdaForTesting(callback_first_fail));
+  Run();
 }
 
 }  // namespace tpm_manager

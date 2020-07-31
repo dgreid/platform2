@@ -97,6 +97,8 @@ TpmManagerService::TpmManagerService(bool wait_for_ownership,
       tpm_initializer_(tpm_initializer),
       tpm_nvram_(tpm_nvram),
       tpm_manager_metrics_(tpm_manager_metrics),
+      update_tpm_status_pending_(false),
+      update_tpm_status_cache_dirty_(true),
       wait_for_ownership_(wait_for_ownership),
       perform_preinit_(perform_preinit) {}
 
@@ -105,13 +107,19 @@ TpmManagerService::~TpmManagerService() {
 }
 
 bool TpmManagerService::Initialize() {
+  origin_task_runner_ = base::ThreadTaskRunnerHandle::Get();
   worker_thread_.reset(
       new ServiceWorkerThread("TpmManager Service Worker", this));
   worker_thread_->StartWithOptions(
       base::Thread::Options(base::MessagePumpType::IO, 0));
-  base::Closure task =
-      base::Bind(&TpmManagerService::InitializeTask, base::Unretained(this));
-  worker_thread_->task_runner()->PostNonNestableTask(FROM_HERE, task);
+
+  update_tpm_status_pending_ = true;
+
+  PostTaskToWorkerThreadWithoutRequest<GetTpmStatusReply>(
+      base::Bind(&TpmManagerService::UpdateTpmStatusCallback,
+                 base::Unretained(this)),
+      &TpmManagerService::InitializeTask);
+
   ReportVersionFingerprint();
   VLOG(1) << "Worker thread started.";
   return true;
@@ -137,7 +145,8 @@ void TpmManagerService::ReportVersionFingerprint() {
   GetVersionInfo(tpm_manager::GetVersionInfoRequest(), callback);
 }
 
-void TpmManagerService::InitializeTask() {
+void TpmManagerService::InitializeTask(
+    const std::shared_ptr<GetTpmStatusReply>& reply) {
   VLOG(1) << "Initializing service...";
 
   if (!tpm_status_ || !tpm_initializer_ || !tpm_nvram_) {
@@ -171,8 +180,11 @@ void TpmManagerService::InitializeTask() {
   }
   if (!tpm_status_->IsTpmEnabled()) {
     LOG(WARNING) << __func__ << ": TPM is disabled.";
+    reply->set_enabled(false);
+    reply->set_status(STATUS_SUCCESS);
     return;
   }
+  reply->set_enabled(true);
   tpm_initializer_->VerifiedBootHelper();
 
   TpmStatus::TpmOwnershipStatus ownership_status;
@@ -186,15 +198,14 @@ void TpmManagerService::InitializeTask() {
     if (!tpm_status_->GetTpmOwned(&ownership_status)) {
       LOG(ERROR) << __func__
                  << ": get tpm ownership status still failed. Giving up.";
+      reply->set_status(STATUS_DEVICE_ERROR);
       return;
     }
     LOG(INFO) << __func__
               << ": get tpm ownership status suceeded after dictionary attack "
                  "lockout reset.";
   }
-  if (ownership_status == TpmStatus::kTpmOwned) {
-    NotifyTpmIsOwned();
-  }
+
   // The precondition of DA reset is not satisfied; resets the timer so it
   // doesn't get triggered immediately.
   if (ownership_status != TpmStatus::kTpmOwned && wait_for_ownership_) {
@@ -205,6 +216,7 @@ void TpmManagerService::InitializeTask() {
       base::Bind(&TpmManagerService::PeriodicResetDictionaryAttackCounterTask,
                  base::Unretained(this)));
 
+  reply->set_owned(TpmStatus::kTpmOwned == ownership_status);
   if (ownership_status == TpmStatus::kTpmOwned) {
     VLOG(1) << "Tpm is already owned.";
     if (!tpm_initializer_->EnsurePersistentOwnerDelegate()) {
@@ -214,6 +226,12 @@ void TpmManagerService::InitializeTask() {
           << __func__
           << ": Failed to ensure owner delegate is ready with ownership taken.";
     }
+    LocalData local_data;
+    if (local_data_store_ && local_data_store_->Read(&local_data)) {
+      *(reply->mutable_local_data()) = std::move(local_data);
+    }
+    reply->set_status(STATUS_SUCCESS);
+    NotifyTpmIsOwned();
     return;
   }
 
@@ -227,26 +245,76 @@ void TpmManagerService::InitializeTask() {
     if (!tpm_initializer_->InitializeTpm()) {
       LOG(WARNING) << __func__ << ": TPM initialization failed.";
       dictionary_attack_timer_.Reset();
+      reply->set_status(STATUS_NOT_AVAILABLE);
       return;
     }
+    reply->set_owned(true);
   } else if (perform_preinit_) {
     VLOG(1) << "Pre-initializing TPM.";
     tpm_initializer_->PreInitializeTpm();
   }
+  LocalData local_data;
+  if (local_data_store_ && local_data_store_->Read(&local_data)) {
+    *(reply->mutable_local_data()) = std::move(local_data);
+  }
+  reply->set_status(STATUS_SUCCESS);
+  if (reply->owned()) {
+    NotifyTpmIsOwned();
+  }
 }
 
 void TpmManagerService::NotifyTpmIsOwned() {
-  CHECK_EQ(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());
+  DCHECK_EQ(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());
   if (!ownership_taken_callback_.is_null()) {
     ownership_taken_callback_.Run();
     ownership_taken_callback_.Reset();
   }
 }
 
+void TpmManagerService::MarkTpmStatusCacheDirty() {
+  if (base::PlatformThread::CurrentId() == worker_thread_->GetThreadId()) {
+    // This should run on origin thread
+    origin_task_runner_->PostTask(
+        FROM_HERE, base::Bind(&TpmManagerService::MarkTpmStatusCacheDirty,
+                              base::Unretained(this)));
+    return;
+  }
+
+  CHECK_NE(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());
+
+  update_tpm_status_cache_dirty_ = true;
+}
+
 void TpmManagerService::GetTpmStatus(const GetTpmStatusRequest& request,
                                      const GetTpmStatusCallback& callback) {
+  if (update_tpm_status_cache_dirty_) {
+    get_tpm_status_waiting_callbacks_.emplace_back(std::move(callback));
+  } else {
+    callback.Run(get_tpm_status_cache_);
+    return;
+  }
+  if (update_tpm_status_pending_) {
+    return;
+  }
+  update_tpm_status_pending_ = true;
   PostTaskToWorkerThread<GetTpmStatusReply>(
-      request, callback, &TpmManagerService::GetTpmStatusTask);
+      request,
+      base::Bind(&TpmManagerService::UpdateTpmStatusCallback,
+                 base::Unretained(this)),
+      &TpmManagerService::GetTpmStatusTask);
+}
+
+void TpmManagerService::UpdateTpmStatusCallback(
+    const GetTpmStatusReply& reply) {
+  DCHECK_NE(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());
+  update_tpm_status_cache_dirty_ = reply.status() != STATUS_SUCCESS;
+  update_tpm_status_pending_ = false;
+  get_tpm_status_cache_ = reply;
+  std::vector<GetTpmStatusCallback> callbacks;
+  callbacks.swap(get_tpm_status_waiting_callbacks_);
+  for (const auto& callback : callbacks) {
+    callback.Run(reply);
+  }
 }
 
 void TpmManagerService::GetTpmStatusTask(
@@ -422,6 +490,7 @@ void TpmManagerService::TakeOwnershipTask(
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
   }
+  MarkTpmStatusCacheDirty();
   NotifyTpmIsOwned();
   if (!ResetDictionaryAttackCounterIfNeeded()) {
     LOG(WARNING) << __func__ << ": DA reset failed after taking ownership.";
@@ -455,6 +524,7 @@ void TpmManagerService::RemoveOwnerDependencyTask(
     return;
   }
   reply->set_status(STATUS_SUCCESS);
+  MarkTpmStatusCacheDirty();
 }
 
 void TpmManagerService::RemoveOwnerDependencyFromLocalData(
@@ -493,6 +563,7 @@ void TpmManagerService::ClearStoredOwnerPasswordTask(
     }
   }
   reply->set_status(STATUS_SUCCESS);
+  MarkTpmStatusCacheDirty();
 }
 
 void TpmManagerService::DefineSpace(const DefineSpaceRequest& request,
@@ -512,6 +583,7 @@ void TpmManagerService::DefineSpaceTask(
   reply->set_result(
       tpm_nvram_->DefineSpace(request.index(), request.size(), attributes,
                               request.authorization_value(), request.policy()));
+  MarkTpmStatusCacheDirty();
 }
 
 void TpmManagerService::DestroySpace(const DestroySpaceRequest& request,
@@ -525,6 +597,7 @@ void TpmManagerService::DestroySpaceTask(
     const std::shared_ptr<DestroySpaceReply>& reply) {
   VLOG(1) << __func__;
   reply->set_result(tpm_nvram_->DestroySpace(request.index()));
+  MarkTpmStatusCacheDirty();
 }
 
 void TpmManagerService::WriteSpace(const WriteSpaceRequest& request,
@@ -725,6 +798,21 @@ void TpmManagerService::PostTaskToWorkerThread(
   auto result = std::make_shared<ReplyProtobufType>();
   base::Closure background_task =
       base::Bind(task, base::Unretained(this), request, result);
+  base::Closure reply =
+      base::Bind(&TpmManagerService::TaskRelayCallback<ReplyProtobufType>,
+                 weak_factory_.GetWeakPtr(), callback, result);
+  worker_thread_->task_runner()->PostTaskAndReply(FROM_HERE, background_task,
+                                                  reply);
+}
+
+template <typename ReplyProtobufType,
+          typename ReplyCallbackType,
+          typename TaskType>
+void TpmManagerService::PostTaskToWorkerThreadWithoutRequest(
+    const ReplyCallbackType& callback, TaskType task) {
+  auto result = std::make_shared<ReplyProtobufType>();
+  base::Closure background_task =
+      base::Bind(task, base::Unretained(this), result);
   base::Closure reply =
       base::Bind(&TpmManagerService::TaskRelayCallback<ReplyProtobufType>,
                  weak_factory_.GetWeakPtr(), callback, result);
