@@ -62,9 +62,11 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   // will be deleted. If |reset| is false, we will only add entropy, and only
   // if no entropy had been added before.
   bool InitEntropy(bool reset) override;
+  bool UpdateFpInfo() override;
 
   int MaxTemplateCount() override;
   int TemplateVersion() override;
+  int DeadPixelCount() override;
 
   EcCmdVersionSupportStatus EcCmdVersionSupported(uint16_t cmd,
                                                   uint32_t ver) override;
@@ -92,7 +94,6 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   bool GetRollBackInfoId(int32_t* block_id);
   bool FpFrame(int index, std::vector<uint8_t>* frame);
   bool FpReadMatchSecret(uint16_t index, brillo::SecureBlob* secret);
-  bool UpdateFpInfo();
   bool GetIndexOfLastTemplate(int* index);
   // Run a sequence of EC commands to update the entropy in the
   // MCU. If |reset| is set to true, it will additionally erase the existing

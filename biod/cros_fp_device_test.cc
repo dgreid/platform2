@@ -6,10 +6,12 @@
 #include <gtest/gtest.h>
 
 #include "biod/cros_fp_device.h"
+#include "biod/fp_info_command.h"
 #include "biod/mock_biod_metrics.h"
 #include "biod/mock_cros_fp_device.h"
 #include "biod/mock_ec_command_factory.h"
 
+using testing::NiceMock;
 using testing::Return;
 
 namespace biod {
@@ -149,6 +151,52 @@ TEST_F(CrosFpDevice_SetContext, SendMetricsOnFailingToSetMode) {
   EXPECT_CALL(mock_biod_metrics, SendSetContextSuccess(false));
 
   mock_cros_fp_device.SetContext("beef");
+}
+
+class CrosFpDevice_DeadPixelCount : public testing::Test {
+ public:
+  CrosFpDevice_DeadPixelCount() {
+    auto mock_command_factory = std::make_unique<MockEcCommandFactory>();
+    mock_ec_command_factory_ = mock_command_factory.get();
+    mock_cros_fp_device_ = std::make_unique<CrosFpDevice>(
+        CrosFpDevice::MkbpCallback(), &mock_biod_metrics_,
+        std::move(mock_command_factory));
+  }
+
+ protected:
+  class MockFpInfoCommand : public FpInfoCommand {
+   public:
+    MockFpInfoCommand() { ON_CALL(*this, Run).WillByDefault(Return(true)); }
+    MOCK_METHOD(bool, Run, (int fd), (override));
+    MOCK_METHOD(ec_response_fp_info*, Resp, (), (override));
+  };
+
+  metrics::MockBiodMetrics mock_biod_metrics_;
+  MockEcCommandFactory* mock_ec_command_factory_ = nullptr;
+  std::unique_ptr<CrosFpDevice> mock_cros_fp_device_;
+};
+
+TEST_F(CrosFpDevice_DeadPixelCount, UnknownCount) {
+  struct ec_response_fp_info resp = {.errors = FP_ERROR_DEAD_PIXELS_UNKNOWN};
+  EXPECT_CALL(*mock_ec_command_factory_, FpInfoCommand).WillOnce([&resp]() {
+    auto mock_fp_info_command = std::make_unique<NiceMock<MockFpInfoCommand>>();
+    EXPECT_CALL(*mock_fp_info_command, Resp).WillRepeatedly(Return(&resp));
+    return mock_fp_info_command;
+  });
+
+  EXPECT_EQ(mock_cros_fp_device_->DeadPixelCount(),
+            FpInfoCommand::kDeadPixelsUnknown);
+}
+
+TEST_F(CrosFpDevice_DeadPixelCount, OneDeadPixel) {
+  struct ec_response_fp_info resp = {.errors = FP_ERROR_DEAD_PIXELS(1)};
+  EXPECT_CALL(*mock_ec_command_factory_, FpInfoCommand).WillOnce([&resp]() {
+    auto mock_fp_info_command = std::make_unique<NiceMock<MockFpInfoCommand>>();
+    EXPECT_CALL(*mock_fp_info_command, Resp).WillRepeatedly(Return(&resp));
+    return mock_fp_info_command;
+  });
+
+  EXPECT_EQ(mock_cros_fp_device_->DeadPixelCount(), 1);
 }
 
 }  // namespace

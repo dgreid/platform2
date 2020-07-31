@@ -47,9 +47,11 @@ class CrosFpDeviceInterface {
   // will be deleted. If |reset| is false, we will only add entropy, and only
   // if no entropy had been added before.
   virtual bool InitEntropy(bool reset) = 0;
+  virtual bool UpdateFpInfo() = 0;
 
   virtual int MaxTemplateCount() = 0;
   virtual int TemplateVersion() = 0;
+  virtual int DeadPixelCount() = 0;
 
   virtual EcCmdVersionSupportStatus EcCmdVersionSupported(uint16_t cmd,
                                                           uint32_t ver) = 0;

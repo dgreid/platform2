@@ -30,8 +30,10 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MOCK_METHOD(bool, SetContext, (std::string user_id), (override));
   MOCK_METHOD(bool, ResetContext, (), (override));
   MOCK_METHOD(bool, InitEntropy, (bool reset), (override));
+  MOCK_METHOD(bool, UpdateFpInfo, (), (override));
   MOCK_METHOD(int, MaxTemplateCount, (), (override));
   MOCK_METHOD(int, TemplateVersion, (), (override));
+  MOCK_METHOD(int, DeadPixelCount, (), (override));
   MOCK_METHOD(EcCmdVersionSupportStatus,
               EcCmdVersionSupported,
               (uint16_t cmd, uint32_t ver),

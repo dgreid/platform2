@@ -59,9 +59,11 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
   bool SetContext(std::string user_id) override { return false; }
   bool ResetContext() override { return false; }
   bool InitEntropy(bool reset) override { return false; }
+  bool UpdateFpInfo() override { return true; }
 
   int MaxTemplateCount() override { return kMaxTemplateCount; }
   int TemplateVersion() override { return FP_TEMPLATE_FORMAT_VERSION; }
+  int DeadPixelCount() override { return 0; }
 
   EcCmdVersionSupportStatus EcCmdVersionSupported(uint16_t cmd,
                                                   uint32_t ver) override {

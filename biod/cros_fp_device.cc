@@ -757,4 +757,13 @@ int CrosFpDevice::TemplateVersion() {
   return info_->template_info()->version;
 }
 
+int CrosFpDevice::DeadPixelCount() {
+  if (!info_ || !info_->template_info()) {
+    UpdateFpInfo();
+  }
+  CHECK(info_);
+  CHECK(info_->template_info());
+  return info_->NumDeadPixels();
+}
+
 }  // namespace biod
