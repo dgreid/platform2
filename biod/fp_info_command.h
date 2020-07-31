@@ -18,7 +18,7 @@ namespace biod {
 
 class FpInfoCommand : public EcCommand<EmptyParam, struct ec_response_fp_info> {
  public:
-  static const int kDeadPixelsUnknown = -1;
+  static constexpr int kDeadPixelsUnknown = -1;
 
   FpInfoCommand() : EcCommand(EC_CMD_FP_INFO, kVersionOne) {}
   ~FpInfoCommand() override = default;
