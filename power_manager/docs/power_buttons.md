@@ -52,6 +52,10 @@ from sleep" setting is enabled, the screen is additionally locked immediately.
 Tapping the power button a second time after the screen has been turned off
 turns the screen back on.
 
+If Volume keys are pressed in combination it works as a shortcut for some
+features, see [debug buttons] documentation for more key combinations with power
+buttons.
+
 If the power button is held for a half second or longer before being released,
 the screen remains on and a power menu with `Power off`, `Sign out`,
 `Lock screen` and `Feedback` options is displayed. The power button may be
@@ -72,6 +76,8 @@ If the display is off due to [user inactivity](inactivity_delays.md) or manually
 setting the screen brightness to zero, the power button turns the display back
 on rather than locking the screen or shutting down the system.
 
+[debug_buttons]: https://chromium.googlesource.com/chromiumos/docs/+/HEAD/debug_buttons.md#devices-without-keyboards
+
 ### Laptop Mode
 
 The behavior of the power button while in laptop mode is identical to the
@@ -85,7 +91,7 @@ Tablet and slate devices that are considered "touch-centric" (typically meaning
 that they're distributed without a keyboard folio) use tablet-like power button
 behavior even when a folio or other external keyboard is attached.
 
-[session_manager]: https://chromium.googlesource.com/chromiumos/platform2/+/master/login_manager/
+[session_manager]: https://chromium.googlesource.com/chromiumos/platform2/+/HEAD/login_manager/
 
 ### Legacy ACPI Power Buttons
 
