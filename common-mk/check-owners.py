@@ -6,15 +6,16 @@
 
 """Linter for various OWNERS files."""
 
+from __future__ import division
 from __future__ import print_function
 
-import os
+from pathlib import Path
 import sys
 
-TOP_DIR = os.path.dirname(os.path.dirname(os.path.realpath(__file__)))
+TOP_DIR = Path(__file__).resolve().parent.parent
 
 # Find chromite!
-sys.path.insert(0, os.path.join(TOP_DIR, '..', '..'))
+sys.path.insert(0, str(TOP_DIR.parent.parent))
 
 # pylint: disable=wrong-import-position
 from chromite.lib import commandline
@@ -35,8 +36,8 @@ def GetActiveProjects():
 
   # ls-tree -z will include a trailing NUL on all entries, not just seperation,
   # so filter it out if found (in case ls-tree behavior changes on us).
-  for path in [x for x in paths if x]:
-    if os.path.isdir(os.path.join(TOP_DIR, path)):
+  for path in [Path(x) for x in paths if x]:
+    if (TOP_DIR / path).is_dir():
       yield path
 
 
@@ -44,8 +45,8 @@ def CheckSubdirs():
   """Check the subdir OWNERS files exist."""
   ret = 0
   for proj in GetActiveProjects():
-    path = os.path.join(TOP_DIR, proj, 'OWNERS')
-    if not os.path.exists(path):
+    path = TOP_DIR / proj / 'OWNERS'
+    if not path.exists():
       logging.error('*** Project "%s" needs an OWNERS file', proj)
       ret = 1
       continue
