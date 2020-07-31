@@ -9,10 +9,7 @@ namespace cros {
 
 namespace iioservice {
 
-// Default size of StringPiece for mojo MessagePipe.
-const int kUnixTokenSize = 32;
-const char kIioserviceServerSocketPathString[] = "/run/iioservice/server.sock";
-const char kIioserviceClientSocketPathString[] = "/run/iioservice/client.sock";
+const double kFrequencyEpsilon = 0.001;  // Hz
 
 }  // namespace iioservice
 

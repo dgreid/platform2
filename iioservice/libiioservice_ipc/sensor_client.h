@@ -28,7 +28,7 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
  public:
   using SensorServiceReceivedCallback =
       base::RepeatingCallback<void(mojo::PendingRemote<mojom::SensorService>)>;
-  using InitOnFailureCallback = base::OnceCallback<void()>;
+  using ClientOnFailureCallback = base::RepeatingCallback<void()>;
 
   static void SensorClientDeleter(SensorClient* client);
   using ScopedSensorClient =
@@ -39,8 +39,9 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
   // callback to abort when an error occurs.
   static ScopedSensorClient Create(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
+      mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
       SensorServiceReceivedCallback sensor_service_received_callback,
-      InitOnFailureCallback init_on_failure_callback);
+      ClientOnFailureCallback client_on_failure_callback);
 
   // Implementation of cros::mojom::SensorHalClient. Called by sensor HAL
   // dispatcher to provide the SensorService interface.
@@ -49,12 +50,9 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
 
  private:
   SensorClient(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
+               mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
                SensorServiceReceivedCallback sensor_service_received_callback,
-               InitOnFailureCallback init_on_failure_callback);
-
-  void InitOnThread();
-  // void RegisterClient(RegisterClientCallback register_client_callback);
-  void RegisterClient();
+               ClientOnFailureCallback client_on_failure_callback);
 
   void OnClientError();
 
@@ -62,7 +60,7 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
 
   mojo::Receiver<mojom::SensorHalClient> receiver_;
   SensorServiceReceivedCallback sensor_service_received_callback_;
-  InitOnFailureCallback init_on_failure_callback_;
+  ClientOnFailureCallback client_on_failure_callback_;
 
   base::WeakPtrFactory<SensorClient> weak_factory_{this};
 };
