@@ -4,9 +4,9 @@
 
 #include <string>
 
-#include <base/command_line.h>
 #include <base/files/file_path.h>
 #include <base/logging.h>
+#include <brillo/flag_helper.h>
 #include <brillo/proto_file_io.h>
 
 #include "ml_benchmark/shared_library_benchmark.h"
@@ -20,9 +20,6 @@ using ml_benchmark::SharedLibraryBenchmark;
 using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
-
-constexpr char kWorkspacePath[] = "workspace_path";
-constexpr char kConfigFilePath[] = "benchmark.config";
 
 constexpr char kSodaDriverName[] = "SoDA";
 constexpr char kSodaDriverPath[] = "libsoda_benchmark_driver.so";
@@ -56,21 +53,19 @@ void benchmark_and_report_results(const std::string& driver_name,
 }  // namespace
 
 int main(int argc, char* argv[]) {
-  base::CommandLine::Init(argc, argv);
+  DEFINE_string(workspace_path, ".", "Path to the driver workspace.");
+  DEFINE_string(config_file_name, "benchmark.config",
+      "Name of the driver configuration file.");
 
-  auto* args = base::CommandLine::ForCurrentProcess();
+  brillo::FlagHelper::Init(argc, argv, "ML Benchmark runner");
 
-  base::FilePath workspace_path(".");
-  if (args->HasSwitch(kWorkspacePath)) {
-    workspace_path = args->GetSwitchValuePath(kWorkspacePath);
-  }
-
-  base::FilePath workspace_config_path = workspace_path.Append(kConfigFilePath);
+  base::FilePath workspace_config_path =
+      base::FilePath(FLAGS_workspace_path).Append(FLAGS_config_file_name);
 
   CrOSBenchmarkConfig benchmark_config;
 
   CHECK(brillo::ReadTextProtobuf(workspace_config_path, &benchmark_config))
-      << "Could not read the benchmark config file";
+      << "Could not read the benchmark config file: " << workspace_config_path;
 
   // Execute benchmarks
   if (benchmark_config.has_soda_config()) {
