@@ -58,6 +58,26 @@ def CheckSubdirs():
                       path, i)
         ret = 1
 
+      if line.strip() != line:
+        logging.error('*** %s:%i: Trim leading/trailing whitespace', path, i)
+        ret = 1
+
+    if not data:
+      logging.error('*** %s: File is empty', path)
+      ret = 1
+
+    if not data.endswith('\n'):
+      logging.error('*** %s: Missing trailing newline', path)
+      ret = 1
+
+    if data.startswith('\n'):
+      logging.error('*** %s: Trim leading blanklines', path)
+      ret = 1
+
+    if data.endswith('\n\n'):
+      logging.error('*** %s: Trim trailing blanklines', path)
+      ret = 1
+
   return ret
 
 
