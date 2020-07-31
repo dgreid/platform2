@@ -185,6 +185,7 @@ class CrashCollector {
               CreateDirectoryWithSettings_FixSubdirPermissions);
   FRIEND_TEST(CrashCollectorTest, FormatDumpBasename);
   FRIEND_TEST(CrashCollectorTest, GetCrashDirectoryInfo);
+  FRIEND_TEST(CrashCollectorTest, GetCrashDirectoryInfoLoggedOut);
   FRIEND_TEST(CrashCollectorTest, GetCrashPath);
   FRIEND_TEST(CrashCollectorTest, GetLogContents);
   FRIEND_TEST(CrashCollectorTest, GetMultipleLogContents);

@@ -703,6 +703,39 @@ TEST_F(CrashCollectorTest, GetCrashDirectoryInfo) {
 #endif  // !USE_KVM_GUEST
 }
 
+TEST_F(CrashCollectorTest, GetCrashDirectoryInfoLoggedOut) {
+  FilePath path;
+  const int kChronosUid = 1000;
+  const mode_t kExpectedUserMode = 02770;
+
+  mode_t directory_mode;
+  uid_t directory_owner;
+  gid_t directory_group;
+
+  auto* mock = new org::chromium::SessionManagerInterfaceProxyMock;
+  test_util::SetActiveSessions(mock, {});
+  collector_.session_manager_proxy_.reset(mock);
+
+  path = collector_
+             .GetCrashDirectoryInfo(
+                 kChronosUid, kChronosUid, /*use_non_chronos_cryptohome=*/false,
+                 &directory_mode, &directory_owner, &directory_group)
+             .value();
+  EXPECT_EQ(kExpectedUserMode, directory_mode);
+#if USE_KVM_GUEST
+  // Inside the VM, everything goes to /var/spool/crash.
+  const int kCrashAccessGid = 419;
+  EXPECT_EQ("/var/spool/crash", path.value());
+  EXPECT_EQ(0, directory_owner);
+  EXPECT_EQ(kCrashAccessGid, directory_group);
+#else
+  const int kCrashUserAccessGid = 420;
+  EXPECT_EQ("/home/chronos/crash", path.value());
+  EXPECT_EQ(kChronosUid, directory_owner);
+  EXPECT_EQ(kCrashUserAccessGid, directory_group);
+#endif  // USE_KVM_GUEST
+}
+
 TEST_F(CrashCollectorTest, FormatDumpBasename) {
   struct tm tm = {};
   tm.tm_sec = 15;
