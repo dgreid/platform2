@@ -157,6 +157,10 @@ const std::vector<Log> kCommandLogs {
   {kFile, "cros_ish.previous", "/var/log/cros_ish.previous"},
   {kFile, "cros_ish.log", "/var/log/cros_ish.log"},
   {kCommand, "dmesg", "/bin/dmesg"},
+  {kCommand, "drm_gem_objects", "cat /sys/kernel/debug/dri/?/gem",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
+  {kCommand, "drm_state", "cat /sys/kernel/debug/dri/?/state",
+    SandboxedProcess::kDefaultUser, kDebugfsGroup},
   {kFile, "ec_info", "/var/log/ec_info.txt"},
   {kCommand, "edid-decode",
     "for f in /sys/class/drm/card?-*/edid; do "
