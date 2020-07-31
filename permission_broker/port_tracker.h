@@ -57,8 +57,6 @@ class PortTracker {
     kLockdownRule = 2,
     // Rule for forwarding ingress traffic on a destination port.
     kForwardingRule = 3,
-    // Rule for forwarding ADB traffic to arc-networkd's adb-proxy.
-    kAdbForwardingRule = 4,
     // Guard value used by FuzzedDataProvider. The name must remain unchanged.
     kMaxValue = kForwardingRule
   };
@@ -97,8 +95,6 @@ class PortTracker {
                              const std::string& input_ifname);
   bool StopUdpPortForwarding(uint16_t input_dst_port,
                              const std::string& input_ifname);
-  bool StartAdbPortForwarding(const std::string& input_ifname, int dbus_fd);
-  bool StopAdbPortForwarding(const std::string& input_ifname);
   bool HasActiveRules();
 
   // Close all outstanding firewall holes, revoke all forwarding rules, and
