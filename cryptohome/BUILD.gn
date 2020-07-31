@@ -710,7 +710,7 @@ if (use.fuzzer) {
       "libs:libcrostpm",
     ]
     pkg_deps = [
-      "libbrillo-${libbase_ver}",
+      "libbrillo",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
       "openssl",
