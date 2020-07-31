@@ -511,6 +511,13 @@ class MetricsDaemon : public brillo::DBusDaemon {
   // thermal_zones will try zones until failure and then update the count.
   int32_t thermal_zone_count_;
 
+  // If index i is true, it means that we have already printed an error message
+  // for a failed read from thermal_zone i, and should not print one again.
+  // This helps reduce log spam from metrics_daemon.
+  // Even if it fails, we will still attempt reading from the thermal_zone.
+  // Once it has succeeded again, index i will be reset to false.
+  std::vector<bool> thermal_zone_read_failure_notified_;
+
   base::TimeDelta upload_interval_;
   std::string server_;
   std::string metrics_file_;

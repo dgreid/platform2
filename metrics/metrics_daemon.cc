@@ -724,6 +724,8 @@ std::map<std::string, uint64_t> MetricsDaemon::ReadSensorTemperatures() {
   // -1 value means we haven't yet determined how many zones there are
   // this run, we'll iterate until we get an error reading a file.
   bool update_zone_count = thermal_zone_count_ == -1;
+  if (update_zone_count)
+    thermal_zone_read_failure_notified_.clear();
 
   std::map<std::string, uint64_t> readings;
   for (int zone = 0; zone < thermal_zone_count_ || update_zone_count; zone++) {
@@ -748,11 +750,18 @@ std::map<std::string, uint64_t> MetricsDaemon::ReadSensorTemperatures() {
       continue;
     }
 
+    if (update_zone_count) {
+      thermal_zone_read_failure_notified_.push_back(false);
+    }
+    bool warn_on_read_failure = !thermal_zone_read_failure_notified_.at(zone);
     uint64_t temperature = 0;
     if (ReadFileToUint64(zone_path.Append(kSysfsTemperatureValueFile),
-                         &temperature, true)) {
+                         &temperature, warn_on_read_failure)) {
       base::TrimWhitespaceASCII(type, base::TRIM_TRAILING, &type);
       readings.emplace(type, temperature);
+      thermal_zone_read_failure_notified_.at(zone) = false;
+    } else {
+      thermal_zone_read_failure_notified_.at(zone) = true;
     }
   }
   return readings;

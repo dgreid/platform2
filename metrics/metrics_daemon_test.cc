@@ -13,6 +13,7 @@
 #include <base/files/scoped_temp_dir.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/syslog_logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 #include <power_manager/proto_bindings/suspend.pb.h>
@@ -183,16 +184,19 @@ class MetricsDaemonTest : public testing::Test {
                                                      value_string.length()));
   }
 
+  base::FilePath CreateZonePath(int zone) {
+    std::string thermal_zone = base::StringPrintf("thermal_zone%d", zone);
+    return fake_temperature_dir_.Append(thermal_zone);
+  }
+
   // Creates two input files containing a thermal zone type and a
   // temperature value at the appropriate zone path given by
   // fake_temperature_dir_, sysfs' thermal zone format, and |zone|.
   void CreateFakeTemperatureSamplesFiles(int zone,
                                          const std::string& type,
                                          uint64_t value) {
-    std::string thermal_zone = base::StringPrintf("thermal_zone%d", zone);
-    base::FilePath zone_path = fake_temperature_dir_.Append(thermal_zone);
+    base::FilePath zone_path = CreateZonePath(zone);
     CHECK(base::CreateDirectory(zone_path));
-
     base::FilePath type_path = zone_path.Append("type");
     std::string type_string = type + "\n";
     ASSERT_EQ(
@@ -322,9 +326,14 @@ TEST_F(MetricsDaemonTest, SendTemperatureSamplesAlternative) {
 }
 
 TEST_F(MetricsDaemonTest, SendTemperatureSamplesReadError) {
+  brillo::InitLog(/*init_flags=*/0);
   CreateFakeTemperatureSamplesFiles(0, "TSR1", 42390);
   CreateFakeTemperatureSamplesFiles(1, "acpitz", 10598);
   CreateFakeTemperatureSamplesFiles(2, "TSR0", 31499);
+  base::FilePath zone_path_zero = CreateZonePath(0);
+  base::FilePath zone_path_one = CreateZonePath(1);
+  base::FilePath zone_path_two = CreateZonePath(2);
+
   EXPECT_CALL(metrics_lib_,
               SendEnumToUMA(MetricsDaemon::kMetricTemperatureOneName, 42,
                             MetricsDaemon::kMetricTemperatureMax));
@@ -334,20 +343,27 @@ TEST_F(MetricsDaemonTest, SendTemperatureSamplesReadError) {
   EXPECT_CALL(metrics_lib_,
               SendEnumToUMA(MetricsDaemon::kMetricTemperatureZeroName, 31,
                             MetricsDaemon::kMetricTemperatureMax));
+  brillo::LogToString(true);
   daemon_.SendTemperatureSamples();
 
+  // Check that no error messages were logged.
+  std::string zone_zero_read_error =
+      "cannot read " + zone_path_zero.MaybeAsASCII();
+  EXPECT_FALSE(brillo::FindLog(zone_zero_read_error.c_str()));
+
+  std::string zone_one_read_error =
+      "cannot read " + zone_path_one.MaybeAsASCII();
+  EXPECT_FALSE(brillo::FindLog(zone_one_read_error.c_str()));
+
+  std::string zone_two_read_error =
+      "cannot read " + zone_path_two.MaybeAsASCII();
+  EXPECT_FALSE(brillo::FindLog(zone_two_read_error.c_str()));
+
   // Break zones 0 and 1 by deleting input files.
-  std::string thermal_zone_zero =
-      base::StringPrintf(MetricsDaemon::kSysfsThermalZoneFormat, 0);
-  base::FilePath zone_path_zero =
-      fake_temperature_dir_.Append(thermal_zone_zero);
   base::FilePath value_path_zero =
       zone_path_zero.Append(MetricsDaemon::kSysfsTemperatureValueFile);
   base::DeleteFile(value_path_zero, false);
 
-  std::string thermal_zone_one =
-      base::StringPrintf(MetricsDaemon::kSysfsThermalZoneFormat, 1);
-  base::FilePath zone_path_one = fake_temperature_dir_.Append(thermal_zone_one);
   base::FilePath type_path_one =
       zone_path_one.Append(MetricsDaemon::kSysfsTemperatureTypeFile);
   base::DeleteFile(type_path_one, false);
@@ -356,7 +372,25 @@ TEST_F(MetricsDaemonTest, SendTemperatureSamplesReadError) {
   EXPECT_CALL(metrics_lib_,
               SendEnumToUMA(MetricsDaemon::kMetricTemperatureZeroName, 31,
                             MetricsDaemon::kMetricTemperatureMax));
+  brillo::ClearLog();
   daemon_.SendTemperatureSamples();
+
+  // An error should've been reported for zone zero only.
+  EXPECT_TRUE(brillo::FindLog(zone_zero_read_error.c_str()));
+  EXPECT_FALSE(brillo::FindLog(zone_one_read_error.c_str()));
+  EXPECT_FALSE(brillo::FindLog(zone_two_read_error.c_str()));
+
+  brillo::ClearLog();
+  EXPECT_CALL(metrics_lib_,
+              SendEnumToUMA(MetricsDaemon::kMetricTemperatureZeroName, 31,
+                            MetricsDaemon::kMetricTemperatureMax));
+  daemon_.SendTemperatureSamples();
+  // No error should be reported now.
+  EXPECT_FALSE(brillo::FindLog(zone_zero_read_error.c_str()));
+  EXPECT_FALSE(brillo::FindLog(zone_one_read_error.c_str()));
+  EXPECT_FALSE(brillo::FindLog(zone_two_read_error.c_str()));
+
+  brillo::LogToString(false);
 }
 
 TEST_F(MetricsDaemonTest, SendTemperatureAtResume) {
