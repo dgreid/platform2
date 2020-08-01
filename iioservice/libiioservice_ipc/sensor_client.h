@@ -16,18 +16,17 @@
 
 #include "iioservice/include/export.h"
 
-namespace cros {
-
 namespace iioservice {
 
 // A helper class to connect to Chromium via unix socket and wait for
 // mojo::PendingRemote<SensorService> connecting to iioservice.
 // Upon disconnection errors from iioservice, the user doesn't need to do
 // anything except for waiting a new remote's arrival again.
-class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
+class IIOSERVICE_EXPORT SensorClient final
+    : public cros::mojom::SensorHalClient {
  public:
-  using SensorServiceReceivedCallback =
-      base::RepeatingCallback<void(mojo::PendingRemote<mojom::SensorService>)>;
+  using SensorServiceReceivedCallback = base::RepeatingCallback<void(
+      mojo::PendingRemote<cros::mojom::SensorService>)>;
   using ClientOnFailureCallback = base::RepeatingCallback<void()>;
 
   static void SensorClientDeleter(SensorClient* client);
@@ -39,26 +38,27 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
   // callback to abort when an error occurs.
   static ScopedSensorClient Create(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-      mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
+      mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,
       SensorServiceReceivedCallback sensor_service_received_callback,
       ClientOnFailureCallback client_on_failure_callback);
 
   // Implementation of cros::mojom::SensorHalClient. Called by sensor HAL
   // dispatcher to provide the SensorService interface.
-  void SetUpChannel(
-      mojo::PendingRemote<mojom::SensorService> sensor_service_ptr) override;
+  void SetUpChannel(mojo::PendingRemote<cros::mojom::SensorService>
+                        sensor_service_ptr) override;
 
  private:
-  SensorClient(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-               mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
-               SensorServiceReceivedCallback sensor_service_received_callback,
-               ClientOnFailureCallback client_on_failure_callback);
+  SensorClient(
+      scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
+      mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,
+      SensorServiceReceivedCallback sensor_service_received_callback,
+      ClientOnFailureCallback client_on_failure_callback);
 
   void OnClientError();
 
   scoped_refptr<base::SequencedTaskRunner> ipc_task_runner_;
 
-  mojo::Receiver<mojom::SensorHalClient> receiver_;
+  mojo::Receiver<cros::mojom::SensorHalClient> receiver_;
   SensorServiceReceivedCallback sensor_service_received_callback_;
   ClientOnFailureCallback client_on_failure_callback_;
 
@@ -66,7 +66,5 @@ class IIOSERVICE_EXPORT SensorClient final : public mojom::SensorHalClient {
 };
 
 }  // namespace iioservice
-
-}  // namespace cros
 
 #endif  // IIOSERVICE_LIBIIOSERVICE_IPC_SENSOR_CLIENT_H_

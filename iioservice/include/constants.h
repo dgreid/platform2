@@ -5,14 +5,10 @@
 #ifndef IIOSERVICE_INCLUDE_CONSTANTS_H_
 #define IIOSERVICE_INCLUDE_CONSTANTS_H_
 
-namespace cros {
-
 namespace iioservice {
 
 const double kFrequencyEpsilon = 0.001;  // Hz
 
 }  // namespace iioservice
-
-}  // namespace cros
 
 #endif  // IIOSERVICE_INCLUDE_CONSTANTS_H_

@@ -12,8 +12,6 @@
 #include "iioservice/include/common.h"
 #include "iioservice/include/constants.h"
 
-namespace cros {
-
 namespace iioservice {
 
 // static
@@ -33,7 +31,7 @@ void SensorClient::SensorClientDeleter(SensorClient* client) {
 // static
 SensorClient::ScopedSensorClient SensorClient::Create(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
+    mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,
     SensorServiceReceivedCallback sensor_service_received_callback,
     ClientOnFailureCallback client_on_failure_callback) {
   ScopedSensorClient client(
@@ -46,7 +44,7 @@ SensorClient::ScopedSensorClient SensorClient::Create(
 }
 
 void SensorClient::SetUpChannel(
-    mojo::PendingRemote<mojom::SensorService> sensor_service_ptr) {
+    mojo::PendingRemote<cros::mojom::SensorService> sensor_service_ptr) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
   LOGF(INFO) << "Received SensorService from sensor HAL dispatcher";
@@ -56,7 +54,7 @@ void SensorClient::SetUpChannel(
 
 SensorClient::SensorClient(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    mojo::PendingReceiver<mojom::SensorHalClient> pending_receiver,
+    mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,
     SensorServiceReceivedCallback sensor_service_received_callback,
     ClientOnFailureCallback client_on_failure_callback)
     : ipc_task_runner_(ipc_task_runner),
@@ -79,5 +77,3 @@ void SensorClient::OnClientError() {
 }
 
 }  // namespace iioservice
-
-}  // namespace cros
