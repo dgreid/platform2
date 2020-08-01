@@ -12,6 +12,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/json/json_writer.h>
+#include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/stringprintf.h>
@@ -23,6 +24,7 @@
 #include <gtest/gtest.h>
 
 using chromeos::ui::ChromiumCommandBuilder;
+using ::testing::ElementsAre;
 
 namespace login_manager {
 
@@ -271,7 +273,7 @@ TEST_F(ChromeSetupTest, TestAllowAmbientEQ) {
   ASSERT_EQ(login_manager::kAllowAmbientEQFeature, GetFlag(argv, kFeatureFlag));
 }
 
-void InitWithUseFlag(std::string flag,
+void InitWithUseFlag(base::Optional<std::string> flag,
                      base::ScopedTempDir* temp_dir,
                      ChromiumCommandBuilder* builder) {
   ASSERT_TRUE(temp_dir->CreateUniqueTempDir());
@@ -282,9 +284,13 @@ void InitWithUseFlag(std::string flag,
   base::File::Error error;
   CHECK(base::CreateDirectoryAndGetError(use_flags_path.DirName(), &error))
       << error;
-  flag += "\n";
-  if (base::WriteFile(use_flags_path, flag.c_str(), flag.length()) !=
-      flag.length()) {
+  std::string flag_file_contents;
+  if (flag) {
+    flag_file_contents = *flag + "\n";
+  }
+  if (base::WriteFile(use_flags_path, flag_file_contents.c_str(),
+                      flag_file_contents.length()) !=
+      flag_file_contents.length()) {
     PLOG(FATAL) << "Could not write to " << use_flags_path.value() << ": ";
   }
 
@@ -298,30 +304,20 @@ void InitWithUseFlag(std::string flag,
   CHECK(builder->Init());
 }
 
-TEST(TestSelectCrashHandler, Crashpad) {
+TEST(TestAddCrashHandlerFlag, Crashpad) {
   base::ScopedTempDir temp_dir;
   ChromiumCommandBuilder builder;
-  InitWithUseFlag("force_crashpad", &temp_dir, &builder);
-  BoardCrashHandler crash_handler = kChooseRandomly;
-  SelectCrashHandler(&builder, &crash_handler);
-  EXPECT_EQ(crash_handler, kAlwaysUseCrashpad);
+  InitWithUseFlag(base::nullopt, &temp_dir, &builder);
+  AddCrashHandlerFlag(&builder);
+  EXPECT_THAT(builder.arguments(), ElementsAre("--enable-crashpad"));
 }
 
-TEST(TestSelectCrashHandler, Breakpad) {
+TEST(TestAddCrashHandlerFlag, Breakpad) {
   base::ScopedTempDir temp_dir;
   ChromiumCommandBuilder builder;
-  InitWithUseFlag("force_breakpad", &temp_dir, &builder);
-  BoardCrashHandler crash_handler = kChooseRandomly;
-  SelectCrashHandler(&builder, &crash_handler);
-  EXPECT_EQ(crash_handler, kAlwaysUseBreakpad);
+  InitWithUseFlag(std::string("force_breakpad"), &temp_dir, &builder);
+  AddCrashHandlerFlag(&builder);
+  EXPECT_THAT(builder.arguments(), ElementsAre("--no-enable-crashpad"));
 }
 
-TEST(TestSelectCrashHandler, ChooseRandomly) {
-  base::ScopedTempDir temp_dir;
-  ChromiumCommandBuilder builder;
-  InitWithUseFlag("other_use_flag", &temp_dir, &builder);
-  BoardCrashHandler crash_handler = kAlwaysUseCrashpad;
-  SelectCrashHandler(&builder, &crash_handler);
-  EXPECT_EQ(crash_handler, kChooseRandomly);
-}
 }  // namespace login_manager

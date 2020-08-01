@@ -82,6 +82,9 @@ const char kPowerPath[] = "/power";
 const char kAllowAmbientEQField[] = "allow-ambient-eq";
 const char kAllowAmbientEQFeature[] = "AllowAmbientEQ";
 
+constexpr char kEnableCrashpadFlag[] = "--enable-crashpad";
+constexpr char kEnableBreakpadFlag[] = "--no-enable-crashpad";
+
 // These hashes are only being used temporarily till we can determine if a
 // device is a Chromebox for Meetings or not from the Install Time attributes.
 // TODO(rkc, pbos): Remove these and related code once crbug.com/706523 is
@@ -783,33 +786,20 @@ void SetUpInstantTetheringFlag(ChromiumCommandBuilder* builder,
     builder->AddFeatureDisableOverride("InstantTethering");
 }
 
-void SelectCrashHandler(ChromiumCommandBuilder* builder,
-                        BoardCrashHandler* crash_handler_out) {
-  const bool has_force_crashpad = builder->UseFlagIsSet("force_crashpad");
-  const bool has_force_breakpad = builder->UseFlagIsSet("force_breakpad");
-  if (has_force_crashpad) {
-    if (has_force_breakpad) {
-      // Warn the foolish humans who got the USE flags wrong.
-      LOG(ERROR) << "Both force_crashpad and force_breakpad USE flags present";
-    }
-    *crash_handler_out = kAlwaysUseCrashpad;
-  } else if (has_force_breakpad) {
-    *crash_handler_out = kAlwaysUseBreakpad;
-  } else {
-    *crash_handler_out = kChooseRandomly;
-  }
+void AddCrashHandlerFlag(ChromiumCommandBuilder* builder) {
+  builder->AddArg(builder->UseFlagIsSet("force_breakpad")
+                      ? kEnableBreakpadFlag
+                      : kEnableCrashpadFlag);
 }
 
 void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         bool* is_developer_end_user_out,
                         std::map<std::string, std::string>* env_vars_out,
                         std::vector<std::string>* args_out,
-                        uid_t* uid_out,
-                        BoardCrashHandler* crash_handler_out) {
+                        uid_t* uid_out) {
   DCHECK(env_vars_out);
   DCHECK(args_out);
   DCHECK(uid_out);
-  DCHECK(crash_handler_out);
 
   ChromiumCommandBuilder builder;
   std::set<std::string> disallowed_prefixes;
@@ -831,7 +821,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
   AddLacrosFlags(&builder);
   AddEnterpriseFlags(&builder);
   AddVmodulePatterns(&builder);
-  SelectCrashHandler(&builder, crash_handler_out);
+  AddCrashHandlerFlag(&builder);
 
   // Apply any modifications requested by the developer.
   if (builder.is_developer_end_user()) {

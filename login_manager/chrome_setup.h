@@ -74,17 +74,6 @@ extern const char kOzoneNNPalmCompatibleProperty[];
 // Property for radius polynomial in NNPalm for Ozone.
 extern const char kOzoneNNPalmRadiusProperty[];
 
-// Does this board require us to use a particular crash handler for Chrome?
-enum BoardCrashHandler {
-  // Breakpad doesn't work on this board, always use crashpad.
-  kAlwaysUseCrashpad,
-  // Crashpad doesn't work on this board, always use breakpad.
-  kAlwaysUseBreakpad,
-  // Both crash handlers work, so do the experiment where we select the
-  // crash handler randomly.
-  kChooseRandomly
-};
-
 // Initializes a ChromiumCommandBuilder and performs additional Chrome-specific
 // setup. Returns environment variables that the caller should export for Chrome
 // and arguments that it should pass to the Chrome binary, along with the UID
@@ -101,8 +90,7 @@ void PerformChromeSetup(brillo::CrosConfigInterface* cros_config,
                         bool* is_developer_end_user_out,
                         std::map<std::string, std::string>* env_vars_out,
                         std::vector<std::string>* args_out,
-                        uid_t* uid_out,
-                        BoardCrashHandler* crash_handler_out);
+                        uid_t* uid_out);
 
 // Add flags pertinent to the Ash window manager generated at
 // build-time by cros_config_schema.  These are stored in
@@ -173,13 +161,10 @@ void SetUpAllowAmbientEQFlag(chromeos::ui::ChromiumCommandBuilder* builder,
 void SetUpInstantTetheringFlag(chromeos::ui::ChromiumCommandBuilder* builder,
                                brillo::CrosConfigInterface* cros_config);
 
-// Determine which Chrome crash handler this board wants to use. We pass this
-// information to BrowserJob instead of just setting the command line flags
-// because some boards are running an experiment where they switch between
-// crashpad and breakpad on each Chrome restart, and because some tast tests
-// opt out of the experiment and force a particular crash handler.
-void SelectCrashHandler(chromeos::ui::ChromiumCommandBuilder* builder,
-                        BoardCrashHandler* crash_handler_out);
+// Determine which Chrome crash handler this board wants to use. (Crashpad or
+// Breakpad). Add the --enable-crashpad or --no-enable-crashpad flag as
+// appropriate.
+void AddCrashHandlerFlag(chromeos::ui::ChromiumCommandBuilder* builder);
 
 }  // namespace login_manager
 

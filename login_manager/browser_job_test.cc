@@ -79,7 +79,6 @@ class BrowserJobTest : public ::testing::Test {
   }
 
   std::vector<std::string> argv_;
-  std::vector<std::string> expected_argv_;
   std::vector<std::string> env_;
   MockFileChecker checker_;
   MockMetrics metrics_;
@@ -103,21 +102,17 @@ const char BrowserJobTest::kChromeMountNamespacePath[] = "mnt_chrome";
 void BrowserJobTest::SetUp() {
   argv_ = std::vector<std::string>(kArgv,
                                    kArgv + base::size(BrowserJobTest::kArgv));
-  expected_argv_ = argv_;
-  // ExportArgv always adds --enable-crashpad or --no-enable-crashpad. It adds
-  // --enable-crashpad since the config has kAlwaysUseCrashpad.
-  expected_argv_.emplace_back(BrowserJob::kForceCrashpadFlag);
   job_.reset(new BrowserJob(
       argv_, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
+      BrowserJob::Config{false, false, base::nullopt},
       std::make_unique<login_manager::Subprocess>(getuid(), &utils_)));
 }
 
 TEST_F(BrowserJobTest, InitializationTest) {
   EXPECT_FALSE(job_->removed_login_manager_flag_);
   std::vector<std::string> job_args = job_->ExportArgv();
-  ASSERT_EQ(expected_argv_.size(), job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_EQ(argv_.size(), job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
 }
 
 TEST_F(BrowserJobTest, WaitAndAbort) {
@@ -170,11 +165,11 @@ TEST_F(BrowserJobTest, UnshareMountNamespaceForGuest) {
   std::vector<std::string> argv{"zero", "one", "two",
                                 BrowserJobInterface::kGuestSessionFlag};
 
-  BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
-                 BrowserJob::Config{false /*isolate_guest_session*/,
-                                    false /*isolate_regular_session*/,
-                                    kAlwaysUseCrashpad, base::nullopt},
-                 std::move(p_subp));
+  BrowserJob job(
+      argv, env_, &checker_, &metrics_, &utils_,
+      BrowserJob::Config{false /*isolate_guest_session*/,
+                         false /*isolate_regular_session*/, base::nullopt},
+      std::move(p_subp));
 
   ASSERT_TRUE(job.RunInBackground());
 }
@@ -198,7 +193,7 @@ TEST_F(BrowserJobTest, EnterMountNamespaceForGuest) {
   BrowserJob job(
       argv, env_, &checker_, &metrics_, &utils_,
       BrowserJob::Config{true /*isolate_guest_session*/,
-                         false /*isolate_regular_session*/, kAlwaysUseCrashpad,
+                         false /*isolate_regular_session*/,
                          base::Optional<base::FilePath>(
                              BrowserJobTest::kChromeMountNamespacePath)},
       std::move(p_subp));
@@ -222,7 +217,7 @@ TEST_F(BrowserJobTest, EnterMountNamespaceForRegularUser) {
   BrowserJob job(
       argv_, env_, &checker_, &metrics_, &utils_,
       BrowserJob::Config{true /*isolate_guest_session*/,
-                         true /*isolate_regular_session*/, kAlwaysUseCrashpad,
+                         true /*isolate_regular_session*/,
                          base::Optional<base::FilePath>(
                              BrowserJobTest::kChromeMountNamespacePath)},
       std::move(p_subp));
@@ -307,10 +302,9 @@ TEST_F(BrowserJobTest, ShouldRunTest) {
 }
 
 TEST_F(BrowserJobTest, NullFileCheckerTest) {
-  BrowserJob job(
-      argv_, env_, nullptr, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(argv_, env_, nullptr, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
   EXPECT_TRUE(job.ShouldRunBrowser());
 }
 
@@ -362,82 +356,75 @@ TEST_F(BrowserJobTest, StartStopSessionTest) {
   job_->StartSession(kUser, kHash);
 
   std::vector<std::string> job_args = job_->ExportArgv();
-  ASSERT_LT(expected_argv_.size(), job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_LT(argv_.size(), job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginUserFlag, kUser);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginProfileFlag, kHash);
 
   // Should remove login user flag.
   job_->StopSession();
   job_args = job_->ExportArgv();
-  ASSERT_EQ(expected_argv_.size(), job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_EQ(argv_.size(), job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
 }
 
 TEST_F(BrowserJobTest, StartStopMultiSessionTest) {
-  BrowserJob job(
-      argv_, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(argv_, env_, &checker_, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.StartSession(kUser, kHash);
 
   std::vector<std::string> job_args = job.ExportArgv();
-  ASSERT_EQ(expected_argv_.size() + 2, job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_EQ(argv_.size() + 2, job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginUserFlag, kUser);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginProfileFlag, kHash);
 
   // Start another session, expect the args to be unchanged.
   job.StartSession(kUser, kHash);
   job_args = job.ExportArgv();
-  ASSERT_EQ(expected_argv_.size() + 2, job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_EQ(argv_.size() + 2, job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginUserFlag, kUser);
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginProfileFlag, kHash);
 
   // Should remove login user and login profile flags.
   job.StopSession();
   job_args = job.ExportArgv();
-  ASSERT_EQ(expected_argv_.size(), job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv_);
+  ASSERT_EQ(argv_.size(), job_args.size());
+  ExpectArgsToContainAll(job_args, argv_);
 }
 
 TEST_F(BrowserJobTest, StartStopSessionFromLoginTest) {
   std::vector<std::string> argv = {"zero", "one", "two", "--login-manager"};
-  std::vector<std::string> expected_argv(argv);
-  expected_argv.emplace(expected_argv.begin(), BrowserJob::kForceCrashpadFlag);
-  BrowserJob job(
-      argv, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   job.StartSession(kUser, kHash);
 
   std::vector<std::string> job_args = job.ExportArgv();
-  ASSERT_EQ(expected_argv.size() + 1, job_args.size());
+  ASSERT_EQ(argv.size() + 1, job_args.size());
   ExpectArgsToContainAll(
-      job_args,
-      std::vector<std::string>(expected_argv.begin(), expected_argv.end() - 1));
+      job_args, std::vector<std::string>(argv.begin(), argv.end() - 1));
   ExpectArgsToContainFlag(job_args, BrowserJob::kLoginUserFlag, kUser);
 
   // Should remove login user/hash flags and append --login-manager flag back.
   job.StopSession();
   job_args = job.ExportArgv();
-  ASSERT_EQ(expected_argv.size(), job_args.size());
-  ExpectArgsToContainAll(job_args, expected_argv);
+  ASSERT_EQ(argv.size(), job_args.size());
+  ExpectArgsToContainAll(job_args, argv);
 }
 
 TEST_F(BrowserJobTest, SetArguments) {
   std::vector<std::string> new_args = {"--ichi", "--ni dfs", "--san"};
   job_->SetArguments(new_args);
 
-  std::vector<std::string> expected_args(new_args);
-  expected_args.emplace_back(BrowserJob::kForceCrashpadFlag);
   std::vector<std::string> job_args = job_->ExportArgv();
-  ASSERT_EQ(expected_args.size(), job_args.size());
+  ASSERT_EQ(new_args.size(), job_args.size());
   EXPECT_EQ(kArgv[0], job_args[0]);
   for (size_t i = 1; i < new_args.size(); ++i) {
-    EXPECT_EQ(expected_args[i], job_args[i]);
+    EXPECT_EQ(new_args[i], job_args[i]);
   }
 
   job_->StartSession(kUser, kHash);
@@ -455,7 +442,6 @@ TEST_F(BrowserJobTest, SetExtraArguments) {
   std::vector<std::string> job_args = job_->ExportArgv();
   ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainAll(job_args, safe_args);
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
   for (const std::string& unsafe : unsafe_args) {
     EXPECT_THAT(job_args, Not(Contains(unsafe)));
   }
@@ -470,7 +456,6 @@ TEST_F(BrowserJobTest, SetTestArguments) {
   std::vector<std::string> job_args = job_->ExportArgv();
   ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainAll(job_args, test_args);
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
 }
 
 TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
@@ -488,7 +473,6 @@ TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
   ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainAll(job_args, test_args);
   ExpectArgsToContainAll(job_args, extra_args);
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
 
   const char* kNewTestArgs[] = {"--debugging=sucks", "--testing=rocks"};
   std::vector<std::string> new_test_args(
@@ -498,7 +482,6 @@ TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
   ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainAll(job_args, new_test_args);
   ExpectArgsToContainAll(job_args, extra_args);
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
   EXPECT_THAT(job_args, Not(IsSupersetOf(test_args)));
 
   const char* kNewExtraArgs[] = {"--uno", "--dos"};
@@ -509,31 +492,26 @@ TEST_F(BrowserJobTest, SetTestArgumentsAndSetExtraArgumentsDontConflict) {
   ExpectArgsToContainAll(job_args, argv_);
   ExpectArgsToContainAll(job_args, new_test_args);
   ExpectArgsToContainAll(job_args, new_extra_args);
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceCrashpadFlag));
   EXPECT_THAT(job_args, Not(IsSupersetOf(extra_args)));
 }
 
 TEST_F(BrowserJobTest, ExportArgv) {
   std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
-  BrowserJob job(
-      argv, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   std::vector<std::string> extra_args = {"--ichi", "--ni", "--san"};
   argv.insert(argv.end(), extra_args.begin(), extra_args.end());
   job.SetExtraArguments(extra_args);
-  std::vector<std::string> expected_argv(argv);
-  expected_argv.emplace_back(BrowserJob::kForceCrashpadFlag);
-  EXPECT_EQ(expected_argv, job.ExportArgv());
+  EXPECT_EQ(argv, job.ExportArgv());
 }
 
 TEST_F(BrowserJobTest, SetAdditionalEnvironmentVariables) {
   std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
-  BrowserJob job(
-      argv, {"A=a"}, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(argv, {"A=a"}, &checker_, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
   job.SetAdditionalEnvironmentVariables({"B=b", "C="});
   EXPECT_EQ((std::vector<std::string>{"A=a", "B=b", "C="}),
             job.ExportEnvironmentVariables());
@@ -553,17 +531,15 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
 
     std::vector<std::string> argv = {kArg1,     kVmodule1, kArg2, kArg3,
                                      kVmodule2, kVmodule3, kArg4};
-    BrowserJob job(
-        argv, env_, &checker_, &metrics_, &utils_,
-        BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-        std::make_unique<login_manager::Subprocess>(1, &utils_));
+    BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
+                   BrowserJob::Config{false, false, base::nullopt},
+                   std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     const char* kCombinedVmodule =
         "--vmodule=file1=1,file2=2,file3=3,file4=4,file5=5,file6=6";
 
     EXPECT_THAT(job.ExportArgv(),
-                ElementsAre(kArg1, kArg2, kArg3, kArg4,
-                            BrowserJob::kForceCrashpadFlag, kCombinedVmodule));
+                ElementsAre(kArg1, kArg2, kArg3, kArg4, kCombinedVmodule));
   }
 
   {
@@ -571,27 +547,23 @@ TEST_F(BrowserJobTest, CombineVModuleArgs) {
     const char* kVmodule = "--vmodule=my_file=1";
 
     std::vector<std::string> argv = {kArg1, kVmodule, kArg2, kArg3, kArg4};
-    BrowserJob job(
-        argv, env_, &checker_, &metrics_, &utils_,
-        BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-        std::make_unique<login_manager::Subprocess>(1, &utils_));
+    BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
+                   BrowserJob::Config{false, false, base::nullopt},
+                   std::make_unique<login_manager::Subprocess>(1, &utils_));
 
     EXPECT_THAT(job.ExportArgv(),
-                ElementsAre(kArg1, kArg2, kArg3, kArg4,
-                            BrowserJob::kForceCrashpadFlag, kVmodule));
+                ElementsAre(kArg1, kArg2, kArg3, kArg4, kVmodule));
   }
 
   {
     // A testcase with no --vmodule flag.
     std::vector<std::string> argv = {kArg1, kArg2, kArg3, kArg4};
 
-    BrowserJob job(
-        argv, env_, &checker_, &metrics_, &utils_,
-        BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-        std::make_unique<login_manager::Subprocess>(1, &utils_));
+    BrowserJob job(argv, env_, &checker_, &metrics_, &utils_,
+                   BrowserJob::Config{false, false, base::nullopt},
+                   std::make_unique<login_manager::Subprocess>(1, &utils_));
 
-    EXPECT_THAT(job.ExportArgv(), ElementsAre(kArg1, kArg2, kArg3, kArg4,
-                                              BrowserJob::kForceCrashpadFlag));
+    EXPECT_THAT(job.ExportArgv(), ElementsAre(kArg1, kArg2, kArg3, kArg4));
   }
 }
 
@@ -628,10 +600,9 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
       kEnable2, kDisable2, kBlinkEnable2, kBlinkDisable2, kArg2,
       kEnable3, kDisable3, kBlinkEnable3, kBlinkDisable3,
   };
-  BrowserJob job(
-      kArgv, env_, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseCrashpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
+  BrowserJob job(kArgv, env_, &checker_, &metrics_, &utils_,
+                 BrowserJob::Config{false, false, base::nullopt},
+                 std::make_unique<login_manager::Subprocess>(1, &utils_));
 
   // --enable-features and --disable-features should be merged into args at the
   // end of the command line, but the original args should be preserved:
@@ -649,7 +620,6 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
       kArg2,
       kEnable3,
       kDisable3,
-      BrowserJob::kForceCrashpadFlag,
       kCombinedEnable,
       kCombinedDisable,
       kCombinedBlinkEnable,
@@ -657,76 +627,6 @@ TEST_F(BrowserJobTest, CombineFeatureArgs) {
   };
   EXPECT_EQ(base::JoinString(job.ExportArgv(), " "),
             base::JoinString(kExpected, " "));
-}
-
-TEST_F(BrowserJobTest, AlwaysUseBreakpad) {
-  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
-  BrowserJob job(
-      argv, {}, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kAlwaysUseBreakpad, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
-  std::vector<std::string> job_args = job.ExportArgv();
-  ASSERT_EQ(argv.size() + 1, job_args.size());
-  EXPECT_THAT(job_args, Contains(BrowserJob::kForceBreakpadFlag));
-  ExpectArgsToContainAll(job_args, argv);
-}
-
-TEST_F(BrowserJobTest, ChooseCrashHandlerRandomly) {
-  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
-  BrowserJob job(
-      argv, {}, &checker_, &metrics_, &utils_,
-      BrowserJob::Config{false, false, kChooseRandomly, base::nullopt},
-      std::make_unique<login_manager::Subprocess>(1, &utils_));
-  bool got_breakpad = false;
-  bool got_crashpad = false;
-  int num_tries = 0;
-  while (!got_breakpad || !got_crashpad) {
-    // .9 ^ 10000 = 2e-458, so this test can run once a millisecond for
-    // thousands of years without flaking due to randomness.
-    const int kMaxTries = 10000;
-    ASSERT_LT(num_tries, kMaxTries)
-        << "Didn't get random selection of crashpad/breakpad. got_breakpad: "
-        << std::boolalpha << got_breakpad
-        << ", got_crashpad: " << std::boolalpha << got_crashpad;
-    std::vector<std::string> job_args = job.ExportArgv();
-    ASSERT_EQ(argv.size() + 1, job_args.size());
-    const std::string& last_arg = *(job_args.end() - 1);
-    if (last_arg == BrowserJob::kForceBreakpadFlag) {
-      got_breakpad = true;
-    } else {
-      ASSERT_EQ(last_arg, BrowserJob::kForceCrashpadFlag);
-      got_crashpad = true;
-    }
-    ExpectArgsToContainAll(job_args, argv);
-    ++num_tries;
-  }
-}
-
-TEST_F(BrowserJobTest, ExtraArgsOverrideBoardCrashHandler) {
-  const std::vector<std::string> argv(kArgv, kArgv + base::size(kArgv));
-  struct Test {
-    const char* extra_arg;
-    BoardCrashHandler board_crash_handler;
-  };
-  Test tests[] = {
-      {BrowserJob::kForceCrashpadFlag, kAlwaysUseBreakpad},
-      {BrowserJob::kForceCrashpadFlag, kAlwaysUseCrashpad},
-      {BrowserJob::kForceCrashpadFlag, kChooseRandomly},
-      {BrowserJob::kForceBreakpadFlag, kAlwaysUseBreakpad},
-      {BrowserJob::kForceBreakpadFlag, kAlwaysUseCrashpad},
-      {BrowserJob::kForceBreakpadFlag, kChooseRandomly},
-  };
-  for (const auto& test : tests) {
-    BrowserJob job(argv, {}, &checker_, &metrics_, &utils_,
-                   BrowserJob::Config{false, false, test.board_crash_handler,
-                                      base::nullopt},
-                   std::make_unique<login_manager::Subprocess>(1, &utils_));
-    job.SetExtraArguments({test.extra_arg});
-    std::vector<std::string> job_args = job.ExportArgv();
-    ASSERT_EQ(argv.size() + 1, job_args.size());
-    EXPECT_THAT(job_args, Contains(test.extra_arg));
-    ExpectArgsToContainAll(job_args, argv);
-  }
 }
 
 }  // namespace login_manager
