@@ -106,6 +106,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunLanConnectivityRoutine() = 0;
 
+  // Runs the signal strength routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunSignalStrengthRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;

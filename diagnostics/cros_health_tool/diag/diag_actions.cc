@@ -203,6 +203,13 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunLanConnectivityRoutine() {
+  auto response = adapter_->RunLanConnectivityRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunNvmeSelfTestRoutine(
     mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type) {
   auto response = adapter_->RunNvmeSelfTestRoutine(nvme_self_test_type);
@@ -226,6 +233,13 @@ bool DiagActions::ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunSignalStrengthRoutine() {
+  auto response = adapter_->RunSignalStrengthRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunSmartctlCheckRoutine() {
   auto response = adapter_->RunSmartctlCheckRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
@@ -235,13 +249,6 @@ bool DiagActions::ActionRunSmartctlCheckRoutine() {
 
 bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
   auto response = adapter_->RunUrandomRoutine(length_seconds);
-  CHECK(response) << "No RunRoutineResponse received.";
-  id_ = response->id;
-  return PollRoutineAndProcessResult();
-}
-
-bool DiagActions::ActionRunLanConnectivityRoutine() {
-  auto response = adapter_->RunLanConnectivityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();

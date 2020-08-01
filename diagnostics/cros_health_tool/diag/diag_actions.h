@@ -66,6 +66,7 @@ class DiagActions final {
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);
   bool ActionRunPrimeSearchRoutine(base::TimeDelta exec_duration,
                                    uint64_t max_num);
+  bool ActionRunSignalStrengthRoutine();
   bool ActionRunSmartctlCheckRoutine();
   bool ActionRunUrandomRoutine(uint32_t length_seconds);
 
