@@ -15,7 +15,11 @@ constexpr char kAllowlistPath[] = "/sys/bus/pci/drivers_allowlist";
 
 // Actual driver allowlist.
 constexpr const char* kAllowlist[] = {
-    // NULL allowlist to begin with.
+    // TODO(b/163121310): This list is only for development and may
+    // be cleared or pruned before the launch/FSI.
+    "pcieport",  // PCI Core services - AER, Hotplug etc.
+    "xhci_hcd",  // XHCI host controller driver.
+    "nvme",      // PCI Express NVME host controller driver.
 };
 
 }  // namespace.
