@@ -230,6 +230,9 @@ int diag_main(int argc, char** argv) {
       case mojo_ipc::DiagnosticRoutineEnum::kMemory:
         routine_result = actions.ActionRunMemoryRoutine();
         break;
+      case mojo_ipc::DiagnosticRoutineEnum::kGatewayCanBePinged:
+        routine_result = actions.ActionRunGatewayCanBePingedRoutine();
+        break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
         return EXIT_FAILURE;

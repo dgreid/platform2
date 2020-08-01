@@ -114,6 +114,10 @@ class CrosHealthdMojoAdapter {
   virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
   RunMemoryRoutine() = 0;
 
+  // Runs the gateway can be pinged routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunGatewayCanBePingedRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;

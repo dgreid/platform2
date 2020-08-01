@@ -205,6 +205,13 @@ bool DiagActions::ActionRunFloatingPointAccuracyRoutine(
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunGatewayCanBePingedRoutine() {
+  auto response = adapter_->RunGatewayCanBePingedRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunLanConnectivityRoutine() {
   auto response = adapter_->RunLanConnectivityRoutine();
   CHECK(response) << "No RunRoutineResponse received.";

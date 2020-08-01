@@ -60,6 +60,7 @@ class DiagActions final {
       uint32_t file_size_mb);
   bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
+  bool ActionRunGatewayCanBePingedRoutine();
   bool ActionRunLanConnectivityRoutine();
   bool ActionRunMemoryRoutine();
   bool ActionRunNvmeSelfTestRoutine(
