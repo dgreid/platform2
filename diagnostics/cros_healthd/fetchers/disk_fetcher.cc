@@ -12,10 +12,10 @@
 
 #include "diagnostics/common/status_macros.h"
 #include "diagnostics/common/statusor.h"
+#include "diagnostics/cros_healthd/fetchers/storage/device_lister.h"
+#include "diagnostics/cros_healthd/fetchers/storage/device_manager.h"
+#include "diagnostics/cros_healthd/fetchers/storage/device_resolver.h"
 #include "diagnostics/cros_healthd/utils/error_utils.h"
-#include "diagnostics/cros_healthd/utils/storage/device_lister.h"
-#include "diagnostics/cros_healthd/utils/storage/device_manager.h"
-#include "diagnostics/cros_healthd/utils/storage/device_resolver.h"
 
 namespace diagnostics {
 

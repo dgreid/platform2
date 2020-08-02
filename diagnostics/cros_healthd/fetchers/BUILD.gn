@@ -24,9 +24,9 @@ source_set("libcros_healthd_fetchers") {
   configs += [ ":libcros_healthd_fetchers_pkg_deps" ]
   deps = [
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/fetchers/storage:storage_data_source",
     "//diagnostics/cros_healthd/system:libcros_healthd_system",
     "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
-    "//diagnostics/cros_healthd/utils/storage:storage_data_source",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
   sources = [
@@ -66,9 +66,9 @@ if (use.test) {
       ":libcros_healthd_fetchers",
       "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/fetchers/storage:storage_data_source_test",
       "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
       "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
-      "//diagnostics/cros_healthd/utils/storage:storage_data_source_test",
     ]
     sources = [
       "backlight_fetcher_test.cc",
