@@ -39,7 +39,9 @@ namespace concierge {
 namespace {
 
 // Features to enable.
-constexpr StartTerminaRequest_Feature kEnabledTerminaFeatures[] = {};
+constexpr StartTerminaRequest_Feature kEnabledTerminaFeatures[] = {
+    StartTerminaRequest_Feature_START_LXD,
+};
 
 // Name of the control socket used for controlling crosvm.
 constexpr char kCrosvmSocket[] = "crosvm.sock";
