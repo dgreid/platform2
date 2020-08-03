@@ -15,6 +15,7 @@
 #include "biod/biod_crypto.h"
 #include "biod/biod_crypto_test_data.h"
 #include "biod/cros_fp_device_interface.h"
+#include "biod/mock_biod_metrics.h"
 
 namespace biod {
 
@@ -74,7 +75,8 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
 
 class FakeCrosFpDeviceFactoryImpl : public CrosFpDeviceFactory {
   std::unique_ptr<CrosFpDeviceInterface> Create(
-      const MkbpCallback& callback, BiodMetrics* biod_metrics) override {
+      const MkbpCallback& callback,
+      BiodMetricsInterface* biod_metrics) override {
     return std::make_unique<FakeCrosFpDevice>();
   }
 };
@@ -102,7 +104,8 @@ class CrosFpBiometricsManagerPeer {
         .WillOnce(testing::Return(power_manager_proxy.get()));
 
     cros_fp_biometrics_manager_ = CrosFpBiometricsManager::Create(
-        mock_bus, std::make_unique<FakeCrosFpDeviceFactoryImpl>());
+        mock_bus, std::make_unique<FakeCrosFpDeviceFactoryImpl>(),
+        std::make_unique<metrics::MockBiodMetrics>());
     // Keep a pointer to the fake device to manipulate it later.
     fake_cros_dev_ = static_cast<FakeCrosFpDevice*>(
         cros_fp_biometrics_manager_->cros_dev_.get());

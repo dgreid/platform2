@@ -426,7 +426,8 @@ BiometricsDaemon::BiometricsDaemon() {
       "%s/%s", kBiodServicePath, kCrosFpBiometricsManagerName));
   std::unique_ptr<BiometricsManager> cros_fp_bio =
       CrosFpBiometricsManager::Create(
-          bus_, std::make_unique<CrosFpDeviceFactoryImpl>());
+          bus_, std::make_unique<CrosFpDeviceFactoryImpl>(),
+          std::make_unique<BiodMetrics>());
   if (cros_fp_bio) {
     biometrics_managers_.emplace_back(
         std::make_unique<BiometricsManagerWrapper>(

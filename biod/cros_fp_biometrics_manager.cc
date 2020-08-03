@@ -158,10 +158,12 @@ bool CrosFpBiometricsManager::ReloadAllRecords(std::string user_id) {
 
 std::unique_ptr<CrosFpBiometricsManager> CrosFpBiometricsManager::Create(
     const scoped_refptr<dbus::Bus>& bus,
-    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory) {
+    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+    std::unique_ptr<BiodMetricsInterface> biod_metrics) {
   std::unique_ptr<CrosFpBiometricsManager> biometrics_manager(
       new CrosFpBiometricsManager(PowerButtonFilter::Create(bus),
-                                  std::move(cros_fp_device_factory)));
+                                  std::move(cros_fp_device_factory),
+                                  std::move(biod_metrics)));
   if (!biometrics_manager->Init())
     return nullptr;
 
@@ -333,8 +335,9 @@ void CrosFpBiometricsManager::KillMcuSession() {
 
 CrosFpBiometricsManager::CrosFpBiometricsManager(
     std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory)
-    : biod_metrics_(std::make_unique<BiodMetrics>()),
+    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+    std::unique_ptr<BiodMetricsInterface> biod_metrics)
+    : biod_metrics_(std::move(biod_metrics)),
       session_weak_factory_(this),
       weak_factory_(this),
       power_button_filter_(std::move(power_button_filter)),

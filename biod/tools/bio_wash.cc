@@ -39,7 +39,8 @@ int DoBioWash(const bool factory_init = false) {
   // Add all the possible BiometricsManagers available.
   std::unique_ptr<biod::BiometricsManager> cros_fp_bio =
       biod::CrosFpBiometricsManager::Create(
-          bus, std::make_unique<biod::CrosFpDeviceFactoryImpl>());
+          bus, std::make_unique<biod::CrosFpDeviceFactoryImpl>(),
+          std::make_unique<biod::BiodMetrics>());
   if (cros_fp_bio) {
     managers.emplace_back(std::move(cros_fp_bio));
   }

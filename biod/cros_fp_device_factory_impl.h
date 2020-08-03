@@ -17,7 +17,8 @@ class CrosFpDeviceFactoryImpl : public CrosFpDeviceFactory {
  public:
   ~CrosFpDeviceFactoryImpl() override = default;
   std::unique_ptr<CrosFpDeviceInterface> Create(
-      const MkbpCallback& callback, BiodMetrics* biod_metrics) override {
+      const MkbpCallback& callback,
+      BiodMetricsInterface* biod_metrics) override {
     auto dev = std::make_unique<CrosFpDevice>(
         callback, biod_metrics, std::make_unique<EcCommandFactory>());
     if (!dev->Init()) {

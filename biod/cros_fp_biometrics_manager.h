@@ -28,7 +28,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
  public:
   static std::unique_ptr<CrosFpBiometricsManager> Create(
       const scoped_refptr<dbus::Bus>& bus,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory);
+      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+      std::unique_ptr<BiodMetricsInterface> biod_metrics);
 
   // BiometricsManager overrides:
   ~CrosFpBiometricsManager() override;
@@ -60,7 +61,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
  protected:
   CrosFpBiometricsManager(
       std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory);
+      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+      std::unique_ptr<BiodMetricsInterface> biod_metrics);
   bool Init();
 
   void EndEnrollSession() override;
@@ -153,7 +155,7 @@ class CrosFpBiometricsManager : public BiometricsManager {
   // BiodMetrics must come before CrosFpDevice, since CrosFpDevice has a
   // raw pointer to BiodMetrics. We must ensure CrosFpDevice is destructed
   // first.
-  std::unique_ptr<BiodMetrics> biod_metrics_;
+  std::unique_ptr<BiodMetricsInterface> biod_metrics_;
   std::unique_ptr<CrosFpDeviceInterface> cros_dev_;
 
   SessionAction next_session_action_;

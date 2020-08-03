@@ -17,7 +17,7 @@ class CrosFpDeviceFactory {
  public:
   virtual ~CrosFpDeviceFactory() = default;
   virtual std::unique_ptr<CrosFpDeviceInterface> Create(
-      const MkbpCallback& callback, BiodMetrics* biod_metrics) = 0;
+      const MkbpCallback& callback, BiodMetricsInterface* biod_metrics) = 0;
 };
 
 }  // namespace biod
