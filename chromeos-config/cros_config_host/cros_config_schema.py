@@ -10,6 +10,7 @@ from __future__ import print_function
 import argparse
 import collections
 import copy
+import functools
 import itertools
 import json
 import os
@@ -469,6 +470,7 @@ def _FilterBuildElements(config, path, build_only_elements):
     config.pop(key)
 
 
+@functools.lru_cache()
 def GetValidSchemaProperties(
     schema=os.path.join(this_dir, 'cros_config_schema.yaml')):
   """Returns all valid properties from the given schema
