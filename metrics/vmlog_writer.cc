@@ -526,8 +526,7 @@ void VmlogWriter::Init(const base::FilePath& vmlog_dir,
 
   for (auto cpu : *online_cpus) {
     std::ostringstream path;
-    path << "/sys/devices/system/cpu/cpufreq/policy" << cpu
-         << "/scaling_cur_freq";
+    path << "/sys/devices/system/cpu/cpu" << cpu << "/cpufreq/scaling_cur_freq";
     std::ifstream cpufreq_stream(path.str());
     if (cpufreq_stream) {
       cpufreq_streams_.push_back(std::move(cpufreq_stream));
