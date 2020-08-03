@@ -12,8 +12,8 @@
 #include <unordered_map>
 #include <vector>
 
-#include <base/memory/shared_memory.h>
 #include <base/memory/weak_ptr.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/threading/thread.h>
 
 #include "cros-camera/camera_mojo_channel_manager.h"
@@ -116,10 +116,6 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
     bool IsReady();
 
    private:
-    // Map from output buffer ID to shared memory.
-    using InputShmMap =
-        std::unordered_map<int32_t, std::unique_ptr<base::SharedMemory>>;
-
     // Initialize the JpegEncodeAccelerator.
     void Initialize(base::Callback<void(bool)> callback);
 
@@ -159,8 +155,6 @@ class JpegEncodeAcceleratorImpl : public JpegEncodeAccelerator {
     // shared memory for JpegEncodeAccelerator interface. We will send the
     // handles of the shared memory to the remote process, so we need to keep
     // the shared memory referenced until we receive EncodeAck.
-    InputShmMap input_shm_map_;
-    InputShmMap exif_shm_map_;
 
     base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
   };

@@ -253,7 +253,6 @@ void JpegDecodeAcceleratorImpl::IPCBridge::Destroy() {
   VLOGF_ENTER();
   jda_ptr_.reset();
   inflight_buffer_ids_.clear();
-  input_shm_map_.clear();
 }
 
 void JpegDecodeAcceleratorImpl::IPCBridge::Decode(int32_t buffer_id,
@@ -317,17 +316,24 @@ void JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy(
     uint32_t output_buffer_size,
     DecodeCallback callback) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK_EQ(input_shm_map_.count(buffer_id), 0);
 
   if (!jda_ptr_.is_bound()) {
     callback.Run(buffer_id, static_cast<int>(Error::TRY_START_AGAIN));
     return;
   }
 
-  std::unique_ptr<base::SharedMemory> input_shm =
-      base::WrapUnique(new base::SharedMemory);
-  if (!input_shm->CreateAndMapAnonymous(input_buffer_size)) {
-    LOGF(WARNING) << "CreateAndMapAnonymous for input failed, size="
+  base::WritableSharedMemoryRegion input_shm_region =
+      base::WritableSharedMemoryRegion::Create(input_buffer_size);
+  if (!input_shm_region.IsValid()) {
+    LOGF(WARNING) << "Create shared memory region for input failed, size="
+                  << input_buffer_size;
+    callback.Run(buffer_id,
+                 static_cast<int>(Error::CREATE_SHARED_MEMORY_FAILED));
+    return;
+  }
+  base::WritableSharedMemoryMapping input_shm_mapping = input_shm_region.Map();
+  if (!input_shm_mapping.IsValid()) {
+    LOGF(WARNING) << "Create mapping for input failed, size="
                   << input_buffer_size;
     callback.Run(buffer_id,
                  static_cast<int>(Error::CREATE_SHARED_MEMORY_FAILED));
@@ -342,15 +348,18 @@ void JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy(
     callback.Run(buffer_id, static_cast<int>(Error::MMAP_FAILED));
     return;
   }
-  memcpy(input_shm->memory(), mmap_buf, input_buffer_size);
+  memcpy(input_shm_mapping.memory(), mmap_buf, input_buffer_size);
   munmap(mmap_buf, input_buffer_size);
 
-  int dup_input_fd = dup(input_shm->handle().GetHandle());
-  int dup_output_fd = dup(output_fd);
-  mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(dup_input_fd);
+  base::subtle::PlatformSharedMemoryRegion input_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(input_shm_region));
+  mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(
+      input_platform_shm.PassPlatformHandle().fd.release());
+
+  int dup_output_fd = HANDLE_EINTR(dup(output_fd));
   mojo::ScopedHandle output_handle = mojo::WrapPlatformFile(dup_output_fd);
 
-  input_shm_map_[buffer_id] = std::move(input_shm);
   jda_ptr_->DecodeWithFD(
       buffer_id, std::move(input_handle), input_buffer_size, coded_size_width,
       coded_size_height, std::move(output_handle), output_buffer_size,
@@ -413,8 +422,6 @@ void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAckLegacy(
     int32_t buffer_id,
     cros::mojom::DecodeError error) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK_EQ(input_shm_map_.count(buffer_id), 1u);
-  input_shm_map_.erase(buffer_id);
   callback.Run(buffer_id, static_cast<int>(error));
 }
 

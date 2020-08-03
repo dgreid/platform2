@@ -12,7 +12,7 @@
 #include <set>
 #include <unordered_map>
 
-#include <base/memory/shared_memory.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/threading/thread.h>
 
 #include "cros-camera/camera_metrics.h"
@@ -116,10 +116,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
     bool IsReady();
 
    private:
-    // Map from buffer ID to input shared memory.
-    using InputShmMap =
-        std::unordered_map<int32_t, std::unique_ptr<base::SharedMemory>>;
-
     // Initialize the JpegDecodeAccelerator.
     void Initialize(base::Callback<void(bool)> callback);
 
@@ -153,15 +149,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
 
     // Tracking the buffer ids sent to decoder.
     std::set<int32_t> inflight_buffer_ids_;
-
-    // A map from buffer id to input shared memory.
-    // |input_shm_map_| should only be accessed on |ipc_task_runner_|.
-    // The input shared memory is used to store JPEG stream buffer.
-    // Since the input buffer may be from DMA buffer, we need to prepare a
-    // shared memory for JpegDecodeAccelerator interface. We will send the
-    // handle of the shared memory to the remote process, so we need to keep the
-    // lifecycle of the shared memory until we receive DecodeAck.
-    InputShmMap input_shm_map_;
 
     base::WeakPtrFactory<IPCBridge> weak_ptr_factory_{this};
   };

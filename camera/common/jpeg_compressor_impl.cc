@@ -15,7 +15,7 @@
 #include <time.h>
 
 #include <base/memory/ptr_util.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/timer/elapsed_timer.h>
 #include "cros-camera/camera_buffer_manager.h"
 #include "cros-camera/common.h"
@@ -343,20 +343,30 @@ bool JpegCompressorImpl::EncodeHwLegacy(const uint8_t* input_buffer,
   }
 
   // Create SharedMemory for output buffer.
-  std::unique_ptr<base::SharedMemory> output_shm =
-      base::WrapUnique(new base::SharedMemory);
-  if (!output_shm->CreateAndMapAnonymous(out_buffer_size)) {
-    LOGF(ERROR) << "CreateAndMapAnonymous for output buffer failed, size="
+  base::WritableSharedMemoryRegion output_shm_region =
+      base::WritableSharedMemoryRegion::Create(out_buffer_size);
+  if (!output_shm_region.IsValid()) {
+    LOGF(ERROR) << "Create shared memory region for output buffer failed, size="
                 << out_buffer_size;
     return false;
   }
+  base::WritableSharedMemoryMapping output_shm_mapping =
+      output_shm_region.Map();
+  if (!output_shm_mapping.IsValid()) {
+    LOGF(ERROR) << "Create mapping for output buffer failed, size="
+                << out_buffer_size;
+    return false;
+  }
+  base::subtle::PlatformSharedMemoryRegion platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(output_shm_region));
 
   // Utilize HW Jpeg encode through IPC.
   int status = hw_encoder_->EncodeSync(
       -1, input_buffer, input_buffer_size, static_cast<int32_t>(width),
       static_cast<int32_t>(height), app1_buffer, app1_buffer_size,
-      output_shm->handle().GetHandle(), static_cast<uint32_t>(out_buffer_size),
-      out_data_size);
+      platform_shm.GetPlatformHandle().fd,
+      static_cast<uint32_t>(out_buffer_size), out_data_size);
   if (status == cros::JpegEncodeAccelerator::TRY_START_AGAIN) {
     // There might be some mojo errors. We will give a second try.
     LOG(WARNING) << "EncodeSync() returns TRY_START_AGAIN.";
@@ -365,14 +375,14 @@ bool JpegCompressorImpl::EncodeHwLegacy(const uint8_t* input_buffer,
       status = hw_encoder_->EncodeSync(
           -1, input_buffer, input_buffer_size, static_cast<int32_t>(width),
           static_cast<int32_t>(height), app1_buffer, app1_buffer_size,
-          output_shm->handle().GetHandle(),
+          platform_shm.GetPlatformHandle().fd,
           static_cast<uint32_t>(out_buffer_size), out_data_size);
     } else {
       LOGF(ERROR) << "JPEG encode accelerator can't be started.";
     }
   }
   if (status == cros::JpegEncodeAccelerator::ENCODE_OK) {
-    memcpy(static_cast<unsigned char*>(out_buffer), output_shm->memory(),
+    memcpy(static_cast<unsigned char*>(out_buffer), output_shm_mapping.memory(),
            *out_data_size);
     camera_metrics_->SendJpegProcessLatency(JpegProcessType::kEncode,
                                             JpegProcessMethod::kHardware,

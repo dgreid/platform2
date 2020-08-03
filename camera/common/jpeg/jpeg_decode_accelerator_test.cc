@@ -7,7 +7,8 @@
 #include <base/at_exit.h>
 #include <base/command_line.h>
 #include <base/files/file_util.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/unsafe_shared_memory_region.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/threading/thread.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <gtest/gtest.h>
@@ -56,12 +57,15 @@ struct Frame {
   int width;
   int height;
 
-  // Mapped memory of input file.
-  std::unique_ptr<base::SharedMemory> in_shm;
-  // Mapped memory of output buffer from hardware decoder.
-  std::unique_ptr<base::SharedMemory> hw_out_shm;
-  // Mapped memory of output buffer from software decoder.
-  std::unique_ptr<base::SharedMemory> sw_out_shm;
+  // Memory Region of input file.
+  base::UnsafeSharedMemoryRegion in_shm_region;
+  base::WritableSharedMemoryMapping in_shm_mapping;
+  // Memory Region of output buffer from hardware decoder.
+  base::UnsafeSharedMemoryRegion hw_out_shm_region;
+  base::WritableSharedMemoryMapping hw_out_shm_mapping;
+  // Memory Region of output buffer from software decoder.
+  base::WritableSharedMemoryRegion sw_out_shm_region;
+  base::WritableSharedMemoryMapping sw_out_shm_mapping;
 };
 
 class JpegDecodeAcceleratorTest : public ::testing::Test {
@@ -162,50 +166,55 @@ void JpegDecodeAcceleratorTest::PrepareMemory(Frame* frame) {
   size_t input_size = frame->data_str.size();
   // Prepare enought size of YUV420 format.
   size_t output_size = frame->width * frame->height * kYUV420_BytesFactor;
-  if (!frame->in_shm.get() || input_size > frame->in_shm->mapped_size()) {
-    frame->in_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->in_shm->CreateAndMapAnonymous(input_size));
+  if (!frame->in_shm_mapping.IsValid() ||
+      input_size > frame->in_shm_mapping.mapped_size()) {
+    frame->in_shm_region = base::UnsafeSharedMemoryRegion::Create(input_size);
+    frame->in_shm_mapping = frame->in_shm_region.Map();
+    LOG_ASSERT(frame->in_shm_mapping.IsValid());
   }
-  memcpy(frame->in_shm->memory(), frame->data_str.data(), input_size);
+  memcpy(frame->in_shm_mapping.memory(), frame->data_str.data(), input_size);
 
-  if (!frame->hw_out_shm.get() ||
-      output_size > frame->hw_out_shm->mapped_size()) {
-    frame->hw_out_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->hw_out_shm->CreateAndMapAnonymous(output_size));
+  if (!frame->hw_out_shm_mapping.IsValid() ||
+      output_size > frame->hw_out_shm_mapping.mapped_size()) {
+    frame->hw_out_shm_region =
+        base::UnsafeSharedMemoryRegion::Create(output_size);
+    frame->hw_out_shm_mapping = frame->hw_out_shm_region.Map();
+    LOG_ASSERT(frame->hw_out_shm_mapping.IsValid());
   }
-  memset(frame->hw_out_shm->memory(), 0, output_size);
+  memset(frame->hw_out_shm_mapping.memory(), 0, output_size);
 
-  if (!frame->sw_out_shm.get() ||
-      output_size > frame->sw_out_shm->mapped_size()) {
-    frame->sw_out_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->sw_out_shm->CreateAndMapAnonymous(output_size));
+  if (!frame->sw_out_shm_mapping.IsValid() ||
+      output_size > frame->sw_out_shm_mapping.mapped_size()) {
+    frame->sw_out_shm_region =
+        base::WritableSharedMemoryRegion::Create(output_size);
+    frame->sw_out_shm_mapping = frame->ww_out_shm_region.Map();
+    LOG_ASSERT(frame->ww_out_shm_mapping.IsValid());
   }
-  memset(frame->sw_out_shm->memory(), 0, output_size);
+  memset(frame->sw_out_shm_mapping.memory(), 0, output_size);
 }
 
 double JpegDecodeAcceleratorTest::GetMeanAbsoluteDifference(Frame* frame) {
   double total_difference = 0;
   int output_size = frame->width * frame->height * kYUV420_BytesFactor;
-  uint8_t* hw_ptr = static_cast<uint8_t*>(frame->hw_out_shm->memory());
-  uint8_t* sw_ptr = static_cast<uint8_t*>(frame->sw_out_shm->memory());
+  uint8_t* hw_ptr = frame->hw_out_shm_mapping.GetMemoryAs<uint8_t>();
+  uint8_t* sw_ptr = frame->sw_out_shm_mapping.GetMemoryAs<uint8_t>();
   for (size_t i = 0; i < output_size; i++)
     total_difference += std::abs(hw_ptr[i] - sw_ptr[i]);
   return total_difference / output_size;
 }
 
 bool JpegDecodeAcceleratorTest::GetSoftwareDecodeResult(Frame* frame) {
-  uint8_t* yplane = static_cast<uint8_t*>(frame->sw_out_shm->memory());
+  uint8_t* yplane = frame->sw_out_shm_mapping.GetMemoryAs<uint8_t>();
   uint8_t* uplane = yplane + frame->width * frame->height;
   uint8_t* vplane = uplane + frame->width * frame->height / 4;
   int yplane_stride = frame->width;
   int uv_plane_stride = yplane_stride / 2;
 
-  if (libyuv::ConvertToI420(static_cast<uint8_t*>(frame->in_shm->memory()),
-                            frame->data_str.size(), yplane, yplane_stride,
-                            uplane, uv_plane_stride, vplane, uv_plane_stride, 0,
-                            0, frame->width, frame->height, frame->width,
-                            frame->height, libyuv::kRotate0,
-                            libyuv::FOURCC_MJPG) != 0) {
+  if (libyuv::ConvertToI420(
+          frame->in_shm_mapping.GetMemoryAs<uint8_t>(), frame->data_str.size(),
+          yplane, yplane_stride, uplane, uv_plane_stride, vplane,
+          uv_plane_stride, 0, 0, frame->width, frame->height, frame->width,
+          frame->height, libyuv::kRotate0, libyuv::FOURCC_MJPG) != 0) {
     LOG(ERROR) << "Software decode failed.";
     return false;
   }
@@ -213,25 +222,22 @@ bool JpegDecodeAcceleratorTest::GetSoftwareDecodeResult(Frame* frame) {
 }
 
 void JpegDecodeAcceleratorTest::DecodeTest(Frame* frame, size_t decoder_id) {
-  base::SharedMemoryHandle input_handle;
-  base::SharedMemoryHandle output_handle;
-  int input_fd, output_fd;
   JpegDecodeAccelerator::Error error;
+  int input_fd, output_fd;
 
   // Clear HW Decode results.
-  memset(frame->hw_out_shm->memory(), 0, frame->hw_out_shm->mapped_size());
+  memset(frame->hw_out_shm_mapping.memory(), 0,
+         frame->hw_out_shm_mapping.mapped_size());
 
-  input_handle = frame->in_shm->handle();
-  output_handle = frame->hw_out_shm->handle();
-  input_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(input_handle);
-  output_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(output_handle);
+  input_fd = in_platform_shm.GetPlatformHandle().fd;
+  output_fd = hw_out_platform_shm.GetPlatformHandle().fd;
   VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
 
   // Pretend the shared memory as DMA buffer.
   // Since we all use mmap to get the user space address.
   error = jpeg_decoder_[decoder_id]->DecodeSync(
-      input_fd, frame->in_shm->mapped_size(), frame->width, frame->height,
-      output_fd, frame->hw_out_shm->mapped_size());
+      input_fd, frame->in_shm_mapping.mapped_size(), frame->width,
+      frame->height, output_fd, frame->hw_out_shm_mapping.mapped_size());
   EXPECT_EQ(error, JpegDecodeAccelerator::Error::NO_ERRORS);
   if (error == JpegDecodeAccelerator::Error::NO_ERRORS) {
     double difference = GetMeanAbsoluteDifference(frame);
@@ -241,22 +247,19 @@ void JpegDecodeAcceleratorTest::DecodeTest(Frame* frame, size_t decoder_id) {
 
 void JpegDecodeAcceleratorTest::DecodeTestAsync(Frame* frame,
                                                 DecodeCallback callback) {
-  base::SharedMemoryHandle input_handle;
-  base::SharedMemoryHandle output_handle;
   int input_fd, output_fd;
 
   // Clear HW Decode results.
-  memset(frame->hw_out_shm->memory(), 0, frame->hw_out_shm->mapped_size());
+  memset(frame->hw_out_shm_mapping.memory(), 0,
+         frame->hw_out_shm_mapping.mapped_size());
 
-  input_handle = frame->in_shm->handle();
-  output_handle = frame->hw_out_shm->handle();
-  input_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(input_handle);
-  output_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(output_handle);
+  input_fd = in_platform_shm.GetPlatformHandle().fd;
+  output_fd = hw_out_platform_shm.GetPlatformHandle().fd;
   VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
 
-  jpeg_decoder_[0]->Decode(input_fd, frame->in_shm->mapped_size(), frame->width,
-                           frame->height, output_fd,
-                           frame->hw_out_shm->mapped_size(), callback);
+  jpeg_decoder_[0]->Decode(input_fd, frame->in_shm_mapping.mapped_size(),
+                           frame->width, frame->height, output_fd,
+                           frame->hw_out_shm_mapping.mapped_size(), callback);
 }
 
 void JpegDecodeAcceleratorTest::DecodeSyncCallback(
@@ -297,8 +300,6 @@ TEST_F(JpegDecodeAcceleratorTest, MultiDecodesTest) {
 }
 
 TEST_F(JpegDecodeAcceleratorTest, DecodeFailTest) {
-  base::SharedMemoryHandle input_handle;
-  base::SharedMemoryHandle output_handle;
   int input_fd, output_fd;
   JpegDecodeAccelerator::Error error;
 
@@ -306,17 +307,23 @@ TEST_F(JpegDecodeAcceleratorTest, DecodeFailTest) {
   PrepareMemory(&jpeg_frame1_);
 
   // Corrupt jpeg content
-  memset(jpeg_frame1_.in_shm->memory(), 0, jpeg_frame1_.in_shm->mapped_size());
-  input_handle = jpeg_frame1_.in_shm->handle();
-  output_handle = jpeg_frame1_.hw_out_shm->handle();
-  input_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(input_handle);
-  output_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(output_handle);
+  memset(jpeg_frame1_.in_shm_mapping.memory(), 0,
+         jpeg_frame1_.in_shm_mapping.mapped_size());
+  base::subtle::PlatformSharedMemoryRegion in_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(frame->in_shm_region));
+  base::subtle::PlatformSharedMemoryRegion hw_out_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(frame->hw_out_shm_region));
+  input_fd = in_platform_shm.PassPlatformHandle().fd.release();
+  output_fd = hw_out_platform_shm.PassPlatformHandle().fd.release();
   VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
 
   ASSERT_TRUE(StartJda(1));
   error = jpeg_decoder_[0]->DecodeSync(
-      input_fd, jpeg_frame1_.in_shm->mapped_size(), jpeg_frame1_.width,
-      jpeg_frame1_.height, output_fd, jpeg_frame1_.hw_out_shm->mapped_size());
+      input_fd, jpeg_frame1_.in_shm_mapping.mapped_size(), jpeg_frame1_.width,
+      jpeg_frame1_.height, output_fd,
+      jpeg_frame1_.hw_out_shm_mapping.mapped_size());
 
   EXPECT_EQ(error, JpegDecodeAccelerator::Error::PARSE_JPEG_FAILED);
 }

@@ -9,7 +9,8 @@
 #include <base/at_exit.h>
 #include <base/command_line.h>
 #include <base/files/file_util.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/writable_shared_memory_region.h>
+#include <base/memory/unsafe_shared_memory_region.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/threading/thread.h>
@@ -60,12 +61,15 @@ struct Frame {
   int height;
   base::FilePath yuv_file;
 
-  // Mapped memory of input file.
-  std::unique_ptr<base::SharedMemory> in_shm;
-  // Mapped memory of output buffer from hardware encoder.
-  std::unique_ptr<base::SharedMemory> hw_out_shm;
-  // Mapped memory of output buffer from software encoder.
-  std::unique_ptr<base::SharedMemory> sw_out_shm;
+  // Memory Region of input file.
+  base::UnsafeSharedMemoryRegion in_shm_region;
+  base::WritableSharedMemoryMapping in_shm_mapping;
+  // Memory Region of output buffer from hardware decoder.
+  base::UnsafeSharedMemoryRegion hw_out_shm_region;
+  base::WritableSharedMemoryMapping hw_out_shm_mapping;
+  // Memory Region of output buffer from software decoder.
+  base::WritableSharedMemoryRegion sw_out_shm_region;
+  base::WritableSharedMemoryMapping sw_out_shm_mapping;
 
   // Actual data size in |hw_out_shm|.
   uint32_t hw_out_size;
@@ -187,25 +191,31 @@ void JpegEncodeAcceleratorTest::PrepareMemory(Frame* frame) {
   size_t input_size = frame->data_str.size();
   // Prepare enought size for encoded JPEG.
   size_t output_size = frame->width * frame->height * 3 / 2;
-  if (!frame->in_shm.get() || input_size > frame->in_shm->mapped_size()) {
-    frame->in_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->in_shm->CreateAndMapAnonymous(input_size));
+  if (!frame->in_shm_mapping.IsValid() ||
+      input_size > frame->in_shm_mapping.mapped_size()) {
+    frame->in_shm_region = base::UnsafeSharedMemoryRegion::Create(input_size);
+    frame->in_shm_mapping = frame->in_shm_region.Map();
+    LOG_ASSERT(frame->in_shm_mapping.IsValid());
   }
-  memcpy(frame->in_shm->memory(), frame->data_str.data(), input_size);
+  memcpy(frame->in_shm_mapping.memory(), frame->data_str.data(), input_size);
 
-  if (!frame->hw_out_shm.get() ||
-      output_size > frame->hw_out_shm->mapped_size()) {
-    frame->hw_out_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->hw_out_shm->CreateAndMapAnonymous(output_size));
+  if (!frame->hw_out_shm_mapping.IsValid() ||
+      output_size > frame->hw_out_shm_mapping.mapped_size()) {
+    frame->hw_out_shm_region =
+        base::UnsafeSharedMemoryRegion::Create(output_size);
+    frame->hw_out_shm_mapping = frame->hw_out_shm_region.Map();
+    LOG_ASSERT(frame->hw_out_shm_mapping.IsValid());
   }
-  memset(frame->hw_out_shm->memory(), 0, output_size);
+  memset(frame->hw_out_shm_mapping.memory(), 0, output_size);
 
-  if (!frame->sw_out_shm.get() ||
-      output_size > frame->sw_out_shm->mapped_size()) {
-    frame->sw_out_shm.reset(new base::SharedMemory);
-    LOG_ASSERT(frame->sw_out_shm->CreateAndMapAnonymous(output_size));
+  if (!frame->sw_out_shm_mapping.IsValid() ||
+      output_size > frame->sw_out_shm_mapping.mapped_size()) {
+    frame->sw_out_shm_region =
+        base::WritableSharedMemoryRegion::Create(output_size);
+    frame->sw_out_shm_mapping = frame->sw_out_shm_region.Map();
+    LOG_ASSERT(frame->sw_out_shm_mapping.IsValid());
   }
-  memset(frame->sw_out_shm->memory(), 0, output_size);
+  memset(frame->sw_out_shm_mapping.memory(), 0, output_size);
 }
 
 double JpegEncodeAcceleratorTest::GetMeanAbsoluteDifference(
@@ -219,11 +229,12 @@ double JpegEncodeAcceleratorTest::GetMeanAbsoluteDifference(
 bool JpegEncodeAcceleratorTest::GetSoftwareEncodeResult(Frame* frame) {
   std::unique_ptr<JpegCompressor> compressor(
       JpegCompressor::GetInstance(g_env->mojo_manager_.get()));
-  if (!compressor->CompressImage(
-          frame->in_shm->memory(), frame->width, frame->height,
-          kJpegDefaultQuality, nullptr, 0, frame->sw_out_shm->mapped_size(),
-          frame->sw_out_shm->memory(), &frame->sw_out_size,
-          JpegCompressor::Mode::kSwOnly)) {
+  if (!compressor->CompressImage(frame->in_shm_mapping.memory(), frame->width,
+                                 frame->height, kJpegDefaultQuality, nullptr, 0,
+                                 frame->sw_out_shm_mapping.mapped_size(),
+                                 frame->sw_out_shm_mapping.memory(),
+                                 &frame->sw_out_size,
+                                 JpegCompressor::Mode::kSwOnly)) {
     LOG(ERROR) << "Software encode failed.";
     return false;
   }
@@ -239,7 +250,7 @@ bool JpegEncodeAcceleratorTest::CompareHwAndSwResults(Frame* frame) {
   int u_stride = width / 2;
   int v_stride = u_stride;
   if (libyuv::ConvertToI420(
-          static_cast<const uint8_t*>(frame->hw_out_shm->memory()),
+          frame->hw_out_shm_mapping.GetMemoryAs<const uint8_t>(),
           frame->hw_out_size, hw_yuv_result, y_stride,
           hw_yuv_result + y_stride * height, u_stride,
           hw_yuv_result + y_stride * height + u_stride * height / 2, v_stride,
@@ -250,7 +261,7 @@ bool JpegEncodeAcceleratorTest::CompareHwAndSwResults(Frame* frame) {
 
   uint8_t* sw_yuv_result = new uint8_t[yuv_size];
   if (libyuv::ConvertToI420(
-          static_cast<const uint8_t*>(frame->sw_out_shm->memory()),
+          frame->sw_out_shm_mapping.GetMemoryAs<const uint8_t>(),
           frame->sw_out_size, sw_yuv_result, y_stride,
           sw_yuv_result + y_stride * height, u_stride,
           sw_yuv_result + y_stride * height + u_stride * height / 2, v_stride,
@@ -274,18 +285,15 @@ bool JpegEncodeAcceleratorTest::CompareHwAndSwResults(Frame* frame) {
 }
 
 void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
-  base::SharedMemoryHandle input_handle;
-  base::SharedMemoryHandle output_handle;
   int input_fd, output_fd;
   int status;
 
   // Clear HW encode results.
-  memset(frame->hw_out_shm->memory(), 0, frame->hw_out_shm->mapped_size());
+  memset(frame->hw_out_shm_mapping.memory(), 0,
+         frame->hw_out_shm_mapping.mapped_size());
 
-  input_handle = frame->in_shm->handle();
-  output_handle = frame->hw_out_shm->handle();
-  input_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(input_handle);
-  output_fd = base::SharedMemory::GetFdFromSharedMemoryHandle(output_handle);
+  input_fd = frame->in_shm_region.GetPlatformHandle().fd;
+  output_fd = frame->hw_out_shm_region.GetPlatformHandle().fd;
   VLOG(1) << "input fd " << input_fd << " output fd " << output_fd;
 
   ExifUtils utils;
@@ -299,15 +307,15 @@ void JpegEncodeAcceleratorTest::EncodeTest(Frame* frame) {
   // Pretend the shared memory as DMA buffer. Since we use mmap to get the user
   // space address, it won't cause any problems.
   status = jpeg_encoder_->EncodeSync(
-      input_fd, nullptr, frame->in_shm->mapped_size(), frame->width,
+      input_fd, nullptr, frame->in_shm_mapping.mapped_size(), frame->width,
       frame->height, utils.GetApp1Buffer(), utils.GetApp1Length(), output_fd,
-      frame->hw_out_shm->mapped_size(), &frame->hw_out_size);
+      frame->hw_out_shm_mapping.mapped_size(), &frame->hw_out_size);
   EXPECT_EQ(status, JpegEncodeAccelerator::ENCODE_OK);
   if (status == static_cast<int>(JpegEncodeAccelerator::ENCODE_OK)) {
     if (g_env->save_to_file_) {
       base::FilePath encoded_file = frame->yuv_file.ReplaceExtension(".jpg");
       base::WriteFile(encoded_file,
-                      static_cast<char*>(frame->hw_out_shm->memory()),
+                      frame->hw_out_shm_mapping.GetMemoryAs<char>(),
                       frame->hw_out_size);
     }
 

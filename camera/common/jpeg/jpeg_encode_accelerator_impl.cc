@@ -205,8 +205,6 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Destroy() {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   VLOGF_ENTER();
   jea_ptr_.reset();
-  input_shm_map_.clear();
-  exif_shm_map_.clear();
 }
 
 void JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy(
@@ -222,24 +220,29 @@ void JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy(
     uint32_t output_buffer_size,
     EncodeWithFDCallback callback) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK_EQ(input_shm_map_.count(task_id), 0);
-  DCHECK_EQ(exif_shm_map_.count(task_id), 0);
 
   if (!jea_ptr_.is_bound()) {
     callback.Run(0, TRY_START_AGAIN);
   }
 
-  std::unique_ptr<base::SharedMemory> input_shm =
-      base::WrapUnique(new base::SharedMemory);
-  if (!input_shm->CreateAndMapAnonymous(input_buffer_size)) {
-    LOGF(WARNING) << "CreateAndMapAnonymous for input failed, size="
+  base::WritableSharedMemoryRegion input_shm_region =
+      base::WritableSharedMemoryRegion::Create(input_buffer_size);
+  if (!input_shm_region.IsValid()) {
+    LOGF(WARNING) << "Create shared memory region for input failed, size="
+                  << input_buffer_size;
+    callback.Run(0, SHARED_MEMORY_FAIL);
+    return;
+  }
+  base::WritableSharedMemoryMapping input_shm_mapping = input_shm_region.Map();
+  if (!input_shm_mapping.IsValid()) {
+    LOGF(WARNING) << "Create mapping for input failed, size="
                   << input_buffer_size;
     callback.Run(0, SHARED_MEMORY_FAIL);
     return;
   }
   // Copy content from input buffer or file descriptor to shared memory.
   if (input_buffer) {
-    memcpy(input_shm->memory(), input_buffer, input_buffer_size);
+    memcpy(input_shm_mapping.memory(), input_buffer, input_buffer_size);
   } else {
     uint8_t* mmap_buf = static_cast<uint8_t*>(
         mmap(NULL, input_buffer_size, PROT_READ, MAP_SHARED, input_fd, 0));
@@ -250,35 +253,40 @@ void JpegEncodeAcceleratorImpl::IPCBridge::EncodeLegacy(
       return;
     }
 
-    memcpy(input_shm->memory(), mmap_buf, input_buffer_size);
+    memcpy(input_shm_mapping.memory(), mmap_buf, input_buffer_size);
     munmap(mmap_buf, input_buffer_size);
   }
 
-  // Create SharedMemory for Exif buffer and copy data into it.
-  std::unique_ptr<base::SharedMemory> exif_shm =
-      base::WrapUnique(new base::SharedMemory);
+  // Create WritableSharedMemory{Region,Mapping} for Exif buffer and copy data
+  // into it.
   // Create a dummy |exif_shm| even if |exif_buffer_size| is 0.
   uint32_t exif_shm_size = std::max(exif_buffer_size, 1u);
-  if (!exif_shm->CreateAndMapAnonymous(exif_shm_size)) {
-    LOGF(WARNING) << "CreateAndMapAnonymous for exif failed, size="
-                  << exif_shm_size;
+  base::WritableSharedMemoryRegion exif_shm_region =
+      base::WritableSharedMemoryRegion::Create(exif_shm_size);
+  base::WritableSharedMemoryMapping exif_shm_mapping = exif_shm_region.Map();
+  if (!exif_shm_mapping.IsValid()) {
+    LOGF(WARNING) << "Create and Map for exif failed, size=" << exif_shm_size;
     callback.Run(0, SHARED_MEMORY_FAIL);
     return;
   }
   if (exif_buffer_size) {
-    memcpy(exif_shm->memory(), exif_buffer, exif_buffer_size);
+    memcpy(exif_shm_mapping.memory(), exif_buffer, exif_buffer_size);
   }
 
-  int dup_input_fd = HANDLE_EINTR(dup(input_shm->handle().GetHandle()));
-  int dup_exif_fd = HANDLE_EINTR(dup(exif_shm->handle().GetHandle()));
+  base::subtle::PlatformSharedMemoryRegion input_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(input_shm_region));
+  base::subtle::PlatformSharedMemoryRegion exif_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(exif_shm_region));
+
   int dup_output_fd = HANDLE_EINTR(dup(output_fd));
 
-  mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(dup_input_fd);
-  mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(dup_exif_fd);
+  mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(
+      input_platform_shm.PassPlatformHandle().fd.release());
+  mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(
+      exif_platform_shm.PassPlatformHandle().fd.release());
   mojo::ScopedHandle output_handle = mojo::WrapPlatformFile(dup_output_fd);
-
-  input_shm_map_[task_id] = std::move(input_shm);
-  exif_shm_map_[task_id] = std::move(exif_shm);
 
   jea_ptr_->EncodeWithFD(
       task_id, std::move(input_handle), input_buffer_size, coded_size_width,
@@ -299,29 +307,37 @@ void JpegEncodeAcceleratorImpl::IPCBridge::Encode(
     int coded_size_height,
     EncodeWithDmaBufCallback callback) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK_EQ(exif_shm_map_.count(task_id), 0);
 
   if (!jea_ptr_.is_bound()) {
     callback.Run(0, TRY_START_AGAIN);
   }
 
   // Create SharedMemory for Exif buffer and copy data into it.
-  std::unique_ptr<base::SharedMemory> exif_shm =
-      base::WrapUnique(new base::SharedMemory);
   // Create a dummy |exif_shm| even if |exif_buffer_size| is 0.
   uint32_t exif_shm_size = std::max(exif_buffer_size, 1u);
-  if (!exif_shm->CreateAndMapAnonymous(exif_shm_size)) {
-    LOGF(WARNING) << "CreateAndMapAnonymous for exif failed, size="
+  base::WritableSharedMemoryRegion exif_shm_region =
+      base::WritableSharedMemoryRegion::Create(exif_shm_size);
+  if (!exif_shm_region.IsValid()) {
+    LOGF(WARNING) << "Create shared memory region for exif failed, size="
                   << exif_shm_size;
     callback.Run(0, SHARED_MEMORY_FAIL);
     return;
   }
-  if (exif_buffer_size) {
-    memcpy(exif_shm->memory(), exif_buffer, exif_buffer_size);
+  base::WritableSharedMemoryMapping exif_shm_mapping = exif_shm_region.Map();
+  if (!exif_shm_mapping.IsValid()) {
+    LOGF(WARNING) << "Create mapping for exif failed, size=" << exif_shm_size;
+    callback.Run(0, SHARED_MEMORY_FAIL);
+    return;
   }
+  if (exif_buffer_size) {
+    memcpy(exif_shm_mapping.memory(), exif_buffer, exif_buffer_size);
+  }
+  base::subtle::PlatformSharedMemoryRegion exif_platform_shm =
+      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+          std::move(exif_shm_region));
 
-  int dup_exif_fd = HANDLE_EINTR(dup(exif_shm->handle().GetHandle()));
-  mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(dup_exif_fd);
+  mojo::ScopedHandle exif_handle = mojo::WrapPlatformFile(
+      exif_platform_shm.PassPlatformHandle().fd.release());
 
   auto WrapToMojoPlanes =
       [](const std::vector<JpegCompressor::DmaBufPlane>& planes) {
@@ -394,10 +410,6 @@ void JpegEncodeAcceleratorImpl::IPCBridge::OnEncodeAck(
     uint32_t output_size,
     mojom::EncodeStatus status) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-  DCHECK_EQ(input_shm_map_.count(task_id), 1u);
-  DCHECK_EQ(exif_shm_map_.count(task_id), 1u);
-  input_shm_map_.erase(task_id);
-  exif_shm_map_.erase(task_id);
   callback.Run(output_size, static_cast<int>(status));
 }
 
