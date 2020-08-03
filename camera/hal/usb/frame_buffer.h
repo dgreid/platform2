@@ -13,7 +13,7 @@
 #include <vector>
 
 #include <base/files/scoped_file.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/unsafe_shared_memory_region.h>
 #include <base/synchronization/lock.h>
 #include <camera/camera_metadata.h>
 
@@ -96,15 +96,16 @@ class SharedFrameBuffer : public FrameBuffer {
   void SetHeight(uint32_t height);
   void SetFourcc(uint32_t fourcc) override;
   int SetDataSize(size_t data_size) override;
-  int GetFd() const override {
-    return base::SharedMemory::GetFdFromSharedMemoryHandle(
-        shm_buffer_->handle());
-  }
+  int GetFd() const override { return shm_region_.GetPlatformHandle().fd; }
 
  private:
   void SetData();
   void SetStride();
-  std::unique_ptr<base::SharedMemory> shm_buffer_;
+  // base::UnsafeSharedMemoryRegion, instead of the Writable alternative, is
+  // used to allow getting (and duplicating in
+  // JpecDecodeAcceleratorImpl::IPCBridge::Decode) the fd.
+  base::UnsafeSharedMemoryRegion shm_region_;
+  base::WritableSharedMemoryMapping shm_mapping_;
 };
 
 // V4L2FrameBuffer is used for the buffer from V4L2CameraDevice. Maps the fd

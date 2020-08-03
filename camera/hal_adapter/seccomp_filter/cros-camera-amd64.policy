@@ -19,6 +19,7 @@ epoll_wait: 1
 eventfd2: 1
 exit: 1
 exit_group: 1
+fallocate: 1
 fcntl: 1
 flock: 1
 fstat: 1
