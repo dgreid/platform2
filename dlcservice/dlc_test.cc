@@ -516,9 +516,10 @@ TEST_F(DlcBaseTest, ChangeStateInstalled) {
   dlc.Initialize();
   dlc.mount_point_ = base::FilePath("foo-path");
 
+  // The |root_path| in |DlcState| should point to the root of the mount point.
   EXPECT_CALL(mock_state_change_reporter_,
-              DlcStateChanged(
-                  CheckDlcStateProto(DlcState::INSTALLED, 1.0, "foo-path")));
+              DlcStateChanged(CheckDlcStateProto(DlcState::INSTALLED, 1.0,
+                                                 "foo-path/root")));
   dlc.ChangeState(DlcState::INSTALLED);
 }
 

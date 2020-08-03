@@ -631,7 +631,7 @@ void DlcBase::ChangeState(DlcState::State state) {
     case DlcState::INSTALLED:
       state_.set_state(state);
       state_.set_progress(1.0);
-      state_.set_root_path(mount_point_.value());
+      state_.set_root_path(GetRoot().value());
       break;
 
     default:
