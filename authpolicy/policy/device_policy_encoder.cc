@@ -278,8 +278,14 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
   }
 
   if (base::Optional<std::string> value =
-          EncodeString(key::kMinimumChromeVersionEnforced))
-    policy->mutable_minimum_chrome_version_enforced()->set_value(value.value());
+          EncodeString(key::kDeviceMinimumVersion))
+    policy->mutable_device_minimum_version()->set_value(value.value());
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kDeviceMinimumVersionAueMessage)) {
+    policy->mutable_device_minimum_version_aue_message()->set_value(
+        value.value());
+  }
 
   if (base::Optional<std::string> value =
           EncodeString(key::kRequiredClientCertificateForDevice)) {
@@ -300,6 +306,12 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
       policy->mutable_system_proxy_settings()->set_system_proxy_settings(
           value.value());
     }
+  }
+
+  if (base::Optional<bool> value =
+          EncodeBoolean(key::kManagedGuestSessionPrivacyWarningsEnabled)) {
+    policy->mutable_managed_guest_session_privacy_warnings()->set_enabled(
+        value.value());
   }
 }
 
@@ -415,6 +427,18 @@ void DevicePolicyEncoder::EncodeAutoUpdatePolicies(
           EncodeString(key::kDeviceLoginScreenWebUsbAllowDevicesForUrls)) {
     policy->mutable_device_login_screen_webusb_allow_devices_for_urls()
         ->set_device_login_screen_webusb_allow_devices_for_urls(value.value());
+  }
+  if (base::Optional<int> value =
+          EncodeInteger(key::kDeviceChannelDowngradeBehavior)) {
+    if (em::AutoUpdateSettingsProto::ChannelDowngradeBehavior_IsValid(
+            value.value())) {
+      policy->mutable_auto_update_settings()->set_channel_downgrade_behavior(
+          static_cast<em::AutoUpdateSettingsProto::ChannelDowngradeBehavior>(
+              value.value()));
+    } else {
+      LOG(ERROR) << "Invalid enum value " << value.value() << " for policy "
+                 << key::kDeviceChannelDowngradeBehavior;
+    }
   }
 }
 
@@ -737,6 +761,48 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     list->clear_whitelist();
     for (const std::string& value : values.value())
       list->add_whitelist(value);
+  }
+
+  if (base::Optional<std::string> value =
+          EncodeString(key::kDeviceExternalPrintServers)) {
+    policy->mutable_external_print_servers()->set_external_policy(
+        value.value());
+  }
+  if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kDeviceExternalPrintServersAllowlist)) {
+    auto list = policy->mutable_external_print_servers_allowlist();
+    list->clear_allowlist();
+    for (const std::string& value : values.value())
+      list->add_allowlist(value);
+  }
+
+  if (base::Optional<std::string> value = EncodeString(key::kDevicePrinters)) {
+    policy->mutable_device_printers()->set_external_policy(value.value());
+  }
+  if (base::Optional<int> value =
+          EncodeInteger(key::kDevicePrintersAccessMode)) {
+    if (em::DevicePrintersAccessModeProto::AccessMode_IsValid(value.value())) {
+      policy->mutable_device_printers_access_mode()->set_access_mode(
+          static_cast<em::DevicePrintersAccessModeProto::AccessMode>(
+              value.value()));
+    } else {
+      LOG(ERROR) << "Invalid enum value " << value.value() << " for policy "
+                 << key::kDevicePrintersAccessMode;
+    }
+  }
+  if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kDevicePrintersAllowlist)) {
+    auto list = policy->mutable_device_printers_allowlist();
+    list->clear_allowlist();
+    for (const std::string& value : values.value())
+      list->add_allowlist(value);
+  }
+  if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kDevicePrintersBlocklist)) {
+    auto list = policy->mutable_device_printers_blocklist();
+    list->clear_blocklist();
+    for (const std::string& value : values.value())
+      list->add_blocklist(value);
   }
 
   if (base::Optional<std::string> value =

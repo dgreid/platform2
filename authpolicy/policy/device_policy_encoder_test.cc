@@ -144,6 +144,11 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeBoolean(&policy, key::kDevicePowerwashAllowed, kBool);
   EXPECT_EQ(kBool,
             policy.device_powerwash_allowed().device_powerwash_allowed());
+
+  EncodeBoolean(&policy, key::kManagedGuestSessionPrivacyWarningsEnabled,
+                kBool);
+  EXPECT_EQ(kBool, policy.managed_guest_session_privacy_warnings().enabled());
+
   //
   // Network policies.
   //
@@ -232,6 +237,11 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
                kString);
   EXPECT_EQ(kString, policy.device_login_screen_webusb_allow_devices_for_urls()
                          .device_login_screen_webusb_allow_devices_for_urls());
+
+  EncodeInteger(&policy, key::kDeviceChannelDowngradeBehavior,
+                em::AutoUpdateSettingsProto::ROLLBACK);
+  EXPECT_EQ(em::AutoUpdateSettingsProto::ROLLBACK,
+            policy.auto_update_settings().channel_downgrade_behavior());
 
   //
   // Accessibility policies.
@@ -396,8 +406,11 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
                })!!!");
   EXPECT_TRUE(policy.has_system_proxy_settings());
 
-  EncodeString(&policy, key::kMinimumChromeVersionEnforced, kString);
-  EXPECT_EQ(policy.minimum_chrome_version_enforced().value(), kString);
+  EncodeString(&policy, key::kDeviceMinimumVersion, kString);
+  EXPECT_EQ(policy.device_minimum_version().value(), kString);
+
+  EncodeString(&policy, key::kDeviceMinimumVersionAueMessage, kString);
+  EXPECT_EQ(policy.device_minimum_version_aue_message().value(), kString);
 
   // The encoder of this policy converts ints to AutomaticTimezoneDetectionType
   // enums.
@@ -514,6 +527,30 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeStringList(&policy, key::kDeviceNativePrintersBlacklist, kStringList);
   EXPECT_EQ(kStringList,
             ToVector(policy.native_device_printers_blacklist().blacklist()));
+
+  EncodeString(&policy, key::kDeviceExternalPrintServers, kString);
+  EXPECT_EQ(kString, policy.external_print_servers().external_policy());
+
+  EncodeStringList(&policy, key::kDeviceExternalPrintServersAllowlist,
+                   kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.external_print_servers_allowlist().allowlist()));
+
+  EncodeString(&policy, key::kDevicePrinters, kString);
+  EXPECT_EQ(kString, policy.device_printers().external_policy());
+
+  EncodeInteger(&policy, key::kDevicePrintersAccessMode,
+                em::DevicePrintersAccessModeProto::ACCESS_MODE_ALL);
+  EXPECT_EQ(em::DevicePrintersAccessModeProto::ACCESS_MODE_ALL,
+            policy.device_printers_access_mode().access_mode());
+
+  EncodeStringList(&policy, key::kDevicePrintersAllowlist, kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_allowlist().allowlist()));
+
+  EncodeStringList(&policy, key::kDevicePrintersBlocklist, kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_blocklist().blocklist()));
 
   EncodeString(&policy, key::kTPMFirmwareUpdateSettings,
                "{\"allow-user-initiated-powerwash\":true,"
