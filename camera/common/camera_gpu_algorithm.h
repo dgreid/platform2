@@ -11,7 +11,8 @@
 #include <memory>
 #include <vector>
 
-#include <base/memory/shared_memory.h>
+#include <base/memory/unsafe_shared_memory_region.h>
+#include <base/posix/eintr_wrapper.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
 
@@ -56,8 +57,8 @@ class CameraGPUAlgorithm {
   // Lock to protect the shared memory map
   base::Lock map_lock_;
 
-  // Store shared memory with fd as the key
-  std::map<int32_t, std::unique_ptr<base::SharedMemory>> shm_map_;
+  // Store shared memory region with fd as the key
+  std::map<int32_t, base::UnsafeSharedMemoryRegion> shm_region_map_;
 };
 
 }  // namespace cros

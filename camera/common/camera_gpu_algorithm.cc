@@ -41,7 +41,7 @@ int32_t CameraGPUAlgorithm::Initialize(
 
 int32_t CameraGPUAlgorithm::RegisterBuffer(int buffer_fd) {
   base::AutoLock auto_lock(map_lock_);
-  if (base::Contains(shm_map_, buffer_fd)) {
+  if (base::Contains(shm_region_map_, buffer_fd)) {
     LOGF(ERROR) << "Buffer already registered";
     return -EINVAL;
   }
@@ -51,15 +51,17 @@ int32_t CameraGPUAlgorithm::RegisterBuffer(int buffer_fd) {
   const int64_t file_size = base::File(fd).GetLength();
   DCHECK_GE(file_size, 0) << "Failed to get size";
 
-  auto shm_handle =
-      base::SharedMemoryHandle::ImportHandle(buffer_fd, file_size);
-  auto shm = std::make_unique<base::SharedMemory>(shm_handle, false);
-  if (!shm->Map(shm_handle.GetSize())) {
-    LOGF(ERROR) << "Failed to map shared memory with size "
-                << shm_handle.GetSize();
+  auto shm_region = base::UnsafeSharedMemoryRegion::Deserialize(
+      base::subtle::PlatformSharedMemoryRegion::Take(
+          base::ScopedFD(buffer_fd),
+          base::subtle::PlatformSharedMemoryRegion::Mode::kUnsafe, file_size,
+          base::UnguessableToken::Create()));
+  if (!shm_region.IsValid()) {
+    LOGF(ERROR) << "Failed to build shared memory region with size "
+                << file_size;
     return -EINVAL;
   }
-  shm_map_.insert(std::make_pair(buffer_fd, std::move(shm)));
+  shm_region_map_.insert(std::make_pair(buffer_fd, std::move(shm_region)));
   return buffer_fd;
 }
 
@@ -78,11 +80,11 @@ void CameraGPUAlgorithm::DeregisterBuffers(const int32_t buffer_handles[],
                                            uint32_t size) {
   base::AutoLock auto_lock(map_lock_);
   for (uint32_t i = 0; i < size; i++) {
-    if (!base::Contains(shm_map_, buffer_handles[i])) {
+    if (!base::Contains(shm_region_map_, buffer_handles[i])) {
       LOGF(ERROR) << "Invalid buffer handle (" << buffer_handles[i] << ")";
       continue;
     }
-    shm_map_.erase(buffer_handles[i]);
+    shm_region_map_.erase(buffer_handles[i]);
   }
 }
 
@@ -126,10 +128,12 @@ void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
     const uint32_t kChannels = 3;
     size_t buffer_size = params.width * params.height * kChannels;
     base::AutoLock auto_lock(map_lock_);
-    if (!base::Contains(shm_map_, params.input_buffer_handle) ||
-        !base::Contains(shm_map_, params.output_buffer_handle) ||
-        shm_map_.at(params.input_buffer_handle)->mapped_size() < buffer_size ||
-        shm_map_.at(params.output_buffer_handle)->mapped_size() < buffer_size) {
+    if (!base::Contains(shm_region_map_, params.input_buffer_handle) ||
+        !base::Contains(shm_region_map_, params.output_buffer_handle) ||
+        shm_region_map_.at(params.input_buffer_handle).GetSize() <
+            buffer_size ||
+        shm_region_map_.at(params.output_buffer_handle).GetSize() <
+            buffer_size) {
       LOGF(ERROR) << "Invalid buffer handle";
       callback(EINVAL);
       return;
@@ -139,12 +143,15 @@ void CameraGPUAlgorithm::RequestOnThread(uint32_t req_id,
         .height = base::checked_cast<int>(params.height),
         .orientation = base::checked_cast<int>(params.orientation),
     };
-    if (!portrait_processor_.Process(
+    base::WritableSharedMemoryMapping input_shm_mapping =
+        shm_region_map_.at(params.input_buffer_handle).Map();
+    base::WritableSharedMemoryMapping output_shm_mapping =
+        shm_region_map_.at(params.output_buffer_handle).Map();
+    if (!input_shm_mapping.IsValid() || !output_shm_mapping.IsValid() ||
+        !portrait_processor_.Process(
             req_id, portrait_request,
-            static_cast<const uint8_t*>(
-                shm_map_.at(params.input_buffer_handle)->memory()),
-            static_cast<uint8_t*>(
-                shm_map_.at(params.output_buffer_handle)->memory()))) {
+            input_shm_mapping.GetMemoryAs<const uint8_t>(),
+            output_shm_mapping.GetMemoryAs<uint8_t>())) {
       LOGF(ERROR) << "Run portrait processor failed";
       callback(EINVAL);
       return;
