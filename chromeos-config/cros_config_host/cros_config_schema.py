@@ -267,11 +267,9 @@ def TransformConfig(config, model_filter_regex=None):
     Resulting JSON output from the transform.
   """
   config_yaml = yaml.load(config, Loader=yaml.SafeLoader)
-  json_from_yaml = json.dumps(config_yaml, sort_keys=True, indent=2)
-  json_config = json.loads(json_from_yaml)
   configs = []
-  if DEVICES in json_config[CHROMEOS]:
-    for device in json_config[CHROMEOS][DEVICES]:
+  if DEVICES in config_yaml[CHROMEOS]:
+    for device in config_yaml[CHROMEOS][DEVICES]:
       template_vars = {}
       for product in device.get(PRODUCTS, [{}]):
         for sku in device[SKUS]:
@@ -289,7 +287,7 @@ def TransformConfig(config, model_filter_regex=None):
           _DeleteTemplateOnlyVars(config)
           configs.append(config)
   else:
-    configs = json_config[CHROMEOS][CONFIGS]
+    configs = config_yaml[CHROMEOS][CONFIGS]
 
   if model_filter_regex:
     matcher = re.compile(model_filter_regex)
