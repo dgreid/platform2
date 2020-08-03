@@ -60,6 +60,7 @@ StatusOr<std::set<std::string>> StorageDeviceResolver::GetSwapDevices(
   auto swaps_path = rootfs.Append(kProcSwapsPath);
 
   if (mnt_table_parse_swaps(table, swaps_path.value().c_str()) != 0) {
+    mnt_free_table(table);
     return Status(StatusCode::kInvalidArgument,
                   "Invalid format of " + swaps_path.value());
   }
@@ -73,11 +74,15 @@ StatusOr<std::set<std::string>> StorageDeviceResolver::GetSwapDevices(
 
     // We expect devices of the format "/dev/<blah>"
     if (swap_dev.find(kDevFsPrefix) != 0) {
+      mnt_free_iter(itr);
+      mnt_free_table(table);
       return Status(StatusCode::kUnavailable,
                     "Unexpected swap device location: " + swap_dev);
     }
     swap_dev = swap_dev.substr(std::string(kDevFsPrefix).length());
     if (swap_dev.find("/") != std::string::npos) {
+      mnt_free_iter(itr);
+      mnt_free_table(table);
       return Status(StatusCode::kUnavailable,
                     "Swap device name shall not contain slashes: " + swap_dev);
     }
