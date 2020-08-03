@@ -91,7 +91,7 @@ void Daemon::BootstrapMojoConnection(
   LOG(INFO) << "MojoBridger connection established.";
   std::unique_ptr<dbus::Response> response =
       dbus::Response::FromMethodCall(method_call);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace midis
