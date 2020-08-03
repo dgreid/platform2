@@ -1022,9 +1022,9 @@ main() {
   local chunk_num
   for chunk_num in $(seq "${NUM_ROOTFS_CHUNKS}"); do
     copy_partition "${PARTITION_NUM_ROOT_B}" "${SRC}" "${DST}" \
-       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 3
-    copy_partition "${PARTITION_NUM_ROOT_A}" "${SRC}" "${DST}" \
        "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 5
+    copy_partition "${PARTITION_NUM_ROOT_A}" "${SRC}" "${DST}" \
+       "${chunk_num}" "${NUM_ROOTFS_CHUNKS}"                         # 3
   done
 
   # Last is stateful.
