@@ -261,10 +261,11 @@ void Suspender::RegisterSuspendDelay(
   dbus::MessageReader reader(method_call);
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
-    response_sender.Run(
-        std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS,
-            "Expected serialized protocol buffer")));
+    std::move(response_sender)
+        .Run(
+            std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+                method_call, DBUS_ERROR_INVALID_ARGS,
+                "Expected serialized protocol buffer")));
     return;
   }
   RegisterSuspendDelayReply reply_proto;
@@ -275,7 +276,7 @@ void Suspender::RegisterSuspendDelay(
       dbus::Response::FromMethodCall(method_call);
   dbus::MessageWriter writer(response.get());
   writer.AppendProtoAsArrayOfBytes(reply_proto);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 void Suspender::UnregisterSuspendDelay(
@@ -286,14 +287,15 @@ void Suspender::UnregisterSuspendDelay(
   dbus::MessageReader reader(method_call);
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
-    response_sender.Run(
-        std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS,
-            "Expected serialized protocol buffer")));
+    std::move(response_sender)
+        .Run(
+            std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+                method_call, DBUS_ERROR_INVALID_ARGS,
+                "Expected serialized protocol buffer")));
     return;
   }
   controller->UnregisterSuspendDelay(request, method_call->GetSender());
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Suspender::HandleSuspendReadiness(
@@ -304,14 +306,15 @@ void Suspender::HandleSuspendReadiness(
   dbus::MessageReader reader(method_call);
   if (!reader.PopArrayOfBytesAsProto(&info)) {
     LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
-    response_sender.Run(
-        std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS,
-            "Expected serialized protocol buffer")));
+    std::move(response_sender)
+        .Run(
+            std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+                method_call, DBUS_ERROR_INVALID_ARGS,
+                "Expected serialized protocol buffer")));
     return;
   }
   controller->HandleSuspendReadiness(info, method_call->GetSender());
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 // Daemons that want powerd to log the wake duration metrics for the current
@@ -343,10 +346,11 @@ void Suspender::RecordDarkResumeWakeReason(
   dbus::MessageReader reader(method_call);
   if (!reader.PopArrayOfBytesAsProto(&proto)) {
     LOG(ERROR) << "Unable to parse " << method_call->GetMember() << " request";
-    response_sender.Run(
-        std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
-            method_call, DBUS_ERROR_INVALID_ARGS,
-            "Expected wake reason proto")));
+    std::move(response_sender)
+        .Run(
+            std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+                method_call, DBUS_ERROR_INVALID_ARGS,
+                "Expected wake reason proto")));
     return;
   }
   last_dark_resume_wake_reason_ = proto.wake_reason();
@@ -355,7 +359,7 @@ void Suspender::RecordDarkResumeWakeReason(
                  << old_wake_reason << " with wake reason "
                  << last_dark_resume_wake_reason_;
   }
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Suspender::HandleEvent(Event event) {

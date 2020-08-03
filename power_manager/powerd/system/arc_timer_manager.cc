@@ -133,8 +133,8 @@ void ArcTimerManager::HandleCreateArcTimers(
   if (!reader.PopString(&tag)) {
     LOG(WARNING) << "Failed to pop tag string arg from "
                  << kCreateArcTimersMethod << " D-Bus method call";
-    response_sender.Run(
-        CreateInvalidArgsError(method_call, "Expected tag string"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call, "Expected tag string"));
     return;
   }
   DVLOG(1) << "Creating timers for tag=" << tag;
@@ -143,8 +143,9 @@ void ArcTimerManager::HandleCreateArcTimers(
   if (!reader.PopArray(&array_reader)) {
     LOG(WARNING) << "Failed to pop {clock id, expiration fd} array from "
                  << kCreateArcTimersMethod << " D-Bus method call";
-    response_sender.Run(CreateInvalidArgsError(
-        method_call, "Expected array of clock id and descriptors"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(
+            method_call, "Expected array of clock id and descriptors"));
     return;
   }
 
@@ -155,14 +156,15 @@ void ArcTimerManager::HandleCreateArcTimers(
   std::vector<std::unique_ptr<ArcTimerInfo>> arc_timers =
       CreateArcTimers(&array_reader, is_testing_);
   if (arc_timers.size() == 0) {
-    response_sender.Run(
-        CreateInvalidArgsError(method_call, "Failed to create timers"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call, "Failed to create timers"));
     return;
   }
 
   if (ContainsDuplicateClocks(arc_timers)) {
-    response_sender.Run(
-        CreateInvalidArgsError(method_call, "Duplicate clocks not supported"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call,
+                                    "Duplicate clocks not supported"));
     return;
   }
 
@@ -183,7 +185,7 @@ void ArcTimerManager::HandleCreateArcTimers(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageWriter writer(response.get());
   WriteTimerIdsToDBusResponse(client_timer_ids_[tag], &writer);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 // static:
@@ -266,8 +268,8 @@ void ArcTimerManager::HandleStartArcTimer(
   if (!reader.PopInt32(&timer_id)) {
     LOG(WARNING) << "Failed to pop timer id from " << kStartArcTimerMethod
                  << " D-Bus method call";
-    response_sender.Run(
-        CreateInvalidArgsError(method_call, "Expected timer id"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call, "Expected timer id"));
     return;
   }
 
@@ -275,8 +277,9 @@ void ArcTimerManager::HandleStartArcTimer(
   if (!reader.PopInt64(&absolute_expiration_time_us)) {
     LOG(WARNING) << "Failed to pop absolute expiration time from "
                  << kStartArcTimerMethod << " D-Bus method call";
-    response_sender.Run(CreateInvalidArgsError(
-        method_call, "Expected absolute expiration time"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call,
+                                    "Expected absolute expiration time"));
     return;
   }
   base::TimeTicks absolute_expiration_time =
@@ -287,8 +290,9 @@ void ArcTimerManager::HandleStartArcTimer(
   // return error. Else retrieve the timer associated with it.
   ArcTimerInfo* arc_timer = FindArcTimerInfo(timer_id);
   if (!arc_timer) {
-    response_sender.Run(CreateInvalidArgsError(
-        method_call, "Invalid timer id " + std::to_string(timer_id)));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(
+            method_call, "Invalid timer id " + std::to_string(timer_id)));
     return;
   }
 
@@ -314,7 +318,7 @@ void ArcTimerManager::HandleStartArcTimer(
   arc_timer->timer->Start(
       FROM_HERE, delay,
       base::Bind(&OnExpiration, timer_id, arc_timer->expiration_fd.get()));
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void ArcTimerManager::HandleDeleteArcTimers(
@@ -327,13 +331,13 @@ void ArcTimerManager::HandleDeleteArcTimers(
   if (!reader.PopString(&tag)) {
     LOG(WARNING) << "Failed to pop tag string arg from "
                  << kDeleteArcTimersMethod << " D-Bus method call";
-    response_sender.Run(
-        CreateInvalidArgsError(method_call, "Expected tag string"));
+    std::move(response_sender)
+        .Run(CreateInvalidArgsError(method_call, "Expected tag string"));
     return;
   }
 
   DeleteArcTimers(tag);
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void ArcTimerManager::DeleteArcTimers(const std::string& tag) {

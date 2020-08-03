@@ -1300,7 +1300,7 @@ void PowerSupply::OnGetPowerSupplyPropertiesMethodCall(
       dbus::Response::FromMethodCall(method_call);
   dbus::MessageWriter writer(response.get());
   writer.AppendProtoAsArrayOfBytes(protobuf);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 void PowerSupply::OnSetPowerSourceMethodCall(
@@ -1310,18 +1310,20 @@ void PowerSupply::OnSetPowerSourceMethodCall(
   dbus::MessageReader reader(method_call);
   if (!reader.PopString(&id)) {
     LOG(ERROR) << "Unable to read " << kSetPowerSourceMethod << " args";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, "Expected string"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, "Expected string"));
     return;
   }
 
   LOG(INFO) << "Received request to switch to power source \"" << id << "\"";
   if (!SetPowerSource(id)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED, "Couldn't set power source"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call, DBUS_ERROR_FAILED,
+                                                 "Couldn't set power source"));
     return;
   }
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 bool PowerSupply::SetPowerSource(const std::string& id) {

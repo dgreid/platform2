@@ -1309,7 +1309,7 @@ void StateController::HandleGetInactivityDelaysMethodCall(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageWriter writer(response.get());
   writer.AppendProtoAsArrayOfBytes(CreateInactivityDelaysProto());
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 void StateController::HandleUpdateEngineAvailable(bool available) {

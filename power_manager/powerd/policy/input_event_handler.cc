@@ -191,8 +191,10 @@ void InputEventHandler::OnHandlePowerButtonAcknowledgmentMethodCall(
   if (!reader.PopInt64(&timestamp_internal)) {
     LOG(ERROR) << "Unable to parse " << kHandlePowerButtonAcknowledgmentMethod
                << " request";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, "Expected int64_t timestamp"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call,
+                                                 DBUS_ERROR_INVALID_ARGS,
+                                                 "Expected int64_t timestamp"));
     return;
   }
 
@@ -207,7 +209,7 @@ void InputEventHandler::OnHandlePowerButtonAcknowledgmentMethodCall(
     expected_power_button_acknowledgment_timestamp_ = base::TimeTicks();
     power_button_acknowledgment_timer_.Stop();
   }
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void InputEventHandler::OnIgnoreNextPowerButtonPressMethodCall(
@@ -218,14 +220,16 @@ void InputEventHandler::OnIgnoreNextPowerButtonPressMethodCall(
   if (!reader.PopInt64(&timeout_internal)) {
     LOG(ERROR) << "Unable to parse " << kIgnoreNextPowerButtonPressMethod
                << " request";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, "Expected int64_t timestamp"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call,
+                                                 DBUS_ERROR_INVALID_ARGS,
+                                                 "Expected int64_t timestamp"));
     return;
   }
 
   IgnoreNextPowerButtonPress(
       base::TimeDelta::FromInternalValue(timeout_internal));
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void InputEventHandler::OnGetSwitchStatesMethodCall(
@@ -259,7 +263,7 @@ void InputEventHandler::OnGetSwitchStatesMethodCall(
       dbus::Response::FromMethodCall(method_call));
   dbus::MessageWriter writer(response.get());
   writer.AppendProtoAsArrayOfBytes(protobuf);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace policy

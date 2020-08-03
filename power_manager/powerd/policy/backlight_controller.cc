@@ -23,7 +23,7 @@ void OnIncreaseBrightness(
     dbus::MethodCall* method_call,
     dbus::ExportedObject::ResponseSender response_sender) {
   callback.Run();
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void OnDecreaseBrightness(
@@ -35,7 +35,7 @@ void OnDecreaseBrightness(
     allow_off = true;
 
   callback.Run(allow_off);
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void OnSetBrightness(const std::string& method_name,
@@ -46,9 +46,10 @@ void OnSetBrightness(const std::string& method_name,
   SetBacklightBrightnessRequest request;
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Invalid " << method_name << " args";
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS,
-        "Expected SetBacklightBrightnessRequest protobuf"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS,
+            "Expected SetBacklightBrightnessRequest protobuf"));
     return;
   }
 
@@ -67,7 +68,7 @@ void OnSetBrightness(const std::string& method_name,
   }
 
   callback.Run(request.percent(), transition, request.cause());
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void OnGetBrightness(const std::string& method_name,
@@ -78,15 +79,16 @@ void OnGetBrightness(const std::string& method_name,
   bool success = false;
   callback.Run(&percent, &success);
   if (!success) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED, "Couldn't fetch brightness"));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call, DBUS_ERROR_FAILED,
+                                                 "Couldn't fetch brightness"));
     return;
   }
 
   std::unique_ptr<dbus::Response> response =
       dbus::Response::FromMethodCall(method_call);
   dbus::MessageWriter(response.get()).AppendDouble(percent);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace

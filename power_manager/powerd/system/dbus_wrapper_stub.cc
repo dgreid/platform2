@@ -118,7 +118,7 @@ void DBusWrapperStub::CallExportedMethod(
 
   const std::string name = method_call->GetMember();
   CHECK(exported_methods_.count(name)) << "Method " << name << " not exported";
-  exported_methods_[name].Run(method_call, response_cb);
+  exported_methods_[name].Run(method_call, std::move(response_cb));
 }
 
 std::unique_ptr<dbus::Response> DBusWrapperStub::CallExportedMethodSync(
