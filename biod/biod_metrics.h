@@ -70,6 +70,10 @@ class BiodMetricsInterface {
   virtual bool SendResetContextMode(const FpMode& mode) = 0;
   virtual bool SendSetContextMode(const FpMode& mode) = 0;
   virtual bool SendSetContextSuccess(bool success) = 0;
+  virtual bool SendReadPositiveMatchSecretSuccess(bool success) = 0;
+  virtual bool SendPositiveMatchSecretCorrect(bool correct) = 0;
+  virtual bool SendRecordFormatVersion(int version) = 0;
+  virtual bool SendMigrationForPositiveMatchSecretResult(bool success) = 0;
 };
 
 class BiodMetrics : public BiodMetricsInterface {
@@ -106,16 +110,16 @@ class BiodMetrics : public BiodMetricsInterface {
   bool SendSetContextSuccess(bool success) override;
 
   // Reading positive match secret succeeded or not?
-  bool SendReadPositiveMatchSecretSuccess(bool success);
+  bool SendReadPositiveMatchSecretSuccess(bool success) override;
 
   // Positive match secret is as expected or not?
-  bool SendPositiveMatchSecretCorrect(bool correct);
+  bool SendPositiveMatchSecretCorrect(bool correct) override;
 
   // Template record file format version.
-  bool SendRecordFormatVersion(int version);
+  bool SendRecordFormatVersion(int version) override;
 
   // Migration of templates to have positive match secret succeeded or not?
-  bool SendMigrationForPositiveMatchSecretResult(bool success);
+  bool SendMigrationForPositiveMatchSecretResult(bool success) override;
 
   void SetMetricsLibraryForTesting(
       std::unique_ptr<MetricsLibraryInterface> metrics_lib);

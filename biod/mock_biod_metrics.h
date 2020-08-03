@@ -36,6 +36,16 @@ class MockBiodMetrics : public BiodMetricsInterface {
   MOCK_METHOD(bool, SendResetContextMode, (const FpMode& mode), (override));
   MOCK_METHOD(bool, SendSetContextMode, (const FpMode& mode), (override));
   MOCK_METHOD(bool, SendSetContextSuccess, (bool success), (override));
+  MOCK_METHOD(bool,
+              SendReadPositiveMatchSecretSuccess,
+              (bool success),
+              (override));
+  MOCK_METHOD(bool, SendPositiveMatchSecretCorrect, (bool correct), (override));
+  MOCK_METHOD(bool, SendRecordFormatVersion, (int version), (override));
+  MOCK_METHOD(bool,
+              SendMigrationForPositiveMatchSecretResult,
+              (bool success),
+              (override));
 };
 
 }  // namespace metrics
