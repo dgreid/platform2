@@ -70,7 +70,8 @@ class Camera3SimpleStillCaptureTest
 
   int cam_id_;
 
-  void TakePictureTest(uint32_t num_still_pictures);
+  void TakePictureTest(uint32_t num_still_pictures,
+                       bool require_3a_converged = true);
 };
 
 TEST_P(Camera3SimpleStillCaptureTest, JpegExifTest) {
@@ -158,8 +159,8 @@ TEST_P(Camera3SimpleStillCaptureTest, JpegExifTest) {
   cam_service_.StopPreview(cam_id_);
 }
 
-void Camera3SimpleStillCaptureTest::TakePictureTest(
-    uint32_t num_still_pictures) {
+void Camera3SimpleStillCaptureTest::TakePictureTest(uint32_t num_still_pictures,
+                                                    bool require_3a_converged) {
   auto IsAFSupported = [this]() {
     std::vector<uint8_t> available_af_modes;
     cam_service_.GetStaticInfo(cam_id_)->GetAvailableAFModes(
@@ -193,16 +194,28 @@ void Camera3SimpleStillCaptureTest::TakePictureTest(
   // Trigger an auto focus run, and wait for AF locked.
   if (IsAFSupported()) {
     cam_service_.StartAutoFocus(cam_id_);
-    ASSERT_EQ(0, cam_service_.WaitForAutoFocusDone(cam_id_))
-        << "Wait for auto focus done timed out";
+    int af_result = cam_service_.WaitForAutoFocusDone(cam_id_);
+    if (require_3a_converged) {
+      ASSERT_EQ(0, af_result) << "Wait for auto focus done timed out";
+    } else if (af_result != 0) {
+      LOGF(WARNING) << "Ignore AF converged timeout failure.";
+    }
   }
   // Wait for AWB converged, then lock it.
-  ASSERT_EQ(0, cam_service_.WaitForAWBConvergedAndLock(cam_id_))
-      << "Wait for AWB converged timed out";
+  int awb_result = cam_service_.WaitForAWBConvergedAndLock(cam_id_);
+  if (require_3a_converged) {
+    ASSERT_EQ(0, awb_result) << "Wait for AWB converged timed out";
+  } else if (awb_result != 0) {
+    LOGF(WARNING) << "Ignore AWB converged timeout failure.";
+  }
   // Trigger an AE precapture metering sequence and wait for AE converged.
   cam_service_.StartAEPrecapture(cam_id_);
-  ASSERT_EQ(0, cam_service_.WaitForAEStable(cam_id_))
-      << "Wait for AE stable timed out";
+  int ae_result = cam_service_.WaitForAEStable(cam_id_);
+  if (require_3a_converged) {
+    ASSERT_EQ(0, ae_result) << "Wait for AE stable timed out";
+  } else if (ae_result != 0) {
+    LOGF(WARNING) << "Ignore AE converged timeout failure.";
+  }
 
   const camera_metadata_t* metadata =
       cam_service_.ConstructDefaultRequestSettings(
@@ -280,7 +293,7 @@ TEST_P(Camera3DumpSimpleStillCaptureTest, DumpCaptureResult) {
   if (dump_path_.empty()) {
     GTEST_SKIP();
   }
-  TakePictureTest(1);
+  TakePictureTest(1, /*require_3a_converged=*/false);
 }
 
 // Test parameters:
