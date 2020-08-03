@@ -15,6 +15,7 @@
 #include "trunks/trunks_factory_for_test.h"
 
 using testing::_;
+using testing::DoAll;
 using testing::NiceMock;
 using testing::Return;
 using testing::SaveArg;

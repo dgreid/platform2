@@ -210,7 +210,7 @@ TEST_P(SensorServiceImplTestDeviceTypesWithParam, DeviceTypes) {
           base::Unretained(this)));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SensorServiceImplTestDeviceTypesWithParamRun,
     SensorServiceImplTestDeviceTypesWithParam,
     ::testing::Values(std::pair<std::vector<std::string>,

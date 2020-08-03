@@ -79,7 +79,7 @@ TEST_P(SamplesHandlerTestOnMinMaxFrequencyWithParam, ParseMinMaxFrequency) {
   EXPECT_EQ(max_freq_, std::get<3>(GetParam()));
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SamplesHandlerTestOnMinMaxFrequencyWithParamRun,
     SamplesHandlerTestOnMinMaxFrequencyWithParam,
     ::testing::Values(
@@ -474,7 +474,7 @@ TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
     handler_->RemoveClient(&client_data);
 }
 
-INSTANTIATE_TEST_CASE_P(
+INSTANTIATE_TEST_SUITE_P(
     SamplesHandlerTestWithParamRun,
     SamplesHandlerTestWithParam,
     ::testing::Values(std::vector<std::pair<double, double>>(3, {10.0, 10.0}),

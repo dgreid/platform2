@@ -120,12 +120,12 @@ class DiskCleanupRoutinesTest
   DiskCleanupRoutines routines_;
 };
 
-INSTANTIATE_TEST_CASE_P(WithEcryptfs,
-                        DiskCleanupRoutinesTest,
-                        ::testing::Values(true));
-INSTANTIATE_TEST_CASE_P(WithDircrypto,
-                        DiskCleanupRoutinesTest,
-                        ::testing::Values(false));
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         DiskCleanupRoutinesTest,
+                         ::testing::Values(true));
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         DiskCleanupRoutinesTest,
+                         ::testing::Values(false));
 
 TEST_P(DiskCleanupRoutinesTest, DeleteUserCache) {
   base::FilePath mount = kTestUserPath.Append(kMountDir);
