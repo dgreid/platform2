@@ -9,7 +9,7 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <base/stl_util.h>
 #include <gtest/gtest.h>
@@ -125,7 +125,8 @@ class NewblueTest : public ::testing::Test {
   }
 
  protected:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   bool is_ready_for_up_ = false;
   std::unique_ptr<Newblue> newblue_;
   MockLibNewblue* libnewblue_;

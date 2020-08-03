@@ -8,7 +8,7 @@
 
 #include <base/bind.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/mock_bus.h>
@@ -30,7 +30,8 @@ class StackSyncMonitorTest : public ::testing::Test {
     dbus::ObjectPath object_path(
         bluez_object_manager::kBluezObjectManagerServicePath);
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
-        .WillRepeatedly(Return(message_loop_.task_runner().get()));
+        .WillRepeatedly(
+            Return(task_environment_.GetMainThreadTaskRunner().get()));
     object_proxy_ = new dbus::MockObjectProxy(
         bus_.get(), bluez_object_manager::kBluezObjectManagerServiceName,
         object_path);
@@ -59,7 +60,8 @@ class StackSyncMonitorTest : public ::testing::Test {
   scoped_refptr<dbus::MockObjectManager> object_manager_;
   std::unique_ptr<dbus::PropertySet> properties_;
   StackSyncMonitor monitor_;
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 };
 
 TEST_F(StackSyncMonitorTest, PowerDown) {

@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
 #include <dbus/message.h>
@@ -40,7 +40,8 @@ class DBusClientTest : public ::testing::Test {
   void SetUp() override {
     bus_ = new dbus::MockBus(dbus::Bus::Options());
     EXPECT_CALL(*bus_, GetOriginTaskRunner())
-        .WillRepeatedly(Return(message_loop_.task_runner().get()));
+        .WillRepeatedly(
+            Return(task_environment_.GetMainThreadTaskRunner().get()));
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
   }
 
@@ -49,7 +50,8 @@ class DBusClientTest : public ::testing::Test {
   void OnClientUnavailable() { client_unavailable_callback_count_++; }
 
  protected:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   scoped_refptr<dbus::MockBus> bus_;
 
   int client_unavailable_callback_count_ = 0;

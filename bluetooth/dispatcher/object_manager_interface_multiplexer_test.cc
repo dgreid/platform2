@@ -5,7 +5,7 @@
 #include <memory>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_manager.h>
@@ -36,7 +36,8 @@ class ObjectManagerInterfaceMultiplexerTest : public ::testing::Test {
   void SetUp() override {
     bus_ = new dbus::MockBus(dbus::Bus::Options());
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
-        .WillRepeatedly(Return(message_loop_.task_runner().get()));
+        .WillRepeatedly(
+            Return(task_environment_.GetMainThreadTaskRunner().get()));
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     // For this test purposes it's okay to mock dbus::Bus::Connect() to return
@@ -79,7 +80,8 @@ class ObjectManagerInterfaceMultiplexerTest : public ::testing::Test {
         ->second.get();
   }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   scoped_refptr<dbus::MockBus> bus_;
   scoped_refptr<dbus::MockObjectProxy> object_proxy1_;
   scoped_refptr<dbus::MockObjectProxy> object_proxy2_;

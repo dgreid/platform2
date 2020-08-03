@@ -12,7 +12,7 @@
 #include <vector>
 
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <base/values.h>
 #include <chromeos/dbus/service_constants.h>
@@ -129,7 +129,8 @@ class NewblueDaemonTest : public ::testing::Test {
   void SetUp() override {
     bus_ = new dbus::MockBus(dbus::Bus::Options());
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
-        .WillRepeatedly(Return(message_loop_.task_runner().get()));
+        .WillRepeatedly(
+            Return(task_environment_.GetMainThreadTaskRunner().get()));
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, Connect()).WillRepeatedly(Return(true));
@@ -893,7 +894,8 @@ class NewblueDaemonTest : public ::testing::Test {
     EXPECT_EQ("", success_pair_response->GetErrorName());
   }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   scoped_refptr<dbus::MockBus> bus_;
   scoped_refptr<dbus::MockObjectProxy> bluez_object_proxy_;
   scoped_refptr<dbus::MockObjectProxy> bluetooth_object_proxy_;

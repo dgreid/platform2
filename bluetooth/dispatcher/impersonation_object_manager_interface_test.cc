@@ -8,7 +8,7 @@
 #include <utility>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_exported_object.h>
@@ -113,7 +113,8 @@ class ImpersonationObjectManagerInterfaceTest : public ::testing::Test {
     client_manager_ = std::make_unique<ClientManager>(
         bus_, std::move(dbus_connection_factory));
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
-        .WillRepeatedly(Return(message_loop_.task_runner().get()));
+        .WillRepeatedly(
+            Return(task_environment_.GetMainThreadTaskRunner().get()));
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, Connect()).WillRepeatedly(Return(false));
@@ -356,7 +357,8 @@ class ImpersonationObjectManagerInterfaceTest : public ::testing::Test {
     EXPECT_EQ(value, exported_property->value());
   }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   scoped_refptr<dbus::MockBus> bus_;
   scoped_refptr<dbus::MockObjectProxy> object_manager_object_proxy1_;
   scoped_refptr<dbus::MockObjectProxy> object_manager_object_proxy2_;

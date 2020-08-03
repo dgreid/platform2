@@ -6,7 +6,7 @@
 #include <utility>
 #include <vector>
 
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <brillo/dbus/mock_exported_object_manager.h>
 #include <chromeos/dbus/service_constants.h>
@@ -31,7 +31,7 @@ class DispatcherTest : public ::testing::Test {
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
 #if BASE_VER < 679961
     EXPECT_CALL(*bus_, GetDBusTaskRunner())
-        .WillOnce(Return(message_loop_.task_runner().get()));
+        .WillOnce(Return(task_environment_.GetMainThreadTaskRunner().get()));
 #endif
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, Connect()).WillRepeatedly(Return(false));
@@ -109,7 +109,8 @@ class DispatcherTest : public ::testing::Test {
   }
 
 #if BASE_VER < 679961
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 #endif
   scoped_refptr<dbus::MockBus> bus_;
   scoped_refptr<dbus::MockObjectProxy> object_manager_object_proxy_;
