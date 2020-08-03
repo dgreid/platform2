@@ -13,7 +13,7 @@
 
 #include <base/at_exit.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 #include <brillo/flag_helper.h>
 
@@ -104,7 +104,7 @@ int diag_main(int argc, char** argv) {
 
   base::AtExitManager at_exit_manager;
 
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   if (FLAGS_crosh_help) {
     std::cout << "Usage: [list|routine]" << std::endl;

@@ -14,13 +14,13 @@
 #include <base/callback.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
-#include "base/strings/stringprintf.h"
-#include "base/system/sys_info.h"
-#include "base/time/time.h"
+#include <base/strings/stringprintf.h>
+#include <base/system/sys_info.h>
+#include <base/test/task_environment.h>
+#include <base/time/time.h>
 #include <gmock/gmock.h>
 #include <google/protobuf/repeated_field.h>
 #include <gtest/gtest.h>
@@ -518,7 +518,8 @@ class GrpcServiceTest : public testing::Test {
   base::FilePath temp_dir_path() const { return temp_dir_.GetPath(); }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   base::ScopedTempDir temp_dir_;
   StrictMock<MockGrpcServiceDelegate> delegate_;
   GrpcService service_{&delegate_};

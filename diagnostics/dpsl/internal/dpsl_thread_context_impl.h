@@ -9,10 +9,10 @@
 
 #include <base/macros.h>
 #include <base/memory/scoped_refptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/sequence_checker_impl.h>
 #include <base/single_thread_task_runner.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/platform_thread.h>
 
 #include "diagnostics/dpsl/public/dpsl_thread_context.h"
@@ -41,9 +41,9 @@ class DpslThreadContextImpl final : public DpslThreadContext {
  private:
   // Identifier of the thread which is associated with this instance.
   const base::PlatformThreadId thread_id_;
-  // Message loop owned by this instance. Only gets created when no previously
-  // created message loop was present at construction time.
-  std::unique_ptr<base::MessageLoopForIO> owned_message_loop_;
+  // SingleThreadTaskExecutor owned by this instance. Only gets created when no
+  // previously created task runner was present at construction time.
+  std::unique_ptr<base::SingleThreadTaskExecutor> owned_task_executor_;
   // Task runner of the thread associated with this instance.
   const scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   // The run loop which is used for the current invocation of RunEventLoop(). Is

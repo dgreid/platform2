@@ -12,9 +12,9 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -84,7 +84,8 @@ class FanUtilsTest : public ::testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   MockContext mock_context_;
   FanFetcher fan_fetcher_{&mock_context_};
   base::ScopedTempDir temp_dir_;

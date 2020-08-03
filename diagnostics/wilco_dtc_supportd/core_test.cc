@@ -26,9 +26,9 @@
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
 #include <base/memory/shared_memory.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/test/task_environment.h>
 #include <brillo/dbus/async_event_sequencer.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
@@ -323,7 +323,8 @@ class CoreTest : public testing::Test {
   // Initialize the Mojo subsystem.
   void InitializeMojo() { mojo::core::Init(); }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   GrpcClientManager grpc_client_manager_;
   MojoGrpcAdapter mojo_grpc_adapter_{&grpc_client_manager_};

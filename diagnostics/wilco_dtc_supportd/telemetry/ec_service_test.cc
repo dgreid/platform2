@@ -15,8 +15,8 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -137,7 +137,8 @@ class EcServiceTest : public testing::Test {
   EcService* service() { return &service_; }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   StrictMock<MockEcServiceObserver> observer_;
   EcService service_;
 

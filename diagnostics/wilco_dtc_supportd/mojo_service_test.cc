@@ -9,10 +9,10 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/strings/string_piece.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -72,7 +72,8 @@ class MojoServiceTest : public testing::Test {
   MojoService* mojo_service() { return mojo_service_.get(); }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   StrictMock<MockMojoClient> mojo_client_;
   std::unique_ptr<mojo::Binding<MojomWilcoDtcSupportdClient>>

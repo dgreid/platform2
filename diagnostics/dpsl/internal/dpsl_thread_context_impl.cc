@@ -33,12 +33,14 @@ void DpslThreadContextImpl::CleanThreadCounterForTesting() {
 
 DpslThreadContextImpl::DpslThreadContextImpl()
     : thread_id_(base::PlatformThread::CurrentId()),
-      // Initialize the message loop only if there's no one yet (it could be
-      // already set up by the calling code via other means, e.g.,
-      // brillo::Daemon).
-      owned_message_loop_(base::ThreadTaskRunnerHandle::IsSet()
-                              ? nullptr
-                              : std::make_unique<base::MessageLoopForIO>()),
+      // Initialize the SingleThreadTaskExecutor only if there's no TaskRunner
+      // yet (it could be already set up by the calling code via other means,
+      // e.g., brillo::Daemon).
+      owned_task_executor_(
+          base::ThreadTaskRunnerHandle::IsSet()
+              ? nullptr
+              : std::make_unique<base::SingleThreadTaskExecutor>(
+                    base::MessagePumpType::IO)),
       task_runner_(base::ThreadTaskRunnerHandle::Get()) {}
 
 DpslThreadContextImpl::~DpslThreadContextImpl() {

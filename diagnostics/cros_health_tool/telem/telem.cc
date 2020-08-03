@@ -17,11 +17,11 @@
 
 #include <base/at_exit.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
@@ -451,7 +451,7 @@ int telem_main(int argc, char** argv) {
 
   logging::InitLogging(logging::LoggingSettings());
 
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   std::unique_ptr<CrosHealthdMojoAdapter> adapter =
       CrosHealthdMojoAdapter::Create();

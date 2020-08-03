@@ -10,8 +10,8 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -204,7 +204,8 @@ class RoutineServiceTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   FakeDiagnosticsService diagnostics_service_;
   RoutineService service_{&diagnostics_service_};
 };

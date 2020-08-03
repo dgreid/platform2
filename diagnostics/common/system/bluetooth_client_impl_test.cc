@@ -8,8 +8,8 @@
 
 #include <base/bind.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_manager.h>
@@ -180,7 +180,8 @@ class BluetoothClientImplTest : public ::testing::Test {
   BluetoothClient* bluetooth_client() const { return bluetooth_client_.get(); }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   StrictMock<MockBluetoothClientObserver> observer_;
 

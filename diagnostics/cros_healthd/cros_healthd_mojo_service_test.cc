@@ -8,9 +8,9 @@
 #include <vector>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -129,7 +129,8 @@ class CrosHealthdMojoServiceTest : public testing::Test {
   MockCrosHealthdRoutineService* routine_service() { return &routine_service_; }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
   StrictMock<MockCrosHealthdRoutineService> routine_service_;
   MockContext mock_context_;
   FetchAggregator fetch_aggregator_{&mock_context_};

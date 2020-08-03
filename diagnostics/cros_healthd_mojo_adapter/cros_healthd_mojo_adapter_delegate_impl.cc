@@ -62,11 +62,11 @@ void DoDBusBootstrap(int raw_fd,
 
 CrosHealthdMojoAdapterDelegateImpl::CrosHealthdMojoAdapterDelegateImpl() {
   CHECK(mojo_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0)))
+      base::Thread::Options(base::MessagePumpType::IO, 0)))
       << "Failed starting the mojo thread.";
 
   CHECK(dbus_thread_.StartWithOptions(
-      base::Thread::Options(base::MessageLoop::TYPE_IO, 0)))
+      base::Thread::Options(base::MessagePumpType::IO, 0)))
       << "Failed starting the D-Bus thread.";
 
   mojo::core::Init();

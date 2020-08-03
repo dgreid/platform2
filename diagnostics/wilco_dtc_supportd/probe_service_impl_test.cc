@@ -7,8 +7,8 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/public/cpp/bindings/binding.h>
@@ -73,7 +73,8 @@ class ProbeServiceImplTest : public testing::Test {
   ProbeService* service() { return &service_; }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   StrictMock<MockCallback> mock_callback_;
 
