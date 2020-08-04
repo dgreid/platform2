@@ -766,4 +766,8 @@ int CrosFpDevice::DeadPixelCount() {
   return info_->NumDeadPixels();
 }
 
+void CrosFpDevice::SetMkbpEventCallback(CrosFpDevice::MkbpCallback callback) {
+  mkbp_event_ = callback;
+}
+
 }  // namespace biod

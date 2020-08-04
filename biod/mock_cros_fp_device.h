@@ -18,6 +18,7 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MockCrosFpDevice() = default;
   ~MockCrosFpDevice() override = default;
 
+  MOCK_METHOD(void, SetMkbpEventCallback, (MkbpCallback), (override));
   MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
   MOCK_METHOD(bool,

@@ -26,14 +26,14 @@ class CrosFpDevice : public CrosFpDeviceInterface {
  public:
   using MkbpCallback = base::Callback<void(const uint32_t event)>;
   // Use the CrosFpDeviceFactory instead of this constructor unless testing.
-  CrosFpDevice(const MkbpCallback& mkbp_event,
-               BiodMetricsInterface* biod_metrics,
+  CrosFpDevice(BiodMetricsInterface* biod_metrics,
                std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
       : ec_command_factory_(std::move(ec_command_factory)),
-        mkbp_event_(mkbp_event),
         biod_metrics_(biod_metrics) {}
 
   bool Init();
+
+  void SetMkbpEventCallback(MkbpCallback callback) override;
 
   // Run a simple command to get the version information from FP MCU and check
   // whether the image type returned is the same as |expected_image|.

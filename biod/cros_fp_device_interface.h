@@ -21,6 +21,7 @@ namespace biod {
 
 class CrosFpDeviceInterface {
  public:
+  using MkbpCallback = base::Callback<void(const uint32_t event)>;
   CrosFpDeviceInterface() = default;
   virtual ~CrosFpDeviceInterface() = default;
 
@@ -29,6 +30,8 @@ class CrosFpDeviceInterface {
     std::string rw_version;
     ec_current_image current_image = EC_IMAGE_UNKNOWN;
   };
+
+  virtual void SetMkbpEventCallback(MkbpCallback callback) = 0;
 
   virtual bool SetFpMode(const FpMode& mode) = 0;
   virtual bool GetFpMode(FpMode* mode) = 0;

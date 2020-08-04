@@ -43,8 +43,7 @@ class CrosFpDevice_ResetContext : public testing::Test {
   };
   metrics::MockBiodMetrics mock_biod_metrics;
   MockCrosFpDevice mock_cros_fp_device{
-      CrosFpDevice::MkbpCallback(), &mock_biod_metrics,
-      std::make_unique<MockFpContextFactory>()};
+      &mock_biod_metrics, std::make_unique<MockFpContextFactory>()};
 };
 
 TEST_F(CrosFpDevice_ResetContext, Success) {
@@ -105,8 +104,7 @@ class CrosFpDevice_SetContext : public testing::Test {
   };
   metrics::MockBiodMetrics mock_biod_metrics;
   MockCrosFpDevice mock_cros_fp_device{
-      CrosFpDevice::MkbpCallback(), &mock_biod_metrics,
-      std::make_unique<MockFpContextFactory>()};
+      &mock_biod_metrics, std::make_unique<MockFpContextFactory>()};
 };
 
 // Test that if FPMCU is in match mode, setting context will trigger a call to
@@ -159,8 +157,7 @@ class CrosFpDevice_DeadPixelCount : public testing::Test {
     auto mock_command_factory = std::make_unique<MockEcCommandFactory>();
     mock_ec_command_factory_ = mock_command_factory.get();
     mock_cros_fp_device_ = std::make_unique<CrosFpDevice>(
-        CrosFpDevice::MkbpCallback(), &mock_biod_metrics_,
-        std::move(mock_command_factory));
+        &mock_biod_metrics_, std::move(mock_command_factory));
   }
 
  protected:
