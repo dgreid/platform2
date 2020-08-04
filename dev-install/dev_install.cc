@@ -474,7 +474,7 @@ bool DevInstall::ConfigurePortage() {
       for (auto& line : lines) {
         if (line == kSearch) {
           found_line = true;
-          line.set(kReplace);
+          line = kReplace;
         }
       }
       if (!found_line) {
