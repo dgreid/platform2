@@ -2678,12 +2678,31 @@ std::unique_ptr<dbus::Response> Service::GetDebugInformation(
   GetDebugInformationResponse response;
 
   std::string container_debug_information;
+  std::string vm_debug_information;
   std::string* debug_information = response.mutable_debug_information();
   for (const auto& vm : vms_) {
     const std::string& vm_name = vm.first.second;
     *debug_information += "VM: ";
     *debug_information += vm_name;
     *debug_information += "\n";
+    vm_debug_information.clear();
+    if (!vm.second->GetTremplinDebugInfo(&vm_debug_information)) {
+      *debug_information += "\tfailed to get debug information\n";
+      *debug_information += "\t";
+      *debug_information += vm_debug_information;
+      *debug_information += "\n";
+      LOG(ERROR) << "Failed to get tremplin debug information: "
+                 << vm_debug_information;
+    } else {
+      std::vector<base::StringPiece> vm_info_lines = base::SplitStringPiece(
+          vm_debug_information, "\n", base::KEEP_WHITESPACE,
+          base::SPLIT_WANT_NONEMPTY);
+      for (const auto& line : vm_info_lines) {
+        *debug_information += "\t";
+        line.AppendToString(debug_information);
+        *debug_information += "\n";
+      }
+    }
     for (const auto& container_name : vm.second->GetContainerNames()) {
       *debug_information += "\tContainer: ";
       *debug_information += container_name;
@@ -2696,11 +2715,14 @@ std::unique_ptr<dbus::Response> Service::GetDebugInformation(
         *debug_information += "\t\t";
         *debug_information += container_debug_information;
         *debug_information += "\n";
+        LOG(ERROR) << "Failed to get container debug information: "
+                   << container_debug_information;
       } else {
-        std::vector<base::StringPiece> info_lines = base::SplitStringPiece(
-            container_debug_information, "\n", base::KEEP_WHITESPACE,
-            base::SPLIT_WANT_NONEMPTY);
-        for (const auto& line : info_lines) {
+        std::vector<base::StringPiece> container_info_lines =
+            base::SplitStringPiece(container_debug_information, "\n",
+                                   base::KEEP_WHITESPACE,
+                                   base::SPLIT_WANT_NONEMPTY);
+        for (const auto& line : container_info_lines) {
           *debug_information += "\t\t";
           line.AppendToString(debug_information);
           *debug_information += "\n";

@@ -901,5 +901,29 @@ void VirtualMachine::HostNetworkChanged() {
   }
 }
 
+bool VirtualMachine::GetTremplinDebugInfo(std::string* out) {
+  if (!tremplin_stub_) {
+    out->assign("Tremplin is not connected");
+    return false;
+  }
+
+  vm_tools::tremplin::GetDebugInfoRequest request;
+  vm_tools::tremplin::GetDebugInfoResponse response;
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kLongOperationTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status = tremplin_stub_->GetDebugInfo(&ctx, request, &response);
+  if (!status.ok()) {
+    LOG(ERROR) << "GetDebugInfo RPC failed: " << status.error_message();
+    out->assign(status.error_message());
+    return false;
+  }
+  out->assign(response.debug_information());
+  return true;
+}
+
 }  // namespace cicerone
 }  // namespace vm_tools

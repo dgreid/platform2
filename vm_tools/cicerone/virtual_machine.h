@@ -320,6 +320,8 @@ class VirtualMachine {
   // Gets a list of all the active container names in this VM.
   std::vector<std::string> GetContainerNames();
 
+  bool GetTremplinDebugInfo(std::string* out);
+
  private:
   // Virtual socket context id to be used when communicating with this VM, only
   // valid for termina VMs.
