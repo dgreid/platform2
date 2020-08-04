@@ -388,11 +388,12 @@ bool CheckVmExists(const std::string& vm_name,
   return false;
 }
 
-uint64_t CalculateDesiredDiskSize(uint64_t current_usage) {
-  // If no disk size was specified, use 90% of free space.
-  // Free space is calculated as if the disk image did not consume any space.
+// Returns the desired size of VM disks, which is 90% of the available space
+// (excluding the space already taken up by the disk).
+uint64_t CalculateDesiredDiskSize(base::FilePath disk_location,
+                                  uint64_t current_usage) {
   uint64_t free_space =
-      base::SysInfo::AmountOfFreeDiskSpace(base::FilePath("/home"));
+      base::SysInfo::AmountOfFreeDiskSpace(disk_location.DirName());
   free_space += current_usage;
   uint64_t disk_size = ((free_space * 9) / 10) & kDiskSizeMask;
 
@@ -647,8 +648,7 @@ Service::Service(base::Closure quit_closure)
     : next_seneschal_server_port_(kFirstSeneschalServerPort),
       quit_closure_(std::move(quit_closure)),
       host_kernel_version_(GetKernelVersion()),
-      weak_ptr_factory_(this) {
-}
+      weak_ptr_factory_(this) {}
 
 Service::~Service() {
   if (grpc_server_vm_) {
@@ -1788,7 +1788,7 @@ std::unique_ptr<dbus::Response> Service::CreateDiskImage(
         LOG(INFO) << "Disk image has " << kDiskImageUserChosenSizeXattr
                   << " xattr - keeping existing size " << current_size;
       } else {
-        uint64_t disk_size = CalculateDesiredDiskSize(current_usage);
+        uint64_t disk_size = CalculateDesiredDiskSize(disk_path, current_usage);
         if (disk_size > current_size) {
           LOG(INFO) << "Expanding disk image from " << current_size << " to "
                     << disk_size;
@@ -1870,8 +1870,9 @@ std::unique_ptr<dbus::Response> Service::CreateDiskImage(
     return dbus_response;
   }
 
-  uint64_t disk_size =
-      request.disk_size() ? request.disk_size() : CalculateDesiredDiskSize(0);
+  uint64_t disk_size = request.disk_size()
+                           ? request.disk_size()
+                           : CalculateDesiredDiskSize(disk_path, 0);
 
   if (request.image_type() == DISK_IMAGE_RAW ||
       request.image_type() == DISK_IMAGE_AUTO) {
