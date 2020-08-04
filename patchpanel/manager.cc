@@ -67,7 +67,7 @@ Manager::Manager(std::unique_ptr<HelperProcess> adb_proxy,
       mcast_proxy_(std::move(mcast_proxy)),
       nd_proxy_(std::move(nd_proxy)) {
   runner_ = std::make_unique<MinijailedProcessRunner>();
-  datapath_ = std::make_unique<Datapath>(runner_.get());
+  datapath_ = std::make_unique<Datapath>(runner_.get(), &firewall_);
   connected_namespaces_epollfd_ = epoll_create(1 /* size */);
 }
 

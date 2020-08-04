@@ -17,6 +17,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "patchpanel/mock_firewall.h"
 #include "patchpanel/net_util.h"
 
 using testing::_;
@@ -106,7 +107,8 @@ class MockProcessRunner : public MinijailedProcessRunner {
 
 TEST(DatapathTest, AddTAP) {
   MockProcessRunner runner;
-  Datapath datapath(&runner, ioctl_req_cap);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall, ioctl_req_cap);
   MacAddress mac = {1, 2, 3, 4, 5, 6};
   Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::DoNothing());
   auto addr = subnet.AllocateAtOffset(0);
@@ -121,7 +123,8 @@ TEST(DatapathTest, AddTAP) {
 
 TEST(DatapathTest, AddTAPWithOwner) {
   MockProcessRunner runner;
-  Datapath datapath(&runner, ioctl_req_cap);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall, ioctl_req_cap);
   MacAddress mac = {1, 2, 3, 4, 5, 6};
   Subnet subnet(Ipv4Addr(100, 115, 92, 4), 30, base::DoNothing());
   auto addr = subnet.AllocateAtOffset(0);
@@ -136,7 +139,8 @@ TEST(DatapathTest, AddTAPWithOwner) {
 
 TEST(DatapathTest, AddTAPNoAddrs) {
   MockProcessRunner runner;
-  Datapath datapath(&runner, ioctl_req_cap);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall, ioctl_req_cap);
   auto ifname = datapath.AddTAP("foo0", nullptr, nullptr, "");
   EXPECT_EQ(ifname, "foo0");
   std::vector<ioctl_req_t> expected = {TUNSETIFF, TUNSETPERSIST, SIOCGIFFLAGS,
@@ -147,30 +151,34 @@ TEST(DatapathTest, AddTAPNoAddrs) {
 
 TEST(DatapathTest, RemoveTAP) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip(StrEq("tuntap"), StrEq("del"),
                          ElementsAre("foo0", "mode", "tap"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveTAP("foo0");
 }
 
 TEST(DatapathTest, NetnsAttachName) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), false));
   EXPECT_CALL(runner, ip_netns_attach(StrEq("netns_foo"), 1234, true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   EXPECT_TRUE(datapath.NetnsAttachName("netns_foo", 1234));
 }
 
 TEST(DatapathTest, NetnsDeleteName) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   EXPECT_TRUE(datapath.NetnsDeleteName("netns_foo"));
 }
 
 TEST(DatapathTest, AddBridge) {
   MockProcessRunner runner;
-  Datapath datapath(&runner);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall);
   EXPECT_CALL(runner, brctl(StrEq("addbr"), ElementsAre("br"), true));
   EXPECT_CALL(
       runner,
@@ -187,6 +195,7 @@ TEST(DatapathTest, AddBridge) {
 
 TEST(DatapathTest, ConnectVethPair) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
                          ElementsAre("veth_foo", "type", "veth", "peer", "name",
                                      "peer_foo", "netns", "netns_foo"),
@@ -203,7 +212,7 @@ TEST(DatapathTest, ConnectVethPair) {
       .WillOnce(Return(0));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
                          ElementsAre("veth_foo", "up"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   EXPECT_TRUE(datapath.ConnectVethPair(kTestPID, "netns_foo", "veth_foo",
                                        "peer_foo", {1, 2, 3, 4, 5, 6},
                                        Ipv4Addr(100, 115, 92, 169), 30, true));
@@ -211,28 +220,31 @@ TEST(DatapathTest, ConnectVethPair) {
 
 TEST(DatapathTest, AddVirtualInterfacePair) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
                          ElementsAre("veth_foo", "type", "veth", "peer", "name",
                                      "peer_foo", "netns", "netns_foo"),
                          true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   EXPECT_TRUE(
       datapath.AddVirtualInterfacePair("netns_foo", "veth_foo", "peer_foo"));
 }
 
 TEST(DatapathTest, ToggleInterface) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("set"), ElementsAre("foo", "up"), true));
   EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
                          ElementsAre("bar", "down"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   EXPECT_TRUE(datapath.ToggleInterface("foo", true));
   EXPECT_TRUE(datapath.ToggleInterface("bar", false));
 }
 
 TEST(DatapathTest, ConfigureInterface) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(
       runner,
       ip(StrEq("addr"), StrEq("add"),
@@ -244,7 +256,7 @@ TEST(DatapathTest, ConfigureInterface) {
                          true))
       .WillOnce(Return(0));
 
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   MacAddress mac_addr = {2, 2, 2, 2, 2, 2};
   EXPECT_TRUE(datapath.ConfigureInterface("foo", mac_addr, Ipv4Addr(1, 1, 1, 1),
                                           30, true, true));
@@ -252,14 +264,16 @@ TEST(DatapathTest, ConfigureInterface) {
 
 TEST(DatapathTest, RemoveInterface) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("delete"), ElementsAre("foo"), false));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveInterface("foo");
 }
 
 TEST(DatapathTest, RemoveBridge) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "PREROUTING", "-i", "br", "-j",
                                            "MARK", "--set-mark", "1", "-w"),
@@ -267,12 +281,13 @@ TEST(DatapathTest, RemoveBridge) {
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("set"), ElementsAre("br", "down"), true));
   EXPECT_CALL(runner, brctl(StrEq("delbr"), ElementsAre("br"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveBridge("br");
 }
 
 TEST(DatapathTest, AddInboundIPv4DNAT) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "PREROUTING", "-i", "eth0",
                                            "-m", "socket", "--nowildcard", "-j",
@@ -288,12 +303,13 @@ TEST(DatapathTest, AddInboundIPv4DNAT) {
                                            "-p", "udp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddInboundIPv4DNAT("eth0", "1.2.3.4");
 }
 
 TEST(DatapathTest, RemoveInboundIPv4DNAT) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "PREROUTING", "-i", "eth0",
                                            "-m", "socket", "--nowildcard", "-j",
@@ -309,33 +325,36 @@ TEST(DatapathTest, RemoveInboundIPv4DNAT) {
                                            "-p", "udp", "-j", "DNAT",
                                            "--to-destination", "1.2.3.4", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveInboundIPv4DNAT("eth0", "1.2.3.4");
 }
 
 TEST(DatapathTest, AddOutboundIPv4) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-o", "eth0", "-j",
                                            "ACCEPT", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddOutboundIPv4("eth0");
 }
 
 TEST(DatapathTest, RemoveInboundIPv4) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-D", "FORWARD", "-o", "eth0", "-j",
                                            "ACCEPT", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveOutboundIPv4("eth0");
 }
 
 TEST(DatapathTest, MaskInterfaceFlags) {
   MockProcessRunner runner;
-  Datapath datapath(&runner, ioctl_req_cap);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall, ioctl_req_cap);
   bool result = datapath.MaskInterfaceFlags("foo0", IFF_DEBUG);
   EXPECT_TRUE(result);
   std::vector<ioctl_req_t> expected = {SIOCGIFFLAGS, SIOCSIFFLAGS};
@@ -345,6 +364,7 @@ TEST(DatapathTest, MaskInterfaceFlags) {
 
 TEST(DatapathTest, AddIPv6Forwarding) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   // Return 1 on iptables -C to simulate rule not existing case
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "eth0", "-o",
@@ -364,12 +384,13 @@ TEST(DatapathTest, AddIPv6Forwarding) {
                                 ElementsAre("-A", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
                                 true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddIPv6Forwarding("eth0", "arc_eth0");
 }
 
 TEST(DatapathTest, AddIPv6ForwardingRuleExists) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-C", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
@@ -378,12 +399,13 @@ TEST(DatapathTest, AddIPv6ForwardingRuleExists) {
                                 ElementsAre("-C", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
                                 false, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddIPv6Forwarding("eth0", "arc_eth0");
 }
 
 TEST(DatapathTest, RemoveIPv6Forwarding) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, ip6tables(StrEq("filter"),
                                 ElementsAre("-D", "FORWARD", "-i", "eth0", "-o",
                                             "arc_eth0", "-j", "ACCEPT", "-w"),
@@ -392,22 +414,24 @@ TEST(DatapathTest, RemoveIPv6Forwarding) {
                                 ElementsAre("-D", "FORWARD", "-i", "arc_eth0",
                                             "-o", "eth0", "-j", "ACCEPT", "-w"),
                                 true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveIPv6Forwarding("eth0", "arc_eth0");
 }
 
 TEST(DatapathTest, AddIPv6HostRoute) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner,
               ip6(StrEq("route"), StrEq("replace"),
                   ElementsAre("2001:da8:e00::1234/128", "dev", "eth0"), true));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddIPv6HostRoute("eth0", "2001:da8:e00::1234", 128);
 }
 
 TEST(DatapathTest, AddIPv4Route) {
   MockProcessRunner runner;
-  Datapath datapath(&runner, (ioctl_t)ioctl_rtentry_cap);
+  MockFirewall firewall;
+  Datapath datapath(&runner, &firewall, (ioctl_t)ioctl_rtentry_cap);
 
   datapath.AddIPv4Route(Ipv4Addr(192, 168, 1, 1), Ipv4Addr(100, 115, 93, 0),
                         Ipv4Addr(255, 255, 255, 0));
@@ -447,6 +471,7 @@ TEST(DatapathTest, AddIPv4Route) {
 
 TEST(DatapathTest, AddSNATMarkRules) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(
       runner,
       iptables(StrEq("filter"),
@@ -462,12 +487,13 @@ TEST(DatapathTest, AddSNATMarkRules) {
                        ElementsAre("-A", "POSTROUTING", "-m", "mark", "--mark",
                                    "1", "-j", "MASQUERADE", "-w"),
                        true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddSNATMarkRules();
 }
 
 TEST(DatapathTest, RemoveSNATMarkRules) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(
       runner,
       iptables(StrEq("filter"),
@@ -483,49 +509,53 @@ TEST(DatapathTest, RemoveSNATMarkRules) {
                        ElementsAre("-D", "POSTROUTING", "-m", "mark", "--mark",
                                    "1", "-j", "MASQUERADE", "-w"),
                        true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveSNATMarkRules();
 }
 
 TEST(DatapathTest, AddForwardEstablishedRule) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner,
               iptables(StrEq("filter"),
                        ElementsAre("-A", "FORWARD", "-m", "state", "--state",
                                    "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
                        true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddForwardEstablishedRule();
 }
 
 TEST(DatapathTest, RemoveForwardEstablishedRule) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner,
               iptables(StrEq("filter"),
                        ElementsAre("-D", "FORWARD", "-m", "state", "--state",
                                    "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
                        true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveForwardEstablishedRule();
 }
 
 TEST(DatapathTest, AddInterfaceSNAT) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-A", "POSTROUTING", "-o", "wwan+",
                                            "-j", "MASQUERADE", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.AddInterfaceSNAT("wwan+");
 }
 
 TEST(DatapathTest, RemoveInterfaceSNAT) {
   MockProcessRunner runner;
+  MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("nat"),
                                ElementsAre("-D", "POSTROUTING", "-o", "wwan+",
                                            "-j", "MASQUERADE", "-w"),
                                true, nullptr));
-  Datapath datapath(&runner);
+  Datapath datapath(&runner, &firewall);
   datapath.RemoveInterfaceSNAT("wwan+");
 }
 

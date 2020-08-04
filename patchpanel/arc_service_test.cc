@@ -18,6 +18,7 @@
 #include "patchpanel/fake_process_runner.h"
 #include "patchpanel/fake_shill_client.h"
 #include "patchpanel/mock_datapath.h"
+#include "patchpanel/mock_firewall.h"
 #include "patchpanel/net_util.h"
 
 using testing::_;
@@ -70,7 +71,7 @@ class ArcServiceTest : public testing::Test {
   void SetUp() override {
     runner_ = std::make_unique<FakeProcessRunner>();
     runner_->Capture(false);
-    datapath_ = std::make_unique<MockDatapath>(runner_.get());
+    datapath_ = std::make_unique<MockDatapath>(runner_.get(), &firewall_);
     shill_client_ = shill_helper_.Client();
     addr_mgr_ = std::make_unique<AddressManager>();
   }
@@ -86,6 +87,7 @@ class ArcServiceTest : public testing::Test {
   MockTrafficForwarder forwarder_;
   std::unique_ptr<MockDatapath> datapath_;
   std::unique_ptr<FakeProcessRunner> runner_;
+  MockFirewall firewall_;
 };
 
 TEST_F(ArcServiceTest, NotStarted_AddDevice) {

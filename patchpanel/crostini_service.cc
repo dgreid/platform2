@@ -49,9 +49,12 @@ CrostiniService::CrostiniService(ShillClient* shill_client,
   DCHECK(datapath_);
   DCHECK(forwarder_);
 
-  // Setup for ADB sideloading.
-  if (!SetupFirewallClient()) {
-    LOG(ERROR) << "Failed to setup firewall client for ADB sideloading";
+  dbus::Bus::Options options;
+  options.bus_type = dbus::Bus::SYSTEM;
+
+  bus_ = new dbus::Bus(options);
+  if (!bus_->Connect()) {
+    LOG(ERROR) << "Failed to connect to system bus";
   } else {
     CheckAdbSideloadingStatus();
   }
@@ -203,61 +206,15 @@ void CrostiniService::StopForwarding(const std::string& phys_ifname,
                                true /*multicast*/);
 }
 
-bool CrostiniService::SetupFirewallClient() {
-  dbus::Bus::Options options;
-  options.bus_type = dbus::Bus::SYSTEM;
-
-  bus_ = new dbus::Bus(options);
-  if (!bus_->Connect()) {
-    LOG(ERROR) << "Failed to connect to system bus";
-    return false;
-  }
-
-  permission_broker_proxy_.reset(
-      new org::chromium::PermissionBrokerProxy(bus_));
-
-  return true;
-}
-
 void CrostiniService::StartAdbPortForwarding(const std::string& ifname) {
-  if (!permission_broker_proxy_)
-    return;
-
-  DCHECK(lifeline_fds_.find(ifname) == lifeline_fds_.end());
-  // Setup lifeline pipe.
-  int lifeline_fds[2];
-  if (pipe(lifeline_fds) != 0) {
-    PLOG(ERROR) << "Failed to create lifeline pipe";
-    return;
-  }
-  base::ScopedFD lifeline_read_fd(lifeline_fds[0]);
-  base::ScopedFD lifeline_write_fd(lifeline_fds[1]);
-
-  bool allowed = false;
-  brillo::ErrorPtr error;
-  permission_broker_proxy_->RequestAdbPortForward(ifname, lifeline_fds[0],
-                                                  &allowed, &error);
-  if (error) {
-    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
-               << "'" << permission_broker_proxy_->GetObjectPath().value()
-               << "': " << error->GetMessage();
-    return;
-  }
-  if (!allowed) {
-    LOG(ERROR) << "ADB port forwarding on " << ifname << " not allowed";
+  if (!datapath_->AddAdbPortForwardRule(ifname)) {
+    LOG(ERROR) << "Error adding ADB port forwarding rule for " << ifname;
     return;
   }
 
-  permission_broker_proxy_->RequestTcpPortAccess(
-      kAdbProxyTcpListenPort, ifname, lifeline_fds[0], &allowed, &error);
-  if (error) {
-    LOG(ERROR) << "Error calling D-Bus proxy call to interface "
-               << "'" << permission_broker_proxy_->GetObjectPath().value()
-               << "': " << error->GetMessage();
-    return;
-  }
-  if (!allowed) {
-    LOG(ERROR) << "ADB port access on " << ifname << " not allowed";
+  if (!datapath_->AddAdbPortAccessRule(ifname)) {
+    datapath_->DeleteAdbPortForwardRule(ifname);
+    LOG(ERROR) << "Error adding ADB port access rule for " << ifname;
     return;
   }
 
@@ -266,12 +223,11 @@ void CrostiniService::StartAdbPortForwarding(const std::string& ifname) {
     LOG(ERROR) << "Failed to set up route localnet for " << ifname;
     return;
   }
-
-  lifeline_fds_.emplace(ifname, std::move(lifeline_write_fd));
 }
 
 void CrostiniService::StopAdbPortForwarding(const std::string& ifname) {
-  lifeline_fds_.erase(ifname);
+  datapath_->DeleteAdbPortForwardRule(ifname);
+  datapath_->DeleteAdbPortAccessRule(ifname);
 }
 
 void CrostiniService::CheckAdbSideloadingStatus() {

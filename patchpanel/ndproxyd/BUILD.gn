@@ -13,6 +13,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "system_api",
   ]
   if (use.fuzzer) {
     pkg_deps += [ "protobuf" ]
@@ -31,6 +32,7 @@ proto_library("protos") {
 executable("ndproxyd") {
   sources = [
     "../datapath.cc",
+    "../firewall.cc",
     "../minijailed_process_runner.cc",
     "../ndproxy.cc",
     "../net_util.cc",

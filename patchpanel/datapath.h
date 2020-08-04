@@ -12,6 +12,7 @@
 
 #include <base/macros.h>
 
+#include "patchpanel/firewall.h"
 #include "patchpanel/mac_address_generator.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/subnet.h"
@@ -35,10 +36,12 @@ std::string ArcBridgeName(const std::string& ifname);
 // (not in CIDR representation
 class Datapath {
  public:
-  // |process_runner| must not be null; it is not owned.
-  explicit Datapath(MinijailedProcessRunner* process_runner);
+  // |process_runner| and |firewall| must not be null; it is not owned.
+  Datapath(MinijailedProcessRunner* process_runner, Firewall* firewall);
   // Provided for testing only.
-  Datapath(MinijailedProcessRunner* process_runner, ioctl_t ioctl_hook);
+  Datapath(MinijailedProcessRunner* process_runner,
+           Firewall* firewall,
+           ioctl_t ioctl_hook);
   virtual ~Datapath() = default;
 
   // Attaches the name |netns_name| to a network namespace identified by
@@ -176,10 +179,19 @@ class Datapath {
                                uint32_t addr,
                                uint32_t netmask);
 
+  // Adds (or deletes) an iptables rule for ADB port forwarding.
+  virtual bool AddAdbPortForwardRule(const std::string& ifname);
+  virtual void DeleteAdbPortForwardRule(const std::string& ifname);
+
+  // Adds (or deletes) an iptables rule for ADB port access.
+  virtual bool AddAdbPortAccessRule(const std::string& ifname);
+  virtual void DeleteAdbPortAccessRule(const std::string& ifname);
+
   MinijailedProcessRunner& runner() const;
 
  private:
   MinijailedProcessRunner* process_runner_;
+  Firewall* firewall_;
   ioctl_t ioctl_;
 
   bool ModifyRtentry(unsigned long op, struct rtentry* route);

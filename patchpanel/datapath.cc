@@ -21,6 +21,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <brillo/userdb_utils.h>
 
+#include "patchpanel/adb_proxy.h"
 #include "patchpanel/net_util.h"
 #include "patchpanel/scoped_ns.h"
 
@@ -31,6 +32,9 @@ namespace {
 constexpr pid_t kTestPID = -2;
 constexpr char kDefaultIfname[] = "vmtap%d";
 constexpr char kTunDev[] = "/dev/net/tun";
+constexpr char kArcAddr[] = "100.115.92.2";
+constexpr char kLocalhostAddr[] = "127.0.0.1";
+constexpr uint16_t kAdbServerPort = 5555;
 
 std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   std::string n = prefix + ifname;
@@ -55,11 +59,13 @@ std::string ArcBridgeName(const std::string& ifname) {
   return PrefixIfname("arc_", ifname);
 }
 
-Datapath::Datapath(MinijailedProcessRunner* process_runner)
-    : Datapath(process_runner, ioctl) {}
+Datapath::Datapath(MinijailedProcessRunner* process_runner, Firewall* firewall)
+    : Datapath(process_runner, firewall, ioctl) {}
 
-Datapath::Datapath(MinijailedProcessRunner* process_runner, ioctl_t ioctl_hook)
-    : process_runner_(process_runner), ioctl_(ioctl_hook) {
+Datapath::Datapath(MinijailedProcessRunner* process_runner,
+                   Firewall* firewall,
+                   ioctl_t ioctl_hook)
+    : process_runner_(process_runner), firewall_(firewall), ioctl_(ioctl_hook) {
   CHECK(process_runner_);
 }
 
@@ -588,6 +594,28 @@ bool Datapath::ModifyRtentry(unsigned long op, struct rtentry* route) {
     return false;
   }
   return true;
+}
+
+bool Datapath::AddAdbPortForwardRule(const std::string& ifname) {
+  return firewall_->AddIpv4ForwardRule(patchpanel::ModifyPortRuleRequest::TCP,
+                                       kArcAddr, kAdbServerPort, ifname,
+                                       kLocalhostAddr, kAdbProxyTcpListenPort);
+}
+
+void Datapath::DeleteAdbPortForwardRule(const std::string& ifname) {
+  firewall_->DeleteIpv4ForwardRule(patchpanel::ModifyPortRuleRequest::TCP,
+                                   kArcAddr, kAdbServerPort, ifname,
+                                   kLocalhostAddr, kAdbProxyTcpListenPort);
+}
+
+bool Datapath::AddAdbPortAccessRule(const std::string& ifname) {
+  return firewall_->AddAcceptRules(patchpanel::ModifyPortRuleRequest::TCP,
+                                   kAdbProxyTcpListenPort, ifname);
+}
+
+void Datapath::DeleteAdbPortAccessRule(const std::string& ifname) {
+  firewall_->DeleteAcceptRules(patchpanel::ModifyPortRuleRequest::TCP,
+                               kAdbProxyTcpListenPort, ifname);
 }
 
 }  // namespace patchpanel

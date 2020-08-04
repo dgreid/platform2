@@ -10,6 +10,7 @@
 #include <brillo/daemons/daemon.h>
 
 #include "patchpanel/datapath.h"
+#include "patchpanel/firewall.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/ndproxy.h"
 
@@ -39,6 +40,7 @@ int main(int argc, char* argv[]) {
   brillo::Daemon daemon;
 
   patchpanel::MinijailedProcessRunner runner;
+  patchpanel::Firewall firewall;
   char accept_ra_sysctl_cmd[40] = {0};
   snprintf(accept_ra_sysctl_cmd, sizeof(accept_ra_sysctl_cmd),
            "net.ipv6.conf.%s.accept_ra", args[0].c_str());
@@ -50,7 +52,7 @@ int main(int argc, char* argv[]) {
     LOG(ERROR) << "Failed to enable net.ipv6.conf.all.forwarding.";
     return EXIT_FAILURE;
   }
-  patchpanel::Datapath datapath(&runner);
+  patchpanel::Datapath datapath(&runner, &firewall);
 
   patchpanel::NDProxy proxy;
   if (!proxy.Init()) {

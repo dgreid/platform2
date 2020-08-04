@@ -10,6 +10,7 @@
 #include <base/macros.h>
 
 #include "patchpanel/datapath.h"
+#include "patchpanel/firewall.h"
 #include "patchpanel/minijailed_process_runner.h"
 
 namespace patchpanel {
@@ -17,7 +18,8 @@ namespace patchpanel {
 // ARC networking data path configuration utility.
 class MockDatapath : public Datapath {
  public:
-  explicit MockDatapath(MinijailedProcessRunner* runner) : Datapath(runner) {}
+  explicit MockDatapath(MinijailedProcessRunner* runner, Firewall* firewall)
+      : Datapath(runner, firewall) {}
   ~MockDatapath() = default;
 
   MOCK_METHOD2(NetnsAttachName,
