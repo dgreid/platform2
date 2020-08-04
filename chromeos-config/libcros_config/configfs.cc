@@ -51,43 +51,15 @@ bool SetupMountPath(const base::FilePath& mount_path,
   return true;
 }
 
-bool SetupLoopDevice(const base::FilePath& backing_file,
-                     base::FilePath* loop_file_out) {
+static bool TrySetupLoopDevice(const base::FilePath& backing_file,
+                               base::FilePath* loop_file_out) {
   const char loop_control_file[] = "/dev/loop-control";
-  const int loop_control_total_retries = 10;
-  const int loop_control_retry_wait_ms = 10;
-  int loop_control_retries = loop_control_total_retries;
-  base::ScopedFD loop_control_fd;
-  // We want to retry opening the loop control file a number of times
-  // in case another process is using it.
-  while (true) {
-    loop_control_fd.reset(open(loop_control_file, O_RDWR));
-    if (loop_control_fd.is_valid()) {
-      break;
-    } else {
-      switch (errno) {
-        // We may get any of these errors if we need to retry.
-        case EBUSY:
-        case EACCES:
-        case ENOENT:
-          if (loop_control_retries > 0) {
-            --loop_control_retries;
-            base::PlatformThread::Sleep(
-                base::TimeDelta::FromMilliseconds(loop_control_retry_wait_ms));
-            continue;
-          }
-          CROS_CONFIG_LOG(ERROR)
-              << "Max retries exceeded when opening " << loop_control_file
-              << " (tried " << loop_control_total_retries
-              << " times): " << logging::SystemErrorCodeToString(errno);
-          return false;
-        default:
-          CROS_CONFIG_LOG(ERROR)
-              << "Error opening loop control device " << loop_control_file
-              << ": " << logging::SystemErrorCodeToString(errno);
-          return false;
-      }
-    }
+  base::ScopedFD loop_control_fd(open(loop_control_file, O_RDWR));
+  if (!loop_control_fd.is_valid()) {
+    CROS_CONFIG_LOG(ERROR) << "Error opening loop control file "
+                           << loop_control_file << ": "
+                           << logging::SystemErrorCodeToString(errno);
+    return false;
   }
 
   int device_number = ioctl(loop_control_fd.get(), LOOP_CTL_GET_FREE);
@@ -130,6 +102,48 @@ bool SetupLoopDevice(const base::FilePath& backing_file,
 
   *loop_file_out = base::FilePath(loop_file_name);
   return true;
+}
+
+// During early boot, a number of resources can be busy
+// (/dev/loop-control or /dev/loopN) due to utilization by other
+// processes on the system.  We wrap the setup of the loop device, and
+// when we encounter an error that might indicate a device is busy, we
+// will retry a number of times.
+bool SetupLoopDevice(const base::FilePath& backing_file,
+                     base::FilePath* loop_file_out) {
+  const int total_retries = 25;
+  const int retry_wait_ms = 10;
+  int current_try = 0;
+
+  while (true) {
+    if (TrySetupLoopDevice(backing_file, loop_file_out)) {
+      return true;
+    }
+
+    CROS_CONFIG_LOG(ERROR) << "TRY " << current_try << "/" << total_retries
+                           << ": Setting up loop device ("
+                           << logging::SystemErrorCodeToString(errno) << ")";
+
+    switch (errno) {
+      // We may get any of these errors if we need to retry.
+      case EBUSY:
+      case EACCES:
+      case ENOENT:
+        if (current_try < total_retries) {
+          ++current_try;
+          CROS_CONFIG_LOG(ERROR) << "Retrying in " << retry_wait_ms << " ms";
+          base::PlatformThread::Sleep(
+              base::TimeDelta::FromMilliseconds(retry_wait_ms));
+          continue;
+        }
+        CROS_CONFIG_LOG(ERROR) << "Max retries exceeded";
+        return false;
+      default:
+        CROS_CONFIG_LOG(ERROR)
+            << "No more retries, this does not look like a busy resource";
+        return false;
+    }
+  }
 }
 
 bool Mount(const base::FilePath& source,
