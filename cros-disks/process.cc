@@ -143,9 +143,9 @@ void Process::AddEnvironmentVariable(const base::StringPiece name,
   DCHECK(!name.empty());
   std::string s;
   s.reserve(name.size() + value.size() + 1);
-  name.AppendToString(&s);
+  s.append(name.data(), name.size());
   s += '=';
-  value.AppendToString(&s);
+  s.append(value.data(), value.size());
   environment_.push_back(std::move(s));
 }
 
