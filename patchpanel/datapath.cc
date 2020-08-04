@@ -574,17 +574,17 @@ bool Datapath::DeleteIPv4Route(const std::string& ifname,
 bool Datapath::ModifyRtentry(unsigned long op, struct rtentry* route) {
   DCHECK(route);
   if (op != SIOCADDRT && op != SIOCDELRT) {
-    LOG(ERROR) << "Invalid operation " << op << " for rtentry " << route;
+    LOG(ERROR) << "Invalid operation " << op << " for rtentry " << *route;
     return false;
   }
   base::ScopedFD fd(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
   if (!fd.is_valid()) {
-    PLOG(ERROR) << "Failed to create socket for adding rtentry " << route;
+    PLOG(ERROR) << "Failed to create socket for adding rtentry " << *route;
     return false;
   }
   if (HANDLE_EINTR(ioctl_(fd.get(), op, route)) != 0) {
     std::string opname = op == SIOCADDRT ? "add" : "delete";
-    PLOG(ERROR) << "Failed to " << opname << " rtentry " << route;
+    PLOG(ERROR) << "Failed to " << opname << " rtentry " << *route;
     return false;
   }
   return true;
