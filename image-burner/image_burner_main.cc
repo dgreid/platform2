@@ -17,7 +17,11 @@ int main(int argc, char* argv[]) {
 
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_ALL;
+#if BASE_VER < 780000
   settings.log_file = "/var/log/image_burner.log";
+#else
+  settings.log_file_path = "/var/log/image_burner.log";
+#endif
   settings.lock_log = logging::LOCK_LOG_FILE;
   settings.delete_old = logging::DELETE_OLD_LOG_FILE;
   logging::InitLogging(settings);
