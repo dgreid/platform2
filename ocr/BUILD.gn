@@ -43,6 +43,15 @@ source_set("libocr") {
   ]
 }
 
+source_set("libocr_mojo_adapter") {
+  configs += [ ":target_defaults" ]
+  deps = [ ":ocr_mojo_bindings" ]
+  sources = [
+    "mojo_adapter/ocr_service_mojo_adapter.cc",
+    "mojo_adapter/ocr_service_mojo_adapter_delegate_impl.cc",
+  ]
+}
+
 executable("ocr_service") {
   configs += [ ":target_defaults" ]
   deps = [ ":libocr" ]
