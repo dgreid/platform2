@@ -47,6 +47,10 @@ class DefaultProfile : public Profile {
 
   bool IsDefault() const override { return true; }
 
+#if !defined(DISABLE_WIFI)
+  bool GetFTEnabled(Error* error);
+#endif  // DISABLE_WIFI
+
  private:
   friend class DefaultProfileTest;
   FRIEND_TEST(DefaultProfileTest, GetStoragePath);
@@ -64,6 +68,12 @@ class DefaultProfile : public Profile {
   static const char kStorageName[];
   static const char kStorageNoAutoConnectTechnologies[];
   static const char kStorageProhibitedTechnologies[];
+#if !defined(DISABLE_WIFI)
+  static const char kStorageWifiGlobalFTEnabled[];
+
+  void HelpRegisterConstDerivedBool(const std::string& name,
+                                    bool (DefaultProfile::*get)(Error* error));
+#endif  // DISABLE_WIFI
 
   const std::string profile_id_;
   const Manager::Properties& props_;

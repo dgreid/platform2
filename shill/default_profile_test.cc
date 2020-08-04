@@ -121,6 +121,11 @@ TEST_F(DefaultProfileTest, Save) {
               SetString(DefaultProfile::kStorageId,
                         DefaultProfile::kStorageProhibitedTechnologies, ""))
       .WillOnce(Return(true));
+#if !defined(DISABLE_WIFI)
+  EXPECT_CALL(*storage, SetBool(DefaultProfile::kStorageId,
+                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
+      .Times(0);
+#endif  // DISABLE_WIFI
   EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
 
   EXPECT_CALL(*device_, Save(storage.get())).Times(0);
@@ -165,6 +170,11 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
               GetString(DefaultProfile::kStorageId,
                         DefaultProfile::kStorageProhibitedTechnologies, _))
       .WillOnce(Return(false));
+#if !defined(DISABLE_WIFI)
+  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
+                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
+      .WillOnce(Return(false));
+#endif  // DISABLE_WIFI
   auto dhcp_props = std::make_unique<MockDhcpProperties>();
   EXPECT_CALL(*dhcp_props, Load(_, DefaultProfile::kStorageId));
   manager()->dhcp_properties_ = std::move(dhcp_props);
@@ -186,6 +196,9 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
   EXPECT_EQ(PortalDetector::kDefaultFallbackHttpUrls,
             manager_props.portal_fallback_http_urls);
   EXPECT_EQ("", manager_props.prohibited_technologies);
+#if !defined(DISABLE_WIFI)
+  EXPECT_FALSE(manager_props.ft_enabled.has_value());
+#endif  // DISABLE_WIFI
 }
 
 TEST_F(DefaultProfileTest, LoadManagerProperties) {
@@ -223,6 +236,11 @@ TEST_F(DefaultProfileTest, LoadManagerProperties) {
               GetString(DefaultProfile::kStorageId,
                         DefaultProfile::kStorageProhibitedTechnologies, _))
       .WillOnce(DoAll(SetArgPointee<2>(prohibited_technologies), Return(true)));
+#if !defined(DISABLE_WIFI)
+  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
+                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
+      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+#endif  // DISABLE_WIFI
   profile_->SetStorageForTest(std::move(storage));
   Manager::Properties manager_props;
   auto dhcp_props = std::make_unique<MockDhcpProperties>();
@@ -239,6 +257,10 @@ TEST_F(DefaultProfileTest, LoadManagerProperties) {
   EXPECT_EQ(no_auto_connect_technologies,
             manager_props.no_auto_connect_technologies);
   EXPECT_EQ(prohibited_technologies, manager_props.prohibited_technologies);
+#if !defined(DISABLE_WIFI)
+  EXPECT_TRUE(manager_props.ft_enabled.has_value());
+  EXPECT_TRUE(manager_props.ft_enabled.value());
+#endif  // DISABLE_WIFI
 }
 
 TEST_F(DefaultProfileTest, GetStoragePath) {

@@ -14,6 +14,9 @@
 #include "shill/link_monitor.h"
 #include "shill/manager.h"
 #include "shill/portal_detector.h"
+#if !defined(DISABLE_WIFI)
+#include "shill/property_accessor.h"
+#endif  // DISABLE_WIFI
 #include "shill/resolver.h"
 #include "shill/store_interface.h"
 
@@ -51,6 +54,11 @@ const char DefaultProfile::kStorageNoAutoConnectTechnologies[] =
 // static
 const char DefaultProfile::kStorageProhibitedTechnologies[] =
     "ProhibitedTechnologies";
+#if !defined(DISABLE_WIFI)
+// static
+const char DefaultProfile::kStorageWifiGlobalFTEnabled[] =
+    "WiFi.GlobalFTEnabled";
+#endif  // DISABLE_WIFI
 
 DefaultProfile::DefaultProfile(Manager* manager,
                                const base::FilePath& storage_directory,
@@ -72,11 +80,28 @@ DefaultProfile::DefaultProfile(Manager* manager,
                              &manager_props.no_auto_connect_technologies);
   store->RegisterConstString(kProhibitedTechnologiesProperty,
                              &manager_props.prohibited_technologies);
+#if !defined(DISABLE_WIFI)
+  HelpRegisterConstDerivedBool(kWifiGlobalFTEnabledProperty,
+                               &DefaultProfile::GetFTEnabled);
+#endif  // DISABLE_WIFI
   set_persistent_profile_path(
       GetFinalStoragePath(storage_directory, Identifier(profile_id)));
 }
 
 DefaultProfile::~DefaultProfile() = default;
+
+#if !defined(DISABLE_WIFI)
+void DefaultProfile::HelpRegisterConstDerivedBool(
+    const std::string& name, bool (DefaultProfile::*get)(Error*)) {
+  this->mutable_store()->RegisterDerivedBool(
+      name, BoolAccessor(new CustomAccessor<DefaultProfile, bool>(
+                this, get, nullptr, nullptr)));
+}
+
+bool DefaultProfile::GetFTEnabled(Error* error) {
+  return manager()->GetFTEnabled(error);
+}
+#endif  // DISABLE_WIFI
 
 void DefaultProfile::LoadManagerProperties(Manager::Properties* manager_props,
                                            DhcpProperties* dhcp_properties) {
@@ -117,6 +142,14 @@ void DefaultProfile::LoadManagerProperties(Manager::Properties* manager_props,
                             &manager_props->prohibited_technologies)) {
     manager_props->prohibited_technologies = "";
   }
+#if !defined(DISABLE_WIFI)
+  bool ft_enabled;
+  if (storage()->GetBool(kStorageId, kStorageWifiGlobalFTEnabled,
+                         &ft_enabled)) {
+    manager_props->ft_enabled = ft_enabled;
+  }
+#endif  // DISABLE_WIFI
+
   dhcp_properties->Load(storage(), kStorageId);
 }
 
@@ -154,6 +187,12 @@ bool DefaultProfile::Save() {
                        props_.no_auto_connect_technologies);
   storage()->SetString(kStorageId, kStorageProhibitedTechnologies,
                        props_.prohibited_technologies);
+#if !defined(DISABLE_WIFI)
+  if (props_.ft_enabled.has_value()) {
+    storage()->SetBool(kStorageId, kStorageWifiGlobalFTEnabled,
+                       props_.ft_enabled.value());
+  }
+#endif  // DISABLE_WIFI
   manager()->dhcp_properties().Save(storage(), kStorageId);
   return Profile::Save();
 }

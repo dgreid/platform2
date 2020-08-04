@@ -99,6 +99,9 @@ class Manager {
     // Name of Android VPN package that should be enforced for user traffic.
     // Empty string if the lockdown feature is not enabled.
     std::string always_on_vpn_package;
+#if !defined(DISABLE_WIFI)
+    base::Optional<bool> ft_enabled;
+#endif  // !DISABLE_WIFI
   };
 
   Manager(ControlInterface* control_interface,
@@ -496,8 +499,9 @@ class Manager {
   virtual std::vector<std::string> GetDeviceInterfaceNames();
 
 #if !defined(DISABLE_WIFI)
-  bool ft_enabled() const { return ft_enabled_; }
-#endif
+  bool GetFTEnabled(Error* error);
+#endif  // DISABLE_WIFI
+
   bool ShouldBlackholeUserTraffic(const std::string& device_name) const;
 
   const std::vector<uint32_t>& user_traffic_uids() const {
@@ -605,6 +609,8 @@ class Manager {
 #if !defined(DISABLE_WIFI)
   bool SetDisableWiFiVHT(const bool& disable_wifi_vht, Error* error);
   bool GetDisableWiFiVHT(Error* error);
+
+  bool SetFTEnabled(const bool& ft_enabled, Error* error);
 #endif  // DISABLE_WIFI
   bool SetProhibitedTechnologies(const std::string& prohibited_technologies,
                                  Error* error);
@@ -852,11 +858,6 @@ class Manager {
   bool network_throttling_enabled_;
   uint32_t download_rate_kbits_;
   uint32_t upload_rate_kbits_;
-
-#if !defined(DISABLE_WIFI)
-  // Fast Transition enabled
-  bool ft_enabled_;
-#endif
 
   // "User traffic" refers to traffic from processes that run under one of the
   // unix users enumered in |kUserTrafficUsernames| constant in

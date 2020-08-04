@@ -560,13 +560,23 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
   {
     WiFiServiceRefPtr wifi_service = MakeServiceWithWiFi(kSecurityPsk);
 
-    manager()->ft_enabled_ = false;
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
+    string default_key_mgmt = "WPA-PSK";
+#if !defined(DISABLE_FT)
+    default_key_mgmt += " FT-PSK";
+#endif  // DISABLE_FT
+    EXPECT_EQ(
+        default_key_mgmt,
+        params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
+
+    manager()->props_.ft_enabled = false;
+    wifi_service->Connect(nullptr, "in test");
+    params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ("WPA-PSK", params.Get<string>(
                              WPASupplicant::kNetworkPropertyEapKeyManagement));
 
-    manager()->ft_enabled_ = true;
+    manager()->props_.ft_enabled = true;
     wifi_service->Connect(nullptr, "in test");
     params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ(
@@ -579,13 +589,24 @@ TEST_F(WiFiServiceTest, ConnectTaskFT) {
     wifi_service->mutable_eap()->set_password("mumble");
     wifi_service->OnEapCredentialsChanged(Service::kReasonCredentialsLoaded);
 
-    manager()->ft_enabled_ = false;
+    manager()->props_.ft_enabled = base::nullopt;
     wifi_service->Connect(nullptr, "in test");
     KeyValueStore params = wifi_service->GetSupplicantConfigurationParameters();
+    string default_key_mgmt = "WPA-EAP";
+#if !defined(DISABLE_FT)
+    default_key_mgmt += " FT-EAP";
+#endif  // DISABLE_FT
+    EXPECT_EQ(
+        default_key_mgmt,
+        params.Get<string>(WPASupplicant::kNetworkPropertyEapKeyManagement));
+
+    manager()->props_.ft_enabled = false;
+    wifi_service->Connect(nullptr, "in test");
+    params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ("WPA-EAP", params.Get<string>(
                              WPASupplicant::kNetworkPropertyEapKeyManagement));
 
-    manager()->ft_enabled_ = true;
+    manager()->props_.ft_enabled = true;
     wifi_service->Connect(nullptr, "in test");
     params = wifi_service->GetSupplicantConfigurationParameters();
     EXPECT_EQ(

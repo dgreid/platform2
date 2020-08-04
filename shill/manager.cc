@@ -205,13 +205,6 @@ Manager::Manager(ControlInterface* control_interface,
       network_throttling_enabled_(false),
       download_rate_kbits_(0),
       upload_rate_kbits_(0),
-#if !defined(DISABLE_WIFI)
-#if !defined(DISABLE_FT)
-      ft_enabled_(true),
-#else
-      ft_enabled_(false),
-#endif  // DISABLE_FT
-#endif  // DISABLE_WIFI
       should_blackhole_user_traffic_(false) {
   HelpRegisterConstDerivedRpcIdentifier(
       kActiveProfileProperty, &Manager::GetActiveProfileRpcIdentifier);
@@ -236,7 +229,8 @@ Manager::Manager(ControlInterface* control_interface,
 #if !defined(DISABLE_WIFI)
   HelpRegisterDerivedBool(kDisableWiFiVHTProperty, &Manager::GetDisableWiFiVHT,
                           &Manager::SetDisableWiFiVHT);
-  store_.RegisterBool(kWifiGlobalFTEnabledProperty, &ft_enabled_);
+  HelpRegisterDerivedBool(kWifiGlobalFTEnabledProperty, &Manager::GetFTEnabled,
+                          &Manager::SetFTEnabled);
 #endif  // DISABLE_WIFI
   HelpRegisterConstDerivedStrings(kEnabledTechnologiesProperty,
                                   &Manager::EnabledTechnologies);
@@ -1304,6 +1298,22 @@ bool Manager::SetDisableWiFiVHT(const bool& disable_wifi_vht, Error* error) {
 bool Manager::GetDisableWiFiVHT(Error* error) {
   return wifi_provider_->disable_vht();
 }
+
+bool Manager::SetFTEnabled(const bool& ft_enabled, Error* error) {
+  props_.ft_enabled = ft_enabled;
+  return true;
+}
+
+bool Manager::GetFTEnabled(Error* error) {
+  if (props_.ft_enabled.has_value()) {
+    return props_.ft_enabled.value();
+  }
+#if !defined(DISABLE_FT)
+  return true;
+#else
+  return false;
+#endif  // DISABLE_FT
+}
 #endif  // DISABLE_WIFI
 
 bool Manager::SetProhibitedTechnologies(const string& prohibited_technologies,
@@ -1682,7 +1692,7 @@ void Manager::HelpRegisterConstDerivedStrings(const string& name,
 void Manager::HelpRegisterDerivedBool(const string& name,
                                       bool (Manager::*get)(Error* error),
                                       bool (Manager::*set)(const bool&,
-                                                           Error*)) {
+                                                           Error* error)) {
   store_.RegisterDerivedBool(
       name,
       BoolAccessor(new CustomAccessor<Manager, bool>(this, get, set, nullptr)));
