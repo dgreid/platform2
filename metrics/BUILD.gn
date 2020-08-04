@@ -11,7 +11,7 @@ import("//common-mk/proto_library.gni")
 group("all") {
   deps = [
     ":chromeos-pgmem",
-    ":libmetrics-${libbase_ver}",
+    ":libmetrics",
     ":libmetrics_daemon",
     ":libupload_service",
     ":metrics_client",
@@ -40,7 +40,7 @@ group("all") {
   }
 }
 
-shared_library("libmetrics-${libbase_ver}") {
+shared_library("libmetrics") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
@@ -81,7 +81,7 @@ config("target_defaults") {
 static_library("libmetrics_daemon") {
   configs += [ ":target_defaults" ]
   deps = [
-    ":libmetrics-${libbase_ver}",
+    ":libmetrics",
     ":libupload_service",
     ":metrics_proto",
   ]
@@ -100,7 +100,7 @@ static_library("libmetrics_daemon") {
 
 executable("metrics_client") {
   configs += [ ":target_defaults" ]
-  deps = [ ":libmetrics-${libbase_ver}" ]
+  deps = [ ":libmetrics" ]
   sources = [ "metrics_client.cc" ]
 }
 
@@ -116,7 +116,7 @@ executable("chromeos-pgmem") {
 static_library("libupload_service") {
   configs += [ ":target_defaults" ]
   deps = [
-    ":libmetrics-${libbase_ver}",
+    ":libmetrics",
     ":metrics_proto",
   ]
   all_dependent_pkg_deps = [ "vboot_host" ]
@@ -180,7 +180,7 @@ if (use.test) {
   }
   executable("metrics_library_test") {
     deps = [
-      ":libmetrics-${libbase_ver}",
+      ":libmetrics",
       "../common-mk/testrunner:testrunner",
     ]
     configs += [
@@ -252,7 +252,7 @@ if (use.passive_metrics && use.test) {
 
 if (use.fuzzer) {
   executable("metrics_library_consent_id_fuzzer") {
-    deps = [ ":libmetrics-${libbase_ver}" ]
+    deps = [ ":libmetrics" ]
     configs += [
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
@@ -264,7 +264,7 @@ if (use.fuzzer) {
       "//common-mk/common_fuzzer:common_fuzzer",
       ":target_defaults",
     ]
-    deps = [ ":libmetrics-${libbase_ver}" ]
+    deps = [ ":libmetrics" ]
     sources = [ "serialization/metrics_serialization_utils_fuzzer.cc" ]
   }
 }
