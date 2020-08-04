@@ -16,9 +16,10 @@ use std::marker::Send;
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 
 use core::mem::replace;
-use sys_util::pipe;
+use libchromeos::vsock::{self, VsockListener, VsockStream};
+use sys_util::{handle_eintr, pipe};
 
-use super::to_sys_util::{self, VsockCid, VsockStreamListener};
+use super::to_sys_util::VsockCid;
 
 const DEFAULT_PORT: u32 = 5552;
 
@@ -98,6 +99,11 @@ fn tcpstream_to_transport(stream: TcpStream) -> Result<Transport> {
     Ok(Transport(Box::new(stream), Box::new(write)))
 }
 
+fn vsockstream_to_transport(stream: VsockStream) -> Result<Transport> {
+    let write = stream.try_clone().map_err(Error::Clone)?;
+    Ok(Transport(Box::new(stream), Box::new(write)))
+}
+
 /// Abstracts transport methods that accept incoming connections.
 pub trait ServerTransport {
     fn accept(&mut self) -> Result<Transport>;
@@ -127,7 +133,7 @@ impl IPServerTransport {
 
 impl ServerTransport for IPServerTransport {
     fn accept(&mut self) -> Result<Transport> {
-        let (stream, _) = self.0.accept().map_err(Error::Accept)?;
+        let (stream, _) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
         tcpstream_to_transport(stream)
     }
 }
@@ -149,26 +155,25 @@ impl IPClientTransport {
 
 impl ClientTransport for IPClientTransport {
     fn connect(&mut self) -> Result<Transport> {
-        let stream = TcpStream::connect(&self.0).map_err(Error::Connect)?;
+        let stream = handle_eintr!(TcpStream::connect(&self.0)).map_err(Error::Connect)?;
         tcpstream_to_transport(stream)
     }
 }
 
 /// A transport method that listens for incoming vsock connections.
-pub struct VsockServerTransport(VsockStreamListener);
+pub struct VsockServerTransport(VsockListener);
 
 impl VsockServerTransport {
     pub fn new() -> Result<Self> {
-        let listener =
-            VsockStreamListener::new(VsockCid::Any, DEFAULT_PORT).map_err(Error::Bind)?;
+        let listener = VsockListener::bind(DEFAULT_PORT).map_err(Error::Bind)?;
         Ok(VsockServerTransport(listener))
     }
 }
 
 impl ServerTransport for VsockServerTransport {
     fn accept(&mut self) -> Result<Transport> {
-        let (stream, _) = self.0.accept().map_err(Error::Accept)?;
-        tcpstream_to_transport(stream)
+        let (stream, _) = handle_eintr!(self.0.accept()).map_err(Error::Accept)?;
+        vsockstream_to_transport(stream)
     }
 }
 
@@ -183,8 +188,12 @@ impl VsockClientTransport {
 
 impl ClientTransport for VsockClientTransport {
     fn connect(&mut self) -> Result<Transport> {
-        let stream = to_sys_util::vsock_connect(self.0, DEFAULT_PORT).map_err(Error::Connect)?;
-        tcpstream_to_transport(stream)
+        let addr = vsock::SocketAddr {
+            cid: self.0.into(),
+            port: DEFAULT_PORT,
+        };
+        let stream = handle_eintr!(VsockStream::connect(&addr)).map_err(Error::Connect)?;
+        vsockstream_to_transport(stream)
     }
 }
 

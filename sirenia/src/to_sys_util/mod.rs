@@ -8,31 +8,16 @@
 //!
 //! TODO(b/162502718) Move this over to crosvm/sys_util
 
-use std::fs::File;
 use std::io;
-use std::mem::{size_of, MaybeUninit};
-use std::net::TcpStream;
-use std::os::unix::io::{AsRawFd, FromRawFd, RawFd};
+use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
 use libc::{
-    self, accept4, bind, c_int, connect, listen, sigfillset, sigprocmask, sigset_t, sockaddr_vm,
-    socket, socklen_t, wait, AF_VSOCK, ECHILD, SIG_BLOCK, SIG_UNBLOCK, SOCK_CLOEXEC, SOCK_STREAM,
-    SOMAXCONN, VMADDR_CID_ANY, VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR,
+    self, c_int, sigfillset, sigprocmask, sigset_t, wait, ECHILD, SIG_BLOCK, SIG_UNBLOCK,
+    VMADDR_CID_ANY, VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR,
 };
-use sys_util::handle_eintr_errno;
 
 const VMADDR_CID_LOCAL: u32 = 1;
-
-pub const VMADDR_PORT_ANY: u32 = libc::VMADDR_PORT_ANY;
-
-const DEFAULT_SOCKADDR_VM: sockaddr_vm = sockaddr_vm {
-    svm_family: 0,
-    svm_reserved1: 0,
-    svm_port: 0,
-    svm_cid: 0,
-    svm_zero: [0; 4],
-};
 
 pub fn errno() -> c_int {
     io::Error::last_os_error().raw_os_error().unwrap()
@@ -88,26 +73,6 @@ pub unsafe fn fork() -> Result<i32, io::Error> {
     }
 }
 
-fn get_vsock_stream() -> Result<RawFd, io::Error> {
-    // This is safe because it doesn't take any references.
-    let fd: RawFd = handle_eintr_errno!(unsafe { socket(AF_VSOCK, SOCK_STREAM | SOCK_CLOEXEC, 0) });
-    if fd < 0 {
-        Err(io::Error::last_os_error())
-    } else {
-        Ok(fd)
-    }
-}
-
-fn new_vsock_addr(cid: VsockCid, port: u32) -> sockaddr_vm {
-    let mut addr: sockaddr_vm = DEFAULT_SOCKADDR_VM.clone();
-
-    addr.svm_family = AF_VSOCK as u16;
-    addr.svm_port = port;
-    addr.svm_cid = cid.into();
-
-    addr
-}
-
 #[derive(Debug, Copy, Clone)]
 pub enum VsockCid {
     Any,
@@ -139,92 +104,4 @@ impl Into<u32> for VsockCid {
             VsockCid::Cid(c) => c,
         }
     }
-}
-
-pub struct VsockStreamListener(File);
-
-impl VsockStreamListener {
-    pub fn new(cid: VsockCid, port: u32) -> Result<Self, io::Error> {
-        // This is safe because the fd is valid and not associated with a rust
-        // struct yet.
-        let fd = unsafe { File::from_raw_fd(get_vsock_stream()?) };
-        let addr = new_vsock_addr(cid, port);
-
-        // This is safe because the passed structs will outlive the bind
-        // call.
-        if handle_eintr_errno!(unsafe {
-            bind(
-                fd.as_raw_fd(),
-                &addr as *const _ as *const _,
-                size_of::<sockaddr_vm>() as socklen_t,
-            )
-        }) != 0
-        {
-            return Err(io::Error::last_os_error());
-        }
-
-        // This is safe because the file descriptor is owned.
-        if handle_eintr_errno!(unsafe { listen(fd.as_raw_fd(), SOMAXCONN) }) != 0 {
-            return Err(io::Error::last_os_error());
-        }
-
-        Ok(VsockStreamListener(fd))
-    }
-
-    pub fn accept(&self) -> Result<(TcpStream, (VsockCid, u32)), io::Error> {
-        let mut addr: sockaddr_vm = DEFAULT_SOCKADDR_VM.clone();
-        let mut len: socklen_t = size_of::<sockaddr_vm>() as socklen_t;
-        let stream: TcpStream;
-
-        // This is safe because the passed structs will outlive the accept4
-        // call and if the resulting file descriptor is valid it is wrapped
-        // with a type that will close it when dropped.
-        let fd: c_int = handle_eintr_errno!(unsafe {
-            accept4(
-                self.0.as_raw_fd(),
-                &mut addr as *mut _ as *mut _,
-                &mut len as *mut _,
-                SOCK_CLOEXEC,
-            )
-        });
-        if fd < 0 {
-            return Err(io::Error::last_os_error());
-        }
-
-        // This is safe because the file descriptor is valid and isn't
-        // associated with a rust struct yet.
-        stream = unsafe { TcpStream::from_raw_fd(fd) };
-        if size_of::<sockaddr_vm>() as socklen_t != len {
-            return Err(io::Error::last_os_error());
-        }
-        Ok((stream, (VsockCid::from(addr.svm_cid), addr.svm_port)))
-    }
-}
-
-pub fn vsock_connect(cid: VsockCid, port: u32) -> Result<TcpStream, io::Error> {
-    let fd: RawFd = get_vsock_stream()?;
-    let addr: sockaddr_vm = new_vsock_addr(cid, port);
-
-    if handle_eintr_errno!(unsafe {
-        // This is safe because the passed structs will outlive the connect
-        // call.
-        connect(
-            fd,
-            &addr as *const _ as *const _,
-            size_of::<sockaddr_vm>() as socklen_t,
-        )
-    }) != 0
-    {
-        // This is safe because the file descriptor is valid and isn't
-        // associated with a rust struct yet. It is used to close the
-        // file descriptor.
-        unsafe {
-            File::from_raw_fd(fd);
-        }
-        return Err(io::Error::last_os_error());
-    }
-
-    // This is safe because the file descriptor is valid and isn't associated
-    // with a rust struct yet.
-    Ok(unsafe { TcpStream::from_raw_fd(fd) })
 }

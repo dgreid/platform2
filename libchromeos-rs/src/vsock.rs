@@ -48,7 +48,7 @@ impl fmt::Display for AddrParseError {
 }
 
 /// An address associated with a virtual socket.
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct SocketAddr {
     pub cid: c_uint,
     pub port: c_uint,
@@ -123,6 +123,7 @@ unsafe fn set_nonblocking(fd: RawFd, nonblocking: bool) -> io::Result<()> {
 }
 
 /// A virtual stream socket.
+#[derive(Debug)]
 pub struct VsockStream {
     fd: RawFd,
 }
@@ -244,6 +245,7 @@ impl Drop for VsockStream {
 }
 
 /// Represents a virtual socket server.
+#[derive(Debug)]
 pub struct VsockListener {
     fd: RawFd,
 }
