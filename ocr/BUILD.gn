@@ -8,7 +8,10 @@ import("//common-mk/pkg_config.gni")
 # The target named "all" is the root target built
 # by the platform2 build system.
 group("all") {
-  deps = [ ":ocr_service" ]
+  deps = [
+    ":ocr_service",
+    ":ocr_tool",
+  ]
   if (use.test) {
     deps += [ ":ocr_service_test" ]
   }
@@ -56,6 +59,12 @@ executable("ocr_service") {
   configs += [ ":target_defaults" ]
   deps = [ ":libocr" ]
   sources = [ "main.cc" ]
+}
+
+executable("ocr_tool") {
+  configs += [ ":target_defaults" ]
+  deps = [ ":libocr_mojo_adapter" ]
+  sources = [ "ocr_tool/ocr_tool.cc" ]
 }
 
 if (use.test) {
