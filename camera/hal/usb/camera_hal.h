@@ -90,7 +90,7 @@ class CameraHal : public UdevWatcher::Observer {
   // Used to watch (un)plug events of external cameras.
   std::unique_ptr<UdevWatcher> udev_watcher_;
 
-  // Used to access to the master configuration for Chrome OS.
+  // Used to access to the main configuration for Chrome OS.
   CrosDeviceConfig cros_device_config_;
 
   // Map from device path to camera id.

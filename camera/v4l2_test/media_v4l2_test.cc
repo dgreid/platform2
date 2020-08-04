@@ -301,7 +301,7 @@ class V4L2TestEnvironment : public ::testing::Environment {
         // * broken JPEG image when setting power frequency to 60Hz.
         // Although it's infeasible to test every possible parameter
         // combinations, we might want to add tests for the failing cases above
-        // in the future and whitelist the existing devices.
+        // in the future and qualify the existing devices.
         LOG(WARNING) << "Ignore non-zero skip frames for v3 devices";
         skip_frames_ = 0;
       }
