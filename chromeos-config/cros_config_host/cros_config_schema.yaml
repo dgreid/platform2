@@ -30,7 +30,6 @@ typeDefs:
     additionalProperties: false
   # V2 exists because system-file targets were poorly named, so they couldn't
   # be logically shared for build-time and run-time usage.
-  # E.g. bluetooth config we want to both install and get the path at runtime
   system-file-v2: &system_file_v2
     type: object
     properties:
@@ -296,8 +295,6 @@ properties:
             bluetooth:
               type: object
               properties:
-                # TODO(b:152526402) - Remove when no yaml references "config".
-                config: *system_file_v2
                 flags:
                   type: object
                   properties:

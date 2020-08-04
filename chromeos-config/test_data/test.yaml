@@ -53,10 +53,6 @@ some_base_config: &some_base_config
       product: "{{$name}}"
       device: "{{$name}}_cheets"
       metrics-tag: "abc123"
-  bluetooth:
-    config:
-      build-path: "some/main.conf"
-      system-path: "/etc/bluetooth/some/main.conf"
   camera:
     count: 1
   firmware:

@@ -125,12 +125,6 @@ class CrosConfigHostTest(unittest.TestCase):
     output = subprocess.check_output(call_args).decode('utf-8')
     self.CheckManyLines(output, 10)
 
-  def testGetBluetoothFiles(self):
-    call_args = '{} -c {} get-bluetooth-files'.format(
-        CLI_FILE, self.conf_file).split()
-    output = subprocess.check_output(call_args).decode('utf-8')
-    self.CheckManyLines(output, 1)
-
   def testGetFirmwareBuildTargets(self):
     call_args = '{} -c {} get-firmware-build-targets coreboot'.format(
         CLI_FILE, self.conf_file).split()

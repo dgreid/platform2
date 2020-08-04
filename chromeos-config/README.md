@@ -408,14 +408,7 @@ In the tables below,
 ### bluetooth
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| config | [config](#config) |  | False |  | False |  |
 | flags | [flags](#flags) |  | False |  | False |  |
-
-### config
-| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
-| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| build-path | string |  | True |  | True | Source of the file relative to the build system. |
-| system-path | string |  | True |  | False | Installation path for the file on the system image. |
 
 ### flags
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |

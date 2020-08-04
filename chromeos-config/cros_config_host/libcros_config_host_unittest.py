@@ -123,15 +123,6 @@ class CrosConfigHostTest(unittest.TestCase):
             dest='/etc/some_media_profiles.xml'),
     ])
 
-  def testGetBluetoothFiles(self):
-    config = CrosConfig(self.filepath)
-    bluetooth_files = config.GetBluetoothFiles()
-    self.assertEqual(
-        bluetooth_files,
-        [BaseFile(
-            source='some/main.conf',
-            dest='/etc/bluetooth/some/main.conf')])
-
   def testGetThermalFiles(self):
     config = CrosConfig(self.filepath)
     thermal_files = config.GetThermalFiles()

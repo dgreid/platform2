@@ -25,11 +25,6 @@
             "ucm-suffix": "some"
           }
         },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
-          }
-        },
         "camera": {
           "count": 1
         },
@@ -104,11 +99,6 @@
             "ucm-suffix": "some"
           }
         },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
-          }
-        },
         "camera": {
           "count": 1
         },
@@ -176,11 +166,6 @@
           "main": {
             "cras-config-dir": "some2",
             "ucm-suffix": "some2"
-          }
-        },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
           }
         },
         "camera": {
@@ -295,11 +280,6 @@
             "system-path": "/etc/some_media_profiles.xml"
           }
         },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
-          }
-        },
         "brand-code": "WLBA",
         "camera": {
           "count": 1
@@ -359,11 +339,6 @@
           },
           "media-profiles": {
             "system-path": "/etc/some_media_profiles.xml"
-          }
-        },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
           }
         },
         "brand-code": "WLBA",
@@ -427,11 +402,6 @@
             "system-path": "/etc/some_media_profiles.xml"
           }
         },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
-          }
-        },
         "brand-code": "WLBB",
         "camera": {
           "count": 1
@@ -491,11 +461,6 @@
           },
           "media-profiles": {
             "system-path": "/etc/some_media_profiles.xml"
-          }
-        },
-        "bluetooth": {
-          "config": {
-            "system-path": "/etc/bluetooth/some/main.conf"
           }
         },
         "brand-code": "WLBB",
