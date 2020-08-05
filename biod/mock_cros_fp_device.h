@@ -15,6 +15,9 @@ namespace biod {
 
 class MockCrosFpDevice : public CrosFpDeviceInterface {
  public:
+  MockCrosFpDevice() = default;
+  ~MockCrosFpDevice() override = default;
+
   MOCK_METHOD(bool, SetFpMode, (const FpMode& mode));
   MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
   MOCK_METHOD(bool,
