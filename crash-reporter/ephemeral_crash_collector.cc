@@ -34,8 +34,15 @@ void EphemeralCrashCollector::Initialize(
     // reports in the reboot vault to collect. Allow the meta collector to
     // collect such reports into /var/spool. Once OOBE is complete, depending
     // on user consent, either throw away these reports or send them.
-    if (!base::PathExists(paths::Get(paths::kOobeCompletePath)))
+    if (!base::PathExists(paths::Get(paths::kOobeCompletePath))) {
+      // TODO(crbug/1039378): Remove this log once we have test failures that
+      // ran with it.
+      LOG(INFO) << "OOBE path doesn't exist. Integration tests running? "
+                << std::boolalpha << util::IsCrashTestInProgress()
+                << " Mock consent? " << std::boolalpha
+                << util::HasMockConsent();
       is_feedback_allowed_function = []() { return true; };
+    }
     source_directories_.push_back(
         base::FilePath(paths::kEncryptedRebootVaultCrashDirectory));
   }
