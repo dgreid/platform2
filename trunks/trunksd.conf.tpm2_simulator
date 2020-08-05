@@ -9,8 +9,9 @@ start on starting system-services and started dbus
 stop on stopping system-services and stopped chapsd
 respawn
 
-script
+pre-start script
   mkdir -p /var/lib/trunks
   chown trunks:trunks /var/lib/trunks
-  exec trunksd --simulator
 end script
+
+exec trunksd --simulator
