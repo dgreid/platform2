@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <errno.h>
 #include <gbm.h>
+#include <libdrm/drm_fourcc.h>
 #include <limits.h>
 #include <linux/virtwl.h>
 #include <pixman.h>
@@ -226,8 +227,9 @@ static void sl_host_surface_attach(struct wl_client* client,
 
           buffer_params = zwp_linux_dmabuf_v1_create_params(
               host->ctx->linux_dmabuf->internal);
-          zwp_linux_buffer_params_v1_add(buffer_params, fd, 0, 0, stride0, 0,
-                                         0);
+          zwp_linux_buffer_params_v1_add(buffer_params, fd, 0, 0, stride0,
+                                         DRM_FORMAT_MOD_INVALID >> 32,
+                                         DRM_FORMAT_MOD_INVALID & 0xffffffff);
           host->current_buffer->internal =
               zwp_linux_buffer_params_v1_create_immed(
                   buffer_params, width, height,

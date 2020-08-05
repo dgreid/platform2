@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <gbm.h>
+#include <libdrm/drm_fourcc.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -148,8 +149,9 @@ static void sl_drm_create_prime_buffer(struct wl_client* client,
 
   buffer_params =
       zwp_linux_dmabuf_v1_create_params(host->ctx->linux_dmabuf->internal);
-  zwp_linux_buffer_params_v1_add(buffer_params, name, 0, offset0, stride0, 0,
-                                 0);
+  zwp_linux_buffer_params_v1_add(buffer_params, name, 0, offset0, stride0,
+                                 DRM_FORMAT_MOD_INVALID >> 32,
+                                 DRM_FORMAT_MOD_INVALID & 0xffffffff);
 
   struct sl_host_buffer* host_buffer =
       sl_create_host_buffer(client, id,
