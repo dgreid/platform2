@@ -58,6 +58,11 @@ class CrosFpBiometricsManager : public BiometricsManager {
   bool ResetEntropy(bool factory_init) override;
 
  protected:
+  CrosFpBiometricsManager(
+      std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
+      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory);
+  bool Init();
+
   void EndEnrollSession() override;
   void EndAuthSession() override;
 
@@ -101,11 +106,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
     kSuccess,
     kError,
   };
-
-  explicit CrosFpBiometricsManager(
-      std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory);
-  bool Init();
 
   void OnEnrollScanDone(ScanResult result,
                         const BiometricsManager::EnrollStatus& enroll_status);
