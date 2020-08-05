@@ -1,0 +1,28 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [ ":federated_service" ]
+}
+
+pkg_config("federated_common_pkg_deps") {
+  pkg_deps = [
+    "libbrillo-${libbase_ver}",
+    "libchrome-${libbase_ver}",
+    "libmetrics-${libbase_ver}",
+    "libmojo-${libbase_ver}",
+  ]
+}
+
+static_library("federated_common") {
+  all_dependent_configs = [ ":federated_common_pkg_deps" ]
+  sources = [ "daemon.cc" ]
+}
+
+executable("federated_service") {
+  deps = [ ":federated_common" ]
+  sources = [ "main.cc" ]
+}

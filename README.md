@@ -56,6 +56,7 @@ copies.
 | [disk_updater](./disk_updater/) | Utility for updating root disk firmware (e.g. SSDs and eMMC) |
 | [dlcservice](./dlcservice/) | Downloadable Content (DLC) Service daemon |
 | [easy-unlock](./easy-unlock/) | Daemon for handling Easy Unlock requests (e.g. unlocking Chromebooks with an Android device) |
+| [federated](./federated/) | Federated computation service (Federated Analytics & Federated Learning) |
 | [feedback](./feedback/) | Daemon for headless systems that want to gather feedback (normally Chrome manages it) |
 | [fitpicker](./fitpicker/) ||
 | [foomatic_shell](./foomatic_shell/) | Simple shell used by the foomatic-rip package |
