@@ -7,8 +7,11 @@
 #include <algorithm>
 #include <vector>
 
+#include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/optional.h>
+#include <brillo/file_utils.h>
 #include <tpm_manager/server/tpm_util.h>
 #include <trousers/trousers.h>
 #include <trousers/tss.h>
@@ -29,6 +32,15 @@ constexpr uint32_t kInfineonMfrSubCapability = 0x00000802;
 
 // The offset of DA counter in the Infineon-specific DA info data.
 constexpr size_t kInfineonDACounterOffset = 9;
+
+// The flag that tells if the tpm is full initialized.
+constexpr char kTpmFullyInitializedPath[] =
+    "/mnt/stateful_partition/.tpm_owned";
+
+bool TouchTpmFullyInitializedPath() {
+  return brillo::WriteBlobToFile<std::vector<char>>(
+      base::FilePath(kTpmFullyInitializedPath), {});
+}
 
 }  // namespace
 
@@ -58,6 +70,11 @@ bool TpmStatusImpl::CheckAndNotifyIfTpmOwned(
   }
 
   if (!is_owned_) {
+    if (!base::DeleteFile(base::FilePath(kTpmFullyInitializedPath),
+                          /*recursive=*/false)) {
+      LOG(WARNING) << __func__ << ": Failed to delete "
+                   << kTpmFullyInitializedPath;
+    }
     // We even haven't tried to take ownership yet.
     ownership_status_ = kTpmUnowned;
     *status = ownership_status_;
@@ -207,7 +224,11 @@ bool TpmStatusImpl::GetVersionInfo(uint32_t* family,
 }
 
 base::Optional<bool> TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
-  if (is_owner_password_default_) {
+  if (base::PathExists(base::FilePath(kTpmFullyInitializedPath))) {
+    is_owner_password_default_ = false;
+  }
+
+  if (is_owner_password_default_.has_value()) {
     return is_owner_password_default_;
   }
 
@@ -226,6 +247,10 @@ base::Optional<bool> TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
     is_owner_password_default_ = true;
   } else if (result == TPM_ERROR(TPM_E_AUTHFAIL)) {
     is_owner_password_default_ = false;
+    if (!TouchTpmFullyInitializedPath()) {
+      LOG(WARNING) << __func__ << ": Failed to touch "
+                   << kTpmFullyInitializedPath;
+    }
   } else {
     TPM_LOG(ERROR, result) << "Unexpected error calling |Tspi_TPM_GetStatus|.";
   }
@@ -284,6 +309,10 @@ void TpmStatusImpl::MarkRandomOwnerPasswordSet() {
   is_enable_initialized_ = is_enabled_ = is_owned_ = true;
   ownership_status_ = kTpmOwned;
   is_owner_password_default_ = false;
+  if (!TouchTpmFullyInitializedPath()) {
+    LOG(WARNING) << __func__ << ": Failed to touch "
+                 << kTpmFullyInitializedPath;
+  }
 }
 
 }  // namespace tpm_manager
