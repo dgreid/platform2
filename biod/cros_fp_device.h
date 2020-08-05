@@ -24,14 +24,18 @@ namespace biod {
 
 class CrosFpDevice : public CrosFpDeviceInterface {
  public:
-  using MkbpCallback = base::Callback<void(const uint32_t event)>;
-  // Use the CrosFpDeviceFactory instead of this constructor unless testing.
-  CrosFpDevice(BiodMetricsInterface* biod_metrics,
-               std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
-      : ec_command_factory_(std::move(ec_command_factory)),
-        biod_metrics_(biod_metrics) {}
-
-  bool Init();
+  static std::unique_ptr<CrosFpDevice> Create(
+      BiodMetricsInterface* biod_metrics,
+      std::unique_ptr<EcCommandFactoryInterface> ec_command_factory) {
+    // Using new to access non-public constructor.
+    // See https://abseil.io/tips/134.
+    auto dev = base::WrapUnique(
+        new CrosFpDevice(biod_metrics, std::move(ec_command_factory)));
+    if (!dev->Init()) {
+      return nullptr;
+    }
+    return dev;
+  }
 
   void SetMkbpEventCallback(MkbpCallback callback) override;
 
@@ -80,6 +84,14 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   static constexpr int kMaxIoAttempts = 2;
 
   static constexpr int kLastTemplate = -1;
+
+ protected:
+  CrosFpDevice(BiodMetricsInterface* biod_metrics,
+               std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
+      : ec_command_factory_(std::move(ec_command_factory)),
+        biod_metrics_(biod_metrics) {}
+
+  bool Init();
 
  private:
   bool EcDevInit();

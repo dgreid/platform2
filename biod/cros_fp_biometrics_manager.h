@@ -17,7 +17,6 @@
 
 #include "biod/biod_storage.h"
 #include "biod/cros_fp_device.h"
-#include "biod/cros_fp_device_factory.h"
 #include "biod/power_button_filter_interface.h"
 
 namespace biod {
@@ -28,7 +27,7 @@ class CrosFpBiometricsManager : public BiometricsManager {
  public:
   static std::unique_ptr<CrosFpBiometricsManager> Create(
       const scoped_refptr<dbus::Bus>& bus,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+      std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics);
 
   // BiometricsManager overrides:
@@ -61,7 +60,7 @@ class CrosFpBiometricsManager : public BiometricsManager {
  protected:
   CrosFpBiometricsManager(
       std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+      std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics);
   bool Init();
 
@@ -174,7 +173,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
   base::WeakPtrFactory<CrosFpBiometricsManager> weak_factory_;
 
   std::unique_ptr<PowerButtonFilterInterface> power_button_filter_;
-  std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory_;
   BiodStorage biod_storage_;
 
   bool use_positive_match_secret_;

@@ -23,7 +23,6 @@
 
 #include "biod/biod_crypto.h"
 #include "biod/biod_metrics.h"
-#include "biod/cros_fp_device_factory_impl.h"
 #include "biod/power_button_filter.h"
 
 namespace {
@@ -158,14 +157,20 @@ bool CrosFpBiometricsManager::ReloadAllRecords(std::string user_id) {
 
 std::unique_ptr<CrosFpBiometricsManager> CrosFpBiometricsManager::Create(
     const scoped_refptr<dbus::Bus>& bus,
-    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+    std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
     std::unique_ptr<BiodMetricsInterface> biod_metrics) {
+  if (!cros_fp_device) {
+    return nullptr;
+  }
+
   std::unique_ptr<CrosFpBiometricsManager> biometrics_manager(
       new CrosFpBiometricsManager(PowerButtonFilter::Create(bus),
-                                  std::move(cros_fp_device_factory),
+                                  std::move(cros_fp_device),
                                   std::move(biod_metrics)));
-  if (!biometrics_manager->Init())
+
+  if (!biometrics_manager->Init()) {
     return nullptr;
+  }
 
   return biometrics_manager;
 }
@@ -335,13 +340,13 @@ void CrosFpBiometricsManager::KillMcuSession() {
 
 CrosFpBiometricsManager::CrosFpBiometricsManager(
     std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-    std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+    std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
     std::unique_ptr<BiodMetricsInterface> biod_metrics)
     : biod_metrics_(std::move(biod_metrics)),
+      cros_dev_(std::move(cros_fp_device)),
       session_weak_factory_(this),
       weak_factory_(this),
       power_button_filter_(std::move(power_button_filter)),
-      cros_fp_device_factory_(std::move(cros_fp_device_factory)),
       biod_storage_(kCrosFpBiometricsManagerName,
                     base::Bind(&CrosFpBiometricsManager::LoadRecord,
                                base::Unretained(this))),
@@ -350,11 +355,8 @@ CrosFpBiometricsManager::CrosFpBiometricsManager(
 CrosFpBiometricsManager::~CrosFpBiometricsManager() {}
 
 bool CrosFpBiometricsManager::Init() {
-  cros_dev_ = cros_fp_device_factory_->Create(
-      base::Bind(&CrosFpBiometricsManager::OnMkbpEvent, base::Unretained(this)),
-      biod_metrics_.get());
-  if (cros_dev_ == nullptr)
-    return false;
+  cros_dev_->SetMkbpEventCallback(base::Bind(
+      &CrosFpBiometricsManager::OnMkbpEvent, base::Unretained(this)));
 
   use_positive_match_secret_ = cros_dev_->SupportsPositiveMatchSecret();
   return true;

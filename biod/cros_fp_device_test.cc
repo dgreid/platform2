@@ -28,7 +28,10 @@ class CrosFpDevice_ResetContext : public testing::Test {
  public:
   class MockCrosFpDevice : public CrosFpDevice {
    public:
-    using CrosFpDevice::CrosFpDevice;
+    MockCrosFpDevice(
+        BiodMetricsInterface* biod_metrics,
+        std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
+        : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
     MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
     MOCK_METHOD(bool, SetContext, (std::string user_id));
   };
@@ -89,7 +92,10 @@ class CrosFpDevice_SetContext : public testing::Test {
  public:
   class MockCrosFpDevice : public CrosFpDevice {
    public:
-    using CrosFpDevice::CrosFpDevice;
+    MockCrosFpDevice(
+        BiodMetricsInterface* biod_metrics,
+        std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
+        : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
     MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
     MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   };
@@ -156,11 +162,19 @@ class CrosFpDevice_DeadPixelCount : public testing::Test {
   CrosFpDevice_DeadPixelCount() {
     auto mock_command_factory = std::make_unique<MockEcCommandFactory>();
     mock_ec_command_factory_ = mock_command_factory.get();
-    mock_cros_fp_device_ = std::make_unique<CrosFpDevice>(
+    mock_cros_fp_device_ = std::make_unique<MockCrosFpDevice>(
         &mock_biod_metrics_, std::move(mock_command_factory));
   }
 
  protected:
+  class MockCrosFpDevice : public CrosFpDevice {
+   public:
+    MockCrosFpDevice(
+        BiodMetricsInterface* biod_metrics,
+        std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
+        : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
+  };
+
   class MockFpInfoCommand : public FpInfoCommand {
    public:
     MockFpInfoCommand() { ON_CALL(*this, Run).WillByDefault(Return(true)); }

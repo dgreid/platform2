@@ -77,13 +77,6 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
   std::vector<uint8_t> positive_match_secret_;
 };
 
-class FakeCrosFpDeviceFactoryImpl : public CrosFpDeviceFactory {
-  std::unique_ptr<CrosFpDeviceInterface> Create(
-      const MkbpCallback& callback,
-      BiodMetricsInterface* biod_metrics) override {
-    return std::make_unique<FakeCrosFpDevice>();
-  }
-};
 
 // Using a peer class to control access to the class under test is better than
 // making the text fixture a friend class.
@@ -107,12 +100,13 @@ class CrosFpBiometricsManagerPeer {
                     dbus::ObjectPath(power_manager::kPowerManagerServicePath)))
         .WillOnce(testing::Return(power_manager_proxy.get()));
 
-    cros_fp_biometrics_manager_ = CrosFpBiometricsManager::Create(
-        mock_bus, std::make_unique<FakeCrosFpDeviceFactoryImpl>(),
-        std::make_unique<metrics::MockBiodMetrics>());
+    auto fake_cros_dev = std::make_unique<FakeCrosFpDevice>();
     // Keep a pointer to the fake device to manipulate it later.
-    fake_cros_dev_ = static_cast<FakeCrosFpDevice*>(
-        cros_fp_biometrics_manager_->cros_dev_.get());
+    fake_cros_dev_ = fake_cros_dev.get();
+
+    cros_fp_biometrics_manager_ = CrosFpBiometricsManager::Create(
+        mock_bus, std::move(fake_cros_dev),
+        std::make_unique<metrics::MockBiodMetrics>());
   }
 
   // Methods to access or modify the fake device.

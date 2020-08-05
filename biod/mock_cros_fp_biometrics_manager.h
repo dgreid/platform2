@@ -31,12 +31,12 @@ class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
    */
   static std::unique_ptr<MockCrosFpBiometricsManager> Create(
       const scoped_refptr<dbus::Bus>& bus,
-      std::unique_ptr<CrosFpDeviceFactory> cros_fp_device_factory,
+      std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics) {
     // Using new to access non-public constructor.
     // See https://abseil.io/tips/134.
     auto mock = base::WrapUnique(new MockCrosFpBiometricsManager(
-        PowerButtonFilter::Create(bus), std::move(cros_fp_device_factory),
+        PowerButtonFilter::Create(bus), std::move(cros_fp_device),
         std::move(biod_metrics)));
     if (!mock->Init()) {
       return nullptr;
