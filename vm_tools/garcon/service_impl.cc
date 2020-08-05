@@ -336,6 +336,25 @@ grpc::Status ServiceImpl::GetDebugInformation(
     *debug_information += "\n";
   }
 
+  auto user_services =
+      std::vector<std::string>{"cros-garcon", "sommelier@0", "sommelier@1",
+                               "sommelier-x@0", "sommelier-x@1"};
+  for (const auto& service : user_services) {
+    *debug_information += "Filtered journalctl for " + service + ":\n";
+    std::string journalctl_user_out;
+    base::GetAppOutput(
+        {"journalctl", "--user-unit", service, "--since", "1 day ago"},
+        &journalctl_user_out);
+    std::vector<base::StringPiece> systemctl_user_out_lines =
+        base::SplitStringPiece(journalctl_user_out, "\n", base::TRIM_WHITESPACE,
+                               base::SPLIT_WANT_NONEMPTY);
+    for (const auto& line : systemctl_user_out_lines) {
+      *debug_information += "\t";
+      line.AppendToString(debug_information);
+      *debug_information += "\n";
+    }
+  }
+
   return grpc::Status::OK;
 }
 
