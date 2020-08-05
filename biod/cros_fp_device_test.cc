@@ -8,6 +8,7 @@
 #include "biod/cros_fp_device.h"
 #include "biod/mock_biod_metrics.h"
 #include "biod/mock_cros_fp_device.h"
+#include "biod/mock_ec_command_factory.h"
 
 using testing::Return;
 
@@ -21,22 +22,6 @@ class MockEcCommandInterface : public EcCommandInterface {
   MOCK_METHOD(uint32_t, Command, (), (const));
 };
 
-class MockEcCommandFactory : public EcCommandFactoryInterface {
- public:
-  std::unique_ptr<EcCommandInterface> FpContextCommand(
-      CrosFpDeviceInterface* cros_fp, const std::string& user_id) override {
-    auto cmd = std::make_unique<MockEcCommandInterface>();
-    EXPECT_CALL(*cmd, Run).WillOnce(testing::Return(true));
-    return cmd;
-  }
-
-  std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() override {
-    // Should never be called for this test.
-    EXPECT_TRUE(false);
-    return nullptr;
-  }
-};
-
 class CrosFpDevice_ResetContext : public testing::Test {
  public:
   class MockCrosFpDevice : public CrosFpDevice {
@@ -45,10 +30,19 @@ class CrosFpDevice_ResetContext : public testing::Test {
     MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
     MOCK_METHOD(bool, SetContext, (std::string user_id));
   };
+  class MockFpContextFactory : public MockEcCommandFactory {
+   public:
+    std::unique_ptr<EcCommandInterface> FpContextCommand(
+        CrosFpDeviceInterface* cros_fp, const std::string& user_id) override {
+      auto cmd = std::make_unique<MockEcCommandInterface>();
+      EXPECT_CALL(*cmd, Run).WillOnce(testing::Return(true));
+      return cmd;
+    }
+  };
   metrics::MockBiodMetrics mock_biod_metrics;
   MockCrosFpDevice mock_cros_fp_device{
       CrosFpDevice::MkbpCallback(), &mock_biod_metrics,
-      std::make_unique<MockEcCommandFactory>()};
+      std::make_unique<MockFpContextFactory>()};
 };
 
 TEST_F(CrosFpDevice_ResetContext, Success) {
@@ -98,10 +92,19 @@ class CrosFpDevice_SetContext : public testing::Test {
     MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
     MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   };
+  class MockFpContextFactory : public MockEcCommandFactory {
+   public:
+    std::unique_ptr<EcCommandInterface> FpContextCommand(
+        CrosFpDeviceInterface* cros_fp, const std::string& user_id) override {
+      auto cmd = std::make_unique<MockEcCommandInterface>();
+      EXPECT_CALL(*cmd, Run).WillOnce(testing::Return(true));
+      return cmd;
+    }
+  };
   metrics::MockBiodMetrics mock_biod_metrics;
   MockCrosFpDevice mock_cros_fp_device{
       CrosFpDevice::MkbpCallback(), &mock_biod_metrics,
-      std::make_unique<MockEcCommandFactory>()};
+      std::make_unique<MockFpContextFactory>()};
 };
 
 // Test that if FPMCU is in match mode, setting context will trigger a call to
