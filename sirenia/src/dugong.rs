@@ -8,8 +8,8 @@ use std::env;
 use std::io::{copy, stdin, stdout};
 use std::thread::spawn;
 
+use libchromeos::vsock::VsockCid;
 use sirenia::cli::{initialize_common_arguments, TransportType};
-use sirenia::to_sys_util::VsockCid;
 use sirenia::transport::{ClientTransport, IPClientTransport, Transport, VsockClientTransport};
 
 fn main() {

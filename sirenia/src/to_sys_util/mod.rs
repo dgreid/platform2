@@ -12,12 +12,7 @@ use std::io;
 use std::mem::MaybeUninit;
 use std::ptr::null_mut;
 
-use libc::{
-    self, c_int, sigfillset, sigprocmask, sigset_t, wait, ECHILD, SIG_BLOCK, SIG_UNBLOCK,
-    VMADDR_CID_ANY, VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR,
-};
-
-const VMADDR_CID_LOCAL: u32 = 1;
+use libc::{self, c_int, sigfillset, sigprocmask, sigset_t, wait, ECHILD, SIG_BLOCK, SIG_UNBLOCK};
 
 pub fn errno() -> c_int {
     io::Error::last_os_error().raw_os_error().unwrap()
@@ -70,38 +65,5 @@ pub unsafe fn fork() -> Result<i32, io::Error> {
         Err(io::Error::last_os_error())
     } else {
         Ok(ret)
-    }
-}
-
-#[derive(Debug, Copy, Clone)]
-pub enum VsockCid {
-    Any,
-    Hypervisor,
-    Local,
-    Host,
-    Cid(u32),
-}
-
-impl From<u32> for VsockCid {
-    fn from(c: u32) -> Self {
-        match c {
-            VMADDR_CID_ANY => VsockCid::Any,
-            VMADDR_CID_HYPERVISOR => VsockCid::Hypervisor,
-            VMADDR_CID_LOCAL => VsockCid::Local,
-            VMADDR_CID_HOST => VsockCid::Host,
-            _ => VsockCid::Cid(c),
-        }
-    }
-}
-
-impl Into<u32> for VsockCid {
-    fn into(self) -> u32 {
-        match self {
-            VsockCid::Any => VMADDR_CID_ANY,
-            VsockCid::Hypervisor => VMADDR_CID_HYPERVISOR,
-            VsockCid::Local => VMADDR_CID_LOCAL,
-            VsockCid::Host => VMADDR_CID_HOST,
-            VsockCid::Cid(c) => c,
-        }
     }
 }

@@ -21,7 +21,7 @@ use dbus::{
     self, tree, Connection as DBusConnection, Error as DBusError, Message as DBusMessage, OwnedFd,
 };
 use libchromeos::syslog;
-use libchromeos::vsock::{VsockListener, VMADDR_PORT_ANY};
+use libchromeos::vsock::{VsockCid, VsockListener, VMADDR_PORT_ANY};
 use log::{error, warn};
 use protobuf::{self, Message as ProtoMessage, ProtobufError};
 use sys_util::{self, block_signal, pipe, EventFd, PollContext, PollToken};
@@ -71,7 +71,7 @@ enum Error {
     DBusRegisterTree(DBusError),
     EventFdClone(sys_util::Error),
     EventFdNew(sys_util::Error),
-    IncorrectCid(u32),
+    IncorrectCid(VsockCid),
     LifelinePipe(sys_util::Error),
     NoListenerForPort(u16),
     NoSessionForTag(SessionTag),
@@ -141,7 +141,7 @@ struct TcpForwardTarget {
     pub vm_name: String,
     pub container_name: String,
     pub owner_id: String,
-    pub vsock_cid: u32,
+    pub vsock_cid: VsockCid,
 }
 
 /// A tag that uniquely identifies a particular forwarding session. This has arbitrarily been
@@ -464,7 +464,8 @@ fn create_forwarder_session(
 ) -> Result<ForwarderSession> {
     let (tcp_stream, _) = listener.accept().map_err(Error::TcpAccept)?;
     // Bind a vsock port, tell the guest to connect, and accept the connection.
-    let mut vsock_listener = VsockListener::bind(VMADDR_PORT_ANY).map_err(Error::BindVsock)?;
+    let mut vsock_listener =
+        VsockListener::bind(VsockCid::Any, VMADDR_PORT_ANY).map_err(Error::BindVsock)?;
     vsock_listener
         .set_nonblocking(true)
         .map_err(Error::SetVsockNonblocking)?;
@@ -531,7 +532,7 @@ fn update_listening_ports(
             vm_name: forward_target.take_vm_name(),
             owner_id: forward_target.take_owner_id(),
             container_name: forward_target.take_container_name(),
-            vsock_cid: forward_target.vsock_cid,
+            vsock_cid: forward_target.vsock_cid.into(),
         });
     }
 

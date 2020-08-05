@@ -16,10 +16,8 @@ use std::marker::Send;
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 
 use core::mem::replace;
-use libchromeos::vsock::{self, VsockListener, VsockStream};
+use libchromeos::vsock::{self, VsockCid, VsockListener, VsockStream};
 use sys_util::{handle_eintr, pipe};
-
-use super::to_sys_util::VsockCid;
 
 const DEFAULT_PORT: u32 = 5552;
 
@@ -165,7 +163,7 @@ pub struct VsockServerTransport(VsockListener);
 
 impl VsockServerTransport {
     pub fn new() -> Result<Self> {
-        let listener = VsockListener::bind(DEFAULT_PORT).map_err(Error::Bind)?;
+        let listener = VsockListener::bind(VsockCid::Any, DEFAULT_PORT).map_err(Error::Bind)?;
         Ok(VsockServerTransport(listener))
     }
 }
@@ -189,7 +187,7 @@ impl VsockClientTransport {
 impl ClientTransport for VsockClientTransport {
     fn connect(&mut self) -> Result<Transport> {
         let addr = vsock::SocketAddr {
-            cid: self.0.into(),
+            cid: self.0,
             port: DEFAULT_PORT,
         };
         let stream = handle_eintr!(VsockStream::connect(&addr)).map_err(Error::Connect)?;

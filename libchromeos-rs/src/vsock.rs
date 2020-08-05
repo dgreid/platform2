@@ -6,20 +6,24 @@
 use std::fmt;
 use std::io;
 use std::mem::{self, size_of};
+use std::num::ParseIntError;
 use std::os::raw::{c_int, c_uchar, c_uint, c_ushort};
 use std::os::unix::io::{AsRawFd, IntoRawFd, RawFd};
 use std::result;
 use std::str::FromStr;
 
-use libc::{self, c_void, sa_family_t, size_t, sockaddr, socklen_t, F_GETFL, F_SETFL, O_NONBLOCK};
+use libc::{
+    self, c_void, sa_family_t, size_t, sockaddr, socklen_t, F_GETFL, F_SETFL, O_NONBLOCK,
+    VMADDR_CID_ANY, VMADDR_CID_HOST, VMADDR_CID_HYPERVISOR,
+};
 
 // The domain for vsock sockets.
 const AF_VSOCK: sa_family_t = 40;
 
-// Vsock equivalent of INADDR_ANY.  Indicates the context id of the current endpoint.
-pub const VMADDR_CID_ANY: c_uint = c_uint::max_value();
+// Vsock loopback address.
+const VMADDR_CID_LOCAL: c_uint = 1;
 
-// Vsock equivalent of binding on port 0. Binds to a random port.
+/// Vsock equivalent of binding on port 0. Binds to a random port.
 pub const VMADDR_PORT_ANY: c_uint = c_uint::max_value();
 
 // The number of bytes of padding to be added to the sockaddr_vm struct.  Taken directly
@@ -47,10 +51,70 @@ impl fmt::Display for AddrParseError {
     }
 }
 
+/// The vsock equivalent of an IP address.
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+pub enum VsockCid {
+    /// Vsock equivalent of INADDR_ANY. Indicates the context id of the current endpoint.
+    Any,
+    /// An address that refers to the bare-metal machine that serves as the hypervisor.
+    Hypervisor,
+    /// The loopback address.
+    Local,
+    /// The parent machine. It may not be the hypervisor for nested VMs.
+    Host,
+    /// An assigned CID that serves as the address for VSOCK.
+    Cid(c_uint),
+}
+
+impl fmt::Display for VsockCid {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        match &self {
+            VsockCid::Any => write!(fmt, "Any"),
+            VsockCid::Hypervisor => write!(fmt, "Hypervisor"),
+            VsockCid::Local => write!(fmt, "Local"),
+            VsockCid::Host => write!(fmt, "Host"),
+            VsockCid::Cid(c) => write!(fmt, "'{}'", c),
+        }
+    }
+}
+
+impl From<c_uint> for VsockCid {
+    fn from(c: c_uint) -> Self {
+        match c {
+            VMADDR_CID_ANY => VsockCid::Any,
+            VMADDR_CID_HYPERVISOR => VsockCid::Hypervisor,
+            VMADDR_CID_LOCAL => VsockCid::Local,
+            VMADDR_CID_HOST => VsockCid::Host,
+            _ => VsockCid::Cid(c),
+        }
+    }
+}
+
+impl FromStr for VsockCid {
+    type Err = ParseIntError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let c: c_uint = s.parse()?;
+        Ok(c.into())
+    }
+}
+
+impl Into<c_uint> for VsockCid {
+    fn into(self) -> c_uint {
+        match self {
+            VsockCid::Any => VMADDR_CID_ANY,
+            VsockCid::Hypervisor => VMADDR_CID_HYPERVISOR,
+            VsockCid::Local => VMADDR_CID_LOCAL,
+            VsockCid::Host => VMADDR_CID_HOST,
+            VsockCid::Cid(c) => c,
+        }
+    }
+}
+
 /// An address associated with a virtual socket.
 #[derive(Debug, Copy, Clone)]
 pub struct SocketAddr {
-    pub cid: c_uint,
+    pub cid: VsockCid,
     pub port: c_uint,
 }
 
@@ -143,7 +207,7 @@ impl VsockStream {
 
         let mut svm: sockaddr_vm = Default::default();
         svm.svm_family = AF_VSOCK;
-        svm.svm_cid = sockaddr.cid;
+        svm.svm_cid = sockaddr.cid.into();
         svm.svm_port = sockaddr.port;
 
         // Safe because this just connects a vsock socket, and the return value is checked.
@@ -253,7 +317,7 @@ pub struct VsockListener {
 impl VsockListener {
     /// Creates a new `VsockListener` bound to the specified port on the current virtual socket
     /// endpoint.
-    pub fn bind(port: c_uint) -> io::Result<VsockListener> {
+    pub fn bind(cid: VsockCid, port: c_uint) -> io::Result<VsockListener> {
         // The compiler should optimize this out since these are both compile-time constants.
         assert_eq!(size_of::<sockaddr_vm>(), size_of::<sockaddr>());
 
@@ -271,7 +335,7 @@ impl VsockListener {
 
         let mut svm: sockaddr_vm = Default::default();
         svm.svm_family = AF_VSOCK;
-        svm.svm_cid = VMADDR_CID_ANY;
+        svm.svm_cid = cid.into();
         svm.svm_port = port;
 
         // Safe because this doesn't modify any memory and we check the return value.
@@ -357,7 +421,7 @@ impl VsockListener {
         Ok((
             VsockStream { fd },
             SocketAddr {
-                cid: svm.svm_cid,
+                cid: svm.svm_cid.into(),
                 port: svm.svm_port,
             },
         ))

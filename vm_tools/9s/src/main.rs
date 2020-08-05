@@ -219,9 +219,9 @@ fn spawn_server_thread<
 fn run_vsock_server(
     server_params: Arc<ServerParams>,
     port: c_uint,
-    accept_cid: c_uint,
+    accept_cid: VsockCid,
 ) -> io::Result<()> {
-    let listener = VsockListener::bind(port)?;
+    let listener = VsockListener::bind(VsockCid::Any, port)?;
 
     loop {
         let (stream, peer) = listener.accept()?;
@@ -409,7 +409,7 @@ fn main() -> Result<()> {
     {
         ListenAddress::Vsock(port) => {
             let accept_cid = if let Some(cid) = matches.opt_str("accept_cid") {
-                cid.parse::<c_uint>().map_err(Error::Cid)
+                cid.parse::<VsockCid>().map_err(Error::Cid)
             } else {
                 Err(Error::MissingAcceptCid)
             }?;
