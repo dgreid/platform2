@@ -10,7 +10,7 @@ getopts = "0.2"
 libc = "0.2"
 libchromeos = { path = "../../libchromeos-rs" } # provided by ebuild
 log = "0.4"
-protobuf = "2"
+protobuf = "2.16.2"
 remain = "0.2"
 sys_util = { path = "../../../platform/crosvm/sys_util" } # provided by ebuild
 system_api = { path = "system_api" }

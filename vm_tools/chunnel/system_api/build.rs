@@ -32,13 +32,13 @@ fn main() {
     ];
     let include_dirs = [chunneld_dir, cicerone_dir];
 
-    protoc_rust::run(protoc_rust::Args {
-        out_dir: out_dir.as_os_str().to_str().unwrap(),
-        input: &paths_to_strs(&input_files),
-        includes: &paths_to_strs(&include_dirs),
-        customize: Default::default(),
-    })
-    .expect("protoc");
+    protoc_rust::Codegen::new()
+        .out_dir(out_dir.as_os_str().to_str().unwrap())
+        .inputs(&paths_to_strs(&input_files))
+        .includes(&paths_to_strs(&include_dirs))
+        .customize(Default::default())
+        .run()
+        .expect("protoc");
 
     let mut path_include_mods = String::new();
     for input_file in input_files.iter() {
