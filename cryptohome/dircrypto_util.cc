@@ -418,9 +418,45 @@ bool AddDirectoryKey(const brillo::SecureBlob& key,
 
 bool RemoveDirectoryKey(const KeyReference& key_reference,
                         const base::FilePath& dir) {
-  return CheckFscryptKeyIoctlSupport()
-             ? RemoveFscryptKey(key_reference)
-             : legacy::RemoveSessionKey(key_reference, dir);
+  // If the key reference is empty (eg. after a crash), create
+  // the key reference from the policy set on the directory.
+  KeyReference ref;
+  if (key_reference.reference.size() == 0) {
+    struct fscrypt_get_policy_ex_arg arg;
+    memset(&arg, 0, sizeof(fscrypt_get_policy_ex_arg));
+    arg.policy_size = sizeof(arg.policy);
+
+    LOG(INFO)
+        << "Empty key reference; attempting to get policy from directory.";
+    if (GetDirectoryPolicy(dir, &arg) < 0) {
+      LOG(ERROR) << "Failed to get fscrypt policy from directory " << dir;
+      return false;
+    }
+
+    switch (arg.policy.version) {
+      case FSCRYPT_POLICY_V1:
+        ref.reference.resize(FSCRYPT_KEY_DESCRIPTOR_SIZE);
+        memcpy(ref.reference.char_data(), arg.policy.v1.master_key_descriptor,
+               FSCRYPT_KEY_DESCRIPTOR_SIZE);
+        ref.policy_version = FSCRYPT_POLICY_V1;
+        break;
+      case FSCRYPT_POLICY_V2:
+        ref.reference.resize(FSCRYPT_KEY_IDENTIFIER_SIZE);
+        memcpy(ref.reference.char_data(), arg.policy.v2.master_key_identifier,
+               FSCRYPT_KEY_IDENTIFIER_SIZE);
+        ref.policy_version = FSCRYPT_POLICY_V2;
+        break;
+      default:
+        NOTREACHED() << "Invalid encryption policy version: "
+                     << arg.policy.version;
+        return false;
+    }
+  } else {
+    ref = key_reference;
+  }
+
+  return CheckFscryptKeyIoctlSupport() ? RemoveFscryptKey(ref)
+                                       : legacy::RemoveSessionKey(ref, dir);
 }
 
 }  // namespace dircrypto
