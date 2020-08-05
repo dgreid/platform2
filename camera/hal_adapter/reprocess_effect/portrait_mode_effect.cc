@@ -21,8 +21,9 @@
 #include <base/json/json_reader.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/memory/shared_memory.h>
+#include <base/memory/unsafe_shared_memory_region.h>
 #include <base/numerics/safe_conversions.h>
+#include <base/posix/eintr_wrapper.h>
 #include <base/process/launch.h>
 #include <base/stl_util.h>
 #include <base/values.h>
@@ -125,13 +126,19 @@ int32_t PortraitModeEffect::ReprocessRequest(
   if (entry.data.u8[0] != 0) {
     const uint32_t kRGBNumOfChannels = 3;
     size_t rgb_buf_size = width * height * kRGBNumOfChannels;
-    base::SharedMemory input_rgb_shm;
-    if (!input_rgb_shm.CreateAndMapAnonymous(rgb_buf_size)) {
+    base::UnsafeSharedMemoryRegion input_rgb_shm_region =
+        base::UnsafeSharedMemoryRegion::Create(rgb_buf_size);
+    base::WritableSharedMemoryMapping input_rgb_shm_mapping =
+        input_rgb_shm_region.Map();
+    if (!input_rgb_shm_mapping.IsValid()) {
       LOGF(ERROR) << "Failed to create shared memory for input RGB buffer";
       return -ENOMEM;
     }
-    base::SharedMemory output_rgb_shm;
-    if (!output_rgb_shm.CreateAndMapAnonymous(rgb_buf_size)) {
+    base::UnsafeSharedMemoryRegion output_rgb_shm_region =
+        base::UnsafeSharedMemoryRegion::Create(rgb_buf_size);
+    base::WritableSharedMemoryMapping output_rgb_shm_mapping =
+        output_rgb_shm_region.Map();
+    if (!output_rgb_shm_mapping.IsValid()) {
       LOGF(ERROR) << "Failed to create shared memory for output RGB buffer";
       return -ENOMEM;
     }
@@ -140,8 +147,9 @@ int32_t PortraitModeEffect::ReprocessRequest(
     base::ScopedClosureRunner result_metadata_runner(
         base::Bind(&PortraitModeEffect::UpdateResultMetadata,
                    base::Unretained(this), result_metadata, &result));
-    result = ConvertYUVToRGB(v4l2_format, *input_ycbcr, input_rgb_shm.memory(),
-                             rgb_buf_stride, width, height);
+    result = ConvertYUVToRGB(v4l2_format, *input_ycbcr,
+                             input_rgb_shm_mapping.memory(), rgb_buf_stride,
+                             width, height);
     if (result != 0) {
       LOGF(ERROR) << "Failed to convert from YUV to RGB";
       return result;
@@ -153,9 +161,9 @@ int32_t PortraitModeEffect::ReprocessRequest(
     // the call of execve(). Duplicated descriptors do not share the
     // close-on-exec flag.
     base::ScopedFD dup_input_rgb_buf_fd(
-        HANDLE_EINTR(dup(input_rgb_shm.handle().GetHandle())));
+        HANDLE_EINTR(dup(input_rgb_shm_region.GetPlatformHandle().fd)));
     base::ScopedFD dup_output_rgb_buf_fd(
-        HANDLE_EINTR(dup(output_rgb_shm.handle().GetHandle())));
+        HANDLE_EINTR(dup(output_rgb_shm_region.GetPlatformHandle().fd)));
 
     class ScopedHandle {
      public:
@@ -180,9 +188,9 @@ int32_t PortraitModeEffect::ReprocessRequest(
     };
 
     ScopedHandle input_buffer_handle(gpu_algo_manager_,
-                                     dup_input_rgb_buf_fd.get());
+                                     dup_input_rgb_buf_fd.release());
     ScopedHandle output_buffer_handle(gpu_algo_manager_,
-                                      dup_output_rgb_buf_fd.get());
+                                      dup_output_rgb_buf_fd.release());
     if (!input_buffer_handle.IsValid() || !output_buffer_handle.IsValid()) {
       LOGF(ERROR) << "Failed to register buffers";
       result = -EINVAL;
@@ -216,7 +224,7 @@ int32_t PortraitModeEffect::ReprocessRequest(
       return 0;
     }
 
-    result = ConvertRGBToYUV(output_rgb_shm.memory(), rgb_buf_stride,
+    result = ConvertRGBToYUV(output_rgb_shm_mapping.memory(), rgb_buf_stride,
                              v4l2_format, *output_ycbcr, width, height);
     if (result != 0) {
       LOGF(ERROR) << "Failed to convert from RGB to YUV";
