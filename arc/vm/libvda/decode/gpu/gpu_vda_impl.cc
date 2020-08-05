@@ -460,9 +460,27 @@ GpuVdaImpl::GpuVdaImpl(VafConnection* conn) : connection_(conn) {}
 
 GpuVdaImpl::~GpuVdaImpl() = default;
 
+std::vector<vda_input_format_t> GpuVdaImpl::GetSupportedInputFormats() {
+  std::vector<vda_input_format_t> supported_input_formats;
+
+  for (int i = 0; i < base::size(kInputFormats); i++) {
+    auto* context = InitDecodeSession(kInputFormats[i].profile);
+    if (context) {
+      supported_input_formats.emplace_back(kInputFormats[i]);
+      CloseDecodeSession(context);
+    }
+  }
+
+  return supported_input_formats;
+}
+
 bool GpuVdaImpl::PopulateCapabilities() {
-  capabilities_.num_input_formats = base::size(kInputFormats);
-  capabilities_.input_formats = kInputFormats;
+  input_formats_ = GetSupportedInputFormats();
+  if (input_formats_.empty())
+    return false;
+
+  capabilities_.num_input_formats = input_formats_.size();
+  capabilities_.input_formats = input_formats_.data();
 
   output_formats_ = GetSupportedRawFormats(GbmUsageType::DECODE);
   if (output_formats_.empty())
@@ -474,10 +492,13 @@ bool GpuVdaImpl::PopulateCapabilities() {
 }
 
 bool GpuVdaImpl::Initialize() {
-  if (!PopulateCapabilities())
-    return false;
-
   ipc_task_runner_ = connection_->GetIpcTaskRunner();
+
+  if (!PopulateCapabilities()) {
+    ipc_task_runner_.reset();
+    return false;
+  }
+
   return true;
 }
 

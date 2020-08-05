@@ -42,6 +42,7 @@ class GpuVdaImpl : public VdaImpl {
   static GpuVdaImpl* Create(VafConnection* conn);
 
  private:
+  std::vector<vda_input_format_t> GetSupportedInputFormats();
   bool PopulateCapabilities();
   bool Initialize();
   void InitializeOnIpcThread(bool* init_success);
@@ -56,6 +57,7 @@ class GpuVdaImpl : public VdaImpl {
   void CloseDecodeSessionOnIpcThread(VdaContext* context);
 
   arc::VafConnection* const connection_;
+  std::vector<vda_input_format_t> input_formats_;
   std::vector<vda_pixel_format_t> output_formats_;
   scoped_refptr<base::SingleThreadTaskRunner> ipc_task_runner_;
 };
