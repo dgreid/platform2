@@ -12,6 +12,13 @@
 
 #include "cros-camera/timezone.h"
 
+// TODO(crbug.com/661877): Wrap this with kernel version check once the
+// format is introduced to kernel.
+#ifndef V4L2_PIX_FMT_INVZ
+// 16 bit depth, Realsense SR300.
+#define V4L2_PIX_FMT_INVZ v4l2_fourcc('I', 'N', 'V', 'Z')
+#endif
+
 namespace cros {
 
 // Fields without default value would be filled in runtime.

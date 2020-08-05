@@ -174,7 +174,15 @@ V4L2FrameBuffer::V4L2FrameBuffer(base::ScopedFD fd,
   width_ = width;
   height_ = height;
   fourcc_ = fourcc;
-  num_planes_ = 1;
+
+  switch (fourcc_) {
+    case V4L2_PIX_FMT_YUV420:
+      num_planes_ = 3;
+      break;
+    default:
+      num_planes_ = 1;
+      break;
+  }
   data_.resize(num_planes_, nullptr);
   stride_.resize(num_planes_, 0);
 }
@@ -213,6 +221,13 @@ int V4L2FrameBuffer::Map() {
       break;
     case V4L2_PIX_FMT_YUYV:
       stride_[0] = width_ * 2;
+      break;
+    case V4L2_PIX_FMT_YUV420:
+      stride_[0] = width_;
+      stride_[1] = (width_ + 1) / 2;
+      stride_[2] = (width_ + 1) / 2;
+      data_[1] = data_[0] + stride_[0] * height_;
+      data_[2] = data_[1] + stride_[1] * (height_ + 1) / 2;
       break;
     default:
       LOGF(WARNING) << "The strides for pixel format "

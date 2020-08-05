@@ -85,9 +85,11 @@ size_t ImageProcessor::GetConvertedSize(const FrameBuffer& frame) {
       }
       return frame.GetStride(FrameBuffer::YPLANE) * frame.GetHeight() +
              frame.GetStride(FrameBuffer::UPLANE) * frame.GetHeight() / 2;
+    case V4L2_PIX_FMT_YUYV:
     case V4L2_PIX_FMT_RGBX32:
     case V4L2_PIX_FMT_RGB24:
       return frame.GetStride() * frame.GetHeight();
+    case V4L2_PIX_FMT_INVZ:
     case V4L2_PIX_FMT_Y16:
     case V4L2_PIX_FMT_Z16:
       return 2 * frame.GetStride() * frame.GetHeight();
@@ -261,7 +263,8 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
                     << " is unsupported for NV12 source format.";
         return -EINVAL;
     }
-  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_MJPEG) {
+  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_JPEG ||
+             in_frame.GetFourcc() == V4L2_PIX_FMT_MJPEG) {
     switch (out_frame->GetFourcc()) {
       case V4L2_PIX_FMT_YUV420:     // YU12
       case V4L2_PIX_FMT_YUV420M: {  // YM12, multiple planes YU12
@@ -345,7 +348,8 @@ int ImageProcessor::ConvertFormat(const FrameBuffer& in_frame,
         return -EINVAL;
       }
     }
-  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_Y16 ||
+  } else if (in_frame.GetFourcc() == V4L2_PIX_FMT_INVZ ||
+             in_frame.GetFourcc() == V4L2_PIX_FMT_Y16 ||
              in_frame.GetFourcc() == V4L2_PIX_FMT_Z16) {
     if (!temp_i420_buffer_gray_ ||
         temp_i420_buffer_gray_->GetWidth() != in_frame.GetWidth() ||
