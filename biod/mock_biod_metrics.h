@@ -14,6 +14,7 @@ namespace metrics {
 
 class MockBiodMetrics : public BiodMetricsInterface {
  public:
+  MockBiodMetrics() = default;
   ~MockBiodMetrics() override = default;
 
   MOCK_METHOD(bool, SendEnrolledFingerCount, (int finger_count), (override));
