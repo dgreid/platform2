@@ -110,13 +110,6 @@ that before installing any DLC files, you have to add the dlc prefix path to
 
 See an example of a DLC ebuild: [dummy-dlc]
 
-To avoid generating large tarballs with all the DLC build files, a configuration
-file should be added under
-src/third_party/chromiumos-overlay/chromeos/config/env/\[name of ebuild\]. This
-reduces the build time and disk space used by the build.
-
-See the example: [dummy-dlc config]
-
 ## Write platform code to request DLC
 
 A DLC is downloaded (from Omaha server) and installed at runtime by dlcservice.
@@ -186,5 +179,4 @@ A DLC is updated at the same time the device itself is updated.
 [tast]: go/tast
 [tast-deps]: go/tast-deps
 [dummy-dlc]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos-base/dummy-dlc/dummy-dlc-1.0.0.ebuild
-[dummy-dlc config]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/chromeos/config/env/chromeos-base/dummy-dlc
 [overlay-eve make.defaults]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/overlay-eve/profiles/base/make.defaults
