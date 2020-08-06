@@ -33,6 +33,7 @@ class ViewerPlaintext : public Multiplexer::Observer {
   FRIEND_TEST(ViewerPlaintextTest, GetBootIdAt);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntry);
   FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId);
+  FRIEND_TEST(ViewerPlaintextTest, ShouldFilterOutEntryWithCursor);
 
   enum class CursorMode { UNSPECIFIED, SAME_AND_NEWER, NEWER };
 

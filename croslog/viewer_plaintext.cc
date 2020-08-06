@@ -62,12 +62,16 @@ void ViewerPlaintext::Initialize() {
       config_grep_.reset();
   }
 
-  if (!config_.cursor.empty()) {
+  if (!config_.after_cursor.empty()) {
     if (ParseCursor(config_.after_cursor, &config_cursor_time_))
       config_cursor_mode_ = CursorMode::NEWER;
-  } else if (!config_.after_cursor.empty()) {
+    else
+      LOG(WARNING) << "Invalid cursor format in 'after-cursor' option.";
+  } else if (!config_.cursor.empty()) {
     if (ParseCursor(config_.cursor, &config_cursor_time_))
       config_cursor_mode_ = CursorMode::SAME_AND_NEWER;
+    else
+      LOG(WARNING) << "Invalid cursor format in 'cursor' option.";
   }
 
   config_show_cursor_ = config_.show_cursor && !config_.follow;

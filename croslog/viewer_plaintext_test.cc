@@ -6,6 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include "croslog/cursor_util.h"
+
 namespace croslog {
 
 class ViewerPlaintextTest : public ::testing::Test {
@@ -166,6 +168,38 @@ TEST_F(ViewerPlaintextTest, ShouldFilterOutEntryWithBootId) {
     ViewerPlaintext v(c, BootRecords(GenerateBootLog(now)));
     EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
     EXPECT_TRUE(v.ShouldFilterOutEntry(e2));
+  }
+}
+
+TEST_F(ViewerPlaintextTest, ShouldFilterOutEntryWithCursor) {
+  base::Time now = base::Time::Now();
+
+  {
+    Config c;
+    c.cursor = GenerateCursor(now);
+
+    LogEntry e1 = GenerateLogEntry(now - base::TimeDelta::FromSeconds(2));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+
+    ViewerPlaintext v(c);
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e2));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
+  }
+
+  {
+    Config c;
+    c.after_cursor = GenerateCursor(now);
+
+    LogEntry e1 = GenerateLogEntry(now - base::TimeDelta::FromSeconds(2));
+    LogEntry e2 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(0));
+    LogEntry e3 = GenerateLogEntry(now + base::TimeDelta::FromSeconds(2));
+
+    ViewerPlaintext v(c);
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e1));
+    EXPECT_TRUE(v.ShouldFilterOutEntry(e2));
+    EXPECT_FALSE(v.ShouldFilterOutEntry(e3));
   }
 }
 
