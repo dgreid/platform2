@@ -358,6 +358,7 @@ void Service::Disconnect(Error* error, const char* reason) {
 void Service::DisconnectWithFailure(ConnectFailure failure,
                                     Error* error,
                                     const char* reason) {
+  SLOG(this, 1) << __func__ << ": " << failure;
   CHECK(reason);
   Disconnect(error, reason);
   SetFailure(failure);
@@ -561,6 +562,7 @@ void Service::SaveFailure() {
 }
 
 void Service::SetFailure(ConnectFailure failure) {
+  SLOG(this, 1) << __func__ << ": " << failure;
   failure_ = failure;
   SaveFailure();
   failed_time_ = time(nullptr);
@@ -569,6 +571,7 @@ void Service::SetFailure(ConnectFailure failure) {
 }
 
 void Service::SetFailureSilent(ConnectFailure failure) {
+  SLOG(this, 1) << __func__ << ": " << failure;
   NoteFailureEvent();
   // Note that order matters here, since SetState modifies |failure_| and
   // |failed_time_|.
@@ -1021,6 +1024,8 @@ const char* Service::ConnectFailureToString(const ConnectFailure& state) {
       return kErrorNotAuthenticated;
     case kFailureTooManySTAs:
       return kErrorTooManySTAs;
+    case kFailureDisconnect:
+      return kErrorDisconnect;
     case kFailureMax:
       NOTREACHED();
   }
@@ -1786,6 +1791,7 @@ void Service::UpdateErrorProperty() {
   if (error == error_) {
     return;
   }
+  LOG(INFO) << __func__ << ": " << error;
   error_ = error;
   adaptor_->EmitStringChanged(kErrorProperty, error);
 }

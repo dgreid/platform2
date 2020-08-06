@@ -483,6 +483,9 @@ class Metrics : public DefaultServiceObserver {
     kDeviceTechnologyTypeMax
   };
 
+  // These correspond to entries in Chrome's tools/metrics/histograms/enums.xml.
+  // Please do not remove entries (append 'Deprecated' instead), and update the
+  // enums.xml file when entries are added.
   enum NetworkServiceError {
     kNetworkServiceErrorNone = 0,
     kNetworkServiceErrorAAA = 1,
@@ -509,6 +512,7 @@ class Metrics : public DefaultServiceObserver {
     kNetworkServiceErrorNotAssociated = 22,
     kNetworkServiceErrorNotAuthenticated = 23,
     kNetworkServiceErrorTooManySTAs = 24,
+    kNetworkServiceErrorDisconnect = 25,
     kNetworkServiceErrorMax
   };
 

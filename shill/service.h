@@ -112,6 +112,10 @@ class Service : public base::RefCounted<Service> {
     // WiFi authentication failure that doesn't correspond to any other failure
     kFailureNotAuthenticated,
     kFailureTooManySTAs,
+    // The service disconnected. This may happen when the device suspends or
+    // switches to a different network. These errors are generally ignored by
+    // the client (i.e. Chrome).
+    kFailureDisconnect,
     kFailureMax
   };
   enum ConnectState {

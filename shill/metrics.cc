@@ -2094,6 +2094,9 @@ void Metrics::SendServiceFailure(const Service& service) {
     case Service::kFailureTooManySTAs:
       error = kNetworkServiceErrorTooManySTAs;
       break;
+    case Service::kFailureDisconnect:
+      error = kNetworkServiceErrorDisconnect;
+      break;
     case Service::kFailureUnknown:
     case Service::kFailureMax:
       error = kNetworkServiceErrorUnknown;

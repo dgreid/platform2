@@ -983,7 +983,7 @@ void WiFi::HandleDisconnect() {
 }
 
 void WiFi::ServiceDisconnected(WiFiServiceRefPtr affected_service) {
-  SLOG(this, 2) << __func__ << " service " << affected_service->log_name();
+  SLOG(this, 1) << __func__ << " service " << affected_service->log_name();
 
   // Check if service was explicitly disconnected due to failure or
   // is explicitly disconnected by user.
@@ -1000,18 +1000,23 @@ void WiFi::ServiceDisconnected(WiFiServiceRefPtr affected_service) {
     if (SuspectCredentials(affected_service, &failure)) {
       // If we've reached here, |SuspectCredentials| has already set
       // |failure| to the appropriate value.
-    } else if ((supplicant_disconnect_reason_ ==
-                    IEEE_80211::kReasonCodeInactivity ||
-                supplicant_disconnect_reason_ ==
-                    IEEE_80211::kReasonCodeSenderHasLeft) &&
-               disconnect_signal_dbm_ <= disconnect_threshold_dbm_ &&
-               disconnect_signal_dbm_ != kDefaultDisconnectDbm) {
-      // Disconnected due to service being out of range.
-      failure = Service::kFailureOutOfRange;
     } else {
+      SLOG(this, 2) << "Supplicant disconnect reason: "
+                    << IEEE_80211::ReasonToString(
+                           supplicant_disconnect_reason_);
       // Disconnected for some other reason.
       // Map IEEE error codes to shill error codes.
       switch (supplicant_disconnect_reason_) {
+        case IEEE_80211::kReasonCodeInactivity:
+        case IEEE_80211::kReasonCodeSenderHasLeft:
+          SLOG(this, 2) << "Disconnect signal: " << disconnect_signal_dbm_;
+          if (disconnect_signal_dbm_ <= disconnect_threshold_dbm_ &&
+              disconnect_signal_dbm_ != kDefaultDisconnectDbm) {
+            failure = Service::kFailureOutOfRange;
+          } else {
+            failure = Service::kFailureDisconnect;
+          }
+          break;
         case IEEE_80211::kReasonCodeNonAuthenticated:
         case IEEE_80211::kReasonCodeReassociationNotAuthenticated:
         case IEEE_80211::kReasonCodePreviousAuthenticationInvalid:
