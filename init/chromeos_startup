@@ -224,6 +224,18 @@ allow_fifo() {
   printf "%s" "$1" > "${LSM_INODE_POLICIES}/allow_fifo"
 }
 
+# Check if one string contains the other.
+string_contains() {
+  case "$1" in
+    *"$2"*)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
 # Configure chromiumos LSM security policies for process management.
 . /usr/share/cros/config_process_mgmt_utils.sh
 configure_process_mgmt_security
@@ -258,9 +270,11 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
 
   # Check if we enable ext4 features.
   if [ "${FS_FORMAT_STATE}" = "ext4" ]; then
+    FS_FEATURES=$(dumpe2fs -h "${STATE_DEV}" 2>/dev/null |
+      grep -e "^Filesystem features:.*")
+
     # Enable directory encryption for existing install.
-    if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
-         grep -qe "^Filesystem features:.* encrypt.*"; then
+    if ! string_contains "${FS_FEATURES}" "encrypt"; then
       # The stateful partition is not set for encryption.
       # Check if we should migrate.
       if ext4_dir_encryption_supported; then
@@ -272,8 +286,7 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     fi
 
     # Enable fs-verity for existing install.
-    if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
-         grep -qe "^Filesystem features:.* verity.*"; then
+    if ! string_contains "${FS_FEATURES}" "verity"; then
       # The stateful partition is not set for fs-verity.
       # Check if we should migrate.
       if ext4_fsverity_supported; then
@@ -293,15 +306,13 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
     if [ -d /proc/sys/fs/quota ]; then
       # Quota is enabled in the kernel, make sure that quota is enabled in the
       # filesystem.
-      if ! dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
-           grep -qe "^Filesystem features:.* quota.*"; then
+      if ! string_contains "${FS_FEATURES}" "quota"; then
         tune2fs -Oquota -Qusrquota,grpquota "${STATE_DEV}" || :
       fi
     else
       # Quota is not enabled in the kernel, make sure that quota is disabled in
       # the filesystem.
-      if dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
-           grep -qe "^Filesystem features:.* quota.*"; then
+      if string_contains "${FS_FEATURES}" "quota"; then
         tune2fs -O^quota -Q^usrquota,^grpquota "${STATE_DEV}" || :
       fi
     fi
