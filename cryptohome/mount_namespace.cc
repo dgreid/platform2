@@ -14,13 +14,13 @@
 namespace cryptohome {
 
 MountNamespace::~MountNamespace() {
-  if (exists) {
+  if (exists_) {
     Destroy();
   }
 }
 
 bool MountNamespace::Create() {
-  if (exists) {
+  if (exists_) {
     LOG(ERROR) << "Non-root mount namespace at " << ns_path_.value()
                << " already exists, cannot create";
     return false;
@@ -41,12 +41,12 @@ bool MountNamespace::Create() {
     LOG(ERROR) << "Failed to run 'unshare " << mount
                << "--propagation=unchanged -- /bin/true'";
   }
-  exists = rc == 0;
-  return exists;
+  exists_ = rc == 0;
+  return exists_;
 }
 
 bool MountNamespace::Destroy() {
-  if (!exists) {
+  if (!exists_) {
     LOG(ERROR) << "Non-root mount namespace at " << ns_path_.value()
                << " does not exist, cannot destroy";
     return false;
@@ -59,13 +59,13 @@ bool MountNamespace::Destroy() {
     if (was_busy) {
       LOG(ERROR) << ns_path_.value() << " was busy";
     }
-    // If Unmount() fails, keep the object valid by keeping |exists| set to
+    // If Unmount() fails, keep the object valid by keeping |exists_| set to
     // true.
     return false;
   } else {
     VLOG(1) << "Unmounted namespace at " << ns_path_.value();
   }
-  exists = false;
+  exists_ = false;
   return true;
 }
 

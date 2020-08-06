@@ -22,7 +22,7 @@ class MountNamespace {
   // destroyed when the object goes out of scope.
  public:
   MountNamespace(const base::FilePath& ns_path, Platform* platform)
-      : ns_path_(ns_path), exists(false), platform_(platform) {}
+      : ns_path_(ns_path), exists_(false), platform_(platform) {}
   ~MountNamespace();
 
   base::FilePath path() const { return ns_path_; }
@@ -32,7 +32,7 @@ class MountNamespace {
 
  private:
   base::FilePath ns_path_;
-  bool exists;
+  bool exists_;
   Platform* platform_;
 
   DISALLOW_COPY_AND_ASSIGN(MountNamespace);
