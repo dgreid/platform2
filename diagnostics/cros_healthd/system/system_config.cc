@@ -28,28 +28,44 @@ bool SystemConfig::FioSupported() {
 
 bool SystemConfig::HasBacklight() {
   std::string has_backlight;
-  cros_config_->GetString(kBacklightPropertiesPath, kHasBacklightProperty,
-                          &has_backlight);
+  // Assume that device has a backlight unless otherwise configured.
+  if (!cros_config_->GetString(kBacklightPropertiesPath, kHasBacklightProperty,
+                               &has_backlight)) {
+    return true;
+  }
   return has_backlight != "false";
 }
 
 bool SystemConfig::HasBattery() {
   std::string psu_type;
-  cros_config_->GetString(kHardwarePropertiesPath, kPsuTypeProperty, &psu_type);
+  // Assume that device has a battery unless otherwise configured.
+  if (!cros_config_->GetString(kHardwarePropertiesPath, kPsuTypeProperty,
+                               &psu_type)) {
+    return true;
+  }
   return psu_type != "AC_only";
 }
 
 bool SystemConfig::HasSkuNumber() {
   std::string has_sku_number;
-  cros_config_->GetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
-                          &has_sku_number);
+  // Assume that device have does NOT have a SKU number unless otherwise
+  // configured.
+  if (!cros_config_->GetString(kCachedVpdPropertiesPath, kHasSkuNumberProperty,
+                               &has_sku_number)) {
+    return false;
+  }
   return has_sku_number == "true";
 }
 
 bool SystemConfig::HasSmartBattery() {
   std::string has_smart_battery_info;
-  cros_config_->GetString(kBatteryPropertiesPath, kHasSmartBatteryInfoProperty,
-                          &has_smart_battery_info);
+  // Assume that device does NOT have a smart battery unless otherwise
+  // configured.
+  if (!cros_config_->GetString(kBatteryPropertiesPath,
+                               kHasSmartBatteryInfoProperty,
+                               &has_smart_battery_info)) {
+    return false;
+  }
   return has_smart_battery_info == "true";
 }
 
@@ -63,8 +79,12 @@ bool SystemConfig::SmartCtlSupported() {
 
 std::string SystemConfig::GetMarketingName() {
   std::string marketing_name;
-  cros_config_->GetString(kArcBuildPropertiesPath, kMarketingNameProperty,
-                          &marketing_name);
+  // Assume that device does NOT have a marketing name unless otherwise
+  // configured.
+  if (!cros_config_->GetString(kArcBuildPropertiesPath, kMarketingNameProperty,
+                               &marketing_name)) {
+    return "";
+  }
   return marketing_name;
 }
 

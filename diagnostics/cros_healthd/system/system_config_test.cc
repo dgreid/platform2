@@ -63,6 +63,10 @@ TEST_F(SystemConfigTest, TestBacklightFalse) {
   EXPECT_FALSE(system_config()->HasBacklight());
 }
 
+TEST_F(SystemConfigTest, TestBacklightUnset) {
+  EXPECT_TRUE(system_config()->HasBacklight());
+}
+
 TEST_F(SystemConfigTest, TestBatteryTrue) {
   fake_cros_config()->SetString(kHardwarePropertiesPath, kPsuTypeProperty, "");
   EXPECT_TRUE(system_config()->HasBattery());
@@ -72,6 +76,10 @@ TEST_F(SystemConfigTest, TestBatteryFalse) {
   fake_cros_config()->SetString(kHardwarePropertiesPath, kPsuTypeProperty,
                                 "AC_only");
   EXPECT_FALSE(system_config()->HasBattery());
+}
+
+TEST_F(SystemConfigTest, TestBatteryUnset) {
+  EXPECT_TRUE(system_config()->HasBattery());
 }
 
 TEST_F(SystemConfigTest, TestSkuNumberTrue) {
@@ -86,6 +94,10 @@ TEST_F(SystemConfigTest, TestSkuNumberFalse) {
   EXPECT_FALSE(system_config()->HasSkuNumber());
 }
 
+TEST_F(SystemConfigTest, TestSkuNumberUnset) {
+  EXPECT_FALSE(system_config()->HasSkuNumber());
+}
+
 TEST_F(SystemConfigTest, TestSmartBatteryTrue) {
   fake_cros_config()->SetString(kBatteryPropertiesPath,
                                 kHasSmartBatteryInfoProperty, "true");
@@ -95,6 +107,10 @@ TEST_F(SystemConfigTest, TestSmartBatteryTrue) {
 TEST_F(SystemConfigTest, TestSmartBatteryFalse) {
   fake_cros_config()->SetString(kBatteryPropertiesPath,
                                 kHasSmartBatteryInfoProperty, "");
+  EXPECT_FALSE(system_config()->HasSmartBattery());
+}
+
+TEST_F(SystemConfigTest, TestSmartBatteryUnset) {
   EXPECT_FALSE(system_config()->HasSmartBattery());
 }
 
@@ -121,6 +137,10 @@ TEST_F(SystemConfigTest, CorrectMarketingName) {
   fake_cros_config()->SetString(kArcBuildPropertiesPath, kMarketingNameProperty,
                                 kFakeMarketingName);
   EXPECT_EQ(system_config()->GetMarketingName(), kFakeMarketingName);
+}
+
+TEST_F(SystemConfigTest, MarketingNameUnset) {
+  EXPECT_EQ(system_config()->GetMarketingName(), "");
 }
 
 }  // namespace diagnostics

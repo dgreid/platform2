@@ -56,7 +56,7 @@ bool Context::Initialize() {
 
   cros_config_ = std::make_unique<brillo::CrosConfig>();
 
-  // Init should always succeed on unibuild boards.
+  // Init should always succeed.
   if (!static_cast<brillo::CrosConfig*>(cros_config_.get())->Init()) {
     LOG(ERROR) << "Unable to initialize cros_config";
     return false;
