@@ -482,13 +482,12 @@ bool GpuVdaImpl::Initialize() {
 }
 
 VdaContext* GpuVdaImpl::InitDecodeSession(vda_profile_t profile) {
-  DCHECK(!ipc_task_runner_->BelongsToCurrentThread());
-
-  if (!connection_) {
+  if (!ipc_task_runner_) {
     DLOG(FATAL) << "InitDecodeSession called before successful Initialize().";
     return nullptr;
   }
 
+  DCHECK(!ipc_task_runner_->BelongsToCurrentThread());
   DLOG(INFO) << "Initializing decode session with profile " << profile;
 
   base::WaitableEvent init_complete_event(
