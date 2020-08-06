@@ -26,39 +26,35 @@ constexpr char kSandboxDirPath[] = "/usr/share/policy/";
 // SECCOMP policy for ectool pwmgetfanrpm:
 constexpr char kFanSpeedSeccompPolicyPath[] =
     "ectool_pwmgetfanrpm-seccomp.policy";
-constexpr char kRunAs[] = "healthd_ec";
+constexpr char kEctoolUserAndGroup[] = "healthd_ec";
 constexpr char kEctoolBinary[] = "/usr/sbin/ectool";
 // The ectool command used to collect fan speed in RPM.
 constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
 
-// Runs ectool with the given arguments.
-int RunEctool(const base::FilePath& seccomp_policy_path,
-              const std::vector<std::string>& ectool_args,
+// Runs the given binary with the given arguments and sandboxing.
+int RunBinary(const base::FilePath& seccomp_policy_path,
+              const std::vector<std::string>& sandboxing_args,
+              const std::string& user_and_group,
+              const base::FilePath& binary_path,
+              const std::vector<std::string>& binary_args,
               mojo_ipc::ProcessResult* result) {
   if (!base::PathExists(seccomp_policy_path)) {
     result->err = "Sandbox info is missing for this architecture.";
     return EXIT_FAILURE;
   }
 
-  // Minijail setup for ectool.
-  std::vector<std::string> parsed_args;
-  parsed_args.push_back("-c");
-  parsed_args.push_back("cap_sys_rawio=e");
-  parsed_args.push_back("-b");
-  parsed_args.push_back("/dev/cros_ec");
-
+  // Sandboxing setup for the process.
   ProcessWithOutput process;
-  process.SandboxAs(kRunAs, kRunAs);
+  process.SandboxAs(user_and_group, user_and_group);
   process.SetSeccompFilterPolicyFile(seccomp_policy_path.MaybeAsASCII());
-  process.InheritUsergroups();
   process.set_separate_stderr(true);
-  if (!process.Init(parsed_args)) {
+  if (!process.Init(sandboxing_args)) {
     result->err = "Process initialization failure.";
     return EXIT_FAILURE;
   }
 
-  process.AddArg(kEctoolBinary);
-  for (const auto& arg : ectool_args)
+  process.AddArg(binary_path.MaybeAsASCII());
+  for (const auto& arg : binary_args)
     process.AddArg(arg);
   int exit_code = process.Run();
   if (exit_code != EXIT_SUCCESS) {
@@ -88,8 +84,18 @@ void ExecutorMojoService::GetFanSpeed(GetFanSpeedCallback callback) {
 
   const auto seccomp_policy_path =
       base::FilePath(kSandboxDirPath).Append(kFanSpeedSeccompPolicyPath);
+
+  // Minijail setup for ectool.
+  std::vector<std::string> sandboxing_args;
+  sandboxing_args.push_back("-G");
+  sandboxing_args.push_back("-c");
+  sandboxing_args.push_back("cap_sys_rawio=e");
+  sandboxing_args.push_back("-b");
+  sandboxing_args.push_back("/dev/cros_ec");
+
   result.return_code =
-      RunEctool(seccomp_policy_path, {kGetFanRpmCommand}, &result);
+      RunBinary(seccomp_policy_path, sandboxing_args, kEctoolUserAndGroup,
+                base::FilePath(kEctoolBinary), {kGetFanRpmCommand}, &result);
 
   std::move(callback).Run(result.Clone());
 }
