@@ -58,19 +58,22 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
                                      std::string* iccid,
                                      std::string* sim_card_id,
                                      Error* error) {
-  if (!storage->GetString(entry_name, CellularService::kStorageImsi, imsi)) {
+  if (!storage->GetString(entry_name, CellularService::kStorageImsi, imsi) ||
+      imsi->empty()) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
-                          "Missing IMSI");
+                          "Missing or empty IMSI");
     return false;
   }
-  if (!storage->GetString(entry_name, CellularService::kStorageIccid, iccid)) {
+  if (!storage->GetString(entry_name, CellularService::kStorageIccid, iccid) ||
+      iccid->empty()) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
-                          "Missing ICCID");
+                          "Missing or empty ICCID");
     return false;
   }
   if (!storage->GetString(entry_name, CellularService::kStorageSimCardId,
-                          sim_card_id)) {
-    // If SIM Card Id is unset, fall back to ICCID.
+                          sim_card_id) ||
+      sim_card_id->empty()) {
+    // If SIM Card Id is unset or empty, fall back to ICCID.
     *sim_card_id = *iccid;
   }
   return true;
@@ -158,7 +161,7 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
 
   // Find Cellular profile entries matching the sim card identifier.
   CHECK(profile_);
-  const StoreInterface* storage = profile_->GetConstStorage();
+  StoreInterface* storage = profile_->GetStorage();
   DCHECK(storage);
   KeyValueStore args;
   args.Set<std::string>(kTypeProperty, kTypeCellular);
@@ -171,7 +174,9 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
     if (!GetServiceParametersFromStorage(storage, group, &imsi, &iccid,
                                          &service_sim_card_id,
                                          /*error=*/nullptr)) {
-      LOG(ERROR) << "Unable to load service properties for: " << sim_card_id;
+      LOG(ERROR) << "Unable to load service properties for: " << sim_card_id
+                 << ", removing old or invalid profile entry.";
+      storage->DeleteGroup(group);
       continue;
     }
     DCHECK_EQ(service_sim_card_id, sim_card_id);

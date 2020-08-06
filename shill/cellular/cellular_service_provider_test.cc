@@ -4,6 +4,8 @@
 
 #include "shill/cellular/cellular_service_provider.h"
 
+#include <set>
+
 #include <gtest/gtest.h>
 
 #include "shill/cellular/cellular.h"
@@ -76,6 +78,8 @@ class CellularServiceProviderTest : public testing::Test {
                              const std::string& value) {
     storage_.SetString(identifier, key, value);
   }
+
+  std::set<std::string> GetStorageGroups() { return storage_.GetGroups(); }
 
   const std::vector<CellularServiceRefPtr>& GetProviderServices() const {
     return provider_.services_;
@@ -182,6 +186,31 @@ TEST_F(CellularServiceProviderTest, SwitchDeviceIccid) {
   // Stopping should remove all services.
   provider()->Stop();
   EXPECT_EQ(0u, GetProviderServices().size());
+}
+
+TEST_F(CellularServiceProviderTest, RemoveObsoleteServiceFromProfile) {
+  CellularRefPtr device = CreateDevice("imsi1", "iccid1");
+  std::string identifier = device->GetStorageIdentifier();
+
+  // Add an entry in the storage with an empty IMSI and set property.
+  SetupCellularStore(identifier, "", "iccid1", "iccid1");
+  StoreCellularProperty(identifier, CellularService::kStoragePPPUsername,
+                        "user1");
+
+  // Ensure that the service is not loaded from storage and that a new service
+  // is created with ppp_username unset.
+  CellularServiceRefPtr service =
+      provider()->LoadServicesForDevice(device.get());
+  ASSERT_TRUE(service);
+  EXPECT_EQ("imsi1", service->imsi());
+  EXPECT_EQ("iccid1", service->iccid());
+  EXPECT_EQ("", service->ppp_username());
+
+  // Only one provider service should exist.
+  EXPECT_EQ(1u, GetProviderServices().size());
+
+  // Storage should not have any service saved at this point.
+  EXPECT_EQ(0, GetStorageGroups().size());
 }
 
 }  // namespace shill
