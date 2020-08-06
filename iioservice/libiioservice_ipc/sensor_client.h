@@ -18,7 +18,7 @@
 
 namespace iioservice {
 
-// A helper class to connect to Chromium via unix socket and wait for
+// A helper class to connect to Chromium via dbus and wait for
 // mojo::PendingRemote<SensorService> connecting to iioservice.
 // Upon disconnection errors from iioservice, the user doesn't need to do
 // anything except for waiting a new remote's arrival again.
