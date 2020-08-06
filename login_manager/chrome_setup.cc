@@ -501,8 +501,10 @@ void AddUiFlags(ChromiumCommandBuilder* builder,
   if (builder->UseFlagIsSet("shelf-hotseat"))
     builder->AddFeatureEnableOverride("ShelfHotseat");
 
-  if (builder->UseFlagIsSet("webui-tab-strip"))
+  if (builder->UseFlagIsSet("webui-tab-strip")) {
     builder->AddFeatureEnableOverride("WebUITabStrip");
+    builder->AddFeatureEnableOverride("WebUITabStripTabDragIntegration");
+  }
 
   SetUpAutoDimFlag(builder, cros_config);
 
