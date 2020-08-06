@@ -13,7 +13,7 @@ namespace croslog {
 
 Severity SeverityFromString(const std::string& severity_str) {
   if (severity_str == "0" ||
-      base::CompareCaseInsensitiveASCII(severity_str, "emerge") == 0) {
+      base::CompareCaseInsensitiveASCII(severity_str, "emerg") == 0) {
     return Severity::EMERGE;
   } else if (severity_str == "1" ||
              base::CompareCaseInsensitiveASCII(severity_str, "alert") == 0) {
