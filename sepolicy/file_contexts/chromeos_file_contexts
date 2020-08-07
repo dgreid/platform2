@@ -163,6 +163,9 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/share/cros/init/ui-respawn u:object_r:cros_init_ui_respawn_shell_script:s0
 /usr/share/cros/init/shill.sh   u:object_r:cros_init_shill_shell_script:s0
 /usr/share/cros/init/shill-pre-start.sh u:object_r:cros_init_shill_shell_script:s0
+/usr/share/cros/init/logging-pre-start.sh u:object_r:cros_init_logging_shell_scripts:s0
+/usr/share/cros/init/logging-exec.sh u:object_r:cros_init_logging_shell_scripts:s0
+/usr/share/cros/init/logging-post-start.sh u:object_r:cros_init_logging_shell_scripts:s0
 
 /var                            u:object_r:cros_var:s0
 /var/cache                      u:object_r:cros_var_cache:s0
