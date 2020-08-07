@@ -539,7 +539,7 @@ void GpuVdaImpl::InitDecodeSessionAfterContextInitializedOnIpcThread(
 }
 
 void GpuVdaImpl::CloseDecodeSession(VdaContext* context) {
-  if (!connection_) {
+  if (!ipc_task_runner_) {
     DLOG(FATAL) << "CloseDecodeSession called before successful Initialize().";
     return;
   }
