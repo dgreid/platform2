@@ -125,10 +125,13 @@ export SRC ?= $(CURDIR)
 
 # If BASE_VER is not set, read the libchrome revision number from
 # common-mk/BASE_VER file.
-ifeq ($(strip $(BASE_VER)),)
-BASE_VER := $(shell cat $(SRC)/../common-mk/BASE_VER)
-endif
+BASE_VER_PATH := $(SYSROOT)/usr/share/libchrome/BASE_VER
+ifeq (,$(wildcard $(BASE_VER_PATH)))
+BASE_VER := $(shell cat $(BASE_VER_PATH))
 $(info Using BASE_VER=$(BASE_VER))
+else
+$(info Libchrome is not installed. No BASE_VER will be provided.)
+endif
 
 # Re-start in the $(OUT) directory if we're not there.
 # We may be invoked using -C or bare and we need to ensure behavior

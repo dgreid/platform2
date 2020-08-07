@@ -152,12 +152,18 @@ class Platform2(object):
 
     self.libbase_ver = os.environ.get('BASE_VER', '')
     if not self.libbase_ver:
-      # If BASE_VER variable not set, read the content of common_mk/BASE_VER
+      # If BASE_VER variable not set, read the content of
+      # $SYSROOT/usr/share/libchrome/BASE_VER
       # file which contains the default libchrome revision number.
-      base_ver_file = os.path.join(self.get_src_dir(), 'BASE_VER')
-      self.libbase_ver = osutils.ReadFile(base_ver_file).strip()
-    assert self.libbase_ver
-
+      base_ver_file = os.path.join(self.sysroot,
+                                   'usr/share/libchrome/BASE_VER')
+      try:
+        self.libbase_ver = osutils.ReadFile(base_ver_file).strip()
+      except FileNotFoundError:
+        # Software not depending on libchrome still uses platform2.py, Instead
+        # of asserting here. Provide a human readable bad value that is not
+        # supposed to be used.
+        self.libbase_ver = 'NOT-INSTALLED'
 
   def get_src_dir(self):
     """Return the path to build tools and common GN files"""
