@@ -502,6 +502,20 @@ bool CrosFpDevice::Init() {
   LOG(INFO) << "  Max number of fingers : "
             << info_->template_info()->max_templates;
 
+  auto fp_resp = GetFlashProtect();
+  if (!fp_resp) {
+    LOG(ERROR) << "Unable to read flash protect state";
+  } else {
+    LOG(INFO) << "Flash Protect Flags : 0x" << std::hex << fp_resp->flags
+              << "\t: " << FpFlashProtectCommand::ParseFlags(fp_resp->flags);
+    LOG(INFO) << "Valid Flags         : 0x" << std::hex << fp_resp->valid_flags
+              << "\t: "
+              << FpFlashProtectCommand::ParseFlags(fp_resp->valid_flags);
+    LOG(INFO) << "writable flags      : 0x" << std::hex
+              << fp_resp->writable_flags << "\t: "
+              << FpFlashProtectCommand::ParseFlags(fp_resp->writable_flags);
+  }
+
   watcher_ = base::FileDescriptorWatcher::WatchReadable(
       cros_fd_.get(), base::BindRepeating(&CrosFpDevice::OnEventReadable,
                                           base::Unretained(this)));
@@ -589,6 +603,26 @@ bool CrosFpDevice::UploadTemplate(const VendorTemplate& tmpl) {
     pos += tlen;
   }
   return true;
+}
+
+std::unique_ptr<struct ec_response_flash_protect>
+CrosFpDevice::GetFlashProtect() {
+  auto fp_cmd = ec_command_factory_->FpFlashProtectCommand(0, 0);
+
+  if (!fp_cmd) {
+    LOG(ERROR) << "Unable to create FP flash protect command";
+    return nullptr;
+  }
+
+  bool success = fp_cmd->Run(cros_fd_.get());
+  if (!success) {
+    return nullptr;
+  }
+
+  auto ret = std::make_unique<struct ec_response_flash_protect>();
+  memcpy(ret.get(), fp_cmd->Resp(), fp_cmd->RespSize());
+
+  return ret;
 }
 
 bool CrosFpDevice::SetContext(std::string user_hex) {

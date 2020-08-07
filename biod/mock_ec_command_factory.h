@@ -23,6 +23,10 @@ class MockEcCommandFactory : public EcCommandFactoryInterface {
               FpContextCommand,
               (CrosFpDeviceInterface * cros_fp, const std::string& user_id),
               (override));
+  MOCK_METHOD(std::unique_ptr<biod::FpFlashProtectCommand>,
+              FpFlashProtectCommand,
+              (const uint32_t flags, const uint32_t mask),
+              (override));
   MOCK_METHOD(std::unique_ptr<biod::FpInfoCommand>,
               FpInfoCommand,
               (),

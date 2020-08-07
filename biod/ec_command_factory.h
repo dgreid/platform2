@@ -10,6 +10,7 @@
 
 #include "biod/cros_fp_device_interface.h"
 #include "biod/fp_context_command_factory.h"
+#include "biod/fp_flashprotect_command.h"
 #include "biod/fp_info_command.h"
 
 namespace biod {
@@ -20,6 +21,13 @@ class EcCommandFactoryInterface {
 
   virtual std::unique_ptr<EcCommandInterface> FpContextCommand(
       CrosFpDeviceInterface* cros_fp, const std::string& user_id) = 0;
+
+  virtual std::unique_ptr<biod::FpFlashProtectCommand> FpFlashProtectCommand(
+      const uint32_t flags, const uint32_t mask) = 0;
+  static_assert(
+      std::is_base_of<EcCommandInterface, biod::FpFlashProtectCommand>::value,
+      "All commands created by this class should derive from "
+      "EcCommandInterface");
 
   virtual std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() = 0;
   static_assert(std::is_base_of<EcCommandInterface, biod::FpInfoCommand>::value,
@@ -40,6 +48,9 @@ class EcCommandFactory : public EcCommandFactoryInterface {
 
   std::unique_ptr<EcCommandInterface> FpContextCommand(
       CrosFpDeviceInterface* cros_fp, const std::string& user_id) override;
+
+  std::unique_ptr<biod::FpFlashProtectCommand> FpFlashProtectCommand(
+      const uint32_t flags, const uint32_t mask) override;
 
   std::unique_ptr<biod::FpInfoCommand> FpInfoCommand() override;
 };

@@ -98,6 +98,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   // MCU. If |reset| is set to true, it will additionally erase the existing
   // entropy too.
   bool UpdateEntropy(bool reset);
+  std::unique_ptr<struct ec_response_flash_protect> GetFlashProtect();
 
   void OnEventReadable();
 
