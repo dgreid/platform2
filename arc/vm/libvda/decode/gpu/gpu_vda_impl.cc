@@ -565,9 +565,9 @@ void GpuVdaImpl::CloseDecodeSession(VdaContext* context) {
     return;
   }
   DLOG(INFO) << "Closing decode session";
-  ipc_task_runner_->PostTask(
-      FROM_HERE, base::BindOnce(&GpuVdaImpl::CloseDecodeSessionOnIpcThread,
-                                base::Unretained(this), context));
+  RunTaskOnThread(ipc_task_runner_,
+                  base::BindOnce(&GpuVdaImpl::CloseDecodeSessionOnIpcThread,
+                                 base::Unretained(this), context));
 }
 
 void GpuVdaImpl::CloseDecodeSessionOnIpcThread(VdaContext* context) {

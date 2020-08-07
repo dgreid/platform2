@@ -17,6 +17,9 @@
 
 namespace arc {
 
+void RunTaskOnThread(scoped_refptr<base::SingleThreadTaskRunner> task_runner,
+                     base::OnceClosure task);
+
 // VafConnection provides a connection to the mojo VideoAcceleratorFactory
 // interface using the LibvdaService D-Bus service. Only a single instantiated
 // VafConnection object should exist at a time. Callers can use the

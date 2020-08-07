@@ -43,6 +43,11 @@ namespace {
 // Set to 6 which is when CreateDecodeAccelerator was introduced.
 constexpr uint32_t kRequiredVideoAcceleratorFactoryMojoVersion = 6;
 
+static base::Lock connection_lock;
+static VafConnection* connection = nullptr;
+
+}  // namespace
+
 void RunTaskOnThread(scoped_refptr<base::SingleThreadTaskRunner> task_runner,
                      base::OnceClosure task) {
   if (task_runner->BelongsToCurrentThread()) {
@@ -64,11 +69,6 @@ void RunTaskOnThread(scoped_refptr<base::SingleThreadTaskRunner> task_runner,
           std::move(task), &task_complete_event));
   task_complete_event.Wait();
 }
-
-static base::Lock connection_lock;
-static VafConnection* connection = nullptr;
-
-}  // namespace
 
 VafConnection::VafConnection() : ipc_thread_("VafConnectionIpcThread") {
   // TODO(alexlau): Use DETACH_FROM_THREAD macro after libchrome uprev
