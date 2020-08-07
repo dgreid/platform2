@@ -156,13 +156,13 @@ Service::ServerInfo::ServerInfo(pid_t pid, base::FilePath root_dir)
   CHECK(root_dir_.Set(root_dir));
 }
 
-Service::ServerInfo::ServerInfo(Service::ServerInfo&& other)
+Service::ServerInfo::ServerInfo(Service::ServerInfo&& other) noexcept
     : pid_(other.pid_) {
   CHECK(root_dir_.Set(other.root_dir_.Take()));
 }
 
 Service::ServerInfo& Service::ServerInfo::operator=(
-    Service::ServerInfo&& other) {
+    Service::ServerInfo&& other) noexcept {
   // Self assignment check is required.
   if (this != &other) {
     pid_ = other.pid_;
