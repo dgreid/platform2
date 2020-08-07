@@ -73,6 +73,10 @@ bool __attribute__((unused)) IsolateUserSession() {
 #endif
 }
 
+constexpr bool __attribute__((unused)) MountUserSessionOOP() {
+  return USE_MOUNT_OOP;
+}
+
 }  // namespace
 
 namespace cryptohome {
