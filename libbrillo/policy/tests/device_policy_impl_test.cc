@@ -416,4 +416,29 @@ TEST_F(DevicePolicyImplTest, GetReleaseLtsTagNotSet) {
   EXPECT_TRUE(lts_tag.empty());
 }
 
+TEST_F(DevicePolicyImplTest, GetChannelDowngradeBehaviorSet) {
+  em::ChromeDeviceSettingsProto device_policy_proto;
+  em::AutoUpdateSettingsProto* auto_update_settings =
+      device_policy_proto.mutable_auto_update_settings();
+  auto_update_settings->set_channel_downgrade_behavior(
+      em::AutoUpdateSettingsProto::ChannelDowngradeBehavior
+        ::AutoUpdateSettingsProto_ChannelDowngradeBehavior_ROLLBACK);
+  InitializePolicy(InstallAttributesReader::kDeviceModeEnterprise,
+                   device_policy_proto);
+
+  int value = -1;
+  EXPECT_TRUE(device_policy_.GetChannelDowngradeBehavior(&value));
+  EXPECT_EQ(static_cast<int>(
+      em::AutoUpdateSettingsProto::ChannelDowngradeBehavior
+        ::AutoUpdateSettingsProto_ChannelDowngradeBehavior_ROLLBACK), value);
+}
+
+TEST_F(DevicePolicyImplTest, GetChannelDowngradeBehaviorNotSet) {
+  em::PolicyData policy_data;
+  device_policy_.set_policy_data_for_testing(policy_data);
+
+  int value = -1;
+  EXPECT_FALSE(device_policy_.GetChannelDowngradeBehavior(&value));
+}
+
 }  // namespace policy

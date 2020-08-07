@@ -720,6 +720,20 @@ bool DevicePolicyImpl::GetCustomerId(
   return true;
 }
 
+bool DevicePolicyImpl::GetChannelDowngradeBehavior(
+    int* channel_downgrade_behavior_out) const {
+  if (!device_policy_.has_auto_update_settings())
+    return false;
+
+  const em::AutoUpdateSettingsProto& proto =
+      device_policy_.auto_update_settings();
+  if (!proto.has_channel_downgrade_behavior())
+    return false;
+
+  *channel_downgrade_behavior_out = proto.channel_downgrade_behavior();
+  return true;
+}
+
 bool DevicePolicyImpl::VerifyPolicyFile(const base::FilePath& policy_path) {
   if (!verify_root_ownership_) {
     return true;

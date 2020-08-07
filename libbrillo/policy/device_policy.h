@@ -250,6 +250,13 @@ class DevicePolicy {
   virtual bool GetCustomerId(
       std::string* customer_id_out) const = 0;
 
+  // Writes the value of ChannelDowngradeBehavior policy into
+  // |channel_downgrade_behavior_out|. |channel_downgrade_behavior_out| will be
+  // one of the values in AutoUpdateSettingsProto's ChannelDowngradeBehavior
+  // enum. Returns true on success.
+  virtual bool GetChannelDowngradeBehavior(
+      int* channel_downgrade_behavior_out) const = 0;
+
  private:
   // Verifies that the policy signature is correct.
   virtual bool VerifyPolicySignature() = 0;

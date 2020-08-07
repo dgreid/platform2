@@ -91,6 +91,8 @@ class DevicePolicyImpl : public DevicePolicy {
       std::string* device_directory_api_out) const override;
   bool GetCustomerId(
       std::string* customer_id_out) const override;
+  bool GetChannelDowngradeBehavior(
+      int* channel_downgrade_behavior_out) const override;
 
   // Methods that can be used only for testing.
   void set_policy_data_for_testing(
