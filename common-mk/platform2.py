@@ -76,6 +76,7 @@ _IUSE = [
     'kvm_host',
     'metrics_uploader',
     'mojo',
+    'mount_oop',
     'msan',
     'mtd',
     'ndk_translation',
