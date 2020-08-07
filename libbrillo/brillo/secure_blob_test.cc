@@ -236,9 +236,15 @@ class TestSecureAllocator : public SecureAllocator<T> {
   using typename SecureAllocator<T>::size_type;
   using typename SecureAllocator<T>::value_type;
 
+  TestSecureAllocator() {
+    erased_count = 0;
+  }
+
   int GetErasedCount() { return erased_count; }
 
  protected:
+  static int erased_count;
+
   void clear_contents(pointer p, size_type n) override {
     SecureAllocator<T>::clear_contents(p, n);
     unsigned char *v = reinterpret_cast<unsigned char*>(p);
@@ -247,10 +253,10 @@ class TestSecureAllocator : public SecureAllocator<T> {
       erased_count++;
     }
   }
-
- private:
-  int erased_count = 0;
 };
+
+template <typename T>
+int TestSecureAllocator<T>::erased_count;
 
 TEST(SecureAllocator, ErasureOnDeallocation) {
   // Make sure that the contents are cleared on deallocation.
@@ -280,6 +286,22 @@ TEST(SecureAllocator, MultiPageCorrectness) {
   e.deallocate(test_array, 4100);
   // 36864 bytes is the next highest size that is a multiple of the page size.
   EXPECT_EQ(e.GetErasedCount(), 36864);
+}
+
+TEST(SecureAllocator, SecureVectorIsClearedOnDestruction) {
+  using TestSecureVector = std::vector<uint8_t, TestSecureAllocator<uint8_t>>;
+  TestSecureAllocator<uint8_t> allocator;
+  {
+    TestSecureVector vector = {{1, 2, 3, 4}};
+    EXPECT_EQ(vector.capacity(), 4);
+  }
+  // The allocator operates on page size blocks, so even though the vector's
+  // capacity is 4, the actual amount of memory allocated is a page.
+  // On destruction, each vector element is destroyed through
+  // SecureAllocator::destroy, which clears the memory. Then the underlying
+  // buffer (page in this case) is deallocated through
+  // SecureAllocator::deallocate, which clears the memory.
+  EXPECT_EQ(allocator.GetErasedCount(), 4 + 4096);
 }
 
 // DeathTests fork a new process and check how it proceeds. Take advantage
