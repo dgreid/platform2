@@ -12,7 +12,7 @@
     <annotation name="org.freedesktop.DBus.GLib.CSymbol"
                 value="image_burner" />
     <method name="BurnImage">
-      <annotation name="org.freedesktop.DBus.GLib.Async" value="true" />
+      <annotation name="org.chromium.DBus.Method.Kind" value="normal" />
       <arg type="s" name="from_path" direction="in" />
       <arg type="s" name="to_path" direction="in" />
     </method>

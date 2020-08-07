@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//common-mk/dbus_glib.gni")
+import("//common-mk/generate-dbus-adaptors.gni")
 import("//common-mk/pkg_config.gni")
 
 group("all") {
   deps = [
-    ":image-burner-dbus-server",
+    ":image-burner-adaptors",
     ":image_burner",
     ":libimage-burner",
   ]
@@ -20,35 +20,27 @@ pkg_config("target_defaults") {
   libs = [ "rootdev" ]
 
   pkg_deps = [
-    "dbus-1",
-    "dbus-glib-1",
-    "gobject-2.0",
     "libbrillo",
-    "libbrillo-glib",
     "libchrome-${libbase_ver}",
   ]
 }
 
-generate_dbus_glib("image-burner-dbus-server") {
-  dbus_glib_out_dir = "include/bindings"
-  dbus_glib_prefix = "image_burner"
-  dbus_glib_type = "server"
-  dbus_glib_header_stem = "image_burner"
-  sources = [ "image_burner.xml" ]
+generate_dbus_adaptors("image-burner-adaptors") {
+  dbus_service_config = "dbus_bindings/dbus-service-config.json"
+  dbus_adaptors_out_dir = "include/image-burner/dbus_adaptors"
+  sources = [ "dbus_bindings/org.chromium.ImageBurnerInterface.xml" ]
 }
 
 static_library("libimage-burner") {
   configs += [ ":target_defaults" ]
   sources = [
+    "daemon.cc",
     "image_burn_service.cc",
-    "image_burner.cc",
     "image_burner_impl.cc",
     "image_burner_utils.cc",
   ]
 
-  # The generated dbus headers use "register".
-  cflags = [ "-Wno-deprecated-register" ]
-  deps = [ ":image-burner-dbus-server" ]
+  deps = [ ":image-burner-adaptors" ]
 }
 
 executable("image_burner") {

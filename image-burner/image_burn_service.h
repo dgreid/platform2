@@ -9,39 +9,32 @@
 
 #include <string>
 
-#include <brillo/glib/abstract_dbus_service.h>
-#include <brillo/glib/dbus.h>
+#include <brillo/dbus/dbus_object.h>
 #include <chromeos/dbus/service_constants.h>
 
+#include "image-burner/dbus_adaptors/org.chromium.ImageBurnerInterface.h"
 #include "image-burner/image_burner_impl.h"
+#include "image-burner/image_burner_utils_interfaces.h"
 
 namespace imageburn {
 
-// Defined in image_burner.h.
-struct ImageBurner;
-
-const int kNumSignals = 2;
-
-enum BurnSignals { kSignalBurnFinished, kSignalBurnUpdate };
-
 // Provides a wrapper for exporting ImageBurnerInterface to
-// D-Bus and entering the glib run loop.
-class ImageBurnService : public brillo::dbus::AbstractDbusService,
+// D-Bus.
+class ImageBurnService : public org::chromium::ImageBurnerInterfaceInterface,
+                         public org::chromium::ImageBurnerInterfaceAdaptor,
                          public SignalSender {
  public:
-  explicit ImageBurnService(BurnerImpl* burner_impl);
+  ImageBurnService(scoped_refptr<dbus::Bus> bus, BurnerImpl* burner_impl);
   virtual ~ImageBurnService();
 
-  // brillo::dbus::AbstractDbusService implementation.
-  const char* service_name() const override;
-  const char* service_path() const override;
-  const char* service_interface() const override;
-  GObject* service_object() const override;
-  bool Initialize() override;
-  bool Reset() override;
-  bool Shutdown() override;
+  void RegisterAsync(
+      const brillo::dbus_utils::AsyncEventSequencer::CompletionAction& cb);
 
-  // SignalSender interface.
+  // org::chromium::ImageBurnerInterfaceInterface overrides.
+  bool BurnImage(brillo::ErrorPtr* error,
+                 const std::string& from_path,
+                 const std::string& to_path) override;
+
   void SendFinishedSignal(const char* target_path,
                           bool success,
                           const char* error_message) override;
@@ -49,20 +42,12 @@ class ImageBurnService : public brillo::dbus::AbstractDbusService,
                           int64_t total_size,
                           const char* target_path) override;
 
-  gboolean BurnImageAsync(gchar* from_path,
-                          gchar* to_path,
-                          DBusGMethodInvocation* context);
-
- protected:
-  GMainLoop* main_loop() override { return main_loop_; }
-
  private:
-  void Cleanup();
-  void SetError(const std::string& message, GError** error);
+  void BurnImageInternal(const std::string& from_path,
+                         const std::string& to_path);
 
-  ImageBurner* image_burner_;
-  GMainLoop* main_loop_;
-  guint signals_[kNumSignals];
+  brillo::dbus_utils::DBusObject dbus_object_;
+
   int64_t amount_burnt_for_next_signal_;
   bool burning_;
   BurnerImpl* burner_impl_;

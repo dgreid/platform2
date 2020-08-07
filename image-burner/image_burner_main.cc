@@ -5,12 +5,9 @@
 #include <memory>
 
 #include <base/command_line.h>
-#include <base/files/file_path.h>
 #include <base/logging.h>
 
-#include "image-burner/image_burner.h"
-#include "image-burner/image_burner_impl.h"
-#include "image-burner/image_burner_utils.h"
+#include "image-burner/daemon.h"
 
 int main(int argc, char* argv[]) {
   base::CommandLine::Init(argc, argv);
@@ -26,17 +23,6 @@ int main(int argc, char* argv[]) {
   settings.delete_old = logging::DELETE_OLD_LOG_FILE;
   logging::InitLogging(settings);
 
-  imageburn::BurnWriter writer;
-  imageburn::BurnReader reader;
-  imageburn::BurnPathGetter path_getter;
-  std::unique_ptr<imageburn::BurnerImpl> burner(
-      new imageburn::BurnerImpl(&writer, &reader, NULL, &path_getter));
-
-  imageburn::ImageBurnService service(burner.get());
-  service.Initialize();
-  burner->InitSignalSender(&service);
-
-  service.Register(brillo::dbus::GetSystemBusConnection());
-  service.Run();
-  return 0;
+  imageburn::Daemon daemon;
+  return daemon.Run();
 }
