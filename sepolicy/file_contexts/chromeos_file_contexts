@@ -145,6 +145,8 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/lib/systemd/systemd-journald u:object_r:cros_journald_exec:s0
 /usr/libexec/bluetooth/bluetoothd u:object_r:cros_bluetoothd_exec:s0
 
+/usr/libexec/cryptohome/update_userdataauth_from_features.sh u:object_r:cros_update_userdataauth_shell_script:s0
+
 /usr/share/policy(/.*)?         u:object_r:cros_seccomp_policy_file:s0
 /usr/share/userfeedback(/.*)?   u:object_r:cros_userfeedback_file:s0
 

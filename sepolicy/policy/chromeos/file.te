@@ -120,6 +120,7 @@ type cros_trunksd_exec, exec_type, file_type, cros_file_type, cros_system_file_t
 type cros_u2fd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_udevd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_update_engine_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_update_userdataauth_shell_script, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_ureadahead_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_userfeedback_file, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_vmlog_forwarder_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
