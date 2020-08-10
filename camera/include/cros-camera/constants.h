@@ -46,8 +46,6 @@ const char kCrosMaxPrivateHeight[] = "max_private_height";
 // Restrict max resolutions for native ratio.
 const char kCrosMaxNativeWidth[] = "max_native_width";
 const char kCrosMaxNativeHeight[] = "max_native_height";
-// Enable advanced controls for USB camera. e.g. brightness, sharpness...
-const char kCrosEnableUsbAdvancedControl[] = "enable_usb_advanced_control";
 // ------End configuration for |kCrosCameraConfigPathString|-------
 
 }  // namespace constants

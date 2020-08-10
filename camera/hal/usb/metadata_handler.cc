@@ -812,67 +812,62 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(kVendorTagTimestampSync, timestamp_sync);
   }
 
-  std::unique_ptr<CameraConfig> camera_config =
-      CameraConfig::Create(constants::kCrosCameraConfigPathString);
-  if (camera_config->GetBoolean(constants::kCrosEnableUsbAdvancedControl,
-                                false)) {
-    ControlRange range;
+  ControlRange range;
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
-                                          kControlBrightness, &range)) {
-      update_static(
-          kVendorTagControlBrightnessRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlBrightness, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                        kControlBrightness, &range)) {
+    update_static(
+        kVendorTagControlBrightnessRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlBrightness, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
-                                          kControlContrast, &range)) {
-      update_static(
-          kVendorTagControlContrastRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlContrast, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                        kControlContrast, &range)) {
+    update_static(
+        kVendorTagControlContrastRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlContrast, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlPan,
-                                          &range)) {
-      update_static(
-          kVendorTagControlPanRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlPan, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlPan,
+                                        &range)) {
+    update_static(
+        kVendorTagControlPanRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlPan, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
-                                          kControlSaturation, &range)) {
-      update_static(
-          kVendorTagControlSaturationRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlSaturation, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                        kControlSaturation, &range)) {
+    update_static(
+        kVendorTagControlSaturationRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlSaturation, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path,
-                                          kControlSharpness, &range)) {
-      update_static(
-          kVendorTagControlSharpnessRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlSharpness, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path,
+                                        kControlSharpness, &range)) {
+    update_static(
+        kVendorTagControlSharpnessRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlSharpness, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlTilt,
-                                          &range)) {
-      update_static(
-          kVendorTagControlTiltRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlTilt, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlTilt,
+                                        &range)) {
+    update_static(
+        kVendorTagControlTiltRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlTilt, range.default_value);
+  }
 
-    if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlZoom,
-                                          &range)) {
-      update_static(
-          kVendorTagControlZoomRange,
-          std::vector<int32_t>{range.minimum, range.maximum, range.step});
-      update_request(kVendorTagControlZoom, range.default_value);
-    }
+  if (V4L2CameraDevice::GetControlRange(device_info.device_path, kControlZoom,
+                                        &range)) {
+    update_static(
+        kVendorTagControlZoomRange,
+        std::vector<int32_t>{range.minimum, range.maximum, range.step});
+    update_request(kVendorTagControlZoom, range.default_value);
   }
 
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;
