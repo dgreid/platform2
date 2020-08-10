@@ -35,7 +35,8 @@ constexpr CommandMapEntry kCommandMap[] = {
   {"/", "name", "mosys platform model"},
   {"/", "brand-code", "mosys platform brand"},
   {"/identity", "sku-id", "mosys platform sku"},
-  {"/identity", "platform-name", "mosys platform name"}};
+  {"/identity", "platform-name", "mosys platform name"},
+  {"/hardware-properties", "psu-type", "mosys psu type"}};
 
 }  // namespace
 
