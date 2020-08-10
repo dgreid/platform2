@@ -110,16 +110,5 @@
       <arg name="success" type="b" direction="out"/>
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
     </method>
-    <method name="RequestAdbPortForward">
-      <arg type="s" name="interface" direction="in"/>
-      <arg type="h" name="lifeline_fd" direction="in"/>
-      <arg name="allowed" type="b" direction="out"/>
-      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
-    </method>
-    <method name="ReleaseAdbPortForward">
-      <arg type="s" name="interface" direction="in"/>
-      <arg name="success" type="b" direction="out"/>
-      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
-    </method>
   </interface>
 </node>

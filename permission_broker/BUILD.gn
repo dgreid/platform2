@@ -21,7 +21,6 @@ pkg_config("target_defaults_deps") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libpatchpanel-client",
-    "libsession_manager-client",
     "libudev",
     "libusb-1.0",
   ]
