@@ -15,4 +15,4 @@ Thus, ippusb_bridge is the happy medium: written in a safe language, to avoid
 exposing unsafe code to all USB devices on the system, but still with a
 reasonable binary size.
 
-[ippusbxd]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/refs/heads/master/net-print/ippusbxd/
+[ippusbxd]: https://www.github.com/OpenPrinting/ippusbxd

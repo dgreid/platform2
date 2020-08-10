@@ -39,10 +39,10 @@ constexpr char kRunDir[] = "/run/ippusb";
 constexpr char kManagerSocketPath[] = "/run/ippusb/ippusb_manager.sock";
 
 // Convenience container that holds
-// *  the main socket on which ippusbxd communicates and
-// *  the ippusbxd keep-alive socket.
-struct IppusbxdSocketPaths {
-  explicit IppusbxdSocketPaths(const UsbPrinterInfo* const printer_info)
+// *  the main socket on which ippusb_bridge communicates and
+// *  the ippusb_bridge keep-alive socket.
+struct IppusbBridgeSocketPaths {
+  explicit IppusbBridgeSocketPaths(const UsbPrinterInfo* const printer_info)
       : main_socket(base::StringPrintf("%s/%04x_%04x.sock",
                                        kRunDir,
                                        printer_info->vid(),
@@ -76,7 +76,8 @@ base::ScopedFD GetFileDescriptor() {
 // Wait up to a maximum of |timeout| seconds for the |socket_paths| to
 // disappear. Will return true if the sockets are closed before the
 // timeout period, false otherwise.
-bool WaitForSocketsClose(const IppusbxdSocketPaths& socket_paths, int timeout) {
+bool WaitForSocketsClose(const IppusbBridgeSocketPaths& socket_paths,
+                         int timeout) {
   base::ElapsedTimer timer;
   while (base::PathExists(socket_paths.main_socket) ||
          base::PathExists(socket_paths.keepalive_socket)) {
@@ -89,7 +90,7 @@ bool WaitForSocketsClose(const IppusbxdSocketPaths& socket_paths, int timeout) {
 }
 
 // Attempts to ping the keep alive socket at the given |keep_alive_path| and
-// receive an acknowledgement from ippusbxd. Returns true if this was
+// receive an acknowledgement from ippusb_bridge. Returns true if this was
 // successful.
 bool CheckKeepAlive(const std::string& keep_alive_path) {
   auto keep_alive_connection =
@@ -110,14 +111,14 @@ bool CheckKeepAlive(const std::string& keep_alive_path) {
 
   // send 'keep-alive' message.
   if (!keep_alive_connection->SendMessage("keep-alive")) {
-    DLOG(ERROR) << "Failed to send keep-alive to ippusbxd";
+    DLOG(ERROR) << "Failed to send keep-alive to ippusb_bridge";
     return false;
   }
 
   // Verify acknowledgement of 'keep-alive' message.
   std::string response;
   if (!keep_alive_connection->GetMessage(&response) || response != "ack") {
-    DLOG(ERROR) << "Expected keep-alive ``ack'' from ippusbxd but got ``"
+    DLOG(ERROR) << "Expected keep-alive ``ack'' from ippusb_bridge but got ``"
                 << response << "''";
     return false;
   }
@@ -125,10 +126,10 @@ bool CheckKeepAlive(const std::string& keep_alive_path) {
   return true;
 }
 
-// Uses minijail to start a new instance of ippusbxd using the
+// Uses minijail to start a new instance of ippusb_bridge using the
 // specified |socket_paths| and the printer described by
 // |printer_info| for printing.
-void SpawnXD(const IppusbxdSocketPaths socket_paths,
+void SpawnXD(const IppusbBridgeSocketPaths socket_paths,
              std::unique_ptr<UsbPrinterInfo> printer_info) {
   std::vector<std::string> string_args = {
       "/usr/bin/ippusb_bridge",
@@ -166,30 +167,30 @@ void SpawnXD(const IppusbxdSocketPaths socket_paths,
   minijail_run(jail.get(), ptr_args[0], ptr_args.data());
 }
 
-// Attempts to ensure that an instance of ippusbxd, appropriately bound
+// Attempts to ensure that an instance of ippusb_bridge, appropriately bound
 // to the specified |socket_paths|, is running. Returns whether or not
 // that is so.
-bool CheckOrSpawnIppusbxd(const IppusbxdSocketPaths& socket_paths,
-                          std::unique_ptr<UsbPrinterInfo> printer_info) {
-  LOG(INFO) << "Checking to see if ippusbxd is already running";
+bool CheckOrSpawnIppusbBridge(const IppusbBridgeSocketPaths& socket_paths,
+                              std::unique_ptr<UsbPrinterInfo> printer_info) {
+  LOG(INFO) << "Checking to see if ippusb_bridge is already running";
 
   // Leap before you look: if we can squeak a keep-alive message to
-  // an already-running ippusbxd instance, we're good.
+  // an already-running ippusb_bridge instance, we're good.
   if (CheckKeepAlive(socket_paths.keepalive_socket.value())) {
     return true;
   }
-  LOG(INFO) << "Couldn't contact ippusbxd. Waiting for sockets to be closed "
-               "before launching a new process";
+  LOG(INFO) << "Couldn't contact ippusb_bridge. Waiting for sockets to be "
+               "closed before launching a new process";
 
-  // Wait a maximum of 3 seconds for the ippusbxd sockets to be closed before
-  // spawning the new process.
+  // Wait a maximum of 3 seconds for the ippusb_bridge sockets to be closed
+  // before spawning the new process.
   if (!WaitForSocketsClose(socket_paths, /*timeout=*/3)) {
     LOG(ERROR) << "The sockets at " << socket_paths.main_socket << " and "
                << socket_paths.keepalive_socket << " still exist";
     return false;
   }
 
-  LOG(INFO) << "Launching a new instance of ippusbxd";
+  LOG(INFO) << "Launching a new instance of ippusb_bridge";
   SpawnXD(socket_paths, std::move(printer_info));
   return true;
 }
@@ -252,13 +253,13 @@ int ippusb_manager_main(int argc, char* argv[]) {
   LOG(INFO) << "Found device on " << static_cast<int>(printer_info->bus())
             << " " << static_cast<int>(printer_info->device());
 
-  const IppusbxdSocketPaths socket_paths =
-      IppusbxdSocketPaths(printer_info.get());
-  if (!CheckOrSpawnIppusbxd(socket_paths, std::move(printer_info))) {
+  const IppusbBridgeSocketPaths socket_paths =
+      IppusbBridgeSocketPaths(printer_info.get());
+  if (!CheckOrSpawnIppusbBridge(socket_paths, std::move(printer_info))) {
     return 1;
   }
 
-  // Sends the basename of the ippusbxd socket to the listener.
+  // Sends the basename of the ippusb_bridge socket to the listener.
   std::string main_socket_basename =
       socket_paths.main_socket.BaseName().value();
   ippusb_socket->SendMessage(main_socket_basename);

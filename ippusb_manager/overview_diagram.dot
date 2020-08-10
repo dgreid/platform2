@@ -6,19 +6,19 @@ digraph {
 
   socket_bridge[label="upstart-socket-bridge",fontname=Monospace,shape=box,];
   ippusb_manager[fontname=Monospace,shape=box];
-  ippusbxd[fontname=Monospace,shape=box];
+  ippusb_bridge[fontname=Monospace,shape=box];
 
   Printer[shape=box];
 
   cups_and_manager[label="Unix socket"];
-  cups_and_xd[label="Unix socket"];
-  xd_and_printer[label="USB connection"];
+  cups_and_bridge[label="Unix socket"];
+  bridge_and_printer[label="USB connection"];
 
-  // Links CUPS to the sockets for ippusb_manager and for ippusbxd.
+  // Links CUPS to the sockets for ippusb_manager and for ippusb_bridge.
   CUPS->cups_and_manager[weight=1000];
   cups_and_manager->CUPS[weight=1000];
-  CUPS->cups_and_xd[weight=1000];
-  cups_and_xd->CUPS[weight=1000];
+  CUPS->cups_and_bridge[weight=1000];
+  cups_and_bridge->CUPS[weight=1000];
 
   // Links the socket, upstart-socket-bridge, and ippusb_manager together.
   cups_and_manager->socket_bridge[label="is mediated by"];
@@ -26,20 +26,20 @@ digraph {
   socket_bridge->ippusb_manager[label="starts"];
   ippusb_manager->cups_and_manager;
 
-  // Links the socket, ippusbxd, and ippusb_manager together.
-  ippusbxd->cups_and_xd;
-  cups_and_xd->ippusbxd;
-  ippusb_manager->ippusbxd[label="starts or keeps alive"];
+  // Links the socket, ippusb_bridge, and ippusb_manager together.
+  ippusb_bridge->cups_and_bridge;
+  cups_and_bridge->ippusb_bridge;
+  ippusb_manager->ippusb_bridge[label="starts or keeps alive"];
 
-  // Links ippusbxd to the printer.
-  ippusbxd->xd_and_printer;
-  xd_and_printer->ippusbxd;
-  Printer->xd_and_printer;
-  xd_and_printer->Printer;
+  // Links ippusb_bridge to the printer.
+  ippusb_bridge->bridge_and_printer;
+  bridge_and_printer->ippusb_bridge;
+  Printer->bridge_and_printer;
+  bridge_and_printer->Printer;
 
   // Aligns the Unix sockets.
-  {rank=same; cups_and_manager cups_and_xd}
+  {rank=same; cups_and_manager cups_and_bridge}
 
-  // Aligns ippusb_manager and ippusbxd.
-  {rank=same; ippusb_manager ippusbxd}
+  // Aligns ippusb_manager and ippusb_bridge.
+  {rank=same; ippusb_manager ippusb_bridge}
 }
