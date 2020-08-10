@@ -10,7 +10,7 @@ group("all") {
 
 pkg_config("federated_common_pkg_deps") {
   pkg_deps = [
-    "libbrillo-${libbase_ver}",
+    "libbrillo",
     "libchrome-${libbase_ver}",
     "libmetrics",
     "libmojo-${libbase_ver}",

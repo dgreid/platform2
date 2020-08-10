@@ -492,6 +492,17 @@ constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
 constexpr char kBootstrapMojoConnectionChannelToken[] = "ml-service-bootstrap";
 }  // namespace ml
 
+namespace federated {
+constexpr char kFederatedServiceName[] = "org.chromium.Federated";
+constexpr char kFederatedServicePath[] = "/org/chromium/Federated";
+constexpr char kFederatedInterfaceName[] = "org.chromium.Federated";
+// Methods
+constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
+// Token identifying the primordial Mojo pipe passed to BootstrapMojoConnection.
+constexpr char kBootstrapMojoConnectionChannelToken[] =
+    "federated-service-bootstrap";
+}  // namespace federated
+
 namespace iioservice {
 constexpr char kIioserviceServiceName[] = "org.chromium.Iioservice";
 constexpr char kIioserviceServicePath[] = "/org/chromium/Iioservice";

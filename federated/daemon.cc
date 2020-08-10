@@ -39,14 +39,66 @@ int Daemon::OnInit() {
 }
 
 void Daemon::InitDBus() {
-  // TODO(alanlxl): Create kFederatedServicePath, kFederatedServiceInterfaceName
-  // and kFederatedServiceName in platform2/system_api/dbus/service_constants.h
+  // Get or create the ExportedObject for the Federated service.
+  dbus::ExportedObject* const federated_service_exported_object =
+      bus_->GetExportedObject(dbus::ObjectPath(kFederatedServicePath));
+  CHECK(federated_service_exported_object);
+
+  // Register a handler of the BootstrapMojoConnection method.
+  CHECK(federated_service_exported_object->ExportMethodAndBlock(
+      kFederatedInterfaceName, kBootstrapMojoConnectionMethod,
+      base::Bind(&Daemon::BootstrapMojoConnection,
+                 weak_ptr_factory_.GetWeakPtr())));
+
+  // Take ownership of the Federated service.
+  CHECK(bus_->RequestOwnershipAndBlock(kFederatedServiceName,
+                                       dbus::Bus::REQUIRE_PRIMARY));
 }
 
 void Daemon::BootstrapMojoConnection(
     dbus::MethodCall* method_call,
     dbus::ExportedObject::ResponseSender response_sender) {
-  // TODO(alanlxl): export this as a dbus method.
+  // TODO(alanlxl): Check if federated_service_impl is already completed.
+
+  base::ScopedFD file_handle;
+  dbus::MessageReader reader(method_call);
+
+  if (!reader.PopFileDescriptor(&file_handle)) {
+    LOG(ERROR) << "Couldn't extract file descriptor from D-Bus call";
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, "Expected file descriptor"));
+    return;
+  }
+
+  if (!file_handle.is_valid()) {
+    LOG(ERROR) << "ScopedFD extracted from D-Bus call was invalid (i.e. empty)";
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS,
+            "Invalid (empty) file descriptor"));
+    return;
+  }
+
+  if (!base::SetCloseOnExec(file_handle.get())) {
+    PLOG(ERROR) << "Failed setting FD_CLOEXEC on file descriptor";
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_FAILED,
+            "Failed setting FD_CLOEXEC on file descriptor"));
+    return;
+  }
+
+  // Connect to mojo in the requesting process.
+  mojo::IncomingInvitation invitation =
+      mojo::IncomingInvitation::Accept(mojo::PlatformChannelEndpoint(
+          mojo::PlatformHandle(std::move(file_handle))));
+
+  // TODO(alanlxl): make a federated_service_impl here and bind primodial
+  // message pipe to it.
+
+  // Send success response.
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Daemon::OnMojoDisconnection() {
