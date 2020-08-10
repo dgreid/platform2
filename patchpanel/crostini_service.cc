@@ -276,8 +276,11 @@ void CrostiniService::StopAdbPortForwarding(const std::string& ifname) {
 
 void CrostiniService::CheckAdbSideloadingStatus() {
   static int num_try = 0;
-  if (num_try >= kAdbSideloadMaxTry)
+  if (num_try >= kAdbSideloadMaxTry) {
+    LOG(WARNING) << "Failed to get ADB sideloading status after " << num_try
+                 << " tries. ADB sideloading will not work";
     return;
+  }
 
   dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
       login_manager::kSessionManagerServiceName,
@@ -288,7 +291,6 @@ void CrostiniService::CheckAdbSideloadingStatus() {
       proxy->CallMethodAndBlock(&method_call, kDbusTimeoutMs);
 
   if (!dbus_response) {
-    LOG(WARNING) << "Failed to get ADB sideloading status";
     base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
         FROM_HERE,
         base::BindOnce(&CrostiniService::CheckAdbSideloadingStatus,
