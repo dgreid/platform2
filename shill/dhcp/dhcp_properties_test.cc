@@ -202,39 +202,6 @@ TEST_F(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted) {
   dhcp_properties_.Save(&storage, kStorageID);
 }
 
-TEST_F(DhcpPropertiesTest, CombineIntoEmpty) {
-  DhcpProperties to_merge;
-  to_merge.properties_.Set<string>("VendorClass", kVendorClass);
-  to_merge.properties_.Set<string>("Hostname", kHostname);
-
-  unique_ptr<DhcpProperties> merged_props =
-      DhcpProperties::Combine(dhcp_properties_, to_merge);
-  EXPECT_EQ(merged_props->properties_, to_merge.properties_);
-}
-
-TEST_F(DhcpPropertiesTest, CombineEmptyIntoExisting) {
-  DhcpProperties to_merge;
-  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
-  dhcp_properties_.properties_.Set<string>("Hostname", kHostname);
-
-  unique_ptr<DhcpProperties> merged_props =
-      DhcpProperties::Combine(dhcp_properties_, to_merge);
-  EXPECT_EQ(merged_props->properties_, dhcp_properties_.properties_);
-}
-
-TEST_F(DhcpPropertiesTest, CombineConflicting) {
-  DhcpProperties to_merge;
-  to_merge.properties_.Set<string>("VendorClass", kOverrideValue);
-  to_merge.properties_.Set<string>("Hostname", kHostname);
-  dhcp_properties_.properties_.Set<string>("VendorClass", kVendorClass);
-
-  unique_ptr<DhcpProperties> merged_props =
-      DhcpProperties::Combine(dhcp_properties_, to_merge);
-  EXPECT_EQ(kOverrideValue,
-            merged_props->properties_.Get<string>("VendorClass"));
-  EXPECT_EQ(kHostname, merged_props->properties_.Get<string>("Hostname"));
-}
-
 TEST_F(DhcpPropertiesTest, GetValueForProperty) {
   string value;
   EXPECT_FALSE(dhcp_properties_.GetValueForProperty("VendorClass", &value));

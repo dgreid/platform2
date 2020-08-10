@@ -797,17 +797,8 @@ bool Device::AcquireIPConfigWithLeaseName(const string& lease_name) {
   DestroyIPConfig();
   StartIPv6();
   bool arp_gateway = manager_->GetArpGateway() && ShouldUseArpGateway();
-  DHCPConfigRefPtr dhcp_config;
-  if (selected_service_) {
-    dhcp_config = dhcp_provider_->CreateIPv4Config(
-        link_name_, lease_name, arp_gateway,
-        *(DhcpProperties::Combine(manager_->dhcp_properties(),
-                                  selected_service_->dhcp_properties())));
-
-  } else {
-    dhcp_config = dhcp_provider_->CreateIPv4Config(
-        link_name_, lease_name, arp_gateway, manager_->dhcp_properties());
-  }
+  DHCPConfigRefPtr dhcp_config = dhcp_provider_->CreateIPv4Config(
+      link_name_, lease_name, arp_gateway, manager_->dhcp_properties());
   const int minimum_mtu = manager()->GetMinimumMTU();
   if (minimum_mtu != IPConfig::kUndefinedMTU) {
     dhcp_config->set_minimum_mtu(minimum_mtu);

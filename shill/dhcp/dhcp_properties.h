@@ -37,21 +37,6 @@ class DhcpProperties {
   // Saves DHCP properties to |storage| in group |id|.
   virtual void Save(StoreInterface* store, const std::string& id) const;
 
-  // Combines two DHCP property objects and returns a
-  // std::unique_ptr<DhcpProperties>.  The new DhcpProperties instance is the
-  // union of the key-value pairs in |base| and |to_merge|.  For keys which
-  // exist in both |base| and |to_merge|, the value is taken from |to_merge|.
-  // EX:  |base| stores {"VendorClass": "v1", "Hostname": "host1"}
-  //      |to_merge| stores {"Hostname": "differentname"}
-  //      returned DhcpProperties will store:
-  //          {"VendorClass": "v1", "Hostname": "differentname"}
-  // EX:  |base| stores {"Hostname": "host1"}
-  //      |to_merge| stores {"Hostname": "differentname", "VendorClass": "vc"}
-  //      returned DhcpProperties will store:
-  //          {"Hostname": "differentname", "VendorClass": "vc"}
-  static std::unique_ptr<DhcpProperties> Combine(
-      const DhcpProperties& base, const DhcpProperties& to_merge);
-
   // Retrieves the value for a property with |name| in |value| if it is set.
   // Returns true if the property was found.
   bool GetValueForProperty(const std::string& name, std::string* value) const;
@@ -61,9 +46,6 @@ class DhcpProperties {
  private:
   FRIEND_TEST(DhcpPropertiesTest, ClearMappedStringPropertyNoExistingValue);
   FRIEND_TEST(DhcpPropertiesTest, ClearMappedStringPropertyWithSetValue);
-  FRIEND_TEST(DhcpPropertiesTest, CombineIntoEmpty);
-  FRIEND_TEST(DhcpPropertiesTest, CombineEmptyIntoExisting);
-  FRIEND_TEST(DhcpPropertiesTest, CombineConflicting);
   FRIEND_TEST(DhcpPropertiesTest, Ctor);
   FRIEND_TEST(DhcpPropertiesTest, GetMappedStringPropertyNoExistingValue);
   FRIEND_TEST(DhcpPropertiesTest, GetMappedStringPropertyWithSetValue);

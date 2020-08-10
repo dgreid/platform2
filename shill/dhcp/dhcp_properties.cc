@@ -93,19 +93,6 @@ void DhcpProperties::Save(StoreInterface* storage, const string& id) const {
   }
 }
 
-std::unique_ptr<DhcpProperties> DhcpProperties::Combine(
-    const DhcpProperties& base, const DhcpProperties& to_merge) {
-  SLOG(nullptr, 2) << __func__;
-  auto to_return = std::make_unique<DhcpProperties>();
-  to_return->properties_ = base.properties_;
-  for (const auto& it : to_merge.properties_.properties()) {
-    const string& name = it.first;
-    const brillo::Any& value = it.second;
-    to_return->properties_.SetVariant(name, value);
-  }
-  return to_return;
-}
-
 bool DhcpProperties::GetValueForProperty(const string& name,
                                          string* value) const {
   if (properties_.Contains<string>(name)) {

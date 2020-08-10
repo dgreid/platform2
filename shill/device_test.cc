@@ -336,7 +336,7 @@ TEST_F(DeviceTest, DestroyIPConfigNULL) {
   ASSERT_EQ(nullptr, device_->dhcpv6_config_);
 }
 
-MATCHER_P(IsCombinedDhcpProperties, dhcp_props, "") {
+MATCHER_P(MatchesDhcpProperties, dhcp_props, "") {
   return dhcp_props == arg.properties();
 }
 
@@ -347,36 +347,24 @@ TEST_F(DeviceTest, AcquireIPConfigWithSelectedService) {
 
   scoped_refptr<MockDHCPConfig> dhcp_config(
       new MockDHCPConfig(control_interface(), kDeviceName));
-  NiceMock<MockStore> storage;
   const string service_storage_id = "service_storage_id";
-  EXPECT_CALL(storage,
-              GetString(service_storage_id, "DHCPProperty.Hostname", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string("name of host")), Return(true)));
-  EXPECT_CALL(storage,
-              GetString(service_storage_id, "DHCPProperty.VendorClass", _))
-      .WillOnce(Return(false));
-
-  auto service_dhcp_properties = std::make_unique<DhcpProperties>();
-  service_dhcp_properties->Load(&storage, service_storage_id);
 
   scoped_refptr<MockService> service(new NiceMock<MockService>(manager()));
   SelectService(service);
 
   const string default_profile_storage_id = "default_profile_storage_id";
   NiceMock<MockStore> default_profile_storage;
+  EXPECT_CALL(default_profile_storage,
+              GetString(default_profile_storage_id, "DHCPProperty.Hostname", _))
+      .WillOnce(DoAll(SetArgPointee<2>(string("name of host")), Return(true)));
   EXPECT_CALL(default_profile_storage, GetString(default_profile_storage_id,
                                                  "DHCPProperty.VendorClass", _))
       .WillOnce(DoAll(SetArgPointee<2>(string("vendorclass")), Return(true)));
-  EXPECT_CALL(default_profile_storage,
-              GetString(default_profile_storage_id, "DHCPProperty.Hostname", _))
-      .WillOnce(Return(false));
 
   auto manager_dhcp_properties = std::make_unique<DhcpProperties>();
   manager_dhcp_properties->Load(&default_profile_storage,
                                 default_profile_storage_id);
-  std::unique_ptr<DhcpProperties> combined_props = DhcpProperties::Combine(
-      *manager_dhcp_properties, *service_dhcp_properties);
-  service->dhcp_properties_ = std::move(service_dhcp_properties);
+
 #ifndef DISABLE_DHCPV6
   device_->dhcpv6_config_ = new IPConfig(control_interface(), "randomname");
   scoped_refptr<MockDHCPConfig> dhcpv6_config(
@@ -388,11 +376,11 @@ TEST_F(DeviceTest, AcquireIPConfigWithSelectedService) {
       .WillOnce(Return(dhcpv6_config));
   EXPECT_CALL(*dhcpv6_config, RequestIP()).WillOnce(Return(true));
 #endif  // DISABLE_DHCPV6
-  device_->manager_->dhcp_properties_ = std::move(manager_dhcp_properties);
-  EXPECT_CALL(
-      *dhcp_provider,
-      CreateIPv4Config(_, _, _,
-                       IsCombinedDhcpProperties(combined_props->properties())))
+  manager()->dhcp_properties_ = std::move(manager_dhcp_properties);
+  EXPECT_CALL(*dhcp_provider,
+              CreateIPv4Config(_, _, _,
+                               MatchesDhcpProperties(
+                                   manager()->dhcp_properties().properties())))
       .WillOnce(Return(dhcp_config));
   EXPECT_CALL(*dhcp_config, RequestIP()).WillOnce(Return(true));
   EXPECT_TRUE(device_->AcquireIPConfig());

@@ -20,7 +20,6 @@
 
 #include "shill/connection.h"
 #include "shill/control_interface.h"
-#include "shill/dhcp/dhcp_properties.h"
 #include "shill/error.h"
 #include "shill/logging.h"
 #include "shill/manager.h"
@@ -143,7 +142,6 @@ Service::Service(Manager* manager, Technology technology)
       endpoint_auth_(false),
       strength_(0),
       save_credentials_(true),
-      dhcp_properties_(new DhcpProperties()),
       technology_(technology),
       failed_time_(0),
       has_ever_connected_(false),
@@ -254,8 +252,6 @@ Service::Service(Manager* manager, Technology technology)
 
   IgnoreParameterForConfigure(kTypeProperty);
   IgnoreParameterForConfigure(kProfileProperty);
-
-  dhcp_properties_->InitPropertyStore(&store_);
 
   SLOG(this, 1) << technology << " Service " << serial_number_
                 << " constructed.";
@@ -651,7 +647,6 @@ bool Service::Load(const StoreInterface* storage) {
   // now that the credentials have been loaded.
   storage->GetBool(id, kStorageHasEverConnected, &has_ever_connected_);
 
-  dhcp_properties_->Load(storage, id);
   return true;
 }
 
@@ -664,6 +659,10 @@ void Service::MigrateDeprecatedStorage(StoreInterface* storage) {
     eap()->MigrateDeprecatedStorage(storage, id);
   }
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+
+  // Delete deprecated keys. TODO: Remove after M88.
+  storage->DeleteKey(id, "DHCPProperty.Hostname");
+  storage->DeleteKey(id, "DHCPProperty.VendorClass");
 }
 
 bool Service::Unload() {
@@ -746,7 +745,7 @@ bool Service::Save(StoreInterface* storage) {
     eap()->Save(storage, id, save_credentials_);
   }
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  dhcp_properties_->Save(storage, id);
+
   return true;
 }
 

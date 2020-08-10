@@ -417,30 +417,6 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			A value of "/" indicates that the service is
 			not bound to any device.
 
-		string DHCPProperty.Hostname [readwrite]
-
-			Optional setting to configure DHCP requests.  Some DHCP
-			servers may register a DNS entry on behalf of this
-			hostname; others may just make available a table for
-			administrators to tell what machines are on their
-			network.
-
-			The default for this name is empty, which means that the
-			system will not report a hostname.  When this property
-			is set it will be persisted in the default profile.
-
-		string DHCPProperty.VendorClass [readwrite]
-
-			Optional setting to configure DHCP requests.  This
-			setting can be used to identify the vendor that
-			manufactured the client hardware, the software in use,
-			or an industry consortium to which the vendor belongs.
-
-			The default for this property is empty, which means the
-			system will not report a Vendor Class.  When set, this
-			property will override the default setting and be
-			persisted in the default profile.
-
 		array{string} Diagnostics.Disconnects [readonly]
 
 			History (wall-clock timestamps) of connection drops.
