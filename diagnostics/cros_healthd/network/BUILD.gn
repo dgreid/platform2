@@ -31,7 +31,9 @@ if (use.test) {
     ]
     sources = [ "network_health_adapter_impl_test.cc" ]
   }
+}
 
+if (use.test || use.fuzzer) {
   source_set("libnetwork_health_adapter_test_utils") {
     configs += [ ":libnetwork_health_pkg_deps" ]
     deps = [
