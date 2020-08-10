@@ -616,6 +616,7 @@ class Metrics : public DefaultServiceObserver {
   static const int kMetricRememberedWiFiNetworkCountMin;
   static const int kMetricRememberedWiFiNetworkCountMax;
   static const int kMetricRememberedWiFiNetworkCountNumBuckets;
+  static const char kMetricHiddenSSIDNetworkCount[];
   static const char kMetricTimeOnlineSecondsSuffix[];
   static const int kMetricTimeOnlineSecondsMax;
   static const int kMetricTimeOnlineSecondsMin;

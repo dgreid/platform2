@@ -652,6 +652,9 @@ TEST_F(WiFiProviderTest, ServiceSourceStats) {
       SendToUMA(StartsWith("Network.Shill.WiFi.RememberedUserNetworkCount."), _,
                 _, _, _))
       .Times(0);
+  EXPECT_CALL(metrics_,
+              SendToUMA(Metrics::kMetricHiddenSSIDNetworkCount, _, _, _, _))
+      .Times(0);
   CreateServicesFromProfile(default_profile_.get());
   Mock::VerifyAndClearExpectations(&manager_);
 
@@ -693,6 +696,11 @@ TEST_F(WiFiProviderTest, ServiceSourceStats) {
                 1, Metrics::kMetricRememberedWiFiNetworkCountMin,
                 Metrics::kMetricRememberedWiFiNetworkCountMax,
                 Metrics::kMetricRememberedWiFiNetworkCountNumBuckets));
+  EXPECT_CALL(metrics_,
+              SendToUMA(Metrics::kMetricHiddenSSIDNetworkCount, 0,
+                        Metrics::kMetricRememberedWiFiNetworkCountMin,
+                        Metrics::kMetricRememberedWiFiNetworkCountMax,
+                        Metrics::kMetricRememberedWiFiNetworkCountNumBuckets));
   CreateServicesFromProfile(user_profile_.get());
 }
 

@@ -129,6 +129,9 @@ const int Metrics::kMetricRememberedWiFiNetworkCountMax = 1024;
 const int Metrics::kMetricRememberedWiFiNetworkCountMin = 1;
 const int Metrics::kMetricRememberedWiFiNetworkCountNumBuckets = 32;
 
+const char Metrics::kMetricHiddenSSIDNetworkCount[] =
+    "Network.Shill.WiFi.HiddenSSIDNetworkCount";
+
 const char Metrics::kMetricTimeOnlineSecondsSuffix[] = "TimeOnline";
 const int Metrics::kMetricTimeOnlineSecondsMax = 8 * 60 * 60;  // 8 hours
 const int Metrics::kMetricTimeOnlineSecondsMin = 1;
