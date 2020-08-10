@@ -77,12 +77,12 @@ bool SharedFrameBuffer::Reallocate(uint32_t width,
 }
 
 SharedFrameBuffer::SharedFrameBuffer(int buffer_size) {
-  shm_region_ = base::UnsafeSharedMemoryRegion::Create(buffer_size);
-  shm_mapping_ = shm_region_.Map();
+  shm_buffer_.reset(new base::SharedMemory);
+  shm_buffer_->CreateAndMapAnonymous(buffer_size);
   buffer_size_ = buffer_size;
   num_planes_ = 1;
   data_.resize(num_planes_, nullptr);
-  data_[0] = shm_mapping_.GetMemoryAs<uint8_t>();
+  data_[0] = static_cast<uint8_t*>(shm_buffer_->memory());
   stride_.resize(num_planes_, 0);
 }
 
@@ -111,9 +111,8 @@ void SharedFrameBuffer::SetFourcc(uint32_t fourcc) {
 
 int SharedFrameBuffer::SetDataSize(size_t data_size) {
   if (data_size > buffer_size_) {
-    shm_region_ = base::UnsafeSharedMemoryRegion::Create(data_size);
-    shm_mapping_ = shm_region_.Map();
-    if (!shm_mapping_.IsValid()) {
+    shm_buffer_.reset(new base::SharedMemory);
+    if (!shm_buffer_->CreateAndMapAnonymous(data_size)) {
       LOGF(ERROR) << "Created Shared Memory Fail";
       return -ENOMEM;
     }
@@ -133,13 +132,13 @@ void SharedFrameBuffer::SetData() {
         return;
       }
       data_.resize(num_planes_, 0);
-      data_[YPLANE] = shm_mapping_.GetMemoryAs<uint8_t>();
+      data_[YPLANE] = static_cast<uint8_t*>(shm_buffer_->memory());
       data_[UPLANE] = data_[YPLANE] + stride_[YPLANE] * height_;
       data_[VPLANE] = data_[UPLANE] + stride_[UPLANE] * height_ / 2;
       break;
     default:
       data_.resize(num_planes_, 0);
-      data_[0] = shm_mapping_.GetMemoryAs<uint8_t>();
+      data_[0] = static_cast<uint8_t*>(shm_buffer_->memory());
       break;
   }
 }
