@@ -4,9 +4,13 @@
 
 #include <string>
 
+#include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/json/json_writer.h>
 #include <base/logging.h>
+#include <base/values.h>
+#include <brillo/file_utils.h>
 #include <brillo/flag_helper.h>
 #include <brillo/proto_file_io.h>
 
@@ -23,9 +27,42 @@ using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
 namespace {
 
-void benchmark_and_report_results(const std::string& driver_name,
-                                  const base::FilePath& driver_file_path,
-                                  const CrOSBenchmarkConfig& config) {
+void write_results_to_path(const BenchmarkResults& results,
+                           const base::FilePath& output_path) {
+  base::Value doc(base::Value::Type::DICTIONARY);
+  doc.SetKey("status", base::Value(results.status()));
+  doc.SetKey("results_message", base::Value(results.results_message()));
+  doc.SetKey("total_accuracy",
+             base::Value(static_cast<double>(results.total_accuracy())));
+
+  base::Value percentiles(base::Value::Type::DICTIONARY);
+  for (const auto& latencies : results.percentile_latencies_in_us()) {
+    std::string percentile = std::to_string(latencies.first);
+    LOG(INFO) << percentile
+              << "th percentile latency: " << latencies.second / 1000000.0
+              << " seconds";
+    percentiles.SetKey(percentile,
+                       base::Value(static_cast<int>(latencies.second)));
+  }
+  doc.SetKey("percentile_latencies_in_us", std::move(percentiles));
+
+  std::string results_string;
+  if (!base::JSONWriter::Write(doc, &results_string)) {
+    LOG(ERROR) << "Unable to serialize benchmarking results.";
+    return;
+  }
+  constexpr mode_t kFileRWMode = 0644;
+  if (!brillo::WriteToFileAtomic(output_path, results_string.c_str(),
+                                 results_string.size(), kFileRWMode)) {
+    LOG(ERROR) << "Unable to write out the benchmarking results";
+  }
+}
+
+void benchmark_and_report_results(
+    const std::string& driver_name,
+    const base::FilePath& driver_file_path,
+    const CrOSBenchmarkConfig& config,
+    const base::Optional<base::FilePath>& output_path) {
   auto functions =
       std::make_unique<SharedLibraryBenchmarkFunctions>(driver_file_path);
   if (functions == nullptr || !functions->valid()) {
@@ -51,10 +88,9 @@ void benchmark_and_report_results(const std::string& driver_name,
                    << "the old interface.";
       return;
     }
-    for (const auto& latency_pair : results.percentile_latencies_in_us()) {
-      LOG(INFO) << latency_pair.first
-                << "th percentile latency: " << latency_pair.second / 1000000.0
-                << " seconds";
+
+    if (output_path) {
+      write_results_to_path(results, *output_path);
     }
   } else {
     LOG(ERROR) << driver_name << " Encountered an error";
@@ -71,6 +107,7 @@ int main(int argc, char* argv[]) {
   DEFINE_string(driver_library_path, "libsoda_benchmark_driver.so",
                 "Path to the driver shared library.");
   DEFINE_bool(use_nnapi, false, "Use NNAPI delegate.");
+  DEFINE_string(output_path, "", "Path to write the final results json to.");
 
   brillo::FlagHelper::Init(argc, argv, "ML Benchmark runner");
 
@@ -87,10 +124,19 @@ int main(int argc, char* argv[]) {
                                benchmark_config.mutable_driver_config()))
       << "Could not read the benchmark config file: " << workspace_config_path;
 
+  base::Optional<base::FilePath> output_file_path;
+  if (!FLAGS_output_path.empty()) {
+    output_file_path = base::Optional<base::FilePath>(FLAGS_output_path);
+    if (!output_file_path->IsAbsolute()) {
+      output_file_path = base::Optional<base::FilePath>(FLAGS_workspace_path)
+                             ->Append(FLAGS_output_path);
+    }
+  }
+
   base::FilePath driver_library(FLAGS_driver_library_path);
 
   benchmark_and_report_results(FLAGS_driver_library_path, driver_library,
-                               benchmark_config);
+                               benchmark_config, output_file_path);
 
   LOG(INFO) << "Benchmark finished, exiting";
 }
