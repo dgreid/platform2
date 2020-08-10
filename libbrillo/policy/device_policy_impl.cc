@@ -342,6 +342,18 @@ bool DevicePolicyImpl::GetReleaseChannelDelegated(
   return true;
 }
 
+bool DevicePolicyImpl::GetReleaseLtsTag(std::string* lts_tag) const {
+  if (!device_policy_.has_release_channel())
+    return false;
+
+  const em::ReleaseChannelProto& proto = device_policy_.release_channel();
+  if (!proto.has_release_lts_tag())
+    return false;
+
+  *lts_tag = proto.release_lts_tag();
+  return true;
+}
+
 bool DevicePolicyImpl::GetUpdateDisabled(bool* update_disabled) const {
   if (!IsEnterpriseEnrolled())
     return false;

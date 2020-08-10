@@ -380,4 +380,40 @@ TEST_F(DevicePolicyImplTest, GetCustomerId_NotSet) {
   EXPECT_TRUE(id.empty());
 }
 
+TEST_F(DevicePolicyImplTest, GetReleaseLtsTagSet) {
+  const char kLtsTag[] = "abc";
+
+  em::ChromeDeviceSettingsProto device_policy_proto;
+  auto* release_channel = device_policy_proto.mutable_release_channel();
+  release_channel->set_release_lts_tag(kLtsTag);
+  InitializePolicy(InstallAttributesReader::kDeviceModeEnterprise,
+                   device_policy_proto);
+
+  std::string lts_tag;
+  EXPECT_TRUE(device_policy_.GetReleaseLtsTag(&lts_tag));
+  EXPECT_EQ(lts_tag, kLtsTag);
+}
+
+TEST_F(DevicePolicyImplTest, GetReleaseLtsTagNotSet) {
+  const char kChannel[] = "stable-channel";
+
+  em::ChromeDeviceSettingsProto device_policy_proto;
+  std::string lts_tag;
+
+  InitializePolicy(InstallAttributesReader::kDeviceModeEnterprise,
+                   device_policy_proto);
+  EXPECT_FALSE(device_policy_.GetReleaseLtsTag(&lts_tag));
+  EXPECT_TRUE(lts_tag.empty());
+
+  // Add release_channel without lts_tag to the proto by setting an unrelated
+  // field.
+  auto* release_channel = device_policy_proto.mutable_release_channel();
+  release_channel->set_release_channel(kChannel);
+  InitializePolicy(InstallAttributesReader::kDeviceModeEnterprise,
+                   device_policy_proto);
+
+  EXPECT_FALSE(device_policy_.GetReleaseLtsTag(&lts_tag));
+  EXPECT_TRUE(lts_tag.empty());
+}
+
 }  // namespace policy

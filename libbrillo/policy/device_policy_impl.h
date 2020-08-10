@@ -57,6 +57,7 @@ class DevicePolicyImpl : public DevicePolicy {
   bool GetReleaseChannel(std::string* release_channel) const override;
   bool GetReleaseChannelDelegated(
       bool* release_channel_delegated) const override;
+  bool GetReleaseLtsTag(std::string* lts_tag) const override;
   bool GetUpdateDisabled(bool* update_disabled) const override;
   bool GetTargetVersionPrefix(
       std::string* target_version_prefix) const override;

@@ -72,6 +72,7 @@ class MockDevicePolicy : public DevicePolicy {
   MOCK_METHOD(bool, GetEphemeralUsersEnabled, (bool*), (const, override));
   MOCK_METHOD(bool, GetReleaseChannel, (std::string*), (const, override));
   MOCK_METHOD(bool, GetReleaseChannelDelegated, (bool*), (const, override));
+  MOCK_METHOD(bool, GetReleaseLtsTag, (std::string*), (const, override));
   MOCK_METHOD(bool, GetUpdateDisabled, (bool*), (const, override));
   MOCK_METHOD(bool, GetTargetVersionPrefix, (std::string*), (const, override));
   MOCK_METHOD(bool, GetRollbackToTargetVersion, (int*), (const, override));

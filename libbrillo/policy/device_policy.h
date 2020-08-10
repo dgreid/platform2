@@ -132,6 +132,10 @@ class DevicePolicy {
   virtual bool GetReleaseChannelDelegated(
       bool* release_channel_delegated) const = 0;
 
+  // Writes the value of the release LTS tag policy in |lts_tag|.
+  // Returns true on success.
+  virtual bool GetReleaseLtsTag(std::string* lts_tag) const = 0;
+
   // Writes the value of the update_disabled policy in |update_disabled|.
   // Returns true on success.
   virtual bool GetUpdateDisabled(bool* update_disabled) const = 0;
