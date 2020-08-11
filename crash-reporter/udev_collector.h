@@ -15,6 +15,7 @@
 #ifndef CRASH_REPORTER_UDEV_COLLECTOR_H_
 #define CRASH_REPORTER_UDEV_COLLECTOR_H_
 
+#include <map>
 #include <string>
 
 #include <base/files/file_path.h>
@@ -40,6 +41,10 @@ class UdevCollector : public CrashCollector {
 
  private:
   friend class UdevCollectorTest;
+
+  // Is this a "safe" device coredump, from an allowlist of driver names
+  // for devices whose device coredump does not contain PII?
+  bool IsSafeDevCoredump(std::map<std::string, std::string> udev_event_map);
 
   // Process udev crash logs, collecting log files according to the config
   // file (crash_reporter_logs.conf).

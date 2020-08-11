@@ -38,8 +38,11 @@ const char kDevCoredumpFilePattern[] = "*.devcore";
 // Dummy content for device coredump data file.
 const char kDevCoredumpDataContents[] = "coredump";
 
-// Content for failing device's uevent file.
-const char kFailingDeviceUeventContents[] = "DRIVER=iwlwifi\n";
+// Driver name for a coredump that should not be collected:
+const char kNoCollectDriverName[] = "iwlwifi";
+
+// Driver name for a coredump that should be collected:
+const char kCollectedDriverName[] = "msm";
 
 bool s_consent_given = true;
 
@@ -75,7 +78,8 @@ class UdevCollectorTest : public ::testing::Test {
     collector_.HandleCrash(udev_event);
   }
 
-  void GenerateDevCoredump(const std::string& device_name) {
+  void GenerateDevCoredump(const std::string& device_name,
+                           const std::string& driver_name) {
     // Generate coredump data file.
     ASSERT_TRUE(CreateDirectory(FilePath(
         base::StringPrintf("%s/%s", collector_.dev_coredump_directory_.c_str(),
@@ -92,7 +96,7 @@ class UdevCollectorTest : public ::testing::Test {
         "%s/%s/failing_device/uevent",
         collector_.dev_coredump_directory_.c_str(), device_name.c_str()));
     ASSERT_TRUE(
-        test_util::CreateFile(uevent_path, kFailingDeviceUeventContents));
+        test_util::CreateFile(uevent_path, "DRIVER=" + driver_name + "\n"));
   }
 
   void SetUpCollector(UdevCollectorMock* collector) {
@@ -156,13 +160,13 @@ TEST_F(UdevCollectorTest, TestMatches) {
 }
 
 TEST_F(UdevCollectorTest, TestDevCoredump) {
-  GenerateDevCoredump("devcd0");
+  GenerateDevCoredump("devcd0", kNoCollectDriverName);
   HandleCrash("ACTION=add:KERNEL_NUMBER=0:SUBSYSTEM=devcoredump");
   // IsDeveloperImage() returns false while running this test so devcoredumps
   // will not be added to the crash directory.
   EXPECT_EQ(
       0, GetNumFiles(temp_dir_generator_.GetPath(), kDevCoredumpFilePattern));
-  GenerateDevCoredump("devcd1");
+  GenerateDevCoredump("devcd1", kNoCollectDriverName);
   // Each collector is only allowed to handle one crash, so create a second
   // collector for the second crash.
   UdevCollectorMock second_collector;
@@ -171,6 +175,18 @@ TEST_F(UdevCollectorTest, TestDevCoredump) {
       "ACTION=add:KERNEL_NUMBER=1:SUBSYSTEM=devcoredump");
   EXPECT_EQ(
       0, GetNumFiles(temp_dir_generator_.GetPath(), kDevCoredumpFilePattern));
+}
+
+TEST_F(UdevCollectorTest, TestCollectedDevCoredump) {
+  // One more test, this time for the case of a devcoredump that should be
+  // collected in all builds:
+  GenerateDevCoredump("devcd2", kCollectedDriverName);
+  UdevCollectorMock third_collector;
+  SetUpCollector(&third_collector);
+  third_collector.HandleCrash(
+      "ACTION=add:KERNEL_NUMBER=2:SUBSYSTEM=devcoredump");
+  EXPECT_EQ(
+      1, GetNumFiles(temp_dir_generator_.GetPath(), kDevCoredumpFilePattern));
 }
 
 // TODO(sque, crosbug.com/32238) - test wildcard cases, multiple identical udev

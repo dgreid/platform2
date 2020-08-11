@@ -38,6 +38,30 @@ UdevCollector::UdevCollector()
 
 UdevCollector::~UdevCollector() {}
 
+bool UdevCollector::IsSafeDevCoredump(
+    std::map<std::string, std::string> udev_event_map) {
+  // Is it a device coredump?
+  if (udev_event_map["SUBSYSTEM"] != kUdevSubsystemDevCoredump)
+    return false;
+
+  int instance_number;
+  if (!base::StringToInt(udev_event_map["KERNEL_NUMBER"], &instance_number)) {
+    LOG(ERROR) << "Invalid kernel number: " << udev_event_map["KERNEL_NUMBER"];
+    return false;
+  }
+
+  // Retrieve the driver name of the failing device.
+  std::string driver_name = GetFailingDeviceDriverName(instance_number);
+  if (driver_name.empty()) {
+    LOG(ERROR) << "Failed to obtain driver name for instance: "
+               << instance_number;
+    return false;
+  }
+
+  // Check for safe drivers:
+  return driver_name == "msm";
+}
+
 bool UdevCollector::HandleCrash(const std::string& udev_event) {
   // Process the udev event string.
   // First get all the key-value pairs.
@@ -48,7 +72,9 @@ bool UdevCollector::HandleCrash(const std::string& udev_event) {
     udev_event_map[key_value.first] = key_value.second;
   }
 
-  if (util::IsDeveloperImage()) {
+  if (UdevCollector::IsSafeDevCoredump(udev_event_map)) {
+    LOG(INFO) << "Safe device coredumps are always processed";
+  } else if (util::IsDeveloperImage()) {
     LOG(INFO) << "developer image - collect udev crash info.";
   } else if (udev_event_map["SUBSYSTEM"] == kUdevSubsystemDevCoredump) {
     LOG(INFO) << "Device coredumps are not processed on non-developer images.";

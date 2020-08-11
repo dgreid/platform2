@@ -637,6 +637,13 @@ bool Sender::HasCrashUploadingConsent() {
   return metrics_lib_->AreMetricsEnabled();
 }
 
+bool Sender::IsSafeDeviceCoredump(const CrashInfo& info) {
+  std::string value;
+  if (!info.metadata.GetString("exec_name", &value))
+    return false;
+  return value == "devcoredump_msm";
+}
+
 Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
                                     std::string* reason,
                                     CrashInfo* info) {
@@ -775,7 +782,8 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     return kIgnore;
   }
 
-  if (info->payload_kind == "devcore" && !IsDeviceCoredumpUploadAllowed()) {
+  if (info->payload_kind == "devcore" && !IsDeviceCoredumpUploadAllowed() &&
+      !IsSafeDeviceCoredump(*info)) {
     *reason = "Device coredump upload not allowed";
     return kIgnore;
   }

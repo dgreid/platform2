@@ -353,6 +353,10 @@ class Sender {
   // Returns true if we have consent to send crashes to Google.
   bool HasCrashUploadingConsent();
 
+  // Is this a "safe" device coredump, from an allowlist of driver names
+  // for devices whose device coredump does not contain PII?
+  bool IsSafeDeviceCoredump(const CrashInfo& info);
+
   // Looks through |keys| in the os-release data using brillo::OsReleaseReader.
   // Keys are searched in order until a value is found. Returns the value in
   // the Optional if found, otherwise the Optional is empty.
