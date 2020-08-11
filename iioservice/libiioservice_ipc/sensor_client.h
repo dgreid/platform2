@@ -27,7 +27,7 @@ class IIOSERVICE_EXPORT SensorClient final
  public:
   using SensorServiceReceivedCallback = base::RepeatingCallback<void(
       mojo::PendingRemote<cros::mojom::SensorService>)>;
-  using ClientOnFailureCallback = base::RepeatingCallback<void()>;
+  using ClientOnFailureCallback = base::OnceCallback<void()>;
 
   static void SensorClientDeleter(SensorClient* client);
   using ScopedSensorClient =
@@ -36,6 +36,7 @@ class IIOSERVICE_EXPORT SensorClient final
   // Create a SensorClient instance by providing a task runner for mojo IPC, a
   // callback to receive SensorService remote from |SetUpChannel|, and a
   // callback to abort when an error occurs.
+  // Should be used on |ipc_task_runner|.
   static ScopedSensorClient Create(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
       mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,

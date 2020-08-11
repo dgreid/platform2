@@ -34,6 +34,8 @@ SensorClient::ScopedSensorClient SensorClient::Create(
     mojo::PendingReceiver<cros::mojom::SensorHalClient> pending_receiver,
     SensorServiceReceivedCallback sensor_service_received_callback,
     ClientOnFailureCallback client_on_failure_callback) {
+  DCHECK(ipc_task_runner->RunsTasksInCurrentSequence());
+
   ScopedSensorClient client(
       new SensorClient(ipc_task_runner, std::move(pending_receiver),
                        std::move(sensor_service_received_callback),
@@ -62,7 +64,9 @@ SensorClient::SensorClient(
       sensor_service_received_callback_(
           std::move(sensor_service_received_callback)),
       client_on_failure_callback_(std::move(client_on_failure_callback)) {
-  receiver_.Bind(std::move(pending_receiver));
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  receiver_.Bind(std::move(pending_receiver), ipc_task_runner_);
   receiver_.set_disconnect_handler(
       base::BindOnce(&SensorClient::OnClientError, base::Unretained(this)));
   LOGF(INFO) << "Connected to broker";
@@ -70,10 +74,12 @@ SensorClient::SensorClient(
 
 void SensorClient::OnClientError() {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+  DCHECK(receiver_.is_bound());
+  DCHECK(!client_on_failure_callback_.is_null());
 
   LOGF(ERROR) << "Connection to broker lost";
   receiver_.reset();
-  client_on_failure_callback_.Run();
+  std::move(client_on_failure_callback_).Run();
 }
 
 }  // namespace iioservice
