@@ -13,6 +13,8 @@
 #include <dbus/exported_object.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 
+#include "federated/mojom/federated_service.mojom.h"
+
 namespace dbus {
 class MethodCall;
 }  // namespace dbus
@@ -41,6 +43,11 @@ class Daemon : public brillo::DBusDaemon {
 
   // IPC Support
   std::unique_ptr<mojo::core::ScopedIPCSupport> ipc_support_;
+
+  // The top-level interface. Empty until it is created & bound to a pipe by
+  // BootstrapMojoConnection.
+  std::unique_ptr<chromeos::federated::mojom::FederatedService>
+      federated_service_;
 
   // Must be last class member.
   base::WeakPtrFactory<Daemon> weak_ptr_factory_;

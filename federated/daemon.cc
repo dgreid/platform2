@@ -18,6 +18,9 @@
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/public/cpp/system/invitation.h>
 
+#include "federated/federated_service_impl.h"
+#include "federated/storage_manager.h"
+
 namespace federated {
 
 Daemon::Daemon() : weak_ptr_factory_(this) {}
@@ -58,7 +61,13 @@ void Daemon::InitDBus() {
 void Daemon::BootstrapMojoConnection(
     dbus::MethodCall* method_call,
     dbus::ExportedObject::ResponseSender response_sender) {
-  // TODO(alanlxl): Check if federated_service_impl is already completed.
+  if (federated_service_) {
+    LOG(ERROR) << "FederatedService already instantiated";
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_FAILED, "Bootstrap already completed"));
+    return;
+  }
 
   base::ScopedFD file_handle;
   dbus::MessageReader reader(method_call);
@@ -94,8 +103,11 @@ void Daemon::BootstrapMojoConnection(
       mojo::IncomingInvitation::Accept(mojo::PlatformChannelEndpoint(
           mojo::PlatformHandle(std::move(file_handle))));
 
-  // TODO(alanlxl): make a federated_service_impl here and bind primodial
-  // message pipe to it.
+  // Bind primordial message pipe to a FederatedService implementation.
+  federated_service_ = std::make_unique<FederatedServiceImpl>(
+      invitation.ExtractMessagePipe(kBootstrapMojoConnectionChannelToken),
+      base::Bind(&Daemon::OnMojoDisconnection, base::Unretained(this)),
+      StorageManager::GetInstance());
 
   // Send success response.
   std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));

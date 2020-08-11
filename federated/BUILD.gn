@@ -2,10 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//common-mk/mojom_bindings_generator.gni")
 import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 group("all") {
   deps = [ ":federated_service" ]
+  if (use.test) {
+    deps += [ ":federated_service_test" ]
+  }
 }
 
 pkg_config("federated_common_pkg_deps") {
@@ -17,12 +22,53 @@ pkg_config("federated_common_pkg_deps") {
   ]
 }
 
+generate_mojom_bindings("federated_mojo_bindings") {
+  mojo_root = "${platform2_root}"
+  sources = [
+    "mojom/example.mojom",
+    "mojom/federated_service.mojom",
+  ]
+}
+
+proto_library("tf_example_proto") {
+  proto_in_dir = "${sysroot}/usr/include/chromeos/federated/protos"
+  proto_out_dir = "chrome/knowledge/federated/"
+  sources = [
+    "${proto_in_dir}/example.proto",
+    "${proto_in_dir}/feature.proto",
+  ]
+}
+
 static_library("federated_common") {
   all_dependent_configs = [ ":federated_common_pkg_deps" ]
-  sources = [ "daemon.cc" ]
+  pkg_deps = [ "protobuf" ]
+  deps = [
+    ":federated_mojo_bindings",
+    ":tf_example_proto",
+  ]
+  sources = [
+    "daemon.cc",
+    "federated_service_impl.cc",
+    "storage_manager_impl.cc",
+    "utils.cc",
+  ]
 }
 
 executable("federated_service") {
   deps = [ ":federated_common" ]
   sources = [ "main.cc" ]
+}
+
+if (use.test) {
+  executable("federated_service_test") {
+    configs += [ "//common-mk:test" ]
+
+    deps = [ ":federated_common" ]
+    sources = [
+      "federated_service_impl_test.cc",
+      "test_utils.cc",
+      "testrunner.cc",
+      "utils_test.cc",
+    ]
+  }
 }
