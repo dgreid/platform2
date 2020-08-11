@@ -261,9 +261,7 @@ class ServiceDistributed : public Service {
   static void ReportUnsupportedKeyType(GError** error, int type);
 
   // Callback called after receiving the ownership taken signal from tpm_manager
-  // The arg |proxy| is required by dbus_g_proxy_connect_signal but unused here.
-  static void OwnershipTakenSignalCallback(
-      DBusGProxy* /* proxy */, GArray* raw_payload, gpointer data);
+  void OwnershipTakenSignalCallback();
 
   std::unique_ptr<attestation::AttestationInterface>
       default_attestation_interface_;

@@ -2,6 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <set>
+#include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
 #include <base/bind.h>
 #include <base/json/json_writer.h>
 #include <base/message_loop/message_pump_type.h>
@@ -12,10 +19,7 @@
 #include <chaps/isolate.h>
 #include <chaps/token_manager_client.h>
 #include <dbus/cryptohome/dbus-constants.h>
-#include <set>
-#include <unordered_map>
-#include <unordered_set>
-#include <vector>
+#include <tpm_manager/client/tpm_manager_utility.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox_client.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper_impl.h"
@@ -401,11 +405,14 @@ bool UserDataAuth::PostDBusInitialize() {
   if (!tpm_ownership_proxy_) {
     tpm_ownership_proxy_ = default_tpm_ownership_proxy_.get();
   }
-  tpm_ownership_proxy_->RegisterSignalOwnershipTakenSignalHandler(
-      base::Bind(&UserDataAuth::OnOwnershipTakenSignal, base::Unretained(this)),
-      base::Bind(&UserDataAuth::OnTpmManagerSignalConnected,
-                 base::Unretained(this)));
-
+  tpm_manager::TpmManagerUtility* tpm_manager_util =
+      tpm_manager::TpmManagerUtility::GetSingleton();
+  if (tpm_manager_util) {
+    tpm_manager_util->AddOwnershipCallback(base::Bind(
+        &UserDataAuth::OnOwnershipTakenSignal, base::Unretained(this)));
+  } else {
+    LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
+  }
   PostTaskToMountThread(FROM_HERE,
                         base::Bind(&UserDataAuth::CreateFingerprintManager,
                                    base::Unretained(this)));
@@ -425,18 +432,7 @@ void UserDataAuth::CreateFingerprintManager() {
     fingerprint_manager_ = default_fingerprint_manager_.get();
 }
 
-void UserDataAuth::OnTpmManagerSignalConnected(const std::string& interface,
-                                               const std::string& signal,
-                                               bool success) {
-  if (!success) {
-    LOG(ERROR)
-        << "Failure to connect DBus signal in cryptohome-proxy, interface="
-        << interface << ", signal=" << signal;
-  }
-}
-
-void UserDataAuth::OnOwnershipTakenSignal(
-    const tpm_manager::OwnershipTakenSignal& signal) {
+void UserDataAuth::OnOwnershipTakenSignal() {
   // Use the same code path as when ownership is taken through tpm_init_.
   OwnershipCallback(true, true);
 }

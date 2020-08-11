@@ -14,7 +14,7 @@
 namespace attestation {
 
 TpmUtilityCommon::TpmUtilityCommon()
-    : tpm_manager_utility_(new tpm_manager::TpmManagerUtility()) {}
+    : tpm_manager_utility_(tpm_manager::TpmManagerUtility::GetSingleton()) {}
 
 TpmUtilityCommon::TpmUtilityCommon(
     tpm_manager::TpmManagerUtility* tpm_manager_utility)
@@ -24,7 +24,11 @@ TpmUtilityCommon::~TpmUtilityCommon() {}
 
 bool TpmUtilityCommon::Initialize() {
   BuildValidPCR0Values();
-  return tpm_manager_utility_->Initialize();
+  if (!tpm_manager_utility_) {
+    LOG(INFO) << __func__ << "Reinitialize tpm_manager utility";
+    tpm_manager_utility_ = tpm_manager::TpmManagerUtility::GetSingleton();
+  }
+  return tpm_manager_utility_;
 }
 
 bool TpmUtilityCommon::IsTpmReady() {
@@ -99,6 +103,13 @@ bool TpmUtilityCommon::CacheTpmState() {
   tpm_manager::LocalData local_data;
   bool is_enabled{false};
   bool is_owned{false};
+  if (!tpm_manager_utility_) {
+    tpm_manager_utility_ = tpm_manager::TpmManagerUtility::GetSingleton();
+    if (!tpm_manager_utility_) {
+      LOG(ERROR) << __func__ << ": Failed to get tpm_manager utility.";
+      return false;
+    }
+  }
   if (!tpm_manager_utility_->GetTpmStatus(&is_enabled, &is_owned,
                                           &local_data)) {
     LOG(ERROR) << __func__ << ": Failed to get tpm status from tpm_manager.";
@@ -113,6 +124,13 @@ bool TpmUtilityCommon::CacheTpmState() {
 }
 
 bool TpmUtilityCommon::RemoveOwnerDependency() {
+  if (!tpm_manager_utility_) {
+    tpm_manager_utility_ = tpm_manager::TpmManagerUtility::GetSingleton();
+    if (!tpm_manager_utility_) {
+      LOG(ERROR) << __func__ << ": Failed to get tpm_manager utility.";
+      return false;
+    }
+  }
   return tpm_manager_utility_->RemoveOwnerDependency(
       tpm_manager::kTpmOwnerDependency_Attestation);
 }

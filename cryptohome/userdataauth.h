@@ -784,7 +784,7 @@ class UserDataAuth {
 
   // This is called whenever the OwnershipTaken signal is emitted by
   // tpm_manager. This will notify |tpm_| about the emitted signal.
-  void OnOwnershipTakenSignal(const tpm_manager::OwnershipTakenSignal& signal);
+  void OnOwnershipTakenSignal();
 
   // =============== Stateful Recovery related Helpers ===============
 

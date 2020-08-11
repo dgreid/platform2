@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 #include <base/macros.h>
 #include <base/optional.h>
@@ -24,6 +25,8 @@ namespace tpm_manager {
 class TPM_MANAGER_EXPORT TpmManagerUtility
     : public TpmOwnershipTakenSignalHandler {
  public:
+  using OwnershipCallback = base::RepeatingCallback<void()>;
+
   TpmManagerUtility() = default;
   // a constructor which enables injection of mock interfaces.
   TpmManagerUtility(tpm_manager::TpmOwnershipInterface* tpm_owner,
@@ -34,7 +37,7 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   // |true| if successful. Returns |false| if we cannot start
   // |tpm_manager_thread_| or tpm_manager's interfaces fail to initialize.
   //
-  // Once returing |true|, the calls of this function afterwards return |true|
+  // Once returning |true|, the calls of this function afterwards return |true|
   // without mutating any data member.
   virtual bool Initialize();
 
@@ -104,6 +107,14 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   virtual bool GetOwnershipTakenSignalStatus(bool* is_successful,
                                              bool* has_received,
                                              LocalData* local_data);
+
+  // Add callback which would be trigger after got tpm ownership.
+  void AddOwnershipCallback(OwnershipCallback ownership_callback);
+
+  // Get a singleton of tpm_manager utility. It would return nullptr when
+  // initialize failed.
+  // Using singleton would resolve the ownership data race of consumers.
+  static TpmManagerUtility* GetSingleton();
 
   void OnOwnershipTaken(const OwnershipTakenSignal& signal) override;
 
@@ -176,6 +187,11 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   // the signal data.
   base::Lock ownership_signal_lock_;
 
+  // |ownership_signal_lock_| is used when the signal-handling data is
+  // accessed; the mutex is necessary because the user of this class could read
+  // the signal data.
+  base::Lock ownership_callback_lock_;
+
   // Only uses |is_connected_| to indicate if we can rely on the dbus signal to
   // get the local data though it could mean "not connected", "being
   // connected". Note that |is_connected_| could also mean the connection has
@@ -189,6 +205,8 @@ class TPM_MANAGER_EXPORT TpmManagerUtility
   // |ownership_taken_signal_| stores the data once the ownership
   // taken signal is received.
   base::Optional<OwnershipTakenSignal> ownership_taken_signal_;
+
+  std::vector<OwnershipCallback> ownership_callbacks_;
 
   DISALLOW_COPY_AND_ASSIGN(TpmManagerUtility);
 };

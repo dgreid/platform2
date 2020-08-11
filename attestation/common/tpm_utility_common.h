@@ -59,7 +59,7 @@ class TpmUtilityCommon : public TpmUtility {
 
   std::unordered_set<std::string> valid_pcr0_values_;
 
-  std::unique_ptr<tpm_manager::TpmManagerUtility> tpm_manager_utility_;
+  tpm_manager::TpmManagerUtility* tpm_manager_utility_;
 
   // For testing purpose.
   template <typename T>

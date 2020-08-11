@@ -60,10 +60,8 @@ class TpmUtilityTest : public testing::Test {
     trunks_factory_for_test_.set_tpm(&mock_tpm_);
     trunks_factory_for_test_.set_tpm_utility(&mock_tpm_utility_);
     trunks_factory_for_test_.set_blob_parser(&mock_blob_parser_);
-    mock_tpm_manager_utility_ =
-        new NiceMock<tpm_manager::MockTpmManagerUtility>();
-    tpm_utility_.reset(
-        new TpmUtilityV2(mock_tpm_manager_utility_, &trunks_factory_for_test_));
+    tpm_utility_.reset(new TpmUtilityV2(&mock_tpm_manager_utility_,
+                                        &trunks_factory_for_test_));
     tpm_utility_->Initialize();
   }
 
@@ -130,13 +128,13 @@ class TpmUtilityTest : public testing::Test {
     tpm_manager::LocalData local_data;
     local_data.set_owner_password("password");
     local_data.set_endorsement_password("endorsement_password");
-    EXPECT_CALL(*mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+    EXPECT_CALL(mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
         .WillOnce(DoAll(SetArgPointee<2>(local_data), Return(true)));
   }
 
   tpm_manager::GetTpmStatusReply tpm_status_;
 
-  tpm_manager::MockTpmManagerUtility* mock_tpm_manager_utility_;
+  NiceMock<tpm_manager::MockTpmManagerUtility> mock_tpm_manager_utility_;
   NiceMock<trunks::MockTpm> mock_tpm_;
   NiceMock<trunks::MockTpmUtility> mock_tpm_utility_;
   NiceMock<trunks::MockBlobParser> mock_blob_parser_;
@@ -446,7 +444,7 @@ TEST_F(TpmUtilityTest, GetEndorsementPublicKeyModulusNoKey) {
 
 TEST_F(TpmUtilityTest, GetEndorsementCertificateRsa) {
   EXPECT_CALL(
-      *mock_tpm_manager_utility_,
+      mock_tpm_manager_utility_,
       ReadSpace(trunks::kRsaEndorsementCertificateNonRealIndex, false, _))
       .WillOnce(DoAll(SetArgPointee<2>("rsa_cert"), Return(true)));
   std::string certificate;
@@ -457,7 +455,7 @@ TEST_F(TpmUtilityTest, GetEndorsementCertificateRsa) {
 
 TEST_F(TpmUtilityTest, GetEndorsementCertificateEcc) {
   EXPECT_CALL(
-      *mock_tpm_manager_utility_,
+      mock_tpm_manager_utility_,
       ReadSpace(trunks::kEccEndorsementCertificateNonRealIndex, false, _))
       .WillOnce(DoAll(SetArgPointee<2>("ecc_cert"), Return(true)));
   std::string certificate;
@@ -468,7 +466,7 @@ TEST_F(TpmUtilityTest, GetEndorsementCertificateEcc) {
 
 TEST_F(TpmUtilityTest, GetEndorsementCertificateNoCert) {
   EXPECT_CALL(
-      *mock_tpm_manager_utility_,
+      mock_tpm_manager_utility_,
       ReadSpace(trunks::kRsaEndorsementCertificateNonRealIndex, false, _))
       .WillOnce(Return(false));
   std::string certificate;

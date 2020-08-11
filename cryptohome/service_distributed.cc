@@ -7,12 +7,10 @@
 #include <base/bind.h>
 #include <base/message_loop/message_pump_type.h>
 #include <base/strings/string_number_conversions.h>
-#include <tpm_manager/proto_bindings/tpm_manager.pb.h>
-#include <tpm_manager-client/tpm_manager/dbus-constants.h>
+#include <tpm_manager/client/tpm_manager_utility.h>
 
 #include "attestation/client/dbus_proxy.h"
 #include "cryptohome/cryptolib.h"
-#include "tpm_manager/common/tpm_ownership_dbus_interface.h"
 
 #include <utility>
 using attestation::AttestationInterface;
@@ -1300,43 +1298,19 @@ gboolean ServiceDistributed::AsyncTpmAttestationGetCertificateEx(
 }
 
 void ServiceDistributed::ConnectOwnershipTakenSignal() {
-  brillo::dbus::BusConnection connection =
-      brillo::dbus::GetSystemBusConnection();
-
-  tpm_manager_proxy_ = std::make_unique<brillo::dbus::Proxy>(
-      connection,
-      tpm_manager::kTpmManagerServiceName,
-      tpm_manager::kTpmManagerServicePath,
-      tpm_manager::kTpmOwnershipInterface);
-  auto tpm_manager_gproxy = tpm_manager_proxy_->gproxy();
-  DCHECK(tpm_manager_gproxy) << "Failed to acquire tpm_manager proxy";
-
-  dbus_g_proxy_add_signal(
-      tpm_manager_gproxy,
-      tpm_manager::kOwnershipTakenSignal,
-      DBUS_TYPE_G_UCHAR_ARRAY,
-      G_TYPE_INVALID);
-
-  dbus_g_proxy_connect_signal(
-      tpm_manager_gproxy, tpm_manager::kOwnershipTakenSignal,
-      G_CALLBACK(ServiceDistributed::OwnershipTakenSignalCallback), this, NULL);
+  tpm_manager::TpmManagerUtility* tpm_manager_util =
+      tpm_manager::TpmManagerUtility::GetSingleton();
+  if (tpm_manager_util) {
+    tpm_manager_util->AddOwnershipCallback(
+        base::Bind(&ServiceDistributed::OwnershipTakenSignalCallback,
+                   base::Unretained(this)));
+  } else {
+    LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
+  }
 }
 
-void ServiceDistributed::OwnershipTakenSignalCallback(
-    DBusGProxy* /* proxy */, GArray* raw_payload, gpointer data) {
-  LOG(INFO) << __PRETTY_FUNCTION__;
-
-  tpm_manager::OwnershipTakenSignal signal_payload;
-  if (!signal_payload.ParseFromArray(raw_payload->data, raw_payload->len)) {
-    LOG(ERROR) << "Failed to parse the ownership taken signal payload.";
-    return;
-  }
-
-  // TODO(garryxiao): extract owner password from signal_payload and pass it to
-  // the signal handler when later optimizing tpm status fetching/caching in
-  // Tpm2Impl.
-  auto service_distributed = reinterpret_cast<ServiceDistributed*>(data);
-  service_distributed->OwnershipCallback(true, true);
+void ServiceDistributed::OwnershipTakenSignalCallback() {
+  OwnershipCallback(true, true);
 }
 
 }  // namespace cryptohome

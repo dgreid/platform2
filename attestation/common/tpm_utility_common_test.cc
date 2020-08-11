@@ -8,6 +8,7 @@
 #include "attestation/common/tpm_utility_v1.h"
 #endif
 
+#include <utility>
 #include <vector>
 
 #include <base/logging.h>
@@ -20,11 +21,11 @@ namespace {
 
 using ::testing::_;
 using ::testing::DoAll;
+using ::testing::NiceMock;
 using ::testing::NotNull;
 using ::testing::Return;
 using ::testing::SetArgPointee;
 using ::testing::Types;
-
 }  // namespace
 
 namespace attestation {
@@ -34,12 +35,11 @@ class TpmUtilityCommonTest : public ::testing::Test {
  public:
   ~TpmUtilityCommonTest() override = default;
   void SetUp() override {
-    mock_tpm_manager_utility_ = new tpm_manager::MockTpmManagerUtility();
-    tpm_manager_utility_backup_.reset(mock_tpm_manager_utility_);
-    tpm_utility_.tpm_manager_utility_.swap(tpm_manager_utility_backup_);
+    tpm_manager_utility_backup_ = &mock_tpm_manager_utility_;
+    std::swap(tpm_utility_.tpm_manager_utility_, tpm_manager_utility_backup_);
   }
   void TearDown() override {
-    tpm_utility_.tpm_manager_utility_.swap(tpm_manager_utility_backup_);
+    std::swap(tpm_utility_.tpm_manager_utility_, tpm_manager_utility_backup_);
   }
 
  protected:
@@ -53,8 +53,8 @@ class TpmUtilityCommonTest : public ::testing::Test {
               local_data.owner_delegate().secret());
   }
   TpmUtilityType tpm_utility_;
-  tpm_manager::MockTpmManagerUtility* mock_tpm_manager_utility_{nullptr};
-  std::unique_ptr<tpm_manager::TpmManagerUtility> tpm_manager_utility_backup_;
+  NiceMock<tpm_manager::MockTpmManagerUtility> mock_tpm_manager_utility_;
+  tpm_manager::TpmManagerUtility* tpm_manager_utility_backup_;
 };
 
 #if USE_TPM2
@@ -70,7 +70,7 @@ TYPED_TEST(TpmUtilityCommonTest, HasTpmManagerUtility) {
 }
 
 TYPED_TEST(TpmUtilityCommonTest, IsTpmReady) {
-  EXPECT_CALL(*this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+  EXPECT_CALL(this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
       .WillOnce(Return(false))
       .WillOnce(
           DoAll(SetArgPointee<0>(false), SetArgPointee<1>(false), Return(true)))
@@ -80,7 +80,7 @@ TYPED_TEST(TpmUtilityCommonTest, IsTpmReady) {
   EXPECT_FALSE(this->tpm_utility_.IsTpmReady());
   EXPECT_FALSE(this->tpm_utility_.IsTpmReady());
 
-  EXPECT_CALL(*this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+  EXPECT_CALL(this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
       .WillOnce(
           DoAll(SetArgPointee<0>(true), SetArgPointee<1>(true), Return(true)));
   EXPECT_TRUE(this->tpm_utility_.IsTpmReady());
@@ -92,7 +92,7 @@ TYPED_TEST(TpmUtilityCommonTest, IsTpmReadyCallsCacheTpmState) {
   expected_local_data.set_endorsement_password("Onyetenyevwe");
   expected_local_data.mutable_owner_delegate()->set_blob("Ugwemuhwem");
   expected_local_data.mutable_owner_delegate()->set_secret("Osas");
-  EXPECT_CALL(*this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
+  EXPECT_CALL(this->mock_tpm_manager_utility_, GetTpmStatus(_, _, _))
       .WillOnce(DoAll(SetArgPointee<2>(expected_local_data), Return(true)));
   this->tpm_utility_.IsTpmReady();
   this->VerifyAgainstExpectedLocalData(expected_local_data);
@@ -100,7 +100,7 @@ TYPED_TEST(TpmUtilityCommonTest, IsTpmReadyCallsCacheTpmState) {
 
 TYPED_TEST(TpmUtilityCommonTest, RemoveOwnerDependency) {
   EXPECT_CALL(
-      *this->mock_tpm_manager_utility_,
+      this->mock_tpm_manager_utility_,
       RemoveOwnerDependency(tpm_manager::kTpmOwnerDependency_Attestation))
       .WillOnce(Return(false))
       .WillOnce(Return(true));

@@ -12,6 +12,12 @@
 
 namespace tpm_manager {
 
+namespace {
+// Singleton and lock for TpmManagerUtility.
+TpmManagerUtility* singleton;
+base::Lock singleton_lock;
+}  // namespace
+
 TpmManagerUtility::TpmManagerUtility(
     tpm_manager::TpmOwnershipInterface* tpm_owner,
     tpm_manager::TpmNvramInterface* tpm_nvram)
@@ -257,10 +263,22 @@ bool TpmManagerUtility::GetOwnershipTakenSignalStatus(bool* is_successful,
   return true;
 }
 
+void TpmManagerUtility::AddOwnershipCallback(
+    OwnershipCallback ownership_callback) {
+  base::AutoLock lock(ownership_callback_lock_);
+  ownership_callbacks_.push_back(ownership_callback);
+}
+
 void TpmManagerUtility::OnOwnershipTaken(const OwnershipTakenSignal& signal) {
   LOG(INFO) << __func__ << ": Received |OwnershipTakenSignal|.";
-  base::AutoLock lock(ownership_signal_lock_);
-  ownership_taken_signal_ = signal;
+  {
+    base::AutoLock lock(ownership_signal_lock_);
+    ownership_taken_signal_ = signal;
+  }
+  base::AutoLock lock(ownership_callback_lock_);
+  for (auto& callback : ownership_callbacks_) {
+    callback.Run();
+  }
 }
 
 void TpmManagerUtility::OnSignalConnected(const std::string& /*interface_name*/,
@@ -274,6 +292,18 @@ void TpmManagerUtility::OnSignalConnected(const std::string& /*interface_name*/,
   base::AutoLock lock(ownership_signal_lock_);
   is_connected_ = true;
   is_connection_successful_ = is_successful;
+}
+
+TpmManagerUtility* TpmManagerUtility::GetSingleton() {
+  base::AutoLock lock(singleton_lock);
+  if (!singleton) {
+    singleton = new TpmManagerUtility();
+    if (!singleton->Initialize()) {
+      delete singleton;
+      singleton = nullptr;
+    }
+  }
+  return singleton;
 }
 
 }  // namespace tpm_manager

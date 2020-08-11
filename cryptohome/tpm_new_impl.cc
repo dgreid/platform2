@@ -48,7 +48,13 @@ bool TpmNewImpl::GetOwnerPassword(brillo::SecureBlob* owner_password) {
 }
 
 bool TpmNewImpl::InitializeTpmManagerUtility() {
-  return tpm_manager_utility_->Initialize();
+  if (!tpm_manager_utility_) {
+    tpm_manager_utility_ = tpm_manager::TpmManagerUtility::GetSingleton();
+    if (!tpm_manager_utility_) {
+      LOG(ERROR) << __func__ << ": Failed to get TpmManagerUtility singleton!";
+    }
+  }
+  return tpm_manager_utility_ && tpm_manager_utility_->Initialize();
 }
 
 bool TpmNewImpl::CacheTpmManagerStatus() {
