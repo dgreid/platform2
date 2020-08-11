@@ -16,6 +16,9 @@
 
 namespace typecd {
 
+constexpr uint8_t kPDRevision30 = 0x3;
+constexpr uint8_t kPDRevision20 = 0x2;
+
 // This is a base class which can represent the components connected to a Type C
 // Port. These components (Partner and Cable) have common properties like PD
 // identity, so it is worthwhile to abstract those into a common base class

@@ -23,6 +23,9 @@ class Cable : public Peripheral {
  public:
   explicit Cable(const base::FilePath& syspath) : Peripheral(syspath) {}
 
+  // Check whether the cable supports Thunderbolt3 speed requirements.
+  bool TBT3PDIdentityCheck();
+
   DISALLOW_COPY_AND_ASSIGN(Cable);
 };
 

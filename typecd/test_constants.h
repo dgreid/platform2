@@ -20,6 +20,7 @@ const uint32_t kTBTVDOIndex = 0;
 constexpr char kFakePort0SysPath[] = "/sys/class/typec/port0";
 constexpr char kFakePort0PartnerSysPath[] =
     "/sys/class/typec/port0/port0-partner";
+constexpr char kFakePort0CableSysPath[] = "/sys/class/typec/port0/port0-cable";
 
 }  // namespace typecd
 
