@@ -162,7 +162,7 @@ bool UdevCollector::AppendDevCoredump(const FilePath& crash_directory,
 
   // Collect coredump data.
   if (!base::CopyFile(coredump_path, core_path)) {
-    PLOG(ERROR) << "Failed to copy device coredumpm file from "
+    PLOG(ERROR) << "Failed to copy device coredump file from "
                 << coredump_path.value() << " to " << core_path.value();
     return false;
   }
