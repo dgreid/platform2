@@ -215,6 +215,7 @@ class Device : public base::RefCounted<Device> {
   const IPConfigRefPtr& ip6config() const { return ip6config_; }
   const IPConfigRefPtr& dhcpv6_config() const { return dhcpv6_config_; }
   void set_ipconfig(const IPConfigRefPtr& config) { ipconfig_ = config; }
+  void set_ip6config(const IPConfigRefPtr& config) { ip6config_ = config; }
 
   // Returns a string that is guaranteed to uniquely identify this Device
   // instance.

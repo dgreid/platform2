@@ -36,12 +36,14 @@ namespace shill {
 class TrafficMonitorTest : public Test {
  public:
   static const char kLocalIpAddr[];
+  static const char kLocalIp6Addr[];
   static const uint16_t kLocalPort1;
   static const uint16_t kLocalPort2;
   static const uint16_t kLocalPort3;
   static const uint16_t kLocalPort4;
   static const uint16_t kLocalPort5;
   static const char kRemoteIpAddr[];
+  static const char kRemoteIp6Addr[];
   static const uint16_t kRemotePort;
   static const uint64_t kTxQueueLength1;
   static const uint64_t kTxQueueLength2;
@@ -52,6 +54,7 @@ class TrafficMonitorTest : public Test {
       : manager_(&control_, &dispatcher_, nullptr),
         device_(new MockDevice(&manager_, "netdev0", "00:11:22:33:44:55", 1)),
         ipconfig_(new IPConfig(&control_, "netdev0")),
+        ip6config_(new IPConfig(&control_, "netdev0")),
         mock_socket_info_reader_(new MockSocketInfoReader),
         mock_connection_info_reader_(new MockConnectionInfoReader),
         monitor_(
@@ -59,15 +62,19 @@ class TrafficMonitorTest : public Test {
             &dispatcher_,
             Bind(&TrafficMonitorTest::OnNoOutgoingPackets, Unretained(this))),
         local_addr_(IPAddress::kFamilyIPv4),
-        remote_addr_(IPAddress::kFamilyIPv4) {
-    local_addr_.SetAddressFromString(kLocalIpAddr);
-    remote_addr_.SetAddressFromString(kRemoteIpAddr);
-  }
+        local_addr6_(IPAddress::kFamilyIPv6),
+        remote_addr_(IPAddress::kFamilyIPv4),
+        remote_addr6_(IPAddress::kFamilyIPv6) {}
 
   MOCK_METHOD(void, OnNoOutgoingPackets, (int));
 
  protected:
   void SetUp() override {
+    EXPECT_TRUE(local_addr_.SetAddressFromString(kLocalIpAddr));
+    EXPECT_TRUE(remote_addr_.SetAddressFromString(kRemoteIpAddr));
+    EXPECT_TRUE(local_addr6_.SetAddressFromString(kLocalIp6Addr));
+    EXPECT_TRUE(remote_addr6_.SetAddressFromString(kRemoteIp6Addr));
+
     monitor_.socket_info_reader_.reset(
         mock_socket_info_reader_);  // Passes ownership
     monitor_.connection_info_reader_.reset(
@@ -79,6 +86,12 @@ class TrafficMonitorTest : public Test {
     ipconfig_->set_properties(ipconfig_properties);
 
     device_->set_ipconfig(ipconfig_);
+
+    // Initialize ip6config_ too, but default to IPv4-only.
+    IPConfig::Properties ip6config_properties;
+    ip6config_properties.address_family = IPAddress::kFamilyIPv6;
+    ip6config_properties.address = kLocalIp6Addr;
+    ip6config_->set_properties(ip6config_properties);
   }
 
   void VerifyStopped() {
@@ -119,28 +132,40 @@ class TrafficMonitorTest : public Test {
     return StringPrintf("%s:%d", ip.ToString().c_str(), port);
   }
 
+  using IPPortToTxQueueLengthMap = TrafficMonitor::IPPortToTxQueueLengthMap;
+
+  IPPortToTxQueueLengthMap BuildIPPortToTxQueueLength(
+      const std::vector<SocketInfo>& socket_infos) {
+    return monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  }
+
   MockControl control_;
   NiceMock<MockEventDispatcher> dispatcher_;
   MockManager manager_;
   scoped_refptr<MockDevice> device_;
   scoped_refptr<IPConfig> ipconfig_;
+  scoped_refptr<IPConfig> ip6config_;
   MockSocketInfoReader* mock_socket_info_reader_;
   MockConnectionInfoReader* mock_connection_info_reader_;
   TrafficMonitor monitor_;
   vector<SocketInfo> mock_socket_infos_;
   vector<ConnectionInfo> mock_connection_infos_;
   IPAddress local_addr_;
+  IPAddress local_addr6_;
   IPAddress remote_addr_;
+  IPAddress remote_addr6_;
 };
 
 // static
 const char TrafficMonitorTest::kLocalIpAddr[] = "127.0.0.1";
+const char TrafficMonitorTest::kLocalIp6Addr[] = "::1";
 const uint16_t TrafficMonitorTest::kLocalPort1 = 1234;
 const uint16_t TrafficMonitorTest::kLocalPort2 = 2345;
 const uint16_t TrafficMonitorTest::kLocalPort3 = 3456;
 const uint16_t TrafficMonitorTest::kLocalPort4 = 4567;
 const uint16_t TrafficMonitorTest::kLocalPort5 = 4567;
 const char TrafficMonitorTest::kRemoteIpAddr[] = "192.168.1.1";
+const char TrafficMonitorTest::kRemoteIp6Addr[] = "fd00::1";
 const uint16_t TrafficMonitorTest::kRemotePort = 5678;
 const uint64_t TrafficMonitorTest::kTxQueueLength1 = 111;
 const uint64_t TrafficMonitorTest::kTxQueueLength2 = 222;
@@ -173,8 +198,8 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthValid) {
                  TrafficMonitorTest::kTxQueueLength1, 0,
                  SocketInfo::kTimerStateRetransmitTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
   EXPECT_EQ(1, tx_queue_lengths.size());
   string ip_port = FormatIPPort(local_addr_, TrafficMonitorTest::kLocalPort1);
   EXPECT_EQ(TrafficMonitorTest::kTxQueueLength1, tx_queue_lengths[ip_port]);
@@ -190,8 +215,8 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthInvalidDevice) {
                  TrafficMonitorTest::kTxQueueLength1, 0,
                  SocketInfo::kTimerStateRetransmitTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
   EXPECT_EQ(0, tx_queue_lengths.size());
 }
 
@@ -202,8 +227,8 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthZero) {
                  TrafficMonitorTest::kRemotePort, 0, 0,
                  SocketInfo::kTimerStateRetransmitTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
   EXPECT_EQ(0, tx_queue_lengths.size());
 }
 
@@ -215,8 +240,8 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthInvalidConnectionState) {
                  TrafficMonitorTest::kTxQueueLength1, 0,
                  SocketInfo::kTimerStateRetransmitTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
   EXPECT_EQ(0, tx_queue_lengths.size());
 }
 
@@ -228,12 +253,14 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthInvalidTimerState) {
                  TrafficMonitorTest::kTxQueueLength1, 0,
                  SocketInfo::kTimerStateNoTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
   EXPECT_EQ(0, tx_queue_lengths.size());
 }
 
 TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthMultipleEntries) {
+  device_->set_ip6config(ip6config_);
+
   vector<SocketInfo> socket_infos = {
       SocketInfo(SocketInfo::kConnectionStateSynSent, local_addr_,
                  TrafficMonitorTest::kLocalPort1, remote_addr_,
@@ -259,14 +286,39 @@ TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthMultipleEntries) {
                  TrafficMonitorTest::kLocalPort5, remote_addr_,
                  TrafficMonitorTest::kRemotePort, 0, 0,
                  SocketInfo::kTimerStateRetransmitTimerPending),
+      SocketInfo(SocketInfo::kConnectionStateEstablished, local_addr6_,
+                 TrafficMonitorTest::kLocalPort1, remote_addr6_,
+                 TrafficMonitorTest::kRemotePort,
+                 TrafficMonitorTest::kTxQueueLength1, 0,
+                 SocketInfo::kTimerStateRetransmitTimerPending),
   };
-  TrafficMonitor::IPPortToTxQueueLengthMap tx_queue_lengths =
-      monitor_.BuildIPPortToTxQueueLength(socket_infos);
-  EXPECT_EQ(2, tx_queue_lengths.size());
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
+  EXPECT_EQ(3, tx_queue_lengths.size());
   string ip_port = FormatIPPort(local_addr_, TrafficMonitorTest::kLocalPort2);
   EXPECT_EQ(kTxQueueLength2, tx_queue_lengths[ip_port]);
   ip_port = FormatIPPort(local_addr_, TrafficMonitorTest::kLocalPort3);
   EXPECT_EQ(kTxQueueLength3, tx_queue_lengths[ip_port]);
+  ip_port = FormatIPPort(local_addr6_, TrafficMonitorTest::kLocalPort1);
+  EXPECT_EQ(kTxQueueLength1, tx_queue_lengths[ip_port]);
+}
+
+TEST_F(TrafficMonitorTest, BuildIPPortToTxQueueLengthIPv6) {
+  device_->set_ip6config(ip6config_);
+  device_->set_ipconfig(nullptr);
+
+  vector<SocketInfo> socket_infos = {
+      SocketInfo(SocketInfo::kConnectionStateEstablished, local_addr6_,
+                 TrafficMonitorTest::kLocalPort1, remote_addr6_,
+                 TrafficMonitorTest::kRemotePort,
+                 TrafficMonitorTest::kTxQueueLength1, 0,
+                 SocketInfo::kTimerStateRetransmitTimerPending),
+  };
+  IPPortToTxQueueLengthMap tx_queue_lengths =
+      BuildIPPortToTxQueueLength(socket_infos);
+  EXPECT_EQ(1, tx_queue_lengths.size());
+  string ip_port = FormatIPPort(local_addr6_, TrafficMonitorTest::kLocalPort1);
+  EXPECT_EQ(kTxQueueLength1, tx_queue_lengths[ip_port]);
 }
 
 TEST_F(TrafficMonitorTest, SampleTrafficStuckTxQueueSameQueueLength) {

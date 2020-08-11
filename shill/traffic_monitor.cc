@@ -84,14 +84,23 @@ TrafficMonitor::BuildIPPortToTxQueueLength(
   SLOG(device_.get(), 3) << __func__;
 
   IPPortToTxQueueLengthMap tx_queue_lengths;
-  string device_ip_address = device_->ipconfig()->properties().address;
+  string device_ipv4;
+  if (device_->ipconfig())
+    device_ipv4 = device_->ipconfig()->properties().address;
+  // NB: we may have multiple IPv6 addresses; we do a best-effort filter using
+  // the preferred address, even though this is imprecise.
+  string device_ipv6;
+  if (device_->ip6config())
+    device_ipv6 = device_->ip6config()->properties().address;
+
   for (const auto& info : socket_infos) {
-    SLOG(device_.get(), 4) << "SocketInfo(IP="
-                           << info.local_ip_address.ToString()
+    string socket_ip = info.local_ip_address.ToString();
+    SLOG(device_.get(), 4) << "SocketInfo(IP=" << socket_ip
                            << ", TX=" << info.transmit_queue_value
                            << ", State=" << info.connection_state
                            << ", TimerState=" << info.timer_state;
-    if (info.local_ip_address.ToString() != device_ip_address ||
+
+    if ((socket_ip != device_ipv4 && socket_ip != device_ipv6) ||
         info.transmit_queue_value == 0 ||
         info.connection_state != SocketInfo::kConnectionStateEstablished ||
         (info.timer_state != SocketInfo::kTimerStateRetransmitTimerPending &&

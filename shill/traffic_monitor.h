@@ -51,13 +51,6 @@ class TrafficMonitor {
 
  private:
   friend class TrafficMonitorTest;
-  FRIEND_TEST(TrafficMonitorTest,
-              BuildIPPortToTxQueueLengthInvalidConnectionState);
-  FRIEND_TEST(TrafficMonitorTest, BuildIPPortToTxQueueLengthInvalidDevice);
-  FRIEND_TEST(TrafficMonitorTest, BuildIPPortToTxQueueLengthInvalidTimerState);
-  FRIEND_TEST(TrafficMonitorTest, BuildIPPortToTxQueueLengthMultipleEntries);
-  FRIEND_TEST(TrafficMonitorTest, BuildIPPortToTxQueueLengthValid);
-  FRIEND_TEST(TrafficMonitorTest, BuildIPPortToTxQueueLengthZero);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsFailureThenSuccess);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsOutstanding);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsStatsReset);
