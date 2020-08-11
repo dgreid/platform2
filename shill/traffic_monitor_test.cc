@@ -12,11 +12,11 @@
 #include <gtest/gtest.h>
 #include <netinet/in.h>
 
+#include "shill/ipconfig.h"
 #include "shill/mock_connection_info_reader.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device.h"
 #include "shill/mock_event_dispatcher.h"
-#include "shill/mock_ipconfig.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_socket_info_reader.h"
 
@@ -51,7 +51,7 @@ class TrafficMonitorTest : public Test {
   TrafficMonitorTest()
       : manager_(&control_, &dispatcher_, nullptr),
         device_(new MockDevice(&manager_, "netdev0", "00:11:22:33:44:55", 1)),
-        ipconfig_(new MockIPConfig(&control_, "netdev0")),
+        ipconfig_(new IPConfig(&control_, "netdev0")),
         mock_socket_info_reader_(new MockSocketInfoReader),
         mock_connection_info_reader_(new MockConnectionInfoReader),
         monitor_(
@@ -73,10 +73,12 @@ class TrafficMonitorTest : public Test {
     monitor_.connection_info_reader_.reset(
         mock_connection_info_reader_);  // Passes ownership
 
+    IPConfig::Properties ipconfig_properties;
+    ipconfig_properties.address_family = IPAddress::kFamilyIPv4;
+    ipconfig_properties.address = kLocalIpAddr;
+    ipconfig_->set_properties(ipconfig_properties);
+
     device_->set_ipconfig(ipconfig_);
-    ipconfig_properties_.address = kLocalIpAddr;
-    EXPECT_CALL(*ipconfig_, properties())
-        .WillRepeatedly(ReturnRef(ipconfig_properties_));
   }
 
   void VerifyStopped() {
@@ -121,8 +123,7 @@ class TrafficMonitorTest : public Test {
   NiceMock<MockEventDispatcher> dispatcher_;
   MockManager manager_;
   scoped_refptr<MockDevice> device_;
-  scoped_refptr<MockIPConfig> ipconfig_;
-  IPConfig::Properties ipconfig_properties_;
+  scoped_refptr<IPConfig> ipconfig_;
   MockSocketInfoReader* mock_socket_info_reader_;
   MockConnectionInfoReader* mock_connection_info_reader_;
   TrafficMonitor monitor_;
