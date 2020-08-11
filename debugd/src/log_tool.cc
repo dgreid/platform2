@@ -270,7 +270,7 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "top memory",
     "/usr/bin/top -o \"+%MEM\" -w128 -bcn 1 | head -n 57"},
   {kCommand, "touch_fw_version",
-    "grep -E"
+    "grep -aE"
     " -e 'synaptics: Touchpad model'"
     " -e 'chromeos-[a-z]*-touch-[a-z]*-update'"
     " /var/log/messages | tail -n 20"},
