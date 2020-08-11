@@ -159,7 +159,7 @@ const std::vector<Log> kCommandLogs {
   {kCommand, "dmesg", "/bin/dmesg"},
   {kFile, "ec_info", "/var/log/ec_info.txt"},
   {kCommand, "edid-decode",
-    "for f in /sys/class/drm/card0-*/edid; do "
+    "for f in /sys/class/drm/card?-*/edid; do "
       "echo \"----------- ${f}\"; "
       // edid-decode's stderr output is redundant, so silence it.
       "edid-decode \"${f}\" 2>/dev/null; "
