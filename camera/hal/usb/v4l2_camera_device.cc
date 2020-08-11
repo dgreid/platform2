@@ -242,11 +242,20 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
     return -EINVAL;
   }
 
-  if (CanUpdateFrameRate() && frame_rate != frame_rate_) {
+  if (CanUpdateFrameRate()) {
+    // We need to set frame rate even if it's same as the previous value, since
+    // uvcvideo driver will always reset it to the default value after the
+    // VIDIOC_S_FMT ioctl() call.
     ret = SetFrameRate(frame_rate);
     if (ret < 0) {
       return ret;
     }
+  } else {
+    // Simply assumes the frame rate is good if the device does not support
+    // frame rate settings.
+    frame_rate_ = frame_rate;
+    LOGF(INFO) << "No fps setting support, " << frame_rate
+               << " fps setting is ignored";
   }
 
   v4l2_requestbuffers req_buffers;
