@@ -998,6 +998,9 @@ TEST_F(OpenVPNDriverTest, InitManagementChannelOptionsOffline) {
 TEST_F(OpenVPNDriverTest, InitLoggingOptions) {
   vector<vector<string>> options;
   bool vpn_logging = SLOG_IS_ON(VPN, 0);
+  int verbose_level = ScopeLogger::GetInstance()->verbose_level();
+  ScopeLogger::GetInstance()->set_verbose_level(0);
+
   ScopeLogger::GetInstance()->EnableScopesByName("-vpn");
   driver_->InitLoggingOptions(&options);
   ASSERT_EQ(1, options.size());
@@ -1016,9 +1019,11 @@ TEST_F(OpenVPNDriverTest, InitLoggingOptions) {
   options.clear();
   driver_->InitLoggingOptions(&options);
   ExpectInFlags(options, "verb", "1");
+
   if (!vpn_logging) {
     ScopeLogger::GetInstance()->EnableScopesByName("-vpn");
   }
+  ScopeLogger::GetInstance()->set_verbose_level(verbose_level);
 }
 
 TEST_F(OpenVPNDriverTest, AppendRemoteOption) {
