@@ -132,5 +132,3 @@ void FileHasher::PrintTable(bool colocated) {
 }
 
 }  // namespace verity
-
-
