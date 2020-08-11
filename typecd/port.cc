@@ -10,11 +10,13 @@
 #include <re2/re2.h>
 
 namespace {
-constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
-}  // namespace
 
-namespace {
-const uint16_t kDPAltModeSID = 0xff01;
+constexpr char kDataRoleDRPRegex[] = R"(.*\[(\w+)\].*)";
+constexpr uint16_t kDPAltModeSID = 0xff01;
+constexpr uint16_t kTBTAltModeVID = 0x8087;
+
+constexpr uint32_t kIDHeaderVDOModalOperationBitField = (1 << 26);
+
 }  // namespace
 
 namespace typecd {
@@ -111,12 +113,53 @@ end:
 }
 
 bool Port::CanEnterDPAltMode() {
+  if (!IsPartnerAltModePresent(kDPAltModeSID)) {
+    LOG(INFO) << "DP alt mode not supported by partner.";
+    return false;
+  }
+
+  return true;
+}
+
+// Mode entry check for TBT compatibility mode.
+// Ref:
+//   USB Type-C Connector Spec, release 2.0
+//   Figure F-1.
+bool Port::CanEnterTBTCompatibilityMode() {
+  if (!cable_) {
+    LOG(ERROR) << "No cable object registered, can't enter TBT Compat mode.";
+    return false;
+  }
+
+  // Check if the Cable meets TBT3 speed requirements.
+  if (!cable_->TBT3PDIdentityCheck())
+    return false;
+
+  // Check if the partner supports Modal Operation
+  // Ref:
+  //   USB PD spec, rev 3.0, v2.0.
+  //   Table 6-29
+  auto partner_idh = partner_->GetIdHeaderVDO();
+  if (!(partner_idh & kIDHeaderVDOModalOperationBitField)) {
+    return false;
+  }
+
+  // Check if the partner supports TBT compatibility mode.
+  if (!IsPartnerAltModePresent(kTBTAltModeVID)) {
+    LOG(INFO) << "TBT Compat mode not supported by partner.";
+    return false;
+  }
+
+  return true;
+}
+
+bool Port::IsPartnerAltModePresent(uint16_t altmode_sid) {
   auto num_alt_modes = partner_->GetNumAltModes();
   for (int i = 0; i < num_alt_modes; i++) {
     auto alt_mode = partner_->GetAltMode(i);
     if (!alt_mode)
       continue;
-    if (alt_mode->GetSVID() == kDPAltModeSID)
+    if (alt_mode->GetSVID() == altmode_sid)
       return true;
   }
 

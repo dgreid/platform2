@@ -41,11 +41,19 @@ class Port {
   // of required attributes on the Partner and (if applicable) Cable.
   bool CanEnterDPAltMode();
 
+  // Check whether we can enter Thunderbolt Compatibility Alt Mode. This should
+  // check for the presence of required attributes on the Partner and
+  // (if applicable) Cable.
+  bool CanEnterTBTCompatibilityMode();
+
  private:
   friend class PortTest;
   FRIEND_TEST(PortTest, TestBasicAdd);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckTrue);
   FRIEND_TEST(PortTest, TestDPAltModeEntryCheckFalse);
+  FRIEND_TEST(PortTest, TestTBTCompatibilityModeEntryCheckTrue);
+
+  bool IsPartnerAltModePresent(uint16_t altmode_sid);
 
   // Sysfs path used to access partner PD information.
   base::FilePath syspath_;

@@ -127,4 +127,44 @@ TEST_F(PortTest, TestDPAltModeEntryCheckFalse) {
   EXPECT_FALSE(port->CanEnterDPAltMode());
 }
 
+// Check that TBT Compat Mode Entry checks work as expected for working cases.
+TEST_F(PortTest, TestTBTCompatibilityModeEntryCheckTrue) {
+  auto port = std::make_unique<Port>(base::FilePath(kFakePort0SysPath), 0);
+
+  port->AddPartner(base::FilePath(kFakePort0PartnerSysPath));
+  // PD ID VDOs for the Startech.com TB3DK2DPW Alpine Ridge Dock.
+  port->partner_->SetPDRevision(kPDRevision20);
+  port->partner_->SetIdHeaderVDO(0xd4008087);
+  port->partner_->SetCertStatVDO(0x0);
+  port->partner_->SetProductVDO(0x0);
+  port->partner_->SetProductTypeVDO1(0);
+  port->partner_->SetProductTypeVDO2(0);
+  port->partner_->SetProductTypeVDO3(0);
+
+  port->partner_->SetNumAltModes(1);
+  // Set up fake sysfs paths for 1 alt mode.
+  base::FilePath temp_dir;
+  ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
+
+  // Add the TBT alt mode.
+  std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
+  auto mode_path = temp_dir.Append(mode_dirname);
+  ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, 0));
+  port->AddRemovePartnerAltMode(mode_path, true);
+
+  // Set up fake sysfs paths and add a cable.
+  port->AddCable(base::FilePath(kFakePort0CableSysPath));
+
+  // StarTech Passive Cable 40 Gbps PD 2.0
+  port->cable_->SetPDRevision(kPDRevision20);
+  port->cable_->SetIdHeaderVDO(0x1c0020c2);
+  port->cable_->SetCertStatVDO(0x000000b6);
+  port->cable_->SetProductVDO(0x00010310);
+  port->cable_->SetProductTypeVDO1(0x11082052);
+  port->cable_->SetProductTypeVDO2(0x0);
+  port->cable_->SetProductTypeVDO3(0x0);
+
+  EXPECT_TRUE(port->CanEnterTBTCompatibilityMode());
+}
+
 }  // namespace typecd
