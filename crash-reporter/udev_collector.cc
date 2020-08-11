@@ -201,6 +201,8 @@ bool UdevCollector::AppendDevCoredump(const FilePath& crash_directory,
     AddCrashMetaUploadFile("logs", log_path.BaseName().value());
   }
 
+  AddCrashMetaData(kUdevSignatureKey, udev_log_name);
+
   FinishCrash(meta_path, coredump_prefix, core_path.BaseName().value());
 
   return true;

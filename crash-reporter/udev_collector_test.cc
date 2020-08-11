@@ -187,6 +187,18 @@ TEST_F(UdevCollectorTest, TestCollectedDevCoredump) {
       "ACTION=add:KERNEL_NUMBER=2:SUBSYSTEM=devcoredump");
   EXPECT_EQ(
       1, GetNumFiles(temp_dir_generator_.GetPath(), kDevCoredumpFilePattern));
+  // Check for the expected crash signature:
+  base::FilePath meta_path;
+  std::string meta_pattern = "devcoredump_";
+  meta_pattern += kCollectedDriverName;
+  meta_pattern += ".*.meta";
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      temp_dir_generator_.GetPath(), meta_pattern, &meta_path));
+  std::string meta_contents;
+  EXPECT_TRUE(base::ReadFileToString(meta_path, &meta_contents));
+  std::string expected_sig = "sig=crash_reporter-udev-collection-devcoredump-";
+  expected_sig += kCollectedDriverName;
+  EXPECT_THAT(meta_contents, testing::HasSubstr(expected_sig));
 }
 
 // TODO(sque, crosbug.com/32238) - test wildcard cases, multiple identical udev
