@@ -62,6 +62,7 @@ static_library("liblorgnette") {
     "enums.cc",
     "epson_probe.cc",
     "firewall_manager.cc",
+    "guess_source.cc",
     "manager.cc",
     "sane_client_fake.cc",
     "sane_client_impl.cc",

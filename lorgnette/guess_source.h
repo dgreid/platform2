@@ -1,0 +1,19 @@
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef LORGNETTE_GUESS_SOURCE_H_
+#define LORGNETTE_GUESS_SOURCE_H_
+
+#include <string>
+
+#include <base/optional.h>
+#include <lorgnette/proto_bindings/lorgnette_service.pb.h>
+
+// Given a string representing a scanning source (for example, 'Platen',
+// 'Flatbed', 'ADF', etc.), attempts to guess what scanner source type that
+// name represents. If no match is found, returns nullopt.
+// Comparisons are case-insensitive.
+base::Optional<lorgnette::SourceType> GuessSourceType(const std::string& name);
+
+#endif  // LORGNETTE_GUESS_SOURCE_H_

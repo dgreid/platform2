@@ -27,6 +27,7 @@
 #include "lorgnette/enums.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
+#include "lorgnette/guess_source.h"
 #include "lorgnette/sane_client.h"
 
 using std::string;
@@ -205,25 +206,6 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   // Release |fd_copy| since it is owned by |file| now.
   (void)fd_copy.release();
   return file;
-}
-
-base::Optional<SourceType> GuessSourceType(const std::string& name) {
-  std::string lowercase = name;
-  for (int i = 0; i < lowercase.size(); i++) {
-    lowercase[i] = std::tolower(lowercase[i]);
-  }
-
-  if (lowercase == "fb" || lowercase == "flatbed")
-    return SOURCE_PLATEN;
-
-  if (lowercase == "adf" || lowercase == "adf front" ||
-      lowercase == "automatic document feeder")
-    return SOURCE_ADF_SIMPLEX;
-
-  if (lowercase == "adf duplex")
-    return SOURCE_ADF_DUPLEX;
-
-  return base::nullopt;
 }
 
 base::Optional<ColorMode> ColorModeFromDbusString(const std::string& mode) {
