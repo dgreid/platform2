@@ -108,7 +108,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   bool RunScanLoop(brillo::ErrorPtr* error,
                    std::unique_ptr<SaneDevice> device,
                    const base::ScopedFD& outfd,
-                   const std::string& device_name,
                    base::Optional<std::string> scan_uuid);
 
   static bool ExtractScanOptions(

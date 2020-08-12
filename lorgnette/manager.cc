@@ -425,10 +425,11 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (!RunScanLoop(error, std::move(device), outfd, device_name,
-                   base::nullopt)) {
+  if (!RunScanLoop(error, std::move(device), outfd, base::nullopt)) {
+    ReportScanFailed(device_name);
     return false;
   }
+  ReportScanSucceeded(device_name);
 
   LOG(INFO) << __func__ << ": completed image scan and conversion.";
 
@@ -475,13 +476,14 @@ void Manager::StartScan(
   ScanStatusChangedSignal result_signal;
   result_signal.set_scan_uuid(uuid);
 
-  if (!RunScanLoop(&error, std::move(device), outfd, request.device_name(),
-                   uuid)) {
+  if (!RunScanLoop(&error, std::move(device), outfd, uuid)) {
+    ReportScanFailed(request.device_name());
     result_signal.set_failure_reason(SerializeError(error));
     result_signal.set_state(SCAN_STATE_FAILED);
     status_signal_sender_.Run(result_signal);
     return;
   }
+  ReportScanSucceeded(request.device_name());
 
   LOG(INFO) << __func__ << ": completed image scan and conversion.";
 
@@ -577,18 +579,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 bool Manager::RunScanLoop(brillo::ErrorPtr* error,
                           std::unique_ptr<SaneDevice> device,
                           const base::ScopedFD& outfd,
-                          const std::string& device_name,
                           base::Optional<std::string> scan_uuid) {
-  // Automatically report a scan failure if we exit early. This will be
-  // cancelled once scanning has succeeded.
-  base::ScopedClosureRunner report_scan_failure(base::BindOnce(
-      [](base::WeakPtr<Manager> manager, std::string device_name) {
-        if (manager) {
-          manager->ReportScanFailed(device_name);
-        }
-      },
-      weak_factory_.GetWeakPtr(), device_name));
-
   ScanParameters params;
   if (!device->GetScanParameters(error, &params)) {
     return false;
@@ -705,8 +696,6 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     return false;
   }
 
-  (void)report_scan_failure.Release();
-  ReportScanSucceeded(device_name);
 
   return true;
 }
