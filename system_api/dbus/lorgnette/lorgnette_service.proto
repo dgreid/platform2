@@ -91,6 +91,9 @@ enum ScanState {
 
   // The scan job failed.
   SCAN_STATE_FAILED = 3;
+
+  // Scanning of the current page completed successfully.
+  SCAN_STATE_PAGE_COMPLETED = 4;
 }
 
 // Information passed to a StartScan D-Bus request.
@@ -115,6 +118,22 @@ message StartScanResponse {
   string scan_uuid = 3;
 }
 
+// Information passed to a GetNextImage D-Bus request.
+// Used by lorgnette to read image data for a scan job.
+message GetNextImageRequest {
+  // A UUID identifying the scan job.
+  string scan_uuid = 1;
+}
+
+// Information returned from a GetNextImage D-Bus request;
+message GetNextImageResponse {
+  // True if initiating this image fetch was successful.
+  bool success = 1;
+
+  // The failure reason if success is false.
+  string failure_reason = 2;
+}
+
 // Information sent with ScanStatus D-Bus signal.
 message ScanStatusChangedSignal {
   // A UUID identifying the scan job.
@@ -128,4 +147,10 @@ message ScanStatusChangedSignal {
 
   // Scan progress from 0 to 100%.
   uint32 progress = 4;
+
+  // The page field will be set to the page currently being scanned for
+  // SCAN_STATE_IN_PROGRESS, or the page that has just been completed for
+  // SCAN_STATE_PAGE_COMPLETED.
+  // Pages are 0-indexed.
+  uint32 page = 5;
 }
