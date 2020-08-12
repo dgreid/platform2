@@ -1,12 +1,20 @@
 #!/bin/sh
-# Copyright 2017 The Chromium OS Authors. All rights reserved.
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-# Run virtual_file_provider with minijail0 for ARC container.
-# The mount path is set to /mnt in the root namespace.
+# Run virtual_file_provider with minijail0 for ARCVM.
+# The mount path is set to /run/arcvm/media/virtual_files in the
+# concierge namespace so that files created can be shared with
+# ARCVM. The concierge namespace is created in the pre-start script of
+# vm_concierge.conf.
 
 set -e
+
+# Create MOUNT_PATH in concierge namespace.
+MOUNT_PATH="/run/arcvm/media/virtual_files"
+nsenter --mount=/run/namespaces/mnt_concierge --no-fork \
+  -- mkdir -p "${MOUNT_PATH}"
 
 MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
 
@@ -31,9 +39,6 @@ args="${args} -c 0x200100"
 # Run as virtual-file-provider user/group.
 args="${args} -u virtual-file-provider -g virtual-file-provider -G"
 
-# Mount tmpfs on /mnt.
-args="${args} -k tmpfs,/mnt,tmpfs,${MOUNT_FLAGS}"
-
 # Mount tmpfs on /run.
 args="${args} -k tmpfs,/run,tmpfs,${MOUNT_FLAGS}"
 
@@ -43,7 +48,12 @@ args="${args} -b /run/dbus"
 # Bind /dev/fuse to mount FUSE file systems.
 args="${args} -b /dev/fuse"
 
-# Finally, specify command line arguments.
-args="${args} -- /usr/bin/virtual-file-provider /mnt"
+# Bind ${MOUNT_PATH} into this namespace.
+args="${args} -k ${MOUNT_PATH},${MOUNT_PATH},none,MS_BIND|MS_REC"
 
-exec minijail0 ${args}
+# Finally, specify command line arguments.
+args="${args} -- /usr/bin/virtual-file-provider ${MOUNT_PATH}"
+
+# Start virtual-file-provider in concierge namespace.
+exec nsenter --mount=/run/namespaces/mnt_concierge --no-fork \
+  -- minijail0 ${args}
