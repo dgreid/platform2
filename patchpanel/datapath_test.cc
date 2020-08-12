@@ -188,7 +188,7 @@ TEST(DatapathTest, AddBridge) {
               ip(StrEq("link"), StrEq("set"), ElementsAre("br", "up"), true));
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-A", "PREROUTING", "-i", "br", "-j",
-                                           "MARK", "--set-mark", "1", "-w"),
+                                           "MARK", "--set-mark", "1/1", "-w"),
                                true, nullptr));
   datapath.AddBridge("br", Ipv4Addr(1, 1, 1, 1), 30);
 }
@@ -276,7 +276,7 @@ TEST(DatapathTest, RemoveBridge) {
   MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "PREROUTING", "-i", "br", "-j",
-                                           "MARK", "--set-mark", "1", "-w"),
+                                           "MARK", "--set-mark", "1/1", "-w"),
                                true, nullptr));
   EXPECT_CALL(runner,
               ip(StrEq("link"), StrEq("set"), ElementsAre("br", "down"), true));
@@ -475,17 +475,18 @@ TEST(DatapathTest, AddSNATMarkRules) {
   EXPECT_CALL(
       runner,
       iptables(StrEq("filter"),
-               ElementsAre("-A", "FORWARD", "-m", "mark", "--mark", "1", "-m",
+               ElementsAre("-A", "FORWARD", "-m", "mark", "--mark", "1/1", "-m",
                            "state", "--state", "INVALID", "-j", "DROP", "-w"),
                true, nullptr));
-  EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-A", "FORWARD", "-m", "mark",
-                                           "--mark", "1", "-j", "ACCEPT", "-w"),
-                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-A", "FORWARD", "-m", "mark", "--mark",
+                                   "1/1", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-A", "POSTROUTING", "-m", "mark", "--mark",
-                                   "1", "-j", "MASQUERADE", "-w"),
+                                   "1/1", "-j", "MASQUERADE", "-w"),
                        true, nullptr));
   Datapath datapath(&runner, &firewall);
   datapath.AddSNATMarkRules();
@@ -497,17 +498,18 @@ TEST(DatapathTest, RemoveSNATMarkRules) {
   EXPECT_CALL(
       runner,
       iptables(StrEq("filter"),
-               ElementsAre("-D", "FORWARD", "-m", "mark", "--mark", "1", "-m",
+               ElementsAre("-D", "FORWARD", "-m", "mark", "--mark", "1/1", "-m",
                            "state", "--state", "INVALID", "-j", "DROP", "-w"),
                true, nullptr));
-  EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-D", "FORWARD", "-m", "mark",
-                                           "--mark", "1", "-j", "ACCEPT", "-w"),
-                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "FORWARD", "-m", "mark", "--mark",
+                                   "1/1", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
   EXPECT_CALL(runner,
               iptables(StrEq("nat"),
                        ElementsAre("-D", "POSTROUTING", "-m", "mark", "--mark",
-                                   "1", "-j", "MASQUERADE", "-w"),
+                                   "1/1", "-j", "MASQUERADE", "-w"),
                        true, nullptr));
   Datapath datapath(&runner, &firewall);
   datapath.RemoveSNATMarkRules();
