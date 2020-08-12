@@ -84,10 +84,7 @@ brillo::SecureBlob RetrieveKey() {
 }  // namespace
 
 EncryptedRebootVault::EncryptedRebootVault()
-    : vault_path_(base::FilePath(kEncryptedRebootVaultPath)) {
-  key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
-  key_reference_.policy_version = FSCRYPT_POLICY_V1;
-}
+    : vault_path_(base::FilePath(kEncryptedRebootVaultPath)) {}
 
 bool EncryptedRebootVault::CreateVault() {
   if (!IsSupported()) {
@@ -107,7 +104,9 @@ bool EncryptedRebootVault::CreateVault() {
       cryptohome::CryptoLib::CreateSecureRandomBlob(kEncryptionKeySize);
 
   // The key descriptor needs to be exactly 8 bytes.
-  if (!dircrypto::AddKeyToKeyring(transient_encryption_key, &key_reference_)) {
+  if (dircrypto::AddKeyToKeyring(transient_encryption_key,
+                                 brillo::SecureBlob(kEncryptionKeyTag)) ==
+      dircrypto::kInvalidKeySerial) {
     LOG(ERROR) << "Failed to add pmsg-key";
     return false;
   }
@@ -125,7 +124,8 @@ bool EncryptedRebootVault::CreateVault() {
   }
 
   // Set the fscrypt context for the directory.
-  if (!dircrypto::SetDirectoryKey(vault_path_, key_reference_)) {
+  if (!dircrypto::SetDirectoryKey(vault_path_,
+                                  brillo::SecureBlob(kEncryptionKeyTag))) {
     LOG(ERROR) << "Failed to set directory key";
     return false;
   }
@@ -141,7 +141,8 @@ bool EncryptedRebootVault::Validate() {
 }
 
 bool EncryptedRebootVault::PurgeVault() {
-  if (!dircrypto::UnlinkKey(key_reference_)) {
+  if (!dircrypto::UnlinkKeyByDescriptor(
+          brillo::SecureBlob(kEncryptionKeyTag))) {
     LOG(WARNING) << "Failed to unlink encryption key from keyring.";
   }
   return base::DeleteFile(vault_path_, true /* recursively */);
@@ -173,7 +174,9 @@ bool EncryptedRebootVault::UnlockVault() {
   }
 
   // Unlock vault.
-  if (!dircrypto::AddKeyToKeyring(transient_encryption_key, &key_reference_)) {
+  if (dircrypto::AddKeyToKeyring(transient_encryption_key,
+                                 brillo::SecureBlob(kEncryptionKeyTag)) ==
+      dircrypto::kInvalidKeySerial) {
     LOG(ERROR) << "Failed to add key to keyring.";
     return false;
   }

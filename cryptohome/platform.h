@@ -687,16 +687,17 @@ class Platform {
 
   // Sets up a directory to be encrypted with the provided key.
   virtual bool SetDirCryptoKey(const base::FilePath& dir,
-                               const dircrypto::KeyReference& key_reference);
+                               const brillo::SecureBlob& key_sig);
 
   // Adds the key to the dircrypto keyring and sets permissions.
   virtual bool AddDirCryptoKeyToKeyring(
       const brillo::SecureBlob& key,
-      dircrypto::KeyReference* key_reference);
+      const brillo::SecureBlob& key_sig,
+      key_serial_t* key_id);
 
   // Invalidates the key to make dircrypto data inaccessible.
   virtual bool InvalidateDirCryptoKey(
-      const dircrypto::KeyReference& key_reference,
+      key_serial_t key_id,
       const base::FilePath& shadow_root);
 
   // Clears the kernel-managed user keyring
@@ -957,6 +958,9 @@ class Platform {
 
   // Returns list of mounts from |mount_info_path_| file.
   std::vector<DecodedProcMountInfo> ReadMountInfoFile();
+
+  // Drops caches selectively for the mount the directory resides in.
+  bool DropMountCaches(const base::FilePath& dir);
 
   base::FilePath mount_info_path_;
 

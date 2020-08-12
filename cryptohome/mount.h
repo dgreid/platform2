@@ -662,8 +662,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // of authorization data based on the passkey needs to be performed also.
   bool is_pkcs11_passkey_migration_required_;
 
-  // Dircrypto key reference.
-  dircrypto::KeyReference dircrypto_key_reference_;
+  // Dircrypto key ID.
+  key_serial_t dircrypto_key_id_;
 
   // Whether to mount the legacy homedir or not (see MountLegacyHome)
   bool legacy_mount_;

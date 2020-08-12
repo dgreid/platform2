@@ -124,7 +124,7 @@ Mount::Mount()
       enterprise_owned_(false),
       pkcs11_state_(kUninitialized),
       is_pkcs11_passkey_migration_required_(false),
-      dircrypto_key_reference_(),
+      dircrypto_key_id_(dircrypto::kInvalidKeySerial),
       legacy_mount_(true),
       mount_type_(MountType::NONE),
       shadow_only_(false),
@@ -557,11 +557,10 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
     }
   }
   if (should_mount_dircrypto) {
-    dircrypto_key_reference_.policy_version =
-        serialized.fscrypt_policy_version();
-    dircrypto_key_reference_.reference = vault_keyset.fek_sig();
-    if (!platform_->AddDirCryptoKeyToKeyring(vault_keyset.fek(),
-                                             &dircrypto_key_reference_)) {
+    LOG_IF(WARNING, dircrypto_key_id_ != dircrypto::kInvalidKeySerial)
+        << "Already mounting with key " << dircrypto_key_id_;
+    if (!platform_->AddDirCryptoKeyToKeyring(
+            vault_keyset.fek(), vault_keyset.fek_sig(), &dircrypto_key_id_)) {
       LOG(ERROR) << "Error adding dircrypto key.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
       return false;
@@ -611,7 +610,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   }
 
   if (should_mount_dircrypto) {
-    if (!platform_->SetDirCryptoKey(mount_point_, dircrypto_key_reference_)) {
+    if (!platform_->SetDirCryptoKey(mount_point_, vault_keyset.fek_sig())) {
       LOG(ERROR) << "Failed to set directory encryption policy for "
                  << mount_point_.value();
       *mount_error = MOUNT_ERROR_SET_DIR_CRYPTO_KEY_FAILED;
@@ -715,10 +714,9 @@ void Mount::UnmountAndDropKeys() {
   mounter_->UnmountAll();
 
   // Invalidate dircrypto key to make directory contents inaccessible.
-  if (!dircrypto_key_reference_.reference.empty()) {
-    platform_->InvalidateDirCryptoKey(dircrypto_key_reference_, shadow_root_);
-    dircrypto_key_reference_.policy_version = FSCRYPT_POLICY_V1;
-    dircrypto_key_reference_.reference.clear();
+  if (dircrypto_key_id_ != dircrypto::kInvalidKeySerial) {
+    platform_->InvalidateDirCryptoKey(dircrypto_key_id_, shadow_root_);
+    dircrypto_key_id_ = dircrypto::kInvalidKeySerial;
   }
 }
 

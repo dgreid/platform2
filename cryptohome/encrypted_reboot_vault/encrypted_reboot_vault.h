@@ -10,8 +10,6 @@
 #include <base/files/file_path.h>
 #include <brillo/brillo_export.h>
 
-#include <cryptohome/dircrypto_util.h>
-
 class EncryptedRebootVault {
  public:
   EncryptedRebootVault();
@@ -27,7 +25,6 @@ class EncryptedRebootVault {
 
  private:
   base::FilePath vault_path_;
-  dircrypto::KeyReference key_reference_;
 };
 
 #endif  // CRYPTOHOME_ENCRYPTED_REBOOT_VAULT_ENCRYPTED_REBOOT_VAULT_H_
