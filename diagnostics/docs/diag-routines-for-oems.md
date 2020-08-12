@@ -76,7 +76,7 @@ Confirms that the device's battery design capacity lies within the given limits.
 Parameters:
 -   `--low_mah` - Lower bound for the allowable design capacity of the battery,
     in mAh. Type: `uint32_t`. Default: `1000`.
--   `--low_mah` - Upper bound for the allowable design capacity of the battery,
+-   `--high_mah` - Upper bound for the allowable design capacity of the battery,
     in mAh. Type: `uint32_t`. Default: `10000`.
 
 To ensure the device's battery capacity lies within the default range of
