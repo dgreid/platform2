@@ -1230,7 +1230,7 @@ class Metrics : public DefaultServiceObserver {
   // Sends linear histogram data to UMA.
   virtual bool SendEnumToUMA(const std::string& name, int sample, int max);
 
-  // Send histogram data to UMA.
+  // Send logarithmic histogram data to UMA.
   virtual bool SendToUMA(
       const std::string& name, int sample, int min, int max, int num_buckets);
 
