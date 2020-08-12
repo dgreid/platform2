@@ -96,7 +96,6 @@ void RTNLHandler::Start(uint32_t netlink_groups_mask) {
   rtnl_socket_ =
       OpenNetlinkSocketFD(sockets_.get(), NETLINK_ROUTE, netlink_groups_mask);
   if (rtnl_socket_ < 0) {
-    LOG(ERROR) << "Failed to open rtnl socket";
     return;
   }
 
@@ -115,7 +114,8 @@ void RTNLHandler::SetReceiverBufferSize(int bytes) {
       << "Invalid socket descriptor: " << rtnl_socket_;
 
   if (sockets_->SetReceiveBuffer(rtnl_socket_, bytes) < 0)
-    PLOG(ERROR) << "Failed to increase receive buffer size";
+    PLOG(WARNING) << "Failed to increase receive buffer size to " << bytes
+                  << "b";
 }
 
 void RTNLHandler::Stop() {
@@ -316,8 +316,11 @@ void RTNLHandler::ParseRTNL(InputData* data) {
           int error_number =
               reinterpret_cast<nlmsgerr*>(NLMSG_DATA(hdr))->error;
           std::string request_str;
-          if (request_msg)
+          RTNLMessage::Mode mode = RTNLMessage::kModeUnknown;
+          if (request_msg) {
             request_str = " (" + request_msg->ToString() + ")";
+            mode = request_msg->mode();
+          }
 
           if (error_number == 0) {
             SLOG(this, 3) << base::StringPrintf(
@@ -333,11 +336,15 @@ void RTNLHandler::ParseRTNL(InputData* data) {
             std::string error_msg = base::StringPrintf(
                 "sequence %d%s received error %d (%s)", hdr->nlmsg_seq,
                 request_str.c_str(), error_number, strerror(error_number));
-            if (!base::Contains(GetAndClearErrorMask(hdr->nlmsg_seq),
-                                error_number)) {
-              LOG(ERROR) << error_msg;
-            } else {
+            if (base::Contains(GetAndClearErrorMask(hdr->nlmsg_seq),
+                               error_number) ||
+                (error_number == EEXIST && mode == RTNLMessage::kModeAdd) ||
+                (error_number == ENOENT && mode == RTNLMessage::kModeDelete)) {
+              // EEXIST for create requests and ENOENT for delete requests
+              // do not really indicate an error condition.
               SLOG(this, 3) << error_msg;
+            } else {
+              LOG(ERROR) << error_msg;
             }
           }
 
