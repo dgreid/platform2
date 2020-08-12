@@ -120,4 +120,12 @@ message WorkerActiveSignalDetails {
 // missing credentials.
 message AuthenticationRequiredDetails {
   optional ProtectionSpace proxy_protection_space = 1;
+  // If true, it means that the credentials previously acquired for proxy
+  // authentication are incorrect and the user will be prompted to introduce new
+  // proxy credentials. If new credentials are set in the authentication
+  // dialogue, they are forwarded to System-proxy via the
+  // |SetAuthenticationDetails| D-Bus call and will overwrite the existing
+  // cached credentials associated with |proxy_protection_space|, otherwise the
+  // existing incorrect credentials are not cleared from the cache.
+  optional bool bad_cached_credentials = 2;
 }
