@@ -30,10 +30,15 @@ bool RetrieveActiveSessionsImpl(
 
 }  // namespace
 
-AdvancingClock::AdvancingClock() : time_(GetDefaultTime()) {}
+AdvancingClock::AdvancingClock()
+    : time_(GetDefaultTime()),
+      advance_amount_(base::TimeDelta::FromSeconds(10)) {}
+
+AdvancingClock::AdvancingClock(base::TimeDelta advance_amount)
+    : time_(GetDefaultTime()), advance_amount_(advance_amount) {}
 
 base::Time AdvancingClock::Now() const {
-  time_ += base::TimeDelta::FromSeconds(10);
+  time_ += advance_amount_;
   return time_;
 }
 

@@ -43,7 +43,10 @@ bool MissedCrashCollector::ReadFILEToString(FILE* file, std::string* contents) {
   return read_status;
 }
 
-bool MissedCrashCollector::Collect(int pid) {
+bool MissedCrashCollector::Collect(int pid,
+                                   int recent_miss_count,
+                                   int recent_match_count,
+                                   int pending_miss_count) {
   std::string reason = "normal collection";
   bool feedback = true;
   if (!is_feedback_allowed_function_()) {
@@ -93,6 +96,12 @@ bool MissedCrashCollector::Collect(int pid) {
 
   AddCrashMetaData("sig", "missed-crash");
   AddCrashMetaUploadData("pid", base::NumberToString(pid));
+  AddCrashMetaUploadData("recent_miss_count",
+                         base::NumberToString(recent_miss_count));
+  AddCrashMetaUploadData("recent_match_count",
+                         base::NumberToString(recent_match_count));
+  AddCrashMetaUploadData("pending_miss_count",
+                         base::NumberToString(pending_miss_count));
 
   FinishCrash(meta_path, kExecName, log_path.BaseName().value());
 

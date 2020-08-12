@@ -270,6 +270,15 @@ int main(int argc, char* argv[]) {
               "Report collected kernel suspend warning");
   DEFINE_bool(missed_chrome_crash, false,
               "Report that we missed a Chrome crash");
+  DEFINE_int32(recent_miss_count, -1,
+               "For missed_chrome_crash, how many Chrome crashes have we "
+               "missed over the last 1 minute");
+  DEFINE_int32(recent_match_count, -1,
+               "For missed_chrome_crash, how many Chrome crashes have we "
+               "matched over the last 1 minute");
+  DEFINE_int32(pending_miss_count, -1,
+               "For missed_chrome_crash, how many Chrome crashes are we "
+               "tracking that might be counted as a miss soon");
   DEFINE_bool(log_to_stderr, false, "Log to stderr instead of syslog.");
   DEFINE_string(arc_service_failure, "",
                 "The specific ARC service name that failed");
@@ -482,7 +491,9 @@ int main(int argc, char* argv[]) {
           .should_handle = FLAGS_missed_chrome_crash,
           .cb = base::BindRepeating(&MissedCrashCollector::Collect,
                                     base::Unretained(&missed_crash_collector),
-                                    FLAGS_pid),
+                                    FLAGS_pid, FLAGS_recent_miss_count,
+                                    FLAGS_recent_match_count,
+                                    FLAGS_pending_miss_count),
       }},
   });
 

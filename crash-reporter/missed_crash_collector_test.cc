@@ -33,7 +33,11 @@ void RunTestWithLogContents(base::StringPiece log_contents) {
   collector.set_input_file_for_testing(input_file.get());
   collector.Initialize([]() { return true; }, false /*early*/);
   constexpr int kPid = 234;
-  EXPECT_TRUE(collector.Collect(kPid));
+  constexpr int kRecentMissCount = 5;
+  constexpr int kRecentMatchCount = 2;
+  constexpr int kPendingMissCount = 4;
+  EXPECT_TRUE(collector.Collect(kPid, kRecentMissCount, kRecentMatchCount,
+                                kPendingMissCount));
 
   base::FilePath meta_path;
   EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
@@ -58,7 +62,11 @@ void RunTestWithLogContents(base::StringPiece log_contents) {
       meta_contents,
       HasSubstr(base::StrCat({"payload=", log_path.BaseName().value()})));
   EXPECT_THAT(meta_contents, HasSubstr("sig=missed-crash"));
+  EXPECT_THAT(meta_contents, HasSubstr("upload_var_recent_miss_count=5"));
+  EXPECT_THAT(meta_contents, HasSubstr("upload_var_recent_match_count=2"));
+  EXPECT_THAT(meta_contents, HasSubstr("upload_var_pending_miss_count=4"));
   EXPECT_THAT(meta_contents, HasSubstr("upload_var_pid=234"));
+  EXPECT_THAT(meta_contents, HasSubstr("done=1"));
 }
 
 }  // namespace

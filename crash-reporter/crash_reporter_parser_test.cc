@@ -150,10 +150,16 @@ class CrashReporterParserTest : public ::testing::Test {
                               newer_time);
     }
 
+    // Amount that the AdvancingClock we pass to CrashReporterParser's
+    // constructor will advance on each Now() call. Less that the normal 10
+    // seconds because each match calls Now() once, and the interleaved tests
+    // want to get 3 matches without going past the timeout.
+    const base::TimeDelta kClockAdvanceAmount = base::TimeDelta::FromSeconds(1);
+
     EXPECT_CALL(*metrics, Init()).Times(1);
     auto parser = std::make_unique<CrashReporterParser>(
-        std::make_unique<AdvancingClock>(), std::move(metrics),
-        true /* testonly_send_all */);
+        std::make_unique<AdvancingClock>(kClockAdvanceAmount),
+        std::move(metrics), true /* testonly_send_all */);
     return parser;
   }
 
@@ -196,9 +202,9 @@ class CrashReporterParserTest : public ::testing::Test {
       CrashReporterParser* parser,
       ExpectedCrashReports expected_crash_reports) {
     std::vector<CrashReport> crash_reports;
-    // AdvancingClock advances 10 seconds per call. The "times 2" is to make
+    // Our AdvancingClock advances 1 second per call. The "times 2" is to make
     // sure we get well past the timeout.
-    const int kTimesToRun = 2 * CrashReporterParser::kTimeout.InSeconds() / 10;
+    const int kTimesToRun = 2 * CrashReporterParser::kTimeout.InSeconds();
     for (int count = 0; count < kTimesToRun; ++count) {
       auto result = parser->PeriodicUpdate();
       if (result) {
@@ -222,8 +228,10 @@ class CrashReporterParserTest : public ::testing::Test {
 
   // If kExpectOneCrashReport, these are the flags we expect to see.
   // The default value matches the UID in TEST_CHROME_CRASH_MATCH.txt
-  std::vector<std::string> expected_flags_ = {"--missed_chrome_crash",
-                                              "--pid=1570"};
+  std::vector<std::string> expected_flags_ = {
+      "--missed_chrome_crash", "--pid=1570",
+      "--recent_miss_count=1",  // 1 because this event itself was a miss.
+      "--recent_match_count=0", "--pending_miss_count=0"};
 };
 
 const ParserRun empty{.expected_size = 0};
@@ -304,6 +312,11 @@ TEST_F(CrashReporterParserTest, InterleavedMessagesTest) {
 }
 
 TEST_F(CrashReporterParserTest, InterleavedMismatchedMessagesTest) {
+  expected_flags_ = {
+      "--missed_chrome_crash", "--pid=1570",
+      "--recent_miss_count=1",   // 1 because this event itself was a miss.
+      "--recent_match_count=2",  // The other 2 PIDs in the file.
+      "--pending_miss_count=0"};
   auto log_msgs = GetTestLogMessages(
       test_util::GetTestDataPath("TEST_CHROME_CRASH_MATCH_INTERLEAVED.txt"));
 
@@ -326,6 +339,101 @@ TEST_F(CrashReporterParserTest, InterleavedMismatchedMessagesTest) {
                                           << base::JoinString(log_msgs, "\n");
     RunCrashReporterPeriodicUpdate(parser.get(), kExpectOneCrashReport);
   } while (std::next_permutation(log_msgs.begin(), log_msgs.end()));
+}
+
+TEST_F(CrashReporterParserTest, PendingAndRecentMissCount) {
+  auto log_msgs = GetTestLogMessages(
+      test_util::GetTestDataPath("TEST_CHROME_CRASH_MATCH_INTERLEAVED.txt"));
+
+  ReplaceMsgContent(&log_msgs,
+                    "Received crash notification for chrome[1570] user 1000 "
+                    "(called directly)",
+                    "Received crash notification for chrome[1571] user 1000 "
+                    "(called directly)");
+  auto metrics = std::make_unique<MetricsLibraryMock>();
+  EXPECT_CALL(*metrics, SendCrosEventToUMA("Crash.Chrome.CrashesFromKernel"))
+      .Times(5)
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(*metrics, SendCrosEventToUMA("Crash.Chrome.MissedCrashes"))
+      .Times(3)
+      .WillRepeatedly(Return(true));
+  auto parser = MakeParser(std::move(metrics));
+  auto crash_reports = ParseLogMessages(parser.get(), log_msgs);
+  EXPECT_THAT(crash_reports, IsEmpty()) << " for message set:\n"
+                                        << base::JoinString(log_msgs, "\n");
+
+  // Run 15 periodic updates to force the clock to advance by 15 seconds.
+  // 15 seconds is half of CrashReporterParser::kTimeout, so that should be
+  // enough that the new pending miss won't be handled in the last
+  // PeriodicUpdate, but not so much that the previous miss will be handled.
+  for (int i = 0; i < CrashReporterParser::kTimeout.InSeconds() / 2; ++i) {
+    EXPECT_EQ(parser->PeriodicUpdate(), base::nullopt);
+  }
+
+  // Add in one more called-for-kernel so that we have another pending miss.
+  EXPECT_EQ(parser->ParseLogEntry(
+                "[user] Received crash notification for chrome[777] sig 10, "
+                "user 1000 group 1000 (ignoring call by kernel - chrome crash; "
+                "waiting for chrome to call us directly)"),
+            base::nullopt);
+  // Run PeriodicUpdate until the report for the miss in the INTERLEAVED file
+  // comes out. That should be PID 1570.
+  expected_flags_ = {
+      "--missed_chrome_crash", "--pid=1570",
+      "--recent_miss_count=1",    // 1 because this event itself was a miss.
+      "--recent_match_count=2",   // The other 2 PIDs in the file.
+      "--pending_miss_count=1"};  // The pending miss we just added above.
+  // We're not using RunCrashReporterPeriodicUpdate here because we want to stop
+  // as soon as we get a CrashReport returned.
+  bool got_crash_report = false;
+  // kMaxTimesToRun is just a safely so we don't loop forever if PeriodicUpdate
+  // is broken and never returns a CrashReport.
+  const int kMaxTimesToRun = 2 * CrashReporterParser::kTimeout.InSeconds();
+  for (int count = 0; !got_crash_report && count < kMaxTimesToRun; ++count) {
+    auto result = parser->PeriodicUpdate();
+    if (result) {
+      got_crash_report = true;
+      EXPECT_EQ(result, CrashReport(expected_text_, expected_flags_));
+    }
+  }
+  EXPECT_TRUE(got_crash_report);
+
+  // Now that we got the miss from the INTERLEAVED file, we expect the next
+  // miss CrashReport to be the one we added above in the direct call to
+  // ParseLogEntry. That should be PID 777.
+  expected_flags_ = {"--missed_chrome_crash", "--pid=777",
+                     "--recent_miss_count=2",   // The one we're returning plus
+                                                // the PID 1570 one.
+                     "--recent_match_count=2",  // The other 2 PIDs in the file.
+                     "--pending_miss_count=0"};
+  got_crash_report = false;
+  for (int count = 0; !got_crash_report && count < kMaxTimesToRun; ++count) {
+    auto result = parser->PeriodicUpdate();
+    if (result) {
+      got_crash_report = true;
+      EXPECT_EQ(result, CrashReport(expected_text_, expected_flags_));
+    }
+  }
+  EXPECT_TRUE(got_crash_report);
+
+  // Run the PeriodicUpload long enough to clear the recent counts.
+  RunCrashReporterPeriodicUpdate(parser.get(), kExpectNoCrashReport);
+
+  // Add in one more pending miss.
+  EXPECT_EQ(parser->ParseLogEntry(
+                "[user] Received crash notification for chrome[772] sig 10, "
+                "user 1000 group 1000 (ignoring call by kernel - chrome crash; "
+                "waiting for chrome to call us directly)"),
+            base::nullopt);
+
+  // We should get a CrashReport for the called-by-kernel line we just added
+  // with a direct call to ParseLogEntry, but all those others (PID 777 and the
+  // ones from the INTERLEAVED file) should have been so long ago that they are
+  // not counted in the recent miss / recent match counts.
+  expected_flags_ = {"--missed_chrome_crash", "--pid=772",
+                     "--recent_miss_count=1", "--recent_match_count=0",
+                     "--pending_miss_count=0"};
+  RunCrashReporterPeriodicUpdate(parser.get(), kExpectOneCrashReport);
 }
 
 // Test what happens if we try to capture logs but they don't exist. We should

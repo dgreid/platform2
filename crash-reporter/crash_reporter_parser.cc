@@ -16,6 +16,24 @@
 #include "crash-reporter/paths.h"
 #include "crash-reporter/util.h"
 
+namespace {
+
+// Erase all entries in times that are older than too_old.
+void EraseTimesBefore(base::Time too_old, std::vector<base::Time>* times) {
+  auto it = times->begin();
+  // Assume the times are in order. This is not *strictly* true, because
+  // clock->Now() will in some cases return values out of order (e.g. if the
+  // system clock is adjusted), but we won't break anything (no crash, no
+  // undefined behavior) if that happens, we'll just get a slightly-incorrect
+  // count. So take the optimization savings of assuming the times are in order.
+  while (it != times->end() && *it < too_old) {
+    ++it;
+  }
+  times->erase(times->begin(), it);
+}
+
+}  // namespace
+
 namespace anomaly {
 
 constexpr LazyRE2 chrome_crash_called_directly = {
@@ -29,6 +47,7 @@ constexpr LazyRE2 chrome_crash_called_by_kernel = {
 constexpr char kUMACrashesFromKernel[] = "Crash.Chrome.CrashesFromKernel";
 constexpr char kUMAMissedCrashes[] = "Crash.Chrome.MissedCrashes";
 constexpr base::TimeDelta CrashReporterParser::kTimeout;
+constexpr base::TimeDelta CrashReporterParser::kTimeoutForRecentUsage;
 constexpr int CrashReporterParser::kNumLogLinesCaptured;
 constexpr int CrashReporterParser::kMaxLogBytesRead;
 
@@ -42,11 +61,23 @@ CrashReporterParser::CrashReporterParser(
   metrics_lib_->Init();
 }
 
-// static
 CrashReport CrashReporterParser::MakeCrashReport(const UnmatchedCrash& crash) {
   // Note that we don't have a good signature -- we don't have any way to
   // really distinguish one missed crash from another -- so the text is just the
   // log we want to send.
+  int recent_miss_count =
+      static_cast<int>(recent_unmatched_crash_times_.size());
+  int recent_match_count = static_cast<int>(recent_matched_crash_times_.size());
+  // Count pending missing. collector=CHROME will never turn into a miss, so
+  // don't count those.
+  int pending_miss_count = 0;
+  for (const UnmatchedCrash& unmatched : unmatched_crashes_) {
+    if (unmatched.collector == Collector::USER) {
+      ++pending_miss_count;
+    }
+  }
+  // -1 so we don't count the current missed crash as both pending and recent.
+  --pending_miss_count;
   return CrashReport(
       base::StrCat({"===/proc/sys/fs/file-nr===\n", crash.file_nr,
                     "\n===/proc/meminfo===\n", crash.meminfo,
@@ -55,7 +86,10 @@ CrashReport CrashReporterParser::MakeCrashReport(const UnmatchedCrash& crash) {
                     crash.last_50_chrome_current,
                     "\n===tail previous /var/log/chrome===\n",
                     crash.last_50_chrome_previous}),
-      {"--missed_chrome_crash", base::StringPrintf("--pid=%d", crash.pid)});
+      {"--missed_chrome_crash", base::StringPrintf("--pid=%d", crash.pid),
+       base::StringPrintf("--recent_miss_count=%d", recent_miss_count),
+       base::StringPrintf("--recent_match_count=%d", recent_match_count),
+       base::StringPrintf("--pending_miss_count=%d", pending_miss_count)});
 }
 
 // static
@@ -237,6 +271,7 @@ MaybeCrashReport CrashReporterParser::ParseLogEntry(const std::string& line) {
       if (!metrics_lib_->SendCrosEventToUMA(kUMACrashesFromKernel)) {
         LOG(WARNING) << "Could not mark Chrome crash as correctly processed";
       }
+      recent_matched_crash_times_.push_back(clock_->Now());
       return base::nullopt;
     }
   }
@@ -250,10 +285,16 @@ MaybeCrashReport CrashReporterParser::ParseLogEntry(const std::string& line) {
 }
 
 MaybeCrashReport CrashReporterParser::PeriodicUpdate() {
-  base::Time too_old = clock_->Now() - kTimeout;
+  base::Time now = clock_->Now();
+  base::Time too_old_for_recent_usage = now - kTimeoutForRecentUsage;
+  // Remove the record of recent reports first, so that any missed crash reports
+  // have the proper nearby misses & hits count.
+  EraseTimesBefore(too_old_for_recent_usage, &recent_unmatched_crash_times_);
+  EraseTimesBefore(too_old_for_recent_usage, &recent_matched_crash_times_);
+
+  base::Time too_old = now - kTimeout;
   auto it = unmatched_crashes_.begin();
   MaybeCrashReport return_value;
-
   while (it != unmatched_crashes_.end()) {
     if (it->timestamp < too_old) {
       if (it->collector == Collector::USER) {
@@ -261,6 +302,7 @@ MaybeCrashReport CrashReporterParser::PeriodicUpdate() {
             !metrics_lib_->SendCrosEventToUMA(kUMAMissedCrashes)) {
           LOG(WARNING) << "Could not mark Chrome crash as missed";
         }
+        recent_unmatched_crash_times_.push_back(it->timestamp);
       }
       if (it->logs_captured) {
         // In principle, we could have two log captures at about the same

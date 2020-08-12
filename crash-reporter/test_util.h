@@ -17,21 +17,25 @@
 
 namespace test_util {
 
-// A Clock that advances 10 seconds on each call, used in tests and fuzzers.
-// Unlike a MockClock, it will not fail the test regardless of how many times it
-// is or isn't called, and it always eventually reaches the desired time. In
-// particular, having an advancing clock in the crash sender code is useful
-// because if AcquireLockFileOrDie can't get the lock, the test will eventually
-// fail instead of going into an infinite loop.
+// A Clock that advances 10 seconds (by default) on each call, used in tests and
+// fuzzers. Unlike a MockClock, it will not fail the test regardless of how many
+// times it is or isn't called, and it always eventually reaches any desired
+// time. In particular, having an advancing clock in the crash sender code is
+// useful because if AcquireLockFileOrDie can't get the lock, the test will
+// eventually fail instead of going into an infinite loop.
 class AdvancingClock : public base::Clock {
  public:
   // Start clock at GetDefaultTime()
   AdvancingClock();
+  // Start clock at GetDefaultTime(). Each call to Now() will advance the
+  // clock by |advance_amount|.
+  explicit AdvancingClock(base::TimeDelta advance_amount);
 
   base::Time Now() const override;
 
  private:
   mutable base::Time time_;
+  const base::TimeDelta advance_amount_;
 };
 
 // Get an assumed "now" for things that mocks out the current time. Always
