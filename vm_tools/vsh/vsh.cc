@@ -19,6 +19,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/stl_util.h>
 #include <base/strings/string_split.h>
+#include <base/process/process.h>
 #include <brillo/flag_helper.h>
 #include <brillo/message_loops/base_message_loop.h>
 #include <brillo/syslog_logging.h>
@@ -229,6 +230,49 @@ bool ListenForVshd(dbus::ObjectProxy* cicerone_proxy,
   return true;
 }
 
+void RegisterVshSession(dbus::ObjectProxy* cicerone_proxy,
+                        const std::string& owner_id,
+                        const std::string& vm_name,
+                        const std::string& container_name,
+                        int32_t host_vsh_pid,
+                        int32_t container_shell_pid) {
+  dbus::MethodCall method_call(vm_tools::cicerone::kVmCiceroneInterface,
+                               vm_tools::cicerone::kRegisterVshSessionMethod);
+  dbus::MessageWriter writer(&method_call);
+
+  vm_tools::cicerone::RegisterVshSessionRequest request;
+  request.set_owner_id(owner_id);
+  request.set_vm_name(vm_name);
+  request.set_container_name(container_name);
+  request.set_host_vsh_pid(host_vsh_pid);
+  request.set_container_shell_pid(container_shell_pid);
+
+  if (!writer.AppendProtoAsArrayOfBytes(request)) {
+    LOG(ERROR) << "Failed to encode RegisterVshSessionRequest protobuf";
+    return;
+  }
+
+  std::unique_ptr<dbus::Response> dbus_response =
+      cicerone_proxy->CallMethodAndBlock(&method_call, kDefaultTimeoutMs);
+  if (!dbus_response) {
+    LOG(ERROR) << "Failed to send dbus message to cicerone service";
+    return;
+  }
+
+  dbus::MessageReader reader(dbus_response.get());
+  vm_tools::cicerone::RegisterVshSessionResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&response)) {
+    LOG(ERROR) << "Failed to parse response protobuf";
+    return;
+  }
+
+  if (!response.success()) {
+    LOG(ERROR) << "Failed to register vsh session for " << owner_id << ": "
+               << vm_name << ":" << container_name << ": "
+               << response.failure_reason();
+  }
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -254,6 +298,9 @@ int main(int argc, char** argv) {
   scoped_refptr<dbus::Bus> bus(new dbus::Bus(std::move(opts)));
 
   bool interactive = isatty(STDIN_FILENO) && isatty(STDOUT_FILENO);
+
+  int32_t pid = base::Process::Current().Pid();
+  dbus::ObjectProxy* cicerone_proxy = nullptr;
 
   base::ScopedFD stdout_fd;
   base::ScopedFD stderr_fd;
@@ -288,15 +335,15 @@ int main(int argc, char** argv) {
       }
     }
 
-    dbus::ObjectProxy* proxy = GetServiceProxy(bus,
-            vm_tools::cicerone::kVmCiceroneServiceName,
-            vm_tools::cicerone::kVmCiceroneServicePath);
-    if (!proxy)
+    cicerone_proxy =
+        GetServiceProxy(bus, vm_tools::cicerone::kVmCiceroneServiceName,
+                        vm_tools::cicerone::kVmCiceroneServicePath);
+    if (!cicerone_proxy)
       return EXIT_FAILURE;
 
     base::ScopedFD sock_fd;
-    if (!ListenForVshd(proxy, port, &sock_fd, FLAGS_owner_id, FLAGS_vm_name,
-                       FLAGS_target_container)) {
+    if (!ListenForVshd(cicerone_proxy, port, &sock_fd, FLAGS_owner_id,
+                       FLAGS_vm_name, FLAGS_target_container)) {
       return EXIT_FAILURE;
     }
 
@@ -307,6 +354,11 @@ int main(int argc, char** argv) {
     if (!client) {
       return EXIT_FAILURE;
     }
+
+    RegisterVshSession(cicerone_proxy, FLAGS_owner_id, FLAGS_vm_name,
+                       FLAGS_target_container, pid,
+                       client->container_shell_pid());
+
   } else {
     if ((FLAGS_cid != 0 && !FLAGS_vm_name.empty()) ||
         (FLAGS_cid == 0 && FLAGS_vm_name.empty())) {
@@ -374,6 +426,12 @@ int main(int argc, char** argv) {
   }
 
   message_loop.Run();
+
+  // Clear session by setting container_shell_pid to 0.
+  if (cicerone_proxy) {
+    RegisterVshSession(cicerone_proxy, FLAGS_owner_id, FLAGS_vm_name,
+                       FLAGS_target_container, pid, 0);
+  }
 
   return client->exit_code();
 }

@@ -44,8 +44,10 @@ message SetupConnectionRequest {
   // The logic here is inverted to keep backwards compatibility with the
   // current behavior (always allocate a pty).
   bool nopty = 8;
-  // Directory to set for current working directory.
+  // Optional: directory to set for current working directory.
   string cwd = 9;
+  // Optional: use /proc/<cwd_pid>/cwd for current working directory.
+  int32 cwd_pid = 10;
 }
 
 // Response to a SetupConnectionRequest.
@@ -55,6 +57,8 @@ message SetupConnectionResponse {
   // Short description of any error encountered when setting up the
   // connection.
   string description = 2;
+  // Process ID of new shell.
+  int32 pid = 3;
 }
 
 // A message that indicates to either the server or the client a change

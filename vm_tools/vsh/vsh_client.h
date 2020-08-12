@@ -39,6 +39,7 @@ class VshClient {
                                                      base::ScopedFD stderr_fd);
   ~VshClient() = default;
 
+  int32_t container_shell_pid();
   int exit_code();
 
   // Helper function defined in vsh_client_fuzzer.cc.
@@ -64,6 +65,7 @@ class VshClient {
   void CancelStdinTask();
 
   base::ScopedFD sock_fd_;
+  int32_t container_shell_pid_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> sock_watcher_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> stdin_watcher_;
 

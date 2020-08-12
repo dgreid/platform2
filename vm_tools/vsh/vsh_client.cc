@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <string.h>
 #include <termios.h>
 #include <unistd.h>
@@ -17,6 +18,9 @@
 
 #include <linux/vm_sockets.h>  // Needs to come after sys/socket.h
 
+#include <algorithm>
+#include <cctype>
+#include <cstdlib>
 #include <memory>
 #include <string>
 #include <utility>
@@ -80,6 +84,7 @@ VshClient::VshClient(base::ScopedFD sock_fd,
                      base::ScopedFD stdout_fd,
                      base::ScopedFD stderr_fd)
     : sock_fd_(std::move(sock_fd)),
+      container_shell_pid_(0),
       stdout_fd_(std::move(stdout_fd)),
       stderr_fd_(std::move(stderr_fd)),
       exit_code_(kDefaultExitCode) {}
@@ -106,7 +111,12 @@ bool VshClient::Init(const std::string& user,
   }
 
   connection_request.set_user(user);
-  connection_request.set_cwd(cwd);
+  // cwd is either a path, or a pid where we will look up /proc/<pid>/cwd.
+  if (!cwd.empty() && std::all_of(cwd.begin(), cwd.end(), isdigit)) {
+    connection_request.set_cwd_pid(atoi(cwd.c_str()));
+  } else {
+    connection_request.set_cwd(cwd);
+  }
   connection_request.set_nopty(!interactive);
 
   auto env = connection_request.mutable_env();
@@ -163,6 +173,8 @@ bool VshClient::Init(const std::string& user,
                << connection_response.description();
     return false;
   }
+
+  container_shell_pid_ = connection_response.pid();
 
   sock_watcher_ = base::FileDescriptorWatcher::WatchReadable(
       sock_fd_.get(),
@@ -379,6 +391,10 @@ bool VshClient::GetCurrentWindowSize(struct winsize* ws) {
 
 void VshClient::CancelStdinTask() {
   stdin_watcher_.reset();
+}
+
+int32_t VshClient::container_shell_pid() {
+  return container_shell_pid_;
 }
 
 int VshClient::exit_code() {

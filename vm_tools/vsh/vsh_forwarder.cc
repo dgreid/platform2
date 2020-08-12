@@ -341,6 +341,9 @@ bool VshForwarder::SendConnectionResponse(ConnectionStatus status,
   SetupConnectionResponse connection_response;
   connection_response.set_status(status);
   connection_response.set_description(description);
+  if (status == READY) {
+    connection_response.set_pid(target_pid_);
+  }
 
   if (!SendMessage(sock_fd_.get(), connection_response)) {
     LOG(ERROR) << "Failed to send connection response";
@@ -420,6 +423,21 @@ void VshForwarder::PrepareExec(
   if (!connection_request.cwd().empty()) {
     if (chdir(connection_request.cwd().c_str()) < 0) {
       PLOG(WARNING) << "Failed to set cwd to: " << connection_request.cwd();
+    }
+  }
+  // Look up /proc/<cwd_pid>/cwd and change to it if set.
+  if (connection_request.cwd_pid() != 0) {
+    const std::string path =
+        base::StringPrintf("/proc/%d/cwd", connection_request.cwd_pid());
+    char buf[kMaxDataSize];
+    size_t size = readlink(path.c_str(), buf, kMaxDataSize - 1);
+    if (size < 0) {
+      PLOG(WARNING) << "Failed to read pid cwd: " << path;
+    } else {
+      buf[size] = '\0';
+      if (chdir(buf) < 0) {
+        PLOG(WARNING) << "Failed to set cwd from << " << path << " to: " << buf;
+      }
     }
   }
 
