@@ -85,12 +85,8 @@ brillo::SecureBlob RetrieveKey() {
 
 EncryptedRebootVault::EncryptedRebootVault()
     : vault_path_(base::FilePath(kEncryptedRebootVaultPath)) {
-  if (dircrypto::CheckFscryptKeyIoctlSupport()) {
-    key_reference_.policy_version = FSCRYPT_POLICY_V2;
-  } else {
-    key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
-    key_reference_.policy_version = FSCRYPT_POLICY_V1;
-  }
+  key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
+  key_reference_.policy_version = FSCRYPT_POLICY_V1;
 }
 
 bool EncryptedRebootVault::CreateVault() {
@@ -166,20 +162,6 @@ bool EncryptedRebootVault::UnlockVault() {
   if (!Validate()) {
     LOG(ERROR) << "Invalid vault; purging.";
     return false;
-  }
-
-  // If the vault exists, get the policy version from the directory.
-  switch (dircrypto::GetDirectoryPolicyVersion(vault_path_)) {
-    case FSCRYPT_POLICY_V1:
-      key_reference_.policy_version = FSCRYPT_POLICY_V1;
-      key_reference_.reference = brillo::SecureBlob(kEncryptionKeyTag);
-      break;
-    case FSCRYPT_POLICY_V2:
-      key_reference_.policy_version = FSCRYPT_POLICY_V2;
-      break;
-    default:
-      LOG(ERROR) << "Failed to get policy version for directory";
-      return false;
   }
 
   // Retrieve key.
