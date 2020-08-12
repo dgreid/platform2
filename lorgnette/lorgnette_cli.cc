@@ -70,7 +70,9 @@ class ScanHandler {
         quit_closure_(quit_closure),
         manager_(std::move(manager)),
         scanner_name_(scanner_name),
-        output_path_("/tmp/scan-" + EscapeScannerName(scanner_name) + ".png"),
+        base_output_path_("/tmp/scan-" + EscapeScannerName(scanner_name) +
+                          ".png"),
+        current_page_(1),
         connected_callback_called_(false),
         connection_status_(false) {
     manager_->RegisterScanStatusChangedSignalHandler(
@@ -93,14 +95,19 @@ class ScanHandler {
                            const std::string& signal_name,
                            bool signal_connected);
 
+  void RequestNextPage();
+  base::Optional<lorgnette::GetNextImageResponse> GetNextImage(
+      const base::FilePath& output_path);
+
   base::Lock lock_;
   base::ConditionVariable cvar_;
   base::RepeatingClosure quit_closure_;
 
   std::unique_ptr<ManagerProxy> manager_;
   std::string scanner_name_;
-  base::FilePath output_path_;
+  base::FilePath base_output_path_;
   base::Optional<std::string> scan_uuid_;
+  int current_page_;
 
   bool connected_callback_called_;
   bool connection_status_;
@@ -126,18 +133,9 @@ bool ScanHandler::StartScan(uint32_t resolution,
   std::vector<uint8_t> request_in(request.ByteSizeLong());
   request.SerializeToArray(request_in.data(), request_in.size());
 
-  base::File output_file(
-      output_path_, base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
-
-  if (!output_file.IsValid()) {
-    PLOG(ERROR) << "Failed to open output file " << output_path_;
-    return false;
-  }
-
   brillo::ErrorPtr error;
   std::vector<uint8_t> response_out;
-  if (!manager_->StartScan(request_in, output_file.GetPlatformFile(),
-                           &response_out, &error)) {
+  if (!manager_->StartScanMultiPage(request_in, &response_out, &error)) {
     LOG(ERROR) << "StartScan failed: " << error->GetMessage();
     return false;
   }
@@ -157,6 +155,7 @@ bool ScanHandler::StartScan(uint32_t resolution,
             << std::endl;
   scan_uuid_ = response.scan_uuid();
 
+  RequestNextPage();
   return true;
 }
 
@@ -179,6 +178,11 @@ void ScanHandler::HandleScanStatusChangedSignal(
   } else if (signal.state() == lorgnette::SCAN_STATE_FAILED) {
     LOG(ERROR) << "Scan failed: " << signal.failure_reason();
     quit_closure_.Run();
+  } else if (signal.state() == lorgnette::SCAN_STATE_PAGE_COMPLETED) {
+    std::cout << "Page " << signal.page() << " completed." << std::endl;
+    current_page_ += 1;
+    if (signal.more_pages())
+      RequestNextPage();
   } else if (signal.state() == lorgnette::SCAN_STATE_COMPLETED) {
     std::cout << "Scan completed successfully." << std::endl;
     quit_closure_.Run();
@@ -195,6 +199,58 @@ void ScanHandler::OnConnectedCallback(const std::string& interface_name,
     LOG(ERROR) << "Failed to connect to ScanStatusChanged signal";
   }
   cvar_.Signal();
+}
+
+base::Optional<lorgnette::GetNextImageResponse> ScanHandler::GetNextImage(
+    const base::FilePath& output_path) {
+  lorgnette::GetNextImageRequest request;
+  request.set_scan_uuid(scan_uuid_.value());
+  std::vector<uint8_t> request_in(request.ByteSizeLong());
+  request.SerializeToArray(request_in.data(), request_in.size());
+
+  base::File output_file(
+      output_path, base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+
+  if (!output_file.IsValid()) {
+    PLOG(ERROR) << "Failed to open output file " << output_path;
+    return base::nullopt;
+  }
+
+  brillo::ErrorPtr error;
+  std::vector<uint8_t> response_out;
+  if (!manager_->GetNextImage(request_in, output_file.GetPlatformFile(),
+                              &response_out, &error)) {
+    LOG(ERROR) << "GetNextImage failed: " << error->GetMessage();
+    return base::nullopt;
+  }
+
+  lorgnette::GetNextImageResponse response;
+  if (!response.ParseFromArray(response_out.data(), response_out.size())) {
+    LOG(ERROR) << "Failed to parse StartScanResponse";
+    return base::nullopt;
+  }
+
+  return response;
+}
+
+void ScanHandler::RequestNextPage() {
+  base::FilePath output_path = base_output_path_.InsertBeforeExtension(
+      base::StringPrintf("_page%d", current_page_));
+
+  base::Optional<lorgnette::GetNextImageResponse> response =
+      GetNextImage(output_path);
+  if (!response.has_value()) {
+    quit_closure_.Run();
+  }
+
+  if (!response.value().success()) {
+    LOG(ERROR) << "Requesting next page failed: "
+               << response.value().failure_reason();
+    quit_closure_.Run();
+  } else {
+    std::cout << "Reading page " << current_page_ << " to "
+              << output_path.value() << std::endl;
+  }
 }
 
 base::Optional<std::vector<std::string>> ListScanners(ManagerProxy* manager) {
