@@ -961,6 +961,7 @@ void Service::SetAutoConnect(bool connect) {
   if (auto_connect() == connect) {
     return;
   }
+  LOG(INFO) << "Service " << log_name() << ": SetAutoConnect: " << connect;
   auto_connect_ = connect;
   adaptor_->EmitBoolChanged(kAutoConnectProperty, auto_connect());
 }

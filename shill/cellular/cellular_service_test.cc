@@ -72,6 +72,12 @@ class CellularServiceTest : public testing::Test {
   static const char kAddress[];
 
   string GetFriendlyName() const { return service_->friendly_name(); }
+  bool IsAutoConnectable(const char** reason) const {
+    return service_->IsAutoConnectable(reason);
+  }
+  bool SetAutoConnectFull(bool connect) {
+    return service_->SetAutoConnectFull(connect, /*error=*/nullptr);
+  }
 
   EventDispatcher dispatcher_;
   MockModemInfo modem_info_;
@@ -252,7 +258,7 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
 
   // Auto-connect should be suppressed if the device is not running.
   device_->running_ = false;
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(CellularService::kAutoConnDeviceDisabled, reason);
 
   device_->running_ = true;
@@ -261,7 +267,7 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(_, _))
       .WillOnce(Return(PendingActivationStore::kStatePending));
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(CellularService::kAutoConnActivating, reason);
   EXPECT_CALL(*modem_info_.mock_pending_activation_store(),
               GetActivationState(_, _))
@@ -269,29 +275,29 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
 
   // Auto-connect should be suppressed if we're out of credits.
   service_->NotifySubscriptionStateChanged(SubscriptionState::kOutOfCredits);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(CellularService::kAutoConnOutOfCredits, reason);
   service_->NotifySubscriptionStateChanged(SubscriptionState::kProvisioned);
 
   // A PPP authentication failure means the Service is not auto-connectable.
   service_->SetFailure(Service::kFailurePPPAuth);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(CellularService::kAutoConnBadPPPCredentials, reason);
 
   // Reset failure state, to make the Service auto-connectable again.
   service_->SetState(Service::kStateIdle);
-  EXPECT_TRUE(service_->IsAutoConnectable(&reason));
+  EXPECT_TRUE(IsAutoConnectable(&reason));
 
   // The following test cases are copied from ServiceTest.IsAutoConnectable
 
   service_->SetConnectable(true);
-  EXPECT_TRUE(service_->IsAutoConnectable(&reason));
+  EXPECT_TRUE(IsAutoConnectable(&reason));
 
   // We should not auto-connect to a Service that a user has
   // deliberately disconnected.
   Error error;
   service_->UserInitiatedDisconnect("RPC", &error);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(Service::kAutoConnExplicitDisconnect, reason);
 
   // But if the Service is reloaded, it is eligible for auto-connect
@@ -303,24 +309,24 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
                            CellularService::kStorageImsi, device_->imsi())))
       .WillRepeatedly(Return(std::set<string>{"matching-storage-id"}));
   EXPECT_TRUE(service_->Load(&storage));
-  EXPECT_TRUE(service_->IsAutoConnectable(&reason));
+  EXPECT_TRUE(IsAutoConnectable(&reason));
 
   // A non-user initiated Disconnect doesn't change anything.
   service_->Disconnect(&error, "in test");
-  EXPECT_TRUE(service_->IsAutoConnectable(&reason));
+  EXPECT_TRUE(IsAutoConnectable(&reason));
 
   // A resume also re-enables auto-connect.
   service_->UserInitiatedDisconnect("RPC", &error);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   service_->OnAfterResume();
-  EXPECT_TRUE(service_->IsAutoConnectable(&reason));
+  EXPECT_TRUE(IsAutoConnectable(&reason));
 
   service_->SetState(Service::kStateConnected);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(Service::kAutoConnConnected, reason);
 
   service_->SetState(Service::kStateAssociating);
-  EXPECT_FALSE(service_->IsAutoConnectable(&reason));
+  EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(Service::kAutoConnConnecting, reason);
 }
 
@@ -502,6 +508,33 @@ TEST_F(CellularServiceTest, CustomSetterNoopChange) {
 TEST_F(CellularServiceTest, IsMeteredByDefault) {
   // These services should be metered by default.
   EXPECT_TRUE(service_->IsMetered());
+}
+
+TEST_F(CellularServiceTest, SetActivationState) {
+  // SetActivationState should emit a change.
+  EXPECT_CALL(*adaptor_, EmitStringChanged(kActivationStateProperty,
+                                           kActivationStateNotActivated));
+  service_->SetActivationState(kActivationStateNotActivated);
+  EXPECT_EQ(service_->activation_state(), kActivationStateNotActivated);
+  EXPECT_CALL(*adaptor_, EmitStringChanged(kActivationStateProperty, _))
+      .Times(AnyNumber());
+
+  // Setting the activation state to activated should also set AutoConnect.
+  EXPECT_FALSE(service_->auto_connect());
+  service_->SetActivationState(kActivationStateActivated);
+  EXPECT_EQ(service_->activation_state(), kActivationStateActivated);
+  EXPECT_TRUE(service_->auto_connect());
+
+  // After a client sets AutoConnect to false, setting the activation state to
+  // activated should not set AutoConnect.
+  SetAutoConnectFull(false);
+  EXPECT_FALSE(service_->auto_connect());
+  service_->SetActivationState(kActivationStateNotActivated);
+  EXPECT_EQ(service_->activation_state(), kActivationStateNotActivated);
+  EXPECT_FALSE(service_->auto_connect());
+  service_->SetActivationState(kActivationStateActivated);
+  EXPECT_EQ(service_->activation_state(), kActivationStateActivated);
+  EXPECT_FALSE(service_->auto_connect());
 }
 
 }  // namespace shill

@@ -133,11 +133,7 @@ class CellularService : public Service {
   FRIEND_TEST(CellularServiceTest, SetApn);
   FRIEND_TEST(CellularServiceTest, ClearApn);
   FRIEND_TEST(CellularServiceTest, LastGoodApn);
-  FRIEND_TEST(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles);
-  FRIEND_TEST(CellularServiceTest, LoadFromProfileMatchingImsi);
-  FRIEND_TEST(CellularServiceTest, LoadFromOlderProfile);
   FRIEND_TEST(CellularServiceTest, LoadResetsPPPAuthFailure);
-  FRIEND_TEST(CellularServiceTest, Save);
   FRIEND_TEST(CellularServiceTest, IsAutoConnectable);
   FRIEND_TEST(CellularServiceTest, CustomSetterNoopChange);
 

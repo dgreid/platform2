@@ -583,14 +583,6 @@ void CellularCapability3gpp::UpdateServiceActivationState() {
     activation_state = kActivationStateNotActivated;
   } else {
     activation_state = kActivationStateActivated;
-
-    // Mark an activated service for auto-connect by default. Since data from
-    // the user profile will be loaded after the call to OnServiceCreated, this
-    // property will be corrected based on the user data at that time.
-    // NOTE: This function can be called outside the service initialization
-    // path so make sure we don't overwrite the auto-connect setting.
-    if (service->activation_state() != activation_state)
-      service->SetAutoConnect(true);
   }
   service->SetActivationState(activation_state);
 }

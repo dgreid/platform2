@@ -1499,12 +1499,10 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
   EXPECT_CALL(*mock_home_provider_info_, olp_list())
       .WillRepeatedly(ReturnRef(olp_list));
 
-  service_->SetAutoConnect(false);
   EXPECT_CALL(*service_, SetActivationState(kActivationStateNotActivated))
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  EXPECT_FALSE(service_->auto_connect());
 
   cellular_->set_mdn("1231231122");
   capability_->subscription_state_ = SubscriptionState::kUnknown;
@@ -1512,22 +1510,7 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  EXPECT_TRUE(service_->auto_connect());
 
-  // Make sure we don't overwrite auto-connect if a service is already
-  // activated before calling UpdateServiceActivationState().
-  service_->SetAutoConnect(false);
-  EXPECT_FALSE(service_->auto_connect());
-  const string activation_state = kActivationStateActivated;
-  EXPECT_CALL(*service_, activation_state())
-      .WillOnce(ReturnRef(activation_state));
-  EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
-      .Times(1);
-  capability_->UpdateServiceActivationState();
-  Mock::VerifyAndClearExpectations(service_);
-  EXPECT_FALSE(service_->auto_connect());
-
-  service_->SetAutoConnect(false);
   cellular_->set_mdn("0000000000");
   cellular_->set_iccid(kIccid);
   EXPECT_CALL(
@@ -1540,7 +1523,6 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  EXPECT_FALSE(service_->auto_connect());
 
   EXPECT_CALL(
       *modem_info_.mock_pending_activation_store(),
@@ -1552,29 +1534,24 @@ TEST_F(CellularCapability3gppMainTest, UpdateServiceActivationState) {
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
   Mock::VerifyAndClearExpectations(modem_info_.mock_pending_activation_store());
-  EXPECT_TRUE(service_->auto_connect());
 
   // SubscriptionStateUnprovisioned overrides valid MDN.
   capability_->subscription_state_ = SubscriptionState::kUnprovisioned;
   cellular_->set_mdn("1231231122");
   cellular_->set_iccid("");
-  service_->SetAutoConnect(false);
   EXPECT_CALL(*service_, SetActivationState(kActivationStateNotActivated))
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  EXPECT_FALSE(service_->auto_connect());
 
   // SubscriptionStateProvisioned overrides invalid MDN.
   capability_->subscription_state_ = SubscriptionState::kProvisioned;
   cellular_->set_mdn("0000000000");
   cellular_->set_iccid("");
-  service_->SetAutoConnect(false);
   EXPECT_CALL(*service_, SetActivationState(kActivationStateActivated))
       .Times(1);
   capability_->UpdateServiceActivationState();
   Mock::VerifyAndClearExpectations(service_);
-  EXPECT_TRUE(service_->auto_connect());
 }
 
 TEST_F(CellularCapability3gppMainTest, UpdatePendingActivationState) {

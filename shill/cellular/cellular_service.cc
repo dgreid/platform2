@@ -263,6 +263,12 @@ void CellularService::SetActivationState(const string& state) {
   if (state == activation_state_) {
     return;
   }
+
+  // If AutoConnect has not been explicitly set by the client, set it to true
+  // when the service becomes activated.
+  if (!retain_auto_connect() && state == kActivationStateActivated)
+    SetAutoConnect(true);
+
   activation_state_ = state;
   adaptor()->EmitStringChanged(kActivationStateProperty, state);
 }
