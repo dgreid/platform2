@@ -9,8 +9,10 @@ use std::io::{copy, stdin, stdout};
 use std::thread::spawn;
 
 use libchromeos::vsock::VsockCid;
-use sirenia::cli::{initialize_common_arguments, TransportType};
-use sirenia::transport::{ClientTransport, IPClientTransport, Transport, VsockClientTransport};
+use sirenia::cli::initialize_common_arguments;
+use sirenia::transport::{
+    ClientTransport, IPClientTransport, Transport, TransportType, VsockClientTransport,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();

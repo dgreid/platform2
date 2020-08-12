@@ -43,6 +43,7 @@ struct sockaddr_vm {
     svm_zero: [c_uchar; PADDING],
 }
 
+#[derive(Debug)]
 pub struct AddrParseError;
 
 impl fmt::Display for AddrParseError {
@@ -112,7 +113,7 @@ impl Into<c_uint> for VsockCid {
 }
 
 /// An address associated with a virtual socket.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, PartialEq)]
 pub struct SocketAddr {
     pub cid: VsockCid,
     pub port: c_uint,

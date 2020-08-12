@@ -14,15 +14,27 @@ use std::io::{self, Read, Write};
 use std::iter::Iterator;
 use std::marker::Send;
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
+use std::str::FromStr;
 
 use core::mem::replace;
-use libchromeos::vsock::{self, VsockCid, VsockListener, VsockStream};
+use libchromeos::vsock::{
+    self, AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener,
+    VsockStream,
+};
 use sys_util::{handle_eintr, pipe};
 
-const DEFAULT_PORT: u32 = 5552;
+pub const DEFAULT_PORT: u32 = 5552;
 
 #[derive(Debug)]
 pub enum Error {
+    /// Failed to parse a socket address.
+    SocketAddrParse(Option<io::Error>),
+    /// Failed to parse a vsock socket address.
+    VSocketAddrParse(AddrParseError),
+    /// Got an unknown transport type.
+    UnknownTransportType,
+    /// Failed to parse URI.
+    URIParse,
     /// Failed to clone a fd.
     Clone(io::Error),
     /// Failed to bind a socket.
@@ -31,8 +43,6 @@ pub enum Error {
     GetAddress(io::Error),
     /// Failed to accept the incoming connection.
     Accept(io::Error),
-    /// Failed to parse the socket address.
-    ParseAddress(Option<io::Error>),
     /// Failed to connect to the socket address.
     Connect(io::Error),
     /// Failed to construct the pipe.
@@ -47,14 +57,17 @@ impl Display for Error {
         use self::Error::*;
 
         match self {
+            SocketAddrParse(e) => match e {
+                Some(i) => write!(f, "failed to parse the socket address: {}", i),
+                None => write!(f, "failed to parse the socket address"),
+            },
+            VSocketAddrParse(_) => write!(f, "failed to parse the vsock socket address"),
+            UnknownTransportType => write!(f, "got an unrecognized transport type"),
+            URIParse => write!(f, "failed to parse the URI"),
             Clone(e) => write!(f, "failed to clone fd: {}", e),
             Bind(e) => write!(f, "failed to bind: {}", e),
             GetAddress(e) => write!(f, "failed to get the socket address: {}", e),
             Accept(e) => write!(f, "failed to accept connection: {}", e),
-            ParseAddress(e) => match e {
-                Some(i) => write!(f, "failed to parse the socket address: {}", i),
-                None => write!(f, "failed to parse the socket address"),
-            },
             Connect(e) => write!(f, "failed to connect: {}", e),
             Pipe(e) => write!(f, "failed to construct the pipe: {}", e),
             InvalidState => write!(f, "pipe transport was in the wrong state"),
@@ -71,6 +84,49 @@ impl<T: Read + Debug + Send> ReadDebugSend for T {}
 /// An abstraction wrapper to support the sending side of a transport method.
 pub trait WriteDebugSend: Write + Debug + Send {}
 impl<T: Write + Debug + Send> WriteDebugSend for T {}
+
+/// Transport options that can be selected.
+#[derive(Debug, PartialEq)]
+pub enum TransportType {
+    VsockConnection(VSocketAddr),
+    IpConnection(SocketAddr),
+}
+
+fn parse_ip_connection(value: &str) -> Result<TransportType> {
+    let mut iter = value
+        .to_socket_addrs()
+        .map_err(|e| Error::SocketAddrParse(Some(e)))?;
+    match iter.next() {
+        None => Err(Error::SocketAddrParse(None)),
+        Some(a) => Ok(TransportType::IpConnection(a)),
+    }
+}
+
+fn parse_vsock_connection(value: &str) -> Result<TransportType> {
+    let socket_addr: VSocketAddr = value.to_socket_addr().map_err(Error::VSocketAddrParse)?;
+    Ok(TransportType::VsockConnection(socket_addr))
+}
+
+impl FromStr for TransportType {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self> {
+        if value.is_empty() {
+            return Err(Error::URIParse);
+        }
+        let parts: Vec<&str> = value.split("://").collect();
+        match parts.len() {
+            2 => match parts[0] {
+                "vsock" | "VSOCK" => parse_vsock_connection(parts[1]),
+                "ip" | "IP" => parse_ip_connection(parts[1]),
+                _ => Err(Error::UnknownTransportType),
+            },
+            // TODO: Should this still be the default?
+            1 => parse_ip_connection(value),
+            _ => Err(Error::URIParse),
+        }
+    }
+}
 
 /// Wraps a complete transport method, both sending and receiving.
 #[derive(Debug)]
@@ -143,10 +199,10 @@ impl IPClientTransport {
     pub fn new<T: ToSocketAddrs>(addr: T) -> Result<Self> {
         let mut iter = addr
             .to_socket_addrs()
-            .map_err(|e| Error::ParseAddress(Some(e)))?;
+            .map_err(|e| Error::SocketAddrParse(Some(e)))?;
         match iter.next() {
             Some(a) => Ok(IPClientTransport(a)),
-            None => Err(Error::ParseAddress(None)),
+            None => Err(Error::SocketAddrParse(None)),
         }
     }
 }
@@ -306,10 +362,14 @@ impl ClientTransport for PipeTransport {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::*;
 
+    use std::net::{IpAddr, Ipv4Addr};
+    use std::os::raw::c_uint;
     use std::thread::spawn;
+
+    const IP_ADDR: &str = "1.1.1.1:1234";
 
     const CLIENT_SEND: [u8; 7] = [1, 2, 3, 4, 5, 6, 7];
     const SERVER_SEND: [u8; 5] = [11, 12, 13, 14, 15];
@@ -340,6 +400,19 @@ mod tests {
         let mut buf: [u8; CLIENT_SEND.len()] = [0; CLIENT_SEND.len()];
         r.read_exact(&mut buf).unwrap();
         assert_eq!(buf, CLIENT_SEND);
+    }
+
+    pub(crate) fn get_ip_uri() -> String {
+        format!("ip://{}", IP_ADDR)
+    }
+
+    fn get_vsock_addr() -> String {
+        let cid: c_uint = VsockCid::Local.into();
+        format!("vsock:{}:1", cid)
+    }
+
+    pub(crate) fn get_vsock_uri() -> String {
+        format!("vsock://{}", get_vsock_addr())
     }
 
     #[test]
@@ -405,5 +478,101 @@ mod tests {
         let mut buf: [u8; CLIENT_SEND.len()] = [0; CLIENT_SEND.len()];
         r.read_exact(&mut buf).unwrap();
         assert_eq!(buf, CLIENT_SEND);
+    }
+
+    #[test]
+    fn parse_ip_connection_valid() {
+        let exp_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)), 1234);
+        let exp_result = TransportType::IpConnection(exp_socket);
+        let act_result = parse_ip_connection(&IP_ADDR).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    #[test]
+    fn parse_ip_connection_invalid() {
+        let result = parse_ip_connection("foo");
+        match &result {
+            Err(Error::SocketAddrParse(_)) => (),
+            _ => panic!("Got unexpected result: {:?}", &result),
+        }
+    }
+
+    #[test]
+    fn parse_vsock_connection_valid() {
+        let exp_result = TransportType::VsockConnection(VSocketAddr {
+            cid: VsockCid::Local,
+            port: 1,
+        });
+        let act_result = parse_vsock_connection(&get_vsock_addr()).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    // Note: should break rn
+    #[test]
+    fn parse_vsock_connection_invalid() {
+        let result = parse_vsock_connection("foo");
+        match &result {
+            Err(Error::VSocketAddrParse(AddrParseError)) => (),
+            _ => panic!("Got unexpected result: {:?}", &result),
+        }
+    }
+
+    #[test]
+    fn parse_connection_empty() {
+        let value = "";
+        let act_result = TransportType::from_str(&value);
+        match &act_result {
+            Err(Error::URIParse) => (),
+            _ => panic!("Got unexpected result: {:?}", &act_result),
+        }
+    }
+
+    #[test]
+    fn parse_unknown_connection_type_error() {
+        let value = "foo://foo";
+        let act_result = TransportType::from_str(&value);
+        match &act_result {
+            Err(Error::UnknownTransportType) => (),
+            _ => panic!("Got unexpected result: {:?}", &act_result),
+        }
+    }
+
+    #[test]
+    fn parse_ip_connection_uri_valid() {
+        let exp_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)), 1234);
+        let exp_result = TransportType::IpConnection(exp_socket);
+        let value = get_ip_uri();
+        let act_result = TransportType::from_str(&value).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    #[test]
+    fn parse_vsock_connection_uri_valid() {
+        let exp_result = TransportType::VsockConnection(VSocketAddr {
+            cid: VsockCid::Local,
+            port: 1,
+        });
+        let value = get_vsock_uri();
+        let act_result = TransportType::from_str(&value).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    #[test]
+    fn parse_ip_connection_implicit_invalid() {
+        let value = "foo";
+        let act_result = TransportType::from_str(&value);
+        match &act_result {
+            Err(Error::SocketAddrParse(_)) => (),
+            _ => panic!("Got unexpected result: {:?}", &act_result),
+        }
+    }
+
+    #[test]
+    fn parse_ip_connection_implicit_valid() {
+        let exp_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)), 1234);
+        let exp_result = TransportType::IpConnection(exp_socket);
+        let value = IP_ADDR;
+        let act_result = TransportType::from_str(&value).unwrap();
+        assert_eq!(act_result, exp_result);
     }
 }

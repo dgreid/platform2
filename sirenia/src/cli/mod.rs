@@ -6,23 +6,17 @@
 //! Trichechus and Dugong daemons.
 
 use std::fmt::{self, Display};
-use std::io;
-use std::net::{SocketAddr, ToSocketAddrs};
 
 use getopts::{self, Options};
 
-use super::transport::LOOPBACK_DEFAULT;
+use super::transport::{TransportType, DEFAULT_PORT, LOOPBACK_DEFAULT};
+use libchromeos::vsock::{SocketAddr as VSocketAddr, VsockCid};
 
 #[derive(Debug)]
 pub enum Error {
-    /// Failed to parse a socket address.
-    SocketAddrParse(Option<io::Error>),
-    /// Got an unknown transport type.
-    UnknownTransportType,
-    /// Failed to parse URI.
-    URIParse,
     /// Error parsing command line options.
     CLIParse(getopts::Fail),
+    TransportParse(super::transport::Error),
 }
 
 impl Display for Error {
@@ -30,13 +24,8 @@ impl Display for Error {
         use self::Error::*;
 
         match self {
-            SocketAddrParse(e) => match e {
-                Some(i) => write!(f, "failed to parse the socket address: {}", i),
-                None => write!(f, "failed to parse the socket address"),
-            },
-            UnknownTransportType => write!(f, "got an unrecognized transport type"),
-            URIParse => write!(f, "failed to parse the URI"),
             CLIParse(e) => write!(f, "failed to parse the command line options: {}", e),
+            TransportParse(e) => write!(f, "failed to parse transport type: {}", e),
         }
     }
 }
@@ -44,49 +33,26 @@ impl Display for Error {
 /// The result of an operation in this crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
-/// Transport options that can be selected.
-pub enum TransportType {
-    VsockConnection,
-    IpConnection(SocketAddr),
-}
-
 /// The configuration options that can be configured by command line arguments,
 /// flags, and options.
+#[derive(Debug, PartialEq)]
 pub struct CommonConfig {
     pub connection_type: TransportType,
-}
-
-fn parse_ip_connection(value: &str) -> Result<TransportType> {
-    let mut iter = value
-        .to_socket_addrs()
-        .map_err(|e| Error::SocketAddrParse(Some(e)))?;
-    match iter.next() {
-        None => Err(Error::SocketAddrParse(None)),
-        Some(a) => Ok(TransportType::IpConnection(a)),
-    }
-}
-
-fn parse_connection_type(value: &str) -> Result<TransportType> {
-    if value.is_empty() {
-        return Ok(TransportType::VsockConnection);
-    }
-    let parts: Vec<&str> = value.split("://").collect();
-    match parts.len() {
-        2 => match parts[0] {
-            "vsock" | "VSOCK" => Ok(TransportType::VsockConnection),
-            "ip" | "IP" => parse_ip_connection(parts[1]),
-            _ => Err(Error::UnknownTransportType),
-        },
-        1 => parse_ip_connection(value),
-        _ => Err(Error::URIParse),
-    }
 }
 
 /// Sets up command line argument parsing and generates a CommonConfig based on
 /// the command line entry.
 pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
+    // Vsock is used as the default because it is the transport used in production.
+    // IP is provided for testing and development.
+    // Not sure yet what cid default makes sense or if a default makes sense at
+    // all.
+    let default_connection = TransportType::VsockConnection(VSocketAddr {
+        cid: VsockCid::Any,
+        port: DEFAULT_PORT,
+    });
     let mut config = CommonConfig {
-        connection_type: TransportType::VsockConnection,
+        connection_type: default_connection,
     };
 
     let url_name = "U";
@@ -100,10 +66,66 @@ pub fn initialize_common_arguments(args: &[String]) -> Result<CommonConfig> {
     );
     let matches = opts.parse(&args[..]).map_err(Error::CLIParse)?;
 
-    config.connection_type = match matches.opt_str(url_name) {
-        Some(value) => parse_connection_type(&value)?,
-        None => TransportType::VsockConnection,
+    if let Some(value) = matches.opt_str(url_name) {
+        config.connection_type = value
+            .parse::<TransportType>()
+            .map_err(Error::TransportParse)?
     };
-
     Ok(config)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::transport::tests::{get_ip_uri, get_vsock_uri};
+    use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+
+    #[test]
+    fn initialize_common_arguments_invalid_args() {
+        let value: [String; 1] = ["-foo".to_string()];
+        let act_result = initialize_common_arguments(&value);
+        match &act_result {
+            Err(Error::CLIParse(_)) => (),
+            _ => panic!("Got unexpected result: {:?}", &act_result),
+        }
+    }
+
+    #[test]
+    fn initialize_common_arguments_ip_valid() {
+        let exp_socket = SocketAddr::new(IpAddr::V4(Ipv4Addr::new(1, 1, 1, 1)), 1234);
+        let exp_result = CommonConfig {
+            connection_type: TransportType::IpConnection(exp_socket),
+        };
+        let value: [String; 2] = ["-U".to_string(), get_ip_uri().to_string()];
+        let act_result = initialize_common_arguments(&value).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    #[test]
+    fn initialize_common_arguments_vsock_valid() {
+        let vsock = TransportType::VsockConnection(VSocketAddr {
+            cid: VsockCid::Local,
+            port: 1,
+        });
+        let exp_result = CommonConfig {
+            connection_type: vsock,
+        };
+        let value: [String; 2] = ["-U".to_string(), get_vsock_uri()];
+        let act_result = initialize_common_arguments(&value).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
+
+    #[test]
+    fn initialize_common_arguments_no_args() {
+        let default_connection = TransportType::VsockConnection(VSocketAddr {
+            cid: VsockCid::Any,
+            port: DEFAULT_PORT,
+        });
+        let exp_result = CommonConfig {
+            connection_type: default_connection,
+        };
+        let value: [String; 0] = [];
+        let act_result = initialize_common_arguments(&value).unwrap();
+        assert_eq!(act_result, exp_result);
+    }
 }

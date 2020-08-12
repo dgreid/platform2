@@ -8,9 +8,9 @@ use std::env;
 use std::io::copy;
 use std::thread::spawn;
 
-use sirenia::cli::{initialize_common_arguments, TransportType};
+use sirenia::cli::initialize_common_arguments;
 use sirenia::to_sys_util;
-use sirenia::transport::{IPServerTransport, ServerTransport, VsockServerTransport};
+use sirenia::transport::{IPServerTransport, ServerTransport, TransportType, VsockServerTransport};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
