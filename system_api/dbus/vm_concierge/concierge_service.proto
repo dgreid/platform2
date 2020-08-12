@@ -76,7 +76,7 @@ message VmInfo {
   // The handle to a 9p server managed by the seneschal system service.  Use
   // this handle when making requests to that service to manage the files shared
   // with this VM.
-  uint64 seneschal_server_handle = 4;
+  uint32 seneschal_server_handle = 4;
 
   // Permission token assigned to the VM. Use this token when making requests
   // to the VM permission service to determine what permissions have been

@@ -1690,12 +1690,8 @@ impl Backend for ChromeOS {
     ) -> Result<String, Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let vm_info = self.get_vm_info(name, user_id_hash)?;
-        // The VmInfo uses a u64 as the handle, but SharePathRequest uses a u32 for the handle.
-        if vm_info.seneschal_server_handle > u64::from(u32::max_value()) {
-            return Err(FailedGetVmInfo.into());
-        }
-        let seneschal_handle = vm_info.seneschal_server_handle as u32;
-        let vm_path = self.share_path_with_vm(seneschal_handle, user_id_hash, path)?;
+        let vm_path =
+            self.share_path_with_vm(vm_info.seneschal_server_handle, user_id_hash, path)?;
         Ok(format!("{}/{}", MNT_SHARED_ROOT, vm_path))
     }
 
@@ -1707,11 +1703,7 @@ impl Backend for ChromeOS {
     ) -> Result<(), Box<dyn Error>> {
         self.start_vm_infrastructure(user_id_hash)?;
         let vm_info = self.get_vm_info(name, user_id_hash)?;
-        // The VmInfo uses a u64 as the handle, but SharePathRequest uses a u32 for the handle.
-        if vm_info.seneschal_server_handle > u64::from(u32::max_value()) {
-            return Err(FailedGetVmInfo.into());
-        }
-        self.unshare_path_with_vm(vm_info.seneschal_server_handle as u32, path)
+        self.unshare_path_with_vm(vm_info.seneschal_server_handle, path)
     }
 
     fn vsh_exec(&mut self, vm_name: &str, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
