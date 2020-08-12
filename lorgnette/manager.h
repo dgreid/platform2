@@ -73,10 +73,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   bool GetScannerCapabilities(brillo::ErrorPtr* error,
                               const std::string& device_name,
                               std::vector<uint8_t>* capabilities) override;
-  bool ScanImage(brillo::ErrorPtr* error,
-                 const std::string& device_name,
-                 const base::ScopedFD& outfd,
-                 const brillo::VariantDictionary& scan_properties) override;
   void StartScan(
       std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
       const std::vector<uint8_t>& start_scan_request,
@@ -90,12 +86,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
  private:
   friend class ManagerTest;
-
-  enum BooleanMetric {
-    kBooleanMetricFailure = 0,
-    kBooleanMetricSuccess = 1,
-    kBooleanMetricMax
-  };
 
   static const char kMetricScanRequested[];
   static const char kMetricScanSucceeded[];
