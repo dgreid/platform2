@@ -511,6 +511,8 @@ void ServiceTestingHelper::SetDbusCallbackNames() {
   dbus_callbacks_[kStartLxd].method_name = kStartLxdMethod;
   dbus_callbacks_[kAddFileWatch].method_name = kAddFileWatchMethod;
   dbus_callbacks_[kRemoveFileWatch].method_name = kRemoveFileWatchMethod;
+  dbus_callbacks_[kRegisterVshSession].method_name = kRegisterVshSessionMethod;
+  dbus_callbacks_[kGetVshSession].method_name = kGetVshSessionMethod;
 
   // Check we didn't forget any.
   for (const auto& callback_info : dbus_callbacks_) {

@@ -527,6 +527,14 @@ class Service final {
   std::unique_ptr<dbus::Response> RemoveFileWatch(
       dbus::MethodCall* method_call);
 
+  // Handles a request to add a mapping between vsh and the session data such as
+  // the container shell pid.
+  std::unique_ptr<dbus::Response> RegisterVshSession(
+      dbus::MethodCall* method_call);
+
+  // Handles a request to retrieve vsh session data.
+  std::unique_ptr<dbus::Response> GetVshSession(dbus::MethodCall* method_call);
+
   // Gets the container's SSH keys from concierge.
   bool GetContainerSshKeys(const std::string& owner_id,
                            const std::string& vm_name,

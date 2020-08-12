@@ -390,5 +390,19 @@ bool Container::RemoveFileWatch(const std::string& path,
          vm_tools::container::RemoveFileWatchResponse::SUCCEEDED;
 }
 
+void Container::RegisterVshSession(int32_t host_vsh_pid,
+                                   int32_t container_shell_pid) {
+  if (container_shell_pid == 0) {
+    vsh_pids_.erase(host_vsh_pid);
+  } else {
+    vsh_pids_[host_vsh_pid] = container_shell_pid;
+  }
+}
+
+int32_t Container::GetVshSession(int32_t host_vsh_pid) {
+  auto it = vsh_pids_.find(host_vsh_pid);
+  return it != vsh_pids_.end() ? it->second : 0;
+}
+
 }  // namespace cicerone
 }  // namespace vm_tools

@@ -73,6 +73,8 @@ class ServiceTestingHelper {
     kStartLxd,
     kAddFileWatch,
     kRemoveFileWatch,
+    kRegisterVshSession,
+    kGetVshSession,
 
     kNumDbusCalls
   };

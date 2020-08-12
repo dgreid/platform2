@@ -1260,6 +1260,8 @@ bool Service::Init(
       {kStartLxdMethod, &Service::StartLxd},
       {kAddFileWatchMethod, &Service::AddFileWatch},
       {kRemoveFileWatchMethod, &Service::RemoveFileWatch},
+      {kRegisterVshSessionMethod, &Service::RegisterVshSession},
+      {kGetVshSessionMethod, &Service::GetVshSession},
   };
 
   for (const auto& iter : kServiceMethods) {
@@ -3134,6 +3136,102 @@ void Service::FileWatchTriggered(const std::string& container_token,
   *result = SendSignal(kFileWatchTriggeredSignal, container_token, cid,
                        changed_signal);
   event->Signal();
+}
+
+std::unique_ptr<dbus::Response> Service::RegisterVshSession(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received RegisterVshSession request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  RegisterVshSessionRequest request;
+  RegisterVshSessionResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse RegisterVshSessionRequest from message";
+    response.set_failure_reason(
+        "unable to parse RegisterVshSessionRequest from message");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  VirtualMachine* vm = FindVm(request.owner_id(), request.vm_name());
+  if (!vm) {
+    LOG(ERROR) << "Requested VM does not exist:" << request.vm_name();
+    response.set_failure_reason(base::StringPrintf(
+        "requested VM does not exist: %s", request.vm_name().c_str()));
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  Container* container = vm->GetContainerForName(request.container_name());
+  if (!container) {
+    LOG(ERROR) << "Requested container does not exist: "
+               << request.container_name();
+    response.set_failure_reason(
+        base::StringPrintf("requested container does not exist: %s",
+                           request.container_name().c_str()));
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  container->RegisterVshSession(request.host_vsh_pid(),
+                                request.container_shell_pid());
+  response.set_success(true);
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::GetVshSession(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received GetVshSession request";
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  GetVshSessionRequest request;
+  GetVshSessionResponse response;
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse GetVshSessionRequest from message";
+    response.set_failure_reason(
+        "unable to parse GetVshSessionRequest from message");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  VirtualMachine* vm = FindVm(request.owner_id(), request.vm_name());
+  if (!vm) {
+    LOG(ERROR) << "Requested VM does not exist:" << request.vm_name();
+    response.set_failure_reason(base::StringPrintf(
+        "requested VM does not exist: %s", request.vm_name().c_str()));
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+  Container* container = vm->GetContainerForName(request.container_name());
+  if (!container) {
+    LOG(ERROR) << "Requested container does not exist: "
+               << request.container_name();
+    response.set_failure_reason(
+        base::StringPrintf("requested container does not exist: %s",
+                           request.container_name().c_str()));
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  int32_t pid = container->GetVshSession(request.host_vsh_pid());
+  if (pid == 0) {
+    response.set_failure_reason("container shell pid not found");
+  } else {
+    response.set_success(true);
+    response.set_container_shell_pid(pid);
+  }
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
 }
 
 bool Service::GetVirtualMachineForCidOrToken(const uint32_t cid,

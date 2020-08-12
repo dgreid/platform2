@@ -42,6 +42,8 @@ const char kConfigureForArcSideloadMethod[] = "ConfigureForArcSideload";
 const char kStartLxdMethod[] = "StartLxd";
 const char kAddFileWatchMethod[] = "AddFileWatch";
 const char kRemoveFileWatchMethod[] = "RemoveFileWatch";
+const char kRegisterVshSessionMethod[] = "RegisterVshSession";
+const char kGetVshSessionMethod[] = "GetVshSession";
 
 // Methods to be called from chunneld.
 const char kConnectChunnelMethod[] = "ConnectChunnel";

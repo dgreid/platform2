@@ -124,6 +124,10 @@ class Container {
 
   bool RemoveFileWatch(const std::string& path, std::string* out_error);
 
+  void RegisterVshSession(int32_t host_vsh_pid, int32_t container_shell_pid);
+
+  int32_t GetVshSession(int32_t host_vsh_pid);
+
  private:
   std::string name_;
   std::string token_;
@@ -131,6 +135,7 @@ class Container {
   std::string drivefs_mount_path_;
   std::string homedir_;
   std::vector<uint16_t> listening_tcp4_ports_;
+  std::map<int32_t, int32_t> vsh_pids_;
 
   // The VM that owns this container.
   base::WeakPtr<VirtualMachine> vm_;
