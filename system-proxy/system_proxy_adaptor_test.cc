@@ -426,7 +426,8 @@ TEST_F(SystemProxyAdaptorTest, ProtectionSpaceAuthenticationRequired) {
   base::ScopedFD read_scoped_fd(fds[0]);
   // Reset the worker stdin pipe to read the input from the other endpoint.
   adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
-  adaptor_->RequestAuthenticationCredentials(protection_space);
+  adaptor_->RequestAuthenticationCredentials(protection_space,
+                                             /* bad_credentials = */ false);
 
   brillo_loop_.RunOnce(false);
 
@@ -462,7 +463,8 @@ TEST_F(SystemProxyAdaptorTest, ProtectionSpaceNoCredentials) {
   base::ScopedFD read_scoped_fd(fds[0]);
   // Reset the worker stdin pipe to read the input from the other endpoint.
   adaptor_->system_services_worker_->stdin_pipe_.reset(fds[1]);
-  adaptor_->RequestAuthenticationCredentials(protection_space);
+  adaptor_->RequestAuthenticationCredentials(protection_space,
+                                             /* bad_credentials = */ false);
 
   brillo_loop_.RunOnce(false);
 

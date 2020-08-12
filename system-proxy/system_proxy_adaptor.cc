@@ -398,13 +398,15 @@ void SystemProxyAdaptor::OnNamespaceConnected(SandboxedWorker* worker,
 }
 
 void SystemProxyAdaptor::RequestAuthenticationCredentials(
-    const worker::ProtectionSpace& protection_space) {
+    const worker::ProtectionSpace& protection_space,
+    bool bad_cached_credentials) {
   AuthenticationRequiredDetails details;
   ProtectionSpace proxy_protection_space;
   proxy_protection_space.set_origin(protection_space.origin());
   proxy_protection_space.set_realm(protection_space.realm());
   proxy_protection_space.set_scheme(protection_space.scheme());
   *details.mutable_proxy_protection_space() = proxy_protection_space;
+  details.set_bad_cached_credentials(bad_cached_credentials);
   SendAuthenticationRequiredSignal(SerializeProto(details));
 }
 

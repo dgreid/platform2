@@ -49,6 +49,10 @@ message ProxyResolutionReply {
 
 message AuthRequiredRequest {
   optional ProtectionSpace protection_space = 1;
+  // If true, it means that the credentials previously acquired for proxy
+  // authentication are incorrect. This should force the user to re-enter the
+  // credentials in the system authentication dialogue.
+  optional bool bad_cached_credentials = 2;
 }
 
 message WorkerRequest {

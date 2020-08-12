@@ -33,7 +33,8 @@ void NullAuthenticationRequiredCallback(
     const std::string& proxy_url,
     const std::string& scheme,
     const std::string& realm,
-    base::OnceCallback<void(const std::string& credentials)>
+    bool bad_cached_credentials,
+    base::RepeatingCallback<void(const std::string& credentials)>
         on_auth_acquired_callback) {}
 
 void OnConnectionSetupFinished(base::OnceClosure quit_task,
@@ -72,7 +73,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   auto connect_job = std::make_unique<system_proxy::ProxyConnectJob>(
       std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
       base::BindOnce(&ResolveProxyCallback, run_loop.QuitClosure()),
-      base::BindOnce(&NullAuthenticationRequiredCallback),
+      base::BindRepeating(&NullAuthenticationRequiredCallback),
       base::BindOnce(&OnConnectionSetupFinished, run_loop.QuitClosure()));
   connect_job->Start();
   cros_client_socket.SendTo(data, size);

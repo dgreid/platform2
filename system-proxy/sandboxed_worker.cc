@@ -205,7 +205,8 @@ void SandboxedWorker::OnMessageReceived() {
   if (request.has_auth_required_request()) {
     const worker::AuthRequiredRequest& auth_request =
         request.auth_required_request();
-    adaptor_->RequestAuthenticationCredentials(auth_request.protection_space());
+    adaptor_->RequestAuthenticationCredentials(
+        auth_request.protection_space(), auth_request.bad_cached_credentials());
   }
 }
 

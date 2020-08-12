@@ -59,12 +59,14 @@ class ProxyConnectJob {
       base::OnceCallback<void(const std::list<std::string>&)>
           on_proxy_resolution_callback)>;
   // Will be invoked by ProxyConnectJob to request the credentials for requests
-  // that fail with code 407.
-  using AuthenticationRequiredCallback = base::OnceCallback<void(
+  // that fail with code 407. If |bad_cached_credentials| is true, the
+  // credentials previously acquired for proxy authentication are incorrect.
+  using AuthenticationRequiredCallback = base::RepeatingCallback<void(
       const std::string& proxy_url,
       const std::string& scheme,
       const std::string& realm,
-      base::OnceCallback<void(const std::string& credentials)>
+      const std::string& bad_cached_credentials,
+      base::RepeatingCallback<void(const std::string& credentials)>
           on_auth_acquired_callback)>;
 
   ProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
@@ -96,6 +98,7 @@ class ProxyConnectJob {
   FRIEND_TEST(ProxyConnectJobTest, ResendWithCredentials);
   FRIEND_TEST(ProxyConnectJobTest, NoCredentials);
   FRIEND_TEST(ProxyConnectJobTest, KerberosAuth);
+  FRIEND_TEST(ProxyConnectJobTest, AuthenticationTimeout);
 
   // Reads data from the socket into |raw_request| until the first empty line,
   // which would mark the end of the HTTP request header.
@@ -118,6 +121,11 @@ class ProxyConnectJob {
   // sent by the remote server.
   void AuthenticationRequired(const std::vector<char>& http_response_headers);
   void OnAuthCredentialsProvided(const std::string& credentials);
+  // Proxy credentials are asynchronously requested from the Browser. The user
+  // can ignore the authentication request. This method will forward the
+  // authentication failure message to the client and is triggered when the
+  // waiting time for the credentials has expired.
+  void OnAuthenticationTimeout();
   // Checks if the HTTP CONNECT request has failed because of missing proxy
   // authentication credentials.
   bool AreAuthCredentialsRequired(CURL* easyhandle);
@@ -134,19 +142,21 @@ class ProxyConnectJob {
   // HTTP proxy response code to the CONNECT request.
   int64_t http_response_code_ = 0;
 
+  // Indicates that the timer for waiting for authentication credentials has
+  // started. The timer is started the first time the credentials are requested.
+  // Subsequent authentication attempts will not re-start the timer.
+  bool authentication_timer_started_ = false;
+
   std::string credentials_;
-  // Keep track on whether this is the first connect attempt or not. If a proxy
-  // connection attempt fails because of missing or invalid credentials, the
-  // code will attempt to reconnect with credentials fetched from the parent
-  // process. We should only reconnect after the first failed try otherwise
-  // the code will go into an infinite loop when fetched credentials are
-  // invalid.
-  bool first_http_connect_attempt_;
   std::list<std::string> proxy_servers_;
   ResolveProxyCallback resolve_proxy_callback_;
   AuthenticationRequiredCallback auth_required_callback_;
   OnConnectionSetupFinishedCallback setup_finished_callback_;
   base::CancelableClosure client_connect_timeout_callback_;
+  // Started the first time credentials are requested and cancelled when the
+  // proxy server sends any HTTP code other than 407 (proxy authentication
+  // required).
+  base::CancelableClosure credentials_request_timeout_callback_;
 
   std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> read_watcher_;

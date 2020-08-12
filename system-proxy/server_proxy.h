@@ -26,7 +26,8 @@ namespace system_proxy {
 
 using OnProxyResolvedCallback =
     base::OnceCallback<void(const std::list<std::string>&)>;
-using OnAuthAcquiredCallback = base::OnceCallback<void(const std::string&)>;
+using OnAuthAcquiredCallback =
+    base::RepeatingCallback<void(const std::string&)>;
 
 class ProxyConnectJob;
 
@@ -55,10 +56,13 @@ class ServerProxy {
   // parent process will send the result trough the standard input. |callback|
   // will be called when the credentials associated to the protection space
   // given by the input parameters, or empty strings in case of failure or
-  // missing credentials.
+  // missing credentials. |bad_cached_credentials| are the incorrect credentials
+  // previously used for authentication; can be an empty string if no
+  // credentials were used in the initial request.
   void AuthenticationRequired(const std::string& proxy_url,
                               const std::string& scheme,
                               const std::string& realm,
+                              const std::string& bad_cached_credentials,
                               OnAuthAcquiredCallback callback);
 
  protected:
@@ -78,6 +82,7 @@ class ServerProxy {
   FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials);
   FRIEND_TEST(ServerProxyTest, HandlePendingAuthRequestsNoCredentials);
   FRIEND_TEST(ServerProxyTest, ClearUserCredentials);
+  FRIEND_TEST(ServerProxyTest, AuthRequestsBadCachedCredentials);
 
   bool HandleSignal(const struct signalfd_siginfo& siginfo);
 

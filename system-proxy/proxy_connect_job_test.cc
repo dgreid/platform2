@@ -73,8 +73,8 @@ class ProxyConnectJobTest : public ::testing::Test {
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
-        base::BindOnce(&ProxyConnectJobTest::FetchCredentialsFromCache,
-                       base::Unretained(this)),
+        base::BindRepeating(&ProxyConnectJobTest::OnAuthCredentialsRequired,
+                            base::Unretained(this)),
         base::BindOnce(&ProxyConnectJobTest::OnConnectionSetupFinished,
                        base::Unretained(this)));
   }
@@ -95,12 +95,12 @@ class ProxyConnectJobTest : public ::testing::Test {
     std::move(callback).Run({remote_proxy_url_});
   }
 
-  void FetchCredentialsFromCache(
+  void OnAuthCredentialsRequired(
       const std::string& proxy_url,
       const std::string& scheme,
       const std::string& realm,
-      base::OnceCallback<void(const std::string&)> callback) {
-    ASSERT_FALSE(auth_requested_);
+      const std::string& bad_credentials,
+      base::RepeatingCallback<void(const std::string&)> callback) {
     auth_requested_ = true;
     for (const auto& auth_entry : http_auth_cache_) {
       if (auth_entry.origin == proxy_url && auth_entry.realm == realm &&
@@ -109,7 +109,9 @@ class ProxyConnectJobTest : public ::testing::Test {
         return;
       }
     }
-    std::move(callback).Run(/* credentials = */ "");
+    if (invoke_authentication_callback_) {
+      std::move(callback).Run(/* credentials = */ "");
+    }
   }
 
   void OnConnectionSetupFinished(
@@ -123,6 +125,8 @@ class ProxyConnectJobTest : public ::testing::Test {
 
   std::string remote_proxy_url_ = kProxyServerUrl;
   bool forwarder_created_ = false;
+  // Used to simulate time-outs while waiting for credentials from the Browser.
+  bool invoke_authentication_callback_ = true;
   std::unique_ptr<ProxyConnectJob> connect_job_;
   base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
   std::unique_ptr<brillo::BaseMessageLoop> brillo_loop_{
@@ -277,8 +281,8 @@ TEST_F(ProxyConnectJobTest, ClientConnectTimeoutJobCanceled) {
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),
-        base::BindOnce(&ProxyConnectJobTest::FetchCredentialsFromCache,
-                       base::Unretained(this)),
+        base::BindRepeating(&ProxyConnectJobTest::OnAuthCredentialsRequired,
+                            base::Unretained(this)),
         base::BindOnce(&ProxyConnectJobTest::OnConnectionSetupFinished,
                        base::Unretained(this)));
     // Post the timeout task.
@@ -352,6 +356,83 @@ TEST_F(ProxyConnectJobTest, KerberosAuth) {
   ASSERT_FALSE(AuthRequested());
   EXPECT_EQ("", connect_job_->credentials_);
   EXPECT_EQ(407, connect_job_->http_response_code_);
+}
+
+// Test that the connection times out while waiting for credentials from the
+// Browser.
+TEST_F(ProxyConnectJobTest, AuthenticationTimeout) {
+  // Add a TaskRunner where we can control time.
+  scoped_refptr<base::TestMockTimeTaskRunner> task_runner{
+      new base::TestMockTimeTaskRunner()};
+  brillo_loop_ = nullptr;
+  brillo_loop_ = std::make_unique<brillo::BaseMessageLoop>(task_runner);
+  base::TestMockTimeTaskRunner::ScopedContext scoped_context(task_runner.get());
+
+  invoke_authentication_callback_ = false;
+
+  // Start the test server
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  task_runner->RunUntilIdle();
+  // We need to manually invoke the method which reads from the client socket
+  // because |task_runner| will not execute the FileDescriptorWatcher's tasks.
+  connect_job_->OnClientReadReady();
+
+  // Check that an authentication request was sent.
+  ASSERT_TRUE(AuthRequested());
+  EXPECT_EQ(1, task_runner->GetPendingTaskCount());
+  // Move the time ahead so that the client connection timeout callback is
+  // triggered.
+  task_runner->FastForwardBy(task_runner->NextPendingTaskDelay());
+
+  const std::string expected_http_response =
+      "HTTP/1.1 407 Credentials required - Origin: local proxy\r\n\r\n";
+  std::vector<char> buf(expected_http_response.size());
+  ASSERT_TRUE(
+      base::ReadFromFD(cros_client_socket_->fd(), buf.data(), buf.size()));
+  std::string actual_response(buf.data(), buf.size());
+
+  // Check that the auth failure was forwarded to the client.
+  EXPECT_EQ(expected_http_response, actual_response);
+}
+
+// Verifies that the receiving the same bad credentials twice will send an auth
+// failure to the Chrome OS local client.
+TEST_F(ProxyConnectJobTest, CancelIfBadCredentials) {
+  // Start the test server
+  HttpTestServer http_test_server;
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server.AddHttpConnectReply(
+      HttpTestServer::HttpConnectReply::kAuthRequiredBasic);
+  http_test_server.Start();
+  remote_proxy_url_ = http_test_server.GetUrl();
+  AddHttpAuthEntry(remote_proxy_url_, "Basic", "\"My Proxy\"", kCredentials);
+
+  connect_job_->Start();
+
+  cros_client_socket_->SendTo(kValidConnectRequest,
+                              std::strlen(kValidConnectRequest));
+  brillo_loop_->RunOnce(false);
+
+  ASSERT_TRUE(AuthRequested());
+
+  const std::string expected_http_response =
+      "HTTP/1.1 407 Credentials required - Origin: local proxy\r\n\r\n";
+  std::vector<char> buf(expected_http_response.size());
+  ASSERT_TRUE(
+      base::ReadFromFD(cros_client_socket_->fd(), buf.data(), buf.size()));
+  std::string actual_response(buf.data(), buf.size());
+
+  EXPECT_EQ(expected_http_response, actual_response);
 }
 
 }  // namespace system_proxy

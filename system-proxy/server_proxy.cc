@@ -91,10 +91,12 @@ void ServerProxy::ResolveProxy(const std::string& target_url,
   pending_proxy_resolution_requests_[target_url].push_back(std::move(callback));
 }
 
-void ServerProxy::AuthenticationRequired(const std::string& proxy_url,
-                                         const std::string& scheme,
-                                         const std::string& realm,
-                                         OnAuthAcquiredCallback callback) {
+void ServerProxy::AuthenticationRequired(
+    const std::string& proxy_url,
+    const std::string& scheme,
+    const std::string& realm,
+    const std::string& bad_cached_credentials,
+    OnAuthAcquiredCallback callback) {
   worker::ProtectionSpace protection_space;
   protection_space.set_origin(proxy_url);
   protection_space.set_realm(realm);
@@ -104,13 +106,19 @@ void ServerProxy::AuthenticationRequired(const std::string& proxy_url,
   // Check the local cache.
   auto it = auth_cache_.find(auth_key);
   if (it != auth_cache_.end()) {
-    std::move(callback).Run(it->second);
-    return;
+    // Don't use the cached credentials if they are flagged by the connection as
+    // "bad".
+    if (it->second != bad_cached_credentials) {
+      std::move(callback).Run(it->second);
+      return;
+    }
   }
 
   // Request the credentials from the main process.
   worker::AuthRequiredRequest auth_request;
   *auth_request.mutable_protection_space() = protection_space;
+  auth_request.set_bad_cached_credentials(bad_cached_credentials !=
+                                          kCredentialsColonSeparator);
 
   worker::WorkerRequest request;
   *request.mutable_auth_required_request() = auth_request;
@@ -249,8 +257,8 @@ void ServerProxy::OnConnectionAccept() {
     auto connect_job = std::make_unique<ProxyConnectJob>(
         std::move(client_conn), system_credentials_,
         base::BindOnce(&ServerProxy::ResolveProxy, base::Unretained(this)),
-        base::BindOnce(&ServerProxy::AuthenticationRequired,
-                       base::Unretained(this)),
+        base::BindRepeating(&ServerProxy::AuthenticationRequired,
+                            base::Unretained(this)),
         base::BindOnce(&ServerProxy::OnConnectionSetupFinished,
                        base::Unretained(this)));
     if (connect_job->Start())

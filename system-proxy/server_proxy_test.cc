@@ -227,9 +227,11 @@ TEST_F(ServerProxyTest, HandlePendingJobs) {
         std::move(client_socket), "" /* credentials */,
         base::BindOnce([](const std::string& target_url,
                           OnProxyResolvedCallback callback) {}),
-        base::BindOnce([](const std::string& proxy_url,
-                          const std::string& realm, const std::string& scheme,
-                          OnAuthAcquiredCallback callback) {}),
+        base::BindRepeating([](const std::string& proxy_url,
+                               const std::string& realm,
+                               const std::string& scheme,
+                               const std::string& bad_cached_credentials,
+                               OnAuthAcquiredCallback callback) {}),
         base::BindOnce(&ServerProxy::OnConnectionSetupFinished,
                        base::Unretained(server_proxy_.get())));
     server_proxy_->pending_connect_jobs_[mock_connect_job.get()] =
@@ -322,7 +324,7 @@ TEST_F(ServerProxyTest, HandlePendingAuthRequests) {
 
   server_proxy_->AuthenticationRequired(
       protection_space.origin(), protection_space.scheme(),
-      protection_space.realm(),
+      protection_space.realm(), /* bad_cached_credentials = */ "",
       base::Bind(
           [](std::string* actual_credentials, const std::string& credentials) {
             *actual_credentials = credentials;
@@ -374,7 +376,7 @@ TEST_F(ServerProxyTest, HandlePendingAuthRequestsNoCredentials) {
 
   server_proxy_->AuthenticationRequired(
       protection_space.origin(), protection_space.scheme(),
-      protection_space.realm(),
+      protection_space.realm(), /* bad_cached_credentials = */ "",
       base::Bind(
           [](std::string* actual_credentials, const std::string& credentials) {
             *actual_credentials = credentials;
@@ -424,7 +426,7 @@ TEST_F(ServerProxyTest, HandlePendingAuthRequestsCachedCredentials) {
 
   server_proxy_->AuthenticationRequired(
       protection_space.origin(), protection_space.scheme(),
-      protection_space.realm(),
+      protection_space.realm(), /* bad_cached_credentials = */ "",
       base::Bind(
           [](std::string* actual_credentials, const std::string& credentials) {
             *actual_credentials = credentials;
@@ -457,6 +459,66 @@ TEST_F(ServerProxyTest, ClearUserCredentials) {
   brillo_loop_.RunOnce(false);
   // Expect that the credentials were cleared.
   EXPECT_EQ(0, server_proxy_->auth_cache_.size());
+}
+
+// Verifies that even if there are credentials in the cache for the remote
+// web-proxy, the ServerProxy sends a request to the parent web-proxy if the
+// credentials are flagged as bad.
+TEST_F(ServerProxyTest, AuthRequestsBadCachedCredentials) {
+  constexpr char kBadCachedCredetials[] = "bad_user:bad_pwd";
+  constexpr char kCredetials[] = "test_user:test_pwd";
+
+  RedirectStdPipes();
+  EXPECT_CALL(*server_proxy_, GetStdoutPipe())
+      .WillOnce(Return(stdout_write_fd_.get()));
+
+  // Add credentials to the cache for the proxy.
+  worker::ProtectionSpace protection_space;
+  protection_space.set_origin(kFakeProxyAddress);
+  protection_space.set_scheme("Basic");
+  protection_space.set_realm("Proxy test realm");
+  server_proxy_->auth_cache_[protection_space.SerializeAsString()] =
+      kBadCachedCredetials;
+
+  // Request credentials for the proxy.
+  std::string actual_credentials = "";
+  server_proxy_->AuthenticationRequired(
+      protection_space.origin(), protection_space.scheme(),
+      protection_space.realm(), kBadCachedCredetials,
+      base::Bind(
+          [](std::string* actual_credentials, const std::string& credentials) {
+            *actual_credentials = credentials;
+          },
+          &actual_credentials));
+
+  // Expect that the credentials are not served from the cache.
+  EXPECT_EQ(1, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ(protection_space.SerializeAsString(),
+            server_proxy_->pending_auth_required_requests_.begin()->first);
+
+  brillo_loop_.RunOnce(false);
+
+  worker::WorkerRequest request;
+  // Read the request from the worker's stdout output.
+  ASSERT_TRUE(ReadProtobuf(stdout_read_fd_.get(), &request));
+  ASSERT_TRUE(request.has_auth_required_request());
+  ASSERT_TRUE(request.auth_required_request().has_protection_space());
+  EXPECT_EQ(
+      request.auth_required_request().protection_space().SerializeAsString(),
+      protection_space.SerializeAsString());
+
+  // Write reply with a fake credentials to the worker's standard input.
+  worker::Credentials credentials;
+  *credentials.mutable_protection_space() = protection_space;
+  credentials.set_username("test_user");
+  credentials.set_password("test_pwd");
+  worker::WorkerConfigs configs;
+  *configs.mutable_credentials() = credentials;
+
+  ASSERT_TRUE(WriteProtobuf(stdin_write_fd_.get(), configs));
+  brillo_loop_.RunOnce(false);
+  EXPECT_EQ(0, server_proxy_->pending_auth_required_requests_.size());
+  EXPECT_EQ(kCredetials, actual_credentials);
 }
 
 }  // namespace system_proxy

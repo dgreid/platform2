@@ -43,6 +43,12 @@ constexpr base::TimeDelta kCurlConnectTimeout =
     base::TimeDelta::FromSeconds(30);
 constexpr base::TimeDelta kWaitClientConnectTimeout =
     base::TimeDelta::FromSeconds(15);
+// Time to wait for proxy authentication credentials to be fetched from the
+// browser. The credentials are retrieved either from the Network Service or, if
+// the Network Service doesn't have them, directly from the user via a login
+// dialogue.
+constexpr base::TimeDelta kCredentialsRequestTimeout =
+    base::TimeDelta::FromMinutes(1);
 constexpr size_t kMaxBadRequestPrintSize = 120;
 
 constexpr int64_t kHttpCodeProxyAuthRequired = 407;
@@ -111,14 +117,15 @@ ProxyConnectJob::ProxyConnectJob(
     AuthenticationRequiredCallback auth_required_callback,
     OnConnectionSetupFinishedCallback setup_finished_callback)
     : credentials_(credentials),
-      first_http_connect_attempt_(true),
       resolve_proxy_callback_(std::move(resolve_proxy_callback)),
       auth_required_callback_(std::move(auth_required_callback)),
       setup_finished_callback_(std::move(setup_finished_callback)),
       // Safe to use |base::Unretained| because the callback will be canceled
       // when it goes out of scope.
       client_connect_timeout_callback_(base::Bind(
-          &ProxyConnectJob::OnClientConnectTimeout, base::Unretained(this))) {
+          &ProxyConnectJob::OnClientConnectTimeout, base::Unretained(this))),
+      credentials_request_timeout_callback_(base::Bind(
+          &ProxyConnectJob::OnAuthenticationTimeout, base::Unretained(this))) {
   client_socket_ = std::move(socket);
 }
 
@@ -227,16 +234,26 @@ void ProxyConnectJob::AuthenticationRequired(
     return;
   }
 
-  std::move(auth_required_callback_)
-      .Run(proxy_servers_.front(), scheme_realm_pairs.front().first,
-           scheme_realm_pairs.front().second,
-           base::Bind(&ProxyConnectJob::OnAuthCredentialsProvided,
-                      base::Unretained(this)));
+  if (!authentication_timer_started_) {
+    authentication_timer_started_ = true;
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+        FROM_HERE, credentials_request_timeout_callback_.callback(),
+        kCredentialsRequestTimeout);
+  }
+
+  auth_required_callback_.Run(
+      proxy_servers_.front(), scheme_realm_pairs.front().first,
+      scheme_realm_pairs.front().second, credentials_,
+      base::BindRepeating(&ProxyConnectJob::OnAuthCredentialsProvided,
+                          weak_ptr_factory_.GetWeakPtr()));
 }
 
 void ProxyConnectJob::OnAuthCredentialsProvided(
     const std::string& credentials) {
-  if (credentials.empty()) {
+  // If no credentials were returned or if the same bad credentials were
+  // returned twice, quit the connection. This is to ensure that bad credentials
+  // acquired from the Network Service won't trigger an authentication loop.
+  if (credentials.empty() || credentials_ == credentials) {
     SendHttpResponseToClient(/* http_response_headers= */ {},
                              /* http_response_body= */ {});
     std::move(setup_finished_callback_).Run(nullptr, this);
@@ -305,12 +322,13 @@ void ProxyConnectJob::DoCurlServerConnection() {
   if (res != CURLE_OK) {
     LOG(ERROR) << *this << " curl_easy_perform() failed with error: "
                << curl_easy_strerror(res);
-    if (first_http_connect_attempt_ && AreAuthCredentialsRequired(easyhandle)) {
-      first_http_connect_attempt_ = false;
+    if (AreAuthCredentialsRequired(easyhandle)) {
       AuthenticationRequired(http_response_headers);
       curl_easy_cleanup(easyhandle);
       return;
     }
+    credentials_request_timeout_callback_.Cancel();
+
     curl_easy_cleanup(easyhandle);
 
     SendHttpResponseToClient(/* http_response_headers= */ {},
@@ -318,6 +336,7 @@ void ProxyConnectJob::DoCurlServerConnection() {
     std::move(setup_finished_callback_).Run(nullptr, this);
     return;
   }
+  credentials_request_timeout_callback_.Cancel();
   // Extract the socket from the curl handle.
   res = curl_easy_getinfo(easyhandle, CURLINFO_ACTIVESOCKET, &newSocket);
   if (res != CURLE_OK) {
@@ -403,6 +422,14 @@ void ProxyConnectJob::OnClientConnectTimeout() {
              << " Connection timed out while waiting for the client to send a "
                 "connect request.";
   OnError(kHttpConnectionTimeout);
+}
+
+void ProxyConnectJob::OnAuthenticationTimeout() {
+  LOG(ERROR)
+      << *this
+      << "The connect job timed out while waiting for proxy authentication "
+         "credentials";
+  OnError(kHttpProxyAuthRequired);
 }
 
 std::ostream& operator<<(std::ostream& stream, const ProxyConnectJob& job) {
