@@ -549,7 +549,8 @@ TEST_F(AsyncGrpcClientServerTest, TwoRpcClients) {
 }
 
 // Set up a RPC server, then restart it. Send one RPC to each instance.
-TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
+// TODO(https://crbug.com/1115145): Reenable when deadlock is fixed.
+TEST_F(AsyncGrpcClientServerTest, DISABLED_RpcServerRestarted) {
   {
     RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
     test_rpcs::EchoIntRpcRequest request;
