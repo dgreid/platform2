@@ -34,23 +34,23 @@ struct KeyReference {
 // keyutils functions use -1 as the invalid key serial value.
 constexpr key_serial_t kInvalidKeySerial = -1;
 
-// Checks if the device supports fscrypt key add/remove ioctls.
-bool CheckFscryptKeyIoctlSupport();
-
 // Sets the directory key.
 bool SetDirectoryKey(const base::FilePath& dir,
                      const KeyReference& key_reference);
 
-// Adds the directory key.
-bool AddDirectoryKey(const brillo::SecureBlob& key,
-                     KeyReference* key_reference);
-
-// Removes the directory key.
-bool RemoveDirectoryKey(const KeyReference& key_reference,
-                        const base::FilePath& dir);
-
 // Returns the directory's key state, or returns UNKNOWN on errors.
 KeyState GetDirectoryKeyState(const base::FilePath& dir);
+
+// Adds the key to the dircrypto keyring. Returns -1 on errors.
+bool AddKeyToKeyring(const brillo::SecureBlob& key,
+                     KeyReference* key_reference);
+
+// Unlinks the key from the dircrypto keyring.
+bool UnlinkKey(const KeyReference& key_reference);
+
+// Invalidate session key and clears cache for mounted partition.
+bool InvalidateSessionKey(const KeyReference& key_reference,
+                          const base::FilePath& mount_root);
 
 }  // namespace dircrypto
 
