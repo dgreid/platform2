@@ -32,10 +32,10 @@ class EntryFlags(enum.Enum):
   HAS_SKU_ID = 1 << 0
   HAS_WHITELABEL = 1 << 1
 
-  # For x86 only: this device uses a customization ID from VPD to
-  # match instead of a whitelabel tag. This is deprecated for new
-  # devices since 2017, so it should only be set by Reef.
-  IS_X86_LEGACY_CUSTOMIZATION_ID = 1 << 2
+  # This device uses a customization ID from VPD to match instead of a
+  # whitelabel tag. This is deprecated for new devices since 2017, so
+  # it should only be set for old pre-unibuild migrations.
+  USES_CUSTOMIZATION_ID = 1 << 2
 
   # For ARM only: use a portion of the FRID to match the device
   # instead of a device-tree compatible string.
@@ -168,9 +168,6 @@ def WriteIdentityStruct(config, output_file):
       if 'smbios-name-match' in identity_info:
         flags |= EntryFlags.HAS_SMBIOS_NAME.value
         model_match = identity_info['smbios-name-match']
-      if 'customization-id' in identity_info:
-        flags |= EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value
-        whitelabel_match = identity_info['customization-id']
     elif identity_type is IdentityType.ARM:
       if 'firmware-name' in identity_info:
         flags |= EntryFlags.USES_FIRMWARE_NAME.value
@@ -178,7 +175,10 @@ def WriteIdentityStruct(config, output_file):
       else:
         model_match = identity_info['device-tree-compatible-match']
 
-    if whitelabel_match is None and 'whitelabel-tag' in identity_info:
+    if 'customization-id' in identity_info:
+      flags |= EntryFlags.USES_CUSTOMIZATION_ID.value
+      whitelabel_match = identity_info['customization-id']
+    elif 'whitelabel-tag' in identity_info:
       flags |= EntryFlags.HAS_WHITELABEL.value
       whitelabel_match = identity_info['whitelabel-tag']
 

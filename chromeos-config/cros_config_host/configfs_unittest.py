@@ -126,9 +126,6 @@ class ConfigFSTests(cros_test_lib.TestCase):
       if identity_type == configfs.IdentityType.X86:
         self.assertEqual(
             flags & configfs.EntryFlags.USES_FIRMWARE_NAME.value, 0)
-      else:
-        self.assertEqual(
-            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
 
       if 'smbios-name-match' in device['identity']:
         self.assertEqual(flags & configfs.EntryFlags.HAS_SMBIOS_NAME.value,
@@ -171,13 +168,13 @@ class ConfigFSTests(cros_test_lib.TestCase):
 
       if 'customization-id' in device['identity']:
         self.assertEqual(
-            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value,
-            configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value)
+            flags & configfs.EntryFlags.USES_CUSTOMIZATION_ID.value,
+            configfs.EntryFlags.USES_CUSTOMIZATION_ID.value)
         self.assertEqual(_GetString(whitelabel_offset),
                          device['identity']['customization-id'].lower())
       else:
         self.assertEqual(
-            flags & configfs.EntryFlags.IS_X86_LEGACY_CUSTOMIZATION_ID.value, 0)
+            flags & configfs.EntryFlags.USES_CUSTOMIZATION_ID.value, 0)
 
 if __name__ == '__main__':
   cros_test_lib.main(module=__name__)

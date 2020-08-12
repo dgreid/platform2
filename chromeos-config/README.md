@@ -563,6 +563,7 @@ In the tables below,
 | sku-id | integer |  | False | x86 | False | SKU/Board strapping pins configured during board manufacturing. Leaving this value unset will cause the config to match any SKU ID. Minimum value: -0x1. Maximum value: 0x7fffffff. |
 | smbios-name-match | string |  | False | x86 | False | [x86] Firmware name built into the firmware and reflected back out in the SMBIOS tables. Leaving this value unset will cause the config to match any SMBIOS product name. |
 | whitelabel-tag | string |  | False | x86 | False | 'whitelabel_tag' value set in the VPD, to add Whitelabel branding over an unbranded base model. |
+| customization-id | string |  | False | ARM | False | 'customization_id' value set in the VPD for non-unibuild Zergs and Whitelabels. Deprecated for use in new products since 2017/07/26. |
 | device-tree-compatible-match | string |  | False | ARM | False | [ARM] String pattern (partial) that is matched against the contents of /proc/device-tree/compatible on ARM devices. |
 | platform-name | string |  | False | ARM | False | Defines the name of the mosys platform used. Mosys is the only software which is allowed to used this value. |
 | sku-id | integer |  | False | ARM | False | SKU/Board strapping pins configured during board manufacturing. Leaving this value unset will cause the config to match any SKU ID. Minimum value: -0x1. Maximum value: 0x7fffffff. |
