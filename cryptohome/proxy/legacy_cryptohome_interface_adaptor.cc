@@ -1446,6 +1446,44 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationSignEnterpriseVaChallenge(
     const std::vector<uint8_t>& in_device_id,
     bool in_include_signed_public_key,
     const std::vector<uint8_t>& in_challenge) {
+  TpmAttestationSignEnterpriseVaChallengeV2Actual(
+      std::move(response), in_va_type, in_is_user_specific, in_username,
+      in_key_name, in_domain, in_device_id, in_include_signed_public_key,
+      in_challenge, base::nullopt);
+}
+
+void LegacyCryptohomeInterfaceAdaptor::
+    TpmAttestationSignEnterpriseVaChallengeV2(
+        std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>>
+            response,
+        int32_t in_va_type,
+        bool in_is_user_specific,
+        const std::string& in_username,
+        const std::string& in_key_name,
+        const std::string& in_domain,
+        const std::vector<uint8_t>& in_device_id,
+        bool in_include_signed_public_key,
+        const std::vector<uint8_t>& in_challenge,
+        const std::string& in_key_name_for_spkac) {
+  TpmAttestationSignEnterpriseVaChallengeV2Actual(
+      std::move(response), in_va_type, in_is_user_specific, in_username,
+      in_key_name, in_domain, in_device_id, in_include_signed_public_key,
+      in_challenge, in_key_name_for_spkac);
+}
+
+void LegacyCryptohomeInterfaceAdaptor::
+    TpmAttestationSignEnterpriseVaChallengeV2Actual(
+        std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>>
+            response,
+        int32_t in_va_type,
+        bool in_is_user_specific,
+        const std::string& in_username,
+        const std::string& in_key_name,
+        const std::string& in_domain,
+        const std::vector<uint8_t>& in_device_id,
+        bool in_include_signed_public_key,
+        const std::vector<uint8_t>& in_challenge,
+        const base::Optional<std::string> in_key_name_for_spkac) {
   base::Optional<attestation::VAType> va_type;
   va_type = IntegerToVAType(in_va_type);
   if (!va_type.has_value()) {
@@ -1465,6 +1503,9 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationSignEnterpriseVaChallenge(
   *request.mutable_device_id() = {in_device_id.begin(), in_device_id.end()};
   request.set_include_signed_public_key(in_include_signed_public_key);
   *request.mutable_challenge() = {in_challenge.begin(), in_challenge.end()};
+  if (in_key_name_for_spkac) {
+    request.set_key_name_for_spkac(in_key_name_for_spkac.value());
+  }
 
   int async_id = HandleAsyncData<attestation::SignEnterpriseChallengeRequest,
                                  attestation::SignEnterpriseChallengeReply>(
@@ -1474,25 +1515,6 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationSignEnterpriseVaChallenge(
                      base::Unretained(attestation_proxy_)));
 
   response->Return(async_id);
-}
-
-void LegacyCryptohomeInterfaceAdaptor::
-    TpmAttestationSignEnterpriseVaChallengeV2(
-        std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>>
-            response,
-        int32_t in_va_type,
-        bool in_is_user_specific,
-        const std::string& in_username,
-        const std::string& in_key_name,
-        const std::string& in_domain,
-        const std::vector<uint8_t>& in_device_id,
-        bool in_include_signed_public_key,
-        const std::vector<uint8_t>& in_challenge,
-        const std::string& in_key_name_for_spkac) {
-  // Not implemented yet
-  response->ReplyWithError(FROM_HERE, brillo::errors::dbus::kDomain,
-                           DBUS_ERROR_NOT_SUPPORTED,
-                           "Method unimplemented yet");
 }
 
 void LegacyCryptohomeInterfaceAdaptor::TpmAttestationSignSimpleChallenge(

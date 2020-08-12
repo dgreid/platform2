@@ -22,8 +22,8 @@
 
 #include "cryptohome/platform.h"
 
-#include "rpc.pb.h"  // NOLINT(build/include)
-#include "UserDataAuth.pb.h"  // NOLINT(build/include)
+#include "rpc.pb.h"           // NOLINT(build/include_directory)
+#include "UserDataAuth.pb.h"  // NOLINT(build/include_directory)
 #include "dbus_adaptors/org.chromium.CryptohomeInterface.h"  // NOLINT(build/include_alpha)
 #include "user_data_auth/dbus-proxies.h"
 // The dbus_adaptor and proxy include must happen after the protobuf include
@@ -365,6 +365,23 @@ class LegacyCryptohomeInterfaceAdaptor
       bool in_include_signed_public_key,
       const std::vector<uint8_t>& in_challenge,
       const std::string& in_key_name_for_spkac) override;
+
+  // Helper for reducing code duplication between
+  // TpmAttestationSignEnterpriseVaChallengeV2,
+  // TpmAttestationSignEnterpriseVaChallenge and
+  // TpmAttestationSignEnterpriseChallenge.
+  void TpmAttestationSignEnterpriseVaChallengeV2Actual(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
+      int32_t in_va_type,
+      bool in_is_user_specific,
+      const std::string& in_username,
+      const std::string& in_key_name,
+      const std::string& in_domain,
+      const std::vector<uint8_t>& in_device_id,
+      bool in_include_signed_public_key,
+      const std::vector<uint8_t>& in_challenge,
+      const base::Optional<std::string> in_key_name_for_spkac);
+
   void TpmAttestationSignSimpleChallenge(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<int32_t>> response,
       bool in_is_user_specific,
