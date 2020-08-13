@@ -8,7 +8,12 @@
 #include "ml/daemon.h"
 
 int main(int argc, char* argv[]) {
-  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
+  if (argc != 1) {
+    LOG(ERROR) << "Unexpected command line arguments";
+    return 1;
+  }
+
   ml::Daemon daemon;
   daemon.Run();
   return 0;

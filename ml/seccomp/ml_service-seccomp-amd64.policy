@@ -27,6 +27,7 @@ getsockname: 1
 gettid: 1
 gettimeofday: 1
 getuid: 1
+ioctl: arg1 == TCGETS
 lseek: 1
 # arg2 must exclude PROT_WRITE ('in 0xfffffffd') or PROT_EXEC ('in 0xfffffffb'):
 mmap: arg2 in 0xfffffffd || arg2 in 0xfffffffb
