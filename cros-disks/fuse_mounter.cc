@@ -21,14 +21,15 @@
 #include <string>
 #include <utility>
 
-#include <base/macros.h>
 #include <base/bind.h>
 #include <base/callback_helpers.h>
 #include <base/files/file.h>
 #include <base/logging.h>
+#include <base/macros.h>
 #include <base/memory/weak_ptr.h>
-#include <base/strings/stringprintf.h>
+#include <base/stl_util.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <brillo/process/process_reaper.h>
 
 #include "cros-disks/error_logger.h"
@@ -280,14 +281,14 @@ FUSEMounter::FUSEMounter(Params params)
       network_access_(params.network_access),
       mount_namespace_(std::move(params.mount_namespace)),
       supplementary_groups_(std::move(params.supplementary_groups)),
-      password_needed_code_(params.password_needed_code) {}
+      password_needed_codes_(std::move(params.password_needed_codes)) {}
 
 void FUSEMounter::CopyPassword(const std::vector<std::string>& options,
                                Process* const process) const {
   DCHECK(process);
 
   // Is the process "password-aware"?
-  if (password_needed_code_ <= 0)
+  if (password_needed_codes_.empty())
     return;
 
   // Is there a password available in options?
@@ -432,7 +433,7 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     }
     LOG(ERROR) << "FUSE mount program " << quote(mount_program_)
                << " returned error code " << return_code;
-    *error = return_code == password_needed_code_
+    *error = base::Contains(password_needed_codes_, return_code)
                  ? MOUNT_ERROR_NEED_PASSWORD
                  : MOUNT_ERROR_MOUNT_PROGRAM_FAILED;
     return nullptr;

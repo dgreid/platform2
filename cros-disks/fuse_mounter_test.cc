@@ -143,7 +143,7 @@ class FUSEMounterForTesting : public FUSEMounter {
       : FUSEMounter({.filesystem_type = kFUSEType,
                      .mount_program = kMountProgram,
                      .mount_user = kMountUser,
-                     .password_needed_code = kPasswordNeededCode,
+                     .password_needed_codes = {kPasswordNeededCode},
                      .platform = platform,
                      .process_reaper = process_reaper}) {}
 
@@ -304,7 +304,7 @@ TEST_F(FUSEMounterTest, WithPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, NoPassword) {
-  const FUSEMounter mounter({.password_needed_code = kPasswordNeededCode});
+  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
   SandboxedProcess process;
   mounter.CopyPassword(
       {
@@ -318,7 +318,7 @@ TEST(FUSEMounterPasswordTest, NoPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, CopiesPassword) {
-  const FUSEMounter mounter({.password_needed_code = kPasswordNeededCode});
+  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
   for (const std::string password : {
            "",
            " ",
@@ -333,7 +333,7 @@ TEST(FUSEMounterPasswordTest, CopiesPassword) {
 }
 
 TEST(FUSEMounterPasswordTest, FirstPassword) {
-  const FUSEMounter mounter({.password_needed_code = kPasswordNeededCode});
+  const FUSEMounter mounter({.password_needed_codes = {kPasswordNeededCode}});
   SandboxedProcess process;
   mounter.CopyPassword({"other1=value1", "password=1", "password=2",
                         "other2=value2", "password=3"},

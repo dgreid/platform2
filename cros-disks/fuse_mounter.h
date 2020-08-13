@@ -74,8 +74,8 @@ class FUSEMounter : public MounterCompat {
     // Whether the FUSE mount program needs to access the network.
     bool network_access = false;
 
-    // Code returned by the FUSE mount program to ask for a password.
-    int password_needed_code = -1;
+    // Possible codes returned by the FUSE mount program to ask for a password.
+    std::vector<int> password_needed_codes;
 
     // Object that provides platform service.
     const Platform* platform = nullptr;
@@ -100,7 +100,7 @@ class FUSEMounter : public MounterCompat {
 
   // If necessary, extracts the password from the given options and sets the
   // PASSWORD environment variable in the given process. Does nothing if
-  // password_needed_code is <= 0. Does nothing if no string starting with
+  // password_needed_codes is empty. Does nothing if no string starting with
   // "password=" is found in options. If several options start with "password=",
   // only the first one is taken in account and the other ones are ignored.
   void CopyPassword(const std::vector<std::string>& options,
@@ -148,8 +148,8 @@ class FUSEMounter : public MounterCompat {
   // Supplementary groups to run the FUSE mount program with.
   const std::vector<gid_t> supplementary_groups_;
 
-  // Code returned by the FUSE mount program to ask for a password.
-  const int password_needed_code_;
+  // Possible codes returned by the FUSE mount program to ask for a password.
+  std::vector<int> password_needed_codes_;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(FUSEMounter);
