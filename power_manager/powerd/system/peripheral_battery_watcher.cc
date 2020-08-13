@@ -65,6 +65,14 @@ void PeripheralBatteryWatcher::Init(DBusWrapperInterface* dbus_wrapper) {
   ReadBatteryStatuses();
 }
 
+bool PeripheralBatteryWatcher::IsPeripheralDevice(
+    const base::FilePath& device_path) const {
+  // Peripheral batteries have device scopes.
+  std::string scope;
+  return (ReadStringFromFile(device_path.Append(kScopeFile), &scope) &&
+          scope == kScopeValueDevice);
+}
+
 void PeripheralBatteryWatcher::GetBatteryList(
     std::vector<base::FilePath>* battery_list) {
   battery_list->clear();
@@ -73,10 +81,7 @@ void PeripheralBatteryWatcher::GetBatteryList(
 
   for (base::FilePath device_path = dir_enumerator.Next(); !device_path.empty();
        device_path = dir_enumerator.Next()) {
-    // Peripheral batteries have device scopes.
-    std::string scope;
-    if (!ReadStringFromFile(device_path.Append(kScopeFile), &scope) ||
-        scope != kScopeValueDevice)
+    if (!IsPeripheralDevice(device_path))
       continue;
 
     // Some devices may initially have an unknown status; avoid reporting
@@ -90,36 +95,39 @@ void PeripheralBatteryWatcher::GetBatteryList(
   }
 }
 
+void PeripheralBatteryWatcher::ReadBatteryStatus(const base::FilePath& path) {
+  // sysfs entry "capacity" has the current battery level.
+  base::FilePath capacity_path = path.Append(kCapacityFile);
+  if (!base::PathExists(capacity_path))
+    return;
+
+  std::string model_name;
+  if (!ReadStringFromFile(path.Append(kModelNameFile), &model_name))
+    return;
+
+  battery_readers_.push_back(std::make_unique<AsyncFileReader>());
+  AsyncFileReader* reader = battery_readers_.back().get();
+
+  if (reader->Init(capacity_path)) {
+    reader->StartRead(base::Bind(&PeripheralBatteryWatcher::ReadCallback,
+                                 base::Unretained(this), path, model_name),
+                      base::Bind(&PeripheralBatteryWatcher::ErrorCallback,
+                                 base::Unretained(this), path, model_name));
+  } else {
+    LOG(ERROR) << "Can't read battery capacity " << capacity_path.value();
+  }
+}
+
 void PeripheralBatteryWatcher::ReadBatteryStatuses() {
   battery_readers_.clear();
 
   std::vector<base::FilePath> new_battery_list;
   GetBatteryList(&new_battery_list);
 
-  for (size_t i = 0; i < new_battery_list.size(); i++) {
-    base::FilePath path = new_battery_list[i];
-
-    // sysfs entry "capacity" has the current battery level.
-    base::FilePath capacity_path = path.Append(kCapacityFile);
-    if (!base::PathExists(capacity_path))
-      continue;
-
-    std::string model_name;
-    if (!ReadStringFromFile(path.Append(kModelNameFile), &model_name))
-      continue;
-
-    battery_readers_.push_back(std::make_unique<AsyncFileReader>());
-    AsyncFileReader* reader = battery_readers_.back().get();
-
-    if (reader->Init(capacity_path)) {
-      reader->StartRead(base::Bind(&PeripheralBatteryWatcher::ReadCallback,
-                                   base::Unretained(this), path, model_name),
-                        base::Bind(&PeripheralBatteryWatcher::ErrorCallback,
-                                   base::Unretained(this), path, model_name));
-    } else {
-      LOG(ERROR) << "Can't read battery capacity " << capacity_path.value();
-    }
+  for (const base::FilePath& path : new_battery_list) {
+    ReadBatteryStatus(path);
   }
+
   poll_timer_.Start(FROM_HERE,
                     base::TimeDelta::FromMilliseconds(poll_interval_ms_), this,
                     &PeripheralBatteryWatcher::ReadBatteryStatuses);

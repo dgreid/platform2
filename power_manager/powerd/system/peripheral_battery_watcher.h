@@ -49,9 +49,15 @@ class PeripheralBatteryWatcher {
   void Init(DBusWrapperInterface* dbus_wrapper);
 
  private:
+  // Reads battery status of a single peripheral device and send out a signal.
+  void ReadBatteryStatus(const base::FilePath& path);
+
   // Handler for a periodic event that reads the peripheral batteries'
   // level.
   void ReadBatteryStatuses();
+
+  // Detects if |device_path| in /sys/class/power_supply is a peripheral device.
+  bool IsPeripheralDevice(const base::FilePath& device_path) const;
 
   // Fills |battery_list| with paths containing information about
   // peripheral batteries.
