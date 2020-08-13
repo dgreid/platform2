@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 config("libcamera_metrics_config") {
-  libs = [ "metrics-${libbase_ver}" ]
+  libs = [ "metrics" ]
 }
 
 static_library("libcamera_metrics") {
@@ -18,7 +18,7 @@ static_library("libcamera_metrics") {
     "//common-mk:use_thin_archive",
   ]
   public_configs = [ ":libcamera_metrics_config" ]
-  all_dependent_pkg_deps = [ "libmetrics-${libbase_ver}" ]
+  all_dependent_pkg_deps = [ "libmetrics" ]
   pkg_deps = [
     "cros-camera-android-headers",
     "libcamera_metadata",
