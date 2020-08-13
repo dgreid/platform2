@@ -1594,9 +1594,15 @@ int main(int argc, char **argv) {
       }
       printf("%s\n", result);
     } else {
-      // Use libbrillo directly if we are not using dbus/cryptohome.
-      printf("%s\n", SanitizeUserNameWithSalt(account_id,
-                                              GetSystemSalt(proxy)).c_str());
+      // Use libbrillo directly instead of going through dbus/cryptohome.
+      if (!brillo::cryptohome::home::EnsureSystemSaltIsLoaded()) {
+        printf("Failed to load system salt\n");
+        return 1;
+      }
+
+      std::string* salt_ptr = brillo::cryptohome::home::GetSystemSalt();
+      brillo::SecureBlob system_salt = SecureBlob(*salt_ptr);
+      printf("%s\n", SanitizeUserNameWithSalt(account_id, system_salt).c_str());
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_GET_SYSTEM_SALT],
                      action.c_str())) {
