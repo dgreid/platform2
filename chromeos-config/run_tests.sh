@@ -5,6 +5,12 @@
 
 # Script to run all Python unit tests in cros_config.
 
+# Exit immediately if a command exits with a non-zero status.
+set -e
+
+# Switch to script directory to constrain testing.
+cd "$(dirname "$(realpath -e "${BASH_SOURCE[0]}")")"
+
 python3 -m unittest discover -p '*test.py' -v
 
 # Run linter
