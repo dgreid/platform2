@@ -122,7 +122,7 @@ std::string UserCollector::GetPattern(bool enabled, bool early) const {
     // the size of the invocation line for crash_reporter, since the kernel
     // has a fixed-sized (128B) buffer for it (before parameter expansion).
     // Note that the kernel does not support quoted arguments in core_pattern.
-    return StringPrintf("|%s %s--user=%%P:%%s:%%u:%%g:%%e", our_path_.c_str(),
+    return StringPrintf("|%s %s--user=%%P:%%s:%%u:%%g:%%f", our_path_.c_str(),
                         early ? "--early --log_to_stderr " : "");
   } else {
     return "core";

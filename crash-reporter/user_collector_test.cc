@@ -128,7 +128,7 @@ class UserCollectorTest : public ::testing::Test {
 
 TEST_F(UserCollectorTest, EnableOK) {
   ASSERT_TRUE(collector_.Enable(false));
-  ExpectFileEquals("|/my/path --user=%P:%s:%u:%g:%e", test_core_pattern_file_);
+  ExpectFileEquals("|/my/path --user=%P:%s:%u:%g:%f", test_core_pattern_file_);
   ExpectFileEquals("4", test_core_pipe_limit_file_);
   EXPECT_TRUE(FindLog("Enabling user crash handling"));
 }

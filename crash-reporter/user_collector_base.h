@@ -41,7 +41,7 @@ class UserCollectorBase : public CrashCollector {
 
   // Attempt to parse a given attributes string into a CrashAttributes struct.
   // The attributes string is generated in the kernel by the core_pattern
-  // specification %P:%s:%u:%g:%e, and consists of the pid, the signal
+  // specification %P:%s:%u:%g:%f, and consists of the pid, the signal
   // responsible for terminating the process, the uid, the gid, and the
   // executable's name, separated by colons.
   // For example, an input string 123456:11:1000:2000:foobar is pid
