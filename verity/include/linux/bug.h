@@ -20,4 +20,4 @@
     }                                                                    \
   }
 
-#endif /* VERITY_INCLUDE_LINUX_BUG_ */
+#endif  // VERITY_INCLUDE_LINUX_BUG_H_

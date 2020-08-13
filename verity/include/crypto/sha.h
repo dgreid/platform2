@@ -1,9 +1,11 @@
+// NOLINT(legal/copyright)
+
 /*
  * Common values for SHA algorithms
  */
 
-#ifndef _CRYPTO_SHA_H
-#define _CRYPTO_SHA_H
+#ifndef VERITY_INCLUDE_CRYPTO_SHA_H_
+#define VERITY_INCLUDE_CRYPTO_SHA_H_
 
 #include <linux/types.h>
 
@@ -82,4 +84,4 @@ struct sha512_state {
   u8 buf[SHA512_BLOCK_SIZE];
 };
 
-#endif
+#endif  // VERITY_INCLUDE_CRYPTO_SHA_H_

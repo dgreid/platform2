@@ -1,5 +1,7 @@
-#ifndef __CRYPTOHASH_H
-#define __CRYPTOHASH_H
+// NOLINT(legal/copyright)
+
+#ifndef VERITY_INCLUDE_LINUX_CRYPTOHASH_H_
+#define VERITY_INCLUDE_LINUX_CRYPTOHASH_H_
 
 #define SHA_DIGEST_WORDS 5
 #define SHA_MESSAGE_BYTES (512 /*bits*/ / 8)
@@ -13,4 +15,4 @@ void sha_transform(__u32* digest, const u8* data, __u32* W);
 
 void md5_transform(__u32* hash, __u32 const* in);
 
-#endif
+#endif  // VERITY_INCLUDE_LINUX_CRYPTOHASH_H_

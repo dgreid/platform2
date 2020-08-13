@@ -4,13 +4,13 @@
 //
 // Simple wrapper for synchronous file operations
 // TODO(wad) clean up the API then propose moving it to a standalone location.
-#ifndef VERITY_SIMPLE_FILE_FILE_H__
-#define VERITY_SIMPLE_FILE_FILE_H__ 1
+#ifndef VERITY_SIMPLE_FILE_FILE_H_
+#define VERITY_SIMPLE_FILE_FILE_H_
 
 #include <fcntl.h>
 #include <inttypes.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "verity/logging.h"
@@ -57,4 +57,4 @@ class File {
 };
 
 }  // namespace simple_file
-#endif  // VERITY_SIMPLE_FILE_H__
+#endif  // VERITY_SIMPLE_FILE_FILE_H_

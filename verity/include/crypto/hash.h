@@ -10,8 +10,8 @@
  *
  */
 
-#ifndef _CRYPTO_HASH_H
-#define _CRYPTO_HASH_H
+#ifndef VERITY_INCLUDE_CRYPTO_HASH_H_
+#define VERITY_INCLUDE_CRYPTO_HASH_H_
 
 #include <linux/crypto.h>
 
@@ -53,4 +53,4 @@ static inline void* shash_desc_ctx(struct shash_desc* desc) {
   return desc->__ctx;
 }
 
-#endif /* _CRYPTO_HASH_H */
+#endif  // VERITY_INCLUDE_CRYPTO_HASH_H_

@@ -6,8 +6,8 @@
  *
  * This file is released under the GPLv2.
  */
-#ifndef __LINUX_DM_BHT_H
-#define __LINUX_DM_BHT_H
+#ifndef VERITY_DM_BHT_H_
+#define VERITY_DM_BHT_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -48,9 +48,9 @@ struct dm_bht_entry {
    */
   void* io_context; /* Reserve a pointer for use during io */
   /* data should only be non-NULL if fully populated. */
+  // NOLINTNEXTLINE(readability/multiline_comment)
   u8* nodes; /* The hash data used to verify the children.
-              * Guaranteed to be page-aligned.
-              */
+              * Guaranteed to be page-aligned. */
 };
 
 /* dm_bht_level
@@ -189,4 +189,4 @@ static inline u8* dm_bht_get_node(struct dm_bht* bht,
 }
 #endif
 
-#endif /* __LINUX_DM_BHT_H */
+#endif  // VERITY_DM_BHT_H_

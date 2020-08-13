@@ -13,6 +13,7 @@ void to_hex(char *hexdigest,
             const uint8_t *digest,
             unsigned int digest_length) {
   for (unsigned int i = 0; i < digest_length ; i++) {
+    // NOLINTNEXTLINE(runtime/printf)
     sprintf(hexdigest+(2*i), "%02x", static_cast<int>(digest[i]));
   }
 }

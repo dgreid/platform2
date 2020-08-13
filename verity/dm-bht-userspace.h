@@ -5,8 +5,8 @@
  *
  * This file is released under the GPLv2.
  */
-#ifndef __LINUX_DM_BHT_USERSPACE_H
-#define __LINUX_DM_BHT_USERSPACE_H
+#ifndef VERITY_DM_BHT_USERSPACE_H_
+#define VERITY_DM_BHT_USERSPACE_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,4 +24,4 @@ int dm_bht_store_block(struct dm_bht* bht, unsigned int block, u8* block_data);
 }
 #endif
 
-#endif /* __LINUX_DM_BHT_USERSPACE_H */
+#endif  // VERITY_DM_BHT_USERSPACE_H_

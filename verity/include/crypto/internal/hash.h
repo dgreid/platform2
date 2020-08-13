@@ -15,4 +15,4 @@ static inline int crypto_unregister_shash(struct shash_alg* alg) {
   return 0;
 }
 
-#endif
+#endif  // VERITY_INCLUDE_CRYPTO_INTERNAL_HASH_H_

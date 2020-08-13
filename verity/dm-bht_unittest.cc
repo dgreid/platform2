@@ -23,7 +23,7 @@ extern "C" {
 #include "dm-bht.c"
 #endif
 }
-#include "dm-bht-userspace.h"
+#include "verity/dm-bht-userspace.h"
 
 void* my_memalign(size_t boundary, size_t size) {
   void* memptr;
@@ -44,7 +44,7 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
   sector_t sectors;
   // This should fail.
   unsigned int blocks, total_blocks = 16384;
-  u8* data = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* data = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
   u8* hash_data;
 
   blocks = total_blocks;
@@ -106,7 +106,7 @@ class MemoryBhtTest : public ::testing::Test {
                  const char* salt,
                  void* hash_data) {
     struct dm_bht bht;
-    u8* data = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+    u8* data = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
     memset(data, 0, PAGE_SIZE);
 
@@ -163,7 +163,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOk) {
   static const char kRootDigest[] =
       "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -185,7 +185,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifySingleLevel) {
   static const char kRootDigest[] =
       "2d3a43008286f56536fa24dcdbf14d342f0548827e374210415c7be0b610d2ba";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -207,7 +207,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyRealParameters) {
   static const char kRootDigest[] =
       "15d5a180b5080a1d43e3fbd1f2cd021d0fc3ea91a8e330bad468b980c2fd4d8b";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -229,7 +229,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddLeafCount) {
   static const char kRootDigest[] =
       "dc8cec4220d388b05ba75c853f858bb8cc25edfb1d5d2f3be6bdf9edfa66dc6a";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -251,7 +251,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOddNodeCount) {
   static const char kRootDigest[] =
       "10832dd62c427bcf68c56c8de0d1f9c32b61d9e5ddf43c77c56a97b372ad4b07";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -273,7 +273,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
   static const char kRootDigest[] =
       "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -285,7 +285,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadHashBlock) {
 
   // Corrupt one has hblock
   static const unsigned int kBadBlock = 256;
-  u8* bad_hash_block = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* bad_hash_block = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
   memset(bad_hash_block, 'A', PAGE_SIZE);
   EXPECT_EQ(dm_bht_store_block(bht_, kBadBlock, bad_hash_block), 0);
 
@@ -317,7 +317,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyBadDataBlock) {
       "45d65d6f9e5a962f4d80b5f1bd7a918152251c27bdad8c5f52b590c129833372";
   dm_bht_set_root_hexdigest(bht_, reinterpret_cast<const u8*>(kRootDigest));
   // A corrupt page
-  u8* bad_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* bad_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(bad_page, 'A', PAGE_SIZE);
 
@@ -340,7 +340,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkSalt) {
   static const char salt[] =
       "01ad1f06255d452d91337bf037953053cc3e452541db4b8ca05811bf3e2b6027";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 
@@ -365,7 +365,7 @@ TEST_F(MemoryBhtTest, CreateThenVerifyOkLongSalt) {
       "01ad1f06255d452d91337bf037953053cc3e452541db4b8ca05811bf3e2b6027b2188a1"
       "d";
   // A page of all zeros
-  u8* zero_page = (u8*)my_memalign(PAGE_SIZE, PAGE_SIZE);
+  u8* zero_page = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
 
   memset(zero_page, 0, PAGE_SIZE);
 

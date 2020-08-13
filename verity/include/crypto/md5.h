@@ -1,5 +1,7 @@
-#ifndef _CRYPTO_MD5_H
-#define _CRYPTO_MD5_H
+// NOLINT(legal/copyright)
+
+#ifndef VERITY_INCLUDE_CRYPTO_MD5_H_
+#define VERITY_INCLUDE_CRYPTO_MD5_H_
 
 #include <linux/types.h>
 
@@ -14,4 +16,4 @@ struct md5_state {
   u64 byte_count;
 };
 
-#endif
+#endif  // VERITY_INCLUDE_CRYPTO_MD5_H_

@@ -9,8 +9,8 @@
 
 #include "verity/dm-bht.h"
 #include "verity/dm-bht-userspace.h"
-#include "verity/simple_file/file.h"
 #include "verity/include/asm/page.h"
+#include "verity/simple_file/file.h"
 
 namespace verity {
 // FileHasher takes a simple_file::File object and reads in |block_size|
@@ -40,7 +40,7 @@ class FileHasher {
   }
   virtual const char* salt(void) { return salt_; }
 
-  virtual ~FileHasher(){};
+  virtual ~FileHasher() = default;
   static int WriteCallback(void* file,
                            sector_t start,
                            u8* dst,

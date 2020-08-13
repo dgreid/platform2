@@ -69,23 +69,21 @@ int main(int argc, char **argv) {
       print_usage(argv[0]);
       return -1;
     }
-    if (!strcmp(key, "alg"))
+    if (!strcmp(key, "alg")) {
       alg = val;
-    else if (!strcmp(key, "payload"))
+    } else if (!strcmp(key, "payload")) {
       payload = val;
-    else if (!strcmp(key, "payload_blocks"))
+    } else if (!strcmp(key, "payload_blocks")) {
       payload_blocks = parse_blocks(val);
-    else if (!strcmp(key, "hashtree"))
+    } else if (!strcmp(key, "hashtree")) {
       hashtree = val;
-    else if (!strcmp(key, "root_hexdigest"))
+    } else if (!strcmp(key, "root_hexdigest")) {
       // Silently drop root_hexdigest for now...
-      ;
-    else if (!strcmp(key, "mode"))
+    } else if (!strcmp(key, "mode")) {
       // Silently drop the mode for now...
-      ;
-    else if (!strcmp(key, "salt"))
+    } else if (!strcmp(key, "salt")) {
       salt = val;
-    else {
+    } else {
       fprintf(stderr, "bogus key: '%s'\n", key);
       print_usage(argv[0]);
       return -1;

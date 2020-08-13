@@ -29,6 +29,7 @@ class Message {
           MessageType type,
           int errn,
           const char* file,
+          // NOLINTNEXTLINE(runtime/int)
           unsigned long line)
       : type_(type), log_errno_(errn), file_(file), line_(line) {
 #ifdef NDEBUG
@@ -87,6 +88,7 @@ class Message {
   MessageType type() const { return type_; }
   int log_errno() const { return log_errno_; }
   const char* file() const { return file_; }
+  // NOLINTNEXTLINE(runtime/int)
   unsigned long line() const { return line_; }
 
   void set_level(MessageLevel l) { level_ = l; }
@@ -96,6 +98,7 @@ class Message {
   MessageType type_;
   int log_errno_;
   const char* file_;
+  // NOLINTNEXTLINE(runtime/int)
   unsigned long line_;
 };
 }  // namespace logging

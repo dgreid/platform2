@@ -1,8 +1,10 @@
+// NOLINT(legal/copyright)
+
 /* Duplicated under the terms of the GPLv2 from
  * linux-kernel:/include/asm-generic/bitops/fls.h
  */
-#ifndef _ASM_GENERIC_BITOPS_FLS_H_
-#define _ASM_GENERIC_BITOPS_FLS_H_
+#ifndef VERITY_INCLUDE_ASM_GENERIC_BITOPS_FLS_H_
+#define VERITY_INCLUDE_ASM_GENERIC_BITOPS_FLS_H_
 
 /**
  * fls - find last (most-significant) bit set
@@ -40,4 +42,4 @@ static __always_inline int fls(int x) {
   return r;
 }
 
-#endif /* _ASM_GENERIC_BITOPS_FLS_H_ */
+#endif  // VERITY_INCLUDE_ASM_GENERIC_BITOPS_FLS_H_

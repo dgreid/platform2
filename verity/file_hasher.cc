@@ -106,8 +106,10 @@ const char* FileHasher::RandomSalt() {
   PLOG_IF(FATAL, !source.Read(sizeof(buf), buf))
       << "Failed to read the random source";
 
-  for (size_t i = 0; i < sizeof(buf); ++i)
+  for (size_t i = 0; i < sizeof(buf); ++i) {
+    // NOLINTNEXTLINE(runtime/printf)
     sprintf(&random_salt_[i * 2], "%02x", buf[i]);
+  }
   random_salt_[sizeof(random_salt_) - 1] = '\0';
 
   return random_salt_;
