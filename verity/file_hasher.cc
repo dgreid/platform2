@@ -19,21 +19,23 @@
 namespace verity {
 
 // Simple helper for Initialize.
-template<typename T>
+template <typename T>
 static inline bool power_of_two(T num) {
-  if (num == 0) return false;
-  if (!(num & (num - 1))) return true;
+  if (num == 0)
+    return false;
+  if (!(num & (num - 1)))
+    return true;
   return false;
 }
 
-bool FileHasher::Initialize(simple_file::File *source,
-                            simple_file::File *destination,
+bool FileHasher::Initialize(simple_file::File* source,
+                            simple_file::File* destination,
                             unsigned int blocks,
-                            const char *alg) {
+                            const char* alg) {
   if (!alg || !source || !destination) {
-     LOG(ERROR) << "Invalid arguments supplied to Initialize";
-     LOG(INFO) << "s: " << source << " d: " << destination;
-     return false;
+    LOG(ERROR) << "Invalid arguments supplied to Initialize";
+    LOG(INFO) << "s: " << source << " d: " << destination;
+    return false;
   }
   if (source_ || destination_) {
     LOG(ERROR) << "Initialize called more than once";
@@ -47,7 +49,7 @@ bool FileHasher::Initialize(simple_file::File *source,
     if (source->Size() % PAGE_SIZE) {
       LOG(ERROR) << "The source file size must be divisible by the block size";
       LOG(ERROR) << "Size: " << source->Size();
-      LOG(INFO) << "Suggested size: " << ALIGN(source->Size(),PAGE_SIZE);
+      LOG(INFO) << "Suggested size: " << ALIGN(source->Size(), PAGE_SIZE);
       return false;
     }
   }
@@ -94,15 +96,15 @@ bool FileHasher::Hash() {
   return !dm_bht_compute(&tree_);
 }
 
-const char *FileHasher::RandomSalt() {
+const char* FileHasher::RandomSalt() {
   uint8_t buf[DM_BHT_SALT_SIZE];
   const char urandom_path[] = "/dev/urandom";
   simple_file::File source;
 
   LOG_IF(FATAL, !source.Initialize(urandom_path, O_RDONLY, NULL))
-    << "Failed to open the random source: " << urandom_path;
+      << "Failed to open the random source: " << urandom_path;
   PLOG_IF(FATAL, !source.Read(sizeof(buf), buf))
-    << "Failed to read the random source";
+      << "Failed to read the random source";
 
   for (size_t i = 0; i < sizeof(buf); ++i)
     sprintf(&random_salt_[i * 2], "%02x", buf[i]);
@@ -123,9 +125,12 @@ void FileHasher::PrintTable(bool colocated) {
   // TODO(wad) later support sizes that need 64-bit sectors.
   unsigned int hash_start = 0;
   unsigned int root_end = to_sector(block_limit_ << PAGE_SHIFT);
-  if (colocated) hash_start = root_end;
-  printf("0 %u verity payload=ROOT_DEV hashtree=HASH_DEV hashstart=%u alg=%s "
-         "root_hexdigest=%s", root_end, hash_start, alg_, digest);
+  if (colocated)
+    hash_start = root_end;
+  printf(
+      "0 %u verity payload=ROOT_DEV hashtree=HASH_DEV hashstart=%u alg=%s "
+      "root_hexdigest=%s",
+      root_end, hash_start, alg_, digest);
   if (have_salt)
     printf(" salt=%s", hexsalt);
   printf("\n");

@@ -13,7 +13,7 @@ namespace verity_utils {
 // A shabby function to convert an arbitrarily long digest to hex.
 // This needs to be replace FOR SPEED.
 // Note: hexdigest must be 2*digest_length+i long.
-void to_hex(char *hexdigest, const uint8_t *digest, unsigned int digest_length);
+void to_hex(char* hexdigest, const uint8_t* digest, unsigned int digest_length);
 
 }  // namespace verity_utils
 

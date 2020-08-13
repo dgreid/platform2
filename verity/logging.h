@@ -7,6 +7,7 @@
 #define VERITY_LOGGING_H_
 
 #include "verity/logging/logging.h"
-#define INIT_LOGGING(name, flags...) { }
+#define INIT_LOGGING(name, flags...) \
+  {}
 
-#endif   // VERITY_LOGGING_H_
+#endif  // VERITY_LOGGING_H_

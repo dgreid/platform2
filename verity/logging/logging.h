@@ -23,31 +23,28 @@ enum MessageLevel { LEVEL_INFO, LEVEL_WARNING, LEVEL_ERROR, LEVEL_FATAL };
 
 static MessageLevel min_level = LEVEL_INFO;
 
-class Message  {
+class Message {
  public:
   Message(MessageLevel level,
           MessageType type,
           int errn,
-          const char *file,
-          unsigned long line) : type_(type),
-                                log_errno_(errn),
-                                file_(file),
-                                line_(line) {
+          const char* file,
+          unsigned long line)
+      : type_(type), log_errno_(errn), file_(file), line_(line) {
 #ifdef NDEBUG
-      if (type == TYPE_DEBUG)
-        return;
+    if (type == TYPE_DEBUG)
+      return;
 #endif
-      if (level > LEVEL_FATAL)
-        level = LEVEL_FATAL;
-      level_ = level;
+    if (level > LEVEL_FATAL)
+      level = LEVEL_FATAL;
+    level_ = level;
 
-      if (type == TYPE_NULL || level < min_level)
-        return;
+    if (type == TYPE_NULL || level < min_level)
+      return;
 
-      static const char *kLevels[] = { "INFO", "WARNING", "ERROR", "FATAL" };
-      std::cerr << "[" << kLevels[level]
-                << ":" << file << ":" << line << "] ";
-    }
+    static const char* kLevels[] = {"INFO", "WARNING", "ERROR", "FATAL"};
+    std::cerr << "[" << kLevels[level] << ":" << file << ":" << line << "] ";
+  }
 
   // The Message object is expected to be destroyed at the end of the line.
   // So far this works reliably with the macros below, which is good enough
@@ -70,9 +67,9 @@ class Message  {
     std::cerr.flush();
     if (level_ == LEVEL_FATAL)
       exit(1);
-   }
+  }
 
-  template<typename T>
+  template <typename T>
   const Message& operator<<(const T& t) const {
 #ifdef NDEBUG
     if (type() == TYPE_DEBUG)
@@ -89,7 +86,7 @@ class Message  {
   MessageLevel level() const { return level_; }
   MessageType type() const { return type_; }
   int log_errno() const { return log_errno_; }
-  const char *file() const { return file_; }
+  const char* file() const { return file_; }
   unsigned long line() const { return line_; }
 
   void set_level(MessageLevel l) { level_ = l; }
@@ -98,36 +95,24 @@ class Message  {
   MessageLevel level_;
   MessageType type_;
   int log_errno_;
-  const char *file_;
+  const char* file_;
   unsigned long line_;
 };
 }  // namespace logging
 
 // Interface macros
-#define LOG(_level) \
-  logging::Message(logging::LEVEL_##_level, \
-                    logging::TYPE_NORMAL, \
-                    0, \
-                    __FILE__, \
-                    __LINE__)
-#define PLOG(_level) \
-  logging::Message(logging::LEVEL_##_level, \
-                    logging::TYPE_ERRNO,\
-                    errno, \
-                    __FILE__, \
-                    __LINE__)
-#define DLOG(_level) \
-  logging::Message(logging::LEVEL_##_level,\
-                    logging::TYPE_DEBUG, \
-                    0, \
-                    __FILE__, \
-                    __LINE__)
-#define LOG_NULL \
-  logging::Message(logging::LEVEL_INFO, \
-                    logging::TYPE_NULL, \
-                    0, \
-                    __FILE__, \
-                    __LINE__)
+#define LOG(_level)                                                            \
+  logging::Message(logging::LEVEL_##_level, logging::TYPE_NORMAL, 0, __FILE__, \
+                   __LINE__)
+#define PLOG(_level)                                                    \
+  logging::Message(logging::LEVEL_##_level, logging::TYPE_ERRNO, errno, \
+                   __FILE__, __LINE__)
+#define DLOG(_level)                                                          \
+  logging::Message(logging::LEVEL_##_level, logging::TYPE_DEBUG, 0, __FILE__, \
+                   __LINE__)
+#define LOG_NULL                                                         \
+  logging::Message(logging::LEVEL_INFO, logging::TYPE_NULL, 0, __FILE__, \
+                   __LINE__)
 
 #define LOG_IF(_level, cond) ((cond) ? LOG(_level) : LOG_NULL)
 #define PLOG_IF(_level, cond) ((cond) ? PLOG(_level) : LOG_NULL)

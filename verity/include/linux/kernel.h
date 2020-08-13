@@ -10,24 +10,28 @@
 
 #include_next <linux/kernel.h>
 
-#define ALIGN(x,a)		__ALIGN_MASK(x,(typeof(x))(a)-1)
-#define __ALIGN_MASK(x,mask)	(((x)+(mask))&~(mask))
-#define IS_ALIGNED(x, a)		(((x) & ((typeof(x))(a) - 1)) == 0)
+#define ALIGN(x, a) __ALIGN_MASK(x, (typeof(x))(a)-1)
+#define __ALIGN_MASK(x, mask) (((x) + (mask)) & ~(mask))
+#define IS_ALIGNED(x, a) (((x) & ((typeof(x))(a)-1)) == 0)
 
-#define DIV_ROUND_UP(n,d) (((n) + (d) - 1) / (d))
+#define DIV_ROUND_UP(n, d) (((n) + (d)-1) / (d))
 
-#define MIN(x, y) ({				\
-	typeof(x) _min1 = (x);			\
-	typeof(y) _min2 = (y);			\
-	(void) (&_min1 == &_min2);		\
-	_min1 < _min2 ? _min1 : _min2; })
+#define MIN(x, y)                  \
+  ({                               \
+    typeof(x) _min1 = (x);         \
+    typeof(y) _min2 = (y);         \
+    (void)(&_min1 == &_min2);      \
+    _min1 < _min2 ? _min1 : _min2; \
+  })
 
-#define MAX(x, y) ({				\
-	typeof(x) _max1 = (x);			\
-	typeof(y) _max2 = (y);			\
-	(void) (&_max1 == &_max2);		\
-	_max1 > _max2 ? _max1 : _max2; })
+#define MAX(x, y)                  \
+  ({                               \
+    typeof(x) _max1 = (x);         \
+    typeof(y) _max2 = (y);         \
+    (void)(&_max1 == &_max2);      \
+    _max1 > _max2 ? _max1 : _max2; \
+  })
 
 #include <linux/bitops.h>
 
-#endif  /* VERITY_INCLUDE_LINUX_KERNEL_H_ */
+#endif /* VERITY_INCLUDE_LINUX_KERNEL_H_ */

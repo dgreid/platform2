@@ -14,11 +14,12 @@
 #endif
 
 #define DMLOG(fmt, args...) \
-	fprintf(stderr, "dm:" DM_MSG_PREFIX fmt "\n", ##args)
+  fprintf(stderr, "dm:" DM_MSG_PREFIX fmt "\n", ##args)
 #ifdef CONFIG_DM_DEBUG
 #define DMDEBUG(fmt, args...) DMLOG("[DEBUG] " fmt, ##args)
 #else
-#define DMDEBUG(fmt, args...) { }
+#define DMDEBUG(fmt, args...) \
+  {}
 #endif
 #define DMINFO(fmt, args...) DMLOG("[INFO] " fmt, ##args)
 #define DMERR(fmt, args...) DMLOG("[ERR] " fmt, ##args)
@@ -30,4 +31,4 @@
 #define to_sector(x) ((x) >> SECTOR_SHIFT)
 #define verity_to_bytes(x) ((x) << SECTOR_SHIFT)
 
-#endif  /* VERITY_INCLUDE_LINUX_DEVICE_MAPPER_H_ */
+#endif /* VERITY_INCLUDE_LINUX_DEVICE_MAPPER_H_ */

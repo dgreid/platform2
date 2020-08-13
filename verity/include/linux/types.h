@@ -20,4 +20,4 @@ typedef __u64 u64;
 /* Assume CONFIG_LBDAF */
 typedef __u64 sector_t;
 
-#endif  /* VERITY_INCLUDE_LINUX_TYPES_H_ */
+#endif /* VERITY_INCLUDE_LINUX_TYPES_H_ */

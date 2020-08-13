@@ -16,13 +16,12 @@ extern "C" {
  * should not be directly used for verification. (It should be repopulated.)
  * In addition, these functions aren't meant to be called in parallel.
  */
-int dm_bht_compute(struct dm_bht *bht);
-void dm_bht_set_buffer(struct dm_bht *bht, void *buffer);
-int dm_bht_store_block(struct dm_bht *bht, unsigned int block,
-		       u8 *block_data);
+int dm_bht_compute(struct dm_bht* bht);
+void dm_bht_set_buffer(struct dm_bht* bht, void* buffer);
+int dm_bht_store_block(struct dm_bht* bht, unsigned int block, u8* block_data);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif  /* __LINUX_DM_BHT_USERSPACE_H */
+#endif /* __LINUX_DM_BHT_USERSPACE_H */

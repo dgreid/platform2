@@ -16,39 +16,41 @@
 #include <linux/crypto.h>
 
 struct shash_desc {
-	u32 flags;
+  u32 flags;
 
-	void *__ctx[] CRYPTO_MINALIGN_ATTR;
+  void* __ctx[] CRYPTO_MINALIGN_ATTR;
 };
 
 struct shash_alg {
-	int (*init)(struct shash_desc *desc);
-	int (*update)(struct shash_desc *desc, const u8 *data,
-		      unsigned int len);
-	int (*final)(struct shash_desc *desc, u8 *out);
-	int (*finup)(struct shash_desc *desc, const u8 *data,
-		     unsigned int len, u8 *out);
-	int (*digest)(struct shash_desc *desc, const u8 *data,
-		      unsigned int len, u8 *out);
-	int (*export)(struct shash_desc *desc, void *out);
-	int (*import)(struct shash_desc *desc, const void *in);
+  int (*init)(struct shash_desc* desc);
+  int (*update)(struct shash_desc* desc, const u8* data, unsigned int len);
+  int (*final)(struct shash_desc* desc, u8* out);
+  int (*finup)(struct shash_desc* desc,
+               const u8* data,
+               unsigned int len,
+               u8* out);
+  int (*digest)(struct shash_desc* desc,
+                const u8* data,
+                unsigned int len,
+                u8* out);
+  int (*export)(struct shash_desc* desc, void* out);
+  int (*import)(struct shash_desc* desc, const void* in);
 
-	unsigned int descsize;
+  unsigned int descsize;
 
-	unsigned int digestsize;
-	unsigned int statesize;
+  unsigned int digestsize;
+  unsigned int statesize;
 
-	struct crypto_alg base;
+  struct crypto_alg base;
 };
 
 struct hash_tfm {
-	const struct shash_alg *alg;
-	struct shash_desc desc;
+  const struct shash_alg* alg;
+  struct shash_desc desc;
 };
 
-static inline void *shash_desc_ctx(struct shash_desc *desc)
-{
-	return desc->__ctx;
+static inline void* shash_desc_ctx(struct shash_desc* desc) {
+  return desc->__ctx;
 }
 
-#endif	/* _CRYPTO_HASH_H */
+#endif /* _CRYPTO_HASH_H */

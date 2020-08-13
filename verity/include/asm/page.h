@@ -11,4 +11,4 @@
 #define PAGE_SIZE 4096
 #define PAGE_SHIFT 12
 
-#endif  /* VERITY_INCLUDE_ASM_PAGE_H_ */
+#endif /* VERITY_INCLUDE_ASM_PAGE_H_ */

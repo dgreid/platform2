@@ -23,34 +23,38 @@ class Env {
   Env();
   virtual ~Env() {}
   // Wraps open(2). Use umask(2) (Env::Umask) to set the mode for file creation.
-  virtual int Open(const char *pathname, int flags) const
-    { return open(pathname, flags); }
-  virtual int Create(const char *pathname, int flags, mode_t mode) const
-    { return open(pathname, flags, mode); }
+  virtual int Open(const char* pathname, int flags) const {
+    return open(pathname, flags);
+  }
+  virtual int Create(const char* pathname, int flags, mode_t mode) const {
+    return open(pathname, flags, mode);
+  }
   virtual mode_t Umask(mode_t mask) const { return umask(mask); }
-  virtual int Close(int fd) const
-    { return close(fd); }
-  virtual int Fstat(int fd, struct stat *buf) const
-    { return fstat(fd, buf); }
-  virtual off_t Lseek(int fd, off_t offset, int whence) const
-    { return lseek(fd, offset, whence); }
-  virtual ssize_t Read(int fd, void *buf, size_t count) const
-    { return read(fd, buf, count); }
-  virtual ssize_t Pread(int fd, void *buf, size_t count, off_t offset) const
-    { return pread(fd, buf, count, offset); }
+  virtual int Close(int fd) const { return close(fd); }
+  virtual int Fstat(int fd, struct stat* buf) const { return fstat(fd, buf); }
+  virtual off_t Lseek(int fd, off_t offset, int whence) const {
+    return lseek(fd, offset, whence);
+  }
+  virtual ssize_t Read(int fd, void* buf, size_t count) const {
+    return read(fd, buf, count);
+  }
+  virtual ssize_t Pread(int fd, void* buf, size_t count, off_t offset) const {
+    return pread(fd, buf, count, offset);
+  }
   virtual ssize_t Pwrite(int fd,
-                         const void *buf,
+                         const void* buf,
                          size_t count,
-                         off_t offset) const
-    { return pwrite(fd, buf, count, offset); }
-  virtual ssize_t Write(int fd, const void *buf, size_t count) const
-    { return write(fd, buf, count); }
-
-  // Wrap less defined behavior.
-  virtual int BlockDevSize(int fd, int64_t *size) const {
-    return ioctl(fd, BLKGETSIZE64, size);
+                         off_t offset) const {
+    return pwrite(fd, buf, count, offset);
+  }
+  virtual ssize_t Write(int fd, const void* buf, size_t count) const {
+    return write(fd, buf, count);
   }
 
+  // Wrap less defined behavior.
+  virtual int BlockDevSize(int fd, int64_t* size) const {
+    return ioctl(fd, BLKGETSIZE64, size);
+  }
 };
 
 }  // namespace simple_file

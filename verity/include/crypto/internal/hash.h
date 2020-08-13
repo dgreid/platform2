@@ -10,10 +10,9 @@
 
 #include <crypto/hash.h>
 
-int crypto_register_shash(struct shash_alg *alg);
-static inline int crypto_unregister_shash(struct shash_alg *alg)
-{
-	return 0;
+int crypto_register_shash(struct shash_alg* alg);
+static inline int crypto_unregister_shash(struct shash_alg* alg) {
+  return 0;
 }
 
 #endif

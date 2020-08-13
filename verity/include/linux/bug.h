@@ -11,12 +11,13 @@
 #include <stdlib.h>
 
 #define BUG() abort()
-#define BUG_ON(val) { \
-	if (val) { \
-		fprintf(stderr, "!! %s:%s:%i: BUG_ON: %s\n\n", \
-			__FILE__, __func__, __LINE__, #val); \
-		abort(); \
-	} \
-}
+#define BUG_ON(val)                                                      \
+  {                                                                      \
+    if (val) {                                                           \
+      fprintf(stderr, "!! %s:%s:%i: BUG_ON: %s\n\n", __FILE__, __func__, \
+              __LINE__, #val);                                           \
+      abort();                                                           \
+    }                                                                    \
+  }
 
-#endif  /* VERITY_INCLUDE_LINUX_BUG_ */
+#endif /* VERITY_INCLUDE_LINUX_BUG_ */

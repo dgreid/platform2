@@ -19,47 +19,46 @@ namespace verity {
 // This class may not be used by multiple threads at once.
 class FileHasher {
  public:
-  FileHasher() : source_(NULL),
-                 destination_(NULL),
-                 block_limit_(0),
-                 alg_(NULL) { }
+  FileHasher()
+      : source_(NULL), destination_(NULL), block_limit_(0), alg_(NULL) {}
   // TODO(wad) add initialized_ variable to check.
-  virtual bool Initialize(simple_file::File *source,
-                          simple_file::File *destination,
+  virtual bool Initialize(simple_file::File* source,
+                          simple_file::File* destination,
                           unsigned int blocks,
-                          const char *alg);
+                          const char* alg);
   virtual bool Hash();
   virtual bool Store();
   // Print a table to stdout which contains a dmsetup compatible format
   virtual void PrintTable(bool colocated);
 
-  virtual const char *RandomSalt();
-  virtual void set_salt(const char *salt) {
+  virtual const char* RandomSalt();
+  virtual void set_salt(const char* salt) {
     if (!strcmp(salt, "random"))
       salt = RandomSalt();
     dm_bht_set_salt(&tree_, salt);
     salt_ = salt;
   }
-  virtual const char *salt(void) { return salt_; }
+  virtual const char* salt(void) { return salt_; }
 
-  virtual ~FileHasher() {};
-  static int WriteCallback(void *file,
+  virtual ~FileHasher(){};
+  static int WriteCallback(void* file,
                            sector_t start,
-                           u8 *dst,
+                           u8* dst,
                            sector_t count,
-                           struct dm_bht_entry *entry);
+                           struct dm_bht_entry* entry);
+
  private:
-  simple_file::File *source_;
-  simple_file::File *destination_;
+  simple_file::File* source_;
+  simple_file::File* destination_;
   unsigned int block_limit_;
-  const char *alg_;
-  const char *salt_;
+  const char* alg_;
+  const char* salt_;
   char random_salt_[DM_BHT_SALT_SIZE * 2 + 1];
-  u8 *hash_data_;
+  u8* hash_data_;
   struct dm_bht tree_;
   sector_t sectors_;
 };
 
 }  // namespace verity
 
-#endif   // VERITY_FILE_HASHER_H__
+#endif  // VERITY_FILE_HASHER_H__
