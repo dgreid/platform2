@@ -20,8 +20,8 @@ namespace {
 // Android data directory.
 constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data";
 
-// File extension for pstore backend file
-constexpr char kPstoreExtension[] = ".pstore";
+// ARCVM pstore path.
+constexpr const char kArcVmPstorePath[] = "/run/arcvm/arcvm.pstore";
 
 }  // namespace
 
@@ -165,17 +165,6 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   features.rootfs_writable = request.rootfs_writable();
   features.use_dev_conf = !request.ignore_dev_conf();
 
-  const auto pstore_path = GetFilePathFromName(
-      request.owner_id(), request.name(), STORAGE_CRYPTOHOME_ROOT,
-      kPstoreExtension, true /* create_parent_dir */);
-  if (!pstore_path) {
-    LOG(ERROR) << "Failed to get pstore path";
-
-    response.set_failure_reason("Failed to get pstore path");
-    writer.AppendProtoAsArrayOfBytes(response);
-    return dbus_response;
-  }
-
   base::FilePath data_dir = base::FilePath(kAndroidDataDir);
   if (!base::PathExists(data_dir)) {
     LOG(WARNING) << "Android data directory does not exist";
@@ -199,8 +188,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
       .AppendCustomParam("--android-fstab", fstab.value())
       .AppendCustomParam(
           "--pstore",
-          base::StringPrintf("path=%s,size=%d", (*pstore_path).value().c_str(),
-                             kPstoreSize))
+          base::StringPrintf("path=%s,size=%d", kArcVmPstorePath, kPstoreSize))
       .AppendSharedDir(shared_data)
       .AppendSharedDir(shared_data_media)
       .EnableSmt(false /* enable */);
