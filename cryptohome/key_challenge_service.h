@@ -9,7 +9,7 @@
 
 #include <base/callback.h>
 
-#include "rpc.pb.h"  // NOLINT(build/include)
+#include "cryptohome/rpc.pb.h"
 
 namespace cryptohome {
 

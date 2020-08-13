@@ -11,8 +11,8 @@
 #include <brillo/secure_blob.h>
 #include <gtest/gtest.h>
 
+#include "cryptohome/pinweaver.pb.h"
 #include "cryptohome/tpm2_impl.h"
-#include "pinweaver.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

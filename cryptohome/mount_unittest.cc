@@ -49,11 +49,10 @@
 #include "cryptohome/mock_user_session.h"
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/mount_helper.h"
+#include "cryptohome/timestamp.pb.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "timestamp.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 using brillo::SecureBlob;
 using base::FilePath;

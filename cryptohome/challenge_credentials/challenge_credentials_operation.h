@@ -15,7 +15,7 @@
 #include <base/threading/thread_checker.h>
 #include <brillo/secure_blob.h>
 
-#include "key.pb.h"  // NOLINT(build/include)
+#include "cryptohome/key.pb.h"
 
 namespace cryptohome {
 

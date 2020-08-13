@@ -13,8 +13,8 @@
 
 #include <brillo/secure_blob.h>
 
-#include "key.pb.h"                    // NOLINT(build/include)
-#include "signature_sealed_data.pb.h"  // NOLINT(build/include)
+#include "cryptohome/key.pb.h"
+#include "cryptohome/signature_sealed_data.pb.h"
 
 namespace cryptohome {
 

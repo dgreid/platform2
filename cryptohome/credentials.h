@@ -9,8 +9,8 @@
 
 #include <brillo/secure_blob.h>
 
-#include "key.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/key.pb.h"
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

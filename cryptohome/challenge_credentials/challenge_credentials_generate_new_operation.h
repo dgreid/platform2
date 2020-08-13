@@ -16,10 +16,9 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/challenge_credentials/challenge_credentials_operation.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/signature_sealing_backend.h"
-
-#include "key.pb.h"           // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

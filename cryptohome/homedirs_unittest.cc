@@ -32,8 +32,7 @@
 #include "cryptohome/mock_vault_keyset.h"
 #include "cryptohome/mock_vault_keyset_factory.h"
 #include "cryptohome/mount.h"
-
-#include "signed_secret.pb.h"  // NOLINT(build/include)
+#include "cryptohome/signed_secret.pb.h"
 
 using base::FilePath;
 using base::StringPrintf;

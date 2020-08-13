@@ -19,12 +19,11 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_operation.h"
 #include "cryptohome/credentials.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/key_challenge_service.h"
+#include "cryptohome/rpc.pb.h"
 #include "cryptohome/tpm.h"
-
-#include "key.pb.h"           // NOLINT(build/include)
-#include "rpc.pb.h"           // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

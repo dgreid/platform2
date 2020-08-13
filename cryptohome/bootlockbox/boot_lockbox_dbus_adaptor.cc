@@ -14,9 +14,8 @@
 #include <brillo/secure_blob.h>
 #include <dbus/dbus-protocol.h>
 
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 #include "cryptohome/bootlockbox/tpm_nvspace_interface.h"
-
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
 
 namespace {
 // Creates a dbus error message.

@@ -12,10 +12,9 @@
 #include <brillo/secure_blob.h>
 #include <gtest/gtest_prod.h>
 
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
+#include "cryptohome/bootlockbox/key_value_map.pb.h"
 #include "cryptohome/bootlockbox/tpm_nvspace_interface.h"
-
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
-#include "key_value_map.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

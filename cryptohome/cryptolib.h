@@ -16,9 +16,8 @@
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
 
+#include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto_error.h"
-
-#include "attestation.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

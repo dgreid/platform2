@@ -46,11 +46,10 @@
 #include "cryptohome/mount_utils.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/timestamp.pb.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "timestamp.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 using base::FilePath;
 using base::StringPrintf;

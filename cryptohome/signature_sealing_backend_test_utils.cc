@@ -8,8 +8,7 @@
 
 #include "cryptohome/mock_signature_sealing_backend.h"
 #include "cryptohome/protobuf_test_utils.h"
-
-#include "signature_sealed_data.pb.h"  // NOLINT(build/include)
+#include "cryptohome/signature_sealed_data.pb.h"
 
 using brillo::Blob;
 using brillo::BlobToString;

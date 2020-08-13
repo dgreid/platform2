@@ -21,9 +21,8 @@
 #include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 
 #include "cryptohome/platform.h"
-
-#include "rpc.pb.h"           // NOLINT(build/include_directory)
-#include "UserDataAuth.pb.h"  // NOLINT(build/include_directory)
+#include "cryptohome/rpc.pb.h"
+#include "cryptohome/UserDataAuth.pb.h"
 #include "dbus_adaptors/org.chromium.CryptohomeInterface.h"  // NOLINT(build/include_alpha)
 #include "user_data_auth/dbus-proxies.h"
 // The dbus_adaptor and proxy include must happen after the protobuf include

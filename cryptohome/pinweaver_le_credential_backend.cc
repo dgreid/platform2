@@ -21,8 +21,8 @@ extern "C" {
 #include <trunks/cr50_headers/pinweaver_types.h>
 }
 
+#include "cryptohome/pinweaver.pb.h"
 #include "cryptohome/tpm2_impl.h"
-#include "pinweaver.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

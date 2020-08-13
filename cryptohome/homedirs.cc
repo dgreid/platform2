@@ -29,14 +29,13 @@
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/dircrypto_util.h"
 #include "cryptohome/disk_cleanup.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/signed_secret.pb.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "key.pb.h"  // NOLINT(build/include)
-#include "signed_secret.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 using brillo::cryptohome::home::SanitizeUserNameWithSalt;

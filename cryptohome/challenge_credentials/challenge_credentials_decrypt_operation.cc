@@ -13,8 +13,7 @@
 
 #include "cryptohome/challenge_credentials/challenge_credentials_constants.h"
 #include "cryptohome/credentials.h"
-
-#include "signature_sealed_data.pb.h"  // NOLINT(build/include)
+#include "cryptohome/signature_sealed_data.pb.h"
 
 using brillo::Blob;
 using brillo::BlobFromString;

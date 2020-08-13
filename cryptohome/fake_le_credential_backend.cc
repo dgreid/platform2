@@ -9,7 +9,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cryptolib.h"
-#include "fake_le_credential_metadata.pb.h"  // NOLINT(build/include)
+#include "cryptohome/fake_le_credential_metadata.pb.h"
 
 namespace cryptohome {
 

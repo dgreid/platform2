@@ -11,11 +11,8 @@
 #include <dbus/cryptohome/dbus-constants.h>
 #include <brillo/dbus/dbus_method_response.h>
 
-#include "UserDataAuth.pb.h"
-// Note that cryptohome generates its own copy of UserDataAuth.pb.h, so we
-// shouldn't include from the system's version.
-
 #include "cryptohome/userdataauth.h"
+#include "cryptohome/UserDataAuth.pb.h"
 #include "dbus_adaptors/org.chromium.UserDataAuth.h"
 
 namespace cryptohome {

@@ -21,16 +21,15 @@
 #include "cryptohome/challenge_credentials/challenge_credentials_test_utils.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/mock_key_challenge_service.h"
 #include "cryptohome/mock_signature_sealing_backend.h"
 #include "cryptohome/mock_tpm.h"
+#include "cryptohome/rpc.pb.h"
+#include "cryptohome/signature_sealed_data.pb.h"
 #include "cryptohome/signature_sealing_backend.h"
 #include "cryptohome/signature_sealing_backend_test_utils.h"
-
-#include "key.pb.h"                    // NOLINT(build/include)
-#include "rpc.pb.h"                    // NOLINT(build/include)
-#include "signature_sealed_data.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"           // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 using brillo::Blob;
 using brillo::BlobToString;

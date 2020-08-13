@@ -64,17 +64,17 @@
 #include "cryptohome/glib_transition.h"
 #include "cryptohome/install_attributes.h"
 #include "cryptohome/interface.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/key_challenge_service.h"
 #include "cryptohome/key_challenge_service_factory.h"
 #include "cryptohome/key_challenge_service_factory_impl.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/rpc.pb.h"
 #include "cryptohome/service_distributed.h"
 #include "cryptohome/stateful_recovery.h"
 #include "cryptohome/tpm.h"
-#include "key.pb.h"           // NOLINT(build/include_directory)
-#include "rpc.pb.h"           // NOLINT(build/include_directory)
-#include "vault_keyset.pb.h"  // NOLINT(build/include_directory)
+#include "cryptohome/vault_keyset.pb.h"
 
 using base::FilePath;
 using brillo::Blob;

@@ -27,6 +27,7 @@ extern "C" {
 #include <scrypt/scryptenc.h>
 }
 
+#include "cryptohome/attestation.pb.h"
 #include "cryptohome/challenge_credential_auth_block.h"
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
@@ -41,8 +42,6 @@ extern "C" {
 #include "cryptohome/tpm_auth_block.h"
 #include "cryptohome/tpm_init.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "attestation.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 using brillo::SecureBlob;

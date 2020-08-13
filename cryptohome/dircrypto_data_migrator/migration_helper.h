@@ -16,14 +16,11 @@
 #include <base/synchronization/lock.h>
 #include <chromeos/dbus/service_constants.h>
 
-// Note that cryptohome generates its own copy of UserDataAuth.pb.h, so we
-// shouldn't include from the system's version.
-#include "UserDataAuth.pb.h"
-
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/dircrypto_data_migrator/atomic_flag.h"
 #include "cryptohome/migration_type.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/UserDataAuth.pb.h"
 
 namespace base {
 class Thread;

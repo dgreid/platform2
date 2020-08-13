@@ -34,18 +34,18 @@
 #include <chromeos/dbus/service_constants.h>
 #include <google/protobuf/message_lite.h>
 
+#include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/key.pb.h"
 #include "cryptohome/mount.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/rpc.pb.h"
+#include "cryptohome/signed_secret.pb.h"
+#include "cryptohome/vault_keyset.pb.h"
 
-#include "attestation.pb.h"  // NOLINT(build/include)
 #include "bindings/cryptohome.dbusclient.h"
-#include "key.pb.h"  // NOLINT(build/include)
-#include "rpc.pb.h"  // NOLINT(build/include)
-#include "signed_secret.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 using base::StringPrintf;

@@ -23,10 +23,10 @@
 #include <trousers/trousers.h>  // NOLINT(build/include_alpha) - needs tss.h
 
 #include "cryptohome/cryptolib.h"
+#include "cryptohome/key.pb.h"
+#include "cryptohome/signature_sealed_data.pb.h"
 #include "cryptohome/tpm1_static_utils.h"
 #include "cryptohome/tpm_impl.h"
-#include "key.pb.h"                    // NOLINT(build/include)
-#include "signature_sealed_data.pb.h"  // NOLINT(build/include)
 
 using brillo::Blob;
 using brillo::BlobFromString;

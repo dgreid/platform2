@@ -12,8 +12,8 @@
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
 
+#include "cryptohome/key.pb.h"
 #include "cryptohome/signature_sealing_backend.h"
-#include "key.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

@@ -9,12 +9,11 @@
 #include <gtest/gtest.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox_dbus_adaptor.h"
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 #include "cryptohome/bootlockbox/mock_nvram_boot_lockbox.h"
 #include "cryptohome/mock_tpm_init.h"
 
 #include "dbus_adaptors/org.chromium.BootLockboxInterface.h"
-
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
 
 using ::testing::_;
 using ::testing::NiceMock;

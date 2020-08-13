@@ -8,7 +8,7 @@
 #include <base/macros.h>
 #include <brillo/secure_blob.h>
 
-#include "boot_lockbox_key.pb.h"  // NOLINT(build/include)
+#include "cryptohome/boot_lockbox_key.pb.h"
 
 namespace cryptohome {
 

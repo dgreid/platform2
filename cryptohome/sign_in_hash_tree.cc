@@ -13,8 +13,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cryptolib.h"
-
-#include "hash_tree_leaf_data.pb.h"  // NOLINT(build/include)
+#include "cryptohome/hash_tree_leaf_data.pb.h"
 
 namespace cryptohome {
 

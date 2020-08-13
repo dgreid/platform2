@@ -12,7 +12,7 @@
 #include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
 
-#include "attestation.pb.h"  // NOLINT(build/include)
+#include "cryptohome/attestation.pb.h"
 
 namespace cryptohome {
 

@@ -9,9 +9,8 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/bootlockbox/boot_lockbox.h"
+#include "cryptohome/install_attributes.pb.h"
 #include "cryptohome/platform.h"
-
-#include "install_attributes.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 

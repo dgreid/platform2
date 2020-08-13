@@ -8,12 +8,8 @@
 #include <memory>
 #include <vector>
 
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 #include "cryptohome/bootlockbox/nvram_boot_lockbox.h"
-
-// Note that boot_lockbox_rpc.pb.h have to be included before
-// dbus_adaptors/org.chromium.BootLockboxInterface.h because it is used in
-// there.
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
 
 #include "dbus_adaptors/org.chromium.BootLockboxInterface.h"
 

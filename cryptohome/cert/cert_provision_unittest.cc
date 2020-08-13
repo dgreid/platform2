@@ -16,17 +16,15 @@
 #include <openssl/sha.h>
 #include <openssl/x509.h>
 
+#include "cert/cert_provision.pb.h"
 #include "cryptohome/cert/cert_provision_cryptohome.h"
 #include "cryptohome/cert/cert_provision_keystore.h"
 #include "cryptohome/cert/cert_provision_pca.h"
 #include "cryptohome/cert/cert_provision_util.h"
-#include "cryptohome/cert_provision.h"
-
 #include "cryptohome/cert/mock_cert_provision_cryptohome.h"
 #include "cryptohome/cert/mock_cert_provision_keystore.h"
 #include "cryptohome/cert/mock_cert_provision_pca.h"
-
-#include "cert/cert_provision.pb.h"  // NOLINT(build/include)
+#include "cryptohome/cert_provision.h"
 
 using ::brillo::SecureBlob;
 using ::google::protobuf::MessageLite;

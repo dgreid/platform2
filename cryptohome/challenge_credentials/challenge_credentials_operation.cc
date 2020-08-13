@@ -9,8 +9,7 @@
 
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/key_challenge_service.h"
-
-#include "rpc.pb.h"  // NOLINT(build/include)
+#include "cryptohome/rpc.pb.h"
 
 using brillo::Blob;
 using brillo::BlobFromString;

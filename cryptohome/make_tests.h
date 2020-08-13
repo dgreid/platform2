@@ -21,8 +21,7 @@
 #include "cryptohome/make_tests.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

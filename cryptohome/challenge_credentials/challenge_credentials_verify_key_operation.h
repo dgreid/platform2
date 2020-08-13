@@ -13,8 +13,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/challenge_credentials/challenge_credentials_operation.h"
-
-#include "key.pb.h"  // NOLINT(build/include)
+#include "cryptohome/key.pb.h"
 
 namespace cryptohome {
 

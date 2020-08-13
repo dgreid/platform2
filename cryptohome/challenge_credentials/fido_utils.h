@@ -14,8 +14,8 @@
 
 #include <base/time/time.h>
 
-#include "fido.pb.h"  // NOLINT(build/include)
-#include "rpc.pb.h"   // NOLINT(build/include)
+#include "cryptohome/fido.pb.h"
+#include "cryptohome/rpc.pb.h"
 
 namespace cryptohome {
 

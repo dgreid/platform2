@@ -26,11 +26,10 @@
 #include <policy/libpolicy.h>
 
 #include "cryptohome/mount_factory.h"
+#include "cryptohome/rpc.pb.h"
 #include "cryptohome/vault_keyset.h"
+#include "cryptohome/vault_keyset.pb.h"
 #include "cryptohome/vault_keyset_factory.h"
-
-#include "rpc.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
 
 namespace cryptohome {
 

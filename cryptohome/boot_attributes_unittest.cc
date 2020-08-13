@@ -15,11 +15,10 @@
 #include <gtest/gtest.h>
 
 #include "cryptohome/bootlockbox/mock_boot_lockbox.h"
+#include "cryptohome/install_attributes.pb.h"
 #include "cryptohome/mock_crypto.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
-
-#include "install_attributes.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 using ::testing::_;

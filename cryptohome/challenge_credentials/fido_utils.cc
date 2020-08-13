@@ -13,8 +13,7 @@
 #include <brillo/secure_blob.h>
 
 #include "cryptohome/cryptolib.h"
-
-#include "fido.pb.h"  // NOLINT(build/include)
+#include "cryptohome/fido.pb.h"
 
 namespace cryptohome {
 

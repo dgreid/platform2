@@ -39,12 +39,11 @@
 #include "cryptohome/mount_helper.h"
 #include "cryptohome/out_of_process_mount_helper.h"
 #include "cryptohome/platform.h"
+#include "cryptohome/timestamp.pb.h"
 #include "cryptohome/user_oldest_activity_timestamp_cache.h"
 #include "cryptohome/user_session.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "timestamp.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

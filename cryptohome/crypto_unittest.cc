@@ -19,14 +19,13 @@
 #include <gtest/gtest.h>
 #include <vector>
 
+#include "cryptohome/attestation.pb.h"
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/cryptolib.h"
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 #include "cryptohome/mock_tpm_init.h"
 #include "cryptohome/vault_keyset.h"
-
-#include "attestation.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 using brillo::Blob;

@@ -11,7 +11,7 @@
 
 #include <base/synchronization/lock.h>
 
-#include "tpm_status.pb.h"  // NOLINT(build/include)
+#include "cryptohome/tpm_status.pb.h"
 
 namespace cryptohome {
 

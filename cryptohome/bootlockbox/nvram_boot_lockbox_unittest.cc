@@ -13,7 +13,7 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 
 namespace {
 const char kTestFilePath[] = "test_file_path.pb";

@@ -41,9 +41,8 @@
 #include "cryptohome/mount_factory.h"
 #include "cryptohome/mount_task.h"
 #include "cryptohome/pkcs11_init.h"
+#include "cryptohome/rpc.pb.h"
 #include "cryptohome/tpm_init.h"
-
-#include "rpc.pb.h"  // NOLINT(build/include_directory)
 
 namespace chaps {
 class TokenManagerClient;

@@ -11,9 +11,9 @@
 #include <base/memory/ref_counted.h>
 
 #include "cryptohome/key_challenge_service.h"
+#include "cryptohome/rpc.pb.h"
 
 #include "cryptohome_key_delegate/dbus-proxies.h"
-#include "rpc.pb.h"  // NOLINT(build/include)
 
 namespace dbus {
 class Bus;

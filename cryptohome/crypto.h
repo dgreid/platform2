@@ -28,8 +28,7 @@
 #include "cryptohome/le_credential_manager.h"
 #include "cryptohome/tpm.h"
 #include "cryptohome/tpm_init.h"
-
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 

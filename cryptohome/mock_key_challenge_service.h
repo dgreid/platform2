@@ -12,10 +12,9 @@
 #include <brillo/secure_blob.h>
 #include <gmock/gmock.h>
 
+#include "cryptohome/key.pb.h"
 #include "cryptohome/key_challenge_service.h"
-
-#include "key.pb.h"  // NOLINT(build/include)
-#include "rpc.pb.h"  // NOLINT(build/include)
+#include "cryptohome/rpc.pb.h"
 
 namespace cryptohome {
 

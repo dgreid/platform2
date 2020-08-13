@@ -14,10 +14,9 @@
 #include <base/logging.h>
 #include <base/time/time.h>
 
+#include "cryptohome/install_attributes.pb.h"
 #include "cryptohome/lockbox.h"
 #include "cryptohome/tpm_init.h"
-
-#include "install_attributes.pb.h"  // NOLINT(build/include)
 
 using base::FilePath;
 

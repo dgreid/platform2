@@ -33,10 +33,7 @@
 #include "cryptohome/mount_factory.h"
 #include "cryptohome/pkcs11_init.h"
 #include "cryptohome/platform.h"
-
-#include "UserDataAuth.pb.h"
-// Note that cryptohome generates its own copy of UserDataAuth.pb.h, so we
-// shouldn't include from the system's version.
+#include "cryptohome/UserDataAuth.pb.h"
 
 namespace cryptohome {
 

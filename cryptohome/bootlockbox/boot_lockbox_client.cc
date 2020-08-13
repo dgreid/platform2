@@ -16,7 +16,7 @@
 // Note that boot_lockbox_rpc.pb.h have to be included before
 // dbus_adaptors/org.chromium.BootLockboxInterface.h because it is used in
 // there.
-#include "boot_lockbox_rpc.pb.h"  // NOLINT(build/include)
+#include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 
 #include "bootlockbox/dbus-proxies.h"
 

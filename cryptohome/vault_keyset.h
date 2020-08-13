@@ -14,9 +14,8 @@
 #include "cryptohome/crypto.h"
 #include "cryptohome/crypto_error.h"
 #include "cryptohome/cryptohome_common.h"
-
-#include "timestamp.pb.h"  // NOLINT(build/include)
-#include "vault_keyset.pb.h"  // NOLINT(build/include)
+#include "cryptohome/timestamp.pb.h"
+#include "cryptohome/vault_keyset.pb.h"
 
 namespace cryptohome {
 
