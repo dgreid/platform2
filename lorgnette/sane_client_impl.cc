@@ -9,8 +9,23 @@
 #include <sane/saneopts.h>
 
 #include "lorgnette/dbus_adaptors/org.chromium.lorgnette.Manager.h"
+#include "lorgnette/guess_source.h"
 
 namespace lorgnette {
+
+namespace {
+
+DocumentSource CreateDocumentSource(const std::string& name) {
+  DocumentSource source;
+  source.set_name(name);
+  base::Optional<SourceType> type = GuessSourceType(name);
+  if (type.has_value()) {
+    source.set_type(type.value());
+  }
+  return source;
+}
+
+}  // namespace
 
 // static
 std::unique_ptr<SaneClientImpl> SaneClientImpl::Create() {
@@ -139,11 +154,16 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (!GetValidStringOptionValues(error, kSource, &values.sources)) {
+  std::vector<std::string> source_names;
+  if (!GetValidStringOptionValues(error, kSource, &source_names)) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
                          "Failed to get valid values for sources setting");
     return false;
+  }
+
+  for (const std::string& source_name : source_names) {
+    values.sources.push_back(CreateDocumentSource(source_name));
   }
 
   if (!GetValidStringOptionValues(error, kScanMode, &values.color_modes)) {
@@ -185,6 +205,26 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
     options_[kResolution] = option;
   }
 
+  return true;
+}
+
+bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
+                                       DocumentSource* source_out) {
+  if (!source_out) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError,
+                         "source_out argument cannot be null");
+    return false;
+  }
+
+  if (options_.count(kSource) == 0) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "No source option found.");
+    return false;
+  }
+
+  std::string source_name = options_[kSource].value.s;
+  *source_out = CreateDocumentSource(source_name);
   return true;
 }
 

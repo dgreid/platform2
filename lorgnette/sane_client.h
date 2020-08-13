@@ -18,7 +18,7 @@ namespace lorgnette {
 
 struct ValidOptionValues {
   std::vector<uint32_t> resolutions;
-  std::vector<std::string> sources;
+  std::vector<DocumentSource> sources;
   std::vector<std::string> color_modes;
 };
 
@@ -46,6 +46,8 @@ class SaneDevice {
                                     ValidOptionValues* values) = 0;
 
   virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
+  virtual bool GetDocumentSource(brillo::ErrorPtr* error,
+                                 DocumentSource* source_out) = 0;
   virtual bool SetDocumentSource(brillo::ErrorPtr* error,
                                  const DocumentSource& source) = 0;
   virtual bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) = 0;

@@ -41,6 +41,13 @@ namespace lorgnette {
 
 #define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
 
+DocumentSource CreateDocumentSource(const std::string& name, SourceType type) {
+  DocumentSource source;
+  source.set_name(name);
+  source.set_type(type);
+  return source;
+}
+
 class ManagerTest : public testing::Test {
  protected:
   ManagerTest()
@@ -148,7 +155,10 @@ TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   ValidOptionValues opts;
   opts.resolutions = {100, 200, 300, 600};
-  opts.sources = {"FB", "Negative", "Automatic Document Feeder"};
+  opts.sources = {
+      CreateDocumentSource("FB", SOURCE_PLATEN),
+      CreateDocumentSource("Negative", SOURCE_UNSPECIFIED),
+      CreateDocumentSource("Automatic Document Feeder", SOURCE_ADF_SIMPLEX)};
   opts.color_modes = {kScanPropertyModeColor};
   device->SetValidOptionValues(opts);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));

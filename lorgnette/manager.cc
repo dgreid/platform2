@@ -25,7 +25,6 @@
 #include "lorgnette/enums.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
-#include "lorgnette/guess_source.h"
 #include "lorgnette/sane_client.h"
 
 using std::string;
@@ -350,14 +349,11 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
     capabilities.add_resolutions(resolution);
   }
 
-  for (const std::string& source_name : options.sources) {
-    base::Optional<SourceType> type = GuessSourceType(source_name);
-    if (type.has_value()) {
-      DocumentSource* source = capabilities.add_sources();
-      source->set_type(type.value());
-      source->set_name(source_name);
+  for (const DocumentSource& source : options.sources) {
+    if (source.type() != SOURCE_UNSPECIFIED) {
+      *capabilities.add_sources() = source;
     } else {
-      LOG(INFO) << "Ignoring source '" << source_name << "' of unknown type.";
+      LOG(INFO) << "Ignoring source '" << source.name() << "' of unknown type.";
     }
   }
 

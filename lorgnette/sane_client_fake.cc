@@ -89,8 +89,18 @@ bool SaneDeviceFake::SetScanResolution(brillo::ErrorPtr*, int) {
   return true;
 }
 
+bool SaneDeviceFake::GetDocumentSource(brillo::ErrorPtr*,
+                                       DocumentSource* source_out) {
+  if (!source_out)
+    return false;
+
+  *source_out = document_source_;
+  return true;
+}
+
 bool SaneDeviceFake::SetDocumentSource(brillo::ErrorPtr*,
-                                       const DocumentSource&) {
+                                       const DocumentSource& document_source) {
+  document_source_ = document_source;
   return true;
 }
 
