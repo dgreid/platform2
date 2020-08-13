@@ -65,6 +65,7 @@ enum BodyLength {
 }
 
 struct ResponseReader<R: BufRead + Sized> {
+    verbose_log: bool,
     reader: R,
     body_length: BodyLength,
     header_was_read: bool,
@@ -75,8 +76,9 @@ impl<R> ResponseReader<R>
 where
     R: BufRead + Sized,
 {
-    fn new(reader: R) -> ResponseReader<R> {
+    fn new(verbose_log: bool, reader: R) -> ResponseReader<R> {
         ResponseReader {
+            verbose_log,
             reader,
             // Assume body is empty unless we see a header to the contrary.
             body_length: BodyLength::Exactly(0),
@@ -110,6 +112,9 @@ where
                 let mut parsed_headers = Vec::new();
                 for header in headers.iter().take_while(|&&h| h != httparse::EMPTY_HEADER) {
                     if let Ok(h) = Header::from_bytes(header.name, header.value) {
+                        if self.verbose_log {
+                            debug!("  {}: {}", h.field, h.value);
+                        }
                         parsed_headers.push(h);
                     } else {
                         error!(
@@ -323,19 +328,36 @@ fn rewrite_request(request: &tiny_http::Request) -> Request {
     }
 }
 
-fn serialize_request_header(request: &Request, writer: &mut dyn Write) -> io::Result<()> {
+fn serialize_request_header(
+    verbose_log: bool,
+    request: &Request,
+    writer: &mut dyn Write,
+) -> io::Result<()> {
     write!(writer, "{} {} HTTP/1.1\r\n", request.method, request.url)?;
+    if verbose_log {
+        debug!("{} {} HTTP/1.1\\r\n", request.method, request.url);
+    }
     for (field, values) in request.headers.values.iter() {
         for value in values.iter() {
             write!(writer, "{}: {}\r\n", field, value)?;
+            if verbose_log {
+                debug!("  {}: {}\\r", field, value);
+            }
         }
     }
 
     write!(writer, "\r\n")?;
+    if verbose_log {
+        debug!("\\r");
+    }
     writer.flush()
 }
 
-pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Result<()> {
+pub fn handle_request(
+    verbose_log: bool,
+    usb: UsbConnection,
+    mut request: tiny_http::Request,
+) -> Result<()> {
     debug!(
         "< {} {} HTTP/1.{}",
         request.method(),
@@ -347,7 +369,7 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
     // Transfer-Encoding headers based on how the body (if any) will be transferred.
     let new_request = rewrite_request(&request);
 
-    let mut logging_reader = LoggingReader::new(request.as_reader(), "client".to_string());
+    let mut logging_reader = LoggingReader::new(request.as_reader(), "client");
     let mut request_body: Box<dyn Read> = match new_request.forwarded_body_length {
         BodyLength::Exactly(length) => {
             // If we're not using chunked, we must have the entire request body before beginning to
@@ -362,14 +384,15 @@ pub fn handle_request(usb: UsbConnection, mut request: tiny_http::Request) -> Re
 
     let mut usb_writer = BufWriter::new(&usb);
     // Write the modified request header to the printer.
-    serialize_request_header(&new_request, &mut usb_writer).map_err(Error::WriteRequestHeader)?;
+    serialize_request_header(verbose_log, &new_request, &mut usb_writer)
+        .map_err(Error::WriteRequestHeader)?;
 
     // Now that we have written data to the printer, we must ensure that we read
     // a complete HTTP response from the printer. Otherwise, that data may
     // remain in the printer's buffers and be sent to some other client.
     // ResponseReader ensures that this happens internally.
-    let usb_reader = BufReader::new(&usb);
-    let mut response_reader = ResponseReader::new(usb_reader);
+    let usb_reader = BufReader::new(LoggingReader::new(&usb, "printer"));
+    let mut response_reader = ResponseReader::new(verbose_log, usb_reader);
 
     if new_request.body_length != BodyLength::Exactly(0) {
         debug!("* Forwarding client request body");

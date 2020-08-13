@@ -314,12 +314,13 @@ impl rusb::Hotplug<GlobalContext> for CallbackHandler {
 /// get_connection(), and use that UsbConnection to perform I/O to the device.
 #[derive(Clone)]
 pub struct UsbConnector {
+    verbose_log: bool,
     handle: Arc<rusb::DeviceHandle<GlobalContext>>,
     manager: InterfaceManager,
 }
 
 impl UsbConnector {
-    pub fn new(bus_device: Option<(u8, u8)>) -> Result<UsbConnector> {
+    pub fn new(verbose_log: bool, bus_device: Option<(u8, u8)>) -> Result<UsbConnector> {
         let device_list = rusb::DeviceList::new().map_err(Error::DeviceList)?;
 
         let (device, info) = match bus_device {
@@ -387,6 +388,7 @@ impl UsbConnector {
         }
 
         Ok(UsbConnector {
+            verbose_log,
             handle: Arc::new(handle),
             manager: InterfaceManager::new(connections),
         })
@@ -398,13 +400,14 @@ impl UsbConnector {
 
     pub fn get_connection(&mut self) -> UsbConnection {
         let interface = self.manager.request_interface();
-        UsbConnection::new(self.manager.clone(), interface)
+        UsbConnection::new(self.verbose_log, self.manager.clone(), interface)
     }
 }
 
 /// A struct representing a claimed IPPUSB interface. The owner of this struct
 /// can communicate with the IPPUSB device via the Read and Write.
 pub struct UsbConnection {
+    verbose_log: bool,
     manager: InterfaceManager,
     // `interface` is never None until the UsbConnection is dropped, at which point the
     // ClaimedInterface is returned to the pool of connections in InterfaceManager.
@@ -412,8 +415,9 @@ pub struct UsbConnection {
 }
 
 impl UsbConnection {
-    fn new(manager: InterfaceManager, interface: ClaimedInterface) -> Self {
+    fn new(verbose_log: bool, manager: InterfaceManager, interface: ClaimedInterface) -> Self {
         Self {
+            verbose_log,
             manager,
             interface: Some(interface),
         }
@@ -445,10 +449,27 @@ impl Write for &UsbConnection {
         // Unwrap because interface only becomes None at drop.
         let interface = self.interface.as_ref().unwrap();
         let endpoint = interface.descriptor.out_endpoint;
-        interface
+        let written = interface
             .handle
             .write_bulk(endpoint, buf, USB_TRANSFER_TIMEOUT)
-            .map_err(to_io_error)
+            .map_err(to_io_error)?;
+
+        if self.verbose_log {
+            let mut output = String::new();
+            for byte in buf[..written].iter() {
+                let c = *byte as char;
+                if c == '\n' {
+                    output.push(c);
+                } else {
+                    for v in c.escape_default() {
+                        output.push(v);
+                    }
+                }
+            }
+            debug!("USB write:\n{}", output);
+        }
+
+        Ok(written)
     }
 
     fn flush(&mut self) -> io::Result<()> {

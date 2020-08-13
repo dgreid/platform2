@@ -70,8 +70,11 @@ impl<R> LoggingReader<R>
 where
     R: Read,
 {
-    pub fn new(reader: R, name: String) -> Self {
-        Self { reader, name }
+    pub fn new(reader: R, name: &str) -> Self {
+        Self {
+            reader,
+            name: name.to_string(),
+        }
     }
 }
 

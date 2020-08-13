@@ -40,6 +40,7 @@ pub struct Args {
     pub bus_device: Option<(u8, u8)>,
     pub keep_alive: Option<PathBuf>,
     pub unix_socket: Option<PathBuf>,
+    pub verbose_log: bool,
 }
 
 impl Args {
@@ -55,6 +56,7 @@ impl Args {
                 "Path to unix socket to listen on",
                 "PATH",
             )
+            .optflag("v", "verbose", "Enable verbose logging")
             .optflag("h", "help", "Print help message");
 
         let args = args.iter().map(|s| s.as_ref());
@@ -94,11 +96,13 @@ impl Args {
 
         let keep_alive = matches.opt_str("keep-alive").map(PathBuf::from);
         let unix_socket = matches.opt_str("unix-socket").map(PathBuf::from);
+        let verbose_log = matches.opt_present("v");
 
         Ok(Some(Args {
             bus_device,
             keep_alive,
             unix_socket,
+            verbose_log,
         }))
     }
 }
@@ -172,5 +176,23 @@ mod tests {
         );
 
         assert!(Args::parse(&["ippusb-bridge", "--unix-socket"]).is_err());
+    }
+
+    #[test]
+    fn verbose() {
+        let args = Args::parse(&["ippusb-bridge"])
+            .expect("No args format should parse correctly")
+            .expect("Options struct should be returned");
+        assert!(!args.verbose_log);
+
+        let args = Args::parse(&["ippusb-bridge", "-v"])
+            .expect("Short verbose flag should parse correctly")
+            .expect("Options struct should be returned");
+        assert!(args.verbose_log);
+
+        let args = Args::parse(&["ippusb-bridge", "--verbose"])
+            .expect("Long verbose flag should parse correctly")
+            .expect("Options struct should be returned");
+        assert!(args.verbose_log);
     }
 }

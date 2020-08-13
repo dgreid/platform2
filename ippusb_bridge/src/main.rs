@@ -97,6 +97,8 @@ fn add_sigint_handler(shutdown_fd: EventFd) -> sys_util::Result<()> {
 }
 
 struct Daemon<A: Accept> {
+    verbose_log: bool,
+
     shutdown: EventFd,
     listener: A,
     usb: UsbConnector,
@@ -118,12 +120,14 @@ struct Daemon<A: Accept> {
 
 impl<A: Accept> Daemon<A> {
     fn new(
+        verbose_log: bool,
         shutdown: EventFd,
         listener: A,
         usb: UsbConnector,
         keep_alive_socket: Option<ScopedUnixListener>,
     ) -> Result<Self> {
         Ok(Self {
+            verbose_log,
             shutdown,
             listener,
             usb,
@@ -270,11 +274,12 @@ impl<A: Accept> Daemon<A> {
         let connection = ClientConnection::new(stream);
         let mut thread_usb = self.usb.clone();
         let thread_connection_tracker = self.connection_tracker.clone();
+        let verbose = self.verbose_log;
         std::thread::spawn(move || {
             thread_connection_tracker.lock().client_connected();
             for request in connection {
                 let usb_conn = thread_usb.get_connection();
-                if let Err(e) = handle_request(usb_conn, request) {
+                if let Err(e) = handle_request(verbose, usb_conn, request) {
                     error!("Handling request failed: {}", e);
                 }
             }
@@ -305,7 +310,8 @@ fn run() -> Result<()> {
         })
         .transpose()?;
 
-    let usb = UsbConnector::new(args.bus_device).map_err(Error::CreateUsbConnector)?;
+    let usb =
+        UsbConnector::new(args.verbose_log, args.bus_device).map_err(Error::CreateUsbConnector)?;
     let unplug_shutdown_fd = shutdown_fd.try_clone().map_err(Error::EventFd)?;
     let _unplug = UnplugDetector::new(usb.device(), unplug_shutdown_fd, &SHUTDOWN);
 
@@ -313,13 +319,25 @@ fn run() -> Result<()> {
         info!("Listening on {}", unix_socket_path.display());
         let unix_listener =
             ScopedUnixListener(UnixListener::bind(unix_socket_path).map_err(Error::CreateSocket)?);
-        let mut daemon = Daemon::new(shutdown_fd, unix_listener, usb, keep_alive_socket)?;
+        let mut daemon = Daemon::new(
+            args.verbose_log,
+            shutdown_fd,
+            unix_listener,
+            usb,
+            keep_alive_socket,
+        )?;
         daemon.run()?;
     } else {
         let host = "127.0.0.1:60000";
         info!("Listening on {}", host);
         let tcp_listener = TcpListener::bind(host).map_err(Error::CreateSocket)?;
-        let mut daemon = Daemon::new(shutdown_fd, tcp_listener, usb, keep_alive_socket)?;
+        let mut daemon = Daemon::new(
+            args.verbose_log,
+            shutdown_fd,
+            tcp_listener,
+            usb,
+            keep_alive_socket,
+        )?;
         daemon.run()?;
     }
 
