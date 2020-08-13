@@ -223,6 +223,14 @@ bool OutOfProcessMountHelper::LaunchOutOfProcessHelper(
 }
 
 bool OutOfProcessMountHelper::TearDownEphemeralMount() {
+  return TearDownExistingMount();
+}
+
+void OutOfProcessMountHelper::TearDownNonEphemeralMount() {
+  TearDownExistingMount();
+}
+
+bool OutOfProcessMountHelper::TearDownExistingMount() {
   if (!helper_process_) {
     LOG(WARNING) << "Can't tear down mount, OOP mount helper is not running";
     return false;

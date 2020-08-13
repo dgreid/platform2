@@ -60,6 +60,9 @@ class MountHelperInterface {
   // Tears down the existing ephemeral mount.
   virtual bool TearDownEphemeralMount() = 0;
 
+  // Tears down non-ephemeral cryptohome mount.
+  virtual void TearDownNonEphemeralMount() = 0;
+
   // Carries out mount operations for a regular cryptohome.
   virtual bool PerformMount(const Options& mount_opts,
                             const std::string& username,
@@ -135,6 +138,9 @@ class MountHelper : public MountHelperInterface {
 
   // Tears down an ephemeral cryptohome mount in-process by calling umount(2).
   bool TearDownEphemeralMount() override;
+
+  // Tears down non-ephemeral cryptohome mount in-process by calling umount(2).
+  void TearDownNonEphemeralMount() override;
 
   // Unmounts all mount points.
   // Relies on ForceUnmount() internally; see the caveat listed for it.

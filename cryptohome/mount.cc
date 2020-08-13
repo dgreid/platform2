@@ -1165,8 +1165,8 @@ bool Mount::MountGuestCryptohome() {
     // Ephemeral cryptohomes for Guest sessions are mounted out-of-process.
     ephemeral_mounter = out_of_process_mounter_.get();
     // This callback will be executed in the destructor at the latest so
-    // |out_of_process_mounter_| will always be valid. Error repoting is done in
-    // the helper process in cryptohome_namespace_mounter.cc.
+    // |out_of_process_mounter_| will always be valid. Error reporting is done
+    // in the helper process in cryptohome_namespace_mounter.cc.
     cleanup = base::Bind(
         base::IgnoreResult(&OutOfProcessMountHelper::TearDownEphemeralMount),
         base::Unretained(out_of_process_mounter_.get()));

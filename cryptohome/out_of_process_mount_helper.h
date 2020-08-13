@@ -58,6 +58,10 @@ class OutOfProcessMountHelper : public MountHelperInterface {
   // helper.
   bool TearDownEphemeralMount() override;
 
+  // Tears down the non-ephemeral cryptohome mount by terminating the
+  // out-of-process helper.
+  void TearDownNonEphemeralMount() override;
+
   // Returns whether an ephemeral mount operation can be performed.
   bool CanPerformEphemeralMount() const override;
 
@@ -85,6 +89,10 @@ class OutOfProcessMountHelper : public MountHelperInterface {
   // Kills the out-of-process helper if it's still running, and Reset()s the
   // Process instance to close all pipe file descriptors.
   void KillOutOfProcessHelperIfNecessary();
+
+  // Tears down the existing cryptohome mount by terminating the out-of-process
+  // helper.
+  bool TearDownExistingMount();
 
   // Stores the global system salt.
   brillo::SecureBlob system_salt_;

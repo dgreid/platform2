@@ -860,6 +860,10 @@ bool MountHelper::TearDownEphemeralMount() {
   return CleanUpEphemeral();
 }
 
+void MountHelper::TearDownNonEphemeralMount() {
+  UnmountAll();
+}
+
 void MountHelper::UnmountAll() {
   FilePath src, dest;
   const FilePath ephemeral_mount_path =
