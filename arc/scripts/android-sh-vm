@@ -14,7 +14,8 @@ owner_id="$(dbus-send \
   | awk 'NR==3' \
   | cut -d "\"" -f2)"
 if [ -z "${owner_id}" ]; then
-  echo "$0: Could not connect, cannot get owner_id" >&2
+  echo "$0: ARCVM might not be running. Please check /var/log/messages \
+for boot up errors" >&2
   exit 1
 fi
 vm_name=arcvm
