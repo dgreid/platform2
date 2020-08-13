@@ -498,10 +498,21 @@ namespace iioservice {
 constexpr char kIioserviceServiceName[] = "org.chromium.Iioservice";
 constexpr char kIioserviceServicePath[] = "/org/chromium/Iioservice";
 constexpr char kIioserviceInterfaceName[] = "org.chromium.Iioservice";
+
 // Methods
-constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
-// Token identifying the primordial Mojo pipe passed to BootstrapMojoConnection.
-constexpr char kBootstrapMojoConnectionChannelToken[] = "iioservice-bootstrap";
+constexpr char kServerBootstrapMojoConnectionMethod[] =
+    "ServerBootstrapMojoConnection";
+// Token identifying the primordial Mojo pipe passed to
+// ServerBootstrapMojoConnection.
+constexpr char kServerBootstrapMojoConnectionChannelToken[] =
+    "iioservice-server-bootstrap";
+
+constexpr char kClientBootstrapMojoConnectionMethod[] =
+    "ClientBootstrapMojoConnection";
+// Token identifying the primordial Mojo pipe passed to
+// ClientBootstrapMojoConnection.
+constexpr char kClientBootstrapMojoConnectionChannelToken[] =
+    "iioservice-client-bootstrap";
 }  // namespace iioservice
 
 namespace virtual_file_provider {
