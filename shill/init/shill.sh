@@ -17,6 +17,10 @@ elif [ -n "${SHILL_TEST_DEVICES}" ]; then
   ARGS="${ARGS} --devices-blocked=${SHILL_TEST_DEVICES}"
 fi
 
+if [ -n "${ALLOWED_DEVICES}" ]; then
+  ARGS="${ARGS} --devices-allowed=${ALLOWED_DEVICES}"
+fi
+
 if [ -n "${SHILL_PASSIVE_MODE}" ]; then
   ARGS="${ARGS} --passive-mode"
 fi
