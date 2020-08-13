@@ -41,12 +41,48 @@ namespace lorgnette {
 
 #define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
 
+namespace {
+
+void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,
+                     const std::string& scan_uuid) {
+  EXPECT_GE(signals.size(), 1);
+  EXPECT_EQ(signals.back().scan_uuid(), scan_uuid);
+  EXPECT_EQ(signals.back().state(), SCAN_STATE_COMPLETED);
+
+  int progress = 0;
+  for (auto it = signals.begin();
+       it != signals.end() && next(it) != signals.end(); it++) {
+    const ScanStatusChangedSignal& signal = *it;
+    EXPECT_EQ(signal.scan_uuid(), scan_uuid);
+    EXPECT_EQ(signal.state(), SCAN_STATE_IN_PROGRESS);
+    EXPECT_GT(signal.progress(), progress);
+    progress = signal.progress();
+  }
+}
+
+std::unique_ptr<MockDBusMethodResponse<std::vector<uint8_t>>>
+BuildMockDBusResponse(StartScanResponse* response) {
+  auto dbus_response =
+      std::make_unique<MockDBusMethodResponse<std::vector<uint8_t>>>();
+  dbus_response->set_return_callback(base::BindRepeating(
+      [](StartScanResponse* response_out,
+         const std::vector<uint8_t>& serialized_response) {
+        ASSERT_TRUE(response_out);
+        ASSERT_TRUE(response_out->ParseFromArray(serialized_response.data(),
+                                                 serialized_response.size()));
+      },
+      base::Unretained(response)));
+  return dbus_response;
+}
+
 DocumentSource CreateDocumentSource(const std::string& name, SourceType type) {
   DocumentSource source;
   source.set_name(name);
   source.set_type(type);
   return source;
 }
+
+}  // namespace
 
 class ManagerTest : public testing::Test {
  protected:
@@ -66,17 +102,6 @@ class ManagerTest : public testing::Test {
                     base::File::FLAG_CREATE | base::File::FLAG_WRITE);
     ASSERT_TRUE(scan.IsValid());
     scan_fd_ = base::ScopedFD(scan.TakePlatformFile());
-
-    dbus_response_ =
-        std::make_unique<MockDBusMethodResponse<std::vector<uint8_t>>>();
-    dbus_response_->set_return_callback(base::BindRepeating(
-        [](StartScanResponse* response_out,
-           const std::vector<uint8_t>& serialized_response) {
-          ASSERT_TRUE(response_out);
-          ASSERT_TRUE(response_out->ParseFromArray(serialized_response.data(),
-                                                   serialized_response.size()));
-        },
-        base::Unretained(&response_)));
 
     manager_.SetScanStatusChangedSignalSenderForTest(base::BindRepeating(
         [](std::vector<ScanStatusChangedSignal>* signals,
@@ -115,18 +140,6 @@ class ManagerTest : public testing::Test {
         << path_a << " and " << path_b << " are not the same image";
   }
 
-  void ValidateProgressSignals(const std::string& scan_uuid) {
-    int progress = 0;
-    for (auto it = signals_.begin();
-         it != signals_.end() && next(it) != signals_.end(); it++) {
-      const ScanStatusChangedSignal& signal = *it;
-      EXPECT_EQ(signal.scan_uuid(), scan_uuid);
-      EXPECT_EQ(signal.state(), SCAN_STATE_IN_PROGRESS);
-      EXPECT_GT(signal.progress(), progress);
-      progress = signal.progress();
-    }
-  }
-
   void SetUpTestDevice(const std::string& name,
                        const base::FilePath& image_path,
                        const ScanParameters& parameters) {
@@ -139,8 +152,30 @@ class ManagerTest : public testing::Test {
     sane_client_->SetDeviceForName(name, std::move(device));
   }
 
-  std::unique_ptr<MockDBusMethodResponse<std::vector<uint8_t>>> dbus_response_;
-  StartScanResponse response_;
+  StartScanResponse StartScan(const std::string& device_name,
+                              ColorMode color_mode,
+                              const base::ScopedFD& fd) {
+    StartScanRequest request;
+    request.set_device_name(device_name);
+    request.mutable_settings()->set_color_mode(color_mode);
+
+    StartScanResponse response;
+    manager_.StartScan(BuildMockDBusResponse(&response),
+                       impl::SerializeProto(request), fd);
+    return response;
+  }
+
+  // Run a scan to completion, and verify that it was successful.
+  void RunScanSuccess(const std::string& device_name,
+                      ColorMode color_mode,
+                      const base::ScopedFD& fd) {
+    StartScanResponse response = StartScan(device_name, color_mode, fd);
+    EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+    EXPECT_NE(response.scan_uuid(), "");
+
+    ValidateSignals(signals_, response.scan_uuid());
+  }
+
   std::vector<ScanStatusChangedSignal> signals_;
 
   SaneClientFake* sane_client_;
@@ -347,23 +382,9 @@ TEST_F(ManagerTest, StartScanBlackAndWhiteSuccess) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/bw.pnm"),
                   parameters);
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_LINEART);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanSuccess(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
-
-  EXPECT_GE(signals_.size(), 1);
-  EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
-  EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
-  ValidateProgressSignals(response_.scan_uuid());
-
+  RunScanSuccess("TestDevice", MODE_LINEART, scan_fd_);
   CompareImages("./test_images/bw.png", output_path_.value());
 }
 
@@ -377,23 +398,9 @@ TEST_F(ManagerTest, StartScanGrayscaleSuccess) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/gray.pnm"),
                   parameters);
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_GRAYSCALE);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanSuccess(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
-
-  EXPECT_GE(signals_.size(), 1);
-  EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
-  EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
-  ValidateProgressSignals(response_.scan_uuid());
-
+  RunScanSuccess("TestDevice", MODE_GRAYSCALE, scan_fd_);
   CompareImages("./test_images/gray.png", output_path_.value());
 }
 
@@ -407,23 +414,9 @@ TEST_F(ManagerTest, StartScanColorSuccess) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
                   parameters);
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanSuccess(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
-
-  EXPECT_GE(signals_.size(), 1);
-  EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
-  EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
-  ValidateProgressSignals(response_.scan_uuid());
-
+  RunScanSuccess("TestDevice", MODE_COLOR, scan_fd_);
   CompareImages("./test_images/color.png", output_path_.value());
 }
 
@@ -441,41 +434,17 @@ TEST_F(ManagerTest, StartScan16BitColorSuccess) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/color16.pnm"),
                   parameters);
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanSuccess(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
-
-  EXPECT_GE(signals_.size(), 1);
-  EXPECT_EQ(signals_.back().scan_uuid(), response_.scan_uuid());
-  EXPECT_EQ(signals_.back().state(), SCAN_STATE_COMPLETED);
-  ValidateProgressSignals(response_.scan_uuid());
-
+  RunScanSuccess("TestDevice", MODE_COLOR, scan_fd_);
   CompareImages("./test_images/color16.png", output_path_.value());
 }
 
 TEST_F(ManagerTest, StartScanFailNoDevice) {
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
-                                     &contents));
-  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, scan_fd_);
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_FAILED);
-  EXPECT_NE(response_.failure_reason(), "");
+  EXPECT_EQ(response.state(), SCAN_STATE_FAILED);
+  EXPECT_NE(response.failure_reason(), "");
   EXPECT_EQ(signals_.size(), 0);
 }
 
@@ -489,17 +458,11 @@ TEST_F(ManagerTest, StartScanFailToStart) {
   device->SetStartScanResult(SANE_STATUS_IO_ERROR);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanFailure(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
-
-  EXPECT_EQ(response_.state(), SCAN_STATE_FAILED);
-  EXPECT_NE(response_.failure_reason(), "");
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, scan_fd_);
+  EXPECT_EQ(response.state(), SCAN_STATE_FAILED);
+  EXPECT_NE(response.failure_reason(), "");
   EXPECT_EQ(signals_.size(), 0);
 }
 
@@ -513,20 +476,15 @@ TEST_F(ManagerTest, StartScanFailToRead) {
   device->SetReadScanDataResult(false);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanFailure(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     scan_fd_);
+  StartScanResponse response = StartScan("TestDevice", MODE_COLOR, scan_fd_);
 
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(response.scan_uuid(), "");
 
   EXPECT_EQ(signals_.size(), 1);
-  EXPECT_EQ(signals_[0].scan_uuid(), response_.scan_uuid());
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
   EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
   EXPECT_NE(signals_[0].failure_reason(), "");
 }
@@ -535,20 +493,16 @@ TEST_F(ManagerTest, StartScanFailBadFd) {
   SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
                   ScanParameters());
 
-  StartScanRequest request;
-  request.set_device_name("TestDevice");
-  request.mutable_settings()->set_color_mode(MODE_COLOR);
-
   ExpectScanRequest(kOtherBackend);
   ExpectScanFailure(kOtherBackend);
-  manager_.StartScan(std::move(dbus_response_), impl::SerializeProto(request),
-                     base::ScopedFD());
+  StartScanResponse response =
+      StartScan("TestDevice", MODE_COLOR, base::ScopedFD());
 
-  EXPECT_EQ(response_.state(), SCAN_STATE_IN_PROGRESS);
-  EXPECT_NE(response_.scan_uuid(), "");
+  EXPECT_EQ(response.state(), SCAN_STATE_IN_PROGRESS);
+  EXPECT_NE(response.scan_uuid(), "");
 
   EXPECT_EQ(signals_.size(), 1);
-  EXPECT_EQ(signals_[0].scan_uuid(), response_.scan_uuid());
+  EXPECT_EQ(signals_[0].scan_uuid(), response.scan_uuid());
   EXPECT_EQ(signals_[0].state(), SCAN_STATE_FAILED);
   EXPECT_NE(signals_[0].failure_reason(), "");
 }
