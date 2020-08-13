@@ -15,6 +15,7 @@
 #include "patchpanel/firewall.h"
 #include "patchpanel/mac_address_generator.h"
 #include "patchpanel/minijailed_process_runner.h"
+#include "patchpanel/routing_service.h"
 #include "patchpanel/subnet.h"
 
 namespace patchpanel {
@@ -109,6 +110,22 @@ class Datapath {
                                   bool enable_multicast);
 
   virtual void RemoveInterface(const std::string& ifname);
+
+  // Sets up IPv4 SNAT, IP forwarding, and traffic marking for the given
+  // virtual device |int_ifname| associated to |source|. if |ext_ifname| is
+  // empty, the device is implicitly routed through the highest priority
+  // network.
+  virtual void StartRoutingDevice(const std::string& ext_ifname,
+                                  const std::string& int_ifname,
+                                  uint32_t int_ipv4_addr,
+                                  TrafficSource source);
+
+  // Removes IPv4 iptables, IP forwarding, and traffic marking for the given
+  // virtual device |int_ifname|.
+  virtual void StopRoutingDevice(const std::string& ext_ifname,
+                                 const std::string& int_ifname,
+                                 uint32_t int_ipv4_addr,
+                                 TrafficSource source);
 
   // Create (or delete) pre-routing rules allowing direct ingress on |ifname|
   // to guest desintation |ipv4_addr|.

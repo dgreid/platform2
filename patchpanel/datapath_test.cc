@@ -285,6 +285,88 @@ TEST(DatapathTest, RemoveBridge) {
   datapath.RemoveBridge("br");
 }
 
+TEST(DatapathTest, StartRoutingDevice_Arc) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "PREROUTING", "-i", "eth0",
+                                           "-m", "socket", "--nowildcard", "-j",
+                                           "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "PREROUTING", "-i", "eth0",
+                                           "-p", "tcp", "-j", "DNAT",
+                                           "--to-destination", "1.2.3.4", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-A", "PREROUTING", "-i", "eth0",
+                                           "-p", "udp", "-j", "DNAT",
+                                           "--to-destination", "1.2.3.4", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-o", "arc_eth0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.StartRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
+                              TrafficSource::ARC);
+}
+
+TEST(DatapathTest, StartRoutingDevice_CrosVM) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-o", "vmtap0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.StartRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
+                              TrafficSource::CROSVM);
+}
+
+TEST(DatapathTest, StopRoutingDevice_Arc) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "PREROUTING", "-i", "eth0",
+                                           "-m", "socket", "--nowildcard", "-j",
+                                           "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "PREROUTING", "-i", "eth0",
+                                           "-p", "tcp", "-j", "DNAT",
+                                           "--to-destination", "1.2.3.4", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("nat"),
+                               ElementsAre("-D", "PREROUTING", "-i", "eth0",
+                                           "-p", "udp", "-j", "DNAT",
+                                           "--to-destination", "1.2.3.4", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-o", "arc_eth0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.StopRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
+                             TrafficSource::ARC);
+}
+
+TEST(DatapathTest, StopRoutingDevice_CrosVM) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-o", "vmtap0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.StopRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
+                             TrafficSource::CROSVM);
+}
+
 TEST(DatapathTest, AddInboundIPv4DNAT) {
   MockProcessRunner runner;
   MockFirewall firewall;

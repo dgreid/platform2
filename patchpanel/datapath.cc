@@ -321,6 +321,50 @@ void Datapath::RemoveInterface(const std::string& ifname) {
   process_runner_->ip("link", "delete", {ifname}, false /*log_failures*/);
 }
 
+void Datapath::StartRoutingDevice(const std::string& ext_ifname,
+                                  const std::string& int_ifname,
+                                  uint32_t int_ipv4_addr,
+                                  TrafficSource source) {
+  if (!ext_ifname.empty() &&
+      !AddInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr)))
+    LOG(ERROR) << "Failed to configure ingress traffic rules for " << ext_ifname
+               << "->" << int_ifname;
+
+  // TODO(b/161508179) Explicitly enable IPv4 forwarding for this pair of
+  // interfaces for the ingress direction.
+  if (!AddOutboundIPv4(int_ifname))
+    LOG(ERROR) << "Failed to configure egress traffic rules for " << ext_ifname
+               << "<-" << int_ifname;
+
+  // TODO(b/161508179) Explicitly enable IPv4 forwarding for this pair of
+  // interfaces for the egress direction and stop relying on the traffic fwmark
+  // matching 1/1 once forwarded egress traffic is routed through the fwmark
+  // routing tag.
+
+  // TODO(b/161507671) If ext_ifname is not null, mark egress traffic with the
+  // fwmark routing tag corresponding to |ext_ifname|, and set up strong routing
+  // in ip rule.
+
+  // TODO(b/161507671) If ext_ifname is null, set up connection tracking for the
+  // current default interface.
+
+  // TODO(b/161508179) Start marking egress traffic with the corresponding
+  // source fwmark in mangle PREROUTING.
+}
+
+void Datapath::StopRoutingDevice(const std::string& ext_ifname,
+                                 const std::string& int_ifname,
+                                 uint32_t int_ipv4_addr,
+                                 TrafficSource source) {
+  if (!ext_ifname.empty())
+    RemoveInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr));
+  RemoveOutboundIPv4(int_ifname);
+
+  // TODO(b/161508179) Stops IPv4 forwarding for this pair of interfaces.
+  // TODO(b/161508179) Remove source marking for egress traffic.
+  // TODO(b/161507671) Remove routing tag marking for egress traffic.
+}
+
 bool Datapath::AddInboundIPv4DNAT(const std::string& ifname,
                                   const std::string& ipv4_addr) {
   // Direct ingress IP traffic to existing sockets.
@@ -359,6 +403,8 @@ void Datapath::RemoveInboundIPv4DNAT(const std::string& ifname,
               "-j", "ACCEPT", "-w"});
 }
 
+// TODO(hugobenichi) The name incorrectly refers to egress traffic, but this
+// FORWARD rule actually enables forwarding for ingress traffic. Fix the name.
 bool Datapath::AddOutboundIPv4(const std::string& ifname) {
   return process_runner_->iptables("filter", {"-A", "FORWARD", "-o", ifname,
                                               "-j", "ACCEPT", "-w"}) == 0;

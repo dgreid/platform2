@@ -52,12 +52,19 @@ class MockDatapath : public Datapath {
                     bool up,
                     bool multicast));
   MOCK_METHOD1(RemoveInterface, void(const std::string& ifname));
-  MOCK_METHOD2(AddInboundIPv4DNAT,
-               bool(const std::string& ifname, const std::string& ipv4_addr));
-  MOCK_METHOD2(RemoveInboundIPv4DNAT,
-               void(const std::string& ifname, const std::string& ipv4_addr));
+  MOCK_METHOD4(StartRoutingDevice,
+               void(const std::string& ext_ifname,
+                    const std::string& int_ifname,
+                    uint32_t int_ipv4_addr,
+                    TrafficSource source));
+  MOCK_METHOD4(StopRoutingDevice,
+               void(const std::string& ext_ifname,
+                    const std::string& int_ifname,
+                    uint32_t int_ipv4_addr,
+                    TrafficSource source));
   MOCK_METHOD1(AddOutboundIPv4, bool(const std::string& ifname));
   MOCK_METHOD1(RemoveOutboundIPv4, void(const std::string& ifname));
+
   MOCK_METHOD3(MaskInterfaceFlags,
                bool(const std::string& ifname, uint16_t on, uint16_t off));
   MOCK_METHOD2(AddIPv6Forwarding,

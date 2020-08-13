@@ -468,16 +468,9 @@ void ArcService::AddDevice(const std::string& ifname) {
     return;
   }
 
-  // Set up iptables.
-  if (!datapath_->AddInboundIPv4DNAT(
-          device->phys_ifname(),
-          IPv4AddressToString(device->config().guest_ipv4_addr())))
-    LOG(ERROR) << "Failed to configure ingress traffic rules for "
-               << device->phys_ifname();
-
-  if (!datapath_->AddOutboundIPv4(device->host_ifname()))
-    LOG(ERROR) << "Failed to configure egress traffic rules for "
-               << device->phys_ifname();
+  datapath_->StartRoutingDevice(device->phys_ifname(), device->host_ifname(),
+                                device->config().guest_ipv4_addr(),
+                                TrafficSource::ARC);
 
   std::string virtual_device_ifname;
   if (guest_ == GuestMessage::ARC_VM) {
@@ -537,10 +530,9 @@ void ArcService::RemoveDevice(const std::string& ifname) {
   if (guest_ == GuestMessage::ARC)
     datapath_->RemoveInterface(ArcVethHostName(device->phys_ifname()));
 
-  const auto& config = device->config();
-  datapath_->RemoveOutboundIPv4(device->host_ifname());
-  datapath_->RemoveInboundIPv4DNAT(
-      device->phys_ifname(), IPv4AddressToString(config.guest_ipv4_addr()));
+  datapath_->StopRoutingDevice(device->phys_ifname(), device->host_ifname(),
+                               device->config().guest_ipv4_addr(),
+                               TrafficSource::ARC);
   datapath_->RemoveBridge(device->host_ifname());
   if (device->options().adb_allowed)
     datapath_->DeleteAdbPortAccessRule(ifname);
