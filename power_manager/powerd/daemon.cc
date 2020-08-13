@@ -418,8 +418,8 @@ void Daemon::Init() {
   wifi_controller_->Init(this, prefs_.get(), udev_.get(), tablet_mode);
   cellular_controller_->Init(this, prefs_.get());
 
-  peripheral_battery_watcher_ =
-      delegate_->CreatePeripheralBatteryWatcher(dbus_wrapper_.get());
+  peripheral_battery_watcher_ = delegate_->CreatePeripheralBatteryWatcher(
+      dbus_wrapper_.get(), udev_.get());
   power_override_lockfile_checker_ = delegate_->CreateLockfileChecker(
       base::FilePath(kPowerOverrideLockfileDir), {});
 

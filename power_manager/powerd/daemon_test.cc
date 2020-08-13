@@ -248,9 +248,10 @@ class DaemonTest : public ::testing::Test, public DaemonDelegate {
     return std::move(passed_ec_helper_);
   }
   std::unique_ptr<system::PeripheralBatteryWatcher>
-  CreatePeripheralBatteryWatcher(
-      system::DBusWrapperInterface* dbus_wrapper) override {
+  CreatePeripheralBatteryWatcher(system::DBusWrapperInterface* dbus_wrapper,
+                                 system::UdevInterface* udev) override {
     EXPECT_EQ(dbus_wrapper_, dbus_wrapper);
+    EXPECT_EQ(udev_, udev);
     return nullptr;
   }
   std::unique_ptr<system::PowerSupplyInterface> CreatePowerSupply(

@@ -187,10 +187,10 @@ class DaemonDelegateImpl : public DaemonDelegate {
   }
 
   std::unique_ptr<system::PeripheralBatteryWatcher>
-  CreatePeripheralBatteryWatcher(
-      system::DBusWrapperInterface* dbus_wrapper) override {
+  CreatePeripheralBatteryWatcher(system::DBusWrapperInterface* dbus_wrapper,
+                                 system::UdevInterface* udev) override {
     auto watcher = std::make_unique<system::PeripheralBatteryWatcher>();
-    watcher->Init(dbus_wrapper);
+    watcher->Init(dbus_wrapper, udev);
     return watcher;
   }
 

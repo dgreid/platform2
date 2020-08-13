@@ -15,13 +15,14 @@
 #include <base/timer/timer.h>
 
 #include "power_manager/powerd/system/async_file_reader.h"
+#include "power_manager/powerd/system/udev_subsystem_observer.h"
 
 namespace power_manager {
 namespace system {
 
 class DBusWrapperInterface;
 
-class PeripheralBatteryWatcher {
+class PeripheralBatteryWatcher : public UdevSubsystemObserver {
  public:
   // sysfs file containing a battery's scope.
   static const char kScopeFile[];
@@ -37,6 +38,8 @@ class PeripheralBatteryWatcher {
   static const char kModelNameFile[];
   // sysfs file containing a battery's capacity.
   static const char kCapacityFile[];
+  // udev subsystem to listen to for peripheral battery events.
+  static const char kUdevSubsystem[];
 
   PeripheralBatteryWatcher();
   ~PeripheralBatteryWatcher();
@@ -46,7 +49,10 @@ class PeripheralBatteryWatcher {
   }
 
   // Starts polling.
-  void Init(DBusWrapperInterface* dbus_wrapper);
+  void Init(DBusWrapperInterface* dbus_wrapper, UdevInterface* udev);
+
+  // UdevSubsystemObserver implementation:
+  void OnUdevEvent(const UdevEvent& event) override;
 
  private:
   // Reads battery status of a single peripheral device and send out a signal.
@@ -75,6 +81,8 @@ class PeripheralBatteryWatcher {
   void ErrorCallback(const base::FilePath& path, const std::string& model_name);
 
   DBusWrapperInterface* dbus_wrapper_;  // weak
+
+  UdevInterface* udev_ = nullptr;  // non-owned
 
   // Path containing battery info for peripheral devices.
   base::FilePath peripheral_battery_path_;

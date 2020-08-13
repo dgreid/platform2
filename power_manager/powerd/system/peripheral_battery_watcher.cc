@@ -52,17 +52,36 @@ const char PeripheralBatteryWatcher::kStatusFile[] = "status";
 const char PeripheralBatteryWatcher::kStatusValueUnknown[] = "Unknown";
 const char PeripheralBatteryWatcher::kModelNameFile[] = "model_name";
 const char PeripheralBatteryWatcher::kCapacityFile[] = "capacity";
+const char PeripheralBatteryWatcher::kUdevSubsystem[] = "power_supply";
 
 PeripheralBatteryWatcher::PeripheralBatteryWatcher()
     : dbus_wrapper_(nullptr),
       peripheral_battery_path_(kDefaultPeripheralBatteryPath),
       poll_interval_ms_(kDefaultPollIntervalMs) {}
 
-PeripheralBatteryWatcher::~PeripheralBatteryWatcher() {}
+PeripheralBatteryWatcher::~PeripheralBatteryWatcher() {
+  if (udev_)
+    udev_->RemoveSubsystemObserver(kUdevSubsystem, this);
+}
 
-void PeripheralBatteryWatcher::Init(DBusWrapperInterface* dbus_wrapper) {
+void PeripheralBatteryWatcher::Init(DBusWrapperInterface* dbus_wrapper,
+                                    UdevInterface* udev) {
+  udev_ = udev;
+  udev_->AddSubsystemObserver(kUdevSubsystem, this);
+
   dbus_wrapper_ = dbus_wrapper;
   ReadBatteryStatuses();
+}
+
+void PeripheralBatteryWatcher::OnUdevEvent(const UdevEvent& event) {
+  base::FilePath path = base::FilePath(peripheral_battery_path_)
+                            .Append(event.device_info.sysname);
+  if (event.action == UdevEvent::Action::REMOVE || !IsPeripheralDevice(path))
+    return;
+
+  // An event of a peripheral device is detected through udev, Refresh the
+  // battery status of that device.
+  ReadBatteryStatus(path);
 }
 
 bool PeripheralBatteryWatcher::IsPeripheralDevice(

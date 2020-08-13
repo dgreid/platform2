@@ -117,8 +117,8 @@ class DaemonDelegate {
 
   // Test implementations may return null.
   virtual std::unique_ptr<system::PeripheralBatteryWatcher>
-  CreatePeripheralBatteryWatcher(
-      system::DBusWrapperInterface* dbus_wrapper) = 0;
+  CreatePeripheralBatteryWatcher(system::DBusWrapperInterface* dbus_wrapper,
+                                 system::UdevInterface* udev) = 0;
 
   virtual std::unique_ptr<system::PowerSupplyInterface> CreatePowerSupply(
       const base::FilePath& power_supply_path,
