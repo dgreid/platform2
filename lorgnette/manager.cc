@@ -502,7 +502,11 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
-  if (!device->StartScan(error)) {
+  SANE_Status status = device->StartScan(error);
+  if (status != SANE_STATUS_GOOD) {
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError, "Failed to start scan: %s",
+                               sane_strstatus(status));
     ReportScanFailed(request.device_name());
     return false;
   }

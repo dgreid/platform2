@@ -12,6 +12,7 @@
 #include <vector>
 
 #include <base/optional.h>
+#include <sane/sane.h>
 
 #include "lorgnette/sane_client.h"
 
@@ -54,7 +55,7 @@ class SaneDeviceFake : public SaneDevice {
   bool SetDocumentSource(brillo::ErrorPtr* error,
                          const DocumentSource& source) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
-  bool StartScan(brillo::ErrorPtr* error) override;
+  SANE_Status StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;
   bool ReadScanData(brillo::ErrorPtr* error,
@@ -63,14 +64,14 @@ class SaneDeviceFake : public SaneDevice {
                     size_t* read_out) override;
 
   void SetValidOptionValues(const base::Optional<ValidOptionValues>& values);
-  void SetStartScanResult(bool result);
+  void SetStartScanResult(SANE_Status status);
   void SetScanParameters(const base::Optional<ScanParameters>& params);
   void SetReadScanDataResult(bool result);
   void SetScanData(const std::vector<uint8_t>& scan_data);
 
  private:
   base::Optional<ValidOptionValues> values_;
-  bool start_scan_result_;
+  SANE_Status start_scan_result_;
   bool read_scan_data_result_;
   bool scan_running_;
   base::Optional<ScanParameters> params_;

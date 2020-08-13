@@ -57,7 +57,7 @@ class SaneDeviceImpl : public SaneDevice {
   bool SetDocumentSource(brillo::ErrorPtr* error,
                          const DocumentSource& source) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
-  bool StartScan(brillo::ErrorPtr* error) override;
+  SANE_Status StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;
   bool ReadScanData(brillo::ErrorPtr* error,

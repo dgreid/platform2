@@ -67,7 +67,7 @@ void SaneClientFake::SetDeviceForName(const std::string& device_name,
 }
 
 SaneDeviceFake::SaneDeviceFake()
-    : start_scan_result_(true),
+    : start_scan_result_(SANE_STATUS_GOOD),
       read_scan_data_result_(true),
       scan_running_(false) {}
 
@@ -98,22 +98,19 @@ bool SaneDeviceFake::SetColorMode(brillo::ErrorPtr*, ColorMode) {
   return true;
 }
 
-bool SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
+SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   if (scan_running_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Scan not running");
-    return false;
+                         kManagerServiceError, "Scan is already running");
+    return SANE_STATUS_DEVICE_BUSY;
   }
 
-  if (!start_scan_result_) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "Starting failed.");
-    return false;
+  if (start_scan_result_ == SANE_STATUS_GOOD) {
+    scan_running_ = true;
   }
 
-  scan_running_ = true;
   scan_data_offset_ = 0;
-  return true;
+  return start_scan_result_;
 }
 
 bool SaneDeviceFake::GetScanParameters(brillo::ErrorPtr* error,
@@ -163,8 +160,8 @@ void SaneDeviceFake::SetValidOptionValues(
   values_ = values;
 }
 
-void SaneDeviceFake::SetStartScanResult(bool result) {
-  start_scan_result_ = result;
+void SaneDeviceFake::SetStartScanResult(SANE_Status status) {
+  start_scan_result_ = status;
 }
 
 void SaneDeviceFake::SetScanParameters(

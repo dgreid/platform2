@@ -320,7 +320,7 @@ TEST_F(ManagerTest, StartScanFailToStart) {
   std::vector<uint8_t> image_data(contents.begin(), contents.end());
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   device->SetScanData(image_data);
-  device->SetStartScanResult(false);
+  device->SetStartScanResult(SANE_STATUS_IO_ERROR);
   sane_client_->SetDeviceForName("TestDevice", std::move(device));
 
   StartScanRequest request;

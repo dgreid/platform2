@@ -255,23 +255,19 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
   return true;
 }
 
-bool SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
+SANE_Status SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
   if (scan_running_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "Scan is already in progress");
-    return false;
+    return SANE_STATUS_DEVICE_BUSY;
   }
 
   SANE_Status status = sane_start(handle_);
-  if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                               kManagerServiceError, "Failed to start scan: %s",
-                               sane_strstatus(status));
-    return false;
+  if (status == SANE_STATUS_GOOD) {
+    scan_running_ = true;
   }
 
-  scan_running_ = true;
-  return true;
+  return status;
 }
 
 bool SaneDeviceImpl::GetScanParameters(brillo::ErrorPtr* error,
