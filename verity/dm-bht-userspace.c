@@ -65,7 +65,7 @@ void dm_bht_set_buffer(struct dm_bht* bht, void* buffer) {
 
 /**
  * dm_bht_compute - computes and updates all non-block-level hashes in a tree
- * @bht:	pointer to a dm_bht_create()d bht
+ * @bht: pointer to a dm_bht_create()d bht
  *
  * Returns 0 on success, >0 when data is pending, and <0 when a IO or other
  * error has occurred.
@@ -114,9 +114,9 @@ out:
 
 /**
  * dm_bht_store_block - sets a given block's hash in the tree
- * @bht:	pointer to a dm_bht_create()d bht
- * @block:	numeric index of the block in the tree
- * @block_data:	array of u8s containing the block of data to hash
+ * @bht: pointer to a dm_bht_create()d bht
+ * @block: numeric index of the block in the tree
+ * @block_data: array of u8s containing the block of data to hash
  *
  * Returns 0 on success.
  *

@@ -58,8 +58,8 @@ static u8 from_hex(u8 ch) {
 
 /**
  * dm_bht_bin_to_hex - converts a binary stream to human-readable hex
- * @binary:	a byte array of length @binary_len
- * @hex:	a byte array of length @binary_len * 2 + 1
+ * @binary: a byte array of length @binary_len
+ * @hex: a byte array of length @binary_len * 2 + 1
  */
 static void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
   while (binary_len-- > 0) {
@@ -71,8 +71,8 @@ static void dm_bht_bin_to_hex(u8* binary, u8* hex, unsigned int binary_len) {
 
 /**
  * dm_bht_hex_to_bin - converts a hex stream to binary
- * @binary:	a byte array of length @binary_len
- * @hex:	a byte array of length @binary_len * 2 + 1
+ * @binary: a byte array of length @binary_len
+ * @hex: a byte array of length @binary_len * 2 + 1
  */
 static void dm_bht_hex_to_bin(u8* binary,
                               const u8* hex,
@@ -141,10 +141,10 @@ static int dm_bht_read_callback_stub(void* ctx,
 
 /**
  * dm_bht_create - prepares @bht for us
- * @bht:	pointer to a dm_bht_create()d bht
- * @depth:	tree depth without the root; including block hashes
+ * @bht: pointer to a dm_bht_create()d bht
+ * @depth: tree depth without the root; including block hashes
  * @block_count:the number of block hashes / tree leaves
- * @alg_name:	crypto hash algorithm name
+ * @alg_name: crypto hash algorithm name
  *
  * Returns 0 on success.
  *
@@ -335,8 +335,8 @@ static int dm_bht_read_callback_stub(void* ctx,
 
 /**
  * dm_bht_read_completed
- * @entry:	pointer to the entry that's been loaded
- * @status:	I/O status. Non-zero is failure.
+ * @entry: pointer to the entry that's been loaded
+ * @status: I/O status. Non-zero is failure.
  * MUST always be called after a read_cb completes.
  */
 void dm_bht_read_completed(struct dm_bht_entry* entry, int status) {
@@ -411,10 +411,10 @@ mismatch:
 
 /**
  * dm_bht_zeroread_callback - read callback which always returns 0s
- * @ctx:	ignored
- * @start:	ignored
- * @data:	buffer to write 0s to
- * @count:	number of sectors worth of data to write
+ * @ctx: ignored
+ * @start: ignored
+ * @data: buffer to write 0s to
+ * @count: number of sectors worth of data to write
  * @complete_ctx: opaque context for @completed
  * @completed: callback to confirm end of data read
  *
@@ -436,8 +436,8 @@ int dm_bht_zeroread_callback(void* ctx,
 /**
  * dm_bht_is_populated - check that entries from disk needed to verify a given
  *                       block are all ready
- * @bht:	pointer to a dm_bht_create()d bht
- * @block:	specific block data is expected from
+ * @bht: pointer to a dm_bht_create()d bht
+ * @block: specific block data is expected from
  *
  * Callers may wish to call dm_bht_is_populated() when checking an io
  * for which entries were already pending.
@@ -456,9 +456,9 @@ bool dm_bht_is_populated(struct dm_bht* bht, unsigned int block) {
 
 /**
  * dm_bht_populate - reads entries from disk needed to verify a given block
- * @bht:	pointer to a dm_bht_create()d bht
- * @ctx:        context used for all read_cb calls on this request
- * @block:	specific block data is expected from
+ * @bht: pointer to a dm_bht_create()d bht
+ * @ctx: context used for all read_cb calls on this request
+ * @block: specific block data is expected from
  *
  * Returns negative value on error. Returns 0 on success.
  */
@@ -517,10 +517,10 @@ nomem:
 
 /**
  * dm_bht_verify_block - checks that all nodes in the path for @block are valid
- * @bht:	pointer to a dm_bht_create()d bht
- * @block:	specific block data is expected from
- * @buffer:	page holding the block data
- * @offset:	offset into the page
+ * @bht: pointer to a dm_bht_create()d bht
+ * @block: specific block data is expected from
+ * @buffer: page holding the block data
+ * @offset: offset into the page
  *
  * Returns 0 on success, 1 on missing data, and a negative error
  * code on verification failure. All supporting functions called
@@ -537,7 +537,7 @@ int dm_bht_verify_block(struct dm_bht* bht,
 
 /**
  * dm_bht_destroy - cleans up all memory used by @bht
- * @bht:	pointer to a dm_bht_create()d bht
+ * @bht: pointer to a dm_bht_create()d bht
  *
  * Returns 0 on success. Does not free @bht itself.
  */
@@ -580,7 +580,7 @@ int dm_bht_destroy(struct dm_bht* bht) {
 
 /**
  * dm_bht_sectors - return the sectors required on disk
- * @bht:	pointer to a dm_bht_create()d bht
+ * @bht: pointer to a dm_bht_create()d bht
  */
 sector_t dm_bht_sectors(const struct dm_bht* bht) {
   return bht->sectors;
@@ -588,8 +588,8 @@ sector_t dm_bht_sectors(const struct dm_bht* bht) {
 
 /**
  * dm_bht_set_read_cb - set read callback
- * @bht:	pointer to a dm_bht_create()d bht
- * @read_cb:	callback function used for all read requests by @bht
+ * @bht: pointer to a dm_bht_create()d bht
+ * @read_cb: callback function used for all read requests by @bht
  */
 void dm_bht_set_read_cb(struct dm_bht* bht, dm_bht_callback read_cb) {
   bht->read_cb = read_cb;
@@ -597,8 +597,8 @@ void dm_bht_set_read_cb(struct dm_bht* bht, dm_bht_callback read_cb) {
 
 /**
  * dm_bht_set_root_hexdigest - sets an unverified root digest hash from hex
- * @bht:	pointer to a dm_bht_create()d bht
- * @hexdigest:	array of u8s containing the new digest in binary
+ * @bht: pointer to a dm_bht_create()d bht
+ * @hexdigest: array of u8s containing the new digest in binary
  * Returns non-zero on error.  hexdigest should be NUL terminated.
  */
 int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest) {
@@ -617,9 +617,9 @@ int dm_bht_set_root_hexdigest(struct dm_bht* bht, const u8* hexdigest) {
 
 /**
  * dm_bht_root_hexdigest - returns root digest in hex
- * @bht:	pointer to a dm_bht_create()d bht
- * @hexdigest:	u8 array of size @available
- * @available:	must be bht->digest_size * 2 + 1
+ * @bht: pointer to a dm_bht_create()d bht
+ * @hexdigest: u8 array of size @available
+ * @available: must be bht->digest_size * 2 + 1
  */
 int dm_bht_root_hexdigest(struct dm_bht* bht, u8* hexdigest, int available) {
   if (available < 0 || ((unsigned int)available) < bht->digest_size * 2 + 1) {
@@ -632,8 +632,8 @@ int dm_bht_root_hexdigest(struct dm_bht* bht, u8* hexdigest, int available) {
 
 /**
  * dm_bht_set_salt - sets the salt used, in hex
- * @bht:      pointer to a dm_bht_create()d bht
- * @hexsalt:  salt string, as hex; will be zero-padded or truncated to
+ * @bht: pointer to a dm_bht_create()d bht
+ * @hexsalt: salt string, as hex; will be zero-padded or truncated to
  *            DM_BHT_SALT_SIZE * 2 hex digits.
  */
 void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
@@ -645,8 +645,8 @@ void dm_bht_set_salt(struct dm_bht* bht, const char* hexsalt) {
 
 /**
  * dm_bht_salt - returns the salt used, in hex
- * @bht:      pointer to a dm_bht_create()d bht
- * @hexsalt:  buffer to put salt into, of length DM_BHT_SALT_SIZE * 2 + 1.
+ * @bht: pointer to a dm_bht_create()d bht
+ * @hexsalt: buffer to put salt into, of length DM_BHT_SALT_SIZE * 2 + 1.
  */
 int dm_bht_salt(struct dm_bht* bht, char* hexsalt) {
   if (!bht->have_salt)
