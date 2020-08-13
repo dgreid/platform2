@@ -78,7 +78,8 @@ constexpr char kTimestampRegex[] = "^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
 // feature.
 //
 // For ARM we see:
-//   "<5>[   39.458982] PC is at write_breakme+0xd0/0x1b4"
+//   "<5>[   39.458982] PC is at write_breakme+0xd0/0x1b4" (arm32)
+//   "<4>[  263.857834] pc : lkdtm_BUG+0xc/0x10" (arm64)
 // For MIPS we see:
 //   "<5>[ 3378.552000] epc   : 804010f0 lkdtm_do_action+0x68/0x3f8"
 // For x86:
@@ -86,7 +87,7 @@ constexpr char kTimestampRegex[] = "^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
 //    SS:ESP 0068:e9dd3efc"
 //
 const char* const kPCRegex[] = {
-    nullptr, " PC is at ([^\\+ ]+).*",
+    nullptr, " (?:PC is at |pc : )([^\\+\\[ ]+).*",
     " epc\\s+:\\s+\\S+\\s+([^\\+ ]+).*",  // MIPS has an exception program
                                           // counter
     " EIP: \\[<.*>\\] ([^\\+ ]+).*",  // X86 uses EIP for the program counter
@@ -396,15 +397,17 @@ void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
                                         float* last_stack_timestamp,
                                         bool* is_watchdog_crash) {
   pcrecpp::RE line_re("(.+)", pcrecpp::MULTILINE());
-  pcrecpp::RE stack_trace_start_re(std::string(kTimestampRegex) +
-                                   " (Call Trace|Backtrace):$");
+  pcrecpp::RE stack_trace_start_re(
+      std::string(kTimestampRegex) + " (Call Trace|Backtrace):$",
+      pcrecpp::CASELESS());
 
   // Match lines such as the following and grab out "function_name".
   // The ? may or may not be present.
   //
   // For ARM:
   // <4>[ 3498.731164] [<c0057220>] ? (function_name+0x20/0x2c) from
-  // [<c018062c>] (foo_bar+0xdc/0x1bc)
+  // [<c018062c>] (foo_bar+0xdc/0x1bc) (arm32 older)
+  // <4>[  263.956936]  lkdtm_do_action+0x24/0x40 (arm64 / arm32 newer)
   //
   // For MIPS:
   // <5>[ 3378.656000] [<804010f0>] lkdtm_do_action+0x68/0x3f8
@@ -414,9 +417,9 @@ void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
   //
   pcrecpp::RE stack_entry_re(
       std::string(kTimestampRegex) +
-      "\\s+\\[<[[:xdigit:]]+>\\]"  // Matches "  [<7937bcee>]"
-      "([\\s\\?(]+)"               // Matches " ? (" (ARM) or " ? " (X86)
-      "([^\\+ )]+)");              // Matches until delimiter reached
+      R"(\s+(?:\[<[[:xdigit:]]+>\])?)"  // Matches "  [<7937bcee>]" (if any)
+      R"(([\s?(]+))"                    // Matches " ? (" (ARM) or " ? " (X86)
+      R"(([^\+ )]+))");                 // Matches until delimiter reached
   std::string line;
   std::string hashable;
   std::string previous_hashable;

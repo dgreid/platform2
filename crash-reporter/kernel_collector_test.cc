@@ -478,6 +478,50 @@ TEST_F(KernelCollectorTest, ComputeKernelStackSignatureARM) {
             collector_.ComputeKernelStackSignature(kBugToPanic));
 }
 
+TEST_F(KernelCollectorTest, ComputeKernelStackSignatureARM64) {
+  const char kBugToPanic[] =
+      "<4>[  263.786327] Modules linked in:\n"
+      "<4>[  263.841132] CPU: 2 PID: 1303 Comm: bash Not tainted 5.4.57 #355\n"
+      "<4>[  263.847229] Hardware name: Google Lazor (rev1, rev3+) (DT)\n"
+      "<4>[  263.852883] pstate: 60400009 (nZCv daif +PAN -UAO)\n"
+      "<4>[  263.857834] pc : lkdtm_BUG+0xc/0x10\n"
+      "<4>[  263.861436] lr : lkdtm_do_action+0x24/0x40\n"
+      "<4>[  263.865662] sp : ffffff80b2b47c60\n"
+      "<4>[  263.869086] x29: ffffff80b2b47c60 x28: ffffff80c29799c0\n"
+      "<4>[  263.874558] x27: 0000000000000000 x26: 0000000000000000\n"
+      "<4>[  263.880031] x25: 0000000044000000 x24: ffffffd05a0af040\n"
+      "<4>[  263.885501] x23: 0000000000000010 x22: ffffffd05a3c41ce\n"
+      "<4>[  263.890968] x21: ffffffd05a0af050 x20: ffffff80b2b47df0\n"
+      "<4>[  263.896439] x19: ffffffd05a0af050 x18: ffffffd05ae33000\n"
+      "<4>[  263.901916] x17: 0000000000008000 x16: 00000000000000b0\n"
+      "<4>[  263.907387] x15: ffffffd05abe1e08 x14: 0000000000000001\n"
+      "<4>[  263.912860] x13: 0000000000000000 x12: 0000000000000000\n"
+      "<4>[  263.918327] x11: 0000000000000000 x10: dfffffd000000001\n"
+      "<4>[  263.923794] x9 : a1be91ac2dd38f00 x8 : ffffffd059af1cdc\n"
+      "<4>[  263.929270] x7 : ffffffd0595712e4 x6 : 0000000000000000\n"
+      "<4>[  263.934736] x5 : 0000000000000080 x4 : 0000000000000001\n"
+      "<4>[  263.940204] x3 : ffffffd059911eb8 x2 : 0000000000000001\n"
+      "<4>[  263.945678] x1 : 0000000000000008 x0 : ffffffd05a0af050\n"
+      "<4>[  263.951156] Call trace:\n"
+      "<4>[  263.953694]  lkdtm_BUG+0xc/0x10\n"
+      "<4>[  263.956936]  lkdtm_do_action+0x24/0x40\n"
+      "<4>[  263.960805]  direct_entry+0x16c/0x1b4\n"
+      "<4>[  263.964590]  full_proxy_write+0x6c/0xa8\n"
+      "<4>[  263.968555]  __vfs_write+0x54/0x1a0\n"
+      "<4>[  263.972153]  vfs_write+0xe4/0x1a4\n"
+      "<4>[  263.975573]  ksys_write+0x84/0xec\n"
+      "<4>[  263.978992]  __arm64_sys_write+0x20/0x2c\n"
+      "<4>[  263.983045]  el0_svc_common+0xa8/0x178\n"
+      "<4>[  263.986910]  el0_svc_compat_handler+0x2c/0x40\n"
+      "<4>[  263.991403]  el0_svc_compat+0x8/0x10\n"
+      "<0>[  263.995097] Code: 97e80634 a9bf7bfd 910003fd d503201f (d4210000)\n"
+      "<4>[  264.001374] ---[ end trace 46a2784a72b8824d ]---\n";
+
+  collector_.set_arch(KernelCollector::kArchArm);
+  EXPECT_EQ("kernel-lkdtm_BUG-1E904F37",
+            collector_.ComputeKernelStackSignature(kBugToPanic));
+}
+
 TEST_F(KernelCollectorTest, ComputeKernelStackSignatureMIPS) {
   const char kBugToPanic[] =
       "<5>[ 3378.472000] lkdtm: Performing direct entry BUG\n"
