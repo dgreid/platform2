@@ -38,6 +38,7 @@ void benchmark_and_report_results(const std::string& driver_name,
   BenchmarkResults results;
   if (!benchmark.ExecuteBenchmark(config, &results)) {
     LOG(ERROR) << "Unable to execute the " << driver_name << " benchmark";
+    return;
   }
 
   if (results.status() == chrome::ml_benchmark::OK) {
