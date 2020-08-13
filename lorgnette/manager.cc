@@ -12,7 +12,6 @@
 #include <cctype>
 #include <utility>
 
-#include <base/callback_helpers.h>
 #include <base/files/file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
@@ -243,6 +242,16 @@ base::ScopedClosureRunner RequestPortAccessIfNeeded(
                      firewall_manager));
 }
 
+std::string GenerateUUID() {
+  uuid_t uuid_bytes;
+  uuid_generate_random(uuid_bytes);
+  std::string uuid(kUUIDStringLength, '\0');
+  uuid_unparse(uuid_bytes, &uuid[0]);
+  // Remove the null terminator from the string.
+  uuid.resize(kUUIDStringLength - 1);
+  return uuid;
+}
+
 }  // namespace
 
 const char Manager::kMetricScanRequested[] = "DocumentScan.ScanRequested";
@@ -428,8 +437,15 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
   ScanJobState scan_state;
   scan_state.device_name = device_name;
   scan_state.device = std::move(device);
+  scan_state.total_pages = 1;
 
-  if (!RunScanLoop(error, &scan_state, outfd, base::nullopt)) {
+  base::ScopedFILE out_file = SetupOutputFile(error, outfd);
+  if (!out_file) {
+    ReportScanFailed(device_name);
+    return false;
+  }
+
+  if (!RunScanLoop(error, &scan_state, std::move(out_file), base::nullopt)) {
     ReportScanFailed(device_name);
     return false;
   }
@@ -468,31 +484,137 @@ void Manager::StartScan(
   // The scan has now been successfully started, notify the client.
   response.set_state(SCAN_STATE_IN_PROGRESS);
 
-  uuid_t uuid_bytes;
-  uuid_generate_random(uuid_bytes);
-  std::string uuid(kUUIDStringLength, '\0');
-  uuid_unparse(uuid_bytes, &uuid[0]);
-  // Remove the null terminator from the string.
-  uuid.resize(kUUIDStringLength - 1);
+  std::string uuid = GenerateUUID();
   response.set_scan_uuid(uuid);
   method_response->Return(impl::SerializeProto(response));
 
   ScanJobState scan_state;
   scan_state.device_name = request.device_name();
   scan_state.device = std::move(device);
+  scan_state.total_pages = 1;
 
-  if (!RunScanLoop(&error, &scan_state, outfd, uuid)) {
+  base::ScopedFILE out_file = SetupOutputFile(&error, outfd);
+  if (!out_file) {
     ReportScanFailed(request.device_name());
     SendFailureSignal(uuid, SerializeError(error));
     return;
   }
-  ReportScanSucceeded(request.device_name());
 
-  LOG(INFO) << __func__ << ": completed image scan and conversion.";
+  GetNextImageInternal(uuid, &scan_state, std::move(out_file), base::nullopt);
+}
 
-  SendStatusSignal(uuid, SCAN_STATE_COMPLETED, 1, 100);
+std::vector<uint8_t> Manager::StartScanMultiPage(
+    const std::vector<uint8_t>& start_scan_request) {
+  StartScanResponse response;
+  response.set_state(SCAN_STATE_FAILED);
+
+  StartScanRequest request;
+  if (!request.ParseFromArray(start_scan_request.data(),
+                              start_scan_request.size())) {
+    response.set_failure_reason("Failed to parse StartScanRequest");
+    return impl::SerializeProto(response);
+  }
+
+  brillo::ErrorPtr error;
+  std::unique_ptr<SaneDevice> device;
+  if (!StartScanInternal(&error, request, &device)) {
+    response.set_failure_reason(SerializeError(error));
+    return impl::SerializeProto(response);
+  }
+
+  DocumentSource source;
+  if (!device->GetDocumentSource(&error, &source)) {
+    response.set_failure_reason("Failed to get DocumentSource: " +
+                                SerializeError(error));
+    return impl::SerializeProto(response);
+  }
+
+  ScanJobState scan_state;
+  scan_state.device_name = request.device_name();
+  scan_state.device = std::move(device);
+
+  // Set the number of pages based on the source type. If it's ADF, keep
+  // scanning until an error is received.
+  // Otherwise, stop scanning after one page.
+  if (source.type() == SOURCE_ADF_SIMPLEX ||
+      source.type() == SOURCE_ADF_DUPLEX) {
+    scan_state.total_pages = base::nullopt;
+  } else {
+    scan_state.total_pages = 1;
+  }
+
+  std::string uuid = GenerateUUID();
+  {
+    base::AutoLock auto_lock(active_scans_lock_);
+    active_scans_.emplace(uuid, std::move(scan_state));
+  }
+
   if (!activity_callback_.is_null())
     activity_callback_.Run();
+
+  response.set_scan_uuid(uuid);
+  response.set_state(SCAN_STATE_IN_PROGRESS);
+  return impl::SerializeProto(response);
+}
+
+void Manager::GetNextImage(
+    std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> method_response,
+    const std::vector<uint8_t>& get_next_image_request,
+    const base::ScopedFD& out_fd) {
+  GetNextImageResponse response;
+
+  GetNextImageRequest request;
+  if (!request.ParseFromArray(get_next_image_request.data(),
+                              get_next_image_request.size())) {
+    response.set_success(false);
+    response.set_failure_reason("Failed to parse GetNextImageRequest");
+    method_response->Return(impl::SerializeProto(response));
+    return;
+  }
+
+  std::string uuid = request.scan_uuid();
+  ScanJobState* scan_state;
+  {
+    base::AutoLock auto_lock(active_scans_lock_);
+    if (!base::Contains(active_scans_, uuid)) {
+      response.set_success(false);
+      response.set_failure_reason("No scan job with UUID " + uuid + " found");
+      method_response->Return(impl::SerializeProto(response));
+      return;
+    }
+    scan_state = &active_scans_[uuid];
+
+    if (scan_state->in_use) {
+      response.set_success(false);
+      response.set_failure_reason("Scan job with UUID " + uuid +
+                                  " is currently busy");
+      method_response->Return(impl::SerializeProto(response));
+      return;
+    }
+    scan_state->in_use = true;
+  }
+  base::ScopedClosureRunner release_device(base::BindOnce(
+      [](base::Lock* lock, ScanJobState* scan_state) {
+        base::AutoLock auto_lock(*lock);
+        scan_state->in_use = false;
+      },
+      &active_scans_lock_, scan_state));
+
+  brillo::ErrorPtr error;
+  base::ScopedFILE out_file = SetupOutputFile(&error, out_fd);
+  if (!out_file) {
+    response.set_success(false);
+    response.set_failure_reason("Failed to setup output file: " +
+                                SerializeError(error));
+    method_response->Return(impl::SerializeProto(response));
+    return;
+  }
+
+  response.set_success(true);
+  method_response->Return(impl::SerializeProto(response));
+
+  GetNextImageInternal(uuid, scan_state, std::move(out_file),
+                       std::move(release_device));
 }
 
 void Manager::SetProgressSignalInterval(base::TimeDelta interval) {
@@ -576,9 +698,75 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   return true;
 }
 
+void Manager::GetNextImageInternal(
+    const std::string& uuid,
+    ScanJobState* scan_state,
+    base::ScopedFILE out_file,
+    base::Optional<base::ScopedClosureRunner> release_device) {
+  brillo::ErrorPtr error;
+  if (RunScanLoop(&error, scan_state, std::move(out_file), uuid)) {
+    scan_state->pages_scanned++;
+  } else {
+    ReportScanFailed(scan_state->device_name);
+    SendFailureSignal(uuid, SerializeError(error));
+    return;
+  }
+
+  bool scanned_all_pages =
+      scan_state->total_pages.has_value() &&
+      scan_state->pages_scanned == scan_state->total_pages.value();
+
+  bool adf_scan = !scan_state->total_pages.has_value();
+
+  SANE_Status status = SANE_STATUS_GOOD;
+  if (!scanned_all_pages) {
+    // Here, we call StartScan again in order to prepare for scanning the next
+    // page of the scan. Additionally, if we're scanning from the ADF, this
+    // lets us know if we've run out of pages so that we can signal scan
+    // completion.
+    status = scan_state->device->StartScan(&error);
+  }
+
+  bool scan_complete =
+      scanned_all_pages || (status == SANE_STATUS_NO_DOCS && adf_scan);
+
+  SendStatusSignal(uuid, SCAN_STATE_PAGE_COMPLETED,
+                   scan_state->pages_scanned - 1, 100, !scan_complete);
+
+  if (scan_complete) {
+    ReportScanSucceeded(scan_state->device_name);
+    SendStatusSignal(uuid, SCAN_STATE_COMPLETED, scan_state->pages_scanned, 100,
+                     false);
+    LOG(INFO) << __func__ << ": completed image scan and conversion.";
+
+    if (release_device.has_value()) {
+      (void)release_device.value().Release();
+    }
+    {
+      base::AutoLock auto_lock(active_scans_lock_);
+      active_scans_.erase(uuid);
+    }
+
+    return;
+  }
+
+  if (status != SANE_STATUS_GOOD) {
+    // The scan failed.
+    brillo::Error::AddToPrintf(&error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kManagerServiceError, "Failed to start scan: %s",
+                               sane_strstatus(status));
+    ReportScanFailed(scan_state->device_name);
+    SendFailureSignal(uuid, SerializeError(error));
+    return;
+  }
+
+  if (!activity_callback_.is_null())
+    activity_callback_.Run();
+}
+
 bool Manager::RunScanLoop(brillo::ErrorPtr* error,
                           ScanJobState* scan_state,
-                          const base::ScopedFD& outfd,
+                          base::ScopedFILE out_file,
                           base::Optional<std::string> scan_uuid) {
   SaneDevice* device = scan_state->device.get();
   ScanParameters params;
@@ -587,11 +775,6 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   }
 
   if (!ValidateParams(error, params)) {
-    return false;
-  }
-
-  base::ScopedFILE out_file = SetupOutputFile(error, outfd);
-  if (!out_file) {
     return false;
   }
 
@@ -664,8 +847,8 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
       base::TimeTicks now = base::TimeTicks::Now();
       if (scan_uuid.has_value() && progress != last_progress_value &&
           now - last_progress_sent_time >= progress_signal_interval_) {
-        SendStatusSignal(scan_uuid.value(), SCAN_STATE_IN_PROGRESS, 1,
-                         progress);
+        SendStatusSignal(scan_uuid.value(), SCAN_STATE_IN_PROGRESS,
+                         scan_state->pages_scanned, progress, false);
         last_progress_value = progress;
         last_progress_sent_time = now;
       }
@@ -757,12 +940,14 @@ void Manager::ReportScanFailed(const std::string& device_name) {
 void Manager::SendStatusSignal(std::string uuid,
                                ScanState state,
                                int page,
-                               int progress) {
+                               int progress,
+                               bool more_pages) {
   ScanStatusChangedSignal signal;
   signal.set_scan_uuid(uuid);
   signal.set_state(state);
   signal.set_page(page);
   signal.set_progress(progress);
+  signal.set_more_pages(more_pages);
   status_signal_sender_.Run(signal);
 }
 

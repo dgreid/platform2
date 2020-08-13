@@ -5,15 +5,17 @@
 #ifndef LORGNETTE_MANAGER_H_
 #define LORGNETTE_MANAGER_H_
 
-#include <map>
 #include <memory>
 #include <string>
 #include <vector>
 
 #include <base/callback.h>
+#include <base/callback_helpers.h>
+#include <base/containers/flat_map.h>
 #include <base/files/scoped_file.h>
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
+#include <base/synchronization/lock.h>
 #include <base/time/time.h>
 #include <brillo/variant_dictionary.h>
 #include <brillo/errors/error.h>
@@ -82,6 +84,15 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
       const std::vector<uint8_t>& start_scan_request,
       const base::ScopedFD& outfd) override;
 
+  // Returns a serialized StartScanResponse.
+  std::vector<uint8_t> StartScanMultiPage(
+      const std::vector<uint8_t>& start_scan_request) override;
+
+  void GetNextImage(
+      std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
+      const std::vector<uint8_t>& get_next_image_request,
+      const base::ScopedFD& out_fd) override;
+
   void SetProgressSignalInterval(base::TimeDelta interval);
 
   // Register the callback to call when we send a ScanStatusChanged signal for
@@ -101,6 +112,10 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
     std::string device_name;
     bool in_use = false;
     std::unique_ptr<SaneDevice> device;
+    int pages_scanned = 0;
+    // The total number of pages to scan for the scan job. If this is nullopt,
+    // keep scanning until we get an error.
+    base::Optional<int> total_pages;
   };
 
   static const char kMetricScanRequested[];
@@ -111,9 +126,15 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                          const StartScanRequest& request,
                          std::unique_ptr<SaneDevice>* device_out);
 
+  void GetNextImageInternal(
+      const std::string& uuid,
+      ScanJobState* scan_state,
+      base::ScopedFILE out_file,
+      base::Optional<base::ScopedClosureRunner> release_device);
+
   bool RunScanLoop(brillo::ErrorPtr* error,
                    ScanJobState* scan_state,
-                   const base::ScopedFD& outfd,
+                   base::ScopedFILE out_file,
                    base::Optional<std::string> scan_uuid);
 
   static bool ExtractScanOptions(
@@ -129,7 +150,8 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   void SendStatusSignal(std::string uuid,
                         ScanState state,
                         int page,
-                        int progress);
+                        int progress,
+                        bool more_pages);
   void SendFailureSignal(std::string uuid, std::string failure_reason);
 
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
@@ -146,6 +168,10 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   // for testing in order to track the signals sent from StartScan.
   StatusSignalSender status_signal_sender_;
   base::TimeDelta progress_signal_interval_;
+
+  base::Lock active_scans_lock_;
+  // Mapping from scan UUIDs to the state for that scan job.
+  base::flat_map<std::string, ScanJobState> active_scans_;
 
   // Keep as the last member variable.
   base::WeakPtrFactory<Manager> weak_factory_{this};

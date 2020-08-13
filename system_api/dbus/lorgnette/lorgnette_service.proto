@@ -153,4 +153,8 @@ message ScanStatusChangedSignal {
   // SCAN_STATE_PAGE_COMPLETED.
   // Pages are 0-indexed.
   uint32 page = 5;
+
+  // If state is SCAN_STATE_PAGE_COMPLETED and more_pages is true, the client
+  // should send another GetNextImage request in order to fetch the next page.
+  bool more_pages = 6;
 }
