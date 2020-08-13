@@ -776,6 +776,9 @@ properties:
                 has-touchscreen:
                   description: Does the device have a touchscreen.
                   type: boolean
+                has-backlight:
+                  description: Does the device have a backlight.
+                  type: boolean
                 display-type: *display-type
                 stylus-category: *stylus-category
                 psu-type: *psu-type
@@ -788,12 +791,6 @@ properties:
                 whether a device supports a particular telemetry item. See
                 cros_healthd_probe.mojom for descriptions of each property.
               properties:
-                backlight:
-                  type: object
-                  properties:
-                    has-backlight:
-                      type: boolean
-                  additionalProperties: false
                 battery:
                   type: object
                   properties:

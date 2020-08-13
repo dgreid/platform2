@@ -442,14 +442,8 @@ In the tables below,
 ### cros-healthd
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| backlight | [backlight](#backlight) |  | False |  | False |  |
 | battery | [battery](#battery) |  | False |  | False |  |
 | cached-vpd | [cached-vpd](#cached_vpd) |  | False |  | False |  |
-
-### backlight
-| Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
-| --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
-| has-backlight | boolean |  | False |  | False |  |
 
 ### battery
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
@@ -542,6 +536,7 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | display-type | string |  | False |  | False | Denotes the type of display this device contains. |
+| has-backlight | boolean |  | False |  | False | Does the device have a backlight. |
 | has-base-accelerometer | boolean |  | False |  | False | Is there an accelerometer in the base of the device. |
 | has-base-gyroscope | boolean |  | False |  | False | Is there a gyroscope in the base of the device. |
 | has-base-light-sensor | boolean |  | False |  | False | Is there a light sensor in the base of the device. |

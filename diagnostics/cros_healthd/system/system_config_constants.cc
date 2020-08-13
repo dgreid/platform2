@@ -10,7 +10,6 @@ const char kHardwarePropertiesPath[] = "/hardware-properties";
 const char kPsuTypeProperty[] = "psu-type";
 const char kBatteryPropertiesPath[] = "/cros-healthd/battery";
 const char kHasSmartBatteryInfoProperty[] = "has-smart-battery-info";
-const char kBacklightPropertiesPath[] = "/cros-healthd/backlight";
 const char kHasBacklightProperty[] = "has-backlight";
 const char kCachedVpdPropertiesPath[] = "/cros-healthd/cached-vpd";
 const char kHasSkuNumberProperty[] = "has-sku-number";

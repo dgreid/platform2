@@ -29,7 +29,7 @@ bool SystemConfig::FioSupported() {
 bool SystemConfig::HasBacklight() {
   std::string has_backlight;
   // Assume that device has a backlight unless otherwise configured.
-  if (!cros_config_->GetString(kBacklightPropertiesPath, kHasBacklightProperty,
+  if (!cros_config_->GetString(kHardwarePropertiesPath, kHasBacklightProperty,
                                &has_backlight)) {
     return true;
   }

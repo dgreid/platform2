@@ -52,13 +52,13 @@ TEST_F(SystemConfigTest, FioSupportedFalse) {
 }
 
 TEST_F(SystemConfigTest, TestBacklightTrue) {
-  fake_cros_config()->SetString(kBacklightPropertiesPath, kHasBacklightProperty,
+  fake_cros_config()->SetString(kHardwarePropertiesPath, kHasBacklightProperty,
                                 "");
   EXPECT_TRUE(system_config()->HasBacklight());
 }
 
 TEST_F(SystemConfigTest, TestBacklightFalse) {
-  fake_cros_config()->SetString(kBacklightPropertiesPath, kHasBacklightProperty,
+  fake_cros_config()->SetString(kHardwarePropertiesPath, kHasBacklightProperty,
                                 "false");
   EXPECT_FALSE(system_config()->HasBacklight());
 }

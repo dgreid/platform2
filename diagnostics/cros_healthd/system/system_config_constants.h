@@ -17,8 +17,6 @@ extern const char kBatteryPropertiesPath[];
 // The master configuration property that indicates whether a device has Smart
 // Battery info.
 extern const char kHasSmartBatteryInfoProperty[];
-// The path used to check a device's master configuration backlight properties.
-extern const char kBacklightPropertiesPath[];
 // The master configuration property that indicates whether a device has a
 // backlight.
 extern const char kHasBacklightProperty[];
