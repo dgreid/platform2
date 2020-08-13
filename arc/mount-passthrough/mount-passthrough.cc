@@ -23,6 +23,7 @@
 #include <sys/vfs.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -44,20 +45,25 @@ struct FusePrivateData {
 
 // Given android_app_access_type, figure out the source of /storage mount in
 // Android.
-std::string get_storage_source(const std::string& android_app_access_type) {
+std::vector<std::string> get_storage_source(
+    const std::string& android_app_access_type) {
   std::string storage_source;
   // Either full (if no Android permission check is needed), read (for Android
   // READ_EXTERNAL_STORAGE permission check), or write (for Android
   // WRITE_EXTERNAL_STORAGE_PERMISSION).
   if (android_app_access_type == "full") {
-    return "";
+    return {};
   } else if (android_app_access_type == "read") {
-    return "/runtime/read";
+    // We allow apps with both READ_EXTERNAL_STORAGE and WRITE_EXTERNAL_STORAGE
+    // to access the read view. This is useful for MyFiles so that we can expose
+    // a read-only view (this one) as a second mount point under
+    // /mnt/runtime/write.
+    return {"/runtime/read", "/runtime/write"};
   } else if (android_app_access_type == "write") {
-    return "/runtime/write";
+    return {"/runtime/write"};
   } else {
     NOTREACHED();
-    return "notreached";
+    return {"notreached"};
   }
 }
 
@@ -79,7 +85,7 @@ int check_allowed() {
     return 0;
   }
 
-  std::string storage_source =
+  std::vector<std::string> storage_source =
       get_storage_source(static_cast<FusePrivateData*>(context->private_data)
                              ->android_app_access_type);
   // No check is required because the android_app_access_type is "full".
@@ -106,8 +112,10 @@ int check_allowed() {
       continue;
     }
     std::string source = tokens[3];
+    auto source_iterator =
+        std::find(storage_source.begin(), storage_source.end(), source);
     std::string target = tokens[4];
-    if (source == storage_source && target == "/storage") {
+    if (source_iterator != storage_source.end() && target == "/storage") {
       return 0;
     }
   }
