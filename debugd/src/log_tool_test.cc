@@ -74,7 +74,7 @@ class LogToolTest : public testing::Test {
 };
 
 TEST_F(LogToolTest, GetArcBugReport_ReturnsContents_WhenFileExists) {
-  std::string userhash = "userhash";
+  std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
   EXPECT_TRUE(WriteFile(logPath, "test"));
@@ -94,7 +94,7 @@ TEST_F(LogToolTest, GetArcBugReport_ReturnsContents_WhenFileExists) {
 }
 
 TEST_F(LogToolTest, GetArcBugReport_Succeeds_WhenIsBackupIsNull) {
-  std::string userhash = "userhash";
+  std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
   EXPECT_TRUE(WriteFile(logPath, "test"));
@@ -111,7 +111,7 @@ TEST_F(LogToolTest, GetArcBugReport_Succeeds_WhenIsBackupIsNull) {
 }
 
 TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
-  std::string userhash = "userhash";
+  std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
   EXPECT_TRUE(WriteFile(logPath, "test"));
@@ -132,7 +132,7 @@ TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
 }
 
 TEST_F(LogToolTest, DeleteArcBugReportBackup) {
-  std::string userhash = "user";
+  std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath = temp_dir_.GetPath()
                             .Append(userhash)
                             .Append("arc-bugreport.log");

@@ -37,6 +37,7 @@
 
 #include "brillo/key_value_store.h"
 #include <brillo/osrelease_reader.h>
+#include <brillo/cryptohome.h>
 
 namespace debugd {
 
@@ -673,6 +674,9 @@ LogTool::LogTool(scoped_refptr<dbus::Bus> bus)
 
 base::FilePath LogTool::GetArcBugReportBackupFilePath
   (const std::string& userhash) {
+  CHECK(brillo::cryptohome::home::IsSanitizedUserName(userhash))
+      << "Invalid userhash '" << userhash << "'";
+
   return daemon_store_base_dir_
     .Append(userhash)
     .Append(kArcBugReportBackupFileName);
