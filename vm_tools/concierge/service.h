@@ -173,6 +173,9 @@ class Service final {
   // Handles a request to adjust parameters of a given VM.
   std::unique_ptr<dbus::Response> AdjustVm(dbus::MethodCall* method_call);
 
+  // Handles a request to set the owner id of a given VM.
+  std::unique_ptr<dbus::Response> SetVmId(dbus::MethodCall* method_call);
+
   // Writes DnsConfigResponse protobuf into DBus message.
   void ComposeDnsResponse(dbus::MessageWriter* writer);
 

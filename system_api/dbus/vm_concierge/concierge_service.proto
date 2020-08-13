@@ -981,3 +981,24 @@ message AdjustVmResponse {
   // If the attempt to adjust VM failed, the reason for the failure.
   string failure_reason = 2;
 };
+
+// Request to set owner id of a given VM.
+message SetVmIdRequest {
+  // An identifier for this VM.
+  string name = 1;
+
+  // The current cyptohome id of this VM.
+  string src_owner_id = 2;
+
+  // The cryptohome id to set for this VM.
+  string dest_owner_id = 3;
+}
+
+// Response to a SetVmIdRequest.
+message SetVmIdResponse {
+  // If true, the owner id of the VM was successfully changed.
+  bool success = 1;
+
+  // If the attempt to set the owner id failed, the reason for failure.
+  string failure_reason = 2;
+}

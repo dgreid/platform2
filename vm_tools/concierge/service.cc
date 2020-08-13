@@ -719,6 +719,7 @@ bool Service::Init() {
       {kListUsbDeviceMethod, &Service::ListUsbDevices},
       {kGetDnsSettingsMethod, &Service::GetDnsSettings},
       {kSetVmCpuRestrictionMethod, &Service::SetVmCpuRestriction},
+      {kSetVmIdMethod, &Service::SetVmId},
   };
 
   for (const auto& iter : kServiceMethods) {
@@ -2871,6 +2872,48 @@ std::unique_ptr<dbus::Response> Service::SetVmCpuRestriction(
   }
 
   response.set_success(success);
+  writer.AppendProtoAsArrayOfBytes(response);
+  return dbus_response;
+}
+
+std::unique_ptr<dbus::Response> Service::SetVmId(
+    dbus::MethodCall* method_call) {
+  DCHECK(sequence_checker_.CalledOnValidSequence());
+  LOG(INFO) << "Received SetVmId request";
+
+  std::unique_ptr<dbus::Response> dbus_response(
+      dbus::Response::FromMethodCall(method_call));
+
+  dbus::MessageReader reader(method_call);
+  dbus::MessageWriter writer(dbus_response.get());
+
+  SetVmIdRequest request;
+  SetVmIdResponse response;
+
+  response.set_success(false);
+
+  if (!reader.PopArrayOfBytesAsProto(&request)) {
+    LOG(ERROR) << "Unable to parse SetVmIdRequest from message";
+    response.set_failure_reason("Unable to parse SetVmIdRequest from message");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto iter = FindVm(request.src_owner_id(), request.name());
+  if (iter == vms_.end()) {
+    LOG(ERROR) << "Requested VM does not exist";
+    response.set_failure_reason("Requested VM does not exist");
+    writer.AppendProtoAsArrayOfBytes(response);
+    return dbus_response;
+  }
+
+  auto vm = std::move(iter->second);
+  vms_.erase(iter);
+  VmId new_id(request.dest_owner_id(), request.name());
+  vms_[new_id] = std::move(vm);
+  // TODO(wvk): redirect logging to new cryptohome.
+
+  response.set_success(true);
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
 }
