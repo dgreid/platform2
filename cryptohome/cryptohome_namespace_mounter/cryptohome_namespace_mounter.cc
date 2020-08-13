@@ -7,11 +7,12 @@
 // cryptohome.
 // Eventually, this executable will perform all cryptohome mounts.
 // The lifetime of this executable's process matches the lifetime of the mount:
-// it's launched by cryptohome when a Guest session is requested, and it's
-// killed by cryptohome when the Guest session exits.
+// it's launched by cryptohome when a session is started, and it's
+// killed by cryptohome when the session exits.
 
 #include <sysexits.h>
 
+#include <map>
 #include <memory>
 #include <vector>
 
@@ -28,6 +29,7 @@
 #include <brillo/scoped_mount_namespace.h>
 #include <brillo/secure_blob.h>
 #include <brillo/syslog_logging.h>
+#include <dbus/cryptohome/dbus-constants.h>
 
 #include "cryptohome/cryptohome_common.h"
 #include "cryptohome/cryptohome_metrics.h"
@@ -40,6 +42,22 @@
 using base::FilePath;
 
 namespace {
+
+std::map<cryptohome::MountType, cryptohome::OutOfProcessMountRequest_MountType>
+    kProtobufMountType = {
+        // Not mounted.
+        {cryptohome::MountType::NONE,
+         cryptohome::OutOfProcessMountRequest_MountType_NONE},
+        // Encrypted with ecryptfs.
+        {cryptohome::MountType::ECRYPTFS,
+         cryptohome::OutOfProcessMountRequest_MountType_ECRYPTFS},
+        // Encrypted with dircrypto.
+        {cryptohome::MountType::DIR_CRYPTO,
+         cryptohome::OutOfProcessMountRequest_MountType_DIR_CRYPTO},
+        // Ephemeral mount.
+        {cryptohome::MountType::EPHEMERAL,
+         cryptohome::OutOfProcessMountRequest_MountType_EPHEMERAL},
+};
 
 const std::vector<FilePath> kDaemonDirPaths = {
     FilePath("session_manager"), FilePath("shill"), FilePath("shill_logs")};
@@ -126,21 +144,46 @@ int main(int argc, char** argv) {
       FilePath(cryptohome::kDefaultSkeletonSource), system_salt,
       request.legacy_home(), &platform);
 
-  // A failure in PerformEphemeralMount might still require clean-up so set up
-  // the clean-up routine now.
-  base::ScopedClosureRunner tear_down_runner(base::BindOnce(
-      &TearDownEphemeralAndReportError, &mounter));
+  // A failure in PerformMount/PerformEphemeralMount might still require
+  // clean-up so set up the clean-up routine before
+  // PerformMount/PerformEphemeralMount is started.
+  base::ScopedClosureRunner tear_down_runner;
+  cryptohome::OutOfProcessMountResponse response;
+  bool is_ephemeral =
+      request.type() == kProtobufMountType[cryptohome::MountType::EPHEMERAL];
+  if (is_ephemeral) {
+    tear_down_runner = base::ScopedClosureRunner(
+        base::BindOnce(&TearDownEphemeralAndReportError, &mounter));
 
-  cryptohome::ReportTimerStart(cryptohome::kPerformEphemeralMountTimer);
-  if (!mounter.PerformEphemeralMount(request.username())) {
-    cryptohome::ForkAndCrash("PerformEphemeralMount failed");
-    return EX_SOFTWARE;
+    cryptohome::ReportTimerStart(cryptohome::kPerformEphemeralMountTimer);
+    if (!mounter.PerformEphemeralMount(request.username())) {
+      cryptohome::ForkAndCrash("PerformEphemeralMount failed");
+      return EX_SOFTWARE;
+    }
+
+    cryptohome::ReportTimerStop(cryptohome::kPerformEphemeralMountTimer);
+    VLOG(1) << "PerformEphemeralMount succeeded";
+  } else {
+    tear_down_runner = base::ScopedClosureRunner(
+        base::BindOnce(&cryptohome::MountHelper::TearDownNonEphemeralMount,
+                       base::Unretained(&mounter)));
+
+    cryptohome::MountHelperInterface::Options mount_options;
+    mount_options.type = static_cast<cryptohome::MountType>(request.type());
+    mount_options.to_migrate_from_ecryptfs = request.to_migrate_from_ecryptfs();
+    mount_options.shadow_only = request.shadow_only();
+
+    cryptohome::MountError error = cryptohome::MOUNT_ERROR_NONE;
+    if (!mounter.PerformMount(mount_options, request.username(),
+                              request.fek_signature(), request.fnek_signature(),
+                              request.is_pristine(), &error)) {
+      cryptohome::ForkAndCrash("PerformMount failed");
+      return EX_SOFTWARE;
+    }
+    response.set_mount_error(static_cast<uint32_t>(error));
+    VLOG(1) << "PerformMount succeeded";
   }
 
-  cryptohome::ReportTimerStop(cryptohome::kPerformEphemeralMountTimer);
-  VLOG(1) << "PerformEphemeralMount succeeded";
-
-  cryptohome::OutOfProcessMountResponse response;
   for (const auto& path : mounter.MountedPaths()) {
     response.add_paths(path.value());
   }
