@@ -461,9 +461,15 @@ impl Read for &UsbConnection {
         // Unwrap because interface only becomes None at drop.
         let interface = self.interface.as_ref().unwrap();
         let endpoint = interface.descriptor.in_endpoint;
-        interface
+        let result = interface
             .handle
             .read_bulk(endpoint, buf, USB_TRANSFER_TIMEOUT)
-            .map_err(to_io_error)
+            .map_err(to_io_error);
+
+        match result {
+            // USB reads cannot hit EOF. This is an interrupted read.
+            Ok(0) => Err(io::Error::from_raw_os_error(libc::EINTR)),
+            _ => result,
+        }
     }
 }
