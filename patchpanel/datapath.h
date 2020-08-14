@@ -229,6 +229,15 @@ class Datapath {
   MinijailedProcessRunner& runner() const;
 
  private:
+  bool ModifyFwmarkSourceTag(const std::string& op,
+                             const std::string& iif,
+                             TrafficSource source);
+  bool ModifyFwmarkPrerouting(IpFamily family,
+                              const std::string& op,
+                              const std::string& iif,
+                              Fwmark mark,
+                              Fwmark mask,
+                              bool log_failures = true);
   bool ModifyIpForwarding(IpFamily family,
                           const std::string& op,
                           const std::string& iif,

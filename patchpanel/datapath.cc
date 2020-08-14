@@ -347,8 +347,9 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
   // TODO(b/161507671) If ext_ifname is null, set up connection tracking for the
   // current default interface.
 
-  // TODO(b/161508179) Start marking egress traffic with the corresponding
-  // source fwmark in mangle PREROUTING.
+  if (!ModifyFwmarkSourceTag("-A", int_ifname, source))
+    LOG(ERROR) << "Failed to add PREROUTING fwmark tagging rule for source "
+               << source << " for " << int_ifname;
 }
 
 void Datapath::StopRoutingDevice(const std::string& ext_ifname,
@@ -359,7 +360,7 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
     RemoveInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr));
   StopIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname);
   StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
-  // TODO(b/161508179) Remove source marking for egress traffic.
+  ModifyFwmarkSourceTag("-D", int_ifname, source);
   // TODO(b/161507671) Remove routing tag marking for egress traffic.
 }
 
@@ -530,6 +531,50 @@ bool Datapath::AddIPv6Neighbor(const std::string& ifname,
 void Datapath::RemoveIPv6Neighbor(const std::string& ifname,
                                   const std::string& ipv6_addr) {
   process_runner_->ip6("neigh", "del", {"proxy", ipv6_addr, "dev", ifname});
+}
+
+bool Datapath::ModifyFwmarkSourceTag(const std::string& op,
+                                     const std::string& iif,
+                                     TrafficSource source) {
+  return ModifyFwmarkPrerouting(IpFamily::Dual, op, iif,
+                                Fwmark::FromSource(source),
+                                kFwmarkAllSourcesMask);
+}
+
+bool Datapath::ModifyFwmarkPrerouting(IpFamily family,
+                                      const std::string& op,
+                                      const std::string& iif,
+                                      Fwmark mark,
+                                      Fwmark mask,
+                                      bool log_failures) {
+  if (iif.empty()) {
+    LOG(ERROR)
+        << "Cannot change PREROUTING set-fwmark with no interface specified";
+    return false;
+  }
+
+  switch (family) {
+    case IPv4:
+    case IPv6:
+    case Dual:
+      break;
+    default:
+      LOG(ERROR) << "Cannot change PREROUTING set-fwmark for " << iif
+                 << ": incorrect IP family " << family;
+      return false;
+  }
+
+  std::vector<std::string> args = {
+      op,   "PREROUTING", "-i",         iif,
+      "-j", "MARK",       "--set-mark", mark.ToString() + "/" + mask.ToString(),
+      "-w"};
+
+  bool success = true;
+  if (family & AF_INET)
+    success &= process_runner_->iptables("mangle", args, log_failures) == 0;
+  if (family & AF_INET6)
+    success &= process_runner_->ip6tables("mangle", args, log_failures) == 0;
+  return false;
 }
 
 bool Datapath::ModifyIpForwarding(IpFamily family,
