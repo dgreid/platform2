@@ -45,8 +45,16 @@ void benchmark_and_report_results(const std::string& driver_name,
     LOG(INFO) << driver_name << " finished";
     LOG(INFO) << results.results_message();
     LOG(INFO) << "Accuracy: " << results.total_accuracy();
-    LOG(INFO) << "Average Latency: " << results.average_latency_in_us()
-              << " usec";
+    if (results.percentile_latencies_in_us().empty()) {
+      LOG(WARNING) << driver_name << " did not provide any latency "
+                   << "percentiles, the driver might be using "
+                   << "the old interface.";
+      return;
+    }
+    for (const auto& latency_pair : results.percentile_latencies_in_us()) {
+      LOG(INFO) << latency_pair.first << "th percentile latency: "
+                << latency_pair.second/1000000.0 << " seconds";
+    }
   } else {
     LOG(ERROR) << driver_name << " Encountered an error";
     LOG(ERROR) << "Reason: " << results.results_message();

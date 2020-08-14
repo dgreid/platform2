@@ -48,7 +48,12 @@ enum BenchmarkReturnStatus {
 message BenchmarkResults {
   BenchmarkReturnStatus status = 1;
   string results_message = 2;
-  // TODO(franklinh) use this field to report accuracy in benchmark loader
+  // accuracy of inference
   float total_accuracy = 3;
-  int64 average_latency_in_us = 4;
+  // originally, test drivers only outputs the average latency
+  // This has been modified to output latencies at different percentiles
+  int64 average_latency_in_us = 4 [deprecated = true];
+  // For new code, use this instead, which allows us to output 50th and 90th
+  // Percentile latencies
+  map<int32, int64> percentile_latencies_in_us = 5;
 }
