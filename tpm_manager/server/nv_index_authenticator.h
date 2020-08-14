@@ -1,9 +1,6 @@
-//
-// Copyright (c) 2018 The Chromium OS Authors. All rights reserved.
-//
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-//
 
 #ifndef TPM_MANAGER_SERVER_NV_INDEX_AUTHENTICATOR_H_
 #define TPM_MANAGER_SERVER_NV_INDEX_AUTHENTICATOR_H_
