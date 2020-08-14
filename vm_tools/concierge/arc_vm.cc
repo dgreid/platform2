@@ -27,11 +27,10 @@
 #include <base/system/sys_info.h>
 #include <base/time/time.h>
 #include <chromeos/constants/vm_tools.h>
+#include <vboot/crossystem.h>
 
 #include "vm_tools/concierge/tap_device_builder.h"
 #include "vm_tools/concierge/vm_util.h"
-
-using std::string;
 
 namespace vm_tools {
 namespace concierge {
@@ -52,8 +51,8 @@ constexpr char kArcvmCpuCgroup[] = "/sys/fs/cgroup/cpu/vms/arc";
 // Port for arc-powerctl running on the guest side.
 constexpr unsigned int kVSockPort = 4242;
 
-// Path to the custom parameter file.
-constexpr char kCustomParameterFilePath[] = "/etc/arcvm_dev.conf";
+// Path to the development configuration file (only visible in dev mode).
+constexpr char kDevConfFilePath[] = "/usr/local/vms/etc/arcvm_dev.conf";
 
 // Custom parameter key to override the kernel path
 constexpr char kKeyToOverrideKernelPath[] = "KERNEL_PATH";
@@ -167,7 +166,7 @@ std::unique_ptr<ArcVm> ArcVm::Create(
     std::unique_ptr<SeneschalServerProxy> seneschal_server_proxy,
     base::FilePath runtime_dir,
     ArcVmFeatures features,
-    std::vector<string> params) {
+    std::vector<std::string> params) {
   auto vm = base::WrapUnique(new ArcVm(vsock_cid, std::move(network_client),
                                        std::move(seneschal_server_proxy),
                                        std::move(runtime_dir), features));
@@ -193,7 +192,7 @@ bool ArcVm::Start(base::FilePath kernel,
                   uint32_t pstore_size,
                   std::vector<ArcVm::Disk> disks,
                   base::FilePath data_dir,
-                  std::vector<string> params) {
+                  std::vector<std::string> params) {
   // Get the available network interfaces.
   network_devices_ = network_client_->NotifyArcVmStartup(vsock_cid_);
   if (network_devices_.empty()) {
@@ -245,9 +244,6 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--video-decoder",   ""},
     { "--wayland-sock",    kWaylandSocket },
     { "--wayland-sock",    "/run/arcvm/mojo/mojo-proxy.sock,name=mojo" },
-    { "--serial",          "type=syslog,hardware=serial,num=1,earlycon=true" },
-    { "--serial",          "type=syslog,hardware=virtio-console,num=1,"
-                           "console=true" },
     { "--syslog-tag",      base::StringPrintf("ARCVM(%u)", vsock_cid_) },
     { "--ac97",            "backend=cras,capture=true" },
     { "--ac97",            "backend=cras,capture=true,capture_effects=aec" },
@@ -278,11 +274,22 @@ bool ArcVm::Start(base::FilePath kernel,
     }
   }
 
-  // Add any custom parameters from file.
-  base::FilePath file_path(kCustomParameterFilePath);
-  std::string data;
-  if (base::ReadFileToString(file_path, &data))
+  // Load any custom parameters from the development configuration file if the
+  // feature is turned on (default) and path exists (dev mode only).
+  const bool is_dev_mode = (VbGetSystemPropertyInt("cros_debug") == 1);
+  if (is_dev_mode && use_dev_conf()) {
+    const base::FilePath dev_conf(kDevConfFilePath);
+    if (!base::PathExists(dev_conf)) {
+      PLOG(ERROR) << "Invalid file path " << dev_conf.value();
+      return false;
+    }
+    std::string data;
+    if (!base::ReadFileToString(dev_conf, &data)) {
+      PLOG(ERROR) << "Failed to read file " << dev_conf.value();
+      return false;
+    }
     LoadCustomParameters(data, &args);
+  }
 
   // Finally list the path to the kernel.
   const std::string kernel_path =

@@ -149,6 +149,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   // Start the VM and build the response.
   ArcVmFeatures features;
   features.rootfs_writable = request.rootfs_writable();
+  features.use_dev_conf = !request.ignore_dev_conf();
 
   const auto pstore_path = GetFilePathFromName(
       request.owner_id(), request.name(), STORAGE_CRYPTOHOME_ROOT,

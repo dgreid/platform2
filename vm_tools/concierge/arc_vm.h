@@ -27,6 +27,9 @@ namespace concierge {
 struct ArcVmFeatures {
   // Whether the guest kernel root file system is writable.
   bool rootfs_writable;
+
+  // Use development configuration directives in the started VM.
+  bool use_dev_conf;
 };
 
 // Represents a single instance of a running termina VM.
@@ -66,7 +69,9 @@ class ArcVm final : public VmBaseImpl {
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
+  // ArcVmFeatures settings.
   bool rootfs_writable() const { return features_.rootfs_writable; }
+  bool use_dev_conf() const { return features_.use_dev_conf; }
 
   // The 9p server managed by seneschal that provides access to shared files for
   // this VM.  Returns 0 if there is no seneschal server associated with this
