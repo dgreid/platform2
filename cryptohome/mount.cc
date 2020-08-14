@@ -136,7 +136,7 @@ Mount::Mount()
       boot_lockbox_(NULL),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
       mount_guest_session_out_of_process_(true),
-      mount_non_ephemeral_session_out_of_process_(false),
+      mount_non_ephemeral_session_out_of_process_(MountUserSessionOOP()),
       mount_guest_session_non_root_namespace_(true) {}
 
 Mount::~Mount() {
@@ -228,7 +228,8 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
     }
   }
 
-  if (mount_guest_session_out_of_process_) {
+  if (mount_guest_session_out_of_process_ ||
+      mount_non_ephemeral_session_out_of_process_) {
     out_of_process_mounter_.reset(new OutOfProcessMountHelper(
         system_salt_, std::move(chrome_mnt_ns), legacy_mount_, platform_));
   }
@@ -544,10 +545,20 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
     return false;
   }
 
+  MountHelperInterface* helper;
+  if (mount_non_ephemeral_session_out_of_process_) {
+    helper = out_of_process_mounter_.get();
+  } else {
+    helper = mounter_.get();
+  }
   // Ensure we don't leave any mounts hanging on intermediate errors.
   // The closure won't outlive the class so |this| will always be valid.
-  base::ScopedClosureRunner unmount_and_drop_keys_runner(
-      base::Bind(&Mount::UnmountAndDropKeys, base::Unretained(this)));
+  // |out_of_process_mounter_|/|mounter_| will always be valid since this
+  // callback runs in the destructor at the latest.
+  base::ScopedClosureRunner unmount_and_drop_keys_runner(base::BindOnce(
+      &Mount::UnmountAndDropKeys, base::Unretained(this),
+      base::BindOnce(&MountHelperInterface::TearDownNonEphemeralMount,
+                     base::Unretained(helper))));
 
   std::string key_signature, fnek_signature;
   if (should_mount_ecryptfs) {
@@ -633,8 +644,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   MountHelper::Options mount_opts = {
       mount_type_, mount_args.to_migrate_from_ecryptfs, mount_args.shadow_only};
 
-  if (!mounter_->PerformMount(mount_opts, credentials.username(), key_signature,
-                              fnek_signature, created, mount_error)) {
+  if (!helper->PerformMount(mount_opts, credentials.username(), key_signature,
+                            fnek_signature, created, mount_error)) {
     LOG(ERROR) << "MountHelper::PerformMount failed, error = " << *mount_error;
     return false;
   }
@@ -713,8 +724,8 @@ void Mount::TearDownEphemeralMount() {
   }
 }
 
-void Mount::UnmountAndDropKeys() {
-  mounter_->UnmountAll();
+void Mount::UnmountAndDropKeys(base::OnceClosure unmounter) {
+  std::move(unmounter).Run();
 
   // Invalidate dircrypto key to make directory contents inaccessible.
   if (dircrypto_key_id_ != dircrypto::kInvalidKeySerial) {
@@ -1496,7 +1507,9 @@ bool Mount::MigrateToDircrypto(
     active_dircrypto_migrator_ = &migrator;
   }
   bool success = migrator.Migrate(callback);
-  UnmountAndDropKeys();
+  // This closure will be run immediately so |mounter_| will be valid.
+  UnmountAndDropKeys(base::BindOnce(&MountHelper::TearDownNonEphemeralMount,
+                                    base::Unretained(mounter_.get())));
   {  // Signal the waiting thread.
     base::AutoLock lock(active_dircrypto_migrator_lock_);
     active_dircrypto_migrator_ = nullptr;

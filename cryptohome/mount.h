@@ -569,7 +569,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Unmounts all mount points, and invalidates the dircrypto encryption key.
   // Relies on ForceUnmount() internally; see the caveat listed for it
-  void UnmountAndDropKeys();
+  void UnmountAndDropKeys(base::OnceClosure unmounter);
 
   // Derives PKCS #11 token authorization data from a passkey. This may take up
   // to ~100ms (dependant on CPU / memory performance). Returns true on success.
