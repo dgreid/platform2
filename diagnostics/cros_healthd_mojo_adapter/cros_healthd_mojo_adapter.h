@@ -102,6 +102,10 @@ class CrosHealthdMojoAdapter {
   RunBatteryChargeRoutine(base::TimeDelta exec_duration,
                           uint32_t minimum_charge_percent_required) = 0;
 
+  // Runs the LAN connectivity routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunLanConnectivityRoutine() = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;

@@ -239,6 +239,13 @@ bool DiagActions::ActionRunUrandomRoutine(uint32_t length_seconds) {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunLanConnectivityRoutine() {
+  auto response = adapter_->RunLanConnectivityRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 void DiagActions::ForceCancelAtPercent(uint32_t percent) {
   CHECK_LE(percent, 100) << "Percent must be <= 100.";
   force_cancel_ = true;

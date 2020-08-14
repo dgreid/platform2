@@ -60,6 +60,7 @@ class DiagActions final {
       uint32_t file_size_mb);
   bool ActionRunCpuStressRoutine(base::TimeDelta exec_duration);
   bool ActionRunFloatingPointAccuracyRoutine(base::TimeDelta exec_duration);
+  bool ActionRunLanConnectivityRoutine();
   bool ActionRunNvmeSelfTestRoutine(
       chromeos::cros_healthd::mojom::NvmeSelfTestTypeEnum nvme_self_test_type);
   bool ActionRunNvmeWearLevelRoutine(uint32_t wear_level_threshold);

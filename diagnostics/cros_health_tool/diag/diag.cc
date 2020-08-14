@@ -52,7 +52,8 @@ const struct {
     {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch},
     {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge},
     {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge},
-    {"memory", mojo_ipc::DiagnosticRoutineEnum::kMemory}};
+    {"memory", mojo_ipc::DiagnosticRoutineEnum::kMemory},
+    {"lan_connectivity", mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity}};
 
 }  // namespace
 
@@ -216,6 +217,9 @@ int diag_main(int argc, char** argv) {
         routine_result = actions.ActionRunBatteryChargeRoutine(
             base::TimeDelta::FromSeconds(FLAGS_length_seconds),
             FLAGS_minimum_charge_percent_required);
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity:
+        routine_result = actions.ActionRunLanConnectivityRoutine();
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;
