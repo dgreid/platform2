@@ -67,7 +67,8 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
     LOG(INFO) << "Starting mDNS forwarding between " << dev_ifname << " and "
               << msg.br_ifname();
     if (!mdns_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "mDNS forwarder could not be started on " << dev_ifname;
+      LOG(WARNING) << "mDNS forwarder could not be started between "
+                   << dev_ifname << " and " << msg.br_ifname();
     }
 
     if (ssdp_fwd == ssdp_fwds_.end()) {
@@ -80,7 +81,8 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
     LOG(INFO) << "Starting SSDP forwarding between " << dev_ifname << " and "
               << msg.br_ifname();
     if (!ssdp_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname;
+      LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname
+                   << " and " << msg.br_ifname();
     }
 
     if (bcast_fwd == bcast_fwds_.end()) {
@@ -92,7 +94,8 @@ void MulticastProxy::OnDeviceMessage(const DeviceMessage& msg) {
     LOG(INFO) << "Starting broadcast forwarding between " << dev_ifname
               << " and " << msg.br_ifname();
     if (!bcast_fwd->second->AddGuest(msg.br_ifname())) {
-      LOG(WARNING) << "SSDP forwarder could not be started on " << dev_ifname;
+      LOG(WARNING) << "Broadcast forwarder could not be started on "
+                   << dev_ifname << " and " << msg.br_ifname();
     }
 
     return;

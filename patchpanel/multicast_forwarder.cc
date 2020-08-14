@@ -134,8 +134,8 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
 
   base::ScopedFD fd(socket(sa_family, SOCK_DGRAM, 0));
   if (!fd.is_valid()) {
-    PLOG(ERROR) << "socket() failed for multicast forwarder on " << ifname
-                << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "socket() failed on " << ifname << " for " << mcast_addr
+                << ":" << port_;
     return base::ScopedFD();
   }
 
@@ -147,16 +147,15 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
   memset(&ifr, 0, sizeof(ifr));
   strncpy(ifr.ifr_name, ifname.c_str(), IFNAMSIZ);
   if (setsockopt(fd.get(), SOL_SOCKET, SO_BINDTODEVICE, &ifr, sizeof(ifr))) {
-    PLOG(ERROR) << "setsockopt(SOL_SOCKET) failed for multicast forwarder on "
-                << ifname << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "setsockopt(SO_BINDTODEVICE) failed on " << ifname << " for "
+                << mcast_addr << ":" << port_;
     return base::ScopedFD();
   }
 
   int ifindex = if_nametoindex(ifname.c_str());
   if (ifindex == 0) {
-    PLOG(ERROR)
-        << "Could not obtain interface index for multicast forwarder on "
-        << ifname << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "Could not obtain interface index of " << ifname << " for "
+                << mcast_addr << ":" << port_;
     return base::ScopedFD();
   }
 
@@ -169,9 +168,8 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
     mreqn.imr_ifindex = ifindex;
     if (setsockopt(fd.get(), IPPROTO_IP, IP_ADD_MEMBERSHIP, &mreqn,
                    sizeof(mreqn)) < 0) {
-      PLOG(ERROR)
-          << "Can't add multicast membership for multicast forwarder on "
-          << ifname << " for " << mcast_addr_ << ":" << port_;
+      PLOG(ERROR) << "Can't add IPv4 multicast membership for on " << ifname
+                  << " for " << mcast_addr_ << ":" << port_;
       return base::ScopedFD();
     }
 
@@ -184,9 +182,8 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
     mreqn.ipv6mr_interface = ifindex;
     if (setsockopt(fd.get(), IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreqn,
                    sizeof(mreqn)) < 0) {
-      PLOG(ERROR)
-          << "Can't add multicast membership for multicast forwarder on "
-          << ifname << " for " << mcast_addr6_ << ":" << port_;
+      PLOG(ERROR) << "Can't add IPv6 multicast membership on " << ifname
+                  << " for " << mcast_addr6_ << ":" << port_;
       return base::ScopedFD();
     }
 
@@ -198,16 +195,15 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
 
   int off = 0;
   if (setsockopt(fd.get(), level, optname, &off, sizeof(off))) {
-    PLOG(ERROR)
-        << "setsockopt(IP_MULTICAST_LOOP) failed for multicast forwarder on "
-        << ifname << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "setsockopt(IP_MULTICAST_LOOP) failed on " << ifname
+                << " for " << mcast_addr << ":" << port_;
     return base::ScopedFD();
   }
 
   int on = 1;
   if (setsockopt(fd.get(), SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) < 0) {
-    PLOG(ERROR) << "setsockopt(SO_REUSEADDR) failed for multicast forwarder on "
-                << ifname << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "setsockopt(SO_REUSEADDR) failed on " << ifname << " for "
+                << mcast_addr << ":" << port_;
     return base::ScopedFD();
   }
 
@@ -216,8 +212,8 @@ base::ScopedFD MulticastForwarder::Bind(sa_family_t sa_family,
 
   if (bind(fd.get(), (const struct sockaddr*)&bind_addr,
            sizeof(struct sockaddr_storage)) < 0) {
-    PLOG(ERROR) << "bind(" << port_ << ") failed for multicast forwarder on "
-                << ifname << " for " << mcast_addr << ":" << port_;
+    PLOG(ERROR) << "bind(" << port_ << ") failed for on " << ifname << " for "
+                << mcast_addr << ":" << port_;
     return base::ScopedFD();
   }
 
@@ -322,7 +318,8 @@ void MulticastForwarder::OnFileCanReadWithoutBlocking(int fd,
   socklen_t expectlen = sa_family == AF_INET ? sizeof(struct sockaddr_in)
                                              : sizeof(struct sockaddr_in6);
   if (addrlen != expectlen) {
-    LOG(WARNING) << "recvfrom failed: unexpected src addr length " << addrlen;
+    LOG(WARNING) << "recvfrom failed: src addr length was " << addrlen
+                 << " but expected " << expectlen;
     return;
   }
 
@@ -390,7 +387,8 @@ bool MulticastForwarder::SendTo(uint16_t src_port,
   if (src_port == port_) {
     int lan_fd = lan_socket_.find(dst->sa_family)->second->fd.get();
     if (sendto(lan_fd, data, len, 0, dst, dst_len) < 0) {
-      PLOG(WARNING) << "sendto failed";
+      PLOG(WARNING) << "sendto " << *dst << " on " << lan_ifname_
+                    << " from port " << src_port << " failed";
       return false;
     }
     return true;
@@ -403,7 +401,7 @@ bool MulticastForwarder::SendTo(uint16_t src_port,
   strncpy(ifr.ifr_name, lan_ifname_.c_str(), IFNAMSIZ);
   if (setsockopt(temp_socket.fd(), SOL_SOCKET, SO_BINDTODEVICE, &ifr,
                  sizeof(ifr))) {
-    PLOG(ERROR) << "setsockopt(SOL_SOCKET) failed";
+    PLOG(ERROR) << "setsockopt(SO_BINDTODEVICE) failed";
     return false;
   }
 
@@ -417,6 +415,7 @@ bool MulticastForwarder::SendTo(uint16_t src_port,
     level = IPPROTO_IPV6;
     optname = IPV6_MULTICAST_LOOP;
   } else {
+    LOG(ERROR) << "Unexpected sa_family " << dst->sa_family;
     return false;
   }
   SetSockaddr(&bind_addr_storage, dst->sa_family, src_port, nullptr);
@@ -437,7 +436,12 @@ bool MulticastForwarder::SendTo(uint16_t src_port,
   if (!temp_socket.Bind(bind_addr, sizeof(struct sockaddr_storage)))
     return false;
 
-  return temp_socket.SendTo(data, len, dst, dst_len);
+  if (!temp_socket.SendTo(data, len, dst, dst_len)) {
+    PLOG(WARNING) << "sendto " << *dst << " on " << lan_ifname_ << " from port "
+                  << src_port << " failed";
+    return false;
+  }
+  return true;
 }
 
 bool MulticastForwarder::SendToGuests(const void* data,
@@ -455,7 +459,7 @@ bool MulticastForwarder::SendToGuests(const void* data,
 
     // Use already created multicast fd.
     if (sendto(fd, data, len, 0, dst, dst_len) < 0) {
-      PLOG(WARNING) << "sendto failed to " << socket.first.second;
+      PLOG(WARNING) << "sendto " << socket.first.second << " failed";
       success = false;
     }
   }
