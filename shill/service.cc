@@ -112,6 +112,16 @@ const char Service::kStorageConnectionId[] = "ConnectionId";
 const char Service::kStorageLinkMonitorDisabled[] = "LinkMonitorDisabled";
 const char Service::kStorageManagedCredentials[] = "ManagedCredentials";
 const char Service::kStorageMeteredOverride[] = "MeteredOverride";
+const char Service::kStorageCurrentTrafficCounterPrefix[] =
+    "TrafficCounterCurrent";
+const char Service::kStorageTrafficCounterRxBytesSuffix[] = "RxBytes";
+const char Service::kStorageTrafficCounterTxBytesSuffix[] = "TxBytes";
+const char Service::kStorageTrafficCounterRxPacketsSuffix[] = "RxPackets";
+const char Service::kStorageTrafficCounterTxPacketsSuffix[] = "TxPackets";
+const char* const Service::kStorageTrafficCounterSuffixes[] = {
+    kStorageTrafficCounterRxBytesSuffix, kStorageTrafficCounterTxBytesSuffix,
+    kStorageTrafficCounterRxPacketsSuffix,
+    kStorageTrafficCounterTxPacketsSuffix};
 
 const size_t Service::kTrafficCounterArraySize = 4;
 
@@ -662,6 +672,26 @@ bool Service::Load(const StoreInterface* storage) {
   storage->GetBool(id, kStorageHasEverConnected, &has_ever_connected_);
 
   dhcp_properties_->Load(storage, id);
+
+  for (patchpanel::TrafficCounter::Source source =
+           patchpanel::TrafficCounter::Source_MIN;
+       source <= patchpanel::TrafficCounter::Source_MAX;
+       source = patchpanel::TrafficCounter::Source(source + 1)) {
+    std::valarray<uint64_t> counter_array(kTrafficCounterArraySize),
+        prev_counter_array(kTrafficCounterArraySize);
+    for (size_t i = 0; i < kTrafficCounterArraySize; i++) {
+      storage->GetUint64(id,
+                         GetCurrentTrafficCounterKey(
+                             source, kStorageTrafficCounterSuffixes[i]),
+                         &counter_array[i]);
+    }
+    if (counter_array.sum()) {
+      current_traffic_counters_[source] = counter_array;
+    } else {
+      current_traffic_counters_.erase(source);
+    }
+  }
+
   return true;
 }
 
@@ -701,6 +731,7 @@ bool Service::Unload() {
     Error error;  // Ignored.
     Disconnect(&error, __func__);
   }
+  current_traffic_counters_.clear();
   static_ip_parameters_.Reset();
   return false;
 }
@@ -759,6 +790,24 @@ bool Service::Save(StoreInterface* storage) {
   }
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
   dhcp_properties_->Save(storage, id);
+
+  for (patchpanel::TrafficCounter::Source source =
+           patchpanel::TrafficCounter::Source_MIN;
+       source < patchpanel::TrafficCounter::Source_MAX;
+       source = patchpanel::TrafficCounter::Source(source + 1)) {
+    bool in_storage = current_traffic_counters_.find(source) !=
+                      current_traffic_counters_.end();
+    for (size_t i = 0; i < kTrafficCounterArraySize; i++) {
+      string key = GetCurrentTrafficCounterKey(
+          source, kStorageTrafficCounterSuffixes[i]);
+      if (in_storage) {
+        storage->SetUint64(id, key, current_traffic_counters_[source][i]);
+      } else {
+        storage->DeleteKey(id, key);
+      }
+    }
+  }
+
   return true;
 }
 
@@ -1209,6 +1258,14 @@ void Service::RefreshTrafficCounters(
     }
     traffic_counter_snapshot_[counter.source()] = counter_array;
   }
+  SaveToProfile();
+}
+
+// static
+string Service::GetCurrentTrafficCounterKey(
+    patchpanel::TrafficCounter::Source source, string suffix) {
+  return string(kStorageCurrentTrafficCounterPrefix) +
+         patchpanel::TrafficCounter::Source_Name(source) + suffix;
 }
 
 // static

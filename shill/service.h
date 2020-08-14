@@ -88,6 +88,18 @@ class Service : public base::RefCounted<Service> {
   static const char kStorageLinkMonitorDisabled[];
   static const char kStorageManagedCredentials[];
   static const char kStorageMeteredOverride[];
+  // The prefix for traffic counter storage key for the current
+  // billing cycles, appended by the source being counted (e.g. CHROME, USER,
+  // ARC, etc.)
+  static const char kStorageCurrentTrafficCounterPrefix[];
+  // The suffixes for traffic counter storage keys.
+  static const char kStorageTrafficCounterRxBytesSuffix[];
+  static const char kStorageTrafficCounterTxBytesSuffix[];
+  static const char kStorageTrafficCounterRxPacketsSuffix[];
+  static const char kStorageTrafficCounterTxPacketsSuffix[];
+  // An array of the traffic counter storage suffixes in the order that we
+  // expect them to be read from patchpanel and stored in the profile.
+  static const char* const kStorageTrafficCounterSuffixes[];
 
   static const uint8_t kStrengthMax;
   static const uint8_t kStrengthMin;
@@ -729,11 +741,13 @@ class Service : public base::RefCounted<Service> {
   FRIEND_TEST(ServiceTest, IsAutoConnectable);
   FRIEND_TEST(ServiceTest, IsNotMeteredByDefault);
   FRIEND_TEST(ServiceTest, Load);
+  FRIEND_TEST(ServiceTest, LoadTrafficCounters);
   FRIEND_TEST(ServiceTest, MeteredOverride);
   FRIEND_TEST(ServiceTest, PortalDetectionFailure);
   FRIEND_TEST(ServiceTest, RecheckPortal);
   FRIEND_TEST(ServiceTest, Save);
   FRIEND_TEST(ServiceTest, SaveMeteredOverride);
+  FRIEND_TEST(ServiceTest, SaveTrafficCounters);
   FRIEND_TEST(ServiceTest, SecurityLevel);
   FRIEND_TEST(ServiceTest, SetCheckPortal);
   FRIEND_TEST(ServiceTest, SetConnectableFull);
@@ -848,6 +862,11 @@ class Service : public base::RefCounted<Service> {
   // or unmetered, returns that value. Otherwise, returns whether or not the
   // connection is confirmed or inferred to be metered.
   bool IsMetered() const;
+
+  // Get the storage key for current traffic counters corresponding
+  // to |source| and |suffix| (one of kStorageTrafficCounterSuffixes).
+  static std::string GetCurrentTrafficCounterKey(
+      patchpanel::TrafficCounter::Source source, std::string suffix);
 
   // WeakPtrFactory comes first, so that other fields can use it.
   base::WeakPtrFactory<Service> weak_ptr_factory_;

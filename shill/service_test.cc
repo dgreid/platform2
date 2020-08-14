@@ -385,6 +385,36 @@ class ServiceWithOnEapCredentialsChangedOverride : public ServiceUnderTest {
 };
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
 
+TEST_F(ServiceTest, LoadTrafficCounters) {
+  FakeStore storage;
+  const uint64_t kUserRxBytes = 1234;
+  const uint64_t kChromeTxPackets = 9876;
+  vector<uint64_t> kUserCounters{kUserRxBytes, 0, 0, 0};
+  vector<uint64_t> kChromeCounters{0, 0, 0, kChromeTxPackets};
+  storage.SetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::USER,
+                        Service::kStorageTrafficCounterRxBytesSuffix),
+                    kUserRxBytes);
+  storage.SetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::CHROME,
+                        Service::kStorageTrafficCounterTxPacketsSuffix),
+                    kChromeTxPackets);
+  EXPECT_TRUE(service_->Load(&storage));
+  EXPECT_EQ(service_->current_traffic_counters_.size(), 2);
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(
+        service_
+            ->current_traffic_counters_[patchpanel::TrafficCounter::USER][i],
+        kUserCounters[i]);
+    EXPECT_EQ(
+        service_
+            ->current_traffic_counters_[patchpanel::TrafficCounter::CHROME][i],
+        kChromeCounters[i]);
+  }
+}
+
 TEST_F(ServiceTest, Load) {
   FakeStore storage;
   const string kCheckPortal("check-portal");
@@ -491,6 +521,39 @@ TEST_F(ServiceTest, SaveString) {
   // Setting kKey to an empty value should delete the entry
   service_->SaveStringOrClear(&storage, storage_id_, kKey, "");
   EXPECT_FALSE(storage.GetString(storage_id_, kKey, &data));
+}
+
+TEST_F(ServiceTest, SaveTrafficCounters) {
+  FakeStore storage;
+  std::valarray<uint64_t> kVPNCounters{0, 19, 28, 0};
+  std::valarray<uint64_t> kUnknownCounters{333, 222, 555, 888};
+  service_->current_traffic_counters_[patchpanel::TrafficCounter::VPN] =
+      kVPNCounters;
+  EXPECT_TRUE(service_->Save(&storage));
+  vector<uint64_t> kActualVPNCounters(Service::kTrafficCounterArraySize);
+  storage.GetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::VPN,
+                        Service::kStorageTrafficCounterRxBytesSuffix),
+                    &kActualVPNCounters[0]);
+  storage.GetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::VPN,
+                        Service::kStorageTrafficCounterTxBytesSuffix),
+                    &kActualVPNCounters[1]);
+  storage.GetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::VPN,
+                        Service::kStorageTrafficCounterRxPacketsSuffix),
+                    &kActualVPNCounters[2]);
+  storage.GetUint64(storage_id_,
+                    Service::GetCurrentTrafficCounterKey(
+                        patchpanel::TrafficCounter::VPN,
+                        Service::kStorageTrafficCounterTxPacketsSuffix),
+                    &kActualVPNCounters[3]);
+  for (size_t i = 0; i < Service::kTrafficCounterArraySize; i++) {
+    EXPECT_EQ(kVPNCounters[i], kActualVPNCounters[i]);
+  }
 }
 
 TEST_F(ServiceTest, Save) {
