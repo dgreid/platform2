@@ -20,6 +20,14 @@
 
 namespace patchpanel {
 
+// Simple enum of bitmasks used for specifying a set of IP family values.
+enum IpFamily {
+  NONE = 0,
+  IPv4 = 1 << 0,
+  IPv6 = 1 << 1,
+  Dual = IPv4 | IPv6,  //(1 << 0) | (1 << 1);
+};
+
 // cros lint will yell to force using int16/int64 instead of long here, however
 // note that unsigned long IS the correct signature for ioctl in Linux kernel -
 // it's 32 bits on 32-bit platform and 64 bits on 64-bit one.
@@ -162,6 +170,20 @@ class Datapath {
                                   uint16_t on,
                                   uint16_t off = 0);
 
+  // Starts or stops accepting IP traffic forwarded between |iif| and |oif|
+  // by adding or removing ACCEPT rules in the filter FORWARD chain of iptables
+  // and/or ip6tables. If |iif| is empty, only specifies |oif| as the output
+  // interface.  If |iif| is empty, only specifies |iif| as the input interface.
+  // |oif| and |iif| cannot be both empty.
+  virtual bool StartIpForwarding(IpFamily family,
+                                 const std::string& iif,
+                                 const std::string& oif);
+  virtual bool StopIpForwarding(IpFamily family,
+                                const std::string& iif,
+                                const std::string& oif);
+
+  // Convenience functions for enabling or disabling IPv6 forwarding in both
+  // directions between a pair of interfaces
   virtual bool AddIPv6Forwarding(const std::string& ifname1,
                                  const std::string& ifname2);
   virtual void RemoveIPv6Forwarding(const std::string& ifname1,
@@ -207,6 +229,12 @@ class Datapath {
   MinijailedProcessRunner& runner() const;
 
  private:
+  bool ModifyIpForwarding(IpFamily family,
+                          const std::string& op,
+                          const std::string& iif,
+                          const std::string& oif,
+                          bool log_failures = true);
+
   MinijailedProcessRunner* process_runner_;
   Firewall* firewall_;
   ioctl_t ioctl_;

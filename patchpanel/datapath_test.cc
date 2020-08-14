@@ -105,6 +105,15 @@ class MockProcessRunner : public MinijailedProcessRunner {
                int(const std::string& netns_name, bool log_failures));
 };
 
+TEST(DatapathTest, IpFamily) {
+  EXPECT_EQ(IpFamily::Dual, IpFamily::IPv4 | IpFamily::IPv6);
+  EXPECT_EQ(IpFamily::Dual & IpFamily::IPv4, IpFamily::IPv4);
+  EXPECT_EQ(IpFamily::Dual & IpFamily::IPv6, IpFamily::IPv6);
+  EXPECT_NE(IpFamily::Dual, IpFamily::IPv4);
+  EXPECT_NE(IpFamily::Dual, IpFamily::IPv6);
+  EXPECT_NE(IpFamily::IPv4, IpFamily::IPv6);
+}
+
 TEST(DatapathTest, AddTAP) {
   MockProcessRunner runner;
   MockFirewall firewall;
@@ -365,6 +374,101 @@ TEST(DatapathTest, StopRoutingDevice_CrosVM) {
   Datapath datapath(&runner, &firewall);
   datapath.StopRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
                              TrafficSource::CROSVM);
+}
+
+TEST(DatapathTest, StartStopIpForwarding) {
+  struct {
+    IpFamily family;
+    std::string iif;
+    std::string oif;
+    std::vector<std::string> start_args;
+    std::vector<std::string> stop_args;
+    bool result;
+  } testcases[] = {
+      {IpFamily::IPv4, "", "", {}, {}, false},
+      {IpFamily::NONE, "foo", "bar", {}, {}, false},
+      {IpFamily::IPv4,
+       "foo",
+       "bar",
+       {"-A", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::IPv4,
+       "",
+       "bar",
+       {"-A", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::IPv4,
+       "foo",
+       "",
+       {"-A", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::IPv6,
+       "foo",
+       "bar",
+       {"-A", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::IPv6,
+       "",
+       "bar",
+       {"-A", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::IPv6,
+       "foo",
+       "",
+       {"-A", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::Dual,
+       "foo",
+       "bar",
+       {"-A", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::Dual,
+       "",
+       "bar",
+       {"-A", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-o", "bar", "-j", "ACCEPT", "-w"},
+       true},
+      {IpFamily::Dual,
+       "foo",
+       "",
+       {"-A", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       {"-D", "FORWARD", "-i", "foo", "-j", "ACCEPT", "-w"},
+       true},
+  };
+
+  for (const auto& tt : testcases) {
+    MockProcessRunner runner;
+    MockFirewall firewall;
+    if (tt.result) {
+      if (tt.family & IpFamily::IPv4) {
+        EXPECT_CALL(runner,
+                    iptables(StrEq("filter"), tt.start_args, true, nullptr))
+            .WillOnce(Return(0));
+        EXPECT_CALL(runner,
+                    iptables(StrEq("filter"), tt.stop_args, true, nullptr))
+            .WillOnce(Return(0));
+      }
+      if (tt.family & IpFamily::IPv6) {
+        EXPECT_CALL(runner,
+                    ip6tables(StrEq("filter"), tt.start_args, true, nullptr))
+            .WillOnce(Return(0));
+        EXPECT_CALL(runner,
+                    ip6tables(StrEq("filter"), tt.stop_args, true, nullptr))
+            .WillOnce(Return(0));
+      }
+    }
+    Datapath datapath(&runner, &firewall);
+
+    EXPECT_EQ(tt.result, datapath.StartIpForwarding(tt.family, tt.iif, tt.oif));
+    EXPECT_EQ(tt.result, datapath.StopIpForwarding(tt.family, tt.iif, tt.oif));
+  }
 }
 
 TEST(DatapathTest, AddInboundIPv4DNAT) {

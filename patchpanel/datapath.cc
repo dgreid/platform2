@@ -15,6 +15,8 @@
 #include <sys/ioctl.h>
 #include <sys/socket.h>
 
+#include <vector>
+
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/posix/eintr_wrapper.h>
@@ -406,13 +408,11 @@ void Datapath::RemoveInboundIPv4DNAT(const std::string& ifname,
 // TODO(hugobenichi) The name incorrectly refers to egress traffic, but this
 // FORWARD rule actually enables forwarding for ingress traffic. Fix the name.
 bool Datapath::AddOutboundIPv4(const std::string& ifname) {
-  return process_runner_->iptables("filter", {"-A", "FORWARD", "-o", ifname,
-                                              "-j", "ACCEPT", "-w"}) == 0;
+  return StartIpForwarding(IpFamily::IPv4, "", ifname);
 }
 
 void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
-  process_runner_->iptables(
-      "filter", {"-D", "FORWARD", "-o", ifname, "-j", "ACCEPT", "-w"});
+  StopIpForwarding(IpFamily::IPv4, "", ifname);
 }
 
 bool Datapath::AddSNATMarkRules() {
@@ -534,25 +534,75 @@ void Datapath::RemoveIPv6Neighbor(const std::string& ifname,
   process_runner_->ip6("neigh", "del", {"proxy", ipv6_addr, "dev", ifname});
 }
 
-bool Datapath::AddIPv6Forwarding(const std::string& ifname1,
-                                 const std::string& ifname2) {
-  if (process_runner_->ip6tables(
-          "filter",
-          {"-C", "FORWARD", "-i", ifname1, "-o", ifname2, "-j", "ACCEPT", "-w"},
-          false /*log_failures*/) != 0 &&
-      process_runner_->ip6tables(
-          "filter", {"-A", "FORWARD", "-i", ifname1, "-o", ifname2, "-j",
-                     "ACCEPT", "-w"}) != 0) {
+bool Datapath::ModifyIpForwarding(IpFamily family,
+                                  const std::string& op,
+                                  const std::string& iif,
+                                  const std::string& oif,
+                                  bool log_failures) {
+  if (iif.empty() && oif.empty()) {
+    LOG(ERROR) << "Cannot change IP forwarding with no input or output "
+                  "interface specified";
     return false;
   }
 
-  if (process_runner_->ip6tables(
-          "filter",
-          {"-C", "FORWARD", "-i", ifname2, "-o", ifname1, "-j", "ACCEPT", "-w"},
-          false /*log_failures*/) != 0 &&
-      process_runner_->ip6tables(
-          "filter", {"-A", "FORWARD", "-i", ifname2, "-o", ifname1, "-j",
-                     "ACCEPT", "-w"}) != 0) {
+  switch (family) {
+    case IPv4:
+    case IPv6:
+    case Dual:
+      break;
+    default:
+
+      LOG(ERROR) << "Cannot change IP forwarding from \"" << iif << "\" to \""
+                 << oif << "\": incorrect IP family " << family;
+      return false;
+  }
+
+  std::vector<std::string> args = {op, "FORWARD"};
+  if (!iif.empty()) {
+    args.push_back("-i");
+    args.push_back(iif);
+  }
+  if (!oif.empty()) {
+    args.push_back("-o");
+    args.push_back(oif);
+  }
+  args.push_back("-j");
+  args.push_back("ACCEPT");
+  args.push_back("-w");
+
+  bool success = true;
+  if (family & IpFamily::IPv4)
+    success &= process_runner_->iptables("filter", args, log_failures) == 0;
+  if (family & IpFamily::IPv6)
+    success &= process_runner_->ip6tables("filter", args, log_failures) == 0;
+  return success;
+}
+
+bool Datapath::StartIpForwarding(IpFamily family,
+                                 const std::string& iif,
+                                 const std::string& oif) {
+  return ModifyIpForwarding(family, "-A", iif, oif);
+}
+
+bool Datapath::StopIpForwarding(IpFamily family,
+                                const std::string& iif,
+                                const std::string& oif) {
+  return ModifyIpForwarding(family, "-D", iif, oif);
+}
+
+bool Datapath::AddIPv6Forwarding(const std::string& ifname1,
+                                 const std::string& ifname2) {
+  // Only start Ipv6 forwarding if -C returns false and it had not been
+  // started yet.
+  if (!ModifyIpForwarding(IpFamily::IPv6, "-C", ifname1, ifname2,
+                          false /*log_failures*/) &&
+      !StartIpForwarding(IpFamily::IPv6, ifname1, ifname2)) {
+    return false;
+  }
+
+  if (!ModifyIpForwarding(IpFamily::IPv6, "-C", ifname2, ifname1,
+                          false /*log_failures*/) &&
+      !StartIpForwarding(IpFamily::IPv6, ifname2, ifname1)) {
     RemoveIPv6Forwarding(ifname1, ifname2);
     return false;
   }
@@ -562,11 +612,8 @@ bool Datapath::AddIPv6Forwarding(const std::string& ifname1,
 
 void Datapath::RemoveIPv6Forwarding(const std::string& ifname1,
                                     const std::string& ifname2) {
-  process_runner_->ip6tables("filter", {"-D", "FORWARD", "-i", ifname1, "-o",
-                                        ifname2, "-j", "ACCEPT", "-w"});
-
-  process_runner_->ip6tables("filter", {"-D", "FORWARD", "-i", ifname2, "-o",
-                                        ifname1, "-j", "ACCEPT", "-w"});
+  StopIpForwarding(IpFamily::IPv6, ifname1, ifname2);
+  StopIpForwarding(IpFamily::IPv6, ifname2, ifname1);
 }
 
 bool Datapath::AddIPv4Route(uint32_t gateway_addr,
