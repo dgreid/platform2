@@ -210,6 +210,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /var/log/session_manager        u:object_r:cros_var_log_session_manager:s0
 /var/log/tlsdate.log            u:object_r:cros_tlsdate_log:s0
 /var/log/tpm-firmware-updater.log u:object_r:cros_var_log_tpm_firmware_updater:s0
+/var/log/typecd.log             u:object_r:cros_typecd_log:s0
 /var/log/ui(/.*)?               u:object_r:cros_var_log_ui:s0
 /var/log/upstart.log            u:object_r:cros_var_log_upstart:s0
 /var/log/vmlog(/.*)?            u:object_r:cros_var_log_vmlog:s0
