@@ -9,7 +9,6 @@
 #include "cryptohome/proxy/dbus_service.h"
 
 int main(int argc, char** argv) {
-#if USE_CRYPTOHOME_USERDATAAUTH_INTERFACE
   // Initialize command line configuration early, as logging will require
   // command line to be initialized
   base::CommandLine::Init(argc, argv);
@@ -24,9 +23,4 @@ int main(int argc, char** argv) {
 
   cryptohome::CryptohomeProxyDaemon proxy_daemon;
   return proxy_daemon.Run();
-#else
-  LOG(FATAL) << "cryptohome_userdataauth_interface USE flag is unset, "
-                "cryptohome-proxy is disabled.";
-  return 0;
-#endif
 }

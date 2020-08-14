@@ -112,7 +112,6 @@ int main(int argc, char** argv) {
   cryptohome::CryptoLib::AssertProductionScryptParams();
 
   if (use_new_dbus_interface) {
-#if USE_CRYPTOHOME_USERDATAAUTH_INTERFACE
     // Note that there's an AtExitManager in the constructor of
     // UserDataAuthDaemon
     cryptohome::UserDataAuthDaemon user_data_auth_daemon;
@@ -145,9 +144,6 @@ int main(int argc, char** argv) {
 
     // Start UserDataAuth daemon if the option is selected
     user_data_auth_daemon.Run();
-#else
-    LOG(FATAL) << "Unsupported option: " << switches::kUserDataAuthInterface;
-#endif
   } else {
     // Start the old interface if nothing is selected
 

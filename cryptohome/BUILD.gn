@@ -471,6 +471,7 @@ if (use.test) {
       "tpm_persistent_state_unittest.cc",
       "user_oldest_activity_timestamp_cache_unittest.cc",
       "user_session_unittest.cc",
+      "userdataauth_unittest.cc",
       "vault_keyset_unittest.cc",
     ]
     libs = [
@@ -539,10 +540,6 @@ if (use.test) {
         "cert/cert_provision_unittest.cc",
       ]
       deps += [ ":cert_provision-static" ]
-    }
-
-    if (use.cryptohome_userdataauth_interface) {
-      sources += [ "userdataauth_unittest.cc" ]
     }
 
     # TODO(crbug.com/1082873): Remove after fixing usage of deprecated
