@@ -2,8 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate pkg_config;
-
 fn main() {
-    pkg_config::probe_library("libvda").unwrap();
+    match pkg_config::probe_library("libvda") {
+        Ok(_) => (),
+        // Ignore a pkg-config failure to allow cargo-clippy to run even when libvda.pc doesn't
+        // exist.
+        Err(pkg_config::Error::Failure { command, .. })
+            if command == r#""pkg-config" "--libs" "--cflags" "libvda""# => {}
+        Err(e) => panic!("{}", e),
+    };
 }
