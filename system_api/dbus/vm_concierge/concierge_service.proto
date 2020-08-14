@@ -209,6 +209,9 @@ message StartArcVmRequest {
 
   // Whether the guest kernel root file system is writable.
   bool rootfs_writable = 8;
+
+  // Ignore development configuration directives when ARCVM is started.
+  bool ignore_dev_conf = 9;
 }
 
 enum VmStatus {
