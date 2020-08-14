@@ -45,11 +45,7 @@ class DrivefsHelper : public FUSEHelper {
 
  protected:
   // Make sure the dir is set up to be used by FUSE's helper user.
-  // Some FUSE modules may need secure and/or persistent storage of cached
-  // data somewhere in cryptohome. This method provides implementations
-  // with a shortcut for doing this.
-  // This is approximately `chown fuse-drivefs:chronos-access |dirpath|'.
-  virtual bool SetupDirectoryForFUSEAccess(const base::FilePath& dirpath) const;
+  virtual bool CheckDataDirPermissions(const base::FilePath& dirpath) const;
 
   // Ensure |path| is accessible by chronos.
   virtual bool CheckMyFilesPermissions(const base::FilePath& path) const;

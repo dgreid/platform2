@@ -136,17 +136,16 @@ class TestDrivefsHelper : public DrivefsHelper {
   TestDrivefsHelper(const Platform* platform,
                     brillo::ProcessReaper* process_reaper)
       : DrivefsHelper(platform, process_reaper) {
-    ON_CALL(*this, SetupDirectoryForFUSEAccess(_))
+    ON_CALL(*this, CheckDataDirPermissions(_))
         .WillByDefault(Invoke(
-            this,
-            &TestDrivefsHelper::ForwardSetupDirectoryForFUSEAccessToImpl));
+            this, &TestDrivefsHelper::ForwardCheckDataDirPermissionsToImpl));
     ON_CALL(*this, CheckMyFilesPermissions(_))
         .WillByDefault(Invoke(
             this, &TestDrivefsHelper::ForwardCheckMyFilesPermissionsToImpl));
   }
 
   MOCK_METHOD(bool,
-              SetupDirectoryForFUSEAccess,
+              CheckDataDirPermissions,
               (const base::FilePath&),
               (const, override));
   MOCK_METHOD(bool,
@@ -155,8 +154,8 @@ class TestDrivefsHelper : public DrivefsHelper {
               (const, override));
 
  private:
-  bool ForwardSetupDirectoryForFUSEAccessToImpl(const base::FilePath& path) {
-    return DrivefsHelper::SetupDirectoryForFUSEAccess(path);
+  bool ForwardCheckDataDirPermissionsToImpl(const base::FilePath& path) {
+    return DrivefsHelper::CheckDataDirPermissions(path);
   }
 
   bool ForwardCheckMyFilesPermissionsToImpl(const base::FilePath& path) {
@@ -171,8 +170,8 @@ class DrivefsHelperTest : public ::testing::Test {
   void SetUp() override { ASSERT_TRUE(platform_.SetUp()); }
 
  protected:
-  bool SetupDirectoryForFUSEAccess(const std::string& dir) {
-    return helper_.SetupDirectoryForFUSEAccess(base::FilePath(dir));
+  bool CheckDataDirPermissions(const std::string& dir) {
+    return helper_.CheckDataDirPermissions(base::FilePath(dir));
   }
 
   bool CheckMyFilesPermissions(const std::string& dir) {
@@ -185,7 +184,7 @@ class DrivefsHelperTest : public ::testing::Test {
 };
 
 TEST_F(DrivefsHelperTest, CreateMounter) {
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(platform_.datadir()))
+  EXPECT_CALL(helper_, CheckDataDirPermissions(platform_.datadir()))
       .WillOnce(Return(true));
 
   auto mounter = helper_.CreateMounter(
@@ -206,7 +205,7 @@ TEST_F(DrivefsHelperTest, CreateMounter) {
 }
 
 TEST_F(DrivefsHelperTest, CreateMounterWithMyFiles) {
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(platform_.datadir()))
+  EXPECT_CALL(helper_, CheckDataDirPermissions(platform_.datadir()))
       .WillOnce(Return(true));
   EXPECT_CALL(helper_, CheckMyFilesPermissions(base::FilePath("/baz/qux")))
       .WillOnce(Return(true));
@@ -235,7 +234,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_CreateDataDir) {
       .WillOnce(
           DoAll(SetArgPointee<1>(platform_.datadir().value()), Return(true)));
   EXPECT_CALL(helper_,
-              SetupDirectoryForFUSEAccess(platform_.datadir().Append("bar")))
+              CheckDataDirPermissions(platform_.datadir().Append("bar")))
       .WillOnce(Return(true));
 
   auto mounter = helper_.CreateMounter(
@@ -256,8 +255,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_CreateDataDir) {
 
 TEST_F(DrivefsHelperTest, CreateMounter_GetUserAndGroupIdFails) {
   EXPECT_CALL(platform_, GetUserAndGroupId(_, _, _)).WillOnce(Return(false));
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(platform_.datadir()))
-      .Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(platform_.datadir())).Times(0);
 
   EXPECT_FALSE(helper_.CreateMounter(
       base::FilePath("/tmp/working_dir"), Uri::Parse("drivefs://id"),
@@ -266,8 +264,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_GetUserAndGroupIdFails) {
 
 TEST_F(DrivefsHelperTest, CreateMounter_GetAndGroupIdFails) {
   EXPECT_CALL(platform_, GetGroupId(_, _)).WillOnce(Return(false));
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(platform_.datadir()))
-      .Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(platform_.datadir())).Times(0);
 
   EXPECT_FALSE(helper_.CreateMounter(
       base::FilePath("/tmp/working_dir"), Uri::Parse("drivefs://id"),
@@ -276,7 +273,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_GetAndGroupIdFails) {
 
 TEST_F(DrivefsHelperTest, CreateMounter_GetRealPathFails_DirectoryExists) {
   EXPECT_CALL(platform_, GetRealPath("/foo/bar", _)).WillOnce(Return(false));
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(_)).Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(_)).Times(0);
 
   EXPECT_FALSE(helper_.CreateMounter(
       base::FilePath("/tmp/working_dir"), Uri::Parse("drivefs://id"),
@@ -287,7 +284,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_GetRealPathFails_DirectoryDoesntExist) {
   EXPECT_CALL(platform_, DirectoryExists("/foo/bar")).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetRealPath("/foo", _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetGroupId(_, _)).Times(0);
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(_)).Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(_)).Times(0);
 
   EXPECT_FALSE(helper_.CreateMounter(
       base::FilePath("/tmp/working_dir"), Uri::Parse("drivefs://id"),
@@ -295,7 +292,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_GetRealPathFails_DirectoryDoesntExist) {
 }
 
 TEST_F(DrivefsHelperTest, CreateMounter_InvalidPath) {
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(_)).Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(_)).Times(0);
 
   for (const auto* path : {"relative/path", "/foo/../bar", ".", ".."}) {
     EXPECT_FALSE(helper_.CreateMounter(base::FilePath("/tmp/working_dir"),
@@ -306,7 +303,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_InvalidPath) {
 }
 
 TEST_F(DrivefsHelperTest, CreateMounter_NoDatadir) {
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(_)).Times(0);
+  EXPECT_CALL(helper_, CheckDataDirPermissions(_)).Times(0);
 
   EXPECT_FALSE(helper_.CreateMounter(
       base::FilePath("/tmp/working_dir"), Uri::Parse("drivefs://id"),
@@ -314,7 +311,7 @@ TEST_F(DrivefsHelperTest, CreateMounter_NoDatadir) {
 }
 
 TEST_F(DrivefsHelperTest, CreateMounter_SetupDirectoryFails) {
-  EXPECT_CALL(helper_, SetupDirectoryForFUSEAccess(platform_.datadir()))
+  EXPECT_CALL(helper_, CheckDataDirPermissions(platform_.datadir()))
       .WillOnce(Return(false));
 
   EXPECT_FALSE(helper_.CreateMounter(
@@ -322,198 +319,53 @@ TEST_F(DrivefsHelperTest, CreateMounter_SetupDirectoryFails) {
       base::FilePath("/media/fuse/drivefs/id"), {"rw", "datadir=/foo/bar"}));
 }
 
-// Verifies that SetupDirectoryForFUSEAccess crashes if path is unsafe.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_UnsafePath) {
-  EXPECT_DEATH(SetupDirectoryForFUSEAccess("foo"), ".*");
-  EXPECT_DEATH(SetupDirectoryForFUSEAccess("../foo"), ".*");
-  EXPECT_DEATH(SetupDirectoryForFUSEAccess("/bar/../foo"), ".*");
-  EXPECT_DEATH(SetupDirectoryForFUSEAccess("/../foo"), ".*");
+// Verifies that CheckDataDirPermissions crashes if path is unsafe.
+TEST_F(DrivefsHelperTest, CheckDataDirPermissions_UnsafePath) {
+  EXPECT_DEATH(CheckDataDirPermissions("foo"), ".*");
+  EXPECT_DEATH(CheckDataDirPermissions("../foo"), ".*");
+  EXPECT_DEATH(CheckDataDirPermissions("/bar/../foo"), ".*");
+  EXPECT_DEATH(CheckDataDirPermissions("/../foo"), ".*");
 }
 
-// Verifies that SetupDirectoryForFUSEAccess creates directory with
-// correct access if there was no directory initially.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_NoDir) {
+// Verifies that CheckDataDirPermissions won't create directory if there was
+// no directory initially.
+TEST_F(DrivefsHelperTest, CheckDataDirPermissions_NoDir) {
   EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
       .WillOnce(Return(false));
-  EXPECT_CALL(platform_, CreateDirectory(platform_.datadir().value()))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(platform_.datadir().value(), 0770))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().value(), kFilesUID,
-                                      kFilesAccessGID))
-      .WillOnce(Return(true));
-  EXPECT_TRUE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
+  EXPECT_CALL(platform_, CreateDirectory(_)).Times(0);
+  EXPECT_FALSE(CheckDataDirPermissions(platform_.datadir().value()));
 }
 
-// Verifies that SetupDirectoryForFUSEAccess fails if there was no
-// directory initially and can't create one.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_NoDir_CantCreate) {
-  EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
-      .WillOnce(Return(false));
-  EXPECT_CALL(platform_, CreateDirectory(platform_.datadir().value()))
-      .WillOnce(Return(false));
-  EXPECT_CALL(platform_, SetPermissions(_, _)).Times(0);
-  EXPECT_CALL(platform_, SetOwnership(_, _, _)).Times(0);
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
-}
-
-// Verifies that SetupDirectoryForFUSEAccess fails if chmod fails.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_NoDir_CantChmod) {
-  EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
-      .WillOnce(Return(false));
-  EXPECT_CALL(platform_, CreateDirectory(platform_.datadir().value()))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(platform_.datadir().value(), 0770));
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
-}
-
-// Verifies that SetupDirectoryForFUSEAccess fails if can't get attributes
+// Verifies that CheckDataDirPermissions fails if can't get attributes
 // of an existing directory.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_CantStat) {
+TEST_F(DrivefsHelperTest, CheckDataDirPermissions_CantStat) {
   EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetOwnership(platform_.datadir().value(), _, _));
   EXPECT_CALL(platform_, SetOwnership(_, _, _)).Times(0);
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
+  EXPECT_FALSE(CheckDataDirPermissions(platform_.datadir().value()));
 }
 
-// Verifies that SetupDirectoryForFUSEAccess succeeds with shortcut
+// Verifies that CheckDataDirPermissions succeeds
 // if directory already has correct owner.
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_Owned) {
+TEST_F(DrivefsHelperTest, CheckDataDirPermissions_Owned) {
   EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetOwnership(platform_.datadir().value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kFilesUID),
-                      SetArgPointee<2>(kFilesAccessGID), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(kFilesUID), Return(true)));
   EXPECT_CALL(platform_, SetOwnership(_, _, _)).Times(0);
-  EXPECT_TRUE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
+  EXPECT_TRUE(CheckDataDirPermissions(platform_.datadir().value()));
 }
 
-// Verifies that SetupDirectoryForFUSEAccess updates ownership to match the
-// expected owner if the old owner was as expected.
-TEST_F(DrivefsHelperTest,
-       SetupDirectoryForFUSEAccess_AlreadyExistsWithOldOwner) {
-  base::CreateDirectory(platform_.datadir().Append("foo"));
-  base::WriteFile(platform_.datadir().Append("foo").Append("qux"), "a", 1);
-  base::CreateDirectory(platform_.datadir().Append("bar"));
-  base::WriteFile(platform_.datadir().Append("bar").Append("baz"), "a", 1);
-
+// Verifies that CheckDataDirPermissions fails if the directory
+// has wrong owner.
+TEST_F(DrivefsHelperTest, CheckDataDirPermissions_WrongOwner) {
   EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, GetOwnership(platform_.datadir().value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kOldUID),
-                      SetArgPointee<2>(kFilesAccessGID), Return(true)));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().value(), kOldUID,
-                                      kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_,
-              GetOwnership(platform_.datadir().Append("bar").value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kFilesUID),
-                      SetArgPointee<2>(kFilesAccessGID), Return(true)));
-
-  EXPECT_CALL(platform_,
-              GetOwnership(platform_.datadir().Append("foo").value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kOldUID), SetArgPointee<2>(kOldGID),
-                      Return(true)));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().Append("foo").value(),
-                                      kOldUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(
-      platform_,
-      SetOwnership(platform_.datadir().Append("foo").Append("qux").value(),
-                   kFilesUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().Append("foo").value(),
-                                      kFilesUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().value(), kFilesUID,
-                                      kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_TRUE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
-}
-
-TEST_F(DrivefsHelperTest, SetupDirectoryForFUSEAccess_AlreadyExists_CantChown) {
-  base::CreateDirectory(platform_.datadir().Append("foo"));
-  base::WriteFile(platform_.datadir().Append("foo").Append("qux"), "a", 1);
-  base::CreateDirectory(platform_.datadir().Append("bar"));
-  base::WriteFile(platform_.datadir().Append("bar").Append("baz"), "a", 1);
-
-  EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, GetOwnership(platform_.datadir().value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kOldUID),
-                      SetArgPointee<2>(kFilesAccessGID), Return(true)));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().value(), kOldUID,
-                                      kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_,
-              GetOwnership(platform_.datadir().Append("bar").value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kFilesUID),
-                      SetArgPointee<2>(kFilesAccessGID), Return(true)));
-
-  EXPECT_CALL(platform_,
-              GetOwnership(platform_.datadir().Append("foo").value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kOldUID), SetArgPointee<2>(kOldGID),
-                      Return(true)));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().Append("foo").value(),
-                                      kOldUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(
-      platform_,
-      SetOwnership(platform_.datadir().Append("foo").Append("qux").value(),
-                   kFilesUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().Append("foo").value(),
-                                      kFilesUID, kFilesAccessGID))
-      .WillOnce(Return(true));
-
-  EXPECT_CALL(platform_, SetOwnership(platform_.datadir().value(), kFilesUID,
-                                      kFilesAccessGID))
-      .WillOnce(Return(false));
-
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
-}
-
-// Verifies that SetupDirectoryForFUSEAccess refuses to update ownership from an
-// unexpected old uid.
-TEST_F(DrivefsHelperTest,
-       SetupDirectoryForFUSEAccess_AlreadyExistsWithUnexpectedOwner) {
-  base::CreateDirectory(platform_.datadir().Append("foo"));
-  base::WriteFile(platform_.datadir().Append("foo").Append("qux"), "a", 1);
-  base::CreateDirectory(platform_.datadir().Append("bar"));
-  base::WriteFile(platform_.datadir().Append("bar").Append("baz"), "a", 1);
-
-  EXPECT_CALL(platform_, DirectoryExists(platform_.datadir().value()))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_, GetOwnership(platform_.datadir().value(), _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(kOtherUID), SetArgPointee<2>(kOldGID),
-                      Return(true)));
-
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
-}
-
-TEST_F(DrivefsHelperTest,
-       SetupDirectoryForFUSEAccess_AlreadyExistsOldOwnerTooDeep) {
-  ON_CALL(platform_, GetOwnership(_, _, _))
-      .WillByDefault((DoAll(SetArgPointee<1>(kOldUID),
-                            SetArgPointee<2>(kOldGID), Return(true))));
-  ON_CALL(platform_, SetOwnership(_, _, _)).WillByDefault((Return(true)));
-
-  ASSERT_TRUE(base::CreateDirectory(platform_.datadir().Append("1/2/3/4/5/6")));
-
-  EXPECT_FALSE(SetupDirectoryForFUSEAccess(platform_.datadir().value()));
+      .WillOnce(DoAll(SetArgPointee<1>(kFilesUID + 15), Return(true)));
+  EXPECT_CALL(platform_, SetOwnership(_, _, _)).Times(0);
+  EXPECT_FALSE(CheckDataDirPermissions(platform_.datadir().value()));
 }
 
 TEST_F(DrivefsHelperTest, CheckMyFilesPermissions_Success) {
