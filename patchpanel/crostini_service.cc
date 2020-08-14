@@ -88,6 +88,9 @@ bool CrostiniService::Start(uint64_t vm_id, bool is_termina, int subnet_index) {
 
   LOG(INFO) << "Crostini network service started for {id: " << vm_id << "}";
   StartForwarding(shill_client_->default_interface(), tap->host_ifname());
+  auto source = is_termina ? TrafficSource::CROSVM : TrafficSource::PLUGINVM;
+  datapath_->StartRoutingDevice("", tap->host_ifname(),
+                                tap->config().host_ipv4_addr(), source);
 
   if (adb_sideloading_enabled_)
     StartAdbPortForwarding(tap->phys_ifname());
@@ -105,6 +108,9 @@ void CrostiniService::Stop(uint64_t vm_id, bool is_termina) {
   }
 
   const auto& ifname = it->second->host_ifname();
+  auto source = is_termina ? TrafficSource::CROSVM : TrafficSource::PLUGINVM;
+  datapath_->StopRoutingDevice("", ifname,
+                               it->second->config().host_ipv4_addr(), source);
   StopForwarding(shill_client_->default_interface(), ifname);
   if (adb_sideloading_enabled_)
     StopAdbPortForwarding(ifname);

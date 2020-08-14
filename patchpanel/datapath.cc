@@ -332,16 +332,13 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     LOG(ERROR) << "Failed to configure ingress traffic rules for " << ext_ifname
                << "->" << int_ifname;
 
-  // TODO(b/161508179) Explicitly enable IPv4 forwarding for this pair of
-  // interfaces for the ingress direction.
-  if (!AddOutboundIPv4(int_ifname))
-    LOG(ERROR) << "Failed to configure egress traffic rules for " << ext_ifname
-               << "<-" << int_ifname;
+  if (StartIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname))
+    LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "->"
+               << int_ifname;
 
-  // TODO(b/161508179) Explicitly enable IPv4 forwarding for this pair of
-  // interfaces for the egress direction and stop relying on the traffic fwmark
-  // matching 1/1 once forwarded egress traffic is routed through the fwmark
-  // routing tag.
+  if (StartIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname))
+    LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "<-"
+               << int_ifname;
 
   // TODO(b/161507671) If ext_ifname is not null, mark egress traffic with the
   // fwmark routing tag corresponding to |ext_ifname|, and set up strong routing
@@ -360,9 +357,8 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
                                  TrafficSource source) {
   if (!ext_ifname.empty())
     RemoveInboundIPv4DNAT(ext_ifname, IPv4AddressToString(int_ipv4_addr));
-  RemoveOutboundIPv4(int_ifname);
-
-  // TODO(b/161508179) Stops IPv4 forwarding for this pair of interfaces.
+  StopIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname);
+  StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
   // TODO(b/161508179) Remove source marking for egress traffic.
   // TODO(b/161507671) Remove routing tag marking for egress traffic.
 }
@@ -415,6 +411,8 @@ void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
   StopIpForwarding(IpFamily::IPv4, "", ifname);
 }
 
+// TODO(b/161507671) Stop relying on the traffic fwmark 1/1 once forwarded
+// egress traffic is routed through the fwmark routing tag.
 bool Datapath::AddSNATMarkRules() {
   // chromium:1050579: INVALID packets cannot be tracked by conntrack therefore
   // need to be explicitly dropped.

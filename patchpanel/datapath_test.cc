@@ -313,8 +313,12 @@ TEST(DatapathTest, StartRoutingDevice_Arc) {
                                            "--to-destination", "1.2.3.4", "-w"),
                                true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-A", "FORWARD", "-o", "arc_eth0",
-                                           "-j", "ACCEPT", "-w"),
+                               ElementsAre("-A", "FORWARD", "-i", "eth0", "-o",
+                                           "arc_eth0", "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-i", "arc_eth0",
+                                           "-o", "eth0", "-j", "ACCEPT", "-w"),
                                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
@@ -327,6 +331,10 @@ TEST(DatapathTest, StartRoutingDevice_CrosVM) {
   MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-A", "FORWARD", "-o", "vmtap0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-i", "vmtap0",
                                            "-j", "ACCEPT", "-w"),
                                true, nullptr));
 
@@ -354,8 +362,12 @@ TEST(DatapathTest, StopRoutingDevice_Arc) {
                                            "--to-destination", "1.2.3.4", "-w"),
                                true, nullptr));
   EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-D", "FORWARD", "-o", "arc_eth0",
-                                           "-j", "ACCEPT", "-w"),
+                               ElementsAre("-D", "FORWARD", "-i", "eth0", "-o",
+                                           "arc_eth0", "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-i", "arc_eth0",
+                                           "-o", "eth0", "-j", "ACCEPT", "-w"),
                                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
@@ -368,6 +380,10 @@ TEST(DatapathTest, StopRoutingDevice_CrosVM) {
   MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("filter"),
                                ElementsAre("-D", "FORWARD", "-o", "vmtap0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-i", "vmtap0",
                                            "-j", "ACCEPT", "-w"),
                                true, nullptr));
 
