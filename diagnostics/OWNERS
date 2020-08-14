@@ -1,7 +1,6 @@
 # Wilco telemetry and diagnostics owners:
 lamzin@google.com
 mgawad@google.com
-pbond@chromium.org
 
 # cros_healthd owners:
 pmoy@chromium.org
@@ -9,6 +8,7 @@ jschettler@chromium.org
 
 # Backup Wilco reviewers:
 emaxx@chromium.org
+pbond@chromium.org
 pmarko@chromium.org
 
 # Backup cros_healthd reviewers:
