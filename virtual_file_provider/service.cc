@@ -104,8 +104,9 @@ void Service::OpenFile(dbus::MethodCall* method_call,
   dbus::MessageReader reader(method_call);
   int64_t size = 0;
   if (!reader.PopInt64(&size)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, "Size must be provided."));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, "Size must be provided."));
     return;
   }
   // Generate a new ID.
@@ -130,7 +131,7 @@ void Service::OpenFile(dbus::MethodCall* method_call,
   dbus::MessageWriter writer(response.get());
   writer.AppendString(id);
   writer.AppendFileDescriptor(fd.get());
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace virtual_file_provider

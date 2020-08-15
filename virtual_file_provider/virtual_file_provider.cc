@@ -10,7 +10,7 @@
 #include <base/bind.h>
 #include <base/location.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/message_loop/message_pump_type.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread.h>
@@ -146,7 +146,11 @@ int main(int argc, char** argv) {
   virtual_file_provider::ServiceThread service_thread(
       fuse_mount_path, &size_map);
   base::Thread::Options options;
+#if BASE_VER < 780000
   options.message_loop_type = base::MessageLoop::TYPE_IO;
+#else
+  options.message_pump_type = base::MessagePumpType::IO;
+#endif
   service_thread.StartWithOptions(options);
 
   // Enter the FUSE main loop.
