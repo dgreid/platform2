@@ -190,6 +190,13 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
   if (base::Optional<bool> value = EncodeBoolean(key::kDeviceAllowNewUsers))
     policy->mutable_allow_new_users()->set_allow_new_users(value.value());
   if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kDeviceUserAllowlist)) {
+    auto list = policy->mutable_user_allowlist();
+    list->clear_user_allowlist();
+    for (const std::string& value : values.value())
+      list->add_user_allowlist(value);
+  }
+  if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceUserWhitelist)) {
     auto list = policy->mutable_user_whitelist();
     list->clear_user_whitelist();
@@ -358,6 +365,10 @@ void DevicePolicyEncoder::EncodeAutoUpdatePolicies(
           EncodeBoolean(key::kChromeOsReleaseChannelDelegated)) {
     policy->mutable_release_channel()->set_release_channel_delegated(
         value.value());
+  }
+  if (base::Optional<std::string> value =
+          EncodeString(key::kDeviceReleaseLtsTag)) {
+    policy->mutable_release_channel()->set_release_lts_tag(value.value());
   }
 
   if (base::Optional<bool> value =
@@ -684,6 +695,30 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
     }
   }
 
+  if (base::Optional<std::vector<std::string>> values =
+          EncodeStringList(key::kUsbDetachableAllowlist)) {
+    auto list = policy->mutable_usb_detachable_allowlist();
+    list->clear_id();
+    for (const std::string& value : values.value()) {
+      std::string error;
+      std::unique_ptr<base::DictionaryValue> dict_value =
+          JsonToDictionary(value, &error);
+      int vid, pid;
+      if (!dict_value || !dict_value->GetInteger("vendor_id", &vid) ||
+          !dict_value->GetInteger("product_id", &pid)) {
+        LOG(ERROR) << "Invalid JSON string '"
+                   << (!error.empty() ? error : value) << "' for policy '"
+                   << key::kUsbDetachableAllowlist << "', ignoring. Expected: "
+                   << "'{\"vendor_id\": <vid>, \"product_id\": <pid>}'.";
+        continue;
+      }
+
+      em::UsbDeviceIdInclusiveProto* entry = list->add_id();
+      entry->set_vendor_id(vid);
+      entry->set_product_id(pid);
+    }
+  }
+
   if (base::Optional<bool> value =
           EncodeBoolean(key::kDeviceQuirksDownloadEnabled)) {
     policy->mutable_quirks_download_enabled()->set_quirks_download_enabled(
@@ -967,6 +1002,11 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
             em::DeviceCrostiniArcAdbSideloadingAllowedProto::AllowanceMode>(
             value.value()));
   }
+
+  if (base::Optional<bool> value =
+          EncodeBoolean(key::kDeviceShowLowDiskSpaceNotification))
+    policy->mutable_device_show_low_disk_space_notification()
+        ->set_device_show_low_disk_space_notification(value.value());
 }
 
 base::Optional<bool> DevicePolicyEncoder::EncodeBoolean(

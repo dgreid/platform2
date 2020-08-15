@@ -105,6 +105,9 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeStringList(&policy, key::kDeviceUserWhitelist, kStringList);
   EXPECT_EQ(kStringList, ToVector(policy.user_whitelist().user_whitelist()));
 
+  EncodeStringList(&policy, key::kDeviceUserAllowlist, kStringList);
+  EXPECT_EQ(kStringList, ToVector(policy.user_allowlist().user_allowlist()));
+
   EncodeBoolean(&policy, key::kDeviceEphemeralUsersEnabled, kBool);
   EXPECT_EQ(kBool, policy.ephemeral_users_enabled().ephemeral_users_enabled());
 
@@ -183,6 +186,9 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
 
   EncodeBoolean(&policy, key::kChromeOsReleaseChannelDelegated, kBool);
   EXPECT_EQ(kBool, policy.release_channel().release_channel_delegated());
+
+  EncodeString(&policy, key::kDeviceReleaseLtsTag, kString);
+  EXPECT_EQ(kString, policy.release_channel().release_lts_tag());
 
   EncodeBoolean(&policy, key::kDeviceAutoUpdateDisabled, kBool);
   EXPECT_EQ(kBool, policy.auto_update_settings().update_disabled());
@@ -454,6 +460,15 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EXPECT_EQ(345, whitelist_proto.id().Get(1).vendor_id());
   EXPECT_EQ(456, whitelist_proto.id().Get(1).product_id());
 
+  EncodeStringList(&policy, key::kUsbDetachableAllowlist,
+                   {"{\"vendor_id\":123, \"product_id\":234}",
+                    "{\"vendor_id\":345, \"product_id\":456}"});
+  const auto& allowlist_proto = policy.usb_detachable_allowlist();
+  EXPECT_EQ(123, allowlist_proto.id().Get(0).vendor_id());
+  EXPECT_EQ(234, allowlist_proto.id().Get(0).product_id());
+  EXPECT_EQ(345, allowlist_proto.id().Get(1).vendor_id());
+  EXPECT_EQ(456, allowlist_proto.id().Get(1).product_id());
+
   EncodeBoolean(&policy, key::kDeviceQuirksDownloadEnabled, kBool);
   EXPECT_EQ(kBool, policy.quirks_download_enabled().quirks_download_enabled());
 
@@ -648,6 +663,10 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeBoolean(&policy, key::kDeviceUnaffiliatedCrostiniAllowed, kBool);
   EXPECT_EQ(kBool, policy.device_unaffiliated_crostini_allowed()
                        .device_unaffiliated_crostini_allowed());
+
+  EncodeBoolean(&policy, key::kDeviceShowLowDiskSpaceNotification, kBool);
+  EXPECT_EQ(kBool, policy.device_show_low_disk_space_notification()
+                       .device_show_low_disk_space_notification());
 
   //
   // Check whether all device policies have been handled.
