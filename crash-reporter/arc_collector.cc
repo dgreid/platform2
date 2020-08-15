@@ -44,6 +44,7 @@ const FilePath kArcBuildProp("system/build.prop");  // Relative to ARC root.
 
 const char kCoreCollectorPath[] = "/usr/bin/core_collector";
 const char kCoreCollector32Path[] = "/usr/bin/core_collector32";
+const char kCoreCollector64Path[] = "/usr/bin/core_collector64";
 
 const char kChromePath[] = "/opt/google/chrome/chrome";
 
@@ -271,6 +272,10 @@ UserCollectorBase::ErrorType ArcCollector::ConvertCoreToMinidump(
   // Still try to run core_collector32 if 64-bit detection failed.
   if (__WORDSIZE == 64 && (elf_class_error != kErrorNone || !is_64_bit))
     collector_path = kCoreCollector32Path;
+
+  // Still try to run core_collector64 if 64-bit detection failed.
+  if (__WORDSIZE == 32 && (elf_class_error != kErrorNone || is_64_bit))
+    collector_path = kCoreCollector64Path;
 
   ProcessImpl core_collector;
   core_collector.AddArg(collector_path);

@@ -227,6 +227,16 @@ if (use.cheets) {
       # and that doesn't work with PIE linking
       configs -= [ "//common-mk:pie" ]
     }
+
+    # This condition matches the "use_arm64" helper in the "cros-arm64"
+    # eclass. The "arm" check allows the "cros_arm64" USE flag to be
+    # enabled for an overlay inherited by non-arm boards.
+    if (use.cros_arm64 && use.arm) {
+      # We link the C & C++ runtime statically because dynamic libs for these
+      # (multilib) ABIs aren't installed.  The eclasses handle forcing -static,
+      # and that doesn't work with PIE linking
+      configs -= [ "//common-mk:pie" ]
+    }
   }
 }
 
