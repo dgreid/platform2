@@ -477,7 +477,12 @@ void RecordSendAttempt(const base::FilePath& timestamps_dir, int bytes) {
 
   base::FilePath temp_file_path;
   base::ScopedFILE temp_file(
-      base::CreateAndOpenTemporaryFileInDir(timestamps_dir, &temp_file_path));
+#if BASE_VER < 780000
+      base::CreateAndOpenTemporaryFileInDir
+#else
+      base::CreateAndOpenTemporaryStreamInDir
+#endif
+      (timestamps_dir, &temp_file_path));
   if (temp_file == nullptr) {
     PLOG(ERROR) << "Failed to create a file in " << timestamps_dir.value();
   } else {

@@ -242,7 +242,11 @@ bool CrashCollector::CreateDirectoryWithSettings(const FilePath& dir,
                          FileEnumerator::FILES | FileEnumerator::DIRECTORIES |
                              FileEnumerator::SHOW_SYM_LINKS);
     for (FilePath name = files.Next(); !name.empty(); name = files.Next()) {
-      struct stat st = files.GetInfo().stat();
+#if BASE_VER < 780000
+      const struct stat st = files.GetInfo().stat();
+#else
+      const base::stat_wrapper_t st = files.GetInfo().stat();
+#endif
       const FilePath subdir_path = name.DirName();
       const FilePath file = name.BaseName();
 
