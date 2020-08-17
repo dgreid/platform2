@@ -226,7 +226,24 @@ static bool RemoveSessionKey(const KeyReference& key_reference,
 // (1) The filesystem-level keyring is supported.
 // (2) Whether fscrypt v2 encryption policies can be used.
 bool CheckFscryptKeyIoctlSupport() {
-  return false;
+  base::ScopedFD fd = GetStatefulPartitionScopedFd();
+  if (!fd.is_valid()) {
+    PLOG(ERROR) << "Failed to open stateful partition";
+    return false;
+  }
+
+  errno = 0;
+  bool ret = false;
+
+  ioctl(fd.get(), FS_IOC_ADD_ENCRYPTION_KEY, nullptr);
+  if (errno != EOPNOTSUPP && errno != ENOTTY)
+    ret = true;
+
+  if (!ret)
+    VLOG(3) << "fscrypt v2 encryption policies not supported; "
+            << "falling back to v1 encryption policies.";
+
+  return ret;
 }
 
 bool SetDirectoryKey(const base::FilePath& dir,
