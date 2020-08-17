@@ -79,6 +79,24 @@ namespace concierge {
 
 namespace {
 
+// Default path to VM kernel image and rootfs.
+constexpr char kVmDefaultPath[] = "/run/imageloader/cros-termina";
+
+// Name of the VM kernel image.
+constexpr char kVmKernelName[] = "vm_kernel";
+
+// Name of the VM rootfs image.
+constexpr char kVmRootfsName[] = "vm_rootfs.img";
+
+// Name of the VM tools image to be mounted at kToolsMountPath.
+constexpr char kVmToolsDiskName[] = "vm_tools.img";
+
+// Filesystem location to mount VM tools image.
+constexpr char kToolsMountPath[] = "/opt/google/cros-containers";
+
+// Filesystem type of VM tools image.
+constexpr char kToolsFsType[] = "ext4";
+
 // How long we should wait for a VM to start up.
 // While this timeout might be high, it's meant to be a final failure point, not
 // the lower bound of how long it takes.  On a loaded system (like extracting
@@ -244,6 +262,30 @@ bool IPv4AddressToString(const uint32_t address, std::string* str) {
   }
   *str = std::string(result);
   return true;
+}
+
+// Get the path to the latest available cros-termina component.
+base::FilePath GetLatestVMPath() {
+  base::FilePath component_dir(kVmDefaultPath);
+  base::FileEnumerator dir_enum(component_dir, false,
+                                base::FileEnumerator::DIRECTORIES);
+
+  base::Version latest_version("0");
+  base::FilePath latest_path;
+
+  for (base::FilePath path = dir_enum.Next(); !path.empty();
+       path = dir_enum.Next()) {
+    base::Version version(path.BaseName().value());
+    if (!version.IsValid())
+      continue;
+
+    if (version > latest_version) {
+      latest_version = version;
+      latest_path = path;
+    }
+  }
+
+  return latest_path;
 }
 
 // Gets the path to a VM disk given the name, user id, and location.
@@ -909,17 +951,26 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     return dbus_response;
   }
 
-  base::FilePath kernel, rootfs;
+  base::FilePath kernel, rootfs, tools_disk;
 
-  // Termina VM images (the guest kernel and rootfs) are always considered
-  // trusted. Note that this means we rely on Chrome to only ask us to execute
-  // images that come from trusted storage, currently provided by the dlc
-  // service or the component updater.
+  // A VM is trusted when this daemon chooses the kernel and rootfs path.
   bool is_trusted_image = false;
-  kernel = base::FilePath(request.vm().kernel());
-  rootfs = base::FilePath(request.vm().rootfs());
   if (request.start_termina()) {
+    base::FilePath component_path = GetLatestVMPath();
+    if (component_path.empty()) {
+      LOG(ERROR) << "Termina component is not loaded";
+      response.set_failure_reason("Termina component is not loaded");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
+
+    kernel = component_path.Append(kVmKernelName);
+    rootfs = component_path.Append(kVmRootfsName);
+    tools_disk = component_path.Append(kVmToolsDiskName);
     is_trusted_image = true;
+  } else {
+    kernel = base::FilePath(request.vm().kernel());
+    rootfs = base::FilePath(request.vm().rootfs());
   }
 
   if (!base::PathExists(kernel)) {
@@ -1038,6 +1089,18 @@ std::unique_ptr<dbus::Response> Service::StartVm(
                   USE_PMEM_DEVICE_FOR_ROOTFS;
   string rootfs_device = use_pmem ? "/dev/pmem0" : "/dev/vda";
   unsigned char disk_letter = use_pmem ? 'a' : 'b';
+
+  // In newer components, the /opt/google/cros-containers directory
+  // is split into its own disk image(vm_tools.img).  Detect whether it exists
+  // to keep compatibility with older components with only vm_rootfs.img.
+  string tools_device;
+  if (base::PathExists(tools_disk)) {
+    disks.push_back(TerminaVm::Disk{
+        .path = std::move(tools_disk),
+        .writable = false,
+    });
+    tools_device = base::StringPrintf("/dev/vd%c", disk_letter++);
+  }
 
   if (request.disks().size() == 0) {
     LOG(ERROR) << "Missing required stateful disk";
@@ -1180,6 +1243,17 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     response.set_failure_reason("Failed to configure VM network");
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
+  }
+
+  // Mount the tools disk if it exists.
+  if (!tools_device.empty()) {
+    if (!vm->Mount(tools_device, kToolsMountPath, kToolsFsType, MS_RDONLY,
+                   "")) {
+      LOG(ERROR) << "Failed to mount tools disk";
+      response.set_failure_reason("Failed to mount tools disk");
+      writer.AppendProtoAsArrayOfBytes(response);
+      return dbus_response;
+    }
   }
 
   // Do all the mounts.
