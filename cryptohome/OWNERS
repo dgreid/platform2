@@ -1,11 +1,21 @@
 apronin@chromium.org
 cylai@chromium.org
-gwendal@chromium.org
-hashimoto@chromium.org
 mnissler@chromium.org
 zuan@chromium.org
 
+# Owners of file system related code.
 per-file *homedirs*=oka@chromium.org
+per-file *homedirs*=gwendal@chromium.org
+per-file *homedirs*=hashimoto@chromium.org
+
+per-file mount*=gwendal@chromium.org
+per-file mount*=hashimoto@chromium.org
+
+per-file platform*=gwendal@chromium.org
+per-file platform*=hashimoto@chromium.org
+
+per-file disk_cleanup*=gwendal@chromium.org
+per-file dircrypto_util*=gwendal@chromium.org
 
 # Files related to mount/unmount operations, including out-of-process mounts.
 per-file mount*=jorgelo@chromium.org
