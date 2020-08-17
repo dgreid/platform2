@@ -91,6 +91,24 @@ std::vector<float> GetPhysicalSize(float horiz_fov,
               vert_crop_factor};
 }
 
+// The unit of ANDROID_LENS_FOCUS_DISTANCE is diopters (1/meter), but the unit
+// of V4L2_CID_FOCUS_ABSOLUTE is undefined. We map the V4L2 value to diopters by
+// (value - minimum) / normalize_factor where |value| is in [minimum, maximum].
+// We calculate a proper |normalize_factor| by assuming the minimum focus
+// distance of USB cameras is >= 1cm (tested on real webcams), i.e. max diopter
+// is <= 100, and only use power of 10s for readability.
+// For example, V4L2 range [0, 250] will map to Android range [0, 25], where the
+// minimum focus distance is 1m/25=4cm. This function takes |v4l2_range|
+// (== maximum - minimum) and returns |normalize_factor|.
+uint32_t GetNormalizeFactorForV4l2FocusRange(float v4l2_range) {
+  uint32_t normalize_factor = 1;
+
+  while (v4l2_range / normalize_factor > 100.0)
+    normalize_factor *= 10;
+
+  return normalize_factor;
+}
+
 class MetadataUpdater {
  public:
   explicit MetadataUpdater(android::CameraMetadata* metadata)
@@ -178,7 +196,10 @@ MetadataHandler::MetadataHandler(const camera_metadata_t& static_metadata,
                                  const DeviceInfo& device_info,
                                  V4L2CameraDevice* device,
                                  const SupportedFormats& supported_formats)
-    : device_info_(device_info), device_(device), af_trigger_(false) {
+    : device_info_(device_info),
+      device_(device),
+      af_trigger_(false),
+      focus_distance_normalize_factor_(0) {
   // MetadataBase::operator= will make a copy of camera_metadata_t.
   static_metadata_ = &static_metadata;
   request_template_ = &request_template;
@@ -219,6 +240,14 @@ MetadataHandler::MetadataHandler(const camera_metadata_t& static_metadata,
       device_info.device_path, kControlTilt);
   is_zoom_control_supported_ = V4L2CameraDevice::IsControlSupported(
       device_info.device_path, kControlZoom);
+
+  if (V4L2CameraDevice::IsFocusDistanceSupported(device_info.device_path,
+                                                 &focus_distance_range_)) {
+    float full_range =
+        focus_distance_range_.maximum - focus_distance_range_.minimum;
+    focus_distance_normalize_factor_ =
+        GetNormalizeFactorForV4l2FocusRange(full_range);
+  }
 
   thread_checker_.DetachFromThread();
 }
@@ -769,6 +798,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
       ANDROID_LENS_INFO_AVAILABLE_OPTICAL_STABILIZATION,
       ANDROID_LENS_INFO_FOCUS_DISTANCE_CALIBRATION,
       ANDROID_LENS_INFO_HYPERFOCAL_DISTANCE,
+      ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
       ANDROID_NOISE_REDUCTION_AVAILABLE_NOISE_REDUCTION_MODES,
       ANDROID_REQUEST_AVAILABLE_CAPABILITIES,
       ANDROID_REQUEST_MAX_NUM_INPUT_STREAMS,
@@ -806,7 +836,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
         available_characteristics_keys.end(),
         {
             ANDROID_LENS_INFO_AVAILABLE_FOCAL_LENGTHS,
-            ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
             ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
         });
   }
@@ -830,12 +859,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
 
     update_request(ANDROID_LENS_FOCAL_LENGTH,
                    device_info.lens_info_available_focal_lengths[0]);
-
-    update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
-                  device_info.lens_info_minimum_focus_distance);
-
-    update_request(ANDROID_LENS_FOCUS_DISTANCE,
-                   device_info.lens_info_optimal_focus_distance);
 
     update_static(
         ANDROID_SENSOR_INFO_PHYSICAL_SIZE,
@@ -867,21 +890,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
       update_request(ANDROID_LENS_FOCAL_LENGTH, kDefaultAvailableFocalLength);
     }
 
-    if (device_info.lens_info_minimum_focus_distance > 0) {
-      update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
-                    device_info.lens_info_minimum_focus_distance);
-    } else {
-      update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
-                    kDefaultMinimumFocusDistance);
-    }
-
-    if (device_info.lens_info_optimal_focus_distance > 0) {
-      update_request(ANDROID_LENS_FOCUS_DISTANCE,
-                     device_info.lens_info_optimal_focus_distance);
-    } else {
-      update_request(ANDROID_LENS_FOCUS_DISTANCE, kDefaultLensFocusDistance);
-    }
-
     if (device_info.sensor_info_pixel_array_size_width > 0 &&
         device_info.sensor_info_pixel_array_size_height > 0) {
       update_static(ANDROID_SENSOR_INFO_PIXEL_ARRAY_SIZE,
@@ -896,30 +904,10 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
                   ANDROID_INFO_SUPPORTED_HARDWARE_LEVEL_EXTERNAL);
   }
 
-  update_static(ANDROID_LENS_INFO_FOCUS_DISTANCE_CALIBRATION,
-                ANDROID_LENS_INFO_FOCUS_DISTANCE_CALIBRATION_UNCALIBRATED);
-
   update_static(ANDROID_CONTROL_AE_AVAILABLE_ANTIBANDING_MODES,
                 ANDROID_CONTROL_AE_ANTIBANDING_MODE_AUTO);
   update_request(ANDROID_CONTROL_AE_ANTIBANDING_MODE,
                  ANDROID_CONTROL_AE_ANTIBANDING_MODE_AUTO);
-
-  bool support_af =
-      V4L2CameraDevice::IsAutoFocusSupported(device_info.device_path);
-  if (support_af) {
-    update_static(ANDROID_CONTROL_AF_AVAILABLE_MODES,
-                  std::vector<uint8_t>{ANDROID_CONTROL_AF_MODE_OFF,
-                                       ANDROID_CONTROL_AF_MODE_AUTO});
-    update_request(ANDROID_CONTROL_AF_MODE, ANDROID_CONTROL_AF_MODE_AUTO);
-  } else {
-    update_static(ANDROID_CONTROL_AF_AVAILABLE_MODES,
-                  ANDROID_CONTROL_AF_MODE_OFF);
-    update_request(ANDROID_CONTROL_AF_MODE, ANDROID_CONTROL_AF_MODE_OFF);
-    // If auto focus is not supported, the minimum focus distance should be 0.
-    // Overwrite the value here since there are many camera modules have wrong
-    // config.
-    update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE, 0.0f);
-  }
 
   // Set vendor tags for specified boards.
   if (device_info.quirks & kQuirkMonocle) {
@@ -1006,6 +994,38 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     available_characteristics_keys.push_back(
         ANDROID_SENSOR_INFO_EXPOSURE_TIME_RANGE);
     available_request_keys.push_back(ANDROID_SENSOR_EXPOSURE_TIME);
+  }
+
+  // The unit of V4L2 focus distance is undefined, so set it to uncalibrated.
+  update_static(ANDROID_LENS_INFO_FOCUS_DISTANCE_CALIBRATION,
+                ANDROID_LENS_INFO_FOCUS_DISTANCE_CALIBRATION_UNCALIBRATED);
+  if (V4L2CameraDevice::IsControlSupported(device_info.device_path,
+                                           kControlFocusAuto)) {
+    update_static(ANDROID_CONTROL_AF_AVAILABLE_MODES,
+                  std::vector<uint8_t>{ANDROID_CONTROL_AF_MODE_OFF,
+                                       ANDROID_CONTROL_AF_MODE_AUTO});
+    update_request(ANDROID_CONTROL_AF_MODE, ANDROID_CONTROL_AF_MODE_AUTO);
+    update_request(ANDROID_LENS_FOCUS_DISTANCE, 0.0f);
+    if (V4L2CameraDevice::IsFocusDistanceSupported(device_info.device_path,
+                                                   &range)) {
+      float full_range = range.maximum - range.minimum;
+      uint32_t factor = GetNormalizeFactorForV4l2FocusRange(full_range);
+      update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
+                    full_range / factor);
+    } else {
+      if (device_info.lens_info_minimum_focus_distance > 0) {
+        update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
+                      1.0f / device_info.lens_info_minimum_focus_distance);
+      } else {
+        update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE,
+                      1.0f / kDefaultMinimumFocusDistance);
+      }
+    }
+  } else {
+    update_static(ANDROID_CONTROL_AF_AVAILABLE_MODES,
+                  ANDROID_CONTROL_AF_MODE_OFF);
+    update_request(ANDROID_CONTROL_AF_MODE, ANDROID_CONTROL_AF_MODE_OFF);
+    update_static(ANDROID_LENS_INFO_MINIMUM_FOCUS_DISTANCE, 0.0f);
   }
 
   update_static(ANDROID_REQUEST_AVAILABLE_CHARACTERISTICS_KEYS,
@@ -1133,9 +1153,34 @@ int MetadataHandler::PreHandleRequest(int frame_number,
   if (metadata->exists(ANDROID_CONTROL_AF_MODE)) {
     camera_metadata_entry entry = metadata->find(ANDROID_CONTROL_AF_MODE);
     if (entry.data.u8[0] == ANDROID_CONTROL_AF_MODE_OFF) {
-      device_->SetAutoFocus(false);
+      if (metadata->exists(ANDROID_LENS_FOCUS_DISTANCE) &&
+          focus_distance_normalize_factor_ > 0) {
+        entry = metadata->find(ANDROID_LENS_FOCUS_DISTANCE);
+        int32_t distance =
+            static_cast<int32_t>(entry.data.f[0] *
+                                 focus_distance_normalize_factor_) +
+            focus_distance_range_.minimum;
+        distance = std::min(distance, focus_distance_range_.maximum);
+        device_->SetAutoFocus(false);
+        device_->SetFocusDistance(distance);
+        int32_t focus_distance;
+        device_->GetControlValue(kControlFocusDistance, &focus_distance);
+        float simulate_diopters =
+            static_cast<float>(focus_distance - focus_distance_range_.minimum) /
+            focus_distance_normalize_factor_;
+        update_request(ANDROID_LENS_FOCUS_DISTANCE, simulate_diopters);
+      } else {
+        device_->SetAutoFocus(false);
+      }
     } else if (entry.data.u8[0] == ANDROID_CONTROL_AF_MODE_AUTO) {
       device_->SetAutoFocus(true);
+      float diopters;
+      if (device_info_.lens_info_optimal_focus_distance > 0) {
+        diopters = 1.0 / device_info_.lens_info_optimal_focus_distance;
+      } else {
+        diopters = 1.0 / kDefaultLensFocusDistance;
+      }
+      update_request(ANDROID_LENS_FOCUS_DISTANCE, diopters);
     }
   }
 

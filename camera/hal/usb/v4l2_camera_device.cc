@@ -64,6 +64,12 @@ const int ControlTypeToCid(ControlType type) {
     case kControlExposureTime:
       return V4L2_CID_EXPOSURE_ABSOLUTE;
 
+    case kControlFocusAuto:
+      return V4L2_CID_FOCUS_AUTO;
+
+    case kControlFocusDistance:
+      return V4L2_CID_FOCUS_ABSOLUTE;
+
     case kControlPan:
       return V4L2_CID_PAN_ABSOLUTE;
 
@@ -108,6 +114,12 @@ const std::string ControlTypeToString(ControlType type) {
     case kControlExposureTime:
       return "exposure time";
 
+    case kControlFocusAuto:
+      return "auto focus";
+
+    case kControlFocusDistance:
+      return "focus distance";
+
     case kControlPan:
       return "pan";
 
@@ -151,6 +163,12 @@ const std::string CidToString(int cid) {
 
     case V4L2_CID_EXPOSURE_AUTO_PRIORITY:
       return "V4L2_CID_EXPOSURE_AUTO_PRIORITY";
+
+    case V4L2_CID_FOCUS_ABSOLUTE:
+      return "V4L2_CID_FOCUS_ABSOLUTE";
+
+    case V4L2_CID_FOCUS_AUTO:
+      return "V4L2_CID_FOCUS_AUTO";
 
     case V4L2_CID_PAN_ABSOLUTE:
       return "V4L2_CID_PAN_ABSOLUTE";
@@ -244,20 +262,23 @@ int V4L2CameraDevice::Connect(const std::string& device_path) {
   }
 
   // Initial autofocus state.
-  struct v4l2_control control;
-  control.id = V4L2_CID_FOCUS_AUTO;
-  ret = TEMP_FAILURE_RETRY(ioctl(device_fd_.get(), VIDIOC_G_CTRL, &control));
-  if (ret < 0) {
-    LOGF(WARNING) << "Failed to get V4L2_CID_FOCUS_AUTO";
-    autofocus_supported_ = false;
-    autofocus_on_ = false;
-  } else {
-    autofocus_supported_ = true;
-    autofocus_on_ = control.value;
+  int32_t value;
+  focus_auto_supported_ = IsControlSupported(kControlFocusAuto) &&
+                          GetControlValue(kControlFocusAuto, &value) == 0;
+  if (focus_auto_supported_) {
+    LOGF(INFO) << "Device supports auto focus control, current mode is "
+               << (value == 0 ? "Off" : "Auto");
+  }
+  focus_distance_supported_ = IsControlSupported(kControlFocusDistance);
+  if (focus_distance_supported_) {
+    LOGF(INFO) << "Device supports focus distance control";
+    // Focus distance is valid when focus mode is off.
+    if (value == 0 && GetControlValue(kControlFocusDistance, &value) == 0) {
+      LOGF(INFO) << "Current distance is " << value;
+    }
   }
 
   // Query the initial auto white balance state.
-  int32_t value;
   white_balance_control_supported_ =
       IsControlSupported(kControlAutoWhiteBalance) &&
       IsControlSupported(kControlWhiteBalanceTemperature);
@@ -633,19 +654,30 @@ bool V4L2CameraDevice::IsBufferFilled(uint32_t buffer_id) {
 }
 
 int V4L2CameraDevice::SetAutoFocus(bool enable) {
-  if (!autofocus_supported_ || enable == autofocus_on_)
+  if (!focus_auto_supported_) {
+    // Off mode is default supported
+    if (enable) {
+      LOGF(WARNING)
+          << "Setting auto focus while device doesn't support. Ignored";
+    }
     return 0;
-  int ret;
-  struct v4l2_control control;
-  control.id = V4L2_CID_FOCUS_AUTO;
-  control.value = enable ? 1 : 0;
-  ret = TEMP_FAILURE_RETRY(ioctl(device_fd_.get(), VIDIOC_S_CTRL, &control));
-  if (ret < 0) {
-    LOGF(WARNING) << "Failed to set V4L2_CID_FOCUS_AUTO";
-  } else {
-    autofocus_on_ = enable;
   }
-  return ret;
+
+  if (enable && control_values_.count(kControlFocusDistance)) {
+    control_values_.erase(kControlFocusDistance);
+  }
+
+  return SetControlValue(kControlFocusAuto, enable ? 1 : 0);
+}
+
+int V4L2CameraDevice::SetFocusDistance(int32_t distance) {
+  if (!focus_distance_supported_) {
+    LOGF(WARNING) << "Setting focus distance while devcie doesn't support. "
+                  << "Ignored.";
+    return 0;
+  }
+
+  return SetControlValue(kControlFocusDistance, distance);
 }
 
 int V4L2CameraDevice::SetExposureTimeHundredUs(uint32_t exposure_time) {
@@ -1281,19 +1313,21 @@ PowerLineFrequency V4L2CameraDevice::GetPowerLineFrequency(
 }
 
 // static
-bool V4L2CameraDevice::IsAutoFocusSupported(const std::string& device_path) {
-  base::ScopedFD fd(RetryDeviceOpen(device_path, O_RDONLY));
-  if (!fd.is_valid()) {
-    PLOGF(ERROR) << "Failed to open " << device_path;
+bool V4L2CameraDevice::IsFocusDistanceSupported(
+    const std::string& device_path, ControlRange* focus_distance_range) {
+  DCHECK(focus_distance_range != nullptr);
+
+  if (!IsControlSupported(device_path, kControlFocusAuto))
+    return false;
+
+  ControlInfo info;
+  if (QueryControl(device_path, kControlFocusDistance, &info) != 0) {
     return false;
   }
-  struct v4l2_queryctrl query_ctrl;
-  query_ctrl.id = V4L2_CID_FOCUS_AUTO;
-  if (TEMP_FAILURE_RETRY(ioctl(fd.get(), VIDIOC_QUERYCTRL, &query_ctrl)) < 0) {
-    LOGF(WARNING) << "Failed to query V4L2_CID_FOCUS_AUTO";
-    return false;
-  }
-  return !(query_ctrl.flags & V4L2_CTRL_FLAG_DISABLED);
+
+  *focus_distance_range = info.range;
+
+  return true;
 }
 
 // static

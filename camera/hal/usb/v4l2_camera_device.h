@@ -39,6 +39,8 @@ struct ControlInfo {
 enum ControlType {
   kControlAutoWhiteBalance,
   kControlBrightness,
+  kControlFocusAuto,
+  kControlFocusDistance,
   kControlContrast,
   kControlExposureAuto,
   kControlExposureAutoPriority,  // 0 for constant frame rate
@@ -117,6 +119,9 @@ class V4L2CameraDevice {
   // |-errno|.
   int SetAutoFocus(bool enable);
 
+  // Return 0 if focus distance is set successfully. Otherwise, return |-errno|.
+  int SetFocusDistance(int32_t distance);
+
   // Return 0 if device sets color tepmerature successfully. Otherwise, return
   // |-errno|. Set |color_temperature| to |kColorTemperatureAuto| means auto
   // white balance mode.
@@ -160,7 +165,10 @@ class V4L2CameraDevice {
   static PowerLineFrequency GetPowerLineFrequency(
       const std::string& device_path);
 
-  static bool IsAutoFocusSupported(const std::string& device_path);
+  // If the device supports manual focus distance, returns the focus distance
+  // range to |focus_distance_range|.
+  static bool IsFocusDistanceSupported(const std::string& device_path,
+                                       ControlRange* focus_distance_range);
 
   // If the device supports manual exposure time, returns the exposure time
   // range to |exposure_time_range|.
@@ -239,8 +247,8 @@ class V4L2CameraDevice {
   bool stream_on_;
 
   // AF state
-  bool autofocus_on_;
-  bool autofocus_supported_;
+  bool focus_auto_supported_;
+  bool focus_distance_supported_;
 
   bool white_balance_control_supported_;
 

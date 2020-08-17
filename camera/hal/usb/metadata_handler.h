@@ -139,6 +139,9 @@ class MetadataHandler {
   bool is_sharpness_control_supported_;
   bool is_tilt_control_supported_;
   bool is_zoom_control_supported_;
+
+  uint32_t focus_distance_normalize_factor_;
+  ControlRange focus_distance_range_;
 };
 
 }  // namespace cros
