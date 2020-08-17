@@ -4,6 +4,7 @@
 
 #include <base/at_exit.h>
 #include <base/command_line.h>
+#include <base/test/test_timeouts.h>
 #include <brillo/syslog_logging.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -40,6 +41,8 @@ int main(int argc, char** argv) {
   if (cl->HasSwitch(switches::kHelp)) {
     fputs(switches::kHelpMessage, stderr);
   }
+
+  TestTimeouts::Initialize();
 
   return RUN_ALL_TESTS();
 }

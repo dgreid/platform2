@@ -16,8 +16,8 @@
 #include <sys/ioctl.h>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 
 #include "shill/mock_log.h"
 #include "shill/net/mock_io_handler_factory.h"
@@ -144,7 +144,8 @@ class RTNLHandlerTest : public Test {
   Callback<void(const RTNLMessage&)> callback_;
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 };
 
 const int RTNLHandlerTest::kTestSocket = 123;

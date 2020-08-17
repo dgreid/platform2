@@ -7,7 +7,6 @@
 #include <memory>
 
 #include <base/bind.h>
-#include <base/message_loop/message_loop.h>
 
 #include "shill/error.h"
 #include "shill/test_event_dispatcher.h"

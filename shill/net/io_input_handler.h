@@ -8,7 +8,6 @@
 #include <memory>
 
 #include <base/files/file_descriptor_watcher_posix.h>
-#include <base/message_loop/message_loop.h>
 
 #include "shill/net/io_handler.h"
 

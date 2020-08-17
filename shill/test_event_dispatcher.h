@@ -6,7 +6,7 @@
 #define SHILL_TEST_EVENT_DISPATCHER_H_
 
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <brillo/message_loops/base_message_loop.h>
 
 #include "shill/event_dispatcher.h"
@@ -21,9 +21,9 @@ class EventDispatcherForTest : public EventDispatcher {
 
  private:
   // Message loop for testing.
-  base::MessageLoopForIO message_loop_;
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
   // The chromeos wrapper for the main message loop.
-  brillo::BaseMessageLoop chromeos_message_loop_{&message_loop_};
+  brillo::BaseMessageLoop chromeos_message_loop_{task_executor_.task_runner()};
 
   DISALLOW_COPY_AND_ASSIGN(EventDispatcherForTest);
 };

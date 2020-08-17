@@ -10,10 +10,9 @@
 #include <set>
 #include <string>
 
-#include <base/files/file_descriptor_watcher_posix.h>
-#include <base/message_loop/message_loop.h>
 #include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/test/task_environment.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -1151,10 +1150,11 @@ class WakeOnWiFiTestWithMockDispatcher : public WakeOnWiFiTest {
   virtual ~WakeOnWiFiTestWithMockDispatcher() = default;
 
  protected:
-  // TODO(zqiu): message loop is needed by AlarmTimer, should restructure the
-  // code so that it can be mocked out.
-  base::MessageLoopForIO message_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  // TODO(zqiu): TaskRunner is needed by AlarmTimer, temporarily provide with
+  // TaskEnvironment, Should restructure the code so that it can be mocked out.
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
   MockEventDispatcher mock_dispatcher_;
 };
 
