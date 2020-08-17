@@ -17,9 +17,9 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/strcat.h>
 #include <base/strings/string_util.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/default_clock.h>
 #include <base/threading/platform_thread.h>
 #include <brillo/flag_helper.h>
@@ -112,7 +112,7 @@ int main(int argc, char* argv[]) {
   // Sim sala bim!  These are needed to send D-Bus signals.  Even though they
   // are not used directly, they set up some global state needed by the D-Bus
   // library.
-  base::MessageLoop message_loop;
+  base::SingleThreadTaskExecutor task_executor;
   base::AtExitManager at_exit_manager;
 
   brillo::OpenLog("anomaly_detector", true);

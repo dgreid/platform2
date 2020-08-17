@@ -15,7 +15,7 @@
 #include <base/logging.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/strings/stringprintf.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/optional.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -323,8 +323,8 @@ int main(int argc, char* argv[]) {
   FilePath my_path = base::MakeAbsoluteFilePath(FilePath(argv[0]));
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Reporter");
 
-  base::MessageLoopForIO message_loop;
-  base::FileDescriptorWatcher watcher(message_loop.task_runner());
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
+  base::FileDescriptorWatcher watcher(task_executor.task_runner());
 
   // In certain cases, /dev/log may not be available: log to stderr instead.
   if (FLAGS_log_to_stderr) {

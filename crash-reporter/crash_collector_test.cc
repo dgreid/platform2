@@ -16,9 +16,9 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/memory/scoped_refptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/test/simple_test_clock.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <brillo/syslog_logging.h>
@@ -1440,7 +1440,7 @@ void CrashCollectorTest::TestFinishCrashInCrashLoopMode(
   const char kBuffer[] = "Buffer full of goodness";
   const FilePath kPath = test_dir_.Append("buffer.txt");
   const FilePath kMetaFilePath = test_dir_.Append("meta.txt");
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   CrashCollectorMock collector(
       CrashCollector::kUseNormalCrashDirectorySelectionMethod,
