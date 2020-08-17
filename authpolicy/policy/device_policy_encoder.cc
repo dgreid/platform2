@@ -191,17 +191,13 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
     policy->mutable_allow_new_users()->set_allow_new_users(value.value());
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceUserAllowlist)) {
-    auto list = policy->mutable_user_allowlist();
-    list->clear_user_allowlist();
-    for (const std::string& value : values.value())
-      list->add_user_allowlist(value);
+    *policy->mutable_user_allowlist()->mutable_user_allowlist() = {
+        values.value().begin(), values.value().end()};
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceUserWhitelist)) {
-    auto list = policy->mutable_user_whitelist();
-    list->clear_user_whitelist();
-    for (const std::string& value : values.value())
-      list->add_user_whitelist(value);
+    *policy->mutable_user_whitelist()->mutable_user_whitelist() = {
+        values.value().begin(), values.value().end()};
   }
   if (base::Optional<bool> value =
           EncodeBoolean(key::kDeviceEphemeralUsersEnabled))
@@ -211,10 +207,9 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
     policy->mutable_allow_bluetooth()->set_allow_bluetooth(value.value());
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceLoginScreenExtensions)) {
-    auto list = policy->mutable_device_login_screen_extensions();
-    list->clear_device_login_screen_extensions();
-    for (const std::string& value : values.value())
-      list->add_device_login_screen_extensions(value);
+    *policy->mutable_device_login_screen_extensions()
+         ->mutable_device_login_screen_extensions() = {values.value().begin(),
+                                                       values.value().end()};
   }
   if (base::Optional<std::string> value =
           EncodeString(key::kDeviceLoginScreenDomainAutoComplete)) {
@@ -223,25 +218,20 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceLoginScreenLocales)) {
-    auto list = policy->mutable_login_screen_locales();
-    list->clear_login_screen_locales();
-    for (const std::string& value : values.value())
-      list->add_login_screen_locales(value);
+    *policy->mutable_login_screen_locales()->mutable_login_screen_locales() = {
+        values.value().begin(), values.value().end()};
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceLoginScreenInputMethods)) {
-    auto list = policy->mutable_login_screen_input_methods();
-    list->clear_login_screen_input_methods();
-    for (const std::string& value : values.value())
-      list->add_login_screen_input_methods(value);
+    *policy->mutable_login_screen_input_methods()
+         ->mutable_login_screen_input_methods() = {values.value().begin(),
+                                                   values.value().end()};
   }
   if (base::Optional<std::vector<std::string>> values = EncodeStringList(
           key::kDeviceLoginScreenAutoSelectCertificateForUrls)) {
-    auto* list =
-        policy->mutable_device_login_screen_auto_select_certificate_for_urls();
-    list->clear_login_screen_auto_select_certificate_rules();
-    for (const std::string& value : values.value())
-      list->add_login_screen_auto_select_certificate_rules(value);
+    *policy->mutable_device_login_screen_auto_select_certificate_for_urls()
+         ->mutable_login_screen_auto_select_certificate_rules() = {
+        values.value().begin(), values.value().end()};
   }
 
   if (base::Optional<int> value =
@@ -277,11 +267,9 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
 
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceWebBasedAttestationAllowedUrls)) {
-    auto* list = policy->mutable_device_web_based_attestation_allowed_urls()
-                     ->mutable_value();
-    list->clear_entries();
-    for (const std::string& value : values.value())
-      list->add_entries(value);
+    *policy->mutable_device_web_based_attestation_allowed_urls()
+         ->mutable_value()
+         ->mutable_entries() = {values.value().begin(), values.value().end()};
   }
 
   if (base::Optional<std::string> value =
@@ -785,17 +773,13 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceNativePrintersBlacklist)) {
-    auto list = policy->mutable_native_device_printers_blacklist();
-    list->clear_blacklist();
-    for (const std::string& value : values.value())
-      list->add_blacklist(value);
+    *policy->mutable_native_device_printers_blacklist()->mutable_blacklist() = {
+        values.value().begin(), values.value().end()};
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceNativePrintersWhitelist)) {
-    auto list = policy->mutable_native_device_printers_whitelist();
-    list->clear_whitelist();
-    for (const std::string& value : values.value())
-      list->add_whitelist(value);
+    *policy->mutable_native_device_printers_whitelist()->mutable_whitelist() = {
+        values.value().begin(), values.value().end()};
   }
 
   if (base::Optional<std::string> value =
@@ -805,10 +789,8 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceExternalPrintServersAllowlist)) {
-    auto list = policy->mutable_external_print_servers_allowlist();
-    list->clear_allowlist();
-    for (const std::string& value : values.value())
-      list->add_allowlist(value);
+    *policy->mutable_external_print_servers_allowlist()->mutable_allowlist() = {
+        values.value().begin(), values.value().end()};
   }
 
   if (base::Optional<std::string> value = EncodeString(key::kDevicePrinters)) {
@@ -827,17 +809,13 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDevicePrintersAllowlist)) {
-    auto list = policy->mutable_device_printers_allowlist();
-    list->clear_allowlist();
-    for (const std::string& value : values.value())
-      list->add_allowlist(value);
+    *policy->mutable_device_printers_allowlist()->mutable_allowlist() = {
+        values.value().begin(), values.value().end()};
   }
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDevicePrintersBlocklist)) {
-    auto list = policy->mutable_device_printers_blocklist();
-    list->clear_blocklist();
-    for (const std::string& value : values.value())
-      list->add_blocklist(value);
+    *policy->mutable_device_printers_blocklist()->mutable_blocklist() = {
+        values.value().begin(), values.value().end()};
   }
 
   if (base::Optional<std::string> value =
