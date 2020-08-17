@@ -352,6 +352,49 @@ properties:
                   type: integer
                   description: Specifies the duration to look back for
                     Zero-Shutter Lag (ZSL) in milliseconds.
+                devices:
+                  type: array
+                  description: List of camera devices on the model. Newly
+                    created models should use this property to define camera
+                    configuration.
+                  items:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: A string to identify the camera device. For
+                          USB cameras this must be 4-digit hexadecimal VID and
+                          PID separated by a colon, e.g. 0123:abcd. For MIPI
+                          cameras it depends on vendor software usage.
+                      interface:
+                        type: string
+                        description: The interface type of the camera device.
+                        enum:
+                        - usb
+                        - mipi
+                      facing:
+                        type: string
+                        description: Direction the camera faces relative to
+                          device screen.
+                        enum:
+                        - front
+                        - back
+                      orientation:
+                        type: integer
+                        description: Clockwise angle through which the output
+                          image needs to be rotated to be upright on the device
+                          screen in its native orientation.
+                        enum:
+                        - 0
+                        - 90
+                        - 180
+                        - 270
+                    required:
+                    - id
+                    - interface
+                    - facing
+                    - orientation
+                    additionalProperties: false
               additionalProperties: false
             fingerprint:
               type: object
