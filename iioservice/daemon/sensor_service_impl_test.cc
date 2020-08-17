@@ -78,7 +78,7 @@ class SensorServiceImplTest : public ::testing::Test {
 
     ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
     EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+        base::Thread::Options(base::MessagePumpType::IO, 0)));
 
     ipc_thread_->task_runner()->PostTask(
         FROM_HERE, base::BindOnce(&SensorServiceImplTest::CreateServiceOnThread,
@@ -162,7 +162,7 @@ class SensorServiceImplTestDeviceTypesWithParam
 
     ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
     EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+        base::Thread::Options(base::MessagePumpType::IO, 0)));
 
     ipc_thread_->task_runner()->PostTask(
         FROM_HERE,

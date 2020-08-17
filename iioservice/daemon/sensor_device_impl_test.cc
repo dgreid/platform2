@@ -7,6 +7,7 @@
 #include <set>
 #include <utility>
 
+#include <base/run_loop.h>
 #include <base/threading/thread.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
@@ -191,7 +192,8 @@ class SensorDeviceImplTest : public ::testing::Test {
     fake_device_ = fake_device.get();
     context_->AddDevice(std::move(fake_device));
 
-    message_loop_ = std::make_unique<base::MessageLoopForIO>();
+    task_executor_ = std::make_unique<base::SingleThreadTaskExecutor>(
+        base::MessagePumpType::IO);
 
     EXPECT_TRUE(ipc_thread_->Start());
     EXPECT_TRUE(remote_thread_->Start());
@@ -210,7 +212,7 @@ class SensorDeviceImplTest : public ::testing::Test {
     sensor_device_.reset();
     ipc_support_.reset();
     ipc_thread_->Stop();
-    message_loop_.reset();
+    task_executor_.reset();
   }
 
   void SetupDevice() {
@@ -255,7 +257,7 @@ class SensorDeviceImplTest : public ::testing::Test {
   libmems::fakes::FakeIioDevice* device_;
   libmems::fakes::FakeIioDevice* fake_device_;
 
-  std::unique_ptr<base::MessageLoopForIO> message_loop_;
+  std::unique_ptr<base::SingleThreadTaskExecutor> task_executor_;
 
   std::unique_ptr<base::Thread> ipc_thread_;
   std::unique_ptr<base::Thread> remote_thread_;

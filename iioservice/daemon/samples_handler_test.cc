@@ -13,6 +13,7 @@
 #include <vector>
 
 #include <base/rand_util.h>
+#include <base/run_loop.h>
 #include <base/threading/thread.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
 #include <mojo/public/cpp/bindings/receiver_set.h>
@@ -131,11 +132,11 @@ class SamplesHandlerTestBase {
 
     ipc_thread_ = std::make_unique<base::Thread>("IPCThread");
     EXPECT_TRUE(ipc_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+        base::Thread::Options(base::MessagePumpType::IO, 0)));
 
     sample_thread_ = std::make_unique<base::Thread>("SampleThread");
     EXPECT_TRUE(sample_thread_->StartWithOptions(
-        base::Thread::Options(base::MessageLoop::TYPE_IO, 0)));
+        base::Thread::Options(base::MessagePumpType::IO, 0)));
 
     handler_ = fakes::FakeSamplesHandler::CreateWithFifo(
         ipc_thread_->task_runner(), sample_thread_->task_runner(),
@@ -229,7 +230,7 @@ TEST_F(SamplesHandlerTest, UpdateChannelsEnabled) {
 }
 
 TEST_F(SamplesHandlerTest, BadDeviceWithNoSamples) {
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   device_->DisableFd();
 
@@ -327,7 +328,7 @@ TEST_P(SamplesHandlerTestWithParam, UpdateFrequency) {
     handler_->CheckRequestedFrequency(*frequencies.rbegin());
   }
 
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   // Update clients' frequencies
   for (size_t i = 0; i < GetParam().size(); ++i) {
@@ -371,7 +372,7 @@ TEST_P(SamplesHandlerTestWithParam, UpdateFrequency) {
 // channel, and read the rest samples. All samples are checked when received by
 // observers.
 TEST_P(SamplesHandlerTestWithParam, ReadSamplesWithFrequency) {
-  base::MessageLoopForIO message_loop;
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   base::RunLoop pause_loop;
   // Set the pause in the beginning to prevent reading samples before all

@@ -42,7 +42,7 @@ SensorDeviceImpl::ScopedSensorDeviceImpl SensorDeviceImpl::Create(
 
   std::unique_ptr<base::Thread> thread(new base::Thread("SensorDeviceImpl"));
   if (!thread->StartWithOptions(
-          base::Thread::Options(base::MessageLoop::TYPE_IO, 0))) {
+          base::Thread::Options(base::MessagePumpType::IO, 0))) {
     LOG(ERROR) << "Failed to start thread with TYPE_IO";
     device.reset();
     return device;
