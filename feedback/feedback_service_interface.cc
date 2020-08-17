@@ -7,7 +7,6 @@
 #include <memory>
 
 #include "base/bind.h"
-#include "base/message_loop/message_loop.h"
 #include "chromeos/dbus/service_constants.h"
 #include "components/feedback/feedback_common.h"
 #include "components/feedback/proto/extension.pb.h"

@@ -13,8 +13,8 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/guid.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread.h>
 #include <chromeos/dbus/service_constants.h>
 #include <gmock/gmock.h>
@@ -74,7 +74,7 @@ class FailedFeedbackUploader : public MockFeedbackUploader {
 
 class FeedbackServiceTest : public testing::Test {
  public:
-  FeedbackServiceTest() : message_loop_(base::MessageLoop::TYPE_IO) {}
+  FeedbackServiceTest() : task_executor_(base::MessagePumpType::IO) {}
 
   static void CallbackFeedbackResult(bool expected_result, bool result,
                                      const std::string& err) {
@@ -108,7 +108,7 @@ class FeedbackServiceTest : public testing::Test {
   }
 
   base::ScopedTempDir temp_dir_;
-  base::MessageLoop message_loop_;
+  base::SingleThreadTaskExecutor task_executor_;
   std::unique_ptr<base::Thread> worker_thread_;
   scoped_refptr<base::SingleThreadTaskRunner> worker_task_runner_;
 };

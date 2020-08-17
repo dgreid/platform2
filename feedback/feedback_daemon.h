@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "base/files/file_descriptor_watcher_posix.h"
-#include "base/message_loop/message_loop.h"
+#include "base/task/single_thread_task_executor.h"
 #include "base/threading/thread.h"
 #include "feedback/feedback_service.h"
 
@@ -30,7 +30,7 @@ class Daemon final {
   void Run();
 
  private:
-  base::MessageLoopForIO loop_;
+  base::SingleThreadTaskExecutor loop_{base::MessagePumpType::IO};
   base::Thread worker_thread_;
   base::FileDescriptorWatcher watcher_;
   std::unique_ptr<feedback::FeedbackUploader> uploader_;
