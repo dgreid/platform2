@@ -37,6 +37,7 @@ filetrans_pattern(chromeos_startup, cros_run_lock, cros_power_override_lock_file
 
 allow chromeos_startup self:capability { chown fsetid linux_immutable sys_resource };
 
+allow domain chromeos_startup:key search;
 
 type chromeos_startup_restorecon, chromeos_domain, domain;
 permissive chromeos_startup_restorecon;
