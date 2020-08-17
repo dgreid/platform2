@@ -5,10 +5,10 @@
 #include <utility>
 
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
 #include <base/test/bind_test_util.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>
@@ -58,7 +58,7 @@ class NetworkHealthAdapterImplTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_;
   NetworkHealthAdapterImpl network_health_adapter_;
 };
 

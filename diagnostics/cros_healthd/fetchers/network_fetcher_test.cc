@@ -6,7 +6,7 @@
 
 #include <base/run_loop.h>
 #include <base/optional.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -51,7 +51,7 @@ class NetworkFetcherTest : public testing::Test {
   }
 
  private:
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_;
   MockContext mock_context_;
   NetworkFetcher network_fetcher_{&mock_context_};
 };
