@@ -58,6 +58,9 @@ const int ControlTypeToCid(ControlType type) {
     case kControlZoom:
       return V4L2_CID_ZOOM_ABSOLUTE;
 
+    case kControlExposureAutoPriority:
+      return V4L2_CID_EXPOSURE_AUTO_PRIORITY;
+
     default:
       NOTREACHED() << "Unexpected control type " << type;
       return -1;
@@ -86,6 +89,9 @@ const std::string ControlTypeToString(ControlType type) {
 
     case kControlZoom:
       return "zoom";
+
+    case kControlExposureAutoPriority:
+      return "exposure_auto_priority";
 
     default:
       NOTREACHED() << "Unexpected control type " << type;
@@ -197,7 +203,6 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
                                uint32_t height,
                                uint32_t pixel_format,
                                float frame_rate,
-                               bool constant_frame_rate,
                                std::vector<base::ScopedFD>* fds,
                                std::vector<uint32_t>* buffer_sizes) {
   base::AutoLock l(lock_);
@@ -211,13 +216,6 @@ int V4L2CameraDevice::StreamOn(uint32_t width,
   }
 
   int ret;
-  struct v4l2_control control;
-  control.id = V4L2_CID_EXPOSURE_AUTO_PRIORITY;
-  control.value = constant_frame_rate ? 0 : 1;
-  ret = TEMP_FAILURE_RETRY(ioctl(device_fd_.get(), VIDIOC_S_CTRL, &control));
-  if (ret < 0) {
-    LOGF(WARNING) << "Failed to set V4L2_CID_EXPOSURE_AUTO_PRIORITY";
-  }
 
   // Some drivers use rational time per frame instead of float frame rate, this
   // constant k is used to convert between both: A fps -> [k/k*A] seconds/frame.
@@ -541,7 +539,7 @@ bool V4L2CameraDevice::SetControlValue(ControlType type, int32_t value) {
 
   if (SetControlValue(device_fd_.get(), cid, value)) {
     if (GetControlValue(type, &current_value)) {
-      LOG(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
+      LOGF(INFO) << "Set " << ControlTypeToString(type) << " to " << value;
       control_values_[type] = value;
       return true;
     }

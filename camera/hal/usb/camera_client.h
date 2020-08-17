@@ -88,7 +88,6 @@ class CameraClient {
 
   // Start |request_thread_| and streaming.
   int StreamOn(Size stream_on_resolution,
-               bool constant_frame_rate,
                int crop_rotate_scale_degrees,
                int* num_buffers,
                bool use_native_sensor_ratio);
@@ -169,7 +168,6 @@ class CameraClient {
 
     // Synchronous call to start streaming.
     void StreamOn(Size stream_on_resolution,
-                  bool constant_frame_rate,
                   int crop_rotate_scale_degrees,
                   bool use_native_sensor_ratio,
                   const base::Callback<void(int, int)>& callback);
@@ -186,7 +184,6 @@ class CameraClient {
    private:
     // Start streaming implementation.
     int StreamOnImpl(Size stream_on_resolution,
-                     bool constant_frame_rate,
                      bool use_native_sensor_ratio,
                      float target_frame_rate);
 
@@ -215,7 +212,7 @@ class CameraClient {
     bool IsValidFrameRate(int frame_rate);
 
     // Convert to |capture_result->output_buffers| with |cached_frame_|.
-    int WriteStreamBuffers(const android::CameraMetadata& metadata,
+    int WriteStreamBuffers(const android::CameraMetadata& request_metadata,
                            camera3_capture_result_t* capture_result);
 
     // Some devices may output invalid image after stream on. Skip frames
@@ -292,9 +289,6 @@ class CameraClient {
 
     // The default resolution decided from ConfigureStreams for preview.
     Size default_resolution_;
-
-    // The constant_frame_rate setting for stream on.
-    bool constant_frame_rate_;
 
     // Use the resolution of native sensor ratio.
     // So the image is not cropped by USB device, it is cropped in SW.

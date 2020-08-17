@@ -198,15 +198,9 @@ int CameraClient::ConfigureStreams(
     stream_on_resolution = resolution;
   }
 
-  // We don't have enough information to decide whether to enable constant frame
-  // rate or not here. Tried some common camera apps and seems that true is a
-  // sensible default. False if constant frame rate is not supported.
-  bool constant_frame_rate = !device_info_.constant_framerate_unsupported;
-
   int num_buffers;
-  int ret = StreamOn(stream_on_resolution, constant_frame_rate,
-                     crop_rotate_scale_degrees, &num_buffers,
-                     use_native_sensor_ratio);
+  int ret = StreamOn(stream_on_resolution, crop_rotate_scale_degrees,
+                     &num_buffers, use_native_sensor_ratio);
   if (ret) {
     LOGFID(ERROR, id_) << "StreamOn failed";
     StreamOff();
@@ -351,7 +345,6 @@ void CameraClient::SetUpStreams(int num_buffers,
 }
 
 int CameraClient::StreamOn(Size stream_on_resolution,
-                           bool constant_frame_rate,
                            int crop_rotate_scale_degrees,
                            int* num_buffers,
                            bool use_native_sensor_ratio) {
@@ -374,11 +367,10 @@ int CameraClient::StreamOn(Size stream_on_resolution,
       base::Bind(&CameraClient::StreamOnCallback, base::Unretained(this),
                  base::RetainedRef(future), num_buffers);
   request_task_runner_->PostTask(
-      FROM_HERE,
-      base::Bind(&CameraClient::RequestHandler::StreamOn,
-                 base::Unretained(request_handler_.get()), stream_on_resolution,
-                 constant_frame_rate, crop_rotate_scale_degrees,
-                 use_native_sensor_ratio, streamon_callback));
+      FROM_HERE, base::Bind(&CameraClient::RequestHandler::StreamOn,
+                            base::Unretained(request_handler_.get()),
+                            stream_on_resolution, crop_rotate_scale_degrees,
+                            use_native_sensor_ratio, streamon_callback));
   return future->Get();
 }
 
@@ -544,7 +536,6 @@ CameraClient::RequestHandler::~RequestHandler() {}
 
 void CameraClient::RequestHandler::StreamOn(
     Size stream_on_resolution,
-    bool constant_frame_rate,
     int crop_rotate_scale_degrees,
     bool use_native_sensor_ratio,
     const base::Callback<void(int, int)>& callback) {
@@ -563,8 +554,8 @@ void CameraClient::RequestHandler::StreamOn(
     callback.Run(0, -EINVAL);
     return;
   }
-  int ret = StreamOnImpl(stream_on_resolution, constant_frame_rate,
-                         use_native_sensor_ratio, GetMaximumFrameRate(*format));
+  int ret = StreamOnImpl(stream_on_resolution, use_native_sensor_ratio,
+                         GetMaximumFrameRate(*format));
   if (ret) {
     callback.Run(0, ret);
     return;
@@ -615,9 +606,6 @@ void CameraClient::RequestHandler::HandleRequest(
                          << ", Number of output buffers: "
                          << capture_result.num_output_buffers;
   android::CameraMetadata* metadata = request->GetMetadata();
-  bool constant_frame_rate = ShouldEnableConstantFrameRate(*metadata);
-  VLOGFID(1, device_id_) << "constant_frame_rate " << std::boolalpha
-                         << constant_frame_rate;
   is_video_recording_ = IsVideoRecording(*metadata);
 
   bool stream_resolution_reconfigure = false;
@@ -653,8 +641,7 @@ void CameraClient::RequestHandler::HandleRequest(
       device_->CanUpdateFrameRate() &&
       target_frame_rate != device_->GetFrameRate() &&
       IsValidFrameRate(target_frame_rate);
-  if (stream_resolution_reconfigure ||
-      constant_frame_rate != constant_frame_rate_ || should_update_frame_rate) {
+  if (stream_resolution_reconfigure || should_update_frame_rate) {
     VLOGFID(1, device_id_) << "Restart stream";
     int ret = StreamOffImpl();
     if (ret) {
@@ -662,8 +649,8 @@ void CameraClient::RequestHandler::HandleRequest(
       return;
     }
 
-    ret = StreamOnImpl(new_resolution, constant_frame_rate,
-                       use_native_sensor_ratio_, target_frame_rate);
+    ret = StreamOnImpl(new_resolution, use_native_sensor_ratio_,
+                       target_frame_rate);
     if (ret) {
       HandleAbortedRequest(&capture_result);
       return;
@@ -698,8 +685,8 @@ void CameraClient::RequestHandler::HandleRequest(
       if (StreamOffImpl() != 0) {
         break;
       }
-      if (StreamOnImpl(new_resolution, constant_frame_rate,
-                       use_native_sensor_ratio_, target_frame_rate) != 0) {
+      if (StreamOnImpl(new_resolution, use_native_sensor_ratio_,
+                       target_frame_rate) != 0) {
         break;
       }
       keep_trying = true;
@@ -764,7 +751,6 @@ void CameraClient::RequestHandler::DiscardOutdatedBuffers() {
 }
 
 int CameraClient::RequestHandler::StreamOnImpl(Size stream_on_resolution,
-                                               bool constant_frame_rate,
                                                bool use_native_sensor_ratio,
                                                float target_frame_rate) {
   DCHECK(task_runner_->BelongsToCurrentThread());
@@ -773,7 +759,6 @@ int CameraClient::RequestHandler::StreamOnImpl(Size stream_on_resolution,
   // If new stream configuration is the same as current stream, do nothing.
   if (stream_on_resolution.width == stream_on_resolution_.width &&
       stream_on_resolution.height == stream_on_resolution_.height &&
-      constant_frame_rate == constant_frame_rate_ &&
       use_native_sensor_ratio == use_native_sensor_ratio_ &&
       target_frame_rate == stream_on_fps_) {
     VLOGFID(1, device_id_) << "Skip stream on for the same configuration";
@@ -801,15 +786,12 @@ int CameraClient::RequestHandler::StreamOnImpl(Size stream_on_resolution,
   VLOGFID(1, device_id_) << "streamOn with width " << format->width
                          << ", height " << format->height << ", fps "
                          << target_frame_rate << ", format "
-                         << FormatToString(format->fourcc)
-                         << ", constant_frame_rate " << std::boolalpha
-                         << constant_frame_rate;
+                         << FormatToString(format->fourcc);
 
   std::vector<base::ScopedFD> fds;
   std::vector<uint32_t> buffer_sizes;
   ret = device_->StreamOn(format->width, format->height, format->fourcc,
-                          target_frame_rate, constant_frame_rate, &fds,
-                          &buffer_sizes);
+                          target_frame_rate, &fds, &buffer_sizes);
   if (ret) {
     LOGFID(ERROR, device_id_)
         << "StreamOn failed: " << base::safe_strerror(-ret);
@@ -831,7 +813,6 @@ int CameraClient::RequestHandler::StreamOnImpl(Size stream_on_resolution,
   }
 
   stream_on_resolution_ = stream_on_resolution;
-  constant_frame_rate_ = constant_frame_rate;
   use_native_sensor_ratio_ = use_native_sensor_ratio;
   stream_on_fps_ = target_frame_rate;
   current_buffer_timestamp_in_v4l2_ = 0;
@@ -892,36 +873,6 @@ uint64_t CameraClient::RequestHandler::CurrentBufferTimestamp() {
   return device_info_.quirks & kQuirkUserSpaceTimestamp
              ? current_buffer_timestamp_in_user_
              : current_buffer_timestamp_in_v4l2_;
-}
-
-bool CameraClient::RequestHandler::ShouldEnableConstantFrameRate(
-    const android::CameraMetadata& metadata) {
-  if (device_info_.constant_framerate_unsupported) {
-    return false;
-  }
-
-  // TODO(shik): Add a helper function to do the exists() and find() combo, so
-  // it's less likely to have typos in the tag name.
-
-  if (metadata.exists(ANDROID_CONTROL_AE_TARGET_FPS_RANGE)) {
-    camera_metadata_ro_entry entry =
-        metadata.find(ANDROID_CONTROL_AE_TARGET_FPS_RANGE);
-    if (entry.data.i32[0] == entry.data.i32[1]) {
-      return true;
-    }
-  }
-
-  if (metadata.exists(ANDROID_CONTROL_CAPTURE_INTENT)) {
-    camera_metadata_ro_entry entry =
-        metadata.find(ANDROID_CONTROL_CAPTURE_INTENT);
-    switch (entry.data.u8[0]) {
-      case ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_RECORD:
-      case ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_SNAPSHOT:
-        return true;
-    }
-  }
-
-  return false;
 }
 
 bool CameraClient::RequestHandler::IsValidFrameRate(int frame_rate) {

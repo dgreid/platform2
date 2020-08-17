@@ -934,11 +934,50 @@ const camera_metadata_t* MetadataHandler::GetDefaultRequestSettings(
   return template_settings_[template_type].get();
 }
 
+bool MetadataHandler::ShouldEnableConstantFrameRate(
+    const android::CameraMetadata* metadata) const {
+  if (device_info_.constant_framerate_unsupported) {
+    return false;
+  }
+
+  // TODO(shik): Add a helper function to do the exists() and find() combo, so
+  // it's less likely to have typos in the tag name.
+
+  if (metadata->exists(ANDROID_CONTROL_AE_TARGET_FPS_RANGE)) {
+    camera_metadata_ro_entry entry =
+        metadata->find(ANDROID_CONTROL_AE_TARGET_FPS_RANGE);
+    if (entry.data.i32[0] == entry.data.i32[1]) {
+      return true;
+    }
+  }
+
+  if (metadata->exists(ANDROID_CONTROL_CAPTURE_INTENT)) {
+    camera_metadata_ro_entry entry =
+        metadata->find(ANDROID_CONTROL_CAPTURE_INTENT);
+    switch (entry.data.u8[0]) {
+      case ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_RECORD:
+      case ANDROID_CONTROL_CAPTURE_INTENT_VIDEO_SNAPSHOT:
+        return true;
+    }
+  }
+
+  return false;
+}
+
 int MetadataHandler::PreHandleRequest(int frame_number,
                                       const Size& resolution,
                                       android::CameraMetadata* metadata) {
   DCHECK(thread_checker_.CalledOnValidThread());
   MetadataUpdater update_request(metadata);
+
+  if (!device_info_.constant_framerate_unsupported) {
+    bool enable = ShouldEnableConstantFrameRate(metadata);
+    if (!device_->SetControlValue(kControlExposureAutoPriority,
+                                  enable ? 0 : 1)) {
+      LOGF(WARNING) << "Failed to set constant frame rate to " << std::boolalpha
+                    << enable;
+    }
+  }
 
   if (metadata->exists(ANDROID_CONTROL_AF_TRIGGER)) {
     camera_metadata_entry entry = metadata->find(ANDROID_CONTROL_AF_TRIGGER);

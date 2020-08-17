@@ -79,6 +79,10 @@ class MetadataHandler {
   // Check |template_type| is valid or not.
   bool IsValidTemplateType(int template_type);
 
+  // Check if constant frame rate should be enabled or not.
+  bool ShouldEnableConstantFrameRate(
+      const android::CameraMetadata* metadata) const;
+
   // Return a copy of metadata according to |template_type|.
   ScopedCameraMetadata CreateDefaultRequestSettings(int template_type);
   int FillDefaultPreviewSettings(android::CameraMetadata* metadata);

@@ -37,6 +37,7 @@ enum ControlType {
   kControlSharpness,
   kControlTilt,
   kControlZoom,
+  kControlExposureAutoPriority,  // 0 for constant frame rate
 };
 
 // The class is thread-safe.
@@ -56,18 +57,16 @@ class V4L2CameraDevice {
   void Disconnect();
 
   // Enable camera device stream. Setup captured frame with |width|x|height|
-  // resolution, |pixel_format|, |frame_rate|, and whether we want
-  // |constant_frame_rate|. Get frame buffer file descriptors |fds| and
-  // |buffer_sizes|. |buffer_sizes| are the sizes allocated for each buffer. The
-  // ownership of |fds| are transferred to the caller and |fds| should be closed
-  // when done. Caller can memory map |fds| and should unmap when done. Return 0
-  // if device supports the format.  Otherwise, return -|errno|. This function
-  // should be called after Connect().
+  // resolution, |pixel_format|, |frame_rate|. Get frame buffer file descriptors
+  // |fds| and |buffer_sizes|. |buffer_sizes| are the sizes allocated for each
+  // buffer. The ownership of |fds| are transferred to the caller and |fds|
+  // should be closed when done. Caller can memory map |fds| and should unmap
+  // when done. Return 0 if device supports the format.  Otherwise, return
+  // -|errno|. This function should be called after Connect().
   int StreamOn(uint32_t width,
                uint32_t height,
                uint32_t pixel_format,
                float frame_rate,
-               bool constant_frame_rate,
                std::vector<base::ScopedFD>* fds,
                std::vector<uint32_t>* buffer_sizes);
 
