@@ -177,8 +177,13 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
                                sane_strstatus(status));
     return false;
   }
-  if (should_reload)
+
+  if (should_reload) {
     LoadOptions(error);
+  } else {
+    // If not reloading the option values, we should update the stored option.
+    options_[kResolution] = option;
+  }
 
   return true;
 }
@@ -207,6 +212,13 @@ bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
                                "Unable to set document source to %s: %s",
                                source.name().c_str(), sane_strstatus(status));
     return false;
+  }
+
+  if (should_reload) {
+    LoadOptions(error);
+  } else {
+    // If not reloading the option values, we should update the stored option.
+    options_[kSource] = option;
   }
 
   return true;
@@ -252,6 +264,14 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
                                mode_string.c_str(), sane_strstatus(status));
     return false;
   }
+
+  if (should_reload) {
+    LoadOptions(error);
+  } else {
+    // If not reloading the option values, we should update the stored option.
+    options_[kScanMode] = option;
+  }
+
   return true;
 }
 
@@ -375,18 +395,15 @@ bool SaneDeviceImpl::SaneOption::SetString(const std::string& s) {
     return false;
   }
 
-  if (value.s)
-    free(value.s);
-  value.s = strdup(s.c_str());
-  if (!value.s)
+  size_t size_with_null = s.size() + 1;
+  if (size_with_null > string_data.size()) {
+    LOG(ERROR) << "String size " << size_with_null
+               << " exceeds maximum option size " << string_data.size();
     return false;
+  }
 
+  memcpy(string_data.data(), s.c_str(), size_with_null);
   return true;
-}
-
-SaneDeviceImpl::SaneOption::~SaneOption() {
-  if (type == SANE_TYPE_STRING)
-    free(value.s);
 }
 
 SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
@@ -430,21 +447,50 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
       return false;
     }
 
+    // A pointer to the memory used to store the current setting's value.
+    // If this is non-null, we will read the detected option's value and store
+    // it to this address.
+    void* value = nullptr;
     if ((opt->type == SANE_TYPE_INT || opt->type == SANE_TYPE_FIXED) &&
         opt->size == sizeof(SANE_Int) && opt->unit == SANE_UNIT_DPI &&
         strcmp(opt->name, SANE_NAME_SCAN_RESOLUTION) == 0) {
       options_[kResolution].index = i;
       options_[kResolution].type = opt->type;
+      if (opt->type == SANE_TYPE_INT) {
+        value = &options_[kResolution].value.i;
+      } else {  // type is SANE_TYPE_FIXED
+        value = &options_[kResolution].value.f;
+      }
     } else if ((opt->type == SANE_TYPE_STRING) &&
                strcmp(opt->name, SANE_NAME_SCAN_MODE) == 0) {
-      options_[kScanMode].index = i;
-      options_[kScanMode].type = opt->type;
-      options_[kScanMode].value.s = NULL;
+      SaneOption& sane_opt = options_[kScanMode];
+      sane_opt.index = i;
+      sane_opt.type = opt->type;
+      // opt->size is the maximum size of the string option, including the null
+      // terminator (which is mandatory).
+      sane_opt.string_data.resize(opt->size);
+      sane_opt.value.s = sane_opt.string_data.data();
+      value = sane_opt.string_data.data();
     } else if ((opt->type == SANE_TYPE_STRING) &&
                strcmp(opt->name, SANE_NAME_SCAN_SOURCE) == 0) {
-      options_[kSource].index = i;
-      options_[kSource].type = opt->type;
-      options_[kSource].value.s = NULL;
+      SaneOption& sane_opt = options_[kSource];
+      sane_opt.index = i;
+      sane_opt.type = opt->type;
+      sane_opt.string_data.resize(opt->size);
+      sane_opt.value.s = sane_opt.string_data.data();
+      value = sane_opt.string_data.data();
+    }
+
+    if (value) {
+      SANE_Status status =
+          sane_control_option(handle_, i, SANE_ACTION_GET_VALUE, value, NULL);
+      if (status != SANE_STATUS_GOOD) {
+        brillo::Error::AddToPrintf(
+            error, FROM_HERE, brillo::errors::dbus::kDomain,
+            kManagerServiceError, "Unable to read option value %d for device",
+            i);
+        return false;
+      }
     }
   }
 

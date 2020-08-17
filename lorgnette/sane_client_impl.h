@@ -82,9 +82,11 @@ class SaneDeviceImpl : public SaneDevice {
       SANE_String s;
     } value;
 
+    // The buffer backing value.s, if this is a string option.
+    std::vector<char> string_data;
+
     bool SetInt(int i);
     bool SetString(const std::string& s);
-    ~SaneOption();
   };
 
   SaneDeviceImpl(SANE_Handle handle,
