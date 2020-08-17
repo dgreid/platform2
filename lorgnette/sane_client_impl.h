@@ -110,6 +110,7 @@ class SaneDeviceImpl : public SaneDevice {
   std::shared_ptr<DeviceSet> open_devices_;
   std::unordered_map<ScanOption, SaneOption> options_;
   bool scan_running_;
+  bool reached_eof_;
 };
 
 }  // namespace lorgnette

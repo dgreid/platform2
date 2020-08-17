@@ -125,8 +125,10 @@ std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDevice(
 }
 
 SaneDeviceImpl::~SaneDeviceImpl() {
-  if (handle_)
+  if (handle_) {
+    // If a scan is running, this will call sane_cancel() first.
     sane_close(handle_);
+  }
   base::AutoLock auto_lock(open_devices_->first);
   open_devices_->second.erase(name_);
 }
@@ -316,7 +318,7 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
 }
 
 SANE_Status SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
-  if (scan_running_) {
+  if (scan_running_ && !reached_eof_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "Scan is already in progress");
     return SANE_STATUS_DEVICE_BUSY;
@@ -405,9 +407,7 @@ bool SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
       return true;
     case SANE_STATUS_EOF:
       *read_out = 0;
-      scan_running_ = false;
-      // sane_cancel() must always be called once a scan has completed.
-      sane_cancel(handle_);
+      reached_eof_ = true;
       return true;
     default:
       brillo::Error::AddToPrintf(
@@ -452,7 +452,8 @@ SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
     : handle_(handle),
       name_(name),
       open_devices_(open_devices),
-      scan_running_(false) {}
+      scan_running_(false),
+      reached_eof_(false) {}
 
 bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
   // First we get option descriptor 0, which contains the total count of
