@@ -10,7 +10,7 @@
 #include <base/files/file_util.h>
 #include <gtest/gtest.h>
 
-#include "chrome/knowledge/handwriting/validate.pb.h"
+#include "chrome/knowledge/handwriting/handwriting_validate.pb.h"
 #include "ml/handwriting.h"
 
 namespace ml {

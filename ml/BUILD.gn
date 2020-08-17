@@ -61,8 +61,8 @@ proto_library("ml_handwriting_proto") {
   proto_in_dir = "${sysroot}/usr/include/chromeos/libhandwriting/proto"
   proto_out_dir = "chrome/knowledge/handwriting/"
   sources = [
-    "${proto_in_dir}/interface.proto",
-    "${proto_in_dir}/validate.proto",
+    "${proto_in_dir}/handwriting_interface.proto",
+    "${proto_in_dir}/handwriting_validate.proto",
   ]
 }
 

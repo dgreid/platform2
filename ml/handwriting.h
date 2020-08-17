@@ -10,9 +10,9 @@
 #include <base/no_destructor.h>
 #include <base/optional.h>
 #include <base/scoped_native_library.h>
-#include <chromeos/libhandwriting/interface.h>
+#include <chromeos/libhandwriting/handwriting_interface.h>
 
-#include "chrome/knowledge/handwriting/interface.pb.h"
+#include "chrome/knowledge/handwriting/handwriting_interface.pb.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 
 namespace ml {
@@ -98,7 +98,7 @@ class HandwritingLibrary {
   FRIEND_TEST(HandwritingLibraryTest, CanLoadLibrary);
 
   // Initialize the handwriting library.
-  explicit HandwritingLibrary();
+  HandwritingLibrary();
 
   // Currently HandwritingLibrary is supported only when the "sanitizer" is not
   // enabled (see https://crbug.com/1082632).

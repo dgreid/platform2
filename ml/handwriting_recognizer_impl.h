@@ -10,7 +10,7 @@
 #include <mojo/public/cpp/bindings/pending_receiver.h>
 #include <mojo/public/cpp/bindings/receiver.h>
 
-#include "chrome/knowledge/handwriting/interface.pb.h"
+#include "chrome/knowledge/handwriting/handwriting_interface.pb.h"
 #include "ml/handwriting.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 

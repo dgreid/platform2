@@ -5,7 +5,7 @@
 #ifndef ML_HANDWRITING_PROTO_MOJOM_CONVERSION_H_
 #define ML_HANDWRITING_PROTO_MOJOM_CONVERSION_H_
 
-#include "chrome/knowledge/handwriting/interface.pb.h"
+#include "chrome/knowledge/handwriting/handwriting_interface.pb.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 
 namespace ml {

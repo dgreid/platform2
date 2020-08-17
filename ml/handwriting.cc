@@ -5,6 +5,7 @@
 #include "ml/handwriting.h"
 
 #include <string>
+#include <utility>
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
@@ -74,7 +75,7 @@ HandwritingLibrary::HandwritingLibrary()
 
 // Helper macro to look up functions from the library, assuming the function
 // pointer type is named as (name+"Fn"), which is the case in
-// "libhandwriting/interface.h".
+// "libhandwriting/handwriting_interface.h".
 #define ML_HANDWRITING_LOOKUP_FUNCTION(function_ptr, name)             \
   function_ptr =                                                       \
       reinterpret_cast<name##Fn>(library_->GetFunctionPointer(#name)); \
