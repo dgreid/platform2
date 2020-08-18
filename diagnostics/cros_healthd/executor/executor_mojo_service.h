@@ -23,6 +23,7 @@ class ExecutorMojoService final
 
   // chromeos::cros_healthd_executor::mojom::Executor overrides:
   void GetFanSpeed(GetFanSpeedCallback callback) override;
+  void RunMemtester(RunMemtesterCallback callback) override;
 
  private:
   // Provides a Mojo endpoint that cros_healthd can call to access the

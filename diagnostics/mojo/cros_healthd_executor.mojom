@@ -28,4 +28,10 @@ interface Executor {
   // The response:
   // * |result| - contains information received from running the tool.
   GetFanSpeed() => (ProcessResult result);
+
+  // Runs memtester and returns the result.
+  //
+  // The response:
+  // * |result| - contains information received from running memtester.
+  RunMemtester() => (ProcessResult result);
 };

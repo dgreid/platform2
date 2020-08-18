@@ -4,6 +4,9 @@
 
 #include "diagnostics/cros_healthd/executor/executor_mojo_service.h"
 
+#include <inttypes.h>
+
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 #include <utility>
@@ -12,6 +15,8 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/optional.h>
+#include <base/strings/stringprintf.h>
+#include <base/system/sys_info.h>
 
 #include "diagnostics/cros_healthd/process/process_with_output.h"
 #include "mojo/cros_healthd_executor.mojom.h"
@@ -31,6 +36,10 @@ constexpr char kEctoolUserAndGroup[] = "healthd_ec";
 constexpr char kEctoolBinary[] = "/usr/sbin/ectool";
 // The ectool command used to collect fan speed in RPM.
 constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
+
+// SECCOMP policy for memtester, relative to kSandboxDirPath.
+constexpr char kMemtesterSeccompPolicyPath[] = "memtester-seccomp.policy";
+constexpr char kMemtesterBinary[] = "/usr/sbin/memtester";
 
 // Runs the given binary with the given arguments and sandboxing. If specified,
 // |user| will be used as both the user and group for sandboxing the binary. If
@@ -101,6 +110,46 @@ void ExecutorMojoService::GetFanSpeed(GetFanSpeedCallback callback) {
   result.return_code =
       RunBinary(seccomp_policy_path, sandboxing_args, kEctoolUserAndGroup,
                 base::FilePath(kEctoolBinary), {kGetFanRpmCommand}, &result);
+
+  std::move(callback).Run(result.Clone());
+}
+
+void ExecutorMojoService::RunMemtester(RunMemtesterCallback callback) {
+  mojo_ipc::ProcessResult result;
+
+  int64_t available_mem = base::SysInfo::AmountOfAvailablePhysicalMemory();
+  // Convert from bytes to MB.
+  available_mem /= (1024 * 1024);
+  // Make sure the operating system is left with at least 200 MB.
+  available_mem -= 200;
+  if (available_mem <= 0) {
+    result.err = "Not enough available memory to run memtester.";
+    result.return_code = EXIT_FAILURE;
+    std::move(callback).Run(result.Clone());
+    return;
+  }
+
+  // Minijail setup for memtester.
+  std::vector<std::string> sandboxing_args;
+  sandboxing_args.push_back("-c");
+  sandboxing_args.push_back("cap_ipc_lock=e");
+
+  // Additional args for memtester.
+  std::vector<std::string> memtester_args;
+  // Run with all free memory, except that which we left to the operating system
+  // above.
+  memtester_args.push_back(base::StringPrintf("%" PRId64, available_mem));
+  // Run for one loop.
+  memtester_args.push_back("1");
+
+  const auto kSeccompPolicyPath =
+      base::FilePath(kSandboxDirPath).Append(kMemtesterSeccompPolicyPath);
+
+  // Since no user:group is specified, this will run with the default
+  // cros_healthd:cros_healthd user and group.
+  result.return_code =
+      RunBinary(kSeccompPolicyPath, sandboxing_args, base::nullopt,
+                base::FilePath(kMemtesterBinary), memtester_args, &result);
 
   std::move(callback).Run(result.Clone());
 }
