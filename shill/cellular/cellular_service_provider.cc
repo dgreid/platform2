@@ -190,6 +190,11 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
     } else {
       SLOG(this, 1) << "Cellular service exists: " << imsi;
       service->SetDevice(device);
+      // For Cellular, when the SIM changes or when Cellular is enabled, assume
+      // that the intent is to auto connect to the CellularService (if
+      // connectable and AutoConnect is set), even if the service was previously
+      // explicitly disconnected.
+      service->ClearExplicitlyDisconnected();
     }
     if (imsi == device->imsi())
       active_service = service;
