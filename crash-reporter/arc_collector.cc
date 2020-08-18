@@ -43,9 +43,7 @@ const FilePath kContainerPid("container.pid");
 const FilePath kArcBuildProp("system/build.prop");  // Relative to ARC root.
 
 const char kCoreCollectorPath[] = "/usr/bin/core_collector";
-#if __WORDSIZE == 64
 const char kCoreCollector32Path[] = "/usr/bin/core_collector32";
-#endif
 
 const char kChromePath[] = "/opt/google/chrome/chrome";
 
@@ -268,15 +266,11 @@ UserCollectorBase::ErrorType ArcCollector::ConvertCoreToMinidump(
   }
 
   const char* collector_path = kCoreCollectorPath;
-  // TODO(crbug.com/735075): Remove this __WORDSIZE hack by building+installing
-  // ARM versions of core_collector{,32}, too.
-#if __WORDSIZE == 64
   bool is_64_bit;
   ErrorType elf_class_error = Is64BitProcess(pid, &is_64_bit);
   // Still try to run core_collector32 if 64-bit detection failed.
-  if (elf_class_error != kErrorNone || !is_64_bit)
+  if (__WORDSIZE == 64 && (elf_class_error != kErrorNone || !is_64_bit))
     collector_path = kCoreCollector32Path;
-#endif
 
   ProcessImpl core_collector;
   core_collector.AddArg(collector_path);

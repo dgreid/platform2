@@ -222,6 +222,9 @@ if (use.cheets) {
     # eclass. The "amd64" check allows the "cros_i686" USE flag to be
     # enabled for an overlay inherited by non-x86 boards.
     if (use.cros_i686 && use.amd64) {
+      # We link the C & C++ runtime statically because dynamic libs for these
+      # (multilib) ABIs aren't installed.  The eclasses handle forcing -static,
+      # and that doesn't work with PIE linking
       configs -= [ "//common-mk:pie" ]
     }
   }
