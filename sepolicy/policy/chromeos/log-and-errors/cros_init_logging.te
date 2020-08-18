@@ -1,8 +1,0 @@
-type cros_init_logging_scripts, domain, chromeos_domain;
-type cros_logger, domain, chromeos_domain;
-
-permissive cros_init_logging_scripts;
-permissive cros_logger;
-
-domain_auto_trans({cros_init cros_init_scripts}, cros_init_logging_shell_scripts, cros_init_logging_scripts);
-domain_auto_trans({cros_init cros_init_scripts cros_init_logging_scripts}, cros_logger_exec, cros_logger);

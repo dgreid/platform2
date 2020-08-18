@@ -174,7 +174,6 @@ type cros_init_start_bluetoothd_shell_script, exec_type, file_type, cros_init_sc
 type cros_init_start_bluetoothlog_shell_script, exec_type, file_type, cros_init_scripts_file_type, cros_file_type, cros_system_file_type;
 type cros_init_ui_pre_start_shell_script, exec_type, file_type, cros_init_scripts_file_type, cros_file_type, cros_system_file_type;
 type cros_init_ui_respawn_shell_script, exec_type, file_type, cros_init_scripts_file_type, cros_file_type, cros_system_file_type;
-type cros_init_logging_shell_scripts, exec_type, file_type, cros_init_scripts_file_type, cros_file_type, cros_system_file_type;
 
 type cros_ionice_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 
