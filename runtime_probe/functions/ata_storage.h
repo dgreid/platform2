@@ -18,17 +18,10 @@ namespace runtime_probe {
 
 class AtaStorageFunction : public StorageFunction {
  public:
-  static constexpr auto function_name = "ata_storage";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("ata_storage");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " does not take any argument";
-      return nullptr;
-    }
-    return std::make_unique<AtaStorageFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<AtaStorageFunction>;
 
  protected:
   // Eval the ATA storage indicated by |node_path| inside the
@@ -38,12 +31,11 @@ class AtaStorageFunction : public StorageFunction {
 
  private:
   bool CheckStorageTypeMatch(const base::FilePath& node_path) const;
-  std::string GetStorageFwVersion(const base::FilePath& node_path) const;
-  static ProbeFunction::Register<AtaStorageFunction> register_;
-};
 
-// Register the AtaStorageFunction
-REGISTER_PROBE_FUNCTION(AtaStorageFunction);
+  std::string GetStorageFwVersion(const base::FilePath& node_path) const;
+
+  friend class GenericStorageFunction;
+};
 
 }  // namespace runtime_probe
 

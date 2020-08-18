@@ -40,12 +40,12 @@ class ProbeStatement {
    *     }
    *   }
    *
-   * For "expect", the dictionary value should represent a |ProbeResultChecker|
-   * object.  See |ProbeResultChecker| for more details.
+   * For "expect", the dictionary value should represent a ProbeResultChecker
+   * object.  See ProbeResultChecker for more details.
    *
-   * When evaluating a |ProbeStatement|, the |ProbeFunction| defined by "eval"
-   * will be called.  The results will be filtered / processed by "keys" and
-   * "expect" rules.  See |ProbeStatement.Eval()| for more details.
+   * When evaluating a ProbeStatement, the ProbeFunction defined by "eval" will
+   * be called.  The results will be filtered / processed by "keys" and "expect"
+   * rules.  See ProbeStatement::Eval() for more details.
    */
  public:
   static std::unique_ptr<ProbeStatement> FromValue(std::string component_name,

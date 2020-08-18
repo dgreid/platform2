@@ -26,7 +26,7 @@ namespace {
 constexpr char kSysfsDrmPath[] = "/sys/class/drm/*";
 }  // namespace
 
-std::unique_ptr<ProbeFunction> EdidFunction::FromValue(
+std::unique_ptr<EdidFunction> EdidFunction::FromKwargsValue(
     const base::Value& dict_value) {
   if (dict_value.DictSize() != 0)
     return nullptr;

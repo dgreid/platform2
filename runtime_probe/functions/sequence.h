@@ -31,9 +31,9 @@ namespace runtime_probe {
  */
 class SequenceFunction : public ProbeFunction {
  public:
-  static constexpr auto function_name = "sequence";
+  NAME_PROBE_FUNCTION("sequence");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
+  static std::unique_ptr<SequenceFunction> FromKwargsValue(
       const base::Value& dict_value) {
     auto instance = std::make_unique<SequenceFunction>();
 
@@ -49,8 +49,6 @@ class SequenceFunction : public ProbeFunction {
   DataType Eval() const override;
 
  private:
-  static Register<SequenceFunction> register_;
-
   std::vector<std::unique_ptr<ProbeFunction>> functions_;
 
   FRIEND_TEST(SequenceFunctionTest, TestEvalFailTooManyResults);
@@ -58,8 +56,6 @@ class SequenceFunction : public ProbeFunction {
   FRIEND_TEST(SequenceFunctionTest, TestParserEmptyList);
   FRIEND_TEST(SequenceFunctionTest, TestParseFunctions);
 };
-
-REGISTER_PROBE_FUNCTION(SequenceFunction);
 
 }  // namespace runtime_probe
 

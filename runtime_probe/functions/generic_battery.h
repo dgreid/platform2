@@ -28,35 +28,14 @@ namespace runtime_probe {
  */
 class GenericBattery : public ProbeFunction {
  public:
-  static constexpr auto function_name = "generic_battery";
+  NAME_PROBE_FUNCTION("generic_battery");
 
-  /* Define a parser for this function.
-   *
-   * @args dict_value: a JSON dictionary to parse arguments from.
-   *
-   * @return pointer to new `GenericBattery` instance on success, nullptr
-   *   otherwise.
-   */
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " doesn't take any argument.";
-      return nullptr;
-    }
-    return std::make_unique<GenericBattery>();
-  }
-
-  std::string GetFunctionName() const override { return function_name; }
+  static constexpr auto FromKwargsValue = FromEmptyKwargsValue<GenericBattery>;
 
   DataType Eval() const override;
+
   int EvalInHelper(std::string*) const override;
-
- private:
-  static ProbeFunction::Register<GenericBattery> register_;
 };
-
-/* Register the GenericBattery */
-REGISTER_PROBE_FUNCTION(GenericBattery);
 
 }  // namespace runtime_probe
 

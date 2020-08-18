@@ -16,23 +16,15 @@ namespace runtime_probe {
 
 class InputDeviceFunction : public ProbeFunction {
  public:
-  static constexpr auto function_name = "input_device";
+  NAME_PROBE_FUNCTION("input_device");
 
-  std::string GetFunctionName() const override { return function_name; }
-
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value);
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<InputDeviceFunction>;
 
   DataType Eval() const override;
 
   int EvalInHelper(std::string* output) const override;
-
- private:
-  static ProbeFunction::Register<InputDeviceFunction> register_;
 };
-
-/* Register the InputDeviceFunction */
-REGISTER_PROBE_FUNCTION(InputDeviceFunction);
 
 }  // namespace runtime_probe
 

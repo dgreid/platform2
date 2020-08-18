@@ -27,44 +27,23 @@ namespace runtime_probe {
 
 class VPDCached : public ProbeFunction {
  public:
-  static constexpr auto function_name = "vpd_cached";
-
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("vpd_cached");
 
   // Define a parser for this function.
   //
   // @args dict_value: a JSON dictionary to parse arguments from.
   //
   // @return pointer to new `VPDCached` instance on success, nullptr otherwise.
-
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 1) {
-      LOG(ERROR) << function_name << " expect 1 arguments.";
-      return nullptr;
-    }
-
-    auto instance = std::make_unique<VPDCached>();
-    bool result = true;
-
-    result &= PARSE_ARGUMENT(vpd_name);
-
-    if (result)
-      return instance;
-    return nullptr;
-  }
+  static std::unique_ptr<VPDCached> FromKwargsValue(
+      const base::Value& dict_value);
 
   DataType Eval() const override;
+
   int EvalInHelper(std::string* output) const override;
 
  private:
   std::string vpd_name_;
-
-  static ProbeFunction::Register<VPDCached> register_;
 };
-
-// Register the VPDCached
-REGISTER_PROBE_FUNCTION(VPDCached);
 
 }  // namespace runtime_probe
 

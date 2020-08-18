@@ -21,10 +21,9 @@ namespace runtime_probe {
 
 class GenericStorageFunction : public StorageFunction {
  public:
-  static constexpr auto function_name = "generic_storage";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("generic_storage");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
+  static std::unique_ptr<GenericStorageFunction> FromKwargsValue(
       const base::Value& dict_value);
 
  protected:
@@ -36,18 +35,13 @@ class GenericStorageFunction : public StorageFunction {
       const base::FilePath& node_path) const override;
 
  private:
-  // Use FromValue to ensure the arg is correctly parsed.
+  // Use FromKwargsValue to ensure the arg is correctly parsed.
   GenericStorageFunction() = default;
 
-  static ProbeFunction::Register<GenericStorageFunction> register_;
-
-  std::unique_ptr<StorageFunction> ata_prober_;
-  std::unique_ptr<StorageFunction> mmc_prober_;
-  std::unique_ptr<StorageFunction> nvme_prober_;
+  std::unique_ptr<AtaStorageFunction> ata_prober_;
+  std::unique_ptr<MmcStorageFunction> mmc_prober_;
+  std::unique_ptr<NvmeStorageFunction> nvme_prober_;
 };
-
-// Register the GenericStorageFunction
-REGISTER_PROBE_FUNCTION(GenericStorageFunction);
 
 }  // namespace runtime_probe
 

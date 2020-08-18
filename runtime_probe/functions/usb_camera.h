@@ -14,19 +14,15 @@ namespace runtime_probe {
 
 class UsbCameraFunction : public ProbeFunction {
  public:
-  static constexpr auto function_name = "usb_camera";
-  std::string GetFunctionName() const override { return function_name; }
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value);
+  NAME_PROBE_FUNCTION("usb_camera");
+
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<UsbCameraFunction>;
+
   DataType Eval() const override;
+
   int EvalInHelper(std::string*) const override;
-
- private:
-  static ProbeFunction::Register<UsbCameraFunction> register_;
 };
-
-// Register the UsbCameraFunction.
-REGISTER_PROBE_FUNCTION(UsbCameraFunction);
 
 }  // namespace runtime_probe
 

@@ -18,17 +18,10 @@ namespace runtime_probe {
 
 class NvmeStorageFunction : public StorageFunction {
  public:
-  static constexpr auto function_name = "nvme_storage";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("nvme_storage");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " does not take any argument";
-      return nullptr;
-    }
-    return std::make_unique<NvmeStorageFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<NvmeStorageFunction>;
 
  protected:
   // Eval the NVMe storage indicated by |node_path| inside the
@@ -38,12 +31,11 @@ class NvmeStorageFunction : public StorageFunction {
 
  private:
   bool CheckStorageTypeMatch(const base::FilePath& node_path) const;
-  std::string GetStorageFwVersion(const base::FilePath& node_path) const;
-  static ProbeFunction::Register<NvmeStorageFunction> register_;
-};
 
-// Register the NvmeStorageFunction
-REGISTER_PROBE_FUNCTION(NvmeStorageFunction);
+  std::string GetStorageFwVersion(const base::FilePath& node_path) const;
+
+  friend class GenericStorageFunction;
+};
 
 }  // namespace runtime_probe
 

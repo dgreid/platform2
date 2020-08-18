@@ -124,15 +124,6 @@ std::unique_ptr<DmiMemory> DmiMemory::From(const std::vector<uint8_t>& blob) {
   return dmi_memory;
 }
 
-std::unique_ptr<ProbeFunction> MemoryFunction::FromValue(
-    const base::Value& dict_value) {
-  if (dict_value.DictSize() != 0) {
-    LOG(ERROR) << function_name << " does not take any arguments.";
-    return nullptr;
-  }
-  return std::make_unique<MemoryFunction>();
-}
-
 MemoryFunction::DataType MemoryFunction::Eval() const {
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {

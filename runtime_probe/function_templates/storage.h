@@ -20,16 +20,8 @@ namespace runtime_probe {
 
 class StorageFunction : public ProbeFunction {
  public:
-  // Must be implemented by derived function to invoke the helper properly.
-  std::string GetFunctionName() const override = 0;
-
-  // This class is a template for storage probing workflow and should never be
-  // instantiated.
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) = delete;
-
-  // Override `Eval` function, which should return a list of Value.
   DataType Eval() const final;
+
   int EvalInHelper(std::string* output) const override;
 
  protected:
@@ -53,11 +45,11 @@ class StorageFunction : public ProbeFunction {
  private:
   // The following functions are shared across different types of storage.
   std::vector<base::FilePath> GetFixedDevices() const;
+
   base::Optional<int64_t> GetStorageSectorCount(
       const base::FilePath& node_path) const;
-  int32_t GetStorageLogicalBlockSize(const base::FilePath& node_path) const;
 
-  friend class GenericStorageFunction;
+  int32_t GetStorageLogicalBlockSize(const base::FilePath& node_path) const;
 };
 
 }  // namespace runtime_probe

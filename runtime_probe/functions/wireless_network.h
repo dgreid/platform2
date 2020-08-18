@@ -16,27 +16,14 @@ namespace runtime_probe {
 
 class WirelessNetworkFunction : public NetworkFunction {
  public:
-  static constexpr auto function_name = "wireless_network";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("wireless_network");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " dooes not take any arguement";
-      return nullptr;
-    }
-    return std::make_unique<WirelessNetworkFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<WirelessNetworkFunction>;
 
  protected:
   base::Optional<std::string> GetNetworkType() const override;
-
- private:
-  static ProbeFunction::Register<WirelessNetworkFunction> register_;
 };
-
-/* Register the WirelessNetworkFunction */
-REGISTER_PROBE_FUNCTION(WirelessNetworkFunction);
 
 }  // namespace runtime_probe
 

@@ -18,17 +18,10 @@ namespace runtime_probe {
 
 class MmcStorageFunction : public StorageFunction {
  public:
-  static constexpr auto function_name = "mmc_storage";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("mmc_storage");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " does not take any argument";
-      return nullptr;
-    }
-    return std::make_unique<MmcStorageFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<MmcStorageFunction>;
 
  protected:
   base::Optional<base::Value> EvalByDV(
@@ -41,15 +34,14 @@ class MmcStorageFunction : public StorageFunction {
 
  private:
   bool CheckStorageTypeMatch(const base::FilePath& node_path) const;
+
   // Get the result of mmc extcsd from debugd and put it into |output|.
   bool GetOutputOfMmcExtcsd(std::string* output) const;
+
   std::string GetStorageFwVersion(const base::FilePath& node_path) const;
 
-  static ProbeFunction::Register<MmcStorageFunction> register_;
+  friend class GenericStorageFunction;
 };
-
-// Register the MmcStorageFunction
-REGISTER_PROBE_FUNCTION(MmcStorageFunction);
 
 }  // namespace runtime_probe
 

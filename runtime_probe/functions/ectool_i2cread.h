@@ -27,9 +27,7 @@ namespace runtime_probe {
 // More details can be found under command "ectool i2cread help"
 class EctoolI2Cread : public ProbeFunction {
  public:
-  static constexpr auto function_name = "ectool_i2cread";
-
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("ectool_i2cread");
 
   // Define a parser for this function.
   //
@@ -37,7 +35,7 @@ class EctoolI2Cread : public ProbeFunction {
   //
   // @return pointer to new `EctoolI2Cread` instance on success, nullptr
   //   otherwise.
-  static std::unique_ptr<ProbeFunction> FromValue(
+  static std::unique_ptr<EctoolI2Cread> FromKwargsValue(
       const base::Value& dict_value) {
     if (dict_value.DictSize() != 5) {
       LOG(ERROR) << function_name << " expect 5 arguments.";
@@ -67,12 +65,7 @@ class EctoolI2Cread : public ProbeFunction {
   int offset_;
   int port_;
   int size_;
-
-  static ProbeFunction::Register<EctoolI2Cread> register_;
 };
-
-// Register the EctoolI2Cread
-REGISTER_PROBE_FUNCTION(EctoolI2Cread);
 
 }  // namespace runtime_probe
 

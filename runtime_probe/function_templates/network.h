@@ -20,20 +20,13 @@ namespace runtime_probe {
 
 class NetworkFunction : public ProbeFunction {
  public:
-  // Must be implemented by derived function to invoke the helper properly.
-  std::string GetFunctionName() const override = 0;
-
-  // Must be implemented by derived function instead of
-  // ProbeFunction::FromValue.
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) = delete;
-
-  // Override `Eval` function, which should return a list of Value.
   DataType Eval() const final;
 
   int EvalInHelper(std::string* output) const override;
 
  protected:
+  NetworkFunction() = default;
+
   virtual base::Optional<std::string> GetNetworkType() const = 0;
 
   // Evals the network indicated by |node_path| in runtime_probe_helper.

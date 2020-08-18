@@ -46,22 +46,14 @@ struct DmiMemory {
 
 class MemoryFunction : public ProbeFunction {
  public:
-  static constexpr auto function_name = "memory";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("memory");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value);
+  static constexpr auto FromKwargsValue = FromEmptyKwargsValue<MemoryFunction>;
 
   DataType Eval() const override;
 
   int EvalInHelper(std::string* output) const override;
-
- private:
-  static ProbeFunction::Register<MemoryFunction> register_;
 };
-
-// Register the MemoryFunction.
-REGISTER_PROBE_FUNCTION(MemoryFunction);
 
 }  // namespace runtime_probe
 

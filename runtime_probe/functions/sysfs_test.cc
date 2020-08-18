@@ -44,7 +44,7 @@ TEST(SysfsFunctionTest, TestRead) {
       "optional_keys": ["2"]
   })");
   json_val->SetStringKey("dir_path", temp_dir.GetPath().Append("D*").value());
-  auto p = SysfsFunction::FromValue(*json_val);
+  auto p = SysfsFunction::FromKwargsValue(*json_val);
   ASSERT_TRUE(p) << "Failed to create SysfsFunction: " << *json_val;
 
   auto f = dynamic_cast<SysfsFunction*>(p.get());

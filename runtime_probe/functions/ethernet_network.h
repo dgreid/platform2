@@ -16,28 +16,14 @@ namespace runtime_probe {
 
 class EthernetNetworkFunction : public NetworkFunction {
  public:
-  static constexpr auto function_name = "ethernet_network";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("ethernet_network");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " dooes not take any arguement";
-      return nullptr;
-    }
-
-    return std::make_unique<EthernetNetworkFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<EthernetNetworkFunction>;
 
  protected:
   base::Optional<std::string> GetNetworkType() const override;
-
- private:
-  static ProbeFunction::Register<EthernetNetworkFunction> register_;
 };
-
-/* Register the EthernetNetworkFunction */
-REGISTER_PROBE_FUNCTION(EthernetNetworkFunction);
 
 }  // namespace runtime_probe
 

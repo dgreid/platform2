@@ -22,13 +22,11 @@ namespace runtime_probe {
  */
 class EdidFunction : public ProbeFunction {
  public:
-  static constexpr auto function_name = "edid";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("edid");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
+  static std::unique_ptr<EdidFunction> FromKwargsValue(
       const base::Value& dict_value);
 
-  /* Override `Eval` function, which should return a list of Value */
   DataType Eval() const override;
 
   int EvalInHelper(std::string* output) const override;
@@ -39,12 +37,9 @@ class EdidFunction : public ProbeFunction {
 
   std::vector<base::FilePath> GetEdidPaths(
       const base::FilePath& glob_path) const;
-  base::Value EvalInHelperByPath(const base::FilePath& node_path) const;
-  static ProbeFunction::Register<EdidFunction> register_;
-};
 
-/* Register the EdidFunction */
-REGISTER_PROBE_FUNCTION(EdidFunction);
+  base::Value EvalInHelperByPath(const base::FilePath& node_path) const;
+};
 
 }  // namespace runtime_probe
 

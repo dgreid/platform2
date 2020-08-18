@@ -17,6 +17,32 @@
 
 namespace runtime_probe {
 
+std::unique_ptr<SysfsFunction> SysfsFunction::FromKwargsValue(
+    const base::Value& dict_value) {
+  // Create an instance of SysfsFunction.
+  // **NOTE: The name should always be "instance" for PARSE_ARGUMENT to work**
+  auto instance = std::make_unique<SysfsFunction>();
+
+  bool result = true;
+
+  // Parse each argument one by one.
+  //
+  //  1. Due to the template declaration, the type of default value and member
+  //  must match exactly.  That is, the default value of a double argument must
+  //  be double (3.0 instead of 3).  And default value of string argument must
+  //  be std::string{...}.
+  //
+  //  2. Due to the behavior of "&=", all parser will be executed even if some
+  //  of them failed.
+  result &= PARSE_ARGUMENT(dir_path);
+  result &= PARSE_ARGUMENT(keys);
+  result &= PARSE_ARGUMENT(optional_keys, {});
+
+  if (result)
+    return instance;
+  return nullptr;
+}
+
 SysfsFunction::DataType SysfsFunction::Eval() const {
   DataType result{};
 

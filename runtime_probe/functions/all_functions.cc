@@ -26,3 +26,37 @@
 #include "runtime_probe/functions/usb_camera.h"
 #include "runtime_probe/functions/vpd_cached.h"
 #include "runtime_probe/functions/wireless_network.h"
+
+namespace runtime_probe {
+
+namespace {
+
+template <typename... ProbeFunctionType>
+auto ConstructRegisteredFunctionTable() {
+  return std::map<std::string_view, ProbeFunction::FactoryFunctionType>{
+      {ProbeFunctionType::function_name,
+       ProbeFunctionType::FromKwargsValue}...};
+}
+
+}  // namespace
+
+auto ProbeFunction::registered_functions_ =
+    ConstructRegisteredFunctionTable<AtaStorageFunction,
+                                     CellularNetworkFunction,
+                                     EctoolI2Cread,
+                                     EdidFunction,
+                                     EthernetNetworkFunction,
+                                     GenericBattery,
+                                     GenericNetworkFunction,
+                                     GenericStorageFunction,
+                                     InputDeviceFunction,
+                                     MemoryFunction,
+                                     MmcStorageFunction,
+                                     NvmeStorageFunction,
+                                     SequenceFunction,
+                                     ShellFunction,
+                                     SysfsFunction,
+                                     UsbCameraFunction,
+                                     VPDCached,
+                                     WirelessNetworkFunction>();
+}  // namespace runtime_probe

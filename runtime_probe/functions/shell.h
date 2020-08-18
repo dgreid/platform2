@@ -20,7 +20,7 @@ class ShellFunction : public ProbeFunction {
    *
    * It will be used for both parsing and logging.
    */
-  static constexpr auto function_name = "shell";
+  NAME_PROBE_FUNCTION("shell");
 
   /* Define a parser for this function.
    *
@@ -34,7 +34,7 @@ class ShellFunction : public ProbeFunction {
    * @return pointer to new `ShellFunction` instance on success, nullptr
    *   otherwise.
    */
-  static std::unique_ptr<ProbeFunction> FromValue(
+  static std::unique_ptr<ShellFunction> FromKwargsValue(
       const base::Value& dict_value) {
     /* Create an instance of ShellFunction.
      * **NOTE: The name should always be "instance" for PARSE_ARGUMENT to work**
@@ -62,19 +62,11 @@ class ShellFunction : public ProbeFunction {
   }
 
  private:
-  /* Declare a register for this function.  This has to be defined for
-   * `REGISTER_PROBE_FUNCTION(...)` to work.
-   */
-  static ProbeFunction::Register<ShellFunction> register_;
-
   /* Declare function arguments */
   std::string command_;
   std::string key_;
   bool split_line_;
 };
-
-/* Register the ShellFunction */
-REGISTER_PROBE_FUNCTION(ShellFunction);
 
 }  // namespace runtime_probe
 

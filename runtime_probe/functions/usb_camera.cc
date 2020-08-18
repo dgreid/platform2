@@ -101,15 +101,6 @@ bool ExploreAsUsbCamera(const base::FilePath& path, base::Value* res) {
 
 }  // namespace
 
-std::unique_ptr<ProbeFunction> UsbCameraFunction::FromValue(
-    const base::Value& dict_value) {
-  if (dict_value.DictSize() != 0) {
-    LOG(ERROR) << function_name << " does not take any arguments.";
-    return nullptr;
-  }
-  return std::make_unique<UsbCameraFunction>();
-}
-
 UsbCameraFunction::DataType UsbCameraFunction::Eval() const {
   auto json_output = InvokeHelperToJSON();
   if (!json_output) {

@@ -7,7 +7,7 @@
 
 namespace runtime_probe {
 
-std::unique_ptr<ProbeFunction> GenericStorageFunction::FromValue(
+std::unique_ptr<GenericStorageFunction> GenericStorageFunction::FromKwargsValue(
     const base::Value& dict_value) {
   if (dict_value.DictSize() != 0) {
     LOG(ERROR) << function_name << " does not take any argument";
@@ -16,9 +16,9 @@ std::unique_ptr<ProbeFunction> GenericStorageFunction::FromValue(
 
   std::unique_ptr<GenericStorageFunction> instance{
       new GenericStorageFunction()};
-  instance->ata_prober_ = std::make_unique<AtaStorageFunction>();
-  instance->mmc_prober_ = std::make_unique<MmcStorageFunction>();
-  instance->nvme_prober_ = std::make_unique<NvmeStorageFunction>();
+  instance->ata_prober_ = AtaStorageFunction::FromKwargsValue(dict_value);
+  instance->mmc_prober_ = MmcStorageFunction::FromKwargsValue(dict_value);
+  instance->nvme_prober_ = NvmeStorageFunction::FromKwargsValue(dict_value);
 
   return instance;
 }

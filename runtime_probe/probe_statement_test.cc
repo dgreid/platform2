@@ -18,6 +18,7 @@ namespace runtime_probe {
 
 class MockProbeFunction : public ProbeFunction {
  public:
+  NAME_PROBE_FUNCTION("mock_function");
   MOCK_METHOD(DataType, Eval, (), (const, override));
 };
 

@@ -24,6 +24,14 @@
 namespace runtime_probe {
 
 class ProbeFunction {
+  // ProbeFunction is the base class for all probe functions.  A derived
+  // class should implement required virtual functions and contain some static
+  // members: |function_name|, FromKwargsValue().
+  //
+  // FromKwargsValue is the main point to create a probe function instance.  It
+  // takes a dictionary value in type base::Value as arguments and returns a
+  // pointer to the instance of the probe function.
+  //
   // Formally, a probe function will be represented as following structure::
   //   {
   //     <function_name:string>: <args:ArgsType>
@@ -60,10 +68,27 @@ class ProbeFunction {
  public:
   using DataType = std::vector<base::Value>;
 
-  // Convert |value| to ProbeFunction.  Returns nullptr on failure.
+  // Returns the name of the probe function.  The returned value should always
+  // identical to the static member |function_name| of the derived class.
+  //
+  // A common implementation can be declared by macro NAME_PROBE_FUNCTION(name)
+  // below.
+  virtual const std::string& GetFunctionName() const = 0;
+
+  // Converts |dv| with function name as key to ProbeFunction.  Returns nullptr
+  // on failure.
   static std::unique_ptr<ProbeFunction> FromValue(const base::Value& dv);
 
-  virtual std::string GetFunctionName() const { return {}; }
+  // A pre-defined factory function creating a probe function with empty
+  // argument.
+  template <typename T>
+  static std::unique_ptr<T> FromEmptyKwargsValue(const base::Value& dv) {
+    if (dv.DictSize() != 0) {
+      LOG(ERROR) << T::function_name << " does not take any arguement";
+      return nullptr;
+    }
+    return std::make_unique<T>();
+  }
 
   // Evaluates this entire probe function.
   //
@@ -78,8 +103,8 @@ class ProbeFunction {
 
   // Serializes this probe function and passes it to helper.  Helper function
   // for InvokeHelper() where the output is known in advanced in JSON format.
-  // The transform of JSON will be automatically applied.  If it fails,
-  // the returned pointer points to NULL.
+  // The transform of JSON will be automatically applied.  Returns base::nullopt
+  // on failure.
   base::Optional<base::Value> InvokeHelperToJSON() const;
 
   // Evaluates the helper part for this probe function. Helper part is
@@ -94,23 +119,14 @@ class ProbeFunction {
   // in sandbox environment and we might want to preserve the exit code.
   virtual int EvalInHelper(std::string* output) const;
 
-  // Function prototype of |FromValue| that should be implemented by each
+  // Function prototype of FromKwargsValue() that should be implemented by each
   // derived class.  See `functions/sysfs.h` about how to implement this
   // function.
   using FactoryFunctionType =
       std::function<std::unique_ptr<ProbeFunction>(const base::Value&)>;
 
-  // Mapping from |function_name| to |FromValue| of each derived classes.
+  // Mapping from |function_name| to FromKwargsValue() of each derived classes.
   static std::map<std::string_view, FactoryFunctionType> registered_functions_;
-
-  template <class T>
-  struct Register {
-    Register() {
-      static_assert(std::is_base_of<ProbeFunction, T>::value,
-                    "Registered type must inherit ProbeFunction");
-      registered_functions_[T::function_name] = T::FromValue;
-    }
-  };
 
   virtual ~ProbeFunction() = default;
 
@@ -123,20 +139,12 @@ class ProbeFunction {
   // Each probe function must define their own args type.
 };
 
-#ifdef _RUNTIME_PROBE_GENERATE_PROBE_FUNCTIONS
-// _RUNTIME_PROBE_GENERATE_PROBE_FUNCTIONS should only be defined by
-// `all_functions.cc`.  So the following initialization will only have one
-// instance.
-
-std::map<std::string_view, ProbeFunction::FactoryFunctionType>
-    ProbeFunction::registered_functions_{};
-#define REGISTER_PROBE_FUNCTION(T) ProbeFunction::Register<T> T::register_
-
-#else
-
-#define REGISTER_PROBE_FUNCTION(T)
-
-#endif
+#define NAME_PROBE_FUNCTION(name)                       \
+  const std::string& GetFunctionName() const override { \
+    static const std::string instance(function_name);   \
+    return instance;                                    \
+  }                                                     \
+  static constexpr auto function_name = name
 
 }  // namespace runtime_probe
 

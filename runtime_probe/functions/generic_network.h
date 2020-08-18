@@ -16,27 +16,14 @@ namespace runtime_probe {
 
 class GenericNetworkFunction : public NetworkFunction {
  public:
-  static constexpr auto function_name = "generic_network";
-  std::string GetFunctionName() const override { return function_name; }
+  NAME_PROBE_FUNCTION("generic_network");
 
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    if (dict_value.DictSize() != 0) {
-      LOG(ERROR) << function_name << " dooes not take any arguement";
-      return nullptr;
-    }
-    return std::make_unique<GenericNetworkFunction>();
-  }
+  static constexpr auto FromKwargsValue =
+      FromEmptyKwargsValue<GenericNetworkFunction>;
 
  protected:
   base::Optional<std::string> GetNetworkType() const override;
-
- private:
-  static ProbeFunction::Register<GenericNetworkFunction> register_;
 };
-
-/* Register the GenericNetworkFunction */
-REGISTER_PROBE_FUNCTION(GenericNetworkFunction);
 
 }  // namespace runtime_probe
 

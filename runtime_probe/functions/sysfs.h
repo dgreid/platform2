@@ -58,7 +58,7 @@ class SysfsFunction : public ProbeFunction {
    *
    * It will be used for both parsing and logging.
    */
-  static constexpr auto function_name = "sysfs";
+  NAME_PROBE_FUNCTION("sysfs");
 
   /* Define a parser for this function.
    *
@@ -72,43 +72,13 @@ class SysfsFunction : public ProbeFunction {
    * @return pointer to new `SysfsFunction` instance on success, nullptr
    *   otherwise.
    */
-  static std::unique_ptr<ProbeFunction> FromValue(
-      const base::Value& dict_value) {
-    /* Create an instance of SysfsFunction.
-     * **NOTE: The name should always be "instance" for PARSE_ARGUMENT to work**
-     */
-    auto instance = std::make_unique<SysfsFunction>();
-
-    bool result = true;
-
-    /* Parse each argument one by one.
-     *
-     * 1. Due to the template declaration, the type of default value and member
-     * must match exactly.  That is, the default value of a double argument must
-     * be double (3.0 instead of 3).  And default value of string argument must
-     * be std::string{...}.
-     *
-     * 2. Due to the behavior of "&=", all parser will be executed even if some
-     * of them failed.
-     */
-    result &= PARSE_ARGUMENT(dir_path);
-    result &= PARSE_ARGUMENT(keys);
-    result &= PARSE_ARGUMENT(optional_keys, {});
-
-    if (result)
-      return instance;
-    return nullptr;
-  }
+  static std::unique_ptr<SysfsFunction> FromKwargsValue(
+      const base::Value& dict_value);
 
   /* Override `Eval` function, which should return a list of Value  */
   DataType Eval() const override;
 
  private:
-  /* Declare a register for this function.  This has to be defined for
-   * `REGISTER_PROBE_FUNCTION(...)` to work.
-   */
-  static ProbeFunction::Register<SysfsFunction> register_;
-
   /* Declare function arguments */
 
   /* The path of target sysfs folder, the last component can contain '*' */
@@ -132,9 +102,6 @@ class SysfsFunction : public ProbeFunction {
 
   FRIEND_TEST(SysfsFunctionTest, TestRead);
 };
-
-/* Register the SysfsFunction */
-REGISTER_PROBE_FUNCTION(SysfsFunction);
 
 }  // namespace runtime_probe
 

@@ -35,8 +35,7 @@ int main(int argc, char* argv[]) {
     return kFailedToParseProbeStatementFromArg;
   }
 
-  std::unique_ptr<runtime_probe::ProbeFunction> probe_function =
-      runtime_probe::ProbeFunction::FromValue(*val);
+  auto probe_function = runtime_probe::ProbeFunction::FromValue(*val);
   if (probe_function == nullptr) {
     LOG(ERROR) << "Failed to convert a probe statement to probe function";
     return kFailedToParseProbeStatementFromArg;
