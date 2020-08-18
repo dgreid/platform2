@@ -163,23 +163,20 @@ void ModemQrtr::RetryInitialization() {
 void ModemQrtr::FinalizeInitialization() {
   if (current_state_ != State::kLogicalChannelOpened) {
     LOG(ERROR) << "ModemQrtr initialization unsuccessful";
-    // TODO(akhouderchah) Call lpa library and flush kSendApdu requests from the
-    // queue.
     Shutdown();
     RetryInitialization();
     return;
   }
   LOG(INFO) << "ModemQrtr initialization successful";
   current_state_.Transition(State::kReady);
-  // TODO(akhouderchah) set this based on whether or not Extended Length APDU is
-  // supported.
+  // TODO(crbug.com/1117582) Set this based on whether or not Extended Length
+  // APDU is supported.
   extended_apdu_supported_ = false;
 }
 
 void ModemQrtr::Shutdown() {
   if (current_state_ != State::kUninitialized &&
       current_state_ != State::kInitializeStarted) {
-    // TODO(akhouderchah) Implement actual shutdown procedure
     socket_->StopService(kQmiUimService, 1, 0);
   }
   current_state_.Transition(State::kUninitialized);
@@ -250,8 +247,6 @@ void ModemQrtr::TransmitQmiOpenLogicalChannel(TxElement* tx_element) {
 void ModemQrtr::TransmitQmiSendApdu(TxElement* tx_element) {
   DCHECK(tx_element && tx_element->uim_type_ == QmiUimCommand::kSendApdu);
 
-  // TODO(akhouderchah) we can't avoid the copy when encoding into QMI format,
-  // but there is really no need to have this copy. Fix.
   uim_send_apdu_req request;
   request.slot = slot_;
   request.channel_id_valid = true;
@@ -379,10 +374,9 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
     return;
   }
 
-  // TODO(akhouderchah) try to avoid the unnecessary copy from *_resp to vector
   switch (qmi_type) {
     case QmiUimCommand::kReset:
-      // TODO(akhouderchah) implement a service reset
+      LOG(INFO) << "Ignoring received RESET packet";
       break;
     case QmiUimCommand::kGetSlots:
       ReceiveQmiGetSlots(packet);

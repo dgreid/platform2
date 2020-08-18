@@ -22,8 +22,6 @@ Manager::Manager()
 }
 
 void Manager::SetTestMode(bool /*is_test_mode*/) {
-  // TODO(akhouderchah) This is a no-op until the Lpa interface allows for
-  // switching certificate directory without recreating the Lpa object.
   NOTIMPLEMENTED();
 }
 
