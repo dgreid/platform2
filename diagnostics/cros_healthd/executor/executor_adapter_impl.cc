@@ -45,4 +45,11 @@ void ExecutorAdapterImpl::GetFanSpeed(Executor::GetFanSpeedCallback callback) {
   executor_->GetFanSpeed(std::move(callback));
 }
 
+void ExecutorAdapterImpl::RunMemtester(
+    Executor::RunMemtesterCallback callback) {
+  DCHECK(executor_.is_bound());
+
+  executor_->RunMemtester(std::move(callback));
+}
+
 }  // namespace diagnostics

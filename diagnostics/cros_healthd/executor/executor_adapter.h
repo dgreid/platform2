@@ -23,6 +23,9 @@ class ExecutorAdapter {
 
   // Returns the speed of each of the device's fans.
   virtual void GetFanSpeed(Executor::GetFanSpeedCallback callback) = 0;
+
+  // Instructs the executor to run the memtester executable.
+  virtual void RunMemtester(Executor::RunMemtesterCallback callback) = 0;
 };
 
 }  // namespace diagnostics
