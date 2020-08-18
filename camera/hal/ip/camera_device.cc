@@ -350,6 +350,11 @@ int CameraDevice::ProcessCaptureRequest(camera3_capture_request_t* request) {
     return -EINVAL;
   }
 
+  if (!open_) {
+    LOGFID(ERROR, id_) << "Device is not open";
+    return -ENODEV;
+  }
+
   request_queue_.Push(request);
 
   return 0;

@@ -225,6 +225,10 @@ void CameraHal::OnDeviceDisconnected(const std::string& ip) {
       LOGF(ERROR) << "Camera id " << id << " is invalid";
       return;
     }
+
+    if (cameras_[id]->IsOpen()) {
+      cameras_[id]->Close();
+    }
   }
 
   callbacks_->camera_device_status_change(callbacks_, id,
@@ -232,9 +236,6 @@ void CameraHal::OnDeviceDisconnected(const std::string& ip) {
 
   {
     base::AutoLock l(camera_map_lock_);
-    if (cameras_[id]->IsOpen()) {
-      cameras_[id]->Close();
-    }
 
     ip_to_id_.erase(ip);
     cameras_.erase(id);
