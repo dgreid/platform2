@@ -8,6 +8,7 @@
 #include <utility>
 
 #include <base/run_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/threading/thread.h>
 #include <mojo/core/embedder/embedder.h>
 #include <mojo/core/embedder/scoped_ipc_support.h>
