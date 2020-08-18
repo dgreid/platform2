@@ -18,8 +18,10 @@
 
 namespace patchpanel {
 
-// Simple wrapper around patchpanel DBus API. All public functions are
-// blocking DBus calls to patchpaneld.
+// Simple wrapper around patchpanel DBus API. All public functions are blocking
+// DBus calls to patchpaneld. The method names and protobuf schema used by
+// patchpanel DBus API are defined in platform2/system_api/dbus/patchpanel.
+// Access control for clients is defined in platform2/patchpanel/dbus.
 class BRILLO_EXPORT Client {
  public:
   static std::unique_ptr<Client> New();

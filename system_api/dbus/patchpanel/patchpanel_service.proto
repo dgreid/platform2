@@ -5,8 +5,11 @@
 syntax = "proto3";
 option optimize_for = LITE_RUNTIME;
 
-// This file defines messages for notifying the networking daemon about guest
-// lifetime (startup, teardown) events.
+// This file defines the messages used by the patchpanel D-Bus API. It is
+// strongly recommended to not use the patchpanel D-Bus API directly and to
+// instead use the thin client defined at platform2/patchpanel/client.h that
+// provides additional functionalities and abstracts the details of the wire
+// format. Access control for clients is defined in platform2/patchpanel/dbus.
 package patchpanel;
 
 // Notification that the ARC++ container is starting up.
