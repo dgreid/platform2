@@ -661,7 +661,7 @@ void OpenVPNDriver::InitOptions(vector<vector<string>>* options, Error* error) {
       AppendRemoteOption(host, options);
     }
   }
-
+  AppendOption("mark", "1280", options);  // 0x500: source type = 5 (Native VPN)
   AppendOption("nobind", options);
   AppendOption("persist-key", options);
   AppendOption("persist-tun", options);
