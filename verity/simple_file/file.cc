@@ -7,16 +7,14 @@
 
 namespace simple_file {
 
-const Env *File::env() const {
+const Env* File::env() const {
   if (env_) {
     return env_;
   }
   return default_env_;
 }
 
-bool File::Initialize(const char *path,
-                      int flags,
-                      const Env *new_env) {
+bool File::Initialize(const char* path, int flags, const Env* new_env) {
   if (fd_ >= 0) {
     LOG(ERROR) << "Attempted to Initialize while in use";
     return false;
@@ -30,7 +28,7 @@ bool File::Initialize(const char *path,
 
   if (flags & O_CREAT) {
     // TODO(wad) less hacky
-    fd_ = env()->Create(path, flags, S_IRUSR|S_IWUSR);
+    fd_ = env()->Create(path, flags, S_IRUSR | S_IWUSR);
   } else {
     fd_ = env()->Open(path, flags);
   }
@@ -72,7 +70,7 @@ off_t File::Whence() const {
   return offset_;
 }
 
-bool File::Read(int bytes, uint8_t *buf) {
+bool File::Read(int bytes, uint8_t* buf) {
   if (!ReadAt(bytes, buf, offset_)) {
     return false;
   }
@@ -80,7 +78,7 @@ bool File::Read(int bytes, uint8_t *buf) {
   return true;
 }
 
-bool File::ReadAt(int bytes, uint8_t *buf, off_t offset) {
+bool File::ReadAt(int bytes, uint8_t* buf, off_t offset) {
   if (fd_ < 0) {
     LOG(ERROR) << "Read called with an invalid fd";
     return false;
@@ -102,7 +100,7 @@ bool File::ReadAt(int bytes, uint8_t *buf, off_t offset) {
   return false;
 }
 
-int64_t File::Size() const  {
+int64_t File::Size() const {
   if (fd_ < 0) {
     LOG(ERROR) << "Size called with an invalid fd";
     return false;
@@ -124,7 +122,7 @@ int64_t File::Size() const  {
   return size;
 }
 
-bool File::WriteAt(int bytes, const uint8_t *buf, off_t offset) {
+bool File::WriteAt(int bytes, const uint8_t* buf, off_t offset) {
   if (fd_ < 0) {
     LOG(ERROR) << "Write called with an invalid fd";
     return false;
@@ -145,7 +143,7 @@ bool File::WriteAt(int bytes, const uint8_t *buf, off_t offset) {
   return false;
 }
 
-bool File::Write(int bytes, const uint8_t *buf) {
+bool File::Write(int bytes, const uint8_t* buf) {
   if (!WriteAt(bytes, buf, offset_)) {
     return false;
   }

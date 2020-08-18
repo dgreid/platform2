@@ -7,6 +7,6 @@
 
 namespace simple_file {
 
-Env::Env() { }
+Env::Env() {}
 
 }  // namespace simple_file

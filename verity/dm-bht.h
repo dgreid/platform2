@@ -20,14 +20,14 @@ extern "C" {
  * max to use for now.
  */
 #define DM_BHT_MAX_DIGEST_SIZE 128 /* 1k hashes are unlikely for now */
-#define DM_BHT_SALT_SIZE 32        /* 256 bits of salt is a lot */
+#define DM_BHT_SALT_SIZE 32 /* 256 bits of salt is a lot */
 
 /* UNALLOCATED, PENDING, READY, and VERIFIED are valid states. All other
  * values are entry-related return codes.
  */
-#define DM_BHT_ENTRY_VERIFIED 8    /* 'nodes' has been checked against parent */
-#define DM_BHT_ENTRY_READY 4       /* 'nodes' is loaded and available */
-#define DM_BHT_ENTRY_PENDING 2     /* 'nodes' is being loaded */
+#define DM_BHT_ENTRY_VERIFIED 8 /* 'nodes' has been checked against parent */
+#define DM_BHT_ENTRY_READY 4 /* 'nodes' is loaded and available */
+#define DM_BHT_ENTRY_PENDING 2 /* 'nodes' is being loaded */
 #define DM_BHT_ENTRY_UNALLOCATED 0 /* untouched */
 #define DM_BHT_ENTRY_ERROR -1 /* entry is unsuitable for use */
 #define DM_BHT_ENTRY_ERROR_IO -2 /* I/O error on load */
