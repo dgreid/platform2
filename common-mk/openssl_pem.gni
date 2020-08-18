@@ -7,9 +7,13 @@ template("genopenssl_key") {
                          [
                            "openssl_pem_in_dir",
                            "openssl_pem_out_dir",
+                           "openssl_pem_algorithm",
                          ])
   if (!defined(openssl_pem_in_dir)) {
     openssl_pem_in_dir = "."
+  }
+  if (!defined(openssl_pem_algorithm)) {
+    openssl_pem_algorithm = "rsa"
   }
   openssl_pem_in_dir = rebase_path(openssl_pem_in_dir)
   pem_dir = "${root_gen_dir}/${openssl_pem_out_dir}"
@@ -20,7 +24,7 @@ template("genopenssl_key") {
     outputs = [ "${pem_dir}/{{source_name_part}}.pub.pem" ]
     args = [
       "openssl",
-      "rsa",
+      "${openssl_pem_algorithm}",
       "-in",
       "${openssl_pem_in_dir}/{{source_file_part}}",
       "-pubout",
