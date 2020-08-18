@@ -16,9 +16,9 @@ namespace shill_cli {
 class TopCommand : public Command {
  public:
   TopCommand() : Command("shillcli", "Shill Command Line Interface") {
-    // TODO(akhouderchah) Replace these with actual functional commands (most of
-    // these will likely have their own child class). Having this is useful for
-    // testing.
+    // TODO(crbug.com/1024079) Replace these with actual functional commands
+    // (most of these will likely have their own child class). Having this is
+    // useful for testing.
     AddSubcommand("device", "Interact with Devices", base::Bind([]() {
                     LOG(INFO) << "Device was called";
                     return true;
