@@ -15,6 +15,7 @@
 #include <base/memory/weak_ptr.h>
 #include <base/optional.h>
 #include <base/run_loop.h>
+#include <base/strings/stringprintf.h>
 #include <base/strings/string_util.h>
 #include <base/strings/string_split.h>
 #include <base/synchronization/condition_variable.h>
@@ -48,13 +49,43 @@ base::Optional<std::vector<std::string>> ReadLines(base::File* file) {
                            base::SPLIT_WANT_ALL);
 }
 
-class SignalHandler {
+std::string EscapeScannerName(const std::string& scanner_name) {
+  std::string escaped;
+  for (char c : scanner_name) {
+    if (isalnum(c)) {
+      escaped += c;
+    } else {
+      escaped += '_';
+    }
+  }
+  return escaped;
+}
+
+class ScanHandler {
  public:
-  explicit SignalHandler(base::RepeatingClosure quit_closure)
-      : cvar_(&lock_), quit_closure_(quit_closure) {}
+  ScanHandler(base::RepeatingClosure quit_closure,
+              std::unique_ptr<ManagerProxy> manager,
+              std::string scanner_name)
+      : cvar_(&lock_),
+        quit_closure_(quit_closure),
+        manager_(std::move(manager)),
+        scanner_name_(scanner_name),
+        output_path_("/tmp/scan-" + EscapeScannerName(scanner_name) + ".png"),
+        connected_callback_called_(false),
+        connection_status_(false) {
+    manager_->RegisterScanStatusChangedSignalHandler(
+        base::BindRepeating(&ScanHandler::HandleScanStatusChangedSignal,
+                            weak_factory_.GetWeakPtr()),
+        base::BindOnce(&ScanHandler::OnConnectedCallback,
+                       weak_factory_.GetWeakPtr()));
+  }
 
   bool WaitUntilConnected();
 
+  bool StartScan(uint32_t resolution,
+                 const lorgnette::DocumentSource& scan_source);
+
+ private:
   void HandleScanStatusChangedSignal(
       const std::vector<uint8_t>& signal_serialized);
 
@@ -62,20 +93,22 @@ class SignalHandler {
                            const std::string& signal_name,
                            bool signal_connected);
 
-  base::WeakPtr<SignalHandler> GetWeakPtr();
-
- private:
   base::Lock lock_;
   base::ConditionVariable cvar_;
   base::RepeatingClosure quit_closure_;
 
+  std::unique_ptr<ManagerProxy> manager_;
+  std::string scanner_name_;
+  base::FilePath output_path_;
+  base::Optional<std::string> scan_uuid_;
+
   bool connected_callback_called_;
   bool connection_status_;
 
-  base::WeakPtrFactory<SignalHandler> weak_factory_{this};
+  base::WeakPtrFactory<ScanHandler> weak_factory_{this};
 };
 
-bool SignalHandler::WaitUntilConnected() {
+bool ScanHandler::WaitUntilConnected() {
   base::AutoLock auto_lock(lock_);
   while (!connected_callback_called_) {
     cvar_.Wait();
@@ -83,8 +116,56 @@ bool SignalHandler::WaitUntilConnected() {
   return connection_status_;
 }
 
-void SignalHandler::HandleScanStatusChangedSignal(
+bool ScanHandler::StartScan(uint32_t resolution,
+                            const lorgnette::DocumentSource& scan_source) {
+  lorgnette::StartScanRequest request;
+  request.set_device_name(scanner_name_);
+  request.mutable_settings()->set_resolution(resolution);
+  *request.mutable_settings()->mutable_source() = scan_source;
+  request.mutable_settings()->set_color_mode(lorgnette::MODE_COLOR);
+  std::vector<uint8_t> request_in(request.ByteSizeLong());
+  request.SerializeToArray(request_in.data(), request_in.size());
+
+  base::File output_file(
+      output_path_, base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
+
+  if (!output_file.IsValid()) {
+    PLOG(ERROR) << "Failed to open output file " << output_path_;
+    return false;
+  }
+
+  brillo::ErrorPtr error;
+  std::vector<uint8_t> response_out;
+  if (!manager_->StartScan(request_in, output_file.GetPlatformFile(),
+                           &response_out, &error)) {
+    LOG(ERROR) << "StartScan failed: " << error->GetMessage();
+    return false;
+  }
+
+  lorgnette::StartScanResponse response;
+  if (!response.ParseFromArray(response_out.data(), response_out.size())) {
+    LOG(ERROR) << "Failed to parse StartScanResponse";
+    return false;
+  }
+
+  if (response.state() == lorgnette::SCAN_STATE_FAILED) {
+    LOG(ERROR) << "StartScan failed: " << response.failure_reason();
+    return false;
+  }
+
+  std::cout << "Scan " << response.scan_uuid() << " started successfully"
+            << std::endl;
+  scan_uuid_ = response.scan_uuid();
+
+  return true;
+}
+
+void ScanHandler::HandleScanStatusChangedSignal(
     const std::vector<uint8_t>& signal_serialized) {
+  if (!scan_uuid_.has_value()) {
+    return;
+  }
+
   lorgnette::ScanStatusChangedSignal signal;
   if (!signal.ParseFromArray(signal_serialized.data(),
                              signal_serialized.size())) {
@@ -93,22 +174,20 @@ void SignalHandler::HandleScanStatusChangedSignal(
   }
 
   if (signal.state() == lorgnette::SCAN_STATE_IN_PROGRESS) {
-    std::cout << "Scan " << signal.scan_uuid() << " is " << signal.progress()
+    std::cout << "Page " << signal.page() << " is " << signal.progress()
               << "% finished" << std::endl;
   } else if (signal.state() == lorgnette::SCAN_STATE_FAILED) {
-    std::cout << "Scan " << signal.scan_uuid()
-              << "failed: " << signal.failure_reason() << std::endl;
+    LOG(ERROR) << "Scan failed: " << signal.failure_reason();
     quit_closure_.Run();
   } else if (signal.state() == lorgnette::SCAN_STATE_COMPLETED) {
-    std::cout << "Scan " << signal.scan_uuid() << " completed successfully."
-              << std::endl;
+    std::cout << "Scan completed successfully." << std::endl;
     quit_closure_.Run();
   }
 }
 
-void SignalHandler::OnConnectedCallback(const std::string& interface_name,
-                                        const std::string& signal_name,
-                                        bool signal_connected) {
+void ScanHandler::OnConnectedCallback(const std::string& interface_name,
+                                      const std::string& signal_name,
+                                      bool signal_connected) {
   base::AutoLock auto_lock(lock_);
   connected_callback_called_ = true;
   connection_status_ = signal_connected;
@@ -116,10 +195,6 @@ void SignalHandler::OnConnectedCallback(const std::string& interface_name,
     LOG(ERROR) << "Failed to connect to ScanStatusChanged signal";
   }
   cvar_.Signal();
-}
-
-base::WeakPtr<SignalHandler> SignalHandler::GetWeakPtr() {
-  return weak_factory_.GetWeakPtr();
 }
 
 base::Optional<std::vector<std::string>> ListScanners(ManagerProxy* manager) {
@@ -223,50 +298,6 @@ base::Optional<std::vector<std::string>> ReadAirscanOutput(
   }
 
   return scanner_names;
-}
-
-bool StartScan(ManagerProxy* manager,
-               const std::string& scanner,
-               const base::FilePath& output_path,
-               uint32_t resolution,
-               const lorgnette::DocumentSource& scan_source) {
-  base::File output_file(
-      output_path, base::File::FLAG_CREATE_ALWAYS | base::File::FLAG_WRITE);
-  if (!output_file.IsValid()) {
-    PLOG(ERROR) << "Failed to open output file " << output_path;
-    return false;
-  }
-
-  lorgnette::StartScanRequest request;
-  request.set_device_name(scanner);
-  request.mutable_settings()->set_resolution(resolution);
-  *request.mutable_settings()->mutable_source() = scan_source;
-  request.mutable_settings()->set_color_mode(lorgnette::MODE_COLOR);
-  std::vector<uint8_t> request_in(request.ByteSizeLong());
-  request.SerializeToArray(request_in.data(), request_in.size());
-
-  brillo::ErrorPtr error;
-  std::vector<uint8_t> response_out;
-  if (!manager->StartScan(request_in, output_file.GetPlatformFile(),
-                          &response_out, &error)) {
-    LOG(ERROR) << "StartScan failed: " << error->GetMessage();
-    return false;
-  }
-
-  lorgnette::StartScanResponse response;
-  if (!response.ParseFromArray(response_out.data(), response_out.size())) {
-    LOG(ERROR) << "Failed to parse StartScanResponse";
-    return false;
-  }
-
-  if (response.state() == lorgnette::SCAN_STATE_FAILED) {
-    LOG(ERROR) << "StartScan failed: " << response.failure_reason();
-    return false;
-  }
-
-  std::cout << "Scan " << response.scan_uuid() << " started successfully"
-            << std::endl;
-  return true;
 }
 
 }  // namespace
@@ -385,12 +416,7 @@ int main(int argc, char** argv) {
 
   // Implicitly uses this thread's executor as defined above.
   base::RunLoop run_loop;
-  SignalHandler handler(run_loop.QuitClosure());
-  manager->RegisterScanStatusChangedSignalHandler(
-      base::BindRepeating(&SignalHandler::HandleScanStatusChangedSignal,
-                          handler.GetWeakPtr()),
-      base::BindOnce(&SignalHandler::OnConnectedCallback,
-                     handler.GetWeakPtr()));
+  ScanHandler handler(run_loop.QuitClosure(), std::move(manager), scanner);
 
   if (!handler.WaitUntilConnected()) {
     return 1;
@@ -398,24 +424,12 @@ int main(int argc, char** argv) {
 
   std::cout << "Scanning from " << scanner << std::endl;
 
-  std::string escaped_scanner;
-  for (char c : scanner) {
-    if (isalnum(c)) {
-      escaped_scanner += c;
-    } else {
-      escaped_scanner += '_';
-    }
-  }
-  base::FilePath output_path("/tmp/scan-" + escaped_scanner + ".png");
-
-  if (!StartScan(manager.get(), scanner, output_path, FLAGS_scan_resolution,
-                 scan_source.value())) {
+  if (!handler.StartScan(FLAGS_scan_resolution, scan_source.value())) {
     return 1;
   }
 
-  // Will run until the SignalHandler runs this RunLoop's quit_closure.
+  // Will run until the ScanHandler runs this RunLoop's quit_closure.
   run_loop.Run();
 
-  std::cout << "Scanned to " << output_path << std::endl;
   return 0;
 }
