@@ -44,6 +44,8 @@ do_mount_var_and_home_chronos() {
       # to wiping whole stateful partition (including all helpful programs in
       # /usr/local/bin and sshd).
       clobber-log -- "Failed mounting var and home/chronos; re-created."
+      crash_reporter --early --log_to_stderr --mount_failure \
+        --mount_device="encstateful"
       local backup_dir="/mnt/stateful_partition/corrupted_encryption"
       rm -rf "${backup_dir}"
       mkdir -p "${backup_dir}"
