@@ -11,6 +11,7 @@
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/optional.h>
 
 #include "diagnostics/cros_healthd/process/process_with_output.h"
 #include "mojo/cros_healthd_executor.mojom.h"
@@ -31,10 +32,13 @@ constexpr char kEctoolBinary[] = "/usr/sbin/ectool";
 // The ectool command used to collect fan speed in RPM.
 constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
 
-// Runs the given binary with the given arguments and sandboxing.
+// Runs the given binary with the given arguments and sandboxing. If specified,
+// |user| will be used as both the user and group for sandboxing the binary. If
+// not specified, the default cros_healthd:cros_healthd user and group will be
+// used.
 int RunBinary(const base::FilePath& seccomp_policy_path,
               const std::vector<std::string>& sandboxing_args,
-              const std::string& user_and_group,
+              const base::Optional<std::string>& user,
               const base::FilePath& binary_path,
               const std::vector<std::string>& binary_args,
               mojo_ipc::ProcessResult* result) {
@@ -45,7 +49,8 @@ int RunBinary(const base::FilePath& seccomp_policy_path,
 
   // Sandboxing setup for the process.
   ProcessWithOutput process;
-  process.SandboxAs(user_and_group, user_and_group);
+  if (user.has_value())
+    process.SandboxAs(user.value(), user.value());
   process.SetSeccompFilterPolicyFile(seccomp_policy_path.MaybeAsASCII());
   process.set_separate_stderr(true);
   if (!process.Init(sandboxing_args)) {
