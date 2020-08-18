@@ -7,7 +7,7 @@
 #include <metrics/metrics_library.h>
 
 #include "biod/biod_storage.h"
-#include "biod/update_reason.h"
+#include "biod/updater/update_reason.h"
 #include "biod/utils.h"
 
 namespace biod {

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "biod/cros_fp_updater.h"
+#include "biod/updater/cros_fp_updater.h"
 
 #include <fcntl.h>
 #include <stdlib.h>
@@ -25,8 +25,8 @@
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_firmware.h"
 #include "biod/ec_command.h"
-#include "biod/update_reason.h"
-#include "biod/update_status.h"
+#include "biod/updater/update_reason.h"
+#include "biod/updater/update_status.h"
 
 namespace {
 

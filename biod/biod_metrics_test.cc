@@ -8,7 +8,7 @@
 #include <metrics/metrics_library_mock.h>
 
 #include "biod/biod_metrics.h"
-#include "biod/update_reason.h"
+#include "biod/updater/update_reason.h"
 #include "biod/utils.h"
 
 using ::testing::_;

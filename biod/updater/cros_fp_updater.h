@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef BIOD_CROS_FP_UPDATER_H_
-#define BIOD_CROS_FP_UPDATER_H_
+#ifndef BIOD_UPDATER_CROS_FP_UPDATER_H_
+#define BIOD_UPDATER_CROS_FP_UPDATER_H_
 
 #include <string>
 #include <utility>
@@ -15,8 +15,8 @@
 
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_firmware.h"
-#include "biod/update_reason.h"
-#include "biod/update_status.h"
+#include "biod/updater/update_reason.h"
+#include "biod/updater/update_status.h"
 
 namespace biod {
 
@@ -81,4 +81,4 @@ UpdateResult DoUpdate(const CrosFpDeviceUpdate& ec_dev,
 
 }  // namespace biod
 
-#endif  // BIOD_CROS_FP_UPDATER_H_
+#endif  // BIOD_UPDATER_CROS_FP_UPDATER_H_

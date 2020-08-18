@@ -20,9 +20,9 @@
 #include "biod/biod_metrics.h"
 #include "biod/biod_version.h"
 #include "biod/cros_fp_device.h"
-#include "biod/cros_fp_updater.h"
-#include "biod/update_reason.h"
-#include "biod/update_status.h"
+#include "biod/updater/cros_fp_updater.h"
+#include "biod/updater/update_reason.h"
+#include "biod/updater/update_status.h"
 
 using UpdateStatus = biod::updater::UpdateStatus;
 using UpdateReason = biod::updater::UpdateReason;

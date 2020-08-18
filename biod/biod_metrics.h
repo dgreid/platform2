@@ -12,7 +12,7 @@
 #include <metrics/metrics_library.h>
 
 #include "biod/fp_mode.h"
-#include "biod/update_reason.h"
+#include "biod/updater/update_reason.h"
 
 namespace biod {
 

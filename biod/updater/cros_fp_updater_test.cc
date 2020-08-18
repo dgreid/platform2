@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "biod/cros_fp_updater.h"
+#include "biod/updater/cros_fp_updater.h"
 
 #include <string>
 #include <unordered_set>
@@ -19,8 +19,8 @@
 #include <cros_config/fake_cros_config.h>
 
 #include "biod/cros_fp_firmware.h"
-#include "biod/update_reason.h"
-#include "biod/update_status.h"
+#include "biod/updater/update_reason.h"
+#include "biod/updater/update_status.h"
 #include "biod/utils.h"
 
 using ::testing::_;
