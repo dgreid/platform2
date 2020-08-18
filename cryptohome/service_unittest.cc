@@ -779,6 +779,34 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_NoOpenFiles_ShadowOnly) {
   EXPECT_FALSE(service_.CleanUpStaleMounts(false));
 }
 
+TEST_F(ServiceTest, CleanUpStale_EmptyMap_NoOpenFiles_ShadowOnly_Forced) {
+  // Check that when we have a bunch of stale shadow mounts, no active mounts,
+  // and no open filehandles, all stale mounts are unmounted and we attempt
+  // to clear the encryption key for fscrypt/ecryptfs mounts.
+
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
+    .WillOnce(Invoke(StaleShadowMounts));
+  EXPECT_CALL(platform_, GetAttachedLoopDevices())
+    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
+    .WillOnce(Return(false));
+  EXPECT_CALL(platform_,
+      EnumerateDirectoryEntries(
+          FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
+    .WillOnce(Return(false));
+  EXPECT_CALL(platform_, Unmount(_, true, _))
+    .Times(kShadowMounts.size())
+    .WillRepeatedly(Return(true));
+
+  // Expect the cleanup to clear user keys.
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
+  EXPECT_CALL(platform_, InvalidateDirCryptoKey(_, _))
+    .Times(kShadowMounts.size())
+    .WillRepeatedly(Return(true));
+
+  EXPECT_FALSE(service_.CleanUpStaleMounts(true));
+}
+
 TEST_F(ServiceTest, CleanUpStale_EmptyMap_OpenLegacy_ShadowOnly) {
   // Check that when we have a bunch of stale shadow mounts, no active mounts,
   // and some open filehandles to the legacy homedir, all mounts without

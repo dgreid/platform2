@@ -397,7 +397,7 @@ static bool RemoveFscryptKey(const KeyReference& key_reference) {
     return false;
 
   if (ioctl(fd.get(), FS_IOC_REMOVE_ENCRYPTION_KEY, &arg) < 0) {
-    PLOG(ERROR) << "Failed to add encryption key";
+    PLOG(ERROR) << "Failed to remove encryption key";
     return false;
   }
 

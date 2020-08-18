@@ -709,6 +709,26 @@ bool UserDataAuth::CleanUpStaleMounts(bool force) {
     // unmounted.
     platform_->Unmount(match.second, true, nullptr);
   }
+
+  // Attempt to clear the encryption key for the shadow directories once
+  // the mount has been unmounted. The encryption key needs to be cleared
+  // after all the unmounts are done to ensure that none of the existing
+  // submounts becomes inaccessible.
+  if (force && !shadow_mounts.empty()) {
+    // Attempt to clear fscrypt encryption keys for the shadow mounts.
+    for (const auto& match : shadow_mounts) {
+      if (!platform_->InvalidateDirCryptoKey(dircrypto::KeyReference(),
+                                             match.first)) {
+        LOG(WARNING) << "Failed to clear fscrypt keys for stale mount: "
+                     << match.first;
+      }
+    }
+
+    // Clear all keys in the user keyring for ecryptfs mounts.
+    if (!platform_->ClearUserKeyring()) {
+      LOG(WARNING) << "Failed to clear stale user keys.";
+    }
+  }
   for (const auto& match : ephemeral_mounts) {
     LOG(WARNING) << "Lazily unmounting stale ephemeral mount: "
                  << match.second.value() << " from " << match.first.value();
