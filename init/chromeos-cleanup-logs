@@ -93,7 +93,7 @@ rotate_logs() {
   echo Rotating rsyslogd logs
   for x in messages secure net.log faillog session_manager atrus.log \
            tlsdate.log authpolicy.log tpm-firmware-updater.log arc.log \
-           recover_duts/recover_duts.log hammerd.log upstart.log; do
+           recover_duts/recover_duts.log hammerd.log upstart.log typecd.log; do
     rotate_file "/var/log/${x}"
   done
   pkill -HUP rsyslogd
