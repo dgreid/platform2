@@ -46,10 +46,8 @@ bool waitpid_awhile(pid_t pid) {
 
 }  // namespace
 
-// Run as debugd for now since it is the same code.
-// TODO(sjg@chromium.org): Create a new user specifically for diagnostics
-const char SandboxedProcess::kDefaultUser[] = "debugd";
-const char SandboxedProcess::kDefaultGroup[] = "debugd";
+const char SandboxedProcess::kDefaultUser[] = "cros_healthd";
+const char SandboxedProcess::kDefaultGroup[] = "cros_healthd";
 
 SandboxedProcess::SandboxedProcess()
     : sandboxing_(true),
