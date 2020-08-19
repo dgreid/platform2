@@ -6,6 +6,7 @@ access: 1
 arch_prctl: 1
 bind: 1
 brk: 1
+clock_getres: 1
 clone: 1
 close: 1
 connect: 1
@@ -21,9 +22,10 @@ fcntl: 1
 fstat: 1
 # futex op values:
 #   0x0  == FUTEX_WAIT
+#   0x1  == FUTEX_WAKE
 #   0x80 == FUTEX_WAIT_PRIVATE
 #   0x81 == FUTEX_WAKE_PRIVATE
-futex: arg1 == 0x0 || arg1 == 0x80 || arg1 == 0x81
+futex: arg1 == 0x0 || arg1 == 0x1 || arg1 == 0x80 || arg1 == 0x81
 getdents: 1
 getegid: 1
 geteuid: 1
@@ -35,6 +37,7 @@ gettid: 1
 getuid: 1
 # ioctl values:
 #   0x6458     == DRM_IOCTL_I915_GEM_THROTTLE
+#   0x40046460 == DRM_IOCTL_I915_GEM_SW_FINISH
 #   0x40086409 == DRM_IOCTL_GEM_CLOSE
 #   0x400c645f == DRM_IOCTL_I915_GEM_SET_DOMAIN
 #   0x4020645d == DRM_IOCTL_I915_GEM_PWRITE
@@ -46,14 +49,24 @@ getuid: 1
 #   0xc0106446 == DRM_IOCTL_I915_GETPARAM
 #   0xc010645b == DRM_IOCTL_I915_GEM_CREATE
 #   0xc0106461 == DRM_IOCTL_I915_GEM_SET_TILING
+#   0xc010646c == DRM_IOCTL_I915_GEM_WAIT
 #   0xc0106471 == DRM_IOCTL_I915_REG_READ
 #   0xc0106479 == DRM_IOCTL_I915_QUERY
 #   0xc0186472 == DRM_IOCTL_I915_GET_RESET_STATS
+#   0xc0186473 == DRM_IOCTL_I915_GEM_USERPTR
 #   0xc0186474 == DRM_IOCTL_I915_GEM_CONTEXT_GETPARAM
 #   0xc0186475 == DRM_IOCTL_I915_GEM_CONTEXT_SETPARAM
 #   0xc028645e == DRM_IOCTL_I915_GEM_MMAP
 #   0xc0406400 == DRM_IOCTL_VERSION
-ioctl: arg1 == TCGETS || arg1 == 0x6458 || arg1 == 0x40086409 || arg1 == 0x400c645f || arg1 == 0x4020645d || arg1 == 0x40406469 || arg1 == 0x80106463 || arg1 == 0xc0086457 || arg1 == 0xc008646d || arg1 == 0xc00c6466 || arg1 == 0xc0106446 || arg1 == 0xc010645b || arg1 == 0xc0106461 || arg1 == 0xc0106471 || arg1 == 0xc0106479 || arg1 == 0xc0186472 || arg1 == 0xc0186474 || arg1 == 0xc0186475 || arg1 == 0xc028645e || arg1 == 0xc0406400
+#   0xc0406469 == DRM_IOCTL_I915_GEM_EXECBUFFER2_WR
+ioctl: arg1 == TCGETS || arg1 == 0x6458 || arg1 == 0x40086409 || \
+       arg1 == 0x400c645f || arg1 == 0x4020645d || arg1 == 0x40406469 || \
+       arg1 == 0x80106463 || arg1 == 0xc0086457 || arg1 == 0xc008646d || \
+       arg1 == 0xc00c6466 || arg1 == 0xc0106446 || arg1 == 0xc010645b || \
+       arg1 == 0xc0106461 || arg1 == 0xc0106471 || arg1 == 0xc0106479 || \
+       arg1 == 0xc0186472 || arg1 == 0xc0186474 || arg1 == 0xc0186475 || \
+       arg1 == 0xc028645e || arg1 == 0xc0406400 || arg1 == 0xc010646c || \
+       arg1 == 0xc0186473 || arg1 == 0x40046460 || arg1 == 0xc0406469
 kill: 1
 listen: 1
 lseek: 1
