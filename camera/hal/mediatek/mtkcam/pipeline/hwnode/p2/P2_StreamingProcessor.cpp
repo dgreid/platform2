@@ -294,11 +294,8 @@ MBOOL StreamingProcessor::prepareOutputs(
                                    &sensorSize)) {
           MY_LOGE("p2 can't get sensor size");
         }
-        mapping_ratio = static_cast<float>(sensorSize.w / inRRZOSize.w);
-        zoomRatio = static_cast<float>(sensorSize.w / cropRect_control.s.w);
-        if (zoomRatio > 1.0) {
-          MY_LOGI("p2 zoomRatio %f", zoomRatio);
-        }
+        mapping_ratio = sensorSize.w * 1.0f / inRRZOSize.w;
+        zoomRatio = sensorSize.w * 1.0f / cropRect_control.s.w;
       }
     }
     for (auto& it : reqPack->mOutputs) {
@@ -325,15 +322,11 @@ MBOOL StreamingProcessor::prepareOutputs(
           cropF =
               cropper->calcViewAngleF(payload->mLog, noTransformSize, cropFlag,
                                       cropRatio, dmaConstrainFlag);
-          MY_LOGD("p2s crop info (%f_%f)(%fx%f)", cropF.p.x, cropF.p.y,
-                  cropF.s.w, cropF.s.h);
           MRectF originCrop = cropF;
           cropF.s.w = originCrop.s.h * originCrop.s.h / originCrop.s.w;
           cropF.s.h = originCrop.s.h;
           cropF.p.x = (originCrop.s.w - cropF.s.w) / 2 + originCrop.p.x;
           cropF.p.y = originCrop.p.y;
-          MY_LOGD("p2s modify crop info (%f_%f)(%fx%f)", cropF.p.x, cropF.p.y,
-                  cropF.s.w, cropF.s.h);
         } else {  // normal flow
           if (zoomRatio <= 1.0) {
             cropF = cropper->calcViewAngleF(
@@ -350,6 +343,8 @@ MBOOL StreamingProcessor::prepareOutputs(
                                         out.mImg->getTransformSize());
           }
         }
+        MY_LOGD("p2s crop info (%f) (%f_%f)(%fx%f)", zoomRatio, cropF.p.x,
+                cropF.p.y, cropF.s.w, cropF.s.h);
         out.mCrop = cropF;
         out.mDMAConstrainFlag = dmaConstrainFlag;
 
