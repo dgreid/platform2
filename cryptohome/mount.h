@@ -722,10 +722,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   FRIEND_TEST(MountTest, BothFlagsMigrationTest);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);
-  FRIEND_TEST(MountTest, BindMyFilesDownloadsSuccess);
-  FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingUserHome);
-  FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingDownloads);
-  FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloads);
   FRIEND_TEST(EphemeralNoUserSystemTest, CreateMyFilesDownloadsAlreadyExists);
   FRIEND_TEST(EphemeralNoUserSystemTest, MountGuestUserDir);

@@ -462,6 +462,27 @@ bool MountHelper::BindMyFilesDownloads(const base::FilePath& user_home) {
                << downloads_in_myfiles.value();
     return false;
   }
+  /*
+   * User could have saved files in MyFiles/Downloads in case cryptohome
+   * crashed and bind mounts were removed by error. See crbug.com/1080730.
+   * Move the files back to Download unless a file already exits.
+   */
+  std::unique_ptr<FileEnumerator> enumerator(
+      platform_->GetFileEnumerator(downloads_in_myfiles, false /* recursive */,
+                                   base::FileEnumerator::DIRECTORIES |
+                                   base::FileEnumerator::FILES));
+  bool warning_sent = false;
+  for (FilePath obj = enumerator->Next(); !obj.empty();
+      obj = enumerator->Next()) {
+    FilePath obj_in_downloads = downloads.Append(obj.BaseName());
+
+    if (platform_->FileExists(obj_in_downloads))
+      platform_->DeleteFile(obj, true);
+    else
+      platform_->Move(obj, obj_in_downloads);
+    LOG_IF(WARNING, !warning_sent) << "Processing files in " << downloads_in_myfiles;
+    warning_sent = true;
+  }
 
   if (!BindAndPush(downloads, downloads_in_myfiles))
     return false;

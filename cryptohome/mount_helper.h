@@ -336,6 +336,8 @@ class MountHelper : public MountHelperInterface {
   FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingUserHome);
   FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingDownloads);
   FRIEND_TEST(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads);
+  FRIEND_TEST(MountTest, BindMyFilesDownloadsRemoveExistingFiles);
+  FRIEND_TEST(MountTest, BindMyFilesDownloadsMoveForgottenFiles);
 
   FRIEND_TEST(MountTest, CreateTrackedSubdirectories);
   FRIEND_TEST(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir);

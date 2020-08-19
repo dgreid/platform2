@@ -60,6 +60,9 @@ class MockFileEnumerator : public FileEnumerator {
 
 // TODO(wad) Migrate to an in-memory-only mock filesystem.
 ACTION(CallDeleteFile) { return base::DeleteFile(base::FilePath(arg0), arg1); }
+ACTION(CallMove) {
+  return base::Move(base::FilePath(arg0), base::FilePath(arg1));
+}
 ACTION(CallEnumerateDirectoryEntries) {
   // Pass a call to EnumerateDirectoryEntries through to a real Platform if it's
   // not mocked.

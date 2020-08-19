@@ -56,9 +56,9 @@
 
 using brillo::SecureBlob;
 using base::FilePath;
-using ::testing::AllOf;
 using ::testing::AnyNumber;
 using ::testing::AnyOf;
+using ::testing::AnyOfArray;
 using ::testing::DoAll;
 using ::testing::EndsWith;
 using ::testing::InSequence;
@@ -444,6 +444,11 @@ class MountTest
           .WillOnce(Return(true));
       EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
           .WillOnce(Return(true));
+
+      NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
+        new NiceMock<MockFileEnumerator>();
+      EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
+          .WillOnce(Return(in_myfiles_download_enumerator));
     }
   }
 
@@ -491,6 +496,11 @@ class MountTest
         .WillRepeatedly(Return(true));
 
     EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
+        .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
+        .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
+    EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+            EndsWith("MyFiles/Downloads")), _, _))
+        .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
     EXPECT_CALL(platform_, DirectoryExists(_))
@@ -791,6 +801,8 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
   FilePath dest_dir("/home/chronos/u-userhash");
   auto downloads_path = dest_dir.Append("Downloads");
   auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
+  NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
+    new NiceMock<MockFileEnumerator>();
 
   // All directories must exist for bind mount succeed.
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
@@ -798,6 +810,8 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
       .WillOnce(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
       .WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
+      .WillOnce(Return(in_myfiles_download_enumerator));
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
       .WillOnce(Return(true));
 
@@ -854,6 +868,102 @@ TEST_P(MountTest, BindMyFilesDownloadsMissingMyFilesDownloads) {
                          &platform_);
 
   EXPECT_FALSE(mnt_helper.BindMyFilesDownloads(dest_dir));
+}
+
+TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
+  FilePath dest_dir("/home/chronos/u-userhash");
+  auto downloads_path = dest_dir.Append("Downloads");
+  auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
+  const std::string existing_files[] = { "dir1", "file1"};
+  std::vector<FilePath> existing_files_in_download;
+  std::vector<FilePath> existing_files_in_myfiles_download;
+  auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
+  struct stat stat_file = {};
+  stat_file.st_mode = S_IRWXU;
+  struct stat stat_dir = {};
+  stat_dir.st_mode = S_IFDIR;
+
+  for (auto base : existing_files) {
+    existing_files_in_download.push_back(downloads_path.Append(base));
+    existing_files_in_myfiles_download.push_back(
+        downloads_in_myfiles.Append(base));
+  }
+  in_myfiles_download_enumerator->entries_.push_back(
+      FileEnumerator::FileInfo(
+        downloads_in_myfiles.Append("dir1"), stat_dir));
+  in_myfiles_download_enumerator->entries_.push_back(
+      FileEnumerator::FileInfo(
+        downloads_in_myfiles.Append("file1"), stat_file));
+
+  // When MyFiles/Downloads doesn't exists BindMyFilesDownloads returns false.
+  EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(downloads_path))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
+      .WillOnce(Return(in_myfiles_download_enumerator));
+  EXPECT_CALL(platform_, FileExists(AnyOfArray(existing_files_in_download)))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(
+        AnyOfArray(existing_files_in_myfiles_download), true))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
+      .WillOnce(Return(true));
+
+  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
+                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+                         &platform_);
+
+  EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
+}
+
+TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
+  FilePath dest_dir("/home/chronos/u-userhash");
+  auto downloads_path = dest_dir.Append("Downloads");
+  auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
+  const std::string existing_files[] = { "dir1", "file1"};
+  std::vector<FilePath> existing_files_in_download;
+  std::vector<FilePath> existing_files_in_myfiles_download;
+  auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
+  struct stat stat_file = {};
+  stat_file.st_mode = S_IRWXU;
+  struct stat stat_dir = {};
+  stat_dir.st_mode = S_IFDIR;
+
+  for (auto base : existing_files) {
+    existing_files_in_download.push_back(downloads_path.Append(base));
+    existing_files_in_myfiles_download.push_back(
+        downloads_in_myfiles.Append(base));
+  }
+  in_myfiles_download_enumerator->entries_.push_back(
+      FileEnumerator::FileInfo(
+        downloads_in_myfiles.Append("file1"), stat_file));
+  in_myfiles_download_enumerator->entries_.push_back(
+      FileEnumerator::FileInfo(
+        downloads_in_myfiles.Append("dir1"), stat_dir));
+
+  // When MyFiles/Downloads doesn't exists BindMyFilesDownloads returns false.
+  EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(downloads_path))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(downloads_in_myfiles))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
+      .WillOnce(Return(in_myfiles_download_enumerator));
+  EXPECT_CALL(platform_, FileExists(AnyOfArray(existing_files_in_download)))
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, Move(AnyOfArray(existing_files_in_myfiles_download),
+                              AnyOfArray(existing_files_in_download)))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
+      .WillOnce(Return(true));
+
+  MountHelper mnt_helper(chronos_uid_, chronos_gid_, shared_gid_, kImageDir,
+                         kSkelDir, helper_.system_salt, true /*legacy_mount*/,
+                         &platform_);
+
+  EXPECT_TRUE(mnt_helper.BindMyFilesDownloads(dest_dir));
 }
 
 // A fixture for testing chaps directory checks.
@@ -2758,6 +2868,11 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
     for (int i = 0; i < 2; ++i) {
       user->InjectKeyset(&platform_, true);
       EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
+          .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
+          .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
+      EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
+              EndsWith("MyFiles/Downloads")), _, _))
+          .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
     }

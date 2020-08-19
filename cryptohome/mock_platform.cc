@@ -41,6 +41,8 @@ MockPlatform::MockPlatform()
       .WillByDefault(CallFindFilesystemDevice());
   ON_CALL(*this, DeleteFile(_, _))
       .WillByDefault(CallDeleteFile());
+  ON_CALL(*this, Move(_, _))
+      .WillByDefault(CallMove());
   ON_CALL(*this, EnumerateDirectoryEntries(_, _, _))
       .WillByDefault(CallEnumerateDirectoryEntries());
   ON_CALL(*this, DirectoryExists(_))
