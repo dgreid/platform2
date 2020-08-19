@@ -40,7 +40,7 @@ bool GetDefaultVersionInfo(uint32_t* family,
 MockTpmStatus::MockTpmStatus() {
   ON_CALL(*this, IsTpmEnabled()).WillByDefault(Return(true));
 
-  ON_CALL(*this, CheckAndNotifyIfTpmOwned(_))
+  ON_CALL(*this, GetTpmOwned(_))
       .WillByDefault(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
 

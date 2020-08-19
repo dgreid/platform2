@@ -16,20 +16,16 @@ using trunks::TPM_RC_SUCCESS;
 
 namespace tpm_manager {
 
-Tpm2StatusImpl::Tpm2StatusImpl(
-    const trunks::TrunksFactory& factory,
-    const OwnershipTakenCallBack& ownership_taken_callback)
+Tpm2StatusImpl::Tpm2StatusImpl(const trunks::TrunksFactory& factory)
     : trunks_factory_(factory),
-      trunks_tpm_state_(trunks_factory_.GetTpmState()),
-      ownership_taken_callback_(ownership_taken_callback) {}
+      trunks_tpm_state_(trunks_factory_.GetTpmState()) {}
 
 bool Tpm2StatusImpl::IsTpmEnabled() {
   // For 2.0, TPM is always enabled.
   return true;
 }
 
-bool Tpm2StatusImpl::CheckAndNotifyIfTpmOwned(
-    TpmStatus::TpmOwnershipStatus* status) {
+bool Tpm2StatusImpl::GetTpmOwned(TpmStatus::TpmOwnershipStatus* status) {
   if (kTpmOwned == ownership_status_) {
     *status = kTpmOwned;
     return true;
@@ -43,13 +39,6 @@ bool Tpm2StatusImpl::CheckAndNotifyIfTpmOwned(
     ownership_status_ = kTpmOwned;
   } else if (trunks_tpm_state_->IsOwnerPasswordSet()) {
     ownership_status_ = kTpmPreOwned;
-  }
-
-  if (kTpmOwned == ownership_status_ && !ownership_taken_callback_.is_null()) {
-    // Sends out the ownership taken signal when the TPM ownership status
-    // changes to owned from a different state.
-    ownership_taken_callback_.Run();
-    ownership_taken_callback_.Reset();
   }
 
   *status = ownership_status_;

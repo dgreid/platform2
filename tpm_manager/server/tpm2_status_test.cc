@@ -28,21 +28,13 @@ class Tpm2StatusTest : public testing::Test {
 
   void SetUp() override {
     factory_.set_tpm_state(&mock_tpm_state_);
-    ownership_callback_ =
-        base::Bind(&Tpm2StatusTest::OwnershipCallback, base::Unretained(this));
-    tpm_status_.reset(new Tpm2StatusImpl(factory_, ownership_callback_));
+    tpm_status_.reset(new Tpm2StatusImpl(factory_));
   }
 
  protected:
-  // Mock ownership taken callback.
-  void OwnershipCallback() { ++ownership_callback_call_count_; }
-
   NiceMock<trunks::MockTpmState> mock_tpm_state_;
   trunks::TrunksFactoryForTest factory_;
   std::unique_ptr<TpmStatus> tpm_status_;
-
-  OwnershipTakenCallBack ownership_callback_;
-  int ownership_callback_call_count_ = 0;
 };
 
 TEST_F(Tpm2StatusTest, IsEnabledAlwaysSuccess) {
@@ -58,9 +50,8 @@ TEST_F(Tpm2StatusTest, IsOwnedSuccess) {
       .WillRepeatedly(Return(true));
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmOwned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 1);
 }
 
 TEST_F(Tpm2StatusTest, IsOwnedFailure) {
@@ -69,9 +60,8 @@ TEST_F(Tpm2StatusTest, IsOwnedFailure) {
       .WillRepeatedly(Return(false));
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmUnowned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 0);
 }
 
 TEST_F(Tpm2StatusTest, IsOwnedRepeatedInitializationOnFalse) {
@@ -83,15 +73,13 @@ TEST_F(Tpm2StatusTest, IsOwnedRepeatedInitializationOnFalse) {
       .WillRepeatedly(Return(false));
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmUnowned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 0);
 
   EXPECT_CALL(mock_tpm_state_, IsOwned()).WillRepeatedly(Return(true));
 
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmOwned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 1);
 }
 
 TEST_F(Tpm2StatusTest, IsOwnedNoRepeatedInitializationOnTrue) {
@@ -101,11 +89,10 @@ TEST_F(Tpm2StatusTest, IsOwnedNoRepeatedInitializationOnTrue) {
       .WillRepeatedly(Return(true));
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmOwned, status);
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmOwned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 1);
 }
 
 TEST_F(Tpm2StatusTest, IsOwnedInitializeFailure) {
@@ -115,8 +102,7 @@ TEST_F(Tpm2StatusTest, IsOwnedInitializeFailure) {
   EXPECT_CALL(mock_tpm_state_, IsOwnerPasswordSet()).Times(0);
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_FALSE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
-  EXPECT_EQ(ownership_callback_call_count_, 0);
+  EXPECT_FALSE(tpm_status_->GetTpmOwned(&status));
 }
 
 TEST_F(Tpm2StatusTest, IsPreOwned) {
@@ -127,9 +113,8 @@ TEST_F(Tpm2StatusTest, IsPreOwned) {
       .WillRepeatedly(Return(true));
 
   TpmStatus::TpmOwnershipStatus status;
-  EXPECT_TRUE(tpm_status_->CheckAndNotifyIfTpmOwned(&status));
+  EXPECT_TRUE(tpm_status_->GetTpmOwned(&status));
   EXPECT_EQ(TpmStatus::kTpmPreOwned, status);
-  EXPECT_EQ(ownership_callback_call_count_, 0);
 }
 
 TEST_F(Tpm2StatusTest, GetDictionaryAttackInfoInitializeFailure) {

@@ -39,14 +39,12 @@ class Tpm2InitializerImpl : public TpmInitializer {
   // Does not take ownership of arguments.
   Tpm2InitializerImpl(const trunks::TrunksFactory& factory,
                       LocalDataStore* local_data_store,
-                      TpmStatus* tpm_status,
-                      const OwnershipTakenCallBack& ownership_taken_callback);
+                      TpmStatus* tpm_status);
   // Does not take ownership of arguments.
   Tpm2InitializerImpl(const trunks::TrunksFactory& factory,
                       OpensslCryptoUtil* openssl_util,
                       LocalDataStore* local_data_store,
-                      TpmStatus* tpm_status,
-                      const OwnershipTakenCallBack& ownership_taken_callback);
+                      TpmStatus* tpm_status);
   ~Tpm2InitializerImpl() override = default;
 
   // TpmInitializer methods.
@@ -70,9 +68,6 @@ class Tpm2InitializerImpl : public TpmInitializer {
   OpensslCryptoUtil* openssl_util_;
   LocalDataStore* local_data_store_;
   TpmStatus* tpm_status_;
-
-  // Callback function called after TPM ownership is taken.
-  const OwnershipTakenCallBack& ownership_taken_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(Tpm2InitializerImpl);
 };

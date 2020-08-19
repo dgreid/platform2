@@ -31,28 +31,22 @@ const size_t kDefaultPasswordSize = kOwnerPasswordRandomBytes * 2;
 
 namespace tpm_manager {
 
-Tpm2InitializerImpl::Tpm2InitializerImpl(
-    const trunks::TrunksFactory& factory,
-    LocalDataStore* local_data_store,
-    TpmStatus* tpm_status,
-    const OwnershipTakenCallBack& ownership_taken_callback)
+Tpm2InitializerImpl::Tpm2InitializerImpl(const trunks::TrunksFactory& factory,
+                                         LocalDataStore* local_data_store,
+                                         TpmStatus* tpm_status)
     : trunks_factory_(factory),
       openssl_util_(new OpensslCryptoUtilImpl()),
       local_data_store_(local_data_store),
-      tpm_status_(tpm_status),
-      ownership_taken_callback_(ownership_taken_callback) {}
+      tpm_status_(tpm_status) {}
 
-Tpm2InitializerImpl::Tpm2InitializerImpl(
-    const trunks::TrunksFactory& factory,
-    OpensslCryptoUtil* openssl_util,
-    LocalDataStore* local_data_store,
-    TpmStatus* tpm_status,
-    const OwnershipTakenCallBack& ownership_taken_callback)
+Tpm2InitializerImpl::Tpm2InitializerImpl(const trunks::TrunksFactory& factory,
+                                         OpensslCryptoUtil* openssl_util,
+                                         LocalDataStore* local_data_store,
+                                         TpmStatus* tpm_status)
     : trunks_factory_(factory),
       openssl_util_(openssl_util),
       local_data_store_(local_data_store),
-      tpm_status_(tpm_status),
-      ownership_taken_callback_(ownership_taken_callback) {}
+      tpm_status_(tpm_status) {}
 
 bool Tpm2InitializerImpl::PreInitializeTpm() {
   TPM_RC result = trunks_factory_.GetTpmUtility()->PrepareForOwnership();
@@ -70,7 +64,7 @@ bool Tpm2InitializerImpl::InitializeTpm() {
   }
 
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
     return false;
   }
@@ -133,9 +127,6 @@ bool Tpm2InitializerImpl::InitializeTpm() {
     return false;
   }
 
-  if (!ownership_taken_callback_.is_null()) {
-    ownership_taken_callback_.Run();
-  }
   return true;
 }
 

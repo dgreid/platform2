@@ -150,22 +150,20 @@ void TpmManagerService::InitializeTask() {
            base::TimeTicks::Now() < deadline) {
       base::PlatformThread::Sleep(kTrunksDaemonInitAttemptDelay);
     }
-    default_tpm_status_ = std::make_unique<Tpm2StatusImpl>(
-        *default_trunks_factory_, ownership_taken_callback_);
+    default_tpm_status_ =
+        std::make_unique<Tpm2StatusImpl>(*default_trunks_factory_);
     tpm_status_ = default_tpm_status_.get();
     default_tpm_initializer_ = std::make_unique<Tpm2InitializerImpl>(
-        *default_trunks_factory_, local_data_store_, tpm_status_,
-        ownership_taken_callback_);
+        *default_trunks_factory_, local_data_store_, tpm_status_);
     tpm_initializer_ = default_tpm_initializer_.get();
     default_tpm_nvram_ = std::make_unique<Tpm2NvramImpl>(
         *default_trunks_factory_, local_data_store_, tpm_status_);
     tpm_nvram_ = default_tpm_nvram_.get();
 #else
-    default_tpm_status_ =
-        std::make_unique<TpmStatusImpl>(ownership_taken_callback_);
+    default_tpm_status_ = std::make_unique<TpmStatusImpl>();
     tpm_status_ = default_tpm_status_.get();
-    default_tpm_initializer_ = std::make_unique<TpmInitializerImpl>(
-        local_data_store_, tpm_status_, ownership_taken_callback_);
+    default_tpm_initializer_ =
+        std::make_unique<TpmInitializerImpl>(local_data_store_, tpm_status_);
     tpm_initializer_ = default_tpm_initializer_.get();
     default_tpm_nvram_ = std::make_unique<TpmNvramImpl>(local_data_store_);
     tpm_nvram_ = default_tpm_nvram_.get();
@@ -177,18 +175,15 @@ void TpmManagerService::InitializeTask() {
   }
   tpm_initializer_->VerifiedBootHelper();
 
-  // CheckAndNotifyIfTpmOwned() sends a signal if the TPM is already owned at
-  // boot time and needs to be called no matter what value wait_for_ownership_
-  // is.
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__
                << ": failed to get tpm ownership status, maybe it's the "
                   "dictionary attack lockout.";
     // GetStatus could fail because the TPM is under DA lockout, so we'll try to
     // reset lockout then try again.
     ResetDictionaryAttackCounterIfNeeded();
-    if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+    if (!tpm_status_->GetTpmOwned(&ownership_status)) {
       LOG(ERROR) << __func__
                  << ": get tpm ownership status still failed. Giving up.";
       return;
@@ -196,6 +191,9 @@ void TpmManagerService::InitializeTask() {
     LOG(INFO) << __func__
               << ": get tpm ownership status suceeded after dictionary attack "
                  "lockout reset.";
+  }
+  if (ownership_status == TpmStatus::kTpmOwned) {
+    NotifyTpmIsOwned();
   }
   // The precondition of DA reset is not satisfied; resets the timer so it
   // doesn't get triggered immediately.
@@ -237,6 +235,14 @@ void TpmManagerService::InitializeTask() {
   }
 }
 
+void TpmManagerService::NotifyTpmIsOwned() {
+  CHECK_EQ(base::PlatformThread::CurrentId(), worker_thread_->GetThreadId());
+  if (!ownership_taken_callback_.is_null()) {
+    ownership_taken_callback_.Run();
+    ownership_taken_callback_.Reset();
+  }
+}
+
 void TpmManagerService::GetTpmStatus(const GetTpmStatusRequest& request,
                                      const GetTpmStatusCallback& callback) {
   PostTaskToWorkerThread<GetTpmStatusReply>(
@@ -257,7 +263,7 @@ void TpmManagerService::GetTpmStatusTask(
   reply->set_enabled(tpm_status_->IsTpmEnabled());
 
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
@@ -416,6 +422,7 @@ void TpmManagerService::TakeOwnershipTask(
     reply->set_status(STATUS_DEVICE_ERROR);
     return;
   }
+  NotifyTpmIsOwned();
   if (!ResetDictionaryAttackCounterIfNeeded()) {
     LOG(WARNING) << __func__ << ": DA reset failed after taking ownership.";
   }

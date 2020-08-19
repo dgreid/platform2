@@ -42,7 +42,7 @@ class TpmStatus {
   // different state.
   //
   // Returns whether the operation is successful or not.
-  virtual bool CheckAndNotifyIfTpmOwned(TpmOwnershipStatus* status) = 0;
+  virtual bool GetTpmOwned(TpmOwnershipStatus* status) = 0;
 
   // Reports the current state of the TPM dictionary attack logic.
   virtual bool GetDictionaryAttackInfo(uint32_t* counter,

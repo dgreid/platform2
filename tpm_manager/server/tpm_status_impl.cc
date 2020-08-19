@@ -46,10 +46,6 @@ bool TouchTpmFullyInitializedPath() {
 
 namespace tpm_manager {
 
-TpmStatusImpl::TpmStatusImpl(
-    const OwnershipTakenCallBack& ownership_taken_callback)
-    : ownership_taken_callback_(ownership_taken_callback) {}
-
 bool TpmStatusImpl::IsTpmEnabled() {
   if (!is_enable_initialized_) {
     RefreshOwnedEnabledInfo();
@@ -57,8 +53,7 @@ bool TpmStatusImpl::IsTpmEnabled() {
   return is_enabled_;
 }
 
-bool TpmStatusImpl::CheckAndNotifyIfTpmOwned(
-    TpmStatus::TpmOwnershipStatus* status) {
+bool TpmStatusImpl::GetTpmOwned(TpmStatus::TpmOwnershipStatus* status) {
   if (kTpmOwned == ownership_status_) {
     *status = ownership_status_;
     return true;
@@ -88,13 +83,6 @@ bool TpmStatusImpl::CheckAndNotifyIfTpmOwned(
     return false;
   }
   ownership_status_ = *is_default_owner_password ? kTpmPreOwned : kTpmOwned;
-
-  if (kTpmOwned == ownership_status_ && !ownership_taken_callback_.is_null()) {
-    // Sends out the ownership taken signal when the value of
-    // is_fully_initialized_ changes from false to true.
-    ownership_taken_callback_.Run();
-    ownership_taken_callback_.Reset();
-  }
 
   *status = ownership_status_;
   return true;

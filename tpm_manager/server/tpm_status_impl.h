@@ -21,15 +21,12 @@ namespace tpm_manager {
 
 class TpmStatusImpl : public TpmStatus {
  public:
-  // |ownership_taken_callback| must stay alive during the entire lifetime of
-  // the TpmStatus object.
-  explicit TpmStatusImpl(
-      const OwnershipTakenCallBack& ownership_taken_callback);
+  TpmStatusImpl() = default;
   ~TpmStatusImpl() override = default;
 
   // TpmState methods.
   bool IsTpmEnabled() override;
-  bool CheckAndNotifyIfTpmOwned(TpmOwnershipStatus* status) override;
+  bool GetTpmOwned(TpmOwnershipStatus* status) override;
   bool GetDictionaryAttackInfo(uint32_t* counter,
                                uint32_t* threshold,
                                bool* lockout,
@@ -78,9 +75,6 @@ class TpmStatusImpl : public TpmStatus {
   TpmOwnershipStatus ownership_status_{kTpmUnowned};
 
   bool is_enable_initialized_{false};
-
-  // Callback function called after TPM ownership is taken.
-  OwnershipTakenCallBack ownership_taken_callback_;
 
   // Whether current owner password in the TPM is the default one; in case of
   // nullopt the password status is not determined yet.

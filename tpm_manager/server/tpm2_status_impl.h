@@ -22,17 +22,12 @@ namespace tpm_manager {
 class Tpm2StatusImpl : public TpmStatus {
  public:
   // Does not take ownership of |factory|.
-  //
-  // |ownership_taken_callback| must stay alive during the entire lifetime of
-  // the TpmStatus object.
-  explicit Tpm2StatusImpl(
-      const trunks::TrunksFactory& factory,
-      const OwnershipTakenCallBack& ownership_taken_callback);
+  explicit Tpm2StatusImpl(const trunks::TrunksFactory& factory);
   ~Tpm2StatusImpl() override = default;
 
   // TpmStatus methods.
   bool IsTpmEnabled() override;
-  bool CheckAndNotifyIfTpmOwned(TpmOwnershipStatus* status) override;
+  bool GetTpmOwned(TpmOwnershipStatus* status) override;
   bool GetDictionaryAttackInfo(uint32_t* counter,
                                uint32_t* threshold,
                                bool* lockout,
@@ -56,9 +51,6 @@ class Tpm2StatusImpl : public TpmStatus {
   TpmOwnershipStatus ownership_status_{kTpmUnowned};
   const trunks::TrunksFactory& trunks_factory_;
   std::unique_ptr<trunks::TpmState> trunks_tpm_state_;
-
-  // Callback function called after TPM ownership is taken.
-  OwnershipTakenCallBack ownership_taken_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(Tpm2StatusImpl);
 };

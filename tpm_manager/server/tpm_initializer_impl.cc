@@ -36,13 +36,9 @@ constexpr uint8_t kDefaultDelegateFamilyLabel = 1;
 
 namespace tpm_manager {
 
-TpmInitializerImpl::TpmInitializerImpl(
-    LocalDataStore* local_data_store,
-    TpmStatus* tpm_status,
-    const OwnershipTakenCallBack& ownership_taken_callback)
-    : local_data_store_(local_data_store),
-      tpm_status_(tpm_status),
-      ownership_taken_callback_(ownership_taken_callback) {}
+TpmInitializerImpl::TpmInitializerImpl(LocalDataStore* local_data_store,
+                                       TpmStatus* tpm_status)
+    : local_data_store_(local_data_store), tpm_status_(tpm_status) {}
 
 bool TpmInitializerImpl::PreInitializeTpm() {
   // No pre-initialization steps are performed for 1.2.
@@ -51,7 +47,7 @@ bool TpmInitializerImpl::PreInitializeTpm() {
 
 bool TpmInitializerImpl::InitializeTpm() {
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
     return false;
   }
@@ -102,10 +98,6 @@ bool TpmInitializerImpl::InitializeTpm() {
   }
   tpm_status_->MarkRandomOwnerPasswordSet();
 
-  if (!ownership_taken_callback_.is_null()) {
-    ownership_taken_callback_.Run();
-  }
-
   // for performance sake, continue using the same |local_data| so we don't need
   // to read the data from file once again.
   AuthDelegate owner_delegate;
@@ -140,7 +132,7 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
   }
 
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     // Can't tell if we really can't get tpm ownership status or lockout is in
     // our way, so let's still go ahead.
     LOG(WARNING) << __func__
@@ -158,7 +150,7 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
   if (!ReadOwnerAuthFromLocalData(&owner_password, &owner_delegate)) {
     // Note that if it failed here, it could be because the TPM is not owned,
     // but we tried anyway because we can't get the TPM status. See comments
-    // above on CheckAndNotifyIfTpmOwned().
+    // above on GetTpmOwned().
     LOG(ERROR) << __func__ << ": failed to get owner auth.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
@@ -203,7 +195,7 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
 
 void TpmInitializerImpl::PruneStoredPasswords() {
   TpmStatus::TpmOwnershipStatus ownership_status;
-  if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+  if (!tpm_status_->GetTpmOwned(&ownership_status)) {
     LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
     return;
   }

@@ -53,7 +53,7 @@ class NvIndexAuthenticator {
       use_hmac_session = false;
     } else {
       TpmStatus::TpmOwnershipStatus ownership_status;
-      if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+      if (!tpm_status_->GetTpmOwned(&ownership_status)) {
         LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
         return nullptr;
       }
@@ -73,7 +73,7 @@ class NvIndexAuthenticator {
   trunks::AuthorizationDelegate* GetOwnerAuthDelegate(
       const std::string& owner_password) {
     TpmStatus::TpmOwnershipStatus ownership_status;
-    if (!tpm_status_->CheckAndNotifyIfTpmOwned(&ownership_status)) {
+    if (!tpm_status_->GetTpmOwned(&ownership_status)) {
       LOG(ERROR) << __func__ << ": failed to get tpm ownership status";
       return nullptr;
     }

@@ -51,17 +51,11 @@ class Tpm2InitializerTest : public testing::Test {
     factory_.set_tpm_state(&mock_trunks_tpm_state_);
     factory_.set_tpm_utility(&mock_tpm_utility_);
 
-    ownership_callback_ = base::Bind(&Tpm2InitializerTest::OwnershipCallback,
-                                     base::Unretained(this));
     tpm_initializer_.reset(new Tpm2InitializerImpl(
-        factory_, &mock_openssl_util_, &mock_data_store_, &mock_tpm_status_,
-        ownership_callback_));
+        factory_, &mock_openssl_util_, &mock_data_store_, &mock_tpm_status_));
   }
 
  protected:
-  // Mock ownership taken callback.
-  void OwnershipCallback() { ++ownership_call_count_; }
-
   LocalData fake_local_data_;
   NiceMock<MockOpensslCryptoUtil> mock_openssl_util_;
   NiceMock<MockLocalDataStore> mock_data_store_;
@@ -70,9 +64,6 @@ class Tpm2InitializerTest : public testing::Test {
   NiceMock<trunks::MockTpmUtility> mock_tpm_utility_;
   trunks::TrunksFactoryForTest factory_;
   std::unique_ptr<TpmInitializer> tpm_initializer_;
-
-  OwnershipTakenCallBack ownership_callback_;
-  int ownership_call_count_ = 0;
 };
 
 TEST_F(Tpm2InitializerTest, InitializeTpmNoSeedTpm) {
@@ -87,15 +78,14 @@ TEST_F(Tpm2InitializerTest, InitializeTpmAlreadyOwned) {
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmOwnershipStatusError) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
-      .WillOnce(Return(false));
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_)).WillOnce(Return(false));
   EXPECT_CALL(mock_data_store_, Read(_)).Times(0);
   EXPECT_CALL(mock_tpm_utility_, TakeOwnership(_, _, _)).Times(0);
   EXPECT_FALSE(tpm_initializer_->InitializeTpm());
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmLocalDataReadError) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_data_store_, Read(_)).WillRepeatedly(Return(false));
@@ -104,27 +94,25 @@ TEST_F(Tpm2InitializerTest, InitializeTpmLocalDataReadError) {
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmLocalDataWriteError) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_data_store_, Write(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_utility_, TakeOwnership(_, _, _)).Times(0);
   EXPECT_FALSE(tpm_initializer_->InitializeTpm());
-  EXPECT_EQ(ownership_call_count_, 0);
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmOwnershipError) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_tpm_utility_, TakeOwnership(_, _, _))
       .WillRepeatedly(Return(trunks::TPM_RC_FAILURE));
   EXPECT_FALSE(tpm_initializer_->InitializeTpm());
-  EXPECT_EQ(ownership_call_count_, 0);
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmSuccess) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   std::string owner_random_bytes("\xFF\xF7\x00\x01\xD2\xA3", 6);
   std::string owner_password =
@@ -147,11 +135,10 @@ TEST_F(Tpm2InitializerTest, InitializeTpmSuccess) {
   EXPECT_EQ(owner_password, fake_local_data_.owner_password());
   EXPECT_EQ(endorsement_password, fake_local_data_.endorsement_password());
   EXPECT_EQ(lockout_password, fake_local_data_.lockout_password());
-  EXPECT_EQ(ownership_call_count_, 1);
 }
 
 TEST_F(Tpm2InitializerTest, InitializeTpmSuccessAfterError) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   std::string owner_password("owner");
   std::string endorsement_password("endorsement");
@@ -169,7 +156,6 @@ TEST_F(Tpm2InitializerTest, InitializeTpmSuccessAfterError) {
   EXPECT_EQ(owner_password, fake_local_data_.owner_password());
   EXPECT_EQ(endorsement_password, fake_local_data_.endorsement_password());
   EXPECT_EQ(lockout_password, fake_local_data_.lockout_password());
-  EXPECT_EQ(ownership_call_count_, 1);
 }
 
 TEST_F(Tpm2InitializerTest, PruneStoredPasswordsSuccess) {

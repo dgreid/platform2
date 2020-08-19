@@ -29,8 +29,7 @@ constexpr TSS_HTPM kFakeTpm = 66666;
 class TpmInitializerTest : public ::hwsec::Tpm1HwsecTest {
  public:
   TpmInitializerTest()
-      : tpm_initializer_(
-            &mock_data_store_, &mock_tpm_status_, ownership_callback_),
+      : tpm_initializer_(&mock_data_store_, &mock_tpm_status_),
         fake_local_data_(mock_data_store_.GetMutableFakeData()) {
     ON_CALL_OVERALLS(Ospi_Context_Create(_))
         .WillByDefault(
@@ -43,14 +42,13 @@ class TpmInitializerTest : public ::hwsec::Tpm1HwsecTest {
  protected:
   NiceMock<MockLocalDataStore> mock_data_store_;
   NiceMock<MockTpmStatus> mock_tpm_status_;
-  OwnershipTakenCallBack ownership_callback_;
   TpmInitializerImpl tpm_initializer_;
   // Holds a reference of the internal |LocalData| of |mock_data_store_|.
   LocalData& fake_local_data_;
 };
 
 TEST_F(TpmInitializerTest, DAResetSuccess) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.mutable_owner_delegate()->set_blob("blob");
   fake_local_data_.mutable_owner_delegate()->set_secret("secret");
@@ -63,7 +61,7 @@ TEST_F(TpmInitializerTest, DAResetSuccess) {
 }
 
 TEST_F(TpmInitializerTest, DAResetSuccessWithOwnerPassword) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.set_owner_password("owner password");
   EXPECT_CALL_OVERALLS(Ospi_TPM_SetStatus(_, TSS_TPMSTATUS_RESETLOCK, _))
@@ -73,14 +71,14 @@ TEST_F(TpmInitializerTest, DAResetSuccessWithOwnerPassword) {
 }
 
 TEST_F(TpmInitializerTest, DAResetNoAuth) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   EXPECT_EQ(tpm_initializer_.ResetDictionaryAttackLock(),
             DictionaryAttackResetStatus::kDelegateNotAvailable);
 }
 
 TEST_F(TpmInitializerTest, DAResetDelegateNoPermission) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.mutable_owner_delegate()->set_blob("blob");
   fake_local_data_.mutable_owner_delegate()->set_secret("secret");
@@ -91,7 +89,7 @@ TEST_F(TpmInitializerTest, DAResetDelegateNoPermission) {
 }
 
 TEST_F(TpmInitializerTest, DAResetFailed) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.mutable_owner_delegate()->set_blob("blob");
   fake_local_data_.mutable_owner_delegate()->set_secret("secret");
@@ -104,7 +102,7 @@ TEST_F(TpmInitializerTest, DAResetFailed) {
 }
 
 TEST_F(TpmInitializerTest, DAResetFailedFailedAuthNoRepeat) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.mutable_owner_delegate()->set_blob("blob");
   fake_local_data_.mutable_owner_delegate()->set_secret("secret");
@@ -115,13 +113,13 @@ TEST_F(TpmInitializerTest, DAResetFailedFailedAuthNoRepeat) {
   EXPECT_EQ(tpm_initializer_.ResetDictionaryAttackLock(),
             DictionaryAttackResetStatus::kResetAttemptFailed);
   // Makes sure the bad auth is flagged.
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_)).Times(0);
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_)).Times(0);
   EXPECT_EQ(tpm_initializer_.ResetDictionaryAttackLock(),
             DictionaryAttackResetStatus::kResetAttemptFailed);
 }
 
 TEST_F(TpmInitializerTest, DAResetFailedWrongPcr0) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   fake_local_data_.mutable_owner_delegate()->set_blob("blob");
   fake_local_data_.mutable_owner_delegate()->set_secret("secret");

@@ -120,7 +120,7 @@ class TpmManagerServiceTest_Preinit
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitialize) {
   // Called in InitializeTask() and GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .Times(2)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
@@ -134,7 +134,7 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitialize) {
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, NoNeedToInitialize) {
   // Called in InitializeTask() and GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .Times(2)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
@@ -146,7 +146,7 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, NoNeedToInitialize) {
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeNoTpm) {
   // Called in GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_)).Times(1);
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_)).Times(1);
   EXPECT_CALL(mock_tpm_status_, IsTpmEnabled()).WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
   EXPECT_CALL(mock_tpm_initializer_, PreInitializeTpm()).Times(0);
@@ -156,7 +156,7 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeNoTpm) {
 
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeFailure) {
   // Called in InitializeTask() and GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .Times(2)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
@@ -169,7 +169,7 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership, AutoInitializeFailure) {
 TEST_F(TpmManagerServiceTest_NoWaitForOwnership,
        TakeOwnershipAfterAutoInitialize) {
   // Called in InitializeTask()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm())
       .Times(2)
@@ -190,7 +190,7 @@ TEST_F(TpmManagerServiceTest_NoWaitForOwnership,
 }
 
 TEST_F(TpmManagerServiceTest_Preinit, NoAutoInitialize) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).Times(0);
@@ -201,7 +201,7 @@ TEST_F(TpmManagerServiceTest_Preinit, NoAutoInitialize) {
 
 TEST_F(TpmManagerServiceTest_Preinit, TpmAlreadyOwned) {
   // Called in InitializeTask() and GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .Times(2)
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
@@ -213,7 +213,7 @@ TEST_F(TpmManagerServiceTest_Preinit, TpmAlreadyOwned) {
 
 TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusOwnershipStatusFailure) {
   // Called in InitializeTask() and GetTpmStatus()
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillOnce(DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)))
       .WillOnce(Return(false));
   SetupService();
@@ -230,7 +230,7 @@ TEST_F(TpmManagerServiceTest_Preinit, GetTpmStatusOwnershipStatusFailure) {
 }
 
 TEST_F(TpmManagerServiceTest_Preinit, PruneLocalData) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmUnowned), Return(true)));
 
@@ -254,7 +254,7 @@ TEST_F(TpmManagerServiceTest_NoPreinit, NoPreInitialize) {
 // TODO(b/152485752): Finds out non-flaky version to test it and re-enable it.
 TEST_F(TpmManagerServiceTest_Preinit,
        DISABLED_DictionaryAttackResetTimerReset) {
-  EXPECT_CALL(mock_tpm_status_, CheckAndNotifyIfTpmOwned(_))
+  EXPECT_CALL(mock_tpm_status_, GetTpmOwned(_))
       .WillRepeatedly(
           DoAll(SetArgPointee<0>(TpmStatus::kTpmOwned), Return(true)));
   EXPECT_CALL(mock_tpm_initializer_, InitializeTpm()).WillOnce(Return(true));

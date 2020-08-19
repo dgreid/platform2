@@ -163,6 +163,10 @@ class TpmManagerService : public TpmNvramInterface,
   // effect.
   void InitializeTask();
 
+  // Calling the callback which is registered by SetOwnershipTakenCallback if it
+  // exists.
+  void NotifyTpmIsOwned();
+
   // Blocking implementation of GetTpmStatus that can be executed on the
   // background worker thread.
   void GetTpmStatusTask(const GetTpmStatusRequest& request,
