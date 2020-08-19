@@ -158,6 +158,9 @@ const std::vector<Log> kCommandLogs {
   {kFile, "cros_fp.log", "/var/log/cros_fp.log"},
   {kFile, "cros_ish.previous", "/var/log/cros_ish.previous"},
   {kFile, "cros_ish.log", "/var/log/cros_ish.log"},
+  {kCommand, "crosvm.log", "nsenter -t1 -m /bin/sh -c 'tail -n+1"
+    " /run/daemon-store/crosvm/*/log/*.log.1"
+    " /run/daemon-store/crosvm/*/log/*.log'", kRoot, kRoot},
   {kCommand, "dmesg", "/bin/dmesg"},
   {kCommand, "drm_gem_objects", "cat /sys/kernel/debug/dri/?/gem",
     SandboxedProcess::kDefaultUser, kDebugfsGroup},
