@@ -4,46 +4,32 @@
 # found in the LICENSE file.
 
 # Run virtual_file_provider with minijail0 for ARC container.
-# The mount path is set to /mnt in the root namespace.
+# The mount path is set to /mnt in the minijail namespace.
 
 set -e
 
 MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
 
-# Start constructing minijail0 args...
-args=""
-
-# Use minimalistic-mountns profile.
-args="${args} --profile=minimalistic-mountns"
-
-# Enter a new network namespace.
-args="${args} -e"
-
-# Enter a new PID namespace and run the process as init (pid=1).
-args="${args} -p -I"
-
-# Enter a new IPC namespace.
-args="${args} -l"
-
-# Forbid all caps except CAP_SYS_ADMIN and CAP_SETPCAP.
-args="${args} -c 0x200100"
-
-# Run as virtual-file-provider user/group.
-args="${args} -u virtual-file-provider -g virtual-file-provider -G"
-
-# Mount tmpfs on /mnt.
-args="${args} -k tmpfs,/mnt,tmpfs,${MOUNT_FLAGS}"
-
-# Mount tmpfs on /run.
-args="${args} -k tmpfs,/run,tmpfs,${MOUNT_FLAGS}"
-
-# For D-Bus system bus socket.
-args="${args} -b /run/dbus"
-
-# Bind /dev/fuse to mount FUSE file systems.
-args="${args} -b /dev/fuse"
-
-# Finally, specify command line arguments.
-args="${args} -- /usr/bin/virtual-file-provider /mnt"
-
-exec minijail0 ${args}
+# Start virtual-file-provider with /mnt as FUSE mount point in the
+# minijail namespace.
+# --profile=minimalistic-mountns Use minimalistic-mountns profile.
+# -e    Enter a new network namespace.
+# -p -I Enter a new PID namespace and run the process as init (pid=1).
+# -l    Enter a new IPC namespace.
+# -c    Forbid all caps except CAP_SYS_ADMIN and CAP_SETPCAP.
+# -u/-g Run as virtual-file-provider user/group.
+# -k    Mount tmpfs on /mnt and /run.
+# -b    /run/dbus is for D-Bus system bus socket.
+#       /dev/fuse is for mounting FUSE file systems.
+exec minijail0 \
+     --profile=minimalistic-mountns \
+     -e \
+     -p -I \
+     -l \
+     -c 0x200100 \
+     -u virtual-file-provider -g virtual-file-provider -G \
+     -k "tmpfs,/mnt,tmpfs,${MOUNT_FLAGS}" \
+     -k "tmpfs,/run,tmpfs,${MOUNT_FLAGS}" \
+     -b /run/dbus \
+     -b /dev/fuse \
+     -- /usr/bin/virtual-file-provider /mnt

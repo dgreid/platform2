@@ -11,49 +11,36 @@
 
 set -e
 
-# Create MOUNT_PATH in concierge namespace.
+# Create MOUNT_PATH in the concierge namespace.
 MOUNT_PATH="/run/arcvm/media/virtual_files"
 nsenter --mount=/run/namespaces/mnt_concierge --no-fork \
   -- mkdir -p "${MOUNT_PATH}"
 
 MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
 
-# Start constructing minijail0 args...
-args=""
-
-# Use minimalistic-mountns profile.
-args="${args} --profile=minimalistic-mountns"
-
-# Enter a new network namespace.
-args="${args} -e"
-
-# Enter a new PID namespace and run the process as init (pid=1).
-args="${args} -p -I"
-
-# Enter a new IPC namespace.
-args="${args} -l"
-
-# Forbid all caps except CAP_SYS_ADMIN and CAP_SETPCAP.
-args="${args} -c 0x200100"
-
-# Run as virtual-file-provider user/group.
-args="${args} -u virtual-file-provider -g virtual-file-provider -G"
-
-# Mount tmpfs on /run.
-args="${args} -k tmpfs,/run,tmpfs,${MOUNT_FLAGS}"
-
-# For D-Bus system bus socket.
-args="${args} -b /run/dbus"
-
-# Bind /dev/fuse to mount FUSE file systems.
-args="${args} -b /dev/fuse"
-
-# Bind ${MOUNT_PATH} into this namespace.
-args="${args} -k ${MOUNT_PATH},${MOUNT_PATH},none,MS_BIND|MS_REC"
-
-# Finally, specify command line arguments.
-args="${args} -- /usr/bin/virtual-file-provider ${MOUNT_PATH}"
-
-# Start virtual-file-provider in concierge namespace.
+# Start virtual-file-provider with MOUNT_PATH as FUSE mount point
+# in the concierge namespace.
+# nsenter --mount=<namespace> Enter the specified mount namespace.
+# --profile=minimalistic-mountns Use minimalistic-mountns profile.
+# -e    Enter a new network namespace.
+# -p -I Enter a new PID namespace and run the process as init (pid=1).
+# -l    Enter a new IPC namespace.
+# -c    Forbid all caps except CAP_SYS_ADMIN and CAP_SETPCAP.
+# -u/-g Run as virtual-file-provider user/group.
+# -b    /run/dbus is for D-Bus system bus socket.
+#       /dev/fuse is for mounting FUSE file systems.
+# -k    Mount tmpfs on /run.
+#       Bind ${MOUNT_PATH} into this namespace.
 exec nsenter --mount=/run/namespaces/mnt_concierge --no-fork \
-  -- minijail0 ${args}
+     -- minijail0 \
+        --profile=minimalistic-mountns \
+        -e \
+        -p -I \
+        -l \
+        -c 0x200100 \
+        -u virtual-file-provider -g virtual-file-provider -G \
+        -k "tmpfs,/run,tmpfs,${MOUNT_FLAGS}" \
+        -b /run/dbus \
+        -b /dev/fuse \
+        -k "${MOUNT_PATH},${MOUNT_PATH},none,MS_BIND|MS_REC" \
+        -- /usr/bin/virtual-file-provider "${MOUNT_PATH}"
