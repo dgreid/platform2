@@ -150,7 +150,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   static const int kFscryptPolicyVersion = 2;
   cryptohome::Timestamp timestamp;
   timestamp.set_timestamp(kTestTimestamp);
-  SecureBlob tbytes(timestamp.ByteSize());
+  SecureBlob tbytes(timestamp.ByteSizeLong());
   google::protobuf::uint8* buf =
     static_cast<google::protobuf::uint8*>(tbytes.data());
   timestamp.SerializeWithCachedSizesToArray(buf);
