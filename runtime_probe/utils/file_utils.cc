@@ -59,13 +59,13 @@ base::Optional<Value> MapFilesToDict(const FilePath& dir_path,
     const auto file_path = dir_path.Append(file_name);
     string content;
 
-    /* missing file */
+    // missing file
     if (!PathExists(file_path)) {
       LOG(ERROR) << file_path.value() << " doesn't exist";
       return base::nullopt;
     }
 
-    /* file exists, but somehow we can't read it */
+    // File exists, but somehow we can't read it.
     if (!ReadFileToStringWithMaxSize(file_path, &content, kReadFileMaxSize)) {
       LOG(ERROR) << file_path.value() << " exists, but we can't read it";
       return base::nullopt;

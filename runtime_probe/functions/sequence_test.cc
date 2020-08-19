@@ -1,7 +1,6 @@
-/* Copyright 2018 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include <algorithm>
 #include <memory>
@@ -61,7 +60,7 @@ TEST(SequenceFunctionTest, TestEvalFailTooManyResults) {
   for (auto& result : results) {
     stream << result;
   }
-  /* The `results` should be empty */
+  // The `results` should be empty.
   ASSERT_EQ(results.size(), 0) << "unexpected results: " << stream.str();
 
   return;
@@ -102,7 +101,7 @@ TEST(SequenceFunctionTest, TestEvalSuccess) {
   for (auto& result : results) {
     stream << result;
   }
-  /* The `results` should be empty */
+  // The `results` should be empty.
   ASSERT_EQ(results.size(), 1) << "unexpected results: " << stream.str();
 
   std::set<std::string> result_keys;

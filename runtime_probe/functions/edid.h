@@ -1,7 +1,7 @@
-/* Copyright 2020 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
 #ifndef RUNTIME_PROBE_FUNCTIONS_EDID_H_
 #define RUNTIME_PROBE_FUNCTIONS_EDID_H_
 
@@ -15,11 +15,10 @@
 
 namespace runtime_probe {
 
-/* Parse EDID files from DRM devices in sysfs.
- *
- * @param dir_path a list of paths to be evaluated. (Default:
- * {"/sys/class/drm/<wildcard>"})
- */
+// Parse EDID files from DRM devices in sysfs.
+//
+// @param dir_path a list of paths to be evaluated. (Default:
+// {"/sys/class/drm/<wildcard>"})
 class EdidFunction : public ProbeFunction {
  public:
   NAME_PROBE_FUNCTION("edid");
@@ -32,7 +31,7 @@ class EdidFunction : public ProbeFunction {
   int EvalInHelper(std::string* output) const override;
 
  private:
-  /* The path of target sysfs device, the last component can contain '*' */
+  // The path of target sysfs device, the last component can contain '*'.
   std::vector<std::string> dir_path_;
 
   std::vector<base::FilePath> GetEdidPaths(

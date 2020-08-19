@@ -1,7 +1,6 @@
-/* Copyright 2018 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #ifndef RUNTIME_PROBE_PROBE_FUNCTION_ARGUMENT_H_
 #define RUNTIME_PROBE_PROBE_FUNCTION_ARGUMENT_H_
@@ -13,21 +12,19 @@
 
 namespace runtime_probe {
 
-/*
- * To know how to define an argument parser and use it in your probe function,
- * please check "functions/shell.h" as an example.  It should be well commented.
- *
- * Currently, we only supports the following types of arguments:
- *   - std::string
- *   - int
- *   - bool
- *   - double
- *   - std::vector<std::string>
- *   - std::vector<std::unique_ptr<ProbeFunction>>
- *
- * Arguments can have default value, except for
- * std::vector<std::unique_ptr<ProbeFunction>>.
- */
+// To know how to define an argument parser and use it in your probe function,
+// please check "functions/shell.h" as an example.  It should be well commented.
+//
+// Currently, we only supports the following types of arguments:
+//   - std::string
+//   - int
+//   - bool
+//   - double
+//   - std::vector<std::string>
+//   - std::vector<std::unique_ptr<ProbeFunction>>
+//
+// Arguments can have default value, except for
+// std::vector<std::unique_ptr<ProbeFunction>>.
 
 class ProbeFunction;
 
@@ -77,10 +74,9 @@ bool ParseArgument<std::vector<std::unique_ptr<ProbeFunction>>>(
     const base::Value& dict_value,
     const std::vector<std::unique_ptr<ProbeFunction>>&& default_value) = delete;
 
-/* We assume that |function_name|, |instance|, |dict_value| are available in the
- * scope this macro is called.  See `functions/shell.h` about how this macro is
- * used.
- */
+// We assume that |function_name|, |instance|, |dict_value| are available in the
+// scope this macro is called.  See `functions/shell.h` about how this macro is
+// used.
 #define PARSE_ARGUMENT(member_name, ...)                                \
   ParseArgument(function_name, #member_name, &instance->member_name##_, \
                 dict_value, ##__VA_ARGS__)

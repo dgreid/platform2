@@ -1,7 +1,6 @@
-/* Copyright 2020 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2020 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include "runtime_probe/functions/edid.h"
 
@@ -59,7 +58,7 @@ EdidFunction::DataType EdidFunction::Eval() const {
 int EdidFunction::EvalInHelper(std::string* output) const {
   base::Value result(base::Value::Type::LIST);
 
-  /* Store paths which have been evaluated. */
+  // Store paths which have been evaluated.
   base::Value evaluated_path(base::Value::Type::DICTIONARY);
   for (const auto& dir_path : dir_path_) {
     for (const auto& edid_path : GetEdidPaths(base::FilePath(dir_path))) {

@@ -1,7 +1,6 @@
-/* Copyright 2018 The Chromium OS Authors. All rights reserved.
- * Use of this source code is governed by a BSD-style license that can be
- * found in the LICENSE file.
- */
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
 
 #include <string>
 #include <utility>
@@ -55,9 +54,8 @@ SysfsFunction::DataType SysfsFunction::Eval() const {
       LOG(ERROR) << glob_root.value() << " is not under /sys/";
       return {};
     }
-    /* While testing, |sysfs_path_for_testing_| can be set to allow additional
-     * path.
-     */
+    // While testing, |sysfs_path_for_testing_| can be set to allow additional
+    // path.
     if (sysfs_path_for_testing_.IsParent(glob_root) ||
         sysfs_path_for_testing_ == glob_root) {
       LOG(WARNING) << glob_root.value() << " is allowed because "
