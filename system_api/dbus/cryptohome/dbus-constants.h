@@ -161,6 +161,9 @@ const char kCryptohomeLockToSingleUserMountUntilReboot[] =
     "LockToSingleUserMountUntilReboot";
 const char kCryptohomeGetRsuDeviceId[] = "GetRsuDeviceId";
 const char kCryptohomeCheckHealth[] = "CheckHealth";
+const char kCryptohomeStartFingerprintAuthSession[] =
+    "StartFingerprintAuthSession";
+const char kCryptohomeEndFingerprintAuthSession[] = "EndFingerprintAuthSession";
 
 // Signals of the |kCryptohomeInterface| interface:
 const char kSignalAsyncCallStatus[] = "AsyncCallStatus";
