@@ -890,8 +890,15 @@ bool Platform::SetExtFileAttributes(const FilePath& path, int flags) {
   // FS_IOC_SETFLAGS actually takes int*
   // though the signature suggests long*.
   // https://lwn.net/Articles/575846/
+  int current_flag;
+  if (ioctl(fd, FS_IOC_GETFLAGS, &current_flag) < 0) {
+    PLOG(ERROR) << "ioctl GETFLAGS: " << path.value();
+    IGNORE_EINTR(close(fd));
+    return false;
+  }
+  flags |= current_flag;
   if (ioctl(fd, FS_IOC_SETFLAGS, &flags) < 0) {
-    PLOG(ERROR) << "ioctl: " << path.value();
+    PLOG(ERROR) << "ioctl SETFLAGS: " << path.value();
     IGNORE_EINTR(close(fd));
     return false;
   }

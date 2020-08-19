@@ -244,7 +244,7 @@ TEST_F(PlatformTest, GetExtFileAttributes) {
 
   int got;
   EXPECT_TRUE(platform_.GetExtFileAttributes(filename, &got));
-  EXPECT_EQ(flags, got);
+  EXPECT_EQ(flags, got & flags);
   close(fd);
   platform_.DeleteFile(filename, false /* recursive */);
 }
@@ -262,7 +262,7 @@ TEST_F(PlatformTest, SetExtFileAttributes) {
   int new_flags;
   ASSERT_GE(ioctl(fd, FS_IOC_GETFLAGS, &new_flags), 0);
 
-  EXPECT_EQ(flags, new_flags);
+  EXPECT_EQ(flags, new_flags & flags);
   close(fd);
   platform_.DeleteFile(filename, false /* recursive */);
 }
@@ -276,7 +276,9 @@ TEST_F(PlatformTest, HasNoDumpFileAttribute) {
 
   int fd;
   ASSERT_GT(fd = open(filename.value().c_str(), O_RDONLY), 0);
-  int flags = FS_UNRM_FL | FS_NODUMP_FL;
+  int flags;
+  ASSERT_GE(ioctl(fd, FS_IOC_GETFLAGS, &flags), 0);
+  flags |= FS_UNRM_FL | FS_NODUMP_FL;
   ASSERT_GE(ioctl(fd, FS_IOC_SETFLAGS, &flags), 0);
 
   EXPECT_TRUE(platform_.HasNoDumpFileAttribute(filename));

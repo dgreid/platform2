@@ -239,7 +239,7 @@ TEST_F(MigrationHelperTest, CopyAttributesDirectory) {
   ASSERT_TRUE(to_fd.is_valid());
   int new_ext2_attrs;
   ASSERT_EQ(0, ::ioctl(to_fd.get(), FS_IOC_GETFLAGS, &new_ext2_attrs));
-  EXPECT_EQ(FS_SYNC_FL | FS_NODUMP_FL, new_ext2_attrs);
+  EXPECT_EQ(ext2_attrs, new_ext2_attrs & ext2_attrs);
 }
 
 TEST_F(MigrationHelperTest, DirectoryPartiallyMigrated) {
@@ -526,7 +526,7 @@ TEST_F(MigrationHelperTest, CopyAttributesFile) {
   EXPECT_TRUE(to_fd.is_valid());
   int new_ext2_attrs;
   EXPECT_EQ(0, ::ioctl(to_fd.get(), FS_IOC_GETFLAGS, &new_ext2_attrs));
-  EXPECT_EQ(FS_SYNC_FL | FS_NODUMP_FL, new_ext2_attrs);
+  EXPECT_EQ(ext2_attrs, new_ext2_attrs & ext2_attrs);
 }
 
 TEST_F(MigrationHelperTest, CopyOwnership) {
