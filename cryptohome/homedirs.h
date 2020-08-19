@@ -322,17 +322,11 @@ class HomeDirs {
 
   // Removes all mounted homedirs from the vector
   void FilterMountedHomedirs(std::vector<HomeDir>* homedirs);
-  // Removes all homedirs that have not been active since the cutoff
-  void FilterHomedirsProcessedBeforeCutoff(base::Time cutoff,
-                                           std::vector<HomeDir>* homedirs);
   // Used by RemoveNonOwnerCryptohomes and FreeDiskSpace to perform the actual
   // cleanup.
   void RemoveNonOwnerCryptohomesInternal(const std::vector<HomeDir>& homedirs);
   // Callback used during RemoveNonOwnerCryptohomes()
   void RemoveNonOwnerCryptohomesCallback(const std::string& obfuscated);
-  // Recursively deletes all contents of a directory while leaving the directory
-  // itself intact.
-  void DeleteDirectoryContents(const base::FilePath& dir);
   // Deletes all directories under the supplied directory whose basename is not
   // the same as the obfuscated owner name.
   void RemoveNonOwnerDirectories(const base::FilePath& prefix);

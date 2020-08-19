@@ -870,31 +870,6 @@ void HomeDirs::FilterMountedHomedirs(std::vector<HomeDirs::HomeDir>* homedirs) {
       homedirs->end());
 }
 
-void HomeDirs::FilterHomedirsProcessedBeforeCutoff(
-    base::Time cutoff,
-    std::vector<HomeDirs::HomeDir>* homedirs) {
-  homedirs->erase(
-      std::remove_if(homedirs->begin(), homedirs->end(),
-                     [&](const HomeDirs::HomeDir& dir) {
-                       return timestamp_cache_->GetLastUserActivityTimestamp(
-                                  dir.obfuscated) < cutoff;
-                     }),
-      homedirs->end());
-}
-
-void HomeDirs::DeleteDirectoryContents(const FilePath& dir) {
-  std::unique_ptr<FileEnumerator> subdir_enumerator(
-    platform_->GetFileEnumerator(dir, false,
-      base::FileEnumerator::FILES |
-          base::FileEnumerator::DIRECTORIES |
-          base::FileEnumerator::SHOW_SYM_LINKS));
-  for (FilePath subdir_path = subdir_enumerator->Next();
-       !subdir_path.empty();
-       subdir_path = subdir_enumerator->Next()) {
-    platform_->DeleteFile(subdir_path, true);
-  }
-}
-
 void HomeDirs::RemoveNonOwnerDirectories(const FilePath& prefix) {
   std::vector<FilePath> dirents;
   if (!platform_->EnumerateDirectoryEntries(prefix, false, &dirents))
