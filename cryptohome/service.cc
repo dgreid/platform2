@@ -3017,9 +3017,14 @@ void Service::DoUnmountEx(std::unique_ptr<UnmountRequest> request_pb,
   CleanUpStaleMounts(true);
 
   SendReply(context, reply);
+
+  // TODO(chromium:1109147): Remove this INFO log after we solve this issue.
+  LOG(INFO) << "Finished unmount request process";
 }
 
 gboolean Service::UnmountEx(GArray* request, DBusGMethodInvocation* context) {
+  // TODO(chromium:1109147): Remove this INFO log after we solve this issue.
+  LOG(INFO) << "Received an unmount request.";
   auto request_pb = std::make_unique<UnmountRequest>();
   if (!request_pb->ParseFromArray(request->data, request->len))
     request_pb.reset(nullptr);
