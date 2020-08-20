@@ -68,6 +68,7 @@ void AndroidOciWrapper::RequestJobExit(ArcContainerStopReason reason) {
                                    kContainerId};
 
   int exit_code = -1;
+  LOG(INFO) << "Forcefully shutting down container " << container_pid_;
   if (!system_utils_->LaunchAndWait(argv, &exit_code)) {
     PLOG(ERROR) << "Failed to run run_oci";
     return;
@@ -246,6 +247,7 @@ void AndroidOciWrapper::ExecuteRunOciToStartContainer(
 }
 
 bool AndroidOciWrapper::RequestTermination() {
+  LOG(INFO) << "Gracefully shutting down container";
   // Use run_oci to perform graceful shutdown.
   std::vector<std::string> argv = {kRunOciPath, kRunOciLogging,
                                    kRunOciKillCommand, kContainerId};
