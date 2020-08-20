@@ -760,26 +760,90 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   if (base::Optional<std::string> value = EncodeString(key::kCastReceiverName))
     policy->mutable_cast_receiver_name()->set_name(value.value());
 
-  if (base::Optional<std::string> value =
-          EncodeString(key::kDeviceNativePrinters)) {
-    policy->mutable_native_device_printers()->set_external_policy(
-        value.value());
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<std::string> device_printers_value =
+      EncodeString(key::kDevicePrinters);
+  base::Optional<std::string> device_native_printers_value =
+      EncodeString(key::kDeviceNativePrinters);
+  if (device_printers_value || device_native_printers_value) {
+    policy->mutable_device_printers()->set_external_policy(
+        device_printers_value ? device_printers_value.value()
+                              : device_native_printers_value.value());
   }
-  if (base::Optional<int> value =
-          EncodeInteger(key::kDeviceNativePrintersAccessMode)) {
+  if (device_native_printers_value) {
+    policy->mutable_native_device_printers()->set_external_policy(
+        device_native_printers_value.value());
+  }
+
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<int> device_printers_access_mode_value =
+      EncodeInteger(key::kDevicePrintersAccessMode);
+  base::Optional<int> device_native_printers_access_mode_value =
+      EncodeInteger(key::kDeviceNativePrintersAccessMode);
+  if (device_printers_access_mode_value ||
+      device_native_printers_access_mode_value) {
+    policy->mutable_device_printers_access_mode()->set_access_mode(
+        static_cast<em::DevicePrintersAccessModeProto_AccessMode>(
+            device_printers_access_mode_value
+                ? device_printers_access_mode_value.value()
+                : device_native_printers_access_mode_value.value()));
+  }
+  if (device_native_printers_access_mode_value) {
     policy->mutable_native_device_printers_access_mode()->set_access_mode(
         static_cast<em::DeviceNativePrintersAccessModeProto_AccessMode>(
-            value.value()));
+            device_native_printers_access_mode_value.value()));
   }
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDeviceNativePrintersBlacklist)) {
+
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<std::vector<std::string>> device_printers_blocklist_value =
+      EncodeStringList(key::kDevicePrintersBlocklist);
+  base::Optional<std::vector<std::string>>
+      device_native_printers_blacklist_value =
+          EncodeStringList(key::kDeviceNativePrintersBlacklist);
+  if (device_printers_blocklist_value ||
+      device_native_printers_blacklist_value) {
+    *policy->mutable_device_printers_blocklist()->mutable_blocklist() = {
+        device_printers_blocklist_value
+            ? device_printers_blocklist_value.value().begin()
+            : device_native_printers_blacklist_value.value().begin(),
+        device_printers_blocklist_value
+            ? device_printers_blocklist_value.value().end()
+            : device_native_printers_blacklist_value.value().end()};
+  }
+  if (device_native_printers_blacklist_value) {
     *policy->mutable_native_device_printers_blacklist()->mutable_blacklist() = {
-        values.value().begin(), values.value().end()};
+        device_native_printers_blacklist_value.value().begin(),
+        device_native_printers_blacklist_value.value().end()};
   }
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDeviceNativePrintersWhitelist)) {
+
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<std::vector<std::string>> device_printers_allowlist_value =
+      EncodeStringList(key::kDevicePrintersAllowlist);
+  base::Optional<std::vector<std::string>>
+      device_native_printers_whitelist_value =
+          EncodeStringList(key::kDeviceNativePrintersWhitelist);
+  if (device_printers_allowlist_value ||
+      device_native_printers_whitelist_value) {
+    *policy->mutable_device_printers_allowlist()->mutable_allowlist() = {
+        device_printers_allowlist_value
+            ? device_printers_allowlist_value.value().begin()
+            : device_native_printers_whitelist_value.value().begin(),
+        device_printers_allowlist_value
+            ? device_printers_allowlist_value.value().end()
+            : device_native_printers_whitelist_value.value().end()};
+  }
+  if (device_native_printers_whitelist_value) {
     *policy->mutable_native_device_printers_whitelist()->mutable_whitelist() = {
-        values.value().begin(), values.value().end()};
+        device_native_printers_whitelist_value.value().begin(),
+        device_native_printers_whitelist_value.value().end()};
   }
 
   if (base::Optional<std::string> value =
@@ -790,31 +854,6 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kDeviceExternalPrintServersAllowlist)) {
     *policy->mutable_external_print_servers_allowlist()->mutable_allowlist() = {
-        values.value().begin(), values.value().end()};
-  }
-
-  if (base::Optional<std::string> value = EncodeString(key::kDevicePrinters)) {
-    policy->mutable_device_printers()->set_external_policy(value.value());
-  }
-  if (base::Optional<int> value =
-          EncodeInteger(key::kDevicePrintersAccessMode)) {
-    if (em::DevicePrintersAccessModeProto::AccessMode_IsValid(value.value())) {
-      policy->mutable_device_printers_access_mode()->set_access_mode(
-          static_cast<em::DevicePrintersAccessModeProto::AccessMode>(
-              value.value()));
-    } else {
-      LOG(ERROR) << "Invalid enum value " << value.value() << " for policy "
-                 << key::kDevicePrintersAccessMode;
-    }
-  }
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDevicePrintersAllowlist)) {
-    *policy->mutable_device_printers_allowlist()->mutable_allowlist() = {
-        values.value().begin(), values.value().end()};
-  }
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDevicePrintersBlocklist)) {
-    *policy->mutable_device_printers_blocklist()->mutable_blocklist() = {
         values.value().begin(), values.value().end()};
   }
 

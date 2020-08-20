@@ -526,22 +526,51 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
   EncodeString(&policy, key::kCastReceiverName, kString);
   EXPECT_EQ(kString, policy.cast_receiver_name().name());
 
-  // The encoder of this policy converts ints to AccessMode enums.
+  EncodeString(&policy, key::kDevicePrinters, kString);
+  EXPECT_EQ(kString, policy.device_printers().external_policy());
+
+  // Old policy copied to new name.
   EncodeString(&policy, key::kDeviceNativePrinters, kString);
   EXPECT_EQ(kString, policy.native_device_printers().external_policy());
+  // Old policy copied to new name.
+  EXPECT_EQ(kString, policy.device_printers().external_policy());
 
+  // The encoder of this policy converts ints to AccessMode enums.
+  EncodeInteger(&policy, key::kDevicePrintersAccessMode,
+                em::DevicePrintersAccessModeProto::ACCESS_MODE_ALLOWLIST);
+  EXPECT_EQ(em::DevicePrintersAccessModeProto::ACCESS_MODE_ALLOWLIST,
+            policy.device_printers_access_mode().access_mode());
+
+  // Old policy copied to new name.
   EncodeInteger(&policy, key::kDeviceNativePrintersAccessMode,
                 em::DeviceNativePrintersAccessModeProto::ACCESS_MODE_WHITELIST);
   EXPECT_EQ(em::DeviceNativePrintersAccessModeProto::ACCESS_MODE_WHITELIST,
             policy.native_device_printers_access_mode().access_mode());
+  // Old policy copied to new name.
+  EXPECT_EQ(em::DevicePrintersAccessModeProto::ACCESS_MODE_ALLOWLIST,
+            policy.device_printers_access_mode().access_mode());
+
+  EncodeStringList(&policy, key::kDevicePrintersAllowlist, kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_allowlist().allowlist()));
 
   EncodeStringList(&policy, key::kDeviceNativePrintersWhitelist, kStringList);
   EXPECT_EQ(kStringList,
             ToVector(policy.native_device_printers_whitelist().whitelist()));
+  // Old policy copied to new name.
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_allowlist().allowlist()));
+
+  EncodeStringList(&policy, key::kDevicePrintersBlocklist, kStringList);
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_blocklist().blocklist()));
 
   EncodeStringList(&policy, key::kDeviceNativePrintersBlacklist, kStringList);
   EXPECT_EQ(kStringList,
             ToVector(policy.native_device_printers_blacklist().blacklist()));
+  // Old policy copied to new name.
+  EXPECT_EQ(kStringList,
+            ToVector(policy.device_printers_blocklist().blocklist()));
 
   EncodeString(&policy, key::kDeviceExternalPrintServers, kString);
   EXPECT_EQ(kString, policy.external_print_servers().external_policy());
@@ -550,22 +579,6 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
                    kStringList);
   EXPECT_EQ(kStringList,
             ToVector(policy.external_print_servers_allowlist().allowlist()));
-
-  EncodeString(&policy, key::kDevicePrinters, kString);
-  EXPECT_EQ(kString, policy.device_printers().external_policy());
-
-  EncodeInteger(&policy, key::kDevicePrintersAccessMode,
-                em::DevicePrintersAccessModeProto::ACCESS_MODE_ALL);
-  EXPECT_EQ(em::DevicePrintersAccessModeProto::ACCESS_MODE_ALL,
-            policy.device_printers_access_mode().access_mode());
-
-  EncodeStringList(&policy, key::kDevicePrintersAllowlist, kStringList);
-  EXPECT_EQ(kStringList,
-            ToVector(policy.device_printers_allowlist().allowlist()));
-
-  EncodeStringList(&policy, key::kDevicePrintersBlocklist, kStringList);
-  EXPECT_EQ(kStringList,
-            ToVector(policy.device_printers_blocklist().blocklist()));
 
   EncodeString(&policy, key::kTPMFirmwareUpdateSettings,
                "{\"allow-user-initiated-powerwash\":true,"
