@@ -73,7 +73,8 @@ constexpr int kSignatureTimestampWindow = 2;
 constexpr char kTimestampRegex[] = "^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
 
 //
-// These regular expressions enable to us capture the PC in a backtrace.
+// These regular expressions enable to us capture the function name of
+// the PC in a backtrace.
 // The backtrace is obtained through dmesg or the kernel's preserved/kcrashmem
 // feature.
 //
@@ -85,17 +86,23 @@ constexpr char kTimestampRegex[] = "^<.*>\\[\\s*(\\d+\\.\\d+)\\]";
 // For x86:
 //   "<0>[   37.474699] EIP: [<790ed488>] write_breakme+0x80/0x108
 //    SS:ESP 0068:e9dd3efc"
+// For x86_64:
+//   "<5>[ 1505.853254] RIP: 0010:[<ffffffff94fb0c27>] [<ffffffff94fb0c27>]
+//   list_del_init+0x8/0x1b" (v4.10-)
+//   "<4>[ 2358.194253] RIP: 0010:pick_task_fair+0x55/0x77" (v4.10+)
 //
-const char* const kPCRegex[] = {
-    nullptr, " (?:PC is at |pc : )([^\\+\\[ ]+).*",
-    " epc\\s+:\\s+\\S+\\s+([^\\+ ]+).*",  // MIPS has an exception program
-                                          // counter
-    " EIP: \\[<.*>\\] ([^\\+ ]+).*",  // X86 uses EIP for the program counter
-    " RIP \\[<.*>\\] ([^\\+ ]+).*",   // X86_64 uses RIP for the program counter
+const char* const kPCFuncNameRegex[] = {
+    nullptr, R"( (?:PC is at |pc : )([^\+\[ ]+).*)",
+    R"( epc\s+:\s+\S+\s+([^\+ ]+).*)",  // MIPS has an exception
+                                        // program counter
+    R"( EIP: \[<.*>\] ([^\+ ]+).*)",    // X86 uses EIP for the
+                                        // program counter
+    R"( RIP: [[:xdigit:]]{4}:(?:\[<[[:xdigit:]]+>\] \[<[[:xdigit:]]+>\] )?)"
+    R"(([^\+ ]+)\+0x.*)",  // X86_64 uses RIP
 };
 
-static_assert(base::size(kPCRegex) == KernelCollector::kArchCount,
-              "Missing Arch PC RegExp");
+static_assert(base::size(kPCFuncNameRegex) == KernelCollector::kArchCount,
+              "Missing Arch PC func_name RegExp");
 
 pcrecpp::RE kSanityCheckRe("\n(<\\d+>)?\\[\\s*(\\d+\\.\\d+)\\]");
 
@@ -375,7 +382,7 @@ bool KernelCollector::DumpDirMounted() {
 
 bool KernelCollector::Enable() {
   if (arch_ == kArchUnknown || arch_ >= kArchCount ||
-      kPCRegex[arch_] == nullptr) {
+      kPCFuncNameRegex[arch_] == nullptr) {
     LOG(WARNING) << "KernelCollector does not understand this architecture";
     return false;
   }
@@ -414,6 +421,7 @@ void KernelCollector::ProcessStackTrace(pcrecpp::StringPiece kernel_dump,
   //
   // For X86:
   // <4>[ 6066.849504]  [<7937bcee>] ? function_name+0x66/0x6c
+  // <4>[ 2358.194379]  __schedule+0x83f/0xf92 (newer) like arm64 above
   //
   pcrecpp::RE stack_entry_re(
       std::string(kTimestampRegex) +
@@ -489,10 +497,10 @@ bool KernelCollector::FindCrashingFunction(pcrecpp::StringPiece kernel_dump,
   float timestamp = 0;
 
   // Use the correct regex for this architecture.
-  pcrecpp::RE eip_re(std::string(kTimestampRegex) + kPCRegex[arch_],
-                     pcrecpp::MULTILINE());
+  pcrecpp::RE func_re(std::string(kTimestampRegex) + kPCFuncNameRegex[arch_],
+                      pcrecpp::MULTILINE());
 
-  while (eip_re.FindAndConsume(&kernel_dump, &timestamp, crashing_function)) {
+  while (func_re.FindAndConsume(&kernel_dump, &timestamp, crashing_function)) {
   }
   if (timestamp == 0) {
     LOG(WARNING) << "Found no crashing function";
