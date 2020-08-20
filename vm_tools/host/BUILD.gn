@@ -117,6 +117,7 @@ static_library("libconcierge") {
   sources = [
     "../concierge/arc_vm.cc",
     "../concierge/disk_image.cc",
+    "../concierge/dlc_helper.cc",
     "../concierge/plugin_vm.cc",
     "../concierge/plugin_vm_helper.cc",
     "../concierge/power_manager_client.cc",
@@ -142,6 +143,7 @@ static_library("libconcierge") {
   all_dependent_pkg_deps = [
     "grpc++",
     "libarchive",
+    "libdlcservice-client",
     "libminijail",
     "libqcow_utils",
     "libshill-client",
@@ -291,6 +293,7 @@ if (use.test) {
 
   executable("concierge_test") {
     sources = [
+      "../concierge/dlc_helper_test.cc",
       "../concierge/future_test.cc",
       "../concierge/power_manager_client_test.cc",
       "../concierge/termina_vm_test.cc",
@@ -301,7 +304,10 @@ if (use.test) {
       "//common-mk:test",
       ":host_target_defaults",
     ]
-    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+    pkg_deps = [
+      "libchrome-test-${libbase_ver}",
+      "libdlcservice-client-test",
+    ]
     deps = [
       ":libconcierge",
       "//common-mk/testrunner:testrunner",

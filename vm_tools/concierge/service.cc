@@ -64,6 +64,7 @@
 #include <vboot/crossystem.h>
 
 #include "vm_tools/concierge/arc_vm.h"
+#include "vm_tools/concierge/dlc_helper.h"
 #include "vm_tools/concierge/plugin_vm.h"
 #include "vm_tools/concierge/plugin_vm_helper.h"
 #include "vm_tools/concierge/seneschal_server_proxy.h"
@@ -691,6 +692,8 @@ bool Service::Init() {
   untrusted_vm_utils_ = std::make_unique<UntrustedVMUtils>(
       base::FilePath(kL1TFFilePath), base::FilePath(kMDSFilePath));
 
+  dlcservice_client_ = std::make_unique<DlcHelper>(bus_);
+
   using ServiceMethod =
       std::unique_ptr<dbus::Response> (Service::*)(dbus::MethodCall*);
   const std::map<const char*, ServiceMethod> kServiceMethods = {
@@ -944,22 +947,29 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   base::FilePath kernel, rootfs, tools_disk;
 
-  // A VM is trusted when this daemon chooses the kernel and rootfs path.
-  bool is_trusted_image = false;
-  if (request.start_termina()) {
-    base::FilePath component_path = GetLatestVMPath();
-    if (component_path.empty()) {
-      LOG(ERROR) << "Termina component is not loaded";
-      response.set_failure_reason("Termina component is not loaded");
+  // A VM is trusted when both:
+  // 1) This daemon (or a trusted daemon) chooses the kernel and rootfs path.
+  // 2) The chosen VM is a first-party VM.
+  //
+  // In practical terms this is true iff we are booting termina.
+  bool is_trusted_image = request.start_termina();
+
+  if (!request.vm().dlc_id().empty() || request.start_termina()) {
+    std::string error;
+    base::FilePath vm_path = GetVmImagePath(request.vm().dlc_id(), &error);
+    if (vm_path.empty()) {
+      LOG(ERROR) << error;
+      response.set_failure_reason(error);
       writer.AppendProtoAsArrayOfBytes(response);
       return dbus_response;
     }
-
-    kernel = component_path.Append(kVmKernelName);
-    rootfs = component_path.Append(kVmRootfsName);
-    tools_disk = component_path.Append(kVmToolsDiskName);
-    is_trusted_image = true;
+    kernel = vm_path.Append(kVmKernelName);
+    rootfs = vm_path.Append(kVmRootfsName);
+    if (request.start_termina())
+      tools_disk = vm_path.Append(kVmToolsDiskName);
   } else {
+    // User-chosen VMs (i.e. with arbitrary paths) can not be trusted.
+    DCHECK(!is_trusted_image);
     kernel = base::FilePath(request.vm().kernel());
     rootfs = base::FilePath(request.vm().rootfs());
   }
@@ -3116,6 +3126,30 @@ Service::VmMap::iterator Service::FindVm(const std::string& owner_id,
     return vms_.find(VmId("", vm_name));
   }
   return it;
+}
+
+base::FilePath Service::GetVmImagePath(const std::string& dlc_id,
+                                       std::string* failure_reason) {
+  DCHECK(failure_reason);
+  // As a legacy fallback, use the component rather than the DLC.
+  //
+  // TODO(crbug/953544): remove this once we no longer distribute termina as a
+  // component.
+  if (dlc_id.empty()) {
+    base::FilePath ret = GetLatestVMPath();
+    if (ret.empty()) {
+      *failure_reason = "Termina component is not loaded";
+    }
+    return ret;
+  }
+
+  base::Optional<std::string> dlc_root =
+      dlcservice_client_->GetRootPath(dlc_id, failure_reason);
+  if (!dlc_root.has_value()) {
+    // On an error, failure_reason will be set by GetRootPath().
+    return {};
+  }
+  return base::FilePath(dlc_root.value());
 }
 
 }  // namespace concierge

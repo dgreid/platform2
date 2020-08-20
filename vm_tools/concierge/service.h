@@ -29,6 +29,7 @@
 #include <dbus/message.h>
 #include <grpcpp/grpcpp.h>
 
+#include "base/files/file_path.h"
 #include "vm_tools/common/vm_id.h"
 #include "vm_tools/concierge/disk_image.h"
 #include "vm_tools/concierge/power_manager_client.h"
@@ -41,6 +42,8 @@
 
 namespace vm_tools {
 namespace concierge {
+
+class DlcHelper;
 
 // Used to represent kernel version.
 using KernelVersionAndMajorRevision = std::pair<int, int>;
@@ -257,6 +260,12 @@ class Service final {
                              const std::string& lookup_name,
                              ListVmDisksResponse* response);
 
+  // Determine the path for a VM image based on |dlc_id| (or the component, if
+  // the id is empty). Returns the empty path and sets failure_reason in the
+  // event of a failure.
+  base::FilePath GetVmImagePath(const std::string& dlc_id,
+                                std::string* failure_reason);
+
   // Resource allocators for VMs.
   VsockCidPool vsock_cid_pool_;
 
@@ -287,6 +296,9 @@ class Service final {
 
   // The power manager D-Bus client.
   std::unique_ptr<PowerManagerClient> power_manager_client_;
+
+  // The dlcservice helper D-Bus client.
+  std::unique_ptr<DlcHelper> dlcservice_client_;
 
   // The StartupListener service.
   StartupListenerImpl startup_listener_;
