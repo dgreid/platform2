@@ -97,7 +97,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     biod_data = data_provider.ConsumeRemainingBytesAsString();
 
   biod::BiodStorage biod_storage =
-        biod::BiodStorage("BiometricsManager", base::Bind(&LoadRecord));
+      biod::BiodStorage("BiometricsManager", base::Bind(&LoadRecord));
   biod_storage.set_allow_access(true);
 
   std::unique_ptr<TestRecord> record(new TestRecord(
@@ -105,9 +105,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   base::FilePath root_path("/tmp/biod_storage_fuzzing_data");
   biod_storage.SetRootPathForTesting(root_path);
-  bool status =
-    biod_storage.WriteRecord((const TestRecord)*record,
-                            std::make_unique<base::Value>(record->GetData()));
+  bool status = biod_storage.WriteRecord(
+      (const TestRecord)*record,
+      std::make_unique<base::Value>(record->GetData()));
   if (status)
     status = biod_storage.ReadRecordsForSingleUser(user_id);
 

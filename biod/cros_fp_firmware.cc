@@ -120,8 +120,8 @@ void CrosFpFirmware::DecodeVersionFromFile() {
 
   base::MemoryMappedFile image_fmap_aligned;
   const base::MemoryMappedFile::Region image_fmap_aligned_region = {
-    .offset = fmap_offset,
-    .size = image.length() - fmap_offset,
+      .offset = fmap_offset,
+      .size = image.length() - fmap_offset,
   };
   // MemoryMappedFile doesn't allow sharing the same open file with another
   // MemoryMappedFile nor does it allow mapping multiple file regions,
