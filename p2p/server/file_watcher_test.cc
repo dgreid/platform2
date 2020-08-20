@@ -131,7 +131,7 @@ TEST(FileWatcher, TouchNonExisting) {
 
 // Check that we detect when a timestamp is updated on an existing
 // file that we monitor - this should result in a single event.
-TEST(FileWatcher, TouchExisting) {
+TEST(FileWatcher, DISABLED_TouchExisting) {
   FilePath testdir = SetupTestDir("filewatcher-touch-existing");
   EXPECT_COMMAND(0, "touch %s", testdir.Append("existing.p2p").value().c_str());
 
