@@ -183,7 +183,7 @@ Paths created on the fly by `build_image`:
 *   `/build/dev-install/package.installable`: Not actually installed on the
     device, just created on the fly for use by the build system to determine
     which binpkgs to upload to the server.
-*   `dev-only-extras.tbz2`: All the content of `/usr/local` (except for `/var`).
+*   `dev-only-extras.tar.xz`: Everything in `/usr/local` (except for `/var`).
 *   `/usr/share/dev-install/`: The list of packages used by the device are
     computed at this point as the image has been finalized.
     *   `bootstrap.packages`: The set of packages to manually install in order
