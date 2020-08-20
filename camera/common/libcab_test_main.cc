@@ -81,6 +81,10 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
     sem_post(&return_sem_);
   }
 
+  // |mojo_manager_| should only be destroyed after any usage of it. So it
+  // should be declared first.
+  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager_;
+
   std::unique_ptr<cros::CameraAlgorithmBridge> bridge_;
 
   std::list<int32_t> status_list_;
@@ -93,8 +97,6 @@ class CameraAlgorithmBridgeFixture : public testing::Test,
   base::Lock request_map_lock_;
 
   std::unordered_map<uint32_t, int32_t> request_map_;
-
-  std::unique_ptr<cros::CameraMojoChannelManager> mojo_manager_;
 
   DISALLOW_COPY_AND_ASSIGN(CameraAlgorithmBridgeFixture);
 };
