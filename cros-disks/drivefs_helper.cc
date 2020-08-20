@@ -62,7 +62,7 @@ bool EnsureOwnership(const Platform& platform,
     LOG(ERROR) << "Cannot access datadir " << quote(path);
     return false;
   }
-  if (current_uid == mounter_uid && current_gid == files_gid) {
+  if (current_uid == mounter_uid) {
     return true;
   }
   if (current_uid != old_mounter_uid) {
