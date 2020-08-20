@@ -15,7 +15,9 @@
 #include <base/callback_helpers.h>
 #include <base/files/file.h>
 #include <base/logging.h>
+#include <base/strings/string_number_conversions.h>
 #include <base/strings/stringprintf.h>
+#include <brillo/type_name_undecorate.h>
 #include <chromeos/dbus/service_constants.h>
 #include <crypto/random.h>
 #include <png.h>
@@ -205,6 +207,18 @@ base::ScopedFILE SetupOutputFile(brillo::ErrorPtr* error,
   return file;
 }
 
+base::Optional<ColorMode> ColorModeFromDbusString(const std::string& mode) {
+  if (mode == kScanPropertyModeColor) {
+    return MODE_COLOR;
+  } else if (mode == kScanPropertyModeGray) {
+    return MODE_GRAYSCALE;
+  } else if (mode == kScanPropertyModeLineart) {
+    return MODE_LINEART;
+  } else {
+    return base::nullopt;
+  }
+}
+
 DocumentScanSaneBackend BackendFromDeviceName(const std::string& device_name) {
   size_t colon_index = device_name.find(":");
   if (colon_index != std::string::npos) {
@@ -371,6 +385,55 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   capabilities.SerializeToArray(serialized.data(), serialized.size());
 
   *capabilities_out = std::move(serialized);
+  return true;
+}
+
+bool Manager::ScanImage(brillo::ErrorPtr* error,
+                        const string& device_name,
+                        const base::ScopedFD& outfd,
+                        const brillo::VariantDictionary& scan_properties) {
+  StartScanRequest request;
+  request.set_device_name(device_name);
+
+  uint32_t resolution = 0;
+  string color_mode_string;
+  if (!ExtractScanOptions(error, scan_properties, &resolution,
+                          &color_mode_string))
+    return false;
+
+  LOG(INFO) << "User requested color mode: '" << color_mode_string
+            << "' and resolution: " << resolution;
+
+  if (resolution != 0)
+    request.mutable_settings()->set_resolution(resolution);
+
+  if (color_mode_string != "") {
+    base::Optional<ColorMode> color_mode =
+        ColorModeFromDbusString(color_mode_string);
+    if (!color_mode.has_value()) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Invalid color mode: %s", color_mode_string.c_str());
+      return false;
+    }
+
+    request.mutable_settings()->set_color_mode(color_mode.value());
+  }
+
+  std::unique_ptr<SaneDevice> device;
+  if (!StartScanInternal(error, request, &device)) {
+    return false;
+  }
+
+  if (!RunScanLoop(error, std::move(device), outfd, device_name,
+                   base::nullopt)) {
+    return false;
+  }
+
+  LOG(INFO) << __func__ << ": completed image scan and conversion.";
+
+  if (!activity_callback_.is_null())
+    activity_callback_.Run();
   return true;
 }
 
@@ -645,6 +708,45 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   (void)report_scan_failure.Release();
   ReportScanSucceeded(device_name);
 
+  return true;
+}
+
+// static
+bool Manager::ExtractScanOptions(
+    brillo::ErrorPtr* error,
+    const brillo::VariantDictionary& scan_properties,
+    uint32_t* resolution_out,
+    string* mode_out) {
+  uint32_t resolution = 0;
+  string mode;
+  for (const auto& property : scan_properties) {
+    const string& property_name = property.first;
+    const auto& property_value = property.second;
+    if (property_name == kScanPropertyMode &&
+        property_value.IsTypeCompatible<string>()) {
+      mode = property_value.Get<string>();
+      if (mode != kScanPropertyModeColor && mode != kScanPropertyModeGray &&
+          mode != kScanPropertyModeLineart) {
+        brillo::Error::AddToPrintf(
+            error, FROM_HERE, brillo::errors::dbus::kDomain,
+            kManagerServiceError, "Invalid mode parameter %s", mode.c_str());
+        return false;
+      }
+    } else if (property_name == kScanPropertyResolution &&
+               property_value.IsTypeCompatible<uint32_t>()) {
+      resolution = property_value.Get<uint32_t>();
+    } else {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Invalid scan parameter %s of type %s", property_name.c_str(),
+          property_value.GetUndecoratedTypeName().c_str());
+      return false;
+    }
+  }
+  if (resolution_out)
+    *resolution_out = resolution;
+  if (mode_out)
+    *mode_out = mode;
   return true;
 }
 

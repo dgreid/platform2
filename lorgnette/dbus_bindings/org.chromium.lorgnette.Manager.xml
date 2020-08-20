@@ -28,6 +28,28 @@ ns-v0">
         </tp:docstring>
       </arg>
     </method>
+    <method name="ScanImage">
+      <tp:docstring>
+        Initiates a scan on |device_name|, and output PNG data to |outfd|.
+      </tp:docstring>
+      <arg name="device_name" type="s" direction="in"/>
+        <tp:docstring>
+          Device name (gained from "ListScanners").
+        </tp:docstring>
+      <arg name="outfd" type="h" direction="in"/>
+        <tp:docstring>
+          Output file descriptor.  PNG image data will be written to this fd.
+        </tp:docstring>
+      <arg name="scan_properties" type="a{sv}" direction="in"/>
+        <tp:docstring>
+          A dict of key-value pairs which define parameters of the scan.
+          Accepted keys are.
+
+            Mode (string): Capture mode (can be "Color", "Gray",
+                "Lineart".)
+            Resolution (uint32): Image resolution in DPI.
+        </tp:docstring>
+    </method>
     <method name="StartScan">
       <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
       <tp:docstring>

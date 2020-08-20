@@ -181,6 +181,162 @@ TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
   EXPECT_THAT(caps.color_modes(), ElementsAre(MODE_COLOR));
 }
 
+TEST_F(ManagerTest, ScanBlackAndWhiteSuccess) {
+  ScanParameters parameters;
+  parameters.format = kGrayscale;
+  parameters.pixels_per_line = 85;
+  parameters.lines = 29;
+  parameters.depth = 1;
+  parameters.bytes_per_line = ALIGN_UP(parameters.pixels_per_line, 8) / 8;
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/bw.pnm"),
+                  parameters);
+
+  brillo::VariantDictionary args;
+  args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeLineart));
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+  CompareImages("./test_images/bw.png", output_path_.value());
+}
+
+TEST_F(ManagerTest, ScanGrayscaleSuccess) {
+  ScanParameters parameters;
+  parameters.format = kGrayscale;
+  parameters.pixels_per_line = 32;
+  parameters.lines = 32;
+  parameters.depth = 8;
+  parameters.bytes_per_line = parameters.pixels_per_line * parameters.depth / 8;
+  SetUpTestDevice("airscan:TestDevice",
+                  base::FilePath("./test_images/gray.pnm"), parameters);
+
+  brillo::VariantDictionary args;
+  args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeGray));
+
+  ExpectScanRequest(kAirscanOther);
+  ExpectScanSuccess(kAirscanOther);
+  EXPECT_TRUE(
+      manager_.ScanImage(nullptr, "airscan:TestDevice", scan_fd_, args));
+  CompareImages("./test_images/gray.png", output_path_.value());
+}
+
+TEST_F(ManagerTest, ScanColorSuccess) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.bytes_per_line = 98 * 3;
+  parameters.pixels_per_line = 98;
+  parameters.lines = 50;
+  parameters.depth = 8;
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  parameters);
+
+  brillo::VariantDictionary args;
+  args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeColor));
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+  CompareImages("./test_images/color.png", output_path_.value());
+}
+
+TEST_F(ManagerTest, Scan16BitColorSuccess) {
+  ScanParameters parameters;
+  parameters.format = kRGB;
+  parameters.pixels_per_line = 32;
+  parameters.lines = 32;
+  parameters.depth = 16;
+  parameters.bytes_per_line =
+      parameters.pixels_per_line * parameters.depth / 8 * 3;
+  // Note: technically, color16.pnm does not really contain PNM data, since
+  // NetPBM assumes big endian 16-bit samples. Since SANE provides
+  // endian-native samples, color16.pnm stores the samples as little-endian.
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color16.pnm"),
+                  parameters);
+
+  brillo::VariantDictionary args;
+  args[kScanPropertyMode] = brillo::Any(std::string(kScanPropertyModeColor));
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanSuccess(kOtherBackend);
+  EXPECT_TRUE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+  CompareImages("./test_images/color16.png", output_path_.value());
+}
+
+TEST_F(ManagerTest, ScanFailNoDevice) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_,
+                                  brillo::VariantDictionary()));
+}
+
+TEST_F(ManagerTest, ScanFailToStart) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  device->SetStartScanResult(SANE_STATUS_IO_ERROR);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_,
+                                  brillo::VariantDictionary()));
+}
+
+TEST_F(ManagerTest, ScanFailToRead) {
+  std::string contents;
+  ASSERT_TRUE(base::ReadFileToString(base::FilePath("./test_images/color.pnm"),
+                                     &contents));
+  std::vector<uint8_t> image_data(contents.begin(), contents.end());
+  std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
+  device->SetScanData(image_data);
+  device->SetReadScanDataResult(false);
+  sane_client_->SetDeviceForName("TestDevice", std::move(device));
+
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_,
+                                  brillo::VariantDictionary()));
+}
+
+TEST_F(ManagerTest, ScanFailBadFd) {
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  ScanParameters());
+  ExpectScanRequest(kOtherBackend);
+  ExpectScanFailure(kOtherBackend);
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", base::ScopedFD(),
+                                  brillo::VariantDictionary()));
+}
+
+TEST_F(ManagerTest, ScanFailBadArgs) {
+  SetUpTestDevice("TestDevice", base::FilePath("./test_images/color.pnm"),
+                  ScanParameters());
+
+  brillo::VariantDictionary args;
+  // Const char *, not std::string.
+  args[kScanPropertyMode] = brillo::Any(kScanPropertyModeColor);
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+
+  // Invalid value.
+  args[kScanPropertyMode] = brillo::Any(std::string("InvalidMode"));
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+
+  args = brillo::VariantDictionary();
+  // Invalid name.
+  args["Invalid argument name"] = brillo::Any((uint32_t)100);
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+
+  args = brillo::VariantDictionary();
+  // Invalid argument type.
+  args[kScanPropertyResolution] = brillo::Any("100");
+  EXPECT_FALSE(manager_.ScanImage(nullptr, "TestDevice", scan_fd_, args));
+}
+
 TEST_F(ManagerTest, StartScanBlackAndWhiteSuccess) {
   ScanParameters parameters;
   parameters.format = kGrayscale;
