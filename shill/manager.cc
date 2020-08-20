@@ -139,10 +139,11 @@ constexpr char kDefaultClaimerName[] = "";
 // Currently the "user traffic" as defined by these usernames does not include
 // e.g. Android apps or system processes like the update engine.
 const char* const kUserTrafficUsernames[] = {
-    "chronos",  // Traffic originating from chrome and nacl applications
-    "debugd",   // crosh terminal
-    "cups",     // native printing using the cups daemon
-
+    "chronos",         // Traffic originating from chrome and nacl applications
+    "debugd",          // crosh terminal
+    "cups",            // native printing using the cups daemon
+    "kerberosd",       // Chrome OS Kerberos daemon
+    "kerberosd-exec",  // Kerberos third party untrusted code
     // While tlsdate is not user traffic, time sync should be attempted over
     // VPN. It is OK to send tlsdate traffic over VPN because it will also try
     // to sync time immediately after boot on the sign-in screen when no VPN can
