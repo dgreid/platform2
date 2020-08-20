@@ -36,6 +36,14 @@ class DhcpPropertiesTest : public Test {
   virtual ~DhcpPropertiesTest() {}
 
   KeyValueStore& GetDhcpProperties() { return dhcp_properties_.properties_; }
+  void SetDhcpProperty(DhcpProperties* properties,
+                       const std::string& key,
+                       const std::string& value) {
+    properties->properties_.Set<string>(key, value);
+  }
+  bool DhcpPropertiesMatch(const DhcpProperties& a, const DhcpProperties& b) {
+    return a.properties_ == b.properties_;
+  }
 
  protected:
   NiceMock<MockControl> control_;
@@ -215,6 +223,43 @@ TEST_F(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted) {
   EXPECT_CALL(storage, DeleteKey(kStorageID, "DHCPProperty.Hostname"))
       .WillOnce(Return(true));
   dhcp_properties_.Save(&storage, kStorageID);
+}
+
+TEST_F(DhcpPropertiesTest, CombineIntoEmpty) {
+  DhcpProperties to_merge(/*manager=*/nullptr);
+  SetDhcpProperty(&to_merge, "VendorClass", kVendorClass);
+  SetDhcpProperty(&to_merge, "Hostname", kHostname);
+
+  // dhcp_properties_ remain empty.
+
+  DhcpProperties merged_props =
+      DhcpProperties::Combine(dhcp_properties_, to_merge);
+  EXPECT_TRUE(DhcpPropertiesMatch(merged_props, to_merge));
+}
+
+TEST_F(DhcpPropertiesTest, CombineEmptyIntoExisting) {
+  DhcpProperties to_merge(/*manager=*/nullptr);
+  // to_merge properties remain empty.
+
+  GetDhcpProperties().Set<string>("VendorClass", kVendorClass);
+  GetDhcpProperties().Set<string>("Hostname", kHostname);
+
+  DhcpProperties merged_props =
+      DhcpProperties::Combine(dhcp_properties_, to_merge);
+  EXPECT_TRUE(DhcpPropertiesMatch(merged_props, dhcp_properties_));
+}
+
+TEST_F(DhcpPropertiesTest, CombineConflicting) {
+  DhcpProperties to_merge(/*manager=*/nullptr);
+  SetDhcpProperty(&to_merge, "VendorClass", kOverrideValue);
+  SetDhcpProperty(&to_merge, "Hostname", kHostname);
+
+  // Set conflicting VendorClass.
+  GetDhcpProperties().Set<string>("VendorClass", kVendorClass);
+
+  DhcpProperties merged_props =
+      DhcpProperties::Combine(dhcp_properties_, to_merge);
+  EXPECT_TRUE(DhcpPropertiesMatch(merged_props, to_merge));
 }
 
 TEST_F(DhcpPropertiesTest, GetValueForProperty) {

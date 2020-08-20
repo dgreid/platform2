@@ -48,8 +48,6 @@ const char DhcpProperties::kVendorClassProperty[] = "VendorClass";
 
 DhcpProperties::DhcpProperties(Manager* manager) : manager_(manager) {}
 
-DhcpProperties::~DhcpProperties() = default;
-
 void DhcpProperties::InitPropertyStore(PropertyStore* store) {
   SLOG(this, 2) << __func__;
   int i = 0;
@@ -92,6 +90,19 @@ void DhcpProperties::Save(StoreInterface* storage, const string& id) const {
       storage->DeleteKey(id, GetFullPropertyName(name));
     }
   }
+}
+
+DhcpProperties DhcpProperties::Combine(const DhcpProperties& base,
+                                       const DhcpProperties& to_merge) {
+  SLOG(nullptr, 2) << __func__;
+  DhcpProperties to_return(base.manager_);
+  to_return.properties_ = base.properties_;
+  for (const auto& it : to_merge.properties_.properties()) {
+    const string& name = it.first;
+    const brillo::Any& value = it.second;
+    to_return.properties_.SetVariant(name, value);
+  }
+  return to_return;
 }
 
 bool DhcpProperties::GetValueForProperty(const string& name,

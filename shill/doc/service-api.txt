@@ -417,6 +417,20 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			A value of "/" indicates that the service is
 			not bound to any device.
 
+		string DHCPProperty.Hostname [readwrite]
+
+			This per-service property is supported in Shill for
+			go/jetstream. It is not used in Chrome OS. The value
+			will override the Manager property for this service
+			if set. See Manager for details about the property.
+
+		string DHCPProperty.VendorClass [readwrite]
+
+			This per-service property is supported in Shill for
+			go/jetstream. It is not used in Chrome OS. The value
+			will override the Manager property for this service
+			if set. See Manager for details about the property.
+
 		array{string} Diagnostics.Disconnects [readonly]
 
 			History (wall-clock timestamps) of connection drops.
