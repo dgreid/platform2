@@ -48,6 +48,7 @@ class ModemHelper {
 
   virtual bool Reboot() = 0;
   virtual bool FlashModeCheck() = 0;
+  virtual bool ClearAttachAPN(const std::string& carrier_uuid) = 0;
 };
 
 std::unique_ptr<ModemHelper> CreateModemHelper(const HelperInfo& helper_info);

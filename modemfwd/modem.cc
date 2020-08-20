@@ -129,6 +129,10 @@ class ModemImpl : public Modem {
     return helper_->FlashCarrierFirmware(path_to_fw, version);
   }
 
+  bool ClearAttachAPN(const std::string& carrier_uuid) override {
+    return helper_->ClearAttachAPN(carrier_uuid);
+  }
+
  private:
   std::string device_id_;
   std::string equipment_id_;
@@ -233,6 +237,10 @@ class StubModem : public Modem {
   bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
                             const std::string& version) override {
     return helper_->FlashCarrierFirmware(path_to_fw, version);
+  }
+
+  bool ClearAttachAPN(const std::string& carrier_uuid) override {
+    return helper_->ClearAttachAPN(carrier_uuid);
   }
 
  private:

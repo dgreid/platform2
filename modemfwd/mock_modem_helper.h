@@ -31,6 +31,10 @@ class MockModemHelper : public ModemHelper {
               (override));
   MOCK_METHOD(bool, FlashModeCheck, (), (override));
   MOCK_METHOD(bool, Reboot, (), (override));
+  MOCK_METHOD(bool,
+              ClearAttachAPN,
+              (const std::string& carrier_uuid),
+              (override));
 };
 
 }  // namespace modemfwd

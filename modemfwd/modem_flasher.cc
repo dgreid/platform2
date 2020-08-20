@@ -80,6 +80,8 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
 
   std::string device_id = modem->GetDeviceId();
   std::string current_carrier = modem->GetCarrierId();
+  // The real carrier ID before it might be replaced by the generic one
+  std::string real_carrier = current_carrier;
   flash_state->OnCarrierSeen(current_carrier);
   FirmwareDirectory::Files files = firmware_directory_->FindFirmware(
       device_id, current_carrier.empty() ? nullptr : &current_carrier);
@@ -126,6 +128,11 @@ base::Closure ModemFlasher::TryFlash(Modem* modem) {
   if (current_carrier.empty()) {
     ELOG(INFO) << "No carrier found. Is a SIM card inserted?";
     return base::Closure();
+  }
+
+  // Clear the attach APN if needed for a specific modem/carrier combination.
+  if (!modem->ClearAttachAPN(real_carrier)) {
+    ELOG(INFO) << "Clear attach APN failed for current carrier.";
   }
 
   // Check if we have carrier firmware matching the SIM's carrier. If not,

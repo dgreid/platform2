@@ -37,6 +37,10 @@ class MockModem : public Modem {
               FlashCarrierFirmware,
               (const base::FilePath&, const std::string&),
               (override));
+  MOCK_METHOD(bool,
+              ClearAttachAPN,
+              (const std::string& carrier_uuid),
+              (override));
 };
 
 }  // namespace modemfwd

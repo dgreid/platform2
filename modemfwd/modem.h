@@ -43,6 +43,7 @@ class Modem {
                                  const std::string& version) = 0;
   virtual bool FlashCarrierFirmware(const base::FilePath& path_to_fw,
                                     const std::string& version) = 0;
+  virtual bool ClearAttachAPN(const std::string& carrier_uuid) = 0;
 };
 
 std::unique_ptr<Modem> CreateModem(

@@ -19,6 +19,8 @@ flags are declared in the [system API] repo.
 * `--flash_carrier_fw=<file>`
 * `--flash_mode_check`: see if the modem is present in firmware download mode
 * `--reboot`
+* `--clear_attach_apn=<carrier_id>`: clear the attach APN in the modem NVM if
+  the carrier ID is matching the one provided
 * `--fw_version`: can be optionally passed along with `--flash_main_fw` or
   `--flash_carrier_fw` to signify the firmware version of the passed file
 
