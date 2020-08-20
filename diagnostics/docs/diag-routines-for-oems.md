@@ -129,10 +129,6 @@ Progress: 0
 Unplug the AC adapter.
 Press ENTER to continue.
 
-Progress: 0
-Progress: 1
-...
-Progress: 99
 Progress: 100
 Output: Battery discharged 7% in 600 seconds.
 Status: Passed
@@ -169,10 +165,6 @@ Progress: 0
 Unplug the AC adapter.
 Press ENTER to continue.
 
-Progress: 0
-Progress: 1
-...
-Progress: 99
 Progress: 100
 Output: Battery discharged 7% in 600 seconds.
 Status: Passed
@@ -245,13 +237,6 @@ $ cros-health-tool diag --action=run_routine --routine=cpu_cache --length_second
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -280,13 +265,6 @@ $ cros-health-tool diag --action=run_routine --routine=cpu_stress
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -315,13 +293,6 @@ $ cros-health-tool diag --action=run_routine --routine=floating_point_accuracy -
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -352,13 +323,6 @@ $ cros-health-tool diag --action=run_routine --routine=prime_search --max_num=10
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -386,13 +350,6 @@ $ cros-health-tool diag --action=run_routine --routine=urandom --length_seconds=
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -418,13 +375,6 @@ $ cros-health-tool diag --action=run_routine --routine=memory
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 99
 Progress: 100
 Output: memtester version 4.2.2 (64-bit)
 Copyright (C) 2010 Charles Cazabon.
@@ -487,13 +437,6 @@ $ cros-health-tool diag --action=run_routine --routine=disk_read --length_second
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 99
 Progress: 100
 Status: Passed
 Status message: Routine passed.
@@ -521,13 +464,6 @@ $ cros-health-tool diag --action=run_routine --routine=nvme_self_test
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 1
-Progress: 2
-Progress: 3
-Progress: 4
-...
-Progress: 99
 Progress: 100
 Output: AQAAABAAAAA7AAAAAAAAAA==
 Status: Passed
@@ -556,10 +492,8 @@ $ cros-health-tool diag --action=run_routine --routine=nvme_wear_level --wear_le
 
 Sample output:
 ```bash
-Progress: 0
 Progress: 100
 Output: AAAAAAAAAADxBAAAAAAAAA==
-Progress: 100
 Status: Passed
 Status message: Wear-level status: PASS.
 ```
@@ -585,8 +519,6 @@ $ cros-health-tool diag --action=run_routine --routine=smartctl_check
 
 Sample output:
 ```bash
-Progress: 33
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Routine passed
@@ -614,8 +546,6 @@ $ cros-health-tool diag --action=run_routine --routine=lan_connectivity
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Lan Connectivity routine passed with no problems.
@@ -642,8 +572,6 @@ $ cros-health-tool diag --action=run_routine --routine=signal_strength
 
 Sample output:
 ```bash
-Progress: 0
-Progress: 100
 Progress: 100
 Status: Passed
 Status message: Signal Strength routine passed with no problems.

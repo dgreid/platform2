@@ -277,7 +277,8 @@ bool DiagActions::PollRoutineAndProcessResult() {
     response = adapter_->GetRoutineUpdate(
         id_, mojo_ipc::DiagnosticRoutineCommandEnum::kGetStatus,
         true /* include_output */);
-    std::cout << "Progress: " << response->progress_percent << std::endl;
+    std::cout << '\r' << "Progress: " << response->progress_percent
+              << std::flush;
 
     if (force_cancel_ && !response.is_null() &&
         response->progress_percent >= cancellation_percent_) {
@@ -299,18 +300,22 @@ bool DiagActions::PollRoutineAndProcessResult() {
       tick_clock_->NowTicks() < start_time + kMaximumExecutionTime);
 
   if (response.is_null()) {
-    std::cout << "No GetRoutineUpdateResponse received." << std::endl;
+    std::cout << '\n' << "No GetRoutineUpdateResponse received." << std::endl;
     return false;
   }
 
   if (response->routine_update_union->is_interactive_update()) {
+    // Print a newline so we don't overwrite the progress percent. No need to
+    // flush the output, since ProcessInteractiveResultAndContinue() will do
+    // that itself.
+    std::cout << '\n';
     return ProcessInteractiveResultAndContinue(
         std::move(response->routine_update_union->get_interactive_update()));
   }
 
   // Noninteractive routines without a status of kRunning must have terminated
   // in some form. Print the update to the console to let the user know.
-  std::cout << "Progress: " << response->progress_percent << std::endl;
+  std::cout << '\r' << "Progress: " << response->progress_percent << std::endl;
   if (response->output.is_valid()) {
     auto shm_mapping =
         diagnostics::GetReadOnlySharedMemoryMappingFromMojoHandle(
