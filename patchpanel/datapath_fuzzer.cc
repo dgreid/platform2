@@ -13,6 +13,7 @@
 #include <base/logging.h>
 
 #include "patchpanel/datapath.h"
+#include "patchpanel/firewall.h"
 #include "patchpanel/minijailed_process_runner.h"
 #include "patchpanel/multicast_forwarder.h"
 #include "patchpanel/net_util.h"
@@ -55,7 +56,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   FuzzedDataProvider provider(data, size);
   RandomProcessRunner runner(&provider);
-  Datapath datapath(&runner, ioctl_stub);
+  Firewall firewall;
+  Datapath datapath(&runner, &firewall, ioctl_stub);
 
   while (provider.remaining_bytes() > 0) {
     std::string netns_name = provider.ConsumeRandomLengthString(10);
