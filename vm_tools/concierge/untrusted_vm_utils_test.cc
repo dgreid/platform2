@@ -14,10 +14,6 @@
 #include <base/macros.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <chromeos/dbus/service_constants.h>
-#include <dbus/mock_bus.h>
-#include <dbus/mock_object_proxy.h>
-#include <dbus/scoped_dbus_error.h>
 
 using ::testing::_;
 using ::testing::Invoke;
@@ -29,22 +25,7 @@ namespace concierge {
 // Test fixture for actually testing the VirtualMachine functionality.
 class UntrustedVMUtilsTest : public ::testing::Test {
  public:
-  UntrustedVMUtilsTest() {
-    dbus::Bus::Options opts;
-    mock_bus_ = new dbus::MockBus(opts);
-    debugd_proxy_ =
-        new dbus::MockObjectProxy(mock_bus_.get(), debugd::kDebugdServiceName,
-                                  dbus::ObjectPath(debugd::kDebugdServicePath));
-
-    // Sets an expectation that the mock proxy's
-    // CallMethodAndBlockWithErrorDetails() will use CreateMockProxyResponse()
-    // to return responses.
-    EXPECT_CALL(*debugd_proxy_.get(),
-                CallMethodAndBlockWithErrorDetails(_, _, _))
-        .WillRepeatedly(
-            Invoke(this, &UntrustedVMUtilsTest::CreateMockProxyResponse));
-  }
-
+  UntrustedVMUtilsTest() = default;
   ~UntrustedVMUtilsTest() override = default;
 
   void SetUp() override {
@@ -54,8 +35,8 @@ class UntrustedVMUtilsTest : public ::testing::Test {
 
     // Set a kernel version that supports untrusted VMs by default. Individual
     // test cases can override this if testing for related error scenarios.
-    untrusted_vm_utils_ = std::make_unique<UntrustedVMUtils>(
-        debugd_proxy_.get(), l1tf_status_path_, mds_status_path_);
+    untrusted_vm_utils_ =
+        std::make_unique<UntrustedVMUtils>(l1tf_status_path_, mds_status_path_);
   }
 
  protected:
@@ -87,32 +68,6 @@ class UntrustedVMUtilsTest : public ::testing::Test {
   base::FilePath mds_status_path_;
 
   std::unique_ptr<UntrustedVMUtils> untrusted_vm_utils_;
-
- private:
-  std::unique_ptr<dbus::Response> CreateMockProxyResponse(
-      dbus::MethodCall* method_call,
-      int timeout_ms,
-      dbus::ScopedDBusError* error) {
-    if (method_call->GetInterface() != debugd::kDebugdInterface) {
-      LOG(ERROR) << "Unexpected method call: " << method_call->ToString();
-      return std::unique_ptr<dbus::Response>();
-    }
-
-    std::unique_ptr<dbus::Response> response = dbus::Response::CreateEmpty();
-    if (method_call->GetMember() != debugd::kSetSchedulerConfigurationV2) {
-      LOG(ERROR) << "Unexpected method call: " << method_call->ToString();
-      return std::unique_ptr<dbus::Response>();
-    }
-
-    dbus::MessageWriter writer(response.get());
-    writer.AppendBool(true);
-    return response;
-  }
-
-  scoped_refptr<dbus::MockBus> mock_bus_;
-  scoped_refptr<dbus::MockObjectProxy> debugd_proxy_;
-
-  DISALLOW_COPY_AND_ASSIGN(UntrustedVMUtilsTest);
 };
 
 // Checks mitigation status for all L1TF statuses.
@@ -185,11 +140,6 @@ TEST_F(UntrustedVMUtilsTest, CheckMDSStatus) {
   CheckMDSStatus(
       "Mitigation: Clear CPU buffers; SMT Host state unknown",
       UntrustedVMUtils::MitigationStatus::VULNERABLE_DUE_TO_SMT_ENABLED);
-}
-
-// Checks if |DisableSMT| API makes a D-Bus call inside.
-TEST_F(UntrustedVMUtilsTest, CheckDisableSMT) {
-  EXPECT_TRUE(untrusted_vm_utils_->DisableSMT());
 }
 
 }  // namespace concierge

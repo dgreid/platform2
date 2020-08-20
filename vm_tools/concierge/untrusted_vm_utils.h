@@ -18,11 +18,9 @@ namespace concierge {
 // untrusted VMs.
 class UntrustedVMUtils {
  public:
-  // |debugd_proxy| - Used to call into debugd daemon.
   // |l1tf_status_path| - Path to read L1TF vulnerability status from.
   // |mds_status_path| - Path to read MDS vulnerability status from.
-  UntrustedVMUtils(dbus::ObjectProxy* debugd_proxy,
-                   const base::FilePath& l1tf_status_path,
+  UntrustedVMUtils(const base::FilePath& l1tf_status_path,
                    const base::FilePath& mds_status_path);
 
   // Mitigation status for L1TF and MDS vulnerabilities.
@@ -44,14 +42,7 @@ class UntrustedVMUtils {
   // - Check if MDS is mitigated.
   MitigationStatus CheckUntrustedVMMitigationStatus();
 
-  // Disables SMT on the host it's run on. Returns true if successful or if SMT
-  // was already disabled. Returns false otherwise.
-  bool DisableSMT();
-
  private:
-  // Not owned. Used for calling the debugd API.
-  dbus::ObjectProxy* const debugd_proxy_;
-
   // Path to read L1TF vulnerability status from.
   base::FilePath l1tf_status_path_;
 

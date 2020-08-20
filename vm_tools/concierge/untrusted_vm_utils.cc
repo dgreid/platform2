@@ -23,14 +23,6 @@ namespace concierge {
 
 namespace {
 
-// Scheduler configuration to be passed to the debugd API to disable SMT on the
-// device.
-const char kSchedulerConfigurationConservative[] = "conservative";
-
-// Error returned by debugd::SetSchedulerConfigurationV2 API if SMT is not
-// supported by the host.
-const char kInvalidArchitectureErrorMsg[] = "Invalid architecture";
-
 // Returns the L1TF mitigation status of the host it's run on.
 UntrustedVMUtils::MitigationStatus GetL1TFMitigationStatus(
     const base::FilePath& l1tf_status_path) {
@@ -125,13 +117,9 @@ UntrustedVMUtils::MitigationStatus GetMDSMitigationStatus(
 
 }  // namespace
 
-UntrustedVMUtils::UntrustedVMUtils(
-    dbus::ObjectProxy* debugd_proxy,
-    const base::FilePath& l1tf_status_path,
-    const base::FilePath& mds_status_path)
-    : debugd_proxy_(debugd_proxy),
-      l1tf_status_path_(l1tf_status_path),
-      mds_status_path_(mds_status_path) {
+UntrustedVMUtils::UntrustedVMUtils(const base::FilePath& l1tf_status_path,
+                                   const base::FilePath& mds_status_path)
+    : l1tf_status_path_(l1tf_status_path), mds_status_path_(mds_status_path) {
   DCHECK(!l1tf_status_path.empty());
   DCHECK(!mds_status_path.empty());
 }
@@ -143,36 +131,6 @@ UntrustedVMUtils::CheckUntrustedVMMitigationStatus() {
     return status;
 
   return GetMDSMitigationStatus(mds_status_path_);
-}
-
-bool UntrustedVMUtils::DisableSMT() {
-  dbus::MethodCall method_call(debugd::kDebugdInterface,
-                               debugd::kSetSchedulerConfigurationV2);
-  dbus::MessageWriter writer(&method_call);
-  writer.AppendString(kSchedulerConfigurationConservative);
-  writer.AppendBool(true /* lock_policy */);
-
-  dbus::ScopedDBusError dbus_error;
-  std::unique_ptr<dbus::Response> response =
-      debugd_proxy_->CallMethodAndBlockWithErrorDetails(
-          &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT, &dbus_error);
-  if (!response) {
-    // Non x86_64 devices don't have SMT. Pretend this operation succeeded.
-    if (dbus_error.is_set() &&
-        !strcmp(dbus_error.message(), kInvalidArchitectureErrorMsg)) {
-      return true;
-    }
-    return false;
-  }
-
-  bool result;
-  dbus::MessageReader reader(response.get());
-  if (!reader.PopBool(&result)) {
-    LOG(ERROR) << "Failed to read SetAndLockConservativeSchedulerConfiguration "
-                  "response ";
-    return false;
-  }
-  return result;
 }
 
 }  // namespace concierge
