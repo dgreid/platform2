@@ -32,17 +32,17 @@ if [ -w "${DRM_TRACEFS_BUF_SIZE}" ]; then
   echo 64 > "${DRM_TRACEFS_BUF_SIZE}"
 fi
 
-mkdir -p $UI_LOG_DIR
-ln -sf ui.$(date +%Y%m%d-%H%M%S) $UI_LOG_DIR/$UI_LOG_FILE
+mkdir -p "${UI_LOG_DIR}"
+ln -sf ui.$(date +%Y%m%d-%H%M%S) "${UI_LOG_DIR}/${UI_LOG_FILE}"
 
-mkdir -p $CONTAINER_ROOT_DIR
+mkdir -p "${CONTAINER_ROOT_DIR}"
 
 # Create a top-level cpu cgroup for ui tasks.  This will be used to share cpu
 # resources with tasks not managed by the UI.  Android will be placed in a
 # parallel cgroup allowing priority to be given to one or the other depending
 # on what the user is doing at the time.
-if [ ! -d $UI_CPU_CGROUP_DIR ]; then
-  mkdir -p ${UI_CPU_CGROUP_DIR}
+if [ ! -d "${UI_CPU_CGROUP_DIR}" ]; then
+  mkdir -p "${UI_CPU_CGROUP_DIR}"
 fi
 
 # Set up cgroups for chrome. We create two task groups, one for at most one
@@ -51,11 +51,11 @@ fi
 # the lowest "2" such that other processes like the update-engine can be even
 # lower. The default value is 1024.
 CHROME_CPU_CGROUP_DIR=/sys/fs/cgroup/cpu/chrome_renderers
-if [ ! -d $CHROME_CPU_CGROUP_DIR ]; then
-  mkdir -p ${CHROME_CPU_CGROUP_DIR}/foreground
-  mkdir -p ${CHROME_CPU_CGROUP_DIR}/background
-  echo "10" > ${CHROME_CPU_CGROUP_DIR}/background/cpu.shares
-  chown -R chronos ${CHROME_CPU_CGROUP_DIR}
+if [ ! -d "${CHROME_CPU_CGROUP_DIR}" ]; then
+  mkdir -p "${CHROME_CPU_CGROUP_DIR}/foreground"
+  mkdir -p "${CHROME_CPU_CGROUP_DIR}/background"
+  echo "10" > "${CHROME_CPU_CGROUP_DIR}/background/cpu.shares"
+  chown -R chronos "${CHROME_CPU_CGROUP_DIR}"
 fi
 
 # Set up a folder on the stateful partition for ephemeral encrypted swap
@@ -69,10 +69,10 @@ fi
 # Set up the renderer freezer.  This is used during the suspend/resume cycle
 # to freeze all the chrome renderers so that they don't take up a lot of power
 # when the system comes up in dark resume
-if [ ! -d $CHROME_FREEZER_CGROUP_DIR ]; then
-  mkdir -p ${CHROME_FREEZER_CGROUP_DIR}
+if [ ! -d "${CHROME_FREEZER_CGROUP_DIR}" ]; then
+  mkdir -p "${CHROME_FREEZER_CGROUP_DIR}"
   mkdir -p "${CHROME_FREEZER_CGROUP_DIR}/to_be_frozen"
-  chown -R chronos ${CHROME_FREEZER_CGROUP_DIR}
+  chown -R chronos "${CHROME_FREEZER_CGROUP_DIR}"
 fi
 
 # Set up a cgroup for containers(Android) started by session manager.  To
@@ -80,9 +80,9 @@ fi
 # once the user clicks on an Android app.  Keeping the usage low prevents
 # Android boot from slowing the login process.
 CONTAINER_CGROUP_DIR=/sys/fs/cgroup/cpu/session_manager_containers
-if [ -d $CONTAINER_CGROUP_DIR ]; then
-  echo "32" > ${CONTAINER_CGROUP_DIR}/cpu.shares
-  echo "-1" > ${CONTAINER_CGROUP_DIR}/cpu.cfs_quota_us
+if [ -d "${CONTAINER_CGROUP_DIR}" ]; then
+  echo "32" > "${CONTAINER_CGROUP_DIR}/cpu.shares"
+  echo "-1" > "${CONTAINER_CGROUP_DIR}/cpu.cfs_quota_us"
 fi
 
 if crossystem "cros_debug?1"; then
