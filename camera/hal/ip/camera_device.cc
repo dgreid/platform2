@@ -420,6 +420,14 @@ void CameraDevice::DecodeJpeg(base::ReadOnlySharedMemoryRegion shm,
           .PassPlatformHandle();
   JpegDecodeAccelerator::Error err =
       jda_->DecodeSync(fd.get().fd, size, 0, *buffer);
+  if (err == JpegDecodeAccelerator::Error::TRY_START_AGAIN) {
+    LOGFID(WARNING, id_) << "Restarting JPEG processor";
+    if (!jda_->Start()) {
+      LOGFID(ERROR, id_) << "Failed to restart JPEG processor";
+    } else {
+      err = jda_->DecodeSync(fd.get().fd, size, 0, *buffer);
+    }
+  }
   if (err != JpegDecodeAccelerator::Error::NO_ERRORS) {
     LOGFID(ERROR, id_) << "Jpeg decoder returned error";
     request_queue_.NotifyError(std::move(request));
