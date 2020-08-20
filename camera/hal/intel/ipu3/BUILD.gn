@@ -145,9 +145,9 @@ shared_library("libcamera_hal") {
     "libyuv",
   ]
   deps = [
-    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
     "//camera/common:libcamera_jpeg",
     "//camera/common:libcamera_metrics",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
   ]
 }
 

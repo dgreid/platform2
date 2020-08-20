@@ -36,9 +36,7 @@ if (use.test) {
       "scanner.h",
       "scanner_test.cc",
     ]
-    deps = [
-      "//common-mk/testrunner",
-    ]
+    deps = [ "//common-mk/testrunner" ]
   }
 }
 

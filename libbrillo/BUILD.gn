@@ -281,9 +281,7 @@ generate_pkg_config("libbrillo_pc") {
 }
 
 action("libbrillo") {
-  deps = [
-    ":libbrillo_pc",
-  ]
+  deps = [ ":libbrillo_pc" ]
   foreach(sublib, libbrillo_sublibs) {
     deps += [ ":lib" + sublib.library_name ]
   }

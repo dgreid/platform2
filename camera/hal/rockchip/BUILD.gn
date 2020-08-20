@@ -3,9 +3,7 @@
 # found in the LICENSE file.
 
 group("all") {
-  deps = [
-    ":libcamera_hal",
-  ]
+  deps = [ ":libcamera_hal" ]
 }
 
 shared_library("libcamera_hal") {
@@ -141,11 +139,11 @@ shared_library("libcamera_hal") {
     "USING_DECLARED_NAMESPACE=using namespace android::camera2",
   ]
   deps = [
-    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
+    ":libcam_algo",
     "//camera/common:libcamera_jpeg",
     "//camera/common:libcamera_metrics",
     "//camera/common/libcab",
-    ":libcam_algo",
+    "//camera/common/libcamera_ipc:libcamera_ipc_mojom",
   ]
 }
 
