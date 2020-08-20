@@ -109,6 +109,16 @@ HERMES_PROFILE_IFACE=org.chromium.Hermes.Profile
 esim() {
   local command="$1"
   shift
+
+  local euicc
+  if [ "$1" = "-euicc" ]; then
+    euicc="/org/chromium/Hermes/euicc/$2"
+    shift 2
+  else
+    euicc=$(default_euicc)
+  fi
+  [ -z "${euicc}" ] && error_exit "No euicc found."
+
   case "${command}" in
     status)
       poll_for_dbus_service "${HERMES}"
@@ -116,19 +126,19 @@ esim() {
       ;;
     install)
       poll_for_dbus_service "${HERMES}"
-      esim_install "$@"
+      esim_install "${euicc}" "$@"
       ;;
     uninstall)
       poll_for_dbus_service "${HERMES}"
-      esim_uninstall "$@"
+      esim_uninstall "${euicc}" "$@"
       ;;
     enable)
       poll_for_dbus_service "${HERMES}"
-      esim_enable "$@"
+      esim_enable "${euicc}" "$@"
       ;;
     disable)
       poll_for_dbus_service "${HERMES}"
-      esim_disable "$@"
+      esim_disable "${euicc}" "$@"
       ;;
     *)
       error_exit "Expected one of {status|install|uninstall|enable|disable}"
@@ -146,18 +156,8 @@ default_euicc() {
   all_euiccs | head -1
 }
 
-euicc_or_default() {
-  if [ "$1" = "-euicc" ]; then
-    echo "/org/chromium/Hermes/euicc/$2"
-    shift 2
-  else
-    default_euicc
-  fi
-}
-
 esim_profile_from_iccid() {
   local euicc="$1"
-  [ -z "${euicc}" ] && error_exit "No euicc provided."
 
   local iccid="$2"
   [ -z "${iccid}" ] && error_exit "No iccid provided."
@@ -206,12 +206,9 @@ esim_status() {
 }
 
 esim_install() {
-  local euicc
-  euicc=$(euicc_or_default "$@")
-  [ -z "${euicc}" ] && error_exit "No euicc found."
-
-  local activation_code="$1"
-  local confirmation_code="$2"
+  local euicc="$1"
+  local activation_code="$2"
+  local confirmation_code="$3"
   [ -z "${activation_code}" ] && error_exit "No activation_code provided."
 
   dbus_call "${HERMES}" "${euicc}" \
@@ -220,35 +217,24 @@ esim_install() {
 }
 
 esim_uninstall() {
-  local euicc
-  euicc=$(euicc_or_default "$@")
-  [ -z "${euicc}" ] && error_exit "No euicc found."
-
+  local euicc="$1"
   local profile
-  profile=$(esim_profile_from_iccid "${euicc}" "$@")
+  profile=$(esim_profile_from_iccid "$@")
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${euicc}" \
             "${HERMES_EUICC_IFACE}.UninstallProfile" objpath:"${profile}"
 }
 
 esim_enable() {
-  local euicc
-  euicc=$(euicc_or_default "$@")
-  [ -z "${euicc}" ] && error_exit "No euicc found."
-
   local profile
-  profile=$(esim_profile_from_iccid "${euicc}" "$@")
+  profile=$(esim_profile_from_iccid "$@")
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Enable"
 }
 
 esim_disable() {
-  local euicc
-  euicc=$(euicc_or_default "$@")
-  [ -z "${euicc}" ] && error_exit "No euicc found."
-
   local profile
-  profile=$(esim_profile_from_iccid "${euicc}" "$@")
+  profile=$(esim_profile_from_iccid "$@")
   [ -z "${profile}" ] && exit 1
   dbus_call "${HERMES}" "${profile}" "${HERMES_PROFILE_IFACE}.Disable"
 }
