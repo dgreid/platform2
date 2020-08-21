@@ -132,7 +132,8 @@ int main(int argc, char* argv[]) {
 
   bool success = response->result == mojo_ipc::OcrResultEnum::SUCCESS;
   if (success) {
-    std::cout << "Generated searchable PDF file: " << output_pdf_filename;
+    std::cout << "Generated searchable PDF file: " << output_pdf_filename
+              << std::endl;
   } else {
     LOG(ERROR) << response->result_message;
   }
