@@ -8,9 +8,9 @@
 #include "timberslide/fingerprint_log_listener_impl.h"
 
 using testing::_;
-using testing::Return;
 using testing::Invoke;
 using testing::NiceMock;
+using testing::Return;
 
 namespace timberslide {
 namespace {

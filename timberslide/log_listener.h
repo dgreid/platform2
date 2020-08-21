@@ -15,6 +15,6 @@ class LogListener {
   virtual void OnLogLine(const std::string& line) = 0;
 };
 
-}  // timberslide
+}  // namespace timberslide
 
 #endif  // TIMBERSLIDE_LOG_LISTENER_H_

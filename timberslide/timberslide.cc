@@ -196,7 +196,6 @@ std::string TimberSlide::ProcessLogBuffer(const char* buffer,
   return oss.str();
 }
 
-
 void TimberSlide::OnEventReadable() {
   char buffer[4096];
   int ret;

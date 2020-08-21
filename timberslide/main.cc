@@ -23,8 +23,7 @@ int main(int argc, char* argv[]) {
                 "File where the recent EC logs are posted to.");
   DEFINE_string(log_directory, kDefaultLogDirectory,
                 "Directory where the output logs should be.");
-  DEFINE_string(uptime_file, kDefaultDeviceUptimeFile,
-                "Device uptime file.");
+  DEFINE_string(uptime_file, kDefaultDeviceUptimeFile, "Device uptime file.");
   brillo::FlagHelper::Init(
       argc, argv, "timberslide concatenates EC logs for use in debugging.");
 
