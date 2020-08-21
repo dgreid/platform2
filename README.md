@@ -140,6 +140,7 @@ copies.
 | [usb_bouncer](./usb_bouncer/) | Tools for managing USBGuard white-lists and configuration on Chrome OS |
 | [userfeedback](./userfeedback/) | Various utilities to gather extended data for user feedback reports |
 | [userspace_touchpad](./userspace_touchpad/) ||
+| [verity](./verity/) | Userspace tools for working dm-verity (verified disk images) |
 | [virtual_file_provider](./virtual_file_provider/) ||
 | [vm_tools](./vm_tools/) | Utilities for Virtual Machine (VM) orchestration |
 | [vpn-manager](./vpn-manager/) | Chrome OS Native L2TP/IPSec VPN Daemon |
