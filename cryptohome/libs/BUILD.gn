@@ -130,7 +130,7 @@ pkg_config("libcrosplatform_dependent_config") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libecryptfs",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "openssl",
     "vboot_host",
   ]

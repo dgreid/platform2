@@ -79,7 +79,7 @@ pkg_config("libchrome_test_config") {
 }
 
 pkg_config("libutil_dependent_config") {
-  pkg_deps = [ "libmetrics-${libbase_ver}" ]
+  pkg_deps = [ "libmetrics" ]
 }
 
 static_library("libutil") {
@@ -197,7 +197,7 @@ static_library("libpolicy_stub") {
 }
 
 pkg_config("libpowerd_dependent_config") {
-  pkg_deps = [ "libmetrics-${libbase_ver}" ]
+  pkg_deps = [ "libmetrics" ]
 }
 
 static_library("libpowerd") {

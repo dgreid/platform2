@@ -34,7 +34,7 @@ pkg_config("u2fd_config") {
   # NOSORT
   pkg_deps = [
     "libattestation-client",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libpower_manager-client",
     "libtrunks",
     "openssl",

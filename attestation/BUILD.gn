@@ -212,7 +212,7 @@ source_set("server_library") {
 # The attestation daemon.
 pkg_config("attestationd_config") {
   pkg_deps = [
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
   ]
 }
@@ -309,7 +309,7 @@ if (use.test) {
     pkg_deps = [
       "libbrillo-test",
       "libchrome-test-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
     ]
   }
   executable("attestation_testrunner") {

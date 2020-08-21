@@ -12,7 +12,7 @@ pkg_config("federated_common_pkg_deps") {
   pkg_deps = [
     "libbrillo-${libbase_ver}",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libmojo-${libbase_ver}",
   ]
 }

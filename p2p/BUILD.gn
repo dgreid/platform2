@@ -73,7 +73,7 @@ pkg_config("libp2p-client_dependent_config") {
     "avahi-glib",
     "glib-2.0",
     "gobject-2.0",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
   ]
 }
 
@@ -104,7 +104,7 @@ pkg_config("libp2p-server_dependent_config") {
     "gio-unix-2.0",
     "glib-2.0",
     "gobject-2.0",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
   ]
 }
 
@@ -134,7 +134,7 @@ pkg_config("libp2p-http-server_dependent_config") {
     "avahi-client",
     "avahi-glib",
     "glib-2.0",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
   ]
 }
 

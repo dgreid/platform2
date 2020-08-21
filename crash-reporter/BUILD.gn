@@ -108,7 +108,7 @@ static_library("libcrash_reporter") {
 pkg_config("crash_reporter_config") {
   pkg_deps = [
     "dbus-1",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "protobuf",
     "vm_protos",
@@ -136,7 +136,7 @@ pkg_config("libcrash_sender_config") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "libsession_manager-client",
     "libshill-client",
@@ -174,7 +174,7 @@ pkg_config("anomaly_detector_config") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "re2",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -245,7 +245,7 @@ if (use.test || use.fuzzer) {
     pkg_deps = [
       "libchrome-test-${libbase_ver}",
       "libdebugd-client-test",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libsession_manager-client-test",
       "libshill-client-test",
       "protobuf",

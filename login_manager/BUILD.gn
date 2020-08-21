@@ -33,7 +33,7 @@ pkg_config("target_defaults") {
     "libchromeos-ui-${libbase_ver}",
     "libcontainer",
     "libcros_config",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "libpasswordprovider",
     "nss",

@@ -27,7 +27,7 @@ pkg_config("target_defaults") {
     "blkid",
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "libsession_manager-client",
   ]

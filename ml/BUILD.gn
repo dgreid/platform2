@@ -51,7 +51,7 @@ pkg_config("ml_common_pkg_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libmojo-${libbase_ver}",
     "zlib",
   ]

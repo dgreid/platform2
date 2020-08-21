@@ -142,7 +142,7 @@ pkg_config("authpolicy_parser_config") {
     "libbrillo",
     "libcap",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "libpcrecpp",
 
@@ -191,7 +191,7 @@ if (use.test) {
       "libcap",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libminijail",
       "libpcrecpp",
 

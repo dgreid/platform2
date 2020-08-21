@@ -88,7 +88,7 @@ pkg_config("kerberosd_config") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
 
     # system_api depends on protobuf (or protobuf-lite). It must
@@ -121,7 +121,7 @@ if (use.test) {
       "libbrillo",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libminijail",
 
       # system_api depends on protobuf (or protobuf-lite). It must
@@ -166,7 +166,7 @@ if (use.fuzzer) {
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libminijail",
 
       # system_api depends on protobuf (or protobuf-lite). It must

@@ -20,7 +20,7 @@ pkg_config("target_defaults_deps") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libpng",
     "protobuf-lite",
     "sane-backends",

@@ -81,7 +81,7 @@ executable("cryptohome") {
     "libbrillo-glib",
     "libchrome-${libbase_ver}",
     "libecryptfs",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "openssl",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -129,7 +129,7 @@ executable("cryptohomed") {
     "libbrillo-glib",
     "libchrome-${libbase_ver}",
     "libecryptfs",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "openssl",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -186,7 +186,7 @@ executable("cryptohome-proxy") {
     "libattestation-client",
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libtpm_manager-client",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -219,7 +219,7 @@ executable("lockbox-cache") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libecryptfs",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "openssl",
     "vboot_host",
   ]
@@ -294,7 +294,7 @@ executable("tpm-manager") {
     "libbrillo-glib",
     "libchrome-${libbase_ver}",
     "libecryptfs",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "openssl",
 
     # system_api depends on protobuf (or protobuf-lite). It must appear
@@ -502,7 +502,7 @@ if (use.test) {
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
       "libecryptfs",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libtpm_manager-client",
       "libtpm_manager-client-test",
       "openssl",
@@ -670,7 +670,7 @@ if (use.tpm2) {
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
       "libecryptfs",
       "openssl",
 

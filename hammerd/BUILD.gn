@@ -29,7 +29,7 @@ pkg_config("target_defaults") {
     "fmap",
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libpcrecpp",
     "openssl",
 

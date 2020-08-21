@@ -31,7 +31,7 @@ pkg_config("target_defaults_pkg_deps") {
     "libcros_config",
     "libcrypto",
     "libcryptohome-client",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
     "libpatchpanel-client",
     "libselinux",

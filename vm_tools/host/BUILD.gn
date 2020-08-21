@@ -187,7 +187,7 @@ static_library("libcicerone") {
   libs = [ "grpc" ]
   all_dependent_pkg_deps = [
     "grpc++",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libshill-client",
     "protobuf",
     "system_api",

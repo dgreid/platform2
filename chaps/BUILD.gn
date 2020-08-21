@@ -114,7 +114,7 @@ shared_library("libchaps") {
 
 pkg_config("chapsd_config") {
   pkg_deps = [
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
   ]
 }
@@ -352,7 +352,7 @@ if (use.test) {
   }
 
   pkg_config("object_store_test_config") {
-    pkg_deps = [ "libmetrics-${libbase_ver}" ]
+    pkg_deps = [ "libmetrics" ]
   }
 
   executable("object_store_test") {

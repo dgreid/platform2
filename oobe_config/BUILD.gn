@@ -31,7 +31,7 @@ pkg_config("target_defaults") {
   pkg_deps = [
     "libbrillo",
     "libchrome-${libbase_ver}",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libtpmcrypto",
 
     # system_api depends on protobuf (or protobuf-lite). It must

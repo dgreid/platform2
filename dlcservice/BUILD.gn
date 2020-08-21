@@ -32,7 +32,7 @@ pkg_config("target_defaults") {
     "libchrome-${libbase_ver}",
     "libbrillo",
     "libimageloader-client",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libsession_manager-client",
     "libimageloader-manifest",
     "libupdate_engine-client",

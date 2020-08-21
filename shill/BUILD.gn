@@ -226,7 +226,7 @@ pkg_config("libshill_config") {
 pkg_config("libshill_all_dependent_config") {
   pkg_deps = [
     "libcares",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libpasswordprovider",
     "libpower_manager-client",
   ]

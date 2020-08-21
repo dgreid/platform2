@@ -149,7 +149,7 @@ static_library("server_library") {
 # The tpm_manager daemon.
 pkg_config("tpm_managerd_config") {
   pkg_deps = [
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libminijail",
   ]
 }
@@ -217,7 +217,7 @@ if (use.test) {
     pkg_deps = [
       "libbrillo-test",
       "libchrome-test-${libbase_ver}",
-      "libmetrics-${libbase_ver}",
+      "libmetrics",
     ]
   }
 

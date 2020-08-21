@@ -36,7 +36,7 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libcros_config",
-    "libmetrics-${libbase_ver}",
+    "libmetrics",
     "libpower_manager-client",
     "fmap",
     "openssl",
