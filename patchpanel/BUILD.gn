@@ -41,7 +41,10 @@ pkg_config("target_defaults") {
   } else {
     pkg_deps += [ "protobuf-lite" ]
   }
-  defines = [ "USE_ARCVM=${use.arcvm}" ]
+  defines = [
+    "USE_ARCVM=${use.arcvm}",
+    "USE_JETSTREAM_ROUTING=${use.jetstream_routing}",
+  ]
 }
 
 proto_library("protos") {

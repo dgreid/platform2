@@ -216,7 +216,92 @@ void Manager::InitialSetup() {
   }
   LOG(INFO) << "DBus service interface ready";
 
+  routing_svc_ = std::make_unique<RoutingService>();
+
+  StartDatapath();
+
+  nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
+      &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
+
+  shill_client_ = std::make_unique<ShillClient>(bus_);
+  auto* const forwarder = static_cast<TrafficForwarder*>(this);
+
+  GuestMessage::GuestType arc_guest =
+      USE_ARCVM ? GuestMessage::ARC_VM : GuestMessage::ARC;
+  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
+                                          &addr_mgr_, forwarder, arc_guest);
+  cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
+                                                datapath_.get(), forwarder);
+  network_monitor_svc_ =
+      std::make_unique<NetworkMonitorService>(shill_client_.get());
+  network_monitor_svc_->Start();
+
+  counters_svc_ =
+      std::make_unique<CountersService>(shill_client_.get(), runner_.get());
+
+  nd_proxy_->Listen();
+}
+
+void Manager::OnShutdown(int* exit_code) {
+  LOG(INFO) << "Shutting down and cleaning up";
+  cros_svc_.reset();
+  arc_svc_.reset();
+  close(connected_namespaces_epollfd_);
+  // Tear down any remaining connected namespace.
+  std::vector<int> connected_namespaces_fdkeys;
+  for (const auto& kv : connected_namespaces_)
+    connected_namespaces_fdkeys.push_back(kv.first);
+  for (const int fdkey : connected_namespaces_fdkeys)
+    DisconnectNamespace(fdkey);
+  StopDatapath();
+}
+
+void Manager::OnSubprocessExited(pid_t pid, const siginfo_t&) {
+  LOG(ERROR) << "Subprocess " << pid << " exited unexpectedly -"
+             << " attempting to restart";
+
+  HelperProcess* proc;
+  if (pid == adb_proxy_->pid()) {
+    proc = adb_proxy_.get();
+  } else if (pid == mcast_proxy_->pid()) {
+    proc = mcast_proxy_.get();
+  } else if (pid == nd_proxy_->pid()) {
+    proc = nd_proxy_.get();
+  } else {
+    LOG(DFATAL) << "Unknown child process";
+    return;
+  }
+
+  process_reaper_.ForgetChild(pid);
+
+  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&Manager::RestartSubprocess, weak_factory_.GetWeakPtr(), proc),
+      base::TimeDelta::FromMilliseconds((2 << proc->restarts()) *
+                                        kSubprocessRestartDelayMs));
+}
+
+void Manager::RestartSubprocess(HelperProcess* subproc) {
+  if (subproc->Restart()) {
+    DCHECK(process_reaper_.WatchForChild(
+        FROM_HERE, subproc->pid(),
+        base::Bind(&Manager::OnSubprocessExited, weak_factory_.GetWeakPtr(),
+                   subproc->pid())))
+        << "Failed to watch child process " << subproc->pid();
+  }
+}
+
+void Manager::StartDatapath() {
+  // b/162966185: Allow Jetstream to disable:
+  //  - the IP forwarding setup used for hosting VMs and containers,
+  //  - the iptables rules for fwmark based routing.
+  if (USE_JETSTREAM_ROUTING) {
+    LOG(INFO) << "Skipping Datapath routing setup";
+    return;
+  }
+
   auto& runner = datapath_->runner();
+
   // Enable IPv4 packet forwarding
   if (runner.sysctl_w("net.ipv4.ip_forward", "1") != 0) {
     LOG(ERROR) << "Failed to update net.ipv4.ip_forward."
@@ -263,42 +348,11 @@ void Manager::InitialSetup() {
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
   }
-
-  routing_svc_ = std::make_unique<RoutingService>();
-
-  nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
-      &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
-
-  shill_client_ = std::make_unique<ShillClient>(bus_);
-  auto* const forwarder = static_cast<TrafficForwarder*>(this);
-
-  GuestMessage::GuestType arc_guest =
-      USE_ARCVM ? GuestMessage::ARC_VM : GuestMessage::ARC;
-  arc_svc_ = std::make_unique<ArcService>(shill_client_.get(), datapath_.get(),
-                                          &addr_mgr_, forwarder, arc_guest);
-  cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
-                                                datapath_.get(), forwarder);
-  network_monitor_svc_ =
-      std::make_unique<NetworkMonitorService>(shill_client_.get());
-  network_monitor_svc_->Start();
-
-  counters_svc_ =
-      std::make_unique<CountersService>(shill_client_.get(), runner_.get());
-
-  nd_proxy_->Listen();
 }
 
-void Manager::OnShutdown(int* exit_code) {
-  LOG(INFO) << "Shutting down and cleaning up";
-  cros_svc_.reset();
-  arc_svc_.reset();
-  close(connected_namespaces_epollfd_);
-  // Tear down any remaining connected namespace.
-  std::vector<int> connected_namespaces_fdkeys;
-  for (const auto& kv : connected_namespaces_)
-    connected_namespaces_fdkeys.push_back(kv.first);
-  for (const int fdkey : connected_namespaces_fdkeys)
-    DisconnectNamespace(fdkey);
+void Manager::StopDatapath() {
+  if (USE_JETSTREAM_ROUTING)
+    return;
 
   datapath_->RemoveOutboundIPv4SNATMark("vmtap+");
   datapath_->RemoveInterfaceSNAT("wwan+");
@@ -318,41 +372,6 @@ void Manager::OnShutdown(int* exit_code) {
   }
   if (runner.sysctl_w("net.ipv4.ip_forward", "0") != 0) {
     LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
-  }
-}
-
-void Manager::OnSubprocessExited(pid_t pid, const siginfo_t&) {
-  LOG(ERROR) << "Subprocess " << pid << " exited unexpectedly -"
-             << " attempting to restart";
-
-  HelperProcess* proc;
-  if (pid == adb_proxy_->pid()) {
-    proc = adb_proxy_.get();
-  } else if (pid == mcast_proxy_->pid()) {
-    proc = mcast_proxy_.get();
-  } else if (pid == nd_proxy_->pid()) {
-    proc = nd_proxy_.get();
-  } else {
-    LOG(DFATAL) << "Unknown child process";
-    return;
-  }
-
-  process_reaper_.ForgetChild(pid);
-
-  base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-      FROM_HERE,
-      base::Bind(&Manager::RestartSubprocess, weak_factory_.GetWeakPtr(), proc),
-      base::TimeDelta::FromMilliseconds((2 << proc->restarts()) *
-                                        kSubprocessRestartDelayMs));
-}
-
-void Manager::RestartSubprocess(HelperProcess* subproc) {
-  if (subproc->Restart()) {
-    DCHECK(process_reaper_.WatchForChild(
-        FROM_HERE, subproc->pid(),
-        base::Bind(&Manager::OnSubprocessExited, weak_factory_.GetWeakPtr(),
-                   subproc->pid())))
-        << "Failed to watch child process " << subproc->pid();
   }
 }
 

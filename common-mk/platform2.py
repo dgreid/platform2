@@ -74,6 +74,7 @@ _IUSE = [
     'ipu6',
     'ipu6se',
     'iwlwifi_dump',
+    'jetstream_routing',
     'kvm_guest',
     'kvm_host',
     'metrics_uploader',

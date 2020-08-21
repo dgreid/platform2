@@ -87,6 +87,13 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
  private:
   void InitialSetup();
 
+  // Start and stop the Datapath, creating or destroying the initial iptables
+  // setup needed for forwarding traffic from VMs and containers and for
+  // fwmark based routing. These functions are NOPs if USE_JETSTREAM_ROUTING is
+  // set.
+  void StartDatapath();
+  void StopDatapath();
+
   bool StartArc(pid_t pid);
   void StopArc();
   bool StartArcVm(uint32_t cid);
