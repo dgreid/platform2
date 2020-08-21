@@ -40,7 +40,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
   std::vector<std::unique_ptr<BiometricsManager::Record>> GetRecords() override;
   bool DestroyAllRecords() override;
   void RemoveRecordsFromMemory() override;
-  bool ReadRecords(const std::unordered_set<std::string>& user_ids) override;
   bool ReadRecordsForSingleUser(const std::string& user_id) override;
 
   void SetEnrollScanDoneHandler(const BiometricsManager::EnrollScanDoneCallback&

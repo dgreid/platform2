@@ -235,13 +235,6 @@ void CrosFpBiometricsManager::RemoveRecordsFromMemory() {
   cros_dev_->ResetContext();
 }
 
-bool CrosFpBiometricsManager::ReadRecords(
-    const std::unordered_set<std::string>& user_ids) {
-  // TODO(mqg): delete this function and adjust parent class accordingly.
-  LOG(WARNING) << __func__ << " should not be used.";
-  return false;
-}
-
 bool CrosFpBiometricsManager::ReadRecordsForSingleUser(
     const std::string& user_id) {
   cros_dev_->SetContext(user_id);

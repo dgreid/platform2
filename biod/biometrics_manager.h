@@ -183,10 +183,6 @@ class BiometricsManager {
   // Remove all decrypted records from memory. Still keep them in storage.
   virtual void RemoveRecordsFromMemory() = 0;
 
-  // Read all the records for each of the users in the set. Return true if
-  // successful.
-  virtual bool ReadRecords(const std::unordered_set<std::string>& user_ids) = 0;
-
   // Read all the records for one user. Return true if successful.
   virtual bool ReadRecordsForSingleUser(const std::string& user_id) = 0;
 
