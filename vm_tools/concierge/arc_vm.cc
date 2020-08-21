@@ -223,9 +223,14 @@ bool ArcVm::Start(base::FilePath kernel,
       "security-xattrs=true",
       kOemEtcSharedDir, kOemEtcSharedDirTag, kOemEtcUgidMap, kOemEtcUgidMap);
 
-  std::string shared_data = CreateSharedDataParam(data_dir, "data", true);
+  std::string shared_data = CreateSharedDataParam(data_dir, "_data", true);
   std::string shared_data_media =
-      CreateSharedDataParam(data_dir.Append("media"), "data_media", false);
+      CreateSharedDataParam(data_dir, "_data_media", false);
+  // TODO(wvk): remove these once the new tags are used by ARCVM.
+  std::string old_shared_data =
+      CreateSharedDataParam(data_dir.Append("mount/data"), "data", true);
+  std::string old_shared_data_media = CreateSharedDataParam(
+      data_dir.Append("mount/data/media"), "data_media", false);
 
   std::string shared_media = base::StringPrintf(
       "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s", kMediaSharedDir,
@@ -253,6 +258,9 @@ bool ArcVm::Start(base::FilePath kernel,
     { "--shared-dir",     std::move(oem_etc_shared_dir) },
     { "--shared-dir",     std::move(shared_data) },
     { "--shared-dir",     std::move(shared_data_media) },
+    // TODO(wvk): remove these once the new tags are used by ARCVM
+    { "--shared-dir",     std::move(old_shared_data) },
+    { "--shared-dir",     std::move(old_shared_data_media) },
     { "--shared-dir",     std::move(shared_media) },
     { "--params",         base::JoinString(params, " ") },
   };

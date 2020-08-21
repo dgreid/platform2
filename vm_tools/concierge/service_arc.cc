@@ -16,7 +16,7 @@ namespace concierge {
 namespace {
 
 // Android data directory.
-constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data/data";
+constexpr const char kAndroidDataDir[] = "/run/arcvm/android-data";
 
 // File extension for pstore backend file
 constexpr char kPstoreExtension[] = ".pstore";
