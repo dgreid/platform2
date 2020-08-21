@@ -54,7 +54,7 @@ wl_protocols = [
     'protocol/relative-pointer-unstable-v1.xml',
     'protocol/text-input-unstable-v1.xml',
     'protocol/viewporter.xml',
-    'protocol/xdg-shell.xml',
+    'protocol/xdg-shell-unstable-v6.xml',
 ]
 
 wl_outs = []
