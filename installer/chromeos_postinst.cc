@@ -10,9 +10,11 @@
 #include <unistd.h>
 
 #include <string>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/strings/string_util.h>
 
 #include "installer/cgpt_manager.h"
 #include "installer/chromeos_install_config.h"
@@ -118,15 +120,11 @@ int RunCr50Script(const string& install_dir,
                   const string& script_name,
                   const string& script_arg) {
   string script = install_dir + "/usr/share/cros/" + script_name;
-  string command = script + " " + script_arg;
-
   if (access(script.c_str(), X_OK)) {
     // The script is not there, means no cr50 present either, nothing to do.
     return 0;
   }
-
-  printf("Starting command: %s\n", command.c_str());
-  return RunCommand(command);
+  return RunCommand({script, script_arg});
 }
 
 // Updates firmware. We must activate new firmware only after new kernel is
@@ -136,14 +134,13 @@ int RunCr50Script(const string& install_dir,
 // Note that this returns an exit code, not bool success/failure.
 int FirmwareUpdate(const string& install_dir, bool is_update) {
   int result;
-  const char* mode;
   string command = install_dir + "/usr/sbin/chromeos-firmwareupdate";
-
   if (access(command.c_str(), X_OK) != 0) {
     printf("No firmware updates available.\n");
     return true;
   }
 
+  string mode;
   if (is_update) {
     // Background auto update by Update Engine.
     mode = "autoupdate";
@@ -152,11 +149,7 @@ int FirmwareUpdate(const string& install_dir, bool is_update) {
     mode = "recovery";
   }
 
-  command += " --mode=";
-  command += mode;
-
-  printf("Starting firmware updater (%s)\n", command.c_str());
-  result = RunCommand(command);
+  result = RunCommand({command, "--mode=" + mode});
 
   // Next step after postinst may take a lot of time (eg, disk wiping)
   // and people may confuse that as 'firmware update takes a long wait',
@@ -214,14 +207,12 @@ void FixUnencryptedPermission() {
 bool RunBoardPostInstall(const string& install_dir) {
   int result;
   string script = install_dir + "/usr/sbin/board-postinst";
-  string command = script + " " + install_dir;
 
   if (access(script.c_str(), X_OK)) {
     return true;
   }
 
-  printf("Starting board post install script (%s)\n", command.c_str());
-  result = RunCommand(command);
+  result = RunCommand({script, install_dir});
 
   if (result)
     fprintf(stderr, "Board post install failed (%d).\n", result);
@@ -507,14 +498,14 @@ bool RunPostInstall(const string& install_dev,
 
   install_config.boot.set_mount("/tmp/boot_mnt");
 
-  string cmd;
+  if (!base::CreateDirectory(base::FilePath(install_config.boot.mount()))) {
+    return false;
+  }
 
-  cmd = "/bin/mkdir -p " + install_config.boot.mount();
-  RUN_OR_RETURN_FALSE(cmd);
-
-  cmd = "/bin/mount " + install_config.boot.device() + " " +
-        install_config.boot.mount();
-  RUN_OR_RETURN_FALSE(cmd);
+  if (RunCommand({"/bin/mount", install_config.boot.device(),
+                  install_config.boot.mount()}) != 0) {
+    return false;
+  }
 
   bool success = true;
 
@@ -549,11 +540,8 @@ bool RunPostInstall(const string& install_dev,
       break;
   }
 
-  cmd = "/bin/umount " + install_config.boot.device();
-  if (RunCommand(cmd.c_str()) != 0) {
-    printf("Cmd: '%s' failed.\n", cmd.c_str());
+  if (RunCommand({"/bin/umount", install_config.boot.device()}) != 0)
     success = false;
-  }
 
   return success;
 }

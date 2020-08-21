@@ -38,12 +38,6 @@ class ScopedPathRemover {
   void operator=(const ScopedPathRemover& other) {}
 };
 
-#define RUN_OR_RETURN_FALSE(_x) \
-  do {                          \
-    if (RunCommand(_x) != 0)    \
-      return false;             \
-  } while (0)
-
 // Find a pointer to the first element of a statically sized array.
 template <typename T, size_t N>
 T* begin(T (&ra)[N]) {
@@ -72,7 +66,7 @@ void JoinStrings(const std::vector<std::string>& strs,
 
 // This is a place holder to invoke the backing scripts. Once all scripts have
 // been rewritten as library calls this command should be deleted.
-int RunCommand(const std::string& command);
+int RunCommand(const std::vector<std::string>& cmdline);
 
 bool ReadFileToString(const std::string& path, std::string* contents);
 

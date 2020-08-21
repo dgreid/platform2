@@ -81,12 +81,12 @@ TEST(UtilTest, JoinStringsTest) {
 TEST(UtilTest, RunCommandTest) {
   // Note that RunCommand returns the raw system() result, including signal
   // values. WEXITSTATUS would be needed to check clean result codes.
-  EXPECT_EQ(RunCommand("/bin/true"), 0);
-  EXPECT_EQ(RunCommand("/bin/false"), 1);
-  EXPECT_EQ(RunCommand("/bin/bogus"), 127);
-  EXPECT_EQ(RunCommand("/bin/bash -c \"exit 2\""), 2);
-  EXPECT_EQ(RunCommand("/bin/echo RunCommand*Test"), 0);
-  EXPECT_EQ(RunCommand("kill -INT $$"), 1);
+  EXPECT_EQ(RunCommand({"/bin/true"}), 0);
+  EXPECT_EQ(RunCommand({"/bin/false"}), 1);
+  EXPECT_EQ(RunCommand({"/bin/bogus"}), 127);
+  EXPECT_EQ(RunCommand({"/bin/bash", "-c", "exit 2"}), 2);
+  EXPECT_EQ(RunCommand({"/bin/echo", "RunCommand*Test"}), 0);
+  EXPECT_EQ(RunCommand({"kill", "-INT", "$$"}), 1);
 }
 
 TEST(UtilTest, ReadFileToStringTest) {
@@ -272,9 +272,8 @@ TEST(UtilTest, DirnameTest) {
 
 TEST(UtilTest, RemovePackFileTest) {
   // Setup
-  EXPECT_EQ(RunCommand("rm -rf /tmp/PackFileTest"), 0);
-  EXPECT_EQ(RunCommand("mkdir /tmp/PackFileTest"), 0);
-
+  EXPECT_EQ(RunCommand({"rm", "-rf", "/tmp/PackFileTest"}), 0);
+  EXPECT_EQ(RunCommand({"mkdir", "/tmp/PackFileTest"}), 0);
   EXPECT_EQ(Touch("/tmp/PackFileTest/foo"), true);
   EXPECT_EQ(Touch("/tmp/PackFileTest/foo.pack"), true);
   EXPECT_EQ(Touch("/tmp/PackFileTest/foopack"), true);
@@ -295,7 +294,7 @@ TEST(UtilTest, RemovePackFileTest) {
   EXPECT_EQ(RemovePackFiles("/fuzzy"), false);
 
   // Cleanup
-  EXPECT_EQ(RunCommand("rm -rf /tmp/PackFileTest"), 0);
+  EXPECT_EQ(RunCommand({"rm", "-rf", "/tmp/PackFileTest"}), 0);
 }
 
 TEST(UtilTest, TouchTest) {

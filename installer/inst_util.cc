@@ -15,10 +15,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/ioctl.h>
-#include <sys/mman.h>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/utsname.h>
 #include <sys/wait.h>
 #include <time.h>
@@ -30,6 +26,7 @@ extern "C" {
 
 #include <base/files/scoped_file.h>
 #include <base/strings/string_util.h>
+#include <brillo/process/process.h>
 
 using std::string;
 using std::vector;
@@ -140,34 +137,32 @@ void JoinStrings(const vector<string>& strs,
 
 // This is a place holder to invoke the backing scripts. Once all scripts have
 // been rewritten as library calls this command should be deleted.
-// If you are passing more than one command in cmdoptions you need it to be
-// space separated.
-int RunCommand(const string& command) {
+// Takes a vector of args and returns error code.
+int RunCommand(const vector<string>& cmdline) {
+  string command = base::JoinString(cmdline, " ");
   printf("Command: %s\n", command.c_str());
 
   fflush(stdout);
   fflush(stderr);
 
+  brillo::ProcessImpl process;
+  process.SetSearchPath(true);
+
+  for (const auto& arg : cmdline) {
+    process.AddArg(arg);
+  }
+
   LoggingTimerStart();
-  int result = system(command.c_str());
+  int exit_code = process.Run();
   LoggingTimerFinish();
 
-  if (WIFEXITED(result)) {
-    int exit_code = WEXITSTATUS(result);
-    if (exit_code)
-      printf("Failed Command: %s - Exit Code %d\n", command.c_str(), exit_code);
-    return exit_code;
-  }
-
-  if (WIFSIGNALED(result)) {
-    printf("Failed Command: %s - Signal %d\n", command.c_str(),
-           WTERMSIG(result));
+  if (exit_code == -1) {
+    printf("Failed Command - invalid process: %s\n", command.c_str());
     return 1;
+  } else if (exit_code != 0) {
+    printf("Failed Command: %s - Exit Code %d\n", command.c_str(), exit_code);
   }
-
-  // This shouldn't be reachable.
-  printf("Failed Command for unknown reason.: %s\n", command.c_str());
-  return 1;
+  return exit_code;
 }
 
 // Open a file and read it's contents into a string.

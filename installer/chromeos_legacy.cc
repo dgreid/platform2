@@ -7,12 +7,14 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include <string>
 #include <vector>
 
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/strings/stringprintf.h>
+#include <base/strings/string_util.h>
 
 #include "installer/inst_util.h"
 
@@ -53,11 +55,8 @@ bool RunLegacyPostInstall(const InstallConfig& install_config) {
   const base::FilePath boot_syslinux = boot_mount.Append("syslinux");
   printf("Running LegacyPostInstall\n");
 
-  string cmd =
-      base::StringPrintf("cp -nR '%s' '%s'", root_syslinux.value().c_str(),
-                         boot_mount.value().c_str());
-  if (RunCommand(cmd.c_str()) != 0) {
-    printf("Cmd: '%s' failed.\n", cmd.c_str());
+  if (RunCommand({"cp", "-nR", root_syslinux.value(), boot_mount.value()}) !=
+      0) {
     return false;
   }
 

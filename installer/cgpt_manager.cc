@@ -14,6 +14,9 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <string>
+#include <vector>
+
 #include <base/files/scoped_file.h>
 #include <base/strings/stringprintf.h>
 
@@ -40,8 +43,8 @@ bool ReadGptFromNor(string* file_name) {
   ScopedPathRemover remover((string(tmp_name)));
   // Close fd so that flashrom can write to the file right after.
   close(fd);
-  string cmd = base::StringPrintf("flashrom -i \"RW_GPT:%s\" -r", tmp_name);
-  if (RunCommand(cmd) != 0) {
+  if (RunCommand({"/usr/sbin/flashrom", "-i", string("RW_GPT:") + tmp_name,
+                  "-r"}) != 0) {
     return false;
   }
   // Keep the temp file.
@@ -69,8 +72,8 @@ bool WriteToNor(const string& data, const string& region) {
   // Close fd so that flashrom can open it right after.
   fd.reset();
 
-  string cmd = base::StringPrintf("flashrom -i \"%s:%s\" -w --fast-verify",
-                                  region.c_str(), tmp_name);
+  std::vector<string> cmd{"/usr/sbin/flashrom", "-i", region + ":" + tmp_name,
+                          "-w", "--fast-verify"};
   if (RunCommand(cmd) != 0) {
     warnx("Cannot write %s to %s section.\n", tmp_name, region.c_str());
     return false;

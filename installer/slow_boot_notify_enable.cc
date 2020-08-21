@@ -10,19 +10,11 @@
 #include <brillo/process/process.h>
 #include <vboot/crossystem.h>
 
+#include "installer/inst_util.h"
 #include "installer/slow_boot_notify.h"
 
 using std::string;
 using std::vector;
-
-int RunCommand(const vector<string>& args) {
-  brillo::ProcessImpl process;
-  for (const auto& arg : args) {
-    process.AddArg(arg);
-  }
-
-  return process.Run();
-}
 
 void ExtractFspm(const string& partition, const base::FilePath& fspm_path) {
   if (partition != "A" && partition != "B") {
