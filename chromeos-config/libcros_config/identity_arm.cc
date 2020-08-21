@@ -12,6 +12,7 @@
 #include <base/files/file_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/values.h>
+#include "chromeos-config/libcros_config/cros_config.h"
 #include "chromeos-config/libcros_config/cros_config_interface.h"
 
 namespace {
@@ -61,10 +62,11 @@ bool CrosConfigIdentityArm::ReadInfo(const base::FilePath& dt_compatible_file,
   char sku_id_char[kSkuIdLength];
   if (base::ReadFile(sku_id_file, sku_id_char, kSkuIdLength) != kSkuIdLength) {
     CROS_CONFIG_LOG(WARNING) << "Cannot read product_sku file ";
-    return false;
+    sku_id_ = kDefaultSkuId;
+  } else {
+    std::memcpy(&sku_id_, sku_id_char, kSkuIdLength);
+    sku_id_ = ntohl(sku_id_);
   }
-  std::memcpy(&sku_id_, sku_id_char, kSkuIdLength);
-  sku_id_ = ntohl(sku_id_);
 
   CROS_CONFIG_LOG(INFO) << "Read device-tree compatible list: "
                         << compatible_devices_
