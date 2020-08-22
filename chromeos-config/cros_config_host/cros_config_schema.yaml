@@ -4,7 +4,7 @@
 imports:
 - "power_manager_prefs_schema.yaml"
 
-"$schema": http://json-schema.org/draft-04/schema#
+"$schema": http://json-schema.org/draft-07/schema#
 typeDefs:
   bcs-file-name: &bcs_file_name
     type: string

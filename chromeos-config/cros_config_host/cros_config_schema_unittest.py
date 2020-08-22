@@ -15,6 +15,7 @@ import re
 import jsonschema  # pylint: disable=import-error
 from six.moves import zip_longest
 import yaml  # pylint: disable=import-error
+from packaging import version  # pylint: disable=import-error
 
 import cros_config_schema
 import libcros_schema
@@ -242,8 +243,13 @@ class ValidateConfigSchemaTests(cros_test_lib.TestCase):
     with self.assertRaises(jsonschema.ValidationError) as ctx:
       libcros_schema.ValidateConfigSchema(
           self._schema, cros_config_schema.TransformConfig(config))
-    self.assertIn("'sku-id': %i" % 0x80000000, str(ctx.exception))
-    self.assertIn('is not valid', str(ctx.exception))
+    if version.parse(jsonschema.__version__) >= version.Version('3.0.0'):
+      self.assertIn(
+          '%i is greater than the maximum' % 0x80000000, str(ctx.exception))
+      self.assertIn('sku-id', str(ctx.exception))
+    else:
+      self.assertIn("'sku-id': %i" % 0x80000000, str(ctx.exception))
+      self.assertIn('is not valid', str(ctx.exception))
 
 
 class ValidateFingerprintSchema(cros_test_lib.TestCase):
