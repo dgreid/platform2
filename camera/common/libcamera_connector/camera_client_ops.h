@@ -22,26 +22,54 @@
 
 namespace cros {
 
+// CameraClientOps is an implementation of mojom::Camera3CallbackOps and
+// manages mojom::Camera3DeviceOps as well. CameraClientOps is expected to be
+// initialized every time before a capture session can be started.
+//
+// When starting a capture session,
+//   1. Init() is called to initialize CameraClientOps and
+//      mojom::Camera3DeviceOpsRequest is returned. Subsequent calls to the
+//      member functions are expected to be run on the same sequence the
+//      Init() call ran on.
+//   2. The user of this class should then bind mojom::Camera3DeviceOpsRequest
+//      before calling StartCapture()
+//   3. When StartCapture() is called, it's expected that |device_ops_| is bound
+//      CameraClientOps would proceed to start the capture loop and send capture
+//      results via |result_callback_|.
+//   4. When StopCapture() is called, the capture loop is stopped immediately.
+//      To reuse this class, Init() needs to be called to re-initialize the
+//      class.
+//
+//  Error handling: When a serious error is encountered when configuring the
+//  capture session or the camera device reported a serious error,
+//  CameraClientOps notifies the error to the user of this class with by sending
+//  -ENODEV status in the result callback, and the user is expected to close the
+//  camera device immediately and stop using CameraClientOps.
 class CameraClientOps : public mojom::Camera3CallbackOps {
  public:
   static const int kStreamId = 0;
 
-  using DeviceOpsInitCallback =
-      base::OnceCallback<void(mojom::Camera3DeviceOpsRequest)>;
   using CaptureResultCallback =
       base::Callback<void(const cros_cam_capture_result_t&)>;
 
   CameraClientOps();
-  ~CameraClientOps();
 
-  void Init(DeviceOpsInitCallback init_callback,
-            CaptureResultCallback result_callback);
+  // Initializes the class and returns mojom::Camera3DeviceOpsRequest to be
+  // bound. Subsequent calls to other member functions are expected to be run on
+  // the same sequence the Init() call ran on.
+  mojom::Camera3DeviceOpsRequest Init(CaptureResultCallback result_callback);
 
+  // Starts the capture session.  StartCapture() initializes the device,
+  // configures streams, and starts sending capture requests in a loop. Note
+  // that |device_ops_| should be bound before the user makes this call.
   void StartCapture(int32_t camera_id,
                     const cros_cam_format_info_t* format,
                     int32_t jpeg_max_size);
 
-  void StopCapture(mojom::Camera3DeviceOps::CloseCallback close_callback);
+  // Stops the capture session and calls |close_callback| when the device is
+  // closed. The capture loop is immediately stopped, but capture results might
+  // still be sent after this call.
+  void StopCapture(IntOnceCallback close_callback);
 
   // ProcessCaptureResult is an implementation of ProcessCaptureResult in
   // Camera3CallbackOps. It receives the result metadata and filled buffers from
@@ -53,16 +81,6 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
   void Notify(mojom::Camera3NotifyMsgPtr msg) override;
 
  private:
-  void InitOnThread(DeviceOpsInitCallback init_callback,
-                    CaptureResultCallback result_callback);
-
-  void StartCaptureOnThread(int32_t camera_id,
-                            const cros_cam_format_info_t* format,
-                            int32_t jpeg_max_size);
-
-  void StopCaptureOnThread(
-      mojom::Camera3DeviceOps::CloseCallback close_callback);
-
   void InitializeDevice();
 
   void OnInitializedDevice(int32_t result);
@@ -83,19 +101,26 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
 
   void ConstructCaptureRequestOnThread();
 
-  void ProcessCaptureRequestOnThread(mojom::Camera3CaptureRequestPtr request);
+  void ProcessCaptureRequest(mojom::Camera3CaptureRequestPtr request);
 
   void OnProcessedCaptureRequest(int32_t result);
 
-  void SendCaptureResult(const cros_cam_capture_result_t& result);
+  void SendCaptureResult(int status, cros_cam_frame_t* frame);
 
-  base::Thread ops_thread_;
+  void OnClosedDevice(IntOnceCallback close_callback, int32_t result);
 
+  // All public functions and IPC calls through |device_ops_| are expected to be
+  // done on |ops_runner_|.
+  scoped_refptr<base::SequencedTaskRunner> ops_runner_;
+
+  // |capturing_| indicates whether device has been opened. We use |capturing_|
+  // to prevent us from sending additional mojo IPC calls after calling
+  // Camera3DeviceOps::Close(). See b/166725158 for context.
+  bool capturing_;
   mojom::Camera3DeviceOpsPtr device_ops_;
   mojo::Binding<mojom::Camera3CallbackOps> camera3_callback_ops_;
 
   CaptureResultCallback result_callback_;
-  bool capture_started_;
 
   int32_t request_camera_id_;
   cros_cam_format_info_t request_format_;
@@ -106,7 +131,6 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
   mojom::CameraMetadataPtr request_settings_;
 
   uint32_t frame_number_;
-  base::Lock frame_number_lock_;
 };
 
 }  // namespace cros

@@ -4,6 +4,8 @@
  * found in the LICENSE file.
  */
 
+#include "common/libcamera_connector/camera_client_ops.h"
+
 #include <utility>
 
 #include <base/bind.h>
@@ -16,7 +18,6 @@
 #include <sync/sync.h>
 #include <sys/mman.h>
 
-#include "common/libcamera_connector/camera_client_ops.h"
 #include "common/libcamera_connector/camera_metadata_utils.h"
 #include "common/libcamera_connector/supported_formats.h"
 #include "cros-camera/common.h"
@@ -24,61 +25,46 @@
 
 namespace cros {
 
-CameraClientOps::CameraClientOps()
-    : ops_thread_("CamClientOps"),
-      camera3_callback_ops_(this),
-      capture_started_(false) {
-  ops_thread_.Start();
-}
+CameraClientOps::CameraClientOps() : camera3_callback_ops_(this) {}
 
-CameraClientOps::~CameraClientOps() {
-  ops_thread_.Stop();
-}
-
-void CameraClientOps::Init(DeviceOpsInitCallback init_callback,
-                           CaptureResultCallback result_callback) {
+mojom::Camera3DeviceOpsRequest CameraClientOps::Init(
+    CaptureResultCallback result_callback) {
   VLOGF_ENTER();
 
-  ops_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&CameraClientOps::InitOnThread, base::Unretained(this),
-                     std::move(init_callback), std::move(result_callback)));
-}
-
-void CameraClientOps::InitOnThread(DeviceOpsInitCallback init_callback,
-                                   CaptureResultCallback result_callback) {
-  VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
-
+  ops_runner_ = base::SequencedTaskRunnerHandle::Get();
+  capturing_ = false;
   result_callback_ = std::move(result_callback);
-  std::move(init_callback).Run(mojo::MakeRequest(&device_ops_));
+  return mojo::MakeRequest(&device_ops_);
 }
 
 void CameraClientOps::StartCapture(int32_t camera_id,
                                    const cros_cam_format_info_t* format,
                                    int32_t jpeg_max_size) {
   VLOGF_ENTER();
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
-  ops_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&CameraClientOps::StartCaptureOnThread,
-                     base::Unretained(this), camera_id, format, jpeg_max_size));
+  capturing_ = true;
+  // TODO(b/151047930): Check whether this format info is actually supported.
+  request_camera_id_ = camera_id;
+  request_format_ = *format;
+  jpeg_max_size_ = jpeg_max_size;
+  InitializeDevice();
 }
 
-void CameraClientOps::StopCapture(
-    mojom::Camera3DeviceOps::CloseCallback close_callback) {
+void CameraClientOps::StopCapture(IntOnceCallback close_callback) {
   VLOGF_ENTER();
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
-  ops_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&CameraClientOps::StopCaptureOnThread,
-                     base::Unretained(this), std::move(close_callback)));
+  capturing_ = false;
+  device_ops_->Close(base::BindOnce(&CameraClientOps::OnClosedDevice,
+                                    base::Unretained(this),
+                                    std::move(close_callback)));
 }
 
 void CameraClientOps::ProcessCaptureResult(
     mojom::Camera3CaptureResultPtr result) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (result->output_buffers) {
     CHECK_EQ(result->output_buffers->size(), 1u);
@@ -125,8 +111,7 @@ void CameraClientOps::ProcessCaptureResult(
                      {.size = 0},
                      {.size = 0},
                      {.size = 0}}};
-      cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
-      SendCaptureResult(result);
+      SendCaptureResult(0, &frame);
 
       munmap(data, mapped_size);
       buffer_manager_.ReleaseBuffer(output_buffer->buffer_id);
@@ -163,8 +148,7 @@ void CameraClientOps::ProcessCaptureResult(
                .data = static_cast<uint8_t*>(cb_ptr) + cb_unaligned_offset},
               {.size = 0},
               {.size = 0}}};
-      cros_cam_capture_result_t result = {.status = 0, .frame = &frame};
-      SendCaptureResult(result);
+      SendCaptureResult(0, &frame);
 
       munmap(y_ptr, y_mapped_size);
       munmap(cb_ptr, cb_mapped_size);
@@ -174,37 +158,23 @@ void CameraClientOps::ProcessCaptureResult(
 }
 
 void CameraClientOps::Notify(mojom::Camera3NotifyMsgPtr msg) {
-  // TODO(b/151047930): Handle error messages.
-}
-
-void CameraClientOps::StartCaptureOnThread(int32_t camera_id,
-                                           const cros_cam_format_info_t* format,
-                                           int32_t jpeg_max_size) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
-  capture_started_ = true;
-  // TODO(b/151047930): Check whether this format info is actually supported.
-  request_camera_id_ = camera_id;
-  request_format_ = *format;
-  jpeg_max_size_ = jpeg_max_size;
-
-  InitializeDevice();
-}
-
-void CameraClientOps::StopCaptureOnThread(
-    mojom::Camera3DeviceOps::CloseCallback close_callback) {
-  VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
-
-  capture_started_ = false;
-  device_ops_->Close(std::move(close_callback));
-  camera3_callback_ops_.Close();
+  // We only need to handle error messages for libcamera_connector.
+  if (msg->type != mojom::Camera3MsgType::CAMERA3_MSG_ERROR) {
+    return;
+  }
+  int status = msg->message->get_error()->error_code ==
+                       mojom::Camera3ErrorMsgCode::CAMERA3_MSG_ERROR_DEVICE
+                   ? -ENODEV
+                   : -EIO;
+  SendCaptureResult(status, nullptr);
 }
 
 void CameraClientOps::InitializeDevice() {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   mojom::Camera3CallbackOpsPtr camera3_callback_ops_ptr;
   mojom::Camera3CallbackOpsRequest camera3_callback_ops_request =
@@ -217,12 +187,13 @@ void CameraClientOps::InitializeDevice() {
 
 void CameraClientOps::OnInitializedDevice(int32_t result) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (result != 0) {
-    // TODO(b/151047930): Handle this gracefully.
-    LOGF(FATAL) << "Failed to initialize device: "
+    LOGF(ERROR) << "Failed to initialize device: "
                 << base::safe_strerror(-result);
+    SendCaptureResult(-ENODEV, nullptr);
+    return;
   }
   LOGF(INFO) << "Successfully initialized device";
   ConfigureStreams();
@@ -230,7 +201,10 @@ void CameraClientOps::OnInitializedDevice(int32_t result) {
 
 void CameraClientOps::ConfigureStreams() {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+  if (!capturing_) {
+    return;
+  }
 
   mojom::Camera3StreamPtr stream = mojom::Camera3Stream::New();
   stream->id = kStreamId;
@@ -262,13 +236,14 @@ void CameraClientOps::OnConfiguredStreams(
     base::flat_map<uint64_t, std::vector<mojom::Camera3StreamBufferPtr>>
         allocated_buffers) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (result != 0) {
-    // TODO(b/151047930): Handle this gracefully.
-    LOGF(FATAL)
+    LOGF(ERROR)
         << "Failed to configure streams. Please check your capture parameters: "
         << base::safe_strerror(-result);
+    SendCaptureResult(-ENODEV, nullptr);
+    return;
   }
   LOGF(INFO) << "Stream configured successfully";
   stream_config_ = std::move(updated_config);
@@ -278,7 +253,10 @@ void CameraClientOps::OnConfiguredStreams(
 
 void CameraClientOps::ConstructDefaultRequestSettings() {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+  if (!capturing_) {
+    return;
+  }
 
   // TODO(b/151047930): Support other templates.
   mojom::Camera3RequestTemplate request_template =
@@ -292,11 +270,12 @@ void CameraClientOps::ConstructDefaultRequestSettings() {
 void CameraClientOps::OnConstructedDefaultRequestSettings(
     mojom::CameraMetadataPtr settings) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (settings.is_null()) {
-    // TODO(b/151047930): Handle this gracefully.
-    LOGF(FATAL) << "Failed to construct the specified capture template";
+    LOGF(ERROR) << "Failed to construct the specified capture template";
+    SendCaptureResult(-ENODEV, nullptr);
+    return;
   }
   LOGF(INFO) << "Gotten request template for capture";
   request_settings_ = std::move(settings);
@@ -307,8 +286,7 @@ void CameraClientOps::OnConstructedDefaultRequestSettings(
 
 void CameraClientOps::ConstructCaptureRequest() {
   VLOGF_ENTER();
-
-  ops_thread_.task_runner()->PostTask(
+  ops_runner_->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraClientOps::ConstructCaptureRequestOnThread,
                      base::Unretained(this)));
@@ -316,7 +294,7 @@ void CameraClientOps::ConstructCaptureRequest() {
 
 void CameraClientOps::ConstructCaptureRequestOnThread() {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (!buffer_manager_.HasFreeBuffers()) {
     buffer_manager_.SetNotifyBufferCallback(base::BindOnce(
@@ -325,29 +303,21 @@ void CameraClientOps::ConstructCaptureRequestOnThread() {
   }
 
   mojom::Camera3CaptureRequestPtr request = mojom::Camera3CaptureRequest::New();
-  {
-    base::AutoLock l(frame_number_lock_);
-    request->frame_number = frame_number_++;
-  }
+  request->frame_number = frame_number_++;
   request->settings = request_settings_.Clone();
 
   auto buffer = buffer_manager_.AllocateBuffer();
   CHECK(!buffer.is_null());
   request->output_buffers.push_back(std::move(buffer));
 
-  ops_thread_.task_runner()->PostTask(
-      FROM_HERE, base::BindOnce(&CameraClientOps::ProcessCaptureRequestOnThread,
-                                base::Unretained(this), std::move(request)));
+  ProcessCaptureRequest(std::move(request));
 }
 
-void CameraClientOps::ProcessCaptureRequestOnThread(
+void CameraClientOps::ProcessCaptureRequest(
     mojom::Camera3CaptureRequestPtr request) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
-
-  if (!capture_started_) {
-    LOGF(WARNING) << "Capture is stopped. Skipping a capture request";
-    buffer_manager_.ReleaseBuffer(request->output_buffers[0]->buffer_id);
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+  if (!capturing_) {
     return;
   }
 
@@ -359,21 +329,33 @@ void CameraClientOps::ProcessCaptureRequestOnThread(
 
 void CameraClientOps::OnProcessedCaptureRequest(int32_t result) {
   VLOGF_ENTER();
-  DCHECK(ops_thread_.task_runner()->BelongsToCurrentThread());
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
 
   if (result != 0) {
     LOGF(ERROR) << "Failed to send capture request: "
                 << base::safe_strerror(-result);
+    SendCaptureResult(-ENODEV, nullptr);
     return;
   }
   ConstructCaptureRequestOnThread();
 }
 
-void CameraClientOps::SendCaptureResult(
-    const cros_cam_capture_result_t& result) {
-  if (!capture_started_)
-    return;
+void CameraClientOps::SendCaptureResult(int status, cros_cam_frame_t* frame) {
+  VLOGF_ENTER();
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+
+  cros_cam_capture_result_t result = {.status = status, .frame = frame};
   result_callback_.Run(result);
+}
+
+void CameraClientOps::OnClosedDevice(IntOnceCallback close_callback,
+                                     int32_t result) {
+  VLOGF_ENTER();
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+
+  device_ops_.reset();
+  camera3_callback_ops_.Close();
+  std::move(close_callback).Run(result);
 }
 
 }  // namespace cros

@@ -86,8 +86,7 @@ namespace cros {
 CameraClient::CameraClient()
     : ipc_thread_("CamClient"),
       camera_hal_client_(this),
-      cam_info_callback_(nullptr),
-      capture_started_(false) {}
+      cam_info_callback_(nullptr) {}
 
 void CameraClient::Init(RegisterClientCallback register_client_callback,
                         IntOnceCallback init_callback) {
@@ -107,44 +106,27 @@ void CameraClient::Init(RegisterClientCallback register_client_callback,
 
 int CameraClient::Exit() {
   VLOGF_ENTER();
-  int ret = 0;
-  {
-    base::AutoLock l(capture_started_lock_);
-    if (capture_started_) {
-      auto future = cros::Future<int>::Create(nullptr);
-      stop_callback_ = cros::GetFutureCallback(future);
-      client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
-                                         base::Unretained(this),
-                                         /*is_local_stop=*/false));
-      ret = future->Get();
-    }
-  }
-
+  int ret = StopCapture(context_.info.camera_id);
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE,
       base::BindOnce(&CameraClient::CloseOnThread, base::Unretained(this)));
   ipc_thread_.Stop();
-
+  // The stop might fail due to the camera already being closed. Ignore the
+  // failure.
+  if (ret == -EIO) {
+    LOGF(INFO) << "Camera is already closed";
+    ret = 0;
+  }
   return ret;
-}
-
-void CameraClient::SetUpChannel(mojom::CameraModulePtr camera_module) {
-  VLOGF_ENTER();
-  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
-
-  LOGF(INFO) << "Received camera module from camera HAL dispatcher";
-  camera_module_ = std::move(camera_module);
-
-  GetNumberOfCameras();
 }
 
 int CameraClient::SetCameraInfoCallback(cros_cam_get_cam_info_cb_t callback,
                                         void* context) {
   VLOGF_ENTER();
+  base::AutoLock l(camera_info_lock_);
 
   cam_info_callback_ = callback;
   cam_info_context_ = context;
-
   SendCameraInfo();
   return 0;
 }
@@ -154,60 +136,37 @@ int CameraClient::StartCapture(const cros_cam_capture_request_t* request,
                                void* context) {
   VLOGF_ENTER();
 
-  base::AutoLock l(capture_started_lock_);
-  if (capture_started_) {
-    LOGF(WARNING) << "Capture already started";
-    return -EINVAL;
-  }
-  if (!IsDeviceActive(request->id)) {
-    LOGF(ERROR) << "Cannot start capture on an inactive device: "
-                << request->id;
-    return -ENODEV;
-  }
-
-  LOGF(INFO) << "Starting capture";
-
-  // TODO(b/151047930): Check whether this format info is actually supported.
-  request_camera_id_ = request->id;
-  request_format_ = *request->format;
-  request_callback_ = callback;
-  request_context_ = context;
-
   auto future = cros::Future<int>::Create(nullptr);
-  start_callback_ = cros::GetFutureCallback(future);
-
-  client_ops_.Init(
-      base::BindOnce(&CameraClient::OnDeviceOpsReceived,
-                     base::Unretained(this)),
-      base::Bind(&CameraClient::SendCaptureResult, base::Unretained(this)));
-
+  SessionRequest session_request = {
+      .type = SessionRequestType::kStart,
+      .info = {.camera_id = request->id,
+               .format = *request->format,
+               .capture_callback = callback,
+               .context = context},
+      .result_callback = cros::GetFutureCallback(future)};
+  PushSessionRequest(std::move(session_request));
   return future->Get();
 }
 
 int CameraClient::StopCapture(int id) {
   VLOGF_ENTER();
 
-  base::AutoLock l(capture_started_lock_);
-  if (!capture_started_) {
-    LOGF(WARNING) << "Capture already stopped";
-    return -EPERM;
-  }
-  if (!IsDeviceActive(id)) {
-    LOGF(ERROR) << "Cannot stop capture on an inactive device: " << id;
-    return -ENODEV;
-  }
-
-  // TODO(lnishan): Support multi-device streaming.
-  CHECK_EQ(request_camera_id_, id);
-
-  LOGF(INFO) << "Stopping capture";
-
   auto future = cros::Future<int>::Create(nullptr);
-  stop_callback_ = cros::GetFutureCallback(future);
-  client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
-                                     base::Unretained(this),
-                                     /*is_local_stop=*/false));
+  SessionRequest session_request = {
+      .type = SessionRequestType::kStop,
+      .info = {.camera_id = id},
+      .result_callback = cros::GetFutureCallback(future)};
+  PushSessionRequest(std::move(session_request));
   return future->Get();
+}
+
+void CameraClient::SetUpChannel(mojom::CameraModulePtr camera_module) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  LOGF(INFO) << "Received camera module from camera HAL dispatcher";
+  camera_module_ = std::move(camera_module);
+  GetNumberOfCameras();
 }
 
 void CameraClient::RegisterClient(
@@ -238,14 +197,14 @@ void CameraClient::GetNumberOfCameras() {
 void CameraClient::OnGotNumberOfCameras(int32_t num_builtin_cameras) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(camera_info_lock_);
 
-  num_builtin_cameras_ = num_builtin_cameras;
-  LOGF(INFO) << "Number of builtin cameras: " << num_builtin_cameras_;
+  LOGF(INFO) << "Number of builtin cameras: " << num_builtin_cameras;
 
-  for (int32_t i = 0; i < num_builtin_cameras_; ++i) {
+  for (int32_t i = 0; i < num_builtin_cameras; ++i) {
     camera_id_list_.push_back(i);
   }
-  if (num_builtin_cameras_ == 0) {
+  if (num_builtin_cameras == 0) {
     std::move(init_callback_).Run(0);
     return;
   }
@@ -265,6 +224,7 @@ void CameraClient::GetCameraInfo(int32_t camera_id) {
 void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(camera_info_lock_);
 
   int32_t camera_id = *camera_id_iter_;
   if (result != 0) {
@@ -318,6 +278,7 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
 
   ++camera_id_iter_;
   if (camera_id_iter_ == camera_id_list_.end()) {
+    context_.state = SessionState::kIdle;
     std::move(init_callback_).Run(0);
   } else {
     GetCameraInfo(*camera_id_iter_);
@@ -326,10 +287,7 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
 
 void CameraClient::SendCameraInfo() {
   VLOGF_ENTER();
-
-  if (cam_info_callback_ == nullptr) {
-    return;
-  }
+  camera_info_lock_.AssertAcquired();
 
   for (auto& camera_id : camera_id_list_) {
     auto it = camera_info_map_.find(camera_id);
@@ -344,105 +302,260 @@ void CameraClient::SendCameraInfo() {
         .format_count = static_cast<int>(it->second.format_info.size()),
         .format_info = it->second.format_info.data()};
 
-    int ret =
-        (*cam_info_callback_)(cam_info_context_, &cam_info, /*is_removed=*/0);
-    if (ret != 0) {
-      // Deregister callback
-      cam_info_callback_ = nullptr;
-      cam_info_context_ = nullptr;
-      break;
-    }
+    SendCameraInfoInternal(cam_info, /*is_removed=*/0);
   }
 }
 
-void CameraClient::OnDeviceOpsReceived(
-    mojom::Camera3DeviceOpsRequest device_ops_request) {
+void CameraClient::SendCameraInfoInternal(const cros_cam_info_t& cam_info,
+                                          int is_removed) {
   VLOGF_ENTER();
-  ipc_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::BindOnce(&CameraClient::OpenDeviceOnThread, base::Unretained(this),
-                     std::move(device_ops_request)));
+  camera_info_lock_.AssertAcquired();
+
+  if (cam_info_callback_ == nullptr) {
+    return;
+  }
+  int ret = (*cam_info_callback_)(cam_info_context_, &cam_info, is_removed);
+  if (ret != 0) {
+    // Deregister callback
+    cam_info_callback_ = nullptr;
+    cam_info_context_ = nullptr;
+  }
 }
 
-void CameraClient::OpenDeviceOnThread(
-    mojom::Camera3DeviceOpsRequest device_ops_request) {
+void CameraClient::PushSessionRequest(SessionRequest request) {
+  VLOGF_ENTER();
+
+  ipc_thread_.task_runner()->PostTask(
+      FROM_HERE, base::BindOnce(&CameraClient::PushSessionRequestOnThread,
+                                base::Unretained(this), std::move(request)));
+}
+
+void CameraClient::PushSessionRequestOnThread(SessionRequest request) {
   VLOGF_ENTER();
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
+  pending_session_requests_.push(std::move(request));
+  TryProcessSessionRequests();
+}
+
+void CameraClient::TryProcessSessionRequests() {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  while (!pending_session_requests_.empty() &&
+         ProcessSessionRequest(&pending_session_requests_.front()) == 0) {
+    pending_session_requests_.pop();
+  }
+}
+
+int CameraClient::ProcessSessionRequest(SessionRequest* request) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  switch (request->type) {
+    case SessionRequestType::kStart:
+      return StartCaptureOnThread(request);
+    case SessionRequestType::kStop:
+      return StopCaptureOnThread(request);
+    default:
+      LOGF(ERROR) << "Unexpected session request type";
+      std::move(request->result_callback).Run(-EINVAL);
+      return 0;
+  }
+}
+
+void CameraClient::FlushInflightSessionRequests(int error) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  while (!pending_session_requests_.empty()) {
+    auto request = std::move(pending_session_requests_.front());
+    pending_session_requests_.pop();
+    std::move(request.result_callback).Run(error);
+  }
+}
+
+int CameraClient::StartCaptureOnThread(SessionRequest* request) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  if (!IsDeviceActive(request->info.camera_id)) {
+    LOGF(ERROR) << "Cannot start capture on an inactive device: "
+                << request->info.camera_id;
+    std::move(request->result_callback).Run(-ENODEV);
+    return 0;
+  }
+
+  // TODO(lnishan): Support multi-device streaming by checking against the state
+  // of the specified device only.
+  switch (context_.state) {
+    case SessionState::kIdle:
+      // Proceed to start capture.
+      break;
+    case SessionState::kStarting:
+      LOGF(WARNING) << "Capture is already starting";
+      std::move(request->result_callback).Run(-EIO);
+      return 0;
+    case SessionState::kCapturing:
+      LOGF(WARNING) << "Capture is already started";
+      std::move(request->result_callback).Run(-EIO);
+      return 0;
+    case SessionState::kStopping:
+      // Cannot start capture when the device is still being closed.
+      return -EAGAIN;
+  }
+
+  LOGF(INFO) << "Starting capture";
+  context_.state = SessionState::kStarting;
+  context_.info = std::move(request->info);
+  context_.result_callback = std::move(request->result_callback);
+  auto device_ops_request = context_.client_ops.Init(
+      base::Bind(&CameraClient::SendCaptureResult, base::Unretained(this)));
   camera_module_->OpenDevice(
-      request_camera_id_, std::move(device_ops_request),
+      context_.info.camera_id, std::move(device_ops_request),
       base::Bind(&CameraClient::OnOpenedDevice, base::Unretained(this)));
+  return 0;
 }
 
 void CameraClient::OnOpenedDevice(int32_t result) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  CHECK_EQ(context_.state, SessionState::kStarting);
+
+  const auto& info = context_.info;
   if (result != 0) {
-    LOGF(ERROR) << "Failed to open camera " << request_camera_id_;
+    LOGF(ERROR) << "Failed to open camera " << info.camera_id << ": "
+                << base::safe_strerror(-result);
+    context_.state = SessionState::kIdle;
   } else {
+    base::AutoLock l(camera_info_lock_);
     LOGF(INFO) << "Camera opened successfully";
-    client_ops_.StartCapture(
-        request_camera_id_, &request_format_,
-        camera_info_map_[request_camera_id_].jpeg_max_size);
-    // Caller should hold |capture_started_lock_| until the device is opened.
-    CHECK(!capture_started_lock_.Try());
-    capture_started_ = true;
+    context_.state = SessionState::kCapturing;
+    context_.client_ops.StartCapture(
+        info.camera_id, &info.format,
+        camera_info_map_[info.camera_id].jpeg_max_size);
   }
-  std::move(start_callback_).Run(result);
+  std::move(context_.result_callback).Run(result);
+
+  TryProcessSessionRequests();
 }
 
-void CameraClient::OnClosedDevice(bool is_local_stop, int32_t result) {
+int CameraClient::StopCaptureOnThread(SessionRequest* request) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  if (!IsDeviceActive(request->info.camera_id)) {
+    LOGF(ERROR) << "Cannot stop capture on an inactive device: "
+                << request->info.camera_id;
+    std::move(request->result_callback).Run(-ENODEV);
+    return 0;
+  }
+
+  // TODO(lnishan): Support multi-device streaming.
+  CHECK_EQ(request->info.camera_id, context_.info.camera_id);
+
+  // TODO(lnishan): Support multi-device streaming by checking against the state
+  // of the specified device only.
+  switch (context_.state) {
+    case SessionState::kIdle:
+      LOGF(WARNING) << "Capture is already stopped";
+      std::move(request->result_callback).Run(-EIO);
+      return 0;
+    case SessionState::kStarting:
+      return -EAGAIN;
+    case SessionState::kCapturing:
+      // Proceed to close the camera.
+      break;
+    case SessionState::kStopping:
+      LOGF(WARNING) << "Capture is already stopping";
+      std::move(request->result_callback).Run(-EIO);
+      return 0;
+  }
+
+  LOGF(INFO) << "Stopping capture";
+  context_.state = SessionState::kStopping;
+  context_.result_callback = std::move(request->result_callback);
+  context_.client_ops.StopCapture(
+      base::Bind(&CameraClient::OnClosedDevice, base::Unretained(this)));
+  return 0;
+}
+
+void CameraClient::OnClosedDevice(int32_t result) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  CHECK_EQ(context_.state, SessionState::kStopping);
+
   if (result != 0) {
-    LOGF(ERROR) << "Failed to close camera " << request_camera_id_;
+    LOGF(ERROR) << "Failed to close camera " << context_.info.camera_id << ": "
+                << base::safe_strerror(-result);
   } else {
     LOGF(INFO) << "Camera closed successfully";
   }
-  // Caller should hold |capture_started_lock_| until the device is closed.
-  CHECK(!capture_started_lock_.Try());
-  // Capture is marked stopped regardless of the result. When an error takes
-  // place, we don't want to close or use the camera again.
-  capture_started_ = false;
-  if (is_local_stop) {
-    // If the stop was initiated through CameraClientOps, the root
-    // StopCapture() would be called on |ops_thread_| holding
-    // |capture_started_lock_|. We release it here to allow further
-    // StartCapture() and StopCapture() calls to resume.
-    capture_started_lock_.Release();
-  } else {
-    // If the stop was initiated by a client (through StopCapture()) or Exit()
-    // call, it would come from a different thread, and thus we cannot release
-    // |capture_started_lock_| here. The caller would set a future callback,
-    // |stop_callback_| and wait on it.
-    std::move(stop_callback_).Run(result);
-  }
+
+  // We transition the state to |SessionState::kIdle| here regardless of the
+  // result to allow further retries. It's also possible that a device is
+  // disconnected while the device is closing, and such an event would be
+  // recoverable.
+  context_.state = SessionState::kIdle;
+  std::move(context_.result_callback).Run(result);
+
+  TryProcessSessionRequests();
 }
 
 bool CameraClient::IsDeviceActive(int device) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(camera_info_lock_);
+
   return camera_info_map_.find(device) != camera_info_map_.end();
 }
 
 void CameraClient::SendCaptureResult(const cros_cam_capture_result_t& result) {
-  // Make sure cameras aren't being opened or stopped. It's very important we
-  // don't wait on the lock here. If we waited on the lock, the thread owned by
-  // CameraClientOps would be blocked. If StopCapture() was the one which
-  // acquired the lock, it would hold it until device is closed. Since
-  // Camera3DeviceOps::Close() is done on CameraClientOps thread, it would not
-  // be able to continue if we were to wait on the lock here, causing deadlock.
-  if (!capture_started_lock_.Try()) {
-    VLOGF(1) << "Capture is being started or stopped. Dropping a frame.";
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  // Only permissible states here are |SessionState::kCapturing| and
+  // |SessionState::kStopping|.
+  switch (context_.state) {
+    case SessionState::kIdle:
+      LOGF(ERROR) << "Received a capture result while the device is idle";
+      return;
+    case SessionState::kStarting:
+      LOGF(ERROR) << "Received a capture result while the capture is starting";
+      return;
+    case SessionState::kCapturing:
+      break;
+    case SessionState::kStopping:
+      // We don't return any capture results if the capture is stopping.
+      return;
+  }
+
+  int ret = (*context_.info.capture_callback)(context_.info.context, &result);
+  // We don't need to do anything if the session is already stopping.
+  if (context_.state == SessionState::kStopping) {
     return;
   }
-  if (!capture_started_) {
-    LOGF(INFO) << "Camera already closed. Skipping a capture result.";
-    capture_started_lock_.Release();
-    return;
+  if (ret != 0 || result.status == -ENODEV) {
+    CHECK_EQ(context_.state, SessionState::kCapturing);
+    // Flush all inflight session requests to stop the capture immediately.
+    FlushInflightSessionRequests(-EIO);
+    SessionRequest request = {.type = SessionRequestType::kStop,
+                              .info = context_.info,
+                              .result_callback = base::BindOnce(
+                                  &CameraClient::OnStoppedCaptureFromCallback,
+                                  base::Unretained(this))};
+    PushSessionRequestOnThread(std::move(request));
+    CHECK_EQ(context_.state, SessionState::kStopping);
   }
-  int ret = (*request_callback_)(request_context_, &result);
-  if (ret != 0) {
-    client_ops_.StopCapture(base::Bind(&CameraClient::OnClosedDevice,
-                                       base::Unretained(this),
-                                       /*is_local_stop=*/true));
-    return;
+}
+
+void CameraClient::OnStoppedCaptureFromCallback(int result) {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+
+  if (result != 0) {
+    LOGF(ERROR) << "Failed to stop capture from capture callback";
   }
-  capture_started_lock_.Release();
 }
 
 }  // namespace cros
