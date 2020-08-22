@@ -61,6 +61,15 @@ void CameraClientOps::StopCapture(IntOnceCallback close_callback) {
                                     std::move(close_callback)));
 }
 
+void CameraClientOps::Reset() {
+  VLOGF_ENTER();
+  DCHECK(ops_runner_->RunsTasksInCurrentSequence());
+
+  capturing_ = false;
+  device_ops_.reset();
+  camera3_callback_ops_.Close();
+}
+
 void CameraClientOps::ProcessCaptureResult(
     mojom::Camera3CaptureResultPtr result) {
   VLOGF_ENTER();

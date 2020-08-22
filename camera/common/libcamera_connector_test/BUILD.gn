@@ -14,6 +14,7 @@ executable("cros_camera_connector_test") {
   ]
   pkg_deps = [
     "libbrillo",
+    "libcamera_common",
     "libcamera_connector",
     "libyuv",
   ]

@@ -166,6 +166,9 @@ void CameraClient::SetUpChannel(mojom::CameraModulePtr camera_module) {
 
   LOGF(INFO) << "Received camera module from camera HAL dispatcher";
   camera_module_ = std::move(camera_module);
+  camera_module_.set_connection_error_handler(
+      base::Bind(&CameraClient::ResetClientState, base::Unretained(this)));
+
   GetNumberOfCameras();
 }
 
@@ -184,6 +187,50 @@ void CameraClient::CloseOnThread() {
   DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
 
   camera_hal_client_.Close();
+}
+
+void CameraClient::ResetClientState() {
+  VLOGF_ENTER();
+  DCHECK(ipc_thread_.task_runner()->BelongsToCurrentThread());
+  base::AutoLock l(camera_info_lock_);
+
+  LOGF(WARNING) << "Mojo connection to HAL server disconnected";
+  // Notify the user that cameras are down.
+  for (auto id : camera_id_list_) {
+    cros_cam_info_t info = {.id = id, .format_count = 0};
+    SendCameraInfoInternal(info, /*is_removed=*/1);
+  }
+  camera_id_list_.clear();
+  camera_info_map_.clear();
+  if (init_callback_) {
+    // If mojo disconnects during initialization, we can wait for the mojo
+    // connection to come back and re-do the initialization. In addition, We
+    // wouldn't have a valid session context here. Hence we don't reset sessions
+    // or CameraClientOps.
+    return;
+  }
+  switch (context_.state) {
+    case SessionState::kIdle: {
+      // No need to do anything.
+      break;
+    }
+    case SessionState::kStarting: {
+      std::move(context_.result_callback).Run(-ENODEV);
+      break;
+    }
+    case SessionState::kCapturing: {
+      cros_cam_capture_result_t result = {.status = -ENODEV, .frame = nullptr};
+      (*context_.info.capture_callback)(context_.info.context, &result);
+      break;
+    }
+    case SessionState::kStopping: {
+      std::move(context_.result_callback).Run(-ENODEV);
+      break;
+    }
+  }
+  context_.state = SessionState::kIdle;
+  FlushInflightSessionRequests(-ENODEV);
+  context_.client_ops.Reset();
 }
 
 void CameraClient::GetNumberOfCameras() {
@@ -205,7 +252,9 @@ void CameraClient::OnGotNumberOfCameras(int32_t num_builtin_cameras) {
     camera_id_list_.push_back(i);
   }
   if (num_builtin_cameras == 0) {
-    std::move(init_callback_).Run(0);
+    if (init_callback_) {
+      std::move(init_callback_).Run(0);
+    }
     return;
   }
   camera_id_iter_ = camera_id_list_.begin();
@@ -227,10 +276,25 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
   base::AutoLock l(camera_info_lock_);
 
   int32_t camera_id = *camera_id_iter_;
+  ++camera_id_iter_;
   if (result != 0) {
     LOGF(ERROR) << "Failed to get camera info of " << camera_id << ": "
                 << base::safe_strerror(-result);
-    std::move(init_callback_).Run(-ENODEV);
+    if (init_callback_) {
+      std::move(init_callback_).Run(-ENODEV);
+    } else {
+      // Caveat: If the error happened after initialization, the user has no way
+      // to be notified of the failure, and simply won't know this camera
+      // exists.
+      if (camera_id_iter_ == camera_id_list_.end()) {
+        // Still send existing camera info since we might have some cameras
+        // available.
+        SendCameraInfo();
+      } else {
+        // Try the next camera. It might succeed.
+        GetCameraInfo(*camera_id_iter_);
+      }
+    }
     return;
   }
 
@@ -276,10 +340,13 @@ void CameraClient::OnGotCameraInfo(int32_t result, mojom::CameraInfoPtr info) {
       info->static_camera_characteristics,
       mojom::CameraMetadataTag::ANDROID_JPEG_MAX_SIZE)[0];
 
-  ++camera_id_iter_;
   if (camera_id_iter_ == camera_id_list_.end()) {
-    context_.state = SessionState::kIdle;
-    std::move(init_callback_).Run(0);
+    if (init_callback_) {
+      context_.state = SessionState::kIdle;
+      std::move(init_callback_).Run(0);
+    } else {
+      SendCameraInfo();
+    }
   } else {
     GetCameraInfo(*camera_id_iter_);
   }

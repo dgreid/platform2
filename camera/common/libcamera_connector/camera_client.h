@@ -151,6 +151,8 @@ class CameraClient final : public mojom::CameraHalClient {
   // Closes the message pipe associated with this client.
   void CloseOnThread();
 
+  void ResetClientState();
+
   void GetNumberOfCameras();
 
   void OnGotNumberOfCameras(int32_t num_builtin_cameras);

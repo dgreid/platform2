@@ -4,13 +4,16 @@
  * found in the LICENSE file.
  */
 
+#include <cstdlib>
 #include <set>
 #include <vector>
 
 #include <base/command_line.h>
 #include <base/posix/safe_strerror.h>
+#include <base/stl_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/threading/thread.h>
 #include <brillo/syslog_logging.h>
 #include <gtest/gtest.h>
 #include <libyuv.h>
@@ -20,6 +23,7 @@
 #include "common/libcamera_connector_test/util.h"
 #include "cros-camera/camera_service_connector.h"
 #include "cros-camera/common.h"
+#include "cros-camera/future.h"
 
 namespace cros {
 namespace tests {
@@ -54,6 +58,9 @@ class ConnectorEnvironment : public ::testing::Environment {
 
 class FrameCapturer {
  public:
+  FrameCapturer() : thread_("FrameCapturer") { thread_.Start(); }
+  ~FrameCapturer() { thread_.Stop(); }
+
   FrameCapturer& SetNumFrames(int num_frames) {
     num_frames_ = num_frames;
     return *this;
@@ -64,36 +71,67 @@ class FrameCapturer {
     return *this;
   }
 
+  // Run starts a capture session with the given |id| and |format|. Returns the
+  // number of frames captured or the error status if an error is encountered.
   int Run(int id, cros_cam_format_info_t format) {
-    num_frames_captured_ = 0;
-    capture_done_.Reset();
-    format_ = format;
+    auto future = cros::Future<int>::Create(nullptr);
+    thread_.task_runner()->PostTask(
+        FROM_HERE,
+        base::BindOnce(&FrameCapturer::RunAsync, base::Unretained(this), id,
+                       std::move(format), cros::GetFutureCallback(future)));
+    return future->Get();
+  }
 
-    const cros_cam_capture_request_t request = {
-        .id = id,
-        .format = &format,
-    };
-
-    if (cros_cam_start_capture(&request, &FrameCapturer::CaptureCallback,
-                               this) != 0) {
-      ADD_FAILURE() << "failed to start capture";
-      return 0;
+  // Run starts a capture session with the given |id| and |format|. Fires
+  // |callback| with the number of frames captured or the error status if an
+  // error is encountered.
+  // TODO(b/168769598): Change |callback| to base::OnceCallback once
+  // cros::GetFutureCallback() returns base::OnceCallback.
+  void RunAsync(int id,
+                cros_cam_format_info_t format,
+                base::Callback<void(int)> callback) {
+    int ret = StartCapture(id, std::move(format));
+    if (ret != 0) {
+      LOGF(ERROR) << "Failed to start capture";
+      callback.Run(ret);
     }
-
-    // Wait until |duration_| passed or |num_frames_| captured.
-    if (!capture_done_.TimedWait(duration_)) {
-      cros_cam_stop_capture(id);
-      capture_done_.Signal();
-    }
-
-    LOGF(INFO) << "Captured " << num_frames_captured_ << " frames";
-    return num_frames_captured_;
+    thread_.task_runner()->PostTask(
+        FROM_HERE, base::BindOnce(&FrameCapturer::WaitForCaptureResult,
+                                  base::Unretained(this), std::move(callback)));
   }
 
   I420Buffer LastI420Frame() const { return last_i420_frame_; }
 
  private:
-  // non-zero return value should stop the capture.
+  int StartCapture(int id, cros_cam_format_info_t format) {
+    num_frames_captured_ = 0;
+    last_status_ = 0;
+    capture_done_.Reset();
+
+    id_ = id;
+    format_ = format;
+    const cros_cam_capture_request_t request = {
+        .id = id,
+        .format = &format,
+    };
+    return cros_cam_start_capture(&request, &FrameCapturer::CaptureCallback,
+                                  this);
+  }
+
+  void WaitForCaptureResult(base::Callback<void(int)> callback) {
+    // Wait until |duration_| passed or |num_frames_| captured. Fires |callback|
+    // with the number of frames captured or the error status if an error is
+    // encountered.
+    if (!capture_done_.TimedWait(duration_)) {
+      cros_cam_stop_capture(id_);
+      capture_done_.Signal();
+    }
+    LOGF(INFO) << "Last status = " << last_status_;
+    LOGF(INFO) << "Captured " << num_frames_captured_ << " frames";
+    callback.Run(last_status_ != 0 ? last_status_ : num_frames_captured_);
+  }
+
+  // Non-zero return value should stop the capture.
   int GotCaptureResult(const cros_cam_capture_result_t* result) {
     if (capture_done_.IsSignaled()) {
       ADD_FAILURE() << "got capture result after capture is done";
@@ -101,8 +139,10 @@ class FrameCapturer {
     }
 
     if (result->status != 0) {
-      ADD_FAILURE() << "capture result error: "
+      LOGF(WARNING) << "Capture result error: "
                     << base::safe_strerror(-result->status);
+      last_status_ = result->status;
+      capture_done_.Signal();
       return -1;
     }
 
@@ -125,13 +165,17 @@ class FrameCapturer {
     return self->GotCaptureResult(result);
   }
 
+  base::Thread thread_;
+
   int num_frames_ = INT_MAX;
   base::TimeDelta duration_ = kDefaultTimeout;
+  int id_;
   cros_cam_format_info_t format_;
 
   int num_frames_captured_;
   base::WaitableEvent capture_done_;
   I420Buffer last_i420_frame_;
+  int last_status_;
 };
 
 class CameraClient {
@@ -139,7 +183,7 @@ class CameraClient {
   void ProbeCameraInfo() {
     ASSERT_EQ(cros_cam_get_cam_info(&CameraClient::GetCamInfoCallback, this),
               0);
-    EXPECT_GT(camera_infos_.size(), 0) << "no camera found";
+    EXPECT_GT(GetNumberOfCameras(), 0) << "no camera found";
     // All connected cameras should be already reported by the callback
     // function, set the frozen flag to capture unexpected hotplug events
     // during test. Please see the comment of cros_cam_get_cam_info() for more
@@ -161,13 +205,7 @@ class CameraClient {
     }
   }
 
-  size_t GetNumberOfCameras() {
-    std::set<int> ids;
-    for (const auto& info : camera_infos_) {
-      ids.insert(info.id);
-    }
-    return ids.size();
-  }
+  size_t GetNumberOfCameras() { return camera_infos_.size(); }
 
   int FindIdForFormat(const cros_cam_format_info_t& format) {
     for (const auto& info : camera_infos_) {
@@ -180,13 +218,39 @@ class CameraClient {
     return -1;
   }
 
+  void RestartCrosCamera() {
+    prev_num_cameras_ = GetNumberOfCameras();
+    camera_info_frozen_ = false;
+    // We don't clear |camera_infos_| here expecting that libcamera_connector
+    // would notify us that the cameras are down.
+    init_done_event_.Reset();
+    LOGF(INFO) << "Restarting cros-camera";
+    ASSERT_EQ(system("stop cros-camera"), 0) << "Failed to stop camera";
+    ASSERT_EQ(system("start cros-camera"), 0) << "Failed to start camera";
+    ASSERT_TRUE(init_done_event_.TimedWait(kDefaultTimeout))
+        << "Failed to get all camera info after timeout";
+  }
+
  private:
   int GotCameraInfo(const cros_cam_info_t* info, int is_removed) {
     EXPECT_FALSE(camera_info_frozen_) << "unexpected hotplug events";
-    EXPECT_EQ(is_removed, 0) << "unexpected removing events";
-    EXPECT_GT(info->format_count, 0) << "no available formats";
-    camera_infos_.push_back(*info);
-    LOGF(INFO) << "Got camera info for id: " << info->id;
+    if (is_removed) {
+      LOGF(INFO) << "Camera " << info->id << " removed";
+      // TODO(lnishan): Check return value of base::EraseIf after libchrome in
+      // Chrome OS includes crrev.com/c/2072038.
+      size_t old_size = camera_infos_.size();
+      base::EraseIf(camera_infos_, [&](const auto& my_info) {
+        return my_info.id == info->id;
+      });
+      CHECK_EQ(camera_infos_.size(), old_size - 1);
+    } else {
+      LOGF(INFO) << "Got camera info for camera " << info->id;
+      EXPECT_GT(info->format_count, 0) << "no available formats";
+      camera_infos_.push_back(*info);
+      if (GetNumberOfCameras() == prev_num_cameras_) {
+        init_done_event_.Signal();
+      }
+    }
     return 0;
   }
 
@@ -198,6 +262,8 @@ class CameraClient {
   }
   std::vector<cros_cam_info_t> camera_infos_;
   bool camera_info_frozen_ = false;
+  int prev_num_cameras_ = -1;
+  base::WaitableEvent init_done_event_;
 };
 
 class CaptureTest
@@ -275,6 +341,38 @@ TEST(ConnectorTest, CompareFrames) {
   // such as all pixels are black. Set the threshold as 0.99 for potential jpeg
   // artifacts and floating point error.
   EXPECT_LE(ssim, 0.99);
+}
+
+TEST(ConnectorTest, RestartCrosCameraIdle) {
+  CameraClient client;
+  FrameCapturer capturer;
+  cros_cam_format_info_t format = kTestFormats[0];
+
+  client.ProbeCameraInfo();
+  client.RestartCrosCamera();
+
+  int id = client.FindIdForFormat(format);
+  ASSERT_NE(id, -1);
+  int num_frames_captured = capturer.SetNumFrames(1).Run(id, format);
+  EXPECT_EQ(num_frames_captured, 1);
+}
+
+TEST(ConnectorTest, RestartCrosCameraActive) {
+  CameraClient client;
+  FrameCapturer capturer;
+  cros_cam_format_info_t format = kTestFormats[0];
+
+  client.ProbeCameraInfo();
+  int id = client.FindIdForFormat(format);
+  ASSERT_NE(id, -1);
+
+  auto future = cros::Future<int>::Create(nullptr);
+  capturer.SetDuration(kDefaultTimeout)
+      .RunAsync(id, format, cros::GetFutureCallback(future));
+  client.RestartCrosCamera();
+  ASSERT_EQ(future->Get(), -ENODEV);
+  int num_frames_captured = capturer.SetNumFrames(1).Run(id, format);
+  EXPECT_EQ(num_frames_captured, 1);
 }
 
 INSTANTIATE_TEST_SUITE_P(ConnectorTest,

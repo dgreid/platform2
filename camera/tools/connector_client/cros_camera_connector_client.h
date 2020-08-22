@@ -9,6 +9,7 @@
 
 #include <list>
 #include <map>
+#include <queue>
 #include <vector>
 
 #include <base/threading/thread.h>
@@ -20,8 +21,6 @@ namespace cros {
 
 int OnGotCameraInfo(void* context, const cros_cam_info_t* info, int is_removed);
 
-int OnFrameAvailable(void* context, const cros_cam_frame_t* frame);
-
 class CrosCameraConnectorClient : public brillo::Daemon {
  public:
   CrosCameraConnectorClient();
@@ -32,7 +31,11 @@ class CrosCameraConnectorClient : public brillo::Daemon {
 
   void SetCamInfo(const cros_cam_info_t* info);
 
+  void RemoveCamera(int32_t id);
+
   void ProcessFrame(const cros_cam_frame_t* frame);
+
+  void StartCapture();
 
   void RestartCapture();
 
@@ -45,11 +48,17 @@ class CrosCameraConnectorClient : public brillo::Daemon {
 
   scoped_refptr<base::SequencedTaskRunner> client_runner_;
 
-  std::list<int> camera_device_list_;
-  std::map<int, std::vector<cros_cam_format_info_t>> format_info_map_;
+  std::list<int32_t> camera_device_list_;
+  std::map<int32_t, std::vector<cros_cam_format_info_t>> format_info_map_;
+  base::Lock camera_info_lock_;  // Lock that protects |camera_device_list_|
+                                 // and |format_info_map_|.
+  bool init_done_;
 
-  std::list<int>::iterator request_device_iter_;
-  std::vector<cros_cam_format_info_t>::iterator request_format_iter_;
+  std::map<int32_t, std::queue<cros_cam_format_info_t>> pending_captures_map_;
+  int32_t current_id_;
+  cros_cam_format_info_t current_format_info_;
+  base::Lock capture_lock_;  // Lock that protects |pending_captures_map_|,
+                             // |current_id_| and |current_format_info_|.
 
   base::Thread capture_thread_;
   int num_restarts_;

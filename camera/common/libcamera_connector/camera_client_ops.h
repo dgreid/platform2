@@ -71,6 +71,11 @@ class CameraClientOps : public mojom::Camera3CallbackOps {
   // still be sent after this call.
   void StopCapture(IntOnceCallback close_callback);
 
+  // Resets CameraClientOps. This halts all ongoing CameraClientOps operations
+  // and resets the class to an uninitialized state (i.e., Init() can be called
+  // to reinitialize the class).
+  void Reset();
+
   // ProcessCaptureResult is an implementation of ProcessCaptureResult in
   // Camera3CallbackOps. It receives the result metadata and filled buffers from
   // the camera service.
