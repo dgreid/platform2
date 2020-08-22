@@ -389,6 +389,14 @@ properties:
                         - 90
                         - 180
                         - 270
+                    if:
+                      properties:
+                        interface:
+                          const: usb
+                    then:
+                      properties:
+                        id:
+                          pattern: "[0-9a-f]{4}:[0-9a-f]{4}"
                     required:
                     - id
                     - interface
