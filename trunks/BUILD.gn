@@ -65,6 +65,7 @@ proto_library("pinweaver_proto") {
 
   # Use -fPIC so this code can be linked into a shared library.
   use_pic = true
+  standalone = true
 }
 
 shared_library("trunks") {
@@ -108,10 +109,7 @@ shared_library("trunks") {
 executable("pinweaver_client") {
   configs += [ ":target_defaults" ]
   sources = [ "pinweaver_client.cc" ]
-  deps = [
-    ":pinweaver_proto",
-    ":trunks",
-  ]
+  deps = [ ":trunks" ]
 }
 
 executable("trunks_client") {
@@ -311,10 +309,7 @@ if (use.fuzzer) {
       ":target_defaults",
     ]
     sources = [ "tpm_pinweaver_fuzzer.cc" ]
-    deps = [
-      ":pinweaver_proto",
-      ":trunks",
-    ]
+    deps = [ ":trunks" ]
   }
 }
 
