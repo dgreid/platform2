@@ -122,6 +122,7 @@ copies.
 | [smogcheck](./smogcheck/) | Developer library for working with raw I2C devices |
 | [st_flash](./st_flash/) ||
 | [storage_info](./storage_info/) | Helper shell functions for retrieving disk information) |
+| [syslog-cat](./syslog-cat/) | Helper command to forward stdout/stderr from process to syslog |
 | [system-proxy](./system-proxy/) | Daemon for web proxy authentication support on Chrome OS |
 | [system_api](./system_api/) | Headers and .proto files etc. to be shared with chromium |
 | [thd](./thd/) | Thermal daemon to help keep systems running cool |
