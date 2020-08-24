@@ -414,6 +414,9 @@ void AddSystemFlags(ChromiumCommandBuilder* builder) {
   if (builder->is_developer_end_user())
     builder->AddArg("--system-developer-mode");
 
+  if (builder->UseFlagIsSet("diagnostics"))
+    builder->AddFeatureEnableOverride("UmaStorageDimensions");
+
   // Enable Wilco only features.
   if (builder->UseFlagIsSet("wilco")) {
     builder->AddFeatureEnableOverride("WilcoDtc");
