@@ -147,11 +147,11 @@ TEST_F(MountOptionsTest, ToString) {
   mount_options_.Initialize(options, false, "", "");
   EXPECT_EQ(expected_string, mount_options_.ToString());
 
-  // Whitelist more options.
+  // Allow more options.
   expected_string = "bind,foo=mississippi,bar,ro,nodev,noexec,nosuid";
   options = {"bind", "bang", "foo=mississippi", "bar", "baz"};
-  mount_options_.WhitelistOption("bar");
-  mount_options_.WhitelistOptionPrefix("foo=");
+  mount_options_.AllowOption("bar");
+  mount_options_.AllowOptionPrefix("foo=");
   mount_options_.Initialize(options, false, "", "");
   EXPECT_EQ(expected_string, mount_options_.ToString());
 
@@ -275,7 +275,7 @@ TEST_F(MountOptionsTest, ToMountFlagsAndData) {
 }
 
 TEST_F(MountOptionsTest, HasOption) {
-  mount_options_.WhitelistOption(MountOptions::kOptionNoSymFollow);
+  mount_options_.AllowOption(MountOptions::kOptionNoSymFollow);
 
   std::vector<std::string> options = {MountOptions::kOptionNoSymFollow};
   mount_options_.Initialize(options, false, "", "");

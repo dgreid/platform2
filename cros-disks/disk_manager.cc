@@ -206,7 +206,7 @@ std::unique_ptr<MounterCompat> DiskManager::CreateMounter(
   }
 
   MountOptions mount_options;
-  mount_options.WhitelistOption(MountOptions::kOptionNoSymFollow);
+  mount_options.AllowOption(MountOptions::kOptionNoSymFollow);
   mount_options.Initialize(extended_options,
                            filesystem.accepts_user_and_group_id,
                            default_user_id, default_group_id);

@@ -32,14 +32,14 @@ class MountOptions {
   MountOptions();
   ~MountOptions();
 
-  // Whitelists additional options for particular mount invocations.
+  // Allows additional options for particular mount invocations.
   // Some filesystems have required uncommon options. Must be set up before
   // options are initialized.
-  void WhitelistOption(const std::string& option);
-  void WhitelistOptionPrefix(const std::string& prefix);
+  void AllowOption(const std::string& option);
+  void AllowOptionPrefix(const std::string& prefix);
 
   // Enforces option to be included regardless of what was provided in the
-  // Initialize(). Implicitly whitelists this option.
+  // Initialize(). Implicitly allows this option.
   // Useful for options like foo=bar to prevent changing 'bar' to user input.
   void EnforceOption(const std::string& option);
 
@@ -75,9 +75,9 @@ class MountOptions {
   const std::vector<std::string>& options() const { return options_; }
 
  private:
-  // Whitelisted mount options.
-  std::vector<std::string> whitelist_exact_;
-  std::vector<std::string> whitelist_prefix_;
+  // Allowed mount options.
+  std::vector<std::string> allow_exact_;
+  std::vector<std::string> allow_prefix_;
   std::vector<std::string> enforced_options_;
 
   // List of mount options.

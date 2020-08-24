@@ -139,11 +139,11 @@ std::unique_ptr<FUSEMounter> SshfsHelper::CreateMounter(
   for (const auto& opt : kEnforcedOptions) {
     mount_options.EnforceOption(opt);
   }
-  // We don't whitelist *Base64 versions as we replace them with files.
-  mount_options.WhitelistOptionPrefix(kOptionIdentityFile);
-  mount_options.WhitelistOptionPrefix(kOptionUserKnownHostsFile);
-  mount_options.WhitelistOptionPrefix(kOptionHostName);
-  mount_options.WhitelistOptionPrefix(kOptionPort);
+  // We don't allow *Base64 versions as we replace them with files.
+  mount_options.AllowOptionPrefix(kOptionIdentityFile);
+  mount_options.AllowOptionPrefix(kOptionUserKnownHostsFile);
+  mount_options.AllowOptionPrefix(kOptionHostName);
+  mount_options.AllowOptionPrefix(kOptionPort);
   mount_options.Initialize(opts, true, base::NumberToString(files_uid),
                            base::NumberToString(files_gid));
 

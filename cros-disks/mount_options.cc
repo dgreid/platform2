@@ -41,9 +41,9 @@ const char kOptionTimeOffsetPrefix[] = "time_offset=";
 }  // namespace
 
 MountOptions::MountOptions()
-    : whitelist_exact_({kOptionBind, kOptionDirSync, kOptionFlush,
-                        kOptionSynchronous, kOptionUtf8}),
-      whitelist_prefix_({kOptionShortNamePrefix, kOptionTimeOffsetPrefix}),
+    : allow_exact_({kOptionBind, kOptionDirSync, kOptionFlush,
+                    kOptionSynchronous, kOptionUtf8}),
+      allow_prefix_({kOptionShortNamePrefix, kOptionTimeOffsetPrefix}),
       enforced_options_({kOptionNoDev, kOptionNoExec, kOptionNoSuid}) {}
 
 MountOptions::~MountOptions() = default;
@@ -81,19 +81,19 @@ void MountOptions::Initialize(const std::vector<std::string>& options,
     } else if (base::Contains(enforced_options_, option)) {
       // We'll add these options unconditionally below.
       continue;
-    } else if (base::Contains(whitelist_exact_, option)) {
-      // Only add options in the whitelist.
+    } else if (base::Contains(allow_exact_, option)) {
+      // Only add options in the allowlist.
       options_.push_back(option);
-    } else if (std::find_if(whitelist_prefix_.begin(), whitelist_prefix_.end(),
+    } else if (std::find_if(allow_prefix_.begin(), allow_prefix_.end(),
                             [option](const auto& s) {
                               return base::StartsWith(
                                   option, s,
                                   base::CompareCase::INSENSITIVE_ASCII);
-                            }) != whitelist_prefix_.end()) {
-      // Only add options in the whitelist.
+                            }) != allow_prefix_.end()) {
+      // Only add options in the allowlist.
       options_.push_back(option);
     } else {
-      // Never add unknown/non-whitelisted options.
+      // Never add unknown/non-allowed options.
       LOG(WARNING) << "Ignoring unsupported mount option " << quote(option);
     }
   }
@@ -193,12 +193,12 @@ std::string MountOptions::ToString() const {
   return options_.empty() ? kOptionReadOnly : base::JoinString(options_, ",");
 }
 
-void MountOptions::WhitelistOption(const std::string& option) {
-  whitelist_exact_.push_back(option);
+void MountOptions::AllowOption(const std::string& option) {
+  allow_exact_.push_back(option);
 }
 
-void MountOptions::WhitelistOptionPrefix(const std::string& prefix) {
-  whitelist_prefix_.push_back(prefix);
+void MountOptions::AllowOptionPrefix(const std::string& prefix) {
+  allow_prefix_.push_back(prefix);
 }
 
 void MountOptions::EnforceOption(const std::string& option) {

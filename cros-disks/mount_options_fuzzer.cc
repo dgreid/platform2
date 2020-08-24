@@ -19,16 +19,16 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   MountOptions mount_options;
 
-  size_t num_whitelisted_options =
+  size_t num_allowed_options =
       data_provider.ConsumeIntegralInRange<uint32_t>(0, 50);
-  for (size_t i = 0; i < num_whitelisted_options; ++i) {
-    mount_options.WhitelistOption(data_provider.ConsumeRandomLengthString(100));
+  for (size_t i = 0; i < num_allowed_options; ++i) {
+    mount_options.AllowOption(data_provider.ConsumeRandomLengthString(100));
   }
 
-  size_t num_whitelisted_option_prefixes =
+  size_t num_allowed_option_prefixes =
       data_provider.ConsumeIntegralInRange<uint32_t>(0, 50);
-  for (size_t i = 0; i < num_whitelisted_option_prefixes; ++i) {
-    mount_options.WhitelistOptionPrefix(
+  for (size_t i = 0; i < num_allowed_option_prefixes; ++i) {
+    mount_options.AllowOptionPrefix(
         data_provider.ConsumeRandomLengthString(100));
   }
 

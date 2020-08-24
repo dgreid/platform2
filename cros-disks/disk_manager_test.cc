@@ -157,7 +157,7 @@ TEST_F(DiskManagerTest, CreateExt4SystemMounter) {
   disk.device_file = "/dev/sda1";
 
   std::string target_path = "/media/disk";
-  // "mand" is not a whitelisted option, so it should be skipped.
+  // "mand" is not an allowed option, so it should be skipped.
   std::vector<std::string> options = {"rw", "nodev", "noexec", "nosuid",
                                       "mand"};
 
