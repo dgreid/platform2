@@ -118,8 +118,7 @@ class DeviceConfigJson(DeviceConfig):
   def GetArcFiles(self):
     return self._GetSystemFilesV2([
         '/arc/hardware-features',
-        '/arc/media-profiles',
-        '/arc/camera-characteristics'])
+        '/arc/media-profiles'])
 
   def GetAudioFiles(self):
     return self._GetFiles('/audio/main')

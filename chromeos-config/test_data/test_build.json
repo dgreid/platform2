@@ -9,10 +9,6 @@
             "metrics-tag": "abc123",
             "product": "some"
           },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
-          },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
             "system-path": "/etc/some_hardware_features.xml"
@@ -147,10 +143,6 @@
             "metrics-tag": "abc123",
             "product": "some"
           },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
-          },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
             "system-path": "/etc/some_hardware_features.xml"
@@ -280,10 +272,6 @@
             "first-api-level": "27",
             "metrics-tag": "abc123",
             "product": "some2"
-          },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
           },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
@@ -499,10 +487,6 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
-          },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
             "system-path": "/etc/some_hardware_features.xml"
@@ -596,10 +580,6 @@
             "first-api-level": "27",
             "metrics-tag": "abc123",
             "product": "whitelabel"
-          },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
           },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
@@ -695,10 +675,6 @@
             "metrics-tag": "abc123",
             "product": "whitelabel"
           },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
-          },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",
             "system-path": "/etc/some_hardware_features.xml"
@@ -792,10 +768,6 @@
             "first-api-level": "27",
             "metrics-tag": "abc123",
             "product": "whitelabel"
-          },
-          "camera-characteristics": {
-            "build-path": "some/camera_characteristics.conf",
-            "system-path": "/etc/arc/camera_characteristics.conf"
           },
           "hardware-features": {
             "build-path": "some/hardware_features.xml",

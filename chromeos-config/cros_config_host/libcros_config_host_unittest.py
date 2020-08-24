@@ -113,9 +113,6 @@ class CrosConfigHostTest(unittest.TestCase):
     arc_files = config.GetArcFiles()
     self.assertEqual(arc_files, [
         BaseFile(
-            source='some/camera_characteristics.conf',
-            dest='/etc/arc/camera_characteristics.conf'),
-        BaseFile(
             source='some/hardware_features.xml',
             dest='/etc/some_hardware_features.xml'),
         BaseFile(
