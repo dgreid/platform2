@@ -51,31 +51,28 @@ namespace brillo {
 //    secure objects would be transparent across threads.
 // TODO(sarthakkukreti): Figure out patterns to pass secure data over fork().
 template <typename T>
-class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
+class BRILLO_PRIVATE SecureAllocator {
  public:
-  using typename std::allocator<T>::pointer;
-  using typename std::allocator<T>::size_type;
-  using typename std::allocator<T>::value_type;
+  using pointer = typename std::allocator<T>::pointer;
+  using size_type = typename std::allocator<T>::size_type;
+  using value_type = typename std::allocator<T>::value_type;
 
   // Constructors that wrap over std::allocator.
-  // Make sure that the allocator's static members are only allocated once.
-  SecureAllocator() noexcept : std::allocator<T>() {}
-  SecureAllocator(const SecureAllocator& other) noexcept
-      : std::allocator<T>(other) {}
-
+  // Makes sure that the allocator's static members are only allocated once.
+  SecureAllocator() noexcept = default;
+  SecureAllocator(const SecureAllocator& other) noexcept = default;
   template <class U>
-  SecureAllocator(const SecureAllocator<U>& other) noexcept
-      : std::allocator<T>(other) {}
+  SecureAllocator(const SecureAllocator<U>& other) noexcept {}
 
   template <typename U>
   struct rebind {
     typedef SecureAllocator<U> other;
   };
 
-  // Return cached max_size. Deprecated in C++17, removed in C++20.
+  // Returns cached max_size.
   size_type max_size() const { return max_size_; }
 
-  // Allocation: allocate ceil(size/pagesize) for holding the data.
+  // Allocation: allocates ceil(size/pagesize) for holding the data.
   pointer allocate(size_type n, pointer hint = nullptr) {
     pointer buffer = nullptr;
     // Check if n can be theoretically allocated.
@@ -144,19 +141,19 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
     return buffer;
   }
 
-  // Destroy object before deallocation. Deprecated in C++17, removed in C++20.
-  // After destroying the object, clear the contents of where the object was
+  // Destroys object before deallocation.
+  // After destroying the object, clears the contents of where the object was
   // stored.
   template <class U>
   void destroy(U* p) {
     // Return if the pointer is invalid.
     if (!p)
       return;
-    std::allocator<U>::destroy(p);
+    p->~U();
     clear_contents(p, sizeof(U));
   }
 
-  virtual void deallocate(pointer p, size_type n) {
+  void deallocate(pointer p, size_type n) {
     // Check if n can be theoretically deallocated.
     CHECK_LT(n, max_size());
 
@@ -192,7 +189,7 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
 #undef __attribute_no_opt
 
  private:
-  // Calculate the page-aligned buffer size.
+  // Calculates the page-aligned buffer size.
   size_t CalculatePageAlignedBufferSize(size_type n) {
     size_type real_size = n * sizeof(value_type);
     size_type page_aligned_remainder = real_size % page_size_;
@@ -236,6 +233,22 @@ const typename SecureAllocator<T>::size_type SecureAllocator<T>::page_size_ =
 template <typename T>
 const typename SecureAllocator<T>::size_type SecureAllocator<T>::max_size_ =
     SecureAllocator<T>::GetMaxSizeForType(SecureAllocator<T>::page_size_);
+
+// Allocators are equal if they are stateless. i.e., one allocator can
+// deallocate objects created by another allocator.
+// See https://en.cppreference.com/w/cpp/memory/allocator/operator_cmp.
+// TODO(b/162949739): When C++17 is enabled this can be replaced with an
+//  implementation of std::allocator_traits::is_always_equal.
+template <class T, class U>
+bool operator==(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
+  return true;
+}
+
+template <class T, class U>
+bool operator!=(const SecureAllocator<T>& x,
+                const SecureAllocator<U>& y) noexcept {
+  return !(x == y);
+}
 
 }  // namespace brillo
 
