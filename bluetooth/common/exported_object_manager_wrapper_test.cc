@@ -91,7 +91,8 @@ class ExportedObjectManagerWrapperTest : public ::testing::Test {
       const std::string& method_name,
       dbus::ExportedObject::MethodCallCallback method_call_callback,
       dbus::ExportedObject::OnExportedCallback on_exported_callback) {
-    on_exported_callback.Run(interface_name, method_name, true /* success */);
+    std::move(on_exported_callback)
+        .Run(interface_name, method_name, true /* success */);
   }
 
  protected:
