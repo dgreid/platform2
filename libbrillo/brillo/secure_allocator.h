@@ -212,20 +212,10 @@ class BRILLO_PRIVATE SecureAllocator {
   }
 
   // Page size on system.
-  static const size_type page_size_;
+  static inline const size_type page_size_ = CalculatePageSize();
   // Max theoretical count for type on system.
-  static const size_type max_size_;
+  static inline const size_type max_size_ = GetMaxSizeForType(page_size_);
 };
-
-// Inline definitions are only allowed for static const members with integral
-// constexpr initializers, define static members of SecureAllocator types here.
-template <typename T>
-const typename SecureAllocator<T>::size_type SecureAllocator<T>::page_size_ =
-    SecureAllocator<T>::CalculatePageSize();
-
-template <typename T>
-const typename SecureAllocator<T>::size_type SecureAllocator<T>::max_size_ =
-    SecureAllocator<T>::GetMaxSizeForType(SecureAllocator<T>::page_size_);
 
 // Allocators are equal if they are stateless. i.e., one allocator can
 // deallocate objects created by another allocator.
