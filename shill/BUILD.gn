@@ -536,7 +536,7 @@ executable("openvpn-script") {
 
 if (use.cellular) {
   pkg_config("set-apn-helper_config") {
-    pkg_deps = [ "dbus-glib-1" ]
+    pkg_deps = [ "dbus-1" ]
   }
 
   executable("set-apn-helper") {
