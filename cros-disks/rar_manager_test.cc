@@ -186,6 +186,10 @@ TEST_F(RarManagerTest, Increment) {
 }
 
 TEST_F(RarManagerTest, ParseDigits) {
+  const auto ir = [](const size_t begin, const size_t end) {
+    return RarManager::IndexRange{begin, end};
+  };
+
   EXPECT_THAT(RarManager::ParseDigits(""), IsEmpty());
   EXPECT_THAT(RarManager::ParseDigits("0"), IsEmpty());
   EXPECT_THAT(RarManager::ParseDigits("rar"), IsEmpty());
@@ -195,36 +199,23 @@ TEST_F(RarManagerTest, ParseDigits) {
   EXPECT_THAT(RarManager::ParseDigits("blah.part.rar"), IsEmpty());
   EXPECT_THAT(RarManager::ParseDigits("blah0.part.rar"), IsEmpty());
   EXPECT_THAT(RarManager::ParseDigits("/blah.part.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("0.rar"), IsEmpty());
-  EXPECT_THAT(RarManager::ParseDigits("part0.rar"), IsEmpty());
-  EXPECT_EQ(RarManager::ParseDigits(".part0.rar"),
-            (RarManager::IndexRange{5, 6}));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part0.rar"),
-            (RarManager::IndexRange{9, 10}));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part0.rar"),
-            (RarManager::IndexRange{10, 11}));
-  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part0.rar"),
-            (RarManager::IndexRange{20, 21}));
-  EXPECT_EQ(RarManager::ParseDigits(".part9.rar"),
-            (RarManager::IndexRange{5, 6}));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part9.rar"),
-            (RarManager::IndexRange{9, 10}));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part9.rar"),
-            (RarManager::IndexRange{10, 11}));
-  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part9.rar"),
-            (RarManager::IndexRange{20, 21}));
-  EXPECT_EQ(RarManager::ParseDigits(".part2468097531.rar"),
-            (RarManager::IndexRange{5, 15}));
-  EXPECT_EQ(RarManager::ParseDigits("blah.part2468097531.rar"),
-            (RarManager::IndexRange{9, 19}));
-  EXPECT_EQ(RarManager::ParseDigits("/blah.part2468097531.rar"),
-            (RarManager::IndexRange{10, 20}));
+  EXPECT_THAT(RarManager::ParseDigits("0.rar"), ir(0, 1));
+  EXPECT_THAT(RarManager::ParseDigits("part0.rar"), ir(4, 5));
+  EXPECT_EQ(RarManager::ParseDigits(".part0.rar"), ir(5, 6));
+  EXPECT_EQ(RarManager::ParseDigits("blah.part0.rar"), ir(9, 10));
+  EXPECT_EQ(RarManager::ParseDigits("/blah.part0.rar"), ir(10, 11));
+  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part0.rar"), ir(20, 21));
+  EXPECT_EQ(RarManager::ParseDigits(".part9.rar"), ir(5, 6));
+  EXPECT_EQ(RarManager::ParseDigits("blah.part9.rar"), ir(9, 10));
+  EXPECT_EQ(RarManager::ParseDigits("/blah.part9.rar"), ir(10, 11));
+  EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part9.rar"), ir(20, 21));
+  EXPECT_EQ(RarManager::ParseDigits(".part2468097531.rar"), ir(5, 15));
+  EXPECT_EQ(RarManager::ParseDigits("blah.part2468097531.rar"), ir(9, 19));
+  EXPECT_EQ(RarManager::ParseDigits("/blah.part2468097531.rar"), ir(10, 20));
   EXPECT_EQ(RarManager::ParseDigits("/some/path/blah.part2468097531.rar"),
-            (RarManager::IndexRange{20, 30}));
-  EXPECT_EQ(RarManager::ParseDigits("Blah.Part0.Rar"),
-            (RarManager::IndexRange{9, 10}));
-  EXPECT_EQ(RarManager::ParseDigits("BLAH.PART0.RAR"),
-            (RarManager::IndexRange{9, 10}));
+            ir(20, 30));
+  EXPECT_EQ(RarManager::ParseDigits("Blah.Part0.Rar"), ir(9, 10));
+  EXPECT_EQ(RarManager::ParseDigits("BLAH.PART0.RAR"), ir(9, 10));
 }
 
 TEST_F(RarManagerTest, GetBindPathsWithOldNamingScheme) {
@@ -254,31 +245,27 @@ TEST_F(RarManagerTest, GetBindPathsWithOldNamingScheme) {
 TEST_F(RarManagerTest, GetBindPathsWithNewNamingScheme) {
   const RarManager& m = manager_;
 
-  EXPECT_CALL(platform_, PathExists("poi.part1.rar")).WillOnce(Return(false));
-  EXPECT_THAT(m.GetBindPaths("poi.part2.rar"),
-              ElementsAreArray<FUSEMounter::BindPath>({{"poi.part2.rar"}}));
+  EXPECT_CALL(platform_, PathExists("poi1.rar")).WillOnce(Return(false));
+  EXPECT_THAT(m.GetBindPaths("poi2.rar"),
+              ElementsAreArray<FUSEMounter::BindPath>({{"poi2.rar"}}));
 
-  EXPECT_CALL(platform_, PathExists("poi.part1.rar")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("poi.part2.rar")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("poi.part3.rar")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("poi.part4.rar")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("poi.part5.rar")).WillOnce(Return(false));
-  EXPECT_THAT(m.GetBindPaths("poi.part2.rar"),
-              ElementsAreArray<FUSEMounter::BindPath>({{"poi.part2.rar"},
-                                                       {"poi.part1.rar"},
-                                                       {"poi.part3.rar"},
-                                                       {"poi.part4.rar"}}));
+  EXPECT_CALL(platform_, PathExists("poi1.rar")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("poi2.rar")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("poi3.rar")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("poi4.rar")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("poi5.rar")).WillOnce(Return(false));
+  EXPECT_THAT(m.GetBindPaths("poi2.rar"),
+              ElementsAreArray<FUSEMounter::BindPath>(
+                  {{"poi2.rar"}, {"poi1.rar"}, {"poi3.rar"}, {"poi4.rar"}}));
 
-  EXPECT_CALL(platform_, PathExists("POI.PART1.RAR")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("POI.PART2.RAR")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("POI.PART3.RAR")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("POI.PART4.RAR")).WillOnce(Return(true));
-  EXPECT_CALL(platform_, PathExists("POI.PART5.RAR")).WillOnce(Return(false));
-  EXPECT_THAT(m.GetBindPaths("POI.PART2.RAR"),
-              ElementsAreArray<FUSEMounter::BindPath>({{"POI.PART2.RAR"},
-                                                       {"POI.PART1.RAR"},
-                                                       {"POI.PART3.RAR"},
-                                                       {"POI.PART4.RAR"}}));
+  EXPECT_CALL(platform_, PathExists("POI1.RAR")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("POI2.RAR")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("POI3.RAR")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("POI4.RAR")).WillOnce(Return(true));
+  EXPECT_CALL(platform_, PathExists("POI5.RAR")).WillOnce(Return(false));
+  EXPECT_THAT(m.GetBindPaths("POI2.RAR"),
+              ElementsAreArray<FUSEMounter::BindPath>(
+                  {{"POI2.RAR"}, {"POI1.RAR"}, {"POI3.RAR"}, {"POI4.RAR"}}));
 }
 
 TEST_F(RarManagerTest, GetBindPathsStopsOnOverflow) {
@@ -288,12 +275,12 @@ TEST_F(RarManagerTest, GetBindPathsStopsOnOverflow) {
 
   EXPECT_THAT(m.GetBindPaths("poi.rar"), SizeIs(901));
   EXPECT_THAT(m.GetBindPaths("POI.RAR"), SizeIs(901));
-  EXPECT_THAT(m.GetBindPaths("poi.part1.rar"), SizeIs(9));
-  EXPECT_THAT(m.GetBindPaths("POI.PART1.RAR"), SizeIs(9));
-  EXPECT_THAT(m.GetBindPaths("poi.part01.rar"), SizeIs(99));
-  EXPECT_THAT(m.GetBindPaths("POI.PART01.RAR"), SizeIs(99));
-  EXPECT_THAT(m.GetBindPaths("poi.part001.rar"), SizeIs(999));
-  EXPECT_THAT(m.GetBindPaths("POI.PART001.RAR"), SizeIs(999));
+  EXPECT_THAT(m.GetBindPaths("poi1.rar"), SizeIs(9));
+  EXPECT_THAT(m.GetBindPaths("POI1.RAR"), SizeIs(9));
+  EXPECT_THAT(m.GetBindPaths("poi01.rar"), SizeIs(99));
+  EXPECT_THAT(m.GetBindPaths("POI01.RAR"), SizeIs(99));
+  EXPECT_THAT(m.GetBindPaths("poi001.rar"), SizeIs(999));
+  EXPECT_THAT(m.GetBindPaths("POI001.RAR"), SizeIs(999));
 }
 
 }  // namespace cros_disks

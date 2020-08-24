@@ -121,9 +121,6 @@ RarManager::IndexRange RarManager::ParseDigits(base::StringPiece path) {
   while (!path.empty() && base::IsAsciiDigit(path.back()))
     path.remove_suffix(1);
 
-  if (!base::EndsWith(path, ".part", base::CompareCase::INSENSITIVE_ASCII))
-    return {};
-
   return {path.size(), end};
 }
 

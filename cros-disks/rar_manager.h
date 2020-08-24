@@ -92,22 +92,24 @@ class RarManager : public ArchiveManager {
   //
   // The new naming scheme is:
   //
-  // basename.part1.rar
-  // basename.part2.rar
+  // basename1.rar
+  // basename2.rar
   // ...
-  // basename.part9.rar
+  // basename9.rar
   //
   // or
   //
-  // basename.part01.rar
-  // basename.part02.rar
+  // basename01.rar
+  // basename02.rar
   // ...
-  // basename.part99.rar
+  // basename99.rar
   //
   // or
   //
-  // basename.part001.rar
+  // basename001.rar
+  // basename002.rar
   // ...
+  // basename999.rar
   // etc.
   FUSEMounter::BindPaths GetBindPaths(base::StringPiece original_path) const;
 
