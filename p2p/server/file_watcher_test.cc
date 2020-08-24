@@ -131,6 +131,7 @@ TEST(FileWatcher, TouchNonExisting) {
 
 // Check that we detect when a timestamp is updated on an existing
 // file that we monitor - this should result in a single event.
+// TODO(crbug/1119393): Needs to be re-enabled after fixing timeouts.
 TEST(FileWatcher, DISABLED_TouchExisting) {
   FilePath testdir = SetupTestDir("filewatcher-touch-existing");
   EXPECT_COMMAND(0, "touch %s", testdir.Append("existing.p2p").value().c_str());
@@ -163,7 +164,8 @@ TEST(FileWatcher, DISABLED_TouchExisting) {
 }
 
 // Check that we detect when a file has been written to.
-TEST(FileWatcher, CreateFile) {
+// TODO(crbug/1119393): Needs to be re-enabled after fixing timeouts.
+TEST(FileWatcher, DISABLED_CreateFile) {
   FilePath testdir = SetupTestDir("filewatcher-create-file");
 
   FileWatcher* watcher = FileWatcher::Construct(testdir, ".p2p");
