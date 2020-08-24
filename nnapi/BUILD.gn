@@ -17,7 +17,7 @@ import("//common-mk/pkg_config.gni")
 # gnlint: disable=GnLintVisibilityFlags
 
 arect_src = "../aosp/frameworks/native/libs/arect"
-libbase_src = "../aosp/system/core/base"
+libbase_src = "../aosp/system/libbase"
 libcutils_src = "../aosp/system/core/libcutils"
 libfmq_src = "../aosp/system/libfmq"
 libhidl_src = "../aosp/system/libhidl"
