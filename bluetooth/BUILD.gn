@@ -37,29 +37,17 @@ pkg_config("target_defaults") {
 
 static_library("libcommon") {
   sources = [
-    "common/dbus_client.cc",
     "common/dbus_daemon.cc",
     "common/exported_object_manager_wrapper.cc",
     "common/property.cc",
-    "common/util.cc",
   ]
   configs += [ ":target_defaults" ]
 }
 
 static_library("libdispatcher") {
   sources = [
-    "dispatcher/bluez_interface_handler.cc",
-    "dispatcher/catch_all_forwarder.cc",
-    "dispatcher/client_manager.cc",
-    "dispatcher/dbus_connection_factory.cc",
-    "dispatcher/dbus_util.cc",
-    "dispatcher/dispatcher.cc",
-    "dispatcher/dispatcher_client.cc",
     "dispatcher/dispatcher_daemon.cc",
     "dispatcher/dispatcher_debug_manager.cc",
-    "dispatcher/impersonation_object_manager_interface.cc",
-    "dispatcher/object_manager_interface_multiplexer.cc",
-    "dispatcher/service_watcher.cc",
   ]
   configs += [ ":target_defaults" ]
 }
@@ -79,14 +67,8 @@ if (use.test) {
   }
   executable("bluetooth_test") {
     sources = [
-      "common/dbus_client_test.cc",
       "common/exported_object_manager_wrapper_test.cc",
       "common/property_test.cc",
-      "dispatcher/catch_all_forwarder_test.cc",
-      "dispatcher/dispatcher_client_test.cc",
-      "dispatcher/dispatcher_test.cc",
-      "dispatcher/object_manager_interface_multiplexer_test.cc",
-      "dispatcher/test_helper.cc",
     ]
     configs += [
       "//common-mk:test",

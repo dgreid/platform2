@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "bluetooth/common/bluetooth_daemon.h"
-#include "bluetooth/dispatcher/dispatcher.h"
 #include "bluetooth/dispatcher/dispatcher_debug_manager.h"
 
 namespace bluetooth {
@@ -16,8 +15,7 @@ namespace bluetooth {
 // Main class within btdispatch daemon that ties all other classes together.
 class DispatcherDaemon : public BluetoothDaemon {
  public:
-  // |passthrough_mode|: Pure D-Bus forwarding to/from BlueZ or NewBlue.
-  explicit DispatcherDaemon(PassthroughMode passthrough_mode);
+  DispatcherDaemon() = default;
   ~DispatcherDaemon() override = default;
 
   // Initializes the daemon D-Bus operations.
@@ -30,11 +28,6 @@ class DispatcherDaemon : public BluetoothDaemon {
 
   // Exposes D-Bus API to enable debug logs
   std::unique_ptr<DispatcherDebugManager> debug_manager_;
-
-  // Exposes BlueZ-compatible D-Bus API and handles the client requests.
-  std::unique_ptr<Dispatcher> dispatcher_;
-
-  PassthroughMode passthrough_mode_;
 
   DISALLOW_COPY_AND_ASSIGN(DispatcherDaemon);
 };

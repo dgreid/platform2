@@ -7,17 +7,12 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <chromeos/dbus/service_constants.h>
 
 namespace bluetooth {
 
-DispatcherDaemon::DispatcherDaemon(PassthroughMode passthrough_mode)
-    : passthrough_mode_(passthrough_mode) {}
-
 bool DispatcherDaemon::Init(scoped_refptr<dbus::Bus> bus,
                             DBusDaemon* dbus_daemon) {
-  LOG(INFO) << "Bluetooth daemon started with passthrough mode = "
-            << static_cast<int>(passthrough_mode_);
-
   auto exported_object_manager =
       std::make_unique<brillo::dbus_utils::ExportedObjectManager>(
           bus,
