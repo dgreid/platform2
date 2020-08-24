@@ -6,6 +6,8 @@
 #ifndef VERITY_INCLUDE_ASM_GENERIC_BITOPS_FLS_H_
 #define VERITY_INCLUDE_ASM_GENERIC_BITOPS_FLS_H_
 
+#include <linux/stddef.h>
+
 /**
  * fls - find last (most-significant) bit set
  * @x: the word to search
