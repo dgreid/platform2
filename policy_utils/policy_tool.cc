@@ -23,9 +23,7 @@ constexpr char kBookmarkBarEnabled[] = "BookmarkBarEnabled";
 
 // The same policies, bundled up in a list.
 const policy_utils::PolicyTool::PolicyList known_policies = {
-    kBookmarkBarEnabled,
-    kPolicyDeviceAllowBluetooth,
-    kShowHomeButton};
+    kBookmarkBarEnabled, kPolicyDeviceAllowBluetooth, kShowHomeButton};
 
 // Compare two strings for equality ignoring case.
 bool IsEqualNoCase(const std::string& a, const std::string& b) {
