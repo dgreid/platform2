@@ -81,10 +81,11 @@ bool DoesExtensionExist(const char* extension_string, const char* name) {
          extensions.end();
 }
 
-EGLImageKHR CreateImage(
-    PFNEGLCREATEIMAGEKHRPROC CreateImageKHR,
-    bool import_modifiers_exist,
-    int drm_fd, EGLDisplay display, const drmModeFB2Ptr fb) {
+EGLImageKHR CreateImage(PFNEGLCREATEIMAGEKHRPROC CreateImageKHR,
+                        bool import_modifiers_exist,
+                        int drm_fd,
+                        EGLDisplay display,
+                        const drmModeFB2Ptr fb) {
   int num_planes = 0;
   // CreateImageKHR takes its own references to the dma-bufs, so closing the fds
   // at the end of the function is necessary and won't break the returned image.
@@ -275,9 +276,9 @@ std::unique_ptr<EglPixelBuf> EglCapture(
   glTexParameteri(GL_TEXTURE_EXTERNAL_OES, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
   if (crtc.planes().empty()) {
-    EGLImageKHR image = CreateImage(
-        CreateImageKHR, import_modifiers_exist,
-        crtc.file().GetPlatformFile(), display, crtc.fb2());
+    EGLImageKHR image =
+        CreateImage(CreateImageKHR, import_modifiers_exist,
+                    crtc.file().GetPlatformFile(), display, crtc.fb2());
     CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
 
     glViewport(0, 0, width, height);
@@ -291,14 +292,14 @@ std::unique_ptr<EglPixelBuf> EglCapture(
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
     for (auto& plane : crtc.planes()) {
-      EGLImageKHR image = CreateImage(
-          CreateImageKHR, import_modifiers_exist,
-          crtc.file().GetPlatformFile(), display, plane.first.get());
+      EGLImageKHR image = CreateImage(CreateImageKHR, import_modifiers_exist,
+                                      crtc.file().GetPlatformFile(), display,
+                                      plane.first.get());
       CHECK(image != EGL_NO_IMAGE_KHR) << "Failed to create image";
 
       // TODO(dcastagna): Handle SRC_ and rotation.
-      glViewport(plane.second.x, plane.second.y,
-                 plane.second.w, plane.second.h);
+      glViewport(plane.second.x, plane.second.y, plane.second.w,
+                 plane.second.h);
 
       glEGLImageTargetTexture2DOES(GL_TEXTURE_EXTERNAL_OES, image);
 

@@ -29,13 +29,18 @@ class Crtc {
  public:
   using PlaneInfo = std::pair<ScopedDrmModeFB2Ptr, PlanePosition>;
 
-  Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
-      ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
-      ScopedDrmModeFBPtr fb, ScopedDrmModeFB2Ptr fb2);
+  Crtc(base::File file,
+       ScopedDrmModeConnectorPtr connector,
+       ScopedDrmModeEncoderPtr encoder,
+       ScopedDrmModeCrtcPtr crtc,
+       ScopedDrmModeFBPtr fb,
+       ScopedDrmModeFB2Ptr fb2);
 
-  Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
-      ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
-      std::vector<PlaneInfo> planes);
+  Crtc(base::File file,
+       ScopedDrmModeConnectorPtr connector,
+       ScopedDrmModeEncoderPtr encoder,
+       ScopedDrmModeCrtcPtr crtc,
+       std::vector<PlaneInfo> planes);
 
   const base::File& file() const { return file_; }
   drmModeConnector* connector() const { return connector_.get(); }

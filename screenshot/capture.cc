@@ -17,13 +17,18 @@
 
 namespace screenshot {
 
-GbmBoMap::GbmBoMap(ScopedGbmDevicePtr device, ScopedGbmBoPtr bo, uint32_t x,
-                   uint32_t y, uint32_t width, uint32_t height)
-    : device_(std::move(device)), bo_(std::move(bo)), width_(width),
+GbmBoMap::GbmBoMap(ScopedGbmDevicePtr device,
+                   ScopedGbmBoPtr bo,
+                   uint32_t x,
+                   uint32_t y,
+                   uint32_t width,
+                   uint32_t height)
+    : device_(std::move(device)),
+      bo_(std::move(bo)),
+      width_(width),
       height_(height) {
-  buffer_ = gbm_bo_map2(
-      bo_.get(), x, y, width, height, GBM_BO_TRANSFER_READ, &stride_,
-      &map_data_, 0);
+  buffer_ = gbm_bo_map2(bo_.get(), x, y, width, height, GBM_BO_TRANSFER_READ,
+                        &stride_, &map_data_, 0);
   PCHECK(buffer_ != MAP_FAILED) << "gbm_bo_map failed";
 }
 
@@ -31,8 +36,8 @@ GbmBoMap::~GbmBoMap() {
   gbm_bo_unmap(bo_.get(), map_data_);
 }
 
-std::unique_ptr<GbmBoMap> Capture(const Crtc& crtc, uint32_t x, uint32_t y,
-                                  uint32_t width, uint32_t height) {
+std::unique_ptr<GbmBoMap> Capture(
+    const Crtc& crtc, uint32_t x, uint32_t y, uint32_t width, uint32_t height) {
   ScopedGbmDevicePtr device(gbm_create_device(crtc.file().GetPlatformFile()));
   CHECK(device) << "gbm_create_device failed";
 

@@ -54,10 +54,9 @@ int Main() {
     return 1;
   }
 
-  int crtc_specs =
-      (cmdline->HasSwitch(kInternalSwitch) ? 1 : 0) +
-      (cmdline->HasSwitch(kExternalSwitch) ? 1 : 0) +
-      (cmdline->HasSwitch(kCrtcIdSwitch) ? 1 : 0);
+  int crtc_specs = (cmdline->HasSwitch(kInternalSwitch) ? 1 : 0) +
+                   (cmdline->HasSwitch(kExternalSwitch) ? 1 : 0) +
+                   (cmdline->HasSwitch(kCrtcIdSwitch) ? 1 : 0);
   if (crtc_specs > 1) {
     LOG(ERROR) << "--internal, --external and --crtc-id are exclusive";
     return 1;
@@ -68,9 +67,9 @@ int Main() {
   if (cmdline->HasSwitch(kCropSwitch)) {
     auto spec = cmdline->GetSwitchValueASCII(kCropSwitch);
     int read_size;
-    int scan_size = sscanf(
-        spec.c_str(), "%" SCNu32 "x%" SCNu32 "+%" SCNu32 "+%" SCNu32 "%n",
-        &width, &height, &x, &y, &read_size);
+    int scan_size = sscanf(spec.c_str(),
+                           "%" SCNu32 "x%" SCNu32 "+%" SCNu32 "+%" SCNu32 "%n",
+                           &width, &height, &x, &y, &read_size);
     if (scan_size != 4 || read_size != static_cast<int>(spec.size())) {
       LOG(ERROR) << "Invalid --crop specification";
       return 1;
@@ -87,8 +86,8 @@ int Main() {
     crtc = screenshot::CrtcFinder::FindExternalDisplay();
   } else if (cmdline->HasSwitch(kCrtcIdSwitch)) {
     uint32_t crtc_id;
-    if (!base::StringToUint(
-            cmdline->GetSwitchValueASCII(kCrtcIdSwitch), &crtc_id)) {
+    if (!base::StringToUint(cmdline->GetSwitchValueASCII(kCrtcIdSwitch),
+                            &crtc_id)) {
       LOG(ERROR) << "Invalid --crtc-id specification";
       return 1;
     }

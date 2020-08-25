@@ -14,10 +14,13 @@
 
 namespace screenshot {
 
-void SaveAsPng(const char* path, void* data, uint32_t width, uint32_t height,
+void SaveAsPng(const char* path,
+               void* data,
+               uint32_t width,
+               uint32_t height,
                uint32_t stride) {
-  png_struct* png = png_create_write_struct(
-      PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
+  png_struct* png =
+      png_create_write_struct(PNG_LIBPNG_VER_STRING, nullptr, nullptr, nullptr);
   CHECK(png) << "png_create_write_struct failed";
 
   png_info* info = png_create_info_struct(png);

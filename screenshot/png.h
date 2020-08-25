@@ -10,7 +10,10 @@
 namespace screenshot {
 
 // Saves a BGRX image on memory as a RGB PNG file.
-void SaveAsPng(const char* path, void* data, uint32_t width, uint32_t height,
+void SaveAsPng(const char* path,
+               void* data,
+               uint32_t width,
+               uint32_t height,
                uint32_t stride);
 
 }  // namespace screenshot

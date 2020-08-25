@@ -25,11 +25,8 @@ bool PopulatePlanePosition(int fd, uint32_t plane_id, PlanePosition* pos) {
     const char* name;
     uint64_t val;
   } crtc_props[4] = {
-    { "CRTC_X", 0 },
-    { "CRTC_Y", 0 },
-    { "CRTC_W", 0 },
-    { "CRTC_H", 0 },
-    // TODO(dcastagna): Handle SRC_ and rotation
+      {"CRTC_X", 0}, {"CRTC_Y", 0}, {"CRTC_W", 0}, {"CRTC_H", 0},
+      // TODO(dcastagna): Handle SRC_ and rotation
   };
 
   ScopedDrmObjectPropertiesPtr props(
@@ -69,12 +66,9 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
 
   std::vector<base::FilePath> paths;
   {
-    base::FileEnumerator lister(base::FilePath(kDrmDeviceDir),
-                                false,
-                                base::FileEnumerator::FILES,
-                                kDrmDeviceGlob);
-    for (base::FilePath name = lister.Next();
-         !name.empty();
+    base::FileEnumerator lister(base::FilePath(kDrmDeviceDir), false,
+                                base::FileEnumerator::FILES, kDrmDeviceGlob);
+    for (base::FilePath name = lister.Next(); !name.empty();
          name = lister.Next()) {
       paths.push_back(name);
     }
@@ -82,26 +76,23 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
   std::sort(paths.begin(), paths.end());
 
   for (base::FilePath path : paths) {
-    base::File file(
-        path,
-        base::File::FLAG_OPEN | base::File::FLAG_READ | base::File::FLAG_WRITE);
+    base::File file(path, base::File::FLAG_OPEN | base::File::FLAG_READ |
+                              base::File::FLAG_WRITE);
     if (!file.IsValid())
       continue;
 
     // Set CAP_ATOMIC so we can query all planes and plane properties.
-    bool atomic_modeset = drmSetClientCap(
-        file.GetPlatformFile(), DRM_CLIENT_CAP_ATOMIC, 1) == 0;
+    bool atomic_modeset =
+        drmSetClientCap(file.GetPlatformFile(), DRM_CLIENT_CAP_ATOMIC, 1) == 0;
 
     ScopedDrmModeResPtr resources(drmModeGetResources(file.GetPlatformFile()));
     if (!resources)
       continue;
 
-    for (int index_connector = 0;
-         index_connector < resources->count_connectors;
+    for (int index_connector = 0; index_connector < resources->count_connectors;
          ++index_connector) {
-      ScopedDrmModeConnectorPtr connector(
-          drmModeGetConnector(file.GetPlatformFile(),
-                              resources->connectors[index_connector]));
+      ScopedDrmModeConnectorPtr connector(drmModeGetConnector(
+          file.GetPlatformFile(), resources->connectors[index_connector]));
       if (!connector || connector->encoder_id == 0)
         continue;
 
@@ -144,14 +135,14 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
           }
 
           PlanePosition pos{};
-          bool res = PopulatePlanePosition(
-              file.GetPlatformFile(), plane->plane_id, &pos);
+          bool res = PopulatePlanePosition(file.GetPlatformFile(),
+                                           plane->plane_id, &pos);
           if (!res) {
             LOG(WARNING) << "Failed to query plane position, skipping.\n";
             continue;
           }
           ScopedDrmModeFB2Ptr fb_info(
-                drmModeGetFB2(file.GetPlatformFile(), plane->fb_id));
+              drmModeGetFB2(file.GetPlatformFile(), plane->fb_id));
           if (!fb_info) {
             LOG(WARNING) << "Failed to query plane fb info, skipping.\n";
             continue;
@@ -169,8 +160,8 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
 
       if (!res_crtc) {
         res_crtc = std::make_unique<Crtc>(
-          file.Duplicate(), std::move(connector), std::move(encoder),
-          std::move(crtc), std::move(fb), std::move(fb2));
+            file.Duplicate(), std::move(connector), std::move(encoder),
+            std::move(crtc), std::move(fb), std::move(fb2));
       }
 
       crtcs.push_back(std::move(res_crtc));
@@ -182,18 +173,28 @@ std::vector<std::unique_ptr<Crtc>> GetConnectedCrtcs() {
 
 }  // namespace
 
-Crtc::Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
-           ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
-           ScopedDrmModeFBPtr fb, ScopedDrmModeFB2Ptr fb2)
-    : file_(std::move(file)), connector_(std::move(connector)),
-      encoder_(std::move(encoder)), crtc_(std::move(crtc)),
-      fb_(std::move(fb)), fb2_(std::move(fb2)) {}
+Crtc::Crtc(base::File file,
+           ScopedDrmModeConnectorPtr connector,
+           ScopedDrmModeEncoderPtr encoder,
+           ScopedDrmModeCrtcPtr crtc,
+           ScopedDrmModeFBPtr fb,
+           ScopedDrmModeFB2Ptr fb2)
+    : file_(std::move(file)),
+      connector_(std::move(connector)),
+      encoder_(std::move(encoder)),
+      crtc_(std::move(crtc)),
+      fb_(std::move(fb)),
+      fb2_(std::move(fb2)) {}
 
-Crtc::Crtc(base::File file, ScopedDrmModeConnectorPtr connector,
-           ScopedDrmModeEncoderPtr encoder, ScopedDrmModeCrtcPtr crtc,
+Crtc::Crtc(base::File file,
+           ScopedDrmModeConnectorPtr connector,
+           ScopedDrmModeEncoderPtr encoder,
+           ScopedDrmModeCrtcPtr crtc,
            std::vector<PlaneInfo> planes)
-    : file_(std::move(file)), connector_(std::move(connector)),
-      encoder_(std::move(encoder)), crtc_(std::move(crtc)),
+    : file_(std::move(file)),
+      connector_(std::move(connector)),
+      encoder_(std::move(encoder)),
+      crtc_(std::move(crtc)),
       planes_(std::move(planes)) {}
 
 bool Crtc::IsInternalDisplay() const {
