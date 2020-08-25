@@ -15,22 +15,21 @@
 
 #include <brillo/flag_helper.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   DEFINE_string(device, "", "Path of the device");
-  DEFINE_int32(maxpressure, -1,
-                "Max pressure to override.");
+  DEFINE_int32(maxpressure, -1, "Max pressure to override.");
 
   brillo::FlagHelper::Init(
       argc, argv, "override_stylus_pressure, Override max pressure of device.");
 
   if (FLAGS_device == "") {
-      LOG(ERROR) << "Please provide path to the device";
-      exit(1);
+    LOG(ERROR) << "Please provide path to the device";
+    exit(1);
   }
 
   if (FLAGS_maxpressure < 0) {
-      LOG(ERROR) << "Please set max pressure to a non-negative value";
-      exit(1);
+    LOG(ERROR) << "Please set max pressure to a non-negative value";
+    exit(1);
   }
 
   std::string dev_path = "/dev/input/" + FLAGS_device;
