@@ -70,9 +70,15 @@ MachineLearningServiceImpl::MachineLearningServiceImpl(
 }
 
 MachineLearningServiceImpl::MachineLearningServiceImpl(
-    mojo::ScopedMessagePipeHandle pipe, base::Closure disconnect_handler)
+    mojo::ScopedMessagePipeHandle pipe,
+    base::Closure disconnect_handler,
+    dbus::Bus* bus)
     : MachineLearningServiceImpl(
-          std::move(pipe), std::move(disconnect_handler), kSystemModelDir) {}
+          std::move(pipe), std::move(disconnect_handler), kSystemModelDir) {
+  if (bus) {
+    dlcservice_client_ = std::make_unique<DlcserviceClient>(bus);
+  }
+}
 
 void MachineLearningServiceImpl::SetTextClassifierModelFilenameForTesting(
     const std::string& filename) {

@@ -11,10 +11,12 @@
 
 #include <base/callback_forward.h>
 #include <base/macros.h>
+#include <dbus/bus.h>
 #include <mojo/public/cpp/bindings/pending_receiver.h>
 #include <mojo/public/cpp/bindings/receiver.h>
 #include <mojo/public/cpp/bindings/receiver_set.h>
 
+#include "ml/dlcservice_client.h"
 #include "ml/model_metadata.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
 
@@ -25,13 +27,14 @@ class MachineLearningServiceImpl
  public:
   // Creates an instance bound to `pipe`. The specified `disconnect_handler`
   // will be invoked if the binding encounters a connection error or is closed.
+  // The `bus` is used to construct `dlcservice_client_` if it is not nullptr.
   MachineLearningServiceImpl(mojo::ScopedMessagePipeHandle pipe,
-                             base::Closure disconnect_handler);
+                             base::Closure disconnect_handler,
+                             dbus::Bus* bus = nullptr);
 
   // A interface to change `text_classifier_model_filename_` for testing. Should
   // not be used outside of tests.
   void SetTextClassifierModelFilenameForTesting(const std::string& filename);
-
  protected:
   // Testing constructor that allows overriding of the model dir. Should not be
   // used outside of tests.
@@ -77,6 +80,9 @@ class MachineLearningServiceImpl
       builtin_model_metadata_;
 
   const std::string model_dir_;
+
+  // DlcserviceClient used to communicate with DlcService.
+  std::unique_ptr<DlcserviceClient> dlcservice_client_;
 
   // Primordial receiver bootstrapped over D-Bus. Once opened, is never closed.
   mojo::Receiver<chromeos::machine_learning::mojom::MachineLearningService>

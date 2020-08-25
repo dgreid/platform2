@@ -53,6 +53,7 @@ pkg_config("ml_common_pkg_deps") {
     "libchrome-${libbase_ver}",
     "libmetrics",
     "libmojo-${libbase_ver}",
+    "system_api",
     "zlib",
   ]
 }
@@ -86,6 +87,7 @@ static_library("ml_common") {
   all_dependent_configs = [ ":ml_common_pkg_deps" ]
   sources = [
     "daemon.cc",
+    "dlcservice_client.cc",
     "graph_executor_impl.cc",
     "handwriting.cc",
     "handwriting_proto_mojom_conversion.cc",
@@ -128,8 +130,10 @@ if (use.test) {
     deps = [
       ":ml_common",
       ":ml_handwriting_proto",
+      "//common-mk/testrunner:testrunner",
     ]
     sources = [
+      "dlcservice_client_test.cc",
       "graph_executor_impl_test.cc",
       "handwriting_proto_mojom_conversion_test.cc",
       "handwriting_test.cc",
