@@ -89,9 +89,7 @@ class SealedStorageTest : public ::testing::Test {
     return GetECPointWithFilledXY(0x55, 0x66);
   }
 
-  static Policy ConstructEmptyPolicy() {
-    return {};
-  }
+  static Policy ConstructEmptyPolicy() { return {}; }
 
   static Policy ConstructPcrBoundPolicy() {
     Policy::PcrMap pcr_map;
@@ -125,7 +123,7 @@ class SealedStorageTest : public ::testing::Test {
   // not the same data, of course).
   // Returns data_to_sign to be used with the setup ZPoints.
   const SecretData SetupWrongZPointWithGarbageData() {
-    z_point_ = GetECPointWithFilledXY(0x11, 0x11);  // KeyGen
+    z_point_ = GetECPointWithFilledXY(0x11, 0x11);          // KeyGen
     z_gen_out_point_ = GetECPointWithFilledXY(0x0F, 0x00);  // ZGen
     return SecretData("testdata");
   }

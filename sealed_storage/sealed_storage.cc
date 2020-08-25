@@ -27,7 +27,7 @@ namespace {
 // Version tag at the start of serialized sealed blob.
 enum SerializedVer : char {
   kSerializedVer1 = 0x01,
-  kSerializedVer2 = 0x02
+  kSerializedVer2 = 0x02,
 };
 
 // Magic value, sha256 of which is extended to PCRs when requested.
@@ -146,7 +146,7 @@ base::Optional<std::string> DeserializePolicyDigest(
   }
   if (serialized_data->size() < size) {
     LOG(ERROR) << "Policy digest longer than the remaining sealed data: "
-                << serialized_data->size() << " < " << size;
+               << serialized_data->size() << " < " << size;
     return base::nullopt;
   }
 
@@ -328,7 +328,8 @@ base::Optional<bool> SealedStorage::CheckState() const {
 
 bool SealedStorage::PrepareSealingKeyObject(
     const base::Optional<std::string>& expected_digest,
-    trunks::TPM_HANDLE* key_handle, std::string* key_name,
+    trunks::TPM_HANDLE* key_handle,
+    std::string* key_name,
     std::string* resulting_digest) const {
   CHECK(key_handle);
   CHECK(key_name);
@@ -351,8 +352,7 @@ bool SealedStorage::PrepareSealingKeyObject(
     policy_digest = GetEmptyPolicy();
   }
   VLOG(2) << "Created policy digest: " << HexDump(policy_digest);
-  if (expected_digest.has_value() &&
-      expected_digest.value() != policy_digest) {
+  if (expected_digest.has_value() && expected_digest.value() != policy_digest) {
     VLOG(2) << "Expected policy digest: " << HexDump(expected_digest.value());
     LOG(ERROR) << "Policy mismatch";
     return false;
@@ -651,8 +651,8 @@ bool Key::Init(const PrivSeeds& priv_seeds, const PubSeeds& pub_seeds) {
 
 base::Optional<Data> Key::Encrypt(const SecretData& plain_data) const {
   if (plain_data.size() != expected_size_) {
-    LOG(ERROR) << "Unexpected plain data size: " << plain_data.size() << " != "
-               << expected_size_;
+    LOG(ERROR) << "Unexpected plain data size: " << plain_data.size()
+               << " != " << expected_size_;
     return base::nullopt;
   }
 
@@ -723,9 +723,9 @@ base::Optional<SecretData> Key::Decrypt(const Data& encrypted_data) const {
 
   const size_t max_decrypted_size = encrypted_data.size() + GetBlockSize();
   if (max_decrypted_size < expected_size_) {
-    LOG(ERROR) << "Not enough data for expected size: "
-               << encrypted_data.size() << " leads to max "
-               << max_decrypted_size << " < " << expected_size_;
+    LOG(ERROR) << "Not enough data for expected size: " << encrypted_data.size()
+               << " leads to max " << max_decrypted_size << " < "
+               << expected_size_;
     return base::nullopt;
   }
   SecretData decrypted_data(max_decrypted_size);
@@ -759,8 +759,8 @@ base::Optional<SecretData> Key::Decrypt(const Data& encrypted_data) const {
   }
   decrypted_size += decrypted_size_final;
   if (decrypted_size != expected_size_) {
-    LOG(ERROR) << "Unexpected decrypted data size: "
-               << decrypted_size << " != " << expected_size_;
+    LOG(ERROR) << "Unexpected decrypted data size: " << decrypted_size
+               << " != " << expected_size_;
     return base::nullopt;
   }
   decrypted_data.resize(decrypted_size);

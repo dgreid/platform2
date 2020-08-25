@@ -93,9 +93,7 @@ class SealedStorage {
     return tpm_ownership_;
   }
 
-  void set_plain_size_for_v1(uint16_t size) {
-    plain_size_for_v1_ = size;
-  }
+  void set_plain_size_for_v1(uint16_t size) { plain_size_for_v1_ = size; }
 
   void reset_policy(const Policy& policy) { policy_ = policy; }
   const Policy& policy() const { return policy_; }
@@ -130,7 +128,8 @@ class SealedStorage {
   // key object. On failure, returns false.
   bool PrepareSealingKeyObject(
       const base::Optional<std::string>& expected_digest,
-      trunks::TPM_HANDLE* key_handle, std::string* key_name,
+      trunks::TPM_HANDLE* key_handle,
+      std::string* key_name,
       std::string* resulting_digest) const;
 
   // Retrieves the endorsement password.
