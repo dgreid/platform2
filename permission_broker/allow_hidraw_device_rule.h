@@ -17,7 +17,7 @@ class AllowHidrawDeviceRule : public HidrawSubsystemUdevRule {
   AllowHidrawDeviceRule();
   ~AllowHidrawDeviceRule() override = default;
 
-  Result ProcessHidrawDevice(struct udev_device *device) override;
+  Result ProcessHidrawDevice(struct udev_device* device) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(AllowHidrawDeviceRule);

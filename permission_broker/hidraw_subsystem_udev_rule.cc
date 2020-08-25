@@ -119,7 +119,7 @@ bool ParseDescriptorItem(const HidReportDescriptor& descriptor,
                          int current_depth,
                          DescriptorItem* item,
                          int* bytes_read,
-                         int *new_depth) {
+                         int* new_depth) {
   if (offset >= descriptor.size)
     return false;
   uint8_t header = descriptor.data[offset];
@@ -170,8 +170,8 @@ bool ParseToplevelDescriptorItems(const HidReportDescriptor& descriptor,
   while (offset < descriptor.size) {
     int bytes_read;
     DescriptorItem item;
-    if (!ParseDescriptorItem(
-        descriptor, offset, depth, &item, &bytes_read, &depth)) {
+    if (!ParseDescriptorItem(descriptor, offset, depth, &item, &bytes_read,
+                             &depth)) {
       return false;
     }
     if (item.depth == 0) {
@@ -185,12 +185,11 @@ bool ParseToplevelDescriptorItems(const HidReportDescriptor& descriptor,
 }  // namespace
 
 HidrawSubsystemUdevRule::HidrawSubsystemUdevRule(const string& name)
-    : Rule(name) {
-}
+    : Rule(name) {}
 
 Rule::Result HidrawSubsystemUdevRule::ProcessDevice(
-    struct udev_device *device) {
-  const char *const subsystem = udev_device_get_subsystem(device);
+    struct udev_device* device) {
+  const char* const subsystem = udev_device_get_subsystem(device);
   if (!subsystem || strcmp(subsystem, "hidraw"))
     return IGNORE;
   return ProcessHidrawDevice(device);
@@ -198,8 +197,7 @@ Rule::Result HidrawSubsystemUdevRule::ProcessDevice(
 
 // static
 bool HidrawSubsystemUdevRule::ParseToplevelCollectionUsages(
-    const HidReportDescriptor& descriptor,
-    std::vector<HidUsage>* usages) {
+    const HidReportDescriptor& descriptor, std::vector<HidUsage>* usages) {
   std::vector<DescriptorItem> items;
   if (!ParseToplevelDescriptorItems(descriptor, &items)) {
     return false;
@@ -214,17 +212,15 @@ bool HidrawSubsystemUdevRule::ParseToplevelCollectionUsages(
     DescriptorItem& third = items[i + 2];
     if (third.type != TYPE_MAIN || third.tag.main != MAIN_TAG_COLLECTION)
       continue;
-    usages->push_back(HidUsage(
-        static_cast<HidUsage::Page>(first.data_value),
-        static_cast<uint16_t>(second.data_value)));
+    usages->push_back(HidUsage(static_cast<HidUsage::Page>(first.data_value),
+                               static_cast<uint16_t>(second.data_value)));
   }
   return true;
 }
 
 // static
 bool HidrawSubsystemUdevRule::GetHidToplevelUsages(
-    struct udev_device* device,
-    std::vector<HidUsage>* usages) {
+    struct udev_device* device, std::vector<HidUsage>* usages) {
   const char* dev_node = udev_device_get_devnode(device);
 
   HidReportDescriptor descriptor;
@@ -237,7 +233,6 @@ bool HidrawSubsystemUdevRule::GetHidToplevelUsages(
     LOG(INFO) << "Error parsing descriptor for " << dev_node;
     return false;
   }
-
 
   return true;
 }

@@ -7,8 +7,8 @@
 namespace permission_broker {
 
 AllowGroupTtyDeviceRule::AllowGroupTtyDeviceRule(const std::string& group_name)
-    : TtySubsystemUdevRule("AllowGroupTtyDeviceRule"), group_name_(group_name) {
-}
+    : TtySubsystemUdevRule("AllowGroupTtyDeviceRule"),
+      group_name_(group_name) {}
 
 Rule::Result AllowGroupTtyDeviceRule::ProcessTtyDevice(udev_device* device) {
   const std::string& device_gr_name = GetDevNodeGroupName(device);

@@ -21,7 +21,7 @@ using std::string;
 
 namespace permission_broker {
 
-class  DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
+class DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
  public:
   DenyClaimedUsbDeviceRuleMockPolicy() = default;
   ~DenyClaimedUsbDeviceRuleMockPolicy() override = default;
@@ -32,9 +32,7 @@ class  DenyClaimedUsbDeviceRuleMockPolicy : public DenyClaimedUsbDeviceRule {
   }
 
  private:
-  bool LoadPolicy() override {
-    return true;
-  }
+  bool LoadPolicy() override { return true; }
 
   DISALLOW_COPY_AND_ASSIGN(DenyClaimedUsbDeviceRuleMockPolicy);
 };
@@ -50,10 +48,10 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
     ScopedUdevEnumeratePtr enumerate(udev_enumerate_new(udev.get()));
     udev_enumerate_scan_devices(enumerate.get());
 
-    struct udev_list_entry *entry = nullptr;
+    struct udev_list_entry* entry = nullptr;
     udev_list_entry_foreach(entry,
                             udev_enumerate_get_list_entry(enumerate.get())) {
-      const char *syspath = udev_list_entry_get_name(entry);
+      const char* syspath = udev_list_entry_get_name(entry);
       ScopedUdevDevicePtr device(
           udev_device_new_from_syspath(udev.get(), syspath));
       EXPECT_TRUE(device.get());
@@ -70,8 +68,8 @@ class DenyClaimedUsbDeviceRuleTest : public RuleTest {
       if (!devnode)
         continue;
 
-      const char *vid = udev_device_get_sysattr_value(parent, "idVendor");
-      const char *pid = udev_device_get_sysattr_value(parent, "idProduct");
+      const char* vid = udev_device_get_sysattr_value(parent, "idVendor");
+      const char* pid = udev_device_get_sysattr_value(parent, "idProduct");
       unsigned vendor_id, product_id;
       if (!vid || !base::HexStringToUInt(vid, &vendor_id))
         continue;
@@ -156,8 +154,7 @@ TEST_F(DenyClaimedUsbDeviceRuleTest,
         << device;
 }
 
-TEST_F(DenyClaimedUsbDeviceRuleTest,
-       AllowDetachableClaimedUsbDevice) {
+TEST_F(DenyClaimedUsbDeviceRuleTest, AllowDetachableClaimedUsbDevice) {
   if (detachable_devices_.empty())
     LOG(WARNING) << "Tests incomplete because there are no detachable "
                  << "devices connected.";

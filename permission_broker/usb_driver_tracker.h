@@ -38,7 +38,7 @@ class UsbDriverTracker {
   void ScanClosedFd(int fd);
 
   // File descriptors watcher callback.
-  static void OnFdEvent(UsbDriverTracker *obj, int fd);
+  static void OnFdEvent(UsbDriverTracker* obj, int fd);
 
   std::map<int, UsbInterfaces> dev_fds_;
 

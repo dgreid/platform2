@@ -23,7 +23,7 @@
 
 namespace permission_broker {
 
-struct UsbDriverTracker::UsbInterfaces{
+struct UsbDriverTracker::UsbInterfaces {
   std::string path;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> controller;
   std::vector<uint8_t> ifaces;
@@ -56,8 +56,8 @@ void UsbDriverTracker::ScanClosedFd(int fd) {
   }
 }
 
-bool UsbDriverTracker::ReAttachPathToKernel(const std::string& path,
-    const std::vector<uint8_t>& ifaces) {
+bool UsbDriverTracker::ReAttachPathToKernel(
+    const std::string& path, const std::vector<uint8_t>& ifaces) {
   int fd = HANDLE_EINTR(open(path.c_str(), O_RDWR));
   if (fd < 0) {
     LOG(WARNING) << "Cannot open " << path;
@@ -73,10 +73,10 @@ bool UsbDriverTracker::ReAttachPathToKernel(const std::string& path,
     int res = ioctl(fd, USBDEVFS_IOCTL, &dio);
     if (res < 0) {
       LOG(WARNING) << "Kernel USB driver connection for " << path
-          << " on interface " << iface_num << " failed " << errno;
+                   << " on interface " << iface_num << " failed " << errno;
     } else {
-      LOG(INFO) << "Kernel USB driver attached on " << path
-          << " interface " << iface_num;
+      LOG(INFO) << "Kernel USB driver attached on " << path << " interface "
+                << iface_num;
     }
   }
   IGNORE_EINTR(close(fd));
@@ -107,12 +107,12 @@ bool UsbDriverTracker::DetachPathFromKernel(int fd, const std::string& path) {
   // and extracting our children devices.
   bool detached = false;
   std::vector<uint8_t> ifaces;
-  struct udev_list_entry *entry;
+  struct udev_list_entry* entry;
   udev_list_entry_foreach(entry,
                           udev_enumerate_get_list_entry(enumerate.get())) {
-    const char *entry_path = udev_list_entry_get_name(entry);
-    ScopedUdevDevicePtr child(udev_device_new_from_syspath(udev.get(),
-                                                           entry_path));
+    const char* entry_path = udev_list_entry_get_name(entry);
+    ScopedUdevDevicePtr child(
+        udev_device_new_from_syspath(udev.get(), entry_path));
 
     const char* child_type = udev_device_get_devtype(child.get());
     if (!child_type || strcmp(child_type, "usb_interface") != 0) {
@@ -122,8 +122,8 @@ bool UsbDriverTracker::DetachPathFromKernel(int fd, const std::string& path) {
     const char* driver = udev_device_get_driver(child.get());
     if (driver) {
       // A kernel driver is using this interface, try to detach it.
-      const char *iface = udev_device_get_sysattr_value(
-          child.get(), "bInterfaceNumber");
+      const char* iface =
+          udev_device_get_sysattr_value(child.get(), "bInterfaceNumber");
       unsigned iface_num;
       if (!iface || !base::StringToUint(iface, &iface_num)) {
         detached = false;
@@ -138,29 +138,26 @@ bool UsbDriverTracker::DetachPathFromKernel(int fd, const std::string& path) {
       int res = ioctl(fd, USBDEVFS_IOCTL, &dio);
       if (res < 0) {
         LOG(WARNING) << "Kernel USB driver disconnection for " << path
-            << " on interface " << iface_num << " failed " << errno;
+                     << " on interface " << iface_num << " failed " << errno;
       } else {
         detached = true;
         ifaces.push_back(iface_num);
         LOG(INFO) << "USB driver '" << driver << "' detached on " << path
-            << " interface " << iface_num;
+                  << " interface " << iface_num;
       }
     }
   }
 
   if (detached) {
     auto controller = base::FileDescriptorWatcher::WatchWritable(
-        fd,
-        base::BindRepeating(&UsbDriverTracker::ScanClosedFd,
-                            base::Unretained(this), fd));
+        fd, base::BindRepeating(&UsbDriverTracker::ScanClosedFd,
+                                base::Unretained(this), fd));
     if (!controller) {
       LOG(ERROR) << "Unable to watch FD: " << fd;
       return true;
     }
-    dev_fds_.emplace(
-        fd,
-        UsbInterfaces{
-          std::move(path), std::move(controller), std::move(ifaces)});
+    dev_fds_.emplace(fd, UsbInterfaces{std::move(path), std::move(controller),
+                                       std::move(ifaces)});
   }
 
   return detached;

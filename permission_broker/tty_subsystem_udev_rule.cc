@@ -52,8 +52,7 @@ std::string TtySubsystemUdevRule::GetDevNodeGroupName(udev_device* device) {
   return string(pgr->gr_name);
 }
 
-TtySubsystemUdevRule::TtySubsystemUdevRule(const string& name) : Rule(name) {
-}
+TtySubsystemUdevRule::TtySubsystemUdevRule(const string& name) : Rule(name) {}
 
 Rule::Result TtySubsystemUdevRule::ProcessDevice(udev_device* device) {
   const char* const subsystem = udev_device_get_subsystem(device);

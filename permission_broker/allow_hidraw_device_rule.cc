@@ -12,7 +12,7 @@ AllowHidrawDeviceRule::AllowHidrawDeviceRule()
     : HidrawSubsystemUdevRule("AllowHidrawDeviceRule") {}
 
 Rule::Result AllowHidrawDeviceRule::ProcessHidrawDevice(
-    struct udev_device *device) {
+    struct udev_device* device) {
   return ALLOW;
 }
 

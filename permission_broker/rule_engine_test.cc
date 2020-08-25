@@ -49,8 +49,8 @@ class RuleEngineTest : public testing::Test {
   }
 
  protected:
-  Rule *CreateMockRule(const Rule::Result result) const {
-    MockRule *rule = new MockRule();
+  Rule* CreateMockRule(const Rule::Result result) const {
+    MockRule* rule = new MockRule();
     EXPECT_CALL(*rule, ProcessDevice(_)).WillOnce(Return(result));
     return rule;
   }

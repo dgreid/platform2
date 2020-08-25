@@ -22,7 +22,6 @@ const char kDefaultPath[] = "/devices/wormhole/0000:1234:1500.001/hidraw0";
 
 namespace permission_broker {
 
-
 class DenyFwUpdateHidrawDeviceRuleTest : public testing::Test {
  public:
   DenyFwUpdateHidrawDeviceRuleTest() = default;
@@ -46,22 +45,19 @@ TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowEmptyPath) {
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, DenyFwDevice) {
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x2000}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x2000}}}};
 
   EXPECT_TRUE(rule_.IsFwUpdateDevice(kDefaultPath, fwDevices));
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, DenyFwDeviceRangeInclusive) {
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x1500}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x1500}}}};
 
   EXPECT_TRUE(rule_.IsFwUpdateDevice(kDefaultPath, fwDevices));
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowProductIdBlockedVendor) {
-  RangeListMap fwDevices = {
-      {0x1234, {{0x3000, 0x4000}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x3000, 0x4000}}}};
 
   EXPECT_FALSE(rule_.IsFwUpdateDevice(kDefaultPath, fwDevices));
 }
@@ -69,33 +65,28 @@ TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowProductIdBlockedVendor) {
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, DenyDeviceParent) {
   const char path[] =
       "/devices/pci/0000:1234:1500.001/nuerolink/0000:4567:1500.001/hidraw0";
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x2000}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x2000}}}};
 
   EXPECT_TRUE(rule_.IsFwUpdateDevice(path, fwDevices));
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowNoVendorProductPath) {
-  const char path[] =
-      "/devices/usb/mouse/hidraw0";
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x2000}}}};
+  const char path[] = "/devices/usb/mouse/hidraw0";
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x2000}}}};
 
   EXPECT_FALSE(rule_.IsFwUpdateDevice(path, fwDevices));
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, DenyNoTrailingPeriod) {
   const char path[] = "/devices/lasers/0000:1234:1500/hidraw0";
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x2000}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x2000}}}};
 
   EXPECT_TRUE(rule_.IsFwUpdateDevice(path, fwDevices));
 }
 
 TEST_F(DenyFwUpdateHidrawDeviceRuleTest, AllowCloseMatch) {
   const char path[] = "/devices/lasers/0000:1234:1500:0/hidraw0";
-  RangeListMap fwDevices = {
-      {0x1234, {{0x1000, 0x2000}}}};
+  RangeListMap fwDevices = {{0x1234, {{0x1000, 0x2000}}}};
 
   EXPECT_FALSE(rule_.IsFwUpdateDevice(path, fwDevices));
 }

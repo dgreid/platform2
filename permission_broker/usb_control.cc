@@ -45,7 +45,6 @@ std::string DeviceInfoString(uint16_t vid, uint16_t pid) {
 bool SetDevicesPowerState(
     const std::vector<std::unique_ptr<UsbDeviceInterface>>& devices,
     bool is_power_on) {
-
   bool cumulative_success = true;
   for (auto& device : devices) {
     // Get the parent if it is possible.
@@ -83,30 +82,25 @@ void PowerOnDevicesCallback(
     base::Callback<void(bool)> callback,
     const std::vector<std::unique_ptr<UsbDeviceInterface>> devices,
     bool cumulative_success) {
-
   cumulative_success =
       SetDevicesPowerState(devices, true) && cumulative_success;
   callback.Run(cumulative_success);
 }
 
 UsbControl::UsbControl(std::unique_ptr<UsbDeviceManagerInterface> manager)
-  : manager_(std::move(manager)) {}
+    : manager_(std::move(manager)) {}
 
 UsbControl::~UsbControl() = default;
 
 bool UsbControl::IsDeviceAllowed(uint16_t vid, uint16_t pid) const {
-  return std::find(
-      std::begin(kDeviceAllowList),
-      std::end(kDeviceAllowList),
-      UsbDeviceInfo(vid, pid)) != std::end(kDeviceAllowList);
+  return std::find(std::begin(kDeviceAllowList), std::end(kDeviceAllowList),
+                   UsbDeviceInfo(vid, pid)) != std::end(kDeviceAllowList);
 }
 
-void UsbControl::PowerCycleUsbPorts(
-    base::Callback<void(bool)> callback,
-    uint16_t vid,
-    uint16_t pid,
-    base::TimeDelta delay) {
-
+void UsbControl::PowerCycleUsbPorts(base::Callback<void(bool)> callback,
+                                    uint16_t vid,
+                                    uint16_t pid,
+                                    base::TimeDelta delay) {
   if (!IsDeviceAllowed(vid, pid)) {
     LOG(ERROR) << "The device is not allowed for USB control "
                << DeviceInfoString(vid, pid);
@@ -129,11 +123,8 @@ void UsbControl::PowerCycleUsbPorts(
   // After the specified delay, turn all the devices on.
   brillo::MessageLoop::current()->PostDelayedTask(
       FROM_HERE,
-      base::Bind(
-          &PowerOnDevicesCallback,
-          base::Passed(std::move(callback)),
-          base::Passed(std::move(devices)),
-          cumulative_success),
+      base::Bind(&PowerOnDevicesCallback, base::Passed(std::move(callback)),
+                 base::Passed(std::move(devices)), cumulative_success),
       delay);
 }
 

@@ -18,19 +18,18 @@ namespace permission_broker {
 // ignored by this rule.
 class HidrawSubsystemUdevRule : public Rule {
  public:
-  explicit HidrawSubsystemUdevRule(const std::string &name);
+  explicit HidrawSubsystemUdevRule(const std::string& name);
   ~HidrawSubsystemUdevRule() override = default;
 
   // Called with every device belonging to the hidraw subsystem.
-  virtual Result ProcessHidrawDevice(struct udev_device *device) = 0;
+  virtual Result ProcessHidrawDevice(struct udev_device* device) = 0;
 
-  Result ProcessDevice(struct udev_device *device) override;
+  Result ProcessDevice(struct udev_device* device) override;
 
   // This parses toplevel items from a report descriptor and extracts the usage
   // parameters of any toplevel collections.
   static bool ParseToplevelCollectionUsages(
-      const HidReportDescriptor& descriptor,
-      std::vector<HidUsage>* usages);
+      const HidReportDescriptor& descriptor, std::vector<HidUsage>* usages);
 
   // Populates a vector of HidUsage items using information parsed from a given
   // device's descriptor. Returns true iff the descriptor was processed without

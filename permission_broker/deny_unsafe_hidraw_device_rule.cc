@@ -18,7 +18,7 @@ bool IsKeyboardUsage(const HidUsage& usage) {
 
   if (usage.page == HidUsage::PAGE_GENERIC_DESKTOP) {
     return usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_KEYBOARD ||
-        usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_KEYPAD;
+           usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_KEYPAD;
   }
 
   return false;
@@ -27,7 +27,7 @@ bool IsKeyboardUsage(const HidUsage& usage) {
 bool IsPointerUsage(const HidUsage& usage) {
   if (usage.page == HidUsage::PAGE_GENERIC_DESKTOP) {
     return usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_POINTER ||
-        usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_MOUSE;
+           usage.usage == HidUsage::GENERIC_DESKTOP_USAGE_MOUSE;
   }
   return false;
 }
@@ -52,7 +52,7 @@ DenyUnsafeHidrawDeviceRule::DenyUnsafeHidrawDeviceRule()
     : HidrawSubsystemUdevRule("DenyUnsafeHidrawDeviceRule") {}
 
 Rule::Result DenyUnsafeHidrawDeviceRule::ProcessHidrawDevice(
-    struct udev_device *device) {
+    struct udev_device* device) {
   std::vector<HidUsage> usages;
   if (!GetHidToplevelUsages(device, &usages)) {
     return IGNORE;
@@ -69,7 +69,7 @@ Rule::Result DenyUnsafeHidrawDeviceRule::ProcessHidrawDevice(
 // static
 bool DenyUnsafeHidrawDeviceRule::IsUnsafeUsage(const HidUsage& usage) {
   return IsKeyboardUsage(usage) || IsPointerUsage(usage) ||
-      IsSystemControlUsage(usage);
+         IsSystemControlUsage(usage);
 }
 
 }  // namespace permission_broker

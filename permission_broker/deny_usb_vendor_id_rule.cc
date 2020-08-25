@@ -16,8 +16,8 @@ DenyUsbVendorIdRule::DenyUsbVendorIdRule(const uint16_t vendor_id)
     : UsbSubsystemUdevRule("DenyUsbVendorIdRule"),
       vendor_id_(base::StringPrintf("%.4x", vendor_id)) {}
 
-Rule::Result DenyUsbVendorIdRule::ProcessUsbDevice(struct udev_device *device) {
-  const char *vendor_id = udev_device_get_sysattr_value(device, "idVendor");
+Rule::Result DenyUsbVendorIdRule::ProcessUsbDevice(struct udev_device* device) {
+  const char* vendor_id = udev_device_get_sysattr_value(device, "idVendor");
   if (vendor_id && (vendor_id_ == vendor_id))
     return DENY;
   return IGNORE;

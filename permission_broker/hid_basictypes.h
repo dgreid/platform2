@@ -123,8 +123,7 @@ struct HidUsage {
     GENERIC_DESKTOP_USAGE_SYSTEM_DISPLAY_SWAP = 0xb6,
   };
 
-  HidUsage(Page page, uint16_t usage)
-      : page(page), usage(usage) {}
+  HidUsage(Page page, uint16_t usage) : page(page), usage(usage) {}
   ~HidUsage() = default;
 
   Page page;

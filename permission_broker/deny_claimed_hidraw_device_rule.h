@@ -17,7 +17,7 @@ class DenyClaimedHidrawDeviceRule : public HidrawSubsystemUdevRule {
   DenyClaimedHidrawDeviceRule();
   ~DenyClaimedHidrawDeviceRule() override = default;
 
-  Result ProcessHidrawDevice(struct udev_device *device) override;
+  Result ProcessHidrawDevice(struct udev_device* device) override;
 
   // Indicates if a hidraw device should be inaccessible given the subsystem
   // identifier of one of its siblings.

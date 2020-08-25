@@ -49,8 +49,8 @@ std::unique_ptr<UsbDeviceInterface> UsbDevice::GetParent() const {
     LOG(ERROR) << "Unable to find the device parent for '" << info_ << "'";
     return nullptr;
   }
-  auto parent = std::unique_ptr<UsbDeviceInterface>(
-      new UsbDevice(parent_device));
+  auto parent =
+      std::unique_ptr<UsbDeviceInterface>(new UsbDevice(parent_device));
 
   UsbDeviceInfo parent_info = parent->GetInfo();
   if (parent_info.device_class != LIBUSB_CLASS_HUB) {

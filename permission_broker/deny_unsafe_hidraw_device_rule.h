@@ -18,7 +18,7 @@ class DenyUnsafeHidrawDeviceRule : public HidrawSubsystemUdevRule {
   DenyUnsafeHidrawDeviceRule();
   ~DenyUnsafeHidrawDeviceRule() override = default;
 
-  Result ProcessHidrawDevice(struct udev_device *device) override;
+  Result ProcessHidrawDevice(struct udev_device* device) override;
 
   static bool IsUnsafeUsage(const HidUsage& usage);
 

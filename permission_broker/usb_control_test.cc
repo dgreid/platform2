@@ -1,4 +1,4 @@
-// Copyright (c) 2018 The Chromium OS Authors. All rights reserved.
+// Copyright 2018 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -22,9 +22,7 @@ namespace permission_broker {
 
 class UsbControlTest : public testing::Test {
  public:
-  UsbControlTest() : loop_(nullptr) {
-    loop_.SetAsCurrent();
-  }
+  UsbControlTest() : loop_(nullptr) { loop_.SetAsCurrent(); }
   ~UsbControlTest() override = default;
 
  protected:
@@ -62,8 +60,8 @@ TEST_F(UsbControlTest, PowerCycleSingleDeviceSucceeds) {
   FakeUsbDevice::State state(false, false);
   UsbDeviceInfo info(0x2bd9, 0x0011);
   UsbDeviceInfo parent_info(0x1111, 0x2222, LIBUSB_CLASS_HUB);
-  auto valid_device = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state);
+  auto valid_device =
+      std::make_unique<FakeUsbDevice>(info, parent_info, &state);
   // Add the device into the vector of extracted devices and create a manager
   // that is capable of returing such a vector.
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices;
@@ -73,11 +71,9 @@ TEST_F(UsbControlTest, PowerCycleSingleDeviceSucceeds) {
   // Test that usb_control is correctly able to power-cycle the device.
   UsbControl usb_control(std::move(manager));
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x2bd9,
-      0x0011,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x2bd9, 0x0011,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_EQ(state.power_off_counter, 1);
   EXPECT_EQ(state.power_on_counter, 0);
@@ -96,12 +92,12 @@ TEST_F(UsbControlTest, PowerCycleMultipleDevicesSucceed) {
   UsbDeviceInfo info(0x2bd9, 0x0011);
   UsbDeviceInfo parent_info(0x1111, 0x2222, LIBUSB_CLASS_HUB);
   FakeUsbDevice::State state1(false, false);
-  auto valid_device1 = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state1);
+  auto valid_device1 =
+      std::make_unique<FakeUsbDevice>(info, parent_info, &state1);
   // - Second target device.
   FakeUsbDevice::State state2(false, false);
-  auto valid_device2 = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state2);
+  auto valid_device2 =
+      std::make_unique<FakeUsbDevice>(info, parent_info, &state2);
   // Add the device into the vector of extracted devices and create a manager
   // that is capable of returing such a vector.
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices;
@@ -112,11 +108,9 @@ TEST_F(UsbControlTest, PowerCycleMultipleDevicesSucceed) {
   // Test that usb_control is correctly able to power-cycle the device.
   UsbControl usb_control(std::move(manager));
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x2bd9,
-      0x0011,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x2bd9, 0x0011,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_EQ(state1.power_off_counter, 1);
   EXPECT_EQ(state1.power_on_counter, 0);
@@ -142,11 +136,9 @@ TEST_F(UsbControlTest, DeviceNotFound) {
   // the device is not available.
   UsbControl usb_control(std::move(manager));
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x2bd9,
-      0x0011,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x2bd9, 0x0011,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_FALSE(*result);
 }
@@ -156,8 +148,8 @@ TEST_F(UsbControlTest, PowerCycleNotAllowedDevice) {
   FakeUsbDevice::State state(false, false);
   UsbDeviceInfo info(0x1234, 0x5678);
   UsbDeviceInfo parent_info;
-  auto invalid_device = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state);
+  auto invalid_device =
+      std::make_unique<FakeUsbDevice>(info, parent_info, &state);
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices;
   devices.push_back(std::move(invalid_device));
@@ -167,11 +159,9 @@ TEST_F(UsbControlTest, PowerCycleNotAllowedDevice) {
   // allowed.
   UsbControl usb_control(std::move(manager));
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x1234,
-      0x5678,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x1234, 0x5678,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_EQ(state.power_off_counter, 0);
   EXPECT_EQ(state.power_on_counter, 0);
@@ -185,8 +175,7 @@ TEST_F(UsbControlTest, PowerOffFails) {
   FakeUsbDevice::State state(true, false);
   UsbDeviceInfo info(0x2bd9, 0x0011);
   UsbDeviceInfo parent_info(0x1111, 0x2222, LIBUSB_CLASS_HUB);
-  auto device = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state);
+  auto device = std::make_unique<FakeUsbDevice>(info, parent_info, &state);
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices;
   devices.push_back(std::move(device));
@@ -196,11 +185,9 @@ TEST_F(UsbControlTest, PowerOffFails) {
   // failes to turn off.
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
   UsbControl usb_control(std::move(manager));
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x2bd9,
-      0x0011,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x2bd9, 0x0011,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_EQ(state.power_off_counter, 1);
   EXPECT_EQ(state.power_on_counter, 0);
@@ -219,8 +206,7 @@ TEST_F(UsbControlTest, PowerOnFails) {
   FakeUsbDevice::State state(false, true);
   UsbDeviceInfo info(0x2bd9, 0x0011);
   UsbDeviceInfo parent_info(0x1111, 0x2222, LIBUSB_CLASS_HUB);
-  auto device = std::make_unique<FakeUsbDevice>(
-      info, parent_info, &state);
+  auto device = std::make_unique<FakeUsbDevice>(info, parent_info, &state);
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> devices;
   devices.push_back(std::move(device));
@@ -230,11 +216,9 @@ TEST_F(UsbControlTest, PowerOnFails) {
   // failes to turn on.
   std::shared_ptr<bool> result = std::make_shared<bool>(false);
   UsbControl usb_control(std::move(manager));
-  usb_control.PowerCycleUsbPorts(
-      base::Bind(&TestResultCallback, result),
-      0x2bd9,
-      0x0011,
-      base::TimeDelta::FromMilliseconds(1));
+  usb_control.PowerCycleUsbPorts(base::Bind(&TestResultCallback, result),
+                                 0x2bd9, 0x0011,
+                                 base::TimeDelta::FromMilliseconds(1));
 
   EXPECT_EQ(state.power_off_counter, 1);
   EXPECT_EQ(state.power_on_counter, 0);

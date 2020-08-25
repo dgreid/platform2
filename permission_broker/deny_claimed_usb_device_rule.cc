@@ -23,7 +23,7 @@ const uint32_t kAdbProtocol = 0x1;
 bool GetUIntSysattr(udev_device* device, const char* key, uint32_t* val) {
   CHECK(val);
 
-  const char *str_val = udev_device_get_sysattr_value(device, key);
+  const char* str_val = udev_device_get_sysattr_value(device, key);
   return str_val && base::HexStringToUInt(str_val, val);
 }
 
@@ -125,7 +125,7 @@ bool IsDeviceAllowedSerial(udev_device* device) {
 }
 
 Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
-  const char *device_syspath = udev_device_get_syspath(device);
+  const char* device_syspath = udev_device_get_syspath(device);
   if (!device_syspath) {
     return DENY;
   }
@@ -138,10 +138,10 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
   bool found_claimed_interface = false;
   bool found_unclaimed_interface = false;
   bool found_adb_interface = false;
-  struct udev_list_entry *entry = nullptr;
+  struct udev_list_entry* entry = nullptr;
   udev_list_entry_foreach(entry,
                           udev_enumerate_get_list_entry(enumerate.get())) {
-    const char *entry_path = udev_list_entry_get_name(entry);
+    const char* entry_path = udev_list_entry_get_name(entry);
     ScopedUdevDevicePtr child(udev_device_new_from_syspath(udev, entry_path));
 
     // Find out if this entry's direct parent is the device in question.

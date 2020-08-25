@@ -34,22 +34,17 @@ const char kThingmDriver[] = "thingm";
 const base::StringPiece kJoydevPrefix = "/dev/input/js";
 
 const size_t kAllowedAbsCapabilities[] = {
-    ABS_X, ABS_Y, ABS_Z,
-    ABS_RX, ABS_RY, ABS_RZ,
-    ABS_THROTTLE, ABS_RUDDER, ABS_WHEEL, ABS_GAS, ABS_BRAKE,
-    ABS_HAT0X, ABS_HAT0Y,
-    ABS_HAT1X, ABS_HAT1Y,
-    ABS_HAT2X, ABS_HAT2Y,
-    ABS_HAT3X, ABS_HAT3Y,
-    ABS_MISC,
+    ABS_X,     ABS_Y,        ABS_Z,      ABS_RX,    ABS_RY,
+    ABS_RZ,    ABS_THROTTLE, ABS_RUDDER, ABS_WHEEL, ABS_GAS,
+    ABS_BRAKE, ABS_HAT0X,    ABS_HAT0Y,  ABS_HAT1X, ABS_HAT1Y,
+    ABS_HAT2X, ABS_HAT2Y,    ABS_HAT3X,  ABS_HAT3Y, ABS_MISC,
 };
 
 bool ParseInputCapabilities(const char* input, std::vector<uint64_t>* output) {
   // The kernel expresses capabilities as a bitfield, broken into long-sized
   // chunks encoded in hexadecimal.
-  std::vector<std::string> chunks =
-      base::SplitString(input, " ", base::KEEP_WHITESPACE,
-                        base::SPLIT_WANT_ALL);
+  std::vector<std::string> chunks = base::SplitString(
+      input, " ", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
   output->clear();
   output->reserve(chunks.size());
@@ -163,8 +158,8 @@ Rule::Result DenyClaimedHidrawDeviceRule::ProcessHidrawDevice(
   std::string hid_parent_path(udev_device_get_syspath(hid_parent));
   std::string usb_interface_path;
   struct udev_device* usb_interface =
-      udev_device_get_parent_with_subsystem_devtype(
-          device, "usb", "usb_interface");
+      udev_device_get_parent_with_subsystem_devtype(device, "usb",
+                                                    "usb_interface");
 
   if (usb_interface)
     usb_interface_path = udev_device_get_syspath(usb_interface);
@@ -192,11 +187,11 @@ Rule::Result DenyClaimedHidrawDeviceRule::ProcessHidrawDevice(
     const char* syspath = udev_list_entry_get_name(entry);
     ScopedUdevDevicePtr child(udev_device_new_from_syspath(udev, syspath));
     struct udev_device* child_usb_interface =
-        udev_device_get_parent_with_subsystem_devtype(
-            child.get(), "usb", "usb_interface");
+        udev_device_get_parent_with_subsystem_devtype(child.get(), "usb",
+                                                      "usb_interface");
     struct udev_device* child_hid_parent =
-        udev_device_get_parent_with_subsystem_devtype(
-            child.get(), "hid", nullptr);
+        udev_device_get_parent_with_subsystem_devtype(child.get(), "hid",
+                                                      nullptr);
     if (!child_usb_interface && !child_hid_parent) {
       continue;
     }
@@ -210,8 +205,8 @@ Rule::Result DenyClaimedHidrawDeviceRule::ProcessHidrawDevice(
 
     // This device shares a USB interface with the hidraw device in question.
     // Check its subsystem to see if it should block hidraw access.
-    if (!should_sibling_subsystem_exclude_access &&
-        usb_interface && child_usb_interface &&
+    if (!should_sibling_subsystem_exclude_access && usb_interface &&
+        child_usb_interface &&
         usb_interface_path == udev_device_get_syspath(child_usb_interface)) {
       should_sibling_subsystem_exclude_access =
           ShouldSiblingSubsystemExcludeHidAccess(child.get());

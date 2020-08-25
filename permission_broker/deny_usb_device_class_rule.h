@@ -16,7 +16,7 @@ class DenyUsbDeviceClassRule : public UsbSubsystemUdevRule {
   explicit DenyUsbDeviceClassRule(const uint8_t device_class);
   ~DenyUsbDeviceClassRule() override = default;
 
-  Result ProcessUsbDevice(struct udev_device *device) override;
+  Result ProcessUsbDevice(struct udev_device* device) override;
 
  private:
   const std::string device_class_;

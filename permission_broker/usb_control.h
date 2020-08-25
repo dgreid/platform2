@@ -36,11 +36,10 @@ class UsbControl {
   // |vid| and |pid| and will try to power-cycle them using the VBUS subsystem.
   // The |delay| determines the delay between powering all the devices found on
   // and powering them all off.
-  void PowerCycleUsbPorts(
-      base::Callback<void(bool)> callback,
-      uint16_t vid,
-      uint16_t pid,
-      base::TimeDelta delay);
+  void PowerCycleUsbPorts(base::Callback<void(bool)> callback,
+                          uint16_t vid,
+                          uint16_t pid,
+                          base::TimeDelta delay);
 
  private:
   std::unique_ptr<UsbDeviceManagerInterface> manager_ = nullptr;

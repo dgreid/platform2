@@ -15,8 +15,8 @@ DenyUsbDeviceClassRule::DenyUsbDeviceClassRule(const uint8_t device_class)
       device_class_(base::StringPrintf("%.2x", device_class)) {}
 
 Rule::Result DenyUsbDeviceClassRule::ProcessUsbDevice(
-    struct udev_device *device) {
-  const char *device_class =
+    struct udev_device* device) {
+  const char* device_class =
       udev_device_get_sysattr_value(device, "bDeviceClass");
   if (device_class && (device_class_ == device_class))
     return DENY;

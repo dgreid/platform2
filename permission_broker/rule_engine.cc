@@ -13,8 +13,7 @@
 
 namespace permission_broker {
 
-RuleEngine::RuleEngine()
-    : udev_(udev_new()) {}
+RuleEngine::RuleEngine() : udev_(udev_new()) {}
 
 RuleEngine::RuleEngine(const std::string& udev_run_path,
                        const base::TimeDelta& poll_interval)
@@ -24,8 +23,7 @@ RuleEngine::RuleEngine(const std::string& udev_run_path,
   CHECK(udev_) << "Could not create udev context, is sysfs mounted?";
 }
 
-RuleEngine::~RuleEngine() {
-}
+RuleEngine::~RuleEngine() {}
 
 void RuleEngine::AddRule(Rule* rule) {
   CHECK(rule) << "Cannot add NULL as a rule.";

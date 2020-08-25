@@ -20,7 +20,7 @@ class DenyUsbVendorIdRule : public UsbSubsystemUdevRule {
   explicit DenyUsbVendorIdRule(const uint16_t vendor_id);
   ~DenyUsbVendorIdRule() override = default;
 
-  Result ProcessUsbDevice(struct udev_device *device) override;
+  Result ProcessUsbDevice(struct udev_device* device) override;
 
  private:
   const std::string vendor_id_;

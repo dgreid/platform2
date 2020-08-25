@@ -112,8 +112,7 @@ class UsbDeviceManagerInterface {
   virtual ~UsbDeviceManagerInterface() = default;
 
   virtual std::vector<std::unique_ptr<UsbDeviceInterface>> GetDevicesByVidPid(
-      uint16_t vid,
-      uint16_t pid) = 0;
+      uint16_t vid, uint16_t pid) = 0;
 };
 
 // Specialized implementation of UsbDeviceManagerInterface that uses libusb
@@ -124,8 +123,7 @@ class UsbDeviceManager : public UsbDeviceManagerInterface {
   ~UsbDeviceManager() override;
 
   std::vector<std::unique_ptr<UsbDeviceInterface>> GetDevicesByVidPid(
-      uint16_t vid,
-      uint16_t pid) override;
+      uint16_t vid, uint16_t pid) override;
 
  private:
   std::unique_ptr<libusb_context, LibusbContextDeleter> context_;

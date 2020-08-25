@@ -17,7 +17,7 @@ class AllowUsbDeviceRule : public UsbSubsystemUdevRule {
   AllowUsbDeviceRule();
   ~AllowUsbDeviceRule() override = default;
 
-  Result ProcessUsbDevice(struct udev_device *device) override;
+  Result ProcessUsbDevice(struct udev_device* device) override;
 
  private:
   DISALLOW_COPY_AND_ASSIGN(AllowUsbDeviceRule);

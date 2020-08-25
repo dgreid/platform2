@@ -101,8 +101,8 @@ void PermissionBroker::RegisterAsync(
 
 bool PermissionBroker::CheckPathAccess(const std::string& in_path) {
   Rule::Result result = rule_engine_.ProcessPath(in_path);
-  return result == Rule::ALLOW || result == Rule::ALLOW_WITH_LOCKDOWN
-      || result == Rule::ALLOW_WITH_DETACH;
+  return result == Rule::ALLOW || result == Rule::ALLOW_WITH_LOCKDOWN ||
+         result == Rule::ALLOW_WITH_DETACH;
 }
 
 bool PermissionBroker::OpenPath(brillo::ErrorPtr* error,
@@ -154,24 +154,22 @@ bool PermissionBroker::ReleaseLoopbackTcpPort(uint16_t in_port) {
   return port_tracker_.ReleaseLoopbackTcpPort(in_port);
 }
 
-bool PermissionBroker::RequestTcpPortForward(
-    uint16_t in_port,
-    const std::string& in_interface,
-    const std::string& dst_ip,
-    uint16_t dst_port,
-    const base::ScopedFD& dbus_fd) {
-  return port_tracker_.StartTcpPortForwarding(
-      in_port, in_interface, dst_ip, dst_port, dbus_fd.get());
+bool PermissionBroker::RequestTcpPortForward(uint16_t in_port,
+                                             const std::string& in_interface,
+                                             const std::string& dst_ip,
+                                             uint16_t dst_port,
+                                             const base::ScopedFD& dbus_fd) {
+  return port_tracker_.StartTcpPortForwarding(in_port, in_interface, dst_ip,
+                                              dst_port, dbus_fd.get());
 }
 
-bool PermissionBroker::RequestUdpPortForward(
-    uint16_t in_port,
-    const std::string& in_interface,
-    const std::string& dst_ip,
-    uint16_t dst_port,
-    const base::ScopedFD& dbus_fd) {
-  return port_tracker_.StartUdpPortForwarding(
-      in_port, in_interface, dst_ip, dst_port, dbus_fd.get());
+bool PermissionBroker::RequestUdpPortForward(uint16_t in_port,
+                                             const std::string& in_interface,
+                                             const std::string& dst_ip,
+                                             uint16_t dst_port,
+                                             const base::ScopedFD& dbus_fd) {
+  return port_tracker_.StartUdpPortForwarding(in_port, in_interface, dst_ip,
+                                              dst_port, dbus_fd.get());
 }
 
 bool PermissionBroker::ReleaseTcpPortForward(uint16_t in_port,
@@ -195,14 +193,10 @@ void PermissionBroker::PowerCycleUsbPorts(
     uint16_t in_vid,
     uint16_t in_pid,
     int64_t in_delay) {
-
-  usb_control_.PowerCycleUsbPorts(
-      base::Bind(
-          &PowerCycleUsbPortsResultCallback,
-          base::Passed(std::move(response))),
-      in_vid,
-      in_pid,
-      base::TimeDelta::FromInternalValue(in_delay));
+  usb_control_.PowerCycleUsbPorts(base::Bind(&PowerCycleUsbPortsResultCallback,
+                                             base::Passed(std::move(response))),
+                                  in_vid, in_pid,
+                                  base::TimeDelta::FromInternalValue(in_delay));
 }
 
 bool PermissionBroker::OpenPathImpl(
@@ -254,6 +248,5 @@ bool PermissionBroker::OpenPathImpl(
   *out_fd = std::move(fd);
   return true;
 }
-
 
 }  // namespace permission_broker
