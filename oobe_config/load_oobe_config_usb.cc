@@ -40,7 +40,7 @@ namespace {
 constexpr uint32_t kTpmPermissions = 0x62040001;
 #else
 // TPM_NV_PER_PPWRITE
-constexpr uint32_t kTpmPermissions =  0x1;
+constexpr uint32_t kTpmPermissions = 0x1;
 #endif
 
 constexpr uint32_t kHashIndexInTpmNvram = 0x100c;
