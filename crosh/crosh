@@ -1788,7 +1788,7 @@ HELP_dmesg='
   Display kernel log buffer
 '
 cmd_dmesg() (
-  # We whitelist only a few options.
+  # We allow only a few options.
   local opt
   for opt in "$@"; do
     if ! printf '%s' "${opt}" | grep -sqE '^-[dHkLPprTtuwx]+$'; then
@@ -1852,7 +1852,7 @@ HELP_uname='
   Display system info
 '
 cmd_uname() (
-  # We whitelist only a few options.
+  # We allow only a few options.
   local opt
   for opt in "$@"; do
     if ! printf '%s' "${opt}" | grep -sqE '^-[asnrvmpio]+$'; then
@@ -1868,7 +1868,7 @@ HELP_vmstat='
   Report virtual memory statistics
 '
 cmd_vmstat() (
-  # We whitelist only a few options.
+  # We allow only a few options.
   local opt
   for opt in "$@"; do
     if ! printf '%s' "${opt}" | grep -sqE '^(-[adfmnsw]+|[0-9]+)$'; then

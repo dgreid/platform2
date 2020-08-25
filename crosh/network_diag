@@ -560,7 +560,7 @@ diag_link_wired () {
 is_modem () {
   local ifc="$1"
   driver="$(basename "$(readlink "/sys/class/net/${ifc}/device/driver")")"
-  # Whitelist certain device types
+  # Allow certain device types.
   [ "${driver}" = "QCUSBNet2k" ] && return 0
 
   # See if there is a TTY device that is associated the same USB device

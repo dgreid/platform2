@@ -4,7 +4,7 @@
 # found in the LICENSE file.
 
 # This script generates a initrc file that removes any readline keybindings
-# not on the whitelist.  It was used to generate
+# not explicitly allowed.  It was used to generate
 # window_manager/bin/inputrc.crosh, so that crosh can use readline for its line
 # editing features, without exposing edit-and-execute-command or the various
 # file completion commands.
@@ -17,14 +17,14 @@
 # prints the keybindings from the current environment, and in the context of
 # a script there are no keybindings.
 #
-# The non-whitelisted commands are commented out below for reference only.
-# Only the non-commented commands will be included in the actual whitelist.
+# The blocked commands are commented out below for reference only.
+# Only the non-commented commands will be included in the actual allowlist.
 # Any commands found in the `bind -p` output not on that list will be remapped
 # to the "abort" readline command.
 #
 # This list of commands was initially generated with `bind -l`.
 
-WHITELIST="$(grep -v "#" <<EOF
+ALLOWLIST="$(grep -v "#" <<EOF
 abort
 accept-line
 #alias-expand-line
@@ -182,14 +182,14 @@ fi
 # Remove any commands that are not bound to a key.
 BINDINGS="$(cat | grep -v "not bound")"
 
-# Remove any whitelisted commands from the list of bindings.
-for safecommand in $WHITELIST; do
-  BINDINGS="$(echo "$BINDINGS" | grep -v ": $safecommand\$")"
+# Remove any allowed commands from the list of bindings.
+for safecommand in ${ALLOWLIST}; do
+  BINDINGS="$(echo "${BINDINGS}" | grep -v ": ${safecommand}\$")"
 done
 
-# Anything left is not on the whitelist, remap it to the "abort" command.
+# Anything left is not allowed, remap it to the "abort" command.
 echo "# Generated with $(basename $0) on $(date)"
-echo "$BINDINGS" | sed 's/\([^:]\+\):\(.*\)$/\1: abort #\2/'
+echo "${BINDINGS}" | sed 's/\([^:]\+\):\(.*\)$/\1: abort #\2/'
 echo
 echo "set expand-tilde off"
 echo "set disable-completion on"
