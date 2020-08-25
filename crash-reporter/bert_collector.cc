@@ -44,8 +44,7 @@ bool BertRead(const FilePath& bert_table_path,
               std::string* bert_table_contents,
               std::string* bert_data_contents) {
   // Read BERT table file.
-  if (!base::ReadFileToStringWithMaxSize(bert_table_path,
-                                         bert_table_contents,
+  if (!base::ReadFileToStringWithMaxSize(bert_table_path, bert_table_contents,
                                          sizeof(struct acpi_table_bert))) {
     PLOG(ERROR) << "BERT table file read failed";
     return false;
@@ -58,8 +57,7 @@ bool BertRead(const FilePath& bert_table_path,
   }
 
   // Read BERT data file.
-  if (!base::ReadFileToStringWithMaxSize(bert_data_path,
-                                         bert_data_contents,
+  if (!base::ReadFileToStringWithMaxSize(bert_data_path, bert_data_contents,
                                          bert_table->region_length)) {
     PLOG(ERROR) << "BERT data file read failed";
     return false;
@@ -112,30 +110,26 @@ bool BERTCollector::Collect() {
   }
 
   // Dump BERT table and BERT data into single bertdump file.
-  if (!GetCreatedCrashDirectoryByEuid(kRootUid,
-                                      &root_crash_directory,
+  if (!GetCreatedCrashDirectoryByEuid(kRootUid, &root_crash_directory,
                                       nullptr)) {
     return false;
   }
   std::string dump_basename =
       FormatDumpBasename(kBertErrorName, time(nullptr), 0);
-  FilePath bert_crash_path = GetCrashPath(
-      root_crash_directory, dump_basename, "bertdump");
+  FilePath bert_crash_path =
+      GetCrashPath(root_crash_directory, dump_basename, "bertdump");
 
   // We must use WriteNewFile instead of base::WriteFile as we
   // do not want to write with root access to a symlink that an attacker
   // might have created.
   if (WriteNewFile(bert_crash_path, bert_table_contents.c_str(),
                    bert_table.length) != bert_table.length) {
-    PLOG(ERROR) << "Failed to write BERT table to "
-                << bert_crash_path.value();
+    PLOG(ERROR) << "Failed to write BERT table to " << bert_crash_path.value();
     return false;
   }
-  if (!base::AppendToFile(bert_crash_path,
-                          bert_data_contents.c_str(),
+  if (!base::AppendToFile(bert_crash_path, bert_data_contents.c_str(),
                           bert_table.region_length)) {
-    PLOG(ERROR) << "Failed to write BERT data to "
-                << bert_crash_path.value();
+    PLOG(ERROR) << "Failed to write BERT data to " << bert_crash_path.value();
     return false;
   }
 

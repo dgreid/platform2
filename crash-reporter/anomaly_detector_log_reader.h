@@ -40,8 +40,7 @@ constexpr char kAuditLogPattern[] = R"([^(]+\(([\d\.]+)\S+ (.+))";
 // e.g.3
 // `2020-05-14T19:37:04.202906+09:00 INFO VM(3)[8947]:`
 // ` [devices/src/virtio/balloon.rs:290] ballon config changed`
-constexpr char kMessageLogPattern[] =
-    R"((\S+) \S+ (\S*?)(?:\[\d+\])?:\s+(.+))";
+constexpr char kMessageLogPattern[] = R"((\S+) \S+ (\S*?)(?:\[\d+\])?:\s+(.+))";
 
 // First group captures timestamp in RFC3339 format.
 // Second group captures the service name.

@@ -271,4 +271,3 @@ TEST_F(SELinuxViolationCollectorTest, FeedbackNotAllowed) {
   EXPECT_TRUE(collector_.Collect());
   EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
 }
-

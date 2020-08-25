@@ -8,8 +8,8 @@
 #include <base/files/file_util.h>
 #include <gtest/gtest.h>
 
-using testing::Invoke;
 using testing::_;
+using testing::Invoke;
 
 namespace test_util {
 

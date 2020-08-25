@@ -43,8 +43,7 @@ class BERTCollectorTest : public ::testing::Test {
   void PrepareBertDataTest(bool good_data) {
     constexpr char data[] = "Create BERT File for testing";
     FilePath testberttable_path = collector_.acpitable_path_.Append("BERT");
-    FilePath testbertdata_path =
-        collector_.acpitable_path_.Append("data/BERT");
+    FilePath testbertdata_path = collector_.acpitable_path_.Append("data/BERT");
 
     ASSERT_TRUE(test_util::CreateFile(testbertdata_path, data));
 
@@ -53,9 +52,17 @@ class BERTCollectorTest : public ::testing::Test {
     } else {
       // Dummy test values.
       const struct acpi_table_bert bert_tab_test = {
-        {'B', 'E', 'R', 'T'}, 48, 'A', 'D',
-        "OEMID", "TABLEID", 0xFFFFFFFF, "ACP",
-        0xEEEEEEEE, sizeof(data), 0x000000000001234
+          {'B', 'E', 'R', 'T'},
+          48,
+          'A',
+          'D',
+          "OEMID",
+          "TABLEID",
+          0xFFFFFFFF,
+          "ACP",
+          0xEEEEEEEE,
+          sizeof(data),
+          0x000000000001234,
       };
       ASSERT_EQ(sizeof(struct acpi_table_bert),
                 base::WriteFile(testberttable_path,
