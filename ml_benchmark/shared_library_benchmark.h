@@ -20,7 +20,7 @@ namespace ml_benchmark {
 // A benchmark class that runs shared library benchmarks
 // Some benchmarks are shared libraries, mimicking how the
 // corresponding ML use cases are being deployed in production
-class SharedLibraryBenchmark: public Benchmark {
+class SharedLibraryBenchmark : public Benchmark {
  public:
   explicit SharedLibraryBenchmark(
       std::unique_ptr<BenchmarkFunctions> functions_ptr);
@@ -28,9 +28,8 @@ class SharedLibraryBenchmark: public Benchmark {
   SharedLibraryBenchmark(const SharedLibraryBenchmark&) = delete;
   SharedLibraryBenchmark& operator=(const SharedLibraryBenchmark&) = delete;
 
-  bool ExecuteBenchmark(
-      const chrome::ml_benchmark::CrOSBenchmarkConfig& config,
-      chrome::ml_benchmark::BenchmarkResults* results) final;
+  bool ExecuteBenchmark(const chrome::ml_benchmark::CrOSBenchmarkConfig& config,
+                        chrome::ml_benchmark::BenchmarkResults* results) final;
 
  private:
   const std::unique_ptr<BenchmarkFunctions> functions_;

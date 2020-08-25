@@ -12,13 +12,13 @@ constexpr char kBenchmarkFunctionName[] = "benchmark_start";
 constexpr char kFreeBenchmarkFunctionName[] = "free_benchmark_results";
 
 void* load_function_from_shared_lib(const base::ScopedNativeLibrary& library,
-    const char* function_name,
-    const char* library_path) {
+                                    const char* function_name,
+                                    const char* library_path) {
   auto function_pointer = library.GetFunctionPointer(function_name);
 
   if (function_pointer == nullptr) {
-    LOG(ERROR)  << "Unable to load " << function_name << " from "
-                << library_path;
+    LOG(ERROR) << "Unable to load " << function_name << " from "
+               << library_path;
   }
 
   return function_pointer;
@@ -38,10 +38,9 @@ SharedLibraryBenchmarkFunctions::SharedLibraryBenchmarkFunctions(
   }
 
   library_ = base::ScopedNativeLibrary(library);
-  auto benchmark_function_pointer = reinterpret_cast<benchmark_function>(
-        load_function_from_shared_lib(library_,
-                                      kBenchmarkFunctionName,
-                                      path.value().c_str()));
+  auto benchmark_function_pointer =
+      reinterpret_cast<benchmark_function>(load_function_from_shared_lib(
+          library_, kBenchmarkFunctionName, path.value().c_str()));
 
   if (benchmark_function_pointer == nullptr) {
     return;
@@ -49,9 +48,8 @@ SharedLibraryBenchmarkFunctions::SharedLibraryBenchmarkFunctions(
 
   auto free_results_function =
       reinterpret_cast<free_benchmark_results_function>(
-        load_function_from_shared_lib(library_,
-            kFreeBenchmarkFunctionName,
-            path.value().c_str()));
+          load_function_from_shared_lib(library_, kFreeBenchmarkFunctionName,
+                                        path.value().c_str()));
 
   if (free_results_function == nullptr) {
     return;
@@ -78,9 +76,7 @@ int32_t SharedLibraryBenchmarkFunctions::BenchmarkFunction(
   DCHECK(valid()) << "Attempted to call BenchmarkFunction without"
                      " loading from the shared library";
 
-  return benchmark_function_(config_bytes,
-                             config_bytes_size,
-                             results_bytes,
+  return benchmark_function_(config_bytes, config_bytes_size, results_bytes,
                              results_bytes_size);
 }
 

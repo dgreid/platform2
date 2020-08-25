@@ -15,25 +15,22 @@
 
 namespace ml_benchmark {
 
-using chrome::ml_benchmark::CrOSBenchmarkConfig;
 using chrome::ml_benchmark::BenchmarkResults;
+using chrome::ml_benchmark::CrOSBenchmarkConfig;
 using google::protobuf::util::MessageDifferencer;
 using testing::Expectation;
 
-class MockBenchmarkFunctions: public BenchmarkFunctions {
+class MockBenchmarkFunctions : public BenchmarkFunctions {
  public:
   MOCK_METHOD(int32_t,
               BenchmarkFunction,
               (const void*, int32_t, void**, int32_t*),
               (override));
 
-  MOCK_METHOD(void,
-              FreeBenchmarkResults,
-              (void*),
-              (override));
+  MOCK_METHOD(void, FreeBenchmarkResults, (void*), (override));
 };
 
-class SharedLibraryBenchmarkTest: public ::testing::Test {
+class SharedLibraryBenchmarkTest : public ::testing::Test {
  protected:
   void SetUp() override {
     functions_ = std::make_unique<MockBenchmarkFunctions>();
@@ -43,16 +40,15 @@ class SharedLibraryBenchmarkTest: public ::testing::Test {
     return_buffer_ = result.SerializeAsString();
 
     ON_CALL(*functions_.get(), BenchmarkFunction)
-      .WillByDefault([this, result](const void* buf,
-          int32_t buf_len,
-          void** results_bytes,
-          int32_t* results_len){
-        *results_bytes = const_cast<void *>(
-            reinterpret_cast<const void*>(return_buffer_.c_str()));
-        *results_len = return_buffer_.size();
+        .WillByDefault([this, result](const void* buf, int32_t buf_len,
+                                      void** results_bytes,
+                                      int32_t* results_len) {
+          *results_bytes = const_cast<void*>(
+              reinterpret_cast<const void*>(return_buffer_.c_str()));
+          *results_len = return_buffer_.size();
 
-        return result.status();
-      });
+          return result.status();
+        });
   }
 
   std::unique_ptr<MockBenchmarkFunctions> functions_;
@@ -72,10 +68,8 @@ TEST_F(SharedLibraryBenchmarkTest, benchmark_success) {
   {
     InSequence seq;
 
-    EXPECT_CALL(*functions_, BenchmarkFunction)
-      .Times(1);
-    EXPECT_CALL(*functions_, FreeBenchmarkResults)
-      .Times(1);
+    EXPECT_CALL(*functions_, BenchmarkFunction).Times(1);
+    EXPECT_CALL(*functions_, FreeBenchmarkResults).Times(1);
   }
 
   CrOSBenchmarkConfig config;

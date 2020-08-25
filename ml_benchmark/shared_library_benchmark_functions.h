@@ -20,17 +20,15 @@ typedef int32_t (*benchmark_function)(const void* config_bytes,
 
 typedef void (*free_benchmark_results_function)(void* results_bytes);
 
-class SharedLibraryBenchmarkFunctions: public BenchmarkFunctions {
+class SharedLibraryBenchmarkFunctions : public BenchmarkFunctions {
  public:
   explicit SharedLibraryBenchmarkFunctions(const base::FilePath& path);
-  SharedLibraryBenchmarkFunctions(
-      const SharedLibraryBenchmarkFunctions&) = delete;
+  SharedLibraryBenchmarkFunctions(const SharedLibraryBenchmarkFunctions&) =
+      delete;
   SharedLibraryBenchmarkFunctions& operator=(
       const SharedLibraryBenchmarkFunctions&) = delete;
 
-  bool valid() const {
-    return valid_;
-  }
+  bool valid() const { return valid_; }
 
   int32_t BenchmarkFunction(const void* config_bytes,
                             int32_t config_bytes_size,

@@ -15,9 +15,9 @@
 #include "proto/benchmark_config.pb.h"
 
 using chrome::ml_benchmark::AccelerationMode;
+using chrome::ml_benchmark::BenchmarkResults;
 using chrome::ml_benchmark::CrOSBenchmarkConfig;
 using chrome::ml_benchmark::SodaBenchmarkConfig;
-using chrome::ml_benchmark::BenchmarkResults;
 using ml_benchmark::SharedLibraryBenchmark;
 using ml_benchmark::SharedLibraryBenchmarkFunctions;
 
@@ -26,8 +26,8 @@ namespace {
 void benchmark_and_report_results(const std::string& driver_name,
                                   const base::FilePath& driver_file_path,
                                   const CrOSBenchmarkConfig& config) {
-  auto functions = std::make_unique<SharedLibraryBenchmarkFunctions>(
-      driver_file_path);
+  auto functions =
+      std::make_unique<SharedLibraryBenchmarkFunctions>(driver_file_path);
   if (functions == nullptr || !functions->valid()) {
     LOG(ERROR) << "Unable to load the " << driver_name << " benchmark";
     return;
@@ -52,8 +52,9 @@ void benchmark_and_report_results(const std::string& driver_name,
       return;
     }
     for (const auto& latency_pair : results.percentile_latencies_in_us()) {
-      LOG(INFO) << latency_pair.first << "th percentile latency: "
-                << latency_pair.second/1000000.0 << " seconds";
+      LOG(INFO) << latency_pair.first
+                << "th percentile latency: " << latency_pair.second / 1000000.0
+                << " seconds";
     }
   } else {
     LOG(ERROR) << driver_name << " Encountered an error";
@@ -66,9 +67,9 @@ void benchmark_and_report_results(const std::string& driver_name,
 int main(int argc, char* argv[]) {
   DEFINE_string(workspace_path, ".", "Path to the driver workspace.");
   DEFINE_string(config_file_name, "benchmark.config",
-      "Name of the driver configuration file.");
+                "Name of the driver configuration file.");
   DEFINE_string(driver_library_path, "libsoda_benchmark_driver.so",
-      "Path to the driver shared library.");
+                "Path to the driver shared library.");
   DEFINE_bool(use_nnapi, false, "Use NNAPI delegate.");
 
   brillo::FlagHelper::Init(argc, argv, "ML Benchmark runner");
@@ -88,8 +89,7 @@ int main(int argc, char* argv[]) {
 
   base::FilePath driver_library(FLAGS_driver_library_path);
 
-  benchmark_and_report_results(FLAGS_driver_library_path,
-                               driver_library,
+  benchmark_and_report_results(FLAGS_driver_library_path, driver_library,
                                benchmark_config);
 
   LOG(INFO) << "Benchmark finished, exiting";
