@@ -51,8 +51,7 @@ base::Optional<std::vector<uint8_t>> SignatureToDerBytes(const uint8_t* r,
     LOG(ERROR) << "Failed to allocate ECDSA_SIG or BIGNUM.";
     return base::nullopt;
   }
-  if (!BN_bin2bn(r, 32, sig_r.get()) ||
-      !BN_bin2bn(s, 32, sig_s.get())) {
+  if (!BN_bin2bn(r, 32, sig_r.get()) || !BN_bin2bn(s, 32, sig_s.get())) {
     LOG(ERROR) << "Failed to convert ECDSA_SIG parameters to BIGNUM";
     return base::nullopt;
   }

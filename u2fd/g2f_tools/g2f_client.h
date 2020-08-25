@@ -33,14 +33,12 @@ class HidDevice {
              (static_cast<uint32_t>(raw[2]) << 16) |
              (static_cast<uint32_t>(raw[3]) << 24);
     }
-    constexpr uint32_t IsBroadcast() const {
-      return value() == 0xFFFFFFFFu;
-    }
+    constexpr uint32_t IsBroadcast() const { return value() == 0xFFFFFFFFu; }
   } __attribute__((__packed__));
   static_assert(sizeof(Cid) == 4, "Wrong Cid size");
 
   // Broadcast Channel ID, used during INIT command to create a channel.
-  static constexpr Cid kCidBroadcast = { { 0xFF, 0xFF, 0xFF, 0xFF } };
+  static constexpr Cid kCidBroadcast = {{0xFF, 0xFF, 0xFF, 0xFF}};
 
   // Creates a new instance for the device at the specified path.
   // Does not open the device.
@@ -55,12 +53,14 @@ class HidDevice {
   // Sends a message to the given channel, with the specified command
   // and payload. Payload will be split into multiple messages if necessary.
   // Returns true on success.
-  virtual bool SendRequest(const Cid& cid, uint8_t cmd,
+  virtual bool SendRequest(const Cid& cid,
+                           uint8_t cmd,
                            const brillo::Blob& payload);
   // Reads a response for the given channel. This should follow a call
   // to SendRequest. Returns true on success, false if a packet could
   // not be read, or an unexpected packet was read.
-  virtual bool RecvResponse(const Cid& cid, uint8_t* cmd,
+  virtual bool RecvResponse(const Cid& cid,
+                            uint8_t* cmd,
                             brillo::Blob* payload,
                             int timeout_ms);
 
@@ -138,8 +138,7 @@ class U2FHid {
   // This sends the specified message to the device. The message
   // should be formatted according to section 4.1.1 of the FIDO
   // U2F HID spec. This sends a U2FHID_MSG command.
-  virtual bool Msg(const brillo::Blob& request,
-                   brillo::Blob* response);
+  virtual bool Msg(const brillo::Blob& request, brillo::Blob* response);
   // This sends a ping of the specified size to the device.
   // This is a U2FHID_PING command.
   bool Ping(size_t size);
@@ -197,8 +196,7 @@ class U2F {
                     brillo::Blob* counter,
                     brillo::Blob* signature);
 
-  static void AppendBlob(const brillo::Blob& from,
-                         brillo::Blob* to);
+  static void AppendBlob(const brillo::Blob& from, brillo::Blob* to);
 
  private:
   // Sends a U2F message, checks that the response is sufficiently
@@ -237,10 +235,9 @@ class U2F {
 
   // This size should be interpreted in the same way as
   // kRegResponseMinSize above.
-  static constexpr int kAuthResponseMinSize =
-      1 +  // User presence
-      4 +  // Counter
-      1;   // Signature
+  static constexpr int kAuthResponseMinSize = 1 +  // User presence
+                                              4 +  // Counter
+                                              1;   // Signature
 
   static constexpr int kAuthResponseCounterOffset = 1;
   static constexpr int kAuthResponseCounterLength = 4;

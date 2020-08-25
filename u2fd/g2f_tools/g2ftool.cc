@@ -20,7 +20,7 @@
 
 int main(int argc, char* argv[]) {
   DEFINE_bool(syslog, false, "also log to syslog");
-  DEFINE_string(dev, "", "path to G2F device")
+  DEFINE_string(dev, "", "path to G2F device");
   DEFINE_bool(ping, false, "{action} ping device");
   DEFINE_bool(raw, false, "{action} send raw HID command");
   DEFINE_bool(msg, false, "{action} send U2F message");
@@ -57,7 +57,7 @@ int main(int argc, char* argv[]) {
   g2f_client::U2F u2f(&u2f_hid);
 
   const std::vector<bool> actions = {FLAGS_ping, FLAGS_wink, FLAGS_raw,
-                                     FLAGS_msg, FLAGS_reg, FLAGS_auth};
+                                     FLAGS_msg,  FLAGS_reg,  FLAGS_auth};
   if (std::count(actions.cbegin(), actions.cend(), true) != 1) {
     LOG(ERROR) << "Must specify exactly one action";
     return EX_USAGE;
@@ -116,8 +116,7 @@ int main(int argc, char* argv[]) {
     if (!u2f_hid.Msg(request, &response)) {
       return EX_SOFTWARE;
     }
-    std::cout << base::HexEncode(response.data(), response.size())
-              << std::endl;
+    std::cout << base::HexEncode(response.data(), response.size()) << std::endl;
   } else if (FLAGS_reg) {
     if (FLAGS_p1 < -1 || FLAGS_p1 > 255) {
       LOG(ERROR) << "P1 value should be 0-255, or -1 for default" << std::endl;
@@ -142,9 +141,8 @@ int main(int argc, char* argv[]) {
     brillo::Blob public_key;
     brillo::Blob key_handle;
     brillo::Blob certificate_and_signature;
-    if (!u2f.Register(p1, challenge, application, FLAGS_g2f,
-                      &public_key, &key_handle,
-                      &certificate_and_signature)) {
+    if (!u2f.Register(p1, challenge, application, FLAGS_g2f, &public_key,
+                      &key_handle, &certificate_and_signature)) {
       return EX_SOFTWARE;
     }
     std::cout << "public_key="
@@ -188,14 +186,11 @@ int main(int argc, char* argv[]) {
     brillo::Blob counter;
     brillo::Blob signature;
     if (!u2f.Authenticate(p1, challenge, application, key_handle,
-                          &presence_verified, &counter,
-                          &signature)) {
+                          &presence_verified, &counter, &signature)) {
       return EX_SOFTWARE;
     }
-    std::cout << "presence_verified=" << presence_verified
-              << std::endl
-              << "counter="
-              << base::HexEncode(counter.data(), counter.size())
+    std::cout << "presence_verified=" << presence_verified << std::endl
+              << "counter=" << base::HexEncode(counter.data(), counter.size())
               << std::endl
               << "signature="
               << base::HexEncode(signature.data(), signature.size())

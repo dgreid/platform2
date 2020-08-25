@@ -94,14 +94,12 @@ std::vector<uint8_t> EncodeCredentialPublicKeyInCBOR(
   cbor_map[cbor::Value(kCoseKeyKtyLabel)] = cbor::Value(kCoseKeyKtyEC2);
   cbor_map[cbor::Value(kCoseKeyAlgLabel)] = cbor::Value(kCoseKeyAlgES256);
   cbor_map[cbor::Value(kCoseECKeyCrvLabel)] = cbor::Value(1);
-  cbor_map[cbor::Value(kCoseECKeyXLabel)] =
-      cbor::Value(base::make_span(
-          credential_public_key.data() + offsetof(struct u2f_ec_point, x),
-          U2F_EC_KEY_SIZE));
-  cbor_map[cbor::Value(kCoseECKeyYLabel)] =
-      cbor::Value(base::make_span(
-          credential_public_key.data() + offsetof(struct u2f_ec_point, y),
-          U2F_EC_KEY_SIZE));
+  cbor_map[cbor::Value(kCoseECKeyXLabel)] = cbor::Value(base::make_span(
+      credential_public_key.data() + offsetof(struct u2f_ec_point, x),
+      U2F_EC_KEY_SIZE));
+  cbor_map[cbor::Value(kCoseECKeyYLabel)] = cbor::Value(base::make_span(
+      credential_public_key.data() + offsetof(struct u2f_ec_point, y),
+      U2F_EC_KEY_SIZE));
   return *cbor::Writer::Write(cbor::Value(std::move(cbor_map)));
 }
 

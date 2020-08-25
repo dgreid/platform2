@@ -66,7 +66,9 @@ int hid_write(hid_device* device, const unsigned char* data, size_t length) {
   return length;
 }
 
-int hid_read_timeout(hid_device* device, unsigned char* data, size_t length,
+int hid_read_timeout(hid_device* device,
+                     unsigned char* data,
+                     size_t length,
                      int milliseconds) {
   length = std::min(length, kRwBufSize - hid_read_count);
   if (hid_read_fail_timeout) {
@@ -90,8 +92,8 @@ using ::testing::ByRef;
 using ::testing::ContainerEq;
 using ::testing::DoAll;
 using ::testing::Each;
-using ::testing::Eq;
 using ::testing::ElementsAre;
+using ::testing::Eq;
 using ::testing::InvokeWithoutArgs;
 using ::testing::MatcherCast;
 using ::testing::MatchesRegex;
@@ -100,12 +102,12 @@ using ::testing::SaveArg;
 using ::testing::SetArgPointee;
 using ::testing::StrEq;
 
-static HidDevice::Cid kDummyCid = { { 0xAA, 0xBB, 0xCC, 0xDD } };
+static HidDevice::Cid kDummyCid = {{0xAA, 0xBB, 0xCC, 0xDD}};
 static constexpr int kHidTimeoutMs = 100;
 
 class G2fClientTest : public ::testing::Test {
  public:
-  G2fClientTest() =  default;
+  G2fClientTest() = default;
 
   ~G2fClientTest() override = default;
 
@@ -167,15 +169,14 @@ TEST_F(G2fClientTest, HidDeviceRecvWithoutOpen) {
 TEST_F(G2fClientTest, HidDeviceSend) {
   EXPECT_TRUE(device_->Open());
 
-  brillo::Blob payload { 0xDD, 0xFF };
+  brillo::Blob payload{0xDD, 0xFF};
   EXPECT_TRUE(device_->SendRequest(kDummyCid, 0xAB, payload));
 
-  EXPECT_THAT(
-      base::HexEncode(hid_write_data, hid_write_count),
-      MatchesRegex(".*"
-                   "AABBCCDD.*"  // Cid
-                   "AB.*"        // Command
-                   "DDFF.*"));   // Payload
+  EXPECT_THAT(base::HexEncode(hid_write_data, hid_write_count),
+              MatchesRegex(".*"
+                           "AABBCCDD.*"  // Cid
+                           "AB.*"        // Command
+                           "DDFF.*"));   // Payload
 }
 
 TEST_F(G2fClientTest, HidDeviceSendMultipleFrames) {
@@ -187,16 +188,15 @@ TEST_F(G2fClientTest, HidDeviceSendMultipleFrames) {
   }
   EXPECT_TRUE(device_->SendRequest(kDummyCid, 0xAB, payload));
 
-  EXPECT_THAT(
-      base::HexEncode(hid_write_data, hid_write_count),
-      MatchesRegex(".*"
-                   "AABBCCDD.*"   // Cid
-                   "AB.*"         // Command
-                   "010203.*"     // Payload
-                   // Second frame:
-                   "AABBCCDD.*"   // Cid
-                   "01.*"         // Cont
-                   "747576.*"));  // Payload
+  EXPECT_THAT(base::HexEncode(hid_write_data, hid_write_count),
+              MatchesRegex(".*"
+                           "AABBCCDD.*"  // Cid
+                           "AB.*"        // Command
+                           "010203.*"    // Payload
+                           // Second frame:
+                           "AABBCCDD.*"   // Cid
+                           "01.*"         // Cont
+                           "747576.*"));  // Payload
 }
 
 TEST_F(G2fClientTest, HidDeviceSendTooLarge) {
@@ -205,7 +205,6 @@ TEST_F(G2fClientTest, HidDeviceSendTooLarge) {
   brillo::Blob payload(UINT16_MAX + 1, 0);
   EXPECT_FALSE(device_->SendRequest(kDummyCid, 0xAB, payload));
 }
-
 
 TEST_F(G2fClientTest, HidDeviceSendWriteFails) {
   EXPECT_TRUE(device_->Open());
@@ -239,8 +238,7 @@ TEST_F(G2fClientTest, HidDeviceRecvResponse) {
   EXPECT_TRUE(device_->Open());
   EXPECT_TRUE(device_->RecvResponse(kDummyCid, &cmd, &payload, kHidTimeoutMs));
 
-  EXPECT_THAT(payload, ElementsAre(0xDE, 0xAD, 0xBE, 0xEF,
-                                   0, 0, 0, 0));
+  EXPECT_THAT(payload, ElementsAre(0xDE, 0xAD, 0xBE, 0xEF, 0, 0, 0, 0));
 }
 
 TEST_F(G2fClientTest, HidDeviceRecvResponseMultiPart) {
@@ -345,9 +343,7 @@ class U2FHidTest : public ::testing::Test {
                   const char* version,
                   const char* caps);
 
-  void ExpectDefaultInit() {
-    ExpectInit(true, "AABBCCDD", "00000000", "00");
-  }
+  void ExpectDefaultInit() { ExpectInit(true, "AABBCCDD", "00000000", "00"); }
 
   void ExpectMsg(U2FHid::CommandCode cmd, bool echo_req);
 
@@ -363,10 +359,8 @@ class U2FHidTest : public ::testing::Test {
 };
 
 MATCHER(IsBroadcastCid, "Matches the broadcast cid.") {
-  return arg.raw[0] == 0xFF &&
-      arg.raw[1] == 0xFF &&
-      arg.raw[2] == 0xFF &&
-      arg.raw[3] == 0xFF;
+  return arg.raw[0] == 0xFF && arg.raw[1] == 0xFF && arg.raw[2] == 0xFF &&
+         arg.raw[3] == 0xFF;
 }
 
 MATCHER_P(EqCommandCode, value, "Matches the specified command code") {
@@ -388,51 +382,38 @@ void U2FHidTest::ExpectInit(bool copy_nonce,
                             const char* caps) {
   EXPECT_CALL(device_, Open()).WillOnce(Return(true));
 
-  std::string resp = base::StringPrintf("%s%s%s",
-                                        cid,
-                                        version,
-                                        caps);
+  std::string resp = base::StringPrintf("%s%s%s", cid, version, caps);
 
-  EXPECT_CALL(device_, SendRequest(
-      IsBroadcastCid(),
-      EqCommandCode(U2FHid::CommandCode::kInit),
-      _))
-      .WillOnce(DoAll(
-          SaveArg<2>(&request.payload),
-          PrepareInitResponse(copy_nonce,
-                              &request.payload, &response.payload,
-                              resp),
-          Return(true)));
+  EXPECT_CALL(device_,
+              SendRequest(IsBroadcastCid(),
+                          EqCommandCode(U2FHid::CommandCode::kInit), _))
+      .WillOnce(DoAll(SaveArg<2>(&request.payload),
+                      PrepareInitResponse(copy_nonce, &request.payload,
+                                          &response.payload, resp),
+                      Return(true)));
 
   EXPECT_CALL(device_, RecvResponse(_, _, _, _))
       .WillOnce(DoAll(
           SetArgPointee<1>(static_cast<uint8_t>(U2FHid::CommandCode::kInit)),
-          SetArgPointee<2>(ByRef(response.payload)),
-          Return(true)));
+          SetArgPointee<2>(ByRef(response.payload)), Return(true)));
 }
 
 void U2FHidTest::ExpectMsg(U2FHid::CommandCode cmd, bool echo_req) {
   EXPECT_CALL(device_, Open()).WillOnce(Return(true));
 
-  EXPECT_CALL(device_, SendRequest(
-      _,
-      EqCommandCode(cmd),
-      _))
-      .WillOnce(DoAll(
-          SaveArg<2>(&request.payload),
-          InvokeWithoutArgs([this, echo_req]() {
-                              if (echo_req)
-                                response.payload = request.payload;
-                              else
-                                response.payload.clear();
-                            }),
-          Return(true)));
+  EXPECT_CALL(device_, SendRequest(_, EqCommandCode(cmd), _))
+      .WillOnce(DoAll(SaveArg<2>(&request.payload),
+                      InvokeWithoutArgs([this, echo_req]() {
+                        if (echo_req)
+                          response.payload = request.payload;
+                        else
+                          response.payload.clear();
+                      }),
+                      Return(true)));
 
   EXPECT_CALL(device_, RecvResponse(_, _, _, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(static_cast<uint8_t>(cmd)),
-          SetArgPointee<2>(ByRef(response.payload)),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(static_cast<uint8_t>(cmd)),
+                      SetArgPointee<2>(ByRef(response.payload)), Return(true)));
 }
 
 TEST_F(U2FHidTest, Init) {
@@ -471,19 +452,18 @@ TEST_F(U2FHidTest, InitBadResponseSize) {
 }
 
 TEST_F(U2FHidTest, InitBadNonce) {
-  ExpectInit(false,       // Copy nonce
-             "0000000000000000"   // Incorrect nonce (prepend to cid)
-             "AABBCCDD",  // Cid
-             "00000000",  // Version - too short!
-             "DE");       // Caps
+  ExpectInit(false,              // Copy nonce
+             "0000000000000000"  // Incorrect nonce (prepend to cid)
+             "AABBCCDD",         // Cid
+             "00000000",         // Version - too short!
+             "DE");              // Caps
   EXPECT_FALSE(hid_.Init(false));
   EXPECT_FALSE(hid_.Initialized());
 }
 
 TEST_F(U2FHidTest, InitSendError) {
   EXPECT_CALL(device_, Open()).WillOnce(Return(true));
-  EXPECT_CALL(device_, SendRequest(_, _, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(device_, SendRequest(_, _, _)).WillOnce(Return(false));
 
   EXPECT_FALSE(hid_.Init(false));
   EXPECT_FALSE(hid_.Initialized());
@@ -491,13 +471,11 @@ TEST_F(U2FHidTest, InitSendError) {
 
 TEST_F(U2FHidTest, InitRecvError) {
   EXPECT_CALL(device_, Open()).WillOnce(Return(true));
-  EXPECT_CALL(device_, SendRequest(
-      IsBroadcastCid(),
-      EqCommandCode(U2FHid::CommandCode::kInit),
-      _))
+  EXPECT_CALL(device_,
+              SendRequest(IsBroadcastCid(),
+                          EqCommandCode(U2FHid::CommandCode::kInit), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(device_, RecvResponse(_, _, _, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(device_, RecvResponse(_, _, _, _)).WillOnce(Return(false));
 
   EXPECT_FALSE(hid_.Init(false));
   EXPECT_FALSE(hid_.Initialized());
@@ -512,7 +490,7 @@ TEST_F(U2FHidTest, Lock) {
 }
 
 TEST_F(U2FHidTest, Msg) {
-  brillo::Blob request = { 1, 2, 3, 4, 5 };
+  brillo::Blob request = {1, 2, 3, 4, 5};
   brillo::Blob response;
 
   ExpectDefaultInit();
@@ -539,13 +517,11 @@ TEST_F(U2FHidTest, Wink) {
   EXPECT_TRUE(hid_.Wink());
 }
 
-
 class MockU2FHid : public U2FHid {
  public:
   MockU2FHid() : U2FHid(nullptr) {}
   MOCK_METHOD(bool, Msg, (const brillo::Blob&, brillo::Blob*), (override));
 };
-
 
 class U2FTest : public ::testing::Test {
  public:
@@ -561,14 +537,10 @@ class U2FTest : public ::testing::Test {
     brillo::Blob key_handle;
     brillo::Blob cert;
 
-    EXPECT_FALSE(
-        u2f_.Register(-1,  // Default P1
-                      challenge,
-                      application,
-                      false,  // G2F
-                      &public_key,
-                      &key_handle,
-                      &cert));
+    EXPECT_FALSE(u2f_.Register(-1,  // Default P1
+                               challenge, application,
+                               false,  // G2F
+                               &public_key, &key_handle, &cert));
   }
 
   void RunAuthenticateExpectFail() {
@@ -580,14 +552,9 @@ class U2FTest : public ::testing::Test {
     brillo::Blob counter;
     brillo::Blob signature;
 
-    EXPECT_FALSE(
-        u2f_.Authenticate(-1,  // Default P1
-                          challenge,
-                          application,
-                          key_handle,
-                          &presence_verified,
-                          &counter,
-                          &signature));
+    EXPECT_FALSE(u2f_.Authenticate(-1,  // Default P1
+                                   challenge, application, key_handle,
+                                   &presence_verified, &counter, &signature));
   }
 
   MockU2FHid u2f_hid_;
@@ -604,7 +571,7 @@ TEST_F(U2FTest, RegisterSuccess) {
   // See section 4.3 of U2F Raw Message Format spec
   // for details.
   brillo::Blob response = {
-    0x05,  // Reserved (legacy reasons)
+      0x05,  // Reserved (legacy reasons)
   };
   // Public key, fixed size.
   U2F::AppendBlob(expected_public_key, &response);
@@ -618,9 +585,7 @@ TEST_F(U2FTest, RegisterSuccess) {
   response.push_back(0x00);  // Sw2
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   const brillo::Blob challenge(32, 0xaa);
   const brillo::Blob application(32, 0xbb);
@@ -629,43 +594,33 @@ TEST_F(U2FTest, RegisterSuccess) {
   brillo::Blob key_handle;
   brillo::Blob cert;
 
-  EXPECT_TRUE(
-      u2f_.Register(-1,  // Default P1
-                    challenge,
-                    application,
-                    false,  // G2F
-                    &public_key,
-                    &key_handle,
-                    &cert));
+  EXPECT_TRUE(u2f_.Register(-1,  // Default P1
+                            challenge, application,
+                            false,  // G2F
+                            &public_key, &key_handle, &cert));
 
-  EXPECT_THAT(public_key,
-              ContainerEq(expected_public_key));
-  EXPECT_THAT(key_handle,
-              ContainerEq(expected_key_handle));
-  EXPECT_THAT(cert,
-              ContainerEq(expected_cert));
+  EXPECT_THAT(public_key, ContainerEq(expected_public_key));
+  EXPECT_THAT(key_handle, ContainerEq(expected_key_handle));
+  EXPECT_THAT(cert, ContainerEq(expected_cert));
 }
 
 TEST_F(U2FTest, RegisterMsgFails) {
-  EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(u2f_hid_, Msg(_, _)).WillOnce(Return(false));
 
   RunRegisterExpectFail();
 }
 
 TEST_F(U2FTest, RegisterBadStatus) {
   brillo::Blob response = {
-    // Dummy data, unused.
-    0xDE, 0xAD, 0xBE, 0xEF,
-    // Status code: SW_WRONG_DATA
-    0x6A,  // SW1
-    0x80,  // SW2
+      // Dummy data, unused.
+      0xDE, 0xAD, 0xBE, 0xEF,
+      // Status code: SW_WRONG_DATA
+      0x6A,  // SW1
+      0x80,  // SW2
   };
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   RunRegisterExpectFail();
 }
@@ -674,43 +629,27 @@ TEST_F(U2FTest, RegisterShortResponse) {
   // See section 4.3 of U2F Raw Message Format spec
   // for details.
   brillo::Blob response = {
-    0x05,  // Reserved (legacy reasons)
-    // Rest of response should go here (intentionally missing).
-    // Status code: SW_NO_ERROR
-    0x90,  // SW1
-    0x00,  // SW2
+      0x05,  // Reserved (legacy reasons)
+      // Rest of response should go here (intentionally missing).
+      // Status code: SW_NO_ERROR
+      0x90,  // SW1
+      0x00,  // SW2
   };
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   RunRegisterExpectFail();
 }
 
 TEST_F(U2FTest, AuthenticateSuccess) {
-  brillo::Blob response = {
-    0x01,  // Presence verified
-
-    0x01,  // Counter
-    0x02,
-    0x03,
-    0x04,
-
-    0xde,  // Signature
-    0xad,
-    0xbe,
-    0xef,
-
-    0x90,  // Status code: SW_NO_ERROR
-    0x00
-  };
+  brillo::Blob response = {0x01,                    // Presence verified
+                           0x01, 0x02, 0x03, 0x04,  // Counter
+                           0xde, 0xad, 0xbe, 0xef,  // Signature
+                           0x90, 0x00};             // Status code: SW_NO_ERROR
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   const brillo::Blob challenge(32, 0xaa);
   const brillo::Blob application(32, 0xbb);
@@ -720,70 +659,41 @@ TEST_F(U2FTest, AuthenticateSuccess) {
   brillo::Blob counter;
   brillo::Blob signature;
 
-  EXPECT_TRUE(
-      u2f_.Authenticate(-1,  // Default P1
-                        challenge,
-                        application,
-                        key_handle,
-                        &presence_verified,
-                        &counter,
-                        &signature));
+  EXPECT_TRUE(u2f_.Authenticate(-1,  // Default P1
+                                challenge, application, key_handle,
+                                &presence_verified, &counter, &signature));
 
   EXPECT_TRUE(presence_verified);
   EXPECT_THAT(counter, ElementsAre(1, 2, 3, 4));
   EXPECT_THAT(signature, ElementsAre(0xde, 0xad, 0xbe, 0xef));
 }
 
-
 TEST_F(U2FTest, AuthenticateMsgFail) {
-  EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(u2f_hid_, Msg(_, _)).WillOnce(Return(false));
 
   RunAuthenticateExpectFail();
 }
 
-
 TEST_F(U2FTest, AuthenticateBadStatus) {
-  brillo::Blob response = {
-    0x01,  // Presence verified
-
-    0x01,  // Counter
-    0x02,
-    0x03,
-    0x04,
-
-    0xde,  // Signature
-    0xad,
-    0xbe,
-    0xef,
-
-    0x6A,  // Status code: U2F_SW_NO_ERROR
-    0x80
-  };
+  brillo::Blob response = {0x01,                    // Presence verified
+                           0x01, 0x02, 0x03, 0x04,  // Counter
+                           0xde, 0xad, 0xbe, 0xef,  // Signature
+                           0x6A, 0x80};  // Status code: U2F_SW_NO_ERROR
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   RunAuthenticateExpectFail();
 }
 
 TEST_F(U2FTest, AuthenticateShortReponse) {
-  brillo::Blob response = {
-    0x01,  // Presence verified
-
-    // Remainder of response should go here
-    // (intentionally left blank)
-
-    0x90,  // Status code: SW_NO_ERROR
-    0x00
-  };
+  brillo::Blob response = {0x01,         // Presence verified
+                                         // Remainder of response should go here
+                                         // (intentionally left blank)
+                           0x90, 0x00};  // Status code: SW_NO_ERROR
 
   EXPECT_CALL(u2f_hid_, Msg(_, _))
-      .WillOnce(DoAll(
-          SetArgPointee<1>(response),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(response), Return(true)));
 
   RunAuthenticateExpectFail();
 }

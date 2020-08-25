@@ -22,8 +22,8 @@ constexpr uint32_t kDefaultProductId = 0x502c;
 
 int main(int argc, char* argv[]) {
   DEFINE_bool(force_u2f, false, "force U2F mode even if disabled by policy");
-  DEFINE_bool(
-      force_g2f, false, "force U2F mode plus extensions regardless of policy");
+  DEFINE_bool(force_g2f, false,
+              "force U2F mode plus extensions regardless of policy");
   DEFINE_bool(g2f_allowlist_data, false,
               "append allowlisting data to G2F register responses");
   DEFINE_int32(product_id, kDefaultProductId, "Product ID for the HID device");

@@ -47,8 +47,10 @@ constexpr char kDeviceId[36 + 1 /* null terminator */] =
 constexpr uint8_t kFinalCertificateMetadataHeader[2] = {
     0x04 /* Octet String */, sizeof(kTpmMetadata) /* Metadata Length */};
 constexpr uint8_t kFinalCertificateSignatureHeader[4] = {
-    0x04 /* Octet String */, 0x82 /* Long Form Length, 2 bytes */,
-    0x01, 0x00 /* Signature Length: 256 */};
+    0x04,       // Octet String
+    0x82,       // Long Form Length, 2 bytes
+    0x01, 0x00  // Signature Length: 256
+};
 constexpr uint8_t kFinalCertificateDeviceIdHeader[2] = {
     0x13 /* Printable String */,
     sizeof(kDeviceId) - 1 /* Device Id Length (excl. null terminator) */};

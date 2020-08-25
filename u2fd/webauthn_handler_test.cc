@@ -105,7 +105,7 @@ const struct u2f_generate_resp kU2fGenerateResponse = {
 
 // Dummy cr50 U2F_SIGN_RESP.
 const struct u2f_sign_resp kU2fSignResponse = {.sig_r = {[0 ... 31] = 0x12},
-                                        .sig_s = {[0 ... 31] = 0x34}};
+                                               .sig_s = {[0 ... 31] = 0x34}};
 
 // AuthenticatorData field sizes, in bytes.
 constexpr int kRpIdHashBytes = 32;
@@ -751,8 +751,8 @@ TEST_F(WebAuthnHandlerTest, MakeAuthenticatorDataNoAttestedCredData) {
   const std::string expected_authenticator_data_regex =
       rp_id_hash_hex +  // RP ID hash
       std::string(
-          "01"          // Flag: user present
-          "(..){4}");   // Signature counter
+          "01"         // Flag: user present
+          "(..){4}");  // Signature counter
   EXPECT_THAT(
       base::HexEncode(authenticator_data.data(), authenticator_data.size()),
       MatchesRegex(expected_authenticator_data_regex));

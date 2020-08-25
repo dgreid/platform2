@@ -73,8 +73,7 @@ class U2fHid {
 
   // Create a new virtual U2F HID Device. Does not take ownership of
   // msg_handler, which must outlive this instance.
-  U2fHid(std::unique_ptr<HidInterface> hid,
-         U2fMessageHandler* msg_handler);
+  U2fHid(std::unique_ptr<HidInterface> hid, U2fMessageHandler* msg_handler);
   ~U2fHid();
   bool Init();
 
@@ -111,7 +110,6 @@ class U2fHid {
   // Parses the HID report contained in |report| and append the content to the
   // current U2FHID transaction or create a new one.
   void ProcessReport(const std::string& report);
-
 
   std::unique_ptr<HidInterface> hid_;
   uint32_t free_cid_;

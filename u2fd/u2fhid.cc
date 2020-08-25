@@ -314,8 +314,7 @@ int U2fHid::CmdLock(std::string* resp) {
   } else {
     locked_cid_ = transaction_->cid;
     lock_timeout_.Start(
-        FROM_HERE,
-        base::TimeDelta::FromSeconds(duration),
+        FROM_HERE, base::TimeDelta::FromSeconds(duration),
         base::Bind(&U2fHid::LockTimeout, base::Unretained(this)));
   }
   return 0;
@@ -378,8 +377,7 @@ void U2fHid::ProcessReport(const std::string& report) {
   // Check frame validity
   if (pkt.ChannelId() == 0) {
     VLOG(1) << "No frame should use channel 0";
-    ReturnError(U2fHidError::kInvalidCid,
-                pkt.ChannelId(),
+    ReturnError(U2fHidError::kInvalidCid, pkt.ChannelId(),
                 pkt.ChannelId() == transaction_->cid);
     return;
   }
@@ -426,8 +424,7 @@ void U2fHid::ProcessReport(const std::string& report) {
     }
 
     transaction_->timeout.Start(
-        FROM_HERE,
-        base::TimeDelta::FromMilliseconds(kU2fHidTimeoutMs),
+        FROM_HERE, base::TimeDelta::FromMilliseconds(kU2fHidTimeoutMs),
         base::Bind(&U2fHid::TransactionTimeout, base::Unretained(this)));
 
     // record transaction parameters
@@ -445,15 +442,13 @@ void U2fHid::ProcessReport(const std::string& report) {
     if (transaction_->seq != pkt.SeqNumber()) {
       VLOG(1) << "invalid sequence " << static_cast<int>(pkt.SeqNumber())
               << " !=  " << transaction_->seq;
-      ReturnError(U2fHidError::kInvalidSeq,
-                  pkt.ChannelId(),
+      ReturnError(U2fHidError::kInvalidSeq, pkt.ChannelId(),
                   pkt.ChannelId() == transaction_->cid);
       return;
     }
     // reload timeout
     transaction_->timeout.Start(
-        FROM_HERE,
-        base::TimeDelta::FromMilliseconds(kU2fHidTimeoutMs),
+        FROM_HERE, base::TimeDelta::FromMilliseconds(kU2fHidTimeoutMs),
         base::Bind(&U2fHid::TransactionTimeout, base::Unretained(this)));
     // record the payload
     transaction_->payload += report.substr(pkt.PayloadIndex());

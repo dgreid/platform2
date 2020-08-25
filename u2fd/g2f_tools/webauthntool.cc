@@ -49,7 +49,8 @@ Resp SendRequest(dbus::ObjectProxy* proxy,
 std::string ResponseStatusToString(
     u2f::MakeCredentialResponse::MakeCredentialStatus status) {
   switch (status) {
-    case 1: return "SUCCESS";
+    case 1:
+      return "SUCCESS";
     case 2:
       return "VERIFICATION_FAILED";
     case 3:
@@ -96,7 +97,8 @@ std::string ResponseStatusToString(
       return "INTERNAL_ERROR";
     case 4:
       return "UNKNOWN_CREDENTIAL_ID";
-    default: return "UNKNOWN";
+    default:
+      return "UNKNOWN";
   }
 }
 

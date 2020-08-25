@@ -164,17 +164,12 @@ bool UHidDevice::CreateDev(uint32_t interface_version,
   if (report_desc.size() > sizeof(ev.u.create2.rd_data))
     return false;
 
-  base::strlcpy(reinterpret_cast<char*>(ev.u.create2.name),
-                name_.c_str(),
+  base::strlcpy(reinterpret_cast<char*>(ev.u.create2.name), name_.c_str(),
                 sizeof(ev.u.create2.name));
   snprintf(reinterpret_cast<char*>(ev.u.create2.phys),
-           sizeof(ev.u.create2.phys),
-           "%s-%04X:%04X",
-           phys_.c_str(),
-           ev.u.create2.vendor,
-           ev.u.create2.product);
-  memcpy(ev.u.create2.rd_data,
-         report_desc.data(),
+           sizeof(ev.u.create2.phys), "%s-%04X:%04X", phys_.c_str(),
+           ev.u.create2.vendor, ev.u.create2.product);
+  memcpy(ev.u.create2.rd_data, report_desc.data(),
          std::min(report_desc.size(), sizeof(ev.u.create2.rd_data)));
 
   return WriteEvent(ev);

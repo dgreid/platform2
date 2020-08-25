@@ -49,9 +49,7 @@ struct FrameInit {
   constexpr size_t PayloadSize() const {
     return (static_cast<size_t>(header.bcnth) << 8) + header.bcntl;
   }
-  constexpr static size_t MaxDataSize() {
-    return base::size(decltype(data) {});
-  }
+  constexpr static size_t MaxDataSize() { return base::size(decltype(data){}); }
   constexpr static size_t DataFits(size_t all_data_size) {
     return std::min(all_data_size, MaxDataSize());
   }
@@ -67,9 +65,7 @@ struct FrameCont {
   FrameContHeader header;
   uint8_t data[kFrameSize - sizeof(FrameContHeader)];
 
-  constexpr static size_t MaxDataSize() {
-    return base::size(decltype(data) {});
-  }
+  constexpr static size_t MaxDataSize() { return base::size(decltype(data){}); }
   constexpr static size_t DataFits(size_t all_data_size) {
     return std::min(all_data_size, MaxDataSize());
   }
@@ -91,9 +87,8 @@ struct FrameBlob {
     return IsInit() ? FrameInit::MaxDataSize() : FrameCont::MaxDataSize();
   }
   constexpr size_t DataFits(size_t all_data_size) const {
-    return IsInit() ?
-           FrameInit::DataFits(all_data_size) :
-           FrameCont::DataFits(all_data_size);
+    return IsInit() ? FrameInit::DataFits(all_data_size)
+                    : FrameCont::DataFits(all_data_size);
   }
   constexpr uint8_t* Data() {
     return IsInit() ? frame.init.data : frame.cont.data;
@@ -107,8 +102,7 @@ struct FrameBlob {
 } __attribute__((__packed__));
 static_assert(sizeof(FrameBlob) == kFrameSize + 1, "Bad FrameBlob size");
 
-HidDevice::HidDevice(const std::string& path)
-    : path_(path) {}
+HidDevice::HidDevice(const std::string& path) : path_(path) {}
 
 HidDevice::~HidDevice() {
   Close();
@@ -132,12 +126,12 @@ void HidDevice::Close() {
   }
 }
 
-bool HidDevice::SendRequest(const Cid& cid, uint8_t cmd,
+bool HidDevice::SendRequest(const Cid& cid,
+                            uint8_t cmd,
                             const brillo::Blob& payload) {
   size_t size = payload.size();
   if (size > UINT16_MAX) {
-    LOG(ERROR) << "Too large payload (" << size << ") for cmd "
-               << cmd;
+    LOG(ERROR) << "Too large payload (" << size << ") for cmd " << cmd;
     return false;
   }
   if (!dev_) {
@@ -172,8 +166,10 @@ bool HidDevice::SendRequest(const Cid& cid, uint8_t cmd,
   return true;
 }
 
-bool HidDevice::RecvResponse(const Cid& cid, uint8_t* cmd,
-                             brillo::Blob* payload, int timeout_ms) {
+bool HidDevice::RecvResponse(const Cid& cid,
+                             uint8_t* cmd,
+                             brillo::Blob* payload,
+                             int timeout_ms) {
   CHECK(cmd);
   CHECK(payload);
 
@@ -219,7 +215,7 @@ bool HidDevice::RecvResponse(const Cid& cid, uint8_t* cmd,
       if (blob.frame.cont.header.seq != seq++) {
         LOG(ERROR) << "Unexpected SEQ from cid " << cid.value() << ": "
                    << static_cast<unsigned>(blob.frame.cont.header.seq)
-                   << " instead of " << static_cast<unsigned>(seq-1);
+                   << " instead of " << static_cast<unsigned>(seq - 1);
         return false;
       }
     }
@@ -229,16 +225,14 @@ bool HidDevice::RecvResponse(const Cid& cid, uint8_t* cmd,
     payload_ptr += data_size;
     size -= data_size;
   } while ((wait_for_init || size) &&
-           (timeout_ms < 0 ||
-            timer.Elapsed().InMilliseconds() < timeout_ms));
+           (timeout_ms < 0 || timer.Elapsed().InMilliseconds() < timeout_ms));
   return !(wait_for_init || size);
 }
 
 bool HidDevice::WriteBlob(const FrameBlob& blob) {
   const unsigned char* data =
       static_cast<const unsigned char*>(&blob.report_id);
-  VLOG(3) << "HID Send Frame "
-          << base::HexEncode(data + 1, kFrameSize);
+  VLOG(3) << "HID Send Frame " << base::HexEncode(data + 1, kFrameSize);
   return CheckDeviceError("hid_write", hid_write(dev_, data, sizeof(FrameBlob)),
                           sizeof(FrameBlob));
 }
@@ -256,14 +250,14 @@ bool HidDevice::ReadBlob(FrameBlob* blob, int timeout_ms) {
   return true;
 }
 
-bool HidDevice::CheckDeviceError(const std::string& func, int res,
+bool HidDevice::CheckDeviceError(const std::string& func,
+                                 int res,
                                  int expected) {
   if (res == expected) {
     return true;
   }
-  LOG(ERROR) << func << " for " << path_
-              << " failed (" << res << " != " << expected << "): "
-              << hid_error(dev_);
+  LOG(ERROR) << func << " for " << path_ << " failed (" << res
+             << " != " << expected << "): " << hid_error(dev_);
   return false;
 }
 
@@ -285,14 +279,12 @@ constexpr uint8_t U2FHid::Command::ErrorCode() const {
 }
 
 std::string U2FHid::Command::Description() const {
-  return base::StringPrintf("%u (%s) [%zu bytes]",
-                            cmd, CommandName().c_str(),
+  return base::StringPrintf("%u (%s) [%zu bytes]", cmd, CommandName().c_str(),
                             payload.size());
 }
 
 std::string U2FHid::Command::FullDump() const {
-  return Description() + ": " +
-         base::HexEncode(payload.data(), payload.size());
+  return Description() + ": " + base::HexEncode(payload.data(), payload.size());
 }
 
 std::string U2FHid::Command::CommandName() const {
@@ -341,8 +333,7 @@ std::string U2FHid::Command::ErrorName() const {
   return "?";
 }
 
-U2FHid::U2FHid(HidDevice* hid_device)
-    : hid_device_(hid_device) {}
+U2FHid::U2FHid(HidDevice* hid_device) : hid_device_(hid_device) {}
 
 bool U2FHid::RawCommand(const Command& request, Command* response) {
   CHECK(response);
@@ -389,7 +380,7 @@ bool U2FHid::Init(bool force_realloc) {
     cid_ = HidDevice::kCidBroadcast;
   }
 
-  Command req = { CommandCode::kInit, GetRandomData(u2f::kInitNonceSize) };
+  Command req = {CommandCode::kInit, GetRandomData(u2f::kInitNonceSize)};
   Command rsp;
   InitResponse parsed_response;
   if (req.payload.size() != u2f::kInitNonceSize) {
@@ -437,7 +428,7 @@ bool U2FHid::Lock(uint8_t lock_timeout_seconds) {
                  << static_cast<unsigned>(lock_timeout_seconds);
   }
 
-  Command req = { CommandCode::kLock, { lock_timeout_seconds } };
+  Command req = {CommandCode::kLock, {lock_timeout_seconds}};
   Command rsp;
   if (!GetSuccessfulResponse(req, &rsp)) {
     return false;
@@ -454,7 +445,7 @@ bool U2FHid::Msg(const brillo::Blob& request, brillo::Blob* response) {
   if (!Init(false /* force_realloc */)) {
     return false;
   }
-  Command req = { CommandCode::kMsg, request };
+  Command req = {CommandCode::kMsg, request};
   Command rsp;
   if (!GetSuccessfulResponse(req, &rsp)) {
     return false;
@@ -467,7 +458,7 @@ bool U2FHid::Ping(size_t size) {
   if (!Init(false /* force_realloc */)) {
     return false;
   }
-  Command req = { CommandCode::kPing, GetRandomData(size) };
+  Command req = {CommandCode::kPing, GetRandomData(size)};
   Command rsp;
   if (!GetSuccessfulResponse(req, &rsp)) {
     return false;
@@ -483,7 +474,7 @@ bool U2FHid::Wink() {
   if (!Init(false /* force_realloc */)) {
     return false;
   }
-  Command req = { CommandCode::kWink, {} };
+  Command req = {CommandCode::kWink, {}};
   Command rsp;
   if (!GetSuccessfulResponse(req, &rsp)) {
     return false;
@@ -505,8 +496,7 @@ bool U2F::SendMsg(const brillo::Blob& request,
   }
 
   if (response->size() < 2 /* SW1 + SW2 */) {
-    LOG(ERROR) << "Malformed response received, size: "
-               << response->size();
+    LOG(ERROR) << "Malformed response received, size: " << response->size();
     return false;
   }
 
@@ -520,24 +510,20 @@ bool U2F::SendMsg(const brillo::Blob& request,
   response->pop_back();
 
   if (status != U2F_SW_NO_ERROR) {
-    LOG(ERROR) << "Bad status received: 0x"
-               << std::hex << status;
+    LOG(ERROR) << "Bad status received: 0x" << std::hex << status;
     return false;
   }
 
   if (response->size() < min_response_size) {
-    LOG(ERROR) << "Response too short, size: "
-               << response->size();
+    LOG(ERROR) << "Response too short, size: " << response->size();
     return false;
   }
 
   return true;
 }
 
-void U2F::AppendBlob(const brillo::Blob& from,
-                brillo::Blob* to) {
-  std::copy(from.begin(), from.end(),
-            std::back_inserter(*to));
+void U2F::AppendBlob(const brillo::Blob& from, brillo::Blob* to) {
+  std::copy(from.begin(), from.end(), std::back_inserter(*to));
 }
 
 bool U2F::AppendFromResponse(const brillo::Blob& from,
@@ -556,12 +542,12 @@ bool U2F::AppendFromResponse(const brillo::Blob& from,
 
 namespace {
 
-bool CheckBlobLength(const brillo::Blob& blob, int expected_length,
+bool CheckBlobLength(const brillo::Blob& blob,
+                     int expected_length,
                      const std::string& name) {
   if (blob.size() != expected_length) {
-    LOG(ERROR) << "Invalid " << name << " length, expected "
-               << expected_length << ", but got "
-               << blob.size();
+    LOG(ERROR) << "Invalid " << name << " length, expected " << expected_length
+               << ", but got " << blob.size();
     return false;
   } else {
     return true;
@@ -592,11 +578,11 @@ bool U2F::Register(base::Optional<uint8_t> p1,
   // Message format defined in sections 3 and 4.1 of the
   // U2F Raw Message Formats Spec v1.2.
   brillo::Blob request = {
-    0x00,       // CLA
-    0x01,       // INS: U2F_REGISTER
-    *p1,        // P1
-    0x00,       // P2
-    64,         // Request length
+      0x00,  // CLA
+      0x01,  // INS: U2F_REGISTER
+      *p1,   // P1
+      0x00,  // P2
+      64,    // Request length
   };
 
   AppendBlob(challenge, &request);
@@ -615,18 +601,14 @@ bool U2F::Register(base::Optional<uint8_t> p1,
 
   // Public key has a fixed length. Size check above guarantees we have
   // enough data in response to read this.
-  AppendFromResponse(response,
-                     &response_iter,
-                     kRegResponsePublicKeyLength,
+  AppendFromResponse(response, &response_iter, kRegResponsePublicKeyLength,
                      public_key);
 
   // Key handle length is variable and provided in the response. Size
   // check above guarantees we can read the length, but the length could
   // be invalid, so reading the number of bytes it specifies could fail.
   size_t key_handle_length = *response_iter++;
-  if (!AppendFromResponse(response,
-                          &response_iter,
-                          key_handle_length,
+  if (!AppendFromResponse(response, &response_iter, key_handle_length,
                           key_handle)) {
     LOG(ERROR) << "Invalid key handle length provided in response.";
     return false;
@@ -641,9 +623,7 @@ bool U2F::Register(base::Optional<uint8_t> p1,
     return false;
   }
   // Length is calculated based on remaining bytes, so this will succeed.
-  AppendFromResponse(response,
-                     &response_iter,
-                     cert_sig_length,
+  AppendFromResponse(response, &response_iter, cert_sig_length,
                      certificate_and_signature);
 
   return true;
@@ -674,11 +654,11 @@ bool U2F::Authenticate(base::Optional<uint8_t> p1,
   // Message format defined in sections 3 and 4.1 of the
   // U2F Raw Message Formats Spec v1.2.
   brillo::Blob request = {
-    0x00,        // CLA
-    0x02,        // INS: U2F_AUTHENTICATE
-    *p1,         // P1
-    0x00,        // P2
-    req_length,  // Request length
+      0x00,        // CLA
+      0x02,        // INS: U2F_AUTHENTICATE
+      *p1,         // P1
+      0x00,        // P2
+      req_length,  // Request length
   };
   AppendBlob(challenge, &request);
   AppendBlob(application, &request);
@@ -698,17 +678,13 @@ bool U2F::Authenticate(base::Optional<uint8_t> p1,
 
   // Counter is fixed length.
   auto response_iter = response.begin() + kAuthResponseCounterOffset;
-  AppendFromResponse(response,
-                     &response_iter,
-                     kAuthResponseCounterLength,
+  AppendFromResponse(response, &response_iter, kAuthResponseCounterLength,
                      counter);
 
   // Signature is the final field and occupies the remainder of
   // the response. Size check above guarantees we have at least
   // one byte of the response left to read.
-  AppendFromResponse(response,
-                     &response_iter,
-                     response.end() - response_iter,
+  AppendFromResponse(response, &response_iter, response.end() - response_iter,
                      signature);
 
   return true;
