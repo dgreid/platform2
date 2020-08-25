@@ -35,10 +35,8 @@ struct EnvVarDef {
   { name "=", sizeof(name "=") - 1 }
 
 constexpr EnvVarDef kWhitelistedEnvVars[]{
-    DEFINE_ENV_VAR("ASAN_OPTIONS"),
-    DEFINE_ENV_VAR("LSAN_OPTIONS"),
-    DEFINE_ENV_VAR("MSAN_OPTIONS"),
-    DEFINE_ENV_VAR("TSAN_OPTIONS"),
+    DEFINE_ENV_VAR("ASAN_OPTIONS"),  DEFINE_ENV_VAR("LSAN_OPTIONS"),
+    DEFINE_ENV_VAR("MSAN_OPTIONS"),  DEFINE_ENV_VAR("TSAN_OPTIONS"),
     DEFINE_ENV_VAR("UBSAN_OPTIONS"),
 };
 

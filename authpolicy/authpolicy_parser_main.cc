@@ -462,7 +462,9 @@ int ParsePreg(const std::string& gpo_file_paths_blob,
         return EXIT_CODE_WRITE_OUTPUT_FAILED;
       break;
     }
-    default: { LOG(FATAL) << "invalid scope"; }
+    default: {
+      LOG(FATAL) << "invalid scope";
+    }
   }
 
   // Parse GPOs again for extension policy. Note that it might be contained in
