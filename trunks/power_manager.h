@@ -23,7 +23,7 @@ class PowerManager {
   // The |resource_manager| will be notified of power events. This
   // class does not take ownership of |resource_manager|.
   explicit PowerManager(ResourceManager* resource_manager = nullptr)
-    : resource_manager_(resource_manager) {}
+      : resource_manager_(resource_manager) {}
   ~PowerManager() = default;
 
   void set_resource_manager(ResourceManager* resource_manager) {
@@ -91,9 +91,7 @@ class PowerManager {
   base::WeakPtr<PowerManager> GetWeakPtr() {
     return weak_factory_.GetWeakPtr();
   }
-  base::WeakPtr<PowerManager> ThisForBind() {
-    return GetWeakPtr();
-  }
+  base::WeakPtr<PowerManager> ThisForBind() { return GetWeakPtr(); }
 
   // Whether SuspendDelay handler is registered.
   bool suspend_delay_registered_ = false;

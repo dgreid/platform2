@@ -62,8 +62,8 @@ TEST_F(TrunksFactoryTest, TpmSendCommand) {
     auto callback = [](TPM_RC expected_code, TPM_RC response_code) {
       EXPECT_EQ(expected_code, response_code);
     };
-    factory_.GetTpm()->Startup(
-        TPM_SU_CLEAR, nullptr, base::Bind(callback, expected_code));
+    factory_.GetTpm()->Startup(TPM_SU_CLEAR, nullptr,
+                               base::Bind(callback, expected_code));
     EXPECT_EQ(expected_code,
               factory_.GetTpm()->StartupSync(TPM_SU_CLEAR, nullptr));
   }

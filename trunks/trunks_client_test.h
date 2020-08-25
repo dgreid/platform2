@@ -140,8 +140,8 @@ class TrunksClientTest {
   // Get and put RSA public key with DER format in |public_key| from TPM handle
   // |key_handle|. Returns true on success.
   bool GetRSAPublicKeyFromHandle(const ScopedKeyHandle& key_handle,
-                              std::string* public_key,
-                              AuthorizationDelegate* delegate);
+                                 std::string* public_key,
+                                 AuthorizationDelegate* delegate);
 
   // Factory for instantiation of Tpm classes
   const TrunksFactory& factory_;

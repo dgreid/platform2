@@ -87,9 +87,7 @@ class TpmStateForwarder : public TpmState {
     return target_->GetLockoutRecovery();
   }
 
-  uint32_t GetTpmFamily() override {
-    return target_->GetTpmFamily();
-  }
+  uint32_t GetTpmFamily() override { return target_->GetTpmFamily(); }
 
   uint32_t GetSpecificationLevel() override {
     return target_->GetSpecificationLevel();
@@ -99,13 +97,9 @@ class TpmStateForwarder : public TpmState {
     return target_->GetSpecificationRevision();
   }
 
-  uint32_t GetManufacturer() override {
-    return target_->GetManufacturer();
-  }
+  uint32_t GetManufacturer() override { return target_->GetManufacturer(); }
 
-  uint32_t GetTpmModel() override {
-    return target_->GetTpmModel();
-  }
+  uint32_t GetTpmModel() override { return target_->GetTpmModel(); }
 
   uint64_t GetFirmwareVersion() override {
     return target_->GetFirmwareVersion();
@@ -224,8 +218,8 @@ class TpmUtilityForwarder : public TpmUtility {
               bool generate_hash,
               AuthorizationDelegate* delegate,
               std::string* signature) override {
-    return target_->Sign(key_handle, scheme, hash_alg, plaintext,
-                         generate_hash, delegate, signature);
+    return target_->Sign(key_handle, scheme, hash_alg, plaintext, generate_hash,
+                         delegate, signature);
   }
 
   TPM_RC CertifyCreation(TPM_HANDLE key_handle,
@@ -321,9 +315,9 @@ class TpmUtilityForwarder : public TpmUtility {
                          const std::string& y,
                          AuthorizationDelegate* delegate,
                          TPM_HANDLE* key_handle) override {
-    return target_->LoadECPublicKey(key_type, curve_id, scheme, hash_alg,
-                                    x, y, delegate, key_handle);
-}
+    return target_->LoadECPublicKey(key_type, curve_id, scheme, hash_alg, x, y,
+                                    delegate, key_handle);
+  }
 
   TPM_RC GetKeyName(TPM_HANDLE handle, std::string* name) override {
     return target_->GetKeyName(handle, name);
@@ -357,8 +351,7 @@ class TpmUtilityForwarder : public TpmUtility {
       const std::map<uint32_t, std::string>& pcr_map,
       bool use_auth_value,
       std::string* policy_digest) override {
-    return target_->GetPolicyDigestForPcrValues(pcr_map,
-                                                use_auth_value,
+    return target_->GetPolicyDigestForPcrValues(pcr_map, use_auth_value,
                                                 policy_digest);
   }
 
@@ -465,7 +458,8 @@ class TpmUtilityForwarder : public TpmUtility {
   }
 
   TPM_RC PinWeaverResetTree(uint8_t protocol_version,
-                            uint8_t bits_per_level, uint8_t height,
+                            uint8_t bits_per_level,
+                            uint8_t height,
                             uint32_t* result_code,
                             std::string* root_hash) override {
     return target_->PinWeaverResetTree(protocol_version, bits_per_level, height,
@@ -490,53 +484,67 @@ class TpmUtilityForwarder : public TpmUtility {
         cred_metadata, mac);
   }
 
-  TPM_RC PinWeaverRemoveLeaf(
-      uint8_t protocol_version, uint64_t label, const std::string& h_aux,
-      const std::string& mac, uint32_t* result_code, std::string* root_hash)
-      override {
+  TPM_RC PinWeaverRemoveLeaf(uint8_t protocol_version,
+                             uint64_t label,
+                             const std::string& h_aux,
+                             const std::string& mac,
+                             uint32_t* result_code,
+                             std::string* root_hash) override {
     return target_->PinWeaverRemoveLeaf(protocol_version, label, h_aux, mac,
                                         result_code, root_hash);
   }
 
-  TPM_RC PinWeaverTryAuth(
-      uint8_t protocol_version, const brillo::SecureBlob& le_secret,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash, uint32_t* seconds_to_wait,
-      brillo::SecureBlob* he_secret, brillo::SecureBlob* reset_secret,
-      std::string* cred_metadata_out, std::string* mac_out) override {
-    return target_->PinWeaverTryAuth(
-        protocol_version, le_secret, h_aux, cred_metadata, result_code,
-        root_hash, seconds_to_wait, he_secret, reset_secret, cred_metadata_out,
-        mac_out);
+  TPM_RC PinWeaverTryAuth(uint8_t protocol_version,
+                          const brillo::SecureBlob& le_secret,
+                          const std::string& h_aux,
+                          const std::string& cred_metadata,
+                          uint32_t* result_code,
+                          std::string* root_hash,
+                          uint32_t* seconds_to_wait,
+                          brillo::SecureBlob* he_secret,
+                          brillo::SecureBlob* reset_secret,
+                          std::string* cred_metadata_out,
+                          std::string* mac_out) override {
+    return target_->PinWeaverTryAuth(protocol_version, le_secret, h_aux,
+                                     cred_metadata, result_code, root_hash,
+                                     seconds_to_wait, he_secret, reset_secret,
+                                     cred_metadata_out, mac_out);
   }
 
-  TPM_RC PinWeaverResetAuth(
-      uint8_t protocol_version, const brillo::SecureBlob& reset_secret,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash,
-      brillo::SecureBlob* he_secret, std::string* cred_metadata_out,
-      std::string* mac_out) override {
-    return target_->PinWeaverResetAuth(
-        protocol_version, reset_secret, h_aux, cred_metadata, result_code,
-        root_hash, he_secret, cred_metadata_out, mac_out);
+  TPM_RC PinWeaverResetAuth(uint8_t protocol_version,
+                            const brillo::SecureBlob& reset_secret,
+                            const std::string& h_aux,
+                            const std::string& cred_metadata,
+                            uint32_t* result_code,
+                            std::string* root_hash,
+                            brillo::SecureBlob* he_secret,
+                            std::string* cred_metadata_out,
+                            std::string* mac_out) override {
+    return target_->PinWeaverResetAuth(protocol_version, reset_secret, h_aux,
+                                       cred_metadata, result_code, root_hash,
+                                       he_secret, cred_metadata_out, mac_out);
   }
 
-  TPM_RC PinWeaverGetLog(
-      uint8_t protocol_version, const std::string& root, uint32_t* result_code,
-      std::string* root_hash, std::vector<trunks::PinWeaverLogEntry>* log)
-      override {
+  TPM_RC PinWeaverGetLog(uint8_t protocol_version,
+                         const std::string& root,
+                         uint32_t* result_code,
+                         std::string* root_hash,
+                         std::vector<trunks::PinWeaverLogEntry>* log) override {
     return target_->PinWeaverGetLog(protocol_version, root, result_code,
                                     root_hash, log);
   }
 
-  TPM_RC PinWeaverLogReplay(
-      uint8_t protocol_version, const std::string& log_root,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash,
-      std::string* cred_metadata_out, std::string* mac_out) override {
-    return target_->PinWeaverLogReplay(
-        protocol_version, log_root, h_aux, cred_metadata, result_code,
-        root_hash, cred_metadata_out, mac_out);
+  TPM_RC PinWeaverLogReplay(uint8_t protocol_version,
+                            const std::string& log_root,
+                            const std::string& h_aux,
+                            const std::string& cred_metadata,
+                            uint32_t* result_code,
+                            std::string* root_hash,
+                            std::string* cred_metadata_out,
+                            std::string* mac_out) override {
+    return target_->PinWeaverLogReplay(protocol_version, log_root, h_aux,
+                                       cred_metadata, result_code, root_hash,
+                                       cred_metadata_out, mac_out);
   }
 
   TPM_RC GetRsuDeviceId(std::string* device_id) override {
@@ -603,8 +611,8 @@ class SessionManagerForwarder : public SessionManager {
                       bool enable_encryption,
                       HmacAuthorizationDelegate* delegate) override {
     return target_->StartSession(session_type, bind_entity,
-                                 bind_authorization_value,
-                                 salted, enable_encryption, delegate);
+                                 bind_authorization_value, salted,
+                                 enable_encryption, delegate);
   }
 
  private:
@@ -686,12 +694,12 @@ class PolicySessionForwarder : public PolicySession {
   TPM_RC PolicySecret(TPMI_DH_ENTITY auth_entity,
                       const std::string& auth_entity_name,
                       const std::string& nonce,
-                      const std::string& cp_hash, const std::string& policy_ref,
+                      const std::string& cp_hash,
+                      const std::string& policy_ref,
                       int32_t expiration,
                       AuthorizationDelegate* delegate) override {
-    return target_->PolicySecret(auth_entity, auth_entity_name,
-                                 nonce, cp_hash, policy_ref,
-                                 expiration, delegate);
+    return target_->PolicySecret(auth_entity, auth_entity_name, nonce, cp_hash,
+                                 policy_ref, expiration, delegate);
   }
 
   TPM_RC PolicySigned(TPMI_DH_ENTITY auth_entity,

@@ -95,8 +95,7 @@ bool HmacAuthorizationDelegate::GetCommandAuthorization(
 }
 
 bool HmacAuthorizationDelegate::CheckResponseAuthorization(
-    const std::string& response_hash,
-    const std::string& authorization) {
+    const std::string& response_hash, const std::string& authorization) {
   if (!session_handle_) {
     return false;
   }

@@ -33,9 +33,9 @@ namespace trunks {
 class ScopedGlobalHmacSession {
  public:
   ScopedGlobalHmacSession(const TrunksFactory* factory,
-      bool salted,
-      bool enable_encryption,
-      std::unique_ptr<HmacSession>* session)
+                          bool salted,
+                          bool enable_encryption,
+                          std::unique_ptr<HmacSession>* session)
       : target_session_(session) {
     DCHECK(target_session_);
     VLOG_IF(1, *target_session_) << "Concurrent sessions?";
@@ -50,21 +50,20 @@ class ScopedGlobalHmacSession {
     }
   }
 
-  ~ScopedGlobalHmacSession() {
-    *target_session_ = nullptr;
-  }
+  ~ScopedGlobalHmacSession() { *target_session_ = nullptr; }
 
  private:
-  std::unique_ptr<HmacSession> *target_session_;
+  std::unique_ptr<HmacSession>* target_session_;
   DISALLOW_COPY_AND_ASSIGN(ScopedGlobalHmacSession);
 };
 #else  // TRUNKS_USE_PER_OP_SESSIONS
 class ScopedGlobalHmacSession {
  public:
   ScopedGlobalHmacSession(const TrunksFactory* /* factory */,
-      bool /* salted */,
-      bool /* enable_encryption */,
-      std::unique_ptr<HmacSession>* /* session */) {}
+                          bool /* salted */,
+                          bool /* enable_encryption */,
+                          std::unique_ptr<HmacSession>* /* session */) {}
+
  private:
   DISALLOW_COPY_AND_ASSIGN(ScopedGlobalHmacSession);
 };

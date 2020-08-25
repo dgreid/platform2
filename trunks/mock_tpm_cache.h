@@ -18,8 +18,10 @@ class MockTpmCache : public TpmCache {
   MockTpmCache();
   ~MockTpmCache() override = default;
 
-  MOCK_METHOD(
-      TPM_RC, GetSaltingKeyPublicArea, (TPMT_PUBLIC* public_area), (override));
+  MOCK_METHOD(TPM_RC,
+              GetSaltingKeyPublicArea,
+              (TPMT_PUBLIC * public_area),
+              (override));
   MOCK_METHOD(TPM_ALG_ID, GetBestSupportedKeyType, (), (override));
 
  private:

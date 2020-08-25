@@ -16,8 +16,10 @@
 
 #include "trunks/error_codes.h"
 
-#define IS_TPM_CC_VENDOR_CMD(c)    (((c) == TPM_CC_VENDOR_SPECIFIC_MASK) || \
-                                    ((c) == TPM_CC_CR50_EXTENSION_COMMAND))
+#define IS_TPM_CC_VENDOR_CMD(c)            \
+  (((c) == TPM_CC_VENDOR_SPECIFIC_MASK) || \
+   ((c) == TPM_CC_CR50_EXTENSION_COMMAND))
+
 namespace {
 
 const int kMaxSuspendDurationSec = 10;
@@ -50,7 +52,8 @@ namespace trunks {
 
 ResourceManager::ResourceManager(const TrunksFactory& factory,
                                  CommandTransceiver* next_transceiver)
-    : factory_(factory), next_transceiver_(next_transceiver),
+    : factory_(factory),
+      next_transceiver_(next_transceiver),
       max_suspend_duration_(
           base::TimeDelta::FromSeconds(kMaxSuspendDurationSec)) {}
 
@@ -108,8 +111,8 @@ std::string ResourceManager::SendCommandAndWait(const std::string& command) {
   // while in the suspended state, auto-resume from it, block commands
   // with handles as a result.
   if (suspended_) {
-    LOG(WARNING) << "Received command CC 0x"
-                 << std::hex << command_info.code << " while suspended.";
+    LOG(WARNING) << "Received command CC 0x" << std::hex << command_info.code
+                 << " while suspended.";
     // Make sure we resume after the maximum allowed suspend duration even
     // if the resume event is somehow lost. Should be enough to go through
     // suspend preparaion - and that's all we care about.
@@ -358,8 +361,7 @@ void ResourceManager::SaveAllContexts() {
 }
 
 std::vector<TPM_HANDLE> ResourceManager::ExtractHandlesFromBuffer(
-    size_t number_of_handles,
-    std::string* buffer) {
+    size_t number_of_handles, std::string* buffer) {
   std::vector<TPM_HANDLE> handles(number_of_handles);
   for (auto& handle : handles) {
     if (Parse_TPM_HANDLE(buffer, &handle, nullptr) != TPM_RC_SUCCESS) {
@@ -709,8 +711,7 @@ TPM_RC ResourceManager::ParseResponse(const MessageInfo& command_info,
 }
 
 void ResourceManager::ProcessExternalContextSave(
-    const MessageInfo& command_info,
-    const MessageInfo& response_info) {
+    const MessageInfo& command_info, const MessageInfo& response_info) {
   CHECK_EQ(command_info.code, TPM_CC_ContextSave);
   if (command_info.handles.size() != 1) {
     LOG(WARNING) << "Invalid context save command.";
@@ -756,8 +757,7 @@ void ResourceManager::ProcessExternalContextSave(
 }
 
 std::string ResourceManager::ProcessFlushContext(
-    const std::string& command,
-    const MessageInfo& command_info) {
+    const std::string& command, const MessageInfo& command_info) {
   std::string buffer = command_info.parameter_data;
   // There must be exactly one handle in the parameters section.
   std::vector<TPM_HANDLE> handles = ExtractHandlesFromBuffer(1, &buffer);
@@ -860,8 +860,7 @@ TPM_HANDLE ResourceManager::ProcessOutputHandle(TPM_HANDLE handle) {
 }
 
 std::string ResourceManager::ReplaceHandles(
-    const std::string& message,
-    const std::vector<TPM_HANDLE>& new_handles) {
+    const std::string& message, const std::vector<TPM_HANDLE>& new_handles) {
   std::string handles_blob;
   for (auto handle : new_handles) {
     CHECK_EQ(Serialize_TPM_HANDLE(handle, &handles_blob), TPM_RC_SUCCESS);

@@ -58,10 +58,10 @@ std::string HexEncode(const std::string& bytes) {
 // All TPM extension commands use this struct for input and output. Any other
 // data follows immediately after. All values are big-endian over the wire.
 struct TpmCmdHeader {
-  uint16_t tag;                         // TPM_ST_NO_SESSIONS
-  uint32_t size;                        // including this header
-  uint32_t code;                        // Command out, Response back.
-  uint16_t subcommand_code;             // Additional command/response codes
+  uint16_t tag;              // TPM_ST_NO_SESSIONS
+  uint32_t size;             // including this header
+  uint32_t code;             // Command out, Response back.
+  uint16_t subcommand_code;  // Additional command/response codes
 } __attribute__((packed));
 
 // TPMv2 Spec mandates that vendor-specific command codes have bit 29 set,
@@ -69,13 +69,13 @@ struct TpmCmdHeader {
 // define one of those 16-bit command values for Cr50 purposes, and use the
 // subcommand_code in struct TpmCmdHeader to further distinguish the desired
 // operation.
-#define TPM_CC_VENDOR_BIT   0x20000000
+#define TPM_CC_VENDOR_BIT 0x20000000
 
 // Vendor-specific command codes
-#define TPM_CC_VENDOR_CR50      0x0000
+#define TPM_CC_VENDOR_CR50 0x0000
 
 // This needs to be used to be backwards compatible with older Cr50 versions.
-#define CR50_EXTENSION_COMMAND    0xbaccd00a
+#define CR50_EXTENSION_COMMAND 0xbaccd00a
 #define CR50_EXTENSION_FW_UPGRADE 4
 
 // Cr50 vendor-specific subcommand codes. 16 bits available.
@@ -99,7 +99,7 @@ enum vendor_cmd_cc {
 //   Bit  8     V=1   Conforms to TPMv2 spec
 //   Bit  7     F=0   Conforms to Table 14, Format-Zero Response Codes
 //   Bits 6:0   num   128 possible failure reasons
-#define VENDOR_RC_ERR  0x00000500
+#define VENDOR_RC_ERR 0x00000500
 #define VENDOR_RC_MASK 0x0000007f
 #define VENDOR_RC_NO_SUCH_COMMAND 0x0000007f
 
@@ -136,7 +136,8 @@ static int HandleRaw(TrunksDBusProxy* proxy, base::CommandLine* cl) {
 }
 
 // Send the TPM command, get the reply, return response code and results.
-static uint32_t VendorCommand(TrunksDBusProxy* proxy, uint16_t cc,
+static uint32_t VendorCommand(TrunksDBusProxy* proxy,
+                              uint16_t cc,
                               const std::string& input,
                               std::string* output,
                               bool extendedCommandMode = false) {
@@ -219,8 +220,8 @@ struct FirstResponsePdu {
   uint32_t protocol_version;
 
   // The below fields are present in versions 3 and up.
-  uint32_t  backup_ro_offset;
-  uint32_t  backup_rw_offset;
+  uint32_t backup_ro_offset;
+  uint32_t backup_rw_offset;
 
   // The below fields are present in versions 4 and up.
   // Versions of the currently active RO and RW sections.
@@ -286,8 +287,8 @@ static bool TransferBlock(TrunksDBusProxy* proxy,
       std::string(reinterpret_cast<char*>(&updu), sizeof(updu)) +
       std::string(data + data_offset, block_size);
 
-  uint32_t rv = VendorCommand(proxy, CR50_EXTENSION_FW_UPGRADE, request,
-                              &response, true);
+  uint32_t rv =
+      VendorCommand(proxy, CR50_EXTENSION_FW_UPGRADE, request, &response, true);
   if (rv) {
     LOG(ERROR) << "Failed to transfer image block, got 0x" << std::hex << rv;
     return false;
@@ -313,14 +314,13 @@ static bool TransferBlock(TrunksDBusProxy* proxy,
 //
 // Returns true on success, false on error.
 //
-static bool SetupConnection(TrunksDBusProxy* proxy,
-                            FirstResponsePdu* rpdu) {
+static bool SetupConnection(TrunksDBusProxy* proxy, FirstResponsePdu* rpdu) {
   // Connection setup is triggered by 8 bytes of zeros.
   std::string request(8, 0);
   std::string response;
 
-  uint32_t rv = VendorCommand(proxy, CR50_EXTENSION_FW_UPGRADE,
-                              request, &response, true);
+  uint32_t rv =
+      VendorCommand(proxy, CR50_EXTENSION_FW_UPGRADE, request, &response, true);
   if (rv) {
     LOG(ERROR) << "Failed to set up connection, got 0x" << std::hex << rv;
     return false;
@@ -365,8 +365,8 @@ static bool SetupConnection(TrunksDBusProxy* proxy,
 // Compares version fields in the header of the new image to the versions
 // running on the target. Returns true if the new image is newer.
 //
-static bool ImageIsNewer(const EssentialHeader &header,
-                         const SignedHeaderVersion &shv) {
+static bool ImageIsNewer(const EssentialHeader& header,
+                         const SignedHeaderVersion& shv) {
   if (header.epoch != shv.epoch)
     return header.epoch > shv.epoch;
   if (header.major != shv.major)
@@ -388,17 +388,17 @@ static bool ImageIsNewer(const EssentialHeader &header,
 // version is not older than the one in |update_image| is considered a success.
 //
 static bool TransferSection(TrunksDBusProxy* proxy,
-                            const std::string &update_image,
+                            const std::string& update_image,
                             uint32_t section_offset,
-                            const SignedHeaderVersion &shv,
+                            const SignedHeaderVersion& shv,
                             bool force) {
   EssentialHeader header;
 
   // Try reading the header into the structure.
   if ((section_offset + sizeof(EssentialHeader)) > update_image.size()) {
     LOG(ERROR) << "Header at offset 0x" << std::hex << section_offset
-               << " does not fit into the image of "
-               << std::dec << update_image.size() << " bytes";
+               << " does not fit into the image of " << std::dec
+               << update_image.size() << " bytes";
     return false;
   }
   memcpy(&header, update_image.data() + section_offset, sizeof(header));
@@ -416,10 +416,8 @@ static bool TransferSection(TrunksDBusProxy* proxy,
   }
 
   printf("Offset %#x file at %d.%d.%d device at %d.%d.%d, section size %d\n",
-         section_offset,
-         header.epoch, header.major, header.minor,
-         shv.epoch, shv.major, shv.minor,
-         header.image_size);
+         section_offset, header.epoch, header.major, header.minor, shv.epoch,
+         shv.major, shv.minor, header.image_size);
   if (!force && !ImageIsNewer(header, shv)) {
     printf("Skipping update\n");
     return true;
@@ -452,8 +450,8 @@ static bool TransferSection(TrunksDBusProxy* proxy,
 // a negative value in case of error.
 //
 static int TransferImage(TrunksDBusProxy* proxy,
-                         const std::string &update_image,
-                         const FirstResponsePdu &rpdu,
+                         const std::string& update_image,
+                         const FirstResponsePdu& rpdu,
                          bool force) {
   int num_txed_sections = 0;
   uint32_t section_offsets[] = {rpdu.backup_ro_offset, rpdu.backup_rw_offset};
@@ -480,11 +478,7 @@ static int TransferImage(TrunksDBusProxy* proxy,
   return num_txed_sections;
 }
 
-enum UpdateStatus {
-  UpdateSuccess = 0,
-  UpdateError = 1,
-  UpdateCancelled = 2
-};
+enum UpdateStatus { UpdateSuccess = 0, UpdateError = 1, UpdateCancelled = 2 };
 
 // Updathe the Cr50 image on the device.
 static UpdateStatus HandleUpdate(TrunksDBusProxy* proxy,
@@ -509,10 +503,8 @@ static UpdateStatus HandleUpdate(TrunksDBusProxy* proxy,
 
   // Cr50 images with RW versoin below 0.0.19 process updates differently,
   // and as such require special treatment.
-  bool running_pre_19 =
-    rpdu.shv[1].minor < 19 &&
-    rpdu.shv[1].major == 0 &&
-    rpdu.shv[1].epoch == 0;
+  bool running_pre_19 = rpdu.shv[1].minor < 19 && rpdu.shv[1].major == 0 &&
+                        rpdu.shv[1].epoch == 0;
 
   if (running_pre_19 && !cl->HasSwitch(kForce)) {
     printf("Not updating from RW 0.0.%d, use --force if necessary\n",
@@ -604,12 +596,11 @@ static int VcSysInfo(TrunksDBusProxy* proxy, base::CommandLine* cl) {
   sysinfo.dev_id0 = base::NetToHost32(sysinfo.dev_id0);
   sysinfo.dev_id1 = base::NetToHost32(sysinfo.dev_id1);
 
-  printf("RO keyid:    0x%08x (%s)\n",
-         sysinfo.ro_keyid, key_type(sysinfo.ro_keyid));
-  printf("RW keyid:    0x%08x (%s)\n",
-         sysinfo.rw_keyid, key_type(sysinfo.rw_keyid));
-  printf("DEV_ID:      0x%08x 0x%08x\n",
-         sysinfo.dev_id0, sysinfo.dev_id1);
+  printf("RO keyid:    0x%08x (%s)\n", sysinfo.ro_keyid,
+         key_type(sysinfo.ro_keyid));
+  printf("RW keyid:    0x%08x (%s)\n", sysinfo.rw_keyid,
+         key_type(sysinfo.rw_keyid));
+  printf("DEV_ID:      0x%08x 0x%08x\n", sysinfo.dev_id0, sysinfo.dev_id1);
 
   return 0;
 }
@@ -647,8 +638,8 @@ static int VcPopLogEntry(TrunksDBusProxy* proxy, base::CommandLine* cl) {
   logentry.timestamp = base::NetToHost32(logentry.timestamp);
   logentry.data = base::NetToHost16(logentry.data);
 
-  ts = base::Time::Now() -
-       base::TimeDelta::FromMilliseconds(logentry.timestamp);
+  ts =
+      base::Time::Now() - base::TimeDelta::FromMilliseconds(logentry.timestamp);
   ts.LocalExplode(&ts_exploded);
 
   printf("LogEntry %04i%02i%02i-%02i:%02i:%02i.%03i: Type: 0x%x Data: 0x%x\n",

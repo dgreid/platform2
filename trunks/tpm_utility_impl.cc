@@ -55,8 +55,8 @@ const uint16_t kCr50SubcmdPinWeaver = 37;
 // Auth policy used in RSA and ECC templates for EK keys generation.
 // From TCG Credential Profile EK 2.0. Section 2.1.5.
 const std::string kEKTemplateAuthPolicy(
-  "\x83\x71\x97\x67\x44\x84\xB3\xF8\x1A\x90\xCC\x8D\x46\xA5\xD7\x24"
-  "\xFD\x52\xD7\x6E\x06\x52\x0B\x64\xF2\xA1\xDA\x1B\x33\x14\x69\xAA");
+    "\x83\x71\x97\x67\x44\x84\xB3\xF8\x1A\x90\xCC\x8D\x46\xA5\xD7\x24"
+    "\xFD\x52\xD7\x6E\x06\x52\x0B\x64\xF2\xA1\xDA\x1B\x33\x14\x69\xAA");
 
 // Salt used exclusively for the Remote Server Unlock process due to the privacy
 // reasons.
@@ -89,8 +89,7 @@ std::string HashString(const std::string& plaintext,
 namespace trunks {
 
 TpmUtilityImpl::TpmUtilityImpl(const TrunksFactory& factory)
-    : factory_(factory),
-      vendor_id_(0) {
+    : factory_(factory), vendor_id_(0) {
   crypto::EnsureOpenSSLInit();
 }
 
@@ -102,14 +101,14 @@ TPM_RC TpmUtilityImpl::Startup() {
   result = tpm->StartupSync(TPM_SU_CLEAR, nullptr);
   // Ignore TPM_RC_INITIALIZE, that means it was already started.
   if (result && result != TPM_RC_INITIALIZE) {
-    LOG(ERROR) << __func__ << ": Failed to startup sync: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed to startup sync: " << GetErrorString(result);
     return result;
   }
   result = tpm->SelfTestSync(YES /* Full test. */, nullptr);
   if (result) {
-    LOG(ERROR) << __func__ << ": Failed self test sync: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed self test sync: " << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
@@ -181,8 +180,8 @@ TPM_RC TpmUtilityImpl::CheckState() {
   result = TpmBasicInit(&tpm_state);
 
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Failed TPM basic init: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed TPM basic init: " << GetErrorString(result);
     return result;
   }
 
@@ -205,8 +204,8 @@ TPM_RC TpmUtilityImpl::InitializeTpm() {
 
   result = TpmBasicInit(&tpm_state);
   if (result) {
-    LOG(ERROR) << __func__ << ": Failed TPM basic init: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed TPM basic init: " << GetErrorString(result);
     return result;
   }
 
@@ -228,8 +227,8 @@ TPM_RC TpmUtilityImpl::InitializeTpm() {
     }
     result = AllocatePCR(kPlatformPassword);
     if (result != TPM_RC_SUCCESS) {
-      LOG(ERROR) << __func__ << ": Failed to alocate PCR: "
-                 << GetErrorString(result);
+      LOG(ERROR) << __func__
+                 << ": Failed to alocate PCR: " << GetErrorString(result);
       return result;
     }
     std::unique_ptr<AuthorizationDelegate> authorization(
@@ -312,8 +311,8 @@ TPM_RC TpmUtilityImpl::PrepareForOwnership() {
   std::unique_ptr<TpmState> tpm_state(factory_.GetTpmState());
   TPM_RC result = tpm_state->Initialize();
   if (result) {
-    LOG(ERROR) << __func__ << ": Error initializing state: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Error initializing state: " << GetErrorString(result);
     return result;
   }
   if (tpm_state->IsOwnerPasswordSet()) {
@@ -376,8 +375,7 @@ TPM_RC TpmUtilityImpl::TakeOwnership(const std::string& owner_password,
                                        session->GetDelegate());
     if (result) {
       LOG(ERROR) << __func__ << ": Failed to set hierarchy authorization, "
-                 << "endorsement password not set: "
-                 << GetErrorString(result);
+                 << "endorsement password not set: " << GetErrorString(result);
       return result;
     }
   }
@@ -703,10 +701,9 @@ TPM_RC TpmUtilityImpl::RawSign(TPM_HANDLE key_handle,
   std::string digest =
       generate_hash ? HashString(plaintext, hash_alg) : plaintext;
   if (digest.size() > sizeof(TPMU_HA)) {
-    LOG(ERROR)
-        << __func__
-        << ": digest is too long for TPM signing command. Input length: "
-        << digest.size() << ", the limit: " << sizeof(TPMU_HA);
+    LOG(ERROR) << __func__
+               << ": digest is too long for TPM signing command. Input length: "
+               << digest.size() << ", the limit: " << sizeof(TPMU_HA);
     return SAPI_RC_BAD_PARAMETER;
   }
 
@@ -741,7 +738,7 @@ TPM_RC TpmUtilityImpl::Sign(TPM_HANDLE key_handle,
     scheme = TPM_ALG_RSASSA;
 
   result = RawSign(key_handle, scheme, hash_alg, plaintext, generate_hash,
-    delegate, &signature_out);
+                   delegate, &signature_out);
   if (result) {
     LOG(ERROR) << __func__
                << ": Error from RawSign(): " << GetErrorString(result);
@@ -1075,7 +1072,7 @@ TPM_RC TpmUtilityImpl::CreateKeyPairInner(
     for (uint32_t creation_pcr_index : creation_pcr_indexes) {
       if (creation_pcr_index >= 8 * PCR_SELECT_MIN) {
         LOG(ERROR) << __func__
-           << ": Creation PCR index is not within the allocated bank.";
+                   << ": Creation PCR index is not within the allocated bank.";
         return SAPI_RC_BAD_PARAMETER;
       }
       creation_pcrs.pcr_selections[0].pcr_select[creation_pcr_index / 8] |=
@@ -1975,19 +1972,18 @@ TPM_RC TpmUtilityImpl::DeclareTpmFirmwareStable() {
     return TPM_RC_SUCCESS;
   }
   std::string response_payload;
-  TPM_RC rc = Cr50VendorCommand(kCr50SubcmdInvalidateInactiveRW,
-                                std::string(), &response_payload);
+  TPM_RC rc = Cr50VendorCommand(kCr50SubcmdInvalidateInactiveRW, std::string(),
+                                &response_payload);
   if (rc == TPM_RC_SUCCESS) {
     LOG(INFO) << "Successfully invalidated inactive Cr50 RW";
   } else {
-    LOG(WARNING) << "Invalidating inactive Cr50 RW failed: 0x"
-                 << std::hex << rc;
+    LOG(WARNING) << "Invalidating inactive Cr50 RW failed: 0x" << std::hex
+                 << rc;
   }
   return rc;
 }
 
-TPM_RC TpmUtilityImpl::GetPublicRSAEndorsementKeyModulus(
-    std::string* ekm) {
+TPM_RC TpmUtilityImpl::GetPublicRSAEndorsementKeyModulus(std::string* ekm) {
   uint32_t index = kRsaEndorsementCertificateNonRealIndex;
   trunks::TPMS_NV_PUBLIC nvram_public;
   TPM_RC result = GetNVSpacePublicArea(index, &nvram_public);
@@ -1998,10 +1994,10 @@ TPM_RC TpmUtilityImpl::GetPublicRSAEndorsementKeyModulus(
   }
 
   std::unique_ptr<AuthorizationDelegate> password_delegate(
-    factory_.GetPasswordAuthorization(""));
+      factory_.GetPasswordAuthorization(""));
   std::string nvram_data;
-  result = ReadNVSpace(index, 0, nvram_public.data_size, false,
-                              &nvram_data, password_delegate.get());
+  result = ReadNVSpace(index, 0, nvram_public.data_size, false, &nvram_data,
+                       password_delegate.get());
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error reading NV space for index " << index
                << " with error: " << GetErrorString(result);
@@ -2052,8 +2048,8 @@ TPM_RC TpmUtilityImpl::ManageCCDPwd(bool allow_pwd) {
   }
   std::string command_payload(1, allow_pwd ? 1 : 0);
   std::string response_payload;
-  return Cr50VendorCommand(kCr50SubcmdManageCCDPwd,
-                           command_payload, &response_payload);
+  return Cr50VendorCommand(kCr50SubcmdManageCCDPwd, command_payload,
+                           &response_payload);
 }
 
 TPM_RC TpmUtilityImpl::SetKnownOwnerPassword(
@@ -2146,8 +2142,8 @@ TPM_RC TpmUtilityImpl::CreateStorageRootKeys(
       TPM_RH_OWNER, NameFromHandle(TPM_RH_OWNER), object_handle,
       StringFrom_TPM2B_NAME(object_name), kStorageRootKey, delegate.get());
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Failed to evict control sync: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed to evict control sync: " << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
@@ -2234,8 +2230,8 @@ TPM_RC TpmUtilityImpl::CreateSaltingKey(const std::string& owner_password) {
       TPM_RH_OWNER, NameFromHandle(TPM_RH_OWNER), key_handle,
       StringFrom_TPM2B_NAME(key_name), kSaltingKey, owner_delegate.get());
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Failed to evict control sync: "
-               << GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Failed to evict control sync: " << GetErrorString(result);
     return result;
   }
   return TPM_RC_SUCCESS;
@@ -2425,11 +2421,9 @@ TPM_RC TpmUtilityImpl::GetAlertsData(TpmAlertsData* alerts) {
     return TPM_RC_SUCCESS;
   }
   std::string out;
-  TPM_RC rc = Cr50VendorCommand(kCr50SubcmdGetAlertsData,
-                                std::string(), &out);
+  TPM_RC rc = Cr50VendorCommand(kCr50SubcmdGetAlertsData, std::string(), &out);
   if (rc != TPM_RC_SUCCESS) {
-    LOG(WARNING) << "Unable to read alerts data: 0x"
-                 << std::hex << rc;
+    LOG(WARNING) << "Unable to read alerts data: 0x" << std::hex << rc;
     return rc;
   }
 
@@ -2439,8 +2433,8 @@ TPM_RC TpmUtilityImpl::GetAlertsData(TpmAlertsData* alerts) {
     return TPM_RC_FAILURE;
   }
 
-  const TpmAlertsData* received_alerts = reinterpret_cast<const TpmAlertsData*>(
-    out.data());
+  const TpmAlertsData* received_alerts =
+      reinterpret_cast<const TpmAlertsData*>(out.data());
 
   // convert byte-order from one specified by TPM specification to host order
   alerts->chip_family = base::NetToHost16(received_alerts->chip_family);
@@ -2459,8 +2453,8 @@ TPM_RC TpmUtilityImpl::GetAlertsData(TpmAlertsData* alerts) {
     return TPM_RC_FAILURE;
   }
 
-  size_t expected_size = 2 * sizeof(uint16_t)
-         + alerts->alerts_num * sizeof(uint16_t);
+  size_t expected_size =
+      2 * sizeof(uint16_t) + alerts->alerts_num * sizeof(uint16_t);
   if (out.size() != expected_size) {
     LOG(WARNING) << "TPM AlertsData response size does not match alerts_num "
                  << out.size() << " vs " << expected_size;
@@ -2475,10 +2469,10 @@ TPM_RC TpmUtilityImpl::GetAlertsData(TpmAlertsData* alerts) {
 }
 
 TPM_RC TpmUtilityImpl::PinWeaverIsSupported(uint8_t request_version,
-                                            uint8_t *protocol_version) {
+                                            uint8_t* protocol_version) {
   return PinWeaverCommand(
       __func__,
-      [request_version](std::string *in) -> TPM_RC {
+      [request_version](std::string* in) -> TPM_RC {
         return Serialize_pw_ping_t(request_version, in);
       },
       [protocol_version](const std::string& out) -> TPM_RC {
@@ -2488,11 +2482,12 @@ TPM_RC TpmUtilityImpl::PinWeaverIsSupported(uint8_t request_version,
 
 TPM_RC TpmUtilityImpl::PinWeaverResetTree(uint8_t protocol_version,
                                           uint8_t bits_per_level,
-                                          uint8_t height, uint32_t* result_code,
+                                          uint8_t height,
+                                          uint32_t* result_code,
                                           std::string* root_hash) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, bits_per_level, height](std::string *in) -> TPM_RC {
+      [protocol_version, bits_per_level, height](std::string* in) -> TPM_RC {
         return Serialize_pw_reset_tree_t(protocol_version, bits_per_level,
                                          height, in);
       },
@@ -2518,10 +2513,9 @@ TPM_RC TpmUtilityImpl::PinWeaverInsertLeaf(
       __func__,
       [protocol_version, label, h_aux, le_secret, he_secret, reset_secret,
        delay_schedule, valid_pcr_criteria](std::string* in) -> TPM_RC {
-        return Serialize_pw_insert_leaf_t(protocol_version, label, h_aux,
-                                          le_secret, he_secret,
-                                          reset_secret, delay_schedule,
-                                          valid_pcr_criteria, in);
+        return Serialize_pw_insert_leaf_t(
+            protocol_version, label, h_aux, le_secret, he_secret, reset_secret,
+            delay_schedule, valid_pcr_criteria, in);
       },
       [result_code, root_hash, cred_metadata,
        mac](const std::string& out) -> TPM_RC {
@@ -2530,13 +2524,15 @@ TPM_RC TpmUtilityImpl::PinWeaverInsertLeaf(
       });
 }
 
-TPM_RC TpmUtilityImpl::PinWeaverRemoveLeaf(
-    uint8_t protocol_version,
-    uint64_t label, const std::string& h_aux, const std::string& mac,
-    uint32_t* result_code, std::string* root_hash) {
+TPM_RC TpmUtilityImpl::PinWeaverRemoveLeaf(uint8_t protocol_version,
+                                           uint64_t label,
+                                           const std::string& h_aux,
+                                           const std::string& mac,
+                                           uint32_t* result_code,
+                                           std::string* root_hash) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, label, h_aux, mac](std::string *in) -> TPM_RC {
+      [protocol_version, label, h_aux, mac](std::string* in) -> TPM_RC {
         return Serialize_pw_remove_leaf_t(protocol_version, label, h_aux, mac,
                                           in);
       },
@@ -2545,22 +2541,26 @@ TPM_RC TpmUtilityImpl::PinWeaverRemoveLeaf(
       });
 }
 
-TPM_RC TpmUtilityImpl::PinWeaverTryAuth(
-    uint8_t protocol_version,
-    const brillo::SecureBlob& le_secret, const std::string& h_aux,
-    const std::string& cred_metadata, uint32_t* result_code,
-    std::string* root_hash, uint32_t* seconds_to_wait,
-    brillo::SecureBlob* he_secret, brillo::SecureBlob* reset_secret,
-    std::string* cred_metadata_out, std::string* mac_out) {
+TPM_RC TpmUtilityImpl::PinWeaverTryAuth(uint8_t protocol_version,
+                                        const brillo::SecureBlob& le_secret,
+                                        const std::string& h_aux,
+                                        const std::string& cred_metadata,
+                                        uint32_t* result_code,
+                                        std::string* root_hash,
+                                        uint32_t* seconds_to_wait,
+                                        brillo::SecureBlob* he_secret,
+                                        brillo::SecureBlob* reset_secret,
+                                        std::string* cred_metadata_out,
+                                        std::string* mac_out) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, le_secret, h_aux, cred_metadata]
-      (std::string *in) -> TPM_RC {
+      [protocol_version, le_secret, h_aux,
+       cred_metadata](std::string* in) -> TPM_RC {
         return Serialize_pw_try_auth_t(protocol_version, le_secret, h_aux,
                                        cred_metadata, in);
       },
       [result_code, root_hash, seconds_to_wait, he_secret, reset_secret,
-          cred_metadata_out, mac_out](const std::string& out) -> TPM_RC {
+       cred_metadata_out, mac_out](const std::string& out) -> TPM_RC {
         return Parse_pw_try_auth_t(out, result_code, root_hash, seconds_to_wait,
                                    he_secret, reset_secret, cred_metadata_out,
                                    mac_out);
@@ -2569,19 +2569,23 @@ TPM_RC TpmUtilityImpl::PinWeaverTryAuth(
 
 TPM_RC TpmUtilityImpl::PinWeaverResetAuth(
     uint8_t protocol_version,
-    const brillo::SecureBlob& reset_secret, const std::string& h_aux,
-    const std::string& cred_metadata, uint32_t* result_code,
-    std::string* root_hash, brillo::SecureBlob* he_secret,
-    std::string* cred_metadata_out, std::string* mac_out) {
+    const brillo::SecureBlob& reset_secret,
+    const std::string& h_aux,
+    const std::string& cred_metadata,
+    uint32_t* result_code,
+    std::string* root_hash,
+    brillo::SecureBlob* he_secret,
+    std::string* cred_metadata_out,
+    std::string* mac_out) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, reset_secret, h_aux, cred_metadata]
-      (std::string *in) -> TPM_RC {
+      [protocol_version, reset_secret, h_aux,
+       cred_metadata](std::string* in) -> TPM_RC {
         return Serialize_pw_reset_auth_t(protocol_version, reset_secret, h_aux,
                                          cred_metadata, in);
       },
-      [result_code, root_hash, he_secret, cred_metadata_out, mac_out](
-          const std::string& out) -> TPM_RC {
+      [result_code, root_hash, he_secret, cred_metadata_out,
+       mac_out](const std::string& out) -> TPM_RC {
         return Parse_pw_reset_auth_t(out, result_code, root_hash, he_secret,
                                      cred_metadata_out, mac_out);
       });
@@ -2589,11 +2593,13 @@ TPM_RC TpmUtilityImpl::PinWeaverResetAuth(
 
 TPM_RC TpmUtilityImpl::PinWeaverGetLog(
     uint8_t protocol_version,
-    const std::string& root, uint32_t* result_code, std::string* root_hash,
+    const std::string& root,
+    uint32_t* result_code,
+    std::string* root_hash,
     std::vector<trunks::PinWeaverLogEntry>* log) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, root](std::string *in) -> TPM_RC {
+      [protocol_version, root](std::string* in) -> TPM_RC {
         return Serialize_pw_get_log_t(protocol_version, root, in);
       },
       [result_code, root_hash, log](const std::string& out) -> TPM_RC {
@@ -2601,21 +2607,23 @@ TPM_RC TpmUtilityImpl::PinWeaverGetLog(
       });
 }
 
-TPM_RC TpmUtilityImpl::PinWeaverLogReplay(
-    uint8_t protocol_version,
-    const std::string& log_root, const std::string& h_aux,
-    const std::string& cred_metadata, uint32_t* result_code,
-    std::string* root_hash, std::string* cred_metadata_out,
-    std::string* mac_out) {
+TPM_RC TpmUtilityImpl::PinWeaverLogReplay(uint8_t protocol_version,
+                                          const std::string& log_root,
+                                          const std::string& h_aux,
+                                          const std::string& cred_metadata,
+                                          uint32_t* result_code,
+                                          std::string* root_hash,
+                                          std::string* cred_metadata_out,
+                                          std::string* mac_out) {
   return PinWeaverCommand(
       __func__,
-      [protocol_version, log_root, h_aux, cred_metadata]
-      (std::string *in) -> TPM_RC {
+      [protocol_version, log_root, h_aux,
+       cred_metadata](std::string* in) -> TPM_RC {
         return Serialize_pw_log_replay_t(protocol_version, log_root, h_aux,
                                          cred_metadata, in);
       },
-      [result_code, root_hash, cred_metadata_out, mac_out](
-          const std::string& out) -> TPM_RC {
+      [result_code, root_hash, cred_metadata_out,
+       mac_out](const std::string& out) -> TPM_RC {
         return Parse_pw_log_replay_t(out, result_code, root_hash,
                                      cred_metadata_out, mac_out);
       });
@@ -2635,8 +2643,8 @@ uint32_t TpmUtilityImpl::VendorId() {
                    << ": Error getting TPM_PT_MANUFACTURER property";
       return 0;
     }
-    VLOG(1) << __func__ << ": TPM_PT_MANUFACTURER = 0x"
-            << std::hex << vendor_id_;
+    VLOG(1) << __func__ << ": TPM_PT_MANUFACTURER = 0x" << std::hex
+            << vendor_id_;
   }
   return vendor_id_;
 }
@@ -2661,8 +2669,9 @@ TPM_RC TpmUtilityImpl::SerializeCommand_Cr50Vendor(
   Serialize_TPM_CC(kCr50VendorCC, serialized_command);
   Serialize_UINT16(subcommand, serialized_command);
   serialized_command->append(command_payload);
-  VLOG(2) << "Command: " << base::HexEncode(serialized_command->data(),
-                                            serialized_command->size());
+  VLOG(2) << "Command: "
+          << base::HexEncode(serialized_command->data(),
+                             serialized_command->size());
 
   // We didn't check the return statuses of Serialize_Xxx routines above, which
   // in practice always succeed. Let's at least check the resulting command
@@ -2675,9 +2684,8 @@ TPM_RC TpmUtilityImpl::SerializeCommand_Cr50Vendor(
   return TPM_RC_SUCCESS;
 }
 
-TPM_RC TpmUtilityImpl::ParseResponse_Cr50Vendor(
-    const std::string& response,
-    std::string* response_payload) {
+TPM_RC TpmUtilityImpl::ParseResponse_Cr50Vendor(const std::string& response,
+                                                std::string* response_payload) {
   VLOG(3) << __func__;
   VLOG(2) << "Response: " << base::HexEncode(response.data(), response.size());
   response_payload->assign(response);
@@ -2724,7 +2732,7 @@ TPM_RC TpmUtilityImpl::Cr50VendorCommand(uint16_t subcommand,
   VLOG(1) << __func__ << "(subcommand: " << subcommand << ")";
   std::string command;
   TPM_RC rc =
-    SerializeCommand_Cr50Vendor(subcommand, command_payload, &command);
+      SerializeCommand_Cr50Vendor(subcommand, command_payload, &command);
   if (rc != TPM_RC_SUCCESS) {
     return rc;
   }
@@ -2734,8 +2742,9 @@ TPM_RC TpmUtilityImpl::Cr50VendorCommand(uint16_t subcommand,
 }
 
 template <typename S, typename P>
-TPM_RC TpmUtilityImpl::PinWeaverCommand(
-    const std::string& tag, S serialize, P parse) {
+TPM_RC TpmUtilityImpl::PinWeaverCommand(const std::string& tag,
+                                        S serialize,
+                                        P parse) {
   if (!IsCr50()) {
     LOG(ERROR) << tag << ": Called a Cr50 only function without Cr50.";
     return TPM_RC_FAILURE;
@@ -2752,8 +2761,8 @@ TPM_RC TpmUtilityImpl::PinWeaverCommand(
   std::string out;
   rc = Cr50VendorCommand(kCr50SubcmdPinWeaver, in, &out);
   if (rc != TPM_RC_SUCCESS) {
-    LOG(WARNING) << tag << ": command failed: 0x" << std::hex << rc << " " <<
-                 GetErrorString(rc);
+    LOG(WARNING) << tag << ": command failed: 0x" << std::hex << rc << " "
+                 << GetErrorString(rc);
   } else {
     rc = parse(out);
   }

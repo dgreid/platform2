@@ -122,7 +122,7 @@ bool TrunksClientTest::SignTest() {
   }
   std::string public_key;
   if (!GetRSAPublicKeyFromHandle(scoped_key, &public_key,
-                                     session->GetDelegate())) {
+                                 session->GetDelegate())) {
     LOG(ERROR) << "Error fetching the public key to verify: "
                << GetErrorString(result);
     return false;
@@ -241,8 +241,8 @@ bool TrunksClientTest::VerifyKeyCreationTest() {
   TPM_RC result = utility->CreateRSAKeyPair(
       TpmUtility::AsymmetricKeyUsage::kDecryptKey, 2048, 0x10001, "", "",
       false,  // use_only_policy_authorization
-      std::vector<uint32_t>(), session->GetDelegate(),
-      &key_blob, &creation_blob);
+      std::vector<uint32_t>(), session->GetDelegate(), &key_blob,
+      &creation_blob);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error creating certify key: " << GetErrorString(result);
     return false;
@@ -294,10 +294,9 @@ bool TrunksClientTest::SealedDataTest() {
   }
   uint32_t pcr_index = 5;
   std::string policy_digest;
-  TPM_RC result =
-      utility->GetPolicyDigestForPcrValues(
-          std::map<uint32_t, std::string>({{pcr_index, ""}}),
-          true /* use_auth_value */, &policy_digest);
+  TPM_RC result = utility->GetPolicyDigestForPcrValues(
+      std::map<uint32_t, std::string>({{pcr_index, ""}}),
+      true /* use_auth_value */, &policy_digest);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error getting policy_digest: " << GetErrorString(result);
     return false;
@@ -382,11 +381,9 @@ bool TrunksClientTest::SealedToMultiplePCRDataTest() {
   uint32_t pcr_index2 = 2;
   // Build policy digest.
   std::string policy_digest;
-  TPM_RC result =
-      utility->GetPolicyDigestForPcrValues(
-          std::map<uint32_t, std::string>({{pcr_index1, ""}, {pcr_index2, ""}}),
-          false /* use_auth_value */,
-          &policy_digest);
+  TPM_RC result = utility->GetPolicyDigestForPcrValues(
+      std::map<uint32_t, std::string>({{pcr_index1, ""}, {pcr_index2, ""}}),
+      false /* use_auth_value */, &policy_digest);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error getting policy_digest: " << GetErrorString(result);
     return false;
@@ -560,7 +557,7 @@ bool TrunksClientTest::PolicyAuthValueTest() {
   }
   std::string public_key;
   if (!GetRSAPublicKeyFromHandle(scoped_key, &public_key,
-                                     policy_session->GetDelegate())) {
+                                 policy_session->GetDelegate())) {
     LOG(ERROR) << "Error fetching the public key to verify: "
                << GetErrorString(result);
     return false;
@@ -731,7 +728,7 @@ bool TrunksClientTest::PolicyAndTest() {
   }
   std::string public_key;
   if (!GetRSAPublicKeyFromHandle(scoped_key, &public_key,
-                                     policy_session->GetDelegate())) {
+                                 policy_session->GetDelegate())) {
     LOG(ERROR) << "Error fetching the public key to verify: "
                << GetErrorString(result);
     return false;
@@ -941,12 +938,13 @@ bool TrunksClientTest::NvramTest(const std::string& owner_password) {
   auto cleanup = base::Bind(
       [](HmacSession* session, const std::string& owner_password,
          TpmUtility* utility, uint32_t index) {
-    session->SetEntityAuthorizationValue(owner_password);
-    TPM_RC result = utility->DestroyNVSpace(index, session->GetDelegate());
-    if (result != TPM_RC_SUCCESS) {
-      LOG(ERROR) << "Error destroying nvram: " << GetErrorString(result);
-    }
-  }, session.get(), owner_password, utility.get(), index);
+        session->SetEntityAuthorizationValue(owner_password);
+        TPM_RC result = utility->DestroyNVSpace(index, session->GetDelegate());
+        if (result != TPM_RC_SUCCESS) {
+          LOG(ERROR) << "Error destroying nvram: " << GetErrorString(result);
+        }
+      },
+      session.get(), owner_password, utility.get(), index);
   base::ScopedClosureRunner scoper(cleanup);
 
   session->SetEntityAuthorizationValue(owner_password);
@@ -1254,10 +1252,9 @@ bool TrunksClientTest::SignAndVerify(const ScopedKeyHandle& key_handle,
   std::string signature;
   std::string data_to_sign("sign_this");
   std::unique_ptr<TpmUtility> utility = factory_.GetTpmUtility();
-  TPM_RC result =
-      utility->Sign(key_handle.get(), TPM_ALG_RSASSA, TPM_ALG_SHA256,
-                    data_to_sign, true /* generate_hash */,
-                    delegate, &signature);
+  TPM_RC result = utility->Sign(key_handle.get(), TPM_ALG_RSASSA,
+                                TPM_ALG_SHA256, data_to_sign,
+                                true /* generate_hash */, delegate, &signature);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Sign: " << GetErrorString(result);
     return false;
@@ -1287,9 +1284,9 @@ bool TrunksClientTest::GetRSAPublicKeyFromHandle(
   CHECK(e);
   CHECK(n);
   CHECK(BN_set_word(e.get(), 0x10001)) << "Error setting exponent for RSA.";
-  CHECK(BN_bin2bn(public_area.unique.rsa.buffer,
-                  public_area.unique.rsa.size,
-                  n.get())) << "Error setting modulus for RSA.";
+  CHECK(BN_bin2bn(public_area.unique.rsa.buffer, public_area.unique.rsa.size,
+                  n.get()))
+      << "Error setting modulus for RSA.";
   CHECK(RSA_set0_key(rsa.get(), n.release(), e.release(), nullptr));
 
   int der_length = i2d_RSAPublicKey(rsa.get(), nullptr);

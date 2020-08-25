@@ -30,6 +30,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   // The first parameter is ignored.
   delegate.CheckResponseAuthorization(
-        "", data_provider.ConsumeRandomLengthString(kMaxRandomAuthLength));
+      "", data_provider.ConsumeRandomLengthString(kMaxRandomAuthLength));
   return 0;
 }

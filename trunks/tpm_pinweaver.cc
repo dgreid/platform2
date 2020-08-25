@@ -29,9 +29,10 @@ void Serialize_pw_request_header_t(uint8_t protocol_version,
   Serialize(&header, sizeof(header), buffer);
 }
 
-TPM_RC Parse_unimported_leaf_data_t(
-    std::string::const_iterator begin, std::string::const_iterator end,
-    std::string* cred_metadata, std::string* mac) {
+TPM_RC Parse_unimported_leaf_data_t(std::string::const_iterator begin,
+                                    std::string::const_iterator end,
+                                    std::string* cred_metadata,
+                                    std::string* mac) {
   auto size = end - begin;
   if (size < sizeof(unimported_leaf_data_t))
     return SAPI_RC_BAD_SIZE;
@@ -39,7 +40,8 @@ TPM_RC Parse_unimported_leaf_data_t(
   const struct unimported_leaf_data_t* unimported_leaf_data =
       reinterpret_cast<const struct unimported_leaf_data_t*>(&*begin);
   if (size != sizeof(unimported_leaf_data_t) +
-      unimported_leaf_data->head.pub_len + unimported_leaf_data->head.sec_len) {
+                  unimported_leaf_data->head.pub_len +
+                  unimported_leaf_data->head.sec_len) {
     return SAPI_RC_BAD_SIZE;
   }
 
@@ -47,8 +49,8 @@ TPM_RC Parse_unimported_leaf_data_t(
     cred_metadata->assign(begin, end);
   if (mac) {
     mac->assign(
-        unimported_leaf_data->hmac, unimported_leaf_data->hmac +
-            sizeof(unimported_leaf_data->hmac));
+        unimported_leaf_data->hmac,
+        unimported_leaf_data->hmac + sizeof(unimported_leaf_data->hmac));
   }
   return TPM_RC_SUCCESS;
 }
@@ -182,8 +184,9 @@ TPM_RC Serialize_pw_try_auth_t(uint8_t protocol_version,
   }
 
   buffer->reserve(buffer->size() + sizeof(pw_request_header_t) +
-      sizeof(pw_request_try_auth_t) +
-      (cred_metadata.size() - sizeof(unimported_leaf_data_t)) + h_aux.size());
+                  sizeof(pw_request_try_auth_t) +
+                  (cred_metadata.size() - sizeof(unimported_leaf_data_t)) +
+                  h_aux.size());
 
   Serialize_pw_request_header_t(
       protocol_version, PW_TRY_AUTH,
@@ -207,8 +210,9 @@ TPM_RC Serialize_pw_reset_auth_t(uint8_t protocol_version,
   }
 
   buffer->reserve(buffer->size() + sizeof(pw_request_header_t) +
-      sizeof(pw_request_reset_auth_t) +
-      (cred_metadata.size() - sizeof(unimported_leaf_data_t)) + h_aux.size());
+                  sizeof(pw_request_reset_auth_t) +
+                  (cred_metadata.size() - sizeof(unimported_leaf_data_t)) +
+                  h_aux.size());
 
   Serialize_pw_request_header_t(
       protocol_version, PW_RESET_AUTH,
@@ -238,16 +242,15 @@ TPM_RC Serialize_pw_log_replay_t(uint8_t protocol_version,
                                  const std::string& h_aux,
                                  const std::string& cred_metadata,
                                  std::string* buffer) {
-  if (log_root.size() != PW_HASH_SIZE ||
-      h_aux.length() > PW_MAX_PATH_SIZE ||
+  if (log_root.size() != PW_HASH_SIZE || h_aux.length() > PW_MAX_PATH_SIZE ||
       Validate_cred_metadata(cred_metadata) != TPM_RC_SUCCESS) {
     return SAPI_RC_BAD_PARAMETER;
   }
 
   buffer->reserve(buffer->size() + sizeof(pw_request_header_t) +
-      sizeof(pw_request_log_replay_t) +
-      (cred_metadata.size() - sizeof(unimported_leaf_data_t)) +
-      h_aux.size());
+                  sizeof(pw_request_log_replay_t) +
+                  (cred_metadata.size() - sizeof(unimported_leaf_data_t)) +
+                  h_aux.size());
 
   Serialize_pw_request_header_t(protocol_version, PW_LOG_REPLAY,
                                 sizeof(pw_request_log_replay_t) -
@@ -261,7 +264,8 @@ TPM_RC Serialize_pw_log_replay_t(uint8_t protocol_version,
 }
 
 TPM_RC Parse_pw_response_header_t(const std::string& buffer,
-                                  uint32_t* result_code, std::string* root_hash,
+                                  uint32_t* result_code,
+                                  std::string* root_hash,
                                   uint16_t* data_length) {
   *result_code = 0;
   if (root_hash)
@@ -302,11 +306,12 @@ TPM_RC Parse_pw_response_header_t(const std::string& buffer,
   return TPM_RC_SUCCESS;
 }
 
-TPM_RC Parse_pw_short_message(const std::string& buffer, uint32_t* result_code,
+TPM_RC Parse_pw_short_message(const std::string& buffer,
+                              uint32_t* result_code,
                               std::string* root_hash) {
   uint16_t data_length;
-  TPM_RC rc = Parse_pw_response_header_t(buffer, result_code, root_hash,
-                                         &data_length);
+  TPM_RC rc =
+      Parse_pw_response_header_t(buffer, result_code, root_hash, &data_length);
   if (rc != TPM_RC_SUCCESS)
     return rc;
 
@@ -329,15 +334,17 @@ TPM_RC Parse_pw_pong_t(const std::string& buffer, uint8_t* protocol_version) {
   return TPM_RC_SUCCESS;
 }
 
-TPM_RC Parse_pw_insert_leaf_t(
-    const std::string& buffer, uint32_t* result_code,
-    std::string* root_hash, std::string* cred_metadata, std::string* mac) {
+TPM_RC Parse_pw_insert_leaf_t(const std::string& buffer,
+                              uint32_t* result_code,
+                              std::string* root_hash,
+                              std::string* cred_metadata,
+                              std::string* mac) {
   cred_metadata->clear();
   mac->clear();
 
   uint16_t response_length;
   TPM_RC rc = Parse_pw_response_header_t(buffer, result_code, root_hash,
-                                  &response_length);
+                                         &response_length);
   if (rc != TPM_RC_SUCCESS)
     return rc;
 
@@ -350,11 +357,14 @@ TPM_RC Parse_pw_insert_leaf_t(
       cred_metadata, mac);
 }
 
-TPM_RC Parse_pw_try_auth_t(
-    const std::string& buffer, uint32_t* result_code,
-    std::string* root_hash, uint32_t* seconds_to_wait,
-    brillo::SecureBlob* he_secret, brillo::SecureBlob* reset_secret,
-    std::string* cred_metadata_out, std::string* mac_out) {
+TPM_RC Parse_pw_try_auth_t(const std::string& buffer,
+                           uint32_t* result_code,
+                           std::string* root_hash,
+                           uint32_t* seconds_to_wait,
+                           brillo::SecureBlob* he_secret,
+                           brillo::SecureBlob* reset_secret,
+                           std::string* cred_metadata_out,
+                           std::string* mac_out) {
   *seconds_to_wait = 0;
   he_secret->clear();
   reset_secret->clear();
@@ -395,9 +405,9 @@ TPM_RC Parse_pw_try_auth_t(
     }
   }
   if ((uint8_t)buffer[0] > 0) {
-      itr += 2 * PW_SECRET_SIZE;
+    itr += 2 * PW_SECRET_SIZE;
   } else {
-      itr += PW_SECRET_SIZE;
+    itr += PW_SECRET_SIZE;
   }
 
   // For PW_ERR_RATE_LIMIT_REACHED the only valid result field is
@@ -409,10 +419,12 @@ TPM_RC Parse_pw_try_auth_t(
                                       mac_out);
 }
 
-TPM_RC Parse_pw_reset_auth_t(
-    const std::string& buffer, uint32_t* result_code,
-    std::string* root_hash, brillo::SecureBlob* he_secret,
-    std::string* cred_metadata_out, std::string* mac_out) {
+TPM_RC Parse_pw_reset_auth_t(const std::string& buffer,
+                             uint32_t* result_code,
+                             std::string* root_hash,
+                             brillo::SecureBlob* he_secret,
+                             std::string* cred_metadata_out,
+                             std::string* mac_out) {
   he_secret->clear();
   cred_metadata_out->clear();
   mac_out->clear();
@@ -441,9 +453,10 @@ TPM_RC Parse_pw_reset_auth_t(
                                       mac_out);
 }
 
-TPM_RC Parse_pw_get_log_t(
-    const std::string& buffer, uint32_t* result_code, std::string* root_hash,
-    std::vector<trunks::PinWeaverLogEntry>* log) {
+TPM_RC Parse_pw_get_log_t(const std::string& buffer,
+                          uint32_t* result_code,
+                          std::string* root_hash,
+                          std::vector<trunks::PinWeaverLogEntry>* log) {
   log->clear();
 
   uint16_t response_length;
@@ -463,7 +476,7 @@ TPM_RC Parse_pw_get_log_t(
   TPM_RC ret = TPM_RC_SUCCESS;
   size_t x = 0;
   for (auto itr = buffer.begin() + sizeof(struct pw_response_header_t);
-      itr < buffer.end(); itr += sizeof(struct pw_get_log_entry_t)) {
+       itr < buffer.end(); itr += sizeof(struct pw_get_log_entry_t)) {
     const struct pw_get_log_entry_t* entry =
         reinterpret_cast<const struct pw_get_log_entry_t*>(&*itr);
     trunks::PinWeaverLogEntry* proto_entry = &(*log)[x];
@@ -494,10 +507,11 @@ TPM_RC Parse_pw_get_log_t(
   return ret;
 }
 
-TPM_RC Parse_pw_log_replay_t(
-    const std::string& buffer, uint32_t* result_code,
-    std::string* root_hash, std::string* cred_metadata_out,
-    std::string* mac_out) {
+TPM_RC Parse_pw_log_replay_t(const std::string& buffer,
+                             uint32_t* result_code,
+                             std::string* root_hash,
+                             std::string* cred_metadata_out,
+                             std::string* mac_out) {
   cred_metadata_out->clear();
   mac_out->clear();
 

@@ -29,8 +29,8 @@ using MessageCallback = base::Callback<void(const std::vector<uint8_t>&)>;
 using ConnectedCallback = dbus::ObjectProxy::OnConnectedCallback;
 using ErrorCallback = base::Callback<void(brillo::Error*)>;
 using SuccessCallback = base::Callback<void()>;
-using NameOwnerChangedCallback = base::Callback<void(const std::string&,
-                                                     const std::string&)>;
+using NameOwnerChangedCallback =
+    base::Callback<void(const std::string&, const std::string&)>;
 using ServiceAvailableCallback =
     dbus::ObjectProxy::WaitForServiceToBeAvailableCallback;
 
@@ -107,10 +107,9 @@ class PowerManagerTest : public testing::Test {
           service_available_ = std::move(*cb);
         }));
     ON_CALL(*object_proxy_, SetNameOwnerChangedCallback(_))
-        .WillByDefault(Invoke(
-            [this](const NameOwnerChangedCallback& cb) {
-              name_owner_changed_ = cb;
-            }));
+        .WillByDefault(Invoke([this](const NameOwnerChangedCallback& cb) {
+          name_owner_changed_ = cb;
+        }));
     ON_CALL(proxy_, UnregisterSuspendDelay(_, _, _))
         .WillByDefault(Return(true));
     ON_CALL(proxy_, GetObjectProxy())
@@ -143,37 +142,33 @@ class PowerManagerTest : public testing::Test {
         .Times(available ? 1 : 0);
     std::move(service_available_).Run(available);
   }
-  void ServiceLost() {
-    name_owner_changed_.Run("some_owner", std::string());
-  }
+  void ServiceLost() { name_owner_changed_.Run("some_owner", std::string()); }
   void ServiceRestored() {
     name_owner_changed_.Run(std::string(), "some_owner");
   }
 
   brillo::ErrorPtr TestError() {
-    return brillo::Error::Create(FROM_HERE, "test_domain",
-                                    "test_code", "test_message");
+    return brillo::Error::Create(FROM_HERE, "test_domain", "test_code",
+                                 "test_message");
   }
 
   void SetSuspendDelay(int32_t delay_id = kSomeDelayId) {
     EXPECT_CALL(proxy_, RegisterSuspendDelayAsync(_, _, _, _))
-        .WillOnce(Invoke(
-            [delay_id](const std::vector<uint8_t>& /* request */,
-                             const MessageCallback& on_reply,
-                             const ErrorCallback& /* on_error */,
-                             int /* timeout_ms */) {
-              power_manager::RegisterSuspendDelayReply reply;
-              reply.set_delay_id(delay_id);
-              SendMessage(on_reply, reply);
-            }));
+        .WillOnce(Invoke([delay_id](const std::vector<uint8_t>& /* request */,
+                                    const MessageCallback& on_reply,
+                                    const ErrorCallback& /* on_error */,
+                                    int /* timeout_ms */) {
+          power_manager::RegisterSuspendDelayReply reply;
+          reply.set_delay_id(delay_id);
+          SendMessage(on_reply, reply);
+        }));
   }
   void DenySuspendDelay() {
     EXPECT_CALL(proxy_, RegisterSuspendDelayAsync(_, _, _, _))
-        .WillOnce(Invoke(
-            [this](const std::vector<uint8_t>& /* request */,
-                   const MessageCallback& /* on_reply */,
-                   const ErrorCallback& on_error,
-                   int /* timeout_ms */) {
+        .WillOnce(
+            Invoke([this](const std::vector<uint8_t>& /* request */,
+                          const MessageCallback& /* on_reply */,
+                          const ErrorCallback& on_error, int /* timeout_ms */) {
               brillo::ErrorPtr error = TestError();
               on_error.Run(error.get());
             }));
@@ -182,11 +177,11 @@ class PowerManagerTest : public testing::Test {
   void ExpectSuspendReadiness(bool reply_success = true) {
     last_readiness_info_.Clear();
     EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _))
-        .WillOnce(Invoke(
-            [this, reply_success](const std::vector<uint8_t>& serialized_proto,
-                                  const SuccessCallback& on_success,
-                                  const ErrorCallback& on_error,
-                                  int /* timeout_ms */) {
+        .WillOnce(
+            Invoke([this, reply_success](
+                       const std::vector<uint8_t>& serialized_proto,
+                       const SuccessCallback& on_success,
+                       const ErrorCallback& on_error, int /* timeout_ms */) {
               DeserializeProto(serialized_proto, &last_readiness_info_);
               if (reply_success) {
                 on_success.Run();
@@ -206,17 +201,16 @@ class PowerManagerTest : public testing::Test {
   void ExpectUnregisterSuspendDelay(bool reply_success = true) {
     last_unregister_suspend_delay_.Clear();
     EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _))
-        .WillOnce(Invoke(
-            [this, reply_success](const std::vector<uint8_t>& serialized_proto,
-                                  brillo::ErrorPtr* error,
-                                  int /* timeout_ms */) -> bool {
-              DeserializeProto(serialized_proto,
-                               &last_unregister_suspend_delay_);
-              if (!reply_success) {
-                *error = TestError();
-              }
-              return reply_success;
-            }))
+        .WillOnce(Invoke([this, reply_success](
+                             const std::vector<uint8_t>& serialized_proto,
+                             brillo::ErrorPtr* error,
+                             int /* timeout_ms */) -> bool {
+          DeserializeProto(serialized_proto, &last_unregister_suspend_delay_);
+          if (!reply_success) {
+            *error = TestError();
+          }
+          return reply_success;
+        }))
         .RetiresOnSaturation();
   }
   void CheckUnregisterSuspendDelay(int32_t delay_id = kSomeDelayId) {
@@ -239,19 +233,18 @@ class PowerManagerTest : public testing::Test {
     ServiceAvailable();
   }
 
-  void SuspendResume(bool do_suspend = true, bool do_resume = true,
+  void SuspendResume(bool do_suspend = true,
+                     bool do_resume = true,
                      int32_t suspend_id = kSomeSuspendId,
                      int32_t delay_id = kSomeDelayId) {
-    EXPECT_CALL(resource_manager_, Suspend())
-        .Times(do_suspend);
+    EXPECT_CALL(resource_manager_, Suspend()).Times(do_suspend);
     if (do_suspend) {
       ExpectSuspendReadiness();
       SendSuspendImminent(suspend_id);
       CheckSuspendReadiness(suspend_id, delay_id);
     }
 
-    EXPECT_CALL(resource_manager_, Resume())
-        .Times(do_resume);
+    EXPECT_CALL(resource_manager_, Resume()).Times(do_resume);
     if (do_resume) {
       SendSuspendDone();
     }
@@ -292,8 +285,7 @@ TEST_F(PowerManagerTest, ServiceAvailableFailure) {
   // SuspendDelay.
   Init();
   ConnectAllSignals();
-  EXPECT_CALL(proxy_, RegisterSuspendDelayAsync(_, _, _, _))
-      .Times(0);
+  EXPECT_CALL(proxy_, RegisterSuspendDelayAsync(_, _, _, _)).Times(0);
   ServiceAvailable(false);
 }
 
@@ -307,8 +299,7 @@ TEST_F(PowerManagerTest, SuspendWithoutResumeSignalConnected) {
   ConnectSignal(&dark_suspend_imminent_);
   ServiceAvailable();
   ExpectSuspendReadiness();
-  EXPECT_CALL(resource_manager_, Suspend())
-      .Times(0);
+  EXPECT_CALL(resource_manager_, Suspend()).Times(0);
   SendSuspendImminent();
   CheckSuspendReadiness();
 }
@@ -321,10 +312,8 @@ TEST_F(PowerManagerTest, SuspendWithoutSuspendDelay) {
   DenySuspendDelay();
   ConnectAllSignals();
   ServiceAvailable();
-  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Suspend())
-      .Times(1);
+  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Suspend()).Times(1);
   SendSuspendImminent();
 }
 
@@ -360,10 +349,8 @@ TEST_F(PowerManagerTest, SuspendReadinessIgnoresResult) {
   // The results of sending SuspendReadinessInfo shouldn't affect the behavior.
   // Errors are ignored.
   NormalStart();
-  EXPECT_CALL(resource_manager_, Suspend())
-      .Times(3);
-  EXPECT_CALL(resource_manager_, Resume())
-      .Times(3);
+  EXPECT_CALL(resource_manager_, Suspend()).Times(3);
+  EXPECT_CALL(resource_manager_, Resume()).Times(3);
   ExpectSuspendReadiness(false);
   SendSuspendImminent(kSomeSuspendId);
   CheckSuspendReadiness(kSomeSuspendId);
@@ -391,10 +378,8 @@ TEST_F(PowerManagerTest, TearDown) {
   ExpectUnregisterSuspendDelay();
   power_manager_.TearDown();
   CheckUnregisterSuspendDelay();
-  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Suspend())
-      .Times(1);
+  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Suspend()).Times(1);
   SendSuspendImminent();
 }
 
@@ -430,31 +415,24 @@ TEST_F(PowerManagerTest, ServiceLost) {
   // SuspendDelay should not be attempted to be unregistered - service is
   // gone.
   NormalStart();
-  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Resume())
-      .Times(1);
+  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Resume()).Times(1);
   ServiceLost();
 }
 
 TEST_F(PowerManagerTest, ServiceRestored) {
   NormalStart();
-  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Resume())
-      .Times(1);
+  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Resume()).Times(1);
   ServiceLost();
   testing::Mock::VerifyAndClearExpectations(&resource_manager_);
 
   // While no service, don't send ReadinessInfo, but otherwise process
   // SuspendImminent and SuspendDone.
-  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Suspend())
-      .Times(1);
+  EXPECT_CALL(proxy_, HandleSuspendReadinessAsync(_, _, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Suspend()).Times(1);
   SendSuspendImminent();
-  EXPECT_CALL(resource_manager_, Resume())
-      .Times(1);
+  EXPECT_CALL(resource_manager_, Resume()).Times(1);
   SendSuspendDone();
   testing::Mock::VerifyAndClearExpectations(&resource_manager_);
 
@@ -479,10 +457,8 @@ TEST_F(PowerManagerTest, UnexpectedServiceRestored) {
 
   int32_t new_delay_id = kSomeDelayId + 1;
   SetSuspendDelay(new_delay_id);
-  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _))
-      .Times(0);
-  EXPECT_CALL(resource_manager_, Resume())
-      .Times(1);
+  EXPECT_CALL(proxy_, UnregisterSuspendDelay(_, _, _)).Times(0);
+  EXPECT_CALL(resource_manager_, Resume()).Times(1);
   ServiceRestored();
 
   SuspendResume(true, true, kSomeSuspendId, new_delay_id);

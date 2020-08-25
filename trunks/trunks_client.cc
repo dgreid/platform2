@@ -297,12 +297,13 @@ int KeyStartSession(trunks::SessionManager* session_manager,
 
 int GetKeyUsage(const std::string& option_value,
                 trunks::TpmUtility::AsymmetricKeyUsage* key_usage) {
-  const std::map<std::string,
-                 trunks::TpmUtility::AsymmetricKeyUsage> mapping = {
-    {"decrypt", trunks::TpmUtility::kDecryptKey},
-    {"sign", trunks::TpmUtility::kSignKey},
-    {"all", trunks::TpmUtility::kDecryptAndSignKey},
-  };
+  const std::map<std::string, trunks::TpmUtility::AsymmetricKeyUsage> mapping =
+      // NOLINTNEXTLINE(whitespace/braces)
+      {
+          {"decrypt", trunks::TpmUtility::kDecryptKey},
+          {"sign", trunks::TpmUtility::kSignKey},
+          {"all", trunks::TpmUtility::kDecryptAndSignKey},
+      };
   auto entry = mapping.find(option_value);
   if (entry == mapping.end()) {
     LOG(ERROR) << "Unrecognized key usage: " << option_value;
@@ -352,8 +353,7 @@ int KeyTestShortEcc(const TrunksFactory& factory, uint32_t handle) {
   std::string name;
   trunks::TPM_RC rc = tpm_utility->GetKeyName(handle, &name);
   if (rc != trunks::TPM_RC_SUCCESS) {
-    LOG(ERROR) << "Error during GetKeyName: "
-               << trunks::GetErrorString(rc);
+    LOG(ERROR) << "Error during GetKeyName: " << trunks::GetErrorString(rc);
     return -1;
   }
 
@@ -363,8 +363,7 @@ int KeyTestShortEcc(const TrunksFactory& factory, uint32_t handle) {
   rc = session_manager->StartSession(trunks::TPM_SE_HMAC, trunks::TPM_RH_NULL,
                                      "", false, false, &delegate);
   if (rc != trunks::TPM_RC_SUCCESS) {
-    LOG(ERROR) << "Error during StartSession: "
-               << trunks::GetErrorString(rc);
+    LOG(ERROR) << "Error during StartSession: " << trunks::GetErrorString(rc);
     return -1;
   }
 
@@ -375,8 +374,7 @@ int KeyTestShortEcc(const TrunksFactory& factory, uint32_t handle) {
     rc = factory.GetTpm()->ECDH_KeyGenSync(handle, name, &z_point, &pub_point,
                                            nullptr);
     if (rc != trunks::TPM_RC_SUCCESS) {
-      LOG(ERROR) << "Error during ECDH_KeyGen: "
-                 << trunks::GetErrorString(rc);
+      LOG(ERROR) << "Error during ECDH_KeyGen: " << trunks::GetErrorString(rc);
       return -1;
     }
   } while (pub_point.point.x.buffer[0] && pub_point.point.y.buffer[0]);

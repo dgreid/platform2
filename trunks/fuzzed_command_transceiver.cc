@@ -32,7 +32,9 @@ std::string BuildHeader(uint16_t tag, uint32_t size, uint32_t code) {
   return header;
 }
 
-bool ParseHeader(const std::string& command, uint16_t* tag, uint32_t* size,
+bool ParseHeader(const std::string& command,
+                 uint16_t* tag,
+                 uint32_t* size,
                  uint32_t* code) {
   std::string header(command, 0, kHeaderSize);
   if (trunks::Parse_uint16_t(&header, tag, nullptr)) {
@@ -57,9 +59,8 @@ FuzzedCommandTransceiver::FuzzedCommandTransceiver(
   CHECK(data_provider);
 }
 
-void FuzzedCommandTransceiver::SendCommand(
-    const std::string& command,
-    const ResponseCallback& callback) {
+void FuzzedCommandTransceiver::SendCommand(const std::string& command,
+                                           const ResponseCallback& callback) {
   callback.Run(SendCommandAndWait(command));
 }
 
@@ -80,8 +81,8 @@ std::string FuzzedCommandTransceiver::ConsumeCommand() {
   std::string handles = ConsumeHandles(GetNumberOfRequestHandles(code));
   std::string payload = ConsumePayload(kHeaderSize + handles.size());
 
-  return BuildHeader(tag, kHeaderSize + handles.size() + payload.size(),
-                     code) + handles + payload;
+  return BuildHeader(tag, kHeaderSize + handles.size() + payload.size(), code) +
+         handles + payload;
 }
 
 std::string FuzzedCommandTransceiver::ConsumeResponseForCommand(
@@ -114,7 +115,8 @@ std::string FuzzedCommandTransceiver::ConsumeResponseForCommand(
   }
 
   return BuildHeader(cmd_tag, kHeaderSize + handles.size() + payload.size(),
-                     resp_code) + handles + payload;
+                     resp_code) +
+         handles + payload;
 }
 
 uint32_t FuzzedCommandTransceiver::ConsumeCommandCode() {
@@ -171,11 +173,11 @@ uint32_t FuzzedCommandTransceiver::ConsumeHandle() {
 }
 
 std::string FuzzedCommandTransceiver::ConsumePayload(size_t pre_payload_size) {
-    if (max_message_size_ <= pre_payload_size) {
-      return std::string();
-    }
-    return data_provider_->ConsumeRandomLengthString(
-        max_message_size_ - pre_payload_size);
+  if (max_message_size_ <= pre_payload_size) {
+    return std::string();
+  }
+  return data_provider_->ConsumeRandomLengthString(max_message_size_ -
+                                                   pre_payload_size);
 }
 
 bool FuzzedCommandTransceiver::ConsumeBoolWithProbability(

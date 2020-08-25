@@ -15,7 +15,7 @@
 
 namespace trunks {
 
-TpmCacheImpl::TpmCacheImpl(const TrunksFactory& factory): factory_(factory) {}
+TpmCacheImpl::TpmCacheImpl(const TrunksFactory& factory) : factory_(factory) {}
 
 TPM_RC TpmCacheImpl::GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) {
   // sanity check
@@ -34,11 +34,8 @@ TPM_RC TpmCacheImpl::GetSaltingKeyPublicArea(TPMT_PUBLIC* public_area) {
   TPM2B_NAME unused_qualified_name;
   TPM2B_PUBLIC public_data;
   TPM_RC result = factory_.GetTpm()->ReadPublicSync(
-      kSaltingKey,
-      "" /* object_handle_name, not used */,
-      &public_data,
-      &unused_out_name,
-      &unused_qualified_name,
+      kSaltingKey, "" /* object_handle_name, not used */, &public_data,
+      &unused_out_name, &unused_qualified_name,
       nullptr /* authorization_delegate */);
 
   if (result == TPM_RC_SUCCESS) {

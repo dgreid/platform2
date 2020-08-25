@@ -24,8 +24,9 @@
 namespace {
 
 constexpr int kDefaultRetryDelayInMS = 250;
-constexpr int kDefaultRetryTimeoutInMS = 10*1000;
-constexpr int kDefaultRetries = kDefaultRetryTimeoutInMS/kDefaultRetryDelayInMS;
+constexpr int kDefaultRetryTimeoutInMS = 10 * 1000;
+constexpr int kDefaultRetries =
+    kDefaultRetryTimeoutInMS / kDefaultRetryDelayInMS;
 constexpr base::TimeDelta kDefaultRetryDelay =
     base::TimeDelta::FromMilliseconds(kDefaultRetryDelayInMS);
 
@@ -78,8 +79,8 @@ class TrunksFactoryImpl::PostProcessingTransceiver : public CommandTransceiver {
  private:
   bool RetryNeededFor(const std::string& response, int attempt_num) {
     if (attempt_num > max_command_retries_) {
-      LOG(WARNING) << "Gave up retrying command after "
-                   << attempt_num << " attempts.";
+      LOG(WARNING) << "Gave up retrying command after " << attempt_num
+                   << " attempts.";
       return false;
     }
     TPM_RC rc;

@@ -45,8 +45,7 @@ BackgroundCommandTransceiver::BackgroundCommandTransceiver(
 BackgroundCommandTransceiver::~BackgroundCommandTransceiver() {}
 
 void BackgroundCommandTransceiver::SendCommand(
-    const std::string& command,
-    const ResponseCallback& callback) {
+    const std::string& command, const ResponseCallback& callback) {
   if (task_runner_.get()) {
     ResponseCallback background_callback =
         base::Bind(PostCallbackToTaskRunner, callback,
@@ -85,8 +84,7 @@ std::string BackgroundCommandTransceiver::SendCommandAndWait(
 }
 
 void BackgroundCommandTransceiver::SendCommandTask(
-    const std::string& command,
-    const ResponseCallback& callback) {
+    const std::string& command, const ResponseCallback& callback) {
   next_transceiver_->SendCommand(command, callback);
 }
 

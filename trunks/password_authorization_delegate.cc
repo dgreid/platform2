@@ -39,8 +39,7 @@ bool PasswordAuthorizationDelegate::GetCommandAuthorization(
 }
 
 bool PasswordAuthorizationDelegate::CheckResponseAuthorization(
-    const std::string& response_hash,
-    const std::string& authorization) {
+    const std::string& response_hash, const std::string& authorization) {
   TPMS_AUTH_RESPONSE auth_response;
   std::string mutable_auth_string(authorization);
   std::string auth_bytes;

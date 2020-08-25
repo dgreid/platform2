@@ -48,8 +48,8 @@ class TRUNKS_EXPORT SessionManagerImpl : public SessionManager {
   //
   // This is a wrapper function. It calls either GenerateRsaSessionSalt() or
   // GenerateEccSessionSalt(), depending on the salting key type.
-  TPM_RC GenerateSessionSalt(
-      brillo::SecureBlob* salt, std::string* encrypted_salt);
+  TPM_RC GenerateSessionSalt(brillo::SecureBlob* salt,
+                             std::string* encrypted_salt);
 
   // This factory is only set in the constructor and is used to instantiate
   // The TPM class to forward commands to the TPM chip.

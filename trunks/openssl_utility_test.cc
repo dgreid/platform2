@@ -52,15 +52,16 @@ class OpensslUtilityTest : public testing::Test {
 
   // Creates an ECC point in the OpenSSL EC_POINT format, using the hex encoded
   // x, y coordinates |hex_x| and |hex_y|, and stores the point in |ec_point|.
-  void CreateOpensslEccPoint(
-      const char* hex_x, const char* hex_y, EC_POINT* ec_point) {
+  void CreateOpensslEccPoint(const char* hex_x,
+                             const char* hex_y,
+                             EC_POINT* ec_point) {
     hwsec::ScopedBN_CTX ctx;
     BIGNUM* x = BN_CTX_get(ctx.get());
     BIGNUM* y = BN_CTX_get(ctx.get());
     BN_hex2bn(&x, hex_x);
     BN_hex2bn(&y, hex_y);
-    ASSERT_EQ(EC_POINT_set_affine_coordinates_GFp(
-                  default_ec_group_.get(), ec_point, x, y, ctx.get()),
+    ASSERT_EQ(EC_POINT_set_affine_coordinates_GFp(default_ec_group_.get(),
+                                                  ec_point, x, y, ctx.get()),
               1);
   }
 
@@ -81,13 +82,12 @@ using OpensslUtilityDeathTest = OpensslUtilityTest;
 
 TEST_F(OpensslUtilityTest, OpensslToTpmEccPointSuccess) {
   crypto::ScopedEC_POINT openssl_point(EC_POINT_new(default_ec_group_.get()));
-  CreateOpensslEccPoint(
-      kDefaultEccPointX, kDefaultEccPointY, openssl_point.get());
+  CreateOpensslEccPoint(kDefaultEccPointX, kDefaultEccPointY,
+                        openssl_point.get());
 
   TPMS_ECC_POINT tpm_point;
   EXPECT_TRUE(OpensslToTpmEccPoint(*default_ec_group_.get(),
-                                   *openssl_point.get(),
-                                   kTestEccKeySize,
+                                   *openssl_point.get(), kTestEccKeySize,
                                    &tpm_point));
   EXPECT_EQ(StringFrom_TPM2B_ECC_PARAMETER(tpm_point.x),
             HexDecode(kDefaultEccPointX));
@@ -104,16 +104,13 @@ TEST_F(OpensslUtilityTest, OpensslToTpmEccPointZeroPadding) {
   const char* kUnpaddedEccPointY = kPaddedEccPointY + 2;
 
   crypto::ScopedEC_POINT openssl_point(EC_POINT_new(default_ec_group_.get()));
-  CreateOpensslEccPoint(
-      kEccPointX, kUnpaddedEccPointY, openssl_point.get());
+  CreateOpensslEccPoint(kEccPointX, kUnpaddedEccPointY, openssl_point.get());
 
   TPMS_ECC_POINT tpm_point;
   EXPECT_TRUE(OpensslToTpmEccPoint(*default_ec_group_.get(),
-                                   *openssl_point.get(),
-                                   kTestEccKeySize,
+                                   *openssl_point.get(), kTestEccKeySize,
                                    &tpm_point));
-  EXPECT_EQ(StringFrom_TPM2B_ECC_PARAMETER(tpm_point.x),
-            HexDecode(kEccPointX));
+  EXPECT_EQ(StringFrom_TPM2B_ECC_PARAMETER(tpm_point.x), HexDecode(kEccPointX));
   EXPECT_EQ(StringFrom_TPM2B_ECC_PARAMETER(tpm_point.y),
             HexDecode(kPaddedEccPointY));
 }
@@ -131,17 +128,15 @@ TEST_F(OpensslUtilityTest, TpmToOpensslEccPointSuccess) {
       CreateTpmEccPoint(kDefaultEccPointX, kDefaultEccPointY);
 
   crypto::ScopedEC_POINT openssl_point(EC_POINT_new(default_ec_group_.get()));
-  EXPECT_TRUE(TpmToOpensslEccPoint(
-      tpm_point, *default_ec_group_.get(), openssl_point.get()));
+  EXPECT_TRUE(TpmToOpensslEccPoint(tpm_point, *default_ec_group_.get(),
+                                   openssl_point.get()));
 
   hwsec::ScopedBN_CTX ctx;
   BIGNUM* actual_x = BN_CTX_get(ctx.get());
   BIGNUM* actual_y = BN_CTX_get(ctx.get());
   ASSERT_EQ(EC_POINT_get_affine_coordinates_GFp(default_ec_group_.get(),
-                                                openssl_point.get(),
-                                                actual_x,
-                                                actual_y,
-                                                ctx.get()),
+                                                openssl_point.get(), actual_x,
+                                                actual_y, ctx.get()),
             1);
 
   BIGNUM* expected_x = BN_CTX_get(ctx.get());

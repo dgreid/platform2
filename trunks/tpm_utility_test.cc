@@ -169,8 +169,7 @@ class TpmUtilityTest : public testing::Test {
   }
 
   void SetCr50(bool is_cr50) {
-    EXPECT_CALL(mock_tpm_state_, Initialize())
-        .WillOnce(Return(TPM_RC_SUCCESS));
+    EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
     uint32_t vendor_id = is_cr50 ? kVendorIdCr50 : 1;
     EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
         .WillOnce(DoAll(SetArgPointee<1>(vendor_id), Return(true)));
@@ -391,8 +390,7 @@ TEST_F(TpmUtilityTest, PrepareForOwnershipSuccess) {
       .WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_, HierarchyChangeAuthSync(TPM_RH_OWNER, _, _, _))
       .WillOnce(Return(TPM_RC_SUCCESS));
-  EXPECT_EQ(TPM_RC_SUCCESS,
-            utility_.PrepareForOwnership());
+  EXPECT_EQ(TPM_RC_SUCCESS, utility_.PrepareForOwnership());
 }
 
 TEST_F(TpmUtilityTest, PrepareForOwnershipFailure) {
@@ -400,17 +398,13 @@ TEST_F(TpmUtilityTest, PrepareForOwnershipFailure) {
       .WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_, HierarchyChangeAuthSync(TPM_RH_OWNER, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(TPM_RC_FAILURE,
-            utility_.PrepareForOwnership());
+  EXPECT_EQ(TPM_RC_FAILURE, utility_.PrepareForOwnership());
 }
 
 TEST_F(TpmUtilityTest, PrepareForOwnershipAlreadyOwned) {
-  EXPECT_CALL(mock_tpm_state_, IsOwnerPasswordSet())
-      .WillOnce(Return(true));
-  EXPECT_CALL(mock_tpm_, HierarchyChangeAuthSync(_, _, _, _))
-      .Times(0);
-  EXPECT_EQ(TPM_RC_SUCCESS,
-            utility_.PrepareForOwnership());
+  EXPECT_CALL(mock_tpm_state_, IsOwnerPasswordSet()).WillOnce(Return(true));
+  EXPECT_CALL(mock_tpm_, HierarchyChangeAuthSync(_, _, _, _)).Times(0);
+  EXPECT_EQ(TPM_RC_SUCCESS, utility_.PrepareForOwnership());
 }
 
 TEST_F(TpmUtilityTest, TakeOwnershipSuccess) {
@@ -1382,19 +1376,19 @@ TEST_F(TpmUtilityTest, ImportEccKeySuccess) {
 TEST_F(TpmUtilityTest, CreateRSAKeyPairSuccess) {
   TPM2B_PUBLIC public_area;
   TPML_PCR_SELECTION creation_pcrs;
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _,
-                                         _, _, &mock_authorization_delegate_))
+  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _, _,
+                                         _, &mock_authorization_delegate_))
       .WillOnce(DoAll(SaveArg<2>(&public_area), SaveArg<3>(&creation_pcrs),
                       Return(TPM_RC_SUCCESS)));
   std::string key_blob;
   std::string creation_blob;
   uint32_t creation_pcr = 12;
-  EXPECT_EQ(TPM_RC_SUCCESS,
-            utility_.CreateRSAKeyPair(
-                TpmUtility::AsymmetricKeyUsage::kDecryptAndSignKey, 2048,
-                0x10001, "password", "", false,
-                std::vector<uint32_t>({creation_pcr}),
-                &mock_authorization_delegate_, &key_blob, &creation_blob));
+  EXPECT_EQ(
+      TPM_RC_SUCCESS,
+      utility_.CreateRSAKeyPair(
+          TpmUtility::AsymmetricKeyUsage::kDecryptAndSignKey, 2048, 0x10001,
+          "password", "", false, std::vector<uint32_t>({creation_pcr}),
+          &mock_authorization_delegate_, &key_blob, &creation_blob));
   EXPECT_EQ(public_area.public_area.object_attributes & kDecrypt, kDecrypt);
   EXPECT_EQ(public_area.public_area.object_attributes & kSign, kSign);
   EXPECT_EQ(public_area.public_area.object_attributes & kUserWithAuth,
@@ -1412,8 +1406,8 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairSuccess) {
 TEST_F(TpmUtilityTest, CreateRSAKeyPairMultiplePCRSuccess) {
   TPM2B_PUBLIC public_area;
   TPML_PCR_SELECTION creation_pcrs;
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _,
-                                         _, _, &mock_authorization_delegate_))
+  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _, _,
+                                         _, &mock_authorization_delegate_))
       .WillOnce(DoAll(SaveArg<2>(&public_area), SaveArg<3>(&creation_pcrs),
                       Return(TPM_RC_SUCCESS)));
   std::string key_blob;
@@ -1447,8 +1441,8 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairMultiplePCRSuccess) {
 
 TEST_F(TpmUtilityTest, CreateRSAKeyPairDecryptKeySuccess) {
   TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _,
-                                         _, _, &mock_authorization_delegate_))
+  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _, _,
+                                         _, &mock_authorization_delegate_))
       .WillOnce(DoAll(SaveArg<2>(&public_area), Return(TPM_RC_SUCCESS)));
   std::string key_blob;
   EXPECT_EQ(TPM_RC_SUCCESS,
@@ -1465,24 +1459,23 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairDecryptKeySuccess) {
 TEST_F(TpmUtilityTest, CreateRSAKeyPairSignKeySuccess) {
   TPM2B_PUBLIC public_area;
   TPM2B_SENSITIVE_CREATE sensitive_create;
-  EXPECT_CALL(mock_tpm_state_, Initialize())
-      .WillOnce(Return(TPM_RC_SUCCESS));
+  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
       .WillOnce(DoAll(SetArgPointee<1>(kVendorIdCr50), Return(true)));
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _,
-                                         _, _, &mock_authorization_delegate_))
+  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _, _,
+                                         _, &mock_authorization_delegate_))
       .WillOnce(DoAll(SaveArg<1>(&sensitive_create), SaveArg<2>(&public_area),
                       Return(TPM_RC_SUCCESS)));
   std::string key_blob;
   std::string policy_digest(32, 'a');
   std::string key_auth("password");
-  EXPECT_EQ(
-      TPM_RC_SUCCESS,
-      utility_.CreateRSAKeyPair(
-          TpmUtility::AsymmetricKeyUsage::kSignKey, 2048, 0x10001, key_auth,
-          policy_digest, true /* use_only_policy_authorization */,
-          std::vector<uint32_t>(), &mock_authorization_delegate_, &key_blob,
-          nullptr));
+  EXPECT_EQ(TPM_RC_SUCCESS,
+            utility_.CreateRSAKeyPair(TpmUtility::AsymmetricKeyUsage::kSignKey,
+                                      2048, 0x10001, key_auth, policy_digest,
+                                      true /* use_only_policy_authorization */,
+                                      std::vector<uint32_t>(),
+                                      &mock_authorization_delegate_, &key_blob,
+                                      nullptr));
   EXPECT_EQ(public_area.public_area.object_attributes & kDecrypt, 0u);
   EXPECT_EQ(public_area.public_area.object_attributes & kSign, kSign);
   EXPECT_EQ(public_area.public_area.object_attributes & kUserWithAuth, 0u);
@@ -1504,8 +1497,7 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairSignKeySuccessNoPaddingOnlyAlg) {
   // Unknown vendor - no padding-only alg support expected for TPM.
   uint32_t vendor_id = 0xaabbccdd;
   TPM2B_PUBLIC public_area;
-  EXPECT_CALL(mock_tpm_state_, Initialize())
-      .WillOnce(Return(TPM_RC_SUCCESS));
+  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
       .WillOnce(DoAll(SetArgPointee<1>(vendor_id), Return(true)));
   EXPECT_CALL(mock_tpm_, CreateSyncShort(_, _, _, _, _, _, _, _, _, _))
@@ -1513,34 +1505,32 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairSignKeySuccessNoPaddingOnlyAlg) {
   std::string key_blob;
   std::string policy_digest(32, 'a');
   std::string key_auth("password");
-  EXPECT_EQ(
-      TPM_RC_SUCCESS,
-      utility_.CreateRSAKeyPair(
-          TpmUtility::AsymmetricKeyUsage::kSignKey, 2048, 0x10001, key_auth,
-          policy_digest, true /* use_only_policy_authorization */,
-          std::vector<uint32_t>(), &mock_authorization_delegate_, &key_blob,
-          nullptr));
+  EXPECT_EQ(TPM_RC_SUCCESS,
+            utility_.CreateRSAKeyPair(TpmUtility::AsymmetricKeyUsage::kSignKey,
+                                      2048, 0x10001, key_auth, policy_digest,
+                                      true /* use_only_policy_authorization */,
+                                      std::vector<uint32_t>(),
+                                      &mock_authorization_delegate_, &key_blob,
+                                      nullptr));
   EXPECT_EQ(public_area.public_area.object_attributes & kDecrypt, kDecrypt);
   EXPECT_EQ(public_area.public_area.object_attributes & kSign, kSign);
 }
 
 TEST_F(TpmUtilityTest, CreateRSAKeyPairBadDelegate) {
   std::string key_blob;
-  EXPECT_EQ(
-      SAPI_RC_INVALID_SESSIONS,
-      utility_.CreateRSAKeyPair(TpmUtility::AsymmetricKeyUsage::kDecryptKey,
-                                2048, 0x10001, "password", "", false,
-                                std::vector<uint32_t>(), nullptr, &key_blob,
-                                nullptr));
+  EXPECT_EQ(SAPI_RC_INVALID_SESSIONS,
+            utility_.CreateRSAKeyPair(
+                TpmUtility::AsymmetricKeyUsage::kDecryptKey, 2048, 0x10001,
+                "password", "", false, std::vector<uint32_t>(), nullptr,
+                &key_blob, nullptr));
 }
 
 TEST_F(TpmUtilityTest, CreateRSAKeyPairFailure) {
-  EXPECT_CALL(mock_tpm_state_, Initialize())
-      .WillOnce(Return(TPM_RC_SUCCESS));
+  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
       .WillOnce(DoAll(SetArgPointee<1>(kVendorIdCr50), Return(true)));
-  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _,
-                                         _, _, &mock_authorization_delegate_))
+  EXPECT_CALL(mock_tpm_, CreateSyncShort(kStorageRootKey, _, _, _, _, _, _, _,
+                                         _, &mock_authorization_delegate_))
       .WillOnce(Return(TPM_RC_FAILURE));
   std::string key_blob;
   EXPECT_EQ(TPM_RC_FAILURE,
@@ -1552,8 +1542,7 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairFailure) {
 
 TEST_F(TpmUtilityTest, CreateRSAKeyPairKeyParserFail) {
   std::string key_blob;
-  EXPECT_CALL(mock_tpm_state_, Initialize())
-      .WillOnce(Return(TPM_RC_SUCCESS));
+  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
       .WillOnce(DoAll(SetArgPointee<1>(kVendorIdCr50), Return(true)));
   EXPECT_CALL(mock_blob_parser_, SerializeKeyBlob(_, _, &key_blob))
@@ -1568,8 +1557,7 @@ TEST_F(TpmUtilityTest, CreateRSAKeyPairKeyParserFail) {
 TEST_F(TpmUtilityTest, CreateRSAKeyPairCreationParserFail) {
   std::string creation_blob;
   std::string key_blob;
-  EXPECT_CALL(mock_tpm_state_, Initialize())
-      .WillOnce(Return(TPM_RC_SUCCESS));
+  EXPECT_CALL(mock_tpm_state_, Initialize()).WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(mock_tpm_state_, GetTpmProperty(TPM_PT_MANUFACTURER, _))
       .WillOnce(DoAll(SetArgPointee<1>(kVendorIdCr50), Return(true)));
   EXPECT_CALL(mock_blob_parser_, SerializeCreationBlob(_, _, _, &creation_blob))
@@ -1825,25 +1813,21 @@ TEST_F(TpmUtilityTest, LoadECPublicKey) {
 
   EXPECT_EQ(TPM_RC_SUCCESS,
             utility_.LoadECPublicKey(
-              TpmUtility::AsymmetricKeyUsage::kDecryptKey,
-              TPM_ECC_NIST_P256,
-              TPM_ALG_ECDSA,  /* default scheme, TPM_ALG_ECDSA */
-              TPM_ALG_SHA256,  /* default hash alg, TPM_ALG_SHA256 */
-              x,
-              y,
-              &mock_authorization_delegate_,
-              &loaded_handle));
+                TpmUtility::AsymmetricKeyUsage::kDecryptKey, TPM_ECC_NIST_P256,
+                TPM_ALG_ECDSA,  /* default scheme, TPM_ALG_ECDSA */
+                TPM_ALG_SHA256, /* default hash alg, TPM_ALG_SHA256 */
+                x, y, &mock_authorization_delegate_, &loaded_handle));
 
   testing::Mock::VerifyAndClearExpectations(&mock_tpm_);
   EXPECT_EQ(0, in_private_arg.size);
   EXPECT_EQ(kFixedTPM | kFixedParent,
             in_public_arg.public_area.object_attributes);
-  EXPECT_EQ(TPM_ALG_ECDSA,  /* default algorithm */
+  EXPECT_EQ(TPM_ALG_ECDSA, /* default algorithm */
             in_public_arg.public_area.parameters.ecc_detail.scheme.scheme);
-  EXPECT_EQ(TPM_ALG_SHA256, in_public_arg.public_area.parameters
-                            .ecc_detail.kdf.scheme);
+  EXPECT_EQ(TPM_ALG_SHA256,
+            in_public_arg.public_area.parameters.ecc_detail.kdf.scheme);
   EXPECT_EQ(TPM_ECC_NIST_P256,
-    in_public_arg.public_area.parameters.ecc_detail.curve_id);
+            in_public_arg.public_area.parameters.ecc_detail.curve_id);
   EXPECT_EQ(TPM_RH_NULL, hierarchy_arg);
   EXPECT_EQ(kKeyHandle, loaded_handle);
 }
@@ -2134,17 +2118,14 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesSuccess) {
                       SetArgPointee<3>(pcr_values), Return(TPM_RC_SUCCESS)));
   std::map<uint32_t, std::string> pcr_map;
   EXPECT_CALL(mock_trial_session_, PolicyPCR(_))
-      .WillOnce(DoAll(SaveArg<0>(&pcr_map),
-                      Return(TPM_RC_SUCCESS)));
+      .WillOnce(DoAll(SaveArg<0>(&pcr_map), Return(TPM_RC_SUCCESS)));
   std::string tpm_policy_digest("digest");
   EXPECT_CALL(mock_trial_session_, GetDigest(_))
       .WillOnce(
           DoAll(SetArgPointee<0>(tpm_policy_digest), Return(TPM_RC_SUCCESS)));
-  EXPECT_EQ(TPM_RC_SUCCESS,
-            utility_.GetPolicyDigestForPcrValues(
-                std::map<uint32_t, std::string>({{index, ""}}),
-                false /* use_auth_value */,
-                &policy_digest));
+  EXPECT_EQ(TPM_RC_SUCCESS, utility_.GetPolicyDigestForPcrValues(
+                                std::map<uint32_t, std::string>({{index, ""}}),
+                                false /* use_auth_value */, &policy_digest));
   EXPECT_EQ(policy_digest, tpm_policy_digest);
   EXPECT_EQ(pcr_value, pcr_map[index]);
 }
@@ -2154,10 +2135,8 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesSuccessWithPcrValue) {
   std::string pcr_value("pcr_value");
   std::string policy_digest;
   std::map<uint32_t, std::string> pcr_map;
-  EXPECT_CALL(mock_trial_session_,
-              PolicyPCR(_))
-      .WillOnce(DoAll(SaveArg<0>(&pcr_map),
-                      Return(TPM_RC_SUCCESS)));
+  EXPECT_CALL(mock_trial_session_, PolicyPCR(_))
+      .WillOnce(DoAll(SaveArg<0>(&pcr_map), Return(TPM_RC_SUCCESS)));
   std::string tpm_policy_digest("digest");
   EXPECT_CALL(mock_trial_session_, GetDigest(_))
       .WillOnce(
@@ -2165,8 +2144,7 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesSuccessWithPcrValue) {
   EXPECT_EQ(TPM_RC_SUCCESS,
             utility_.GetPolicyDigestForPcrValues(
                 std::map<uint32_t, std::string>({{index, pcr_value}}),
-                false /* use_auth_value */,
-                &policy_digest));
+                false /* use_auth_value */, &policy_digest));
   EXPECT_EQ(policy_digest, tpm_policy_digest);
   EXPECT_EQ(pcr_value, pcr_map[index]);
 }
@@ -2188,10 +2166,8 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesSuccessMultiplePcrs) {
   pcr_values.count = 1;
   pcr_values.digests[0] = Make_TPM2B_DIGEST(pcr_value3);
   std::map<uint32_t, std::string> pcr_map;
-  EXPECT_CALL(mock_trial_session_,
-              PolicyPCR(_))
-      .WillOnce(DoAll(SaveArg<0>(&pcr_map),
-                      Return(TPM_RC_SUCCESS)));
+  EXPECT_CALL(mock_trial_session_, PolicyPCR(_))
+      .WillOnce(DoAll(SaveArg<0>(&pcr_map), Return(TPM_RC_SUCCESS)));
   std::string tpm_policy_digest("digest");
   EXPECT_CALL(mock_trial_session_, GetDigest(_))
       .WillOnce(
@@ -2201,12 +2177,10 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesSuccessMultiplePcrs) {
                       SetArgPointee<3>(pcr_values), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS,
             utility_.GetPolicyDigestForPcrValues(
-                std::map<uint32_t, std::string>(
-                    {{index1, pcr_value1},
-                     {index2, pcr_value2},
-                     {index3, pcr_value3}}),
-                false /* use_auth_value */,
-                &policy_digest));
+                std::map<uint32_t, std::string>({{index1, pcr_value1},
+                                                 {index2, pcr_value2},
+                                                 {index3, pcr_value3}}),
+                false /* use_auth_value */, &policy_digest));
   EXPECT_EQ(policy_digest, tpm_policy_digest);
   EXPECT_EQ(pcr_value1, pcr_map[index1]);
   EXPECT_EQ(pcr_value2, pcr_map[index2]);
@@ -2221,8 +2195,7 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesBadSession) {
       .WillOnce(Return(TPM_RC_FAILURE));
   EXPECT_EQ(TPM_RC_FAILURE,
             utility_.GetPolicyDigestForPcrValues(
-                std::map<uint32_t, std::string>({{index, pcr_value}}),
-                false,
+                std::map<uint32_t, std::string>({{index, pcr_value}}), false,
                 &policy_digest));
 }
 
@@ -2231,25 +2204,21 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesPcrReadFail) {
   std::string policy_digest;
   EXPECT_CALL(mock_tpm_, PCR_ReadSync(_, _, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(TPM_RC_FAILURE,
-            utility_.GetPolicyDigestForPcrValues(
-                std::map<uint32_t, std::string>({{index, ""}}),
-                false /* use_auth_value */,
-                &policy_digest));
+  EXPECT_EQ(TPM_RC_FAILURE, utility_.GetPolicyDigestForPcrValues(
+                                std::map<uint32_t, std::string>({{index, ""}}),
+                                false /* use_auth_value */, &policy_digest));
 }
 
 TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesBadPcr) {
   int index = 5;
   std::string pcr_value("value");
   std::string policy_digest;
-  EXPECT_CALL(mock_trial_session_,
-              PolicyPCR(_))
+  EXPECT_CALL(mock_trial_session_, PolicyPCR(_))
       .WillOnce(Return(TPM_RC_FAILURE));
   EXPECT_EQ(TPM_RC_FAILURE,
             utility_.GetPolicyDigestForPcrValues(
                 std::map<uint32_t, std::string>({{index, pcr_value}}),
-                false /* use_auth_value */,
-                &policy_digest));
+                false /* use_auth_value */, &policy_digest));
 }
 
 TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesBadDigest) {
@@ -2261,8 +2230,7 @@ TEST_F(TpmUtilityTest, GetPolicyDigestForPcrValuesBadDigest) {
   EXPECT_EQ(TPM_RC_FAILURE,
             utility_.GetPolicyDigestForPcrValues(
                 std::map<uint32_t, std::string>({{index, pcr_value}}),
-                false /* use_auth_value */,
-                &policy_digest));
+                false /* use_auth_value */, &policy_digest));
 }
 
 TEST_F(NVTpmUtilityTest, DefineNVSpaceSuccess) {
@@ -2685,8 +2653,7 @@ TEST_F(TpmUtilityTest, RootKeysRsaSuccess) {
       .WillOnce(Return(TPM_ALG_RSA));
   TPM2B_PUBLIC public_area;
   EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
-      .WillRepeatedly(
-          DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
+      .WillRepeatedly(DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS, CreateStorageRootKeys("password"));
   EXPECT_EQ(TPM_ALG_RSA, public_area.public_area.type);
 }
@@ -2696,8 +2663,7 @@ TEST_F(TpmUtilityTest, RootKeysEccSuccess) {
       .WillOnce(Return(TPM_ALG_ECC));
   TPM2B_PUBLIC public_area;
   EXPECT_CALL(mock_tpm_, CreatePrimarySyncShort(_, _, _, _, _, _, _, _, _, _))
-      .WillRepeatedly(
-          DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
+      .WillRepeatedly(DoAll(SaveArg<1>(&public_area), Return(TPM_RC_SUCCESS)));
   EXPECT_EQ(TPM_RC_SUCCESS, CreateStorageRootKeys("password"));
   EXPECT_EQ(TPM_ALG_ECC, public_area.public_area.type);
 }
@@ -2865,8 +2831,7 @@ TEST_F(TpmUtilityTest, CreateIdentityKeyFail) {
 
 TEST_F(TpmUtilityTest, DeclareTpmFirmwareStableNonCr50) {
   SetCr50(false);
-  EXPECT_CALL(mock_transceiver_, SendCommandAndWait(_))
-      .Times(0);
+  EXPECT_CALL(mock_transceiver_, SendCommandAndWait(_)).Times(0);
   EXPECT_EQ(TPM_RC_SUCCESS, utility_.DeclareTpmFirmwareStable());
 }
 
@@ -2879,10 +2844,10 @@ TEST_F(TpmUtilityTest, DeclareTpmFirmwareStableCr50Success) {
       "\x00\x14",         // subcommand=kCr50SubcmdInvalidateInactiveRW
       12);
   std::string command_response(
-      "\x80\x01"           // tag=TPM_ST_NO_SESSIONS
-      "\x00\x00\x00\x0C"   // size=12
-      "\x00\x00\x00\x00"   // code=TPM_RC_SUCCESS
-      "\x00\x14",          // subcommand=kCr50SubcmdInvalidateInactiveRW
+      "\x80\x01"          // tag=TPM_ST_NO_SESSIONS
+      "\x00\x00\x00\x0C"  // size=12
+      "\x00\x00\x00\x00"  // code=TPM_RC_SUCCESS
+      "\x00\x14",         // subcommand=kCr50SubcmdInvalidateInactiveRW
       12);
   SetCr50(true);
   EXPECT_CALL(mock_transceiver_, SendCommandAndWait(expected_command))
@@ -2899,10 +2864,10 @@ TEST_F(TpmUtilityTest, DeclareTpmFirmwareStableCr50Failure) {
       "\x00\x14",         // subcommand=kCr50SubcmdInvalidateInactiveRW
       12);
   std::string command_response(
-      "\x80\x01"           // tag=TPM_ST_NO_SESSIONS
-      "\x00\x00\x00\x0C"   // size=10
-      "\x00\x00\x01\x01"   // code=TPM_RC_FAILURE
-      "\x00\x14",          // subcommand=kCr50SubcmdInvalidateInactiveRW
+      "\x80\x01"          // tag=TPM_ST_NO_SESSIONS
+      "\x00\x00\x00\x0C"  // size=10
+      "\x00\x00\x01\x01"  // code=TPM_RC_FAILURE
+      "\x00\x14",         // subcommand=kCr50SubcmdInvalidateInactiveRW
       12);
   SetCr50(true);
   EXPECT_CALL(mock_transceiver_, SendCommandAndWait(expected_command))
@@ -3019,8 +2984,7 @@ TEST_F(TpmUtilityTest,
           DoAll(SetArgPointee<6>(nvram_data_buffer), Return(TPM_RC_SUCCESS)));
 
   std::string ekm;
-  EXPECT_EQ(TPM_RC_SUCCESS,
-            utility_.GetPublicRSAEndorsementKeyModulus(&ekm));
+  EXPECT_EQ(TPM_RC_SUCCESS, utility_.GetPublicRSAEndorsementKeyModulus(&ekm));
   std::string hex_encoded_ekm =
       "AC5869BD60F30463612BB0C472AA19E5400E524A213290EBFB728D1AAC956F74B7CF6A8D"
       "57F17C94D4BE2B3D07FD882CF708C30C476DCB1FF32695A8BAC77BDD5C04E89E2AB228D6"
@@ -3030,8 +2994,7 @@ TEST_F(TpmUtilityTest,
       "81EB9C9EACF0029C4F41B2E4033AB68453884D5BB3E0DD9F680E150CB604428546CFA32B"
       "05743B073BAE97964A847756BB79D132EAEFF44EE1B25315C6B45CE74087A777CFD14276"
       "9B5CF4E5";
-  EXPECT_EQ(hex_encoded_ekm,
-            base::HexEncode(ekm.data(), ekm.size()));
+  EXPECT_EQ(hex_encoded_ekm, base::HexEncode(ekm.data(), ekm.size()));
 }
 
 TEST_F(TpmUtilityTest, GetRsuDeviceIdDecodesCorrectly) {
@@ -3137,8 +3100,7 @@ TEST_F(TpmUtilityTest,
 
 TEST_F(TpmUtilityTest, ManageCCDPwdNonCr50) {
   SetCr50(false);
-  EXPECT_CALL(mock_transceiver_, SendCommandAndWait(_))
-      .Times(0);
+  EXPECT_CALL(mock_transceiver_, SendCommandAndWait(_)).Times(0);
   EXPECT_EQ(TPM_RC_SUCCESS, utility_.ManageCCDPwd(true));
 }
 
@@ -3160,10 +3122,10 @@ TEST_F(TpmUtilityTest, ManageCCDPwdCr50Success) {
       "\x00",             // value=false
       13);
   std::string command_response(
-      "\x80\x01"           // tag=TPM_ST_NO_SESSIONS
-      "\x00\x00\x00\x0C"   // size=12
-      "\x00\x00\x00\x00"   // code=TPM_RC_SUCCESS
-      "\x00\x21",          // subcommand=kCr50SubcmdManageCCDPwd
+      "\x80\x01"          // tag=TPM_ST_NO_SESSIONS
+      "\x00\x00\x00\x0C"  // size=12
+      "\x00\x00\x00\x00"  // code=TPM_RC_SUCCESS
+      "\x00\x21",         // subcommand=kCr50SubcmdManageCCDPwd
       12);
   SetCr50(true);
   EXPECT_CALL(mock_transceiver_, SendCommandAndWait(expected_command_true))
@@ -3185,10 +3147,10 @@ TEST_F(TpmUtilityTest, ManageCCDPwdFailure) {
       "\x01",             // value=true
       13);
   std::string command_response(
-      "\x80\x01"           // tag=TPM_ST_NO_SESSIONS
-      "\x00\x00\x00\x0C"   // size=12
-      "\x00\x00\x01\x01"   // code=TPM_RC_FAILURE
-      "\x00\x21",          // subcommand=kCr50SubcmdManageCCDPwd
+      "\x80\x01"          // tag=TPM_ST_NO_SESSIONS
+      "\x00\x00\x00\x0C"  // size=12
+      "\x00\x00\x01\x01"  // code=TPM_RC_FAILURE
+      "\x00\x21",         // subcommand=kCr50SubcmdManageCCDPwd
       12);
   SetCr50(true);
   EXPECT_CALL(mock_transceiver_, SendCommandAndWait(expected_command))

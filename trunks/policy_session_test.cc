@@ -85,8 +85,8 @@ TEST_F(PolicySessionTest, StartBoundSessionFailure) {
   EXPECT_CALL(mock_session_manager_,
               StartSession(TPM_SE_POLICY, handle, _, true, true, _))
       .WillRepeatedly(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(TPM_RC_FAILURE, session.StartBoundSession(handle, "auth",
-                                                      true, true));
+  EXPECT_EQ(TPM_RC_FAILURE,
+            session.StartBoundSession(handle, "auth", true, true));
 }
 
 TEST_F(PolicySessionTest, StartBoundSessionBadType) {
@@ -169,8 +169,8 @@ TEST_F(PolicySessionTest, PolicyPCRSuccess) {
   EXPECT_CALL(mock_tpm_, PolicyPCRSync(_, _, _, _, _))
       .WillOnce(DoAll(SaveArg<2>(&pcr_value), SaveArg<3>(&pcr_select),
                       Return(TPM_RC_SUCCESS)));
-  EXPECT_EQ(TPM_RC_SUCCESS, session.PolicyPCR(
-      std::map<uint32_t, std::string>({{pcr_index, pcr_digest}})));
+  EXPECT_EQ(TPM_RC_SUCCESS, session.PolicyPCR(std::map<uint32_t, std::string>(
+                                {{pcr_index, pcr_digest}})));
   uint8_t pcr_select_index = pcr_index / 8;
   uint8_t pcr_select_byte = 1 << (pcr_index % 8);
   EXPECT_EQ(pcr_select.count, 1u);
@@ -221,14 +221,15 @@ TEST_F(PolicySessionTest, PolicyPCRFailure) {
   PolicySessionImpl session(factory_);
   EXPECT_CALL(mock_tpm_, PolicyPCRSync(_, _, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(TPM_RC_FAILURE, session.PolicyPCR(
-      std::map<uint32_t, std::string>({{1, "pcr_digest"}})));
+  EXPECT_EQ(
+      TPM_RC_FAILURE,
+      session.PolicyPCR(std::map<uint32_t, std::string>({{1, "pcr_digest"}})));
 }
 
 TEST_F(PolicySessionTest, PolicyPCRTrialWithNoDigest) {
   PolicySessionImpl session(factory_, TPM_SE_TRIAL);
-  EXPECT_EQ(SAPI_RC_BAD_PARAMETER, session.PolicyPCR(
-      std::map<uint32_t, std::string>({{1, ""}})));
+  EXPECT_EQ(SAPI_RC_BAD_PARAMETER,
+            session.PolicyPCR(std::map<uint32_t, std::string>({{1, ""}})));
 }
 
 TEST_F(PolicySessionTest, PolicyCommandCodeSuccess) {

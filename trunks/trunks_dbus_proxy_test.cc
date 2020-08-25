@@ -44,8 +44,7 @@ class FakeObjectProxy : public dbus::ObjectProxy {
     } else {
       method_call->SetSerial(1);
       std::unique_ptr<dbus::ErrorResponse> error_response =
-          dbus::ErrorResponse::FromMethodCall(method_call,
-                                              "org.MyError",
+          dbus::ErrorResponse::FromMethodCall(method_call, "org.MyError",
                                               "Error message");
       std::move(error_callback).Run(error_response.get());
     }
@@ -87,8 +86,7 @@ class TrunksDBusProxyTest : public testing::Test {
   }
 
   void SetUp() override {
-    ON_CALL(*bus_, Connect())
-        .WillByDefault(Return(true));
+    ON_CALL(*bus_, Connect()).WillByDefault(Return(true));
     ON_CALL(*bus_, GetObjectProxy(_, _))
         .WillByDefault(Return(object_proxy_.get()));
     ON_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
@@ -123,8 +121,7 @@ TEST_F(TrunksDBusProxyTest, InitSuccess) {
 }
 
 TEST_F(TrunksDBusProxyTest, InitFailure) {
-  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
-      .WillRepeatedly(Return(""));
+  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _)).WillRepeatedly(Return(""));
   EXPECT_FALSE(proxy_.Init());
   EXPECT_FALSE(proxy_.IsServiceReady(false /* force_check */));
   EXPECT_FALSE(proxy_.IsServiceReady(true /* force_check */));
@@ -161,8 +158,7 @@ TEST_F(TrunksDBusProxyTest, SendCommandAndWaitSuccess) {
 TEST_F(TrunksDBusProxyTest, SendCommandFailureInit) {
   // If Init() failed, SAPI_RC_NO_CONNECTION should be returned
   // without sending a command.
-  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
-      .WillRepeatedly(Return(""));
+  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _)).WillRepeatedly(Return(""));
   EXPECT_FALSE(proxy_.Init());
   set_next_response("");
   auto callback = [](const std::string& response) {
@@ -175,8 +171,7 @@ TEST_F(TrunksDBusProxyTest, SendCommandFailureInit) {
 TEST_F(TrunksDBusProxyTest, SendCommandAndWaitFailureInit) {
   // If Init() failed, SAPI_RC_NO_CONNECTION should be returned
   // without sending a command.
-  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
-      .WillRepeatedly(Return(""));
+  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _)).WillRepeatedly(Return(""));
   EXPECT_FALSE(proxy_.Init());
   set_next_response("");
   EXPECT_EQ(CreateErrorResponse(SAPI_RC_NO_CONNECTION),
@@ -188,8 +183,7 @@ TEST_F(TrunksDBusProxyTest, SendCommandFailureNoConnection) {
   // If Init() succeeded, but service is later lost, it should return
   // SAPI_RC_NO_CONNECTION in case there was no response.
   EXPECT_TRUE(proxy_.Init());
-  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
-      .WillRepeatedly(Return(""));
+  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _)).WillRepeatedly(Return(""));
   set_next_response("");
   auto callback = [](const std::string& response) {
     EXPECT_EQ(CreateErrorResponse(SAPI_RC_NO_CONNECTION), response);
@@ -202,8 +196,7 @@ TEST_F(TrunksDBusProxyTest, SendCommandAndWaitFailureNoConnection) {
   // If Init() succeeded, but service is later lost, it should return
   // SAPI_RC_NO_CONNECTION in case there was no response.
   EXPECT_TRUE(proxy_.Init());
-  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _))
-      .WillRepeatedly(Return(""));
+  EXPECT_CALL(*bus_, GetServiceOwnerAndBlock(_, _)).WillRepeatedly(Return(""));
   set_next_response("");
   EXPECT_EQ(CreateErrorResponse(SAPI_RC_NO_CONNECTION),
             proxy_.SendCommandAndWait("command"));

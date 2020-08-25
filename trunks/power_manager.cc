@@ -100,8 +100,8 @@ void PowerManager::OnServiceAvailable(bool available) {
 
 void PowerManager::OnOwnerChanged(const std::string& old_owner,
                                   const std::string& new_owner) {
-  VLOG(2) << "PowerManager detected owner change: \"" << old_owner
-          << "\" -> \"" << new_owner << "\".";
+  VLOG(2) << "PowerManager detected owner change: \"" << old_owner << "\" -> \""
+          << new_owner << "\".";
   if (new_owner.empty()) {
     LOG(WARNING) << "PowerManager service lost.";
     Stop();
@@ -126,8 +126,8 @@ void PowerManager::Start() {
       base::Bind(&PowerManager::OnRegisterSuspendDelaySuccess, ThisForBind());
   auto error_callback = base::Bind(&PowerManager::OnRequestError, ThisForBind(),
                                    std::string("RegisterSuspendDelayRequest"));
-  proxy_->RegisterSuspendDelayAsync(serialized_request,
-                                    success_callback, error_callback);
+  proxy_->RegisterSuspendDelayAsync(serialized_request, success_callback,
+                                    error_callback);
 }
 
 void PowerManager::Stop() {
@@ -175,14 +175,13 @@ void PowerManager::OnSuspend(const std::vector<uint8_t>& serialized_proto) {
   request.set_suspend_id(signal.suspend_id());
   std::vector<uint8_t> serialized_request;
   SerializeProto(request, &serialized_request);
-  auto success_callback = base::Bind(&PowerManager::OnRequestSuccess,
-                                     ThisForBind(),
-                                     std::string("SuspendReadinessInfo"));
-  auto error_callback = base::Bind(&PowerManager::OnRequestError,
-                                   ThisForBind(),
+  auto success_callback =
+      base::Bind(&PowerManager::OnRequestSuccess, ThisForBind(),
+                 std::string("SuspendReadinessInfo"));
+  auto error_callback = base::Bind(&PowerManager::OnRequestError, ThisForBind(),
                                    std::string("SuspendReadinessInfo"));
-  proxy_->HandleSuspendReadinessAsync(serialized_request,
-                                      success_callback, error_callback);
+  proxy_->HandleSuspendReadinessAsync(serialized_request, success_callback,
+                                      error_callback);
 }
 
 void PowerManager::OnResumeConnect(const std::string& interface_name,
@@ -224,8 +223,8 @@ void PowerManager::OnRequestSuccess(const std::string& message_name) {
 
 void PowerManager::OnRequestError(const std::string& message_name,
                                   brillo::Error* error) {
-  LOG(WARNING) << "Sending " << message_name << " failed("
-               << error->GetCode() << "): " << error->GetMessage();
+  LOG(WARNING) << "Sending " << message_name << " failed(" << error->GetCode()
+               << "): " << error->GetMessage();
 }
 
 }  // namespace trunks

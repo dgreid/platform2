@@ -16,8 +16,7 @@ namespace trunks {
 MockTpmCache::MockTpmCache() {
   ON_CALL(*this, GetSaltingKeyPublicArea(_))
       .WillByDefault(Return(TPM_RC_FAILURE));
-  ON_CALL(*this, GetBestSupportedKeyType())
-      .WillByDefault(Return(TPM_ALG_ECC));
+  ON_CALL(*this, GetBestSupportedKeyType()).WillByDefault(Return(TPM_ALG_ECC));
 }
 
 }  // namespace trunks

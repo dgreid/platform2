@@ -15,7 +15,7 @@ class MockResourceManager : public ResourceManager {
  public:
   MockResourceManager(const TrunksFactory& factory,
                       CommandTransceiver* next_transceiver)
-    : ResourceManager(factory, next_transceiver) {}
+      : ResourceManager(factory, next_transceiver) {}
 
   MOCK_METHOD0(Suspend, void());
   MOCK_METHOD0(Resume, void());

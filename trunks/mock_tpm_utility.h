@@ -153,7 +153,8 @@ class MockTpmUtility : public TpmUtility {
                       std::string*));
   MOCK_METHOD1(StartSession, TPM_RC(HmacSession*));
   MOCK_METHOD3(GetPolicyDigestForPcrValues,
-               TPM_RC(const std::map<uint32_t, std::string>&, bool,
+               TPM_RC(const std::map<uint32_t, std::string>&,
+                      bool,
                       std::string*));
   MOCK_METHOD6(DefineNVSpace,
                TPM_RC(uint32_t,

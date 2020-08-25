@@ -86,18 +86,15 @@ bool GenerateEcdhKeys(const trunks::TPMS_ECC_POINT& salting_key_pub,
 
   crypto::ScopedEC_POINT z_ec_point(EC_POINT_new(ec_group.get()));
   crypto::ScopedEC_POINT salting_key_ec_point(EC_POINT_new(ec_group.get()));
-  if (!TpmToOpensslEccPoint(
-      salting_key_pub, *ec_group.get(), salting_key_ec_point.get())) {
+  if (!TpmToOpensslEccPoint(salting_key_pub, *ec_group.get(),
+                            salting_key_ec_point.get())) {
     LOG(ERROR) << "Failed to get EC_POINT for the ECC salting key.";
     return false;
   }
 
-  if (!EC_POINT_mul(ec_group.get(),
-                    z_ec_point.get(),
-                    nullptr /* unused multiplier */,
-                    salting_key_ec_point.get(),
-                    ephemeral_key_pri,
-                    nullptr /* unused context */)) {
+  if (!EC_POINT_mul(ec_group.get(), z_ec_point.get(),
+                    nullptr /* unused multiplier */, salting_key_ec_point.get(),
+                    ephemeral_key_pri, nullptr /* unused context */)) {
     LOG(ERROR) << "Failed to compute the Z point.";
     return false;
   }
@@ -115,8 +112,8 @@ bool GenerateEcdhKeys(const trunks::TPMS_ECC_POINT& salting_key_pub,
     return false;
   }
 
-  if (!OpensslToTpmEccPoint(
-      *ec_group.get(), *z_ec_point.get(), trunks::kEccKeySize, z_point)) {
+  if (!OpensslToTpmEccPoint(*ec_group.get(), *z_ec_point.get(),
+                            trunks::kEccKeySize, z_point)) {
     LOG(ERROR) << "Failed to convert the Z point.";
     return false;
   }
@@ -163,8 +160,7 @@ trunks::TPM_RC GenerateRsaSessionSalt(const trunks::TPMT_PUBLIC& public_area,
                << hwsec::GetOpensslError();
     return trunks::TRUNKS_RC_SESSION_SETUP_ERROR;
   }
-  if (!RSA_set0_key(salting_key_rsa.get(), n.release(), e.release(),
-                    nullptr)) {
+  if (!RSA_set0_key(salting_key_rsa.get(), n.release(), e.release(), nullptr)) {
     LOG(ERROR) << "Failed to set exponent or modulus.";
     return trunks::TRUNKS_RC_SESSION_SETUP_ERROR;
   }
@@ -199,10 +195,9 @@ trunks::TPM_RC GenerateRsaSessionSalt(const trunks::TPMT_PUBLIC& public_area,
   }
   size_t out_length = EVP_PKEY_size(salting_key.get());
   encrypted_salt->resize(out_length);
-  if (!EVP_PKEY_encrypt(
-      salt_encrypt_context.get(),
-      reinterpret_cast<uint8_t*>(base::data(*encrypted_salt)), &out_length,
-      salt->data(), salt->size())) {
+  if (!EVP_PKEY_encrypt(salt_encrypt_context.get(),
+                        reinterpret_cast<uint8_t*>(base::data(*encrypted_salt)),
+                        &out_length, salt->data(), salt->size())) {
     LOG(ERROR) << "Error encrypting salt: " << hwsec::GetOpensslError();
     return trunks::TRUNKS_RC_SESSION_SETUP_ERROR;
   }
@@ -254,8 +249,8 @@ trunks::TPM_RC GenerateEccSessionSalt(const trunks::TPMT_PUBLIC& public_area,
                     "Trying again...";
   }
 
-  trunks::TPM_RC result = Serialize_TPMS_ECC_POINT(
-      ephemeral_point, serialized_ephemeral_point);
+  trunks::TPM_RC result =
+      Serialize_TPMS_ECC_POINT(ephemeral_point, serialized_ephemeral_point);
   if (result != trunks::TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error serializing initiator's public point: "
                << trunks::GetErrorString(result);
@@ -391,10 +386,9 @@ TPM_RC SessionManagerImpl::StartSession(
                << GetErrorString(tpm_result);
     return tpm_result;
   }
-  bool hmac_result =
-      delegate->InitSession(
-          session_handle_, nonce_tpm, nonce_caller, salt.to_string(),
-          bind_authorization_value, enable_encryption);
+  bool hmac_result = delegate->InitSession(
+      session_handle_, nonce_tpm, nonce_caller, salt.to_string(),
+      bind_authorization_value, enable_encryption);
   if (!hmac_result) {
     LOG(ERROR) << "Failed to initialize an authorization session delegate.";
     return TPM_RC_FAILURE;
@@ -402,9 +396,8 @@ TPM_RC SessionManagerImpl::StartSession(
   return TPM_RC_SUCCESS;
 }
 
-TPM_RC SessionManagerImpl::GenerateSessionSalt(
-    brillo::SecureBlob* salt,
-    std::string* encrypted_salt) {
+TPM_RC SessionManagerImpl::GenerateSessionSalt(brillo::SecureBlob* salt,
+                                               std::string* encrypted_salt) {
   TPMT_PUBLIC public_area;
   TPM_RC result = factory_.GetTpmCache()->GetSaltingKeyPublicArea(&public_area);
   if (result != TPM_RC_SUCCESS) {
@@ -425,8 +418,7 @@ TPM_RC SessionManagerImpl::GenerateSessionSalt(
   }
 
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << "Error generating a session salt: "
-               << GetErrorString(result);
+    LOG(ERROR) << "Error generating a session salt: " << GetErrorString(result);
     return result;
   }
 

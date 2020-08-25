@@ -57,11 +57,10 @@ typedef enum PinweaverFunc {
 trunks::ValidPcrCriteria GenerateFuzzedValidPcrCriteria(
     FuzzedDataProvider* data_provider) {
   trunks::ValidPcrCriteria valid_pcr_criteria;
-  int num_values = data_provider->ConsumeIntegralInRange<int>(
-      0, kMaxCollectionDataLength);
+  int num_values =
+      data_provider->ConsumeIntegralInRange<int>(0, kMaxCollectionDataLength);
   for (int i = 0; i < num_values; ++i) {
-    trunks::ValidPcrValue* value =
-        valid_pcr_criteria.add_valid_pcr_values();
+    trunks::ValidPcrValue* value = valid_pcr_criteria.add_valid_pcr_values();
     value->set_bitmask(data_provider->ConsumeRandomLengthString(8));
     value->set_digest(
         data_provider->ConsumeRandomLengthString(kMaxStringLength));

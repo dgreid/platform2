@@ -31,21 +31,30 @@ enum return_codes {
 
 const uint8_t DEFAULT_BITS_PER_LEVEL = 2;
 const uint8_t DEFAULT_HEIGHT = 6;
-const uint8_t DEFAULT_LE_SECRET[PW_SECRET_SIZE] =
-    {0xba, 0xbc, 0x98, 0x9d, 0x97, 0x20, 0xcf, 0xea,
-     0xaa, 0xbd, 0xb2, 0xe3, 0xe0, 0x2c, 0x5c, 0x55,
-     0x06, 0x60, 0x93, 0xbd, 0x07, 0xe2, 0xba, 0x92,
-     0x10, 0x19, 0x24, 0xb1, 0x29, 0x33, 0x5a, 0xe2};
-const uint8_t DEFAULT_HE_SECRET[PW_SECRET_SIZE] =
-    {0xe3, 0x46, 0xe3, 0x62, 0x01, 0x5d, 0xfe, 0x0a,
-     0xd3, 0x67, 0xd7, 0xef, 0xab, 0x01, 0xad, 0x0e,
-     0x3a, 0xed, 0xe8, 0x2f, 0x99, 0xd1, 0x2d, 0x13,
-     0x4d, 0x4e, 0xe4, 0x02, 0xbe, 0x71, 0x8e, 0x40};
-const uint8_t DEFAULT_RESET_SECRET[PW_SECRET_SIZE] =
-    {0x8c, 0x33, 0x8c, 0xa7, 0x0f, 0x81, 0xa4, 0xee,
-     0x24, 0xcd, 0x04, 0x84, 0x9c, 0xa8, 0xfd, 0xdd,
-     0x14, 0xb0, 0xad, 0xe6, 0xb7, 0x6a, 0x10, 0xfc,
-     0x03, 0x22, 0xcb, 0x71, 0x31, 0xd3, 0x74, 0xd6};
+const uint8_t DEFAULT_LE_SECRET[PW_SECRET_SIZE] = {
+    // clang-format off
+    0xba, 0xbc, 0x98, 0x9d, 0x97, 0x20, 0xcf, 0xea,
+    0xaa, 0xbd, 0xb2, 0xe3, 0xe0, 0x2c, 0x5c, 0x55,
+    0x06, 0x60, 0x93, 0xbd, 0x07, 0xe2, 0xba, 0x92,
+    0x10, 0x19, 0x24, 0xb1, 0x29, 0x33, 0x5a, 0xe2
+    // clang-format on
+};
+const uint8_t DEFAULT_HE_SECRET[PW_SECRET_SIZE] = {
+    // clang-format off
+    0xe3, 0x46, 0xe3, 0x62, 0x01, 0x5d, 0xfe, 0x0a,
+    0xd3, 0x67, 0xd7, 0xef, 0xab, 0x01, 0xad, 0x0e,
+    0x3a, 0xed, 0xe8, 0x2f, 0x99, 0xd1, 0x2d, 0x13,
+    0x4d, 0x4e, 0xe4, 0x02, 0xbe, 0x71, 0x8e, 0x40
+    // clang-format on
+};
+const uint8_t DEFAULT_RESET_SECRET[PW_SECRET_SIZE] = {
+    // clang-format off
+    0x8c, 0x33, 0x8c, 0xa7, 0x0f, 0x81, 0xa4, 0xee,
+    0x24, 0xcd, 0x04, 0x84, 0x9c, 0xa8, 0xfd, 0xdd,
+    0x14, 0xb0, 0xad, 0xe6, 0xb7, 0x6a, 0x10, 0xfc,
+    0x03, 0x22, 0xcb, 0x71, 0x31, 0xd3, 0x74, 0xd6
+    // clang-format on
+};
 
 uint8_t protocol_version = PW_PROTOCOL_VERSION;
 
@@ -180,13 +189,14 @@ void GetInsertLeafDefaults(uint64_t* label,
   valid_pcr_criteria->Clear();
   if (protocol_version > 0) {
     trunks::ValidPcrValue* default_pcr_value =
-      valid_pcr_criteria->add_valid_pcr_values();
-    uint8_t bitmask[2] {0, 0};
+        valid_pcr_criteria->add_valid_pcr_values();
+    uint8_t bitmask[2]{0, 0};
     default_pcr_value->set_bitmask(&bitmask, sizeof(bitmask));
   }
 }
 
-void SetupBaseOutcome(uint32_t result_code, const std::string& root,
+void SetupBaseOutcome(uint32_t result_code,
+                      const std::string& root,
                       base::DictionaryValue* outcome) {
   // This is exported as a string because the API handles integers as signed.
   outcome->SetString("result_code.value", std::to_string(result_code));
@@ -496,9 +506,10 @@ int HandleGetLog(base::CommandLine::StringVector::const_iterator begin,
             "timestamp.timer_value",
             std::to_string(entry.auth().timestamp().timer_value()));
         out_entry->SetString("return_code.value",
-                            std::to_string(entry.auth().return_code()));
-        out_entry->SetString("return_code.name",
-                            trunks::GetErrorString(entry.auth().return_code()));
+                             std::to_string(entry.auth().return_code()));
+        out_entry->SetString(
+            "return_code.name",
+            trunks::GetErrorString(entry.auth().return_code()));
         break;
       case trunks::PinWeaverLogEntry::TypeCase::kResetTree:
         out_entry->SetString("type", "ResetTree");
@@ -626,9 +637,11 @@ int HandleSelfTest(base::CommandLine::StringVector::const_iterator begin,
     return EXIT_FAILURE;
   }
 
-  if (protocol_version > 0 && (test_reset_secret.size() != PW_SECRET_SIZE ||
-      std::mismatch(test_reset_secret.begin(), test_reset_secret.end(),
-                    DEFAULT_RESET_SECRET).first != test_reset_secret.end())) {
+  if (protocol_version > 0 &&
+      (test_reset_secret.size() != PW_SECRET_SIZE ||
+       std::mismatch(test_reset_secret.begin(), test_reset_secret.end(),
+                     DEFAULT_RESET_SECRET)
+               .first != test_reset_secret.end())) {
     LOG(ERROR) << "try_auth reset_secret retrieval failed!";
     return EXIT_FAILURE;
   }
@@ -742,10 +755,10 @@ int HandleSelfTest(base::CommandLine::StringVector::const_iterator begin,
                         &delay_schedule, &valid_pcr_criteria);
   if (protocol_version > 0) {
     std::string digest = HexDecode(
-      "66687AADF862BD776C8FC18B8E9F8E20089714856EE233B3902A591D0D5F2925");
+        "66687AADF862BD776C8FC18B8E9F8E20089714856EE233B3902A591D0D5F2925");
     trunks::ValidPcrValue* value =
-      valid_pcr_criteria.mutable_valid_pcr_values(0);
-    const uint8_t bitmask[2] = {1<<4 /* PCR 4 */, 0};
+        valid_pcr_criteria.mutable_valid_pcr_values(0);
+    const uint8_t bitmask[2] = {1 << 4 /* PCR 4 */, 0};
     value->set_bitmask(&bitmask, sizeof(bitmask));
     value->set_digest(digest);
   }
@@ -812,8 +825,7 @@ int HandleSelfTest(base::CommandLine::StringVector::const_iterator begin,
     replay_mac = mac;
     result = tpm_utility->PinWeaverTryAuth(
         protocol_version, le_secret, h_aux, cred_metadata, &result_code, &root,
-        &seconds_to_wait, &he_secret, &test_reset_secret, &cred_metadata,
-        &mac);
+        &seconds_to_wait, &he_secret, &test_reset_secret, &cred_metadata, &mac);
     if (!result && !result_code) {
       LOG(ERROR) << "try_auth with wrong PCR failed to fail";
       return EXIT_FAILURE;
@@ -848,9 +860,8 @@ int main(int argc, char** argv) {
   base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   int requested_protocol = PW_PROTOCOL_VERSION;
   if (cl->HasSwitch("protocol")) {
-    requested_protocol =
-        std::min(PW_PROTOCOL_VERSION,
-                 std::stoi(cl->GetSwitchValueASCII("protocol")));
+    requested_protocol = std::min(
+        PW_PROTOCOL_VERSION, std::stoi(cl->GetSwitchValueASCII("protocol")));
   }
   const auto& args = cl->GetArgs();
 
@@ -894,6 +905,7 @@ int main(int argc, char** argv) {
                    base::CommandLine::StringVector::const_iterator end,
                    TrunksFactoryImpl* factory);
   } command_handlers[] = {
+      // clang-format off
       {"resettree", HandleResetTree},
       {"insert", HandleInsert},
       {"remove", HandleRemove},
@@ -902,13 +914,12 @@ int main(int argc, char** argv) {
       {"getlog", HandleGetLog},
       {"replay", HandleReplay},
       {"selftest", HandleSelfTest},
+      // clang-format on
   };
 
   for (const auto& command_handler : command_handlers) {
     if (command_handler.command == command) {
-      return command_handler.handler(command_args_start,
-                                     args.end(),
-                                     &factory);
+      return command_handler.handler(command_args_start, args.end(), &factory);
     }
   }
 

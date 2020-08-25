@@ -40,15 +40,15 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   caller_nonce.size =
       data_provider.ConsumeIntegralInRange(kNonceSizeMin, kNonceSizeMax);
   if (tpm_nonce.size) {
-    std::vector<uint8_t> rand_data = data_provider.ConsumeBytes<uint8_t>(
-        tpm_nonce.size);
+    std::vector<uint8_t> rand_data =
+        data_provider.ConsumeBytes<uint8_t>(tpm_nonce.size);
     // Backfill with zeroes in case the data provider ran out of stream.
     rand_data.resize(tpm_nonce.size);
     memcpy(tpm_nonce.buffer, rand_data.data(), rand_data.size());
   }
   if (caller_nonce.size) {
-    std::vector<uint8_t> rand_data = data_provider.ConsumeBytes<uint8_t>(
-        caller_nonce.size);
+    std::vector<uint8_t> rand_data =
+        data_provider.ConsumeBytes<uint8_t>(caller_nonce.size);
     // Backfill with zeroes in case the data provider ran out of stream.
     rand_data.resize(caller_nonce.size);
     memcpy(caller_nonce.buffer, rand_data.data(), rand_data.size());

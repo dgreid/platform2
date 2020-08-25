@@ -69,13 +69,14 @@ class ResourceManagerTest : public testing::Test {
 
   // Builds a command-response pair.
   CommandResponsePair CreateCommandResponsePair(
-      const std::string& name, TPM_CC code,
+      const std::string& name,
+      TPM_CC code,
       const std::vector<TPM_HANDLE>& input_handles,
       const std::vector<TPM_HANDLE>& output_handles) {
     CommandResponsePair pair;
     pair.name = name;
-    pair.command = CreateCommand(code, input_handles,
-                                 kNoAuthorization, kNoParameters);
+    pair.command =
+        CreateCommand(code, input_handles, kNoAuthorization, kNoParameters);
     pair.response = CreateResponse(TPM_RC_SUCCESS, output_handles,
                                    kNoAuthorization, kNoParameters);
     return pair;
@@ -502,11 +503,11 @@ TEST_F(ResourceManagerTest, LoadAuthSessionBeforeUse) {
 TEST_F(ResourceManagerTest, LoadNonAuthSessionBeforeUse) {
   StartSession(kArbitrarySessionHandle);
   EvictSession();
-  std::string command = CreateCommand(
-      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
-      kNoAuthorization, kNoParameters);
-  std::string response = CreateResponse(
-      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
+  std::string command =
+      CreateCommand(TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+                    kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(TPM_RC_SUCCESS, kNoHandles,
+                                        kNoAuthorization, kNoParameters);
   EXPECT_CALL(transceiver_, SendCommandAndWait(command))
       .WillOnce(Return(response));
   EXPECT_CALL(tpm_, ContextLoadSync(_, _, _)).WillOnce(Return(TPM_RC_SUCCESS));
@@ -584,11 +585,11 @@ TEST_F(ResourceManagerTest, EvictWhenAuthSessionInUse) {
 TEST_F(ResourceManagerTest, EvictWhenNonAuthSessionInUse) {
   StartSession(kArbitrarySessionHandle);
   StartSession(kArbitrarySessionHandle + 1);
-  std::string command = CreateCommand(
-      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
-      kNoAuthorization, kNoParameters);
-  std::string response = CreateResponse(
-      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
+  std::string command =
+      CreateCommand(TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+                    kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(TPM_RC_SUCCESS, kNoHandles,
+                                        kNoAuthorization, kNoParameters);
   std::string error_response = CreateErrorResponse(TPM_RC_SESSION_MEMORY);
   EXPECT_CALL(transceiver_, SendCommandAndWait(_))
       .WillOnce(Return(error_response))
@@ -695,11 +696,11 @@ TEST_F(ResourceManagerTest, FlushWhenAuthSessionInUse) {
 TEST_F(ResourceManagerTest, FlushWhenNonAuthSessionInUse) {
   StartSession(kArbitrarySessionHandle);
   StartSession(kArbitrarySessionHandle + 1);
-  std::string command = CreateCommand(
-      TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
-      kNoAuthorization, kNoParameters);
-  std::string response = CreateResponse(
-      TPM_RC_SUCCESS, kNoHandles, kNoAuthorization, kNoParameters);
+  std::string command =
+      CreateCommand(TPM_CC_PolicyPCR, {kArbitrarySessionHandle},
+                    kNoAuthorization, kNoParameters);
+  std::string response = CreateResponse(TPM_RC_SUCCESS, kNoHandles,
+                                        kNoAuthorization, kNoParameters);
   std::string error_response = CreateErrorResponse(TPM_RC_SESSION_HANDLES);
   EXPECT_CALL(transceiver_, SendCommandAndWait(_))
       .WillOnce(Return(error_response))
@@ -765,8 +766,8 @@ TEST_F(ResourceManagerTest, ExternalContext) {
               ContextLoadSync(Field(&TPMS_CONTEXT::sequence, Eq(1u)), _, _))
       .WillOnce(Return(TPM_RC_SUCCESS));
   EXPECT_CALL(tpm_, ContextSaveSync(kArbitrarySessionHandle, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(CreateContext(2)),
-                      Return(TPM_RC_SUCCESS)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(CreateContext(2)), Return(TPM_RC_SUCCESS)));
   std::string command = CreateCommand(TPM_CC_Startup, kNoHandles,
                                       kNoAuthorization, kNoParameters);
   std::string response = CreateErrorResponse(TPM_RC_CONTEXT_GAP);
@@ -886,10 +887,8 @@ TEST_F(ResourceManagerTest, SuspendSavesObjects) {
   LoadHandle(tpm_handle0);
   EvictObjects();
   testing::Mock::VerifyAndClearExpectations(&tpm_);
-  EXPECT_CALL(tpm_, ContextSaveSync(tpm_handle0, _, _, _))
-      .Times(0);
-  EXPECT_CALL(tpm_, FlushContextSync(tpm_handle0, _))
-      .Times(0);
+  EXPECT_CALL(tpm_, ContextSaveSync(tpm_handle0, _, _, _)).Times(0);
+  EXPECT_CALL(tpm_, FlushContextSync(tpm_handle0, _)).Times(0);
 
   // Handle 1 - success.
   TPM_HANDLE tpm_handle1 = kArbitraryObjectHandle + 1;
@@ -904,8 +903,7 @@ TEST_F(ResourceManagerTest, SuspendSavesObjects) {
   LoadHandle(tpm_handle2);
   EXPECT_CALL(tpm_, ContextSaveSync(tpm_handle2, _, _, _))
       .WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_CALL(tpm_, FlushContextSync(tpm_handle2, _))
-      .Times(0);
+  EXPECT_CALL(tpm_, FlushContextSync(tpm_handle2, _)).Times(0);
 
   // Handle 3 - failure during FlushContext.
   TPM_HANDLE tpm_handle3 = kArbitraryObjectHandle + 3;
@@ -927,26 +925,16 @@ TEST_F(ResourceManagerTest, SuspendSavesObjects) {
 }
 
 TEST_F(ResourceManagerTest, SuspendBlocksCommands) {
-  CommandResponsePair no_handles =
-      CreateCommandResponsePair("with no handles",
-                                TPM_CC_Startup,
-                                kNoHandles,
-                                kNoHandles);
+  CommandResponsePair no_handles = CreateCommandResponsePair(
+      "with no handles", TPM_CC_Startup, kNoHandles, kNoHandles);
   CommandResponsePair output_handles =
-      CreateCommandResponsePair("with output handles",
-                                TPM_CC_HashSequenceStart,
-                                kNoHandles,
-                                {kArbitraryObjectHandle});
-  CommandResponsePair input_handles =
-      CreateCommandResponsePair("with input handles",
-                                TPM_CC_ReadPublic,
-                                {PERSISTENT_FIRST},
-                                kNoHandles);
-  CommandResponsePair all_handles =
-      CreateCommandResponsePair("with input and output handles",
-                                TPM_CC_CreatePrimary,
-                                {PERSISTENT_FIRST},
-                                {kArbitraryObjectHandle+1});
+      CreateCommandResponsePair("with output handles", TPM_CC_HashSequenceStart,
+                                kNoHandles, {kArbitraryObjectHandle});
+  CommandResponsePair input_handles = CreateCommandResponsePair(
+      "with input handles", TPM_CC_ReadPublic, {PERSISTENT_FIRST}, kNoHandles);
+  CommandResponsePair all_handles = CreateCommandResponsePair(
+      "with input and output handles", TPM_CC_CreatePrimary, {PERSISTENT_FIRST},
+      {kArbitraryObjectHandle + 1});
 
   // After Suspend, commands with handles are blocked, commands without
   // handles are let through.
@@ -956,10 +944,8 @@ TEST_F(ResourceManagerTest, SuspendBlocksCommands) {
       .WillOnce(Return(no_handles.response));
   EXPECT_CALL(transceiver_, SendCommandAndWait(output_handles.command))
       .Times(0);
-  EXPECT_CALL(transceiver_, SendCommandAndWait(input_handles.command))
-      .Times(0);
-  EXPECT_CALL(transceiver_, SendCommandAndWait(all_handles.command))
-      .Times(0);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(input_handles.command)).Times(0);
+  EXPECT_CALL(transceiver_, SendCommandAndWait(all_handles.command)).Times(0);
   EXPECT_TRUE(CommandReturnsSuccess(no_handles.command));
   EXPECT_FALSE(CommandReturnsSuccess(output_handles.command));
   EXPECT_FALSE(CommandReturnsSuccess(input_handles.command));

@@ -60,8 +60,8 @@ TEST_F(HmacSessionTest, StartBoundSessionSuccess) {
   EXPECT_CALL(mock_session_manager_,
               StartSession(TPM_SE_HMAC, bind_entity, _, true, true, _))
       .WillOnce(Return(TPM_RC_SUCCESS));
-  EXPECT_EQ(TPM_RC_SUCCESS, session.StartBoundSession(bind_entity, "",
-                                                      true, true));
+  EXPECT_EQ(TPM_RC_SUCCESS,
+            session.StartBoundSession(bind_entity, "", true, true));
 }
 
 TEST_F(HmacSessionTest, StartBoundSessionFailure) {
@@ -70,8 +70,8 @@ TEST_F(HmacSessionTest, StartBoundSessionFailure) {
   EXPECT_CALL(mock_session_manager_,
               StartSession(TPM_SE_HMAC, bind_entity, _, true, true, _))
       .WillOnce(Return(TPM_RC_FAILURE));
-  EXPECT_EQ(TPM_RC_FAILURE, session.StartBoundSession(bind_entity, "",
-                                                      true, true));
+  EXPECT_EQ(TPM_RC_FAILURE,
+            session.StartBoundSession(bind_entity, "", true, true));
 }
 
 TEST_F(HmacSessionTest, EntityAuthorizationForwardingTest) {

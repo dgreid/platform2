@@ -10,13 +10,13 @@
 #include "trunks/tpm_state_impl.h"
 #include "trunks/trunks_factory_for_test.h"
 
+using testing::_;
 using testing::DoAll;
 using testing::Invoke;
 using testing::NiceMock;
 using testing::Return;
 using testing::SetArgPointee;
 using testing::WithArgs;
-using testing::_;
 
 namespace trunks {
 

@@ -200,8 +200,10 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
   TPM_RC GetAlertsData(TpmAlertsData* alerts) override;
   TPM_RC PinWeaverIsSupported(uint8_t request_version,
                               uint8_t* protocol_version) override;
-  TPM_RC PinWeaverResetTree(uint8_t protocol_version, uint8_t bits_per_level,
-                            uint8_t height, uint32_t* result_code,
+  TPM_RC PinWeaverResetTree(uint8_t protocol_version,
+                            uint8_t bits_per_level,
+                            uint8_t height,
+                            uint32_t* result_code,
                             std::string* root_hash) override;
   TPM_RC PinWeaverInsertLeaf(uint8_t protocol_version,
                              uint64_t label,
@@ -215,31 +217,45 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
                              std::string* root_hash,
                              std::string* cred_metadata,
                              std::string* mac) override;
-  TPM_RC PinWeaverRemoveLeaf(
-      uint8_t protocol_version, uint64_t label, const std::string& h_aux,
-      const std::string& mac, uint32_t* result_code, std::string* root_hash)
-      override;
-  TPM_RC PinWeaverTryAuth(
-      uint8_t protocol_version, const brillo::SecureBlob& le_secret,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash, uint32_t* seconds_to_wait,
-      brillo::SecureBlob* he_secret, brillo::SecureBlob* reset_secret,
-      std::string* cred_metadata_out, std::string* mac_out) override;
-  TPM_RC PinWeaverResetAuth(
-      uint8_t protocol_version, const brillo::SecureBlob& reset_secret,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash,
-      brillo::SecureBlob* he_secret, std::string* cred_metadata_out,
-      std::string* mac_out) override;
-  TPM_RC PinWeaverGetLog(
-      uint8_t protocol_version, const std::string& root, uint32_t* result_code,
-      std::string* root_hash, std::vector<trunks::PinWeaverLogEntry>* log)
-      override;
-  TPM_RC PinWeaverLogReplay(
-      uint8_t protocol_version, const std::string& log_root,
-      const std::string& h_aux, const std::string& cred_metadata,
-      uint32_t* result_code, std::string* root_hash,
-      std::string* cred_metadata_out, std::string* mac_out) override;
+  TPM_RC PinWeaverRemoveLeaf(uint8_t protocol_version,
+                             uint64_t label,
+                             const std::string& h_aux,
+                             const std::string& mac,
+                             uint32_t* result_code,
+                             std::string* root_hash) override;
+  TPM_RC PinWeaverTryAuth(uint8_t protocol_version,
+                          const brillo::SecureBlob& le_secret,
+                          const std::string& h_aux,
+                          const std::string& cred_metadata,
+                          uint32_t* result_code,
+                          std::string* root_hash,
+                          uint32_t* seconds_to_wait,
+                          brillo::SecureBlob* he_secret,
+                          brillo::SecureBlob* reset_secret,
+                          std::string* cred_metadata_out,
+                          std::string* mac_out) override;
+  TPM_RC PinWeaverResetAuth(uint8_t protocol_version,
+                            const brillo::SecureBlob& reset_secret,
+                            const std::string& h_aux,
+                            const std::string& cred_metadata,
+                            uint32_t* result_code,
+                            std::string* root_hash,
+                            brillo::SecureBlob* he_secret,
+                            std::string* cred_metadata_out,
+                            std::string* mac_out) override;
+  TPM_RC PinWeaverGetLog(uint8_t protocol_version,
+                         const std::string& root,
+                         uint32_t* result_code,
+                         std::string* root_hash,
+                         std::vector<trunks::PinWeaverLogEntry>* log) override;
+  TPM_RC PinWeaverLogReplay(uint8_t protocol_version,
+                            const std::string& log_root,
+                            const std::string& h_aux,
+                            const std::string& cred_metadata,
+                            uint32_t* result_code,
+                            std::string* root_hash,
+                            std::string* cred_metadata_out,
+                            std::string* mac_out) override;
   TPM_RC GetRsuDeviceId(std::string* device_id) override;
 
  private:
@@ -366,9 +382,7 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
   TPM_RC TpmBasicInit(std::unique_ptr<TpmState>* tpm_state);
 
   // Return true if the TPM supports padding-only scheme for Sign.
-  bool SupportsPaddingOnlySigningScheme() {
-    return IsCr50();
-  }
+  bool SupportsPaddingOnlySigningScheme() { return IsCr50(); }
 
   // Returns Vendor ID as reported in TPM_PT_MANUFACTURER property, or 0
   // in case of error reading the property.
@@ -410,8 +424,8 @@ class TRUNKS_EXPORT TpmUtilityImpl : public TpmUtility {
                                   std::string* response_payload);
 
   // Helper function for PinWeaver vendor specific commands.
-  template <typename S, typename P> TPM_RC PinWeaverCommand(
-      const std::string& tag, S serialize, P parse);
+  template <typename S, typename P>
+  TPM_RC PinWeaverCommand(const std::string& tag, S serialize, P parse);
 
   // Obrains RSU device id from Cr50.
   TPM_RC GetRsuDeviceIdInternal(std::string* device_id);

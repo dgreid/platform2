@@ -27,8 +27,8 @@ bool BignumCoordinateToEccParameter(const BIGNUM& coordinate,
 
   int key_size = BN_num_bytes(&coordinate);
   if (key_size > coord_size) {
-    LOG(ERROR) << "Coordinate size is larger than expected: "
-               << key_size << " vs. " << coord_size;
+    LOG(ERROR) << "Coordinate size is larger than expected: " << key_size
+               << " vs. " << coord_size;
     return false;
   }
 
@@ -67,8 +67,8 @@ bool TpmToOpensslEccPoint(const TPMS_ECC_POINT& point,
                  point.x.size, x) ||
       !BN_bin2bn(reinterpret_cast<const unsigned char*>(point.y.buffer),
                  point.y.size, y) ||
-      !EC_POINT_set_affine_coordinates_GFp(
-          &ec_group, ec_point, x, y, ctx.get())) {
+      !EC_POINT_set_affine_coordinates_GFp(&ec_group, ec_point, x, y,
+                                           ctx.get())) {
     LOG(ERROR) << "Failed to convert TPMS_ECC_POINT to OpenSSL EC_POINT: "
                << hwsec::GetOpensslError();
     return false;
@@ -92,8 +92,8 @@ bool OpensslToTpmEccPoint(const EC_GROUP& ec_group,
     return false;
   }
 
-  if (!EC_POINT_get_affine_coordinates_GFp(
-      &ec_group, &point, x, y, ctx.get())) {
+  if (!EC_POINT_get_affine_coordinates_GFp(&ec_group, &point, x, y,
+                                           ctx.get())) {
     LOG(ERROR) << "Failed to get X and Y from OpenSSL EC_POINT: "
                << hwsec::GetOpensslError();
     return false;
