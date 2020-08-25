@@ -5,8 +5,8 @@
 #ifndef SMBPROVIDER_CONSTANTS_H_
 #define SMBPROVIDER_CONSTANTS_H_
 
-#include <fcntl.h>  /* for file flags */
-#include <stddef.h> /* for size_t */
+#include <fcntl.h>    /* for file flags */
+#include <stddef.h>   /* for size_t */
 #include <sys/stat.h> /* for mode_t */
 
 #include <cstdint>

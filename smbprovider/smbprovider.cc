@@ -260,7 +260,7 @@ void SmbProvider::ReadDirectoryEntries(const ProtoBlob& options_blob,
     DCHECK(cache);
 
     SambaInterface* samba_interface = GetSambaInterface(GetMountId(options));
-      // Purge the cache of expired entries before reading next directory.
+    // Purge the cache of expired entries before reading next directory.
     cache->PurgeExpiredEntries();
     GetEntries(options, CachingIterator(full_path, samba_interface, cache),
                error_code, out_entries);
