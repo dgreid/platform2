@@ -12,7 +12,9 @@
 
 #include <gtest/gtest.h>
 
+#include "shill/arp_client_test_helper.h"
 #include "shill/icmp_session.h"
+#include "shill/mock_arp_client.h"
 #include "shill/mock_connection.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device_info.h"
@@ -26,8 +28,6 @@
 #include "shill/mock_portal_detector.h"
 #include "shill/mock_routing_table.h"
 #include "shill/net/arp_client.h"
-#include "shill/net/arp_client_test_helper.h"
-#include "shill/net/mock_arp_client.h"
 #include "shill/net/mock_io_handler_factory.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/routing_table_entry.h"

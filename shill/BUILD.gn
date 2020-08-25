@@ -12,7 +12,6 @@ import("//common-mk/protoctxt.gni")
 group("all") {
   deps = [
     ":libshill",
-    ":libshill-net",
     ":mobile_operator_db",
     ":mobile_operator_db-db",
     ":mobile_operator_db-protos",
@@ -109,6 +108,7 @@ pkg_config("target_defaults") {
     "dbus-1",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libshill-net",
     "libtirpc",
     "re2",
   ]
@@ -166,53 +166,6 @@ generate_dbus_adaptors("shill-chromeos-dbus-adaptors") {
     "dbus_bindings/org.chromium.flimflam.Task.dbus-xml",
     "dbus_bindings/org.chromium.flimflam.ThirdPartyVpn.dbus-xml",
   ]
-}
-
-write_deps("libshill-net_deps") {
-  pkg_deps = []
-  target = "libshill-net"
-}
-
-net_sources = [
-  "net/arp_client.cc",
-  "net/arp_packet.cc",
-  "net/attribute_list.cc",
-  "net/byte_string.cc",
-  "net/control_netlink_attribute.cc",
-  "net/event_history.cc",
-  "net/generic_netlink_message.cc",
-  "net/ieee80211.cc",
-  "net/io_handler_factory.cc",
-  "net/io_handler_factory_container.cc",
-  "net/io_input_handler.cc",
-  "net/io_ready_handler.cc",
-  "net/ip_address.cc",
-  "net/netlink_attribute.cc",
-  "net/netlink_fd.cc",
-  "net/netlink_manager.cc",
-  "net/netlink_message.cc",
-  "net/netlink_packet.cc",
-  "net/netlink_sock_diag.cc",
-  "net/netlink_socket.cc",
-  "net/nl80211_attribute.cc",
-  "net/nl80211_message.cc",
-  "net/rtnl_handler.cc",
-  "net/rtnl_listener.cc",
-  "net/rtnl_message.cc",
-  "net/shill_time.cc",
-  "net/sockets.cc",
-]
-
-shared_library("libshill-net") {
-  configs += [ ":target_defaults" ]
-  defines = [ "SLOG_MEANS_VLOG=1" ]
-  sources = net_sources
-  cflags_cc = [
-    # for shill::Logging declarations
-    "-Wno-unused-variable",
-    "-Wno-unused-function",
-  ]
-  deps = [ ":${target_name}_deps" ]
 }
 
 pkg_config("libshill_config") {
@@ -381,7 +334,6 @@ static_library("libshill") {
     "vpn/vpn_provider.cc",
     "vpn/vpn_service.cc",
   ]
-  sources += net_sources
   libs = [
     "bootstat",
     "rootdev",
@@ -568,16 +520,6 @@ if (use.fuzzer) {
   pkg_config("fuzzed_data_config") {
     pkg_deps = [ "libchrome-test-${libbase_ver}" ]
   }
-  executable("arp_client_fuzzer") {
-    configs += [
-      "//common-mk:test",
-      "//common-mk/common_fuzzer",
-      ":fuzzed_data_config",
-      ":target_defaults",
-    ]
-    sources = [ "net/arp_client_fuzzer.cc" ]
-    deps = [ ":libshill" ]
-  }
   executable("cellular_pco_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
@@ -585,22 +527,6 @@ if (use.fuzzer) {
       ":target_defaults",
     ]
     sources = [ "cellular/cellular_pco_fuzzer.cc" ]
-    deps = [ ":libshill" ]
-  }
-  executable("nl80211_message_fuzzer") {
-    configs += [
-      "//common-mk/common_fuzzer",
-      ":target_defaults",
-    ]
-    sources = [ "net/nl80211_message_fuzzer.cc" ]
-    deps = [ ":libshill" ]
-  }
-  executable("rtnl_handler_fuzzer") {
-    configs += [
-      "//common-mk/common_fuzzer",
-      ":target_defaults",
-    ]
-    sources = [ "net/rtnl_handler_fuzzer.cc" ]
     deps = [ ":libshill" ]
   }
   executable("verizon_subscription_state_fuzzer") {
@@ -644,6 +570,7 @@ if (use.test) {
     ]
     sources = [
       "active_link_monitor_test.cc",
+      "arp_client_test_helper.cc",
       "certificate_file_test.cc",
       "connection_diagnostics_test.cc",
       "connection_info_reader_test.cc",
@@ -695,6 +622,7 @@ if (use.test) {
       "mock_active_link_monitor.cc",
       "mock_adaptors.cc",
       "mock_ares.cc",
+      "mock_arp_client.cc",
       "mock_certificate_file.cc",
       "mock_connection.cc",
       "mock_connection_info_reader.cc",
@@ -729,20 +657,6 @@ if (use.test) {
       "mock_throttler.cc",
       "mock_traffic_monitor.cc",
       "mock_virtual_device.cc",
-      "net/arp_client_test.cc",
-      "net/arp_client_test_helper.cc",
-      "net/arp_packet_test.cc",
-      "net/attribute_list_test.cc",
-      "net/byte_string_test.cc",
-      "net/event_history_test.cc",
-      "net/ip_address_test.cc",
-      "net/mock_arp_client.cc",
-      "net/netlink_attribute_test.cc",
-      "net/nl80211_message_test.cc",
-      "net/rtnl_handler_test.cc",
-      "net/rtnl_listener_test.cc",
-      "net/rtnl_message_test.cc",
-      "net/shill_time_test.cc",
       "passive_link_monitor_test.cc",
       "portal_detector_test.cc",
       "power_manager_test.cc",
@@ -846,11 +760,6 @@ if (use.test) {
 
     if (use.wifi) {
       sources += [
-        "net/netlink_manager_test.cc",
-        "net/netlink_message_test.cc",
-        "net/netlink_packet_test.cc",
-        "net/netlink_socket_test.cc",
-        "net/nl80211_attribute_test.cc",
         "supplicant/mock_supplicant_bss_proxy.cc",
         "wifi/mac80211_monitor_test.cc",
         "wifi/mock_mac80211_monitor.cc",

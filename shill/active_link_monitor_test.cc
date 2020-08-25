@@ -12,7 +12,9 @@
 #include <base/stl_util.h>
 #include <gtest/gtest.h>
 
+#include "shill/arp_client_test_helper.h"
 #include "shill/logging.h"
+#include "shill/mock_arp_client.h"
 #include "shill/mock_connection.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device_info.h"
@@ -20,11 +22,9 @@
 #include "shill/mock_log.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/net/arp_client_test_helper.h"
 #include "shill/net/arp_packet.h"
 #include "shill/net/byte_string.h"
 #include "shill/net/ip_address.h"
-#include "shill/net/mock_arp_client.h"
 #include "shill/net/mock_io_handler_factory.h"
 #include "shill/net/mock_sockets.h"
 #include "shill/net/mock_time.h"

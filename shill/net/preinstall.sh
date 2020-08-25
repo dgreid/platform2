@@ -15,9 +15,9 @@ deps=$(<"${OUT}"/gen/libshill-net-deps.txt)
 sed \
   -e "s/@BSLOT@/${v}/g" \
   -e "s/@PRIVATE_PC@/${deps}/g" \
-  "net/libshill-net.pc.in" > "${OUT}/lib/libshill-net-${v}.pc"
+  "libshill-net.pc.in" > "${OUT}/lib/libshill-net-${v}.pc"
 sed \
   -e "s/@BSLOT@/${v}/g" \
   -e "s/@PRIVATE_PC@/${deps}/g" \
-  "net/libshill-net.pc.in" > "${OUT}/lib/libshill-net.pc"
+  "libshill-net.pc.in" > "${OUT}/lib/libshill-net.pc"
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SHILL_NET_MOCK_ARP_CLIENT_H_
-#define SHILL_NET_MOCK_ARP_CLIENT_H_
+#ifndef SHILL_MOCK_ARP_CLIENT_H_
+#define SHILL_MOCK_ARP_CLIENT_H_
 
 #include "shill/net/arp_client.h"
 
@@ -34,4 +34,4 @@ class MockArpClient : public ArpClient {
 
 }  // namespace shill
 
-#endif  // SHILL_NET_MOCK_ARP_CLIENT_H_
+#endif  // SHILL_MOCK_ARP_CLIENT_H_

@@ -9,6 +9,8 @@
 
 #include <string>
 
+#include "shill/net/shill_export.h"
+
 namespace shill {
 
 namespace IEEE_80211 {
@@ -257,12 +259,12 @@ enum WiFiStatusCode : uint16_t {
 // Returns a string representing the specified |reason|, which is an integer
 // value corresponding to the NL80211_ATTR_REASON_CODE attribute acquired from
 // the kernel.
-std::string ReasonToString(WiFiReasonCode reason);
+SHILL_EXPORT std::string ReasonToString(WiFiReasonCode reason);
 
 // Returns a string representing the specified |status|, which is an integer
 // value corresponding to the NL80211_ATTR_STATUS_CODE attribute acquired from
 // the kernel.
-std::string StatusToString(WiFiStatusCode status);
+SHILL_EXPORT std::string StatusToString(WiFiStatusCode status);
 
 }  // namespace IEEE_80211
 

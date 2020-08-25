@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "shill/net/arp_client_test_helper.h"
+#include "shill/arp_client_test_helper.h"
 
 #include <gtest/gtest.h>
 
