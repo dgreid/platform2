@@ -113,8 +113,8 @@ bool Dlc::Mount(HelperProcessProxy* proxy,
   }
   base::File image(image_path, base::File::FLAG_OPEN | base::File::FLAG_READ);
   if (!image.IsValid()) {
-    LOG(ERROR) << "Could not open image file '" << image_path.value() << "': "
-               << base::File::ErrorToString(image.error_details());
+    LOG(ERROR) << "Could not open image file '" << image_path.value()
+               << "': " << base::File::ErrorToString(image.error_details());
     return false;
   }
   base::ScopedFD image_fd(image.TakePlatformFile());

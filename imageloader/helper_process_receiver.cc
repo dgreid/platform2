@@ -32,9 +32,7 @@ constexpr char kSeccompFilterPath[] =
 }  // namespace
 
 HelperProcessReceiver::HelperProcessReceiver(base::ScopedFD control_fd)
-    : control_fd_(std::move(control_fd)),
-      pending_fd_(-1),
-      mounter_() {}
+    : control_fd_(std::move(control_fd)), pending_fd_(-1), mounter_() {}
 
 int HelperProcessReceiver::OnInit() {
   // Prevent the main process from sending us any signals.
