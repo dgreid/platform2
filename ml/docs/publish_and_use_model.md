@@ -45,6 +45,7 @@ CrOS major version:
 | M84             | 1.14.0           |
 | M85             | 1.14.0           |
 | M86             | 2.2.0            |
+| M87             | 2.3.0            |
 
 ## Two methods to publish your models
 
