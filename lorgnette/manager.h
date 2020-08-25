@@ -97,6 +97,12 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
     kBooleanMetricMax
   };
 
+  struct ScanJobState {
+    std::string device_name;
+    bool in_use = false;
+    std::unique_ptr<SaneDevice> device;
+  };
+
   static const char kMetricScanRequested[];
   static const char kMetricScanSucceeded[];
   static const char kMetricScanFailed[];
@@ -106,7 +112,7 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                          std::unique_ptr<SaneDevice>* device_out);
 
   bool RunScanLoop(brillo::ErrorPtr* error,
-                   std::unique_ptr<SaneDevice> device,
+                   ScanJobState* scan_state,
                    const base::ScopedFD& outfd,
                    base::Optional<std::string> scan_uuid);
 

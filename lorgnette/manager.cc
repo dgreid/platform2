@@ -425,7 +425,11 @@ bool Manager::ScanImage(brillo::ErrorPtr* error,
     return false;
   }
 
-  if (!RunScanLoop(error, std::move(device), outfd, base::nullopt)) {
+  ScanJobState scan_state;
+  scan_state.device_name = device_name;
+  scan_state.device = std::move(device);
+
+  if (!RunScanLoop(error, &scan_state, outfd, base::nullopt)) {
     ReportScanFailed(device_name);
     return false;
   }
@@ -473,7 +477,11 @@ void Manager::StartScan(
   response.set_scan_uuid(uuid);
   method_response->Return(impl::SerializeProto(response));
 
-  if (!RunScanLoop(&error, std::move(device), outfd, uuid)) {
+  ScanJobState scan_state;
+  scan_state.device_name = request.device_name();
+  scan_state.device = std::move(device);
+
+  if (!RunScanLoop(&error, &scan_state, outfd, uuid)) {
     ReportScanFailed(request.device_name());
     SendFailureSignal(uuid, SerializeError(error));
     return;
@@ -569,9 +577,10 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
 }
 
 bool Manager::RunScanLoop(brillo::ErrorPtr* error,
-                          std::unique_ptr<SaneDevice> device,
+                          ScanJobState* scan_state,
                           const base::ScopedFD& outfd,
                           base::Optional<std::string> scan_uuid) {
+  SaneDevice* device = scan_state->device.get();
   ScanParameters params;
   if (!device->GetScanParameters(error, &params)) {
     return false;
