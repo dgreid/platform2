@@ -554,8 +554,8 @@ TEST(ArcSetupUtil, TestGenerateFakeSerialNumber) {
 
   // Generate an ID for a different account but for the same machine.
   // Check that the ID is not the same as |id_1|.
-  const std::string id_3 = GenerateFakeSerialNumber("mytestaccount2@gmail.com",
-                                                    "001122aabbcc");
+  const std::string id_3 =
+      GenerateFakeSerialNumber("mytestaccount2@gmail.com", "001122aabbcc");
   EXPECT_NE(id_1, id_3);
 
   // Generate an ID for a different machine but for the same account.

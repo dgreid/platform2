@@ -844,8 +844,7 @@ void ArcSetup::ApplyPerBoardConfigurationsInternal(
         base::FilePath(oem_mount_directory)
             .Append("etc")
             .Append(arc_paths_->media_profile_file);
-    EXIT_IF(
-        !base::CopyFile(media_profile_xml, new_media_profile_xml));
+    EXIT_IF(!base::CopyFile(media_profile_xml, new_media_profile_xml));
     EXIT_IF(
         !Chown(kHostArcCameraUid, kHostArcCameraGid, new_media_profile_xml));
   }

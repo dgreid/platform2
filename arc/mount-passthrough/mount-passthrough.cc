@@ -402,14 +402,37 @@ int main(int argc, char** argv) {
           fuse_umask_opt.c_str());
 
   const char* fuse_argv[] = {
-      argv[0], argv[2], "-f", "-o", "allow_other", "-o", "default_permissions",
+      argv[0],
+      argv[2],
+      "-f",
+      "-o",
+      "allow_other",
+      "-o",
+      "default_permissions",
       // Never cache attr/dentry since our backend storage is not exclusive to
       // this process.
-      "-o", "attr_timeout=0", "-o", "entry_timeout=0", "-o",
-      "negative_timeout=0", "-o", "ac_attr_timeout=0", "-o",
-      "fsname=passthrough", "-o", fuse_uid_opt.c_str(), "-o",
-      fuse_gid_opt.c_str(), "-o", "modules=subdir", "-o",
-      fuse_subdir_opt.c_str(), "-o", "direct_io", "-o", fuse_umask_opt.c_str(),
+      "-o",
+      "attr_timeout=0",
+      "-o",
+      "entry_timeout=0",
+      "-o",
+      "negative_timeout=0",
+      "-o",
+      "ac_attr_timeout=0",
+      "-o",
+      "fsname=passthrough",
+      "-o",
+      fuse_uid_opt.c_str(),
+      "-o",
+      fuse_gid_opt.c_str(),
+      "-o",
+      "modules=subdir",
+      "-o",
+      fuse_subdir_opt.c_str(),
+      "-o",
+      "direct_io",
+      "-o",
+      fuse_umask_opt.c_str(),
   };
   int fuse_argc = sizeof(fuse_argv) / sizeof(fuse_argv[0]);
 

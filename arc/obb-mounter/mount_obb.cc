@@ -25,6 +25,6 @@ int main(int argc, char** argv) {
   const std::string& owner_uid = args[2];
   const std::string& owner_gid = args[3];
 
-  return mount_obb_fuse_main(file_system_name, obb_filename,
-                             mount_path, owner_uid, owner_gid);
+  return mount_obb_fuse_main(file_system_name, obb_filename, mount_path,
+                             owner_uid, owner_gid);
 }

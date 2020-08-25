@@ -27,7 +27,6 @@ bool IgnoreLogging(int, const char*, int, size_t, const std::string&) {
 
 }  // namespace
 
-
 class Environment {
  public:
   Environment() {
@@ -41,11 +40,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider data_provider(data, size);
   // Create string arguments first
   const std::string& mount_path =
-    data_provider.ConsumeRandomLengthString(kRandomFilePathMaxLength);
+      data_provider.ConsumeRandomLengthString(kRandomFilePathMaxLength);
   const std::string& owner_uid =
-    data_provider.ConsumeRandomLengthString(kRandomIDMaxLength);
+      data_provider.ConsumeRandomLengthString(kRandomIDMaxLength);
   const std::string& owner_gid =
-    data_provider.ConsumeRandomLengthString(kRandomIDMaxLength);
+      data_provider.ConsumeRandomLengthString(kRandomIDMaxLength);
 
   // Create a temporary directory to hold the created file
   base::ScopedTempDir temp_dir;
@@ -62,13 +61,10 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   }
 
   const std::string& file_contents =
-    data_provider.ConsumeRemainingBytesAsString();
+      data_provider.ConsumeRemainingBytesAsString();
   file.Write(0, file_contents.c_str(), file_contents.length());
 
-  mount_obb_fuse_main(path.value(),
-                      file_path.value(),
-                      mount_path,
-                      owner_uid,
+  mount_obb_fuse_main(path.value(), file_path.value(), mount_path, owner_uid,
                       owner_gid);
 
   return 0;

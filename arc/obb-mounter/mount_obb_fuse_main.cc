@@ -38,7 +38,7 @@ class FileReaderThreadSafe {
   FileReaderThreadSafe(fat::Volume* volume,
                        int64_t start_cluster,
                        int64_t file_size)
-    : reader_(volume, start_cluster, file_size) {}
+      : reader_(volume, start_cluster, file_size) {}
   ~FileReaderThreadSafe() = default;
 
   int64_t Read(char* buf, int64_t size, int64_t offset) {
@@ -68,8 +68,7 @@ void ConvertDirectoryEntryToStat(const DirectoryEntry& entry,
 }
 
 // Gets a DirectoryEntry with the given path.
-bool GetDirectoryEntry(const base::StringPiece16& path,
-                       DirectoryEntry* out) {
+bool GetDirectoryEntry(const base::StringPiece16& path, DirectoryEntry* out) {
   if (path.empty() || path[0] != '/') {
     return false;
   }
@@ -227,8 +226,8 @@ int mount_obb_fuse_main(const std::string& file_system_name,
       std::string("allow_other,default_permissions,uid=") + owner_uid +
       ",gid=" + owner_gid;
   const char* fuse_argv[] = {
-     file_system_name.c_str(), mount_path.c_str(),
-     "-f", "-o", mount_options.c_str(),
+      file_system_name.c_str(), mount_path.c_str(), "-f", "-o",
+      mount_options.c_str(),
   };
   struct fuse_operations fat_ops = {};
 #define SET_FAT_OP(name) fat_ops.name = fat_##name
