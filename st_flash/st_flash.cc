@@ -23,7 +23,6 @@
 #include <base/strings/string_number_conversions.h>
 #include <brillo/flag_helper.h>
 
-
 #define GPIO_SYS "/sys/class/gpio/"
 #define PULSE_WIDTH 100000  // 100ms reset pulse width, we need at least 300ns.
 
@@ -43,35 +42,34 @@ struct BoardConfig {
 
 // Board specific configurations.
 static std::map<std::string, struct BoardConfig> boardConfigs = {
-  {
-    "eve",
     {
-      .i2cBusMin = 7,
-      .i2cBusMax = 8,
-      .i2cSlaveAddress = 0x46,
-      .flash_size = 512 * 1024,
-      .flash_address = 0x08000000,
-      .fwInfoAddress = 0x80001c4,
-      .bootGPIO = 432,
-      .resetGPIO = 433,
-    }
-  }
+        "eve",
+        {
+            .i2cBusMin = 7,
+            .i2cBusMax = 8,
+            .i2cSlaveAddress = 0x46,
+            .flash_size = 512 * 1024,
+            .flash_address = 0x08000000,
+            .fwInfoAddress = 0x80001c4,
+            .bootGPIO = 432,
+            .resetGPIO = 433,
+        },
+    },
 };
 
 // Global config instance.
 static struct BoardConfig config;
 
-
 enum StatusCode {
   ACK = 0x79,
   NACK = 0x1f,
-  BUSY = 0x76
+  BUSY = 0x76,
 };
-
 
 class IAPFirmwareUpdater {
  public:
-  IAPFirmwareUpdater(uint8_t i2cBusMin, uint8_t u2cBusMax,
+  IAPFirmwareUpdater(uint8_t i2cBusMin,
+                     uint8_t u2cBusMax,
                      uint8_t slaveAddress);
 
   void Flash(uint32_t address, std::string path, bool verify);
@@ -103,7 +101,8 @@ class IAPFirmwareUpdater {
   bool WriteToFile(std::string path, std::string value);
 };
 
-IAPFirmwareUpdater::IAPFirmwareUpdater(uint8_t i2cBusMin, uint8_t i2cBusMax,
+IAPFirmwareUpdater::IAPFirmwareUpdater(uint8_t i2cBusMin,
+                                       uint8_t i2cBusMax,
                                        uint8_t slaveAddress) {
   char dev_path[kMaxI2CDevicePathLen];
 
@@ -120,7 +119,7 @@ IAPFirmwareUpdater::IAPFirmwareUpdater(uint8_t i2cBusMin, uint8_t i2cBusMax,
 
     if (ioctl(i2c_fd_, I2C_SLAVE_FORCE, slaveAddress)) {
       PLOG(INFO) << "Failed to set slave address 0x" << std::hex
-                  << static_cast<int>(slaveAddress);
+                 << static_cast<int>(slaveAddress);
       close(i2c_fd_);
       continue;
     }
@@ -135,7 +134,7 @@ IAPFirmwareUpdater::IAPFirmwareUpdater(uint8_t i2cBusMin, uint8_t i2cBusMax,
 }
 
 bool IAPFirmwareUpdater::PollForAck(uint32_t timeoutMs) {
-  struct timespec delay = { .tv_sec = 0, .tv_nsec = 250000000 };
+  struct timespec delay = {.tv_sec = 0, .tv_nsec = 250000000};
   uint8_t byte;
   uint32_t elapseMs = 0;
   struct timeval start, current;
@@ -143,16 +142,16 @@ bool IAPFirmwareUpdater::PollForAck(uint32_t timeoutMs) {
 
   while (true) {
     switch ((byte = ReadOneByte())) {
-    case ACK:
-      return true;
-    case NACK:
-      return false;
-    case BUSY:
-      nanosleep(&delay, NULL);
-      break;
-    default:
-      LOG(FATAL) << "PollForAck: unexpected byte 0x" << std::hex
-                 << static_cast<int>(byte);
+      case ACK:
+        return true;
+      case NACK:
+        return false;
+      case BUSY:
+        nanosleep(&delay, NULL);
+        break;
+      default:
+        LOG(FATAL) << "PollForAck: unexpected byte 0x" << std::hex
+                   << static_cast<int>(byte);
     }
 
     gettimeofday(&current, NULL);
@@ -165,7 +164,8 @@ bool IAPFirmwareUpdater::PollForAck(uint32_t timeoutMs) {
   }
 }
 
-void IAPFirmwareUpdater::Flash(uint32_t address, std::string path,
+void IAPFirmwareUpdater::Flash(uint32_t address,
+                               std::string path,
                                bool verify) {
   int id = GetId();
   LOG(INFO) << "BootLoader version: 0x" << std::hex
@@ -182,8 +182,8 @@ void IAPFirmwareUpdater::Flash(uint32_t address, std::string path,
     LOG(INFO) << "Verifing firmware ...";
     for (unsigned i = 0; i < firmware.size(); i++) {
       if (firmware[i] != readFirmware[i]) {
-        LOG(FATAL) << "Verification failed at 0x"
-                   << std::setfill('0') << std::setw(8) << address + i;
+        LOG(FATAL) << "Verification failed at 0x" << std::setfill('0')
+                   << std::setw(8) << address + i;
       }
     }
     LOG(INFO) << "Firmware verified.";
@@ -203,8 +203,8 @@ void IAPFirmwareUpdater::GetFirmwareVersion() {
 }
 
 void IAPFirmwareUpdater::ReadFirmware(std::string filename) {
-  std::vector<uint8_t> firmware = ReadFlash(config.flash_address,
-                                            config.flash_size);
+  std::vector<uint8_t> firmware =
+      ReadFlash(config.flash_address, config.flash_size);
   WriteToFile(filename, std::string(firmware.begin(), firmware.end()));
   LOG(INFO) << "Firmware saved to " << filename;
 
@@ -255,7 +255,7 @@ void IAPFirmwareUpdater::LeaveBootLoader() {
 }
 
 void IAPFirmwareUpdater::WriteFlash(uint32_t address,
-                                     std::vector<uint8_t> data) {
+                                    std::vector<uint8_t> data) {
   const uint32_t chunkSize = 200;
   uint32_t length = data.size();
   uint32_t sent = 0, to_send = 0;
@@ -328,13 +328,14 @@ void IAPFirmwareUpdater::Erase() {
 
   CHECK(WriteCommand(0x45));
   CHECK(PollForAck());
-  uint8_t idBuf[3] = { 0xff, 0xff, 0x00 };
+  uint8_t idBuf[3] = {0xff, 0xff, 0x00};
   CHECK_EQ(write(i2c_fd_, idBuf, 3), 3);
   CHECK(PollForAck(60000));
   LOG(INFO) << "done";
 }
 
-bool IAPFirmwareUpdater::WriteFlashChunk(uint32_t address, uint8_t length,
+bool IAPFirmwareUpdater::WriteFlashChunk(uint32_t address,
+                                         uint8_t length,
                                          uint8_t* data) {
   CHECK(WriteCommand(0x31));
   CHECK(PollForAck());
@@ -349,7 +350,7 @@ bool IAPFirmwareUpdater::WriteFlashChunk(uint32_t address, uint8_t length,
   CHECK_EQ(write(i2c_fd_, addr, 5), 5);
   CHECK(PollForAck());
 
-  uint8_t buffer[300] = { 0 };
+  uint8_t buffer[300] = {0};
   int offset = 0;
   buffer[offset++] = length - 1;
 
@@ -364,7 +365,8 @@ bool IAPFirmwareUpdater::WriteFlashChunk(uint32_t address, uint8_t length,
   return true;
 }
 
-bool IAPFirmwareUpdater::ReadFlashChunk(uint32_t address, uint8_t length,
+bool IAPFirmwareUpdater::ReadFlashChunk(uint32_t address,
+                                        uint8_t length,
                                         uint8_t* data) {
   CHECK(WriteCommand(0x11));
   CHECK(PollForAck());
@@ -391,12 +393,12 @@ bool IAPFirmwareUpdater::ReadFlashChunk(uint32_t address, uint8_t length,
 std::vector<uint8_t> IAPFirmwareUpdater::LoadFirmware(std::string path) {
   std::string buf;
   CHECK(base::ReadFileToString(base::FilePath(path), &buf))
-    << "Failed to load firmware: " << path;
+      << "Failed to load firmware: " << path;
   return std::vector<uint8_t>(buf.begin(), buf.end());
 }
 
 bool IAPFirmwareUpdater::WriteCommand(uint8_t command) {
-  uint8_t buffer[2] = { command, static_cast<uint8_t>(~command) };
+  uint8_t buffer[2] = {command, static_cast<uint8_t>(~command)};
   return write(i2c_fd_, buffer, 2) == 2;
 }
 
@@ -407,11 +409,11 @@ uint8_t IAPFirmwareUpdater::ReadOneByte() {
 }
 
 bool IAPFirmwareUpdater::WriteToFile(std::string path, std::string value) {
-  return (base::WriteFile(base::FilePath(path), value.c_str(), value.size())
-          == value.size());
+  return (base::WriteFile(base::FilePath(path), value.c_str(), value.size()) ==
+          value.size());
 }
 
-int main(int argc, const char *argv[]) {
+int main(int argc, const char* argv[]) {
   DEFINE_string(board, "", "Target board to update");
   DEFINE_string(read, "", "Read current firmware content to file");
   DEFINE_bool(fw_version, false, "Get current firmware version");
