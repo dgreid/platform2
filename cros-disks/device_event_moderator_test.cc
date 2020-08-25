@@ -13,11 +13,11 @@
 #include "cros-disks/device_event_dispatcher_interface.h"
 #include "cros-disks/device_event_source_interface.h"
 
+using testing::_;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
 using testing::SetArgPointee;
-using testing::_;
 
 namespace cros_disks {
 

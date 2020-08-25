@@ -19,11 +19,11 @@
 #include "cros-disks/platform.h"
 #include "cros-disks/uri.h"
 
+using testing::_;
 using testing::HasSubstr;
 using testing::Not;
 using testing::Return;
 using testing::StrEq;
-using testing::_;
 
 namespace cros_disks {
 

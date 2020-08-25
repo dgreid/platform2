@@ -126,9 +126,7 @@ TEST_F(SandboxedInitTest, RunInitNoDaemon_WaitForTermination) {
 }
 
 TEST_F(SandboxedInitTest, RunInitNoDaemon_Crash) {
-  RunUnderInit([]() -> int {
-    _exit(1);
-  });
+  RunUnderInit([]() -> int { _exit(1); });
 
   int status;
   ASSERT_TRUE(Wait(&status, false));
