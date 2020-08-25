@@ -6,10 +6,10 @@
 
 namespace typecd {
 
-Daemon::Daemon() :
-  udev_monitor_(new UdevMonitor()),
-  port_manager_(new PortManager()),
-  weak_factory_(this) {}
+Daemon::Daemon()
+    : udev_monitor_(new UdevMonitor()),
+      port_manager_(new PortManager()),
+      weak_factory_(this) {}
 
 Daemon::~Daemon() {}
 

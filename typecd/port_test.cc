@@ -119,8 +119,7 @@ TEST_F(PortTest, TestDPAltModeEntryCheckFalse) {
   ASSERT_TRUE(base::CreateNewTempDirectory("", &temp_dir));
 
   // Add the TBT alt mode.
-  std::string mode_dirname =
-      base::StringPrintf("port%d-partner.%d", 0, 0);
+  std::string mode_dirname = base::StringPrintf("port%d-partner.%d", 0, 0);
   auto mode_path = temp_dir.Append(mode_dirname);
   ASSERT_TRUE(CreateFakeAltMode(mode_path, kTBTSVID, kTBTVDO, kTBTVDOIndex));
   port->AddRemovePartnerAltMode(mode_path, true);
