@@ -71,6 +71,6 @@ int main(int argc, char* argv[]) {
 
   LOG(INFO) << "Starting patchpanel manager";
   patchpanel::Manager manager(std::move(adb_proxy), std::move(mcast_proxy),
-                                std::move(nd_proxy));
+                              std::move(nd_proxy));
   return manager.Run();
 }

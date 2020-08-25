@@ -25,12 +25,12 @@ int main(int argc, char* argv[]) {
   brillo::Daemon daemon;
 
   auto mdns_fwd = std::make_unique<patchpanel::MulticastForwarder>(
-      args[0], patchpanel::kMdnsMcastAddress,
-      patchpanel::kMdnsMcastAddress6, patchpanel::kMdnsPort);
+      args[0], patchpanel::kMdnsMcastAddress, patchpanel::kMdnsMcastAddress6,
+      patchpanel::kMdnsPort);
 
   auto ssdp_fwd = std::make_unique<patchpanel::MulticastForwarder>(
-      args[0], patchpanel::kSsdpMcastAddress,
-      patchpanel::kSsdpMcastAddress6, patchpanel::kSsdpPort);
+      args[0], patchpanel::kSsdpMcastAddress, patchpanel::kSsdpMcastAddress6,
+      patchpanel::kSsdpPort);
 
   // Crostini depends on another daemon (LXD) creating the guest bridge
   // interface. This can take a few seconds, so retry if necessary.

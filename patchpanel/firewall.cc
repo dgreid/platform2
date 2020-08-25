@@ -25,7 +25,8 @@ namespace {
 // Interface names must be shorter than 'IFNAMSIZ' chars.
 // See http://man7.org/linux/man-pages/man7/netdevice.7.html
 // 'IFNAMSIZ' is 16 in recent kernels.
-// See https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/if.h?h=v4.14#n33
+// See
+// https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/tree/include/uapi/linux/if.h?h=v4.14#n33
 constexpr size_t kInterfaceNameSize = 16;
 
 // Interface names are passed directly to the 'iptables' command. Rather than
@@ -106,10 +107,9 @@ bool Firewall::DeleteAcceptRules(Protocol protocol,
     return false;
   }
 
-  bool ip4_success = DeleteAcceptRule(kIpTablesPath, protocol, port,
-                                      interface);
-  bool ip6_success = DeleteAcceptRule(kIp6TablesPath, protocol,
-                                      port, interface);
+  bool ip4_success = DeleteAcceptRule(kIpTablesPath, protocol, port, interface);
+  bool ip6_success =
+      DeleteAcceptRule(kIp6TablesPath, protocol, port, interface);
   return ip4_success && ip6_success;
 }
 
@@ -119,13 +119,15 @@ bool Firewall::AddIpv4ForwardRule(Protocol protocol,
                                   const std::string& interface,
                                   const std::string& dst_ip,
                                   uint16_t dst_port) {
-  if (!ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port, "-I")) {
-      return false;
+  if (!ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port,
+                          "-I")) {
+    return false;
   }
 
   if (!ModifyIpv4ForwardChain(protocol, interface, dst_ip, dst_port, "-A")) {
-      ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port, "-D");
-      return false;
+    ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port,
+                       "-D");
+    return false;
   }
 
   return true;
@@ -138,7 +140,8 @@ bool Firewall::DeleteIpv4ForwardRule(Protocol protocol,
                                      const std::string& dst_ip,
                                      uint16_t dst_port) {
   bool success = true;
-  if (!ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port, "-D")) {
+  if (!ModifyIpv4DNATRule(protocol, input_ip, port, interface, dst_ip, dst_port,
+                          "-D")) {
     success = false;
   }
   if (!ModifyIpv4ForwardChain(protocol, interface, dst_ip, dst_port, "-D")) {
@@ -187,15 +190,17 @@ bool Firewall::ModifyIpv4DNATRule(Protocol protocol,
     return false;
   }
 
-  std::vector<std::string> argv{kIpTablesPath,
-                                "-t",
-                                "nat",
-                                operation,
-                                "PREROUTING",
-                                "-i",
-                                interface,
-                                "-p",  // protocol
-                                ProtocolName(protocol)};
+  std::vector<std::string> argv{
+      kIpTablesPath,
+      "-t",
+      "nat",
+      operation,
+      "PREROUTING",
+      "-i",
+      interface,
+      "-p",  // protocol
+      ProtocolName(protocol),
+  };
   if (!input_ip.empty()) {
     argv.push_back("-d");  // input destination ip
     argv.push_back(input_ip);
@@ -253,7 +258,8 @@ bool Firewall::ModifyIpv4ForwardChain(Protocol protocol,
       std::to_string(dst_port),
       "-j",
       "ACCEPT",
-      "-w"};  // Wait for xtables lock.
+      "-w",
+  };  // Wait for xtables lock.
   return RunInMinijail(argv) == 0;
 }
 
@@ -294,13 +300,15 @@ bool Firewall::AddAcceptRule(const std::string& executable_path,
                              Protocol protocol,
                              uint16_t port,
                              const std::string& interface) {
-  std::vector<std::string> argv{executable_path,
-                                "-I",  // insert
-                                "INPUT",
-                                "-p",  // protocol
-                                ProtocolName(protocol),
-                                "--dport",  // destination port
-                                std::to_string(port)};
+  std::vector<std::string> argv{
+      executable_path,
+      "-I",  // insert
+      "INPUT",
+      "-p",  // protocol
+      ProtocolName(protocol),
+      "--dport",  // destination port
+      std::to_string(port),
+  };
   if (!interface.empty()) {
     argv.push_back("-i");  // interface
     argv.push_back(interface);
@@ -316,13 +324,15 @@ bool Firewall::DeleteAcceptRule(const std::string& executable_path,
                                 Protocol protocol,
                                 uint16_t port,
                                 const std::string& interface) {
-  std::vector<std::string> argv{executable_path,
-                                "-D",  // delete
-                                "INPUT",
-                                "-p",  // protocol
-                                ProtocolName(protocol),
-                                "--dport",  // destination port
-                                std::to_string(port)};
+  std::vector<std::string> argv{
+      executable_path,
+      "-D",  // delete
+      "INPUT",
+      "-p",  // protocol
+      ProtocolName(protocol),
+      "--dport",  // destination port
+      std::to_string(port),
+  };
   if (!interface.empty()) {
     argv.push_back("-i");  // interface
     argv.push_back(interface);

@@ -20,8 +20,9 @@ class MockFirewall : public Firewall {
   MockFirewall() = default;
   ~MockFirewall() = default;
 
-  int SetRunInMinijailFailCriterion(
-      const std::vector<std::string>& keywords, bool repeat, bool omit_failure);
+  int SetRunInMinijailFailCriterion(const std::vector<std::string>& keywords,
+                                    bool repeat,
+                                    bool omit_failure);
   int GetRunInMinijailCriterionMatchCount(int id);
   bool CheckCommandsUndone();
   int CountActiveCommands();
@@ -48,10 +49,9 @@ class MockFirewall : public Firewall {
 
     // Don't take into account match_count.
     bool operator==(const Criterion& c) const {
-      return (std::equal(keywords.begin(), keywords.end(),
-                         c.keywords.begin()) &&
-              (repeat == c.repeat) &&
-              (c.omit_failure == omit_failure));
+      return (
+          std::equal(keywords.begin(), keywords.end(), c.keywords.begin()) &&
+          (repeat == c.repeat) && (c.omit_failure == omit_failure));
     }
   };
 

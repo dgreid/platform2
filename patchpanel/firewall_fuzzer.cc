@@ -24,9 +24,7 @@ class FakeFirewall : public Firewall {
 
  private:
   // The fake's implementation always succeeds.
-  int RunInMinijail(const std::vector<std::string>& argv) override {
-    return 0;
-  }
+  int RunInMinijail(const std::vector<std::string>& argv) override { return 0; }
 
   DISALLOW_COPY_AND_ASSIGN(FakeFirewall);
 };
@@ -34,9 +32,7 @@ class FakeFirewall : public Firewall {
 }  // namespace patchpanel
 
 struct Environment {
-  Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);
-  }
+  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
 };
 
 void FuzzAcceptRules(patchpanel::FakeFirewall* fake_firewall,
