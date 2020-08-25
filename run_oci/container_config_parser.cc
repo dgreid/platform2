@@ -600,9 +600,11 @@ bool ParseMountPropagationFlags(const std::string& propagation,
 constexpr std::pair<const char*, uint64_t> kSecurebitsMapping[] = {
 #define SECUREBIT_MAP_ENTRY(secbit) \
   { #secbit, SECBIT_##secbit }
-    SECUREBIT_MAP_ENTRY(NOROOT), SECUREBIT_MAP_ENTRY(NOROOT_LOCKED),
+    SECUREBIT_MAP_ENTRY(NOROOT),
+    SECUREBIT_MAP_ENTRY(NOROOT_LOCKED),
     SECUREBIT_MAP_ENTRY(NO_SETUID_FIXUP),
-    SECUREBIT_MAP_ENTRY(NO_SETUID_FIXUP_LOCKED), SECUREBIT_MAP_ENTRY(KEEP_CAPS),
+    SECUREBIT_MAP_ENTRY(NO_SETUID_FIXUP_LOCKED),
+    SECUREBIT_MAP_ENTRY(KEEP_CAPS),
     SECUREBIT_MAP_ENTRY(KEEP_CAPS_LOCKED),
 #if defined(SECBIT_NO_CAP_AMBIENT_RAISE)
     // Kernels < v4.4 do not have this.
