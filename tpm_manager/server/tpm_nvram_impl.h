@@ -45,13 +45,12 @@ class TpmNvramImpl : public TpmNvram {
                         bool lock_write,
                         const std::string& authorization_value) override;
   NvramResult ListSpaces(std::vector<uint32_t>* index_list) override;
-  NvramResult GetSpaceInfo(
-      uint32_t index,
-      uint32_t* size,
-      bool* is_read_locked,
-      bool* is_write_locked,
-      std::vector<NvramSpaceAttribute>* attributes,
-      NvramSpacePolicy* policy) override;
+  NvramResult GetSpaceInfo(uint32_t index,
+                           uint32_t* size,
+                           bool* is_read_locked,
+                           bool* is_write_locked,
+                           std::vector<NvramSpaceAttribute>* attributes,
+                           NvramSpacePolicy* policy) override;
 
   void PrunePolicies() override;
 
@@ -78,13 +77,12 @@ class TpmNvramImpl : public TpmNvram {
   // lifetime of |nv_handle|.
   //
   // Returns whether the initialization is successful.
-  bool InitializeNvramHandleWithPolicy(
-      uint32_t index,
-      bool need_auth_policy,
-      const std::string& authorization_value,
-      trousers::ScopedTssNvStore* nv_handle,
-      trousers::ScopedTssPolicy* policy_handle,
-      TpmConnection* connection);
+  bool InitializeNvramHandleWithPolicy(uint32_t index,
+                                       bool need_auth_policy,
+                                       const std::string& authorization_value,
+                                       trousers::ScopedTssNvStore* nv_handle,
+                                       trousers::ScopedTssPolicy* policy_handle,
+                                       TpmConnection* connection);
 
   // This method sets up the composite pcr provided by |pcr_handle| with the
   // value of PCR0 at locality 1. Returns true on success.

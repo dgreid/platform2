@@ -23,8 +23,8 @@
 
 using testing::_;
 using testing::AtLeast;
-using testing::Invoke;
 using testing::DoAll;
+using testing::Invoke;
 using testing::NiceMock;
 using testing::Return;
 using testing::SaveArg;
@@ -51,8 +51,8 @@ class Tpm2InitializerTest : public testing::Test {
     factory_.set_tpm_state(&mock_trunks_tpm_state_);
     factory_.set_tpm_utility(&mock_tpm_utility_);
 
-    ownership_callback_ = base::Bind(
-        &Tpm2InitializerTest::OwnershipCallback, base::Unretained(this));
+    ownership_callback_ = base::Bind(&Tpm2InitializerTest::OwnershipCallback,
+                                     base::Unretained(this));
     tpm_initializer_.reset(new Tpm2InitializerImpl(
         factory_, &mock_openssl_util_, &mock_data_store_, &mock_tpm_status_,
         ownership_callback_));

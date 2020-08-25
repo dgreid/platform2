@@ -128,9 +128,8 @@ NvramResult MapTpmError(TSS_RESULT tpm_error) {
 }
 
 // Returns whether |attributes| contains at least one key of |keys|.
-bool HasAnyAttribute(
-    const std::unordered_set<NvramSpaceAttribute>& key_set,
-    const std::vector<NvramSpaceAttribute>& attributes) {
+bool HasAnyAttribute(const std::unordered_set<NvramSpaceAttribute>& key_set,
+                     const std::vector<NvramSpaceAttribute>& attributes) {
   for (const auto attr : attributes) {
     if (key_set.find(attr) != key_set.end()) {
       return true;
@@ -165,12 +164,9 @@ NvramResult TpmNvramImpl::DefineSpace(
   static const std::unordered_set<NvramSpaceAttribute> auth_attributes(
       {NVRAM_READ_AUTHORIZATION, NVRAM_WRITE_AUTHORIZATION});
   bool need_auth_policy = HasAnyAttribute(auth_attributes, attributes);
-  if (!InitializeNvramHandleWithPolicy(index,
-                                       need_auth_policy,
-                                       authorization_value,
-                                       &nv_handle,
-                                       &policy_handle,
-                                       &owner_connection)) {
+  if (!InitializeNvramHandleWithPolicy(index, need_auth_policy,
+                                       authorization_value, &nv_handle,
+                                       &policy_handle, &owner_connection)) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
 
@@ -241,12 +237,9 @@ NvramResult TpmNvramImpl::WriteSpace(uint32_t index,
   static const std::unordered_set<NvramSpaceAttribute> auth_attributes(
       {NVRAM_OWNER_WRITE, NVRAM_WRITE_AUTHORIZATION});
   bool need_auth_policy = HasAnyAttribute(auth_attributes, attributes);
-  if (!InitializeNvramHandleWithPolicy(index,
-                                       need_auth_policy,
-                                       authorization_value,
-                                       &nv_handle,
-                                       &policy_handle,
-                                       &tpm_connection_)) {
+  if (!InitializeNvramHandleWithPolicy(index, need_auth_policy,
+                                       authorization_value, &nv_handle,
+                                       &policy_handle, &tpm_connection_)) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
 
@@ -401,12 +394,9 @@ NvramResult TpmNvramImpl::ReadSpaceInternal(
   static const std::unordered_set<NvramSpaceAttribute> auth_attributes(
       {NVRAM_OWNER_READ, NVRAM_READ_AUTHORIZATION});
   bool need_auth_policy = HasAnyAttribute(auth_attributes, attributes);
-  if (!InitializeNvramHandleWithPolicy(index,
-                                       need_auth_policy,
-                                       authorization_value,
-                                       &nv_handle,
-                                       &policy_handle,
-                                       &tpm_connection_)) {
+  if (!InitializeNvramHandleWithPolicy(index, need_auth_policy,
+                                       authorization_value, &nv_handle,
+                                       &policy_handle, &tpm_connection_)) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
 
@@ -417,8 +407,8 @@ NvramResult TpmNvramImpl::ReadSpaceInternal(
     TSS_RESULT tpm_result =
         Tspi_NV_ReadValue(nv_handle, 0, &chunk_size, space_data.ptr());
 
-    return TPM_ERROR(tpm_result) ?
-        MapTpmError(tpm_result) : NVRAM_RESULT_SUCCESS;
+    return TPM_ERROR(tpm_result) ? MapTpmError(tpm_result)
+                                 : NVRAM_RESULT_SUCCESS;
   }
 
   // The Tpm1.2 Specification defines the maximum read size of 128 bytes.
@@ -431,8 +421,8 @@ NvramResult TpmNvramImpl::ReadSpaceInternal(
     TSS_RESULT tpm_result =
         Tspi_NV_ReadValue(nv_handle, offset, &chunk_size, space_data.ptr());
     if (TPM_ERROR(tpm_result)) {
-      TPM_LOG(ERROR, tpm_result) << "Could not read from NVRAM space: "
-                                 << index;
+      TPM_LOG(ERROR, tpm_result)
+          << "Could not read from NVRAM space: " << index;
       data->clear();
       return MapTpmError(tpm_result);
     }
@@ -510,9 +500,9 @@ bool TpmNvramImpl::InitializeNvramHandleWithPolicy(
 
 bool TpmNvramImpl::SetCompositePcr0(ScopedTssPcrs* pcr_handle,
                                     TpmConnection* connection) {
-  TSS_RESULT result = Tspi_Context_CreateObject(
-      connection->GetContext(), TSS_OBJECT_TYPE_PCRS,
-      TSS_PCRS_STRUCT_INFO_SHORT, pcr_handle->ptr());
+  TSS_RESULT result =
+      Tspi_Context_CreateObject(connection->GetContext(), TSS_OBJECT_TYPE_PCRS,
+                                TSS_PCRS_STRUCT_INFO_SHORT, pcr_handle->ptr());
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "Could not acquire PCR object handle";
     return false;

@@ -49,13 +49,11 @@ DBusService::DBusService(scoped_refptr<dbus::Bus> bus,
                          TpmOwnershipInterface* ownership_service,
                          LocalDataStore* local_data_store)
     : brillo::DBusServiceDaemon(tpm_manager::kTpmManagerServiceName),
-      dbus_object_(new DBusObject(nullptr,
-                                  bus,
-                                  dbus::ObjectPath(kTpmManagerServicePath))),
+      dbus_object_(new DBusObject(
+          nullptr, bus, dbus::ObjectPath(kTpmManagerServicePath))),
       nvram_service_(nvram_service),
       ownership_service_(ownership_service),
-      local_data_store_(local_data_store)
-      {}
+      local_data_store_(local_data_store) {}
 
 void DBusService::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {

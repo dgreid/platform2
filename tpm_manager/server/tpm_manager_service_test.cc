@@ -376,7 +376,7 @@ TEST_F(TpmManagerServiceTest, GetVersionInfoSuccess) {
         *manufacturer = 3;
         *tpm_model = 4;
         *firmware_version = 5;
-        *vendor_specific = { 'a', 'b' };
+        *vendor_specific = {'a', 'b'};
         return true;
       }));
 
@@ -487,8 +487,8 @@ TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockReset) {
     self->Quit();
   };
 
-  service_->ResetDictionaryAttackLock(
-      ResetDictionaryAttackLockRequest(), base::Bind(callback, this));
+  service_->ResetDictionaryAttackLock(ResetDictionaryAttackLockRequest(),
+                                      base::Bind(callback, this));
   Run();
 }
 
@@ -532,8 +532,8 @@ TEST_F(TpmManagerServiceTest, ResetDictionaryAttackLockFailure) {
     self->Quit();
   };
 
-  service_->ResetDictionaryAttackLock(
-      ResetDictionaryAttackLockRequest(), base::Bind(callback, this));
+  service_->ResetDictionaryAttackLock(ResetDictionaryAttackLockRequest(),
+                                      base::Bind(callback, this));
   Run();
 }
 
@@ -718,8 +718,7 @@ TEST_F(TpmManagerServiceTest, ClearStoredOwnerPasswordRemainingDependencies) {
   local_data.add_owner_dependency(kOtherDependency);
   EXPECT_CALL(mock_local_data_store_, Read(_))
       .WillOnce(DoAll(SetArgPointee<0>(local_data), Return(true)));
-  EXPECT_CALL(mock_local_data_store_, Write(_))
-      .Times(0);
+  EXPECT_CALL(mock_local_data_store_, Write(_)).Times(0);
   auto callback = [](TpmManagerServiceTestBase* self, LocalData* data,
                      const ClearStoredOwnerPasswordReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());

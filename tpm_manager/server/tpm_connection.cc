@@ -26,15 +26,13 @@ const int kTpmConnectIntervalMs = 100;
 
 namespace tpm_manager {
 
-TpmConnection::TpmConnection(): connection_type_(kConnectWithoutAuth) {}
+TpmConnection::TpmConnection() : connection_type_(kConnectWithoutAuth) {}
 
 TpmConnection::TpmConnection(const std::string& owner_password)
-    : owner_password_(owner_password),
-      connection_type_(kConnectWithPassword) {}
+    : owner_password_(owner_password), connection_type_(kConnectWithPassword) {}
 
 TpmConnection::TpmConnection(const AuthDelegate& owner_delegate)
-    : owner_delegate_(owner_delegate),
-      connection_type_(kConnectWithDelegate) {}
+    : owner_delegate_(owner_delegate), connection_type_(kConnectWithDelegate) {}
 
 TSS_HCONTEXT TpmConnection::GetContext() {
   if (!ConnectContextIfNeeded()) {
@@ -108,8 +106,9 @@ bool TpmConnection::ConnectContextIfNeeded() {
     return false;
   }
 
-  const std::string& secret = connection_type_ == kConnectWithPassword ?
-      owner_password_ : owner_delegate_.secret();
+  const std::string& secret = connection_type_ == kConnectWithPassword
+                                  ? owner_password_
+                                  : owner_delegate_.secret();
   std::vector<BYTE> secret_data(secret.begin(), secret.end());
   if (TPM_ERROR(result = GetOveralls()->Ospi_Policy_SetSecret(
                     tpm_usage_policy, TSS_SECRET_MODE_PLAIN, secret_data.size(),

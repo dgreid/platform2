@@ -198,8 +198,7 @@ class TpmManagerService : public TpmNvramInterface,
   // |local_data|. If |owner_dependency| is not present in |local_data|,
   // this method does nothing.
   static void RemoveOwnerDependencyFromLocalData(
-      const std::string& owner_dependency,
-      LocalData* local_data);
+      const std::string& owner_dependency, LocalData* local_data);
 
   // Blocking implementation of ClearStoredOwnerPassword that can be executed
   // on the background worker thread.

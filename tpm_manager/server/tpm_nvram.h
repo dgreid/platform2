@@ -52,13 +52,12 @@ class TpmNvram {
 
   // Provides basic information about a given space. All pointer are optional
   // and may be NULL. Returns true on success.
-  virtual NvramResult GetSpaceInfo(
-      uint32_t index,
-      uint32_t* size,
-      bool* is_read_locked,
-      bool* is_write_locked,
-      std::vector<NvramSpaceAttribute>* attributes,
-      NvramSpacePolicy* policy) = 0;
+  virtual NvramResult GetSpaceInfo(uint32_t index,
+                                   uint32_t* size,
+                                   bool* is_read_locked,
+                                   bool* is_write_locked,
+                                   std::vector<NvramSpaceAttribute>* attributes,
+                                   NvramSpacePolicy* policy) = 0;
 
   // Removes stale NVRAM policies from the on-disk local data, if any. If the
   // data is fresh, or if we cannot determine that, the data won't be touched.

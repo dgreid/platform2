@@ -86,8 +86,8 @@ bool AesDecrypt(const EVP_CIPHER* cipher,
     LOG(ERROR) << __func__ << ": " << GetOpenSSLError();
     return false;
   }
-  if (!EVP_DecryptInit_ex(decryption_context.get(), cipher, nullptr,
-                          key_buffer, iv_buffer)) {
+  if (!EVP_DecryptInit_ex(decryption_context.get(), cipher, nullptr, key_buffer,
+                          iv_buffer)) {
     LOG(ERROR) << __func__ << ": " << GetOpenSSLError();
     return false;
   }
@@ -100,7 +100,7 @@ bool AesDecrypt(const EVP_CIPHER* cipher,
   output_buffer += output_size;
   output_size = 0;
   if (!EVP_DecryptFinal_ex(decryption_context.get(), output_buffer,
-      &output_size)) {
+                           &output_size)) {
     LOG(ERROR) << __func__ << ": " << GetOpenSSLError();
     return false;
   }

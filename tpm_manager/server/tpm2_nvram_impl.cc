@@ -53,12 +53,11 @@ void MapAttributesFromTpm(trunks::TPMA_NV tpm_flags,
     attributes->push_back(NVRAM_PLATFORM_READ);
 }
 
-bool MapAttributesToTpm(
-    const std::vector<NvramSpaceAttribute>& attributes,
-    NvramSpacePolicy policy,
-    trunks::TPMA_NV* tpm_flags,
-    bool* world_read_allowed,
-    bool* world_write_allowed) {
+bool MapAttributesToTpm(const std::vector<NvramSpaceAttribute>& attributes,
+                        NvramSpacePolicy policy,
+                        trunks::TPMA_NV* tpm_flags,
+                        bool* world_read_allowed,
+                        bool* world_write_allowed) {
   if (policy == NVRAM_POLICY_NONE) {
     *tpm_flags = trunks::TPMA_NV_AUTHWRITE | trunks::TPMA_NV_AUTHREAD;
   } else {
@@ -139,7 +138,8 @@ Tpm2NvramImpl::Tpm2NvramImpl(const trunks::TrunksFactory& factory,
 #ifndef TRUNKS_USE_PER_OP_SESSIONS
       trunks_session_(trunks_factory_.GetHmacSession()),
 #endif
-      trunks_utility_(trunks_factory_.GetTpmUtility()) {}
+      trunks_utility_(trunks_factory_.GetTpmUtility()) {
+}
 
 NvramResult Tpm2NvramImpl::DefineSpace(
     uint32_t index,
@@ -154,9 +154,8 @@ NvramResult Tpm2NvramImpl::DefineSpace(
   trunks::TPMA_NV attribute_flags = 0;
   bool world_read_allowed = false;
   bool world_write_allowed = false;
-  if (!MapAttributesToTpm(attributes, policy,
-                          &attribute_flags, &world_read_allowed,
-                          &world_write_allowed)) {
+  if (!MapAttributesToTpm(attributes, policy, &attribute_flags,
+                          &world_read_allowed, &world_write_allowed)) {
     return NVRAM_RESULT_INVALID_PARAMETER;
   }
   NvramPolicyRecord policy_record;
@@ -171,16 +170,16 @@ NvramResult Tpm2NvramImpl::DefineSpace(
   }
 
   NvIndexAuthenticator nvindex_auth(tpm_status_, &trunks_session_,
-      trunks_factory_);
+                                    trunks_factory_);
   trunks::AuthorizationDelegate* delegate =
       nvindex_auth.GetOwnerAuthDelegate(GetOwnerPassword());
   if (!delegate) {
     return NVRAM_RESULT_OPERATION_DISABLED;
   }
 
-  TPM_RC result = trunks_utility_->DefineNVSpace(
-      index, size, attribute_flags, authorization_value, policy_digest,
-      delegate);
+  TPM_RC result = trunks_utility_->DefineNVSpace(index, size, attribute_flags,
+                                                 authorization_value,
+                                                 policy_digest, delegate);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error defining nvram space: " << GetErrorString(result);
     return MapTpmError(result);
@@ -196,10 +195,9 @@ NvramResult Tpm2NvramImpl::DestroySpace(uint32_t index) {
   if (!Initialize()) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
-  trunks::ScopedGlobalHmacSession session_scope(&trunks_factory_,
-                                                kGlobalSessionSalted,
-                                                kGlobalSessionEncryption,
-                                                &trunks_session_);
+  trunks::ScopedGlobalHmacSession session_scope(
+      &trunks_factory_, kGlobalSessionSalted, kGlobalSessionEncryption,
+      &trunks_session_);
   if (!trunks_session_) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
@@ -233,7 +231,7 @@ NvramResult Tpm2NvramImpl::WriteSpace(uint32_t index,
     return NVRAM_RESULT_OPERATION_DISABLED;
   }
   NvIndexAuthenticator nvindex_auth(tpm_status_, &trunks_session_,
-      trunks_factory_);
+                                    trunks_factory_);
   trunks::AuthorizationDelegate* authorization = nullptr;
   std::unique_ptr<trunks::PolicySession> policy_session =
       trunks_factory_.GetPolicySession();
@@ -299,7 +297,7 @@ NvramResult Tpm2NvramImpl::ReadSpace(uint32_t index,
     return NVRAM_RESULT_SUCCESS;
   }
   NvIndexAuthenticator nvindex_auth(tpm_status_, &trunks_session_,
-      trunks_factory_);
+                                    trunks_factory_);
   trunks::AuthorizationDelegate* authorization = nullptr;
   std::unique_ptr<trunks::PolicySession> policy_session =
       trunks_factory_.GetPolicySession();
@@ -346,10 +344,9 @@ NvramResult Tpm2NvramImpl::LockSpace(uint32_t index,
   if (!Initialize()) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
-  trunks::ScopedGlobalHmacSession session_scope(&trunks_factory_,
-                                                kGlobalSessionSalted,
-                                                kGlobalSessionEncryption,
-                                                &trunks_session_);
+  trunks::ScopedGlobalHmacSession session_scope(
+      &trunks_factory_, kGlobalSessionSalted, kGlobalSessionEncryption,
+      &trunks_session_);
   if (!trunks_session_) {
     return NVRAM_RESULT_DEVICE_ERROR;
   }
@@ -527,9 +524,8 @@ bool Tpm2NvramImpl::Initialize() {
   if (initialized_) {
     return true;
   }
-  TPM_RC result =
-      trunks_session_->StartUnboundSession(true /* salted */,
-                                           true /* enable_encryption */);
+  TPM_RC result = trunks_session_->StartUnboundSession(
+      true /* salted */, true /* enable_encryption */);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error starting a default authorization session: "
                << GetErrorString(result);
@@ -560,11 +556,10 @@ bool Tpm2NvramImpl::SetupOwnerSession() {
   return true;
 }
 
-bool Tpm2NvramImpl::SetupPolicySession(
-    const NvramPolicyRecord& policy_record,
-    const std::string& authorization_value,
-    trunks::TPM_CC command_code,
-    trunks::PolicySession* session) {
+bool Tpm2NvramImpl::SetupPolicySession(const NvramPolicyRecord& policy_record,
+                                       const std::string& authorization_value,
+                                       trunks::TPM_CC command_code,
+                                       trunks::PolicySession* session) {
   TPM_RC result = session->StartUnboundSession(true /* salted */,
                                                true /* enable_encryption */);
   if (result != TPM_RC_SUCCESS) {
@@ -623,9 +618,8 @@ bool Tpm2NvramImpl::AddPoliciesForCommand(
   return true;
 }
 
-bool Tpm2NvramImpl::AddPolicyOR(
-    const NvramPolicyRecord& policy_record,
-    trunks::PolicySession* session) {
+bool Tpm2NvramImpl::AddPolicyOR(const NvramPolicyRecord& policy_record,
+                                trunks::PolicySession* session) {
   std::vector<std::string> digests;
   for (int i = 0; i < policy_record.policy_digests_size(); ++i) {
     digests.push_back(policy_record.policy_digests(i));

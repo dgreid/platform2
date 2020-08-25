@@ -71,8 +71,8 @@ bool AesEncrypt(const EVP_CIPHER* cipher,
   if (!encryption_context) {
     return false;
   }
-  if (!EVP_EncryptInit_ex(encryption_context.get(), cipher, nullptr,
-                          key_buffer, iv_buffer)) {
+  if (!EVP_EncryptInit_ex(encryption_context.get(), cipher, nullptr, key_buffer,
+                          iv_buffer)) {
     return false;
   }
   if (!EVP_EncryptUpdate(encryption_context.get(), output_buffer, &output_size,

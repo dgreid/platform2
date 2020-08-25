@@ -64,8 +64,8 @@ void TpmOwnershipDBusProxy::GetTpmStatus(const GetTpmStatusRequest& request,
 void TpmOwnershipDBusProxy::GetVersionInfo(
     const GetVersionInfoRequest& request,
     const GetVersionInfoCallback& callback) {
-  CallMethod<GetVersionInfoReply>(
-      tpm_manager::kGetVersionInfo, request, callback);
+  CallMethod<GetVersionInfoReply>(tpm_manager::kGetVersionInfo, request,
+                                  callback);
 }
 
 void TpmOwnershipDBusProxy::GetDictionaryAttackInfo(

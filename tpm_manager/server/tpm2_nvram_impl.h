@@ -49,13 +49,12 @@ class Tpm2NvramImpl : public TpmNvram {
                         bool lock_write,
                         const std::string& authorization_value) override;
   NvramResult ListSpaces(std::vector<uint32_t>* index_list) override;
-  NvramResult GetSpaceInfo(
-      uint32_t index,
-      uint32_t* size,
-      bool* is_read_locked,
-      bool* is_write_locked,
-      std::vector<NvramSpaceAttribute>* attributes,
-      NvramSpacePolicy* policy) override;
+  NvramResult GetSpaceInfo(uint32_t index,
+                           uint32_t* size,
+                           bool* is_read_locked,
+                           bool* is_write_locked,
+                           std::vector<NvramSpaceAttribute>* attributes,
+                           NvramSpacePolicy* policy) override;
 
   void PrunePolicies() override;
 

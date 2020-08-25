@@ -95,20 +95,16 @@ std::string GetProtoDebugStringWithIndent(const GetVersionInfoReply& value,
                                           int indent_size);
 std::string GetProtoDebugString(const GetVersionInfoReply& value);
 std::string GetProtoDebugStringWithIndent(
-    const GetDictionaryAttackInfoRequest& value,
-    int indent_size);
+    const GetDictionaryAttackInfoRequest& value, int indent_size);
 std::string GetProtoDebugString(const GetDictionaryAttackInfoRequest& value);
 std::string GetProtoDebugStringWithIndent(
-    const GetDictionaryAttackInfoReply& value,
-    int indent_size);
+    const GetDictionaryAttackInfoReply& value, int indent_size);
 std::string GetProtoDebugString(const GetDictionaryAttackInfoReply& value);
 std::string GetProtoDebugStringWithIndent(
-    const ResetDictionaryAttackLockRequest& value,
-    int indent_size);
+    const ResetDictionaryAttackLockRequest& value, int indent_size);
 std::string GetProtoDebugString(const ResetDictionaryAttackLockRequest& value);
 std::string GetProtoDebugStringWithIndent(
-    const ResetDictionaryAttackLockReply& value,
-    int indent_size);
+    const ResetDictionaryAttackLockReply& value, int indent_size);
 std::string GetProtoDebugString(const ResetDictionaryAttackLockReply& value);
 std::string GetProtoDebugStringWithIndent(const TakeOwnershipRequest& value,
                                           int indent_size);
@@ -117,20 +113,16 @@ std::string GetProtoDebugStringWithIndent(const TakeOwnershipReply& value,
                                           int indent_size);
 std::string GetProtoDebugString(const TakeOwnershipReply& value);
 std::string GetProtoDebugStringWithIndent(
-    const RemoveOwnerDependencyRequest& value,
-    int indent_size);
+    const RemoveOwnerDependencyRequest& value, int indent_size);
 std::string GetProtoDebugString(const RemoveOwnerDependencyRequest& value);
 std::string GetProtoDebugStringWithIndent(
-    const RemoveOwnerDependencyReply& value,
-    int indent_size);
+    const RemoveOwnerDependencyReply& value, int indent_size);
 std::string GetProtoDebugString(const RemoveOwnerDependencyReply& value);
 std::string GetProtoDebugStringWithIndent(
-    const ClearStoredOwnerPasswordRequest& value,
-    int indent_size);
+    const ClearStoredOwnerPasswordRequest& value, int indent_size);
 std::string GetProtoDebugString(const ClearStoredOwnerPasswordRequest& value);
 std::string GetProtoDebugStringWithIndent(
-    const ClearStoredOwnerPasswordReply& value,
-    int indent_size);
+    const ClearStoredOwnerPasswordReply& value, int indent_size);
 std::string GetProtoDebugString(const ClearStoredOwnerPasswordReply& value);
 
 }  // namespace tpm_manager

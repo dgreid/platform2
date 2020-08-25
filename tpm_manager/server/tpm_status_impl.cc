@@ -134,7 +134,7 @@ bool TpmStatusImpl::GetDictionaryAttackInfo(uint32_t* counter,
 
   if (!GetCapability(TSS_TPMCAP_PROPERTY, TSS_TPMCAP_PROP_MANUFACTURER,
                      &capability_data, nullptr) ||
-                     capability_data.size() != sizeof(uint32_t)) {
+      capability_data.size() != sizeof(uint32_t)) {
     LOG(WARNING) << "Failed to query TSS_TPMCAP_PROP_MANUFACTURER. "
                     "Using the DA info from TSS_TPMCAP_DA_LOGIC.";
     return true;
@@ -147,10 +147,8 @@ bool TpmStatusImpl::GetDictionaryAttackInfo(uint32_t* counter,
     return true;
   }
 
-  if (!GetCapability(TSS_TPMCAP_MFR,
-                     kInfineonMfrSubCapability,
-                     &capability_data,
-                     nullptr)) {
+  if (!GetCapability(TSS_TPMCAP_MFR, kInfineonMfrSubCapability,
+                     &capability_data, nullptr)) {
     LOG(WARNING) << "Failed to query Infineon MFR capability. "
                     "Using the DA info from TSS_TPMCAP_DA_LOGIC.";
     return true;
@@ -165,8 +163,8 @@ bool TpmStatusImpl::GetDictionaryAttackInfo(uint32_t* counter,
   uint32_t vendor_da_counter =
       static_cast<uint32_t>(capability_data[kInfineonDACounterOffset]);
   if (*counter != vendor_da_counter) {
-    LOG(WARNING) << "DA counter mismatch for Infineon: " << *counter
-                 << " vs. " << vendor_da_counter << ". Using the larger one.";
+    LOG(WARNING) << "DA counter mismatch for Infineon: " << *counter << " vs. "
+                 << vendor_da_counter << ". Using the larger one.";
     *counter = std::max(*counter, vendor_da_counter);
   }
   return true;
@@ -188,8 +186,8 @@ bool TpmStatusImpl::GetVersionInfo(uint32_t* family,
 
   TPM_CAP_VERSION_INFO tpm_version;
   uint64_t offset = 0;
-  Trspi_UnloadBlob_CAP_VERSION_INFO(
-      &offset, capability_data.data(), &tpm_version);
+  Trspi_UnloadBlob_CAP_VERSION_INFO(&offset, capability_data.data(),
+                                    &tpm_version);
   if (family) {
     *family = 0x312e3200;
   }
@@ -240,8 +238,8 @@ base::Optional<bool> TpmStatusImpl::TestTpmWithDefaultOwnerPassword() {
 
   // Call Tspi_TPM_GetStatus to test the default owner password.
   TSS_BOOL current_status = false;
-  TSS_RESULT result = Tspi_TPM_GetStatus(
-      tpm_handle, TSS_TPMSTATUS_DISABLED, &current_status);
+  TSS_RESULT result =
+      Tspi_TPM_GetStatus(tpm_handle, TSS_TPMSTATUS_DISABLED, &current_status);
 
   if (result == TPM_SUCCESS) {
     is_owner_password_default_ = true;

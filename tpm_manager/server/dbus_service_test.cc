@@ -68,8 +68,7 @@ class DBusServiceTest : public testing::Test {
 
  protected:
   std::unique_ptr<dbus::MethodCall> CreateMethodCall(
-      const std::string& method_name,
-      const std::string& interface) {
+      const std::string& method_name, const std::string& interface) {
     std::unique_ptr<dbus::MethodCall> call(
         new dbus::MethodCall(interface, method_name));
     call->SetSerial(1);
@@ -135,15 +134,16 @@ TEST_F(DBusServiceTest, GetVersionInfo) {
 
   GetVersionInfoRequest request;
   EXPECT_CALL(mock_ownership_service_, GetVersionInfo(_, _))
-      .WillOnce(Invoke([&expected_version_info](
-          const GetVersionInfoRequest& request,
-          const TpmOwnershipInterface::GetVersionInfoCallback& callback) {
+      .WillOnce(Invoke(
+          [&expected_version_info](
+              const GetVersionInfoRequest& request,
+              const TpmOwnershipInterface::GetVersionInfoCallback& callback) {
             callback.Run(expected_version_info);
           }));
 
   GetVersionInfoReply actual_version_info;
-  ExecuteMethod(
-      kGetVersionInfo, request, &actual_version_info, kTpmOwnershipInterface);
+  ExecuteMethod(kGetVersionInfo, request, &actual_version_info,
+                kTpmOwnershipInterface);
   EXPECT_EQ(actual_version_info.SerializeAsString(),
             expected_version_info.SerializeAsString());
 }
@@ -166,8 +166,8 @@ TEST_F(DBusServiceTest, GetDictionaryAttackInfo) {
             callback.Run(reply);
           }));
   GetDictionaryAttackInfoReply reply;
-  ExecuteMethod(
-      kGetDictionaryAttackInfo, request, &reply, kTpmOwnershipInterface);
+  ExecuteMethod(kGetDictionaryAttackInfo, request, &reply,
+                kTpmOwnershipInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
   EXPECT_EQ(3, reply.dictionary_attack_counter());
   EXPECT_EQ(4, reply.dictionary_attack_threshold());
@@ -189,8 +189,8 @@ TEST_F(DBusServiceTest, ResetDictionaryAttackLock) {
             callback.Run(reply);
           }));
   ResetDictionaryAttackLockReply reply;
-  ExecuteMethod(
-      kResetDictionaryAttackLock, request, &reply, kTpmOwnershipInterface);
+  ExecuteMethod(kResetDictionaryAttackLock, request, &reply,
+                kTpmOwnershipInterface);
   EXPECT_EQ(STATUS_SUCCESS, reply.status());
 }
 
@@ -218,16 +218,17 @@ TEST_F(DBusServiceTest, RemoveOwnerDependency) {
   RemoveOwnerDependencyRequest request;
   request.set_owner_dependency(owner_dependency);
   EXPECT_CALL(mock_ownership_service_, RemoveOwnerDependency(_, _))
-      .WillOnce(Invoke([&owner_dependency](
-          const RemoveOwnerDependencyRequest& request,
-          const TpmOwnershipInterface::RemoveOwnerDependencyCallback&
-              callback) {
-        EXPECT_TRUE(request.has_owner_dependency());
-        EXPECT_EQ(owner_dependency, request.owner_dependency());
-        RemoveOwnerDependencyReply reply;
-        reply.set_status(STATUS_SUCCESS);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([&owner_dependency](
+                     const RemoveOwnerDependencyRequest& request,
+                     const TpmOwnershipInterface::RemoveOwnerDependencyCallback&
+                         callback) {
+            EXPECT_TRUE(request.has_owner_dependency());
+            EXPECT_EQ(owner_dependency, request.owner_dependency());
+            RemoveOwnerDependencyReply reply;
+            reply.set_status(STATUS_SUCCESS);
+            callback.Run(reply);
+          }));
   RemoveOwnerDependencyReply reply;
   ExecuteMethod(kRemoveOwnerDependency, request, &reply,
                 kTpmOwnershipInterface);
@@ -239,14 +240,14 @@ TEST_F(DBusServiceTest, ClearStoredOwnerPassword) {
 
   ClearStoredOwnerPasswordRequest request;
   EXPECT_CALL(mock_ownership_service_, ClearStoredOwnerPassword(_, _))
-      .WillOnce(Invoke([](
-          const ClearStoredOwnerPasswordRequest& request,
-          const TpmOwnershipInterface::ClearStoredOwnerPasswordCallback&
-              callback) {
-        ClearStoredOwnerPasswordReply reply;
-        reply.set_status(STATUS_SUCCESS);
-        callback.Run(reply);
-      }));
+      .WillOnce(Invoke(
+          [](const ClearStoredOwnerPasswordRequest& request,
+             const TpmOwnershipInterface::ClearStoredOwnerPasswordCallback&
+                 callback) {
+            ClearStoredOwnerPasswordReply reply;
+            reply.set_status(STATUS_SUCCESS);
+            callback.Run(reply);
+          }));
   ClearStoredOwnerPasswordReply reply;
   ExecuteMethod(kClearStoredOwnerPassword, request, &reply,
                 kTpmOwnershipInterface);
@@ -262,17 +263,18 @@ TEST_F(DBusServiceTest, DefineSpace) {
   request.set_index(nvram_index);
   request.set_size(nvram_length);
   EXPECT_CALL(mock_nvram_service_, DefineSpace(_, _))
-      .WillOnce(Invoke([nvram_index, nvram_length](
-          const DefineSpaceRequest& request,
-          const TpmNvramInterface::DefineSpaceCallback& callback) {
-        EXPECT_TRUE(request.has_index());
-        EXPECT_EQ(nvram_index, request.index());
-        EXPECT_TRUE(request.has_size());
-        EXPECT_EQ(nvram_length, request.size());
-        DefineSpaceReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index, nvram_length](
+                     const DefineSpaceRequest& request,
+                     const TpmNvramInterface::DefineSpaceCallback& callback) {
+            EXPECT_TRUE(request.has_index());
+            EXPECT_EQ(nvram_index, request.index());
+            EXPECT_TRUE(request.has_size());
+            EXPECT_EQ(nvram_length, request.size());
+            DefineSpaceReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            callback.Run(reply);
+          }));
   DefineSpaceReply reply;
   ExecuteMethod(kDefineSpace, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
@@ -285,15 +287,16 @@ TEST_F(DBusServiceTest, DestroySpace) {
   DestroySpaceRequest request;
   request.set_index(nvram_index);
   EXPECT_CALL(mock_nvram_service_, DestroySpace(_, _))
-      .WillOnce(Invoke([nvram_index](
-          const DestroySpaceRequest& request,
-          const TpmNvramInterface::DestroySpaceCallback& callback) {
-        EXPECT_TRUE(request.has_index());
-        EXPECT_EQ(nvram_index, request.index());
-        DestroySpaceReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index](
+                     const DestroySpaceRequest& request,
+                     const TpmNvramInterface::DestroySpaceCallback& callback) {
+            EXPECT_TRUE(request.has_index());
+            EXPECT_EQ(nvram_index, request.index());
+            DestroySpaceReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            callback.Run(reply);
+          }));
   DestroySpaceReply reply;
   ExecuteMethod(kDestroySpace, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
@@ -308,17 +311,18 @@ TEST_F(DBusServiceTest, WriteSpace) {
   request.set_index(nvram_index);
   request.set_data(nvram_data);
   EXPECT_CALL(mock_nvram_service_, WriteSpace(_, _))
-      .WillOnce(Invoke([nvram_index, nvram_data](
-          const WriteSpaceRequest& request,
-          const TpmNvramInterface::WriteSpaceCallback& callback) {
-        EXPECT_TRUE(request.has_index());
-        EXPECT_EQ(nvram_index, request.index());
-        EXPECT_TRUE(request.has_data());
-        EXPECT_EQ(nvram_data, request.data());
-        WriteSpaceReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index, nvram_data](
+                     const WriteSpaceRequest& request,
+                     const TpmNvramInterface::WriteSpaceCallback& callback) {
+            EXPECT_TRUE(request.has_index());
+            EXPECT_EQ(nvram_index, request.index());
+            EXPECT_TRUE(request.has_data());
+            EXPECT_EQ(nvram_data, request.data());
+            WriteSpaceReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            callback.Run(reply);
+          }));
   WriteSpaceReply reply;
   ExecuteMethod(kWriteSpace, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
@@ -332,16 +336,17 @@ TEST_F(DBusServiceTest, ReadSpace) {
   ReadSpaceRequest request;
   request.set_index(nvram_index);
   EXPECT_CALL(mock_nvram_service_, ReadSpace(_, _))
-      .WillOnce(Invoke([nvram_index, nvram_data](
-          const ReadSpaceRequest& request,
-          const TpmNvramInterface::ReadSpaceCallback& callback) {
-        EXPECT_TRUE(request.has_index());
-        EXPECT_EQ(nvram_index, request.index());
-        ReadSpaceReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        reply.set_data(nvram_data);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index, nvram_data](
+                     const ReadSpaceRequest& request,
+                     const TpmNvramInterface::ReadSpaceCallback& callback) {
+            EXPECT_TRUE(request.has_index());
+            EXPECT_EQ(nvram_index, request.index());
+            ReadSpaceReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            reply.set_data(nvram_data);
+            callback.Run(reply);
+          }));
   ReadSpaceReply reply;
   ExecuteMethod(kReadSpace, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
@@ -380,16 +385,17 @@ TEST_F(DBusServiceTest, ListSpaces) {
   constexpr uint32_t nvram_index_list[] = {3, 4, 5};
   ListSpacesRequest request;
   EXPECT_CALL(mock_nvram_service_, ListSpaces(_, _))
-      .WillOnce(Invoke([nvram_index_list](
-          const ListSpacesRequest& request,
-          const TpmNvramInterface::ListSpacesCallback& callback) {
-        ListSpacesReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        for (auto index : nvram_index_list) {
-          reply.add_index_list(index);
-        }
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index_list](
+                     const ListSpacesRequest& request,
+                     const TpmNvramInterface::ListSpacesCallback& callback) {
+            ListSpacesReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            for (auto index : nvram_index_list) {
+              reply.add_index_list(index);
+            }
+            callback.Run(reply);
+          }));
   ListSpacesReply reply;
   ExecuteMethod(kListSpaces, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());
@@ -407,18 +413,19 @@ TEST_F(DBusServiceTest, GetSpaceInfo) {
   GetSpaceInfoRequest request;
   request.set_index(nvram_index);
   EXPECT_CALL(mock_nvram_service_, GetSpaceInfo(_, _))
-      .WillOnce(Invoke([nvram_index, nvram_size](
-          const GetSpaceInfoRequest& request,
-          const TpmNvramInterface::GetSpaceInfoCallback& callback) {
-        EXPECT_TRUE(request.has_index());
-        EXPECT_EQ(nvram_index, request.index());
-        GetSpaceInfoReply reply;
-        reply.set_result(NVRAM_RESULT_SUCCESS);
-        reply.set_size(nvram_size);
-        reply.set_is_read_locked(true);
-        reply.set_is_write_locked(true);
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([nvram_index, nvram_size](
+                     const GetSpaceInfoRequest& request,
+                     const TpmNvramInterface::GetSpaceInfoCallback& callback) {
+            EXPECT_TRUE(request.has_index());
+            EXPECT_EQ(nvram_index, request.index());
+            GetSpaceInfoReply reply;
+            reply.set_result(NVRAM_RESULT_SUCCESS);
+            reply.set_size(nvram_size);
+            reply.set_is_read_locked(true);
+            reply.set_is_write_locked(true);
+            callback.Run(reply);
+          }));
   GetSpaceInfoReply reply;
   ExecuteMethod(kGetSpaceInfo, request, &reply, kTpmNvramInterface);
   EXPECT_EQ(NVRAM_RESULT_SUCCESS, reply.result());

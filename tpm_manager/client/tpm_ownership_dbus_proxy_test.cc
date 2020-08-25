@@ -143,10 +143,10 @@ TEST_F(TpmOwnershipDBusProxyTest, GetVersionInfo) {
   auto callback = [](const GetVersionInfoReply& expected_version_info,
                      int* callback_count,
                      const GetVersionInfoReply& actual_version_info) {
-        (*callback_count)++;
-        EXPECT_EQ(actual_version_info.SerializeAsString(),
-                  expected_version_info.SerializeAsString());
-      };
+    (*callback_count)++;
+    EXPECT_EQ(actual_version_info.SerializeAsString(),
+              expected_version_info.SerializeAsString());
+  };
   GetVersionInfoRequest request;
   proxy_.GetVersionInfo(
       request, base::Bind(callback, expected_version_info, &callback_count));
@@ -178,8 +178,8 @@ TEST_F(TpmOwnershipDBusProxyTest, GetDictionaryAttackInfo) {
 
   // Set expectations on the outputs.
   int callback_count = 0;
-  auto callback =
-      [](int* callback_count, const GetDictionaryAttackInfoReply& reply) {
+  auto callback = [](int* callback_count,
+                     const GetDictionaryAttackInfoReply& reply) {
     (*callback_count)++;
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
     EXPECT_EQ(3, reply.dictionary_attack_counter());
@@ -188,8 +188,8 @@ TEST_F(TpmOwnershipDBusProxyTest, GetDictionaryAttackInfo) {
     EXPECT_EQ(5, reply.dictionary_attack_lockout_seconds_remaining());
   };
   GetDictionaryAttackInfoRequest request;
-  proxy_.GetDictionaryAttackInfo(
-      request, base::Bind(callback, &callback_count));
+  proxy_.GetDictionaryAttackInfo(request,
+                                 base::Bind(callback, &callback_count));
   EXPECT_EQ(1, callback_count);
 }
 

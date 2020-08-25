@@ -26,7 +26,6 @@ using brillo::dbus_utils::DBusMethodResponse;
 using brillo::dbus_utils::DBusObject;
 using brillo::dbus_utils::DBusSignal;
 
-
 // Handles D-Bus communication with the TpmManager daemon.
 class DBusService : public brillo::DBusServiceDaemon {
  public:

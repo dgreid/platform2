@@ -87,9 +87,7 @@ NvramResult MockTpmNvram::FakeWriteSpace(
 }
 
 NvramResult MockTpmNvram::FakeReadSpace(
-    uint32_t index,
-    std::string* data,
-    const std::string& authorization_value) {
+    uint32_t index, std::string* data, const std::string& authorization_value) {
   if (nvram_map_.count(index) == 0) {
     return NVRAM_RESULT_SPACE_DOES_NOT_EXIST;
   }

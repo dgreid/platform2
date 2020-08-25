@@ -28,8 +28,8 @@ class Tpm2StatusTest : public testing::Test {
 
   void SetUp() override {
     factory_.set_tpm_state(&mock_tpm_state_);
-    ownership_callback_ = base::Bind(
-        &Tpm2StatusTest::OwnershipCallback, base::Unretained(this));
+    ownership_callback_ =
+        base::Bind(&Tpm2StatusTest::OwnershipCallback, base::Unretained(this));
     tpm_status_.reset(new Tpm2StatusImpl(factory_, ownership_callback_));
   }
 

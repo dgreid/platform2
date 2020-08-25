@@ -29,9 +29,8 @@ constexpr TSS_HTPM kFakeTpm = 66666;
 class TpmInitializerTest : public ::hwsec::Tpm1HwsecTest {
  public:
   TpmInitializerTest()
-      : tpm_initializer_(&mock_data_store_,
-                         &mock_tpm_status_,
-                         ownership_callback_),
+      : tpm_initializer_(
+            &mock_data_store_, &mock_tpm_status_, ownership_callback_),
         fake_local_data_(mock_data_store_.GetMutableFakeData()) {
     ON_CALL_OVERALLS(Ospi_Context_Create(_))
         .WillByDefault(

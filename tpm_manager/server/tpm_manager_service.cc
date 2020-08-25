@@ -403,8 +403,7 @@ void TpmManagerService::RemoveOwnerDependencyTask(
 }
 
 void TpmManagerService::RemoveOwnerDependencyFromLocalData(
-    const std::string& owner_dependency,
-    LocalData* local_data) {
+    const std::string& owner_dependency, LocalData* local_data) {
   google::protobuf::RepeatedPtrField<std::string>* dependencies =
       local_data->mutable_owner_dependency();
   for (int i = 0; i < dependencies->size(); i++) {

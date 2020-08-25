@@ -193,11 +193,10 @@ DictionaryAttackResetStatus Tpm2InitializerImpl::ResetDictionaryAttackLock() {
   session->SetEntityAuthorizationValue(local_data.lockout_password());
   std::unique_ptr<trunks::TpmUtility> tpm_utility =
       trunks_factory_.GetTpmUtility();
-  result =
-      tpm_utility->ResetDictionaryAttackLock(session->GetDelegate());
+  result = tpm_utility->ResetDictionaryAttackLock(session->GetDelegate());
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__ << ": Error resetting lock: "
-               << trunks::GetErrorString(result);
+    LOG(ERROR) << __func__
+               << ": Error resetting lock: " << trunks::GetErrorString(result);
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
   return DictionaryAttackResetStatus::kResetAttemptSucceeded;
@@ -212,8 +211,7 @@ void Tpm2InitializerImpl::PruneStoredPasswords() {
   }
 
   if (trunks_tpm_state->IsEndorsementPasswordSet()) {
-    LOG(WARNING) << __func__
-                 << ": take ownership already started. "
+    LOG(WARNING) << __func__ << ": take ownership already started. "
                  << "Local data won't be touched.";
     return;
   }
@@ -230,7 +228,7 @@ void Tpm2InitializerImpl::PruneStoredPasswords() {
   local_data.clear_owner_dependency();
 
   if (!local_data_store_->Write(local_data)) {
-    LOG(ERROR) << __func__  << ": failed to write local data.";
+    LOG(ERROR) << __func__ << ": failed to write local data.";
   }
 }
 

@@ -4,10 +4,10 @@
 
 #include "tpm_manager/server/mock_tpm_status.h"
 
+using testing::_;
 using testing::Invoke;
 using testing::Return;
 using testing::SetArgPointee;
-using testing::_;
 
 namespace tpm_manager {
 
@@ -33,7 +33,7 @@ bool GetDefaultVersionInfo(uint32_t* family,
   *manufacturer = 0x90091;
   *tpm_model = 0x1234;
   *firmware_version = 0xdeadc0de;
-  *vendor_specific = { 0xda, 0x7a };
+  *vendor_specific = {0xda, 0x7a};
   return true;
 }
 

@@ -133,8 +133,9 @@ DictionaryAttackResetStatus TpmInitializerImpl::ResetDictionaryAttackLock() {
     // An auth error was encountered in a previous attempt, and there was no
     // auth update after the attempt. Skips the request to avoid further
     // increasing the counter.
-    LOG(ERROR) << __func__ << ": skipped the request to avoid repeating a "
-                              "previous auth error.";
+    LOG(ERROR) << __func__
+               << ": skipped the request to avoid repeating a "
+                  "previous auth error.";
     return DictionaryAttackResetStatus::kResetAttemptFailed;
   }
 
@@ -224,7 +225,7 @@ void TpmInitializerImpl::PruneStoredPasswords() {
   local_data.clear_owner_dependency();
 
   if (!local_data_store_->Write(local_data)) {
-    LOG(ERROR) << __func__  << ": failed to write local data.";
+    LOG(ERROR) << __func__ << ": failed to write local data.";
   }
 }
 
@@ -363,10 +364,10 @@ bool TpmInitializerImpl::ChangeOwnerPassword(
     return false;
   }
   std::string mutable_owner_password(owner_password);
-  if (TPM_ERROR(result = Tspi_Policy_SetSecret(
-                    policy_handle, TSS_SECRET_MODE_PLAIN, owner_password.size(),
-                    reinterpret_cast<BYTE*>(
-                        base::data(mutable_owner_password))))) {
+  if (TPM_ERROR(
+          result = Tspi_Policy_SetSecret(
+              policy_handle, TSS_SECRET_MODE_PLAIN, owner_password.size(),
+              reinterpret_cast<BYTE*>(base::data(mutable_owner_password))))) {
     TPM_LOG(ERROR, result) << "Error calling Tspi_Policy_SetSecret";
     return false;
   }
