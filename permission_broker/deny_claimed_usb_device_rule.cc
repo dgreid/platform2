@@ -7,6 +7,7 @@
 #include <libudev.h>
 
 #include <memory>
+#include <string>
 
 #include "base/logging.h"
 #include "base/strings/string_number_conversions.h"
@@ -19,6 +20,34 @@ namespace {
 const uint32_t kAdbClass = 0xff;
 const uint32_t kAdbSubclass = 0x42;
 const uint32_t kAdbProtocol = 0x1;
+
+enum class RemovableAttr {
+  kUnknown,
+  kFixed,
+  kRemovable,
+};
+
+RemovableAttr ParseRemovableSysattr(const std::string& removable) {
+  if (removable == "fixed") {
+    return RemovableAttr::kFixed;
+  } else if (removable == "removable") {
+    return RemovableAttr::kRemovable;
+  } else {
+    if (removable != "unknown") {
+      LOG(WARNING) << "Unexpected value for removable sysattr: '" << removable
+                   << "'";
+    }
+    return RemovableAttr::kUnknown;
+  }
+}
+
+RemovableAttr GetRemovableSysattr(udev_device* device) {
+  const char* removable = udev_device_get_sysattr_value(device, "removable");
+  if (!removable) {
+    return RemovableAttr::kUnknown;
+  }
+  return ParseRemovableSysattr(removable);
+}
 
 bool GetUIntSysattr(udev_device* device, const char* key, uint32_t* val) {
   CHECK(val);
@@ -178,6 +207,12 @@ Rule::Result DenyClaimedUsbDeviceRule::ProcessUsbDevice(udev_device* device) {
   }
 
   if (found_claimed_interface) {
+    // Don't allow detaching the driver from fixed (internal) USB devices.
+    if (GetRemovableSysattr(device) == RemovableAttr::kFixed) {
+      LOG(INFO) << "Denying fixed USB device with driver.";
+      return DENY;
+    }
+
     if (IsDeviceDetachableByPolicy(device) || IsDeviceAllowedSerial(device) ||
         found_adb_interface)
       return ALLOW_WITH_DETACH;
