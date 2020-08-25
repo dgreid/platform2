@@ -21,7 +21,6 @@
 #include <inttypes.h>
 #include <math.h>
 
-#include <base/cpu.h>
 #include <base/files/file.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
@@ -66,9 +65,6 @@ int main(int argc, char** argv) {
       argc, argv, "Print average power consumption per domain for Intel SoCs");
 
   brillo::InitLog(brillo::kLogToStderr);
-
-  const base::CPU cpu;
-  CHECK_EQ("GenuineIntel", cpu.vendor_name()) << "Only GenuineIntel supported";
 
   // Kernel v3.13+ supports powercap, it also requires a proper configuration
   // enabling it; leave a verbose footprint of the kernel string, and examine
