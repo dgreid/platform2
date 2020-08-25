@@ -57,9 +57,7 @@ class TestRunner {
     testing::InitGoogleMock(&argc, argv);
   }
 
-  int Run() {
-    return RUN_ALL_TESTS();
-  }
+  int Run() { return RUN_ALL_TESTS(); }
 
  private:
   std::unique_ptr<base::AtExitManager> exit_manager_;
