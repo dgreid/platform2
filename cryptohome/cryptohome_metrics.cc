@@ -108,7 +108,7 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     {"Cryptohome.TimeToCompleteDircryptoMigration", 1000,
      10 * 60 * 60 * 1000, 50},
     // Minimal migration is expected to take few seconds in a fast case,
-    // and minutes in the worst case if we forgot to blacklist files.
+    // and minutes in the worst case if we forgot to blocklist files.
     {"Cryptohome.TimeToCompleteDircryptoMinimalMigration", 200,
      2 * 60 * 1000, 50},
     // The out-of-process mount operation will time out after 3 seconds.

@@ -52,7 +52,7 @@ constexpr size_t kDefaultMaxJobListSize = 100000;
 // List of paths in the root part of the user home to be migrated when minimal
 // migration is performed. If the last component of a path is *, it means that
 // all children should be migrated too.
-const char* const kMinimalMigrationRootPathsWhitelist[] = {
+const char* const kMinimalMigrationRootPathsAllowlist[] = {
     // Keep the user policy - network/proxy settings could be stored here and
     // chrome will need network access to re-setup the wiped profile. Also, we
     // want to make absolutely sure that the user session does not end up in an
@@ -63,7 +63,7 @@ const char* const kMinimalMigrationRootPathsWhitelist[] = {
 // List of paths in the user part of the user home to be migrated when minimal
 // migration is performed. If the path refers to a directory, all children will
 // be migrated too.
-const char* const kMinimalMigrationUserPathsWhitelist[] = {
+const char* const kMinimalMigrationUserPathsAllowlist[] = {
     // Migrate the log directory, because it only gets created on fresh user
     // home creation by copying the skeleton structure. If it's missing, chrome
     // user sessoin won't log.
@@ -343,11 +343,11 @@ MigrationHelper::MigrationHelper(Platform* platform,
       max_job_list_size_(kDefaultMaxJobListSize),
       worker_pool_(new WorkerPool(this)) {
   if (migration_type_ == MigrationType::MINIMAL) {
-    for (const char* path : kMinimalMigrationRootPathsWhitelist) {
+    for (const char* path : kMinimalMigrationRootPathsAllowlist) {
       minimal_migration_paths_.emplace_back(
           base::FilePath(kRootHomeSuffix).Append(path));
     }
-    for (const char* path : kMinimalMigrationUserPathsWhitelist) {
+    for (const char* path : kMinimalMigrationUserPathsAllowlist) {
       minimal_migration_paths_.emplace_back(
           base::FilePath(kUserHomeSuffix).Append(path));
     }
@@ -557,11 +557,11 @@ bool MigrationHelper::ShouldMigrateFile(const base::FilePath& child) {
 
     return true;
   } else {
-    // Minimal migration - process the whitelist. Because the whitelist is
+    // Minimal migration - process the allowlist. Because the allowlist is
     // supposed to be small, we won't recurse into many subdirectories, so we
-    // assume that iterating all whitelist elements for each file is fine.
+    // assume that iterating all allowlist elements for each file is fine.
     for (const auto& migration_path : minimal_migration_paths_) {
-      // If the current path is one of the whitelisted paths, or its
+      // If the current path is one of the allowlisted paths, or its
       // parent, migrate it.
       if (child == migration_path || child.IsParent(migration_path))
         return true;

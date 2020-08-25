@@ -260,7 +260,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Migrates the data from eCryptfs to dircrypto.
   // Call MountCryptohome with to_migrate_from_ecryptfs beforehand.
   // If |migration_type| is MINIMAL, no progress reporting will be done and only
-  // whitelisted paths will be migrated.
+  // allowlisted paths will be migrated.
   virtual bool MigrateToDircrypto(
       const dircrypto_data_migrator::MigrationHelper::ProgressCallback&
           callback,

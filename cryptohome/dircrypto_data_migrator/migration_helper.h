@@ -215,7 +215,7 @@ class MigrationHelper {
   const base::FilePath status_files_dir_;
   uint64_t max_chunk_size_;
   MigrationType migration_type_;
-  // Whitelisted paths for minimal migration. May contain directories and files.
+  // Allowlisted paths for minimal migration. May contain directories and files.
   std::vector<base::FilePath> minimal_migration_paths_;
 
   uint64_t effective_chunk_size_;

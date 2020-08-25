@@ -9,7 +9,7 @@ namespace cryptohome {
 // Determines type of ext4 migration.
 enum class MigrationType {
   FULL,     // Migrate all files.
-  MINIMAL,  // Migrate only whitelisted files.
+  MINIMAL,  // Migrate only allowlisted files.
 };
 
 }  // namespace cryptohome

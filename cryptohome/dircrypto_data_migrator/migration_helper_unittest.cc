@@ -993,7 +993,7 @@ TEST_F(MigrationHelperTest, MinimalMigration) {
   std::vector<FilePath> expect_skipped_files;
 
   // Set up expectations about what is skipped and what is kept.
-  // Random stuff not on the whitelist is skipped.
+  // Random stuff not on the allowlist is skipped.
   expect_skipped_dirs.emplace_back("user/Application Cache");
   expect_skipped_dirs.emplace_back("root/android-data");
   expect_skipped_files.emplace_back("user/Application Cache/subfile");
