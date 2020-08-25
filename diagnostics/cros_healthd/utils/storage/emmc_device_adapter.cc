@@ -30,7 +30,7 @@ constexpr char kAltRevisionFile[] = "device/hwrev";
 constexpr char kModelFile[] = "device/name";
 constexpr char kFirmwareVersionFile[] = "device/fwrev";
 
-constexpr uint64_t kU64Size = 8;
+constexpr size_t kU64Size = 8;
 
 // Convenience wrapper for error status.
 Status ReadFailure(const base::FilePath& path) {
