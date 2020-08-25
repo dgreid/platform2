@@ -200,8 +200,7 @@ const char kChromeFeaturesServiceName[] = "org.chromium.ChromeFeaturesService";
 const char kChromeFeaturesServicePath[] = "/org/chromium/ChromeFeaturesService";
 const char kChromeFeaturesServiceInterface[] =
     "org.chromium.ChromeFeaturesServiceInterface";
-const char kChromeFeaturesServiceIsFeatureEnabledMethod[] =
-    "IsFeatureEnabled";
+const char kChromeFeaturesServiceIsFeatureEnabledMethod[] = "IsFeatureEnabled";
 const char kChromeFeaturesServiceIsCrostiniEnabledMethod[] =
     "IsCrostiniEnabled";
 const char kChromeFeaturesServiceIsCryptohomeDistributedModelEnabledMethod[] =
@@ -307,8 +306,7 @@ const char kModemManager1ModemInterface[] =
     "org.freedesktop.ModemManager1.Modem";
 const char kModemManager1MessagingInterface[] =
     "org.freedesktop.ModemManager1.Modem.Messaging";
-const char kModemManager1SmsInterface[] =
-    "org.freedesktop.ModemManager1.Sms";
+const char kModemManager1SmsInterface[] = "org.freedesktop.ModemManager1.Sms";
 const char kSMSAddedSignal[] = "Added";
 }  // namespace modemmanager
 
@@ -533,7 +531,7 @@ constexpr char kCrosDnsInterfaceName[] = "org.chromium.CrosDns";
 // Methods
 constexpr char kSetHostnameIpMappingMethod[] = "SetHostnameIpMapping";
 constexpr char kRemoveHostnameIpMappingMethod[] = "RemoveHostnameIpMapping";
-}
+}  // namespace crosdns
 
 namespace arc {
 
@@ -581,12 +579,10 @@ constexpr char kOpenFileMethod[] = "OpenFile";
 
 namespace sensor {
 // D-Bus service constants.
-constexpr char kArcSensorServiceInterface[] =
-    "org.chromium.ArcSensorService";
+constexpr char kArcSensorServiceInterface[] = "org.chromium.ArcSensorService";
 constexpr char kArcSensorServiceServicePath[] =
     "/org/chromium/ArcSensorService";
-constexpr char kArcSensorServiceServiceName[] =
-    "org.chromium.ArcSensorService";
+constexpr char kArcSensorServiceServiceName[] = "org.chromium.ArcSensorService";
 
 // Method names.
 constexpr char kBootstrapMojoConnectionMethod[] = "BootstrapMojoConnection";
