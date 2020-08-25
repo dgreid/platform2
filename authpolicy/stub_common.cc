@@ -23,8 +23,12 @@ const int kExitCodeOk = 0;
 const int kExitCodeError = 1;
 const int kExitCodeUnspecifiedError = 255;
 
+const char kDefaultWorkgroup[] = "WORKGROUP1";
+const char kSecondaryWorkgroup[] = "WORKGROUP2";
+
 const char kUserRealm[] = "REALM.EXAMPLE.COM";
 const char kMachineRealm[] = "DEVICES.EXAMPLE.COM";
+const char kSecondaryWorkgroupRealm[] = "SECONDARY.EXAMPLE.COM";
 
 const char kUserName[] = "user";
 const char kUserPrincipal[] = "user@REALM.EXAMPLE.COM";

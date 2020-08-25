@@ -19,9 +19,16 @@ extern const int kExitCodeOk;
 extern const int kExitCodeError;
 extern const int kExitCodeUnspecifiedError;
 
+// Workgroups.
+extern const char kDefaultWorkgroup[];
+extern const char kSecondaryWorkgroup[];
+
 // Realms.
 extern const char kUserRealm[];
 extern const char kMachineRealm[];
+
+// Realm for secondary workgroup.
+extern const char kSecondaryWorkgroupRealm[];
 
 // Default, valid user name.
 extern const char kUserName[];

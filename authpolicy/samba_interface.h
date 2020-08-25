@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -431,15 +432,17 @@ class SambaInterface : public TgtManager::Delegate {
   // Similar to SetUser, but sets user_account_.realm.
   void SetUserRealm(const std::string& user_realm);
 
-  // Calls net setdomainsid S-1-5-21-0000000000-0000000000-00000000. This is a
-  // workaround for Samba 4.8.6+, which expects a domain SID to exist in
-  // add_builtin_guests() (Samba code). The SID is stored in Samba's,
-  // secrets.tdb, which authpolicyd places in /tmp/authpolicyd/samba/private,
-  // so it is wiped whenever the daemon is restarted and the SID is lost.
-  // However, the SID is not really needed for our purposes, so we set a fake
-  // SID here.
-  // Earlies out if set successfully before.
-  ErrorType MaybeSetFakeDomainSid() WARN_UNUSED_RESULT;
+  // Calls net setdomainsid S-1-5-21-0000000000-0000000000-00000000 if it was
+  // not set for the account workgroup yet. This is a workaround for
+  // Samba 4.8.6+, which expects a domain SID to exist in add_builtin_guests()
+  // (Samba code). Without a SID 'net ads gpo list' fails with "Failed to check
+  // for local Guests membership (NT_STATUS_INVALID_PARAMETER_MIX)". The SID is
+  // stored in Samba's, secrets.tdb as a key/value store with key as a
+  // workgroup, which authpolicyd places in /tmp/authpolicyd/samba/private, so
+  // it is wiped whenever the daemon is restarted and the SID is lost. However,
+  // the SID is not really needed for our purposes, so we set a fake SID here.
+  ErrorType MaybeSetFakeDomainSid(const AccountData& account)
+      WARN_UNUSED_RESULT;
 
   // Sets machine name and realm on the device account and the tgt manager.
   void InitDeviceAccount(const std::string& netbios_name,
@@ -562,8 +565,9 @@ class SambaInterface : public TgtManager::Delegate {
   // Whether device policy has been fetched or loaded from disk on startup.
   bool has_device_policy_ = false;
 
-  // Whether a fake domain SID was set to work around Samba issue.
-  bool fake_domain_sid_was_set_ = false;
+  // Whether a fake domain SID was set for a given workgroup to work around
+  // Samba issue.
+  std::set<std::string> fake_domain_sid_was_set_for_workgroup_;
 
   // For testing only. Used/consumed during Initialize().
   std::unique_ptr<policy::DevicePolicyImpl> device_policy_impl_for_testing;

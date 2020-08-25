@@ -56,7 +56,7 @@ constexpr char kSmbConfData[] =
     "\tclient ldap sasl wrapping = sign\n";
 
 // Fake domain SID to work around issue in Samba-4.8.6+, see
-// MaybeSetFakeDomainSid().
+// `MaybeSetFakeDomainSid()`.
 constexpr char kFakeDomainSid[] = "S-1-5-21-0000000000-0000000000-00000000";
 
 constexpr int kFileMode_rwr = base::FILE_PERMISSION_READ_BY_USER |
@@ -994,6 +994,8 @@ ErrorType SambaInterface::FetchUserGpos(
       return error;
 
     // Download device GPOs with user policy data.
+    // Note that device account data was updated by calling `AcquireDeviceTgt()`
+    // above.
     error = GetGpos(GpoSource::MACHINE, PolicyScope::USER, &gpo_file_paths);
     if (error != ERROR_NONE)
       return error;
@@ -1027,6 +1029,7 @@ ErrorType SambaInterface::FetchDeviceGpos(
     return error;
 
   // Download device GPOs with device policy data.
+  // Note that account data was updated by calling `AcquireDeviceTgt()` above.
   std::vector<base::FilePath> gpo_file_paths;
   error = GetGpos(GpoSource::MACHINE, PolicyScope::MACHINE, &gpo_file_paths);
   if (error != ERROR_NONE)
@@ -1399,6 +1402,13 @@ ErrorType SambaInterface::UpdateAccountData(AccountData* account) {
     if (error != ERROR_NONE)
       return error;
   }
+
+  // Set fake domain SID if it was not set for this account workgroup yet.
+  // This is workaround for Samba 4.8.6+, see `MaybeSetFakeDomainSid()`
+  // description.
+  error = MaybeSetFakeDomainSid(*account);
+  if (error != ERROR_NONE)
+    return error;
 
   // Query the key distribution center IP and server time and store them in
   // |account|->kdc_ip and |account|->server_time, respectively.
@@ -1786,11 +1796,6 @@ ErrorType SambaInterface::GetGpoList(GpoSource source,
   LOG(INFO) << "Getting " << (scope == PolicyScope::USER ? "user" : "device")
             << " GPO list for "
             << (source == GpoSource::USER ? "user" : "device") << " account";
-
-  // Work around issue in Samba 4.8.6+.
-  ErrorType error = MaybeSetFakeDomainSid();
-  if (error != ERROR_NONE)
-    return error;
 
   const AccountData& account = GetAccount(source);
   const TgtManager& tgt_manager = GetTgtManager(source);
@@ -2271,20 +2276,17 @@ void SambaInterface::SetUserRealm(const std::string& user_realm) {
   AnonymizeRealm(user_realm, kUserRealmPlaceholder);
 }
 
-ErrorType SambaInterface::MaybeSetFakeDomainSid() {
-  if (fake_domain_sid_was_set_)
+ErrorType SambaInterface::MaybeSetFakeDomainSid(const AccountData& account) {
+  // Don't set twice for the same workgroup.
+  if (fake_domain_sid_was_set_for_workgroup_.find(account.workgroup) !=
+      fake_domain_sid_was_set_for_workgroup_.end())
     return ERROR_NONE;
-
-  // Make sure config is up-to-date.
-  ErrorType error = UpdateAccountData(&device_account_);
-  if (error != ERROR_NONE)
-    return error;
 
   // Reuse the NET_ADS_SECCOMP filter for simplicity, even though it's not a net
   // ads command.
   ProcessExecutor net_cmd({paths_->Get(Path::NET), "setdomainsid",
                            kFakeDomainSid, kConfigParam,
-                           paths_->Get(Path::DEVICE_SMB_CONF), kDebugParam,
+                           paths_->Get(account.smb_conf_path), kDebugParam,
                            flags_.net_log_level()});
   if (!jail_helper_.SetupJailAndRun(&net_cmd, Path::NET_ADS_SECCOMP,
                                     TIMER_NONE)) {
@@ -2293,7 +2295,8 @@ ErrorType SambaInterface::MaybeSetFakeDomainSid() {
     return ERROR_LOCAL_IO;
   }
 
-  fake_domain_sid_was_set_ = true;
+  // Mark as set for this workgroup.
+  fake_domain_sid_was_set_for_workgroup_.insert(account.workgroup);
   return ERROR_NONE;
 }
 

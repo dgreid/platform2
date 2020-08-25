@@ -117,7 +117,6 @@ constexpr char kCacheTestMachineWorkgroup[] = "cache_test_machine_workgroup";
 constexpr char kCacheTestMachineDcName[] = "cache_test_machine_dc_name";
 
 // See stub_net_main for the strings. Don't bother to make those constants.
-constexpr char kDefaultWorkgroup[] = "WOKGROUP";
 constexpr char kDefaultKdcIp[] = "111.222.33.2";
 constexpr char kDefaultDcName[] = "DCNAME.EXAMPLE.COM";
 
@@ -1795,6 +1794,35 @@ TEST_F(AuthPolicyTest, AffiliationMarkerNotSetForUnaffiliatedUsers) {
   validate_user_policy_ = &CheckUserPolicyEmpty;
   FetchAndValidateUserPolicy(DefaultAuth(), ERROR_NONE);
   EXPECT_FALSE(user_affiliation_marker_set_);
+}
+
+// Successful device and user policy fetch with empty policy for different
+// workgroups.
+TEST_F(AuthPolicyTest, DeviceAndUserPolicyFetchDifferentWorkgroupsSucceeds) {
+  // The workgroup is associated with the realm. Pass secondary workgroup realm,
+  // so `HandleWorkgroup()` imitating "net ads workgroup" in stub will fetch the
+  // secondary workgroup associated with it.
+  JoinDomainRequest request;
+  request.set_machine_name(kMachineName);
+  request.set_machine_domain(kSecondaryWorkgroupRealm);
+  request.set_user_principal_name(kUserPrincipal);
+  EXPECT_EQ(ERROR_NONE, JoinEx(request, MakePasswordFd()));
+  MarkDeviceAsLocked();
+  validate_device_policy_ = &CheckDevicePolicyEmpty;
+  FetchAndValidateDevicePolicy(ERROR_NONE);
+
+  // Validate device workgroup.
+  SmbConf device_smb_conf;
+  ReadSmbConf(paths_->Get(Path::DEVICE_SMB_CONF), &device_smb_conf);
+  EXPECT_EQ(kSecondaryWorkgroup, device_smb_conf.workgroup);
+
+  validate_user_policy_ = &CheckUserPolicyEmpty;
+  FetchAndValidateUserPolicy(DefaultAuth(), ERROR_NONE);
+
+  // Validate user workgroup.
+  SmbConf user_smb_conf;
+  ReadSmbConf(paths_->Get(Path::USER_SMB_CONF), &user_smb_conf);
+  EXPECT_EQ(kDefaultWorkgroup, user_smb_conf.workgroup);
 }
 
 // Successful user policy fetch with actual data.

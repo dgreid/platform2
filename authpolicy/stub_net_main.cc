@@ -11,6 +11,7 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/strings/strcat.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
@@ -29,7 +30,9 @@ const char kMachinePass[] = "machine_pass";
 const char kStateDir[] = "state";
 const char kSambaDir[] = "samba";
 const char kKrb5CCUser[] = "krb5cc_user";
-const char kFakeDomainSidMarker[] = "fake_domain_sid_marker";
+
+// Prefix for the fake domain sid marker file "fake_domain_sid_<workgroup>".
+const char kFakeDomainSidMarkerPrefix[] = "fake_domain_sid_";
 
 // Various stub error messages.
 const char kSmbConfArgMissingError[] =
@@ -323,6 +326,17 @@ std::string GetUserKrb5CCData(const std::string& smb_conf_path) {
   return krb5cc_data;
 }
 
+// Reads the smb.conf file at |smb_conf_path| and extracts the string value
+// associated with given |setting|.
+std::string GetStringValueFromSmbConf(const std::string& smb_conf_path,
+                                      const std::string& setting) {
+  std::string smb_conf;
+  CHECK(base::ReadFileToString(base::FilePath(smb_conf_path), &smb_conf));
+  std::string value;
+  CHECK(FindToken(smb_conf, '=', setting, &value));
+  return value;
+}
+
 // Reads the smb.conf file at |smb_conf_path| and extracts the netbios name.
 std::string GetMachineNameFromSmbConf(const std::string& smb_conf_path) {
   // We need the device smb.conf here, the user smb.conf doesn't contain the
@@ -330,12 +344,7 @@ std::string GetMachineNameFromSmbConf(const std::string& smb_conf_path) {
   std::string device_smb_conf_path = smb_conf_path;
   base::ReplaceFirstSubstringAfterOffset(&device_smb_conf_path, 0, kSmbConfUser,
                                          kSmbConfDevice);
-  std::string smb_conf;
-  CHECK(
-      base::ReadFileToString(base::FilePath(device_smb_conf_path), &smb_conf));
-  std::string machine_name;
-  CHECK(FindToken(smb_conf, '=', "netbios name", &machine_name));
-  return machine_name;
+  return GetStringValueFromSmbConf(device_smb_conf_path, "netbios name");
 }
 
 // Returns different stub net ads search results depending on |object_guid|.
@@ -406,9 +415,12 @@ std::string FormatServerTime(const base::Time& time) {
 }
 
 // Returns the path of a marker file to check whether "net setdomainsid" has
-// been called.
+// been called for a given workgroup stored in a config file at |smb_conf_path|.
 base::FilePath GetDomainSidMarkerPath(const std::string& smb_conf_path) {
-  return base::FilePath(smb_conf_path).DirName().Append(kFakeDomainSidMarker);
+  return base::FilePath(smb_conf_path)
+      .DirName()
+      .Append(kFakeDomainSidMarkerPrefix +
+              GetStringValueFromSmbConf(smb_conf_path, "workgroup"));
 }
 
 // Fakes setting a "net setdomainsid" call by writing a marker file.
@@ -438,7 +450,13 @@ int HandleWorkgroup(const std::string& smb_conf_path) {
     return kExitCodeError;
   }
 
-  WriteOutput("Workgroup: WOKGROUP", "");
+  // Select workgroup based on realm.
+  std::string workgroup = (GetStringValueFromSmbConf(smb_conf_path, "realm") ==
+                           kSecondaryWorkgroupRealm)
+                              ? kSecondaryWorkgroup
+                              : kDefaultWorkgroup;
+
+  WriteOutput(base::StrCat({"Workgroup: ", workgroup}), "");
   return kExitCodeOk;
 }
 
@@ -678,7 +696,7 @@ int HandleSearch(const std::string& command_line) {
 // fakes the behavior of Samba 4.10.7, which requires the domain sid to be set
 // for that command.
 int HandleSetDomainSid(const std::string& smb_conf_path) {
-  // net setdomainsid should be called at most once.
+  // net setdomainsid should be called at most once for the same workgroup.
   if (IsFakeDomainSidSet(smb_conf_path))
     return kExitCodeError;
   SetFakeDomainSid(smb_conf_path);
