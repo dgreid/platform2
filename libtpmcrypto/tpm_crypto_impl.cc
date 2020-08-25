@@ -178,8 +178,7 @@ bool AesDecryptGcmMode(const SecureBlob& cipher_text,
 
 }  // namespace
 
-TpmCryptoImpl::TpmCryptoImpl()
-  : rand_bytes_fn_(RAND_bytes) {
+TpmCryptoImpl::TpmCryptoImpl() : rand_bytes_fn_(RAND_bytes) {
 #if USE_TPM2
   tpm_ = std::make_unique<Tpm2Impl>();
 #else
@@ -188,7 +187,7 @@ TpmCryptoImpl::TpmCryptoImpl()
 }
 
 TpmCryptoImpl::TpmCryptoImpl(std::unique_ptr<Tpm> tpm)
-  : TpmCryptoImpl(std::move(tpm), RAND_bytes) {}
+    : TpmCryptoImpl(std::move(tpm), RAND_bytes) {}
 
 TpmCryptoImpl::TpmCryptoImpl(std::unique_ptr<Tpm> tpm,
                              RandBytesFn rand_bytes_fn) {
