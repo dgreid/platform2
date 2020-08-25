@@ -14,8 +14,9 @@
 
 #include "label_detect.h"
 
-static bool is_blacklisted_driver(
-    const char* vendor_string, VAProfile profile, VAEntrypoint entrypoint) {
+static bool is_blacklisted_driver(const char* vendor_string,
+                                  VAProfile profile,
+                                  VAEntrypoint entrypoint) {
   // No blacklisted driver today.
   return false;
 }
@@ -23,12 +24,14 @@ static bool is_blacklisted_driver(
 /* Returns true if given VA profile |va_profile| has |entrypoint| and the entry
  * point supports given raw |format|.
  */
-static bool has_vaapi_entrypoint(VADisplay va_display, VAProfile va_profile,
-    VAEntrypoint entrypoint, unsigned int format) {
+static bool has_vaapi_entrypoint(VADisplay va_display,
+                                 VAProfile va_profile,
+                                 VAEntrypoint entrypoint,
+                                 unsigned int format) {
   VAStatus va_res;
   VAConfigAttrib attrib = {VAConfigAttribRTFormat, 0};
-  va_res = vaGetConfigAttributes(va_display, va_profile, entrypoint,
-      &attrib, 1);
+  va_res =
+      vaGetConfigAttributes(va_display, va_profile, entrypoint, &attrib, 1);
   if (va_res != VA_STATUS_SUCCESS) {
     TRACE("vaGetConfigAttributes failed (%d)\n", va_res);
     return false;
@@ -42,8 +45,9 @@ static bool has_vaapi_entrypoint(VADisplay va_display, VAProfile va_profile,
  * |format|.
  */
 static bool match_vaapi_capabilities(VADisplay va_display,
-    const VAProfile* required_profiles,
-    VAEntrypoint entrypoint, unsigned int format) {
+                                     const VAProfile* required_profiles,
+                                     VAEntrypoint entrypoint,
+                                     unsigned int format) {
   int i;
   bool found = false;
   int num_supported_profiles;
@@ -52,11 +56,11 @@ static bool match_vaapi_capabilities(VADisplay va_display,
   int max_profiles = vaMaxNumProfiles(va_display);
   /* If no profiles are supported do not proceed further */
   if (max_profiles <= 0) {
-    TRACE("vaMaxNumProfiles returns %d \n ",max_profiles);
+    TRACE("vaMaxNumProfiles returns %d \n ", max_profiles);
     return false;
   }
 
-  profiles = (VAProfile*) alloca(sizeof(VAProfile) * max_profiles);
+  profiles = (VAProfile*)alloca(sizeof(VAProfile) * max_profiles);
   if (!profiles) {
     TRACE("alloca failed\n");
     return false;
@@ -88,8 +92,10 @@ static bool match_vaapi_capabilities(VADisplay va_display,
 /* Returns true if libva supports any given profiles. And that profile has said
  * entrypoint with format.
  */
-bool is_vaapi_support_formats(int fd, const VAProfile* profiles,
-    VAEntrypoint entrypoint, unsigned int format) {
+bool is_vaapi_support_formats(int fd,
+                              const VAProfile* profiles,
+                              VAEntrypoint entrypoint,
+                              unsigned int format) {
   bool found = false;
   VAStatus va_res;
   VADisplay va_display;
@@ -116,16 +122,17 @@ bool is_vaapi_support_formats(int fd, const VAProfile* profiles,
 }
 
 /* Returns true if |entrypoint| is supported. */
-static bool is_entrypoint_supported(VADisplay va_display, VAProfile va_profile,
+static bool is_entrypoint_supported(VADisplay va_display,
+                                    VAProfile va_profile,
                                     VAEntrypoint entrypoint) {
   bool result = false;
   int max_entrypoints = vaMaxNumEntrypoints(va_display);
   VAEntrypoint* supported_entrypoints =
       malloc(max_entrypoints * sizeof(VAEntrypoint));
   int num_supported_entrypoints;
-  VAStatus va_res = vaQueryConfigEntrypoints(va_display, va_profile,
-                                             supported_entrypoints,
-                                             &num_supported_entrypoints);
+  VAStatus va_res =
+      vaQueryConfigEntrypoints(va_display, va_profile, supported_entrypoints,
+                               &num_supported_entrypoints);
 
   if (va_res != VA_STATUS_SUCCESS) {
     TRACE("vaQueryConfigEntrypoints failed (%d)\n", va_res);
@@ -144,16 +151,17 @@ static bool is_entrypoint_supported(VADisplay va_display, VAProfile va_profile,
     }
   }
 
- finish:
+finish:
   free(supported_entrypoints);
   return result;
 }
 
 /* Returns true if |required_attribs| are supported. */
-static bool are_attribs_supported(
-    VADisplay va_display, VAProfile va_profile,
-    VAEntrypoint entrypoint,
-    VAConfigAttrib* required_attribs, int num_required_attribs) {
+static bool are_attribs_supported(VADisplay va_display,
+                                  VAProfile va_profile,
+                                  VAEntrypoint entrypoint,
+                                  VAConfigAttrib* required_attribs,
+                                  int num_required_attribs) {
   bool result = false;
   VAConfigAttrib* attribs =
       malloc(sizeof(VAConfigAttrib) * num_required_attribs);
@@ -179,26 +187,29 @@ static bool are_attribs_supported(
   }
   result = true;
 
- finish:
+finish:
   free(attribs);
   return result;
 }
 
 /* Returns success or failure of getting resolution. The maximum resolution
  * of a passed profile is returned through arguments. */
-static bool get_max_resolution(
-    VADisplay va_display, VAProfile va_profile, VAEntrypoint entrypoint,
-    VAConfigAttrib* required_attribs, int num_required_attribs,
-    int32_t *width, int32_t *height) {
+static bool get_max_resolution(VADisplay va_display,
+                               VAProfile va_profile,
+                               VAEntrypoint entrypoint,
+                               VAConfigAttrib* required_attribs,
+                               int num_required_attribs,
+                               int32_t* width,
+                               int32_t* height) {
   VAStatus va_res;
   VAConfigID va_config_id;
-  VASurfaceAttrib *attrib_list;
+  VASurfaceAttrib* attrib_list;
   unsigned int num_attribs = 0;
   *width = 0;
   *height = 0;
 
-  va_res = vaCreateConfig(va_display, va_profile, entrypoint,
-                          required_attribs, num_attribs, &va_config_id);
+  va_res = vaCreateConfig(va_display, va_profile, entrypoint, required_attribs,
+                          num_attribs, &va_config_id);
   if (va_res != VA_STATUS_SUCCESS) {
     TRACE("vaQueryConfigProfiles failed (%d)\n", va_res);
     return false;
@@ -217,8 +228,8 @@ static bool get_max_resolution(
   }
 
   attrib_list = malloc(num_attribs * sizeof(VASurfaceAttrib));
-  va_res= vaQuerySurfaceAttributes(va_display, va_config_id, attrib_list,
-                                   &num_attribs);
+  va_res = vaQuerySurfaceAttributes(va_display, va_config_id, attrib_list,
+                                    &num_attribs);
   if (va_res != VA_STATUS_SUCCESS) {
     TRACE("vaQuerySurfaceAttributes failed (%d)\n", va_res);
     free(attrib_list);
@@ -236,12 +247,13 @@ static bool get_max_resolution(
   return *width > 0 && *height > 0;
 }
 
-
 /* Returns success or failure of getting resolution. The maximum resolution
  * among passed profiles is returned through arguments. */
-bool get_vaapi_max_resolution(
-    int fd, const VAProfile* profiles, VAEntrypoint entrypoint,
-    int32_t* const resolution_width, int32_t* const resolution_height) {
+bool get_vaapi_max_resolution(int fd,
+                              const VAProfile* profiles,
+                              VAEntrypoint entrypoint,
+                              int32_t* const resolution_width,
+                              int32_t* const resolution_height) {
   *resolution_width = 0;
   *resolution_height = 0;
 

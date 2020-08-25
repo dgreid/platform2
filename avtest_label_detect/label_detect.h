@@ -11,13 +11,17 @@
 #include <linux/videodev2.h>
 #endif  // defined(USE_V4L2_CODEC)
 
-#if defined (USE_VAAPI)
+#if defined(USE_VAAPI)
 #include <va/va.h>
 #endif  // defined (USE_VAAPI)
 
 /* main.c */
 extern int verbose;
-#define TRACE(...) do { if (verbose) printf(__VA_ARGS__); } while (0)
+#define TRACE(...)         \
+  do {                     \
+    if (verbose)           \
+      printf(__VA_ARGS__); \
+  } while (0)
 
 /* table_lookup.c */
 extern void detect_label_by_board_name(void);
@@ -26,28 +30,33 @@ extern void detect_label_by_board_name(void);
 extern int do_ioctl(int fd, int request, void* arg);
 extern bool is_any_device(const char* pattern, bool (*func)(int fd));
 extern bool is_any_device_with_path(const char* pattern,
-                                    bool (*func)(const char *dev_path,
-                                                 int fd));
+                                    bool (*func)(const char* dev_path, int fd));
 extern void convert_fourcc_to_str(uint32_t fourcc, char* str);
 
 /* util_v4l2 */
 #if defined(USE_V4L2_CODEC)
-extern bool is_v4l2_support_format(int fd, enum v4l2_buf_type buf_type,
-    uint32_t fourcc);
+extern bool is_v4l2_support_format(int fd,
+                                   enum v4l2_buf_type buf_type,
+                                   uint32_t fourcc);
 extern bool is_hw_video_acc_device(int fd);
 extern bool is_hw_jpeg_acc_device(int fd);
-bool get_v4l2_max_resolution(
-    int fd, uint32_t fourcc,
-    int32_t* const resolution_width, int32_t* const resolution_height);
+bool get_v4l2_max_resolution(int fd,
+                             uint32_t fourcc,
+                             int32_t* const resolution_width,
+                             int32_t* const resolution_height);
 #endif  // defined(USE_V4L2_CODEC)
 
 /* util_vaapi */
 #if defined(USE_VAAPI)
-bool is_vaapi_support_formats(int fd, const VAProfile* profiles,
-    VAEntrypoint entrypoint, unsigned int format);
-bool get_vaapi_max_resolution(
-    int fd, const VAProfile* profiles, VAEntrypoint entrypoit,
-    int32_t* const resolution_width, int32_t* const resolution_height);
+bool is_vaapi_support_formats(int fd,
+                              const VAProfile* profiles,
+                              VAEntrypoint entrypoint,
+                              unsigned int format);
+bool get_vaapi_max_resolution(int fd,
+                              const VAProfile* profiles,
+                              VAEntrypoint entrypoit,
+                              int32_t* const resolution_width,
+                              int32_t* const resolution_height);
 #endif  // defined(USE_VAAPI)
 
 /* detectors */

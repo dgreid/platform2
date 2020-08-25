@@ -7,11 +7,11 @@
 
 #include "label_detect.h"
 
-bool get_board_name(int board_buffer_len, char *board) {
-  const char *kBoardKey = "CHROMEOS_RELEASE_BOARD=";
+bool get_board_name(int board_buffer_len, char* board) {
+  const char* kBoardKey = "CHROMEOS_RELEASE_BOARD=";
   char line[1024];
   bool found = false;
-  FILE *fp = fopen("/etc/lsb-release", "r");
+  FILE* fp = fopen("/etc/lsb-release", "r");
 
   if (!fp) {
     TRACE("failed to open /etc/lsb-release\n");
@@ -30,7 +30,7 @@ bool get_board_name(int board_buffer_len, char *board) {
     /* chomp trailing newline character. */
     line[strlen(line) - 1] = '\0';
 
-    char *p = line + strlen(kBoardKey);
+    char* p = line + strlen(kBoardKey);
     if (strlen(p) >= board_buffer_len) {
       TRACE("board name too long: %s\n", p);
       break;
@@ -46,9 +46,9 @@ bool get_board_name(int board_buffer_len, char *board) {
   return found;
 }
 
-void match_rule(char *board, char *rule_line) {
+void match_rule(char* board, char* rule_line) {
   char *pattern, *label;
-  char *comment = strchr(rule_line, '#');
+  char* comment = strchr(rule_line, '#');
 
   /* ignore comments */
   if (comment)
@@ -72,11 +72,11 @@ void match_rule(char *board, char *rule_line) {
 }
 
 void detect_label_by_board_name() {
-  const char *conf_filename = "/usr/local/etc/avtest_label_detect.conf";
+  const char* conf_filename = "/usr/local/etc/avtest_label_detect.conf";
   const int kMaxBoardLen = 64;
   char board[kMaxBoardLen];
   char rule_line[1024];
-  FILE *fp;
+  FILE* fp;
 
   if (!get_board_name(sizeof(board), board))
     return;

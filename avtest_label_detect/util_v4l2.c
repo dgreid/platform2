@@ -11,18 +11,19 @@
  * Example of buf_type: V4L2_BUF_TYPE_VIDEO_OUTPUT,
  * V4L2_BUF_TYPE_VIDEO_CAPTURE.
  * */
-bool is_v4l2_support_format(int fd, enum v4l2_buf_type buf_type,
-    uint32_t fourcc) {
+bool is_v4l2_support_format(int fd,
+                            enum v4l2_buf_type buf_type,
+                            uint32_t fourcc) {
   int i;
   bool found = false;
   char fourcc_str[5];
 
   convert_fourcc_to_str(fourcc, fourcc_str);
   TRACE("is_v4l2_support_format(%s)\n", fourcc_str);
-  for (i = 0; ; ++i) {
+  for (i = 0;; ++i) {
     struct v4l2_fmtdesc format_desc;
     memset(&format_desc, 0, sizeof(format_desc));
-    format_desc.type = (enum v4l2_buf_type) buf_type;
+    format_desc.type = (enum v4l2_buf_type)buf_type;
     format_desc.index = i;
     if (-1 == do_ioctl(fd, VIDIOC_ENUM_FMT, &format_desc)) {
       break;
@@ -70,9 +71,10 @@ bool is_hw_jpeg_acc_device(int fd) {
 
 /* Returns success or failure of getting resolution. The maximum resolution is
    returned through arguments. */
-bool get_v4l2_max_resolution(
-    int fd, uint32_t fourcc,
-    int32_t* const resolution_width, int32_t* const resolution_height) {
+bool get_v4l2_max_resolution(int fd,
+                             uint32_t fourcc,
+                             int32_t* const resolution_width,
+                             int32_t* const resolution_height) {
   *resolution_width = 0;
   *resolution_height = 0;
 
