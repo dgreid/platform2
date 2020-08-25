@@ -83,26 +83,22 @@ class AttestationInterface {
   // Processes a GetEnrollmentPreparationsRequest and responds with a
   // GetEnrollmentPreparationsReply.
   using GetEnrollmentPreparationsCallback =
-     base::RepeatingCallback<void(const GetEnrollmentPreparationsReply&)>;
+      base::RepeatingCallback<void(const GetEnrollmentPreparationsReply&)>;
   virtual void GetEnrollmentPreparations(
       const GetEnrollmentPreparationsRequest& request,
       const GetEnrollmentPreparationsCallback& callback) = 0;
 
   // Processes a GetStatusRequest and responds with a
   // GetStatusReply.
-  using GetStatusCallback =
-      base::Callback<void(const GetStatusReply&)>;
-  virtual void GetStatus(
-      const GetStatusRequest& request,
-      const GetStatusCallback& callback) = 0;
+  using GetStatusCallback = base::Callback<void(const GetStatusReply&)>;
+  virtual void GetStatus(const GetStatusRequest& request,
+                         const GetStatusCallback& callback) = 0;
 
   // Processes a VerifyRequest and responds with a
   // VerifyReply.
-  using VerifyCallback =
-      base::Callback<void(const VerifyReply&)>;
-  virtual void Verify(
-      const VerifyRequest& request,
-      const VerifyCallback& callback) = 0;
+  using VerifyCallback = base::Callback<void(const VerifyReply&)>;
+  virtual void Verify(const VerifyRequest& request,
+                      const VerifyCallback& callback) = 0;
 
   // Processes a CreateEnrollRequestRequest and responds with a
   // CreateEnrollRequestReply.
@@ -114,11 +110,9 @@ class AttestationInterface {
 
   // Processes a FinishEnrollRequest and responds with a
   // FinishEnrollReply.
-  using FinishEnrollCallback =
-      base::Callback<void(const FinishEnrollReply&)>;
-  virtual void FinishEnroll(
-      const FinishEnrollRequest& request,
-      const FinishEnrollCallback& callback) = 0;
+  using FinishEnrollCallback = base::Callback<void(const FinishEnrollReply&)>;
+  virtual void FinishEnroll(const FinishEnrollRequest& request,
+                            const FinishEnrollCallback& callback) = 0;
 
   // Processes a EnrollRequest and responds with a
   // EnrollReply.
@@ -167,34 +161,27 @@ class AttestationInterface {
 
   // Processes a SetKeyPayloadRequest and responds with a
   // SetKeyPayloadReply.
-  using SetKeyPayloadCallback =
-      base::Callback<void(const SetKeyPayloadReply&)>;
-  virtual void SetKeyPayload(
-      const SetKeyPayloadRequest& request,
-      const SetKeyPayloadCallback& callback) = 0;
+  using SetKeyPayloadCallback = base::Callback<void(const SetKeyPayloadReply&)>;
+  virtual void SetKeyPayload(const SetKeyPayloadRequest& request,
+                             const SetKeyPayloadCallback& callback) = 0;
 
   // Processes a DeleteKeysRequest and responds with a
   // DeleteKeysReply.
-  using DeleteKeysCallback =
-      base::Callback<void(const DeleteKeysReply&)>;
-  virtual void DeleteKeys(
-      const DeleteKeysRequest& request,
-      const DeleteKeysCallback& callback) = 0;
+  using DeleteKeysCallback = base::Callback<void(const DeleteKeysReply&)>;
+  virtual void DeleteKeys(const DeleteKeysRequest& request,
+                          const DeleteKeysCallback& callback) = 0;
 
   // Processes a ResetIdentityRequest and responds with a
   // ResetIdentityReply.
-  using ResetIdentityCallback =
-      base::Callback<void(const ResetIdentityReply&)>;
-  virtual void ResetIdentity(
-      const ResetIdentityRequest& request,
-      const ResetIdentityCallback& callback) = 0;
+  using ResetIdentityCallback = base::Callback<void(const ResetIdentityReply&)>;
+  virtual void ResetIdentity(const ResetIdentityRequest& request,
+                             const ResetIdentityCallback& callback) = 0;
 
   // Processes a GetEnrollmentId request and responds with GetEnrollmentIdReply.
   using GetEnrollmentIdCallback =
       base::Callback<void(const GetEnrollmentIdReply&)>;
-  virtual void GetEnrollmentId(
-      const GetEnrollmentIdRequest& request,
-      const GetEnrollmentIdCallback& callback) = 0;
+  virtual void GetEnrollmentId(const GetEnrollmentIdRequest& request,
+                               const GetEnrollmentIdCallback& callback) = 0;
 
   // Processes a GetCertifiedNvIndex request and responds with
   // GetCertifiedNvIndexReply.

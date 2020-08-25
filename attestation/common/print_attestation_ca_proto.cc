@@ -251,8 +251,7 @@ std::string GetProtoDebugString(const EncryptedIdentityCredential& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const EncryptedIdentityCredential& value,
-    int indent_size) {
+    const EncryptedIdentityCredential& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -314,8 +313,7 @@ std::string GetProtoDebugString(const AttestationEnrollmentRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const AttestationEnrollmentRequest& value,
-    int indent_size) {
+    const AttestationEnrollmentRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -388,8 +386,7 @@ std::string GetProtoDebugString(const AttestationEnrollmentResponse& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const AttestationEnrollmentResponse& value,
-    int indent_size) {
+    const AttestationEnrollmentResponse& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -429,8 +426,7 @@ std::string GetProtoDebugString(const AttestationCertificateRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const AttestationCertificateRequest& value,
-    int indent_size) {
+    const AttestationCertificateRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -510,8 +506,7 @@ std::string GetProtoDebugString(const AttestationCertificateResponse& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const AttestationCertificateResponse& value,
-    int indent_size) {
+    const AttestationCertificateResponse& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());

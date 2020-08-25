@@ -191,8 +191,7 @@ std::string GetProtoDebugString(const GetEndorsementInfoRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetEndorsementInfoRequest& value,
-    int indent_size) {
+    const GetEndorsementInfoRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -248,8 +247,7 @@ std::string GetProtoDebugString(const GetAttestationKeyInfoRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetAttestationKeyInfoRequest& value,
-    int indent_size) {
+    const GetAttestationKeyInfoRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -271,8 +269,7 @@ std::string GetProtoDebugString(const GetAttestationKeyInfoReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetAttestationKeyInfoReply& value,
-    int indent_size) {
+    const GetAttestationKeyInfoReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -333,8 +330,7 @@ std::string GetProtoDebugString(const ActivateAttestationKeyRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const ActivateAttestationKeyRequest& value,
-    int indent_size) {
+    const ActivateAttestationKeyRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -370,8 +366,7 @@ std::string GetProtoDebugString(const ActivateAttestationKeyReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const ActivateAttestationKeyReply& value,
-    int indent_size) {
+    const ActivateAttestationKeyReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -400,8 +395,7 @@ std::string GetProtoDebugString(const CreateCertifiableKeyRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const CreateCertifiableKeyRequest& value,
-    int indent_size) {
+    const CreateCertifiableKeyRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -441,8 +435,7 @@ std::string GetProtoDebugString(const CreateCertifiableKeyReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const CreateCertifiableKeyReply& value,
-    int indent_size) {
+    const CreateCertifiableKeyReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -609,8 +602,7 @@ std::string GetProtoDebugString(const RegisterKeyWithChapsTokenRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const RegisterKeyWithChapsTokenRequest& value,
-    int indent_size) {
+    const RegisterKeyWithChapsTokenRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -640,8 +632,7 @@ std::string GetProtoDebugString(const RegisterKeyWithChapsTokenReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const RegisterKeyWithChapsTokenReply& value,
-    int indent_size) {
+    const RegisterKeyWithChapsTokenReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -662,8 +653,7 @@ std::string GetProtoDebugString(const GetEnrollmentPreparationsRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetEnrollmentPreparationsRequest& value,
-    int indent_size) {
+    const GetEnrollmentPreparationsRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -685,8 +675,7 @@ std::string GetProtoDebugString(const GetEnrollmentPreparationsReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetEnrollmentPreparationsReply& value,
-    int indent_size) {
+    const GetEnrollmentPreparationsReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -747,8 +736,7 @@ std::string GetProtoDebugString(
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetStatusReply::IdentityCertificate& value,
-    int indent_size) {
+    const GetStatusReply::IdentityCertificate& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -871,8 +859,7 @@ std::string GetProtoDebugString(const CreateEnrollRequestRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const CreateEnrollRequestRequest& value,
-    int indent_size) {
+    const CreateEnrollRequestRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1022,8 +1009,7 @@ std::string GetProtoDebugString(const CreateCertificateRequestRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const CreateCertificateRequestRequest& value,
-    int indent_size) {
+    const CreateCertificateRequestRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1071,8 +1057,7 @@ std::string GetProtoDebugString(const CreateCertificateRequestReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const CreateCertificateRequestReply& value,
-    int indent_size) {
+    const CreateCertificateRequestReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1101,8 +1086,7 @@ std::string GetProtoDebugString(const FinishCertificateRequestRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const FinishCertificateRequestRequest& value,
-    int indent_size) {
+    const FinishCertificateRequestRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1134,8 +1118,7 @@ std::string GetProtoDebugString(const FinishCertificateRequestReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const FinishCertificateRequestReply& value,
-    int indent_size) {
+    const FinishCertificateRequestReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1257,8 +1240,7 @@ std::string GetProtoDebugString(const SignEnterpriseChallengeRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const SignEnterpriseChallengeRequest& value,
-    int indent_size) {
+    const SignEnterpriseChallengeRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1322,8 +1304,7 @@ std::string GetProtoDebugString(const SignEnterpriseChallengeReply& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const SignEnterpriseChallengeReply& value,
-    int indent_size) {
+    const SignEnterpriseChallengeReply& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1352,8 +1333,7 @@ std::string GetProtoDebugString(const SignSimpleChallengeRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const SignSimpleChallengeRequest& value,
-    int indent_size) {
+    const SignSimpleChallengeRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());
@@ -1605,8 +1585,7 @@ std::string GetProtoDebugString(const GetCertifiedNvIndexRequest& value) {
 }
 
 std::string GetProtoDebugStringWithIndent(
-    const GetCertifiedNvIndexRequest& value,
-    int indent_size) {
+    const GetCertifiedNvIndexRequest& value, int indent_size) {
   std::string indent(indent_size, ' ');
   std::string output =
       base::StringPrintf("[%s] {\n", value.GetTypeName().c_str());

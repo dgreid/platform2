@@ -145,18 +145,19 @@ TEST_F(DBusServiceTest, GetEndorsementInfo) {
 TEST_F(DBusServiceTest, GetAttestationKeyInfo) {
   GetAttestationKeyInfoRequest request;
   EXPECT_CALL(mock_service_, GetAttestationKeyInfo(_, _))
-      .WillOnce(Invoke([](
-          const GetAttestationKeyInfoRequest& request,
-          const AttestationInterface::GetAttestationKeyInfoCallback& callback) {
-        GetAttestationKeyInfoReply reply;
-        reply.set_status(STATUS_SUCCESS);
-        reply.set_public_key("public_key");
-        reply.set_public_key_tpm_format("public_key_tpm_format");
-        reply.set_certificate("certificate");
-        reply.mutable_pcr0_quote()->set_quote("pcr0");
-        reply.mutable_pcr1_quote()->set_quote("pcr1");
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([](const GetAttestationKeyInfoRequest& request,
+                    const AttestationInterface::GetAttestationKeyInfoCallback&
+                        callback) {
+            GetAttestationKeyInfoReply reply;
+            reply.set_status(STATUS_SUCCESS);
+            reply.set_public_key("public_key");
+            reply.set_public_key_tpm_format("public_key_tpm_format");
+            reply.set_certificate("certificate");
+            reply.mutable_pcr0_quote()->set_quote("pcr0");
+            reply.mutable_pcr1_quote()->set_quote("pcr1");
+            callback.Run(reply);
+          }));
   std::unique_ptr<dbus::MethodCall> call =
       CreateMethodCall(kGetAttestationKeyInfo);
   dbus::MessageWriter writer(call.get());
@@ -212,20 +213,21 @@ TEST_F(DBusServiceTest, CreateCertifiableKey) {
   request.set_key_usage(KEY_USAGE_SIGN);
   request.set_username("user");
   EXPECT_CALL(mock_service_, CreateCertifiableKey(_, _))
-      .WillOnce(Invoke([](
-          const CreateCertifiableKeyRequest& request,
-          const AttestationInterface::CreateCertifiableKeyCallback& callback) {
-        EXPECT_EQ("label", request.key_label());
-        EXPECT_EQ(KEY_TYPE_ECC, request.key_type());
-        EXPECT_EQ(KEY_USAGE_SIGN, request.key_usage());
-        EXPECT_EQ("user", request.username());
-        CreateCertifiableKeyReply reply;
-        reply.set_status(STATUS_SUCCESS);
-        reply.set_public_key("public_key");
-        reply.set_certify_info("certify_info");
-        reply.set_certify_info_signature("signature");
-        callback.Run(reply);
-      }));
+      .WillOnce(
+          Invoke([](const CreateCertifiableKeyRequest& request,
+                    const AttestationInterface::CreateCertifiableKeyCallback&
+                        callback) {
+            EXPECT_EQ("label", request.key_label());
+            EXPECT_EQ(KEY_TYPE_ECC, request.key_type());
+            EXPECT_EQ(KEY_USAGE_SIGN, request.key_usage());
+            EXPECT_EQ("user", request.username());
+            CreateCertifiableKeyReply reply;
+            reply.set_status(STATUS_SUCCESS);
+            reply.set_public_key("public_key");
+            reply.set_certify_info("certify_info");
+            reply.set_certify_info_signature("signature");
+            callback.Run(reply);
+          }));
   std::unique_ptr<dbus::MethodCall> call =
       CreateMethodCall(kCreateCertifiableKey);
   dbus::MessageWriter writer(call.get());

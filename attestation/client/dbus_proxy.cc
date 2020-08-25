@@ -37,16 +37,15 @@ bool DBusProxy::Initialize() {
 
 void DBusProxy::GetKeyInfo(const GetKeyInfoRequest& request,
                            const GetKeyInfoCallback& callback) {
-  auto on_error = [](const GetKeyInfoCallback& callback,
-                     brillo::Error* error) {
+  auto on_error = [](const GetKeyInfoCallback& callback, brillo::Error* error) {
     GetKeyInfoReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kGetKeyInfo, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kGetKeyInfo, callback, base::Bind(on_error, callback),
+      request);
 }
 
 void DBusProxy::GetEndorsementInfo(const GetEndorsementInfoRequest& request,
@@ -110,29 +109,25 @@ void DBusProxy::CreateCertifiableKey(
 
 void DBusProxy::Decrypt(const DecryptRequest& request,
                         const DecryptCallback& callback) {
-  auto on_error = [](const DecryptCallback& callback,
-                     brillo::Error* error) {
+  auto on_error = [](const DecryptCallback& callback, brillo::Error* error) {
     DecryptReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kDecrypt, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kDecrypt, callback, base::Bind(on_error, callback), request);
 }
 
 void DBusProxy::Sign(const SignRequest& request, const SignCallback& callback) {
-  auto on_error = [](const SignCallback& callback,
-                     brillo::Error* error) {
+  auto on_error = [](const SignCallback& callback, brillo::Error* error) {
     SignReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kSign, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kSign, callback, base::Bind(on_error, callback), request);
 }
 
 void DBusProxy::RegisterKeyWithChapsToken(
@@ -165,34 +160,29 @@ void DBusProxy::GetEnrollmentPreparations(
       base::Bind(on_error, callback), request);
 }
 
-void DBusProxy::GetStatus(
-    const GetStatusRequest& request,
-    const GetStatusCallback& callback) {
-  auto on_error = [](const GetStatusCallback& callback,
-                     brillo::Error* error) {
+void DBusProxy::GetStatus(const GetStatusRequest& request,
+                          const GetStatusCallback& callback) {
+  auto on_error = [](const GetStatusCallback& callback, brillo::Error* error) {
     GetStatusReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kGetStatus, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kGetStatus, callback, base::Bind(on_error, callback),
+      request);
 }
 
-void DBusProxy::Verify(
-    const VerifyRequest& request,
-    const VerifyCallback& callback) {
-  auto on_error = [](const VerifyCallback& callback,
-                     brillo::Error* error) {
+void DBusProxy::Verify(const VerifyRequest& request,
+                       const VerifyCallback& callback) {
+  auto on_error = [](const VerifyCallback& callback, brillo::Error* error) {
     VerifyReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kVerify, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kVerify, callback, base::Bind(on_error, callback), request);
 }
 
 void DBusProxy::CreateEnrollRequest(
@@ -210,9 +200,8 @@ void DBusProxy::CreateEnrollRequest(
       base::Bind(on_error, callback), request);
 }
 
-void DBusProxy::FinishEnroll(
-    const FinishEnrollRequest& request,
-    const FinishEnrollCallback& callback) {
+void DBusProxy::FinishEnroll(const FinishEnrollRequest& request,
+                             const FinishEnrollCallback& callback) {
   auto on_error = [](const FinishEnrollCallback& callback,
                      brillo::Error* error) {
     FinishEnrollReply reply;
@@ -221,8 +210,8 @@ void DBusProxy::FinishEnroll(
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kFinishEnroll, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kFinishEnroll, callback, base::Bind(on_error, callback),
+      request);
 }
 
 void DBusProxy::Enroll(const EnrollRequest& request,
@@ -311,9 +300,8 @@ void DBusProxy::SignSimpleChallenge(
       base::Bind(on_error, callback), request);
 }
 
-void DBusProxy::SetKeyPayload(
-    const SetKeyPayloadRequest& request,
-    const SetKeyPayloadCallback& callback) {
+void DBusProxy::SetKeyPayload(const SetKeyPayloadRequest& request,
+                              const SetKeyPayloadCallback& callback) {
   auto on_error = [](const SetKeyPayloadCallback& callback,
                      brillo::Error* error) {
     SetKeyPayloadReply reply;
@@ -322,28 +310,25 @@ void DBusProxy::SetKeyPayload(
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kSetKeyPayload, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kSetKeyPayload, callback, base::Bind(on_error, callback),
+      request);
 }
 
-void DBusProxy::DeleteKeys(
-    const DeleteKeysRequest& request,
-    const DeleteKeysCallback& callback) {
-  auto on_error = [](const DeleteKeysCallback& callback,
-                     brillo::Error* error) {
+void DBusProxy::DeleteKeys(const DeleteKeysRequest& request,
+                           const DeleteKeysCallback& callback) {
+  auto on_error = [](const DeleteKeysCallback& callback, brillo::Error* error) {
     DeleteKeysReply reply;
     reply.set_status(STATUS_NOT_AVAILABLE);
     callback.Run(reply);
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kDeleteKeys, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kDeleteKeys, callback, base::Bind(on_error, callback),
+      request);
 }
 
-void DBusProxy::ResetIdentity(
-    const ResetIdentityRequest& request,
-    const ResetIdentityCallback& callback) {
+void DBusProxy::ResetIdentity(const ResetIdentityRequest& request,
+                              const ResetIdentityCallback& callback) {
   auto on_error = [](const ResetIdentityCallback& callback,
                      brillo::Error* error) {
     ResetIdentityReply reply;
@@ -352,13 +337,12 @@ void DBusProxy::ResetIdentity(
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kResetIdentity, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kResetIdentity, callback, base::Bind(on_error, callback),
+      request);
 }
 
-void DBusProxy::GetEnrollmentId(
-    const GetEnrollmentIdRequest& request,
-    const GetEnrollmentIdCallback& callback) {
+void DBusProxy::GetEnrollmentId(const GetEnrollmentIdRequest& request,
+                                const GetEnrollmentIdCallback& callback) {
   auto on_error = [](const GetEnrollmentIdCallback& callback,
                      brillo::Error* error) {
     GetEnrollmentIdReply reply;
@@ -367,8 +351,8 @@ void DBusProxy::GetEnrollmentId(
   };
   brillo::dbus_utils::CallMethodWithTimeout(
       kDBusTimeoutMS, object_proxy_, attestation::kAttestationInterface,
-      attestation::kGetEnrollmentId, callback,
-      base::Bind(on_error, callback), request);
+      attestation::kGetEnrollmentId, callback, base::Bind(on_error, callback),
+      request);
 }
 
 void DBusProxy::GetCertifiedNvIndex(

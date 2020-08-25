@@ -49,13 +49,12 @@ class TpmUtility {
   // by the Attestation CA via an EncryptedIdentityCredential protobuf. Take
   // note that the |wrapped_credential| is not the wrapped certificate itself
   // but a shorter value which is used to derive
-  virtual bool ActivateIdentityForTpm2(
-      KeyType key_type,
-      const std::string& identity_key_blob,
-      const std::string& encrypted_seed,
-      const std::string& credential_mac,
-      const std::string& wrapped_credential,
-      std::string* credential) = 0;
+  virtual bool ActivateIdentityForTpm2(KeyType key_type,
+                                       const std::string& identity_key_blob,
+                                       const std::string& encrypted_seed,
+                                       const std::string& credential_mac,
+                                       const std::string& wrapped_credential,
+                                       std::string* credential) = 0;
 
   // Generates and certifies a non-migratable key in the TPM. The new key will
   // correspond to |key_type| and |key_usage|. The parent key will be the

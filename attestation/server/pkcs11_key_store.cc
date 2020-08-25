@@ -142,10 +142,8 @@ bool Pkcs11KeyStore::Write(const std::string& username,
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE attributes[] = {
       {CKA_CLASS, &object_class, sizeof(object_class)},
-      {CKA_LABEL, base::data(mutable_key_name),
-       mutable_key_name.size()},
-      {CKA_VALUE, base::data(mutable_key_data),
-       mutable_key_data.size()},
+      {CKA_LABEL, base::data(mutable_key_name), mutable_key_name.size()},
+      {CKA_VALUE, base::data(mutable_key_data), mutable_key_data.size()},
       {CKA_APPLICATION, base::data(mutable_application_id),
        mutable_application_id.size()},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
@@ -240,8 +238,8 @@ bool Pkcs11KeyStore::Register(const std::string& username,
   std::string modulus(RSA_size(public_key.get()), 0);
   const BIGNUM* n;
   RSA_get0_key(public_key.get(), &n, nullptr, nullptr);
-  int length = BN_bn2bin(
-      n, reinterpret_cast<unsigned char*>(base::data(modulus)));
+  int length =
+      BN_bn2bin(n, reinterpret_cast<unsigned char*>(base::data(modulus)));
   if (length <= 0) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to extract public key modulus.";
     return false;
@@ -327,13 +325,11 @@ bool Pkcs11KeyStore::Register(const std::string& username,
         {CKA_TOKEN, &true_value, sizeof(true_value)},
         {CKA_PRIVATE, &false_value, sizeof(false_value)},
         {CKA_ID, base::data(id), id.size()},
-        {CKA_LABEL, base::data(mutable_label),
-         mutable_label.size()},
+        {CKA_LABEL, base::data(mutable_label), mutable_label.size()},
         {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
         {CKA_SUBJECT, base::data(subject), subject.size()},
         {CKA_ISSUER, base::data(issuer), issuer.size()},
-        {CKA_SERIAL_NUMBER, base::data(serial_number),
-         serial_number.size()},
+        {CKA_SERIAL_NUMBER, base::data(serial_number), serial_number.size()},
         {CKA_VALUE, base::data(mutable_certificate),
          mutable_certificate.size()}};
 
@@ -384,10 +380,8 @@ bool Pkcs11KeyStore::RegisterCertificate(const std::string& username,
       {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
       {CKA_SUBJECT, base::data(subject), subject.size()},
       {CKA_ISSUER, base::data(issuer), issuer.size()},
-      {CKA_SERIAL_NUMBER, base::data(serial_number),
-       serial_number.size()},
-      {CKA_VALUE, base::data(mutable_certificate),
-       mutable_certificate.size()}};
+      {CKA_SERIAL_NUMBER, base::data(serial_number), serial_number.size()},
+      {CKA_VALUE, base::data(mutable_certificate), mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   if (C_CreateObject(session.handle(), certificate_attributes,
                      base::size(certificate_attributes),
@@ -408,8 +402,7 @@ CK_OBJECT_HANDLE Pkcs11KeyStore::FindObject(CK_SESSION_HANDLE session_handle,
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE attributes[] = {
       {CKA_CLASS, &object_class, sizeof(object_class)},
-      {CKA_LABEL, base::data(mutable_key_name),
-       mutable_key_name.size()},
+      {CKA_LABEL, base::data(mutable_key_name), mutable_key_name.size()},
       {CKA_APPLICATION, base::data(mutable_application_id),
        mutable_application_id.size()},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
@@ -559,8 +552,8 @@ bool Pkcs11KeyStore::GetCertificateFields(const std::string& certificate,
     return false;
   }
   unsigned char* subject_buffer = nullptr;
-  int length = i2d_X509_NAME(X509_get_subject_name(x509.get()),
-                             &subject_buffer);
+  int length =
+      i2d_X509_NAME(X509_get_subject_name(x509.get()), &subject_buffer);
   crypto::ScopedOpenSSLBytes scoped_subject_buffer(subject_buffer);
   if (length <= 0) {
     LOG(WARNING) << "Pkcs11KeyStore: Failed to encode certificate subject.";
@@ -602,8 +595,7 @@ bool Pkcs11KeyStore::DoesCertificateExist(CK_SESSION_HANDLE session_handle,
       {CKA_CLASS, &object_class, sizeof(object_class)},
       {CKA_TOKEN, &true_value, sizeof(true_value)},
       {CKA_PRIVATE, &false_value, sizeof(false_value)},
-      {CKA_VALUE, base::data(mutable_certificate),
-       mutable_certificate.size()}};
+      {CKA_VALUE, base::data(mutable_certificate), mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
   if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=

@@ -319,8 +319,8 @@ TEST_F(CryptoUtilityImplTest, KDFaKnownAnswerTest) {
       "000BEDB60C6A4E2470EF4804FDE7FA35B94A5338DB7D5B5A3A1DE0E7EB12152A1A95");
   std::string expected_output_256 = HexDecode(
       "C8307D1197CBD3A26E78D5519C26E08661C79D36B528A1089E6156627441ECCD");
-  std::string expected_output_128 = HexDecode(
-      "9FD97E677A4538557783B3442EC41993");
+  std::string expected_output_128 =
+      HexDecode("9FD97E677A4538557783B3442EC41993");
   EXPECT_EQ(expected_output_256, KDFa(key, "STORAGE", context, 256));
   EXPECT_EQ(expected_output_128, KDFa(key, "STORAGE", context, 128));
 }

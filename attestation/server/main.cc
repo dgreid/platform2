@@ -79,9 +79,10 @@ base::Optional<attestation::GoogleKeys> ReadGoogleKeysIfExists() {
 }
 
 bool GetAttestationEnrollmentData(const std::string& abe_data_hex,
-                                         brillo::SecureBlob* abe_data) {
+                                  brillo::SecureBlob* abe_data) {
   abe_data->clear();
-  if (abe_data_hex.empty()) return true;  // no data is ok.
+  if (abe_data_hex.empty())
+    return true;  // no data is ok.
   // The data must be a valid 32-byte hex string.
   return brillo::SecureBlob::HexStringToSecureBlob(abe_data_hex, abe_data) &&
          abe_data->size() == 32;

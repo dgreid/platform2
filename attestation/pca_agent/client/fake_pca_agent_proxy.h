@@ -101,8 +101,8 @@ class FakePcaAgentProxy : public org::chromium::PcaAgentProxyMock {
                 const ErrorCallbackType& on_error) {
     auto task = config.success ? base::Bind(on_success, reply)
                                : base::Bind(on_error, dummy_error_.get());
-    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
-        FROM_HERE, task, config.delay);
+    base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(FROM_HERE, task,
+                                                         config.delay);
   }
 
   void FakeEnrollAsync(

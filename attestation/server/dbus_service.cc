@@ -49,18 +49,14 @@ void DBusService::Register(const CompletionAction& callback) {
   dbus_interface->AddMethodHandler(
       kGetEnrollmentPreparations, base::Unretained(this),
       &DBusService::HandleGetEnrollmentPreparations);
-  dbus_interface->AddMethodHandler(
-      kGetStatus, base::Unretained(this),
-      &DBusService::HandleGetStatus);
-  dbus_interface->AddMethodHandler(
-      kVerify, base::Unretained(this),
-      &DBusService::HandleVerify);
-  dbus_interface->AddMethodHandler(
-      kCreateEnrollRequest, base::Unretained(this),
-      &DBusService::HandleCreateEnrollRequest);
-  dbus_interface->AddMethodHandler(
-      kFinishEnroll, base::Unretained(this),
-      &DBusService::HandleFinishEnroll);
+  dbus_interface->AddMethodHandler(kGetStatus, base::Unretained(this),
+                                   &DBusService::HandleGetStatus);
+  dbus_interface->AddMethodHandler(kVerify, base::Unretained(this),
+                                   &DBusService::HandleVerify);
+  dbus_interface->AddMethodHandler(kCreateEnrollRequest, base::Unretained(this),
+                                   &DBusService::HandleCreateEnrollRequest);
+  dbus_interface->AddMethodHandler(kFinishEnroll, base::Unretained(this),
+                                   &DBusService::HandleFinishEnroll);
   dbus_interface->AddMethodHandler(kEnroll, base::Unretained(this),
                                    &DBusService::HandleEnroll);
   dbus_interface->AddMethodHandler(
@@ -71,24 +67,19 @@ void DBusService::Register(const CompletionAction& callback) {
       &DBusService::HandleFinishCertificateRequest);
   dbus_interface->AddMethodHandler(kGetCertificate, base::Unretained(this),
                                    &DBusService::HandleGetCertificate);
-  dbus_interface->AddMethodHandler(
-      kSignEnterpriseChallenge, base::Unretained(this),
-      &DBusService::HandleSignEnterpriseChallenge);
-  dbus_interface->AddMethodHandler(
-      kSignSimpleChallenge, base::Unretained(this),
-      &DBusService::HandleSignSimpleChallenge);
-  dbus_interface->AddMethodHandler(
-      kSetKeyPayload, base::Unretained(this),
-      &DBusService::HandleSetKeyPayload);
-  dbus_interface->AddMethodHandler(
-      kDeleteKeys, base::Unretained(this),
-      &DBusService::HandleDeleteKeys);
-  dbus_interface->AddMethodHandler(
-      kResetIdentity, base::Unretained(this),
-      &DBusService::HandleResetIdentity);
-  dbus_interface->AddMethodHandler(
-      kGetEnrollmentId, base::Unretained(this),
-      &DBusService::HandleGetEnrollmentId);
+  dbus_interface->AddMethodHandler(kSignEnterpriseChallenge,
+                                   base::Unretained(this),
+                                   &DBusService::HandleSignEnterpriseChallenge);
+  dbus_interface->AddMethodHandler(kSignSimpleChallenge, base::Unretained(this),
+                                   &DBusService::HandleSignSimpleChallenge);
+  dbus_interface->AddMethodHandler(kSetKeyPayload, base::Unretained(this),
+                                   &DBusService::HandleSetKeyPayload);
+  dbus_interface->AddMethodHandler(kDeleteKeys, base::Unretained(this),
+                                   &DBusService::HandleDeleteKeys);
+  dbus_interface->AddMethodHandler(kResetIdentity, base::Unretained(this),
+                                   &DBusService::HandleResetIdentity);
+  dbus_interface->AddMethodHandler(kGetEnrollmentId, base::Unretained(this),
+                                   &DBusService::HandleGetEnrollmentId);
   dbus_interface->AddMethodHandler(kGetCertifiedNvIndex, base::Unretained(this),
                                    &DBusService::HandleGetCertifiedNvIndex);
 
@@ -258,38 +249,32 @@ void DBusService::HandleGetEnrollmentPreparations(
 }
 
 void DBusService::HandleGetStatus(
-    std::unique_ptr<DBusMethodResponse<const GetStatusReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const GetStatusReply&>> response,
     const GetStatusRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const GetStatusReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const GetStatusReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
-                     const GetStatusReply& reply) {
-    response->Return(reply);
-  };
+                     const GetStatusReply& reply) { response->Return(reply); };
   service_->GetStatus(
       request,
       base::Bind(callback, SharedResponsePointer(std::move(response))));
 }
 
 void DBusService::HandleVerify(
-    std::unique_ptr<DBusMethodResponse<const VerifyReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const VerifyReply&>> response,
     const VerifyRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const VerifyReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const VerifyReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
-                     const VerifyReply& reply) {
-    response->Return(reply);
-  };
+                     const VerifyReply& reply) { response->Return(reply); };
   service_->Verify(
       request,
       base::Bind(callback, SharedResponsePointer(std::move(response))));
@@ -302,8 +287,8 @@ void DBusService::HandleCreateEnrollRequest(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const CreateEnrollRequestReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const CreateEnrollRequestReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const CreateEnrollRequestReply& reply) {
@@ -315,14 +300,13 @@ void DBusService::HandleCreateEnrollRequest(
 }
 
 void DBusService::HandleFinishEnroll(
-    std::unique_ptr<DBusMethodResponse<const FinishEnrollReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const FinishEnrollReply&>> response,
     const FinishEnrollRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const FinishEnrollReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const FinishEnrollReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const FinishEnrollReply& reply) {
@@ -356,8 +340,8 @@ void DBusService::HandleCreateCertificateRequest(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const CreateCertificateRequestReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const CreateCertificateRequestReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const CreateCertificateRequestReply& reply) {
@@ -375,8 +359,8 @@ void DBusService::HandleFinishCertificateRequest(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const FinishCertificateRequestReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const FinishCertificateRequestReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const FinishCertificateRequestReply& reply) {
@@ -412,8 +396,8 @@ void DBusService::HandleSignEnterpriseChallenge(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const SignEnterpriseChallengeReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const SignEnterpriseChallengeReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const SignEnterpriseChallengeReply& reply) {
@@ -431,8 +415,8 @@ void DBusService::HandleSignSimpleChallenge(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const SignSimpleChallengeReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const SignSimpleChallengeReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const SignSimpleChallengeReply& reply) {
@@ -444,14 +428,13 @@ void DBusService::HandleSignSimpleChallenge(
 }
 
 void DBusService::HandleSetKeyPayload(
-    std::unique_ptr<DBusMethodResponse<const SetKeyPayloadReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const SetKeyPayloadReply&>> response,
     const SetKeyPayloadRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const SetKeyPayloadReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const SetKeyPayloadReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const SetKeyPayloadReply& reply) {
@@ -463,33 +446,29 @@ void DBusService::HandleSetKeyPayload(
 }
 
 void DBusService::HandleDeleteKeys(
-    std::unique_ptr<DBusMethodResponse<const DeleteKeysReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const DeleteKeysReply&>> response,
     const DeleteKeysRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const DeleteKeysReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const DeleteKeysReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
-                     const DeleteKeysReply& reply) {
-    response->Return(reply);
-  };
+                     const DeleteKeysReply& reply) { response->Return(reply); };
   service_->DeleteKeys(
       request,
       base::Bind(callback, SharedResponsePointer(std::move(response))));
 }
 
 void DBusService::HandleResetIdentity(
-    std::unique_ptr<DBusMethodResponse<const ResetIdentityReply&>>
-        response,
+    std::unique_ptr<DBusMethodResponse<const ResetIdentityReply&>> response,
     const ResetIdentityRequest& request) {
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const ResetIdentityReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const ResetIdentityReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const ResetIdentityReply& reply) {
@@ -507,8 +486,8 @@ void DBusService::HandleGetEnrollmentId(
   VLOG(1) << __func__;
   // Convert |response| to a shared_ptr so |service_| can safely copy the
   // callback.
-  using SharedResponsePointer = std::shared_ptr<
-      DBusMethodResponse<const GetEnrollmentIdReply&>>;
+  using SharedResponsePointer =
+      std::shared_ptr<DBusMethodResponse<const GetEnrollmentIdReply&>>;
   // A callback that fills the reply protobuf and sends it.
   auto callback = [](const SharedResponsePointer& response,
                      const GetEnrollmentIdReply& reply) {

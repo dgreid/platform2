@@ -104,11 +104,10 @@ class CryptoUtility {
   // which instance of the ACA is used (e.g. production vs test). On success
   // returns true and populates |encrypted_data| which can be transmitted
   // to the ACA.
-  virtual bool EncryptDataForGoogle(
-      const std::string& certificate,
-      const std::string& public_key_hex,
-      const std::string& key_id,
-      EncryptedData* encrypted_data) = 0;
+  virtual bool EncryptDataForGoogle(const std::string& certificate,
+                                    const std::string& public_key_hex,
+                                    const std::string& key_id,
+                                    EncryptedData* encrypted_data) = 0;
 
   // Creates a SignedPublicKeyAndChallenge signed with |key_blob| from
   // |public_key| in PKCS #1 RSAPublicKey (ASN.1 DER) format with a random
@@ -132,8 +131,7 @@ class CryptoUtility {
   // Gets SubjectPublicKeyInfo of public key for the X.509 |certificate|.
   // On success returns true and populates |public_key|.
   virtual bool GetCertificateSubjectPublicKeyInfo(
-      const std::string& certificate,
-      std::string* public_key) = 0;
+      const std::string& certificate, std::string* public_key) = 0;
 
   // Gets public key for the X.509 |certificate|. On success returns true and
   // populates |public_key|.

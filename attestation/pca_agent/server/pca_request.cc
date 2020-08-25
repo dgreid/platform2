@@ -29,8 +29,7 @@ void PcaRequest<ReplyType>::SendRequest() {
 
 template <typename ReplyType>
 void PcaRequest<ReplyType>::OnGetProxyServers(
-    bool success,
-    const std::vector<std::string>& servers) {
+    bool success, const std::vector<std::string>& servers) {
   // In case of failure, also tries direct connection.
   if (!success || servers.empty()) {
     proxy_servers_ = {brillo::http::kDirectProxy};

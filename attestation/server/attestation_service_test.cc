@@ -154,12 +154,12 @@ class AttestationServiceBaseTest : public testing::Test {
     service_->set_policy_provider(mock_policy_provider_);
     // Setup a fake wrapped EK certificate by default.
     (*mock_database_.GetMutableProtobuf()
-        ->mutable_credentials()
-        ->mutable_encrypted_endorsement_credentials())[DEFAULT_ACA]
+          ->mutable_credentials()
+          ->mutable_encrypted_endorsement_credentials())[DEFAULT_ACA]
         .set_wrapping_key_id("default");
     (*mock_database_.GetMutableProtobuf()
-        ->mutable_credentials()
-        ->mutable_encrypted_endorsement_credentials())[TEST_ACA]
+          ->mutable_credentials()
+          ->mutable_encrypted_endorsement_credentials())[TEST_ACA]
         .set_wrapping_key_id("test");
     EXPECT_CALL(mock_tpm_utility_, IsPCR0Valid()).WillRepeatedly(Return(true));
     // Run out initialize task(s) to avoid any race conditions with tests that
@@ -212,8 +212,8 @@ class AttestationServiceBaseTest : public testing::Test {
     (*identity_data->mutable_nvram_quotes())[BOARD_ID].set_quote("board_id");
     (*identity_data->mutable_nvram_quotes())[SN_BITS].set_quote("sn_bits");
     if (service_->GetEndorsementKeyType() != KEY_TYPE_RSA) {
-      (*identity_data->mutable_nvram_quotes())[RSA_PUB_EK_CERT]
-          .set_quote("rsa_pub_ek_cert");
+      (*identity_data->mutable_nvram_quotes())[RSA_PUB_EK_CERT].set_quote(
+          "rsa_pub_ek_cert");
     }
 #endif
   }
@@ -288,9 +288,8 @@ class AttestationServiceBaseTest : public testing::Test {
          aca < AttestationService::kMaxACATypeInternal; ++aca) {
       AttestationService::ACATypeInternal aca_int =
           static_cast<AttestationService::ACATypeInternal>(aca);
-      ASSERT_TRUE(
-          db.credentials().encrypted_endorsement_credentials()
-              .count(AttestationService::GetACAType(aca_int)));
+      ASSERT_TRUE(db.credentials().encrypted_endorsement_credentials().count(
+          AttestationService::GetACAType(aca_int)));
     }
   }
 
@@ -363,12 +362,14 @@ TEST_F(AttestationServiceBaseTest, MigrateAttestationDatabase) {
   // The deprecated field has not been cleared so that older code can still
   // use the database.
   EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().encrypted_endorsement_credentials().at(
-          DEFAULT_ACA).wrapped_key());
-  EXPECT_EQ(
-      default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().default_encrypted_endorsement_credential()
-          .wrapped_key());
+            const_db.credentials()
+                .encrypted_endorsement_credentials()
+                .at(DEFAULT_ACA)
+                .wrapped_key());
+  EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
+            const_db.credentials()
+                .default_encrypted_endorsement_credential()
+                .wrapped_key());
 
   // The default identity has data copied from the deprecated database fields.
   // The deprecated fields have not been cleared so that older code can still
@@ -433,12 +434,14 @@ TEST_F(AttestationServiceBaseTest,
   // The deprecated field has not been cleared so that older code can still
   // use the database.
   EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().encrypted_endorsement_credentials().at(
-          DEFAULT_ACA).wrapped_key());
-  EXPECT_EQ(
-      default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().default_encrypted_endorsement_credential()
-          .wrapped_key());
+            const_db.credentials()
+                .encrypted_endorsement_credentials()
+                .at(DEFAULT_ACA)
+                .wrapped_key());
+  EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
+            const_db.credentials()
+                .default_encrypted_endorsement_credential()
+                .wrapped_key());
 
   // The default identity could not be copied from the deprecated database.
   // The deprecated fields have not been cleared so that older code can still
@@ -490,19 +493,23 @@ TEST_F(AttestationServiceBaseTest,
   // The deprecated fields have not been cleared so that older code can still
   // use the database.
   EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().encrypted_endorsement_credentials().at(
-          DEFAULT_ACA).wrapped_key());
-  EXPECT_EQ(
-      default_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().default_encrypted_endorsement_credential()
-          .wrapped_key());
+            const_db.credentials()
+                .encrypted_endorsement_credentials()
+                .at(DEFAULT_ACA)
+                .wrapped_key());
+  EXPECT_EQ(default_encrypted_endorsement_credential.wrapped_key(),
+            const_db.credentials()
+                .default_encrypted_endorsement_credential()
+                .wrapped_key());
   EXPECT_EQ(test_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().encrypted_endorsement_credentials().at(
-          TEST_ACA).wrapped_key());
-  EXPECT_EQ(
-      test_encrypted_endorsement_credential.wrapped_key(),
-      const_db.credentials().test_encrypted_endorsement_credential()
-          .wrapped_key());
+            const_db.credentials()
+                .encrypted_endorsement_credentials()
+                .at(TEST_ACA)
+                .wrapped_key());
+  EXPECT_EQ(test_encrypted_endorsement_credential.wrapped_key(),
+            const_db.credentials()
+                .test_encrypted_endorsement_credential()
+                .wrapped_key());
 }
 
 TEST_F(AttestationServiceBaseTest, GetEndorsementInfoNoInfo) {
@@ -692,17 +699,16 @@ TEST_F(AttestationServiceBaseTest, GetEndorsementInfoSuccess) {
 
 TEST_F(AttestationServiceBaseTest, GetEnrollmentId) {
   EXPECT_CALL(mock_tpm_utility_, GetEndorsementPublicKeyModulus(_, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(std::string("ekm")),
-                      Return(true)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(std::string("ekm")), Return(true)));
   brillo::SecureBlob abe_data(0xCA, 32);
   service_->set_abe_data(&abe_data);
   CryptoUtilityImpl crypto_utility(&mock_tpm_utility_);
   service_->set_crypto_utility(&crypto_utility);
   std::string enrollment_id = GetEnrollmentId();
-  EXPECT_EQ(
-      "635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
-      base::ToLowerASCII(
-          base::HexEncode(enrollment_id.data(), enrollment_id.size())));
+  EXPECT_EQ("635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
+            base::ToLowerASCII(
+                base::HexEncode(enrollment_id.data(), enrollment_id.size())));
 
   // Cache the EID in the database.
   AttestationDatabase database_pb;
@@ -713,16 +719,15 @@ TEST_F(AttestationServiceBaseTest, GetEnrollmentId) {
   brillo::SecureBlob abe_data_new(0x89, 32);
   service_->set_abe_data(&abe_data_new);
   enrollment_id = GetEnrollmentId();
-  EXPECT_EQ(
-      "635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
-      base::ToLowerASCII(
-          base::HexEncode(enrollment_id.data(), enrollment_id.size())));
+  EXPECT_EQ("635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
+            base::ToLowerASCII(
+                base::HexEncode(enrollment_id.data(), enrollment_id.size())));
 }
 
 TEST_F(AttestationServiceBaseTest, SignSimpleChallengeSuccess) {
   EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(std::string("signature")),
-                      Return(true)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<2>(std::string("signature")), Return(true)));
   auto callback = [](const base::Closure& quit_closure,
                      const SignSimpleChallengeReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -743,8 +748,7 @@ TEST_F(AttestationServiceBaseTest, SignSimpleChallengeSuccess) {
 }
 
 TEST_F(AttestationServiceBaseTest, SignSimpleChallengeInternalFailure) {
-  EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _)).WillRepeatedly(Return(false));
   auto callback = [](const base::Closure& quit_closure,
                      const SignSimpleChallengeReply& reply) {
     EXPECT_NE(STATUS_SUCCESS, reply.status());
@@ -760,8 +764,8 @@ TEST_F(AttestationServiceBaseTest, SignSimpleChallengeInternalFailure) {
 }
 
 class AttestationServiceEnterpriseTest
-  : public AttestationServiceBaseTest,
-    public testing::WithParamInterface<VAType> {
+    : public AttestationServiceBaseTest,
+      public testing::WithParamInterface<VAType> {
  public:
   AttestationServiceEnterpriseTest() : va_type_(GetParam()) {}
   ~AttestationServiceEnterpriseTest() override = default;
@@ -790,8 +794,8 @@ TEST_P(AttestationServiceEnterpriseTest, SignEnterpriseChallengeSuccess) {
       .WillRepeatedly(DoAll(SetArgPointee<3>(MockEncryptedData(key_info_str)),
                             Return(true)));
   EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(std::string("signature")),
-                      Return(true)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<2>(std::string("signature")), Return(true)));
   auto callback = [](const base::Closure& quit_closure,
                      const SignEnterpriseChallengeReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -806,8 +810,7 @@ TEST_P(AttestationServiceEnterpriseTest, SignEnterpriseChallengeSuccess) {
     KeyInfo key_info = CreateChallengeKeyInfo();
     std::string key_info_str;
     key_info.SerializeToString(&key_info_str);
-    EXPECT_EQ(key_info_str,
-              response_pb.encrypted_key_info().encrypted_data());
+    EXPECT_EQ(key_info_str, response_pb.encrypted_key_info().encrypted_data());
     quit_closure.Run();
   };
   SignEnterpriseChallengeRequest request;
@@ -830,8 +833,7 @@ TEST_P(AttestationServiceEnterpriseTest,
   key_info.SerializeToString(&key_info_str);
   EXPECT_CALL(mock_crypto_utility_, VerifySignatureUsingHexKey(_, _, _, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _)).WillRepeatedly(Return(false));
   auto callback = [](const base::Closure& quit_closure,
                      const SignEnterpriseChallengeReply& reply) {
     EXPECT_NE(STATUS_SUCCESS, reply.status());
@@ -920,8 +922,7 @@ TEST_P(AttestationServiceEnterpriseTest,
   EXPECT_CALL(mock_crypto_utility_, CreateSPKAC(key_for_spkac.key_blob(),
                                                 key_for_spkac.public_key(), _))
       .WillOnce(
-          DoAll(SetArgPointee<2>(std::string("fake_spkac")),
-                Return(true)));
+          DoAll(SetArgPointee<2>(std::string("fake_spkac")), Return(true)));
 
   EXPECT_CALL(mock_tpm_utility_, Sign(_, _, _))
       .WillOnce(
@@ -956,21 +957,17 @@ TEST_P(AttestationServiceEnterpriseTest,
   Run();
 }
 
-INSTANTIATE_TEST_SUITE_P(
-    VerifiedAccessType,
-    AttestationServiceEnterpriseTest,
-    ::testing::Values(DEFAULT_VA, TEST_VA));
+INSTANTIATE_TEST_SUITE_P(VerifiedAccessType,
+                         AttestationServiceEnterpriseTest,
+                         ::testing::Values(DEFAULT_VA, TEST_VA));
 
-class AttestationServiceTest
-    : public AttestationServiceBaseTest,
-      public testing::WithParamInterface<ACAType> {
+class AttestationServiceTest : public AttestationServiceBaseTest,
+                               public testing::WithParamInterface<ACAType> {
  public:
   AttestationServiceTest() : aca_type_(GetParam()) {}
   ~AttestationServiceTest() override = default;
 
-  void SetUp() override {
-    AttestationServiceBaseTest::SetUp();
-  }
+  void SetUp() override { AttestationServiceBaseTest::SetUp(); }
 
  protected:
   std::string CreateCAEnrollResponse(bool success) {
@@ -989,7 +986,8 @@ class AttestationServiceTest
       response_pb.mutable_encrypted_identity_credential()->set_credential_mac(
           "mac");
       response_pb.mutable_encrypted_identity_credential()
-          ->mutable_wrapped_certificate()->set_wrapped_key("wrapped");
+          ->mutable_wrapped_certificate()
+          ->set_wrapped_key("wrapped");
     } else {
       response_pb.set_status(SERVER_ERROR);
       response_pb.set_detail("fake_enroll_error");
@@ -1057,8 +1055,9 @@ TEST_P(AttestationServiceTest, GetAttestationKeyInfoSuccess) {
   };
   GetAttestationKeyInfoRequest request;
   request.set_aca_type(aca_type_);
-  service_->GetAttestationKeyInfo(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->GetAttestationKeyInfo(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -1105,8 +1104,9 @@ TEST_P(AttestationServiceTest, GetAttestationKeyInfoSomeInfo) {
   };
   GetAttestationKeyInfoRequest request;
   request.set_aca_type(aca_type_);
-  service_->GetAttestationKeyInfo(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->GetAttestationKeyInfo(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -1144,8 +1144,9 @@ TEST_P(AttestationServiceTest, ActivateAttestationKeySuccess) {
       ->mutable_wrapped_certificate()
       ->set_wrapped_key("wrapped");
   request.set_save_certificate(true);
-  service_->ActivateAttestationKey(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->ActivateAttestationKey(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -1183,8 +1184,9 @@ TEST_P(AttestationServiceTest, ActivateAttestationKeySuccessNoSave) {
   request.mutable_encrypted_certificate()
       ->mutable_wrapped_certificate()
       ->set_wrapped_key("wrapped");
-  service_->ActivateAttestationKey(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->ActivateAttestationKey(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -1257,11 +1259,10 @@ TEST_P(AttestationServiceTest, CreateCertifiableKeySuccess) {
   EXPECT_CALL(
       mock_tpm_utility_,
       CreateCertifiedKey(KEY_TYPE_RSA, KEY_USAGE_SIGN, _, _, _, _, _, _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<5>(std::string("public_key")),
-                SetArgPointee<7>(std::string("certify_info")),
-                SetArgPointee<8>(std::string("certify_info_signature")),
-                Return(true)));
+      .WillOnce(DoAll(SetArgPointee<5>(std::string("public_key")),
+                      SetArgPointee<7>(std::string("certify_info")),
+                      SetArgPointee<8>(std::string("certify_info_signature")),
+                      Return(true)));
   // Expect the key to be written exactly once.
   EXPECT_CALL(mock_key_store_, Write("user", "label", _)).Times(1);
   // Set expectations on the outputs.
@@ -1290,11 +1291,10 @@ TEST_P(AttestationServiceTest, CreateCertifiableKeySuccessNoUser) {
   EXPECT_CALL(
       mock_tpm_utility_,
       CreateCertifiedKey(KEY_TYPE_RSA, KEY_USAGE_SIGN, _, _, _, _, _, _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<5>(std::string("public_key")),
-                SetArgPointee<7>(std::string("certify_info")),
-                SetArgPointee<8>(std::string("certify_info_signature")),
-                Return(true)));
+      .WillOnce(DoAll(SetArgPointee<5>(std::string("public_key")),
+                      SetArgPointee<7>(std::string("certify_info")),
+                      SetArgPointee<8>(std::string("certify_info_signature")),
+                      Return(true)));
   // Expect the key to be written exactly once.
   EXPECT_CALL(mock_database_, SaveChanges()).Times(1);
   // Set expectations on the outputs.
@@ -1610,8 +1610,7 @@ TEST_P(AttestationServiceTest, RegisterSuccess) {
               Register("user", "label", KEY_TYPE_RSA, KEY_USAGE_SIGN,
                        "key_blob", "public_key", ""))
       .Times(1);
-  EXPECT_CALL(mock_key_store_, RegisterCertificate(_, _))
-      .Times(0);
+  EXPECT_CALL(mock_key_store_, RegisterCertificate(_, _)).Times(0);
   EXPECT_CALL(mock_key_store_, Delete("user", "label")).Times(1);
   // Set expectations on the outputs.
   auto callback = [](const base::Closure& quit_closure,
@@ -1644,8 +1643,7 @@ TEST_P(AttestationServiceTest, RegisterSuccessNoUser) {
               Register("", "label", KEY_TYPE_RSA, KEY_USAGE_SIGN, "key_blob",
                        "public_key", ""))
       .Times(1);
-  EXPECT_CALL(mock_key_store_, RegisterCertificate(_, _))
-      .Times(0);
+  EXPECT_CALL(mock_key_store_, RegisterCertificate(_, _)).Times(0);
   // Set expectations on the outputs.
   auto callback = [](const base::Closure& quit_closure, Database* database,
                      const RegisterKeyWithChapsTokenReply& reply) {
@@ -1859,7 +1857,8 @@ TEST_P(AttestationServiceTest, DeleteKeysByLabelSuccess) {
   key.SerializeToString(&key_bytes);
 
   EXPECT_CALL(mock_key_store_, Delete("user", "label"))
-      .Times(1).WillOnce(Return(true));
+      .Times(1)
+      .WillOnce(Return(true));
   // Set expectations on the outputs.
   auto callback = [](const base::Closure& quit_closure,
                      const DeleteKeysReply& reply) {
@@ -1870,8 +1869,7 @@ TEST_P(AttestationServiceTest, DeleteKeysByLabelSuccess) {
   request.set_key_label_match("label");
   request.set_match_behavior(DeleteKeysRequest::MATCH_BEHAVIOR_EXACT);
   request.set_username("user");
-  service_->DeleteKeys(request,
-                       base::Bind(callback, QuitClosure()));
+  service_->DeleteKeys(request, base::Bind(callback, QuitClosure()));
   Run();
 }
 
@@ -1933,7 +1931,8 @@ TEST_P(AttestationServiceTest, DeleteKeyByLabelNoUserNoKey) {
 
 TEST_P(AttestationServiceTest, DeleteKeysByPrefixSuccess) {
   EXPECT_CALL(mock_key_store_, DeleteByPrefix("user", "label"))
-      .Times(1).WillOnce(Return(true));
+      .Times(1)
+      .WillOnce(Return(true));
   // Set expectations on the outputs.
   auto callback = [](const base::Closure& quit_closure,
                      const DeleteKeysReply& reply) {
@@ -2013,8 +2012,9 @@ TEST_P(AttestationServiceTest, PrepareForEnrollment) {
   VerifyACAData(mock_database_.GetProtobuf());
   // These deprecated fields have not been set either.
   EXPECT_TRUE(mock_database_.GetProtobuf().has_credentials());
-  EXPECT_FALSE(mock_database_.GetProtobuf().credentials()
-               .has_default_encrypted_endorsement_credential());
+  EXPECT_FALSE(mock_database_.GetProtobuf()
+                   .credentials()
+                   .has_default_encrypted_endorsement_credential());
 }
 
 #if USE_TPM2
@@ -2178,17 +2178,16 @@ TEST_P(AttestationServiceTest, PrepareForEnrollmentFailQuote) {
 
 TEST_P(AttestationServiceTest, ComputeEnterpriseEnrollmentId) {
   EXPECT_CALL(mock_tpm_utility_, GetEndorsementPublicKeyModulus(_, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(std::string("ekm")),
-                      Return(true)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(std::string("ekm")), Return(true)));
   brillo::SecureBlob abe_data(0xCA, 32);
   service_->set_abe_data(&abe_data);
   CryptoUtilityImpl crypto_utility(&mock_tpm_utility_);
   service_->set_crypto_utility(&crypto_utility);
   std::string enrollment_id = ComputeEnterpriseEnrollmentId();
-  EXPECT_EQ(
-      "635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
-      base::ToLowerASCII(
-          base::HexEncode(enrollment_id.data(), enrollment_id.size())));
+  EXPECT_EQ("635c4526dfa583362273e2987944007b09131cfa0f4e5874e7a76d55d333e3cc",
+            base::ToLowerASCII(
+                base::HexEncode(enrollment_id.data(), enrollment_id.size())));
 }
 
 TEST_P(AttestationServiceTest, CreateCertificateRequestSuccess) {
@@ -2212,8 +2211,9 @@ TEST_P(AttestationServiceTest, CreateCertificateRequestSuccess) {
   request.set_certificate_profile(ENTERPRISE_MACHINE_CERTIFICATE);
   request.set_username("user");
   request.set_request_origin("origin");
-  service_->CreateCertificateRequest(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->CreateCertificateRequest(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -2222,8 +2222,7 @@ TEST_P(AttestationServiceTest, CreateEnrollmentCertificateRequestSuccess) {
   EXPECT_CALL(mock_tpm_utility_,
               CertifyNV(VIRTUAL_NV_INDEX_RSU_DEV_ID, _, _, _, _))
       .WillRepeatedly(DoAll(SetArgPointee<3>("rsu_device_id_quoted_data"),
-                            SetArgPointee<4>("rsu_device_id"),
-                            Return(true)));
+                            SetArgPointee<4>("rsu_device_id"), Return(true)));
 #endif
   SetUpIdentity(identity_);
   SetUpIdentityCertificate(identity_, aca_type_);
@@ -2245,7 +2244,7 @@ TEST_P(AttestationServiceTest, CreateEnrollmentCertificateRequestSuccess) {
     EXPECT_EQ("rsu_device_id_quoted_data",
               pca_request.nvram_quotes().at(RSU_DEVICE_ID).quoted_data());
 #else
-  EXPECT_TRUE(pca_request.nvram_quotes().empty());
+    EXPECT_TRUE(pca_request.nvram_quotes().empty());
 #endif
     EXPECT_EQ(cert_name, pca_request.identity_credential());
     quit_closure.Run();
@@ -2255,8 +2254,9 @@ TEST_P(AttestationServiceTest, CreateEnrollmentCertificateRequestSuccess) {
   request.set_certificate_profile(ENTERPRISE_ENROLLMENT_CERTIFICATE);
   request.set_username("user");
   request.set_request_origin("origin");
-  service_->CreateCertificateRequest(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->CreateCertificateRequest(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -2267,8 +2267,7 @@ TEST_P(AttestationServiceTest,
               CertifyNV(VIRTUAL_NV_INDEX_RSU_DEV_ID, _, _, _, _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(mock_tpm_utility_, GetRsuDeviceId(_))
-      .WillRepeatedly(DoAll(SetArgPointee<0>("rsu_device_id"),
-                            Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<0>("rsu_device_id"), Return(true)));
 #endif
   SetUpIdentity(identity_);
   SetUpIdentityCertificate(identity_, aca_type_);
@@ -2288,7 +2287,7 @@ TEST_P(AttestationServiceTest,
     EXPECT_EQ(pca_request.nvram_quotes().end(),
               pca_request.nvram_quotes().find(RSU_DEVICE_ID));
 #else
-  EXPECT_TRUE(pca_request.nvram_quotes().empty());
+    EXPECT_TRUE(pca_request.nvram_quotes().empty());
 #endif
     EXPECT_EQ(cert_name, pca_request.identity_credential());
     quit_closure.Run();
@@ -2298,8 +2297,9 @@ TEST_P(AttestationServiceTest,
   request.set_certificate_profile(ENTERPRISE_ENROLLMENT_CERTIFICATE);
   request.set_username("user");
   request.set_request_origin("origin");
-  service_->CreateCertificateRequest(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->CreateCertificateRequest(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -2330,7 +2330,7 @@ TEST_P(AttestationServiceTest,
     EXPECT_EQ(pca_request.nvram_quotes().find(RSU_DEVICE_ID),
               pca_request.nvram_quotes().cend());
 #else
-  EXPECT_TRUE(pca_request.nvram_quotes().empty());
+    EXPECT_TRUE(pca_request.nvram_quotes().empty());
 #endif
     EXPECT_EQ(cert_name, pca_request.identity_credential());
     quit_closure.Run();
@@ -2340,8 +2340,9 @@ TEST_P(AttestationServiceTest,
   request.set_certificate_profile(ENTERPRISE_ENROLLMENT_CERTIFICATE);
   request.set_username("user");
   request.set_request_origin("origin");
-  service_->CreateCertificateRequest(request, base::Bind(callback,
-      GetCertificateName(identity_, aca_type_), QuitClosure()));
+  service_->CreateCertificateRequest(
+      request, base::Bind(callback, GetCertificateName(identity_, aca_type_),
+                          QuitClosure()));
   Run();
 }
 
@@ -2461,9 +2462,10 @@ TEST_P(AttestationServiceTest, FinishCertificateRequestServerFailure) {
 TEST_P(AttestationServiceTest, CreateEnrollRequestSuccessWithoutAbeData) {
   SetUpIdentity(identity_);
   SetUpIdentityCertificate(identity_, aca_type_);
-  (*mock_database_.GetMutableProtobuf()->mutable_credentials()
-     ->mutable_encrypted_endorsement_credentials())[aca_type_]
-     .set_wrapped_key("wrapped_key");
+  (*mock_database_.GetMutableProtobuf()
+        ->mutable_credentials()
+        ->mutable_encrypted_endorsement_credentials())[aca_type_]
+      .set_wrapped_key("wrapped_key");
   auto callback = [](const base::Closure& quit_closure,
                      const CreateEnrollRequestReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -2488,9 +2490,10 @@ TEST_P(AttestationServiceTest, CreateEnrollRequestSuccessWithoutAbeData) {
 TEST_P(AttestationServiceTest, CreateEnrollRequestSuccessWithEmptyAbeData) {
   SetUpIdentity(identity_);
   SetUpIdentityCertificate(identity_, aca_type_);
-  (*mock_database_.GetMutableProtobuf()->mutable_credentials()
-     ->mutable_encrypted_endorsement_credentials())[aca_type_]
-     .set_wrapped_key("wrapped_key");
+  (*mock_database_.GetMutableProtobuf()
+        ->mutable_credentials()
+        ->mutable_encrypted_endorsement_credentials())[aca_type_]
+      .set_wrapped_key("wrapped_key");
   auto callback = [](const base::Closure& quit_closure,
                      const CreateEnrollRequestReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -2517,9 +2520,10 @@ TEST_P(AttestationServiceTest, CreateEnrollRequestSuccessWithEmptyAbeData) {
 TEST_P(AttestationServiceTest, CreateEnrollRequestSuccessWithAbeData) {
   SetUpIdentity(identity_);
   SetUpIdentityCertificate(identity_, aca_type_);
-  (*mock_database_.GetMutableProtobuf()->mutable_credentials()
-     ->mutable_encrypted_endorsement_credentials())[aca_type_]
-     .set_wrapped_key("wrapped_key");
+  (*mock_database_.GetMutableProtobuf()
+        ->mutable_credentials()
+        ->mutable_encrypted_endorsement_credentials())[aca_type_]
+      .set_wrapped_key("wrapped_key");
   auto callback = [](const base::Closure& quit_closure,
                      const CreateEnrollRequestReply& reply) {
     EXPECT_EQ(STATUS_SUCCESS, reply.status());
@@ -3049,8 +3053,8 @@ TEST_P(AttestationServiceTest, GetCertificateFailureQueued) {
 
 #endif
 
-INSTANTIATE_TEST_SUITE_P(
-    AcaType, AttestationServiceTest,
-    ::testing::Values(DEFAULT_ACA, TEST_ACA));
+INSTANTIATE_TEST_SUITE_P(AcaType,
+                         AttestationServiceTest,
+                         ::testing::Values(DEFAULT_ACA, TEST_ACA));
 
 }  // namespace attestation

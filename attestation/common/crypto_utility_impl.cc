@@ -166,8 +166,7 @@ bool CryptoUtilityImpl::DecryptData(const std::string& encrypted_data,
 }
 
 bool CryptoUtilityImpl::GetRSASubjectPublicKeyInfo(
-    const std::string& public_key,
-    std::string* public_key_info) {
+    const std::string& public_key, std::string* public_key_info) {
   auto asn1_ptr = reinterpret_cast<const unsigned char*>(public_key.data());
   crypto::ScopedRSA rsa(
       d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key.size()));
@@ -412,8 +411,8 @@ bool CryptoUtilityImpl::VerifySignatureInner(
 
   crypto::ScopedEVP_MD_CTX mdctx(EVP_MD_CTX_new());
   if (!mdctx) {
-    LOG(ERROR) << __func__ << ": Failed to allocate EVP_MD_CTX: "
-               << GetOpenSSLError();
+    LOG(ERROR) << __func__
+               << ": Failed to allocate EVP_MD_CTX: " << GetOpenSSLError();
     return false;
   }
   if (!EVP_DigestVerifyInit(mdctx.get(), nullptr, md, nullptr, pubkey.get())) {
@@ -432,11 +431,10 @@ bool CryptoUtilityImpl::VerifySignatureInner(
       mdctx.get(), StringAsConstOpenSSLBuffer(signature), signature.size());
 }
 
-bool CryptoUtilityImpl::EncryptDataForGoogle(
-    const std::string& data,
-    const std::string& public_key_hex,
-    const std::string& key_id,
-    EncryptedData* encrypted_data) {
+bool CryptoUtilityImpl::EncryptDataForGoogle(const std::string& data,
+                                             const std::string& public_key_hex,
+                                             const std::string& key_id,
+                                             EncryptedData* encrypted_data) {
   crypto::ScopedRSA rsa = CreateRSAFromHexModulus(public_key_hex);
   if (!rsa.get()) {
     LOG(ERROR) << __func__ << ": Failed to decode public key.";
@@ -446,8 +444,7 @@ bool CryptoUtilityImpl::EncryptDataForGoogle(
   if (!GetRandom(kAesKeySize, &key)) {
     return false;
   }
-  if (!EncryptWithSeed(KeyDerivationScheme::kNone, data, key,
-                       encrypted_data)) {
+  if (!EncryptWithSeed(KeyDerivationScheme::kNone, data, key, encrypted_data)) {
     return false;
   }
   if (!WrapKeyOAEP(key, rsa.get(), key_id, encrypted_data)) {
@@ -715,8 +712,8 @@ std::string CryptoUtilityImpl::Tpm2CompatibleKDFa(const std::string& key,
   std::string null_separator("\x00", 1);
   // Encode number of bits as big-endian 32-bit value (128 or 256).
   std::string b_buf(bits == 128 ? "\x00\x00\x00\x80" : "\x00\x00\x01\x00", 4);
-  return HmacSha256(key, iteration + label + null_separator + context + b_buf).
-             substr(0, bits / 8);
+  return HmacSha256(key, iteration + label + null_separator + context + b_buf)
+      .substr(0, bits / 8);
 }
 
 bool CryptoUtilityImpl::Tpm2CompatibleOAEPEncrypt(const std::string& label,
@@ -749,8 +746,7 @@ bool CryptoUtilityImpl::OAEPEncryptWithLabel(const std::string& label,
     return false;
   }
   output->resize(padded_input.size());
-  auto output_buffer =
-      reinterpret_cast<unsigned char*>(base::data(*output));
+  auto output_buffer = reinterpret_cast<unsigned char*>(base::data(*output));
   result = RSA_public_encrypt(padded_input.size(), padded_buffer, output_buffer,
                               key, RSA_NO_PADDING);
   if (result == -1) {
@@ -766,7 +762,7 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
                                     std::string* spkac) {
   // Get the certified public key as an EVP_PKEY.
   const unsigned char* asn1_ptr =
-    reinterpret_cast<const unsigned char*>(public_key.data());
+      reinterpret_cast<const unsigned char*>(public_key.data());
   crypto::ScopedRSA rsa(
       d2i_RSAPublicKey(nullptr, &asn1_ptr, public_key.size()));
   if (!rsa.get()) {
@@ -782,8 +778,8 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
   EVP_PKEY_assign_RSA(evp_pkey.get(), rsa.release());
 
   // Fill in the public key.
-  crypto::ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free>
-      spki(NETSCAPE_SPKI_new());
+  crypto::ScopedOpenSSL<NETSCAPE_SPKI, NETSCAPE_SPKI_free> spki(
+      NETSCAPE_SPKI_new());
   if (!spki.get()) {
     LOG(ERROR) << __func__ << ": Failed to create SPKI.";
     return false;
@@ -795,16 +791,16 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
 
   // Fill in a random challenge.
   std::string challenge;
-  size_t challenge_size = (tpm_utility_->GetVersion() == TPM_1_2) ?
-                          base::kSHA1Length : crypto::kSHA256Length;
+  size_t challenge_size = (tpm_utility_->GetVersion() == TPM_1_2)
+                              ? base::kSHA1Length
+                              : crypto::kSHA256Length;
   if (!GetRandom(challenge_size, &challenge)) {
     LOG(ERROR) << __func__ << ": Failed to GetRandom(challenge).";
     return false;
   }
-  std::string challenge_hex = base::HexEncode(challenge.data(),
-                                              challenge.size());
-  if (!ASN1_STRING_set(spki.get()->spkac->challenge,
-                       challenge_hex.data(),
+  std::string challenge_hex =
+      base::HexEncode(challenge.data(), challenge.size());
+  if (!ASN1_STRING_set(spki.get()->spkac->challenge, challenge_hex.data(),
                        challenge_hex.size())) {
     LOG(ERROR) << __func__ << ": Failed to set challenge in SPKAC.";
     return false;
@@ -826,10 +822,10 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
   }
 
   // Fill in the signature and algorithm.
-  if (!ASN1_BIT_STRING_set(spki.get()->signature,
-                           reinterpret_cast<unsigned char*>(
-                           const_cast<char *>(signature.data())),
-                           signature.size())) {
+  if (!ASN1_BIT_STRING_set(
+          spki.get()->signature,
+          reinterpret_cast<unsigned char*>(const_cast<char*>(signature.data())),
+          signature.size())) {
     LOG(ERROR) << __func__ << ": Failed to set signature in SPKAC.";
     return false;
   }
@@ -841,10 +837,8 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
 #else
   X509_ALGOR* sig_algor = &spki.get()->sig_algor;
 #endif
-  X509_ALGOR_set0(sig_algor,
-                  OBJ_nid2obj(NID_sha256WithRSAEncryption),
-                  V_ASN1_NULL,
-                  NULL);
+  X509_ALGOR_set0(sig_algor, OBJ_nid2obj(NID_sha256WithRSAEncryption),
+                  V_ASN1_NULL, NULL);
 
   // DER encode.
   buffer = NULL;
@@ -860,8 +854,7 @@ bool CryptoUtilityImpl::CreateSPKAC(const std::string& key_blob,
 }
 
 bool CryptoUtilityImpl::VerifyCertificate(
-    const std::string& certificate,
-    const std::string& ca_public_key_hex) {
+    const std::string& certificate, const std::string& ca_public_key_hex) {
   crypto::ScopedRSA rsa = CreateRSAFromHexModulus(ca_public_key_hex);
   if (!rsa.get()) {
     LOG(ERROR) << __func__ << ": Failed to decode CA public key.";
@@ -886,8 +879,7 @@ bool CryptoUtilityImpl::VerifyCertificate(
 }
 
 bool CryptoUtilityImpl::GetCertificateSubjectPublicKeyInfo(
-    const std::string& certificate,
-    std::string* public_key) {
+    const std::string& certificate, std::string* public_key) {
   // Some TPM 1.2 certificates use OAEP key type (rsaOAEP (PKCS #1)). It is not
   // supported algorithm in OpenSSL, so we can't parse the public key data to
   // public key object.
@@ -904,8 +896,8 @@ bool CryptoUtilityImpl::GetCertificateSubjectPublicKeyInfo(
   }
 
   unsigned char* pubkey_buffer = nullptr;
-  int length = i2d_X509_PUBKEY(X509_get_X509_PUBKEY(x509.get()),
-                               &pubkey_buffer);
+  int length =
+      i2d_X509_PUBKEY(X509_get_X509_PUBKEY(x509.get()), &pubkey_buffer);
   if (length < 0) {
     LOG(ERROR) << __func__
                << ": Failed to dump SubjectPublicKeyInfo from cert.";
@@ -952,9 +944,8 @@ bool CryptoUtilityImpl::GetCertificatePublicKey(const std::string& certificate,
   return true;
 }
 
-bool CryptoUtilityImpl::GetCertificateIssuerName(
-    const std::string& certificate,
-    std::string* issuer_name) {
+bool CryptoUtilityImpl::GetCertificateIssuerName(const std::string& certificate,
+                                                 std::string* issuer_name) {
   auto x509 = CreateX509FromCertificate(certificate);
   if (!x509.get()) {
     LOG(ERROR) << __func__ << ": Failed to parse certificate.";
@@ -967,9 +958,8 @@ bool CryptoUtilityImpl::GetCertificateIssuerName(
   return true;
 }
 
-bool CryptoUtilityImpl::GetKeyDigest(
-    const std::string& public_key,
-    std::string* key_digest) {
+bool CryptoUtilityImpl::GetKeyDigest(const std::string& public_key,
+                                     std::string* key_digest) {
   auto asn1_ptr = reinterpret_cast<const unsigned char*>(public_key.data());
   crypto::ScopedRSA rsa(d2i_RSA_PUBKEY(NULL, &asn1_ptr, public_key.size()));
   if (!rsa.get()) {
@@ -985,7 +975,7 @@ bool CryptoUtilityImpl::GetKeyDigest(
   }
   char digest_buf[base::kSHA1Length];
   base::SHA1HashBytes(modulus.data(), modulus.size(),
-                      reinterpret_cast<unsigned char *>(digest_buf));
+                      reinterpret_cast<unsigned char*>(digest_buf));
   key_digest->assign(digest_buf, sizeof(digest_buf));
   return true;
 }

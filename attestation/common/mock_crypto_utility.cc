@@ -40,8 +40,7 @@ MockCryptoUtility::MockCryptoUtility() {
       .WillByDefault(Return(true));
   ON_CALL(*this, DecryptIdentityCertificateForTpm2(_, _, _))
       .WillByDefault(WithArgs<0, 2>(Invoke(CopyString)));
-  ON_CALL(*this, EncryptDataForGoogle(_, _, _, _))
-      .WillByDefault(Return(true));
+  ON_CALL(*this, EncryptDataForGoogle(_, _, _, _)).WillByDefault(Return(true));
   ON_CALL(*this, HmacSha256(_, _)).WillByDefault(Return(std::string(32, '\0')));
   ON_CALL(*this, HmacSha512(_, _)).WillByDefault(Return(std::string(64, '\0')));
 }

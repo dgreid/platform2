@@ -111,18 +111,15 @@ class AttestationService : public AttestationInterface {
   void RegisterKeyWithChapsToken(
       const RegisterKeyWithChapsTokenRequest& request,
       const RegisterKeyWithChapsTokenCallback& callback) override;
-  void GetStatus(
-      const GetStatusRequest& request,
-      const GetStatusCallback& callback) override;
-  void Verify(
-      const VerifyRequest& request,
-      const VerifyCallback& callback) override;
+  void GetStatus(const GetStatusRequest& request,
+                 const GetStatusCallback& callback) override;
+  void Verify(const VerifyRequest& request,
+              const VerifyCallback& callback) override;
   void CreateEnrollRequest(
       const CreateEnrollRequestRequest& request,
       const CreateEnrollRequestCallback& callback) override;
-  void FinishEnroll(
-      const FinishEnrollRequest& request,
-      const FinishEnrollCallback& callback) override;
+  void FinishEnroll(const FinishEnrollRequest& request,
+                    const FinishEnrollCallback& callback) override;
   void Enroll(const EnrollRequest& request,
               const EnrollCallback& callback) override;
   void CreateCertificateRequest(
@@ -139,18 +136,14 @@ class AttestationService : public AttestationInterface {
   void SignSimpleChallenge(
       const SignSimpleChallengeRequest& request,
       const SignSimpleChallengeCallback& callback) override;
-  void SetKeyPayload(
-      const SetKeyPayloadRequest& request,
-      const SetKeyPayloadCallback& callback) override;
-  void DeleteKeys(
-      const DeleteKeysRequest& request,
-      const DeleteKeysCallback& callback) override;
-  void ResetIdentity(
-      const ResetIdentityRequest& request,
-      const ResetIdentityCallback& callback) override;
-  void GetEnrollmentId(
-      const GetEnrollmentIdRequest& request,
-      const GetEnrollmentIdCallback& callback) override;
+  void SetKeyPayload(const SetKeyPayloadRequest& request,
+                     const SetKeyPayloadCallback& callback) override;
+  void DeleteKeys(const DeleteKeysRequest& request,
+                  const DeleteKeysCallback& callback) override;
+  void ResetIdentity(const ResetIdentityRequest& request,
+                     const ResetIdentityCallback& callback) override;
+  void GetEnrollmentId(const GetEnrollmentIdRequest& request,
+                       const GetEnrollmentIdCallback& callback) override;
   void GetCertifiedNvIndex(
       const GetCertifiedNvIndexRequest& request,
       const GetCertifiedNvIndexCallback& callback) override;
@@ -187,8 +180,7 @@ class AttestationService : public AttestationInterface {
     google_keys_ = std::move(google_keys);
   }
 
-  void set_policy_provider(
-      policy::PolicyProvider* policy_provider) {
+  void set_policy_provider(policy::PolicyProvider* policy_provider) {
     policy_provider_.reset(policy_provider);
   }
 
@@ -200,11 +192,7 @@ class AttestationService : public AttestationInterface {
     kEnrolled,
   };
 
-  enum ACATypeInternal {
-    kDefaultACA = 0,
-    kTestACA = 1,
-    kMaxACATypeInternal
-  };
+  enum ACATypeInternal { kDefaultACA = 0, kTestACA = 1, kMaxACATypeInternal };
 
   static ACAType GetACAType(ACATypeInternal aca_type_internal);
 
@@ -220,14 +208,10 @@ class AttestationService : public AttestationInterface {
         : base::Thread("Attestation Service Worker"), service_(service) {
       DCHECK(service_);
     }
-    ~ServiceWorkerThread() override {
-      Stop();
-    }
+    ~ServiceWorkerThread() override { Stop(); }
 
    private:
-    void CleanUp() override {
-      service_->ShutdownTask();
-    }
+    void CleanUp() override { service_->ShutdownTask(); }
 
     AttestationService* const service_;
 
@@ -301,14 +285,12 @@ class AttestationService : public AttestationInterface {
       const std::shared_ptr<RegisterKeyWithChapsTokenReply>& result);
 
   // A synchronous implementation of GetStatus.
-  void GetStatusTask(
-      const GetStatusRequest& request,
-      const std::shared_ptr<GetStatusReply>& result);
+  void GetStatusTask(const GetStatusRequest& request,
+                     const std::shared_ptr<GetStatusReply>& result);
 
   // A synchronous implementation of Verify.
-  void VerifyTask(
-      const VerifyRequest& request,
-      const std::shared_ptr<VerifyReply>& result);
+  void VerifyTask(const VerifyRequest& request,
+                  const std::shared_ptr<VerifyReply>& result);
 
   // A synchronous implementation of CreateEnrollRequest.
   template <typename RequestType>
@@ -344,24 +326,20 @@ class AttestationService : public AttestationInterface {
       const std::shared_ptr<SignSimpleChallengeReply>& result);
 
   // A synchronous implementation of SetKeyPayload.
-  void SetKeyPayloadTask(
-      const SetKeyPayloadRequest& request,
-      const std::shared_ptr<SetKeyPayloadReply>& result);
+  void SetKeyPayloadTask(const SetKeyPayloadRequest& request,
+                         const std::shared_ptr<SetKeyPayloadReply>& result);
 
   // A synchronous implementation of DeleteKeys.
-  void DeleteKeysTask(
-      const DeleteKeysRequest& request,
-      const std::shared_ptr<DeleteKeysReply>& result);
+  void DeleteKeysTask(const DeleteKeysRequest& request,
+                      const std::shared_ptr<DeleteKeysReply>& result);
 
   // A synchronous implementation of ResetIdentity.
-  void ResetIdentityTask(
-      const ResetIdentityRequest& request,
-      const std::shared_ptr<ResetIdentityReply>& result);
+  void ResetIdentityTask(const ResetIdentityRequest& request,
+                         const std::shared_ptr<ResetIdentityReply>& result);
 
   // A synchronous implementation for GetEnrollmentId.
-  void GetEnrollmentIdTask(
-    const GetEnrollmentIdRequest& request,
-    const std::shared_ptr<GetEnrollmentIdReply>& result);
+  void GetEnrollmentIdTask(const GetEnrollmentIdRequest& request,
+                           const std::shared_ptr<GetEnrollmentIdReply>& result);
 
   // A synchronous implementation for GetCertifiedNvIndex.
   void GetCertifiedNvIndexTask(
@@ -427,11 +405,11 @@ class AttestationService : public AttestationInterface {
   // association with the |key| identified by |username| and |key_label|.
   // Returns true on success.
   bool PopulateAndStoreCertifiedKey(
-    const AttestationCertificateResponse& response_pb,
-    const std::string& username,
-    const std::string& key_label,
-    CertifiedKey* key,
-    std::string* certificate_chain);
+      const AttestationCertificateResponse& response_pb,
+      const std::string& username,
+      const std::string& key_label,
+      CertifiedKey* key,
+      std::string* certificate_chain);
 
   // Creates, certifies, and saves a new |key| for |username| with the given
   // |key_label|, |key_type|, and |key_usage|. Returns true on success.
@@ -518,9 +496,8 @@ class AttestationService : public AttestationInterface {
   // CA, and if none is found, creates one. Returns a pointer to the certificate
   // or nullptr if one could not be created. If |cert_index| is non null, set it
   // to the index of the certificate, or -1 if none could be found or created.
-  AttestationDatabase_IdentityCertificate*
-  FindOrCreateIdentityCertificate(int identity, ACAType aca_type,
-                                  int* cert_index);
+  AttestationDatabase_IdentityCertificate* FindOrCreateIdentityCertificate(
+      int identity, ACAType aca_type, int* cert_index);
 
   // Creates a new identity and returns its index, or -1 if it could not be
   // created.
@@ -551,10 +528,9 @@ class AttestationService : public AttestationInterface {
   bool EncryptAllEndorsementCredentials();
 
   // Encrypts data for the given |aca_type|.
-  bool EncryptDataForAttestationCA(
-      ACAType aca_type,
-      const std::string& data,
-      EncryptedData* encrypted_data);
+  bool EncryptDataForAttestationCA(ACAType aca_type,
+                                   const std::string& data,
+                                   EncryptedData* encrypted_data);
 
   // Activates an attestation key given an |encrypted_certificate|. The EK with
   // |ek_key_type| will be used for activation. On success returns true and
@@ -662,8 +638,7 @@ class AttestationService : public AttestationInterface {
   // |AttestationStatus|. Passed as the error callback of
   // |pca_agent::EnrollAsync|.
   void HandlePcaAgentEnrollRequestError(
-      const std::shared_ptr<AttestationFlowData>& data,
-      brillo::Error* err);
+      const std::shared_ptr<AttestationFlowData>& data, brillo::Error* err);
 
   // Calls the D-bus method callback stored in |data| with a proper
   // |AttestationStatus| depending on the response received from PCA server.
@@ -686,8 +661,7 @@ class AttestationService : public AttestationInterface {
   // |AttestationStatus|. Passed as the error callback of
   // |pca_agent::GetCertificateAsync|.
   void HandlePcaAgentGetCertificateRequestError(
-      const std::shared_ptr<AttestationFlowData>& data,
-      brillo::Error* err);
+      const std::shared_ptr<AttestationFlowData>& data, brillo::Error* err);
 
   // Calls the D-bus method callback stored in |data| with a proper
   // |AttestationStatus| depending on the response received from PCA server via
@@ -744,9 +718,9 @@ class AttestationService : public AttestationInterface {
 
   FRIEND_TEST(AttestationServiceBaseTest, MigrateAttestationDatabase);
   FRIEND_TEST(AttestationServiceBaseTest,
-                           MigrateAttestationDatabaseWithCorruptedFields);
+              MigrateAttestationDatabaseWithCorruptedFields);
   FRIEND_TEST(AttestationServiceBaseTest,
-                           MigrateAttestationDatabaseAllEndorsementCredentials);
+              MigrateAttestationDatabaseAllEndorsementCredentials);
   FRIEND_TEST_ALL_PREFIXES(AttestationServiceEnterpriseTest,
                            SignEnterpriseChallengeSuccess);
   FRIEND_TEST_ALL_PREFIXES(AttestationServiceEnterpriseTest,

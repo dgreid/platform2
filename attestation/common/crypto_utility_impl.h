@@ -62,11 +62,10 @@ class CryptoUtilityImpl : public CryptoUtility {
                                   const std::string& public_key_hex,
                                   const std::string& data,
                                   const std::string& signature) override;
-  bool EncryptDataForGoogle(
-      const std::string& data,
-      const std::string& public_key_hex,
-      const std::string& key_id,
-      EncryptedData* encrypted_data) override;
+  bool EncryptDataForGoogle(const std::string& data,
+                            const std::string& public_key_hex,
+                            const std::string& key_id,
+                            EncryptedData* encrypted_data) override;
   bool CreateSPKAC(const std::string& key_blob,
                    const std::string& public_key,
                    std::string* spkac) override;

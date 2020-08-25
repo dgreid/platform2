@@ -90,15 +90,14 @@ class DBusService {
       const GetEnrollmentPreparationsRequest& request);
 
   // Handles a GetStatus D-Bus call.
-  void HandleGetStatus(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-          const GetStatusReply&>> response,
-      const GetStatusRequest& request);
+  void HandleGetStatus(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                           const GetStatusReply&>> response,
+                       const GetStatusRequest& request);
 
   // Handles a Verify D-Bus call.
   void HandleVerify(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-          const VerifyReply&>> response,
+      std::unique_ptr<
+          brillo::dbus_utils::DBusMethodResponse<const VerifyReply&>> response,
       const VerifyRequest& request);
 
   // Handles a CreateEnrollRequest D-Bus call.
@@ -156,10 +155,9 @@ class DBusService {
       const SetKeyPayloadRequest& request);
 
   // Handles a DeleteKeys D-Bus call.
-  void HandleDeleteKeys(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-          const DeleteKeysReply&>> response,
-      const DeleteKeysRequest& request);
+  void HandleDeleteKeys(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                            const DeleteKeysReply&>> response,
+                        const DeleteKeysRequest& request);
 
   // Handles a ResetIdentity D-Bus call.
   void HandleResetIdentity(

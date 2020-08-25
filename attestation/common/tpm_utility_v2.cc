@@ -51,8 +51,8 @@ bool StringToBignum(const std::string& big_integer, BIGNUM* b) {
   if (big_integer.empty() || !b)
     return false;
 
-  return BN_bin2bn(StringToByteBuffer(big_integer.data()),
-                   big_integer.length(), b);
+  return BN_bin2bn(StringToByteBuffer(big_integer.data()), big_integer.length(),
+                   b);
 }
 
 crypto::ScopedRSA CreateRSAFromRawModulus(const uint8_t* modulus_buffer,
@@ -111,8 +111,7 @@ crypto::ScopedEC_KEY GetEccPublicKeyFromTpmPublicArea(
     return nullptr;
   }
 
-  int nid =
-      TrunksCurveIDToNID(public_area.parameters.ecc_detail.curve_id);
+  int nid = TrunksCurveIDToNID(public_area.parameters.ecc_detail.curve_id);
   if (nid == NID_undef) {
     LOG(ERROR) << __func__ << "Unknown trunks curve_id: " << std::hex
                << std::showbase << public_area.parameters.ecc_detail.curve_id;
@@ -288,9 +287,7 @@ class MultipleAuthorizations : public AuthorizationDelegate {
     return true;
   }
 
-  bool GetTpmNonce(std::string* nonce) override {
-    return false;
-  }
+  bool GetTpmNonce(std::string* nonce) override { return false; }
 
  private:
   std::string ExtractSingleAuthorizationResponse(std::string* all_responses) {
@@ -413,9 +410,8 @@ bool TpmUtilityV2::ActivateIdentityForTpm2(
 
   std::unique_ptr<HmacSession> endorsement_session =
       trunks_factory_->GetHmacSession();
-  result =
-      endorsement_session->StartUnboundSession(true /* salted */,
-                                               false /* enable_encryption */);
+  result = endorsement_session->StartUnboundSession(
+      true /* salted */, false /* enable_encryption */);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to setup endorsement session: "
                << trunks::GetErrorString(result);
@@ -786,10 +782,9 @@ bool TpmUtilityV2::Sign(const std::string& key_blob,
   }
 
   TpmObjectScoper scoper(trunks_factory_, key_handle);
-  result = trunks_utility_->Sign(key_handle, sign_algorithm,
-                                 trunks::TPM_ALG_SHA256, data_to_sign,
-                                 true /* generate_hash */,
-                                 empty_password_authorization.get(), signature);
+  result = trunks_utility_->Sign(
+      key_handle, sign_algorithm, trunks::TPM_ALG_SHA256, data_to_sign,
+      true /* generate_hash */, empty_password_authorization.get(), signature);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__
                << ": Failed to sign data: " << trunks::GetErrorString(result);
@@ -801,7 +796,7 @@ bool TpmUtilityV2::Sign(const std::string& key_blob,
   if (sign_algorithm == trunks::TPM_ALG_ECDSA) {
     trunks::TPMT_SIGNATURE tpm_signature;
     trunks::TPM_RC result =
-      trunks::Parse_TPMT_SIGNATURE(signature, &tpm_signature, nullptr);
+        trunks::Parse_TPMT_SIGNATURE(signature, &tpm_signature, nullptr);
     if (result != trunks::TPM_RC_SUCCESS) {
       LOG(ERROR) << "Error when parse TPM signing result.";
       return -1;
@@ -1027,8 +1022,7 @@ bool TpmUtilityV2::GetNVDataSize(uint32_t nv_index, uint16_t* nv_size) const {
   trunks::TPMS_NV_PUBLIC public_data;
   if (trunks_utility_->GetNVSpacePublicArea(nv_index & ~trunks::HR_NV_INDEX,
                                             &public_data) != TPM_RC_SUCCESS) {
-    LOG(ERROR) << __func__
-               << ": Failed to get NV space public area for index "
+    LOG(ERROR) << __func__ << ": Failed to get NV space public area for index "
                << std::hex << nv_index << ".";
     return false;
   }
@@ -1052,8 +1046,7 @@ bool TpmUtilityV2::CertifyNV(uint32_t nv_index,
 
   TPM_HANDLE key_handle;
   result = trunks_utility_->LoadKey(
-            key_blob, empty_password_authorization.get(),
-            &key_handle);
+      key_blob, empty_password_authorization.get(), &key_handle);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__
                << ": Failed to load key: " << trunks::GetErrorString(result);
@@ -1093,19 +1086,17 @@ bool TpmUtilityV2::CertifyNV(uint32_t nv_index,
   trunks::TPM2B_ATTEST quoted_struct;
   trunks::TPMT_SIGNATURE signature;
   result = trunks_factory_->GetTpm()->NV_CertifySync(
-      key_handle,  // sign_handle
-      key_name,    // sign_handle_name
-      nv_index,    // auth_handle
-      "",          // auth_handle_name
-      nv_index,    // nv_index
-      "",          // nv_index_name
+      key_handle,                   // sign_handle
+      key_name,                     // sign_handle_name
+      nv_index,                     // auth_handle
+      "",                           // auth_handle_name
+      nv_index,                     // nv_index
+      "",                           // nv_index_name
       trunks::Make_TPM2B_DATA(""),  // qualifying data
-      scheme,      // in_scheme
-      nv_size,     // size to read
-      0,           // offset
-      &quoted_struct,
-      &signature,
-      &authorization);
+      scheme,                       // in_scheme
+      nv_size,                      // size to read
+      0,                            // offset
+      &quoted_struct, &signature, &authorization);
 
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to certify the NVs: "
@@ -1129,9 +1120,8 @@ bool TpmUtilityV2::GetEndorsementKey(KeyType key_type, TPM_HANDLE* key_handle) {
   }
   std::unique_ptr<HmacSession> endorsement_session =
       trunks_factory_->GetHmacSession();
-  TPM_RC result =
-      endorsement_session->StartUnboundSession(true /* salted */,
-                                               false /* enable_encryption */);
+  TPM_RC result = endorsement_session->StartUnboundSession(
+      true /* salted */, false /* enable_encryption */);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": Failed to setup endorsement session: "
                << trunks::GetErrorString(result);
@@ -1165,9 +1155,8 @@ bool TpmUtilityV2::GetEndorsementKey(KeyType key_type, TPM_HANDLE* key_handle) {
   return true;
 }
 
-bool TpmUtilityV2::GetEndorsementPublicKeyModulus(
-    KeyType key_type,
-    std::string* ekm) {
+bool TpmUtilityV2::GetEndorsementPublicKeyModulus(KeyType key_type,
+                                                  std::string* ekm) {
   if (key_type == KEY_TYPE_RSA) {
     return trunks_utility_->GetPublicRSAEndorsementKeyModulus(ekm) ==
            TPM_RC_SUCCESS;
@@ -1195,7 +1184,7 @@ bool TpmUtilityV2::CreateIdentity(KeyType key_type,
 
 bool TpmUtilityV2::GetRsuDeviceId(std::string* rsu_device_id) {
   return trunks_utility_->GetRsuDeviceId(rsu_device_id) ==
-      trunks::TPM_RC_SUCCESS;
+         trunks::TPM_RC_SUCCESS;
 }
 
 }  // namespace attestation
