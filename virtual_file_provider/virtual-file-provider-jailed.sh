@@ -21,6 +21,8 @@ MOUNT_FLAGS="MS_NOSUID|MS_NODEV|MS_NOEXEC"
 # -k    Mount tmpfs on /mnt and /run.
 # -b    /run/dbus is for D-Bus system bus socket.
 #       /dev/fuse is for mounting FUSE file systems.
+# -f    Assign freeze cgroup as
+#       /sys/fs/cgroup/freezer/virtual-file-provider/cgroup.procs
 exec minijail0 \
      --profile=minimalistic-mountns \
      -e \
@@ -32,4 +34,5 @@ exec minijail0 \
      -k "tmpfs,/run,tmpfs,${MOUNT_FLAGS}" \
      -b /run/dbus \
      -b /dev/fuse \
+     -f /sys/fs/cgroup/freezer/virtual-file-provider/cgroup.procs \
      -- /usr/bin/virtual-file-provider /mnt
