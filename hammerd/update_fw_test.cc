@@ -33,10 +33,8 @@ namespace hammerd {
 class FirmwareUpdaterTest : public testing::Test {
  public:
   void SetUp() override {
-    fw_updater_.reset(
-        new FirmwareUpdater{
-            std::make_unique<MockUsbEndpoint>(),
-            std::make_unique<MockFmap>()});
+    fw_updater_.reset(new FirmwareUpdater{std::make_unique<MockUsbEndpoint>(),
+                                          std::make_unique<MockFmap>()});
     endpoint_ = static_cast<MockUsbEndpoint*>(fw_updater_->endpoint_.get());
     fmap_ = static_cast<MockFmap*>(fw_updater_->fmap_.get());
     targ_ = &(fw_updater_->targ_);
@@ -95,7 +93,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
   // Build a fake EC image.
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap = { };
+  fmap mock_fmap = {};
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap) + 32 + 32 + 4 + sizeof(vb21_packed_key);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -113,7 +111,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
   ec_image.append(reinterpret_cast<char*>(&rw_rollback), sizeof(rw_rollback));
 
   int64_t ro_key_offset = ec_image.size();
-  vb21_packed_key ro_key = { };
+  vb21_packed_key ro_key = {};
   ro_key.key_version = 1;
   ec_image.append(reinterpret_cast<char*>(&ro_key), sizeof(ro_key));
 
@@ -126,37 +124,37 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RO section.
-  fmap_area ro_section_area = { };
+  fmap_area ro_section_area = {};
   ro_section_area.offset = 0x0;
   ro_section_area.size = 0x10;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))
       .WillOnce(Return(&ro_section_area));
   // Find RO version.
-  fmap_area ro_version_area = { };
+  fmap_area ro_version_area = {};
   ro_version_area.offset = ro_version_offset;
   ro_version_area.size = 32;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RO_FRID"))
       .WillOnce(Return(&ro_version_area));
   // Find RO key.
-  fmap_area ro_key_area = { };
+  fmap_area ro_key_area = {};
   ro_key_area.offset = ro_key_offset;
   ro_key_area.size = sizeof(ro_key);
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "KEY_RO"))
       .WillOnce(Return(&ro_key_area));
   // Find RW section.
-  fmap_area rw_section_area = { };
+  fmap_area rw_section_area = {};
   rw_section_area.offset = 0x10;
   rw_section_area.size = 0x10;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RW"))
       .WillOnce(Return(&rw_section_area));
   // Find RW version.
-  fmap_area rw_version_area = { };
+  fmap_area rw_version_area = {};
   rw_version_area.offset = rw_version_offset;
   rw_version_area.size = 32;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RW_FWID"))
       .WillOnce(Return(&rw_version_area));
   // Find RW rollback version.
-  fmap_area rw_rollback_area = { };
+  fmap_area rw_rollback_area = {};
   rw_rollback_area.offset = rw_rollback_offset;
   rw_rollback_area.size = 4;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "RW_RBVER"))
@@ -164,12 +162,10 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage) {
 
   ASSERT_EQ(fw_updater_->LoadEcImage(ec_image), true);
   ASSERT_EQ(fw_updater_->ec_image_, ec_image);
-  ASSERT_EQ(
-      fw_updater_->sections_[0],
-      SectionInfo(SectionName::RO, 0x0, 0x10, "RO MOCK VERSION", -1, -1));
-  ASSERT_EQ(
-      fw_updater_->sections_[1],
-      SectionInfo(SectionName::RW, 0x10, 0x10, "RW MOCK VERSION", 35, 1));
+  ASSERT_EQ(fw_updater_->sections_[0],
+            SectionInfo(SectionName::RO, 0x0, 0x10, "RO MOCK VERSION", -1, -1));
+  ASSERT_EQ(fw_updater_->sections_[1],
+            SectionInfo(SectionName::RW, 0x10, 0x10, "RW MOCK VERSION", 35, 1));
 }
 
 // Load a fake EC image that we expect to fail
@@ -179,7 +175,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_ShortFmap) {
   // Build a fake EC image but don't pass it all.
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap = { };
+  fmap mock_fmap = {};
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap) - 1);
@@ -197,7 +193,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_TooManyFmapAreas) {
   // Build a fake EC image with one too many fmap areas
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap = { };
+  fmap mock_fmap = {};
   mock_fmap.nareas = 1;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -215,7 +211,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_BadROVersion) {
   // Build a fake EC image
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap = { };
+  fmap mock_fmap = {};
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -227,7 +223,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_BadROVersion) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RO section that is too large.
-  fmap_area ro_section_area = { };
+  fmap_area ro_section_area = {};
   ro_section_area.offset = 0;
   ro_section_area.size = ec_image_len + 1;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))
@@ -243,7 +239,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_OverflowRO) {
   // Build a fake EC image
   std::string ec_image("12345678");
   int64_t mock_offset = ec_image.size();
-  fmap mock_fmap = { };
+  fmap mock_fmap = {};
   mock_fmap.nareas = 0;
   mock_fmap.size = 8 + sizeof(fmap);
   ec_image.append(reinterpret_cast<char*>(&mock_fmap), sizeof(mock_fmap));
@@ -255,7 +251,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_OverflowRO) {
 
   EXPECT_CALL(*fmap_, Find(_, ec_image_len)).WillOnce(Return(mock_offset));
   // Find RW section that is too large and will overflow.
-  fmap_area ro_section_area = { };
+  fmap_area ro_section_area = {};
   ro_section_area.offset = UINT_MAX - 1;
   ro_section_area.size = 2;
   EXPECT_CALL(*fmap_, FindArea(mock_fmap_ptr, "EC_RO"))
@@ -266,7 +262,7 @@ TEST_F(FirmwareUpdaterTest, LoadEcImage_OverflowRO) {
 
 // Returns a helper function that returns |before| or |after| depending on
 // whether a period of time has passed.
-template<typename T>
+template <typename T>
 std::function<T()> BeforeAfterPeriod(int64_t period_ms, T before, T after) {
   base::Time start = base::Time::Now();
   return [=]() {
@@ -278,8 +274,9 @@ std::function<T()> BeforeAfterPeriod(int64_t period_ms, T before, T after) {
 // USB endpoint is ready to connect after 500 ms.
 TEST_F(FirmwareUpdaterTest, TryConnectUsb_OK) {
   InSequence dummy;
-  ON_CALL(*endpoint_, Connect()).WillByDefault(Invoke(BeforeAfterPeriod(
-      500, UsbConnectStatus::kUsbPathEmpty, UsbConnectStatus::kSuccess)));
+  ON_CALL(*endpoint_, Connect())
+      .WillByDefault(Invoke(BeforeAfterPeriod(
+          500, UsbConnectStatus::kUsbPathEmpty, UsbConnectStatus::kSuccess)));
   EXPECT_CALL(*endpoint_, Connect()).Times(AtLeast(1));
   EXPECT_CALL(*endpoint_, GetChunkLength()).WillOnce(Return(0x40));
   EXPECT_CALL(*endpoint_, Receive(_, 0x40, true, _)).WillOnce(Return(-1));
@@ -292,8 +289,9 @@ TEST_F(FirmwareUpdaterTest, TryConnectUsb_OK) {
 // USB endpoint is ready to connect after 5000 ms, which is longer than timeout.
 TEST_F(FirmwareUpdaterTest, TryConnectUsb_FAIL) {
   InSequence dummy;
-  ON_CALL(*endpoint_, Connect()).WillByDefault(Invoke(BeforeAfterPeriod(
-      5000, UsbConnectStatus::kUsbPathEmpty, UsbConnectStatus::kSuccess)));
+  ON_CALL(*endpoint_, Connect())
+      .WillByDefault(Invoke(BeforeAfterPeriod(
+          5000, UsbConnectStatus::kUsbPathEmpty, UsbConnectStatus::kSuccess)));
   EXPECT_CALL(*endpoint_, Connect()).Times(AtLeast(1));
   EXPECT_CALL(*endpoint_, GetConfigurationString()).Times(0);
   ASSERT_EQ(fw_updater_->TryConnectUsb(), UsbConnectStatus::kUsbPathEmpty);
@@ -386,8 +384,7 @@ TEST_F(FirmwareUpdaterTest, SendSubcommand_InjectEntropy) {
       ConvertData(reinterpret_cast<uint8_t*>(&subcommand), sizeof(subcommand));
   std::vector<uint8_t> ufh_data;
   ufh_data = BuildHeaderData(
-      sizeof(UpdateFrameHeader) + sizeof(subcommand) + fake_entropy.size(),
-      0,
+      sizeof(UpdateFrameHeader) + sizeof(subcommand) + fake_entropy.size(), 0,
       kUpdateExtraCmd);
   ufh_data.insert(ufh_data.end(), sub_cmd_data.begin(), sub_cmd_data.end());
   ufh_data.insert(ufh_data.end(), fake_entropy.begin(), fake_entropy.end());
@@ -413,8 +410,8 @@ TEST_F(FirmwareUpdaterTest, SendSubcommand_Reset) {
   std::vector<uint8_t> sub_cmd_data =
       ConvertData(reinterpret_cast<uint8_t*>(&subcommand), sizeof(subcommand));
   std::vector<uint8_t> ufh_data;
-  ufh_data = BuildHeaderData(
-      sizeof(UpdateFrameHeader) + sizeof(subcommand), 0, kUpdateExtraCmd);
+  ufh_data = BuildHeaderData(sizeof(UpdateFrameHeader) + sizeof(subcommand), 0,
+                             kUpdateExtraCmd);
   ufh_data.insert(ufh_data.end(), sub_cmd_data.begin(), sub_cmd_data.end());
 
   ON_CALL(*endpoint_, SendHelper(_, _, _)).WillByDefault(ReturnArg<2>());
@@ -457,9 +454,7 @@ TEST_F(FirmwareUpdaterTest, CheckKeyRollback) {
   fw_updater_->targ_.offset = 0x11000;
 
   // Everything is the same -- update should be possible.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
-           "%s",
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version), "%s",
            fw_updater_->sections_[1].version);
   fw_updater_->targ_.min_rollback = 35;
   fw_updater_->targ_.key_version = 1;
@@ -467,8 +462,7 @@ TEST_F(FirmwareUpdaterTest, CheckKeyRollback) {
   ASSERT_EQ(fw_updater_->CompareRollback(), 0);
 
   // Version is different -- update should be possible.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version),
            "ANOTHER VERSION");
   fw_updater_->targ_.min_rollback = 35;
   fw_updater_->targ_.key_version = 1;
@@ -476,8 +470,7 @@ TEST_F(FirmwareUpdaterTest, CheckKeyRollback) {
   ASSERT_EQ(fw_updater_->CompareRollback(), 0);
 
   // Minimum rollback is larger than the updated image -- update not possible.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version),
            "ANOTHER VERSION");
   fw_updater_->targ_.min_rollback = 40;
   fw_updater_->targ_.key_version = 1;
@@ -485,8 +478,7 @@ TEST_F(FirmwareUpdaterTest, CheckKeyRollback) {
   ASSERT_EQ(fw_updater_->CompareRollback(), -1);
 
   // The key version is not the same -- update not possible.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version),
            "ANOTHER VERSION");
   fw_updater_->targ_.min_rollback = 35;
   fw_updater_->targ_.key_version = 2;
@@ -503,17 +495,14 @@ TEST_F(FirmwareUpdaterTest, VersionMismatch) {
   fw_updater_->targ_.offset = 0x11000;
 
   // Version is the same.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
-           "%s",
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version), "%s",
            fw_updater_->sections_[1].version);
   fw_updater_->targ_.min_rollback = 35;
   fw_updater_->targ_.key_version = 1;
   ASSERT_EQ(fw_updater_->VersionMismatch(SectionName::RW), false);
 
   // Version is different.
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version),
            "ANOTHER VERSION");
   fw_updater_->targ_.min_rollback = 35;
   fw_updater_->targ_.key_version = 1;
@@ -611,8 +600,7 @@ TEST_F(FirmwareUpdaterTest, IsCritical) {
 
   // Same version tag, same rollback.
   fw_updater_->targ_.min_rollback = 2;
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version),
            "%s-installed",  // Add substring to end of version.
            fw_updater_->sections_[1].version);
   ASSERT_EQ(fw_updater_->IsCritical(), false);
@@ -623,9 +611,7 @@ TEST_F(FirmwareUpdaterTest, IsCritical) {
 
   // Different version tag, same rollback.
   fw_updater_->targ_.min_rollback = 2;
-  snprintf(fw_updater_->targ_.version,
-           sizeof(fw_updater_->targ_.version),
-           "%s",
+  snprintf(fw_updater_->targ_.version, sizeof(fw_updater_->targ_.version), "%s",
            fw_updater_->sections_[0].version);
   ASSERT_EQ(fw_updater_->IsCritical(), true);
 }

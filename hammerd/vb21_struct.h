@@ -10,7 +10,11 @@
  * Note: This file is copied from
  * src/platform/vboot_reference/firmware/lib21/include/vb21_struct.h
  * and should be updated if necessary.
+ * TODO(http://b/168129183): Add vboot_reference to include path so copy is not
+ * needed.
  */
+
+/* clang-format off */
 
 #ifndef VBOOT_REFERENCE_VB21_STRUCT_H_
 #define VBOOT_REFERENCE_VB21_STRUCT_H_

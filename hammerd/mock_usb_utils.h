@@ -32,8 +32,12 @@ class MockUsbEndpoint : public UsbEndpointInterface {
 
   // Use implementation identical to UsbEndpoint::Transfer, and test calls
   // to Send and Receive instead.
-  int Transfer(const void* outbuf, int outlen, void* inbuf, int inlen,
-               bool allow_less, unsigned int timeout_ms) override {
+  int Transfer(const void* outbuf,
+               int outlen,
+               void* inbuf,
+               int inlen,
+               bool allow_less,
+               unsigned int timeout_ms) override {
     constexpr int kError = -1;
     if (Send(outbuf, outlen, allow_less, timeout_ms) != outlen) {
       return kError;
@@ -43,7 +47,9 @@ class MockUsbEndpoint : public UsbEndpointInterface {
     }
     return Receive(inbuf, inlen, allow_less, timeout_ms);
   }
-  int Send(const void* outbuf, int outlen, bool allow_less,
+  int Send(const void* outbuf,
+           int outlen,
+           bool allow_less,
            unsigned int timeout_ms) override {
     // We only care about the value of the output buffer.
     auto out_ptr = reinterpret_cast<const uint8_t*>(outbuf);

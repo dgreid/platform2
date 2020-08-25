@@ -58,12 +58,13 @@ class HammerUpdater {
     // Set the flag when we jump to RW at the previous round.
     bool post_rw_jump;
 
-    TaskState() : update_ro(false),
-                  update_rw(false),
-                  update_tp(false),
-                  inject_entropy(false),
-                  post_rw_lock(false),
-                  post_rw_jump(false) {}
+    TaskState()
+        : update_ro(false),
+          update_rw(false),
+          update_tp(false),
+          inject_entropy(false),
+          post_rw_lock(false),
+          post_rw_jump(false) {}
     const std::string ToString();
   };
 
@@ -98,10 +99,9 @@ class HammerUpdater {
   // Update the touchpad firmware via the virtual address.
   virtual RunStatus RunTouchpadUpdater();
   // Extract product_id and firmware version.
-  static bool ParseTouchpadInfoFromFilename(
-      const std::string& filename,
-      std::string* touchpad_product_id,
-      std::string* touchpad_fw_ver);
+  static bool ParseTouchpadInfoFromFilename(const std::string& filename,
+                                            std::string* touchpad_product_id,
+                                            std::string* touchpad_fw_ver);
   // Setter for inject_entropy control flag in TestState.
   void SetInjectEntropyFlag(bool inject_entropy);
 

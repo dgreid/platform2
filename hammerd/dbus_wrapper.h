@@ -31,7 +31,8 @@ class DBusWrapperInterface {
   // Currently we only have one signal with a binary-blob argument. If we need
   // other kind of arguments in the future, then switch to protobuf.
   virtual void SendSignalWithArg(const std::string& signal_name,
-                                 const uint8_t* values, size_t length) = 0;
+                                 const uint8_t* values,
+                                 size_t length) = 0;
 };
 
 class DBusWrapper : public DBusWrapperInterface {
@@ -41,7 +42,8 @@ class DBusWrapper : public DBusWrapperInterface {
 
   void SendSignal(const std::string& signal_name) override;
   void SendSignalWithArg(const std::string& signal_name,
-                         const uint8_t* values, size_t length) override;
+                         const uint8_t* values,
+                         size_t length) override;
 
  protected:
   scoped_refptr<dbus::Bus> bus_;
@@ -61,7 +63,8 @@ class DummyDBusWrapper : public DBusWrapperInterface {
     SendSignalWithArg(signal_name, NULL, 0);
   }
   void SendSignalWithArg(const std::string& signal_name,
-                         const uint8_t* values, size_t length) override {
+                         const uint8_t* values,
+                         size_t length) override {
     last_signal_name_ = std::string(signal_name);
     if (values == NULL)
       last_value_ = "";

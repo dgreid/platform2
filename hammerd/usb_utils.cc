@@ -27,24 +27,22 @@ constexpr unsigned int kTimeoutMs = 1000;  // Default timeout value.
 }  // namespace
 
 const base::FilePath GetUsbSysfsPath(const std::string& path) {
-  return base::FilePath(base::StringPrintf("/sys/bus/usb/devices/%s",
-                                           path.c_str()));
+  return base::FilePath(
+      base::StringPrintf("/sys/bus/usb/devices/%s", path.c_str()));
 }
 
 static bool GetUsbDevicePath(const std::string& path, base::FilePath* out) {
   // Find the line in the uevent that starts with "DEVNAME=", and replace it
   // with "/dev/".
   const std::string devname_prefix = "DEVNAME=";
-  const base::FilePath uevent_path =
-      GetUsbSysfsPath(path).Append("uevent");
+  const base::FilePath uevent_path = GetUsbSysfsPath(path).Append("uevent");
   std::string content;
   if (!base::ReadFileToString(uevent_path, &content)) {
     LOG(ERROR) << "Failed to read uevent.";
     return false;
   }
-  for (const auto& line : base::SplitStringPiece(content, "\n",
-                                                 base::TRIM_WHITESPACE,
-                                                 base::SPLIT_WANT_NONEMPTY)) {
+  for (const auto& line : base::SplitStringPiece(
+           content, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY)) {
     if (base::StartsWith(line, devname_prefix, base::CompareCase::SENSITIVE)) {
       std::string path(line.data(), line.size());
       *out = base::FilePath("/dev").Append(path.substr(devname_prefix.size()));
@@ -69,10 +67,16 @@ static bool CheckFileIntValue(const base::FilePath& path, int value) {
   return ReadFileToInt(path, &file_value) && (value == file_value);
 }
 
-UsbEndpoint::UsbEndpoint(uint16_t vendor_id, uint16_t product_id,
+UsbEndpoint::UsbEndpoint(uint16_t vendor_id,
+                         uint16_t product_id,
                          std::string path)
-    : vendor_id_(vendor_id), product_id_(product_id), path_(path),
-      fd_(-1), iface_num_(-1), ep_num_(-1), chunk_len_(-1) {}
+    : vendor_id_(vendor_id),
+      product_id_(product_id),
+      path_(path),
+      fd_(-1),
+      iface_num_(-1),
+      ep_num_(-1),
+      chunk_len_(-1) {}
 
 UsbEndpoint::~UsbEndpoint() {
   Close();
@@ -122,12 +126,10 @@ UsbConnectStatus UsbEndpoint::Connect() {
   // - Bits 0..6: Endpoint Number
   // - Bits 7:    Direction 0 = Out, 1 = In
   bool is_found = false;
-  base::FileEnumerator iface_paths(
-      usb_path, false,
-      base::FileEnumerator::FileType::DIRECTORIES,
-      base::StringPrintf("%s:*", path_.c_str()));
-  for (base::FilePath iface_path = iface_paths.Next();
-       !iface_path.empty();
+  base::FileEnumerator iface_paths(usb_path, false,
+                                   base::FileEnumerator::FileType::DIRECTORIES,
+                                   base::StringPrintf("%s:*", path_.c_str()));
+  for (base::FilePath iface_path = iface_paths.Next(); !iface_path.empty();
        iface_path = iface_paths.Next()) {
     if (CheckFileIntValue(iface_path.Append("bInterfaceClass"),
                           kUsbClassGoogleUpdate) &&
@@ -145,9 +147,11 @@ UsbConnectStatus UsbEndpoint::Connect() {
       }
       // Get endpoint number and chunk size. Two endpoints should have the same
       // endpoint number, so just calculate it by the first one.
-      base::FilePath ep_path = base::FileEnumerator(
-          iface_path, false,
-          base::FileEnumerator::FileType::DIRECTORIES, "ep_*").Next();
+      base::FilePath ep_path =
+          base::FileEnumerator(iface_path, false,
+                               base::FileEnumerator::FileType::DIRECTORIES,
+                               "ep_*")
+              .Next();
       if (!ReadFileToInt(ep_path.Append("bEndpointAddress"), &ep_num_) ||
           !ReadFileToInt(ep_path.Append("wMaxPacketSize"), &chunk_len_)) {
         LOG(ERROR) << "Failed to read endpoint address and chunk size.";
@@ -225,8 +229,8 @@ int UsbEndpoint::Send(const void* outbuf,
                       unsigned int timeout_ms) {
   // BulkTransfer() does not modify the buffer while using kUsbEndpointOut
   // direction mask.
-  int actual = BulkTransfer(
-      const_cast<void*>(outbuf), kUsbEndpointOut, outlen, timeout_ms);
+  int actual = BulkTransfer(const_cast<void*>(outbuf), kUsbEndpointOut, outlen,
+                            timeout_ms);
   if (!allow_less && actual != outlen) {
     LOG(ERROR) << "Failed to send the complete data.";
   }

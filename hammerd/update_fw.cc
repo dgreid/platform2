@@ -96,7 +96,7 @@ SectionInfo::SectionInfo(SectionName name,
   // strlen(version_str) >= sizeof(version). Hence, we unconditionally
   // guarantee that the last byte of `version` is always '\0'.
   strncpy(version, version_str, sizeof(version));
-  version[sizeof(version)-1] = '\0';
+  version[sizeof(version) - 1] = '\0';
 }
 
 bool operator==(const SectionInfo& lhs, const SectionInfo& rhs) {
@@ -150,8 +150,8 @@ UsbConnectStatus FirmwareUpdater::TryConnectUsb() {
       // in this buffer from a previous failure.
       const size_t buf_len = endpoint_->GetChunkLength();
       std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_len]);
-      while (endpoint_->Receive(buf.get(), buf_len, true,
-                                kFlushTimeoutMs) > 0) {
+      while (endpoint_->Receive(buf.get(), buf_len, true, kFlushTimeoutMs) >
+             0) {
         LOG(INFO) << "Flushing data...";
       }
 
@@ -312,12 +312,8 @@ bool FirmwareUpdater::LoadEcImage(const std::string& ec_image) {
   for (const auto& section : sections_) {
     LOG(INFO) << base::StringPrintf(
         "  %s: offset=0x%08x/0x%08x version=%s rollback=%d key_version=%d",
-        ToString(section.name),
-        section.offset,
-        section.size,
-        section.version,
-        section.rollback,
-        section.key_version);
+        ToString(section.name), section.offset, section.size, section.version,
+        section.rollback, section.key_version);
   }
   return true;
 }
@@ -338,8 +334,8 @@ SectionName FirmwareUpdater::CurrentSection() const {
 
 bool FirmwareUpdater::ValidKey() const {
   SectionInfo local_section = sections_[static_cast<int>(SectionName::RW)];
-  LOG(INFO) << "ValidKey: key_version [EC] " << targ_.key_version
-            << " vs. " << local_section.key_version << " [update]";
+  LOG(INFO) << "ValidKey: key_version [EC] " << targ_.key_version << " vs. "
+            << local_section.key_version << " [update]";
   return targ_.key_version == local_section.key_version;
 }
 
@@ -398,10 +394,9 @@ bool FirmwareUpdater::IsCritical() const {
   const std::string new_version{
       sections_[static_cast<int>(SectionName::RW)].version};
   const std::string current_version = GetSectionVersion(SectionName::RW);
-  const std::string branch_tag =
-      new_version.substr(0, new_version.rfind("."));
-  const bool same_branch_tag = base::StartsWith(
-      current_version, branch_tag, base::CompareCase::SENSITIVE);
+  const std::string branch_tag = new_version.substr(0, new_version.rfind("."));
+  const bool same_branch_tag = base::StartsWith(current_version, branch_tag,
+                                                base::CompareCase::SENSITIVE);
   return !same_branch_tag || CompareRollback() > 0;
 }
 
@@ -431,17 +426,16 @@ bool FirmwareUpdater::TransferImage(SectionName section_name) {
                << " + " << section.size;
     return false;
   }
-  return TransferSection(image_ptr + section.offset,
-                         section.offset, section.size, true);
+  return TransferSection(image_ptr + section.offset, section.offset,
+                         section.size, true);
 }
 
-bool FirmwareUpdater::TransferTouchpadFirmware(
-    uint32_t section_addr, size_t data_len) {
+bool FirmwareUpdater::TransferTouchpadFirmware(uint32_t section_addr,
+                                               size_t data_len) {
   return TransferSection(
-      reinterpret_cast<const uint8_t*>(touchpad_image_.data()),
-      section_addr, data_len, false);
+      reinterpret_cast<const uint8_t*>(touchpad_image_.data()), section_addr,
+      data_len, false);
 }
-
 
 bool FirmwareUpdater::InjectEntropy() {
   uint8_t entropy[kEntropySize];
@@ -467,8 +461,8 @@ bool FirmwareUpdater::SendSubcommand(UpdateExtraCommand subcommand) {
 bool FirmwareUpdater::SendSubcommandWithPayload(UpdateExtraCommand subcommand,
                                                 const std::string& cmd_body) {
   uint8_t response;
-  return SendSubcommandReceiveResponse(
-      subcommand, cmd_body, &response, sizeof(response));
+  return SendSubcommandReceiveResponse(subcommand, cmd_body, &response,
+                                       sizeof(response));
 }
 
 bool FirmwareUpdater::SendSubcommandReceiveResponse(
@@ -577,12 +571,8 @@ bool FirmwareUpdater::SendFirstPdu() {
   LOG(INFO) << base::StringPrintf(
       "  Maximum PDU size: %d, Flash protection: %04x, Version: %s, "
       "Key version: %d, Minimum rollback: %d, Writeable at offset: 0x%x",
-      targ_.maximum_pdu_size,
-      targ_.flash_protection,
-      targ_.version,
-      targ_.key_version,
-      targ_.min_rollback,
-      targ_.offset);
+      targ_.maximum_pdu_size, targ_.flash_protection, targ_.version,
+      targ_.key_version, targ_.min_rollback, targ_.offset);
   return true;
 }
 
@@ -596,7 +586,8 @@ void FirmwareUpdater::SendDone() {
 
 bool FirmwareUpdater::TransferSection(const uint8_t* data_ptr,
                                       uint32_t section_addr,
-                                      size_t data_len, bool use_block_skip) {
+                                      size_t data_len,
+                                      bool use_block_skip) {
   if (!SendFirstPdu()) {
     LOG(ERROR) << "Failed to send the first PDU.";
     return false;
@@ -630,8 +621,8 @@ bool FirmwareUpdater::TransferSection(const uint8_t* data_ptr,
   return ret;
 }
 
-bool FirmwareUpdater::CheckEmptyBlock(
-    const uint8_t* transfer_data_ptr, size_t payload_size) {
+bool FirmwareUpdater::CheckEmptyBlock(const uint8_t* transfer_data_ptr,
+                                      size_t payload_size) {
   for (int i = 0; i < payload_size; i++) {
     if (transfer_data_ptr[i] != 0xff)
       return false;
@@ -641,7 +632,8 @@ bool FirmwareUpdater::CheckEmptyBlock(
 
 bool FirmwareUpdater::TransferBlock(UpdateFrameHeader* ufh,
                                     const uint8_t* transfer_data_ptr,
-                                    size_t payload_size, bool use_block_skip) {
+                                    size_t payload_size,
+                                    bool use_block_skip) {
   // The section space must be erased before the update is attempted.
   // Thus we can skip blocks entirely composed of 0xff. However, this doesn't
   // apply for touchpad update.
@@ -658,8 +650,8 @@ bool FirmwareUpdater::TransferBlock(UpdateFrameHeader* ufh,
   // Now send the block, chunk by chunk.
   size_t transfer_size = 0;
   while (transfer_size < payload_size) {
-    int chunk_size = std::min<size_t>(
-        endpoint_->GetChunkLength(), payload_size - transfer_size);
+    int chunk_size = std::min<size_t>(endpoint_->GetChunkLength(),
+                                      payload_size - transfer_size);
     endpoint_->Send(transfer_data_ptr, chunk_size);
     transfer_data_ptr += chunk_size;
     transfer_size += chunk_size;
@@ -667,8 +659,8 @@ bool FirmwareUpdater::TransferBlock(UpdateFrameHeader* ufh,
 
   // Now get the reply.
   uint32_t reply;
-  if (endpoint_->Receive(&reply, sizeof(reply), true,
-                         kTransferTimeoutMs) == -1) {
+  if (endpoint_->Receive(&reply, sizeof(reply), true, kTransferTimeoutMs) ==
+      -1) {
     return false;
   }
   reply = *(reinterpret_cast<uint8_t*>(&reply));
@@ -687,13 +679,13 @@ std::string FirmwareUpdater::ReadConsole() {
   std::string ret;
   constexpr size_t CHUNK_SIZE = 64;
   size_t response_size = 1;
-  char response[CHUNK_SIZE] = { '\0' };
+  char response[CHUNK_SIZE] = {'\0'};
   const std::string next_payload = "\1";
   bool cmd_ret;
 
-  cmd_ret = SendSubcommandReceiveResponse(
-      UpdateExtraCommand::kConsoleReadInit, "",
-      reinterpret_cast<void *>(response), response_size);
+  cmd_ret = SendSubcommandReceiveResponse(UpdateExtraCommand::kConsoleReadInit,
+                                          "", reinterpret_cast<void*>(response),
+                                          response_size);
   if (!cmd_ret) {
     LOG(ERROR) << "Failed to init before reading console.";
     return ret;
@@ -704,7 +696,7 @@ std::string FirmwareUpdater::ReadConsole() {
     // Enable allow_less because response size can vary.
     cmd_ret = SendSubcommandReceiveResponse(
         UpdateExtraCommand::kConsoleReadNext, next_payload,
-        reinterpret_cast<void *>(response), response_size, true);
+        reinterpret_cast<void*>(response), response_size, true);
     if (response[0] == 0)
       break;
 

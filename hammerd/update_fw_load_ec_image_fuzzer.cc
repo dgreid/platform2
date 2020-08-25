@@ -16,9 +16,7 @@ namespace hammerd {
 
 class Environment {
  public:
-  Environment() {
-    logging::SetMinLogLevel(logging::LOG_FATAL);
-  }
+  Environment() { logging::SetMinLogLevel(logging::LOG_FATAL); }
 };
 
 namespace {
@@ -28,12 +26,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   FirmwareUpdater fw_updater_(nullptr);  // no endpoint required to load EC
   FuzzedDataProvider data_provider(data, size);
-  const char *ec_ro_name = "EC_RO";
-  const char *ro_frid_name = "RO_FRID";
-  const char *ec_rw_name = "EC_RW";
-  const char *ec_fwid_name = "EC_FWID";
-  const char *rw_rbver_name = "RW_RBVER";
-  const char *key_ro_name = "KEY_RO";
+  const char* ec_ro_name = "EC_RO";
+  const char* ro_frid_name = "RO_FRID";
+  const char* ec_rw_name = "EC_RW";
+  const char* ec_fwid_name = "EC_FWID";
+  const char* rw_rbver_name = "RW_RBVER";
+  const char* key_ro_name = "KEY_RO";
 
   // Build a fake EC image.
   // - Fake header: 5 bytes
@@ -55,7 +53,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   fake_map.size = 5 + sizeof(fmap) + (sizeof(fmap_area) * fake_map.nareas) +
                   32 + 32 + 4 + sizeof(vb21_packed_key);
   memcpy(fake_map.signature, FMAP_SIGNATURE, sizeof(FMAP_SIGNATURE));
-  ec_image.append(reinterpret_cast<char *>(&fake_map), sizeof(fake_map));
+  ec_image.append(reinterpret_cast<char*>(&fake_map), sizeof(fake_map));
 
   // Setup areas
   fmap_area fake_area;
@@ -63,32 +61,32 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
            "%s", ec_ro_name);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
-  ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+  ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
 
   snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
            "%s", ro_frid_name);
   fake_area.size = sizeof(SectionInfo::version);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
-  ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+  ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
 
   snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
            "%s", ec_rw_name);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
   fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
-  ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+  ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
 
   snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
            "%s", ec_fwid_name);
   fake_area.size = sizeof(SectionInfo::version);
   fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
-  ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+  ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
 
   if (fake_map.nareas > 4) {
     snprintf(reinterpret_cast<char*>(fake_area.name), sizeof(fake_area.name),
              "%s", rw_rbver_name);
     fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
     fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
-    ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+    ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
   }
 
   if (fake_map.nareas > 5) {
@@ -96,7 +94,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
              "%s", key_ro_name);
     fake_area.offset = data_provider.ConsumeIntegral<uint32_t>();
     fake_area.size = data_provider.ConsumeIntegral<uint32_t>();
-    ec_image.append(reinterpret_cast<char *>(&fake_area), sizeof(fake_area));
+    ec_image.append(reinterpret_cast<char*>(&fake_area), sizeof(fake_area));
   }
 
   char ro_version[32] = "UNUSED RO FAKE VERSION";
@@ -106,11 +104,11 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   ec_image.append(rw_version, 32);
 
   int32_t rw_rollback = 35;
-  ec_image.append(reinterpret_cast<char *>(&rw_rollback), sizeof(rw_rollback));
+  ec_image.append(reinterpret_cast<char*>(&rw_rollback), sizeof(rw_rollback));
 
   vb21_packed_key ro_key;
   ro_key.key_version = 1;
-  ec_image.append(reinterpret_cast<char *>(&ro_key), sizeof(ro_key));
+  ec_image.append(reinterpret_cast<char*>(&ro_key), sizeof(ro_key));
 
   fw_updater_.LoadEcImage(ec_image);
 

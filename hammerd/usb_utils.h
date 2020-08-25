@@ -41,10 +41,10 @@ constexpr uint8_t kUsbProtocolGoogleUpdate = 0xff;
 const base::FilePath GetUsbSysfsPath(const std::string& path);
 
 enum class UsbConnectStatus {
-  kSuccess,  // USB device is connected successfully.
-  kUsbPathEmpty,  // Sysfs path of USB device is not found.
+  kSuccess,        // USB device is connected successfully.
+  kUsbPathEmpty,   // Sysfs path of USB device is not found.
   kInvalidDevice,  // USB device has wrong VID/PID.
-  kUnknownError,  // Other failure.
+  kUnknownError,   // Other failure.
 };
 
 class UsbEndpointInterface {
@@ -93,8 +93,7 @@ class UsbEndpointInterface {
 
 class UsbEndpoint : public UsbEndpointInterface {
  public:
-  UsbEndpoint(uint16_t vendor_id, uint16_t product_id,
-              std::string path);
+  UsbEndpoint(uint16_t vendor_id, uint16_t product_id, std::string path);
 
   // UsbEndpointInterface:
   ~UsbEndpoint() override;

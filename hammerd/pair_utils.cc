@@ -19,8 +19,8 @@
 namespace hammerd {
 
 // Implementation of PairManager.
-ChallengeStatus PairManager::PairChallenge(
-    FirmwareUpdaterInterface* fw_updater, DBusWrapperInterface* dbus_wrapper) {
+ChallengeStatus PairManager::PairChallenge(FirmwareUpdaterInterface* fw_updater,
+                                           DBusWrapperInterface* dbus_wrapper) {
   // Generate Challenge request.
   PairChallengeRequest request;
   uint8_t private_key[X25519_PRIVATE_KEY_LEN];
@@ -31,10 +31,8 @@ ChallengeStatus PairManager::PairChallenge(
   // Send the request to the hammer.
   PairChallengeResponse response;
   if (!fw_updater->SendSubcommandReceiveResponse(
-          UpdateExtraCommand::kPairChallenge,
-          request_payload,
-          reinterpret_cast<void*>(&response),
-          sizeof(response))) {
+          UpdateExtraCommand::kPairChallenge, request_payload,
+          reinterpret_cast<void*>(&response), sizeof(response))) {
     if (response.status ==
         static_cast<uint8_t>(EcResponseStatus::kUnavailable)) {
       LOG(ERROR) << "Need to inject the entropy.";
@@ -85,20 +83,14 @@ bool PairManager::VerifyChallenge(const PairChallengeRequest& request,
 
   X25519(shared, private_key, resp.public_key);
 
-  HMAC(EVP_sha256(),
-       shared,
-       sizeof(shared),
-       request.nonce,
-       sizeof(request.nonce),
-       myauth,
-       nullptr);
+  HMAC(EVP_sha256(), shared, sizeof(shared), request.nonce,
+       sizeof(request.nonce), myauth, nullptr);
 
   LOG(INFO) << "Authenticator (local):\n"
             << base::HexEncode(myauth, sizeof(myauth));
   // The authenticator is truncated, so we only compare the remaining part.
-  static_assert(
-      sizeof(resp.authenticator) <= SHA256_DIGEST_LENGTH,
-      "size of authenticator must be <= SHA256_DIGEST_LENGTH.");
+  static_assert(sizeof(resp.authenticator) <= SHA256_DIGEST_LENGTH,
+                "size of authenticator must be <= SHA256_DIGEST_LENGTH.");
   if (memcmp(myauth, resp.authenticator, sizeof(resp.authenticator)) == 0) {
     LOG(INFO) << "Authenticator matches.";
     return true;

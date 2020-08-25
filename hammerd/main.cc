@@ -7,7 +7,7 @@
 #include <stdlib.h>
 
 #include <iostream>
-#include <regex>
+#include <regex>  // NOLINT(build/c++11)
 #include <string>
 
 #include <base/files/file_path.h>
@@ -27,15 +27,15 @@ namespace {
 constexpr char kLockFile[] = "/run/lock/hammerd.lock";
 
 enum class ExitStatus {
-  kSuccess                = EXIT_SUCCESS,  // 0
-  kUnknownError           = 1,
-  kNeedUsbInfo            = 10,
-  kEcImageNotFound        = 11,
-  kTouchpadImageNotFound  = 12,
+  kSuccess = EXIT_SUCCESS,  // 0
+  kUnknownError = 1,
+  kNeedUsbInfo = 10,
+  kEcImageNotFound = 11,
+  kTouchpadImageNotFound = 12,
   kUnknownUpdateCondition = 13,
-  kConnectionError        = 14,
-  kInvalidFirmware        = 15,
-  kTouchpadMismatched     = 16,
+  kConnectionError = 14,
+  kInvalidFirmware = 15,
+  kTouchpadMismatched = 16,
 };
 }  // namespace
 
@@ -92,17 +92,16 @@ int main(int argc, const char* argv[]) {
   }
 
   if (!check_usb_path(FLAGS_usb_path)) {
-      LOG(ERROR) << "--usb_path should follow the format: '<bus>-<port>'.";
-      return static_cast<int>(ExitStatus::kNeedUsbInfo);
+    LOG(ERROR) << "--usb_path should follow the format: '<bus>-<port>'.";
+    return static_cast<int>(ExitStatus::kNeedUsbInfo);
   }
 
   if (FLAGS_get_console_log) {
     LOG(INFO) << "Getting EC console log. FW update will not be performed.";
     std::unique_ptr<hammerd::FirmwareUpdaterInterface> fw_updater =
-      std::make_unique<hammerd::FirmwareUpdater>(
-          std::make_unique<hammerd::UsbEndpoint>(FLAGS_vendor_id,
-                                                 FLAGS_product_id,
-                                                 FLAGS_usb_path));
+        std::make_unique<hammerd::FirmwareUpdater>(
+            std::make_unique<hammerd::UsbEndpoint>(
+                FLAGS_vendor_id, FLAGS_product_id, FLAGS_usb_path));
     hammerd::UsbConnectStatus connect_status = fw_updater->TryConnectUsb();
     if (connect_status != hammerd::UsbConnectStatus::kSuccess) {
       LOG(ERROR) << "Failed to connect USB.";
@@ -132,8 +131,8 @@ int main(int argc, const char* argv[]) {
   std::string touchpad_product_id;
   std::string touchpad_fw_ver;
   if (!FLAGS_touchpad_image_path.size()) {
-    LOG(INFO) << "Touchpad image is not assigned. " <<
-                 "Proceeding without updating touchpad.";
+    LOG(INFO) << "Touchpad image is not assigned. "
+              << "Proceeding without updating touchpad.";
 
   } else if (!base::ReadFileToString(base::FilePath(FLAGS_touchpad_image_path),
                                      &touchpad_image)) {
@@ -141,7 +140,8 @@ int main(int argc, const char* argv[]) {
                << FLAGS_touchpad_image_path << "]. Abort.";
     return static_cast<int>(ExitStatus::kTouchpadImageNotFound);
   } else if (!hammerd::HammerUpdater::ParseTouchpadInfoFromFilename(
-        FLAGS_touchpad_image_path, &touchpad_product_id, &touchpad_fw_ver)) {
+                 FLAGS_touchpad_image_path, &touchpad_product_id,
+                 &touchpad_fw_ver)) {
     LOG(ERROR) << "Not able to get version info from filename. "
                << "Check if [" << FLAGS_touchpad_image_path << "] follows "
                << "<product_id>_<fw_version>.bin format (applied to symbolic "
@@ -158,10 +158,10 @@ int main(int argc, const char* argv[]) {
   // The task executor registers a task runner with the current thread, which
   // is used by DBusWrapper to send signals.
   base::SingleThreadTaskExecutor task_executor;
-  hammerd::HammerUpdater updater(
-      ec_image, touchpad_image, touchpad_product_id, touchpad_fw_ver,
-      FLAGS_vendor_id, FLAGS_product_id, FLAGS_usb_path, FLAGS_at_boot,
-      update_condition);
+  hammerd::HammerUpdater updater(ec_image, touchpad_image, touchpad_product_id,
+                                 touchpad_fw_ver, FLAGS_vendor_id,
+                                 FLAGS_product_id, FLAGS_usb_path,
+                                 FLAGS_at_boot, update_condition);
 
   updater.SetInjectEntropyFlag(FLAGS_force_inject_entropy);
 
@@ -170,8 +170,7 @@ int main(int argc, const char* argv[]) {
       FLAGS_autosuspend_delay_ms >= 0) {
     LOG(INFO) << "Enable USB autosuspend with delay "
               << FLAGS_autosuspend_delay_ms << " ms.";
-    base::FilePath base_path =
-        hammerd::GetUsbSysfsPath(FLAGS_usb_path);
+    base::FilePath base_path = hammerd::GetUsbSysfsPath(FLAGS_usb_path);
     constexpr char kPowerLevelPath[] = "power/control";
     constexpr char kAutosuspendDelayMsPath[] = "power/autosuspend_delay_ms";
     constexpr char kPowerLevel[] = "auto";

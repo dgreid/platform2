@@ -28,10 +28,10 @@
 namespace hammerd {
 
 const std::string HammerUpdater::TaskState::ToString() {
-  return base::StringPrintf("update_ro(%d) update_rw(%d) update_tp(%d) "
-                            "inject_entropy(%d) post_rw_jump(%d)",
-                            update_ro, update_rw, update_tp,
-                            inject_entropy, post_rw_jump);
+  return base::StringPrintf(
+      "update_ro(%d) update_rw(%d) update_tp(%d) "
+      "inject_entropy(%d) post_rw_jump(%d)",
+      update_ro, update_rw, update_tp, inject_entropy, post_rw_jump);
 }
 
 HammerUpdater::UpdateCondition HammerUpdater::ToUpdateCondition(
@@ -49,21 +49,23 @@ HammerUpdater::HammerUpdater(const std::string& ec_image,
                              const std::string& touchpad_image,
                              const std::string& touchpad_product_id,
                              const std::string& touchpad_fw_ver,
-                             uint16_t vendor_id, uint16_t product_id,
-                             const std::string& path, bool at_boot,
+                             uint16_t vendor_id,
+                             uint16_t product_id,
+                             const std::string& path,
+                             bool at_boot,
                              UpdateCondition update_condition)
     : HammerUpdater(
-        ec_image,
-        touchpad_image,
-        touchpad_product_id,
-        touchpad_fw_ver,
-        at_boot,
-        update_condition,
-        std::make_unique<FirmwareUpdater>(
-            std::make_unique<UsbEndpoint>(vendor_id, product_id, path)),
-        std::make_unique<PairManager>(),
-        std::make_unique<DBusWrapper>(),
-        std::make_unique<MetricsLibrary>()) {}
+          ec_image,
+          touchpad_image,
+          touchpad_product_id,
+          touchpad_fw_ver,
+          at_boot,
+          update_condition,
+          std::make_unique<FirmwareUpdater>(
+              std::make_unique<UsbEndpoint>(vendor_id, product_id, path)),
+          std::make_unique<PairManager>(),
+          std::make_unique<DBusWrapper>(),
+          std::make_unique<MetricsLibrary>()) {}
 
 HammerUpdater::HammerUpdater(
     const std::string& ec_image,
@@ -109,9 +111,8 @@ HammerUpdater::RunStatus HammerUpdater::UpdateRW() {
   task_.update_rw = !ret;
   metrics_->SendEnumToUMA(
       kMetricRWUpdateResult,
-      static_cast<int>(ret
-          ? RWUpdateResult::kSucceeded
-          : RWUpdateResult::kTransferFailed),
+      static_cast<int>(ret ? RWUpdateResult::kSucceeded
+                           : RWUpdateResult::kTransferFailed),
       static_cast<int>(RWUpdateResult::kCount));
   LOG(INFO) << "RW update " << (ret ? "passed." : "failed.");
   return HammerUpdater::RunStatus::kNeedReset;
@@ -126,9 +127,9 @@ HammerUpdater::RunStatus HammerUpdater::RunLoop() {
   bool can_update = update_condition_ != UpdateCondition::kNever;
   // Set all update flags if update mode is forced.
   if (update_condition_ == UpdateCondition::kAlways) {
-      task_.update_ro = true;
-      task_.update_rw = true;
-      task_.update_tp = true;
+    task_.update_ro = true;
+    task_.update_rw = true;
+    task_.update_tp = true;
   }
 
   HammerUpdater::RunStatus status;
@@ -179,10 +180,9 @@ HammerUpdater::RunStatus HammerUpdater::RunLoop() {
           pending_metric = PendingRWUpdate::kNoUpdate;
         }
 
-        metrics_->SendEnumToUMA(
-            kMetricPendingRWUpdate,
-            static_cast<int>(pending_metric),
-            static_cast<int>(PendingRWUpdate::kCount));
+        metrics_->SendEnumToUMA(kMetricPendingRWUpdate,
+                                static_cast<int>(pending_metric),
+                                static_cast<int>(PendingRWUpdate::kCount));
       }
     }
 
@@ -223,7 +223,7 @@ HammerUpdater::RunStatus HammerUpdater::RunLoop() {
 
       case HammerUpdater::RunStatus::kNeedLock:
         LOG(INFO) << "Request 'Jump to RW'. Hammer will reboot with locked RW. "
-            << "Run again. run_count=" << run_count;
+                  << "Run again. run_count=" << run_count;
         fw_updater_->SendSubcommand(UpdateExtraCommand::kJumpToRW);
         fw_updater_->CloseUsb();
         // TODO(kitching): Make RW jumps more robust by polling until
@@ -318,8 +318,7 @@ HammerUpdater::RunStatus HammerUpdater::RunOnce() {
   //   (2) inject entropy
   //   (3) update RW section
   if (task_.post_rw_jump || task_.inject_entropy ||
-      (task_.update_rw &&
-       fw_updater_->ValidKey() &&
+      (task_.update_rw && fw_updater_->ValidKey() &&
        fw_updater_->CompareRollback() >= 0)) {
     // If we have just finished a jump to RW, but we're still in RO, then
     // we should log the failure.
@@ -338,8 +337,8 @@ HammerUpdater::RunStatus HammerUpdater::RunOnce() {
         metrics_->SendEnumToUMA(
             kMetricRWUpdateResult,
             static_cast<int>(fw_updater_->ValidKey()
-                ? RWUpdateResult::kRollbackDisallowed
-                : RWUpdateResult::kInvalidKey),
+                                 ? RWUpdateResult::kRollbackDisallowed
+                                 : RWUpdateResult::kInvalidKey),
             static_cast<int>(RWUpdateResult::kCount));
         return HammerUpdater::RunStatus::kFatalError;
       }
@@ -393,7 +392,7 @@ HammerUpdater::RunStatus HammerUpdater::RunOnce() {
       return UpdateRW();
     }
     LOG(INFO) << "RO is locked but RW is not. "
-        << "Lock RW by asking hammer to reset.";
+              << "Lock RW by asking hammer to reset.";
     return HammerUpdater::RunStatus::kNeedLock;
   }
   task_.post_rw_lock = false;
@@ -451,9 +450,8 @@ HammerUpdater::RunStatus HammerUpdater::UpdateRO() {
   task_.update_ro = !ret;
   metrics_->SendEnumToUMA(
       kMetricROUpdateResult,
-      static_cast<int>(ret
-          ? ROUpdateResult::kSucceeded
-          : ROUpdateResult::kTransferFailed),
+      static_cast<int>(ret ? ROUpdateResult::kSucceeded
+                           : ROUpdateResult::kTransferFailed),
       static_cast<int>(ROUpdateResult::kCount));
   LOG(INFO) << "RO update " << (ret ? "passed." : "failed.");
   // In the case that the update failed, a reset will either brick the device,
@@ -462,8 +460,8 @@ HammerUpdater::RunStatus HammerUpdater::UpdateRO() {
 }
 
 HammerUpdater::RunStatus HammerUpdater::Pair() {
-  ChallengeStatus status = pair_manager_->PairChallenge(fw_updater_.get(),
-                                                        dbus_wrapper_.get());
+  ChallengeStatus status =
+      pair_manager_->PairChallenge(fw_updater_.get(), dbus_wrapper_.get());
   PairResult metric_result = PairResult::kUnknownError;
   HammerUpdater::RunStatus ret = HammerUpdater::RunStatus::kFatalError;
 
@@ -502,10 +500,8 @@ HammerUpdater::RunStatus HammerUpdater::Pair() {
   }
 
   if (metric_result != PairResult::kCount) {
-    metrics_->SendEnumToUMA(
-        kMetricPairResult,
-        static_cast<int>(metric_result),
-        static_cast<int>(PairResult::kCount));
+    metrics_->SendEnumToUMA(kMetricPairResult, static_cast<int>(metric_result),
+                            static_cast<int>(PairResult::kCount));
   }
   return ret;
 }
@@ -545,8 +541,7 @@ void HammerUpdater::WaitUsbReady(HammerUpdater::RunStatus status) {
       }
     }
 
-    LOG(INFO) << "Now USB device should be in RW. Wait "
-              << kUdevGuardTimeMs
+    LOG(INFO) << "Now USB device should be in RW. Wait " << kUdevGuardTimeMs
               << "ms to prevent udev invoking next process.";
     base::PlatformThread::Sleep(
         base::TimeDelta::FromMilliseconds(kUdevGuardTimeMs));
@@ -584,13 +579,11 @@ void HammerUpdater::NotifyUpdateFinished(bool is_success) {
 std::string HammerUpdater::VersionString(TouchpadInfo info) {
   std::string base_fw_ver;
   if (info.vendor == ST_VENDOR_ID) {
-    base_fw_ver = base::StringPrintf(
-      kStFormatString,
-      info.st.fw_version & 0x00ff,
-      (info.st.fw_version & 0xff00) >> 8);
+    base_fw_ver =
+        base::StringPrintf(kStFormatString, info.st.fw_version & 0x00ff,
+                           (info.st.fw_version & 0xff00) >> 8);
   } else {
-    base_fw_ver = base::StringPrintf(
-      kElanFormatString, info.elan.fw_version);
+    base_fw_ver = base::StringPrintf(kElanFormatString, info.elan.fw_version);
   }
   return base_fw_ver;
 }
@@ -626,19 +619,18 @@ HammerUpdater::RunStatus HammerUpdater::RunTouchpadUpdater() {
   TouchpadInfo response;
   if (!fw_updater_->SendSubcommandReceiveResponse(
           UpdateExtraCommand::kTouchpadInfo, "",
-          reinterpret_cast<void*>(&response),
-          sizeof(response))) {
-      LOG(ERROR) << "Not able to get touchpad info from base.";
-      return HammerUpdater::RunStatus::kNeedReset;
+          reinterpret_cast<void*>(&response), sizeof(response))) {
+    LOG(ERROR) << "Not able to get touchpad info from base.";
+    return HammerUpdater::RunStatus::kNeedReset;
   }
   LOG(INFO) << "Current touchpad information from base:";
   LOG(INFO) << "status: 0x" << std::hex << static_cast<int>(response.status);
-  LOG(INFO) << "vendor: 0x" << std::hex << response.vendor <<
-    " " << VendorString(response);
+  LOG(INFO) << "vendor: 0x" << std::hex << response.vendor << " "
+            << VendorString(response);
   LOG(INFO) << "fw_address: 0x" << std::hex << response.fw_address;
   LOG(INFO) << "fw_size: " << response.fw_size << " bytes";
-  LOG(INFO) << "allowed_fw_hash: 0x" <<
-      base::HexEncode(response.allowed_fw_hash, SHA256_DIGEST_LENGTH);
+  LOG(INFO) << "allowed_fw_hash: 0x"
+            << base::HexEncode(response.allowed_fw_hash, SHA256_DIGEST_LENGTH);
   LOG(INFO) << "product_id: " << response.elan.id << ".0";
 
   std::string base_fw_ver = VersionString(response);
@@ -667,7 +659,7 @@ HammerUpdater::RunStatus HammerUpdater::RunTouchpadUpdater() {
   uint8_t digest[SHA256_DIGEST_LENGTH];
 
   SHA256(reinterpret_cast<const uint8_t*>(touchpad_image_.data()),
-         response.fw_size, reinterpret_cast<unsigned char *>(&digest));
+         response.fw_size, reinterpret_cast<unsigned char*>(&digest));
   LOG(INFO) << "Computed local touchpad firmware hash: 0x"
             << base::HexEncode(digest, SHA256_DIGEST_LENGTH);
   if (std::memcmp(digest, response.allowed_fw_hash, SHA256_DIGEST_LENGTH)) {
@@ -687,7 +679,6 @@ HammerUpdater::RunStatus HammerUpdater::RunTouchpadUpdater() {
 
   if (!task_.update_tp) {
     // If fw_ver match, then we skip the update. Otherwise, flash it.
-
 
     LOG(INFO) << base::StringPrintf(
         "Checking touchpad firmware version: Local(%s) vs. Base(%s)",
@@ -713,17 +704,17 @@ HammerUpdater::RunStatus HammerUpdater::RunTouchpadUpdater() {
   }
   LOG(INFO) << "Update touchpad firmware, notify UI";
   NotifyUpdateStarted();
-  bool ret = fw_updater_->TransferTouchpadFirmware(
-      response.fw_address, response.fw_size);
+  bool ret = fw_updater_->TransferTouchpadFirmware(response.fw_address,
+                                                   response.fw_size);
   task_.update_tp = !ret;
   return ret ? HammerUpdater::RunStatus::kTouchpadUpToDate
              : HammerUpdater::RunStatus::kNeedReset;
 }
 
 bool HammerUpdater::ParseTouchpadInfoFromFilename(
-      const std::string& filename,
-      std::string* touchpad_product_id,
-      std::string* touchpad_fw_ver) {
+    const std::string& filename,
+    std::string* touchpad_product_id,
+    std::string* touchpad_fw_ver) {
   base::FilePath real_path;
   bool ret = base::NormalizeFilePath(base::FilePath(filename), &real_path);
   std::string basename = real_path.BaseName().value();

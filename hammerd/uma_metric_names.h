@@ -12,8 +12,7 @@ namespace hammerd {
 const char kMetricROUpdateResult[] = DETACHABLE_BASE_PREFIX "ROUpdateResult";
 const char kMetricRWUpdateResult[] = DETACHABLE_BASE_PREFIX "RWUpdateResult";
 const char kMetricPairResult[] = DETACHABLE_BASE_PREFIX "PairResult";
-const char kMetricPendingRWUpdate[] =
-    DETACHABLE_BASE_PREFIX "PendingRWUpdate";
+const char kMetricPendingRWUpdate[] = DETACHABLE_BASE_PREFIX "PendingRWUpdate";
 
 // Values in the enums below are persisted to logs. Entries should not
 // be renumbered and numeric values should never be reused.

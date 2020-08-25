@@ -51,9 +51,8 @@ class PairManagerInterface {
   virtual ~PairManagerInterface() = default;
   // Generates the challange request and sends to the hammer. Then verifies the
   // challenge.
-  virtual ChallengeStatus PairChallenge(
-      FirmwareUpdaterInterface* fw_updater,
-      DBusWrapperInterface* dbus_wrapper) = 0;
+  virtual ChallengeStatus PairChallenge(FirmwareUpdaterInterface* fw_updater,
+                                        DBusWrapperInterface* dbus_wrapper) = 0;
 };
 
 // The host for generating and verifying the challenge.

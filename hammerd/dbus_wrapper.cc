@@ -26,7 +26,8 @@ void DBusWrapper::SendSignal(const std::string& signal_name) {
 }
 
 void DBusWrapper::SendSignalWithArg(const std::string& signal_name,
-                                    const uint8_t* values, size_t length) {
+                                    const uint8_t* values,
+                                    size_t length) {
   LOG(INFO) << "Send the DBus signal: " << signal_name;
   dbus::Signal signal(kHammerdInterface, signal_name);
   if (length > 0) {

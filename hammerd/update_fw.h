@@ -92,15 +92,15 @@ enum class EcResponseStatus : uint8_t {
   kInvalidResponse = 5,
   kInvalidVersion = 6,
   kInvalidChecksum = 7,
-  kInProgress = 8,  // Accepted, command in progress
-  kUnavailable = 9,  // No response available
-  kTimeout = 10,  // We got a timeout
-  kOverflow = 11,  // Table / data overflow
-  kInvalidHeader = 12,  // Header contains invalid data
+  kInProgress = 8,         // Accepted, command in progress
+  kUnavailable = 9,        // No response available
+  kTimeout = 10,           // We got a timeout
+  kOverflow = 11,          // Table / data overflow
+  kInvalidHeader = 12,     // Header contains invalid data
   kRequestTruncated = 13,  // Didn't get the entire request
-  kResponseTooBig = 14,  // Response was too big to handle
-  kBusError = 15,  // Communications bus error
-  kBusy = 16,  // Up but too busy.  Should retry
+  kResponseTooBig = 14,    // Response was too big to handle
+  kBusError = 15,          // Communications bus error
+  kBusy = 16,              // Up but too busy.  Should retry
 };
 
 // Flash protection masks.
@@ -383,12 +383,14 @@ class FirmwareUpdater : public FirmwareUpdaterInterface {
   // Transfers the data of the target section.
   bool TransferSection(const uint8_t* data_ptr,
                        uint32_t section_addr,
-                       size_t data_len, bool use_block_skip);
+                       size_t data_len,
+                       bool use_block_skip);
 
   // Transfers a block of data.
   bool TransferBlock(UpdateFrameHeader* ufh,
                      const uint8_t* transfer_data_ptr,
-                     size_t payload_size, bool use_block_skip);
+                     size_t payload_size,
+                     bool use_block_skip);
 
   // The USB endpoint interface to the hammer EC.
   std::unique_ptr<UsbEndpointInterface> endpoint_;

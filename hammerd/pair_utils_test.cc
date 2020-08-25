@@ -93,16 +93,16 @@ class PairTest : public testing::Test {
   void SetUp() override {
     // Make the request payload with Alice's key pair and the nonce.
     PairChallengeRequest fake_request;
-    CheckMemcpy(
-        fake_request.public_key, X25519_PUBLIC_VALUE_LEN, tv_.alice_public_);
+    CheckMemcpy(fake_request.public_key, X25519_PUBLIC_VALUE_LEN,
+                tv_.alice_public_);
     CheckMemcpy(fake_request.nonce, kHMACNonceLength, tv_.nonce_);
     request_payload_.assign(reinterpret_cast<const char*>(&fake_request),
                             sizeof(fake_request));
 
     // Always generate the request with Alice's key pair and the nonce.
     EXPECT_CALL(pair_manager_, GenerateChallenge(_, _))
-        .WillRepeatedly(SetChallengeRequest(
-            tv_.alice_public_, tv_.alice_private_, tv_.nonce_));
+        .WillRepeatedly(SetChallengeRequest(tv_.alice_public_,
+                                            tv_.alice_private_, tv_.nonce_));
     // USB device is not disconnected in normal case.
     ON_CALL(fw_updater_, UsbSysfsExists()).WillByDefault(Return(true));
   }
@@ -118,18 +118,15 @@ class PairTest : public testing::Test {
 // Hammer returns a valid response.
 TEST_F(PairTest, ChallengePassed) {
   EXPECT_CALL(fw_updater_,
-              SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
-                                            request_payload_,
-                                            _,
-                                            sizeof(PairChallengeResponse),
-                                            false))
+              SendSubcommandReceiveResponse(
+                  UpdateExtraCommand::kPairChallenge, request_payload_, _,
+                  sizeof(PairChallengeResponse), false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kSuccess,
-                                     tv_.bob_public_,
-                                     tv_.authenticator_,
+                                     tv_.bob_public_, tv_.authenticator_,
                                      true));
-  EXPECT_CALL(dbus_wrapper_,
-              SendSignalWithArgHelper(kPairChallengeSucceededSignal,
-                                      tv_.bob_public_));
+  EXPECT_CALL(
+      dbus_wrapper_,
+      SendSignalWithArgHelper(kPairChallengeSucceededSignal, tv_.bob_public_));
   EXPECT_EQ(pair_manager_.PairChallenge(&fw_updater_, &dbus_wrapper_),
             ChallengeStatus::kChallengePassed);
 }
@@ -138,14 +135,11 @@ TEST_F(PairTest, ChallengePassed) {
 // public key but it returns Alice's public key.
 TEST_F(PairTest, ChallengeFailed) {
   EXPECT_CALL(fw_updater_,
-              SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
-                                            request_payload_,
-                                            _,
-                                            sizeof(PairChallengeResponse),
-                                            false))
+              SendSubcommandReceiveResponse(
+                  UpdateExtraCommand::kPairChallenge, request_payload_, _,
+                  sizeof(PairChallengeResponse), false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kSuccess,
-                                     tv_.alice_public_,
-                                     tv_.authenticator_,
+                                     tv_.alice_public_, tv_.authenticator_,
                                      true));
   EXPECT_CALL(dbus_wrapper_, SendSignal(kPairChallengeFailedSignal));
   EXPECT_EQ(pair_manager_.PairChallenge(&fw_updater_, &dbus_wrapper_),
@@ -155,15 +149,12 @@ TEST_F(PairTest, ChallengeFailed) {
 // Hammer only returns the kUnavailable status.
 TEST_F(PairTest, ChallengeNeedInjectEntropy) {
   EXPECT_CALL(fw_updater_,
-              SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
-                                            request_payload_,
-                                            _,
-                                            sizeof(PairChallengeResponse),
-                                            false))
+              SendSubcommandReceiveResponse(
+                  UpdateExtraCommand::kPairChallenge, request_payload_, _,
+                  sizeof(PairChallengeResponse), false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kUnavailable,
                                      std::vector<uint8_t>(),
-                                     std::vector<uint8_t>(),
-                                     false));
+                                     std::vector<uint8_t>(), false));
   EXPECT_EQ(pair_manager_.PairChallenge(&fw_updater_, &dbus_wrapper_),
             ChallengeStatus::kNeedInjectEntropy);
 }
@@ -174,15 +165,12 @@ TEST_F(PairTest, UsbDisconnection) {
   ON_CALL(fw_updater_, UsbSysfsExists()).WillByDefault(Return(false));
 
   EXPECT_CALL(fw_updater_,
-              SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
-                                            request_payload_,
-                                            _,
-                                            sizeof(PairChallengeResponse),
-                                            false))
+              SendSubcommandReceiveResponse(
+                  UpdateExtraCommand::kPairChallenge, request_payload_, _,
+                  sizeof(PairChallengeResponse), false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kInvalidParam,
                                      std::vector<uint8_t>(),
-                                     std::vector<uint8_t>(),
-                                     false));
+                                     std::vector<uint8_t>(), false));
   // The DBus signal is not sent.
   EXPECT_CALL(dbus_wrapper_, SendSignal(_)).Times(0);
   EXPECT_EQ(pair_manager_.PairChallenge(&fw_updater_, &dbus_wrapper_),
@@ -192,15 +180,12 @@ TEST_F(PairTest, UsbDisconnection) {
 // Hammer only returns the other error status.
 TEST_F(PairTest, ChallengeUnknownError) {
   EXPECT_CALL(fw_updater_,
-              SendSubcommandReceiveResponse(UpdateExtraCommand::kPairChallenge,
-                                            request_payload_,
-                                            _,
-                                            sizeof(PairChallengeResponse),
-                                            false))
+              SendSubcommandReceiveResponse(
+                  UpdateExtraCommand::kPairChallenge, request_payload_, _,
+                  sizeof(PairChallengeResponse), false))
       .WillOnce(SetChallengeResponse(EcResponseStatus::kInvalidParam,
                                      std::vector<uint8_t>(),
-                                     std::vector<uint8_t>(),
-                                     false));
+                                     std::vector<uint8_t>(), false));
   EXPECT_CALL(dbus_wrapper_, SendSignal(kPairChallengeFailedSignal));
   EXPECT_EQ(pair_manager_.PairChallenge(&fw_updater_, &dbus_wrapper_),
             ChallengeStatus::kUnknownError);
