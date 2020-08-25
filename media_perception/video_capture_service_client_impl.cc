@@ -47,7 +47,7 @@ void VideoCaptureServiceClientImpl::OpenDevice(
   VideoStreamParams format = Serialized<VideoStreamParams>(
       capture_format).Deserialize();
 
-  std::lock_guard<std::mutex> lock(device_id_to_video_frame_handler_map_lock_);
+  device_id_to_video_frame_handler_map_lock_.lock();
   std::map<std::string, std::shared_ptr<VideoFrameHandlerImpl>>::iterator it =
       device_id_to_video_frame_handler_map_.find(device_id);
   if (it != device_id_to_video_frame_handler_map_.end() &&
@@ -59,6 +59,7 @@ void VideoCaptureServiceClientImpl::OpenDevice(
 
     // Device already open with the same settings.
     if (it->second->CaptureFormatsMatch(format)) {
+      device_id_to_video_frame_handler_map_lock_.unlock();
       callback(
           device_id,
           CreatePushSubscriptionResultCode::CREATED_WITH_REQUESTED_SETTINGS,
@@ -66,6 +67,7 @@ void VideoCaptureServiceClientImpl::OpenDevice(
       return;
     }
     // Device already open but with different settings.
+    device_id_to_video_frame_handler_map_lock_.unlock();
     callback(
         device_id,
         CreatePushSubscriptionResultCode::CREATED_WITH_DIFFERENT_SETTINGS,
@@ -81,6 +83,7 @@ void VideoCaptureServiceClientImpl::OpenDevice(
   }
   device_id_to_video_frame_handler_map_.insert(
       std::make_pair(device_id, video_frame_handler_impl));
+  device_id_to_video_frame_handler_map_lock_.unlock();
   mojo_connector_->OpenDevice(
       device_id, force_reopen_with_settings, video_frame_handler_impl, format,
       std::bind(&VideoCaptureServiceClientImpl::OnOpenDeviceCallback,
