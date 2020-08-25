@@ -33,7 +33,7 @@ const char kGroup[] = "shill-scripts";
 const char kScriptsDir[] = "/usr/bin";
 
 // clang-format off
-const char * const kWhitelistedScripts[] = {
+const char * const kAllowedScripts[] = {
     "connectivity",
     "ff_debug",
     "modem",
@@ -46,8 +46,8 @@ const char * const kWhitelistedScripts[] = {
 // clang-format on
 
 // Only permit certain scripts here.
-bool WhitelistedScript(const std::string& script, brillo::ErrorPtr* error) {
-  for (const char* listed : kWhitelistedScripts)
+bool AllowedScript(const std::string& script, brillo::ErrorPtr* error) {
+  for (const char* listed : kAllowedScripts)
     if (script == listed)
       return true;
 
@@ -62,7 +62,7 @@ bool ShillScriptsTool::Run(const base::ScopedFD& outfd,
                            const std::vector<std::string>& script_args,
                            std::string* out_id,
                            brillo::ErrorPtr* error) {
-  if (!WhitelistedScript(script, error))
+  if (!AllowedScript(script, error))
     return false;
 
   auto p = std::make_unique<ProcessWithId>();
