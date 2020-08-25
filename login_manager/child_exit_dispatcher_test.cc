@@ -74,9 +74,7 @@ class ChildExitDispatcherTest : public ::testing::Test {
   ChildExitDispatcherTest() = default;
   ~ChildExitDispatcherTest() override = default;
 
-  void SetUp() override {
-    brillo_loop_.SetAsCurrent();
-  }
+  void SetUp() override { brillo_loop_.SetAsCurrent(); }
 
  protected:
   base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};

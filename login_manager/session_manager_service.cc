@@ -187,8 +187,7 @@ bool SessionManagerService::Initialize() {
       dbus::ObjectPath(system_clock::kSystemClockServicePath));
 
   debugd_dbus_proxy_ = bus_->GetObjectProxy(
-      debugd::kDebugdServiceName,
-      dbus::ObjectPath(debugd::kDebugdServicePath));
+      debugd::kDebugdServiceName, dbus::ObjectPath(debugd::kDebugdServicePath));
 
 #if USE_SYSTEMD
   using InitDaemonControllerImpl = SystemdUnitStarter;

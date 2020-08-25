@@ -198,8 +198,8 @@ class DevicePolicyService : public PolicyService {
 
   OwnerKeyLossMitigator* mitigator_;
   NssUtil* nss_;
-  Crossystem* crossystem_;   // Owned by the caller.
-  VpdProcess* vpd_process_;  // Owned by the caller.
+  Crossystem* crossystem_;                              // Owned by the caller.
+  VpdProcess* vpd_process_;                             // Owned by the caller.
   InstallAttributesReader* install_attributes_reader_;  // Owned by the caller.
 
   // Cached copy of the decoded device settings. Decoding happens on first

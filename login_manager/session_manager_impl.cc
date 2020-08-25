@@ -1866,8 +1866,7 @@ bool SessionManagerImpl::StopArcInstanceInternal(
 }
 
 void SessionManagerImpl::OnAndroidContainerStopped(
-    pid_t pid,
-    ArcContainerStopReason reason) {
+    pid_t pid, ArcContainerStopReason reason) {
   if (reason == ArcContainerStopReason::CRASH) {
     LOG(ERROR) << "Android container with PID " << pid << " crashed";
   } else {
