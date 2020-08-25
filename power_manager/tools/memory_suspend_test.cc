@@ -44,14 +44,14 @@ void PrintAddrMap(void* vaddr) {
          (page_data & (1LL << 63)) >> 63);
 }
 
-int Suspend(uint64_t wakeup_count, int32_t wakeup_timeout,
+int Suspend(uint64_t wakeup_count,
+            int32_t wakeup_timeout,
             int32_t suspend_for_sec) {
-  return system(
-      base::StringPrintf(
-          "powerd_dbus_suspend --delay=0 --wakeup_count=%" PRIu64
-          " --wakeup_timeout=%" PRIi32 " --suspend_for_sec=%" PRIi32,
-          wakeup_count, wakeup_timeout, suspend_for_sec)
-          .c_str());
+  return system(base::StringPrintf(
+                    "powerd_dbus_suspend --delay=0 --wakeup_count=%" PRIu64
+                    " --wakeup_timeout=%" PRIi32 " --suspend_for_sec=%" PRIi32,
+                    wakeup_count, wakeup_timeout, suspend_for_sec)
+                    .c_str());
 }
 
 uint32_t* Allocate(size_t size) {
@@ -156,7 +156,7 @@ int main(int argc, char* argv[]) {
 
   Fill(ptr, size);
   if (Suspend(FLAGS_wakeup_count, FLAGS_wakeup_timeout,
-      FLAGS_suspend_for_sec)) {
+              FLAGS_suspend_for_sec)) {
     printf("Error suspending\n");
     return 1;
   }

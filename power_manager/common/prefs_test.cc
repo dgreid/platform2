@@ -104,8 +104,8 @@ class PrefsTest : public testing::Test {
   }
 
   void InitPrefs() {
-    ASSERT_TRUE(prefs_.Init(std::make_unique<FilePrefsStore>(paths_[0]),
-                            GetSources()));
+    ASSERT_TRUE(
+        prefs_.Init(std::make_unique<FilePrefsStore>(paths_[0]), GetSources()));
   }
 
   std::vector<base::FilePath> paths_;
@@ -198,8 +198,8 @@ TEST_F(PrefsTest, TestThreeDirectoriesStacked) {
         base::StringPrintf("Testing stacked directories, cycle %d", cycle));
     SetUp();
     Prefs prefs;
-    ASSERT_TRUE(prefs.Init(std::make_unique<FilePrefsStore>(paths_[0]),
-                           GetSources()));
+    ASSERT_TRUE(
+        prefs.Init(std::make_unique<FilePrefsStore>(paths_[0]), GetSources()));
 
     // Write values to the pref directories as appropriate for this cycle.
     int i;
