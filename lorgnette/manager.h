@@ -120,6 +120,12 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   void ReportScanSucceeded(const std::string& device_name);
   void ReportScanFailed(const std::string& device_name);
 
+  void SendStatusSignal(std::string uuid,
+                        ScanState state,
+                        int page,
+                        int progress);
+  void SendFailureSignal(std::string uuid, std::string failure_reason);
+
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
   base::Callback<void()> activity_callback_;
   std::unique_ptr<MetricsLibraryInterface> metrics_library_;

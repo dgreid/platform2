@@ -473,24 +473,16 @@ void Manager::StartScan(
   response.set_scan_uuid(uuid);
   method_response->Return(impl::SerializeProto(response));
 
-  ScanStatusChangedSignal result_signal;
-  result_signal.set_scan_uuid(uuid);
-
   if (!RunScanLoop(&error, std::move(device), outfd, uuid)) {
     ReportScanFailed(request.device_name());
-    result_signal.set_failure_reason(SerializeError(error));
-    result_signal.set_state(SCAN_STATE_FAILED);
-    status_signal_sender_.Run(result_signal);
+    SendFailureSignal(uuid, SerializeError(error));
     return;
   }
   ReportScanSucceeded(request.device_name());
 
   LOG(INFO) << __func__ << ": completed image scan and conversion.";
 
-  result_signal.set_state(SCAN_STATE_COMPLETED);
-  result_signal.set_progress(100);
-  status_signal_sender_.Run(result_signal);
-
+  SendStatusSignal(uuid, SCAN_STATE_COMPLETED, 1, 100);
   if (!activity_callback_.is_null())
     activity_callback_.Run();
 }
@@ -663,11 +655,8 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
       base::TimeTicks now = base::TimeTicks::Now();
       if (scan_uuid.has_value() && progress != last_progress_value &&
           now - last_progress_sent_time >= progress_signal_interval_) {
-        ScanStatusChangedSignal result_signal;
-        result_signal.set_scan_uuid(scan_uuid.value());
-        result_signal.set_state(SCAN_STATE_IN_PROGRESS);
-        result_signal.set_progress(progress);
-        status_signal_sender_.Run(result_signal);
+        SendStatusSignal(scan_uuid.value(), SCAN_STATE_IN_PROGRESS, 1,
+                         progress);
         last_progress_value = progress;
         last_progress_sent_time = now;
       }
@@ -755,6 +744,26 @@ void Manager::ReportScanFailed(const std::string& device_name) {
   DocumentScanSaneBackend backend = BackendFromDeviceName(device_name);
   metrics_library_->SendEnumToUMA(kMetricScanFailed, backend,
                                   DocumentScanSaneBackend::kMaxValue);
+}
+
+void Manager::SendStatusSignal(std::string uuid,
+                               ScanState state,
+                               int page,
+                               int progress) {
+  ScanStatusChangedSignal signal;
+  signal.set_scan_uuid(uuid);
+  signal.set_state(state);
+  signal.set_page(page);
+  signal.set_progress(progress);
+  status_signal_sender_.Run(signal);
+}
+
+void Manager::SendFailureSignal(std::string uuid, std::string failure_reason) {
+  ScanStatusChangedSignal signal;
+  signal.set_scan_uuid(uuid);
+  signal.set_state(SCAN_STATE_FAILED);
+  signal.set_failure_reason(failure_reason);
+  status_signal_sender_.Run(signal);
 }
 
 }  // namespace lorgnette
