@@ -22,8 +22,7 @@ namespace fake_pca_agent {
 // |crypto::ScopedEVP_PKEY|. If |public_key_digest|, it is set to the SHA-1
 // digest of the public key.
 crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
-    const std::string& serialized_tpm_pubkey,
-    std::string* public_key_digest);
+    const std::string& serialized_tpm_pubkey, std::string* public_key_digest);
 
 // Builds the serialized TPM_PCR_COMPOSITE stream with |pcr_value| at
 // |pcr_index|.

@@ -36,8 +36,7 @@ constexpr int kSelectBitmapSize = 2;
 }  // namespace
 
 crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
-    const std::string& serialized_tpm_pubkey,
-    std::string* public_key_digest) {
+    const std::string& serialized_tpm_pubkey, std::string* public_key_digest) {
   // Parse the serialized TPM_PUBKEY.
   UINT64 offset = 0;
   TPM_PUBKEY parsed = {};
