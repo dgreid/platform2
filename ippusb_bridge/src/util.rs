@@ -56,7 +56,11 @@ impl ConnectionTracker {
 pub fn read_until_delimiter(reader: &mut dyn BufRead, delimiter: &[u8]) -> io::Result<Vec<u8>> {
     let mut result: Vec<u8> = Vec::new();
     loop {
-        let buf = reader.fill_buf()?;
+        let buf = match reader.fill_buf() {
+            Ok(buf) => buf,
+            Err(ref e) if e.kind() == io::ErrorKind::Interrupted => continue,
+            Err(e) => return Err(e),
+        };
 
         if buf.is_empty() {
             return Ok(result);
