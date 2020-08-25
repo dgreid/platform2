@@ -19,8 +19,8 @@ const char kPacketCaptureToolErrorString[] =
 bool ValidateInterfaceName(const std::string& name) {
   for (char c : name) {
     // These are the only plausible interface name characters.
-    if (!base::IsAsciiAlpha(c) &&
-        !base::IsAsciiDigit(c) && c != '-' && c != '_')
+    if (!base::IsAsciiAlpha(c) && !base::IsAsciiDigit(c) && c != '-' &&
+        c != '_')
       return false;
   }
   return true;
@@ -42,10 +42,8 @@ bool AddValidatedStringOption(debugd::ProcessWithId* p,
   }
 
   if (!ValidateInterfaceName(name)) {
-    DEBUGD_ADD_ERROR_FMT(error,
-                         kPacketCaptureToolErrorString,
-                         "\"%s\" is not a valid interface name",
-                         name.c_str());
+    DEBUGD_ADD_ERROR_FMT(error, kPacketCaptureToolErrorString,
+                         "\"%s\" is not a valid interface name", name.c_str());
     return false;
   }
 
@@ -57,24 +55,22 @@ bool AddValidatedStringOption(debugd::ProcessWithId* p,
 
 namespace debugd {
 
-bool PacketCaptureTool::Start(
-    const base::ScopedFD& status_fd,
-    const base::ScopedFD& output_fd,
-    const brillo::VariantDictionary& options,
-    std::string* out_id,
-    brillo::ErrorPtr* error) {
+bool PacketCaptureTool::Start(const base::ScopedFD& status_fd,
+                              const base::ScopedFD& output_fd,
+                              const brillo::VariantDictionary& options,
+                              std::string* out_id,
+                              brillo::ErrorPtr* error) {
   std::string exec_path;
   if (!GetHelperPath("capture_utility.sh", &exec_path)) {
-    DEBUGD_ADD_ERROR(
-        error, kPacketCaptureToolErrorString, "Helper path is too long");
+    DEBUGD_ADD_ERROR(error, kPacketCaptureToolErrorString,
+                     "Helper path is too long");
     return false;
   }
 
   ProcessWithId* p =
       CreateProcess(false /* sandboxed */, false /* access_root_mount_ns */);
   if (!p) {
-    DEBUGD_ADD_ERROR(error,
-                     kPacketCaptureToolErrorString,
+    DEBUGD_ADD_ERROR(error, kPacketCaptureToolErrorString,
                      "Failed to create helper process");
     return false;
   }
@@ -83,14 +79,13 @@ bool PacketCaptureTool::Start(
     return false;
   if (!AddIntOption(p, options, "frequency", "--frequency", error))
     return false;
-  if (!AddValidatedStringOption(
-      p, options, "ht_location", "--ht-location", error))
+  if (!AddValidatedStringOption(p, options, "ht_location", "--ht-location",
+                                error))
     return false;
-  if (!AddValidatedStringOption(
-      p, options, "vht_width", "--vht-width", error))
+  if (!AddValidatedStringOption(p, options, "vht_width", "--vht-width", error))
     return false;
-  if (!AddValidatedStringOption(
-      p, options, "monitor_connection_on", "--monitor-connection-on", error))
+  if (!AddValidatedStringOption(p, options, "monitor_connection_on",
+                                "--monitor-connection-on", error))
     return false;
 
   // Pass the output fd of the pcap as a command line option to the child

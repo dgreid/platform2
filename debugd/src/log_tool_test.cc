@@ -133,9 +133,8 @@ TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
 
 TEST_F(LogToolTest, DeleteArcBugReportBackup) {
   std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
-  base::FilePath logPath = temp_dir_.GetPath()
-                            .Append(userhash)
-                            .Append("arc-bugreport.log");
+  base::FilePath logPath =
+      temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
   EXPECT_TRUE(WriteFile(logPath, userhash));
   EXPECT_TRUE(base::PathExists(logPath));
   log_tool_->DeleteArcBugReportBackup(userhash);
@@ -146,12 +145,11 @@ TEST_F(LogToolTest, EncodeString) {
   // U+1F600 GRINNING FACE
   constexpr const char kGrinningFaceUTF8[] = "\xF0\x9F\x98\x80";
   constexpr const char kGrinningFaceBase64[] = "<base64>: 8J+YgA==";
-  EXPECT_EQ(kGrinningFaceUTF8,
-            LogTool::EncodeString(kGrinningFaceUTF8,
-                                  LogTool::Encoding::kAutodetect));
   EXPECT_EQ(
       kGrinningFaceUTF8,
-      LogTool::EncodeString(kGrinningFaceUTF8, LogTool::Encoding::kUtf8));
+      LogTool::EncodeString(kGrinningFaceUTF8, LogTool::Encoding::kAutodetect));
+  EXPECT_EQ(kGrinningFaceUTF8,
+            LogTool::EncodeString(kGrinningFaceUTF8, LogTool::Encoding::kUtf8));
   EXPECT_EQ(
       kGrinningFaceBase64,
       LogTool::EncodeString(kGrinningFaceUTF8, LogTool::Encoding::kBase64));
@@ -236,8 +234,7 @@ TEST_F(LogTest, GetCommandLogData) {
   EXPECT_EQ(log_two.GetLogData(), "test_output");
 
   LogTool::Log log_three(LogTool::Log::kCommand, "test_log_three",
-                         "echo a,b,c | cut -d, -f2", user_name_,
-                         group_name_);
+                         "echo a,b,c | cut -d, -f2", user_name_, group_name_);
   log_three.DisableMinijailForTest();
   EXPECT_EQ(log_three.GetLogData(), "b\n");
 }

@@ -40,8 +40,7 @@ constexpr char kSandboxInfoDir[] = "/etc/runtime_probe/sandbox";
 constexpr char kBinary[] = "/usr/bin/runtime_probe_helper";
 constexpr char kRunAs[] = "runtime_probe";
 
-bool CreateNonblockingPipe(base::ScopedFD* read_fd,
-                           base::ScopedFD* write_fd) {
+bool CreateNonblockingPipe(base::ScopedFD* read_fd, base::ScopedFD* write_fd) {
   int pipe_fd[2];
   int ret = pipe2(pipe_fd, O_CLOEXEC | O_NONBLOCK);
   if (ret != 0) {
@@ -59,7 +58,7 @@ bool ProbeTool::EvaluateProbeFunction(
     brillo::ErrorPtr* error,
     const std::string& sandbox_info,
     const std::string& probe_statement,
-    brillo::dbus_utils::FileDescriptor *outfd) {
+    brillo::dbus_utils::FileDescriptor* outfd) {
   std::unique_ptr<brillo::Process> process;
 
   // Details of sandboxing for probing should be centralized in a single

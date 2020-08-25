@@ -150,14 +150,13 @@ void CrashSenderTool::RunCrashSender(bool ignore_hold_off_time,
 }
 
 void CrashSenderTool::OnTestModeChanged(
-  const brillo::dbus_utils::ExportedPropertyBase* test_mode_property) {
+    const brillo::dbus_utils::ExportedPropertyBase* test_mode_property) {
   const auto* property =
       dynamic_cast<const brillo::dbus_utils::ExportedProperty<bool>*>(
-        test_mode_property);
+          test_mode_property);
   DCHECK(property);
   test_mode_ = property->value();
   LOG(INFO) << "CrashSenderTestMode set to " << std::boolalpha << test_mode_;
 }
-
 
 }  // namespace debugd

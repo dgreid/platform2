@@ -26,8 +26,7 @@ const char kPathLengthErrorString[] = "Path length is too long.";
 }  // namespace
 
 ProcessWithOutput::ProcessWithOutput()
-    : separate_stderr_(false), use_minijail_(true) {
-}
+    : separate_stderr_(false), use_minijail_(true) {}
 
 ProcessWithOutput::~ProcessWithOutput() {
   outfile_.reset();
@@ -112,8 +111,8 @@ int ProcessWithOutput::RunProcess(const std::string& command,
   } else if (requires_root) {
     process.SandboxAs("root", "root");
   }
-  return DoRunProcess(
-      command, arguments, stdin, stdout, stderr, error, &process);
+  return DoRunProcess(command, arguments, stdin, stdout, stderr, error,
+                      &process);
 }
 
 int ProcessWithOutput::RunHelper(const std::string& helper,
@@ -140,8 +139,8 @@ int ProcessWithOutput::RunProcessFromHelper(const std::string& command,
   ProcessWithOutput process;
   process.set_use_minijail(false);
   process.SetSearchPath(true);
-  return DoRunProcess(
-      command, arguments, stdin, stdout, stderr, nullptr, &process);
+  return DoRunProcess(command, arguments, stdin, stdout, stderr, nullptr,
+                      &process);
 }
 
 int ProcessWithOutput::DoRunProcess(const std::string& command,

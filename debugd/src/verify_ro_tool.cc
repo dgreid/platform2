@@ -100,8 +100,7 @@ bool VerifyRoTool::CheckCr50ResourceLocation(const std::string& path,
 
   // Using absolute path here to avoid path spoofing, e.g.,
   // /opt/google/cr50/../../../tmp/badfile
-  return base::StartsWith(absolute_path.value(),
-                          kCr50ResourcePath,
+  return base::StartsWith(absolute_path.value(), kCr50ResourcePath,
                           base::CompareCase::SENSITIVE);
 }
 

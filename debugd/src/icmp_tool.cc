@@ -36,8 +36,8 @@ string ICMPTool::TestICMPWithOptions(const string& host,
     // No need to quote here because chromeos:ProcessImpl (base class of
     // ProcessWithOutput) passes arguments as is to helpers/icmp, which will
     // check arguments before executing in the shell.
-    p.AddArg(base::StringPrintf("--%s=%s",
-                                option.first.c_str(), option.second.c_str()));
+    p.AddArg(base::StringPrintf("--%s=%s", option.first.c_str(),
+                                option.second.c_str()));
   }
 
   p.AddArg(host);

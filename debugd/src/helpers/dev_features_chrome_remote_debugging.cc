@@ -33,8 +33,8 @@ bool ConfigureChromeRemoteDebugging() {
     // This is basically touching a new empty file.  It's only checked for
     // existence.  The content is not used.
     int bytes_written = base::WriteFile(
-        base::FilePath(debugd::kDevFeaturesChromeRemoteDebuggingFlagPath),
-        "", 0);
+        base::FilePath(debugd::kDevFeaturesChromeRemoteDebuggingFlagPath), "",
+        0);
     if (bytes_written < 0) {
       PLOG(WARNING) << "Failed to write Chrome remote debugging marker file.";
       result = false;
@@ -46,8 +46,7 @@ bool ConfigureChromeRemoteDebugging() {
 }  // namespace
 
 int main(int argc, char** argv) {
-  DEFINE_bool(q,
-              false,
+  DEFINE_bool(q, false,
               "Query whether Chrome remote debugging has been configured");
   brillo::FlagHelper::Init(argc, argv, kUsageMessage);
 

@@ -16,8 +16,8 @@ void OnSignalConnected(const std::string& interface,
                        const std::string& signal,
                        bool success) {
   if (!success) {
-    LOG(ERROR) << "Could not connect to signal " << signal
-               << " on interface " << interface;
+    LOG(ERROR) << "Could not connect to signal " << signal << " on interface "
+               << interface;
   }
 }
 
@@ -28,17 +28,15 @@ namespace debugd {
 SessionManagerProxy::SessionManagerProxy(scoped_refptr<dbus::Bus> bus)
     : bus_(bus),
       proxy_(bus->GetObjectProxy(
-        login_manager::kSessionManagerServiceName,
-        dbus::ObjectPath(login_manager::kSessionManagerServicePath))),
+          login_manager::kSessionManagerServiceName,
+          dbus::ObjectPath(login_manager::kSessionManagerServicePath))),
       weak_ptr_factory_(this) {
-  proxy_->ConnectToSignal(
-      login_manager::kSessionManagerInterface,
-      login_manager::kLoginPromptVisibleSignal,
-      base::Bind(&SessionManagerProxy::OnLoginPromptVisible,
-                 weak_ptr_factory_.GetWeakPtr()),
-      base::Bind(&OnSignalConnected));
+  proxy_->ConnectToSignal(login_manager::kSessionManagerInterface,
+                          login_manager::kLoginPromptVisibleSignal,
+                          base::Bind(&SessionManagerProxy::OnLoginPromptVisible,
+                                     weak_ptr_factory_.GetWeakPtr()),
+                          base::Bind(&OnSignalConnected));
 }
-
 
 void SessionManagerProxy::OnLoginPromptVisible(dbus::Signal*) {
   // Try to enable Chrome remote debugging again on Login prompt.
@@ -50,8 +48,7 @@ void SessionManagerProxy::OnLoginPromptVisible(dbus::Signal*) {
 
 void SessionManagerProxy::EnableChromeRemoteDebugging() {
   VLOG(1) << "Enable Chrome remote debugging: "
-          << should_enable_chrome_remote_debugging_
-          << " "
+          << should_enable_chrome_remote_debugging_ << " "
           << is_chrome_remote_debugging_enabled_;
   should_enable_chrome_remote_debugging_ = true;
   EnableChromeRemoteDebuggingInternal();
@@ -59,8 +56,7 @@ void SessionManagerProxy::EnableChromeRemoteDebugging() {
 
 void SessionManagerProxy::EnableChromeRemoteDebuggingInternal() {
   VLOG(1) << "Enable Chrome remote debugging internal: "
-          << should_enable_chrome_remote_debugging_
-          << " "
+          << should_enable_chrome_remote_debugging_ << " "
           << is_chrome_remote_debugging_enabled_;
   if (!should_enable_chrome_remote_debugging_ ||
       is_chrome_remote_debugging_enabled_) {

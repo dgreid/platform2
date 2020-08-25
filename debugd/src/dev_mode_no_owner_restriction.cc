@@ -18,7 +18,7 @@
 #include "debugd/src/error_utils.h"
 #include "debugd/src/process_with_output.h"
 
-#include "rpc.pb.h"  // NOLINT(build/include)
+#include "rpc.pb.h"  // NOLINT(build/include_directory)
 
 namespace debugd {
 
@@ -46,16 +46,15 @@ const char kOwnerQueryErrorString[] =
 bool CryptohomeGetLoginStatus(dbus::Bus* bus, cryptohome::BaseReply* reply) {
   cryptohome::GetLoginStatusRequest request;
 
-  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
-      cryptohome::kCryptohomeServiceName,
-      dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
+  dbus::ObjectProxy* proxy =
+      bus->GetObjectProxy(cryptohome::kCryptohomeServiceName,
+                          dbus::ObjectPath(cryptohome::kCryptohomeServicePath));
   dbus::MethodCall method_call(cryptohome::kCryptohomeInterface,
                                cryptohome::kCryptohomeGetLoginStatus);
   dbus::MessageWriter writer(&method_call);
   writer.AppendProtoAsArrayOfBytes(request);
-  std::unique_ptr<dbus::Response> response =
-      proxy->CallMethodAndBlock(&method_call,
-                                dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+  std::unique_ptr<dbus::Response> response = proxy->CallMethodAndBlock(
+      &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
 
   if (!response)
     return false;
@@ -67,13 +66,14 @@ bool CryptohomeGetLoginStatus(dbus::Bus* bus, cryptohome::BaseReply* reply) {
 }  // namespace
 
 DevModeNoOwnerRestriction::DevModeNoOwnerRestriction(
-    scoped_refptr<dbus::Bus> bus) : bus_(bus) {}
+    scoped_refptr<dbus::Bus> bus)
+    : bus_(bus) {}
 
 bool DevModeNoOwnerRestriction::AllowToolUse(brillo::ErrorPtr* error) {
   // Check dev mode first to avoid unnecessary cryptohome query delays.
   if (!InDevMode()) {
-    DEBUGD_ADD_ERROR(
-        error, kAccessDeniedErrorString, kDevModeAccessErrorString);
+    DEBUGD_ADD_ERROR(error, kAccessDeniedErrorString,
+                     kDevModeAccessErrorString);
     return false;
   }
 
@@ -115,8 +115,7 @@ bool DevModeNoOwnerRestriction::InDevMode() const {
 // If cryptohome was queried successfully, returns true and |owner_user_exists|
 // and |boot_lockbox_finalized| are updated.
 bool DevModeNoOwnerRestriction::GetOwnerAndLockboxStatus(
-    bool* owner_user_exists,
-    bool* boot_lockbox_finalized) {
+    bool* owner_user_exists, bool* boot_lockbox_finalized) {
   cryptohome::BaseReply base_reply;
   if (CryptohomeGetLoginStatus(bus_.get(), &base_reply)) {
     cryptohome::GetLoginStatusReply reply =

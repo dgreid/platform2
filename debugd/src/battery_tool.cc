@@ -18,11 +18,10 @@ const char kUnsupportedMessage[] =
 
 }  // namespace
 
-
 namespace debugd {
 
 std::string BatteryTool::BatteryFirmware(const std::string& option) {
-  const char *tool_name;
+  const char* tool_name;
   std::string output;
   ProcessWithOutput process;
   // Disabling sandboxing since battery requires higher privileges.

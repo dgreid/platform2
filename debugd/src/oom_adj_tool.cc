@@ -64,7 +64,7 @@ class ProcessHandler {
   const pid_t pid_;
 };
 
-ProcessHandler::ProcessHandler(const pid_t pid): pid_(pid) {}
+ProcessHandler::ProcessHandler(const pid_t pid) : pid_(pid) {}
 
 uid_t ProcessHandler::GetProcessOwnerUid(std::string* errors) {
   std::string procfs_entry = base::StringPrintf(kProcfsDirFormat, pid_);
@@ -79,8 +79,7 @@ uid_t ProcessHandler::GetProcessOwnerUid(std::string* errors) {
   struct stat statbuf;
   if (fstat(procfs_fd.get(), &statbuf) < 0) {
     PrintAndAppendError(
-        errors,
-        base::StringPrintf("Failed to get uid of process %d", pid_));
+        errors, base::StringPrintf("Failed to get uid of process %d", pid_));
     return kInvalidUid;
   }
 
@@ -119,8 +118,7 @@ class OomScoreSetter {
  public:
   OomScoreSetter()
       : chronos_uid_(GetUidForUsername("chronos")),
-        android_root_uid_(GetUidForUsername("android-root")) {
-  }
+        android_root_uid_(GetUidForUsername("android-root")) {}
   ~OomScoreSetter() = default;
 
   // Entry point.
@@ -152,8 +150,9 @@ std::string OomScoreSetter::Set(const std::map<pid_t, int32_t>& scores) {
   return errors;
 }
 
-void OomScoreSetter::SetOne(
-    const pid_t pid, const int32_t score, std::string* errors) {
+void OomScoreSetter::SetOne(const pid_t pid,
+                            const int32_t score,
+                            std::string* errors) {
   if (!IsValidOwner(pid, errors)) {
     PrintAndAppendError(
         errors,
@@ -170,15 +169,15 @@ void OomScoreSetter::SetOne(
   if (bytes_written < 0) {
     write_error = strerror(errno);
   } else if ((size_t)bytes_written != len) {
-    write_error = base::StringPrintf(
-        "%zd instead of %zu bytes written", bytes_written, len);
+    write_error = base::StringPrintf("%zd instead of %zu bytes written",
+                                     bytes_written, len);
   }
 
   if (!write_error.empty()) {
     PrintAndAppendError(
-        errors, base::StringPrintf(
-            "Write %d to %s failed: %s",
-            score, oom_file.value().c_str(), write_error.c_str()));
+        errors,
+        base::StringPrintf("Write %d to %s failed: %s", score,
+                           oom_file.value().c_str(), write_error.c_str()));
   }
 }
 
@@ -195,7 +194,7 @@ bool OomScoreSetter::IsValidOwner(const pid_t pid, std::string* errors) {
 
   uid_t namespace_root_uid = handler.GetUserNamespaceRootUid(errors);
   VLOG(2) << "Root of the user namespace " << pid
-            << " is in: " << namespace_root_uid;
+          << " is in: " << namespace_root_uid;
   if (IsValidUid(namespace_root_uid) && namespace_root_uid == android_root_uid_)
     return true;
 

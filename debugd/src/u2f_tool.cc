@@ -26,20 +26,16 @@ constexpr char kOverrideConfigDir[] = "/var/lib/u2f/force";
 constexpr char kJobName[] = "u2fd";
 
 constexpr const char* kKnownFlags[] = {
-  u2f_flags::kU2f,
-  u2f_flags::kG2f,
-  u2f_flags::kVerbose,
-  u2f_flags::kUserKeys,
-  u2f_flags::kAllowlistData,
+    u2f_flags::kU2f,      u2f_flags::kG2f,           u2f_flags::kVerbose,
+    u2f_flags::kUserKeys, u2f_flags::kAllowlistData,
 };
 
 int ControlU2fd(bool start) {
   const char* action = start ? "start" : "stop";
 
-  return ProcessWithOutput::RunProcess("/sbin/initctl",
-                                       {action, kJobName},
+  return ProcessWithOutput::RunProcess("/sbin/initctl", {action, kJobName},
                                        true,     // requires root
-                                       false,     // disable_sandbox
+                                       false,    // disable_sandbox
                                        nullptr,  // stdin
                                        nullptr,  // stdout
                                        nullptr,  // stderr

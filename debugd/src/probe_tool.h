@@ -19,10 +19,10 @@ class ProbeTool {
   ~ProbeTool() = default;
 
   // Executes the function defined for runtime_probe.
-  bool EvaluateProbeFunction(
-      brillo::ErrorPtr* error, const std::string&
-      sandbox_info, const std::string& probe_statement,
-      brillo::dbus_utils::FileDescriptor *outfd);
+  bool EvaluateProbeFunction(brillo::ErrorPtr* error,
+                             const std::string& sandbox_info,
+                             const std::string& probe_statement,
+                             brillo::dbus_utils::FileDescriptor* outfd);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(ProbeTool);

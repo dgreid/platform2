@@ -103,8 +103,7 @@ class LogTool {
   void GetJournalLog(const base::ScopedFD& fd);
 
   // Returns a representation of |value| with the specified encoding.
-  static std::string EncodeString(std::string value,
-                                  Encoding source_encoding);
+  static std::string EncodeString(std::string value, Encoding source_encoding);
 
  private:
   friend class LogToolTest;

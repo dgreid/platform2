@@ -52,7 +52,7 @@ std::string SwapTool::SwapDisable(bool change_now) const {
   int result;
   std::string output;
 
-  output = RunSwapHelper({"disable", }, &result);
+  output = RunSwapHelper({"disable"}, &result);
   if (result != EXIT_SUCCESS)
     return output;
 
@@ -68,19 +68,19 @@ std::string SwapTool::SwapStartStop(bool on) const {
 
   // We always turn off swap because the config might have changed.
   // Also because the code doesn't like to turn on twice.
-  output = RunSwapHelper({"stop", }, &result);
+  output = RunSwapHelper({"stop"}, &result);
   if (result != EXIT_SUCCESS)
     return output;
 
   if (on)
-    output = RunSwapHelper({"start", }, &result);
+    output = RunSwapHelper({"start"}, &result);
 
   return output;
 }
 
 std::string SwapTool::SwapStatus() const {
   int result;
-  return RunSwapHelper({"status", }, &result);
+  return RunSwapHelper({"status"}, &result);
 }
 
 std::string SwapTool::SwapSetParameter(const std::string& parameter_name,
@@ -97,8 +97,8 @@ bool SwapTool::KstaledSetRatio(brillo::ErrorPtr* error,
   std::string buf = std::to_string(kstaled_ratio);
 
   errno = 0;
-  size_t res = base::WriteFile(base::FilePath(kKstaledRatioPath),
-                               buf.c_str(), buf.size());
+  size_t res = base::WriteFile(base::FilePath(kKstaledRatioPath), buf.c_str(),
+                               buf.size());
   if (res != buf.size()) {
     DEBUGD_ADD_ERROR(error, kSwapToolErrorString, strerror(errno));
     return false;

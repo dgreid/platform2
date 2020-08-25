@@ -14,21 +14,18 @@
 #define RECEIVE_PACKET_SIZE 2048
 #define PACKET_TIMEOUT_MS 1000
 
-int perform_capture(char *device, char *output_file) {
+int perform_capture(char* device, char* output_file) {
   char buf[RECEIVE_PACKET_SIZE];
   const int promiscuous = 0;
   char errbuf[PCAP_ERRBUF_SIZE];
-  pcap_t *pcap = pcap_open_live(device,
-                        sizeof(buf),
-                        promiscuous,
-                        PACKET_TIMEOUT_MS,
-                        errbuf);
+  pcap_t* pcap = pcap_open_live(device, sizeof(buf), promiscuous,
+                                PACKET_TIMEOUT_MS, errbuf);
   if (pcap == nullptr) {
     fprintf(stderr, "Could not open capture handle.\n");
     return -1;
   }
 
-  pcap_dumper_t *dumper  = pcap_dump_open(pcap, output_file);
+  pcap_dumper_t* dumper = pcap_dump_open(pcap, output_file);
   if (dumper == nullptr) {
     fprintf(stderr, "Could not open dump file.\n");
     return -1;
@@ -51,7 +48,7 @@ int perform_capture(char *device, char *output_file) {
       break;
     }
     struct pcap_pkthdr header;
-    const unsigned char *packet = pcap_next(pcap, &header);
+    const unsigned char* packet = pcap_next(pcap, &header);
     if (packet == nullptr || header.len == 0) {
       continue;
     }
@@ -67,10 +64,10 @@ int perform_capture(char *device, char *output_file) {
   return 0;
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   if (argc < 3) {
-     fprintf(stderr, "Usage: %s <device> <output_file>\n", argv[0]);
-     return 1;
+    fprintf(stderr, "Usage: %s <device> <output_file>\n", argv[0]);
+    return 1;
   }
 
   return perform_capture(argv[1], argv[2]);

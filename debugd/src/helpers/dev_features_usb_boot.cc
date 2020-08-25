@@ -33,15 +33,14 @@ bool StartsWith(const std::string& full_string, const std::string& prefix) {
 //   Other: USB boot is enabled if crossystem dev_boot_usb is 1.
 bool IsUsbBootEnabled() {
   std::array<char, VB_MAX_STRING_PROPERTY> crossystem_buffer;
-  if (VbGetSystemPropertyString(
-          "fwid", crossystem_buffer.data(), crossystem_buffer.size())) {
+  if (VbGetSystemPropertyString("fwid", crossystem_buffer.data(),
+                                crossystem_buffer.size())) {
     std::string fwid(crossystem_buffer.data());
     // Older fwid strings (including Mario/Alex/ZGB) are <platform>.<version>.
     if (StartsWith(fwid, "Mario.")) {
       return false;
     } else if (StartsWith(fwid, "Alex.") || StartsWith(fwid, "ZGB.")) {
-      if (VbGetSystemPropertyString("mainfw_type",
-                                    crossystem_buffer.data(),
+      if (VbGetSystemPropertyString("mainfw_type", crossystem_buffer.data(),
                                     crossystem_buffer.size())) {
         return !strcmp(crossystem_buffer.data(), "developer");
       }
@@ -57,8 +56,7 @@ bool IsUsbBootEnabled() {
 bool EnableUsbBoot() {
   std::string error;
   int result = debugd::ProcessWithOutput::RunProcessFromHelper(
-      "enable_dev_usb_boot",
-      debugd::ProcessWithOutput::ArgList{},
+      "enable_dev_usb_boot", debugd::ProcessWithOutput::ArgList{},
       nullptr,  // stdin.
       nullptr,  // stdout.
       &error);  // stderr.

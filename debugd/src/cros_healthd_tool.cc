@@ -39,13 +39,15 @@ constexpr char kNumBits[] = "16";
 constexpr char kBatteryI2cAddress[] = "0x16";
 // The only i2cread argument different across models is the port.
 const std::map<std::string, std::string> kModelToPort = {
-  {"sona", "2"},
-  {"careena", "0"},
-  {"dratini", "5"},
-  {"dorp", "0"}};
+    {"sona", "2"},
+    {"careena", "0"},
+    {"dratini", "5"},
+    {"dorp", "0"},
+};
 const std::map<std::string, std::string> kMetricNameToOffset = {
-  {"temperature_smart", "0x08"},
-  {"manufacture_date_smart", "0x1b"}};
+    {"temperature_smart", "0x08"},
+    {"manufacture_date_smart", "0x1b"},
+};
 // The ectool command used to collect fan speed in RPM.
 constexpr char kGetFanRpmCommand[] = "pwmgetfanrpm";
 

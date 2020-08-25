@@ -27,25 +27,24 @@
 namespace {
 
 const char kUsage[] =
-  "Developer helper tool for getting extended debug logs from the system."
-  "\n"
-  "\n"
-  "This calls back into debugd using the DumpDebugLogs dbus end point."
-  "\n"
-  "\n"
-  "WARNING: The exact contents of the generated output may vary depending on"
-  "\n"
-  "developers' whims.";
+    "Developer helper tool for getting extended debug logs from the system."
+    "\n"
+    "\n"
+    "This calls back into debugd using the DumpDebugLogs dbus end point."
+    "\n"
+    "\n"
+    "WARNING: The exact contents of the generated output may vary depending on"
+    "\n"
+    "developers' whims.";
 
 // Returns a dynamic file name with datestamps in it.
 std::string LogName(bool compress) {
   base::Time::Exploded now;
   base::Time::Now().LocalExplode(&now);
 
-  return base::StringPrintf(
-      "debug-logs_%04i%02i%02i-%02i%02i%02i.%s",
-      now.year, now.month, now.day_of_month, now.hour, now.minute, now.second,
-      compress ? "tgz" : "tar");
+  return base::StringPrintf("debug-logs_%04i%02i%02i-%02i%02i%02i.%s", now.year,
+                            now.month, now.day_of_month, now.hour, now.minute,
+                            now.second, compress ? "tgz" : "tar");
 }
 
 }  // namespace
@@ -83,13 +82,11 @@ int main(int argc, char* argv[]) {
   scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
   CHECK(bus->Connect());
   dbus::ObjectProxy* debugd_proxy = bus->GetObjectProxy(
-      debugd::kDebugdServiceName,
-      dbus::ObjectPath(debugd::kDebugdServicePath));
+      debugd::kDebugdServiceName, dbus::ObjectPath(debugd::kDebugdServicePath));
 
   // Send request for debug logs.
-  dbus::MethodCall method_call(
-      debugd::kDebugdInterface,
-      debugd::kDumpDebugLogs);
+  dbus::MethodCall method_call(debugd::kDebugdInterface,
+                               debugd::kDumpDebugLogs);
   dbus::MessageWriter writer(&method_call);
   writer.AppendBool(FLAGS_compress);
   writer.AppendFileDescriptor(fileno(fp.get()));

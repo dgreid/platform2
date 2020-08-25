@@ -74,7 +74,7 @@ using base::DictionaryValue;
 using base::ListValue;
 using base::Value;
 
-std::string getmac(int fd, const char *ifname) {
+std::string getmac(int fd, const char* ifname) {
   struct ifreq ifr;
   int ret;
   memset(&ifr, 0, sizeof(ifr));
@@ -86,45 +86,45 @@ std::string getmac(int fd, const char *ifname) {
   return base::HexEncode(ifr.ifr_hwaddr.sa_data, 6);
 }
 
-std::string sockaddr2str(struct sockaddr *sa) {
+std::string sockaddr2str(struct sockaddr* sa) {
   char buf[INET6_ADDRSTRLEN];
-  void *addr;
+  void* addr;
   // These need NOLINT because cpplint thinks we're taking the address of a
   // cast, which we aren't - we're taking the address of a member after casting
   // a pointer to a different type.
   if (sa->sa_family == AF_INET)
-    addr = &((struct sockaddr_in *)sa)->sin_addr; // NOLINT
+    addr = &((struct sockaddr_in*)sa)->sin_addr;  // NOLINT
   else if (sa->sa_family == AF_INET6)
-    addr = &((struct sockaddr_in6 *)sa)->sin6_addr; // NOLINT
+    addr = &((struct sockaddr_in6*)sa)->sin6_addr;  // NOLINT
   else
     return "unknown";
-  const char *result = inet_ntop(sa->sa_family, addr, buf, sizeof(buf));
+  const char* result = inet_ntop(sa->sa_family, addr, buf, sizeof(buf));
   return result ?: "invalid";
 }
 
 struct ifflag {
   unsigned int bit;
-  const char *name;
+  const char* name;
 } ifflags[] = {
-  { IFF_UP, "up" },
-  { IFF_BROADCAST, "broadcast" },
-  { IFF_DEBUG, "debug" },
-  { IFF_LOOPBACK, "loopback" },
-  { IFF_POINTOPOINT, "point-to-point" },
-  { IFF_RUNNING, "running" },
-  { IFF_NOARP, "noarp" },
-  { IFF_PROMISC, "promisc" },
-  { IFF_NOTRAILERS, "notrailers" },
-  { IFF_ALLMULTI, "allmulti" },
-  { IFF_MASTER, "master" },
-  { IFF_SLAVE, "slave" },
-  { IFF_MULTICAST, "multi" },
-  { IFF_PORTSEL, "portsel" },
-  { IFF_AUTOMEDIA, "automedia" },
-  { IFF_DYNAMIC, "dynamic" },
-  { IFF_LOWER_UP, "lower-up" },
-  { IFF_DORMANT, "dormant" },
-  { IFF_ECHO, "echo" }
+    {IFF_UP, "up"},
+    {IFF_BROADCAST, "broadcast"},
+    {IFF_DEBUG, "debug"},
+    {IFF_LOOPBACK, "loopback"},
+    {IFF_POINTOPOINT, "point-to-point"},
+    {IFF_RUNNING, "running"},
+    {IFF_NOARP, "noarp"},
+    {IFF_PROMISC, "promisc"},
+    {IFF_NOTRAILERS, "notrailers"},
+    {IFF_ALLMULTI, "allmulti"},
+    {IFF_MASTER, "master"},
+    {IFF_SLAVE, "slave"},
+    {IFF_MULTICAST, "multi"},
+    {IFF_PORTSEL, "portsel"},
+    {IFF_AUTOMEDIA, "automedia"},
+    {IFF_DYNAMIC, "dynamic"},
+    {IFF_LOWER_UP, "lower-up"},
+    {IFF_DORMANT, "dormant"},
+    {IFF_ECHO, "echo"},
 };
 
 std::unique_ptr<ListValue> flags2list(unsigned int flags) {
@@ -140,24 +140,24 @@ std::unique_ptr<ListValue> flags2list(unsigned int flags) {
 
 class NetInterface {
  public:
-  NetInterface(int fd, const char *name);
+  NetInterface(int fd, const char* name);
   ~NetInterface() = default;
 
   bool Init();
-  void AddAddress(struct ifaddrs *ifa);
+  void AddAddress(struct ifaddrs* ifa);
   void AddSignalStrength(const std::string& name, int strength);
   std::unique_ptr<Value> ToValue() const;
 
  private:
   int fd_;
-  const char *name_;
+  const char* name_;
   std::unique_ptr<DictionaryValue> ipv4_;
   std::unique_ptr<DictionaryValue> ipv6_;
   std::unique_ptr<ListValue> flags_;
   std::string mac_;
   std::unique_ptr<DictionaryValue> signal_strengths_;
 
-  void AddAddressTo(DictionaryValue *dv, struct sockaddr *sa);
+  void AddAddressTo(DictionaryValue* dv, struct sockaddr* sa);
 };
 
 NetInterface::NetInterface(int fd, const char* name) : fd_(fd), name_(name) {}
@@ -174,15 +174,15 @@ void NetInterface::AddSignalStrength(const std::string& name, int strength) {
   signal_strengths_->SetKey(name, base::Value(strength));
 }
 
-void NetInterface::AddAddressTo(DictionaryValue *dv, struct sockaddr *sa) {
+void NetInterface::AddAddressTo(DictionaryValue* dv, struct sockaddr* sa) {
   if (!dv->HasKey("addrs"))
     dv->Set("addrs", std::make_unique<ListValue>());
-  ListValue *lv;
+  ListValue* lv;
   dv->Get("addrs", reinterpret_cast<Value**>(&lv));
   lv->Append(std::make_unique<Value>(sockaddr2str(sa)));
 }
 
-void NetInterface::AddAddress(struct ifaddrs *ifa) {
+void NetInterface::AddAddress(struct ifaddrs* ifa) {
   if (!flags_)
     flags_ = flags2list(ifa->ifa_flags);
   if (!ifa->ifa_addr)
@@ -197,9 +197,8 @@ void NetInterface::AddAddress(struct ifaddrs *ifa) {
                  std::make_unique<Value>(sockaddr2str(ifa->ifa_netmask)));
     }
     if (!ipv4_->HasKey("destination")) {
-      ipv4_->Set(
-          "destination",
-          std::make_unique<Value>(sockaddr2str(ifa->ifa_broadaddr)));
+      ipv4_->Set("destination",
+                 std::make_unique<Value>(sockaddr2str(ifa->ifa_broadaddr)));
     }
   } else if (ifa->ifa_addr->sa_family == AF_INET6) {
     // An IPv6 address.
@@ -263,7 +262,7 @@ void AddSignalStrengths(
 }
 
 int main() {
-  struct ifaddrs *ifaddrs;
+  struct ifaddrs* ifaddrs;
   int fd;
   DictionaryValue result;
   std::map<std::string, std::unique_ptr<NetInterface>> interfaces;
@@ -279,7 +278,7 @@ int main() {
     exit(1);
   }
 
-  for (struct ifaddrs *ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
+  for (struct ifaddrs* ifa = ifaddrs; ifa; ifa = ifa->ifa_next) {
     auto& interface = interfaces[ifa->ifa_name];
     if (!interface) {
       interface = std::make_unique<NetInterface>(fd, ifa->ifa_name);

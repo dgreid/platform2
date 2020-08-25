@@ -68,8 +68,7 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
   u2f_tool_ = std::make_unique<U2fTool>();
   verify_ro_tool_ = std::make_unique<VerifyRoTool>();
   vm_concierge_tool_ = std::make_unique<SimpleServiceTool>(
-      "vm_concierge", bus,
-      vm_tools::concierge::kVmConciergeServiceName,
+      "vm_concierge", bus, vm_tools::concierge::kVmConciergeServiceName,
       vm_tools::concierge::kVmConciergeServicePath);
   vm_plugin_dispatcher_tool_ = std::make_unique<SimpleServiceTool>(
       "vmplugin_dispatcher", bus,
@@ -82,7 +81,7 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
       std::make_unique<SchedulerConfigurationTool>();
   if (dev_features_tool_wrapper_->restriction().InDevMode() &&
       base::PathExists(
-      base::FilePath(debugd::kDevFeaturesChromeRemoteDebuggingFlagPath))) {
+          base::FilePath(debugd::kDevFeaturesChromeRemoteDebuggingFlagPath))) {
     session_manager_proxy_->EnableChromeRemoteDebugging();
   }
 }
@@ -93,11 +92,11 @@ void DebugdDBusAdaptor::RegisterAsync(
   DCHECK(my_interface);
   my_interface->AddProperty(kCrashSenderTestMode, &crash_sender_test_mode_);
   crash_sender_test_mode_.SetUpdateCallback(
-    base::Bind(&CrashSenderTool::OnTestModeChanged,
-               base::Unretained(crash_sender_tool_.get())));
+      base::Bind(&CrashSenderTool::OnTestModeChanged,
+                 base::Unretained(crash_sender_tool_.get())));
   crash_sender_test_mode_.SetValue(false);
   crash_sender_test_mode_.SetAccessMode(
-    brillo::dbus_utils::ExportedPropertyBase::Access::kReadWrite);
+      brillo::dbus_utils::ExportedPropertyBase::Access::kReadWrite);
   RegisterWithDBusObject(&dbus_object_);
   dbus_object_.RegisterAsync(cb);
 }
@@ -133,7 +132,7 @@ bool DebugdDBusAdaptor::TracePathStop(brillo::ErrorPtr* error,
 }
 
 void DebugdDBusAdaptor::SystraceStart(const std::string& categories) {
-  (void) systrace_tool_->Start(categories);
+  (void)systrace_tool_->Start(categories);
 }
 
 void DebugdDBusAdaptor::SystraceStop(const base::ScopedFD& outfd) {
@@ -158,15 +157,14 @@ std::string DebugdDBusAdaptor::GetNetworkStatus() {
   return network_status_tool_->GetNetworkStatus();
 }
 
-bool DebugdDBusAdaptor::GetPerfOutput(
-    brillo::ErrorPtr* error,
-    uint32_t duration_sec,
-    const std::vector<std::string>& perf_args,
-    int32_t* status,
-    std::vector<uint8_t>* perf_data,
-    std::vector<uint8_t>* perf_stat) {
-  return perf_tool_->GetPerfOutput(
-      duration_sec, perf_args, perf_data, perf_stat, status, error);
+bool DebugdDBusAdaptor::GetPerfOutput(brillo::ErrorPtr* error,
+                                      uint32_t duration_sec,
+                                      const std::vector<std::string>& perf_args,
+                                      int32_t* status,
+                                      std::vector<uint8_t>* perf_data,
+                                      std::vector<uint8_t>* perf_stat) {
+  return perf_tool_->GetPerfOutput(duration_sec, perf_args, perf_data,
+                                   perf_stat, status, error);
 }
 
 bool DebugdDBusAdaptor::GetPerfOutputFd(
@@ -222,8 +220,7 @@ std::string DebugdDBusAdaptor::GetExample() {
 }
 
 int32_t DebugdDBusAdaptor::CupsAddAutoConfiguredPrinter(
-    const std::string& name,
-    const std::string& uri) {
+    const std::string& name, const std::string& uri) {
   return cups_tool_->AddAutoConfiguredPrinter(name, uri);
 }
 
@@ -231,8 +228,7 @@ int32_t DebugdDBusAdaptor::CupsAddManuallyConfiguredPrinter(
     const std::string& name,
     const std::string& uri,
     const std::vector<uint8_t>& ppd_contents) {
-  return cups_tool_->AddManuallyConfiguredPrinter(
-      name, uri, ppd_contents);
+  return cups_tool_->AddManuallyConfiguredPrinter(name, uri, ppd_contents);
 }
 
 bool DebugdDBusAdaptor::CupsRemovePrinter(const std::string& name) {
@@ -285,8 +281,7 @@ bool DebugdDBusAdaptor::MemtesterStop(brillo::ErrorPtr* error,
   return memory_tool_->Stop(handle, error);
 }
 
-std::string DebugdDBusAdaptor::BadblocksStart(
-    const base::ScopedFD& outfd) {
+std::string DebugdDBusAdaptor::BadblocksStart(const base::ScopedFD& outfd) {
   return storage_tool_->Start(outfd);
 }
 
@@ -351,8 +346,7 @@ bool DebugdDBusAdaptor::SetUserPassword(brillo::ErrorPtr* error,
 }
 
 bool DebugdDBusAdaptor::EnableChromeDevFeatures(
-    brillo::ErrorPtr* error,
-    const std::string& root_password) {
+    brillo::ErrorPtr* error, const std::string& root_password) {
   auto tool = dev_features_tool_wrapper_->GetTool(error);
   return tool && tool->EnableChromeDevFeatures(root_password, error);
 }
@@ -372,16 +366,14 @@ bool DebugdDBusAdaptor::QueryDevFeatures(brillo::ErrorPtr* error,
 }
 
 bool DebugdDBusAdaptor::EnableDevCoredumpUpload(brillo::ErrorPtr* error) {
-  if (base::PathExists(
-      base::FilePath(debugd::kDeviceCoredumpUploadFlagPath))) {
+  if (base::PathExists(base::FilePath(debugd::kDeviceCoredumpUploadFlagPath))) {
     VLOG(1) << "Device coredump upload already enabled";
     return true;
   }
-  if (base::WriteFile(
-      base::FilePath(debugd::kDeviceCoredumpUploadFlagPath), "", 0) < 0) {
-    DEBUGD_ADD_ERROR(error,
-              kDevCoredumpDBusErrorString,
-              "Failed to write flag file.");
+  if (base::WriteFile(base::FilePath(debugd::kDeviceCoredumpUploadFlagPath), "",
+                      0) < 0) {
+    DEBUGD_ADD_ERROR(error, kDevCoredumpDBusErrorString,
+                     "Failed to write flag file.");
     PLOG(ERROR) << "Failed to write flag file.";
     return false;
   }
@@ -390,15 +382,14 @@ bool DebugdDBusAdaptor::EnableDevCoredumpUpload(brillo::ErrorPtr* error) {
 
 bool DebugdDBusAdaptor::DisableDevCoredumpUpload(brillo::ErrorPtr* error) {
   if (!base::PathExists(
-      base::FilePath(debugd::kDeviceCoredumpUploadFlagPath))) {
+          base::FilePath(debugd::kDeviceCoredumpUploadFlagPath))) {
     VLOG(1) << "Device coredump upload already disabled";
     return true;
   }
-  if (!base::DeleteFile(
-      base::FilePath(debugd::kDeviceCoredumpUploadFlagPath), false)) {
-    DEBUGD_ADD_ERROR(error,
-              kDevCoredumpDBusErrorString,
-              "Failed to delete flag file.");
+  if (!base::DeleteFile(base::FilePath(debugd::kDeviceCoredumpUploadFlagPath),
+                        false)) {
+    DEBUGD_ADD_ERROR(error, kDevCoredumpDBusErrorString,
+                     "Failed to delete flag file.");
     PLOG(ERROR) << "Failed to delete flag file.";
     return false;
   }
@@ -406,7 +397,8 @@ bool DebugdDBusAdaptor::DisableDevCoredumpUpload(brillo::ErrorPtr* error) {
 }
 
 bool DebugdDBusAdaptor::KstaledSetRatio(brillo::ErrorPtr* error,
-    uint8_t kstaled_ratio, bool* out_result) {
+                                        uint8_t kstaled_ratio,
+                                        bool* out_result) {
   *out_result = swap_tool_->KstaledSetRatio(error, kstaled_ratio);
   return *out_result;
 }
@@ -428,8 +420,7 @@ std::string DebugdDBusAdaptor::SwapStatus() {
 }
 
 std::string DebugdDBusAdaptor::SwapSetParameter(
-    const std::string& parameter_name,
-    int32_t parameter_value) {
+    const std::string& parameter_name, int32_t parameter_value) {
   return swap_tool_->SwapSetParameter(parameter_name, parameter_value);
 }
 
@@ -525,12 +516,12 @@ void DebugdDBusAdaptor::StopVmPluginDispatcher() {
 bool DebugdDBusAdaptor::SetRlzPingSent(brillo::ErrorPtr* error) {
   std::string stderr;
   int result = ProcessWithOutput::RunProcess(
-      "/usr/sbin/vpd", {"-i", "RW_VPD", "-s", std::string(kShouldSendRlzPingKey)
-      + "=0"},
-      true,      // requires root
-      false,     // disable_sandbox
-      nullptr,   // stdin
-      nullptr,   // stdout
+      "/usr/sbin/vpd",
+      {"-i", "RW_VPD", "-s", std::string(kShouldSendRlzPingKey) + "=0"},
+      true,     // requires root
+      false,    // disable_sandbox
+      nullptr,  // stdin
+      nullptr,  // stdout
       &stderr, error);
   if (result != EXIT_SUCCESS) {
     std::string error_string =
@@ -543,12 +534,12 @@ bool DebugdDBusAdaptor::SetRlzPingSent(brillo::ErrorPtr* error) {
   // Remove |kRlzEmbargoEndDateKey|, which is no longer useful after
   // |kShouldSendRlzPingKey| is updated.
   result = ProcessWithOutput::RunProcess(
-      "/usr/sbin/vpd", {"-i", "RW_VPD", "-d",
-      std::string(kRlzEmbargoEndDateKey)},
-      true,      // requires root
-      false,     // disable_sandbox
-      nullptr,   // stdin
-      nullptr,   // stdout
+      "/usr/sbin/vpd",
+      {"-i", "RW_VPD", "-d", std::string(kRlzEmbargoEndDateKey)},
+      true,     // requires root
+      false,    // disable_sandbox
+      nullptr,  // stdin
+      nullptr,  // stdout
       &stderr, error);
   if (result != EXIT_SUCCESS) {
     std::string error_string =
@@ -558,13 +549,12 @@ bool DebugdDBusAdaptor::SetRlzPingSent(brillo::ErrorPtr* error) {
     PLOG(ERROR) << error_string;
   }
   // Regenerate the vpd cache log.
-  result = ProcessWithOutput::RunProcess(
-      "/usr/sbin/dump_vpd_log", {"--force"},
-      true,      // requires root
-      false,     // disable_sandbox
-      nullptr,   // stdin
-      nullptr,   // stdout
-      &stderr, error);
+  result = ProcessWithOutput::RunProcess("/usr/sbin/dump_vpd_log", {"--force"},
+                                         true,     // requires root
+                                         false,    // disable_sandbox
+                                         nullptr,  // stdin
+                                         nullptr,  // stdout
+                                         &stderr, error);
   if (result != EXIT_SUCCESS) {
     std::string error_string =
         "Failed to dump vpd log with exit code: " + std::to_string(result) +
@@ -584,12 +574,12 @@ bool DebugdDBusAdaptor::UpdateAndVerifyFWOnUsbStart(
     const std::string& image_file,
     const std::string& ro_db_dir,
     std::string* handle) {
-  return verify_ro_tool_->UpdateAndVerifyFWOnUsb(
-      error, outfd, image_file, ro_db_dir, handle);
+  return verify_ro_tool_->UpdateAndVerifyFWOnUsb(error, outfd, image_file,
+                                                 ro_db_dir, handle);
 }
 
 bool DebugdDBusAdaptor::UpdateAndVerifyFWOnUsbStop(brillo::ErrorPtr* error,
-                                     const std::string& handle) {
+                                                   const std::string& handle) {
   return verify_ro_tool_->Stop(handle, error);
 }
 
@@ -616,9 +606,9 @@ bool DebugdDBusAdaptor::EvaluateProbeFunction(
     brillo::ErrorPtr* error,
     const std::string& sandbox_info,
     const std::string& probe_statement,
-    brillo::dbus_utils::FileDescriptor *outfd) {
-  return probe_tool_->EvaluateProbeFunction(
-          error, sandbox_info, probe_statement, outfd);
+    brillo::dbus_utils::FileDescriptor* outfd) {
+  return probe_tool_->EvaluateProbeFunction(error, sandbox_info,
+                                            probe_statement, outfd);
 }
 
 bool DebugdDBusAdaptor::CollectFanSpeed(brillo::ErrorPtr* error,

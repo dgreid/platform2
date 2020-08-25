@@ -84,8 +84,7 @@ void enter_vfs_namespace() {
   // In case we start before avahi-daemon, make sure the path exists.
   mkdir("/var/run/avahi-daemon", 0755);
   // Mount /run/avahi-daemon in order to perform mdns name resolution.
-  if (minijail_bind(j.get(), "/run/avahi-daemon", "/run/avahi-daemon",
-                    0))
+  if (minijail_bind(j.get(), "/run/avahi-daemon", "/run/avahi-daemon", 0))
     LOG(FATAL) << "minijail_bind(\"/run/avahi-daemon\") failed";
 
   // Since shill provides network resolution settings, bind mount it.
@@ -141,8 +140,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   void RegisterDBusObjectsAsync(
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override {
     adaptor_.reset(new debugd::DebugdDBusAdaptor(bus_));
-    adaptor_->RegisterAsync(sequencer->GetHandler(
-        "RegisterAsync() failed.", true));
+    adaptor_->RegisterAsync(
+        sequencer->GetHandler("RegisterAsync() failed.", true));
   }
 
  private:

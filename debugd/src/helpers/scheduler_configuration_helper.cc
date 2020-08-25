@@ -25,8 +25,8 @@
 #endif
 
 using debugd::scheduler_configuration::kConservativeScheduler;
-using debugd::scheduler_configuration::kPerformanceScheduler;
 using debugd::scheduler_configuration::kCoreIsolationScheduler;
+using debugd::scheduler_configuration::kPerformanceScheduler;
 
 namespace {
 
@@ -64,10 +64,9 @@ void EnterSandbox() {
 int main(int argc, char* argv[]) {
   brillo::InitLog(brillo::kLogToStderr);
 
-  std::string policy_flag = std::string("Set to either ") +
-                            kConservativeScheduler + " or " +
-                            kCoreIsolationScheduler + " or " +
-                            kPerformanceScheduler + ".";
+  std::string policy_flag =
+      std::string("Set to either ") + kConservativeScheduler + " or " +
+      kCoreIsolationScheduler + " or " + kPerformanceScheduler + ".";
   DEFINE_string(policy, "", policy_flag.c_str());
   brillo::FlagHelper::Init(argc, argv, "scheduler_configuration_helper");
 

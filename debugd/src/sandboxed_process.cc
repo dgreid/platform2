@@ -52,19 +52,18 @@ SandboxedProcess::SandboxedProcess()
       set_capabilities_(false),
       inherit_usergroups_(false),
       user_(kDefaultUser),
-      group_(kDefaultGroup) {
-}
+      group_(kDefaultGroup) {}
 
 bool SandboxedProcess::Init(
     const std::vector<std::string>& minijail_extra_args) {
   if (sandboxing_ && (user_.empty() || group_.empty())) {
-      // Cannot sandbox without user/group.
-      return false;
+    // Cannot sandbox without user/group.
+    return false;
   }
 
   if (set_capabilities_ && (!sandboxing_ || user_ == "root")) {
-      // Restricting capabilities requires dropping root.
-      return false;
+    // Restricting capabilities requires dropping root.
+    return false;
   }
 
   AddArg(kMiniJail);
@@ -171,8 +170,8 @@ bool SandboxedProcess::KillProcessGroup() {
     if (kill(minijail_pid, sig) != 0) {
       // ESRCH means the process already exited.
       if (errno != ESRCH) {
-        PLOG(WARNING) << "failed to kill " << minijail_pid
-                      << " with signal " << sig;
+        PLOG(WARNING) << "failed to kill " << minijail_pid << " with signal "
+                      << sig;
       }
       break;
     }

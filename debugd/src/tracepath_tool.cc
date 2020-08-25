@@ -15,10 +15,9 @@ const char kTracepath6[] = "/usr/sbin/tracepath6";
 
 }  // namespace
 
-std::string TracePathTool::Start(
-    const base::ScopedFD& outfd,
-    const std::string& destination,
-    const brillo::VariantDictionary& options) {
+std::string TracePathTool::Start(const base::ScopedFD& outfd,
+                                 const std::string& destination,
+                                 const brillo::VariantDictionary& options) {
   ProcessWithId* p =
       CreateProcess(true /* sandboxed */, false /* access_root_mount_ns */);
   if (!p)

@@ -47,7 +47,8 @@ constexpr int kLpadminNormalFailure = 1;
 // Returns the exit code for the executed process.
 // By default disallow root mount namespace. Passing true as optional argument
 // enables root mount namespace.
-int RunAsUser(const std::string& user, const std::string& group,
+int RunAsUser(const std::string& user,
+              const std::string& group,
               const std::string& command,
               const std::string& seccomp_policy,
               const ProcessWithOutput::ArgList& arg_list,
@@ -109,7 +110,7 @@ int RunAsUser(const std::string& user, const std::string& group,
 
 // Runs cupstestppd on |ppd_content| returns the result code.  0 is the expected
 // success code.
-int TestPPD(const std::vector<uint8_t> & ppd_content) {
+int TestPPD(const std::vector<uint8_t>& ppd_content) {
   return RunAsUser(kLpadminUser, kLpadminGroup, kTestPPDCommand,
                    kTestPPDSeccompPolicy, {"-"}, &(ppd_content),
                    true /* root_mount_ns */);
@@ -121,8 +122,8 @@ int Lpadmin(const ProcessWithOutput::ArgList& arg_list,
             const std::vector<uint8_t>* std_input = nullptr) {
   // Run in lp group so we can read and write /run/cups/cups.sock.
   return RunAsUser(kLpadminUser, kLpGroup, kLpadminCommand,
-                   kLpadminSeccompPolicy, arg_list, std_input,
-                   false, inherit_usergroups);
+                   kLpadminSeccompPolicy, arg_list, std_input, false,
+                   inherit_usergroups);
 }
 
 // Checks whether the scheme for the given |uri| is one of the required schemes
@@ -181,7 +182,6 @@ int32_t CupsTool::AddManuallyConfiguredPrinter(
     const std::string& name,
     const std::string& uri,
     const std::vector<uint8_t>& ppd_contents) {
-
   int result = TestPPD(ppd_contents);
   if (result != EXIT_SUCCESS) {
     LOG(ERROR) << "PPD failed validation";
@@ -194,8 +194,8 @@ int32_t CupsTool::AddManuallyConfiguredPrinter(
   }
 
   // lpadmin only returns 0 for success and 1 for failure.
-  result = Lpadmin({"-v", uri, "-p", name, "-P", "-", "-E"}, false,
-                   &ppd_contents);
+  result =
+      Lpadmin({"-v", uri, "-p", name, "-P", "-", "-E"}, false, &ppd_contents);
   if (result != EXIT_SUCCESS) {
     return CupsResult::CUPS_LPADMIN_FAILURE;
   }

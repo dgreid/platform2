@@ -19,8 +19,7 @@ class MemtesterTool : public SubprocessTool {
   MemtesterTool() = default;
   ~MemtesterTool() override = default;
 
-  std::string Start(const base::ScopedFD& outfd,
-                    const uint32_t& memory);
+  std::string Start(const base::ScopedFD& outfd, const uint32_t& memory);
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MemtesterTool);

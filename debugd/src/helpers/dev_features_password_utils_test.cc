@@ -43,8 +43,8 @@ class DevFeaturesPasswordHelperTest : public Test {
  public:
   DevFeaturesPasswordHelperTest() {
     ON_CALL(utils_, HashPassword(kTestPassword, _))
-        .WillByDefault(DoAll(SetArgPointee<1>(kTestPasswordHashed),
-                             Return(true)));
+        .WillByDefault(
+            DoAll(SetArgPointee<1>(kTestPasswordHashed), Return(true)));
     // Start with an empty temp directory but no password file.
     CHECK(temp_dir_.CreateUniqueTempDir());
     file_path_ = temp_dir_.GetPath().Append("password.temp");

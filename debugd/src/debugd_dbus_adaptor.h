@@ -164,7 +164,8 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   bool EnableDevCoredumpUpload(brillo::ErrorPtr* error) override;
   bool DisableDevCoredumpUpload(brillo::ErrorPtr* error) override;
   std::string SetOomScoreAdj(const std::map<pid_t, int32_t>& scores) override;
-  bool KstaledSetRatio(brillo::ErrorPtr* error, uint8_t kstaled_ratio,
+  bool KstaledSetRatio(brillo::ErrorPtr* error,
+                       uint8_t kstaled_ratio,
                        bool* out_result) override;
   std::string SwapEnable(int32_t size, bool change_now) override;
   std::string SwapDisable(bool change_now) override;

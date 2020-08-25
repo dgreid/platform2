@@ -31,7 +31,8 @@ class SupplicantProxy {
     dbus::Property<std::string> debug_level;
 
     explicit Properties(dbus::ObjectProxy* proxy)
-        : dbus::PropertySet(proxy, kSupplicantServiceName,
+        : dbus::PropertySet(proxy,
+                            kSupplicantServiceName,
                             dbus::PropertySet::PropertyChangedCallback()) {
       RegisterProperty(kSupplicantDebugLevel, &debug_level);
     }
@@ -100,14 +101,11 @@ void MaybeWriteSysfs(const char* sysfs_path, const char* data) {
   }
 }
 void WifiSetDebugLevels(bool enable) {
-  MaybeWriteSysfs(kIwlwifiDebugFlag,
-                  enable ? kIwlwifiEnable : kIwlwifiDisable);
+  MaybeWriteSysfs(kIwlwifiDebugFlag, enable ? kIwlwifiEnable : kIwlwifiDisable);
 
-  MaybeWriteSysfs(kMwifiexDebugFlag,
-                  enable ? kMwifiexEnable : kMwifiexDisable);
+  MaybeWriteSysfs(kMwifiexDebugFlag, enable ? kMwifiexEnable : kMwifiexDisable);
 
-  MaybeWriteSysfs(kAth10kDebugFlag,
-                  enable ? kAth10kEnable : kAth10kDisable);
+  MaybeWriteSysfs(kAth10kDebugFlag, enable ? kAth10kEnable : kAth10kDisable);
 
   MaybeWriteSysfs(kRtw88DebugFlag, enable ? kRtw88Enable : kRtw88Disable);
 }

@@ -45,10 +45,10 @@ ParseResult GetOption(const brillo::VariantDictionary& options,
   if (!it->second.GetValue(value)) {
     std::string expected = brillo::GetUndecoratedTypeName<T>();
     std::string got = it->second.GetUndecoratedTypeName();
-    DEBUGD_ADD_ERROR_FMT(error,
-                  kOptionParsingErrorString,
-                  "Option \"%s\" has the wrong type (expected %s, got %s)",
-                  key.c_str(), expected.c_str(), got.c_str());
+    DEBUGD_ADD_ERROR_FMT(
+        error, kOptionParsingErrorString,
+        "Option \"%s\" has the wrong type (expected %s, got %s)", key.c_str(),
+        expected.c_str(), got.c_str());
     return ParseResult::PARSE_ERROR;
   }
   return ParseResult::PARSED;

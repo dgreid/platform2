@@ -24,8 +24,9 @@ const char kUnsupportedPerfToolErrorName[] =
 const char kProcessErrorName[] = "org.chromium.debugd.error.RunProcess";
 const char kStopProcessErrorName[] = "org.chromium.debugd.error.StopProcess";
 
-const char kArgsError[] = "perf_args must begin with {\"perf\", \"record\"}, "
-                          " {\"perf\", \"stat\"}, or {\"perf\", \"mem\"}";
+const char kArgsError[] =
+    "perf_args must begin with {\"perf\", \"record\"}, "
+    " {\"perf\", \"stat\"}, or {\"perf\", \"mem\"}";
 
 // Location of quipper on ChromeOS.
 const char kQuipperLocation[] = "/usr/bin/quipper";
@@ -86,8 +87,8 @@ bool PerfTool::GetPerfOutput(uint32_t duration_secs,
   ProcessWithOutput process;
   process.SandboxAs("root", "root");
   if (!process.Init()) {
-    DEBUGD_ADD_ERROR(
-        error, kProcessErrorName, "Process initialization failure.");
+    DEBUGD_ADD_ERROR(error, kProcessErrorName,
+                     "Process initialization failure.");
     return false;
   }
 
@@ -103,16 +104,16 @@ bool PerfTool::GetPerfOutput(uint32_t duration_secs,
   }
 
   switch (subcommand) {
-  case PERF_COMMAND_RECORD:
-  case PERF_COMMAND_MEM:
-    perf_data->assign(output_string.begin(), output_string.end());
-    break;
-  case PERF_COMMAND_STAT:
-    perf_stat->assign(output_string.begin(), output_string.end());
-    break;
-  default:
-    // Discard the output.
-    break;
+    case PERF_COMMAND_RECORD:
+    case PERF_COMMAND_MEM:
+      perf_data->assign(output_string.begin(), output_string.end());
+      break;
+    case PERF_COMMAND_STAT:
+      perf_stat->assign(output_string.begin(), output_string.end());
+      break;
+    default:
+      // Discard the output.
+      break;
   }
 
   return true;
@@ -153,8 +154,8 @@ bool PerfTool::GetPerfOutputFd(uint32_t duration_secs,
   quipper_process_ = std::make_unique<SandboxedProcess>();
   quipper_process_->SandboxAs("root", "root");
   if (!quipper_process_->Init()) {
-    DEBUGD_ADD_ERROR(
-        error, kProcessErrorName, "Process initialization failure.");
+    DEBUGD_ADD_ERROR(error, kProcessErrorName,
+                     "Process initialization failure.");
     return false;
   }
 

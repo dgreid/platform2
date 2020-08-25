@@ -71,7 +71,7 @@ constexpr const char kPerfDataDescription[] =
     "repository.\n";
 
 #define CMD_KERNEL_MODULE_PARAMS(module_name) \
-    "cd /sys/module/" #module_name "/parameters 2>/dev/null && grep -sH ^ *"
+  "cd /sys/module/" #module_name "/parameters 2>/dev/null && grep -sH ^ *"
 
 using Log = LogTool::Log;
 constexpr Log::LogType kCommand = Log::kCommand;
@@ -96,6 +96,7 @@ class ArcBugReportLog : public LogTool::Log {
 // * add a row to http://go/cros-feedback-audit and fill it out
 // * email cros-telemetry@
 // (Eventually we'll have a better process, but for now please do this.)
+// clang-format off
 const std::vector<Log> kCommandLogs {
   // We need to enter init's mount namespace because it has /home/chronos
   // mounted which is where the consent knob lives.  We don't have that mount
@@ -341,10 +342,12 @@ const std::vector<Log> kCommandLogs {
   // {kCommand, "setxkbmap", "/usr/bin/setxkbmap -print -query"},
   // {kCommand, "xrandr", "/usr/bin/xrandr --verbose}
 };
+// clang-format on
 
 // netstat and logcat should appear in chrome://system but not in feedback
 // reports.  Open sockets may have privacy implications, and logcat is
 // already incorporated via arc-bugreport.
+// clang-format off
 const std::vector<Log> kExtraLogs {
 #if USE_CELLULAR
   {kCommand, "mm-status", "/usr/bin/modem status"},
@@ -360,7 +363,9 @@ const std::vector<Log> kExtraLogs {
     "/usr/bin/nsenter -t1 -m /usr/sbin/android-sh -c '/system/bin/logcat -d'",
     kRoot, kRoot, Log::kDefaultMaxBytes, LogTool::Encoding::kUtf8},
 };
+// clang-format on
 
+// clang-format off
 const std::vector<Log> kFeedbackLogs {
 #if USE_CELLULAR
   {kCommand, "mm-status", "/usr/bin/modem status-feedback"},
@@ -372,6 +377,7 @@ const std::vector<Log> kFeedbackLogs {
   {kCommand, "wifi_status",
       "/usr/bin/network_diag --wifi-internal --no-log --anonymize"},
 };
+// clang-format on
 
 // Fills |dictionary| with the contents of the logs in |logs|.
 void GetLogsInDictionary(const std::vector<Log>& logs,
@@ -386,9 +392,8 @@ void GetLogsInDictionary(const std::vector<Log>& logs,
 void SerializeLogsAsJSON(const base::DictionaryValue& dictionary,
                          const base::ScopedFD& fd) {
   string logs_json;
-  base::JSONWriter::WriteWithOptions(dictionary,
-                                     base::JSONWriter::OPTIONS_PRETTY_PRINT,
-                                     &logs_json);
+  base::JSONWriter::WriteWithOptions(
+      dictionary, base::JSONWriter::OPTIONS_PRETTY_PRINT, &logs_json);
   base::WriteFileDescriptor(fd.get(), logs_json.c_str(), logs_json.size());
 }
 
@@ -469,7 +474,7 @@ void GetPerfData(LogTool::LogMap* map) {
   // to avoid sampling periodic system activities), with callstack in each
   // sample (-g).
   std::vector<std::string> perf_args = {
-    "perf", "record", "-a", "-g", "-F", "499"
+      "perf", "record", "-a", "-g", "-F", "499",
   };
   std::vector<uint8_t> perf_data;
   int32_t status;
@@ -487,10 +492,9 @@ void GetPerfData(LogTool::LogMap* map) {
   // Base64 encode the compressed data.
   std::string perf_data_str(reinterpret_cast<const char*>(perf_data_xz.data()),
                             perf_data_xz.size());
-  (*map)["perf-data"] =
-      std::string(kPerfDataDescription) +
-      LogTool::EncodeString(std::move(perf_data_str),
-                                LogTool::Encoding::kBase64);
+  (*map)["perf-data"] = std::string(kPerfDataDescription) +
+                        LogTool::EncodeString(std::move(perf_data_str),
+                                              LogTool::Encoding::kBase64);
 }
 
 }  // namespace
@@ -677,14 +681,13 @@ LogTool::LogTool(scoped_refptr<dbus::Bus> bus)
               std::make_unique<ArcBugReportLog>(),
               base::FilePath(kDaemonStoreBaseDir)) {}
 
-base::FilePath LogTool::GetArcBugReportBackupFilePath
-  (const std::string& userhash) {
+base::FilePath LogTool::GetArcBugReportBackupFilePath(
+    const std::string& userhash) {
   CHECK(brillo::cryptohome::home::IsSanitizedUserName(userhash))
       << "Invalid userhash '" << userhash << "'";
 
-  return daemon_store_base_dir_
-    .Append(userhash)
-    .Append(kArcBugReportBackupFileName);
+  return daemon_store_base_dir_.Append(userhash).Append(
+      kArcBugReportBackupFileName);
 }
 
 void LogTool::CreateConnectivityReport(bool wait_for_results) {
@@ -700,9 +703,9 @@ void LogTool::CreateConnectivityReport(bool wait_for_results) {
 
 string LogTool::GetLog(const string& name) {
   string result;
-     GetNamedLogFrom(name, kCommandLogs, &result)
-  || GetNamedLogFrom(name, kExtraLogs, &result)
-  || GetNamedLogFrom(name, kFeedbackLogs, &result);
+  GetNamedLogFrom(name, kCommandLogs, &result) ||
+      GetNamedLogFrom(name, kExtraLogs, &result) ||
+      GetNamedLogFrom(name, kFeedbackLogs, &result);
   return result;
 }
 
@@ -823,8 +826,7 @@ void LogTool::GetJournalLog(const base::ScopedFD& fd) {
 }
 
 // static
-string LogTool::EncodeString(string value,
-                             LogTool::Encoding source_encoding) {
+string LogTool::EncodeString(string value, LogTool::Encoding source_encoding) {
   if (source_encoding == LogTool::Encoding::kBinary)
     return value;
 

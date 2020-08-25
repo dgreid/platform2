@@ -16,7 +16,6 @@
 // }
 // All times are in milliseconds. "time" is the total time taken by ping(1).
 
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -46,7 +45,8 @@ static void Die(const string& why) {
   exit(1);
 }
 
-static int GetIntSwitch(const base::CommandLine* cl, const string& name,
+static int GetIntSwitch(const base::CommandLine* cl,
+                        const string& name,
                         int default_value) {
   int val = default_value;
   if (cl->HasSwitch(name)) {
@@ -61,10 +61,10 @@ static int GetIntSwitch(const base::CommandLine* cl, const string& name,
 
 }  // namespace
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[]) {
   char outbuf[1024];
   char ipbuf[128] = {0};
-  FILE *out;
+  FILE* out;
   int sent = -1, recvd = -1, loss = -1, errors = -1, time = -1;
   float min = 0.0, avg = 0.0, max = 0.0, mdev = 0.0;
 
@@ -88,8 +88,8 @@ int main(int argc, char *argv[]) {
   string size_out = size ? StringPrintf("-s %d", size) : "";
   string ttl_out = ttl ? StringPrintf("-t %d", ttl) : "";
   string timeout_out = timeout ? StringPrintf("-W %d", timeout) : "";
-  string command = StringPrintf("/bin/ping -c %d -w 10 -n %s %s %s %s",
-                                count, ttl_out.c_str(), size_out.c_str(),
+  string command = StringPrintf("/bin/ping -c %d -w 10 -n %s %s %s %s", count,
+                                ttl_out.c_str(), size_out.c_str(),
                                 timeout_out.c_str(), ip_addr.c_str());
 
   // Execute!
@@ -118,9 +118,8 @@ int main(int argc, char *argv[]) {
                       &sent, &recvd, &errors, &loss, &time) == 5) {
       continue;
 
-    } else if (sscanf(outbuf,
-                    "rtt min/avg/max/mdev = %f/%f/%f/%f ms",
-                    &min, &avg, &max, &mdev) == 4) {
+    } else if (sscanf(outbuf, "rtt min/avg/max/mdev = %f/%f/%f/%f ms", &min,
+                      &avg, &max, &mdev) == 4) {
       continue;
     }
   }

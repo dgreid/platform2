@@ -24,8 +24,7 @@ namespace debugd {
 
 bool DevFeaturesPasswordUtils::IsUsernameValid(const std::string& username) {
   regex_t regex;
-  if (regcomp(&regex,
-              "^[a-z_][a-z0-9._-]*$",
+  if (regcomp(&regex, "^[a-z_][a-z0-9._-]*$",
               REG_EXTENDED | REG_ICASE | REG_NOSUB) != 0) {
     return false;
   }
@@ -35,8 +34,7 @@ bool DevFeaturesPasswordUtils::IsUsernameValid(const std::string& username) {
 }
 
 bool DevFeaturesPasswordUtils::IsPasswordSet(
-    const std::string& username,
-    const base::FilePath& password_file) {
+    const std::string& username, const base::FilePath& password_file) {
   std::string file_contents;
   if (!base::ReadFileToString(password_file, &file_contents)) {
     return false;
@@ -50,8 +48,7 @@ bool DevFeaturesPasswordUtils::IsPasswordSet(
 
   regex_t regex;
   std::string regex_string('^' + escaped_username + ":[^!*:]");
-  if (regcomp(&regex,
-              regex_string.c_str(),
+  if (regcomp(&regex, regex_string.c_str(),
               REG_EXTENDED | REG_NOSUB | REG_NEWLINE) != 0) {
     return false;
   }
@@ -78,9 +75,8 @@ bool DevFeaturesPasswordUtils::SetPassword(
 
   // Split the file into lines to handle each user entry individually, set the
   // new user password, and join the lines again.
-  std::vector<std::string> lines =
-    base::SplitString(file_contents, "\n", base::KEEP_WHITESPACE,
-                      base::SPLIT_WANT_ALL);
+  std::vector<std::string> lines = base::SplitString(
+      file_contents, "\n", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
   SetPasswordInEntries(username, hashed_password, &lines);
   file_contents = base::JoinString(lines, "\n");
 
@@ -108,20 +104,19 @@ bool DevFeaturesPasswordUtils::HashPassword(const std::string& password,
                                             std::string* hashed_password) {
   // Run openssl to hash the password.
   std::string error;
-  int result =
-      ProcessWithOutput::RunProcessFromHelper("openssl",
-                                              {"passwd", "-1", "-stdin"},
-                                              &password,        // stdin.
-                                              hashed_password,  // stdout.
-                                              &error);          // stderr.
+  int result = ProcessWithOutput::RunProcessFromHelper(
+      "openssl", {"passwd", "-1", "-stdin"},
+      &password,        // stdin.
+      hashed_password,  // stdout.
+      &error);          // stderr.
   if (result != EXIT_SUCCESS) {
     LOG(WARNING) << "openssl failed with exit code " << result << ": " << error;
     return false;
   }
 
   // Remove any trailing newline.
-  base::TrimWhitespaceASCII(
-      *hashed_password, base::TRIM_TRAILING, hashed_password);
+  base::TrimWhitespaceASCII(*hashed_password, base::TRIM_TRAILING,
+                            hashed_password);
   return true;
 }
 
@@ -136,9 +131,8 @@ bool DevFeaturesPasswordUtils::SetPasswordInEntries(
     if (line.compare(0, user_line_start.length(), user_line_start) == 0) {
       user_found = true;
       // Break the entry into fields and replace the password field.
-      std::vector<std::string> fields =
-          base::SplitString(line, ":", base::KEEP_WHITESPACE,
-                            base::SPLIT_WANT_ALL);
+      std::vector<std::string> fields = base::SplitString(
+          line, ":", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
       if (fields.size() < 2) {
         fields.resize(2);
       }

@@ -24,8 +24,7 @@ constexpr char kCrashLogs[] = "/var/spool/crash";
 
 }  // namespace
 
-void DebugLogsTool::GetDebugLogs(bool is_compressed,
-                                 const base::ScopedFD& fd) {
+void DebugLogsTool::GetDebugLogs(bool is_compressed, const base::ScopedFD& fd) {
   base::ScopedTempDir temp_dir;
   if (!temp_dir.CreateUniqueTempDir()) {
     PLOG(WARNING) << "Failed to create a temporary directory";
@@ -44,7 +43,7 @@ void DebugLogsTool::GetDebugLogs(bool is_compressed,
     const std::string& name = l.first;
     const std::string& contents = l.second;
     if (base::WriteFile(logs_path.Append(name), contents.data(),
-        contents.size()) < 0) {
+                        contents.size()) < 0) {
       PLOG(WARNING) << "Failed to write file: " << name;
     }
   }

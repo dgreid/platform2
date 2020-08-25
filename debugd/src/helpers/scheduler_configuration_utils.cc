@@ -175,8 +175,8 @@ SchedulerConfigurationUtils::DisableSiblings(const std::string& cpu_num) {
 
   // The physical core is the first number in the range.
   if (cpu_num != sibling_nums[0]) {
-    return DisableCPU(cpu_num) ?
-        DisableSiblingsResult::SUCCESS : DisableSiblingsResult::ERROR;
+    return DisableCPU(cpu_num) ? DisableSiblingsResult::SUCCESS
+                               : DisableSiblingsResult::ERROR;
   }
 
   return DisableSiblingsResult::PHYSICAL_CORE;
@@ -305,7 +305,7 @@ bool SchedulerConfigurationUtils::UpdateAllCPUSets() {
   for (const auto& scoped_fd : cpusets_fds_) {
     // This is a best effort, so if it fails, continue on.
     base::WriteFileDescriptor(scoped_fd.get(), online_cpus_str.data(),
-                                   online_cpus_str.size());
+                              online_cpus_str.size());
   }
 
   return true;

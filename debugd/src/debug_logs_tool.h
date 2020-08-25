@@ -16,8 +16,7 @@ class DebugLogsTool {
   explicit DebugLogsTool(scoped_refptr<dbus::Bus> bus) : bus_(bus) {}
   ~DebugLogsTool() = default;
 
-  void GetDebugLogs(bool is_compressed,
-                    const base::ScopedFD& fd);
+  void GetDebugLogs(bool is_compressed, const base::ScopedFD& fd);
 
  private:
   scoped_refptr<dbus::Bus> bus_;

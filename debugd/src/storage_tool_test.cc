@@ -106,7 +106,6 @@ run /run tmpfs rw,seclabel,nosuid,nodev,noexec,relatime,mode=755 0 0
 /dev/loop1 /mnt/stateful_partition rw 0 0
   )";
 
-
 constexpr char kTypeFileDataTarget[] = "/sys/devices/target/type";
 
 constexpr char kTypeFileDataMMC[] = "/sys/devices/mmc_host/mmc0/type";
@@ -115,12 +114,11 @@ TEST(StorageToolTest, TestGetDevice) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath mounts = temp_dir.GetPath().Append("mounts");
-  base::WriteFile(mounts, kMountsDataExample,
-                  sizeof(kMountsDataExample));
+  base::WriteFile(mounts, kMountsDataExample, sizeof(kMountsDataExample));
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/sda");
 }
 
@@ -128,12 +126,11 @@ TEST(StorageToolTest, TestGetDeviceMMC) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath mounts = temp_dir.GetPath().Append("mounts");
-  base::WriteFile(mounts, kMountsDataExampleMMC,
-                  sizeof(kMountsDataExampleMMC));
+  base::WriteFile(mounts, kMountsDataExampleMMC, sizeof(kMountsDataExampleMMC));
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/mmcblk0");
 }
 
@@ -146,7 +143,7 @@ TEST(StorageToolTest, TestGetDeviceMMCRepeatedNumber) {
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/mmcblk3");
 }
 
@@ -154,12 +151,11 @@ TEST(StorageToolTest, TestGetDeviceDM) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath mounts = temp_dir.GetPath().Append("mounts");
-  base::WriteFile(mounts, kMountsDataExampleDM,
-                  sizeof(kMountsDataExampleDM));
+  base::WriteFile(mounts, kMountsDataExampleDM, sizeof(kMountsDataExampleDM));
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/dm-1");
 }
 
@@ -172,7 +168,7 @@ TEST(StorageToolTest, TestGetDeviceNVME) {
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/nvme0n1");
 }
 
@@ -185,7 +181,7 @@ TEST(StorageToolTest, TestGetDeviceLoop) {
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/loop1");
 }
 
@@ -196,7 +192,7 @@ TEST(StorageToolTest, TestGetDeviceNoMounts) {
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "");
 }
 
@@ -204,12 +200,11 @@ TEST(StorageToolTest, TestGetDeviceForNone) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath mounts = temp_dir.GetPath().Append("mounts");
-  base::WriteFile(mounts, kMountsDataForNone,
-                  sizeof(kMountsDataForNone));
+  base::WriteFile(mounts, kMountsDataForNone, sizeof(kMountsDataForNone));
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "");
 }
 
@@ -222,7 +217,7 @@ TEST(StorageToolTest, TestGetDeviceSamePrefix) {
 
   debugd::StorageTool sTool;
   const base::FilePath device =
-    sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
+      sTool.GetDevice(base::FilePath("/mnt/stateful_partition"), mounts);
   EXPECT_STREQ(device.value().c_str(), "/dev/sda");
 }
 
@@ -244,8 +239,7 @@ TEST(StorageToolTest, TestIsSupportedMMC) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath typeFile = temp_dir.GetPath().Append("mmc_type");
   base::FilePath vendFile = temp_dir.GetPath().Append("vendor");
-  base::WriteFile(typeFile, kTypeFileDataMMC,
-                  sizeof(kTypeFileDataMMC));
+  base::WriteFile(typeFile, kTypeFileDataMMC, sizeof(kTypeFileDataMMC));
 
   debugd::StorageTool sTool;
   std::string msg;
@@ -259,8 +253,7 @@ TEST(StorageToolTest, TestIsSupportedNoVend) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath typeFile = temp_dir.GetPath().Append("target_type");
   base::FilePath vendFile = temp_dir.GetPath().Append("vendor");
-  base::WriteFile(typeFile, kTypeFileDataTarget,
-                  sizeof(kTypeFileDataTarget));
+  base::WriteFile(typeFile, kTypeFileDataTarget, sizeof(kTypeFileDataTarget));
 
   debugd::StorageTool sTool;
   std::string msg;
@@ -274,10 +267,9 @@ TEST(StorageToolTest, TestIsSupportedVendEmpty) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath typeFile = temp_dir.GetPath().Append("target_type");
   base::FilePath vendFile = temp_dir.GetPath().Append("vendor");
-  base::WriteFile(typeFile, kTypeFileDataTarget,
-                  sizeof(kTypeFileDataTarget));
+  base::WriteFile(typeFile, kTypeFileDataTarget, sizeof(kTypeFileDataTarget));
 
-  const char *vendData = "";
+  const char* vendData = "";
   base::WriteFile(vendFile, vendData, 0);
 
   debugd::StorageTool sTool;
@@ -292,12 +284,10 @@ TEST(StorageToolTest, TestIsSupportedOther) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath typeFile = temp_dir.GetPath().Append("target_type");
   base::FilePath vendFile = temp_dir.GetPath().Append("vendor");
-  base::WriteFile(typeFile, kTypeFileDataTarget,
-                  sizeof(kTypeFileDataTarget));
+  base::WriteFile(typeFile, kTypeFileDataTarget, sizeof(kTypeFileDataTarget));
 
   constexpr char vendData[] = "OTHER";
-  base::WriteFile(vendFile, vendData,
-                  sizeof(vendData));
+  base::WriteFile(vendFile, vendData, sizeof(vendData));
 
   debugd::StorageTool sTool;
   std::string msg;
@@ -311,12 +301,10 @@ TEST(StorageToolTest, TestIsSupportedATA) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath typeFile = temp_dir.GetPath().Append("target_type");
   base::FilePath vendFile = temp_dir.GetPath().Append("vendor");
-  base::WriteFile(typeFile, kTypeFileDataTarget,
-                  sizeof(kTypeFileDataTarget));
+  base::WriteFile(typeFile, kTypeFileDataTarget, sizeof(kTypeFileDataTarget));
 
   constexpr char vendData[] = "ATA";
-  base::WriteFile(vendFile, vendData,
-                  sizeof(vendData));
+  base::WriteFile(vendFile, vendData, sizeof(vendData));
 
   debugd::StorageTool sTool;
   std::string msg;

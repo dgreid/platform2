@@ -42,7 +42,7 @@ class CrashSenderTool : public SubprocessTool {
 
   // Called when the CrashSenderTestMode dbus property is changed.
   void OnTestModeChanged(
-    const brillo::dbus_utils::ExportedPropertyBase* test_mode_property);
+      const brillo::dbus_utils::ExportedPropertyBase* test_mode_property);
 
  private:
   int next_crash_directory_id_ = 1;

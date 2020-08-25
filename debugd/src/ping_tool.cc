@@ -28,16 +28,16 @@ bool PingTool::Start(const base::ScopedFD& outfd,
                      const brillo::VariantDictionary& options,
                      std::string* out_id,
                      brillo::ErrorPtr* error) {
-  ProcessWithId* p =
-      CreateProcess(true /* sandboxed */, false /* access_root_mount_ns */,
-      {"-pvrl", "--profile=minimalistic-mountns", "--uts",
-       "-k", "tmpfs,/run,tmpfs,MS_NODEV|MS_NOEXEC|MS_NOSUID,mode=755,size=10M",
+  ProcessWithId* p = CreateProcess(
+      true /* sandboxed */, false /* access_root_mount_ns */,
+      {"-pvrl", "--profile=minimalistic-mountns", "--uts", "-k",
+       "tmpfs,/run,tmpfs,MS_NODEV|MS_NOEXEC|MS_NOSUID,mode=755,size=10M",
        // A /run/shill bind mount is needed to access /etc/resolv.conf, which
        // is a symlink to /run/shill/resolv.conf.
        "-b", "/run/shill"});
   if (!p) {
-    DEBUGD_ADD_ERROR(
-        error, kPingToolErrorString, "Could not create ping process");
+    DEBUGD_ADD_ERROR(error, kPingToolErrorString,
+                     "Could not create ping process");
     return false;
   }
 

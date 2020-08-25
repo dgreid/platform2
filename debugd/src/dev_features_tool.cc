@@ -36,13 +36,10 @@ bool RunHelper(const std::string& command,
                int* exit_status,
                brillo::ErrorPtr* error) {
   std::string stderr;
-  int result = ProcessWithOutput::RunHelper(command,
-                                            arguments,
-                                            requires_root,
-                                            stdin,
-                                            nullptr,  // Don't need stdout.
-                                            &stderr,
-                                            error);
+  int result =
+      ProcessWithOutput::RunHelper(command, arguments, requires_root, stdin,
+                                   nullptr,  // Don't need stdout.
+                                   &stderr, error);
   if (!stderr.empty()) {
     DEBUGD_ADD_ERROR(error, kDevFeaturesErrorString, stderr.c_str());
     return false;
@@ -55,35 +52,30 @@ bool RunHelper(const std::string& command,
 
 bool RemoveRootfsVerificationQuery(int* exit_status, brillo::ErrorPtr* error) {
   return RunHelper("dev_features_rootfs_verification", ArgList{"-q"},
-                   true,  // requires root to check if / is writable by root.
+                   true,     // requires root to check if / is writable by root.
                    nullptr,  // no stdin.
-                   exit_status,
-                   error);
+                   exit_status, error);
 }
 
 bool EnableBootFromUsbQuery(int* exit_status, brillo::ErrorPtr* error) {
   return RunHelper("dev_features_usb_boot", ArgList{"-q"},
-                   true,  // requires root for crossystem queries.
+                   true,     // requires root for crossystem queries.
                    nullptr,  // no stdin.
-                   exit_status,
-                   error);
+                   exit_status, error);
 }
 
 bool ConfigureSshServerQuery(int* exit_status, brillo::ErrorPtr* error) {
   return RunHelper("dev_features_ssh", ArgList{"-q"},
-                   true,  // needs root to check for files in 700 folders.
+                   true,     // needs root to check for files in 700 folders.
                    nullptr,  // no stdin.
-                   exit_status,
-                   error);
+                   exit_status, error);
 }
 
 bool EnableChromeRemoteDebuggingQuery(int* exit_status,
                                       brillo::ErrorPtr* error) {
-  return RunHelper("dev_features_chrome_remote_debugging", ArgList{"-q"},
-                   false,
+  return RunHelper("dev_features_chrome_remote_debugging", ArgList{"-q"}, false,
                    nullptr,  // no stdin.
-                   exit_status,
-                   error);
+                   exit_status, error);
 }
 
 bool SetUserPasswordQuery(const std::string& username,
@@ -95,17 +87,16 @@ bool SetUserPasswordQuery(const std::string& username,
     args.push_back("--system");
 
   return RunHelper("dev_features_password", args,
-                   true,  // requires root to read either password file.
+                   true,     // requires root to read either password file.
                    nullptr,  // no stdin.
-                   exit_status,
-                   error);
+                   exit_status, error);
 }
 
 }  // namespace
 
 bool DevFeaturesTool::RemoveRootfsVerification(brillo::ErrorPtr* error) const {
   return RunHelper("dev_features_rootfs_verification", ArgList{},
-                   true,  // requires root for make_dev_ssd.sh script.
+                   true,     // requires root for make_dev_ssd.sh script.
                    nullptr,  // no stdin.
                    nullptr,  // exit status doesn't matter.
                    error);
@@ -113,7 +104,7 @@ bool DevFeaturesTool::RemoveRootfsVerification(brillo::ErrorPtr* error) const {
 
 bool DevFeaturesTool::EnableBootFromUsb(brillo::ErrorPtr* error) const {
   return RunHelper("dev_features_usb_boot", ArgList{},
-                   true,  // requires root for enable_dev_usb_boot script.
+                   true,     // requires root for enable_dev_usb_boot script.
                    nullptr,  // no stdin.
                    nullptr,  // exit status doesn't matter.
                    error);
@@ -128,14 +119,14 @@ bool DevFeaturesTool::ConfigureSshServer(brillo::ErrorPtr* error) const {
   }
 
   return RunHelper("dev_features_ssh", ArgList{},
-                   true,  // requires root to write to rootfs directories.
+                   true,     // requires root to write to rootfs directories.
                    nullptr,  // no stdin.
                    nullptr,  // exit status doesn't matter.
                    error);
 }
 
-bool DevFeaturesTool::EnableChromeRemoteDebugging(brillo::ErrorPtr* error)
-    const {
+bool DevFeaturesTool::EnableChromeRemoteDebugging(
+    brillo::ErrorPtr* error) const {
   int exit_status;
   if (!RemoveRootfsVerificationQuery(&exit_status, error) || exit_status != 0) {
     DEBUGD_ADD_ERROR(error, kDevFeaturesErrorString, kRootfsLockedErrorString);
@@ -143,7 +134,7 @@ bool DevFeaturesTool::EnableChromeRemoteDebugging(brillo::ErrorPtr* error)
   }
 
   return RunHelper("dev_features_chrome_remote_debugging", ArgList{},
-                   true,  // requires root to write to rootfs directories.
+                   true,     // requires root to write to rootfs directories.
                    nullptr,  // no stdin.
                    nullptr,  // exit status doesn't matter.
                    error);
@@ -156,9 +147,9 @@ bool DevFeaturesTool::SetUserPassword(const std::string& username,
 
   // Set the devmode password regardless of rootfs verification state.
   if (!RunHelper("dev_features_password", args,
-                 true,  // requires root to write devmode password file.
+                 true,       // requires root to write devmode password file.
                  &password,  // pipe the password through stdin.
-                 nullptr,  // exit status doesn't matter.
+                 nullptr,    // exit status doesn't matter.
                  error)) {
     return false;
   }
@@ -170,9 +161,9 @@ bool DevFeaturesTool::SetUserPassword(const std::string& username,
 
   args.push_back("--system");
   return RunHelper("dev_features_password", args,
-                   true,  // requires root to write system password file.
+                   true,       // requires root to write system password file.
                    &password,  // pipe the password through stdin.
-                   nullptr,  // exit status doesn't matter.
+                   nullptr,    // exit status doesn't matter.
                    error);
 }
 
@@ -185,8 +176,7 @@ bool DevFeaturesTool::EnableChromeDevFeatures(const std::string& root_password,
     return false;
 
   return SetUserPassword(
-      "root",
-      root_password.empty() ? kDefaultRootPassword : root_password,
+      "root", root_password.empty() ? kDefaultRootPassword : root_password,
       error);
 }
 
@@ -209,18 +199,15 @@ bool DevFeaturesTool::QueryDevFeatures(int32_t* flags,
   DCHECK(flags);
   Query queries[] = {
       {base::Bind(&RemoveRootfsVerificationQuery),
-            DEV_FEATURE_ROOTFS_VERIFICATION_REMOVED},
-      {base::Bind(&EnableBootFromUsbQuery),
-            DEV_FEATURE_BOOT_FROM_USB_ENABLED},
+       DEV_FEATURE_ROOTFS_VERIFICATION_REMOVED},
+      {base::Bind(&EnableBootFromUsbQuery), DEV_FEATURE_BOOT_FROM_USB_ENABLED},
       {base::Bind(&EnableChromeRemoteDebuggingQuery),
-            DEV_FEATURE_CHROME_REMOTE_DEBUGGING_ENABLED},
-      {base::Bind(&ConfigureSshServerQuery),
-            DEV_FEATURE_SSH_SERVER_CONFIGURED},
+       DEV_FEATURE_CHROME_REMOTE_DEBUGGING_ENABLED},
+      {base::Bind(&ConfigureSshServerQuery), DEV_FEATURE_SSH_SERVER_CONFIGURED},
       {base::Bind(&SetUserPasswordQuery, "root", /* system = */ false),
-            DEV_FEATURE_DEV_MODE_ROOT_PASSWORD_SET},
+       DEV_FEATURE_DEV_MODE_ROOT_PASSWORD_SET},
       {base::Bind(&SetUserPasswordQuery, "root", /* system = */ true),
-            DEV_FEATURE_SYSTEM_ROOT_PASSWORD_SET}
-  };
+       DEV_FEATURE_SYSTEM_ROOT_PASSWORD_SET}};
 
   int32_t result_flags = 0;
   for (const auto& query : queries) {

@@ -65,12 +65,11 @@ bool StartUpstartJob() {
   // The Upstart D-Bus interface isn't well documented and reload-configuration
   // isn't listed anywhere I can find, so just use initctl for this.
   std::string error;
-  int result =
-      debugd::ProcessWithOutput::RunProcessFromHelper("initctl",
-                                                      {"reload-configuration"},
-                                                      nullptr,  // stdin.
-                                                      nullptr,  // stdout.
-                                                      &error);  // stderr.
+  int result = debugd::ProcessWithOutput::RunProcessFromHelper(
+      "initctl", {"reload-configuration"},
+      nullptr,  // stdin.
+      nullptr,  // stdout.
+      &error);  // stderr.
   if (result != EXIT_SUCCESS) {
     LOG(WARNING) << "\"initctl reload-configuration\" failed with exit code "
                  << result << ": " << error;

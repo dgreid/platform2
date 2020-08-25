@@ -115,8 +115,8 @@ bool SchedulerConfigurationTool::SetPolicy(const std::string& policy,
                           ProcessWithOutput::ArgList{"--policy=" + policy},
                           &stdout, &exit_status, error);
 
-  bool status = base::StringToUint(
-      stdout, num_cores_disabled) && result && (exit_status == 0);
+  bool status = base::StringToUint(stdout, num_cores_disabled) && result &&
+                (exit_status == 0);
   if (!status) {
     DEBUGD_ADD_ERROR(error, kErrorPath,
                      "scheduler_configuration_helper failed: stdout=" + stdout);
