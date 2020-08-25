@@ -197,7 +197,6 @@ TEST_F(DpslThreadContextImplDeathTest, PostDelayedTaskInvalidDelay) {
       "Delay must be non-negative");
 }
 
-
 class DpslThreadContextImplMultiThreadTest
     : public DpslThreadContextImplMainThreadTest {
  public:

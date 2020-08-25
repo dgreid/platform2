@@ -60,9 +60,8 @@ inline ReturnType RunStdFunctionWithArgsGrpc(
 template <typename ReturnType, typename... ArgTypes>
 inline base::Callback<ReturnType(ArgTypes...)> MakeCallbackFromStdFunction(
     std::function<ReturnType(ArgTypes...)> function) {
-  return base::Bind(
-      &internal::RunStdFunctionWithArgs<ReturnType, ArgTypes...>,
-      base::Passed(std::move(function)));
+  return base::Bind(&internal::RunStdFunctionWithArgs<ReturnType, ArgTypes...>,
+                    base::Passed(std::move(function)));
 }
 
 // Transforms std::function into base::Callback, and ignores grpc::Status
