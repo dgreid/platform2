@@ -182,8 +182,8 @@ std::string DetermineFlag(const std::string& info) {
 // by umac dumps. The KernelParser should parse the dumps accordingly.
 // The following regexps identify the beginning of the iwlwifi dump.
 constexpr LazyRE2 start_iwlwifi_dump = {
-    R"(iwlwifi.*(Microcode SW error detected\. Restarting|Microcode CT kill"
-  " error detected\.|Hardware error detected\. Restarting))"};
+    R"(iwlwifi.*(Microcode SW error detected\.  ?Restarting|Microcode CT kill"
+  " error detected\.|Hardware error detected\.  ?Restarting))"};
 // The following regexps separates the umac and lmac.
 constexpr LazyRE2 start_iwlwifi_dump_umac = {R"(Start IWL Error Log Dump(.+))"};
 // The following regexps identify the iwlwifi error dump end.

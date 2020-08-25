@@ -105,6 +105,57 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacUmac) {
   ParserTest<KernelParser>("TEST_IWLWIFI_LMAC_UMAC", {wifi_error});
 }
 
+TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacTwoSpace) {
+  ParserRun wifi_error = {
+      .expected_text =
+          "[79553.430686] iwlwifi 0000:02:00.0: Microcode SW error detected.  "
+          "Restarting 0x2000000.\n"
+          "[79553.430913] iwlwifi 0000:02:00.0: Start IWL Error Log Dump:\n"
+          "[79553.430919] iwlwifi 0000:02:00.0: Status: 0x00000040, count: 6\n"
+          "[79553.430924] iwlwifi 0000:02:00.0: Loaded firmware version: "
+          "29.116a852a.0 7265D-29.ucode\n"
+          "[79553.430930] iwlwifi 0000:02:00.0: 0x00000084 | "
+          "NMI_INTERRUPT_UNKNOWN       \n"
+          "[79553.430935] iwlwifi 0000:02:00.0: 0x00A002F0 | trm_hw_status0\n"
+          "[79553.430939] iwlwifi 0000:02:00.0: 0x00000000 | trm_hw_status1\n"
+          "[79553.430944] iwlwifi 0000:02:00.0: 0x00043D6C | branchlink2\n"
+          "[79553.430948] iwlwifi 0000:02:00.0: 0x0004AFD6 | interruptlink1\n"
+          "[79553.430953] iwlwifi 0000:02:00.0: 0x0004AFD6 | interruptlink2\n"
+          "[79553.430957] iwlwifi 0000:02:00.0: 0x00000000 | data1\n"
+          "[79553.430961] iwlwifi 0000:02:00.0: 0x00000080 | data2\n"
+          "[79553.430966] iwlwifi 0000:02:00.0: 0x07230000 | data3\n"
+          "[79553.430970] iwlwifi 0000:02:00.0: 0x1E00B95C | beacon time\n"
+          "[79553.430975] iwlwifi 0000:02:00.0: 0xE6A38917 | tsf low\n"
+          "[79553.430979] iwlwifi 0000:02:00.0: 0x00000011 | tsf hi\n"
+          "[79553.430983] iwlwifi 0000:02:00.0: 0x00000000 | time gp1\n"
+          "[79553.430988] iwlwifi 0000:02:00.0: 0x8540E3A4 | time gp2\n"
+          "[79553.430992] iwlwifi 0000:02:00.0: 0x00000001 | uCode revision "
+          "type\n"
+          "[79553.430996] iwlwifi 0000:02:00.0: 0x0000001D | uCode version "
+          "major\n"
+          "[79553.431013] iwlwifi 0000:02:00.0: 0x116A852A | uCode version "
+          "minor\n"
+          "[79553.431017] iwlwifi 0000:02:00.0: 0x00000210 | hw version\n"
+          "[79553.431021] iwlwifi 0000:02:00.0: 0x00489200 | board version\n"
+          "[79553.431025] iwlwifi 0000:02:00.0: 0x0000001C | hcmd\n"
+          "[79553.431030] iwlwifi 0000:02:00.0: 0x00022000 | isr0\n"
+          "[79553.431034] iwlwifi 0000:02:00.0: 0x00000000 | isr1\n"
+          "[79553.431039] iwlwifi 0000:02:00.0: 0x0000000A | isr2\n"
+          "[79553.431043] iwlwifi 0000:02:00.0: 0x0041D4C0 | isr3\n"
+          "[79553.431047] iwlwifi 0000:02:00.0: 0x00000000 | isr4\n"
+          "[79553.431052] iwlwifi 0000:02:00.0: 0x00230151 | last cmd Id\n"
+          "[79553.431056] iwlwifi 0000:02:00.0: 0x00000000 | wait_event\n"
+          "[79553.431060] iwlwifi 0000:02:00.0: 0x0000A8CB | l2p_control\n"
+          "[79553.431082] iwlwifi 0000:02:00.0: 0x00000020 | l2p_duration\n"
+          "[79553.431086] iwlwifi 0000:02:00.0: 0x00000003 | l2p_mhvalid\n"
+          "[79553.431091] iwlwifi 0000:02:00.0: 0x000000CE | l2p_addr_match\n"
+          "[79553.431095] iwlwifi 0000:02:00.0: 0x00000005 | lmpm_pmg_sel\n"
+          "[79553.431100] iwlwifi 0000:02:00.0: 0x07071159 | timestamp\n"
+          "[79553.431104] iwlwifi 0000:02:00.0: 0x00340010 | flow_handler\n",
+      .expected_flags = {{"--kernel_iwlwifi_error"}}};
+  ParserTest<KernelParser>("TEST_IWLWIFI_LMAC_TWO_SPACE", {wifi_error});
+}
+
 TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmac) {
   ParserRun wifi_error = {
       .expected_text =
