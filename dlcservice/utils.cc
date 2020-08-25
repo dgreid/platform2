@@ -98,8 +98,7 @@ bool ResizeFile(const base::FilePath& path, int64_t size) {
     return false;
   }
   if (!f.SetLength(size)) {
-    PLOG(ERROR) << "Failed to set length (" << size << ") for "
-                << path.value();
+    PLOG(ERROR) << "Failed to set length (" << size << ") for " << path.value();
     return false;
   }
   // When shrinking files, there is no need to unsparse as it's not certainly

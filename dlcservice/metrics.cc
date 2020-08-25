@@ -18,7 +18,7 @@ namespace metrics {
 
 const char kMetricInstallResult[] = "Platform.DlcService.InstallResult";
 const char kMetricUninstallResult[] = "Platform.DlcService.UninstallResult";
-}
+}  // namespace metrics
 
 // IMPORTANT: To obsolete a metric enum value, just remove it from the map
 // initialization and comment it out on the Enum.
