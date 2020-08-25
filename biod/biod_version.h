@@ -13,7 +13,7 @@
 
 namespace biod {
 
-void LogVersion() {
+static inline void LogVersion() {
   LOG(INFO) << "vcsid " << VCSID;
 }
 
