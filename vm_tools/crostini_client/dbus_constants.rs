@@ -47,6 +47,7 @@ pub const VM_PLUGIN_DISPATCHER_SERVICE_PATH: &str = "/org/chromium/VmPluginDispa
 pub const VM_PLUGIN_DISPATCHER_SERVICE_NAME: &str = "org.chromium.VmPluginDispatcher";
 pub const START_PLUGIN_VM_METHOD: &str = "StartVm";
 pub const SHOW_PLUGIN_VM_METHOD: &str = "ShowVm";
+pub const SEND_PVM_PROBLEM_REPORT_METHOD: &str = "SendProblemReport";
 
 // cicerone dbus-constants.h
 pub const VM_CICERONE_INTERFACE: &str = "org.chromium.VmCicerone";

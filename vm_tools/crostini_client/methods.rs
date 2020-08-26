@@ -63,6 +63,7 @@ enum ChromeOSError {
     FailedListUsb,
     FailedMetricsSend { exit_code: Option<i32> },
     FailedOpenPath(dbus::Error),
+    FailedSendProblemReport(String, i32),
     FailedSetupContainerUser(SetUpLxdContainerUserResponse_Status, String),
     FailedSharePath(String),
     FailedStartContainerStatus(StartLxdContainerResponse_Status, String),
@@ -74,6 +75,7 @@ enum ChromeOSError {
     InvalidSourcePath,
     NoVmTechnologyEnabled,
     NotAvailableForPluginVm,
+    NotPluginVm,
     PluginVmDisabled,
     RetrieveActiveSessions,
     SourcePathDoesNotExist,
@@ -115,6 +117,9 @@ impl fmt::Display for ChromeOSError {
             }
             FailedGetOpenPath(path) => write!(f, "failed to request OpenPath {}", path.display()),
             FailedGetVmInfo => write!(f, "failed to get vm info"),
+            FailedSendProblemReport(msg, error_code) => {
+                write!(f, "failed to send problem report: {} ({})", msg, error_code)
+            }
             FailedSetupContainerUser(s, reason) => {
                 write!(f, "failed to setup container user: `{:?}`: {}", s, reason)
             }
@@ -150,6 +155,7 @@ impl fmt::Display for ChromeOSError {
             InvalidSourcePath => write!(f, "source media path is invalid"),
             NoVmTechnologyEnabled => write!(f, "neither Crostini nor Parallels VMs are enabled"),
             NotAvailableForPluginVm => write!(f, "this command is not available for Parallels VM"),
+            NotPluginVm => write!(f, "this VM is not a Parallels VM"),
             PluginVmDisabled => write!(f, "Parallels VMs are currently disabled"),
             RetrieveActiveSessions => write!(f, "failed to retrieve active sessions"),
             SourcePathDoesNotExist => write!(f, "source media path does not exist"),
@@ -1552,6 +1558,54 @@ impl Methods {
             .ok_or_else(|| FailedGetOpenPath(path.into()).into())
     }
 
+    fn send_problem_report_for_plugin_vm(
+        &mut self,
+        vm_name: Option<String>,
+        user_id_hash: &str,
+        email: Option<String>,
+        text: Option<String>,
+    ) -> Result<String, Box<dyn Error>> {
+        let mut request = vm_plugin_dispatcher::SendProblemReportRequest::new();
+        request.owner_id = user_id_hash.to_owned();
+
+        if let Some(name) = vm_name {
+            if !self.is_plugin_vm(name.as_str(), user_id_hash)? {
+                return Err(NotPluginVm.into());
+            }
+            request.vm_name_uuid = name;
+        }
+
+        if !self.is_plugin_vm_enabled(user_id_hash)? {
+            return Err(PluginVmDisabled.into());
+        }
+
+        request.detailed = true;
+
+        if let Some(email_str) = email {
+            request.email = email_str;
+        }
+
+        if let Some(text_str) = text {
+            request.description = text_str;
+        }
+
+        let response: vm_plugin_dispatcher::SendProblemReportResponse = self.sync_protobus(
+            Message::new_method_call(
+                VM_PLUGIN_DISPATCHER_SERVICE_NAME,
+                VM_PLUGIN_DISPATCHER_SERVICE_PATH,
+                VM_PLUGIN_DISPATCHER_INTERFACE,
+                SEND_PVM_PROBLEM_REPORT_METHOD,
+            )?,
+            &request,
+        )?;
+
+        if response.success {
+            Ok(response.report_id)
+        } else {
+            Err(FailedSendProblemReport(response.error_message, response.result_code).into())
+        }
+    }
+
     pub fn metrics_send_sample(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
         #![allow(unreachable_code)]
         let _ = name;
@@ -1893,6 +1947,17 @@ impl Methods {
             })
             .collect();
         Ok(device_list)
+    }
+
+    pub fn pvm_send_problem_report(
+        &mut self,
+        vm_name: Option<String>,
+        user_id_hash: &str,
+        email: Option<String>,
+        text: Option<String>,
+    ) -> Result<String, Box<dyn Error>> {
+        self.start_vm_infrastructure(user_id_hash)?;
+        self.send_problem_report_for_plugin_vm(vm_name, user_id_hash, email, text)
     }
 }
 
