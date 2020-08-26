@@ -5,11 +5,13 @@
 #ifndef MEDIA_PERCEPTION_PRODUCER_IMPL_H_
 #define MEDIA_PERCEPTION_PRODUCER_IMPL_H_
 
-#include <base/bind.h>
 #include <map>
 #include <memory>
 
-#include "media_perception/shared_memory_provider.h"
+#include <base/time/time.h>
+#include <base/memory/writable_shared_memory_region.h>
+#include <mojo/public/cpp/bindings/binding.h>
+
 #include "mojom/producer.mojom.h"
 #include "mojom/video_source_provider.mojom.h"
 #include "mojom/virtual_device.mojom.h"
@@ -60,7 +62,7 @@ class ProducerImpl : public video_capture::mojom::Producer {
   // Provides an interface to a created virtual device.
   video_capture::mojom::SharedMemoryVirtualDevicePtr virtual_device_;
 
-  std::map<int32_t /*buffer_id*/, std::unique_ptr<SharedMemoryProvider>>
+  std::map<int32_t /*buffer_id*/, base::WritableSharedMemoryMapping>
       outgoing_buffer_id_to_buffer_map_;
 };
 

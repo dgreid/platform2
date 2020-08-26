@@ -6,7 +6,10 @@
 
 #include <utility>
 
-#include "base/logging.h"
+#include <base/logging.h>
+#include <mojo/public/cpp/system/handle.h>
+#include <mojo/public/cpp/system/platform_handle.h>
+
 #include "mojom/scoped_access_permission.mojom.h"
 #include "mojom/video_capture_types.mojom.h"
 
@@ -66,19 +69,34 @@ void VideoFrameHandlerImpl::OnNewBuffer(
     int32_t buffer_id, media::mojom::VideoBufferHandlePtr buffer_handle) {
   LOG(INFO) << "On new buffer";
   CHECK(buffer_handle->is_shared_memory_via_raw_file_descriptor());
-  std::unique_ptr<SharedMemoryProvider> shared_memory_provider =
-      SharedMemoryProvider::CreateFromRawFileDescriptor(
-          true /*read_only*/,
-          std::move(buffer_handle->get_shared_memory_via_raw_file_descriptor()
-                        ->file_descriptor_handle),
-          buffer_handle->get_shared_memory_via_raw_file_descriptor()
-              ->shared_memory_size_in_bytes);
-  if (!shared_memory_provider) {
-    LOG(ERROR) << "SharedMemoryProvider is nullptr.";
+  base::PlatformFile platform_file;
+  MojoResult mojo_result = mojo::UnwrapPlatformFile(
+      std::move(buffer_handle->get_shared_memory_via_raw_file_descriptor()
+                    ->file_descriptor_handle),
+      &platform_file);
+  if (mojo_result != MOJO_RESULT_OK) {
+    LOG(ERROR) << "Failed to unwrap handle: " << mojo_result;
+    return;
+  }
+  base::UnsafeSharedMemoryRegion shm_region =
+      base::UnsafeSharedMemoryRegion::Deserialize(
+          base::subtle::PlatformSharedMemoryRegion::Take(
+              base::ScopedFD(platform_file),
+              base::subtle::PlatformSharedMemoryRegion::Mode::kUnsafe,
+              buffer_handle->get_shared_memory_via_raw_file_descriptor()
+                  ->shared_memory_size_in_bytes,
+              base::UnguessableToken::Create()));
+  if (!shm_region.IsValid()) {
+    LOG(ERROR) << "Failed to unwrap handle to valid shared memory region.";
+    return;
+  }
+  base::WritableSharedMemoryMapping shm_mapping = shm_region.Map();
+  if (!shm_mapping.IsValid()) {
+    LOG(ERROR) << "Failed to map shared memory region.";
     return;
   }
   incoming_buffer_id_to_buffer_map_.insert(
-      std::make_pair(buffer_id, std::move(shared_memory_provider)));
+      std::make_pair(buffer_id, std::move(shm_mapping)));
 }
 
 void VideoFrameHandlerImpl::OnFrameReadyInBuffer(
@@ -86,17 +104,14 @@ void VideoFrameHandlerImpl::OnFrameReadyInBuffer(
     int32_t frame_feedback_id,
     video_capture::mojom::ScopedAccessPermissionPtr permission,
     media::mojom::VideoFrameInfoPtr frame_info) {
-  SharedMemoryProvider* incoming_buffer =
-      incoming_buffer_id_to_buffer_map_.at(buffer_id).get();
+  base::WritableSharedMemoryMapping* incoming_buffer =
+      &incoming_buffer_id_to_buffer_map_.at(buffer_id);
   // Loop through all the registered frame handlers and push a frame out.
-  std::map<int, VideoCaptureServiceClient::FrameHandler>::iterator it;
-  for (it = frame_handler_map_.begin(); it != frame_handler_map_.end(); it++) {
-    it->second(
-        frame_info->timestamp->microseconds,
-        static_cast<const uint8_t*>(
-            incoming_buffer->GetSharedMemoryForInProcessAccess()->memory()),
-        incoming_buffer->GetMemorySizeInBytes(),
-        capture_format_.width_in_pixels(), capture_format_.height_in_pixels());
+  for (auto& entry : frame_handler_map_) {
+    entry.second(frame_info->timestamp->microseconds,
+                 incoming_buffer->GetMemoryAs<const uint8_t>(),
+                 incoming_buffer->size(), capture_format_.width_in_pixels(),
+                 capture_format_.height_in_pixels());
   }
 }
 

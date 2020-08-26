@@ -5,15 +5,13 @@
 #ifndef MEDIA_PERCEPTION_VIDEO_FRAME_HANDLER_IMPL_H_
 #define MEDIA_PERCEPTION_VIDEO_FRAME_HANDLER_IMPL_H_
 
-#include <base/memory/shared_memory.h>
 #include <map>
-#include <memory>
-#include <mojo/public/cpp/bindings/binding.h>
 #include <string>
 
-#include "base/logging.h"
+#include <base/memory/unsafe_shared_memory_region.h>
+#include <mojo/public/cpp/bindings/binding.h>
+
 #include "media_perception/device_management.pb.h"
-#include "media_perception/shared_memory_provider.h"
 #include "media_perception/video_capture_service_client.h"
 #include "mojom/device_factory.mojom.h"
 #include "mojom/video_frame_handler.mojom.h"
@@ -77,7 +75,7 @@ class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
   // Stores the capture format requested from the open device.
   VideoStreamParams capture_format_;
 
-  std::map<int32_t /*buffer_id*/, std::unique_ptr<SharedMemoryProvider>>
+  std::map<int32_t /*buffer_id*/, base::WritableSharedMemoryMapping>
       incoming_buffer_id_to_buffer_map_;
 };
 

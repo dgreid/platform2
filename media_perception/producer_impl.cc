@@ -5,9 +5,16 @@
 #include "media_perception/producer_impl.h"
 
 #include <stdlib.h>
+
+#include <algorithm>
+#include <cstring>
 #include <utility>
 
-#include "base/logging.h"
+#include <base/bind.h>
+#include <base/logging.h>
+#include <mojo/public/cpp/system/handle.h>
+#include <mojo/public/cpp/system/platform_handle.h>
+
 #include "mojom/constants.mojom.h"
 #include "mojom/video_capture_types.mojom.h"
 
@@ -31,19 +38,34 @@ void ProducerImpl::OnNewBuffer(int32_t buffer_id,
                                media::mojom::VideoBufferHandlePtr buffer_handle,
                                OnNewBufferCallback callback) {
   CHECK(buffer_handle->is_shared_memory_via_raw_file_descriptor());
-  std::unique_ptr<SharedMemoryProvider> shared_memory_provider =
-      SharedMemoryProvider::CreateFromRawFileDescriptor(
-          false /*read_only*/,
-          std::move(buffer_handle->get_shared_memory_via_raw_file_descriptor()
-                        ->file_descriptor_handle),
-          buffer_handle->get_shared_memory_via_raw_file_descriptor()
-              ->shared_memory_size_in_bytes);
-  if (!shared_memory_provider) {
-    LOG(ERROR) << "SharedMemoryProvider is nullptr.";
+  base::PlatformFile platform_file;
+  MojoResult mojo_result = mojo::UnwrapPlatformFile(
+      std::move(buffer_handle->get_shared_memory_via_raw_file_descriptor()
+                    ->file_descriptor_handle),
+      &platform_file);
+  if (mojo_result != MOJO_RESULT_OK) {
+    LOG(ERROR) << "Failed to unwrap handle: " << mojo_result;
+    return;
+  }
+  base::UnsafeSharedMemoryRegion shm_region =
+      base::UnsafeSharedMemoryRegion::Deserialize(
+          base::subtle::PlatformSharedMemoryRegion::Take(
+              base::ScopedFD(platform_file),
+              base::subtle::PlatformSharedMemoryRegion::Mode::kUnsafe,
+              buffer_handle->get_shared_memory_via_raw_file_descriptor()
+                  ->shared_memory_size_in_bytes,
+              base::UnguessableToken::Create()));
+  if (!shm_region.IsValid()) {
+    LOG(ERROR) << "Failed to take shared memory region.";
+    return;
+  }
+  base::WritableSharedMemoryMapping shm_mapping = shm_region.Map();
+  if (!shm_mapping.IsValid()) {
+    LOG(ERROR) << "Failed to map shared memory region.";
     return;
   }
   outgoing_buffer_id_to_buffer_map_.insert(
-      std::make_pair(buffer_id, std::move(shared_memory_provider)));
+      std::make_pair(buffer_id, std::move(shm_mapping)));
   std::move(callback).Run();
 }
 
@@ -97,12 +119,11 @@ void ProducerImpl::OnFrameBufferReceived(
   info->visible_rect = std::move(rect);
   info->metadata = mojo_base::mojom::DictionaryValue::New();
 
-  SharedMemoryProvider* outgoing_buffer =
-      outgoing_buffer_id_to_buffer_map_.at(buffer_id).get();
-
-  auto memory = static_cast<uint8_t*>(
-      outgoing_buffer->GetSharedMemoryForInProcessAccess()->memory());
-  memcpy(memory, data.get(), outgoing_buffer->GetMemorySizeInBytes());
+  base::WritableSharedMemoryMapping* outgoing_buffer =
+      &outgoing_buffer_id_to_buffer_map_.at(buffer_id);
+  std::memcpy(
+      outgoing_buffer->GetMemoryAs<uint8_t>(), data.get(),
+      std::min(outgoing_buffer->mapped_size(), static_cast<size_t>(data_size)));
   virtual_device_->OnFrameReadyInBuffer(buffer_id, std::move(info));
 }
 

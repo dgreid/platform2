@@ -99,7 +99,6 @@ static_library("media_perception_service_lib") {
     "output_manager.cc",
     "producer_impl.cc",
     "proto_mojom_conversion.cc",
-    "shared_memory_provider.cc",
     "video_capture_service_client_impl.cc",
     "video_frame_handler_impl.cc",
   ]
