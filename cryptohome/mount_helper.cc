@@ -488,7 +488,8 @@ bool MountHelper::BindMyFilesDownloads(const base::FilePath& user_home) {
       platform_->DeleteFile(obj, true);
     else
       platform_->Move(obj, obj_in_downloads);
-    LOG_IF(WARNING, !warning_sent) << "Processing files in " << downloads_in_myfiles;
+    LOG_IF(WARNING, !warning_sent) << "Processing files in "
+                                   << downloads_in_myfiles;
     warning_sent = true;
   }
 
@@ -943,15 +944,12 @@ void MountHelper::ForceUnmount(const FilePath& src, const FilePath& dest) {
       platform_->GetProcessesWithOpenFiles(dest, &processes);
       for (const auto& proc : processes) {
         LOG(ERROR) << "Process " << proc.get_process_id()
-                   << " had open files.  Command line: "
+                   << " had " << proc.get_open_files().size()
+                   << " open files.  Command line: "
                    << proc.GetCommandLine();
         if (proc.get_cwd().length()) {
           LOG(ERROR) << "  (" << proc.get_process_id() << ") CWD: "
                      << proc.get_cwd();
-        }
-        for (const auto& file : proc.get_open_files()) {
-          LOG(ERROR) << "  (" << proc.get_process_id() << ") Open File: "
-                     << file.value();
         }
       }
     }
