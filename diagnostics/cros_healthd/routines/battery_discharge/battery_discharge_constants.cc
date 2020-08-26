@@ -21,11 +21,4 @@ const char kBatteryDischargeRoutineCancelledMessage[] =
 const char kBatteryDischargeRoutineRunningMessage[] =
     "Battery discharge routine running.";
 
-const char kBatteryDirectoryPath[] = "sys/class/power_supply/BAT0";
-const char kBatteryChargeNowFileName[] = "charge_now";
-const char kBatteryChargeFullFileName[] = "charge_full";
-const char kBatteryStatusFileName[] = "status";
-
-const char kBatteryStatusDischargingValue[] = "Discharging";
-
 }  // namespace diagnostics

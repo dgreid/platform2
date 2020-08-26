@@ -6,18 +6,18 @@
 
 #include <inttypes.h>
 
-#include <cmath>
 #include <cstdint>
 
 #include <base/files/file_path.h>
 #include <base/logging.h>
 #include <base/optional.h>
-#include <base/strings/string_number_conversions.h>
+#include <base/strings/string_piece.h>
 #include <base/strings/stringprintf.h>
 #include <base/threading/thread_task_runner_handle.h>
 
 #include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge_constants.h"
+#include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "diagnostics/cros_healthd/utils/file_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
@@ -26,30 +26,6 @@ namespace diagnostics {
 namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
-
-// Calculates the charge percent of the battery. Returns true and populates
-// |charge_percent_out| iff the battery charge percent was able to be
-// calculated.
-base::Optional<uint32_t> CalculateBatteryChargePercent(
-    const base::FilePath& root_dir) {
-  base::FilePath battery_path = root_dir.Append(kBatteryDirectoryPath);
-
-  uint32_t charge_now;
-  if (!ReadInteger(battery_path, kBatteryChargeNowFileName, base::StringToUint,
-                   &charge_now)) {
-    return base::nullopt;
-  }
-
-  uint32_t charge_full;
-  if (!ReadInteger(battery_path, kBatteryChargeFullFileName, base::StringToUint,
-                   &charge_full)) {
-    return base::nullopt;
-  }
-
-  return static_cast<uint32_t>(
-      std::round(100.0 * (static_cast<float>(charge_now) /
-                          static_cast<float>(charge_full))));
-}
 
 }  // namespace
 

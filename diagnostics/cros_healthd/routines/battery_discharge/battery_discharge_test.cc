@@ -19,6 +19,7 @@
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge_constants.h"
 #include "diagnostics/cros_healthd/routines/routine_test_utils.h"
+#include "diagnostics/cros_healthd/utils/battery_utils.h"
 #include "mojo/cros_healthd_diagnostics.mojom.h"
 
 namespace diagnostics {
@@ -30,7 +31,6 @@ namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
 constexpr uint32_t kStartingChargeNowFileContents = 4031000;
 constexpr uint32_t kEndingChargeNowFileContents = 3000000;
 constexpr uint32_t kChargeFullFileContents = 5042000;
-constexpr char kStatusChargingContents[] = "Charging";
 
 // With this value for maximum_discharge_percent_allowed, the routine should
 // pass.
@@ -204,7 +204,7 @@ TEST_F(BatteryDischargeRoutineTest, BatteryNotDischarging) {
                         std::to_string(kStartingChargeNowFileContents));
   WriteBatterySysfsNode(kBatteryChargeFullFileName,
                         std::to_string(kChargeFullFileContents));
-  WriteBatterySysfsNode(kBatteryStatusFileName, kStatusChargingContents);
+  WriteBatterySysfsNode(kBatteryStatusFileName, kBatteryStatusChargingValue);
 
   StartRoutineAndVerifyInteractiveResponse();
 
