@@ -72,6 +72,35 @@ immediately. If it instead retried it ten seconds later, the retry would
 probably occur after the wake alarm had fired, resulting in the system sleeping
 forever.
 
+## Suspend Freezer
+
+IPC mechanisms such as FUSE (Filesystem in Userspace) create issues for the
+freeze step in the kernel. This is because the framework holds onto kernel locks
+while waiting on a userspace process. A task can't freeze while it's holding
+onto one of these locks. To address this, we impose an ordering on freeze in
+userspace utilizing cgroup freezers. Only the children of the root freezer can
+be ordered.
+
+-   The order is specified in pref files, `suspend_freezer_deps_<cgroup name>`.
+    These files contain one dependency per line for the cgroup. For instance, if
+    the cgroups A, B, and C exist (located in /sys/fs/cgroup/freezer/ as
+    directories A, B, and C), and A depends on B and C, there will be a pref
+    file named `suspend_freezer_deps_A` that contains the contents:
+```sh
+B
+C
+```
+    This will cause cgroup A to freeze before cgroups B and C.
+-   Pref files for a program's dependencies should be installed in
+    `/usr/share/power_manager/` by the ebuild for that program.
+-   A freezer cgroup for a program that requires freeze ordering to prevent
+    timeouts on suspend should be created at boot via an upstart script that
+    runs with `start on starting system-services`. The ownership of the
+    `freezer.state` file should be set to `power:power`.
+-   A package is responsible for making sure that all relevant tasks are part of
+    its freezer cgroup. This may be done by writing the PID of the root process
+    for a program to `/sys/fs/cgroup/freezer/<cgroup>/cgroup.procs`.
+
 ## Dark Resume
 
 On some systems, powerd passes a duration to the kernel in order to periodically
