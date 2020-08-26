@@ -4,24 +4,18 @@
 //
 // Basic unittesting of dm-bht using google-gtest.
 
-#include <gtest/gtest.h>
 #include <stdlib.h>
 
 #include <string>
 #include <vector>
 
-#include "verity/logging.h"
+#include <base/logging.h>
+#include <gtest/gtest.h>
 
 // Pull in dm-bht.c so that we can access static functions.
 // But disable verbose logging.
 extern "C" {
-#ifndef NDEBUG
-#undef NDEBUG
 #include "dm-bht.c"
-#define NDEBUG 1
-#else
-#include "dm-bht.c"
-#endif
 }
 #include "verity/dm-bht-userspace.h"
 

@@ -10,11 +10,12 @@
 #include <inttypes.h>
 #include <stdint.h>
 
+#include <base/logging.h>
+
 #include <asm/page.h>
 #include <linux/device-mapper.h>
 #include <linux/kernel.h>
 #include "verity/file_hasher.h"
-#include "verity/logging.h"
 
 namespace verity {
 

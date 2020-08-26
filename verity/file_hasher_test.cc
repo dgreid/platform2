@@ -5,10 +5,10 @@
 // Tests for verity::FileHasher
 #include "verity/file_hasher.h"
 
+#include <base/logging.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "verity/logging.h"
 #include "verity/simple_file/mock_file.h"
 #include "verity/utils.h"
 

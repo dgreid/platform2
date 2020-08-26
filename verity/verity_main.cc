@@ -6,8 +6,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <base/logging.h>
+#include <brillo/syslog_logging.h>
+
 #include "verity/file_hasher.h"
-#include "verity/logging.h"
 #include "verity/simple_file/env.h"
 #include "verity/simple_file/file.h"
 #include "verity/utils.h"

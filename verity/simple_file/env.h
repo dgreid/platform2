@@ -14,7 +14,7 @@
 #include <sys/types.h>
 #include <unistd.h>
 
-#include "verity/logging.h"
+#include <base/logging.h>
 
 namespace simple_file {
 
