@@ -24,6 +24,7 @@
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/machine_learning_service.mojom.h"
 #include "ml/mojom/model.mojom.h"
+#include "ml/mojom/soda.mojom.h"
 #include "ml/mojom/text_classifier.mojom.h"
 #include "ml/tensor_view.h"
 #include "ml/test_utils.h"
@@ -203,6 +204,9 @@ using ::chromeos::machine_learning::mojom::LoadHandwritingModelResult;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningService;
 using ::chromeos::machine_learning::mojom::Model;
+using ::chromeos::machine_learning::mojom::SodaClient;
+using ::chromeos::machine_learning::mojom::SodaConfig;
+using ::chromeos::machine_learning::mojom::SodaRecognizer;
 using ::chromeos::machine_learning::mojom::TensorPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationPtr;
 using ::chromeos::machine_learning::mojom::TextAnnotationRequest;
@@ -214,6 +218,7 @@ using ::chromeos::machine_learning::mojom::TextSuggestSelectionRequestPtr;
 using ::testing::DoubleEq;
 using ::testing::DoubleNear;
 using ::testing::ElementsAre;
+using ::testing::StrictMock;
 
 // A version of MachineLearningServiceImpl that loads from the testing model
 // directory.
@@ -224,6 +229,13 @@ class MachineLearningServiceImplForTesting : public MachineLearningServiceImpl {
       mojo::ScopedMessagePipeHandle pipe)
       : MachineLearningServiceImpl(
             std::move(pipe), base::Closure(), GetTestModelDir()) {}
+};
+
+// A simple SODA client for testing.
+class MockSodaClientImpl
+    : public chromeos::machine_learning::mojom::SodaClient {
+ public:
+  MOCK_METHOD(void, OnSodaEvent, (const std::string& event_string), (override));
 };
 
 // Loads builtin model specified by `model_id`, binding the impl to `model`.
@@ -1252,6 +1264,52 @@ TEST_F(HandwritingRecognizerTest, FailOnEmptyInk) {
           &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
+}
+
+// Tests the SODA CrOS mojo callback for the dummy implementation can return
+// expected error string.
+TEST(SODARecognizerTest, DummyImplMojoCallback) {
+#ifdef USE_ONDEVICE_SPEECH
+  return;
+#else
+  StrictMock<MockSodaClientImpl> soda_client_impl;
+  mojo::Receiver<SodaClient> soda_client(&soda_client_impl);
+  auto soda_config = SodaConfig::New();
+  mojo::Remote<SodaRecognizer> soda_recognizer;
+
+  mojo::Remote<MachineLearningService> ml_service;
+  const MachineLearningServiceImplForTesting ml_service_impl(
+      ml_service.BindNewPipeAndPassReceiver().PassPipe());
+
+  ml_service->LoadSpeechRecognizer(std::move(soda_config),
+                                   soda_client.BindNewPipeAndPassRemote(),
+                                   soda_recognizer.BindNewPipeAndPassReceiver(),
+                                   base::BindOnce([](LoadModelResult) {}));
+
+  EXPECT_CALL(soda_client_impl,
+              OnSodaEvent("On-device speech is not supported."))
+      .Times(1);
+  soda_recognizer->Start();
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_CALL(soda_client_impl,
+              OnSodaEvent("On-device speech is not supported."))
+      .Times(1);
+  soda_recognizer->AddAudio({});
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_CALL(soda_client_impl,
+              OnSodaEvent("On-device speech is not supported."))
+      .Times(1);
+  soda_recognizer->MarkDone();
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_CALL(soda_client_impl,
+              OnSodaEvent("On-device speech is not supported."))
+      .Times(1);
+  soda_recognizer->Stop();
+  base::RunLoop().RunUntilIdle();
+#endif
 }
 
 }  // namespace

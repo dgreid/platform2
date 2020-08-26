@@ -86,6 +86,7 @@ _IUSE = [
     'ndk_translation',
     'ondevice_handwriting',
     'ondevice_handwriting_dlc',
+    'ondevice_speech',
     'opengles',
     'passive_metrics',
     'pinweaver',

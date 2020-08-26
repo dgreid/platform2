@@ -32,6 +32,7 @@ generate_mojom_bindings("ml_mojo_bindings") {
     "mojom/handwriting_recognizer.mojom",
     "mojom/machine_learning_service.mojom",
     "mojom/model.mojom",
+    "mojom/soda.mojom",
     "mojom/tensor.mojom",
     "mojom/text_classifier.mojom",
     "mojom/time.mojom",
@@ -65,6 +66,12 @@ proto_library("ml_handwriting_proto") {
     "${proto_in_dir}/handwriting_interface.proto",
     "${proto_in_dir}/handwriting_validate.proto",
   ]
+}
+
+proto_library("ml_soda_proto") {
+  proto_in_dir = "${sysroot}/usr/include/chromeos/libsoda/proto"
+  proto_out_dir = "chrome/knowledge/soda/"
+  sources = [ "${proto_in_dir}/extended_soda_api.proto" ]
 }
 
 static_library("ml_common") {
@@ -101,6 +108,15 @@ static_library("ml_common") {
     "text_classifier_impl.cc",
     "util.cc",
   ]
+  if (use.ondevice_speech) {
+    sources += [
+      "soda.cc",
+      "soda_recognizer_impl.cc",
+    ]
+    deps += [ ":ml_soda_proto" ]
+  } else {
+    sources += [ "soda_recognizer_impl_dummy.cc" ]
+  }
   defines = [
     "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
     "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
@@ -147,6 +163,10 @@ if (use.test) {
       "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",
       "USE_ONDEVICE_HANDWRITING_DLC=${use.ondevice_handwriting_dlc}",
     ]
+    if (use.ondevice_speech && !use.asan) {
+      defines += [ "USE_ONDEVICE_SPEECH" ]
+      sources += [ "soda_test.cc" ]
+    }
   }
   executable("ml_cmdline_test") {
     configs += [ "//common-mk:test" ]

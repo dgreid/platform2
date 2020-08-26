@@ -22,6 +22,8 @@
 #include "ml/model_impl.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
 #include "ml/mojom/model.mojom.h"
+#include "ml/mojom/soda.mojom.h"
+#include "ml/soda_recognizer_impl.h"
 #include "ml/text_classifier_impl.h"
 
 namespace ml {
@@ -38,6 +40,9 @@ using ::chromeos::machine_learning::mojom::LoadHandwritingModelResult;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningService;
 using ::chromeos::machine_learning::mojom::Model;
+using ::chromeos::machine_learning::mojom::SodaClient;
+using ::chromeos::machine_learning::mojom::SodaConfigPtr;
+using ::chromeos::machine_learning::mojom::SodaRecognizer;
 using ::chromeos::machine_learning::mojom::TextClassifier;
 
 constexpr char kSystemModelDir[] = "/opt/google/chrome/ml_models/";
@@ -340,6 +345,32 @@ void MachineLearningServiceImpl::LoadHandwritingModelWithSpec(
   }
 
   std::move(callback).Run(LoadModelResult::OK);
+  request_metrics.FinishRecordingPerformanceMetrics();
+  request_metrics.RecordRequestEvent(LoadModelResult::OK);
+}
+
+void MachineLearningServiceImpl::LoadSpeechRecognizer(
+    SodaConfigPtr config,
+    mojo::PendingRemote<SodaClient> soda_client,
+    mojo::PendingReceiver<SodaRecognizer> soda_recognizer,
+    LoadSpeechRecognizerCallback callback) {
+  RequestMetrics request_metrics("Soda", kMetricsRequestName);
+  request_metrics.StartRecordingPerformanceMetrics();
+
+  // Create the SodaRecognizer.
+  if (!SodaRecognizerImpl::Create(std::move(config), std::move(soda_client),
+                                  std::move(soda_recognizer))) {
+    LOG(ERROR) << "Failed to create SodaRecognizerImpl object.";
+    // TODO(robsc): it may be better that SODA has its specific enum values to
+    // return, similar to handwriting. So before we finalize the impl of SODA
+    // Mojo API, we may revisit this return value.
+    std::move(callback).Run(LoadModelResult::LOAD_MODEL_ERROR);
+    request_metrics.RecordRequestEvent(LoadModelResult::LOAD_MODEL_ERROR);
+    return;
+  }
+
+  std::move(callback).Run(LoadModelResult::OK);
+
   request_metrics.FinishRecordingPerformanceMetrics();
   request_metrics.RecordRequestEvent(LoadModelResult::OK);
 }

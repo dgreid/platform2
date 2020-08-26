@@ -69,6 +69,13 @@ class MachineLearningServiceImpl
       mojo::PendingReceiver<
           chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
       LoadHandwritingModelWithSpecCallback callback) override;
+  void LoadSpeechRecognizer(
+      chromeos::machine_learning::mojom::SodaConfigPtr spec,
+      mojo::PendingRemote<chromeos::machine_learning::mojom::SodaClient>
+          soda_client,
+      mojo::PendingReceiver<chromeos::machine_learning::mojom::SodaRecognizer>
+          soda_recognizer,
+      LoadSpeechRecognizerCallback callback) override;
 
   // Init the icu data if it is not initialized yet.
   void InitIcuIfNeeded();
