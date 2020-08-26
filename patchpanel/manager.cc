@@ -185,6 +185,8 @@ void Manager::InitialSetup() {
                << " object";
   }
 
+  shill_client_ = std::make_unique<ShillClient>(bus_);
+
   using ServiceMethod =
       std::unique_ptr<dbus::Response> (Manager::*)(dbus::MethodCall*);
   const std::map<const char*, ServiceMethod> kServiceMethods = {
@@ -225,7 +227,6 @@ void Manager::InitialSetup() {
   nd_proxy_->RegisterNDProxyMessageHandler(
       base::Bind(&Manager::OnNDProxyMessage, weak_factory_.GetWeakPtr()));
 
-  shill_client_ = std::make_unique<ShillClient>(bus_);
   auto* const forwarder = static_cast<TrafficForwarder*>(this);
 
   GuestMessage::GuestType arc_guest =
@@ -319,7 +320,7 @@ void Manager::StartDatapath() {
     LOG(ERROR) << "Failed to limit local port range. Some Android features or"
                << " apps may not work correctly.";
   }
-  // Enable IPv6 packet forarding
+  // Enable IPv6 packet forwarding
   if (runner.sysctl_w("net.ipv6.conf.all.forwarding", "1") != 0) {
     LOG(ERROR) << "Failed to update net.ipv6.conf.all.forwarding."
                << " IPv6 functionality may be broken.";
@@ -349,6 +350,9 @@ void Manager::StartDatapath() {
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
   }
+
+  shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
+      &Manager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
 }
 
 void Manager::StopDatapath() {
@@ -375,6 +379,15 @@ void Manager::StopDatapath() {
   if (runner.sysctl_w("net.ipv4.ip_forward", "0") != 0) {
     LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
   }
+}
+
+void Manager::OnDevicesChanged(const std::set<std::string>& added,
+                               const std::set<std::string>& removed) {
+  for (const std::string& ifname : removed)
+    datapath_->StopConnectionPinning(ifname);
+
+  for (const std::string& ifname : added)
+    datapath_->StartConnectionPinning(ifname);
 }
 
 bool Manager::StartArc(pid_t pid) {

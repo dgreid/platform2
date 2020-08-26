@@ -591,6 +591,35 @@ TEST(DatapathTest, StartStopIpForwarding) {
   }
 }
 
+TEST(DatapathTest, StartStopConnectionPinning) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "POSTROUTING", "-o", "eth0",
+                                           "-j", "CONNMARK", "--set-mark",
+                                           "0x03eb0000/0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "POSTROUTING", "-o", "eth0",
+                                           "-j", "CONNMARK", "--set-mark",
+                                           "0x03eb0000/0xffff0000", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "POSTROUTING", "-o", "eth0",
+                                            "-j", "CONNMARK", "--set-mark",
+                                            "0x03eb0000/0xffff0000", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "POSTROUTING", "-o", "eth0",
+                                            "-j", "CONNMARK", "--set-mark",
+                                            "0x03eb0000/0xffff0000", "-w"),
+                                true, nullptr));
+  Datapath datapath(&runner, &firewall);
+  datapath.SetIfnameIndex("eth0", 3);
+  datapath.StartConnectionPinning("eth0");
+  datapath.StopConnectionPinning("eth0");
+}
+
 TEST(DatapathTest, AddInboundIPv4DNAT) {
   MockProcessRunner runner;
   MockFirewall firewall;

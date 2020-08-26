@@ -144,6 +144,13 @@ class Datapath {
                                  uint32_t int_ipv4_addr,
                                  TrafficSource source);
 
+  // Starts or stops marking conntrack entries routed to |ext_ifname| with its
+  // associated fwmark routing tag. Once a conntrack entry is marked with the
+  // fwmark routing tag of a external device, the connection will be pinned
+  // to that deviced if conntrack fwmark restore is set for the source.
+  virtual void StartConnectionPinning(const std::string& ext_ifname);
+  virtual void StopConnectionPinning(const std::string& ext_ifname);
+
   // Create (or delete) pre-routing rules allowing direct ingress on |ifname|
   // to guest desintation |ipv4_addr|.
   virtual bool AddInboundIPv4DNAT(const std::string& ifname,
@@ -242,6 +249,9 @@ class Datapath {
   MinijailedProcessRunner& runner() const;
 
  private:
+  bool ModifyConnmarkSetPostrouting(IpFamily family,
+                                    const std::string& op,
+                                    const std::string& oif);
   bool ModifyConnmarkRestore(IpFamily family,
                              const std::string& chain,
                              const std::string& op,

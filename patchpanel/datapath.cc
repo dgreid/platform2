@@ -571,6 +571,56 @@ void Datapath::RemoveIPv6Address(const std::string& ifname,
   process_runner_->ip6("addr", "del", {ipv6_addr, "dev", ifname});
 }
 
+void Datapath::StartConnectionPinning(const std::string& ext_ifname) {
+  if (!ModifyConnmarkSetPostrouting(IpFamily::Dual, "-A", ext_ifname))
+    LOG(ERROR) << "Could not start connection pinning on " << ext_ifname;
+}
+
+void Datapath::StopConnectionPinning(const std::string& ext_ifname) {
+  if (!ModifyConnmarkSetPostrouting(IpFamily::Dual, "-D", ext_ifname))
+    LOG(ERROR) << "Could not stop connection pinning on " << ext_ifname;
+}
+
+bool Datapath::ModifyConnmarkSetPostrouting(IpFamily family,
+                                            const std::string& op,
+                                            const std::string& oif) {
+  if (oif.empty()) {
+    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark with no "
+                  "interface specified";
+    return false;
+  }
+
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark for " << oif
+               << ": incorrect IP family " << family;
+    return false;
+  }
+
+  int ifindex = FindIfIndex(oif);
+  if (ifindex == 0) {
+    PLOG(ERROR) << "if_nametoindex(" << oif << ") failed";
+    return false;
+  }
+
+  std::vector<std::string> args = {op,
+                                   "POSTROUTING",
+                                   "-o",
+                                   oif,
+                                   "-j",
+                                   "CONNMARK",
+                                   "--set-mark",
+                                   Fwmark::FromIfIndex(ifindex).ToString() +
+                                       "/" + kFwmarkRoutingMask.ToString(),
+                                   "-w"};
+
+  bool success = true;
+  if (family & IPv4)
+    success &= process_runner_->iptables("mangle", args) == 0;
+  if (family & IPv6)
+    success &= process_runner_->ip6tables("mangle", args) == 0;
+  return false;
+}
+
 bool Datapath::ModifyConnmarkRestore(IpFamily family,
                                      const std::string& chain,
                                      const std::string& op,

@@ -85,6 +85,8 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
   int OnInit() override;
 
  private:
+  void OnDevicesChanged(const std::set<std::string>& added,
+                        const std::set<std::string>& removed);
   void InitialSetup();
 
   // Start and stop the Datapath, creating or destroying the initial iptables
