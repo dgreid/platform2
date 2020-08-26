@@ -1,0 +1,65 @@
+# Copyright 2020 The Chromium OS Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//common-mk/pkg_config.gni")
+
+group("all") {
+  deps = [
+    ":libdm-bht",
+    ":verity",
+  ]
+  if (use.test) {
+    deps += [ ":verity_tests" ]
+  }
+}
+
+pkg_config("target_defaults") {
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
+  include_dirs = [ "include" ]
+}
+
+static_library("libdm-bht") {
+  configs += [
+    ":target_defaults",
+    "//common-mk:nouse_thin_archive",
+  ]
+  configs -= [ "//common-mk:use_thin_archive" ]
+  sources = [
+    "dm-bht-userspace.c",
+    "dm-bht.c",
+    "file_hasher.cc",
+    "kernel/crypto.c",
+    "kernel/md5.c",
+    "kernel/md5_generic.c",
+    "kernel/sha1.c",
+    "kernel/sha1_generic.c",
+    "kernel/sha256_generic.c",
+    "simple_file/env.cc",
+    "simple_file/file.cc",
+    "utils.cc",
+  ]
+}
+
+executable("verity") {
+  configs += [ ":target_defaults" ]
+  deps = [ ":libdm-bht" ]
+  sources = [ "verity_main.cc" ]
+}
+
+if (use.test) {
+  executable("verity_tests") {
+    configs += [
+      "//common-mk:test",
+      ":target_defaults",
+    ]
+    sources = [
+      "dm-bht_test.cc",
+      "file_hasher_test.cc",
+    ]
+    deps = [
+      ":libdm-bht",
+      "//common-mk/testrunner",
+    ]
+  }
+}
