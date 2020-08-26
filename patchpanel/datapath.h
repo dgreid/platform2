@@ -235,9 +235,20 @@ class Datapath {
   virtual bool AddAdbPortAccessRule(const std::string& ifname);
   virtual void DeleteAdbPortAccessRule(const std::string& ifname);
 
+  // Set or override the interface name to index mapping for |ifname|.
+  // Only used for testing.
+  void SetIfnameIndex(const std::string& ifname, int ifindex);
+
   MinijailedProcessRunner& runner() const;
 
  private:
+  bool ModifyConnmarkRestore(IpFamily family,
+                             const std::string& chain,
+                             const std::string& op,
+                             const std::string& iif);
+  bool ModifyFwmarkRoutingTag(const std::string& op,
+                              const std::string& ext_ifname,
+                              const std::string& int_ifname);
   bool ModifyFwmarkSourceTag(const std::string& op,
                              const std::string& iif,
                              TrafficSource source);
@@ -252,12 +263,22 @@ class Datapath {
                           const std::string& iif,
                           const std::string& oif,
                           bool log_failures = true);
+  bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
+  int FindIfIndex(const std::string& ifname);
 
   MinijailedProcessRunner* process_runner_;
   Firewall* firewall_;
   ioctl_t ioctl_;
 
-  bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
+  // A map used for remembering the interface index of an interface. This
+  // information is necessary when cleaning up iptables fwmark rules that
+  // directly references the interface index. When removing these rules on
+  // an RTM_DELLINK event, the interface index cannot be retrieved anymore.
+  // A new entry is only added when a new physical device appears, and entries
+  // are not removed.
+  // TODO(b/161507671) Rely on RoutingService to obtain this information once
+  // shill/routing_table.cc has been migrated to patchpanel.
+  std::map<std::string, int> if_nametoindex_;
 
   DISALLOW_COPY_AND_ASSIGN(Datapath);
 };

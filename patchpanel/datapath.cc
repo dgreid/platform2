@@ -51,6 +51,17 @@ std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   return n;
 }
 
+bool IsValidIpFamily(IpFamily family) {
+  switch (family) {
+    case IPv4:
+    case IPv6:
+    case Dual:
+      return true;
+    default:
+      return false;
+  }
+}
+
 }  // namespace
 
 std::string ArcVethHostName(const std::string& ifname) {
@@ -352,12 +363,24 @@ void Datapath::StartRoutingDevice(const std::string& ext_ifname,
     LOG(ERROR) << "Failed to enable IP forwarding for " << ext_ifname << "<-"
                << int_ifname;
 
-  // TODO(b/161507671) If ext_ifname is not null, mark egress traffic with the
-  // fwmark routing tag corresponding to |ext_ifname|, and set up strong routing
-  // in ip rule.
+  if (!ext_ifname.empty()) {
+    // If |ext_ifname| is not null, mark egress traffic with the
+    // fwmark routing tag corresponding to |ext_ifname|.
+    if (!ModifyFwmarkRoutingTag("-A", ext_ifname, int_ifname))
+      LOG(ERROR) << "Failed to add PREROUTING fwmark routing tag for "
+                 << ext_ifname << "<-" << int_ifname;
+  } else {
+    // Otherwise if ext_ifname is null, set up a CONNMARK restore rule in
+    // PREROUTING to apply any fwmark routing tag saved for the current
+    // connection, and rely on implicit routing to the default logical network
+    // otherwise.
+    if (!ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-A", int_ifname))
+      LOG(ERROR) << "Failed to add PREROUTING CONNMARK restore rule for "
+                 << int_ifname;
 
-  // TODO(b/161507671) If ext_ifname is null, set up connection tracking for the
-  // current default interface.
+    // TODO(b/161507671) When a VPN service starts, tag new connections with the
+    // fwmark routing tag for VPNs.
+  }
 
   if (!ModifyFwmarkSourceTag("-A", int_ifname, source))
     LOG(ERROR) << "Failed to add PREROUTING fwmark tagging rule for source "
@@ -373,7 +396,11 @@ void Datapath::StopRoutingDevice(const std::string& ext_ifname,
   StopIpForwarding(IpFamily::IPv4, ext_ifname, int_ifname);
   StopIpForwarding(IpFamily::IPv4, int_ifname, ext_ifname);
   ModifyFwmarkSourceTag("-D", int_ifname, source);
-  // TODO(b/161507671) Remove routing tag marking for egress traffic.
+  if (!ext_ifname.empty()) {
+    ModifyFwmarkRoutingTag("-D", ext_ifname, int_ifname);
+  } else {
+    ModifyConnmarkRestore(IpFamily::Dual, "PREROUTING", "-D", int_ifname);
+  }
 }
 
 bool Datapath::AddInboundIPv4DNAT(const std::string& ifname,
@@ -544,6 +571,51 @@ void Datapath::RemoveIPv6Address(const std::string& ifname,
   process_runner_->ip6("addr", "del", {ipv6_addr, "dev", ifname});
 }
 
+bool Datapath::ModifyConnmarkRestore(IpFamily family,
+                                     const std::string& chain,
+                                     const std::string& op,
+                                     const std::string& iif) {
+  if (chain != "OUTPUT" && (chain != "PREROUTING" || iif.empty())) {
+    LOG(ERROR) << "Invalid arguments chain=" << chain << " iif=" << iif;
+    return false;
+  }
+
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Cannot change " << chain << " -j CONNMARK restore-mark"
+               << " for " << iif << ": incorrect IP family " << family;
+    return false;
+  }
+
+  std::vector<std::string> args = {op, chain};
+  if (!iif.empty()) {
+    args.push_back("-i");
+    args.push_back(iif);
+  }
+  args.insert(args.end(), {"-j", "CONNMARK", "--restore-mark", "--mask",
+                          kFwmarkRoutingMask.ToString(), "-w"});
+
+  bool success = true;
+  if (family & IPv4)
+    success &= process_runner_->iptables("mangle", args) == 0;
+  if (family & IPv6)
+    success &= process_runner_->ip6tables("mangle", args) == 0;
+  return success;
+}
+
+bool Datapath::ModifyFwmarkRoutingTag(const std::string& op,
+                                      const std::string& ext_ifname,
+                                      const std::string& int_ifname) {
+  int ifindex = FindIfIndex(ext_ifname);
+  if (ifindex == 0) {
+    PLOG(ERROR) << "if_nametoindex(" << ext_ifname << ") failed";
+    return false;
+  }
+
+  return ModifyFwmarkPrerouting(IpFamily::Dual, op, int_ifname,
+                                Fwmark::FromIfIndex(ifindex),
+                                kFwmarkRoutingMask);
+}
+
 bool Datapath::ModifyFwmarkSourceTag(const std::string& op,
                                      const std::string& iif,
                                      TrafficSource source) {
@@ -564,15 +636,10 @@ bool Datapath::ModifyFwmarkPrerouting(IpFamily family,
     return false;
   }
 
-  switch (family) {
-    case IPv4:
-    case IPv6:
-    case Dual:
-      break;
-    default:
-      LOG(ERROR) << "Cannot change PREROUTING set-fwmark for " << iif
-                 << ": incorrect IP family " << family;
-      return false;
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Cannot change PREROUTING set-fwmark for " << iif
+               << ": incorrect IP family " << family;
+    return false;
   }
 
   std::vector<std::string> args = {
@@ -599,16 +666,10 @@ bool Datapath::ModifyIpForwarding(IpFamily family,
     return false;
   }
 
-  switch (family) {
-    case IPv4:
-    case IPv6:
-    case Dual:
-      break;
-    default:
-
-      LOG(ERROR) << "Cannot change IP forwarding from \"" << iif << "\" to \""
-                 << oif << "\": incorrect IP family " << family;
-      return false;
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Cannot change IP forwarding from \"" << iif << "\" to \""
+               << oif << "\": incorrect IP family " << family;
+    return false;
   }
 
   std::vector<std::string> args = {op, "FORWARD"};
@@ -763,6 +824,24 @@ bool Datapath::AddAdbPortAccessRule(const std::string& ifname) {
 void Datapath::DeleteAdbPortAccessRule(const std::string& ifname) {
   firewall_->DeleteAcceptRules(patchpanel::ModifyPortRuleRequest::TCP,
                                kAdbProxyTcpListenPort, ifname);
+}
+
+void Datapath::SetIfnameIndex(const std::string& ifname, int ifindex) {
+  if_nametoindex_[ifname] = ifindex;
+}
+
+int Datapath::FindIfIndex(const std::string& ifname) {
+  uint32_t ifindex = if_nametoindex(ifname.c_str());
+  if (ifindex > 0) {
+    if_nametoindex_[ifname] = ifindex;
+    return ifindex;
+  }
+
+  const auto it = if_nametoindex_.find(ifname);
+  if (it != if_nametoindex_.end())
+    return it->second;
+
+  return 0;
 }
 
 }  // namespace patchpanel

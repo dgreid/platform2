@@ -18,6 +18,16 @@
 
 namespace patchpanel {
 
+// Constant used for establishing a stable mapping between routing table ids
+// and interface indexes. An interface with ifindex 2 will be assigned the
+// routing table with id 1002 by the routing layer. This stable mapping is used
+// for configuring ip rules, iptables fwmark mangle rules, and the
+// accept_ra_rt_table sysctl for all physical interfaces.
+// TODO(b/161507671) Consolidate with shill::kInterfaceTableIdIncrement
+// in platform2/shill/routing_table.cc once routing and ip rule configuration
+// is migrated to patchpanel.
+constexpr const uint32_t kInterfaceTableIdIncrement = 1000;
+
 // The list of all sources of traffic that need to be distinguished
 // for routing or traffic accounting. Currently 6 bits are used for encoding
 // the TrafficSource enum in a fwmark. The enum is split into two groups:local
@@ -123,6 +133,13 @@ union Fwmark {
   static Fwmark FromSource(TrafficSource source) {
     return {
         .policy = static_cast<uint8_t>(source), .legacy = 0, .rt_table_id = 0};
+  }
+
+  static Fwmark FromIfIndex(uint32_t ifindex) {
+    uint32_t table_id = ifindex + kInterfaceTableIdIncrement;
+    return {.policy = 0,
+            .legacy = 0,
+            .rt_table_id = static_cast<uint16_t>(table_id)};
   }
 };
 
