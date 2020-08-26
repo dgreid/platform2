@@ -55,6 +55,7 @@ pkg_config("target_defaults") {
 
 static_library("libbiod") {
   sources = [
+    "biod_config.cc",
     "biod_crypto.cc",
     "biod_metrics.cc",
     "biod_storage.cc",
@@ -72,6 +73,7 @@ static_library("libbiod") {
     "power_manager_client.cc",
     "uinput_device.cc",
     "updater/cros_fp_updater.cc",
+    "updater/update_utils.cc",
   ]
   configs += [ ":target_defaults" ]
 }
@@ -134,6 +136,7 @@ if (use.test) {
       "power_manager_client_test.cc",
       "tools/bio_crypto_init_test.cc",
       "updater/cros_fp_updater_test.cc",
+      "updater/update_utils_test.cc",
     ]
     configs += [
       "//common-mk:test",

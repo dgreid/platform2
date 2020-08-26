@@ -17,12 +17,14 @@
 #include <base/strings/stringprintf.h>
 #include <cros_config/cros_config.h>
 
+#include "biod/biod_config.h"
 #include "biod/biod_metrics.h"
 #include "biod/biod_version.h"
 #include "biod/cros_fp_device.h"
 #include "biod/updater/cros_fp_updater.h"
 #include "biod/updater/update_reason.h"
 #include "biod/updater/update_status.h"
+#include "biod/updater/update_utils.h"
 
 using UpdateStatus = biod::updater::UpdateStatus;
 using UpdateReason = biod::updater::UpdateReason;
@@ -120,7 +122,7 @@ int main(int argc, char* argv[]) {
     LOG(WARNING) << "Cros config is not supported on this model, continuing "
                     "with legacy update.";
   }
-  if (biod::updater::FingerprintUnsupported(&cros_config)) {
+  if (biod::FingerprintUnsupported(&cros_config)) {
     LOG(INFO) << "Fingerprint is not supported on this model, exiting.";
     return EXIT_SUCCESS;
   }

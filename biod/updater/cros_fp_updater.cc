@@ -12,21 +12,24 @@
 #include <utility>
 
 #include <base/command_line.h>
-#include <base/logging.h>
-#include <base/process/launch.h>
-#include <base/time/time.h>
-#include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
+#include <base/logging.h>
+#include <base/process/launch.h>
 #include <base/strings/string_split.h>
+#include <base/time/time.h>
 #include <chromeos/ec/ec_commands.h>
 #include <cros_config/cros_config_interface.h>
 
+#include "biod/biod_config.h"
+#include "biod/biod_version.h"
 #include "biod/cros_fp_device.h"
 #include "biod/cros_fp_firmware.h"
 #include "biod/ec_command.h"
 #include "biod/updater/update_reason.h"
 #include "biod/updater/update_status.h"
+#include "biod/updater/update_utils.h"
+#include "biod/utils.h"
 
 namespace {
 
@@ -35,10 +38,6 @@ constexpr base::TimeDelta kBootSplashScreenLaunchTimeout =
 
 constexpr char kFlashromPath[] = "/usr/sbin/flashrom";
 constexpr char kRebootFile[] = "/tmp/force_reboot_after_fw_update";
-
-constexpr char kUpdateDisableFile[] = "/opt/google/biod/fw/.disable_fp_updater";
-constexpr char kFirmwareLegacyBoardPattern[] = "*_fp";
-constexpr char kFirmwareGlobSuffix[] = "_*.bin";
 
 bool UpdateImage(const biod::CrosFpDeviceUpdate& ec_dev,
                  const biod::CrosFpBootUpdateCtrl& boot_ctrl,
@@ -70,10 +69,6 @@ bool UpdateImage(const biod::CrosFpDeviceUpdate& ec_dev,
 }  // namespace
 
 namespace biod {
-
-constexpr char kCrosConfigFPPath[] = "/fingerprint";
-constexpr char kCrosConfigFPBoard[] = "board";
-constexpr char kCrosConfigFPLocation[] = "sensor-location";
 
 std::string CrosFpDeviceUpdate::EcCurrentImageToString(
     enum ec_current_image image) {
@@ -210,97 +205,6 @@ bool CrosFpBootUpdateCtrl::ScheduleReboot() const {
 
 namespace updater {
 
-constexpr char kFirmwareDir[] = "/opt/google/biod/fw";
-
-// FindFirmwareFile searches |directory| for a single firmware file
-// that matches the |board_name|+|kFirmwareGlobSuffix| file pattern.
-// If a single matching firmware file is found is found,
-// its path is written to |file|. Otherwise, |file| will be untouched.
-FindFirmwareFileStatus FindFirmwareFile(const base::FilePath& directory,
-                                        const std::string& board_name,
-                                        base::FilePath* file) {
-  if (!base::DirectoryExists(directory)) {
-    return FindFirmwareFileStatus::kNoDirectory;
-  }
-
-  std::string glob(board_name + std::string(kFirmwareGlobSuffix));
-  base::FileEnumerator fw_bin_list(directory, false,
-                                   base::FileEnumerator::FileType::FILES, glob);
-
-  // Find provided firmware file
-  base::FilePath fw_bin = fw_bin_list.Next();
-  if (fw_bin.empty()) {
-    return FindFirmwareFileStatus::kFileNotFound;
-  }
-  LOG(INFO) << "Found firmware file '" << fw_bin.value() << "'.";
-
-  // Ensure that there are no other firmware files
-  bool extra_fw_files = false;
-  for (base::FilePath fw_extra = fw_bin_list.Next(); !fw_extra.empty();
-       fw_extra = fw_bin_list.Next()) {
-    extra_fw_files = true;
-    LOG(ERROR) << "Found firmware file '" << fw_extra.value() << "'.";
-  }
-  if (extra_fw_files) {
-    return FindFirmwareFileStatus::kMultipleFiles;
-  }
-
-  *file = fw_bin;
-  return FindFirmwareFileStatus::kFoundFile;
-}
-
-FindFirmwareFileStatus FindFirmwareFile(
-    const base::FilePath& directory,
-    brillo::CrosConfigInterface* cros_config,
-    base::FilePath* file) {
-  std::string board_name;
-  if (cros_config->GetString(kCrosConfigFPPath, kCrosConfigFPBoard,
-                             &board_name)) {
-    LOG(INFO) << "Identified fingerprint board name as '" << board_name << "'.";
-  } else {
-    LOG(WARNING) << "Fingerprint board name is unavailable, continuing with "
-                    "legacy update.";
-    board_name = kFirmwareLegacyBoardPattern;
-  }
-
-  return FindFirmwareFile(directory, board_name, file);
-}
-
-std::string FindFirmwareFileStatusToString(FindFirmwareFileStatus status) {
-  switch (status) {
-    case FindFirmwareFileStatus::kFoundFile:
-      return "Firmware file found.";
-    case FindFirmwareFileStatus::kNoDirectory:
-      return "Firmware directory does not exist.";
-    case FindFirmwareFileStatus::kFileNotFound:
-      return "Firmware file not found.";
-    case FindFirmwareFileStatus::kMultipleFiles:
-      return "More than one firmware file was found.";
-  }
-
-  NOTREACHED();
-  return "Unknown find firmware file status encountered.";
-}
-
-bool UpdateDisallowed() {
-  return base::PathExists(base::FilePath(kUpdateDisableFile));
-}
-
-// Since /fingerprint/sensor-location is an optional field, the only information
-// that is relevant to the updater is if fingerprint is explicitly not
-// supported.
-bool FingerprintUnsupported(brillo::CrosConfigInterface* cros_config) {
-  std::string fingerprint_location;
-  if (cros_config->GetString(kCrosConfigFPPath, kCrosConfigFPLocation,
-                             &fingerprint_location)) {
-    if (fingerprint_location == "none") {
-      return true;
-    }
-  }
-
-  return false;
-}
-
 UpdateResult DoUpdate(const CrosFpDeviceUpdate& ec_dev,
                       const CrosFpBootUpdateCtrl& boot_ctrl,
                       const CrosFpFirmware& fw) {
@@ -371,5 +275,4 @@ UpdateResult DoUpdate(const CrosFpDeviceUpdate& ec_dev,
 }
 
 }  // namespace updater
-
 }  // namespace biod
