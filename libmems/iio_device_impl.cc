@@ -78,7 +78,7 @@ int IioDeviceImpl::GetId() const {
 
 base::FilePath IioDeviceImpl::GetPath() const {
   std::string id_str = GetStringFromId(GetId());
-  auto path = base::FilePath("/sys/bus/iio/devices").Append(id_str);
+  auto path = base::FilePath(kSysDevString).Append(id_str);
   CHECK(base::DirectoryExists(path));
   return path;
 }

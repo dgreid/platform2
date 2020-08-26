@@ -64,7 +64,7 @@ base::FilePath IioDeviceTriggerImpl::GetPath() const {
   if (id >= 0)
     id_str = GetStringFromId(id);
 
-  auto path = base::FilePath("/sys/bus/iio/devices").Append(id_str);
+  auto path = base::FilePath(kSysDevString).Append(id_str);
   CHECK(base::DirectoryExists(path));
   return path;
 }

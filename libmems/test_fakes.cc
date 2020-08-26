@@ -86,7 +86,7 @@ FakeIioDevice::FakeIioDevice(FakeIioContext* ctx,
 base::FilePath FakeIioDevice::GetPath() const {
   std::string id_str(kDeviceIdPrefix);
   id_str.append(std::to_string(GetId()));
-  return base::FilePath("/sys/bus/iio/devices").Append(id_str);
+  return base::FilePath(kSysDevString).Append(id_str);
 }
 
 base::Optional<std::string> FakeIioDevice::ReadStringAttribute(

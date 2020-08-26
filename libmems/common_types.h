@@ -23,6 +23,8 @@ constexpr char kHWFifoTimeoutAttr[] = "buffer/hwfifo_timeout";
 constexpr char kRawAttr[] = "raw";
 constexpr char kTimestampAttr[] = "timestamp";
 
+constexpr char kSysDevString[] = "/sys/bus/iio/devices";
+
 }  // namespace libmems
 
 #endif  // LIBMEMS_COMMON_TYPES_H_
