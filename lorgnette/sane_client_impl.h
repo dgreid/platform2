@@ -45,6 +45,37 @@ class SaneClientImpl : public SaneClient {
   std::shared_ptr<DeviceSet> open_devices_;
 };
 
+class SaneOption {
+ public:
+  SaneOption(const SANE_Option_Descriptor& opt, int index);
+
+  bool SetInt(int i);
+  bool SetString(const std::string& s);
+  base::Optional<std::string> GetString() const;
+
+  // This returns a pointer to the internal storage. Care must be taken that the
+  // pointer does not outlive the SaneOption.
+  void* GetPointer();
+
+  int GetIndex() const;
+  std::string GetName() const;
+  std::string DisplayValue() const;
+
+ private:
+  std::string name_;
+  int index_;
+  SANE_Value_Type type_;  // The type that the backend uses for the option.
+
+  // The integer data, if this is an int option.
+  union {
+    SANE_Int i;
+    SANE_Fixed f;
+  } int_data_;
+
+  // The buffer containing string data, if this is a string option.
+  std::vector<char> string_data_;
+};
+
 class SaneDeviceImpl : public SaneDevice {
   friend class SaneClientImpl;
 
@@ -81,28 +112,11 @@ class SaneDeviceImpl : public SaneDevice {
     kSource,
   };
 
-  class SaneOption {
-   public:
-    int index;
-    SANE_Value_Type type;  // The type that the backend uses for the option.
-    union {
-      SANE_Int i;
-      SANE_Fixed f;
-      SANE_String s;
-    } value;
-
-    // The buffer backing value.s, if this is a string option.
-    std::vector<char> string_data;
-
-    bool SetInt(int i);
-    bool SetString(const std::string& s);
-  };
-
   SaneDeviceImpl(SANE_Handle handle,
                  const std::string& name,
                  std::shared_ptr<DeviceSet> open_devices);
   bool LoadOptions(brillo::ErrorPtr* error);
-  SANE_Status SetOption(SaneOption* option, bool* should_reload);
+  bool UpdateDeviceOption(brillo::ErrorPtr* error, SaneOption* option);
 
   SANE_Handle handle_;
   std::string name_;

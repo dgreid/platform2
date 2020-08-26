@@ -150,7 +150,7 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
 
   ValidOptionValues values;
   if (options_.count(kResolution) != 0) {
-    int index = options_.at(kResolution).index;
+    int index = options_.at(kResolution).GetIndex();
     const SANE_Option_Descriptor* descriptor =
         sane_get_option_descriptor(handle_, index);
     if (!descriptor) {
@@ -172,7 +172,7 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
   }
 
   if (options_.count(kSource) != 0) {
-    int index = options_.at(kSource).index;
+    int index = options_.at(kSource).GetIndex();
     const SANE_Option_Descriptor* descriptor =
         sane_get_option_descriptor(handle_, index);
     if (!descriptor) {
@@ -197,7 +197,7 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
   }
 
   if (options_.count(kScanMode) != 0) {
-    int index = options_.at(kScanMode).index;
+    int index = options_.at(kScanMode).GetIndex();
     const SANE_Option_Descriptor* descriptor =
         sane_get_option_descriptor(handle_, index);
     if (!descriptor) {
@@ -231,27 +231,13 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
     return false;
   }
 
-  SaneOption option = options_[kResolution];
-  option.SetInt(resolution);
-
-  bool should_reload = false;
-  SANE_Status status = SetOption(&option, &should_reload);
-  if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                               kManagerServiceError,
-                               "Unable to set resolution to %d: %s", resolution,
-                               sane_strstatus(status));
+  SaneOption& option = options_.at(kResolution);
+  if (!option.SetInt(resolution)) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Failed to set SaneOption");
     return false;
   }
-
-  if (should_reload) {
-    LoadOptions(error);
-  } else {
-    // If not reloading the option values, we should update the stored option.
-    options_[kResolution] = option;
-  }
-
-  return true;
+  return UpdateDeviceOption(error, &option);
 }
 
 bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
@@ -269,8 +255,15 @@ bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
     return false;
   }
 
-  std::string source_name = options_[kSource].value.s;
-  *source_out = CreateDocumentSource(source_name);
+  SaneOption& option = options_.at(kSource);
+  base::Optional<std::string> source_name = option.GetString();
+  if (!source_name.has_value()) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Source is not a string option");
+    return false;
+  }
+
+  *source_out = CreateDocumentSource(source_name.value());
   return true;
 }
 
@@ -282,32 +275,13 @@ bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
     return false;
   }
 
-  SaneOption option = options_[kSource];
+  SaneOption& option = options_.at(kSource);
   if (!option.SetString(source.name())) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "Failed to set SaneOption");
-  }
-
-  bool should_reload = false;
-  SANE_Status status = SetOption(&option, &should_reload);
-  if (should_reload)
-    LoadOptions(error);
-  if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                               kManagerServiceError,
-                               "Unable to set document source to %s: %s",
-                               source.name().c_str(), sane_strstatus(status));
     return false;
   }
-
-  if (should_reload) {
-    LoadOptions(error);
-  } else {
-    // If not reloading the option values, we should update the stored option.
-    options_[kSource] = option;
-  }
-
-  return true;
+  return UpdateDeviceOption(error, &option);
 }
 
 bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
@@ -336,29 +310,14 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
     return false;
   }
 
-  SaneOption option = options_[kScanMode];
-  option.SetString(mode_string);
-
-  bool should_reload = false;
-  SANE_Status status = SetOption(&option, &should_reload);
-  if (should_reload)
-    LoadOptions(error);
-  if (status != SANE_STATUS_GOOD) {
-    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                               kManagerServiceError,
-                               "Unable to set scan mode to %s: %s",
-                               mode_string.c_str(), sane_strstatus(status));
+  SaneOption& option = options_.at(kScanMode);
+  if (!option.SetString(mode_string)) {
+    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                         kManagerServiceError, "Failed to set SaneOption");
     return false;
   }
 
-  if (should_reload) {
-    LoadOptions(error);
-  } else {
-    // If not reloading the option values, we should update the stored option.
-    options_[kScanMode] = option;
-  }
-
-  return true;
+  return UpdateDeviceOption(error, &option);
 }
 
 SANE_Status SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
@@ -501,33 +460,83 @@ base::Optional<std::vector<uint32_t>> SaneDeviceImpl::GetValidIntOptionValues(
   return values;
 }
 
-bool SaneDeviceImpl::SaneOption::SetInt(int i) {
-  switch (type) {
+SaneOption::SaneOption(const SANE_Option_Descriptor& opt, int index) {
+  name_ = opt.name;
+  index_ = index;
+  type_ = opt.type;
+  if (type_ == SANE_TYPE_STRING) {
+    // opt.size is the maximum size of the string option, including the null
+    // terminator (which is mandatory).
+    string_data_.resize(opt.size);
+  }
+}
+
+bool SaneOption::SetInt(int i) {
+  switch (type_) {
     case SANE_TYPE_INT:
-      value.i = i;
+      int_data_.i = i;
       return true;
     case SANE_TYPE_FIXED:
-      value.f = SANE_FIX(static_cast<double>(i));
+      int_data_.f = SANE_FIX(static_cast<double>(i));
       return true;
     default:
       return false;
   }
 }
 
-bool SaneDeviceImpl::SaneOption::SetString(const std::string& s) {
-  if (type != SANE_TYPE_STRING) {
+bool SaneOption::SetString(const std::string& s) {
+  if (type_ != SANE_TYPE_STRING) {
     return false;
   }
 
   size_t size_with_null = s.size() + 1;
-  if (size_with_null > string_data.size()) {
+  if (size_with_null > string_data_.size()) {
     LOG(ERROR) << "String size " << size_with_null
-               << " exceeds maximum option size " << string_data.size();
+               << " exceeds maximum option size " << string_data_.size();
     return false;
   }
 
-  memcpy(string_data.data(), s.c_str(), size_with_null);
+  memcpy(string_data_.data(), s.c_str(), size_with_null);
   return true;
+}
+
+base::Optional<std::string> SaneOption::GetString() const {
+  if (type_ != SANE_TYPE_STRING)
+    return base::nullopt;
+
+  return std::string(string_data_.data());
+}
+
+void* SaneOption::GetPointer() {
+  if (type_ == SANE_TYPE_STRING)
+    return string_data_.data();
+  else if (type_ == SANE_TYPE_INT)
+    return &int_data_.i;
+  else if (type_ == SANE_TYPE_FIXED)
+    return &int_data_.f;
+  else
+    return nullptr;
+}
+
+int SaneOption::GetIndex() const {
+  return index_;
+}
+
+std::string SaneOption::GetName() const {
+  return name_;
+}
+
+std::string SaneOption::DisplayValue() const {
+  switch (type_) {
+    case SANE_TYPE_INT:
+      return std::to_string(int_data_.i);
+    case SANE_TYPE_FIXED:
+      return std::to_string(static_cast<int>(SANE_UNFIX(int_data_.f)));
+    case SANE_TYPE_STRING:
+      return GetString().value();
+    default:
+      return "[invalid]";
+  }
 }
 
 SaneDeviceImpl::SaneDeviceImpl(SANE_Handle handle,
@@ -572,43 +581,23 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
       return false;
     }
 
-    // A pointer to the memory used to store the current setting's value.
-    // If this is non-null, we will read the detected option's value and store
-    // it to this address.
-    void* value = nullptr;
+    base::Optional<ScanOption> option_name;
     if ((opt->type == SANE_TYPE_INT || opt->type == SANE_TYPE_FIXED) &&
         opt->size == sizeof(SANE_Int) && opt->unit == SANE_UNIT_DPI &&
         strcmp(opt->name, SANE_NAME_SCAN_RESOLUTION) == 0) {
-      options_[kResolution].index = i;
-      options_[kResolution].type = opt->type;
-      if (opt->type == SANE_TYPE_INT) {
-        value = &options_[kResolution].value.i;
-      } else {  // type is SANE_TYPE_FIXED
-        value = &options_[kResolution].value.f;
-      }
+      option_name = kResolution;
     } else if ((opt->type == SANE_TYPE_STRING) &&
                strcmp(opt->name, SANE_NAME_SCAN_MODE) == 0) {
-      SaneOption& sane_opt = options_[kScanMode];
-      sane_opt.index = i;
-      sane_opt.type = opt->type;
-      // opt->size is the maximum size of the string option, including the null
-      // terminator (which is mandatory).
-      sane_opt.string_data.resize(opt->size);
-      sane_opt.value.s = sane_opt.string_data.data();
-      value = sane_opt.string_data.data();
+      option_name = kScanMode;
     } else if ((opt->type == SANE_TYPE_STRING) &&
                strcmp(opt->name, SANE_NAME_SCAN_SOURCE) == 0) {
-      SaneOption& sane_opt = options_[kSource];
-      sane_opt.index = i;
-      sane_opt.type = opt->type;
-      sane_opt.string_data.resize(opt->size);
-      sane_opt.value.s = sane_opt.string_data.data();
-      value = sane_opt.string_data.data();
+      option_name = kSource;
     }
 
-    if (value) {
-      SANE_Status status =
-          sane_control_option(handle_, i, SANE_ACTION_GET_VALUE, value, NULL);
+    if (option_name.has_value()) {
+      SaneOption sane_option(*opt, i);
+      SANE_Status status = sane_control_option(
+          handle_, i, SANE_ACTION_GET_VALUE, sane_option.GetPointer(), NULL);
       if (status != SANE_STATUS_GOOD) {
         brillo::Error::AddToPrintf(
             error, FROM_HERE, brillo::errors::dbus::kDomain,
@@ -616,41 +605,34 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
             i);
         return false;
       }
+      options_.insert({option_name.value(), std::move(sane_option)});
     }
   }
 
   return true;
 }
 
-SANE_Status SaneDeviceImpl::SetOption(SaneOption* option, bool* should_reload) {
-  void* value;
-  switch (option->type) {
-    case SANE_TYPE_INT:
-      value = &option->value.i;
-      break;
-    case SANE_TYPE_FIXED:
-      value = &option->value.f;
-      break;
-    case SANE_TYPE_STRING:
-      // Do not use '&' here, since SANE_String is already a pointer type.
-      value = option->value.s;
-      break;
-    default:
-      return SANE_STATUS_UNSUPPORTED;
-  }
-
+bool SaneDeviceImpl::UpdateDeviceOption(brillo::ErrorPtr* error,
+                                        SaneOption* option) {
   SANE_Int result_flags;
-  SANE_Status status = sane_control_option(
-      handle_, option->index, SANE_ACTION_SET_VALUE, value, &result_flags);
+  SANE_Status status =
+      sane_control_option(handle_, option->GetIndex(), SANE_ACTION_SET_VALUE,
+                          option->GetPointer(), &result_flags);
   if (status != SANE_STATUS_GOOD) {
-    return status;
+    brillo::Error::AddTo(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to set " + option->GetName() + " to " + option->DisplayValue() +
+            " : " + sane_strstatus(status));
+    // Reload options, to bring local value and device value back in sync.
+    LoadOptions(error);
+    return false;
   }
 
   if (result_flags & SANE_INFO_RELOAD_OPTIONS) {
-    *should_reload = true;
+    return LoadOptions(error);
   }
 
-  return status;
+  return true;
 }
 
 }  // namespace lorgnette

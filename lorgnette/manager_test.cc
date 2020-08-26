@@ -632,6 +632,171 @@ TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
   EXPECT_EQ(info_[1].type(), dev_two_.type);
 }
 
+namespace {
+
+SANE_Option_Descriptor CreateDescriptor(const char* name,
+                                        SANE_Value_Type type,
+                                        int size) {
+  SANE_Option_Descriptor desc;
+  desc.name = name;
+  desc.type = type;
+  desc.constraint_type = SANE_CONSTRAINT_NONE;
+  desc.size = size;
+  return desc;
+}
+
+}  // namespace
+
+TEST(SaneOptionIntTest, SetIntSucceeds) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
+  EXPECT_TRUE(option.SetInt(54));
+  EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 54);
+}
+
+TEST(SaneOptionIntTest, SetStringFails) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
+  EXPECT_TRUE(option.SetInt(17));
+  EXPECT_FALSE(option.SetString("test"));
+  EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 17);
+}
+
+TEST(SaneOptionIntTest, GetIndex) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
+  EXPECT_EQ(option.GetIndex(), 7);
+}
+
+TEST(SaneOptionIntTest, GetName) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
+  EXPECT_EQ(option.GetName(), "Test Name");
+}
+
+TEST(SaneOptionIntTest, DisplayValue) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 2);
+  EXPECT_TRUE(option.SetInt(247));
+  EXPECT_EQ(option.DisplayValue(), "247");
+}
+
+TEST(SaneOptionIntTest, CopiesDoNotAlias) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 2);
+  EXPECT_TRUE(option.SetInt(88));
+  EXPECT_EQ(option.DisplayValue(), "88");
+
+  SaneOption option_two = option;
+  EXPECT_TRUE(option_two.SetInt(9));
+  EXPECT_EQ(option_two.DisplayValue(), "9");
+  EXPECT_EQ(option.DisplayValue(), "88");
+}
+
+TEST(SaneOptionFixedTest, SetIntSucceeds) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
+  EXPECT_TRUE(option.SetInt(54));
+  SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
+  EXPECT_EQ(static_cast<int>(SANE_UNFIX(f)), 54);
+}
+
+TEST(SaneOptionFixedTest, SetStringFails) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
+  EXPECT_TRUE(option.SetInt(17));
+  EXPECT_FALSE(option.SetString("test"));
+  SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
+  EXPECT_EQ(static_cast<int>(SANE_UNFIX(f)), 17);
+}
+
+TEST(SaneOptionFixedTest, GetIndex) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
+  EXPECT_EQ(option.GetIndex(), 7);
+}
+
+TEST(SaneOptionFixedTest, GetName) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
+  EXPECT_EQ(option.GetName(), "Test Name");
+}
+
+TEST(SaneOptionFixedTest, DisplayValue) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 2);
+  EXPECT_TRUE(option.SetInt(247));
+  EXPECT_EQ(option.DisplayValue(), "247");
+}
+
+TEST(SaneOptionFixedTest, CopiesDoNotAlias) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 2);
+  EXPECT_TRUE(option.SetInt(88));
+  EXPECT_EQ(option.DisplayValue(), "88");
+
+  SaneOption option_two = option;
+  EXPECT_TRUE(option_two.SetInt(9));
+  EXPECT_EQ(option_two.DisplayValue(), "9");
+  EXPECT_EQ(option.DisplayValue(), "88");
+}
+
+TEST(SaneOptionStringTest, SetStringSucceeds) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 8), 7);
+  EXPECT_TRUE(option.SetString("test"));
+  EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
+
+  // Longest string that fits (with null terminator).
+  EXPECT_TRUE(option.SetString("1234567"));
+  EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "1234567");
+}
+
+TEST(SaneOptionStringTest, SetStringTooLongFails) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 8), 7);
+  EXPECT_TRUE(option.SetString("test"));
+
+  // String that is exactly one character too long.
+  EXPECT_FALSE(option.SetString("12345678"));
+
+  // String that is many characters too long.
+  EXPECT_FALSE(option.SetString("This is a much longer string than can fit."));
+  EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
+}
+
+TEST(SaneOptionStringTest, SetIntFails) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 7);
+  EXPECT_TRUE(option.SetString("test"));
+  EXPECT_FALSE(option.SetInt(54));
+  EXPECT_STREQ(static_cast<char*>(option.GetPointer()), "test");
+}
+
+TEST(SaneOptionStringTest, GetIndex) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 7);
+  EXPECT_EQ(option.GetIndex(), 7);
+}
+
+TEST(SaneOptionStringTest, GetName) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 7);
+  EXPECT_EQ(option.GetName(), "Test Name");
+}
+
+TEST(SaneOptionStringTest, DisplayValue) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 2);
+  EXPECT_TRUE(option.SetString("test string"));
+  EXPECT_EQ(option.DisplayValue(), "test string");
+}
+
+TEST(SaneOptionStringTest, CopiesDoNotAlias) {
+  SaneOption option(CreateDescriptor("Test Name", SANE_TYPE_STRING, 32), 2);
+  EXPECT_TRUE(option.SetString("test string"));
+  EXPECT_EQ(option.DisplayValue(), "test string");
+
+  SaneOption option_two = option;
+  EXPECT_TRUE(option_two.SetString("other value"));
+  EXPECT_EQ(option.DisplayValue(), "test string");
+  EXPECT_EQ(option_two.DisplayValue(), "other value");
+}
+
 TEST(ValidOptionValues, InvalidDescriptorWordList) {
   SANE_Option_Descriptor desc;
   desc.constraint_type = SANE_CONSTRAINT_STRING_LIST;
