@@ -33,7 +33,7 @@ void NullAuthenticationRequiredCallback(
     const std::string& proxy_url,
     const std::string& scheme,
     const std::string& realm,
-    bool bad_cached_credentials,
+    const std::string& bad_cached_credentials,
     base::RepeatingCallback<void(const std::string& credentials)>
         on_auth_acquired_callback) {}
 
