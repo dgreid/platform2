@@ -632,4 +632,80 @@ TEST_F(SaneClientTest, ScannerInfoFromDeviceListMultipleDevices) {
   EXPECT_EQ(info_[1].type(), dev_two_.type);
 }
 
+TEST(ValidOptionValues, InvalidDescriptorWordList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_STRING_LIST;
+  std::vector<SANE_String_Const> valid_values = {nullptr};
+  desc.constraint.string_list = valid_values.data();
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_FALSE(values.has_value());
+}
+
+TEST(ValidOptionValues, EmptyWordList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_WORD_LIST;
+  std::vector<SANE_Word> valid_values = {0};
+  desc.constraint.word_list = valid_values.data();
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value().size(), 0);
+}
+
+TEST(ValidOptionValues, NonEmptyWordList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_WORD_LIST;
+  std::vector<SANE_Word> valid_values = {4, 0, 729, 368234, 15};
+  desc.constraint.word_list = valid_values.data();
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value().size(), 4);
+  EXPECT_EQ(values.value(), std::vector<uint32_t>({0, 729, 368234, 15}));
+}
+
+TEST(ValidOptionValues, InvalidDescriptorStringList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_WORD_LIST;
+  std::vector<SANE_Word> valid_values = {4, 0, 729, 368234, 15};
+  desc.constraint.word_list = valid_values.data();
+
+  base::Optional<std::vector<std::string>> values =
+      SaneDeviceImpl::GetValidStringOptionValues(nullptr, desc);
+  EXPECT_FALSE(values.has_value());
+}
+
+TEST(ValidOptionValues, EmptyStringList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_STRING_LIST;
+  std::vector<SANE_String_Const> valid_values = {nullptr};
+  desc.constraint.string_list = valid_values.data();
+
+  base::Optional<std::vector<std::string>> values =
+      SaneDeviceImpl::GetValidStringOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value().size(), 0);
+}
+
+TEST(ValidOptionValues, NonEmptyStringList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_STRING_LIST;
+  std::vector<SANE_String_Const> valid_values = {"Color", "Gray", "Lineart",
+                                                 nullptr};
+  desc.constraint.string_list = valid_values.data();
+
+  base::Optional<std::vector<std::string>> values =
+      SaneDeviceImpl::GetValidStringOptionValues(nullptr, desc);
+  desc.constraint.string_list = valid_values.data();
+  values = SaneDeviceImpl::GetValidStringOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value().size(), 3);
+  EXPECT_EQ(values.value(),
+            std::vector<std::string>({"Color", "Gray", "Lineart"}));
+}
+
 }  // namespace lorgnette

@@ -149,31 +149,66 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
   }
 
   ValidOptionValues values;
-  if (!GetValidIntOptionValues(error, kResolution, &values.resolutions)) {
+  int index = options_[kResolution].index;
+  const SANE_Option_Descriptor* descriptor =
+      sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get resolution option at index %d", index);
+    return false;
+  }
+
+  base::Optional<std::vector<uint32_t>> resolutions =
+      GetValidIntOptionValues(error, *descriptor);
+  if (!resolutions.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
                          "Failed to get valid values for resolution setting");
     return false;
   }
+  values.resolutions = std::move(resolutions.value());
 
-  std::vector<std::string> source_names;
-  if (!GetValidStringOptionValues(error, kSource, &source_names)) {
+  index = options_[kSource].index;
+  descriptor = sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get source option at index %d", index);
+    return false;
+  }
+
+  base::Optional<std::vector<std::string>> source_names =
+      GetValidStringOptionValues(error, *descriptor);
+  if (!source_names.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
                          "Failed to get valid values for sources setting");
     return false;
   }
 
-  for (const std::string& source_name : source_names) {
+  for (const std::string& source_name : source_names.value()) {
     values.sources.push_back(CreateDocumentSource(source_name));
   }
 
-  if (!GetValidStringOptionValues(error, kScanMode, &values.color_modes)) {
+  index = options_[kScanMode].index;
+  descriptor = sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get scan mode option at index %d", index);
+    return false;
+  }
+
+  base::Optional<std::vector<std::string>> color_modes =
+      GetValidStringOptionValues(error, *descriptor);
+  if (!color_modes.has_value()) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
                          "Failed to get valid values for scan modes setting");
     return false;
   }
+  values.color_modes = std::move(color_modes.value());
 
   *values_out = values;
   return true;
@@ -417,6 +452,46 @@ bool SaneDeviceImpl::ReadScanData(brillo::ErrorPtr* error,
   }
 }
 
+// static
+base::Optional<std::vector<std::string>>
+SaneDeviceImpl::GetValidStringOptionValues(brillo::ErrorPtr* error,
+                                           const SANE_Option_Descriptor& opt) {
+  if (opt.constraint_type != SANE_CONSTRAINT_STRING_LIST) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Invalid option constraint type %d", opt.constraint_type);
+    return base::nullopt;
+  }
+
+  std::vector<std::string> values;
+  for (int i = 0; opt.constraint.string_list[i]; i++) {
+    values.push_back(opt.constraint.string_list[i]);
+  }
+
+  return values;
+}
+
+// static
+base::Optional<std::vector<uint32_t>> SaneDeviceImpl::GetValidIntOptionValues(
+    brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt) {
+  if (opt.constraint_type != SANE_CONSTRAINT_WORD_LIST) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Invalid option constraint type %d", opt.constraint_type);
+    return base::nullopt;
+  }
+
+  std::vector<uint32_t> values;
+  int num_values = opt.constraint.word_list[0];
+  for (int i = 1; i <= num_values; i++) {
+    SANE_Word w = opt.constraint.word_list[i];
+    int value = opt.type == SANE_TYPE_FIXED ? SANE_UNFIX(w) : w;
+    values.push_back(value);
+  }
+
+  return values;
+}
+
 bool SaneDeviceImpl::SaneOption::SetInt(int i) {
   switch (type) {
     case SANE_TYPE_INT:
@@ -567,83 +642,6 @@ SANE_Status SaneDeviceImpl::SetOption(SaneOption* option, bool* should_reload) {
   }
 
   return status;
-}
-
-bool SaneDeviceImpl::GetValidStringOptionValues(
-    brillo::ErrorPtr* error,
-    ScanOption option,
-    std::vector<std::string>* values_out) {
-  if (!values_out)
-    return false;
-
-  if (options_.count(option) == 0) {
-    return false;
-  }
-
-  int index = options_[option].index;
-  const SANE_Option_Descriptor* opt =
-      sane_get_option_descriptor(handle_, index);
-  if (!opt) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to get option descriptor (%d) for device", index);
-    return false;
-  }
-
-  if (opt->constraint_type != SANE_CONSTRAINT_STRING_LIST) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Invalid option constraint type %d", opt->constraint_type);
-    return false;
-  }
-
-  std::vector<std::string> values;
-  for (int i = 0; opt->constraint.string_list[i]; i++) {
-    values.push_back(opt->constraint.string_list[i]);
-  }
-
-  *values_out = values;
-  return true;
-}
-
-bool SaneDeviceImpl::GetValidIntOptionValues(
-    brillo::ErrorPtr* error,
-    ScanOption option,
-    std::vector<uint32_t>* values_out) {
-  if (!values_out)
-    return false;
-
-  if (options_.count(option) == 0) {
-    return false;
-  }
-
-  int index = options_[option].index;
-  const SANE_Option_Descriptor* opt =
-      sane_get_option_descriptor(handle_, index);
-  if (!opt) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to get option descriptor (%d) for device", index);
-    return false;
-  }
-
-  if (opt->constraint_type != SANE_CONSTRAINT_WORD_LIST) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Invalid option constraint type %d", opt->constraint_type);
-    return false;
-  }
-
-  std::vector<uint32_t> values;
-  int num_values = opt->constraint.word_list[0];
-  for (int i = 1; i <= num_values; i++) {
-    SANE_Word w = opt->constraint.word_list[i];
-    int value = opt->type == SANE_TYPE_FIXED ? SANE_UNFIX(w) : w;
-    values.push_back(value);
-  }
-
-  *values_out = values;
-  return true;
 }
 
 }  // namespace lorgnette

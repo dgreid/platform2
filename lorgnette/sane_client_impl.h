@@ -13,6 +13,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/optional.h>
 #include <base/synchronization/lock.h>
 #include <brillo/errors/error.h>
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
@@ -67,6 +68,12 @@ class SaneDeviceImpl : public SaneDevice {
                     size_t count,
                     size_t* read_out) override;
 
+  static base::Optional<std::vector<std::string>> GetValidStringOptionValues(
+      brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);
+
+  static base::Optional<std::vector<uint32_t>> GetValidIntOptionValues(
+      brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);
+
  private:
   enum ScanOption {
     kResolution,
@@ -96,14 +103,6 @@ class SaneDeviceImpl : public SaneDevice {
                  std::shared_ptr<DeviceSet> open_devices);
   bool LoadOptions(brillo::ErrorPtr* error);
   SANE_Status SetOption(SaneOption* option, bool* should_reload);
-
-  bool GetValidStringOptionValues(brillo::ErrorPtr* error,
-                                  ScanOption option,
-                                  std::vector<std::string>* values_out);
-
-  bool GetValidIntOptionValues(brillo::ErrorPtr* error,
-                               ScanOption option,
-                               std::vector<uint32_t>* values_out);
 
   SANE_Handle handle_;
   std::string name_;
