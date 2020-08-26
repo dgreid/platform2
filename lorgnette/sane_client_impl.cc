@@ -545,7 +545,8 @@ base::Optional<std::vector<uint32_t>> SaneDeviceImpl::GetValidIntOptionValues(
   } else if (opt.constraint_type == SANE_CONSTRAINT_RANGE) {
     const SANE_Range* range = opt.constraint.range;
     for (int i = range->min; i <= range->max; i += range->quant) {
-      values.push_back(i);
+      const int value = opt.type == SANE_TYPE_FIXED ? SANE_UNFIX(i) : i;
+      values.push_back(value);
     }
   } else {
     brillo::Error::AddToPrintf(

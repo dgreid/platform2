@@ -120,6 +120,8 @@ class SaneDeviceImpl : public SaneDevice {
       brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);
 
  private:
+  friend class SaneDeviceImplTest;
+
   enum ScanOption {
     kResolution,
     kScanMode,
