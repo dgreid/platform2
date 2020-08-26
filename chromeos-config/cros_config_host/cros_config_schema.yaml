@@ -634,7 +634,7 @@ properties:
                   required:
                   - config-file
                 touchpad-wakeup:
-                  description: Enable (1) or disable (0) wake from touchpad.
+                  description: Enable (1) or disable (0) wake from touchpad. If not set, default to enable. When set to enable, on many devices, firmware is in charge of controlling whether to wake from touchpad. This flag is reserved for older devices without firmware support (Nami and Coral) and please do not set for new devices.
                   type: string
                   pattern: "^[01]$"
               additionalProperties: false
