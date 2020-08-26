@@ -158,15 +158,19 @@ void NeighborLinkMonitor::OnIPConfigChanged(
   Start();
 
   // If one address is in our list before, restores its NUD state and does
-  // nothing; otherwise, probes it immediately.
+  // nothing; otherwise, we need to do a dump.
+  bool has_new_entry = false;
   for (auto new_it = watching_entries_.begin();
        new_it != watching_entries_.end(); new_it++) {
     const auto old_it = old_watching_entries.find(new_it->first);
     if (old_it == old_watching_entries.end())
-      ProbeEntry(new_it->second);
+      has_new_entry = true;
     else
       new_it->second.nud_state = old_it->second.nud_state;
   }
+
+  if (has_new_entry)
+    SendNeighborDumpRTNLMessage();
 }
 
 void NeighborLinkMonitor::Start() {
@@ -188,32 +192,38 @@ void NeighborLinkMonitor::Stop() {
 }
 
 void NeighborLinkMonitor::ProbeAll() {
-  for (const auto& addr_entry : watching_entries_)
-    ProbeEntry(addr_entry.second);
+  bool has_unknown_entry = false;
+  for (const auto& addr_entry : watching_entries_) {
+    const auto& entry = addr_entry.second;
+    if (entry.nud_state == NUD_NONE) {
+      has_unknown_entry = true;
+      // This could happen for temporary failures, but continuously reaching
+      // here for one entry means that, we have an entry in ipconfig which is
+      // not accessible.
+      LOG(INFO) << "Has an unknown entry on " << ifname_ << " with "
+                << entry.ToString();
+    } else if (NeedProbeForState(entry.nud_state)) {
+      SendNeighborProbeRTNLMessage(entry);
+    }
+  }
+
+  if (has_unknown_entry)
+    SendNeighborDumpRTNLMessage();
 }
 
-void NeighborLinkMonitor::ProbeEntry(const WatchingEntry& entry) {
-  // If we know nothing about this address from the kernel, send a get request
-  // first. Probe will be done on getting the response in OnNeighborMessage().
-  if (entry.nud_state == NUD_NONE)
-    SendNeighborGetRTNLMessage(entry);
-  else if (NeedProbeForState(entry.nud_state))
-    SendNeighborProbeRTNLMessage(entry);
-}
-
-void NeighborLinkMonitor::SendNeighborGetRTNLMessage(
-    const WatchingEntry& entry) {
+void NeighborLinkMonitor::SendNeighborDumpRTNLMessage() {
   // |seq| will be set by RTNLHandler.
+  // TODO(jiejiang): Specify the family instead of kFamilyUnknown. This
+  // optimization could reduce the amount of data received for each request.
   auto msg = std::make_unique<shill::RTNLMessage>(
       shill::RTNLMessage::kTypeNeighbor, shill::RTNLMessage::kModeGet,
-      NLM_F_REQUEST, 0 /* seq */, 0 /* pid */, ifindex_, entry.addr.family());
-  msg->SetAttribute(NDA_DST, entry.addr.address());
+      NLM_F_REQUEST | NLM_F_DUMP, 0 /* seq */, 0 /* pid */, ifindex_,
+      shill::IPAddress::kFamilyUnknown);
 
   // TODO(jiejiang): We may get an error of errno=16 (Device or resource busy)
-  // from kernel here. We may need to serialize the GET requests.
+  // from kernel here. We may need to serialize the DUMP requests.
   if (!rtnl_handler_->SendMessage(std::move(msg), nullptr /* msg_seq */))
-    LOG(WARNING) << "Failed to send neighbor get message for "
-                 << entry.ToString() << " on " << ifname_;
+    LOG(WARNING) << "Failed to send neighbor dump message for on " << ifname_;
 }
 
 void NeighborLinkMonitor::SendNeighborProbeRTNLMessage(

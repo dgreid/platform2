@@ -20,16 +20,14 @@ namespace {
 constexpr int kTestInterfaceIndex = 1;
 constexpr char kTestInterfaceName[] = "wlan0";
 
-MATCHER_P(IsNeighborGetMessage, address, "") {
+MATCHER(IsNeighborDumpMessage, "") {
   if (!(arg->type() == shill::RTNLMessage::kTypeNeighbor &&
-        arg->flags() == NLM_F_REQUEST &&
+        arg->flags() == NLM_F_REQUEST | NLM_F_DUMP &&
         arg->mode() == shill::RTNLMessage::kModeGet &&
-        arg->interface_index() == kTestInterfaceIndex &&
-        arg->HasAttribute(NDA_DST)))
+        arg->interface_index() == kTestInterfaceIndex))
     return false;
 
-  shill::IPAddress msg_address(arg->family(), arg->GetAttribute(NDA_DST));
-  return msg_address == shill::IPAddress(address);
+  return true;
 }
 
 MATCHER_P(IsNeighborProbeMessage, address, "") {
@@ -49,11 +47,12 @@ shill::RTNLMessage* CreateIncomingRTNLMessage(
     const shill::RTNLMessage::Mode mode,
     const std::string& address,
     uint16_t nud_state) {
-  auto* rtnl_response = new shill::RTNLMessage(
-      shill::RTNLMessage::kTypeNeighbor, mode, 0, 0, 0, kTestInterfaceIndex,
-      shill::IPAddress::kFamilyIPv4);
+  shill::IPAddress addr(address);
+  auto* rtnl_response =
+      new shill::RTNLMessage(shill::RTNLMessage::kTypeNeighbor, mode, 0, 0, 0,
+                             kTestInterfaceIndex, addr.family());
 
-  rtnl_response->SetAttribute(NDA_DST, shill::IPAddress(address).address());
+  rtnl_response->SetAttribute(NDA_DST, addr.address());
   if (mode == shill::RTNLMessage::kModeAdd) {
     rtnl_response->set_neighbor_status(
         shill::RTNLMessage::NeighborStatus(nud_state, 0, 0));
@@ -101,22 +100,16 @@ class NeighborLinkMonitorTest : public testing::Test {
   std::unique_ptr<NeighborLinkMonitor> link_monitor_;
 };
 
-TEST_F(NeighborLinkMonitorTest, SendNeighborGetMessageOnIPConfigChanged) {
+TEST_F(NeighborLinkMonitorTest, SendNeighborDumpMessageOnIPConfigChanged) {
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv4_address = "1.2.3.4";
   ipconfig.ipv4_gateway = "1.2.3.5";
   ipconfig.ipv4_prefix_length = 24;
-  // The second dns address is not in this subnet, and should be ignored by the
-  // link monitor.
-  ipconfig.ipv4_dns_addresses = {"1.2.3.6", "4.3.2.1"};
+  ipconfig.ipv4_dns_addresses = {"1.2.3.6"};
 
-  // On ipconfig changed, the link monitor should send a get request for each
-  // watching address, to fetch their current NUD state.
-  EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("1.2.3.5"), _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("1.2.3.6"), _))
+  // On ipconfig changed, the link monitor should send only one dump request, to
+  // fetch current NUD state of these new addresses.
+  EXPECT_CALL(*mock_rtnl_handler_, DoSendMessage(IsNeighborDumpMessage(), _))
       .WillOnce(Return(true));
 
   link_monitor_->OnIPConfigChanged(ipconfig);
@@ -129,14 +122,22 @@ TEST_F(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress) {
   ipconfig.ipv6_gateway = "fe80::1";
   ipconfig.ipv6_dns_addresses = {"fe80::2"};
 
+  link_monitor_->OnIPConfigChanged(ipconfig);
+
+  std::unique_ptr<shill::RTNLMessage> gateway_is_reachable(
+      CreateNUDStateChangedMessage("fe80::1", NUD_REACHABLE));
+  std::unique_ptr<shill::RTNLMessage> dns_is_reachable(
+      CreateNUDStateChangedMessage("fe80::2", NUD_REACHABLE));
+
   EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("fe80::1"), _))
+              DoSendMessage(IsNeighborProbeMessage("fe80::1"), _))
       .WillOnce(Return(true));
   EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("fe80::2"), _))
+              DoSendMessage(IsNeighborProbeMessage("fe80::2"), _))
       .WillOnce(Return(true));
 
-  link_monitor_->OnIPConfigChanged(ipconfig);
+  link_monitor_->OnNeighborMessage(*gateway_is_reachable);
+  link_monitor_->OnNeighborMessage(*dns_is_reachable);
 }
 
 TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
@@ -169,13 +170,12 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
   link_monitor_->OnNeighborMessage(*address_is_probing);
   FastForwardOneActiveProbeInterval();
 
-  // The gateway is removed in the kernel. A get request should be sent when the
-  // timer is triggered.
+  // The gateway is removed in the kernel. A dump request should be sent when
+  // the timer is triggered.
   std::unique_ptr<shill::RTNLMessage> address_is_removed(
       CreateNeighborDeletedMessage("1.2.3.5"));
   link_monitor_->OnNeighborMessage(*address_is_removed);
-  EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("1.2.3.5"), _))
+  EXPECT_CALL(*mock_rtnl_handler_, DoSendMessage(IsNeighborDumpMessage(), _))
       .WillOnce(Return(true));
   FastForwardOneActiveProbeInterval();
 }
@@ -189,10 +189,8 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
   link_monitor_->OnIPConfigChanged(ipconfig);
 
   ipconfig.ipv4_dns_addresses = {"1.2.3.7"};
-  // The watching list should be updated to {"1.2.3.5", "1.2.3.7"}, and only
-  // "1.2.3.7" is an new entry, so it should be probed immediately.
-  EXPECT_CALL(*mock_rtnl_handler_,
-              DoSendMessage(IsNeighborGetMessage("1.2.3.7"), _))
+  // One dump request is expected since there is a new address.
+  EXPECT_CALL(*mock_rtnl_handler_, DoSendMessage(IsNeighborDumpMessage(), _))
       .WillOnce(Return(true));
   link_monitor_->OnIPConfigChanged(ipconfig);
 
@@ -211,6 +209,12 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
   link_monitor_->OnNeighborMessage(*addr_7_is_probing);
   link_monitor_->OnNeighborMessage(*addr_7_is_reachable);
 
+  // This address is not been watching now. Nothing should happen when a message
+  // about it comes.
+  std::unique_ptr<shill::RTNLMessage> addr_6_is_reachable(
+      CreateNUDStateChangedMessage("1.2.3.6", NUD_REACHABLE));
+  link_monitor_->OnNeighborMessage(*addr_6_is_reachable);
+
   // Nothing should happen within one interval.
   task_environment_.FastForwardBy(base::TimeDelta::FromSeconds(30));
 
@@ -223,6 +227,20 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
               DoSendMessage(IsNeighborProbeMessage("1.2.3.7"), _))
       .WillOnce(Return(true));
   FastForwardOneActiveProbeInterval();
+}
+
+TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntriesWithSameAddress) {
+  ShillClient::IPConfig ipconfig;
+  ipconfig.ipv4_address = "1.2.3.4";
+  ipconfig.ipv4_gateway = "1.2.3.5";
+  ipconfig.ipv4_dns_addresses = {"1.2.3.6"};
+  ipconfig.ipv4_prefix_length = 24;
+  link_monitor_->OnIPConfigChanged(ipconfig);
+
+  // No dump request is expected.
+  EXPECT_CALL(*mock_rtnl_handler_, DoSendMessage(IsNeighborDumpMessage(), _))
+      .Times(0);
+  link_monitor_->OnIPConfigChanged(ipconfig);
 }
 
 class NetworkMonitorServiceTest : public testing::Test {

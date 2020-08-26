@@ -34,11 +34,14 @@ namespace patchpanel {
 // each address in the watching list, this class will:
 // - Listen to the NUD state changed event from kernel;
 // - When applicable, periodically set NUD state into NUD_PROBE to make the
-// kernel send probe packets.
+//   kernel send probe packets.
 //
 // Normally, the following events will happen after an address is added:
-// 1) We (this class) send a RTM_GETNEIGH request to the kernel to get the
-//    current state of this address;
+// 1) We (this class) send a RTM_GETNEIGH request with NLM_F_DUMP flag to the
+//    kernel to get the current state of this address (maybe with other
+//    addresses together, since this is a dump request) (note that we cannot
+//    send a real get request to retrieve a single entry, it's not supported by
+//    Linux kernel v4.x and earlier versions);
 // 2) On receiving the response from the kernel, we send a RTM_NEWNEIGH request
 //    at once to set the NUD state of this address into NUD_PROBE, when
 //    applicable;
@@ -98,17 +101,16 @@ class NeighborLinkMonitor {
     // we use NUD_NONE (which is a dummy state in the kernel) to indicate that
     // we don't know this address from the kernel (i.e., this entry is just
     // added or the kernel tells us this entry has been deleted). If an entry is
-    // in this state, we will send a get request to the kernel when the timer is
-    // triggered.
+    // in this state, we will send a dump request to the kernel when the timer
+    // is triggered.
     uint16_t nud_state = NUD_NONE;
   };
 
-  // ProbeAll() calls ProbeEntry() for each entry in |watching_entries_|: sends
-  // a RTM_NEWNEIGH message to set the NUD state in the kernel to NUD_PROBE, or
-  // sends a RTM_GETNEIGH message if we haven't heard of this address from
-  // kernel.
+  // ProbeAll() is invoked periodically by |probe_timer_|. It will scan the
+  // entries in |watching_entries_|, and 1) send a RTM_NEWNEIGH message to set
+  // the NUD state in the kernel to NUD_PROBE for each applicable entry, and 2)
+  // send a dump request for this interface if there are any unknown entries.
   void ProbeAll();
-  void ProbeEntry(const WatchingEntry& entry);
 
   // Start() will set a repeating timer to run ProbeAll() periodically and start
   // the listener for RTNL messages (if they are already running then Start()
@@ -125,7 +127,7 @@ class NeighborLinkMonitor {
   void UpdateWatchingEntry(const shill::IPAddress& addr,
                            WatchingEntry::Role role);
 
-  void SendNeighborGetRTNLMessage(const WatchingEntry& entry);
+  void SendNeighborDumpRTNLMessage();
   void SendNeighborProbeRTNLMessage(const WatchingEntry& entry);
   void OnNeighborMessage(const shill::RTNLMessage& msg);
 
@@ -140,6 +142,7 @@ class NeighborLinkMonitor {
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;
 
+  FRIEND_TEST(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress);
   FRIEND_TEST(NeighborLinkMonitorTest, SendNeighborProbeMessage);
   FRIEND_TEST(NeighborLinkMonitorTest, UpdateWatchingEntries);
 };
