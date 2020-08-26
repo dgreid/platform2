@@ -8,6 +8,7 @@
 #include <base/logging.h>
 #include <base/macros.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/strings/string_split.h>
 #include <brillo/dbus/dbus_method_invoker.h>
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/flag_helper.h>
@@ -107,6 +108,12 @@ void AppendToString(const std::vector<uint8_t>& vect, std::string* str) {
   str->append(reinterpret_cast<const char*>(vect.data()), vect.size());
 }
 
+const std::vector<std::string> ParseCommaDelimitedString(
+    const std::string& str) {
+  return base::SplitString(str, ",", base::TRIM_WHITESPACE,
+                           base::SPLIT_WANT_NONEMPTY);
+}
+
 std::string ExtractCredentialId(const std::string& authenticator_data) {
   size_t credential_id_length_offset =
       kRpIdHashBytes + kFlagsBytes + kCounterBytes + kAaguidBytes;
@@ -127,20 +134,22 @@ std::string ExtractCredentialId(const std::string& authenticator_data) {
 void MakeCredential(dbus::ObjectProxy* proxy,
                     int verification_type,
                     const std::string& rp_id,
-                    const std::string& excluded_credential_id) {
+                    const std::vector<std::string>& excluded_credential_ids) {
   u2f::MakeCredentialRequest req;
   req.set_verification_type(
       static_cast<u2f::VerificationType>(verification_type));
   req.set_rp_id(rp_id);
 
-  if (!excluded_credential_id.empty()) {
-    std::vector<uint8_t> excluded_credential_id_bytes;
-    if (!base::HexStringToBytes(excluded_credential_id,
-                                &excluded_credential_id_bytes)) {
-      LOG(FATAL) << "Could not parse excluded_credential_id bytes";
+  for (const std::string& excluded_credential_id : excluded_credential_ids) {
+    if (!excluded_credential_id.empty()) {
+      std::vector<uint8_t> excluded_credential_id_bytes;
+      if (!base::HexStringToBytes(excluded_credential_id,
+                                  &excluded_credential_id_bytes)) {
+        LOG(FATAL) << "Could not parse excluded_credential_id bytes";
+      }
+      AppendToString(excluded_credential_id_bytes,
+                     req.add_excluded_credential_id());
     }
-    AppendToString(excluded_credential_id_bytes,
-                   req.add_excluded_credential_id());
   }
 
   if (verification_type == u2f::VERIFICATION_USER_VERIFICATION) {
@@ -167,19 +176,21 @@ void GetAssertion(dbus::ObjectProxy* proxy,
                   int verification_type,
                   const std::string& rp_id,
                   const std::string& client_data_hash,
-                  const std::string& allowed_credential_id) {
+                  const std::vector<std::string>& allowed_credential_ids) {
   u2f::GetAssertionRequest req;
   req.set_verification_type(
       static_cast<u2f::VerificationType>(verification_type));
   req.set_rp_id(rp_id);
   req.set_client_data_hash(client_data_hash);
 
-  std::vector<uint8_t> credential_id_bytes;
-  if (!base::HexStringToBytes(allowed_credential_id, &credential_id_bytes)) {
-    LOG(FATAL) << "Could not parse credential_id bytes";
-  }
+  for (const std::string& allowed_credential_id : allowed_credential_ids) {
+    std::vector<uint8_t> credential_id_bytes;
+    if (!base::HexStringToBytes(allowed_credential_id, &credential_id_bytes)) {
+      LOG(FATAL) << "Could not parse credential_id bytes";
+    }
 
-  AppendToString(credential_id_bytes, req.add_allowed_credential_id());
+    AppendToString(credential_id_bytes, req.add_allowed_credential_id());
+  }
 
   u2f::GetAssertionResponse resp =
       SendRequest<u2f::GetAssertionRequest, u2f::GetAssertionResponse>(
@@ -196,16 +207,18 @@ void GetAssertion(dbus::ObjectProxy* proxy,
 
 void HasCredentials(dbus::ObjectProxy* proxy,
                     const std::string& rp_id,
-                    const std::string& credential_id) {
+                    const std::vector<std::string>& credential_ids) {
   u2f::HasCredentialsRequest req;
   req.set_rp_id(rp_id);
 
-  std::vector<uint8_t> credential_id_bytes;
-  if (!base::HexStringToBytes(credential_id, &credential_id_bytes)) {
-    LOG(FATAL) << "Could not parse credential_id bytes";
-  }
+  for (const std::string& credential_id : credential_ids) {
+    std::vector<uint8_t> credential_id_bytes;
+    if (!base::HexStringToBytes(credential_id, &credential_id_bytes)) {
+      LOG(FATAL) << "Could not parse credential_id bytes";
+    }
 
-  AppendToString(credential_id_bytes, req.add_credential_id());
+    AppendToString(credential_id_bytes, req.add_credential_id());
+  }
 
   u2f::HasCredentialsResponse resp =
       SendRequest<u2f::HasCredentialsRequest, u2f::HasCredentialsResponse>(
@@ -228,10 +241,11 @@ int main(int argc, char* argv[]) {
                "type of verification to request: presence=1, verification=2");
   DEFINE_string(rp_id, "", "relaying party ID (domain name)");
   DEFINE_string(client_data_hash, "", "client data hash, as a hex string");
-  DEFINE_string(credential_id, "", "list of credential IDs, as hex strings");
-  DEFINE_string(
-      excluded_credential_id, "",
-      "list of credential IDs to be exluded in MakeCredential, as hex strings");
+  DEFINE_string(credential_id, "",
+                "comma-separated list of credential IDs, as hex strings");
+  DEFINE_string(excluded_credential_id, "",
+                "comma-separated list of credential IDs to be exluded in "
+                "MakeCredential, as hex strings");
 
   brillo::FlagHelper::Init(argc, argv,
                            "webauthntool - WebAuthn DBus API testing tool");
@@ -254,18 +268,20 @@ int main(int argc, char* argv[]) {
 
   if (FLAGS_make_credential) {
     MakeCredential(u2f_proxy, FLAGS_verification_type, FLAGS_rp_id,
-                   FLAGS_excluded_credential_id);
+                   ParseCommaDelimitedString(FLAGS_excluded_credential_id));
     return EX_OK;
   }
 
   if (FLAGS_get_assertion) {
     GetAssertion(u2f_proxy, FLAGS_verification_type, FLAGS_rp_id,
-                 FLAGS_client_data_hash, FLAGS_credential_id);
+                 FLAGS_client_data_hash,
+                 ParseCommaDelimitedString(FLAGS_credential_id));
     return EX_OK;
   }
 
   if (FLAGS_has_credentials) {
-    HasCredentials(u2f_proxy, FLAGS_rp_id, FLAGS_credential_id);
+    HasCredentials(u2f_proxy, FLAGS_rp_id,
+                   ParseCommaDelimitedString(FLAGS_credential_id));
     return EX_OK;
   }
 

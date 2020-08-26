@@ -8,6 +8,7 @@
 #include <functional>
 #include <memory>
 #include <queue>
+#include <string>
 #include <vector>
 
 #include <brillo/dbus/dbus_method_response.h>
@@ -35,6 +36,8 @@ struct GetAssertionSession {
   bool empty() { return !response_; }
   uint64_t session_id;
   GetAssertionRequest request_;
+  // The credential_id to send to the TPM. May be a resident credential.
+  const std::string credential_id;
   std::unique_ptr<GetAssertionMethodResponse> response_;
 };
 

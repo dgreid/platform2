@@ -419,26 +419,30 @@ void WebAuthnHandler::GetAssertion(
     return;
   }
 
-  // TODO(louiscollard): Support multiple credentials.
   // TODO(louiscollard): Support resident credentials.
-  if (request.allowed_credential_id().size() != 1 ||
-      request.allowed_credential_id().Get(0).size() !=
-          sizeof(struct u2f_key_handle)) {
-    response.set_status(GetAssertionResponse::INVALID_REQUEST);
-    method_response->Return(response);
-    return;
+
+  const std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
+  int matched_index = -1;
+
+  for (int index = 0; index < request.allowed_credential_id_size(); index++) {
+    const HasCredentialsResponse::HasCredentialsStatus ret = DoU2fSignCheckOnly(
+        rp_id_hash, util::ToVector(request.allowed_credential_id(index)));
+
+    if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
+      // If there's an internal error then the remaining credentials won't
+      // succeed.
+      response.set_status(GetAssertionResponse::INTERNAL_ERROR);
+      method_response->Return(response);
+      return;
+    }
+    if (ret != HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID) {
+      matched_index = index;
+      break;
+    }
   }
 
-  // If credential_id is not recognized or there's an internal error, don't
-  // even start auth flow.
-  std::vector<uint8_t> rp_id_hash = util::Sha256(request.rp_id());
-  auto ret = DoU2fSignCheckOnly(
-      rp_id_hash, util::ToVector(request.allowed_credential_id().Get(0)));
-  if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
-    response.set_status(GetAssertionResponse::INTERNAL_ERROR);
-    method_response->Return(response);
-    return;
-  } else if (ret == HasCredentialsResponse::UNKNOWN_CREDENTIAL_ID) {
+  if (matched_index == -1) {
+    // No credential_id matched.
     response.set_status(GetAssertionResponse::UNKNOWN_CREDENTIAL_ID);
     method_response->Return(response);
     return;
@@ -446,7 +450,7 @@ void WebAuthnHandler::GetAssertion(
 
   struct GetAssertionSession session = {
       static_cast<uint64_t>(base::Time::Now().ToTimeT()), request,
-      std::move(method_response)};
+      request.allowed_credential_id(matched_index), std::move(method_response)};
 
   if (request.verification_type() ==
       VerificationType::VERIFICATION_USER_VERIFICATION) {
@@ -482,8 +486,7 @@ void WebAuthnHandler::DoGetAssertion(struct GetAssertionSession session,
 
   std::vector<uint8_t> signature;
   GetAssertionResponse::GetAssertionStatus sign_status =
-      DoU2fSign(rp_id_hash, hash_to_sign,
-                util::ToVector(session.request_.allowed_credential_id().Get(0)),
+      DoU2fSign(rp_id_hash, hash_to_sign, util::ToVector(session.credential_id),
                 presence_requirement, &signature);
   response.set_status(sign_status);
   if (sign_status == GetAssertionResponse::SUCCESS) {
