@@ -16,7 +16,9 @@
 namespace midis {
 
 SubDeviceClientFdHolder::SubDeviceClientFdHolder(
-    uint32_t client_id, uint32_t subdevice_id, base::ScopedFD fd,
+    uint32_t client_id,
+    uint32_t subdevice_id,
+    base::ScopedFD fd,
     ClientDataCallback client_data_cb)
     : client_id_(client_id),
       subdevice_id_(subdevice_id),
@@ -28,7 +30,9 @@ SubDeviceClientFdHolder::SubDeviceClientFdHolder(
 SubDeviceClientFdHolder::~SubDeviceClientFdHolder() = default;
 
 std::unique_ptr<SubDeviceClientFdHolder> SubDeviceClientFdHolder::Create(
-    uint32_t client_id, uint32_t subdevice_id, base::ScopedFD fd,
+    uint32_t client_id,
+    uint32_t subdevice_id,
+    base::ScopedFD fd,
     ClientDataCallback client_data_cb) {
   auto holder = std::make_unique<SubDeviceClientFdHolder>(
       client_id, subdevice_id, std::move(fd), client_data_cb);

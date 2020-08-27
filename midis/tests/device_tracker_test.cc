@@ -69,33 +69,24 @@ class DeviceTrackerTest : public ::testing::Test {
 TEST_F(DeviceTrackerTest, Add2DevicesPositive) {
   // Since this test isn't testing the Device class functionality, it's OK
   // to set the callbacks to be no-ops.
-  auto dev = std::make_unique<Device>(kFakeName1,
-                                      kFakeManufacturer1,
-                                      kFakeSysNum1,
-                                      kFakeDevNum1,
-                                      kFakeSubdevs1,
-                                      kFakeFlags1,
-                                      base::Bind(&FakeInPortSubscribeCallback),
-                                      base::Bind(&FakeOutPortSubscribeCallback),
-                                      base::Bind(&FakeInPortDeleteCallback),
-                                      base::Bind(&FakeOutPortDeleteCallback),
-                                      base::Bind(&FakeSendMidiDataCallback),
-                                      std::map<uint32_t, unsigned int>());
+  auto dev = std::make_unique<Device>(
+      kFakeName1, kFakeManufacturer1, kFakeSysNum1, kFakeDevNum1, kFakeSubdevs1,
+      kFakeFlags1, base::Bind(&FakeInPortSubscribeCallback),
+      base::Bind(&FakeOutPortSubscribeCallback),
+      base::Bind(&FakeInPortDeleteCallback),
+      base::Bind(&FakeOutPortDeleteCallback),
+      base::Bind(&FakeSendMidiDataCallback),
+      std::map<uint32_t, unsigned int>());
   tracker_.AddDevice(std::move(dev));
 
-  auto dev2 =
-      std::make_unique<Device>(kFakeName2,
-                               kFakeManufacturer2,
-                               kFakeSysNum2,
-                               kFakeDevNum2,
-                               kFakeSubdevs2,
-                               kFakeFlags2,
-                               base::Bind(&FakeInPortSubscribeCallback),
-                               base::Bind(&FakeOutPortSubscribeCallback),
-                               base::Bind(&FakeInPortDeleteCallback),
-                               base::Bind(&FakeOutPortDeleteCallback),
-                               base::Bind(&FakeSendMidiDataCallback),
-                               std::map<uint32_t, unsigned int>());
+  auto dev2 = std::make_unique<Device>(
+      kFakeName2, kFakeManufacturer2, kFakeSysNum2, kFakeDevNum2, kFakeSubdevs2,
+      kFakeFlags2, base::Bind(&FakeInPortSubscribeCallback),
+      base::Bind(&FakeOutPortSubscribeCallback),
+      base::Bind(&FakeInPortDeleteCallback),
+      base::Bind(&FakeOutPortDeleteCallback),
+      base::Bind(&FakeSendMidiDataCallback),
+      std::map<uint32_t, unsigned int>());
   tracker_.AddDevice(std::move(dev2));
 
   EXPECT_EQ(2, tracker_.devices_.size());
@@ -114,18 +105,14 @@ TEST_F(DeviceTrackerTest, Add2DevicesPositive) {
 // Check whether a device gets successfully added, then removed from the devices
 // map.
 TEST_F(DeviceTrackerTest, AddRemoveDevicePositive) {
-  auto dev = std::make_unique<Device>(kFakeName1,
-                                      kFakeManufacturer1,
-                                      kFakeSysNum1,
-                                      kFakeDevNum1,
-                                      kFakeSubdevs1,
-                                      kFakeFlags1,
-                                      base::Bind(&FakeInPortSubscribeCallback),
-                                      base::Bind(&FakeOutPortSubscribeCallback),
-                                      base::Bind(&FakeInPortDeleteCallback),
-                                      base::Bind(&FakeOutPortDeleteCallback),
-                                      base::Bind(&FakeSendMidiDataCallback),
-                                      std::map<uint32_t, unsigned int>());
+  auto dev = std::make_unique<Device>(
+      kFakeName1, kFakeManufacturer1, kFakeSysNum1, kFakeDevNum1, kFakeSubdevs1,
+      kFakeFlags1, base::Bind(&FakeInPortSubscribeCallback),
+      base::Bind(&FakeOutPortSubscribeCallback),
+      base::Bind(&FakeInPortDeleteCallback),
+      base::Bind(&FakeOutPortDeleteCallback),
+      base::Bind(&FakeSendMidiDataCallback),
+      std::map<uint32_t, unsigned int>());
   tracker_.AddDevice(std::move(dev));
   EXPECT_EQ(1, tracker_.devices_.size());
 
@@ -135,18 +122,14 @@ TEST_F(DeviceTrackerTest, AddRemoveDevicePositive) {
 
 // Check whether a device gets successfully added, but not removed.
 TEST_F(DeviceTrackerTest, AddDeviceRemoveNegative) {
-  auto dev = std::make_unique<Device>(kFakeName1,
-                                      kFakeManufacturer1,
-                                      kFakeSysNum1,
-                                      kFakeDevNum1,
-                                      kFakeSubdevs1,
-                                      kFakeFlags1,
-                                      base::Bind(&FakeInPortSubscribeCallback),
-                                      base::Bind(&FakeOutPortSubscribeCallback),
-                                      base::Bind(&FakeInPortDeleteCallback),
-                                      base::Bind(&FakeOutPortDeleteCallback),
-                                      base::Bind(&FakeSendMidiDataCallback),
-                                      std::map<uint32_t, unsigned int>());
+  auto dev = std::make_unique<Device>(
+      kFakeName1, kFakeManufacturer1, kFakeSysNum1, kFakeDevNum1, kFakeSubdevs1,
+      kFakeFlags1, base::Bind(&FakeInPortSubscribeCallback),
+      base::Bind(&FakeOutPortSubscribeCallback),
+      base::Bind(&FakeInPortDeleteCallback),
+      base::Bind(&FakeOutPortDeleteCallback),
+      base::Bind(&FakeSendMidiDataCallback),
+      std::map<uint32_t, unsigned int>());
   tracker_.AddDevice(std::move(dev));
   EXPECT_EQ(1, tracker_.devices_.size());
 

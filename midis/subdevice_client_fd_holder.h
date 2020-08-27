@@ -23,10 +23,14 @@ class SubDeviceClientFdHolder {
   using ClientDataCallback = base::Callback<void(
       uint32_t subdevice_id, const uint8_t* buffer, size_t buf_len)>;
 
-  SubDeviceClientFdHolder(uint32_t client_id, uint32_t subdevice_id,
-                          base::ScopedFD fd, ClientDataCallback client_data_cb);
+  SubDeviceClientFdHolder(uint32_t client_id,
+                          uint32_t subdevice_id,
+                          base::ScopedFD fd,
+                          ClientDataCallback client_data_cb);
   static std::unique_ptr<SubDeviceClientFdHolder> Create(
-      uint32_t client_id, uint32_t subdevice_id, base::ScopedFD fd,
+      uint32_t client_id,
+      uint32_t subdevice_id,
+      base::ScopedFD fd,
       ClientDataCallback client_data_cb);
   ~SubDeviceClientFdHolder();
   int GetRawFd() { return fd_.get(); }

@@ -76,8 +76,8 @@ bool Device::StartMonitoring() {
       }
     }
     if (it.second & kOutputPortCaps) {
-      auto out_port = OutPort::Create(
-          device_, it.first, out_sub_cb_, out_del_cb_, send_data_cb_);
+      auto out_port = OutPort::Create(device_, it.first, out_sub_cb_,
+                                      out_del_cb_, send_data_cb_);
       if (out_port) {
         out_ports_.emplace(it.first, std::move(out_port));
         LOG(INFO) << "Outpot Port created for port:" << it.first;
@@ -169,9 +169,7 @@ base::ScopedFD Device::AddClientToReadSubdevice(uint32_t client_id,
     std::vector<std::unique_ptr<SubDeviceClientFdHolder>> list_entries;
 
     list_entries.emplace_back(SubDeviceClientFdHolder::Create(
-        client_id,
-        subdevice_id,
-        std::move(server_fd),
+        client_id, subdevice_id, std::move(server_fd),
         base::Bind(&Device::WriteClientDataToDevice,
                    weak_factory_.GetWeakPtr())));
 
@@ -187,9 +185,7 @@ base::ScopedFD Device::AddClientToReadSubdevice(uint32_t client_id,
       }
     }
     id_fd_list->second.emplace_back(SubDeviceClientFdHolder::Create(
-        client_id,
-        subdevice_id,
-        std::move(server_fd),
+        client_id, subdevice_id, std::move(server_fd),
         base::Bind(&Device::WriteClientDataToDevice,
                    weak_factory_.GetWeakPtr())));
   }

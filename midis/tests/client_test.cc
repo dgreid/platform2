@@ -39,6 +39,7 @@ class ClientTest : public ::testing::Test {
  public:
   ClientTest() = default;
   ~ClientTest() override = default;
+
  protected:
   void SetUp() override {
     message_loop_.SetAsCurrent();
@@ -51,6 +52,7 @@ class ClientTest : public ::testing::Test {
     core->GetActiveHandlesForTest(&leaks);
     EXPECT_TRUE(leaks.empty());
   }
+
  private:
   brillo::BaseMessageLoop message_loop_;
 

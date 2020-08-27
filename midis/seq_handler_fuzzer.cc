@@ -99,9 +99,7 @@ class SeqHandlerFuzzer {
 };
 
 struct Environment {
-  Environment() {
-    logging::SetMinLogLevel(logging::LOG_ERROR);
-  }
+  Environment() { logging::SetMinLogLevel(logging::LOG_ERROR); }
 };
 
 Environment* env = new Environment();

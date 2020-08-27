@@ -25,7 +25,8 @@ base::FilePath CreateFakeTempSubDir(base::FilePath temp_path,
 }
 
 base::FilePath CreateDevNodeFileName(base::FilePath dev_path_base,
-                                     uint32_t sys_num, uint32_t dev_num) {
+                                     uint32_t sys_num,
+                                     uint32_t dev_num) {
   // Create a fake devnode file
   std::string node_name = base::StringPrintf("midiC%uD%u", sys_num, dev_num);
   return dev_path_base.Append(node_name);

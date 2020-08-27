@@ -119,9 +119,8 @@ bool SeqHandler::InitSeq() {
   snd_seq_poll_descriptors(in_client_.get(), pfd_.get(), 1, POLLIN);
 
   watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      pfd_->fd,
-      base::BindRepeating(&SeqHandler::ProcessAlsaClientFd,
-                          weak_factory_.GetWeakPtr()));
+      pfd_->fd, base::BindRepeating(&SeqHandler::ProcessAlsaClientFd,
+                                    weak_factory_.GetWeakPtr()));
   if (!watcher_) {
     in_client_.reset();
     out_client_.reset();

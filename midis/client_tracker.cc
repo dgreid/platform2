@@ -72,11 +72,9 @@ void ClientTracker::MakeMojoClient(arc::mojom::MidisServerRequest request,
   client_id_counter_++;
   VLOG(1) << "MakeMojoClient called.";
   auto new_cli = std::make_unique<Client>(
-      device_tracker_,
-      client_id_counter_,
+      device_tracker_, client_id_counter_,
       base::Bind(&ClientTracker::RemoveClient, weak_factory_.GetWeakPtr()),
-      std::move(request),
-      std::move(client_ptr));
+      std::move(request), std::move(client_ptr));
 
   if (new_cli) {
     clients_.emplace(client_id_counter_, std::move(new_cli));

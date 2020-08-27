@@ -105,9 +105,7 @@ class SeqHandler {
   // a Device handler which receives MIDI data from a client (e.g ARC++). The
   // Device handler will in turn be called by a Client handler which is
   // listening for data from it's client.
-  void SendMidiData(int out_port_id,
-                    const uint8_t* buffer,
-                    size_t buf_len);
+  void SendMidiData(int out_port_id, const uint8_t* buffer, size_t buf_len);
 
   // This function processes the MIDI data received from H/W or an external
   // client, and invokes the callback |handle_rx_data_cb_| which handles the

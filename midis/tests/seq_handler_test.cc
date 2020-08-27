@@ -110,13 +110,12 @@ TEST_F(SeqHandlerTest, TestProcessAlsaClientFdNegative) {
   seq_handler->ProcessAlsaClientFd();
 
   snd_seq_event_t invalid_event = {
-    // This event type should never show up on this client+port.
-    .type = SND_SEQ_EVENT_SONGPOS,
-    .source = {
-      .client = SND_SEQ_CLIENT_SYSTEM,
-      .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE,
-    },
-  };
+      // This event type should never show up on this client+port.
+      .type = SND_SEQ_EVENT_SONGPOS,
+      .source = {
+          .client = SND_SEQ_CLIENT_SYSTEM,
+          .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE,
+      }};
 
   // Check invalid events.
   EXPECT_CALL(*seq_handler, SndSeqEventInput(_, _))
@@ -130,13 +129,11 @@ TEST_F(SeqHandlerTest, TestProcessAlsaClientFdNegative) {
 TEST_F(SeqHandlerTest, TestProcessAlsaClientFdPositive) {
   auto seq_handler = std::make_unique<SeqHandlerMock>();
 
-  snd_seq_event_t valid_event1 = {
-    .type = SND_SEQ_EVENT_PORT_START,
-    .source = {
-      .client = SND_SEQ_CLIENT_SYSTEM,
-      .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE,
-    },
-  };
+  snd_seq_event_t valid_event1 = {.type = SND_SEQ_EVENT_PORT_START,
+                                  .source = {
+                                      .client = SND_SEQ_CLIENT_SYSTEM,
+                                      .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE,
+                                  }};
 
   EXPECT_CALL(*seq_handler, AddSeqDevice(_)).Times(1);
   EXPECT_CALL(*seq_handler, AddSeqPort(_, _)).Times(1);
@@ -150,18 +147,10 @@ TEST_F(SeqHandlerTest, TestProcessAlsaClientFdPositive) {
   seq_handler->ProcessAlsaClientFd();
 
   snd_seq_event_t valid_event2 = {
-    .type = SND_SEQ_EVENT_CLIENT_EXIT,
-    .source = {
-      .client = SND_SEQ_CLIENT_SYSTEM,
-      .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE,
-    },
-    .data = {
-      .addr = {
-        .client = 3,
-        .port = 4,
-      }
-    },
-  };
+      .type = SND_SEQ_EVENT_CLIENT_EXIT,
+      .source = {.client = SND_SEQ_CLIENT_SYSTEM,
+                 .port = SND_SEQ_PORT_SYSTEM_ANNOUNCE},
+      .data = {.addr = {.client = 3, .port = 4}}};
 
   seq_handler->out_client_id_ = kOutClientId;
   EXPECT_CALL(*seq_handler, AddSeqDevice(_)).Times(0);
@@ -202,30 +191,25 @@ TEST_F(SeqHandlerTest, TestProcessMidiEventsPositive) {
   seq_handler->decoder_ = SeqHandler::CreateMidiEvent(0);
 
   snd_seq_event_t valid_event1 = {
-    .type = SND_SEQ_EVENT_NOTEON,
-    .data = {
-      .raw8 = {{0x00, 0x30, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-               0x00, 0x00, 0x00}},
-    },
-  };
+      .type = SND_SEQ_EVENT_NOTEON,
+      .data = {.raw8 = {{0x00, 0x30, 0x36, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                         0x00, 0x00, 0x00}}}};
   seq_handler->ProcessMidiEvent(&valid_event1);
 
   snd_seq_event_t valid_event2 = {
-    .type = SND_SEQ_EVENT_PITCHBEND,
-    .data = {
-      .raw8 = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-                0xe1, 0xff, 0xff}},
-    },
-  };
+      .type = SND_SEQ_EVENT_PITCHBEND,
+      .data = {
+          .raw8 = {{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xe1,
+                    0xff, 0xff}},
+      }};
   seq_handler->ProcessMidiEvent(&valid_event2);
 
   snd_seq_event_t valid_event3 = {
-    .type = SND_SEQ_EVENT_CONTROLLER,
-    .data = {
-      .raw8 = {{0x00, 0x00, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x41,
-                0x00, 0x00, 0x00}},
-    },
-  };
+      .type = SND_SEQ_EVENT_CONTROLLER,
+      .data = {
+          .raw8 = {{0x00, 0x00, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x41, 0x00,
+                    0x00, 0x00}},
+      }};
   seq_handler->ProcessMidiEvent(&valid_event3);
 }
 
@@ -254,12 +238,11 @@ TEST_F(SeqHandlerTest, TestProcessMidiEventsNegative) {
   seq_handler->decoder_ = SeqHandler::CreateMidiEvent(0);
 
   snd_seq_event_t invalid_event1 = {
-    .type = SND_SEQ_EVENT_PORT_EXIT,
-    .data = {
-      .raw8 = {{0x00, 0xff, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x41,
-                0x00, 0x00, 0x00}},
-    },
-  };
+      .type = SND_SEQ_EVENT_PORT_EXIT,
+      .data = {
+          .raw8 = {{0x00, 0xff, 0x00, 0x00, 0x47, 0x00, 0x00, 0x00, 0x41, 0x00,
+                    0x00, 0x00}},
+      }};
   seq_handler->ProcessMidiEvent(&invalid_event1);
 }
 
