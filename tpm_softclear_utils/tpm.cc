@@ -14,9 +14,9 @@ namespace tpm_softclear_utils {
 
 Tpm* Tpm::Create() {
 #if USE_TPM2
-    return new Tpm2Impl();
+  return new Tpm2Impl();
 #else
-    return new TpmImpl();
+  return new TpmImpl();
 #endif
 }
 

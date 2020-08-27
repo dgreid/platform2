@@ -39,13 +39,11 @@ class Tpm2ImplFakeFileUtils : public Tpm2Impl {
     is_reading_file_successful_ = is_successful;
   }
 
-  bool is_local_data_file_read() const {
-    return is_local_data_file_read_;
-  }
+  bool is_local_data_file_read() const { return is_local_data_file_read_; }
 
  protected:
-  bool ReadFileToString(
-      const base::FilePath& path, std::string* data) override {
+  bool ReadFileToString(const base::FilePath& path,
+                        std::string* data) override {
     if (path != expected_local_data_path_) {
       return false;
     }
@@ -170,9 +168,8 @@ TEST_F(Tpm2ImplTest, ClearTpmSuccess) {
   std::string expected_handle_name;
   trunks::Serialize_TPM_HANDLE(trunks::TPM_RH_LOCKOUT, &expected_handle_name);
 
-  EXPECT_CALL(mock_tpm_, ClearSync(trunks::TPM_RH_LOCKOUT,
-                                   expected_handle_name,
-                                   _))
+  EXPECT_CALL(mock_tpm_,
+              ClearSync(trunks::TPM_RH_LOCKOUT, expected_handle_name, _))
       .WillOnce(Return(trunks::TPM_RC_SUCCESS));
 
   const std::string expected_password = "12345";

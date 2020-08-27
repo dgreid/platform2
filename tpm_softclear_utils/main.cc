@@ -14,8 +14,8 @@ int main(int argc, char* argv[]) {
   int flags = brillo::kLogToSyslog;
   brillo::InitLog(flags);
 
-  std::unique_ptr<tpm_softclear_utils::Tpm>
-      tpm(tpm_softclear_utils::Tpm::Create());
+  std::unique_ptr<tpm_softclear_utils::Tpm> tpm(
+      tpm_softclear_utils::Tpm::Create());
 
   if (!tpm->Initialize()) {
     LOG(ERROR) << "Failed to initialize for soft-clearing TPM.";

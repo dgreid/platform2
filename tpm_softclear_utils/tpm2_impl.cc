@@ -55,8 +55,8 @@ base::Optional<std::string> Tpm2Impl::GetAuthForOwnerReset() {
     // This covers both the cases of local data file not existing and failing to
     // read that file. The local data file should exist if the lockout password
     // is set.
-    LOG(ERROR) << __func__
-               << " : failed to read file " << local_data_path_.value();
+    LOG(ERROR) << __func__ << " : failed to read file "
+               << local_data_path_.value();
     return {};
   }
 
@@ -70,8 +70,8 @@ base::Optional<std::string> Tpm2Impl::GetAuthForOwnerReset() {
   const std::string& lockout_password = local_data.lockout_password();
   const size_t password_length = lockout_password.length();
   if (password_length != kLockoutPasswordSize) {
-    LOG(ERROR) << __func__ << ": bad lockout password, length = "
-               << password_length;
+    LOG(ERROR) << __func__
+               << ": bad lockout password, length = " << password_length;
     return {};
   }
 
@@ -90,8 +90,8 @@ bool Tpm2Impl::SoftClearOwner(const std::string& auth_for_owner_reset) {
       trunks_factory_->GetPasswordAuthorization(auth_for_owner_reset));
 
   std::string lockout_handle_name;
-  trunks::TPM_RC result = trunks::Serialize_TPM_HANDLE(
-      trunks::TPM_RH_LOCKOUT, &lockout_handle_name);
+  trunks::TPM_RC result = trunks::Serialize_TPM_HANDLE(trunks::TPM_RH_LOCKOUT,
+                                                       &lockout_handle_name);
   if (result != trunks::TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": failed to serialize TPM lockout handle: "
                << trunks::GetErrorString(result);
@@ -99,8 +99,7 @@ bool Tpm2Impl::SoftClearOwner(const std::string& auth_for_owner_reset) {
   }
 
   result = trunks_factory_->GetTpm()->ClearSync(
-      trunks::TPM_RH_LOCKOUT,
-      lockout_handle_name,
+      trunks::TPM_RH_LOCKOUT, lockout_handle_name,
       lockout_password_delegate.get());
   if (result != trunks::TPM_RC_SUCCESS) {
     LOG(ERROR) << __func__ << ": failed to clear the TPM: "
