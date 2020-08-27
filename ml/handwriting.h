@@ -14,6 +14,7 @@
 
 #include "chrome/knowledge/handwriting/handwriting_interface.pb.h"
 #include "ml/mojom/handwriting_recognizer.mojom.h"
+#include "ml/util.h"
 
 namespace ml {
 // A singleton proxy class for the handwriting DSO.
@@ -99,10 +100,6 @@ class HandwritingLibrary {
 
   // Initialize the handwriting library.
   HandwritingLibrary();
-
-  // Currently HandwritingLibrary is supported only when the "sanitizer" is not
-  // enabled (see https://crbug.com/1082632).
-  static constexpr bool IsAsan() { return __has_feature(address_sanitizer); }
 
   // Returns bool of use.ondevice_handwriting.
   static constexpr bool IsUseLibHandwritingEnabled() {

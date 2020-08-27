@@ -36,6 +36,13 @@ bool GetProcessMemoryUsage(MemoryUsage* memory_usage);
 // Return true if successful, false otherwise.
 bool GetTotalProcessMemoryUsage(size_t* total_memory);
 
+// "dlopen() with RTLD_DEEPBIND" does not work with ASAN. So currently we only
+// support services using this (e.g. HandwritingLibrary) when the "sanitizer" is
+// not enabled (see https://crbug.com/1082632).
+constexpr bool IsAsan() {
+  return __has_feature(address_sanitizer);
+}
+
 }  // namespace ml
 
 #endif  // ML_UTIL_H_

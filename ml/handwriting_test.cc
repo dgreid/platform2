@@ -12,6 +12,7 @@
 
 #include "chrome/knowledge/handwriting/handwriting_validate.pb.h"
 #include "ml/handwriting.h"
+#include "ml/util.h"
 
 namespace ml {
 namespace {
@@ -27,7 +28,7 @@ constexpr char kLabeledRequestPathGesture[] =
 
 TEST(HandwritingLibraryTest, CanLoadLibrary) {
   auto* const instance = ml::HandwritingLibrary::GetInstance();
-  if (ml::HandwritingLibrary::IsAsan()) {
+  if (IsAsan()) {
     EXPECT_FALSE(ml::HandwritingLibrary::IsHandwritingLibrarySupported());
     EXPECT_FALSE(
         ml::HandwritingLibrary::IsHandwritingLibraryUnitTestSupported());
