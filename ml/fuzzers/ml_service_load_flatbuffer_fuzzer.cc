@@ -52,8 +52,7 @@ class MLServiceFuzzer {
         base::ThreadTaskRunnerHandle::Get(),
         mojo::core::ScopedIPCSupport::ShutdownPolicy::FAST);
     ml_service_impl_ = std::make_unique<MachineLearningServiceImpl>(
-        mojo::MakeRequest(&ml_service_).PassMessagePipe(),
-        base::Closure());
+        mojo::MakeRequest(&ml_service_).PassMessagePipe(), base::Closure());
   }
   void PerformInference(const uint8_t* data, size_t size) {
     FlatBufferModelSpecPtr spec = FlatBufferModelSpec::New();

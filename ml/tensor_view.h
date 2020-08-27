@@ -38,9 +38,7 @@ class TensorView {
   // Return the shape array of the tensor.
   std::vector<int64_t>& GetShape() { return tensor_->shape->value; }
 
-  const std::vector<int64_t>& GetShape() const {
-    return tensor_->shape->value;
-  }
+  const std::vector<int64_t>& GetShape() const { return tensor_->shape->value; }
 
   // Return the value array of the tensor.
   // Defined only in each specialization for T.

@@ -14,8 +14,8 @@ namespace ml {
 namespace {
 
 using ::chromeos::machine_learning::mojom::HandwritingRecognitionQueryPtr;
-using ::chromeos::machine_learning::mojom::HandwritingRecognizerCandidatePtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizer;
+using ::chromeos::machine_learning::mojom::HandwritingRecognizerCandidatePtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 

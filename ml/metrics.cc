@@ -39,8 +39,7 @@ constexpr int kMemoryUsageBuckets = 100;
 
 // chromeos_metrics::CumulativeMetrics constants:
 constexpr char kCumulativeMetricsBackingDir[] = "/var/lib/ml_service/metrics";
-constexpr char kPeakTotalMemoryCumulativeStatName[] =
-    "peak_total_memory_kb";
+constexpr char kPeakTotalMemoryCumulativeStatName[] = "peak_total_memory_kb";
 
 constexpr base::TimeDelta kCumulativeMetricsUpdatePeriod =
     base::TimeDelta::FromMinutes(5);
@@ -104,17 +103,15 @@ void Metrics::UpdateAndRecordMetrics(
 
   if (record_current_metrics) {
     // Record CPU usage (units = milli-percent i.e. 0.001%):
-    const int cpu_usage_milli_percent =
-        static_cast<int>(1000. *
-                         process_metrics_->GetPlatformIndependentCPUUsage() /
-                         base::SysInfo::NumberOfProcessors());
+    const int cpu_usage_milli_percent = static_cast<int>(
+        1000. * process_metrics_->GetPlatformIndependentCPUUsage() /
+        base::SysInfo::NumberOfProcessors());
     metrics_library_.SendToUMA(kCpuUsageMetricName, cpu_usage_milli_percent,
                                kCpuUsageMinMilliPercent,
                                kCpuUsageMaxMilliPercent, kCpuUsageBuckets);
     // Record memory usage:
-    metrics_library_.SendToUMA(kTotalMemoryMetricName, usage,
-                               kMemoryUsageMinKb, kMemoryUsageMaxKb,
-                               kMemoryUsageBuckets);
+    metrics_library_.SendToUMA(kTotalMemoryMetricName, usage, kMemoryUsageMinKb,
+                               kMemoryUsageMaxKb, kMemoryUsageBuckets);
   }
 }
 

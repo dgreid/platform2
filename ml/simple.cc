@@ -54,8 +54,7 @@ AddResult Add(const double x, const double y, const bool use_nnapi) {
   // Create ML Service
   mojo::Remote<MachineLearningService> ml_service;
   const MachineLearningServiceImpl ml_service_impl(
-      ml_service.BindNewPipeAndPassReceiver().PassPipe(),
-      base::Closure());
+      ml_service.BindNewPipeAndPassReceiver().PassPipe(), base::Closure());
 
   // Load model.
   BuiltinModelSpecPtr spec = BuiltinModelSpec::New();

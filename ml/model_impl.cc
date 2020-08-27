@@ -29,7 +29,6 @@ using ::chromeos::machine_learning::mojom::CreateGraphExecutorResult;
 using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::GraphExecutorOptions;
 using ::chromeos::machine_learning::mojom::GraphExecutorOptionsPtr;
-using ::chromeos::machine_learning::mojom::GraphExecutor;
 using ::chromeos::machine_learning::mojom::Model;
 
 // Base name for UMA metrics related to CreateGraphExecutor calls

@@ -267,8 +267,7 @@ void GraphExecutorImpl::Execute(base::flat_map<std::string, TensorPtr> tensors,
     output_tensors.push_back(Tensor::New());
 
     // Always valid, by the output name check at the start of this function.
-    const int cur_output_id =
-        required_outputs_.find(cur_output_name)->second;
+    const int cur_output_id = required_outputs_.find(cur_output_name)->second;
 
     // Check that the current output node is a supported type.
     const uint32_t cur_output_type = interpreter_->tensor(cur_output_id)->type;

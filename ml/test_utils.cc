@@ -13,4 +13,3 @@ std::string GetTestModelDir() {
 }
 
 }  // namespace ml
-

@@ -168,8 +168,7 @@ constexpr double kTopCat20190722TestInput[] = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0
-};
+    0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0};
 
 // Points that are used to generate a stroke for handwriting.
 constexpr float kHandwritingTestPoints[23][2] = {
@@ -475,10 +474,9 @@ TEST(MachineLearningServiceImplTest, TestModel) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, 0.75, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape, 0.75,
+                                     &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -505,8 +503,8 @@ TEST(MachineLearningServiceImplTest, TestModelString) {
 
   // Load model.
   mojo::Remote<Model> model;
-  ASSERT_TRUE(LoadFlatBufferModelForTesting(
-      ml_service, std::move(spec), &model));
+  ASSERT_TRUE(
+      LoadFlatBufferModelForTesting(ml_service, std::move(spec), &model));
   ASSERT_NE(model.get(), nullptr);
   ASSERT_TRUE(model.is_bound());
 
@@ -524,10 +522,9 @@ TEST(MachineLearningServiceImplTest, TestModelString) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, 0.75, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape, 0.75,
+                                     &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -562,10 +559,9 @@ TEST(BuiltinModelInferenceTest, SmartDim20181115) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, -3.36311, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     -3.36311, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -599,10 +595,9 @@ TEST(BuiltinModelInferenceTest, SmartDim20190221) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, -0.900591, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     -0.900591, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -636,10 +631,9 @@ TEST(BuiltinModelInferenceTest, SmartDim20190521) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(&CheckOutputTensor, expected_shape,
-                 0.66962254, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     0.66962254, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -673,10 +667,9 @@ TEST(BuiltinModelInferenceTest, TopCat20190722) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, -3.02972, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     -3.02972, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -710,10 +703,9 @@ TEST(BuiltinModelInferenceTest, SearchRanker20190923) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, 0.658488, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     0.658488, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -740,8 +732,8 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
 
   // Load model.
   mojo::Remote<Model> model;
-  ASSERT_TRUE(LoadFlatBufferModelForTesting(
-      ml_service, std::move(spec), &model));
+  ASSERT_TRUE(
+      LoadFlatBufferModelForTesting(ml_service, std::move(spec), &model));
   ASSERT_NE(model.get(), nullptr);
   ASSERT_TRUE(model.is_bound());
 
@@ -762,10 +754,9 @@ TEST(DownloadableModelInferenceTest, SmartDim20200206) {
 
   // Perform inference.
   bool infer_callback_done = false;
-  graph_executor->Execute(
-      std::move(inputs), std::move(outputs),
-      base::Bind(
-          &CheckOutputTensor, expected_shape, -1.07195, &infer_callback_done));
+  graph_executor->Execute(std::move(inputs), std::move(outputs),
+                          base::Bind(&CheckOutputTensor, expected_shape,
+                                     -1.07195, &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -835,15 +826,14 @@ TEST(TextClassifierAnnotateTest, EmptyString) {
   TextAnnotationRequestPtr request = TextAnnotationRequest::New();
   request->text = "";
   bool infer_callback_done = false;
-  text_classifier->Annotate(
-      std::move(request),
-      base::Bind(
-          [](bool* infer_callback_done,
-             std::vector<TextAnnotationPtr> annotations) {
-            *infer_callback_done = true;
-            EXPECT_EQ(annotations.size(), 0);
-          },
-          &infer_callback_done));
+  text_classifier->Annotate(std::move(request),
+                            base::Bind(
+                                [](bool* infer_callback_done,
+                                   std::vector<TextAnnotationPtr> annotations) {
+                                  *infer_callback_done = true;
+                                  EXPECT_EQ(annotations.size(), 0);
+                                },
+                                &infer_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(infer_callback_done);
 }
@@ -942,8 +932,7 @@ TEST(TextClassifierSelectionTest, EmptyString) {
   text_classifier->SuggestSelection(
       std::move(request),
       base::Bind(
-          [](bool* infer_callback_done,
-             CodepointSpanPtr suggested_span) {
+          [](bool* infer_callback_done, CodepointSpanPtr suggested_span) {
             *infer_callback_done = true;
             EXPECT_EQ(suggested_span->start_offset, 1);
             EXPECT_EQ(suggested_span->end_offset, 2);
@@ -981,8 +970,7 @@ TEST(TextClassifierSelectionTest, ComplexString) {
   text_classifier->SuggestSelection(
       std::move(request),
       base::Bind(
-          [](bool* infer_callback_done,
-             CodepointSpanPtr suggested_span) {
+          [](bool* infer_callback_done, CodepointSpanPtr suggested_span) {
             *infer_callback_done = true;
             EXPECT_EQ(suggested_span->start_offset, 21);
             EXPECT_EQ(suggested_span->end_offset, 38);
@@ -1021,8 +1009,7 @@ TEST(TextClassifierSelectionTest, WrongInput) {
   text_classifier->SuggestSelection(
       std::move(request),
       base::Bind(
-          [](bool* infer_callback_done,
-             CodepointSpanPtr suggested_span) {
+          [](bool* infer_callback_done, CodepointSpanPtr suggested_span) {
             *infer_callback_done = true;
             EXPECT_EQ(suggested_span->start_offset, 30);
             EXPECT_EQ(suggested_span->end_offset, 26);

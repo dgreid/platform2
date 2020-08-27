@@ -17,7 +17,8 @@ RequestMetrics::RequestMetrics(const std::string& model_name,
     : name_base_(std::string(kGlobalMetricsPrefix) + model_name + "." +
                  request_name),
       initial_cpu_clock_(0),
-      initial_memory_(0), status_(Status::kNotStarted) {}
+      initial_memory_(0),
+      status_(Status::kNotStarted) {}
 
 void RequestMetrics::StartRecordingPerformanceMetrics() {
   DCHECK(status_ == Status::kNotStarted);
@@ -49,18 +50,13 @@ void RequestMetrics::FinishRecordingPerformanceMetrics() {
     LOG(DFATAL) << "Getting process memory usage failed.";
     return;
   }
-  const int64_t memory_usage_kb =
-      static_cast<int64_t>(usage) - initial_memory_;
+  const int64_t memory_usage_kb = static_cast<int64_t>(usage) - initial_memory_;
 
   metrics_library_.SendToUMA(name_base_ + kTotalMemoryDeltaSuffix,
-                             memory_usage_kb,
-                             kMemoryDeltaMinKb,
-                             kMemoryDeltaMaxKb,
-                             kMemoryDeltaBuckets);
-  metrics_library_.SendToUMA(name_base_ + kCpuTimeSuffix,
-                             cpu_time_microsec,
-                             kCpuTimeMinMicrosec,
-                             kCpuTimeMaxMicrosec,
+                             memory_usage_kb, kMemoryDeltaMinKb,
+                             kMemoryDeltaMaxKb, kMemoryDeltaBuckets);
+  metrics_library_.SendToUMA(name_base_ + kCpuTimeSuffix, cpu_time_microsec,
+                             kCpuTimeMinMicrosec, kCpuTimeMaxMicrosec,
                              kCpuTimeBuckets);
 }
 
