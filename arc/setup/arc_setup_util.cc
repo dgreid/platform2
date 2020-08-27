@@ -966,8 +966,8 @@ bool FindFingerprintAndSdkVersion(std::string* out_fingerprint,
     return false;
   }
 
-  fingerprint.CopyToString(out_fingerprint);
-  sdk_version.CopyToString(out_sdk_version);
+  out_fingerprint->assign(fingerprint.data(), fingerprint.size());
+  out_sdk_version->assign(sdk_version.data(), sdk_version.size());
   return true;
 }
 
