@@ -36,22 +36,34 @@ struct PriorityTestCase {
 // priority values.
 const PriorityTestCase priority_tests[] = {
     {
-        .buf = "<117>", .count = 5, .severity = vm_tools::NOTICE,
+        .buf = "<117>",
+        .count = 5,
+        .severity = vm_tools::NOTICE,
     },
     {
-        .buf = "<24975>", .count = 0, .severity = vm_tools::MISSING,
+        .buf = "<24975>",
+        .count = 0,
+        .severity = vm_tools::MISSING,
     },
     {
-        .buf = "<>", .count = 0, .severity = vm_tools::MISSING,
+        .buf = "<>",
+        .count = 0,
+        .severity = vm_tools::MISSING,
     },
     {
-        .buf = "<0 hi there", .count = 0, .severity = vm_tools::MISSING,
+        .buf = "<0 hi there",
+        .count = 0,
+        .severity = vm_tools::MISSING,
     },
     {
-        .buf = "5> kthxbye", .count = 0, .severity = vm_tools::MISSING,
+        .buf = "5> kthxbye",
+        .count = 0,
+        .severity = vm_tools::MISSING,
     },
     {
-        .buf = "\0\0\0\0\0\0\0", .count = 0, .severity = vm_tools::MISSING,
+        .buf = "\0\0\0\0\0\0\0",
+        .count = 0,
+        .severity = vm_tools::MISSING,
     },
     {
         .buf = "<0> this should work",

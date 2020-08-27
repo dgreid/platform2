@@ -27,34 +27,44 @@ constexpr struct SeverityTestCase {
   const char* result;
 } kSeverityTests[] = {
     {
-        .severity = vm_tools::EMERGENCY, .result = "<8>",
+        .severity = vm_tools::EMERGENCY,
+        .result = "<8>",
     },
     {
-        .severity = vm_tools::ALERT, .result = "<9>",
+        .severity = vm_tools::ALERT,
+        .result = "<9>",
     },
     {
-        .severity = vm_tools::CRITICAL, .result = "<10>",
+        .severity = vm_tools::CRITICAL,
+        .result = "<10>",
     },
     {
-        .severity = vm_tools::ERROR, .result = "<11>",
+        .severity = vm_tools::ERROR,
+        .result = "<11>",
     },
     {
-        .severity = vm_tools::WARNING, .result = "<12>",
+        .severity = vm_tools::WARNING,
+        .result = "<12>",
     },
     {
-        .severity = vm_tools::NOTICE, .result = "<13>",
+        .severity = vm_tools::NOTICE,
+        .result = "<13>",
     },
     {
-        .severity = vm_tools::INFO, .result = "<14>",
+        .severity = vm_tools::INFO,
+        .result = "<14>",
     },
     {
-        .severity = vm_tools::DEBUG, .result = "<15>",
+        .severity = vm_tools::DEBUG,
+        .result = "<15>",
     },
     {
-        .severity = vm_tools::MISSING, .result = "<13>",
+        .severity = vm_tools::MISSING,
+        .result = "<13>",
     },
     {
-        .severity = static_cast<vm_tools::LogSeverity>(18), .result = "<13>",
+        .severity = static_cast<vm_tools::LogSeverity>(18),
+        .result = "<13>",
     },
 };
 

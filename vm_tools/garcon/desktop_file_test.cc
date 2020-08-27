@@ -265,7 +265,9 @@ TEST_F(DesktopFileTest, WhitespaceRemoval) {
       "Name = TestW\n",
       "whitespace.desktop",
       {
-          "whitespace", "Application", {std::make_pair("", "TestW")},
+          "whitespace",
+          "Application",
+          {std::make_pair("", "TestW")},
       },
       true);
 }
@@ -293,15 +295,16 @@ TEST_F(DesktopFileTest, Types) {
                                    },
                                    true)
                    ->IsApplication());
-  EXPECT_FALSE(ValidateDesktopFile(
-                   "[Desktop Entry]\n"
-                   "Type=Link\n"
-                   "Name=TestLink\n",
-                   "LinkTest.desktop",
-                   {
-                       "LinkTest", "Link", {std::make_pair("", "TestLink")},
-                   },
-                   true)
+  EXPECT_FALSE(ValidateDesktopFile("[Desktop Entry]\n"
+                                   "Type=Link\n"
+                                   "Name=TestLink\n",
+                                   "LinkTest.desktop",
+                                   {
+                                       "LinkTest",
+                                       "Link",
+                                       {std::make_pair("", "TestLink")},
+                                   },
+                                   true)
                    ->IsApplication());
   // Now try an invalid type, which should fail
   ValidateDesktopFile(
@@ -318,7 +321,9 @@ TEST_F(DesktopFileTest, RelativePathConversion) {
       "Name=Test\n",
       "foo/bar_fun/mad.desktop",
       {
-          "foo-bar_fun-mad", "Application", {std::make_pair("", "Test")},
+          "foo-bar_fun-mad",
+          "Application",
+          {std::make_pair("", "Test")},
       },
       true);
   ValidateDesktopFile(
@@ -327,7 +332,9 @@ TEST_F(DesktopFileTest, RelativePathConversion) {
       "Name=Test\n",
       "foo/applications/bar.desktop",
       {
-          "foo-applications-bar", "Application", {std::make_pair("", "Test")},
+          "foo-applications-bar",
+          "Application",
+          {std::make_pair("", "Test")},
       },
       true);
 }

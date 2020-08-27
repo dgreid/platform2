@@ -30,7 +30,6 @@ base::ScopedFD OpenTapDevice(const std::string& ifname_in,
                              bool vnet_hdr,
                              std::string* ifname_out);
 
-
 }  //  namespace concierge
 }  //  namespace vm_tools
 

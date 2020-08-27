@@ -40,8 +40,8 @@ static bool is_virtwl_fd(int fd) {
   return ioctl(fd, VIRTWL_IOCTL_SEND, &ioctl_send) == 0;
 }
 
-static void *pipe_proxy_routine(void *args) {
-  int *fds = (int *)args;
+static void* pipe_proxy_routine(void* args) {
+  int* fds = (int*)args;
   int in_pipe = fds[0];
   int out_pipe = fds[1];
   free(fds);
@@ -66,7 +66,7 @@ static void *pipe_proxy_routine(void *args) {
     }
 
     // Check for hangup
-    if (ret != count){
+    if (ret != count) {
       syslog(LOG_USER | LOG_ERR, "incomplete write to output pipe %d",
              out_pipe);
       break;
@@ -79,7 +79,7 @@ static void *pipe_proxy_routine(void *args) {
 }
 
 static int launch_pipe_proxy(int in_fd, int out_fd) {
-  int *fds = calloc(2, sizeof(int));
+  int* fds = calloc(2, sizeof(int));
   if (!fds)
     return ENOMEM;
 
@@ -200,8 +200,7 @@ static int handle_client_in(int wl0_fd, int server_fd, int client_fd) {
     size_t cmsg_fd_count = (cmsg->cmsg_len - CMSG_LEN(0)) / sizeof(int);
     // fd_idx will never exceed VIRTWL_SEND_MAX_ALLOCS because the
     // control message buffer only allocates enough space for that many FDs.
-    memcpy(&ioctl_send->fds[fd_idx],
-           CMSG_DATA(cmsg),
+    memcpy(&ioctl_send->fds[fd_idx], CMSG_DATA(cmsg),
            cmsg_fd_count * sizeof(int));
     fd_idx += cmsg_fd_count;
   }
@@ -216,25 +215,25 @@ static int handle_client_in(int wl0_fd, int server_fd, int client_fd) {
     // If the client sends us a non-virtwl FD, it's likely some kind of pipe
     // that we can manually proxy in another thread.
     struct virtwl_ioctl_new new_pipe = {
-      .type = 0,
-      .fd = -1,
-      .flags = 0,
-      .size = 0,
+        .type = 0,
+        .fd = -1,
+        .flags = 0,
+        .size = 0,
     };
 
     int flags = fcntl(fd, F_GETFL) & O_ACCMODE;
     switch (flags) {
-    case O_RDONLY:
-      new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_WRITE;
-      break;
-    case O_WRONLY:
-    // virtwl does not support read/write pipes but pipes sent from the client
-    // are likely intended to be written to by the remote end.
-    case O_RDWR:
-      new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_READ;
-      break;
-    default:
-      continue;
+      case O_RDONLY:
+        new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_WRITE;
+        break;
+      case O_WRONLY:
+      // virtwl does not support read/write pipes but pipes sent from the client
+      // are likely intended to be written to by the remote end.
+      case O_RDWR:
+        new_pipe.type = VIRTWL_IOCTL_NEW_PIPE_READ;
+        break;
+      default:
+        continue;
     }
 
     int ret = ioctl(wl0_fd, VIRTWL_IOCTL_NEW, &new_pipe);
@@ -309,8 +308,7 @@ end:
   return ret;
 }
 
-static void empty_handler(int signum) {
-}
+static void empty_handler(int signum) {}
 
 int main(int argc, char** argv) {
   // Handle broken pipes without signals that kill the entire process.
@@ -318,9 +316,7 @@ int main(int argc, char** argv) {
 
   struct sockaddr_un addr;
   addr.sun_family = AF_UNIX;
-  snprintf(addr.sun_path,
-           sizeof(addr.sun_path) - 1,
-           "%s/wayland-0",
+  snprintf(addr.sun_path, sizeof(addr.sun_path) - 1, "%s/wayland-0",
            getenv("XDG_RUNTIME_DIR"));
   socklen_t len = strlen(addr.sun_path) + sizeof(addr.sun_family);
 
@@ -417,10 +413,10 @@ int main(int argc, char** argv) {
       }
 
       struct virtwl_ioctl_new new_ctx = {
-        .type = VIRTWL_IOCTL_NEW_CTX,
-        .fd = -1,
-        .flags = 0,
-        .size = 0,
+          .type = VIRTWL_IOCTL_NEW_CTX,
+          .fd = -1,
+          .flags = 0,
+          .size = 0,
       };
 
       ret = ioctl(wl_fd, VIRTWL_IOCTL_NEW, &new_ctx);

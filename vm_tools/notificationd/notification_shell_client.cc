@@ -161,7 +161,10 @@ bool NotificationShellClient::Init(const char* display_name,
     const auto virtwl_display_fd = fds[1];
 
     virtwl_ioctl_new new_ctx = {
-        .type = VIRTWL_IOCTL_NEW_CTX, .fd = -1, .flags = 0, .size = 0,
+        .type = VIRTWL_IOCTL_NEW_CTX,
+        .fd = -1,
+        .flags = 0,
+        .size = 0,
     };
     if (ioctl(virtwl_fd.get(), VIRTWL_IOCTL_NEW, &new_ctx)) {
       PLOG(ERROR) << "Failed to create virtwl context";

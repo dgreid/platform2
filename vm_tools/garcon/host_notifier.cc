@@ -139,7 +139,7 @@ bool HostNotifier::OpenUrlInHost(const std::string& url) {
   std::unique_ptr<vm_tools::container::ContainerListener::Stub> stub;
   stub = std::make_unique<vm_tools::container::ContainerListener::Stub>(
       grpc::CreateChannel(base::StringPrintf("vsock:%d:%u", VMADDR_CID_HOST,
-                          vm_tools::kGarconPort),
+                                             vm_tools::kGarconPort),
                           grpc::InsecureChannelCredentials()));
   grpc::ClientContext ctx;
   vm_tools::container::OpenUrlRequest url_request;
@@ -173,7 +173,7 @@ bool HostNotifier::OpenTerminal(std::vector<std::string> args) {
   std::unique_ptr<vm_tools::container::ContainerListener::Stub> stub;
   stub = std::make_unique<vm_tools::container::ContainerListener::Stub>(
       grpc::CreateChannel(base::StringPrintf("vsock:%d:%u", VMADDR_CID_HOST,
-                          vm_tools::kGarconPort),
+                                             vm_tools::kGarconPort),
                           grpc::InsecureChannelCredentials()));
   grpc::ClientContext ctx;
   vm_tools::container::OpenTerminalRequest terminal_request;

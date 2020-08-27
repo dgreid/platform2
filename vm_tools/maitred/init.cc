@@ -360,11 +360,11 @@ constexpr struct {
 } resource_limits[] = {
     {
         .resource_type = RLIMIT_NOFILE,
-        .limit = {.rlim_cur = 1048576, .rlim_max = 1048576, },
+        .limit = {.rlim_cur = 1048576, .rlim_max = 1048576},
     },
     {
         .resource_type = RLIMIT_MEMLOCK,
-        .limit = {.rlim_cur = RLIM_INFINITY, .rlim_max = RLIM_INFINITY, },
+        .limit = {.rlim_cur = RLIM_INFINITY, .rlim_max = RLIM_INFINITY},
     },
 };
 
@@ -373,16 +373,20 @@ constexpr struct {
   const char* value;
 } sysctl_limits[] = {
     {
-        .path = "/proc/sys/fs/inotify/max_queued_events", .value = "1048576",
+        .path = "/proc/sys/fs/inotify/max_queued_events",
+        .value = "1048576",
     },
     {
-        .path = "/proc/sys/fs/inotify/max_user_instances", .value = "1048576",
+        .path = "/proc/sys/fs/inotify/max_user_instances",
+        .value = "1048576",
     },
     {
-        .path = "/proc/sys/fs/inotify/max_user_watches", .value = "1048576",
+        .path = "/proc/sys/fs/inotify/max_user_watches",
+        .value = "1048576",
     },
     {
-        .path = "/proc/sys/vm/max_map_count", .value = "262144",
+        .path = "/proc/sys/vm/max_map_count",
+        .value = "262144",
     },
 };
 

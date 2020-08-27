@@ -203,8 +203,8 @@ bool ArcVm::Start(base::FilePath kernel,
   // Open the tap device(s).
   std::vector<base::ScopedFD> tap_fds;
   for (const auto& dev : network_devices_) {
-    auto fd = OpenTapDevice(dev.ifname(), true /*vnet_hdr*/,
-                            nullptr /*ifname_out*/);
+    auto fd =
+        OpenTapDevice(dev.ifname(), true /*vnet_hdr*/, nullptr /*ifname_out*/);
     if (!fd.is_valid()) {
       LOG(ERROR) << "Unable to open and configure TAP device " << dev.ifname();
     } else {

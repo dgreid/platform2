@@ -155,7 +155,8 @@ int main(int argc, char** argv) {
   }
 
   struct pollfd pollfds[] = {
-      {signal_fd.get(), POLLIN, 0}, {sock_fd.get(), POLLIN, 0},
+      {signal_fd.get(), POLLIN, 0},
+      {sock_fd.get(), POLLIN, 0},
   };
   const int num_pollfds = base::size(pollfds);
 

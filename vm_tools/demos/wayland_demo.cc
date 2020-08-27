@@ -235,7 +235,8 @@ int main(int argc, char* argv[]) {
                                                output_done, output_scale};
   data.output_listener = &output_listener;
   struct wl_registry_listener registry_listener = {
-      demo_registry_listener, demo_registry_remover,
+      demo_registry_listener,
+      demo_registry_remover,
   };
   struct wl_keyboard_listener keyboard_listener = {
       keyboard_keymap, keyboard_enter,     keyboard_leave,

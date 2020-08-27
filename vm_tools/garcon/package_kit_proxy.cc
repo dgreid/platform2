@@ -478,7 +478,7 @@ class PackageKitTransaction : PackageKitProxy::PackageKitDeathObserver {
  protected:
   scoped_refptr<dbus::Bus> bus_;
   dbus::ScopedDBusError dbus_error_;
-  PackageKitProxy* packagekit_proxy_;            // Not owned.
+  PackageKitProxy* packagekit_proxy_;                          // Not owned.
   scoped_refptr<dbus::ObjectProxy> packagekit_service_proxy_;  // Not owned.
 
  private:

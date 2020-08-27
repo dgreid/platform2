@@ -58,8 +58,8 @@ dbus::ObjectProxy* GetServiceProxy(const scoped_refptr<dbus::Bus>& bus,
     return nullptr;
   }
 
-  dbus::ObjectProxy* proxy = bus->GetObjectProxy(service_name,
-      dbus::ObjectPath(service_path));
+  dbus::ObjectProxy* proxy =
+      bus->GetObjectProxy(service_name, dbus::ObjectPath(service_path));
   if (!proxy) {
     LOG(ERROR) << "Unable to get dbus proxy for " << service_name;
     return nullptr;
@@ -375,9 +375,9 @@ int main(int argc, char** argv) {
         return EXIT_FAILURE;
       }
     } else {
-      dbus::ObjectProxy* proxy = GetServiceProxy(bus,
-              vm_tools::concierge::kVmConciergeServiceName,
-              vm_tools::concierge::kVmConciergeServicePath);
+      dbus::ObjectProxy* proxy =
+          GetServiceProxy(bus, vm_tools::concierge::kVmConciergeServiceName,
+                          vm_tools::concierge::kVmConciergeServicePath);
       if (!proxy)
         return EXIT_FAILURE;
       if (!GetCid(proxy, FLAGS_owner_id, FLAGS_vm_name, &cid))
