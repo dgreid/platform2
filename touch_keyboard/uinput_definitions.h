@@ -17,7 +17,7 @@
 #ifndef UI_ABS_SETUP
 #define UI_ABS_SETUP _IOW(UINPUT_IOCTL_BASE, 4, struct uinput_abs_setup)
 struct uinput_abs_setup {
-  __u16  code; /* axis code */
+  __u16 code; /* axis code */
   /* __u16 filler; */
   struct input_absinfo absinfo;
 };

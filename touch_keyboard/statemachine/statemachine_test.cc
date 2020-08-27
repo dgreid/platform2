@@ -48,8 +48,8 @@ TEST_F(StateMachineTest, BasicOneFingerTest) {
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot1),
                            &snapshot));
   EXPECT_TRUE(snapshot.empty());
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID,
-                                            kTestTID1), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, kTestTID1), &snapshot));
   EXPECT_TRUE(snapshot.empty());
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_POSITION_X, kTestX1),
                            &snapshot));
@@ -73,8 +73,8 @@ TEST_F(StateMachineTest, BasicOneFingerTest) {
   EXPECT_EQ(snapshot[kTestTID1].p, kTestP1);
 
   // Now, we update the x value to simulate the finger moving 1 pixel right.
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_POSITION_X,
-                                            kTestX1 + 1), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_POSITION_X, kTestX1 + 1), &snapshot));
 
   // A SYN event tells the state machine that all values have updated, and we
   // can check the contents of the snapshot again to make sure that X (and only
@@ -88,8 +88,8 @@ TEST_F(StateMachineTest, BasicOneFingerTest) {
   EXPECT_EQ(snapshot[kTestTID1].p, kTestP1);
 
   // Now, make the finger leave by marking it's TID as invalid (-1).
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1),
-                           &snapshot));
+  EXPECT_FALSE(
+      sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1), &snapshot));
   // After a SYN, we should see the snapshot emptied out.
   EXPECT_TRUE(sm.AddEvent(CreateInputEvent(EV_SYN, SYN_REPORT, 0), &snapshot));
   EXPECT_TRUE(snapshot.empty());
@@ -110,8 +110,8 @@ TEST_F(StateMachineTest, BasicTwoFingerTest) {
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot1),
                            &snapshot));
   EXPECT_TRUE(snapshot.empty());
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID,
-                                            kTestTID1), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, kTestTID1), &snapshot));
   EXPECT_TRUE(snapshot.empty());
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_POSITION_X, kTestX1),
                            &snapshot));
@@ -127,8 +127,8 @@ TEST_F(StateMachineTest, BasicTwoFingerTest) {
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot2),
                            &snapshot));
   EXPECT_TRUE(snapshot.empty());
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID,
-                                            kTestTID2), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, kTestTID2), &snapshot));
   EXPECT_TRUE(snapshot.empty());
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_POSITION_X, kTestX2),
                            &snapshot));
@@ -161,12 +161,12 @@ TEST_F(StateMachineTest, BasicTwoFingerTest) {
   // Confirm that the values are updated in the snapshot after a SYN event.
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot1),
                            &snapshot));
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_POSITION_Y,
-                                            kTestY1 + 1), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_POSITION_Y, kTestY1 + 1), &snapshot));
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot2),
                            &snapshot));
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_PRESSURE,
-                                            kTestP2 + 1), &snapshot));
+  EXPECT_FALSE(sm.AddEvent(
+      CreateInputEvent(EV_ABS, ABS_MT_PRESSURE, kTestP2 + 1), &snapshot));
   EXPECT_TRUE(sm.AddEvent(CreateInputEvent(EV_SYN, SYN_REPORT, 0), &snapshot));
   EXPECT_EQ(snapshot.size(), 2);
   EXPECT_NE(snapshot.find(kTestTID1), snapshot.end());
@@ -182,16 +182,16 @@ TEST_F(StateMachineTest, BasicTwoFingerTest) {
   // finger has left checking that the state machine understands.
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot1),
                            &snapshot));
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1),
-                           &snapshot));
+  EXPECT_FALSE(
+      sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1), &snapshot));
   EXPECT_TRUE(sm.AddEvent(CreateInputEvent(EV_SYN, SYN_REPORT, 0), &snapshot));
   EXPECT_EQ(snapshot.size(), 1);
   EXPECT_EQ(snapshot.find(kTestTID1), snapshot.end());
   EXPECT_NE(snapshot.find(kTestTID2), snapshot.end());
   EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_SLOT, kTestSlot2),
                            &snapshot));
-  EXPECT_FALSE(sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1),
-                           &snapshot));
+  EXPECT_FALSE(
+      sm.AddEvent(CreateInputEvent(EV_ABS, ABS_MT_TRACKING_ID, -1), &snapshot));
   EXPECT_TRUE(sm.AddEvent(CreateInputEvent(EV_SYN, SYN_REPORT, 0), &snapshot));
   EXPECT_TRUE(snapshot.empty());
   EXPECT_EQ(snapshot.find(kTestTID1), snapshot.end());

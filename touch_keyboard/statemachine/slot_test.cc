@@ -40,7 +40,7 @@ TEST_F(SlotTest, MissingValueTest) {
   // value.
   Slot test_slot = BuildTestSlot();
   EXPECT_EQ(test_slot.FindValueByEvent(EV_ABS, ABS_MT_TOUCH_MAJOR),
-              kSlotMissingValue);
+            kSlotMissingValue);
 }
 
 }  // namespace mtstatemachine

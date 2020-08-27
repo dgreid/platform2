@@ -25,20 +25,19 @@ namespace touch_keyboard {
 constexpr int kNoTimeout = -1;
 
 class EvdevSource {
- /* A class that uses an Evdev device as an event source
-  *
-  * This class opens an Evdev device and allows you to easily process the
-  * events it is producing.  Generally speaking, you should probably derive
-  * from this class instead of instantiating it directly.  Essentially you
-  * should call OpenSourceDevice() at the beginning, then repeatedly
-  * call GetNextEvent() to collect up the individual events being produced
-  * by the Evdev device you selected.
-  */
+  /* A class that uses an Evdev device as an event source
+   *
+   * This class opens an Evdev device and allows you to easily process the
+   * events it is producing.  Generally speaking, you should probably derive
+   * from this class instead of instantiating it directly.  Essentially you
+   * should call OpenSourceDevice() at the beginning, then repeatedly
+   * call GetNextEvent() to collect up the individual events being produced
+   * by the Evdev device you selected.
+   */
  public:
-  EvdevSource() : syscall_handler_(&default_syscall_handler),
-                  source_fd_(-1) { }
-  explicit EvdevSource(SyscallHandler *syscall_handler) :
-      syscall_handler_(syscall_handler), source_fd_(-1) {
+  EvdevSource() : syscall_handler_(&default_syscall_handler), source_fd_(-1) {}
+  explicit EvdevSource(SyscallHandler* syscall_handler)
+      : syscall_handler_(syscall_handler), source_fd_(-1) {
     // This constructor allows you to pass in a SyscallHandler when unit
     // testing this class.  For real use, allow it to use the default value
     // by using the constructor with no arguments.
@@ -50,11 +49,11 @@ class EvdevSource {
 
  protected:
   // Open the device file on disk and store the descriptor in this object.
-  bool OpenSourceDevice(std::string const &source_device_path);
+  bool OpenSourceDevice(std::string const& source_device_path);
   // Wait for a new event to come from the source and populate *ev with it.
-  bool GetNextEvent(int timeout_ms, struct input_event *ev) const;
+  bool GetNextEvent(int timeout_ms, struct input_event* ev) const;
 
-  SyscallHandler *syscall_handler_;
+  SyscallHandler* syscall_handler_;
   int source_fd_;
 
   friend class EvdevSourceTest;

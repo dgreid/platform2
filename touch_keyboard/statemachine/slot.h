@@ -17,15 +17,15 @@ namespace mtstatemachine {
 constexpr int kSlotMissingValue = -1;
 
 class Slot : public std::unordered_map<EventKey, int, EventKeyHasher> {
- /* Storage for all the event data for a single multitouch slot
-  *
-  * Multitouch works by filling "slots" with key-value pairs.  Each slot
-  * corresponds with a single finger and is incrementally updated until a SYN
-  * event is finally sent, indicating that the slot has been fully updated and
-  * the current values are valid.  This class implements a slot as a mapping
-  * from event keys to their values.  Slots are used by MtStateMachine to
-  * store all the touch information it receives.
-  */
+  /* Storage for all the event data for a single multitouch slot
+   *
+   * Multitouch works by filling "slots" with key-value pairs.  Each slot
+   * corresponds with a single finger and is incrementally updated until a SYN
+   * event is finally sent, indicating that the slot has been fully updated and
+   * the current values are valid.  This class implements a slot as a mapping
+   * from event keys to their values.  Slots are used by MtStateMachine to
+   * store all the touch information it receives.
+   */
  public:
   // Scan through the slot's fields for one that matches this event type and
   // code.  If a match is found, return it. Otherwise return kSlotMissingValue.

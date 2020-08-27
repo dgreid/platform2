@@ -33,12 +33,9 @@ bool EventKey::IsY() const {
 bool EventKey::IsSupportedForTouchpads() const {
   if (type_ != EV_ABS)
     return false;
-  return (code_ == ABS_MT_TRACKING_ID ||
-          code_ == ABS_MT_PRESSURE ||
-          code_ == ABS_MT_POSITION_X ||
-          code_ == ABS_MT_POSITION_Y ||
-          code_ == ABS_MT_TOUCH_MAJOR ||
-          code_ == ABS_MT_TOUCH_MINOR);
+  return (code_ == ABS_MT_TRACKING_ID || code_ == ABS_MT_PRESSURE ||
+          code_ == ABS_MT_POSITION_X || code_ == ABS_MT_POSITION_Y ||
+          code_ == ABS_MT_TOUCH_MAJOR || code_ == ABS_MT_TOUCH_MINOR);
 }
 
 }  // namespace mtstatemachine

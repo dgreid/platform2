@@ -59,142 +59,180 @@ void FakeKeyboard::SetUpLayout() {
   //     Obviously, that's a bad idea.  This needs to be updated to load
   //     a layout from disk somewhere once things have stabilized a little.
   unsigned int i;
-  int row1[] = {KEY_Z, KEY_X, KEY_C, KEY_V, KEY_B, KEY_N, KEY_M, KEY_COMMA,
-                KEY_DOT, KEY_SLASH};
-  int row2[] = {KEY_A, KEY_S, KEY_D, KEY_F, KEY_G, KEY_H, KEY_J, KEY_K, KEY_L,
-                KEY_SEMICOLON, KEY_APOSTROPHE};
-  int row3[] = {KEY_Q, KEY_W, KEY_E, KEY_R, KEY_T, KEY_Y, KEY_U, KEY_I,
-                KEY_O, KEY_P, KEY_LEFTBRACE, KEY_RIGHTBRACE, KEY_BACKSLASH};
-  int row4[] = {KEY_GRAVE, KEY_1, KEY_2, KEY_3, KEY_4, KEY_5, KEY_6, KEY_7,
-                KEY_8, KEY_9, KEY_0, KEY_MINUS, KEY_EQUAL};
-  int rowfn[] = {KEY_ESC, KEY_F1, KEY_F2, KEY_F3, KEY_F4, KEY_F5, KEY_F6,
-                 KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F13};
-
+  int row1[] = {KEY_Z, KEY_X, KEY_C,     KEY_V,   KEY_B,
+                KEY_N, KEY_M, KEY_COMMA, KEY_DOT, KEY_SLASH};
+  int row2[] = {KEY_A, KEY_S, KEY_D, KEY_F,         KEY_G,         KEY_H,
+                KEY_J, KEY_K, KEY_L, KEY_SEMICOLON, KEY_APOSTROPHE};
+  int row3[] = {KEY_Q,         KEY_W,          KEY_E,        KEY_R, KEY_T,
+                KEY_Y,         KEY_U,          KEY_I,        KEY_O, KEY_P,
+                KEY_LEFTBRACE, KEY_RIGHTBRACE, KEY_BACKSLASH};
+  int row4[] = {KEY_GRAVE, KEY_1, KEY_2, KEY_3, KEY_4,     KEY_5,    KEY_6,
+                KEY_7,     KEY_8, KEY_9, KEY_0, KEY_MINUS, KEY_EQUAL};
+  int rowfn[] = {KEY_ESC, KEY_F1, KEY_F2, KEY_F3, KEY_F4,  KEY_F5,
+                 KEY_F6,  KEY_F7, KEY_F8, KEY_F9, KEY_F10, KEY_F13};
 
   int bottom_row_ymin = kBottomRowYmin;
-  layout_.push_back(Key(KEY_LEFTCTRL,
-                        0,
-                        kLeftCtrlWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kKeyHeight));
-  layout_.push_back(Key(KEY_LEFTALT,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kLeftAltWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kKeyHeight));
-  layout_.push_back(Key(KEY_SPACE,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kSpaceWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kKeyHeight));
-  layout_.push_back(Key(KEY_RIGHTALT,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kKeyWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kKeyHeight));
-  layout_.push_back(Key(KEY_RIGHTCTRL,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kKeyWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kKeyHeight));
-  layout_.push_back(Key(KEY_LEFT,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kKeyWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kArrowKeyHeight));
-  layout_.push_back(Key(KEY_DOWN,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kWideArrowKeyWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kArrowKeyHeight));
-  layout_.push_back(Key(KEY_UP,
-                        layout_.back().xmin_,
-                        layout_.back().xmax_,
-                        bottom_row_ymin + kArrowKeyHeight,
-                        bottom_row_ymin + kKeyWidth));
-  layout_.push_back(Key(KEY_RIGHT,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kKeyWidth,
-                        bottom_row_ymin,
-                        bottom_row_ymin + kArrowKeyHeight));
-
+  layout_.push_back(Key{
+      KEY_LEFTCTRL,
+      0,
+      static_cast<int>(kLeftCtrlWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_LEFTALT,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kLeftAltWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_SPACE,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kSpaceWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_RIGHTALT,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kKeyWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_RIGHTCTRL,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kKeyWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_LEFT,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kKeyWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kArrowKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_DOWN,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kWideArrowKeyWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kArrowKeyHeight),
+  });
+  layout_.push_back(Key{
+      KEY_UP,
+      layout_.back().xmin_,
+      layout_.back().xmax_,
+      static_cast<int>(bottom_row_ymin + kArrowKeyHeight),
+      static_cast<int>(bottom_row_ymin + kKeyWidth),
+  });
+  layout_.push_back(Key{
+      KEY_RIGHT,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kKeyWidth),
+      bottom_row_ymin,
+      static_cast<int>(bottom_row_ymin + kArrowKeyHeight),
+  });
 
   int row1_ymin = bottom_row_ymin + kKeyHeight;
-  layout_.push_back(Key(KEY_LEFTSHIFT,
-                        0,
-                        kShiftWidth,
-                        row1_ymin,
-                        row1_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_LEFTSHIFT,
+      0,
+      static_cast<int>(kShiftWidth),
+      row1_ymin,
+      static_cast<int>(row1_ymin + kKeyHeight),
+  });
   for (i = 0; i < base::size(row1); i++) {
-    layout_.push_back(Key(row1[i],
-                          kShiftWidth + i * kKeyWidth,
-                          kShiftWidth + i * kKeyWidth + kKeyWidth,
-                          row1_ymin,
-                          row1_ymin + kKeyHeight));
+    layout_.push_back(Key{
+        row1[i],
+        static_cast<int>(kShiftWidth + i * kKeyWidth),
+        static_cast<int>(kShiftWidth + i * kKeyWidth + kKeyWidth),
+        row1_ymin,
+        static_cast<int>(row1_ymin + kKeyHeight),
+    });
   }
-  layout_.push_back(Key(KEY_RIGHTSHIFT,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kShiftWidth,
-                        row1_ymin,
-                        row1_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_RIGHTSHIFT,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kShiftWidth),
+      row1_ymin,
+      static_cast<int>(row1_ymin + kKeyHeight),
+  });
 
   int row2_ymin = row1_ymin + kKeyHeight;
-  layout_.push_back(Key(KEY_LEFTMETA,
-                        0,
-                        kSearchWidth,
-                        row2_ymin,
-                        row2_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_LEFTMETA,
+      0,
+      static_cast<int>(kSearchWidth),
+      row2_ymin,
+      static_cast<int>(row2_ymin + kKeyHeight),
+  });
   for (i = 0; i < base::size(row2); i++) {
-    layout_.push_back(Key(row2[i],
-                          kSearchWidth + i * kKeyWidth,
-                          kSearchWidth + i * kKeyWidth + kKeyWidth,
-                          row2_ymin,
-                          row2_ymin + kKeyHeight));
+    layout_.push_back(Key{
+        row2[i],
+        static_cast<int>(kSearchWidth + i * kKeyWidth),
+        static_cast<int>(kSearchWidth + i * kKeyWidth + kKeyWidth),
+        row2_ymin,
+        static_cast<int>(row2_ymin + kKeyHeight),
+    });
   }
-  layout_.push_back(Key(KEY_ENTER,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kEnterWidth,
-                        row2_ymin,
-                        row2_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_ENTER,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kEnterWidth),
+      row2_ymin,
+      static_cast<int>(row2_ymin + kKeyHeight),
+  });
 
   int row3_ymin = row2_ymin + kKeyHeight;
-  layout_.push_back(Key(KEY_TAB,
-                        0,
-                        kTabWidth,
-                        row3_ymin,
-                        row3_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_TAB,
+      0,
+      static_cast<int>(kTabWidth),
+      row3_ymin,
+      static_cast<int>(row3_ymin + kKeyHeight),
+  });
   for (i = 0; i < base::size(row3); i++) {
-    layout_.push_back(Key(row3[i],
-                          kTabWidth + i * kKeyWidth,
-                          kTabWidth + i * kKeyWidth + kKeyWidth,
-                          row3_ymin,
-                          row3_ymin + kKeyHeight));
+    layout_.push_back(Key{
+        row3[i],
+        static_cast<int>(kTabWidth + i * kKeyWidth),
+        static_cast<int>(kTabWidth + i * kKeyWidth + kKeyWidth),
+        row3_ymin,
+        static_cast<int>(row3_ymin + kKeyHeight),
+    });
   }
 
   int row4_ymin = row3_ymin + kKeyHeight;
   for (i = 0; i < base::size(row4); i++) {
-    layout_.push_back(Key(row4[i],
-                          i * kKeyWidth,
-                          i * kKeyWidth + kKeyWidth,
-                          row4_ymin,
-                          row4_ymin + kKeyHeight));
+    layout_.push_back(Key{
+        row4[i],
+        static_cast<int>(i * kKeyWidth),
+        static_cast<int>(i * kKeyWidth + kKeyWidth),
+        row4_ymin,
+        static_cast<int>(row4_ymin + kKeyHeight),
+    });
   }
-  layout_.push_back(Key(KEY_BACKSPACE,
-                        layout_.back().xmax_,
-                        layout_.back().xmax_ + kBackspaceWidth,
-                        row4_ymin,
-                        row4_ymin + kKeyHeight));
+  layout_.push_back(Key{
+      KEY_BACKSPACE,
+      layout_.back().xmax_,
+      static_cast<int>(layout_.back().xmax_ + kBackspaceWidth),
+      row4_ymin,
+      static_cast<int>(row4_ymin + kKeyHeight),
+  });
 
   int rowfn_ymin = row4_ymin + kKeyHeight;
   for (i = 0; i < base::size(rowfn); i++) {
-    layout_.push_back(Key(rowfn[i],
-                          i * kFnKeyWidth,
-                          i * kFnKeyWidth + kFnKeyWidth,
-                          rowfn_ymin,
-                          rowfn_ymin + kFnKeyHeight));
+    layout_.push_back(Key{
+        rowfn[i],
+        static_cast<int>(i * kFnKeyWidth),
+        static_cast<int>(i * kFnKeyWidth + kFnKeyWidth),
+        rowfn_ymin,
+        static_cast<int>(rowfn_ymin + kFnKeyHeight),
+    });
   }
 }
-
 
 void FakeKeyboard::EnableKeyboardEvents() const {
   // Enable key events in general for output.
@@ -217,14 +255,15 @@ struct timespec FakeKeyboard::AddMsToTimespec(struct timespec const& orig,
 }
 
 bool FakeKeyboard::TimespecIsLater(struct timespec const& t1,
-                                    struct timespec const& t2) {
+                                   struct timespec const& t2) {
   return ((t1.tv_sec > t2.tv_sec) ||
           (t1.tv_sec == t2.tv_sec && t1.tv_nsec > t2.tv_nsec));
 }
 
 int FakeKeyboard::GenerateEventForArrivingFinger(
     struct timespec now,
-    struct mtstatemachine::MtFinger const &finger, int tid) {
+    struct mtstatemachine::MtFinger const& finger,
+    int tid) {
   for (unsigned int key_num = 0; key_num < layout_.size(); key_num++) {
     if (layout_[key_num].Contains(finger.x, finger.y)) {
       Event ev(layout_[key_num].event_code_, kKeyDownEvent,
@@ -236,7 +275,8 @@ int FakeKeyboard::GenerateEventForArrivingFinger(
   return kNoKey;
 }
 
-void FakeKeyboard::HandleLeavingFinger(int tid, FingerData finger,
+void FakeKeyboard::HandleLeavingFinger(int tid,
+                                       FingerData finger,
                                        timespec now) {
   bool up_event_guaranteed = false, down_event_guaranteed = false;
 
@@ -269,15 +309,15 @@ void FakeKeyboard::HandleLeavingFinger(int tid, FingerData finger,
 }
 
 void FakeKeyboard::EnqueueKeyUpEvent(int ev_code, timespec now) {
-  Event up_event(ev_code, kKeyUpEvent,
-                 AddMsToTimespec(now, kEventDelayMS), kOldTID);
+  Event up_event(ev_code, kKeyUpEvent, AddMsToTimespec(now, kEventDelayMS),
+                 kOldTID);
   up_event.is_guaranteed_ = true;
   EnqueueEvent(up_event);
 }
 
 bool FakeKeyboard::StillOnFirstKey(
-    struct mtstatemachine::MtFinger const & finger,
-    FingerData const & data) const {
+    struct mtstatemachine::MtFinger const& finger,
+    FingerData const& data) const {
   // If this finger didn't start on a key, then automatically return false.
   if (data.starting_key_number_ == kNoKey) {
     return false;
@@ -303,7 +343,7 @@ void FakeKeyboard::RejectFinger(int tid, RejectionStatus reason) {
 
 void FakeKeyboard::ProcessIncomingSnapshot(
     struct timespec now,
-    std::unordered_map<int, struct mtstatemachine::MtFinger> const &snapshot) {
+    std::unordered_map<int, struct mtstatemachine::MtFinger> const& snapshot) {
   // First we go through all the touches reported by the touchscreen in the most
   // recent snapshot.
   for (auto map_entry : snapshot) {
@@ -406,8 +446,8 @@ void FakeKeyboard::Consume() {
                     (deadline.tv_nsec - now.tv_nsec) / 1000000);
       timeout_ms++;  // Always add 1 more ms so as to not undershoot.
       if (timeout_ms < 0) {
-        LOG(WARNING) << "Negative timeout (" << timeout_ms <<
-                        ").  We missed an event somewhere!\n";
+        LOG(WARNING) << "Negative timeout (" << timeout_ms
+                     << ").  We missed an event somewhere!\n";
         timeout_ms = 1;
       }
     }
@@ -456,20 +496,21 @@ void FakeKeyboard::Consume() {
         // pressed by a user's thumb, which may have unusually high pressure.
         if (it->second.max_pressure_ < kMinTapPressure ||
             (layout_[it->second.starting_key_number_].event_code_ !=
-             KEY_SPACE && it->second.max_pressure_ > kMaxTapPressure)) {
-          LOG(INFO) << "Tap rejected!  Pressure of " <<
-                    it->second.max_pressure_ << " is out of range " <<
-                    kMinTapPressure << "->" << kMaxTapPressure;
+                 KEY_SPACE &&
+             it->second.max_pressure_ > kMaxTapPressure)) {
+          LOG(INFO) << "Tap rejected!  Pressure of " << it->second.max_pressure_
+                    << " is out of range " << kMinTapPressure << "->"
+                    << kMaxTapPressure;
           continue;
         }
       } else {
         // The finger has already left -- that's OK as long as it is
         // "guaranteed" to fire.
         if (!next_event.is_guaranteed_) {
-          LOG(ERROR) << "No finger data for event that should have some! " <<
-                       "(guaranteed: " << next_event.is_guaranteed_ << ", " <<
-                       "is_down: " << next_event.is_down_ << ", " <<
-                       "tid: " << next_event.tid_ << ")";
+          LOG(ERROR) << "No finger data for event that should have some! "
+                     << "(guaranteed: " << next_event.is_guaranteed_ << ", "
+                     << "is_down: " << next_event.is_down_ << ", "
+                     << "tid: " << next_event.tid_ << ")";
         }
       }
 
@@ -491,8 +532,8 @@ void FakeKeyboard::Consume() {
   }
 }
 
-void FakeKeyboard::Start(std::string const &source_device_path,
-                         std::string const &keyboard_device_name) {
+void FakeKeyboard::Start(std::string const& source_device_path,
+                         std::string const& keyboard_device_name) {
   // Do all the set up steps.
   OpenSourceDevice(source_device_path);
   CreateUinputFD();

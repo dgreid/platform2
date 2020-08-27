@@ -36,11 +36,11 @@ bool UinputDevice::CreateUinputFD() {
     return false;
   }
 
-  uinput_fd_ = syscall_handler_->open(kUinputControlFilename,
-                                      O_WRONLY | O_NONBLOCK);
+  uinput_fd_ =
+      syscall_handler_->open(kUinputControlFilename, O_WRONLY | O_NONBLOCK);
   if (uinput_fd_ < 0) {
-    PLOG(ERROR) << "Unable to open " << kUinputControlFilename <<
-                   " (" << uinput_fd_ << ")";
+    PLOG(ERROR) << "Unable to open " << kUinputControlFilename << " ("
+                << uinput_fd_ << ")";
     return false;
   }
   LOG(INFO) << "Uinput control file descriptor opened (" << uinput_fd_ << ")";
@@ -54,8 +54,8 @@ bool UinputDevice::EnableEventType(int ev_type) const {
   // first, which is done here.
   int error = syscall_handler_->ioctl(uinput_fd_, UI_SET_EVBIT, ev_type);
   if (error) {
-    LOG(ERROR) << "Unable to enable event type 0x" << std::hex << ev_type <<
-                  "(" << std::dec << error << ")";
+    LOG(ERROR) << "Unable to enable event type 0x" << std::hex << ev_type << "("
+               << std::dec << error << ")";
     return false;
   }
   LOG(INFO) << "Enabled events of type 0x" << std::hex << ev_type;
@@ -67,8 +67,8 @@ bool UinputDevice::EnableKeyEvent(int ev_code) const {
   // key event. (eg: KEY_BACKSPACE or BTN_TOUCH)
   int error = syscall_handler_->ioctl(uinput_fd_, UI_SET_KEYBIT, ev_code);
   if (error) {
-    LOG(ERROR) << "Unable to enable EV_KEY 0x" << std::hex << ev_code <<
-                  " events (" << std::dec << ")";
+    LOG(ERROR) << "Unable to enable EV_KEY 0x" << std::hex << ev_code
+               << " events (" << std::dec << ")";
     return false;
   }
   LOG(INFO) << "Enabled EV_KEY 0x" << std::hex << ev_code << " events";
@@ -80,8 +80,8 @@ bool UinputDevice::EnableAbsEvent(int ev_code) const {
   // kind of ABS event. (eg: ABS_MT_POSITION_X or ABS_PRESSURE)
   int error = syscall_handler_->ioctl(uinput_fd_, UI_SET_ABSBIT, ev_code);
   if (error) {
-    LOG(ERROR) << "Unable to enable EV_ABS 0x" << std::hex << ev_code <<
-                  " events (" << std::dec << error << ")";
+    LOG(ERROR) << "Unable to enable EV_ABS 0x" << std::hex << ev_code
+               << " events (" << std::dec << error << ")";
     return false;
   }
   LOG(INFO) << "Enabled EV_ABS 0x" << std::hex << ev_code << " events";
@@ -89,7 +89,8 @@ bool UinputDevice::EnableAbsEvent(int ev_code) const {
 }
 
 bool UinputDevice::CopyABSOutputEvents(int source_evdev_fd,
-                                       int width, int height) const {
+                                       int width,
+                                       int height) const {
   // Configure this region's uinput device to report the correct kinds of
   // events by copying the events that are reported by the input device
   // who's file descriptor is passed as a reference.
@@ -146,8 +147,8 @@ bool UinputDevice::CopyABSOutputEvents(int source_evdev_fd,
     }
     error = syscall_handler_->ioctl(uinput_fd_, UI_ABS_SETUP, &abs_setup);
     if (error) {
-      LOG(ERROR) << "Unable to set up axis for event code 0x" << std::hex <<
-                    ev_code << " (" << std::dec << error << ")";
+      LOG(ERROR) << "Unable to set up axis for event code 0x" << std::hex
+                 << ev_code << " (" << std::dec << error << ")";
       return false;
     }
   }
@@ -157,7 +158,7 @@ bool UinputDevice::CopyABSOutputEvents(int source_evdev_fd,
 }
 
 bool UinputDevice::FinalizeUinputCreation(
-                                  std::string const &device_name) const {
+    std::string const& device_name) const {
   int error;
   struct uinput_setup device_info;
 
@@ -166,7 +167,7 @@ bool UinputDevice::FinalizeUinputCreation(
   memset(&device_info, 0, sizeof(device_info));
   snprintf(device_info.name, UINPUT_MAX_NAME_SIZE, "%s", device_name.c_str());
   device_info.id.bustype = BUS_USB;
-  device_info.id.vendor  = kGoogleVendorID;
+  device_info.id.vendor = kGoogleVendorID;
   device_info.id.product = kDummyProductID;
   device_info.id.version = kVersionNumber;
   error = syscall_handler_->ioctl(uinput_fd_, UI_DEV_SETUP, &device_info);
@@ -196,22 +197,23 @@ bool UinputDevice::SendEvent(int ev_type, int ev_code, int value) const {
   ev.value = value;
 
   int bytes_written =
-          syscall_handler_->write(uinput_fd_, &ev, sizeof(struct input_event));
+      syscall_handler_->write(uinput_fd_, &ev, sizeof(struct input_event));
   if (bytes_written != sizeof(struct input_event)) {
-    LOG(ERROR) << "Failed to write() when sending an event. (" <<
-                  bytes_written << ")";
+    LOG(ERROR) << "Failed to write() when sending an event. (" << bytes_written
+               << ")";
     return false;
   }
   return true;
 }
 
 bool UinputDevice::IsEventSupported(int event,
-                                    int64_t *supported_event_types) const {
+                                    int64_t* supported_event_types) const {
   // The array is essentially a big bit field and we're testing to see if
   // the event-th bit is set.  That tells us if the event type in question
   // is included in the support event types.
   return (supported_event_types[event / kNumBitsPerInt] >>
-          (event % kNumBitsPerInt)) & 1;
+          (event % kNumBitsPerInt)) &
+         1;
 }
 
 }  // namespace touch_keyboard

@@ -7,8 +7,8 @@
 namespace mtstatemachine {
 
 bool MtStateMachine::AddEvent(
-    struct input_event const &ev,
-    std::unordered_map<int, struct MtFinger> *out_snapshot) {
+    struct input_event const& ev,
+    std::unordered_map<int, struct MtFinger>* out_snapshot) {
   // Here we process an event.  This function returns true at the end of a full
   // snapshot of the data (whenever there is a SYN event) and if you
   // pass it a pointer to an appropriate map, it will fill it with the
@@ -28,7 +28,7 @@ bool MtStateMachine::AddEvent(
 }
 
 void MtStateMachine::FillSnapshot(
-    std::unordered_map<int, struct MtFinger> *out_snapshot) {
+    std::unordered_map<int, struct MtFinger>* out_snapshot) {
   out_snapshot->clear();
 
   for (int slot = 0; slot < kNumSlots; slot++) {
@@ -40,8 +40,8 @@ void MtStateMachine::FillSnapshot(
     finger.x = slots_[slot].FindValueByEvent(EV_ABS, ABS_MT_POSITION_X);
     finger.y = slots_[slot].FindValueByEvent(EV_ABS, ABS_MT_POSITION_Y);
     finger.p = slots_[slot].FindValueByEvent(EV_ABS, ABS_MT_PRESSURE);
-    finger.touch_major = slots_[slot].FindValueByEvent(EV_ABS,
-                                                       ABS_MT_TOUCH_MAJOR);
+    finger.touch_major =
+        slots_[slot].FindValueByEvent(EV_ABS, ABS_MT_TOUCH_MAJOR);
     (*out_snapshot)[tid] = finger;
   }
 }

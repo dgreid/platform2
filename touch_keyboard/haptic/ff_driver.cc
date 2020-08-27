@@ -17,11 +17,11 @@
 namespace {
 // This value drive the vibrator at max strength.
 constexpr int kMaxDriverInput = 0x7f;
-}
+}  // namespace
 
 namespace touch_keyboard {
 
-FFDriver::FFDriver() : fd_ {-1} {}
+FFDriver::FFDriver() : fd_{-1} {}
 
 FFDriver::~FFDriver() {
   CloseFDIfValid();
@@ -80,7 +80,7 @@ bool FFDriver::PlayEffect(int id) {
   play.code = id;
   play.value = 1;
 
-  if (write(fd_, (const void*) &play, sizeof(play)) != sizeof(play)) {
+  if (write(fd_, (const void*)&play, sizeof(play)) != sizeof(play)) {
     PLOG(ERROR) << "Fail to play effect";
     return false;
   }

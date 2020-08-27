@@ -12,8 +12,8 @@
 // set up this symlink.
 constexpr char kTouchSensorDevicePath[] = "/dev/touch_keyboard";
 
-using touch_keyboard::FakeTouchpad;
 using touch_keyboard::FakeKeyboard;
+using touch_keyboard::FakeTouchpad;
 
 int main() {
   LOG(INFO) << "Starting touch_keyboard_handler";

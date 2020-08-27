@@ -18,24 +18,27 @@ constexpr int kInvertY = 0x01;
 constexpr int kInvertX = 0x02;
 
 class FakeTouchpad : public UinputDevice, public EvdevSource {
- /* Generate a "fake" touchpad device that pulls it's touch events from a sub-
-  * region of a larger touch sensor.
-  *
-  * This class collects evdev events from one touch sensor and creates a
-  * similar device with udev, then pipes events from a certain area through.
-  * It also handles various bookkeeping with respect to which fingers are
-  * within the "touchpad" region.  In essence, you initialize one of these
-  * objects with a source device and the area you want to treat as a touchpad.
-  * Then, when you run Start() it sets up the devices and will block forever
-  * passing though the appropriate events and modifying them to maintain the
-  * illusion of a normal touchpad.
-  */
+  /* Generate a "fake" touchpad device that pulls it's touch events from a sub-
+   * region of a larger touch sensor.
+   *
+   * This class collects evdev events from one touch sensor and creates a
+   * similar device with udev, then pipes events from a certain area through.
+   * It also handles various bookkeeping with respect to which fingers are
+   * within the "touchpad" region.  In essence, you initialize one of these
+   * objects with a source device and the area you want to treat as a touchpad.
+   * Then, when you run Start() it sets up the devices and will block forever
+   * passing though the appropriate events and modifying them to maintain the
+   * illusion of a normal touchpad.
+   */
  public:
-  FakeTouchpad(int xmin, int xmax, int ymin, int ymax,
+  FakeTouchpad(int xmin,
+               int xmax,
+               int ymin,
+               int ymax,
                unsigned char axis_inversion_flags);
 
-  void Start(std::string const &source_device_path,
-             std::string const &touchpad_device_name);
+  void Start(std::string const& source_device_path,
+             std::string const& touchpad_device_name);
 
  private:
   // Loop forever consuming events from the source and emitting them from the
@@ -48,7 +51,7 @@ class FakeTouchpad : public UinputDevice, public EvdevSource {
 
   // Test to see if the finger who's data is stored in the slot is currently
   // within the region defined as the touchpad.
-  bool Contains(mtstatemachine::Slot const &slot) const;
+  bool Contains(mtstatemachine::Slot const& slot) const;
 
   // Check the state of the input touch and sync the fake touchpad by passing
   // through any new updates.
@@ -56,7 +59,7 @@ class FakeTouchpad : public UinputDevice, public EvdevSource {
 
   // Used by SyncTouchEvents, this function blindly duplicates the state stored
   // in the slot for the fake touchpad by replicating events for each value.
-  bool PassEventsThrough(mtstatemachine::Slot const &slot) const;
+  bool PassEventsThrough(mtstatemachine::Slot const& slot) const;
 
   // These member variables store the ranges of x/y coordinates that make up
   // the "touchpad" area on the source input device.

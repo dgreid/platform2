@@ -6,9 +6,9 @@
 
 namespace touch_keyboard {
 
-FakeTouchpad::FakeTouchpad(int xmin, int xmax, int ymin, int ymax,
-                           unsigned char axis_inversion_flags) :
-             xmin_(xmin), xmax_(xmax), ymin_(ymin), ymax_(ymax) {
+FakeTouchpad::FakeTouchpad(
+    int xmin, int xmax, int ymin, int ymax, unsigned char axis_inversion_flags)
+    : xmin_(xmin), xmax_(xmax), ymin_(ymin), ymax_(ymax) {
   invertx_ = static_cast<bool>(axis_inversion_flags & kInvertX);
   inverty_ = static_cast<bool>(axis_inversion_flags & kInvertY);
 
@@ -17,8 +17,8 @@ FakeTouchpad::FakeTouchpad(int xmin, int xmax, int ymin, int ymax,
   }
 }
 
-void FakeTouchpad::Start(std::string const &source_device_path,
-                         std::string const &touchpad_device_name) {
+void FakeTouchpad::Start(std::string const& source_device_path,
+                         std::string const& touchpad_device_name) {
   OpenSourceDevice(source_device_path);
   CreateUinputFD();
 
@@ -73,7 +73,7 @@ void FakeTouchpad::SendTouchpadBtnEvents(int touch_count) const {
   SendEvent(EV_KEY, BTN_TOOL_QUADTAP, (touch_count == 4) ? 1 : 0);
 }
 
-bool FakeTouchpad::Contains(mtstatemachine::Slot const &slot) const {
+bool FakeTouchpad::Contains(mtstatemachine::Slot const& slot) const {
   // Check and see if the contact in the slot is currently contained within
   // the boundaries of this region.
   int x = slot.FindValueByEvent(EV_ABS, ABS_MT_POSITION_X);
@@ -85,7 +85,7 @@ bool FakeTouchpad::Contains(mtstatemachine::Slot const &slot) const {
   return true;
 }
 
-bool FakeTouchpad::PassEventsThrough(mtstatemachine::Slot const &slot) const {
+bool FakeTouchpad::PassEventsThrough(mtstatemachine::Slot const& slot) const {
   // Go through the slot in question and send events setting each of the set
   // values into this region.  Essentially this updates all of the values for
   // this slot in the kernel to match our internal version.
@@ -154,8 +154,7 @@ int FakeTouchpad::SyncTouchEvents() {
     } else {
       // If this slot just entered the region, send a finger-arrive event.
       if (!slot_memberships_[slot]) {
-        int tid = sm_.slots_[slot].FindValueByEvent(EV_ABS,
-                                                    ABS_MT_TRACKING_ID);
+        int tid = sm_.slots_[slot].FindValueByEvent(EV_ABS, ABS_MT_TRACKING_ID);
         SendEvent(EV_ABS, ABS_MT_TRACKING_ID, tid);
       }
       slot_memberships_[slot] = true;

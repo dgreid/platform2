@@ -54,7 +54,8 @@ class TouchFFManager {
   // This helper function get the effect id of the event from lib and then play
   // the effect on the driver.
   void PlayEffectOfEvent(
-      TouchKeyboardEvent event, FFDriver* driver,
+      TouchKeyboardEvent event,
+      FFDriver* driver,
       std::unordered_map<TouchKeyboardEvent, int, TouchKeyboardEventHash>* lib);
 
   FFDriver left_driver_;

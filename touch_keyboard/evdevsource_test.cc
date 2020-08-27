@@ -9,8 +9,8 @@
 
 namespace touch_keyboard {
 
-using ::testing::Return;
 using ::testing::_;
+using ::testing::Return;
 
 constexpr char kTestFilepath[] = "/dev/input/event3";
 constexpr int kNumRepeatedTestEvents = 20;
@@ -64,7 +64,6 @@ TEST_F(EvdevSourceTest, EventCaptureTimeoutDisabledTest) {
   }
 }
 
-
 TEST_F(EvdevSourceTest, EventCaptureTimeoutEnabledTest) {
   // This test repeatedly exercises the typical path to capturing an event
   // from an EvdevSource.  This means using a timeout, but everything succeeds
@@ -76,7 +75,8 @@ TEST_F(EvdevSourceTest, EventCaptureTimeoutEnabledTest) {
   // Select() is used to implement a timeout before each read.  For this test
   // it should always return 1 to indicate that there is an event to read.
   EXPECT_CALL(mock_syscall_handler, select(kTestValidFD + 1, _, NULL, NULL, _))
-      .Times(kNumRepeatedTestEvents) .WillRepeatedly(Return(1));
+      .Times(kNumRepeatedTestEvents)
+      .WillRepeatedly(Return(1));
   // Read() should be called once when we try to get a new event.
   EXPECT_CALL(mock_syscall_handler,
               read(kTestValidFD, _, sizeof(struct input_event)))

@@ -15,26 +15,26 @@ constexpr int kDefaultHapticDurationMs = 100;
 // Path for left and right vibrators.
 const char kLeftVibratorPath[] = "/dev/left_vibrator";
 const char kRightVibratorPath[] = "/dev/right_vibrator";
-}
+}  // namespace
 
 namespace touch_keyboard {
 
-TouchFFManager::TouchFFManager(int max_x) :
-  touch_max_x_(max_x) {
-    if (!left_driver_.Init(kLeftVibratorPath)) {
-      LOG(ERROR) << "Cannot find left motor";
-    }
+TouchFFManager::TouchFFManager(int max_x) : touch_max_x_(max_x) {
+  if (!left_driver_.Init(kLeftVibratorPath)) {
+    LOG(ERROR) << "Cannot find left motor";
+  }
 
-    if (!right_driver_.Init(kRightVibratorPath)) {
-      LOG(ERROR) << "Cannot find right motor";
-    }
+  if (!right_driver_.Init(kRightVibratorPath)) {
+    LOG(ERROR) << "Cannot find right motor";
+  }
 
-    RegisterFF(TouchKeyboardEvent::FingerDown, kDefaultHapticMagnitue,
-               kDefaultHapticDurationMs);
+  RegisterFF(TouchKeyboardEvent::FingerDown, kDefaultHapticMagnitue,
+             kDefaultHapticDurationMs);
 }
 
 void TouchFFManager::RegisterFF(TouchKeyboardEvent event,
-                                double magnitude, int length_ms) {
+                                double magnitude,
+                                int length_ms) {
   int tmp_event_id;
   // The effect is uploaded to both drivers.
   tmp_event_id = left_driver_.UploadEffect(magnitude, length_ms);

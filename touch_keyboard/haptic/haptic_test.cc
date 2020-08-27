@@ -21,19 +21,18 @@ constexpr int kMaxDuration = 10000;
 // Path for both vibrators.
 const char kLeftVibratorPath[] = "/dev/left_vibrator";
 const char kRightVibratorPath[] = "/dev/right_vibrator";
-}
+}  // namespace
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   // Path for the selected vibrator.
   const char* vibrator_path = kLeftVibratorPath;
   DEFINE_string(vibrator, "left", "Select left or right motor.");
   DEFINE_double(magnitude, 1.0,
                 "Strength of vibration, value is from 0.0 to 1.0.");
-  DEFINE_int32(duration_ms, 1000,
-                "Duration of the vibration in ms.");
+  DEFINE_int32(duration_ms, 1000, "Duration of the vibration in ms.");
 
-  brillo::FlagHelper::Init(
-      argc, argv, "touchkb_haptic_test, test touch keyboard haptic.");
+  brillo::FlagHelper::Init(argc, argv,
+                           "touchkb_haptic_test, test touch keyboard haptic.");
 
   // Check vibrator selection.
   if (FLAGS_vibrator == "right") {

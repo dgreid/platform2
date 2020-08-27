@@ -14,15 +14,26 @@ namespace touch_keyboard {
 class MockSyscallHandler : public SyscallHandler {
  public:
   MOCK_CONST_METHOD2(open, int(const char* pathname, int flags));
-  MOCK_CONST_METHOD3(read, ssize_t(int fd, void *buf, size_t count));
-  MOCK_CONST_METHOD3(write, ssize_t(int fd, const void *buf, size_t count));
-  MOCK_CONST_METHOD5(select, int(int nfds, fd_set *readfds, fd_set *writefds,
-                                 fd_set *except_fds, struct timeval *timeout));
+  MOCK_CONST_METHOD3(read, ssize_t(int fd, void* buf, size_t count));
+  MOCK_CONST_METHOD3(write, ssize_t(int fd, const void* buf, size_t count));
+  MOCK_CONST_METHOD5(select,
+                     int(int nfds,
+                         fd_set* readfds,
+                         fd_set* writefds,
+                         fd_set* except_fds,
+                         struct timeval* timeout));
 
-  MOCK_CONST_METHOD2(ioctl, int(int fd, long request_code));
-  MOCK_CONST_METHOD3(ioctl, int(int fd, long request_code, uint64_t arg1));
-  MOCK_CONST_METHOD3(ioctl, int(int fd, long request_code,
-                                struct uinput_setup *arg1));
+  MOCK_CONST_METHOD2(ioctl,
+                     int(int fd,
+                         long request_code));  // NOLINT(runtime/int)
+  MOCK_CONST_METHOD3(ioctl,
+                     int(int fd,
+                         long request_code,  // NOLINT(runtime/int)
+                         uint64_t arg1));
+  MOCK_CONST_METHOD3(ioctl,
+                     int(int fd,
+                         long request_code,  // NOLINT(runtime/int)
+                         struct uinput_setup* arg1));
 };
 
 }  // namespace touch_keyboard

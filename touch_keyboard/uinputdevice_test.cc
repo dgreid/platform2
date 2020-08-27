@@ -32,8 +32,8 @@ TEST_F(UinputDeviceTest, UinputControlOpeningTest) {
               open(StrEq(kUinputControlFilename), O_WRONLY | O_NONBLOCK))
       .WillOnce(Return(kTestValidFD));
   // The UI_DEV_DESTROY ioctl will be called in the device's destructor.
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
 
   // Given that open() succeeds, this function should return true to indicate to
   // us that everything went as expected.
@@ -68,8 +68,8 @@ TEST_F(UinputDeviceTest, EnableEventTypeTest) {
 
   MockSyscallHandler mock_syscall_handler;
   EXPECT_CALL(mock_syscall_handler, open(_, _)).WillOnce(Return(kTestValidFD));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
   // Ioctl()s are used to enable an event type, so we expect this input and set
   // up all but the last one to succeed.
   EXPECT_CALL(mock_syscall_handler,
@@ -77,7 +77,9 @@ TEST_F(UinputDeviceTest, EnableEventTypeTest) {
       .WillOnce(Return(-EPERM));
   EXPECT_CALL(mock_syscall_handler,
               ioctl(kTestValidFD, UI_SET_EVBIT, Matcher<uint64_t>(_)))
-      .Times(num_ev_types - 1).WillRepeatedly(Return(0)).RetiresOnSaturation();
+      .Times(num_ev_types - 1)
+      .WillRepeatedly(Return(0))
+      .RetiresOnSaturation();
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -98,8 +100,8 @@ TEST_F(UinputDeviceTest, EnableKeyEventTest) {
 
   MockSyscallHandler mock_syscall_handler;
   EXPECT_CALL(mock_syscall_handler, open(_, _)).WillOnce(Return(kTestValidFD));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
   // Ioctl()s are used to enable a key event, so we expect this input.  Setting
   // up the first (num_key_codes - 1) attempts to succeed and the last one
   // will fail.
@@ -108,7 +110,9 @@ TEST_F(UinputDeviceTest, EnableKeyEventTest) {
       .WillRepeatedly(Return(-EPERM));
   EXPECT_CALL(mock_syscall_handler,
               ioctl(kTestValidFD, UI_SET_KEYBIT, Matcher<uint64_t>(_)))
-      .Times(num_key_codes - 1).WillRepeatedly(Return(0)).RetiresOnSaturation();
+      .Times(num_key_codes - 1)
+      .WillRepeatedly(Return(0))
+      .RetiresOnSaturation();
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -125,14 +129,14 @@ TEST_F(UinputDeviceTest, EnableAbsEventTest) {
   // This tests the ability to enable abs events (like those used by touchpads
   // and touchscreens) for the UinputDevice.  To do so, we simulate enabling
   // everal kinds of abs events that both succeed and fail.
-  int abs_codes[] = {ABS_PRESSURE, ABS_MT_TOUCH_MAJOR,
-                     ABS_MT_POSITION_X, ABS_X};
+  int abs_codes[] = {ABS_PRESSURE, ABS_MT_TOUCH_MAJOR, ABS_MT_POSITION_X,
+                     ABS_X};
   int num_abs_codes = sizeof(abs_codes) / sizeof(*abs_codes);
 
   MockSyscallHandler mock_syscall_handler;
   EXPECT_CALL(mock_syscall_handler, open(_, _)).WillOnce(Return(kTestValidFD));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
   // Ioctls are used to enable an abs event, so we expect this input -- setting
   // up the first (num_abs_codes - 1) attempts to succeed and the last one
   // will fail.
@@ -141,7 +145,9 @@ TEST_F(UinputDeviceTest, EnableAbsEventTest) {
       .WillRepeatedly(Return(-EPERM));
   EXPECT_CALL(mock_syscall_handler,
               ioctl(kTestValidFD, UI_SET_ABSBIT, Matcher<uint64_t>(_)))
-      .Times(num_abs_codes - 1).WillRepeatedly(Return(0)).RetiresOnSaturation();
+      .Times(num_abs_codes - 1)
+      .WillRepeatedly(Return(0))
+      .RetiresOnSaturation();
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -168,8 +174,8 @@ TEST_F(UinputDeviceTest, FinalizeUinputCreationSuccessTest) {
       .WillOnce(Return(0));
   EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_CREATE))
       .WillOnce(Return(0));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -187,8 +193,8 @@ TEST_F(UinputDeviceTest, FinalizeUinputCreationDEV_SETUPFailTest) {
   EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_SETUP,
                                           Matcher<struct uinput_setup*>(_)))
       .WillOnce(Return(-EPERM));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -208,8 +214,8 @@ TEST_F(UinputDeviceTest, FinalizeUinputCreationDEV_CREATEFailTest) {
       .WillOnce(Return(0));
   EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_CREATE))
       .WillOnce(Return(-EPERM));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();
@@ -223,8 +229,8 @@ TEST_F(UinputDeviceTest, SendEventTest) {
   MockSyscallHandler mock_syscall_handler;
   // Set up open() to work as normal so the class can set itself up.
   EXPECT_CALL(mock_syscall_handler, open(_, _)).WillOnce(Return(kTestValidFD));
-  EXPECT_CALL(mock_syscall_handler,
-              ioctl(kTestValidFD, UI_DEV_DESTROY)).WillOnce(Return(0));
+  EXPECT_CALL(mock_syscall_handler, ioctl(kTestValidFD, UI_DEV_DESTROY))
+      .WillOnce(Return(0));
   // The first call to write an event to the file descriptor should succeed by
   // returning the full size of the struct, but after that it is configured to
   // return an error on subsequent calls.
@@ -233,7 +239,8 @@ TEST_F(UinputDeviceTest, SendEventTest) {
       .WillRepeatedly(Return(-EPERM));
   EXPECT_CALL(mock_syscall_handler,
               write(kTestValidFD, _, sizeof(struct input_event)))
-      .WillOnce(Return(sizeof(struct input_event))).RetiresOnSaturation();
+      .WillOnce(Return(sizeof(struct input_event)))
+      .RetiresOnSaturation();
 
   UinputDevice dev(&mock_syscall_handler);
   dev.CreateUinputFD();

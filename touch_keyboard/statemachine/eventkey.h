@@ -12,19 +12,19 @@
 namespace mtstatemachine {
 
 class EventKey {
- /* An Event Key to correspond to the various values a multitouch device
-  * can report.  (x position, y position, pressure, etc...)
-  *
-  * In the kernel, each event is specified as a pair of integers: one
-  * for the event type (key, absolute position, relative position, etc..) and
-  * one for the specific event code (which key it is, which axis movement is
-  * on, etc..).  This class represents both of those as a cohesive groups and
-  * offers several convenience functions for classifying these events.
-  */
+  /* An Event Key to correspond to the various values a multitouch device
+   * can report.  (x position, y position, pressure, etc...)
+   *
+   * In the kernel, each event is specified as a pair of integers: one
+   * for the event type (key, absolute position, relative position, etc..) and
+   * one for the specific event code (which key it is, which axis movement is
+   * on, etc..).  This class represents both of those as a cohesive groups and
+   * offers several convenience functions for classifying these events.
+   */
  public:
-  EventKey(int type, int code): type_(type), code_(code) {}
-  explicit EventKey(struct input_event const& ev):
-      type_(ev.type), code_(ev.code) {}
+  EventKey(int type, int code) : type_(type), code_(code) {}
+  explicit EventKey(struct input_event const& ev)
+      : type_(ev.type), code_(ev.code) {}
 
   // Define equality so we can use EventKeys as an std::unordered_map key.
   bool operator==(const EventKey& other) const;

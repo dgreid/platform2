@@ -18,28 +18,26 @@
 #include "touch_keyboard/syscallhandler.h"
 #include "touch_keyboard/uinput_definitions.h"
 
-
 namespace touch_keyboard {
 
 // This is the file handle on disk that you use to control the uinput module.
 constexpr char kUinputControlFilename[] = "/dev/uinput";
 
 class UinputDevice {
- /* A class to allow you to easily create uinput devices and generate events.
-  *
-  * This class can be used to create uinput devices, setup which events they
-  * are capable of generating, and actually sending them.  The general flow is
-  * to instantiate a UinputDevice object and call CreateUinputFD() to get the
-  * process started.  You can then use the various EnableXXXX() functions to
-  * enable the correct event types that you plan to generate.  Once all the
-  * events are enabled, FinalizeUinputCreation() will tell the kernel create
-  * the device and SendEvent() can now be used.
-  */
+  /* A class to allow you to easily create uinput devices and generate events.
+   *
+   * This class can be used to create uinput devices, setup which events they
+   * are capable of generating, and actually sending them.  The general flow is
+   * to instantiate a UinputDevice object and call CreateUinputFD() to get the
+   * process started.  You can then use the various EnableXXXX() functions to
+   * enable the correct event types that you plan to generate.  Once all the
+   * events are enabled, FinalizeUinputCreation() will tell the kernel create
+   * the device and SendEvent() can now be used.
+   */
  public:
-  UinputDevice() : syscall_handler_(&default_syscall_handler),
-                   uinput_fd_(-1) {}
-  explicit UinputDevice(SyscallHandler *syscall_handler) :
-      syscall_handler_(syscall_handler), uinput_fd_(-1) {
+  UinputDevice() : syscall_handler_(&default_syscall_handler), uinput_fd_(-1) {}
+  explicit UinputDevice(SyscallHandler* syscall_handler)
+      : syscall_handler_(syscall_handler), uinput_fd_(-1) {
     // This constructor allows you to pass in a SyscallHandler when unit
     // testing this class.  For real use, allow it to use the default value
     // by using the constructor with no arguments.
@@ -70,19 +68,19 @@ class UinputDevice {
 
   // Wrap up creation once all your events are enabled, and give it a name.
   // Once this is called the device is ready to start sending events out.
-  bool FinalizeUinputCreation(std::string const &device_name) const;
+  bool FinalizeUinputCreation(std::string const& device_name) const;
 
   // Once the device is finalized, this function sends the actual events
   // to the input subsystem just like a normal input device.
   bool SendEvent(int ev_type, int ev_code, int value) const;
 
  private:
-  SyscallHandler *syscall_handler_;
+  SyscallHandler* syscall_handler_;
   int uinput_fd_;
 
   // A helper function that determines if an event is supported by a device
   // when trying to clone its capabilities.
-  bool IsEventSupported(int event, int64_t *supported_event_types) const;
+  bool IsEventSupported(int event, int64_t* supported_event_types) const;
 
   friend class UinputDeviceTest;
   FRIEND_TEST(UinputDeviceTest, UinputControlOpeningTest);
