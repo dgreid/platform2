@@ -833,6 +833,62 @@ TEST(ValidOptionValues, NonEmptyWordList) {
   EXPECT_EQ(values.value(), std::vector<uint32_t>({0, 729, 368234, 15}));
 }
 
+TEST(ValidOptionValues, InvalidDescriptorRangeList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  desc.constraint.range = &range;
+
+  base::Optional<std::vector<std::string>> values =
+      SaneDeviceImpl::GetValidStringOptionValues(nullptr, desc);
+  EXPECT_FALSE(values.has_value());
+}
+
+TEST(ValidOptionValues, EmptyRangeList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = 5;
+  range.max = 4;
+  range.quant = 1;
+  desc.constraint.range = &range;
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value().size(), 0);
+}
+
+TEST(ValidOptionValues, SingleStepRangeList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = 5;
+  range.max = 11;
+  range.quant = 1;
+  desc.constraint.range = &range;
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value(), std::vector<uint32_t>({5, 6, 7, 8, 9, 10, 11}));
+}
+
+TEST(ValidOptionValues, FourStepRangeList) {
+  SANE_Option_Descriptor desc;
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = 13;
+  range.max = 28;
+  range.quant = 4;
+  desc.constraint.range = &range;
+
+  base::Optional<std::vector<uint32_t>> values =
+      SaneDeviceImpl::GetValidIntOptionValues(nullptr, desc);
+  EXPECT_TRUE(values.has_value());
+  EXPECT_EQ(values.value(), std::vector<uint32_t>({13, 17, 21, 25}));
+}
+
 TEST(ValidOptionValues, InvalidDescriptorStringList) {
   SANE_Option_Descriptor desc;
   desc.constraint_type = SANE_CONSTRAINT_WORD_LIST;

@@ -442,19 +442,24 @@ SaneDeviceImpl::GetValidStringOptionValues(brillo::ErrorPtr* error,
 // static
 base::Optional<std::vector<uint32_t>> SaneDeviceImpl::GetValidIntOptionValues(
     brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt) {
-  if (opt.constraint_type != SANE_CONSTRAINT_WORD_LIST) {
+  std::vector<uint32_t> values;
+  if (opt.constraint_type == SANE_CONSTRAINT_WORD_LIST) {
+    int num_values = opt.constraint.word_list[0];
+    for (int i = 1; i <= num_values; i++) {
+      SANE_Word w = opt.constraint.word_list[i];
+      int value = opt.type == SANE_TYPE_FIXED ? SANE_UNFIX(w) : w;
+      values.push_back(value);
+    }
+  } else if (opt.constraint_type == SANE_CONSTRAINT_RANGE) {
+    const SANE_Range* range = opt.constraint.range;
+    for (int i = range->min; i <= range->max; i += range->quant) {
+      values.push_back(i);
+    }
+  } else {
     brillo::Error::AddToPrintf(
         error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
         "Invalid option constraint type %d", opt.constraint_type);
     return base::nullopt;
-  }
-
-  std::vector<uint32_t> values;
-  int num_values = opt.constraint.word_list[0];
-  for (int i = 1; i <= num_values; i++) {
-    SANE_Word w = opt.constraint.word_list[i];
-    int value = opt.type == SANE_TYPE_FIXED ? SANE_UNFIX(w) : w;
-    values.push_back(value);
   }
 
   return values;
