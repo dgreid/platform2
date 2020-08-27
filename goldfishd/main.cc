@@ -39,7 +39,8 @@ class GoldfishDaemon : public brillo::Daemon {
  private:
   void DoAutoLogin() {
     std::vector<std::string> args = {
-        "/usr/local/autotest/bin/autologin.py", "-a",
+        "/usr/local/autotest/bin/autologin.py",
+        "-a",
     };
     base::LaunchOptions options;
     base::Process child = base::LaunchProcess(args, options);
