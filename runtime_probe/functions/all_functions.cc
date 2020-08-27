@@ -31,11 +31,21 @@ namespace runtime_probe {
 
 namespace {
 
+// CallByValue returns the copy of the input value.
+template <typename T>
+T CallByValue(T value) {
+  return value;
+}
+
+// ConstructRegisteredFunctionTable returns a map mapping function name to
+// factory function for each ProbeFunctionType.
 template <typename... ProbeFunctionType>
 auto ConstructRegisteredFunctionTable() {
+  // Enforce arguments passed to the constructor of std::map to be pass-by-value
+  // to prevent ODR-used variables.
   return std::map<std::string_view, ProbeFunction::FactoryFunctionType>{
-      {ProbeFunctionType::function_name,
-       ProbeFunctionType::FromKwargsValue}...};
+      {CallByValue(ProbeFunctionType::function_name),
+       CallByValue(ProbeFunctionType::FromKwargsValue)}...};
 }
 
 }  // namespace
