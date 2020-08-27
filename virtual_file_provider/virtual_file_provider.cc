@@ -110,8 +110,8 @@ void FuseMainDelegateImpl::HandleReadRequest(const std::string& id,
       FROM_HERE,
       base::Bind(&Service::SendReadRequest,
                  // This is safe as service_thread outlives the FUSE main loop.
-                 base::Unretained(service_thread_->service()),
-                 id, offset, size, base::Passed(&fd)));
+                 base::Unretained(service_thread_->service()), id, offset, size,
+                 base::Passed(&fd)));
 }
 
 void FuseMainDelegateImpl::NotifyIdReleased(const std::string& id) {
@@ -143,8 +143,8 @@ int main(int argc, char** argv) {
   virtual_file_provider::SizeMap size_map;
 
   // Run D-Bus service on the service thread.
-  virtual_file_provider::ServiceThread service_thread(
-      fuse_mount_path, &size_map);
+  virtual_file_provider::ServiceThread service_thread(fuse_mount_path,
+                                                      &size_map);
   base::Thread::Options options;
 #if BASE_VER < 780000
   options.message_loop_type = base::MessageLoop::TYPE_IO;

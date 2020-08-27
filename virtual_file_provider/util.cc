@@ -25,9 +25,9 @@ bool ClearCapabilities() {
   std::string contents;
   int last_cap = 0;
   if (!base::ReadFileToString(last_cap_path, &contents) ||
-      !base::StringToInt(base::TrimWhitespaceASCII(contents,
-                                                   base::TRIM_TRAILING),
-                         &last_cap)) {
+      !base::StringToInt(
+          base::TrimWhitespaceASCII(contents, base::TRIM_TRAILING),
+          &last_cap)) {
     LOG(ERROR) << "Failed to read cap_last_cap";
     return false;
   }

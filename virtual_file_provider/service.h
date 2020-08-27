@@ -27,8 +27,7 @@ namespace virtual_file_provider {
 // This class handles incoming D-Bus method calls.
 class Service {
  public:
-  Service(const base::FilePath& fuse_mount_path,
-          SizeMap* size_map);
+  Service(const base::FilePath& fuse_mount_path, SizeMap* size_map);
   ~Service();
 
   // Exports D-Bus methods via the system bus and requests the ownership of the

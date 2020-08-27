@@ -52,8 +52,7 @@ bool Service::Initialize() {
   exported_object_ = bus_->GetExportedObject(
       dbus::ObjectPath(kVirtualFileProviderServicePath));
   if (!exported_object_->ExportMethodAndBlock(
-          kVirtualFileProviderInterface,
-          kOpenFileMethod,
+          kVirtualFileProviderInterface, kOpenFileMethod,
           base::Bind(&Service::OpenFile, weak_ptr_factory_.GetWeakPtr()))) {
     LOG(ERROR) << "Failed to export OpenFile method.";
     return false;
@@ -122,8 +121,8 @@ void Service::OpenFile(dbus::MethodCall* method_call,
   // An ID corresponds to a file name in the FUSE file system.
   base::FilePath path = fuse_mount_path_.AppendASCII(id);
   // Create a new FD associated with the ID.
-  base::ScopedFD fd(HANDLE_EINTR(open(path.value().c_str(),
-                                      O_RDONLY | O_CLOEXEC)));
+  base::ScopedFD fd(
+      HANDLE_EINTR(open(path.value().c_str(), O_RDONLY | O_CLOEXEC)));
 
   // Send response.
   std::unique_ptr<dbus::Response> response =

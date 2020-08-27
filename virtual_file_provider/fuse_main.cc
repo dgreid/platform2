@@ -148,8 +148,7 @@ void* Init(struct fuse_conn_info* conn) {
 int FuseMain(const base::FilePath& mount_path, FuseMainDelegate* delegate) {
   const std::string path_str = mount_path.value();
   const char* fuse_argv[] = {
-      kFileSystemName,
-      path_str.c_str(),
+      kFileSystemName, path_str.c_str(),
       "-f",  // "-f" for foreground.
   };
   constexpr struct fuse_operations operations = {
