@@ -30,7 +30,8 @@ namespace {
 
 bool IsUsbV1Key(const std::string& key) {
   static const std::set<std::string> kV1Keys = {
-      "resolution_1280x960_unsupported", "resolution_1600x1200_unsupported",
+      "resolution_1280x960_unsupported",
+      "resolution_1600x1200_unsupported",
       "allow_external_camera",
   };
   return kV1Keys.count(key);

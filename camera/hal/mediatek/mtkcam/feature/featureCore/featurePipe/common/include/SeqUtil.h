@@ -226,10 +226,10 @@ MVOID SequentialHandler<
 
 template <typename Handler_T>
 template <typename DATA_T>
-unsigned SequentialHandler<
-    Handler_T,
-    typename std::enable_if<Handler_T::supportSeq>::type>::HandlerSeqConverter::
-operator()(const DATA_T& data) const {
+unsigned
+SequentialHandler<Handler_T,
+                  typename std::enable_if<Handler_T::supportSeq>::type>::
+    HandlerSeqConverter::operator()(const DATA_T& data) const {
   return Handler_T::getSeq(data);
 }
 

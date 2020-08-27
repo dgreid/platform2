@@ -124,7 +124,8 @@ void V4L2Buffer::SetUserptr(uintptr_t userptr, uint32_t plane) {
 int V4L2Buffer::RequestFd() const {
   DCHECK(IsValidV4L2BufferType(v4l2_buf_.type));
 
-  return (v4l2_buf_.flags & V4L2_BUF_FLAG_REQUEST_FD) ? v4l2_buf_.request_fd : -1;
+  return (v4l2_buf_.flags & V4L2_BUF_FLAG_REQUEST_FD) ? v4l2_buf_.request_fd
+                                                      : -1;
 }
 
 int V4L2Buffer::SetRequestFd(int fd) {

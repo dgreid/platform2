@@ -22,8 +22,9 @@
   PLOG(level) << __FUNCTION__ << "(): id: " << id << ": "
 #define PLOGF_IF(level, res) PLOG_IF(level, res) << __FUNCTION__ << "(): "
 
-#define VLOGF(level) \
-  VLOG(level) << "(" << base::PlatformThread::CurrentId() << ") " << __FUNCTION__ << "(): "
+#define VLOGF(level)                                              \
+  VLOG(level) << "(" << base::PlatformThread::CurrentId() << ") " \
+              << __FUNCTION__ << "(): "
 #define VLOGFID(level, id) \
   VLOG(level) << __FUNCTION__ << "(): id: " << id << ": "
 

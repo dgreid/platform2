@@ -334,8 +334,8 @@ void CameraClient::SetUpStreams(int num_buffers,
   for (auto& stream : *streams) {
     if (stream->stream_type == CAMERA3_STREAM_OUTPUT ||
         stream->stream_type == CAMERA3_STREAM_BIDIRECTIONAL) {
-      stream->usage |= GRALLOC_USAGE_SW_WRITE_OFTEN |
-                       GRALLOC_USAGE_HW_CAMERA_WRITE;
+      stream->usage |=
+          GRALLOC_USAGE_SW_WRITE_OFTEN | GRALLOC_USAGE_HW_CAMERA_WRITE;
     }
     if (stream->stream_type == CAMERA3_STREAM_INPUT ||
         stream->stream_type == CAMERA3_STREAM_BIDIRECTIONAL)

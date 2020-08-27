@@ -128,7 +128,8 @@ typedef enum mtk_camera_metadata_section_start {
                                 << 16,
   MTK_CONFIGURE_SETTING_START = (MTK_CONFIGURE_SETTING + MTK_VENDOR_TAG_SECTION)
                                 << 16,
-  CUSTOMER_SENSOR_SYNC_TIMESTAMP_START = (CUSTOMER_VENDOR_TAG_SECTION + 1) << 16,
+  CUSTOMER_SENSOR_SYNC_TIMESTAMP_START = (CUSTOMER_VENDOR_TAG_SECTION + 1)
+                                         << 16,
 } mtk_camera_metadata_section_start_t;
 
 /**
@@ -890,6 +891,7 @@ typedef enum mtk_camera_metadata_enum_android_lens_state {
 } mtk_camera_metadata_enum_android_lens_state_t;
 
 // MTK_LENS_INFO_FOCUS_DISTANCE_CALIBRATION
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_lens_info_focus_distance_calibration {
   MTK_LENS_INFO_FOCUS_DISTANCE_CALIBRATION_UNCALIBRATED,
   MTK_LENS_INFO_FOCUS_DISTANCE_CALIBRATION_APPROXIMATE,
@@ -952,6 +954,7 @@ typedef enum mtk_camera_metadata_enum_android_scaler_available_formats {
 } mtk_camera_metadata_enum_android_scaler_available_formats_t;
 
 // MTK_SCALER_AVAILABLE_STREAM_CONFIGURATIONS
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_scaler_available_stream_configurations {
   MTK_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_OUTPUT,
   MTK_SCALER_AVAILABLE_STREAM_CONFIGURATIONS_INPUT,
@@ -1004,6 +1007,7 @@ typedef enum mtk_camera_metadata_enum_android_sensor_test_pattern_mode {
 } mkt_camera_metadata_enum_android_sensor_test_pattern_mode_t;
 
 // MTK_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_sensor_info_color_filter_arrangement {
   MTK_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_RGGB,
   MTK_SENSOR_INFO_COLOR_FILTER_ARRANGEMENT_GRBG,
@@ -1136,9 +1140,11 @@ typedef enum mtk_camera_metadata_enum_android_sync_max_latency {
 } mtk_camera_metadata_enum_android_sync_max_latency_t;
 
 // MTK_DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_depth_available_depth_stream_configurations {
   MTK_DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS_OUTPUT,
-  MTK_DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS_INPUT,
+  MTK_DEPTH_AVAILABLE_DEPTH_STREAM_CONFIGURATIONS_INPUT
+  // NOLINTNEXTLINE(whitespace/line_length)
 } mtk_camera_metadata_enum_android_depth_available_depth_stream_configurations_t;
 
 // MTK_DEPTH_DEPTH_IS_EXCLUSIVE
@@ -1148,6 +1154,7 @@ typedef enum mtk_camera_metadata_enum_android_depth_depth_is_exclusive {
 } mtk_camera_metadata_enum_android_depth_depth_is_exclusive_t;
 
 // MTK_LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_logic_multi_camera_sensor_sync_type {
   MTK_LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE_APPROXIMATE,
   MTK_LOGICAL_MULTI_CAMERA_SENSOR_SYNC_TYPE_CALIBRATED
@@ -1257,11 +1264,13 @@ typedef enum mtk_camera_metadata_enum_control_capture_postview_size {
 } mtk_camera_metadata_enum_control_capture_postview_size;
 
 // p2done callback
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_control_capture_early_notification_support {
   MTK_CONTROL_CAPTURE_EARLY_NOTIFICATION_SUPPORT_OFF = 0,
   MTK_CONTROL_CAPTURE_EARLY_NOTIFICATION_SUPPORT_ON,
 } mtk_camera_metadata_enum_control_capture_early_notification_support;
 
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_control_capture_early_notification_trigger {
   MTK_CONTROL_CAPTURE_EARLY_NOTIFICATION_TRIGGER_OFF = 0,
   MTK_CONTROL_CAPTURE_EARLY_NOTIFICATION_TRIGGER_ON,
@@ -1322,6 +1331,7 @@ typedef enum mtk_camera_metadata_enum_vsdof_feature_preview_enable {
 } mtk_camera_metadata_enum_vsdof_feature_preview_enable_t;
 
 // MTK_LOGICALMULTICAMERA_SENSOR_SYNC_TYPE
+// NOLINTNEXTLINE(whitespace/line_length)
 typedef enum mtk_camera_metadata_enum_android_logicalmulticamera_sensor_sync_type {
   MTK_LOGICALMULTICAMERA_SENSOR_SYNC_TYPE_APPROXIMATE,
   MTK_LOGICALMULTICAMERA_SENSOR_SYNC_TYPE_CALIBRATED,
