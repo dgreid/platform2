@@ -694,7 +694,6 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
     return false;
   }
 
-
   return true;
 }
 
