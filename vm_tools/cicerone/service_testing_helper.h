@@ -269,7 +269,7 @@ class ServiceTestingHelper {
   // unit test itself will be blocking the main thread.
   base::Thread dbus_thread_{"DBus Thread"};
   // The task runner on the dbus thread.
-  scoped_refptr<base::TaskRunner> dbus_task_runner_;
+  scoped_refptr<base::SingleThreadTaskRunner> dbus_task_runner_;
 
   // This needs to exist for Service to start up & shut down right.
   base::test::TaskEnvironment task_environment_;

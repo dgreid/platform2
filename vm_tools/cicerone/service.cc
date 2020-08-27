@@ -87,7 +87,7 @@ void HandleSynchronousDBusMethodCall(
   std::unique_ptr<dbus::Response> response = handler.Run(method_call);
   if (!response)
     response = dbus::Response::FromMethodCall(method_call);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 // Posted to a grpc thread to startup a listener service. Puts a copy of
@@ -2701,7 +2701,7 @@ std::unique_ptr<dbus::Response> Service::GetDebugInformation(
           base::SPLIT_WANT_NONEMPTY);
       for (const auto& line : vm_info_lines) {
         *debug_information += "\t";
-        line.AppendToString(debug_information);
+        debug_information->append(line.data(), line.size());
         *debug_information += "\n";
       }
     }
@@ -2726,7 +2726,7 @@ std::unique_ptr<dbus::Response> Service::GetDebugInformation(
                                    base::SPLIT_WANT_NONEMPTY);
         for (const auto& line : container_info_lines) {
           *debug_information += "\t\t";
-          line.AppendToString(debug_information);
+          debug_information->append(line.data(), line.size());
           *debug_information += "\n";
         }
       }

@@ -146,7 +146,7 @@ void HandleSynchronousDBusMethodCall(
   std::unique_ptr<dbus::Response> response = handler.Run(method_call);
   if (!response)
     response = dbus::Response::FromMethodCall(method_call);
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace

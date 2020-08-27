@@ -203,7 +203,7 @@ static bool ParseExtraDisks(vm_tools::concierge::StartVmRequest* request,
       string data(tokens[5].as_string());
       for (int i = 6; i < tokens.size(); i++) {
         data += ",";
-        tokens[i].AppendToString(&data);
+        data.append(tokens[i].data(), tokens[i].size());
       }
 
       disk_image->set_data(std::move(data));
