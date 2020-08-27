@@ -63,6 +63,62 @@ bool TpmNotBoundToPcrAuthBlock::Derive(const AuthInput& auth_input,
   return true;
 }
 
+base::Optional<AuthBlockState> TpmNotBoundToPcrAuthBlock::Create(
+    const AuthInput& user_input, KeyBlobs* key_blobs, CryptoError* error) {
+  const brillo::SecureBlob& vault_key = user_input.user_input.value();
+  const brillo::SecureBlob& salt = user_input.salt.value();
+
+  // If the cryptohome key isn't loaded, try to load it.
+  if (!tpm_init_->HasCryptohomeKey())
+    tpm_init_->SetupTpm(/*load_key=*/true);
+
+  // If the key still isn't loaded, fail the operation.
+  if (!tpm_init_->HasCryptohomeKey())
+    return base::nullopt;
+
+  const auto local_blob = CryptoLib::CreateSecureRandomBlob(kDefaultAesKeySize);
+  brillo::SecureBlob tpm_key;
+  brillo::SecureBlob aes_skey(kDefaultAesKeySize);
+  brillo::SecureBlob kdf_skey(kDefaultAesKeySize);
+  brillo::SecureBlob vkk_iv(kAesBlockSize);
+  if (!CryptoLib::DeriveSecretsScrypt(vault_key, salt,
+                                      {&aes_skey, &kdf_skey, &vkk_iv})) {
+    return base::nullopt;
+  }
+
+  // Encrypt the VKK using the TPM and the user's passkey.  The output is an
+  // encrypted blob in tpm_key, which is stored in the serialized vault
+  // keyset.
+  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeKey(), local_blob, aes_skey,
+                        &tpm_key) != Tpm::kTpmRetryNone) {
+    LOG(ERROR) << "Failed to wrap vkk with creds.";
+    return base::nullopt;
+  }
+
+  // Allow this to fail.  It is not absolutely necessary; it allows us to
+  // detect a TPM clear.  If this fails due to a transient issue, then on next
+  // successful login, the vault keyset will be re-saved anyway.
+  SerializedVaultKeyset serialized;
+  brillo::SecureBlob pub_key_hash;
+  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(), &pub_key_hash) ==
+      Tpm::kTpmRetryNone) {
+    serialized.set_tpm_public_key_hash(pub_key_hash.data(),
+                                       pub_key_hash.size());
+  }
+
+  serialized.set_flags(SerializedVaultKeyset::TPM_WRAPPED |
+                       SerializedVaultKeyset::SCRYPT_DERIVED);
+  serialized.set_tpm_key(tpm_key.data(), tpm_key.size());
+
+  // Pass back the vkk_key and vkk_iv so the generic secret wrapping can use it.
+  key_blobs->vkk_key = CryptoLib::HmacSha256(kdf_skey, local_blob);
+  key_blobs->vkk_iv = vkk_iv;
+  key_blobs->chaps_iv = vkk_iv;
+  key_blobs->auth_iv = vkk_iv;
+
+  return {{serialized}};
+}
+
 bool TpmNotBoundToPcrAuthBlock::DecryptTpmNotBoundToPcr(
     const SerializedVaultKeyset& serialized,
     const brillo::SecureBlob& vault_key,

@@ -24,6 +24,10 @@ class TpmBoundToPcrAuthBlock : public AuthBlock {
  public:
   TpmBoundToPcrAuthBlock(Tpm* tpm, TpmInit* tpm_init);
 
+  base::Optional<AuthBlockState> Create(const AuthInput& user_input,
+                                        KeyBlobs* key_blobs,
+                                        CryptoError* error) override;
+
   bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,
               KeyBlobs* key_blobs,

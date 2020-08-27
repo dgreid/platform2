@@ -597,130 +597,6 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
   return true;
 }
 
-bool Crypto::EncryptTPM(const VaultKeyset& vault_keyset,
-                        const SecureBlob& key,
-                        const SecureBlob& salt,
-                        const std::string& obfuscated_username,
-                        KeyBlobs* out_blobs,
-                        SerializedVaultKeyset* serialized) const {
-  if (!use_tpm_)
-    return false;
-  EnsureTpm(false);
-  if (!is_cryptohome_key_loaded())
-    return false;
-
-  const auto vkk_key = CryptoLib::CreateSecureRandomBlob(kDefaultAesKeySize);
-  SecureBlob pass_blob(kDefaultPassBlobSize);
-  SecureBlob vkk_iv(kAesBlockSize);
-  if (!CryptoLib::DeriveSecretsScrypt(key, salt, {&pass_blob, &vkk_iv}))
-    return false;
-
-  SecureBlob tpm_key;
-  SecureBlob extended_tpm_key;
-  std::map<uint32_t, std::string> default_pcr_map =
-      tpm_->GetPcrMap(obfuscated_username, false /* use_extended_pcr */);
-  std::map<uint32_t, std::string> extended_pcr_map =
-      tpm_->GetPcrMap(obfuscated_username, true /* use_extended_pcr */);
-
-  // Encrypt the VKK using the TPM and the user's passkey. The output is two
-  // encrypted blobs, sealed to PCR in |tpm_key| and |extended_tpm_key|,
-  // which are stored in the serialized vault keyset.
-  if (tpm_->SealToPcrWithAuthorization(tpm_init_->GetCryptohomeKey(), vkk_key,
-                                       pass_blob, default_pcr_map,
-                                       &tpm_key) != Tpm::kTpmRetryNone) {
-    LOG(ERROR) << "Failed to wrap vkk with creds.";
-    return false;
-  }
-  if (tpm_->SealToPcrWithAuthorization(
-          tpm_init_->GetCryptohomeKey(), vkk_key, pass_blob, extended_pcr_map,
-          &extended_tpm_key) != Tpm::kTpmRetryNone) {
-    LOG(ERROR) << "Failed to wrap vkk with creds for extended PCR.";
-    return false;
-  }
-
-  // Allow this to fail.  It is not absolutely necessary; it allows us to
-  // detect a TPM clear.  If this fails due to a transient issue, then on next
-  // successful login, the vault keyset will be re-saved anyway.
-  SecureBlob pub_key_hash;
-  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(), &pub_key_hash) ==
-      Tpm::kTpmRetryNone)
-    serialized->set_tpm_public_key_hash(pub_key_hash.data(),
-                                        pub_key_hash.size());
-
-  unsigned int flags = serialized->flags();
-  serialized->set_flags((flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED) |
-                        SerializedVaultKeyset::TPM_WRAPPED |
-                        SerializedVaultKeyset::SCRYPT_DERIVED |
-                        SerializedVaultKeyset::PCR_BOUND);
-  serialized->set_tpm_key(tpm_key.data(), tpm_key.size());
-  serialized->set_extended_tpm_key(extended_tpm_key.data(),
-                                   extended_tpm_key.size());
-
-  // Pass back the vkk_key and vkk_iv so the generic secret wrapping can use it.
-  out_blobs->vkk_key = vkk_key;
-  out_blobs->vkk_iv = vkk_iv;
-  out_blobs->chaps_iv = vkk_iv;
-  out_blobs->auth_iv = vkk_iv;
-
-  return true;
-}
-
-bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
-                                     const SecureBlob& key,
-                                     const SecureBlob& salt,
-                                     KeyBlobs* out_blobs,
-                                     SerializedVaultKeyset* serialized) const {
-  if (!use_tpm_)
-    return false;
-  EnsureTpm(false);
-  if (!is_cryptohome_key_loaded())
-    return false;
-  const auto local_blob = CryptoLib::CreateSecureRandomBlob(kDefaultAesKeySize);
-  SecureBlob tpm_key;
-  SecureBlob aes_skey(kDefaultAesKeySize);
-  SecureBlob kdf_skey(kDefaultAesKeySize);
-  SecureBlob vkk_iv(kAesBlockSize);
-
-  if (!CryptoLib::DeriveSecretsScrypt(key, salt,
-                                      {&aes_skey, &kdf_skey, &vkk_iv})) {
-    return false;
-  }
-  // Encrypt the VKK using the TPM and the user's passkey.  The output is an
-  // encrypted blob in tpm_key, which is stored in the serialized vault
-  // keyset.
-  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeKey(), local_blob, aes_skey,
-                        &tpm_key) != Tpm::kTpmRetryNone) {
-    LOG(ERROR) << "Failed to wrap vkk with creds.";
-    return false;
-  }
-
-  // Allow this to fail.  It is not absolutely necessary; it allows us to
-  // detect a TPM clear.  If this fails due to a transient issue, then on next
-  // successful login, the vault keyset will be re-saved anyway.
-  SecureBlob pub_key_hash;
-  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(), &pub_key_hash) ==
-      Tpm::kTpmRetryNone)
-    serialized->set_tpm_public_key_hash(pub_key_hash.data(),
-                                        pub_key_hash.size());
-
-  unsigned int flags = serialized->flags();
-  serialized->set_flags((flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED &
-                         ~SerializedVaultKeyset::PCR_BOUND) |
-                        SerializedVaultKeyset::TPM_WRAPPED |
-                        SerializedVaultKeyset::SCRYPT_DERIVED);
-  serialized->set_tpm_key(tpm_key.data(), tpm_key.size());
-
-  SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, local_blob);
-
-  // Pass back the vkk_key and vkk_iv so the generic secret wrapping can use it.
-  out_blobs->vkk_key = vkk_key;
-  out_blobs->vkk_iv = vkk_iv;
-  out_blobs->chaps_iv = vkk_iv;
-  out_blobs->auth_iv = vkk_iv;
-
-  return true;
-}
-
 bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
                            const SecureBlob& key,
                            SerializedVaultKeyset* serialized) const {
@@ -887,32 +763,49 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
       return false;
     }
   } else {
-    bool encrypt_tpm_success = false;
-    KeyBlobs blobs;
-    if (CanUnsealWithUserAuth()) {
-      encrypt_tpm_success = EncryptTPM(vault_keyset, vault_key, vault_key_salt,
-                                       obfuscated_username, &blobs, serialized);
-    } else {
-      encrypt_tpm_success = EncryptTPMNotBoundToPcr(
-          vault_keyset, vault_key, vault_key_salt, &blobs, serialized);
+    base::Optional<AuthBlockState> auth_state = base::nullopt;
+    if (use_tpm_) {
+      AuthInput user_input;
+      user_input.user_input = vault_key;
+      user_input.salt = vault_key_salt;
+      user_input.obfuscated_username = obfuscated_username;
+
+      std::unique_ptr<AuthBlock> tpm_auth_block;
+      if (CanUnsealWithUserAuth()) {
+        tpm_auth_block =
+            std::make_unique<TpmBoundToPcrAuthBlock>(tpm_, tpm_init_);
+      } else {
+        tpm_auth_block =
+            std::make_unique<TpmNotBoundToPcrAuthBlock>(tpm_, tpm_init_);
+      }
+
+      KeyBlobs blobs;
+      CryptoError error;
+      auth_state = tpm_auth_block->Create(user_input, &blobs, &error);
+
+      if (auth_state != base::nullopt) {
+        *serialized = auth_state.value().vault_keyset.value();
+
+        if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
+                                 /*store_reset_seed=*/true, serialized)) {
+          LOG(ERROR) << "Failed to generate unwrapped keys";
+          return false;
+        }
+
+        if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
+                                      blobs.auth_iv.value())) {
+          return false;
+        }
+      }
     }
-    if (!encrypt_tpm_success) {
-      LOG_IF(ERROR, !disable_logging_for_tests_) << "Encrypt using TPM failed";
+
+    if (auth_state == base::nullopt) {
+      LOG_IF(ERROR, !disable_logging_for_tests_)
+          << "Failed to encrypt with TPM.";
       if (use_tpm_ && tpm_ && tpm_->IsOwned()) {
         ReportCryptohomeError(kEncryptWithTpmFailed);
       }
       if (!EncryptScrypt(vault_keyset, vault_key, serialized)) {
-        return false;
-      }
-    } else {
-      if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
-                               /*store_reset_seed=*/true, serialized)) {
-        LOG(ERROR) << "Failed to generate unwrapped keys";
-        return false;
-      }
-
-      if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
-                                    blobs.auth_iv.value())) {
         return false;
       }
     }

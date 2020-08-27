@@ -226,19 +226,6 @@ class Crypto {
                            bool store_reset_seed,
                            SerializedVaultKeyset* serialized) const;
 
-  bool EncryptTPM(const VaultKeyset& vault_keyset,
-                  const brillo::SecureBlob& key,
-                  const brillo::SecureBlob& salt,
-                  const std::string& obfuscated_username,
-                  KeyBlobs* out_blobs,
-                  SerializedVaultKeyset* serialized) const;
-
-  bool EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
-                               const brillo::SecureBlob& key,
-                               const brillo::SecureBlob& salt,
-                               KeyBlobs* out_blobs,
-                               SerializedVaultKeyset* serialized) const;
-
   bool EncryptScrypt(const VaultKeyset& vault_keyset,
                      const brillo::SecureBlob& key,
                      SerializedVaultKeyset* serialized) const;
