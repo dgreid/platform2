@@ -91,8 +91,8 @@ void Connection::SetResponseData(StreamPtr stream) {
 
 void Connection::PrepareRequest() {
   if (VLOG_IS_ON(3)) {
-    curl_interface_->EasySetOptCallback(
-        curl_handle_, CURLOPT_DEBUGFUNCTION, &curl_trace);
+    curl_interface_->EasySetOptCallback(curl_handle_, CURLOPT_DEBUGFUNCTION,
+                                        &curl_trace);
     curl_interface_->EasySetOptInt(curl_handle_, CURLOPT_VERBOSE, 1);
   }
 
@@ -100,16 +100,16 @@ void Connection::PrepareRequest() {
     // Set up HTTP request data.
     uint64_t data_size = 0;
     if (request_data_stream_ && request_data_stream_->CanGetSize())
-        data_size = request_data_stream_->GetRemainingSize();
+      data_size = request_data_stream_->GetRemainingSize();
 
     if (!request_data_stream_ || request_data_stream_->CanGetSize()) {
       // Data size is known (either no data, or data size is available).
       if (method_ == request_type::kPut) {
-        curl_interface_->EasySetOptOffT(
-            curl_handle_, CURLOPT_INFILESIZE_LARGE, data_size);
+        curl_interface_->EasySetOptOffT(curl_handle_, CURLOPT_INFILESIZE_LARGE,
+                                        data_size);
       } else {
-        curl_interface_->EasySetOptOffT(
-            curl_handle_, CURLOPT_POSTFIELDSIZE_LARGE, data_size);
+        curl_interface_->EasySetOptOffT(curl_handle_,
+                                        CURLOPT_POSTFIELDSIZE_LARGE, data_size);
       }
     } else {
       // Data size is unknown, so use chunked upload.
@@ -117,8 +117,8 @@ void Connection::PrepareRequest() {
     }
 
     if (request_data_stream_) {
-      curl_interface_->EasySetOptCallback(
-          curl_handle_, CURLOPT_READFUNCTION, &Connection::read_callback);
+      curl_interface_->EasySetOptCallback(curl_handle_, CURLOPT_READFUNCTION,
+                                          &Connection::read_callback);
       curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_READDATA, this);
     }
   }
@@ -131,8 +131,8 @@ void Connection::PrepareRequest() {
       VLOG(2) << "Request header: " << header;
       header_list_ = curl_slist_append(header_list_, header.c_str());
     }
-    curl_interface_->EasySetOptPtr(
-        curl_handle_, CURLOPT_HTTPHEADER, header_list_);
+    curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_HTTPHEADER,
+                                   header_list_);
   }
 
   headers_.clear();
@@ -141,14 +141,14 @@ void Connection::PrepareRequest() {
   if (!response_data_stream_)
     response_data_stream_ = MemoryStream::Create(nullptr);
   if (method_ != request_type::kHead) {
-    curl_interface_->EasySetOptCallback(
-        curl_handle_, CURLOPT_WRITEFUNCTION, &Connection::write_callback);
+    curl_interface_->EasySetOptCallback(curl_handle_, CURLOPT_WRITEFUNCTION,
+                                        &Connection::write_callback);
     curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_WRITEDATA, this);
   }
 
   // HTTP response headers
-  curl_interface_->EasySetOptCallback(
-      curl_handle_, CURLOPT_HEADERFUNCTION, &Connection::header_callback);
+  curl_interface_->EasySetOptCallback(curl_handle_, CURLOPT_HEADERFUNCTION,
+                                      &Connection::header_callback);
   curl_interface_->EasySetOptPtr(curl_handle_, CURLOPT_HEADERDATA, this);
 }
 
@@ -177,8 +177,8 @@ RequestID Connection::FinishRequestAsync(
 
 int Connection::GetResponseStatusCode() const {
   int status_code = 0;
-  curl_interface_->EasyGetInfoInt(
-      curl_handle_, CURLINFO_RESPONSE_CODE, &status_code);
+  curl_interface_->EasyGetInfoInt(curl_handle_, CURLINFO_RESPONSE_CODE,
+                                  &status_code);
   return status_code;
 }
 
@@ -209,8 +209,8 @@ size_t Connection::write_callback(char* ptr,
                                   void* data) {
   Connection* me = reinterpret_cast<Connection*>(data);
   size_t data_len = size * num;
-  VLOG(1) << "Response data (" << data_len << "): "
-          << std::string{ptr, data_len};
+  VLOG(1) << "Response data (" << data_len
+          << "): " << std::string{ptr, data_len};
   // TODO(nathanbullock): Currently we are relying on the stream not blocking,
   // but if the stream is representing a pipe or some other construct that might
   // block then this code will behave badly.

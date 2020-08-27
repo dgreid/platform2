@@ -33,7 +33,6 @@ ScopedPipe::~ScopedPipe() {
     close(writer);
 }
 
-
 ScopedSocketPair::ScopedSocketPair() {
   int fds[2];
   if (socketpair(PF_LOCAL, SOCK_STREAM, 0, fds) != 0) {

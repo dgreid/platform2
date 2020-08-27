@@ -45,19 +45,16 @@ TEST(HttpFormData, FileFormField) {
   std::string file_content{"text line1\ntext line2\n"};
   base::FilePath file_name = dir.GetPath().Append("sample.txt");
   ASSERT_EQ(file_content.size(),
-            static_cast<size_t>(base::WriteFile(
-                file_name, file_content.data(), file_content.size())));
+            static_cast<size_t>(base::WriteFile(file_name, file_content.data(),
+                                                file_content.size())));
 
-  StreamPtr stream = FileStream::Open(file_name, Stream::AccessMode::READ,
-                                      FileStream::Disposition::OPEN_EXISTING,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(file_name, Stream::AccessMode::READ,
+                       FileStream::Disposition::OPEN_EXISTING, nullptr);
   ASSERT_NE(nullptr, stream);
-  FileFormField form_field{"test_file",
-                           std::move(stream),
-                           "sample.txt",
-                           content_disposition::kFormData,
-                           mime::text::kPlain,
-                           ""};
+  FileFormField form_field{"test_file",        std::move(stream),
+                           "sample.txt",       content_disposition::kFormData,
+                           mime::text::kPlain, ""};
   const char expected_header[] =
       "Content-Disposition: form-data; name=\"test_file\";"
       " filename=\"sample.txt\"\r\n"
@@ -72,27 +69,21 @@ TEST(HttpFormData, MultiPartFormField) {
   ASSERT_TRUE(dir.CreateUniqueTempDir());
   std::string file1{"text line1\ntext line2\n"};
   base::FilePath filename1 = dir.GetPath().Append("sample.txt");
-  ASSERT_EQ(file1.size(),
-            static_cast<size_t>(
-                base::WriteFile(filename1, file1.data(), file1.size())));
+  ASSERT_EQ(file1.size(), static_cast<size_t>(base::WriteFile(
+                              filename1, file1.data(), file1.size())));
   std::string file2{"\x01\x02\x03\x04\x05"};
   base::FilePath filename2 = dir.GetPath().Append("test.bin");
-  ASSERT_EQ(file2.size(),
-            static_cast<size_t>(
-                base::WriteFile(filename2, file2.data(), file2.size())));
+  ASSERT_EQ(file2.size(), static_cast<size_t>(base::WriteFile(
+                              filename2, file2.data(), file2.size())));
 
   MultiPartFormField form_field{"foo", mime::multipart::kFormData, "Delimiter"};
   form_field.AddTextField("name", "John Doe");
-  EXPECT_TRUE(form_field.AddFileField("file1",
-                                      filename1,
+  EXPECT_TRUE(form_field.AddFileField("file1", filename1,
                                       content_disposition::kFormData,
-                                      mime::text::kPlain,
-                                      nullptr));
-  EXPECT_TRUE(form_field.AddFileField("file2",
-                                      filename2,
-                                      content_disposition::kFormData,
-                                      mime::application::kOctet_stream,
-                                      nullptr));
+                                      mime::text::kPlain, nullptr));
+  EXPECT_TRUE(form_field.AddFileField(
+      "file2", filename2, content_disposition::kFormData,
+      mime::application::kOctet_stream, nullptr));
   const char expected_header[] =
       "Content-Disposition: form-data; name=\"foo\"\r\n"
       "Content-Type: multipart/form-data; boundary=Delimiter\r\n"
@@ -147,26 +138,21 @@ TEST(HttpFormData, FormData) {
   ASSERT_TRUE(dir.CreateUniqueTempDir());
   std::string file1{"text line1\ntext line2\n"};
   base::FilePath filename1 = dir.GetPath().Append("sample.txt");
-  ASSERT_EQ(file1.size(),
-            static_cast<size_t>(
-                base::WriteFile(filename1, file1.data(), file1.size())));
+  ASSERT_EQ(file1.size(), static_cast<size_t>(base::WriteFile(
+                              filename1, file1.data(), file1.size())));
   std::string file2{"\x01\x02\x03\x04\x05"};
   base::FilePath filename2 = dir.GetPath().Append("test.bin");
-  ASSERT_EQ(file2.size(),
-            static_cast<size_t>(
-                base::WriteFile(filename2, file2.data(), file2.size())));
+  ASSERT_EQ(file2.size(), static_cast<size_t>(base::WriteFile(
+                              filename2, file2.data(), file2.size())));
 
   FormData form_data{"boundary1"};
   form_data.AddTextField("name", "John Doe");
   std::unique_ptr<MultiPartFormField> files{
       new MultiPartFormField{"files", "", "boundary 2"}};
-  EXPECT_TRUE(files->AddFileField(
-      "", filename1, content_disposition::kFile, mime::text::kPlain, nullptr));
-  EXPECT_TRUE(files->AddFileField("",
-                                  filename2,
-                                  content_disposition::kFile,
-                                  mime::application::kOctet_stream,
-                                  nullptr));
+  EXPECT_TRUE(files->AddFileField("", filename1, content_disposition::kFile,
+                                  mime::text::kPlain, nullptr));
+  EXPECT_TRUE(files->AddFileField("", filename2, content_disposition::kFile,
+                                  mime::application::kOctet_stream, nullptr));
   form_data.AddCustomField(std::move(files));
   EXPECT_EQ("multipart/form-data; boundary=boundary1",
             form_data.GetContentType());

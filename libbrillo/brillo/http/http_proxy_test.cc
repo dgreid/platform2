@@ -60,9 +60,10 @@ class HttpProxyTest : public testing::Test {
     object_proxy_ = new dbus::MockObjectProxy(
         bus_.get(), chromeos::kNetworkProxyServiceName,
         dbus::ObjectPath(chromeos::kNetworkProxyServicePath));
-    EXPECT_CALL(*bus_, GetObjectProxy(chromeos::kNetworkProxyServiceName,
-                                      dbus::ObjectPath(
-                                          chromeos::kNetworkProxyServicePath)))
+    EXPECT_CALL(
+        *bus_,
+        GetObjectProxy(chromeos::kNetworkProxyServiceName,
+                       dbus::ObjectPath(chromeos::kNetworkProxyServicePath)))
         .WillOnce(Return(object_proxy_.get()));
   }
 
@@ -131,8 +132,9 @@ TEST_F(HttpProxyTest, MultipleProxiesWithoutDirect) {
 }
 
 TEST_F(HttpProxyTest, MultipleProxiesWithDirect) {
-  proxy_info_ = "socks foo.com; Https example.com ; badproxy example2.com ; "
-                "socks5 test.com  ; proxy foobar.com; DIRECT ";
+  proxy_info_ =
+      "socks foo.com; Https example.com ; badproxy example2.com ; "
+      "socks5 test.com  ; proxy foobar.com; DIRECT ";
   std::vector<std::string> proxies;
   EXPECT_CALL(*object_proxy_, CallMethodAndBlock(_, _))
       .WillOnce(Invoke(this, &HttpProxyTest::ResolveProxyHandler));
@@ -165,8 +167,9 @@ TEST_F(HttpProxyTest, DBusInvalidResponseFailsAsync) {
 // We don't need to test all the proxy cases with async because that will be
 // using the same internal parsing code.
 TEST_F(HttpProxyTest, MultipleProxiesWithDirectAsync) {
-  proxy_info_ = "socks foo.com; Https example.com ; badproxy example2.com ; "
-                "socks5 test.com  ; proxy foobar.com; DIRECT ";
+  proxy_info_ =
+      "socks foo.com; Https example.com ; badproxy example2.com ; "
+      "socks5 test.com  ; proxy foobar.com; DIRECT ";
   std::vector<std::string> expected = {
       "socks4://foo.com", "https://example.com", "socks5://test.com",
       "http://foobar.com", kDirectProxy};

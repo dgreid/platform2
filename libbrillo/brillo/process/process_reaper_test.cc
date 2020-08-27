@@ -73,12 +73,15 @@ TEST_F(ProcessReaperTest, UnregisterAndReregister) {
 
 TEST_F(ProcessReaperTest, ReapExitedChild) {
   pid_t pid = ForkChildAndExit(123);
-  EXPECT_TRUE(process_reaper_.WatchForChild(FROM_HERE, pid, base::BindOnce(
-      [](MessageLoop* loop, const siginfo_t& info) {
-        EXPECT_EQ(CLD_EXITED, info.si_code);
-        EXPECT_EQ(123, info.si_status);
-        loop->BreakLoop();
-      }, &brillo_loop_)));
+  EXPECT_TRUE(process_reaper_.WatchForChild(
+      FROM_HERE, pid,
+      base::BindOnce(
+          [](MessageLoop* loop, const siginfo_t& info) {
+            EXPECT_EQ(CLD_EXITED, info.si_code);
+            EXPECT_EQ(123, info.si_status);
+            loop->BreakLoop();
+          },
+          &brillo_loop_)));
   brillo_loop_.Run();
 }
 
@@ -90,15 +93,18 @@ TEST_F(ProcessReaperTest, ReapedChildrenMatchCallbacks) {
     // Different processes will have different exit values.
     int exit_value = 1 + i;
     pid_t pid = ForkChildAndExit(exit_value);
-    EXPECT_TRUE(process_reaper_.WatchForChild(FROM_HERE, pid, base::BindOnce(
-        [](MessageLoop* loop, int exit_value, int* running_children,
-           const siginfo_t& info) {
-          EXPECT_EQ(CLD_EXITED, info.si_code);
-          EXPECT_EQ(exit_value, info.si_status);
-          (*running_children)--;
-          if (*running_children == 0)
-            loop->BreakLoop();
-        }, &brillo_loop_, exit_value, &running_children)));
+    EXPECT_TRUE(process_reaper_.WatchForChild(
+        FROM_HERE, pid,
+        base::BindOnce(
+            [](MessageLoop* loop, int exit_value, int* running_children,
+               const siginfo_t& info) {
+              EXPECT_EQ(CLD_EXITED, info.si_code);
+              EXPECT_EQ(exit_value, info.si_status);
+              (*running_children)--;
+              if (*running_children == 0)
+                loop->BreakLoop();
+            },
+            &brillo_loop_, exit_value, &running_children)));
   }
   // This sleep is optional. It helps to have more processes exit before we
   // start watching for them in the message loop.
@@ -109,32 +115,38 @@ TEST_F(ProcessReaperTest, ReapedChildrenMatchCallbacks) {
 
 TEST_F(ProcessReaperTest, ReapKilledChild) {
   pid_t pid = ForkChildAndKill(SIGKILL);
-  EXPECT_TRUE(process_reaper_.WatchForChild(FROM_HERE, pid, base::BindOnce(
-      [](MessageLoop* loop, const siginfo_t& info) {
-        EXPECT_EQ(CLD_KILLED, info.si_code);
-        EXPECT_EQ(SIGKILL, info.si_status);
-        loop->BreakLoop();
-      }, &brillo_loop_)));
+  EXPECT_TRUE(process_reaper_.WatchForChild(
+      FROM_HERE, pid,
+      base::BindOnce(
+          [](MessageLoop* loop, const siginfo_t& info) {
+            EXPECT_EQ(CLD_KILLED, info.si_code);
+            EXPECT_EQ(SIGKILL, info.si_status);
+            loop->BreakLoop();
+          },
+          &brillo_loop_)));
   brillo_loop_.Run();
 }
 
 TEST_F(ProcessReaperTest, ReapKilledAndForgottenChild) {
   pid_t pid = ForkChildAndExit(0);
-  EXPECT_TRUE(process_reaper_.WatchForChild(FROM_HERE, pid, base::BindOnce(
-      [](MessageLoop* loop, const siginfo_t& /* info */) {
-        ADD_FAILURE() << "Child process was still tracked.";
-        loop->BreakLoop();
-      }, &brillo_loop_)));
+  EXPECT_TRUE(process_reaper_.WatchForChild(
+      FROM_HERE, pid,
+      base::BindOnce(
+          [](MessageLoop* loop, const siginfo_t& /* info */) {
+            ADD_FAILURE() << "Child process was still tracked.";
+            loop->BreakLoop();
+          },
+          &brillo_loop_)));
   EXPECT_TRUE(process_reaper_.ForgetChild(pid));
 
   // A second call should return failure.
   EXPECT_FALSE(process_reaper_.ForgetChild(pid));
 
   // Run the loop with a timeout, as the BreakLoop() above is not expected.
-  brillo_loop_.PostDelayedTask(FROM_HERE,
-                               base::Bind(&MessageLoop::BreakLoop,
-                                          base::Unretained(&brillo_loop_)),
-                               base::TimeDelta::FromMilliseconds(100));
+  brillo_loop_.PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&MessageLoop::BreakLoop, base::Unretained(&brillo_loop_)),
+      base::TimeDelta::FromMilliseconds(100));
   brillo_loop_.Run();
 }
 

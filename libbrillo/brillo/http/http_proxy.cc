@@ -26,8 +26,7 @@ bool ParseProxyInfo(dbus::Response* response,
   DCHECK(proxies_out);
   if (!response) {
     LOG(ERROR) << chromeos::kNetworkProxyServiceName << " D-Bus call to "
-               << chromeos::kNetworkProxyServiceResolveProxyMethod
-               << " failed";
+               << chromeos::kNetworkProxyServiceResolveProxyMethod << " failed";
     proxies_out->assign({brillo::http::kDirectProxy});
     return false;
   }
@@ -100,7 +99,8 @@ void OnResolveProxy(const brillo::http::GetChromeProxyServersCallback& callback,
 namespace brillo {
 namespace http {
 
-bool GetChromeProxyServers(scoped_refptr<dbus::Bus> bus, const std::string& url,
+bool GetChromeProxyServers(scoped_refptr<dbus::Bus> bus,
+                           const std::string& url,
                            std::vector<std::string>* proxies_out) {
   dbus::ObjectProxy* proxy =
       bus->GetObjectProxy(chromeos::kNetworkProxyServiceName,
@@ -118,9 +118,9 @@ bool GetChromeProxyServers(scoped_refptr<dbus::Bus> bus, const std::string& url,
 void GetChromeProxyServersAsync(scoped_refptr<dbus::Bus> bus,
                                 const std::string& url,
                                 const GetChromeProxyServersCallback& callback) {
-  dbus::ObjectProxy* proxy = bus->GetObjectProxy(
-      chromeos::kNetworkProxyServiceName,
-      dbus::ObjectPath(chromeos::kNetworkProxyServicePath));
+  dbus::ObjectProxy* proxy =
+      bus->GetObjectProxy(chromeos::kNetworkProxyServiceName,
+                          dbus::ObjectPath(chromeos::kNetworkProxyServicePath));
   dbus::MethodCall method_call(
       chromeos::kNetworkProxyServiceInterface,
       chromeos::kNetworkProxyServiceResolveProxyMethod);

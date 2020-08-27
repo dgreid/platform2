@@ -227,7 +227,7 @@ class ServerResponse : public ServerRequestResponseBase {
   // Specialized overload to send the binary data as an array of simple
   // data elements. Only trivial data types (scalars, POD structures, etc)
   // can be used.
-  template<typename T>
+  template <typename T>
   void Reply(int status_code,
              const std::vector<T>& data,
              const std::string& mime_type) {
@@ -238,7 +238,7 @@ class ServerResponse : public ServerRequestResponseBase {
 
   // Specialized overload to send the binary data.
   // Only trivial data types (scalars, POD structures, etc) can be used.
-  template<typename T>
+  template <typename T>
   void Reply(int status_code, const T& data, const std::string& mime_type) {
     // Make sure T doesn't have virtual functions, custom constructors, etc.
     static_assert(std::is_trivial<T>::value, "Only simple data is supported");

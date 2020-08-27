@@ -37,8 +37,7 @@ class FakeStream : public Stream {
   // Construct a new instance of the fake stream.
   //   mode        - expected read/write mode supported by the stream.
   //   clock       - the clock to use to get the current time.
-  FakeStream(Stream::AccessMode mode,
-             base::Clock* clock);
+  FakeStream(Stream::AccessMode mode, base::Clock* clock);
 
   // Add data packets to the read queue of the stream.
   // Optional |delay| indicates that the data packet should be delayed.
@@ -116,15 +115,15 @@ class FakeStream : public Stream {
  private:
   // Input data packet to be placed on the read queue.
   struct InputDataPacket {
-    brillo::Blob data;  // Data to be read.
+    brillo::Blob data;             // Data to be read.
     base::TimeDelta delay_before;  // Possible delay for the first read.
     bool read_error{false};  // Set to true if this packet generates an error.
   };
 
   // Output data packet to be placed on the write queue.
   struct OutputDataPacket {
-    size_t expected_size{0};  // Output packet size
-    brillo::Blob data;  // Possible data to verify the output with.
+    size_t expected_size{0};       // Output packet size
+    brillo::Blob data;             // Possible data to verify the output with.
     base::TimeDelta delay_before;  // Possible delay for the first write.
     bool write_error{false};  // Set to true if this packet generates an error.
   };

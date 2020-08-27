@@ -20,11 +20,11 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::Invoke;
 using testing::Return;
 using testing::SetArgPointee;
-using testing::_;
 
 namespace brillo {
 namespace http {
@@ -32,8 +32,10 @@ namespace curl {
 
 namespace {
 
-using ReadWriteCallback =
-    size_t(char* ptr, size_t size, size_t num, void* data);
+using ReadWriteCallback = size_t(char* ptr,
+                                 size_t size,
+                                 size_t num,
+                                 void* data);
 
 // A helper class to simulate curl_easy_perform action. It invokes the
 // read callbacks to obtain the request data from the Connection and then
@@ -106,8 +108,8 @@ class CurlPerformer {
     size_t pos = 0;
     size_t size_remaining = str.size();
     while (size_remaining) {
-      size_t size_written = callback(
-          const_cast<char*>(str.data() + pos), size_remaining, 1, connection);
+      size_t size_written = callback(const_cast<char*>(str.data() + pos),
+                                     size_remaining, 1, connection);
       if (size_written == CURL_WRITEFUNC_PAUSE)
         return CURLE_WRITE_ERROR;  // Shouldn't happen.
       CHECK(size_written <= size_remaining) << "Unexpected size returned";
@@ -155,8 +157,8 @@ class HttpCurlConnectionTest : public testing::Test {
     transport_ = std::make_shared<MockTransport>();
     EXPECT_CALL(*curl_api_, EasySetOptPtr(handle_, CURLOPT_PRIVATE, _))
         .WillOnce(Return(CURLE_OK));
-    connection_ = std::make_shared<Connection>(
-        handle_, request_type::kPost, curl_api_, transport_);
+    connection_ = std::make_shared<Connection>(handle_, request_type::kPost,
+                                               curl_api_, transport_);
     performer_.connection = connection_.get();
   }
 
@@ -189,9 +191,8 @@ TEST_F(HttpCurlConnectionTest, FinishRequestAsync) {
         .WillOnce(Return(CURLE_OK));
   }
 
-  EXPECT_CALL(
-      *curl_api_,
-      EasySetOptOffT(handle_, CURLOPT_POSTFIELDSIZE_LARGE, request_data.size()))
+  EXPECT_CALL(*curl_api_, EasySetOptOffT(handle_, CURLOPT_POSTFIELDSIZE_LARGE,
+                                         request_data.size()))
       .WillOnce(Return(CURLE_OK));
 
   EXPECT_CALL(*curl_api_, EasySetOptCallback(handle_, CURLOPT_READFUNCTION, _))
@@ -237,8 +238,7 @@ TEST_F(HttpCurlConnectionTest, FinishRequest) {
               WriteAllBlocking(MatchStringBuffer(response_data),
                                response_data.size(), _))
       .WillOnce(Return(true));
-  EXPECT_CALL(*response_stream, CanSeek())
-      .WillOnce(Return(false));
+  EXPECT_CALL(*response_stream, CanSeek()).WillOnce(Return(false));
   connection_->SetResponseData(std::move(response_stream));
   EXPECT_TRUE(connection_->SetRequestData(std::move(stream), nullptr));
   EXPECT_TRUE(connection_->SendHeaders(headers, nullptr));
@@ -252,9 +252,8 @@ TEST_F(HttpCurlConnectionTest, FinishRequest) {
         .WillOnce(Return(CURLE_OK));
   }
 
-  EXPECT_CALL(
-      *curl_api_,
-      EasySetOptOffT(handle_, CURLOPT_POSTFIELDSIZE_LARGE, request_data.size()))
+  EXPECT_CALL(*curl_api_, EasySetOptOffT(handle_, CURLOPT_POSTFIELDSIZE_LARGE,
+                                         request_data.size()))
       .WillOnce(Return(CURLE_OK));
 
   EXPECT_CALL(*curl_api_, EasySetOptCallback(handle_, CURLOPT_READFUNCTION, _))

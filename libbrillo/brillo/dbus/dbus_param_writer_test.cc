@@ -110,8 +110,8 @@ TEST(DBusParamWriter, AppendDBusOutParams_ManyArgs) {
   int32_t int_value_in{8};
   Any variant_value_in{8.5};
   bool bool_value_in{true};
-  DBusParamWriter::AppendDBusOutParams(
-      &writer, &int_value_in, &variant_value_in, &bool_value_in);
+  DBusParamWriter::AppendDBusOutParams(&writer, &int_value_in,
+                                       &variant_value_in, &bool_value_in);
   EXPECT_EQ("ivb", message->GetSignature());
 
   int32_t int_value = 0;
@@ -169,8 +169,8 @@ TEST(DBusParamWriter, AppendDBusOutParams_Mixed_ManyArgs) {
   int32_t int_value_in{8};
   Any variant_value_in{7.5};
   bool bool_value_in{true};
-  DBusParamWriter::AppendDBusOutParams(
-      &writer, 0, &int_value_in, 1, &variant_value_in, 2, &bool_value_in, 3);
+  DBusParamWriter::AppendDBusOutParams(&writer, 0, &int_value_in, 1,
+                                       &variant_value_in, 2, &bool_value_in, 3);
   EXPECT_EQ("ivb", message->GetSignature());
 
   int32_t int_value = 0;

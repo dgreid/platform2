@@ -42,8 +42,7 @@ bool BinderWatcher::Init() {
   VLOG(1) << "Got binder FD " << binder_fd;
 
   watcher_ = base::FileDescriptorWatcher::WatchReadable(
-      binder_fd,
-      base::BindRepeating(&OnBinderReadReady));
+      binder_fd, base::BindRepeating(&OnBinderReadReady));
   if (!watcher_) {
     LOG(ERROR) << "Failed to watch binder FD";
     return false;

@@ -28,10 +28,10 @@ enum class BRILLO_EXPORT LoadPolicyResult {
 // contains the raw data from the file, while |policy_out| contains the parsed
 // policy data. Otherwise the contents of |policy_data_str_out| and |policy_out|
 // is undefined.
-BRILLO_EXPORT LoadPolicyResult LoadPolicyFromPath(
-    const base::FilePath& policy_path,
-    std::string* policy_data_str_out,
-    enterprise_management::PolicyFetchResponse* policy_out);
+BRILLO_EXPORT LoadPolicyResult
+LoadPolicyFromPath(const base::FilePath& policy_path,
+                   std::string* policy_data_str_out,
+                   enterprise_management::PolicyFetchResponse* policy_out);
 
 }  // namespace policy
 

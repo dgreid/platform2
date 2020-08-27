@@ -103,15 +103,15 @@ int stream_free(BIO* bio) {
 // BIO_METHOD structure describing the BIO built on top of brillo::Stream.
 BIO_METHOD stream_method = {
     0x7F | BIO_TYPE_SOURCE_SINK,  // type: 0x7F is an arbitrary unused type ID.
-    "stream",      // name
-    stream_write,  // write function
-    stream_read,   // read function
-    nullptr,       // puts function, not implemented
-    nullptr,       // gets function, not implemented
-    stream_ctrl,   // control function
-    stream_new,    // creation
-    stream_free,   // free
-    nullptr,       // callback function, not used
+    "stream",                     // name
+    stream_write,                 // write function
+    stream_read,                  // read function
+    nullptr,                      // puts function, not implemented
+    nullptr,                      // gets function, not implemented
+    stream_ctrl,                  // control function
+    stream_new,                   // creation
+    stream_free,                  // free
+    nullptr,                      // callback function, not used
 };
 
 BIO_METHOD* stream_get_method() {
@@ -124,8 +124,8 @@ BIO_METHOD* stream_get_method() {
   static BIO_METHOD* stream_method;
 
   if (!stream_method) {
-    stream_method = BIO_meth_new(BIO_get_new_index() | BIO_TYPE_SOURCE_SINK,
-                                 "stream");
+    stream_method =
+        BIO_meth_new(BIO_get_new_index() | BIO_TYPE_SOURCE_SINK, "stream");
     BIO_meth_set_write(stream_method, stream_write);
     BIO_meth_set_read(stream_method, stream_read);
     BIO_meth_set_ctrl(stream_method, stream_ctrl);

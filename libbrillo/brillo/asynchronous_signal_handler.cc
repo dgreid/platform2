@@ -66,8 +66,8 @@ void AsynchronousSignalHandler::UnregisterHandler(int signal) {
 
 void AsynchronousSignalHandler::OnReadable() {
   struct signalfd_siginfo info;
-  while (base::ReadFromFD(descriptor_.get(),
-                          reinterpret_cast<char*>(&info), sizeof(info))) {
+  while (base::ReadFromFD(descriptor_.get(), reinterpret_cast<char*>(&info),
+                          sizeof(info))) {
     int signal = info.ssi_signo;
     Callbacks::iterator callback_it = registered_callbacks_.find(signal);
     if (callback_it == registered_callbacks_.end()) {
@@ -90,9 +90,8 @@ void AsynchronousSignalHandler::UpdateSignals() {
   CHECK_EQ(0, sigemptyset(&mask));
   CHECK_EQ(0, sigorset(&mask, &signal_mask_, &saved_signal_mask_));
   CHECK_EQ(0, sigprocmask(SIG_SETMASK, &mask, nullptr));
-  CHECK_EQ(
-      descriptor_.get(),
-      signalfd(descriptor_.get(), &signal_mask_, SFD_CLOEXEC | SFD_NONBLOCK));
+  CHECK_EQ(descriptor_.get(), signalfd(descriptor_.get(), &signal_mask_,
+                                       SFD_CLOEXEC | SFD_NONBLOCK));
 }
 
 }  // namespace brillo

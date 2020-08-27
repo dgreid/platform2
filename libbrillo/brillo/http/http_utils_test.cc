@@ -26,35 +26,28 @@ static const char kMethodEchoUrl[] = "http://localhost/echo/method";
 // Returns the request data back with the same content type.
 static void EchoDataHandler(const fake::ServerRequest& request,
                             fake::ServerResponse* response) {
-  response->Reply(status_code::Ok,
-                  request.GetData(),
+  response->Reply(status_code::Ok, request.GetData(),
                   request.GetHeader(request_header::kContentType));
 }
 
 // Returns the request method as a plain text response.
 static void EchoMethodHandler(const fake::ServerRequest& request,
                               fake::ServerResponse* response) {
-  response->ReplyText(
-      status_code::Ok, request.GetMethod(), brillo::mime::text::kPlain);
+  response->ReplyText(status_code::Ok, request.GetMethod(),
+                      brillo::mime::text::kPlain);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 TEST(HttpUtils, SendRequest_BinaryData) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
-  transport->AddHandler(
-      kEchoUrl, request_type::kPost, base::Bind(EchoDataHandler));
+  transport->AddHandler(kEchoUrl, request_type::kPost,
+                        base::Bind(EchoDataHandler));
 
   // Test binary data round-tripping.
   std::vector<uint8_t> custom_data{0xFF, 0x00, 0x80, 0x40, 0xC0, 0x7F};
-  auto response =
-      http::SendRequestAndBlock(request_type::kPost,
-                                kEchoUrl,
-                                custom_data.data(),
-                                custom_data.size(),
-                                brillo::mime::application::kOctet_stream,
-                                {},
-                                transport,
-                                nullptr);
+  auto response = http::SendRequestAndBlock(
+      request_type::kPost, kEchoUrl, custom_data.data(), custom_data.size(),
+      brillo::mime::application::kOctet_stream, {}, transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::application::kOctet_stream,
             response->GetContentType());
@@ -63,32 +56,27 @@ TEST(HttpUtils, SendRequest_BinaryData) {
 
 TEST(HttpUtils, SendRequestAsync_BinaryData) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
-  transport->AddHandler(
-      kEchoUrl, request_type::kPost, base::Bind(EchoDataHandler));
+  transport->AddHandler(kEchoUrl, request_type::kPost,
+                        base::Bind(EchoDataHandler));
 
   // Test binary data round-tripping.
   std::vector<uint8_t> custom_data{0xFF, 0x00, 0x80, 0x40, 0xC0, 0x7F};
-  auto success_callback =
-      base::Bind([](const std::vector<uint8_t>& custom_data,
-                    RequestID /* id */,
-                    std::unique_ptr<http::Response> response) {
-    EXPECT_TRUE(response->IsSuccessful());
-    EXPECT_EQ(brillo::mime::application::kOctet_stream,
-              response->GetContentType());
-    EXPECT_EQ(custom_data, response->ExtractData());
-  }, custom_data);
+  auto success_callback = base::Bind(
+      [](const std::vector<uint8_t>& custom_data, RequestID /* id */,
+         std::unique_ptr<http::Response> response) {
+        EXPECT_TRUE(response->IsSuccessful());
+        EXPECT_EQ(brillo::mime::application::kOctet_stream,
+                  response->GetContentType());
+        EXPECT_EQ(custom_data, response->ExtractData());
+      },
+      custom_data);
   auto error_callback = [](RequestID /* id */, const Error* /* error */) {
     FAIL() << "This callback shouldn't have been called";
   };
-  http::SendRequest(request_type::kPost,
-                    kEchoUrl,
-                    custom_data.data(),
+  http::SendRequest(request_type::kPost, kEchoUrl, custom_data.data(),
                     custom_data.size(),
-                    brillo::mime::application::kOctet_stream,
-                    {},
-                    transport,
-                    success_callback,
-                    base::Bind(error_callback));
+                    brillo::mime::application::kOctet_stream, {}, transport,
+                    success_callback, base::Bind(error_callback));
 }
 
 TEST(HttpUtils, SendRequest_Post) {
@@ -99,15 +87,10 @@ TEST(HttpUtils, SendRequest_Post) {
   std::vector<uint8_t> custom_data{0xFF, 0x00, 0x80, 0x40, 0xC0, 0x7F};
 
   // Check the correct HTTP method used.
-  auto response =
-      http::SendRequestAndBlock(request_type::kPost,
-                                kMethodEchoUrl,
-                                custom_data.data(),
-                                custom_data.size(),
-                                brillo::mime::application::kOctet_stream,
-                                {},
-                                transport,
-                                nullptr);
+  auto response = http::SendRequestAndBlock(
+      request_type::kPost, kMethodEchoUrl, custom_data.data(),
+      custom_data.size(), brillo::mime::application::kOctet_stream, {},
+      transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::text::kPlain, response->GetContentType());
   EXPECT_EQ(request_type::kPost, response->ExtractDataAsString());
@@ -117,14 +100,9 @@ TEST(HttpUtils, SendRequest_Get) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
   transport->AddHandler(kMethodEchoUrl, "*", base::Bind(EchoMethodHandler));
 
-  auto response = http::SendRequestAndBlock(request_type::kGet,
-                                            kMethodEchoUrl,
-                                            nullptr,
-                                            0,
-                                            std::string{},
-                                            {},
-                                            transport,
-                                            nullptr);
+  auto response =
+      http::SendRequestAndBlock(request_type::kGet, kMethodEchoUrl, nullptr, 0,
+                                std::string{}, {}, transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::text::kPlain, response->GetContentType());
   EXPECT_EQ(request_type::kGet, response->ExtractDataAsString());
@@ -134,14 +112,9 @@ TEST(HttpUtils, SendRequest_Put) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
   transport->AddHandler(kMethodEchoUrl, "*", base::Bind(EchoMethodHandler));
 
-  auto response = http::SendRequestAndBlock(request_type::kPut,
-                                            kMethodEchoUrl,
-                                            nullptr,
-                                            0,
-                                            std::string{},
-                                            {},
-                                            transport,
-                                            nullptr);
+  auto response =
+      http::SendRequestAndBlock(request_type::kPut, kMethodEchoUrl, nullptr, 0,
+                                std::string{}, {}, transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::text::kPlain, response->GetContentType());
   EXPECT_EQ(request_type::kPut, response->ExtractDataAsString());
@@ -159,8 +132,8 @@ TEST(HttpUtils, SendRequest_NotFound) {
 TEST(HttpUtils, SendRequestAsync_NotFound) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
   // Test failed response (URL not found).
-  auto success_callback =
-      [](RequestID /* request_id */, std::unique_ptr<http::Response> response) {
+  auto success_callback = [](RequestID /* request_id */,
+                             std::unique_ptr<http::Response> response) {
     EXPECT_FALSE(response->IsSuccessful());
     EXPECT_EQ(status_code::NotFound, response->GetStatusCode());
   };
@@ -168,11 +141,8 @@ TEST(HttpUtils, SendRequestAsync_NotFound) {
                            const Error* /* error */) {
     FAIL() << "This callback shouldn't have been called";
   };
-  http::SendRequestWithNoData(request_type::kGet,
-                              "http://blah.com",
-                              {},
-                              transport,
-                              base::Bind(success_callback),
+  http::SendRequestWithNoData(request_type::kGet, "http://blah.com", {},
+                              transport, base::Bind(success_callback),
                               base::Bind(error_callback));
 }
 
@@ -180,8 +150,8 @@ TEST(HttpUtils, SendRequest_Headers) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
 
   static const char json_echo_url[] = "http://localhost/echo/json";
-  auto JsonEchoHandler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto JsonEchoHandler = [](const fake::ServerRequest& request,
+                            fake::ServerResponse* response) {
     base::DictionaryValue json;
     json.SetString("method", request.GetMethod());
     json.SetString("data", request.GetDataAsString());
@@ -191,12 +161,14 @@ TEST(HttpUtils, SendRequest_Headers) {
     response->ReplyJson(status_code::Ok, &json);
   };
   transport->AddHandler(json_echo_url, "*", base::Bind(JsonEchoHandler));
-  auto response = http::SendRequestAndBlock(
-      request_type::kPost, json_echo_url, "abcd", 4,
-      brillo::mime::application::kOctet_stream, {
-        {request_header::kCookie, "flavor=vanilla"},
-        {request_header::kIfMatch, "*"},
-      }, transport, nullptr);
+  auto response =
+      http::SendRequestAndBlock(request_type::kPost, json_echo_url, "abcd", 4,
+                                brillo::mime::application::kOctet_stream,
+                                {
+                                    {request_header::kCookie, "flavor=vanilla"},
+                                    {request_header::kIfMatch, "*"},
+                                },
+                                transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::application::kJson,
             brillo::mime::RemoveParameters(response->GetContentType()));
@@ -220,13 +192,12 @@ TEST(HttpUtils, Get) {
   // Sends back the "?test=..." portion of URL.
   // So if we do GET "http://localhost?test=blah", this handler responds
   // with "blah" as text/plain.
-  auto GetHandler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto GetHandler = [](const fake::ServerRequest& request,
+                       fake::ServerResponse* response) {
     EXPECT_EQ(request_type::kGet, request.GetMethod());
     EXPECT_EQ("0", request.GetHeader(request_header::kContentLength));
     EXPECT_EQ("", request.GetHeader(request_header::kContentType));
-    response->ReplyText(status_code::Ok,
-                        request.GetFormField("test"),
+    response->ReplyText(status_code::Ok, request.GetFormField("test"),
                         brillo::mime::text::kPlain);
   };
 
@@ -248,8 +219,8 @@ TEST(HttpUtils, Get) {
 }
 
 TEST(HttpUtils, Head) {
-  auto HeadHandler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto HeadHandler = [](const fake::ServerRequest& request,
+                        fake::ServerResponse* response) {
     EXPECT_EQ(request_type::kHead, request.GetMethod());
     EXPECT_EQ("0", request.GetHeader(request_header::kContentLength));
     EXPECT_EQ("", request.GetHeader(request_header::kContentType));
@@ -267,8 +238,8 @@ TEST(HttpUtils, Head) {
 }
 
 TEST(HttpUtils, PostBinary) {
-  auto Handler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto Handler = [](const fake::ServerRequest& request,
+                    fake::ServerResponse* response) {
     EXPECT_EQ(request_type::kPost, request.GetMethod());
     EXPECT_EQ("256", request.GetHeader(request_header::kContentLength));
     EXPECT_EQ(brillo::mime::application::kOctet_stream,
@@ -289,40 +260,33 @@ TEST(HttpUtils, PostBinary) {
   std::vector<uint8_t> data(256);
   std::iota(data.begin(), data.end(), 0);
 
-  auto response = http::PostBinaryAndBlock(kFakeUrl,
-                                           data.data(),
-                                           data.size(),
-                                           mime::application::kOctet_stream,
-                                           {},
-                                           transport,
-                                           nullptr);
+  auto response = http::PostBinaryAndBlock(kFakeUrl, data.data(), data.size(),
+                                           mime::application::kOctet_stream, {},
+                                           transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
 }
 
 TEST(HttpUtils, PostText) {
   std::string fake_data = "Some data";
-  auto post_handler = base::Bind([](const std::string& data,
-                                    const fake::ServerRequest& request,
-                                    fake::ServerResponse* response) {
-    EXPECT_EQ(request_type::kPost, request.GetMethod());
-    EXPECT_EQ(data.size(),
-              std::stoul(request.GetHeader(request_header::kContentLength)));
-    EXPECT_EQ(brillo::mime::text::kPlain,
-              request.GetHeader(request_header::kContentType));
-    response->ReplyText(status_code::Ok,
-                        request.GetDataAsString(),
-                        brillo::mime::text::kPlain);
-  }, fake_data);
+  auto post_handler = base::Bind(
+      [](const std::string& data, const fake::ServerRequest& request,
+         fake::ServerResponse* response) {
+        EXPECT_EQ(request_type::kPost, request.GetMethod());
+        EXPECT_EQ(
+            data.size(),
+            std::stoul(request.GetHeader(request_header::kContentLength)));
+        EXPECT_EQ(brillo::mime::text::kPlain,
+                  request.GetHeader(request_header::kContentType));
+        response->ReplyText(status_code::Ok, request.GetDataAsString(),
+                            brillo::mime::text::kPlain);
+      },
+      fake_data);
 
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
   transport->AddHandler(kFakeUrl, request_type::kPost, post_handler);
 
-  auto response = http::PostTextAndBlock(kFakeUrl,
-                                         fake_data,
-                                         brillo::mime::text::kPlain,
-                                         {},
-                                         transport,
-                                         nullptr);
+  auto response = http::PostTextAndBlock(
+      kFakeUrl, fake_data, brillo::mime::text::kPlain, {}, transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::text::kPlain, response->GetContentType());
   EXPECT_EQ(fake_data, response->ExtractDataAsString());
@@ -330,14 +294,15 @@ TEST(HttpUtils, PostText) {
 
 TEST(HttpUtils, PostFormData) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
-  transport->AddHandler(
-      kFakeUrl, request_type::kPost, base::Bind(EchoDataHandler));
+  transport->AddHandler(kFakeUrl, request_type::kPost,
+                        base::Bind(EchoDataHandler));
 
-  auto response = http::PostFormDataAndBlock(
-      kFakeUrl, {
-          {"key", "value"},
-          {"field", "field value"},
-      }, {}, transport, nullptr);
+  auto response = http::PostFormDataAndBlock(kFakeUrl,
+                                             {
+                                                 {"key", "value"},
+                                                 {"field", "field value"},
+                                             },
+                                             {}, transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(brillo::mime::application::kWwwFormUrlEncoded,
             response->GetContentType());
@@ -346,15 +311,15 @@ TEST(HttpUtils, PostFormData) {
 
 TEST(HttpUtils, PostMultipartFormData) {
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
-  transport->AddHandler(
-      kFakeUrl, request_type::kPost, base::Bind(EchoDataHandler));
+  transport->AddHandler(kFakeUrl, request_type::kPost,
+                        base::Bind(EchoDataHandler));
 
   std::unique_ptr<FormData> form_data{new FormData{"boundary123"}};
   form_data->AddTextField("key1", "value1");
   form_data->AddTextField("key2", "value2");
   std::string expected_content_type = form_data->GetContentType();
-  auto response = http::PostFormDataAndBlock(
-      kFakeUrl, std::move(form_data), {}, transport, nullptr);
+  auto response = http::PostFormDataAndBlock(kFakeUrl, std::move(form_data), {},
+                                             transport, nullptr);
   EXPECT_TRUE(response->IsSuccessful());
   EXPECT_EQ(expected_content_type, response->GetContentType());
   const char expected_value[] =
@@ -371,16 +336,16 @@ TEST(HttpUtils, PostMultipartFormData) {
 }
 
 TEST(HttpUtils, PostPatchJson) {
-  auto JsonHandler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto JsonHandler = [](const fake::ServerRequest& request,
+                        fake::ServerResponse* response) {
     auto mime_type = brillo::mime::RemoveParameters(
         request.GetHeader(request_header::kContentType));
     EXPECT_EQ(brillo::mime::application::kJson, mime_type);
-    response->ReplyJson(
-        status_code::Ok,
-        {
-          {"method", request.GetMethod()}, {"data", request.GetDataAsString()},
-        });
+    response->ReplyJson(status_code::Ok,
+                        {
+                            {"method", request.GetMethod()},
+                            {"data", request.GetDataAsString()},
+                        });
   };
   std::shared_ptr<fake::Transport> transport(new fake::Transport);
   transport->AddHandler(kFakeUrl, "*", base::Bind(JsonHandler));
@@ -411,8 +376,8 @@ TEST(HttpUtils, PostPatchJson) {
 }
 
 TEST(HttpUtils, ParseJsonResponse) {
-  auto JsonHandler =
-      [](const fake::ServerRequest& request, fake::ServerResponse* response) {
+  auto JsonHandler = [](const fake::ServerRequest& request,
+                        fake::ServerResponse* response) {
     int status_code = std::stoi(request.GetFormField("code"));
     response->ReplyJson(status_code, {{"data", request.GetFormField("value")}});
   };
@@ -422,11 +387,12 @@ TEST(HttpUtils, ParseJsonResponse) {
   // Test valid JSON responses (with success or error codes).
   for (auto item : {"200;data", "400;wrong", "500;Internal Server error"}) {
     auto pair = brillo::string_utils::SplitAtFirst(item, ";");
-    auto response = http::PostFormDataAndBlock(
-        kFakeUrl, {
-          {"code", pair.first},
-          {"value", pair.second},
-        }, {}, transport, nullptr);
+    auto response = http::PostFormDataAndBlock(kFakeUrl,
+                                               {
+                                                   {"code", pair.first},
+                                                   {"value", pair.second},
+                                               },
+                                               {}, transport, nullptr);
     int code = 0;
     auto json = http::ParseJsonResponse(response.get(), &code, nullptr);
     EXPECT_NE(nullptr, json.get());
@@ -467,9 +433,8 @@ TEST(HttpUtils, SendRequestAsync_Failure) {
   ErrorPtr error;
   Error::AddTo(&error, FROM_HERE, "test_domain", "test_code", "Test message");
   transport->SetCreateConnectionError(std::move(error));
-  auto success_callback =
-      [](RequestID /* request_id */,
-         std::unique_ptr<http::Response> /* response */) {
+  auto success_callback = [](RequestID /* request_id */,
+                             std::unique_ptr<http::Response> /* response */) {
     FAIL() << "This callback shouldn't have been called";
   };
   auto error_callback = [](RequestID /* request_id */, const Error* error) {
@@ -477,11 +442,8 @@ TEST(HttpUtils, SendRequestAsync_Failure) {
     EXPECT_EQ("test_code", error->GetCode());
     EXPECT_EQ("Test message", error->GetMessage());
   };
-  http::SendRequestWithNoData(request_type::kGet,
-                              "http://blah.com",
-                              {},
-                              transport,
-                              base::Bind(success_callback),
+  http::SendRequestWithNoData(request_type::kGet, "http://blah.com", {},
+                              transport, base::Bind(success_callback),
                               base::Bind(error_callback));
 }
 

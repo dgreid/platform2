@@ -11,8 +11,8 @@ using std::vector;
 
 namespace brillo {
 
-static base::LazyInstance<Minijail>::DestructorAtExit g_minijail
-    = LAZY_INSTANCE_INITIALIZER;
+static base::LazyInstance<Minijail>::DestructorAtExit g_minijail =
+    LAZY_INSTANCE_INITIALIZER;
 
 Minijail::Minijail() {}
 

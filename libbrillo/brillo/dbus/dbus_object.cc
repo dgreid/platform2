@@ -46,8 +46,8 @@ DBusInterface::DBusInterface(DBusObject* dbus_object,
 
 void DBusInterface::AddProperty(const std::string& property_name,
                                 ExportedPropertyBase* prop_base) {
-  dbus_object_->property_set_.RegisterProperty(
-      interface_name_, property_name, prop_base);
+  dbus_object_->property_set_.RegisterProperty(interface_name_, property_name,
+                                               prop_base);
 }
 
 void DBusInterface::RemoveProperty(const std::string& property_name) {
@@ -72,30 +72,26 @@ void DBusInterface::ExportAsync(
         interface_name_, method_name, export_error, true);
     auto method_handler =
         base::Bind(&DBusInterface::HandleMethodCall, base::Unretained(this));
-    exported_object->ExportMethod(
-        interface_name_, method_name, method_handler, export_handler);
+    exported_object->ExportMethod(interface_name_, method_name, method_handler,
+                                  export_handler);
   }
 
   std::vector<AsyncEventSequencer::CompletionAction> actions;
   if (object_manager) {
     auto property_writer_callback =
         dbus_object_->property_set_.GetPropertyWriter(interface_name_);
-    actions.push_back(
-        base::Bind(&DBusInterface::ClaimInterface,
-                   weak_factory_.GetWeakPtr(),
-                   object_manager->AsWeakPtr(),
-                   object_path,
-                   property_writer_callback));
+    actions.push_back(base::Bind(
+        &DBusInterface::ClaimInterface, weak_factory_.GetWeakPtr(),
+        object_manager->AsWeakPtr(), object_path, property_writer_callback));
   }
   actions.push_back(completion_callback);
   sequencer->OnAllTasksCompletedCall(actions);
 }
 
-void DBusInterface::ExportAndBlock(
-    ExportedObjectManager* object_manager,
-    dbus::Bus* /* bus */,
-    dbus::ExportedObject* exported_object,
-    const dbus::ObjectPath& object_path) {
+void DBusInterface::ExportAndBlock(ExportedObjectManager* object_manager,
+                                   dbus::Bus* /* bus */,
+                                   dbus::ExportedObject* exported_object,
+                                   const dbus::ObjectPath& object_path) {
   VLOG(1) << "Registering D-Bus interface '" << interface_name_ << "' for '"
           << object_path.value() << "'";
   for (const auto& pair : handlers_) {
@@ -103,19 +99,17 @@ void DBusInterface::ExportAndBlock(
     VLOG(1) << "Exporting method: " << interface_name_ << "." << method_name;
     auto method_handler =
         base::Bind(&DBusInterface::HandleMethodCall, base::Unretained(this));
-    if (!exported_object->ExportMethodAndBlock(
-            interface_name_, method_name, method_handler)) {
-        LOG(FATAL) << "Failed exporting " << method_name << " method";
+    if (!exported_object->ExportMethodAndBlock(interface_name_, method_name,
+                                               method_handler)) {
+      LOG(FATAL) << "Failed exporting " << method_name << " method";
     }
   }
 
   if (object_manager) {
     auto property_writer_callback =
         dbus_object_->property_set_.GetPropertyWriter(interface_name_);
-    ClaimInterface(object_manager->AsWeakPtr(),
-                   object_path,
-                   property_writer_callback,
-                   true);
+    ClaimInterface(object_manager->AsWeakPtr(), object_path,
+                   property_writer_callback, true);
   }
 }
 
@@ -164,10 +158,10 @@ void DBusInterface::UnexportAndBlock(ExportedObjectManager* object_manager,
 }
 
 void DBusInterface::ClaimInterface(
-      base::WeakPtr<ExportedObjectManager> object_manager,
-      const dbus::ObjectPath& object_path,
-      const ExportedPropertySet::PropertyWriter& writer,
-      bool all_succeeded) {
+    base::WeakPtr<ExportedObjectManager> object_manager,
+    const dbus::ObjectPath& object_path,
+    const ExportedPropertySet::PropertyWriter& writer,
+    bool all_succeeded) {
   if (!all_succeeded || !object_manager) {
     LOG(ERROR) << "Skipping claiming interface: " << interface_name_;
     return;
@@ -175,8 +169,8 @@ void DBusInterface::ClaimInterface(
   object_manager->ClaimInterface(object_path, interface_name_, writer);
   release_interface_cb_.RunAndReset();
   release_interface_cb_.ReplaceClosure(
-      base::Bind(&ExportedObjectManager::ReleaseInterface,
-                 object_manager, object_path, interface_name_));
+      base::Bind(&ExportedObjectManager::ReleaseInterface, object_manager,
+                 object_path, interface_name_));
 }
 
 void DBusInterface::HandleMethodCall(dbus::MethodCall* method_call,
@@ -189,10 +183,9 @@ void DBusInterface::HandleMethodCall(dbus::MethodCall* method_call,
           << method_name << "(" << method_call->GetSignature() << ")";
   auto pair = handlers_.find(method_name);
   if (pair == handlers_.end()) {
-    auto response =
-        dbus::ErrorResponse::FromMethodCall(method_call,
-                                            DBUS_ERROR_UNKNOWN_METHOD,
-                                            "Unknown method: " + method_name);
+    auto response = dbus::ErrorResponse::FromMethodCall(
+        method_call, DBUS_ERROR_UNKNOWN_METHOD,
+        "Unknown method: " + method_name);
     std::move(sender).Run(std::move(response));
     return;
   }
@@ -256,8 +249,9 @@ DBusInterface* DBusObject::AddOrGetInterface(
     // Interface doesn't exist yet. Create one...
     std::unique_ptr<DBusInterface> new_itf(
         new DBusInterface(this, interface_name));
-    iter = interfaces_.insert(std::make_pair(interface_name,
-                                             std::move(new_itf))).first;
+    iter =
+        interfaces_.insert(std::make_pair(interface_name, std::move(new_itf)))
+            .first;
   }
   return iter->second.get();
 }
@@ -314,10 +308,7 @@ void DBusObject::RegisterAsync(
   // Export interface methods
   for (const auto& pair : interfaces_) {
     pair.second->ExportAsync(
-        object_manager_.get(),
-        bus_.get(),
-        exported_object_,
-        object_path_,
+        object_manager_.get(), bus_.get(), exported_object_, object_path_,
         sequencer->GetHandler("Failed to export interface " + pair.first,
                               false));
   }
@@ -334,11 +325,8 @@ void DBusObject::RegisterAndBlock() {
 
   // Export interface methods
   for (const auto& pair : interfaces_) {
-    pair.second->ExportAndBlock(
-        object_manager_.get(),
-        bus_.get(),
-        exported_object_,
-        object_path_);
+    pair.second->ExportAndBlock(object_manager_.get(), bus_.get(),
+                                exported_object_, object_path_);
   }
 }
 

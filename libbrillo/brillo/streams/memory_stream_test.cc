@@ -15,10 +15,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::Return;
 using testing::SetArgPointee;
-using testing::_;
 
 namespace brillo {
 
@@ -77,9 +77,8 @@ class MemoryStreamTest : public testing::Test {
   const void* const test_write_buffer_ = IntToConstPtr(67890);
   // We limit the size of memory streams to be the maximum size of either of
   // size_t (on 32 bit platforms) or the size of signed 64 bit integer.
-  const size_t kSizeMax =
-      std::min<uint64_t>(std::numeric_limits<size_t>::max(),
-                         std::numeric_limits<int64_t>::max());
+  const size_t kSizeMax = std::min<uint64_t>(
+      std::numeric_limits<size_t>::max(), std::numeric_limits<int64_t>::max());
 };
 
 TEST_F(MemoryStreamTest, CanRead) {
@@ -88,8 +87,8 @@ TEST_F(MemoryStreamTest, CanRead) {
 
 TEST_F(MemoryStreamTest, CanWrite) {
   EXPECT_CALL(container_mock(), IsReadOnly())
-    .WillOnce(Return(true))
-    .WillOnce(Return(false));
+      .WillOnce(Return(true))
+      .WillOnce(Return(false));
 
   EXPECT_FALSE(stream_->CanWrite());
   EXPECT_TRUE(stream_->CanWrite());
@@ -101,9 +100,9 @@ TEST_F(MemoryStreamTest, CanSeek) {
 
 TEST_F(MemoryStreamTest, GetSize) {
   EXPECT_CALL(container_mock(), GetSize())
-    .WillOnce(Return(0))
-    .WillOnce(Return(1234))
-    .WillOnce(Return(kSizeMax));
+      .WillOnce(Return(0))
+      .WillOnce(Return(1234))
+      .WillOnce(Return(kSizeMax));
 
   EXPECT_EQ(0, stream_->GetSize());
   EXPECT_EQ(1234, stream_->GetSize());
@@ -118,7 +117,7 @@ TEST_F(MemoryStreamTest, SetSizeBlocking) {
   EXPECT_EQ(nullptr, error.get());
 
   EXPECT_CALL(container_mock(), Resize(kSizeMax, nullptr))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   EXPECT_TRUE(stream_->SetSizeBlocking(kSizeMax, nullptr));
 }
@@ -152,28 +151,28 @@ TEST_F(MemoryStreamTest, ReadNonBlocking) {
   bool eos = false;
 
   EXPECT_CALL(container_mock(), Read(test_read_buffer_, 10, 0, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(5), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(5), Return(true)));
 
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 10, &read, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 10, &read, &eos, nullptr));
   EXPECT_EQ(5, read);
   EXPECT_EQ(5, stream_->GetPosition());
   EXPECT_FALSE(eos);
 
   EXPECT_CALL(container_mock(), Read(test_read_buffer_, 100, 5, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(100), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(100), Return(true)));
 
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 100, &read, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 100, &read, &eos, nullptr));
   EXPECT_EQ(100, read);
   EXPECT_EQ(105, stream_->GetPosition());
   EXPECT_FALSE(eos);
 
   EXPECT_CALL(container_mock(), Read(test_read_buffer_, 10, 105, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(0), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(0), Return(true)));
 
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 10, &read, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 10, &read, &eos, nullptr));
   EXPECT_EQ(0, read);
   EXPECT_EQ(105, stream_->GetPosition());
   EXPECT_TRUE(eos);
@@ -183,26 +182,26 @@ TEST_F(MemoryStreamTest, WriteNonBlocking) {
   size_t written = 0;
 
   EXPECT_CALL(container_mock(), Write(test_write_buffer_, 10, 0, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(5), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(5), Return(true)));
 
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 10, &written,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 10, &written, nullptr));
   EXPECT_EQ(5, written);
   EXPECT_EQ(5, stream_->GetPosition());
 
   EXPECT_CALL(container_mock(), Write(test_write_buffer_, 100, 5, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(100), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(100), Return(true)));
 
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 100, &written,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 100, &written, nullptr));
   EXPECT_EQ(100, written);
   EXPECT_EQ(105, stream_->GetPosition());
 
   EXPECT_CALL(container_mock(), Write(test_write_buffer_, 10, 105, _, nullptr))
-    .WillOnce(DoAll(SetArgPointee<3>(10), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<3>(10), Return(true)));
 
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 10, &written,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 10, &written, nullptr));
   EXPECT_EQ(115, stream_->GetPosition());
 }
 

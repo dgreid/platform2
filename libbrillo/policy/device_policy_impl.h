@@ -84,13 +84,12 @@ class DevicePolicyImpl : public DevicePolicy {
   bool GetDisallowedTimeIntervals(
       std::vector<WeeklyTimeInterval>* intervals_out) const override;
   bool GetDeviceUpdateStagingSchedule(
-      std::vector<DayPercentagePair> *staging_schedule_out) const override;
+      std::vector<DayPercentagePair>* staging_schedule_out) const override;
   bool GetDeviceQuickFixBuildToken(
       std::string* device_quick_fix_build_token) const override;
   bool GetDeviceDirectoryApiId(
       std::string* device_directory_api_out) const override;
-  bool GetCustomerId(
-      std::string* customer_id_out) const override;
+  bool GetCustomerId(std::string* customer_id_out) const override;
   bool GetChannelDowngradeBehavior(
       int* channel_downgrade_behavior_out) const override;
 

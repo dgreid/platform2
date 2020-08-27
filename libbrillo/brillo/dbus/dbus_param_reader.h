@@ -33,7 +33,7 @@ namespace dbus_utils {
 // defined below are.
 // |allow_out_params| controls whether DBusParamReader allows the parameter
 // list to contain OUT parameters (pointers).
-template<bool allow_out_params, typename...>
+template <bool allow_out_params, typename...>
 struct DBusParamReader;
 
 // A generic specialization of DBusParamReader to handle variable function
@@ -42,7 +42,9 @@ struct DBusParamReader;
 // parameters to pop the remaining parameters.
 //  CurrentParam  - the type of the current method parameter we are processing.
 //  RestOfParams  - the types of remaining parameters to be processed.
-template<bool allow_out_params, typename CurrentParam, typename... RestOfParams>
+template <bool allow_out_params,
+          typename CurrentParam,
+          typename... RestOfParams>
 struct DBusParamReader<allow_out_params, CurrentParam, RestOfParams...> {
   // DBusParamReader::Invoke() is a member function that actually extracts the
   // current parameter from the message buffer.
@@ -93,8 +95,7 @@ struct DBusParamReader<allow_out_params, CurrentParam, RestOfParams...> {
     ParamValueType current_param;
     if (!DBusType<ParamValueType>::Read(reader, &current_param)) {
       Error::AddTo(error, FROM_HERE, errors::dbus::kDomain,
-                   DBUS_ERROR_INVALID_ARGS,
-                   "Method parameter type mismatch");
+                   DBUS_ERROR_INVALID_ARGS, "Method parameter type mismatch");
       return false;
     }
     // Call DBusParamReader::Invoke() to process the rest of parameters.
@@ -106,8 +107,7 @@ struct DBusParamReader<allow_out_params, CurrentParam, RestOfParams...> {
     // reference to allow to use move-only types such as std::unique_ptr<> and
     // to eliminate unnecessarily copying data.
     return DBusParamReader<allow_out_params, RestOfParams...>::Invoke(
-        handler, reader, error,
-        static_cast<const Args&>(args)...,
+        handler, reader, error, static_cast<const Args&>(args)...,
         static_cast<const ParamValueType&>(current_param));
   }
 
@@ -133,8 +133,7 @@ struct DBusParamReader<allow_out_params, CurrentParam, RestOfParams...> {
     // all the parameters to the arguments of Invoke() and append the current
     // parameter to the end of the parameter list.
     return DBusParamReader<allow_out_params, RestOfParams...>::Invoke(
-        handler, reader, error,
-        static_cast<const Args&>(args)...,
+        handler, reader, error, static_cast<const Args&>(args)...,
         &current_param);
   }
 };  // struct DBusParamReader<ParamType, RestOfParams...>
@@ -142,7 +141,7 @@ struct DBusParamReader<allow_out_params, CurrentParam, RestOfParams...> {
 // The final specialization of DBusParamReader<> used when no more parameters
 // are expected in the message buffer. Actually dispatches the call to the
 // handler with all the accumulated arguments.
-template<bool allow_out_params>
+template <bool allow_out_params>
 struct DBusParamReader<allow_out_params> {
   template <typename CallbackType, typename... Args>
   static bool Invoke(const CallbackType& handler,

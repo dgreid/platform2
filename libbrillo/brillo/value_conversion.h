@@ -55,7 +55,7 @@ BRILLO_EXPORT bool FromValue(const base::Value& in_value,
 
 template <typename T, typename Pred, typename Alloc>
 bool FromValue(const base::Value& in_value,
-              std::map<std::string, T, Pred, Alloc>* out_value);
+               std::map<std::string, T, Pred, Alloc>* out_value);
 
 template <typename T, typename Alloc>
 bool FromValue(const base::Value& in_value, std::vector<T, Alloc>* out_value) {
@@ -75,7 +75,7 @@ bool FromValue(const base::Value& in_value, std::vector<T, Alloc>* out_value) {
 
 template <typename T, typename Pred, typename Alloc>
 bool FromValue(const base::Value& in_value,
-              std::map<std::string, T, Pred, Alloc>* out_value) {
+               std::map<std::string, T, Pred, Alloc>* out_value) {
   const base::DictionaryValue* dict = nullptr;
   if (!in_value.GetAsDictionary(&dict))
     return false;

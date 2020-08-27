@@ -20,8 +20,8 @@ namespace brillo {
 // Sets up signal handlers for registered signals, and converts signal receipt
 // into a write on a pipe. Watches that pipe for data and, when some appears,
 // execute the associated callback.
-class BRILLO_EXPORT AsynchronousSignalHandler final :
-    public AsynchronousSignalHandlerInterface {
+class BRILLO_EXPORT AsynchronousSignalHandler final
+    : public AsynchronousSignalHandlerInterface {
  public:
   using AsynchronousSignalHandlerInterface::SignalHandler;
 
@@ -29,8 +29,8 @@ class BRILLO_EXPORT AsynchronousSignalHandler final :
   ~AsynchronousSignalHandler() override;
 
   AsynchronousSignalHandler(const AsynchronousSignalHandler&) = delete;
-  AsynchronousSignalHandler&
-  operator=(const AsynchronousSignalHandler&) = delete;
+  AsynchronousSignalHandler& operator=(const AsynchronousSignalHandler&) =
+      delete;
 
   // Initialize the handler.
   void Init();

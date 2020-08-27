@@ -43,8 +43,7 @@ class Transport::SocketPollData {
     read_watcher_ = base::FileDescriptorWatcher::WatchReadable(
         socket_fd_,
         base::BindRepeating(&Transport::SocketPollData::OnSocketReady,
-                            base::Unretained(this),
-                            CURL_CSELECT_IN));
+                            base::Unretained(this), CURL_CSELECT_IN));
     return read_watcher_.get();
   }
 
@@ -52,8 +51,7 @@ class Transport::SocketPollData {
     write_watcher_ = base::FileDescriptorWatcher::WatchWritable(
         socket_fd_,
         base::BindRepeating(&Transport::SocketPollData::OnSocketReady,
-                            base::Unretained(this),
-                            CURL_CSELECT_OUT));
+                            base::Unretained(this), CURL_CSELECT_OUT));
     return write_watcher_.get();
   }
 
@@ -156,8 +154,8 @@ std::shared_ptr<http::Connection> Transport::CreateConnection(
         curl_interface_->EasySetOptInt(curl_handle, CURLOPT_SSL_VERIFYHOST, 2);
   }
   if (code == CURLE_OK && !user_agent.empty()) {
-    code = curl_interface_->EasySetOptStr(
-        curl_handle, CURLOPT_USERAGENT, user_agent);
+    code = curl_interface_->EasySetOptStr(curl_handle, CURLOPT_USERAGENT,
+                                          user_agent);
   }
   if (code == CURLE_OK && !referer.empty()) {
     code =
@@ -170,14 +168,13 @@ std::shared_ptr<http::Connection> Transport::CreateConnection(
     int64_t timeout_ms = connection_timeout_.InMillisecondsRoundedUp();
 
     if (timeout_ms > 0 && timeout_ms <= std::numeric_limits<int>::max()) {
-      code = curl_interface_->EasySetOptInt(
-          curl_handle, CURLOPT_TIMEOUT_MS,
-          static_cast<int>(timeout_ms));
+      code = curl_interface_->EasySetOptInt(curl_handle, CURLOPT_TIMEOUT_MS,
+                                            static_cast<int>(timeout_ms));
     }
   }
   if (code == CURLE_OK && !ip_address_.empty()) {
-    code = curl_interface_->EasySetOptStr(
-        curl_handle, CURLOPT_INTERFACE, ip_address_.c_str());
+    code = curl_interface_->EasySetOptStr(curl_handle, CURLOPT_INTERFACE,
+                                          ip_address_.c_str());
   }
   if (code == CURLE_OK && host_list_) {
     code = curl_interface_->EasySetOptPtr(curl_handle, CURLOPT_RESOLVE,
@@ -196,12 +193,12 @@ std::shared_ptr<http::Connection> Transport::CreateConnection(
       // POST and custom request methods
       code = curl_interface_->EasySetOptInt(curl_handle, CURLOPT_POST, 1);
       if (code == CURLE_OK) {
-        code = curl_interface_->EasySetOptPtr(
-            curl_handle, CURLOPT_POSTFIELDS, nullptr);
+        code = curl_interface_->EasySetOptPtr(curl_handle, CURLOPT_POSTFIELDS,
+                                              nullptr);
       }
       if (code == CURLE_OK && method != request_type::kPost) {
-        code = curl_interface_->EasySetOptStr(
-            curl_handle, CURLOPT_CUSTOMREQUEST, method);
+        code = curl_interface_->EasySetOptStr(curl_handle,
+                                              CURLOPT_CUSTOMREQUEST, method);
       }
     }
   }
@@ -366,31 +363,26 @@ void Transport::ShutDownAsyncCurl() {
   curl_multi_handle_ = nullptr;
 }
 
-int Transport::MultiSocketCallback(CURL* easy,
-                                   curl_socket_t s,
-                                   int what,
-                                   void* userp,
-                                   void* socketp) {
+int Transport::MultiSocketCallback(
+    CURL* easy, curl_socket_t s, int what, void* userp, void* socketp) {
   auto transport = static_cast<Transport*>(userp);
   CHECK(transport) << "Transport must be set for this callback";
   auto poll_data = static_cast<SocketPollData*>(socketp);
   if (!poll_data) {
     // We haven't attached polling data to this socket yet. Let's do this now.
     poll_data = new SocketPollData{transport->curl_interface_,
-                                   transport->curl_multi_handle_,
-                                   transport,
-                                   s};
+                                   transport->curl_multi_handle_, transport, s};
     transport->poll_data_map_.emplace(std::make_pair(easy, s), poll_data);
-    transport->curl_interface_->MultiAssign(
-        transport->curl_multi_handle_, s, poll_data);
+    transport->curl_interface_->MultiAssign(transport->curl_multi_handle_, s,
+                                            poll_data);
   }
 
   if (what == CURL_POLL_NONE) {
     return 0;
   } else if (what == CURL_POLL_REMOVE) {
     // Remove the attached data from the socket.
-    transport->curl_interface_->MultiAssign(
-        transport->curl_multi_handle_, s, nullptr);
+    transport->curl_interface_->MultiAssign(transport->curl_multi_handle_, s,
+                                            nullptr);
     transport->poll_data_map_.erase(std::make_pair(easy, s));
 
     // Make sure we stop watching the socket file descriptor now, before
@@ -434,8 +426,8 @@ int Transport::MultiTimerCallback(CURLM* /* multi */,
 void Transport::OnTimer() {
   if (curl_multi_handle_) {
     int still_running_count = 0;
-    curl_interface_->MultiSocketAction(
-        curl_multi_handle_, CURL_SOCKET_TIMEOUT, 0, &still_running_count);
+    curl_interface_->MultiSocketAction(curl_multi_handle_, CURL_SOCKET_TIMEOUT,
+                                       0, &still_running_count);
     ProcessAsyncCurlMessages();
   }
 }
@@ -443,16 +435,14 @@ void Transport::OnTimer() {
 void Transport::ProcessAsyncCurlMessages() {
   CURLMsg* msg = nullptr;
   int msgs_left = 0;
-  while ((msg = curl_interface_->MultiInfoRead(curl_multi_handle_,
-                                               &msgs_left))) {
+  while (
+      (msg = curl_interface_->MultiInfoRead(curl_multi_handle_, &msgs_left))) {
     if (msg->msg == CURLMSG_DONE) {
       // Async I/O complete for a connection. Invoke the user callbacks.
       Connection* connection = nullptr;
-      CHECK_EQ(CURLE_OK,
-               curl_interface_->EasyGetInfoPtr(
-                   msg->easy_handle,
-                   CURLINFO_PRIVATE,
-                   reinterpret_cast<void**>(&connection)));
+      CHECK_EQ(CURLE_OK, curl_interface_->EasyGetInfoPtr(
+                             msg->easy_handle, CURLINFO_PRIVATE,
+                             reinterpret_cast<void**>(&connection)));
       CHECK(connection != nullptr);
       OnTransferComplete(connection, msg->data.result);
     }
@@ -463,16 +453,14 @@ void Transport::OnTransferComplete(Connection* connection, CURLcode code) {
   auto p = async_requests_.find(connection);
   CHECK(p != async_requests_.end()) << "Unknown connection";
   AsyncRequestData* request_data = p->second.get();
-  VLOG(1) << "HTTP request # " << request_data->request_id
-          << " has completed "
+  VLOG(1) << "HTTP request # " << request_data->request_id << " has completed "
           << (code == CURLE_OK ? "successfully" : "with an error");
   if (code != CURLE_OK) {
     brillo::ErrorPtr error;
     AddEasyCurlError(&error, FROM_HERE, code, curl_interface_.get());
-    RunCallbackAsync(FROM_HERE,
-                     base::Bind(request_data->error_callback,
-                                p->second->request_id,
-                                base::Owned(error.release())));
+    RunCallbackAsync(FROM_HERE, base::Bind(request_data->error_callback,
+                                           p->second->request_id,
+                                           base::Owned(error.release())));
   } else {
     if (connection->GetResponseStatusCode() != status_code::Ok) {
       LOG(INFO) << "Response: " << connection->GetResponseStatusCode() << " ("
@@ -483,16 +471,14 @@ void Transport::OnTransferComplete(Connection* connection, CURLcode code) {
     // read the data back.
     const auto& stream = request_data->connection->response_data_stream_;
     if (stream && stream->CanSeek() && !stream->SetPosition(0, &error)) {
-      RunCallbackAsync(FROM_HERE,
-                       base::Bind(request_data->error_callback,
-                                  p->second->request_id,
-                                  base::Owned(error.release())));
+      RunCallbackAsync(FROM_HERE, base::Bind(request_data->error_callback,
+                                             p->second->request_id,
+                                             base::Owned(error.release())));
     } else {
       std::unique_ptr<Response> resp{new Response{request_data->connection}};
       RunCallbackAsync(FROM_HERE,
                        base::Bind(request_data->success_callback,
-                                  p->second->request_id,
-                                  base::Passed(&resp)));
+                                  p->second->request_id, base::Passed(&resp)));
     }
   }
   // In case of an error on CURL side, we would have dispatched the error
@@ -505,8 +491,7 @@ void Transport::OnTransferComplete(Connection* connection, CURLcode code) {
   // Instead, schedule an asynchronous task to clean up the connection.
   RunCallbackAsync(FROM_HERE,
                    base::Bind(&Transport::CleanAsyncConnection,
-                              weak_ptr_factory_.GetWeakPtr(),
-                              connection));
+                              weak_ptr_factory_.GetWeakPtr(), connection));
 }
 
 void Transport::CleanAsyncConnection(Connection* connection) {

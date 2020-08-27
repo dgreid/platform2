@@ -45,8 +45,8 @@ void BackoffEntry::InformOfRequest(bool succeeded) {
     base::TimeDelta delay;
     if (policy_->always_use_initial_delay)
       delay = base::TimeDelta::FromMilliseconds(policy_->initial_delay_ms);
-    exponential_backoff_release_time_ = std::max(
-        ImplGetTimeNow() + delay, exponential_backoff_release_time_);
+    exponential_backoff_release_time_ =
+        std::max(ImplGetTimeNow() + delay, exponential_backoff_release_time_);
   }
 }
 
@@ -85,8 +85,8 @@ bool BackoffEntry::CanDiscard() const {
   if (failure_count_ > 0) {
     // Need to keep track of failures until maximum back-off period
     // has passed (since further failures can add to back-off).
-    return unused_since_ms >= std::max(policy_->maximum_backoff_ms,
-                                       policy_->entry_lifetime_ms);
+    return unused_since_ms >=
+           std::max(policy_->maximum_backoff_ms, policy_->entry_lifetime_ms);
   }
 
   // Otherwise, consider the entry is outdated if it hasn't been used for the
@@ -153,9 +153,9 @@ base::TimeTicks BackoffEntry::CalculateReleaseTime() const {
 
   // Decide between maximum release time and calculated release time, accounting
   // for overflow with both.
-  int64_t release_time_us = std::min(
-      calculated_release_time_us.ValueOrDefault(kMaxTime),
-      maximum_release_time_us.ValueOrDefault(kMaxTime));
+  int64_t release_time_us =
+      std::min(calculated_release_time_us.ValueOrDefault(kMaxTime),
+               maximum_release_time_us.ValueOrDefault(kMaxTime));
 
   // Never reduce previously set release horizon, e.g. due to Retry-After
   // header.

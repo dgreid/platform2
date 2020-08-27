@@ -62,8 +62,8 @@ bool ReadPublicKeyFromFile(const base::FilePath& key_file,
 bool VerifySignature(const std::string& signed_data,
                      const std::string& signature,
                      const std::string& public_key) {
-  std::unique_ptr<EVP_MD_CTX, void (*)(EVP_MD_CTX *)> ctx(EVP_MD_CTX_new(),
-                                                          EVP_MD_CTX_free);
+  std::unique_ptr<EVP_MD_CTX, void (*)(EVP_MD_CTX*)> ctx(EVP_MD_CTX_new(),
+                                                         EVP_MD_CTX_free);
   if (!ctx)
     return false;
 
@@ -109,13 +109,20 @@ std::string DecodeConnectionType(int type) {
 
 // TODO(adokar): change type to base::Optional<int> when available.
 int ConvertDayOfWeekStringToInt(const std::string& day_of_week_str) {
-  if (day_of_week_str == "Sunday") return 0;
-  if (day_of_week_str == "Monday") return 1;
-  if (day_of_week_str == "Tuesday") return 2;
-  if (day_of_week_str == "Wednesday") return 3;
-  if (day_of_week_str == "Thursday") return 4;
-  if (day_of_week_str == "Friday") return 5;
-  if (day_of_week_str == "Saturday") return 6;
+  if (day_of_week_str == "Sunday")
+    return 0;
+  if (day_of_week_str == "Monday")
+    return 1;
+  if (day_of_week_str == "Tuesday")
+    return 2;
+  if (day_of_week_str == "Wednesday")
+    return 3;
+  if (day_of_week_str == "Thursday")
+    return 4;
+  if (day_of_week_str == "Friday")
+    return 5;
+  if (day_of_week_str == "Saturday")
+    return 6;
   return -1;
 }
 
@@ -205,7 +212,7 @@ bool DevicePolicyImpl::IsEnterpriseEnrolled() const {
   const std::string& device_mode = install_attributes_reader_->GetAttribute(
       InstallAttributesReader::kAttrMode);
   return device_mode == InstallAttributesReader::kDeviceModeEnterprise ||
-      device_mode == InstallAttributesReader::kDeviceModeEnterpriseAD;
+         device_mode == InstallAttributesReader::kDeviceModeEnterpriseAD;
 }
 
 bool DevicePolicyImpl::GetPolicyRefreshRate(int* rate) const {
@@ -557,7 +564,7 @@ bool DevicePolicyImpl::GetDeviceUpdateStagingSchedule(
   if (!device_policy_.has_auto_update_settings())
     return false;
 
-  const em::AutoUpdateSettingsProto &proto =
+  const em::AutoUpdateSettingsProto& proto =
       device_policy_.auto_update_settings();
 
   if (!proto.has_staging_schedule())
@@ -711,8 +718,7 @@ bool DevicePolicyImpl::GetDeviceDirectoryApiId(
   return true;
 }
 
-bool DevicePolicyImpl::GetCustomerId(
-    std::string* customer_id_out) const {
+bool DevicePolicyImpl::GetCustomerId(std::string* customer_id_out) const {
   if (!policy_data_.has_obfuscated_customer_id())
     return false;
 

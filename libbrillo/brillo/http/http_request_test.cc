@@ -15,13 +15,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::Invoke;
 using testing::Return;
 using testing::SetArgPointee;
 using testing::Unused;
 using testing::WithArg;
-using testing::_;
 
 namespace brillo {
 namespace http {
@@ -119,20 +119,21 @@ TEST_F(HttpRequestTest, GetResponseAndBlock) {
   std::string req_body{"Foo bar baz"};
   request.AddHeader(request_header::kContentType, mime::text::kPlain);
 
-  EXPECT_CALL(*transport_, CreateConnection(
-      "http://www.foo.bar",
-      request_type::kPost,
-      HeaderList{
-        {request_header::kAcceptEncoding, "compress, gzip"},
-        {request_header::kAcceptLanguage, "da, en-gb;q=0.8, en;q=0.7"},
-        {request_header::kConnection, "close"},
-        {request_header::kContentType, mime::text::kPlain},
-        {request_header::kRange, "bytes=-10,100-200,300-"},
-        {request_header::kAccept, "text/*, text/html, text/html;level=1, */*"},
-      },
-      "FooBar Browser",
-      "http://www.foo.bar/baz",
-      nullptr)).WillOnce(Return(connection_));
+  EXPECT_CALL(
+      *transport_,
+      CreateConnection(
+          "http://www.foo.bar", request_type::kPost,
+          HeaderList{
+              {request_header::kAcceptEncoding, "compress, gzip"},
+              {request_header::kAcceptLanguage, "da, en-gb;q=0.8, en;q=0.7"},
+              {request_header::kConnection, "close"},
+              {request_header::kContentType, mime::text::kPlain},
+              {request_header::kRange, "bytes=-10,100-200,300-"},
+              {request_header::kAccept,
+               "text/*, text/html, text/html;level=1, */*"},
+          },
+          "FooBar Browser", "http://www.foo.bar/baz", nullptr))
+      .WillOnce(Return(connection_));
 
   EXPECT_CALL(*connection_, MockSetRequestData(ContainsStringData(req_body), _))
       .WillOnce(Return(true));
@@ -149,8 +150,8 @@ TEST_F(HttpRequestTest, GetResponse) {
   Request request{"http://foo.bar", request_type::kGet, transport_};
 
   std::string resp_data{"FooBar response body"};
-  auto read_data =
-      [&resp_data](void* buffer, Unused, size_t* read, Unused) -> bool {
+  auto read_data = [&resp_data](void* buffer, Unused, size_t* read,
+                                Unused) -> bool {
     memcpy(buffer, resp_data.data(), resp_data.size());
     *read = resp_data.size();
     return true;
@@ -159,38 +160,39 @@ TEST_F(HttpRequestTest, GetResponse) {
   auto success_callback = base::Bind(
       [](MockConnection* connection, const std::string& resp_data,
          RequestID request_id, std::unique_ptr<Response> resp) {
-    EXPECT_EQ(23, request_id);
-    EXPECT_CALL(*connection, GetResponseStatusCode())
-        .WillOnce(Return(status_code::Partial));
-    EXPECT_EQ(status_code::Partial, resp->GetStatusCode());
+        EXPECT_EQ(23, request_id);
+        EXPECT_CALL(*connection, GetResponseStatusCode())
+            .WillOnce(Return(status_code::Partial));
+        EXPECT_EQ(status_code::Partial, resp->GetStatusCode());
 
-    EXPECT_CALL(*connection, GetResponseStatusText())
-        .WillOnce(Return("Partial completion"));
-    EXPECT_EQ("Partial completion", resp->GetStatusText());
+        EXPECT_CALL(*connection, GetResponseStatusText())
+            .WillOnce(Return("Partial completion"));
+        EXPECT_EQ("Partial completion", resp->GetStatusText());
 
-    EXPECT_CALL(*connection, GetResponseHeader(response_header::kContentType))
-        .WillOnce(Return(mime::text::kHtml));
-    EXPECT_EQ(mime::text::kHtml, resp->GetContentType());
+        EXPECT_CALL(*connection,
+                    GetResponseHeader(response_header::kContentType))
+            .WillOnce(Return(mime::text::kHtml));
+        EXPECT_EQ(mime::text::kHtml, resp->GetContentType());
 
-    EXPECT_EQ(resp_data, resp->ExtractDataAsString());
-  }, connection_.get(), resp_data);
+        EXPECT_EQ(resp_data, resp->ExtractDataAsString());
+      },
+      connection_.get(), resp_data);
 
   auto finish_request_async =
       [this, &read_data](const SuccessCallback& success_callback) {
-    std::unique_ptr<MockStream> mock_stream{new MockStream};
-    EXPECT_CALL(*mock_stream, ReadBlocking(_, _, _, _))
-        .WillOnce(Invoke(read_data))
-        .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
+        std::unique_ptr<MockStream> mock_stream{new MockStream};
+        EXPECT_CALL(*mock_stream, ReadBlocking(_, _, _, _))
+            .WillOnce(Invoke(read_data))
+            .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
 
-    EXPECT_CALL(*connection_, MockExtractDataStream(_))
-      .WillOnce(Return(mock_stream.release()));
-    std::unique_ptr<Response> resp{new Response{connection_}};
-    success_callback.Run(23, std::move(resp));
-  };
+        EXPECT_CALL(*connection_, MockExtractDataStream(_))
+            .WillOnce(Return(mock_stream.release()));
+        std::unique_ptr<Response> resp{new Response{connection_}};
+        success_callback.Run(23, std::move(resp));
+      };
 
-  EXPECT_CALL(
-      *transport_,
-      CreateConnection("http://foo.bar", request_type::kGet, _, "", "", _))
+  EXPECT_CALL(*transport_, CreateConnection("http://foo.bar",
+                                            request_type::kGet, _, "", "", _))
       .WillOnce(Return(connection_));
 
   EXPECT_CALL(*connection_, FinishRequestAsync(_, _))

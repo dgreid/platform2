@@ -84,7 +84,7 @@ MessageLoop::TaskId BaseMessageLoop::PostDelayedTask(
     const base::Location& from_here,
     base::OnceClosure task,
     base::TimeDelta delay) {
-  TaskId task_id =  NextTaskId();
+  TaskId task_id = NextTaskId();
   bool base_scheduled = task_runner_->PostDelayedTask(
       from_here,
       base::BindOnce(&BaseMessageLoop::OnRanPostedTask,
@@ -167,8 +167,7 @@ MessageLoop::TaskId BaseMessageLoop::NextTaskId() {
   do {
     res = ++last_id_;
     // We would run out of memory before we run out of task ids.
-  } while (!res ||
-           delayed_tasks_.find(res) != delayed_tasks_.end());
+  } while (!res || delayed_tasks_.find(res) != delayed_tasks_.end());
   return res;
 }
 
@@ -193,14 +192,12 @@ void BaseMessageLoop::OnRanPostedTask(MessageLoop::TaskId task_id) {
   delayed_tasks_.erase(task_it);
 }
 
-int BaseMessageLoop::ParseBinderMinor(
-    const std::string& file_contents) {
+int BaseMessageLoop::ParseBinderMinor(const std::string& file_contents) {
   int result = kInvalidMinor;
   // Split along '\n', then along the ' '. Note that base::SplitString trims all
   // white spaces at the beginning and end after splitting.
-  std::vector<std::string> lines =
-      base::SplitString(file_contents, "\n", base::TRIM_WHITESPACE,
-                        base::SPLIT_WANT_ALL);
+  std::vector<std::string> lines = base::SplitString(
+      file_contents, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
   for (const std::string& line : lines) {
     if (line.empty())
       continue;

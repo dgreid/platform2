@@ -84,43 +84,29 @@ void PerformRead(const std::shared_ptr<CopyDataState>& state) {
 
 }  // anonymous namespace
 
-bool ErrorStreamClosed(const base::Location& location,
-                       ErrorPtr* error) {
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
-               errors::stream::kStreamClosed,
-               "Stream is closed");
+bool ErrorStreamClosed(const base::Location& location, ErrorPtr* error) {
+  Error::AddTo(error, location, errors::stream::kDomain,
+               errors::stream::kStreamClosed, "Stream is closed");
   return false;
 }
 
 bool ErrorOperationNotSupported(const base::Location& location,
                                 ErrorPtr* error) {
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
+  Error::AddTo(error, location, errors::stream::kDomain,
                errors::stream::kOperationNotSupported,
                "Stream operation not supported");
   return false;
 }
 
-bool ErrorReadPastEndOfStream(const base::Location& location,
-                              ErrorPtr* error) {
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
-               errors::stream::kPartialData,
-               "Reading past the end of stream");
+bool ErrorReadPastEndOfStream(const base::Location& location, ErrorPtr* error) {
+  Error::AddTo(error, location, errors::stream::kDomain,
+               errors::stream::kPartialData, "Reading past the end of stream");
   return false;
 }
 
-bool ErrorOperationTimeout(const base::Location& location,
-                           ErrorPtr* error) {
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
-               errors::stream::kTimeout,
-               "Operation timed out");
+bool ErrorOperationTimeout(const base::Location& location, ErrorPtr* error) {
+  Error::AddTo(error, location, errors::stream::kDomain,
+               errors::stream::kTimeout, "Operation timed out");
   return false;
 }
 
@@ -144,9 +130,7 @@ bool CheckInt64Overflow(const base::Location& location,
         return true;
     }
   }
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
+  Error::AddTo(error, location, errors::stream::kDomain,
                errors::stream::kInvalidParameter,
                "The stream offset value is out of range");
   return false;
@@ -174,9 +158,7 @@ bool CalculateStreamPosition(const base::Location& location,
       break;
 
     default:
-      Error::AddTo(error,
-                   location,
-                   errors::stream::kDomain,
+      Error::AddTo(error, location, errors::stream::kDomain,
                    errors::stream::kInvalidParameter,
                    "Invalid stream position whence");
       return false;

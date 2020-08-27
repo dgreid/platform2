@@ -88,7 +88,7 @@ class BRILLO_EXPORT DBusMethodResponseBase {
 // DBusMethodResponse is an explicitly-typed version of DBusMethodResponse.
 // Using DBusMethodResponse<Types...> indicates the types a D-Bus method
 // is expected to return.
-template<typename... Types>
+template <typename... Types>
 class DBusMethodResponse : public DBusMethodResponseBase {
  public:
   // Make the base class's custom constructor available to DBusMethodResponse.

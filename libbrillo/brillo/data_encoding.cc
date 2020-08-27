@@ -30,9 +30,8 @@ inline int HexToDec(int hex) {
 std::string Base64EncodeHelper(const void* data, size_t size) {
   std::vector<char> buffer;
   buffer.resize(modp_b64_encode_len(size));
-  size_t out_size = modp_b64_encode(buffer.data(),
-                                    static_cast<const char*>(data),
-                                    size);
+  size_t out_size =
+      modp_b64_encode(buffer.data(), static_cast<const char*>(data), size);
   return std::string{buffer.begin(), buffer.begin() + out_size};
 }
 
@@ -59,8 +58,7 @@ std::string UrlEncode(const char* data, bool encodeSpaceAsPlus) {
       // 'application/x-www-form-urlencoded'
       result += '+';
     } else {
-      base::StringAppendF(&result,
-                          "%%%02X",
+      base::StringAppendF(&result, "%%%02X",
                           static_cast<unsigned char>(c));  // Encode as %NN
     }
   }

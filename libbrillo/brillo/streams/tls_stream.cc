@@ -287,10 +287,9 @@ void TlsStream::TlsStreamImpl::CancelPendingAsyncOperations() {
   weak_ptr_factory_.InvalidateWeakPtrs();
 }
 
-bool TlsStream::TlsStreamImpl::ReportError(
-    ErrorPtr* error,
-    const base::Location& location,
-    const std::string& message) {
+bool TlsStream::TlsStreamImpl::ReportError(ErrorPtr* error,
+                                           const base::Location& location,
+                                           const std::string& message) {
   const char* file = nullptr;
   int line = 0;
   const char* data = 0;
@@ -331,13 +330,13 @@ int TlsStream::TlsStreamImpl::OnCertVerifyResultsStatic(int ok,
                                                         X509_STORE_CTX* ctx) {
   // Obtain the pointer to the instance of TlsStream::TlsStreamImpl from the
   // SSL CTX object referenced by |ctx|.
-  SSL* ssl = static_cast<SSL*>(X509_STORE_CTX_get_ex_data(
-      ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
+  SSL* ssl = static_cast<SSL*>(
+      X509_STORE_CTX_get_ex_data(ctx, SSL_get_ex_data_X509_STORE_CTX_idx()));
   SSL_CTX* ssl_ctx = ssl ? SSL_get_SSL_CTX(ssl) : nullptr;
   TlsStream::TlsStreamImpl* self = nullptr;
   if (ssl_ctx) {
-    self = static_cast<TlsStream::TlsStreamImpl*>(SSL_CTX_get_ex_data(
-        ssl_ctx, ssl_ctx_private_data_index));
+    self = static_cast<TlsStream::TlsStreamImpl*>(
+        SSL_CTX_get_ex_data(ssl_ctx, ssl_ctx_private_data_index));
   }
   return self ? self->OnCertVerifyResults(ok, ctx) : ok;
 }
@@ -394,11 +393,9 @@ bool TlsStream::TlsStreamImpl::Init(StreamPtr socket,
   // We might have no message loop (e.g. we are in unit tests).
   if (MessageLoop::ThreadHasCurrent()) {
     MessageLoop::current()->PostTask(
-        FROM_HERE,
-        base::BindOnce(&TlsStreamImpl::DoHandshake,
-                       weak_ptr_factory_.GetWeakPtr(),
-                       success_callback,
-                       error_callback));
+        FROM_HERE, base::BindOnce(&TlsStreamImpl::DoHandshake,
+                                  weak_ptr_factory_.GetWeakPtr(),
+                                  success_callback, error_callback));
   } else {
     DoHandshake(success_callback, error_callback);
   }
@@ -427,22 +424,20 @@ void TlsStream::TlsStreamImpl::DoHandshake(
   int err = SSL_get_error(ssl_.get(), res);
   if (err == SSL_ERROR_WANT_READ) {
     VLOG(1) << "Waiting for read data...";
-    bool ok = socket_->WaitForData(
-        Stream::AccessMode::READ,
-        base::Bind(&TlsStreamImpl::RetryHandshake,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   success_callback, error_callback),
-        &error);
+    bool ok = socket_->WaitForData(Stream::AccessMode::READ,
+                                   base::Bind(&TlsStreamImpl::RetryHandshake,
+                                              weak_ptr_factory_.GetWeakPtr(),
+                                              success_callback, error_callback),
+                                   &error);
     if (ok)
       return;
   } else if (err == SSL_ERROR_WANT_WRITE) {
     VLOG(1) << "Waiting for write data...";
-    bool ok = socket_->WaitForData(
-        Stream::AccessMode::WRITE,
-        base::Bind(&TlsStreamImpl::RetryHandshake,
-                   weak_ptr_factory_.GetWeakPtr(),
-                   success_callback, error_callback),
-        &error);
+    bool ok = socket_->WaitForData(Stream::AccessMode::WRITE,
+                                   base::Bind(&TlsStreamImpl::RetryHandshake,
+                                              weak_ptr_factory_.GetWeakPtr(),
+                                              success_callback, error_callback),
+                                   &error);
     if (ok)
       return;
   } else {
@@ -470,10 +465,10 @@ void TlsStream::Connect(StreamPtr socket,
 
   TlsStreamImpl* pimpl = stream->impl_.get();
   ErrorPtr error;
-  bool success = pimpl->Init(std::move(socket), host,
-                             base::Bind(success_callback,
-                                        base::Passed(std::move(stream))),
-                             error_callback, &error);
+  bool success =
+      pimpl->Init(std::move(socket), host,
+                  base::Bind(success_callback, base::Passed(std::move(stream))),
+                  error_callback, &error);
 
   if (!success)
     error_callback.Run(error.get());

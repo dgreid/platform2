@@ -7,8 +7,8 @@
 #include <brillo/any.h>
 #include <gtest/gtest.h>
 
-using brillo::internal_details::Buffer;
 using brillo::GetTypeTag;
+using brillo::internal_details::Buffer;
 
 TEST(Buffer, Empty) {
   Buffer buffer;
@@ -39,8 +39,7 @@ TEST(Buffer, Store_Pointers) {
   buffer.Assign(nullptr);
   EXPECT_FALSE(buffer.IsEmpty());
   EXPECT_EQ(Buffer::kContained, buffer.storage_);
-  EXPECT_STREQ(GetTypeTag<std::nullptr_t>(),
-               buffer.GetDataPtr()->GetTypeTag());
+  EXPECT_STREQ(GetTypeTag<std::nullptr_t>(), buffer.GetDataPtr()->GetTypeTag());
 
   // char *
   buffer.Assign("abcd");

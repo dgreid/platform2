@@ -30,9 +30,7 @@ class FakeMessageLoopTest : public ::testing::Test {
     loop_.reset(new FakeMessageLoop(nullptr));
     EXPECT_TRUE(loop_.get());
   }
-  void TearDown() override {
-    EXPECT_FALSE(loop_->PendingTasks());
-  }
+  void TearDown() override { EXPECT_FALSE(loop_->PendingTasks()); }
 
   base::SimpleTestClock clock_;
   std::unique_ptr<FakeMessageLoop> loop_;

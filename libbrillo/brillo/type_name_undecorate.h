@@ -23,7 +23,7 @@
 
 namespace brillo {
 
-template<typename T>
+template <typename T>
 const char* GetTypeTag() {
 #if defined(USE_RTTI_FOR_TYPE_TAGS) && \
     (defined(__cpp_rtti) || defined(__GXX_RTTI))
@@ -59,7 +59,7 @@ BRILLO_EXPORT std::string UndecorateTypeName(const char* type_name);
 BRILLO_EXPORT std::string GetUndecoratedTypeNameForTag(const char* type_tag);
 
 // A template helper function that returns the undecorated type name for type T.
-template<typename T>
+template <typename T>
 inline std::string GetUndecoratedTypeName() {
   return GetUndecoratedTypeNameForTag(GetTypeTag<T>());
 }

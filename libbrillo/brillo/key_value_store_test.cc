@@ -100,8 +100,8 @@ TEST_F(KeyValueStoreTest, EmptyTest) {
 }
 
 TEST_F(KeyValueStoreTest, LoadAndReloadTest) {
-  EXPECT_TRUE(store_.LoadFromString(
-      "A=B\nC=\nFOO=BAR=BAZ\nBAR=BAX\nMISSING=NEWLINE"));
+  EXPECT_TRUE(
+      store_.LoadFromString("A=B\nC=\nFOO=BAR=BAZ\nBAR=BAX\nMISSING=NEWLINE"));
 
   map<string, string> expected = {{"A", "B"},
                                   {"C", ""},
@@ -230,7 +230,9 @@ TEST_F(KeyValueStoreTest, UnterminatedMultilineValue) {
 
 TEST_F(KeyValueStoreTest, GetKeys) {
   map<string, string> entries = {
-    {"1", "apple"}, {"2", "banana"}, {"3", "cherry"}
+      {"1", "apple"},
+      {"2", "banana"},
+      {"3", "cherry"},
   };
   for (const auto& it : entries) {
     store_.SetString(it.first, it.second);

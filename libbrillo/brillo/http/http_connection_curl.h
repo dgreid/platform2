@@ -35,9 +35,8 @@ class BRILLO_EXPORT Connection : public http::Connection {
   bool SetRequestData(StreamPtr stream, brillo::ErrorPtr* error) override;
   void SetResponseData(StreamPtr stream) override;
   bool FinishRequest(brillo::ErrorPtr* error) override;
-  RequestID FinishRequestAsync(
-      const SuccessCallback& success_callback,
-      const ErrorCallback& error_callback) override;
+  RequestID FinishRequestAsync(const SuccessCallback& success_callback,
+                               const ErrorCallback& error_callback) override;
 
   int GetResponseStatusCode() const override;
   std::string GetResponseStatusText() const override;

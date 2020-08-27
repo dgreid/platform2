@@ -84,10 +84,9 @@ class BRILLO_EXPORT Transport : public std::enable_shared_from_this<Transport> {
   // Initiates an asynchronous transfer on the given |connection|.
   // The actual implementation of an async I/O is transport-specific.
   // Returns a request ID which can be used to cancel the request.
-  virtual RequestID StartAsyncTransfer(
-      Connection* connection,
-      const SuccessCallback& success_callback,
-      const ErrorCallback& error_callback) = 0;
+  virtual RequestID StartAsyncTransfer(Connection* connection,
+                                       const SuccessCallback& success_callback,
+                                       const ErrorCallback& error_callback) = 0;
 
   // Cancels a pending asynchronous request. This will cancel a pending request
   // scheduled by the transport while the I/O operations are still in progress.

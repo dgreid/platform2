@@ -484,9 +484,8 @@ class BRILLO_EXPORT Stream {
       size_t size_written);
 
   // Helper callbacks to implement FlushAsync().
-  BRILLO_PRIVATE void FlushAsyncCallback(
-      const base::Closure& success_callback,
-      const ErrorCallback& error_callback);
+  BRILLO_PRIVATE void FlushAsyncCallback(const base::Closure& success_callback,
+                                         const ErrorCallback& error_callback);
 
   // Data members for asynchronous read operations.
   bool is_async_read_pending_{false};

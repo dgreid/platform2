@@ -22,9 +22,7 @@ std::string UndecorateTypeName(const char* type_name) {
   int status = 0;
 
   std::unique_ptr<char, decltype(&std::free)> res{
-      abi::__cxa_demangle(type_name, nullptr, nullptr, &status),
-      std::free
-  };
+      abi::__cxa_demangle(type_name, nullptr, nullptr, &status), std::free};
 
   return (status == 0) ? res.get() : type_name;
 #else

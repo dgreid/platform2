@@ -180,12 +180,8 @@ TEST(DBusParamReader, ManyArgs_With_OUT) {
                       VariantDictionary{{"key", std::string{"value"}}});
   MessageReader reader(message.get());
   bool called = false;
-  auto callback = [&called](bool p1,
-                            std::string* p2,
-                            int p3,
-                            int* p4,
-                            const VariantDictionary& p5,
-                            bool* p6) {
+  auto callback = [&called](bool p1, std::string* p2, int p3, int* p4,
+                            const VariantDictionary& p5, bool* p6) {
     EXPECT_TRUE(p1);
     EXPECT_EQ("", *p2);
     EXPECT_EQ(1972, p3);
@@ -195,13 +191,9 @@ TEST(DBusParamReader, ManyArgs_With_OUT) {
     EXPECT_FALSE(*p6);
     called = true;
   };
-  EXPECT_TRUE((DBusParamReader<true,
-                               bool,
-                               std::string*,
-                               int,
-                               int*,
-                               VariantDictionary,
-                               bool*>::Invoke(callback, &reader, nullptr)));
+  EXPECT_TRUE(
+      (DBusParamReader<true, bool, std::string*, int, int*, VariantDictionary,
+                       bool*>::Invoke(callback, &reader, nullptr)));
   EXPECT_TRUE(called);
 }
 

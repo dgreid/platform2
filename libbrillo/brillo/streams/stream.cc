@@ -55,9 +55,9 @@ bool Stream::ReadAllAsync(void* buffer,
     return false;
   }
 
-  auto callback = base::Bind(&Stream::ReadAllAsyncCallback,
-                             weak_ptr_factory_.GetWeakPtr(), buffer,
-                             size_to_read, success_callback, error_callback);
+  auto callback =
+      base::Bind(&Stream::ReadAllAsyncCallback, weak_ptr_factory_.GetWeakPtr(),
+                 buffer, size_to_read, success_callback, error_callback);
   return ReadAsyncImpl(buffer, size_to_read, callback, error_callback, error,
                        true);
 }
@@ -128,9 +128,9 @@ bool Stream::WriteAllAsync(const void* buffer,
     return false;
   }
 
-  auto callback = base::Bind(&Stream::WriteAllAsyncCallback,
-                             weak_ptr_factory_.GetWeakPtr(), buffer,
-                             size_to_write, success_callback, error_callback);
+  auto callback =
+      base::Bind(&Stream::WriteAllAsyncCallback, weak_ptr_factory_.GetWeakPtr(),
+                 buffer, size_to_write, success_callback, error_callback);
   return WriteAsyncImpl(buffer, size_to_write, callback, error_callback, error,
                         true);
 }
@@ -177,9 +177,9 @@ bool Stream::WriteAllBlocking(const void* buffer,
 bool Stream::FlushAsync(const base::Closure& success_callback,
                         const ErrorCallback& error_callback,
                         ErrorPtr* /* error */) {
-  auto callback = base::Bind(&Stream::FlushAsyncCallback,
-                             weak_ptr_factory_.GetWeakPtr(),
-                             success_callback, error_callback);
+  auto callback =
+      base::Bind(&Stream::FlushAsyncCallback, weak_ptr_factory_.GetWeakPtr(),
+                 success_callback, error_callback);
   MessageLoop::current()->PostTask(FROM_HERE, callback);
   return true;
 }
@@ -212,10 +212,9 @@ bool Stream::ReadAsyncImpl(
   if (read > 0 || eos) {
     if (force_async_callback) {
       MessageLoop::current()->PostTask(
-          FROM_HERE,
-          base::BindOnce(&Stream::OnReadAsyncDone,
-                         weak_ptr_factory_.GetWeakPtr(),
-                         success_callback, read, eos));
+          FROM_HERE, base::BindOnce(&Stream::OnReadAsyncDone,
+                                    weak_ptr_factory_.GetWeakPtr(),
+                                    success_callback, read, eos));
     } else {
       is_async_read_pending_ = false;
       success_callback.Run(read, eos);
@@ -277,10 +276,9 @@ bool Stream::WriteAsyncImpl(
   if (written > 0) {
     if (force_async_callback) {
       MessageLoop::current()->PostTask(
-          FROM_HERE,
-          base::BindOnce(&Stream::OnWriteAsyncDone,
-                         weak_ptr_factory_.GetWeakPtr(),
-                         success_callback, written));
+          FROM_HERE, base::BindOnce(&Stream::OnWriteAsyncDone,
+                                    weak_ptr_factory_.GetWeakPtr(),
+                                    success_callback, written));
     } else {
       is_async_write_pending_ = false;
       success_callback.Run(written);
@@ -296,8 +294,7 @@ bool Stream::WriteAsyncImpl(
 }
 
 void Stream::OnWriteAsyncDone(
-    const base::Callback<void(size_t)>& success_callback,
-    size_t size_written) {
+    const base::Callback<void(size_t)>& success_callback, size_t size_written) {
   is_async_write_pending_ = false;
   success_callback.Run(size_written);
 }

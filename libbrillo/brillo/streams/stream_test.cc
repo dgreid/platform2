@@ -14,12 +14,12 @@
 #include <brillo/message_loops/fake_message_loop.h>
 #include <brillo/streams/stream_errors.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
 using testing::SaveArg;
 using testing::SetArgPointee;
-using testing::_;
 
 namespace {
 
@@ -105,8 +105,7 @@ TEST(Stream, SetPosition) {
   // Test too large an offset (that doesn't fit in signed 64 bit value).
   ErrorPtr error;
   uint64_t max_offset = std::numeric_limits<int64_t>::max();
-  EXPECT_CALL(stream_mock, Seek(max_offset, _, _, _))
-      .WillOnce(Return(true));
+  EXPECT_CALL(stream_mock, Seek(max_offset, _, _, _)).WillOnce(Return(true));
   EXPECT_TRUE(stream_mock.SetPosition(max_offset, nullptr));
 
   EXPECT_FALSE(stream_mock.SetPosition(max_offset + 1, &error));
@@ -120,9 +119,10 @@ TEST(Stream, ReadAsync) {
   bool failed = false;
   auto success_callback = base::Bind(
       [](size_t* read_size, bool* succeeded, size_t size) {
-    *read_size = size;
-    *succeeded = true;
-  }, &read_size, &succeeded);
+        *read_size = size;
+        *succeeded = true;
+      },
+      &read_size, &succeeded);
   auto error_callback = base::Bind(&SetToTrue, &failed);
 
   MockStreamImpl stream_mock;
@@ -155,9 +155,8 @@ TEST(Stream, ReadAsync) {
   // Making the data available via data_callback should not schedule the
   // success callback from the main loop and run it directly instead.
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 10, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(7),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(7), SetArgPointee<3>(false), Return(true)));
   data_callback.Run(AccessMode::READ);
   EXPECT_EQ(7u, read_size);
   EXPECT_FALSE(failed);
@@ -166,9 +165,9 @@ TEST(Stream, ReadAsync) {
 TEST(Stream, ReadAsync_DontWaitForData) {
   bool succeeded = false;
   bool failed = false;
-  auto success_callback = base::Bind([](bool* succeeded, size_t /* size */) {
-    *succeeded = true;
-  }, &succeeded);
+  auto success_callback =
+      base::Bind([](bool* succeeded, size_t /* size */) { *succeeded = true; },
+                 &succeeded);
   auto error_callback = base::Bind(&SetToTrue, &failed);
 
   MockStreamImpl stream_mock;
@@ -206,8 +205,8 @@ TEST(Stream, ReadAsync_DontWaitForData) {
 TEST(Stream, ReadAllAsync) {
   bool succeeded = false;
   bool failed = false;
-  auto success_callback = base::Bind([](bool* succeeded) { *succeeded = true; },
-                                     &succeeded);
+  auto success_callback =
+      base::Bind([](bool* succeeded) { *succeeded = true; }, &succeeded);
   auto error_callback = base::Bind(&SetToTrue, &failed);
 
   MockStreamImpl stream_mock;
@@ -230,9 +229,8 @@ TEST(Stream, ReadAllAsync) {
   // ReadAllAsync() will try to read non blocking until the read would block
   // before it waits for the data to be available again.
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 10, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(7),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(7), SetArgPointee<3>(false), Return(true)));
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf + 7, 3, _, _, _))
       .WillOnce(
           DoAll(SetArgPointee<2>(0), SetArgPointee<3>(false), Return(true)));
@@ -244,9 +242,8 @@ TEST(Stream, ReadAllAsync) {
   testing::Mock::VerifyAndClearExpectations(&stream_mock);
 
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf + 7, 3, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(3),
-                      SetArgPointee<3>(true),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(3), SetArgPointee<3>(true), Return(true)));
   data_callback.Run(AccessMode::READ);
   EXPECT_TRUE(succeeded);
   EXPECT_FALSE(failed);
@@ -255,13 +252,15 @@ TEST(Stream, ReadAllAsync) {
 TEST(Stream, ReadAllAsync_EOS) {
   bool succeeded = false;
   bool failed = false;
-  auto success_callback = base::Bind([](bool* succeeded) { *succeeded = true; },
-                                     &succeeded);
-  auto error_callback = base::Bind([](bool* failed, const Error* error) {
-    ASSERT_EQ(errors::stream::kDomain, error->GetDomain());
-    ASSERT_EQ(errors::stream::kPartialData, error->GetCode());
-    *failed = true;
-  }, &failed);
+  auto success_callback =
+      base::Bind([](bool* succeeded) { *succeeded = true; }, &succeeded);
+  auto error_callback = base::Bind(
+      [](bool* failed, const Error* error) {
+        ASSERT_EQ(errors::stream::kDomain, error->GetDomain());
+        ASSERT_EQ(errors::stream::kPartialData, error->GetCode());
+        *failed = true;
+      },
+      &failed);
 
   MockStreamImpl stream_mock;
   base::Callback<void(AccessMode)> data_callback;
@@ -278,9 +277,8 @@ TEST(Stream, ReadAllAsync_EOS) {
   // ReadAsyncAll() should finish and fail once ReadNonBlocking() returns an
   // end-of-stream condition.
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 10, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(7),
-                      SetArgPointee<3>(true),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(7), SetArgPointee<3>(true), Return(true)));
   data_callback.Run(AccessMode::READ);
   EXPECT_FALSE(succeeded);
   EXPECT_TRUE(failed);
@@ -292,36 +290,31 @@ TEST(Stream, ReadBlocking) {
   size_t read = 0;
 
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(24),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(24), SetArgPointee<3>(false), Return(true)));
   EXPECT_TRUE(stream_mock.ReadBlocking(buf, sizeof(buf), &read, nullptr));
   EXPECT_EQ(24, read);
 
   EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(0),
-                      SetArgPointee<3>(true),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
   EXPECT_TRUE(stream_mock.ReadBlocking(buf, sizeof(buf), &read, nullptr));
   EXPECT_EQ(0, read);
 
   {
     InSequence seq;
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-        .WillOnce(DoAll(SetArgPointee<2>(0),
-                        SetArgPointee<3>(false),
-                        Return(true)));
+        .WillOnce(
+            DoAll(SetArgPointee<2>(0), SetArgPointee<3>(false), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-        .WillOnce(DoAll(SetArgPointee<2>(0),
-                        SetArgPointee<3>(false),
-                        Return(true)));
+        .WillOnce(
+            DoAll(SetArgPointee<2>(0), SetArgPointee<3>(false), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-        .WillOnce(DoAll(SetArgPointee<2>(124),
-                        SetArgPointee<3>(false),
+        .WillOnce(DoAll(SetArgPointee<2>(124), SetArgPointee<3>(false),
                         Return(true)));
   }
   EXPECT_TRUE(stream_mock.ReadBlocking(buf, sizeof(buf), &read, nullptr));
@@ -330,9 +323,8 @@ TEST(Stream, ReadBlocking) {
   {
     InSequence seq;
     EXPECT_CALL(stream_mock, ReadNonBlocking(buf, 1024, _, _, _))
-        .WillOnce(DoAll(SetArgPointee<2>(0),
-                        SetArgPointee<3>(false),
-                        Return(true)));
+        .WillOnce(
+            DoAll(SetArgPointee<2>(0), SetArgPointee<3>(false), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::READ, _, _, _))
         .WillOnce(Return(false));
   }
@@ -369,9 +361,8 @@ TEST(Stream, ReadAllBlocking) {
 TEST(Stream, WriteAsync) {
   size_t write_size = 0;
   bool failed = false;
-  auto success_callback = base::Bind([](size_t* write_size, size_t size) {
-    *write_size = size;
-  }, &write_size);
+  auto success_callback = base::Bind(
+      [](size_t* write_size, size_t size) { *write_size = size; }, &write_size);
   auto error_callback = base::Bind(&SetToTrue, &failed);
 
   MockStreamImpl stream_mock;
@@ -408,8 +399,8 @@ TEST(Stream, WriteAsync) {
 TEST(Stream, WriteAllAsync) {
   bool succeeded = false;
   bool failed = false;
-  auto success_callback = base::Bind([](bool* succeeded) { *succeeded = true; },
-                                     &succeeded);
+  auto success_callback =
+      base::Bind([](bool* succeeded) { *succeeded = true; }, &succeeded);
   auto error_callback = base::Bind(&SetToTrue, &failed);
 
   MockStreamImpl stream_mock;
@@ -457,15 +448,15 @@ TEST(Stream, WriteBlocking) {
   {
     InSequence seq;
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
-          .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
+        .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
-          .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
+        .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(true));
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
-          .WillOnce(DoAll(SetArgPointee<2>(124), Return(true)));
+        .WillOnce(DoAll(SetArgPointee<2>(124), Return(true)));
   }
   EXPECT_TRUE(stream_mock.WriteBlocking(buf, sizeof(buf), &written, nullptr));
   EXPECT_EQ(124, written);
@@ -473,7 +464,7 @@ TEST(Stream, WriteBlocking) {
   {
     InSequence seq;
     EXPECT_CALL(stream_mock, WriteNonBlocking(buf, 1024, _, _))
-          .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
+        .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
     EXPECT_CALL(stream_mock, WaitForDataBlocking(AccessMode::WRITE, _, _, _))
         .WillOnce(Return(false));
   }

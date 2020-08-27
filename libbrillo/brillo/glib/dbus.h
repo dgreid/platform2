@@ -143,9 +143,7 @@ class BRILLO_EXPORT Proxy {
                                              bool connect_to_name_owner);
 
   BRILLO_PRIVATE static value_type GetGPeerProxy(
-      const BusConnection& connection,
-      const char* path,
-      const char* interface);
+      const BusConnection& connection, const char* path, const char* interface);
 
   BRILLO_PRIVATE operator int() const;  // for safe bool cast
   friend void swap(Proxy& x, Proxy& y);
@@ -174,10 +172,10 @@ BRILLO_EXPORT bool RegisterExclusiveService(const BusConnection& connection,
                                             const char* service_path,
                                             GObject* object);
 
-template<typename F>  // F is a function signature
+template <typename F>  // F is a function signature
 class MonitorConnection;
 
-template<typename A1>
+template <typename A1>
 class MonitorConnection<void(A1)> {
  public:
   MonitorConnection(const Proxy& proxy,
@@ -199,7 +197,7 @@ class MonitorConnection<void(A1)> {
   void* object_;
 };
 
-template<typename A1, typename A2>
+template <typename A1, typename A2>
 class MonitorConnection<void(A1, A2)> {
  public:
   MonitorConnection(const Proxy& proxy,
@@ -221,7 +219,7 @@ class MonitorConnection<void(A1, A2)> {
   void* object_;
 };
 
-template<typename A1, typename A2, typename A3>
+template <typename A1, typename A2, typename A3>
 class MonitorConnection<void(A1, A2, A3)> {
  public:
   MonitorConnection(const Proxy& proxy,
@@ -243,7 +241,7 @@ class MonitorConnection<void(A1, A2, A3)> {
   void* object_;
 };
 
-template<typename A1, typename A2, typename A3, typename A4>
+template <typename A1, typename A2, typename A3, typename A4>
 class MonitorConnection<void(A1, A2, A3, A4)> {
  public:
   MonitorConnection(const Proxy& proxy,
@@ -252,12 +250,8 @@ class MonitorConnection<void(A1, A2, A3, A4)> {
                     void* object)
       : proxy_(proxy), name_(name), monitor_(monitor), object_(object) {}
 
-  static void Run(::DBusGProxy*,
-                  A1 x,
-                  A2 y,
-                  A3 z,
-                  A4 w,
-                  MonitorConnection* self) {
+  static void Run(
+      ::DBusGProxy*, A1 x, A2 y, A3 z, A4 w, MonitorConnection* self) {
     self->monitor_(self->object_, x, y, z, w);
   }
   const Proxy& proxy() const { return proxy_; }
@@ -270,7 +264,7 @@ class MonitorConnection<void(A1, A2, A3, A4)> {
   void* object_;
 };
 
-template<typename A1>
+template <typename A1>
 MonitorConnection<void(A1)>* Monitor(const Proxy& proxy,
                                      const char* name,
                                      void (*monitor)(void*, A1),
@@ -279,14 +273,14 @@ MonitorConnection<void(A1)>* Monitor(const Proxy& proxy,
 
   ConnectionType* result = new ConnectionType(proxy, name, monitor, object);
 
-  ::dbus_g_proxy_add_signal(
-      proxy.gproxy(), name, glib::type_to_gtypeid<A1>(), G_TYPE_INVALID);
+  ::dbus_g_proxy_add_signal(proxy.gproxy(), name, glib::type_to_gtypeid<A1>(),
+                            G_TYPE_INVALID);
   ::dbus_g_proxy_connect_signal(
       proxy.gproxy(), name, G_CALLBACK(&ConnectionType::Run), result, nullptr);
   return result;
 }
 
-template<typename A1, typename A2>
+template <typename A1, typename A2>
 MonitorConnection<void(A1, A2)>* Monitor(const Proxy& proxy,
                                          const char* name,
                                          void (*monitor)(void*, A1, A2),
@@ -295,17 +289,14 @@ MonitorConnection<void(A1, A2)>* Monitor(const Proxy& proxy,
 
   ConnectionType* result = new ConnectionType(proxy, name, monitor, object);
 
-  ::dbus_g_proxy_add_signal(proxy.gproxy(),
-                            name,
-                            glib::type_to_gtypeid<A1>(),
-                            glib::type_to_gtypeid<A2>(),
-                            G_TYPE_INVALID);
+  ::dbus_g_proxy_add_signal(proxy.gproxy(), name, glib::type_to_gtypeid<A1>(),
+                            glib::type_to_gtypeid<A2>(), G_TYPE_INVALID);
   ::dbus_g_proxy_connect_signal(
       proxy.gproxy(), name, G_CALLBACK(&ConnectionType::Run), result, nullptr);
   return result;
 }
 
-template<typename A1, typename A2, typename A3>
+template <typename A1, typename A2, typename A3>
 MonitorConnection<void(A1, A2, A3)>* Monitor(const Proxy& proxy,
                                              const char* name,
                                              void (*monitor)(void*, A1, A2, A3),
@@ -314,18 +305,15 @@ MonitorConnection<void(A1, A2, A3)>* Monitor(const Proxy& proxy,
 
   ConnectionType* result = new ConnectionType(proxy, name, monitor, object);
 
-  ::dbus_g_proxy_add_signal(proxy.gproxy(),
-                            name,
-                            glib::type_to_gtypeid<A1>(),
+  ::dbus_g_proxy_add_signal(proxy.gproxy(), name, glib::type_to_gtypeid<A1>(),
                             glib::type_to_gtypeid<A2>(),
-                            glib::type_to_gtypeid<A3>(),
-                            G_TYPE_INVALID);
+                            glib::type_to_gtypeid<A3>(), G_TYPE_INVALID);
   ::dbus_g_proxy_connect_signal(
       proxy.gproxy(), name, G_CALLBACK(&ConnectionType::Run), result, nullptr);
   return result;
 }
 
-template<typename A1, typename A2, typename A3, typename A4>
+template <typename A1, typename A2, typename A3, typename A4>
 MonitorConnection<void(A1, A2, A3, A4)>* Monitor(
     const Proxy& proxy,
     const char* name,
@@ -335,26 +323,22 @@ MonitorConnection<void(A1, A2, A3, A4)>* Monitor(
 
   ConnectionType* result = new ConnectionType(proxy, name, monitor, object);
 
-  ::dbus_g_proxy_add_signal(proxy.gproxy(),
-                            name,
-                            glib::type_to_gtypeid<A1>(),
+  ::dbus_g_proxy_add_signal(proxy.gproxy(), name, glib::type_to_gtypeid<A1>(),
                             glib::type_to_gtypeid<A2>(),
                             glib::type_to_gtypeid<A3>(),
-                            glib::type_to_gtypeid<A4>(),
-                            G_TYPE_INVALID);
+                            glib::type_to_gtypeid<A4>(), G_TYPE_INVALID);
   ::dbus_g_proxy_connect_signal(
       proxy.gproxy(), name, G_CALLBACK(&ConnectionType::Run), result, nullptr);
   return result;
 }
 
-template<typename F>
+template <typename F>
 void Disconnect(MonitorConnection<F>* connection) {
   typedef MonitorConnection<F> ConnectionType;
 
-  ::dbus_g_proxy_disconnect_signal(connection->proxy().gproxy(),
-                                   connection->name().c_str(),
-                                   G_CALLBACK(&ConnectionType::Run),
-                                   connection);
+  ::dbus_g_proxy_disconnect_signal(
+      connection->proxy().gproxy(), connection->name().c_str(),
+      G_CALLBACK(&ConnectionType::Run), connection);
   delete connection;
 }
 
@@ -367,8 +351,8 @@ void Disconnect(MonitorConnection<F>* connection) {
 // future. However, I don't yet have enough cases to generalize from.
 
 BRILLO_EXPORT bool CallPtrArray(const Proxy& proxy,
-                                  const char* method,
-                                  glib::ScopedPtrArray<const char*>* result);
+                                const char* method,
+                                glib::ScopedPtrArray<const char*>* result);
 
 // \brief RetrieveProperty() retrieves a property of an object associated with a
 //  proxy.
@@ -392,7 +376,7 @@ BRILLO_EXPORT bool CallPtrArray(const Proxy& proxy,
 //   std::cout << "Battery charge is " << x << "% of capacity.";
 // \end_example
 
-template<typename T>
+template <typename T>
 inline bool RetrieveProperty(const Proxy& proxy,
                              const char* interface,
                              const char* property,
@@ -401,10 +385,8 @@ inline bool RetrieveProperty(const Proxy& proxy,
   glib::Value value;
 
   if (!::dbus_g_proxy_call(proxy.gproxy(), "Get", &Resetter(&error).lvalue(),
-                           G_TYPE_STRING, interface,
-                           G_TYPE_STRING, property,
-                           G_TYPE_INVALID,
-                           G_TYPE_VALUE, &value,
+                           G_TYPE_STRING, interface, G_TYPE_STRING, property,
+                           G_TYPE_INVALID, G_TYPE_VALUE, &value,
                            G_TYPE_INVALID)) {
     LOG(ERROR) << "Getting property failed: "
                << (error->message ? error->message : "Unknown Error.");
@@ -456,9 +438,7 @@ class BRILLO_EXPORT SignalWatcher {
 
   // A D-Bus message filter to receive signals.
   BRILLO_PRIVATE static DBusHandlerResult FilterDBusMessage(
-      DBusConnection* dbus_conn,
-      DBusMessage* message,
-      void* data);
+      DBusConnection* dbus_conn, DBusMessage* message, void* data);
   std::string interface_;
   std::string signal_;
 };

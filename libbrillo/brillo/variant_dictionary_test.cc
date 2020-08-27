@@ -8,8 +8,8 @@
 #include <brillo/variant_dictionary.h>
 #include <gtest/gtest.h>
 
-using brillo::VariantDictionary;
 using brillo::GetVariantValueOrDefault;
+using brillo::VariantDictionary;
 
 TEST(VariantDictionary, GetVariantValueOrDefault) {
   VariantDictionary dictionary;

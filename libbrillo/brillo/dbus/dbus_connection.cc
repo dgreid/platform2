@@ -6,8 +6,7 @@
 
 namespace brillo {
 
-DBusConnection::DBusConnection() {
-}
+DBusConnection::DBusConnection() {}
 
 DBusConnection::~DBusConnection() {
   if (bus_)

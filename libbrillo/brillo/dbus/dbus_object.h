@@ -122,7 +122,7 @@ class BRILLO_EXPORT DBusInterface final {
   DBusInterface(DBusObject* dbus_object, const std::string& interface_name);
 
   // Register sync DBus method handler for |method_name| as base::Callback.
-  template<typename R, typename... Args>
+  template <typename R, typename... Args>
   inline void AddSimpleMethodHandler(
       const std::string& method_name,
       const base::Callback<R(Args...)>& handler) {
@@ -132,34 +132,34 @@ class BRILLO_EXPORT DBusInterface final {
 
   // Register sync D-Bus method handler for |method_name| as a static
   // function.
-  template<typename R, typename... Args>
+  template <typename R, typename... Args>
   inline void AddSimpleMethodHandler(const std::string& method_name,
-                                     R(*handler)(Args...)) {
+                                     R (*handler)(Args...)) {
     Handler<SimpleDBusInterfaceMethodHandler<R, Args...>>::Add(
         this, method_name, base::Bind(handler));
   }
 
   // Register sync D-Bus method handler for |method_name| as a class member
   // function.
-  template<typename Instance, typename Class, typename R, typename... Args>
+  template <typename Instance, typename Class, typename R, typename... Args>
   inline void AddSimpleMethodHandler(const std::string& method_name,
                                      Instance instance,
-                                     R(Class::*handler)(Args...)) {
+                                     R (Class::*handler)(Args...)) {
     Handler<SimpleDBusInterfaceMethodHandler<R, Args...>>::Add(
         this, method_name, base::Bind(handler, instance));
   }
 
   // Same as above but for const-method of a class.
-  template<typename Instance, typename Class, typename R, typename... Args>
+  template <typename Instance, typename Class, typename R, typename... Args>
   inline void AddSimpleMethodHandler(const std::string& method_name,
                                      Instance instance,
-                                     R(Class::*handler)(Args...) const) {
+                                     R (Class::*handler)(Args...) const) {
     Handler<SimpleDBusInterfaceMethodHandler<R, Args...>>::Add(
         this, method_name, base::Bind(handler, instance));
   }
 
   // Register sync DBus method handler for |method_name| as base::Callback.
-  template<typename... Args>
+  template <typename... Args>
   inline void AddSimpleMethodHandlerWithError(
       const std::string& method_name,
       const base::Callback<bool(ErrorPtr*, Args...)>& handler) {
@@ -169,31 +169,32 @@ class BRILLO_EXPORT DBusInterface final {
 
   // Register sync D-Bus method handler for |method_name| as a static
   // function.
-  template<typename... Args>
-  inline void AddSimpleMethodHandlerWithError(
-      const std::string& method_name,
-      bool(*handler)(ErrorPtr*, Args...)) {
+  template <typename... Args>
+  inline void AddSimpleMethodHandlerWithError(const std::string& method_name,
+                                              bool (*handler)(ErrorPtr*,
+                                                              Args...)) {
     Handler<SimpleDBusInterfaceMethodHandlerWithError<Args...>>::Add(
         this, method_name, base::Bind(handler));
   }
 
   // Register sync D-Bus method handler for |method_name| as a class member
   // function.
-  template<typename Instance, typename Class, typename... Args>
-  inline void AddSimpleMethodHandlerWithError(
-      const std::string& method_name,
-      Instance instance,
-      bool(Class::*handler)(ErrorPtr*, Args...)) {
+  template <typename Instance, typename Class, typename... Args>
+  inline void AddSimpleMethodHandlerWithError(const std::string& method_name,
+                                              Instance instance,
+                                              bool (Class::*handler)(ErrorPtr*,
+                                                                     Args...)) {
     Handler<SimpleDBusInterfaceMethodHandlerWithError<Args...>>::Add(
         this, method_name, base::Bind(handler, instance));
   }
 
   // Same as above but for const-method of a class.
-  template<typename Instance, typename Class, typename... Args>
-  inline void AddSimpleMethodHandlerWithError(
-      const std::string& method_name,
-      Instance instance,
-      bool(Class::*handler)(ErrorPtr*, Args...) const) {
+  template <typename Instance, typename Class, typename... Args>
+  inline void AddSimpleMethodHandlerWithError(const std::string& method_name,
+                                              Instance instance,
+                                              bool (Class::*handler)(ErrorPtr*,
+                                                                     Args...)
+                                                  const) {
     Handler<SimpleDBusInterfaceMethodHandlerWithError<Args...>>::Add(
         this, method_name, base::Bind(handler, instance));
   }
@@ -243,7 +244,7 @@ class BRILLO_EXPORT DBusInterface final {
   }
 
   // Register an async DBus method handler for |method_name| as base::Callback.
-  template<typename Response, typename... Args>
+  template <typename Response, typename... Args>
   inline void AddMethodHandler(
       const std::string& method_name,
       const base::Callback<void(std::unique_ptr<Response>, Args...)>& handler) {
@@ -255,10 +256,10 @@ class BRILLO_EXPORT DBusInterface final {
 
   // Register an async D-Bus method handler for |method_name| as a static
   // function.
-  template<typename Response, typename... Args>
-  inline void AddMethodHandler(
-      const std::string& method_name,
-      void (*handler)(std::unique_ptr<Response>, Args...)) {
+  template <typename Response, typename... Args>
+  inline void AddMethodHandler(const std::string& method_name,
+                               void (*handler)(std::unique_ptr<Response>,
+                                               Args...)) {
     static_assert(std::is_base_of<DBusMethodResponseBase, Response>::value,
                   "Response must be DBusMethodResponse<T...>");
     Handler<DBusInterfaceMethodHandler<Response, Args...>>::Add(
@@ -267,14 +268,14 @@ class BRILLO_EXPORT DBusInterface final {
 
   // Register an async D-Bus method handler for |method_name| as a class member
   // function.
-  template<typename Response,
-           typename Instance,
-           typename Class,
-           typename... Args>
-  inline void AddMethodHandler(
-      const std::string& method_name,
-      Instance instance,
-      void(Class::*handler)(std::unique_ptr<Response>, Args...)) {
+  template <typename Response,
+            typename Instance,
+            typename Class,
+            typename... Args>
+  inline void AddMethodHandler(const std::string& method_name,
+                               Instance instance,
+                               void (Class::*handler)(std::unique_ptr<Response>,
+                                                      Args...)) {
     static_assert(std::is_base_of<DBusMethodResponseBase, Response>::value,
                   "Response must be DBusMethodResponse<T...>");
     Handler<DBusInterfaceMethodHandler<Response, Args...>>::Add(
@@ -282,14 +283,14 @@ class BRILLO_EXPORT DBusInterface final {
   }
 
   // Same as above but for const-method of a class.
-  template<typename Response,
-           typename Instance,
-           typename Class,
-           typename... Args>
-  inline void AddMethodHandler(
-      const std::string& method_name,
-      Instance instance,
-      void(Class::*handler)(std::unique_ptr<Response>, Args...) const) {
+  template <typename Response,
+            typename Instance,
+            typename Class,
+            typename... Args>
+  inline void AddMethodHandler(const std::string& method_name,
+                               Instance instance,
+                               void (Class::*handler)(std::unique_ptr<Response>,
+                                                      Args...) const) {
     static_assert(std::is_base_of<DBusMethodResponseBase, Response>::value,
                   "Response must be DBusMethodResponse<T...>");
     Handler<DBusInterfaceMethodHandler<Response, Args...>>::Add(
@@ -370,8 +371,8 @@ class BRILLO_EXPORT DBusInterface final {
                                   Instance instance,
                                   void (Class::*handler)(::dbus::MethodCall*,
                                                          ResponseSender)) {
-    Handler<RawDBusInterfaceMethodHandler>::Add(
-        this, method_name, base::Bind(handler, instance));
+    Handler<RawDBusInterfaceMethodHandler>::Add(this, method_name,
+                                                base::Bind(handler, instance));
   }
 
   // Register a D-Bus property.
@@ -409,7 +410,7 @@ class BRILLO_EXPORT DBusInterface final {
 
   // RegisterSignalOfType can be used to create a signal if the type of the
   // complete DBusSignal<Args...> class which is pre-defined/aliased earlier.
-  template<typename DBusSignalType>
+  template <typename DBusSignalType>
   inline std::weak_ptr<DBusSignalType> RegisterSignalOfType(
       const std::string& signal_name) {
     auto signal = std::make_shared<DBusSignalType>(
@@ -422,7 +423,7 @@ class BRILLO_EXPORT DBusInterface final {
   // RegisterSignal<t1, t2, ...>():
   //  auto signal = itf->RegisterSignal<int>("SignalName");
   // This will create a callback signal object that expects one int argument.
-  template<typename... Args>
+  template <typename... Args>
   inline std::weak_ptr<DBusSignal<Args...>> RegisterSignal(
       const std::string& signal_name) {
     return RegisterSignalOfType<DBusSignal<Args...>>(signal_name);
@@ -436,9 +437,9 @@ class BRILLO_EXPORT DBusInterface final {
   // Using struct here to allow partial specialization on HandlerType while
   // letting the compiler to deduce the type of the callback without explicitly
   // specifying it.
-  template<typename HandlerType>
+  template <typename HandlerType>
   struct Handler {
-    template<typename CallbackType>
+    template <typename CallbackType>
     inline static void Add(DBusInterface* self,
                            const std::string& method_name,
                            const CallbackType& callback) {

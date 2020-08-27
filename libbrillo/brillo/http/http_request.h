@@ -32,8 +32,8 @@ BRILLO_EXPORT extern const char kPatch[];  // Non-standard HTTP/1.1 verb
 BRILLO_EXPORT extern const char kDelete[];
 BRILLO_EXPORT extern const char kTrace[];
 BRILLO_EXPORT extern const char kConnect[];
-BRILLO_EXPORT extern const char kCopy[];   // Non-standard HTTP/1.1 verb
-BRILLO_EXPORT extern const char kMove[];   // Non-standard HTTP/1.1 verb
+BRILLO_EXPORT extern const char kCopy[];  // Non-standard HTTP/1.1 verb
+BRILLO_EXPORT extern const char kMove[];  // Non-standard HTTP/1.1 verb
 }  // namespace request_type
 
 // HTTP request header names

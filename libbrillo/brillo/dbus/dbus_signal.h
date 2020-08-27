@@ -43,7 +43,7 @@ class BRILLO_EXPORT DBusSignalBase {
 
 // DBusSignal<...> is a concrete signal proxy class that knows about the
 // exact number of signal arguments and their types.
-template<typename... Args>
+template <typename... Args>
 class DBusSignal : public DBusSignalBase {
  public:
   // Expose the custom constructor from DBusSignalBase.

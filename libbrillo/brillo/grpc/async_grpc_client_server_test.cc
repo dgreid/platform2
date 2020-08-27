@@ -23,7 +23,7 @@
 #include "brillo/grpc/async_grpc_client.h"
 #include "brillo/grpc/async_grpc_constants.h"
 #include "brillo/grpc/async_grpc_server.h"
-#include "test_rpcs.grpc.pb.h"  // NOLINT(build/include)
+#include "test_rpcs.grpc.pb.h"  // NOLINT(build/include_directory)
 
 namespace brillo {
 
@@ -35,9 +35,8 @@ namespace {
 template <typename RequestType, typename ResponseType>
 class PendingIncomingRpcQueue {
  public:
-  using HandlerDoneCallback =
-      base::Callback<void(grpc::Status status,
-                          std::unique_ptr<ResponseType> response)>;
+  using HandlerDoneCallback = base::Callback<void(
+      grpc::Status status, std::unique_ptr<ResponseType> response)>;
   using RpcHandlerCallback =
       base::Callback<void(std::unique_ptr<RequestType> request,
                           const HandlerDoneCallback& response_callback)>;
@@ -111,8 +110,8 @@ class RpcReply {
 
   // Returns a callback that should be called when a response to the outgoing
   // RPC is available.
-  base::Callback<void(grpc::Status status,
-                      std::unique_ptr<ResponseType>)> MakeWriter() {
+  base::Callback<void(grpc::Status status, std::unique_ptr<ResponseType>)>
+  MakeWriter() {
     return base::Bind(&RpcReply::OnReply, weak_ptr_factory_.GetWeakPtr());
   }
 
@@ -355,8 +354,8 @@ TEST_F(AsyncGrpcClientServerTest, OneRpcExplicitCancellation) {
   pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
   auto pending_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
   pending_rpc->handler_done_callback.Run(
-    grpc::Status(grpc::StatusCode::CANCELLED, "Cancelled on the server side"),
-    nullptr);
+      grpc::Status(grpc::StatusCode::CANCELLED, "Cancelled on the server side"),
+      nullptr);
 
   rpc_reply.Wait();
   EXPECT_TRUE(rpc_reply.IsError());
@@ -459,8 +458,7 @@ TEST_F(AsyncGrpcClientServerTest, HeavyRpcData) {
 
   auto response = std::make_unique<test_rpcs::HeavyRpcResponse>();
   response->set_data(kData);
-  pending_rpc->handler_done_callback.Run(grpc::Status::OK,
-                                         std::move(response));
+  pending_rpc->handler_done_callback.Run(grpc::Status::OK, std::move(response));
 
   rpc_reply.Wait();
   EXPECT_FALSE(rpc_reply.IsError());
@@ -602,7 +600,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
   ShutDownServer();
 
   client_->SetDefaultRpcDeadlineForTesting(
-    base::TimeDelta::FromMilliseconds(50));
+      base::TimeDelta::FromMilliseconds(50));
 
   base::TimeTicks start = base::TimeTicks::Now();
 
@@ -625,7 +623,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped_PerRequestTimeout) {
   ShutDownServer();
 
   client_->SetDefaultRpcDeadlineForTesting(
-    base::TimeDelta::FromMilliseconds(50));
+      base::TimeDelta::FromMilliseconds(50));
 
   base::TimeTicks start = base::TimeTicks::Now();
 
@@ -633,8 +631,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped_PerRequestTimeout) {
   test_rpcs::EchoIntRpcRequest request;
   request.set_int_to_echo(1);
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc,
-                   base::TimeDelta::FromMilliseconds(200),
-                   request,
+                   base::TimeDelta::FromMilliseconds(200), request,
                    rpc_reply.MakeWriter());
 
   rpc_reply.Wait();

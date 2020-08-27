@@ -14,8 +14,7 @@ DBusSignalBase::DBusSignalBase(DBusObject* dbus_object,
                                const std::string& signal_name)
     : interface_name_(interface_name),
       signal_name_(signal_name),
-      dbus_object_(dbus_object) {
-}
+      dbus_object_(dbus_object) {}
 
 bool DBusSignalBase::SendSignal(dbus::Signal* signal) const {
   // This sends the signal asynchronously.  However, the raw message inside

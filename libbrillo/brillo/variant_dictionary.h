@@ -18,7 +18,7 @@ using VariantDictionary = std::map<std::string, brillo::Any>;
 // GetVariantValueOrDefault tries to retrieve the named key from the dictionary
 // and convert it to the type T.  If the value does not exist, or the type
 // conversion fails, the default value of type T is returned.
-template<typename T>
+template <typename T>
 const T GetVariantValueOrDefault(const VariantDictionary& dictionary,
                                  const std::string& key) {
   VariantDictionary::const_iterator it = dictionary.find(key);

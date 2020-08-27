@@ -19,10 +19,10 @@ using base::FilePath;
 
 // This test assumes the following standard binaries are installed.
 #if defined(__ANDROID__)
-# define SYSTEM_PREFIX "/system"
+#define SYSTEM_PREFIX "/system"
 static const char kBinStat[] = SYSTEM_PREFIX "/bin/stat";
 #else
-# define SYSTEM_PREFIX ""
+#define SYSTEM_PREFIX ""
 static const char kBinStat[] = "/usr/bin/stat";
 #endif
 
@@ -323,7 +323,6 @@ TEST_F(ProcessTest, KillHandling) {
   EXPECT_TRUE(FindLog("did not exit normally: 9"));
 }
 
-
 TEST_F(ProcessTest, KillNoPid) {
   process_.Kill(SIGTERM, 0);
   EXPECT_TRUE(FindLog("Process not running"));
@@ -365,7 +364,9 @@ TEST_F(ProcessTest, Reset) {
   EXPECT_EQ(0, process_.Run());
 }
 
-bool ReturnFalse() { return false; }
+bool ReturnFalse() {
+  return false;
+}
 
 TEST_F(ProcessTest, PreExecCallback) {
   process_.AddArg(kBinTrue);

@@ -13,10 +13,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::AnyNumber;
 using testing::Return;
 using testing::SaveArg;
-using testing::_;
 
 namespace brillo {
 namespace dbus_utils {
@@ -36,8 +36,8 @@ class DBusSignalHandlerTest : public testing::Test {
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     // Use a mock object proxy.
-    mock_object_proxy_ = new dbus::MockObjectProxy(
-        bus_.get(), kTestServiceName, dbus::ObjectPath(kTestPath));
+    mock_object_proxy_ = new dbus::MockObjectProxy(bus_.get(), kTestServiceName,
+                                                   dbus::ObjectPath(kTestPath));
     EXPECT_CALL(*bus_,
                 GetObjectProxy(kTestServiceName, dbus::ObjectPath(kTestPath)))
         .WillRepeatedly(Return(mock_object_proxy_.get()));
@@ -46,7 +46,7 @@ class DBusSignalHandlerTest : public testing::Test {
   void TearDown() override { bus_ = nullptr; }
 
  protected:
-  template<typename SignalHandlerSink, typename... Args>
+  template <typename SignalHandlerSink, typename... Args>
   void CallSignal(SignalHandlerSink* sink, Args... args) {
     dbus::ObjectProxy::SignalCallback signal_callback;
     EXPECT_CALL(*mock_object_proxy_,
@@ -54,11 +54,8 @@ class DBusSignalHandlerTest : public testing::Test {
         .WillOnce(SaveArg<2>(&signal_callback));
 
     brillo::dbus_utils::ConnectToSignal(
-        mock_object_proxy_.get(),
-        kInterface,
-        kSignal,
-        base::Bind(&SignalHandlerSink::Handler, base::Unretained(sink)),
-        {});
+        mock_object_proxy_.get(), kInterface, kSignal,
+        base::Bind(&SignalHandlerSink::Handler, base::Unretained(sink)), {});
 
     dbus::Signal signal(kInterface, kSignal);
     dbus::MessageWriter writer(&signal);
@@ -74,8 +71,8 @@ TEST_F(DBusSignalHandlerTest, ConnectToSignal) {
   EXPECT_CALL(*mock_object_proxy_, DoConnectToSignal(kInterface, kSignal, _, _))
       .Times(1);
 
-  brillo::dbus_utils::ConnectToSignal(
-      mock_object_proxy_.get(), kInterface, kSignal, base::Closure{}, {});
+  brillo::dbus_utils::ConnectToSignal(mock_object_proxy_.get(), kInterface,
+                                      kSignal, base::Closure{}, {});
 }
 
 TEST_F(DBusSignalHandlerTest, CallSignal_3Args) {

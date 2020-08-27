@@ -14,9 +14,7 @@ using brillo::Error;
 namespace {
 
 brillo::ErrorPtr GenerateNetworkError() {
-  base::Location loc("GenerateNetworkError",
-                     "error_test.cc",
-                     15,
+  base::Location loc("GenerateNetworkError", "error_test.cc", 15,
                      ::base::GetProgramCounter());
   return Error::Create(loc, "network", "not_found", "Resource not found");
 }

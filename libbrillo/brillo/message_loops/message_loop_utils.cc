@@ -27,7 +27,8 @@ void MessageLoopRunUntil(MessageLoop* loop,
 
 int MessageLoopRunMaxIterations(MessageLoop* loop, int iterations) {
   int result;
-  for (result = 0; result < iterations && loop->RunOnce(false); result++) {}
+  for (result = 0; result < iterations && loop->RunOnce(false); result++) {
+  }
   return result;
 }
 

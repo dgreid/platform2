@@ -33,9 +33,12 @@ base::TimeDelta CalculateDelay(const base::Time& now,
 // operations calculates the smaller wait delay of the two and sets the
 // resulting operation to |*mode| and the delay to wait for into |*delay|.
 void GetMinDelayAndMode(const base::Time& now,
-                        bool read, const base::Time& delay_read_until,
-                        bool write, const base::Time& delay_write_until,
-                        Stream::AccessMode* mode, base::TimeDelta* delay) {
+                        bool read,
+                        const base::Time& delay_read_until,
+                        bool write,
+                        const base::Time& delay_write_until,
+                        Stream::AccessMode* mode,
+                        base::TimeDelta* delay) {
   base::TimeDelta read_delay = base::TimeDelta::Max();
   base::TimeDelta write_delay = base::TimeDelta::Max();
 
@@ -55,8 +58,7 @@ void GetMinDelayAndMode(const base::Time& now,
 
 }  // anonymous namespace
 
-FakeStream::FakeStream(Stream::AccessMode mode,
-                       base::Clock* clock)
+FakeStream::FakeStream(Stream::AccessMode mode, base::Clock* clock)
     : mode_{mode}, clock_{clock} {}
 
 void FakeStream::AddReadPacketData(base::TimeDelta delay,
@@ -294,9 +296,9 @@ bool FakeStream::WriteNonBlocking(const void* buffer,
       size_to_write = std::min(size_to_write,
                                max_output_buffer_size_ - output_buffer_.size());
       auto byte_ptr = static_cast<const uint8_t*>(buffer);
-      output_buffer_.insert(output_buffer_.end(),
-                            byte_ptr, byte_ptr + size_to_write);
-      if (output_buffer_.size()  == max_output_buffer_size_) {
+      output_buffer_.insert(output_buffer_.end(), byte_ptr,
+                            byte_ptr + size_to_write);
+      if (output_buffer_.size() == max_output_buffer_size_) {
         if (!expected_output_data_.empty() &&
             expected_output_data_ != output_buffer_) {
           // We expected different data to be written, report an error.
@@ -305,8 +307,8 @@ bool FakeStream::WriteNonBlocking(const void* buffer,
           success = false;
         }
 
-        all_output_data_.insert(all_output_data_.end(),
-                                output_buffer_.begin(), output_buffer_.end());
+        all_output_data_.insert(all_output_data_.end(), output_buffer_.begin(),
+                                output_buffer_.end());
 
         output_buffer_.clear();
         max_output_buffer_size_ = 0;
@@ -341,8 +343,8 @@ bool FakeStream::FlushBlocking(ErrorPtr* error) {
                    "Unexpected data written");
       success = false;
     }
-    all_output_data_.insert(all_output_data_.end(),
-                            output_buffer_.begin(), output_buffer_.end());
+    all_output_data_.insert(all_output_data_.end(), output_buffer_.begin(),
+                            output_buffer_.end());
 
     output_buffer_.clear();
     max_output_buffer_size_ = 0;
@@ -373,8 +375,8 @@ bool FakeStream::WaitForData(AccessMode mode,
   base::TimeDelta delay;
   GetMinDelayAndMode(clock_->Now(), read_requested, delay_input_until_,
                      write_requested, delay_output_until_, &mode, &delay);
-  MessageLoop::current()->PostDelayedTask(
-      FROM_HERE, base::Bind(callback, mode), delay);
+  MessageLoop::current()->PostDelayedTask(FROM_HERE, base::Bind(callback, mode),
+                                          delay);
   return true;
 }
 

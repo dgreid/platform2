@@ -60,7 +60,7 @@ class BRILLO_EXPORT MemoryStream : public Stream {
   static StreamPtr OpenCopyOf(std::string buffer, ErrorPtr* error);
   static StreamPtr OpenCopyOf(const char* buffer, ErrorPtr* error);
   // Only vectors of char and uint8_t are supported.
-  template<typename T>
+  template <typename T>
   inline static StreamPtr OpenCopyOf(std::vector<T> buffer, ErrorPtr* error) {
     std::unique_ptr<data_container::ReadOnlyVectorCopy<T>> container{
         new data_container::ReadOnlyVectorCopy<T>{std::move(buffer)}};
@@ -77,7 +77,7 @@ class BRILLO_EXPORT MemoryStream : public Stream {
   static StreamPtr OpenRef(const std::string& buffer, ErrorPtr* error);
   static StreamPtr OpenRef(const char* buffer, ErrorPtr* error);
   // Only vectors of char and uint8_t are supported.
-  template<typename T>
+  template <typename T>
   inline static StreamPtr OpenRef(const std::vector<T>& buffer,
                                   ErrorPtr* error) {
     std::unique_ptr<data_container::ReadOnlyVectorRef<T>> container{
@@ -106,7 +106,7 @@ class BRILLO_EXPORT MemoryStream : public Stream {
   // The stream pointer will be at the beginning of the data and the vector's
   // content is preserved.
   // Only vectors of char and uint8_t are supported.
-  template<typename T>
+  template <typename T>
   static StreamPtr CreateRef(std::vector<T>* buffer, ErrorPtr* error) {
     std::unique_ptr<data_container::VectorPtr<T>> container{
         new data_container::VectorPtr<T>{buffer}};
@@ -124,7 +124,7 @@ class BRILLO_EXPORT MemoryStream : public Stream {
   // The stream pointer will be at the end of the data and the vector's
   // content is preserved.
   // Only vectors of char and uint8_t are supported.
-  template<typename T>
+  template <typename T>
   static StreamPtr CreateRefForAppend(std::vector<T>* buffer, ErrorPtr* error) {
     std::unique_ptr<data_container::VectorPtr<T>> container{
         new data_container::VectorPtr<T>{buffer}};

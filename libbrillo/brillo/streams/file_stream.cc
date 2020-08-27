@@ -88,9 +88,8 @@ class FileDescriptor : public FileStream::FileDescriptorInterface {
     if (stream_utils::IsReadAccessMode(mode)) {
       CHECK(read_data_callback_.is_null());
       read_watcher_ = base::FileDescriptorWatcher::WatchReadable(
-          fd_,
-          base::BindRepeating(&FileDescriptor::OnReadable,
-                              base::Unretained(this)));
+          fd_, base::BindRepeating(&FileDescriptor::OnReadable,
+                                   base::Unretained(this)));
       if (!read_watcher_) {
         Error::AddTo(error, FROM_HERE, errors::stream::kDomain,
                      errors::stream::kInvalidParameter,
@@ -102,9 +101,8 @@ class FileDescriptor : public FileStream::FileDescriptorInterface {
     if (stream_utils::IsWriteAccessMode(mode)) {
       CHECK(write_data_callback_.is_null());
       write_watcher_ = base::FileDescriptorWatcher::WatchWritable(
-          fd_,
-          base::BindRepeating(&FileDescriptor::OnWritable,
-                              base::Unretained(this)));
+          fd_, base::BindRepeating(&FileDescriptor::OnWritable,
+                                   base::Unretained(this)));
       if (!write_watcher_) {
         Error::AddTo(error, FROM_HERE, errors::stream::kDomain,
                      errors::stream::kInvalidParameter,
@@ -316,12 +314,11 @@ StreamPtr FileStream::FromFileDescriptor(int file_descriptor,
 
 FileStream::FileStream(std::unique_ptr<FileDescriptorInterface> fd_interface,
                        AccessMode mode)
-    : fd_interface_(std::move(fd_interface)),
-      access_mode_(mode) {
+    : fd_interface_(std::move(fd_interface)), access_mode_(mode) {
   switch (fd_interface_->GetFileMode() & S_IFMT) {
-    case S_IFCHR:  // Character device
+    case S_IFCHR:   // Character device
     case S_IFSOCK:  // Socket
-    case S_IFIFO:  // FIFO/pipe
+    case S_IFIFO:   // FIFO/pipe
       // We know that these devices are not seekable and stream size is unknown.
       seekable_ = false;
       can_get_size_ = false;
@@ -500,10 +497,9 @@ bool FileStream::CloseBlocking(ErrorPtr* error) {
   return true;
 }
 
-bool FileStream::WaitForData(
-    AccessMode mode,
-    const base::Callback<void(AccessMode)>& callback,
-    ErrorPtr* error) {
+bool FileStream::WaitForData(AccessMode mode,
+                             const base::Callback<void(AccessMode)>& callback,
+                             ErrorPtr* error) {
   if (!IsOpen())
     return stream_utils::ErrorStreamClosed(FROM_HERE, error);
 

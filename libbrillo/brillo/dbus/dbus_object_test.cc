@@ -15,9 +15,9 @@
 #include <dbus/mock_bus.h>
 #include <dbus/mock_exported_object.h>
 
+using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::Return;
-using ::testing::_;
 
 namespace brillo {
 namespace dbus_utils {
@@ -120,14 +120,14 @@ class DBusObjectTest : public ::testing::Test {
         new DBusObject(nullptr, bus_, kMethodsExportedOnPath));
 
     DBusInterface* itf1 = dbus_object_->AddOrGetInterface(kTestInterface1);
-    itf1->AddSimpleMethodHandler(
-        kTestMethod_Add, base::Unretained(&calc_), &Calc::Add);
-    itf1->AddSimpleMethodHandler(
-        kTestMethod_Negate, base::Unretained(&calc_), &Calc::Negate);
-    itf1->AddMethodHandler(
-        kTestMethod_Positive, base::Unretained(&calc_), &Calc::Positive);
-    itf1->AddSimpleMethodHandler(
-        kTestMethod_AddSubtract, base::Unretained(&calc_), &Calc::AddSubtract);
+    itf1->AddSimpleMethodHandler(kTestMethod_Add, base::Unretained(&calc_),
+                                 &Calc::Add);
+    itf1->AddSimpleMethodHandler(kTestMethod_Negate, base::Unretained(&calc_),
+                                 &Calc::Negate);
+    itf1->AddMethodHandler(kTestMethod_Positive, base::Unretained(&calc_),
+                           &Calc::Positive);
+    itf1->AddSimpleMethodHandler(kTestMethod_AddSubtract,
+                                 base::Unretained(&calc_), &Calc::AddSubtract);
     DBusInterface* itf2 = dbus_object_->AddOrGetInterface(kTestInterface2);
     itf2->AddSimpleMethodHandler(kTestMethod_StrLen, StrLen);
     itf2->AddSimpleMethodHandlerWithError(kTestMethod_CheckNonEmpty,
@@ -458,8 +458,8 @@ TEST_F(DBusObjectTest, ShouldReleaseOnlyClaimedInterfaces) {
   EXPECT_CALL(mock_object_manager, ClaimInterface(_, _, _)).Times(0);
   EXPECT_CALL(mock_object_manager, ReleaseInterface(_, _)).Times(0);
   DBusInterface* itf1 = dbus_object_->AddOrGetInterface(kTestInterface1);
-  itf1->AddSimpleMethodHandler(
-      kTestMethod_Add, base::Unretained(&calc_), &Calc::Add);
+  itf1->AddSimpleMethodHandler(kTestMethod_Add, base::Unretained(&calc_),
+                               &Calc::Add);
   // When we tear down our DBusObject, it should release only interfaces it has
   // previously claimed.  This prevents a check failing inside the
   // ExportedObjectManager.  Since no interfaces have finished exporting

@@ -22,9 +22,9 @@ base::LazyInstance<base::ThreadLocalPointer<MessageLoop> >::Leaky lazy_tls_ptr =
 const MessageLoop::TaskId MessageLoop::kTaskIdNull = 0;
 
 MessageLoop* MessageLoop::current() {
-  DCHECK(lazy_tls_ptr.Pointer()->Get() != nullptr) <<
-      "There isn't a MessageLoop for this thread. You need to initialize it "
-      "first.";
+  DCHECK(lazy_tls_ptr.Pointer()->Get() != nullptr)
+      << "There isn't a MessageLoop for this thread. You need to initialize it "
+         "first.";
   return lazy_tls_ptr.Pointer()->Get();
 }
 
@@ -33,14 +33,14 @@ bool MessageLoop::ThreadHasCurrent() {
 }
 
 void MessageLoop::SetAsCurrent() {
-  DCHECK(lazy_tls_ptr.Pointer()->Get() == nullptr) <<
-      "There's already a MessageLoop for this thread.";
+  DCHECK(lazy_tls_ptr.Pointer()->Get() == nullptr)
+      << "There's already a MessageLoop for this thread.";
   lazy_tls_ptr.Pointer()->Set(this);
 }
 
 void MessageLoop::ReleaseFromCurrent() {
-  DCHECK(lazy_tls_ptr.Pointer()->Get() == this) <<
-      "This is not the MessageLoop bound to the current thread.";
+  DCHECK(lazy_tls_ptr.Pointer()->Get() == this)
+      << "This is not the MessageLoop bound to the current thread.";
   lazy_tls_ptr.Pointer()->Set(nullptr);
 }
 
@@ -52,7 +52,8 @@ MessageLoop::~MessageLoop() {
 void MessageLoop::Run() {
   // Default implementation is to call RunOnce() blocking until there aren't
   // more tasks scheduled.
-  while (!should_exit_ && RunOnce(true)) {}
+  while (!should_exit_ && RunOnce(true)) {
+  }
   should_exit_ = false;
 }
 

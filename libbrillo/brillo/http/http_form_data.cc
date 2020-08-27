@@ -38,8 +38,7 @@ FormField::FormField(const std::string& name,
     : name_{name},
       content_disposition_{content_disposition},
       content_type_{content_type},
-      transfer_encoding_{transfer_encoding} {
-}
+      transfer_encoding_{transfer_encoding} {}
 
 std::string FormField::GetContentDisposition() const {
   std::string disposition = content_disposition_;
@@ -54,8 +53,7 @@ std::string FormField::GetContentType() const {
 
 std::string FormField::GetContentHeader() const {
   HeaderList headers{
-      {form_header::kContentDisposition, GetContentDisposition()}
-  };
+      {form_header::kContentDisposition, GetContentDisposition()}};
 
   if (!content_type_.empty())
     headers.emplace_back(form_header::kContentType, GetContentType());
@@ -67,8 +65,8 @@ std::string FormField::GetContentHeader() const {
 
   std::string result;
   for (const auto& pair : headers) {
-    base::StringAppendF(
-        &result, "%s: %s\r\n", pair.first.c_str(), pair.second.c_str());
+    base::StringAppendF(&result, "%s: %s\r\n", pair.first.c_str(),
+                        pair.second.c_str());
   }
   result += "\r\n";
   return result;
@@ -78,12 +76,9 @@ TextFormField::TextFormField(const std::string& name,
                              const std::string& data,
                              const std::string& content_type,
                              const std::string& transfer_encoding)
-    : FormField{name,
-                content_disposition::kFormData,
-                content_type,
+    : FormField{name, content_disposition::kFormData, content_type,
                 transfer_encoding},
-      data_{data} {
-}
+      data_{data} {}
 
 bool TextFormField::ExtractDataStreams(std::vector<StreamPtr>* streams) {
   streams->push_back(MemoryStream::OpenCopyOf(data_, nullptr));
@@ -98,8 +93,7 @@ FileFormField::FileFormField(const std::string& name,
                              const std::string& transfer_encoding)
     : FormField{name, content_disposition, content_type, transfer_encoding},
       stream_{std::move(stream)},
-      file_name_{file_name} {
-}
+      file_name_{file_name} {}
 
 std::string FileFormField::GetContentDisposition() const {
   std::string disposition = FormField::GetContentDisposition();
@@ -171,18 +165,15 @@ bool MultiPartFormField::AddFileField(const std::string& name,
                                       const std::string& content_disposition,
                                       const std::string& content_type,
                                       brillo::ErrorPtr* error) {
-  StreamPtr stream = FileStream::Open(file_path, Stream::AccessMode::READ,
-                                      FileStream::Disposition::OPEN_EXISTING,
-                                      error);
+  StreamPtr stream =
+      FileStream::Open(file_path, Stream::AccessMode::READ,
+                       FileStream::Disposition::OPEN_EXISTING, error);
   if (!stream)
     return false;
   std::string file_name = file_path.BaseName().value();
-  std::unique_ptr<FormField> file_field{new FileFormField{name,
-                                                          std::move(stream),
-                                                          file_name,
-                                                          content_disposition,
-                                                          content_type,
-                                                          "binary"}};
+  std::unique_ptr<FormField> file_field{
+      new FileFormField{name, std::move(stream), file_name, content_disposition,
+                        content_type, "binary"}};
   AddCustomField(std::move(file_field));
   return true;
 }
@@ -195,12 +186,10 @@ std::string MultiPartFormField::GetBoundaryEnd() const {
   return base::StringPrintf("--%s--\r\n", boundary_.c_str());
 }
 
-FormData::FormData() : FormData{std::string{}} {
-}
+FormData::FormData() : FormData{std::string{}} {}
 
 FormData::FormData(const std::string& boundary)
-    : form_data_{"", mime::multipart::kFormData, boundary} {
-}
+    : form_data_{"", mime::multipart::kFormData, boundary} {}
 
 void FormData::AddCustomField(std::unique_ptr<FormField> field) {
   form_data_.AddCustomField(std::move(field));

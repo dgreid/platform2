@@ -13,10 +13,10 @@
 // We need to #undef at least these two before including base/logging.h.  The
 // others are included to be consistent.
 namespace {
-const int kSyslogDebug    = LOG_DEBUG;
-const int kSyslogInfo     = LOG_INFO;
-const int kSyslogWarning  = LOG_WARNING;
-const int kSyslogError    = LOG_ERR;
+const int kSyslogDebug = LOG_DEBUG;
+const int kSyslogInfo = LOG_INFO;
+const int kSyslogWarning = LOG_WARNING;
+const int kSyslogError = LOG_ERR;
 const int kSyslogCritical = LOG_CRIT;
 
 #undef LOG_INFO
@@ -27,8 +27,8 @@ const int kSyslogCritical = LOG_CRIT;
 
 #include <base/logging.h>
 
-static std::string s_ident;
-static std::string s_accumulated;
+static std::string s_ident;        // NOLINT(runtime/string)
+static std::string s_accumulated;  // NOLINT(runtime/string)
 static bool s_accumulate;
 static bool s_log_to_syslog;
 static bool s_log_to_stderr;
@@ -100,8 +100,8 @@ void InitLog(int init_flags) {
   const bool kOptionTID = false;
   const bool kOptionTimestamp = false;
   const bool kOptionTickcount = false;
-  logging::SetLogItems(
-      kOptionPID, kOptionTID, kOptionTimestamp, kOptionTickcount);
+  logging::SetLogItems(kOptionPID, kOptionTID, kOptionTimestamp,
+                       kOptionTickcount);
   logging::SetLogMessageHandler(HandleMessage);
   SetLogFlags(init_flags);
 }

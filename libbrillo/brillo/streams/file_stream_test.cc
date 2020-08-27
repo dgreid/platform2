@@ -25,12 +25,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::InSequence;
 using testing::Return;
 using testing::ReturnArg;
 using testing::SaveArg;
 using testing::SetErrnoAndReturn;
-using testing::_;
 
 namespace brillo {
 
@@ -70,8 +70,8 @@ void TestCreateFile(Stream* stream) {
   EXPECT_EQ(0, stream->GetSize());
 
   // Write sample data.
-  EXPECT_TRUE(stream->WriteAllBlocking(in_buffer.data(), in_buffer.size(),
-                                       nullptr));
+  EXPECT_TRUE(
+      stream->WriteAllBlocking(in_buffer.data(), in_buffer.size(), nullptr));
   EXPECT_EQ(in_buffer.size(), stream->GetPosition());
   EXPECT_EQ(in_buffer.size(), stream->GetSize());
 
@@ -84,8 +84,8 @@ void TestCreateFile(Stream* stream) {
 
   // Read the file contents back.
   std::vector<uint8_t> out_buffer(256);
-  EXPECT_TRUE(stream->ReadAllBlocking(out_buffer.data(), out_buffer.size(),
-                                      nullptr));
+  EXPECT_TRUE(
+      stream->ReadAllBlocking(out_buffer.data(), out_buffer.size(), nullptr));
   EXPECT_EQ(out_buffer.size(), stream->GetPosition());
   EXPECT_EQ(out_buffer.size(), stream->GetSize());
 
@@ -334,11 +334,11 @@ TEST_F(FileStreamTest, Seek_Set) {
 
   EXPECT_CALL(fd_mock(), Seek(kMaxSize, SEEK_SET))
       .WillRepeatedly(Return(kMaxSize));
-  EXPECT_TRUE(stream_->Seek(kMaxSize, Stream::Whence::FROM_BEGIN, &pos,
-              nullptr));
+  EXPECT_TRUE(
+      stream_->Seek(kMaxSize, Stream::Whence::FROM_BEGIN, &pos, nullptr));
   EXPECT_EQ(kMaxSize, pos);
-  EXPECT_TRUE(stream_->Seek(kMaxSize, Stream::Whence::FROM_BEGIN, nullptr,
-              nullptr));
+  EXPECT_TRUE(
+      stream_->Seek(kMaxSize, Stream::Whence::FROM_BEGIN, nullptr, nullptr));
 }
 
 TEST_F(FileStreamTest, Seek_Cur) {
@@ -393,8 +393,7 @@ TEST_F(FileStreamTest, ReadAsync) {
       .WillOnce(DoAll(SaveArg<1>(&data_callback), Return(true)));
   EXPECT_TRUE(stream_->ReadAsync(test_read_buffer_, 100,
                                  base::Bind(&SetSizeT, &read_size),
-                                 base::Bind(&SetToTrue, &failed),
-                                 nullptr));
+                                 base::Bind(&SetToTrue, &failed), nullptr));
   EXPECT_EQ(0u, read_size);
   EXPECT_FALSE(failed);
 
@@ -409,26 +408,26 @@ TEST_F(FileStreamTest, ReadNonBlocking) {
   bool eos = false;
   EXPECT_CALL(fd_mock(), Read(test_read_buffer_, _))
       .WillRepeatedly(ReturnArg<1>());
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos, nullptr));
   EXPECT_EQ(100u, size);
   EXPECT_FALSE(eos);
 
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 0, &size, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 0, &size, &eos, nullptr));
   EXPECT_EQ(0u, size);
   EXPECT_FALSE(eos);
 
   EXPECT_CALL(fd_mock(), Read(test_read_buffer_, _)).WillOnce(Return(0));
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos, nullptr));
   EXPECT_EQ(0u, size);
   EXPECT_TRUE(eos);
 
   EXPECT_CALL(fd_mock(), Read(test_read_buffer_, _))
       .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-  EXPECT_TRUE(stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos,
-                                       nullptr));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(test_read_buffer_, 100, &size, &eos, nullptr));
   EXPECT_EQ(0u, size);
   EXPECT_FALSE(eos);
 }
@@ -438,8 +437,8 @@ TEST_F(FileStreamTest, ReadNonBlocking_Fail) {
   brillo::ErrorPtr error;
   EXPECT_CALL(fd_mock(), Read(test_read_buffer_, _))
       .WillOnce(SetErrnoAndReturn(EACCES, -1));
-  EXPECT_FALSE(stream_->ReadNonBlocking(test_read_buffer_, 100, &size, nullptr,
-                                        &error));
+  EXPECT_FALSE(
+      stream_->ReadNonBlocking(test_read_buffer_, 100, &size, nullptr, &error));
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("EACCES", error->GetCode());
 }
@@ -530,8 +529,7 @@ TEST_F(FileStreamTest, WriteAsync) {
       .WillOnce(DoAll(SaveArg<1>(&data_callback), Return(true)));
   EXPECT_TRUE(stream_->WriteAsync(test_write_buffer_, 100,
                                   base::Bind(&SetSizeT, &write_size),
-                                  base::Bind(&SetToTrue, &failed),
-                                  nullptr));
+                                  base::Bind(&SetToTrue, &failed), nullptr));
   EXPECT_EQ(0u, write_size);
   EXPECT_FALSE(failed);
 
@@ -545,22 +543,22 @@ TEST_F(FileStreamTest, WriteNonBlocking) {
   size_t size = 0;
   EXPECT_CALL(fd_mock(), Write(test_write_buffer_, _))
       .WillRepeatedly(ReturnArg<1>());
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 100, &size,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 100, &size, nullptr));
   EXPECT_EQ(100u, size);
 
   EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 0, &size, nullptr));
   EXPECT_EQ(0u, size);
 
   EXPECT_CALL(fd_mock(), Write(test_write_buffer_, _)).WillOnce(Return(0));
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 100, &size,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 100, &size, nullptr));
   EXPECT_EQ(0u, size);
 
   EXPECT_CALL(fd_mock(), Write(test_write_buffer_, _))
       .WillOnce(SetErrnoAndReturn(EAGAIN, -1));
-  EXPECT_TRUE(stream_->WriteNonBlocking(test_write_buffer_, 100, &size,
-                                        nullptr));
+  EXPECT_TRUE(
+      stream_->WriteNonBlocking(test_write_buffer_, 100, &size, nullptr));
   EXPECT_EQ(0u, size);
 }
 
@@ -569,8 +567,8 @@ TEST_F(FileStreamTest, WriteNonBlocking_Fail) {
   brillo::ErrorPtr error;
   EXPECT_CALL(fd_mock(), Write(test_write_buffer_, _))
       .WillOnce(SetErrnoAndReturn(EACCES, -1));
-  EXPECT_FALSE(stream_->WriteNonBlocking(test_write_buffer_, 100, &size,
-                                         &error));
+  EXPECT_FALSE(
+      stream_->WriteNonBlocking(test_write_buffer_, 100, &size, &error));
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("EACCES", error->GetCode());
 }
@@ -719,10 +717,9 @@ TEST_F(FileStreamTest, OpenRead) {
   int file_size = buffer.size();  // Stupid base::WriteFile taking "int" size.
   ASSERT_EQ(file_size, base::WriteFile(path, buffer.data(), file_size));
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ,
-                                      FileStream::Disposition::OPEN_EXISTING,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ,
+                       FileStream::Disposition::OPEN_EXISTING, nullptr);
   ASSERT_NE(nullptr, stream.get());
   ASSERT_TRUE(stream->IsOpen());
   EXPECT_TRUE(stream->CanRead());
@@ -745,10 +742,9 @@ TEST_F(FileStreamTest, OpenWrite) {
   std::vector<char> buffer(1024 * 1024);
   base::RandBytes(buffer.data(), buffer.size());
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::WRITE,
-                                      FileStream::Disposition::CREATE_ALWAYS,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::WRITE,
+                       FileStream::Disposition::CREATE_ALWAYS, nullptr);
   ASSERT_NE(nullptr, stream.get());
   ASSERT_TRUE(stream->IsOpen());
   EXPECT_FALSE(stream->CanRead());
@@ -775,10 +771,9 @@ TEST_F(FileStreamTest, Open_OpenExisting) {
   int data_size = data.size();  // I hate ints for data size...
   ASSERT_EQ(data_size, base::WriteFile(path, data.data(), data_size));
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::OPEN_EXISTING,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::OPEN_EXISTING, nullptr);
   ASSERT_NE(nullptr, stream.get());
   EXPECT_TRUE(stream->CanRead());
   EXPECT_TRUE(stream->CanWrite());
@@ -795,10 +790,9 @@ TEST_F(FileStreamTest, Open_OpenExisting_Fail) {
   base::FilePath path = temp_dir.GetPath().Append(base::FilePath{"test.dat"});
 
   ErrorPtr error;
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::OPEN_EXISTING,
-                                      &error);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::OPEN_EXISTING, &error);
   ASSERT_EQ(nullptr, stream.get());
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("ENOENT", error->GetCode());
@@ -809,10 +803,9 @@ TEST_F(FileStreamTest, Open_CreateAlways_New) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath path = temp_dir.GetPath().Append(base::FilePath{"test.dat"});
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::CREATE_ALWAYS,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::CREATE_ALWAYS, nullptr);
   ASSERT_NE(nullptr, stream.get());
   EXPECT_TRUE(stream->CanRead());
   EXPECT_TRUE(stream->CanWrite());
@@ -831,10 +824,9 @@ TEST_F(FileStreamTest, Open_CreateAlways_Existing) {
   int data_size = data.size();  // I hate ints for data size...
   ASSERT_EQ(data_size, base::WriteFile(path, data.data(), data_size));
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::CREATE_ALWAYS,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::CREATE_ALWAYS, nullptr);
   ASSERT_NE(nullptr, stream.get());
   EXPECT_TRUE(stream->CanRead());
   EXPECT_TRUE(stream->CanWrite());
@@ -850,10 +842,9 @@ TEST_F(FileStreamTest, Open_CreateNewOnly_New) {
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath path = temp_dir.GetPath().Append(base::FilePath{"test.dat"});
 
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::CREATE_NEW_ONLY,
-                                      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::CREATE_NEW_ONLY, nullptr);
   ASSERT_NE(nullptr, stream.get());
   EXPECT_TRUE(stream->CanRead());
   EXPECT_TRUE(stream->CanWrite());
@@ -873,10 +864,9 @@ TEST_F(FileStreamTest, Open_CreateNewOnly_Existing) {
   ASSERT_EQ(data_size, base::WriteFile(path, data.data(), data_size));
 
   ErrorPtr error;
-  StreamPtr stream = FileStream::Open(path,
-                                      Stream::AccessMode::READ_WRITE,
-                                      FileStream::Disposition::CREATE_NEW_ONLY,
-                                      &error);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::CREATE_NEW_ONLY, &error);
   ASSERT_EQ(nullptr, stream.get());
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("EEXIST", error->GetCode());
@@ -888,11 +878,9 @@ TEST_F(FileStreamTest, Open_TruncateExisting_New) {
   base::FilePath path = temp_dir.GetPath().Append(base::FilePath{"test.dat"});
 
   ErrorPtr error;
-  StreamPtr stream = FileStream::Open(
-      path,
-      Stream::AccessMode::READ_WRITE,
-      FileStream::Disposition::TRUNCATE_EXISTING,
-      &error);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::TRUNCATE_EXISTING, &error);
   ASSERT_EQ(nullptr, stream.get());
   EXPECT_EQ(errors::system::kDomain, error->GetDomain());
   EXPECT_EQ("ENOENT", error->GetCode());
@@ -906,11 +894,9 @@ TEST_F(FileStreamTest, Open_TruncateExisting_Existing) {
   int data_size = data.size();  // I hate ints for data size...
   ASSERT_EQ(data_size, base::WriteFile(path, data.data(), data_size));
 
-  StreamPtr stream = FileStream::Open(
-      path,
-      Stream::AccessMode::READ_WRITE,
-      FileStream::Disposition::TRUNCATE_EXISTING,
-      nullptr);
+  StreamPtr stream =
+      FileStream::Open(path, Stream::AccessMode::READ_WRITE,
+                       FileStream::Disposition::TRUNCATE_EXISTING, nullptr);
   ASSERT_NE(nullptr, stream.get());
   EXPECT_TRUE(stream->CanRead());
   EXPECT_TRUE(stream->CanWrite());
@@ -1059,10 +1045,9 @@ TEST_F(FileStreamTest, FromFileDescriptor_ReadAsync) {
   StreamPtr stream = FileStream::FromFileDescriptor(fds[0], true, nullptr);
 
   // Write to the pipe with a bit of delay.
-  brillo_loop.PostDelayedTask(
-      FROM_HERE,
-      base::Bind(write_data_callback, fds[1]),
-      base::TimeDelta::FromMilliseconds(10));
+  brillo_loop.PostDelayedTask(FROM_HERE,
+                              base::Bind(write_data_callback, fds[1]),
+                              base::TimeDelta::FromMilliseconds(10));
 
   EXPECT_TRUE(stream->ReadAsync(
       buffer, 100, base::Bind(success_callback, &succeeded, buffer),
@@ -1071,8 +1056,7 @@ TEST_F(FileStreamTest, FromFileDescriptor_ReadAsync) {
   auto end_condition = [](bool* failed, bool* succeeded) {
     return *failed || *succeeded;
   };
-  MessageLoopRunUntil(&brillo_loop,
-                      base::TimeDelta::FromSeconds(1),
+  MessageLoopRunUntil(&brillo_loop, base::TimeDelta::FromSeconds(1),
                       base::Bind(end_condition, &failed, &succeeded));
 
   EXPECT_TRUE(succeeded);
@@ -1103,16 +1087,15 @@ TEST_F(FileStreamTest, FromFileDescriptor_WriteAsync) {
 
   StreamPtr stream = FileStream::FromFileDescriptor(fds[1], true, nullptr);
 
-  EXPECT_TRUE(stream->WriteAsync(
-      data.data(), data.size(),
-      base::Bind(success_callback, &succeeded, data, fds[0]),
-      base::Bind(&SetToTrue, &failed), nullptr));
+  EXPECT_TRUE(
+      stream->WriteAsync(data.data(), data.size(),
+                         base::Bind(success_callback, &succeeded, data, fds[0]),
+                         base::Bind(&SetToTrue, &failed), nullptr));
 
   auto end_condition = [](bool* failed, bool* succeeded) {
     return *failed || *succeeded;
   };
-  MessageLoopRunUntil(&brillo_loop,
-                      base::TimeDelta::FromSeconds(1),
+  MessageLoopRunUntil(&brillo_loop, base::TimeDelta::FromSeconds(1),
                       base::Bind(end_condition, &failed, &succeeded));
 
   EXPECT_TRUE(succeeded);

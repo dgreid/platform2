@@ -10,8 +10,7 @@
 namespace brillo {
 
 FakeMessageLoop::FakeMessageLoop(base::SimpleTestClock* clock)
-  : test_clock_(clock) {
-}
+    : test_clock_(clock) {}
 
 MessageLoop::TaskId FakeMessageLoop::PostDelayedTask(
     const base::Location& from_here,
@@ -28,8 +27,8 @@ MessageLoop::TaskId FakeMessageLoop::PostDelayedTask(
   tasks_.emplace(current_id, ScheduledTask{from_here, std::move(task)});
   fire_order_.push(std::make_pair(current_time_ + delay, current_id));
   VLOG_LOC(from_here, 1) << "Scheduling delayed task_id " << current_id
-                         << " to run at " << current_time_ + delay
-                         << " (in " << delay << ").";
+                         << " to run at " << current_time_ + delay << " (in "
+                         << delay << ").";
   return current_id;
 }
 
@@ -66,8 +65,8 @@ bool FakeMessageLoop::RunOnce(bool may_block) {
     // for the task you are running now should fail and return false.
     base::OnceClosure callback = std::move(scheduled_task_ref->second.callback);
     VLOG_LOC(scheduled_task_ref->second.location, 1)
-        << "Running task_id " << task_ref.second
-        << " at time " << current_time_ << " from this location.";
+        << "Running task_id " << task_ref.second << " at time " << current_time_
+        << " from this location.";
     tasks_.erase(scheduled_task_ref);
 
     std::move(callback).Run();

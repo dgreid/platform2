@@ -18,8 +18,7 @@ namespace brillo {
 namespace dbus_utils {
 
 ExportedPropertySet::ExportedPropertySet(dbus::Bus* bus)
-    : bus_(bus), weak_ptr_factory_(this) {
-}
+    : bus_(bus), weak_ptr_factory_(this) {}
 
 void ExportedPropertySet::OnPropertiesInterfaceExported(
     DBusInterface* prop_interface) {
@@ -31,8 +30,7 @@ void ExportedPropertySet::OnPropertiesInterfaceExported(
 ExportedPropertySet::PropertyWriter ExportedPropertySet::GetPropertyWriter(
     const std::string& interface_name) {
   return base::Bind(&ExportedPropertySet::WritePropertiesToDict,
-                    weak_ptr_factory_.GetWeakPtr(),
-                    interface_name);
+                    weak_ptr_factory_.GetWeakPtr(), interface_name);
 }
 
 void ExportedPropertySet::RegisterProperty(
@@ -47,9 +45,7 @@ void ExportedPropertySet::RegisterProperty(
   // so we could use Unretained here rather than a weak pointer.
   ExportedPropertyBase::OnUpdateCallback cb =
       base::Bind(&ExportedPropertySet::HandlePropertyUpdated,
-                 weak_ptr_factory_.GetWeakPtr(),
-                 interface_name,
-                 property_name);
+                 weak_ptr_factory_.GetWeakPtr(), interface_name, property_name);
   exported_property->SetUpdateCallback(cb);
 }
 
@@ -82,8 +78,7 @@ VariantDictionary ExportedPropertySet::GetInterfaceProperties(
 }
 
 void ExportedPropertySet::WritePropertiesToDict(
-    const std::string& interface_name,
-    VariantDictionary* dict) {
+    const std::string& interface_name, VariantDictionary* dict) {
   *dict = GetInterfaceProperties(interface_name);
 }
 

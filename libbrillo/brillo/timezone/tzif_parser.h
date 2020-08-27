@@ -19,8 +19,8 @@ namespace timezone {
 // a string. See 'man tzfile' for more info on the format. If |tzif_path| is a
 // relative path, it will be appended to /usr/share/zoneinfo/, otherwise
 // |tzif_path| as an absolute path will be used directly.
-base::Optional<std::string> BRILLO_EXPORT GetPosixTimezone(
-        const base::FilePath& tzif_path);
+base::Optional<std::string> BRILLO_EXPORT
+GetPosixTimezone(const base::FilePath& tzif_path);
 
 }  // namespace timezone
 

@@ -14,7 +14,7 @@ namespace brillo {
 namespace {
 
 bool ConvertHexToBytes(char c, uint8_t* v) {
-  if (c >= '0' && c <='9')
+  if (c >= '0' && c <= '9')
     *v = c - '0';
   else if (c >= 'a' && c <= 'f')
     *v = c - 'a' + 10;
@@ -142,7 +142,7 @@ SecureBlob SecureBlobToSecureHex(const SecureBlob& blob) {
 }
 
 SecureBlob SecureHexToSecureBlob(const SecureBlob& hex) {
-  SecureBlob blob(hex.size()/2, 0);
+  SecureBlob blob(hex.size() / 2, 0);
 
   if (hex.size() == 0 || hex.size() % 2)
     return SecureBlob();
@@ -153,7 +153,7 @@ SecureBlob SecureHexToSecureBlob(const SecureBlob& hex) {
     if (!ConvertHexToBytes(hex[i], &v))
       return SecureBlob();
 
-    blob[i/2] = (blob[i/2] << 4) | (v & 0xf);
+    blob[i / 2] = (blob[i / 2] << 4) | (v & 0xf);
   }
 
   return blob;

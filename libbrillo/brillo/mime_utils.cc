@@ -13,34 +13,34 @@ namespace brillo {
 // ***************************************************************************
 // ******************************* MIME types ********************************
 // ***************************************************************************
-const char mime::types::kApplication[]             = "application";
-const char mime::types::kAudio[]                   = "audio";
-const char mime::types::kImage[]                   = "image";
-const char mime::types::kMessage[]                 = "message";
-const char mime::types::kMultipart[]               = "multipart";
-const char mime::types::kText[]                    = "text";
-const char mime::types::kVideo[]                   = "video";
+const char mime::types::kApplication[] = "application";
+const char mime::types::kAudio[] = "audio";
+const char mime::types::kImage[] = "image";
+const char mime::types::kMessage[] = "message";
+const char mime::types::kMultipart[] = "multipart";
+const char mime::types::kText[] = "text";
+const char mime::types::kVideo[] = "video";
 
-const char mime::parameters::kCharset[]            = "charset";
+const char mime::parameters::kCharset[] = "charset";
 
-const char mime::image::kJpeg[]                    = "image/jpeg";
-const char mime::image::kPng[]                     = "image/png";
-const char mime::image::kBmp[]                     = "image/bmp";
-const char mime::image::kTiff[]                    = "image/tiff";
-const char mime::image::kGif[]                     = "image/gif";
+const char mime::image::kJpeg[] = "image/jpeg";
+const char mime::image::kPng[] = "image/png";
+const char mime::image::kBmp[] = "image/bmp";
+const char mime::image::kTiff[] = "image/tiff";
+const char mime::image::kGif[] = "image/gif";
 
-const char mime::text::kPlain[]                    = "text/plain";
-const char mime::text::kHtml[]                     = "text/html";
-const char mime::text::kXml[]                      = "text/xml";
+const char mime::text::kPlain[] = "text/plain";
+const char mime::text::kHtml[] = "text/html";
+const char mime::text::kXml[] = "text/xml";
 
-const char mime::application::kOctet_stream[]      = "application/octet-stream";
-const char mime::application::kJson[]              = "application/json";
+const char mime::application::kOctet_stream[] = "application/octet-stream";
+const char mime::application::kJson[] = "application/json";
 const char mime::application::kWwwFormUrlEncoded[] =
     "application/x-www-form-urlencoded";
-const char mime::application::kProtobuf[]          = "application/x-protobuf";
+const char mime::application::kProtobuf[] = "application/x-protobuf";
 
-const char mime::multipart::kFormData[]            = "multipart/form-data";
-const char mime::multipart::kMixed[]               = "multipart/mixed";
+const char mime::multipart::kFormData[] = "multipart/form-data";
+const char mime::multipart::kMixed[] = "multipart/mixed";
 
 // ***************************************************************************
 // **************************** Utility Functions ****************************

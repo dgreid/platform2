@@ -43,12 +43,12 @@ class CurlInterface {
                                   curl_off_t value) = 0;
 
   // A type-safe wrapper around function callback options.
-  template<typename R, typename... Args>
+  template <typename R, typename... Args>
   inline CURLcode EasySetOptCallback(CURL* curl,
                                      CURLoption option,
-                                     R(*callback)(Args...)) {
-    return EasySetOptCallback(
-        curl, option, reinterpret_cast<intptr_t>(callback));
+                                     R (*callback)(Args...)) {
+    return EasySetOptCallback(curl, option,
+                              reinterpret_cast<intptr_t>(callback));
   }
 
   // Wrapper around curl_easy_perform().
@@ -88,10 +88,9 @@ class CurlInterface {
                                       CURL* curl_handle) = 0;
 
   // Wrapper around curl_multi_setopt(CURLMOPT_SOCKETFUNCTION/SOCKETDATA).
-  virtual CURLMcode MultiSetSocketCallback(
-      CURLM* multi_handle,
-      curl_socket_callback socket_callback,
-      void* userp) = 0;
+  virtual CURLMcode MultiSetSocketCallback(CURLM* multi_handle,
+                                           curl_socket_callback socket_callback,
+                                           void* userp) = 0;
 
   // Wrapper around curl_multi_setopt(CURLMOPT_TIMERFUNCTION/TIMERDATA).
   virtual CURLMcode MultiSetTimerCallback(
@@ -114,8 +113,7 @@ class CurlInterface {
   virtual std::string MultiStrError(CURLMcode code) const = 0;
 
   // Wrapper around curl_multi_perform().
-  virtual CURLMcode MultiPerform(CURLM* multi_handle,
-                                 int* running_handles) = 0;
+  virtual CURLMcode MultiPerform(CURLM* multi_handle, int* running_handles) = 0;
 
   // Wrapper around curl_multi_wait().
   virtual CURLMcode MultiWait(CURLM* multi_handle,
@@ -186,16 +184,14 @@ class BRILLO_EXPORT CurlApi : public CurlInterface {
   CURLMcode MultiRemoveHandle(CURLM* multi_handle, CURL* curl_handle) override;
 
   // Wrapper around curl_multi_setopt(CURLMOPT_SOCKETFUNCTION/SOCKETDATA).
-  CURLMcode MultiSetSocketCallback(
-      CURLM* multi_handle,
-      curl_socket_callback socket_callback,
-      void* userp) override;
+  CURLMcode MultiSetSocketCallback(CURLM* multi_handle,
+                                   curl_socket_callback socket_callback,
+                                   void* userp) override;
 
   // Wrapper around curl_multi_setopt(CURLMOPT_TIMERFUNCTION/TIMERDATA).
-  CURLMcode MultiSetTimerCallback(
-      CURLM* multi_handle,
-      curl_multi_timer_callback timer_callback,
-      void* userp) override;
+  CURLMcode MultiSetTimerCallback(CURLM* multi_handle,
+                                  curl_multi_timer_callback timer_callback,
+                                  void* userp) override;
 
   // Wrapper around curl_multi_assign().
   CURLMcode MultiAssign(CURLM* multi_handle,
@@ -212,8 +208,7 @@ class BRILLO_EXPORT CurlApi : public CurlInterface {
   std::string MultiStrError(CURLMcode code) const override;
 
   // Wrapper around curl_multi_perform().
-  CURLMcode MultiPerform(CURLM* multi_handle,
-                         int* running_handles) override;
+  CURLMcode MultiPerform(CURLM* multi_handle, int* running_handles) override;
 
   // Wrapper around curl_multi_wait().
   CURLMcode MultiWait(CURLM* multi_handle,

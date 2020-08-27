@@ -13,8 +13,9 @@ namespace brillo {
 class BaseMessageLoopTest : public ::testing::Test {};
 
 TEST(BaseMessageLoopTest, ParseBinderMinor) {
-  EXPECT_EQ(57, BaseMessageLoop::ParseBinderMinor(
-      "227 mcelog\n 58 sw_sync\n 59 ashmem\n 57 binder\n239 uhid\n"));
+  EXPECT_EQ(57,
+            BaseMessageLoop::ParseBinderMinor(
+                "227 mcelog\n 58 sw_sync\n 59 ashmem\n 57 binder\n239 uhid\n"));
   EXPECT_EQ(123, BaseMessageLoop::ParseBinderMinor("123 binder\n"));
 
   EXPECT_EQ(BaseMessageLoop::kInvalidMinor,

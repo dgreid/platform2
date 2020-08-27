@@ -17,9 +17,9 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::InSequence;
 using testing::StrictMock;
-using testing::_;
 
 ACTION_TEMPLATE(InvokeAsyncCallback,
                 HAS_1_TEMPLATE_PARAMS(int, k),
@@ -42,8 +42,8 @@ ACTION_TEMPLATE(InvokeAsyncErrorCallback,
   brillo::ErrorPtr error;
   brillo::Error::AddTo(&error, FROM_HERE, "test", code, "message");
   brillo::MessageLoop::current()->PostTask(
-      FROM_HERE, base::BindOnce(std::get<k>(args),
-                                base::Owned(error.release())));
+      FROM_HERE,
+      base::BindOnce(std::get<k>(args), base::Owned(error.release())));
   return true;
 }
 
@@ -77,13 +77,13 @@ TEST(StreamUtils, CheckInt64Overflow) {
   const int64_t max_int64 = std::numeric_limits<int64_t>::max();
   const uint64_t max_uint64 = std::numeric_limits<uint64_t>::max();
   EXPECT_TRUE(stream_utils::CheckInt64Overflow(FROM_HERE, 0, 0, nullptr));
-  EXPECT_TRUE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, 0, max_int64, nullptr));
-  EXPECT_TRUE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, max_int64, 0, nullptr));
+  EXPECT_TRUE(
+      stream_utils::CheckInt64Overflow(FROM_HERE, 0, max_int64, nullptr));
+  EXPECT_TRUE(
+      stream_utils::CheckInt64Overflow(FROM_HERE, max_int64, 0, nullptr));
   EXPECT_TRUE(stream_utils::CheckInt64Overflow(FROM_HERE, 100, -90, nullptr));
-  EXPECT_TRUE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, 1000, -1000, nullptr));
+  EXPECT_TRUE(
+      stream_utils::CheckInt64Overflow(FROM_HERE, 1000, -1000, nullptr));
 
   ErrorPtr error;
   EXPECT_FALSE(stream_utils::CheckInt64Overflow(FROM_HERE, 100, -101, &error));
@@ -91,12 +91,12 @@ TEST(StreamUtils, CheckInt64Overflow) {
   EXPECT_EQ(errors::stream::kInvalidParameter, error->GetCode());
   EXPECT_EQ("The stream offset value is out of range", error->GetMessage());
 
-  EXPECT_FALSE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, max_int64, 1, nullptr));
-  EXPECT_FALSE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, max_uint64, 0, nullptr));
-  EXPECT_FALSE(stream_utils::CheckInt64Overflow(
-      FROM_HERE, max_uint64, max_int64, nullptr));
+  EXPECT_FALSE(
+      stream_utils::CheckInt64Overflow(FROM_HERE, max_int64, 1, nullptr));
+  EXPECT_FALSE(
+      stream_utils::CheckInt64Overflow(FROM_HERE, max_uint64, 0, nullptr));
+  EXPECT_FALSE(stream_utils::CheckInt64Overflow(FROM_HERE, max_uint64,
+                                                max_int64, nullptr));
 }
 
 TEST(StreamUtils, CalculateStreamPosition) {

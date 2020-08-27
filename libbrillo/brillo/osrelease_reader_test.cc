@@ -77,8 +77,8 @@ TEST_F(OsReleaseReaderTest, NoNewLine) {
   string bonjour = "bonjour\ngarbage";
 
   base::WriteFile(osreleased_.Append("HELLO"), hello.data(), hello.size());
-  base::WriteFile(
-      osreleased_.Append("BONJOUR"), bonjour.data(), bonjour.size());
+  base::WriteFile(osreleased_.Append("BONJOUR"), bonjour.data(),
+                  bonjour.size());
 
   store_.LoadTestingOnly(temp_dir_.GetPath());
 

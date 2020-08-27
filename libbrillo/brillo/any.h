@@ -47,7 +47,7 @@ class BRILLO_EXPORT Any final {
   Any(const Any& rhs);
   Any(Any&& rhs);  // NOLINT(build/c++11)
   // Typed constructor that stores a value of type T in the Any.
-  template<class T>
+  template <class T>
   inline Any(T value) {  // NOLINT(runtime/explicit)
     data_buffer_.Assign(std::move(value));
   }
@@ -59,7 +59,7 @@ class BRILLO_EXPORT Any final {
   // Assignment operators.
   Any& operator=(const Any& rhs);
   Any& operator=(Any&& rhs);  // NOLINT(build/c++11)
-  template<class T>
+  template <class T>
   inline Any& operator=(T value) {
     data_buffer_.Assign(std::move(value));
     return *this;
@@ -75,7 +75,7 @@ class BRILLO_EXPORT Any final {
   // Checks if the given type DestType can be obtained from the Any.
   // For example, to check if Any has a 'double' value in it:
   //  any.IsTypeCompatible<double>()
-  template<typename DestType>
+  template <typename DestType>
   bool IsTypeCompatible() const {
     // Make sure the requested type DestType conforms to the storage
     // requirements of Any. We always store the data by value, which means we
@@ -116,18 +116,17 @@ class BRILLO_EXPORT Any final {
   // Returns immutable data contained in Any.
   // Aborts if Any doesn't contain a value of type T, or trivially
   // convertible to/compatible with it.
-  template<typename T>
+  template <typename T>
   const T& Get() const {
     CHECK(IsTypeCompatible<T>())
         << "Requesting value of type '" << brillo::GetUndecoratedTypeName<T>()
-        << "' from variant containing '" << GetUndecoratedTypeName()
-        << "'";
+        << "' from variant containing '" << GetUndecoratedTypeName() << "'";
     return data_buffer_.GetData<T>();
   }
 
   // Returns a copy of data in Any and returns true when that data is
   // compatible with T.  Returns false if contained data is incompatible.
-  template<typename T>
+  template <typename T>
   bool GetValue(T* value) const {
     if (!IsTypeCompatible<T>()) {
       return false;
@@ -140,7 +139,7 @@ class BRILLO_EXPORT Any final {
   // No data copying is made, the data pointed to is still owned by Any.
   // If Any doesn't contain a value of type T, or trivially
   // convertible/compatible to/with it, then it returns nullptr.
-  template<typename T>
+  template <typename T>
   T* GetPtr() {
     if (!IsTypeCompatible<T>())
       return nullptr;
@@ -150,7 +149,7 @@ class BRILLO_EXPORT Any final {
   // Returns a copy of the data contained in Any.
   // If the Any doesn't contain a compatible value, the provided default
   // |def_val| is returned instead.
-  template<typename T>
+  template <typename T>
   T TryGet(typename std::decay<T>::type const& def_val) const {
     if (!IsTypeCompatible<T>())
       return def_val;
@@ -159,7 +158,7 @@ class BRILLO_EXPORT Any final {
 
   // A convenience specialization of the above function where the default
   // value of type T is returned in case the underlying Get() fails.
-  template<typename T>
+  template <typename T>
   T TryGet() const {
     return TryGet<T>(typename std::decay<T>::type());
   }

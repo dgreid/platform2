@@ -25,8 +25,8 @@ std::unique_ptr<Response> GetAndBlock(const std::string& url,
                                       const HeaderList& headers,
                                       std::shared_ptr<Transport> transport,
                                       brillo::ErrorPtr* error) {
-  return SendRequestWithNoDataAndBlock(
-      request_type::kGet, url, headers, transport, error);
+  return SendRequestWithNoDataAndBlock(request_type::kGet, url, headers,
+                                       transport, error);
 }
 
 RequestID Get(const std::string& url,
@@ -34,31 +34,23 @@ RequestID Get(const std::string& url,
               std::shared_ptr<Transport> transport,
               const SuccessCallback& success_callback,
               const ErrorCallback& error_callback) {
-  return SendRequestWithNoData(request_type::kGet,
-                               url,
-                               headers,
-                               transport,
-                               success_callback,
-                               error_callback);
+  return SendRequestWithNoData(request_type::kGet, url, headers, transport,
+                               success_callback, error_callback);
 }
 
 std::unique_ptr<Response> HeadAndBlock(const std::string& url,
                                        std::shared_ptr<Transport> transport,
                                        brillo::ErrorPtr* error) {
-  return SendRequestWithNoDataAndBlock(
-      request_type::kHead, url, {}, transport, error);
+  return SendRequestWithNoDataAndBlock(request_type::kHead, url, {}, transport,
+                                       error);
 }
 
 RequestID Head(const std::string& url,
                std::shared_ptr<Transport> transport,
                const SuccessCallback& success_callback,
                const ErrorCallback& error_callback) {
-  return SendRequestWithNoData(request_type::kHead,
-                               url,
-                               {},
-                               transport,
-                               success_callback,
-                               error_callback);
+  return SendRequestWithNoData(request_type::kHead, url, {}, transport,
+                               success_callback, error_callback);
 }
 
 std::unique_ptr<Response> PostTextAndBlock(const std::string& url,
@@ -67,8 +59,8 @@ std::unique_ptr<Response> PostTextAndBlock(const std::string& url,
                                            const HeaderList& headers,
                                            std::shared_ptr<Transport> transport,
                                            brillo::ErrorPtr* error) {
-  return PostBinaryAndBlock(
-      url, data.data(), data.size(), mime_type, headers, transport, error);
+  return PostBinaryAndBlock(url, data.data(), data.size(), mime_type, headers,
+                            transport, error);
 }
 
 RequestID PostText(const std::string& url,
@@ -78,14 +70,8 @@ RequestID PostText(const std::string& url,
                    std::shared_ptr<Transport> transport,
                    const SuccessCallback& success_callback,
                    const ErrorCallback& error_callback) {
-  return PostBinary(url,
-                    data.data(),
-                    data.size(),
-                    mime_type,
-                    headers,
-                    transport,
-                    success_callback,
-                    error_callback);
+  return PostBinary(url, data.data(), data.size(), mime_type, headers,
+                    transport, success_callback, error_callback);
 }
 
 std::unique_ptr<Response> SendRequestAndBlock(
@@ -115,8 +101,8 @@ std::unique_ptr<Response> SendRequestWithNoDataAndBlock(
     const HeaderList& headers,
     std::shared_ptr<Transport> transport,
     brillo::ErrorPtr* error) {
-  return SendRequestAndBlock(
-      method, url, nullptr, 0, {}, headers, transport, error);
+  return SendRequestAndBlock(method, url, nullptr, 0, {}, headers, transport,
+                             error);
 }
 
 RequestID SendRequest(const std::string& method,
@@ -136,8 +122,8 @@ RequestID SendRequest(const std::string& method,
     brillo::ErrorPtr error;
     if (!request.AddRequestBody(std::move(stream), &error)) {
       transport->RunCallbackAsync(
-          FROM_HERE, base::Bind(error_callback,
-                                0, base::Owned(error.release())));
+          FROM_HERE,
+          base::Bind(error_callback, 0, base::Owned(error.release())));
       return 0;
     }
   }
@@ -153,14 +139,9 @@ RequestID SendRequest(const std::string& method,
                       std::shared_ptr<Transport> transport,
                       const SuccessCallback& success_callback,
                       const ErrorCallback& error_callback) {
-  return SendRequest(method,
-                     url,
-                     MemoryStream::OpenCopyOf(data, data_size, nullptr),
-                     mime_type,
-                     headers,
-                     transport,
-                     success_callback,
-                     error_callback);
+  return SendRequest(
+      method, url, MemoryStream::OpenCopyOf(data, data_size, nullptr),
+      mime_type, headers, transport, success_callback, error_callback);
 }
 
 RequestID SendRequestWithNoData(const std::string& method,
@@ -169,13 +150,7 @@ RequestID SendRequestWithNoData(const std::string& method,
                                 std::shared_ptr<Transport> transport,
                                 const SuccessCallback& success_callback,
                                 const ErrorCallback& error_callback) {
-  return SendRequest(method,
-                     url,
-                     {},
-                     {},
-                     headers,
-                     transport,
-                     success_callback,
+  return SendRequest(method, url, {}, {}, headers, transport, success_callback,
                      error_callback);
 }
 
@@ -187,14 +162,8 @@ std::unique_ptr<Response> PostBinaryAndBlock(
     const HeaderList& headers,
     std::shared_ptr<Transport> transport,
     brillo::ErrorPtr* error) {
-  return SendRequestAndBlock(request_type::kPost,
-                             url,
-                             data,
-                             data_size,
-                             mime_type,
-                             headers,
-                             transport,
-                             error);
+  return SendRequestAndBlock(request_type::kPost, url, data, data_size,
+                             mime_type, headers, transport, error);
 }
 
 RequestID PostBinary(const std::string& url,
@@ -204,14 +173,8 @@ RequestID PostBinary(const std::string& url,
                      std::shared_ptr<Transport> transport,
                      const SuccessCallback& success_callback,
                      const ErrorCallback& error_callback) {
-  return SendRequest(request_type::kPost,
-                     url,
-                     std::move(stream),
-                     mime_type,
-                     headers,
-                     transport,
-                     success_callback,
-                     error_callback);
+  return SendRequest(request_type::kPost, url, std::move(stream), mime_type,
+                     headers, transport, success_callback, error_callback);
 }
 
 RequestID PostBinary(const std::string& url,
@@ -222,15 +185,8 @@ RequestID PostBinary(const std::string& url,
                      std::shared_ptr<Transport> transport,
                      const SuccessCallback& success_callback,
                      const ErrorCallback& error_callback) {
-  return SendRequest(request_type::kPost,
-                     url,
-                     data,
-                     data_size,
-                     mime_type,
-                     headers,
-                     transport,
-                     success_callback,
-                     error_callback);
+  return SendRequest(request_type::kPost, url, data, data_size, mime_type,
+                     headers, transport, success_callback, error_callback);
 }
 
 std::unique_ptr<Response> PostFormDataAndBlock(
@@ -240,13 +196,9 @@ std::unique_ptr<Response> PostFormDataAndBlock(
     std::shared_ptr<Transport> transport,
     brillo::ErrorPtr* error) {
   std::string encoded_data = brillo::data_encoding::WebParamsEncode(data);
-  return PostBinaryAndBlock(url,
-                            encoded_data.c_str(),
-                            encoded_data.size(),
+  return PostBinaryAndBlock(url, encoded_data.c_str(), encoded_data.size(),
                             brillo::mime::application::kWwwFormUrlEncoded,
-                            headers,
-                            transport,
-                            error);
+                            headers, transport, error);
 }
 
 std::unique_ptr<Response> PostFormDataAndBlock(
@@ -269,14 +221,9 @@ RequestID PostFormData(const std::string& url,
                        const SuccessCallback& success_callback,
                        const ErrorCallback& error_callback) {
   std::string encoded_data = brillo::data_encoding::WebParamsEncode(data);
-  return PostBinary(url,
-                    encoded_data.c_str(),
-                    encoded_data.size(),
-                    brillo::mime::application::kWwwFormUrlEncoded,
-                    headers,
-                    transport,
-                    success_callback,
-                    error_callback);
+  return PostBinary(url, encoded_data.c_str(), encoded_data.size(),
+                    brillo::mime::application::kWwwFormUrlEncoded, headers,
+                    transport, success_callback, error_callback);
 }
 
 RequestID PostFormData(const std::string& url,
@@ -304,11 +251,11 @@ std::unique_ptr<Response> PostJsonAndBlock(const std::string& url,
   std::string data;
   if (json)
     base::JSONWriter::Write(*json, &data);
-  std::string mime_type = AppendParameter(brillo::mime::application::kJson,
-                                          brillo::mime::parameters::kCharset,
-                                          "utf-8");
-  return PostBinaryAndBlock(
-      url, data.c_str(), data.size(), mime_type, headers, transport, error);
+  std::string mime_type =
+      AppendParameter(brillo::mime::application::kJson,
+                      brillo::mime::parameters::kCharset, "utf-8");
+  return PostBinaryAndBlock(url, data.c_str(), data.size(), mime_type, headers,
+                            transport, error);
 }
 
 RequestID PostJson(const std::string& url,
@@ -320,17 +267,11 @@ RequestID PostJson(const std::string& url,
   std::string data;
   if (json)
     base::JSONWriter::Write(*json, &data);
-  std::string mime_type = AppendParameter(brillo::mime::application::kJson,
-                                          brillo::mime::parameters::kCharset,
-                                          "utf-8");
-  return PostBinary(url,
-                    data.c_str(),
-                    data.size(),
-                    mime_type,
-                    headers,
-                    transport,
-                    success_callback,
-                    error_callback);
+  std::string mime_type =
+      AppendParameter(brillo::mime::application::kJson,
+                      brillo::mime::parameters::kCharset, "utf-8");
+  return PostBinary(url, data.c_str(), data.size(), mime_type, headers,
+                    transport, success_callback, error_callback);
 }
 
 std::unique_ptr<Response> PatchJsonAndBlock(
@@ -342,17 +283,11 @@ std::unique_ptr<Response> PatchJsonAndBlock(
   std::string data;
   if (json)
     base::JSONWriter::Write(*json, &data);
-  std::string mime_type = AppendParameter(brillo::mime::application::kJson,
-                                          brillo::mime::parameters::kCharset,
-                                          "utf-8");
-  return SendRequestAndBlock(request_type::kPatch,
-                             url,
-                             data.c_str(),
-                             data.size(),
-                             mime_type,
-                             headers,
-                             transport,
-                             error);
+  std::string mime_type =
+      AppendParameter(brillo::mime::application::kJson,
+                      brillo::mime::parameters::kCharset, "utf-8");
+  return SendRequestAndBlock(request_type::kPatch, url, data.c_str(),
+                             data.size(), mime_type, headers, transport, error);
 }
 
 RequestID PatchJson(const std::string& url,
@@ -373,9 +308,7 @@ RequestID PatchJson(const std::string& url,
 }
 
 std::unique_ptr<base::DictionaryValue> ParseJsonResponse(
-    Response* response,
-    int* status_code,
-    brillo::ErrorPtr* error) {
+    Response* response, int* status_code, brillo::ErrorPtr* error) {
   std::unique_ptr<base::DictionaryValue> result;
   if (!response)
     return result;

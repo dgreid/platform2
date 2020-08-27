@@ -18,34 +18,34 @@ namespace mime {
 
 namespace types {
 // Main MIME type categories
-BRILLO_EXPORT extern const char kApplication[];        // application
-BRILLO_EXPORT extern const char kAudio[];              // audio
-BRILLO_EXPORT extern const char kImage[];              // image
-BRILLO_EXPORT extern const char kMessage[];            // message
-BRILLO_EXPORT extern const char kMultipart[];          // multipart
-BRILLO_EXPORT extern const char kText[];               // test
-BRILLO_EXPORT extern const char kVideo[];              // video
+BRILLO_EXPORT extern const char kApplication[];  // application
+BRILLO_EXPORT extern const char kAudio[];        // audio
+BRILLO_EXPORT extern const char kImage[];        // image
+BRILLO_EXPORT extern const char kMessage[];      // message
+BRILLO_EXPORT extern const char kMultipart[];    // multipart
+BRILLO_EXPORT extern const char kText[];         // test
+BRILLO_EXPORT extern const char kVideo[];        // video
 }  // namespace types
 
 namespace parameters {
 // Common MIME parameters
-BRILLO_EXPORT extern const char kCharset[];            // charset=...
+BRILLO_EXPORT extern const char kCharset[];  // charset=...
 }  // namespace parameters
 
 namespace image {
 // Common image MIME types
-BRILLO_EXPORT extern const char kJpeg[];               // image/jpeg
-BRILLO_EXPORT extern const char kPng[];                // image/png
-BRILLO_EXPORT extern const char kBmp[];                // image/bmp
-BRILLO_EXPORT extern const char kTiff[];               // image/tiff
-BRILLO_EXPORT extern const char kGif[];                // image/gif
+BRILLO_EXPORT extern const char kJpeg[];  // image/jpeg
+BRILLO_EXPORT extern const char kPng[];   // image/png
+BRILLO_EXPORT extern const char kBmp[];   // image/bmp
+BRILLO_EXPORT extern const char kTiff[];  // image/tiff
+BRILLO_EXPORT extern const char kGif[];   // image/gif
 }  // namespace image
 
 namespace text {
 // Common text MIME types
-BRILLO_EXPORT extern const char kPlain[];              // text/plain
-BRILLO_EXPORT extern const char kHtml[];               // text/html
-BRILLO_EXPORT extern const char kXml[];                // text/xml
+BRILLO_EXPORT extern const char kPlain[];  // text/plain
+BRILLO_EXPORT extern const char kHtml[];   // text/html
+BRILLO_EXPORT extern const char kXml[];    // text/xml
 }  // namespace text
 
 namespace application {
@@ -73,10 +73,10 @@ using Parameters = std::vector<std::pair<std::string, std::string>>;
 // Combine a MIME type, subtype and parameters into a MIME string.
 // e.g. Combine("text", "plain", {{"charset", "utf-8"}}) will give:
 //      "text/plain; charset=utf-8"
-BRILLO_EXPORT std::string Combine(
-    const std::string& type,
-    const std::string& subtype,
-    const Parameters& parameters = {}) WARN_UNUSED_RESULT;
+BRILLO_EXPORT std::string Combine(const std::string& type,
+                                  const std::string& subtype,
+                                  const Parameters& parameters = {})
+    WARN_UNUSED_RESULT;
 
 // Splits a MIME string into type and subtype.
 // "text/plain;charset=utf-8" => ("text", "plain")
@@ -105,15 +105,15 @@ BRILLO_EXPORT Parameters GetParameters(const std::string& mime_string);
 
 // Removes parameters from a MIME string
 // "text/plain;charset=utf-8" => "text/plain"
-BRILLO_EXPORT std::string RemoveParameters(
-    const std::string& mime_string) WARN_UNUSED_RESULT;
+BRILLO_EXPORT std::string RemoveParameters(const std::string& mime_string)
+    WARN_UNUSED_RESULT;
 
 // Appends a parameter to a MIME string.
 // "text/plain" => "text/plain; charset=utf-8"
-BRILLO_EXPORT std::string AppendParameter(
-    const std::string& mime_string,
-    const std::string& paramName,
-    const std::string& paramValue) WARN_UNUSED_RESULT;
+BRILLO_EXPORT std::string AppendParameter(const std::string& mime_string,
+                                          const std::string& paramName,
+                                          const std::string& paramValue)
+    WARN_UNUSED_RESULT;
 
 // Returns the value of a parameter on a MIME string (empty string if missing).
 // ("text/plain;charset=utf-8","charset") => "utf-8"

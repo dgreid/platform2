@@ -20,10 +20,10 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-using ::testing::AnyNumber;
-using ::testing::Return;
-using ::testing::Invoke;
 using ::testing::_;
+using ::testing::AnyNumber;
+using ::testing::Invoke;
+using ::testing::Return;
 using ::testing::Unused;
 
 namespace brillo {
@@ -51,7 +51,7 @@ const char kTestInterface1[] = "org.chromium.TestInterface1";
 const char kTestInterface2[] = "org.chromium.TestInterface2";
 const char kTestInterface3[] = "org.chromium.TestInterface3";
 
-const std::string kTestString("lies");
+const std::string kTestString("lies");  // NOLINT(runtime/string)
 const dbus::ObjectPath kMethodsExportedOnPath(std::string("/export"));
 const dbus::ObjectPath kTestObjectPathInit(std::string("/path_init"));
 const dbus::ObjectPath kTestObjectPathUpdate(std::string("/path_update"));
@@ -119,10 +119,12 @@ class ExportedPropertySetTest : public ::testing::Test {
     mock_exported_object_ =
         new dbus::MockExportedObject(bus_.get(), kMethodsExportedOnPath);
     EXPECT_CALL(*bus_, GetExportedObject(kMethodsExportedOnPath))
-        .Times(1).WillOnce(Return(mock_exported_object_.get()));
+        .Times(1)
+        .WillOnce(Return(mock_exported_object_.get()));
 
     EXPECT_CALL(*mock_exported_object_,
-                ExportMethod(dbus::kPropertiesInterface, _, _, _)).Times(3);
+                ExportMethod(dbus::kPropertiesInterface, _, _, _))
+        .Times(3);
     p_.reset(new Properties(bus_, kMethodsExportedOnPath));
   }
 
@@ -137,8 +139,7 @@ class ExportedPropertySetTest : public ::testing::Test {
   }
 
   std::unique_ptr<dbus::Response> GetPropertyOnInterface(
-      const std::string& interface_name,
-      const std::string& property_name) {
+      const std::string& interface_name, const std::string& property_name) {
     dbus::MethodCall method_call(dbus::kPropertiesInterface,
                                  dbus::kPropertiesGet);
     method_call.SetSerial(123);
@@ -168,7 +169,7 @@ class ExportedPropertySetTest : public ::testing::Test {
   std::unique_ptr<Properties> p_;
 };
 
-template<typename T>
+template <typename T>
 class PropertyValidatorObserver {
  public:
   PropertyValidatorObserver()
@@ -185,8 +186,7 @@ class PropertyValidatorObserver {
   }
 
  private:
-  base::Callback<bool(brillo::ErrorPtr*, const T&)>
-      validate_property_callback_;
+  base::Callback<bool(brillo::ErrorPtr*, const T&)> validate_property_callback_;
 
   DISALLOW_COPY_AND_ASSIGN(PropertyValidatorObserver);
 };
@@ -471,30 +471,30 @@ TEST_F(ExportedPropertySetTest, GetWorksWithUint8List) {
 }
 
 TEST_F(ExportedPropertySetTest, SetInvalidInterface) {
-  auto response = SetPropertyOnInterface(
-      "BadInterfaceName", kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface("BadInterfaceName", kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_EQ(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(DBUS_ERROR_UNKNOWN_INTERFACE, response->GetErrorName());
 }
 
 TEST_F(ExportedPropertySetTest, SetBadPropertyName) {
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, "IAmNotAProperty", brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, "IAmNotAProperty",
+                                         brillo::Any(kTestString));
   ASSERT_EQ(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(DBUS_ERROR_UNKNOWN_PROPERTY, response->GetErrorName());
 }
 
 TEST_F(ExportedPropertySetTest, SetFailsWithReadOnlyProperty) {
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_EQ(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(DBUS_ERROR_PROPERTY_READ_ONLY, response->GetErrorName());
 }
 
 TEST_F(ExportedPropertySetTest, SetFailsWithMismatchedValueType) {
   p_->string_prop_.SetAccessMode(ExportedPropertyBase::Access::kReadWrite);
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(true));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(true));
   ASSERT_EQ(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(DBUS_ERROR_INVALID_ARGS, response->GetErrorName());
 }
@@ -519,8 +519,8 @@ TEST_F(ExportedPropertySetTest, SetFailsWithValidator) {
       FROM_HERE, errors::dbus::kDomain, DBUS_ERROR_INVALID_ARGS, "");
   EXPECT_CALL(property_validator, ValidateProperty(_, kTestString))
       .WillOnce(Invoke(SetInvalidProperty));
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_EQ(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(DBUS_ERROR_INVALID_ARGS, response->GetErrorName());
 }
@@ -533,8 +533,8 @@ TEST_F(ExportedPropertySetTest, SetWorksWithValidator) {
 
   EXPECT_CALL(property_validator, ValidateProperty(_, kTestString))
       .WillOnce(Return(true));
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_NE(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(kTestString, p_->string_prop_.value());
 }
@@ -549,16 +549,16 @@ TEST_F(ExportedPropertySetTest, SetWorksWithSameValue) {
 
   // No need to validate the value if it is the same as the current one.
   EXPECT_CALL(property_validator, ValidateProperty(_, _)).Times(0);
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_NE(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(kTestString, p_->string_prop_.value());
 }
 
 TEST_F(ExportedPropertySetTest, SetWorksWithoutValidator) {
   p_->string_prop_.SetAccessMode(ExportedPropertyBase::Access::kReadWrite);
-  auto response = SetPropertyOnInterface(
-      kTestInterface3, kStringPropName, brillo::Any(kTestString));
+  auto response = SetPropertyOnInterface(kTestInterface3, kStringPropName,
+                                         brillo::Any(kTestString));
   ASSERT_NE(dbus::Message::MESSAGE_ERROR, response->GetMessageType());
   ASSERT_EQ(kTestString, p_->string_prop_.value());
 }
@@ -594,7 +594,8 @@ void VerifySignal(dbus::Signal* signal) {
 
 TEST_F(ExportedPropertySetTest, SignalsAreParsable) {
   EXPECT_CALL(*mock_exported_object_, SendSignal(_))
-      .Times(1).WillOnce(Invoke(&VerifySignal));
+      .Times(1)
+      .WillOnce(Invoke(&VerifySignal));
   p_->uint8_prop_.SetValue(57);
 }
 

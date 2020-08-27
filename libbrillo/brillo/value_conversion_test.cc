@@ -183,8 +183,8 @@ TEST(ValueConversionTest, FromValueMap) {
 TEST(ValueConversionTest, FromValueMapOfVectors) {
   std::map<std::string, std::vector<int>> actual;
   EXPECT_TRUE(FromValue(*ParseValue("{'foo':[1,2], 'bar':[]}"), &actual));
-  std::map<std::string, std::vector<int>> expected{
-      {"foo", {1, 2}}, {"bar", {}}};
+  std::map<std::string, std::vector<int>> expected{{"foo", {1, 2}},
+                                                   {"bar", {}}};
   EXPECT_EQ(expected, actual);
 
   EXPECT_TRUE(FromValue(*ParseValue("{}"), &actual));
@@ -196,8 +196,8 @@ TEST(ValueConversionTest, FromValueMapOfVectors) {
 TEST(ValueConversionTest, FromValueVectorOfMaps) {
   std::vector<std::map<std::string, int>> actual;
   EXPECT_TRUE(FromValue(*ParseValue("[{'foo':1,'bar':2},{'baz':3}]"), &actual));
-  std::vector<std::map<std::string, int>> expected{
-      {{"foo", 1}, {"bar", 2}}, {{"baz", 3}}};
+  std::vector<std::map<std::string, int>> expected{{{"foo", 1}, {"bar", 2}},
+                                                   {{"baz", 3}}};
   EXPECT_EQ(expected, actual);
 
   EXPECT_TRUE(FromValue(*ParseValue("[]"), &actual));
@@ -247,9 +247,9 @@ TEST(ValueConversionTest, ToValueMap) {
   EXPECT_JSON_EQ("{}", *ToValue(std::map<std::string, int>{}));
   EXPECT_JSON_EQ("{'foo': true}",
                  *ToValue(std::map<std::string, bool>{{"foo", true}}));
-  EXPECT_JSON_EQ("{'foo': 1.1, 'bar': 2.2}",
-                 *ToValue(std::map<std::string, double>{{"foo", 1.1},
-                                                        {"bar", 2.2}}));
+  EXPECT_JSON_EQ(
+      "{'foo': 1.1, 'bar': 2.2}",
+      *ToValue(std::map<std::string, double>{{"foo", 1.1}, {"bar", 2.2}}));
 }
 
 }  // namespace brillo

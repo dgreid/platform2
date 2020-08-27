@@ -12,13 +12,9 @@ namespace data_container {
 
 namespace {
 
-bool ErrorStreamReadOnly(const base::Location& location,
-                         ErrorPtr* error) {
-  Error::AddTo(error,
-               location,
-               errors::stream::kDomain,
-               errors::stream::kOperationNotSupported,
-               "Stream is read-only");
+bool ErrorStreamReadOnly(const base::Location& location, ErrorPtr* error) {
+  Error::AddTo(error, location, errors::stream::kDomain,
+               errors::stream::kOperationNotSupported, "Stream is read-only");
   return false;
 }
 

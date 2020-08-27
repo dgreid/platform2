@@ -68,14 +68,15 @@ class DBusInterfaceMethodHandlerInterface {
 // value, then it cannot have any output parameters in its parameter list.
 // The signature of the callback handler is expected to be:
 //    R(Args...)
-template<typename R, typename... Args>
+template <typename R, typename... Args>
 class SimpleDBusInterfaceMethodHandler
     : public DBusInterfaceMethodHandlerInterface {
  public:
   // A constructor that takes a |handler| to be called when HandleMethod()
   // virtual function is invoked.
   explicit SimpleDBusInterfaceMethodHandler(
-      const base::Callback<R(Args...)>& handler) : handler_(handler) {}
+      const base::Callback<R(Args...)>& handler)
+      : handler_(handler) {}
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -87,8 +88,8 @@ class SimpleDBusInterfaceMethodHandler
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
     // The handler is expected a return value, don't allow output parameters.
-    if (!DBusParamReader<false, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<false, Args...>::Invoke(invoke_callback, &reader,
+                                                 &param_reader_error)) {
       // Error parsing method arguments.
       method_response.ReplyWithError(param_reader_error.get());
     }
@@ -102,14 +103,15 @@ class SimpleDBusInterfaceMethodHandler
 
 // Specialization of SimpleDBusInterfaceMethodHandlerInterface for
 // R=void (methods with no return values).
-template<typename... Args>
+template <typename... Args>
 class SimpleDBusInterfaceMethodHandler<void, Args...>
     : public DBusInterfaceMethodHandlerInterface {
  public:
   // A constructor that takes a |handler| to be called when HandleMethod()
   // virtual function is invoked.
   explicit SimpleDBusInterfaceMethodHandler(
-      const base::Callback<void(Args...)>& handler) : handler_(handler) {}
+      const base::Callback<void(Args...)>& handler)
+      : handler_(handler) {}
 
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
@@ -124,8 +126,8 @@ class SimpleDBusInterfaceMethodHandler<void, Args...>
 
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
-    if (!DBusParamReader<true, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<true, Args...>::Invoke(invoke_callback, &reader,
+                                                &param_reader_error)) {
       // Error parsing method arguments.
       method_response.ReplyWithError(param_reader_error.get());
     }
@@ -147,7 +149,7 @@ class SimpleDBusInterfaceMethodHandler<void, Args...>
 // into the |error| object provided.
 // The signature of the callback handler is expected to be:
 //    bool(ErrorPtr*, Args...)
-template<typename... Args>
+template <typename... Args>
 class SimpleDBusInterfaceMethodHandlerWithError
     : public DBusInterfaceMethodHandlerInterface {
  public:
@@ -174,8 +176,8 @@ class SimpleDBusInterfaceMethodHandlerWithError
 
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
-    if (!DBusParamReader<true, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<true, Args...>::Invoke(invoke_callback, &reader,
+                                                &param_reader_error)) {
       // Error parsing method arguments.
       method_response.ReplyWithError(param_reader_error.get());
     }
@@ -198,7 +200,7 @@ class SimpleDBusInterfaceMethodHandlerWithError
 // into the |error| object provided.
 // The signature of the callback handler is expected to be:
 //    bool(ErrorPtr*, dbus::Message*, Args...)
-template<typename... Args>
+template <typename... Args>
 class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
     : public DBusInterfaceMethodHandlerInterface {
  public:
@@ -211,8 +213,8 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
   void HandleMethod(::dbus::MethodCall* method_call,
                     ResponseSender sender) override {
     DBusMethodResponseBase method_response(method_call, std::move(sender));
-    auto invoke_callback =
-        [this, method_call, &method_response](const Args&... args) {
+    auto invoke_callback = [this, method_call,
+                            &method_response](const Args&... args) {
       ErrorPtr error;
       if (!handler_.Run(&error, method_call, args...)) {
         method_response.ReplyWithError(error.get());
@@ -226,8 +228,8 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
 
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
-    if (!DBusParamReader<true, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<true, Args...>::Invoke(invoke_callback, &reader,
+                                                &param_reader_error)) {
       // Error parsing method arguments.
       method_response.ReplyWithError(param_reader_error.get());
     }
@@ -246,7 +248,7 @@ class SimpleDBusInterfaceMethodHandlerWithErrorAndMessage
 // the provided DBusMethodResponse object.
 // The signature of the callback handler is expected to be:
 //    void(std::unique_ptr<DBusMethodResponse<RetTypes...>, Args...)
-template<typename Response, typename... Args>
+template <typename Response, typename... Args>
 class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
  public:
   // A constructor that takes a |handler| to be called when HandleMethod()
@@ -268,8 +270,8 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
 
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
-    if (!DBusParamReader<false, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<false, Args...>::Invoke(invoke_callback, &reader,
+                                                 &param_reader_error)) {
       // Error parsing method arguments.
       DBusMethodResponseBase method_response(method_call, std::move(sender));
       method_response.ReplyWithError(param_reader_error.get());
@@ -292,7 +294,7 @@ class DBusInterfaceMethodHandler : public DBusInterfaceMethodHandlerInterface {
 // The signature of the callback handler is expected to be:
 //    void(std::unique_ptr<DBusMethodResponse<RetTypes...>, dbus::Message*,
 //         Args...);
-template<typename Response, typename... Args>
+template <typename Response, typename... Args>
 class DBusInterfaceMethodHandlerWithMessage
     : public DBusInterfaceMethodHandlerInterface {
  public:
@@ -316,8 +318,8 @@ class DBusInterfaceMethodHandlerWithMessage
 
     ErrorPtr param_reader_error;
     ::dbus::MessageReader reader(method_call);
-    if (!DBusParamReader<false, Args...>::Invoke(
-            invoke_callback, &reader, &param_reader_error)) {
+    if (!DBusParamReader<false, Args...>::Invoke(invoke_callback, &reader,
+                                                 &param_reader_error)) {
       // Error parsing method arguments.
       DBusMethodResponseBase method_response(method_call, std::move(sender));
       method_response.ReplyWithError(param_reader_error.get());

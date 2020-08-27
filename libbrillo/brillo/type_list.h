@@ -22,7 +22,7 @@ struct is_one_of {
 template <typename T, typename Head, typename... Tail>
 struct is_one_of<T, TypeList<Head, Tail...>> {
   static constexpr bool value =
-    std::is_same<T, Head>::value || is_one_of<T, TypeList<Tail...>>::value;
+      std::is_same<T, Head>::value || is_one_of<T, TypeList<Tail...>>::value;
 };
 
 }  // namespace type_list
@@ -45,8 +45,7 @@ struct is_one_of<T, TypeList<Head, Tail...>> {
 //  f<const int32_t>();  // Error; no matching function for call to 'f'.
 //  f<uint32_t>();       // Error; no matching function for call to 'f'.
 template <typename T, typename Types>
-using EnableIfIsOneOf =
-  std::enable_if_t<type_list::is_one_of<T, Types>::value>;
+using EnableIfIsOneOf = std::enable_if_t<type_list::is_one_of<T, Types>::value>;
 
 // Enables a template if the type T is in the typelist Types and T is an
 // arithmetic type (some sort of int or floating-point number).

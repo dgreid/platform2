@@ -19,10 +19,10 @@
 
 namespace brillo {
 
-using http::fake::Transport;
-using http::fake::ServerRequestResponseBase;
 using http::fake::ServerRequest;
+using http::fake::ServerRequestResponseBase;
 using http::fake::ServerResponse;
+using http::fake::Transport;
 
 Transport::Transport() {
   VLOG(1) << "fake::Transport created";
@@ -63,9 +63,8 @@ std::shared_ptr<http::Connection> Transport::CreateConnection(
   return connection;
 }
 
-void Transport::RunCallbackAsync(
-    const base::Location& /* from_here */,
-    const base::Closure& callback) {
+void Transport::RunCallbackAsync(const base::Location& /* from_here */,
+                                 const base::Closure& callback) {
   if (!async_) {
     callback.Run();
     return;
@@ -101,8 +100,7 @@ bool Transport::CancelRequest(RequestID /* request_id */) {
   return false;
 }
 
-void Transport::SetDefaultTimeout(base::TimeDelta /* timeout */) {
-}
+void Transport::SetDefaultTimeout(base::TimeDelta /* timeout */) {}
 
 static inline std::string GetHandlerMapKey(const std::string& url,
                                            const std::string& method) {
@@ -121,10 +119,10 @@ void Transport::AddSimpleReplyHandler(const std::string& url,
                                       int status_code,
                                       const std::string& reply_text,
                                       const std::string& mime_type) {
-  auto handler = [](
-      int status_code, const std::string& reply_text,
-      const std::string& mime_type, const ServerRequest& /* request */,
-      ServerResponse* response) {
+  auto handler = [](int status_code, const std::string& reply_text,
+                    const std::string& mime_type,
+                    const ServerRequest& /* request */,
+                    ServerResponse* response) {
     response->ReplyText(status_code, reply_text, mime_type);
   };
   AddHandler(url, method,
@@ -132,8 +130,7 @@ void Transport::AddSimpleReplyHandler(const std::string& url,
 }
 
 Transport::HandlerCallback Transport::GetHandler(
-    const std::string& url,
-    const std::string& method) const {
+    const std::string& url, const std::string& method) const {
   // First try the exact combination of URL/Method
   auto p = handlers_.find(GetHandlerMapKey(url, method));
   if (p != handlers_.end())
@@ -174,8 +171,7 @@ std::string ServerRequestResponseBase::GetDataAsString() const {
 }
 
 base::Optional<base::Value> ServerRequestResponseBase::GetDataAsJson() const {
-  if (brillo::mime::RemoveParameters(
-          GetHeader(request_header::kContentType)) ==
+  if (brillo::mime::RemoveParameters(GetHeader(request_header::kContentType)) ==
       brillo::mime::application::kJson) {
     auto value = base::JSONReader::Read(GetDataAsString());
     if (!value->is_dict())
@@ -219,8 +215,8 @@ ServerRequest::ServerRequest(const std::string& url, const std::string& method)
 
 std::string ServerRequest::GetFormField(const std::string& field_name) const {
   if (!form_fields_parsed_) {
-    std::string mime_type = brillo::mime::RemoveParameters(
-        GetHeader(request_header::kContentType));
+    std::string mime_type =
+        brillo::mime::RemoveParameters(GetHeader(request_header::kContentType));
     if (mime_type == brillo::mime::application::kWwwFormUrlEncoded &&
         !GetData().empty()) {
       auto fields = brillo::data_encoding::WebParamsDecode(GetDataAsString());
@@ -254,10 +250,9 @@ void ServerResponse::ReplyJson(int status_code, const base::Value* json) {
   std::string text;
   base::JSONWriter::WriteWithOptions(
       *json, base::JSONWriter::OPTIONS_PRETTY_PRINT, &text);
-  std::string mime_type =
-      brillo::mime::AppendParameter(brillo::mime::application::kJson,
-                                      brillo::mime::parameters::kCharset,
-                                      "utf-8");
+  std::string mime_type = brillo::mime::AppendParameter(
+      brillo::mime::application::kJson, brillo::mime::parameters::kCharset,
+      "utf-8");
   ReplyText(status_code, text, mime_type);
 }
 

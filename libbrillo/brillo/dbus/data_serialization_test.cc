@@ -432,7 +432,17 @@ TEST(DBusUtils, ArrayOfStrings) {
 TEST(DBusUtils, ArrayOfInt64) {
   std::unique_ptr<Response> message = Response::CreateEmpty();
   MessageWriter writer(message.get());
-  std::vector<int64_t> values{-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5,
+  std::vector<int64_t> values{-5,
+                              -4,
+                              -3,
+                              -2,
+                              -1,
+                              0,
+                              1,
+                              2,
+                              3,
+                              4,
+                              5,
                               std::numeric_limits<int64_t>::min(),
                               std::numeric_limits<int64_t>::max()};
   AppendValueToWriter(&writer, values);
@@ -588,11 +598,8 @@ TEST(DBusUtils, StringToStringMap) {
   std::unique_ptr<Response> message = Response::CreateEmpty();
   MessageWriter writer(message.get());
   std::map<std::string, std::string> values{
-      {"key1", "value1"},
-      {"key2", "value2"},
-      {"key3", "value3"},
-      {"key4", "value4"},
-      {"key5", "value5"},
+      {"key1", "value1"}, {"key2", "value2"}, {"key3", "value3"},
+      {"key4", "value4"}, {"key5", "value5"},
   };
   AppendValueToWriter(&writer, values);
 
@@ -632,7 +639,9 @@ TEST(DBusUtils, Tuple) {
   std::tuple<std::string, int> struct1{"value2", 3};
   AppendValueToWriter(&writer, struct1);
   std::tuple<int, std::string, std::vector<std::pair<int, int>>> struct2{
-    1, "a", {{2, 3}}
+      1,
+      "a",
+      {{2, 3}},
   };
   AppendValueToWriter(&writer, struct2);
 
@@ -720,7 +729,7 @@ bool PopValueFromReader(dbus::MessageReader* reader, Person* value) {
 }
 
 // Specialize DBusType<T> for "Person" structure.
-template<>
+template <>
 struct DBusType<Person> {
   inline static std::string GetSignature() {
     return GetStructDBusSignature<std::string, std::string, int>();
@@ -762,12 +771,10 @@ TEST(DBusUtils, CustomStructInComplexTypes) {
   std::unique_ptr<Response> message = Response::CreateEmpty();
   MessageWriter writer(message.get());
   std::vector<Person> people{{"John", "Doe", 32}, {"Jane", "Smith", 48}};
-  std::vector<std::map<int, Person>> data{
-    {
+  std::vector<std::map<int, Person>> data{{
       {1, Person{"John", "Doe", 32}},
       {2, Person{"Jane", "Smith", 48}},
-    }
-  };
+  }};
   AppendValueToWriter(&writer, data);
 
   EXPECT_EQ("aa{i(ssi)}", message->GetSignature());

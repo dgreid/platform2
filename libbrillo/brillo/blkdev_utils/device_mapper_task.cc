@@ -34,9 +34,8 @@ bool DevmapperTaskImpl::AddTarget(uint64_t start,
   // TODO(sarthakkukreti): Evaluate creation of a SecureCString to keep
   // string data safe.
   std::string parameters_str = parameters.to_string();
-  if (!task_ ||
-      !dm_task_add_target(task_.get(), start, length, type.c_str(),
-                          parameters_str.c_str())) {
+  if (!task_ || !dm_task_add_target(task_.get(), start, length, type.c_str(),
+                                    parameters_str.c_str())) {
     LOG(ERROR) << "AddTarget failed";
     return false;
   }

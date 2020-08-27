@@ -61,10 +61,10 @@ class BRILLO_EXPORT FakeMessageLoop : public MessageLoop {
   // Using std::greater<> for the priority_queue means that the top() of the
   // queue is the lowest (earliest) time, and for the same time, the smallest
   // TaskId. This determines the order in which the tasks will be fired.
-  std::priority_queue<
-      std::pair<base::Time, MessageLoop::TaskId>,
-      std::vector<std::pair<base::Time, MessageLoop::TaskId>>,
-      std::greater<std::pair<base::Time, MessageLoop::TaskId>>> fire_order_;
+  std::priority_queue<std::pair<base::Time, MessageLoop::TaskId>,
+                      std::vector<std::pair<base::Time, MessageLoop::TaskId>>,
+                      std::greater<std::pair<base::Time, MessageLoop::TaskId>>>
+      fire_order_;
 
   base::SimpleTestClock* test_clock_ = nullptr;
   base::Time current_time_ = base::Time::FromDoubleT(1246996800.);

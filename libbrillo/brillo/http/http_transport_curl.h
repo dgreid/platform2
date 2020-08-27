@@ -101,8 +101,7 @@ class BRILLO_EXPORT Transport : public http::Transport {
   void ProcessAsyncCurlMessages();
 
   // Processes the transfer completion message (success or failure).
-  void OnTransferComplete(http::curl::Connection* connection,
-                          CURLcode code);
+  void OnTransferComplete(http::curl::Connection* connection, CURLcode code);
 
   // Cleans up internal data for a completed/canceled asynchronous operation
   // on a connection.
@@ -113,11 +112,8 @@ class BRILLO_EXPORT Transport : public http::Transport {
 
   // Callback for CURL to handle curl_socket_callback() notifications.
   // The parameters correspond to those of curl_socket_callback().
-  static int MultiSocketCallback(CURL* easy,
-                                 curl_socket_t s,
-                                 int what,
-                                 void* userp,
-                                 void* socketp);
+  static int MultiSocketCallback(
+      CURL* easy, curl_socket_t s, int what, void* userp, void* socketp);
 
   // Callback for CURL to handle curl_multi_timer_callback() notifications.
   // The parameters correspond to those of curl_multi_timer_callback().

@@ -17,89 +17,89 @@ namespace brillo {
 namespace http {
 
 // request_type
-const char request_type::kOptions[]               = "OPTIONS";
-const char request_type::kGet[]                   = "GET";
-const char request_type::kHead[]                  = "HEAD";
-const char request_type::kPost[]                  = "POST";
-const char request_type::kPut[]                   = "PUT";
-const char request_type::kPatch[]                 = "PATCH";
-const char request_type::kDelete[]                = "DELETE";
-const char request_type::kTrace[]                 = "TRACE";
-const char request_type::kConnect[]               = "CONNECT";
-const char request_type::kCopy[]                  = "COPY";
-const char request_type::kMove[]                  = "MOVE";
+const char request_type::kOptions[] = "OPTIONS";
+const char request_type::kGet[] = "GET";
+const char request_type::kHead[] = "HEAD";
+const char request_type::kPost[] = "POST";
+const char request_type::kPut[] = "PUT";
+const char request_type::kPatch[] = "PATCH";
+const char request_type::kDelete[] = "DELETE";
+const char request_type::kTrace[] = "TRACE";
+const char request_type::kConnect[] = "CONNECT";
+const char request_type::kCopy[] = "COPY";
+const char request_type::kMove[] = "MOVE";
 
 // request_header
-const char request_header::kAccept[]              = "Accept";
-const char request_header::kAcceptCharset[]       = "Accept-Charset";
-const char request_header::kAcceptEncoding[]      = "Accept-Encoding";
-const char request_header::kAcceptLanguage[]      = "Accept-Language";
-const char request_header::kAllow[]               = "Allow";
-const char request_header::kAuthorization[]       = "Authorization";
-const char request_header::kCacheControl[]        = "Cache-Control";
-const char request_header::kConnection[]          = "Connection";
-const char request_header::kContentEncoding[]     = "Content-Encoding";
-const char request_header::kContentLanguage[]     = "Content-Language";
-const char request_header::kContentLength[]       = "Content-Length";
-const char request_header::kContentLocation[]     = "Content-Location";
-const char request_header::kContentMd5[]          = "Content-MD5";
-const char request_header::kContentRange[]        = "Content-Range";
-const char request_header::kContentType[]         = "Content-Type";
-const char request_header::kCookie[]              = "Cookie";
-const char request_header::kDate[]                = "Date";
-const char request_header::kExpect[]              = "Expect";
-const char request_header::kExpires[]             = "Expires";
-const char request_header::kFrom[]                = "From";
-const char request_header::kHost[]                = "Host";
-const char request_header::kIfMatch[]             = "If-Match";
-const char request_header::kIfModifiedSince[]     = "If-Modified-Since";
-const char request_header::kIfNoneMatch[]         = "If-None-Match";
-const char request_header::kIfRange[]             = "If-Range";
-const char request_header::kIfUnmodifiedSince[]   = "If-Unmodified-Since";
-const char request_header::kLastModified[]        = "Last-Modified";
-const char request_header::kMaxForwards[]         = "Max-Forwards";
-const char request_header::kPragma[]              = "Pragma";
-const char request_header::kProxyAuthorization[]  = "Proxy-Authorization";
-const char request_header::kRange[]               = "Range";
-const char request_header::kReferer[]             = "Referer";
-const char request_header::kTE[]                  = "TE";
-const char request_header::kTrailer[]             = "Trailer";
-const char request_header::kTransferEncoding[]    = "Transfer-Encoding";
-const char request_header::kUpgrade[]             = "Upgrade";
-const char request_header::kUserAgent[]           = "User-Agent";
-const char request_header::kVia[]                 = "Via";
-const char request_header::kWarning[]             = "Warning";
+const char request_header::kAccept[] = "Accept";
+const char request_header::kAcceptCharset[] = "Accept-Charset";
+const char request_header::kAcceptEncoding[] = "Accept-Encoding";
+const char request_header::kAcceptLanguage[] = "Accept-Language";
+const char request_header::kAllow[] = "Allow";
+const char request_header::kAuthorization[] = "Authorization";
+const char request_header::kCacheControl[] = "Cache-Control";
+const char request_header::kConnection[] = "Connection";
+const char request_header::kContentEncoding[] = "Content-Encoding";
+const char request_header::kContentLanguage[] = "Content-Language";
+const char request_header::kContentLength[] = "Content-Length";
+const char request_header::kContentLocation[] = "Content-Location";
+const char request_header::kContentMd5[] = "Content-MD5";
+const char request_header::kContentRange[] = "Content-Range";
+const char request_header::kContentType[] = "Content-Type";
+const char request_header::kCookie[] = "Cookie";
+const char request_header::kDate[] = "Date";
+const char request_header::kExpect[] = "Expect";
+const char request_header::kExpires[] = "Expires";
+const char request_header::kFrom[] = "From";
+const char request_header::kHost[] = "Host";
+const char request_header::kIfMatch[] = "If-Match";
+const char request_header::kIfModifiedSince[] = "If-Modified-Since";
+const char request_header::kIfNoneMatch[] = "If-None-Match";
+const char request_header::kIfRange[] = "If-Range";
+const char request_header::kIfUnmodifiedSince[] = "If-Unmodified-Since";
+const char request_header::kLastModified[] = "Last-Modified";
+const char request_header::kMaxForwards[] = "Max-Forwards";
+const char request_header::kPragma[] = "Pragma";
+const char request_header::kProxyAuthorization[] = "Proxy-Authorization";
+const char request_header::kRange[] = "Range";
+const char request_header::kReferer[] = "Referer";
+const char request_header::kTE[] = "TE";
+const char request_header::kTrailer[] = "Trailer";
+const char request_header::kTransferEncoding[] = "Transfer-Encoding";
+const char request_header::kUpgrade[] = "Upgrade";
+const char request_header::kUserAgent[] = "User-Agent";
+const char request_header::kVia[] = "Via";
+const char request_header::kWarning[] = "Warning";
 
 // response_header
-const char response_header::kAcceptRanges[]       = "Accept-Ranges";
-const char response_header::kAge[]                = "Age";
-const char response_header::kAllow[]              = "Allow";
-const char response_header::kCacheControl[]       = "Cache-Control";
-const char response_header::kConnection[]         = "Connection";
-const char response_header::kContentEncoding[]    = "Content-Encoding";
-const char response_header::kContentLanguage[]    = "Content-Language";
-const char response_header::kContentLength[]      = "Content-Length";
-const char response_header::kContentLocation[]    = "Content-Location";
-const char response_header::kContentMd5[]         = "Content-MD5";
-const char response_header::kContentRange[]       = "Content-Range";
-const char response_header::kContentType[]        = "Content-Type";
-const char response_header::kDate[]               = "Date";
-const char response_header::kETag[]               = "ETag";
-const char response_header::kExpires[]            = "Expires";
-const char response_header::kLastModified[]       = "Last-Modified";
-const char response_header::kLocation[]           = "Location";
-const char response_header::kPragma[]             = "Pragma";
-const char response_header::kProxyAuthenticate[]  = "Proxy-Authenticate";
-const char response_header::kRetryAfter[]         = "Retry-After";
-const char response_header::kServer[]             = "Server";
-const char response_header::kSetCookie[]          = "Set-Cookie";
-const char response_header::kTrailer[]            = "Trailer";
-const char response_header::kTransferEncoding[]   = "Transfer-Encoding";
-const char response_header::kUpgrade[]            = "Upgrade";
-const char response_header::kVary[]               = "Vary";
-const char response_header::kVia[]                = "Via";
-const char response_header::kWarning[]            = "Warning";
-const char response_header::kWwwAuthenticate[]    = "WWW-Authenticate";
+const char response_header::kAcceptRanges[] = "Accept-Ranges";
+const char response_header::kAge[] = "Age";
+const char response_header::kAllow[] = "Allow";
+const char response_header::kCacheControl[] = "Cache-Control";
+const char response_header::kConnection[] = "Connection";
+const char response_header::kContentEncoding[] = "Content-Encoding";
+const char response_header::kContentLanguage[] = "Content-Language";
+const char response_header::kContentLength[] = "Content-Length";
+const char response_header::kContentLocation[] = "Content-Location";
+const char response_header::kContentMd5[] = "Content-MD5";
+const char response_header::kContentRange[] = "Content-Range";
+const char response_header::kContentType[] = "Content-Type";
+const char response_header::kDate[] = "Date";
+const char response_header::kETag[] = "ETag";
+const char response_header::kExpires[] = "Expires";
+const char response_header::kLastModified[] = "Last-Modified";
+const char response_header::kLocation[] = "Location";
+const char response_header::kPragma[] = "Pragma";
+const char response_header::kProxyAuthenticate[] = "Proxy-Authenticate";
+const char response_header::kRetryAfter[] = "Retry-After";
+const char response_header::kServer[] = "Server";
+const char response_header::kSetCookie[] = "Set-Cookie";
+const char response_header::kTrailer[] = "Trailer";
+const char response_header::kTransferEncoding[] = "Transfer-Encoding";
+const char response_header::kUpgrade[] = "Upgrade";
+const char response_header::kVary[] = "Vary";
+const char response_header::kVia[] = "Via";
+const char response_header::kWarning[] = "Warning";
+const char response_header::kWwwAuthenticate[] = "WWW-Authenticate";
 
 // ***********************************************************
 // ********************** Request Class **********************
@@ -271,18 +271,16 @@ bool Request::SendRequestIfNeeded(brillo::ErrorPtr* error) {
         if (!content_type_.empty())
           headers.emplace_back(request_header::kContentType, content_type_);
       }
-      connection_ = transport_->CreateConnection(
-          request_url_, method_, headers, user_agent_, referer_, error);
+      connection_ = transport_->CreateConnection(request_url_, method_, headers,
+                                                 user_agent_, referer_, error);
     }
 
     if (connection_)
       return true;
   } else {
-    brillo::Error::AddTo(error,
-                           FROM_HERE,
-                           http::kErrorDomain,
-                           "response_already_received",
-                           "HTTP response already received");
+    brillo::Error::AddTo(error, FROM_HERE, http::kErrorDomain,
+                         "response_already_received",
+                         "HTTP response already received");
   }
   return false;
 }

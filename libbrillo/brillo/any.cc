@@ -9,18 +9,14 @@
 
 namespace brillo {
 
-Any::Any() {
-}
+Any::Any() {}
 
-Any::Any(const Any& rhs) : data_buffer_(rhs.data_buffer_) {
-}
+Any::Any(const Any& rhs) : data_buffer_(rhs.data_buffer_) {}
 
 // NOLINTNEXTLINE(build/c++11)
-Any::Any(Any&& rhs) : data_buffer_(std::move(rhs.data_buffer_)) {
-}
+Any::Any(Any&& rhs) : data_buffer_(std::move(rhs.data_buffer_)) {}
 
-Any::~Any() {
-}
+Any::~Any() {}
 
 Any& Any::operator=(const Any& rhs) {
   data_buffer_ = rhs.data_buffer_;

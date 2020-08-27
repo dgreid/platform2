@@ -10,13 +10,12 @@ using base::TimeTicks;
 
 namespace brillo {
 
-BackoffEntry::Policy base_policy = { 0, 1000, 2.0, 0.0, 20000, 2000, false };
+BackoffEntry::Policy base_policy = {0, 1000, 2.0, 0.0, 20000, 2000, false};
 
 class TestBackoffEntry : public BackoffEntry {
  public:
   explicit TestBackoffEntry(const Policy* const policy)
-      : BackoffEntry(policy),
-        now_(TimeTicks()) {
+      : BackoffEntry(policy), now_(TimeTicks()) {
     // Work around initialization in constructor not picking up
     // fake time.
     SetCustomReleaseTime(TimeTicks());
@@ -26,9 +25,7 @@ class TestBackoffEntry : public BackoffEntry {
 
   TimeTicks ImplGetTimeNow() const override { return now_; }
 
-  void set_now(const TimeTicks& now) {
-    now_ = now;
-  }
+  void set_now(const TimeTicks& now) { now_ = now; }
 
  private:
   TimeTicks now_;
@@ -65,20 +62,20 @@ TEST(BackoffEntryTest, CanDiscard) {
   EXPECT_FALSE(entry.CanDiscard());
 
   // Test the case where there are errors but we can time out.
-  entry.set_now(
-      entry.GetReleaseTime() + TimeDelta::FromMilliseconds(1));
+  entry.set_now(entry.GetReleaseTime() + TimeDelta::FromMilliseconds(1));
   EXPECT_FALSE(entry.CanDiscard());
-  entry.set_now(entry.GetReleaseTime() + TimeDelta::FromMilliseconds(
-      base_policy.maximum_backoff_ms + 1));
+  entry.set_now(
+      entry.GetReleaseTime() +
+      TimeDelta::FromMilliseconds(base_policy.maximum_backoff_ms + 1));
   EXPECT_TRUE(entry.CanDiscard());
 
   // Test the final case (no errors, dependent only on specified lifetime).
-  entry.set_now(entry.GetReleaseTime() + TimeDelta::FromMilliseconds(
-      base_policy.entry_lifetime_ms - 1));
+  entry.set_now(entry.GetReleaseTime() +
+                TimeDelta::FromMilliseconds(base_policy.entry_lifetime_ms - 1));
   entry.InformOfRequest(true);
   EXPECT_FALSE(entry.CanDiscard());
-  entry.set_now(entry.GetReleaseTime() + TimeDelta::FromMilliseconds(
-      base_policy.entry_lifetime_ms));
+  entry.set_now(entry.GetReleaseTime() +
+                TimeDelta::FromMilliseconds(base_policy.entry_lifetime_ms));
   EXPECT_TRUE(entry.CanDiscard());
 }
 
@@ -155,8 +152,8 @@ TEST(BackoffEntryTest, ReleaseTimeCalculation) {
   entry.InformOfRequest(false);
   entry.InformOfRequest(false);
   result = entry.GetReleaseTime();
-  EXPECT_EQ(
-      entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(20000), result);
+  EXPECT_EQ(entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(20000),
+            result);
 }
 
 TEST(BackoffEntryTest, ReleaseTimeCalculationAlwaysDelay) {
@@ -206,10 +203,10 @@ TEST(BackoffEntryTest, ReleaseTimeCalculationWithJitter) {
     entry.InformOfRequest(false);
     entry.InformOfRequest(false);
     TimeTicks result = entry.GetReleaseTime();
-    EXPECT_LE(
-        entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(3200), result);
-    EXPECT_GE(
-        entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(4000), result);
+    EXPECT_LE(entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(3200),
+              result);
+    EXPECT_GE(entry.ImplGetTimeNow() + TimeDelta::FromMilliseconds(4000),
+              result);
   }
 }
 

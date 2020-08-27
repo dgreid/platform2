@@ -23,10 +23,10 @@ namespace internal_details {
 // an integral type which std::is_convertible does not indicate as supported.
 template <typename From, typename To>
 struct IsConvertible
-    : public std::integral_constant<
-          bool,
-          std::is_convertible<From, To>::value ||
-              (std::is_enum<From>::value && std::is_integral<To>::value)> {};
+    : public std::integral_constant<bool,
+                                    std::is_convertible<From, To>::value ||
+                                        (std::is_enum<From>::value &&
+                                         std::is_integral<To>::value)> {};
 
 // TryConvert is a helper function that does a safe compile-time conditional
 // type cast between data types that may not be always convertible.
@@ -61,7 +61,7 @@ TryConvert(const From& /* in */, To* /* out */) {
 // IsEqualityComparableHelper<T> is a helper class for implementing an
 // an STL-compatible IsEqualityComparable<T> containing a Boolean member |value|
 // which evaluates to true for comparable types and false otherwise.
-template<typename T>
+template <typename T>
 struct IsEqualityComparableHelper {
   struct IntWrapper {
     // A special structure that provides a constructor that takes an int.
@@ -76,7 +76,7 @@ struct IsEqualityComparableHelper {
   // We are providing two function prototypes for TriggerFunction. One that
   // takes an argument of type IntWrapper (which is implicitly convertible from
   // an int), and returns an std::false_type. This is a fall-back mechanism.
-  template<typename U>
+  template <typename U>
   static std::false_type TriggerFunction(IntWrapper dummy);
 
   // The second overload of TriggerFunction takes an int (explicitly) and
@@ -101,7 +101,7 @@ struct IsEqualityComparableHelper {
   //
   // Here we use std::declval<U&>() to make sure we have operator==() that takes
   // lvalue references to type U which is not necessarily default-constructible.
-  template<typename U>
+  template <typename U>
   static decltype((std::declval<U&>() == std::declval<U&>()), std::true_type())
   TriggerFunction(int dummy);
 
@@ -118,18 +118,18 @@ struct IsEqualityComparableHelper {
 // std::true_value, if type T is comparable, or from std::false_value, if the
 // type is non-comparable. We just use |type| alias from
 // IsEqualityComparableHelper<T> as the base class.
-template<typename T>
+template <typename T>
 struct IsEqualityComparable : IsEqualityComparableHelper<T>::type {};
 
 // EqCompare() overload for non-comparable types. Always returns false.
-template<typename T>
+template <typename T>
 inline typename std::enable_if<!IsEqualityComparable<T>::value, bool>::type
 EqCompare(const T& /* v1 */, const T& /* v2 */) {
   return false;
 }
 
 // EqCompare overload for comparable types. Calls operator==(v1, v2) to compare.
-template<typename T>
+template <typename T>
 inline typename std::enable_if<IsEqualityComparable<T>::value, bool>::type
 EqCompare(const T& v1, const T& v2) {
   return (v1 == v2);
@@ -159,7 +159,7 @@ struct Data {
 };
 
 // Concrete implementation of variant data of type T.
-template<typename T>
+template <typename T>
 struct TypedData : public Data {
   explicit TypedData(const T& value) : value_(value) {}
   // NOLINTNEXTLINE(build/c++11)
@@ -263,7 +263,7 @@ class Buffer final {
   }
 
   // Stores a value of type T.
-  template<typename T>
+  template <typename T>
   void Assign(T&& value) {  // NOLINT(build/c++11)
     using Type = typename std::decay<T>::type;
     using DataType = TypedData<Type>;
@@ -302,12 +302,12 @@ class Buffer final {
   // Helper methods to retrieve a reference to contained data.
   // These assume that type checking has already been performed by Any
   // so the type cast is valid and will succeed.
-  template<typename T>
+  template <typename T>
   const T& GetData() const {
     using DataType = internal_details::TypedData<typename std::decay<T>::type>;
     return static_cast<const DataType*>(GetDataPtr())->value_;
   }
-  template<typename T>
+  template <typename T>
   T& GetData() {
     using DataType = internal_details::TypedData<typename std::decay<T>::type>;
     return static_cast<DataType*>(GetDataPtr())->value_;

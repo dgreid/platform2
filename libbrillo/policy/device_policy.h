@@ -247,8 +247,7 @@ class DevicePolicy {
   // Writes the value of the Customer ID to |customer_id_out|.
   // Returns true on success, false if the ID is not available (eg if the device
   // is not enrolled).
-  virtual bool GetCustomerId(
-      std::string* customer_id_out) const = 0;
+  virtual bool GetCustomerId(std::string* customer_id_out) const = 0;
 
   // Writes the value of ChannelDowngradeBehavior policy into
   // |channel_downgrade_behavior_out|. |channel_downgrade_behavior_out| will be

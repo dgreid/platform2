@@ -150,7 +150,7 @@ class BRILLO_EXPORT ReadOnlyBuffer : public ContiguousReadOnlyBufferBase {
 // VectorPtr<T> is a read/write container based on a vector<T> pointer.
 // This is a template class to allow usage of both vector<char> and
 // vector<uint8_t> without duplicating the implementation.
-template<typename T>
+template <typename T>
 class VectorPtr : public ContiguousBufferBase {
  public:
   static_assert(sizeof(T) == 1, "Only char/byte is supported");
@@ -180,7 +180,7 @@ class VectorPtr : public ContiguousBufferBase {
 // ReadOnlyVectorRef<T> is a read-only container based on a vector<T> reference.
 // This is a template class to allow usage of both vector<char> and
 // vector<uint8_t> without duplicating the implementation.
-template<typename T>
+template <typename T>
 class ReadOnlyVectorRef : public ContiguousReadOnlyBufferBase {
  public:
   static_assert(sizeof(T) == 1, "Only char/byte is supported");
@@ -204,7 +204,7 @@ class ReadOnlyVectorRef : public ContiguousReadOnlyBufferBase {
 // This container actually owns the data stored in the vector.
 // This is a template class to allow usage of both vector<char> and
 // vector<uint8_t> without duplicating the implementation.
-template<typename T>
+template <typename T>
 class ReadOnlyVectorCopy : public ContiguousReadOnlyBufferBase {
  public:
   static_assert(sizeof(T) == 1, "Only char/byte is supported");

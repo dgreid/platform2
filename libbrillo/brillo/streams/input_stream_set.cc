@@ -13,10 +13,9 @@
 
 namespace brillo {
 
-InputStreamSet::InputStreamSet(
-    std::vector<Stream*> source_streams,
-    std::vector<StreamPtr> owned_source_streams,
-    uint64_t initial_stream_size)
+InputStreamSet::InputStreamSet(std::vector<Stream*> source_streams,
+                               std::vector<StreamPtr> owned_source_streams,
+                               uint64_t initial_stream_size)
     : source_streams_{std::move(source_streams)},
       owned_source_streams_{std::move(owned_source_streams)},
       initial_stream_size_{initial_stream_size} {}

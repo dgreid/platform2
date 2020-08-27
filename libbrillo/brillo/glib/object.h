@@ -31,16 +31,9 @@ class ResetHelper {
  public:
   typedef typename T::element_type element_type;
 
-  explicit ResetHelper(T* x)
-      : ptr_(nullptr),
-        scoped_(x) {
-  }
-  ~ResetHelper() {
-    scoped_->reset(ptr_);
-  }
-  element_type*& lvalue() {
-    return ptr_;
-  }
+  explicit ResetHelper(T* x) : ptr_(nullptr), scoped_(x) {}
+  ~ResetHelper() { scoped_->reset(ptr_); }
+  element_type*& lvalue() { return ptr_; }
 
  private:
   element_type* ptr_;
@@ -77,35 +70,36 @@ namespace glib {
 // \brief type_to_gtypeid is a type function mapping from a canonical type to
 // the GType typeid for the associated GType (see type_to_gtype).
 
-template <typename T> ::GType type_to_gtypeid();
+template <typename T>
+::GType type_to_gtypeid();
 
-template < >
+template <>
 inline ::GType type_to_gtypeid<const char*>() {
   return G_TYPE_STRING;
 }
-template < >
+template <>
 inline ::GType type_to_gtypeid<char*>() {
   return G_TYPE_STRING;
 }
-template < >
+template <>
 inline ::GType type_to_gtypeid< ::uint8_t>() {
   return G_TYPE_UCHAR;
 }
-template < >
+template <>
 inline ::GType type_to_gtypeid<double>() {
   return G_TYPE_DOUBLE;
 }
-template < >
+template <>
 inline ::GType type_to_gtypeid<bool>() {
   return G_TYPE_BOOLEAN;
 }
 class Value;
-template < >
+template <>
 inline ::GType type_to_gtypeid<const Value*>() {
   return G_TYPE_VALUE;
 }
 
-template < >
+template <>
 inline ::GType type_to_gtypeid< ::uint32_t>() {
   // REVISIT (seanparent) : There currently isn't any G_TYPE_UINT32, this code
   // assumes sizeof(guint) == sizeof(guint32). Need a static_assert to assert
@@ -113,12 +107,12 @@ inline ::GType type_to_gtypeid< ::uint32_t>() {
   return G_TYPE_UINT;
 }
 
-template < >
+template <>
 inline ::GType type_to_gtypeid< ::int64_t>() {
   return G_TYPE_INT64;
 }
 
-template < >
+template <>
 inline ::GType type_to_gtypeid< ::int32_t>() {
   return G_TYPE_INT;
 }
@@ -127,10 +121,12 @@ inline ::GType type_to_gtypeid< ::int32_t>() {
 // by promoting from const char* to the string. promote_from provides a mapping
 // for this promotion (and possibly others in the future).
 
-template <typename T> struct promotes_from {
+template <typename T>
+struct promotes_from {
   typedef T type;
 };
-template < > struct promotes_from<std::string> {
+template <>
+struct promotes_from<std::string> {
   typedef const char* type;
 };
 
@@ -150,31 +146,31 @@ inline T RawCast(const ::GValue& x) {
   return T();
 }
 
-template < >
+template <>
 inline const char* RawCast<const char*>(const ::GValue& x) {
   return static_cast<const char*>(::g_value_get_string(&x));
 }
-template < >
+template <>
 inline double RawCast<double>(const ::GValue& x) {
   return static_cast<double>(::g_value_get_double(&x));
 }
-template < >
+template <>
 inline bool RawCast<bool>(const ::GValue& x) {
   return static_cast<bool>(::g_value_get_boolean(&x));
 }
-template < >
+template <>
 inline ::uint32_t RawCast< ::uint32_t>(const ::GValue& x) {
   return static_cast< ::uint32_t>(::g_value_get_uint(&x));
 }
-template < >
+template <>
 inline ::uint8_t RawCast< ::uint8_t>(const ::GValue& x) {
   return static_cast< ::uint8_t>(::g_value_get_uchar(&x));
 }
-template < >
+template <>
 inline ::int64_t RawCast< ::int64_t>(const ::GValue& x) {
   return static_cast< ::int64_t>(::g_value_get_int64(&x));
 }
-template < >
+template <>
 inline ::int32_t RawCast< ::int32_t>(const ::GValue& x) {
   return static_cast< ::int32_t>(::g_value_get_int(&x));
 }
@@ -217,30 +213,22 @@ inline void RawSet(GValue* x, ::int32_t v) {
 
 class Value : public ::GValue {
  public:
-  Value()
-      : GValue() {
-  }
-  explicit Value(const ::GValue& x)
-      : GValue() {
+  Value() : GValue() {}
+  explicit Value(const ::GValue& x) : GValue() {
     *this = *static_cast<const Value*>(&x);
   }
   template <typename T>
-  explicit Value(T x)
-      : GValue() {
-    ::g_value_init(this,
-        type_to_gtypeid<typename promotes_from<T>::type>());
+  explicit Value(T x) : GValue() {
+    ::g_value_init(this, type_to_gtypeid<typename promotes_from<T>::type>());
     RawSet(this, x);
   }
-  Value(const Value& x)
-      : GValue() {
+  Value(const Value& x) : GValue() {
     if (x.empty())
       return;
     ::g_value_init(this, G_VALUE_TYPE(&x));
     ::g_value_copy(&x, this);
   }
-  ~Value() {
-    clear();
-  }
+  ~Value() { clear(); }
   Value& operator=(const Value& x) {
     if (this == &x)
       return *this;
@@ -254,8 +242,7 @@ class Value : public ::GValue {
   template <typename T>
   Value& operator=(const T& x) {
     clear();
-    ::g_value_init(this,
-                   type_to_gtypeid<typename promotes_from<T>::type>());
+    ::g_value_init(this, type_to_gtypeid<typename promotes_from<T>::type>());
     RawSet(this, x);
     return *this;
   }
@@ -267,12 +254,10 @@ class Value : public ::GValue {
       ::g_value_unset(this);
   }
 
-  bool empty() const {
-    return G_VALUE_TYPE(this) == G_TYPE_INVALID;
-  }
+  bool empty() const { return G_VALUE_TYPE(this) == G_TYPE_INVALID; }
 };
 
-template < >
+template <>
 inline const Value* RawCast<const Value*>(const ::GValue& x) {
   return static_cast<const Value*>(&x);
 }
@@ -289,8 +274,9 @@ template <typename T>
 bool Retrieve(const ::GValue& x, T* result) {
   if (!G_VALUE_HOLDS(&x, type_to_gtypeid<typename promotes_from<T>::type>())) {
     LOG(WARNING) << "GValue retrieve failed. Expected: "
-        << g_type_name(type_to_gtypeid<typename promotes_from<T>::type>())
-        << ", Found: " << g_type_name(G_VALUE_TYPE(&x));
+                 << g_type_name(
+                        type_to_gtypeid<typename promotes_from<T>::type>())
+                 << ", Found: " << g_type_name(G_VALUE_TYPE(&x));
     return false;
   }
 
@@ -345,30 +331,18 @@ class ScopedPtrArray {
   typedef value_type* iterator;
   typedef const value_type* const_iterator;
 
-  ScopedPtrArray()
-      : object_(0) {
-  }
+  ScopedPtrArray() : object_(0) {}
 
-  explicit ScopedPtrArray(::GPtrArray* x)
-      : object_(x) {
-  }
+  explicit ScopedPtrArray(::GPtrArray* x) : object_(x) {}
 
-  ~ScopedPtrArray() {
-    clear();
-  }
+  ~ScopedPtrArray() { clear(); }
 
-  iterator begin() {
-    return iterator(object_ ? object_->pdata : nullptr);
-  }
-  iterator end() {
-    return begin() + size();
-  }
+  iterator begin() { return iterator(object_ ? object_->pdata : nullptr); }
+  iterator end() { return begin() + size(); }
   const_iterator begin() const {
     return const_iterator(object_ ? object_->pdata : nullptr);
   }
-  const_iterator end() const {
-    return begin() + size();
-  }
+  const_iterator end() const { return begin() + size(); }
 
   // \precondition x is a pointer to an object allocated with g_new().
 
@@ -383,9 +357,7 @@ class ScopedPtrArray {
     return *(begin() + n);
   }
 
-  std::size_t size() const {
-    return object_ ? object_->len : 0;
-  }
+  std::size_t size() const { return object_ ? object_->len : 0; }
 
   void clear() {
     if (object_) {
@@ -404,9 +376,7 @@ class ScopedPtrArray {
 
  private:
   struct FreeHelper {
-    void operator()(T x) const {
-      ::g_free(::gpointer(x));
-    }
+    void operator()(T x) const { ::g_free(::gpointer(x)); }
   };
 
   template <typename U>
@@ -454,17 +424,11 @@ class ScopedHashTable {
  public:
   typedef ::GHashTable element_type;
 
-  ScopedHashTable()
-      : object_(nullptr) {
-  }
+  ScopedHashTable() : object_(nullptr) {}
 
-  explicit ScopedHashTable(::GHashTable* p)
-      : object_(p) {
-  }
+  explicit ScopedHashTable(::GHashTable* p) : object_(p) {}
 
-  ~ScopedHashTable() {
-    clear();
-  }
+  ~ScopedHashTable() { clear(); }
 
   template <typename T>
   bool Retrieve(const char* key, T* result) const {
@@ -485,9 +449,7 @@ class ScopedHashTable {
     }
   }
 
-  GHashTable* get() {
-    return object_;
-  }
+  GHashTable* get() { return object_; }
 
   void reset(::GHashTable* p = nullptr) {
     if (p != object_) {

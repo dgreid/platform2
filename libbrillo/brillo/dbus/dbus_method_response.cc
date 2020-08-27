@@ -26,11 +26,10 @@ void DBusMethodResponseBase::ReplyWithError(const brillo::Error* error) {
   SendRawResponse(std::move(response));
 }
 
-void DBusMethodResponseBase::ReplyWithError(
-    const base::Location& location,
-    const std::string& error_domain,
-    const std::string& error_code,
-    const std::string& error_message) {
+void DBusMethodResponseBase::ReplyWithError(const base::Location& location,
+                                            const std::string& error_domain,
+                                            const std::string& error_code,
+                                            const std::string& error_message) {
   ErrorPtr error;
   Error::AddTo(&error, location, error_domain, error_code, error_message);
   ReplyWithError(error.get());
@@ -47,8 +46,8 @@ void DBusMethodResponseBase::SendRawResponse(
   std::move(sender_).Run(std::move(response));
 }
 
-std::unique_ptr<dbus::Response>
-DBusMethodResponseBase::CreateCustomResponse() const {
+std::unique_ptr<dbus::Response> DBusMethodResponseBase::CreateCustomResponse()
+    const {
   return dbus::Response::FromMethodCall(method_call_);
 }
 

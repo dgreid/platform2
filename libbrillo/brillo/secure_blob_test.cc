@@ -53,15 +53,15 @@ class SecureBlobTest : public ::testing::Test {
 
   static bool FindBlobInBlob(const brillo::SecureBlob& haystack,
                              const brillo::SecureBlob& needle) {
-    auto pos = std::search(
-        haystack.begin(), haystack.end(), needle.begin(), needle.end());
+    auto pos = std::search(haystack.begin(), haystack.end(), needle.begin(),
+                           needle.end());
     return (pos != haystack.end());
   }
 
   static int FindBlobIndexInBlob(const brillo::SecureBlob& haystack,
                                  const brillo::SecureBlob& needle) {
-    auto pos = std::search(
-        haystack.begin(), haystack.end(), needle.begin(), needle.end());
+    auto pos = std::search(haystack.begin(), haystack.end(), needle.begin(),
+                           needle.end());
     if (pos == haystack.end()) {
       return -1;
     }
@@ -210,16 +210,16 @@ TEST_F(SecureBlobTest, HexStringToSecureBlob) {
   SecureBlob::HexStringToSecureBlob(hex_string, &blob);
 
   EXPECT_EQ(blob.size(), 16u);
-  EXPECT_EQ(blob[0],  0x11);
-  EXPECT_EQ(blob[1],  0x22);
-  EXPECT_EQ(blob[2],  0x33);
-  EXPECT_EQ(blob[3],  0x44);
-  EXPECT_EQ(blob[4],  0x55);
-  EXPECT_EQ(blob[5],  0x66);
-  EXPECT_EQ(blob[6],  0x77);
-  EXPECT_EQ(blob[7],  0x88);
-  EXPECT_EQ(blob[8],  0x99);
-  EXPECT_EQ(blob[9],  0xaa);
+  EXPECT_EQ(blob[0], 0x11);
+  EXPECT_EQ(blob[1], 0x22);
+  EXPECT_EQ(blob[2], 0x33);
+  EXPECT_EQ(blob[3], 0x44);
+  EXPECT_EQ(blob[4], 0x55);
+  EXPECT_EQ(blob[5], 0x66);
+  EXPECT_EQ(blob[6], 0x77);
+  EXPECT_EQ(blob[7], 0x88);
+  EXPECT_EQ(blob[8], 0x99);
+  EXPECT_EQ(blob[9], 0xaa);
   EXPECT_EQ(blob[10], 0xbb);
   EXPECT_EQ(blob[11], 0xcc);
   EXPECT_EQ(blob[12], 0xdd);
@@ -247,7 +247,7 @@ class TestSecureAllocator : public SecureAllocator<T> {
 
   void clear_contents(pointer p, size_type n) override {
     SecureAllocator<T>::clear_contents(p, n);
-    unsigned char *v = reinterpret_cast<unsigned char*>(p);
+    unsigned char* v = reinterpret_cast<unsigned char*>(p);
     for (int i = 0; i < n; i++) {
       EXPECT_EQ(v[i], 0);
       erased_count++;
@@ -262,7 +262,7 @@ TEST(SecureAllocator, ErasureOnDeallocation) {
   // Make sure that the contents are cleared on deallocation.
   TestSecureAllocator<char> e;
 
-  char *test_string_addr = e.allocate(15);
+  char* test_string_addr = e.allocate(15);
   snprintf(test_string_addr, sizeof(test_string_addr), "Test String");
 
   // Deallocate memory; the mock class should check for cleared data.
@@ -276,11 +276,11 @@ TEST(SecureAllocator, MultiPageCorrectness) {
   TestSecureAllocator<uint64_t> e;
 
   // Allocate 4100*8 bytes.
-  uint64_t *test_array = e.allocate(4100);
+  uint64_t* test_array = e.allocate(4100);
 
   // Check if the space was correctly allocated for long long.
   for (int i = 0; i < 4100; i++)
-      test_array[i] = 0xF0F0F0F0F0F0F0F0;
+    test_array[i] = 0xF0F0F0F0F0F0F0F0;
 
   // Deallocate memory; the mock class should check for cleared data.
   e.deallocate(test_array, 4100);

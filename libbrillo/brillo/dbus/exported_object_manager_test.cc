@@ -15,11 +15,11 @@
 #include <dbus/object_path.h>
 #include <gtest/gtest.h>
 
+using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::InSequence;
 using ::testing::Invoke;
 using ::testing::Return;
-using ::testing::_;
 
 namespace brillo {
 
@@ -29,9 +29,11 @@ namespace {
 
 const dbus::ObjectPath kTestPath(std::string("/test/om_path"));
 const dbus::ObjectPath kClaimedTestPath(std::string("/test/claimed_path"));
-const std::string kClaimedInterface("claimed.interface");
-const std::string kTestPropertyName("PropertyName");
-const std::string kTestPropertyValue("PropertyValue");
+const std::string kClaimedInterface(
+    "claimed.interface");                             // NOLINT(runtime/string)
+const std::string kTestPropertyName("PropertyName");  // NOLINT(runtime/string)
+const std::string kTestPropertyValue(
+    "PropertyValue");  // NOLINT(runtime/string)
 
 void WriteTestPropertyDict(VariantDictionary* dict) {
   dict->insert(std::make_pair(kTestPropertyName, Any(kTestPropertyValue)));
@@ -108,8 +110,9 @@ class ExportedObjectManagerTest : public ::testing::Test {
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     // Use a mock exported object.
     mock_exported_object_ = new dbus::MockExportedObject(bus_.get(), kTestPath);
-    EXPECT_CALL(*bus_, GetExportedObject(kTestPath)).Times(1).WillOnce(
-        Return(mock_exported_object_.get()));
+    EXPECT_CALL(*bus_, GetExportedObject(kTestPath))
+        .Times(1)
+        .WillOnce(Return(mock_exported_object_.get()));
     EXPECT_CALL(*mock_exported_object_, ExportMethod(_, _, _, _))
         .Times(AnyNumber());
     om_.reset(new ExportedObjectManager(bus_.get(), kTestPath));
@@ -139,7 +142,8 @@ class ExportedObjectManagerTest : public ::testing::Test {
 
 TEST_F(ExportedObjectManagerTest, ClaimInterfaceSendsSignals) {
   EXPECT_CALL(*mock_exported_object_, SendSignal(_))
-      .Times(1).WillOnce(Invoke(&VerifyInterfaceClaimSignal));
+      .Times(1)
+      .WillOnce(Invoke(&VerifyInterfaceClaimSignal));
   om_->ClaimInterface(kClaimedTestPath, kClaimedInterface, property_writer_);
 }
 
@@ -147,7 +151,8 @@ TEST_F(ExportedObjectManagerTest, ReleaseInterfaceSendsSignals) {
   InSequence dummy;
   EXPECT_CALL(*mock_exported_object_, SendSignal(_)).Times(1);
   EXPECT_CALL(*mock_exported_object_, SendSignal(_))
-      .Times(1).WillOnce(Invoke(&VerifyInterfaceDropSignal));
+      .Times(1)
+      .WillOnce(Invoke(&VerifyInterfaceDropSignal));
   om_->ClaimInterface(kClaimedTestPath, kClaimedInterface, property_writer_);
   om_->ReleaseInterface(kClaimedTestPath, kClaimedInterface);
 }

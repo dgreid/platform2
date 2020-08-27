@@ -34,8 +34,8 @@ void OsReleaseReader::Load(const base::FilePath& root_dir) {
   }
 
   base::FilePath osreleased = root_dir.Append("etc").Append("os-release.d");
-  base::FileEnumerator enumerator(
-      osreleased, false, base::FileEnumerator::FILES);
+  base::FileEnumerator enumerator(osreleased, false,
+                                  base::FileEnumerator::FILES);
 
   for (base::FilePath path = enumerator.Next(); !path.empty();
        path = enumerator.Next()) {

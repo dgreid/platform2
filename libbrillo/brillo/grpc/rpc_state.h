@@ -99,9 +99,8 @@ class RpcState final : public RpcStateBase {
                           void*)>;
 
   // Called by the handler to send |status| and |response|.
-  using HandlerDoneCallback =
-      base::Callback<void(grpc::Status status,
-                          std::unique_ptr<ResponseType> response)>;
+  using HandlerDoneCallback = base::Callback<void(
+      grpc::Status status, std::unique_ptr<ResponseType> response)>;
 
   // The handler callback - will be invoked to compute a response for a request.
   using HandlerCallback =

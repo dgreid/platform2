@@ -11,11 +11,11 @@
 #include <iterator>
 #include <string>
 
-using brillo::glib::ScopedPtrArray;
-using brillo::glib::ScopedError;
-using brillo::glib::Retrieve;
-using brillo::glib::Value;
 using brillo::Resetter;
+using brillo::glib::Retrieve;
+using brillo::glib::ScopedError;
+using brillo::glib::ScopedPtrArray;
+using brillo::glib::Value;
 
 namespace {  // NOLINT
 
@@ -28,7 +28,7 @@ void SetRetrieveTest(const T& x) {
 }
 
 void ModifyValue(Value* x) {
-  *x = 1.0 / 1231415926.0;   // An unlikely value
+  *x = 1.0 / 1231415926.0;  // An unlikely value
 }
 
 template <typename T, typename O>
@@ -69,9 +69,9 @@ TEST(RetrieveTest, Types) {
 }
 
 TEST(ValueTest, All) {
-  Value x;  // default construction
+  Value x;      // default construction
   Value y = x;  // copy with default value
-  x = y;  // assignment with default value
+  x = y;        // assignment with default value
   Value z(1.5);
   x = z;  // assignment to default value
   MutableRegularTestValue(std::string("Hello!"), &ModifyValue);
@@ -81,10 +81,8 @@ TEST(ScopedErrorTest, All) {
   ScopedError a;  // default construction
   ScopedError b(::g_error_new(::g_quark_from_static_string("error"), -1,
                               ""));  // constructor
-  ::GError* c = ::g_error_new(::g_quark_from_static_string("error"), -1,
-                              "");
-  ::GError* d = ::g_error_new(::g_quark_from_static_string("error"), -1,
-                              "");
+  ::GError* c = ::g_error_new(::g_quark_from_static_string("error"), -1, "");
+  ::GError* d = ::g_error_new(::g_quark_from_static_string("error"), -1, "");
   a.reset(c);  // reset form 1
   (void)d;
 }
@@ -124,11 +122,11 @@ TEST(ScopedPtrArrayTest, Reset) {
 }
 
 TEST(ScopedPtrArrayTest, Iteration) {
-  char* a[] = { static_cast<char*>(::g_malloc(1)),
-      static_cast<char*>(::g_malloc(1)), static_cast<char*>(::g_malloc(1)) };
+  char* a[] = {static_cast<char*>(::g_malloc(1)),
+               static_cast<char*>(::g_malloc(1)),
+               static_cast<char*>(::g_malloc(1))};
 
   ScopedPtrArray<const char*> x;
   std::copy(&a[0], &a[3], std::back_inserter(x));
   EXPECT_TRUE(std::equal(x.begin(), x.end(), &a[0]));
 }
-

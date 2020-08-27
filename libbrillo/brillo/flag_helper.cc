@@ -34,8 +34,7 @@ Flag::Flag(const char* name,
     : name_(name),
       default_value_(default_value),
       help_(help),
-      visible_(visible) {
-}
+      visible_(visible) {}
 
 class HelpFlag : public brillo::Flag {
  public:
@@ -53,8 +52,7 @@ BoolFlag::BoolFlag(const char* name,
                    bool visible)
     : Flag(name, default_value, help, visible),
       value_(value),
-      no_value_(no_value) {
-}
+      no_value_(no_value) {}
 
 bool BoolFlag::SetValue(const std::string& value) {
   if (value.empty()) {
@@ -82,8 +80,7 @@ Int32Flag::Int32Flag(const char* name,
                      const char* default_value,
                      const char* help,
                      bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool Int32Flag::SetValue(const std::string& value) {
   return base::StringToInt(value, value_);
@@ -98,8 +95,7 @@ UInt32Flag::UInt32Flag(const char* name,
                        const char* default_value,
                        const char* help,
                        bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool UInt32Flag::SetValue(const std::string& value) {
   return base::StringToUint(value, value_);
@@ -114,8 +110,7 @@ Int64Flag::Int64Flag(const char* name,
                      const char* default_value,
                      const char* help,
                      bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool Int64Flag::SetValue(const std::string& value) {
   return base::StringToInt64(value, value_);
@@ -130,8 +125,7 @@ UInt64Flag::UInt64Flag(const char* name,
                        const char* default_value,
                        const char* help,
                        bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool UInt64Flag::SetValue(const std::string& value) {
   return base::StringToUint64(value, value_);
@@ -146,8 +140,7 @@ DoubleFlag::DoubleFlag(const char* name,
                        const char* default_value,
                        const char* help,
                        bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool DoubleFlag::SetValue(const std::string& value) {
   return base::StringToDouble(value, value_);
@@ -162,8 +155,7 @@ StringFlag::StringFlag(const char* name,
                        const char* default_value,
                        const char* help,
                        bool visible)
-    : Flag(name, default_value, help, visible), value_(value) {
-}
+    : Flag(name, default_value, help, visible), value_(value) {}
 
 bool StringFlag::SetValue(const std::string& value) {
   value_->assign(value);
@@ -183,8 +175,7 @@ FlagHelper::FlagHelper() : command_line_(nullptr) {
   AddFlag(std::unique_ptr<Flag>(new HelpFlag()));
 }
 
-FlagHelper::~FlagHelper() {
-}
+FlagHelper::~FlagHelper() {}
 
 brillo::FlagHelper* FlagHelper::GetInstance() {
   if (!instance_)
@@ -246,14 +237,12 @@ void FlagHelper::UpdateFlagValues() {
         base::StringAppendF(
             &error_msg,
             "ERROR: illegal value '%s' specified for %s flag '%s'\n",
-            value.c_str(),
-            flag->GetType(),
-            flag->name_);
+            value.c_str(), flag->GetType(), flag->name_);
         error_code = EX_DATAERR;
       }
     } else {
-      base::StringAppendF(
-          &error_msg, "ERROR: unknown command line flag '%s'\n", key.c_str());
+      base::StringAppendF(&error_msg, "ERROR: unknown command line flag '%s'\n",
+                          key.c_str());
       error_code = EX_USAGE;
     }
   }
@@ -278,11 +267,8 @@ std::string FlagHelper::GetHelpMessage() const {
   for (const auto& pair : defined_flags_) {
     const Flag* flag = pair.second.get();
     if (flag->visible_) {
-      base::StringAppendF(&help,
-                          "  --%s  (%s)  type: %s  default: %s\n",
-                          flag->name_,
-                          flag->help_,
-                          flag->GetType(),
+      base::StringAppendF(&help, "  --%s  (%s)  type: %s  default: %s\n",
+                          flag->name_, flag->help_, flag->GetType(),
                           flag->default_value_);
     }
   }

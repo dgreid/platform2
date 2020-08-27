@@ -83,8 +83,8 @@ std::string SanitizeUserNameWithSalt(const std::string& username,
                                      const SecureBlob& salt) {
   unsigned char binmd[SHA_DIGEST_LENGTH];
   std::string lowercase(username);
-  std::transform(
-      lowercase.begin(), lowercase.end(), lowercase.begin(), ::tolower);
+  std::transform(lowercase.begin(), lowercase.end(), lowercase.begin(),
+                 ::tolower);
   SHA_CTX ctx;
   SHA1_Init(&ctx);
   SHA1_Update(&ctx, salt.data(), salt.size());
@@ -118,8 +118,8 @@ FilePath GetUserPath(const std::string& username) {
 FilePath GetRootPath(const std::string& username) {
   if (!EnsureSystemSaltIsLoaded())
     return FilePath();
-  return FilePath(base::StringPrintf(
-      "%s%s", g_root_home_prefix, SanitizeUserName(username).c_str()));
+  return FilePath(base::StringPrintf("%s%s", g_root_home_prefix,
+                                     SanitizeUserName(username).c_str()));
 }
 
 FilePath GetDaemonStorePath(const std::string& username,
@@ -151,15 +151,15 @@ bool IsSanitizedUserName(const std::string& sanitized) {
 
 void SetUserHomePrefix(const std::string& prefix) {
   if (prefix.length() < sizeof(g_user_home_prefix)) {
-    snprintf(
-        g_user_home_prefix, sizeof(g_user_home_prefix), "%s", prefix.c_str());
+    snprintf(g_user_home_prefix, sizeof(g_user_home_prefix), "%s",
+             prefix.c_str());
   }
 }
 
 void SetRootHomePrefix(const std::string& prefix) {
   if (prefix.length() < sizeof(g_root_home_prefix)) {
-    snprintf(
-        g_root_home_prefix, sizeof(g_root_home_prefix), "%s", prefix.c_str());
+    snprintf(g_root_home_prefix, sizeof(g_root_home_prefix), "%s",
+             prefix.c_str());
   }
 }
 

@@ -10,11 +10,8 @@ namespace brillo {
 namespace dbus {
 
 bool AbstractDbusService::Register(const brillo::dbus::BusConnection& conn) {
-  return RegisterExclusiveService(conn,
-                                  service_interface(),
-                                  service_name(),
-                                  service_path(),
-                                  service_object());
+  return RegisterExclusiveService(conn, service_interface(), service_name(),
+                                  service_path(), service_object());
 }
 
 bool AbstractDbusService::Run() {

@@ -19,15 +19,14 @@ bool CallPtrArray(const Proxy& proxy,
                   glib::ScopedPtrArray<const char*>* result) {
   glib::ScopedError error;
 
-  ::GType g_type_array = ::dbus_g_type_get_collection("GPtrArray",
-                                                       DBUS_TYPE_G_OBJECT_PATH);
-
+  ::GType g_type_array =
+      ::dbus_g_type_get_collection("GPtrArray", DBUS_TYPE_G_OBJECT_PATH);
 
   if (!::dbus_g_proxy_call(proxy.gproxy(), method, &Resetter(&error).lvalue(),
                            G_TYPE_INVALID, g_type_array,
                            &Resetter(result).lvalue(), G_TYPE_INVALID)) {
     LOG(WARNING) << "CallPtrArray failed: "
-        << (error->message ? error->message : "Unknown Error.");
+                 << (error->message ? error->message : "Unknown Error.");
     return false;
   }
 
@@ -36,12 +35,12 @@ bool CallPtrArray(const Proxy& proxy,
 
 BusConnection GetSystemBusConnection() {
   glib::ScopedError error;
-  ::DBusGConnection* result = ::dbus_g_bus_get(DBUS_BUS_SYSTEM,
-                                               &Resetter(&error).lvalue());
+  ::DBusGConnection* result =
+      ::dbus_g_bus_get(DBUS_BUS_SYSTEM, &Resetter(&error).lvalue());
   if (!result) {
     LOG(ERROR) << "dbus_g_bus_get(DBUS_BUS_SYSTEM) failed: "
-               << ((error.get() && error->message) ?
-                   error->message : "Unknown Error");
+               << ((error.get() && error->message) ? error->message
+                                                   : "Unknown Error");
     return BusConnection(nullptr);
   }
   // Set to not exit when system bus is disconnected.
@@ -74,8 +73,8 @@ BusConnection GetPrivateBusConnection(const char* address) {
   ::dbus_error_init(&error);
 
   ::DBusGConnection* result = nullptr;
-  ::DBusConnection* raw_connection
-        = ::dbus_connection_open_private(address, &error);
+  ::DBusConnection* raw_connection =
+      ::dbus_connection_open_private(address, &error);
   if (!raw_connection) {
     LOG(WARNING) << "dbus_connection_open_private failed: " << address;
     return BusConnection(nullptr);
@@ -92,8 +91,8 @@ BusConnection GetPrivateBusConnection(const char* address) {
     return BusConnection(nullptr);
   }
 
-  ::dbus_connection_setup_with_g_main(
-      raw_connection, nullptr /* default context */);
+  ::dbus_connection_setup_with_g_main(raw_connection,
+                                      nullptr /* default context */);
 
   // A reference count of |raw_connection| is transferred to |result|. You don't
   // have to (and should not) unref the |raw_connection|.
@@ -111,21 +110,19 @@ bool RetrieveProperties(const Proxy& proxy,
                         glib::ScopedHashTable* result) {
   glib::ScopedError error;
 
-  if (!::dbus_g_proxy_call(proxy.gproxy(), "GetAll", &Resetter(&error).lvalue(),
-                           G_TYPE_STRING, interface, G_TYPE_INVALID,
-                           ::dbus_g_type_get_map("GHashTable", G_TYPE_STRING,
-                                                 G_TYPE_VALUE),
-                           &Resetter(result).lvalue(), G_TYPE_INVALID)) {
+  if (!::dbus_g_proxy_call(
+          proxy.gproxy(), "GetAll", &Resetter(&error).lvalue(), G_TYPE_STRING,
+          interface, G_TYPE_INVALID,
+          ::dbus_g_type_get_map("GHashTable", G_TYPE_STRING, G_TYPE_VALUE),
+          &Resetter(result).lvalue(), G_TYPE_INVALID)) {
     LOG(WARNING) << "RetrieveProperties failed: "
-        << (error->message ? error->message : "Unknown Error.");
+                 << (error->message ? error->message : "Unknown Error.");
     return false;
   }
   return true;
 }
 
-Proxy::Proxy()
-    : object_(nullptr) {
-}
+Proxy::Proxy() : object_(nullptr) {}
 
 // Set |connect_to_name_owner| true if you'd like to use
 // dbus_g_proxy_new_for_name_owner() rather than dbus_g_proxy_new_for_name().
@@ -135,26 +132,22 @@ Proxy::Proxy(const BusConnection& connection,
              const char* interface,
              bool connect_to_name_owner)
     : object_(GetGProxy(
-        connection, name, path, interface, connect_to_name_owner)) {
-}
+          connection, name, path, interface, connect_to_name_owner)) {}
 
 // Equivalent to Proxy(connection, name, path, interface, false).
 Proxy::Proxy(const BusConnection& connection,
              const char* name,
              const char* path,
              const char* interface)
-    : object_(GetGProxy(connection, name, path, interface, false)) {
-}
+    : object_(GetGProxy(connection, name, path, interface, false)) {}
 
 // Creates a peer proxy using dbus_g_proxy_new_for_peer.
 Proxy::Proxy(const BusConnection& connection,
              const char* path,
              const char* interface)
-    : object_(GetGPeerProxy(connection, path, interface)) {
-}
+    : object_(GetGPeerProxy(connection, path, interface)) {}
 
-Proxy::Proxy(const Proxy& x)
-    : object_(x.object_) {
+Proxy::Proxy(const Proxy& x) : object_(x.object_) {
   if (object_)
     ::g_object_ref(object_);
 }
@@ -173,21 +166,16 @@ Proxy::value_type Proxy::GetGProxy(const BusConnection& connection,
   value_type result = nullptr;
   if (connect_to_name_owner) {
     glib::ScopedError error;
-    result = ::dbus_g_proxy_new_for_name_owner(connection.object_,
-                                               name,
-                                               path,
-                                               interface,
-                                               &Resetter(&error).lvalue());
+    result = ::dbus_g_proxy_new_for_name_owner(
+        connection.object_, name, path, interface, &Resetter(&error).lvalue());
     if (!result) {
       DLOG(ERROR) << "Failed to construct proxy: "
-                  << (error->message ? error->message : "Unknown Error")
-                  << ": " << path;
+                  << (error->message ? error->message : "Unknown Error") << ": "
+                  << path;
     }
   } else {
-    result = ::dbus_g_proxy_new_for_name(connection.object_,
-                                         name,
-                                         path,
-                                         interface);
+    result =
+        ::dbus_g_proxy_new_for_name(connection.object_, name, path, interface);
     if (!result) {
       LOG(ERROR) << "Failed to construct proxy: " << path;
     }
@@ -199,9 +187,8 @@ Proxy::value_type Proxy::GetGProxy(const BusConnection& connection,
 Proxy::value_type Proxy::GetGPeerProxy(const BusConnection& connection,
                                        const char* path,
                                        const char* interface) {
-  value_type result = ::dbus_g_proxy_new_for_peer(connection.object_,
-                                                  path,
-                                                  interface);
+  value_type result =
+      ::dbus_g_proxy_new_for_peer(connection.object_, path, interface);
   if (!result)
     LOG(ERROR) << "Failed to construct peer proxy: " << path;
 
@@ -218,21 +205,16 @@ bool RegisterExclusiveService(const BusConnection& connection,
   CHECK(service_name);
   // Create a proxy to DBus itself so that we can request to become a
   // service name owner and then register an object at the related service path.
-  Proxy proxy = brillo::dbus::Proxy(connection,
-                                      DBUS_SERVICE_DBUS,
-                                      DBUS_PATH_DBUS,
-                                      DBUS_INTERFACE_DBUS);
+  Proxy proxy = brillo::dbus::Proxy(connection, DBUS_SERVICE_DBUS,
+                                    DBUS_PATH_DBUS, DBUS_INTERFACE_DBUS);
   // Exclusivity is determined by replacing any existing
   // service, not queuing, and ensuring we are the primary
   // owner after the name is ours.
   glib::ScopedError err;
   guint result = 0;
   // TODO(wad) determine if we are moving away from using generated functions
-  if (!org_freedesktop_DBus_request_name(proxy.gproxy(),
-                                         service_name,
-                                         0,
-                                         &result,
-                                         &Resetter(&err).lvalue())) {
+  if (!org_freedesktop_DBus_request_name(proxy.gproxy(), service_name, 0,
+                                         &result, &Resetter(&err).lvalue())) {
     LOG(ERROR) << "Unable to request service name: "
                << (err->message ? err->message : "Unknown Error.");
     return false;
@@ -253,13 +235,10 @@ bool RegisterExclusiveService(const BusConnection& connection,
     needs_release = true;
   }
   LOG_IF(WARNING, result == DBUS_REQUEST_NAME_REPLY_ALREADY_OWNER)
-    << "Service name already owned by this process";
+      << "Service name already owned by this process";
   if (needs_release) {
-    if (!org_freedesktop_DBus_release_name(
-           proxy.gproxy(),
-           service_name,
-           &result,
-           &Resetter(&err).lvalue())) {
+    if (!org_freedesktop_DBus_release_name(proxy.gproxy(), service_name,
+                                           &result, &Resetter(&err).lvalue())) {
       LOG(ERROR) << "Unabled to release service name: "
                  << (err->message ? err->message : "Unknown Error.");
     }
@@ -268,8 +247,7 @@ bool RegisterExclusiveService(const BusConnection& connection,
   }
 
   // Determine a path from the service name and register the object.
-  dbus_g_connection_register_g_object(connection.g_connection(),
-                                      service_path,
+  dbus_g_connection_register_g_object(connection.g_connection(), service_path,
                                       object);
   return true;
 }
@@ -278,9 +256,7 @@ void CallMethodWithNoArguments(const char* service_name,
                                const char* path,
                                const char* interface_name,
                                const char* method_name) {
-  Proxy proxy(dbus::GetSystemBusConnection(),
-              service_name,
-              path,
+  Proxy proxy(dbus::GetSystemBusConnection(), service_name, path,
               interface_name);
   ::dbus_g_proxy_call_no_reply(proxy.gproxy(), method_name, G_TYPE_INVALID);
 }
@@ -292,8 +268,8 @@ void SignalWatcher::StartMonitoring(const std::string& interface,
   signal_ = signal;
 
   // Snoop on D-Bus messages so we can get notified about signals.
-  DBusConnection* dbus_conn = dbus_g_connection_get_connection(
-      GetSystemBusConnection().g_connection());
+  DBusConnection* dbus_conn =
+      dbus_g_connection_get_connection(GetSystemBusConnection().g_connection());
   DCHECK(dbus_conn);
 
   DBusError error;
@@ -304,8 +280,7 @@ void SignalWatcher::StartMonitoring(const std::string& interface,
                 << " (" << error.message << ")";
   }
 
-  if (!dbus_connection_add_filter(dbus_conn,
-                                  &SignalWatcher::FilterDBusMessage,
+  if (!dbus_connection_add_filter(dbus_conn, &SignalWatcher::FilterDBusMessage,
                                   this,        // user_data
                                   nullptr)) {  // free_data_function
     LOG(DFATAL) << "Unable to add D-Bus filter";
@@ -320,8 +295,7 @@ SignalWatcher::~SignalWatcher() {
       dbus::GetSystemBusConnection().g_connection());
   DCHECK(dbus_conn);
 
-  dbus_connection_remove_filter(dbus_conn,
-                                &SignalWatcher::FilterDBusMessage,
+  dbus_connection_remove_filter(dbus_conn, &SignalWatcher::FilterDBusMessage,
                                 this);
 
   DBusError error;
@@ -343,8 +317,8 @@ DBusHandlerResult SignalWatcher::FilterDBusMessage(DBusConnection* dbus_conn,
                                                    DBusMessage* message,
                                                    void* data) {
   SignalWatcher* self = static_cast<SignalWatcher*>(data);
-  if (dbus_message_is_signal(
-          message, self->interface_.c_str(), self->signal_.c_str())) {
+  if (dbus_message_is_signal(message, self->interface_.c_str(),
+                             self->signal_.c_str())) {
     self->OnSignal(message);
     return DBUS_HANDLER_RESULT_HANDLED;
   } else {

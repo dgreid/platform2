@@ -27,25 +27,24 @@ class BRILLO_EXPORT MockMessageLoop : public MessageLoop {
  public:
   // Create a FakeMessageLoop optionally using a SimpleTestClock to update the
   // time when Run() or RunOnce(true) are called and should block.
-  explicit MockMessageLoop(base::SimpleTestClock* clock)
-    : fake_loop_(clock) {
+  explicit MockMessageLoop(base::SimpleTestClock* clock) : fake_loop_(clock) {
     // Redirect all actions to calling the underlying FakeMessageLoop by
     // default. For the overloaded methods, we need to disambiguate between the
     // different options by specifying the type of the method pointer.
     ON_CALL(*this, PostDelayedTask(::testing::_, ::testing::_, ::testing::_))
-      .WillByDefault(::testing::Invoke(
-          &fake_loop_,
-          static_cast<TaskId(FakeMessageLoop::*)(
-                      const base::Location&,
-                      base::OnceClosure,
-                      base::TimeDelta)>(
-              &FakeMessageLoop::PostDelayedTask)));
+        .WillByDefault(::testing::Invoke(
+            &fake_loop_,
+            // clang-format off
+            static_cast<TaskId(FakeMessageLoop::*)(
+                // clang-format on
+                const base::Location&, base::OnceClosure, base::TimeDelta)>(
+                &FakeMessageLoop::PostDelayedTask)));
     ON_CALL(*this, CancelTask(::testing::_))
-      .WillByDefault(::testing::Invoke(&fake_loop_,
-                                       &FakeMessageLoop::CancelTask));
+        .WillByDefault(
+            ::testing::Invoke(&fake_loop_, &FakeMessageLoop::CancelTask));
     ON_CALL(*this, RunOnce(::testing::_))
-      .WillByDefault(::testing::Invoke(&fake_loop_,
-                                       &FakeMessageLoop::RunOnce));
+        .WillByDefault(
+            ::testing::Invoke(&fake_loop_, &FakeMessageLoop::RunOnce));
   }
   ~MockMessageLoop() override = default;
 
@@ -59,9 +58,7 @@ class BRILLO_EXPORT MockMessageLoop : public MessageLoop {
 
   // Returns the actual FakeMessageLoop instance so default actions can be
   // override with other actions or call
-  FakeMessageLoop* fake_loop() {
-    return &fake_loop_;
-  }
+  FakeMessageLoop* fake_loop() { return &fake_loop_; }
 
  private:
   FakeMessageLoop fake_loop_;

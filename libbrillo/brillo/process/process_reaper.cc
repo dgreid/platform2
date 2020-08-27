@@ -42,8 +42,8 @@ bool ProcessReaper::WatchForChild(const base::Location& from_here,
                                   ChildCallback callback) {
   if (watched_processes_.find(pid) != watched_processes_.end())
     return false;
-  watched_processes_.emplace(
-      pid, WatchedProcess{from_here, std::move(callback)});
+  watched_processes_.emplace(pid,
+                             WatchedProcess{from_here, std::move(callback)});
   return true;
 }
 

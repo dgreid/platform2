@@ -104,8 +104,7 @@ Error::Error(const base::Location& location,
       code_(code),
       message_(message),
       location_(location),
-      inner_error_(std::move(inner_error)) {
-}
+      inner_error_(std::move(inner_error)) {}
 
 const Error* Error::FindErrorOfDomain(const Error* error_chain_start,
                                       const std::string& domain) {

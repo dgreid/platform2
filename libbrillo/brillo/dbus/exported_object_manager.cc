@@ -17,8 +17,7 @@ namespace dbus_utils {
 
 ExportedObjectManager::ExportedObjectManager(scoped_refptr<dbus::Bus> bus,
                                              const dbus::ObjectPath& path)
-    : bus_(bus), dbus_object_(nullptr, bus, path) {
-}
+    : bus_(bus), dbus_object_(nullptr, bus, path) {}
 
 void ExportedObjectManager::RegisterAsync(
     const AsyncEventSequencer::CompletionAction& completion_callback) {
@@ -49,15 +48,13 @@ void ExportedObjectManager::ClaimInterface(
   VariantDictionary property_dict;
   property_writer.Run(&property_dict);
   std::map<std::string, VariantDictionary> interfaces_and_properties{
-      {interface_name, property_dict}
-  };
+      {interface_name, property_dict}};
   signal_itf_added_.lock()->Send(path, interfaces_and_properties);
   registered_objects_[path][interface_name] = property_writer;
 }
 
 void ExportedObjectManager::ReleaseInterface(
-    const dbus::ObjectPath& path,
-    const std::string& interface_name) {
+    const dbus::ObjectPath& path, const std::string& interface_name) {
   bus_->AssertOnOriginThread();
   auto interfaces_for_path_itr = registered_objects_.find(path);
   CHECK(interfaces_for_path_itr != registered_objects_.end())

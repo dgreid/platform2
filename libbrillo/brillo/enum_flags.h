@@ -36,11 +36,14 @@
 
 // This is the macro used to declare that an enum type |ENUM| should have bit-
 // wise operators defined for it.
-#define DECLARE_FLAGS_ENUM(ENUM) \
-template <typename> struct EnumFlagTraitType; \
-template <> struct EnumFlagTraitType<ENUM> { using EnumFlagType = ENUM; }; \
-EnumFlagTraitType<ENUM> GetEnumFlagTraitType(ENUM) __attribute__((used));
-
+#define DECLARE_FLAGS_ENUM(ENUM)   \
+  template <typename>              \
+  struct EnumFlagTraitType;        \
+  template <>                      \
+  struct EnumFlagTraitType<ENUM> { \
+    using EnumFlagType = ENUM;     \
+  };                               \
+  EnumFlagTraitType<ENUM> GetEnumFlagTraitType(ENUM) __attribute__((used));
 
 // Setup the templates used to declare that the operators should exist for a
 // given type T.
@@ -77,18 +80,16 @@ operator~(const T& l) {
 template <typename T>
 constexpr typename std::enable_if<enum_details::IsFlagEnum<T>::value, T>::type
 operator|(const T& l, const T& r) {
-  return static_cast<T>(
-             static_cast<typename std::underlying_type<T>::type>(l) |
-             static_cast<typename std::underlying_type<T>::type>(r));
+  return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(l) |
+                        static_cast<typename std::underlying_type<T>::type>(r));
 }
 
 // T operator&(T&, T&)
 template <typename T>
 constexpr typename std::enable_if<enum_details::IsFlagEnum<T>::value, T>::type
 operator&(const T& l, const T& r) {
-  return static_cast<T>(
-             static_cast<typename std::underlying_type<T>::type>(l) &
-             static_cast<typename std::underlying_type<T>::type>(r));
+  return static_cast<T>(static_cast<typename std::underlying_type<T>::type>(l) &
+                        static_cast<typename std::underlying_type<T>::type>(r));
 }
 
 // T operator^(T&, T&)
@@ -102,7 +103,7 @@ operator^(const T& l, const T& r) {
 // T operator|=(T&, T&)
 template <typename T>
 constexpr typename std::enable_if<enum_details::IsFlagEnum<T>::value, T>::type
-operator|=(T& l, const T& r) {
+operator|=(T& l, const T& r) {  // NOLINT(runtime/references)
   return l = static_cast<T>(
              static_cast<typename std::underlying_type<T>::type>(l) |
              static_cast<typename std::underlying_type<T>::type>(r));
@@ -111,7 +112,7 @@ operator|=(T& l, const T& r) {
 // T operator&=(T&, T&)
 template <typename T>
 constexpr typename std::enable_if<enum_details::IsFlagEnum<T>::value, T>::type
-operator&=(T& l, const T& r) {
+operator&=(T& l, const T& r) {  // NOLINT(runtime/references)
   return l = static_cast<T>(
              static_cast<typename std::underlying_type<T>::type>(l) &
              static_cast<typename std::underlying_type<T>::type>(r));
@@ -120,7 +121,7 @@ operator&=(T& l, const T& r) {
 // T operator^=(T&, T&)
 template <typename T>
 constexpr typename std::enable_if<enum_details::IsFlagEnum<T>::value, T>::type
-operator^=(T& l, const T& r) {
+operator^=(T& l, const T& r) {  // NOLINT(runtime/references)
   return l = static_cast<T>(
              static_cast<typename std::underlying_type<T>::type>(l) ^
              static_cast<typename std::underlying_type<T>::type>(r));

@@ -60,8 +60,7 @@ bool ParseResilientPolicyFilePath(const base::FilePath& policy_path,
 }
 
 base::FilePath GetResilientPolicyFilePathForIndex(
-    const base::FilePath& default_policy_path,
-    int index) {
+    const base::FilePath& default_policy_path, int index) {
   if (index == 0)
     return default_policy_path;
   return base::FilePath(default_policy_path.value() + "." +

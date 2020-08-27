@@ -67,7 +67,8 @@ class BRILLO_PRIVATE SecureAllocator : public std::allocator<T> {
   SecureAllocator(const SecureAllocator<U>& other) noexcept
       : std::allocator<T>(other) {}
 
-  template <typename U> struct rebind {
+  template <typename U>
+  struct rebind {
     typedef SecureAllocator<U> other;
   };
 

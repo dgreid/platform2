@@ -49,10 +49,8 @@ class AsynchronousSignalHandlerTest : public ::testing::Test {
 
 TEST_F(AsynchronousSignalHandlerTest, CheckTerm) {
   handler_.RegisterHandler(
-      SIGTERM,
-      base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
-                 base::Unretained(this),
-                 true));
+      SIGTERM, base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
+                          base::Unretained(this), true));
   EXPECT_EQ(0, infos_.size());
   EXPECT_EQ(0, kill(getpid(), SIGTERM));
 
@@ -65,10 +63,8 @@ TEST_F(AsynchronousSignalHandlerTest, CheckTerm) {
 
 TEST_F(AsynchronousSignalHandlerTest, CheckSignalUnregistration) {
   handler_.RegisterHandler(
-      SIGCHLD,
-      base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
-                 base::Unretained(this),
-                 true));
+      SIGCHLD, base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
+                          base::Unretained(this), true));
   EXPECT_EQ(0, infos_.size());
   EXPECT_EQ(0, kill(getpid(), SIGCHLD));
 
@@ -81,10 +77,10 @@ TEST_F(AsynchronousSignalHandlerTest, CheckSignalUnregistration) {
   EXPECT_EQ(0, kill(getpid(), SIGCHLD));
 
   // Run the loop with a timeout, as no message are expected.
-  brillo_loop_.PostDelayedTask(FROM_HERE,
-                               base::Bind(&MessageLoop::BreakLoop,
-                                          base::Unretained(&brillo_loop_)),
-                               base::TimeDelta::FromMilliseconds(10));
+  brillo_loop_.PostDelayedTask(
+      FROM_HERE,
+      base::Bind(&MessageLoop::BreakLoop, base::Unretained(&brillo_loop_)),
+      base::TimeDelta::FromMilliseconds(10));
   MessageLoop::current()->Run();
 
   // The signal handle should have been unregistered. No new message are
@@ -95,10 +91,8 @@ TEST_F(AsynchronousSignalHandlerTest, CheckSignalUnregistration) {
 TEST_F(AsynchronousSignalHandlerTest, CheckMultipleSignal) {
   const uint8_t NB_SIGNALS = 5;
   handler_.RegisterHandler(
-      SIGCHLD,
-      base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
-                 base::Unretained(this),
-                 false));
+      SIGCHLD, base::Bind(&AsynchronousSignalHandlerTest::RecordInfoAndQuit,
+                          base::Unretained(this), false));
   EXPECT_EQ(0, infos_.size());
   for (int i = 0; i < NB_SIGNALS; ++i) {
     EXPECT_EQ(0, kill(getpid(), SIGCHLD));

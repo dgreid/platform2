@@ -139,8 +139,7 @@ bool PopValueFromReader(dbus::MessageReader* reader, dbus::ObjectPath* value) {
          reader->PopObjectPath(value);
 }
 
-bool PopValueFromReader(dbus::MessageReader* reader,
-                        base::ScopedFD* value) {
+bool PopValueFromReader(dbus::MessageReader* reader, base::ScopedFD* value) {
   dbus::MessageReader variant_reader(nullptr);
   return details::DescendIntoVariantIfPresent(&reader, &variant_reader) &&
          reader->PopFileDescriptor(value);
@@ -151,9 +150,8 @@ namespace {
 // Helper methods for PopValueFromReader(dbus::MessageReader*, Any*)
 // implementation. Pops a value of particular type from |reader| and assigns
 // it to |value| of type Any.
-template<typename T>
-bool PopTypedValueFromReader(dbus::MessageReader* reader,
-                             brillo::Any* value) {
+template <typename T>
+bool PopTypedValueFromReader(dbus::MessageReader* reader, brillo::Any* value) {
   T data{};
   if (!PopValueFromReader(reader, &data))
     return false;
@@ -162,14 +160,13 @@ bool PopTypedValueFromReader(dbus::MessageReader* reader,
 }
 
 // std::vector<T> overload.
-template<typename T>
-bool PopTypedArrayFromReader(dbus::MessageReader* reader,
-                             brillo::Any* value) {
+template <typename T>
+bool PopTypedArrayFromReader(dbus::MessageReader* reader, brillo::Any* value) {
   return PopTypedValueFromReader<std::vector<T>>(reader, value);
 }
 
 // std::map<KEY, VALUE> overload.
-template<typename KEY, typename VALUE>
+template <typename KEY, typename VALUE>
 bool PopTypedMapFromReader(dbus::MessageReader* reader, brillo::Any* value) {
   return PopTypedValueFromReader<std::map<KEY, VALUE>>(reader, value);
 }
@@ -177,8 +174,7 @@ bool PopTypedMapFromReader(dbus::MessageReader* reader, brillo::Any* value) {
 // Helper methods for reading common ARRAY signatures into a Variant.
 // Note that only common types are supported. If an additional specific
 // type signature is required, feel free to add support for it.
-bool PopArrayValueFromReader(dbus::MessageReader* reader,
-                             brillo::Any* value) {
+bool PopArrayValueFromReader(dbus::MessageReader* reader, brillo::Any* value) {
   std::string signature = reader->GetDataSignature();
   if (signature == "ab")
     return PopTypedArrayFromReader<bool>(reader, value);
@@ -209,29 +205,30 @@ bool PopArrayValueFromReader(dbus::MessageReader* reader,
   else if (signature == "a{sv}")
     return PopTypedValueFromReader<brillo::VariantDictionary>(reader, value);
   else if (signature == "aa{ss}")
-    return PopTypedArrayFromReader<
-        std::map<std::string, std::string>>(reader, value);
+    return PopTypedArrayFromReader<std::map<std::string, std::string>>(reader,
+                                                                       value);
   else if (signature == "aa{sv}")
     return PopTypedArrayFromReader<brillo::VariantDictionary>(reader, value);
   else if (signature == "a{sa{ss}}")
-    return PopTypedMapFromReader<
-        std::string, std::map<std::string, std::string>>(reader, value);
+    return PopTypedMapFromReader<std::string,
+                                 std::map<std::string, std::string>>(reader,
+                                                                     value);
   else if (signature == "a{sa{sv}}")
-    return PopTypedMapFromReader<
-        std::string, brillo::VariantDictionary>(reader, value);
+    return PopTypedMapFromReader<std::string, brillo::VariantDictionary>(reader,
+                                                                         value);
   else if (signature == "a{say}")
-    return PopTypedMapFromReader<
-        std::string, std::vector<uint8_t>>(reader, value);
+    return PopTypedMapFromReader<std::string, std::vector<uint8_t>>(reader,
+                                                                    value);
   else if (signature == "a{uv}")
     return PopTypedMapFromReader<uint32_t, brillo::Any>(reader, value);
   else if (signature == "a(su)")
-    return PopTypedArrayFromReader<
-        std::tuple<std::string, uint32_t>>(reader, value);
+    return PopTypedArrayFromReader<std::tuple<std::string, uint32_t>>(reader,
+                                                                      value);
   else if (signature == "a{uu}")
     return PopTypedMapFromReader<uint32_t, uint32_t>(reader, value);
   else if (signature == "a(uu)")
-    return PopTypedArrayFromReader<
-        std::tuple<uint32_t, uint32_t>>(reader, value);
+    return PopTypedArrayFromReader<std::tuple<uint32_t, uint32_t>>(reader,
+                                                                   value);
   else if (signature == "a(ubay)")
     return PopTypedArrayFromReader<
         std::tuple<uint32_t, bool, std::vector<uint8_t>>>(reader, value);
@@ -246,8 +243,7 @@ bool PopArrayValueFromReader(dbus::MessageReader* reader,
 // Helper methods for reading common STRUCT signatures into a Variant.
 // Note that only common types are supported. If an additional specific
 // type signature is required, feel free to add support for it.
-bool PopStructValueFromReader(dbus::MessageReader* reader,
-                              brillo::Any* value) {
+bool PopStructValueFromReader(dbus::MessageReader* reader, brillo::Any* value) {
   std::string signature = reader->GetDataSignature();
   if (signature == "(ii)")
     return PopTypedValueFromReader<std::tuple<int, int>>(reader, value);

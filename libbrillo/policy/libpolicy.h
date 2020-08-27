@@ -45,8 +45,7 @@ class PolicyProvider {
   // is still in OOBE (so device mode is not determined yet).
   virtual bool IsConsumerDevice() const;
 
-  void SetDevicePolicyForTesting(
-      std::unique_ptr<DevicePolicy> device_policy);
+  void SetDevicePolicyForTesting(std::unique_ptr<DevicePolicy> device_policy);
   void SetInstallAttributesReaderForTesting(
       std::unique_ptr<InstallAttributesReader> install_attributes_reader);
 

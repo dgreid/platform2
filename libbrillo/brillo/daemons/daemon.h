@@ -55,9 +55,9 @@ class BRILLO_EXPORT Daemon : public AsynchronousSignalHandlerInterface {
   // are identical to AsynchronousSignalHandler::RegisterHandler and
   // AsynchronousSignalHandler::UnregisterHandler, except that handlers for
   // SIGTERM, SIGINT, and SIGHUP cannot be modified.
-  void RegisterHandler(
-      int signal, const
-      AsynchronousSignalHandlerInterface::SignalHandler& callback) override;
+  void RegisterHandler(int signal,
+                       const AsynchronousSignalHandlerInterface::SignalHandler&
+                           callback) override;
   void UnregisterHandler(int signal) override;
 
  protected:
@@ -90,9 +90,7 @@ class BRILLO_EXPORT Daemon : public AsynchronousSignalHandlerInterface {
   virtual bool OnRestart();
 
   // Returns a delegate to Quit() method in the base::RunLoop instance.
-  base::Closure QuitClosure() const {
-    return message_loop_.QuitClosure();
-  }
+  base::Closure QuitClosure() const { return message_loop_.QuitClosure(); }
 
  private:
   // Called when SIGTERM/SIGINT signals are received.

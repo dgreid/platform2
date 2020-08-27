@@ -12,12 +12,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::InSequence;
 using testing::Return;
 using testing::SetArgPointee;
 using testing::StrictMock;
-using testing::_;
 
 namespace brillo {
 
@@ -57,8 +57,8 @@ TEST_F(InputStreamSetTest, InitialFalseAssumptions) {
   size_t size = 0;
   EXPECT_FALSE(stream_->WriteAsync(buffer, sizeof(buffer), {}, {}, nullptr));
   EXPECT_FALSE(stream_->WriteAllAsync(buffer, sizeof(buffer), {}, {}, nullptr));
-  EXPECT_FALSE(stream_->WriteNonBlocking(buffer, sizeof(buffer), &size,
-                                         nullptr));
+  EXPECT_FALSE(
+      stream_->WriteNonBlocking(buffer, sizeof(buffer), &size, nullptr));
   EXPECT_FALSE(stream_->WriteBlocking(buffer, sizeof(buffer), &size, nullptr));
   EXPECT_FALSE(stream_->WriteAllBlocking(buffer, sizeof(buffer), nullptr));
   EXPECT_TRUE(stream_->FlushBlocking(nullptr));
@@ -72,8 +72,7 @@ TEST_F(InputStreamSetTest, InitialTrueAssumptions) {
   EXPECT_TRUE(stream_->CanGetSize());
 
   // Reading from the first stream fails, so the second one shouldn't be used.
-  EXPECT_CALL(*itf1_, ReadNonBlocking(_, _, _, _, _))
-      .WillOnce(Return(false));
+  EXPECT_CALL(*itf1_, ReadNonBlocking(_, _, _, _, _)).WillOnce(Return(false));
   EXPECT_CALL(*itf2_, ReadNonBlocking(_, _, _, _, _)).Times(0);
   char buffer[100];
   size_t size = 0;
@@ -105,29 +104,29 @@ TEST_F(InputStreamSetTest, ReadNonBlocking) {
 
   InSequence s;
   EXPECT_CALL(*itf1_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(10),
-                    SetArgPointee<3>(false),
-                    Return(true)));
-  EXPECT_TRUE(stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos,
-                                       nullptr));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(10), SetArgPointee<3>(false), Return(true)));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos, nullptr));
   EXPECT_EQ(10, read);
   EXPECT_FALSE(eos);
 
   EXPECT_CALL(*itf1_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
-  EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100 , _, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(100),
-                    SetArgPointee<3>(false),
-                    Return(true)));
-  EXPECT_TRUE(stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos,
-                                       nullptr));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
+  EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
+      .WillOnce(
+          DoAll(SetArgPointee<2>(100), SetArgPointee<3>(false), Return(true)));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos, nullptr));
   EXPECT_EQ(100, read);
   EXPECT_FALSE(eos);
 
   EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
-  EXPECT_TRUE(stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos,
-                                       nullptr));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
+  EXPECT_TRUE(
+      stream_->ReadNonBlocking(IntToPtr(1000), 100, &read, &eos, nullptr));
   EXPECT_EQ(0, read);
   EXPECT_TRUE(eos);
 }
@@ -137,33 +136,28 @@ TEST_F(InputStreamSetTest, ReadBlocking) {
 
   InSequence s;
   EXPECT_CALL(*itf1_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(10),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(10), SetArgPointee<3>(false), Return(true)));
   EXPECT_TRUE(stream_->ReadBlocking(IntToPtr(1000), 100, &read, nullptr));
   EXPECT_EQ(10, read);
 
   EXPECT_CALL(*itf1_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(0),
-                      SetArgPointee<3>(true),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
   EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(0),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(false), Return(true)));
   EXPECT_CALL(*itf2_, WaitForDataBlocking(Stream::AccessMode::READ, _, _, _))
       .WillOnce(Return(true));
   EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(100),
-                      SetArgPointee<3>(false),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(100), SetArgPointee<3>(false), Return(true)));
   EXPECT_TRUE(stream_->ReadBlocking(IntToPtr(1000), 100, &read, nullptr));
   EXPECT_EQ(100, read);
 
   EXPECT_CALL(*itf2_, ReadNonBlocking(IntToPtr(1000), 100, _, _, _))
-      .WillOnce(DoAll(SetArgPointee<2>(0),
-                      SetArgPointee<3>(true),
-                      Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<2>(0), SetArgPointee<3>(true), Return(true)));
   EXPECT_TRUE(stream_->ReadBlocking(IntToPtr(1000), 100, &read, nullptr));
   EXPECT_EQ(0, read);
 }

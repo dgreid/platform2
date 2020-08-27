@@ -38,7 +38,7 @@ bool Connection::SetRequestData(StreamPtr stream,
   return true;
 }
 
-bool Connection::FinishRequest(brillo::ErrorPtr*  /* error */) {
+bool Connection::FinishRequest(brillo::ErrorPtr* /* error */) {
   using brillo::string_utils::ToString;
   request_.AddHeaders(
       {{request_header::kContentLength, ToString(request_.GetData().size())}});

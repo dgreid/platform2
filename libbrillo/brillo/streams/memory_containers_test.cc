@@ -12,12 +12,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
-using testing::Invoke;
 using testing::InSequence;
+using testing::Invoke;
 using testing::Return;
 using testing::WithArgs;
-using testing::_;
 
 namespace brillo {
 
@@ -74,9 +74,10 @@ TEST_F(MemoryContainerTest, Read_WithinBuffer) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, GetReadOnlyBuffer(10, _))
-      .WillOnce(Return(const_buffer_));
+        .WillOnce(Return(const_buffer_));
     EXPECT_CALL(container_,
-                CopyMemoryBlock(test_read_buffer_, const_buffer_, 50)).Times(1);
+                CopyMemoryBlock(test_read_buffer_, const_buffer_, 50))
+        .Times(1);
   }
   size_t read = 0;
   ErrorPtr error;
@@ -90,9 +91,10 @@ TEST_F(MemoryContainerTest, Read_PastEndOfBuffer) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, GetReadOnlyBuffer(80, _))
-      .WillOnce(Return(const_buffer_));
+        .WillOnce(Return(const_buffer_));
     EXPECT_CALL(container_,
-                CopyMemoryBlock(test_read_buffer_, const_buffer_, 20)).Times(1);
+                CopyMemoryBlock(test_read_buffer_, const_buffer_, 20))
+        .Times(1);
   }
   size_t read = 0;
   EXPECT_TRUE(container_.Read(test_read_buffer_, 50, 80, &read, nullptr));
@@ -115,7 +117,7 @@ TEST_F(MemoryContainerTest, Read_Error) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, GetReadOnlyBuffer(0, _))
-      .WillOnce(DoAll(WithArgs<1>(Invoke(OnReadError)), Return(nullptr)));
+        .WillOnce(DoAll(WithArgs<1>(Invoke(OnReadError)), Return(nullptr)));
   }
   size_t read = 0;
   ErrorPtr error;
@@ -131,10 +133,9 @@ TEST_F(MemoryContainerTest, Write_WithinBuffer) {
   {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
-    EXPECT_CALL(container_, GetBuffer(10, _))
-      .WillOnce(Return(buffer_));
-    EXPECT_CALL(container_,
-                CopyMemoryBlock(buffer_, test_write_buffer_, 50)).Times(1);
+    EXPECT_CALL(container_, GetBuffer(10, _)).WillOnce(Return(buffer_));
+    EXPECT_CALL(container_, CopyMemoryBlock(buffer_, test_write_buffer_, 50))
+        .Times(1);
   }
   size_t written = 0;
   ErrorPtr error;
@@ -148,10 +149,9 @@ TEST_F(MemoryContainerTest, Write_PastEndOfBuffer) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, Resize(130, _)).WillOnce(Return(true));
-    EXPECT_CALL(container_, GetBuffer(80, _))
-      .WillOnce(Return(buffer_));
-    EXPECT_CALL(container_,
-                CopyMemoryBlock(buffer_, test_write_buffer_, 50)).Times(1);
+    EXPECT_CALL(container_, GetBuffer(80, _)).WillOnce(Return(buffer_));
+    EXPECT_CALL(container_, CopyMemoryBlock(buffer_, test_write_buffer_, 50))
+        .Times(1);
   }
   size_t written = 0;
   EXPECT_TRUE(container_.Write(test_write_buffer_, 50, 80, &written, nullptr));
@@ -163,10 +163,9 @@ TEST_F(MemoryContainerTest, Write_OutsideBuffer) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, Resize(160, _)).WillOnce(Return(true));
-    EXPECT_CALL(container_, GetBuffer(110, _))
-      .WillOnce(Return(buffer_));
-    EXPECT_CALL(container_,
-                CopyMemoryBlock(buffer_, test_write_buffer_, 50)).Times(1);
+    EXPECT_CALL(container_, GetBuffer(110, _)).WillOnce(Return(buffer_));
+    EXPECT_CALL(container_, CopyMemoryBlock(buffer_, test_write_buffer_, 50))
+        .Times(1);
   }
   size_t written = 0;
   EXPECT_TRUE(container_.Write(test_write_buffer_, 50, 110, &written, nullptr));
@@ -182,7 +181,7 @@ TEST_F(MemoryContainerTest, Write_Error_Resize) {
     InSequence s;
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, Resize(160, _))
-      .WillOnce(DoAll(WithArgs<1>(Invoke(OnWriteError)), Return(false)));
+        .WillOnce(DoAll(WithArgs<1>(Invoke(OnWriteError)), Return(false)));
   }
   size_t written = 0;
   ErrorPtr error;
@@ -204,7 +203,7 @@ TEST_F(MemoryContainerTest, Write_Error) {
     EXPECT_CALL(container_, GetSize()).WillOnce(Return(100));
     EXPECT_CALL(container_, Resize(160, _)).WillOnce(Return(true));
     EXPECT_CALL(container_, GetBuffer(110, _))
-      .WillOnce(DoAll(WithArgs<1>(Invoke(OnWriteError)), Return(nullptr)));
+        .WillOnce(DoAll(WithArgs<1>(Invoke(OnWriteError)), Return(nullptr)));
   }
   size_t written = 0;
   ErrorPtr error;
@@ -217,4 +216,3 @@ TEST_F(MemoryContainerTest, Write_Error) {
 }
 
 }  // namespace brillo
-

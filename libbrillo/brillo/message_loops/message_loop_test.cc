@@ -35,7 +35,7 @@ void SetToTrue(bool* b) {
   *b = true;
 }
 
-bool ReturnBool(bool *b) {
+bool ReturnBool(bool* b) {
   return *b;
 }
 
@@ -75,7 +75,6 @@ void MessageLoopTest<BaseMessageLoop>::MessageLoopSetUp() {
 // on each implementation.
 typedef ::testing::Types<BaseMessageLoop> MessageLoopTypes;
 TYPED_TEST_SUITE(MessageLoopTest, MessageLoopTypes);
-
 
 TYPED_TEST(MessageLoopTest, CancelTaskInvalidValuesTest) {
   EXPECT_FALSE(this->loop_->CancelTask(MessageLoop::kTaskIdNull));

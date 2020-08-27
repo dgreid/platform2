@@ -11,21 +11,16 @@ namespace brillo {
 
 namespace dbus_utils {
 
-AsyncEventSequencer::AsyncEventSequencer() {
-}
-AsyncEventSequencer::~AsyncEventSequencer() {
-}
+AsyncEventSequencer::AsyncEventSequencer() {}
+AsyncEventSequencer::~AsyncEventSequencer() {}
 
 AsyncEventSequencer::Handler AsyncEventSequencer::GetHandler(
-    const std::string& descriptive_message,
-    bool failure_is_fatal) {
+    const std::string& descriptive_message, bool failure_is_fatal) {
   CHECK(!started_) << "Cannot create handlers after OnAllTasksCompletedCall()";
   int unique_registration_id = ++registration_counter_;
   outstanding_registrations_.insert(unique_registration_id);
-  return base::Bind(&AsyncEventSequencer::HandleFinish,
-                    this,
-                    unique_registration_id,
-                    descriptive_message,
+  return base::Bind(&AsyncEventSequencer::HandleFinish, this,
+                    unique_registration_id, descriptive_message,
                     failure_is_fatal);
 }
 
@@ -35,11 +30,8 @@ AsyncEventSequencer::ExportHandler AsyncEventSequencer::GetExportHandler(
     const std::string& descriptive_message,
     bool failure_is_fatal) {
   auto finish_handler = GetHandler(descriptive_message, failure_is_fatal);
-  return base::Bind(&AsyncEventSequencer::HandleDBusMethodExported,
-                    this,
-                    finish_handler,
-                    interface_name,
-                    method_name);
+  return base::Bind(&AsyncEventSequencer::HandleDBusMethodExported, this,
+                    finish_handler, interface_name, method_name);
 }
 
 void AsyncEventSequencer::OnAllTasksCompletedCall(
@@ -56,8 +48,7 @@ void IgnoreSuccess(const AsyncEventSequencer::CompletionTask& task,
                    bool /*success*/) {
   task.Run();
 }
-void DoNothing(bool /* success */) {
-}
+void DoNothing(bool /* success */) {}
 }  // namespace
 
 AsyncEventSequencer::CompletionAction AsyncEventSequencer::WrapCompletionTask(
@@ -98,8 +89,8 @@ void AsyncEventSequencer::HandleDBusMethodExported(
 void AsyncEventSequencer::RetireRegistration(int registration_number) {
   const size_t handlers_retired =
       outstanding_registrations_.erase(registration_number);
-  CHECK_EQ(1U, handlers_retired) << "Tried to retire invalid handler "
-                                 << registration_number << ")";
+  CHECK_EQ(1U, handlers_retired)
+      << "Tried to retire invalid handler " << registration_number << ")";
 }
 
 void AsyncEventSequencer::CheckForFailure(bool failure_is_fatal,

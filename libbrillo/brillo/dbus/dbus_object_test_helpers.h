@@ -62,14 +62,14 @@ inline std::unique_ptr<::dbus::Response> CallMethod(
   std::unique_ptr<::dbus::Response> response;
   if (!itf) {
     response = CreateDBusErrorResponse(
-        method_call,
-        DBUS_ERROR_UNKNOWN_INTERFACE,
+        method_call, DBUS_ERROR_UNKNOWN_INTERFACE,
         "Interface you invoked a method on isn't known by the object.");
   } else {
     ResponseHolder response_holder;
     DBusInterfaceTestHelper::HandleMethodCall(
-      itf, method_call, base::Bind(&ResponseHolder::ReceiveResponse,
-                                   response_holder.AsWeakPtr()));
+        itf, method_call,
+        base::Bind(&ResponseHolder::ReceiveResponse,
+                   response_holder.AsWeakPtr()));
     response = std::move(response_holder.response_);
   }
   return response;
@@ -80,7 +80,7 @@ inline std::unique_ptr<::dbus::Response> CallMethod(
 // the DBusObject/DBusInterface infrastructure.
 // This works only on synchronous methods though. The handler must reply
 // before the handler exits.
-template<typename RetType>
+template <typename RetType>
 struct MethodHandlerInvoker {
   // MethodHandlerInvoker<RetType>::Call() calls a member |method| of a class
   // |instance| and passes the |args| to it. The method's return value provided
@@ -90,21 +90,20 @@ struct MethodHandlerInvoker {
   // value of type RetType as a placeholder).
   // If the method handler asynchronous and did not provide a reply (success or
   // error) before the handler exits, this method aborts with a CHECK().
-  template<class Class, typename... Params, typename... Args>
+  template <class Class, typename... Params, typename... Args>
   static RetType Call(
       ErrorPtr* error,
       Class* instance,
-      void(Class::*method)(std::unique_ptr<DBusMethodResponse<RetType>>,
-                           Params...),
+      void (Class::*method)(std::unique_ptr<DBusMethodResponse<RetType>>,
+                            Params...),
       Args... args) {
     ResponseHolder response_holder;
     ::dbus::MethodCall method_call("test.interface", "TestMethod");
     method_call.SetSerial(123);
     std::unique_ptr<DBusMethodResponse<RetType>> method_response{
-      new DBusMethodResponse<RetType>(
-        &method_call, base::Bind(&ResponseHolder::ReceiveResponse,
-                                 response_holder.AsWeakPtr()))
-    };
+        new DBusMethodResponse<RetType>(
+            &method_call, base::Bind(&ResponseHolder::ReceiveResponse,
+                                     response_holder.AsWeakPtr()))};
     (instance->*method)(std::move(method_response), args...);
     CHECK(response_holder.response_.get())
         << "No response received. Asynchronous methods are not supported.";
@@ -116,22 +115,21 @@ struct MethodHandlerInvoker {
 
 // Specialization of MethodHandlerInvoker for methods that do not return
 // values (void methods).
-template<>
+template <>
 struct MethodHandlerInvoker<void> {
-  template<class Class, typename... Params, typename... Args>
-  static void Call(
-      ErrorPtr* error,
-      Class* instance,
-      void(Class::*method)(std::unique_ptr<DBusMethodResponse<>>, Params...),
-      Args... args) {
+  template <class Class, typename... Params, typename... Args>
+  static void Call(ErrorPtr* error,
+                   Class* instance,
+                   void (Class::*method)(std::unique_ptr<DBusMethodResponse<>>,
+                                         Params...),
+                   Args... args) {
     ResponseHolder response_holder;
     ::dbus::MethodCall method_call("test.interface", "TestMethod");
     method_call.SetSerial(123);
     std::unique_ptr<DBusMethodResponse<>> method_response{
-      new DBusMethodResponse<>(&method_call,
-                               base::Bind(&ResponseHolder::ReceiveResponse,
-                                          response_holder.AsWeakPtr()))
-    };
+        new DBusMethodResponse<>(&method_call,
+                                 base::Bind(&ResponseHolder::ReceiveResponse,
+                                            response_holder.AsWeakPtr()))};
     (instance->*method)(std::move(method_response), args...);
     CHECK(response_holder.response_.get())
         << "No response received. Asynchronous methods are not supported.";

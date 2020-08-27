@@ -19,8 +19,7 @@ Daemon::Daemon() : exit_code_{EX_OK}, exiting_(false) {
   message_loop_.SetAsCurrent();
 }
 
-Daemon::~Daemon() {
-}
+Daemon::~Daemon() {}
 
 int Daemon::Run() {
   int exit_code = OnInit();
@@ -38,12 +37,15 @@ int Daemon::Run() {
   // Run a secondary loop to make sure all those are processed.
   // This becomes important when working with D-Bus since dbus::Bus does
   // a bunch of clean-up tasks asynchronously when shutting down.
-  while (message_loop_.RunOnce(false /* may_block */)) {}
+  while (message_loop_.RunOnce(false /* may_block */)) {
+  }
 
   return exit_code_;
 }
 
-void Daemon::Quit() { QuitWithExitCode(EX_OK); }
+void Daemon::Quit() {
+  QuitWithExitCode(EX_OK);
+}
 
 void Daemon::QuitWithExitCode(int exit_code) {
   exit_code_ = exit_code;

@@ -61,10 +61,10 @@ TEST_F(AsyncEventSequencerTest, SomeInitActionsFail) {
 }
 
 TEST_F(AsyncEventSequencerTest, MultiDBusActionsSucceed) {
-  auto handler1 = aec_->GetExportHandler(
-      kTestInterface, kTestMethod1, "method export failed", false);
-  auto handler2 = aec_->GetExportHandler(
-      kTestInterface, kTestMethod2, "method export failed", false);
+  auto handler1 = aec_->GetExportHandler(kTestInterface, kTestMethod1,
+                                         "method export failed", false);
+  auto handler2 = aec_->GetExportHandler(kTestInterface, kTestMethod2,
+                                         "method export failed", false);
   aec_->OnAllTasksCompletedCall({cb_});
   handler1.Run(kTestInterface, kTestMethod1, true);
   EXPECT_CALL(*this, HandleCompletion(true)).Times(1);
@@ -72,10 +72,10 @@ TEST_F(AsyncEventSequencerTest, MultiDBusActionsSucceed) {
 }
 
 TEST_F(AsyncEventSequencerTest, SomeDBusActionsFail) {
-  auto handler1 = aec_->GetExportHandler(
-      kTestInterface, kTestMethod1, "method export failed", false);
-  auto handler2 = aec_->GetExportHandler(
-      kTestInterface, kTestMethod2, "method export failed", false);
+  auto handler1 = aec_->GetExportHandler(kTestInterface, kTestMethod1,
+                                         "method export failed", false);
+  auto handler2 = aec_->GetExportHandler(kTestInterface, kTestMethod2,
+                                         "method export failed", false);
   aec_->OnAllTasksCompletedCall({cb_});
   handler1.Run(kTestInterface, kTestMethod1, true);
   EXPECT_CALL(*this, HandleCompletion(false)).Times(1);
@@ -83,8 +83,8 @@ TEST_F(AsyncEventSequencerTest, SomeDBusActionsFail) {
 }
 
 TEST_F(AsyncEventSequencerTest, MixedActions) {
-  auto handler1 = aec_->GetExportHandler(
-      kTestInterface, kTestMethod1, "method export failed", false);
+  auto handler1 = aec_->GetExportHandler(kTestInterface, kTestMethod1,
+                                         "method export failed", false);
   auto handler2 = aec_->GetHandler("handler failed", false);
   aec_->OnAllTasksCompletedCall({cb_});
   handler1.Run(kTestInterface, kTestMethod1, true);

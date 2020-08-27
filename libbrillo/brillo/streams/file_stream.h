@@ -26,8 +26,8 @@ class BRILLO_EXPORT FileStream : public Stream {
  public:
   // See comments for FileStream::Open() for detailed description of this enum.
   enum class Disposition {
-    OPEN_EXISTING,  // Open existing file only. Fail if doesn't exist.
-    CREATE_ALWAYS,  // Create empty file, possibly overwriting existing file.
+    OPEN_EXISTING,    // Open existing file only. Fail if doesn't exist.
+    CREATE_ALWAYS,    // Create empty file, possibly overwriting existing file.
     CREATE_NEW_ONLY,  // Create new file if doesn't exist already.
     TRUNCATE_EXISTING,  // Open/truncate existing file. Fail if doesn't exist.
   };

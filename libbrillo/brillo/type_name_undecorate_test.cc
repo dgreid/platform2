@@ -16,14 +16,15 @@ namespace brillo {
 #ifndef USE_RTTI_FOR_TYPE_TAGS
 TEST(TypeTags, GetTypeTag) {
   EXPECT_STREQ("const char *brillo::GetTypeTag() [T = int]", GetTypeTag<int>());
-  EXPECT_STREQ("const char *brillo::GetTypeTag() [T = std::__1::map<std::__1::"
-               "basic_string<char, std::__1::char_traits<char>, "
-               "std::__1::allocator<char> >, brillo::Any, std::__1::less<"
-               "std::__1::basic_string<char, std::__1::char_traits<char>, "
-               "std::__1::allocator<char> > >, std::__1::allocator<std::__1::"
-               "pair<const std::__1::basic_string<char, std::__1::char_traits"
-               "<char>, std::__1::allocator<char> >, brillo::Any> > >]",
-               GetTypeTag<VariantDictionary>());
+  EXPECT_STREQ(
+      "const char *brillo::GetTypeTag() [T = std::__1::map<std::__1::"
+      "basic_string<char, std::__1::char_traits<char>, "
+      "std::__1::allocator<char> >, brillo::Any, std::__1::less<"
+      "std::__1::basic_string<char, std::__1::char_traits<char>, "
+      "std::__1::allocator<char> > >, std::__1::allocator<std::__1::"
+      "pair<const std::__1::basic_string<char, std::__1::char_traits"
+      "<char>, std::__1::allocator<char> >, brillo::Any> > >]",
+      GetTypeTag<VariantDictionary>());
   EXPECT_STREQ("const char *brillo::GetTypeTag() [T = int []]",
                GetTypeTag<int[]>());
 }
@@ -39,12 +40,10 @@ TEST(TypeDecoration, UndecorateTypeName) {
 
 #ifndef USE_RTTI_FOR_TYPE_TAGS
 TEST(TypeDecoration, GetUndecoratedTypeNameForTag) {
-  EXPECT_EQ("int",
-            GetUndecoratedTypeNameForTag(
-                "const char *brillo::GetTypeTag() [T = int]"));
-  EXPECT_EQ("int []",
-            GetUndecoratedTypeNameForTag(
-                "const char *brillo::GetTypeTag() [T = int []]"));
+  EXPECT_EQ("int", GetUndecoratedTypeNameForTag(
+                       "const char *brillo::GetTypeTag() [T = int]"));
+  EXPECT_EQ("int []", GetUndecoratedTypeNameForTag(
+                          "const char *brillo::GetTypeTag() [T = int []]"));
   EXPECT_EQ("foo::bar<int []>()",
             GetUndecoratedTypeNameForTag(
                 "const char *brillo::GetTypeTag() [T = foo::bar<int []>()]"));
@@ -59,10 +58,11 @@ TEST(TypeDecoration, GetUndecoratedTypeName) {
   EXPECT_EQ("char", GetUndecoratedTypeName<char>());
   EXPECT_EQ("float", GetUndecoratedTypeName<float>());
   EXPECT_EQ("double", GetUndecoratedTypeName<double>());
-  EXPECT_EQ("long", GetUndecoratedTypeName<long>());
-  EXPECT_EQ("std::__1::map<int, double, std::__1::less<int>, "
-            "std::__1::allocator<std::__1::pair<const int, double> > >",
-            (GetUndecoratedTypeName<std::map<int, double>>()));
+  EXPECT_EQ("long", GetUndecoratedTypeName<long>());  // NOLINT(runtime/int)
+  EXPECT_EQ(
+      "std::__1::map<int, double, std::__1::less<int>, "
+      "std::__1::allocator<std::__1::pair<const int, double> > >",
+      (GetUndecoratedTypeName<std::map<int, double>>()));
 }
 #endif  // USE_RTTI_FOR_TYPE_TAGS
 

@@ -44,8 +44,7 @@ BRILLO_EXPORT std::pair<std::string, std::string> SplitAtFirst(
 // Splits the string into two pieces at the first position of the specified
 // delimiter. Both parts have all whitespaces trimmed off.
 inline std::pair<std::string, std::string> SplitAtFirst(
-    const std::string& str,
-    const std::string& delimiter) {
+    const std::string& str, const std::string& delimiter) {
   return SplitAtFirst(str, delimiter, true);
 }
 

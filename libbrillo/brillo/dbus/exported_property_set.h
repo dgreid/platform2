@@ -78,8 +78,7 @@ class BRILLO_EXPORT ExportedPropertyBase {
   // Returns the contained value as Any.
   virtual brillo::Any GetValue() const = 0;
 
-  virtual bool SetValue(brillo::ErrorPtr* error,
-                        const brillo::Any& value) = 0;
+  virtual bool SetValue(brillo::ErrorPtr* error, const brillo::Any& value) = 0;
 
   void SetAccessMode(Access access_mode);
   Access GetAccessMode() const;
@@ -167,7 +166,7 @@ class BRILLO_EXPORT ExportedPropertySet {
   DISALLOW_COPY_AND_ASSIGN(ExportedPropertySet);
 };
 
-template<typename T>
+template <typename T>
 class ExportedProperty : public ExportedPropertyBase {
  public:
   ExportedProperty() = default;
@@ -195,8 +194,7 @@ class ExportedProperty : public ExportedPropertyBase {
   // Implementation provided by specialization.
   brillo::Any GetValue() const override { return value_; }
 
-  bool SetValue(brillo::ErrorPtr* error,
-                const brillo::Any& value) override {
+  bool SetValue(brillo::ErrorPtr* error, const brillo::Any& value) override {
     if (GetAccessMode() == ExportedPropertyBase::Access::kReadOnly) {
       brillo::Error::AddTo(error, FROM_HERE, errors::dbus::kDomain,
                            DBUS_ERROR_PROPERTY_READ_ONLY,

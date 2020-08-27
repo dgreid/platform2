@@ -23,8 +23,7 @@ BRILLO_EXPORT std::map<int, base::FilePath> GetSortedResilientPolicyFilePaths(
 // the path of the default policy given by |default_policy_path|. Doesn't check
 // the existence of the file on disk.
 BRILLO_EXPORT base::FilePath GetResilientPolicyFilePathForIndex(
-    const base::FilePath& default_policy_path,
-    int index);
+    const base::FilePath& default_policy_path, int index);
 
 // Returns whether the |policy_path| file is a resilient file based on the name
 // of the file, assuming the |default_policy_path| is the path of the default

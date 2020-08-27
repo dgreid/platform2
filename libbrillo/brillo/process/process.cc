@@ -35,11 +35,9 @@ bool ReturnTrue() {
   return true;
 }
 
-Process::Process() {
-}
+Process::Process() {}
 
-Process::~Process() {
-}
+Process::~Process() {}
 
 bool Process::ProcessExists(pid_t pid) {
   return base::DirectoryExists(
@@ -53,8 +51,7 @@ ProcessImpl::ProcessImpl()
       pre_exec_(base::Bind(&ReturnTrue)),
       search_path_(false),
       inherit_parent_signal_mask_(false),
-      close_unused_file_descriptors_(false) {
-}
+      close_unused_file_descriptors_(false) {}
 
 ProcessImpl::~ProcessImpl() {
   Reset(0);
@@ -179,8 +176,7 @@ bool ProcessImpl::PopulatePipeMap() {
 
 bool ProcessImpl::IsFileDescriptorInPipeMap(int fd) const {
   for (const auto& pipe : pipe_map_) {
-    if (fd == pipe.second.parent_fd_ ||
-        fd == pipe.second.child_fd_ ||
+    if (fd == pipe.second.parent_fd_ || fd == pipe.second.child_fd_ ||
         fd == pipe.first) {
       return true;
     }
@@ -215,8 +211,8 @@ bool ProcessImpl::Start() {
   if (arguments_.empty()) {
     return false;
   }
-  std::unique_ptr<char* []> argv =
-      std::make_unique<char* []>(arguments_.size() + 1);
+  std::unique_ptr<char*[]> argv =
+      std::make_unique<char*[]>(arguments_.size() + 1);
 
   for (size_t i = 0; i < arguments_.size(); ++i)
     argv[i] = const_cast<char*>(arguments_[i].c_str());
@@ -263,9 +259,8 @@ bool ProcessImpl::Start() {
     }
 
     if (!input_file_.empty()) {
-      int input_handle =
-          HANDLE_EINTR(open(input_file_.c_str(),
-                            O_RDONLY | O_NOFOLLOW | O_NOCTTY));
+      int input_handle = HANDLE_EINTR(
+          open(input_file_.c_str(), O_RDONLY | O_NOFOLLOW | O_NOCTTY));
       if (input_handle < 0) {
         PLOG(ERROR) << "Could not open " << input_file_;
         // Avoid exit() to avoid atexit handlers from parent.
@@ -284,9 +279,9 @@ bool ProcessImpl::Start() {
     }
 
     if (!output_file_.empty()) {
-      int output_handle = HANDLE_EINTR(open(
-          output_file_.c_str(), O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW,
-          0666));
+      int output_handle =
+          HANDLE_EINTR(open(output_file_.c_str(),
+                            O_CREAT | O_WRONLY | O_TRUNC | O_NOFOLLOW, 0666));
       if (output_handle < 0) {
         PLOG(ERROR) << "Could not create " << output_file_;
         // Avoid exit() to avoid atexit handlers from parent.
@@ -358,8 +353,8 @@ int ProcessImpl::Wait() {
   // kill the process that has just exited.
   UpdatePid(0);
   if (!WIFEXITED(status)) {
-    DCHECK(WIFSIGNALED(status)) << old_pid
-                                << " neither exited, nor died on a signal?";
+    DCHECK(WIFSIGNALED(status))
+        << old_pid << " neither exited, nor died on a signal?";
     LOG(ERROR) << "Process " << old_pid
                << " did not exit normally: " << WTERMSIG(status);
     return -1;

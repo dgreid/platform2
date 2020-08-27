@@ -109,19 +109,13 @@ inline std::unique_ptr<::dbus::Response> CallMethodAndBlockWithTimeout(
       &method_call, timeout_ms, &dbus_error);
   if (!response) {
     if (dbus_error.is_set()) {
-      Error::AddTo(error,
-                   FROM_HERE,
-                   errors::dbus::kDomain,
-                   dbus_error.name(),
+      Error::AddTo(error, FROM_HERE, errors::dbus::kDomain, dbus_error.name(),
                    dbus_error.message());
     } else {
-      Error::AddToPrintf(error,
-                         FROM_HERE,
-                         errors::dbus::kDomain,
+      Error::AddToPrintf(error, FROM_HERE, errors::dbus::kDomain,
                          DBUS_ERROR_FAILED,
                          "Failed to call D-Bus method: %s.%s",
-                         interface_name.c_str(),
-                         method_name.c_str());
+                         interface_name.c_str(), method_name.c_str());
     }
   }
   return response;
@@ -175,8 +169,8 @@ inline bool ExtractMessageParametersAsTuple(
   auto callback = [val_tuple](const ResultTypes&... params) {
     *val_tuple = std::forward_as_tuple(internal::HackMove(params)...);
   };
-  return DBusParamReader<false, ResultTypes...>::Invoke(
-      callback, reader, error);
+  return DBusParamReader<false, ResultTypes...>::Invoke(callback, reader,
+                                                        error);
 }
 // Overload of ExtractMessageParametersAsTuple to handle reference types in
 // tuples created with std::tie().
@@ -188,8 +182,8 @@ inline bool ExtractMessageParametersAsTuple(
   auto callback = [ref_tuple](const ResultTypes&... params) {
     *ref_tuple = std::forward_as_tuple(internal::HackMove(params)...);
   };
-  return DBusParamReader<false, ResultTypes...>::Invoke(
-      callback, reader, error);
+  return DBusParamReader<false, ResultTypes...>::Invoke(callback, reader,
+                                                        error);
 }
 
 // A helper method to extract a list of values from a message buffer.
@@ -210,8 +204,8 @@ inline bool ExtractMessageParameters(::dbus::MessageReader* reader,
                                      ErrorPtr* error,
                                      ResultTypes*... results) {
   auto ref_tuple = std::tie(*results...);
-  return ExtractMessageParametersAsTuple<ResultTypes...>(
-      reader, error, &ref_tuple);
+  return ExtractMessageParametersAsTuple<ResultTypes...>(reader, error,
+                                                         &ref_tuple);
 }
 
 // Convenient helper method to extract return value(s) of a D-Bus method call.

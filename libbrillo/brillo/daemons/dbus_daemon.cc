@@ -15,8 +15,7 @@ using brillo::dbus_utils::ExportedObjectManager;
 
 namespace brillo {
 
-DBusDaemon::DBusDaemon() {
-}
+DBusDaemon::DBusDaemon() {}
 
 int DBusDaemon::OnInit() {
   int exit_code = Daemon::OnInit();
@@ -30,20 +29,17 @@ int DBusDaemon::OnInit() {
 }
 
 DBusServiceDaemon::DBusServiceDaemon(const std::string& service_name)
-    : service_name_(service_name) {
-}
+    : service_name_(service_name) {}
 
 DBusServiceDaemon::DBusServiceDaemon(
     const std::string& service_name,
     const dbus::ObjectPath& object_manager_path)
-    : service_name_(service_name), object_manager_path_(object_manager_path) {
-}
+    : service_name_(service_name), object_manager_path_(object_manager_path) {}
 
 DBusServiceDaemon::DBusServiceDaemon(const std::string& service_name,
                                      base::StringPiece object_manager_path)
     : DBusServiceDaemon(service_name,
-                        dbus::ObjectPath(object_manager_path.as_string())) {
-}
+                        dbus::ObjectPath(object_manager_path.as_string())) {}
 
 int DBusServiceDaemon::OnInit() {
   int exit_code = DBusDaemon::OnInit();
@@ -58,10 +54,8 @@ int DBusServiceDaemon::OnInit() {
         sequencer->GetHandler("ObjectManager.RegisterAsync() failed.", true));
   }
   RegisterDBusObjectsAsync(sequencer.get());
-  sequencer->OnAllTasksCompletedCall({
-      base::Bind(&DBusServiceDaemon::TakeServiceOwnership,
-                 base::Unretained(this))
-  });
+  sequencer->OnAllTasksCompletedCall({base::Bind(
+      &DBusServiceDaemon::TakeServiceOwnership, base::Unretained(this))});
   return EX_OK;
 }
 
@@ -74,8 +68,8 @@ void DBusServiceDaemon::RegisterDBusObjectsAsync(
 void DBusServiceDaemon::TakeServiceOwnership(bool success) {
   // Success should always be true since we've said that failures are fatal.
   CHECK(success) << "Init of one or more objects has failed.";
-  CHECK(bus_->RequestOwnershipAndBlock(service_name_,
-                                       dbus::Bus::REQUIRE_PRIMARY))
+  CHECK(
+      bus_->RequestOwnershipAndBlock(service_name_, dbus::Bus::REQUIRE_PRIMARY))
       << "Unable to take ownership of " << service_name_;
 }
 

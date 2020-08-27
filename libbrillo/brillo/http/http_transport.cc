@@ -32,9 +32,9 @@ base::FilePath Transport::CertificateToPath(Transport::Certificate cert) {
     case Certificate::kDefault:
       str =
 #ifdef __ANDROID__
-        "/system/etc/security/cacerts_google";
+          "/system/etc/security/cacerts_google";
 #else
-        "/usr/share/chromeos-ca-certificates";
+          "/usr/share/chromeos-ca-certificates";
 #endif
       break;
     case Certificate::kHermesProd:

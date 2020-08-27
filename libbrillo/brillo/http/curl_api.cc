@@ -11,10 +11,9 @@ namespace http {
 
 namespace {
 
-static_assert(CURLOPTTYPE_LONG == 0 &&
-              CURLOPTTYPE_OBJECTPOINT == 10000 &&
-              CURLOPTTYPE_FUNCTIONPOINT == 20000 &&
-              CURLOPTTYPE_OFF_T == 30000,
+static_assert(CURLOPTTYPE_LONG == 0 && CURLOPTTYPE_OBJECTPOINT == 10000 &&
+                  CURLOPTTYPE_FUNCTIONPOINT == 20000 &&
+                  CURLOPTTYPE_OFF_T == 30000,
               "CURL option types are expected to be multiples of 10000");
 
 inline bool VerifyOptionType(CURLoption option, int expected_type) {

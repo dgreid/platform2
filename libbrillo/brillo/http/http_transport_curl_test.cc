@@ -15,13 +15,13 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+using testing::_;
 using testing::DoAll;
 using testing::Invoke;
 using testing::Return;
 using testing::SaveArg;
 using testing::SetArgPointee;
 using testing::WithoutArgs;
-using testing::_;
 
 namespace brillo {
 namespace http {
@@ -69,12 +69,9 @@ TEST_F(HttpCurlTransportTest, RequestGet) {
       .WillOnce(Return(CURLE_OK));
   EXPECT_CALL(*curl_api_, EasySetOptInt(handle_, CURLOPT_HTTPGET, 1))
       .WillOnce(Return(CURLE_OK));
-  auto connection = transport_->CreateConnection("http://foo.bar/get",
-                                                 request_type::kGet,
-                                                 {},
-                                                 "User Agent",
-                                                 "http://foo.bar/baz",
-                                                 nullptr);
+  auto connection =
+      transport_->CreateConnection("http://foo.bar/get", request_type::kGet, {},
+                                   "User Agent", "http://foo.bar/baz", nullptr);
   EXPECT_NE(nullptr, connection.get());
 
   EXPECT_CALL(*curl_api_, EasyCleanup(handle_)).Times(1);
@@ -99,12 +96,9 @@ TEST_F(HttpCurlTransportTest, RequestGetWithProxy) {
   std::shared_ptr<Transport> proxy_transport =
       std::make_shared<Transport>(curl_api_, "http://proxy.server");
 
-  auto connection = proxy_transport->CreateConnection("http://foo.bar/get",
-                                                      request_type::kGet,
-                                                      {},
-                                                      "User Agent",
-                                                      "http://foo.bar/baz",
-                                                      nullptr);
+  auto connection = proxy_transport->CreateConnection(
+      "http://foo.bar/get", request_type::kGet, {}, "User Agent",
+      "http://foo.bar/baz", nullptr);
   EXPECT_NE(nullptr, connection.get());
 
   EXPECT_CALL(*curl_api_, EasyCleanup(handle_)).Times(1);
@@ -163,9 +157,8 @@ TEST_F(HttpCurlTransportTest, RequestPatch) {
       .WillOnce(Return(CURLE_OK));
   EXPECT_CALL(*curl_api_, EasySetOptPtr(handle_, CURLOPT_POSTFIELDS, nullptr))
       .WillOnce(Return(CURLE_OK));
-  EXPECT_CALL(
-      *curl_api_,
-      EasySetOptStr(handle_, CURLOPT_CUSTOMREQUEST, request_type::kPatch))
+  EXPECT_CALL(*curl_api_, EasySetOptStr(handle_, CURLOPT_CUSTOMREQUEST,
+                                        request_type::kPatch))
       .WillOnce(Return(CURLE_OK));
   auto connection = transport_->CreateConnection(
       "http://www.foo.bar/patch", request_type::kPatch, {}, "", "", nullptr);
@@ -240,13 +233,14 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
 
   // Success/error callback needed to report the result of an async operation.
   int success_call_count = 0;
-  auto success_callback = base::Bind([](
-      int* success_call_count, const base::Closure& quit_closure,
-      RequestID /* request_id */, std::unique_ptr<http::Response> /* resp */) {
-    base::ThreadTaskRunnerHandle::Get()->PostTask(
-        FROM_HERE, quit_closure);
-    (*success_call_count)++;
-  }, &success_call_count, run_loop.QuitClosure());
+  auto success_callback = base::Bind(
+      [](int* success_call_count, const base::Closure& quit_closure,
+         RequestID /* request_id */,
+         std::unique_ptr<http::Response> /* resp */) {
+        base::ThreadTaskRunnerHandle::Get()->PostTask(FROM_HERE, quit_closure);
+        (*success_call_count)++;
+      },
+      &success_call_count, run_loop.QuitClosure());
 
   auto error_callback = [](RequestID /* request_id */,
                            const Error* /* error */) {
@@ -270,16 +264,17 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
   EXPECT_CALL(*curl_api_, MultiAddHandle(multi_handle_, handle_))
       .WillOnce(Return(CURLM_OK));
 
-  EXPECT_EQ(1, transport_->StartAsyncTransfer(connection.get(),
-                                              success_callback,
-                                              base::Bind(error_callback)));
+  EXPECT_EQ(1,
+            transport_->StartAsyncTransfer(connection.get(), success_callback,
+                                           base::Bind(error_callback)));
   EXPECT_EQ(0, success_call_count);
 
   timer_callback(multi_handle_, 1, transport_.get());
 
   auto do_socket_action = [&socket_callback, this] {
     EXPECT_CALL(*curl_api_, MultiAssign(multi_handle_, dummy_socket_, _))
-        .Times(2).WillRepeatedly(Return(CURLM_OK));
+        .Times(2)
+        .WillRepeatedly(Return(CURLM_OK));
     EXPECT_EQ(0, socket_callback(handle_, dummy_socket_, CURL_POLL_REMOVE,
                                  transport_.get(), nullptr));
   };
@@ -287,8 +282,7 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
   EXPECT_CALL(*curl_api_,
               MultiSocketAction(multi_handle_, CURL_SOCKET_TIMEOUT, 0, _))
       .WillOnce(DoAll(SetArgPointee<3>(1),
-                      WithoutArgs(Invoke(do_socket_action)),
-                      Return(CURLM_OK)))
+                      WithoutArgs(Invoke(do_socket_action)), Return(CURLM_OK)))
       .WillRepeatedly(DoAll(SetArgPointee<3>(0), Return(CURLM_OK)));
 
   CURLMsg msg = {};
@@ -300,8 +294,8 @@ TEST_F(HttpCurlTransportAsyncTest, StartAsyncTransfer) {
       .WillOnce(DoAll(SetArgPointee<1>(0), Return(&msg)))
       .WillRepeatedly(DoAll(SetArgPointee<1>(0), Return(nullptr)));
   EXPECT_CALL(*curl_api_, EasyGetInfoPtr(handle_, CURLINFO_PRIVATE, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(connection.get()),
-                            Return(CURLE_OK)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<2>(connection.get()), Return(CURLE_OK)));
 
   EXPECT_CALL(*curl_api_, MultiRemoveHandle(multi_handle_, handle_))
       .WillOnce(Return(CURLM_OK));

@@ -16,16 +16,15 @@ DBusServiceWatcher::DBusServiceWatcher(
     : bus_{bus},
       connection_name_{connection_name},
       on_connection_vanish_{on_connection_vanish} {
-  monitoring_callback_ = base::Bind(
-      &DBusServiceWatcher::OnServiceOwnerChange, weak_factory_.GetWeakPtr());
+  monitoring_callback_ = base::Bind(&DBusServiceWatcher::OnServiceOwnerChange,
+                                    weak_factory_.GetWeakPtr());
   // Register to listen, and then request the current owner;
   bus_->ListenForServiceOwnerChange(connection_name_, monitoring_callback_);
   bus_->GetServiceOwner(connection_name_, monitoring_callback_);
 }
 
 DBusServiceWatcher::~DBusServiceWatcher() {
-  bus_->UnlistenForServiceOwnerChange(
-      connection_name_, monitoring_callback_);
+  bus_->UnlistenForServiceOwnerChange(connection_name_, monitoring_callback_);
 }
 
 void DBusServiceWatcher::OnServiceOwnerChange(

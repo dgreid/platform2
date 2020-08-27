@@ -13,7 +13,7 @@
 namespace brillo {
 
 // Given an STL map, returns a set containing all keys from the map.
-template<typename T>
+template <typename T>
 inline std::set<typename T::key_type> GetMapKeys(const T& map) {
   std::set<typename T::key_type> keys;
   for (const auto& pair : map)
@@ -23,7 +23,7 @@ inline std::set<typename T::key_type> GetMapKeys(const T& map) {
 
 // Given an STL map, returns a vector containing all keys from the map.
 // The keys in the vector are sorted.
-template<typename T>
+template <typename T>
 inline std::vector<typename T::key_type> GetMapKeysAsVector(const T& map) {
   std::vector<typename T::key_type> keys;
   keys.reserve(map.size());
@@ -33,7 +33,7 @@ inline std::vector<typename T::key_type> GetMapKeysAsVector(const T& map) {
 }
 
 // Given an STL map, returns a vector containing all values from the map.
-template<typename T>
+template <typename T>
 inline std::vector<typename T::mapped_type> GetMapValues(const T& map) {
   std::vector<typename T::mapped_type> values;
   values.reserve(map.size());
@@ -43,7 +43,7 @@ inline std::vector<typename T::mapped_type> GetMapValues(const T& map) {
 }
 
 // Given an STL map, returns a vector of key-value pairs from the map.
-template<typename T>
+template <typename T>
 inline std::vector<std::pair<typename T::key_type, typename T::mapped_type>>
 MapToVector(const T& map) {
   std::vector<std::pair<typename T::key_type, typename T::mapped_type>> vector;
@@ -55,7 +55,7 @@ MapToVector(const T& map) {
 
 // Given an STL map, returns the value associated with a given key or a default
 // value if the key is not present in the map.
-template<typename T>
+template <typename T>
 inline typename T::mapped_type GetOrDefault(
     const T& map,
     typename T::key_type key,

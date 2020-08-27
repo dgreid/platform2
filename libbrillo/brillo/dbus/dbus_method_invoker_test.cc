@@ -15,11 +15,11 @@
 
 #include "brillo/dbus/test.pb.h"
 
+using testing::_;
 using testing::AnyNumber;
 using testing::InSequence;
 using testing::Invoke;
 using testing::Return;
-using testing::_;
 
 using dbus::MessageReader;
 using dbus::MessageWriter;
@@ -77,8 +77,8 @@ class DBusMethodInvokerTest : public testing::Test {
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     // Use a mock exported object.
-    mock_object_proxy_ = new dbus::MockObjectProxy(
-        bus_.get(), kTestServiceName, dbus::ObjectPath(kTestPath));
+    mock_object_proxy_ = new dbus::MockObjectProxy(bus_.get(), kTestServiceName,
+                                                   dbus::ObjectPath(kTestPath));
     EXPECT_CALL(*bus_,
                 GetObjectProxy(kTestServiceName, dbus::ObjectPath(kTestPath)))
         .WillRepeatedly(Return(mock_object_proxy_.get()));
@@ -165,8 +165,8 @@ class DBusMethodInvokerTest : public testing::Test {
   base::ScopedFD EchoFD(int fd_in) {
     std::unique_ptr<dbus::Response> response =
         brillo::dbus_utils::CallMethodAndBlock(
-            mock_object_proxy_.get(), kTestInterface, kTestMethod4,
-            nullptr, brillo::dbus_utils::FileDescriptor{fd_in});
+            mock_object_proxy_.get(), kTestInterface, kTestMethod4, nullptr,
+            brillo::dbus_utils::FileDescriptor{fd_in});
     EXPECT_NE(nullptr, response.get());
     base::ScopedFD fd_out;
     using brillo::dbus_utils::ExtractMethodCallResults;
@@ -236,8 +236,8 @@ class AsyncDBusMethodInvokerTest : public testing::Test {
     EXPECT_CALL(*bus_, AssertOnOriginThread()).Times(AnyNumber());
     EXPECT_CALL(*bus_, AssertOnDBusThread()).Times(AnyNumber());
     // Use a mock exported object.
-    mock_object_proxy_ = new dbus::MockObjectProxy(
-        bus_.get(), kTestServiceName, dbus::ObjectPath(kTestPath));
+    mock_object_proxy_ = new dbus::MockObjectProxy(bus_.get(), kTestServiceName,
+                                                   dbus::ObjectPath(kTestPath));
     EXPECT_CALL(*bus_,
                 GetObjectProxy(kTestServiceName, dbus::ObjectPath(kTestPath)))
         .WillRepeatedly(Return(mock_object_proxy_.get()));
@@ -286,26 +286,17 @@ TEST_F(AsyncDBusMethodInvokerTest, TestSuccess) {
   int error_count = 0;
   int success_count = 0;
   brillo::dbus_utils::CallMethod(
-      mock_object_proxy_.get(),
-      kTestInterface,
-      kTestMethod1,
+      mock_object_proxy_.get(), kTestInterface, kTestMethod1,
       base::Bind(SuccessCallback, "4", &success_count),
-      base::Bind(SimpleErrorCallback, &error_count),
-      2, 2);
+      base::Bind(SimpleErrorCallback, &error_count), 2, 2);
   brillo::dbus_utils::CallMethod(
-      mock_object_proxy_.get(),
-      kTestInterface,
-      kTestMethod1,
+      mock_object_proxy_.get(), kTestInterface, kTestMethod1,
       base::Bind(SuccessCallback, "10", &success_count),
-      base::Bind(SimpleErrorCallback, &error_count),
-      3, 7);
+      base::Bind(SimpleErrorCallback, &error_count), 3, 7);
   brillo::dbus_utils::CallMethod(
-      mock_object_proxy_.get(),
-      kTestInterface,
-      kTestMethod1,
+      mock_object_proxy_.get(), kTestInterface, kTestMethod1,
       base::Bind(SuccessCallback, "-4", &success_count),
-      base::Bind(SimpleErrorCallback, &error_count),
-      13, -17);
+      base::Bind(SimpleErrorCallback, &error_count), 13, -17);
   EXPECT_EQ(0, error_count);
   EXPECT_EQ(3, success_count);
 }
@@ -314,15 +305,10 @@ TEST_F(AsyncDBusMethodInvokerTest, TestFailure) {
   int error_count = 0;
   int success_count = 0;
   brillo::dbus_utils::CallMethod(
-      mock_object_proxy_.get(),
-      kTestInterface,
-      kTestMethod2,
+      mock_object_proxy_.get(), kTestInterface, kTestMethod2,
       base::Bind(SimpleSuccessCallback, &success_count),
-      base::Bind(ErrorCallback,
-                 brillo::errors::dbus::kDomain,
-                 "org.MyError",
-                 "My error message",
-                 &error_count),
+      base::Bind(ErrorCallback, brillo::errors::dbus::kDomain, "org.MyError",
+                 "My error message", &error_count),
       2, 2);
   EXPECT_EQ(1, error_count);
   EXPECT_EQ(0, success_count);

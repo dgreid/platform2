@@ -6,11 +6,8 @@
 
 namespace policy {
 
-DevicePolicy::DevicePolicy() {
-}
+DevicePolicy::DevicePolicy() {}
 
-DevicePolicy::~DevicePolicy() {
-}
+DevicePolicy::~DevicePolicy() {}
 
 }  // namespace policy
-

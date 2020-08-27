@@ -33,10 +33,8 @@ class Property : public ::dbus::PropertyBase {
     property_set()->Get(this, callback);
   }
 
-  // Synchronous vesion of Get().
-  bool GetAndBlock() {
-    return property_set()->GetAndBlock(this);
-  }
+  // Synchronous version of Get().
+  bool GetAndBlock() { return property_set()->GetAndBlock(this); }
 
   // Requests that the remote object change the property value to |value|,
   // |callback| will be called to indicate the success or failure of the

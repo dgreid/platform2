@@ -82,15 +82,23 @@ StreamPtr MemoryStream::CreateEx(
   return StreamPtr{new MemoryStream(std::move(container), stream_position)};
 }
 
-bool MemoryStream::IsOpen() const { return container_ != nullptr; }
-bool MemoryStream::CanRead() const { return IsOpen(); }
+bool MemoryStream::IsOpen() const {
+  return container_ != nullptr;
+}
+bool MemoryStream::CanRead() const {
+  return IsOpen();
+}
 
 bool MemoryStream::CanWrite() const {
   return IsOpen() && !container_->IsReadOnly();
 }
 
-bool MemoryStream::CanSeek() const { return IsOpen(); }
-bool MemoryStream::CanGetSize() const { return IsOpen(); }
+bool MemoryStream::CanSeek() const {
+  return IsOpen();
+}
+bool MemoryStream::CanGetSize() const {
+  return IsOpen();
+}
 
 uint64_t MemoryStream::GetSize() const {
   return IsOpen() ? container_->GetSize() : 0;
@@ -117,10 +125,9 @@ bool MemoryStream::Seek(int64_t offset,
                         uint64_t* new_position,
                         ErrorPtr* error) {
   uint64_t pos = 0;
-  if (!CheckContainer(error) ||
-      !stream_utils::CalculateStreamPosition(FROM_HERE, offset, whence,
-                                             stream_position_, GetSize(), &pos,
-                                             error)) {
+  if (!CheckContainer(error) || !stream_utils::CalculateStreamPosition(
+                                    FROM_HERE, offset, whence, stream_position_,
+                                    GetSize(), &pos, error)) {
     return false;
   }
   if (pos > static_cast<uint64_t>(std::numeric_limits<size_t>::max())) {

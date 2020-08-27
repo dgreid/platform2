@@ -58,9 +58,7 @@ class BRILLO_EXPORT Error {
   const std::string& GetMessage() const { return message_; }
 
   // Returns the location of the error in the source code.
-  const base::Location& GetLocation() const {
-    return location_;
-  }
+  const base::Location& GetLocation() const { return location_; }
 
   // Checks if this or any of the inner errors in the chain has the specified
   // error domain.

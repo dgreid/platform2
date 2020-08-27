@@ -29,11 +29,10 @@ class BRILLO_EXPORT TlsStream : public Stream {
   // Calls |callback| when successful and passes the instance of TlsStream
   // as an argument. In case of an error, |error_callback| is called.
   // |host| must specify the expected remote host (server) name.
-  static void Connect(
-      StreamPtr socket,
-      const std::string& host,
-      const base::Callback<void(StreamPtr)>& success_callback,
-      const Stream::ErrorCallback& error_callback);
+  static void Connect(StreamPtr socket,
+                      const std::string& host,
+                      const base::Callback<void(StreamPtr)>& success_callback,
+                      const Stream::ErrorCallback& error_callback);
 
   // Overrides from Stream:
   bool IsOpen() const override;

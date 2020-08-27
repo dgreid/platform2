@@ -20,11 +20,10 @@ namespace url {
 // Appends a subpath to url and delimiting then with '/' if the path doesn't
 // end with it already. Also handles URLs with query parameters/fragment.
 BRILLO_EXPORT std::string Combine(
-    const std::string& url,
-    const std::string& subpath) WARN_UNUSED_RESULT;
-BRILLO_EXPORT std::string CombineMultiple(
-    const std::string& url,
-    const std::vector<std::string>& parts) WARN_UNUSED_RESULT;
+    const std::string& url, const std::string& subpath) WARN_UNUSED_RESULT;
+BRILLO_EXPORT std::string CombineMultiple(const std::string& url,
+                                          const std::vector<std::string>& parts)
+    WARN_UNUSED_RESULT;
 
 // Removes the query string/fragment from |url| and returns the query string.
 // This method actually modifies |url|. So, if you call it on this:
@@ -49,12 +48,10 @@ BRILLO_EXPORT data_encoding::WebParamList GetQueryStringParameters(
     const std::string& url);
 
 // Returns a value of the specified query parameter, or empty string if missing.
+BRILLO_EXPORT std::string GetQueryStringValue(const std::string& url,
+                                              const std::string& name);
 BRILLO_EXPORT std::string GetQueryStringValue(
-    const std::string& url,
-    const std::string& name);
-BRILLO_EXPORT std::string GetQueryStringValue(
-    const data_encoding::WebParamList& params,
-    const std::string& name);
+    const data_encoding::WebParamList& params, const std::string& name);
 
 // Removes the query string and/or a fragment part from URL.
 // If |remove_fragment| is specified, the fragment is also removed.
@@ -63,14 +60,13 @@ BRILLO_EXPORT std::string GetQueryStringValue(
 // true  -> http://server.com/path/to/object
 // false -> http://server.com/path/to/object#fragment
 BRILLO_EXPORT std::string RemoveQueryString(
-    const std::string& url,
-    bool remove_fragment) WARN_UNUSED_RESULT;
+    const std::string& url, bool remove_fragment) WARN_UNUSED_RESULT;
 
 // Appends a single query parameter to the URL.
-BRILLO_EXPORT std::string AppendQueryParam(
-    const std::string& url,
-    const std::string& name,
-    const std::string& value) WARN_UNUSED_RESULT;
+BRILLO_EXPORT std::string AppendQueryParam(const std::string& url,
+                                           const std::string& name,
+                                           const std::string& value)
+    WARN_UNUSED_RESULT;
 // Appends a list of query parameters to the URL.
 BRILLO_EXPORT std::string AppendQueryParams(
     const std::string& url,

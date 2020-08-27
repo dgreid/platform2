@@ -38,9 +38,8 @@ class BRILLO_EXPORT AsyncGrpcClientBase {
   // Type of the callback which will be called when an RPC response is
   // available.
   template <typename ResponseType>
-  using ReplyCallback =
-      base::Callback<void(grpc::Status status,
-                          std::unique_ptr<ResponseType> response)>;
+  using ReplyCallback = base::Callback<void(
+      grpc::Status status, std::unique_ptr<ResponseType> response)>;
 
   explicit AsyncGrpcClientBase(
       scoped_refptr<base::SequencedTaskRunner> task_runner);

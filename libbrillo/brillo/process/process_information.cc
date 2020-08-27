@@ -6,16 +6,13 @@
 
 namespace brillo {
 
-ProcessInformation::ProcessInformation() : cmd_line_(), process_id_(-1) {
-}
-ProcessInformation::~ProcessInformation() {
-}
+ProcessInformation::ProcessInformation() : cmd_line_(), process_id_(-1) {}
+ProcessInformation::~ProcessInformation() {}
 
 std::string ProcessInformation::GetCommandLine() {
   std::string result;
   for (std::vector<std::string>::iterator cmd_itr = cmd_line_.begin();
-       cmd_itr != cmd_line_.end();
-       cmd_itr++) {
+       cmd_itr != cmd_line_.end(); cmd_itr++) {
     if (result.length()) {
       result.append(" ");
     }
