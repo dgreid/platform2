@@ -36,6 +36,20 @@ static string ObjectID(const Connection* c) {
 }
 }  // namespace Logging
 
+namespace {
+
+// TODO(b/161507671) Use the constant defined in patchpanel::RoutingService at
+// platform2/patchpanel/routing_service.cc after the routing layer is migrated
+// to patchpanel.
+constexpr const uint32_t kFwmarkRoutingMask = 0xffff0000;
+
+RoutingPolicyEntry::FwMark GetFwmarkRoutingTag(int interface_index) {
+  return {.value = RoutingTable::GetInterfaceTableId(interface_index) << 16,
+          .mask = kFwmarkRoutingMask};
+}
+
+}  // namespace
+
 // static
 const uint32_t Connection::kDefaultPriority = 10;
 // Allowed dsts rules are added right before the catchall rule. In this way,
@@ -378,6 +392,19 @@ void Connection::AllowTrafficThrough(uint32_t table_id,
                             RoutingPolicyEntry::CreateFromDst(dst_address)
                                 .SetPriority(kDstRulePriority)
                                 .SetTable(table_id));
+  }
+
+  // Always set a rule for matching traffic tagged with the fwmark routing tag
+  // corresponding to this network interface for physical networks.
+  if (technology_.IsPrimaryConnectivityTechnology()) {
+    auto fwmark_routing_entry =
+        RoutingPolicyEntry::Create(IPAddress::kFamilyIPv4)
+            .SetPriority(base_priority)
+            .SetTable(table_id)
+            .SetFwMark(GetFwmarkRoutingTag(interface_index_));
+    routing_table_->AddRule(interface_index_, fwmark_routing_entry);
+    routing_table_->AddRule(interface_index_,
+                            fwmark_routing_entry.FlipFamily());
   }
 
   for (const auto& fwmark : included_fwmarks_) {
