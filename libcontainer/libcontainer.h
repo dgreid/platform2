@@ -244,8 +244,9 @@ BRILLO_EXPORT const char* container_config_get_cgroup_parent(
     struct container_config* c);
 
 /* Set namespaces to be used by the container. */
-BRILLO_EXPORT int container_config_namespaces(
-    struct container_config* c, const char** namespaces, size_t num_ns);
+BRILLO_EXPORT int container_config_namespaces(struct container_config* c,
+                                              const char** namespaces,
+                                              size_t num_ns);
 
 /* Get the number of namespaces to enter. */
 BRILLO_EXPORT size_t

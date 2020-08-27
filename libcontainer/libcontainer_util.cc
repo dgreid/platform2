@@ -576,8 +576,7 @@ HookCallback CreateExecveCallback(base::FilePath filename,
 
 HookCallback AdaptCallbackToRunInNamespaces(HookCallback callback,
                                             std::vector<int> nstypes) {
-  return base::Bind(&RunInNamespacesHelper,
-                    base::Passed(std::move(callback)),
+  return base::Bind(&RunInNamespacesHelper, base::Passed(std::move(callback)),
                     base::Passed(std::move(nstypes)));
 }
 

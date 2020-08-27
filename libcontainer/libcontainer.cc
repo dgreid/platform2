@@ -998,19 +998,10 @@ int container_config_add_mount(struct container_config* c,
     return -1;
   }
 
-  c->mounts.emplace_back(Mount{name,
-                               base::FilePath(source),
-                               base::FilePath(destination),
-                               type,
-                               data ? data : "",
-                               verity ? verity : "",
-                               flags,
-                               uid,
-                               gid,
-                               mode,
-                               mount_in_ns != 0,
-                               create != 0,
-                               loopback != 0});
+  c->mounts.emplace_back(
+      Mount{name, base::FilePath(source), base::FilePath(destination), type,
+            data ? data : "", verity ? verity : "", flags, uid, gid, mode,
+            mount_in_ns != 0, create != 0, loopback != 0});
 
   return 0;
 }
@@ -1062,8 +1053,15 @@ int container_config_add_device(struct container_config* c,
   }
 
   c->devices.emplace_back(Device{
-      type, base::FilePath(path), fs_permissions, major, minor, copy_major != 0,
-      copy_minor != 0, uid, gid,
+      type,
+      base::FilePath(path),
+      fs_permissions,
+      major,
+      minor,
+      copy_major != 0,
+      copy_minor != 0,
+      uid,
+      gid,
   });
 
   return 0;
@@ -1346,11 +1344,9 @@ int container_start(struct container* c,
   if (!GetUsernsOutsideId(config->gid_map, config->cgroup_group, &cgroup_gid))
     return -1;
 
-  c->cgroup = libcontainer::Cgroup::Create(c->name,
-                                           base::FilePath("/sys/fs/cgroup"),
-                                           config->cgroup_parent,
-                                           cgroup_uid,
-                                           cgroup_gid);
+  c->cgroup = libcontainer::Cgroup::Create(
+      c->name, base::FilePath("/sys/fs/cgroup"), config->cgroup_parent,
+      cgroup_uid, cgroup_gid);
   if (!c->cgroup)
     return -1;
 
@@ -1508,9 +1504,9 @@ int container_start(struct container* c,
   // Reserve enough memory to hold all the hooks, so that their addresses do not
   // get invalidated by reallocation.
   c->hook_states.reserve(MINIJAIL_HOOK_EVENT_MAX);
-  for (minijail_hook_event_t event : {MINIJAIL_HOOK_EVENT_PRE_CHROOT,
-                                      MINIJAIL_HOOK_EVENT_PRE_DROP_CAPS,
-                                      MINIJAIL_HOOK_EVENT_PRE_EXECVE}) {
+  for (minijail_hook_event_t event :
+       {MINIJAIL_HOOK_EVENT_PRE_CHROOT, MINIJAIL_HOOK_EVENT_PRE_DROP_CAPS,
+        MINIJAIL_HOOK_EVENT_PRE_EXECVE}) {
     const auto& it = hook_callbacks.find(event);
     if (it == hook_callbacks.end())
       continue;

@@ -17,8 +17,7 @@ extern void container_config_add_hook(struct container_config* c,
 
 namespace libcontainer {
 
-Config::Config()
-    : config_(container_config_create()) {
+Config::Config() : config_(container_config_create()) {
   // container_config_create() allocates using std::nothrow, so we need to
   // explicitly call abort(2) when allocation fails.
   CHECK(config_);

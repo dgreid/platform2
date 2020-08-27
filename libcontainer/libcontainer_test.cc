@@ -247,61 +247,25 @@ class ContainerTest : public ::testing::Test {
     };
     container_config_program_argv(config_->get(), kArgv, 1);
     container_config_alt_syscall_table(config_->get(), "testsyscalltable");
-    container_config_add_mount(config_->get(),
-                               "testtmpfs",
-                               "tmpfs",
-                               "/tmp",
-                               "tmpfs",
-                               nullptr,
-                               nullptr,
-                               mount_flags_,
-                               0,
-                               1000,
-                               1000,
-                               0x666,
-                               0,
-                               0);
-    container_config_add_device(config_->get(),
-                                'c',
-                                "/dev/foo",
-                                S_IRWXU | S_IRWXG,
-                                245,
-                                2,
-                                0,
-                                0,
-                                1000,
-                                1001,
-                                1,
-                                1,
-                                0);
+    container_config_add_mount(config_->get(), "testtmpfs", "tmpfs", "/tmp",
+                               "tmpfs", nullptr, nullptr, mount_flags_, 0, 1000,
+                               1000, 0x666, 0, 0);
+    container_config_add_device(config_->get(), 'c', "/dev/foo",
+                                S_IRWXU | S_IRWXG, 245, 2, 0, 0, 1000, 1001, 1,
+                                1, 0);
     // test dynamic minor on /dev/null
-    container_config_add_device(config_->get(),
-                                'c',
-                                "/dev/null",
-                                S_IRWXU | S_IRWXG,
-                                1,
-                                -1,
-                                0,
-                                1,
-                                1000,
-                                1001,
-                                1,
-                                1,
-                                0);
+    container_config_add_device(config_->get(), 'c', "/dev/null",
+                                S_IRWXU | S_IRWXG, 1, -1, 0, 1, 1000, 1001, 1,
+                                1, 0);
     static const char* kNamespaces[] = {
-        "cgroup",
-        "ipc",
-        "mount",
-        "network",
-        "pid",
-        "user",
+        "cgroup", "ipc", "mount", "network", "pid", "user",
     };
     container_config_namespaces(config_->get(), kNamespaces,
                                 base::size(kNamespaces));
 
     container_config_set_cpu_shares(config_->get(), kTestCpuShares);
-    container_config_set_cpu_cfs_params(
-        config_->get(), kTestCpuQuota, kTestCpuPeriod);
+    container_config_set_cpu_cfs_params(config_->get(), kTestCpuQuota,
+                                        kTestCpuPeriod);
     /* Invalid params, so this won't be applied. */
     container_config_set_cpu_rt_params(config_->get(), 20000, 20000);
 
@@ -480,11 +444,8 @@ int __wrap_mount(const char* source,
     return __real_mount(source, target, filesystemtype, mountflags, data);
 
   libcontainer::g_mock_posix_state->mount_args.emplace_back(
-      libcontainer::MockPosixState::MountArgs{source,
-                                              base::FilePath(target),
-                                              filesystemtype,
-                                              mountflags,
-                                              data,
+      libcontainer::MockPosixState::MountArgs{source, base::FilePath(target),
+                                              filesystemtype, mountflags, data,
                                               true});
   return 0;
 }
@@ -553,11 +514,8 @@ int minijail_mount_with_data(struct minijail* j,
                              unsigned long mountflags,
                              const char* data) {
   libcontainer::g_mock_posix_state->mount_args.emplace_back(
-      libcontainer::MockPosixState::MountArgs{source,
-                                              base::FilePath(target),
-                                              filesystemtype,
-                                              mountflags,
-                                              data,
+      libcontainer::MockPosixState::MountArgs{source, base::FilePath(target),
+                                              filesystemtype, mountflags, data,
                                               false});
   return 0;
 }
@@ -616,9 +574,9 @@ int minijail_run_pid_pipes_no_preload(struct minijail* j,
     return libcontainer::g_mock_minijail_state->pid;
 
   if (libcontainer::g_mock_minijail_state->pid == 0) {
-    for (minijail_hook_event_t event : {MINIJAIL_HOOK_EVENT_PRE_CHROOT,
-                                        MINIJAIL_HOOK_EVENT_PRE_DROP_CAPS,
-                                        MINIJAIL_HOOK_EVENT_PRE_EXECVE}) {
+    for (minijail_hook_event_t event :
+         {MINIJAIL_HOOK_EVENT_PRE_CHROOT, MINIJAIL_HOOK_EVENT_PRE_DROP_CAPS,
+          MINIJAIL_HOOK_EVENT_PRE_EXECVE}) {
       auto it = libcontainer::g_mock_minijail_state->hooks.find(event);
       if (it == libcontainer::g_mock_minijail_state->hooks.end())
         continue;

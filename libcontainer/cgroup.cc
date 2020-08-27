@@ -184,13 +184,13 @@ bool CheckCgroupAvailable(const base::FilePath& cgroup_root,
 }  // namespace
 
 bool Cgroup::Freeze() {
-  return WriteCgroupFile(
-      cgroup_paths_[Type::FREEZER], "freezer.state", "FROZEN\n");
+  return WriteCgroupFile(cgroup_paths_[Type::FREEZER], "freezer.state",
+                         "FROZEN\n");
 }
 
 bool Cgroup::Thaw() {
-  return WriteCgroupFile(
-      cgroup_paths_[Type::FREEZER], "freezer.state", "THAWED\n");
+  return WriteCgroupFile(cgroup_paths_[Type::FREEZER], "freezer.state",
+                         "THAWED\n");
 }
 
 bool Cgroup::DenyAllDevices() {
@@ -218,15 +218,11 @@ bool Cgroup::AddDevice(bool allow,
 
   // The device file format is:
   // <type, c, b, or a> major:minor rmw
-  std::string perm_string = base::StringPrintf("%c %s %s%s%s\n",
-                                               type,
-                                               device_string.c_str(),
-                                               read ? "r" : "",
-                                               write ? "w" : "",
-                                               modify ? "m" : "");
+  std::string perm_string =
+      base::StringPrintf("%c %s %s%s%s\n", type, device_string.c_str(),
+                         read ? "r" : "", write ? "w" : "", modify ? "m" : "");
   return WriteCgroupFile(cgroup_paths_[Type::DEVICES],
-                         allow ? "devices.allow" : "devices.deny",
-                         perm_string);
+                         allow ? "devices.allow" : "devices.deny", perm_string);
 }
 
 bool Cgroup::SetCpuShares(int shares) {
@@ -234,23 +230,23 @@ bool Cgroup::SetCpuShares(int shares) {
 }
 
 bool Cgroup::SetCpuQuota(int quota) {
-  return WriteCgroupFileInt(
-      cgroup_paths_[Type::CPU], "cpu.cfs_quota_us", quota);
+  return WriteCgroupFileInt(cgroup_paths_[Type::CPU], "cpu.cfs_quota_us",
+                            quota);
 }
 
 bool Cgroup::SetCpuPeriod(int period) {
-  return WriteCgroupFileInt(
-      cgroup_paths_[Type::CPU], "cpu.cfs_period_us", period);
+  return WriteCgroupFileInt(cgroup_paths_[Type::CPU], "cpu.cfs_period_us",
+                            period);
 }
 
 bool Cgroup::SetCpuRtRuntime(int rt_runtime) {
-  return WriteCgroupFileInt(
-      cgroup_paths_[Type::CPU], "cpu.rt_runtime_us", rt_runtime);
+  return WriteCgroupFileInt(cgroup_paths_[Type::CPU], "cpu.rt_runtime_us",
+                            rt_runtime);
 }
 
 bool Cgroup::SetCpuRtPeriod(int rt_period) {
-  return WriteCgroupFileInt(
-      cgroup_paths_[Type::CPU], "cpu.rt_period_us", rt_period);
+  return WriteCgroupFileInt(cgroup_paths_[Type::CPU], "cpu.rt_period_us",
+                            rt_period);
 }
 
 // static
@@ -265,8 +261,8 @@ std::unique_ptr<Cgroup> Cgroup::Create(base::StringPiece name,
                                        uid_t cgroup_owner,
                                        gid_t cgroup_group) {
   if (g_cgroup_factory) {
-    return g_cgroup_factory(
-        name, cgroup_root, cgroup_parent, cgroup_owner, cgroup_group);
+    return g_cgroup_factory(name, cgroup_root, cgroup_parent, cgroup_owner,
+                            cgroup_group);
   }
   std::unique_ptr<Cgroup> cg(new Cgroup());
 

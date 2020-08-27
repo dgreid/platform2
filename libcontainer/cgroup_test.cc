@@ -68,19 +68,14 @@ TEST(CgroupTest, CgroupNewWithParent) {
 
   ASSERT_TRUE(base::WriteFile(
       cgroup_root.Append("cpuset").Append(kCgroupParentName).Append("cpus"),
-      "0-3",
-      3));
+      "0-3", 3));
   ASSERT_TRUE(base::WriteFile(
       cgroup_root.Append("cpuset").Append(kCgroupParentName).Append("mems"),
-      "0",
-      1));
+      "0", 1));
 
-  std::unique_ptr<libcontainer::Cgroup> ccg =
-      libcontainer::Cgroup::Create(kCgroupName,
-                                   cgroup_root,
-                                   base::FilePath(kCgroupParentName),
-                                   getuid(),
-                                   getgid());
+  std::unique_ptr<libcontainer::Cgroup> ccg = libcontainer::Cgroup::Create(
+      kCgroupName, cgroup_root, base::FilePath(kCgroupParentName), getuid(),
+      getgid());
   ASSERT_NE(nullptr, ccg.get());
 
   EXPECT_TRUE(base::DirectoryExists(
@@ -125,8 +120,8 @@ class BasicCgroupManipulationTest : public ::testing::Test {
     ASSERT_TRUE(base::WriteFile(cgroup_root.Append("cpuset/cpus"), "0-3", 3));
     ASSERT_TRUE(base::WriteFile(cgroup_root.Append("cpuset/mems"), "0", 1));
 
-    ccg_ = libcontainer::Cgroup::Create(
-        kCgroupName, cgroup_root, base::FilePath(), 0, 0);
+    ccg_ = libcontainer::Cgroup::Create(kCgroupName, cgroup_root,
+                                        base::FilePath(), 0, 0);
     ASSERT_NE(nullptr, ccg_.get());
 
     cpu_cg_ = cgroup_root.Append("cpu").Append(kCgroupName);
