@@ -35,7 +35,8 @@ constexpr base::TimeDelta kShortUpdateTimeout =
 
 const char kDeviceModelName[] = "Test HID Mouse";
 
-constexpr char kPeripheralBatterySysname[] = "hid-1-battery";
+constexpr char kPeripheralBatterySysname[] = "hid-someperipheral-battery";
+constexpr char kBluetoothBatterySysname[] = "hid-11:22:33:aa:bb:cc-battery";
 constexpr char kNonPeripheralBatterySysname[] = "AC";
 
 class TestWrapper : public DBusWrapperStub {
@@ -86,7 +87,20 @@ class PeripheralBatteryWatcherTest : public ::testing::Test {
     model_name_file_ =
         device_dir.Append(PeripheralBatteryWatcher::kModelNameFile);
     WriteFile(model_name_file_, kDeviceModelName);
-    capacity_file_ = device_dir.Append(PeripheralBatteryWatcher::kCapacityFile);
+    peripheral_capacity_file_ =
+        device_dir.Append(PeripheralBatteryWatcher::kCapacityFile);
+
+    // Create a fake Bluetooth directory (distinguished by the name)
+    device_dir = temp_dir_.GetPath().Append(kBluetoothBatterySysname);
+    CHECK(base::CreateDirectory(device_dir));
+    WriteFile(device_dir.Append(PeripheralBatteryWatcher::kScopeFile),
+              PeripheralBatteryWatcher::kScopeValueDevice);
+    WriteFile(device_dir.Append(PeripheralBatteryWatcher::kModelNameFile),
+              kDeviceModelName);
+    bluetooth_capacity_file_ =
+        device_dir.Append(PeripheralBatteryWatcher::kCapacityFile);
+
+    battery_.set_battery_path_for_testing(temp_dir_.GetPath());
 
     // Create a fake non-peripheral directory (there is no "scope" file.)
     device_dir = temp_dir_.GetPath().Append(kNonPeripheralBatterySysname);
@@ -110,9 +124,10 @@ class PeripheralBatteryWatcherTest : public ::testing::Test {
 
   base::FilePath scope_file_;
   base::FilePath status_file_;
-  base::FilePath capacity_file_;
+  base::FilePath peripheral_capacity_file_;
   base::FilePath model_name_file_;
   base::FilePath non_peripheral_capacity_file_;
+  base::FilePath bluetooth_capacity_file_;
 
   TestWrapper test_wrapper_;
 
@@ -126,7 +141,7 @@ class PeripheralBatteryWatcherTest : public ::testing::Test {
 
 TEST_F(PeripheralBatteryWatcherTest, Basic) {
   std::string level = base::NumberToString(80);
-  WriteFile(capacity_file_, level);
+  WriteFile(peripheral_capacity_file_, level);
   battery_.Init(&test_wrapper_, &udev_);
   ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
 
@@ -140,14 +155,14 @@ TEST_F(PeripheralBatteryWatcherTest, Basic) {
 
 TEST_F(PeripheralBatteryWatcherTest, NoLevelReading) {
   battery_.Init(&test_wrapper_, &udev_);
-  // Without writing battery level to the capacity_file_, the loop
+  // Without writing battery level to the peripheral_capacity_file_, the loop
   // will timeout.
   EXPECT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
 }
 
 TEST_F(PeripheralBatteryWatcherTest, SkipUnknownStatus) {
   // Batteries with unknown statuses should be skipped: http://b/64397082
-  WriteFile(capacity_file_, base::NumberToString(0));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(0));
   WriteFile(status_file_, PeripheralBatteryWatcher::kStatusValueUnknown);
   battery_.Init(&test_wrapper_, &udev_);
   ASSERT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
@@ -155,7 +170,7 @@ TEST_F(PeripheralBatteryWatcherTest, SkipUnknownStatus) {
 
 TEST_F(PeripheralBatteryWatcherTest, AllowOtherStatus) {
   // Batteries with other statuses should be reported.
-  WriteFile(capacity_file_, base::NumberToString(20));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(20));
   WriteFile(status_file_, "Discharging");
   battery_.Init(&test_wrapper_, &udev_);
   ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
@@ -169,7 +184,7 @@ TEST_F(PeripheralBatteryWatcherTest, AllowOtherStatus) {
 
 TEST_F(PeripheralBatteryWatcherTest, UdevEvents) {
   // Initial reading of battery statuses.
-  WriteFile(capacity_file_, base::NumberToString(80));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(80));
   battery_.Init(&test_wrapper_, &udev_);
   ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
 
@@ -181,7 +196,7 @@ TEST_F(PeripheralBatteryWatcherTest, UdevEvents) {
   EXPECT_EQ(kDeviceModelName, proto.name());
 
   // An udev ADD event appear for a peripheral device.
-  WriteFile(capacity_file_, base::NumberToString(70));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(70));
   udev_.NotifySubsystemObservers({{PeripheralBatteryWatcher::kUdevSubsystem, "",
                                    kPeripheralBatterySysname, ""},
                                   UdevEvent::Action::ADD});
@@ -194,7 +209,7 @@ TEST_F(PeripheralBatteryWatcherTest, UdevEvents) {
   EXPECT_EQ(kDeviceModelName, proto.name());
 
   // An udev CHANGE event appear for a peripheral device.
-  WriteFile(capacity_file_, base::NumberToString(60));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(60));
   udev_.NotifySubsystemObservers({{PeripheralBatteryWatcher::kUdevSubsystem, "",
                                    kPeripheralBatterySysname, ""},
                                   UdevEvent::Action::CHANGE});
@@ -207,7 +222,7 @@ TEST_F(PeripheralBatteryWatcherTest, UdevEvents) {
   EXPECT_EQ(kDeviceModelName, proto.name());
 
   // An udev REMOVE event appear for a peripheral device.
-  WriteFile(capacity_file_, base::NumberToString(60));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(60));
   udev_.NotifySubsystemObservers({{PeripheralBatteryWatcher::kUdevSubsystem, "",
                                    kPeripheralBatterySysname, ""},
                                   UdevEvent::Action::REMOVE});
@@ -217,7 +232,7 @@ TEST_F(PeripheralBatteryWatcherTest, UdevEvents) {
 
 TEST_F(PeripheralBatteryWatcherTest, NonPeripheralUdevEvents) {
   // Initial reading of battery statuses.
-  WriteFile(capacity_file_, base::NumberToString(80));
+  WriteFile(peripheral_capacity_file_, base::NumberToString(80));
   battery_.Init(&test_wrapper_, &udev_);
   ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
 
@@ -233,6 +248,52 @@ TEST_F(PeripheralBatteryWatcherTest, NonPeripheralUdevEvents) {
   udev_.NotifySubsystemObservers({{PeripheralBatteryWatcher::kUdevSubsystem, "",
                                    kNonPeripheralBatterySysname, ""},
                                   UdevEvent::Action::CHANGE});
+  EXPECT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
+}
+
+TEST_F(PeripheralBatteryWatcherTest, RefreshBluetoothBattery) {
+  battery_.Init(&test_wrapper_, &udev_);
+
+  // Initialize non-Bluetooth peripheral.
+  WriteFile(peripheral_capacity_file_, base::NumberToString(90));
+  // Initialize Bluetooth peripheral.
+  WriteFile(bluetooth_capacity_file_, base::NumberToString(80));
+
+  // RefreshBluetoothBattery is called.
+  dbus::MethodCall method_call(kPowerManagerInterface,
+                               kRefreshBluetoothBatteryMethod);
+  dbus::MessageWriter(&method_call).AppendString("11:22:33:AA:BB:CC");
+  std::unique_ptr<dbus::Response> response =
+      test_wrapper_.CallExportedMethodSync(&method_call);
+  ASSERT_TRUE(response);
+  ASSERT_EQ(dbus::Message::MESSAGE_METHOD_RETURN, response->GetMessageType());
+  // Check that powerd reads the battery information and sends an update signal.
+  ASSERT_TRUE(test_wrapper_.RunUntilSignalSent(kUpdateTimeout));
+  ASSERT_EQ(1, test_wrapper_.num_sent_signals());
+  PeripheralBatteryStatus proto;
+  EXPECT_TRUE(test_wrapper_.GetSentSignal(0, kPeripheralBatteryStatusSignal,
+                                          &proto, nullptr));
+  EXPECT_EQ(80, proto.level());
+  EXPECT_EQ(kDeviceModelName, proto.name());
+
+  // RefreshBluetoothBattery is called for non-Bluetooth device.
+  dbus::MethodCall method_call2(kPowerManagerInterface,
+                                kRefreshBluetoothBatteryMethod);
+  dbus::MessageWriter(&method_call2).AppendString("someperipheral");
+  response = test_wrapper_.CallExportedMethodSync(&method_call2);
+  ASSERT_TRUE(response);
+  ASSERT_EQ(dbus::Message::MESSAGE_METHOD_RETURN, response->GetMessageType());
+  // Check that powerd ignores the request.
+  EXPECT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
+
+  // RefreshBluetoothBattery is called for non-existing device.
+  dbus::MethodCall method_call3(kPowerManagerInterface,
+                                kRefreshBluetoothBatteryMethod);
+  dbus::MessageWriter(&method_call3).AppendString("non-existing");
+  response = test_wrapper_.CallExportedMethodSync(&method_call3);
+  ASSERT_TRUE(response);
+  ASSERT_EQ(dbus::Message::MESSAGE_METHOD_RETURN, response->GetMessageType());
+  // Check that powerd ignores the request.
   EXPECT_FALSE(test_wrapper_.RunUntilSignalSent(kShortUpdateTimeout));
 }
 

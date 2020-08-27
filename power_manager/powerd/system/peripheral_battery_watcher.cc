@@ -8,6 +8,7 @@
 
 #include <cerrno>
 #include <string>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/files/file_enumerator.h>
@@ -18,6 +19,7 @@
 #include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <chromeos/dbus/service_constants.h>
+#include <re2/re2.h>
 
 #include "power_manager/common/util.h"
 #include "power_manager/powerd/system/dbus_wrapper.h"
@@ -34,6 +36,8 @@ const char kDefaultPeripheralBatteryPath[] = "/sys/class/power_supply/";
 // Default interval for polling the device battery info.
 const int kDefaultPollIntervalMs = 600000;
 
+const char kBluetoothAddressRegex[] = "^([0-9A-Fa-f]{2}:){5}([0-9A-Fa-f]{2})$";
+
 // Reads |path| to |value_out| and trims trailing whitespace. False is returned
 // if the file doesn't exist or can't be read.
 bool ReadStringFromFile(const base::FilePath& path, std::string* value_out) {
@@ -42,6 +46,10 @@ bool ReadStringFromFile(const base::FilePath& path, std::string* value_out) {
 
   base::TrimWhitespaceASCII(*value_out, base::TRIM_TRAILING, value_out);
   return true;
+}
+
+std::string SysnameFromBluetoothAddress(const std::string& address) {
+  return "hid-" + base::ToLowerASCII(address) + "-battery";
 }
 
 }  // namespace
@@ -57,7 +65,8 @@ const char PeripheralBatteryWatcher::kUdevSubsystem[] = "power_supply";
 PeripheralBatteryWatcher::PeripheralBatteryWatcher()
     : dbus_wrapper_(nullptr),
       peripheral_battery_path_(kDefaultPeripheralBatteryPath),
-      poll_interval_ms_(kDefaultPollIntervalMs) {}
+      poll_interval_ms_(kDefaultPollIntervalMs),
+      weak_ptr_factory_(this) {}
 
 PeripheralBatteryWatcher::~PeripheralBatteryWatcher() {
   if (udev_)
@@ -71,6 +80,12 @@ void PeripheralBatteryWatcher::Init(DBusWrapperInterface* dbus_wrapper,
 
   dbus_wrapper_ = dbus_wrapper;
   ReadBatteryStatuses();
+
+  dbus_wrapper->ExportMethod(
+      kRefreshBluetoothBatteryMethod,
+      base::BindRepeating(
+          &PeripheralBatteryWatcher::OnRefreshBluetoothBatteryMethodCall,
+          weak_ptr_factory_.GetWeakPtr()));
 }
 
 void PeripheralBatteryWatcher::OnUdevEvent(const UdevEvent& event) {
@@ -181,6 +196,36 @@ void PeripheralBatteryWatcher::ReadCallback(const base::FilePath& path,
 void PeripheralBatteryWatcher::ErrorCallback(const base::FilePath& path,
                                              const std::string& model_name) {
   SendBatteryStatus(path, model_name, -1);
+}
+
+void PeripheralBatteryWatcher::OnRefreshBluetoothBatteryMethodCall(
+    dbus::MethodCall* method_call,
+    dbus::ExportedObject::ResponseSender response_sender) {
+  dbus::MessageReader reader(method_call);
+
+  std::string address;
+  if (!reader.PopString(&address)) {
+    LOG(WARNING) << "Failed to pop Bluetooth device address from "
+                 << kRefreshBluetoothBatteryMethod << " D-Bus method call";
+    std::move(response_sender)
+        .Run(
+            std::unique_ptr<dbus::Response>(dbus::ErrorResponse::FromMethodCall(
+                method_call, DBUS_ERROR_INVALID_ARGS,
+                "Expected device address string")));
+    return;
+  }
+
+  // Only process requests for valid Bluetooth addresses.
+  if (RE2::FullMatch(address, kBluetoothAddressRegex)) {
+    base::FilePath path = base::FilePath(peripheral_battery_path_)
+                              .Append(SysnameFromBluetoothAddress(address));
+    ReadBatteryStatus(path);
+  }
+
+  // Best effort, always return success.
+  std::unique_ptr<dbus::Response> response =
+      dbus::Response::FromMethodCall(method_call);
+  std::move(response_sender).Run(std::move(response));
 }
 
 }  // namespace system

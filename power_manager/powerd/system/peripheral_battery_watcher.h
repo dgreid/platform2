@@ -13,6 +13,8 @@
 #include <base/macros.h>
 #include <base/observer_list.h>
 #include <base/timer/timer.h>
+#include <dbus/exported_object.h>
+#include <dbus/message.h>
 
 #include "power_manager/powerd/system/async_file_reader.h"
 #include "power_manager/powerd/system/udev_subsystem_observer.h"
@@ -80,6 +82,13 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
                     const std::string& data);
   void ErrorCallback(const base::FilePath& path, const std::string& model_name);
 
+  // Handles D-Bus method calls.
+  // TODO(b/166543531): Remove this method handler after migrating to BlueZ
+  // Battery Provider API.
+  void OnRefreshBluetoothBatteryMethodCall(
+      dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender response_sender);
+
   DBusWrapperInterface* dbus_wrapper_;  // weak
 
   UdevInterface* udev_ = nullptr;  // non-owned
@@ -95,6 +104,8 @@ class PeripheralBatteryWatcher : public UdevSubsystemObserver {
 
   // AsyncFileReaders for different peripheral batteries.
   std::vector<std::unique_ptr<AsyncFileReader>> battery_readers_;
+
+  base::WeakPtrFactory<PeripheralBatteryWatcher> weak_ptr_factory_;
 
   DISALLOW_COPY_AND_ASSIGN(PeripheralBatteryWatcher);
 };
