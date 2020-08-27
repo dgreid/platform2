@@ -210,8 +210,7 @@ bool TrimExtents(int partition_fd, const struct fiemap* fm) {
 // Verifies that the data in given extents cannot be recovered.
 bool VerifyExtentsErased(int partition_fd, const struct fiemap* fm) {
   for (uint32_t i = 0; i < fm->fm_mapped_extents; i++) {
-    if (!VerifyExtentErased(partition_fd,
-                            fm->fm_extents[i].fe_physical,
+    if (!VerifyExtentErased(partition_fd, fm->fm_extents[i].fe_physical,
                             fm->fm_extents[i].fe_length)) {
       return false;
     }
@@ -291,10 +290,8 @@ bool DropCaches() {
   // This clears the page cache and slab objects (maybe unnecessary).
   // https://www.kernel.org/doc/Documentation/sysctl/vm.txt
   constexpr char kData = '3';
-  if (!base::WriteFile(
-          base::FilePath("/proc/sys/vm/drop_caches"),
-          &kData,
-          sizeof(kData))) {
+  if (!base::WriteFile(base::FilePath("/proc/sys/vm/drop_caches"), &kData,
+                       sizeof(kData))) {
     PLOG(ERROR) << "Failed to drop cache.";
     return false;
   }
