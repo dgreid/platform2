@@ -13,11 +13,10 @@
 // Touchpad size and resolution.
 constexpr int kXMax = 1920;  // points
 constexpr int kYMax = 1080;  // points
-constexpr int kXRes = 16;  // points/mm
-constexpr int kYRes = 16;  // points/mm
+constexpr int kXRes = 16;    // points/mm
+constexpr int kYRes = 16;    // points/mm
 
-TouchEmulator::TouchEmulator()
-    : touch_device_handler_(nullptr) {
+TouchEmulator::TouchEmulator() : touch_device_handler_(nullptr) {
   CreateVirtualMultiTouchDevice();
 
   // Clear slot usage.
@@ -102,8 +101,8 @@ void TouchEmulator::FlushEvents(const std::vector<TouchEvent>& fingers,
     // Update and send events for this finger.
     current_finger_count++;
     new_slot_tid[slot] = slot_tid_[slot] = finger.tracking_id;
-    WriteTouchEvent(slot, finger.tracking_id,
-                    finger.x, finger.y, finger.pressure);
+    WriteTouchEvent(slot, finger.tracking_id, finger.x, finger.y,
+                    finger.pressure);
   }
 
   // Check if any finger left, emit tracking id change if necessary.
@@ -128,15 +127,15 @@ void TouchEmulator::FlushEvents(const std::vector<TouchEvent>& fingers,
   }
 
   // Send the physical button event.
-  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_LEFT,
-                                         button_down ? 1 : 0));
+  assert(
+      touch_device_handler_.SendEvent(EV_KEY, BTN_LEFT, button_down ? 1 : 0));
 
   // Conclude the input report.
   assert(touch_device_handler_.SendEvent(EV_SYN, SYN_REPORT, 0));
 }
 
-void TouchEmulator::WriteTouchEvent(int slot, int id, int x, int y,
-                                    int pressure) {
+void TouchEmulator::WriteTouchEvent(
+    int slot, int id, int x, int y, int pressure) {
   assert(touch_device_handler_.SendEvent(EV_ABS, ABS_MT_SLOT, slot));
   assert(touch_device_handler_.SendEvent(EV_ABS, ABS_MT_TRACKING_ID, id));
   if (id != -1) {
@@ -149,16 +148,15 @@ void TouchEmulator::WriteTouchEvent(int slot, int id, int x, int y,
 void TouchEmulator::WriteTouchButtonEvent(int finger_count) {
   // Just send all events repetitively and let kernel's delta compression
   // handles it.
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOUCH, finger_count > 0));
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOOL_FINGER, finger_count == 1));
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOOL_DOUBLETAP, finger_count == 2));
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOOL_TRIPLETAP, finger_count == 3));
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOOL_QUADTAP, finger_count == 4));
-  assert(touch_device_handler_.SendEvent(
-      EV_KEY, BTN_TOOL_QUINTTAP, finger_count == 5));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOUCH, finger_count > 0));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOOL_FINGER,
+                                         finger_count == 1));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOOL_DOUBLETAP,
+                                         finger_count == 2));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOOL_TRIPLETAP,
+                                         finger_count == 3));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOOL_QUADTAP,
+                                         finger_count == 4));
+  assert(touch_device_handler_.SendEvent(EV_KEY, BTN_TOOL_QUINTTAP,
+                                         finger_count == 5));
 }

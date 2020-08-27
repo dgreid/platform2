@@ -38,7 +38,8 @@ int ReadIntegerFromBuffer(const uint8_t* data, int n) {
 
 // Extract the input report from received data.
 void ParseInputReport(const uint8_t* data,
-    std::vector<TouchEvent>* fingers, bool* button_down) {
+                      std::vector<TouchEvent>* fingers,
+                      bool* button_down) {
   *button_down = data[0];
   int count = data[1];
   int start = 2;
@@ -110,7 +111,7 @@ int main() {
     timeradd(&startval, &wait, &next);
     struct timeval minnext;
     timeradd(&nowval, &minwait, &minnext);
-    if (timercmp(&next, &minnext, < ))
+    if (timercmp(&next, &minnext, <))
       next = minnext;
     struct timeval delay;
     timersub(&next, &nowval, &delay);

@@ -20,8 +20,8 @@ bool UinputDevice::CreateUinputFD() {
     return false;
   }
 
-  uinput_fd_ = syscall_handler_->open(UINPUT_CONTROL_FILENAME,
-                                      O_WRONLY | O_NONBLOCK);
+  uinput_fd_ =
+      syscall_handler_->open(UINPUT_CONTROL_FILENAME, O_WRONLY | O_NONBLOCK);
   if (uinput_fd_ < 0) {
     printf("Unable to open %s. (%d)\n", UINPUT_CONTROL_FILENAME, uinput_fd_);
     return false;
@@ -48,8 +48,8 @@ bool UinputDevice::EnableKeyEvent(int ev_code) const {
   // key event. (eg: KEY_BACKSPACE or BTN_TOUCH)
   int error = syscall_handler_->ioctl(uinput_fd_, UI_SET_KEYBIT, ev_code);
   if (error) {
-    printf("Error: Unable to enable EV_KEY 0x%02X events. (%d)\n",
-           ev_code, error);
+    printf("Error: Unable to enable EV_KEY 0x%02X events. (%d)\n", ev_code,
+           error);
     return false;
   }
   printf("Enabled EV_KEY 0x%02X event.\n", ev_code);
@@ -61,8 +61,8 @@ bool UinputDevice::EnableAbsEvent(int ev_code) const {
   // kind of ABS event. (eg: ABS_MT_POSITION_X or ABS_PRESSURE)
   int error = syscall_handler_->ioctl(uinput_fd_, UI_SET_ABSBIT, ev_code);
   if (error) {
-    printf("Error: Unable to enable EV_ABS 0x%02X events. (%d)\n",
-           ev_code, error);
+    printf("Error: Unable to enable EV_ABS 0x%02X events. (%d)\n", ev_code,
+           error);
     return false;
   }
   printf("Enabled EV_ABS 0x%02X event.\n", ev_code);
@@ -70,7 +70,8 @@ bool UinputDevice::EnableAbsEvent(int ev_code) const {
 }
 
 bool UinputDevice::CopyABSOutputEvents(int source_evdev_fd,
-                                       int width, int height) const {
+                                       int width,
+                                       int height) const {
   // Configure this region's uinput device to report the correct kinds of
   // events by copying the events that are reported by the input device
   // who's file descriptor is passed as a reference.
@@ -134,7 +135,7 @@ bool UinputDevice::CopyABSOutputEvents(int source_evdev_fd,
 }
 
 bool UinputDevice::FinalizeUinputCreation(
-                                  std::string const &device_name) const {
+    std::string const& device_name) const {
   int error;
   struct uinput_setup device_info;
 
@@ -143,7 +144,7 @@ bool UinputDevice::FinalizeUinputCreation(
   memset(&device_info, 0, sizeof(device_info));
   snprintf(device_info.name, UINPUT_MAX_NAME_SIZE, "%s", device_name.c_str());
   device_info.id.bustype = BUS_USB;
-  device_info.id.vendor  = GOOGLE_VENDOR_ID;
+  device_info.id.vendor = GOOGLE_VENDOR_ID;
   device_info.id.product = DUMMY_PRODUCT_ID;
   device_info.id.version = VERSION_NUMBER;
   error = syscall_handler_->ioctl(uinput_fd_, UI_DEV_SETUP, &device_info);
@@ -171,7 +172,7 @@ bool UinputDevice::SendEvent(int ev_type, int ev_code, int value) const {
   ev.value = value;
 
   int bytes_written =
-          syscall_handler_->write(uinput_fd_, &ev, sizeof(struct input_event));
+      syscall_handler_->write(uinput_fd_, &ev, sizeof(struct input_event));
   if (bytes_written != sizeof(struct input_event)) {
     printf("ERROR: Failed during write() when sending an event. (%d)\n",
            bytes_written);
