@@ -18,8 +18,7 @@ namespace hermes {
 
 Manager::Manager()
     : context_(Context::Get()),
-      dbus_adaptor_(context_->adaptor_factory()->CreateManagerAdaptor(this)) {
-}
+      dbus_adaptor_(context_->adaptor_factory()->CreateManagerAdaptor(this)) {}
 
 void Manager::SetTestMode(bool /*is_test_mode*/) {
   NOTIMPLEMENTED();
