@@ -21,6 +21,7 @@
 #include <base/files/file.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
+#include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/optional.h>
 #include <brillo/process/process.h>
@@ -83,7 +84,11 @@ class FileEnumerator {
   class FileInfo {
    public:
     explicit FileInfo(const base::FileEnumerator::FileInfo& file_info);
+#if BASE_VER < 780000
     FileInfo(const base::FilePath& name, const struct stat& stat);
+#else
+    FileInfo(const base::FilePath& name, const base::stat_wrapper_t& stat);
+#endif
     FileInfo(const FileInfo& other);
     FileInfo();
     virtual ~FileInfo();
@@ -93,14 +98,22 @@ class FileEnumerator {
     base::FilePath GetName() const;
     int64_t GetSize() const;
     base::Time GetLastModifiedTime() const;
+#if BASE_VER < 780000
     const struct stat& stat() const;
+#else
+    const base::stat_wrapper_t& stat() const;
+#endif
 
    private:
     void Assign(const base::FileEnumerator::FileInfo& file_info);
 
     std::unique_ptr<base::FileEnumerator::FileInfo> info_;
     base::FilePath name_;
+#if BASE_VER < 780000
     struct stat stat_;
+#else
+    base::stat_wrapper_t stat_;
+#endif
   };
 
   FileEnumerator(const base::FilePath& root_path,
@@ -138,7 +151,12 @@ class Platform {
     base::FilePath device;
   };
 
+#if BASE_VER < 780000
   typedef base::Callback<bool(const base::FilePath&, const struct stat&)>
+#else
+  typedef base::Callback<bool(const base::FilePath&,
+                              const base::stat_wrapper_t&)>
+#endif
       FileEnumeratorCallback;
 
   Platform();
@@ -536,7 +554,11 @@ class Platform {
   // Parameters
   //  path - element to look up
   //  buf - buffer to store results into
+#if BASE_VER < 780000
   virtual bool Stat(const base::FilePath& path, struct stat *buf);
+#else
+  virtual bool Stat(const base::FilePath& path, base::stat_wrapper_t* buf);
+#endif
 
   // Return true if |path| has extended attribute |name|.
   //
@@ -913,7 +935,12 @@ class Platform {
   bool CopyPermissionsCallback(const base::FilePath& old_base,
                                const base::FilePath& new_base,
                                const base::FilePath& file_path,
-                               const struct stat& file_info);
+#if BASE_VER < 780000
+                               const struct stat& file_info
+#else
+                               const base::stat_wrapper_t& file_info
+#endif
+  );
 
   // Applies ownership and permissions to a single file or directory.
   //
@@ -927,7 +954,12 @@ class Platform {
       const Permissions& default_dir_info,
       const std::map<base::FilePath, Permissions>& special_cases,
       const base::FilePath& file_path,
-      const struct stat& file_info);
+#if BASE_VER < 780000
+      const struct stat& file_info
+#else
+      const base::stat_wrapper_t& file_info
+#endif
+  );
 
   void PostWorkerTask(const base::Closure& task);
 

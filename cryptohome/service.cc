@@ -231,8 +231,12 @@ void MountThreadObserver::PostTask() {
   parallel_task_count_ += 1;
 }
 
-void MountThreadObserver::WillProcessTask(
-    const base::PendingTask& pending_task) {
+void MountThreadObserver::WillProcessTask(const base::PendingTask& pending_task
+#if BASE_VER > 780000
+                                          ,
+                                          bool was_blocked_or_low_priority
+#endif
+) {
   // Task name will be equal to the task handler name
   std::string task_name = pending_task.posted_from.function_name();
 
@@ -747,7 +751,11 @@ bool Service::Initialize() {
   }
 
   base::Thread::Options options;
+#if BASE_VER < 780000
   options.message_loop_type = base::MessagePumpType::IO;
+#else
+  options.message_pump_type = base::MessagePumpType::IO;
+#endif
   mount_thread_.StartWithOptions(options);
 
   // Add task observer, message_loop is only availible after the thread start.
@@ -3981,7 +3989,7 @@ bool Service::GetMountPointForUser(const std::string& username,
 
 scoped_refptr<cryptohome::Mount> Service::GetMountForUser(
     const std::string& username) {
-  scoped_refptr<cryptohome::Mount> mount = NULL;
+  scoped_refptr<cryptohome::Mount> mount = nullptr;
   base::AutoLock _lock(mounts_lock_);
   if (mounts_.count(username) == 1) {
     mount = mounts_[username];

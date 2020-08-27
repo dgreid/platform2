@@ -48,7 +48,11 @@ NiceMock<cryptohome::MockFileEnumerator>* CreateMockFileEnumeratorWithEntries(
     const std::vector<base::FilePath>& children) {
   auto* mock = new NiceMock<cryptohome::MockFileEnumerator>;
   for (const auto& child : children) {
+#if BASE_VER < 780000
     struct stat stat = {};
+#else
+    base::stat_wrapper_t stat = {};
+#endif
     mock->entries_.push_back(cryptohome::FileEnumerator::FileInfo(child, stat));
   }
   return mock;
@@ -296,7 +300,11 @@ TEST_P(DiskCleanupRoutinesTest, DeleteAndroidCache) {
   auto* enumerator = new NiceMock<cryptohome::MockFileEnumerator>;
 
   ASSERT_EQ(entriesToClean.size(), 2);
+#if BASE_VER < 780000
   struct stat stat = {};
+#else
+  base::stat_wrapper_t stat = {};
+#endif
 
   stat.st_ino = 1;
   enumerator->entries_.push_back(

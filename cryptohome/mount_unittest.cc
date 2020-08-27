@@ -185,7 +185,7 @@ class MountTest
   }
 
   void TearDown() {
-    mount_ = NULL;
+    mount_ = nullptr;
     helper_.TearDownSystemSalt();
   }
 
@@ -525,7 +525,11 @@ class MountTest
     constexpr char kDaemonName[] = "mock-daemon";
     constexpr uid_t kDaemonUid = 123;
     constexpr gid_t kDaemonGid = 234;
+#if BASE_VER < 780000
     struct stat stat_data = {};
+#else
+    base::stat_wrapper_t stat_data = {};
+#endif
     stat_data.st_mode = S_IFDIR;
     stat_data.st_uid = kDaemonUid;
     stat_data.st_gid = kDaemonGid;
@@ -877,9 +881,17 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
   std::vector<FilePath> existing_files_in_download;
   std::vector<FilePath> existing_files_in_myfiles_download;
   auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
+#if BASE_VER < 780000
   struct stat stat_file = {};
+#else
+  base::stat_wrapper_t stat_file = {};
+#endif
   stat_file.st_mode = S_IRWXU;
+#if BASE_VER < 780000
   struct stat stat_dir = {};
+#else
+  base::stat_wrapper_t stat_dir = {};
+#endif
   stat_dir.st_mode = S_IFDIR;
 
   for (auto base : existing_files) {
@@ -925,9 +937,17 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
   std::vector<FilePath> existing_files_in_download;
   std::vector<FilePath> existing_files_in_myfiles_download;
   auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
+#if BASE_VER < 780000
   struct stat stat_file = {};
+#else
+  base::stat_wrapper_t stat_file = {};
+#endif
   stat_file.st_mode = S_IRWXU;
+#if BASE_VER < 780000
   struct stat stat_dir = {};
+#else
+  base::stat_wrapper_t stat_dir = {};
+#endif
   stat_dir.st_mode = S_IFDIR;
 
   for (auto base : existing_files) {
@@ -1025,10 +1045,17 @@ class ChapsDirectoryTest : public ::testing::Test {
   const uid_t kChapsUID;
   const gid_t kSharedGID;
 
+#if BASE_VER < 780000
   struct stat base_stat_;
   struct stat salt_stat_;
   struct stat database_dir_stat_;
   struct stat database_file_stat_;
+#else
+  base::stat_wrapper_t base_stat_;
+  base::stat_wrapper_t salt_stat_;
+  base::stat_wrapper_t database_dir_stat_;
+  base::stat_wrapper_t database_file_stat_;
+#endif
 
   scoped_refptr<Mount> mount_;
   NiceMock<MockPlatform> platform_;
@@ -1036,8 +1063,13 @@ class ChapsDirectoryTest : public ::testing::Test {
   std::unique_ptr<UserOldestActivityTimestampCache> user_timestamp_cache_;
 
  private:
+#if BASE_VER < 780000
   void InitStat(struct stat* s, mode_t mode, uid_t uid, gid_t gid) {
     memset(s, 0, sizeof(struct stat));
+#else
+  void InitStat(base::stat_wrapper_t* s, mode_t mode, uid_t uid, gid_t gid) {
+    memset(s, 0, sizeof(base::stat_wrapper_t));
+#endif
     s->st_mode = mode;
     s->st_uid = uid;
     s->st_gid = gid;
@@ -1156,7 +1188,11 @@ TEST_P(MountTest, CheckChapsDirectoryMigration) {
       .WillRepeatedly(Return(true));
 
   // Configure stat for the base directory.
+#if BASE_VER < 780000
   struct stat base_stat = {0};
+#else
+  base::stat_wrapper_t base_stat = {0};
+#endif
   base_stat.st_mode = 040123;
   base_stat.st_uid = 1;
   base_stat.st_gid = 2;
@@ -1165,11 +1201,19 @@ TEST_P(MountTest, CheckChapsDirectoryMigration) {
 
   // Configure a fake enumerator.
   MockFileEnumerator* enumerator = platform_.mock_enumerator();
+#if BASE_VER < 780000
   struct stat file_info1 = {0};
+#else
+  base::stat_wrapper_t file_info1 = {0};
+#endif
   file_info1.st_mode = 0555;
   file_info1.st_uid = 3;
   file_info1.st_gid = 4;
+#if BASE_VER < 780000
   struct stat file_info2 = {0};
+#else
+  base::stat_wrapper_t file_info2 = {0};
+#endif
   file_info2.st_mode = 0777;
   file_info2.st_uid = 5;
   file_info2.st_gid = 6;
@@ -3903,7 +3947,11 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountIsEphemeralTest) {
 }
 
 TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
+#if BASE_VER < 780000
   struct stat fake_root_st;
+#else
+  base::stat_wrapper_t fake_root_st;
+#endif
   fake_root_st.st_uid = 0;
   fake_root_st.st_gid = 0;
   fake_root_st.st_mode = S_IFDIR | S_IRWXU;
@@ -3923,7 +3971,11 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   EXPECT_CALL(platform_,
       Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
     .WillOnce(Return(false));
+#if BASE_VER < 780000
   struct stat fake_user_st;
+#else
+  base::stat_wrapper_t fake_user_st;
+#endif
   fake_user_st.st_uid = chronos_uid_;
   fake_user_st.st_gid = chronos_gid_;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;
@@ -4026,7 +4078,11 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
 }
 
 TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
+#if BASE_VER < 780000
   struct stat fake_root_st;
+#else
+  base::stat_wrapper_t fake_root_st;
+#endif
   fake_root_st.st_uid = 0;
   fake_root_st.st_gid = 0;
   fake_root_st.st_mode = S_IFDIR | S_IRWXU;
@@ -4045,7 +4101,11 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
   EXPECT_CALL(platform_,
       Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
     .WillOnce(Return(false));
+#if BASE_VER < 780000
   struct stat fake_user_st;
+#else
+  base::stat_wrapper_t fake_user_st;
+#endif
   fake_user_st.st_uid = chronos_uid_;
   fake_user_st.st_gid = chronos_gid_;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;

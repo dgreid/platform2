@@ -35,7 +35,11 @@ class MockFileEnumerator : public FileEnumerator {
 
   void AddFileEntry(base::FilePath path) {
     // Add a placeholder struct stat.
+#if BASE_VER < 780000
     struct stat s;
+#else
+    base::stat_wrapper_t s;
+#endif
     entries_.emplace_back(FileInfo(path, s));
   }
 
@@ -197,7 +201,14 @@ class MockPlatform : public Platform {
               (FILE*),
               (override));  // NOLINT(readability/function)
   MOCK_METHOD(FILE*, CreateAndOpenTemporaryFile, (base::FilePath*), (override));
+#if BASE_VER < 780000
   MOCK_METHOD(bool, Stat, (const base::FilePath&, struct stat*), (override));
+#else
+  MOCK_METHOD(bool,
+              Stat,
+              (const base::FilePath&, base::stat_wrapper_t*),
+              (override));
+#endif
   MOCK_METHOD(bool,
               HasExtendedFileAttribute,
               (const base::FilePath&, const std::string&),

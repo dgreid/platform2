@@ -377,7 +377,11 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
   mount_info_contents.append("/home/user/uid1 rw,nodev,relatime - ext4 ");
   mount_info_contents.append("/dev/mmcblk0p1 rw,commit=600,data=ordered");
 
+#if BASE_VER < 780000
   fp = base::CreateAndOpenTemporaryFile(&mount_info);
+#else
+  fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
+#endif
   ASSERT_TRUE(fp != NULL);
   EXPECT_EQ(fwrite(mount_info_contents.c_str(),
             mount_info_contents.length(), 1, fp), 1);
@@ -410,7 +414,11 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixECryptFs) {
   mount_info_contents.append("rw,nosuid,nodev,noexec,relatime - ecryptfs ");
   mount_info_contents.append("/beg/uid2/vault rw,ecryp...");
 
+#if BASE_VER < 780000
   fp = base::CreateAndOpenTemporaryFile(&mount_info);
+#else
+  fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
+#endif
   ASSERT_TRUE(fp != NULL);
   EXPECT_EQ(fwrite(mount_info_contents.c_str(),
             mount_info_contents.length(), 1, fp), 1);
@@ -469,7 +477,11 @@ TEST_F(PlatformTest, SetFileTimes) {
   ASSERT_TRUE(platform_.CreateSymbolicLink(link, regular_file));
 
   EXPECT_TRUE(platform_.SetFileTimes(regular_file, atime1, mtime1, true));
+#if BASE_VER < 780000
   struct stat stat;
+#else
+  base::stat_wrapper_t stat;
+#endif
   ASSERT_TRUE(platform_.Stat(regular_file, &stat));
   EXPECT_EQ(atime1.tv_sec, stat.st_atim.tv_sec);
   EXPECT_EQ(atime1.tv_nsec, stat.st_atim.tv_nsec);
@@ -522,7 +534,11 @@ TEST_F(PlatformTest, CreateSparseFile) {
   base::File sparse_file(sparse_name,
                          base::File::FLAG_OPEN | base::File::FLAG_READ);
   EXPECT_EQ(file_size, sparse_file.GetLength());
+#if BASE_VER < 780000
   struct stat stat;
+#else
+  base::stat_wrapper_t stat;
+#endif
   EXPECT_TRUE(platform_.Stat(sparse_name, &stat));
   // No blocks allocated for a sparse file.
   EXPECT_EQ(0, stat.st_blocks);

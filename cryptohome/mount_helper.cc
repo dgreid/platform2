@@ -136,7 +136,11 @@ bool MountHelper::EnsurePathComponent(const FilePath& path,
   for (size_t i = 1; i < num; i++)
     check_path = check_path.Append(path_parts[i]);
 
+#if BASE_VER < 780000
   struct stat st;
+#else
+  base::stat_wrapper_t st;
+#endif
   if (!platform_->Stat(check_path, &st)) {
     // Dirent not there, so create and set ownership.
     if (!platform_->CreateDirectory(check_path)) {
@@ -217,7 +221,11 @@ void MountHelper::MigrateToUserHome(const FilePath& vault_path) const {
   std::vector<FilePath> ent_list;
   FilePath user_path(VaultPathToUserPath(vault_path));
   FilePath root_path(VaultPathToRootPath(vault_path));
+#if BASE_VER < 780000
   struct stat st;
+#else
+  base::stat_wrapper_t st;
+#endif
 
   // This check makes the migration idempotent; if we completed a migration,
   // root_path will exist and we're done, and if we didn't complete it, we can
@@ -564,7 +572,12 @@ bool MountHelper::MountDaemonStoreDirectories(
     // same as for |etc_daemon_store_path| (usually
     // <daemon_user>:<daemon_group>), which is what the daemon intended.
     // Otherwise, it would end up being root-owned.
-    struct stat etc_daemon_path_stat = file_enumerator->GetInfo().stat();
+#if BASE_VER < 780000
+    struct stat etc_daemon_path_stat =
+#else
+    base::stat_wrapper_t etc_daemon_path_stat =
+#endif
+        file_enumerator->GetInfo().stat();
     if (!platform_->SetOwnership(mount_source, etc_daemon_path_stat.st_uid,
                                  etc_daemon_path_stat.st_gid,
                                  false /*follow_links*/)) {

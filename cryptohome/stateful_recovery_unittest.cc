@@ -475,7 +475,11 @@ TEST_F(StatefulRecoveryTest, MountsParseOk) {
   mount_info_contents.append(device_in);
   mount_info_contents.append(" rw,ecryp...");
 
+#if BASE_VER < 780000
   fp = base::CreateAndOpenTemporaryFile(&mount_info);
+#else
+  fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
+#endif
   ASSERT_TRUE(fp != NULL);
   EXPECT_EQ(fwrite(mount_info_contents.c_str(),
                    mount_info_contents.length(), 1, fp), 1);

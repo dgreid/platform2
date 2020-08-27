@@ -206,13 +206,21 @@ TEST_F(MigrationHelperTest, CopyAttributesDirectory) {
   int ext2_attrs = FS_SYNC_FL | FS_NODUMP_FL;
   ASSERT_EQ(0, ::ioctl(from_fd.get(), FS_IOC_SETFLAGS, &ext2_attrs));
 
+#if BASE_VER < 780000
   struct stat from_stat;
+#else
+  base::stat_wrapper_t from_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kFromDirPath, &from_stat));
   EXPECT_TRUE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
                                         base::Unretained(this))));
 
   const FilePath kToDirPath = to_dir_.GetPath().Append(kDirectory);
+#if BASE_VER < 780000
   struct stat to_stat;
+#else
+  base::stat_wrapper_t to_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kToDirPath, &to_stat));
   EXPECT_TRUE(platform.DirectoryExists(kToDirPath));
 
@@ -262,7 +270,11 @@ TEST_F(MigrationHelperTest, DirectoryPartiallyMigrated) {
 
   EXPECT_TRUE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
                                         base::Unretained(this))));
+#if BASE_VER < 780000
   struct stat to_stat;
+#else
+  base::stat_wrapper_t to_stat;
+#endif
 
   // Verify that stored timestamps for in-progress migrations are respected
   ASSERT_TRUE(platform.Stat(to_dir_.GetPath(), &to_stat));
@@ -305,7 +317,11 @@ TEST_F(MigrationHelperTest, CopySymlink) {
                                        kFromAbsLinkPath));
   ASSERT_TRUE(base::CreateSymbolicLink(kTargetInMigrationDirAbsLinkTarget,
                                        kFromTargetInMigrationDirAbsLinkPath));
+#if BASE_VER < 780000
   struct stat from_stat;
+#else
+  base::stat_wrapper_t from_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kFromRelLinkPath, &from_stat));
 
   EXPECT_TRUE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
@@ -320,7 +336,11 @@ TEST_F(MigrationHelperTest, CopySymlink) {
       to_dir_.GetPath().Append(kFileName);
 
   // Verify that timestamps were updated appropriately.
+#if BASE_VER < 780000
   struct stat to_stat;
+#else
+  base::stat_wrapper_t to_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kToRelLinkPath, &to_stat));
   EXPECT_EQ(from_stat.st_atim.tv_sec, to_stat.st_atim.tv_sec);
   EXPECT_EQ(from_stat.st_atim.tv_nsec, to_stat.st_atim.tv_nsec);
@@ -475,12 +495,20 @@ TEST_F(MigrationHelperTest, CopyAttributesFile) {
   int ext2_attrs = FS_SYNC_FL | FS_NODUMP_FL;
   EXPECT_EQ(0, ::ioctl(from_fd.get(), FS_IOC_SETFLAGS, &ext2_attrs));
 
+#if BASE_VER < 780000
   struct stat from_stat;
+#else
+  base::stat_wrapper_t from_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kFromFilePath, &from_stat));
   EXPECT_TRUE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
                                         base::Unretained(this))));
 
+#if BASE_VER < 780000
   struct stat to_stat;
+#else
+  base::stat_wrapper_t to_stat;
+#endif
   ASSERT_TRUE(platform.Stat(kToFilePath, &to_stat));
   EXPECT_EQ(from_stat.st_atim.tv_sec, to_stat.st_atim.tv_sec);
   EXPECT_EQ(from_stat.st_atim.tv_nsec, to_stat.st_atim.tv_nsec);
@@ -565,7 +593,11 @@ TEST_F(MigrationHelperTest, CopyOwnership) {
   ASSERT_TRUE(base::CreateSymbolicLink(kLinkTarget, kToLink));
   ASSERT_TRUE(real_platform.CreateDirectory(kToDir));
 
+#if BASE_VER < 780000
   struct stat stat;
+#else
+  base::stat_wrapper_t stat;
+#endif
   ASSERT_TRUE(real_platform.Stat(kFromFile, &stat));
   stat.st_uid = file_uid;
   stat.st_gid = file_gid;
@@ -955,7 +987,11 @@ TEST_F(MigrationHelperTest, SkipDuppedGCacheTmpDir) {
       v1_path.AppendASCII("tmp/foobar/tmp.gdoc")));
 
   // Mock the situation that user/GCache/v1/tmp is enumerated twice.
+#if BASE_VER < 780000
   struct stat stat_data = {};
+#else
+  base::stat_wrapper_t stat_data = {};
+#endif
   stat_data.st_mode = S_IFDIR;
   const FileEnumerator::FileInfo info(v1_path.AppendASCII("tmp"), stat_data);
   NiceMock<MockFileEnumerator>* mock_v1 = new NiceMock<MockFileEnumerator>();

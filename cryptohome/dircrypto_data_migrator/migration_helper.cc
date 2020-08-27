@@ -204,7 +204,11 @@ class MigrationHelper::WorkerPool {
       job_threads_[i] = std::make_unique<base::Thread>(
           "MigrationHelper worker #" + base::NumberToString(i));
       base::Thread::Options options;
+#if BASE_VER < 780000
       options.message_loop_type = base::MessagePumpType::IO;
+#else
+      options.message_pump_type = base::MessagePumpType::IO;
+#endif
       if (!job_threads_[i]->StartWithOptions(options)) {
         LOG(ERROR) << "Failed to start a job thread.";
         return false;
@@ -432,7 +436,11 @@ bool MigrationHelper::Migrate(const ProgressCallback& progress_callback) {
     }
   }
   ReportStatus(user_data_auth::DIRCRYPTO_MIGRATION_IN_PROGRESS);
+#if BASE_VER < 780000
   struct stat from_stat;
+#else
+  base::stat_wrapper_t from_stat;
+#endif
   if (!platform_->Stat(from_base_path_, &from_stat)) {
     PLOG(ERROR) << "Failed to stat from directory";
     RecordFileErrorWithCurrentErrno(kMigrationFailedAtStat, base::FilePath());

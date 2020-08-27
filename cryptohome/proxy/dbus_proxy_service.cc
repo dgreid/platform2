@@ -41,7 +41,11 @@ class ServiceBlocker {
     // Start the dbus thread. Note that this will need to be an I/O thread
     // because ListenForServiceOwnerChange() needs it.
     base::Thread::Options options;
+#if BASE_VER < 780000
     options.message_loop_type = base::MessagePumpType::IO;
+#else
+    options.message_pump_type = base::MessagePumpType::IO;
+#endif
     dbus_thread_.StartWithOptions(options);
 
     dbus_thread_.task_runner()->PostTask(
@@ -68,8 +72,8 @@ class ServiceBlocker {
   base::WaitableEvent tpm_manager_online;
 
   // We need to keep these in order to unlisten/unregister the events.
-  ::dbus::Bus::GetServiceOwnerCallback on_cryptohome_online_;
-  ::dbus::Bus::GetServiceOwnerCallback on_tpm_manager_online_;
+  ::dbus::Bus::ServiceOwnerChangeCallback on_cryptohome_online_;
+  ::dbus::Bus::ServiceOwnerChangeCallback on_tpm_manager_online_;
 
   // The separate dbus connection that we'll use to monitor the service status.
   scoped_refptr<::dbus::Bus> bus_;

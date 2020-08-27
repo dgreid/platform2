@@ -56,9 +56,9 @@ class MountTaskResult : public CryptohomeEventBase {
         return_status_(false),
         return_code_(MOUNT_ERROR_NONE),
         event_name_(kMountTaskResultEventType),
-        mount_(NULL),
+        mount_(nullptr),
         pkcs11_init_(false),
-        guest_(false) { }
+        guest_(false) {}
 
   // Constructor which sets an alternative event name. Useful
   // for using MountTaskResult for other event types.
@@ -67,9 +67,9 @@ class MountTaskResult : public CryptohomeEventBase {
         return_status_(false),
         return_code_(MOUNT_ERROR_NONE),
         event_name_(event_name),
-        mount_(NULL),
+        mount_(nullptr),
         pkcs11_init_(false),
-        guest_(false) { }
+        guest_(false) {}
 
   // Copy constructor is necessary for inserting MountTaskResult into the events
   // vector in CryptohomeEventSource.

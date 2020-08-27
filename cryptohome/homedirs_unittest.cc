@@ -158,7 +158,11 @@ class HomeDirsTest
       const std::vector<FilePath>& child_directories) {
     auto* mock = new NiceMock<MockFileEnumerator>;
     for (const auto& child : child_directories) {
+#if BASE_VER < 780000
       struct stat stat = {};
+#else
+      base::stat_wrapper_t stat = {};
+#endif
       mock->entries_.push_back(FileEnumerator::FileInfo(child, stat));
     }
     return mock;
@@ -185,7 +189,11 @@ class HomeDirsTest
     auto create_file_enumerator_function = [child_directories]() {
       auto* mock = new NiceMock<MockFileEnumerator>;
       for (const auto& child : child_directories) {
+#if BASE_VER < 780000
         struct stat stat = {};
+#else
+        base::stat_wrapper_t stat = {};
+#endif
         mock->entries_.push_back(FileEnumerator::FileInfo(child, stat));
       }
       return mock;
