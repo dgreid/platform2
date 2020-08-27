@@ -35,7 +35,8 @@ static void GenerateKeyPair(void) {
 }
 
 static void ShowHelpAndExit(void) {
-  fprintf(stderr,
+  fprintf(
+      stderr,
       "cros_oobe_crypto\n"
       "\n"
       "\tGenerates a prime256v1 key pair for OOBE autoconfiguration signing.\n"

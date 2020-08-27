@@ -54,7 +54,8 @@ static bool IsKeyboardDevice(const int fd) {
   return TestBit(EV_KEY, evtype_bitmask);
 }
 
-static bool SupportsAllKeys(const int fd, const int* events,
+static bool SupportsAllKeys(const int fd,
+                            const int* events,
                             const int num_events) {
   uint8_t key_bitmask[KEY_MAX / 8 + 1];
   if (ioctl(fd, EVIOCGBIT(EV_KEY, sizeof(key_bitmask)), key_bitmask) == -1) {
@@ -137,41 +138,41 @@ static int WaitForKeys(const int* fds,
 
 static void ShowHelpAndExit(FILE* out) {
   fprintf(out,
-      "evwaitkey\n"
-      "\n"
-      "This utility allows waiting on arbitrary key inputs to a device's\n"
-      "primary keyboard. It's primarily intended for use from\n"
-      "non-interactive scripts that must obtain user input, e.g.\n"
-      "physical presence checks in the recovery installer.\n"
-      "\n"
-      "It takes at least one key code (as determined by evtest) as input\n"
-      "and prints the first key in the given list that was pressed by the\n"
-      "user. It may block indefinitely if no key was pressed.\n"
-      "\n"
-      "Example usage (waiting either for escape key code 1 or enter key "
-      "code 28):\n"
-      "\n"
-      "    $ evwaitkey --keys 1:28\n"
-      "    <user presses enter>\n"
-      "    28\n"
-      "\n"
-      "Example usage in script:\n"
-      "\n"
-      "    KEY_ESC=1\n"
-      "    KEY_ENTER=28\n"
-      "\n"
-      "    if [ $(evwaitkey --keys $KEY_ESC:$KEY_ENTER) = $KEY_ESC ]; "
-      "then\n"
-      "      echo \"Escape pressed\"\n"
-      "    else\n"
-      "      echo \"Enter pressed\"\n"
-      "    fi\n"
-      "\n\n"
-      "--help (Shows this help message)\n"
-      "--check (Checks if the requested keys are available, exits with an\n"
-      "         error if they are not)\n"
-      "--include_usb (Whether USB devices should be scanned for inputs)\n"
-      "--keys (Colon-separated list of keycodes to listen for)\n\n");
+          "evwaitkey\n"
+          "\n"
+          "This utility allows waiting on arbitrary key inputs to a device's\n"
+          "primary keyboard. It's primarily intended for use from\n"
+          "non-interactive scripts that must obtain user input, e.g.\n"
+          "physical presence checks in the recovery installer.\n"
+          "\n"
+          "It takes at least one key code (as determined by evtest) as input\n"
+          "and prints the first key in the given list that was pressed by the\n"
+          "user. It may block indefinitely if no key was pressed.\n"
+          "\n"
+          "Example usage (waiting either for escape key code 1 or enter key "
+          "code 28):\n"
+          "\n"
+          "    $ evwaitkey --keys 1:28\n"
+          "    <user presses enter>\n"
+          "    28\n"
+          "\n"
+          "Example usage in script:\n"
+          "\n"
+          "    KEY_ESC=1\n"
+          "    KEY_ENTER=28\n"
+          "\n"
+          "    if [ $(evwaitkey --keys $KEY_ESC:$KEY_ENTER) = $KEY_ESC ]; "
+          "then\n"
+          "      echo \"Escape pressed\"\n"
+          "    else\n"
+          "      echo \"Enter pressed\"\n"
+          "    fi\n"
+          "\n\n"
+          "--help (Shows this help message)\n"
+          "--check (Checks if the requested keys are available, exits with an\n"
+          "         error if they are not)\n"
+          "--include_usb (Whether USB devices should be scanned for inputs)\n"
+          "--keys (Colon-separated list of keycodes to listen for)\n\n");
   exit(EXIT_SUCCESS);
 }
 
@@ -180,10 +181,10 @@ int main(int argc, char** argv) {
   static int flag_check = 0;
   static int flag_help = 0;
   static const struct option long_options[] = {
-    {"check", no_argument, &flag_check, 1},
-    {"include_usb", no_argument, &flag_include_usb, 1},
-    {"help", no_argument, &flag_help, 1},
-    {"keys", required_argument, NULL, 'k'},
+      {"check", no_argument, &flag_check, 1},
+      {"include_usb", no_argument, &flag_include_usb, 1},
+      {"help", no_argument, &flag_help, 1},
+      {"keys", required_argument, NULL, 'k'},
   };
 
   int events[KEY_MAX + 1];
@@ -193,22 +194,22 @@ int main(int argc, char** argv) {
   int opt_idx = 0;
   while ((opt = getopt_long(argc, argv, "", long_options, &opt_idx)) != -1) {
     switch (opt) {
-    case 'k': {
-      char* token = strtok(optarg, ":");
-      while (token != NULL && num_events < KEY_MAX) {
-        char *end;
-        int event = strtol(token, &end, 10);
-        if (end == token || *end != '\0' || event < 0 || event > KEY_MAX) {
-          errx(EXIT_FAILURE, "'%s' is not a valid keycode.", token);
-        }
+      case 'k': {
+        char* token = strtok(optarg, ":");
+        while (token != NULL && num_events < KEY_MAX) {
+          char* end;
+          int event = strtol(token, &end, 10);
+          if (end == token || *end != '\0' || event < 0 || event > KEY_MAX) {
+            errx(EXIT_FAILURE, "'%s' is not a valid keycode.", token);
+          }
 
-        events[num_events++] = event;
-        token = strtok(NULL, ":");
+          events[num_events++] = event;
+          token = strtok(NULL, ":");
+        }
+        break;
       }
-      break;
-    }
-    case '?':
-      return EXIT_FAILURE;
+      case '?':
+        return EXIT_FAILURE;
     }
   }
 

@@ -99,7 +99,8 @@ ssize_t PwriteToUbi(int fd,
                     off64_t offset,
                     ssize_t eraseblock_size) {
   struct ubi_set_vol_prop_req prop = {
-      .property = UBI_VOL_PROP_DIRECT_WRITE, .value = 1,
+      .property = UBI_VOL_PROP_DIRECT_WRITE,
+      .value = 1,
   };
   if (ioctl(fd, UBI_IOCSETVOLPROP, &prop)) {
     PLOG(WARNING) << "Failed to enable direct write";
