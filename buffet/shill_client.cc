@@ -193,11 +193,9 @@ Network::State ShillClient::GetConnectionState() const {
   return connectivity_state_;
 }
 
-void ShillClient::StartAccessPoint(const std::string& ssid) {
-}
+void ShillClient::StartAccessPoint(const std::string& ssid) {}
 
-void ShillClient::StopAccessPoint() {
-}
+void ShillClient::StopAccessPoint() {}
 
 std::string ShillClient::GetIpAddress() {
   return ip_address_;

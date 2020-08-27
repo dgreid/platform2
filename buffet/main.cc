@@ -18,8 +18,8 @@
 #include "buffet/dbus_constants.h"
 #include "buffet/manager.h"
 
-using brillo::dbus_utils::AsyncEventSequencer;
 using brillo::DBusServiceDaemon;
+using brillo::dbus_utils::AsyncEventSequencer;
 using buffet::dbus_constants::kRootServicePath;
 using buffet::dbus_constants::kServiceName;
 

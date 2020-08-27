@@ -29,8 +29,8 @@ using ::testing::Return;
 using ::testing::ReturnRefOfCopy;
 using ::testing::StrictMock;
 
-using brillo::dbus_utils::AsyncEventSequencer;
 using brillo::VariantDictionary;
+using brillo::dbus_utils::AsyncEventSequencer;
 using weave::test::CreateDictionaryValue;
 using weave::test::IsEqualValue;
 
