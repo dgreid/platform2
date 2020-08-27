@@ -149,66 +149,75 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
   }
 
   ValidOptionValues values;
-  int index = options_[kResolution].index;
-  const SANE_Option_Descriptor* descriptor =
-      sane_get_option_descriptor(handle_, index);
-  if (!descriptor) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to get resolution option at index %d", index);
-    return false;
+  if (options_.count(kResolution) != 0) {
+    int index = options_.at(kResolution).index;
+    const SANE_Option_Descriptor* descriptor =
+        sane_get_option_descriptor(handle_, index);
+    if (!descriptor) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Unable to get resolution option at index %d", index);
+      return false;
+    }
+
+    base::Optional<std::vector<uint32_t>> resolutions =
+        GetValidIntOptionValues(error, *descriptor);
+    if (!resolutions.has_value()) {
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError,
+                           "Failed to get valid values for resolution setting");
+      return false;
+    }
+    values.resolutions = std::move(resolutions.value());
   }
 
-  base::Optional<std::vector<uint32_t>> resolutions =
-      GetValidIntOptionValues(error, *descriptor);
-  if (!resolutions.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Failed to get valid values for resolution setting");
-    return false;
-  }
-  values.resolutions = std::move(resolutions.value());
+  if (options_.count(kSource) != 0) {
+    int index = options_.at(kSource).index;
+    const SANE_Option_Descriptor* descriptor =
+        sane_get_option_descriptor(handle_, index);
+    if (!descriptor) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Unable to get source option at index %d", index);
+      return false;
+    }
 
-  index = options_[kSource].index;
-  descriptor = sane_get_option_descriptor(handle_, index);
-  if (!descriptor) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to get source option at index %d", index);
-    return false;
-  }
+    base::Optional<std::vector<std::string>> source_names =
+        GetValidStringOptionValues(error, *descriptor);
+    if (!source_names.has_value()) {
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError,
+                           "Failed to get valid values for sources setting");
+      return false;
+    }
 
-  base::Optional<std::vector<std::string>> source_names =
-      GetValidStringOptionValues(error, *descriptor);
-  if (!source_names.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Failed to get valid values for sources setting");
-    return false;
+    for (const std::string& source_name : source_names.value()) {
+      values.sources.push_back(CreateDocumentSource(source_name));
+    }
   }
 
-  for (const std::string& source_name : source_names.value()) {
-    values.sources.push_back(CreateDocumentSource(source_name));
-  }
+  if (options_.count(kScanMode) != 0) {
+    int index = options_.at(kScanMode).index;
+    const SANE_Option_Descriptor* descriptor =
+        sane_get_option_descriptor(handle_, index);
+    if (!descriptor) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Unable to get scan mode option at index %d", index);
+      return false;
+    }
 
-  index = options_[kScanMode].index;
-  descriptor = sane_get_option_descriptor(handle_, index);
-  if (!descriptor) {
-    brillo::Error::AddToPrintf(
-        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
-        "Unable to get scan mode option at index %d", index);
-    return false;
-  }
+    base::Optional<std::vector<std::string>> color_modes =
+        GetValidStringOptionValues(error, *descriptor);
 
-  base::Optional<std::vector<std::string>> color_modes =
-      GetValidStringOptionValues(error, *descriptor);
-  if (!color_modes.has_value()) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError,
-                         "Failed to get valid values for scan modes setting");
-    return false;
+    if (!color_modes.has_value()) {
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError,
+                           "Failed to get valid values for scan modes setting");
+      return false;
+    }
+    values.color_modes = std::move(color_modes.value());
   }
-  values.color_modes = std::move(color_modes.value());
 
   *values_out = values;
   return true;
