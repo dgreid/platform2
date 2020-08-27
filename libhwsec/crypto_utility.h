@@ -22,9 +22,7 @@ namespace hwsec {
 // auto-cleanup on leaving scope.
 class HWSEC_EXPORT ScopedBN_CTX {
  public:
-  ScopedBN_CTX(): ctx_(BN_CTX_new()) {
-    BN_CTX_start(ctx_);
-  }
+  ScopedBN_CTX() : ctx_(BN_CTX_new()) { BN_CTX_start(ctx_); }
 
   ~ScopedBN_CTX() {
     BN_CTX_end(ctx_);

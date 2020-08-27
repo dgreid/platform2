@@ -28,7 +28,7 @@ overalls::MockOveralls* CreateMockOveralls(MOCK_OVERALLS_TYPE mock_type) {
 
 }  // namespace
 
-Tpm1HwsecTest::Tpm1HwsecTest(): Tpm1HwsecTest(MOCK_OVERALLS_TYPE::NICE) {}
+Tpm1HwsecTest::Tpm1HwsecTest() : Tpm1HwsecTest(MOCK_OVERALLS_TYPE::NICE) {}
 
 Tpm1HwsecTest::Tpm1HwsecTest(MOCK_OVERALLS_TYPE mock_overalls_type) {
   mock_overalls_.reset(CreateMockOveralls(mock_overalls_type));
