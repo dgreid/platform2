@@ -7,7 +7,7 @@
 using base::StringPrintf;
 using std::string;
 
-bool SalsaExperimentRunner::LoadExperiment(string const &exp_string) {
+bool SalsaExperimentRunner::LoadExperiment(string const& exp_string) {
   string decoded_string = Decode(exp_string);
   if (decoded_string.empty())
     return false;
@@ -16,15 +16,15 @@ bool SalsaExperimentRunner::LoadExperiment(string const &exp_string) {
   return exp_.valid();
 }
 
-string SalsaExperimentRunner::Decode(string const &exp_string) const {
+string SalsaExperimentRunner::Decode(string const& exp_string) const {
   // Hex encoded strings always have an even length
   if (exp_string.length() % 2 != 0)
     return "";
 
   // Decode the string from hex, any non-hex characters invalidate it
   string decoded_string = "";
-  for (string::const_iterator it = exp_string.begin();
-       it != exp_string.end(); ++it) {
+  for (string::const_iterator it = exp_string.begin(); it != exp_string.end();
+       ++it) {
     char c1 = *it;
     char c2 = *++it;
 
@@ -35,10 +35,10 @@ string SalsaExperimentRunner::Decode(string const &exp_string) const {
 
       // After decoding, these should be the only characters in the string
       if (base::IsAsciiAlpha(converted_char) ||
-          base::IsAsciiDigit(converted_char) ||
-          converted_char == '+' || converted_char == ',' ||
-          converted_char == ':' || converted_char == '-' ||
-          converted_char == ' ' || converted_char == '.') {
+          base::IsAsciiDigit(converted_char) || converted_char == '+' ||
+          converted_char == ',' || converted_char == ':' ||
+          converted_char == '-' || converted_char == ' ' ||
+          converted_char == '.') {
         decoded_string.push_back(converted_char);
       } else {
         return "";
@@ -105,8 +105,10 @@ void SalsaExperimentRunner::run() const {
       mvwprintw(win, 9, 26 + current_treatment * 5, "#");
       mvwprintw(win, 10, 23 + current_treatment * 5, "###");
     } else {
-      mvwprintw(win, 10, 2, "There was an error applying a treatment."
-                            "Try again.", current_treatment);
+      mvwprintw(win, 10, 2,
+                "There was an error applying a treatment."
+                "Try again.",
+                current_treatment);
     }
 
     mvwprintw(win, 12, 2, "Commands:");

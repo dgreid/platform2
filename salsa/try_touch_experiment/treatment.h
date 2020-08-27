@@ -15,7 +15,7 @@
 class Treatment {
  public:
   Treatment();
-  explicit Treatment(const std::string &treatment_string);
+  explicit Treatment(const std::string& treatment_string);
 
   bool Apply() const;
   bool Reset() const;

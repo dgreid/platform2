@@ -26,7 +26,7 @@
 class Property {
  public:
   Property();
-  explicit Property(const std::string &property_string);
+  explicit Property(const std::string& property_string);
 
   bool Apply() const;
   bool Reset() const;
@@ -39,8 +39,9 @@ class Property {
   bool SetValue(double new_value) const;
 
   Display* GetX11Display() const;
-  XDevice* GetX11TouchpadDevice(Display *display) const;
-  double GetPropertyValue(Display *display, XDevice *device,
+  XDevice* GetX11TouchpadDevice(Display* display) const;
+  double GetPropertyValue(Display* display,
+                          XDevice* device,
                           const char* name) const;
 
   std::string name_;

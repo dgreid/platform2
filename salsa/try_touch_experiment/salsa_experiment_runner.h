@@ -15,13 +15,13 @@
 
 class SalsaExperimentRunner {
  public:
-  bool LoadExperiment(const std::string &exp_string);
+  bool LoadExperiment(const std::string& exp_string);
   void run() const;
 
  private:
   static void StartCurses();
   static void EndCurses();
-  std::string Decode(const std::string &exp_string) const;
+  std::string Decode(const std::string& exp_string) const;
 
   Experiment exp_;
 };

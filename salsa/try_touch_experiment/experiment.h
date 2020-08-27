@@ -15,7 +15,7 @@
 class Experiment {
  public:
   Experiment();
-  explicit Experiment(const std::string &experiment_string);
+  explicit Experiment(const std::string& experiment_string);
 
   bool ApplyTreatment(unsigned int treatment_num) const;
   bool Reset() const;

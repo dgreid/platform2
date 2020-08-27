@@ -14,10 +14,9 @@ bool Experiment::valid() const {
   return is_valid_;
 }
 
-Experiment::Experiment(string const &experiment_string) {
-  vector<string> treatment_strings =
-      SplitString(experiment_string, "+", base::KEEP_WHITESPACE,
-                  base::SPLIT_WANT_ALL);
+Experiment::Experiment(string const& experiment_string) {
+  vector<string> treatment_strings = SplitString(
+      experiment_string, "+", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
 
   is_valid_ = true;
   for (vector<string>::const_iterator it = treatment_strings.begin();
