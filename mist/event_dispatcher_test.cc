@@ -45,19 +45,15 @@ TEST_F(EventDispatcherTest, StartAndStopWatchingFileDescriptor) {
   EXPECT_FALSE(dispatcher_.StopWatchingFileDescriptor(file_descriptor));
 
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor, EventDispatcher::Mode::READ,
-      base::DoNothing()));
+      file_descriptor, EventDispatcher::Mode::READ, base::DoNothing()));
 
   // StartWatchingFileDescriptor on the same file descriptor should be ok.
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor, EventDispatcher::Mode::READ,
-      base::DoNothing()));
+      file_descriptor, EventDispatcher::Mode::READ, base::DoNothing()));
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor, EventDispatcher::Mode::WRITE,
-      base::DoNothing()));
+      file_descriptor, EventDispatcher::Mode::WRITE, base::DoNothing()));
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor, EventDispatcher::Mode::READ_WRITE,
-      base::DoNothing()));
+      file_descriptor, EventDispatcher::Mode::READ_WRITE, base::DoNothing()));
   EXPECT_TRUE(dispatcher_.StopWatchingFileDescriptor(file_descriptor));
   EXPECT_FALSE(dispatcher_.StopWatchingFileDescriptor(file_descriptor));
 }
@@ -67,11 +63,9 @@ TEST_F(EventDispatcherTest, StopWatchingAllFileDescriptors) {
   int file_descriptor2 = CreatePollFileDescriptor();
 
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor1, EventDispatcher::Mode::READ,
-      base::DoNothing()));
+      file_descriptor1, EventDispatcher::Mode::READ, base::DoNothing()));
   EXPECT_TRUE(dispatcher_.StartWatchingFileDescriptor(
-      file_descriptor2, EventDispatcher::Mode::READ,
-      base::DoNothing()));
+      file_descriptor2, EventDispatcher::Mode::READ, base::DoNothing()));
   dispatcher_.StopWatchingAllFileDescriptors();
   EXPECT_FALSE(dispatcher_.StopWatchingFileDescriptor(file_descriptor1));
   EXPECT_FALSE(dispatcher_.StopWatchingFileDescriptor(file_descriptor2));
