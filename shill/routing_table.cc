@@ -325,8 +325,8 @@ bool RoutingTable::SetDefaultRoute(int interface_index,
                                    const IPAddress& gateway_address,
                                    uint32_t metric,
                                    uint32_t table_id) {
-  SLOG(this, 2) << __func__ << " index " << interface_index
-                << " metric " << metric;
+  SLOG(this, 2) << __func__ << " index " << interface_index << " metric "
+                << metric;
 
   RoutingTableEntry* old_entry;
 

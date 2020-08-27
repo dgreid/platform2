@@ -145,7 +145,7 @@ const char* const kIgnoredDeviceNamePrefixes[] = {
 // necessarily when they were first supported). These strings are also usually
 // annotated in the kernel source tree via MODULE_ALIAS_RTNL_LINK() macros.
 const char* const kIgnoredDeviceKinds[] = {
-    "ifb",    // v5.4, drivers/net/ifb.c:289
+    "ifb",  // v5.4, drivers/net/ifb.c:289
 };
 // v5.4, drivers/net/veth.c:1393
 constexpr char kKindVeth[] = "veth";

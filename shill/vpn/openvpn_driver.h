@@ -38,8 +38,7 @@ class OpenVPNDriver : public VPNDriver,
     kReconnectReasonTLSError,
   };
 
-  OpenVPNDriver(Manager* manager,
-                ProcessManager* process_manager);
+  OpenVPNDriver(Manager* manager, ProcessManager* process_manager);
   ~OpenVPNDriver() override;
 
   virtual void OnReconnecting(ReconnectReason reason);

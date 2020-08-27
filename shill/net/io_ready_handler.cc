@@ -14,9 +14,7 @@ namespace shill {
 IOReadyHandler::IOReadyHandler(int fd,
                                ReadyMode mode,
                                const ReadyCallback& ready_callback)
-    : fd_(fd),
-      ready_mode_(mode),
-      ready_callback_(ready_callback) {}
+    : fd_(fd), ready_mode_(mode), ready_callback_(ready_callback) {}
 
 IOReadyHandler::~IOReadyHandler() = default;
 

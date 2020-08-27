@@ -28,8 +28,7 @@ class PPPDeviceFactory;
 
 class L2TPIPSecDriver : public VPNDriver, public RpcTaskDelegate {
  public:
-  L2TPIPSecDriver(Manager* manager,
-                  ProcessManager* process_manager);
+  L2TPIPSecDriver(Manager* manager, ProcessManager* process_manager);
   ~L2TPIPSecDriver() override;
 
   // Method to return service RPC identifier.

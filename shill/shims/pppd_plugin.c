@@ -29,7 +29,7 @@ static void PPPOnPhaseChange(void* data, int arg) {
   }
 }
 
-__attribute__ ((visibility("default"))) int plugin_init() {
+__attribute__((visibility("default"))) int plugin_init() {
   PPPInit();
 
   chap_check_hook = PPPHasSecret;

@@ -197,9 +197,7 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
 }  // namespace
 
 WiFiProvider::WiFiProvider(Manager* manager)
-    : manager_(manager),
-      running_(false),
-      disable_vht_(false) {}
+    : manager_(manager), running_(false), disable_vht_(false) {}
 
 WiFiProvider::~WiFiProvider() = default;
 

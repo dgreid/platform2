@@ -30,6 +30,7 @@ using base::Unretained;
 using std::string;
 using testing::_;
 using testing::A;
+using testing::AtLeast;
 using testing::DoAll;
 using testing::ElementsAre;
 using testing::HasSubstr;
@@ -37,7 +38,6 @@ using testing::Return;
 using testing::ReturnArg;
 using testing::StrictMock;
 using testing::Test;
-using testing::AtLeast;
 
 namespace shill {
 

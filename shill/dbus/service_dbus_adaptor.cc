@@ -190,8 +190,8 @@ bool ServiceDBusAdaptor::GetLoadableProfileEntries(
   return true;
 }
 
-bool ServiceDBusAdaptor::GetWiFiPassphrase(
-    brillo::ErrorPtr* error, std::string* out_passphrase) {
+bool ServiceDBusAdaptor::GetWiFiPassphrase(brillo::ErrorPtr* error,
+                                           std::string* out_passphrase) {
   SLOG(this, 2) << __func__;
 
   Error e;

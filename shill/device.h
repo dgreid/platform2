@@ -292,8 +292,7 @@ class Device : public base::RefCounted<Device> {
   // Programs the NIC to wake on every packet of IP protocol type belonging to
   // |packet_types|. |error| indicates the result of the operation.
   virtual void AddWakeOnPacketOfTypes(
-      const std::vector<std::string>& packet_types,
-      Error* error);
+      const std::vector<std::string>& packet_types, Error* error);
   // Removes a rule previously programmed into the NIC to wake the system from
   // suspend upon receiving packets from |ip_endpoint|. |error| indicates the
   // result of the operation.
@@ -303,8 +302,7 @@ class Device : public base::RefCounted<Device> {
   // protocol type belonging to |packet_types|.
   // |error| indicates the result of the operation.
   virtual void RemoveWakeOnPacketOfTypes(
-      const std::vector<std::string>& packet_types,
-      Error* error);
+      const std::vector<std::string>& packet_types, Error* error);
   // Removes all wake-on-packet rules programmed into the NIC. |error| indicates
   // the result of the operation.
   virtual void RemoveAllWakeOnPacketConnections(Error* error);

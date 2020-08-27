@@ -2103,14 +2103,13 @@ void Metrics::SendServiceFailure(const Service& service) {
       break;
   }
 
-  string histogram = GetFullMetricName(kMetricNetworkServiceErrorSuffix,
-                                       service.technology());
+  string histogram =
+      GetFullMetricName(kMetricNetworkServiceErrorSuffix, service.technology());
 
   // Publish technology specific connection failure metrics. This will
   // account for all the connection failures happening while connected to
   // a particular interface e.g. wifi, cellular etc.
-  library_->SendEnumToUMA(histogram, error,
-                          kNetworkServiceErrorMax);
+  library_->SendEnumToUMA(histogram, error, kNetworkServiceErrorMax);
 
   // This is a generic Network service failure metrics agnostic to the
   // underlying interface. This metrics will account for all network
