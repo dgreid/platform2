@@ -50,8 +50,8 @@ class Daemon : public brillo::DBusServiceDaemon {
   void RegisterDBusObjectsAsync(
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override {
     adaptor_.reset(new MtpdServer(bus_));
-    adaptor_->RegisterAsync(sequencer->GetHandler("RegisterAsync() failed",
-                                                  true));
+    adaptor_->RegisterAsync(
+        sequencer->GetHandler("RegisterAsync() failed", true));
   }
 
   int OnInit() override {

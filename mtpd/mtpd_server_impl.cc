@@ -23,21 +23,16 @@ const uint32_t kMaxReadCount = 1024 * 1024;
 void AddError(brillo::ErrorPtr* error,
               const base::Location& location,
               const std::string& message) {
-  brillo::Error::AddTo(error,
-                       location,
-                       brillo::errors::dbus::kDomain,
-                       kMtpdServiceError,
-                       message);
+  brillo::Error::AddTo(error, location, brillo::errors::dbus::kDomain,
+                       kMtpdServiceError, message);
 }
 
 void AddInvalidHandleError(brillo::ErrorPtr* error,
                            const base::Location& location,
                            const std::string& handle) {
-  brillo::Error::AddToPrintf(error,
-                             location,
-                             brillo::errors::dbus::kDomain,
-                             kMtpdServiceError,
-                             "Invalid handle %s", handle.c_str());
+  brillo::Error::AddToPrintf(error, location, brillo::errors::dbus::kDomain,
+                             kMtpdServiceError, "Invalid handle %s",
+                             handle.c_str());
 }
 
 }  // namespace
@@ -71,22 +66,16 @@ bool MtpdServer::OpenStorage(brillo::ErrorPtr* error,
                              const std::string& mode,
                              std::string* id) {
   if (!(mode == kReadOnlyMode || mode == kReadWriteMode)) {
-    brillo::Error::AddToPrintf(error,
-                               FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               kMtpdServiceError,
-                               "Cannot open %s in mode: %s",
+    brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                               kMtpdServiceError, "Cannot open %s in mode: %s",
                                storage_name.c_str(), mode.c_str());
     return false;
   }
 
   if (!device_manager_.HasStorage(storage_name)) {
-    brillo::Error::AddToPrintf(error,
-                               FROM_HERE,
-                               brillo::errors::dbus::kDomain,
-                               kMtpdServiceError,
-                               "Cannot open unknown storage %s",
-                               storage_name.c_str());
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kMtpdServiceError,
+        "Cannot open unknown storage %s", storage_name.c_str());
     return false;
   }
 
@@ -114,10 +103,10 @@ bool MtpdServer::CloseStorage(brillo::ErrorPtr* error,
 }
 
 bool MtpdServer::ReadDirectoryEntryIds(
-      brillo::ErrorPtr* error,
-      const std::string& handle,
-      uint32_t file_id,
-      std::vector<uint32_t>* directory_listing) {
+    brillo::ErrorPtr* error,
+    const std::string& handle,
+    uint32_t file_id,
+    std::vector<uint32_t>* directory_listing) {
   std::string storage_name = LookupHandle(handle);
   if (storage_name.empty()) {
     AddInvalidHandleError(error, FROM_HERE, handle);

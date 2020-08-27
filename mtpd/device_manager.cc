@@ -83,16 +83,14 @@ class DeviceManager::MtpPoller : public base::Thread {
 
   explicit MtpPoller(scoped_refptr<base::SingleThreadTaskRunner> task_runner)
       : Thread("MTP poller"), main_thread_task_runner_(task_runner) {}
-  ~MtpPoller() override {
-    Stop();
-  }
+  ~MtpPoller() override { Stop(); }
 
   void WaitForEvent(LIBMTP_mtpdevice_t* mtp_device, EventCallback callback) {
     DCHECK(main_thread_task_runner_->BelongsToCurrentThread());
 
     auto params = std::make_unique<Params>(this, std::move(callback));
-    int ret = LIBMTP_Read_Event_Async(mtp_device, &ReadEventFunction,
-                                      params.get());
+    int ret =
+        LIBMTP_Read_Event_Async(mtp_device, &ReadEventFunction, params.get());
     if (ret) {
       LOG(ERROR) << "LIBMTP_Read_Event_Async error " << ret;
       return;
@@ -142,8 +140,10 @@ class DeviceManager::MtpPoller : public base::Thread {
     }
   }
 
-  static void ReadEventFunction(int ret_code, LIBMTP_event_t event,
-                                uint32_t unused_extra, void* user_data) {
+  static void ReadEventFunction(int ret_code,
+                                LIBMTP_event_t event,
+                                uint32_t unused_extra,
+                                void* user_data) {
     std::unique_ptr<Params> params(static_cast<Params*>(user_data));
     params->poller->ProcessEvent(ret_code, event, std::move(params->callback));
   }
@@ -193,8 +193,8 @@ DeviceManager::DeviceManager(DeviceEventDelegate* delegate)
   LIBMTP_Init();
 
   // Create and start the libmtp poller thread.
-  mtp_poller_ = std::make_unique<MtpPoller>(
-      base::ThreadTaskRunnerHandle::Get());
+  mtp_poller_ =
+      std::make_unique<MtpPoller>(base::ThreadTaskRunnerHandle::Get());
   CHECK(mtp_poller_->Start());
 
   // Trigger a device scan.
@@ -666,8 +666,7 @@ void DeviceManager::UpdateDevice(const std::string& usb_bus_name) {
 }
 
 void DeviceManager::AddOrUpdateDevices(
-    bool add_update,
-    const std::string& changed_usb_device_name) {
+    bool add_update, const std::string& changed_usb_device_name) {
   // Get raw devices.
   LIBMTP_raw_device_t* raw_devices = nullptr;
   int raw_devices_count = 0;
@@ -787,9 +786,8 @@ void DeviceManager::AddOrUpdateDevices(
                        weak_ptr_factory_.GetWeakPtr(), usb_bus_str));
     bool device_added =
         device_map_
-            .insert(std::make_pair(
-                usb_bus_str,
-                MtpDevice(mtp_device, *storage_map_ptr)))
+            .insert(std::make_pair(usb_bus_str,
+                                   MtpDevice(mtp_device, *storage_map_ptr)))
             .second;
     CHECK(device_added);
     LOG(INFO) << "Added device " << usb_bus_str << " with "
