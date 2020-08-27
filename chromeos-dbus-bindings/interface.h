@@ -19,19 +19,13 @@ constexpr char kProtobufType[] = {DBUS_TYPE_CHROMEOS_PROTOBUF, '\0'};
 
 struct Interface {
   struct Argument {
-    Argument(const std::string& name_in,
-             const std::string& type_in)
-          : name(name_in), type(type_in) {}
+    Argument(const std::string& name_in, const std::string& type_in)
+        : name(name_in), type(type_in) {}
     std::string name;
     std::string type;
   };
   struct Method {
-    enum class Kind {
-      kSimple,
-      kNormal,
-      kAsync,
-      kRaw
-    };
+    enum class Kind { kSimple, kNormal, kAsync, kRaw };
     Method(const std::string& name_in,
            const std::vector<Argument>& input_arguments_in,
            const std::vector<Argument>& output_arguments_in)
@@ -40,8 +34,7 @@ struct Interface {
           output_arguments(output_arguments_in) {}
     Method(const std::string& name_in,
            const std::vector<Argument>& input_arguments_in)
-        : name(name_in),
-          input_arguments(input_arguments_in) {}
+        : name(name_in), input_arguments(input_arguments_in) {}
     explicit Method(const std::string& name_in) : name(name_in) {}
     std::string name;
     std::vector<Argument> input_arguments;
@@ -76,7 +69,9 @@ struct Interface {
             const std::vector<Method>& methods_in,
             const std::vector<Signal>& signals_in,
             const std::vector<Property>& properties_in)
-      : name(name_in), methods(methods_in), signals(signals_in),
+      : name(name_in),
+        methods(methods_in),
+        signals(signals_in),
         properties(properties_in) {}
   std::string name;
   std::string path;

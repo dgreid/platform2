@@ -12,7 +12,7 @@
 
 namespace chromeos_dbus_bindings {
 
-class  IndentedText;
+class IndentedText;
 
 // A helper class that allows to decompose D-Bus name strings such as
 // "org.chromium.TestInterface" into components and be able to construct the
@@ -46,17 +46,17 @@ class NameParser {
 
   // Adds opening "namespace ... {" statements to |text|.
   // If |add_main_type| is true, adds the main type name as a namespace as well.
-  void AddOpenNamespaces(IndentedText *text, bool add_main_type) const;
+  void AddOpenNamespaces(IndentedText* text, bool add_main_type) const;
 
   // Adds closing "}  // namespace ..." statements to |text|.
   // If |add_main_type| is true, adds the main type name as a namespace as well.
-  void AddCloseNamespaces(IndentedText *text, bool add_main_type) const;
+  void AddCloseNamespaces(IndentedText* text, bool add_main_type) const;
 
  private:
   // Helper function to prepend the C++ namespaces to the |name|.
   std::string MakeFullyQualified(const std::string& name) const;
 
-  std::string type_name_;  // e.g. "TestInterface".
+  std::string type_name_;                // e.g. "TestInterface".
   std::vector<std::string> namespaces_;  // e.g. {"org", "chromium"}.
 };
 

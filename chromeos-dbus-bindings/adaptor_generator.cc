@@ -59,9 +59,8 @@ bool AdaptorGenerator::GenerateAdaptors(
   return WriteTextToFile(output_file, text);
 }
 
-void AdaptorGenerator::GenerateInterfaceAdaptor(
-    const Interface& interface,
-    IndentedText *text) {
+void AdaptorGenerator::GenerateInterfaceAdaptor(const Interface& interface,
+                                                IndentedText* text) {
   NameParser parser{interface.name};
   string itf_name = parser.MakeInterfaceName(false);
   string class_name = parser.MakeAdaptorName(false);
@@ -71,8 +70,8 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(
   parser.AddOpenNamespaces(text, false);
 
   text->AddBlankLine();
-  text->AddLine(StringPrintf("// Interface definition for %s.",
-                             full_itf_name.c_str()));
+  text->AddLine(
+      StringPrintf("// Interface definition for %s.", full_itf_name.c_str()));
   text->AddComments(interface.doc_string);
   text->AddLine(StringPrintf("class %s {", itf_name.c_str()));
   text->AddLineWithOffset("public:", kScopeOffset);
@@ -83,8 +82,8 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(
   text->AddLine("};");
 
   text->AddBlankLine();
-  text->AddLine(StringPrintf("// Interface adaptor for %s.",
-                             full_itf_name.c_str()));
+  text->AddLine(
+      StringPrintf("// Interface adaptor for %s.", full_itf_name.c_str()));
   text->AddLine(StringPrintf("class %s {", class_name.c_str()));
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
@@ -113,14 +112,14 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(
   AddPropertyDataMembers(interface, text);
 
   if (!interface.methods.empty()) {
-    text->AddLine(StringPrintf(
-        "%s* interface_;  // Owned by container of this adapter.",
-        itf_name.c_str()));
+    text->AddLine(
+        StringPrintf("%s* interface_;  // Owned by container of this adapter.",
+                     itf_name.c_str()));
   }
 
   text->AddBlankLine();
-  text->AddLine(StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);",
-                             class_name.c_str()));
+  text->AddLine(
+      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", class_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
 
@@ -131,10 +130,10 @@ void AdaptorGenerator::GenerateInterfaceAdaptor(
 void AdaptorGenerator::AddConstructor(const Interface& interface,
                                       const string& class_name,
                                       const string& itf_name,
-                                      IndentedText *text) {
+                                      IndentedText* text) {
   if (interface.methods.empty()) {
-    text->AddLine(StringPrintf("%s(%s* /* interface */) {}",
-                               class_name.c_str(), itf_name.c_str()));
+    text->AddLine(StringPrintf("%s(%s* /* interface */) {}", class_name.c_str(),
+                               itf_name.c_str()));
 
   } else {
     text->AddLine(StringPrintf("%s(%s* interface) : interface_(interface) {}",
@@ -142,18 +141,17 @@ void AdaptorGenerator::AddConstructor(const Interface& interface,
   }
 }
 
-void AdaptorGenerator::AddRegisterWithDBusObject(
-    const std::string& itf_name,
-    const Interface& interface,
-    IndentedText *text) {
+void AdaptorGenerator::AddRegisterWithDBusObject(const std::string& itf_name,
+                                                 const Interface& interface,
+                                                 IndentedText* text) {
   text->AddBlankLine();
   text->AddLine(
-    "void RegisterWithDBusObject(brillo::dbus_utils::DBusObject* object) {");
+      "void RegisterWithDBusObject(brillo::dbus_utils::DBusObject* object) {");
   text->PushOffset(kBlockOffset);
   text->AddLine("brillo::dbus_utils::DBusInterface* itf =");
-  text->AddLineWithOffset(
-      StringPrintf("object->AddOrGetInterface(\"%s\");",
-                   interface.name.c_str()), kLineContinuationOffset);
+  text->AddLineWithOffset(StringPrintf("object->AddOrGetInterface(\"%s\");",
+                                       interface.name.c_str()),
+                          kLineContinuationOffset);
   RegisterInterface(itf_name, interface, text);
   text->PopOffset();
   text->AddLine("}");
@@ -161,7 +159,7 @@ void AdaptorGenerator::AddRegisterWithDBusObject(
 
 void AdaptorGenerator::RegisterInterface(const string& itf_name,
                                          const Interface& interface,
-                                         IndentedText *text) {
+                                         IndentedText* text) {
   if (!interface.methods.empty())
     text->AddBlankLine();
   for (const auto& method : interface.methods) {
@@ -191,8 +189,8 @@ void AdaptorGenerator::RegisterInterface(const string& itf_name,
     text->PushOffset(kLineContinuationOffset);
     text->AddLine(StringPrintf("\"%s\",", method.name.c_str()));
     text->AddLine("base::Unretained(interface_),");
-    text->AddLine(StringPrintf("&%s::%s);", itf_name.c_str(),
-                               method.name.c_str()));
+    text->AddLine(
+        StringPrintf("&%s::%s);", itf_name.c_str(), method.name.c_str()));
     text->PopOffset();
   }
 
@@ -204,8 +202,7 @@ void AdaptorGenerator::RegisterInterface(const string& itf_name,
     string signal_type_name = StringPrintf("Signal%sType", signal.name.c_str());
     text->AddLine(StringPrintf("%s = itf->RegisterSignalOfType<%s>(\"%s\");",
                                signal_var_name.c_str(),
-                               signal_type_name.c_str(),
-                               signal.name.c_str()));
+                               signal_type_name.c_str(), signal.name.c_str()));
   }
 
   // Register exported properties.
@@ -223,9 +220,8 @@ void AdaptorGenerator::RegisterInterface(const string& itf_name,
       text->AddLine(StringPrintf("%s_.SetAccessMode(", variable_name.c_str()));
       text->PushOffset(kLineContinuationOffset);
       text->AddLine(
-          StringPrintf(
-              "brillo::dbus_utils::ExportedPropertyBase::Access::%s);",
-              write_access.c_str()));
+          StringPrintf("brillo::dbus_utils::ExportedPropertyBase::Access::%s);",
+                       write_access.c_str()));
       text->PopOffset();
       text->AddLine(StringPrintf("%s_.SetValidator(", variable_name.c_str()));
       text->PushOffset(kLineContinuationOffset);
@@ -245,7 +241,7 @@ void AdaptorGenerator::RegisterInterface(const string& itf_name,
 }
 
 void AdaptorGenerator::AddInterfaceMethods(const Interface& interface,
-                                           IndentedText *text) {
+                                           IndentedText* text) {
   IndentedText block;
   DBusSignature signature;
   if (!interface.methods.empty())
@@ -300,8 +296,7 @@ void AdaptorGenerator::AddInterfaceMethods(const Interface& interface,
         break;
     }
     block.AddComments(method.doc_string);
-    string method_start = StringPrintf("virtual %s %s(",
-                                       return_type.c_str(),
+    string method_start = StringPrintf("virtual %s %s(", return_type.c_str(),
                                        method.name.c_str());
     string method_end = StringPrintf(")%s = 0;", const_method.c_str());
     int index = 0;
@@ -335,9 +330,8 @@ void AdaptorGenerator::AddInterfaceMethods(const Interface& interface,
   text->AddBlock(block);
 }
 
-void AdaptorGenerator::AddSendSignalMethods(
-    const Interface& interface,
-    IndentedText *text) {
+void AdaptorGenerator::AddSendSignalMethods(const Interface& interface,
+                                            IndentedText* text) {
   IndentedText block;
   DBusSignature signature;
 
@@ -346,8 +340,8 @@ void AdaptorGenerator::AddSendSignalMethods(
 
   for (const auto& signal : interface.signals) {
     block.AddComments(signal.doc_string);
-    string method_start = StringPrintf("void Send%sSignal(",
-                                       signal.name.c_str());
+    string method_start =
+        StringPrintf("void Send%sSignal(", signal.name.c_str());
     string method_end = ") {";
 
     int index = 0;
@@ -377,8 +371,8 @@ void AdaptorGenerator::AddSendSignalMethods(
 
     string args = base::JoinString(param_names, ", ");
     block.PushOffset(kBlockOffset);
-    block.AddLine(StringPrintf("auto signal = signal_%s_.lock();",
-                                signal.name.c_str()));
+    block.AddLine(
+        StringPrintf("auto signal = signal_%s_.lock();", signal.name.c_str()));
     block.AddLine("if (signal)");
     block.AddLineWithOffset(StringPrintf("signal->Send(%s);", args.c_str()),
                             kBlockOffset);
@@ -389,15 +383,14 @@ void AdaptorGenerator::AddSendSignalMethods(
 }
 
 void AdaptorGenerator::AddSignalDataMembers(const Interface& interface,
-                                            IndentedText *text) {
+                                            IndentedText* text) {
   IndentedText block;
   DBusSignature signature;
 
   for (const auto& signal : interface.signals) {
     string signal_type_name = StringPrintf("Signal%sType", signal.name.c_str());
-    string signal_type_alias_begin =
-        StringPrintf("using %s = brillo::dbus_utils::DBusSignal<",
-                     signal_type_name.c_str());
+    string signal_type_alias_begin = StringPrintf(
+        "using %s = brillo::dbus_utils::DBusSignal<", signal_type_name.c_str());
     string signal_type_alias_end = ">;";
     vector<string> params;
     for (const auto& argument : signal.arguments) {
@@ -418,17 +411,15 @@ void AdaptorGenerator::AddSignalDataMembers(const Interface& interface,
       block.AddLine(params.back() + signal_type_alias_end);
       block.PopOffset();
     }
-    block.AddLine(
-        StringPrintf("std::weak_ptr<%s> signal_%s_;",
-                      signal_type_name.c_str(), signal.name.c_str()));
+    block.AddLine(StringPrintf("std::weak_ptr<%s> signal_%s_;",
+                               signal_type_name.c_str(), signal.name.c_str()));
     block.AddBlankLine();
   }
   text->AddBlock(block);
 }
 
 void AdaptorGenerator::AddPropertyMethodImplementation(
-    const Interface& interface,
-    IndentedText *text) {
+    const Interface& interface, IndentedText* text) {
   IndentedText block;
   DBusSignature signature;
 
@@ -445,41 +436,34 @@ void AdaptorGenerator::AddPropertyMethodImplementation(
                                property.name.c_str(), property.name.c_str()));
 
     // Getter method.
-    block.AddLine(StringPrintf("%s Get%s() const {",
-                               type.c_str(),
+    block.AddLine(StringPrintf("%s Get%s() const {", type.c_str(),
                                property.name.c_str()));
     block.PushOffset(kBlockOffset);
     block.AddLine(StringPrintf("return %s_.GetValue().Get<%s>();",
-                               variable_name.c_str(),
-                               type.c_str()));
+                               variable_name.c_str(), type.c_str()));
     block.PopOffset();
     block.AddLine("}");
 
     // Setter method.
     type = parsed_type->GetInArgType(DBusType::Receiver::kAdaptor);
-    block.AddLine(StringPrintf("void Set%s(%s %s) {",
-                               property.name.c_str(),
-                               type.c_str(),
-                               variable_name.c_str()));
+    block.AddLine(StringPrintf("void Set%s(%s %s) {", property.name.c_str(),
+                               type.c_str(), variable_name.c_str()));
     block.PushOffset(kBlockOffset);
-    block.AddLine(StringPrintf("%s_.SetValue(%s);",
-                               variable_name.c_str(),
+    block.AddLine(StringPrintf("%s_.SetValue(%s);", variable_name.c_str(),
                                variable_name.c_str()));
     block.PopOffset();
     block.AddLine("}");
 
     // Validation method for property with write access.
     if (property.access != "read") {
-      block.AddLine(StringPrintf("virtual bool Validate%s(",
-                                 property.name.c_str()));
+      block.AddLine(
+          StringPrintf("virtual bool Validate%s(", property.name.c_str()));
       block.PushOffset(kLineContinuationOffset);
       // Explicitly specify the "value" parameter as const & to match the
       // validator callback function signature.
       type = parsed_type->GetBaseType(DBusType::Direction::kExtract);
-      block.AddLine(
-          StringPrintf(
-              "brillo::ErrorPtr* /*error*/, const %s& /*value*/) {",
-              type.c_str()));
+      block.AddLine(StringPrintf(
+          "brillo::ErrorPtr* /*error*/, const %s& /*value*/) {", type.c_str()));
       block.PopOffset();
       block.PushOffset(kBlockOffset);
       block.AddLine("return true;");
@@ -491,7 +475,7 @@ void AdaptorGenerator::AddPropertyMethodImplementation(
 }
 
 void AdaptorGenerator::AddPropertyDataMembers(const Interface& interface,
-                                              IndentedText *text) {
+                                              IndentedText* text) {
   IndentedText block;
   DBusSignature signature;
 
@@ -501,9 +485,8 @@ void AdaptorGenerator::AddPropertyDataMembers(const Interface& interface,
     string type = parsed_type->GetBaseType(DBusType::Direction::kExtract);
     string variable_name = NameParser{property.name}.MakeVariableName();
 
-    block.AddLine(
-        StringPrintf("brillo::dbus_utils::ExportedProperty<%s> %s_;",
-                     type.c_str(), variable_name.c_str()));
+    block.AddLine(StringPrintf("brillo::dbus_utils::ExportedProperty<%s> %s_;",
+                               type.c_str(), variable_name.c_str()));
   }
   if (!interface.properties.empty())
     block.AddBlankLine();

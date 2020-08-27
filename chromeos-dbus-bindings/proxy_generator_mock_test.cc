@@ -180,9 +180,7 @@ class TestInterface2ProxyMock : public TestInterface2ProxyInterface {
 
 class ProxyGeneratorMockTest : public Test {
  public:
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
  protected:
   base::FilePath CreateInputFile(const string& contents) {
@@ -202,17 +200,14 @@ TEST_F(ProxyGeneratorMockTest, GenerateMocks) {
   interface.path = "/org/chromium/Test";
   interface.methods.emplace_back(
       "Elements",
-      vector<Interface::Argument>{
-          {"space_walk", kDBusTypeString},
-          {"ramblin_man", kDBusTypeArryOfObjects}},
+      vector<Interface::Argument>{{"space_walk", kDBusTypeString},
+                                  {"ramblin_man", kDBusTypeArryOfObjects}},
       vector<Interface::Argument>{{"", kDBusTypeString}});
   interface.methods.emplace_back(
-      "ReturnToPatagonia",
-      vector<Interface::Argument>{},
+      "ReturnToPatagonia", vector<Interface::Argument>{},
       vector<Interface::Argument>{{"", kDBusTypeInt64}});
   interface.methods.emplace_back(
-      "NiceWeatherForDucks",
-      vector<Interface::Argument>{{"", kDBusTypeBool}},
+      "NiceWeatherForDucks", vector<Interface::Argument>{{"", kDBusTypeBool}},
       vector<Interface::Argument>{});
   interface.methods.emplace_back("ExperimentNumberSix");
   // gmock can't handle more than 10 args. The generated method will also
@@ -220,31 +215,27 @@ TEST_F(ProxyGeneratorMockTest, GenerateMocks) {
   // callbacks and the timeout in the asynchronous case.
   interface.methods.emplace_back(
       "AllTheWayUpToEleven",
-      vector<Interface::Argument>{
-          {"arg1", kDBusTypeBool},
-          {"arg2", kDBusTypeBool},
-          {"arg3", kDBusTypeBool},
-          {"arg4", kDBusTypeBool},
-          {"arg5", kDBusTypeBool},
-          {"arg6", kDBusTypeBool},
-          {"arg7", kDBusTypeBool},
-          {"arg8", kDBusTypeBool}},
+      vector<Interface::Argument>{{"arg1", kDBusTypeBool},
+                                  {"arg2", kDBusTypeBool},
+                                  {"arg3", kDBusTypeBool},
+                                  {"arg4", kDBusTypeBool},
+                                  {"arg5", kDBusTypeBool},
+                                  {"arg6", kDBusTypeBool},
+                                  {"arg7", kDBusTypeBool},
+                                  {"arg8", kDBusTypeBool}},
       vector<Interface::Argument>{{"arg9", kDBusTypeBool}});
   interface.signals.emplace_back("Closer");
   interface.signals.emplace_back(
       "TheCurseOfKaZar",
-      vector<Interface::Argument>{
-          {"", kDBusTypeArryOfStrings},
-          {"", kDBusTypeByte}});
+      vector<Interface::Argument>{{"", kDBusTypeArryOfStrings},
+                                  {"", kDBusTypeByte}});
   interface.methods.back().doc_string = "Comment line1\nline2";
   Interface interface2;
   interface2.name = "org.chromium.TestInterface2";
   interface2.methods.emplace_back(
-      "GetPersonInfo",
-      vector<Interface::Argument>{},
-      vector<Interface::Argument>{
-          {"name", kDBusTypeString},
-          {"age", kDBusTypeInt32}});
+      "GetPersonInfo", vector<Interface::Argument>{},
+      vector<Interface::Argument>{{"name", kDBusTypeString},
+                                  {"age", kDBusTypeInt32}});
   interface2.properties.emplace_back("Data", "s", "read");
   interface2.properties.emplace_back("Name", "s", "readwrite");
   vector<Interface> interfaces{interface, interface2};

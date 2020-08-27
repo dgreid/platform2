@@ -80,7 +80,7 @@ TEST_F(IndentedTextTest, AddBlockWithOffset) {
   const size_t kOffset2 = 20;
   text_.AddBlockWithOffset(block, kOffset2);
   EXPECT_EQ(string(kOffset2 + kOffset0, ' ') + kTestString + "\n" +
-            string(kOffset2 + kOffset1, ' ') + kTestString + "\n",
+                string(kOffset2 + kOffset1, ' ') + kTestString + "\n",
             text_.GetContents());
 }
 
@@ -110,11 +110,10 @@ TEST_F(IndentedTextTest, PushPop) {
   EXPECT_EQ(0u, GetOffset());
   EXPECT_TRUE(GetHistory().empty());
 
-  EXPECT_EQ(string(kTestString) + "\n" +
-            string(kShift0, ' ') + kTestString + "\n" +
-            string(kShift0 + kShift1, ' ') + kTestString + "\n" +
-            string(kShift0, ' ') + kTestString + "\n" +
-            string(kTestString) + "\n",
+  EXPECT_EQ(string(kTestString) + "\n" + string(kShift0, ' ') + kTestString +
+                "\n" + string(kShift0 + kShift1, ' ') + kTestString + "\n" +
+                string(kShift0, ' ') + kTestString + "\n" +
+                string(kTestString) + "\n",
             text_.GetContents());
 }
 
@@ -150,9 +149,11 @@ TEST_F(IndentedTextTest, AddComments_EmptyLines) {
 
   )";
   text_.AddComments(comment_block);
-  EXPECT_EQ("// line1\n"
-            "//\n"
-            "// line2\n", text_.GetContents());
+  EXPECT_EQ(
+      "// line1\n"
+      "//\n"
+      "// line2\n",
+      text_.GetContents());
 }
 
 TEST_F(IndentedTextTest, AddComments_Indentation) {
@@ -164,11 +165,13 @@ TEST_F(IndentedTextTest, AddComments_Indentation) {
   line3
   )";
   text_.AddComments(comment_block);
-  EXPECT_EQ("// line1\n"
-            "//   - bullet1\n"
-            "//     line2\n"
-            "//   - bullet2\n"
-            "// line3\n", text_.GetContents());
+  EXPECT_EQ(
+      "// line1\n"
+      "//   - bullet1\n"
+      "//     line2\n"
+      "//   - bullet2\n"
+      "// line3\n",
+      text_.GetContents());
 }
 
 TEST_F(IndentedTextTest, GetLines) {

@@ -1644,9 +1644,7 @@ class TestInterfaceProxy final : public TestInterfaceProxyInterface {
 
 class ProxyGeneratorTest : public Test {
  public:
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
  protected:
   base::FilePath CreateInputFile(const string& contents) {
@@ -1666,42 +1664,34 @@ TEST_F(ProxyGeneratorTest, GenerateAdaptors) {
   interface.path = "/org/chromium/Test";
   interface.methods.emplace_back(
       "Elements",
-      vector<Interface::Argument>{
-          {"space_walk", kDBusTypeString},
-          {"ramblin_man", kDBusTypeArryOfObjects}},
+      vector<Interface::Argument>{{"space_walk", kDBusTypeString},
+                                  {"ramblin_man", kDBusTypeArryOfObjects}},
       vector<Interface::Argument>{{"", kDBusTypeString}});
   interface.methods.emplace_back(
-      "ReturnToPatagonia",
-      vector<Interface::Argument>{},
+      "ReturnToPatagonia", vector<Interface::Argument>{},
       vector<Interface::Argument>{{"", kDBusTypeInt64}});
   interface.methods.emplace_back(
-      "NiceWeatherForDucks",
-      vector<Interface::Argument>{{"", kDBusTypeBool}},
+      "NiceWeatherForDucks", vector<Interface::Argument>{{"", kDBusTypeBool}},
       vector<Interface::Argument>{});
   interface.methods.emplace_back("ExperimentNumberSix");
   interface.methods.back().doc_string = "Comment line1\nline2";
   interface.methods.emplace_back(
       "NervousTension",
       vector<Interface::Argument>{
-        {"page_one", string(kProtobufType)+"PageOne"}},
-      vector<Interface::Argument>{
-        {"pushy", string(kProtobufType)+"Pushy"}});
-
+          {"page_one", string(kProtobufType) + "PageOne"}},
+      vector<Interface::Argument>{{"pushy", string(kProtobufType) + "Pushy"}});
 
   interface.signals.emplace_back("Closer");
   interface.signals.emplace_back(
       "TheCurseOfKaZar",
-      vector<Interface::Argument>{
-          {"", kDBusTypeArryOfStrings},
-          {"", kDBusTypeByte}});
+      vector<Interface::Argument>{{"", kDBusTypeArryOfStrings},
+                                  {"", kDBusTypeByte}});
   Interface interface2;
   interface2.name = "org.chromium.TestInterface2";
   interface2.methods.emplace_back(
-      "GetPersonInfo",
-      vector<Interface::Argument>{},
-      vector<Interface::Argument>{
-          {"name", kDBusTypeString},
-          {"age", kDBusTypeInt32}});
+      "GetPersonInfo", vector<Interface::Argument>{},
+      vector<Interface::Argument>{{"name", kDBusTypeString},
+                                  {"age", kDBusTypeInt32}});
   vector<Interface> interfaces{interface, interface2};
   base::FilePath output_path = temp_dir_.GetPath().Append("output.h");
   ServiceConfig config;
@@ -1773,8 +1763,8 @@ TEST_F(ProxyGeneratorTest, GenerateAdaptorsWithObjectManager) {
   EXPECT_TRUE(base::ReadFileToString(output_path, &contents));
   // The header guards contain the (temporary) filename, so we search for
   // the content we need within the string.
-  test_utils::EXPECT_TEXT_CONTAINED(
-      kExpectedContentWithObjectManager, contents);
+  test_utils::EXPECT_TEXT_CONTAINED(kExpectedContentWithObjectManager,
+                                    contents);
 }
 
 TEST_F(ProxyGeneratorTest, GenerateAdaptorsWithObjectManagerAndServiceName) {
@@ -1804,13 +1794,11 @@ TEST_F(ProxyGeneratorTest, NewFileDescriptors) {
   Interface interface;
   interface.name = "org.chromium.TestInterface";
   interface.path = "/org/chromium/Test";
-  interface.methods.emplace_back(
-      "WrapFileDescriptor",
-      vector<Interface::Argument>{{"", "h"}},
-      vector<Interface::Argument>{{"", "h"}});
-  interface.signals.emplace_back(
-      "File",
-      vector<Interface::Argument>{{"", "h"}});
+  interface.methods.emplace_back("WrapFileDescriptor",
+                                 vector<Interface::Argument>{{"", "h"}},
+                                 vector<Interface::Argument>{{"", "h"}});
+  interface.signals.emplace_back("File",
+                                 vector<Interface::Argument>{{"", "h"}});
   base::FilePath output_path = temp_dir_.GetPath().Append("output2.h");
   ServiceConfig config;
   ProxyGenerator gen;
@@ -1819,8 +1807,8 @@ TEST_F(ProxyGeneratorTest, NewFileDescriptors) {
   EXPECT_TRUE(base::ReadFileToString(output_path, &contents));
   // The header guards contain the (temporary) filename, so we search for
   // the content we need within the string.
-  test_utils::EXPECT_TEXT_CONTAINED(
-      kExpectedContentNewFileDescriptors, contents);
+  test_utils::EXPECT_TEXT_CONTAINED(kExpectedContentNewFileDescriptors,
+                                    contents);
 }
 
 }  // namespace chromeos_dbus_bindings

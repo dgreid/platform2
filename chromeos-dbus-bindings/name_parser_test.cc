@@ -80,8 +80,8 @@ TEST(NameParser, MakeAdaptorName) {
 
 TEST(NameParser, AddOpenNamespaces) {
   std::string expected =
-    "namespace foo {\n"
-    "namespace bar {\n";
+      "namespace foo {\n"
+      "namespace bar {\n";
   NameParser parser{"foo.bar.FooBar"};
   IndentedText text;
   parser.AddOpenNamespaces(&text, false);
@@ -90,9 +90,9 @@ TEST(NameParser, AddOpenNamespaces) {
 
 TEST(NameParser, AddOpenNamespaces_WithMainType) {
   std::string expected =
-    "namespace foo {\n"
-    "namespace bar {\n"
-    "namespace FooBar {\n";
+      "namespace foo {\n"
+      "namespace bar {\n"
+      "namespace FooBar {\n";
   NameParser parser{"foo.bar.FooBar"};
   IndentedText text;
   parser.AddOpenNamespaces(&text, true);
@@ -101,8 +101,8 @@ TEST(NameParser, AddOpenNamespaces_WithMainType) {
 
 TEST(NameParser, AddCloseNamespaces) {
   std::string expected =
-    "}  // namespace bar\n"
-    "}  // namespace foo\n";
+      "}  // namespace bar\n"
+      "}  // namespace foo\n";
   NameParser parser{"foo.bar.FooBar"};
   IndentedText text;
   parser.AddCloseNamespaces(&text, false);
@@ -111,9 +111,9 @@ TEST(NameParser, AddCloseNamespaces) {
 
 TEST(NameParser, AddCloseNamespaces_WithMainType) {
   std::string expected =
-    "}  // namespace FooBar\n"
-    "}  // namespace bar\n"
-    "}  // namespace foo\n";
+      "}  // namespace FooBar\n"
+      "}  // namespace bar\n"
+      "}  // namespace foo\n";
   NameParser parser{"foo.bar.FooBar"};
   IndentedText text;
   parser.AddCloseNamespaces(&text, true);

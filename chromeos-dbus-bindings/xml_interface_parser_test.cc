@@ -150,7 +150,7 @@ TEST_F(XmlInterfaceParserTest, GoodInputFile) {
   //    name="org.chromium.DBus.Argument.ProtobufClass"
   //    value="PassMeProtosRequest" />
   EXPECT_EQ(kRequestArgument, interface.methods[2].input_arguments[0].name);
-  EXPECT_EQ(string(kProtobufType)+string(kRequestArgumentProto),
+  EXPECT_EQ(string(kProtobufType) + string(kRequestArgumentProto),
             interface.methods[2].input_arguments[0].type);
 
   // <arg name="reply" type="ay" direction="out">
@@ -158,7 +158,7 @@ TEST_F(XmlInterfaceParserTest, GoodInputFile) {
   //    name="org.chromium.DBus.Argument.ProtobufClass"
   //    value="PassMeProtosReply" />
   EXPECT_EQ(kReplyArgument, interface.methods[2].output_arguments[0].name);
-  EXPECT_EQ(string(kProtobufType)+string(kReplyArgumentProto),
+  EXPECT_EQ(string(kProtobufType) + string(kReplyArgumentProto),
             interface.methods[2].output_arguments[0].type);
 
   // <signal name="BSSRemoved">

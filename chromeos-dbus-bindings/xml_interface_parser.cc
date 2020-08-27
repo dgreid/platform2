@@ -65,17 +65,14 @@ bool XmlInterfaceParser::ParseXmlInterfaceFile(
     const std::vector<std::string>& ignore_interfaces) {
   auto parser = XML_ParserCreate(nullptr);
   XML_SetUserData(parser, this);
-  XML_SetElementHandler(parser,
-                        &XmlInterfaceParser::HandleElementStart,
+  XML_SetElementHandler(parser, &XmlInterfaceParser::HandleElementStart,
                         &XmlInterfaceParser::HandleElementEnd);
   XML_SetCharacterDataHandler(parser, &XmlInterfaceParser::HandleCharData);
   const int kIsFinal = XML_TRUE;
 
   element_path_.clear();
-  XML_Status res = XML_Parse(parser,
-                             contents.c_str(),
-                             contents.size(),
-                             kIsFinal);
+  XML_Status res =
+      XML_Parse(parser, contents.c_str(), contents.size(), kIsFinal);
   XML_ParserFree(parser);
 
   if (res != XML_STATUS_OK) {
@@ -97,8 +94,8 @@ bool XmlInterfaceParser::ParseXmlInterfaceFile(
   return true;
 }
 
-void XmlInterfaceParser::OnOpenElement(
-    const string& element_name, const XmlAttributeMap& attributes) {
+void XmlInterfaceParser::OnOpenElement(const string& element_name,
+                                       const XmlAttributeMap& attributes) {
   string prev_element;
   if (!element_path_.empty())
     prev_element = element_path_.back();
@@ -115,8 +112,7 @@ void XmlInterfaceParser::OnOpenElement(
     CHECK_EQ(kNodeTag, prev_element)
         << "Unexpected tag " << element_name << " inside " << prev_element;
     string interface_name = GetValidatedElementName(attributes, element_path_);
-    Interface itf(interface_name,
-                  std::vector<Interface::Method>{},
+    Interface itf(interface_name, std::vector<Interface::Method>{},
                   std::vector<Interface::Signal>{},
                   std::vector<Interface::Property>{});
     itf.path = node_names_.back();
@@ -134,20 +130,20 @@ void XmlInterfaceParser::OnOpenElement(
   } else if (element_name == kPropertyTag) {
     CHECK_EQ(kInterfaceTag, prev_element)
         << "Unexpected tag " << element_name << " inside " << prev_element;
-    interfaces_.back().properties.push_back(ParseProperty(attributes,
-                                                          element_path_));
+    interfaces_.back().properties.push_back(
+        ParseProperty(attributes, element_path_));
   } else if (element_name == kArgumentTag) {
     if (prev_element == kMethodTag) {
       AddMethodArgument(attributes);
     } else if (prev_element == kSignalTag) {
       AddSignalArgument(attributes);
     } else {
-      LOG(FATAL) << "Unexpected tag " << element_name
-                 << " inside " << prev_element;
+      LOG(FATAL) << "Unexpected tag " << element_name << " inside "
+                 << prev_element;
     }
   } else if (element_name == kAnnotationTag) {
-    string name = GetValidatedElementAttribute(attributes, element_path_,
-                                               kNameAttribute);
+    string name =
+        GetValidatedElementAttribute(attributes, element_path_, kNameAttribute);
     // Value is optional. Default to empty string if omitted.
     string value;
     GetElementAttribute(attributes, element_path_, kValueAttribute, &value);
@@ -189,8 +185,8 @@ void XmlInterfaceParser::OnOpenElement(
         last_arg_->type = string(kProtobufType) + value;
       }
     } else {
-      LOG(FATAL) << "Unexpected tag " << element_name
-                 << " inside " << prev_element;
+      LOG(FATAL) << "Unexpected tag " << element_name << " inside "
+                 << prev_element;
     }
   } else if (element_name == kDocStringTag) {
     CHECK(!prev_element.empty() && prev_element != kNodeTag)
@@ -222,7 +218,6 @@ void XmlInterfaceParser::OnCharData(const std::string& content) {
 
   (*doc_string_ptr) += content;
 }
-
 
 void XmlInterfaceParser::AddMethodArgument(const XmlAttributeMap& attributes) {
   string argument_direction;
@@ -262,11 +257,10 @@ void XmlInterfaceParser::OnCloseElement(const string& element_name) {
 }
 
 // static
-bool XmlInterfaceParser::GetElementAttribute(
-    const XmlAttributeMap& attributes,
-    const vector<string>& element_path,
-    const string& element_key,
-    string* element_value) {
+bool XmlInterfaceParser::GetElementAttribute(const XmlAttributeMap& attributes,
+                                             const vector<string>& element_path,
+                                             const string& element_key,
+                                             string* element_value) {
   if (attributes.find(element_key) == attributes.end()) {
     return false;
   }
@@ -282,9 +276,7 @@ string XmlInterfaceParser::GetValidatedElementAttribute(
     const vector<string>& element_path,
     const string& element_key) {
   string element_value;
-  CHECK(GetElementAttribute(attributes,
-                            element_path,
-                            element_key,
+  CHECK(GetElementAttribute(attributes, element_path, element_key,
                             &element_value))
       << GetElementPath(element_path) << " does not contain a " << element_key
       << " attribute";
@@ -295,8 +287,7 @@ string XmlInterfaceParser::GetValidatedElementAttribute(
 
 // static
 string XmlInterfaceParser::GetValidatedElementName(
-    const XmlAttributeMap& attributes,
-    const vector<string>& element_path) {
+    const XmlAttributeMap& attributes, const vector<string>& element_path) {
   return GetValidatedElementAttribute(attributes, element_path, kNameAttribute);
 }
 
@@ -309,8 +300,8 @@ Interface::Argument XmlInterfaceParser::ParseArgument(
   // Since the "name" field is optional, use the un-validated variant.
   GetElementAttribute(attributes, path, kNameAttribute, &argument_name);
 
-  string argument_type = GetValidatedElementAttribute(
-      attributes, path, kTypeAttribute);
+  string argument_type =
+      GetValidatedElementAttribute(attributes, path, kTypeAttribute);
   return Interface::Argument(argument_name, argument_type);
 }
 
@@ -321,10 +312,10 @@ Interface::Property XmlInterfaceParser::ParseProperty(
   vector<string> path = element_path;
   path.push_back(kPropertyTag);
   string property_name = GetValidatedElementName(attributes, path);
-  string property_type = GetValidatedElementAttribute(attributes, path,
-                                                      kTypeAttribute);
-  string property_access = GetValidatedElementAttribute(attributes, path,
-                                                        kAccessAttribute);
+  string property_type =
+      GetValidatedElementAttribute(attributes, path, kTypeAttribute);
+  string property_access =
+      GetValidatedElementAttribute(attributes, path, kAccessAttribute);
   return Interface::Property(property_name, property_type, property_access);
 }
 
@@ -334,7 +325,7 @@ void XmlInterfaceParser::HandleElementStart(void* user_data,
                                             const XML_Char** attr) {
   XmlAttributeMap attributes;
   if (attr != nullptr) {
-    for (size_t n = 0; attr[n] != nullptr && attr[n+1] != nullptr; n += 2) {
+    for (size_t n = 0; attr[n] != nullptr && attr[n + 1] != nullptr; n += 2) {
       auto key = attr[n];
       auto value = attr[n + 1];
       attributes.insert(std::make_pair(key, value));
@@ -353,7 +344,7 @@ void XmlInterfaceParser::HandleElementEnd(void* user_data,
 
 // static
 void XmlInterfaceParser::HandleCharData(void* user_data,
-                                        const char *content,
+                                        const char* content,
                                         int length) {
   auto parser = reinterpret_cast<XmlInterfaceParser*>(user_data);
   parser->OnCharData(string(content, length));

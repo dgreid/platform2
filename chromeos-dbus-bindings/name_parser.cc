@@ -16,11 +16,11 @@ namespace chromeos_dbus_bindings {
 
 namespace {
 
-void AddOpenNamespace(IndentedText *text, const std::string& name) {
+void AddOpenNamespace(IndentedText* text, const std::string& name) {
   text->AddLine(base::StringPrintf("namespace %s {", name.c_str()));
 }
 
-void AddCloseNamespace(IndentedText *text, const std::string& name) {
+void AddCloseNamespace(IndentedText* text, const std::string& name) {
   text->AddLine(base::StringPrintf("}  // namespace %s", name.c_str()));
 }
 
@@ -76,7 +76,7 @@ std::string NameParser::MakeAdaptorName(bool fully_qualified) const {
   return fully_qualified ? MakeFullyQualified(adaptor_name) : adaptor_name;
 }
 
-void NameParser::AddOpenNamespaces(IndentedText *text,
+void NameParser::AddOpenNamespaces(IndentedText* text,
                                    bool add_main_type) const {
   for (const auto& ns : namespaces_) {
     AddOpenNamespace(text, ns);
@@ -86,7 +86,7 @@ void NameParser::AddOpenNamespaces(IndentedText *text,
     AddOpenNamespace(text, type_name_);
 }
 
-void NameParser::AddCloseNamespaces(IndentedText *text,
+void NameParser::AddCloseNamespaces(IndentedText* text,
                                     bool add_main_type) const {
   if (add_main_type)
     AddCloseNamespace(text, type_name_);

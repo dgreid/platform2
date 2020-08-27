@@ -113,7 +113,7 @@ class XmlInterfaceParser {
                                  const XML_Char* element,
                                  const XML_Char** attr);
   static void HandleElementEnd(void* user_data, const XML_Char* element);
-  static void HandleCharData(void* user_data, const char *content, int length);
+  static void HandleCharData(void* user_data, const char* content, int length);
 
   // The output of the parse.
   std::vector<Interface> interfaces_;

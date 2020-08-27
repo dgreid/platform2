@@ -366,9 +366,7 @@ class TestAdaptor {
 }  // namespace
 class AdaptorGeneratorTest : public Test {
  public:
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
  protected:
   base::FilePath CreateInputFile(const string& contents) {
@@ -388,66 +386,50 @@ TEST_F(AdaptorGeneratorTest, GenerateAdaptors) {
   interface.path = "/org/chromium/Test";
   interface.methods.emplace_back(
       "Kaneda",
-      vector<Interface::Argument>{
-          {"iwata", kDBusTypeString},
-          {"clarke", kDBusTypeArryOfObjects}},
+      vector<Interface::Argument>{{"iwata", kDBusTypeString},
+                                  {"clarke", kDBusTypeArryOfObjects}},
       vector<Interface::Argument>{{"", kDBusTypeString}});
   interface.methods.back().include_dbus_message = true;
   interface.methods.emplace_back(
-      "Tetsuo",
-      vector<Interface::Argument>{{"", kDBusTypeInt32}},
+      "Tetsuo", vector<Interface::Argument>{{"", kDBusTypeInt32}},
       vector<Interface::Argument>{{"", kDBusTypeInt64}});
   interface.methods.emplace_back("Kei");
   // Interface methods with more than one return argument should be ignored.
   interface.methods.emplace_back(
-      "Kiyoko",
-      vector<Interface::Argument>{},
-      vector<Interface::Argument>{
-          {"akira", kDBusTypeInt64},
-          {"", kDBusTypeString}});
+      "Kiyoko", vector<Interface::Argument>{},
+      vector<Interface::Argument>{{"akira", kDBusTypeInt64},
+                                  {"", kDBusTypeString}});
 
   // Interface methods with protobuf class.
   interface.methods.emplace_back(
       "Takashi",
+      vector<Interface::Argument>{{"onishi", string(kProtobufType) + "Onishi"}},
       vector<Interface::Argument>{
-          {"onishi", string(kProtobufType)+"Onishi"}},
-      vector<Interface::Argument>{
-          {"miyako", string(kProtobufType)+"Miyako"}});
+          {"miyako", string(kProtobufType) + "Miyako"}});
 
   // Signals generate helper methods to send them.
+  interface.signals.emplace_back("Update", vector<Interface::Argument>{});
   interface.signals.emplace_back(
-      "Update",
-      vector<Interface::Argument>{});
-  interface.signals.emplace_back(
-      "Mapping",
-      vector<Interface::Argument>{
-          {"key", kDBusTypeString},
-          {"", kDBusTypeArryOfObjects}});
-  interface.properties.emplace_back(
-      "CharacterName",
-      kDBusTypeString,
-      kPropertyAccessReadOnly);
-  interface.properties.emplace_back(
-      "WriteProperty",
-      kDBusTypeString,
-      kPropertyAccessReadWrite);
+      "Mapping", vector<Interface::Argument>{{"key", kDBusTypeString},
+                                             {"", kDBusTypeArryOfObjects}});
+  interface.properties.emplace_back("CharacterName", kDBusTypeString,
+                                    kPropertyAccessReadOnly);
+  interface.properties.emplace_back("WriteProperty", kDBusTypeString,
+                                    kPropertyAccessReadWrite);
 
   Interface interface2;
   interface2.name = kInterfaceName2;
   interface2.methods.emplace_back(
-      "Kaneda2",
-      vector<Interface::Argument>{{"iwata", kDBusTypeString}},
+      "Kaneda2", vector<Interface::Argument>{{"iwata", kDBusTypeString}},
       vector<Interface::Argument>{{"", kDBusTypeString}});
   interface2.methods.back().is_const = true;
   interface2.methods.back().kind = Interface::Method::Kind::kSimple;
   interface2.methods.emplace_back(
-      "Tetsuo2",
-      vector<Interface::Argument>{{"", kDBusTypeInt32}},
+      "Tetsuo2", vector<Interface::Argument>{{"", kDBusTypeInt32}},
       vector<Interface::Argument>{{"", kDBusTypeInt64}});
   interface2.methods.back().kind = Interface::Method::Kind::kAsync;
   interface2.methods.emplace_back(
-      "Kei2",
-      vector<Interface::Argument>{},
+      "Kei2", vector<Interface::Argument>{},
       vector<Interface::Argument>{{"", kDBusTypeBool}});
   interface2.methods.back().kind = Interface::Method::Kind::kAsync;
   interface2.methods.back().include_dbus_message = true;
@@ -471,8 +453,7 @@ TEST_F(AdaptorGeneratorTest, NewFileDescriptors) {
       vector<Interface::Argument>{{"", kDBusTypeFileDescriptor}},
       vector<Interface::Argument>{{"", kDBusTypeFileDescriptor}});
   interface.signals.emplace_back(
-      "File",
-      vector<Interface::Argument>{{"", kDBusTypeFileDescriptor}});
+      "File", vector<Interface::Argument>{{"", kDBusTypeFileDescriptor}});
 
   base::FilePath output_path = temp_dir_.GetPath().Append("output2.h");
   AdaptorGenerator gen;

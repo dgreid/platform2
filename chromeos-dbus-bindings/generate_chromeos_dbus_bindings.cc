@@ -34,7 +34,8 @@ static const char kProxy[] = "proxy";
 static const char kMock[] = "mock";
 static const char kProxyPathForMocks[] = "proxy-path-in-mocks";
 static const char kServiceConfig[] = "service-config";
-static const char kHelpMessage[] = "\n"
+static const char kHelpMessage[] =
+    "\n"
     "generate-chromeos-dbus-bindings itf1.xml [itf2.xml...] [switches]\n"
     "    itf1.xml, ... = the input interface file(s) [mandatory].\n"
     "Available Switches: \n"
@@ -73,9 +74,8 @@ base::FilePath SanitizeFilePath(const std::string& path) {
   return path_out;
 }
 
-
 // Load the service configuration from the provided JSON file.
-bool LoadConfig(const base::FilePath& path, ServiceConfig *config) {
+bool LoadConfig(const base::FilePath& path, ServiceConfig* config) {
   JSONFileValueDeserializer reader(path);
   std::string error_str;
   std::unique_ptr<base::Value> json = reader.Deserialize(nullptr, &error_str);
@@ -123,7 +123,7 @@ bool LoadConfig(const base::FilePath& path, ServiceConfig *config) {
   return true;
 }
 
-}   // anonymous namespace
+}  // anonymous namespace
 
 int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
@@ -173,8 +173,7 @@ int main(int argc, char** argv) {
         cl->GetSwitchValueASCII(switches::kMethodNames);
     VLOG(1) << "Outputting method names to " << method_name_file;
     if (!MethodNameGenerator::GenerateMethodNames(
-            parser.interfaces(),
-            RemoveQuotes(method_name_file))) {
+            parser.interfaces(), RemoveQuotes(method_name_file))) {
       LOG(ERROR) << "Failed to output method names.";
       return 1;
     }
@@ -188,7 +187,7 @@ int main(int argc, char** argv) {
                                       RemoveQuotes(adaptor_file))) {
       LOG(ERROR) << "Failed to output adaptor.";
       return 1;
-     }
+    }
   }
 
   ProxyGenerator proxy_gen;
@@ -201,7 +200,7 @@ int main(int argc, char** argv) {
     if (!proxy_gen.GenerateProxies(config, parser.interfaces(), proxy_path)) {
       LOG(ERROR) << "Failed to output proxy.";
       return 1;
-     }
+    }
   }
 
   base::FilePath proxy_include_path = proxy_path;
@@ -223,7 +222,7 @@ int main(int argc, char** argv) {
                                  use_literal_include_path)) {
       LOG(ERROR) << "Failed to output mock.";
       return 1;
-     }
+    }
   }
 
   return 0;

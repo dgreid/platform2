@@ -45,10 +45,9 @@ string GetParamString(const ParamDef& param_def) {
 
 ProxyGenerator::ProxyGenerator() = default;
 
-bool ProxyGenerator::GenerateProxies(
-    const ServiceConfig& config,
-    const std::vector<Interface>& interfaces,
-    const base::FilePath& output_file) {
+bool ProxyGenerator::GenerateProxies(const ServiceConfig& config,
+                                     const std::vector<Interface>& interfaces,
+                                     const base::FilePath& output_file) {
   IndentedText text;
 
   text.AddLine("// Automatic generation of D-Bus interfaces:");
@@ -86,8 +85,8 @@ bool ProxyGenerator::GenerateProxies(
     // Add forward-declaration for Object Manager proxy class.
     NameParser parser{config.object_manager.name};
     parser.AddOpenNamespaces(&text, false);
-    text.AddLine(StringPrintf("class %s;",
-                              parser.MakeProxyName(false).c_str()));
+    text.AddLine(
+        StringPrintf("class %s;", parser.MakeProxyName(false).c_str()));
     parser.AddCloseNamespaces(&text, false);
     text.AddBlankLine();
   }
@@ -150,13 +149,13 @@ bool ProxyGenerator::GenerateMocks(const ServiceConfig& config,
 
       // For each remaining components in the |src_components|, generate the
       // parent directory references ("..").
-      size_t src_count = std::distance(mismatch_pair.first,
-                                       src_components.end());
-      std::vector<std::string> components{
-          src_count, base::FilePath::kParentDirectory};
+      size_t src_count =
+          std::distance(mismatch_pair.first, src_components.end());
+      std::vector<std::string> components{src_count,
+                                          base::FilePath::kParentDirectory};
       // Append the remaining components from |dest_components|.
-      components.insert(components.end(),
-                        mismatch_pair.second, dest_components.end());
+      components.insert(components.end(), mismatch_pair.second,
+                        dest_components.end());
       // Finally, add the base name of the target file name.
       components.push_back(proxy_file.BaseName().value());
       // Now reconstruct the relative path.
@@ -164,8 +163,8 @@ bool ProxyGenerator::GenerateMocks(const ServiceConfig& config,
       for (const auto& component : components)
         relative_path = relative_path.Append(component);
     }
-    text.AddLine(StringPrintf("#include \"%s\"",
-                              relative_path.value().c_str()));
+    text.AddLine(
+        StringPrintf("#include \"%s\"", relative_path.value().c_str()));
     text.AddBlankLine();
   }
 
@@ -239,8 +238,8 @@ void ProxyGenerator::GenerateInterfaceProxy(const ServiceConfig& config,
   text->AddLine(StringPrintf("// Interface proxy for %s.",
                              parser.MakeFullCppName().c_str()));
   text->AddComments(interface.doc_string);
-  text->AddLine(StringPrintf("class %s final : public %s {",
-                             proxy_name.c_str(), base_interface_name.c_str()));
+  text->AddLine(StringPrintf("class %s final : public %s {", proxy_name.c_str(),
+                             base_interface_name.c_str()));
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
   AddPropertySet(config, interface, text);
@@ -302,8 +301,8 @@ void ProxyGenerator::GenerateInterfaceProxy(const ServiceConfig& config,
         "friend class %s;",
         NameParser{config.object_manager.name}.MakeProxyName(true).c_str()));
   }
-  text->AddLine(StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);",
-                             proxy_name.c_str()));
+  text->AddLine(
+      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", proxy_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
 
@@ -325,10 +324,10 @@ void ProxyGenerator::GenerateInterfaceMock(const ServiceConfig& config,
   parser.AddOpenNamespaces(text, false);
   text->AddBlankLine();
 
-  text->AddLine(StringPrintf("// Mock object for %s.",
+  text->AddLine(
+      StringPrintf("// Mock object for %s.", base_interface_name.c_str()));
+  text->AddLine(StringPrintf("class %s : public %s {", mock_name.c_str(),
                              base_interface_name.c_str()));
-  text->AddLine(StringPrintf("class %s : public %s {",
-                             mock_name.c_str(), base_interface_name.c_str()));
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
   text->AddLine(StringPrintf("%s() = default;", mock_name.c_str()));
@@ -348,32 +347,34 @@ void ProxyGenerator::GenerateInterfaceMock(const ServiceConfig& config,
     CHECK(parsed_type && parsed_type->IsValidPropertyType());
     string type = parsed_type->GetInArgType(DBusType::Receiver::kProxy);
     string name = NameParser{prop.name}.MakeVariableName();
-    text->AddLine(StringPrintf("MOCK_CONST_METHOD0(%s, %s());",
-                               name.c_str(), type.c_str()));
+    text->AddLine(StringPrintf("MOCK_CONST_METHOD0(%s, %s());", name.c_str(),
+                               type.c_str()));
     if (prop.access == "readwrite") {
-      text->AddLine(StringPrintf("MOCK_METHOD2(set_%s, void(%s, "
-                                 "const base::Callback<bool>&));",
-                                 name.c_str(), type.c_str()));
+      text->AddLine(
+          StringPrintf("MOCK_METHOD2(set_%s, void(%s, "
+                       "const base::Callback<bool>&));",
+                       name.c_str(), type.c_str()));
     }
   }
   text->AddLine(
       "MOCK_CONST_METHOD0(GetObjectPath, const dbus::ObjectPath&());");
-  text->AddLine(
-      "MOCK_CONST_METHOD0(GetObjectProxy, dbus::ObjectProxy*());");
+  text->AddLine("MOCK_CONST_METHOD0(GetObjectProxy, dbus::ObjectProxy*());");
   if (!interface.properties.empty()) {
     if (config.object_manager.name.empty()) {
-      text->AddLineAndPushOffsetTo(
-          "MOCK_METHOD1(InitializeProperties,", 1, '(');
-      text->AddLine(StringPrintf(
-          "void(const base::Callback<void(%sInterface*, "
-          "const std::string&)>&));", proxy_name.c_str()));
+      text->AddLineAndPushOffsetTo("MOCK_METHOD1(InitializeProperties,", 1,
+                                   '(');
+      text->AddLine(
+          StringPrintf("void(const base::Callback<void(%sInterface*, "
+                       "const std::string&)>&));",
+                       proxy_name.c_str()));
       text->PopOffset();
     } else {
-      text->AddLineAndPushOffsetTo(
-          "MOCK_METHOD1(SetPropertyChangedCallback,", 1, '(');
-      text->AddLine(StringPrintf("void(const base::Callback<void(%sInterface*, "
-                                 "const std::string&)>&));",
-                                 proxy_name.c_str()));
+      text->AddLineAndPushOffsetTo("MOCK_METHOD1(SetPropertyChangedCallback,",
+                                   1, '(');
+      text->AddLine(
+          StringPrintf("void(const base::Callback<void(%sInterface*, "
+                       "const std::string&)>&));",
+                       proxy_name.c_str()));
       text->PopOffset();
     }
   }
@@ -381,9 +382,9 @@ void ProxyGenerator::GenerateInterfaceMock(const ServiceConfig& config,
   text->PopOffset();
   text->AddBlankLine();
   text->AddLineWithOffset("private:", kScopeOffset);
-  text->AddLineWithOffset(StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);",
-                                       mock_name.c_str()),
-                          kBlockOffset);
+  text->AddLineWithOffset(
+      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", mock_name.c_str()),
+      kBlockOffset);
   text->AddLine("};");
 
   parser.AddCloseNamespaces(text, false);
@@ -416,8 +417,7 @@ void ProxyGenerator::AddConstructor(const ServiceConfig& config,
   }
   block.PushOffset(kLineContinuationOffset);
   for (const auto& arg : args) {
-    block.AddLine(StringPrintf("%s_{%s},", arg.name.c_str(),
-                               arg.name.c_str()));
+    block.AddLine(StringPrintf("%s_{%s},", arg.name.c_str(), arg.name.c_str()));
   }
   block.AddLine("dbus_object_proxy_{");
   block.AddLineWithOffset(
@@ -529,10 +529,10 @@ void ProxyGenerator::AddOnPropertyChanged(IndentedText* text) {
 }
 
 void ProxyGenerator::AddSignalHandlerRegistration(
-      const Interface::Signal& signal,
-      const string& interface_name,
-      bool declaration_only,
-      IndentedText* text) {
+    const Interface::Signal& signal,
+    const string& interface_name,
+    bool declaration_only,
+    IndentedText* text) {
   IndentedText block;
   block.AddBlankLine();
   block.AddLine(StringPrintf("%svoid Register%sSignalHandler(",
@@ -583,8 +583,7 @@ void ProxyGenerator::AddPropertySet(const ServiceConfig& config,
   block.PushOffset(kBlockOffset);
   for (const auto& prop : interface.properties) {
     block.AddLine(
-        StringPrintf("RegisterProperty(%sName(), &%s);",
-                     prop.name.c_str(),
+        StringPrintf("RegisterProperty(%sName(), &%s);", prop.name.c_str(),
                      NameParser{prop.name}.MakeVariableName().c_str()));
   }
   block.PopOffset();
@@ -597,8 +596,7 @@ void ProxyGenerator::AddPropertySet(const ServiceConfig& config,
     CHECK(parsed_type && parsed_type->IsValidPropertyType());
     string type = parsed_type->GetBaseType(DBusType::Direction::kExtract);
     block.AddLine(
-        StringPrintf("brillo::dbus_utils::Property<%s> %s;",
-                     type.c_str(),
+        StringPrintf("brillo::dbus_utils::Property<%s> %s;", type.c_str(),
                      NameParser{prop.name}.MakeVariableName().c_str()));
   }
   block.AddBlankLine();
@@ -624,8 +622,7 @@ void ProxyGenerator::AddProperties(const Interface& interface,
     if (declaration_only) {
       text->AddLine(
           StringPrintf("static const char* %sName() { return \"%s\"; }",
-                       prop.name.c_str(),
-                       prop.name.c_str()));
+                       prop.name.c_str(), prop.name.c_str()));
     }
     auto parsed_type = signature.Parse(prop.type);
     CHECK(parsed_type && parsed_type->IsValidPropertyType());
@@ -633,12 +630,9 @@ void ProxyGenerator::AddProperties(const Interface& interface,
     string name = NameParser{prop.name}.MakeVariableName();
     if (!declaration_only)
       text->AddBlankLine();
-    text->AddLine(
-        StringPrintf("%s%s %s() const%s",
-                     declaration_only ? "virtual " : "",
-                     type.c_str(),
-                     name.c_str(),
-                     declaration_only ? " = 0;" : " override {"));
+    text->AddLine(StringPrintf(
+        "%s%s %s() const%s", declaration_only ? "virtual " : "", type.c_str(),
+        name.c_str(), declaration_only ? " = 0;" : " override {"));
     if (!declaration_only) {
       text->AddLineWithOffset(
           StringPrintf("return property_set_->%s.value();", name.c_str()),
@@ -650,8 +644,7 @@ void ProxyGenerator::AddProperties(const Interface& interface,
         text->AddBlankLine();
       text->AddLineAndPushOffsetTo(
           StringPrintf("%svoid set_%s(%s value,",
-                       declaration_only ? "virtual " : "",
-                       name.c_str(),
+                       declaration_only ? "virtual " : "", name.c_str(),
                        type.c_str()),
           1, '(');
       text->AddLine(
@@ -677,8 +670,7 @@ void ProxyGenerator::AddMethodProxy(const Interface::Method& method,
   DBusSignature signature;
   block.AddBlankLine();
   block.AddComments(method.doc_string);
-  block.AddLine(StringPrintf("%sbool %s(",
-                             declaration_only ? "virtual " : "",
+  block.AddLine(StringPrintf("%sbool %s(", declaration_only ? "virtual " : "",
                              method.name.c_str()));
   block.PushOffset(kLineContinuationOffset);
   vector<string> argument_names;
@@ -689,8 +681,8 @@ void ProxyGenerator::AddMethodProxy(const Interface::Method& method,
     string argument_type = type->GetInArgType(DBusType::Receiver::kProxy);
     string argument_name = GetArgName("in", argument.name, ++argument_number);
     argument_names.push_back(argument_name);
-    block.AddLine(StringPrintf(
-        "%s %s,", argument_type.c_str(), argument_name.c_str()));
+    block.AddLine(
+        StringPrintf("%s %s,", argument_type.c_str(), argument_name.c_str()));
   }
   vector<string> out_param_names{"response.get()", "error"};
   for (const auto& argument : method.output_arguments) {
@@ -699,8 +691,8 @@ void ProxyGenerator::AddMethodProxy(const Interface::Method& method,
     string argument_type = type->GetOutArgType(DBusType::Receiver::kProxy);
     string argument_name = GetArgName("out", argument.name, ++argument_number);
     out_param_names.push_back(argument_name);
-    block.AddLine(StringPrintf(
-        "%s %s,", argument_type.c_str(), argument_name.c_str()));
+    block.AddLine(
+        StringPrintf("%s %s,", argument_type.c_str(), argument_name.c_str()));
   }
   block.AddLine("brillo::ErrorPtr* error,");
   block.AddLine(
@@ -725,8 +717,9 @@ void ProxyGenerator::AddMethodProxy(const Interface::Method& method,
     block.AddLine(StringPrintf("%s);", last_argument.c_str()));
     block.PopOffset();
 
-    block.AddLine("return response && "
-                  "brillo::dbus_utils::ExtractMethodCallResults(");
+    block.AddLine(
+        "return response && "
+        "brillo::dbus_utils::ExtractMethodCallResults(");
     block.PushOffset(kLineContinuationOffset);
     block.AddLine(base::JoinString(out_param_names, ", ") + ");");
     block.PopOffset();
@@ -756,8 +749,8 @@ void ProxyGenerator::AddAsyncMethodProxy(const Interface::Method& method,
     string argument_type = type->GetInArgType(DBusType::Receiver::kProxy);
     string argument_name = GetArgName("in", argument.name, ++argument_number);
     argument_names.push_back(argument_name);
-    block.AddLine(StringPrintf(
-        "%s %s,", argument_type.c_str(), argument_name.c_str()));
+    block.AddLine(
+        StringPrintf("%s %s,", argument_type.c_str(), argument_name.c_str()));
   }
   vector<string> out_params;
   for (const auto& argument : method.output_arguments) {
@@ -768,11 +761,10 @@ void ProxyGenerator::AddAsyncMethodProxy(const Interface::Method& method,
       base::StringAppendF(&argument_type, " /*%s*/", argument.name.c_str());
     out_params.push_back(argument_type);
   }
-  block.AddLine(StringPrintf(
-      "const base::Callback<void(%s)>& success_callback,",
-      base::JoinString(out_params, ", ").c_str()));
   block.AddLine(
-      "const base::Callback<void(brillo::Error*)>& error_callback,");
+      StringPrintf("const base::Callback<void(%s)>& success_callback,",
+                   base::JoinString(out_params, ", ").c_str()));
+  block.AddLine("const base::Callback<void(brillo::Error*)>& error_callback,");
   block.AddLine(
       StringPrintf("int timeout_ms = dbus::ObjectProxy::TIMEOUT_USE_DEFAULT)%s",
                    declaration_only ? " = 0;" : " override {"));
@@ -849,9 +841,9 @@ void ProxyGenerator::AddAsyncMethodMock(const Interface::Method& method,
       base::StringAppendF(&argument_type, " /*%s*/", argument.name.c_str());
     out_params.push_back(argument_type);
   }
-  arguments.push_back(StringPrintf(
-      "const base::Callback<void(%s)>& /*success_callback*/",
-      base::JoinString(out_params, ", ").c_str()));
+  arguments.push_back(
+      StringPrintf("const base::Callback<void(%s)>& /*success_callback*/",
+                   base::JoinString(out_params, ", ").c_str()));
   arguments.push_back(
       "const base::Callback<void(brillo::Error*)>& /*error_callback*/");
   arguments.push_back("int /*timeout_ms*/");
@@ -867,9 +859,7 @@ void ProxyGenerator::AddMockMethodDeclaration(const string& method_name,
   // 11 arguments or more in a different way.
   if (arguments.size() >= 11) {
     block.AddLineAndPushOffsetTo(
-        StringPrintf("%s %s(%s,",
-                     return_type.c_str(),
-                     method_name.c_str(),
+        StringPrintf("%s %s(%s,", return_type.c_str(), method_name.c_str(),
                      arguments.front().c_str()),
         1, '(');
     for (size_t i = 1; i < arguments.size() - 1; i++)
@@ -893,8 +883,8 @@ void ProxyGenerator::AddMockMethodDeclaration(const string& method_name,
     block.AddLine("}");
   } else {
     block.AddLineAndPushOffsetTo(
-        StringPrintf("MOCK_METHOD%zu(%s,",
-                     arguments.size(), method_name.c_str()),
+        StringPrintf("MOCK_METHOD%zu(%s,", arguments.size(),
+                     method_name.c_str()),
         1, '(');
     block.AddLineAndPushOffsetTo(
         StringPrintf("%s(%s,", return_type.c_str(), arguments.front().c_str()),
@@ -909,8 +899,7 @@ void ProxyGenerator::AddMockMethodDeclaration(const string& method_name,
 }
 
 void ProxyGenerator::AddSignalHandlerRegistrationMock(
-    const Interface::Signal& signal,
-    IndentedText* text) {
+    const Interface::Signal& signal, IndentedText* text) {
   IndentedText callback_arg_text;
   IndentedText callback_arg_real;
   AddSignalCallbackArg(signal, true, &callback_arg_text);
@@ -954,12 +943,12 @@ void ProxyGenerator::AddSignalCallbackArg(const Interface::Signal& signal,
                                           bool comment_arg_name,
                                           IndentedText* block) {
   DBusSignature signature;
-  string signal_callback = StringPrintf("%ssignal_callback%s",
-                                        comment_arg_name ? "/*" : "",
-                                        comment_arg_name ? "*/" : "");
+  string signal_callback =
+      StringPrintf("%ssignal_callback%s", comment_arg_name ? "/*" : "",
+                   comment_arg_name ? "*/" : "");
   if (signal.arguments.empty()) {
-    block->AddLine(StringPrintf("const base::Closure& %s,",
-                                signal_callback.c_str()));
+    block->AddLine(
+        StringPrintf("const base::Closure& %s,", signal_callback.c_str()));
   } else {
     string last_argument;
     string prefix{"const base::Callback<void("};
@@ -967,8 +956,8 @@ void ProxyGenerator::AddSignalCallbackArg(const Interface::Signal& signal,
       if (!last_argument.empty()) {
         if (!prefix.empty()) {
           block->AddLineAndPushOffsetTo(
-              StringPrintf("%s%s,", prefix.c_str(), last_argument.c_str()),
-              1, '(');
+              StringPrintf("%s%s,", prefix.c_str(), last_argument.c_str()), 1,
+              '(');
           prefix.clear();
         } else {
           block->AddLine(StringPrintf("%s,", last_argument.c_str()));
@@ -978,8 +967,7 @@ void ProxyGenerator::AddSignalCallbackArg(const Interface::Signal& signal,
       CHECK(type);
       last_argument = type->GetCallbackArgType();
     }
-    block->AddLine(StringPrintf("%s%s)>& %s,",
-                                prefix.c_str(),
+    block->AddLine(StringPrintf("%s%s)>& %s,", prefix.c_str(),
                                 last_argument.c_str(),
                                 signal_callback.c_str()));
     if (prefix.empty()) {
@@ -1001,9 +989,10 @@ void ProxyGenerator::ObjectManager::GenerateProxy(
   text->AddBlankLine();
 
   string class_name = object_manager.type_name() + "Proxy";
-  text->AddLine(StringPrintf("class %s : "
-                             "public dbus::ObjectManager::Interface {",
-                             class_name.c_str()));
+  text->AddLine(
+      StringPrintf("class %s : "
+                   "public dbus::ObjectManager::Interface {",
+                   class_name.c_str()));
   text->AddLineWithOffset("public:", kScopeOffset);
   text->PushOffset(kBlockOffset);
 
@@ -1023,8 +1012,8 @@ void ProxyGenerator::ObjectManager::GenerateProxy(
   AddCreateProperties(interfaces, class_name, text);
   AddDataMembers(config, interfaces, class_name, text);
 
-  text->AddLine(StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);",
-                              class_name.c_str()));
+  text->AddLine(
+      StringPrintf("DISALLOW_COPY_AND_ASSIGN(%s);", class_name.c_str()));
   text->PopOffset();
   text->AddLine("};");
   text->AddBlankLine();
@@ -1106,8 +1095,7 @@ void ProxyGenerator::ObjectManager::AddGetObjectManagerProxy(
 
 // static
 void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
-    const Interface& interface,
-    IndentedText* text) {
+    const Interface& interface, IndentedText* text) {
   NameParser itf_name{interface.name};
   string map_name = itf_name.MakeVariableName() + "_instances_";
 
@@ -1115,14 +1103,14 @@ void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
   if (interface.path.empty()) {
     // We have no fixed path, so there could be multiple instances of this itf.
     text->AddLine(StringPrintf("%sInterface* Get%s(",
-                                itf_name.MakeProxyName(true).c_str(),
-                                itf_name.MakeProxyName(false).c_str()));
+                               itf_name.MakeProxyName(true).c_str(),
+                               itf_name.MakeProxyName(false).c_str()));
     text->PushOffset(kLineContinuationOffset);
     text->AddLine("const dbus::ObjectPath& object_path) {");
     text->PopOffset();
     text->PushOffset(kBlockOffset);
-    text->AddLine(StringPrintf("auto p = %s.find(object_path);",
-                                map_name.c_str()));
+    text->AddLine(
+        StringPrintf("auto p = %s.find(object_path);", map_name.c_str()));
     text->AddLine(StringPrintf("if (p != %s.end())", map_name.c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine("return p->second.get();");
@@ -1134,22 +1122,21 @@ void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
     // We have a fixed path, so the object could be considered a "singleton".
     // Skip the object_path parameter and return the first available instance.
     text->AddLine(StringPrintf("%sInterface* Get%s() {",
-                                itf_name.MakeProxyName(true).c_str(),
-                                itf_name.MakeProxyName(false).c_str()));
+                               itf_name.MakeProxyName(true).c_str(),
+                               itf_name.MakeProxyName(false).c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine(StringPrintf("if (%s.empty())", map_name.c_str()));
     text->AddLineWithOffset("return nullptr;", kBlockOffset);
-    text->AddLine(StringPrintf("return %s.begin()->second.get();",
-                               map_name.c_str()));
+    text->AddLine(
+        StringPrintf("return %s.begin()->second.get();", map_name.c_str()));
     text->PopOffset();
     text->AddLine("}");
   }
 
   // GetInstances().
-  text->AddLine(
-      StringPrintf("std::vector<%sInterface*> Get%sInstances() const {",
-                   itf_name.MakeProxyName(true).c_str(),
-                   itf_name.type_name().c_str()));
+  text->AddLine(StringPrintf(
+      "std::vector<%sInterface*> Get%sInstances() const {",
+      itf_name.MakeProxyName(true).c_str(), itf_name.type_name().c_str()));
   text->PushOffset(kBlockOffset);
   text->AddLine(StringPrintf("std::vector<%sInterface*> values;",
                              itf_name.MakeProxyName(true).c_str()));
@@ -1161,8 +1148,8 @@ void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
   text->AddLine("}");
 
   // SetAddedCallback().
-  text->AddLine(StringPrintf("void Set%sAddedCallback(",
-                              itf_name.type_name().c_str()));
+  text->AddLine(
+      StringPrintf("void Set%sAddedCallback(", itf_name.type_name().c_str()));
   text->PushOffset(kLineContinuationOffset);
   text->AddLine(
       StringPrintf("const base::Callback<void(%sInterface*)>& callback) {",
@@ -1175,15 +1162,16 @@ void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
   text->AddLine("}");
 
   // SetRemovedCallback().
-  text->AddLine(StringPrintf("void Set%sRemovedCallback(",
-                             itf_name.type_name().c_str()));
+  text->AddLine(
+      StringPrintf("void Set%sRemovedCallback(", itf_name.type_name().c_str()));
   text->PushOffset(kLineContinuationOffset);
-  text->AddLine("const base::Callback<void(const dbus::ObjectPath&)>& "
-                "callback) {");
+  text->AddLine(
+      "const base::Callback<void(const dbus::ObjectPath&)>& "
+      "callback) {");
   text->PopOffset();
   text->PushOffset(kBlockOffset);
   text->AddLine(StringPrintf("on_%s_removed_ = callback;",
-                              itf_name.MakeVariableName().c_str()));
+                             itf_name.MakeVariableName().c_str()));
   text->PopOffset();
   text->AddLine("}");
 
@@ -1192,27 +1180,28 @@ void ProxyGenerator::ObjectManager::AddInterfaceAccessors(
 
 // static
 void ProxyGenerator::ObjectManager::AddOnPropertyChanged(
-    const std::vector<Interface>& interfaces,
-    IndentedText* text) {
+    const std::vector<Interface>& interfaces, IndentedText* text) {
   // If there are no interfaces with properties, comment out parameter
   // names for OnPropertyChanged() to prevent compiler warnings on unused
   // function parameters.
   auto has_props = [](const Interface& itf) { return !itf.properties.empty(); };
-  auto itf_with_props = std::find_if(interfaces.begin(), interfaces.end(),
-                                     has_props);
+  auto itf_with_props =
+      std::find_if(interfaces.begin(), interfaces.end(), has_props);
   if (itf_with_props == interfaces.end()) {
-    text->AddLineAndPushOffsetTo("void OnPropertyChanged("
-                                 "const dbus::ObjectPath& /* object_path */,",
-                                 1, '(');
+    text->AddLineAndPushOffsetTo(
+        "void OnPropertyChanged("
+        "const dbus::ObjectPath& /* object_path */,",
+        1, '(');
     text->AddLine("const std::string& /* interface_name */,");
     text->AddLine("const std::string& /* property_name */) {}");
     text->PopOffset();
     text->AddBlankLine();
     return;
   }
-  text->AddLineAndPushOffsetTo("void OnPropertyChanged("
-                               "const dbus::ObjectPath& object_path,",
-                               1, '(');
+  text->AddLineAndPushOffsetTo(
+      "void OnPropertyChanged("
+      "const dbus::ObjectPath& object_path,",
+      1, '(');
   text->AddLine("const std::string& interface_name,");
   text->AddLine("const std::string& property_name) {");
   text->PopOffset();
@@ -1222,12 +1211,12 @@ void ProxyGenerator::ObjectManager::AddOnPropertyChanged(
       continue;
 
     NameParser itf_name{itf.name};
-    text->AddLine(StringPrintf("if (interface_name == \"%s\") {",
-                               itf.name.c_str()));
+    text->AddLine(
+        StringPrintf("if (interface_name == \"%s\") {", itf.name.c_str()));
     text->PushOffset(kBlockOffset);
     string map_name = itf_name.MakeVariableName() + "_instances_";
-    text->AddLine(StringPrintf("auto p = %s.find(object_path);",
-                               map_name.c_str()));
+    text->AddLine(
+        StringPrintf("auto p = %s.find(object_path);", map_name.c_str()));
     text->AddLine(StringPrintf("if (p == %s.end())", map_name.c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine("return;");
@@ -1256,8 +1245,8 @@ void ProxyGenerator::ObjectManager::AddObjectAdded(
   for (const auto& itf : interfaces) {
     NameParser itf_name{itf.name};
     string var_name = itf_name.MakeVariableName();
-    text->AddLine(StringPrintf("if (interface_name == \"%s\") {",
-                               itf.name.c_str()));
+    text->AddLine(
+        StringPrintf("if (interface_name == \"%s\") {", itf.name.c_str()));
     text->PushOffset(kBlockOffset);
     if (!itf.properties.empty()) {
       text->AddLine("auto property_set =");
@@ -1265,8 +1254,9 @@ void ProxyGenerator::ObjectManager::AddObjectAdded(
       text->AddLine(StringPrintf("static_cast<%s::PropertySet*>(",
                                  itf_name.MakeProxyName(true).c_str()));
       text->PushOffset(kLineContinuationOffset);
-      text->AddLine("dbus_object_manager_->GetProperties(object_path, "
-                    "interface_name));");
+      text->AddLine(
+          "dbus_object_manager_->GetProperties(object_path, "
+          "interface_name));");
       text->PopOffset();
       text->PopOffset();
     }
@@ -1274,8 +1264,8 @@ void ProxyGenerator::ObjectManager::AddObjectAdded(
                                itf_name.MakeProxyName(true).c_str(),
                                var_name.c_str()));
     text->PushOffset(kBlockOffset);
-    string new_instance = StringPrintf("new %s{bus_",
-                                       itf_name.MakeProxyName(true).c_str());
+    string new_instance =
+        StringPrintf("new %s{bus_", itf_name.MakeProxyName(true).c_str());
     if (config.service_name.empty()) {
       new_instance += ", service_name_";
     }
@@ -1287,11 +1277,12 @@ void ProxyGenerator::ObjectManager::AddObjectAdded(
     text->AddLine(new_instance);
     text->PopOffset();
     text->AddLine("};");
-    text->AddLine(StringPrintf("auto p = %s_instances_.emplace(object_path, "
-                               "std::move(%s_proxy));",
-                               var_name.c_str(), var_name.c_str()));
-    text->AddLine(StringPrintf("if (!on_%s_added_.is_null())",
-                               var_name.c_str()));
+    text->AddLine(
+        StringPrintf("auto p = %s_instances_.emplace(object_path, "
+                     "std::move(%s_proxy));",
+                     var_name.c_str(), var_name.c_str()));
+    text->AddLine(
+        StringPrintf("if (!on_%s_added_.is_null())", var_name.c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine(StringPrintf("on_%s_added_.Run(p.first->second.get());",
                                var_name.c_str()));
@@ -1307,8 +1298,7 @@ void ProxyGenerator::ObjectManager::AddObjectAdded(
 
 // static
 void ProxyGenerator::ObjectManager::AddObjectRemoved(
-    const std::vector<Interface>& interfaces,
-    IndentedText* text) {
+    const std::vector<Interface>& interfaces, IndentedText* text) {
   text->AddLine("void ObjectRemoved(");
   text->PushOffset(kLineContinuationOffset);
   text->AddLine("const dbus::ObjectPath& object_path,");
@@ -1318,22 +1308,21 @@ void ProxyGenerator::ObjectManager::AddObjectRemoved(
   for (const auto& itf : interfaces) {
     NameParser itf_name{itf.name};
     string var_name = itf_name.MakeVariableName();
-    text->AddLine(StringPrintf("if (interface_name == \"%s\") {",
-                               itf.name.c_str()));
+    text->AddLine(
+        StringPrintf("if (interface_name == \"%s\") {", itf.name.c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine(StringPrintf("auto p = %s_instances_.find(object_path);",
                                var_name.c_str()));
-    text->AddLine(StringPrintf("if (p != %s_instances_.end()) {",
-                               var_name.c_str()));
+    text->AddLine(
+        StringPrintf("if (p != %s_instances_.end()) {", var_name.c_str()));
     text->PushOffset(kBlockOffset);
-    text->AddLine(StringPrintf("if (!on_%s_removed_.is_null())",
-                               var_name.c_str()));
+    text->AddLine(
+        StringPrintf("if (!on_%s_removed_.is_null())", var_name.c_str()));
     text->PushOffset(kBlockOffset);
-    text->AddLine(StringPrintf("on_%s_removed_.Run(object_path);",
-                               var_name.c_str()));
+    text->AddLine(
+        StringPrintf("on_%s_removed_.Run(object_path);", var_name.c_str()));
     text->PopOffset();
-    text->AddLine(StringPrintf("%s_instances_.erase(p);",
-                               var_name.c_str()));
+    text->AddLine(StringPrintf("%s_instances_.erase(p);", var_name.c_str()));
     text->PopOffset();
     text->AddLine("}");
     text->AddLine("return;");
@@ -1359,16 +1348,15 @@ void ProxyGenerator::ObjectManager::AddCreateProperties(
   text->PushOffset(kBlockOffset);
   for (const auto& itf : interfaces) {
     NameParser itf_name{itf.name};
-    text->AddLine(StringPrintf("if (interface_name == \"%s\") {",
-                               itf.name.c_str()));
+    text->AddLine(
+        StringPrintf("if (interface_name == \"%s\") {", itf.name.c_str()));
     text->PushOffset(kBlockOffset);
     text->AddLine(StringPrintf("return new %s::PropertySet{",
                                itf_name.MakeProxyName(true).c_str()));
     text->PushOffset(kLineContinuationOffset);
     text->AddLine("object_proxy,");
     text->AddLineAndPushOffsetTo(
-        StringPrintf("base::Bind(&%s::OnPropertyChanged,",
-                     class_name.c_str()),
+        StringPrintf("base::Bind(&%s::OnPropertyChanged,", class_name.c_str()),
         1, '(');
     text->AddLine("weak_ptr_factory_.GetWeakPtr(),");
     text->AddLine("object_path,");
@@ -1379,8 +1367,10 @@ void ProxyGenerator::ObjectManager::AddCreateProperties(
     text->PopOffset();
     text->AddLine("}");
   }
-  text->AddLineAndPushOffsetTo("LOG(FATAL) << \"Creating properties for "
-                               "unsupported interface \"", 1, ' ');
+  text->AddLineAndPushOffsetTo(
+      "LOG(FATAL) << \"Creating properties for "
+      "unsupported interface \"",
+      1, ' ');
   text->AddLine("<< interface_name;");
   text->PopOffset();
   text->AddLine("return nullptr;");
@@ -1410,15 +1400,14 @@ void ProxyGenerator::ObjectManager::AddDataMembers(
     text->PopOffset();
     text->AddLine(
         StringPrintf("base::Callback<void(%sInterface*)> on_%s_added_;",
-                     itf_name.MakeProxyName(true).c_str(),
+                     itf_name.MakeProxyName(true).c_str(), var_name.c_str()));
+    text->AddLine(
+        StringPrintf("base::Callback<void(const dbus::ObjectPath&)> "
+                     "on_%s_removed_;",
                      var_name.c_str()));
-    text->AddLine(StringPrintf("base::Callback<void(const dbus::ObjectPath&)> "
-                               "on_%s_removed_;",
-                               var_name.c_str()));
   }
-  text->AddLine(
-      StringPrintf("base::WeakPtrFactory<%s> weak_ptr_factory_{this};",
-                   class_name.c_str()));
+  text->AddLine(StringPrintf(
+      "base::WeakPtrFactory<%s> weak_ptr_factory_{this};", class_name.c_str()));
   text->AddBlankLine();
 }
 

@@ -31,7 +31,7 @@ string GenerateHeaderGuard(const base::FilePath& output_file) {
 }
 
 bool WriteTextToFile(const base::FilePath& output_file,
-                     const IndentedText &text) {
+                     const IndentedText& text) {
   string contents = text.GetContents();
   int expected_write_return = contents.size();
   if (base::WriteFile(output_file, contents.c_str(), contents.size()) !=

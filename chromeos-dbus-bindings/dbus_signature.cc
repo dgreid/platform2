@@ -98,8 +98,8 @@ class NonScalar : public DBusType {
   }
 
   std::string GetCallbackArgType() const override {
-    return base::StringPrintf(
-        "const %s&", GetBaseType(Direction::kExtract).c_str());
+    return base::StringPrintf("const %s&",
+                              GetBaseType(Direction::kExtract).c_str());
   }
 };
 

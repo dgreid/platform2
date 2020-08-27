@@ -36,9 +36,7 @@ const char kTweezersMethod[] = "Tweezers";
 
 class MethodNameGeneratorTest : public Test {
  public:
-  void SetUp() override {
-    ASSERT_TRUE(temp_dir_.CreateUniqueTempDir());
-  }
+  void SetUp() override { ASSERT_TRUE(temp_dir_.CreateUniqueTempDir()); }
 
  protected:
   base::FilePath CreateInputFile(const string& contents) {
@@ -59,8 +57,8 @@ TEST_F(MethodNameGeneratorTest, GnerateMethodNames) {
   interface.methods.emplace_back(kMethodName1);
   interface.methods.emplace_back(kMethodName2);
   base::FilePath output_path = temp_dir_.GetPath().Append("output.h");
-  EXPECT_TRUE(MethodNameGenerator::GenerateMethodNames({interface},
-                                                       output_path));
+  EXPECT_TRUE(
+      MethodNameGenerator::GenerateMethodNames({interface}, output_path));
   string contents;
   EXPECT_TRUE(base::ReadFileToString(output_path, &contents));
   EXPECT_STREQ(kExpectedOutput, contents.c_str());

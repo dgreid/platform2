@@ -52,7 +52,6 @@ class IndentedText {
   // Reset to initial state.
   void Reset();
 
-
  private:
   using IndentedLine = std::pair<std::string, size_t>;
 
