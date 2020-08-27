@@ -86,11 +86,9 @@ TEST_F(SerializationUtilsTest, IllegalNameAreFilteredTest) {
 
 TEST_F(SerializationUtilsTest, BadHistogramsTest) {
   EXPECT_FALSE(SerializationUtils::WriteMetricsToFile(
-      {MetricSample::HistogramSample("myhist", 5, 1, 10, 100)},
-      filename_));
+      {MetricSample::HistogramSample("myhist", 5, 1, 10, 100)}, filename_));
   EXPECT_FALSE(SerializationUtils::WriteMetricsToFile(
-      {MetricSample::LinearHistogramSample("alsomyhist", 0, 1)},
-      filename_));
+      {MetricSample::LinearHistogramSample("alsomyhist", 0, 1)}, filename_));
 }
 
 TEST_F(SerializationUtilsTest, BadInputIsCaughtTest) {
@@ -139,9 +137,7 @@ TEST_F(SerializationUtilsTest, ReadLongMessageTest) {
 
   std::vector<MetricSample> samples;
   SerializationUtils::ReadAndTruncateMetricsFromFile(
-      filename_,
-      &samples,
-      SerializationUtils::kSampleBatchMaxLength);
+      filename_, &samples, SerializationUtils::kSampleBatchMaxLength);
   ASSERT_EQ(1U, samples.size());
   EXPECT_TRUE(crash.IsEqual(samples.front()));
 }
@@ -235,11 +231,8 @@ TEST_F(SerializationUtilsTest, BatchedUploadTest) {
       std::vector<MetricSample>(sample_count, hist), filename_);
 
   std::vector<MetricSample> samples;
-  bool first_pass_status =
-      SerializationUtils::ReadAndTruncateMetricsFromFile(
-          filename_,
-          &samples,
-          sample_batch_max_length);
+  bool first_pass_status = SerializationUtils::ReadAndTruncateMetricsFromFile(
+      filename_, &samples, sample_batch_max_length);
 
   ASSERT_FALSE(first_pass_status);  // means: more samples remain
   int first_pass_count = samples.size();
@@ -255,11 +248,8 @@ TEST_F(SerializationUtilsTest, BatchedUploadTest) {
   // Check that the file has holes.
   ASSERT_LT(stat_buf.st_blocks * 512, stat_buf.st_size);
 
-  bool second_pass_status =
-      SerializationUtils::ReadAndTruncateMetricsFromFile(
-          filename_,
-          &samples,
-          sample_batch_max_length);
+  bool second_pass_status = SerializationUtils::ReadAndTruncateMetricsFromFile(
+      filename_, &samples, sample_batch_max_length);
 
   ASSERT_TRUE(second_pass_status);  // no more samples.
   // Check that stat() is successful.

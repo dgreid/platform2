@@ -165,8 +165,7 @@ bool UploadService::ReadMetrics() {
 
   std::vector<metrics::MetricSample> samples;
   bool result = metrics::SerializationUtils::ReadAndTruncateMetricsFromFile(
-      metrics_file_,
-      &samples,
+      metrics_file_, &samples,
       metrics::SerializationUtils::kSampleBatchMaxLength);
 
   for (const auto& sample : samples) {
@@ -185,10 +184,7 @@ void UploadService::AddSample(const metrics::MetricSample& sample) {
       break;
     case metrics::MetricSample::HISTOGRAM:
       counter = base::Histogram::FactoryGet(
-          sample.name(),
-          sample.min(),
-          sample.max(),
-          sample.bucket_count(),
+          sample.name(), sample.min(), sample.max(), sample.bucket_count(),
           base::Histogram::kUmaTargetedHistogramFlag);
       CHECK(counter) << "FactoryGet failed for " << sample.name();
       counter->AddCount(sample.sample(), sample.num_samples());
@@ -201,10 +197,7 @@ void UploadService::AddSample(const metrics::MetricSample& sample) {
       break;
     case metrics::MetricSample::LINEAR_HISTOGRAM:
       counter = base::LinearHistogram::FactoryGet(
-          sample.name(),
-          1,
-          sample.max(),
-          sample.max() + 1,
+          sample.name(), 1, sample.max(), sample.max() + 1,
           base::Histogram::kUmaTargetedHistogramFlag);
       CHECK(counter) << "FactoryGet failed for " << sample.name();
       counter->Add(sample.sample());

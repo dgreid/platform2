@@ -75,21 +75,19 @@ TEST_F(UploadServiceTest, LogUserCrash) {
 TEST_F(UploadServiceTest, LogUncleanShutdown) {
   upload_service_.AddSample(Crash("uncleanshutdown"));
 
-  EXPECT_EQ(1,
-            upload_service_.current_log_->uma_proto()
-                ->system_profile()
-                .stability()
-                .unclean_system_shutdown_count());
+  EXPECT_EQ(1, upload_service_.current_log_->uma_proto()
+                   ->system_profile()
+                   .stability()
+                   .unclean_system_shutdown_count());
 }
 
 TEST_F(UploadServiceTest, LogKernelCrash) {
   upload_service_.AddSample(Crash("kernel"));
 
-  EXPECT_EQ(1,
-            upload_service_.current_log_->uma_proto()
-                ->system_profile()
-                .stability()
-                .kernel_crash_count());
+  EXPECT_EQ(1, upload_service_.current_log_->uma_proto()
+                   ->system_profile()
+                   .stability()
+                   .kernel_crash_count());
 }
 
 TEST_F(UploadServiceTest, UnknownCrashIgnored) {
@@ -132,8 +130,8 @@ TEST_F(UploadServiceTest, EmptyLogsAreNotSent) {
 }
 
 TEST_F(UploadServiceTest, LogEmptyByDefault) {
-  UploadService upload_service(
-      new MockSystemProfileSetter(), &metrics_lib_, kMetricsServer);
+  UploadService upload_service(new MockSystemProfileSetter(), &metrics_lib_,
+                               kMetricsServer);
 
   // current_log_ should be initialized later as it needs AtExitManager to exit
   // in order to gather system information from SysInfo.

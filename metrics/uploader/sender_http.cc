@@ -22,12 +22,8 @@ bool HttpSender::Send(const std::string& content,
   brillo::http::HeaderList headers = {{"X-Chrome-UMA-Log-SHA1", hash}};
   brillo::ErrorPtr error;
   auto response = brillo::http::PostTextAndBlock(
-      server_url_,
-      content,
-      brillo::mime::application::kWwwFormUrlEncoded,
-      headers,
-      brillo::http::Transport::CreateDefault(),
-      &error);
+      server_url_, content, brillo::mime::application::kWwwFormUrlEncoded,
+      headers, brillo::http::Transport::CreateDefault(), &error);
   if (!response || response->ExtractDataAsString() != "OK") {
     if (error) {
       LOG(ERROR) << "Failed to send data: " << error->GetMessage();

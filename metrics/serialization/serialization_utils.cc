@@ -115,7 +115,7 @@ bool ReadMessage(int fd, std::string* message_out, size_t* bytes_used_out) {
   }
   if (result < message_hdr_size) {
     LOG(ERROR) << "bad read size " << result << ", expecting "
-                << sizeof(message_size);
+               << sizeof(message_size);
     return false;
   }
 
@@ -152,8 +152,7 @@ bool ReadMessage(int fd, std::string* message_out, size_t* bytes_used_out) {
 
 }  // namespace
 
-MetricSample SerializationUtils::ParseSample(
-    const std::string& sample) {
+MetricSample SerializationUtils::ParseSample(const std::string& sample) {
   if (sample.empty())
     return MetricSample();
 
@@ -166,7 +165,7 @@ MetricSample SerializationUtils::ParseSample(
   // three chunks.
   if (parts.size() != 3) {
     LOG(ERROR) << "splitting message on \\0 produced " << parts.size()
-                << " parts (expected 3)";
+               << " parts (expected 3)";
     return MetricSample();
   }
   const std::string& name = parts[0];

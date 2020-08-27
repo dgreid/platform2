@@ -47,9 +47,7 @@ SystemProfileCache::SystemProfileCache() : SystemProfileCache(false, "/") {}
 
 SystemProfileCache::SystemProfileCache(bool testing,
                                        const std::string& config_root)
-    : initialized_(false),
-      testing_(testing),
-      config_root_(config_root) {
+    : initialized_(false), testing_(testing), config_root_(config_root) {
   base::FilePath backing_file(kPersistentSessionIdFilename);
   session_id_.reset(new chromeos_metrics::PersistentInteger(backing_file));
 }

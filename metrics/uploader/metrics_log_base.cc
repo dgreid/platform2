@@ -116,8 +116,7 @@ void MetricsLogBase::RecordHistogramDelta(const std::string& histogram_name,
   histogram_proto->set_sum(snapshot.sum());
 
   for (std::unique_ptr<SampleCountIterator> it = snapshot.Iterator();
-       !it->Done();
-       it->Next()) {
+       !it->Done(); it->Next()) {
     HistogramBase::Sample min;
     int64_t max;
     HistogramBase::Count count;

@@ -40,10 +40,8 @@ TEST(MetricsLogBaseTest, LogType) {
 }
 
 TEST(MetricsLogBaseTest, EmptyRecord) {
-  MetricsLogBase log("totally bogus client ID",
-                     137,
-                     MetricsLogBase::ONGOING_LOG,
-                     "bogus version");
+  MetricsLogBase log("totally bogus client ID", 137,
+                     MetricsLogBase::ONGOING_LOG, "bogus version");
   log.set_hardware_class("sample-class");
   log.CloseLog();
 

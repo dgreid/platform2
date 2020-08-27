@@ -30,12 +30,10 @@ MetricSample::MetricSample(MetricSample::SampleType sample_type,
       num_samples_(num_samples) {}
 
 bool MetricSample::IsValid() const {
-  if (type() == INVALID ||
-      name().find(' ') != std::string::npos ||
-      name().find('\0') != std::string::npos ||
-      name().empty()) {
-    LOG(ERROR) << "Invalid sample type or name for histogram \""
-               << name() << "\"";
+  if (type() == INVALID || name().find(' ') != std::string::npos ||
+      name().find('\0') != std::string::npos || name().empty()) {
+    LOG(ERROR) << "Invalid sample type or name for histogram \"" << name()
+               << "\"";
     return false;
   }
   if (type() == LINEAR_HISTOGRAM && max() == 1) {
@@ -63,35 +61,20 @@ std::string MetricSample::ToString() const {
   if (type_ == CRASH) {
     return base::StringPrintf("crash%c%s%c", '\0', name().c_str(), '\0');
   } else if (type_ == SPARSE_HISTOGRAM) {
-    return base::StringPrintf(
-        "sparsehistogram%c%s %d%c", '\0', name().c_str(), sample_, '\0');
+    return base::StringPrintf("sparsehistogram%c%s %d%c", '\0', name().c_str(),
+                              sample_, '\0');
   } else if (type_ == LINEAR_HISTOGRAM) {
-    return base::StringPrintf("linearhistogram%c%s %d %d%c",
-                              '\0',
-                              name().c_str(),
-                              sample_,
-                              max_,
-                              '\0');
+    return base::StringPrintf("linearhistogram%c%s %d %d%c", '\0',
+                              name().c_str(), sample_, max_, '\0');
   } else if (type_ == HISTOGRAM) {
     if (num_samples_ > 1) {
-      return base::StringPrintf("histogram%c%s %d %d %d %d %d%c",
-                                '\0',
-                                name().c_str(),
-                                sample_,
-                                min_,
-                                max_,
-                                bucket_count_,
-                                num_samples_,
-                                '\0');
+      return base::StringPrintf("histogram%c%s %d %d %d %d %d%c", '\0',
+                                name().c_str(), sample_, min_, max_,
+                                bucket_count_, num_samples_, '\0');
     } else {
-      return base::StringPrintf("histogram%c%s %d %d %d %d%c",
-                                '\0',
-                                name().c_str(),
-                                sample_,
-                                min_,
-                                max_,
-                                bucket_count_,
-                                '\0');
+      return base::StringPrintf("histogram%c%s %d %d %d %d%c", '\0',
+                                name().c_str(), sample_, min_, max_,
+                                bucket_count_, '\0');
     }
   } else if (type_ == USER_ACTION) {
     CHECK_EQ(type_, USER_ACTION);
@@ -136,13 +119,12 @@ MetricSample MetricSample::CrashSample(const std::string& crash_name) {
 }
 
 // static
-MetricSample MetricSample::HistogramSample(
-    const std::string& histogram_name,
-    int sample,
-    int min,
-    int max,
-    int bucket_count,
-    int num_samples) {
+MetricSample MetricSample::HistogramSample(const std::string& histogram_name,
+                                           int sample,
+                                           int min,
+                                           int max,
+                                           int bucket_count,
+                                           int num_samples) {
   return MetricSample(HISTOGRAM, histogram_name, sample, min, max, bucket_count,
                       num_samples);
 }
