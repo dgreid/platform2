@@ -23,23 +23,19 @@ int main() {
   _plat__SetNvAvail();
   brillo::ErrorPtr error;
   // Create pipes.
-  mkfifo("/dev/tpm-req", O_CREAT|O_RDWR);
-  mkfifo("/dev/tpm-resp", O_CREAT|O_RDWR);
+  mkfifo("/dev/tpm-req", O_CREAT | O_RDWR);
+  mkfifo("/dev/tpm-resp", O_CREAT | O_RDWR);
   brillo::StreamPtr request_stream = brillo::FileStream::Open(
-      base::FilePath("/dev/tpm-req"),
-      brillo::Stream::AccessMode::READ_WRITE,
-      brillo::FileStream::Disposition::CREATE_ALWAYS,
-      &error);
+      base::FilePath("/dev/tpm-req"), brillo::Stream::AccessMode::READ_WRITE,
+      brillo::FileStream::Disposition::CREATE_ALWAYS, &error);
   if (error.get()) {
     PLOG(ERROR) << "TPM simulator: Error opening /dev/tpm-req: "
                 << error->GetMessage();
     return -1;
   }
   brillo::StreamPtr response_stream = brillo::FileStream::Open(
-      base::FilePath("/dev/tpm-resp"),
-      brillo::Stream::AccessMode::READ_WRITE,
-      brillo::FileStream::Disposition::CREATE_ALWAYS,
-      &error);
+      base::FilePath("/dev/tpm-resp"), brillo::Stream::AccessMode::READ_WRITE,
+      brillo::FileStream::Disposition::CREATE_ALWAYS, &error);
   if (error.get()) {
     PLOG(ERROR) << "TPM simulator: Error opening /dev/tpm-resp: "
                 << error->GetMessage();
@@ -55,7 +51,7 @@ int main() {
                   << error->GetMessage();
       return -1;
     }
-    unsigned char *header = request;
+    unsigned char* header = request;
     INT32 header_size = 10;
     TPMI_ST_COMMAND_TAG tag;
     UINT32 command_size;
@@ -70,7 +66,7 @@ int main() {
     request_size = command_size;
     // Read request body.
     if (request_size > 10) {
-      request_stream->ReadAllBlocking(request+10, request_size-10, &error);
+      request_stream->ReadAllBlocking(request + 10, request_size - 10, &error);
       if (error.get()) {
         PLOG(ERROR) << "TPM simulator: Error receiving request body: "
                     << error->GetMessage();
@@ -81,7 +77,7 @@ int main() {
     LOG(INFO) << "TPM simulator: Executing "
               << GetCommandCodeString(command_code);
     unsigned int response_size;
-    unsigned char *response;
+    unsigned char* response;
     ExecuteCommand(request_size, request, &response_size, &response);
     // Write response.
     response_stream->WriteAllBlocking(response, response_size, &error);
