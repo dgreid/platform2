@@ -13,15 +13,12 @@
 
 #include "bootstat.h"
 
-static void usage(char* cmd)
-{
+static void usage(char* cmd) {
   fprintf(stderr, "usage: %s <event-name>\n", basename(cmd));
   exit(EXIT_FAILURE);
 }
 
-
-int main(int argc, char* argv[])
-{
+int main(int argc, char* argv[]) {
   if (argc != 2)
     usage(argv[0]);
 

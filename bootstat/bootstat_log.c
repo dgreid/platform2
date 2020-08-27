@@ -47,7 +47,7 @@ static const char* disk_statistics_file_name_for_test = NULL;
 static char* get_disk_statistics_file_name(char* stats_path, size_t len) {
   char boot_path[PATH_MAX];
   int ret = rootdev(boot_path, sizeof(boot_path),
-                    true,  // Do full resolution.
+                    true,    // Do full resolution.
                     false);  // Do not remove partition number.
   if (ret < 0) {
     return NULL;
@@ -65,8 +65,8 @@ static char* get_disk_statistics_file_name(char* stats_path, size_t len) {
     return NULL;
   }
 
-  ret = snprintf(stats_path, len,
-                 "/sys/class/block/%s/../stat", root_device_name);
+  ret = snprintf(stats_path, len, "/sys/class/block/%s/../stat",
+                 root_device_name);
   if (ret >= PATH_MAX || ret < 0) {
     return NULL;
   }
@@ -75,8 +75,7 @@ static char* get_disk_statistics_file_name(char* stats_path, size_t len) {
 
 static void append_logdata(const char* input_path,
                            const char* output_name_prefix,
-                           const char* event_name)
-{
+                           const char* event_name) {
   if (!input_path || !output_name_prefix || !event_name)
     return;
   const mode_t kFileCreationMode =
@@ -103,8 +102,7 @@ static void append_logdata(const char* input_path,
   // of a serious test bug.
   //
   output_path_len = snprintf(output_path, sizeof(output_path), "%s/%s-%.*s",
-                             output_directory_name,
-                             output_name_prefix,
+                             output_directory_name, output_name_prefix,
                              BOOTSTAT_MAX_EVENT_LEN - 1, event_name);
   // output_path_len is unused when the assert() is disabled. Prevent the
   // warning.
@@ -127,23 +125,21 @@ static void append_logdata(const char* input_path,
 }
 
 BRILLO_EXPORT
-void bootstat_log(const char* event_name)
-{
+void bootstat_log(const char* event_name) {
   const char* disk_statistics_file_name;
   char stats_path[PATH_MAX];
   append_logdata(uptime_statistics_file_name, "uptime", event_name);
   if (disk_statistics_file_name_for_test) {
     disk_statistics_file_name = disk_statistics_file_name_for_test;
   } else {
-    disk_statistics_file_name = get_disk_statistics_file_name(
-        stats_path, sizeof(stats_path));
+    disk_statistics_file_name =
+        get_disk_statistics_file_name(stats_path, sizeof(stats_path));
   }
   append_logdata(disk_statistics_file_name, "disk", event_name);
 }
 
 BRILLO_EXPORT
-void bootstat_set_output_directory_for_test(const char* dirname)
-{
+void bootstat_set_output_directory_for_test(const char* dirname) {
   if (dirname != NULL)
     output_directory_name = dirname;
   else
@@ -151,8 +147,7 @@ void bootstat_set_output_directory_for_test(const char* dirname)
 }
 
 BRILLO_EXPORT
-void bootstat_set_uptime_file_name_for_test(const char* filename)
-{
+void bootstat_set_uptime_file_name_for_test(const char* filename) {
   if (filename != NULL)
     uptime_statistics_file_name = filename;
   else
@@ -160,7 +155,6 @@ void bootstat_set_uptime_file_name_for_test(const char* filename)
 }
 
 BRILLO_EXPORT
-void bootstat_set_disk_file_name_for_test(const char* filename)
-{
+void bootstat_set_disk_file_name_for_test(const char* filename) {
   disk_statistics_file_name_for_test = filename;
 }
