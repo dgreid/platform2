@@ -84,7 +84,7 @@ void Daemon::BootstrapMojoConnection(
 
   AcceptProxyConnection(std::move(file_handle));
   LOG(INFO) << "Mojo connection established.";
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Daemon::AcceptProxyConnection(base::ScopedFD fd) {
