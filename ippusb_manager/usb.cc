@@ -16,8 +16,8 @@
 namespace ippusb_manager {
 
 bool GetUsbInfo(const std::string& info, uint16_t* vid, uint16_t* pid) {
-  auto tokens = base::SplitString(info, "_", base::KEEP_WHITESPACE,
-                                  base::SPLIT_WANT_ALL);
+  auto tokens =
+      base::SplitString(info, "_", base::KEEP_WHITESPACE, base::SPLIT_WANT_ALL);
   if (tokens.size() != 2)
     return false;
 

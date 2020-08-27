@@ -204,7 +204,7 @@ std::unique_ptr<ServerSocketManager> ServerSocketManager::Create(
 // static
 std::unique_ptr<ClientSocketManager> ClientSocketManager::Create(
     const char* socket_path) {
-  int fd = socket(AF_UNIX, SOCK_STREAM|SOCK_CLOEXEC, 0);
+  int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
   if (fd < 0) {
     PLOG(ERROR) << "Failed to open socket: " << socket_path;
     return nullptr;
