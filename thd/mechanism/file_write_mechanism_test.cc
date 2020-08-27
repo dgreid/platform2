@@ -27,7 +27,7 @@ const char kTestName[] = "test-name";
 
 // Arbitrary value to use on SetLevel(int level) calls.
 const int kInput = (kMinLevel + kMaxLevel) / 2;
-}
+}  // namespace
 
 class FileWriteMechanismTest : public ::testing::Test {
  public:
@@ -51,11 +51,9 @@ class FileWriteMechanismTest : public ::testing::Test {
 // Test that FileWriteMechanism rejects any request to SetLevel(level)
 // where |level| < min level, or |level| > max level.
 TEST_F(FileWriteMechanismTest, LevelOutOfBounds) {
-  FileWriteMechanism mechanism(kMaxLevel,
-                               kMinLevel,
+  FileWriteMechanism mechanism(kMaxLevel, kMinLevel,
                                kMaxLevel, /* default level */
-                               kTestName,
-                               file_);
+                               kTestName, file_);
   EXPECT_FALSE(mechanism.SetLevel(kMaxLevel + 5));
   EXPECT_FALSE(mechanism.SetLevel(kMinLevel - 5));
 }
@@ -64,8 +62,8 @@ TEST_F(FileWriteMechanismTest, LevelOutOfBounds) {
 // constructor.
 TEST_F(FileWriteMechanismTest, DefaultLevel) {
   const int kDefaultLevel = kMinLevel + (kMaxLevel - kMinLevel) / 4;
-  FileWriteMechanism mechanism(
-      kMaxLevel, kMinLevel, kDefaultLevel, kTestName, file_);
+  FileWriteMechanism mechanism(kMaxLevel, kMinLevel, kDefaultLevel, kTestName,
+                               file_);
   EXPECT_EQ(kMaxLevel, mechanism.GetMaxLevel());
   EXPECT_EQ(kMinLevel, mechanism.GetMinLevel());
   EXPECT_EQ(kDefaultLevel, mechanism.GetDefaultLevel());
@@ -74,8 +72,8 @@ TEST_F(FileWriteMechanismTest, DefaultLevel) {
 // Test standard behavior to verify expected value
 // is written to the file.
 TEST_F(FileWriteMechanismTest, RegularFile) {
-  FileWriteMechanism mechanism(
-      kMaxLevel, kMinLevel, kMaxLevel, kTestName, file_);
+  FileWriteMechanism mechanism(kMaxLevel, kMinLevel, kMaxLevel, kTestName,
+                               file_);
   ASSERT_TRUE(mechanism.SetLevel(kInput));
   std::string file_content;
   ASSERT_TRUE(base::ReadFileToString(file_, &file_content));
@@ -87,8 +85,8 @@ TEST_F(FileWriteMechanismTest, RegularFile) {
 // Test to verify SetLevel(int64_t level) returning false when there
 // is an error in file-writing (error in this case is file is ro).
 TEST_F(FileWriteMechanismTest, InvalidPath) {
-  FileWriteMechanism mechanism(
-      kMinLevel, kMaxLevel, kMaxLevel, kTestName, file_);
+  FileWriteMechanism mechanism(kMinLevel, kMaxLevel, kMaxLevel, kTestName,
+                               file_);
   base::File out_file = base::File(
       file_, base::File::Flags::FLAG_READ | base::File::Flags::FLAG_CREATE);
   EXPECT_FALSE(mechanism.SetLevel(kInput));

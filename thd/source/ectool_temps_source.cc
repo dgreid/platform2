@@ -48,8 +48,8 @@ bool EctoolTempsSource::ReadValue(int64_t* value) {
     PLOG(ERROR) << "Running the command \"" << cmd_line << "\" failed.";
     return false;
   }
-  if (!base::StartsWith(
-          cmd_output, kOutputPrefix, base::CompareCase::SENSITIVE)) {
+  if (!base::StartsWith(cmd_output, kOutputPrefix,
+                        base::CompareCase::SENSITIVE)) {
     LOG(ERROR)
         << "Ectool temps source was unable to parse the command line output."
         << "Output: " << cmd_output << ".";
