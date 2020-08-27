@@ -231,7 +231,7 @@ TEST(Pack, InvalidFile) {
 
   // Fill reserved field.
   content_broken = content;
-  content_broken[header_size-1] = 'x';
+  content_broken[header_size - 1] = 'x';
   EXPECT_TRUE(
       base::WriteFile(pack_path, &content_broken[0], content_broken.length()));
   EXPECT_FALSE(pack.Read(pack_name));
@@ -252,8 +252,8 @@ TEST(Pack, InvalidFile) {
 
   // Path is not 0 terminated string.
   content_broken = content;
-  char* const path = (reinterpret_cast<PackPath*>(
-      &content_broken[0] + paths_offset))->path;
+  char* const path =
+      (reinterpret_cast<PackPath*>(&content_broken[0] + paths_offset))->path;
   for (size_t i = 0; i <= PACK_PATH_MAX; ++i)
     path[i] = 'a';
   EXPECT_TRUE(

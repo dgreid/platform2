@@ -67,8 +67,9 @@ class FileEntry {
   // and leaves difference in |file1| and |file2] correspondingly. Note, that
   // sizes of read requests might be different and |common| will have the size
   // of minimum of read requests sizes of |file1| and |file2|.
-  static void CalculateDifference(
-      FileEntry* file1, FileEntry* file2, FileEntry* common);
+  static void CalculateDifference(FileEntry* file1,
+                                  FileEntry* file2,
+                                  FileEntry* common);
 
   const PackPath& pack_path() const { return pack_path_; }
 

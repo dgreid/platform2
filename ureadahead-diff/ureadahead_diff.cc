@@ -21,27 +21,22 @@ bool ReadBuffer(int fd, void* data, size_t size) {
 }
 
 bool WriteBuffer(int fd, const void* data, size_t size) {
-  return base::WriteFileDescriptor(
-      fd, reinterpret_cast<const char*>(data), size);
+  return base::WriteFileDescriptor(fd, reinterpret_cast<const char*>(data),
+                                   size);
 }
 
 }  // namespace
 
-
 bool PackPath::operator==(const PackPath& other) const {
-  return group == other.group &&
-         ino == other.ino &&
-         !strcmp(path, other.path);
+  return group == other.group && ino == other.ino && !strcmp(path, other.path);
 }
 bool PackPath::operator!=(const PackPath& other) const {
   return !(*this == other);
 }
 
 bool PackBlock::operator==(const PackBlock& other) const {
-  return pathidx == other.pathidx &&
-      offset == other.offset &&
-      length == other.length &&
-      physical == other.physical;
+  return pathidx == other.pathidx && offset == other.offset &&
+         length == other.length && physical == other.physical;
 }
 
 bool PackBlock::operator!=(const PackBlock& other) const {
@@ -106,10 +101,11 @@ bool FileEntry::IsEmpty() const {
 }
 
 // static
-void FileEntry::CalculateDifference(
-    FileEntry* file1, FileEntry* file2, FileEntry* common) {
-  const size_t size = std::min(
-      file1->read_map_.size(), file2->read_map_.size());
+void FileEntry::CalculateDifference(FileEntry* file1,
+                                    FileEntry* file2,
+                                    FileEntry* common) {
+  const size_t size =
+      std::min(file1->read_map_.size(), file2->read_map_.size());
   // Clear just in case we have something pending.
   common->read_map_.clear();
   common->read_map_.resize(size);
@@ -153,8 +149,8 @@ bool Pack::Read(const std::string& path) {
 }
 
 bool Pack::Write(const std::string& path) const {
-  base::ScopedFD fd(open(path.c_str(),
-                      O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644));
+  base::ScopedFD fd(
+      open(path.c_str(), O_WRONLY | O_CREAT | O_TRUNC | O_CLOEXEC, 0644));
   if (!fd.is_valid())
     return false;
   return Write(fd.get());
@@ -264,8 +260,8 @@ bool Pack::Read(int fd) {
 }
 
 bool Pack::Write(int fd) const {
-  char header[8] = {
-      'u', 'r', 'a', 2 /* version */, 0 /* flags */, 0, 0, 0 /* reserved */};
+  char header[8] = {'u',           'r', 'a', 2 /* version */,
+                    0 /* flags */, 0,   0,   0 /* reserved */};
 
   time_t created;
   time(&created);
@@ -290,8 +286,8 @@ bool Pack::Write(int fd) const {
   for (size_t i = 0; i < num_paths; ++i) {
     const std::vector<PackBlock> file_pack_blocks =
         files_[i]->GetReadRequests(i);
-    pack_blocks.insert(
-        pack_blocks.end(), file_pack_blocks.begin(), file_pack_blocks.end());
+    pack_blocks.insert(pack_blocks.end(), file_pack_blocks.begin(),
+                       file_pack_blocks.end());
   }
 
   // Flash blocks for the whole pack.
