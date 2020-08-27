@@ -27,7 +27,7 @@ namespace {
 enum class PipeState {
   PENDING,
   ERROR,
-  DONE
+  DONE,
 };
 
 // The system-defined size of buffer used to read from a pipe.
