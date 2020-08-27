@@ -43,11 +43,11 @@ constexpr char kManagerSocketPath[] = "/run/ippusb/ippusb_manager.sock";
 // *  the ippusb_bridge keep-alive socket.
 struct IppusbBridgeSocketPaths {
   explicit IppusbBridgeSocketPaths(const UsbPrinterInfo* const printer_info)
-      : main_socket(base::StringPrintf("%s/%04x_%04x.sock",
+      : main_socket(base::StringPrintf("%s/%04x-%04x.sock",
                                        kRunDir,
                                        printer_info->vid(),
                                        printer_info->pid())),
-        keepalive_socket(base::StringPrintf("%s/%04x_%04x_keep_alive.sock",
+        keepalive_socket(base::StringPrintf("%s/%04x-%04x_keep_alive.sock",
                                             kRunDir,
                                             printer_info->vid(),
                                             printer_info->pid())) {}
