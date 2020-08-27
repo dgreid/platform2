@@ -13,23 +13,23 @@ namespace {
 
 const char kSecureMessageTemplate[] =
     "securemessage:{"
-      "payload:%s,"
-      "key:%s,"
-      "associated_data:%s,"
-      "public_metadata:%s,"
-      "verification_key_id:%s,"
-      "decryption_key_id:%s,"
-      "encryption:%s,"
-      "signature:%s"
+    "payload:%s,"
+    "key:%s,"
+    "associated_data:%s,"
+    "public_metadata:%s,"
+    "verification_key_id:%s,"
+    "decryption_key_id:%s,"
+    "encryption:%s,"
+    "signature:%s"
     "}";
 
 const char kUnwrappedMessageTemplate[] =
     "unwrappedmessage:{"
-      "original:%s,"
-      "key:%s,"
-      "associated_data:%s,"
-      "encryption:%s,"
-      "signature:%s"
+    "original:%s,"
+    "key:%s,"
+    "associated_data:%s,"
+    "encryption:%s,"
+    "signature:%s"
     "}";
 
 std::string Uint8VectorAsString(const std::vector<uint8_t>& data) {
@@ -80,9 +80,7 @@ std::string KeyAlgorithmAsString(
 
 namespace easy_unlock {
 
-FakeService::FakeService() : private_key_count_(0),
-                             public_key_count_(0) {
-}
+FakeService::FakeService() : private_key_count_(0), public_key_count_(0) {}
 
 FakeService::~FakeService() {}
 
@@ -98,18 +96,17 @@ std::vector<uint8_t> FakeService::WrapPublicKey(
     easy_unlock_crypto::ServiceImpl::KeyAlgorithm algorithm,
     const std::vector<uint8_t>& public_key) {
   return StringAsUint8Vector(base::StringPrintf(
-      "public_key_%s_%s",
-      KeyAlgorithmAsString(algorithm).c_str(),
+      "public_key_%s_%s", KeyAlgorithmAsString(algorithm).c_str(),
       Uint8VectorAsString(public_key).c_str()));
 }
 
 std::vector<uint8_t> FakeService::PerformECDHKeyAgreement(
     const std::vector<uint8_t>& private_key,
     const std::vector<uint8_t>& public_key) {
-  return StringAsUint8Vector(base::StringPrintf(
-      "secret_key:{private_key:%s,public_key:%s}",
-       Uint8VectorAsString(private_key).c_str(),
-       Uint8VectorAsString(public_key).c_str()));
+  return StringAsUint8Vector(
+      base::StringPrintf("secret_key:{private_key:%s,public_key:%s}",
+                         Uint8VectorAsString(private_key).c_str(),
+                         Uint8VectorAsString(public_key).c_str()));
 }
 
 std::vector<uint8_t> FakeService::CreateSecureMessage(
@@ -122,8 +119,7 @@ std::vector<uint8_t> FakeService::CreateSecureMessage(
     easy_unlock_crypto::ServiceImpl::EncryptionType encryption_type,
     easy_unlock_crypto::ServiceImpl::SignatureType signature_type) {
   return StringAsUint8Vector(base::StringPrintf(
-      kSecureMessageTemplate,
-      Uint8VectorAsString(payload).c_str(),
+      kSecureMessageTemplate, Uint8VectorAsString(payload).c_str(),
       Uint8VectorAsString(key).c_str(),
       Uint8VectorAsString(associated_data).c_str(),
       Uint8VectorAsString(public_metadata).c_str(),
@@ -140,8 +136,7 @@ std::vector<uint8_t> FakeService::UnwrapSecureMessage(
     easy_unlock_crypto::ServiceImpl::EncryptionType encryption_type,
     easy_unlock_crypto::ServiceImpl::SignatureType signature_type) {
   return StringAsUint8Vector(base::StringPrintf(
-      kUnwrappedMessageTemplate,
-      Uint8VectorAsString(secure_message).c_str(),
+      kUnwrappedMessageTemplate, Uint8VectorAsString(secure_message).c_str(),
       Uint8VectorAsString(key).c_str(),
       Uint8VectorAsString(associated_data).c_str(),
       EncryptionTypeAsString(encryption_type).c_str(),

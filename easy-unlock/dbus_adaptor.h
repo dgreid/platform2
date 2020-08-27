@@ -41,11 +41,10 @@ class DBusAdaptor {
   // Handlers for DBus method calls exported in |ExportDBusMethods|.
   // See service_impl.h in easy-unlock-crypto repo for more info on specific
   // methods.
-  void GenerateEcP256KeyPair(
-      std::vector<uint8_t>* private_key, std::vector<uint8_t>* public_key);
-  std::vector<uint8_t> WrapPublicKey(
-      const std::string& algorithm_str,
-      const std::vector<uint8_t>& public_key);
+  void GenerateEcP256KeyPair(std::vector<uint8_t>* private_key,
+                             std::vector<uint8_t>* public_key);
+  std::vector<uint8_t> WrapPublicKey(const std::string& algorithm_str,
+                                     const std::vector<uint8_t>& public_key);
   std::vector<uint8_t> PerformECDHKeyAgreement(
       const std::vector<uint8_t>& private_key,
       const std::vector<uint8_t>& public_key);

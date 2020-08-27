@@ -76,13 +76,12 @@ class Daemon : public brillo::DBusServiceDaemon {
  public:
   explicit Daemon(std::unique_ptr<easy_unlock::Service> service_impl)
       : brillo::DBusServiceDaemon(kEasyUnlockServiceName),
-        service_impl_(std::move(service_impl)) {
-  }
+        service_impl_(std::move(service_impl)) {}
   ~Daemon() override {}
 
  protected:
   void RegisterDBusObjectsAsync(
-       brillo::dbus_utils::AsyncEventSequencer* sequencer) override {
+      brillo::dbus_utils::AsyncEventSequencer* sequencer) override {
     adaptor_.reset(new DBusAdaptor(bus_, service_impl_.get()));
     adaptor_->Register(sequencer->GetHandler("Register dbus methods", true));
   }
@@ -106,8 +105,10 @@ int main(int argc, char** argv) {
   }
 
   bool foreground = cl->HasSwitch(switches::kForeground);
-  int log_level = cl->HasSwitch(switches::kLogLevel) ?
-      GetLogLevel(cl->GetSwitchValueASCII(switches::kLogLevel)) : 0;
+  int log_level =
+      cl->HasSwitch(switches::kLogLevel)
+          ? GetLogLevel(cl->GetSwitchValueASCII(switches::kLogLevel))
+          : 0;
 
   SetupLogging(foreground, log_level);
 

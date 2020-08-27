@@ -71,8 +71,8 @@ bool ConvertKeyAlgorithm(
 DBusAdaptor::DBusAdaptor(const scoped_refptr<dbus::Bus>& bus,
                          easy_unlock::Service* service)
     : service_impl_(service),
-      dbus_object_(nullptr, bus,
-                   dbus::ObjectPath(easy_unlock::kEasyUnlockServicePath)) {
+      dbus_object_(
+          nullptr, bus, dbus::ObjectPath(easy_unlock::kEasyUnlockServicePath)) {
   CHECK(service_impl_) << "Service implementation not passed to DBus adaptor";
 }
 
@@ -100,14 +100,13 @@ void DBusAdaptor::Register(const CompletionAction& callback) {
   dbus_object_.RegisterAsync(callback);
 }
 
-void DBusAdaptor::GenerateEcP256KeyPair(
-    std::vector<uint8_t>* private_key, std::vector<uint8_t>* public_key) {
+void DBusAdaptor::GenerateEcP256KeyPair(std::vector<uint8_t>* private_key,
+                                        std::vector<uint8_t>* public_key) {
   service_impl_->GenerateEcP256KeyPair(private_key, public_key);
 }
 
 std::vector<uint8_t> DBusAdaptor::WrapPublicKey(
-    const std::string& algorithm_str,
-    const std::vector<uint8_t>& public_key) {
+    const std::string& algorithm_str, const std::vector<uint8_t>& public_key) {
   easy_unlock_crypto::ServiceImpl::KeyAlgorithm algorithm;
   if (!ConvertKeyAlgorithm(algorithm_str, &algorithm)) {
     LOG(ERROR) << "Invalid key algorithm";
@@ -143,14 +142,9 @@ std::vector<uint8_t> DBusAdaptor::CreateSecureMessage(
     return std::vector<uint8_t>();
   }
 
-  return service_impl_->CreateSecureMessage(payload,
-                                            key,
-                                            associated_data,
-                                            public_metadata,
-                                            verification_key_id,
-                                            decryption_key_id,
-                                            encryption_type,
-                                            signature_type);
+  return service_impl_->CreateSecureMessage(
+      payload, key, associated_data, public_metadata, verification_key_id,
+      decryption_key_id, encryption_type, signature_type);
 }
 
 std::vector<uint8_t> DBusAdaptor::UnwrapSecureMessage(
@@ -169,11 +163,8 @@ std::vector<uint8_t> DBusAdaptor::UnwrapSecureMessage(
     return std::vector<uint8_t>();
   }
 
-  return service_impl_->UnwrapSecureMessage(message,
-                                            key,
-                                            associated_data,
-                                            encryption_type,
-                                            signature_type);
+  return service_impl_->UnwrapSecureMessage(message, key, associated_data,
+                                            encryption_type, signature_type);
 }
 
 }  // namespace easy_unlock

@@ -14,9 +14,8 @@ class ServiceImpl : public easy_unlock::Service {
   ServiceImpl() : crypto_service_(new easy_unlock_crypto::ServiceImpl()) {}
   virtual ~ServiceImpl() {}
 
-  void GenerateEcP256KeyPair(
-      std::vector<uint8_t>* private_key,
-      std::vector<uint8_t>* public_key) override {
+  void GenerateEcP256KeyPair(std::vector<uint8_t>* private_key,
+                             std::vector<uint8_t>* public_key) override {
     crypto_service_->GenerateEcP256KeyPair(private_key, public_key);
   }
 
@@ -41,14 +40,9 @@ class ServiceImpl : public easy_unlock::Service {
       const std::vector<uint8_t>& decryption_key_id,
       easy_unlock_crypto::ServiceImpl::EncryptionType encryption_type,
       easy_unlock_crypto::ServiceImpl::SignatureType signature_type) override {
-    return crypto_service_->CreateSecureMessage(payload,
-                                                key,
-                                                associated_data,
-                                                public_metadata,
-                                                verification_key_id,
-                                                decryption_key_id,
-                                                encryption_type,
-                                                signature_type);
+    return crypto_service_->CreateSecureMessage(
+        payload, key, associated_data, public_metadata, verification_key_id,
+        decryption_key_id, encryption_type, signature_type);
   }
 
   std::vector<uint8_t> UnwrapSecureMessage(
@@ -57,11 +51,8 @@ class ServiceImpl : public easy_unlock::Service {
       const std::vector<uint8_t>& associated_data,
       easy_unlock_crypto::ServiceImpl::EncryptionType encryption_type,
       easy_unlock_crypto::ServiceImpl::SignatureType signature_type) override {
-    return crypto_service_->UnwrapSecureMessage(secure_message,
-                                                key,
-                                                associated_data,
-                                                encryption_type,
-                                                signature_type);
+    return crypto_service_->UnwrapSecureMessage(
+        secure_message, key, associated_data, encryption_type, signature_type);
   }
 
  private:
