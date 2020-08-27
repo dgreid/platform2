@@ -160,6 +160,10 @@ void WebAuthnHandler::MakeCredential(
     dbus::MethodCall call(
         chromeos::kUserAuthenticationServiceInterface,
         chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+    dbus::MessageWriter writer(&call);
+    writer.AppendString(request.rp_id());
+    writer.AppendInt32(request.verification_type());
+
     auth_dialog_dbus_proxy_->CallMethod(
         &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
         base::Bind(&WebAuthnHandler::HandleUVFlowResultMakeCredential,
@@ -457,6 +461,10 @@ void WebAuthnHandler::GetAssertion(
     dbus::MethodCall call(
         chromeos::kUserAuthenticationServiceInterface,
         chromeos::kUserAuthenticationServiceShowAuthDialogMethod);
+    dbus::MessageWriter writer(&call);
+    writer.AppendString(request.rp_id());
+    writer.AppendInt32(request.verification_type());
+
     auth_dialog_dbus_proxy_->CallMethod(
         &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
         base::Bind(&WebAuthnHandler::HandleUVFlowResultGetAssertion,
