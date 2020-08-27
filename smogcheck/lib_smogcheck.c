@@ -20,7 +20,7 @@
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-#define arraysize(x) (sizeof(x)/sizeof(x[0]))
+#define arraysize(x) (sizeof(x) / sizeof(x[0]))
 
 // Opens a device file for I/O operations.
 //
@@ -57,8 +57,10 @@ int SetSlaveAddress(int fd, int addr) {
     printf("Error: invalid file descriptor %d. Expect integer >= 0\n", fd);
     return -1;
   } else if (addr < 0x08 || addr > 0x77) {
-    printf("Error: invalid 7-bit I2C slave address %d. Expect range is " \
-           "an integer in [8, 112]\n", addr);
+    printf(
+        "Error: invalid 7-bit I2C slave address %d. Expect range is "
+        "an integer in [8, 112]\n",
+        addr);
     return -1;
   }
 
