@@ -42,8 +42,8 @@ bool CrosConfigIdentityArm::FakeProductFilesForTesting(
 
   std::memcpy(sku_id_char, &sku_id_fdt, kSkuIdLength);
 
-  if (base::WriteFile(*sku_id_file_out, sku_id_char,
-                      kSkuIdLength) != kSkuIdLength) {
+  if (base::WriteFile(*sku_id_file_out, sku_id_char, kSkuIdLength) !=
+      kSkuIdLength) {
     CROS_CONFIG_LOG(ERROR) << "Failed to write sku-id file";
     return false;
   }
@@ -69,8 +69,7 @@ bool CrosConfigIdentityArm::ReadInfo(const base::FilePath& dt_compatible_file,
   }
 
   CROS_CONFIG_LOG(INFO) << "Read device-tree compatible list: "
-                        << compatible_devices_
-                        << ", sku_id: " << sku_id_;
+                        << compatible_devices_ << ", sku_id: " << sku_id_;
   return true;
 }
 

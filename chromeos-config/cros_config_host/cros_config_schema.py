@@ -15,6 +15,7 @@ import itertools
 import json
 import os
 import re
+import subprocess
 import sys
 
 import six
@@ -306,6 +307,16 @@ def TransformConfig(config, model_filter_regex=None):
   return libcros_schema.FormatJson(json_config)
 
 
+def ClangFormat(text):
+  cmd = [
+      'clang-format',
+      '-style=file',
+  ]
+  completed_process = subprocess.run(cmd, input=text.encode(), check=True,
+                                     stdout=subprocess.PIPE)
+  return completed_process.stdout.decode()
+
+
 def GenerateMosysCBindings(config):
   """Generates Mosys C struct bindings
 
@@ -356,6 +367,11 @@ def GenerateMosysCBindings(config):
                          help_content_id))
 
   file_format = """\
+/* Copyright 2020 The Chromium OS Authors. All rights reserved.
+ * Use of this source code is governed by a BSD-style license that can be
+ * found in the LICENSE file.
+ */
+
 #include "lib/cros_config_struct.h"
 
 static struct config_map all_configs[] = {%s
@@ -366,7 +382,7 @@ const struct config_map *cros_config_get_config_map(int *num_entries) {
   return &all_configs[0];
 }"""
 
-  return file_format % (',\n'.join(structs), len(structs))
+  return ClangFormat(file_format % (',\n'.join(structs), len(structs)))
 
 
 def _GenerateInferredAshFlags(device_config):

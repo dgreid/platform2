@@ -122,9 +122,8 @@ bool CrosConfigJson::GetString(const std::string& path,
 
   if (path.length() > 1) {
     std::string path_no_root = path.substr(1);
-    for (const auto& path :
-         base::SplitStringPiece(path_no_root, "/", base::TRIM_WHITESPACE,
-                           base::SPLIT_WANT_ALL)) {
+    for (const auto& path : base::SplitStringPiece(
+             path_no_root, "/", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL)) {
       attr_dict = attr_dict->FindDictKey(path);
       if (!attr_dict) {
         CROS_CONFIG_LOG(ERROR) << "Failed to find path: " << path;

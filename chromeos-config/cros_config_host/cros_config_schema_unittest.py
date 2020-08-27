@@ -11,6 +11,7 @@ from __future__ import print_function
 import json
 import os
 import re
+import textwrap
 
 import jsonschema  # pylint: disable=import-error
 from six.moves import zip_longest
@@ -772,6 +773,15 @@ class MainTests(cros_test_lib.TempDirTestCase):
                  'test_data/test_merge_overlay.yaml')
     expected_file = os.path.join(this_dir, '../test_data/test_merge.json')
     self.assertFileEqual(expected_file, output, regen_cmd)
+
+  def testClangFormat(self):
+    test_input = 'int main(int argc, char **argv) { return 0; }'
+    expected = textwrap.dedent("""\
+    int main(int argc, char** argv) {
+      return 0;
+    }""")
+    formatted = cros_config_schema.ClangFormat(test_input)
+    self.assertEqual(formatted, expected)
 
 
 if __name__ == '__main__':
