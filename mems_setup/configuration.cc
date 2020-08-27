@@ -123,10 +123,9 @@ bool Configuration::CopyLightCalibrationFromVpd() {
     /*
      * Split the attributes in 3 doubles.
      */
-    std::vector<std::string> attrs = base::SplitString(
-        attrib_value.value(), " ",
-        base::TRIM_WHITESPACE,
-        base::SPLIT_WANT_NONEMPTY);
+    std::vector<std::string> attrs =
+        base::SplitString(attrib_value.value(), " ", base::TRIM_WHITESPACE,
+                          base::SPLIT_WANT_NONEMPTY);
 
     if (attrs.size() == 3) {
       for (int i = 0; i < 3; i++) {
@@ -141,8 +140,8 @@ bool Configuration::CopyLightCalibrationFromVpd() {
 
       for (auto& color_entry : calib_color_entries) {
         if (!color_entry.value) {
-           LOG(ERROR) << "No value set for " << color_entry.iio_name;
-           continue;
+          LOG(ERROR) << "No value set for " << color_entry.iio_name;
+          continue;
         }
         LOG(ERROR) << "writing " << *color_entry.value;
         auto chn = sensor_->GetChannel(color_entry.iio_name);
@@ -256,8 +255,8 @@ bool Configuration::AddSysfsTrigger(int sysfs_trigger_id) {
   // first see if the trigger is already there. If not, try to create it, and
   // then try to access it again. Only if the latter access fails then
   // error out.
-  auto trigger_name = base::StringPrintf("%s%d",
-      kSysfsTriggerPrefix, sysfs_trigger_id);
+  auto trigger_name =
+      base::StringPrintf("%s%d", kSysfsTriggerPrefix, sysfs_trigger_id);
   auto triggers = context_->GetTriggersByName(trigger_name);
 
   if (triggers.size() > 1) {

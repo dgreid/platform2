@@ -118,11 +118,12 @@ bool DelegateImpl::Exists(const base::FilePath& fp) {
 base::Optional<gid_t> DelegateImpl::FindGroupId(const char* group) {
   size_t len = 1024;
   const auto max_len = sysconf(_SC_GETGR_R_SIZE_MAX);
-  if (max_len != -1) len = max_len;
+  if (max_len != -1)
+    len = max_len;
 
   std::vector<char> buf(len);
   struct group result;
-  struct group *resultp;
+  struct group* resultp;
 
   int err = getgrnam_r(group, &result, buf.data(), len, &resultp);
   if (err)

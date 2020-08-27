@@ -31,8 +31,7 @@ class Configuration {
   bool ConfigIlluminance();
 
   bool CopyImuCalibationFromVpd(int max_value);
-  bool CopyImuCalibationFromVpd(int max_value,
-                                const std::string& location);
+  bool CopyImuCalibationFromVpd(int max_value, const std::string& location);
 
   bool CopyLightCalibrationFromVpd();
 
@@ -48,7 +47,7 @@ class Configuration {
 
   Delegate* delegate_;  // non-owned
   SensorKind kind_;
-  libmems::IioDevice* sensor_;  // non-owned
+  libmems::IioDevice* sensor_;    // non-owned
   libmems::IioContext* context_;  // non-owned
 
   DISALLOW_COPY_AND_ASSIGN(Configuration);

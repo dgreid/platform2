@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
   }
 
   std::unique_ptr<mems_setup::Delegate> delegate(
-    new mems_setup::DelegateImpl());
+      new mems_setup::DelegateImpl());
 
   base::FilePath iio_trig_sysfs_path("/sys/bus/iio/devices/iio_sysfs_trigger");
   if (!delegate->Exists(iio_trig_sysfs_path)) {
@@ -72,8 +72,7 @@ int main(int argc, char** argv) {
     }
   }
 
-  std::unique_ptr<libmems::IioContext> context(
-      new libmems::IioContextImpl());
+  std::unique_ptr<libmems::IioContext> context(new libmems::IioContextImpl());
 
   libmems::IioDevice* device = nullptr;
   if (FLAGS_device_id != -1) {
