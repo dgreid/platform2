@@ -137,6 +137,7 @@ FileWatcherGLib::~FileWatcherGLib() {
   if (monitor_ != NULL) {
     g_signal_handlers_disconnect_by_func(monitor_, (gpointer)OnMonitorChanged,
                                          this);
+    g_file_monitor_cancel(monitor_);
     g_clear_object(&monitor_);
   }
 }
