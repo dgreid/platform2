@@ -36,7 +36,11 @@ int main(int argc, char* argv[]) {
     log_file.assign(switches::kDefaultLogFile);
   logging::LoggingSettings settings;
   settings.logging_dest = logging::LOG_TO_ALL;
+#if BASE_VER < 780000
   settings.log_file = log_file.c_str();
+#else
+  settings.log_file_path = log_file.c_str();
+#endif
   settings.lock_log = logging::DONT_LOCK_LOG_FILE;
   settings.delete_old = logging::APPEND_TO_OLD_LOG_FILE;
   logging::InitLogging(settings);
