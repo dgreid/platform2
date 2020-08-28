@@ -39,7 +39,8 @@ constexpr char kReservedPartition[] = "2E0A753D-9E48-43B0-8337-B15192CB1B5E";
 constexpr char kRWFWPartition[] = "CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3";
 constexpr char kEFIPartition[] = "C12A7328-F81F-11D2-BA4B-00A0C93EC93B";
 
-bool WriteFile(const base::FilePath& path, const std::string& contents) {
+bool CreateDirectoryAndWriteFile(const base::FilePath& path,
+                                 const std::string& contents) {
   return base::CreateDirectory(path.DirName()) &&
          base::WriteFile(path, contents.c_str(), contents.length()) ==
              contents.length();
@@ -117,7 +118,7 @@ TEST(IncrementFileCounter, NegativeNumber) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, "-3\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, "-3\n"));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -128,7 +129,7 @@ TEST(IncrementFileCounter, SmallNumber) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, "42\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, "42\n"));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -139,7 +140,7 @@ TEST(IncrementFileCounter, LargeNumber) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, "1238761\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, "1238761\n"));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -150,7 +151,7 @@ TEST(IncrementFileCounter, NonNumber) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, "cruciverbalist"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, "cruciverbalist"));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -161,7 +162,7 @@ TEST(IncrementFileCounter, IntMax) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, std::to_string(INT_MAX)));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, std::to_string(INT_MAX)));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -172,7 +173,7 @@ TEST(IncrementFileCounter, LongMax) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, std::to_string(LONG_MAX)));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, std::to_string(LONG_MAX)));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -183,7 +184,7 @@ TEST(IncrementFileCounter, InputNoNewline) {
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
   base::FilePath counter = temp_dir.GetPath().Append("counter");
-  ASSERT_TRUE(WriteFile(counter, std::to_string(7)));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(counter, std::to_string(7)));
   EXPECT_TRUE(ClobberState::IncrementFileCounter(counter));
   std::string contents;
   ASSERT_TRUE(base::ReadFileToString(counter, &contents));
@@ -207,7 +208,7 @@ TEST(PreserveFiles, NoFiles) {
 
   EXPECT_FALSE(base::PathExists(tar_file));
 
-  ASSERT_TRUE(WriteFile(tar_file, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(tar_file, ""));
   EXPECT_TRUE(base::PathExists(tar_file));
   EXPECT_EQ(ClobberState::PreserveFiles(
                 fake_stateful, std::vector<base::FilePath>(), tar_file),
@@ -236,7 +237,7 @@ TEST(PreserveFiles, NoExistingFiles) {
 
   EXPECT_FALSE(base::PathExists(tar_file));
 
-  ASSERT_TRUE(WriteFile(tar_file, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(tar_file, ""));
   EXPECT_TRUE(base::PathExists(tar_file));
   EXPECT_EQ(ClobberState::PreserveFiles(
                 fake_stateful, std::vector<base::FilePath>({nonexistent_file}),
@@ -259,8 +260,8 @@ TEST(PreserveFiles, OneFile) {
       fake_stateful.Append(not_preserved_file);
   base::FilePath stateful_preserved = fake_stateful.Append(preserved_file);
 
-  ASSERT_TRUE(WriteFile(stateful_not_preserved, "unneeded"));
-  ASSERT_TRUE(WriteFile(stateful_preserved, "test_contents"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(stateful_not_preserved, "unneeded"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(stateful_preserved, "test_contents"));
 
   base::ScopedTempDir fake_tmp_dir;
   ASSERT_TRUE(fake_tmp_dir.CreateUniqueTempDir());
@@ -307,9 +308,10 @@ TEST(PreserveFiles, ManyFiles) {
   base::FilePath stateful_preserved_a = fake_stateful.Append(preserved_file_a);
   base::FilePath stateful_preserved_b = fake_stateful.Append(preserved_file_b);
 
-  ASSERT_TRUE(WriteFile(stateful_not_preserved, "unneeded"));
-  ASSERT_TRUE(WriteFile(stateful_preserved_a, "test_contents"));
-  ASSERT_TRUE(WriteFile(stateful_preserved_b, "data"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(stateful_not_preserved, "unneeded"));
+  ASSERT_TRUE(
+      CreateDirectoryAndWriteFile(stateful_preserved_a, "test_contents"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(stateful_preserved_b, "data"));
 
   base::ScopedTempDir fake_tmp_dir;
   ASSERT_TRUE(fake_tmp_dir.CreateUniqueTempDir());
@@ -580,10 +582,14 @@ class GetPreservedFilesListTest : public ::testing::Test {
     base::FilePath extensions =
         fake_stateful_.Append("unencrypted/import_extensions/extensions");
     ASSERT_TRUE(base::CreateDirectory(extensions));
-    ASSERT_TRUE(WriteFile(extensions.Append("fileA.crx"), ""));
-    ASSERT_TRUE(WriteFile(extensions.Append("fileB.crx"), ""));
-    ASSERT_TRUE(WriteFile(extensions.Append("fileC.tar"), ""));
-    ASSERT_TRUE(WriteFile(extensions.Append("fileD.bmp"), ""));
+    ASSERT_TRUE(
+        CreateDirectoryAndWriteFile(extensions.Append("fileA.crx"), ""));
+    ASSERT_TRUE(
+        CreateDirectoryAndWriteFile(extensions.Append("fileB.crx"), ""));
+    ASSERT_TRUE(
+        CreateDirectoryAndWriteFile(extensions.Append("fileC.tar"), ""));
+    ASSERT_TRUE(
+        CreateDirectoryAndWriteFile(extensions.Append("fileD.bmp"), ""));
   }
 
   void SetCompare(std::set<std::string> expected,
@@ -799,8 +805,8 @@ TEST_F(IsRotationalTest, NoRotationalFile) {
   std::string disk_name = "sdq";
   base::FilePath device = fake_dev_.GetPath().Append(device_name);
   base::FilePath disk = fake_dev_.GetPath().Append(disk_name);
-  ASSERT_TRUE(WriteFile(device, ""));
-  ASSERT_TRUE(WriteFile(disk, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(device, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(disk, ""));
 
   struct stat st;
   st.st_rdev = makedev(14, 7);
@@ -818,8 +824,8 @@ TEST_F(IsRotationalTest, NoMatchingBaseDevice) {
   std::string disk_name = "sda";
   base::FilePath device = fake_dev_.GetPath().Append(device_name);
   base::FilePath disk = fake_dev_.GetPath().Append(disk_name);
-  ASSERT_TRUE(WriteFile(device, ""));
-  ASSERT_TRUE(WriteFile(disk, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(device, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(disk, ""));
 
   struct stat st;
   st.st_rdev = makedev(5, 3);
@@ -832,7 +838,7 @@ TEST_F(IsRotationalTest, NoMatchingBaseDevice) {
   base::FilePath rotational_file =
       fake_sys_.GetPath().Append("block").Append(disk_name).Append(
           "queue/rotational");
-  ASSERT_TRUE(WriteFile(rotational_file, "1\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "1\n"));
   EXPECT_FALSE(clobber_.IsRotational(device));
 }
 
@@ -841,8 +847,8 @@ TEST_F(IsRotationalTest, DifferentRotationalFileFormats) {
   std::string disk_name = "mmcblk1";
   base::FilePath device = fake_dev_.GetPath().Append(device_name);
   base::FilePath disk = fake_dev_.GetPath().Append(disk_name);
-  ASSERT_TRUE(WriteFile(device, ""));
-  ASSERT_TRUE(WriteFile(disk, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(device, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(disk, ""));
 
   struct stat st;
   st.st_rdev = makedev(5, 3);
@@ -855,19 +861,19 @@ TEST_F(IsRotationalTest, DifferentRotationalFileFormats) {
   base::FilePath rotational_file =
       fake_sys_.GetPath().Append("block").Append(disk_name).Append(
           "queue/rotational");
-  ASSERT_TRUE(WriteFile(rotational_file, "0\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "0\n"));
   EXPECT_FALSE(clobber_.IsRotational(device));
 
-  ASSERT_TRUE(WriteFile(rotational_file, "0"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "0"));
   EXPECT_FALSE(clobber_.IsRotational(device));
 
-  ASSERT_TRUE(WriteFile(rotational_file, "aldf"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "aldf"));
   EXPECT_FALSE(clobber_.IsRotational(device));
 
-  ASSERT_TRUE(WriteFile(rotational_file, "1"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "1"));
   EXPECT_TRUE(clobber_.IsRotational(device));
 
-  ASSERT_TRUE(WriteFile(rotational_file, "1\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file, "1\n"));
   EXPECT_TRUE(clobber_.IsRotational(device));
 }
 
@@ -880,10 +886,10 @@ TEST_F(IsRotationalTest, MultipleDevices) {
   base::FilePath disk_one = fake_dev_.GetPath().Append(disk_name_one);
   base::FilePath device_two = fake_dev_.GetPath().Append(device_name_two);
   base::FilePath disk_two = fake_dev_.GetPath().Append(disk_name_two);
-  ASSERT_TRUE(WriteFile(device_one, ""));
-  ASSERT_TRUE(WriteFile(disk_one, ""));
-  ASSERT_TRUE(WriteFile(device_two, ""));
-  ASSERT_TRUE(WriteFile(disk_two, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(device_one, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(disk_one, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(device_two, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(disk_two, ""));
 
   struct stat st;
   st.st_rdev = makedev(5, 5);
@@ -904,13 +910,13 @@ TEST_F(IsRotationalTest, MultipleDevices) {
                                            .Append("block")
                                            .Append(disk_name_one)
                                            .Append("queue/rotational");
-  ASSERT_TRUE(WriteFile(rotational_file_one, "0\n"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file_one, "0\n"));
 
   base::FilePath rotational_file_two = fake_sys_.GetPath()
                                            .Append("block")
                                            .Append(disk_name_two)
                                            .Append("queue/rotational");
-  ASSERT_TRUE(WriteFile(rotational_file_two, "1"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(rotational_file_two, "1"));
 
   EXPECT_FALSE(clobber_.IsRotational(device_one));
   EXPECT_TRUE(clobber_.IsRotational(device_two));
@@ -961,15 +967,15 @@ class AttemptSwitchToFastWipeTest : public ::testing::Test {
          fake_stateful_.Append("other/file/to/delete")});
 
     for (const base::FilePath& path : encrypted_stateful_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
 
     for (const base::FilePath& path : keyset_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
 
     for (const base::FilePath& path : shredded_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
   }
 
@@ -1140,11 +1146,11 @@ class ShredRotationalStatefulFilesTest : public ::testing::Test {
          fake_stateful_.Append("other/file/to/delete")});
 
     for (const base::FilePath& path : deleted_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
 
     for (const base::FilePath& path : shredded_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
   }
 
@@ -1223,11 +1229,11 @@ class WipeKeysetsTest : public ::testing::Test {
     });
 
     for (const base::FilePath& path : deleted_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
 
     for (const base::FilePath& path : ignored_paths_) {
-      ASSERT_TRUE(WriteFile(path, kContents));
+      ASSERT_TRUE(CreateDirectoryAndWriteFile(path, kContents));
     }
   }
 
