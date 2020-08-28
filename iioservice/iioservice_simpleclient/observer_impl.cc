@@ -4,11 +4,14 @@
 
 #include "iioservice/iioservice_simpleclient/observer_impl.h"
 
+#include <algorithm>
 #include <utility>
 
 #include <base/bind.h>
 
+#include "base/time/time.h"
 #include "iioservice/include/common.h"
+#include "libmems/common_types.h"
 
 namespace iioservice {
 
@@ -16,7 +19,13 @@ namespace {
 
 constexpr int kSetUpChannelTimeoutInMilliseconds = 3000;
 
-}
+// Set the base latency tolerance to half of 100 ms, according to
+// https://source.android.com/compatibility/android-cdd#7_3_sensors, as the
+// samples may go through a VM and Android sensormanager.
+constexpr base::TimeDelta kMaximumBaseLatencyTolerance =
+    base::TimeDelta::FromMilliseconds(50);
+
+}  // namespace
 
 // static
 void ObserverImpl::ObserverImplDeleter(ObserverImpl* observer) {
@@ -79,6 +88,7 @@ void ObserverImpl::SetUpChannel(
 void ObserverImpl::OnSampleUpdated(
     const base::flat_map<int32_t, int64_t>& sample) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+  DCHECK_GT(result_freq_, 0.0);
 
   if (sample.size() != channel_indices_.size()) {
     LOGF(ERROR) << "Invalid sample size: " << sample.size()
@@ -88,9 +98,56 @@ void ObserverImpl::OnSampleUpdated(
   for (auto chn : sample)
     LOGF(INFO) << iio_chn_ids_[chn.first] << ": " << chn.second;
 
+  if (!timestamp_index_.has_value())
+    return;
+
+  auto it = sample.find(timestamp_index_.value());
+  if (it != sample.end()) {
+    base::TimeDelta latency =
+        base::TimeTicks::Now() -
+        (base::TimeTicks() + base::TimeDelta::FromNanoseconds(it->second));
+    LOG(INFO) << "Latency: " << latency;
+
+    total_latency_ += latency;
+    latencies_.push_back(latency);
+  }
+
   if (++num_success_reads_ >= kNumSuccessReads) {
     // Don't Change: Used as a check sentence in the tast test.
     LOGF(INFO) << "Number of success reads " << kNumSuccessReads << " achieved";
+
+    base::TimeDelta latency_tolerance =
+        kMaximumBaseLatencyTolerance +
+        base::TimeDelta::FromSecondsD(1.0 / result_freq_);
+
+    size_t n = latencies_.size();
+    std::nth_element(latencies_.begin(), latencies_.begin(), latencies_.end());
+    base::TimeDelta min_latency = latencies_[0];
+
+    std::nth_element(latencies_.begin(), latencies_.begin() + n / 2,
+                     latencies_.end());
+    base::TimeDelta median_latency = latencies_[n / 2];
+
+    std::nth_element(latencies_.begin(), --latencies_.end(), latencies_.end());
+    base::TimeDelta max_latency = *(--latencies_.end());
+
+    LOG(INFO) << "Latency tolerance: " << latency_tolerance;
+    LOG(INFO) << "Max latency      : " << max_latency;
+    LOG(INFO) << "Median latency   : " << median_latency;
+    LOG(INFO) << "Min latency      : " << min_latency;
+    LOG(INFO) << "Mean latency     : " << total_latency_ / n;
+
+    if (max_latency > latency_tolerance) {
+      // Don't Change: Used as a check sentence in the tast test.
+      LOG(ERROR) << "Max latency exceeds latency tolerance.";
+    }
+
+    if (min_latency < base::TimeDelta::FromSecondsD(0.0)) {
+      // Don't Change: Used as a check sentence in the tast test.
+      LOG(ERROR)
+          << "Min latency less than zero: a timestamp was set in the past.";
+    }
+
     if (quit_callback_)
       std::move(quit_callback_).Run();
   }
@@ -241,6 +298,13 @@ void ObserverImpl::GetAllChannelIdsCallback(
     }
   }
 
+  for (int32_t j = 0; j < iio_chn_ids_.size(); ++j) {
+    if (iio_chn_ids_[j].compare(libmems::kTimestampAttr) == 0) {
+      timestamp_index_ = j;
+      break;
+    }
+  }
+
   if (channel_indices_.empty()) {
     LOGF(ERROR) << "No available channels";
     if (quit_callback_)
@@ -270,7 +334,8 @@ void ObserverImpl::StartReading() {
 void ObserverImpl::SetFrequencyCallback(double result_freq) {
   DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
 
-  if (result_freq > 0.0)
+  result_freq_ = result_freq;
+  if (result_freq_ > 0.0)
     return;
 
   LOGF(ERROR) << "Failed to set frequency";

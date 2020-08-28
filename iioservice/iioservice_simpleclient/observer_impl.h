@@ -84,15 +84,22 @@ class ObserverImpl final : public cros::mojom::SensorHalClient,
   cros::mojom::DeviceType device_type_ = cros::mojom::DeviceType::NONE;
   const std::vector<std::string> channel_ids_;
   double frequency_;
+  double result_freq_ = 0.0;
   int timeout_;
   QuitCallback quit_callback_;
 
   std::vector<int32_t> channel_indices_;
   std::vector<std::string> iio_chn_ids_;
 
+  base::Optional<int> timestamp_index_ = base::nullopt;
+
   int num_success_reads_ = 0;
 
+  base::TimeDelta total_latency_;
+  std::vector<base::TimeDelta> latencies_;
+
   mojo::Receiver<cros::mojom::SensorHalClient> client_{this};
+
   mojo::Remote<cros::mojom::SensorService> sensor_service_remote_;
   mojo::Remote<cros::mojom::SensorDevice> sensor_device_remote_;
 
