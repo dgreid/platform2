@@ -57,6 +57,21 @@ std::ostream& operator<<(std::ostream& out, const MountErrorType error) {
              << static_cast<std::underlying_type_t<MountErrorType>>(error);
 }
 
+std::ostream& operator<<(std::ostream& out, const PartitionErrorType error) {
+  switch (error) {
+    CROS_DISKS_PRINT(PARTITION_ERROR_NONE)
+    CROS_DISKS_PRINT(PARTITION_ERROR_UNKNOWN)
+    CROS_DISKS_PRINT(PARTITION_ERROR_INTERNAL)
+    CROS_DISKS_PRINT(PARTITION_ERROR_INVALID_DEVICE_PATH)
+    CROS_DISKS_PRINT(PARTITION_ERROR_DEVICE_BEING_PARTITIONED)
+    CROS_DISKS_PRINT(PARTITION_ERROR_PROGRAM_NOT_FOUND)
+    CROS_DISKS_PRINT(PARTITION_ERROR_PROGRAM_FAILED)
+    CROS_DISKS_PRINT(PARTITION_ERROR_DEVICE_NOT_ALLOWED)
+  }
+  return out << "PARTITION_ERROR_"
+             << static_cast<std::underlying_type_t<PartitionErrorType>>(error);
+}
+
 std::ostream& operator<<(std::ostream& out, const RenameErrorType error) {
   switch (error) {
     CROS_DISKS_PRINT(RENAME_ERROR_NONE)
