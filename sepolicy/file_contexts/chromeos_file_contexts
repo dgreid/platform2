@@ -48,6 +48,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/anomaly_detector       u:object_r:cros_anomaly_detector_exec:s0
 /usr/bin/arc-appfuse-provider   u:object_r:cros_arc_appfuse_provider_exec:s0
 /usr/bin/arc-data-snapshotd     u:object_r:cros_arc_data_snapshotd_exec:s0
+/usr/bin/arc-host-clock-service u:object_r:cros_arc_host_clock_service_exec:s0
 /usr/bin/arc-obb-mounter        u:object_r:cros_arc_obb_mounter_exec:s0
 /usr/bin/arc_camera_service     u:object_r:cros_arc_camera_service_exec:s0
 /usr/bin/arc_sensor_service     u:object_r:cros_arc_sensor_service_exec:s0

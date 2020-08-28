@@ -25,6 +25,7 @@ type cros_arc_appfuse_provider_exec, exec_type, file_type, cros_file_type, cros_
 type cros_arc_apply_per_board_config_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_camera_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_data_snapshotd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_arc_host_clock_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_keymasterd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_obb_mounter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_arc_sensor_service_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
