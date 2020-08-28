@@ -70,6 +70,7 @@ static_library("libdisks") {
     "mount_point.cc",
     "mounter.cc",
     "ntfs_mounter.cc",
+    "partition_manager.cc",
     "platform.cc",
     "process.cc",
     "quote.cc",
