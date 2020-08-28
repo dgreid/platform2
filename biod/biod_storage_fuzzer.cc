@@ -27,7 +27,7 @@ class TestRecord : public biod::BiometricsManager::Record {
              const std::string& user_id,
              const std::string& label,
              const std::vector<uint8_t>& validation_val,
-             const std::string& data)
+             const std::vector<uint8_t>& data)
       : id_(id),
         user_id_(user_id),
         label_(label),
@@ -40,7 +40,7 @@ class TestRecord : public biod::BiometricsManager::Record {
   const std::vector<uint8_t>& GetValidationVal() const override {
     return validation_val_;
   }
-  const std::string& GetData() const { return data_; }
+  const std::vector<uint8_t>& GetData() const { return data_; }
 
   bool SetLabel(std::string label) override { return true; }
   bool Remove() override { return true; }
@@ -52,7 +52,7 @@ class TestRecord : public biod::BiometricsManager::Record {
   std::string user_id_;
   std::string label_;
   std::vector<uint8_t> validation_val_;
-  std::string data_;
+  std::vector<uint8_t> data_;
 };
 
 static std::vector<TestRecord> records;
@@ -63,10 +63,8 @@ static bool LoadRecord(int record_format_version,
                        const std::string& record_id,
                        const std::vector<uint8_t>& validation_val,
                        const base::Value& data_value) {
-  std::string data;
-  data_value.GetAsString(&data);
-  records.push_back(
-      TestRecord(record_id, user_id, label, validation_val, data));
+  records.push_back(TestRecord(record_id, user_id, label, validation_val,
+                               data_value.GetBlob()));
   return true;
 }
 
@@ -89,19 +87,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::vector<uint8_t> validation_val =
       data_provider.ConsumeBytes<uint8_t>(SHA256_DIGEST_LENGTH);
 
-  std::string biod_data;
+  std::vector<uint8_t> biod_data;
 
   if (data_provider.remaining_bytes() > data_len)
-    biod_data = data_provider.ConsumeBytesAsString(data_len);
+    biod_data = data_provider.ConsumeBytes<uint8_t>(data_len);
   else
-    biod_data = data_provider.ConsumeRemainingBytesAsString();
+    biod_data = data_provider.ConsumeRemainingBytes<uint8_t>();
 
   biod::BiodStorage biod_storage =
       biod::BiodStorage("BiometricsManager", base::Bind(&LoadRecord));
   biod_storage.set_allow_access(true);
 
-  std::unique_ptr<TestRecord> record(new TestRecord(
-      id, user_id, label, validation_val, (const std::string)biod_data));
+  std::unique_ptr<TestRecord> record(
+      new TestRecord(id, user_id, label, validation_val, biod_data));
 
   base::FilePath root_path("/tmp/biod_storage_fuzzing_data");
   biod_storage.SetRootPathForTesting(root_path);
