@@ -17,7 +17,7 @@ const char kCrosCameraGPUAlgoSocketPathString[] =
 const char kCrosCameraSocketPathString[] = "/run/camera/camera3.sock";
 const char kCrosCameraTestConfigPathString[] =
     "/var/cache/camera/test_config.json";
-const char kCrosCameraConfigPathString[] = "/etc/camera/camera_config.json";
+const char kCrosCameraConfigPathString[] = "/run/camera/camera_config.json";
 
 // ------Configuration for |kCrosCameraTestConfigPathString|-------
 // boolean value used in test mode for forcing hardware jpeg encode/decode in
