@@ -5,12 +5,17 @@
 //! A TEE application life-cycle manager.
 
 use std::env;
-use std::io::copy;
+use std::path::Path;
+use std::string::String;
 use std::thread::spawn;
 
 use sirenia::cli::initialize_common_arguments;
+use sirenia::sandbox::Sandbox;
 use sirenia::to_sys_util;
-use sirenia::transport::{IPServerTransport, ServerTransport, TransportType, VsockServerTransport};
+use sirenia::transport::{
+    IPServerTransport, ReadDebugSend, ServerTransport, TransportType, VsockServerTransport,
+    WriteDebugSend,
+};
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -36,16 +41,41 @@ fn main() {
 
     let mut transport: Box<dyn ServerTransport> = match config.connection_type {
         TransportType::IpConnection(url) => Box::new(IPServerTransport::new(&url).unwrap()),
-        _ => Box::new(VsockServerTransport::new().unwrap()),
+        TransportType::VsockConnection(url) => Box::new(VsockServerTransport::new(&url).unwrap()),
     };
 
     // Handle incoming connections.
     loop {
         if let Ok(mut t) = transport.accept() {
             spawn(move || {
-                // TODO replace this with a RPC handler.
-                copy(&mut t.0, &mut t.1).unwrap_or(0);
+                start_tee_app("/bin/sh", &mut t.0, &mut t.1);
             });
         }
     }
+}
+
+// TODO: Add abstraction for mapping from app id to path and add as command
+// line arg.
+// Currently, will only start up a shell for a demo
+fn start_tee_app(process: &str, r: &mut Box<dyn ReadDebugSend>, w: &mut Box<dyn WriteDebugSend>) {
+    let mut sandbox = Sandbox::new(None).unwrap();
+
+    println!("Started shell\n");
+    sandbox
+        .run(
+            Path::new(process),
+            &[process],
+            r.as_raw_fd(),
+            w.as_raw_fd(),
+            w.as_raw_fd(),
+        )
+        .unwrap();
+
+    let result = sandbox.wait_for_completion();
+
+    if result.is_err() {
+        eprintln!("Got error code: {:?}", result)
+    }
+
+    result.unwrap();
 }

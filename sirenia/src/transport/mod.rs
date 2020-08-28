@@ -14,12 +14,12 @@ use std::io::{self, Read, Write};
 use std::iter::Iterator;
 use std::marker::Send;
 use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
+use std::os::unix::io::AsRawFd;
 use std::str::FromStr;
 
 use core::mem::replace;
 use libchromeos::vsock::{
-    self, AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockCid, VsockListener,
-    VsockStream,
+    AddrParseError, SocketAddr as VSocketAddr, ToSocketAddr, VsockListener, VsockStream,
 };
 use sys_util::{handle_eintr, pipe};
 
@@ -79,11 +79,11 @@ impl Display for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An abstraction wrapper to support the receiving side of a transport method.
-pub trait ReadDebugSend: Read + Debug + Send {}
-impl<T: Read + Debug + Send> ReadDebugSend for T {}
+pub trait ReadDebugSend: Read + Debug + Send + AsRawFd {}
+impl<T: Read + Debug + Send + AsRawFd> ReadDebugSend for T {}
 /// An abstraction wrapper to support the sending side of a transport method.
-pub trait WriteDebugSend: Write + Debug + Send {}
-impl<T: Write + Debug + Send> WriteDebugSend for T {}
+pub trait WriteDebugSend: Write + Debug + Send + AsRawFd {}
+impl<T: Write + Debug + Send + AsRawFd> WriteDebugSend for T {}
 
 /// Transport options that can be selected.
 #[derive(Debug, PartialEq)]
@@ -218,8 +218,9 @@ impl ClientTransport for IPClientTransport {
 pub struct VsockServerTransport(VsockListener);
 
 impl VsockServerTransport {
-    pub fn new() -> Result<Self> {
-        let listener = VsockListener::bind(VsockCid::Any, DEFAULT_PORT).map_err(Error::Bind)?;
+    pub fn new<T: ToSocketAddr>(addr: T) -> Result<Self> {
+        let address: VSocketAddr = addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
+        let listener = VsockListener::bind(address.cid, address.port).map_err(Error::Bind)?;
         Ok(VsockServerTransport(listener))
     }
 }
@@ -232,21 +233,18 @@ impl ServerTransport for VsockServerTransport {
 }
 
 /// A transport method that connects over vsock.
-pub struct VsockClientTransport(VsockCid);
+pub struct VsockClientTransport(VSocketAddr);
 
 impl VsockClientTransport {
-    pub fn new(cid: VsockCid) -> Result<Self> {
-        Ok(VsockClientTransport(cid))
+    pub fn new<T: ToSocketAddr>(addr: T) -> Result<Self> {
+        let address: VSocketAddr = addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
+        Ok(VsockClientTransport(address))
     }
 }
 
 impl ClientTransport for VsockClientTransport {
     fn connect(&mut self) -> Result<Transport> {
-        let addr = vsock::SocketAddr {
-            cid: self.0,
-            port: DEFAULT_PORT,
-        };
-        let stream = handle_eintr!(VsockStream::connect(&addr)).map_err(Error::Connect)?;
+        let stream = handle_eintr!(VsockStream::connect(&self.0)).map_err(Error::Connect)?;
         vsockstream_to_transport(stream)
     }
 }

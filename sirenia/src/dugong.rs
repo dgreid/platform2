@@ -7,26 +7,43 @@
 use std::env;
 use std::io::{copy, stdin, stdout};
 use std::thread::spawn;
+use sys_util::{info, syslog};
 
-use libchromeos::vsock::VsockCid;
-use sirenia::cli::initialize_common_arguments;
+use sirenia::cli::{initialize_common_arguments, CommonConfig};
 use sirenia::transport::{
-    ClientTransport, IPClientTransport, Transport, TransportType, VsockClientTransport,
+    ClientTransport, IPClientTransport, ReadDebugSend, Transport, TransportType,
+    VsockClientTransport, WriteDebugSend,
 };
 
-fn main() {
+fn main() -> Result<(), sys_util::syslog::Error> {
     let args: Vec<String> = env::args().collect();
     let config = initialize_common_arguments(&args[1..]).unwrap();
-    let mut transport: Box<dyn ClientTransport> = match config.connection_type {
-        TransportType::IpConnection(url) => Box::new(IPClientTransport::new(&url).unwrap()),
-        _ => Box::new(VsockClientTransport::new(VsockCid::Hypervisor).unwrap()),
-    };
+    let mut transport = open_connection(config);
 
-    if let Ok(Transport(mut r, mut w)) = transport.connect() {
-        // TODO replace this with RPC invocations.
-        spawn(move || {
-            copy(&mut stdin(), &mut w).unwrap_or(0);
-        });
-        copy(&mut r, &mut stdout()).unwrap_or(0);
+    if let Err(e) = syslog::init() {
+        eprintln!("failed to initialize syslog: {}", e);
+        return Err(e);
     }
+
+    if let Ok(Transport(r, w)) = transport.connect() {
+        // TODO replace this with RPC invocations.
+        start_rpc(r, w);
+    }
+
+    Ok(())
+}
+
+fn open_connection(config: CommonConfig) -> Box<dyn ClientTransport> {
+    match config.connection_type {
+        TransportType::IpConnection(url) => Box::new(IPClientTransport::new(&url).unwrap()),
+        TransportType::VsockConnection(url) => Box::new(VsockClientTransport::new(&url).unwrap()),
+    }
+}
+
+fn start_rpc(mut r: Box<dyn ReadDebugSend>, mut w: Box<dyn WriteDebugSend>) {
+    info!("Opening Shell for testing");
+    spawn(move || {
+        copy(&mut stdin(), &mut w).unwrap_or(0);
+    });
+    copy(&mut r, &mut stdout()).unwrap_or(0);
 }
