@@ -26,7 +26,8 @@ using testing::Return;
 using testing::WithArg;
 
 namespace {
-bool WriteFile(const base::FilePath& path, const std::string& contents) {
+bool CreateDirectoryAndWriteFile(const base::FilePath& path,
+                                 const std::string& contents) {
   return base::CreateDirectory(path.DirName()) &&
          base::WriteFile(path, contents.c_str(), contents.length()) ==
              contents.length();
@@ -77,7 +78,7 @@ TEST_F(LogToolTest, GetArcBugReport_ReturnsContents_WhenFileExists) {
   std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
-  EXPECT_TRUE(WriteFile(logPath, "test"));
+  EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, "test"));
   EXPECT_TRUE(base::PathExists(logPath));
   SetArcBugReportBackup(userhash);
   EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
@@ -97,7 +98,7 @@ TEST_F(LogToolTest, GetArcBugReport_Succeeds_WhenIsBackupIsNull) {
   std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
-  EXPECT_TRUE(WriteFile(logPath, "test"));
+  EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, "test"));
   SetArcBugReportBackup(userhash);
   EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
       .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
@@ -114,7 +115,7 @@ TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
   std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
-  EXPECT_TRUE(WriteFile(logPath, "test"));
+  EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, "test"));
   EXPECT_TRUE(base::PathExists(logPath));
   EXPECT_CALL(*GetFakeLog(), GetLogData);
   EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
@@ -135,7 +136,7 @@ TEST_F(LogToolTest, DeleteArcBugReportBackup) {
   std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
   base::FilePath logPath =
       temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
-  EXPECT_TRUE(WriteFile(logPath, userhash));
+  EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, userhash));
   EXPECT_TRUE(base::PathExists(logPath));
   log_tool_->DeleteArcBugReportBackup(userhash);
   EXPECT_FALSE(base::PathExists(logPath));
@@ -204,19 +205,19 @@ TEST_F(LogTest, GetFileLogData) {
   ASSERT_TRUE(temp.CreateUniqueTempDir());
 
   base::FilePath file_one = temp.GetPath().Append("test/file_one");
-  ASSERT_TRUE(WriteFile(file_one, "test_one_contents"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_one, "test_one_contents"));
   const LogTool::Log log_one(LogTool::Log::kFile, "test_log_one",
                              file_one.value(), user_name_, group_name_);
   EXPECT_EQ(log_one.GetLogData(), "test_one_contents");
 
   base::FilePath file_two = temp.GetPath().Append("test/file_two");
-  ASSERT_TRUE(WriteFile(file_two, ""));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_two, ""));
   const LogTool::Log log_two(LogTool::Log::kFile, "test_log_two",
                              file_two.value(), user_name_, group_name_);
   EXPECT_EQ(log_two.GetLogData(), "<empty>");
 
   base::FilePath file_three = temp.GetPath().Append("test/file_three");
-  ASSERT_TRUE(WriteFile(file_three, "long input value"));
+  ASSERT_TRUE(CreateDirectoryAndWriteFile(file_three, "long input value"));
   const LogTool::Log log_three(LogTool::Log::kFile, "test_log_three",
                                file_three.value(), user_name_, group_name_, 5);
   EXPECT_EQ(log_three.GetLogData(), "value");

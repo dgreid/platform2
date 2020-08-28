@@ -49,12 +49,20 @@ bool ProcessWithOutput::Init(
       return false;
   }
 
+#if BASE_VER < 780000
   outfile_.reset(base::CreateAndOpenTemporaryFile(&outfile_path_));
+#else
+  outfile_ = base::CreateAndOpenTemporaryStream(&outfile_path_);
+#endif
   if (!outfile_.get()) {
     return false;
   }
   if (separate_stderr_) {
+#if BASE_VER < 780000
     errfile_.reset(base::CreateAndOpenTemporaryFile(&errfile_path_));
+#else
+    errfile_ = base::CreateAndOpenTemporaryStream(&errfile_path_);
+#endif
     if (!errfile_.get()) {
       return false;
     }
