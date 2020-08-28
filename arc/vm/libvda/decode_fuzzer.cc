@@ -10,8 +10,8 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/memory/shared_memory.h>
 #include <base/memory/weak_ptr.h>
+#include <base/memory/writable_shared_memory_region.h>
 #include <base/posix/eintr_wrapper.h>
 #include <base/threading/thread.h>
 
@@ -283,17 +283,19 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
         const size_t data_size = offset + bytes_used;
 
-        // TODO(alexlau): Use WritableSharedMemoryRegion once libchrome uprevs.
-        base::SharedMemory shm;
-        shm.CreateAndMapAnonymous(data_size);
+        base::WritableSharedMemoryRegion shm_region =
+            base::WritableSharedMemoryRegion::Create(data_size);
+        base::WritableSharedMemoryMapping shm_mapping = shm_region.Map();
 
         base::ScopedFD random_fd(HANDLE_EINTR(open("/dev/urandom", O_RDONLY)));
-        HANDLE_EINTR(read(random_fd.get(), shm.memory(), data_size));
+        HANDLE_EINTR(read(random_fd.get(), shm_mapping.memory(), data_size));
 
-        // SharedMemoryHandle passed from SharedMemory maps to FileDescriptor on
-        // POSIX with auto_close parameter set to false.
-        base::SharedMemoryHandle handle(shm.TakeHandle());
-        fd = handle.GetHandle();
+        base::subtle::PlatformSharedMemoryRegion platform_shm =
+            base::WritableSharedMemoryRegion::TakeHandleForSerialization(
+                std::move(shm_region));
+        base::subtle::PlatformSharedMemoryRegion::ScopedPlatformHandle handle =
+            platform_shm.PassPlatformHandle();
+        fd = handle.fd.release();
       }
       // Ownership of the FD is passed. We don't hold the fd out of the output
       // buffer as we're not interested in the buffer content when fuzzing.
