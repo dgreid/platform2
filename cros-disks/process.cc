@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <string>
-#include <utility>
 
 #include <fcntl.h>
 #include <poll.h>
@@ -100,10 +99,29 @@ const size_t StreamMerger::kStreamCount;
 const base::StringPiece StreamMerger::kTags[kStreamCount] = {"OUT", "ERR"};
 
 // Opens /dev/null. Dies in case of error.
-base::ScopedFD OpenNull(const bool for_output) {
-  const int ret = open("/dev/null", for_output ? O_WRONLY : O_RDONLY);
+base::ScopedFD OpenNull() {
+  const int ret = open("/dev/null", O_WRONLY);
   PLOG_IF(FATAL, ret < 0) << "Cannot open /dev/null";
   return base::ScopedFD(ret);
+}
+
+// Creates a pipe holding the given string and returns a file descriptor to the
+// read end of this pipe. If the given string is too big to fit into the pipe's
+// buffer, it is truncated.
+base::ScopedFD WrapStdIn(const base::StringPiece in) {
+  SubprocessPipe p(SubprocessPipe::kParentToChild);
+
+  CHECK(base::SetNonBlocking(p.parent_fd.get()));
+  const ssize_t n =
+      HANDLE_EINTR(write(p.parent_fd.get(), in.data(), in.size()));
+  if (n < 0) {
+    PLOG(ERROR) << "Cannot write to pipe";
+  } else if (n < in.size()) {
+    LOG(ERROR) << "Short write to pipe: Wrote " << n << " bytes instead of "
+               << in.size() << " bytes";
+  }
+
+  return std::move(p.child_fd);
 }
 
 }  // namespace
@@ -188,7 +206,7 @@ bool Process::Start(base::ScopedFD in_fd,
 }
 
 bool Process::Start() {
-  return Start(OpenNull(false), OpenNull(true), OpenNull(true));
+  return Start(WrapStdIn(input_), OpenNull(), OpenNull());
 }
 
 int Process::Wait() {
@@ -217,7 +235,7 @@ int Process::Run(std::vector<std::string>* output) {
   DCHECK(output);
 
   base::ScopedFD out_fd, err_fd;
-  if (!Start(OpenNull(false),
+  if (!Start(WrapStdIn(input_),
              SubprocessPipe::Open(SubprocessPipe::kChildToParent, &out_fd),
              SubprocessPipe::Open(SubprocessPipe::kChildToParent, &err_fd))) {
     return -1;

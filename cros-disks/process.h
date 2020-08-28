@@ -6,6 +6,7 @@
 #define CROS_DISKS_PROCESS_H_
 
 #include <string>
+#include <utility>
 #include <vector>
 
 #include <base/files/scoped_file.h>
@@ -37,6 +38,11 @@ class Process {
   // Precondition: `name` is not empty and doesn't contain '='.
   void AddEnvironmentVariable(base::StringPiece name, base::StringPiece value);
 
+  // Sets the string to pass to the process stdin.
+  // Might be silently truncated if it doesn't fit in a pipe's buffer.
+  // Precondition: Start() has not been called yet.
+  void SetStdIn(std::string input) { input_ = std::move(input); }
+
   // Starts the process. The started process has its stdin, stdout and stderr
   // connected to /dev/null. Returns true in case of success. Once started, the
   // process can be waiting for to finish using Wait().
@@ -58,6 +64,7 @@ class Process {
 
   const std::vector<std::string>& arguments() const { return arguments_; }
   const std::vector<std::string>& environment() const { return environment_; }
+  const std::string& input() const { return input_; }
 
  protected:
   Process();
@@ -119,6 +126,9 @@ class Process {
 
   // Full environment for the subprocess.
   std::vector<char*> environment_array_;
+
+  // String to pass to the process stdin.
+  std::string input_;
 
   // Process ID (default to kInvalidProcessId when the process has not started).
   pid_t pid_ = kInvalidProcessId;

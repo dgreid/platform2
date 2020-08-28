@@ -34,6 +34,7 @@ using testing::_;
 using testing::Contains;
 using testing::ElementsAre;
 using testing::IsEmpty;
+using testing::Not;
 using testing::PrintToStringParamName;
 using testing::Return;
 using testing::SizeIs;
@@ -443,16 +444,56 @@ TEST_P(ProcessRunTest, RunDoesNotBlockWhenReadingFromStdIn) {
   Process& process = *process_;
   process.AddArgument("/bin/cat");
 
-  // By default, /bin/cat reads from stdin. If the pipe connected to stdin was
-  // left open, the process would block indefinitely while reading from it.
   std::vector<std::string> output;
   EXPECT_EQ(process.Run(&output), 0);
   EXPECT_THAT(output, IsEmpty());
 }
 
+TEST_P(ProcessRunTest, ReadsFromStdIn) {
+  Process& process = *process_;
+  process.AddArgument("/bin/cat");
+
+  EXPECT_EQ(process.input(), "");
+  const std::string input = "Line 1\nLine 2\nLine 3";
+  process.SetStdIn(input);
+  EXPECT_EQ(process.input(), input);
+
+  std::vector<std::string> output;
+  EXPECT_EQ(process.Run(&output), 0);
+  EXPECT_THAT(output, ElementsAre("OUT: Line 1", "OUT: Line 2", "OUT: Line 3"));
+}
+
+TEST_P(ProcessRunTest, ReadsLotsFromStdIn) {
+  Process& process = *process_;
+  process.AddArgument("/bin/wc");
+  process.AddArgument("-c");
+
+  // 4KB of data should be passed without error nor truncation.
+  process.SetStdIn(std::string(4096, 'x'));
+  EXPECT_THAT(process.input(), SizeIs(4096));
+
+  std::vector<std::string> output;
+  EXPECT_EQ(process.Run(&output), 0);
+  EXPECT_THAT(output, ElementsAre("OUT: 4096"));
+}
+
+TEST_P(ProcessRunTest, TruncatesDataFromStdIn) {
+  Process& process = *process_;
+  process.AddArgument("/bin/wc");
+  process.AddArgument("-c");
+
+  // 100KB of data should be truncated.
+  process.SetStdIn(std::string(100'000, 'x'));
+
+  std::vector<std::string> output;
+  EXPECT_EQ(process.Run(&output), 0);
+  EXPECT_THAT(output, ElementsAre(Not("OUT: 100000")));
+}
+
 TEST_P(ProcessRunTest, WaitDoesNotBlockWhenReadingFromStdIn) {
   Process& process = *process_;
   process.AddArgument("/bin/cat");
+  process.SetStdIn(std::string(100'000, 'x'));
 
   // By default, /bin/cat reads from stdin. If the pipe connected to stdin was
   // left open, the process would block indefinitely while reading from it.
