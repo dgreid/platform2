@@ -322,12 +322,7 @@ else
 
     if [ -e /sys/firmware/log ]; then
       # Grep /sys/firmware/log for WAK.
-      # shellcheck disable=SC2002
-      # cat is required because tac is unable to correctly processes
-      # /sys/firmware/log. tac reads in 8k chunks, but the kernel only returns
-      # 4k chunks.
-      wakeup_source="$(cat /sys/firmware/log | tac | \
-                       grep -m1 -A1 -B1 "PM1_STS: WAK" | tac)"
+      wakeup_source="$(grep "PM1_STS: WAK" /sys/firmware/log | tail -n 1)"
       if [ -z "${wakeup_source}" ]; then
         wakeup_source='unknown'
       fi
