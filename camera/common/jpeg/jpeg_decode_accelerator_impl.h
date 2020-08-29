@@ -44,25 +44,10 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
                                           uint32_t input_buffer_offset,
                                           buffer_handle_t output_buffer) final;
 
-  JpegDecodeAccelerator::Error DecodeSync(int input_fd,
-                                          uint32_t input_buffer_size,
-                                          int32_t coded_size_width,
-                                          int32_t coded_size_height,
-                                          int output_fd,
-                                          uint32_t output_buffer_size) final;
-
   int32_t Decode(int input_fd,
                  uint32_t input_buffer_size,
                  uint32_t input_buffer_offset,
                  buffer_handle_t output_buffer,
-                 DecodeCallback callback) final;
-
-  int32_t Decode(int input_fd,
-                 uint32_t input_buffer_size,
-                 int32_t coded_size_width,
-                 int32_t coded_size_height,
-                 int output_fd,
-                 uint32_t output_buffer_size,
                  DecodeCallback callback) final;
 
  private:
@@ -90,16 +75,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
                 buffer_handle_t output_buffer,
                 DecodeCallback callback);
 
-    // Process decode request on IPC thread with output shm fd.
-    void DecodeLegacy(int32_t buffer_id,
-                      int input_fd,
-                      uint32_t input_buffer_size,
-                      int32_t coded_size_width,
-                      int32_t coded_size_height,
-                      int output_fd,
-                      uint32_t output_buffer_size,
-                      DecodeCallback callback);
-
     // For synced Decode API.
     void DecodeSyncCallback(base::Callback<void(int)> callback,
                             int32_t buffer_id,
@@ -126,11 +101,6 @@ class JpegDecodeAcceleratorImpl final : public JpegDecodeAccelerator {
     void OnDecodeAck(DecodeCallback callback,
                      int32_t buffer_id,
                      cros::mojom::DecodeError error);
-
-    // Callback function for |jda_ptr_|->DecodeWithFD().
-    void OnDecodeAckLegacy(DecodeCallback callback,
-                           int32_t buffer_id,
-                           cros::mojom::DecodeError error);
 
     // Camera Mojo channel manager.
     // We use it to create JpegDecodeAccelerator Mojo channel.

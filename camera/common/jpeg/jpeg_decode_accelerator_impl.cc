@@ -27,6 +27,7 @@
 #include "cros-camera/common.h"
 #include "cros-camera/future.h"
 #include "cros-camera/ipc_util.h"
+#include "mojo/gpu/dmabuf.mojom.h"
 
 #define STATIC_ASSERT_ENUM(name)                                        \
   static_assert(static_cast<int>(JpegDecodeAccelerator::Error::name) == \
@@ -136,41 +137,6 @@ JpegDecodeAccelerator::Error JpegDecodeAcceleratorImpl::DecodeSync(
   return static_cast<Error>(future->Get());
 }
 
-JpegDecodeAccelerator::Error JpegDecodeAcceleratorImpl::DecodeSync(
-    int input_fd,
-    uint32_t input_buffer_size,
-    int32_t coded_size_width,
-    int32_t coded_size_height,
-    int output_fd,
-    uint32_t output_buffer_size) {
-  auto future = cros::Future<int>::Create(cancellation_relay_.get());
-
-  base::ElapsedTimer timer;
-
-  Decode(
-      input_fd, input_buffer_size, coded_size_width, coded_size_height,
-      output_fd, output_buffer_size,
-      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::DecodeSyncCallback,
-                 ipc_bridge_->GetWeakPtr(), cros::GetFutureCallback(future)));
-
-  if (!future->Wait()) {
-    if (!ipc_bridge_->IsReady()) {
-      LOGF(WARNING) << "There may be an mojo channel error.";
-      return Error::TRY_START_AGAIN;
-    }
-    LOGF(WARNING) << "There is no decode response from JDA mojo channel.";
-    return Error::NO_DECODE_RESPONSE;
-  }
-  camera_metrics_->SendJpegProcessLatency(
-      JpegProcessType::kDecode, JpegProcessMethod::kHardware, timer.Elapsed());
-  camera_metrics_->SendJpegResolution(JpegProcessType::kDecode,
-                                      JpegProcessMethod::kHardware,
-                                      coded_size_width, coded_size_height);
-
-  VLOGF_EXIT();
-  return static_cast<Error>(future->Get());
-}
-
 int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
                                           uint32_t input_buffer_size,
                                           uint32_t input_buffer_offset,
@@ -186,27 +152,6 @@ int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
                             ipc_bridge_->GetWeakPtr(), buffer_id, input_fd,
                             input_buffer_size, input_buffer_offset,
                             output_buffer, std::move(callback)));
-  return buffer_id;
-}
-
-int32_t JpegDecodeAcceleratorImpl::Decode(int input_fd,
-                                          uint32_t input_buffer_size,
-                                          int32_t coded_size_width,
-                                          int32_t coded_size_height,
-                                          int output_fd,
-                                          uint32_t output_buffer_size,
-                                          DecodeCallback callback) {
-  int32_t buffer_id = buffer_id_;
-
-  // Mask against 30 bits, to avoid (undefined) wraparound on signed integer.
-  buffer_id_ = (buffer_id_ + 1) & 0x3FFFFFFF;
-
-  mojo_manager_->GetIpcTaskRunner()->PostTask(
-      FROM_HERE,
-      base::Bind(&JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy,
-                 ipc_bridge_->GetWeakPtr(), buffer_id, input_fd,
-                 input_buffer_size, coded_size_width, coded_size_height,
-                 output_fd, output_buffer_size, std::move(callback)));
   return buffer_id;
 }
 
@@ -306,68 +251,6 @@ void JpegDecodeAcceleratorImpl::IPCBridge::Decode(int32_t buffer_id,
                           GetWeakPtr(), callback, buffer_id));
 }
 
-void JpegDecodeAcceleratorImpl::IPCBridge::DecodeLegacy(
-    int32_t buffer_id,
-    int input_fd,
-    uint32_t input_buffer_size,
-    int32_t coded_size_width,
-    int32_t coded_size_height,
-    int output_fd,
-    uint32_t output_buffer_size,
-    DecodeCallback callback) {
-  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
-
-  if (!jda_ptr_.is_bound()) {
-    callback.Run(buffer_id, static_cast<int>(Error::TRY_START_AGAIN));
-    return;
-  }
-
-  base::WritableSharedMemoryRegion input_shm_region =
-      base::WritableSharedMemoryRegion::Create(input_buffer_size);
-  if (!input_shm_region.IsValid()) {
-    LOGF(WARNING) << "Create shared memory region for input failed, size="
-                  << input_buffer_size;
-    callback.Run(buffer_id,
-                 static_cast<int>(Error::CREATE_SHARED_MEMORY_FAILED));
-    return;
-  }
-  base::WritableSharedMemoryMapping input_shm_mapping = input_shm_region.Map();
-  if (!input_shm_mapping.IsValid()) {
-    LOGF(WARNING) << "Create mapping for input failed, size="
-                  << input_buffer_size;
-    callback.Run(buffer_id,
-                 static_cast<int>(Error::CREATE_SHARED_MEMORY_FAILED));
-    return;
-  }
-  // Copy content from input file descriptor to shared memory.
-  uint8_t* mmap_buf = static_cast<uint8_t*>(
-      mmap(NULL, input_buffer_size, PROT_READ, MAP_SHARED, input_fd, 0));
-
-  if (mmap_buf == MAP_FAILED) {
-    LOGF(WARNING) << "MMAP for input_fd:" << input_fd << " Failed.";
-    callback.Run(buffer_id, static_cast<int>(Error::MMAP_FAILED));
-    return;
-  }
-  memcpy(input_shm_mapping.memory(), mmap_buf, input_buffer_size);
-  munmap(mmap_buf, input_buffer_size);
-
-  base::subtle::PlatformSharedMemoryRegion input_platform_shm =
-      base::WritableSharedMemoryRegion::TakeHandleForSerialization(
-          std::move(input_shm_region));
-  mojo::ScopedHandle input_handle = mojo::WrapPlatformFile(
-      input_platform_shm.PassPlatformHandle().fd.release());
-
-  int dup_output_fd = HANDLE_EINTR(dup(output_fd));
-  mojo::ScopedHandle output_handle = mojo::WrapPlatformFile(dup_output_fd);
-
-  jda_ptr_->DecodeWithFD(
-      buffer_id, std::move(input_handle), input_buffer_size, coded_size_width,
-      coded_size_height, std::move(output_handle), output_buffer_size,
-      base::BindRepeating(
-          &JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAckLegacy,
-          GetWeakPtr(), callback));
-}
-
 void JpegDecodeAcceleratorImpl::IPCBridge::DecodeSyncCallback(
     base::Callback<void(int)> callback, int32_t buffer_id, int error) {
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
@@ -414,14 +297,6 @@ void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAck(
   DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   DCHECK(base::Contains(inflight_buffer_ids_, buffer_id));
   inflight_buffer_ids_.erase(buffer_id);
-  callback.Run(buffer_id, static_cast<int>(error));
-}
-
-void JpegDecodeAcceleratorImpl::IPCBridge::OnDecodeAckLegacy(
-    DecodeCallback callback,
-    int32_t buffer_id,
-    cros::mojom::DecodeError error) {
-  DCHECK(ipc_task_runner_->BelongsToCurrentThread());
   callback.Run(buffer_id, static_cast<int>(error));
 }
 

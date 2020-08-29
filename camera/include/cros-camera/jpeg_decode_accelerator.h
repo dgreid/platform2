@@ -91,35 +91,6 @@ class JpegDecodeAccelerator {
                            uint32_t input_buffer_offset,
                            buffer_handle_t output_buffer) = 0;
 
-  // Decodes the given buffer that contains one JPEG image.
-  // The image is decoded from memory of |input_fd| with size
-  // |input_buffer_size|. The size of JPEG image is |coded_size_width| and
-  // |coded_size_height|.
-  // Decoded I420 frame data will be put onto memory associated with |output_fd|
-  // with allocated size |output_buffer_size|.
-  // Note: This API doesn't close the |input_fd| and |output_fd|. Caller doesn't
-  // need to dup file descriptor.
-  // TODO(kamesan): deprecate this when migrated to the above function.
-  //
-  // Args:
-  //    |input_fd|: A file descriptor of DMA buffer.
-  //    |input_buffer_size|: Size of input buffer.
-  //    |coded_size_width|: Width of JPEG image.
-  //    |coded_size_height|: Height of JPEG image.
-  //    |output_fd|: A file descriptor of shared memory.
-  //    |output_buffer_size|: Size of output buffer.
-  //
-  // Returns:
-  //    Returns enum Error to notify the decode status.
-  //    If the return code is TRY_START_AGAIN, user can call Start() again and
-  //    use this API.
-  virtual Error DecodeSync(int input_fd,
-                           uint32_t input_buffer_size,
-                           int32_t coded_size_width,
-                           int32_t coded_size_height,
-                           int output_fd,
-                           uint32_t output_buffer_size) = 0;
-
   // Asynchronous version of DecodeSync.
   //
   // Args:
@@ -135,28 +106,6 @@ class JpegDecodeAccelerator {
                          uint32_t input_buffer_size,
                          uint32_t input_buffer_offset,
                          buffer_handle_t output_buffer,
-                         DecodeCallback callback) = 0;
-
-  // Asynchronous version of DecodeSync.
-  // TODO(kamesan): deprecate this when migrated to the above function.
-  //
-  // Args:
-  //    |input_fd|: A file descriptor of DMA buffer.
-  //    |input_buffer_size|: Size of input buffer.
-  //    |coded_size_width|: Width of JPEG image.
-  //    |coded_size_height|: Height of JPEG image.
-  //    |output_fd|: A file descriptor of shared memory.
-  //    |output_buffer_size|: Size of output buffer.
-  //    |callback|: callback function after finish decoding.
-  //
-  // Returns:
-  //    Returns buffer_id of this Decode.
-  virtual int32_t Decode(int input_fd,
-                         uint32_t input_buffer_size,
-                         int32_t coded_size_width,
-                         int32_t coded_size_height,
-                         int output_fd,
-                         uint32_t output_buffer_size,
                          DecodeCallback callback) = 0;
 };
 
