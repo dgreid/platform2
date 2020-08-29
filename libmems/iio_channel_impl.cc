@@ -42,8 +42,8 @@ bool IioChannelImpl::SetEnabled(bool en) {
     return true;
 
   std::string en_attrib_name = base::StringPrintf(
-      "scan_elements/%s_%s_en",
-      iio_channel_is_output(channel_) ? "out" : "in", GetId());
+      "scan_elements/%s_%s_en", iio_channel_is_output(channel_) ? "out" : "in",
+      GetId());
   int error = iio_channel_attr_write_bool(channel_, en_attrib_name.c_str(), en);
   if (error) {
     LOG(WARNING) << "could not write to " << en_attrib_name

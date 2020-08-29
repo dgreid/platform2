@@ -37,8 +37,8 @@ class IioChannel {
   // and returns true if the channel's enabled status matches
   // what was set, false otherwise.
   bool SetEnabledAndCheck(bool en) {
-      SetEnabled(en);
-      return en == IsEnabled();
+    SetEnabled(en);
+    return en == IsEnabled();
   }
 
   // Reads the |name| attribute of this channel and returns the value

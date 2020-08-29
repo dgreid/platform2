@@ -24,9 +24,9 @@ bool FakeIioChannel::SetEnabled(bool en) {
   return true;
 }
 
-template <typename T> base::Optional<T> FakeReadAttributes(
-    const std::string& name,
-    std::map<std::string, T> attributes) {
+template <typename T>
+base::Optional<T> FakeReadAttributes(const std::string& name,
+                                     std::map<std::string, T> attributes) {
   auto k = attributes.find(name);
   if (k == attributes.end())
     return base::nullopt;
