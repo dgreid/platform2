@@ -17,24 +17,25 @@
 # which sources this library.
 #
 # If using this library for multiple displays on one device, it is recommended
-# to use each from a separate script, and append a unique suffix to
-# $NVT_TCON_LOG_TAG so that the source of log messages can be identified.
+# to use each from a separate script or invocation, and append a unique suffix
+# to $LOG_TAG so that the source of log messages can be identified.
 
-NVT_TCON_LOG_TAG="chromeos-nvt-tcon-firmware-update"
+LOG_TAG="chromeos-nvt-tcon-firmware-update"
+INHIBIT_SUSPEND_FILE="/run/lock/power_override/${LOG_TAG}.lock"
 
 # Require a minimum battery percentage to mitigate
 # https://issuetracker.google.com/144947174 as best we can.
 # This should NOT be necessary for most firmware update processes in the
 # Chromium OS ecosystem.
-NVT_TCON_MIN_BATTERY_PERCENT=15
+MIN_BATTERY_PERCENT=15
 
 loginfo() {
   echo "$*"
-  logger --tag="${NVT_TCON_LOG_TAG}" -- "$*"
+  logger --tag="${LOG_TAG}" -- "$*"
 }
 
 logerror() {
-  logger --stderr --tag="${NVT_TCON_LOG_TAG}" -- "$*"
+  logger --stderr --tag="${LOG_TAG}" -- "$*"
 }
 
 # Pipe a non-negative integer to this.
@@ -57,6 +58,25 @@ verify_integer() {
 # will return non-zero.
 verify_fw_ver() {
   grep -o -E '^0x[0-9A-F]{2}-0x[0-9A-F]{2}$'
+}
+
+# Block suspend while running a command.
+#
+# Args:
+#   $@ The command to run while suspend is blocked.
+block_suspend_and_run_cmd() {
+  local ret=0
+
+  trap 'rm -f -- "${INHIBIT_SUSPEND_FILE}"' EXIT
+  echo "$$" > "${INHIBIT_SUSPEND_FILE}"
+
+  "$@"
+  # Preserve the exit status in case we're running without set -e.
+  ret="$?"
+
+  rm -f "${INHIBIT_SUSPEND_FILE}"
+  trap - EXIT
+  return "${ret}"
 }
 
 # Prints display resolution string to stdout as one line, with trailing newline.
@@ -263,11 +283,20 @@ update_tcon_fw() {
   # Chromium OS ecosystem.
   local battery_percent
   battery_percent="$(get_battery_percent)"
-  if [ "${battery_percent}" -lt "${NVT_TCON_MIN_BATTERY_PERCENT}" ]; then
+  if [ "${battery_percent}" -lt "${MIN_BATTERY_PERCENT}" ]; then
     loginfo "skipping TCON firmware update due to low battery charge"
     return
   fi
 
+  block_suspend_and_run_cmd do_tcon_fw_update
+}
+
+# Only update_tcon_fw() should invoke this.
+#
+# Preconditions:
+# - Suspend must be inhibited.
+# - Battery state of charge must be sufficient to complete the update.
+do_tcon_fw_update() {
   hook_pre_display_reset || return
   show_message_and_reset_panel || return
   hook_post_display_reset || return
