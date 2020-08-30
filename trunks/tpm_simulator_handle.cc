@@ -19,14 +19,44 @@ extern "C" {
 #endif  // USE_SIMULATOR
 
 #include <base/callback.h>
+#include <base/hash/sha1.h>
 #include <base/logging.h>
 #include <base/stl_util.h>
+#include <crypto/sha2.h>
 
 #include "trunks/error_codes.h"
 
 namespace {
 
 const char kSimulatorStateDirectory[] = "/var/lib/trunks";
+
+#if defined(USE_SIMULATOR)
+// Resizes extend_data to size crypto::kSHA256Length and uses the result to
+// extend the indicated PCR.
+void ExtendPcr(unsigned int pcr_index, const std::string& extend_data) {
+  std::string mode_digest = extend_data;
+  mode_digest.resize(crypto::kSHA256Length);
+  trunks::TPM_RC result = extend_pcr(pcr_index, mode_digest.data());
+  if (result != TPM_RC_SUCCESS) {
+    LOG(ERROR) << __func__ << "Failed to extend PCR" << pcr_index
+               << trunks::GetErrorString(result);
+  }
+}
+
+// According to the specified boot mode, extends PCR0 as cr50 does.
+// It should only be called once after the PCR0 value is set to all 0s
+// (e.g. running Startup with Clear). Calling it twice without resetting the PCR
+// will leave the TPM in an unknown boot mode.
+//  - developer_mode: 1 if in developer mode, 0 otherwise,
+//  - recovery_mode: 1 if in recovery mode, 0 otherwise,
+//  - verified_firmware: 1 if verified firmware, 0 if developer firmware.
+void ExtendPcr0BootMode(const char developer_mode,
+                        const char recovery_mode,
+                        const char verified_firmware) {
+  const std::string mode({developer_mode, recovery_mode, verified_firmware});
+  ExtendPcr(/*pcr_index=*/0, base::SHA1HashString(mode));
+}
+#endif
 
 }  // namespace
 
@@ -79,6 +109,12 @@ void TpmSimulatorHandle::InitializeSimulator() {
   };
   ExecuteCommand(sizeof(startup_cmd), startup_cmd, &response_size, &response);
   LOG(INFO) << "TPM2_Startup(TPM_SU_CLEAR) sent.";
+
+  ExtendPcr0BootMode(/*developer_mode=*/1, /*recovery_mode=*/0,
+                     /*verified_firmware=*/0);
+  // Assign an arbitrary value to PCR1.
+  ExtendPcr(/*pcr_index=*/1, /*extend_data=*/"PCR1");
+
 #else
   LOG(FATAL) << "Simulator not configured.";
 #endif
