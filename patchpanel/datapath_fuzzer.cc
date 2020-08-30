@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include <base/at_exit.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/logging.h>
@@ -48,11 +49,11 @@ class Environment {
   Environment() {
     logging::SetMinLogLevel(logging::LOG_FATAL);  // <- DISABLE LOGGING.
   }
+  base::AtExitManager at_exit;
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  // Turn off logging.
-  logging::SetMinLogLevel(logging::LOG_FATAL);
+  static Environment env;
 
   FuzzedDataProvider provider(data, size);
   RandomProcessRunner runner(&provider);
