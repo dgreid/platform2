@@ -60,6 +60,12 @@ class BRILLO_PRIVATE SecureAllocator {
   using size_type = typename std::allocator<T>::size_type;
   using value_type = typename std::allocator<T>::value_type;
 
+  // Allocators are equal if they are stateless. i.e., one allocator can
+  // deallocate objects created by another allocator.
+  // See https://en.cppreference.com/w/cpp/memory/allocator/operator_cmp and
+  // https://en.cppreference.com/w/cpp/named_req/Allocator.
+  using is_always_equal = std::true_type;
+
   // Constructors that wrap over std::allocator.
   // Makes sure that the allocator's static members are only allocated once.
   SecureAllocator() noexcept = default;
@@ -220,8 +226,10 @@ class BRILLO_PRIVATE SecureAllocator {
 // Allocators are equal if they are stateless. i.e., one allocator can
 // deallocate objects created by another allocator.
 // See https://en.cppreference.com/w/cpp/memory/allocator/operator_cmp.
-// TODO(b/162949739): When C++17 is enabled this can be replaced with an
-//  implementation of std::allocator_traits::is_always_equal.
+// TODO(https://issuetracker.google.com/173431121): It seems like this should be
+// removed with C++17's std::allocator_traits::is_always_equal trait, but it
+// is still used by std::vector:
+// https://github.com/llvm/llvm-project/blob/67fa016ac1e24cd0f32a43d6d2ed43e347f1e74b/libcxx/include/vector#L1370
 template <class T, class U>
 bool operator==(const SecureAllocator<T>&, const SecureAllocator<U>&) noexcept {
   return true;

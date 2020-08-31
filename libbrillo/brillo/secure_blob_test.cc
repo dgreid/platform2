@@ -305,6 +305,10 @@ TEST(SecureAllocator, SecureVectorIsClearedOnDestruction) {
   EXPECT_EQ(allocator.GetErasedCount(), 4 + 4096);
 }
 
+TEST(SecureAllocator, IsAlwaysEqualTrait) {
+  EXPECT_EQ(SecureAllocator<uint8_t>::is_always_equal::value, true);
+}
+
 TEST(SecureAllocator, OperatorEqual) {
   SecureAllocator<uint8_t> allocator1;
   SecureAllocator<uint8_t> allocator2;
