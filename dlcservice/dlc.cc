@@ -399,17 +399,22 @@ bool DlcBase::FinishInstall(bool installed_by_ue, ErrorPtr* err) {
                        << ", but verified to be a valid image.";
         }
       }
-      if (IsVerified() && Mount(err)) {
-        break;
+      if (IsVerified()) {
+        if (Mount(err))
+          break;
+        // Do not |CancelInstall| on mount failure.
+        state_.set_last_error_code(Error::GetDbusErrorCode(*err));
+        ChangeState(DlcState::NOT_INSTALLED);
+        MarkUnverified();
+        SystemState::Get()->metrics()->SendInstallResultFailure(err);
+        LOG(ERROR) << "Mount failed during install finalization for DLC="
+                   << id_;
+        return false;
       } else {
-        // By now, the image is either not verified or it is not mounted.
-        // The error is empty only if verification was not successful, since
-        // |Mount| would have set the error otherwise.
-        if (err->get() == NULL)
-          *err = Error::CreateInternal(
-              FROM_HERE, error::kFailedToVerifyImage,
-              base::StringPrintf("Cannot verify image for DLC=%s",
-                                 id_.c_str()));
+        // The error is empty since verification was not successful.
+        *err = Error::CreateInternal(
+            FROM_HERE, error::kFailedToVerifyImage,
+            base::StringPrintf("Cannot verify image for DLC=%s", id_.c_str()));
 
         SystemState::Get()->metrics()->SendInstallResultFailure(err);
         ErrorPtr tmp_err;

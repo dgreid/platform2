@@ -683,7 +683,8 @@ TEST_F(DlcServiceTest, MountFailureTest) {
   status_result.set_is_install(true);
   dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
 
-  EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
+  EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
+  EXPECT_FALSE(dlc_service_->GetDlc(kSecondDlc, &err_)->IsVerified());
   CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED, kErrorInternal);
 }
 
@@ -824,7 +825,7 @@ TEST_F(DlcServiceTest,
     status_result.set_is_install(true);
     status_result.set_current_operation(Operation::IDLE);
     dlc_service_->OnStatusUpdateAdvancedSignal(status_result);
-    EXPECT_FALSE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
+    EXPECT_TRUE(base::PathExists(JoinPaths(content_path_, kSecondDlc)));
     CheckDlcState(kSecondDlc, DlcState::NOT_INSTALLED, kErrorInternal);
   }
 }
