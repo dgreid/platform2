@@ -175,6 +175,12 @@ const std::vector<Log> kCommandLogs {
   {kFile, "cros_ish.log", "/var/log/cros_ish.log",
     SandboxedProcess::kDefaultUser, SandboxedProcess::kDefaultGroup,
     Log::kDefaultMaxBytes, LogTool::Encoding::kUtf8},
+  {kFile, "cros_scp.previous", "/var/log/cros_scp.previous",
+    SandboxedProcess::kDefaultUser, SandboxedProcess::kDefaultGroup,
+    64 * 1024, LogTool::Encoding::kUtf8},
+  {kFile, "cros_scp.log", "/var/log/cros_scp.log",
+    SandboxedProcess::kDefaultUser, SandboxedProcess::kDefaultGroup,
+    64 * 1024, LogTool::Encoding::kUtf8},
   {kCommand, "crosvm.log", "nsenter -t1 -m /bin/sh -c 'tail -n+1"
     " /run/daemon-store/crosvm/*/log/*.log.1"
     " /run/daemon-store/crosvm/*/log/*.log'", kRoot, kRoot},
