@@ -45,7 +45,6 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
   // This should fail.
   unsigned int blocks, total_blocks = 16384;
   u8* data = static_cast<u8*>(my_memalign(PAGE_SIZE, PAGE_SIZE));
-  u8* hash_data;
 
   blocks = total_blocks;
 
@@ -54,8 +53,8 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
   EXPECT_EQ(0, dm_bht_create(&bht, blocks, "sha256"));
   dm_bht_set_read_cb(&bht, dm_bht_zeroread_callback);
   sectors = dm_bht_sectors(&bht);
-  hash_data = new u8[verity_to_bytes(sectors)];
-  dm_bht_set_buffer(&bht, hash_data);
+  std::vector<u8> hash_data(verity_to_bytes(sectors));
+  dm_bht_set_buffer(&bht, hash_data.data());
 
   do {
     EXPECT_EQ(dm_bht_store_block(&bht, blocks - 1, data), 0);
@@ -65,7 +64,6 @@ TEST(DmBht, CreateZeroPopulateDestroy) {
     EXPECT_GE(dm_bht_populate(&bht, reinterpret_cast<void*>(this), blocks), 0);
   EXPECT_EQ(0, dm_bht_compute(&bht));
   EXPECT_EQ(0, dm_bht_destroy(&bht));
-  delete hash_data;
   free(data);
 }
 
