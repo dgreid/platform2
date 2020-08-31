@@ -39,6 +39,7 @@ Daemon::Daemon(bool has_session_manager)
                     &disk_monitor_,
                     &device_ejector_),
       format_manager_(&process_reaper_),
+      partition_manager_(&process_reaper_, &disk_monitor_),
       rename_manager_(&platform_, &process_reaper_),
       fuse_manager_(kFUSEMountRootDirectory,
                     kFUSEWritableRootDirectory,
@@ -60,7 +61,8 @@ Daemon::~Daemon() = default;
 void Daemon::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
   server_ = std::make_unique<CrosDisksServer>(
-      bus_, &platform_, &disk_monitor_, &format_manager_, &rename_manager_);
+      bus_, &platform_, &disk_monitor_, &format_manager_, &partition_manager_,
+      &rename_manager_);
 
   // Register mount managers with the commonly used ones come first.
   server_->RegisterMountManager(&disk_manager_);

@@ -20,6 +20,7 @@
 #include "cros-disks/format_manager.h"
 #include "cros-disks/fuse_mount_manager.h"
 #include "cros-disks/metrics.h"
+#include "cros-disks/partition_manager.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/rar_manager.h"
 #include "cros-disks/rename_manager.h"
@@ -53,6 +54,7 @@ class Daemon : public brillo::DBusServiceDaemon {
   DiskMonitor disk_monitor_;
   DiskManager disk_manager_;
   FormatManager format_manager_;
+  PartitionManager partition_manager_;
   RenameManager rename_manager_;
   FUSEMountManager fuse_manager_;
   std::unique_ptr<DeviceEventModerator> event_moderator_;

@@ -6,10 +6,12 @@
 #define CROS_DISKS_CROS_DISKS_SERVER_H_
 
 #include <map>
+#include <memory>
 #include <string>
 #include <tuple>
 #include <vector>
 
+#include <base/files/file_path.h>
 #include <base/memory/ref_counted.h>
 #include <brillo/dbus/dbus_object.h>
 #include <dbus/bus.h>
@@ -28,6 +30,7 @@ namespace cros_disks {
 class DiskMonitor;
 class FormatManager;
 class MountManager;
+class PartitionManager;
 class Platform;
 class RenameManager;
 
@@ -44,6 +47,7 @@ class CrosDisksServer : public org::chromium::CrosDisksAdaptor,
                   Platform* platform,
                   DiskMonitor* disk_monitor,
                   FormatManager* format_manager,
+                  PartitionManager* partition_manager,
                   RenameManager* rename_manager);
   ~CrosDisksServer() override = default;
 
@@ -62,6 +66,14 @@ class CrosDisksServer : public org::chromium::CrosDisksAdaptor,
   void Format(const std::string& path,
               const std::string& filesystem_type,
               const std::vector<std::string>& options) override;
+
+  // Partitions a device into a single partition taking up the whole drive.
+  // Returns error code to indicate whether operation succeeded or failed using
+  // a PartitionErrorType enum value.
+  void SinglePartitionFormat(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<uint32_t>>
+          response,
+      const std::string& path) override;
 
   // A method for renaming a device specified by |path|.
   // On completion, a RenameCompleted signal is emitted to indicate whether
@@ -100,6 +112,13 @@ class CrosDisksServer : public org::chromium::CrosDisksAdaptor,
   void OnFormatCompleted(const std::string& device_path,
                          FormatErrorType error_type) override;
 
+  // The callback called when a partitioning operation has completed.
+  void OnPartitionCompleted(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<uint32_t>>
+          response,
+      const base::FilePath& device_path,
+      PartitionErrorType error_type);
+
   // Implements the RenameManagerObserverInterface interface to handle
   // the event when a renaming operation has completed.
   void OnRenameCompleted(const std::string& device_path,
@@ -134,6 +153,7 @@ class CrosDisksServer : public org::chromium::CrosDisksAdaptor,
   Platform* platform_;
   DiskMonitor* disk_monitor_;
   FormatManager* format_manager_;
+  PartitionManager* partition_manager_;
   RenameManager* rename_manager_;
   std::vector<MountManager*> mount_managers_;
 };

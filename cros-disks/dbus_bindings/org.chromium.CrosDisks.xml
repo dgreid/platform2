@@ -67,6 +67,11 @@
       <arg name="filesystem_type" type="s" direction="in" />
       <arg name="options" type="as" direction="in" />
     </method>
+    <method name="SinglePartitionFormat">
+      <annotation name="org.chromium.DBus.Method.Kind" value="async" />
+      <arg name="path" type="s" direction="in" />
+      <arg name="status" type="u" direction="out" />
+    </method>
     <method name="Rename">
       <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
       <arg name="path" type="s" direction="in" />

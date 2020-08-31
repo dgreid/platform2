@@ -15,6 +15,7 @@
 #include "cros-disks/disk_monitor.h"
 #include "cros-disks/error_logger.h"
 #include "cros-disks/format_manager.h"
+#include "cros-disks/partition_manager.h"
 #include "cros-disks/platform.h"
 #include "cros-disks/quote.h"
 #include "cros-disks/rename_manager.h"
@@ -25,16 +26,19 @@ CrosDisksServer::CrosDisksServer(scoped_refptr<dbus::Bus> bus,
                                  Platform* platform,
                                  DiskMonitor* disk_monitor,
                                  FormatManager* format_manager,
+                                 PartitionManager* partition_manager,
                                  RenameManager* rename_manager)
     : org::chromium::CrosDisksAdaptor(this),
       dbus_object_(nullptr, bus, dbus::ObjectPath(kCrosDisksServicePath)),
       platform_(platform),
       disk_monitor_(disk_monitor),
       format_manager_(format_manager),
+      partition_manager_(partition_manager),
       rename_manager_(rename_manager) {
   CHECK(platform_) << "Invalid platform object";
   CHECK(disk_monitor_) << "Invalid disk monitor object";
   CHECK(format_manager_) << "Invalid format manager object";
+  CHECK(partition_manager_) << "Invalid partition manager object";
   CHECK(rename_manager_) << "Invalid rename manager object";
 
   format_manager_->set_observer(this);
@@ -70,6 +74,27 @@ void CrosDisksServer::Format(const std::string& path,
     LOG(ERROR) << "Could not format device " << quote(path) << " as filesystem "
                << quote(filesystem_type) << ": " << error_type;
     SendFormatCompletedSignal(error_type, path);
+  }
+}
+
+void CrosDisksServer::SinglePartitionFormat(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<uint32_t>> response,
+    const std::string& path) {
+  Disk disk;
+
+  if (!disk_monitor_->GetDiskByDevicePath(base::FilePath(path), &disk)) {
+    LOG(ERROR) << "Invalid device path: " << quote(path)
+               << " error code: " << PARTITION_ERROR_INVALID_DEVICE_PATH;
+    response->Return(PARTITION_ERROR_INVALID_DEVICE_PATH);
+  } else if (disk.is_on_boot_device || !disk.is_drive || disk.is_read_only) {
+    LOG(ERROR) << "Device not allowed: " << quote(path)
+               << " error code: " << PARTITION_ERROR_DEVICE_NOT_ALLOWED;
+    response->Return(PARTITION_ERROR_DEVICE_NOT_ALLOWED);
+  } else {
+    partition_manager_->StartSinglePartitionFormat(
+        base::FilePath(disk.device_file),
+        base::BindOnce(&CrosDisksServer::OnPartitionCompleted,
+                       base::Unretained(this), std::move(response)));
   }
 }
 
@@ -220,6 +245,15 @@ bool CrosDisksServer::GetDeviceProperties(
 void CrosDisksServer::OnFormatCompleted(const std::string& device_path,
                                         FormatErrorType error_type) {
   SendFormatCompletedSignal(error_type, device_path);
+}
+
+void CrosDisksServer::OnPartitionCompleted(
+    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<uint32_t>> response,
+    const base::FilePath& device_path,
+    PartitionErrorType error_type) {
+  LOG(ERROR) << "Partitioning for device " << quote(device_path)
+             << " completed, result code: " << std::to_string(error_type);
+  response->Return(error_type);
 }
 
 void CrosDisksServer::OnRenameCompleted(const std::string& device_path,
