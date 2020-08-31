@@ -99,6 +99,46 @@ Status: Passed
 Status message: Battery design capacity within given limits.
 ```
 
+### battery_charge
+
+Checks to see if the battery charges appropriately during a period of time.
+
+Parameters:
+-   `--length_seconds` - Length of time to run the routine for, in seconds.
+    Type: `uint32_t`. Default: `10`.
+-   `--minimum_charge_percent_required` - Minimum charge percent required during
+    the runtime of the routine. If, after the routine ends, the battery has
+    charged less than this percent, then the routine fails. Type: `uint32_t`.
+    Default: `0`.
+
+To ensure the battery discharges less than 10 percent in 600 seconds:
+
+From crosh:
+```bash
+crosh> diag battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=battery_discharge --length_seconds=600 --maximum_discharge_percent_allowed=10
+```
+
+Sample output:
+```bash
+Progress: 0
+Unplug the AC adapter.
+Press ENTER to continue.
+
+Progress: 0
+Progress: 1
+...
+Progress: 99
+Progress: 100
+Output: Battery discharged 7% in 600 seconds.
+Status: Passed
+Status message: Battery discharge routine passed.
+```
+
 ### battery_discharge
 
 Checks to see if the battery discharges excessively during a period of time.

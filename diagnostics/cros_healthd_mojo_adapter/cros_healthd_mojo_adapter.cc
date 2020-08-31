@@ -102,6 +102,11 @@ class CrosHealthdMojoAdapterImpl final : public CrosHealthdMojoAdapter {
       base::TimeDelta exec_duration,
       uint32_t maximum_discharge_percent_allowed) override;
 
+  // Runs the battery charge routine.
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr RunBatteryChargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t minimum_charge_percent_required) override;
+
   // Returns which routines are available on the platform.
   std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() override;
@@ -442,6 +447,24 @@ CrosHealthdMojoAdapterImpl::RunBatteryDischargeRoutine(
   base::RunLoop run_loop;
   cros_healthd_diagnostics_service_->RunBatteryDischargeRoutine(
       exec_duration.InSeconds(), maximum_discharge_percent_allowed,
+      base::Bind(&OnMojoResponseReceived<
+                     chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
+                 &response, run_loop.QuitClosure()));
+  run_loop.Run();
+
+  return response;
+}
+
+chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+CrosHealthdMojoAdapterImpl::RunBatteryChargeRoutine(
+    base::TimeDelta exec_duration, uint32_t minimum_charge_percent_required) {
+  if (!cros_healthd_service_factory_.is_bound())
+    Connect();
+
+  chromeos::cros_healthd::mojom::RunRoutineResponsePtr response;
+  base::RunLoop run_loop;
+  cros_healthd_diagnostics_service_->RunBatteryChargeRoutine(
+      exec_duration.InSeconds(), minimum_charge_percent_required,
       base::Bind(&OnMojoResponseReceived<
                      chromeos::cros_healthd::mojom::RunRoutineResponsePtr>,
                  &response, run_loop.QuitClosure()));

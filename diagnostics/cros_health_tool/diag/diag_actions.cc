@@ -44,7 +44,8 @@ const struct {
     {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
     {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead},
     {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch},
-    {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge}};
+    {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge},
+    {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge}};
 
 const struct {
   const char* readable_status;
@@ -134,6 +135,15 @@ bool DiagActions::ActionRunAcPowerRoutine(
 bool DiagActions::ActionRunBatteryCapacityRoutine(uint32_t low_mah,
                                                   uint32_t high_mah) {
   auto response = adapter_->RunBatteryCapacityRoutine(low_mah, high_mah);
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
+bool DiagActions::ActionRunBatteryChargeRoutine(
+    base::TimeDelta exec_duration, uint32_t minimum_charge_percent_required) {
+  auto response = adapter_->RunBatteryChargeRoutine(
+      exec_duration, minimum_charge_percent_required);
   CHECK(response) << "No RunRoutineResponse received.";
   id_ = response->id;
   return PollRoutineAndProcessResult();

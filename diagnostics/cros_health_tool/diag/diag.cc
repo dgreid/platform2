@@ -50,7 +50,8 @@ const struct {
     {"nvme_self_test", mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest},
     {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead},
     {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch},
-    {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge}};
+    {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge},
+    {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge}};
 
 }  // namespace
 
@@ -98,6 +99,8 @@ int diag_main(int argc, char** argv) {
                 "prime-search routine. Max. is 1000000");
   DEFINE_uint32(maximum_discharge_percent_allowed, 100,
                 "Upper bound for the battery discharge routine.");
+  DEFINE_uint32(minimum_charge_percent_required, 0,
+                "Lower bound for the battery charge routine.");
   brillo::FlagHelper::Init(argc, argv, "diag - Device diagnostic tool.");
 
   logging::InitLogging(logging::LoggingSettings());
@@ -207,6 +210,11 @@ int diag_main(int argc, char** argv) {
         routine_result = actions.ActionRunBatteryDischargeRoutine(
             base::TimeDelta::FromSeconds(FLAGS_length_seconds),
             FLAGS_maximum_discharge_percent_allowed);
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge:
+        routine_result = actions.ActionRunBatteryChargeRoutine(
+            base::TimeDelta::FromSeconds(FLAGS_length_seconds),
+            FLAGS_minimum_charge_percent_required);
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

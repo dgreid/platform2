@@ -97,6 +97,11 @@ class CrosHealthdMojoAdapter {
   RunBatteryDischargeRoutine(base::TimeDelta exec_duration,
                              uint32_t maximum_discharge_percent_allowed) = 0;
 
+  // Runs the battery charge routine.
+  virtual chromeos::cros_healthd::mojom::RunRoutineResponsePtr
+  RunBatteryChargeRoutine(base::TimeDelta exec_duration,
+                          uint32_t minimum_charge_percent_required) = 0;
+
   // Returns which routines are available on the platform.
   virtual std::vector<chromeos::cros_healthd::mojom::DiagnosticRoutineEnum>
   GetAvailableRoutines() = 0;
