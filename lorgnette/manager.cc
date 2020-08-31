@@ -500,7 +500,7 @@ void Manager::StartScan(
     return;
   }
 
-  GetNextImageInternal(uuid, &scan_state, std::move(out_file), base::nullopt);
+  GetNextImageInternal(uuid, &scan_state, std::move(out_file));
 }
 
 std::vector<uint8_t> Manager::StartScanMultiPage(
@@ -594,11 +594,16 @@ void Manager::GetNextImage(
     scan_state->in_use = true;
   }
   base::ScopedClosureRunner release_device(base::BindOnce(
-      [](base::Lock* lock, ScanJobState* scan_state) {
-        base::AutoLock auto_lock(*lock);
-        scan_state->in_use = false;
+      [](base::WeakPtr<Manager> manager, const std::string& uuid) {
+        if (manager) {
+          base::AutoLock(manager->active_scans_lock_);
+          auto state = manager->active_scans_.find(uuid);
+          if (state != manager->active_scans_.end()) {
+            state->second.in_use = false;
+          }
+        }
       },
-      &active_scans_lock_, scan_state));
+      weak_factory_.GetWeakPtr(), uuid));
 
   brillo::ErrorPtr error;
   base::ScopedFILE out_file = SetupOutputFile(&error, out_fd);
@@ -613,8 +618,7 @@ void Manager::GetNextImage(
   response.set_success(true);
   method_response->Return(impl::SerializeProto(response));
 
-  GetNextImageInternal(uuid, scan_state, std::move(out_file),
-                       std::move(release_device));
+  GetNextImageInternal(uuid, scan_state, std::move(out_file));
 }
 
 void Manager::SetProgressSignalInterval(base::TimeDelta interval) {
@@ -698,17 +702,19 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   return true;
 }
 
-void Manager::GetNextImageInternal(
-    const std::string& uuid,
-    ScanJobState* scan_state,
-    base::ScopedFILE out_file,
-    base::Optional<base::ScopedClosureRunner> release_device) {
+void Manager::GetNextImageInternal(const std::string& uuid,
+                                   ScanJobState* scan_state,
+                                   base::ScopedFILE out_file) {
   brillo::ErrorPtr error;
   if (RunScanLoop(&error, scan_state, std::move(out_file), uuid)) {
     scan_state->pages_scanned++;
   } else {
     ReportScanFailed(scan_state->device_name);
     SendFailureSignal(uuid, SerializeError(error));
+    {
+      base::AutoLock auto_lock(active_scans_lock_);
+      active_scans_.erase(uuid);
+    }
     return;
   }
 
@@ -739,9 +745,6 @@ void Manager::GetNextImageInternal(
                      false);
     LOG(INFO) << __func__ << ": completed image scan and conversion.";
 
-    if (release_device.has_value()) {
-      (void)release_device.value().Release();
-    }
     {
       base::AutoLock auto_lock(active_scans_lock_);
       active_scans_.erase(uuid);
@@ -757,6 +760,10 @@ void Manager::GetNextImageInternal(
                                sane_strstatus(status));
     ReportScanFailed(scan_state->device_name);
     SendFailureSignal(uuid, SerializeError(error));
+    {
+      base::AutoLock auto_lock(active_scans_lock_);
+      active_scans_.erase(uuid);
+    }
     return;
   }
 

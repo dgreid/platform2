@@ -126,11 +126,9 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                          const StartScanRequest& request,
                          std::unique_ptr<SaneDevice>* device_out);
 
-  void GetNextImageInternal(
-      const std::string& uuid,
-      ScanJobState* scan_state,
-      base::ScopedFILE out_file,
-      base::Optional<base::ScopedClosureRunner> release_device);
+  void GetNextImageInternal(const std::string& uuid,
+                            ScanJobState* scan_state,
+                            base::ScopedFILE out_file);
 
   bool RunScanLoop(brillo::ErrorPtr* error,
                    ScanJobState* scan_state,
