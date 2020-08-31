@@ -49,6 +49,8 @@ static int dm_bht_compute_hash(struct dm_bht* bht,
 
 void dm_bht_set_buffer(struct dm_bht* bht, void* buffer) {
   int depth;
+  /* Buffers are externally allocated, so mark them as such. */
+  bht->externally_allocated = true;
 
   for (depth = 0; depth < bht->depth; ++depth) {
     struct dm_bht_level* level = dm_bht_get_level(bht, depth);

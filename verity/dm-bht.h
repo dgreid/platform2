@@ -109,6 +109,8 @@ struct dm_bht {
   struct dm_bht_level* levels; /* in reverse order */
   /* Callback for reading from the hash device */
   dm_bht_callback read_cb;
+  /* True if the buffers are externally allocated. */
+  bool externally_allocated;
 };
 
 /* Constructor for struct dm_bht instances. */

@@ -158,6 +158,7 @@ int dm_bht_create(struct dm_bht* bht,
   int cpu = 0;
 
   bht->have_salt = false;
+  bht->externally_allocated = false;
 
   /* Setup the hash first. Its length determines much of the bht layout */
   for (cpu = 0; cpu < nr_cpu_ids; ++cpu) {
@@ -467,6 +468,7 @@ int dm_bht_populate(struct dm_bht* bht, void* ctx, unsigned int block) {
   int state = 0;
 
   BUG_ON(block >= bht->block_count);
+  bht->externally_allocated = false;
 
   DMDEBUG("dm_bht_populate(%u)", block);
 
@@ -549,19 +551,21 @@ int dm_bht_destroy(struct dm_bht* bht) {
   while (depth-- != 0) {
     struct dm_bht_entry* entry = bht->levels[depth].entries;
     struct dm_bht_entry* entry_end = entry + bht->levels[depth].count;
-    for (; entry < entry_end; ++entry) {
-      switch (entry->state) {
-        /* At present, no other states free memory,
-         * but that will change.
-         */
-        case DM_BHT_ENTRY_UNALLOCATED:
-          /* Allocated with improper state */
-          BUG_ON(entry->nodes);
-          continue;
-        default:
-          BUG_ON(!entry->nodes);
-          free(entry->nodes);
-          break;
+    if (!bht->externally_allocated) {
+      for (; entry < entry_end; ++entry) {
+        switch (entry->state) {
+          /* At present, no other states free memory,
+           * but that will change.
+           */
+          case DM_BHT_ENTRY_UNALLOCATED:
+            /* Allocated with improper state */
+            BUG_ON(entry->nodes);
+            continue;
+          default:
+            BUG_ON(!entry->nodes);
+            free(entry->nodes);
+            break;
+        }
       }
     }
     free(bht->levels[depth].entries);

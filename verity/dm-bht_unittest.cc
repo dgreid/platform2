@@ -124,6 +124,7 @@ class MemoryBhtTest : public ::testing::Test {
     dm_bht_root_hexdigest(&bht, digest, sizeof(digest));
     LOG(INFO) << "MemoryBhtTest root is " << digest;
 
+    EXPECT_EQ(0, dm_bht_destroy(&bht));
     free(data);
   }
   void SetupBht(const unsigned int total_blocks,
