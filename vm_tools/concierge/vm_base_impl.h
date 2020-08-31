@@ -13,7 +13,7 @@
 #include <base/macros.h>
 #include <base/files/scoped_temp_dir.h>
 #include <brillo/process/process.h>
-#include <chromeos/patchpanel/client.h>
+#include <chromeos/patchpanel/dbus/client.h>
 
 namespace patchpanel {
 class Client;

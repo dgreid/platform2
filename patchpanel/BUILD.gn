@@ -8,7 +8,6 @@ import("//common-mk/proto_library.gni")
 group("all") {
   deps = [
     ":libpatchpanel",
-    ":libpatchpanel-client",
     ":libpatchpanel-util",
     ":patchpaneld",
   ]
@@ -18,7 +17,6 @@ group("all") {
       ":firewall_fuzzer",
       ":multicast_forwarder_fuzzer",
       ":ndproxy_fuzzer",
-      ":patchpanel_client_fuzzer",
     ]
   }
   if (use.test) {
@@ -114,16 +112,6 @@ static_library("libpatchpanel") {
   deps = [ ":protos" ]
 }
 
-shared_library("libpatchpanel-client") {
-  configs += [ ":target_defaults" ]
-  all_dependent_pkg_deps = [
-    "protobuf",
-    "system_api",
-  ]
-  sources = [ "client.cc" ]
-  sources += util_sources
-}
-
 executable("patchpaneld") {
   sources = [ "main.cc" ]
   configs += [ ":target_defaults" ]
@@ -165,19 +153,6 @@ if (use.fuzzer) {
     deps = [ ":libpatchpanel" ]
   }
 
-  executable("patchpanel_client_fuzzer") {
-    configs += [
-      "//common-mk/common_fuzzer",
-      ":target_defaults",
-      ":fuzzing_config",
-    ]
-    sources = [ "client_fuzzer.cc" ]
-    deps = [
-      ":libpatchpanel",
-      ":libpatchpanel-client",
-    ]
-  }
-
   executable("firewall_fuzzer") {
     configs += [
       "//common-mk/common_fuzzer",
@@ -198,7 +173,6 @@ if (use.test) {
     sources = [
       "address_manager_test.cc",
       "arc_service_test.cc",
-      "client_test.cc",
       "counters_service_test.cc",
       "datapath_test.cc",
       "firewall_test.cc",
@@ -220,7 +194,7 @@ if (use.test) {
     ]
     defines = [ "UNIT_TEST" ]
     deps = [
-      ":libpatchpanel-client",
+      ":libpatchpanel-util",
       ":libpatchpanel_test",
       "//common-mk/testrunner",
     ]

@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PATCHPANEL_CLIENT_H_
-#define PATCHPANEL_CLIENT_H_
+#ifndef PATCHPANEL_DBUS_CLIENT_H_
+#define PATCHPANEL_DBUS_CLIENT_H_
 
 #include <memory>
+#include <set>
 #include <string>
 #include <utility>
 #include <vector>
@@ -98,4 +99,4 @@ class BRILLO_EXPORT Client {
 
 }  // namespace patchpanel
 
-#endif  // PATCHPANEL_CLIENT_H_
+#endif  // PATCHPANEL_DBUS_CLIENT_H_

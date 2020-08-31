@@ -37,6 +37,7 @@ pkg_config("host_target_defaults_pkgs") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libpatchpanel-client",
+    "libpatchpanel-util",
   ]
 }
 

@@ -44,7 +44,7 @@
 #include <brillo/files/safe_fd.h>
 #include <brillo/scoped_mount_namespace.h>
 #include <chromeos-config/libcros_config/cros_config.h>
-#include <chromeos/patchpanel/client.h>
+#include <chromeos/patchpanel/dbus/client.h>
 #include <crypto/random.h>
 #include <metrics/bootstat.h>
 #include <metrics/metrics_library.h>

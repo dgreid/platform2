@@ -19,7 +19,7 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/threading/thread_task_runner_handle.h>
-#include <chromeos/patchpanel/client.h>
+#include <chromeos/patchpanel/dbus/client.h>
 
 namespace permission_broker {
 

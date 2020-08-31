@@ -56,7 +56,7 @@
 #include <chromeos/dbus/service_constants.h>
 #include <crosvm/qcow_utils.h>
 #include <dbus/object_proxy.h>
-#include <chromeos/patchpanel/client.h>
+#include <chromeos/patchpanel/dbus/client.h>
 #include <vm_cicerone/proto_bindings/cicerone_service.pb.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vm_protos/proto_bindings/vm_guest.pb.h>

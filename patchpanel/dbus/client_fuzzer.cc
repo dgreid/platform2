@@ -8,7 +8,7 @@
 #include <dbus/message.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "patchpanel/client.h"
+#include "patchpanel/dbus/client.h"
 
 namespace patchpanel {
 
@@ -61,7 +61,7 @@ class FakeObjectProxy : public dbus::ObjectProxy {
 };
 
 extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
-  // static Environment env;
+  static Environment env;
   dbus::Bus::Options options;
   scoped_refptr<dbus::Bus> bus = new dbus::Bus(options);
   scoped_refptr<dbus::ObjectProxy> proxy(new FakeObjectProxy(bus.get()));

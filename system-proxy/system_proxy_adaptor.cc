@@ -13,7 +13,7 @@
 #include <brillo/dbus/dbus_object.h>
 #include <brillo/message_loops/message_loop.h>
 #include <chromeos/dbus/service_constants.h>
-#include <chromeos/patchpanel/client.h>
+#include <chromeos/patchpanel/dbus/client.h>
 #include <dbus/object_proxy.h>
 
 #include "system-proxy/kerberos_client.h"

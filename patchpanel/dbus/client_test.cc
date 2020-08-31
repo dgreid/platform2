@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "patchpanel/client.h"
+#include "patchpanel/dbus/client.h"
 
 #include <chromeos/dbus/service_constants.h>
-#include <gmock/gmock.h>
-#include <gtest/gtest.h>
 #include <dbus/message.h>
-#include <dbus/object_path.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
+#include <dbus/object_path.h>
+#include <gmock/gmock.h>
+#include <gtest/gtest.h>
 
 #include "patchpanel/net_util.h"
 
