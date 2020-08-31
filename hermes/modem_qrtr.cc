@@ -497,7 +497,20 @@ void ModemQrtr::ReceiveQmiSendApdu(const qrtr_packet& packet) {
                           uim_send_apdu_resp_ei)) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
-  } else if (!CheckMessageSuccess(cmd, resp.result)) {
+  }
+  if (!CheckMessageSuccess(cmd, resp.result)) {
+    if (info->callback_) {
+      info->callback_(responses_, lpa::card::EuiccCard::kSendApduError);
+      // ResponseCallback interface does not indicate a change in ownership of
+      // |responses_|, but all callbacks should transfer ownership. Check for
+      // sanity.
+      // TODO(pholla) : Make ResponseCallback interface accept const responses_&
+      // and clear responses_.
+      CHECK(responses_.empty());
+    }
+    // Pop the apdu that caused the error.
+    tx_queue_.pop_front();
+    ReacquireChannel();
     return;
   }
 
