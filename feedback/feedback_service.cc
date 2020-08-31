@@ -25,14 +25,14 @@ FeedbackService::~FeedbackService() {}
 
 void FeedbackService::SendFeedback(
     const userfeedback::ExtensionSubmit& report,
-    const base::Callback<void(bool, const std::string&)>& callback) {
+    base::OnceCallback<void(bool, const std::string&)> callback) {
   std::string data;
   report.SerializeToString(&data);
   uploader_->QueueReport(data);
 
   // Currently, we don't implement status reporting; if QueueReport
   // returns then the report is at least queued.
-  callback.Run(true, std::string());
+  std::move(callback).Run(true, std::string());
 }
 
 void FeedbackService::QueueExistingReport(const std::string& data) {
@@ -83,12 +83,13 @@ void DBusFeedbackServiceImpl::DBusSendFeedback(
   userfeedback::ExtensionSubmit in;
   if (!reader.PopArrayOfBytesAsProto(&in)) {
     LOG(ERROR) << "Got feedback request with bad param";
-    DBusFeedbackSent(method_call, sender, false,
+    DBusFeedbackSent(
+        method_call, std::move(sender), false,
         "Can't deserialize proto of type userfeedback::ExtensionSubmit");
   } else {
     LOG(INFO) << "Sending feedback";
-    SendFeedback(in, base::Bind(&DBusFeedbackServiceImpl::DBusFeedbackSent,
-                                this, method_call, sender));
+    SendFeedback(in, base::BindOnce(&DBusFeedbackServiceImpl::DBusFeedbackSent,
+                                    this, method_call, std::move(sender)));
   }
 }
 
@@ -101,7 +102,7 @@ void DBusFeedbackServiceImpl::DBusFeedbackSent(
   dbus::MessageWriter writer(response.get());
   writer.AppendBool(status);
   writer.AppendString(reason);
-  sender.Run(std::move(response));
+  std::move(sender).Run(std::move(response));
 }
 
 }  // namespace feedback

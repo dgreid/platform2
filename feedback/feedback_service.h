@@ -26,7 +26,7 @@ class FeedbackService : public base::RefCounted<FeedbackService> {
   // The callback will be called with
   void SendFeedback(
       const userfeedback::ExtensionSubmit& feedback,
-      const base::Callback<void(bool, const std::string&)>& callback);
+      base::OnceCallback<void(bool, const std::string&)> callback);
 
   void QueueExistingReport(const std::string& data);
 
