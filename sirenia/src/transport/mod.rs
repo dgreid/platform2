@@ -220,7 +220,7 @@ pub struct VsockServerTransport(VsockListener);
 impl VsockServerTransport {
     pub fn new<T: ToSocketAddr>(addr: T) -> Result<Self> {
         let address: VSocketAddr = addr.to_socket_addr().map_err(Error::VSocketAddrParse)?;
-        let listener = VsockListener::bind(address.cid, address.port).map_err(Error::Bind)?;
+        let listener = VsockListener::bind(address).map_err(Error::Bind)?;
         Ok(VsockServerTransport(listener))
     }
 }
@@ -363,6 +363,7 @@ impl ClientTransport for PipeTransport {
 pub(crate) mod tests {
     use super::*;
 
+    use libchromeos::vsock::VsockCid;
     use std::net::{IpAddr, Ipv4Addr};
     use std::os::raw::c_uint;
     use std::thread::spawn;
@@ -427,8 +428,8 @@ pub(crate) mod tests {
     // TODO modify this to be work with concurrent vsock usage.
     #[test]
     fn vsocktransport() {
-        let server = VsockServerTransport::new().unwrap();
-        let client = VsockClientTransport::new(VsockCid::Local).unwrap();
+        let server = VsockServerTransport::new((VsockCid::Any, DEFAULT_PORT)).unwrap();
+        let client = VsockClientTransport::new((VsockCid::Local, DEFAULT_PORT)).unwrap();
         test_transport(server, client);
     }
 

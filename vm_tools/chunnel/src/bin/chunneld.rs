@@ -465,7 +465,7 @@ fn create_forwarder_session(
     let (tcp_stream, _) = listener.accept().map_err(Error::TcpAccept)?;
     // Bind a vsock port, tell the guest to connect, and accept the connection.
     let mut vsock_listener =
-        VsockListener::bind(VsockCid::Any, VMADDR_PORT_ANY).map_err(Error::BindVsock)?;
+        VsockListener::bind((VsockCid::Any, VMADDR_PORT_ANY)).map_err(Error::BindVsock)?;
     vsock_listener
         .set_nonblocking(true)
         .map_err(Error::SetVsockNonblocking)?;

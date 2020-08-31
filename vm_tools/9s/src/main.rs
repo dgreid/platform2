@@ -221,7 +221,7 @@ fn run_vsock_server(
     port: c_uint,
     accept_cid: VsockCid,
 ) -> io::Result<()> {
-    let listener = VsockListener::bind(VsockCid::Any, port)?;
+    let listener = VsockListener::bind((VsockCid::Any, port))?;
 
     loop {
         let (stream, peer) = listener.accept()?;

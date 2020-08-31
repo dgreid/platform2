@@ -135,6 +135,13 @@ impl ToSocketAddr for str {
     }
 }
 
+impl ToSocketAddr for (VsockCid, c_uint) {
+    fn to_socket_addr(&self) -> result::Result<SocketAddr, AddrParseError> {
+        let (cid, port) = *self;
+        Ok(SocketAddr { cid, port })
+    }
+}
+
 impl<'a, T: ToSocketAddr + ?Sized> ToSocketAddr for &'a T {
     fn to_socket_addr(&self) -> result::Result<SocketAddr, AddrParseError> {
         (**self).to_socket_addr()
@@ -318,7 +325,11 @@ pub struct VsockListener {
 impl VsockListener {
     /// Creates a new `VsockListener` bound to the specified port on the current virtual socket
     /// endpoint.
-    pub fn bind(cid: VsockCid, port: c_uint) -> io::Result<VsockListener> {
+    pub fn bind<A: ToSocketAddr>(addr: A) -> io::Result<VsockListener> {
+        let sockaddr = addr
+            .to_socket_addr()
+            .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
+
         // The compiler should optimize this out since these are both compile-time constants.
         assert_eq!(size_of::<sockaddr_vm>(), size_of::<sockaddr>());
 
@@ -336,8 +347,8 @@ impl VsockListener {
 
         let mut svm: sockaddr_vm = Default::default();
         svm.svm_family = AF_VSOCK;
-        svm.svm_cid = cid.into();
-        svm.svm_port = port;
+        svm.svm_cid = sockaddr.cid.into();
+        svm.svm_port = sockaddr.port;
 
         // Safe because this doesn't modify any memory and we check the return value.
         let ret = unsafe {
