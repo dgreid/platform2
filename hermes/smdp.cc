@@ -28,15 +28,20 @@ std::unique_ptr<lpa::smdp::SmdpClient> SmdpFactory::NewSmdpClient(
 }
 
 Smdp::Smdp(std::string server_addr,
-           std::string certs_dir,
+           const std::string& certs_dir,
            Logger* logger,
            Executor* executor)
     : server_transport_(brillo::http::Transport::CreateDefault()),
       logger_(logger),
       executor_(executor),
       weak_factory_(this) {
-  server_transport_->UseCustomCertificate(
-      brillo::http::Transport::Certificate::kHermesProd);
+  if (certs_dir.find("/test/") != std::string::npos) {
+    server_transport_->UseCustomCertificate(
+        brillo::http::Transport::Certificate::kHermesTest);
+  } else {
+    server_transport_->UseCustomCertificate(
+        brillo::http::Transport::Certificate::kHermesProd);
+  }
   smdp_addr_ = std::move(server_addr);
   // Ensure |smdp_addr_| does not begin with a scheme (e.g. "https://"), as this
   // variable will be used for the smdpAddress field in SM-DP+ communications.

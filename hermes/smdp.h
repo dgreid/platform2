@@ -42,7 +42,7 @@ class Smdp : public lpa::smdp::SmdpClient {
       std::function<void(int code, std::string& http_resp, int err)>;
 
   Smdp(std::string server_addr,
-       std::string certs_dir,
+       const std::string& certs_dir,
        Logger* logger,
        Executor* executor);
 
