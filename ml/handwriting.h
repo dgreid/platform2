@@ -39,6 +39,10 @@ class HandwritingLibrary {
     kNotSupported = 4,
   };
 
+  // Default handwriting model directory on rootfs.
+  static constexpr char kHandwritingDefaultModelDir[] =
+      "/opt/google/chrome/ml_models/handwriting";
+
   ~HandwritingLibrary() = default;
 
   // Returns whether HandwritingLibrary is supported.
@@ -52,8 +56,23 @@ class HandwritingLibrary {
     return IsUseLibHandwritingEnabled() && !IsAsan();
   }
 
-  // Gets the singleton HandwritingLibrary.
-  static HandwritingLibrary* GetInstance();
+  // Returns bool of use.ondevice_handwriting.
+  static constexpr bool IsUseLibHandwritingEnabled() {
+    return USE_ONDEVICE_HANDWRITING;
+  }
+
+  // Returns bool of use.ondevice_handwriting_dlc.
+  static constexpr bool IsUseLibHandwritingDlcEnabled() {
+    return USE_ONDEVICE_HANDWRITING_DLC;
+  }
+
+  // Gets the singleton HandwritingLibrary. The singleton is initialized with
+  // `model_path` on the first call to GetInstance; for the rest of the calls,
+  //  the `model_path` is ignored, and the existing singleton is returned.
+  // The `model_path` should be either a path on rootfs or a path returned by
+  // DlcService.
+  static HandwritingLibrary* GetInstance(
+      const std::string& model_path = kHandwritingDefaultModelDir);
 
   // Get whether the library is successfully initialized.
   // Initially, the status is `Status::kUninitialized` (this value should never
@@ -99,20 +118,15 @@ class HandwritingLibrary {
   FRIEND_TEST(HandwritingLibraryTest, CanLoadLibrary);
 
   // Initialize the handwriting library.
-  HandwritingLibrary();
+  explicit HandwritingLibrary(const std::string& root_path);
 
-  // Returns bool of use.ondevice_handwriting.
-  static constexpr bool IsUseLibHandwritingEnabled() {
-    return USE_ONDEVICE_HANDWRITING;
-  }
-
-  // Returns bool of use.ondevice_handwriting_dlc.
-  static constexpr bool IsUseLibHandwritingDlcEnabled() {
-    return USE_ONDEVICE_HANDWRITING_DLC;
-  }
+  // Currently HandwritingLibrary is supported only when the "sanitizer" is not
+  // enabled (see https://crbug.com/1082632).
+  static constexpr bool IsAsan() { return __has_feature(address_sanitizer); }
 
   base::Optional<base::ScopedNativeLibrary> library_;
   Status status_;
+  const base::FilePath model_path_;
 
   // Store the interface function pointers.
   // TODO(honglinyu) as pointed out by cjmcdonald@, we should group the pointers

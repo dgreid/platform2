@@ -19,9 +19,6 @@ using chrome_knowledge::HandwritingRecognizerOptions;
 using chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr;
 
 constexpr char kHandwritingLibraryRelativePath[] = "libhandwriting.so";
-// Default handwriting model directory on rootfs.
-constexpr char kHandwritingDefaultModelDir[] =
-    "/opt/google/chrome/ml_models/handwriting/";
 
 // A list of supported language code.
 constexpr char kLanguageCodeEn[] = "en";
@@ -29,28 +26,32 @@ constexpr char kLanguageCodeGesture[] = "gesture_in_context";
 
 // Returns HandwritingRecognizerModelPaths based on the `spec`.
 HandwritingRecognizerModelPaths GetModelPaths(
-    HandwritingRecognizerSpecPtr spec) {
+    HandwritingRecognizerSpecPtr spec, const base::FilePath& model_path) {
   HandwritingRecognizerModelPaths paths;
-  const std::string model_path = kHandwritingDefaultModelDir;
   if (spec->language == kLanguageCodeEn) {
-    paths.set_reco_model_path(model_path + "latin_indy.tflite");
-    paths.set_seg_model_path(model_path + "latin_indy_seg.tflite");
-    paths.set_conf_model_path(model_path + "latin_indy_conf.tflite");
-    paths.set_fst_lm_path(model_path + "latin_indy.compact.fst");
-    paths.set_recospec_path(model_path + "latin_indy.pb");
+    paths.set_reco_model_path(model_path.Append("latin_indy.tflite").value());
+    paths.set_seg_model_path(
+        model_path.Append("latin_indy_seg.tflite").value());
+    paths.set_conf_model_path(
+        model_path.Append("latin_indy_conf.tflite").value());
+    paths.set_fst_lm_path(model_path.Append("latin_indy.compact.fst").value());
+    paths.set_recospec_path(model_path.Append("latin_indy.pb").value());
     return paths;
   }
 
   DCHECK_EQ(spec->language, kLanguageCodeGesture);
-  paths.set_reco_model_path(model_path + "gic.reco_model.tflite");
-  paths.set_recospec_path(model_path + "gic.recospec.pb");
+  paths.set_reco_model_path(model_path.Append("gic.reco_model.tflite").value());
+  paths.set_recospec_path(model_path.Append("gic.recospec.pb").value());
   return paths;
 }
 
 }  // namespace
 
-HandwritingLibrary::HandwritingLibrary()
+constexpr char HandwritingLibrary::kHandwritingDefaultModelDir[];
+
+HandwritingLibrary::HandwritingLibrary(const std::string& model_path)
     : status_(Status::kUninitialized),
+      model_path_(model_path),
       create_handwriting_recognizer_(nullptr),
       load_handwriting_recognizer_(nullptr),
       recognize_handwriting_(nullptr),
@@ -65,8 +66,7 @@ HandwritingLibrary::HandwritingLibrary()
   base::NativeLibraryOptions native_library_options;
   native_library_options.prefer_own_symbols = true;
   library_.emplace(base::LoadNativeLibraryWithOptions(
-      base::FilePath(kHandwritingDefaultModelDir)
-          .Append(kHandwritingLibraryRelativePath),
+      model_path_.Append(kHandwritingLibraryRelativePath),
       native_library_options, nullptr));
   if (!library_->is_valid()) {
     status_ = Status::kLoadLibraryFailed;
@@ -102,8 +102,9 @@ HandwritingLibrary::Status HandwritingLibrary::GetStatus() const {
   return status_;
 }
 
-HandwritingLibrary* HandwritingLibrary::GetInstance() {
-  static base::NoDestructor<HandwritingLibrary> instance;
+HandwritingLibrary* HandwritingLibrary::GetInstance(
+    const std::string& model_path) {
+  static base::NoDestructor<HandwritingLibrary> instance(model_path);
   return instance.get();
 }
 
@@ -123,7 +124,7 @@ bool HandwritingLibrary::LoadHandwritingRecognizer(
       HandwritingRecognizerOptions().SerializeAsString();
 
   const std::string paths_pb =
-      GetModelPaths(std::move(spec)).SerializeAsString();
+      GetModelPaths(std::move(spec), model_path_).SerializeAsString();
   return (*load_handwriting_recognizer_)(recognizer, options_pb.data(),
                                          options_pb.size(), paths_pb.data(),
                                          paths_pb.size());

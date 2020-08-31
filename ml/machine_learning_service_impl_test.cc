@@ -199,6 +199,7 @@ using ::chromeos::machine_learning::mojom::HandwritingRecognizer;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResult;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerResultPtr;
 using ::chromeos::machine_learning::mojom::HandwritingRecognizerSpec;
+using ::chromeos::machine_learning::mojom::LoadHandwritingModelResult;
 using ::chromeos::machine_learning::mojom::LoadModelResult;
 using ::chromeos::machine_learning::mojom::MachineLearningService;
 using ::chromeos::machine_learning::mojom::Model;
@@ -1108,17 +1109,34 @@ class HandwritingRecognizerTest : public testing::Test {
   }
 
   // recognizer_ should be loaded successfully for this `language`.
-  void LoadRecognizerWithLanguage(const std::string& langauge) {
+  // Using new API (LoadHandwritingModelWithSpec) if use_load_handwriting_model
+  // is true.
+  void LoadRecognizerWithLanguage(
+      const std::string& langauge,
+      const bool use_load_handwriting_model = false) {
     bool model_callback_done = false;
-    ml_service_->LoadHandwritingModelWithSpec(
-        HandwritingRecognizerSpec::New(langauge),
-        recognizer_.BindNewPipeAndPassReceiver(),
-        base::Bind(
-            [](bool* model_callback_done, const LoadModelResult result) {
-              ASSERT_EQ(result, LoadModelResult::OK);
-              *model_callback_done = true;
-            },
-            &model_callback_done));
+    if (use_load_handwriting_model) {
+      ml_service_->LoadHandwritingModel(
+          HandwritingRecognizerSpec::New(langauge),
+          recognizer_.BindNewPipeAndPassReceiver(),
+          base::Bind(
+              [](bool* model_callback_done,
+                 const LoadHandwritingModelResult result) {
+                ASSERT_EQ(result, LoadHandwritingModelResult::OK);
+                *model_callback_done = true;
+              },
+              &model_callback_done));
+    } else {
+      ml_service_->LoadHandwritingModelWithSpec(
+          HandwritingRecognizerSpec::New(langauge),
+          recognizer_.BindNewPipeAndPassReceiver(),
+          base::Bind(
+              [](bool* model_callback_done, const LoadModelResult result) {
+                ASSERT_EQ(result, LoadModelResult::OK);
+                *model_callback_done = true;
+              },
+              &model_callback_done));
+    }
     base::RunLoop().RunUntilIdle();
     ASSERT_TRUE(model_callback_done);
     ASSERT_TRUE(recognizer_.is_bound());
@@ -1172,6 +1190,37 @@ TEST_F(HandwritingRecognizerTest, GetExpectedScores) {
                                                                          100);
   }
   ExpectRecognizeResult("a", 0.51218414f);
+}
+
+// Tests that the LoadHandwritingModel also perform as expected.
+TEST_F(HandwritingRecognizerTest, LoadHandwritingModel) {
+  // Nothing to test on an unsupported platform.
+  if (!ml::HandwritingLibrary::IsHandwritingLibraryUnitTestSupported()) {
+    return;
+  }
+
+  // Load Recognizer successfully.
+  LoadRecognizerWithLanguage("en", true);
+
+  // Clear the ink inside request.
+  request_.clear_ink();
+
+  // Perform inference should return an error.
+  bool infer_callback_done = false;
+  recognizer_->Recognize(
+      HandwritingRecognitionQueryFromProtoForTesting(request_),
+      base::Bind(
+          [](bool* infer_callback_done,
+             const HandwritingRecognizerResultPtr result) {
+            // Check that the inference failed.
+            EXPECT_EQ(result->status,
+                      HandwritingRecognizerResult::Status::ERROR);
+            EXPECT_EQ(result->candidates.size(), 0);
+            *infer_callback_done = true;
+          },
+          &infer_callback_done));
+  base::RunLoop().RunUntilIdle();
+  ASSERT_TRUE(infer_callback_done);
 }
 
 // Tests that the HandwritingRecognizer Recognition should fail on empty ink.

@@ -59,7 +59,11 @@ class MachineLearningServiceImpl
       mojo::PendingReceiver<chromeos::machine_learning::mojom::TextClassifier>
           receiver,
       LoadTextClassifierCallback callback) override;
-  void RemovedFunction_3() override;
+  void LoadHandwritingModel(
+      chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
+      mojo::PendingReceiver<
+          chromeos::machine_learning::mojom::HandwritingRecognizer> receiver,
+      LoadHandwritingModelCallback callback) override;
   void LoadHandwritingModelWithSpec(
       chromeos::machine_learning::mojom::HandwritingRecognizerSpecPtr spec,
       mojo::PendingReceiver<
