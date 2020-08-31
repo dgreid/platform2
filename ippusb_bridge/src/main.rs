@@ -217,9 +217,9 @@ impl<A: Accept> Daemon<A> {
     /// If we've exceeded our activity timeout, returns None, indicating that the
     /// poll loop should shut down.
     fn poll_timeout(&self) -> Option<Duration> {
-        let activity_timeout = Duration::from_secs(10);
+        let activity_timeout = Duration::from_secs(30);
         // If we have a keep-alive socket, the poll loop's behavior changes from running
-        // indefinitely to shutting down after 10 seconds of inactivity.
+        // indefinitely to shutting down after the activity_timeout.
         //
         // If any clients are connected, we consider ippusb_bridge to be active. Once all
         // clients have disconnected, we record the time in last_activity_time. We also record
@@ -228,8 +228,8 @@ impl<A: Accept> Daemon<A> {
             let last_keep_alive = self.last_keep_alive.lock();
             let elapsed = std::cmp::max(*last_keep_alive, self.last_activity_time).elapsed();
 
-            // If 10 seconds have elapsed since the later of last_keep_alive and
-            // last_activity_time, we shut down.
+            // If the later of last_keep_alive and last_activity_time is greater
+            // than or equal to activity_timeout, we shut down.
             if elapsed >= activity_timeout {
                 SHUTDOWN.store(true, Ordering::Relaxed);
                 None
