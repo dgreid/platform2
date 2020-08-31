@@ -25,7 +25,7 @@ void HandleSynchronousDBusMethodCall(
   if (!response)
     response = dbus::Response::FromMethodCall(method_call);
 
-  response_sender.Run(std::move(response));
+  std::move(response_sender).Run(std::move(response));
 }
 
 std::unique_ptr<dbus::ErrorResponse> GetErrorResponseWithLog(

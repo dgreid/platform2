@@ -306,9 +306,9 @@ grpc::Status ServiceImpl::GetDebugInformation(
     base::StringPiece pkg_version = pkg_info[2];
 
     *debug_information += "\t";
-    pkg_name.AppendToString(debug_information);
+    debug_information->append(pkg_name.data(), pkg_name.size());
     *debug_information += "-";
-    pkg_version.AppendToString(debug_information);
+    debug_information->append(pkg_version.data(), pkg_version.size());
     *debug_information += "\n";
   }
 
@@ -319,7 +319,7 @@ grpc::Status ServiceImpl::GetDebugInformation(
       systemctl_out, "\n", base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : systemctl_out_lines) {
     *debug_information += "\t";
-    line.AppendToString(debug_information);
+    debug_information->append(line.data(), line.size());
     *debug_information += "\n";
   }
 
@@ -332,7 +332,7 @@ grpc::Status ServiceImpl::GetDebugInformation(
                              base::SPLIT_WANT_NONEMPTY);
   for (const auto& line : systemctl_user_out_lines) {
     *debug_information += "\t";
-    line.AppendToString(debug_information);
+    debug_information->append(line.data(), line.size());
     *debug_information += "\n";
   }
 
@@ -350,7 +350,7 @@ grpc::Status ServiceImpl::GetDebugInformation(
                                base::SPLIT_WANT_NONEMPTY);
     for (const auto& line : systemctl_user_out_lines) {
       *debug_information += "\t";
-      line.AppendToString(debug_information);
+      debug_information->append(line.data(), line.size());
       *debug_information += "\n";
     }
   }

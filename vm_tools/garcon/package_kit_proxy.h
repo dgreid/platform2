@@ -14,6 +14,7 @@
 #include <base/macros.h>
 #include <base/observer_list.h>
 #include <base/observer_list_types.h>
+#include <base/single_thread_task_runner.h>
 #include <base/sequence_checker.h>
 #include <base/synchronization/lock.h>
 #include <dbus/bus.h>
