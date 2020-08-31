@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_
-#define COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_
+#ifndef FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_
+#define FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_
 
 #include <string>
 
@@ -33,10 +33,11 @@ class FeedbackData;
 
 namespace feedback_util {
 
-  void SendReport(scoped_refptr<feedback::FeedbackData> data);
-  bool ZipString(const base::FilePath& filename,
-                 const std::string& data, std::string* compressed_data);
+void SendReport(scoped_refptr<feedback::FeedbackData> data);
+bool ZipString(const base::FilePath& filename,
+               const std::string& data,
+               std::string* compressed_data);
 
 }  // namespace feedback_util
 
-#endif  // COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_
+#endif  // FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UTIL_H_

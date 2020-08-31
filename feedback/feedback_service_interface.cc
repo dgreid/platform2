@@ -19,8 +19,7 @@ DBusFeedbackServiceInterface::DBusFeedbackServiceInterface() {
 }
 
 bool DBusFeedbackServiceInterface::SendFeedback(
-    const FeedbackCommon& feedback,
-    FeedbackResultCallback callback) {
+    const FeedbackCommon& feedback, FeedbackResultCallback callback) {
   // A product ID of 0 generally means that the caller just forgot to
   // set it at all, and an empty description is apparently ignored
   // by the feedback servers.
@@ -37,9 +36,9 @@ bool DBusFeedbackServiceInterface::SendFeedback(
   dbus::MessageWriter writer(&call);
   writer.AppendProtoAsArrayOfBytes(submit);
 
-  dbus::ObjectProxy* object = bus_->GetObjectProxy(
-      feedback::kFeedbackServiceName,
-      dbus::ObjectPath(feedback::kFeedbackServicePath));
+  dbus::ObjectProxy* object =
+      bus_->GetObjectProxy(feedback::kFeedbackServiceName,
+                           dbus::ObjectPath(feedback::kFeedbackServicePath));
 
   std::unique_ptr<dbus::Response> response =
       object->CallMethodAndBlock(&call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
@@ -49,7 +48,7 @@ bool DBusFeedbackServiceInterface::SendFeedback(
   }
 
   bool status = false;
-  const auto &message_type = response->GetMessageType();
+  const auto& message_type = response->GetMessageType();
   if (message_type == dbus::ErrorResponse::MESSAGE_METHOD_RETURN) {
     dbus::MessageReader reader(response.get());
     reader.PopBool(&status);

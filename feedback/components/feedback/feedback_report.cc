@@ -46,11 +46,12 @@ FeedbackReport::FeedbackReport(
       reports_task_runner_(task_runner) {
   if (reports_path_.empty())
     return;
-  file_ = reports_path_.AppendASCII(
-      kFeedbackReportFilenamePrefix + base::GenerateGUID());
+  file_ = reports_path_.AppendASCII(kFeedbackReportFilenamePrefix +
+                                    base::GenerateGUID());
 
-  reports_task_runner_->PostTask(FROM_HERE, base::Bind(
-      &WriteReportOnBlockingPool, reports_path_, file_, data_));
+  reports_task_runner_->PostTask(
+      FROM_HERE,
+      base::Bind(&WriteReportOnBlockingPool, reports_path_, file_, data_));
 }
 
 FeedbackReport::~FeedbackReport() {}
@@ -63,21 +64,18 @@ void FeedbackReport::DeleteReportOnDisk() {
 #else
       base::BindOnce(base::GetDeleteFileCallback(), file_)
 #endif
-  );
+  );  // NOLINT(whitespace/parens)
 }
 
 // static
-void FeedbackReport::LoadReportsAndQueue(
-    const base::FilePath& user_dir, QueueCallback callback) {
+void FeedbackReport::LoadReportsAndQueue(const base::FilePath& user_dir,
+                                         QueueCallback callback) {
   if (user_dir.empty())
     return;
 
-  base::FileEnumerator enumerator(user_dir,
-                                  false,
-                                  base::FileEnumerator::FILES,
+  base::FileEnumerator enumerator(user_dir, false, base::FileEnumerator::FILES,
                                   kFeedbackReportFilenameWildcard);
-  for (base::FilePath name = enumerator.Next();
-       !name.empty();
+  for (base::FilePath name = enumerator.Next(); !name.empty();
        name = enumerator.Next()) {
     std::string data;
     if (ReadFileToString(name, &data))

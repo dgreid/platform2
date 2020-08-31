@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_
-#define COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_
+#ifndef FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_
+#define FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -129,4 +129,4 @@ class FeedbackCommon : public base::RefCountedThreadSafe<FeedbackCommon> {
   std::unique_ptr<SystemLogsMap> logs_;
 };
 
-#endif  // COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_
+#endif  // FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_COMMON_H_

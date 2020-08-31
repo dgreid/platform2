@@ -26,11 +26,11 @@
 namespace {
 
 static const char kSwitchProductId[] = "product_id";  // int
-static const char kSwitchDescription[] = "desc";  // string
-static const char kSwitchBucket[] = "bucket";  // string
+static const char kSwitchDescription[] = "desc";      // string
+static const char kSwitchBucket[] = "bucket";         // string
 static const char kSwitchUserEmail[] = "user_email";  // string
-static const char kSwitchPageUrl[] = "page_url";  // string
-static const char kSwitchRawFiles[] = "raw_files";  // colon-separated strings
+static const char kSwitchPageUrl[] = "page_url";      // string
+static const char kSwitchRawFiles[] = "raw_files";    // colon-separated strings
 
 const char kListSeparator[] = ":";
 
@@ -40,8 +40,7 @@ const char kListSeparator[] = ":";
 const int64_t kMaxFileSize = 1024 * 1024;
 const int64_t kChunkSize = 64 * 1024;
 
-bool ReadFileFromBack(const base::FilePath path,
-                      std::string* contents) {
+bool ReadFileFromBack(const base::FilePath path, std::string* contents) {
   if (!contents) {
     LOG(ERROR) << "contents buffer is null.";
     return false;
@@ -81,7 +80,8 @@ bool ReadFileFromBack(const base::FilePath path,
   return true;
 }
 
-void CommandlineReportStatus(base::WaitableEvent* event, bool* status,
+void CommandlineReportStatus(base::WaitableEvent* event,
+                             bool* status,
                              bool result) {
   *status = result;
   event->Signal();
@@ -111,10 +111,9 @@ bool FillReportFromCommandline(FeedbackCommon* report) {
   report->set_page_url(args->GetSwitchValueASCII(kSwitchPageUrl));
   report->set_category_tag(args->GetSwitchValueASCII(kSwitchBucket));
 
-  std::vector<std::string> raw_files =
-      base::SplitString(args->GetSwitchValueNative(kSwitchRawFiles),
-                        kListSeparator, base::KEEP_WHITESPACE,
-                        base::SPLIT_WANT_NONEMPTY);
+  std::vector<std::string> raw_files = base::SplitString(
+      args->GetSwitchValueNative(kSwitchRawFiles), kListSeparator,
+      base::KEEP_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
 
   for (const std::string& path : raw_files) {
     auto content = std::make_unique<std::string>();
@@ -153,8 +152,8 @@ bool SendReport(FeedbackServiceInterface* interface, FeedbackCommon* report) {
   bool status;
 
   report->CompressLogs();
-  interface->SendFeedback(*report, base::Bind(&CommandlineReportStatus,
-                                              &event, &status));
+  interface->SendFeedback(
+      *report, base::Bind(&CommandlineReportStatus, &event, &status));
   event.Wait();
   return status;
 }

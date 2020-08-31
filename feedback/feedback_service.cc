@@ -40,7 +40,8 @@ void FeedbackService::QueueExistingReport(const std::string& data) {
 }
 
 DBusFeedbackServiceImpl::DBusFeedbackServiceImpl(
-    feedback::FeedbackUploader* uploader) : FeedbackService(uploader) {}
+    feedback::FeedbackUploader* uploader)
+    : FeedbackService(uploader) {}
 
 DBusFeedbackServiceImpl::~DBusFeedbackServiceImpl() {}
 
@@ -58,16 +59,14 @@ bool DBusFeedbackServiceImpl::Start(dbus::Bus* bus) {
   }
 
   if (!object->ExportMethodAndBlock(
-          feedback::kFeedbackServiceName,
-          feedback::kSendFeedback,
-          base::Bind(&DBusFeedbackServiceImpl::DBusSendFeedback,
-                     this))) {
+          feedback::kFeedbackServiceName, feedback::kSendFeedback,
+          base::Bind(&DBusFeedbackServiceImpl::DBusSendFeedback, this))) {
     bus->UnregisterExportedObject(path);
     LOG(ERROR) << "Failed to export method " << feedback::kSendFeedback;
     return false;
   }
   if (!bus->RequestOwnershipAndBlock(feedback::kFeedbackServiceName,
-                                      dbus::Bus::REQUIRE_PRIMARY)) {
+                                     dbus::Bus::REQUIRE_PRIMARY)) {
     bus->UnregisterExportedObject(path);
     LOG(ERROR) << "Failed to get ownership of "
                << feedback::kFeedbackServiceName;
@@ -96,7 +95,8 @@ void DBusFeedbackServiceImpl::DBusSendFeedback(
 void DBusFeedbackServiceImpl::DBusFeedbackSent(
     dbus::MethodCall* method_call,
     dbus::ExportedObject::ResponseSender sender,
-    bool status, const std::string& reason) {
+    bool status,
+    const std::string& reason) {
   std::unique_ptr<dbus::Response> response =
       dbus::Response::FromMethodCall(method_call);
   dbus::MessageWriter writer(response.get());

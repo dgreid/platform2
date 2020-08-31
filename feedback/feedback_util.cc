@@ -18,7 +18,8 @@ namespace feedback_util {
 // |filename| is the name of the file to appear in the archive (if supported
 // by type).
 bool ZipString(const base::FilePath& filename,
-               const std::string& data, std::string* compressed_logs) {
+               const std::string& data,
+               std::string* compressed_logs) {
   base::FilePath temp_path;
   base::FilePath zip_file;
 
@@ -29,16 +30,16 @@ bool ZipString(const base::FilePath& filename,
   // another temporary file to receive the zip file in.
   if (!base::CreateNewTempDirectory(std::string(), &temp_path))
     return false;
-  if (base::WriteFile(temp_path.Append(filename),
-                      data.c_str(), data.size()) == -1)
+  if (base::WriteFile(temp_path.Append(filename), data.c_str(), data.size()) ==
+      -1)
     return false;
 
   brillo::ProcessImpl zipprocess;
   zipprocess.AddArg(kZipProcess);
   zipprocess.AddArg(filename.value());
   zipprocess.RedirectOutput(temp_path.value());
-  bool succeeded = base::CreateTemporaryFile(&zip_file) &&
-      !zipprocess.Run() && base::ReadFileToString(zip_file, compressed_logs);
+  bool succeeded = base::CreateTemporaryFile(&zip_file) && !zipprocess.Run() &&
+                   base::ReadFileToString(zip_file, compressed_logs);
 
   base::DeleteFile(temp_path, true);
   base::DeleteFile(zip_file, false);

@@ -47,8 +47,7 @@ std::unique_ptr<std::string> LogsToString(
     const FeedbackCommon::SystemLogsMap& sys_info) {
   std::unique_ptr<std::string> syslogs_string(new std::string);
   for (FeedbackCommon::SystemLogsMap::const_iterator it = sys_info.begin();
-       it != sys_info.end();
-       ++it) {
+       it != sys_info.end(); ++it) {
     std::string key = it->first;
     std::string value = it->second;
 
@@ -171,8 +170,7 @@ void FeedbackCommon::AddFilesAndLogsToReport(
     userfeedback::ExtensionSubmit* feedback_data) const {
   if (sys_info()) {
     for (FeedbackCommon::SystemLogsMap::const_iterator i = sys_info()->begin();
-         i != sys_info()->end();
-         ++i) {
+         i != sys_info()->end(); ++i) {
       if (BelowCompressionThreshold(i->second))
         AddFeedbackData(feedback_data, i->first, i->second);
     }

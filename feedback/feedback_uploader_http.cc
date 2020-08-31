@@ -18,8 +18,8 @@ FeedbackUploaderHttp::FeedbackUploaderHttp(
 void FeedbackUploaderHttp::DispatchReport(const std::string& data) {
   brillo::ErrorPtr error;
   auto response = brillo::http::PostBinaryAndBlock(
-      url_, data.data(), data.size(), brillo::mime::application::kProtobuf,
-      {}, brillo::http::Transport::CreateDefault(), &error);
+      url_, data.data(), data.size(), brillo::mime::application::kProtobuf, {},
+      brillo::http::Transport::CreateDefault(), &error);
   if (response) {
     LOG(INFO) << "Sending feedback: successful";
     UpdateUploadTimer();

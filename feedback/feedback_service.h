@@ -49,7 +49,8 @@ class DBusFeedbackServiceImpl : public FeedbackService {
 
   void DBusFeedbackSent(dbus::MethodCall* method_call,
                         dbus::ExportedObject::ResponseSender sender,
-                        bool status, const std::string& message);
+                        bool status,
+                        const std::string& message);
 
   DISALLOW_COPY_AND_ASSIGN(DBusFeedbackServiceImpl);
 };

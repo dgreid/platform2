@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_
-#define COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_
+#ifndef FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_
+#define FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_
 
 #include <queue>
 #include <string>
+#include <vector>
 
 #include "base/files/file_util.h"
 #include "base/macros.h"
@@ -71,7 +72,8 @@ class FeedbackUploader : public base::SupportsWeakPtr<FeedbackUploader> {
   // to be uploaded at.
   std::priority_queue<scoped_refptr<FeedbackReport>,
                       std::vector<scoped_refptr<FeedbackReport> >,
-                      ReportsUploadTimeComparator> reports_queue_;
+                      ReportsUploadTimeComparator>
+      reports_queue_;
 
   ReportDataCallback dispatch_callback_;
   base::TimeDelta retry_delay_;
@@ -83,4 +85,4 @@ class FeedbackUploader : public base::SupportsWeakPtr<FeedbackUploader> {
 
 }  // namespace feedback
 
-#endif  // COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_
+#endif  // FEEDBACK_COMPONENTS_FEEDBACK_FEEDBACK_UPLOADER_H_

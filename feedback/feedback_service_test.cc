@@ -6,6 +6,7 @@
 
 #include <utime.h>
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -76,7 +77,8 @@ class FeedbackServiceTest : public testing::Test {
  public:
   FeedbackServiceTest() : task_executor_(base::MessagePumpType::IO) {}
 
-  static void CallbackFeedbackResult(bool expected_result, bool result,
+  static void CallbackFeedbackResult(bool expected_result,
+                                     bool result,
                                      const std::string& err) {
     EXPECT_EQ(result, expected_result);
   }
@@ -122,8 +124,8 @@ TEST_F(FeedbackServiceTest, SendFeedback) {
 
   scoped_refptr<FeedbackService> svc = new FeedbackService(&uploader);
 
-  svc->SendFeedback(report,
-      base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
+  svc->SendFeedback(
+      report, base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
 }
 
 TEST_F(FeedbackServiceTest, DispatchTest) {
@@ -135,8 +137,8 @@ TEST_F(FeedbackServiceTest, DispatchTest) {
 
   scoped_refptr<FeedbackService> svc = new FeedbackService(&uploader);
 
-  svc->SendFeedback(report,
-      base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
+  svc->SendFeedback(
+      report, base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
 }
 
 TEST_F(FeedbackServiceTest, UploadFailure) {
@@ -148,8 +150,8 @@ TEST_F(FeedbackServiceTest, UploadFailure) {
 
   scoped_refptr<FeedbackService> svc = new FeedbackService(&uploader);
 
-  svc->SendFeedback(report,
-      base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
+  svc->SendFeedback(
+      report, base::Bind(&FeedbackServiceTest::CallbackFeedbackResult, true));
   WaitOnThread();
 
   // Verify that this got put back on the queue.

@@ -51,8 +51,8 @@ FeedbackUploader::FeedbackUploader(
 FeedbackUploader::~FeedbackUploader() {}
 
 void FeedbackUploader::Init() {
-  dispatch_callback_ = base::Bind(&FeedbackUploader::DispatchReport,
-                                  AsWeakPtr());
+  dispatch_callback_ =
+      base::Bind(&FeedbackUploader::DispatchReport, AsWeakPtr());
 }
 
 void FeedbackUploader::QueueReport(const std::string& data) {
@@ -73,9 +73,8 @@ void FeedbackUploader::UpdateUploadTimer() {
     // Stop the old timer and start an updated one.
     if (upload_timer_.IsRunning())
       upload_timer_.Stop();
-    upload_timer_.Start(
-        FROM_HERE, report->upload_at() - now, this,
-        &FeedbackUploader::UpdateUploadTimer);
+    upload_timer_.Start(FROM_HERE, report->upload_at() - now, this,
+                        &FeedbackUploader::UpdateUploadTimer);
   }
 }
 

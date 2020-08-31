@@ -16,11 +16,10 @@ class Thread;
 
 class FeedbackCommon;
 
-typedef base::Callback<void(bool status)>
-    FeedbackResultCallback;
+typedef base::Callback<void(bool status)> FeedbackResultCallback;
 
-class FeedbackServiceInterface :
-    public base::RefCountedThreadSafe<FeedbackServiceInterface> {
+class FeedbackServiceInterface
+    : public base::RefCountedThreadSafe<FeedbackServiceInterface> {
  public:
   // Attempt to send the provided feedback report. If the report is invalid
   // (empty description or product ID of 0) then false will be returned.
@@ -28,9 +27,8 @@ class FeedbackServiceInterface :
   // will be called with true if the report is successfully sent, or queued
   // for later upload, and false if there was an error talking to the
   // feedback service daemon.
-  virtual bool SendFeedback(
-      const FeedbackCommon& feedback,
-      FeedbackResultCallback callback) = 0;
+  virtual bool SendFeedback(const FeedbackCommon& feedback,
+                            FeedbackResultCallback callback) = 0;
 
  protected:
   friend class base::RefCountedThreadSafe<FeedbackServiceInterface>;
@@ -58,9 +56,8 @@ class DBusFeedbackServiceInterface : public FeedbackServiceInterface {
  public:
   DBusFeedbackServiceInterface();
 
-  bool SendFeedback(
-      const FeedbackCommon& feedback,
-      FeedbackResultCallback callback) override;
+  bool SendFeedback(const FeedbackCommon& feedback,
+                    FeedbackResultCallback callback) override;
 
  private:
   scoped_refptr<dbus::Bus> bus_;

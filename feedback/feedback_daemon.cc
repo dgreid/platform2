@@ -69,7 +69,7 @@ void Daemon::Run() {
 
 int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
-  base::CommandLine *args = base::CommandLine::ForCurrentProcess();
+  base::CommandLine* args = base::CommandLine::ForCurrentProcess();
 
   // Some libchrome calls need this.
   base::AtExitManager at_exit_manager;
