@@ -308,8 +308,9 @@ properties:
             wifi:
               type: object
               description: Sets limits on maximum WiFi transmit power for tablet and non-tablet
-                device configurations. This config must contain properties for ath10k wifi driver
-                or rtw88 wifi driver only.
+                device configurations. This config must contain properties for ath10k wifi driver,
+                rtw88 wifi driver, or intel driver. Note that configs for the intel driver are
+                delivered as encoded wifi sar hex files.
               oneOf:
                 - properties:
                     tablet-mode-power-table-ath10k: *ath10k-wifi-transmit-power-chain
@@ -321,6 +322,10 @@ properties:
                     geo-offsets-fcc: *wifi-geo-offsets
                     geo-offsets-eu: *wifi-geo-offsets
                     geo-offsets-rest-of-world: *wifi-geo-offsets
+                  additionalProperties: false
+                - properties:
+                    sar-file: *system_file_v2
+                  build-only-element: true
                   additionalProperties: false
             brand-code:
               description: Brand code of the model (also called RLZ code).
