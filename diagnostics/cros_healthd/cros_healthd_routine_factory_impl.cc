@@ -6,6 +6,7 @@
 
 #include "diagnostics/cros_healthd/routines/ac_power/ac_power.h"
 #include "diagnostics/cros_healthd/routines/battery_capacity/battery_capacity.h"
+#include "diagnostics/cros_healthd/routines/battery_charge/battery_charge.h"
 #include "diagnostics/cros_healthd/routines/battery_discharge/battery_discharge.h"
 #include "diagnostics/cros_healthd/routines/battery_health/battery_health.h"
 #include "diagnostics/cros_healthd/routines/cpu_cache/cpu_cache.h"
@@ -113,6 +114,13 @@ CrosHealthdRoutineFactoryImpl::MakeBatteryDischargeRoutine(
     base::TimeDelta exec_duration, uint32_t maximum_discharge_percent_allowed) {
   return std::make_unique<BatteryDischargeRoutine>(
       exec_duration, maximum_discharge_percent_allowed);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeBatteryChargeRoutine(
+    base::TimeDelta exec_duration, uint32_t minimum_charge_percent_required) {
+  return std::make_unique<BatteryChargeRoutine>(
+      exec_duration, minimum_charge_percent_required);
 }
 
 }  // namespace diagnostics

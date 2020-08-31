@@ -109,4 +109,11 @@ void FakeRoutineService::RunBatteryDischargeRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunBatteryChargeRoutine(
+    uint32_t length_seconds,
+    uint32_t minimum_charge_percent_required,
+    RunBatteryDischargeRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

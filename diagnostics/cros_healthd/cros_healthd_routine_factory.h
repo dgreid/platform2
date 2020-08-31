@@ -80,6 +80,11 @@ class CrosHealthdRoutineFactory {
   virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryDischargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t maximum_discharge_percent_allowed) = 0;
+  // Constructs a new instance of the battery charge routine. See
+  // diagnostics/routines/battery_charge for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryChargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t minimum_charge_percent_required) = 0;
 };
 
 }  // namespace diagnostics

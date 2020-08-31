@@ -159,6 +159,16 @@ void CrosHealthdRoutineServiceImpl::RunBatteryDischargeRoutine(
              mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge, id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunBatteryChargeRoutine(
+    base::TimeDelta exec_duration,
+    uint32_t minimum_charge_percent_required,
+    int32_t* id,
+    MojomCrosHealthdDiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeBatteryChargeRoutine(
+                 exec_duration, minimum_charge_percent_required),
+             mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge, id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -241,6 +251,7 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
     available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth);
     available_routines_.insert(
         mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge);
+    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge);
   }
 
   if (context_->system_config()->NvmeSupported()) {

@@ -187,6 +187,17 @@ void CrosHealthdMojoService::RunBatteryDischargeRoutine(
   std::move(callback).Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunBatteryChargeRoutine(
+    uint32_t length_seconds,
+    uint32_t minimum_charge_percent_required,
+    RunBatteryChargeRoutineCallback callback) {
+  RunRoutineResponse response;
+  routine_service_->RunBatteryChargeRoutine(
+      base::TimeDelta::FromSeconds(length_seconds),
+      minimum_charge_percent_required, &response.id, &response.status);
+  std::move(callback).Run(response.Clone());
+}
+
 void CrosHealthdMojoService::AddBluetoothObserver(
     chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
   bluetooth_events_->AddObserver(std::move(observer));

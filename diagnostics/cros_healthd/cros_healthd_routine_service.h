@@ -97,6 +97,11 @@ class CrosHealthdRoutineService {
       uint32_t maximum_discharge_percent_allowed,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunBatteryChargeRoutine(
+      base::TimeDelta exec_duration,
+      uint32_t minimum_charge_percent_required,
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

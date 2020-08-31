@@ -80,6 +80,10 @@ class FakeDiagnosticsService final
       uint32_t length_seconds,
       uint32_t maximum_discharge_percent_allowed,
       RunBatteryDischargeRoutineCallback callback) override;
+  void RunBatteryChargeRoutine(
+      uint32_t length_seconds,
+      uint32_t minimum_charge_percent_required,
+      RunBatteryChargeRoutineCallback callback) override;
 
   // Overrides the default behavior of GetCrosHealthdDiagnosticsService to test
   // situations where mojo methods were called prior to wilco_dtc_supportd's

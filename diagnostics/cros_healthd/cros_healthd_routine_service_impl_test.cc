@@ -42,6 +42,7 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
   return std::set<mojo_ipc::DiagnosticRoutineEnum>{
       mojo_ipc::DiagnosticRoutineEnum::kUrandom,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck,
       mojo_ipc::DiagnosticRoutineEnum::kAcPower,
@@ -58,6 +59,7 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
   return std::set<mojo_ipc::DiagnosticRoutineEnum>{
       mojo_ipc::DiagnosticRoutineEnum::kBatteryCapacity,
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryHealth,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge};
 }
@@ -375,6 +377,22 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunBatteryDischargeRoutine) {
   service()->RunBatteryDischargeRoutine(
       /*exec_duration=*/base::TimeDelta::FromSeconds(23),
       /*maximum_discharge_percent_allowed=*/78, &response.id, &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the battery charge routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunBatteryChargeRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kWaiting;
+  // TODO(crbug/1065463): Treat this as an interactive routine.
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunBatteryChargeRoutine(
+      /*exec_duration=*/base::TimeDelta::FromSeconds(54),
+      /*minimum_charge_percent_required=*/56, &response.id, &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

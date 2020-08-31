@@ -108,6 +108,13 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                     uint32_t maximum_discharge_percent_allowed,
                     int32_t* id,
                     mojo_ipc::DiagnosticRoutineStatusEnum* status));
+  MOCK_METHOD(void,
+              RunBatteryChargeRoutine,
+              (base::TimeDelta exec_duration,
+               uint32_t minimum_charge_percent_required,
+               int32_t* id,
+               mojo_ipc::DiagnosticRoutineStatusEnum* status),
+              (override));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -437,6 +444,31 @@ TEST_F(CrosHealthdMojoServiceTest, RequestBatteryDischargeRoutine) {
   mojo_ipc::RunRoutineResponsePtr response;
   service()->RunBatteryDischargeRoutine(
       kLengthSeconds, kMaximumDischargePercentAllowed,
+      base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
+                 &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the battery charge routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestBatteryChargeRoutine) {
+  constexpr uint32_t kLengthSeconds = 90;
+  constexpr uint32_t kMinimumChargePercentRequired = 21;
+  EXPECT_CALL(*routine_service(),
+              RunBatteryChargeRoutine(
+                  base::TimeDelta::FromSeconds(kLengthSeconds),
+                  kMinimumChargePercentRequired, NotNull(), NotNull()))
+      .WillOnce(WithArgs<2, 3>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunBatteryChargeRoutine(
+      kLengthSeconds, kMinimumChargePercentRequired,
       base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
                  &response));
 
