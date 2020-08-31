@@ -88,7 +88,7 @@ class DBusProtocolHandler final
     // Called when the owner of the well known service name associated with this
     // client changes.  Since clients start up, this is called for the first
     // time when they die.
-    dbus::Bus::GetServiceOwnerCallback on_client_disconnected_callback;
+    dbus::Bus::ServiceOwnerChangeCallback on_client_disconnected_callback;
   };
 
   // Looks up a request with |request_id|.
