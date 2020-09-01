@@ -171,7 +171,6 @@ static_library("libcrostpm") {
   sources = [
     "../bootlockbox/boot_lockbox.cc",
     "../challenge_credential_auth_block.cc",
-    "../crc32.c",
     "../crc8.c",
     "../crypto.cc",
     "../crypto_error.cc",

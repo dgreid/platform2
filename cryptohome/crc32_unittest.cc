@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern "C" {
 #include "cryptohome/crc32.h"
-}
 
 #include <vector>
 

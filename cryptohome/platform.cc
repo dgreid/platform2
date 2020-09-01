@@ -65,14 +65,13 @@
 #include <secure_erase_file/secure_erase_file.h>
 
 extern "C" {
-#include "cryptohome/crc32.h"
-
 #include <keyutils.h>
 #include <linux/fs.h>
 // Uses libvboot_host for accessing crossystem variables.
 #include <vboot/crossystem.h>
 }
 
+#include "cryptohome/crc32.h"
 #include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/dircrypto_util.h"
 

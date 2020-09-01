@@ -200,7 +200,6 @@ executable("cryptohome-proxy") {
 executable("lockbox-cache") {
   configs += [ "libs:target_defaults" ]
   sources = [
-    "crc32.c",
     "dircrypto_util.cc",
     "lockbox-cache-main.cc",
     "lockbox-cache.cc",
