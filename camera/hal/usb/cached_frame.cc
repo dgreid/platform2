@@ -298,10 +298,21 @@ int CachedFrame::ConvertFromNV12(
 int CachedFrame::DecodeToNV12(const FrameBuffer& in_frame,
                               FrameBuffer* out_frame) {
   // Try HW decoding.
+  base::ElapsedTimer hw_timer;
   int ret = DecodeByJDA(in_frame, out_frame);
-  if (ret == 0 || ret == -EAGAIN) {
+  if (ret == 0) {
+    camera_metrics_->SendJpegProcessLatency(JpegProcessType::kDecode,
+                                            JpegProcessMethod::kHardware,
+                                            hw_timer.Elapsed());
+    camera_metrics_->SendJpegResolution(
+        JpegProcessType::kDecode, JpegProcessMethod::kHardware,
+        in_frame.GetWidth(), in_frame.GetHeight());
     return ret;
   }
+  if (ret == -EAGAIN) {
+    return ret;
+  }
+
   // JDA error, fallback to SW decoding if not forcing HW decoding.
   if (force_jpeg_hw_decode_) {
     return -EINVAL;
@@ -317,7 +328,7 @@ int CachedFrame::DecodeToNV12(const FrameBuffer& in_frame,
                                      V4L2_PIX_FMT_YUV420, &temp_i420_frame_)) {
     return -EINVAL;
   }
-  base::ElapsedTimer timer;
+  base::ElapsedTimer sw_timer;
   ret = image_processor_->ConvertFormat(in_frame, temp_i420_frame_.get());
   if (ret) {
     LOGF(ERROR) << "Decode JPEG to YU12 failed: " << ret;
@@ -327,8 +338,9 @@ int CachedFrame::DecodeToNV12(const FrameBuffer& in_frame,
   if (ret) {
     return -EINVAL;
   }
-  camera_metrics_->SendJpegProcessLatency(
-      JpegProcessType::kDecode, JpegProcessMethod::kSoftware, timer.Elapsed());
+  camera_metrics_->SendJpegProcessLatency(JpegProcessType::kDecode,
+                                          JpegProcessMethod::kSoftware,
+                                          sw_timer.Elapsed());
   camera_metrics_->SendJpegResolution(
       JpegProcessType::kDecode, JpegProcessMethod::kSoftware,
       in_frame.GetWidth(), in_frame.GetHeight());
