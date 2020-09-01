@@ -27,7 +27,11 @@ class MockSensorServiceImpl final : public SensorServiceImpl {
   MockSensorServiceImpl(
       scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
       std::unique_ptr<libmems::IioContext> context)
-      : SensorServiceImpl(std::move(ipc_task_runner), std::move(context)) {}
+      : SensorServiceImpl(
+            std::move(ipc_task_runner),
+            std::move(context),
+            SensorDeviceImpl::ScopedSensorDeviceImpl(
+                nullptr, SensorDeviceImpl::SensorDeviceImplDeleter)) {}
 
   void AddReceiver(
       mojo::PendingReceiver<cros::mojom::SensorService> request) override {

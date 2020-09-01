@@ -50,7 +50,8 @@ class SensorServiceImpl : public cros::mojom::SensorService {
 
  protected:
   SensorServiceImpl(scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-                    std::unique_ptr<libmems::IioContext> context);
+                    std::unique_ptr<libmems::IioContext> context,
+                    SensorDeviceImpl::ScopedSensorDeviceImpl sensor_device);
 
  private:
   void SetDeviceTypes();

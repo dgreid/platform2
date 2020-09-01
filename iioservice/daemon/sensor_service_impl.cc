@@ -93,11 +93,17 @@ SensorServiceImpl::ScopedSensorServiceImpl SensorServiceImpl::Create(
     std::unique_ptr<libmems::IioContext> context) {
   DCHECK(ipc_task_runner->RunsTasksInCurrentSequence());
 
-  ScopedSensorServiceImpl service(
-      new SensorServiceImpl(std::move(ipc_task_runner), std::move(context)),
-      SensorServiceImplDeleter);
+  auto sensor_device = SensorDeviceImpl::Create(ipc_task_runner, context.get());
 
-  return service;
+  if (!sensor_device) {
+    LOGF(ERROR) << "Failed to get SensorDevice";
+    return ScopedSensorServiceImpl(nullptr, SensorServiceImplDeleter);
+  }
+
+  return ScopedSensorServiceImpl(
+      new SensorServiceImpl(std::move(ipc_task_runner), std::move(context),
+                            std::move(sensor_device)),
+      SensorServiceImplDeleter);
 }
 
 void SensorServiceImpl::AddReceiver(
@@ -147,14 +153,11 @@ void SensorServiceImpl::GetDevice(
 
 SensorServiceImpl::SensorServiceImpl(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    std::unique_ptr<libmems::IioContext> context)
+    std::unique_ptr<libmems::IioContext> context,
+    SensorDeviceImpl::ScopedSensorDeviceImpl sensor_device)
     : ipc_task_runner_(ipc_task_runner),
       context_(std::move(context)),
-      sensor_device_(
-          SensorDeviceImpl::Create(ipc_task_runner, context_.get())) {
-  if (!sensor_device_)
-    LOGF(ERROR) << "Failed to get SensorDevice";
-
+      sensor_device_(std::move(sensor_device)) {
   SetDeviceTypes();
 }
 
