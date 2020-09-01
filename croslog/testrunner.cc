@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "base/message_loop/message_loop.h"
+#include "base/task/single_thread_task_executor.h"
 #include "common-mk/testrunner.h"
 
 int main(int argc, char** argv) {
-  // Declaring MessageLoop here, since the singleton object FileChangeWatcher
-  // depends on the message loop implicitly.
-  base::MessageLoopForIO message_loop_;
+  // Declaring SingleThreadTaskExecutor here, since the singleton object
+  // FileChangeWatcher depends on the task executor implicitly.
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   auto runner = platform2::TestRunner(argc, argv);
   return runner.Run();

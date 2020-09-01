@@ -7,6 +7,7 @@
 
 #include <base/command_line.h>
 #include <base/logging.h>
+#include <base/task/single_thread_task_executor.h>
 
 #include "croslog/config.h"
 #include "croslog/viewer_journal.h"
@@ -39,7 +40,7 @@ int main(int argc, char* argv[]) {
       return viewer.Run(config) ? 0 : 1;
     case croslog::SourceMode::PLAINTEXT_LOG: {
       // Do not use them directly.
-      base::MessageLoopForIO message_loop_;
+      base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
       base::AtExitManager at_exit_manager_;
 
       // TODO(yoshiki): Implement the reader of plaintext logs.
