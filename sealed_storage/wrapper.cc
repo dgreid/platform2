@@ -7,8 +7,8 @@
 #include <memory>
 #include <vector>
 
-#include <base/message_loop/message_loop.h>
 #include <base/message_loop/message_loop_current.h>
+#include <base/task/single_thread_task_executor.h>
 
 #include "sealed_storage/sealed_storage.h"
 #include "sealed_storage/wrapper.h"
@@ -27,10 +27,11 @@ bool Unseal(bool verified_boot_mode,
   DCHECK(plain_buf);
   DCHECK(plain_size);
 
-  std::unique_ptr<base::MessageLoop> loop;
+  std::unique_ptr<base::SingleThreadTaskExecutor> task_executor;
   if (!base::MessageLoopCurrent::IsSet()) {
-    VLOG(2) << "Creating local MessageLoop";
-    loop.reset(new base::MessageLoop(base::MessageLoop::TYPE_IO));
+    VLOG(2) << "Creating local SingleThreadTaskExector";
+    task_executor.reset(
+        new base::SingleThreadTaskExecutor(base::MessagePumpType::IO));
   }
 
   sealed_storage::Policy policy;

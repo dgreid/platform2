@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
@@ -340,7 +340,9 @@ class SealedStorageTest : public ::testing::Test {
   }
 
  protected:
-  base::MessageLoop loop_{base::MessageLoop::TYPE_IO};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
   Policy policy_;
   trunks::MockTpm tpm_;
   trunks::MockTpmUtility tpm_utility_;

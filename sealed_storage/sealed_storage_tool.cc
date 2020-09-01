@@ -7,9 +7,9 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/macros.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
 #include <base/synchronization/waitable_event.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/file_utils.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
@@ -151,7 +151,7 @@ int main(int argc, char** argv) {
   brillo::InitLog(log_flags);
 
   // Make sure we have a message loop.
-  base::MessageLoop loop(base::MessageLoop::TYPE_IO);
+  base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
 
   // Check provided command line.
   if (FLAGS_dev && FLAGS_verified_boot) {

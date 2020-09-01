@@ -5,6 +5,7 @@
 #include <base/at_exit.h>
 #include <base/command_line.h>
 #include <base/logging.h>
+#include <base/test/test_timeouts.h>
 #include <brillo/syslog_logging.h>
 #include <gtest/gtest.h>
 
@@ -15,5 +16,6 @@ int main(int argc, char** argv) {
   logging::SetMinLogLevel(logging::LOG_VERBOSE);
   base::AtExitManager exit_manager;
   ::testing::InitGoogleTest(&argc, argv);
+  TestTimeouts::Initialize();
   return RUN_ALL_TESTS();
 }
