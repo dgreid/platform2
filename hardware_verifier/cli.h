@@ -63,12 +63,15 @@ class CLI {
   //     verification payload.  If the string is empty, it reads the default
   //     verification payload file in the rootfs.
   // @param output_format: The format of the output data.
+  // @param pii: Output result including PII data like UUID and generic device
+  // info.
   //
   // @return Execution result, can be either the verification result or the
   //     failure code.
   CLIVerificationResult Run(const std::string& probe_result_file,
                             const std::string& hw_verification_spec_file,
-                            const CLIOutputFormat output_format);
+                            const CLIOutputFormat output_format,
+                            bool pii);
 
  private:
   friend class CLITest;

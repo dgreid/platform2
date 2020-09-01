@@ -28,7 +28,7 @@ namespace hardware_verifier {
 namespace {
 
 base::Optional<std::string> OutputInTextFormat(
-    HwVerificationReport hw_verification_report) {
+    HwVerificationReport hw_verification_report, bool pii) {
   std::stringstream ss;
   const auto generic_device_info = hw_verification_report.generic_device_info();
   hw_verification_report.clear_generic_device_info();
@@ -47,9 +47,9 @@ base::Optional<std::string> OutputInTextFormat(
   }
   ss << "[Component Qualification Status]\n" << json_output_data;
 
-  // Output the generic device info in prototxt format.
-  ss << "\n[Generic Device Info]\n";
-  {
+  if (pii) {
+    // Output the generic device info in prototxt format.
+    ss << "\n[Generic Device Info]\n";
     // Enclose google::protobuf::io::OstreamOutputStream in another nested
     // scope so that its data will be flushed while being destroyed.
     google::protobuf::io::OstreamOutputStream ostream_output_stream{&ss};
@@ -73,7 +73,8 @@ CLI::CLI()
 
 CLIVerificationResult CLI::Run(const std::string& probe_result_file,
                                const std::string& hw_verification_spec_file,
-                               const CLIOutputFormat output_format) {
+                               const CLIOutputFormat output_format,
+                               bool pii) {
   LOG(INFO) << "Get the probe result.";
   base::Optional<runtime_probe::ProbeResult> probe_result;
   auto observer = Observer::GetInstance();
@@ -111,7 +112,16 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
   if (!verifier_result) {
     return CLIVerificationResult::kProbeResultHwVerificationSpecMisalignment;
   }
-  const auto hw_verification_report = verifier_result.value();
+  auto hw_verification_report = verifier_result.value();
+
+  if (!pii) {
+    // Remove PII data.
+    for (auto& mutable_component :
+         *(hw_verification_report.mutable_found_component_infos())) {
+      mutable_component.clear_component_uuid();
+    }
+    hw_verification_report.clear_generic_device_info();
+  }
 
   LOG(INFO) << "Output the report.";
   switch (output_format) {
@@ -126,7 +136,7 @@ CLIVerificationResult CLI::Run(const std::string& probe_result_file,
       break;
     }
     case CLIOutputFormat::kText: {
-      auto output_data = OutputInTextFormat(hw_verification_report);
+      auto output_data = OutputInTextFormat(hw_verification_report, pii);
       if (!output_data.has_value()) {
         return CLIVerificationResult::kUnknownError;
       }

@@ -93,6 +93,9 @@ int main(int argc, char* argv[]) {
                 "\"proto\" for protobuf binary format or \"text\" for human "
                 "readable text format.");
   DEFINE_bool(send_to_uma, false, "Send data to UMA.");
+  DEFINE_bool(pii, false,
+              "Output result including PII data like UUID and generic device "
+              "info.");
   brillo::FlagHelper::Init(argc, argv, "ChromeOS Hardware Verifier Tool");
 
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
@@ -112,8 +115,9 @@ int main(int argc, char* argv[]) {
   // TODO(yhong): Add the D-Bus service mode.
 
   hardware_verifier::CLI cli;
-  const auto cli_result = cli.Run(
-      FLAGS_probe_result_file, FLAGS_hw_verification_spec_file, output_format);
+  const auto cli_result =
+      cli.Run(FLAGS_probe_result_file, FLAGS_hw_verification_spec_file,
+              output_format, FLAGS_pii);
 
   const auto exit_status = ConvertCLIVerificationResultToExitStatus(cli_result);
 

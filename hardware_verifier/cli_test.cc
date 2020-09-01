@@ -67,43 +67,43 @@ class CLITest : public testing::Test {
 };
 
 TEST_F(CLITest, TestBasicFlow) {
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kPass);
 }
 
 TEST_F(CLITest, TestHandleWaysToGetProbeResults) {
   pr_getter_->set_runtime_probe_fail();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kProbeFail);
 
   pr_getter_->set_file_probe_results({{"path", runtime_probe::ProbeResult()}});
-  EXPECT_EQ(cli_->Run("path", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("path", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kPass);
-  EXPECT_EQ(cli_->Run("path2", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("path2", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kInvalidProbeResultFile);
 }
 
 TEST_F(CLITest, TestHandleWaysToGetHwVerificationSpec) {
   vp_getter_->SetDefaultInvalid();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kInvalidHwVerificationSpecFile);
 
   vp_getter_->set_files({{"path", HwVerificationSpec()}});
-  EXPECT_EQ(cli_->Run("", "path", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "path", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kPass);
-  EXPECT_EQ(cli_->Run("", "path2", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "path2", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kInvalidHwVerificationSpecFile);
 }
 
 TEST_F(CLITest, TestVerifyFail) {
   verifier_->SetVerifyFail();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kProbeResultHwVerificationSpecMisalignment);
 
   HwVerificationReport vr;
   vr.set_is_compliant(false);
   verifier_->SetVerifySuccess(vr);
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, false),
             CLIVerificationResult::kFail);
 }
 
@@ -112,7 +112,7 @@ TEST_F(CLITest, TestOutput) {
   vr.set_is_compliant(true);
 
   verifier_->SetVerifySuccess(vr);
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kProtoBin, true),
             CLIVerificationResult::kPass);
   HwVerificationReport result;
   EXPECT_TRUE(result.ParseFromString(output_stream_->str()));
@@ -120,7 +120,12 @@ TEST_F(CLITest, TestOutput) {
 
   // For human readable format, only check if there's something printed.
   *output_stream_ = std::ostringstream();
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText, false),
+            CLIVerificationResult::kPass);
+  EXPECT_FALSE(output_stream_->str().empty());
+
+  *output_stream_ = std::ostringstream();
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText, true),
             CLIVerificationResult::kPass);
   EXPECT_FALSE(output_stream_->str().empty());
 }
@@ -141,7 +146,7 @@ TEST_F(CLITest, TestVerifyReportSample1) {
   // This is for recording qualification status of each components.
   EXPECT_CALL(*metrics_, SendEnumToUMA(_, _, _)).Times(AtLeast(3));
 
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText, false),
             CLIVerificationResult::kPass);
 }
 
@@ -161,7 +166,7 @@ TEST_F(CLITest, TestVerifyReportSample2) {
   // This is for recording qualification status of each components.
   EXPECT_CALL(*metrics_, SendEnumToUMA(_, _, _)).Times(AtLeast(2));
 
-  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText),
+  EXPECT_EQ(cli_->Run("", "", CLIOutputFormat::kText, false),
             CLIVerificationResult::kFail);
 }
 
