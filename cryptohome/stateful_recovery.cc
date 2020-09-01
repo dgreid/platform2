@@ -18,7 +18,6 @@
 #include <base/values.h>
 
 #include "cryptohome/platform.h"
-#include "cryptohome/service.h"
 
 using base::FilePath;
 

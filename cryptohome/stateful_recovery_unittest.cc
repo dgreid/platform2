@@ -10,7 +10,6 @@
 #include <memory>
 
 #include "cryptohome/mock_platform.h"
-#include "cryptohome/mock_service.h"
 
 namespace cryptohome {
 
@@ -106,8 +105,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV1) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV1WriteProtected) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -126,8 +123,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV1WriteProtected) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV2) {
-  MockPlatform platform;
-  MockService service;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
@@ -178,8 +173,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwner) {
-  MockPlatform platform;
-  MockService service;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
@@ -211,8 +204,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwner) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV2BadUser) {
-  MockPlatform platform;
-  MockService service;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
@@ -238,8 +229,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2BadUser) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV2BadUserNotWriteProtected) {
-  MockPlatform platform;
-  MockService service;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
@@ -285,8 +274,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2BadUserNotWriteProtected) {
 }
 
 TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwnerNotWriteProtected) {
-  MockPlatform platform;
-  MockService service;
   std::string user = "user@example.com";
   std::string passkey = "abcd1234";
   std::string flag_content = "2\n" + user + "\n" + passkey;
@@ -337,8 +324,6 @@ TEST_F(StatefulRecoveryTest, ValidRequestV2NotOwnerNotWriteProtected) {
 }
 
 TEST_F(StatefulRecoveryTest, InvalidFlagFileContents) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "0 hello";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -349,8 +334,6 @@ TEST_F(StatefulRecoveryTest, InvalidFlagFileContents) {
 }
 
 TEST_F(StatefulRecoveryTest, UnreadableFlagFile) {
-  MockPlatform platform;
-  MockService service;
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
       .WillOnce(Return(false));
@@ -360,8 +343,6 @@ TEST_F(StatefulRecoveryTest, UnreadableFlagFile) {
 }
 
 TEST_F(StatefulRecoveryTest, UncopyableData) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -383,8 +364,6 @@ TEST_F(StatefulRecoveryTest, UncopyableData) {
 }
 
 TEST_F(StatefulRecoveryTest, DirectoryCreationFailure) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -402,8 +381,6 @@ TEST_F(StatefulRecoveryTest, DirectoryCreationFailure) {
 }
 
 TEST_F(StatefulRecoveryTest, StatVFSFailure) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -428,8 +405,6 @@ TEST_F(StatefulRecoveryTest, StatVFSFailure) {
 }
 
 TEST_F(StatefulRecoveryTest, FilesystemDetailsFailure) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
@@ -514,8 +489,6 @@ TEST_F(StatefulRecoveryTest, UsageReportOk) {
 }
 
 TEST_F(StatefulRecoveryTest, DestinationRecreateFailure) {
-  MockPlatform platform;
-  MockService service;
   std::string flag_content = "1";
   EXPECT_CALL(*platform_,
               ReadFileToString(FilePath(StatefulRecovery::kFlagFile), _))
