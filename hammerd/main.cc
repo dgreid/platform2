@@ -13,8 +13,8 @@
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/strings/stringprintf.h>
+#include <base/task/single_thread_task_executor.h>
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 
@@ -155,9 +155,9 @@ int main(int argc, const char* argv[]) {
     return static_cast<int>(ExitStatus::kUnknownUpdateCondition);
   }
 
-  // The message loop registers a task runner with the current thread, which
+  // The task executor registers a task runner with the current thread, which
   // is used by DBusWrapper to send signals.
-  base::MessageLoop message_loop;
+  base::SingleThreadTaskExecutor task_executor;
   hammerd::HammerUpdater updater(
       ec_image, touchpad_image, touchpad_product_id, touchpad_fw_ver,
       FLAGS_vendor_id, FLAGS_product_id, FLAGS_usb_path, FLAGS_at_boot,
