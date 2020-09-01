@@ -35,8 +35,6 @@ using ::testing::ElementsAre;
 
 namespace lorgnette {
 
-#define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
-
 namespace {
 
 void ValidateSignals(const std::vector<ScanStatusChangedSignal>& signals,

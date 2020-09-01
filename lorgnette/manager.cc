@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <utility>
 
+#include <base/bits.h>
 #include <base/files/file.h>
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
@@ -21,8 +22,6 @@
 #include "lorgnette/firewall_manager.h"
 
 using std::string;
-
-#define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
 
 namespace lorgnette {
 
@@ -728,8 +727,9 @@ bool Manager::RunScanLoop(brillo::ErrorPtr* error,
   base::TimeTicks last_progress_sent_time = base::TimeTicks::Now();
   uint32_t last_progress_value = 0;
   size_t rows_written = 0;
+  const size_t kMaxBuffer = 1024 * 1024;
   const size_t buffer_length =
-      std::max(ALIGN_UP(params.bytes_per_line, 4 * 1024), 1024 * 1024);
+      std::max(base::bits::Align(params.bytes_per_line, 4 * 1024), kMaxBuffer);
   std::vector<uint8_t> image_buffer(buffer_length, '\0');
   // The offset within image_buffer to read to. This will be used within the
   // loop for when we've read a partial image line and need to track data that
