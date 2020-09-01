@@ -12,7 +12,7 @@ import("//common-mk/protoctxt.gni")
 group("all") {
   deps = [
     ":libshill",
-    ":libshill-net-${libbase_ver}",
+    ":libshill-net",
     ":mobile_operator_db",
     ":mobile_operator_db-db",
     ":mobile_operator_db-protos",
@@ -168,9 +168,9 @@ generate_dbus_adaptors("shill-chromeos-dbus-adaptors") {
   ]
 }
 
-write_deps("libshill-net-${libbase_ver}_deps") {
+write_deps("libshill-net_deps") {
   pkg_deps = []
-  target = "libshill-net-${libbase_ver}"
+  target = "libshill-net"
 }
 
 net_sources = [
@@ -203,7 +203,7 @@ net_sources = [
   "net/sockets.cc",
 ]
 
-shared_library("libshill-net-${libbase_ver}") {
+shared_library("libshill-net") {
   configs += [ ":target_defaults" ]
   defines = [ "SLOG_MEANS_VLOG=1" ]
   sources = net_sources
