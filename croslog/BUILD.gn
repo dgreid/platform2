@@ -21,6 +21,8 @@ static_library("libcroslog_static") {
     "cursor_util.h",
     "file_change_watcher.cc",
     "file_change_watcher.h",
+    "file_map_reader.cc",
+    "file_map_reader.h",
     "log_entry.cc",
     "log_entry.h",
     "log_line_reader.cc",

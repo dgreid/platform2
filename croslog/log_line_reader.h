@@ -15,6 +15,7 @@
 #include "base/observer_list_types.h"
 
 #include "croslog/file_change_watcher.h"
+#include "croslog/file_map_reader.h"
 #include "croslog/log_entry.h"
 #include "croslog/log_parser.h"
 
@@ -32,6 +33,9 @@ class LogLineReader : public FileChangeWatcher::Observer {
     FILE_FOLLOW,
     MEMORY_FOR_TEST,
   };
+
+  // Sets the maximum limit of length of line.
+  static void SetMaxLineLengthForTest(int64_t max_line_length);
 
   explicit LogLineReader(Backend backend_mode);
   virtual ~LogLineReader();
@@ -58,11 +62,12 @@ class LogLineReader : public FileChangeWatcher::Observer {
 
  private:
   void ReloadRotatedFile();
-  void Remap();
   void OnFileContentMaybeChanged() override;
   void OnFileNameMaybeChanged() override;
 
-  std::string GetString(off_t offset, size_t length) const;
+  std::string GetString(std::unique_ptr<FileMapReader::MappedBuffer> buffer,
+                        uint64_t offset,
+                        uint64_t length) const;
 
   // Information about the target file. These field are initialized by
   // OpenFile() for either FILE or FILE_FOLLOW.
@@ -74,14 +79,17 @@ class LogLineReader : public FileChangeWatcher::Observer {
   // This is initialized by OpenFile() for FILE_FOLLOW backend.
   FileChangeWatcher* file_change_watcher_ = nullptr;
 
-  const uint8_t* buffer_ = nullptr;
-  uint64_t buffer_size_ = 0;
+  std::unique_ptr<FileMapReader> reader_;
   const Backend backend_mode_;
   bool rotated_ = false;
 
-  // Position must be between [0, buffer_size_]. |buffer_[pos]| might be
-  // invalid.
-  off_t pos_ = 0;
+  // Position of the current read.
+  // - Usually be at the first character of line. But it's not when the line is
+  //   is too long to read or the file content is unexpectedly changed by
+  //   another process.
+  // - Must be in the interval of [0, reader_->GetFileSize()].
+  //   (|buffer->GetChar(pos)| is invalid if |pos| == |reader_->GetFileSize()|)
+  int64_t pos_ = 0;
 
   base::ObserverList<Observer> observers_;
 

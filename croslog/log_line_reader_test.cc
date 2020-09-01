@@ -9,7 +9,10 @@
 #include "base/files/file_path.h"
 #include "base/files/file_util.h"
 #include "base/run_loop.h"
+#include "base/strings/stringprintf.h"
 #include "gtest/gtest.h"
+
+#include "croslog/file_map_reader.h"
 
 namespace croslog {
 
@@ -120,6 +123,14 @@ TEST_F(LogLineReaderTest, Forward) {
     EXPECT_FALSE(reader.Forward().has_value());
     EXPECT_FALSE(reader.Forward().has_value());
   }
+
+  {
+    LogLineReader reader(LogLineReader::Backend::FILE);
+    reader.OpenFile(base::FilePath("./testdata/TEST_EMPTY_FILE"));
+
+    EXPECT_FALSE(reader.Forward().has_value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
 }
 
 TEST_F(LogLineReaderTest, Backward) {
@@ -175,6 +186,19 @@ TEST_F(LogLineReaderTest, Backward) {
       EXPECT_TRUE(s.has_value());
       EXPECT_EQ(kEmptyLines[i], s);
     }
+
+    EXPECT_FALSE(reader.Backward().has_value());
+    EXPECT_FALSE(reader.Backward().has_value());
+  }
+
+  {
+    LogLineReader reader(LogLineReader::Backend::FILE);
+    reader.OpenFile(base::FilePath("./testdata/TEST_EMPTY_FILE"));
+
+    EXPECT_FALSE(reader.Backward().has_value());
+    EXPECT_FALSE(reader.Backward().has_value());
+
+    reader.SetPositionLast();
 
     EXPECT_FALSE(reader.Backward().has_value());
     EXPECT_FALSE(reader.Backward().has_value());
@@ -504,6 +528,104 @@ TEST_F(LogLineReaderTest, ReadFileRotatedWithoutLf) {
   EXPECT_FALSE(reader.Forward().has_value());
 
   reader.RemoveObserver(this);
+}
+
+TEST_F(LogLineReaderTest, ReadLarge) {
+  LogLineReader::SetMaxLineLengthForTest(8 * 1024);
+  FileMapReader::SetBlockSizesForTest(8 * 1024, 2);
+
+  base::FilePath temp_path;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+
+  // Write
+  for (int i = 0; i < (10 * 1024); i++) {
+    std::string test_string = base::StringPrintf("%019d\n", i);
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string.c_str(), test_string.length()),
+              test_string.length());
+  }
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.OpenFile(temp_path);
+
+  // Read
+  for (int i = 0; i < (10 * 1024); i++) {
+    std::string test_string = base::StringPrintf("%019d", i);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string, s.value());
+  }
+  EXPECT_FALSE(reader.Forward().has_value());
+}
+
+TEST_F(LogLineReaderTest, ReadLargeAppend) {
+  LogLineReader::SetMaxLineLengthForTest(8 * 1024);
+  FileMapReader::SetBlockSizesForTest(8 * 1024, 2);
+
+  base::FilePath temp_path;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.AddObserver(this);
+  reader.OpenFile(temp_path);
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+  // Nothing to be read, since the file is empty.
+  EXPECT_FALSE(reader.Forward().has_value());
+
+  // Write and read
+  for (int i = 0; i < 10; i++) {
+    // 2000 byte line including LF.
+    std::string test_string = base::StringPrintf("%1999d", i);
+    std::string test_string_with_lf = test_string + "\n";
+
+    int previous_change_event_counter = changed_event_receieved();
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string_with_lf.c_str(),
+                                     test_string_with_lf.length()),
+              test_string_with_lf.length());
+    WaitForChangeEvent(previous_change_event_counter);
+
+    base::Optional<std::string> s = reader.Forward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string, s.value());
+    EXPECT_FALSE(reader.Forward().has_value());
+  }
+
+  EXPECT_FALSE(reader.Forward().has_value());
+  reader.RemoveObserver(this);
+}
+
+TEST_F(LogLineReaderTest, ReadLargeBackward) {
+  LogLineReader::SetMaxLineLengthForTest(8 * 1024);
+  FileMapReader::SetBlockSizesForTest(8 * 1024, 2);
+
+  base::FilePath temp_path;
+  ASSERT_TRUE(base::CreateTemporaryFile(&temp_path));
+
+  base::File file(temp_path, base::File::FLAG_OPEN | base::File::FLAG_WRITE);
+
+  // Write
+  for (int i = 0; i < (10 * 1024); i++) {
+    std::string test_string = base::StringPrintf("%019d\n", i);
+    EXPECT_EQ(file.WriteAtCurrentPos(test_string.c_str(), test_string.length()),
+              test_string.length());
+  }
+
+  LogLineReader reader(LogLineReader::Backend::FILE_FOLLOW);
+  reader.OpenFile(temp_path);
+  reader.SetPositionLast();
+
+  // Read
+  for (int i = 10 * 1024 - 1; i >= 0; i--) {
+    std::string test_string = base::StringPrintf("%019d", i);
+
+    base::Optional<std::string> s = reader.Backward();
+    EXPECT_TRUE(s.has_value());
+    EXPECT_EQ(test_string, s.value());
+  }
+  EXPECT_FALSE(reader.Backward().has_value());
 }
 
 }  // namespace croslog

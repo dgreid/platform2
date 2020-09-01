@@ -4,6 +4,7 @@
 
 #include "croslog/log_line_reader.h"
 
+#include <algorithm>
 #include <string>
 #include <utility>
 
@@ -17,18 +18,27 @@
 #include "base/files/file_util.h"
 #include "base/strings/string_util.h"
 
+#include "croslog/file_map_reader.h"
+
 namespace croslog {
 
 namespace {
-const uint8_t kEmptyBuffer[] = {};
-}  // anonymous namespace
+// Maximum length of line in bytes.
+static int64_t g_max_line_length = 1024 * 1024;
+}  // namespace
 
-// 1 GB limit.
-// TODO(yoshiki): adjust it to an appropriate value.
-constexpr size_t kMaxFileSize = 1024l * 1024 * 1024 - 1;
+// static
+void LogLineReader::SetMaxLineLengthForTest(int64_t max_line_length) {
+  CHECK_LE(max_line_length, FileMapReader::GetChunkSizeInBytes());
+  CHECK_GE(max_line_length, 0);
+  g_max_line_length = max_line_length;
+}
 
 LogLineReader::LogLineReader(Backend backend_mode)
-    : backend_mode_(backend_mode) {}
+    : backend_mode_(backend_mode) {
+  // Checks the assumption of this logic.
+  DCHECK_GE(FileMapReader::GetChunkSizeInBytes(), g_max_line_length);
+}
 
 LogLineReader::~LogLineReader() {
   if (file_change_watcher_)
@@ -41,7 +51,6 @@ void LogLineReader::OpenFile(const base::FilePath& file_path) {
 
   // Ensure the values are not initialized.
   CHECK(file_path_.empty());
-  CHECK(buffer_ == nullptr);
 
   file_ = base::File(file_path, base::File::FLAG_OPEN | base::File::FLAG_READ);
   if (!file_.IsValid()) {
@@ -69,21 +78,39 @@ void LogLineReader::OpenFile(const base::FilePath& file_path) {
     }
   }
 
-  Remap();
+  reader_ = FileMapReader::CreateReader(file_.Duplicate());
 }
 
 void LogLineReader::OpenMemoryBufferForTest(const char* buffer, size_t size) {
   CHECK(backend_mode_ == Backend::MEMORY_FOR_TEST);
-
-  buffer_ = (const uint8_t*)buffer;
-  buffer_size_ = size;
+  reader_ = FileMapReader::CreateFileMapReaderDelegateImplMemoryReaderForTest(
+      (const uint8_t*)buffer, size);
 }
 
 void LogLineReader::SetPositionLast() {
-  pos_ = buffer_size_;
+  // At first, sets the position to EOF.
+  pos_ = reader_->GetFileSize();
+  DCHECK_LE(0, pos_);
 
-  while (pos_ >= 1 && buffer_[pos_ - 1] != '\n')
+  // Calculates the maximum traversable range in the file and allocate a buffer.
+  int64_t pos_traversal_start = std::max(pos_ - g_max_line_length, INT64_C(0));
+  int64_t traversal_length = std::min(g_max_line_length, pos_);
+
+  // Allocates a buffer of the segment from |pos_traversal_start| to EOF.
+  auto buffer = reader_->MapBuffer(pos_traversal_start, traversal_length);
+  CHECK(buffer->valid()) << "Mmap failed. Maybe the file has been truncated.";
+
+  // Traverses in reverse order to find the last LF.
+  while (pos_ > pos_traversal_start && buffer->GetChar(pos_ - 1) != '\n')
     pos_--;
+
+  if (pos_ != 0 && pos_ <= pos_traversal_start) {
+    LOG(ERROR) << "The last line is too long to handle (more than: "
+               << g_max_line_length
+               << "bytes). Lines around here may be broken.";
+    // Sets the position to the last as a sloppy solution.
+    pos_ = reader_->GetFileSize();
+  }
 }
 
 // Ensure the file path is initialized.
@@ -100,98 +127,58 @@ void LogLineReader::ReloadRotatedFile() {
 
   base::FilePath file_path = file_path_;
   file_path_.clear();
-  mmap_.reset();
+  reader_.reset();
   file_inode_ = 0;
-  buffer_ = nullptr;
-  buffer_size_ = 0;
   pos_ = 0;
 
   OpenFile(file_path);
   if (!file_.IsValid()) {
     LOG(FATAL) << "File looks rotated, but new file can't be opened.";
   }
-}
-
-void LogLineReader::Remap() {
-  CHECK(backend_mode_ == Backend::FILE ||
-        backend_mode_ == Backend::FILE_FOLLOW);
-
-  CHECK(!file_path_.empty());
-
-  int64_t file_size = file_.GetLength();
-
-  if (file_size > kMaxFileSize) {
-    LOG(ERROR) << "File is bigger than the supported size (" << file_size
-               << " > " << kMaxFileSize << ").";
-    return;
-  }
-
-  if (mmap_ && buffer_size_ == file_size)
-    return;
-
-  if (mmap_ && buffer_size_ > file_size) {
-    LOG(WARNING) << "Log file gets smaller. Croslog doesn't support file "
-                 << "changes except for appending lines.";
-    if (pos_ > file_size) {
-      // Fall back to set the postiton to last.
-      pos_ = file_size;
-    }
-  }
-
-  mmap_.reset();
-  buffer_ = nullptr;
-  buffer_size_ = 0;
-
-  if (file_size == 0) {
-    // Returning without (re)mmapping, since mmapping an empty file fails.
-    buffer_ = kEmptyBuffer;
-    return;
-  }
-
-  base::File file_duplicated = file_.Duplicate();
-
-  base::MemoryMappedFile::Region mmap_region;
-  mmap_region.offset = 0;
-  mmap_region.size = file_size;
-
-  auto new_mmap = std::make_unique<base::MemoryMappedFile>();
-  bool mmap_result =
-      new_mmap->Initialize(std::move(file_duplicated), mmap_region);
-
-  if (!mmap_result) {
-    LOG(ERROR) << "Doing mmap (" << file_path_ << ") failed.";
-    // resetting position.
-    pos_ = 0;
-    return;
-  }
-
-  std::swap(mmap_, new_mmap);
-  buffer_ = mmap_->data();
-  buffer_size_ = file_size;
+  reader_ = FileMapReader::CreateReader(file_.Duplicate());
 }
 
 base::Optional<std::string> LogLineReader::Forward() {
-  CHECK(buffer_ != nullptr);
-  DCHECK(pos_ <= buffer_size_);
+  DCHECK_LE(0, pos_);
 
-  if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
-    LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
-                 << "be broken.";
-  }
+  // Checks the current position is at the beginning of the line.
+  if (pos_ != 0) {
+    auto buffer = reader_->MapBuffer(pos_ - 1, 1);
+    CHECK(buffer->valid()) << "Mmap failed. Maybe the file has been truncated"
+                           << " and the current read position got invalid.";
 
-  off_t pos_line_end = -1;
-  for (off_t i = pos_; i < buffer_size_; i++) {
-    if (buffer_[i] == '\n') {
-      pos_line_end = i;
-      break;
+    if (buffer->GetChar(pos_ - 1) != '\n') {
+      LOG(WARNING) << "The line is odd. The line is too long or the file is"
+                   << " unexpectedly changed.";
     }
   }
 
-  if (pos_line_end == -1) {
+  // Calculate the maximum traversable size to allocate.
+  int64_t traversal_length =
+      std::min(g_max_line_length, reader_->GetFileSize() - pos_);
+  int64_t pos_traversal_end = pos_ + traversal_length;
+
+  // Allocates a buffer of the segment from |pos_| to |pos_traversal_end|.
+  auto buffer = reader_->MapBuffer(pos_, traversal_length);
+  CHECK(buffer->valid()) << "Mmap failed. Maybe the file has been truncated"
+                         << " and the current read position got invalid.";
+
+  // Finds the next LF (end of line).
+  int64_t pos_line_end = pos_;
+
+  while (pos_line_end < pos_traversal_end &&
+         buffer->GetChar(pos_line_end) != '\n') {
+    pos_line_end++;
+  }
+
+  if (pos_line_end == reader_->GetFileSize()) {
     // Reaches EOF without '\n'.
-    size_t unread_length = buffer_size_ - pos_;
+    int64_t unread_length = reader_->GetFileSize() - pos_;
 
     if (rotated_ && unread_length == 0 && PathExists(file_path_)) {
+      // Free the mapped buffer so that another buffer map is allowed.
+      buffer.reset();
+
       ReloadRotatedFile();
       return Forward();
     }
@@ -201,41 +188,67 @@ base::Optional<std::string> LogLineReader::Forward() {
     if (!rotated_)
       return base::nullopt;
 
-    pos_line_end = buffer_size_;
+    pos_line_end = reader_->GetFileSize();
+  } else if (pos_line_end == (pos_ + g_max_line_length)) {
+    LOG(ERROR) << "A line is too long to handle (more than "
+               << g_max_line_length
+               << "bytes). Lines around here may be broken.";
   }
 
-  size_t pos_line_start = pos_;
-  size_t line_length = pos_line_end - pos_;
+  // Updates the current position.
+  int64_t pos_line_start = pos_;
+  int64_t line_length = pos_line_end - pos_;
   pos_ = pos_line_end;
 
-  if (pos_ < buffer_size_) {
-    DCHECK_EQ('\n', buffer_[pos_]);
-    pos_ += 1;
+  if (pos_ < reader_->GetFileSize()) {
+    // Unless the line is too long, proceed the LF.
+    if (buffer->GetChar(pos_) == '\n')
+      pos_ += 1;
   }
 
-  return GetString(pos_line_start, line_length);
+  return GetString(std::move(buffer), pos_line_start, line_length);
 }
 
 base::Optional<std::string> LogLineReader::Backward() {
-  CHECK(buffer_ != nullptr);
-  DCHECK(pos_ <= buffer_size_);
-
-  if (pos_ != 0 && buffer_[pos_ - 1] != '\n') {
-    LOG(WARNING) << "The file looks changed unexpectedly. The lines read may "
-                 << "be broken.";
-  }
-
+  DCHECK_LE(0, pos_);
   if (pos_ == 0)
     return base::nullopt;
 
-  off_t last_start = pos_ - 1;
-  while (last_start > 0 && buffer_[last_start - 1] != '\n') {
+  // Calculates the maximum traversable range in the file and allocate a buffer.
+  int64_t pos_traversal_start = std::max(pos_ - g_max_line_length, INT64_C(0));
+  int64_t traversal_length = pos_ - pos_traversal_start;
+  DCHECK_GE(traversal_length, 0);
+
+  // Allocates a buffer of the segment from |pos_traversal_start| to |pos_|.
+  auto buffer = reader_->MapBuffer(pos_traversal_start, traversal_length);
+  CHECK(buffer->valid()) << "Mmap failed. Maybe the file has been truncated"
+                         << " and the current read position got invalid.";
+
+  // Ensures the current position is the beginning of the previous line.
+  if (buffer->GetChar(pos_ - 1) != '\n') {
+    LOG(WARNING) << "The line is too long or the file is unexpectedly changed."
+                 << " The lines read may be broken.";
+  }
+
+  // Finds the next LF (at the beginning of the line).
+  int64_t last_start = pos_ - 1;
+  while (last_start > pos_traversal_start &&
+         buffer->GetChar(last_start - 1) != '\n') {
     last_start--;
   }
 
-  size_t line_length = pos_ - last_start - 1;
+  // Ensures the next LF is found.
+  if (last_start != 0 && last_start <= pos_traversal_start) {
+    LOG(ERROR) << "A line is too long to handle (more than "
+               << g_max_line_length
+               << "bytes). Lines around here may be broken.";
+  }
+
+  // Updates the current position.
+  int64_t line_length = pos_ - last_start - 1;
   pos_ = last_start;
-  return GetString(last_start, line_length);
+
+  return GetString(std::move(buffer), last_start, line_length);
 }
 
 void LogLineReader::AddObserver(Observer* obs) {
@@ -246,21 +259,31 @@ void LogLineReader::RemoveObserver(Observer* obs) {
   observers_.RemoveObserver(obs);
 }
 
-std::string LogLineReader::GetString(off_t offset, size_t length) const {
-  CHECK(buffer_ != nullptr);
-  CHECK_GE(offset, 0);
-  CHECK_LE((offset + length), buffer_size_);
+std::string LogLineReader::GetString(
+    std::unique_ptr<FileMapReader::MappedBuffer> mapped_buffer,
+    uint64_t offset,
+    uint64_t length) const {
+  std::pair<const uint8_t*, size_t> buffer =
+      mapped_buffer->GetBuffer(offset, length);
 
-  return std::string(reinterpret_cast<const char*>(buffer_ + offset), length);
+  return std::string(reinterpret_cast<const char*>(buffer.first),
+                     buffer.second);
 }
 
 void LogLineReader::OnFileContentMaybeChanged() {
   CHECK(backend_mode_ == Backend::FILE_FOLLOW);
   CHECK(file_.IsValid());
 
-  int64_t file_size = file_.GetLength();
-  if (buffer_size_ != file_size) {
-    Remap();
+  // We didn't consider the case of content change without size change. It
+  // shouldn't happen with normal log files.
+
+  // Previous file size at (or shortly before) the previous mmap.
+  const int64_t previous_file_size = reader_->GetFileSize();
+  // Current file size read from the file system.
+  const int64_t current_file_size = file_.GetLength();
+
+  if (previous_file_size != current_file_size) {
+    reader_->ApplyFileSizeExpansion();
     for (Observer& obs : observers_)
       obs.OnFileChanged(this);
   }
