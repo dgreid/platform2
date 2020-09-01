@@ -231,6 +231,43 @@ void GenerateKeyPair(CK_SESSION_HANDLE session,
   }
 }
 
+void DestroyKeyPair(CK_SESSION_HANDLE session, const string& label) {
+  CK_BBOOL false_value = CK_FALSE;
+  CK_BBOOL true_value = CK_TRUE;
+  CK_ATTRIBUTE public_attributes[] = {
+      {CKA_PRIVATE, &false_value, sizeof(false_value)},
+      {CKA_ID, const_cast<char*>(kKeyID), strlen(kKeyID)},
+      {CKA_LABEL, const_cast<char*>(label.c_str()), label.length()},
+  };
+  CK_ATTRIBUTE private_attributes[] = {
+      {CKA_PRIVATE, &true_value, sizeof(true_value)},
+      {CKA_ID, const_cast<char*>(kKeyID), strlen(kKeyID)},
+      {CKA_LABEL, const_cast<char*>(label.c_str()), label.length()},
+  };
+  vector<CK_OBJECT_HANDLE> public_objects;
+  Find(session, public_attributes, base::size(public_attributes),
+       &public_objects);
+  vector<CK_OBJECT_HANDLE> private_objects;
+  Find(session, private_attributes, base::size(private_attributes),
+       &private_objects);
+  if (public_objects.size() != 0 || private_objects.size() != 0) {
+    LOG(INFO) << "No keypair.";
+    exit(-1);
+  }
+  for (size_t i = 0; i < public_objects.size(); ++i) {
+    CK_RV result = C_DestroyObject(session, public_objects[i]);
+    LOG(INFO) << "C_DestroyObject: " << chaps::CK_RVToString(result);
+    if (result != CKR_OK)
+      exit(-1);
+  }
+  for (size_t i = 0; i < private_objects.size(); ++i) {
+    CK_RV result = C_DestroyObject(session, private_objects[i]);
+    LOG(INFO) << "C_DestroyObject: " << chaps::CK_RVToString(result);
+    if (result != CKR_OK)
+      exit(-1);
+  }
+}
+
 // TODO(crbug/916023): use shared helper after isolate the OpenSSL functions
 // from session_impl.c
 string bn2bin(const BIGNUM* bn) {
@@ -1234,9 +1271,18 @@ int main(int argc, char** argv) {
   }
   if (vpn || wifi) {
     printf("Replay 1 of 2\n");
-    session = Login(slot, vpn, session);
+    // No need to login again if --generate flag is passed
+    // as it's already logged in for this session
+    if (!generate) {
+      session = Login(slot, vpn, session);
+      GenerateKeyPair(session, key_size_bits, label, false);
+    }
     Sign(session, label);
     PrintTicks(&start_ticks);
+    // Delete the temporary key pair to avoid piling up.
+    if (!generate) {
+      DestroyKeyPair(session, label);
+    }
     printf("Replay 2 of 2\n");
     CK_SESSION_HANDLE session2 = OpenSession(slot);
     session2 = Login(slot, vpn, session2);
