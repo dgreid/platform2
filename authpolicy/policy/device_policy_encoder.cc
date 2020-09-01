@@ -687,10 +687,19 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
         value.value());
   }
 
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<std::vector<std::string>> usb_detachable_allowlist_values =
+      EncodeStringList(key::kUsbDetachableAllowlist);
   if (base::Optional<std::vector<std::string>> values =
           EncodeStringList(key::kUsbDetachableWhitelist)) {
-    auto list = policy->mutable_usb_detachable_whitelist();
-    list->clear_id();
+    auto whitelist = policy->mutable_usb_detachable_whitelist();
+    auto allowlist = policy->mutable_usb_detachable_allowlist();
+    DCHECK(!whitelist->id_size());
+    if (!usb_detachable_allowlist_values) {
+      DCHECK(!allowlist->id_size());
+    }
     for (const std::string& value : values.value()) {
       std::string error;
       std::unique_ptr<base::DictionaryValue> dict_value =
@@ -705,17 +714,22 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
         continue;
       }
 
-      em::UsbDeviceIdProto* entry = list->add_id();
-      entry->set_vendor_id(vid);
-      entry->set_product_id(pid);
+      em::UsbDeviceIdProto* whitelist_entry = whitelist->add_id();
+      whitelist_entry->set_vendor_id(vid);
+      whitelist_entry->set_product_id(pid);
+
+      if (!usb_detachable_allowlist_values) {
+        em::UsbDeviceIdInclusiveProto* allowlist_entry = allowlist->add_id();
+        allowlist_entry->set_vendor_id(vid);
+        allowlist_entry->set_product_id(pid);
+      }
     }
   }
 
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kUsbDetachableAllowlist)) {
+  if (usb_detachable_allowlist_values) {
     auto list = policy->mutable_usb_detachable_allowlist();
-    list->clear_id();
-    for (const std::string& value : values.value()) {
+    DCHECK(!list->id_size());
+    for (const std::string& value : usb_detachable_allowlist_values.value()) {
       std::string error;
       std::unique_ptr<base::DictionaryValue> dict_value =
           JsonToDictionary(value, &error);

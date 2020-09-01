@@ -457,19 +457,26 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
                    {"{\"vendor_id\":123, \"product_id\":234}",
                     "{\"vendor_id\":345, \"product_id\":456}"});
   const auto& whitelist_proto = policy.usb_detachable_whitelist();
+  const auto& copied_allowlist_proto = policy.usb_detachable_allowlist();
   EXPECT_EQ(123, whitelist_proto.id().Get(0).vendor_id());
   EXPECT_EQ(234, whitelist_proto.id().Get(0).product_id());
   EXPECT_EQ(345, whitelist_proto.id().Get(1).vendor_id());
   EXPECT_EQ(456, whitelist_proto.id().Get(1).product_id());
+  // Whitelist values should have been copied to the allowlist proto
+  EXPECT_EQ(123, copied_allowlist_proto.id().Get(0).vendor_id());
+  EXPECT_EQ(234, copied_allowlist_proto.id().Get(0).product_id());
+  EXPECT_EQ(345, copied_allowlist_proto.id().Get(1).vendor_id());
+  EXPECT_EQ(456, copied_allowlist_proto.id().Get(1).product_id());
 
   EncodeStringList(&policy, key::kUsbDetachableAllowlist,
-                   {"{\"vendor_id\":123, \"product_id\":234}",
-                    "{\"vendor_id\":345, \"product_id\":456}"});
+                   {"{\"vendor_id\":1234, \"product_id\":2345}",
+                    "{\"vendor_id\":3456, \"product_id\":4567}"});
   const auto& allowlist_proto = policy.usb_detachable_allowlist();
-  EXPECT_EQ(123, allowlist_proto.id().Get(0).vendor_id());
-  EXPECT_EQ(234, allowlist_proto.id().Get(0).product_id());
-  EXPECT_EQ(345, allowlist_proto.id().Get(1).vendor_id());
-  EXPECT_EQ(456, allowlist_proto.id().Get(1).product_id());
+  EXPECT_EQ(1234, allowlist_proto.id().Get(0).vendor_id());
+  EXPECT_EQ(2345, allowlist_proto.id().Get(0).product_id());
+  EXPECT_EQ(3456, allowlist_proto.id().Get(1).vendor_id());
+  EXPECT_EQ(4567, allowlist_proto.id().Get(1).product_id());
+  EXPECT_FALSE(policy.has_usb_detachable_whitelist());
 
   EncodeBoolean(&policy, key::kDeviceQuirksDownloadEnabled, kBool);
   EXPECT_EQ(kBool, policy.quirks_download_enabled().quirks_download_enabled());
