@@ -6,6 +6,6 @@ authors = ["The Chromium OS Authors"]
 [dependencies]
 getopts = "0.2"
 libc = "0.2"
-libchromeos = "^0.1"
-p9 = "0.1.0"
+libchromeos = { path = "../../libchromeos-rs" } # provided by ebuild
+p9 = { path = "../p9" } # provided by ebuild
 log = "0.4"

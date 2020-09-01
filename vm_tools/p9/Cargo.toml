@@ -6,10 +6,7 @@ edition = "2018"
 
 [dependencies]
 libc = "*"
-wire_format_derive = "*"
+wire_format_derive = { path = "wire_format_derive", version = "*" }
 
 [features]
 trace = []
-
-[patch.crates-io]
-wire_format_derive = { path = "wire_format_derive" }
