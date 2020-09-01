@@ -18,12 +18,15 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#include <memory>
 #include <string>
 
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/logging.h>
+#include <base/memory/aligned_memory.h>
+#include <base/scoped_generic.h>
 #include <base/strings/string_number_conversions.h>
 #include <verity/dm-bht.h>
 #include <verity/dm-bht-userspace.h>
@@ -177,6 +180,17 @@ ssize_t WriteHash(const std::string& dev,
   }
 }
 
+struct ScopedDmBhtDestroyTraits {
+  static struct dm_bht* InvalidValue() { return nullptr; }
+  static void Free(struct dm_bht* bht) {
+    if (bht != nullptr) {
+      dm_bht_destroy(bht);
+    }
+  }
+};
+typedef base::ScopedGeneric<struct dm_bht*, ScopedDmBhtDestroyTraits>
+    ScopedDmBht;
+
 }  // namespace
 
 int chromeos_verity(const std::string& alg,
@@ -186,27 +200,19 @@ int chromeos_verity(const std::string& alg,
                     const std::string& salt,
                     const std::string& expected,
                     bool enforce_rootfs_verification) {
-  // Blocksize better be a power of two and fit into 1 MiB.
-  if (IO_BUF_SIZE % blocksize != 0) {
-    LOG(WARNING) << "blocksize % " << IO_BUF_SIZE << " != 0";
-    return -EINVAL;
-  }
-
-  // we don't need to call dm_bht_destroy after this because we're supplying
-  // our own buffer -- in fact calling it will trigger a bogus assert.
   int ret;
   struct dm_bht bht;
   if ((ret = dm_bht_create(&bht, fs_blocks, alg.c_str()))) {
-    LOG(WARNING) << "dm_bht_create failed: " << ret;
+    LOG(ERROR) << "dm_bht_create failed: " << ret;
     return ret;
   }
+  ScopedDmBht scoped_bht(&bht);
 
-  uint8_t* io_buffer;
-  ret = posix_memalign(reinterpret_cast<void**>(&io_buffer), blocksize,
-                       IO_BUF_SIZE);
-  if (ret != 0) {
-    LOG(WARNING) << "posix_memalign io_buffer failed: " << ret;
-    return ret;
+  std::unique_ptr<uint8_t, base::AlignedFreeDeleter> io_buffer(
+      static_cast<uint8_t*>(base::AlignedAlloc(IO_BUF_SIZE, blocksize)));
+  if (!io_buffer) {
+    PLOG(ERROR) << "aligned_alloc io_buffer failed";
+    return errno;
   }
 
   // We aren't going to do any automatic reading.
@@ -214,22 +220,19 @@ int chromeos_verity(const std::string& alg,
   dm_bht_set_salt(&bht, salt.c_str());
   size_t hash_size = dm_bht_sectors(&bht) << SECTOR_SHIFT;
 
-  uint8_t* hash_buffer;
-  ret = posix_memalign(reinterpret_cast<void**>(&hash_buffer), blocksize,
-                       hash_size);
-  if (ret != 0) {
-    LOG(WARNING) << "posix_memalign hash_buffer failed: " << ret;
-    free(io_buffer);
-    return ret;
+  std::unique_ptr<uint8_t, base::AlignedFreeDeleter> hash_buffer(
+      static_cast<uint8_t*>(base::AlignedAlloc(hash_size, blocksize)));
+  if (!hash_buffer) {
+    PLOG(ERROR) << "aligned_alloc hash_buffer failed";
+    return errno;
   }
-  memset(hash_buffer, 0, hash_size);
-  dm_bht_set_buffer(&bht, hash_buffer);
+
+  memset(hash_buffer.get(), 0, hash_size);
+  dm_bht_set_buffer(&bht, hash_buffer.get());
 
   base::ScopedFD fd(open(device.c_str(), O_RDONLY | O_CLOEXEC));
   if (!fd.is_valid()) {
-    PLOG(WARNING) << "error opening " << device;
-    free(io_buffer);
-    free(hash_buffer);
+    PLOG(ERROR) << "error opening " << device;
     return errno;
   }
 
@@ -243,32 +246,27 @@ int chromeos_verity(const std::string& alg,
       count = IO_BUF_SIZE;
 
     // TODO(ahassani): Make this robust against partial reads.
-    readb = pread(fd.get(), io_buffer, count, cur_block * blocksize);
+    readb = pread(fd.get(), io_buffer.get(), count, cur_block * blocksize);
     if (readb < 0) {
-      PLOG(WARNING) << "read returned error";
-      free(io_buffer);
-      free(hash_buffer);
+      PLOG(ERROR) << "read returned error";
       return errno;
     }
 
     for (i = 0; i < (count / blocksize); i++) {
-      ret = dm_bht_store_block(&bht, cur_block, io_buffer + (i * blocksize));
+      ret = dm_bht_store_block(&bht, cur_block,
+                               io_buffer.get() + (i * blocksize));
       if (ret) {
-        LOG(WARNING) << "dm_bht_store_block returned error: " << ret;
-        free(io_buffer);
-        free(hash_buffer);
+        LOG(ERROR) << "dm_bht_store_block returned error: " << ret;
         return ret;
       }
       cur_block++;
     }
   }
-  free(io_buffer);
+  io_buffer.reset();
   fd.reset();
 
-  ret = dm_bht_compute(&bht);
-  if (ret) {
-    LOG(WARNING) << "dm_bht_compute returned error: " << ret;
-    free(hash_buffer);
+  if ((ret = dm_bht_compute(&bht))) {
+    LOG(ERROR) << "dm_bht_compute returned error: " << ret;
     return ret;
   }
 
@@ -280,22 +278,19 @@ int chromeos_verity(const std::string& alg,
     LOG(ERROR) << "Expected " << expected << " != actual "
                << reinterpret_cast<char*>(digest);
     if (enforce_rootfs_verification) {
-      free(hash_buffer);
       return -1;
     } else {
-      LOG(INFO) << "Verified Boot not enabled; ignoring";
+      LOG(INFO) << "Verified Boot not enabled; ignoring.";
     }
   }
 
   ssize_t written =
-      WriteHash(device, hash_buffer, hash_size, cur_block * blocksize);
+      WriteHash(device, hash_buffer.get(), hash_size, cur_block * blocksize);
   if (written < static_cast<ssize_t>(hash_size)) {
     PLOG(ERROR) << "Writing out hash failed: written" << written
                 << ", expected %d" << hash_size;
-    free(hash_buffer);
     return errno;
   }
-  free(hash_buffer);
 
   return 0;
 }
