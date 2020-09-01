@@ -274,24 +274,21 @@ class CryptoLib {
                                   const brillo::SecureBlob& salt,
                                   std::vector<brillo::SecureBlob*> gen_secrets);
 
-  // This wraps the |crypto_scrypt| function so that it always called
-  // |malloc_trim| after to free the used heap space.
-  //
   // |passkey| - The User Passkey, from which to derive the secrets.
   // |salt| - The salt used when deriving the secrets.
-  // |work_factor| - The work factor passed to crypto_scrypt.
-  // |block_size| - The block size passed to crypto_scrypt.
-  // |parallel_factor| - The parallel factor passed to crypto_scrypt.
+  // |work_factor| - The work factor passed to scrypt.
+  // |block_size| - The block size passed to scrypt.
+  // |parallel_factor| - The parallel factor passed to scrypt.
   // |result| - The blob, allocated by the caller to the correct size,
   //            containing the result secret.
   //
-  //  Returns 0 on success.
-  static int Scrypt(const brillo::SecureBlob& passkey,
-                    const brillo::SecureBlob& salt,
-                    int work_factor,
-                    int block_size,
-                    int parallel_factor,
-                    brillo::SecureBlob* result);
+  //  Returns true on success.
+  static bool Scrypt(const brillo::SecureBlob& passkey,
+                     const brillo::SecureBlob& salt,
+                     int work_factor,
+                     int block_size,
+                     int parallel_factor,
+                     brillo::SecureBlob* result);
 
   // Encrypt a provided blob using libscrypt, which sets up a header, derives
   // the keys, encrypts, and HMACs.

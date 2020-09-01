@@ -23,9 +23,6 @@
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <brillo/secure_blob.h>
-extern "C" {
-#include <scrypt/scryptenc.h>
-}
 
 #include "cryptohome/attestation.pb.h"
 #include "cryptohome/challenge_credential_auth_block.h"
@@ -302,9 +299,8 @@ bool Crypto::PasskeyToTokenAuthData(const brillo::SecureBlob& passkey,
 
   SecureBlob local_auth_data;
   local_auth_data.resize(kAuthDataSizeBytes);
-  if (0 != CryptoLib::Scrypt(passkey, salt, kScryptParameterN,
-                             kScryptParameterR, kScryptParameterP,
-                             &local_auth_data)) {
+  if (!CryptoLib::Scrypt(passkey, salt, kScryptParameterN, kScryptParameterR,
+                         kScryptParameterP, &local_auth_data)) {
     LOG(ERROR) << "Scrypt key derivation failed.";
     return false;
   }

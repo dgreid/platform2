@@ -62,7 +62,6 @@ executable("cryptohome") {
     "keyutils",
     "policy",
     "pthread",
-    "scrypt",
   ]
   deps = [
     "libs:cryptohome-dbus-client",
@@ -113,7 +112,6 @@ executable("cryptohomed") {
     "keyutils",
     "policy",
     "pthread",
-    "scrypt",
   ]
   deps = [
     "libs:libcrostpm",
@@ -311,10 +309,7 @@ executable("tpm-manager") {
   if (use.tpm2) {
     libs += [ "trunks" ]
   } else {
-    libs += [
-      "chaps",
-      "scrypt",
-    ]
+    libs += [ "chaps" ]
     pkg_deps += [ "vboot_host" ]
   }
 }
@@ -479,7 +474,6 @@ if (use.test) {
       "keyutils",
       "policy",
       "pthread",
-      "scrypt",
     ]
     deps = [
       "libs:bootlockbox-client-headers",
@@ -651,7 +645,6 @@ if (use.tpm2) {
     ]
     defines = [ "USE_TPM2=${use.tpm2}" ]
     libs = [
-      "scrypt",
       "chaps",
       "keyutils",
       "tpm_manager",
@@ -689,7 +682,6 @@ if (use.fuzzer) {
       "fuzzers/cryptolib_rsa_oaep_decrypt_fuzzer.cc",
     ]
     deps = [ "libs:libcrosplatform" ]
-    libs = [ "scrypt" ]
     pkg_deps = [
       "libbrillo",
       "libchrome-${libbase_ver}",
@@ -721,6 +713,5 @@ if (use.fuzzer) {
     configs += [ "//common-mk/common_fuzzer" ]
     sources = [ "fuzzers/cryptolib_blob_to_hex_fuzzer.cc" ]
     deps = [ "libs:libcrosplatform" ]
-    libs = [ "scrypt" ]
   }
 }

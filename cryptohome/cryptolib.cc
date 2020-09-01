@@ -12,6 +12,7 @@
 #include <openssl/err.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
+#include <openssl/kdf.h>
 #include <openssl/rand.h>
 #include <openssl/sha.h>
 #include <unistd.h>
@@ -23,10 +24,6 @@
 #include <brillo/secure_blob.h>
 #include <crypto/libcrypto-compat.h>
 #include <crypto/scoped_openssl_types.h>
-extern "C" {
-#include <scrypt/crypto_scrypt.h>
-#include <scrypt/scryptenc.h>
-}
 
 #include "cryptohome/libscrypt_compat.h"
 #include "cryptohome/platform.h"
@@ -1059,9 +1056,9 @@ bool CryptoLib::DeriveSecretsScrypt(
   }
 
   SecureBlob generated(total_len);
-  if (Scrypt(passkey, salt, kDefaultScryptParams.n_factor,
-             kDefaultScryptParams.r_factor, kDefaultScryptParams.p_factor,
-             &generated)) {
+  if (!Scrypt(passkey, salt, kDefaultScryptParams.n_factor,
+              kDefaultScryptParams.r_factor, kDefaultScryptParams.p_factor,
+              &generated)) {
     LOG(ERROR) << "Failed to derive scrypt keys from passkey.";
     return false;
   }
@@ -1076,21 +1073,30 @@ bool CryptoLib::DeriveSecretsScrypt(
 }
 
 // static
-int CryptoLib::Scrypt(const brillo::SecureBlob& passkey,
-                      const brillo::SecureBlob& salt,
-                      int work_factor,
-                      int block_size,
-                      int parallel_factor,
-                      brillo::SecureBlob* result) {
-  int rc = crypto_scrypt(passkey.data(), passkey.size(), salt.data(),
-                         salt.size(), work_factor, block_size, parallel_factor,
-                         result->data(), result->size());
+bool CryptoLib::Scrypt(const brillo::SecureBlob& input,
+                       const brillo::SecureBlob& salt,
+                       int work_factor,
+                       int block_size,
+                       int parallel_factor,
+                       brillo::SecureBlob* result) {
+  crypto::ScopedEVP_PKEY_CTX pctx(EVP_PKEY_CTX_new_id(EVP_PKEY_SCRYPT, NULL));
+  if (EVP_PKEY_derive_init(pctx.get()) <= 0)
+    return false;
+  if (EVP_PKEY_CTX_set1_pbe_pass(pctx.get(), input.data(), input.size()) <= 0)
+    return false;
+  if (EVP_PKEY_CTX_set1_scrypt_salt(pctx.get(), salt.data(), salt.size()) <= 0)
+    return false;
+  if (EVP_PKEY_CTX_set_scrypt_N(pctx.get(), work_factor) <= 0)
+    return false;
+  if (EVP_PKEY_CTX_set_scrypt_r(pctx.get(), block_size) <= 0)
+    return false;
+  if (EVP_PKEY_CTX_set_scrypt_p(pctx.get(), parallel_factor) <= 0)
+    return false;
 
-  // Release unused heap space after crypto_scrypt.
-  // See crbug.com/899065 for details.
-  malloc_trim(0);
+  size_t outlen = result->size();
+  int rc = EVP_PKEY_derive(pctx.get(), result->data(), &outlen);
 
-  return rc;
+  return rc > 0 && outlen == result->size();
 }
 
 // static
@@ -1102,10 +1108,9 @@ bool CryptoLib::EncryptScryptBlob(const brillo::SecureBlob& blob,
   brillo::SecureBlob salt =
       CryptoLib::CreateSecureRandomBlob(kLibScryptSaltSize);
   brillo::SecureBlob derived_key(kLibScryptDerivedKeySize, '0');
-  // TODO(kerrnel): switch this to OpenSSL once the 1.1.1 uprev is complete.
-  if (Scrypt(key_source, salt, gScryptParams.n_factor, gScryptParams.r_factor,
-             gScryptParams.p_factor, &derived_key) != 0) {
-    LOG(ERROR) << "Failed to derive key with crypto_scrypt.";
+  if (!Scrypt(key_source, salt, gScryptParams.n_factor, gScryptParams.r_factor,
+              gScryptParams.p_factor, &derived_key) != 0) {
+    LOG(ERROR) << "Failed to derive key with scrypt.";
     return false;
   }
 
@@ -1135,9 +1140,9 @@ bool CryptoLib::DecryptScryptBlob(const brillo::SecureBlob& wrapped_blob,
 
   // Generate the derived key.
   brillo::SecureBlob derived_key(kLibScryptDerivedKeySize, 0);
-  if (Scrypt(key, salt, params.n_factor, params.r_factor, params.p_factor,
-             &derived_key) != 0) {
-    LOG(ERROR) << "crypto_scrypt failed";
+  if (!Scrypt(key, salt, params.n_factor, params.r_factor, params.p_factor,
+              &derived_key)) {
+    LOG(ERROR) << "scrypt failed";
     return false;
   }
 

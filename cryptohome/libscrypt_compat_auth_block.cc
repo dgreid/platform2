@@ -29,9 +29,9 @@ bool ParseHeaderAndDerive(const brillo::SecureBlob& wrapped_blob,
 
   // Generate the derived key.
   derived_key->resize(kLibScryptDerivedKeySize);
-  if (CryptoLib::Scrypt(input_key, salt, params.n_factor, params.r_factor,
-                        params.p_factor, derived_key) != 0) {
-    LOG(ERROR) << "crypto_scrypt failed";
+  if (!CryptoLib::Scrypt(input_key, salt, params.n_factor, params.r_factor,
+                         params.p_factor, derived_key)) {
+    LOG(ERROR) << "scrypt failed";
     PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
     return false;
   }

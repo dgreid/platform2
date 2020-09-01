@@ -196,7 +196,6 @@ static_library("libcrostpm") {
   libs = [
     "chaps",
     "tpm_manager",
-    "scrypt",
   ]
   all_dependent_configs = [ ":libcrostpm_dependent_config" ]
 
