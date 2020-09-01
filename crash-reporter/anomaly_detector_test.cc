@@ -38,10 +38,6 @@ const ParserRun empty{.expected_size = 0};
 TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacUmac) {
   ParserRun wifi_error = {
       .expected_text =
-          "[15883.337270] iwlwifi 0000:00:0c.0: Microcode SW error detected. "
-          "Restarting 0x0.\n"
-          "[15883.337346] iwlwifi 0000:00:0c.0: Start IWL Error Log Dump:\n"
-          "[15883.337349] iwlwifi 0000:00:0c.0: Status: 0x00000100, count: 6\n"
           "[15883.337352] iwlwifi 0000:00:0c.0: Loaded firmware version: "
           "46.b20aefee.0\n"
           "[15883.337355] iwlwifi 0000:00:0c.0: 0x00000084 | "
@@ -108,10 +104,6 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacUmac) {
 TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacTwoSpace) {
   ParserRun wifi_error = {
       .expected_text =
-          "[79553.430686] iwlwifi 0000:02:00.0: Microcode SW error detected.  "
-          "Restarting 0x2000000.\n"
-          "[79553.430913] iwlwifi 0000:02:00.0: Start IWL Error Log Dump:\n"
-          "[79553.430919] iwlwifi 0000:02:00.0: Status: 0x00000040, count: 6\n"
           "[79553.430924] iwlwifi 0000:02:00.0: Loaded firmware version: "
           "29.116a852a.0 7265D-29.ucode\n"
           "[79553.430930] iwlwifi 0000:02:00.0: 0x00000084 | "
@@ -156,13 +148,85 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacTwoSpace) {
   ParserTest<KernelParser>("TEST_IWLWIFI_LMAC_TWO_SPACE", {wifi_error});
 }
 
+TEST(AnomalyDetectorTest, KernelIwlwifiErrorSending) {
+  ParserRun wifi_error = {
+      .expected_text =
+          "0000:01:00.0: Loaded firmware version: 17.bfb58538.0 7260-17.ucode\n"
+          "2020-09-01T11:03:11.221401-07:00 ERR kernel: [ 2448.183344] iwlwifi "
+          "0000:01:00.0: 0x00000000 | ADVANCED_SYSASSERT\n"
+          "2020-09-01T11:03:11.221407-07:00 ERR kernel: [ 2448.183349] iwlwifi "
+          "0000:01:00.0: 0x00000000 | trm_hw_status0\n"
+          "2020-09-01T11:03:11.221409-07:00 ERR kernel: [ 2448.183353] iwlwifi "
+          "0000:01:00.0: 0x00000000 | trm_hw_status1\n"
+          "2020-09-01T11:03:11.221412-07:00 ERR kernel: [ 2448.183357] iwlwifi "
+          "0000:01:00.0: 0x00000000 | branchlink2\n"
+          "2020-09-01T11:03:11.221415-07:00 ERR kernel: [ 2448.183361] iwlwifi "
+          "0000:01:00.0: 0x00000000 | interruptlink1\n"
+          "2020-09-01T11:03:11.221417-07:00 ERR kernel: [ 2448.183365] iwlwifi "
+          "0000:01:00.0: 0x00000000 | interruptlink2\n"
+          "2020-09-01T11:03:11.221420-07:00 ERR kernel: [ 2448.183368] iwlwifi "
+          "0000:01:00.0: 0x00000000 | data1\n"
+          "2020-09-01T11:03:11.221422-07:00 ERR kernel: [ 2448.183372] iwlwifi "
+          "0000:01:00.0: 0x00000000 | data2\n"
+          "2020-09-01T11:03:11.221425-07:00 ERR kernel: [ 2448.183376] iwlwifi "
+          "0000:01:00.0: 0x00000000 | data3\n"
+          "2020-09-01T11:03:11.221427-07:00 ERR kernel: [ 2448.183380] iwlwifi "
+          "0000:01:00.0: 0x00000000 | beacon time\n"
+          "2020-09-01T11:03:11.221429-07:00 ERR kernel: [ 2448.183384] iwlwifi "
+          "0000:01:00.0: 0x00000000 | tsf low\n"
+          "2020-09-01T11:03:11.221432-07:00 ERR kernel: [ 2448.183388] iwlwifi "
+          "0000:01:00.0: 0x00000000 | tsf hi\n"
+          "2020-09-01T11:03:11.221434-07:00 ERR kernel: [ 2448.183392] iwlwifi "
+          "0000:01:00.0: 0x00000000 | time gp1\n"
+          "2020-09-01T11:03:11.221436-07:00 ERR kernel: [ 2448.183396] iwlwifi "
+          "0000:01:00.0: 0x00000000 | time gp2\n"
+          "2020-09-01T11:03:11.221438-07:00 ERR kernel: [ 2448.183400] iwlwifi "
+          "0000:01:00.0: 0x00000000 | uCode revision type\n"
+          "2020-09-01T11:03:11.221440-07:00 ERR kernel: [ 2448.183404] iwlwifi "
+          "0000:01:00.0: 0x00000000 | uCode version major\n"
+          "2020-09-01T11:03:11.221443-07:00 ERR kernel: [ 2448.183408] iwlwifi "
+          "0000:01:00.0: 0x00000000 | uCode version minor\n"
+          "2020-09-01T11:03:11.221445-07:00 ERR kernel: [ 2448.183412] iwlwifi "
+          "0000:01:00.0: 0x00000000 | hw version\n"
+          "2020-09-01T11:03:11.221447-07:00 ERR kernel: [ 2448.183416] iwlwifi "
+          "0000:01:00.0: 0x00000000 | board version\n"
+          "2020-09-01T11:03:11.221449-07:00 ERR kernel: [ 2448.183419] iwlwifi "
+          "0000:01:00.0: 0x00000000 | hcmd\n"
+          "2020-09-01T11:03:11.221451-07:00 ERR kernel: [ 2448.183423] iwlwifi "
+          "0000:01:00.0: 0x00000000 | isr0\n"
+          "2020-09-01T11:03:11.221453-07:00 ERR kernel: [ 2448.183427] iwlwifi "
+          "0000:01:00.0: 0x00000000 | isr1\n"
+          "2020-09-01T11:03:11.221455-07:00 ERR kernel: [ 2448.183431] iwlwifi "
+          "0000:01:00.0: 0x00000000 | isr2\n"
+          "2020-09-01T11:03:11.221457-07:00 ERR kernel: [ 2448.183435] iwlwifi "
+          "0000:01:00.0: 0x00000000 | isr3\n"
+          "2020-09-01T11:03:11.221459-07:00 ERR kernel: [ 2448.183439] iwlwifi "
+          "0000:01:00.0: 0x00000000 | isr4\n"
+          "2020-09-01T11:03:11.221461-07:00 ERR kernel: [ 2448.183442] iwlwifi "
+          "0000:01:00.0: 0x00000000 | last cmd Id\n"
+          "2020-09-01T11:03:11.221464-07:00 ERR kernel: [ 2448.183446] iwlwifi "
+          "0000:01:00.0: 0x00000000 | wait_event\n"
+          "2020-09-01T11:03:11.221466-07:00 ERR kernel: [ 2448.183450] iwlwifi "
+          "0000:01:00.0: 0x00000000 | l2p_control\n"
+          "2020-09-01T11:03:11.221468-07:00 ERR kernel: [ 2448.183454] iwlwifi "
+          "0000:01:00.0: 0x00000000 | l2p_duration\n"
+          "2020-09-01T11:03:11.221470-07:00 ERR kernel: [ 2448.183458] iwlwifi "
+          "0000:01:00.0: 0x00000000 | l2p_mhvalid\n"
+          "2020-09-01T11:03:11.221472-07:00 ERR kernel: [ 2448.183461] iwlwifi "
+          "0000:01:00.0: 0x00000000 | l2p_addr_match\n"
+          "2020-09-01T11:03:11.221474-07:00 ERR kernel: [ 2448.183465] iwlwifi "
+          "0000:01:00.0: 0x00000000 | lmpm_pmg_sel\n"
+          "2020-09-01T11:03:11.221475-07:00 ERR kernel: [ 2448.183469] iwlwifi "
+          "0000:01:00.0: 0x00000000 | timestamp\n"
+          "2020-09-01T11:03:11.221478-07:00 ERR kernel: [ 2448.183473] iwlwifi "
+          "0000:01:00.0: 0x00000000 | flow_handler\n",
+      .expected_flags = {{"--kernel_iwlwifi_error"}}};
+  ParserTest<KernelParser>("TEST_IWLWIFI_ERROR_SENDING", {wifi_error});
+}
+
 TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmac) {
   ParserRun wifi_error = {
       .expected_text =
-          "[15883.337270] iwlwifi 0000:00:0c.0: Microcode SW error detected. "
-          "Restarting 0x0.\n"
-          "[15883.337346] iwlwifi 0000:00:0c.0: Start IWL Error Log Dump:\n"
-          "[15883.337349] iwlwifi 0000:00:0c.0: Status: 0x00000100, count: 6\n"
           "[15883.337352] iwlwifi 0000:00:0c.0: Loaded firmware version: "
           "46.b20aefee.0\n"
           "[15883.337355] iwlwifi 0000:00:0c.0: 0x00000084 | "
