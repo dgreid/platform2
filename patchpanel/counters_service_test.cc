@@ -5,6 +5,7 @@
 #include "patchpanel/counters_service.h"
 
 #include <memory>
+#include <net/if.h>
 #include <string>
 #include <vector>
 
@@ -19,9 +20,12 @@ namespace patchpanel {
 using ::testing::ContainerEq;
 using ::testing::Contains;
 using ::testing::DoAll;
+using ::testing::Each;
 using ::testing::ElementsAreArray;
+using ::testing::Lt;
 using ::testing::Return;
 using ::testing::SetArgPointee;
+using ::testing::SizeIs;
 
 using Counter = CountersService::Counter;
 using SourceDevice = CountersService::SourceDevice;
@@ -229,6 +233,30 @@ TEST_F(CountersServiceTest, OnSameDeviceAppearAgain) {
   EXPECT_CALL(runner_, ip6tables(_, Contains("-N"), _, _)).Times(AnyNumber());
 
   std::vector<dbus::ObjectPath> devices = {dbus::ObjectPath("/device/eth0")};
+  fake_shill_client_->NotifyManagerPropertyChange(shill::kDevicesProperty,
+                                                  brillo::Any(devices));
+}
+
+TEST_F(CountersServiceTest, ChainNameLength) {
+  // Makes the check commands return 1 (not found).
+  EXPECT_CALL(runner_, iptables(_, Contains("-C"), _, _))
+      .WillRepeatedly(Return(1));
+  EXPECT_CALL(runner_, ip6tables(_, Contains("-C"), _, _))
+      .WillRepeatedly(Return(1));
+
+  // The name of a new chain must be shorter than 29 characters, otherwise
+  // iptables will reject the request. Uses Each() here for simplicity since no
+  // other params could be longer than 29 for now.
+  static constexpr int kMaxChainNameLength = 29;
+  EXPECT_CALL(runner_, iptables(_, Each(SizeIs(Lt(kMaxChainNameLength))), _, _))
+      .Times(AnyNumber());
+  EXPECT_CALL(runner_,
+              ip6tables(_, Each(SizeIs(Lt(kMaxChainNameLength))), _, _))
+      .Times(AnyNumber());
+
+  static const std::string kLongInterfaceName(IFNAMSIZ, 'a');
+  std::vector<dbus::ObjectPath> devices = {
+      dbus::ObjectPath("/device/" + kLongInterfaceName)};
   fake_shill_client_->NotifyManagerPropertyChange(shill::kDevicesProperty,
                                                   brillo::Any(devices));
 }
