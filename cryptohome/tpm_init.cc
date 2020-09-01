@@ -15,8 +15,9 @@
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
 
+#include "cryptohome/cryptohome_metrics.h"
 #include "cryptohome/cryptolib.h"
-#include "cryptohome/interface.h"
+#include "cryptohome/platform.h"
 
 using base::FilePath;
 using base::PlatformThread;
