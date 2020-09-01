@@ -348,9 +348,10 @@ const std::vector<Log> kCommandLogs {
 };
 // clang-format on
 
-// netstat and logcat should appear in chrome://system but not in feedback
-// reports.  Open sockets may have privacy implications, and logcat is
-// already incorporated via arc-bugreport.
+// Extra logs are logs such as netstat and logcat which should appear in
+// chrome://system but not in feedback reports.  Open sockets may have privacy
+// implications, and logcat is already incorporated via arc-bugreport.
+//
 // clang-format off
 const std::vector<Log> kExtraLogs {
 #if USE_CELLULAR
