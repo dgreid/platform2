@@ -335,20 +335,30 @@ bool DevicePolicyService::PolicyAllowsNewUsers(
       !polval.ParseFromString(poldata.policy_value())) {
     return false;
   }
+  // TODO(crbug.com/1103816) - remove whitelist support when no longer supported
+  // by DMServer.
+  bool has_whitelist_only =
+      polval.has_user_whitelist() && !polval.has_user_allowlist();
+  bool has_allowlist = has_whitelist_only || polval.has_user_allowlist();
+  // Use the allowlist proto by default, and only look at the whitelist proto
+  // iff there are no values set for the allowlist proto.
+  bool non_empty_allowlist =
+      has_whitelist_only ? (polval.has_user_whitelist() &&
+                            polval.user_whitelist().user_whitelist_size() > 0)
+                         : (polval.has_user_allowlist() &&
+                            polval.user_allowlist().user_allowlist_size() > 0);
   // Explicitly states that new users are allowed.
   bool explicitly_allowed = (polval.has_allow_new_users() &&
                              polval.allow_new_users().allow_new_users());
   // Doesn't state that new users are allowed, but also doesn't have a
-  // non-empty whitelist.
-  bool not_disallowed = !polval.has_allow_new_users() &&
-                        !(polval.has_user_whitelist() &&
-                          polval.user_whitelist().user_whitelist_size() > 0);
+  // non-empty whitelist or allowlist.
+  bool not_disallowed = !polval.has_allow_new_users() && !non_empty_allowlist;
   // States that new users are not allowed, but doesn't specify a whitelist.
   // So, we fail open. Such policies are the result of a long-fixed bug, but
   // we're not certain all users ever got migrated.
   bool failed_open = polval.has_allow_new_users() &&
                      !polval.allow_new_users().allow_new_users() &&
-                     !polval.has_user_whitelist();
+                     !has_allowlist;
 
   return explicitly_allowed || not_disallowed || failed_open;
 }
@@ -383,15 +393,21 @@ bool DevicePolicyService::StoreOwnerProperties(const std::string& current_user,
   } else {
     poldata.set_policy_type(kDevicePolicyType);
   }
+
+  // TODO(crbug.com/1103816) - remove whitelist support when no longer supported
+  // by DMServer.
+  bool has_whitelist_only =
+      polval.has_user_whitelist() && !polval.has_user_allowlist();
   // If there existed some device policy, we've got it now!
   // Update the UserWhitelistProto inside the ChromeDeviceSettingsProto we made.
-  em::UserWhitelistProto* whitelist_proto = polval.mutable_user_whitelist();
   bool on_list = false;
-  const RepeatedPtrField<std::string>& whitelist =
-      whitelist_proto->user_whitelist();
-  for (RepeatedPtrField<std::string>::const_iterator it = whitelist.begin();
-       it != whitelist.end(); ++it) {
-    if (current_user == *it) {
+  RepeatedPtrField<std::string>* allowlist =
+      has_whitelist_only
+          ? polval.mutable_user_whitelist()->mutable_user_whitelist()
+          : polval.mutable_user_allowlist()->mutable_user_allowlist();
+
+  for (const auto& user : *allowlist) {
+    if (current_user == user) {
       on_list = true;
       break;
     }
@@ -401,9 +417,9 @@ bool DevicePolicyService::StoreOwnerProperties(const std::string& current_user,
     return true;  // No changes are needed.
   }
   if (!on_list) {
-    // Add owner to the whitelist and turn off whitelist enforcement if it is
+    // Add owner to the allowlist and turn off allowlist enforcement if it is
     // currently not explicitly turned on or off.
-    whitelist_proto->add_user_whitelist(current_user);
+    allowlist->Add(std::string(current_user));
     if (!polval.has_allow_new_users())
       polval.mutable_allow_new_users()->set_allow_new_users(true);
   }

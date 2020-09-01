@@ -487,7 +487,7 @@ TEST_F(DevicePolicyServiceTest, CheckAndHandleOwnerLogin_MitigationFailure) {
   EXPECT_EQ(dbus_error::kPubkeySetIllegal, error->GetCode());
 }
 
-TEST_F(DevicePolicyServiceTest, PolicyAllowsNewUsers) {
+TEST_F(DevicePolicyServiceTest, PolicyAllowsNewUsersWhitelist) {
   em::ChromeDeviceSettingsProto allowed;
   allowed.mutable_allow_new_users()->set_allow_new_users(true);
   EXPECT_TRUE(PolicyAllowsNewUsers(allowed));
@@ -514,6 +514,36 @@ TEST_F(DevicePolicyServiceTest, PolicyAllowsNewUsers) {
 
   em::ChromeDeviceSettingsProto implicitly_disallowed = not_disallowed;
   implicitly_disallowed.mutable_user_whitelist()->add_user_whitelist("a@b");
+  EXPECT_FALSE(PolicyAllowsNewUsers(implicitly_disallowed));
+}
+
+TEST_F(DevicePolicyServiceTest, PolicyAllowsNewUsersAllowlist) {
+  em::ChromeDeviceSettingsProto allowed;
+  allowed.mutable_allow_new_users()->set_allow_new_users(true);
+  EXPECT_TRUE(PolicyAllowsNewUsers(allowed));
+
+  allowed.mutable_user_allowlist();
+  EXPECT_TRUE(PolicyAllowsNewUsers(allowed));
+
+  allowed.mutable_user_allowlist()->add_user_allowlist("a@b");
+  EXPECT_TRUE(PolicyAllowsNewUsers(allowed));
+
+  em::ChromeDeviceSettingsProto broken;
+  broken.mutable_allow_new_users()->set_allow_new_users(false);
+  EXPECT_TRUE(PolicyAllowsNewUsers(broken));
+
+  em::ChromeDeviceSettingsProto disallowed = broken;
+  disallowed.mutable_user_allowlist();
+  disallowed.mutable_user_allowlist()->add_user_allowlist("a@b");
+  EXPECT_FALSE(PolicyAllowsNewUsers(disallowed));
+
+  em::ChromeDeviceSettingsProto not_disallowed;
+  EXPECT_TRUE(PolicyAllowsNewUsers(not_disallowed));
+  not_disallowed.mutable_user_allowlist();
+  EXPECT_TRUE(PolicyAllowsNewUsers(not_disallowed));
+
+  em::ChromeDeviceSettingsProto implicitly_disallowed = not_disallowed;
+  implicitly_disallowed.mutable_user_allowlist()->add_user_allowlist("a@b");
   EXPECT_FALSE(PolicyAllowsNewUsers(implicitly_disallowed));
 }
 
@@ -614,12 +644,38 @@ TEST_F(DevicePolicyServiceTest, ValidateAndStoreOwnerKey_FailedMitigating) {
   ExpectNoPersistKeyAndPolicy();
 }
 
-TEST_F(DevicePolicyServiceTest, ValidateAndStoreOwnerKey_SuccessAddOwner) {
+TEST_F(DevicePolicyServiceTest,
+       ValidateAndStoreOwnerKey_SuccessAddOwnerWhitelist) {
   KeyCheckUtil nss;
   InitService(&nss, true);
   em::ChromeDeviceSettingsProto settings;
   settings.mutable_user_whitelist()->add_user_whitelist("a@b");
   settings.mutable_user_whitelist()->add_user_whitelist("c@d");
+  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
+
+  ExpectMitigating(false);
+
+  Sequence s;
+  ExpectGetPolicy(s, policy_proto_);
+  EXPECT_CALL(key_, PopulateFromBuffer(fake_key_))
+      .InSequence(s)
+      .WillOnce(Return(true));
+  EXPECT_CALL(*store_, Set(ProtoEq(em::PolicyFetchResponse())));
+  ExpectInstallNewOwnerPolicy(s, &nss);
+  SetDefaultSettings();
+
+  service_->ValidateAndStoreOwnerKey(owner_, fake_key_, nss.GetDescriptor());
+
+  ExpectPersistKeyAndPolicy(true);
+}
+
+TEST_F(DevicePolicyServiceTest,
+       ValidateAndStoreOwnerKey_SuccessAddOwnerAllowlist) {
+  KeyCheckUtil nss;
+  InitService(&nss, true);
+  em::ChromeDeviceSettingsProto settings;
+  settings.mutable_user_allowlist()->add_user_allowlist("a@b");
+  settings.mutable_user_allowlist()->add_user_allowlist("c@d");
   ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
 
   ExpectMitigating(false);
