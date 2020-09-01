@@ -10,8 +10,8 @@
 #include <gtest/gtest.h>
 
 #include <base/compiler_specific.h>
-#include <base/message_loop/message_loop.h>
 #include <base/stl_util.h>
+#include <base/test/task_environment.h>
 
 #include "mtpd/device_event_delegate.h"
 
@@ -24,7 +24,8 @@ class DeviceManagerTest : public testing::Test {
 
  private:
   // DeviceManager needs the current thread to have a task runner.
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 
   DISALLOW_COPY_AND_ASSIGN(DeviceManagerTest);
 };
