@@ -16,6 +16,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <components/policy/core/common/registry_dict.h>
 #include <dbus/shill/dbus-constants.h>
+#include <google/protobuf/repeated_field.h>
 
 #include "bindings/chrome_device_policy.pb.h"
 #include "bindings/policy_constants.h"
@@ -23,6 +24,7 @@
 namespace em = enterprise_management;
 
 namespace policy {
+using ::google::protobuf::RepeatedPtrField;
 
 // Types must be defined in order of definition in
 // AutoUpdateSettingsProto_ConnectionType for the static_assert to work as
@@ -153,6 +155,25 @@ bool EncodeWeeklyTimeIntervalProto(const base::Value& value,
          EncodeWeeklyTimeProto(*end, proto->mutable_end());
 }
 
+void CopyStringListPolicy(const std::vector<std::string>& list,
+                          RepeatedPtrField<std::string>* proto_list) {
+  *proto_list = {list.begin(), list.end()};
+}
+
+// Copies either `new_list` (preferred) or `old_list` to the specified
+// proto_list. At least one of new_list or old_list must have a value.
+void CopyStringListPolicyWithFallback(
+    const base::Optional<std::vector<std::string>>& new_list,
+    const base::Optional<std::vector<std::string>>& old_list,
+    RepeatedPtrField<std::string>* proto_list) {
+  if (new_list) {
+    CopyStringListPolicy(new_list.value(), proto_list);
+  } else {
+    DCHECK(old_list);
+    CopyStringListPolicy(old_list.value(), proto_list);
+  }
+}
+
 }  // namespace
 
 DevicePolicyEncoder::DevicePolicyEncoder(const RegistryDict* dict,
@@ -189,15 +210,22 @@ void DevicePolicyEncoder::EncodeLoginPolicies(
     policy->mutable_show_user_names()->set_show_user_names(value.value());
   if (base::Optional<bool> value = EncodeBoolean(key::kDeviceAllowNewUsers))
     policy->mutable_allow_new_users()->set_allow_new_users(value.value());
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDeviceUserAllowlist)) {
-    *policy->mutable_user_allowlist()->mutable_user_allowlist() = {
-        values.value().begin(), values.value().end()};
+  // The original policy has been replaced by an inclusively named version. For
+  // backwards compatibility, copy the original policy to the newly named proto
+  // if no value exists for the newly named proto.
+  base::Optional<std::vector<std::string>> user_allowlist_values =
+      EncodeStringList(key::kDeviceUserAllowlist);
+  base::Optional<std::vector<std::string>> user_whitelist_values =
+      EncodeStringList(key::kDeviceUserWhitelist);
+  if (user_allowlist_values || user_whitelist_values) {
+    CopyStringListPolicyWithFallback(
+        user_allowlist_values, user_whitelist_values,
+        policy->mutable_user_allowlist()->mutable_user_allowlist());
   }
-  if (base::Optional<std::vector<std::string>> values =
-          EncodeStringList(key::kDeviceUserWhitelist)) {
-    *policy->mutable_user_whitelist()->mutable_user_whitelist() = {
-        values.value().begin(), values.value().end()};
+  if (user_whitelist_values) {
+    CopyStringListPolicy(
+        user_whitelist_values.value(),
+        policy->mutable_user_whitelist()->mutable_user_whitelist());
   }
   if (base::Optional<bool> value =
           EncodeBoolean(key::kDeviceEphemeralUsersEnabled))
@@ -808,18 +836,14 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
           EncodeStringList(key::kDeviceNativePrintersBlacklist);
   if (device_printers_blocklist_value ||
       device_native_printers_blacklist_value) {
-    *policy->mutable_device_printers_blocklist()->mutable_blocklist() = {
-        device_printers_blocklist_value
-            ? device_printers_blocklist_value.value().begin()
-            : device_native_printers_blacklist_value.value().begin(),
-        device_printers_blocklist_value
-            ? device_printers_blocklist_value.value().end()
-            : device_native_printers_blacklist_value.value().end()};
+    CopyStringListPolicyWithFallback(
+        device_printers_blocklist_value, device_native_printers_blacklist_value,
+        policy->mutable_device_printers_blocklist()->mutable_blocklist());
   }
   if (device_native_printers_blacklist_value) {
-    *policy->mutable_native_device_printers_blacklist()->mutable_blacklist() = {
-        device_native_printers_blacklist_value.value().begin(),
-        device_native_printers_blacklist_value.value().end()};
+    CopyStringListPolicy(device_native_printers_blacklist_value.value(),
+                         policy->mutable_native_device_printers_blacklist()
+                             ->mutable_blacklist());
   }
 
   // The original policy has been replaced by an inclusively named version. For
@@ -832,18 +856,14 @@ void DevicePolicyEncoder::EncodeGenericPolicies(
           EncodeStringList(key::kDeviceNativePrintersWhitelist);
   if (device_printers_allowlist_value ||
       device_native_printers_whitelist_value) {
-    *policy->mutable_device_printers_allowlist()->mutable_allowlist() = {
-        device_printers_allowlist_value
-            ? device_printers_allowlist_value.value().begin()
-            : device_native_printers_whitelist_value.value().begin(),
-        device_printers_allowlist_value
-            ? device_printers_allowlist_value.value().end()
-            : device_native_printers_whitelist_value.value().end()};
+    CopyStringListPolicyWithFallback(
+        device_printers_allowlist_value, device_native_printers_whitelist_value,
+        policy->mutable_device_printers_allowlist()->mutable_allowlist());
   }
   if (device_native_printers_whitelist_value) {
-    *policy->mutable_native_device_printers_whitelist()->mutable_whitelist() = {
-        device_native_printers_whitelist_value.value().begin(),
-        device_native_printers_whitelist_value.value().end()};
+    CopyStringListPolicy(device_native_printers_whitelist_value.value(),
+                         policy->mutable_native_device_printers_whitelist()
+                             ->mutable_whitelist());
   }
 
   if (base::Optional<std::string> value =

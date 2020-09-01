@@ -104,6 +104,8 @@ TEST_F(DevicePolicyEncoderTest, TestEncoding) {
 
   EncodeStringList(&policy, key::kDeviceUserWhitelist, kStringList);
   EXPECT_EQ(kStringList, ToVector(policy.user_whitelist().user_whitelist()));
+  // Old policy copied to new name.
+  EXPECT_EQ(kStringList, ToVector(policy.user_allowlist().user_allowlist()));
 
   EncodeStringList(&policy, key::kDeviceUserAllowlist, kStringList);
   EXPECT_EQ(kStringList, ToVector(policy.user_allowlist().user_allowlist()));
