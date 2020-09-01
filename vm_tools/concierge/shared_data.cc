@@ -4,8 +4,9 @@
 
 #include "vm_tools/concierge/shared_data.h"
 
-#include <base/base64url.h>
 #include <base/files/file_util.h>
+
+#include "vm_tools/common/naming.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -20,10 +21,8 @@ base::Optional<base::FilePath> GetFilePathFromName(
     LOG(ERROR) << "Invalid cryptohome_id specified";
     return base::nullopt;
   }
-  // Base64 encode the given disk name to ensure it only has valid characters.
-  std::string encoded_name;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
-                        &encoded_name);
+  // Encode the given disk name to ensure it only has valid characters.
+  std::string encoded_name = GetEncodedName(vm_name);
 
   base::FilePath storage_dir = base::FilePath(kCryptohomeRoot);
   switch (storage_location) {
@@ -62,9 +61,7 @@ bool GetPluginDirectory(const base::FilePath& prefix,
                         const std::string& vm_id,
                         bool create,
                         base::FilePath* path_out) {
-  std::string dirname;
-  base::Base64UrlEncode(vm_id, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
-                        &dirname);
+  std::string dirname = GetEncodedName(vm_id);
 
   base::FilePath path = prefix.Append(dirname).AddExtension(extension);
   if (create && !base::DirectoryExists(path)) {

@@ -82,7 +82,10 @@ static_library("libforwarder") {
 executable("vmlog_forwarder") {
   sources = [ "../syslog/host_server.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [ ":libforwarder" ]
+  deps = [
+    ":libforwarder",
+    "//vm_tools:libvm_tools_common",
+  ]
 }
 
 static_library("libvsh-client") {
@@ -162,12 +165,16 @@ static_library("libconcierge") {
 executable("vm_concierge") {
   sources = [ "../concierge/main.cc" ]
   configs += [ ":host_target_defaults" ]
-  deps = [ ":libconcierge" ]
+  deps = [
+    ":libconcierge",
+    "//vm_tools:libvm_tools_common",
+  ]
 }
 
 executable("concierge_client") {
   sources = [ "../concierge/client.cc" ]
   configs += [ ":host_target_defaults" ]
+  deps = [ "//vm_tools:libvm_tools_common" ]
   pkg_deps = [
     "libqcow_utils",
     "protobuf",
@@ -272,6 +279,7 @@ if (use.test) {
     deps = [
       ":libforwarder",
       "//common-mk/testrunner:testrunner",
+      "//vm_tools:libvm_tools_common",
     ]
   }
 

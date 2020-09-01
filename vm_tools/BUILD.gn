@@ -32,3 +32,11 @@ executable("vshd") {
   ]
   deps = [ ":libvsh" ]
 }
+
+static_library("libvm_tools_common") {
+  sources = [
+    "common/naming.cc",
+    "common/spawn_util.cc",
+  ]
+  pkg_deps = [ "libchrome-${libbase_ver}" ]
+}

@@ -17,7 +17,6 @@
 #include <utility>
 
 #include <base/at_exit.h>
-#include <base/base64url.h>
 #include <base/command_line.h>
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
@@ -44,6 +43,8 @@
 #include <dbus/object_proxy.h>
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vboot/crossystem.h>
+
+#include "vm_tools/common/naming.h"
 
 using std::string;
 using vm_tools::concierge::StorageLocation;
@@ -1147,9 +1148,7 @@ int StartArcVm(dbus::ObjectProxy* proxy,
   }
 
   if (extra_disks.empty()) {
-    std::string disk_name;
-    base::Base64UrlEncode(name, base::Base64UrlEncodePolicy::INCLUDE_PADDING,
-                          &disk_name);
+    std::string disk_name = vm_tools::GetEncodedName(name);
     extra_disks = base::StringPrintf(
         "/home/root/%s/crosvm/%s.img,1:%s/vendor.raw.img,0",
         cryptohome_id.c_str(), disk_name.c_str(), arcvm_prefix);

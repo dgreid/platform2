@@ -7,13 +7,14 @@
 #include <utility>
 #include <vector>
 
-#include <base/base64url.h>
 #include <base/command_line.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
 #include <base/process/launch.h>
 #include <base/strings/string_util.h>
+
+#include "vm_tools/common/naming.h"
 
 namespace vm_tools {
 namespace concierge {
@@ -28,8 +29,8 @@ constexpr char kSshKeysDir[] = "sshkeys";
 // Filename used for the host keys in the ssh key dir.
 constexpr char kHostKeyFilename[] = "host_key";
 
-// Separator between the base64 vm and container name in the filename. This also
-// prevents a well-chosen vm/container name from colliding with 'host_key'.
+// Separator between the encoded vm and container name in the filename. This
+// also prevents a well-chosen vm/container name from colliding with 'host_key'.
 constexpr char kVmContainerSeparator[] = "-";
 
 // Filename extension for the public variant of a key.
@@ -57,13 +58,8 @@ base::FilePath GetHostKeyPath(const std::string& cryptohome_id) {
 base::FilePath GetGuestKeyPath(const std::string& cryptohome_id,
                                const std::string& vm_name,
                                const std::string& container_name) {
-  std::string encoded_vm;
-  std::string encoded_container;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &encoded_vm);
-  base::Base64UrlEncode(container_name,
-                        base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &encoded_container);
+  std::string encoded_vm = GetEncodedName(vm_name);
+  std::string encoded_container = GetEncodedName(container_name);
 
   return base::FilePath(kCryptohomeRoot)
       .Append(cryptohome_id)
@@ -210,9 +206,7 @@ bool EraseGuestSshKeys(const std::string& cryptohome_id,
   // Look in the generated key directory for all keys that have the prefix
   // associated with this |vm_name| and erase them.
   bool rv = true;
-  std::string encoded_vm;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &encoded_vm);
+  std::string encoded_vm = GetEncodedName(vm_name);
   std::string target_prefix = encoded_vm + kVmContainerSeparator;
   base::FilePath search_path =
       base::FilePath(kCryptohomeRoot).Append(cryptohome_id).Append(kSshKeysDir);

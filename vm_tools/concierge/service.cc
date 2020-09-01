@@ -30,7 +30,6 @@
 #include <utility>
 #include <vector>
 
-#include <base/base64url.h>
 #include <base/bind.h>
 #include <base/bind_helpers.h>
 #include <base/callback.h>
@@ -63,6 +62,7 @@
 #include <chromeos/constants/vm_tools.h>
 #include <vboot/crossystem.h>
 
+#include "vm_tools/common/naming.h"
 #include "vm_tools/concierge/arc_vm.h"
 #include "vm_tools/concierge/dlc_helper.h"
 #include "vm_tools/concierge/plugin_vm.h"
@@ -466,9 +466,7 @@ base::FilePath GetVmLogPath(const std::string& owner_id,
   if (!log_to_cryptohome) {
     return base::FilePath();
   }
-  std::string encoded_vm_name;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &encoded_vm_name);
+  std::string encoded_vm_name = GetEncodedName(vm_name);
 
   base::FilePath path = base::FilePath(kCryptohomeRoot)
                             .Append(kCrosvmDir)
@@ -586,10 +584,8 @@ bool Service::ListVmDisksInLocation(const string& cryptohome_id,
     if (bare_name.empty()) {
       continue;
     }
-    std::string image_name;
-    if (!base::Base64UrlDecode(bare_name.value(),
-                               base::Base64UrlDecodePolicy::IGNORE_PADDING,
-                               &image_name)) {
+    std::string image_name = GetDecodedName(bare_name.value());
+    if (image_name.empty()) {
       continue;
     }
     if (!lookup_name.empty() && lookup_name != image_name) {

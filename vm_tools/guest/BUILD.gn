@@ -49,11 +49,6 @@ pkg_config("target_defaults") {
   pkg_deps = [ "libchrome-${libbase_ver}" ]
 }
 
-static_library("libvm_tools_common") {
-  sources = [ "../common/spawn_util.cc" ]
-  configs += [ ":target_defaults" ]
-}
-
 static_library("libmaitred") {
   sources = [
     "../maitred/init.cc",
@@ -110,7 +105,7 @@ executable("maitred") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libmaitred",
-    ":libvm_tools_common",
+    "//vm_tools:libvm_tools_common",
   ]
 }
 
@@ -119,7 +114,7 @@ executable("garcon") {
   configs += [ ":target_defaults" ]
   deps = [
     ":libgarcon",
-    ":libvm_tools_common",
+    "//vm_tools:libvm_tools_common",
   ]
 }
 
@@ -222,8 +217,8 @@ if (use.test) {
     ]
     deps = [
       ":libmaitred",
-      ":libvm_tools_common",
       "../../common-mk/testrunner:testrunner",
+      "//vm_tools:libvm_tools_common",
     ]
   }
 

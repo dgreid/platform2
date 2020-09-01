@@ -12,7 +12,6 @@
 #include <memory>
 #include <utility>
 
-#include <base/base64url.h>
 #include <base/bind_helpers.h>
 #include <base/files/scoped_file.h>
 #include <base/files/file_path.h>
@@ -28,6 +27,7 @@
 #include <vm_concierge/proto_bindings/concierge_service.pb.h>
 #include <vm_protos/proto_bindings/vm_host.grpc.pb.h>
 
+#include "vm_tools/common/naming.h"
 #include "vm_tools/syslog/rotator.h"
 
 namespace vm_tools {
@@ -49,13 +49,6 @@ constexpr base::TimeDelta kLogRotationPeriod = base::TimeDelta::FromDays(1);
 // maximum log files to keep per vm in |managed_log_dir_|
 constexpr int kMaxFilesPerLog = 5;
 
-std::string EncodedVmName(const std::string& vm_name) {
-  std::string encoded_vm_name;
-  base::Base64UrlEncode(vm_name, base::Base64UrlEncodePolicy::OMIT_PADDING,
-                        &encoded_vm_name);
-  return encoded_vm_name;
-}
-
 base::FilePath GetLogDir(const VmId& id) {
   return base::FilePath(kCryptohomeRoot)
       .Append(id.owner_id())
@@ -64,13 +57,13 @@ base::FilePath GetLogDir(const VmId& id) {
 
 base::FilePath GetCollectorPath(const VmId& id) {
   return GetLogDir(id)
-      .Append(EncodedVmName(id.name()))
+      .Append(GetEncodedName(id.name()))
       .AddExtension(kLogSocketExtension);
 }
 
 base::FilePath GetForwarderPath(const VmId& id) {
   return GetLogDir(id)
-      .Append(EncodedVmName(id.name()))
+      .Append(GetEncodedName(id.name()))
       .AddExtension(kLogFileExtension);
 }
 
