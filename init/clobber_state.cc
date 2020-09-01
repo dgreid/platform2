@@ -24,6 +24,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/bits.h>
 #include <base/callback_helpers.h>
 #include <base/files/file_enumerator.h>
 #include <base/files/file_path.h>
@@ -40,8 +41,6 @@
 #include <chromeos/secure_erase_file/secure_erase_file.h>
 
 #include "init/crossystem.h"
-
-#define ALIGN_UP(val, align) (((val) + (align)-1) & ~((align)-1))
 
 namespace {
 
@@ -658,7 +657,8 @@ bool ClobberState::WipeBlockDevice(const base::FilePath& device_path,
   // We call BLKZEROOUT in chunks 5% (1/20th) of the disk size so that we can
   // update progress as we go. Round up the chunk size to a multiple of 128MiB.
   // BLKZEROOUT requires that its arguments are aligned to at least 512 bytes.
-  const uint64_t zero_block_size = ALIGN_UP(to_write / 20, 128 * 1024 * 1024);
+  const uint64_t zero_block_size =
+      base::bits::Align(to_write / 20, 128 * 1024 * 1024);
   while (total_written < to_write) {
     uint64_t write_size = std::min(zero_block_size, to_write - total_written);
     uint64_t range[2] = {total_written, write_size};
