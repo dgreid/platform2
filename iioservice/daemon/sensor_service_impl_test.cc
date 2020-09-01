@@ -26,15 +26,61 @@ constexpr char kFakeGyroName[] = "FakeGyro";
 constexpr int kFakeGyroId = 2;
 constexpr char kFakeGyroChnName[] = "anglvel_a";
 
+constexpr char kFakeLightName[] = "FakeLight";
+constexpr int kFakeLightId = 3;
+constexpr char kFakeLightChnName[] = "illuminance";
+
+class FakeSensorServiceNewDevicesObserver
+    : public cros::mojom::SensorServiceNewDevicesObserver {
+ public:
+  FakeSensorServiceNewDevicesObserver() : receiver_(this) {}
+
+  void OnNewDeviceAdded(
+      int32_t iio_device_id,
+      const std::vector<cros::mojom::DeviceType>& types) override {
+    iio_device_id_ = iio_device_id;
+    types_ = types;
+  }
+
+  mojo::PendingRemote<cros::mojom::SensorServiceNewDevicesObserver>
+  PassRemote() {
+    CHECK(!receiver_.is_bound());
+    return receiver_.BindNewPipeAndPassRemote();
+  }
+
+  bool CheckNewDevice(int32_t iio_device_id,
+                      std::vector<cros::mojom::DeviceType> types) {
+    if (!iio_device_id_.has_value() || iio_device_id_.value() != iio_device_id)
+      return false;
+
+    if (types_.size() != types.size())
+      return false;
+
+    for (size_t i = 0; i < types_.size(); ++i) {
+      if (types_[i] != types[i])
+        return false;
+    }
+
+    return true;
+  }
+
+ private:
+  mojo::Receiver<cros::mojom::SensorServiceNewDevicesObserver> receiver_;
+
+  base::Optional<int32_t> iio_device_id_;
+  std::vector<cros::mojom::DeviceType> types_;
+};
+
 class SensorServiceImplTest : public ::testing::Test {
  protected:
   void SetUp() override {
     auto context = std::make_unique<libmems::fakes::FakeIioContext>();
+    context_ = context.get();
 
     auto accel = std::make_unique<libmems::fakes::FakeIioDevice>(
-        nullptr, kFakeAccelName, kFakeAccelId);
+        context_, kFakeAccelName, kFakeAccelId);
     auto gyro = std::make_unique<libmems::fakes::FakeIioDevice>(
-        nullptr, kFakeGyroName, kFakeGyroId);
+        context_, kFakeGyroName, kFakeGyroId);
 
     accel->AddChannel(std::make_unique<libmems::fakes::FakeIioChannel>(
         kFakeAccelChnName, true));
@@ -44,13 +90,16 @@ class SensorServiceImplTest : public ::testing::Test {
     context->AddDevice(std::move(accel));
     context->AddDevice(std::move(gyro));
 
-    sensor_service_ = SensorServiceImpl::Create(
-        task_environment_.GetMainThreadTaskRunner(), std::move(context));
+    sensor_service_ =
+        SensorServiceImpl::Create(task_environment_.GetMainThreadTaskRunner(),
+                                  std::move(context), nullptr);
     EXPECT_TRUE(sensor_service_);
   }
 
   base::test::SingleThreadTaskEnvironment task_environment_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
+
+  libmems::fakes::FakeIioContext* context_;
 
   SensorServiceImpl::ScopedSensorServiceImpl sensor_service_ = {
       nullptr, SensorServiceImpl::SensorServiceImplDeleter};
@@ -97,6 +146,25 @@ TEST_F(SensorServiceImplTest, GetAllDeviceIds) {
   loop.Run();
 }
 
+TEST_F(SensorServiceImplTest, OnDeviceAdded) {
+  std::unique_ptr<FakeSensorServiceNewDevicesObserver> observer(
+      new FakeSensorServiceNewDevicesObserver());
+  sensor_service_->RegisterNewDevicesObserver(observer->PassRemote());
+
+  auto light = std::make_unique<libmems::fakes::FakeIioDevice>(
+      context_, kFakeLightName, kFakeLightId);
+  light->AddChannel(std::make_unique<libmems::fakes::FakeIioChannel>(
+      kFakeLightChnName, true));
+  context_->AddDevice(std::move(light));
+
+  sensor_service_->OnDeviceAdded(kFakeLightId);
+  base::RunLoop().RunUntilIdle();
+
+  EXPECT_TRUE(observer->CheckNewDevice(
+      kFakeLightId,
+      std::vector<cros::mojom::DeviceType>{cros::mojom::DeviceType::LIGHT}));
+}
+
 class SensorServiceImplTestDeviceTypesWithParam
     : public ::testing::TestWithParam<
           std::pair<std::vector<std::string>,
@@ -116,8 +184,9 @@ class SensorServiceImplTestDeviceTypesWithParam
 
     context->AddDevice(std::move(device));
 
-    sensor_service_ = SensorServiceImpl::Create(
-        task_environment_.GetMainThreadTaskRunner(), std::move(context));
+    sensor_service_ =
+        SensorServiceImpl::Create(task_environment_.GetMainThreadTaskRunner(),
+                                  std::move(context), nullptr);
     EXPECT_TRUE(sensor_service_.get());
   }
 

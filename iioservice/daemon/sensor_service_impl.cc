@@ -10,6 +10,7 @@
 #include <vector>
 
 #include <base/containers/flat_map.h>
+#include <brillo/udev/udev.h>
 #include <libmems/iio_device.h>
 #include <libmems/iio_channel.h>
 #include <mojo/core/embedder/embedder.h>
@@ -21,6 +22,8 @@ namespace iioservice {
 
 // Add a namespace here to not leak |DeviceHasType|.
 namespace {
+
+constexpr int kPermTrialDelayInMilliseconds = 100;
 
 // Prefixes for each cros::mojom::DeviceType channel.
 constexpr char kChnPrefixes[][12] = {
@@ -89,7 +92,8 @@ void SensorServiceImpl::SensorServiceImplDeleter(SensorServiceImpl* service) {
 // static
 SensorServiceImpl::ScopedSensorServiceImpl SensorServiceImpl::Create(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
-    std::unique_ptr<libmems::IioContext> context) {
+    std::unique_ptr<libmems::IioContext> context,
+    std::unique_ptr<brillo::Udev> udev) {
   DCHECK(ipc_task_runner->RunsTasksInCurrentSequence());
 
   auto sensor_device = SensorDeviceImpl::Create(ipc_task_runner, context.get());
@@ -101,7 +105,7 @@ SensorServiceImpl::ScopedSensorServiceImpl SensorServiceImpl::Create(
 
   return ScopedSensorServiceImpl(
       new SensorServiceImpl(std::move(ipc_task_runner), std::move(context),
-                            std::move(sensor_device)),
+                            std::move(udev), std::move(sensor_device)),
       SensorServiceImplDeleter);
 }
 
@@ -150,28 +154,87 @@ void SensorServiceImpl::GetDevice(
   sensor_device_->AddReceiver(iio_device_id, std::move(device_request));
 }
 
+void SensorServiceImpl::RegisterNewDevicesObserver(
+    mojo::PendingRemote<cros::mojom::SensorServiceNewDevicesObserver>
+        observer) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  observers_.emplace_back(
+      mojo::Remote<cros::mojom::SensorServiceNewDevicesObserver>(
+          std::move(observer)));
+}
+
+void SensorServiceImpl::OnDeviceAdded(int iio_device_id) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  // Reload to check if there are new devices available.
+  context_->Reload();
+  SetDeviceTypes();
+}
+
 SensorServiceImpl::SensorServiceImpl(
     scoped_refptr<base::SequencedTaskRunner> ipc_task_runner,
     std::unique_ptr<libmems::IioContext> context,
+    std::unique_ptr<brillo::Udev> udev,
     SensorDeviceImpl::ScopedSensorDeviceImpl sensor_device)
     : ipc_task_runner_(ipc_task_runner),
       context_(std::move(context)),
+      udev_watcher_(UdevWatcher::Create(this, std::move(udev))),
       sensor_device_(std::move(sensor_device)) {
+  if (!sensor_device_)
+    LOGF(ERROR) << "Failed to get SensorDevice";
+
+  if (!udev_watcher_.get())
+    LOGF(ERROR) << "Late-present sensors won't be tracked.";
+
   SetDeviceTypes();
 }
 
 void SensorServiceImpl::SetDeviceTypes() {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
   for (auto device : context_->GetAllDevices()) {
-    std::vector<cros::mojom::DeviceType> types;
-    for (int32_t i = static_cast<int32_t>(cros::mojom::DeviceType::ACCEL);
-         i < static_cast<int32_t>(cros::mojom::DeviceType::MAX); ++i) {
-      auto type = static_cast<cros::mojom::DeviceType>(i);
-      if (DeviceHasType(device, type))
-        types.push_back(type);
+    if (device_types_map_.find(device->GetId()) != device_types_map_.end())
+      continue;
+
+    AddDevice(device);
+  }
+}
+
+void SensorServiceImpl::AddDevice(libmems::IioDevice* device) {
+  DCHECK(ipc_task_runner_->RunsTasksInCurrentSequence());
+
+  int32_t id = device->GetId();
+  if (!device->DisableBuffer()) {
+    if (++iio_device_permission_trials_[id] >=
+        kNumFailedPermTrialsBeforeGivingUp) {
+      LOGF(ERROR) << "Too many failed permission trials. Giving up on device: "
+                  << id;
+      return;
     }
 
-    device_types_map_.emplace(device->GetId(), std::move(types));
+    LOGF(WARNING)
+        << "Permissions and ownerships may not be set yet for device: " << id;
+    ipc_task_runner_->PostDelayedTask(
+        FROM_HERE,
+        base::BindOnce(&SensorServiceImpl::AddDevice,
+                       weak_factory_.GetWeakPtr(), device),
+        base::TimeDelta::FromMilliseconds(kPermTrialDelayInMilliseconds));
+    return;
   }
+
+  std::vector<cros::mojom::DeviceType> types;
+  for (int32_t i = static_cast<int32_t>(cros::mojom::DeviceType::ACCEL);
+       i < static_cast<int32_t>(cros::mojom::DeviceType::MAX); ++i) {
+    auto type = static_cast<cros::mojom::DeviceType>(i);
+    if (DeviceHasType(device, type))
+      types.push_back(type);
+  }
+
+  device_types_map_.emplace(id, types);
+
+  for (auto& observer : observers_)
+    observer->OnNewDeviceAdded(id, types);
 }
 
 }  // namespace iioservice

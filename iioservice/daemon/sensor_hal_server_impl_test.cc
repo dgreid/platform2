@@ -28,6 +28,7 @@ class FakeSensorServiceImpl final : public SensorServiceImpl {
       : SensorServiceImpl(
             std::move(ipc_task_runner),
             std::move(context),
+            nullptr,
             SensorDeviceImpl::ScopedSensorDeviceImpl(
                 nullptr, SensorDeviceImpl::SensorDeviceImplDeleter)) {}
 
