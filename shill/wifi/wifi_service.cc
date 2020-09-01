@@ -362,15 +362,16 @@ void WiFiService::MigrateDeprecatedStorage(StoreInterface* storage) {
   const string id = GetStorageIdentifier();
   CHECK(storage->ContainsGroup(id));
 
-  // Deprecated keys. TODO: Remove after M89.
+  // Deprecated keys that have not been loaded from storage since at least M84.
+  // TODO(crbug.com/1120161): Remove code after M89.
   storage->DeleteKey(id, "WiFi.Security");
   storage->DeleteKey(id, "WiFi.FTEnabled");
 
-  // Migrate from ROT47 to plaintext.
-  // TODO(crbug.com/1084279) Remove after migration is complete.
-  if (storage->DeleteKey(id, kStorageDeprecatedPassphrase)) {
-    storage->SetString(id, kStorageCredentialPassphrase, passphrase_);
-  }
+  // Save the plaintext passphrase in M86+. TODO: Remove code after M89.
+  storage->SetString(id, kStorageCredentialPassphrase, passphrase_);
+
+  // M85 key to delete after M89:
+  // kStorageDeprecatedPassphrase (crbug.com/1084279)
 }
 
 bool WiFiService::Save(StoreInterface* storage) {
@@ -380,10 +381,16 @@ bool WiFiService::Save(StoreInterface* storage) {
   }
 
   // Save properties specific to WiFi services.
+  // IMPORTANT: Changes must be backwards compatible with the four previous
+  // versions. New keys may be added, but existing keys must be preserved.
+  // See crbug.com/1120161 and go/rollback-data-restore for details.
   const string id = GetStorageIdentifier();
   storage->SetBool(id, kStorageHiddenSSID, hidden_ssid_);
   storage->SetString(id, kStorageMode, mode_);
-  storage->SetString(id, kStorageCredentialPassphrase, passphrase_);
+  // This saves both the plaintext and rot47 versions of the passphrase.
+  // TODO(crbug.com/1084279): Save just the plaintext passphrase after M89.
+  storage->SetCryptedString(id, kStorageDeprecatedPassphrase,
+                            kStorageCredentialPassphrase, passphrase_);
   storage->SetString(id, kStorageSecurityClass,
                      ComputeSecurityClass(security_));
   storage->SetString(id, kStorageSSID, hex_ssid_);

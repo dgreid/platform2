@@ -94,6 +94,12 @@ class StubStorage : public StoreInterface {
                         std::string* value) const override {
     return false;
   }
+  bool SetCryptedString(const std::string& group,
+                        const std::string& deprecated_key,
+                        const std::string& plaintext_key,
+                        const std::string& value) override {
+    return false;
+  }
 };
 
 }  // namespace shill

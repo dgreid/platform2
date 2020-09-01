@@ -270,15 +270,14 @@ class Service : public base::RefCounted<Service> {
   // Loads the service from persistent |storage|. Returns true on success.
   virtual bool Load(const StoreInterface* storage);
 
-  // Invoked after Load for the purpose of storage migration. Can be used
-  // such that a Profile will be updated completely the first time it is pushed
-  // onto Manager's Profile stack (although see the caveat below).
+  // Invoked after Load for migrating storage properties. Ensures migration for
+  // services loaded from a Profile. Services not loaded will not get migrated,
+  // thus it is best to maintain migration for several releases.
   //
-  // NOTE: May not work as expected for CellularService or EthernetService,
-  // whose Providers might not construct all Services persisted in a Profile. No
-  // guarantees are provided about how many invocations of this method are
-  // required for a particular StoreInterface to have all of its relevant
-  // deprecated storage migrated for these classes.
+  // NOTE: In order to support rollbacks (go/rollback-data-restore) profiles
+  // also need to maintain backwards compatibility for four release cycles
+  // before important deprecated properties should be deleted (see notes in
+  // WiFiService::Save).
   virtual void MigrateDeprecatedStorage(StoreInterface* storage);
 
   // Indicate to service that it is no longer persisted to storage.  It

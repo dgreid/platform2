@@ -73,6 +73,10 @@ class FakeStore : public StoreInterface {
                         const std::string& deprecated_key,
                         const std::string& plaintext_key,
                         std::string* value) const override;
+  bool SetCryptedString(const std::string& group,
+                        const std::string& deprecated_key,
+                        const std::string& plaintext_key,
+                        const std::string& value) override;
 
  private:
   template <typename T>

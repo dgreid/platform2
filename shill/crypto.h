@@ -16,6 +16,10 @@ namespace shill {
 // is complete.
 namespace Crypto {
 
+// Returns |plaintext| encrypted by the highest priority available crypto
+// module capable of performing the operation.
+std::string Encrypt(const std::string& plaintext);
+
 // Returns |ciphertext| decrypted by the highest priority available crypto
 // module capable of performing the operation. If no module succeeds, returns
 // base::nullopt.

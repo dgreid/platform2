@@ -148,12 +148,20 @@ class StoreInterface {
   // |group|:|deprecated_key| are present in the store).  It is not an error to
   // pass NULL as |value| to simply test for the presence of this value.
   //
-  // For migration from ROT47 to plaintext. New usecases should use GetString.
+  // For migration from ROT47 to plaintext. New use cases should use GetString.
   // TODO(crbug.com/1084279) Remove after migration is complete.
   virtual bool GetCryptedString(const std::string& group,
                                 const std::string& deprecated_key,
                                 const std::string& plaintext_key,
                                 std::string* value) const = 0;
+
+  // Sets the string associated with |group|:|deprecated_key| with an encrypted
+  // value and sets |plaintext_key| with |value|. Returns true on success.
+  // For ROT47 compatibility for rollback. See crbug.com/1120161 for details.
+  virtual bool SetCryptedString(const std::string& group,
+                                const std::string& deprecated_key,
+                                const std::string& plaintext_key,
+                                const std::string& value) = 0;
 };
 
 // Creates a store, implementing StoreInterface, at the specified |path|.

@@ -708,6 +708,8 @@ bool Service::Save(StoreInterface* storage) {
 
   storage->SetString(id, kStorageType, GetTechnologyString());
 
+  // IMPORTANT: Changes to kStorageAutoConnect must be backwards compatible, see
+  // WiFiService::Save for details.
   if (retain_auto_connect_) {
     storage->SetBool(id, kStorageAutoConnect, auto_connect_);
   } else {

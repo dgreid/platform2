@@ -676,6 +676,14 @@ bool KeyFileStore::GetCryptedString(const string& group,
   return true;
 }
 
+bool KeyFileStore::SetCryptedString(const string& group,
+                                    const string& deprecated_key,
+                                    const string& plaintext_key,
+                                    const string& value) {
+  SetString(group, deprecated_key, Crypto::Encrypt(value));
+  return SetString(group, plaintext_key, value);
+}
+
 bool KeyFileStore::DoesGroupMatchProperties(
     const string& group, const KeyValueStore& properties) const {
   for (const auto& property : properties.properties()) {

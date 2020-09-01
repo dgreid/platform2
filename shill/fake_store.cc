@@ -200,6 +200,13 @@ bool FakeStore::GetCryptedString(const string& group,
   return GetString(group, plaintext_key, value);
 }
 
+bool FakeStore::SetCryptedString(const string& group,
+                                 const std::string& deprecated_key,
+                                 const std::string& plaintext_key,
+                                 const std::string& value) {
+  return SetString(group, plaintext_key, value);
+}
+
 // Private methods.
 template <typename T>
 bool FakeStore::ReadSetting(const string& group,
