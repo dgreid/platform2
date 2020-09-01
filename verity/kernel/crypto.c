@@ -6,6 +6,9 @@
  * compatibility with files under SRC/include.
  */
 
+#include <stdalign.h>
+#include <stdlib.h>
+
 #include <linux/bug.h>
 #include <linux/crypto.h>
 #include <linux/init.h>
@@ -22,7 +25,6 @@ int crypto_register_shash(struct shash_alg* alg) {
 
 struct hash_tfm* crypto_alloc_hash(const char* alg_name, int a, int b) {
   size_t i;
-  struct hash_tfm* tfm;
 
   if (!hashes) {
     /* need to initialize our world */
@@ -37,8 +39,14 @@ struct hash_tfm* crypto_alloc_hash(const char* alg_name, int a, int b) {
       break;
   BUG_ON(i == num_hashes);
 
-  tfm = calloc(sizeof(*tfm) + hashes[i]->statesize, 1);
+  /* Round up the size to multiple of |hash_tfm|'s alignment */
+  size_t alignment = alignof(struct hash_tfm);
+  size_t size =
+      (sizeof(struct hash_tfm) + hashes[i]->statesize + alignment - 1) &
+      ~(alignment - 1);
+  struct hash_tfm* tfm = aligned_alloc(alignment, size);
   BUG_ON(!tfm);
+  memset(tfm, 0, size);
   tfm->alg = hashes[i];
 
   return tfm;
