@@ -118,10 +118,10 @@ void UserCollector::FinishCrash(const base::FilePath& meta_path,
 // and the platform.UserCrash tast test.
 std::string UserCollector::GetPattern(bool enabled, bool early) const {
   if (enabled) {
-    // Combine the crash attributes into one parameter to try to reduce the size
-    // of the invocation line for crash_reporter because the kernel has a
-    // fixed-sized (128 byte) buffer (AFTER parameter expansion)
-    // Also, note that the kernel does not support quoted arguments.
+    // Combine the crash attributes into one parameter to try to reduce
+    // the size of the invocation line for crash_reporter, since the kernel
+    // has a fixed-sized (128B) buffer for it (before parameter expansion).
+    // Note that the kernel does not support quoted arguments in core_pattern.
     return StringPrintf("|%s %s--user=%%P:%%s:%%u:%%g:%%e", our_path_.c_str(),
                         early ? "--early --log_to_stderr " : "");
   } else {
