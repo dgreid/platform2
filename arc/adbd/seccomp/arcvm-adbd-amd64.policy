@@ -17,9 +17,13 @@ read: 1
 fstat: 1
 write: 1
 creat: 1
+chown: 1
 access: 1
-gettid:1
-futex:1
+# Mount should only be called with MS_BIND or MS_NOSUID|MS_NODEV|MS_NOEXEC.
+mount: arg3 == 0x1000 || arg3 == 0xe
+rename: 1
+# mknod should only be used to create FIFOs.
+mknod: arg1 in 0x11ff
 setpriority: 1
 getuid:1
 geteuid:1
@@ -29,20 +33,23 @@ epoll_create1:1
 epoll_ctl: 1
 epoll_wait: 1
 pipe2:1
-
-# Mount should only be MS_NOSUID|MS_NODEV|MS_NOEXEC.
-mount: arg3 == 0xe
 brk: 1
 mkdir: 1
 lstat: 1
+unlink: 1
+symlink: 1
 rt_sigaction: 1
 getdents: 1
+restart_syscall: 1
 exit: 1
 exit_group: 1
+rt_sigreturn: 1
 rt_sigprocmask: 1
 munmap: 1
 tgkill: 1
 sendto: 1
+gettid:1
+futex:1
 
 # For modprobe(8)
 clone: 1
