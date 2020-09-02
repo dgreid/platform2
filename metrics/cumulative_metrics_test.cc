@@ -10,6 +10,7 @@
 #include "base/files/scoped_temp_dir.h"
 #include "base/run_loop.h"
 #include "base/system/sys_info.h"
+#include "base/task/single_thread_task_executor.h"
 #include "base/threading/thread_local.h"
 #include "base/time/time.h"
 #include "metrics/cumulative_metrics.h"
@@ -61,7 +62,7 @@ static void ReportAccumulators(CumulativeMetrics* cm) {
 }
 
 TEST_F(CumulativeMetricsTest, TestLoop) {
-  base::MessageLoop message_loop;
+  base::SingleThreadTaskExecutor task_executor_;
   base::RunLoop run_loop;
   tls_run_loop.Set(&run_loop);
 

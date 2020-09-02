@@ -57,7 +57,6 @@
 #include <vector>
 
 #include <base/memory/weak_ptr.h>
-#include <base/message_loop/message_loop.h>
 #include <base/time/time.h>
 #include <base/timer/timer.h>
 
