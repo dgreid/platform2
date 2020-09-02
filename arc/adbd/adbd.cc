@@ -27,6 +27,8 @@
 #include <base/posix/eintr_wrapper.h>
 #include <base/strings/string_util.h>
 #include <base/system/sys_info.h>
+#include <base/threading/platform_thread.h>
+#include <base/time/time.h>
 #include <base/values.h>
 #include <patchpanel/net_util.h>
 
@@ -391,17 +393,30 @@ base::ScopedFD ConnectToAdbProxy() {
   if (HANDLE_EINTR(connect(proxy_sock.get(),
                            reinterpret_cast<const struct sockaddr*>(&addr_in),
                            sizeof(addr_in))) < 0) {
-    PLOG(ERROR) << "Failed to connect to proxy socket";
+    PLOG(WARNING) << "Failed to connect to proxy socket";
     return base::ScopedFD();
   }
+  LOG(INFO) << "Connected to adb proxy";
   return proxy_sock;
 }
 
 void StartArcVmAdbBridge() {
+  constexpr base::TimeDelta kConnectInterval = base::TimeDelta::FromSeconds(15);
+  constexpr int kMaxRetries = 4;
+
+  int retries = kMaxRetries;
   auto proxy_sock = ConnectToAdbProxy();
-  if (!proxy_sock.is_valid()) {
-    LOG(ERROR) << "Failed to connect to adb proxy";
-    _exit(EXIT_FAILURE);
+  while (!proxy_sock.is_valid()) {
+    if (--retries < 0) {
+      LOG(ERROR) << "Too many retries; giving up";
+      _exit(EXIT_FAILURE);
+    }
+    // This path may be taken when patchpanel hasn't started listening to the
+    // socket yet. To work around the case, retry ConnectToAdbProxy() after a
+    // short sleep.
+    // TODO(crbug.com/1126289): Remove the retry hack.
+    base::PlatformThread::Sleep(kConnectInterval);
+    proxy_sock = ConnectToAdbProxy();
   }
 
   // Channel direction is from device side, instead of USB perspective.
