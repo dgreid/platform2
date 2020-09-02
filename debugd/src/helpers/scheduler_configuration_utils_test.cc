@@ -28,14 +28,27 @@ constexpr char kSessionManagerCPUSubsetSubpath[] =
 
 class SchedulerConfigurationHelperTest : public testing::Test {
  public:
+  std::string GetOnlineOrPresentString(int in_int) {
+    return std::string("0-" + std::to_string(in_int - 1));
+  }
+
+  std::string GetOfflineString(int online, int total) {
+    return std::string(std::to_string(online) + "-" +
+                       std::to_string(total - 1));
+  }
+
+  // Create system files to represent different CPU states.
   void CreateSysInterface(const base::FilePath& cpu_root_dir,
-                          const base::FilePath& base_sys_path) {
+                          const base::FilePath& base_sys_path,
+                          int online,
+                          int present,
+                          int total) {
     // Set up a fake tempdir mimicking a performance mode CPU.
     ASSERT_TRUE(base::CreateDirectory(cpu_root_dir));
-
-    // Create CPUs 0-3, and turn them all on.
-    for (const std::string& cpu_num : {"0", "1", "2", "3"}) {
-      base::FilePath cpu_subroot = cpu_root_dir.Append("cpu" + cpu_num);
+    // Create online CPUs, and turn them all on.
+    for (int cur_online_cpu = 0; cur_online_cpu < online; cur_online_cpu++) {
+      base::FilePath cpu_subroot =
+          cpu_root_dir.Append("cpu" + std::to_string(cur_online_cpu));
       ASSERT_TRUE(base::CreateDirectory(cpu_subroot));
       std::string flag = "1";
       ASSERT_EQ(flag.size(), base::WriteFile(cpu_subroot.Append("online"),
@@ -44,11 +57,21 @@ class SchedulerConfigurationHelperTest : public testing::Test {
       // Establish odd CPUs as virtual siblings.
       base::FilePath topology = cpu_subroot.Append("topology");
       ASSERT_TRUE(base::CreateDirectory(topology));
-      std::string topology_str;
-      if (cpu_num == "0" || cpu_num == "1") {
-        topology_str = "0-1";
-      } else if (cpu_num == "2" || cpu_num == "3") {
-        topology_str = "2-3";
+      // For cpu_num "0", string should read "0-1".
+      // For cpu_num "3", string should read "2-3" and so forth.
+      int lower;
+      if (cur_online_cpu % 2 == 0) {
+        lower = cur_online_cpu;
+      } else {
+        lower = cur_online_cpu - 1;
+      }
+      std::string topology_str =
+          std::to_string(lower) + "-" + std::to_string(lower + 1);
+      // Assert cases manually made by previous logic still work.
+      if (cur_online_cpu == 0 || cur_online_cpu == 1) {
+        ASSERT_EQ(topology_str, "0-1");
+      } else if (cur_online_cpu == 2 || cur_online_cpu == 3) {
+        ASSERT_EQ(topology_str, "2-3");
       }
       ASSERT_EQ(topology_str.size(),
                 base::WriteFile(topology.Append("thread_siblings_list"),
@@ -57,15 +80,34 @@ class SchedulerConfigurationHelperTest : public testing::Test {
 
     // Establish the control files.
     base::FilePath online_cpus_file = cpu_root_dir.Append("online");
-    const std::string online_cpus = "0-3";
+    std::string online_cpus = GetOnlineOrPresentString(online);
     ASSERT_EQ(online_cpus.size(),
               base::WriteFile(online_cpus_file, online_cpus.c_str(),
                               online_cpus.size()));
 
+    // Create set of present CPUs.
+    base::FilePath present_cpus_file = cpu_root_dir.Append("present");
+    std::string present_cpus = GetOnlineOrPresentString(present);
+
+    ASSERT_EQ(present_cpus.size(),
+              base::WriteFile(present_cpus_file, present_cpus.c_str(),
+                              present_cpus.size()));
+
     // Establish the offline CPUs.
     base::FilePath offline_cpus_file = cpu_root_dir.Append("offline");
-    const char terminator = 0xa;
-    ASSERT_EQ(1, base::WriteFile(offline_cpus_file, &terminator, 1));
+    if (online == total) {
+      // If all CPUs are online, the offline file is empty.
+      const char terminator = 0xa;
+      ASSERT_EQ(1, base::WriteFile(offline_cpus_file, &terminator, 1));
+    } else {
+      // If not all CPUs are online, offline file is "online-(total - 1)".
+      // So if 2 CPUs online and 8 CPUs total, online string would be "0-1"
+      // and offline string would be "2-7".
+      std::string offline_cpus = GetOfflineString(online, total);
+      ASSERT_EQ(offline_cpus.size(),
+                base::WriteFile(offline_cpus_file, offline_cpus.c_str(),
+                                offline_cpus.size()));
+    }
 
     // Setup the cpu set files.
     base::FilePath chrome_cpuset =
@@ -95,8 +137,9 @@ class SchedulerConfigurationHelperTest : public testing::Test {
     }
   }
 
-  void CheckConservativeMode(const base::FilePath& cpu_root_dir) {
-    for (const std::string& cpu_num : {"0", "1", "2", "3"}) {
+  void CheckConservativeModeShared(const base::FilePath& cpu_root_dir,
+                                   std::vector<std::string>* cpu_list) {
+    for (const std::string& cpu_num : *cpu_list) {
       base::FilePath cpu_control =
           cpu_root_dir.Append("cpu" + cpu_num).Append("online");
       std::string control_contents;
@@ -107,6 +150,22 @@ class SchedulerConfigurationHelperTest : public testing::Test {
         EXPECT_EQ("0", control_contents);
       }
     }
+  }
+
+  void CheckConservativeMode(const base::FilePath& cpu_root_dir) {
+    std::vector<std::string> cpu_list;
+    cpu_list.push_back("0");
+    cpu_list.push_back("1");
+    cpu_list.push_back("2");
+    cpu_list.push_back("3");
+    CheckConservativeModeShared(cpu_root_dir, &cpu_list);
+  }
+
+  void CheckConservativeModeTwoCpus(const base::FilePath& cpu_root_dir) {
+    std::vector<std::string> cpu_list;
+    cpu_list.push_back("0");
+    cpu_list.push_back("1");
+    CheckConservativeModeShared(cpu_root_dir, &cpu_list);
   }
 };
 
@@ -178,7 +237,8 @@ TEST_F(SchedulerConfigurationHelperTest, TestSchedulers) {
 
   const base::FilePath cpu_root_dir =
       temp_dir.GetPath().Append("devices").Append("system").Append("cpu");
-  CreateSysInterface(cpu_root_dir, temp_dir.GetPath());
+  // Create a simple system interface, with 4 CPUs online and present.
+  CreateSysInterface(cpu_root_dir, temp_dir.GetPath(), 4, 4, 4);
 
   size_t num_cpus_disabled = 0;
   debugd::SchedulerConfigurationUtils utils(temp_dir.GetPath());
@@ -236,6 +296,28 @@ TEST_F(SchedulerConfigurationHelperTest, TestSchedulers) {
     ASSERT_TRUE(base::ReadFileToString(cpuset, &cpuset_contents));
     EXPECT_EQ("0,2", cpuset_contents);
   }
+}
+
+TEST_F(SchedulerConfigurationHelperTest, TestSchedulersWithMissingCPUs) {
+  base::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
+
+  const base::FilePath cpu_root_dir =
+      temp_dir.GetPath().Append("devices").Append("system").Append("cpu");
+  // Create a filesystem with two online/present CPUs out of 8.
+  CreateSysInterface(cpu_root_dir, temp_dir.GetPath(), 2, 2, 8);
+
+  size_t num_cpus_disabled = 0;
+
+  // Enable conservative mode.
+  SchedulerConfigurationUtils utils2(temp_dir.GetPath());
+  ASSERT_TRUE(utils2.GetControlFDs());
+  ASSERT_TRUE(utils2.GetCPUSetFDs());
+  ASSERT_TRUE(utils2.EnableConservativeConfiguration(&num_cpus_disabled));
+  // The second processor (1) is disabled of the available (0-1).
+  ASSERT_EQ(1U, num_cpus_disabled);
+
+  CheckConservativeModeTwoCpus(cpu_root_dir);
 }
 
 }  // namespace debugd

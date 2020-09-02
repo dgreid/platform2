@@ -25,6 +25,7 @@ namespace {
 
 constexpr char kCPUOfflineSubpath[] = "devices/system/cpu/offline";
 constexpr char kCPUOnlineSubpath[] = "devices/system/cpu/online";
+constexpr char kCPUPresentSubpath[] = "devices/system/cpu/present";
 constexpr char kCPUSubpath[] = "devices/system/cpu";
 constexpr char kChromeCPUSubsetSubpath[] = "fs/cgroup/cpuset/chrome/cpus";
 constexpr char kChronosContainerCPUSubsetSubpath[] =
@@ -204,6 +205,41 @@ bool SchedulerConfigurationUtils::EnableConservativeConfiguration(
   return status && UpdateAllCPUSets();
 }
 
+bool SchedulerConfigurationUtils::PruneNonPresentCpus(
+    std::vector<std::string>* cpu_nums) {
+  // Take the list of incoming cpu_nums from online or offline files
+  // then prune these to only include cpus listed in the 'present' file.
+  std::string present_cpus_str;
+  auto present_path = base_path_.Append(kCPUPresentSubpath);
+  if (!base::ReadFileToString(present_path, &present_cpus_str)) {
+    PLOG(ERROR) << "Failed to read present CPU list at "
+                << present_path.value();
+    return false;
+  }
+  // The kernel returns 0xa if the file is empty.
+  if (present_cpus_str == std::string(1, kLineTerminator)) {
+    LOG(ERROR) << "Present CPUs empty";
+    return false;
+  }
+  std::vector<std::string> present_cpu_nums;
+  if (!ParseCPUNumbers(present_cpus_str, &present_cpu_nums)) {
+    LOG(ERROR) << "Unknown range: " << present_cpus_str;
+    return false;
+  }
+  // Then we only take CPUs that are in both in our target list and
+  // the present list.
+  std::vector<std::string> cpu_nums_to_keep;
+  for (const auto& cpu_num : *cpu_nums) {
+    for (const auto& present_cpu_num : present_cpu_nums) {
+      if (cpu_num == present_cpu_num) {
+        cpu_nums_to_keep.push_back(present_cpu_num);
+      }
+    }
+  }
+  cpu_nums->swap(cpu_nums_to_keep);
+  return true;
+}
+
 bool SchedulerConfigurationUtils::GetFDsFromControlFile(
     const base::FilePath& path, std::vector<std::string>* cpu_nums) {
   DCHECK(cpu_nums);
@@ -220,6 +256,10 @@ bool SchedulerConfigurationUtils::GetFDsFromControlFile(
 
   if (!ParseCPUNumbers(cpus_str, cpu_nums)) {
     LOG(ERROR) << "Unknown range: " << cpus_str;
+    return false;
+  }
+  if (!PruneNonPresentCpus(cpu_nums)) {
+    LOG(ERROR) << "Failed to prune CPUs based on present file";
     return false;
   }
 

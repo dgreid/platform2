@@ -82,6 +82,8 @@ class SchedulerConfigurationUtils {
   // This writes the flag to enable the given CPU by number.
   bool EnableCPU(const std::string& cpu_number);
 
+  bool PruneNonPresentCpus(std::vector<std::string>* cpu_nums);
+
   // This reads either the offline or online CPU list and opens FDs for the
   // listed CPUs, putting them into |fd_map_|.
   bool GetFDsFromControlFile(const base::FilePath& path,
