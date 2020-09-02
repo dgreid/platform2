@@ -36,7 +36,7 @@
 namespace adbd {
 namespace {
 
-constexpr uint16_t kAdbProxyPort = 5550;
+constexpr uint16_t kAdbProxyPort = 5555;
 constexpr uint32_t kAdbProxySockAddr = patchpanel::Ipv4Addr(127, 0, 0, 1);
 constexpr char kRuntimePath[] = "/run/arc/adbd";
 constexpr char kConfigFSPath[] = "/dev/config";
