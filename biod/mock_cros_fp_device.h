@@ -18,26 +18,29 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MockCrosFpDevice() = default;
   ~MockCrosFpDevice() override = default;
 
-  MOCK_METHOD(bool, SetFpMode, (const FpMode& mode));
-  MOCK_METHOD(bool, GetFpMode, (FpMode * mode));
+  MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
+  MOCK_METHOD(bool, GetFpMode, (FpMode * mode), (override));
   MOCK_METHOD(bool,
               GetFpStats,
-              (int* capture_ms, int* matcher_ms, int* overall_ms));
-  MOCK_METHOD(bool, GetDirtyMap, (std::bitset<32> * bitmap));
-  MOCK_METHOD(bool, GetTemplate, (int index, VendorTemplate* out));
-  MOCK_METHOD(bool, UploadTemplate, (const VendorTemplate& tmpl));
-  MOCK_METHOD(bool, SetContext, (std::string user_id));
-  MOCK_METHOD(bool, ResetContext, ());
-  MOCK_METHOD(bool, InitEntropy, (bool reset));
-  MOCK_METHOD(int, MaxTemplateCount, ());
-  MOCK_METHOD(int, TemplateVersion, ());
+              (int* capture_ms, int* matcher_ms, int* overall_ms),
+              (override));
+  MOCK_METHOD(bool, GetDirtyMap, (std::bitset<32> * bitmap), (override));
+  MOCK_METHOD(bool, GetTemplate, (int index, VendorTemplate* out), (override));
+  MOCK_METHOD(bool, UploadTemplate, (const VendorTemplate& tmpl), (override));
+  MOCK_METHOD(bool, SetContext, (std::string user_id), (override));
+  MOCK_METHOD(bool, ResetContext, (), (override));
+  MOCK_METHOD(bool, InitEntropy, (bool reset), (override));
+  MOCK_METHOD(int, MaxTemplateCount, (), (override));
+  MOCK_METHOD(int, TemplateVersion, (), (override));
   MOCK_METHOD(EcCmdVersionSupportStatus,
               EcCmdVersionSupported,
-              (uint16_t cmd, uint32_t ver));
-  MOCK_METHOD(bool, SupportsPositiveMatchSecret, ());
+              (uint16_t cmd, uint32_t ver),
+              (override));
+  MOCK_METHOD(bool, SupportsPositiveMatchSecret, (), (override));
   MOCK_METHOD(bool,
               GetPositiveMatchSecret,
-              (int index, brillo::SecureBlob* secret));
+              (int index, brillo::SecureBlob* secret),
+              (override));
 };
 
 }  // namespace biod
