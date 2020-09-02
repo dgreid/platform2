@@ -426,11 +426,17 @@ void DisplaySystemInfo(
   const auto& system_info = system_result->get_system_info();
   std::cout << "first_power_date,manufacture_date,product_sku_number,"
             << "marketing_name,bios_version,board_name,board_version,"
-            << "chassis_type,product_name" << std::endl;
+            << "chassis_type,product_name,os_version,os_channel" << std::endl;
   std::string chassis_type =
       !system_info->chassis_type.is_null()
           ? std::to_string(system_info->chassis_type->value)
           : "NA";
+  std::string os_version =
+      base::JoinString({system_info->os_version->release_milestone,
+                        system_info->os_version->build_number,
+                        system_info->os_version->patch_number},
+                       ".");
+
   std::cout << system_info->first_power_date.value_or("NA") << ","
             << system_info->manufacture_date.value_or("NA") << ","
             << system_info->product_sku_number.value_or("NA") << ","
@@ -438,7 +444,9 @@ void DisplaySystemInfo(
             << system_info->bios_version.value_or("NA") << ","
             << system_info->board_name.value_or("NA") << ","
             << system_info->board_version.value_or("NA") << "," << chassis_type
-            << "," << system_info->product_name.value_or("NA") << std::endl;
+            << "," << system_info->product_name.value_or("NA") << ","
+            << os_version << ',' << system_info->os_version->release_channel
+            << std::endl;
 }
 
 // Displays the retrieved telemetry information to the console.

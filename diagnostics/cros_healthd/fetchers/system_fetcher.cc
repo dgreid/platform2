@@ -13,6 +13,7 @@
 #include <base/optional.h>
 #include <base/strings/stringprintf.h>
 #include <base/strings/string_number_conversions.h>
+#include <base/system/sys_info.h>
 
 #include "diagnostics/cros_healthd/utils/error_utils.h"
 #include "diagnostics/cros_healthd/utils/file_utils.h"
@@ -129,6 +130,48 @@ void SystemFetcher::FetchMasterConfigInfo(mojo_ipc::SystemInfo* output_info) {
   output_info->marketing_name = context_->system_config()->GetMarketingName();
 }
 
+base::Optional<mojo_ipc::ProbeErrorPtr> SystemFetcher::FetchOsVersion(
+    mojo_ipc::OsVersion* os_version) {
+  std::string milestone;
+  std::string build;
+  std::string patch;
+  std::string release_channel;
+
+  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_CHROME_MILESTONE",
+                                         &milestone)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read OS milestone from /etc/lsb-release");
+  }
+
+  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_BUILD_NUMBER",
+                                         &build)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read OS build number from /etc/lsb-release");
+  }
+
+  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_PATCH_NUMBER",
+                                         &patch)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read OS patch number from /etc/lsb-release");
+  }
+
+  if (!base::SysInfo::GetLsbReleaseValue("CHROMEOS_RELEASE_TRACK",
+                                         &release_channel)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Unable to read OS release track from /etc/lsb-release");
+  }
+
+  os_version->release_milestone = milestone;
+  os_version->build_number = build;
+  os_version->patch_number = patch;
+  os_version->release_channel = release_channel;
+  return base::nullopt;
+}
+
 mojo_ipc::SystemResultPtr SystemFetcher::FetchSystemInfo(
     const base::FilePath& root_dir) {
   mojo_ipc::SystemInfo system_info;
@@ -142,6 +185,12 @@ mojo_ipc::SystemResultPtr SystemFetcher::FetchSystemInfo(
   error = FetchDmiInfo(root_dir, &system_info);
   if (error.has_value())
     return mojo_ipc::SystemResult::NewError(std::move(error.value()));
+
+  system_info.os_version = mojo_ipc::OsVersion::New();
+  error = FetchOsVersion(system_info.os_version.get());
+  if (error.has_value()) {
+    return mojo_ipc::SystemResult::NewError(std::move(error.value()));
+  }
 
   return mojo_ipc::SystemResult::NewSystemInfo(system_info.Clone());
 }

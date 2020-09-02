@@ -58,6 +58,11 @@ class SystemFetcher final {
   void FetchMasterConfigInfo(
       chromeos::cros_healthd::mojom::SystemInfo* output_info);
 
+  // Fetches the operating system version and populates the |output_info|
+  // structure.
+  base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr> FetchOsVersion(
+      chromeos::cros_healthd::mojom::OsVersion* os_version);
+
   // Unowned pointer that outlives this SystemFetcher instance.
   Context* const context_ = nullptr;
 };

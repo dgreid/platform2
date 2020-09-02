@@ -8,6 +8,7 @@
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/optional.h>
+#include <base/system/sys_info.h>
 #include <gtest/gtest.h>
 
 #include "diagnostics/common/file_test_utils.h"
@@ -18,6 +19,11 @@ namespace diagnostics {
 
 namespace {
 
+// Fake lsb-release values used for testing.
+const char kFakeReleaseMilestone[] = "87";
+const char kFakeBuildNumber[] = "13544";
+const char kFakePatchNumber[] = "59.0";
+const char kFakeReleaseChannel[] = "stable-channel";
 // Fake cached VPD values used for testing.
 const char kFakeFirstPowerDate[] = "2020-40";
 const char kFakeManufactureDate[] = "2019-01-01";
@@ -75,6 +81,7 @@ class SystemUtilsTest : public ::testing::Test {
 
     SetHasSkuNumber(true);
     SetMarketingName(kFakeMarketingName);
+    PopulateLsbRelease();
   }
 
   const base::FilePath& GetTempDirPath() const {
@@ -93,6 +100,17 @@ class SystemUtilsTest : public ::testing::Test {
 
   void SetMarketingName(const std::string& val) {
     mock_context_.fake_system_config()->SetMarketingName(val);
+  }
+
+  void PopulateLsbRelease() {
+    std::string lsb_release =
+        std::string("CHROMEOS_RELEASE_CHROME_MILESTONE=") +
+        kFakeReleaseMilestone +
+        "\nCHROMEOS_RELEASE_BUILD_NUMBER=" + kFakeBuildNumber +
+        "\nCHROMEOS_RELEASE_PATCH_NUMBER=" + kFakePatchNumber +
+        "\nCHROMEOS_RELEASE_TRACK=" + kFakeReleaseChannel;
+    base::SysInfo::SetChromeOSVersionInfoForTest(lsb_release,
+                                                 base::Time::Now());
   }
 
   void ValidateCachedVpdInfo(
@@ -124,6 +142,15 @@ class SystemUtilsTest : public ::testing::Test {
     EXPECT_EQ(system_info->product_name, kFakeProductName);
   }
 
+  void ValidateOsVersion(
+      const chromeos::cros_healthd::mojom::SystemInfoPtr& system_info) {
+    EXPECT_EQ(system_info->os_version->release_milestone,
+              kFakeReleaseMilestone);
+    EXPECT_EQ(system_info->os_version->build_number, kFakeBuildNumber);
+    EXPECT_EQ(system_info->os_version->patch_number, kFakePatchNumber);
+    EXPECT_EQ(system_info->os_version->release_channel, kFakeReleaseChannel);
+  }
+
   const base::FilePath& relative_vpd_rw_dir() { return relative_vpd_rw_dir_; }
 
   const base::FilePath& relative_vpd_ro_dir() { return relative_vpd_ro_dir_; }
@@ -149,6 +176,7 @@ TEST_F(SystemUtilsTest, TestFetchSystemInfo) {
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
+  ValidateOsVersion(system_info);
 }
 
 // Test that no first_power_date is reported when |kFirstPowerDateFileName| is
@@ -170,6 +198,7 @@ TEST_F(SystemUtilsTest, TestNoFirstPowerDate) {
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
+  ValidateOsVersion(system_info);
 }
 
 // Test that no manufacture_date is reported when |kManufactureDateFileName| is
@@ -191,6 +220,7 @@ TEST_F(SystemUtilsTest, TestNoManufactureDate) {
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
+  ValidateOsVersion(system_info);
 }
 
 // Test that reading system info that does not have |kSkuNumberFileName| (when
@@ -228,6 +258,7 @@ TEST_F(SystemUtilsTest, TestNoSkuNumber) {
 
   ValidateCrosConfigInfo(system_info);
   ValidateDmiInfo(system_info);
+  ValidateOsVersion(system_info);
 }
 
 // Test that no DMI fields are populated when |kRelativeDmiInfoPath| doesn't
@@ -242,6 +273,7 @@ TEST_F(SystemUtilsTest, TestNoSysDevicesVirtualDmiId) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that no DMI values are obtained.
   EXPECT_FALSE(system_info->bios_version.has_value());
@@ -263,6 +295,7 @@ TEST_F(SystemUtilsTest, TestNoBiosVersion) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that the bios_version was not populated.
   EXPECT_FALSE(system_info->bios_version.has_value());
@@ -288,6 +321,7 @@ TEST_F(SystemUtilsTest, TestNoBoardName) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that the board_name was not populated.
   ASSERT_TRUE(system_info->bios_version.has_value());
@@ -313,6 +347,7 @@ TEST_F(SystemUtilsTest, TestNoBoardVersion) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that the board_version was not populated.
   ASSERT_TRUE(system_info->bios_version.has_value());
@@ -338,6 +373,7 @@ TEST_F(SystemUtilsTest, TestNoChassisType) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that the chassis_type was not populated.
   ASSERT_TRUE(system_info->bios_version.has_value());
@@ -379,6 +415,7 @@ TEST_F(SystemUtilsTest, TestNoProductName) {
 
   ValidateCachedVpdInfo(system_info);
   ValidateCrosConfigInfo(system_info);
+  ValidateOsVersion(system_info);
 
   // Confirm that the product_name was not populated.
   ASSERT_TRUE(system_info->bios_version.has_value());
@@ -390,6 +427,32 @@ TEST_F(SystemUtilsTest, TestNoProductName) {
   ASSERT_TRUE(system_info->chassis_type);
   EXPECT_EQ(system_info->chassis_type->value, kFakeChassisTypeOutput);
   EXPECT_FALSE(system_info->product_name.has_value());
+}
+
+// Tests that an error is returned if there is no OS version information
+// populated in lsb-release.
+TEST_F(SystemUtilsTest, TestNoOsVersion) {
+  base::SysInfo::SetChromeOSVersionInfoForTest("", base::Time::Now());
+
+  auto system_result = FetchSystemInfo(GetTempDirPath());
+  ASSERT_TRUE(system_result->is_error());
+  EXPECT_EQ(system_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kFileReadError);
+}
+
+// Tests that an error is returned if the lsb-release file is malformed.
+TEST_F(SystemUtilsTest, TestBadOsVersion) {
+  std::string lsb_release =
+      std::string("Milestone") + kFakeReleaseMilestone +
+      "\nCHROMEOS_RELEASE_BUILD_NUMBER=" + kFakeBuildNumber +
+      "\nCHROMEOS_RELEASE_PATCH_NUMBER=" + kFakePatchNumber +
+      "\nCHROMEOS_RELEASE_TRACK=" + kFakeReleaseChannel;
+  base::SysInfo::SetChromeOSVersionInfoForTest(lsb_release, base::Time::Now());
+
+  auto system_result = FetchSystemInfo(GetTempDirPath());
+  ASSERT_TRUE(system_result->is_error());
+  EXPECT_EQ(system_result->get_error()->type,
+            chromeos::cros_healthd::mojom::ErrorType::kFileReadError);
 }
 
 }  // namespace diagnostics
