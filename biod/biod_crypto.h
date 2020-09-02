@@ -14,7 +14,7 @@ namespace biod {
 
 class BiodCrypto {
  public:
-  static bool ComputeValidationValue(const brillo::SecureBlob& secret,
+  static bool ComputeValidationValue(const brillo::SecureVector& secret,
                                      const std::string& user_id,
                                      std::vector<uint8_t>* out);
 };

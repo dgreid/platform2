@@ -501,7 +501,7 @@ void CrosFpBiometricsManager::DoEnrollImageEvent(InternalRecord record,
   }
 
   if (use_positive_match_secret_) {
-    brillo::SecureBlob secret(FP_POSITIVE_MATCH_SECRET_BYTES);
+    brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
     if (!cros_dev_->GetPositiveMatchSecret(CrosFpDevice::kLastTemplate,
                                            &secret)) {
       LOG(ERROR) << "Failed to get positive match secret.";
@@ -556,7 +556,7 @@ void CrosFpBiometricsManager::DoMatchFingerUpEvent(uint32_t event) {
 }
 
 bool CrosFpBiometricsManager::ValidationValueIsCorrect(uint32_t match_idx) {
-  brillo::SecureBlob secret(FP_POSITIVE_MATCH_SECRET_BYTES);
+  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
   bool read_secret_success =
       cros_dev_->GetPositiveMatchSecret(match_idx, &secret);
   biod_metrics_->SendReadPositiveMatchSecretSuccess(read_secret_success);
@@ -610,7 +610,7 @@ BiometricsManager::AttemptMatches CrosFpBiometricsManager::CalculateMatches(
 
 CrosFpBiometricsManager::MigrationStatus
 CrosFpBiometricsManager::MigrateToValidationValue(int match_idx) {
-  brillo::SecureBlob secret(FP_POSITIVE_MATCH_SECRET_BYTES);
+  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
   if (!cros_dev_->GetPositiveMatchSecret(match_idx, &secret)) {
     LOG(ERROR) << "In migration to validation value: failed to read positive "
                   "match secret on match for finger "

@@ -41,7 +41,7 @@ getuid: 1
 ioctl: arg1 == 0x5501 || arg1 == 0x5502 || arg1 == 0x405c5503 || arg1 == 0x40045564 || arg1 == 0x40045565 || arg1 == 0xc014ec00 || arg1 == 0xec02
 lseek: 1
 lstat: 1
-# madvise, mlock, munlock: For brillo::SecureBlob allocator
+# madvise, mlock, munlock: For brillo::SecureVector allocator
 madvise: 1
 mlock: 1
 # Don't allow execute and write at the same time

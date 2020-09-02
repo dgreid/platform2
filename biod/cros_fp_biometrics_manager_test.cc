@@ -49,7 +49,8 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
   }
   bool GetDirtyMap(std::bitset<32>* bitmap) override { return false; }
   bool SupportsPositiveMatchSecret() override { return true; }
-  bool GetPositiveMatchSecret(int index, brillo::SecureBlob* secret) override {
+  bool GetPositiveMatchSecret(int index,
+                              brillo::SecureVector* secret) override {
     if (positive_match_secret_.empty())
       return false;
     secret->resize(FP_POSITIVE_MATCH_SECRET_BYTES);
@@ -77,7 +78,7 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
 
  private:
   friend class CrosFpBiometricsManagerPeer;
-  std::vector<uint8_t> positive_match_secret_;
+  brillo::SecureVector positive_match_secret_;
 };
 
 
@@ -114,7 +115,7 @@ class CrosFpBiometricsManagerPeer {
 
   // Methods to access or modify the fake device.
 
-  void SetDevicePositiveMatchSecret(const std::vector<uint8_t>& new_secret) {
+  void SetDevicePositiveMatchSecret(const brillo::SecureVector& new_secret) {
     fake_cros_dev_->positive_match_secret_ = new_secret;
   }
 
@@ -149,11 +150,10 @@ class CrosFpBiometricsManagerPeer {
 
   // Methods to execute CrosFpBiometricsManager private methods.
 
-  bool ComputeValidationValue(const std::vector<uint8_t>& secret,
+  bool ComputeValidationValue(const brillo::SecureVector& secret,
                               const std::string& user_id,
                               std::vector<uint8_t>* out) {
-    const brillo::SecureBlob secret_blob(secret);
-    return BiodCrypto::ComputeValidationValue(secret_blob, user_id, out);
+    return BiodCrypto::ComputeValidationValue(secret, user_id, out);
   }
 
   bool ValidationValueIsCorrect(uint32_t match_idx) {
@@ -201,7 +201,7 @@ class CrosFpBiometricsManagerTest : public ::testing::Test {
 
 TEST_F(CrosFpBiometricsManagerTest, TestComputeValidationValue) {
   EXPECT_TRUE(cros_fp_biometrics_manager_peer_.SupportsPositiveMatchSecret());
-  const std::vector<std::pair<std::vector<uint8_t>, std::vector<uint8_t>>>
+  const std::vector<std::pair<brillo::SecureVector, std::vector<uint8_t>>>
       kSecretValidationValuePairs = {
           std::make_pair(kFakePositiveMatchSecret1, kFakeValidationValue1),
           std::make_pair(kFakePositiveMatchSecret2, kFakeValidationValue2),
@@ -307,7 +307,7 @@ TEST_F(CrosFpBiometricsManagerTest, TestMigrateToValidationValueFailures) {
   // Setting the devices positive match secret to empty will make the fake
   // device return false when asked for positive match secret.
   cros_fp_biometrics_manager_peer_.SetDevicePositiveMatchSecret(
-      std::vector<uint8_t>());
+      brillo::SecureVector());
   EXPECT_FALSE(
       cros_fp_biometrics_manager_peer_.MigrateToValidationValue(index));
 }

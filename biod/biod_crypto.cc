@@ -12,7 +12,7 @@
 
 namespace biod {
 
-bool BiodCrypto::ComputeValidationValue(const brillo::SecureBlob& secret,
+bool BiodCrypto::ComputeValidationValue(const brillo::SecureVector& secret,
                                         const std::string& user_id,
                                         std::vector<uint8_t>* out) {
   std::vector<uint8_t> user_id_bytes;

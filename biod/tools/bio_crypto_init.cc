@@ -62,7 +62,7 @@ bool NukeFile(const base::FilePath& filepath) {
   return ret;
 }
 
-bool WriteSeedToCrosFp(const brillo::SecureBlob& seed) {
+bool WriteSeedToCrosFp(const brillo::SecureVector& seed) {
   bool ret = true;
   auto fd =
       base::ScopedFD(open(biod::CrosFpDevice::kCrosFpPath, O_RDWR | O_CLOEXEC));
@@ -102,7 +102,7 @@ bool WriteSeedToCrosFp(const brillo::SecureBlob& seed) {
   // compatible, so use the format version of the firmware.
   req->struct_version =
       static_cast<uint16_t>(firmware_fp_template_format_version);
-  std::copy(seed.char_data(), seed.char_data() + sizeof(req->seed), req->seed);
+  std::copy(seed.cbegin(), seed.cend() + sizeof(req->seed), req->seed);
 
   if (!cmd_seed.Run(fd.get())) {
     LOG(ERROR) << "Failed to set TPM seed.";
@@ -118,7 +118,7 @@ bool WriteSeedToCrosFp(const brillo::SecureBlob& seed) {
   return ret;
 }
 
-bool DoProgramSeed(const brillo::SecureBlob& tpm_seed) {
+bool DoProgramSeed(const brillo::SecureVector& tpm_seed) {
   bool ret = true;
 
   if (!WriteSeedToCrosFp(tpm_seed)) {
@@ -177,9 +177,10 @@ int main(int argc, char* argv[]) {
 
   if (pid == 0) {
     // The first thing we do is read the buffer, and delete the file.
-    brillo::SecureBlob tpm_seed(kTpmSeedSize);
+    brillo::SecureVector tpm_seed(kTpmSeedSize);
     int bytes_read = base::ReadFile(base::FilePath(kBioTpmSeedTmpFile),
-                                    tpm_seed.char_data(), tpm_seed.size());
+                                    reinterpret_cast<char*>(tpm_seed.data()),
+                                    tpm_seed.size());
     NukeFile(base::FilePath(kBioTpmSeedTmpFile));
 
     if (bytes_read != kTpmSeedSize) {

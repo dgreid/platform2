@@ -8,13 +8,15 @@
 #include <cstdint>
 #include <vector>
 
+#include <brillo/secure_blob.h>
+
 namespace biod {
 namespace crypto_test_data {
 
 static constexpr char kUserID[] = "0123456789";
-static const std::vector<uint8_t> kFakePositiveMatchSecret1 = {0x00, 0x01,
+static const brillo::SecureVector kFakePositiveMatchSecret1 = {0x00, 0x01,
                                                                0x02};
-static const std::vector<uint8_t> kFakePositiveMatchSecret2 = {0xcc, 0xdd, 0xee,
+static const brillo::SecureVector kFakePositiveMatchSecret2 = {0xcc, 0xdd, 0xee,
                                                                0xff};
 // Validation value corresponding to kFakePositiveMatchSecret1 and kUserID.
 static const std::vector<uint8_t> kFakeValidationValue1 = {

@@ -22,7 +22,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider data_provider(data, size);
 
   std::string user_id = data_provider.ConsumeRandomLengthString(size);
-  brillo::SecureBlob secret(data_provider.ConsumeRemainingBytes<uint8_t>());
+  brillo::SecureVector secret(data_provider.ConsumeRemainingBytes<uint8_t>());
 
   biod::BiodCrypto::ComputeValidationValue(secret, user_id, &result);
 

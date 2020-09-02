@@ -249,7 +249,7 @@ bool CrosFpDevice::SupportsPositiveMatchSecret() {
 }
 
 bool CrosFpDevice::FpReadMatchSecret(uint16_t index,
-                                     brillo::SecureBlob* secret) {
+                                     brillo::SecureVector* secret) {
   EcCommand<struct ec_params_fp_read_match_secret,
             struct ec_response_fp_read_match_secret>
       cmd(EC_CMD_FP_READ_MATCH_SECRET, 0, {.fgr = index});
@@ -553,7 +553,7 @@ bool CrosFpDevice::GetIndexOfLastTemplate(int* index) {
 }
 
 bool CrosFpDevice::GetPositiveMatchSecret(int index,
-                                          brillo::SecureBlob* secret) {
+                                          brillo::SecureVector* secret) {
   if (index == kLastTemplate) {
     if (!GetIndexOfLastTemplate(&index))
       return false;

@@ -24,7 +24,7 @@ ioctl: arg1 == 0xc014ec00
 kill: 1
 lseek: 1
 lstat: 1
-# madvise, mlock, munlock: For brillo::SecureBlob allocator
+# madvise, mlock, munlock: For brillo::SecureVector allocator
 madvise: 1
 mlock: 1
 # Don't allow execute and write at the same time
