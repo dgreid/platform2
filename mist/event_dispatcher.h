@@ -12,15 +12,15 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
-#include <base/message_loop/message_loop.h>
+#include <base/task/single_thread_task_executor.h>
 #include <base/time/time.h>
 
 namespace mist {
 
 // An event dispatcher for posting a task to a message loop, and for monitoring
 // when a file descriptor is ready for I/O. To allow file descriptor monitoring
-// via libevent, base::MessageLoopForIO, which uses base::MessagePumpLibevent,
-// is used as the underlying message loop.
+// via libevent, base::SingleThreadTaskExecutor, which uses
+// base::MessagePumpLibevent, is used as the underlying message loop.
 class EventDispatcher {
  public:
   enum class Mode {
@@ -66,10 +66,10 @@ class EventDispatcher {
     std::unique_ptr<base::FileDescriptorWatcher::Controller> write_watcher;
   };
 
-  base::MessageLoopForIO message_loop_;  // Do not use this directly.
+  base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
   scoped_refptr<base::SingleThreadTaskRunner> task_runner_;
   base::OnceClosure quit_closure_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
+  base::FileDescriptorWatcher watcher_{task_executor_.task_runner()};
   std::map<int, Watcher> file_descriptor_watchers_;
 
   DISALLOW_COPY_AND_ASSIGN(EventDispatcher);
