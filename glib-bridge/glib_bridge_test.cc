@@ -11,7 +11,7 @@
 #include <vector>
 
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
+#include <base/test/task_environment.h>
 #include <base/run_loop.h>
 #include <gtest/gtest.h>
 
@@ -55,15 +55,16 @@ class GlibBridgeTest : public ::testing::Test {
  protected:
   void Start() {
     // Set up timeout
-    message_loop_.task_runner()->PostDelayedTask(
+    task_environment_.GetMainThreadTaskRunner()->PostDelayedTask(
         FROM_HERE, run_loop_.QuitClosure(), kTestTimeout);
     run_loop_.Run();
   }
 
  private:
-  base::MessageLoopForIO message_loop_;
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY,
+      base::test::TaskEnvironment::MainThreadType::IO};
   base::RunLoop run_loop_;
-  base::FileDescriptorWatcher watcher_{message_loop_.task_runner()};
   std::unique_ptr<GlibBridge> glib_bridge_;
 
   DISALLOW_COPY_AND_ASSIGN(GlibBridgeTest);
