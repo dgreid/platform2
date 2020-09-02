@@ -6,8 +6,8 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
+#include <base/test/task_environment.h>
 #include <base/threading/platform_thread.h>
 #include <base/threading/thread.h>
 #include <gmock/gmock.h>
@@ -60,7 +60,8 @@ class BackgroundTransceiverTest : public testing::Test {
   ~BackgroundTransceiverTest() override {}
 
  protected:
-  base::MessageLoopForIO message_loop_;
+  base::test::TaskEnvironment task_environment_{
+    base::test::TaskEnvironment::MainThreadType::IO};
   base::Thread test_thread_;
   MockCommandTransceiver next_transceiver_;
 };
@@ -84,7 +85,7 @@ TEST_F(BackgroundTransceiverTest, Synchronous) {
       &next_transceiver_, test_thread_.task_runner());
   std::string output = "not_assigned";
   // Post a synchronous call to be run when we start pumping the loop.
-  message_loop_.task_runner()->PostTask(
+  task_environment_.GetMainThreadTaskRunner()->PostTask(
       FROM_HERE, base::Bind(SendCommandAndWaitAndAssign,
                             &background_transceiver, &output));
   base::RunLoop run_loop;

@@ -6,9 +6,9 @@
 
 #include <base/bind.h>
 #include <base/callback.h>
-#include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
 #include <base/stl_util.h>
+#include <base/test/task_environment.h>
 #include <base/threading/thread_task_runner_handle.h>
 #include <gtest/gtest.h>
 
@@ -298,7 +298,9 @@ class CommandFlowTest : public testing::Test {
     run_loop.RunUntilIdle();
   }
 
-  base::MessageLoop message_loop_;
+  base::test::TaskEnvironment task_environment_{
+          base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
+
   TPM_RC response_code_;
   std::string signature_;
   std::string signed_data_;
