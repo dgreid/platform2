@@ -71,7 +71,7 @@ class BRILLO_EXPORT SecureBlob : public SecureVector {
 // this function will not be optimized out.
 //
 // SecureMemset is used to write beyond the size() in several functions.
-// Since this is intentional, disable address sanitizer from analying it.
+// Since this is intentional, disable address sanitizer from analyzing it.
 BRILLO_EXPORT BRILLO_DISABLE_ASAN void* SecureMemset(void* v, int c, size_t n);
 
 // Compare [n] bytes starting at [s1] with [s2] and return 0 if they match,
