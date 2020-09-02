@@ -5,6 +5,8 @@
 #ifndef LORGNETTE_MANAGER_H_
 #define LORGNETTE_MANAGER_H_
 
+#include <stdint.h>
+
 #include <memory>
 #include <string>
 #include <vector>
@@ -17,7 +19,6 @@
 #include <base/optional.h>
 #include <base/synchronization/lock.h>
 #include <base/time/time.h>
-#include <brillo/variant_dictionary.h>
 #include <brillo/errors/error.h>
 #include <lorgnette/proto_bindings/lorgnette_service.pb.h>
 #include <metrics/metrics_library.h>
@@ -75,10 +76,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
   bool GetScannerCapabilities(brillo::ErrorPtr* error,
                               const std::string& device_name,
                               std::vector<uint8_t>* capabilities) override;
-  bool ScanImage(brillo::ErrorPtr* error,
-                 const std::string& device_name,
-                 const base::ScopedFD& outfd,
-                 const brillo::VariantDictionary& scan_properties) override;
   void StartScan(
       std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> response,
       const std::vector<uint8_t>& start_scan_request,
@@ -101,12 +98,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
 
  private:
   friend class ManagerTest;
-
-  enum BooleanMetric {
-    kBooleanMetricFailure = 0,
-    kBooleanMetricSuccess = 1,
-    kBooleanMetricMax
-  };
 
   struct ScanJobState {
     std::string device_name;
@@ -134,12 +125,6 @@ class Manager : public org::chromium::lorgnette::ManagerAdaptor,
                    ScanJobState* scan_state,
                    base::ScopedFILE out_file,
                    base::Optional<std::string> scan_uuid);
-
-  static bool ExtractScanOptions(
-      brillo::ErrorPtr* error,
-      const brillo::VariantDictionary& scan_properties,
-      uint32_t* resolution_out,
-      std::string* mode_out);
 
   void ReportScanRequested(const std::string& device_name);
   void ReportScanSucceeded(const std::string& device_name);
