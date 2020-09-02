@@ -315,7 +315,7 @@ TEST_F(CrosFpBiometricsManagerTest, TestMigrateToValidationValueFailures) {
 TEST_F(CrosFpBiometricsManagerTest, TestInsertEmptyPositiveMatchSalt) {
   // Prepare a template of old format, with zero-length template field.
   size_t metadata_size = sizeof(struct ec_fp_template_encryption_metadata);
-  std::vector<uint8_t> tmpl(metadata_size, 0xff);
+  VendorTemplate tmpl(metadata_size, 0xff);
 
   CrosFpBiometricsManagerPeer::InsertEmptyPositiveMatchSalt(&tmpl);
 

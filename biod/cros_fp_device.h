@@ -104,7 +104,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   bool AddEntropy(bool reset);
   // Get block id from rollback info.
   bool GetRollBackInfoId(int32_t* block_id);
-  bool FpFrame(int index, std::vector<uint8_t>* frame);
+  bool FpFrame(int index, VendorTemplate* frame);
   bool FpReadMatchSecret(uint16_t index, brillo::SecureVector* secret);
   bool GetIndexOfLastTemplate(int* index);
   // Run a sequence of EC commands to update the entropy in the

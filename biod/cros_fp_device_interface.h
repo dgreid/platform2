@@ -15,7 +15,12 @@
 #include "biod/ec_command.h"
 #include "biod/fp_mode.h"
 
-using VendorTemplate = std::vector<uint8_t>;
+/**
+ * The template is encrypted, so it's not strictly necessary to use
+ * SecureVector, but we do so as part of a defense-in-depth strategy in case
+ * there's a bug in the encryption/FPMCU.
+ */
+using VendorTemplate = brillo::SecureVector;
 
 namespace biod {
 

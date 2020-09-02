@@ -175,7 +175,7 @@ FpMode CrosFpDevice::GetFpMode() {
   return FpMode(cmd.Resp()->mode);
 }
 
-bool CrosFpDevice::FpFrame(int index, std::vector<uint8_t>* frame) {
+bool CrosFpDevice::FpFrame(int index, VendorTemplate* frame) {
   EcCommand<struct ec_params_fp_frame, uint8_t[kMaxPacketSize]> cmd(
       EC_CMD_FP_FRAME);
 
