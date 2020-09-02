@@ -50,15 +50,16 @@ class U2fDaemon : public brillo::DBusServiceDaemon {
  private:
   // Checks if the device policy is available, and if so, starts the U2F
   // service.
-  void TryStartService(const std::string& /* unused dbus signal status */);
+  void TryStartU2fHidService(
+      const std::string& /* unused dbus signal status */);
 
-  // Starts the service, and creates the virtual USB HID device. Calling after
-  // the service is started is a no-op. Returns:
+  // Starts the U2F service, and creates the virtual USB HID device. Calling
+  // after the service is started is a no-op. Returns:
   //   EX_OK on success
   //   EX_CONFIG if the service is disabled (by flags and/or policy)
   //   EX_PROTOCOL if the cr50 version is incompatible or virtual HID device
   //   cannot be initialized EX_IOERR if DBus cannot be initialized
-  int StartService();
+  int StartU2fHidService();
 
   // Initializes DBus proxies for PowerManager, SessionManager, and Trunks.
   bool InitializeDBusProxies();

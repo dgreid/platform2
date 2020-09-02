@@ -155,14 +155,20 @@ int U2fDaemon::OnInit() {
     return EX_IOERR;
   }
 
+  user_state_ = std::make_unique<u2f::UserState>(
+      sm_proxy_.get(), legacy_kh_fallback_ ? kLegacyKhCounterMin : 0);
+
   sm_proxy_->RegisterPropertyChangeCompleteSignalHandler(
-      base::Bind(&U2fDaemon::TryStartService, base::Unretained(this)),
+      base::Bind(&U2fDaemon::TryStartU2fHidService, base::Unretained(this)),
       base::Bind(&OnPolicySignalConnected));
+
+  LOG(INFO) << "Initializing WebAuthn handler.";
+  InitializeWebAuthnHandler();
 
   bool policy_ready = U2fPolicyReady();
 
   if (policy_ready) {
-    int status = StartService();
+    int status = StartU2fHidService();
 
     // If U2F is not currently enabled, we'll wait for policy updates
     // that may enable it. We don't ever disable U2F on policy updates.
@@ -180,17 +186,17 @@ int U2fDaemon::OnInit() {
   return EX_OK;
 }
 
-void U2fDaemon::TryStartService(
+void U2fDaemon::TryStartU2fHidService(
     const std::string& /* unused dbus signal status */) {
   if (!u2fhid_ && U2fPolicyReady()) {
-    int status = StartService();
+    int status = StartU2fHidService();
     if (status != EX_OK && status != EX_CONFIG) {
       exit(status);
     }
   }
 }
 
-int U2fDaemon::StartService() {
+int U2fDaemon::StartU2fHidService() {
   if (u2fhid_) {
     // Any failures in previous calls to this function would have caused the
     // program to terminate, so we can assume we have successfully started.
@@ -202,19 +208,17 @@ int U2fDaemon::StartService() {
     return EX_CONFIG;
   }
 
+  LOG(INFO) << "Starting U2fHid service.";
+
   // If g2f is enabled by policy, we always include allowlisting data.
   bool include_g2f_allowlist_data =
       g2f_allowlist_data_ || (ReadU2fPolicy() == U2fMode::kU2fExtended);
-
-  user_state_ = std::make_unique<u2f::UserState>(
-      sm_proxy_.get(), legacy_kh_fallback_ ? kLegacyKhCounterMin : 0);
 
   CreateU2fMsgHandler(
       u2f_mode == U2fMode::kU2fExtended /* Allow G2F Attestation */,
       include_g2f_allowlist_data);
 
   CreateU2fHid();
-  InitializeWebAuthnHandler();
 
   return u2fhid_->Init() ? EX_OK : EX_PROTOCOL;
 }
