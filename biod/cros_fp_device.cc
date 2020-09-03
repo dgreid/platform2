@@ -372,25 +372,24 @@ bool CrosFpDevice::AddEntropy(bool reset) {
   return false;
 }
 
-bool CrosFpDevice::GetRollBackInfoId(int32_t* block_id) {
+base::Optional<int32_t> CrosFpDevice::GetRollBackInfoId() {
   EcCommand<EmptyParam, struct ec_response_rollback_info> cmd_rb_info(
       EC_CMD_ROLLBACK_INFO);
   if (!cmd_rb_info.Run(cros_fd_.get())) {
-    return false;
+    return base::nullopt;
   }
 
-  *block_id = cmd_rb_info.Resp()->id;
-  return true;
+  return cmd_rb_info.Resp()->id;
 }
 
 bool CrosFpDevice::InitEntropy(bool reset) {
-  int32_t block_id;
-  if (!GetRollBackInfoId(&block_id)) {
+  base::Optional<int32_t> block_id = GetRollBackInfoId();
+  if (!block_id) {
     LOG(ERROR) << "Failed to read block ID from FPMCU.";
     return false;
   }
 
-  if (!reset && block_id != 0) {
+  if (!reset && *block_id != 0) {
     // Secret has been set.
     LOG(INFO) << "Entropy source had been initialized previously.";
     return true;
@@ -675,8 +674,8 @@ bool CrosFpDevice::ResetContext() {
 
 bool CrosFpDevice::UpdateEntropy(bool reset) {
   // Stash the most recent block id.
-  int32_t block_id;
-  if (!GetRollBackInfoId(&block_id)) {
+  base::Optional<int32_t> block_id = GetRollBackInfoId();
+  if (!block_id) {
     LOG(ERROR) << "Failed to block ID from FPMCU before entropy reset.";
     return false;
   }
@@ -699,8 +698,8 @@ bool CrosFpDevice::UpdateEntropy(bool reset) {
     return false;
   }
 
-  int32_t new_block_id;
-  if (!GetRollBackInfoId(&new_block_id)) {
+  base::Optional<int32_t> new_block_id = GetRollBackInfoId();
+  if (!new_block_id) {
     LOG(ERROR) << "Failed to block ID from FPMCU after entropy reset.";
     return false;
   }
@@ -710,9 +709,9 @@ bool CrosFpDevice::UpdateEntropy(bool reset) {
     block_id_diff = 1;
   }
 
-  if (new_block_id != block_id + block_id_diff) {
+  if (new_block_id != *block_id + block_id_diff) {
     LOG(ERROR) << "Entropy source has not been updated; old block_id: "
-               << block_id << ", new block_id: " << new_block_id;
+               << *block_id << ", new block_id: " << *new_block_id;
     return false;
   }
   return true;
