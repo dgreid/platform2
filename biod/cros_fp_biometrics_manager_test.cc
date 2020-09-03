@@ -51,16 +51,16 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
     return base::nullopt;
   }
   bool SupportsPositiveMatchSecret() override { return true; }
-  bool GetPositiveMatchSecret(int index,
-                              brillo::SecureVector* secret) override {
-    if (positive_match_secret_.empty())
-      return false;
-    secret->resize(FP_POSITIVE_MATCH_SECRET_BYTES);
+  base::Optional<brillo::SecureVector> GetPositiveMatchSecret(
+      int index) override {
+    if (positive_match_secret_.empty()) {
+      return base::nullopt;
+    }
     // Zero-pad the secret if it's too short.
-    std::fill(secret->begin(), secret->end(), 0);
+    brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES, 0);
     std::copy(positive_match_secret_.begin(), positive_match_secret_.end(),
-              secret->begin());
-    return true;
+              secret.begin());
+    return secret;
   }
   base::Optional<VendorTemplate> GetTemplate(int index) override {
     return VendorTemplate();

@@ -502,13 +502,18 @@ bool CrosFpDevice::GetIndexOfLastTemplate(int* index) {
   return true;
 }
 
-bool CrosFpDevice::GetPositiveMatchSecret(int index,
-                                          brillo::SecureVector* secret) {
+base::Optional<brillo::SecureVector> CrosFpDevice::GetPositiveMatchSecret(
+    int index) {
   if (index == kLastTemplate) {
-    if (!GetIndexOfLastTemplate(&index))
-      return false;
+    if (!GetIndexOfLastTemplate(&index)) {
+      return base::nullopt;
+    }
   }
-  return FpReadMatchSecret(static_cast<uint16_t>(index), secret);
+  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
+  if (!FpReadMatchSecret(static_cast<uint16_t>(index), &secret)) {
+    return base::nullopt;
+  }
+  return secret;
 }
 
 base::Optional<VendorTemplate> CrosFpDevice::GetTemplate(int index) {

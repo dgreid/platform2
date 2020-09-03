@@ -40,9 +40,9 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
               (uint16_t cmd, uint32_t ver),
               (override));
   MOCK_METHOD(bool, SupportsPositiveMatchSecret, (), (override));
-  MOCK_METHOD(bool,
+  MOCK_METHOD(base::Optional<brillo::SecureVector>,
               GetPositiveMatchSecret,
-              (int index, brillo::SecureVector* secret),
+              (int index),
               (override));
 };
 

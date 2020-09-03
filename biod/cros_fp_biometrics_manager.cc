@@ -471,16 +471,16 @@ void CrosFpBiometricsManager::DoEnrollImageEvent(InternalRecord record,
   }
 
   if (use_positive_match_secret_) {
-    brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
-    if (!cros_dev_->GetPositiveMatchSecret(CrosFpDevice::kLastTemplate,
-                                           &secret)) {
+    base::Optional<brillo::SecureVector> secret =
+        cros_dev_->GetPositiveMatchSecret(CrosFpDevice::kLastTemplate);
+    if (!secret) {
       LOG(ERROR) << "Failed to get positive match secret.";
       OnSessionFailed();
       return;
     }
 
     std::vector<uint8_t> validation_val;
-    if (!BiodCrypto::ComputeValidationValue(secret, record.user_id,
+    if (!BiodCrypto::ComputeValidationValue(*secret, record.user_id,
                                             &validation_val)) {
       LOG(ERROR) << "Failed to compute validation value.";
       OnSessionFailed();
@@ -526,18 +526,17 @@ void CrosFpBiometricsManager::DoMatchFingerUpEvent(uint32_t event) {
 }
 
 bool CrosFpBiometricsManager::ValidationValueIsCorrect(uint32_t match_idx) {
-  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
-  bool read_secret_success =
-      cros_dev_->GetPositiveMatchSecret(match_idx, &secret);
-  biod_metrics_->SendReadPositiveMatchSecretSuccess(read_secret_success);
-  if (!read_secret_success) {
+  base::Optional<brillo::SecureVector> secret =
+      cros_dev_->GetPositiveMatchSecret(match_idx);
+  biod_metrics_->SendReadPositiveMatchSecretSuccess(secret.has_value());
+  if (!secret) {
     LOG(ERROR) << "Failed to read positive match secret on match for finger "
                << match_idx << ".";
     return false;
   }
 
   std::vector<uint8_t> validation_value;
-  if (!BiodCrypto::ComputeValidationValue(secret, records_[match_idx].user_id,
+  if (!BiodCrypto::ComputeValidationValue(*secret, records_[match_idx].user_id,
                                           &validation_value)) {
     LOG(ERROR) << "Got positive match secret but failed to compute validation "
                   "value for finger "
@@ -580,8 +579,9 @@ BiometricsManager::AttemptMatches CrosFpBiometricsManager::CalculateMatches(
 
 CrosFpBiometricsManager::MigrationStatus
 CrosFpBiometricsManager::MigrateToValidationValue(int match_idx) {
-  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
-  if (!cros_dev_->GetPositiveMatchSecret(match_idx, &secret)) {
+  base::Optional<brillo::SecureVector> secret =
+      cros_dev_->GetPositiveMatchSecret(match_idx);
+  if (!secret) {
     LOG(ERROR) << "In migration to validation value: failed to read positive "
                   "match secret on match for finger "
                << match_idx << ".";
@@ -589,7 +589,7 @@ CrosFpBiometricsManager::MigrateToValidationValue(int match_idx) {
   }
 
   if (!BiodCrypto::ComputeValidationValue(
-          secret, records_[match_idx].user_id,
+          *secret, records_[match_idx].user_id,
           &records_[match_idx].validation_val)) {
     LOG(ERROR) << "In migration to validation value: failed to compute "
                   "validation value from secret on match for finger "

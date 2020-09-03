@@ -56,8 +56,8 @@ class CrosFpDeviceInterface {
   virtual base::Optional<FpStats> GetFpStats() = 0;
   virtual base::Optional<std::bitset<32>> GetDirtyMap() = 0;
   virtual bool SupportsPositiveMatchSecret() = 0;
-  virtual bool GetPositiveMatchSecret(int index,
-                                      brillo::SecureVector* secret) = 0;
+  virtual base::Optional<brillo::SecureVector> GetPositiveMatchSecret(
+      int index) = 0;
   virtual base::Optional<VendorTemplate> GetTemplate(int index) = 0;
   virtual bool UploadTemplate(const VendorTemplate& tmpl) = 0;
   virtual bool SetContext(std::string user_id) = 0;
