@@ -23,8 +23,7 @@ class MockMount : public Mount {
               Init,
               (Platform*,
                Crypto*,
-               UserOldestActivityTimestampCache*,
-               PreMountCallback pre_mount_callback),
+               UserOldestActivityTimestampCache*),
               (override));
   MOCK_METHOD(bool, AreSameUser, (const std::string&), (override));
   MOCK_METHOD(const UserSession*, GetCurrentUserSession, (), (const, override));

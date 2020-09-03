@@ -3950,11 +3950,11 @@ void Service::DetectEnterpriseOwnership() {
 scoped_refptr<cryptohome::Mount> Service::CreateUntrackedMountForUser(
     const std::string& username) {
   scoped_refptr<cryptohome::Mount> m;
+  // TODO(dlunev): Decide if finalization should be moved to MountFactory.
+  EnsureBootLockboxFinalized();
   m = mount_factory_->New();
   if (!m->Init(platform_, crypto_,
-               user_timestamp_cache_.get(),
-               base::BindRepeating(&Service::PreMountCallback,
-                                   base::Unretained(this)))) {
+               user_timestamp_cache_.get())) {
     return nullptr;
   }
   m->set_enterprise_owned(enterprise_owned_);
@@ -3994,6 +3994,24 @@ void Service::RemoveMount(cryptohome::Mount* mount) {
   }
 }
 
+void Service::EnsureBootLockboxFinalized() {
+  if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
+    LOG(WARNING) << "Failed to finalize boot lockbox when mounting guest "
+                    "cryptohome";
+  }
+#if USE_TPM2
+  // Lock NVRamBootLockbox
+  auto nvram_boot_lockbox_client = BootLockboxClient::CreateBootLockboxClient();
+  if (!nvram_boot_lockbox_client) {
+    LOG(WARNING) << "Failed to create nvram_boot_lockbox_client";
+    return;
+  }
+
+  if (!nvram_boot_lockbox_client->Finalize()) {
+    LOG(WARNING) << "Failed to finalize nvram lockbox.";
+  }
+#endif  // USE_TMP2
+}
 
 bool Service::RemoveAllMounts(bool unmount) {
   bool ok = true;
@@ -4317,22 +4335,6 @@ gboolean Service::CheckHealth(const GArray* request,
 
   SendReply(context, reply);
   return TRUE;
-}
-
-void Service::PreMountCallback() {
-#if USE_TPM2
-  // Lock NVRamBootLockbox
-  auto nvram_boot_lockbox_client =
-      BootLockboxClient::CreateBootLockboxClient();
-  if (!nvram_boot_lockbox_client) {
-    LOG(WARNING) << "Failed to create nvram_boot_lockbox_client";
-    return;
-  }
-
-  if (!nvram_boot_lockbox_client->Finalize()) {
-    LOG(WARNING) << "Failed to finalize nvram lockbox.";
-  }
-#endif  // USE_TMP2
 }
 
 void Service::set_cleanup_threshold(uint64_t cleanup_threshold) {

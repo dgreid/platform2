@@ -239,9 +239,6 @@ class Service : public brillo::dbus::AbstractDbusService,
   // in CleanUpStaleMounts.
   virtual bool CleanUpHiddenMounts();
 
-  // Mount::PreMountCallback. Called before Mount starts to mount cryptohome.
-  virtual void PreMountCallback();
-
   void set_legacy_mount(bool legacy) { legacy_mount_ = legacy; }
   void set_force_ecryptfs(bool force_ecryptfs) {
     force_ecryptfs_ = force_ecryptfs;
@@ -1094,6 +1091,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // Creates and initialized mount for the user
   scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
       const std::string& username);
+
+  // Ensures BootLockbox is finalized;
+  void EnsureBootLockboxFinalized();
 
   brillo::DBusConnection system_dbus_connection_;
 

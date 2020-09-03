@@ -17,6 +17,7 @@
 #include <metrics/metrics_library_mock.h>
 #include <tpm_manager-client-test/tpm_manager/dbus-proxy-mocks.h>
 
+#include "cryptohome/bootlockbox/mock_boot_lockbox.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/challenge_credentials/mock_challenge_credentials_helper.h"
 #include "cryptohome/cryptohome_common.h"
@@ -109,6 +110,7 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
     userdataauth_->set_tpm_init(&tpm_init_);
     userdataauth_->set_platform(&platform_);
     userdataauth_->set_chaps_client(&chaps_client_);
+    userdataauth_->set_boot_lockbox(&lockbox_);
     userdataauth_->set_firmware_management_parameters(&fwmp_);
     userdataauth_->set_fingerprint_manager(&fingerprint_manager_);
     userdataauth_->set_arc_disk_quota(&arc_disk_quota_);
@@ -180,6 +182,10 @@ class UserDataAuthTestNotInitialized : public ::testing::Test {
   // Mock InstallAttributes object, will be passed to UserDataAuth for its
   // internal use.
   NiceMock<MockInstallAttributes> attrs_;
+
+  // Mock BootLockBox object, will be passed to UserDataAuth for its internal
+  // use.
+  NiceMock<MockBootLockbox> lockbox_;
 
   // Mock Platform object, will be passed to UserDataAuth for its internal use.
   NiceMock<MockPlatform> platform_;
@@ -1520,7 +1526,8 @@ TEST_F(UserDataAuthTest, CleanUpStale_FilledMap_NoOpenFiles_ShadowOnly) {
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
   ASSERT_TRUE(userdataauth_->Initialize());
 
-  EXPECT_CALL(*mount, Init(&platform_, &crypto_, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(lockbox_, FinalizeBoot());
+  EXPECT_CALL(*mount, Init(&platform_, &crypto_, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_))
       .WillOnce(Return(true));
@@ -1837,7 +1844,7 @@ TEST_F(UserDataAuthExTest, MountGuestSanity) {
 
   EXPECT_CALL(mount_factory_, New()).WillOnce(Invoke([]() {
     NiceMock<MockMount>* res = new NiceMock<MockMount>();
-    EXPECT_CALL(*res, Init(_, _, _, _)).WillOnce(Return(true));
+    EXPECT_CALL(*res, Init(_, _, _)).WillOnce(Return(true));
     EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(true));
     return reinterpret_cast<Mount*>(res);
   }));
@@ -1896,7 +1903,7 @@ TEST_F(UserDataAuthExTest, MountGuestMountFailed) {
 
   EXPECT_CALL(mount_factory_, New()).WillOnce(Invoke([]() {
     NiceMock<MockMount>* res = new NiceMock<MockMount>();
-    EXPECT_CALL(*res, Init(_, _, _, _)).WillOnce(Return(true));
+    EXPECT_CALL(*res, Init(_, _, _)).WillOnce(Return(true));
     EXPECT_CALL(*res, MountGuestCryptohome()).WillOnce(Return(false));
     return reinterpret_cast<Mount*>(res);
   }));
@@ -1985,6 +1992,7 @@ TEST_F(UserDataAuthExTest, MountPublicWithExistingMounts) {
 
   mount_req_->mutable_account()->set_account_id(kUser);
   mount_req_->set_public_mount(true);
+  EXPECT_CALL(lockbox_, FinalizeBoot());
 
   bool called = false;
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
@@ -2747,8 +2755,10 @@ TEST_F(UserDataAuthExTest, MigrateKeyNotMounted) {
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
   EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
-  EXPECT_CALL(*mount, Init(_, _, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(lockbox_, FinalizeBoot());
+  EXPECT_CALL(*mount, Init(_, _, _)).WillOnce(Return(true));
   userdataauth_->set_mount_factory(&mount_factory);
+
 
   // Test for successful case.
   EXPECT_CALL(homedirs_, Migrate(Property(&Credentials::username, kUsername1),

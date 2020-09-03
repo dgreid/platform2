@@ -54,7 +54,6 @@ extern const char kKeyLegacyPrefix[];
 // Maximum number of key files.
 extern const int kKeyFileMax;
 
-class BootLockbox;
 class ChapsClientFactory;
 class UserOldestActivityTimestampCache;
 
@@ -89,8 +88,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Gets the uid/gid of the default user and loads the system salt
   virtual bool Init(Platform* platform, Crypto* crypto,
-                    UserOldestActivityTimestampCache *cache,
-                    PreMountCallback pre_mount_callback);
+                    UserOldestActivityTimestampCache *cache);
 
   // Attempts to mount the cryptohome for the given credentials
   //
@@ -289,11 +287,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Does not take ownership.
   void set_chaps_client_factory(ChapsClientFactory* factory) {
     chaps_client_factory_ = factory;
-  }
-
-  // Does not take ownership.
-  void set_boot_lockbox(BootLockbox* lockbox) {
-    boot_lockbox_ = lockbox;
   }
 
  protected:
@@ -677,11 +670,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   std::unique_ptr<ChapsClientFactory> default_chaps_client_factory_;
   ChapsClientFactory* chaps_client_factory_;
-
-  BootLockbox* boot_lockbox_;
-  std::unique_ptr<BootLockbox> default_boot_lockbox_;
-
-  PreMountCallback pre_mount_callback_;
 
   dircrypto_data_migrator::MigrationHelper* active_dircrypto_migrator_ =
       nullptr;

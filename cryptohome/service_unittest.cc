@@ -840,7 +840,8 @@ TEST_F(ServiceTestNotInitialized,
     .WillOnce(Return(false));
   ASSERT_TRUE(service_.Initialize());
 
-  EXPECT_CALL(*mount, Init(&platform_, service_.crypto(), _, _))
+  EXPECT_CALL(lockbox_, FinalizeBoot());
+  EXPECT_CALL(*mount, Init(&platform_, service_.crypto(), _))
     .WillOnce(Return(true));
   EXPECT_CALL(*mount, MountCryptohome(_, _, _))
     .WillOnce(Return(true));
@@ -1198,6 +1199,7 @@ TEST_F(ServiceExTest, MountPublicWithExistingMounts) {
 
   id_->set_account_id(kUser);
   mount_req_->set_public_mount(true);
+  EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
   service_.DoMountEx(std::move(id_), std::move(auth_), std::move(mount_req_),
                      NULL);
@@ -1512,7 +1514,8 @@ TEST_F(ServiceExTest, MigrateKeyTestNotMounted) {
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
   EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
-  EXPECT_CALL(*mount, Init(_, _, _, _)).WillOnce(Return(true));
+  EXPECT_CALL(lockbox_, FinalizeBoot());
+  EXPECT_CALL(*mount, Init(_, _, _)).WillOnce(Return(true));
   service_.set_mount_factory(&mount_factory);
 
   id_->set_account_id(kUser);

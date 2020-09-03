@@ -21,6 +21,7 @@
 #include <dbus/cryptohome/dbus-constants.h>
 #include <tpm_manager/client/tpm_manager_utility.h>
 
+#include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/bootlockbox/boot_lockbox_client.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper_impl.h"
 #include "cryptohome/cryptohome_common.h"
@@ -215,6 +216,11 @@ bool UserDataAuth::Initialize() {
   if (!tpm_init_) {
     default_tpm_init_.reset(new TpmInit(tpm_, platform_));
     tpm_init_ = default_tpm_init_.get();
+  }
+
+  if (!boot_lockbox_) {
+    default_boot_lockbox_.reset(new BootLockbox(tpm_, platform_, crypto_));
+    boot_lockbox_ = default_boot_lockbox_.get();
   }
 
   // Initialize Firmware Management Parameters
@@ -1066,16 +1072,35 @@ bool UserDataAuth::GetShouldMountAsEphemeral(
 scoped_refptr<cryptohome::Mount> UserDataAuth::CreateUntrackedMountForUser(
     const std::string& username) {
   scoped_refptr<cryptohome::Mount> m;
+  // TODO(dlunev): Decide if finalization should be moved to MountFactory.
+  EnsureBootLockboxFinalized();
   m = mount_factory_->New();
   if (!m->Init(platform_, crypto_,
-               user_timestamp_cache_.get(),
-               base::BindRepeating(&UserDataAuth::PreMountCallback,
-                                   base::Unretained(this)))) {
+               user_timestamp_cache_.get())) {
     return nullptr;
   }
   m->set_enterprise_owned(enterprise_owned_);
   m->set_legacy_mount(legacy_mount_);
   return m;
+}
+
+void UserDataAuth::EnsureBootLockboxFinalized() {
+  if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
+    LOG(WARNING) << "Failed to finalize boot lockbox when mounting guest "
+                    "cryptohome";
+  }
+#if USE_TPM2
+  // Lock NVRamBootLockbox
+  auto nvram_boot_lockbox_client = BootLockboxClient::CreateBootLockboxClient();
+  if (!nvram_boot_lockbox_client) {
+    LOG(WARNING) << "Failed to create nvram_boot_lockbox_client";
+    return;
+  }
+
+  if (!nvram_boot_lockbox_client->Finalize()) {
+    LOG(WARNING) << "Failed to finalize nvram lockbox.";
+  }
+#endif  // USE_TMP2
 }
 
 scoped_refptr<cryptohome::Mount> UserDataAuth::GetOrCreateMountForUser(
@@ -1092,21 +1117,6 @@ scoped_refptr<cryptohome::Mount> UserDataAuth::GetOrCreateMountForUser(
     mounts_[username] = m;
   }
   return mounts_[username];
-}
-
-void UserDataAuth::PreMountCallback() {
-#if USE_TPM2
-  // Lock NVRamBootLockbox
-  auto nvram_boot_lockbox_client = BootLockboxClient::CreateBootLockboxClient();
-  if (!nvram_boot_lockbox_client) {
-    LOG(WARNING) << "Failed to create nvram_boot_lockbox_client";
-    return;
-  }
-
-  if (!nvram_boot_lockbox_client->Finalize()) {
-    LOG(WARNING) << "Failed to finalize nvram lockbox.";
-  }
-#endif  // USE_TMP2
 }
 
 bool UserDataAuth::CleanUpHiddenMounts() {

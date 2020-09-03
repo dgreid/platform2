@@ -34,7 +34,6 @@
 #include <chromeos/constants/cryptohome.h>
 #include <google/protobuf/util/message_differencer.h>
 
-#include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/chaps_client_factory.h"
 #include "cryptohome/crypto.h"
 #include "cryptohome/cryptohome_common.h"
@@ -133,7 +132,6 @@ Mount::Mount()
       shadow_only_(false),
       default_chaps_client_factory_(new ChapsClientFactory()),
       chaps_client_factory_(default_chaps_client_factory_.get()),
-      boot_lockbox_(NULL),
       dircrypto_migration_stopped_condition_(&active_dircrypto_migrator_lock_),
       mount_guest_session_out_of_process_(true),
       mount_non_ephemeral_session_out_of_process_(MountUserSessionOOP()),
@@ -145,12 +143,10 @@ Mount::~Mount() {
 }
 
 bool Mount::Init(Platform* platform, Crypto* crypto,
-                 UserOldestActivityTimestampCache* cache,
-                 PreMountCallback pre_mount_callback) {
+                 UserOldestActivityTimestampCache* cache) {
   platform_ = platform;
   crypto_ = crypto;
   user_timestamp_cache_ = cache;
-  pre_mount_callback_ = pre_mount_callback;
 
   bool result = true;
 
@@ -190,12 +186,6 @@ bool Mount::Init(Platform* platform, Crypto* crypto,
     // Create the shadow root if it doesn't exist
     if (!platform_->DirectoryExists(shadow_root_)) {
       platform_->CreateDirectory(shadow_root_);
-    }
-
-    if (use_tpm_ && !boot_lockbox_) {
-      default_boot_lockbox_.reset(
-          new BootLockbox(Tpm::GetSingleton(), platform_, crypto_));
-      boot_lockbox_ = default_boot_lockbox_.get();
     }
 
     // One-time load of the global system salt (used in generating username
@@ -302,15 +292,6 @@ bool Mount::EnsureCryptohome(const Credentials& credentials,
 bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
                             MountError* mount_error) {
-  CHECK(boot_lockbox_ || !use_tpm_);
-  if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
-    LOG(WARNING) << "Failed to finalize boot lockbox when mounting cryptohome.";
-  }
-
-  if (!pre_mount_callback_.is_null()) {
-    pre_mount_callback_.Run();
-  }
-
   if (IsMounted()) {
     if (mount_error)
       *mount_error = MOUNT_ERROR_MOUNT_POINT_BUSY;
@@ -1166,16 +1147,6 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
 }
 
 bool Mount::MountGuestCryptohome() {
-  CHECK(boot_lockbox_ || !use_tpm_);
-  if (boot_lockbox_ && !boot_lockbox_->FinalizeBoot()) {
-    LOG(WARNING) << "Failed to finalize boot lockbox when mounting guest "
-                    "cryptohome";
-  }
-
-  if (!pre_mount_callback_.is_null()) {
-    pre_mount_callback_.Run();
-  }
-
   current_user_->Reset();
 
   MountHelperInterface* ephemeral_mounter = nullptr;

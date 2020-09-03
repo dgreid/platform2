@@ -20,6 +20,7 @@
 #include <tpm_manager-client/tpm_manager/dbus-proxies.h>
 
 #include "cryptohome/arc_disk_quota.h"
+#include "cryptohome/bootlockbox/boot_lockbox.h"
 #include "cryptohome/challenge_credentials/challenge_credentials_helper.h"
 #include "cryptohome/credentials.h"
 #include "cryptohome/crypto.h"
@@ -391,10 +392,6 @@ class UserDataAuth {
   // of the TPM.
   void OwnershipCallback(bool status, bool took_ownership);
 
-  // This is called whenever we try to create a Mount object. This callback is
-  // used by |mount_factory_|.
-  void PreMountCallback();
-
   // Set the current dbus connection, this is usually used by the dbus daemon
   // object that owns the instance of this object. During testing, the test
   // fixture might call this for dependency injection.
@@ -521,6 +518,11 @@ class UserDataAuth {
   void set_key_challenge_service_factory(
       KeyChallengeServiceFactory* key_challenge_service_factory) {
     key_challenge_service_factory_ = key_challenge_service_factory;
+  }
+
+  // Override |boot_lockbox_| for testing purpose
+  void set_boot_lockbox(BootLockbox* boot_lockbox) {
+    boot_lockbox_ = boot_lockbox;
   }
 
   // Retrieve the mount associated with a given user, for testing purpose only.
@@ -813,6 +815,9 @@ class UserDataAuth {
   scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
       const std::string& username);
 
+  // Ensures BootLockbox is finalized;
+  void EnsureBootLockboxFinalized();
+
   // =============== Threading Related Variables ===============
 
   // The task runner that belongs to the thread that created this UserDataAuth
@@ -914,6 +919,13 @@ class UserDataAuth {
   // The actual D-Bus proxy for invoking any ownership related methods in
   // tpm_manager, but can be overridden for testing.
   org::chromium::TpmOwnershipProxyInterface* tpm_ownership_proxy_;
+
+  // The default BootLockbox object for finalizing it.
+  std::unique_ptr<BootLockbox> default_boot_lockbox_;
+
+  // The actual BootLockbox object for finalizing it, but can be overridden
+  // for testing.
+  BootLockbox* boot_lockbox_;
 
   // The amount of time in between each run of UploadAlertsDataCallback()
   int upload_alerts_period_ms_;
