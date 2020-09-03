@@ -42,3 +42,25 @@ executable("arc-data-snapshotd") {
     "main.cc",
   ]
 }
+
+if (use.test) {
+  pkg_config("test_pkg_deps") {
+    pkg_deps = [
+      "libbrillo",
+      "libchrome-${libbase_ver}",
+      "libchrome-test-${libbase_ver}",
+    ]
+  }
+  executable("arc-data-snapshotd_test") {
+    configs += [
+      ":test_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":data_snapshotd_adaptors",
+      ":libarc-data-snapshotd",
+      "//common-mk/testrunner:testrunner",
+    ]
+    sources = [ "dbus_adaptor_test.cc" ]
+  }
+}

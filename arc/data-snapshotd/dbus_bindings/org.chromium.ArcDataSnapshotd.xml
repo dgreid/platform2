@@ -13,5 +13,16 @@
         The method should be called before the start of user session.
       </tp:docstring>
     </method>
+    <method name="ClearSnapshot">
+      <tp:docstring>
+        Clears snapshot.
+      </tp:docstring>
+      <arg type="b" name="last" direction="in">
+        <tp:docstring>
+          Specifies a snapshot to clear.
+          If true, the last snapshot directory is cleared.
+        </tp:docstring>
+      </arg>
+    </method>
   </interface>
 </node>

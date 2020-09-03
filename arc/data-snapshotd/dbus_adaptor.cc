@@ -7,14 +7,32 @@
 #include <string>
 #include <utility>
 
+#include <base/files/file_util.h>
 #include <base/logging.h>
+#include <base/memory/ptr_util.h>
 
 namespace arc {
 namespace data_snapshotd {
 
-DBusAdaptor::DBusAdaptor() : org::chromium::ArcDataSnapshotdAdaptor(this) {}
+namespace {
+
+// Snapshot paths:
+constexpr char kCommonSnapshotPath[] =
+    "/mnt/stateful_partition/unencrypted/arc-data-snapshot/";
+constexpr char kLastSnapshotPath[] = "last";
+constexpr char kPreviousSnapshotPath[] = "previous";
+
+}  // namespace
+
+DBusAdaptor::DBusAdaptor() : DBusAdaptor(base::FilePath(kCommonSnapshotPath)) {}
 
 DBusAdaptor::~DBusAdaptor() = default;
+
+// static
+std::unique_ptr<DBusAdaptor> DBusAdaptor::CreateForTesting(
+    const base::FilePath& snapshot_directory) {
+  return base::WrapUnique(new DBusAdaptor(snapshot_directory));
+}
 
 void DBusAdaptor::RegisterAsync(
     const scoped_refptr<dbus::Bus>& bus,
@@ -35,6 +53,26 @@ bool DBusAdaptor::GenerateKeyPair(brillo::ErrorPtr* error) {
   // * Show a spinner screen.
   return false;
 }
+
+bool DBusAdaptor::ClearSnapshot(brillo::ErrorPtr* error, bool last) {
+  base::FilePath dir(last ? last_snapshot_directory_
+                          : previous_snapshot_directory_);
+  if (!base::DirectoryExists(dir)) {
+    LOG(WARNING) << "Snapshot directory is already empty: " << dir.value();
+    return true;
+  }
+  if (!base::DeleteFile(dir, true /* recursive */)) {
+    LOG(ERROR) << "Failed to delete snapshot directory: " << dir.value();
+    return false;
+  }
+  return true;
+}
+
+DBusAdaptor::DBusAdaptor(const base::FilePath& snapshot_directory)
+    : org::chromium::ArcDataSnapshotdAdaptor(this),
+      last_snapshot_directory_(snapshot_directory.Append(kLastSnapshotPath)),
+      previous_snapshot_directory_(
+          snapshot_directory.Append(kPreviousSnapshotPath)) {}
 
 }  // namespace data_snapshotd
 }  // namespace arc
