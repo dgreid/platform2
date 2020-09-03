@@ -110,7 +110,7 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   bool AddEntropy(bool reset);
   // Get block id from rollback info.
   base::Optional<int32_t> GetRollBackInfoId();
-  bool FpReadMatchSecret(uint16_t index, brillo::SecureVector* secret);
+  base::Optional<brillo::SecureVector> FpReadMatchSecret(uint16_t index);
   bool GetIndexOfLastTemplate(int* index);
   // Run a sequence of EC commands to update the entropy in the
   // MCU. If |reset| is set to true, it will additionally erase the existing

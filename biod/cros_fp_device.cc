@@ -204,8 +204,8 @@ bool CrosFpDevice::SupportsPositiveMatchSecret() {
   }
 }
 
-bool CrosFpDevice::FpReadMatchSecret(uint16_t index,
-                                     brillo::SecureVector* secret) {
+base::Optional<brillo::SecureVector> CrosFpDevice::FpReadMatchSecret(
+    uint16_t index) {
   EcCommand<struct ec_params_fp_read_match_secret,
             struct ec_response_fp_read_match_secret>
       cmd(EC_CMD_FP_READ_MATCH_SECRET, 0, {.fgr = index});
@@ -213,21 +213,21 @@ bool CrosFpDevice::FpReadMatchSecret(uint16_t index,
   if (!cmd.Run(cros_fd_.get()) &&
       cmd.Result() == kEcCommandUninitializedResult) {
     LOG(ERROR) << "Failed to run EC_CMD_FP_READ_MATCH_SECRET command.";
-    return false;
+    return base::nullopt;
   }
   if (cmd.Result() != EC_RES_SUCCESS) {
     LOG(ERROR) << "Failed to read positive match secret, result: "
                << cmd.Result() << ".";
-    return false;
+    return base::nullopt;
   }
-  secret->resize(sizeof(cmd.Resp()->positive_match_secret));
+  brillo::SecureVector secret(sizeof(cmd.Resp()->positive_match_secret));
   std::copy(cmd.Resp()->positive_match_secret,
             cmd.Resp()->positive_match_secret +
                 sizeof(cmd.Resp()->positive_match_secret),
-            secret->begin());
+            secret.begin());
   brillo::SecureClear(cmd.Resp()->positive_match_secret,
                       sizeof(cmd.Resp()->positive_match_secret));
-  return true;
+  return secret;
 }
 
 bool CrosFpDevice::UpdateFpInfo() {
@@ -516,11 +516,7 @@ base::Optional<brillo::SecureVector> CrosFpDevice::GetPositiveMatchSecret(
       return base::nullopt;
     }
   }
-  brillo::SecureVector secret(FP_POSITIVE_MATCH_SECRET_BYTES);
-  if (!FpReadMatchSecret(static_cast<uint16_t>(index), &secret)) {
-    return base::nullopt;
-  }
-  return secret;
+  return FpReadMatchSecret(static_cast<uint16_t>(index));
 }
 
 std::unique_ptr<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
