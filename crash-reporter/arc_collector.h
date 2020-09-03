@@ -19,6 +19,7 @@
 #include <base/macros.h>
 #include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
+#include "crash-reporter/arc_util.h"
 #include "crash-reporter/user_collector_base.h"
 
 // Collector for system crashes in the ARC container.
@@ -32,13 +33,6 @@ class ArcCollector : public UserCollectorBase {
     virtual bool GetExeBaseName(pid_t pid, std::string* exe) const = 0;
     virtual bool GetCommand(pid_t pid, std::string* command) const = 0;
     virtual bool ReadAuxvForProcess(pid_t pid, std::string* contents) const = 0;
-  };
-
-  struct BuildProperty {
-    std::string device;
-    std::string board;
-    std::string cpu_abi;
-    std::string fingerprint;
   };
 
   using ContextPtr = std::unique_ptr<Context>;
@@ -58,7 +52,7 @@ class ArcCollector : public UserCollectorBase {
   // Reads a Java crash log for the given |crash_type| from standard input, or
   // closes the stream if reporting is disabled.
   bool HandleJavaCrash(const std::string& crash_type,
-                       const BuildProperty& build_property);
+                       const arc_util::BuildProperty& build_property);
 
   static bool IsArcRunning();
   static bool GetArcPid(pid_t* arc_pid);
@@ -113,7 +107,7 @@ class ArcCollector : public UserCollectorBase {
   using CrashLogHeaderMap = std::unordered_map<std::string, std::string>;
 
   bool CreateReportForJavaCrash(const std::string& crash_type,
-                                const BuildProperty& build_property,
+                                const arc_util::BuildProperty& build_property,
                                 const CrashLogHeaderMap& map,
                                 const std::string& exception_info,
                                 const std::string& log,

@@ -151,13 +151,27 @@ They are invoked either by the kernel or by other program.
 ## arc_collector
 
 Collects [ARC++] crashes from programs inside the [ARC++] container.
-This handles Android NDK and Java crashes.
+This handles Android NDK and Java crashes. For Java crashes, it also collects
+[ARCVM]'s one.
 It does not handle crashes from [ARC++] support daemons that run outside of the
 container as those are collected like any other userland crash via the main
 [user_collector].
 
 [arc_collector] shares a lot of code with [user_collector] so it can overlay
 [ARC++]-specific processing details.
+
+## arcvm_native_collector
+
+Collects crashes of native binaries in [ARCVM].
+
+When a native binary crashes, Linux kernel detects the crash and invokes
+`arc-native-crash-dispatcher` via `/proc/sys/kernel/core_pattern`.
+`arc-native-crash-dispatcher` calls `arc-native-crash-collector32` or
+`arc-native-crash-collector64`, and they dump crash file in
+`/data/vendor/arc_native_crash_reports` in ARCVM. A Java daemon
+`ArcCrashCollector` in ARCVM monitors this directory, and if new files
+appeared, then sends them to ARC bridge of Chrome browser via Mojo. Dump files
+are passed as FDs. And finally ARC bridge invokes `crash_reporter` with the FDs.
 
 ## chrome_collector
 
@@ -329,6 +343,7 @@ D-Bus signal on /org/chromium/AnomalyEventService.  This is currently used by
 [anomaly_detector] does not try to confirm that the kill is successful.
 
 [ARC++]: ../../arc/
+[ARCVM]: ../../arc/vm/
 [BERT]: https://www.uefi.org/sites/default/files/resources/ACPI%206_2_A_Sept29.pdf
 [EC]: https://chromium.googlesource.com/chromiumos/platform/ec
 [Google Breakpad]: https://chromium.googlesource.com/breakpad/breakpad
@@ -341,6 +356,7 @@ D-Bus signal on /org/chromium/AnomalyEventService.  This is currently used by
 [anomaly_detector]: ../anomaly_detector.cc
 [anomaly-detector.conf]: ../init/anomaly-detector.conf
 [arc_collector]: ../arc_collector.cc
+[arcvm_native_collector]: ../arcvm_native_collector.cc
 [bert_collector]: ../bert_collector.cc
 [chrome_collector]: ../chrome_collector.cc
 [chromeos_shutdown]: ../../init/chromeos_shutdown

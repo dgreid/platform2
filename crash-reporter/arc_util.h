@@ -48,6 +48,15 @@ extern const char kSubjectKey[];
 extern const std::vector<std::pair<const char*, const char*>>
     kHeaderToFieldMapping;
 
+// The property about ARC build. These values comes from a Mojo method,
+// SetBuildProperties.
+struct BuildProperty {
+  std::string device;
+  std::string board;
+  std::string cpu_abi;
+  std::string fingerprint;
+};
+
 // Returns the Android version (eg: 7.1.1) from the fingerprint.
 base::Optional<std::string> GetVersionFromFingerprint(
     const std::string& fingerprint);

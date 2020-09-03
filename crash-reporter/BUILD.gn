@@ -97,6 +97,7 @@ static_library("libcrash_reporter") {
     sources += [
       "arc_collector.cc",
       "arc_util.cc",
+      "arcvm_native_collector.cc",
     ]
   }
 
@@ -341,6 +342,7 @@ if (use.test) {
       sources += [
         "arc_collector_test.cc",
         "arc_util_test.cc",
+        "arcvm_native_collector_test.cc",
       ]
     }
   }

@@ -65,7 +65,7 @@ bool ReadCrashLogFromStdin(std::stringstream* stream);
 bool GetChromeVersion(std::string* version);
 
 bool GetArcRoot(FilePath* root);
-bool GetArcProperties(ArcCollector::BuildProperty* build_property);
+bool GetArcProperties(arc_util::BuildProperty* build_property);
 
 std::string FormatDuration(uint64_t seconds);
 
@@ -96,8 +96,9 @@ bool ArcCollector::IsArcProcess(pid_t pid) const {
   return ns == arc_ns;
 }
 
-bool ArcCollector::HandleJavaCrash(const std::string& crash_type,
-                                   const BuildProperty& build_property) {
+bool ArcCollector::HandleJavaCrash(
+    const std::string& crash_type,
+    const arc_util::BuildProperty& build_property) {
   std::string reason;
   const bool should_dump = UserCollectorBase::ShouldDump(
       is_feedback_allowed_function_(), util::IsDeveloperImage(), &reason);
@@ -327,7 +328,7 @@ void ArcCollector::AddArcMetaData(const std::string& process,
   AddCrashMetaUploadData(arc_util::kChromeOsVersionField,
                          CrashCollector::GetOsVersion());
 
-  BuildProperty build_property;
+  arc_util::BuildProperty build_property;
 
   if (add_arc_properties && GetArcProperties(&build_property)) {
     AddCrashMetaUploadData(arc_util::kArcVersionField,
@@ -357,12 +358,13 @@ void ArcCollector::AddArcMetaData(const std::string& process,
     AddCrashMetaData(arc_util::kSilentKey, "true");
 }
 
-bool ArcCollector::CreateReportForJavaCrash(const std::string& crash_type,
-                                            const BuildProperty& build_property,
-                                            const CrashLogHeaderMap& map,
-                                            const std::string& exception_info,
-                                            const std::string& log,
-                                            bool* out_of_capacity) {
+bool ArcCollector::CreateReportForJavaCrash(
+    const std::string& crash_type,
+    const arc_util::BuildProperty& build_property,
+    const CrashLogHeaderMap& map,
+    const std::string& exception_info,
+    const std::string& log,
+    bool* out_of_capacity) {
   FilePath crash_dir;
   if (!GetCreatedCrashDirectoryByEuid(geteuid(), &crash_dir, out_of_capacity)) {
     LOG(ERROR) << "Failed to create or find crash directory";
@@ -530,7 +532,7 @@ bool GetArcRoot(FilePath* root) {
   return false;
 }
 
-bool GetArcProperties(ArcCollector::BuildProperty* build_property) {
+bool GetArcProperties(arc_util::BuildProperty* build_property) {
   FilePath root;
   brillo::KeyValueStore store;
   if (GetArcRoot(&root) && store.Load(root.Append(kArcBuildProp)) &&

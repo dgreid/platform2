@@ -238,6 +238,9 @@ class CrashCollector {
   // Set up D-Bus.
   virtual void SetUpDBus();
 
+  // Creates a new file and returns a file descriptor to it.
+  base::ScopedFD GetNewFileHandle(const base::FilePath& filename);
+
   // Writes |data| of |size| to |filename|, which must be a new file.
   // If the file already exists or writing fails, return a negative value.
   // Otherwise returns the number of bytes written.
@@ -452,10 +455,6 @@ class CrashCollector {
   // WriteNewCompressedFile() so far. For WriteNewCompressedFile(), the count is
   // of bytes on disk, after compression.
   off_t bytes_written_;
-
-  // Creates a new file and returns a file descriptor to it. Helper for
-  // WriteNewFile() and WriteNewCompressedFile().
-  base::ScopedFD GetNewFileHandle(const base::FilePath& filename);
 
   // Returns true if there is already a file in in_memory_files_ with
   // filename.BaseName().
