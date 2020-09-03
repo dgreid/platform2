@@ -505,26 +505,31 @@ constexpr char kBootstrapMojoConnectionChannelToken[] =
     "federated-service-bootstrap";
 }  // namespace federated
 
-namespace iioservice {
-constexpr char kIioserviceServiceName[] = "org.chromium.Iioservice";
-constexpr char kIioserviceServicePath[] = "/org/chromium/Iioservice";
-constexpr char kIioserviceInterfaceName[] = "org.chromium.Iioservice";
+// D-Bus MojoConnectionServiceProvider (go/mojo_connection_service) is a D-Bus
+// service provider in Chrome that bootstraps CrOS services' mojo connection.
+namespace mojo_connection_service {
+constexpr char kMojoConnectionServiceServiceName[] =
+    "org.chromium.MojoConnectionService";
+constexpr char kMojoConnectionServiceServicePath[] =
+    "/org/chromium/MojoConnectionService";
+constexpr char kMojoConnectionServiceInterface[] =
+    "org.chromium.MojoConnectionService";
 
 // Methods
-constexpr char kServerBootstrapMojoConnectionMethod[] =
-    "ServerBootstrapMojoConnection";
+constexpr char kBootstrapMojoConnectionForIioServiceMethod[] =
+    "BootstrapMojoConnectionForIioService";
 // Token identifying the primordial Mojo pipe passed to
-// ServerBootstrapMojoConnection.
-constexpr char kServerBootstrapMojoConnectionChannelToken[] =
-    "iioservice-server-bootstrap";
+// BootstrapMojoConnectionForIioService.
+constexpr char kBootstrapMojoConnectionForIioServiceChannelToken[] =
+    "sensors-iioservice-bootstrap";
 
-constexpr char kClientBootstrapMojoConnectionMethod[] =
-    "ClientBootstrapMojoConnection";
+constexpr char kBootstrapMojoConnectionForSensorClientsMethod[] =
+    "BootstrapMojoConnectionForSensorClients";
 // Token identifying the primordial Mojo pipe passed to
-// ClientBootstrapMojoConnection.
-constexpr char kClientBootstrapMojoConnectionChannelToken[] =
-    "iioservice-client-bootstrap";
-}  // namespace iioservice
+// BootstrapMojoConnectionForSensorClients.
+constexpr char kBootstrapMojoConnectionForSensorClientsChannelToken[] =
+    "sensors-clients-bootstrap";
+}  // namespace mojo_connection_service
 
 namespace virtual_file_provider {
 constexpr char kVirtualFileProviderServiceName[] =
