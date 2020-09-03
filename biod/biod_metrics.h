@@ -11,6 +11,7 @@
 #include <base/macros.h>
 #include <metrics/metrics_library.h>
 
+#include "biod/cros_fp_device_interface.h"
 #include "biod/fp_mode.h"
 #include "biod/updater/update_reason.h"
 
@@ -63,10 +64,8 @@ class BiodMetricsInterface {
 
   virtual bool SendEnrolledFingerCount(int finger_count) = 0;
   virtual bool SendFpUnlockEnabled(bool enabled) = 0;
-  virtual bool SendFpLatencyStats(bool matched,
-                                  int capture_ms,
-                                  int match_ms,
-                                  int overall_ms) = 0;
+  virtual bool SendFpLatencyStats(
+      bool matched, const CrosFpDeviceInterface::FpStats& stats) = 0;
   virtual bool SendFwUpdaterStatus(FwUpdaterStatus status,
                                    updater::UpdateReason reason,
                                    int overall_ms) = 0;
@@ -95,9 +94,7 @@ class BiodMetrics : public BiodMetricsInterface {
 
   // Send matching/capture latency metrics.
   bool SendFpLatencyStats(bool matched,
-                          int capture_ms,
-                          int match_ms,
-                          int overall_ms) override;
+                          const CrosFpDeviceInterface::FpStats& stats) override;
 
   bool SendFwUpdaterStatus(FwUpdaterStatus status,
                            updater::UpdateReason reason,

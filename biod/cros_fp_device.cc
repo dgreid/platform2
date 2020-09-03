@@ -284,22 +284,24 @@ bool CrosFpDevice::UpdateFpInfo() {
   return true;
 }
 
-bool CrosFpDevice::GetFpStats(int* capture_ms,
-                              int* matcher_ms,
-                              int* overall_ms) {
+base::Optional<CrosFpDeviceInterface::FpStats> CrosFpDevice::GetFpStats() {
   EcCommand<EmptyParam, struct ec_response_fp_stats> cmd(EC_CMD_FP_STATS);
-  if (!cmd.Run(cros_fd_.get()))
-    return false;
+  if (!cmd.Run(cros_fd_.get())) {
+    return base::nullopt;
+  }
 
   uint8_t inval = cmd.Resp()->timestamps_invalid;
-  if (inval & (FPSTATS_CAPTURE_INV | FPSTATS_MATCHING_INV))
-    return false;
+  if (inval & (FPSTATS_CAPTURE_INV | FPSTATS_MATCHING_INV)) {
+    return base::nullopt;
+  }
 
-  *capture_ms = cmd.Resp()->capture_time_us / 1000;
-  *matcher_ms = cmd.Resp()->matching_time_us / 1000;
-  *overall_ms = cmd.Resp()->overall_time_us / 1000;
+  FpStats stats = {
+      .capture_ms = cmd.Resp()->capture_time_us / 1000,
+      .matcher_ms = cmd.Resp()->matching_time_us / 1000,
+      .overall_ms = cmd.Resp()->overall_time_us / 1000,
+  };
 
-  return true;
+  return stats;
 }
 
 // static

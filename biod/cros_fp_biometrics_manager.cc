@@ -744,10 +744,10 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
   // Send back the result directly (as we are running on the main thread).
   OnAuthScanDone(result, std::move(matches));
 
-  int capture_ms, matcher_ms, overall_ms;
-  if (cros_dev_->GetFpStats(&capture_ms, &matcher_ms, &overall_ms)) {
-    biod_metrics_->SendFpLatencyStats(matched, capture_ms, matcher_ms,
-                                      overall_ms);
+  base::Optional<CrosFpDeviceInterface::FpStats> stats =
+      cros_dev_->GetFpStats();
+  if (stats) {
+    biod_metrics_->SendFpLatencyStats(matched, *stats);
   }
 
   // Record updated templates

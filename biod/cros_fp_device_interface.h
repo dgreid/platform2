@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include <base/optional.h>
 #include <brillo/secure_blob.h>
 #include <chromeos/ec/ec_commands.h>
 
@@ -38,14 +39,18 @@ class CrosFpDeviceInterface {
 
   virtual void SetMkbpEventCallback(MkbpCallback callback) = 0;
 
+  struct FpStats {
+    uint32_t capture_ms = 0;
+    uint32_t matcher_ms = 0;
+    uint32_t overall_ms = 0;
+  };
+
   virtual bool SetFpMode(const FpMode& mode) = 0;
   /**
    * @return mode on success, FpMode(FpMode::Mode::kModeInvalid) on failure
    */
   virtual FpMode GetFpMode() = 0;
-  virtual bool GetFpStats(int* capture_ms,
-                          int* matcher_ms,
-                          int* overall_ms) = 0;
+  virtual base::Optional<FpStats> GetFpStats() = 0;
   virtual bool GetDirtyMap(std::bitset<32>* bitmap) = 0;
   virtual bool SupportsPositiveMatchSecret() = 0;
   virtual bool GetPositiveMatchSecret(int index,

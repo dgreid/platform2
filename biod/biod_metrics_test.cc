@@ -71,7 +71,8 @@ TEST_F(BiodMetricsTest, SendFpLatencyStatsOnMatch) {
   EXPECT_CALL(*GetMetricsLibraryMock(),
               SendToUMA(metrics::kFpNoMatchDurationOverall, _, _, _, _))
       .Times(0);
-  biod_metrics_.SendFpLatencyStats(true, 0, 0, 0);
+  biod_metrics_.SendFpLatencyStats(
+      true, {.capture_ms = 0, .matcher_ms = 0, .overall_ms = 0});
 }
 
 TEST_F(BiodMetricsTest, SendFpLatencyStatsOnNoMatch) {
@@ -93,21 +94,24 @@ TEST_F(BiodMetricsTest, SendFpLatencyStatsOnNoMatch) {
   EXPECT_CALL(*GetMetricsLibraryMock(),
               SendToUMA(metrics::kFpNoMatchDurationOverall, _, _, _, _))
       .Times(1);
-  biod_metrics_.SendFpLatencyStats(false, 0, 0, 0);
+  biod_metrics_.SendFpLatencyStats(
+      false, {.capture_ms = 0, .matcher_ms = 0, .overall_ms = 0});
 }
 
 TEST_F(BiodMetricsTest, SendFpLatencyStatsValues) {
-  const int capture = 70;
-  const int matcher = 187;
-  const int overall = 223;
-  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, capture, _, _, _))
+  constexpr CrosFpDeviceInterface::FpStats stats = {
+      .capture_ms = 70,
+      .matcher_ms = 187,
+      .overall_ms = 223,
+  };
+  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, stats.capture_ms, _, _, _))
       .Times(2);
-  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, matcher, _, _, _))
+  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, stats.matcher_ms, _, _, _))
       .Times(2);
-  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, overall, _, _, _))
+  EXPECT_CALL(*GetMetricsLibraryMock(), SendToUMA(_, stats.overall_ms, _, _, _))
       .Times(2);
-  biod_metrics_.SendFpLatencyStats(true, capture, matcher, overall);
-  biod_metrics_.SendFpLatencyStats(false, capture, matcher, overall);
+  biod_metrics_.SendFpLatencyStats(true, stats);
+  biod_metrics_.SendFpLatencyStats(false, stats);
 }
 
 TEST_F(BiodMetricsTest, SendFwUpdaterStatusOnNoUpdate) {

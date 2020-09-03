@@ -74,22 +74,20 @@ bool BiodMetrics::SendFpUnlockEnabled(bool enabled) {
   return metrics_lib_->SendBoolToUMA(metrics::kFpUnlockEnabled, enabled);
 }
 
-bool BiodMetrics::SendFpLatencyStats(bool matched,
-                                     int capture_ms,
-                                     int match_ms,
-                                     int overall_ms) {
+bool BiodMetrics::SendFpLatencyStats(
+    bool matched, const CrosFpDeviceInterface::FpStats& stats) {
   bool rc = true;
   rc = metrics_lib_->SendToUMA(matched ? metrics::kFpMatchDurationCapture
                                        : metrics::kFpNoMatchDurationCapture,
-                               capture_ms, 0, 200, 20) &&
+                               stats.capture_ms, 0, 200, 20) &&
        rc;
   rc = metrics_lib_->SendToUMA(matched ? metrics::kFpMatchDurationMatcher
                                        : metrics::kFpNoMatchDurationMatcher,
-                               match_ms, 100, 800, 50) &&
+                               stats.matcher_ms, 100, 800, 50) &&
        rc;
   rc = metrics_lib_->SendToUMA(matched ? metrics::kFpMatchDurationOverall
                                        : metrics::kFpNoMatchDurationOverall,
-                               overall_ms, 100, 1000, 50) &&
+                               stats.overall_ms, 100, 1000, 50) &&
        rc;
   return rc;
 }

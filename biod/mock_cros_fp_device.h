@@ -21,10 +21,7 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MOCK_METHOD(void, SetMkbpEventCallback, (MkbpCallback), (override));
   MOCK_METHOD(bool, SetFpMode, (const FpMode& mode), (override));
   MOCK_METHOD(FpMode, GetFpMode, (), (override));
-  MOCK_METHOD(bool,
-              GetFpStats,
-              (int* capture_ms, int* matcher_ms, int* overall_ms),
-              (override));
+  MOCK_METHOD(base::Optional<FpStats>, GetFpStats, (), (override));
   MOCK_METHOD(bool, GetDirtyMap, (std::bitset<32> * bitmap), (override));
   MOCK_METHOD(bool, GetTemplate, (int index, VendorTemplate* out), (override));
   MOCK_METHOD(bool, UploadTemplate, (const VendorTemplate& tmpl), (override));
