@@ -23,7 +23,10 @@ class MockCrosFpDevice : public CrosFpDeviceInterface {
   MOCK_METHOD(FpMode, GetFpMode, (), (override));
   MOCK_METHOD(base::Optional<FpStats>, GetFpStats, (), (override));
   MOCK_METHOD(base::Optional<std::bitset<32>>, GetDirtyMap, (), (override));
-  MOCK_METHOD(bool, GetTemplate, (int index, VendorTemplate* out), (override));
+  MOCK_METHOD(base::Optional<VendorTemplate>,
+              GetTemplate,
+              (int index),
+              (override));
   MOCK_METHOD(bool, UploadTemplate, (const VendorTemplate& tmpl), (override));
   MOCK_METHOD(bool, SetContext, (std::string user_id), (override));
   MOCK_METHOD(bool, ResetContext, (), (override));

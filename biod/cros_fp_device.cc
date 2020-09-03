@@ -511,14 +511,16 @@ bool CrosFpDevice::GetPositiveMatchSecret(int index,
   return FpReadMatchSecret(static_cast<uint16_t>(index), secret);
 }
 
-bool CrosFpDevice::GetTemplate(int index, VendorTemplate* out) {
+base::Optional<VendorTemplate> CrosFpDevice::GetTemplate(int index) {
   if (index == kLastTemplate) {
-    if (!GetIndexOfLastTemplate(&index))
-      return false;
+    if (!GetIndexOfLastTemplate(&index)) {
+      return base::nullopt;
+    }
     // Is the last one really a new created one ?
     const auto& dirty = info_->template_info()->dirty;
-    if (index >= dirty.size() || !dirty.test(index))
-      return false;
+    if (index >= dirty.size() || !dirty.test(index)) {
+      return base::nullopt;
+    }
   }
 
   // In the EC_CMD_FP_FRAME host command, the templates are indexed starting
@@ -529,11 +531,9 @@ bool CrosFpDevice::GetTemplate(int index, VendorTemplate* out) {
       max_read_size_);
   if (!fp_frame_cmd->Run(cros_fd_.get())) {
     LOG(ERROR) << "Failed to get frame, result: " << fp_frame_cmd->Result();
-    return false;
+    return base::nullopt;
   }
-  *out = fp_frame_cmd->frame();
-
-  return true;
+  return fp_frame_cmd->frame();
 }
 
 bool CrosFpDevice::UploadTemplate(const VendorTemplate& tmpl) {

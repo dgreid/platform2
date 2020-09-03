@@ -104,13 +104,15 @@ bool CrosFpBiometricsManager::Record::SetLabel(std::string label) {
   CHECK(index_ < biometrics_manager_->records_.size());
   std::string old_label = biometrics_manager_->records_[index_].label;
 
-  VendorTemplate tmpl;
+  base::Optional<VendorTemplate> tmpl =
+      biometrics_manager_->cros_dev_->GetTemplate(index_);
   // TODO(vpalatin): would be faster to read it from disk
-  if (!biometrics_manager_->cros_dev_->GetTemplate(index_, &tmpl))
+  if (!tmpl) {
     return false;
+  }
   biometrics_manager_->records_[index_].label = std::move(label);
 
-  if (!biometrics_manager_->WriteRecord(*this, tmpl.data(), tmpl.size())) {
+  if (!biometrics_manager_->WriteRecord(*this, tmpl->data(), tmpl->size())) {
     biometrics_manager_->records_[index_].label = std::move(old_label);
     return false;
   }
@@ -460,8 +462,9 @@ void CrosFpBiometricsManager::DoEnrollImageEvent(InternalRecord record,
   // we are done with captures, save the template.
   OnTaskComplete();
 
-  VendorTemplate tmpl;
-  if (!cros_dev_->GetTemplate(CrosFpDevice::kLastTemplate, &tmpl)) {
+  base::Optional<VendorTemplate> tmpl =
+      cros_dev_->GetTemplate(CrosFpDevice::kLastTemplate);
+  if (!tmpl) {
     LOG(ERROR) << "Failed to retrieve enrolled finger";
     OnSessionFailed();
     return;
@@ -489,7 +492,7 @@ void CrosFpBiometricsManager::DoEnrollImageEvent(InternalRecord record,
 
   records_.emplace_back(record);
   Record current_record(weak_factory_.GetWeakPtr(), records_.size() - 1);
-  if (!WriteRecord(current_record, tmpl.data(), tmpl.size())) {
+  if (!WriteRecord(current_record, tmpl->data(), tmpl->size())) {
     records_.pop_back();
     OnSessionFailed();
     return;
@@ -748,17 +751,17 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
     if (i == match_idx && migration_status == MigrationStatus::kError)
       continue;
 
-    VendorTemplate templ;
-    bool rc = cros_dev_->GetTemplate(i, &templ);
-    LOG(INFO) << "Retrieve updated template " << i << " -> " << rc;
-    if (!rc) {
+    base::Optional<VendorTemplate> templ = cros_dev_->GetTemplate(i);
+    LOG(INFO) << "Retrieve updated template " << i << " -> "
+              << templ.has_value();
+    if (!templ) {
       if (i == match_idx && migration_status == MigrationStatus::kSuccess)
         migration_status = MigrationStatus::kError;
       continue;
     }
 
     Record current_record(weak_factory_.GetWeakPtr(), i);
-    if (!WriteRecord(current_record, templ.data(), templ.size())) {
+    if (!WriteRecord(current_record, templ->data(), templ->size())) {
       LOG(ERROR) << "Cannot update record " << records_[i].record_id
                  << " in storage during AuthSession because writing failed.";
       if (i == match_idx && migration_status == MigrationStatus::kSuccess)
