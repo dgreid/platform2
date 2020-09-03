@@ -2010,6 +2010,7 @@ TEST_F(WiFiMainTest, DisconnectWithWiFiServiceIdle) {
   MockWiFiServiceRefPtr service0(
       SetupConnectedService(RpcIdentifier(""), nullptr, nullptr));
   InitiateDisconnectIfActive(service0);
+  ReportCurrentBSSChanged(RpcIdentifier(WPASupplicant::kCurrentBSSNull));
   MockWiFiServiceRefPtr service1(
       SetupConnectedService(RpcIdentifier(""), nullptr, nullptr));
   NiceScopedMockLog log;

@@ -1887,17 +1887,29 @@ void WiFi::StateChanged(const string& new_state) {
   }
 
   if (new_state == WPASupplicant::kInterfaceStateCompleted) {
-    if (affected_service->IsConnected()) {
+    // There are two possibilities for state changes during a roam in which we
+    // don't experience an intervening disconnect:
+    // 1. We transition from a connected state to Associating, then to
+    // Configuring, and finally back to Connected. This tends to happen in
+    // softMAC drivers where roaming and connecting is often controlled in user
+    // space and state changes are more transparent.
+    // 2. We transition from a connected state directly back to Connected. This
+    // can happen in fullMAC drivers where the driver is responsible for roaming
+    // and connecting, and wpa_supplicant may or may not receive all relevant
+    // state change events.
+    //
+    // In either of these cases, we'd like to simply renew our DHCP lease in
+    // case the new AP is on a different subnet, so we check for an existing
+    // ipconfig_ in addition to a Connected Service state.
+    // TODO(matthewmwang): Handle the IPv6 roam case.
+    if (affected_service->IsConnected() ||
+        (ipconfig() && is_roaming_in_progress_)) {
       StopReconnectTimer();
       if (is_roaming_in_progress_) {
-        // This means wpa_supplicant completed a roam without an intervening
-        // disconnect.  We should renew our DHCP lease just in case the new
-        // AP is on a different subnet than where we started.
         is_roaming_in_progress_ = false;
-        const IPConfigRefPtr& ip_config = ipconfig();
-        if (ip_config) {
+        if (ipconfig()) {
           LOG(INFO) << link_name() << " renewing L3 configuration after roam.";
-          ip_config->RenewIP();
+          ipconfig()->RenewIP();
         }
       }
     } else if (has_already_completed_) {
