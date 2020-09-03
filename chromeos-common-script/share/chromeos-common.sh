@@ -315,6 +315,23 @@ list_fixed_ufs_disks() {
   done
 }
 
+# NVMe devices could have more than one namespace. We need
+# to make sure we use the largest namespace for the rootdev.
+get_largest_nvme_namespace() {
+  local largest size tmp_size dev
+  size=0
+  dev=$(basename "$1")
+
+  for nvme in /sys/block/"${dev%n*}"*; do
+    tmp_size=$(cat "${nvme}"/size)
+    if [ "${tmp_size}" -gt "${size}" ]; then
+      largest="${nvme##*/}"
+      size="${tmp_size}"
+    fi
+  done
+  echo "${largest}"
+}
+
 # Find the drive to install based on the build write_cgpt.sh
 # script. If not found, return ""
 get_fixed_dst_drive() {
@@ -325,6 +342,11 @@ get_fixed_dst_drive() {
     for rootdev in ${DEFAULT_ROOTDEV}; do
       dev="/dev/$(basename "${rootdev}")"
       if [ -b "${dev}" ]; then
+        case "${dev}" in
+          *nvme*)
+            dev="/dev/$(get_largest_nvme_namespace "${dev}")"
+            ;;
+        esac
         break
       else
         dev=""
