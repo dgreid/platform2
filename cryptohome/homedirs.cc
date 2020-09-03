@@ -83,8 +83,6 @@ HomeDirs::HomeDirs()
       default_policy_provider_(new policy::PolicyProvider()),
       policy_provider_(default_policy_provider_.get()),
       crypto_(NULL),
-      default_mount_factory_(new MountFactory()),
-      mount_factory_(default_mount_factory_.get()),
       default_cleanup_(new DiskCleanup()),
       cleanup_(default_cleanup_.get()),
       default_vault_keyset_factory_(new VaultKeysetFactory()),
@@ -1180,16 +1178,9 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
 bool HomeDirs::Migrate(const Credentials& newcreds,
                        const SecureBlob& oldkey,
                        scoped_refptr<Mount> user_mount) {
+  CHECK(user_mount);
   Credentials oldcreds(newcreds.username(), oldkey);
   std::string obfuscated = newcreds.GetObfuscatedUsername(system_salt_);
-  if (!user_mount) {
-    user_mount = mount_factory_->New();
-    if (!user_mount->Init(platform_, crypto_, timestamp_cache_,
-                          base::DoNothing())) {
-      LOG(ERROR) << "Migrate: Init mount failed";
-      return false;
-    }
-  }
   base::ScopedClosureRunner scoped_unmount_runner;
   if (!user_mount->IsMounted()) {
     if (!user_mount->MountCryptohome(oldcreds, Mount::MountArgs(), NULL)) {

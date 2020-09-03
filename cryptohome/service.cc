@@ -1621,7 +1621,15 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
 
   scoped_refptr<cryptohome::Mount> mount =
       GetMountForUser(GetAccountId(*account));
-  if (!homedirs_->Migrate(credentials,
+  if (!mount) {
+    // Create a mount which is not referenced by mounts_ and is cleaned up
+    // after Migration is over.
+    mount = CreateUntrackedMountForUser(GetAccountId(*account));
+  }
+  if (!mount) {
+    LOG(ERROR) << "Failed to obtain Mount for Migrate";
+    reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
+  } else if (!homedirs_->Migrate(credentials,
                           SecureBlob(auth_request->key().secret()), mount)) {
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else {
@@ -2144,6 +2152,12 @@ gboolean Service::Mount(const gchar *userid,
   // mounted cryptohome is backed by a vault, it must be unmounted and
   // remounted with a tmpfs backend.
   scoped_refptr<cryptohome::Mount> user_mount = GetOrCreateMountForUser(userid);
+  if (!user_mount) {
+    LOG(ERROR) << "Could not initialize user mount.";
+    *OUT_error_code = CRYPTOHOME_ERROR_MOUNT_FATAL;
+    *OUT_result = FALSE;
+    return TRUE;
+  }
   if (is_ephemeral && user_mount->IsNonEphemeralMounted()) {
     // TODO(wad,ellyjones) Change this behavior to return failure even
     // on a succesful unmount to tell chrome MOUNT_ERROR_NEEDS_RESTART.
@@ -2780,6 +2794,12 @@ void Service::ContinueMountExWithCredentials(
 
   scoped_refptr<cryptohome::Mount> user_mount =
       GetOrCreateMountForUser(GetAccountId(*identifier));
+  if (!user_mount) {
+    LOG(ERROR) << "Could not initialize user mount.";
+    reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
+    SendReply(context, reply);
+    return;
+  }
 
   if (request->hidden_mount() && user_mount->IsMounted()) {
     LOG(ERROR) << "Hidden mount requested, but mount already exists.";
@@ -2980,6 +3000,11 @@ gboolean Service::MountGuestEx(GArray* request,
       LOG(ERROR) << "Unexpectedly cannot drop unused Guest mount from map.";
     }
     reply.set_error(CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
+    return TRUE;
+  }
+  if (!guest_mount) {
+    LOG(ERROR) << "Could not initialize guest mount.";
+    reply.set_error(CRYPTOHOME_ERROR_MOUNT_FATAL);
     return TRUE;
   }
 
@@ -3922,23 +3947,33 @@ void Service::DetectEnterpriseOwnership() {
   }
 }
 
-scoped_refptr<cryptohome::Mount> Service::GetOrCreateMountForUser(
+scoped_refptr<cryptohome::Mount> Service::CreateUntrackedMountForUser(
     const std::string& username) {
   scoped_refptr<cryptohome::Mount> m;
+  m = mount_factory_->New();
+  if (!m->Init(platform_, crypto_,
+               user_timestamp_cache_.get(),
+               base::BindRepeating(&Service::PreMountCallback,
+                                   base::Unretained(this)))) {
+    return nullptr;
+  }
+  m->set_enterprise_owned(enterprise_owned_);
+  m->set_legacy_mount(legacy_mount_);
+  return m;
+}
+
+scoped_refptr<cryptohome::Mount> Service::GetOrCreateMountForUser(
+    const std::string& username) {
   base::AutoLock _lock(mounts_lock_);
   if (mounts_.count(username) == 0U) {
-    m = mount_factory_->New();
-    m->Init(platform_, crypto_,
-            user_timestamp_cache_.get(),
-            base::BindRepeating(&Service::PreMountCallback,
-                                base::Unretained(this)));
-    m->set_enterprise_owned(enterprise_owned_);
-    m->set_legacy_mount(legacy_mount_);
+    // We don't have a mount associated with |username|, let's create one.
+    scoped_refptr<cryptohome::Mount> m = CreateUntrackedMountForUser(username);
+    if (!m) {
+      return nullptr;
+    }
     mounts_[username] = m;
-  } else {
-    m = mounts_[username];
   }
-  return m;
+  return mounts_[username];
 }
 
 bool Service::RemoveMountForUser(const std::string& username) {

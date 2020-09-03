@@ -1869,13 +1869,7 @@ TEST_F(UserDataAuthExTest, MountGuestMountPointBusy) {
   EXPECT_CALL(*mount_, IsMounted()).WillOnce(Return(true));
   EXPECT_CALL(*mount_, UnmountCryptohome()).WillOnce(Return(false));
 
-  EXPECT_CALL(mount_factory_, New()).WillOnce(Invoke([]() {
-    NiceMock<MockMount>* res = new NiceMock<MockMount>();
-    EXPECT_CALL(*res, Init(_, _, _, _)).WillOnce(Return(true));
-    // The guest mount should NOT be mounted.
-    EXPECT_CALL(*res, MountGuestCryptohome()).Times(0);
-    return reinterpret_cast<Mount*>(res);
-  }));
+  EXPECT_CALL(mount_factory_, New()).Times(0);
 
   bool called = false;
   userdataauth_->DoMount(
@@ -2738,6 +2732,30 @@ TEST_F(UserDataAuthExTest, MigrateKeySanity) {
       .WillOnce(Return(false));
   EXPECT_EQ(userdataauth_->MigrateKey(*migrate_req_),
             user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
+}
+
+TEST_F(UserDataAuthExTest, MigrateKeyNotMounted) {
+  PrepareArguments();
+
+  constexpr char kUsername1[] = "foo@gmail.com";
+  constexpr char kSecret1[] = "some secret";
+  migrate_req_->mutable_account_id()->set_account_id(kUsername1);
+  migrate_req_->mutable_authorization_request()->mutable_key()->set_secret(
+      kSecret1);
+  migrate_req_->set_secret("blerg");
+
+  MockMountFactory mount_factory;
+  MockMount* mount = new MockMount();
+  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
+  EXPECT_CALL(*mount, Init(_, _, _, _)).WillOnce(Return(true));
+  userdataauth_->set_mount_factory(&mount_factory);
+
+  // Test for successful case.
+  EXPECT_CALL(homedirs_, Migrate(Property(&Credentials::username, kUsername1),
+                                 brillo::SecureBlob(kSecret1), Eq(mount)))
+      .WillOnce(Return(true));
+  EXPECT_EQ(userdataauth_->MigrateKey(*migrate_req_),
+            user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 }
 
 TEST_F(UserDataAuthExTest, MigrateKeyInvalidArguments) {

@@ -809,6 +809,10 @@ class UserDataAuth {
   // and false otherwise.
   bool StatefulRecoveryIsOwner(const std::string& username);
 
+  // Creates and initialized mount for the user
+  scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
+      const std::string& username);
+
   // =============== Threading Related Variables ===============
 
   // The task runner that belongs to the thread that created this UserDataAuth

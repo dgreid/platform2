@@ -1091,6 +1091,10 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // function must log any error itself, no logging will be done by the caller.
   bool StatefulRecoveryUnmount();
 
+  // Creates and initialized mount for the user
+  scoped_refptr<cryptohome::Mount> CreateUntrackedMountForUser(
+      const std::string& username);
+
   brillo::DBusConnection system_dbus_connection_;
 
   // Tracks Mount objects for each user by username.

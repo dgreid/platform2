@@ -229,8 +229,7 @@ class HomeDirs {
   virtual bool MoveKeyset(const std::string& obfuscated, int src, int dst);
 
   // Migrates the cryptohome for the supplied obfuscated username from the
-  // supplied old key to the supplied new key. Reuses |user_mount| if it's not
-  // null.
+  // supplied old key to the supplied new key.
   virtual bool Migrate(const Credentials& newcreds,
                        const brillo::SecureBlob& oldkey,
                        scoped_refptr<Mount> user_mount);
@@ -294,8 +293,6 @@ class HomeDirs {
   Crypto* crypto() const { return crypto_; }
   virtual DiskCleanup* disk_cleanup() const { return cleanup_; }
   virtual void set_disk_cleanup(DiskCleanup* cleanup) { cleanup_ = cleanup; }
-  void set_mount_factory(MountFactory* value) { mount_factory_ = value; }
-  MountFactory* mount_factory() const { return mount_factory_; }
   void set_vault_keyset_factory(VaultKeysetFactory* value) {
     vault_keyset_factory_ = value;
   }
@@ -379,8 +376,6 @@ class HomeDirs {
   std::unique_ptr<policy::PolicyProvider> default_policy_provider_;
   policy::PolicyProvider* policy_provider_;
   Crypto* crypto_;
-  std::unique_ptr<MountFactory> default_mount_factory_;
-  MountFactory* mount_factory_;
   std::unique_ptr<DiskCleanup> default_cleanup_;
   DiskCleanup* cleanup_;
   // TODO(wad) Collapse all factories into a single manufacturing plant to save

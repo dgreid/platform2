@@ -1063,28 +1063,35 @@ bool UserDataAuth::GetShouldMountAsEphemeral(
   return true;
 }
 
+scoped_refptr<cryptohome::Mount> UserDataAuth::CreateUntrackedMountForUser(
+    const std::string& username) {
+  scoped_refptr<cryptohome::Mount> m;
+  m = mount_factory_->New();
+  if (!m->Init(platform_, crypto_,
+               user_timestamp_cache_.get(),
+               base::BindRepeating(&UserDataAuth::PreMountCallback,
+                                   base::Unretained(this)))) {
+    return nullptr;
+  }
+  m->set_enterprise_owned(enterprise_owned_);
+  m->set_legacy_mount(legacy_mount_);
+  return m;
+}
+
 scoped_refptr<cryptohome::Mount> UserDataAuth::GetOrCreateMountForUser(
     const std::string& username) {
   // This method touches the |mounts_| object so it needs to run on
   // |mount_thread_|
   AssertOnMountThread();
-
-  scoped_refptr<cryptohome::Mount> m;
   if (mounts_.count(username) == 0U) {
-    // We don't have a mount associated with |username|, let's create one with
-    // the |mount_factory_|.
-    m = mount_factory_->New();
-    m->Init(platform_, crypto_, user_timestamp_cache_.get(),
-            base::BindRepeating(&UserDataAuth::PreMountCallback,
-                                base::Unretained(this)));
-    m->set_enterprise_owned(enterprise_owned_);
-    m->set_legacy_mount(legacy_mount_);
+    // We don't have a mount associated with |username|, let's create one.
+    scoped_refptr<cryptohome::Mount> m = CreateUntrackedMountForUser(username);
+    if (!m) {
+      return nullptr;
+    }
     mounts_[username] = m;
-  } else {
-    // A mount is already associated with |username|, so return it directly.
-    m = mounts_[username];
   }
-  return m;
+  return mounts_[username];
 }
 
 void UserDataAuth::PreMountCallback() {
@@ -1159,15 +1166,9 @@ void UserDataAuth::MountGuest(
   // Rather than make it safe to check the size, then clean up, just always
   // clean up.
   bool ok = RemoveAllMounts(true);
-  // Create a ref-counted guest mount for async use and then throw it away.
-  scoped_refptr<cryptohome::Mount> guest_mount =
-      GetOrCreateMountForUser(guest_user_);
   user_data_auth::MountReply reply;
   if (!ok) {
     LOG(ERROR) << "Could not unmount cryptohomes for Guest use";
-    if (!RemoveMountForUser(guest_user_)) {
-      LOG(ERROR) << "Unexpectedly cannot drop unused Guest mount from map.";
-    }
     reply.set_error(user_data_auth::CryptohomeErrorCode::
                         CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY);
     std::move(on_done).Run(reply);
@@ -1175,7 +1176,11 @@ void UserDataAuth::MountGuest(
   }
   ReportTimerStart(kMountGuestExTimer);
 
-  if (!guest_mount->MountGuestCryptohome()) {
+  // Create a ref-counted guest mount for async use and then throw it away.
+  scoped_refptr<cryptohome::Mount> guest_mount =
+      GetOrCreateMountForUser(guest_user_);
+  if (!guest_mount || !guest_mount->MountGuestCryptohome()) {
+    LOG(ERROR) << "Could not initialize guest mount.";
     reply.set_error(
         user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
   }
@@ -1617,6 +1622,14 @@ void UserDataAuth::ContinueMountWithCredentials(
 
   scoped_refptr<cryptohome::Mount> user_mount =
       GetOrCreateMountForUser(account_id);
+
+  if (!user_mount) {
+    LOG(ERROR) << "Could not initialize user mount.";
+    reply.set_error(
+        user_data_auth::CryptohomeErrorCode::CRYPTOHOME_ERROR_MOUNT_FATAL);
+    std::move(on_done).Run(reply);
+    return;
+  }
 
   if (request.hidden_mount() && user_mount->IsMounted()) {
     LOG(ERROR) << "Hidden mount requested, but mount already exists.";
@@ -2417,6 +2430,15 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
   Credentials credentials(account_id, SecureBlob(request.secret()));
 
   scoped_refptr<cryptohome::Mount> mount = GetMountForUser(account_id);
+  if (!mount) {
+    // Create a mount which is not referenced by mounts_ and is cleaned up
+    // after Migration is over.
+    mount = CreateUntrackedMountForUser(account_id);
+  }
+  if (!mount) {
+    LOG(ERROR) << "Failed to obtain Mount for Migrate";
+    return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
+  }
   if (!homedirs_->Migrate(
           credentials,
           SecureBlob(request.authorization_request().key().secret()), mount)) {
