@@ -82,3 +82,7 @@ unlinkat: 1
 unshare: 1
 wait4: 1
 write: 1
+# Used occasionally by libevent discovered in production use (b/166445013)
+gettimeofday: 1
+# Used occasionally by glibc discovered in production use (b/167617776)
+mremap: 1

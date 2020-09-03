@@ -96,3 +96,7 @@ pwrite64: 1
 setsid: 1
 statfs: 1
 pipe: 1
+# Used occasionally by libevent discovered in production use (b/166445013)
+gettimeofday: 1
+# Used occasionally by glibc discovered in production use (b/167617776)
+mremap: 1

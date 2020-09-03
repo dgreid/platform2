@@ -1,6 +1,7 @@
 # Copyright 2020 The Chromium OS Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
+
 clock_gettime: 1
 pread64: 1
 pwrite64: 1
@@ -90,3 +91,5 @@ getresgid32: 1
 readlink: 1
 fsync: 1
 rt_sigreturn: 1
+# Used occasionally by glibc discovered in production use (b/167617776)
+mremap: 1
