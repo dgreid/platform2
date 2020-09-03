@@ -66,6 +66,8 @@ class CrosFpBiometricsManager : public BiometricsManager {
 
   virtual void OnMaintenanceTimerFired();
 
+  std::vector<int> GetDirtyList();
+
  private:
   // For testing.
   friend class CrosFpBiometricsManagerPeer;

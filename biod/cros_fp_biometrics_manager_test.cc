@@ -34,6 +34,8 @@ using crypto_test_data::kFakeValidationValue1;
 using crypto_test_data::kFakeValidationValue2;
 using crypto_test_data::kUserID;
 
+using testing::Return;
+
 class FakeCrosFpDevice : public CrosFpDeviceInterface {
  public:
   FakeCrosFpDevice() { positive_match_secret_ = kFakePositiveMatchSecret1; }
@@ -398,6 +400,19 @@ TEST_F(CrosFpBiometricsManagerMockTest, TestOnMaintenanceTimerFired) {
       .Times(1);
 
   mock_->OnMaintenanceTimerFiredDelegate();
+}
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestGetDirtyList_Empty) {
+  EXPECT_CALL(*mock_cros_dev_, GetDirtyMap).WillOnce(Return(std::bitset<32>()));
+  auto dirty_list = mock_->GetDirtyList();
+  EXPECT_EQ(dirty_list, std::vector<int>());
+}
+
+TEST_F(CrosFpBiometricsManagerMockTest, TestGetDirtyList) {
+  EXPECT_CALL(*mock_cros_dev_, GetDirtyMap)
+      .WillOnce(Return(std::bitset<32>("1001")));
+  auto dirty_list = mock_->GetDirtyList();
+  EXPECT_EQ(dirty_list, (std::vector<int>{0, 3}));
 }
 
 }  // namespace biod

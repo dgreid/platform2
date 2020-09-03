@@ -664,20 +664,7 @@ void CrosFpBiometricsManager::DoMatchEvent(int attempt, uint32_t event) {
 
   std::vector<int> dirty_list;
   if (match_result == EC_MKBP_FP_ERR_MATCH_YES_UPDATED) {
-    // Retrieve which templates have been updated.
-    base::Optional<std::bitset<32>> dirty_bitmap = cros_dev_->GetDirtyMap();
-    if (dirty_bitmap) {
-      // Create a list of modified template indexes from the bitmap.
-      dirty_list.reserve(dirty_bitmap->count());
-      for (int i = 0; dirty_bitmap->any() && i < dirty_bitmap->size(); i++) {
-        if ((*dirty_bitmap)[i]) {
-          dirty_list.emplace_back(i);
-          dirty_bitmap->reset(i);
-        }
-      }
-    } else {
-      LOG(ERROR) << "Failed to get updated templates map";
-    }
+    dirty_list = GetDirtyList();
   }
 
   bool matched = false;
@@ -880,6 +867,28 @@ void CrosFpBiometricsManager::OnMaintenanceTimerFired() {
   // an asynchronous mode (the state is cleared by the FPMCU after it is
   // finished with the operation).
   cros_dev_->SetFpMode(FpMode(FpMode::Mode::kSensorMaintenance));
+}
+
+std::vector<int> CrosFpBiometricsManager::GetDirtyList() {
+  std::vector<int> dirty_list;
+
+  // Retrieve which templates have been updated.
+  base::Optional<std::bitset<32>> dirty_bitmap = cros_dev_->GetDirtyMap();
+  if (!dirty_bitmap) {
+    LOG(ERROR) << "Failed to get updated templates map";
+    return dirty_list;
+  }
+
+  // Create a list of modified template indexes from the bitmap.
+  dirty_list.reserve(dirty_bitmap->count());
+  for (int i = 0; dirty_bitmap->any() && i < dirty_bitmap->size(); i++) {
+    if ((*dirty_bitmap)[i]) {
+      dirty_list.emplace_back(i);
+      dirty_bitmap->reset(i);
+    }
+  }
+
+  return dirty_list;
 }
 
 }  // namespace biod
