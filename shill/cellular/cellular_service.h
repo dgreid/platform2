@@ -36,9 +36,13 @@ class CellularService : public Service {
   };
 
   // A CellularService is associated with a single SIM Profile, uniquely
-  // identified by IMSI. We also need to provide ICCID which is used to identify
-  // eSIM profiles, and a SIM Card Identifier which is used to identify which
-  // SIM Profiles are available on an active SIM Card.
+  // identified by |iccid|.
+  // * imsi is also unique to the profile, but may not be set on construction.
+  // * sim_card_id uniquely identifies the SIM card associated with this
+  //   service, and is used to group available services on a SIM card.
+  // A CellularService may not be the active service for the associated
+  // device, so its ICCID and IMSI properties may not match the device
+  // properties.
   CellularService(Manager* manager,
                   const std::string& imsi,
                   const std::string& iccid,
@@ -55,6 +59,7 @@ class CellularService : public Service {
       const StoreInterface& storage) const override;
   bool IsLoadableFrom(const StoreInterface& storage) const override;
   bool Load(const StoreInterface* storage) override;
+  void MigrateDeprecatedStorage(StoreInterface* storage) override;
   bool Save(StoreInterface* storage) override;
   bool IsVisible() const override;
 
@@ -187,11 +192,13 @@ class CellularService : public Service {
                            const std::string& apntag);
   bool IsOutOfCredits(Error* /*error*/);
 
-  // IMSI uniquely identifies a CellularService.
+  // IMSI was previously used as a unique identifuer for CellularService,
+  // however it may not be available when a CellularService is created, so
+  // we use ICCID instead, which is consistent with Hermes. We still store
+  // IMSI for convenience and for debugging.
   std::string imsi_;
 
-  // ICCID identifies a SIM Card profile. Strongly tied to IMSI and used to
-  // identify eSIM profiles.
+  // ICCID uniquely identifies a SIM profile.
   std::string iccid_;
 
   // Uniquely identifies a SIM Card (physical or eSIM). This value is used to
@@ -210,8 +217,7 @@ class CellularService : public Service {
   std::string ppp_username_;
   std::string ppp_password_;
 
-  // The storage identifier defaults to cellular_{imsi}, however for older
-  // profiles it may use a different identifier which is set in Load().
+  // The storage identifier defaults to cellular_{iccid}.
   std::string storage_identifier_;
 
   CellularRefPtr cellular_;

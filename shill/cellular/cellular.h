@@ -326,6 +326,7 @@ class Cellular : public Device,
   friend class CellularCapability3gppTest;
   friend class CellularCapabilityCdmaTest;
   friend class CellularServiceTest;
+  friend class CellularServiceProviderTest;
   friend class ModemTest;
   FRIEND_TEST(CellularCapability3gppMainTest, Connect);
   FRIEND_TEST(CellularCapability3gppMainTest, IsServiceActivationRequired);
@@ -468,6 +469,10 @@ class Cellular : public Device,
 
   void PollLocationTask();
 
+  void set_sim_card_id_for_testing(const std::string& sim_card_id) {
+    sim_card_id_ = sim_card_id;
+  }
+
   State state_;
   ModemState modem_state_;
 
@@ -525,6 +530,7 @@ class Cellular : public Device,
   bool sim_present_;
   Stringmaps apn_list_;
   std::string iccid_;
+  std::string sim_card_id_;
 
   // End of DBus properties.
   // ///////////////////////////////////////////////////////////////////////////

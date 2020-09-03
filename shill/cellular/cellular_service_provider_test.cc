@@ -61,6 +61,14 @@ class CellularServiceProviderTest : public testing::Test {
     return cellular;
   }
 
+  CellularRefPtr CreateDeviceWithEid(const std::string& imsi,
+                                     const std::string& iccid,
+                                     const std::string& eid) {
+    CellularRefPtr cellular = CreateDevice(imsi, iccid);
+    cellular->set_sim_card_id_for_testing(eid);
+    return cellular;
+  }
+
   // TODO(b/154014577): Provide eID once supported.
   void SetupCellularStore(const std::string& identifier,
                           const std::string& imsi,
@@ -140,12 +148,13 @@ TEST_F(CellularServiceProviderTest, LoadServiceFromProfile) {
 
 TEST_F(CellularServiceProviderTest, LoadMultipleServicesFromProfile) {
   // Set up two cellular services with the same SIM Card Id.
-  SetupCellularStore("cellular_1a", "imsi1a", "iccid1", "iccid1");
-  SetupCellularStore("cellular_1b", "imsi1b", "iccid1", "iccid1");
+  SetupCellularStore("cellular_1a", "imsi1a", "iccid1a", "eid1");
+  SetupCellularStore("cellular_1b", "imsi1b", "iccid1b", "eid1");
   // Set up a third cellular service with a different SIM Card Id.
-  SetupCellularStore("cellular_2", "imsi2", "iccid2", "iccid2");
+  SetupCellularStore("cellular_2", "imsi2", "iccid2", "eid2");
 
-  CellularRefPtr device = CreateDevice("imsi1a", "iccid1");
+  CellularRefPtr device = CreateDeviceWithEid("imsi1a", "iccid1a", "eid1");
+
   CellularServiceRefPtr service =
       provider()->LoadServicesForDevice(device.get());
   ASSERT_TRUE(service);
@@ -153,7 +162,7 @@ TEST_F(CellularServiceProviderTest, LoadMultipleServicesFromProfile) {
   EXPECT_EQ(2u, GetProviderServices().size());
   // cellular_1a should be returned.
   EXPECT_EQ("imsi1a", service->imsi());
-  EXPECT_EQ("iccid1", service->iccid());
+  EXPECT_EQ("iccid1a", service->iccid());
 }
 
 // When a SIM or eSIM is switched the Cellular Device will be rebuilt,
@@ -192,25 +201,25 @@ TEST_F(CellularServiceProviderTest, RemoveObsoleteServiceFromProfile) {
   CellularRefPtr device = CreateDevice("imsi1", "iccid1");
   std::string identifier = device->GetStorageIdentifier();
 
-  // Add an entry in the storage with an empty IMSI and set property.
+  // Add two entries in the storage with the same ICCID, one with an empty IMSI.
+  // Set a property on both.
   SetupCellularStore(identifier, "", "iccid1", "iccid1");
   StoreCellularProperty(identifier, CellularService::kStoragePPPUsername,
                         "user1");
+  SetupCellularStore(identifier, "imsi1", "iccid1", "iccid1");
+  StoreCellularProperty(identifier, CellularService::kStoragePPPUsername,
+                        "user2");
 
-  // Ensure that the service is not loaded from storage and that a new service
-  // is created with ppp_username unset.
+  // Ensure that the service with a non empty imsi loaded from storage.
   CellularServiceRefPtr service =
       provider()->LoadServicesForDevice(device.get());
   ASSERT_TRUE(service);
   EXPECT_EQ("imsi1", service->imsi());
   EXPECT_EQ("iccid1", service->iccid());
-  EXPECT_EQ("", service->ppp_username());
+  EXPECT_EQ("user2", service->ppp_username());
 
   // Only one provider service should exist.
   EXPECT_EQ(1u, GetProviderServices().size());
-
-  // Storage should not have any service saved at this point.
-  EXPECT_EQ(0, GetStorageGroups().size());
 }
 
 }  // namespace shill

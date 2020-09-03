@@ -111,15 +111,19 @@ void CellularService::SetDevice(Cellular* device) {
                              GetVisibleProperty(&ignored_error));
   if (!cellular_)
     return;
+
+  DCHECK_EQ(sim_card_id_, cellular_->GetSimCardId());
   SetConnectable(!!device);
   set_friendly_name(cellular_->CreateDefaultFriendlyServiceName());
   SetActivationType(kActivationTypeUnknown);
 
-  // Update the ICCID and Sim Card ID to match |device|. This could potentially
-  // happen if a SIM was reprogrammed with an IMSI from another SIM Card, e.g.
-  // to replace a lost card.
-  iccid_ = cellular_->iccid();
-  sim_card_id_ = cellular_->GetSimCardId();
+  // The IMSI may not be available on construction, so set it here if the ICCID
+  // matches. |sim_card_id_| may not match when support for eId is added, so
+  // also update that here.
+  if (iccid_ == cellular_->iccid()) {
+    imsi_ = cellular_->imsi();
+    sim_card_id_ = cellular_->GetSimCardId();
+  }
 }
 
 void CellularService::AutoConnect() {
@@ -152,16 +156,27 @@ string CellularService::GetLoadableStorageIdentifier(
                  << " is not available in the persistent store";
     return std::string();
   }
-  if (groups.size() > 1) {
-    // This could happen when different properties were used to identify a
-    // Cellular service. Look for an entry with a matching identifier,
-    // otherwise use the first matchng entry.
-    auto iter = std::find(groups.begin(), groups.end(), storage_identifier_);
-    if (iter != groups.end())
-      return *iter;
-    LOG(WARNING) << "More than one configuration for service " << log_name()
-                 << " is available; choosing the first.";
+  if (groups.size() == 1)
+    return *groups.begin();
+
+  // If there are multiple candidates, find the best matching entry. This may
+  // happen when loading older profiles.
+  LOG(WARNING) << "More than one configuration for service " << log_name()
+               << " is available, using the best match and removing others.";
+
+  // If the storage identifier matches, always use that.
+  auto iter = std::find(groups.begin(), groups.end(), storage_identifier_);
+  if (iter != groups.end())
+    return *iter;
+
+  // If an entry with a non-empty IMSI exists, use that.
+  for (const string& group : groups) {
+    string imsi;
+    storage.GetString(group, kStorageImsi, &imsi);
+    if (!imsi.empty())
+      return group;
   }
+  // Otherwise use the first entry.
   return *groups.begin();
 }
 
@@ -183,7 +198,7 @@ bool CellularService::Load(const StoreInterface* storage) {
 
   // Set |storage identifier_| to match the storage name in the Profile.
   // This needs to be done before calling Service::Load().
-  // NOTE: Older profiles used other identifiers instead of IMSI. This is fine
+  // NOTE: Older profiles used other identifiers instead of ICCID. This is fine
   // since entries are identified by their properties, not the id.
   storage_identifier_ = id;
 
@@ -195,6 +210,12 @@ bool CellularService::Load(const StoreInterface* storage) {
     return false;
   }
 
+  // |iccid_| will always match the storage entry.
+  // |sim_card_id_| will already be set. If the saved value is empty or differs
+  //     (e.g. once eId is used), we want to use the current value, not the
+  //     saved one.
+
+  storage->GetString(id, kStorageImsi, &imsi_);
   LoadApn(storage, id, kStorageAPN, &apn_info_);
   LoadApn(storage, id, kStorageLastGoodAPN, &last_good_apn_info_);
 
@@ -209,19 +230,37 @@ bool CellularService::Load(const StoreInterface* storage) {
   return true;
 }
 
+void CellularService::MigrateDeprecatedStorage(StoreInterface* storage) {
+  SLOG(this, 2) << __func__;
+
+  // Prior to M85, Cellular services used either IMSI or MEID for |id|.
+  // In M86, IMSI only was used for |id|. In M87+, ICCID is used for |id|.
+  // This removes any stale groups for consistency and debugging clarity.
+  // This migration can be removed in M91+.
+  string id = GetLoadableStorageIdentifier(*storage);
+  set<string> groups = storage->GetGroupsWithProperties(GetStorageProperties());
+  LOG(INFO) << __func__ << " ID: " << id << " Groups: " << groups.size();
+  for (const string& group : groups) {
+    if (group != id)
+      storage->DeleteGroup(group);
+  }
+}
+
 bool CellularService::Save(StoreInterface* storage) {
   // Save properties common to all Services.
   if (!Service::Save(storage))
     return false;
 
   const string id = GetStorageIdentifier();
-  SaveApn(storage, id, GetUserSpecifiedApn(), kStorageAPN);
-  SaveApn(storage, id, GetLastGoodApn(), kStorageLastGoodAPN);
   SaveStringOrClear(storage, id, kStorageIccid, iccid_);
   SaveStringOrClear(storage, id, kStorageImsi, imsi_);
+  SaveStringOrClear(storage, id, kStorageSimCardId, sim_card_id_);
+
+  SaveApn(storage, id, GetUserSpecifiedApn(), kStorageAPN);
+  SaveApn(storage, id, GetLastGoodApn(), kStorageLastGoodAPN);
   SaveStringOrClear(storage, id, kStoragePPPUsername, ppp_username_);
   SaveStringOrClear(storage, id, kStoragePPPPassword, ppp_password_);
-  SaveStringOrClear(storage, id, kStorageSimCardId, sim_card_id_);
+
   // Delete deprecated keys. TODO: Remove after M84.
   storage->DeleteKey(id, "Cellular.Imei");
   storage->DeleteKey(id, "Cellular.Meid");
@@ -546,17 +585,16 @@ void CellularService::SaveApnField(StoreInterface* storage,
 KeyValueStore CellularService::GetStorageProperties() const {
   KeyValueStore properties;
   properties.Set<string>(kStorageType, kTypeCellular);
-  properties.Set<string>(kStorageImsi, imsi_);
+  properties.Set<string>(kStorageIccid, iccid_);
   return properties;
 }
-
 std::string CellularService::GetDefaultStorageIdentifier() const {
-  if (imsi_.empty()) {
-    LOG(ERROR) << "CellularService created with empty IMSI";
+  if (iccid_.empty()) {
+    LOG(ERROR) << "CellularService created with empty ICCID";
     return std::string();
   }
   return SanitizeStorageIdentifier(
-      base::StringPrintf("%s_%s", kTypeCellular, imsi_.c_str()));
+      base::StringPrintf("%s_%s", kTypeCellular, iccid_.c_str()));
 }
 
 bool CellularService::IsOutOfCredits(Error* /*error*/) {

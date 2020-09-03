@@ -1274,8 +1274,7 @@ void Cellular::RegisterProperties() {
 }
 
 const std::string& Cellular::GetSimCardId() const {
-  // TODO(b/154014577): Support eSIM.
-  return iccid_;
+  return sim_card_id_;
 }
 
 std::deque<Stringmap> Cellular::BuildApnTryList() const {
@@ -1542,6 +1541,8 @@ void Cellular::set_iccid(const string& iccid) {
     return;
 
   iccid_ = iccid;
+  // TODO(b/154014577): Support eSIM eId.
+  sim_card_id_ = iccid_;
   adaptor()->EmitStringChanged(kIccidProperty, iccid_);
 }
 

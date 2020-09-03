@@ -990,10 +990,10 @@ TEST_P(CellularTest, HomeProviderServingOperator) {
 }
 
 TEST_P(CellularTest, StorageIdentifier) {
-  // The default storage identifier should always be cellular_{imsi}
-  device_->set_imsi("test_imsi");
+  // The default storage identifier should always be cellular_{iccid}
+  device_->set_iccid("test_iccid");
   device_->CreateService();
-  EXPECT_EQ("cellular_test_imsi", device_->service()->GetStorageIdentifier());
+  EXPECT_EQ("cellular_test_iccid", device_->service()->GetStorageIdentifier());
   device_->DestroyService();
 }
 

@@ -29,13 +29,6 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
                                   std::string* iccid,
                                   std::string* sim_card_id,
                                   Error* error) {
-  *imsi =
-      args.Lookup<std::string>(CellularService::kStorageImsi, std::string());
-  if (imsi->empty()) {
-    Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
-                          "Missing IMSI");
-    return false;
-  }
   *iccid =
       args.Lookup<std::string>(CellularService::kStorageIccid, std::string());
   if (iccid->empty()) {
@@ -49,6 +42,11 @@ bool GetServiceParametersFromArgs(const KeyValueStore& args,
     // If SIM Card Id is unset, fall back to ICCID.
     *sim_card_id = *iccid;
   }
+
+  // IMSI may be empty.
+  *imsi =
+      args.Lookup<std::string>(CellularService::kStorageImsi, std::string());
+
   return true;
 }
 
@@ -58,12 +56,6 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
                                      std::string* iccid,
                                      std::string* sim_card_id,
                                      Error* error) {
-  if (!storage->GetString(entry_name, CellularService::kStorageImsi, imsi) ||
-      imsi->empty()) {
-    Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
-                          "Missing or empty IMSI");
-    return false;
-  }
   if (!storage->GetString(entry_name, CellularService::kStorageIccid, iccid) ||
       iccid->empty()) {
     Error::PopulateAndLog(FROM_HERE, error, Error::kNotSupported,
@@ -76,6 +68,10 @@ bool GetServiceParametersFromStorage(const StoreInterface* storage,
     // If SIM Card Id is unset or empty, fall back to ICCID.
     *sim_card_id = *iccid;
   }
+
+  // IMSI may be empty.
+  storage->GetString(entry_name, CellularService::kStorageImsi, imsi);
+
   return true;
 }
 
@@ -180,15 +176,15 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
       continue;
     }
     DCHECK_EQ(service_sim_card_id, sim_card_id);
-    CellularServiceRefPtr service = FindService(imsi);
+    CellularServiceRefPtr service = FindService(iccid);
     if (!service) {
-      SLOG(this, 1) << "Loading Cellular service for " << imsi;
+      SLOG(this, 1) << "Loading Cellular service for ICCID: " << iccid;
       service = new CellularService(manager_, imsi, iccid, sim_card_id);
       service->Load(storage);
       service->SetDevice(device);
       AddService(service);
     } else {
-      SLOG(this, 1) << "Cellular service exists: " << imsi;
+      SLOG(this, 1) << "Cellular service exists for ICCID: " << iccid;
       service->SetDevice(device);
       // For Cellular, when the SIM changes or when Cellular is enabled, assume
       // that the intent is to auto connect to the CellularService (if
@@ -196,11 +192,12 @@ CellularServiceRefPtr CellularServiceProvider::LoadServicesForDevice(
       // explicitly disconnected.
       service->ClearExplicitlyDisconnected();
     }
-    if (imsi == device->imsi())
+    if (iccid == device->iccid())
       active_service = service;
   }
   if (!active_service) {
-    SLOG(this, 1) << "No existing Cellular service for " << device->imsi();
+    SLOG(this, 1) << "No existing Cellular service with ICCID: "
+                  << device->iccid();
     active_service = new CellularService(manager_, device->imsi(),
                                          device->iccid(), sim_card_id);
     active_service->SetDevice(device);
@@ -233,7 +230,7 @@ void CellularServiceProvider::RemoveServicesForDevice(Cellular* device) {
 }
 
 void CellularServiceProvider::AddService(CellularServiceRefPtr service) {
-  SLOG(this, 1) << __func__ << ": " << service->imsi();
+  SLOG(this, 1) << __func__ << " with ICCID: " << service->iccid();
 
   // See comment in header for |profile_|.
   service->SetProfile(profile_);
@@ -244,7 +241,7 @@ void CellularServiceProvider::AddService(CellularServiceRefPtr service) {
 }
 
 void CellularServiceProvider::RemoveService(CellularServiceRefPtr service) {
-  SLOG(this, 1) << __func__ << ": " << service->imsi();
+  SLOG(this, 1) << __func__ << " with ICCID: " << service->iccid();
   manager_->DeregisterService(service);
   auto iter = std::find(services_.begin(), services_.end(), service);
   if (iter == services_.end()) {
@@ -255,10 +252,10 @@ void CellularServiceProvider::RemoveService(CellularServiceRefPtr service) {
 }
 
 CellularServiceRefPtr CellularServiceProvider::FindService(
-    const std::string& imsi) {
+    const std::string& iccid) {
   const auto iter = std::find_if(
       services_.begin(), services_.end(),
-      [imsi](const auto& service) { return service->imsi() == imsi; });
+      [iccid](const auto& service) { return service->iccid() == iccid; });
   if (iter != services_.end())
     return *iter;
   return nullptr;

@@ -306,7 +306,7 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
   EXPECT_CALL(storage, ContainsGroup(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageImsi, device_->imsi())))
+                           CellularService::kStorageIccid, device_->iccid())))
       .WillRepeatedly(Return(std::set<string>{"matching-storage-id"}));
   EXPECT_TRUE(service_->Load(&storage));
   EXPECT_TRUE(IsAutoConnectable(&reason));
@@ -335,7 +335,7 @@ TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
   EXPECT_CALL(storage, ContainsGroup(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageImsi, device_->imsi())))
+                           CellularService::kStorageIccid, device_->iccid())))
       .WillRepeatedly(Return(std::set<string>{"matching-storage-id"}));
 
   const string kDefaultUser;
@@ -380,7 +380,7 @@ TEST_F(CellularServiceTest, LoadFromProfileMatchingImsi) {
   EXPECT_CALL(storage, ContainsGroup(matching_storage_id))
       .WillOnce(Return(true));
   EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageImsi, device_->imsi())))
+                           CellularService::kStorageIccid, device_->iccid())))
       .WillRepeatedly(Return(groups));
   EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_TRUE(service_->IsLoadableFrom(storage));
@@ -403,7 +403,7 @@ TEST_F(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles) {
   EXPECT_CALL(storage, ContainsGroup(matching_storage_id1))
       .WillOnce(Return(true));
   EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageImsi, device_->imsi())))
+                           CellularService::kStorageIccid, device_->iccid())))
       .WillRepeatedly(Return(groups));
   EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
   EXPECT_TRUE(service_->IsLoadableFrom(storage));
@@ -421,7 +421,7 @@ TEST_F(CellularServiceTest, LoadFromOlderProfile) {
   std::set<string> groups = {storage_id};
 
   EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageImsi, kImsi)))
+                           CellularService::kStorageIccid, kIccid)))
       .WillRepeatedly(Return(groups));
   EXPECT_CALL(storage, ContainsGroup(storage_id)).WillRepeatedly(Return(true));
 
