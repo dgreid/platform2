@@ -3,26 +3,13 @@
 # found in the LICENSE file.
 
 openat: 1
-mmap2: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
-stat64: 1
-mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
-fstat64: 1
-close: 1
 read: 1
 brk: 1
-# ioctl arg1 == _IOC(_IOC_READ|_IOC_WRITE, 0x3a, 0, 0x1c)
-# ioctl arg1 == _IOC(_IOC_READ|_IOC_WRITE, 0x3a, 0x1, 0xc)
-ioctl: arg1 == 0xc01c3a00 || arg1 == 0xc00c3a01
+# CROS_EC_DEV_IOCXCMD = 0xc01c3a00
+# CROS_EC_DEV_IOCRDMEM_V2 = 0xc108ec01
+# CROS_EC_DEV_IOCXCMD_V2 = 0xc014ec00
+ioctl: arg1 == 0xc01c3a00 || arg1 == 0xc108ec01 || arg1 == 0xc014ec00
 uname: 1
-rt_sigaction: 1
-execve: 1
-access: 1
-ARM_set_tls: 1
-munmap: 1
-set_tid_address: 1
-set_robust_list: 1
-rt_sigprocmask: 1
-ugetrlimit: 1
 write: 1
 exit_group: 1
 restart_syscall: 1
