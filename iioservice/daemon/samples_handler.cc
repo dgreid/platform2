@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include <base/files/file_util.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/time/time.h>
@@ -29,7 +30,7 @@ namespace iioservice {
 namespace {
 
 constexpr char kNoBatchChannels[][10] = {"timestamp", "count"};
-
+constexpr char kHWFifoFlushPath[] = "buffer/hwfifo_flush";
 }
 
 // static
@@ -286,6 +287,12 @@ SamplesHandler::SamplesHandler(
 
 void SamplesHandler::SetSampleWatcherOnThread() {
   DCHECK(sample_task_runner_->BelongsToCurrentThread());
+
+  // Flush the old samples in EC FIFO.
+  base::FilePath flush_path = iio_device_->GetPath().Append(kHWFifoFlushPath);
+  int bytes_written = base::WriteFile(flush_path, "1\n", 2);
+  if (bytes_written < 2)
+    LOGF(ERROR) << "Failed to flush the old samples in EC FIFO";
 
   auto fd = iio_device_->GetBufferFd();
   if (!fd.has_value()) {
