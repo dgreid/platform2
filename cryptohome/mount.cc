@@ -594,9 +594,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   // /home/user/$hash: owned by chronos
   // /home/root/$hash: owned by root
 
-  FilePath vault_path =
-      homedirs_->GetEcryptfsUserVaultPath(obfuscated_username);
-
   mount_point_ = homedirs_->GetUserMountDirectory(obfuscated_username);
   if (!platform_->CreateDirectory(mount_point_)) {
     PLOG(ERROR) << "User mount directory creation failed for "
@@ -618,8 +615,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   // Since Service::Mount cleans up stale mounts, we should only reach
   // this point if someone attempts to re-mount an in-use mount point.
   if (platform_->IsDirectoryMounted(mount_point_)) {
-    LOG(ERROR) << "Mount point is busy: " << mount_point_.value()
-               << " for " << vault_path.value();
+    LOG(ERROR) << "Mount point is busy: " << mount_point_.value();
     *mount_error = MOUNT_ERROR_FATAL;
     return false;
   }
