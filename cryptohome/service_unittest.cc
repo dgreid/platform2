@@ -711,7 +711,7 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral) {
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
       .Times(kEphemeralMountsCount - 1);
   std::vector<ProcessInformation> processes(1);
-  std::vector<std::string> cmd_line(1, "test");
+  std::vector<std::string> cmd_line;
   processes[0].set_process_id(1);
   processes[0].set_cmd_line(&cmd_line);
   EXPECT_CALL(platform_,

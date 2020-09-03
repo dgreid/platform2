@@ -600,10 +600,12 @@ bool UserDataAuth::FilterActiveMounts(
         std::vector<ProcessInformation> processes;
         platform_->GetProcessesWithOpenFiles(match->second, &processes);
         if (processes.size()) {
+          const std::vector<std::string> cmd_line = processes[0].get_cmd_line();
+          const std::string first_cmd =
+              (cmd_line.size() > 0 ? cmd_line[0] : "<empty>");
           LOG(WARNING) << "Stale mount " << match->second.value() << " from "
                        << match->first.value() << " has " << processes.size()
-                       << " active holders. "
-                       << "First one " << processes[0].get_cmd_line()[0];
+                       << " active holders. First one " << first_cmd;
           keep = true;
           skipped = true;
         }
