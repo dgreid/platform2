@@ -58,6 +58,12 @@ class UpgradeArcContainerRequest;
 class UserPolicyServiceFactory;
 class VpdProcess;
 
+// Enable further isolation of the user session (including the browser process
+// tree), beyond merely running as user 'chronos'.
+constexpr bool __attribute__((unused)) IsolateUserSession() {
+  return USE_USER_SESSION_ISOLATION;
+}
+
 // Implements the DBus SessionManagerInterface.
 //
 // All signatures used in the methods of the ownership API are

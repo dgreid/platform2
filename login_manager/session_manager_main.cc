@@ -45,6 +45,7 @@
 #include "login_manager/file_checker.h"
 #include "login_manager/login_metrics.h"
 #include "login_manager/regen_mitigator.h"
+#include "login_manager/session_manager_impl.h"
 #include "login_manager/session_manager_service.h"
 #include "login_manager/system_utils_impl.h"
 
@@ -133,15 +134,6 @@ bool BootDeviceIsRotationalDisk() {
   return rotational_contents == "1";
 }
 
-// Enable further isolation of the user session (including the browser process
-// tree), beyond merely running as user 'chronos'.
-bool __attribute__((unused)) IsolateUserSession() {
-#if USE_USER_SESSION_ISOLATION
-  return true;
-#else
-  return false;
-#endif
-}
 }  // namespace
 
 int main(int argc, char* argv[]) {
@@ -251,7 +243,7 @@ int main(int argc, char* argv[]) {
   // the USE flag 'user_session_isolation'. If the flag is set Chrome will
   // be launched in a non-root mount namespace for regular sessions as well.
   config.isolate_guest_session = true;
-  config.isolate_regular_session = IsolateUserSession();
+  config.isolate_regular_session = login_manager::IsolateUserSession();
 
   if (config.isolate_guest_session || config.isolate_regular_session) {
     // Instead of having Chrome unshare a new mount namespace on launch, have
@@ -263,6 +255,9 @@ int main(int argc, char* argv[]) {
   brillo::Platform platform;
   std::unique_ptr<brillo::MountNamespace> chrome_mnt_ns;
   if (config.isolate_regular_session) {
+    // For regular sessions Chrome cannot enter the mount namespace created by
+    // cryptohome on launch since Chrome is not restarted after login. Thus
+    // create the mount namespace here before Chrome launches.
     chrome_mnt_ns =
         std::make_unique<brillo::MountNamespace>(ns_path.value(), &platform);
     if (chrome_mnt_ns->Create()) {
