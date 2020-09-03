@@ -65,47 +65,51 @@ base::Optional<CrosFpDevice::EcProtocolInfo> CrosFpDevice::EcProtoInfo() {
   };
 }
 
-ssize_t CrosFpDevice::ReadVersion(char* buffer, size_t size) {
-  ssize_t ret;
+base::Optional<std::string> CrosFpDevice::ReadVersion() {
+  // TODO(b/131438292): Remove the hardcoded size for the version buffer.
+  std::array<uint8_t, 80> version_buf;
   for (int retry = 0; retry < kMaxIoAttempts; retry++) {
-    ret = read(cros_fd_.get(), buffer, size);
-    if (ret >= 0) {
+    ssize_t bytes_read =
+        read(cros_fd_.get(), version_buf.data(), version_buf.size());
+    if (bytes_read >= 0) {
       LOG_IF(INFO, retry > 0)
           << "FPMCU read cros_fp device succeeded on attempt " << retry + 1
           << "/" << kMaxIoAttempts << ".";
-      return ret;
+      // Ignore the last character read, since it should be a NUL.
+      auto str = std::string(version_buf.cbegin(),
+                             version_buf.cbegin() + bytes_read - 1);
+
+      size_t newline_pos = str.find_first_of('\n');
+      if (newline_pos == std::string::npos) {
+        return base::nullopt;
+      }
+
+      return str.substr(0, newline_pos);
     }
     if (errno != ETIMEDOUT) {
       PLOG(ERROR) << "FPMCU failed to read cros_fp device on attempt "
                   << retry + 1 << "/" << kMaxIoAttempts
                   << ", retry is not allowed for error";
-      return ret;
+      return base::nullopt;
     }
     PLOG(ERROR) << "FPMCU failed to read cros_fp device on attempt "
                 << retry + 1 << "/" << kMaxIoAttempts;
   }
 
-  return ret;
+  return base::nullopt;
 }
 
 bool CrosFpDevice::EcDevInit() {
   // This is a special read (before events are enabled) that can fail due
   // to ETIMEDOUT. This is because the first read with events disabled
   // triggers a get_version request to the FPMCU, which can timeout.
-  // TODO(b/131438292): Remove the hardcoded size for the version buffer.
-  char version[80];
-  ssize_t ret = ReadVersion(version, sizeof(version) - 1);
-  if (ret <= 0) {
-    LOG(ERROR) << "Failed to read cros_fp device version, read returned " << ret
-               << ".";
+  base::Optional<std::string> version = ReadVersion();
+  if (!version) {
+    LOG(ERROR) << "Failed to read cros_fp device version.";
     return false;
   }
-  version[ret] = '\0';
-  LOG(INFO) << "cros_fp device version: " << version;
-  char* s = strchr(version, '\n');
-  if (s)
-    *s = '\0';
-  if (strcmp(version, CROS_EC_DEV_VERSION)) {
+  LOG(INFO) << "cros_fp device version: " << *version;
+  if (version != CROS_EC_DEV_VERSION) {
     LOG(ERROR) << "Invalid device version";
     return false;
   }

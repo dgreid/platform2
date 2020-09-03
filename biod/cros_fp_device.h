@@ -94,6 +94,12 @@ class CrosFpDevice : public CrosFpDeviceInterface {
 
   bool Init();
 
+  virtual int read(int fd, void* buf, size_t count) {
+    return ::read(fd, buf, count);
+  }
+
+  base::Optional<std::string> ReadVersion();
+
  private:
   struct EcProtocolInfo {
     uint16_t max_read = 0;
@@ -101,7 +107,6 @@ class CrosFpDevice : public CrosFpDeviceInterface {
   };
 
   bool EcDevInit();
-  ssize_t ReadVersion(char* buffer, size_t size);
   base::Optional<EcProtocolInfo> EcProtoInfo();
   bool EcReboot(ec_current_image to_image);
   // Run the EC command to generate new entropy in the underlying MCU.

@@ -207,5 +207,86 @@ TEST_F(CrosFpDevice_DeadPixelCount, OneDeadPixel) {
   EXPECT_EQ(mock_cros_fp_device_->DeadPixelCount(), 1);
 }
 
+class CrosFpDevice_ReadVersion : public testing::Test {
+ public:
+  class MockCrosFpDevice : public CrosFpDevice {
+   public:
+    MockCrosFpDevice(
+        BiodMetricsInterface* biod_metrics,
+        std::unique_ptr<EcCommandFactoryInterface> ec_command_factory)
+        : CrosFpDevice(biod_metrics, std::move(ec_command_factory)) {}
+    MOCK_METHOD(int, read, (int, void*, size_t), (override));
+    using CrosFpDevice::ReadVersion;
+  };
+
+ protected:
+  metrics::MockBiodMetrics mock_biod_metrics_;
+  MockCrosFpDevice mock_cros_fp_device_{
+      &mock_biod_metrics_, std::make_unique<MockEcCommandFactory>()};
+};
+
+TEST_F(CrosFpDevice_ReadVersion, ValidVersionStringNotNulTerminated) {
+  const std::string kVersionStr =
+      "1.0.0\n"
+      "bloonchipper_v2.0.4277-9f652bb3\n"
+      "bloonchipper_v2.0.4277-9f652bb3\n"
+      "read-writ\n";
+  EXPECT_EQ(kVersionStr.size(), 80);
+
+  EXPECT_CALL(mock_cros_fp_device_, read)
+      .WillOnce([kVersionStr](int, void* buf, size_t count) {
+        EXPECT_EQ(count, kVersionStr.size());
+        // Copy string, excluding terminating NUL.
+        uint8_t* buffer = static_cast<uint8_t*>(buf);
+        int num_bytes = kVersionStr.size();
+        std::memcpy(buffer, kVersionStr.data(), num_bytes);
+        return num_bytes;
+      });
+  base::Optional<std::string> version = mock_cros_fp_device_.ReadVersion();
+  EXPECT_TRUE(version.has_value());
+  EXPECT_EQ(*version, std::string("1.0.0"));
+}
+
+TEST_F(CrosFpDevice_ReadVersion, ValidVersionStringNulTerminated) {
+  const std::string kVersionStr =
+      "1.0.0\n"
+      "bloonchipper_v2.0.4277-9f652bb3\n"
+      "bloonchipper_v2.0.4277-9f652bb3\n"
+      "read-writ";
+  EXPECT_EQ(kVersionStr.size(), 79);
+
+  EXPECT_CALL(mock_cros_fp_device_, read)
+      .WillOnce([kVersionStr](int, void* buf, size_t count) {
+        EXPECT_GE(count, kVersionStr.size());
+        // Copy string, excluding terminating NUL.
+        uint8_t* buffer = static_cast<uint8_t*>(buf);
+        int num_bytes = kVersionStr.size();
+        std::memcpy(buffer, kVersionStr.data(), num_bytes);
+        num_bytes += 1;
+        EXPECT_EQ(num_bytes, 80);
+        buffer[num_bytes] = '\0';
+        return num_bytes;
+      });
+  base::Optional<std::string> version = mock_cros_fp_device_.ReadVersion();
+  EXPECT_TRUE(version.has_value());
+  EXPECT_EQ(*version, std::string("1.0.0"));
+}
+
+TEST_F(CrosFpDevice_ReadVersion, InvalidVersionStringNoNewline) {
+  const std::string kVersionStr = "1.0.0";
+
+  EXPECT_CALL(mock_cros_fp_device_, read)
+      .WillOnce([kVersionStr](int, void* buf, size_t count) {
+        EXPECT_GE(count, kVersionStr.size());
+        // Copy string, excluding terminating NUL.
+        uint8_t* buffer = static_cast<uint8_t*>(buf);
+        int num_bytes = kVersionStr.size();
+        std::memcpy(buffer, kVersionStr.data(), num_bytes);
+        return num_bytes;
+      });
+  base::Optional<std::string> version = mock_cros_fp_device_.ReadVersion();
+  EXPECT_FALSE(version.has_value());
+}
+
 }  // namespace
 }  // namespace biod
