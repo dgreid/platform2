@@ -45,7 +45,9 @@ class FakeCrosFpDevice : public CrosFpDeviceInterface {
   bool SetFpMode(const FpMode& mode) override { return false; }
   FpMode GetFpMode() override { return FpMode(FpMode::Mode::kModeInvalid); }
   base::Optional<FpStats> GetFpStats() override { return base::nullopt; }
-  bool GetDirtyMap(std::bitset<32>* bitmap) override { return false; }
+  base::Optional<std::bitset<32>> GetDirtyMap() override {
+    return base::nullopt;
+  }
   bool SupportsPositiveMatchSecret() override { return true; }
   bool GetPositiveMatchSecret(int index,
                               brillo::SecureVector* secret) override {

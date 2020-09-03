@@ -496,13 +496,13 @@ bool CrosFpDevice::Init() {
   return true;
 }
 
-bool CrosFpDevice::GetDirtyMap(std::bitset<32>* bitmap) {
+base::Optional<std::bitset<32>> CrosFpDevice::GetDirtyMap() {
   // Retrieve the up-to-date dirty bitmap from the MCU.
-  if (!UpdateFpInfo())
-    return false;
+  if (!UpdateFpInfo()) {
+    return base::nullopt;
+  }
 
-  *bitmap = info_->template_info()->dirty;
-  return true;
+  return info_->template_info()->dirty;
 }
 
 bool CrosFpDevice::GetIndexOfLastTemplate(int* index) {

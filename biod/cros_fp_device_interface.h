@@ -54,7 +54,7 @@ class CrosFpDeviceInterface {
    */
   virtual FpMode GetFpMode() = 0;
   virtual base::Optional<FpStats> GetFpStats() = 0;
-  virtual bool GetDirtyMap(std::bitset<32>* bitmap) = 0;
+  virtual base::Optional<std::bitset<32>> GetDirtyMap() = 0;
   virtual bool SupportsPositiveMatchSecret() = 0;
   virtual bool GetPositiveMatchSecret(int index,
                                       brillo::SecureVector* secret) = 0;
