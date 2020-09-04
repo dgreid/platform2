@@ -256,7 +256,9 @@ bool OutOfProcessMountHelper::PerformMount(const Options& mount_opts,
   request.set_username(username);
   request.set_system_salt(SecureBlobToSecureHex(system_salt_).to_string());
   request.set_legacy_home(legacy_home_);
-  request.set_mount_namespace_path("");
+  request.set_mount_namespace_path(chrome_mnt_ns_ && IsolateUserSession()
+                                       ? chrome_mnt_ns_->path().value()
+                                       : "");
   request.set_type(mount_type[mount_opts.type]);
   request.set_to_migrate_from_ecryptfs(mount_opts.to_migrate_from_ecryptfs);
   request.set_shadow_only(mount_opts.shadow_only);

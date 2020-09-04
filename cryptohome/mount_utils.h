@@ -13,6 +13,10 @@
 
 namespace cryptohome {
 
+constexpr bool IsolateUserSession() {
+  return USE_USER_SESSION_ISOLATION;
+}
+
 // Cryptohome uses protobufs to communicate with the out-of-process mount
 // helper.
 bool ReadProtobuf(int fd, google::protobuf::MessageLite* message);

@@ -63,14 +63,6 @@ using chaps::IsolateCredentialManager;
 using google::protobuf::util::MessageDifferencer;
 
 namespace {
-bool __attribute__((unused)) IsolateUserSession() {
-#if USE_USER_SESSION_ISOLATION
-  return true;
-#else
-  return false;
-#endif
-}
-
 constexpr bool __attribute__((unused)) MountUserSessionOOP() {
   return USE_MOUNT_OOP;
 }
@@ -207,9 +199,14 @@ bool Mount::Init(Platform* platform,
       skel_source_, system_salt_, legacy_mount_, platform_));
 
   std::unique_ptr<MountNamespace> chrome_mnt_ns;
-  if (mount_guest_session_non_root_namespace_) {
+  if (mount_guest_session_non_root_namespace_ || IsolateUserSession()) {
     chrome_mnt_ns = std::make_unique<MountNamespace>(
         base::FilePath(kUserSessionMountNamespacePath), platform_);
+  }
+
+  // When the |user_session_isolation| USE flag is set, the mount namespace for
+  // both Guest and regular sessions will be created by session_manager.
+  if (mount_guest_session_non_root_namespace_ && !IsolateUserSession()) {
     if (!chrome_mnt_ns->Create()) {
       std::string message =
           base::StringPrintf("Failed to create mount namespace at %s",
