@@ -1279,7 +1279,7 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
   if (base::ReadFileToString(paths::GetAt(paths::kSystemRunStateDirectory,
                                           paths::kInProgressTestName),
                              &in_progress_test)) {
-    AddCrashMetaUploadData("in_progress_tast_test", in_progress_test);
+    AddCrashMetaUploadData("in_progress_integration_test", in_progress_test);
   }
 
   base::Time now = test_clock_ ? test_clock_->Now() : base::Time::Now();

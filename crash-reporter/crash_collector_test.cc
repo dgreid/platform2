@@ -933,7 +933,7 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
       "upload_var_osVersion=%s\n"
       "payload=%s\n"
       "done=1\n",
-      test_in_prog ? "upload_var_in_progress_tast_test=some.Test\n" : "",
+      test_in_prog ? "upload_var_in_progress_integration_test=some.Test\n" : "",
       kFakeNow, (os_time - base::Time::UnixEpoch()).InMilliseconds(),
       kKernelName, kKernelVersion, kPayloadName);
   EXPECT_EQ(expected_meta, contents);
