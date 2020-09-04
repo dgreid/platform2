@@ -1182,7 +1182,7 @@ impl Methods {
                 VM_PLUGIN_DISPATCHER_SERVICE_NAME,
                 VM_PLUGIN_DISPATCHER_SERVICE_PATH,
                 VM_PLUGIN_DISPATCHER_INTERFACE,
-                START_PLUGIN_VM_METHOD,
+                START_VM_METHOD,
             )?,
             &request,
         )?;
