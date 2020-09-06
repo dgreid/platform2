@@ -26,8 +26,13 @@ namespace cros {
 namespace {
 
 const char* GetAlgorithmLibraryName(const std::string& pipe_name) {
+  // TODO(kamesan): Arrange the library names in some format like
+  // libcam_algo_<pipe_name>.so
   if (pipe_name == "vendor_cpu") {
     return "libcam_algo.so";
+  }
+  if (pipe_name == "vendor_gpu") {
+    return "libcam_algo_vendor_gpu.so";
   }
   if (pipe_name == "google_gpu") {
     return "libcam_gpu_algo.so";

@@ -179,6 +179,14 @@ void CameraAlgorithmBridgeImpl::IPCBridge::Initialize(
       interface_ptr_ = mojo_manager_->CreateCameraAlgorithmOpsPtr(
           cros::constants::kCrosCameraAlgoSocketPathString, "vendor_cpu");
       break;
+    case CameraAlgorithmBackend::kVendorGpu:
+      if (!base::PathExists(base::FilePath(kGpuAlgoJobFilePath))) {
+        cb.Run(-EINVAL);
+        return;
+      }
+      interface_ptr_ = mojo_manager_->CreateCameraAlgorithmOpsPtr(
+          cros::constants::kCrosCameraGPUAlgoSocketPathString, "vendor_gpu");
+      break;
     case CameraAlgorithmBackend::kGoogleGpu:
       if (!base::PathExists(base::FilePath(kGpuAlgoJobFilePath))) {
         cb.Run(-EINVAL);

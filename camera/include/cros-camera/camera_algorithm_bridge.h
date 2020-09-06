@@ -22,6 +22,8 @@ namespace cros {
 enum class CameraAlgorithmBackend {
   // Platform-specific 3A and extra algorithms running on CPU.
   kVendorCpu,
+  // Platform-specific imaging algorithms running on GPU.
+  kVendorGpu,
   // Google camera algorithms using GPU, e.g. Portrait Mode.
   kGoogleGpu,
   // For testing.
