@@ -36,10 +36,6 @@ namespace patchpanel {
 namespace {
 constexpr int kSubprocessRestartDelayMs = 900;
 
-constexpr char kNDProxyFeatureName[] = "ARC NDProxy";
-constexpr int kNDProxyMinAndroidSdkVersion = 28;  // P
-constexpr int kNDProxyMinChromeMilestone = 80;
-
 // Time interval between epoll checks on file descriptors committed by callers
 // of ConnectNamespace DBus API.
 constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
@@ -317,14 +313,6 @@ void Manager::StartDatapath() {
   // Enable IPv6 packet forarding
   if (runner.sysctl_w("net.ipv6.conf.all.forwarding", "1") != 0) {
     LOG(ERROR) << "Failed to update net.ipv6.conf.all.forwarding."
-               << " IPv6 functionality may be broken.";
-  }
-  // Kernel proxy_ndp is only needed for legacy IPv6 configuration
-  if (!ShouldEnableFeature(kNDProxyMinAndroidSdkVersion,
-                           kNDProxyMinChromeMilestone, {},
-                           kNDProxyFeatureName) &&
-      runner.sysctl_w("net.ipv6.conf.all.proxy_ndp", "1") != 0) {
-    LOG(ERROR) << "Failed to update net.ipv6.conf.all.proxy_ndp."
                << " IPv6 functionality may be broken.";
   }
 
