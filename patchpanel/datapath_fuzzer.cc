@@ -75,12 +75,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     std::vector<uint8_t> bytes = provider.ConsumeBytes<uint8_t>(mac.size());
     std::copy(std::begin(bytes), std::begin(bytes), std::begin(mac));
 
+    datapath.Start();
+    datapath.Stop();
     datapath.AddBridge(ifname, addr, prefix_len);
     datapath.RemoveBridge(ifname);
-    datapath.StartRoutingDevice(ifname, ifname2, addr,
-                                TrafficSource::UNKNOWN);
-    datapath.StopRoutingDevice(ifname, ifname2, addr,
-                               TrafficSource::UNKNOWN);
+    datapath.StartRoutingDevice(ifname, ifname2, addr, TrafficSource::UNKNOWN);
+    datapath.StopRoutingDevice(ifname, ifname2, addr, TrafficSource::UNKNOWN);
     datapath.AddVirtualInterfacePair(netns_name, ifname, bridge);
     datapath.ToggleInterface(ifname, provider.ConsumeBool());
     datapath.ConfigureInterface(ifname, mac, addr, prefix_len,

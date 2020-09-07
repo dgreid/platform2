@@ -53,6 +53,12 @@ class Datapath {
            ioctl_t ioctl_hook);
   virtual ~Datapath() = default;
 
+  // Start and stop the Datapath, creating or destroying the initial iptables
+  // setup needed for forwarding traffic from VMs and containers and for
+  // fwmark based routing.
+  virtual void Start();
+  virtual void Stop();
+
   // Attaches the name |netns_name| to a network namespace identified by
   // |netns_pid|. If |netns_name| had already been created, it will be deleted
   // first.

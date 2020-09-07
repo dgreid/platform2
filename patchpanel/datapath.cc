@@ -38,6 +38,12 @@ constexpr char kArcAddr[] = "100.115.92.2";
 constexpr char kLocalhostAddr[] = "127.0.0.1";
 constexpr uint16_t kAdbServerPort = 5555;
 
+// Constants used for dropping locally originated traffic bound to an incorrect
+// source IPv4 address.
+constexpr char kGuestIPv4Subnet[] = "100.115.92.0/23";
+constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
+    {"eth+", "wlan+", "mlan+", "usb+", "wwan+", "rmnet+"}};
+
 std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
   std::string n = prefix + ifname;
   if (n.length() < IFNAMSIZ)
@@ -84,6 +90,71 @@ Datapath::Datapath(MinijailedProcessRunner* process_runner,
 
 MinijailedProcessRunner& Datapath::runner() const {
   return *process_runner_;
+}
+
+void Datapath::Start() {
+  // Enable IPv4 packet forwarding
+  if (process_runner_->sysctl_w("net.ipv4.ip_forward", "1") != 0)
+    LOG(ERROR) << "Failed to update net.ipv4.ip_forward."
+               << " Guest connectivity will not work correctly.";
+
+  // Limit local port range: Android owns 47104-61000.
+  // TODO(garrick): The original history behind this tweak is gone. Some
+  // investigation is needed to see if it is still applicable.
+  if (process_runner_->sysctl_w("net.ipv4.ip_local_port_range",
+                                "32768 47103") != 0)
+    LOG(ERROR) << "Failed to limit local port range. Some Android features or"
+               << " apps may not work correctly.";
+
+  // Enable IPv6 packet forwarding
+  if (process_runner_->sysctl_w("net.ipv6.conf.all.forwarding", "1") != 0)
+    LOG(ERROR) << "Failed to update net.ipv6.conf.all.forwarding."
+               << " IPv6 functionality may be broken.";
+
+  if (!AddSNATMarkRules())
+    LOG(ERROR) << "Failed to install SNAT mark rules."
+               << " Guest connectivity may be broken.";
+
+  if (!AddForwardEstablishedRule())
+    LOG(ERROR) << "Failed to install forwarding rule for established"
+               << " connections.";
+
+  // chromium:898210: Drop any locally originated traffic that would exit a
+  // physical interface with a source IPv4 address from the subnet of IPs used
+  // for VMs, containers, and connected namespaces This is needed to prevent
+  // packets leaking with an incorrect src IP when a local process binds to the
+  // wrong interface.
+  for (const auto& oif : kPhysicalIfnamePrefixes) {
+    if (!AddSourceIPv4DropRule(oif, kGuestIPv4Subnet))
+      LOG(WARNING) << "Failed to set up IPv4 drop rule for src ip "
+                   << kGuestIPv4Subnet << " exiting " << oif;
+  }
+
+  if (!AddOutboundIPv4SNATMark("vmtap+"))
+    LOG(ERROR) << "Failed to set up NAT for TAP devices."
+               << " Guest connectivity may be broken.";
+}
+
+void Datapath::Stop() {
+  RemoveOutboundIPv4SNATMark("vmtap+");
+  RemoveForwardEstablishedRule();
+  RemoveSNATMarkRules();
+  for (const auto& oif : kPhysicalIfnamePrefixes)
+    RemoveSourceIPv4DropRule(oif, kGuestIPv4Subnet);
+
+  // Restore original local port range.
+  // TODO(garrick): The original history behind this tweak is gone. Some
+  // investigation is needed to see if it is still applicable.
+  if (process_runner_->sysctl_w("net.ipv4.ip_local_port_range",
+                                "32768 61000") != 0)
+    LOG(ERROR) << "Failed to restore local port range";
+
+  // Disable packet forwarding
+  if (process_runner_->sysctl_w("net.ipv6.conf.all.forwarding", "0") != 0)
+    LOG(ERROR) << "Failed to restore net.ipv6.conf.all.forwarding.";
+
+  if (process_runner_->sysctl_w("net.ipv4.ip_forward", "0") != 0)
+    LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
 }
 
 bool Datapath::NetnsAttachName(const std::string& netns_name, pid_t netns_pid) {
@@ -585,8 +656,8 @@ bool Datapath::ModifyConnmarkSetPostrouting(IpFamily family,
                                             const std::string& op,
                                             const std::string& oif) {
   if (oif.empty()) {
-    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark with no "
-                  "interface specified";
+    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark with no"
+                  " interface specified";
     return false;
   }
 

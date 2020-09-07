@@ -114,6 +114,154 @@ TEST(DatapathTest, IpFamily) {
   EXPECT_NE(IpFamily::IPv4, IpFamily::IPv6);
 }
 
+TEST(DatapathTest, Start) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  // Asserts for sysctl modifications
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv4.ip_forward"), StrEq("1"), true));
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv4.ip_local_port_range"),
+                               StrEq("32768 47103"), true));
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv6.conf.all.forwarding"),
+                               StrEq("1"), true));
+  // Asserts for AddSNATMarkRules
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("filter"),
+               ElementsAre("-A", "FORWARD", "-m", "mark", "--mark", "1/1", "-m",
+                           "state", "--state", "INVALID", "-j", "DROP", "-w"),
+               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-A", "FORWARD", "-m", "mark", "--mark",
+                                   "1/1", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("nat"),
+                       ElementsAre("-A", "POSTROUTING", "-m", "mark", "--mark",
+                                   "1/1", "-j", "MASQUERADE", "-w"),
+                       true, nullptr));
+  // Asserts for AddForwardEstablishedRule
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-A", "FORWARD", "-m", "state", "--state",
+                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
+  // Asserts for AddSourceIPv4DropRule() calls.
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "eth+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "wlan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "mlan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "usb+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "wwan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "rmnet+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  // Asserts for AddOutboundIPv4SNATMark("vmtap+")
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-A", "PREROUTING", "-i", "vmtap+", "-j",
+                                   "MARK", "--set-mark", "1/1", "-w"),
+                       true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.Start();
+}
+
+TEST(DatapathTest, Stop) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  // Asserts for sysctl modifications
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv4.ip_local_port_range"),
+                               StrEq("32768 61000"), true));
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv6.conf.all.forwarding"),
+                               StrEq("0"), true));
+  EXPECT_CALL(runner, sysctl_w(StrEq("net.ipv4.ip_forward"), StrEq("0"), true));
+  // Asserts for RemoveOutboundIPv4SNATMark("vmtap+")
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-D", "PREROUTING", "-i", "vmtap+", "-j",
+                                   "MARK", "--set-mark", "1/1", "-w"),
+                       true, nullptr));
+  // Asserts for RemoveForwardEstablishedRule
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "FORWARD", "-m", "state", "--state",
+                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
+  // Asserts for RemoveSNATMarkRules
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("filter"),
+               ElementsAre("-D", "FORWARD", "-m", "mark", "--mark", "1/1", "-m",
+                           "state", "--state", "INVALID", "-j", "DROP", "-w"),
+               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "FORWARD", "-m", "mark", "--mark",
+                                   "1/1", "-j", "ACCEPT", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("nat"),
+                       ElementsAre("-D", "POSTROUTING", "-m", "mark", "--mark",
+                                   "1/1", "-j", "MASQUERADE", "-w"),
+                       true, nullptr));
+  // Asserts for RemoveSourceIPv4DropRule() calls.
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "eth+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "wlan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "mlan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "usb+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "wwan+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "rmnet+", "-s",
+                                   "100.115.92.0/23", "-j", "DROP", "-w"),
+                       true, nullptr));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.Stop();
+}
+
 TEST(DatapathTest, AddTAP) {
   MockProcessRunner runner;
   MockFirewall firewall;

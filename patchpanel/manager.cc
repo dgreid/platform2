@@ -36,12 +36,6 @@ namespace patchpanel {
 namespace {
 constexpr int kSubprocessRestartDelayMs = 900;
 
-// Constants used for dropping locally originated traffic bound to an incorrect
-// source IPv4 address.
-constexpr char kGuestIPv4Subnet[] = "100.115.92.0/23";
-constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
-    {"eth+", "wlan+", "mlan+", "usb+", "wwan+", "rmnet+"}};
-
 // Time interval between epoll checks on file descriptors committed by callers
 // of ConnectNamespace DBus API.
 constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
@@ -222,7 +216,14 @@ void Manager::InitialSetup() {
 
   routing_svc_ = std::make_unique<RoutingService>();
 
-  StartDatapath();
+  // b/162966185: Allow Jetstream to disable:
+  //  - the IP forwarding setup used for hosting VMs and containers,
+  //  - the iptables rules for fwmark based routing.
+  if (!USE_JETSTREAM_ROUTING) {
+    datapath_->Start();
+    shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
+        &Manager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
+  }
 
   nd_proxy_->RegisterNDProxyMessageHandler(
       base::Bind(&Manager::OnNDProxyMessage, weak_factory_.GetWeakPtr()));
@@ -259,7 +260,8 @@ void Manager::OnShutdown(int* exit_code) {
     connected_namespaces_fdkeys.push_back(kv.first);
   for (const int fdkey : connected_namespaces_fdkeys)
     DisconnectNamespace(fdkey);
-  StopDatapath();
+  if (!USE_JETSTREAM_ROUTING)
+    datapath_->Stop();
 }
 
 void Manager::OnSubprocessExited(pid_t pid, const siginfo_t&) {
@@ -294,90 +296,6 @@ void Manager::RestartSubprocess(HelperProcess* subproc) {
         base::Bind(&Manager::OnSubprocessExited, weak_factory_.GetWeakPtr(),
                    subproc->pid())))
         << "Failed to watch child process " << subproc->pid();
-  }
-}
-
-void Manager::StartDatapath() {
-  // b/162966185: Allow Jetstream to disable:
-  //  - the IP forwarding setup used for hosting VMs and containers,
-  //  - the iptables rules for fwmark based routing.
-  if (USE_JETSTREAM_ROUTING) {
-    LOG(INFO) << "Skipping Datapath routing setup";
-    return;
-  }
-
-  auto& runner = datapath_->runner();
-
-  // Enable IPv4 packet forwarding
-  if (runner.sysctl_w("net.ipv4.ip_forward", "1") != 0) {
-    LOG(ERROR) << "Failed to update net.ipv4.ip_forward."
-               << " Guest connectivity will not work correctly.";
-  }
-  // Limit local port range: Android owns 47104-61000.
-  // TODO(garrick): The original history behind this tweak is gone. Some
-  // investigation is needed to see if it is still applicable.
-  if (runner.sysctl_w("net.ipv4.ip_local_port_range", "32768 47103") != 0) {
-    LOG(ERROR) << "Failed to limit local port range. Some Android features or"
-               << " apps may not work correctly.";
-  }
-  // Enable IPv6 packet forwarding
-  if (runner.sysctl_w("net.ipv6.conf.all.forwarding", "1") != 0) {
-    LOG(ERROR) << "Failed to update net.ipv6.conf.all.forwarding."
-               << " IPv6 functionality may be broken.";
-  }
-
-  if (!datapath_->AddSNATMarkRules()) {
-    LOG(ERROR) << "Failed to install SNAT mark rules."
-               << " Guest connectivity may be broken.";
-  }
-  if (!datapath_->AddForwardEstablishedRule()) {
-    LOG(ERROR) << "Failed to install forwarding rule for established"
-               << " connections.";
-  }
-
-  // chromium:898210: Drop any locally originated traffic that would exit a
-  // physical interface with a source IPv4 address from the subnet of IPs used
-  // for VMs, containers, and connected namespaces This is needed to prevent
-  // packets leaking with an incorrect src IP when a local process binds to the
-  // wrong interface.
-  for (const auto& oif : kPhysicalIfnamePrefixes) {
-    if (!datapath_->AddSourceIPv4DropRule(oif, kGuestIPv4Subnet))
-      LOG(WARNING) << "Failed to set up IPv4 drop rule for src ip "
-                   << kGuestIPv4Subnet << " exiting " << oif;
-  }
-
-  if (!datapath_->AddOutboundIPv4SNATMark("vmtap+")) {
-    LOG(ERROR) << "Failed to set up NAT for TAP devices."
-               << " Guest connectivity may be broken.";
-  }
-
-  shill_client_->RegisterDevicesChangedHandler(base::BindRepeating(
-      &Manager::OnDevicesChanged, weak_factory_.GetWeakPtr()));
-}
-
-void Manager::StopDatapath() {
-  if (USE_JETSTREAM_ROUTING)
-    return;
-
-  datapath_->RemoveOutboundIPv4SNATMark("vmtap+");
-  datapath_->RemoveForwardEstablishedRule();
-  datapath_->RemoveSNATMarkRules();
-  for (const auto& oif : kPhysicalIfnamePrefixes)
-    datapath_->RemoveSourceIPv4DropRule(oif, kGuestIPv4Subnet);
-
-  auto& runner = datapath_->runner();
-  // Restore original local port range.
-  // TODO(garrick): The original history behind this tweak is gone. Some
-  // investigation is needed to see if it is still applicable.
-  if (runner.sysctl_w("net.ipv4.ip_local_port_range", "32768 61000") != 0) {
-    LOG(ERROR) << "Failed to restore local port range";
-  }
-  // Disable packet forwarding
-  if (runner.sysctl_w("net.ipv6.conf.all.forwarding", "0") != 0) {
-    LOG(ERROR) << "Failed to restore net.ipv6.conf.all.forwarding.";
-  }
-  if (runner.sysctl_w("net.ipv4.ip_forward", "0") != 0) {
-    LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
   }
 }
 

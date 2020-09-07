@@ -22,6 +22,8 @@ class MockDatapath : public Datapath {
       : Datapath(runner, firewall) {}
   ~MockDatapath() = default;
 
+  MOCK_METHOD0(Start, void());
+  MOCK_METHOD0(Stop, void());
   MOCK_METHOD2(NetnsAttachName,
                bool(const std::string& netns_name, pid_t netns_pid));
   MOCK_METHOD1(NetnsDeleteName, bool(const std::string& netns_name));
