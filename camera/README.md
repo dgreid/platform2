@@ -134,9 +134,9 @@ required for a new camera HAL:
 
   - Camera HAL virtual ebuild example: [**Intel Kabylake camera HAL virtual package**]
 
-[**Intel Kabylake camera HAL**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/master/chipset-kbl/media-libs/cros-camera-hal-intel-ipu3/
-[**USB camera HAL**]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/master/media-libs/cros-camera-hal-usb/
-[**Intel Kabylake camera HAL virtual package**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/master/baseboard-poppy/virtual/cros-camera-hal/
+[**Intel Kabylake camera HAL**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/chipset-kbl/media-libs/cros-camera-hal-intel-ipu3/
+[**USB camera HAL**]: https://chromium.googlesource.com/chromiumos/overlays/chromiumos-overlay/+/HEAD/media-libs/cros-camera-hal-usb/
+[**Intel Kabylake camera HAL virtual package**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/baseboard-poppy/virtual/cros-camera-hal/
 
 - For board-specific camera HAL config files, we have the
   `virtual/cros-camera-hal-configs` ebuild.  One can add a new ebuild to install
@@ -147,5 +147,5 @@ required for a new camera HAL:
 
   - Camera HAL config virtual ebuild example: [**Intel Kabylake camera HAL configs virtual package**]
 
-[**Intel Kabylake camera HAL configs**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/master/baseboard-poppy/media-libs/cros-camera-hal-configs-poppy/
-[**Intel Kabylake camera HAL configs virtual package**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/master/baseboard-poppy/virtual/cros-camera-hal-configs/
+[**Intel Kabylake camera HAL configs**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/baseboard-poppy/media-libs/cros-camera-hal-configs-poppy/
+[**Intel Kabylake camera HAL configs virtual package**]: https://chromium.googlesource.com/chromiumos/overlays/board-overlays/+/HEAD/baseboard-poppy/virtual/cros-camera-hal-configs/
