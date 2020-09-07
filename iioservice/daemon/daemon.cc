@@ -51,12 +51,13 @@ int Daemon::OnInit() {
 void Daemon::ServerBootstrapMojoConnection() {
   // Get or create the ExportedObject for the IIO service.
   dbus::ObjectProxy* proxy = bus_->GetObjectProxy(
-      ::iioservice::kIioserviceServiceName,
-      dbus::ObjectPath(::iioservice::kIioserviceServicePath));
+      ::mojo_connection_service::kMojoConnectionServiceServiceName,
+      dbus::ObjectPath(
+          ::mojo_connection_service::kMojoConnectionServiceServicePath));
 
   dbus::MethodCall method_call(
-      ::iioservice::kIioserviceInterfaceName,
-      ::iioservice::kServerBootstrapMojoConnectionMethod);
+      ::mojo_connection_service::kMojoConnectionServiceInterface,
+      ::mojo_connection_service::kBootstrapMojoConnectionForIioServiceMethod);
   dbus::MessageWriter writer(&method_call);
   proxy->CallMethod(&method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
                     base::BindOnce(&Daemon::OnBootstrapResponse,
@@ -75,8 +76,10 @@ void Daemon::OnBootstrapResponse(dbus::Response* response) {
   DCHECK(!sensor_hal_server_.get());
 
   if (!response) {
-    LOG(ERROR) << ::iioservice::kIioserviceServiceName << " D-Bus call to "
-               << ::iioservice::kServerBootstrapMojoConnectionMethod
+    LOG(ERROR) << ::mojo_connection_service::kMojoConnectionServiceServiceName
+               << " D-Bus call to "
+               << ::mojo_connection_service::
+                      kBootstrapMojoConnectionForIioServiceMethod
                << " failed";
     ReconnectWithDelay();
     return;
@@ -115,7 +118,8 @@ void Daemon::OnBootstrapResponse(dbus::Response* response) {
       base::ThreadTaskRunnerHandle::Get(),
       mojo::PendingReceiver<cros::mojom::SensorHalServer>(
           invitation.ExtractMessagePipe(
-              ::iioservice::kServerBootstrapMojoConnectionChannelToken)),
+              ::mojo_connection_service::
+                  kBootstrapMojoConnectionForIioServiceChannelToken)),
       base::Bind(&Daemon::OnMojoDisconnection, weak_ptr_factory_.GetWeakPtr()));
 }
 
