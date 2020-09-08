@@ -95,7 +95,7 @@ Please follow these steps to enable Dark Resume on a new device.
 Perform the following steps to enable Dark Resume:
 
 ```sh
-# echo 0 > /var/lib/power_manager/disable_dark_resume
+echo 0 > /var/lib/power_manager/disable_dark_resume
 ```
 
 ### Disabling Dark Resume
@@ -103,7 +103,45 @@ Perform the following steps to enable Dark Resume:
 Perform the following steps to disable Dark Resume:
 
 ```sh
-# echo 1 > /var/lib/power_manager/disable_dark_resume
+echo 1 > /var/lib/power_manager/disable_dark_resume
+```
+
+### Manual Test of Dark Resume using RTC as wakeup
+
+The commands below should facilitate a dark resume via the RTC wake source.
+Note, any issues with failures to suspend or spurious wakes should be resolved
+first in order to not block this testing.
+
+Enable it
+```sh
+echo 0 > /var/lib/power_manager/disable_dark_resume
+```
+
+Create an RTC wake that is always meant to be a dark resume.
+```sh
+powerd_dbus_suspend --disable_dark_resume=false --wakeup_timeout=10
+```
+
+Note after ~10 secs device should wake without screen on.  It should be
+perceivable via things like:
+
+*   LED change
+*   fan noise
+*   network connectivity
+*   EC console output
+
+Note device should return to suspend fairly quickly.
+
+Wake manually via input device (keyboard, trackpad)
+
+Examine powerd log for success
+```sh
+grep "In dark resume" /var/log/power_manager/powerd.LATEST
+```
+
+You should see something like:
+```sh
+[0908/104512.488613:INFO:dark_resume.cc(41)] In dark resume
 ```
 
 ### Check if Dark Resume is currently enabled
