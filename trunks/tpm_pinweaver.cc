@@ -380,7 +380,10 @@ TPM_RC Parse_pw_try_auth_t(
   auto itr = buffer.begin() + sizeof(pw_response_header_t);
   // This field may not be aligned so it is retrieved in a way that will work
   // regardless of platform.
-  *seconds_to_wait = (itr[0] << 24) | (itr[1] << 16) | (itr[2] << 8) | itr[3];
+  *seconds_to_wait = (static_cast<uint32_t>(itr[0]) << 24) |
+                     (static_cast<uint32_t>(itr[1]) << 16) |
+                     (static_cast<uint32_t>(itr[2]) << 8) |
+                     static_cast<uint32_t>(itr[3]);
   itr += 4;
 
   // he_secret is only valid for EC_SUCCESS.
