@@ -86,7 +86,8 @@ class TerminaVm final : public VmBaseImpl {
       std::string rootfs_device,
       std::string stateful_device,
       uint64_t stateful_size,
-      VmFeatures features);
+      VmFeatures features,
+      bool is_termina);
   ~TerminaVm() override;
 
   // Configures the network interfaces inside the VM.  Returns true iff
@@ -217,7 +218,8 @@ class TerminaVm final : public VmBaseImpl {
       std::string stateful_device,
       uint64_t stateful_size,
       std::string kernel_version,
-      std::unique_ptr<vm_tools::Maitred::Stub> stub);
+      std::unique_ptr<vm_tools::Maitred::Stub> stub,
+      bool is_termina);
 
  private:
   TerminaVm(uint32_t vsock_cid,
@@ -228,7 +230,8 @@ class TerminaVm final : public VmBaseImpl {
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
-            VmFeatures features);
+            VmFeatures features,
+            bool is_termina);
 
   // Constructor for testing only.
   TerminaVm(std::unique_ptr<patchpanel::Subnet> subnet,
@@ -239,7 +242,8 @@ class TerminaVm final : public VmBaseImpl {
             std::string rootfs_device,
             std::string stateful_device,
             uint64_t stateful_size,
-            VmFeatures features);
+            VmFeatures features,
+            bool is_termina);
   void HandleSuspendImminent() override;
   void HandleSuspendDone() override;
   // Returns the path to the VM control socket.
@@ -320,6 +324,10 @@ class TerminaVm final : public VmBaseImpl {
       DiskImageStatus::DISK_STATUS_RESIZED;
 
   base::FilePath log_path_;
+
+  // Confusingly, this class is also used for non-termina VMs that don't fit in
+  // other types. This bool indicates if the VM is really a termina VM.
+  const bool is_termina_;
 
   DISALLOW_COPY_AND_ASSIGN(TerminaVm);
 };

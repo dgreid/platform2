@@ -91,6 +91,19 @@ message VmInfo {
   // granted to the VM. The token is also to be used to identify VM to the
   // service providers (camera, CRAS, etc).
   string permission_token = 5;
+
+  enum VmType {
+    // Default value indicating an unknown or custom VM.
+    UNKNOWN = 0;
+
+    // VM is associated with a specific feature.
+    TERMINA = 1;
+    ARC_VM = 2;
+    PLUGIN_VM = 3;
+  };
+
+  // What type of VM this is.
+  VmType vm_type = 6;
 }
 
 // Optional fields for network configuration.

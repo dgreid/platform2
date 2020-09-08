@@ -101,6 +101,7 @@ Service::StartVmHelper(dbus::MethodCall* method_call,
     vm_info->set_pid(vm.pid);
     vm_info->set_cid(vm.cid);
     vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
+    vm_info->set_vm_type(vm.type);
     switch (vm.status) {
       case VmInterface::Status::STARTING: {
         response.set_status(VM_STATUS_STARTING);

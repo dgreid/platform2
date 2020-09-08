@@ -51,6 +51,9 @@ class VmInterface {
 
     // The current status of the VM.
     Status status;
+
+    // Type of the VM.
+    VmInfo::VmType type;
   };
 
   // Classes that implement this interface *MUST* exit as quickly as possible

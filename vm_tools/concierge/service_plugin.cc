@@ -109,6 +109,8 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
     return dbus_response;
   }
   std::tie(request, response) = *helper_result;
+  VmInfo* vm_info = response.mutable_vm_info();
+  vm_info->set_vm_type(VmInfo::PLUGIN_VM);
 
   // Get the stateful directory.
   base::FilePath stateful_dir;
@@ -224,7 +226,7 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
 
   // Now start the VM.
   VmId vm_id(request.owner_id(), request.name());
-  SendVmStartingUpSignal(vm_id, 0);
+  SendVmStartingUpSignal(vm_id, *vm_info);
 
   std::unique_ptr<PluginVm> vm = PluginVm::Create(
       vm_id, request.cpus(), std::move(params), std::move(stateful_dir),
@@ -242,7 +244,6 @@ std::unique_ptr<dbus::Response> Service::StartPluginVm(
 
   VmInterface::Info info = vm->GetInfo();
 
-  VmInfo* vm_info = response.mutable_vm_info();
   vm_info->set_ipv4_address(info.ipv4_address);
   vm_info->set_pid(info.pid);
   vm_info->set_cid(info.cid);

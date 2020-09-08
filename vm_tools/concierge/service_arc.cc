@@ -39,6 +39,9 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   }
   std::tie(request, response) = *helper_result;
 
+  VmInfo* vm_info = response.mutable_vm_info();
+  vm_info->set_vm_type(VmInfo::ARC_VM);
+
   if (request.disks_size() > kMaxExtraDisks) {
     LOG(ERROR) << "Rejecting request with " << request.disks_size()
                << " extra disks";
@@ -111,6 +114,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
+  vm_info->set_cid(vsock_cid);
 
   std::unique_ptr<patchpanel::Client> network_client =
       patchpanel::Client::New();
@@ -138,6 +142,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   }
 
   uint32_t seneschal_server_handle = server_proxy->handle();
+  vm_info->set_seneschal_server_handle(seneschal_server_handle);
 
   // Build the plugin params.
   std::vector<std::string> params(
@@ -173,7 +178,7 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   }
 
   VmId vm_id(request.owner_id(), request.name());
-  SendVmStartingUpSignal(vm_id, vsock_cid);
+  SendVmStartingUpSignal(vm_id, *vm_info);
 
   auto vm = ArcVm::Create(
       std::move(kernel), std::move(rootfs), std::move(fstab), request.cpus(),
@@ -191,13 +196,10 @@ std::unique_ptr<dbus::Response> Service::StartArcVm(
   // ARCVM is ready.
   LOG(INFO) << "Started VM with pid " << vm->pid();
 
-  VmInfo* vm_info = response.mutable_vm_info();
   response.set_success(true);
   response.set_status(VM_STATUS_RUNNING);
   vm_info->set_ipv4_address(vm->IPv4Address());
   vm_info->set_pid(vm->pid());
-  vm_info->set_cid(vsock_cid);
-  vm_info->set_seneschal_server_handle(seneschal_server_handle);
   writer.AppendProtoAsArrayOfBytes(response);
 
   SendVmStartedSignal(vm_id, *vm_info, response.status());

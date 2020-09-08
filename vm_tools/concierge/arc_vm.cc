@@ -436,6 +436,7 @@ VmInterface::Info ArcVm::GetInfo() {
       .cid = cid(),
       .seneschal_server_handle = seneschal_server_handle(),
       .status = VmInterface::Status::RUNNING,
+      .type = VmInfo::ARC_VM,
   };
 
   return info;

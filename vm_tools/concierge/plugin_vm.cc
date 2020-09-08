@@ -208,6 +208,7 @@ VmInterface::Info PluginVm::GetInfo() {
       .seneschal_server_handle = seneschal_server_handle(),
       .permission_token = permission_token_,
       .status = VmInterface::Status::RUNNING,
+      .type = VmInfo::PLUGIN_VM,
   };
 
   return info;

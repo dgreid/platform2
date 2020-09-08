@@ -915,6 +915,9 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     return dbus_response;
   }
   std::tie(request, response) = *helper_result;
+  VmInfo* vm_info = response.mutable_vm_info();
+  vm_info->set_vm_type(request.start_termina() ? VmInfo::TERMINA
+                                               : VmInfo::UNKNOWN);
 
   // Make sure we have our signal connected if starting a Termina VM.
   if (request.start_termina() && !is_tremplin_started_signal_connected_) {
@@ -1150,6 +1153,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     writer.AppendProtoAsArrayOfBytes(response);
     return dbus_response;
   }
+  vm_info->set_cid(vsock_cid);
 
   std::unique_ptr<patchpanel::Client> network_client =
       patchpanel::Client::New();
@@ -1174,6 +1178,7 @@ std::unique_ptr<dbus::Response> Service::StartVm(
   }
 
   uint32_t seneschal_server_handle = server_proxy->handle();
+  vm_info->set_seneschal_server_handle(seneschal_server_handle);
 
   // Associate a WaitableEvent with this VM.  This needs to happen before
   // starting the VM to avoid a race where the VM reports that it's ready
@@ -1202,13 +1207,14 @@ std::unique_ptr<dbus::Response> Service::StartVm(
 
   // Notify VmLogForwarder that a vm is starting up.
   VmId vm_id(request.owner_id(), request.name());
-  SendVmStartingUpSignal(vm_id, vsock_cid);
+  SendVmStartingUpSignal(vm_id, *vm_info);
 
   auto vm = TerminaVm::Create(
       std::move(kernel), std::move(rootfs), cpus, std::move(disks), vsock_cid,
       std::move(network_client), std::move(server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
-      std::move(stateful_device), std::move(stateful_size), features);
+      std::move(stateful_device), std::move(stateful_size), features,
+      request.start_termina());
   if (!vm) {
     LOG(ERROR) << "Unable to start VM";
 
@@ -1321,14 +1327,11 @@ std::unique_ptr<dbus::Response> Service::StartVm(
     }
   }
 
-  VmInfo* vm_info = response.mutable_vm_info();
   response.set_success(true);
   response.set_status(request.start_termina() ? VM_STATUS_STARTING
                                               : VM_STATUS_RUNNING);
   vm_info->set_ipv4_address(vm->IPv4Address());
   vm_info->set_pid(vm->pid());
-  vm_info->set_cid(vsock_cid);
-  vm_info->set_seneschal_server_handle(seneschal_server_handle);
   writer.AppendProtoAsArrayOfBytes(response);
 
   SendVmStartedSignal(vm_id, *vm_info, response.status());
@@ -1563,6 +1566,7 @@ std::unique_ptr<dbus::Response> Service::GetVmInfo(
   vm_info->set_cid(vm.cid);
   vm_info->set_seneschal_server_handle(vm.seneschal_server_handle);
   vm_info->set_permission_token(vm.permission_token);
+  vm_info->set_vm_type(vm.type);
 
   response.set_success(true);
   writer.AppendProtoAsArrayOfBytes(response);
@@ -2945,12 +2949,13 @@ void Service::SendVmStartedSignal(const VmId& vm_id,
   exported_object_->SendSignal(&signal);
 }
 
-void Service::SendVmStartingUpSignal(const VmId& vm_id, int64_t cid) {
+void Service::SendVmStartingUpSignal(
+    const VmId& vm_id, const vm_tools::concierge::VmInfo& vm_info) {
   dbus::Signal signal(kVmConciergeInterface, kVmStartingUpSignal);
   vm_tools::concierge::VmStartedSignal proto;
   proto.set_owner_id(vm_id.owner_id());
   proto.set_name(vm_id.name());
-  proto.mutable_vm_info()->set_cid(cid);
+  proto.mutable_vm_info()->CopyFrom(vm_info);
   dbus::MessageWriter(&signal).AppendProtoAsArrayOfBytes(proto);
   exported_object_->SendSignal(&signal);
 }

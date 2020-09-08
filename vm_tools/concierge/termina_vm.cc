@@ -91,7 +91,8 @@ TerminaVm::TerminaVm(
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
-    VmFeatures features)
+    VmFeatures features,
+    bool is_termina)
     : VmBaseImpl(std::move(network_client)),
       vsock_cid_(vsock_cid),
       seneschal_server_proxy_(std::move(seneschal_server_proxy)),
@@ -100,7 +101,8 @@ TerminaVm::TerminaVm(
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
-      log_path_(std::move(log_path)) {
+      log_path_(std::move(log_path)),
+      is_termina_(is_termina) {
   CHECK(base::DirectoryExists(runtime_dir));
 
   // Take ownership of the runtime directory.
@@ -117,7 +119,8 @@ TerminaVm::TerminaVm(
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
-    VmFeatures features)
+    VmFeatures features,
+    bool is_termina)
     : VmBaseImpl(nullptr),
       subnet_(std::move(subnet)),
       vsock_cid_(vsock_cid),
@@ -127,7 +130,8 @@ TerminaVm::TerminaVm(
       stateful_device_(stateful_device),
       stateful_size_(stateful_size),
       stateful_resize_type_(DiskResizeType::NONE),
-      log_path_(std::move(log_path)) {
+      log_path_(std::move(log_path)),
+      is_termina_(is_termina) {
   CHECK(subnet_);
   CHECK(base::DirectoryExists(runtime_dir));
 
@@ -152,11 +156,13 @@ std::unique_ptr<TerminaVm> TerminaVm::Create(
     std::string rootfs_device,
     std::string stateful_device,
     uint64_t stateful_size,
-    VmFeatures features) {
+    VmFeatures features,
+    bool is_termina) {
   auto vm = base::WrapUnique(new TerminaVm(
       vsock_cid, std::move(network_client), std::move(seneschal_server_proxy),
       std::move(runtime_dir), std::move(log_path), std::move(rootfs_device),
-      std::move(stateful_device), std::move(stateful_size), features));
+      std::move(stateful_device), std::move(stateful_size), features,
+      is_termina));
 
   if (!vm->Start(std::move(kernel), std::move(rootfs), cpus,
                  std::move(disks))) {
@@ -901,6 +907,7 @@ VmInterface::Info TerminaVm::GetInfo() {
       .seneschal_server_handle = seneschal_server_handle(),
       .status = IsTremplinStarted() ? VmInterface::Status::RUNNING
                                     : VmInterface::Status::STARTING,
+      .type = is_termina_ ? VmInfo::TERMINA : VmInfo::UNKNOWN,
   };
 
   return info;
@@ -924,7 +931,8 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
     std::string stateful_device,
     uint64_t stateful_size,
     std::string kernel_version,
-    std::unique_ptr<vm_tools::Maitred::Stub> stub) {
+    std::unique_ptr<vm_tools::Maitred::Stub> stub,
+    bool is_termina) {
   VmFeatures features{
       .gpu = false,
       .software_tpm = false,
@@ -933,7 +941,7 @@ std::unique_ptr<TerminaVm> TerminaVm::CreateForTesting(
   auto vm = base::WrapUnique(new TerminaVm(
       std::move(subnet), vsock_cid, nullptr, std::move(runtime_dir),
       std::move(log_path), std::move(rootfs_device), std::move(stateful_device),
-      std::move(stateful_size), features));
+      std::move(stateful_size), features, is_termina));
   vm->set_kernel_version_for_testing(kernel_version);
   vm->set_stub_for_testing(std::move(stub));
 
