@@ -6,7 +6,7 @@ description     "Chromium OS trunks daemon for TPM2.0"
 author          "chromium-os-dev@chromium.org"
 
 start on stopped cr50-result and started dbus
-stop on stopping system-services and stopped chapsd
+stop on stopping boot-services and stopped chapsd
 respawn
 
 exec trunksd

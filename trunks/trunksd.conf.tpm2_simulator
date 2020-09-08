@@ -5,8 +5,8 @@
 description     "Chromium OS trunks daemon for TPM2.0"
 author          "chromium-os-dev@chromium.org"
 
-start on starting system-services and started dbus
-stop on stopping system-services and stopped chapsd
+start on started boot-services and started dbus
+stop on stopping boot-services and stopped chapsd
 respawn
 
 pre-start script
