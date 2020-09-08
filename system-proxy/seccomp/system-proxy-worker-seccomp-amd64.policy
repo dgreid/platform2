@@ -70,3 +70,4 @@ getdents: 1
 recvmsg: 1
 writev: 1
 pipe: 1
+shutdown: 1

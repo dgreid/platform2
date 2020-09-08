@@ -100,3 +100,4 @@ fcntl64: 1
 setitimer: 1
 recv: 1
 lstat64: 1
+shutdown: 1

@@ -12,6 +12,7 @@
 #include <memory>
 #include <string>
 
+#include <base/callback.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/threading/simple_thread.h>
@@ -34,6 +35,10 @@ class BRILLO_EXPORT SocketForwarder : public base::SimpleThread {
   void Run() override;
   bool IsRunning() const;
 
+  // Sets a closure for testing, which will be called when the forwarder is
+  // stopped.
+  void SetStopQuitClosureForTesting(base::OnceClosure closure);
+
  private:
   static constexpr int kBufSize = 4096;
 
@@ -46,9 +51,23 @@ class BRILLO_EXPORT SocketForwarder : public base::SimpleThread {
   char buf1_[kBufSize] = {0};
   ssize_t len0_;
   ssize_t len1_;
+  // Indicates if an EOF has been sent (if it is greater than -1) and which
+  // socket fd it was received on. This means that the socket file descriptor
+  // indicated here should not be read from, only written to.
+  int eof_;
+  // Handles the case when the peer associated with |src| was closed for
+  // writing. If the other peer is still open, the SocketForwarder will stop
+  // listening for read events on the |src| socket, forward the write shutdown
+  // to |dst| and return true to continue forwarding data received from the
+  // other peer. If the |dst| socket is also closed for writing, it will return
+  // false, which will stop the SocketForwarder instance. In case of error, it
+  // returns false.
+  bool HandleConnectionClosed(Socket* src, Socket* dst, int cfd);
 
   std::atomic<bool> poll_;
   std::atomic<bool> done_;
+
+  base::OnceClosure stop_quit_closure_for_testing_;
 
   DISALLOW_COPY_AND_ASSIGN(SocketForwarder);
 };

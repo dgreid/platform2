@@ -80,3 +80,4 @@ setitimer: 1
 recv: 1
 pipe: 1
 lstat64: 1
+shutdown: 1

@@ -64,3 +64,4 @@ getrandom: 1
 getdents: 1
 recvmsg: 1
 writev: 1
+shutdown: 1
