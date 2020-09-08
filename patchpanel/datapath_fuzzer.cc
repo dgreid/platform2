@@ -63,6 +63,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   Datapath datapath(&runner, &firewall, ioctl_stub);
 
   while (provider.remaining_bytes() > 0) {
+    uint32_t pid = provider.ConsumeIntegral<uint32_t>();
     std::string netns_name = provider.ConsumeRandomLengthString(10);
     std::string ifname = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     std::string ifname2 = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
@@ -88,10 +89,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     datapath.StartRoutingNamespace(kTestPID, netns_name, ifname, ifname2, addr,
                                    prefix_len, addr2, addr3, mac);
     datapath.StopRoutingNamespace(netns_name, ifname, addr, prefix_len, addr2);
-    datapath.AddVirtualInterfacePair(netns_name, ifname, bridge);
-    datapath.ToggleInterface(ifname, provider.ConsumeBool());
-    datapath.ConfigureInterface(ifname, mac, addr, prefix_len,
-                                provider.ConsumeBool(), provider.ConsumeBool());
+    datapath.ConnectVethPair(pid, netns_name, ifname, ifname2, mac, addr,
+                             prefix_len, provider.ConsumeBool());
     datapath.RemoveInterface(ifname);
     datapath.AddTAP(ifname, &mac, subnet_addr.get(), "");
     datapath.RemoveTAP(ifname);

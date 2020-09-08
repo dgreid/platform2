@@ -11,6 +11,7 @@
 #include <string>
 
 #include <base/macros.h>
+#include <gtest/gtest_prod.h>  // for FRIEND_TEST
 
 #include "patchpanel/firewall.h"
 #include "patchpanel/mac_address_generator.h"
@@ -107,22 +108,6 @@ class Datapath {
                                uint32_t remote_ipv4_prefix_len,
                                bool remote_multicast_flag);
 
-  // Creates a virtual interface pair.
-  virtual bool AddVirtualInterfacePair(const std::string& netns_name,
-                                       const std::string& veth_ifname,
-                                       const std::string& peer_ifname);
-
-  // Sets the link status.
-  virtual bool ToggleInterface(const std::string& ifname, bool up);
-
-  // Sets the configuration of an interface.
-  virtual bool ConfigureInterface(const std::string& ifname,
-                                  const MacAddress& mac_addr,
-                                  uint32_t ipv4_addr,
-                                  uint32_t ipv4_prefix_len,
-                                  bool up,
-                                  bool enable_multicast);
-
   virtual void RemoveInterface(const std::string& ifname);
 
   // Create (or delete) an OUTPUT DROP rule for any locally originated traffic
@@ -179,52 +164,10 @@ class Datapath {
   virtual void StartConnectionPinning(const std::string& ext_ifname);
   virtual void StopConnectionPinning(const std::string& ext_ifname);
 
-  // Create (or delete) pre-routing rules allowing direct ingress on |ifname|
-  // to guest desintation |ipv4_addr|.
-  virtual bool AddInboundIPv4DNAT(const std::string& ifname,
-                                  const std::string& ipv4_addr);
-  virtual void RemoveInboundIPv4DNAT(const std::string& ifname,
-                                     const std::string& ipv4_addr);
-
-  // Create (or delete) a forwarding rule for |ifname|.
-  virtual bool AddOutboundIPv4(const std::string& ifname);
-  virtual void RemoveOutboundIPv4(const std::string& ifname);
-
-  // Creates (or deletes) the forwarding and postrouting rules for SNAT
-  // fwmarked IPv4 traffic.
-  virtual bool AddSNATMarkRules();
-  virtual void RemoveSNATMarkRules();
-
-  virtual bool AddInterfaceSNAT(const std::string& ifname);
-  virtual void RemoveInterfaceSNAT(const std::string& ifname);
-
-  // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
-  // outgoing of |ifname| with the SNAT fwmark value 0x1.
-  // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and
-  // add a fwmark mask in the generated rule.
-  virtual bool AddOutboundIPv4SNATMark(const std::string& ifname);
-  virtual void RemoveOutboundIPv4SNATMark(const std::string& ifname);
-
-  // Create (or delete) a forward rule for established connections.
-  virtual bool AddForwardEstablishedRule();
-  virtual void RemoveForwardEstablishedRule();
-
   // Methods supporting IPv6 configuration for ARC.
   virtual bool MaskInterfaceFlags(const std::string& ifname,
                                   uint16_t on,
                                   uint16_t off = 0);
-
-  // Starts or stops accepting IP traffic forwarded between |iif| and |oif|
-  // by adding or removing ACCEPT rules in the filter FORWARD chain of iptables
-  // and/or ip6tables. If |iif| is empty, only specifies |oif| as the output
-  // interface.  If |iif| is empty, only specifies |iif| as the input interface.
-  // |oif| and |iif| cannot be both empty.
-  virtual bool StartIpForwarding(IpFamily family,
-                                 const std::string& iif,
-                                 const std::string& oif);
-  virtual bool StopIpForwarding(IpFamily family,
-                                const std::string& iif,
-                                const std::string& oif);
 
   // Convenience functions for enabling or disabling IPv6 forwarding in both
   // directions between a pair of interfaces
@@ -277,6 +220,56 @@ class Datapath {
   MinijailedProcessRunner& runner() const;
 
  private:
+  // Creates a virtual interface pair.
+  bool AddVirtualInterfacePair(const std::string& netns_name,
+                               const std::string& veth_ifname,
+                               const std::string& peer_ifname);
+  // Sets the configuration of an interface.
+  bool ConfigureInterface(const std::string& ifname,
+                          const MacAddress& mac_addr,
+                          uint32_t ipv4_addr,
+                          uint32_t ipv4_prefix_len,
+                          bool up,
+                          bool enable_multicast);
+  // Sets the link status.
+  bool ToggleInterface(const std::string& ifname, bool up);
+  // Starts or stops accepting IP traffic forwarded between |iif| and |oif|
+  // by adding or removing ACCEPT rules in the filter FORWARD chain of iptables
+  // and/or ip6tables. If |iif| is empty, only specifies |oif| as the output
+  // interface.  If |iif| is empty, only specifies |iif| as the input interface.
+  // |oif| and |iif| cannot be both empty.
+  bool StartIpForwarding(IpFamily family,
+                         const std::string& iif,
+                         const std::string& oif);
+  bool StopIpForwarding(IpFamily family,
+                        const std::string& iif,
+                        const std::string& oif);
+  // Create (or delete) pre-routing rules allowing direct ingress on |ifname|
+  // to guest destination |ipv4_addr|.
+  bool AddInboundIPv4DNAT(const std::string& ifname,
+                          const std::string& ipv4_addr);
+  void RemoveInboundIPv4DNAT(const std::string& ifname,
+                             const std::string& ipv4_addr);
+  // Create (or delete) a forwarding rule for |ifname|.
+  bool AddOutboundIPv4(const std::string& ifname);
+  void RemoveOutboundIPv4(const std::string& ifname);
+  // Creates (or deletes) the forwarding and postrouting rules for SNAT
+  // fwmarked IPv4 traffic.
+  bool AddSNATMarkRules();
+  void RemoveSNATMarkRules();
+  // Creates (or delete) a SNAT rule for traffic exiting |ifname|.
+  bool AddInterfaceSNAT(const std::string& ifname);
+  void RemoveInterfaceSNAT(const std::string& ifname);
+  // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
+  // outgoing of |ifname| with the SNAT fwmark value 0x1.
+  // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and
+  // add a fwmark mask in the generated rule.
+  bool AddOutboundIPv4SNATMark(const std::string& ifname);
+  void RemoveOutboundIPv4SNATMark(const std::string& ifname);
+  // Create (or delete) a forward rule for established connections.
+  bool AddForwardEstablishedRule();
+  void RemoveForwardEstablishedRule();
+
   bool ModifyConnmarkSetPostrouting(IpFamily family,
                                     const std::string& op,
                                     const std::string& oif);
@@ -307,6 +300,23 @@ class Datapath {
   MinijailedProcessRunner* process_runner_;
   Firewall* firewall_;
   ioctl_t ioctl_;
+
+  FRIEND_TEST(DatapathTest, AddForwardEstablishedRule);
+  FRIEND_TEST(DatapathTest, AddInboundIPv4DNAT);
+  FRIEND_TEST(DatapathTest, AddInterfaceSNAT);
+  FRIEND_TEST(DatapathTest, AddOutboundIPv4);
+  FRIEND_TEST(DatapathTest, AddOutboundIPv4SNATMark);
+  FRIEND_TEST(DatapathTest, AddSNATMarkRules);
+  FRIEND_TEST(DatapathTest, AddVirtualInterfacePair);
+  FRIEND_TEST(DatapathTest, ConfigureInterface);
+  FRIEND_TEST(DatapathTest, RemoveForwardEstablishedRule);
+  FRIEND_TEST(DatapathTest, RemoveInboundIPv4DNAT);
+  FRIEND_TEST(DatapathTest, RemoveInterfaceSNAT);
+  FRIEND_TEST(DatapathTest, RemoveOutboundIPv4);
+  FRIEND_TEST(DatapathTest, RemoveOutboundIPv4SNATMark);
+  FRIEND_TEST(DatapathTest, RemoveSNATMarkRules);
+  FRIEND_TEST(DatapathTest, StartStopIpForwarding);
+  FRIEND_TEST(DatapathTest, ToggleInterface);
 
   // A map used for remembering the interface index of an interface. This
   // information is necessary when cleaning up iptables fwmark rules that

@@ -41,18 +41,15 @@ class MockDatapath : public Datapath {
                            const MacAddress* mac_addr,
                            const SubnetAddress* ipv4_addr,
                            const std::string& user));
-  MOCK_METHOD3(AddVirtualInterfacePair,
-               bool(const std::string& netns_name,
+  MOCK_METHOD8(ConnectVethPair,
+               bool(pid_t pid,
+                    const std::string& netns_name,
                     const std::string& veth_ifname,
-                    const std::string& peer_ifname));
-  MOCK_METHOD2(ToggleInterface, bool(const std::string& ifname, bool up));
-  MOCK_METHOD6(ConfigureInterface,
-               bool(const std::string& ifname,
-                    const MacAddress& mac_addr,
-                    uint32_t addr,
-                    uint32_t prefix_len,
-                    bool up,
-                    bool multicast));
+                    const std::string& peer_ifname,
+                    const MacAddress& remote_mac_addr,
+                    uint32_t remote_ipv4_addr,
+                    uint32_t remote_ipv4_prefix_len,
+                    bool remote_multicast_flag));
   MOCK_METHOD1(RemoveInterface, void(const std::string& ifname));
   MOCK_METHOD4(StartRoutingDevice,
                void(const std::string& ext_ifname,
@@ -64,9 +61,6 @@ class MockDatapath : public Datapath {
                     const std::string& int_ifname,
                     uint32_t int_ipv4_addr,
                     TrafficSource source));
-  MOCK_METHOD1(AddOutboundIPv4, bool(const std::string& ifname));
-  MOCK_METHOD1(RemoveOutboundIPv4, void(const std::string& ifname));
-
   MOCK_METHOD3(MaskInterfaceFlags,
                bool(const std::string& ifname, uint16_t on, uint16_t off));
   MOCK_METHOD2(AddIPv6Forwarding,

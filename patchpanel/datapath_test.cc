@@ -900,7 +900,7 @@ TEST(DatapathTest, AddOutboundIPv4) {
   datapath.AddOutboundIPv4("eth0");
 }
 
-TEST(DatapathTest, RemoveInboundIPv4) {
+TEST(DatapathTest, RemoveOutboundIPv4) {
   MockProcessRunner runner;
   MockFirewall firewall;
   EXPECT_CALL(runner, iptables(StrEq("filter"),
