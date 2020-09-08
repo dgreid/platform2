@@ -6,6 +6,7 @@
 #define ARC_DATA_SNAPSHOTD_DBUS_ADAPTOR_H_
 
 #include <memory>
+#include <vector>
 
 #include <base/files/file_path.h>
 #include <base/memory/scoped_refptr.h>
@@ -15,8 +16,24 @@
 
 #include "dbus_adaptors/org.chromium.ArcDataSnapshotd.h"
 
+namespace crypto {
+
+class RSAPrivateKey;
+
+}  // namespace crypto
+
+namespace cryptohome {
+
+class BootLockboxClient;
+
+}  // namespace cryptohome
+
 namespace arc {
 namespace data_snapshotd {
+
+// BootLockbox snapshot keys:
+extern const char kLastSnapshotPublicKey[];
+extern const char kPreviousSnapshotPublicKey[];
 
 // Implements the "org.chromium.ArcDataSnapshotdInterface" D-Bus interface
 // exposed by the arc-data-snapshotd daemon (see constants for the API methods
@@ -30,7 +47,8 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   ~DBusAdaptor() override;
 
   static std::unique_ptr<DBusAdaptor> CreateForTesting(
-      const base::FilePath& snapshot_directory);
+      const base::FilePath& snapshot_directory,
+      std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client);
 
   // Registers the D-Bus object that the arc-data-snapshotd daemon exposes and
   // ties methods exposed by this object with the actual implementation.
@@ -50,7 +68,9 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   }
 
  private:
-  explicit DBusAdaptor(const base::FilePath& snapshot_directory);
+  DBusAdaptor(
+      const base::FilePath& snapshot_directory,
+      std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client);
 
   // Manages the D-Bus interfaces exposed by the arc-data-snapshotd daemon.
   std::unique_ptr<brillo::dbus_utils::DBusObject> dbus_object_;
@@ -58,6 +78,16 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   // Snapshot directory paths:
   const base::FilePath last_snapshot_directory_;
   const base::FilePath previous_snapshot_directory_;
+
+  // Manages the communication with BootLockbox.
+  std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client_;
+  // This private key is generated once GenerateKeyPair is called and used once
+  // per snapshot in TakeSnapshot.
+  std::unique_ptr<crypto::RSAPrivateKey> private_key_;
+  // This public key info is generated along with a private key in
+  // GenerateKeyPair. The key is valid only when |private_key_| is set.
+  // Should be stored on disk once |private_key_| is disposed.
+  std::vector<uint8_t> public_key_info_;
 };
 
 }  // namespace data_snapshotd

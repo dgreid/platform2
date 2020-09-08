@@ -10,6 +10,11 @@
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <base/memory/ptr_util.h>
+#include <crypto/scoped_openssl_types.h>
+#include <crypto/rsa_private_key.h>
+#include <openssl/sha.h>
+
+#include "cryptohome/bootlockbox/boot_lockbox_client.h"
 
 namespace arc {
 namespace data_snapshotd {
@@ -24,14 +29,22 @@ constexpr char kPreviousSnapshotPath[] = "previous";
 
 }  // namespace
 
-DBusAdaptor::DBusAdaptor() : DBusAdaptor(base::FilePath(kCommonSnapshotPath)) {}
+// BootLockbox snapshot keys:
+const char kLastSnapshotPublicKey[] = "snapshot_public_key_last";
+const char kPreviousSnapshotPublicKey[] = "snapshot_public_key_previous";
+
+DBusAdaptor::DBusAdaptor()
+    : DBusAdaptor(base::FilePath(kCommonSnapshotPath),
+                  cryptohome::BootLockboxClient::CreateBootLockboxClient()) {}
 
 DBusAdaptor::~DBusAdaptor() = default;
 
 // static
 std::unique_ptr<DBusAdaptor> DBusAdaptor::CreateForTesting(
-    const base::FilePath& snapshot_directory) {
-  return base::WrapUnique(new DBusAdaptor(snapshot_directory));
+    const base::FilePath& snapshot_directory,
+    std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client) {
+  return base::WrapUnique(
+      new DBusAdaptor(snapshot_directory, std::move(boot_lockbox_client)));
 }
 
 void DBusAdaptor::RegisterAsync(
@@ -46,12 +59,59 @@ void DBusAdaptor::RegisterAsync(
 }
 
 bool DBusAdaptor::GenerateKeyPair(brillo::ErrorPtr* error) {
-  LOG(WARNING) << "Unimplimented";
-  // TODO(b/160387490): Implement method:
-  // * Generate a key pair.
-  // * Store public key ib BootlockBox.
-  // * Show a spinner screen.
-  return false;
+  // TODO(b/160387490): Implement showing a spinner screen.
+  std::string last_public_key_digest;
+  // Try to move last snapshot to previous for consistency.
+  if (base::PathExists(last_snapshot_directory_) &&
+      boot_lockbox_client_->Read(kLastSnapshotPublicKey,
+                                 &last_public_key_digest) &&
+      !last_public_key_digest.empty()) {
+    if (boot_lockbox_client_->Store(kPreviousSnapshotPublicKey,
+                                    last_public_key_digest) &&
+        ClearSnapshot(error, false /* last */) &&
+        base::Move(last_snapshot_directory_, previous_snapshot_directory_)) {
+      boot_lockbox_client_->Store(kLastSnapshotPublicKey, "");
+    } else {
+      LOG(ERROR) << "Failed to move last to previous snapshot.";
+    }
+  }
+  // Clear last snapshot - a new one will be created soon.
+  ClearSnapshot(error, true /* last */);
+
+  // Generate a key pair.
+  public_key_info_.clear();
+  std::unique_ptr<crypto::RSAPrivateKey> generated_private_key(
+      crypto::RSAPrivateKey::Create(1024));
+  if (!generated_private_key) {
+    LOG(ERROR) << "Failed to generate a key pair.";
+    return false;
+  }
+  if (!generated_private_key->ExportPublicKey(&public_key_info_)) {
+    LOG(ERROR) << "Failed to export public key";
+    return false;
+  }
+
+  // Store a new public key digest.
+  std::vector<uint8_t> digest;
+  digest.resize(SHA256_DIGEST_LENGTH);
+  if (!SHA256((const unsigned char*)public_key_info_.data(),
+              public_key_info_.size(), digest.data()) ||
+      digest.empty()) {
+    LOG(ERROR) << "Failed to calculate digest of public key.";
+    return false;
+  }
+  if (!boot_lockbox_client_->Store(kLastSnapshotPublicKey,
+                                   std::string(digest.begin(), digest.end()))) {
+    LOG(ERROR) << "Failed to store a public key in BootLockbox.";
+    return false;
+  }
+  if (!boot_lockbox_client_->Finalize()) {
+    LOG(ERROR) << "Failed to finalize a BootLockbox.";
+    return false;
+  }
+  // Save private key for later usage.
+  private_key_ = std::move(generated_private_key);
+  return true;
 }
 
 bool DBusAdaptor::ClearSnapshot(brillo::ErrorPtr* error, bool last) {
@@ -68,11 +128,16 @@ bool DBusAdaptor::ClearSnapshot(brillo::ErrorPtr* error, bool last) {
   return true;
 }
 
-DBusAdaptor::DBusAdaptor(const base::FilePath& snapshot_directory)
+DBusAdaptor::DBusAdaptor(
+    const base::FilePath& snapshot_directory,
+    std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client)
     : org::chromium::ArcDataSnapshotdAdaptor(this),
       last_snapshot_directory_(snapshot_directory.Append(kLastSnapshotPath)),
       previous_snapshot_directory_(
-          snapshot_directory.Append(kPreviousSnapshotPath)) {}
+          snapshot_directory.Append(kPreviousSnapshotPath)),
+      boot_lockbox_client_(std::move(boot_lockbox_client)) {
+  DCHECK(boot_lockbox_client_);
+}
 
 }  // namespace data_snapshotd
 }  // namespace arc
