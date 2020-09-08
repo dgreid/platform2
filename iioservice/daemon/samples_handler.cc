@@ -289,9 +289,7 @@ void SamplesHandler::SetSampleWatcherOnThread() {
   DCHECK(sample_task_runner_->BelongsToCurrentThread());
 
   // Flush the old samples in EC FIFO.
-  base::FilePath flush_path = iio_device_->GetPath().Append(kHWFifoFlushPath);
-  int bytes_written = base::WriteFile(flush_path, "1\n", 2);
-  if (bytes_written < 2)
+  if (!iio_device_->WriteStringAttribute(kHWFifoFlushPath, "1\n"))
     LOGF(ERROR) << "Failed to flush the old samples in EC FIFO";
 
   auto fd = iio_device_->GetBufferFd();
