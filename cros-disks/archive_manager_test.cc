@@ -171,8 +171,9 @@ TEST_F(ArchiveManagerTest, GetMountOptions) {
 
   MountOptions options;
   EXPECT_EQ(manager_.GetMountOptions(&options), MOUNT_ERROR_NONE);
-  EXPECT_EQ(options.ToString(),
-            "ro,uid=687123,gid=932648,nodev,noexec,nosuid,umask=0222");
+  EXPECT_EQ(
+      options.ToString(),
+      "ro,uid=687123,gid=932648,nodev,noexec,nosuid,umask=0222,nosymfollow");
 }
 
 TEST_F(ArchiveManagerTest, GetMountOptionsCannotGetGroupId) {

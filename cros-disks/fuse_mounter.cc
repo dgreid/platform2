@@ -270,12 +270,13 @@ MountErrorType MountFuseDevice(const Platform* platform,
 
     fuse_type = "fuseblk";
   }
+
   if (!filesystem_type.empty()) {
     fuse_type += ".";
     fuse_type += filesystem_type;
   }
 
-  auto flags = options.ToMountFlagsAndData().first;
+  const MountOptions::Flags flags = options.ToMountFlagsAndData().first;
 
   return platform->Mount(source.empty() ? filesystem_type : source,
                          target.value(), fuse_type,
@@ -423,14 +424,17 @@ std::unique_ptr<MountPoint> FUSEMounter::Mount(
     }
   }
 
-  std::string options_string = mount_options().ToString();
-  if (!options_string.empty()) {
+  {
+    std::string options_string = mount_options().ToFuseMounterOptions();
+    DCHECK(!options_string.empty());
     mount_process->AddArgument("-o");
-    mount_process->AddArgument(options_string);
+    mount_process->AddArgument(std::move(options_string));
   }
+
   if (!source.empty()) {
     mount_process->AddArgument(source);
   }
+
   mount_process->AddArgument(
       base::StringPrintf("/dev/fd/%d", fuse_file.GetPlatformFile()));
 

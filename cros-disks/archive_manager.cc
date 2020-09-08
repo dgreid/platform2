@@ -75,6 +75,7 @@ MountErrorType ArchiveManager::GetMountOptions(
 
   options->SetReadOnlyOption();
   options->EnforceOption("umask=0222");
+  options->EnforceOption(MountOptions::kOptionNoSymFollow);
   options->Initialize({}, true, base::NumberToString(uid),
                       base::NumberToString(gid));
 

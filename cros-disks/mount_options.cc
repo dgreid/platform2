@@ -188,6 +188,26 @@ std::pair<MountOptions::Flags, std::string> MountOptions::ToMountFlagsAndData()
   return std::make_pair(flags, base::JoinString(data, ","));
 }
 
+std::string MountOptions::ToFuseMounterOptions() const {
+  std::string result;
+
+  const char* sep = "";
+  for (const std::string& option : options_) {
+    // Do not pass the nosymfollow option to the FUSE mounter.
+    if (option == MountOptions::kOptionNoSymFollow)
+      continue;
+
+    result += sep;
+    result += option;
+    sep = ",";
+  }
+
+  if (result.empty())
+    result = MountOptions::kOptionReadOnly;
+
+  return result;
+}
+
 std::string MountOptions::ToString() const {
   return options_.empty() ? kOptionReadOnly : base::JoinString(options_, ",");
 }

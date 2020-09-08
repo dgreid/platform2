@@ -61,68 +61,79 @@ TEST_F(MountOptionsTest, ToString) {
 
   // default construction
   expected_string = "ro";
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: ro (default)
   expected_string = "ro,nodev,noexec,nosuid";
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: ro, bind
   expected_string = "bind,ro,nodev,noexec,nosuid";
   options.push_back("bind");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: ro, nodev
   expected_string = "ro,nodev,noexec,nosuid";
   options.clear();
   options.push_back("nodev");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw
   expected_string = "rw,nodev,noexec,nosuid";
   options.push_back("rw");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid
   expected_string = "rw,nodev,noexec,nosuid";
   options.push_back("nosuid");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec
   expected_string = "rw,nodev,noexec,nosuid";
   options.push_back("noexec");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync
   expected_string = "dirsync,rw,nodev,noexec,nosuid";
   options.push_back("dirsync");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync, sync
   expected_string = "dirsync,sync,rw,nodev,noexec,nosuid";
   options.push_back("sync");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync, sync
   // default uid=1000, gid=1001
   // ignore user and group ID
   expected_string = "dirsync,sync,rw,nodev,noexec,nosuid";
   mount_options_.Initialize(options, false, "1000", "1001");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync, sync
   // default uid=1000, gid=1001
   expected_string = "dirsync,sync,rw,uid=1000,gid=1001,nodev,noexec,nosuid";
   mount_options_.Initialize(options, true, "1000", "1001");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync, sync, uid=2000, gid=2001
   // default uid=1000, gid=1001
@@ -131,13 +142,15 @@ TEST_F(MountOptionsTest, ToString) {
   options.push_back("gid=2001");
   expected_string = "dirsync,sync,rw,nodev,noexec,nosuid";
   mount_options_.Initialize(options, false, "1000", "1001");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: nodev, rw, nosuid, noexec, dirsync, sync, uid=2000, gid=2001
   // default uid=1000, gid=1001
   expected_string = "dirsync,sync,rw,uid=2000,gid=2001,nodev,noexec,nosuid";
   mount_options_.Initialize(options, true, "1000", "1001");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // options: "nodev,dev"
   // ignore an option string containing a comma.
@@ -145,7 +158,8 @@ TEST_F(MountOptionsTest, ToString) {
   options.clear();
   options.push_back("nodev,dev");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // Allow more options.
   expected_string = "bind,foo=mississippi,bar,ro,nodev,noexec,nosuid";
@@ -153,7 +167,8 @@ TEST_F(MountOptionsTest, ToString) {
   mount_options_.AllowOption("bar");
   mount_options_.AllowOptionPrefix("foo=");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
 
   // Force additional options.
   expected_string =
@@ -162,7 +177,16 @@ TEST_F(MountOptionsTest, ToString) {
   mount_options_.EnforceOption("sheep=baa");
   mount_options_.EnforceOption("zoo");
   mount_options_.Initialize(options, false, "", "");
-  EXPECT_EQ(expected_string, mount_options_.ToString());
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
+
+  // Option nosymfollow should be reflected in ToString() but not
+  // ToFuseMounterOptions().
+  mount_options_.EnforceOption(MountOptions::kOptionNoSymFollow);
+  mount_options_.Initialize(options, false, "", "");
+  EXPECT_EQ(mount_options_.ToFuseMounterOptions(), expected_string);
+  expected_string += ",nosymfollow";
+  EXPECT_EQ(mount_options_.ToString(), expected_string);
 }
 
 TEST_F(MountOptionsTest, ToMountFlagsAndData) {

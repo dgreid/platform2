@@ -66,6 +66,10 @@ class MountOptions {
   // the mount() library call.
   std::pair<Flags, std::string> ToMountFlagsAndData() const;
 
+  // Converts the mount options into a comma-separated string to be passed to
+  // the FUSE mounter program. This filters out the nosymfollow option.
+  std::string ToFuseMounterOptions() const;
+
   // Converts the mount options into a comma-separated string.
   std::string ToString() const;
 
