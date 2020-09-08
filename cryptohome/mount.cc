@@ -726,7 +726,12 @@ void Mount::UnmountAndDropKeys(base::OnceClosure unmounter) {
 
   // Invalidate dircrypto key to make directory contents inaccessible.
   if (!dircrypto_key_reference_.reference.empty()) {
-    platform_->InvalidateDirCryptoKey(dircrypto_key_reference_, shadow_root_);
+    if (!platform_->InvalidateDirCryptoKey(dircrypto_key_reference_,
+                                           shadow_root_)) {
+      // TODO(crbug.com/1116109): We should think about what to do after this
+      // operation failed.
+      LOG(ERROR) << "Failed to invalidate dircrypto key";
+    }
     dircrypto_key_reference_.policy_version = FSCRYPT_POLICY_V1;
     dircrypto_key_reference_.reference.clear();
   }
