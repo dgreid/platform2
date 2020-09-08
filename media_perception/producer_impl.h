@@ -27,9 +27,11 @@ class ProducerImpl : public video_capture::mojom::Producer {
 
   void PushNextFrame(std::shared_ptr<ProducerImpl> producer_impl,
                      base::TimeDelta timestamp,
-                     std::unique_ptr<const uint8_t[]> data, int data_size,
+                     std::unique_ptr<const uint8_t[]> data,
+                     int data_size,
                      media::mojom::VideoCapturePixelFormat pixel_format,
-                     int width, int height);
+                     int width,
+                     int height);
 
   // video_capture::mojom::Producer overrides.
   void OnNewBuffer(int32_t buffer_id,
@@ -48,7 +50,9 @@ class ProducerImpl : public video_capture::mojom::Producer {
                              std::unique_ptr<const uint8_t[]> data,
                              int data_size,
                              media::mojom::VideoCapturePixelFormat pixel_format,
-                             int width, int height, int32_t buffer_id);
+                             int width,
+                             int height,
+                             int32_t buffer_id);
 
   // Binding of the Producer interface to message pipe.
   mojo::Binding<video_capture::mojom::Producer> binding_;

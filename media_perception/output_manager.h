@@ -26,12 +26,11 @@ class OutputManager {
  public:
   OutputManager() {}
 
-  OutputManager(
-      const std::string& configuration_name,
-      std::shared_ptr<Rtanalytics> rtanalytics,
-      const PerceptionInterfaces& interfaces,
-      chromeos::media_perception::mojom::PerceptionInterfacesPtr*
-      interfaces_ptr);
+  OutputManager(const std::string& configuration_name,
+                std::shared_ptr<Rtanalytics> rtanalytics,
+                const PerceptionInterfaces& interfaces,
+                chromeos::media_perception::mojom::PerceptionInterfacesPtr*
+                    interfaces_ptr);
 
   void HandleFramePerception(const std::vector<uint8_t>& bytes);
 
@@ -49,7 +48,7 @@ class OutputManager {
   void HandleIndexedTransitions(const std::vector<uint8_t>& bytes);
 
  private:
-   void HandleFalconPtzTransitionResponse(dbus::Response* response);
+  void HandleFalconPtzTransitionResponse(dbus::Response* response);
 
   std::string configuration_name_;
 

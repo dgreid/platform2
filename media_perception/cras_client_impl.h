@@ -50,12 +50,14 @@ class CrasClientImpl : public CrasClientWrapper {
 
   // Sets parameters for audio capture. Return value indicates success or
   // failure.
-  bool SetParams(const std::string &device_name, unsigned int num_channels,
-                 unsigned int block_size, unsigned int frame_rate,
+  bool SetParams(const std::string& device_name,
+                 unsigned int num_channels,
+                 unsigned int block_size,
+                 unsigned int frame_rate,
                  snd_pcm_format_t format) override;
 
   // Callback when getting a new audio frame.
-  void ProcessAudioSamples(const uint8_t *samples, unsigned int num_samples);
+  void ProcessAudioSamples(const uint8_t* samples, unsigned int num_samples);
 
  private:
   // Destructs audio_format_ and audio_capture_params_;
@@ -64,9 +66,9 @@ class CrasClientImpl : public CrasClientWrapper {
   // Destructs client_;
   void DestroyClient();
 
-  struct cras_client *client_;
-  struct cras_audio_format *audio_format_;
-  struct cras_stream_params *audio_capture_params_;
+  struct cras_client* client_;
+  struct cras_audio_format* audio_format_;
+  struct cras_stream_params* audio_capture_params_;
   bool has_audio_capture_started_;
   std::string device_name_;
   cras_stream_id_t stream_id_;

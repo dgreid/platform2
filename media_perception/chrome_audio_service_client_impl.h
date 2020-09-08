@@ -32,12 +32,11 @@ class ChromeAudioServiceClientImpl : public ChromeAudioServiceClient {
   bool IsAudioCaptureStartedForDevice(
       const std::string& device_id,
       SerializedAudioStreamParams* capture_format) override;
-  int AddFrameHandler(
-      const std::string& device_id,
-      const SerializedAudioStreamParams& capture_format,
-      AudioFrameHandler handler) override;
-  bool RemoveFrameHandler(
-      const std::string& device_id, int frame_handler_id) override;
+  int AddFrameHandler(const std::string& device_id,
+                      const SerializedAudioStreamParams& capture_format,
+                      AudioFrameHandler handler) override;
+  bool RemoveFrameHandler(const std::string& device_id,
+                          int frame_handler_id) override;
 
  private:
   // Destructs client_;

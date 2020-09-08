@@ -18,7 +18,9 @@ using CrasClientWrapperPtr = std::unique_ptr<mri::CrasClientWrapper>;
 using VideoCaptureServiceClientPtr =
     std::unique_ptr<mri::VideoCaptureServiceClient>;
 // This is a reference to run_rtanalytics() in the RTA library.
-extern "C" int run_rtanalytics(int argc, char** argv, DbusServicePtr&& dbus,
+extern "C" int run_rtanalytics(int argc,
+                               char** argv,
+                               DbusServicePtr&& dbus,
                                CrasClientWrapperPtr&& cras,
                                VideoCaptureServiceClientPtr&& vidcap);
 

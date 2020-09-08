@@ -14,19 +14,24 @@ namespace mri {
 namespace {
 
 // Callback when getting a new audio frame.
-int OnAudioSamples(struct cras_client* client, cras_stream_id_t stream_id,
-                   uint8_t* captured_samples, uint8_t* playback_samples,
+int OnAudioSamples(struct cras_client* client,
+                   cras_stream_id_t stream_id,
+                   uint8_t* captured_samples,
+                   uint8_t* playback_samples,
                    unsigned int num_samples,
                    const struct timespec* captured_time,
-                   const struct timespec* playback_time, void* user_arg) {
+                   const struct timespec* playback_time,
+                   void* user_arg) {
   mri::AudioReceiver* audio_receiver = (mri::AudioReceiver*)user_arg;
   audio_receiver->ProcessAudioSamples(captured_samples, num_samples);
   return num_samples;
 }
 
 // Callback when getting audio capture error.
-int OnAudioCaptureError(struct cras_client* client, cras_stream_id_t stream_id,
-                        int err, void* arg) {
+int OnAudioCaptureError(struct cras_client* client,
+                        cras_stream_id_t stream_id,
+                        int err,
+                        void* arg) {
   LOG(ERROR) << "Audio capture error with code: " << err;
   return err;
 }
@@ -35,23 +40,21 @@ int OnAudioCaptureError(struct cras_client* client, cras_stream_id_t stream_id,
 
 void AudioReceiver::ProcessAudioSamples(const uint8_t* samples,
                                         unsigned int num_frames) {
-  const int bytes_per_frame = cras_client_format_bytes_per_frame(
-      audio_format_);
+  const int bytes_per_frame = cras_client_format_bytes_per_frame(audio_format_);
   const int total_bytes = bytes_per_frame * num_frames;
   for (auto& handler_pair : frame_handler_id_to_audio_frame_handler_map_) {
     handler_pair.second(samples, total_bytes);
   }
 }
 
-AudioReceiver::AudioReceiver(const std::string& device_id) :
-  device_id_(device_id),
-  frame_handler_counter_(0) { }
+AudioReceiver::AudioReceiver(const std::string& device_id)
+    : device_id_(device_id), frame_handler_counter_(0) {}
 
 bool AudioReceiver::CaptureFormatMatches(const AudioStreamParams& requested) {
   return params_.frequency_in_hz() == requested.frequency_in_hz() &&
-      params_.num_channels() == requested.num_channels() &&
-      params_.frame_size() == requested.frame_size() &&
-      params_.sample_format() == requested.sample_format();
+         params_.num_channels() == requested.num_channels() &&
+         params_.frame_size() == requested.frame_size() &&
+         params_.sample_format() == requested.sample_format();
 }
 
 int AudioReceiver::GetFrameHandlerCount() {
@@ -83,8 +86,8 @@ bool AudioReceiver::SetAudioStreamParams(const AudioStreamParams& params) {
   }
 
   audio_capture_params_ = cras_client_unified_params_create(
-      CRAS_STREAM_INPUT, params.frame_size(), CRAS_STREAM_TYPE_DEFAULT, 0,
-      this, OnAudioSamples, OnAudioCaptureError, audio_format_);
+      CRAS_STREAM_INPUT, params.frame_size(), CRAS_STREAM_TYPE_DEFAULT, 0, this,
+      OnAudioSamples, OnAudioCaptureError, audio_format_);
   if (!audio_capture_params_) {
     LOG(ERROR) << "Failed to create CrAS audio capture format.";
     DestroyParams();
@@ -99,12 +102,12 @@ AudioStreamParams AudioReceiver::GetAudioStreamParams() {
   return params_;
 }
 
-bool AudioReceiver::StartAudioCaptureForDeviceIdx(
-    struct cras_client* client, int dev_idx) {
+bool AudioReceiver::StartAudioCaptureForDeviceIdx(struct cras_client* client,
+                                                  int dev_idx) {
   // Create a pinned stream. Return 0 on success, or negative error code on
   // failure.
-  int rc = cras_client_add_pinned_stream(
-      client, dev_idx, &stream_id_, audio_capture_params_);
+  int rc = cras_client_add_pinned_stream(client, dev_idx, &stream_id_,
+                                         audio_capture_params_);
   if (rc != 0) {
     LOG(ERROR) << "Failed to add pinned stream with error code: " << rc;
     return false;

@@ -41,11 +41,10 @@ class VideoCaptureServiceClientImpl : public VideoCaptureServiceClient {
   bool IsVideoCaptureStartedForDevice(
       const std::string& device_id,
       SerializedVideoStreamParams* capture_format) override;
-  int AddFrameHandler(
-      const std::string& device_id,
-      FrameHandler handler) override;
-  bool RemoveFrameHandler(
-      const std::string& device_id, int frame_handler_id) override;
+  int AddFrameHandler(const std::string& device_id,
+                      FrameHandler handler) override;
+  bool RemoveFrameHandler(const std::string& device_id,
+                          int frame_handler_id) override;
   void CreateVirtualDevice(const SerializedVideoDevice& video_device,
                            const VirtualDeviceCallback& callback) override;
   void PushFrameToVirtualDevice(const std::string& device_id,
@@ -53,24 +52,25 @@ class VideoCaptureServiceClientImpl : public VideoCaptureServiceClient {
                                 std::unique_ptr<const uint8_t[]> data,
                                 int data_size,
                                 RawPixelFormat pixel_format,
-                                int frame_width, int frame_height) override;
+                                int frame_width,
+                                int frame_height) override;
   void CloseVirtualDevice(const std::string& device_id) override;
 
  private:
-  void OnOpenDeviceCallback(
-      const OpenDeviceCallback& callback,
-      std::string device_id,
-      CreatePushSubscriptionResultCode code,
-      SerializedVideoStreamParams params);
+  void OnOpenDeviceCallback(const OpenDeviceCallback& callback,
+                            std::string device_id,
+                            CreatePushSubscriptionResultCode code,
+                            SerializedVideoStreamParams params);
 
   MojoConnector* mojo_connector_;
 
-  // Stores a map of device ids to video_frame_handlers for receiving frame for the correct
-  // mojo object associated with an open device.
+  // Stores a map of device ids to video_frame_handlers for receiving frame for
+  // the correct mojo object associated with an open device.
   std::map<std::string /*device_id*/, std::shared_ptr<VideoFrameHandlerImpl>>
       device_id_to_video_frame_handler_map_;
 
-  // Guards against concurrent changes to |device_id_to_video_frame_handler_map_|.
+  // Guards against concurrent changes to
+  // |device_id_to_video_frame_handler_map_|.
   mutable std::mutex device_id_to_video_frame_handler_map_lock_;
 
   // Stores a map of device ids to producers for pushing frames to the correct

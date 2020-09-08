@@ -62,19 +62,22 @@ class Rtanalytics {
   // Enables a client of rtanalytics to set the parameters for a video device
   // for a specified device template.
   virtual SerializedSuccessStatus SetVideoDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedVideoDevice& video_device) = 0;
 
   // Enables a client of rtanalytics to set the parameters for an audio device
   // for a specified device template.
   virtual SerializedSuccessStatus SetAudioDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedAudioDevice& audio_device) = 0;
 
   // Enables a client of rtanalytics to set the parameters for a virtual video
   // device for a specified device template.
   virtual SerializedSuccessStatus SetVirtualVideoDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedVirtualVideoDevice& virtual_device) = 0;
 
   // Returns the pipeline state of the given configuation.
@@ -93,7 +96,8 @@ class Rtanalytics {
 
   // Sets a callback for an output stream of the given configuration.
   virtual SerializedSuccessStatus SetPipelineOutputHandler(
-      const std::string& configuration_name, const std::string& output_stream,
+      const std::string& configuration_name,
+      const std::string& output_stream,
       PipelineOutputHandler output_handler) = 0;
 
   // Asks for the active Falcon camera IP for a configuration name.

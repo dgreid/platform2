@@ -76,22 +76,19 @@ namespace mri {
 
 SuccessStatus ToProto(
     const chromeos::media_perception::mojom::SuccessStatusPtr& status_ptr);
-PixelFormat ToProto(
-    chromeos::media_perception::mojom::PixelFormat format);
+PixelFormat ToProto(chromeos::media_perception::mojom::PixelFormat format);
 VideoStreamParams ToProto(
     const chromeos::media_perception::mojom::VideoStreamParamsPtr& params_ptr);
 VideoDevice ToProto(
     const chromeos::media_perception::mojom::VideoDevicePtr& device_ptr);
 VirtualVideoDevice ToProto(
     const chromeos::media_perception::mojom::VirtualVideoDevicePtr& device_ptr);
-SampleFormat ToProto(
-    chromeos::media_perception::mojom::SampleFormat format);
+SampleFormat ToProto(chromeos::media_perception::mojom::SampleFormat format);
 AudioStreamParams ToProto(
     const chromeos::media_perception::mojom::AudioStreamParamsPtr& params_ptr);
 AudioDevice ToProto(
     const chromeos::media_perception::mojom::AudioDevicePtr& device_ptr);
-DeviceType ToProto(
-    chromeos::media_perception::mojom::DeviceType type);
+DeviceType ToProto(chromeos::media_perception::mojom::DeviceType type);
 DeviceTemplate ToProto(
     const chromeos::media_perception::mojom::DeviceTemplatePtr& template_ptr);
 
@@ -99,7 +96,7 @@ DeviceTemplate ToProto(
 DistanceUnits ToProto(chromeos::media_perception::mojom::DistanceUnits units);
 NormalizedBoundingBox ToProto(
     const chromeos::media_perception::mojom::NormalizedBoundingBoxPtr&
-    bbox_ptr);
+        bbox_ptr);
 Distance ToProto(
     const chromeos::media_perception::mojom::DistancePtr& distance_ptr);
 
@@ -113,8 +110,7 @@ FramePerception ToProto(
         perception_ptr);
 
 // Hotword detection conversions.
-HotwordType ToProto(
-    chromeos::media_perception::mojom::HotwordType type);
+HotwordType ToProto(chromeos::media_perception::mojom::HotwordType type);
 Hotword ToProto(
     const chromeos::media_perception::mojom::HotwordPtr& hotword_ptr);
 HotwordDetection ToProto(
@@ -139,7 +135,7 @@ PresencePerception ToProto(
 // Occupancy trigger conversions.
 OccupancyTrigger ToProto(
     const chromeos::media_perception::mojom::OccupancyTriggerPtr&
-    occupancy_ptr);
+        occupancy_ptr);
 
 }  // namespace mri
 

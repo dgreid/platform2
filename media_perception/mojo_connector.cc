@@ -24,14 +24,12 @@ CreatePushSubscriptionResultCode GetCreatePushSubscriptionResultCode(
   switch (code) {
     case video_capture::mojom::CreatePushSubscriptionResultCode::kFailed:
       return CreatePushSubscriptionResultCode::FAILED;
-    case video_capture::mojom::
-        CreatePushSubscriptionResultCode::kCreatedWithDifferentSettings:
-      return CreatePushSubscriptionResultCode::
-          CREATED_WITH_DIFFERENT_SETTINGS;
-    case video_capture::mojom::
-        CreatePushSubscriptionResultCode::kCreatedWithRequestedSettings:
-      return CreatePushSubscriptionResultCode::
-          CREATED_WITH_REQUESTED_SETTINGS;
+    case video_capture::mojom::CreatePushSubscriptionResultCode::
+        kCreatedWithDifferentSettings:
+      return CreatePushSubscriptionResultCode::CREATED_WITH_DIFFERENT_SETTINGS;
+    case video_capture::mojom::CreatePushSubscriptionResultCode::
+        kCreatedWithRequestedSettings:
+      return CreatePushSubscriptionResultCode::CREATED_WITH_REQUESTED_SETTINGS;
   }
   return CreatePushSubscriptionResultCode::RESULT_UNKNOWN;
 }
@@ -69,7 +67,7 @@ constexpr char kConnectorPipe[] = "mpp-connector-pipe";
 
 }  // namespace
 
-MojoConnector::MojoConnector(): ipc_thread_("IpcThread") {
+MojoConnector::MojoConnector() : ipc_thread_("IpcThread") {
   mojo::core::Init();
   LOG(INFO) << "Starting IPC thread.";
   if (!ipc_thread_.StartWithOptions(
@@ -93,8 +91,7 @@ void MojoConnector::SetChromeAudioServiceClient(
   chrome_audio_service_client_ = chrome_audio_service_client;
 }
 
-void MojoConnector::SetRtanalytics(
-    std::shared_ptr<Rtanalytics> rtanalytics) {
+void MojoConnector::SetRtanalytics(std::shared_ptr<Rtanalytics> rtanalytics) {
   rtanalytics_ = rtanalytics;
 }
 
@@ -131,8 +128,7 @@ void MojoConnector::AcceptConnectionOnIpcThread(base::ScopedFD fd) {
       std::move(child_pipe),
       base::Bind(&MojoConnector::OnConnectionErrorOrClosed,
                  base::Unretained(this)),
-      video_capture_service_client_,
-      chrome_audio_service_client_,
+      video_capture_service_client_, chrome_audio_service_client_,
       rtanalytics_);
 }
 
@@ -176,18 +172,17 @@ void MojoConnector::GetDevicesOnIpcThread(
 }
 
 std::string MojoConnector::GetObfuscatedDeviceId(
-    const std::string& device_id,
-    const std::string& display_name) {
+    const std::string& device_id, const std::string& display_name) {
   const std::string unique_id = device_id + display_name;
   std::map<std::string, std::string>::iterator it =
       unique_id_map_.find(unique_id);
   if (it == unique_id_map_.end()) {
     // If the device ID is an IP address there is no need to obfuscate it
     // and we need it to send PTZ commands via the IP peripheral service.
-    std::string obfuscated_id = DeviceIdIsOverviewStreamIpAddress(device_id) ? device_id :
-        std::to_string(unique_device_counter_);
-    unique_id_map_.insert(
-        std::make_pair(unique_id, obfuscated_id));
+    std::string obfuscated_id = DeviceIdIsOverviewStreamIpAddress(device_id)
+                                    ? device_id
+                                    : std::to_string(unique_device_counter_);
+    unique_id_map_.insert(std::make_pair(unique_id, obfuscated_id));
     // Increment the counter so the next obfuscated id is different.
     unique_device_counter_++;
     return obfuscated_id;
@@ -221,7 +216,7 @@ void MojoConnector::OnDeviceInfosReceived(
           capture_format->frame_rate);
       supported_format.set_pixel_format(
           GetPixelFormatFromVideoCapturePixelFormat(
-          capture_format->pixel_format));
+              capture_format->pixel_format));
       *device.add_supported_configurations() = supported_format;
     }
     devices.push_back(Serialized<VideoDevice>(device).GetBytes());
@@ -236,10 +231,10 @@ void MojoConnector::OpenDevice(
     const VideoStreamParams& capture_format,
     const VideoCaptureServiceClient::OpenDeviceCallback& callback) {
   ipc_thread_.task_runner()->PostTask(
-      FROM_HERE, base::Bind(&MojoConnector::OpenDeviceOnIpcThread,
-                            base::Unretained(this),
-                            device_id, force_reopen_with_settings,
-                            video_frame_handler_impl, capture_format, callback));
+      FROM_HERE,
+      base::Bind(&MojoConnector::OpenDeviceOnIpcThread, base::Unretained(this),
+                 device_id, force_reopen_with_settings,
+                 video_frame_handler_impl, capture_format, callback));
 }
 
 void MojoConnector::OpenDeviceOnIpcThread(
@@ -252,19 +247,18 @@ void MojoConnector::OpenDeviceOnIpcThread(
       obfuscated_device_id_map_.find(device_id);
   if (it == obfuscated_device_id_map_.end()) {
     LOG(ERROR) << "Device id not found in obfuscated_device_id map.";
-    callback(device_id,
-             CreatePushSubscriptionResultCode::FAILED,
+    callback(device_id, CreatePushSubscriptionResultCode::FAILED,
              Serialized<VideoStreamParams>(capture_format).GetBytes());
   }
 
-  std::map<std::string, VideoSourceAndPushSubscription>::iterator
-      device_it = device_id_to_active_device_map_.find(device_id);
+  std::map<std::string, VideoSourceAndPushSubscription>::iterator device_it =
+      device_id_to_active_device_map_.find(device_id);
   // Check to see if the device is already opened.
   if (device_it != device_id_to_active_device_map_.end()) {
-    callback(device_id,
-             CreatePushSubscriptionResultCode::ALREADY_OPEN,
+    callback(device_id, CreatePushSubscriptionResultCode::ALREADY_OPEN,
              Serialized<VideoStreamParams>(
-                 video_frame_handler_impl->GetCaptureFormat()).GetBytes());
+                 video_frame_handler_impl->GetCaptureFormat())
+                 .GetBytes());
     return;
   }
 
@@ -298,18 +292,17 @@ void MojoConnector::OpenDeviceOnIpcThread(
 
   device_it->second.video_source->CreatePushSubscription(
       video_frame_handler_impl->CreateInterfacePtr(),
-      std::move(requested_settings),
-      force_reopen_with_settings,
+      std::move(requested_settings), force_reopen_with_settings,
       mojo::MakeRequest(&device_it->second.push_video_stream_subscription),
       base::Bind(&MojoConnector::OnCreatePushSubscriptionCallback,
                  base::Unretained(this), device_id, callback));
 }
 
 void MojoConnector::OnCreatePushSubscriptionCallback(
-      const std::string& device_id,
-      const VideoCaptureServiceClient::OpenDeviceCallback& callback,
-      video_capture::mojom::CreatePushSubscriptionResultCode code,
-      media::mojom::VideoCaptureParamsPtr settings_opened_with) {
+    const std::string& device_id,
+    const VideoCaptureServiceClient::OpenDeviceCallback& callback,
+    video_capture::mojom::CreatePushSubscriptionResultCode code,
+    media::mojom::VideoCaptureParamsPtr settings_opened_with) {
   VideoStreamParams params;
   params.set_frame_rate_in_frames_per_second(
       settings_opened_with->requested_format->frame_rate);
@@ -319,14 +312,13 @@ void MojoConnector::OnCreatePushSubscriptionCallback(
       settings_opened_with->requested_format->frame_size->width);
   params.set_height_in_pixels(
       settings_opened_with->requested_format->frame_size->height);
-  callback(device_id,
-           GetCreatePushSubscriptionResultCode(code),
+  callback(device_id, GetCreatePushSubscriptionResultCode(code),
            Serialized<VideoStreamParams>(params).GetBytes());
 }
 
 bool MojoConnector::ActivateDevice(const std::string& device_id) {
-  std::map<std::string, VideoSourceAndPushSubscription>::iterator
-      it = device_id_to_active_device_map_.find(device_id);
+  std::map<std::string, VideoSourceAndPushSubscription>::iterator it =
+      device_id_to_active_device_map_.find(device_id);
   if (it == device_id_to_active_device_map_.end()) {
     LOG(ERROR) << "Device id not found in active device map.";
     return false;
@@ -376,9 +368,13 @@ void MojoConnector::CreateVirtualDeviceOnIpcThread(
 }
 
 void MojoConnector::PushFrameToVirtualDevice(
-    std::shared_ptr<ProducerImpl> producer_impl, base::TimeDelta timestamp,
-    std::unique_ptr<const uint8_t[]> data, int data_size,
-    PixelFormat pixel_format, int frame_width, int frame_height) {
+    std::shared_ptr<ProducerImpl> producer_impl,
+    base::TimeDelta timestamp,
+    std::unique_ptr<const uint8_t[]> data,
+    int data_size,
+    PixelFormat pixel_format,
+    int frame_width,
+    int frame_height) {
   ipc_thread_.task_runner()->PostTask(
       FROM_HERE, base::Bind(&MojoConnector::PushFrameToVirtualDeviceOnIpcThread,
                             base::Unretained(this), producer_impl, timestamp,
@@ -387,9 +383,13 @@ void MojoConnector::PushFrameToVirtualDevice(
 }
 
 void MojoConnector::PushFrameToVirtualDeviceOnIpcThread(
-    std::shared_ptr<ProducerImpl> producer_impl, base::TimeDelta timestamp,
-    std::unique_ptr<const uint8_t[]> data, int data_size,
-    PixelFormat pixel_format, int frame_width, int frame_height) {
+    std::shared_ptr<ProducerImpl> producer_impl,
+    base::TimeDelta timestamp,
+    std::unique_ptr<const uint8_t[]> data,
+    int data_size,
+    PixelFormat pixel_format,
+    int frame_width,
+    int frame_height) {
   producer_impl->PushNextFrame(
       producer_impl, timestamp, std::move(data), data_size,
       GetVideoCapturePixelFormatFromPixelFormat(pixel_format), frame_width,
@@ -397,4 +397,3 @@ void MojoConnector::PushFrameToVirtualDeviceOnIpcThread(
 }
 
 }  // namespace mri
-

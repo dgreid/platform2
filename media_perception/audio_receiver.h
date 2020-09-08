@@ -5,7 +5,6 @@
 #ifndef MEDIA_PERCEPTION_AUDIO_RECEIVER_H_
 #define MEDIA_PERCEPTION_AUDIO_RECEIVER_H_
 
-
 #include <cras_client.h>
 #include <cras_helpers.h>
 #include <cras_types.h>
@@ -40,13 +39,11 @@ class AudioReceiver {
   AudioStreamParams GetAudioStreamParams();
 
   // Attempts to start audio capture.
-  bool StartAudioCaptureForDeviceIdx(
-      struct cras_client* client, int dev_idx);
+  bool StartAudioCaptureForDeviceIdx(struct cras_client* client, int dev_idx);
 
   // Adds an audio frame handler into the frame handler map. Return value is the
   // frame handler id.
-  int AddAudioFrameHandler(
-      ChromeAudioServiceClient::AudioFrameHandler handler);
+  int AddAudioFrameHandler(ChromeAudioServiceClient::AudioFrameHandler handler);
 
   // Callback when getting a new audio frame.
   void ProcessAudioSamples(const uint8_t* samples, unsigned int num_samples);
@@ -76,7 +73,7 @@ class AudioReceiver {
 
   // Stores a map of frame handler ids to AudioFrameHandlers.
   std::map<int /* frame_handler_id */,
-      ChromeAudioServiceClient::AudioFrameHandler>
+           ChromeAudioServiceClient::AudioFrameHandler>
       frame_handler_id_to_audio_frame_handler_map_;
 };
 

@@ -14,19 +14,24 @@ const size_t MAX_IODEVS = 10;
 const size_t MAX_IONODES = 20;
 
 // Callback when getting a new audio frame.
-int OnAudioSamples(struct cras_client *client, cras_stream_id_t stream_id,
-                   uint8_t *captured_samples, uint8_t *playback_samples,
+int OnAudioSamples(struct cras_client* client,
+                   cras_stream_id_t stream_id,
+                   uint8_t* captured_samples,
+                   uint8_t* playback_samples,
                    unsigned int num_samples,
-                   const struct timespec *captured_time,
-                   const struct timespec *playback_time, void *user_arg) {
-  mri::CrasClientImpl *cras_client = (mri::CrasClientImpl *)user_arg;
+                   const struct timespec* captured_time,
+                   const struct timespec* playback_time,
+                   void* user_arg) {
+  mri::CrasClientImpl* cras_client = (mri::CrasClientImpl*)user_arg;
   cras_client->ProcessAudioSamples(captured_samples, num_samples);
   return num_samples;
 }
 
 // Callback when getting audio capture error.
-int OnAudioCaptureError(struct cras_client *client, cras_stream_id_t stream_id,
-                        int err, void *arg) {
+int OnAudioCaptureError(struct cras_client* client,
+                        cras_stream_id_t stream_id,
+                        int err,
+                        void* arg) {
   syslog(LOG_ERR, "Audio capture error with code: %d.", err);
   return err;
 }
@@ -35,7 +40,9 @@ int OnAudioCaptureError(struct cras_client *client, cras_stream_id_t stream_id,
 
 namespace mri {
 
-CrasClientImpl::~CrasClientImpl() { Disconnect(); }
+CrasClientImpl::~CrasClientImpl() {
+  Disconnect();
+}
 
 bool CrasClientImpl::Connect() {
   if (IsConnected()) {
@@ -62,11 +69,14 @@ void CrasClientImpl::Disconnect() {
   DestroyClient();
 }
 
-bool CrasClientImpl::IsConnected() const { return client_ != nullptr; }
+bool CrasClientImpl::IsConnected() const {
+  return client_ != nullptr;
+}
 
-bool CrasClientImpl::SetParams(const std::string &device_name,
+bool CrasClientImpl::SetParams(const std::string& device_name,
                                unsigned int num_channels,
-                               unsigned int block_size, unsigned int frame_rate,
+                               unsigned int block_size,
+                               unsigned int frame_rate,
                                snd_pcm_format_t format) {
   DestroyParams();
 
@@ -157,7 +167,7 @@ bool CrasClientImpl::HasAudioCaptureStarted() const {
   return has_audio_capture_started_;
 }
 
-void CrasClientImpl::ProcessAudioSamples(const uint8_t *samples,
+void CrasClientImpl::ProcessAudioSamples(const uint8_t* samples,
                                          unsigned int num_frames) {
   if (!audio_input_handler_) {
     return;

@@ -19,7 +19,7 @@ class CrasClientWrapper {
  public:
   // Handler for incoming audio samples.
   using AudioInputHandler =
-      std::function<void(const uint8_t *samples, int size)>;
+      std::function<void(const uint8_t* samples, int size)>;
 
   // Pure virtuals for the interfaces that need to be available in the
   // implementation.
@@ -45,9 +45,11 @@ class CrasClientWrapper {
 
   // Sets parameters for audio capture. Return value indicates success or
   // failure.
-  virtual bool SetParams(const std::string &device_name,
-                         unsigned int num_channels, unsigned int block_size,
-                         unsigned int frame_rate, snd_pcm_format_t format) = 0;
+  virtual bool SetParams(const std::string& device_name,
+                         unsigned int num_channels,
+                         unsigned int block_size,
+                         unsigned int frame_rate,
+                         snd_pcm_format_t format) = 0;
 
   // Sets handler for processing audio samples.
   void SetAudioInputHandler(AudioInputHandler handler) {

@@ -34,13 +34,16 @@ class FakeRtanalytics : public Rtanalytics {
   std::vector<SerializedDeviceTemplate> GetTemplateDevices(
       const std::string& configuration_name) const override;
   SerializedSuccessStatus SetVideoDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedVideoDevice& video_device) override;
   SerializedSuccessStatus SetAudioDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedAudioDevice& audio_device) override;
   SerializedSuccessStatus SetVirtualVideoDeviceForTemplateName(
-      const std::string& configuration_name, const std::string& template_name,
+      const std::string& configuration_name,
+      const std::string& template_name,
       const SerializedVirtualVideoDevice& virtual_device) override;
   SerializedPipelineState GetPipelineState(
       const std::string& configuration_name) const override;
@@ -48,7 +51,8 @@ class FakeRtanalytics : public Rtanalytics {
       const std::string& configuration_name,
       const SerializedPipelineState& desired_state) override;
   SerializedSuccessStatus SetPipelineOutputHandler(
-      const std::string& configuration_name, const std::string& output_stream,
+      const std::string& configuration_name,
+      const std::string& output_stream,
       PipelineOutputHandler output_handler) override;
   SerializedGlobalPipelineState GetGlobalPipelineState() const override;
 

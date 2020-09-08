@@ -22,9 +22,7 @@ namespace mri {
 
 class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
  public:
-  VideoFrameHandlerImpl() :
-    frame_handler_id_counter_(0),
-    binding_(this) {}
+  VideoFrameHandlerImpl() : frame_handler_id_counter_(0), binding_(this) {}
 
   bool HasValidCaptureFormat();
 
@@ -53,7 +51,8 @@ class VideoFrameHandlerImpl : public video_capture::mojom::VideoFrameHandler {
   void OnNewBuffer(int32_t buffer_id,
                    media::mojom::VideoBufferHandlePtr buffer_handle) override;
   void OnFrameReadyInBuffer(
-      int32_t buffer_id, int32_t frame_feedback_id,
+      int32_t buffer_id,
+      int32_t frame_feedback_id,
       video_capture::mojom::ScopedAccessPermissionPtr permission,
       media::mojom::VideoFrameInfoPtr frame_info) override;
   void OnFrameDropped(

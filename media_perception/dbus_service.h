@@ -36,9 +36,10 @@ class DbusService {
   virtual ~DbusService() {}
 
   // Handler for incoming method calls. |bytes| stores the reply message.
-  using MessageHandler =
-      std::function<bool(const Method method, const uint8_t *arg_bytes,
-                         const int arg_size, std::vector<uint8_t> *bytes)>;
+  using MessageHandler = std::function<bool(const Method method,
+                                            const uint8_t* arg_bytes,
+                                            const int arg_size,
+                                            std::vector<uint8_t>* bytes)>;
 
   // This handler function should be set after the DBusService is instantiated
   // to handle incoming D-Bus messages.
@@ -87,7 +88,7 @@ class DbusService {
   virtual void Connect(const Service service) = 0;
   virtual bool IsConnected() const = 0;
   virtual bool PublishSignal(const Signal signal,
-                             const std::vector<uint8_t> *bytes) = 0;
+                             const std::vector<uint8_t>* bytes) = 0;
   virtual void PollMessageQueue() = 0;
 
  protected:

@@ -12,7 +12,6 @@ const char kMockConfigurationName[] = "fake_configuration";
 const char kMockErrorSource[] = "Mock Error Source";
 const char kMockErrorString[] = "Mock Error String";
 
-
 namespace {
 
 constexpr int kNumSupportedConfigurations = 3;
@@ -25,22 +24,22 @@ namespace mojom {
 
 namespace {
 
-
 mri::VideoStreamParams CreateVideoStreamParamsProto(
-    int width_in_pixels, int height_in_pixels,
+    int width_in_pixels,
+    int height_in_pixels,
     float frame_rate_in_frames_per_second) {
   mri::VideoStreamParams params;
   params.set_width_in_pixels(width_in_pixels);
   params.set_height_in_pixels(height_in_pixels);
-  params.set_frame_rate_in_frames_per_second(
-      frame_rate_in_frames_per_second);
+  params.set_frame_rate_in_frames_per_second(frame_rate_in_frames_per_second);
   params.set_pixel_format(mri::PixelFormat::I420);
   return params;
 }
 
-mri::VideoDevice CreateVideoDeviceProto(
-    std::string id, std::string display_name,
-    std::string model_id, bool in_use) {
+mri::VideoDevice CreateVideoDeviceProto(std::string id,
+                                        std::string display_name,
+                                        std::string model_id,
+                                        bool in_use) {
   mri::VideoDevice device;
   device.set_id(id);
   device.set_display_name(display_name);
@@ -59,7 +58,9 @@ mri::VideoDevice CreateVideoDeviceProto(
 }
 
 mri::AudioStreamParams CreateAudioStreamParamsProto(
-    float frequency_in_hz, int num_channels, int frame_size,
+    float frequency_in_hz,
+    int num_channels,
+    int frame_size,
     mri::SampleFormat sample_format) {
   mri::AudioStreamParams params;
   params.set_frequency_in_hz(frequency_in_hz);
@@ -69,8 +70,8 @@ mri::AudioStreamParams CreateAudioStreamParamsProto(
   return params;
 }
 
-mri::AudioDevice CreateAudioDeviceProto(
-    std::string id, std::string display_name) {
+mri::AudioDevice CreateAudioDeviceProto(std::string id,
+                                        std::string display_name) {
   mri::AudioDevice device;
   device.set_id(id);
   device.set_display_name(display_name);
@@ -107,8 +108,8 @@ TEST(ProtoMojomConversionTest, VideoStreamParamsToMojom) {
 }
 
 TEST(ProtoMojomConversionTest, VideoDeviceToMojom) {
-  mri::VideoDevice device = CreateVideoDeviceProto(
-      "id", "display_name", "model_id", true);
+  mri::VideoDevice device =
+      CreateVideoDeviceProto("id", "display_name", "model_id", true);
 
   VideoDevicePtr device_ptr = ToMojom(device);
   EXPECT_EQ(device_ptr->id, "id");
@@ -130,8 +131,8 @@ TEST(ProtoMojomConversionTest, VideoDeviceToMojom) {
 TEST(ProtoMojomConversionTest, VirtualVideoDeviceToMojom) {
   mri::VirtualVideoDevice device;
   mri::VideoDevice* video_device = device.mutable_video_device();
-  *video_device = CreateVideoDeviceProto(
-      "id", "display_name", "model_id", true);
+  *video_device =
+      CreateVideoDeviceProto("id", "display_name", "model_id", true);
   VirtualVideoDevicePtr device_ptr = ToMojom(device);
   EXPECT_EQ(device_ptr->video_device->id, "id");
 }
@@ -152,8 +153,7 @@ TEST(ProtoMojomConversionTest, AudioStreamParamsToMojom) {
 }
 
 TEST(ProtoMojomConversionTest, AudioDeviceToMojom) {
-  mri::AudioDevice device = CreateAudioDeviceProto(
-      "id", "display_name");
+  mri::AudioDevice device = CreateAudioDeviceProto("id", "display_name");
   AudioDevicePtr device_ptr = ToMojom(device);
   EXPECT_EQ(device_ptr->id, "id");
   EXPECT_EQ(*device_ptr->display_name, "display_name");
@@ -345,9 +345,9 @@ namespace mri {
 namespace {
 
 chromeos::media_perception::mojom::VideoStreamParamsPtr
-CreateVideoStreamParamsPtr(
-    int width_in_pixels, int height_in_pixels,
-    float frame_rate_in_frames_per_second) {
+CreateVideoStreamParamsPtr(int width_in_pixels,
+                           int height_in_pixels,
+                           float frame_rate_in_frames_per_second) {
   chromeos::media_perception::mojom::VideoStreamParamsPtr params_ptr =
       chromeos::media_perception::mojom::VideoStreamParams::New();
   params_ptr->width_in_pixels = width_in_pixels;
@@ -359,8 +359,10 @@ CreateVideoStreamParamsPtr(
 }
 
 chromeos::media_perception::mojom::VideoDevicePtr CreateVideoDevicePtr(
-    std::string id, std::string display_name,
-    std::string model_id, bool in_use) {
+    std::string id,
+    std::string display_name,
+    std::string model_id,
+    bool in_use) {
   chromeos::media_perception::mojom::VideoDevicePtr device_ptr =
       chromeos::media_perception::mojom::VideoDevice::New();
   device_ptr->id = id;
@@ -373,15 +375,15 @@ chromeos::media_perception::mojom::VideoDevicePtr CreateVideoDevicePtr(
   }
   device_ptr->in_use = in_use;
   if (in_use) {
-    device_ptr->configuration = CreateVideoStreamParamsPtr(
-        1, 2, 3);
+    device_ptr->configuration = CreateVideoStreamParamsPtr(1, 2, 3);
   }
   return device_ptr;
 }
 
 chromeos::media_perception::mojom::AudioStreamParamsPtr
-CreateAudioStreamParamsPtr(
-    float frequency_in_hz, int num_channels, int frame_size) {
+CreateAudioStreamParamsPtr(float frequency_in_hz,
+                           int num_channels,
+                           int frame_size) {
   chromeos::media_perception::mojom::AudioStreamParamsPtr params_ptr =
       chromeos::media_perception::mojom::AudioStreamParams::New();
   params_ptr->frequency_in_hz = frequency_in_hz;
@@ -432,8 +434,7 @@ TEST(ProtoMojomConversionTest, VideoStreamParamsToProto) {
 
 TEST(ProtoMojomConversionTest, VideoDeviceToProto) {
   chromeos::media_perception::mojom::VideoDevicePtr device_ptr =
-      CreateVideoDevicePtr(
-          "id", "display_name", "model_id", true);
+      CreateVideoDevicePtr("id", "display_name", "model_id", true);
 
   VideoDevice device = ToProto(device_ptr);
   EXPECT_EQ(device.id(), "id");
@@ -455,8 +456,8 @@ TEST(ProtoMojomConversionTest, VideoDeviceToProto) {
 TEST(ProtoMojomConversionTest, VirtualVideoDeviceToProto) {
   chromeos::media_perception::mojom::VirtualVideoDevicePtr device_ptr =
       chromeos::media_perception::mojom::VirtualVideoDevice::New();
-  device_ptr->video_device = CreateVideoDevicePtr(
-      "id", "display_name", "model_id", true);
+  device_ptr->video_device =
+      CreateVideoDevicePtr("id", "display_name", "model_id", true);
   VirtualVideoDevice device = ToProto(device_ptr);
   EXPECT_EQ(device.video_device().id(), "id");
 }
@@ -533,8 +534,8 @@ TEST(ProtoMojomConversionTest, DistanceToProto) {
 }
 
 TEST(ProtoMojomConversionTest, HotwordDetectionToProto) {
-  chromeos::media_perception::mojom::HotwordDetectionPtr hotword_detection_ptr
-      = chromeos::media_perception::mojom::HotwordDetection::New();
+  chromeos::media_perception::mojom::HotwordDetectionPtr hotword_detection_ptr =
+      chromeos::media_perception::mojom::HotwordDetection::New();
   hotword_detection_ptr->hotwords.resize(2);
 
   hotword_detection_ptr->hotwords[0] =
@@ -633,9 +634,9 @@ TEST(ProtoMojomConversionTest, FramePerceptionToProto) {
 TEST(ProtoMojomConversionTest, PipelineErrorToProto) {
   // Construct mojom ptr for PipelineError.
   chromeos::media_perception::mojom::PipelineErrorPtr error_ptr =
-    chromeos::media_perception::mojom::PipelineError::New();
+      chromeos::media_perception::mojom::PipelineError::New();
   error_ptr->error_type =
-    chromeos::media_perception::mojom::PipelineErrorType::CONFIGURATION;
+      chromeos::media_perception::mojom::PipelineErrorType::CONFIGURATION;
   *error_ptr->error_source = kMockErrorSource;
   *error_ptr->error_string = kMockErrorString;
 
@@ -647,14 +648,14 @@ TEST(ProtoMojomConversionTest, PipelineErrorToProto) {
 
 TEST(ProtoMojomConversionTest, PipelineStateToProto) {
   chromeos::media_perception::mojom::PipelineStatePtr state_ptr =
-    chromeos::media_perception::mojom::PipelineState::New();
+      chromeos::media_perception::mojom::PipelineState::New();
   state_ptr->status =
-    chromeos::media_perception::mojom::PipelineStatus::RUNNING;
+      chromeos::media_perception::mojom::PipelineStatus::RUNNING;
 
   state_ptr->error = chromeos::media_perception::mojom::PipelineError::New();
 
   state_ptr->error->error_type =
-    chromeos::media_perception::mojom::PipelineErrorType::CONFIGURATION;
+      chromeos::media_perception::mojom::PipelineErrorType::CONFIGURATION;
   *state_ptr->error->error_source = kMockErrorSource;
   *state_ptr->error->error_string = kMockErrorString;
 

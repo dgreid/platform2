@@ -4,7 +4,6 @@
 
 #include "media_perception/fake_chrome_audio_service_client.h"
 
-
 namespace mri {
 
 bool FakeChromeAudioServiceClient::Connect() {
@@ -27,8 +26,7 @@ FakeChromeAudioServiceClient::GetInputDevices() {
 }
 
 bool FakeChromeAudioServiceClient::IsAudioCaptureStartedForDevice(
-    const std::string& device_id,
-    SerializedAudioStreamParams* capture_format) {
+    const std::string& device_id, SerializedAudioStreamParams* capture_format) {
   return false;
 }
 

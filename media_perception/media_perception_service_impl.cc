@@ -40,15 +40,14 @@ MediaPerceptionServiceImpl::MediaPerceptionServiceImpl(
 void MediaPerceptionServiceImpl::GetController(
     chromeos::media_perception::mojom::MediaPerceptionControllerRequest request,
     chromeos::media_perception::mojom::MediaPerceptionControllerClientPtr
-    client) {
+        client) {
   client_ = std::move(client);
 
   // Use a connection error handler to strongly bind |controller| to |request|.
   MediaPerceptionControllerImpl* const controller =
-      new MediaPerceptionControllerImpl(std::move(request),
-                                        video_capture_service_client_,
-                                        chrome_audio_service_client_,
-                                        rtanalytics_);
+      new MediaPerceptionControllerImpl(
+          std::move(request), video_capture_service_client_,
+          chrome_audio_service_client_, rtanalytics_);
   controller->set_connection_error_handler(
       base::Bind(&OnConnectionClosedOrError, base::Unretained(controller)));
 }

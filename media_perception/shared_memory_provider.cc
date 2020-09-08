@@ -30,7 +30,8 @@ SharedMemoryProvider::~SharedMemoryProvider() {
 
 std::unique_ptr<SharedMemoryProvider>
 SharedMemoryProvider::CreateFromRawFileDescriptor(
-    bool read_only, mojo::ScopedHandle fd_handle,
+    bool read_only,
+    mojo::ScopedHandle fd_handle,
     uint32_t memory_size_in_bytes) {
   base::PlatformFile platform_file;
   MojoResult mojo_result =

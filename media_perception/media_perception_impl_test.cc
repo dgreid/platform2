@@ -26,16 +26,15 @@ class MediaPerceptionImplTest : public testing::Test {
  protected:
   void SetUp() override {
     fake_vidcap_client_ = new FakeVideoCaptureServiceClient();
-    vidcap_client_ = std::shared_ptr<VideoCaptureServiceClient>(
-        fake_vidcap_client_);
+    vidcap_client_ =
+        std::shared_ptr<VideoCaptureServiceClient>(fake_vidcap_client_);
     fake_cras_client_ = new FakeChromeAudioServiceClient();
-    cras_client_ = std::shared_ptr<ChromeAudioServiceClient>(
-        fake_cras_client_);
+    cras_client_ = std::shared_ptr<ChromeAudioServiceClient>(fake_cras_client_);
     fake_rtanalytics_ = new FakeRtanalytics();
     rtanalytics_ = std::shared_ptr<Rtanalytics>(fake_rtanalytics_);
     media_perception_impl_ = std::make_unique<MediaPerceptionImpl>(
-        mojo::MakeRequest(&media_perception_ptr_),
-        vidcap_client_, cras_client_, rtanalytics_);
+        mojo::MakeRequest(&media_perception_ptr_), vidcap_client_, cras_client_,
+        rtanalytics_);
   }
 
   chromeos::media_perception::mojom::MediaPerceptionPtr media_perception_ptr_;
@@ -50,13 +49,14 @@ class MediaPerceptionImplTest : public testing::Test {
 
 TEST_F(MediaPerceptionImplTest, TestGetVideoDevices) {
   bool get_devices_callback_done = false;
-  media_perception_ptr_->GetVideoDevices(
-      base::Bind([](bool* get_devices_callback_done,
-          std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
-          devices) {
+  media_perception_ptr_->GetVideoDevices(base::Bind(
+      [](bool* get_devices_callback_done,
+         std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
+             devices) {
         EXPECT_EQ(devices.size(), 0);
         *get_devices_callback_done = true;
-      }, &get_devices_callback_done));
+      },
+      &get_devices_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_devices_callback_done);
 
@@ -70,28 +70,30 @@ TEST_F(MediaPerceptionImplTest, TestGetVideoDevices) {
   fake_vidcap_client_->SetDevicesForGetDevices(serialized_devices);
 
   get_devices_callback_done = false;
-  media_perception_ptr_->GetVideoDevices(
-        base::Bind([](bool *get_devices_callback_done,
-          std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
-          devices) {
+  media_perception_ptr_->GetVideoDevices(base::Bind(
+      [](bool* get_devices_callback_done,
+         std::vector<chromeos::media_perception::mojom::VideoDevicePtr>
+             devices) {
         EXPECT_EQ(devices.size(), 2);
         EXPECT_EQ(devices[0]->id, "1");
         EXPECT_EQ(devices[1]->id, "2");
         *get_devices_callback_done = true;
-      }, &get_devices_callback_done));
+      },
+      &get_devices_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_devices_callback_done);
 }
 
 TEST_F(MediaPerceptionImplTest, TestGetAudioDevices) {
   bool get_devices_callback_done = false;
-  media_perception_ptr_->GetAudioDevices(
-      base::Bind([](bool* get_devices_callback_done,
-          std::vector<chromeos::media_perception::mojom::AudioDevicePtr>
-          devices) {
+  media_perception_ptr_->GetAudioDevices(base::Bind(
+      [](bool* get_devices_callback_done,
+         std::vector<chromeos::media_perception::mojom::AudioDevicePtr>
+             devices) {
         EXPECT_EQ(devices.size(), 0);
         *get_devices_callback_done = true;
-      }, &get_devices_callback_done));
+      },
+      &get_devices_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_devices_callback_done);
 
@@ -105,15 +107,16 @@ TEST_F(MediaPerceptionImplTest, TestGetAudioDevices) {
   fake_cras_client_->SetDevicesForGetInputDevices(serialized_devices);
 
   get_devices_callback_done = false;
-  media_perception_ptr_->GetAudioDevices(
-        base::Bind([](bool *get_devices_callback_done,
-          std::vector<chromeos::media_perception::mojom::AudioDevicePtr>
-          devices) {
+  media_perception_ptr_->GetAudioDevices(base::Bind(
+      [](bool* get_devices_callback_done,
+         std::vector<chromeos::media_perception::mojom::AudioDevicePtr>
+             devices) {
         EXPECT_EQ(devices.size(), 2);
         EXPECT_EQ(devices[0]->id, "1");
         EXPECT_EQ(devices[1]->id, "2");
         *get_devices_callback_done = true;
-      }, &get_devices_callback_done));
+      },
+      &get_devices_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_devices_callback_done);
 }
@@ -123,15 +126,16 @@ TEST_F(MediaPerceptionImplTest, TestSetupConfiguration) {
 
   media_perception_ptr_->SetupConfiguration(
       "test_configuration",
-      base::Bind([](
-          bool* setup_configuration_callback_done,
-          chromeos::media_perception::mojom::SuccessStatusPtr status,
-          chromeos::media_perception::mojom::PerceptionInterfacesPtr
-          requests) {
-        EXPECT_EQ(status->success, true);
-        EXPECT_EQ(*status->failure_reason, "test_configuration");
-        *setup_configuration_callback_done = true;
-      }, &setup_configuration_callback_done));
+      base::Bind(
+          [](bool* setup_configuration_callback_done,
+             chromeos::media_perception::mojom::SuccessStatusPtr status,
+             chromeos::media_perception::mojom::PerceptionInterfacesPtr
+                 requests) {
+            EXPECT_EQ(status->success, true);
+            EXPECT_EQ(*status->failure_reason, "test_configuration");
+            *setup_configuration_callback_done = true;
+          },
+          &setup_configuration_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(setup_configuration_callback_done);
 }
@@ -142,13 +146,14 @@ TEST_F(MediaPerceptionImplTest, TestSetTemplateArguments) {
 
   media_perception_ptr_->SetTemplateArguments(
       "test_configuration", arguments,
-      base::Bind([](
-          bool* set_template_arguments_callback_done,
-          chromeos::media_perception::mojom::SuccessStatusPtr status) {
-        EXPECT_EQ(status->success, true);
-        EXPECT_EQ(*status->failure_reason, "test_configuration");
-        *set_template_arguments_callback_done = true;
-      }, &set_template_arguments_callback_done));
+      base::Bind(
+          [](bool* set_template_arguments_callback_done,
+             chromeos::media_perception::mojom::SuccessStatusPtr status) {
+            EXPECT_EQ(status->success, true);
+            EXPECT_EQ(*status->failure_reason, "test_configuration");
+            *set_template_arguments_callback_done = true;
+          },
+          &set_template_arguments_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(set_template_arguments_callback_done);
 }
@@ -168,15 +173,16 @@ TEST_F(MediaPerceptionImplTest, TestGetTemplateDevices) {
   bool get_template_devices_callback_done = false;
   media_perception_ptr_->GetTemplateDevices(
       "test_configuration",
-      base::Bind([](
-          bool* get_template_devices_callback_done,
-          std::vector<chromeos::media_perception::mojom::DeviceTemplatePtr>
-          device_templates) {
-        EXPECT_EQ(device_templates.size(), 2);
-        EXPECT_EQ(device_templates[0]->template_name, "one");
-        EXPECT_EQ(device_templates[1]->template_name, "two");
-        *get_template_devices_callback_done = true;
-      }, &get_template_devices_callback_done));
+      base::Bind(
+          [](bool* get_template_devices_callback_done,
+             std::vector<chromeos::media_perception::mojom::DeviceTemplatePtr>
+                 device_templates) {
+            EXPECT_EQ(device_templates.size(), 2);
+            EXPECT_EQ(device_templates[0]->template_name, "one");
+            EXPECT_EQ(device_templates[1]->template_name, "two");
+            *get_template_devices_callback_done = true;
+          },
+          &get_template_devices_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_template_devices_callback_done);
 }
@@ -187,16 +193,15 @@ TEST_F(MediaPerceptionImplTest, TestSetVideoDeviceForTemplateName) {
   chromeos::media_perception::mojom::VideoDevicePtr video_device =
       chromeos::media_perception::mojom::VideoDevice::New();
   media_perception_ptr_->SetVideoDeviceForTemplateName(
-      "test_configuration",
-      "test_template",
-      std::move(video_device),
-      base::Bind([](
-          bool* callback_done,
-          chromeos::media_perception::mojom::SuccessStatusPtr status) {
-        EXPECT_EQ(status->success, true);
-        EXPECT_EQ(*status->failure_reason, "test_template");
-        *callback_done = true;
-      }, &callback_done));
+      "test_configuration", "test_template", std::move(video_device),
+      base::Bind(
+          [](bool* callback_done,
+             chromeos::media_perception::mojom::SuccessStatusPtr status) {
+            EXPECT_EQ(status->success, true);
+            EXPECT_EQ(*status->failure_reason, "test_template");
+            *callback_done = true;
+          },
+          &callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(callback_done);
 }
@@ -207,16 +212,15 @@ TEST_F(MediaPerceptionImplTest, TestSetAudioDeviceForTemplateName) {
   chromeos::media_perception::mojom::AudioDevicePtr audio_device =
       chromeos::media_perception::mojom::AudioDevice::New();
   media_perception_ptr_->SetAudioDeviceForTemplateName(
-      "test_configuration",
-      "test_template",
-      std::move(audio_device),
-      base::Bind([](
-          bool* callback_done,
-          chromeos::media_perception::mojom::SuccessStatusPtr status) {
-        EXPECT_EQ(status->success, true);
-        EXPECT_EQ(*status->failure_reason, "test_template");
-        *callback_done = true;
-      }, &callback_done));
+      "test_configuration", "test_template", std::move(audio_device),
+      base::Bind(
+          [](bool* callback_done,
+             chromeos::media_perception::mojom::SuccessStatusPtr status) {
+            EXPECT_EQ(status->success, true);
+            EXPECT_EQ(*status->failure_reason, "test_template");
+            *callback_done = true;
+          },
+          &callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(callback_done);
 }
@@ -229,16 +233,15 @@ TEST_F(MediaPerceptionImplTest, TestSetVirtualVideoDeviceForTemplateName) {
   video_device->video_device =
       chromeos::media_perception::mojom::VideoDevice::New();
   media_perception_ptr_->SetVirtualVideoDeviceForTemplateName(
-      "test_configuration",
-      "test_template",
-      std::move(video_device),
-      base::Bind([](
-          bool* callback_done,
-          chromeos::media_perception::mojom::SuccessStatusPtr status) {
-        EXPECT_EQ(status->success, true);
-        EXPECT_EQ(*status->failure_reason, "test_template");
-        *callback_done = true;
-      }, &callback_done));
+      "test_configuration", "test_template", std::move(video_device),
+      base::Bind(
+          [](bool* callback_done,
+             chromeos::media_perception::mojom::SuccessStatusPtr status) {
+            EXPECT_EQ(status->success, true);
+            EXPECT_EQ(*status->failure_reason, "test_template");
+            *callback_done = true;
+          },
+          &callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(callback_done);
 }
@@ -248,13 +251,16 @@ TEST_F(MediaPerceptionImplTest, TestGetPipelineState) {
 
   media_perception_ptr_->GetPipelineState(
       "test_configuration",
-      base::Bind([](
-          bool* get_pipeline_callback_done,
-          chromeos::media_perception::mojom::PipelineStatePtr pipeline_state) {
-        EXPECT_EQ(pipeline_state->status,
-                  chromeos::media_perception::mojom::PipelineStatus::SUSPENDED);
-        *get_pipeline_callback_done = true;
-      }, &get_pipeline_callback_done));
+      base::Bind(
+          [](bool* get_pipeline_callback_done,
+             chromeos::media_perception::mojom::PipelineStatePtr
+                 pipeline_state) {
+            EXPECT_EQ(
+                pipeline_state->status,
+                chromeos::media_perception::mojom::PipelineStatus::SUSPENDED);
+            *get_pipeline_callback_done = true;
+          },
+          &get_pipeline_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_pipeline_callback_done);
 }
@@ -267,15 +273,17 @@ TEST_F(MediaPerceptionImplTest, TestSetPipelineState) {
   desired_pipeline_state->status =
       chromeos::media_perception::mojom::PipelineStatus::RUNNING;
   media_perception_ptr_->SetPipelineState(
-      "test_configuration",
-      std::move(desired_pipeline_state),
-      base::Bind([](
-          bool* set_pipeline_callback_done,
-          chromeos::media_perception::mojom::PipelineStatePtr pipeline_state) {
-        EXPECT_EQ(pipeline_state->status,
-                  chromeos::media_perception::mojom::PipelineStatus::RUNNING);
-        *set_pipeline_callback_done = true;
-      }, &set_pipeline_callback_done));
+      "test_configuration", std::move(desired_pipeline_state),
+      base::Bind(
+          [](bool* set_pipeline_callback_done,
+             chromeos::media_perception::mojom::PipelineStatePtr
+                 pipeline_state) {
+            EXPECT_EQ(
+                pipeline_state->status,
+                chromeos::media_perception::mojom::PipelineStatus::RUNNING);
+            *set_pipeline_callback_done = true;
+          },
+          &set_pipeline_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(set_pipeline_callback_done);
 }
@@ -283,14 +291,13 @@ TEST_F(MediaPerceptionImplTest, TestSetPipelineState) {
 TEST_F(MediaPerceptionImplTest, TestGetGlobalPipelineState) {
   bool get_global_pipeline_callback_done = false;
 
-  media_perception_ptr_->GetGlobalPipelineState(
-      base::Bind([](
-          bool* get_global_pipeline_callback_done,
-          chromeos::media_perception::mojom::GlobalPipelineStatePtr state) {
-        EXPECT_EQ(*state->states[0]->configuration_name,
-                  "fake_configuration");
+  media_perception_ptr_->GetGlobalPipelineState(base::Bind(
+      [](bool* get_global_pipeline_callback_done,
+         chromeos::media_perception::mojom::GlobalPipelineStatePtr state) {
+        EXPECT_EQ(*state->states[0]->configuration_name, "fake_configuration");
         *get_global_pipeline_callback_done = true;
-      }, &get_global_pipeline_callback_done));
+      },
+      &get_global_pipeline_callback_done));
   base::RunLoop().RunUntilIdle();
   ASSERT_TRUE(get_global_pipeline_callback_done);
 }

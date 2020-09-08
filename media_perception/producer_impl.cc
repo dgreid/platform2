@@ -22,9 +22,9 @@ video_capture::mojom::ProducerPtr ProducerImpl::CreateInterfacePtr() {
 void ProducerImpl::RegisterVirtualDevice(
     video_capture::mojom::VideoSourceProviderPtr* provider,
     media::mojom::VideoCaptureDeviceInfoPtr info) {
-  (*provider)->AddSharedMemoryVirtualDevice(std::move(info),
-                                           CreateInterfacePtr(), true,
-                                           mojo::MakeRequest(&virtual_device_));
+  (*provider)->AddSharedMemoryVirtualDevice(
+      std::move(info), CreateInterfacePtr(), true,
+      mojo::MakeRequest(&virtual_device_));
 }
 
 void ProducerImpl::OnNewBuffer(int32_t buffer_id,
@@ -52,9 +52,13 @@ void ProducerImpl::OnBufferRetired(int32_t buffer_id) {
 }
 
 void ProducerImpl::PushNextFrame(
-    std::shared_ptr<ProducerImpl> producer_impl, base::TimeDelta timestamp,
-    std::unique_ptr<const uint8_t[]> data, int data_size,
-    media::mojom::VideoCapturePixelFormat pixel_format, int width, int height) {
+    std::shared_ptr<ProducerImpl> producer_impl,
+    base::TimeDelta timestamp,
+    std::unique_ptr<const uint8_t[]> data,
+    int data_size,
+    media::mojom::VideoCapturePixelFormat pixel_format,
+    int width,
+    int height) {
   gfx::mojom::SizePtr size = gfx::mojom::Size::New();
   size->width = width;
   size->height = height;
@@ -66,9 +70,13 @@ void ProducerImpl::PushNextFrame(
 }
 
 void ProducerImpl::OnFrameBufferReceived(
-    std::shared_ptr<ProducerImpl> producer_impl, base::TimeDelta timestamp,
-    std::unique_ptr<const uint8_t[]> data, int data_size,
-    media::mojom::VideoCapturePixelFormat pixel_format, int width, int height,
+    std::shared_ptr<ProducerImpl> producer_impl,
+    base::TimeDelta timestamp,
+    std::unique_ptr<const uint8_t[]> data,
+    int data_size,
+    media::mojom::VideoCapturePixelFormat pixel_format,
+    int width,
+    int height,
     int32_t buffer_id) {
   if (buffer_id == video_capture::mojom::kInvalidBufferId) {
     LOG(ERROR) << "Got invalid buffer id.";

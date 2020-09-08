@@ -15,12 +15,12 @@
 
 namespace mri {
 
-class MediaPerceptionControllerImpl :
-  public chromeos::media_perception::mojom::MediaPerceptionController {
+class MediaPerceptionControllerImpl
+    : public chromeos::media_perception::mojom::MediaPerceptionController {
  public:
   MediaPerceptionControllerImpl(
       chromeos::media_perception::mojom::MediaPerceptionControllerRequest
-      request,
+          request,
       std::shared_ptr<VideoCaptureServiceClient> video_capture_service_client,
       std::shared_ptr<ChromeAudioServiceClient> chrome_audio_service_client,
       std::shared_ptr<Rtanalytics> rtanalytics);

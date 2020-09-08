@@ -15,8 +15,8 @@
 
 namespace mri {
 
-class MediaPerceptionServiceImpl :
-  public chromeos::media_perception::mojom::MediaPerceptionService {
+class MediaPerceptionServiceImpl
+    : public chromeos::media_perception::mojom::MediaPerceptionService {
  public:
   // Creates an instance bound to |pipe|. The specified
   // |connection_error_handler| will be invoked if the binding encounters a
@@ -34,10 +34,9 @@ class MediaPerceptionServiceImpl :
   // chromeos::media_perception::mojom::MediaPerceptionService:
   void GetController(
       chromeos::media_perception::mojom::MediaPerceptionControllerRequest
-      request,
+          request,
       chromeos::media_perception::mojom::MediaPerceptionControllerClientPtr
-      client)
-      override;
+          client) override;
 
  private:
   chromeos::media_perception::mojom::MediaPerceptionControllerClientPtr client_;

@@ -29,10 +29,10 @@ MediaPerceptionControllerImpl::MediaPerceptionControllerImpl(
     std::shared_ptr<VideoCaptureServiceClient> video_capture_service_client,
     std::shared_ptr<ChromeAudioServiceClient> chrome_audio_service_client,
     std::shared_ptr<Rtanalytics> rtanalytics)
-  : binding_(this, std::move(request)),
-    video_capture_service_client_(video_capture_service_client),
-    chrome_audio_service_client_(chrome_audio_service_client),
-    rtanalytics_(rtanalytics) {}
+    : binding_(this, std::move(request)),
+      video_capture_service_client_(video_capture_service_client),
+      chrome_audio_service_client_(chrome_audio_service_client),
+      rtanalytics_(rtanalytics) {}
 
 void MediaPerceptionControllerImpl::set_connection_error_handler(
     base::Closure connection_error_handler) {
@@ -46,13 +46,10 @@ void MediaPerceptionControllerImpl::ActivateMediaPerception(
   // Use a connection error handler to strongly bind |media_perception_impl|
   // to |request|.
   MediaPerceptionImpl* const media_perception_impl =
-      new MediaPerceptionImpl(std::move(request),
-                              video_capture_service_client_,
-                              chrome_audio_service_client_,
-                              rtanalytics_);
-  media_perception_impl->set_connection_error_handler(
-      base::Bind(&OnConnectionClosedOrError,
-                 base::Unretained(media_perception_impl)));
+      new MediaPerceptionImpl(std::move(request), video_capture_service_client_,
+                              chrome_audio_service_client_, rtanalytics_);
+  media_perception_impl->set_connection_error_handler(base::Bind(
+      &OnConnectionClosedOrError, base::Unretained(media_perception_impl)));
 }
 
 }  // namespace mri

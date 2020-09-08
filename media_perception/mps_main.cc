@@ -15,11 +15,11 @@
 #include "media_perception/video_capture_service_client_impl.h"
 
 // Rtanalytics implementation to be fulfilled by the library side.
-extern "C" void init_mps(
-    int argc, char** argv,
-    std::shared_ptr<mri::ChromeAudioServiceClient> cras,
-    std::shared_ptr<mri::VideoCaptureServiceClient> vidcap,
-    std::shared_ptr<mri::Rtanalytics>* rtanalytics);
+extern "C" void init_mps(int argc,
+                         char** argv,
+                         std::shared_ptr<mri::ChromeAudioServiceClient> cras,
+                         std::shared_ptr<mri::VideoCaptureServiceClient> vidcap,
+                         std::shared_ptr<mri::Rtanalytics>* rtanalytics);
 
 int main(int argc, char** argv) {
   // Needs to exist for creating and starting ipc_thread.
@@ -34,9 +34,8 @@ int main(int argc, char** argv) {
   vidcap_client->SetMojoConnector(&mojo_connector);
 
   auto dbus = std::unique_ptr<mri::DbusService>(cros_dbus_service);
-  auto cras =
-      std::shared_ptr<mri::ChromeAudioServiceClient>(
-          new mri::ChromeAudioServiceClientImpl());
+  auto cras = std::shared_ptr<mri::ChromeAudioServiceClient>(
+      new mri::ChromeAudioServiceClientImpl());
   auto vidcap = std::shared_ptr<mri::VideoCaptureServiceClient>(vidcap_client);
   mojo_connector.SetVideoCaptureServiceClient(vidcap);
   mojo_connector.SetChromeAudioServiceClient(cras);

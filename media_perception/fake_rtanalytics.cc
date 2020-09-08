@@ -27,8 +27,7 @@ SerializedPerceptionInterfaces FakeRtanalytics::SetupConfiguration(
   status.set_failure_reason(configuration_name);
   *success_status = Serialized<SuccessStatus>(status).GetBytes();
   PerceptionInterfaces perception_interfaces;
-  return Serialized<PerceptionInterfaces>(
-      perception_interfaces).GetBytes();
+  return Serialized<PerceptionInterfaces>(perception_interfaces).GetBytes();
 }
 
 SerializedSuccessStatus FakeRtanalytics::SetTemplateArguments(
@@ -41,12 +40,13 @@ SerializedSuccessStatus FakeRtanalytics::SetTemplateArguments(
 }
 
 std::vector<SerializedDeviceTemplate> FakeRtanalytics::GetTemplateDevices(
-      const std::string& configuration_name) const {
+    const std::string& configuration_name) const {
   return serialized_device_templates_;
 }
 
 SerializedSuccessStatus FakeRtanalytics::SetVideoDeviceForTemplateName(
-    const std::string& configuration_name, const std::string& template_name,
+    const std::string& configuration_name,
+    const std::string& template_name,
     const SerializedVideoDevice& video_device) {
   SuccessStatus status;
   status.set_success(true);
@@ -55,7 +55,8 @@ SerializedSuccessStatus FakeRtanalytics::SetVideoDeviceForTemplateName(
 }
 
 SerializedSuccessStatus FakeRtanalytics::SetAudioDeviceForTemplateName(
-    const std::string& configuration_name, const std::string& template_name,
+    const std::string& configuration_name,
+    const std::string& template_name,
     const SerializedAudioDevice& audio_device) {
   SuccessStatus status;
   status.set_success(true);
@@ -64,7 +65,8 @@ SerializedSuccessStatus FakeRtanalytics::SetAudioDeviceForTemplateName(
 }
 
 SerializedSuccessStatus FakeRtanalytics::SetVirtualVideoDeviceForTemplateName(
-    const std::string& configuration_name, const std::string& template_name,
+    const std::string& configuration_name,
+    const std::string& template_name,
     const SerializedVirtualVideoDevice& virtual_device) {
   SuccessStatus status;
   status.set_success(true);
@@ -80,10 +82,10 @@ SerializedPipelineState FakeRtanalytics::GetPipelineState(
 }
 
 SerializedPipelineState FakeRtanalytics::SetPipelineState(
-      const std::string& configuration_name,
-      const SerializedPipelineState& desired_state) {
-  PipelineState pipeline_state = Serialized<PipelineState>(
-      desired_state).Deserialize();
+    const std::string& configuration_name,
+    const SerializedPipelineState& desired_state) {
+  PipelineState pipeline_state =
+      Serialized<PipelineState>(desired_state).Deserialize();
   return Serialized<PipelineState>(pipeline_state).GetBytes();
 }
 
@@ -94,7 +96,8 @@ SerializedGlobalPipelineState FakeRtanalytics::GetGlobalPipelineState() const {
 }
 
 SerializedSuccessStatus FakeRtanalytics::SetPipelineOutputHandler(
-    const std::string& configuration_name, const std::string& output_stream,
+    const std::string& configuration_name,
+    const std::string& output_stream,
     PipelineOutputHandler output_handler) {
   SuccessStatus status;
   status.set_success(true);

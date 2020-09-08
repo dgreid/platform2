@@ -325,8 +325,7 @@ SuccessStatus ToProto(
   return status;
 }
 
-PixelFormat ToProto(
-    chromeos::media_perception::mojom::PixelFormat format) {
+PixelFormat ToProto(chromeos::media_perception::mojom::PixelFormat format) {
   switch (format) {
     case chromeos::media_perception::mojom::PixelFormat::I420:
       return PixelFormat::I420;
@@ -347,8 +346,7 @@ VideoStreamParams ToProto(
   params.set_height_in_pixels(params_ptr->height_in_pixels);
   params.set_frame_rate_in_frames_per_second(
       params_ptr->frame_rate_in_frames_per_second);
-  params.set_pixel_format(
-      ToProto(params_ptr->pixel_format));
+  params.set_pixel_format(ToProto(params_ptr->pixel_format));
   return params;
 }
 
@@ -374,7 +372,7 @@ VideoDevice ToProto(
 
 VirtualVideoDevice ToProto(
     const chromeos::media_perception::mojom::VirtualVideoDevicePtr&
-    device_ptr) {
+        device_ptr) {
   VirtualVideoDevice device;
   if (device_ptr.is_null())
     return device;
@@ -384,23 +382,21 @@ VirtualVideoDevice ToProto(
   return device;
 }
 
-SampleFormat ToProto(
-    chromeos::media_perception::mojom::SampleFormat format) {
+SampleFormat ToProto(chromeos::media_perception::mojom::SampleFormat format) {
   switch (format) {
     case chromeos::media_perception::mojom::SampleFormat::SND_PCM_FORMAT_S32_LE:
       return SampleFormat::SND_PCM_FORMAT_S32_LE;
     case chromeos::media_perception::mojom::SampleFormat::SND_PCM_FORMAT_S16_LE:
       return SampleFormat::SND_PCM_FORMAT_S16_LE;
-    case chromeos::media_perception::mojom::SampleFormat
-        ::SND_PCM_UNKNOWN_FORMAT:
+    case chromeos::media_perception::mojom::SampleFormat ::
+        SND_PCM_UNKNOWN_FORMAT:
       return SampleFormat::SND_PCM_UNKNOWN_FORMAT;
   }
   return SampleFormat::SND_PCM_UNKNOWN_FORMAT;
 }
 
 AudioStreamParams ToProto(
-    const chromeos::media_perception::mojom::AudioStreamParamsPtr&
-    params_ptr) {
+    const chromeos::media_perception::mojom::AudioStreamParamsPtr& params_ptr) {
   AudioStreamParams params;
   if (params_ptr.is_null())
     return params;
@@ -431,8 +427,7 @@ AudioDevice ToProto(
   return device;
 }
 
-DeviceType ToProto(
-    const chromeos::media_perception::mojom::DeviceType type) {
+DeviceType ToProto(const chromeos::media_perception::mojom::DeviceType type) {
   switch (type) {
     case chromeos::media_perception::mojom::DeviceType::VIDEO:
       return DeviceType::VIDEO;
@@ -552,14 +547,14 @@ FramePerceptionType ToProto(
   switch (type) {
     case chromeos::media_perception::mojom::FramePerceptionType::FACE_DETECTION:
       return FramePerceptionType::FACE_DETECTION;
-    case chromeos::media_perception::mojom::FramePerceptionType
-        ::PERSON_DETECTION:
+    case chromeos::media_perception::mojom::FramePerceptionType ::
+        PERSON_DETECTION:
       return FramePerceptionType::PERSON_DETECTION;
-    case chromeos::media_perception::mojom::FramePerceptionType
-        ::MOTION_DETECTION:
+    case chromeos::media_perception::mojom::FramePerceptionType ::
+        MOTION_DETECTION:
       return FramePerceptionType::MOTION_DETECTION;
-    case chromeos::media_perception::mojom::FramePerceptionType
-        ::FRAME_PERCEPTION_TYPE_UNKNOWN:
+    case chromeos::media_perception::mojom::FramePerceptionType ::
+        FRAME_PERCEPTION_TYPE_UNKNOWN:
       return FramePerceptionType::FRAME_PERCEPTION_TYPE_UNKNOWN;
   }
   return FramePerceptionType::FRAME_PERCEPTION_TYPE_UNKNOWN;

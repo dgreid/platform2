@@ -18,8 +18,7 @@ class FakeChromeAudioServiceClient : public ChromeAudioServiceClient {
  public:
   FakeChromeAudioServiceClient() = default;
 
-  void SetDevicesForGetInputDevices(
-      std::vector<SerializedAudioDevice> devices);
+  void SetDevicesForGetInputDevices(std::vector<SerializedAudioDevice> devices);
 
   // ChromeAudioServiceClient:
   bool Connect() override;
@@ -28,12 +27,11 @@ class FakeChromeAudioServiceClient : public ChromeAudioServiceClient {
   bool IsAudioCaptureStartedForDevice(
       const std::string& device_id,
       SerializedAudioStreamParams* capture_format) override;
-  int AddFrameHandler(
-      const std::string& device_id,
-      const SerializedAudioStreamParams& capture_format,
-      AudioFrameHandler handler) override;
-  bool RemoveFrameHandler(
-      const std::string& device_id, int frame_handler_id) override;
+  int AddFrameHandler(const std::string& device_id,
+                      const SerializedAudioStreamParams& capture_format,
+                      AudioFrameHandler handler) override;
+  bool RemoveFrameHandler(const std::string& device_id,
+                          int frame_handler_id) override;
 
  private:
   std::vector<SerializedAudioDevice> devices_;

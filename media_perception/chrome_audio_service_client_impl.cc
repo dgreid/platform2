@@ -98,16 +98,15 @@ ChromeAudioServiceClientImpl::GetInputDevices() {
     // Add the stable device id to the audio receivers map if it does not exist.
     if (device_id_to_audio_receiver_map_.find(audio_device.id()) ==
         device_id_to_audio_receiver_map_.end()) {
-      device_id_to_audio_receiver_map_.emplace(audio_device.id(),
-          AudioReceiver(audio_device.id()));
+      device_id_to_audio_receiver_map_.emplace(
+          audio_device.id(), AudioReceiver(audio_device.id()));
     }
   }
   return serialized_audio_devices;
 }
 
 bool ChromeAudioServiceClientImpl::IsAudioCaptureStartedForDevice(
-    const std::string& device_id,
-    SerializedAudioStreamParams* capture_format) {
+    const std::string& device_id, SerializedAudioStreamParams* capture_format) {
   base::AutoLock auto_lock(client_lock_);
   std::map<std::string, AudioReceiver>::iterator it =
       device_id_to_audio_receiver_map_.find(device_id);
@@ -120,21 +119,22 @@ bool ChromeAudioServiceClientImpl::IsAudioCaptureStartedForDevice(
     return false;
   }
 
-  *capture_format = Serialized<AudioStreamParams>(
-      it->second.GetAudioStreamParams()).GetBytes();
+  *capture_format =
+      Serialized<AudioStreamParams>(it->second.GetAudioStreamParams())
+          .GetBytes();
   return true;
 }
 
 int ChromeAudioServiceClientImpl::AddFrameHandler(
-      const std::string& device_id,
-      const SerializedAudioStreamParams& capture_format,
-      AudioFrameHandler handler) {
-  AudioStreamParams params = Serialized<AudioStreamParams>(
-      capture_format).Deserialize();
+    const std::string& device_id,
+    const SerializedAudioStreamParams& capture_format,
+    AudioFrameHandler handler) {
+  AudioStreamParams params =
+      Serialized<AudioStreamParams>(capture_format).Deserialize();
 
   base::AutoLock auto_lock(client_lock_);
-  std::map<std::string, AudioReceiver>::iterator
-      receiver_it = device_id_to_audio_receiver_map_.find(device_id);
+  std::map<std::string, AudioReceiver>::iterator receiver_it =
+      device_id_to_audio_receiver_map_.find(device_id);
   if (receiver_it == device_id_to_audio_receiver_map_.end()) {
     LOG(WARNING) << "Device id not found in map.";
     return 0;
@@ -144,9 +144,9 @@ int ChromeAudioServiceClientImpl::AddFrameHandler(
   // compare the requested params with the params saved for the device.
   if (receiver_it->second.GetFrameHandlerCount() > 0 &&
       !receiver_it->second.CaptureFormatMatches(params)) {
-      LOG(WARNING)
-          << "Capture formats do not match for device already streaming.";
-      return 0;
+    LOG(WARNING)
+        << "Capture formats do not match for device already streaming.";
+    return 0;
   } else if (receiver_it->second.GetFrameHandlerCount() == 0) {
     // Start streaming audio for this device since it not started.
     struct cras_iodev_info devs[MAX_IODEVS];

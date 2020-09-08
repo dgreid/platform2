@@ -32,12 +32,14 @@ void FakeVideoCaptureServiceClient::OpenDevice(
     const OpenDeviceCallback& callback) {}
 
 bool FakeVideoCaptureServiceClient::IsVideoCaptureStartedForDevice(
-    const std::string& device_id,
-    SerializedVideoStreamParams* capture_format) { return false; }
+    const std::string& device_id, SerializedVideoStreamParams* capture_format) {
+  return false;
+}
 
-int FakeVideoCaptureServiceClient::AddFrameHandler(
-    const std::string& device_id,
-    FrameHandler frame_handler) { return 0; }
+int FakeVideoCaptureServiceClient::AddFrameHandler(const std::string& device_id,
+                                                   FrameHandler frame_handler) {
+  return 0;
+}
 
 void FakeVideoCaptureServiceClient::CreateVirtualDevice(
     const SerializedVideoDevice& video_device,
@@ -49,7 +51,8 @@ void FakeVideoCaptureServiceClient::PushFrameToVirtualDevice(
     std::unique_ptr<const uint8_t[]> data,
     int data_size,
     RawPixelFormat pixel_format,
-    int frame_width, int frame_height) {}
+    int frame_width,
+    int frame_height) {}
 
 void FakeVideoCaptureServiceClient::CloseVirtualDevice(
     const std::string& device_id) {}

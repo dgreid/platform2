@@ -44,8 +44,8 @@ void VideoCaptureServiceClientImpl::OpenDevice(
     bool force_reopen_with_settings,
     const SerializedVideoStreamParams& capture_format,
     const OpenDeviceCallback& callback) {
-  VideoStreamParams format = Serialized<VideoStreamParams>(
-      capture_format).Deserialize();
+  VideoStreamParams format =
+      Serialized<VideoStreamParams>(capture_format).Deserialize();
 
   device_id_to_video_frame_handler_map_lock_.lock();
   std::map<std::string, std::shared_ptr<VideoFrameHandlerImpl>>::iterator it =
@@ -54,8 +54,8 @@ void VideoCaptureServiceClientImpl::OpenDevice(
       it->second->HasValidCaptureFormat()) {
     LOG(INFO) << "Device with " << device_id << " already open.";
     SerializedVideoStreamParams current_format =
-        Serialized<VideoStreamParams>(
-            it->second->GetCaptureFormat()).GetBytes();
+        Serialized<VideoStreamParams>(it->second->GetCaptureFormat())
+            .GetBytes();
 
     // Device already open with the same settings.
     if (it->second->CaptureFormatsMatch(format)) {
@@ -68,10 +68,9 @@ void VideoCaptureServiceClientImpl::OpenDevice(
     }
     // Device already open but with different settings.
     device_id_to_video_frame_handler_map_lock_.unlock();
-    callback(
-        device_id,
-        CreatePushSubscriptionResultCode::CREATED_WITH_DIFFERENT_SETTINGS,
-        current_format);
+    callback(device_id,
+             CreatePushSubscriptionResultCode::CREATED_WITH_DIFFERENT_SETTINGS,
+             current_format);
     return;
   }
 
@@ -86,20 +85,21 @@ void VideoCaptureServiceClientImpl::OpenDevice(
   device_id_to_video_frame_handler_map_lock_.unlock();
   mojo_connector_->OpenDevice(
       device_id, force_reopen_with_settings, video_frame_handler_impl, format,
-      std::bind(&VideoCaptureServiceClientImpl::OnOpenDeviceCallback,
-                this, callback, std::placeholders::_1,
-                std::placeholders::_2, std::placeholders::_3));
+      std::bind(&VideoCaptureServiceClientImpl::OnOpenDeviceCallback, this,
+                callback, std::placeholders::_1, std::placeholders::_2,
+                std::placeholders::_3));
 }
 
 void VideoCaptureServiceClientImpl::OnOpenDeviceCallback(
-      const OpenDeviceCallback& callback,
-      std::string device_id,
-      CreatePushSubscriptionResultCode code,
-      SerializedVideoStreamParams params) {
-  VideoStreamParams format = Serialized<VideoStreamParams>(
-      params).Deserialize();
+    const OpenDeviceCallback& callback,
+    std::string device_id,
+    CreatePushSubscriptionResultCode code,
+    SerializedVideoStreamParams params) {
+  VideoStreamParams format =
+      Serialized<VideoStreamParams>(params).Deserialize();
   {
-    std::lock_guard<std::mutex> lock(device_id_to_video_frame_handler_map_lock_);
+    std::lock_guard<std::mutex> lock(
+        device_id_to_video_frame_handler_map_lock_);
     std::map<std::string, std::shared_ptr<VideoFrameHandlerImpl>>::iterator it =
         device_id_to_video_frame_handler_map_.find(device_id);
     if (it != device_id_to_video_frame_handler_map_.end() &&
@@ -111,31 +111,30 @@ void VideoCaptureServiceClientImpl::OnOpenDeviceCallback(
 }
 
 bool VideoCaptureServiceClientImpl::IsVideoCaptureStartedForDevice(
-    const std::string& device_id,
-    SerializedVideoStreamParams* capture_format) {
+    const std::string& device_id, SerializedVideoStreamParams* capture_format) {
   std::lock_guard<std::mutex> lock(device_id_to_video_frame_handler_map_lock_);
   std::map<std::string, std::shared_ptr<VideoFrameHandlerImpl>>::iterator it =
       device_id_to_video_frame_handler_map_.find(device_id);
   bool capture_started = it != device_id_to_video_frame_handler_map_.end() &&
-      it->second->HasValidCaptureFormat();
+                         it->second->HasValidCaptureFormat();
   if (capture_started) {
-    *capture_format = Serialized<VideoStreamParams>(
-        it->second->GetCaptureFormat()).GetBytes();
+    *capture_format =
+        Serialized<VideoStreamParams>(it->second->GetCaptureFormat())
+            .GetBytes();
   }
   return capture_started;
 }
 
-int VideoCaptureServiceClientImpl::AddFrameHandler(
-    const std::string& device_id,
-    FrameHandler handler) {
+int VideoCaptureServiceClientImpl::AddFrameHandler(const std::string& device_id,
+                                                   FrameHandler handler) {
   std::lock_guard<std::mutex> lock(device_id_to_video_frame_handler_map_lock_);
 
   std::map<std::string, std::shared_ptr<VideoFrameHandlerImpl>>::iterator it =
       device_id_to_video_frame_handler_map_.find(device_id);
   if (it != device_id_to_video_frame_handler_map_.end()) {
     if (it->second->GetFrameHandlerCount() == 0) {
-      // If no frame handlers exist for video_frame_handler, need to activate video
-      // device.
+      // If no frame handlers exist for video_frame_handler, need to activate
+      // video device.
       if (!mojo_connector_->ActivateDevice(device_id)) {
         // Failed to activate the device.
         return 0;
@@ -153,7 +152,8 @@ bool VideoCaptureServiceClientImpl::RemoveFrameHandler(
       device_id_to_video_frame_handler_map_.find(device_id);
 
   if (it == device_id_to_video_frame_handler_map_.end()) {
-    // VideoFrameHandler does not exist. Ensure that the device is removed as well.
+    // VideoFrameHandler does not exist. Ensure that the device is removed as
+    // well.
     mojo_connector_->StopVideoCapture(device_id);
     return false;
   }
@@ -178,14 +178,17 @@ void VideoCaptureServiceClientImpl::CreateVirtualDevice(
   auto producer_impl = std::make_shared<ProducerImpl>();
   mojo_connector_->CreateVirtualDevice(device, producer_impl, callback);
 
-  device_id_to_producer_map_.insert(
-      std::make_pair(device.id(), producer_impl));
+  device_id_to_producer_map_.insert(std::make_pair(device.id(), producer_impl));
 }
 
 void VideoCaptureServiceClientImpl::PushFrameToVirtualDevice(
-    const std::string& device_id, uint64_t timestamp_in_microseconds,
-    std::unique_ptr<const uint8_t[]> data, int data_size,
-    RawPixelFormat pixel_format, int frame_width, int frame_height) {
+    const std::string& device_id,
+    uint64_t timestamp_in_microseconds,
+    std::unique_ptr<const uint8_t[]> data,
+    int data_size,
+    RawPixelFormat pixel_format,
+    int frame_width,
+    int frame_height) {
   std::lock_guard<std::mutex> lock(device_id_to_producer_map_lock_);
   std::map<std::string, std::shared_ptr<ProducerImpl>>::iterator it =
       device_id_to_producer_map_.find(device_id);

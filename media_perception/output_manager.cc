@@ -30,7 +30,7 @@ OutputManager::OutputManager(
     std::shared_ptr<Rtanalytics> rtanalytics,
     const PerceptionInterfaces& interfaces,
     chromeos::media_perception::mojom::PerceptionInterfacesPtr*
-    interfaces_ptr) {
+        interfaces_ptr) {
   // Save the configuration name in case we need to reference it later.
   configuration_name_ = configuration_name;
   rtanalytics_ = rtanalytics;
@@ -50,11 +50,11 @@ OutputManager::OutputManager(
             PipelineOutputType::OUTPUT_FRAME_PERCEPTION) {
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
-              configuration_name, output.stream_name(),
-              std::bind(&OutputManager::HandleFramePerception,
-                        this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  configuration_name, output.stream_name(),
+                  std::bind(&OutputManager::HandleFramePerception, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -70,9 +70,8 @@ OutputManager::OutputManager(
         PerceptionInterfaceType::INTERFACE_HOTWORD_DETECTION) {
       (*interfaces_ptr)->hotword_detection_handler_request =
           mojo::MakeRequest(&hotword_detection_handler_ptr_);
-      hotword_detection_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-                     "INTERFACE_HOTWORD_DETECTION"));
+      hotword_detection_handler_ptr_.set_connection_error_handler(base::Bind(
+          &OnConnectionClosedOrError, "INTERFACE_HOTWORD_DETECTION"));
 
       // Hotword detection outputs setup.
       for (const PipelineOutput& output : interface.output()) {
@@ -81,10 +80,10 @@ OutputManager::OutputManager(
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleHotwordDetection,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleHotwordDetection, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -100,9 +99,8 @@ OutputManager::OutputManager(
         PerceptionInterfaceType::INTERFACE_PRESENCE_PERCEPTION) {
       (*interfaces_ptr)->presence_perception_handler_request =
           mojo::MakeRequest(&presence_perception_handler_ptr_);
-      presence_perception_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-          "INTERFACE_PRESENCE_PERCEPTION"));
+      presence_perception_handler_ptr_.set_connection_error_handler(base::Bind(
+          &OnConnectionClosedOrError, "INTERFACE_PRESENCE_PERCEPTION"));
 
       // Presence perception outputs setup.
       for (const PipelineOutput& output : interface.output()) {
@@ -111,10 +109,10 @@ OutputManager::OutputManager(
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandlePresencePerception,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandlePresencePerception, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -130,9 +128,8 @@ OutputManager::OutputManager(
         PerceptionInterfaceType::INTERFACE_OCCUPANCY_TRIGGER) {
       (*interfaces_ptr)->occupancy_trigger_handler_request =
           mojo::MakeRequest(&occupancy_trigger_handler_ptr_);
-      occupancy_trigger_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-          "INTERFACE_OCCUPANCY_TRIGGER"));
+      occupancy_trigger_handler_ptr_.set_connection_error_handler(base::Bind(
+          &OnConnectionClosedOrError, "INTERFACE_OCCUPANCY_TRIGGER"));
 
       // Occpancy trigger outputs setup.
       for (const PipelineOutput& output : interface.output()) {
@@ -141,10 +138,10 @@ OutputManager::OutputManager(
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleOccupancyTrigger,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleOccupancyTrigger, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -161,20 +158,18 @@ OutputManager::OutputManager(
       (*interfaces_ptr)->appearances_handler_request =
           mojo::MakeRequest(&appearances_handler_ptr_);
       appearances_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-          "APPEARANCES"));
+          base::Bind(&OnConnectionClosedOrError, "APPEARANCES"));
 
       // Appearances outputs setup.
       for (const PipelineOutput& output : interface.output()) {
-        if (output.output_type() ==
-            PipelineOutputType::OUTPUT_APPEARANCES) {
+        if (output.output_type() == PipelineOutputType::OUTPUT_APPEARANCES) {
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleAppearances,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleAppearances, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -191,20 +186,18 @@ OutputManager::OutputManager(
       (*interfaces_ptr)->one_touch_autozoom_handler_request =
           mojo::MakeRequest(&one_touch_autozoom_handler_ptr_);
       one_touch_autozoom_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-          "ONE_TOUCH_AUTOZOOM"));
+          base::Bind(&OnConnectionClosedOrError, "ONE_TOUCH_AUTOZOOM"));
 
       // One touch Autozoom outputs setup.
       for (const PipelineOutput& output : interface.output()) {
-        if (output.output_type() ==
-            PipelineOutputType::OUTPUT_SMART_FRAMING) {
+        if (output.output_type() == PipelineOutputType::OUTPUT_SMART_FRAMING) {
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleSmartFraming,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleSmartFraming, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -221,20 +214,18 @@ OutputManager::OutputManager(
       (*interfaces_ptr)->software_autozoom_handler_request =
           mojo::MakeRequest(&software_autozoom_handler_ptr_);
       software_autozoom_handler_ptr_.set_connection_error_handler(
-          base::Bind(&OnConnectionClosedOrError,
-          "SOFTWARE_AUTOZOOM"));
+          base::Bind(&OnConnectionClosedOrError, "SOFTWARE_AUTOZOOM"));
 
       // Software Autozoom outputs setup.
       for (const PipelineOutput& output : interface.output()) {
-        if (output.output_type() ==
-            PipelineOutputType::OUTPUT_SMART_FRAMING) {
+        if (output.output_type() == PipelineOutputType::OUTPUT_SMART_FRAMING) {
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleSmartFraming,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleSmartFraming, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -248,7 +239,6 @@ OutputManager::OutputManager(
     // Falcon Autozoom outputs setup.
     if (interface.interface_type() ==
         PerceptionInterfaceType::INTERFACE_FALCON_AUTOZOOM) {
-
       // Falcon Autozoom outputs setup.
       for (const PipelineOutput& output : interface.output()) {
         if (output.output_type() ==
@@ -256,10 +246,10 @@ OutputManager::OutputManager(
           SerializedSuccessStatus serialized_status =
               rtanalytics->SetPipelineOutputHandler(
                   configuration_name, output.stream_name(),
-                  std::bind(&OutputManager::HandleIndexedTransitions,
-                            this, std::placeholders::_1));
-          SuccessStatus status = Serialized<SuccessStatus>(
-              serialized_status).Deserialize();
+                  std::bind(&OutputManager::HandleIndexedTransitions, this,
+                            std::placeholders::_1));
+          SuccessStatus status =
+              Serialized<SuccessStatus>(serialized_status).Deserialize();
           if (!status.success()) {
             LOG(ERROR) << "Failed to set output handler for "
                        << configuration_name << " with output "
@@ -278,7 +268,6 @@ OutputManager::OutputManager(
       }
       continue;
     }
-
   }
 }
 
@@ -336,8 +325,7 @@ void OutputManager::HandlePresencePerception(
       chromeos::media_perception::mojom::ToMojom(presence_perception));
 }
 
-void OutputManager::HandleOccupancyTrigger(
-    const std::vector<uint8_t>& bytes) {
+void OutputManager::HandleOccupancyTrigger(const std::vector<uint8_t>& bytes) {
   if (!occupancy_trigger_handler_ptr_.is_bound()) {
     LOG(WARNING)
         << "Got occupancy trigger output but handler ptr is not bound.";
@@ -355,11 +343,9 @@ void OutputManager::HandleOccupancyTrigger(
       chromeos::media_perception::mojom::ToMojom(occupancy_trigger));
 }
 
-void OutputManager::HandleAppearances(
-    const std::vector<uint8_t>& bytes) {
+void OutputManager::HandleAppearances(const std::vector<uint8_t>& bytes) {
   if (!appearances_handler_ptr_.is_bound()) {
-    LOG(WARNING)
-        << "Got appearances but handler ptr is not bound.";
+    LOG(WARNING) << "Got appearances but handler ptr is not bound.";
     return;
   }
 
@@ -371,17 +357,15 @@ void OutputManager::HandleAppearances(
   appearances_handler_ptr_->OnAppearances(bytes);
 }
 
-void OutputManager::HandleSmartFraming(
-    const std::vector<uint8_t>& bytes) {
+void OutputManager::HandleSmartFraming(const std::vector<uint8_t>& bytes) {
   if (one_touch_autozoom_handler_ptr_.is_bound() &&
       one_touch_autozoom_handler_ptr_.get() != nullptr) {
-   one_touch_autozoom_handler_ptr_->OnSmartFraming(bytes);
+    one_touch_autozoom_handler_ptr_->OnSmartFraming(bytes);
   } else if (software_autozoom_handler_ptr_.is_bound() &&
-      software_autozoom_handler_ptr_.get() != nullptr) {
-   software_autozoom_handler_ptr_->OnSmartFraming(bytes);
+             software_autozoom_handler_ptr_.get() != nullptr) {
+    software_autozoom_handler_ptr_->OnSmartFraming(bytes);
   } else {
-    LOG(WARNING)
-        << "Got smart framing but handler ptr is not bound.";
+    LOG(WARNING) << "Got smart framing but handler ptr is not bound.";
   }
 }
 
@@ -398,15 +382,15 @@ void OutputManager::HandleIndexedTransitions(
   // Send indexed transitions bytes over D-bus to the IP peripheral service.
   if (bytes.size() == 0) {
     dbus::MethodCall method_call("org.chromium.IpPeripheralService.FalconGrpc",
-                                   "ResetPTZTransition");
+                                 "ResetPTZTransition");
     dbus::MessageWriter writer(&method_call);
     writer.AppendString(falcon_ip);
-    dbus_proxy_->CallMethod(
-        &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
-        base::BindOnce([](dbus::Response* response) { }));
+    dbus_proxy_->CallMethod(&method_call,
+                            dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+                            base::BindOnce([](dbus::Response* response) {}));
   } else {
     dbus::MethodCall method_call("org.chromium.IpPeripheralService.FalconGrpc",
-                                   "DoPTZTransition");
+                                 "DoPTZTransition");
     dbus::MessageWriter writer(&method_call);
     writer.AppendString(falcon_ip);
     writer.AppendArrayOfBytes(bytes.data(), bytes.size());
@@ -417,7 +401,8 @@ void OutputManager::HandleIndexedTransitions(
   }
 }
 
-void OutputManager::HandleFalconPtzTransitionResponse(dbus::Response* response) {
+void OutputManager::HandleFalconPtzTransitionResponse(
+    dbus::Response* response) {
   dbus::MessageReader reader(response);
   // Return the response to rtanalytics.
   const uint8_t* bytes = nullptr;
@@ -425,8 +410,8 @@ void OutputManager::HandleFalconPtzTransitionResponse(dbus::Response* response) 
   reader.PopArrayOfBytes(&bytes, &size);
   std::vector<uint8_t> serialized_response;
   serialized_response.assign(bytes, bytes + size);
-  rtanalytics_->RespondToFalconPtzTransition(
-      configuration_name_, serialized_response);
+  rtanalytics_->RespondToFalconPtzTransition(configuration_name_,
+                                             serialized_response);
 }
 
 }  // namespace mri
