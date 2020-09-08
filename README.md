@@ -126,7 +126,6 @@ copies.
 | [thd](./thd/) | Thermal daemon to help keep systems running cool |
 | [timberslide](./timberslide/) | Tool for working with EC crashes for reporting purposes |
 | [touch_firmware_calibration](./touch_firmware_calibration/) ||
-| [touch_keyboard](./touch_keyboard/) | Utilities for a touch based virtual keyboard |
 | [tpm2-simulator](./tpm2-simulator/) | A software TPM 2.0 implementation (for testing/debugging) |
 | [tpm_manager](./tpm_manager/) | Daemon and client for managing TPM setup and operations |
 | [tpm_softclear_utils](./tpm_softclear_utils/) | Utilities that soft-clear TPM (for testing only) |
