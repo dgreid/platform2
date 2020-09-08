@@ -39,7 +39,7 @@ struct Environment {
   }
 };
 
-void FuzzAcceptRules(patchpanel::FakeFirewall& fake_firewall,
+void FuzzAcceptRules(patchpanel::FakeFirewall* fake_firewall,
                      const uint8_t* data,
                      size_t size) {
   FuzzedDataProvider data_provider(data, size);
@@ -50,14 +50,14 @@ void FuzzAcceptRules(patchpanel::FakeFirewall& fake_firewall,
     uint16_t port = data_provider.ConsumeIntegral<uint16_t>();
     std::string iface = data_provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     if (data_provider.ConsumeBool()) {
-      fake_firewall.AddAcceptRules(proto, port, iface);
+      fake_firewall->AddAcceptRules(proto, port, iface);
     } else {
-      fake_firewall.DeleteAcceptRules(proto, port, iface);
+      fake_firewall->DeleteAcceptRules(proto, port, iface);
     }
   }
 }
 
-void FuzzForwardRules(patchpanel::FakeFirewall& fake_firewall,
+void FuzzForwardRules(patchpanel::FakeFirewall* fake_firewall,
                       const uint8_t* data,
                       size_t size) {
   FuzzedDataProvider data_provider(data, size);
@@ -81,16 +81,16 @@ void FuzzForwardRules(patchpanel::FakeFirewall& fake_firewall,
     std::string dst_ip = dst_buffer;
     std::string iface = data_provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     if (data_provider.ConsumeBool()) {
-      fake_firewall.AddIpv4ForwardRule(proto, input_ip, forwarded_port, iface,
-                                       dst_ip, dst_port);
+      fake_firewall->AddIpv4ForwardRule(proto, input_ip, forwarded_port, iface,
+                                        dst_ip, dst_port);
     } else {
-      fake_firewall.DeleteIpv4ForwardRule(proto, input_ip, forwarded_port,
-                                          iface, dst_ip, dst_port);
+      fake_firewall->DeleteIpv4ForwardRule(proto, input_ip, forwarded_port,
+                                           iface, dst_ip, dst_port);
     }
   }
 }
 
-void FuzzLoopbackLockdownRules(patchpanel::FakeFirewall& fake_firewall,
+void FuzzLoopbackLockdownRules(patchpanel::FakeFirewall* fake_firewall,
                                const uint8_t* data,
                                size_t size) {
   FuzzedDataProvider data_provider(data, size);
@@ -100,9 +100,9 @@ void FuzzLoopbackLockdownRules(patchpanel::FakeFirewall& fake_firewall,
                                                 : ModifyPortRuleRequest::UDP;
     uint16_t port = data_provider.ConsumeIntegral<uint16_t>();
     if (data_provider.ConsumeBool()) {
-      fake_firewall.AddLoopbackLockdownRules(proto, port);
+      fake_firewall->AddLoopbackLockdownRules(proto, port);
     } else {
-      fake_firewall.DeleteLoopbackLockdownRules(proto, port);
+      fake_firewall->DeleteLoopbackLockdownRules(proto, port);
     }
   }
 }
@@ -112,9 +112,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   patchpanel::FakeFirewall fake_firewall;
 
-  FuzzAcceptRules(fake_firewall, data, size);
-  FuzzForwardRules(fake_firewall, data, size);
-  FuzzLoopbackLockdownRules(fake_firewall, data, size);
+  FuzzAcceptRules(&fake_firewall, data, size);
+  FuzzForwardRules(&fake_firewall, data, size);
+  FuzzLoopbackLockdownRules(&fake_firewall, data, size);
 
   return 0;
 }
