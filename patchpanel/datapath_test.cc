@@ -276,6 +276,7 @@ TEST(DatapathTest, AddTAP) {
       SIOCSIFHWADDR, SIOCGIFFLAGS,  SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
 }
 
 TEST(DatapathTest, AddTAPWithOwner) {
@@ -292,6 +293,7 @@ TEST(DatapathTest, AddTAPWithOwner) {
       SIOCSIFNETMASK, SIOCSIFHWADDR, SIOCGIFFLAGS, SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
 }
 
 TEST(DatapathTest, AddTAPNoAddrs) {
@@ -304,6 +306,7 @@ TEST(DatapathTest, AddTAPNoAddrs) {
                                        SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
 }
 
 TEST(DatapathTest, RemoveTAP) {
@@ -458,6 +461,80 @@ TEST(DatapathTest, AddRemoveSourceIPv4DropRule) {
   Datapath datapath(&runner, &firewall);
   datapath.AddSourceIPv4DropRule("eth+", "100.115.92.0/24");
   datapath.RemoveSourceIPv4DropRule("eth+", "100.115.92.0/24");
+}
+
+TEST(DatapathTest, StartRoutingNamespace) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  MacAddress mac = {1, 2, 3, 4, 5, 6};
+
+  EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), false));
+  EXPECT_CALL(runner, ip_netns_attach(StrEq("netns_foo"), kTestPID, true));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("add"),
+                         ElementsAre("arc_ns0", "type", "veth", "peer", "name",
+                                     "veth0", "netns", "netns_foo"),
+                         true));
+  EXPECT_CALL(runner, ip(StrEq("addr"), StrEq("add"),
+                         ElementsAre("100.115.92.130/30", "brd",
+                                     "100.115.92.131", "dev", "veth0"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("dev", "veth0", "up", "addr",
+                                     "01:02:03:04:05:06", "multicast", "off"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("arc_ns0", "up"), true));
+  EXPECT_CALL(runner, ip(StrEq("addr"), StrEq("add"),
+                         ElementsAre("100.115.92.129/30", "brd",
+                                     "100.115.92.131", "dev", "arc_ns0"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("set"),
+                         ElementsAre("dev", "arc_ns0", "up", "addr",
+                                     "01:02:03:04:05:06", "multicast", "off"),
+                         true))
+      .WillOnce(Return(0));
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-A", "FORWARD", "-o", "arc_ns0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-A", "PREROUTING", "-i", "arc_ns0", "-j",
+                                   "MARK", "--set-mark", "1/1", "-w"),
+                       true, nullptr));
+
+  Datapath datapath(&runner, &firewall, (ioctl_t)ioctl_rtentry_cap);
+  datapath.StartRoutingNamespace(
+      kTestPID, "netns_foo", "arc_ns0", "veth0", Ipv4Addr(100, 115, 92, 128),
+      30, Ipv4Addr(100, 115, 92, 129), Ipv4Addr(100, 115, 92, 130), mac);
+  ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
+}
+
+TEST(DatapathTest, StopRoutingNamespace) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+
+  EXPECT_CALL(runner, iptables(StrEq("filter"),
+                               ElementsAre("-D", "FORWARD", "-o", "arc_ns0",
+                                           "-j", "ACCEPT", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-D", "PREROUTING", "-i", "arc_ns0", "-j",
+                                   "MARK", "--set-mark", "1/1", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner, ip_netns_delete(StrEq("netns_foo"), true));
+  EXPECT_CALL(runner, ip(StrEq("link"), StrEq("delete"), ElementsAre("arc_ns0"),
+                         false));
+
+  Datapath datapath(&runner, &firewall);
+  datapath.StopRoutingNamespace("netns_foo", "arc_ns0",
+                                Ipv4Addr(100, 115, 92, 128), 30,
+                                Ipv4Addr(100, 115, 92, 129));
 }
 
 TEST(DatapathTest, StartRoutingDevice_Arc) {
@@ -838,11 +915,13 @@ TEST(DatapathTest, MaskInterfaceFlags) {
   MockProcessRunner runner;
   MockFirewall firewall;
   Datapath datapath(&runner, &firewall, ioctl_req_cap);
+
   bool result = datapath.MaskInterfaceFlags("foo0", IFF_DEBUG);
   EXPECT_TRUE(result);
   std::vector<ioctl_req_t> expected = {SIOCGIFFLAGS, SIOCSIFFLAGS};
   EXPECT_EQ(ioctl_reqs, expected);
   ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
 }
 
 TEST(DatapathTest, AddIPv6Forwarding) {
@@ -928,7 +1007,6 @@ TEST(DatapathTest, AddIPv4Route) {
   std::vector<ioctl_req_t> expected_reqs = {SIOCADDRT, SIOCDELRT, SIOCADDRT,
                                             SIOCDELRT};
   EXPECT_EQ(expected_reqs, ioctl_reqs);
-  ioctl_reqs.clear();
 
   std::string route1 =
       "{rt_dst: {family: AF_INET, port: 0, addr: 100.115.93.0}, rt_genmask: "
@@ -945,11 +1023,12 @@ TEST(DatapathTest, AddIPv4Route) {
     stream << route.second;
     captured_routes.emplace_back(stream.str());
   }
-  ioctl_rtentry_args.clear();
   EXPECT_EQ(route1, captured_routes[0]);
   EXPECT_EQ(route1, captured_routes[1]);
   EXPECT_EQ(route2, captured_routes[2]);
   EXPECT_EQ(route2, captured_routes[3]);
+  ioctl_reqs.clear();
+  ioctl_rtentry_args.clear();
 }
 
 TEST(DatapathTest, AddSNATMarkRules) {

@@ -162,9 +162,9 @@ class Manager final : public brillo::DBusDaemon, private TrafficForwarder {
                                        NeighborLinkMonitor::NeighborRole role,
                                        bool connected);
 
-  void ConnectNamespace(base::ScopedFD client_fd,
-                        const patchpanel::ConnectNamespaceRequest& request,
-                        patchpanel::ConnectNamespaceResponse& response);
+  std::unique_ptr<patchpanel::ConnectNamespaceResponse> ConnectNamespace(
+      base::ScopedFD client_fd,
+      const patchpanel::ConnectNamespaceRequest& request);
   void DisconnectNamespace(int client_fd);
   // Detects if any file descriptor committed in ConnectNamespace DBus API has
   // been invalidated by the caller. Calls DisconnectNamespace for any invalid

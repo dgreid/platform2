@@ -691,21 +691,21 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
   dbus::MessageWriter writer(dbus_response.get());
 
   patchpanel::ConnectNamespaceRequest request;
-  patchpanel::ConnectNamespaceResponse response;
 
-  bool success = true;
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     LOG(ERROR) << "Unable to parse ConnectNamespaceRequest";
     // Do not return yet to make sure we close the received fd and
     // validate other arguments.
-    success = false;
+    writer.AppendProtoAsArrayOfBytes(patchpanel::ConnectNamespaceResponse());
+    return dbus_response;
   }
 
   base::ScopedFD client_fd;
   reader.PopFileDescriptor(&client_fd);
   if (!client_fd.is_valid()) {
     LOG(ERROR) << "ConnectNamespaceRequest: invalid file descriptor";
-    success = false;
+    writer.AppendProtoAsArrayOfBytes(patchpanel::ConnectNamespaceResponse());
+    return dbus_response;
   }
 
   pid_t pid = request.pid();
@@ -713,7 +713,8 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
     ScopedNS ns(pid);
     if (!ns.IsValid()) {
       LOG(ERROR) << "ConnectNamespaceRequest: invalid namespace pid " << pid;
-      success = false;
+      writer.AppendProtoAsArrayOfBytes(patchpanel::ConnectNamespaceResponse());
+      return dbus_response;
     }
   }
 
@@ -721,13 +722,12 @@ std::unique_ptr<dbus::Response> Manager::OnConnectNamespace(
   if (!outbound_ifname.empty() && !shill_client_->has_device(outbound_ifname)) {
     LOG(ERROR) << "ConnectNamespaceRequest: invalid outbound ifname "
                << outbound_ifname;
-    success = false;
+    writer.AppendProtoAsArrayOfBytes(patchpanel::ConnectNamespaceResponse());
+    return dbus_response;
   }
 
-  if (success)
-    ConnectNamespace(std::move(client_fd), request, response);
-
-  writer.AppendProtoAsArrayOfBytes(response);
+  auto response = ConnectNamespace(std::move(client_fd), request);
+  writer.AppendProtoAsArrayOfBytes(*response);
   return dbus_response;
 }
 
@@ -828,127 +828,27 @@ void Manager::OnNeighborConnectedStateChanged(
   dbus_svc_path_->SendSignal(&signal);
 }
 
-void Manager::ConnectNamespace(
+std::unique_ptr<patchpanel::ConnectNamespaceResponse> Manager::ConnectNamespace(
     base::ScopedFD client_fd,
-    const patchpanel::ConnectNamespaceRequest& request,
-    patchpanel::ConnectNamespaceResponse& response) {
+    const patchpanel::ConnectNamespaceRequest& request) {
+  auto response = std::make_unique<patchpanel::ConnectNamespaceResponse>();
+
   std::unique_ptr<Subnet> subnet =
       addr_mgr_.AllocateIPv4Subnet(AddressManager::Guest::MINIJAIL_NETNS);
   if (!subnet) {
-    LOG(ERROR) << "ConnectNamespaceRequest: exhausted IPv4 subnet space";
-    return;
-  }
-
-  const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
-  const std::string netns_name = "connected_netns_" + ifname_id;
-  const std::string host_ifname = "arc_ns" + ifname_id;
-  const std::string client_ifname = "veth" + ifname_id;
-  const uint32_t host_ipv4_addr = subnet->AddressAtOffset(0);
-  const uint32_t client_ipv4_addr = subnet->AddressAtOffset(1);
-
-  // Veth interface configuration and client routing configuration:
-  //  - attach a name to the client namespace.
-  //  - create veth pair across the current namespace and the client namespace.
-  //  - configure IPv4 address on remote veth inside client namespace.
-  //  - configure IPv4 address on local veth inside host namespace.
-  //  - add a default IPv4 /0 route sending traffic to that remote veth.
-  pid_t pid = request.pid();
-  if (!datapath_->NetnsAttachName(netns_name, pid)) {
-    LOG(ERROR) << "ConnectNamespaceRequest: failed to attach name "
-               << netns_name << " to namespace pid " << pid;
-    return;
-  }
-  if (!datapath_->ConnectVethPair(pid, netns_name, host_ifname, client_ifname,
-                                  addr_mgr_.GenerateMacAddress(),
-                                  client_ipv4_addr, subnet->PrefixLength(),
-                                  false /* enable_multicast */)) {
-    LOG(ERROR) << "ConnectNamespaceRequest: failed to create veth pair for "
-                  "namespace pid "
-               << pid;
-    datapath_->NetnsDeleteName(netns_name);
-    return;
-  }
-  if (!datapath_->ConfigureInterface(
-          host_ifname, addr_mgr_.GenerateMacAddress(), host_ipv4_addr,
-          subnet->PrefixLength(), true /* link up */,
-          false /* enable_multicast */)) {
-    LOG(ERROR) << "ConnectNamespaceRequest: cannot configure host interface "
-               << host_ifname;
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
-  }
-  bool peer_route_setup_success;
-  {
-    ScopedNS ns(pid);
-    peer_route_setup_success =
-        ns.IsValid() &&
-        datapath_->AddIPv4Route(host_ipv4_addr, INADDR_ANY, INADDR_ANY);
-  }
-  if (!peer_route_setup_success) {
-    LOG(ERROR) << "ConnectNamespaceRequest: failed to add default /0 route to "
-               << host_ifname << " inside namespace pid " << pid;
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
-  }
-
-  // Host namespace routing configuration
-  //  - ingress: add route to client subnet via |host_ifname|.
-  //  - egress: - allow forwarding for traffic outgoing |host_ifname|.
-  //            - add SNAT mark 0x1/0x1 for traffic outgoing |host_ifname|.
-  //  Note that by default unsolicited ingress traffic is not forwarded to the
-  //  client namespace unless the client specifically set port forwarding
-  //  through permission_broker DBus APIs.
-  // TODO(hugobenichi) If allow_user_traffic is false, then prevent forwarding
-  // both ways between client namespace and other guest containers and VMs.
-  // TODO(hugobenichi) If outbound_physical_device is defined, then set strong
-  // routing to that interface routing table.
-  if (!datapath_->AddIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
-                               subnet->Netmask())) {
-    LOG(ERROR)
-        << "ConnectNamespaceRequest: failed to set route to client namespace";
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
-  }
-  if (!datapath_->AddOutboundIPv4(host_ifname)) {
-    LOG(ERROR) << "ConnectNamespaceRequest: failed to allow FORWARD for "
-                  "traffic outgoing from "
-               << host_ifname;
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
-                               subnet->Netmask());
-    datapath_->NetnsDeleteName(netns_name);
-    return;
-  }
-  if (!datapath_->AddOutboundIPv4SNATMark(host_ifname)) {
-    LOG(ERROR) << "ConnectNamespaceRequest: failed to set SNAT for traffic "
-                  "outgoing from "
-               << host_ifname;
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
-                               subnet->Netmask());
-    datapath_->RemoveOutboundIPv4(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
+    LOG(ERROR) << "ConnectNamespace: exhausted IPv4 subnet space";
+    return response;
   }
 
   // Dup the client fd into our own: this guarantees that the fd number will
   // be stable and tied to the actual kernel resources used by the client.
   base::ScopedFD local_client_fd(dup(client_fd.get()));
   if (!local_client_fd.is_valid()) {
-    PLOG(ERROR) << "ConnectNamespaceRequest: failed to dup() client fd";
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
-                               subnet->Netmask());
-    datapath_->RemoveOutboundIPv4(host_ifname);
-    datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
+    PLOG(ERROR) << "ConnectNamespace: failed to dup() client fd";
+    return response;
   }
 
-  // Add the dupe fd to the epoll watcher.
+  // Add the duped fd to the epoll watcher.
   // TODO(hugobenichi) Find a way to reuse base::FileDescriptorWatcher for
   // listening to EPOLLHUP.
   struct epoll_event epevent;
@@ -956,22 +856,33 @@ void Manager::ConnectNamespace(
   epevent.data.fd = local_client_fd.get();
   if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_ADD,
                 local_client_fd.get(), &epevent) != 0) {
-    PLOG(ERROR) << "ConnectNamespaceResponse: epoll_ctl(EPOLL_CTL_ADD) failed";
-    datapath_->RemoveInterface(host_ifname);
-    datapath_->DeleteIPv4Route(host_ipv4_addr, subnet->BaseAddress(),
-                               subnet->Netmask());
-    datapath_->RemoveOutboundIPv4(host_ifname);
-    datapath_->RemoveOutboundIPv4SNATMark(host_ifname);
-    datapath_->NetnsDeleteName(netns_name);
-    return;
+    PLOG(ERROR) << "ConnectNamespace: epoll_ctl(EPOLL_CTL_ADD) failed";
+    return response;
   }
 
+  const std::string ifname_id = std::to_string(connected_namespaces_next_id_);
+  const std::string netns_name = "connected_netns_" + ifname_id;
+  const std::string host_ifname = "arc_ns" + ifname_id;
+  const std::string client_ifname = "veth" + ifname_id;
+  if (!datapath_->StartRoutingNamespace(
+          request.pid(), netns_name, host_ifname, client_ifname,
+          subnet->BaseAddress(), subnet->PrefixLength(),
+          subnet->AddressAtOffset(0), subnet->AddressAtOffset(1),
+          addr_mgr_.GenerateMacAddress())) {
+    LOG(ERROR) << "ConnectNamespace: failed to setup datapath";
+    if (epoll_ctl(connected_namespaces_epollfd_, EPOLL_CTL_DEL,
+                  local_client_fd.get(), nullptr) != 0)
+      PLOG(ERROR) << "ConnectNamespace: epoll_ctl(EPOLL_CTL_DEL) failed";
+    return response;
+  }
+
+  // TODO(hugobenichi) The peer and host addresses are swapped in the response
   // Prepare the response before storing ConnectNamespaceInfo.
-  response.set_peer_ifname(client_ifname);
-  response.set_peer_ipv4_address(host_ipv4_addr);
-  response.set_host_ifname(host_ifname);
-  response.set_host_ipv4_address(client_ipv4_addr);
-  auto* response_subnet = response.mutable_ipv4_subnet();
+  response->set_peer_ifname(client_ifname);
+  response->set_peer_ipv4_address(subnet->AddressAtOffset(0));
+  response->set_host_ifname(host_ifname);
+  response->set_host_ipv4_address(subnet->AddressAtOffset(1));
+  auto* response_subnet = response->mutable_ipv4_subnet();
   response_subnet->set_base_addr(subnet->BaseAddress());
   response_subnet->set_prefix_len(subnet->PrefixLength());
 
@@ -993,6 +904,8 @@ void Manager::ConnectNamespace(
     LOG(INFO) << "Starting ConnectNamespace client fds monitoring";
     CheckConnectedNamespaces();
   }
+
+  return response;
 }
 
 void Manager::DisconnectNamespace(int client_fd) {
@@ -1009,21 +922,10 @@ void Manager::DisconnectNamespace(int client_fd) {
   if (close(client_fd) < 0)
     PLOG(ERROR) << "DisconnectNamespace: close(client_fd) failed";
 
-  // Destroy the interface configuration and routing configuration:
-  //  - destroy veth pair.
-  //  - remove forwarding rules on host namespace.
-  //  - remove SNAT marking rule on host namespace.
-  //  Delete the network namespace attached to the client namespace.
-  //  Note that the default route set inside the client namespace by patchpanel
-  //  is not destroyed: it is assumed the client will also teardown its
-  //  namespace if it triggered DisconnectNamespace.
-  datapath_->RemoveInterface(it->second.host_ifname);
-  datapath_->RemoveOutboundIPv4(it->second.host_ifname);
-  datapath_->RemoveOutboundIPv4SNATMark(it->second.host_ifname);
-  datapath_->DeleteIPv4Route(it->second.client_subnet->AddressAtOffset(0),
-                             it->second.client_subnet->BaseAddress(),
-                             it->second.client_subnet->Netmask());
-  datapath_->NetnsDeleteName(it->second.netns_name);
+  datapath_->StopRoutingNamespace(it->second.netns_name, it->second.host_ifname,
+                                  it->second.client_subnet->BaseAddress(),
+                                  it->second.client_subnet->PrefixLength(),
+                                  it->second.client_subnet->AddressAtOffset(0));
 
   LOG(INFO) << "Disconnected network namespace " << it->second;
 

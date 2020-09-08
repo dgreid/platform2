@@ -44,6 +44,8 @@ class RandomProcessRunner : public MinijailedProcessRunner {
 
 namespace {
 
+constexpr pid_t kTestPID = -2;
+
 class Environment {
  public:
   Environment() {
@@ -66,6 +68,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     std::string ifname2 = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     std::string bridge = provider.ConsumeRandomLengthString(IFNAMSIZ - 1);
     uint32_t addr = provider.ConsumeIntegral<uint32_t>();
+    uint32_t addr2 = provider.ConsumeIntegral<uint32_t>();
+    uint32_t addr3 = provider.ConsumeIntegral<uint32_t>();
     std::string addr_str = IPv4AddressToString(addr);
     uint32_t prefix_len = provider.ConsumeIntegralInRange<uint32_t>(0, 31);
     Subnet subnet(provider.ConsumeIntegral<int32_t>(), prefix_len,
@@ -81,6 +85,9 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     datapath.RemoveBridge(ifname);
     datapath.StartRoutingDevice(ifname, ifname2, addr, TrafficSource::UNKNOWN);
     datapath.StopRoutingDevice(ifname, ifname2, addr, TrafficSource::UNKNOWN);
+    datapath.StartRoutingNamespace(kTestPID, netns_name, ifname, ifname2, addr,
+                                   prefix_len, addr2, addr3, mac);
+    datapath.StopRoutingNamespace(netns_name, ifname, addr, prefix_len, addr2);
     datapath.AddVirtualInterfacePair(netns_name, ifname, bridge);
     datapath.ToggleInterface(ifname, provider.ConsumeBool());
     datapath.ConfigureInterface(ifname, mac, addr, prefix_len,
