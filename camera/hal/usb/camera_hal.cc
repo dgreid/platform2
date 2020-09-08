@@ -225,6 +225,11 @@ int CameraHal::SetCallbacks(const camera_module_callbacks_t* callbacks) {
 int CameraHal::Init() {
   DCHECK(thread_checker_.CalledOnValidThread());
 
+  if (!cros_device_config_.is_initialized) {
+    LOGF(ERROR) << "Failed to initialize CrOS device config";
+    return -ENODEV;
+  }
+
   if (!udev_watcher_->Start(base::ThreadTaskRunnerHandle::Get())) {
     LOGF(ERROR) << "Failed to Start()";
     return -ENODEV;
@@ -235,11 +240,21 @@ int CameraHal::Init() {
     return -ENODEV;
   }
 
-  // TODO(shik): possible race here. We may have 2 built-in cameras but just
-  // detect one.
-  if (CameraCharacteristics::ConfigFileExists() && num_builtin_cameras_ == 0) {
-    LOGF(ERROR) << "Expect to find at least one camera if config file exists";
-    return -ENODEV;
+  if (cros_device_config_.usb_camera_count.has_value()) {
+    if (num_builtin_cameras_ != *cros_device_config_.usb_camera_count) {
+      LOGF(ERROR) << "Expected " << *cros_device_config_.usb_camera_count
+                  << " cameras from Chrome OS config, found "
+                  << num_builtin_cameras_;
+      return -ENODEV;
+    }
+  } else {
+    // TODO(shik): possible race here. We may have 2 built-in cameras but just
+    // detect one.
+    if (CameraCharacteristics::ConfigFileExists() &&
+        num_builtin_cameras_ == 0) {
+      LOGF(ERROR) << "Expect to find at least one camera if config file exists";
+      return -ENODEV;
+    }
   }
 
   // TODO(shik): Some unibuild devices like vayne may have only user-facing
@@ -280,12 +295,6 @@ int CameraHal::Init() {
   }
 
   next_external_camera_id_ = num_builtin_cameras_;
-
-  if (!cros_device_config_.is_initialized) {
-    LOGF(ERROR) << "Failed to initialize CrOS device config";
-    // TODO(b/150578054): Return -ENODEV once the issue is fixed. For now, let's
-    // ignore such error.
-  }
   return 0;
 }
 

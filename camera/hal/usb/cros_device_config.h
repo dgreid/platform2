@@ -9,6 +9,7 @@
 
 #include <string>
 
+#include <base/optional.h>
 #include <chromeos-config/libcros_config/cros_config.h>
 
 namespace cros {
@@ -26,6 +27,7 @@ struct CrosDeviceConfig {
   bool is_initialized;
   bool is_v1_device;
   std::string model_name;
+  base::Optional<int> usb_camera_count;
 };
 
 }  // namespace cros
