@@ -103,6 +103,17 @@ TEST_F(KernelWarningCollectorTest, CollectOK) {
       "sig=70e67541-iwl_mvm_rm_sta+0x161/0x344 [iwlmvm]()"));
 }
 
+TEST_F(KernelWarningCollectorTest, CollectBad) {
+  // Collector fails to collect a single line without newline
+  ASSERT_TRUE(
+      test_util::CreateFile(test_path_,
+                            "[    0.000000] percpu: Embedded 32 pages/cpu "
+                            "s91880 r8192 d31000 u131072"));
+  EXPECT_FALSE(
+      collector_.Collect(KernelWarningCollector::WarningType::kGeneric));
+  EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
+}
+
 TEST_F(KernelWarningCollectorTest, CollectOKMultiline) {
   // Collector produces a crash report.
   ASSERT_TRUE(

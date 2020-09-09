@@ -228,13 +228,13 @@ bool KernelWarningCollector::Collect(WarningType type) {
   std::string func_name;
   if (!LoadKernelWarning(&kernel_warning, &warning_signature, &func_name,
                          type)) {
-    return true;
+    return false;
   }
 
   FilePath root_crash_directory;
   if (!GetCreatedCrashDirectoryByEuid(kRootUid, &root_crash_directory,
                                       nullptr)) {
-    return true;
+    return false;
   }
 
   const char* exec_name;
