@@ -47,6 +47,7 @@ setgroups32: 1
 setresgid32: 1
 setresuid32: 1
 setsid: 1
+sigreturn: 1
 socket: arg0 == AF_UNIX
 stat64: 1
 statfs64: 1
