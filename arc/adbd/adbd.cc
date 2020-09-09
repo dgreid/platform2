@@ -107,6 +107,8 @@ bool BindMountFile(const base::FilePath& source, const base::FilePath& target) {
 
 // Writes a string to a file. Returns false if the full string was not able to
 // be written.
+// TODO(crbug.com/1094927): Remove after r780000 uprev and replace usages by
+// base::WriteFile.
 bool WriteFile(const base::FilePath& filename, const std::string& contents) {
   int bytes_written =
       base::WriteFile(filename, contents.c_str(), contents.size());
@@ -273,19 +275,26 @@ bool SetupConfigFS(const std::string& serialnumber,
       return false;
     }
   }
-  if (!WriteFile(gadget_path.Append("idVendor"), "0x18d1"))
+  // Argument-dependent lookup puts base::WriteFile into the candidates of
+  // overload resolution although this is in the adbd namespace.
+  // In libchrome r780000, the variant
+  // base::WriteFile(const FilePath& filename, StringPiece data) will be added
+  // which causes ambiguity to calling adbd::WriteFile.
+  if (!adbd::WriteFile(gadget_path.Append("idVendor"), "0x18d1"))
     return false;
-  if (!WriteFile(gadget_path.Append("idProduct"), usb_product_id))
+  if (!adbd::WriteFile(gadget_path.Append("idProduct"), usb_product_id))
     return false;
-  if (!WriteFile(gadget_path.Append("strings/0x409/serialnumber"),
-                 serialnumber)) {
+  if (!adbd::WriteFile(gadget_path.Append("strings/0x409/serialnumber"),
+                       serialnumber)) {
     return false;
   }
-  if (!WriteFile(gadget_path.Append("strings/0x409/manufacturer"), "google"))
+  if (!adbd::WriteFile(gadget_path.Append("strings/0x409/manufacturer"),
+                       "google"))
     return false;
-  if (!WriteFile(gadget_path.Append("strings/0x409/product"), usb_product_name))
+  if (!adbd::WriteFile(gadget_path.Append("strings/0x409/product"),
+                       usb_product_name))
     return false;
-  if (!WriteFile(gadget_path.Append("configs/b.1/MaxPower"), "500"))
+  if (!adbd::WriteFile(gadget_path.Append("configs/b.1/MaxPower"), "500"))
     return false;
 
   return true;
