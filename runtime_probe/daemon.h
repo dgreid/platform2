@@ -34,7 +34,7 @@ class Daemon : public brillo::DBusDaemon {
   // Sugar wrapper for packing protocol buffer with error handling.
   void SendProbeResult(const ProbeResult& reply,
                        dbus::MethodCall* method_call,
-                       dbus::ExportedObject::ResponseSender* response_sender);
+                       dbus::ExportedObject::ResponseSender response_sender);
 
   // Handler of org.chromium.ProbeCategories method calls.
   void ProbeCategories(dbus::MethodCall* method_call,

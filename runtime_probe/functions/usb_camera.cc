@@ -112,8 +112,7 @@ UsbCameraFunction::DataType UsbCameraFunction::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 
 int UsbCameraFunction::EvalInHelper(std::string* output) const {
@@ -131,7 +130,7 @@ int UsbCameraFunction::EvalInHelper(std::string* output) const {
     res.SetStringKey("path", video_path.value());
     if (ExploreAsUsbCamera(video_path, &res)) {
       res.SetStringKey("bus_type", "usb");
-      result.GetList().push_back(std::move(res));
+      result.Append(std::move(res));
     }
   }
 

@@ -84,7 +84,7 @@ void Daemon::QuitDaemonInternal() {
 void Daemon::SendProbeResult(
     const ProbeResult& reply,
     dbus::MethodCall* method_call,
-    dbus::ExportedObject::ResponseSender* response_sender) {
+    dbus::ExportedObject::ResponseSender response_sender) {
   DumpProtocolBuffer(reply, "ProbeResult");
 
   std::unique_ptr<dbus::Response> message(
@@ -92,11 +92,13 @@ void Daemon::SendProbeResult(
   dbus::MessageWriter writer(message.get());
   if (!writer.AppendProtoAsArrayOfBytes(reply)) {
     LOG(ERROR) << kErrorMsgFailedToPackProtobuf;
-    response_sender->Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, kErrorMsgFailedToPackProtobuf));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS,
+            kErrorMsgFailedToPackProtobuf));
   } else {
     // TODO(itspeter): b/119939408, PII filter before return.
-    response_sender->Run(std::move(message));
+    std::move(response_sender).Run(std::move(message));
   }
   PostQuitTask();
 }
@@ -113,7 +115,7 @@ void Daemon::ProbeCategories(
 
   if (!reader.PopArrayOfBytesAsProto(&request)) {
     reply.set_error(RUNTIME_PROBE_ERROR_PROBE_REQUEST_INVALID);
-    return SendProbeResult(reply, method_call, &response_sender);
+    return SendProbeResult(reply, method_call, std::move(response_sender));
   }
 
   DumpProtocolBuffer(request, "ProbeRequest");
@@ -121,7 +123,7 @@ void Daemon::ProbeCategories(
   std::string probe_config_path;
   if (!runtime_probe::GetProbeConfigPath(&probe_config_path, "")) {
     reply.set_error(RUNTIME_PROBE_ERROR_DEFAULT_PROBE_CONFIG_NOT_FOUND);
-    return SendProbeResult(reply, method_call, &response_sender);
+    return SendProbeResult(reply, method_call, std::move(response_sender));
   }
 
   const auto probe_config_data =
@@ -129,7 +131,7 @@ void Daemon::ProbeCategories(
 
   if (!probe_config_data) {
     reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_SYNTAX_ERROR);
-    return SendProbeResult(reply, method_call, &response_sender);
+    return SendProbeResult(reply, method_call, std::move(response_sender));
   }
 
   reply.set_probe_config_checksum(probe_config_data.value().sha1_hash);
@@ -140,7 +142,7 @@ void Daemon::ProbeCategories(
       runtime_probe::ProbeConfig::FromValue(probe_config_data.value().config);
   if (!probe_config) {
     reply.set_error(RUNTIME_PROBE_ERROR_PROBE_CONFIG_INCOMPLETE_PROBE_FUNCTION);
-    return SendProbeResult(reply, method_call, &response_sender);
+    return SendProbeResult(reply, method_call, std::move(response_sender));
   }
 
   base::Value probe_result;
@@ -173,7 +175,7 @@ void Daemon::ProbeCategories(
   reply.MergeFrom(placeholder);
   VLOG(3) << "serialize JSON to Protobuf status: " << json_parse_status;
 
-  return SendProbeResult(reply, method_call, &response_sender);
+  return SendProbeResult(reply, method_call, std::move(response_sender));
 }
 
 }  // namespace runtime_probe

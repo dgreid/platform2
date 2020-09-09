@@ -41,7 +41,7 @@ base::Value LoadInputDevices() {
       if (prefix == 'I') {
         if (!data.DictEmpty()) {
           RenameKey(&data, "sysfs", "path");
-          results.GetList().push_back(std::move(data));
+          results.Append(std::move(data));
           data = base::Value(base::Value::Type::DICTIONARY);
         }
         base::StringPairs keyVals;
@@ -84,7 +84,7 @@ base::Value LoadInputDevices() {
   }
   if (!data.DictEmpty()) {
     RenameKey(&data, "sysfs", "path");
-    results.GetList().push_back(std::move(data));
+    results.Append(std::move(data));
   }
   return results;
 }
@@ -102,8 +102,7 @@ InputDeviceFunction::DataType InputDeviceFunction::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 
 int InputDeviceFunction::EvalInHelper(std::string* output) const {

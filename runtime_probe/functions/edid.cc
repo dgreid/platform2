@@ -51,8 +51,7 @@ EdidFunction::DataType EdidFunction::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 
 int EdidFunction::EvalInHelper(std::string* output) const {
@@ -71,7 +70,7 @@ int EdidFunction::EvalInHelper(std::string* output) const {
         continue;
       }
       evaluated_path.SetBoolKey(edid_path.value(), true);
-      result.GetList().push_back(std::move(node_res));
+      result.Append(std::move(node_res));
     }
   }
 

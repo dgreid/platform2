@@ -96,8 +96,7 @@ NetworkFunction::DataType NetworkFunction::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 
 int NetworkFunction::EvalInHelper(std::string* output) const {
@@ -132,7 +131,7 @@ int NetworkFunction::EvalInHelper(std::string* output) const {
       node_res->SetStringKey("type", device_type);
     }
 
-    result.GetList().push_back(std::move(*node_res));
+    result.Append(std::move(*node_res));
   }
   if (!base::JSONWriter::Write(result, output)) {
     LOG(ERROR) << "Failed to serialize network probed result to json string.";

@@ -31,8 +31,7 @@ GenericBattery::DataType GenericBattery::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 int GenericBattery::EvalInHelper(std::string* output) const {
   constexpr char kSysfsBatteryPath[] = "/sys/class/power_supply/BAT*";
@@ -85,7 +84,7 @@ int GenericBattery::EvalInHelper(std::string* output) const {
                                  base::NumberToString(battery_index + 1));
       }
 
-      result.GetList().push_back(std::move(*dict_value));
+      result.Append(std::move(*dict_value));
     }
   }
 

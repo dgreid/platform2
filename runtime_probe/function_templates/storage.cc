@@ -121,7 +121,7 @@ StorageFunction::DataType StorageFunction::Eval() const {
     return {};
   }
 
-  DataType results(std::move(json_output->GetList()));
+  DataType results(json_output->TakeList());
   for (auto& storage_res : results) {
     const auto storage_aux_res = EvalByDV(storage_res);
     if (storage_aux_res)
@@ -158,7 +158,7 @@ int StorageFunction::EvalInHelper(std::string* output) const {
                                                           logical_block_size));
     }
 
-    result.GetList().push_back(std::move(*node_res));
+    result.Append(std::move(*node_res));
   }
   if (!base::JSONWriter::Write(result, output)) {
     LOG(ERROR) << "Failed to serialize storage probed result to json string";

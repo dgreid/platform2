@@ -88,7 +88,7 @@ base::Value GetMemoryInfo() {
     info.SetIntKey("speed", dmi_memory->speed);
     info.SetStringKey("locator", dmi_memory->locator);
     info.SetStringKey("part", dmi_memory->part_number);
-    results.GetList().push_back(std::move(info));
+    results.Append(std::move(info));
   }
 
   return results;
@@ -134,8 +134,7 @@ MemoryFunction::DataType MemoryFunction::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 
 int MemoryFunction::EvalInHelper(std::string* output) const {

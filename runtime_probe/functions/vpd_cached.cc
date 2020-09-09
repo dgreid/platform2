@@ -40,8 +40,7 @@ VPDCached::DataType VPDCached::Eval() const {
     return {};
   }
 
-  // TODO(b/161770131): replace with TakeList() after libchrome uprev.
-  return DataType(std::move(json_output->GetList()));
+  return DataType(json_output->TakeList());
 }
 int VPDCached::EvalInHelper(std::string* output) const {
   constexpr char kSysfsVPDCached[] = "/sys/firmware/vpd/ro/";
@@ -72,7 +71,7 @@ int VPDCached::EvalInHelper(std::string* output) const {
 
   base::Value result(base::Value::Type::LIST);
   if (!dict_with_prefix.DictEmpty()) {
-    result.GetList().push_back(std::move(dict_with_prefix));
+    result.Append(std::move(dict_with_prefix));
   }
 
   if (!base::JSONWriter::Write(result, output)) {
