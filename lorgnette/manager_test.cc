@@ -201,6 +201,15 @@ class ManagerTest : public testing::Test {
   base::ScopedFD scan_fd_;
 };
 
+TEST_F(ManagerTest, GetScannerCapabilitiesInvalidIppUsbFailure) {
+  std::vector<uint8_t> serialized;
+  brillo::ErrorPtr error;
+  EXPECT_FALSE(
+      manager_.GetScannerCapabilities(&error, "ippusb:invalid", &serialized));
+  EXPECT_NE(error, nullptr);
+  EXPECT_NE(error->GetMessage().find("ippusb"), std::string::npos);
+}
+
 TEST_F(ManagerTest, GetScannerCapabilitiesSuccess) {
   std::unique_ptr<SaneDeviceFake> device = std::make_unique<SaneDeviceFake>();
   ValidOptionValues opts;

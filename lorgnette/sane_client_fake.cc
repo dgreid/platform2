@@ -24,7 +24,7 @@ bool SaneClientFake::ListDevices(brillo::ErrorPtr* error,
   return true;
 }
 
-std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDevice(
+std::unique_ptr<SaneDevice> SaneClientFake::ConnectToDeviceInternal(
     brillo::ErrorPtr* error, const std::string& device_name) {
   if (devices_.count(device_name) > 0) {
     auto ptr = std::move(devices_[device_name]);

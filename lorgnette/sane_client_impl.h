@@ -32,11 +32,13 @@ class SaneClientImpl : public SaneClient {
 
   bool ListDevices(brillo::ErrorPtr* error,
                    std::vector<ScannerInfo>* scanners_out) override;
-  std::unique_ptr<SaneDevice> ConnectToDevice(
-      brillo::ErrorPtr* error, const std::string& device_name) override;
 
   static bool DeviceListToScannerInfo(const SANE_Device** device_list,
                                       std::vector<ScannerInfo>* scanners_out);
+
+ protected:
+  std::unique_ptr<SaneDevice> ConnectToDeviceInternal(
+      brillo::ErrorPtr* error, const std::string& device_name) override;
 
  private:
   SaneClientImpl();

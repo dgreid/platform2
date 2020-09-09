@@ -93,7 +93,7 @@ bool SaneClientImpl::DeviceListToScannerInfo(
 SaneClientImpl::SaneClientImpl()
     : open_devices_(std::make_shared<DeviceSet>()) {}
 
-std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDevice(
+std::unique_ptr<SaneDevice> SaneClientImpl::ConnectToDeviceInternal(
     brillo::ErrorPtr* error, const std::string& device_name) {
   base::AutoLock auto_lock(lock_);
   SANE_Handle handle;

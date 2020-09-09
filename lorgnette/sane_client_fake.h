@@ -24,8 +24,6 @@ class SaneClientFake : public SaneClient {
  public:
   bool ListDevices(brillo::ErrorPtr* error,
                    std::vector<ScannerInfo>* scanners_out) override;
-  std::unique_ptr<SaneDevice> ConnectToDevice(
-      brillo::ErrorPtr* error, const std::string& device_name) override;
 
   void SetListDevicesResult(bool value);
   void AddDevice(const std::string& name,
@@ -36,6 +34,10 @@ class SaneClientFake : public SaneClient {
 
   void SetDeviceForName(const std::string& device_name,
                         std::unique_ptr<SaneDeviceFake> device);
+
+ protected:
+  std::unique_ptr<SaneDevice> ConnectToDeviceInternal(
+      brillo::ErrorPtr* error, const std::string& device_name) override;
 
  private:
   std::map<std::string, std::unique_ptr<SaneDeviceFake>> devices_;

@@ -23,6 +23,7 @@ pkg_config("target_defaults_deps") {
     "libmetrics",
     "libpng",
     "protobuf-lite",
+    "re2",
     "sane-backends",
     "system_api",
     "uuid",
@@ -62,7 +63,9 @@ static_library("liblorgnette") {
     "epson_probe.cc",
     "firewall_manager.cc",
     "guess_source.cc",
+    "ippusb_device.cc",
     "manager.cc",
+    "sane_client.cc",
     "sane_client_fake.cc",
     "sane_client_impl.cc",
   ]
@@ -93,6 +96,9 @@ if (use.test) {
       ":liblorgnette",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [ "manager_test.cc" ]
+    sources = [
+      "ippusb_device_test.cc",
+      "manager_test.cc",
+    ]
   }
 }
