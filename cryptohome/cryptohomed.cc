@@ -106,7 +106,9 @@ int main(int argc, char** argv) {
   OpenSSL_add_all_algorithms();
 
   // Initialize cryptohome metrics
-  cryptohome::ScopedMetricsInitializer metrics_initializer;
+  // Because mount thread may use metrics after main scope, don't
+  // TearDownMetrics after main finished.
+  cryptohome::InitializeMetrics();
 
   // Make sure scrypt parameters are correct.
   cryptohome::CryptoLib::AssertProductionScryptParams();
