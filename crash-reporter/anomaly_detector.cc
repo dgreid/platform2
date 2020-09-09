@@ -352,23 +352,16 @@ constexpr LazyRE2 btrfs_tree_node_corruption = {
     R"(BTRFS warning \(device .*\): .* checksum verify failed on )"
     R"([[:digit:]]+ wanted [[:xdigit:]]+ found [[:xdigit:]]+ level )"
     R"([[:digit:]]+)"};
-constexpr LazyRE2 vsock_cid = {R"(VM\(([[:digit:]]+)\))"};
 
-MaybeCrashReport TerminaParser::ParseLogEntry(const std::string& tag,
+MaybeCrashReport TerminaParser::ParseLogEntry(int cid,
                                               const std::string& line) {
   if (!RE2::PartialMatch(line, *btrfs_extent_corruption) &&
       !RE2::PartialMatch(line, *btrfs_tree_node_corruption)) {
     return base::nullopt;
   }
 
-  int cid;
   anomaly_detector::GuestFileCorruptionSignal message;
-  if (!RE2::PartialMatch(tag, *vsock_cid, &cid)) {
-    LOG(ERROR) << "Was unable to parse vsock cid out of tag";
-  } else {
-    message.set_vsock_cid(cid);
-  }
-
+  message.set_vsock_cid(cid);
   dbus::Signal signal(anomaly_detector::kAnomalyEventServiceInterface,
                       anomaly_detector::kAnomalyGuestFileCorruptionSignalName);
 

@@ -12,6 +12,7 @@
 #include <memory>
 #include <utility>
 
+#include <anomaly_detector/proto_bindings/anomaly_detector.pb.h>
 #include <base/bind_helpers.h>
 #include <base/files/scoped_file.h>
 #include <base/files/file_path.h>
@@ -82,12 +83,15 @@ LogPipe::LogPipe(VmId vm_id,
       forwarder_(std::move(forwarder)) {}
 
 std::unique_ptr<LogPipe> LogPipe::Create(
+    scoped_refptr<dbus::Bus> bus,
     int64_t cid,
     const VmId& id,
     base::ScopedFD dest,
+    anomaly_detector::VmType vm_type,
     base::WeakPtr<LogPipeManager> manager) {
   auto forwarder = std::make_unique<Forwarder>(std::move(dest), false);
-  auto collector = HostCollector::Create(cid, GetCollectorPath(id), manager);
+  auto collector =
+      HostCollector::Create(bus, cid, GetCollectorPath(id), vm_type, manager);
   return std::unique_ptr<LogPipe>(
       new LogPipe(id, std::move(collector), std::move(forwarder)));
 }
@@ -147,14 +151,24 @@ void LogPipeManager::CreateLogPipeForTesting(int64_t cid,
                                               weak_ptr_factory_.GetWeakPtr());
 }
 
-void LogPipeManager::Init(base::ScopedFD syslog_fd,
+bool LogPipeManager::Init(base::ScopedFD syslog_fd,
                           bool only_forward_to_syslog) {
+  dbus::Bus::Options opts;
+  opts.bus_type = dbus::Bus::SYSTEM;
+  bus_ = new dbus::Bus(std::move(opts));
+
+  if (!bus_->Connect()) {
+    LOG(ERROR) << "Failed to connect to system bus";
+    return false;
+  }
+
   if (syslog_fd.is_valid()) {
     syslog_forwarder_.reset(new Forwarder(std::move(syslog_fd), true));
     only_forward_to_syslog_ = only_forward_to_syslog;
   } else {
     if (only_forward_to_syslog) {
       LOG(ERROR) << "Forwarding to syslogd unavailable.";
+      return false;
     }
   }
 
@@ -166,19 +180,13 @@ void LogPipeManager::Init(base::ScopedFD syslog_fd,
                base::BindRepeating(&LogPipeManager::RotateLogs,
                                    weak_ptr_factory_.GetWeakPtr()));
   LOG(INFO) << "Started RotateLogs timer";
+  return true;
 }
 
 void LogPipeManager::ConnectToConcierge() {
-  dbus::Bus::Options options;
-  options.bus_type = dbus::Bus::SYSTEM;
-  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
-  if (!bus->Connect()) {
-    LOG(ERROR) << "Failed to connect to system D-Bus";
-    return;
-  }
-  auto concierge_proxy =
-      bus->GetObjectProxy(concierge::kVmConciergeServiceName,
-                          dbus::ObjectPath(concierge::kVmConciergeServicePath));
+  auto concierge_proxy = bus_->GetObjectProxy(
+      concierge::kVmConciergeServiceName,
+      dbus::ObjectPath(concierge::kVmConciergeServicePath));
 
   if (!concierge_proxy) {
     LOG(ERROR) << "Failed to get Concerge proxy";
@@ -247,7 +255,11 @@ void LogPipeManager::OnVmStartingUpSignal(dbus::Signal* signal) {
   }
   VmId vm_id(vm_started_signal.owner_id(), vm_started_signal.name());
   int64_t cid = vm_started_signal.vm_info().cid();
-  LOG(INFO) << "Received VmStartingUpSignal for " << vm_id << ", cid " << cid;
+  auto vm_type = static_cast<anomaly_detector::VmType>(
+      vm_started_signal.vm_info().vm_type());
+
+  LOG(INFO) << "Received VmStartingUpSignal for " << vm_id << ", cid " << cid
+            << ", type " << anomaly_detector::VmType_Name(vm_type);
 
   base::ScopedFD dest = OpenForwarderPath(vm_id);
   if (!dest.is_valid()) {
@@ -257,7 +269,7 @@ void LogPipeManager::OnVmStartingUpSignal(dbus::Signal* signal) {
 
   base::AutoLock lock(log_pipes_lock_);
   managed_log_dirs_.insert(GetLogDir(vm_id));
-  log_pipes_[cid] = LogPipe::Create(cid, vm_id, std::move(dest),
+  log_pipes_[cid] = LogPipe::Create(bus_, cid, vm_id, std::move(dest), vm_type,
                                     weak_ptr_factory_.GetWeakPtr());
 }
 

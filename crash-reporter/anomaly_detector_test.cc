@@ -401,7 +401,7 @@ TEST(AnomalyDetectorTest, BTRFSExtentCorruption) {
   TerminaParser parser(bus);
 
   parser.ParseLogEntry(
-      "VM(3)",
+      3,
       "BTRFS warning (device vdb): csum failed root 5 ino 257 off 409600 csum "
       "0x76ad9387 expected csum 0xd8d34542 mirror 1");
 }
@@ -425,7 +425,7 @@ TEST(AnomalyDetectorTest, BTRFSTreeCorruption) {
 
   TerminaParser parser(bus);
 
-  parser.ParseLogEntry("VM(3)",
+  parser.ParseLogEntry(3,
                        "BTRFS warning (device vdb): vdb checksum verify failed "
                        "on 122798080 wanted 4E5B4C99 found 5F261FEB level 0");
 }

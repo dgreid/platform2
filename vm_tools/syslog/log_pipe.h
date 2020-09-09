@@ -34,9 +34,11 @@ namespace syslog {
 // LogPipe holds an HostCollector and associated Forwarder.
 class LogPipe {
  public:
-  static std::unique_ptr<LogPipe> Create(int64_t cid,
+  static std::unique_ptr<LogPipe> Create(scoped_refptr<dbus::Bus> bus,
+                                         int64_t cid,
                                          const vm_tools::VmId& id,
                                          base::ScopedFD dest,
+                                         anomaly_detector::VmType vm_type,
                                          base::WeakPtr<LogPipeManager> manager);
 
   static std::unique_ptr<LogPipe> CreateForTesting(
@@ -74,7 +76,7 @@ class LogPipeManager final : public LogCollector::Service {
   explicit LogPipeManager(base::OnceClosure shutdown_closure);
   ~LogPipeManager();
 
-  void Init(base::ScopedFD syslog_fd, bool only_forward_to_syslog);
+  bool Init(base::ScopedFD syslog_fd, bool only_forward_to_syslog);
 
   void OnVmStartingUpSignal(dbus::Signal* signal);
   void OnVmStoppedSignal(dbus::Signal* signal);
@@ -129,6 +131,8 @@ class LogPipeManager final : public LogCollector::Service {
   // File descriptor and watcher for the SIGTERM event.
   base::ScopedFD signal_fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
+
+  scoped_refptr<dbus::Bus> bus_;
 
   base::WeakPtrFactory<LogPipeManager> weak_ptr_factory_;
 

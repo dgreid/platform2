@@ -26,9 +26,6 @@
 #include <brillo/flag_helper.h>
 #include <brillo/syslog_logging.h>
 #include <chromeos/dbus/service_constants.h>
-#include <dbus/bus.h>
-#include <dbus/message.h>
-#include <dbus/object_proxy.h>
 #include <grpcpp/grpcpp.h>
 #include <vm_protos/proto_bindings/vm_host.grpc.pb.h>
 
@@ -79,7 +76,7 @@ int main(int argc, char** argv) {
 
   base::RunLoop run_loop;
   vm_tools::syslog::LogPipeManager log_pipe_manager(run_loop.QuitClosure());
-  log_pipe_manager.Init(std::move(dest), only_log_to_syslog);
+  CHECK(log_pipe_manager.Init(std::move(dest), only_log_to_syslog));
 
   grpc::ServerBuilder builder;
   builder.AddListeningPort(

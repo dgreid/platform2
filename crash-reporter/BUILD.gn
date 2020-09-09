@@ -178,16 +178,13 @@ pkg_config("anomaly_detector_config") {
     "libmetrics",
     "re2",
 
-    # system_api depends on protobuf (or protobuf-lite). It must appear
-    # before protobuf here or the linker flags won't be in the right
-    # order.
+    # system_api depends on protobuf. It must appear before protobuf
+    # here or the linker flags won't be in the right order.
     "system_api",
+    "vm_protos",
+
+    "protobuf",
   ]
-  if (use.fuzzer) {
-    pkg_deps += [ "protobuf" ]
-  } else {
-    pkg_deps += [ "protobuf-lite" ]
-  }
 }
 
 executable("anomaly_detector") {
@@ -196,6 +193,7 @@ executable("anomaly_detector") {
     "anomaly_detector.cc",
     "anomaly_detector_log_reader.cc",
     "anomaly_detector_main.cc",
+    "anomaly_detector_service.cc",
     "anomaly_detector_text_file_reader.cc",
     "crash_reporter_parser.cc",
   ]

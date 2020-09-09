@@ -128,8 +128,7 @@ class SuspendParser : public Parser {
 class TerminaParser {
  public:
   explicit TerminaParser(scoped_refptr<dbus::Bus> dbus);
-  MaybeCrashReport ParseLogEntry(const std::string& tag,
-                                 const std::string& line);
+  MaybeCrashReport ParseLogEntry(int cid, const std::string& line);
 
  private:
   scoped_refptr<dbus::Bus> dbus_;

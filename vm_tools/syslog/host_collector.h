@@ -6,11 +6,16 @@
 
 #include <memory>
 
+#include <chromeos/dbus/service_constants.h>
+#include <anomaly_detector/proto_bindings/anomaly_detector.pb.h>
 #include <base/files/file_path.h>
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
 #include <base/memory/weak_ptr.h>
 #include <base/time/time.h>
+#include <dbus/bus.h>
+#include <dbus/object_proxy.h>
+#include <dbus/message.h>
 
 #include "vm_tools/syslog/collector.h"
 
@@ -26,8 +31,10 @@ class HostCollector : public Collector {
   ~HostCollector() override;
 
   static std::unique_ptr<HostCollector> Create(
+      scoped_refptr<dbus::Bus> bus,
       int64_t cid,
       base::FilePath logsocket_path,
+      anomaly_detector::VmType vm_type,
       base::WeakPtr<LogPipeManager> log_pipe_manager);
 
   static std::unique_ptr<HostCollector> CreateForTesting(
@@ -42,12 +49,17 @@ class HostCollector : public Collector {
  private:
   // Protected default constructor.  Use the static factory function to create
   // new instances of this class.
-  explicit HostCollector(int64_t cid,
+  explicit HostCollector(scoped_refptr<dbus::Bus> bus,
+                         int64_t cid,
+                         anomaly_detector::VmType vm_type,
                          base::WeakPtr<LogPipeManager> log_pipe_manager);
 
   int64_t cid_;
 
   base::WeakPtr<LogPipeManager> log_pipe_manager_;
+
+  dbus::ObjectProxy* anomaly_detector_proxy_ = nullptr;
+  anomaly_detector::VmType vm_type_;
 
   base::WeakPtrFactory<Collector> weak_factory_;
 
