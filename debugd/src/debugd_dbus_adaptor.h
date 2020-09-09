@@ -259,7 +259,6 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   std::unique_ptr<TracePathTool> tracepath_tool_;
   std::unique_ptr<U2fTool> u2f_tool_;
   std::unique_ptr<VerifyRoTool> verify_ro_tool_;
-  std::unique_ptr<SimpleServiceTool> vm_concierge_tool_;
   std::unique_ptr<SimpleServiceTool> vm_plugin_dispatcher_tool_;
   std::unique_ptr<WifiFWDumpTool> wifi_fw_dump_tool_;
   std::unique_ptr<WifiPowerTool> wifi_power_tool_;

@@ -67,9 +67,6 @@ DebugdDBusAdaptor::DebugdDBusAdaptor(scoped_refptr<dbus::Bus> bus)
   tracepath_tool_ = std::make_unique<TracePathTool>();
   u2f_tool_ = std::make_unique<U2fTool>();
   verify_ro_tool_ = std::make_unique<VerifyRoTool>();
-  vm_concierge_tool_ = std::make_unique<SimpleServiceTool>(
-      "vm_concierge", bus, vm_tools::concierge::kVmConciergeServiceName,
-      vm_tools::concierge::kVmConciergeServicePath);
   vm_plugin_dispatcher_tool_ = std::make_unique<SimpleServiceTool>(
       "vmplugin_dispatcher", bus,
       vm_tools::plugin_dispatcher::kVmPluginDispatcherServiceName,
@@ -470,12 +467,10 @@ bool DebugdDBusAdaptor::RunShillScriptStop(brillo::ErrorPtr* error,
 
 void DebugdDBusAdaptor::StartVmConcierge(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response) {
-  vm_concierge_tool_->StartService({}, std::move(response));
+  response->Return(true);
 }
 
-void DebugdDBusAdaptor::StopVmConcierge() {
-  vm_concierge_tool_->StopService();
-}
+void DebugdDBusAdaptor::StopVmConcierge() {}
 
 void DebugdDBusAdaptor::StartVmPluginDispatcher(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
