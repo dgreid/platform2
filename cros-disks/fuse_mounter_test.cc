@@ -147,7 +147,7 @@ class FUSEMounterForTesting : public FUSEMounter {
                      .platform = platform,
                      .process_reaper = process_reaper}) {}
 
-  MOCK_METHOD(int, OnEnvironment, (const std::vector<std::string>&), (const));
+  MOCK_METHOD(int, OnInput, (const std::string&), (const));
   MOCK_METHOD(int, InvokeMountTool, (const std::vector<std::string>&), (const));
 
   mutable std::vector<std::string> environment;
@@ -159,9 +159,9 @@ class FUSEMounterForTesting : public FUSEMounter {
     ON_CALL(*mock, StartImpl(_, _, _)).WillByDefault(Return(123));
     ON_CALL(*mock, WaitNonBlockingImpl())
         .WillByDefault(Invoke([this, process]() {
-          const auto& environment = process->environment();
-          if (!environment.empty())
-            OnEnvironment(environment);
+          const std::string& input = process->input();
+          if (!input.empty())
+            OnInput(input);
 
           return InvokeMountTool(process->arguments());
         }));
@@ -290,8 +290,7 @@ TEST_F(FUSEMounterTest, WithPassword) {
   const std::string password = "My Password";
 
   SetupMountExpectations();
-  EXPECT_CALL(mounter_, OnEnvironment(ElementsAre("PASSWORD=" + password)))
-      .Times(1);
+  EXPECT_CALL(mounter_, OnInput(password)).Times(1);
   // The MountPoint returned by Mount() will unmount when it is destructed.
   EXPECT_CALL(platform_, Unmount(kMountDir, 0))
       .WillOnce(Return(MOUNT_ERROR_NONE));
@@ -314,7 +313,7 @@ TEST(FUSEMounterPasswordTest, NoPassword) {
           "password",     // Not a valid option
       },
       &process);
-  EXPECT_THAT(process.environment(), IsEmpty());
+  EXPECT_EQ(process.input(), "");
 }
 
 TEST(FUSEMounterPasswordTest, CopiesPassword) {
@@ -328,7 +327,7 @@ TEST(FUSEMounterPasswordTest, CopiesPassword) {
        }) {
     SandboxedProcess process;
     mounter.CopyPassword({"password=" + password}, &process);
-    EXPECT_THAT(process.environment(), ElementsAre("PASSWORD=" + password));
+    EXPECT_EQ(process.input(), password);
   }
 }
 
@@ -338,14 +337,14 @@ TEST(FUSEMounterPasswordTest, FirstPassword) {
   mounter.CopyPassword({"other1=value1", "password=1", "password=2",
                         "other2=value2", "password=3"},
                        &process);
-  EXPECT_THAT(process.environment(), ElementsAre("PASSWORD=1"));
+  EXPECT_EQ(process.input(), "1");
 }
 
 TEST(FUSEMounterPasswordTest, IgnoredIfNotNeeded) {
   const FUSEMounter mounter({});
   SandboxedProcess process;
   mounter.CopyPassword({"password=dummy"}, &process);
-  EXPECT_THAT(process.environment(), IsEmpty());
+  EXPECT_EQ(process.input(), "");
 }
 
 }  // namespace cros_disks

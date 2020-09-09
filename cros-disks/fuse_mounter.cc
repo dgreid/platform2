@@ -299,9 +299,8 @@ void FUSEMounter::CopyPassword(const std::vector<std::string>& options,
   if (it == options.cend())
     return;
 
-  // Pass the password as environment variable.
-  process->AddEnvironmentVariable("PASSWORD",
-                                  base::StringPiece(*it).substr(prefix.size()));
+  // Pass the password via stdin.
+  process->SetStdIn(it->substr(prefix.size()));
 }
 
 std::unique_ptr<MountPoint> FUSEMounter::Mount(

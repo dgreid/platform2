@@ -99,10 +99,10 @@ class FUSEMounter : public MounterCompat {
                                     MountErrorType* error) const override;
 
   // If necessary, extracts the password from the given options and sets the
-  // PASSWORD environment variable in the given process. Does nothing if
-  // password_needed_codes is empty. Does nothing if no string starting with
-  // "password=" is found in options. If several options start with "password=",
-  // only the first one is taken in account and the other ones are ignored.
+  // standard input of the given process. Does nothing if password_needed_codes
+  // is empty. Does nothing if no string starting with "password=" is found in
+  // options. If several options start with "password=", only the first one is
+  // taken in account and the other ones are ignored.
   void CopyPassword(const std::vector<std::string>& options,
                     Process* process) const;
 
