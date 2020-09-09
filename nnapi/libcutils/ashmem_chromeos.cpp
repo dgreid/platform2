@@ -15,7 +15,6 @@
 #include <sys/mman.h>
 #include <sys/stat.h>
 
-
 // Implementation of the ashmem interface using POSIX shared memory buffers
 
 extern "C" {
@@ -24,7 +23,7 @@ int ashmem_valid(int fd) {
   return fcntl(fd, F_GETFD) != -1 || errno != EBADF;
 }
 
-int ashmem_create_region(const char * /*name*/, size_t size) {
+int ashmem_create_region(const char* /*name*/, size_t size) {
   char _tmpname[L_tmpnam];
   if (tmpnam_r(_tmpname) == nullptr) {
     return -1;
@@ -35,8 +34,8 @@ int ashmem_create_region(const char * /*name*/, size_t size) {
   std::string _name = std::string(_tmpname);
   std::replace(_name.begin(), _name.end(), '/', '-');
 
-  int fd = shm_open(_name.c_str(),
-                    O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
+  int fd =
+      shm_open(_name.c_str(), O_RDWR | O_CREAT | O_EXCL | O_NOFOLLOW, 0600);
   if (fd == -1) {
     return -1;
   }
@@ -85,7 +84,6 @@ int ashmem_get_size_region(int fd) {
   if (fstat(fd, &s) == -1) {
     return -1;
   }
-  return(s.st_size);
+  return (s.st_size);
 }
-
 }

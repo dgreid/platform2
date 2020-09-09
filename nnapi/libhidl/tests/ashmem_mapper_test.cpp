@@ -6,10 +6,10 @@
 #include <android/hidl/memory/1.0/IMemory.h>
 #include <gtest/gtest.h>
 
+using ::android::sp;
 using ::android::hardware::hidl_memory;
 using ::android::hidl::memory::V1_0::IMapper;
 using ::android::hidl::memory::V1_0::IMemory;
-using ::android::sp;
 
 TEST(AshmemMapperTest, EmptyMemory) {
   auto mapper = IMapper::getService("ashmem", false);

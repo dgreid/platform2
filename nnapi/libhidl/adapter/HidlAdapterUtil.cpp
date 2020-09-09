@@ -23,18 +23,18 @@ namespace details {
 // you end up with multiple names for the same interface.
 sp<IBase> adaptWithDefault(const sp<IBase>& something,
                            const std::function<sp<IBase>()>& makeDefault) {
-    static std::map<sp<IBase>, sp<IBase>> sAdapterMap;
+  static std::map<sp<IBase>, sp<IBase>> sAdapterMap;
 
-    if (something == nullptr) {
-        return something;
-    }
+  if (something == nullptr) {
+    return something;
+  }
 
-    auto it = sAdapterMap.find(something);
-    if (it == sAdapterMap.end()) {
-        it = sAdapterMap.insert(it, {something, makeDefault()});
-    }
+  auto it = sAdapterMap.find(something);
+  if (it == sAdapterMap.end()) {
+    it = sAdapterMap.insert(it, {something, makeDefault()});
+  }
 
-    return it->second;
+  return it->second;
 }
 
 }  // namespace details

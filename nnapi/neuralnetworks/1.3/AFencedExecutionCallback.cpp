@@ -25,9 +25,10 @@ AFencedExecutionCallback::AFencedExecutionCallback(
     const ::android::sp<
         ::android::hardware::neuralnetworks::V1_3::IFencedExecutionCallback>&
         impl)
-    : mImpl(impl) {}  // Methods from
-                      // ::android::hardware::neuralnetworks::V1_3::IFencedExecutionCallback
-                      // follow.
+    : mImpl(impl) {
+}  // Methods from
+   // ::android::hardware::neuralnetworks::V1_3::IFencedExecutionCallback
+   // follow.
 ::android::hardware::Return<void> AFencedExecutionCallback::getExecutionInfo(
     getExecutionInfo_cb _hidl_cb) {
   getExecutionInfo_cb _hidl_cb_wrapped =

@@ -19,5 +19,3 @@ TEST(AHardwareBufferTest, LinkTest) {
   AHardwareBuffer_release(nullptr);
   AHardwareBuffer_unlock(nullptr, nullptr);
 }
-
-

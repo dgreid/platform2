@@ -16,7 +16,6 @@
 #include <android/log.h>
 #include <vndk/hardware_buffer.h>
 
-
 int AHardwareBuffer_allocate(const AHardwareBuffer_Desc* /*desc*/,
                              AHardwareBuffer** /*outBuffer*/) {
   return 0;

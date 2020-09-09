@@ -19,13 +19,13 @@ namespace hidl {
 namespace allocator {
 namespace V1_0 {
 
-using ::android::hardware::Return;
-using ::android::hardware::Void;
+using ::android::sp;
 using ::android::hardware::hidl_death_recipient;
 using ::android::hardware::hidl_handle;
-using ::android::hardware::hidl_vec;
 using ::android::hardware::hidl_string;
-using ::android::sp;
+using ::android::hardware::hidl_vec;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
 
 const char* IAllocator::descriptor("android.hidl.allocator@1.0::IAllocator");
 
@@ -35,7 +35,7 @@ Return<void> IAllocator::interfaceChain(interfaceChain_cb _hidl_cb) {
       ::android::hidl::allocator::V1_0::IAllocator::descriptor,
       ::android::hidl::base::V1_0::IBase::descriptor,
   });
-return Void();
+  return Void();
 }
 
 Return<void> IAllocator::debug(const hidl_handle&,
@@ -49,15 +49,15 @@ Return<void> IAllocator::interfaceDescriptor(interfaceDescriptor_cb _hidl_cb) {
 }
 
 Return<void> IAllocator::getHashChain(getHashChain_cb _hidl_cb) {
-  _hidl_cb({
-      /* fc6cbbc8a22edabd4b58f8949e591359d3138d16a82506052e25ac43e1dbda68 */
-      (uint8_t[32]){252, 108, 187, 200, 162, 46, 218, 189, 75, 88, 248, 148,
-                    158, 89, 19, 89, 211, 19, 141, 22, 168, 37, 6, 5, 46, 37,
-                    172, 67, 225, 219, 218, 104},
-      /* ec7fd79ed02dfa85bc499426adae3ebe23ef0524f3cd6957139324b83b18ca4c */
-      (uint8_t[32]){236, 127, 215, 158, 208, 45, 250, 133, 188, 73, 148, 38,
-                    173, 174, 62, 190, 35, 239, 5, 36, 243, 205, 105, 87, 19,
-                    147, 36, 184, 59, 24, 202, 76}});
+  _hidl_cb(
+      {/* fc6cbbc8a22edabd4b58f8949e591359d3138d16a82506052e25ac43e1dbda68 */
+       (uint8_t[32]){252, 108, 187, 200, 162, 46,  218, 189, 75,  88,  248,
+                     148, 158, 89,  19,  89,  211, 19,  141, 22,  168, 37,
+                     6,   5,   46,  37,  172, 67,  225, 219, 218, 104},
+       /* ec7fd79ed02dfa85bc499426adae3ebe23ef0524f3cd6957139324b83b18ca4c */
+       (uint8_t[32]){236, 127, 215, 158, 208, 45,  250, 133, 188, 73,  148,
+                     38,  173, 174, 62,  190, 35,  239, 5,   36,  243, 205,
+                     105, 87,  19,  147, 36,  184, 59,  24,  202, 76}});
   return Void();
 }
 
@@ -79,11 +79,11 @@ Return<void> IAllocator::getDebugInfo(getDebugInfo_cb _hidl_cb) {
   info.pid = -1;
   info.ptr = 0;
   info.arch =
-  #if defined(__LP64__)
-  ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_64BIT;
-  #else
-  ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_32BIT;
-  #endif
+#if defined(__LP64__)
+      ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_64BIT;
+#else
+      ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_32BIT;
+#endif
 
   _hidl_cb(info);
   return Void();

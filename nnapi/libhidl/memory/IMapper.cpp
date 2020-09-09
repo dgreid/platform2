@@ -19,13 +19,13 @@ namespace hidl {
 namespace memory {
 namespace V1_0 {
 
-using ::android::hardware::Return;
-using ::android::hardware::Void;
+using ::android::sp;
 using ::android::hardware::hidl_death_recipient;
 using ::android::hardware::hidl_handle;
 using ::android::hardware::hidl_string;
 using ::android::hardware::hidl_vec;
-using ::android::sp;
+using ::android::hardware::Return;
+using ::android::hardware::Void;
 
 const char* IMapper::descriptor("android.hidl.memory@1.0::IMapper");
 
@@ -47,20 +47,20 @@ Return<void> IMapper::interfaceDescriptor(interfaceDescriptor_cb _hidl_cb) {
 }
 
 Return<void> IMapper::getHashChain(getHashChain_cb _hidl_cb) {
-  _hidl_cb({
-      /* 2b885b5dec97391c82f35e64180686dc4c8f78b2b0a01732f8536385654f27c8 */
-      (uint8_t[32]){43, 136, 91, 93, 236, 151, 57, 28, 130, 243, 94, 100, 24, 6,
-                    134, 220, 76, 143, 120, 178, 176, 160, 23, 50, 248, 83, 99,
-                    133, 101, 79, 39, 200},
-      /* ec7fd79ed02dfa85bc499426adae3ebe23ef0524f3cd6957139324b83b18ca4c */
-      (uint8_t[32]){236, 127, 215, 158, 208, 45, 250, 133, 188, 73, 148, 38,
-                   173, 174, 62, 190, 35, 239, 5, 36, 243, 205, 105, 87, 19,
-                   147, 36, 184, 59, 24, 202, 76}});
+  _hidl_cb(
+      {/* 2b885b5dec97391c82f35e64180686dc4c8f78b2b0a01732f8536385654f27c8 */
+       (uint8_t[32]){43,  136, 91,  93,  236, 151, 57,  28,  130, 243, 94,
+                     100, 24,  6,   134, 220, 76,  143, 120, 178, 176, 160,
+                     23,  50,  248, 83,  99,  133, 101, 79,  39,  200},
+       /* ec7fd79ed02dfa85bc499426adae3ebe23ef0524f3cd6957139324b83b18ca4c */
+       (uint8_t[32]){236, 127, 215, 158, 208, 45,  250, 133, 188, 73,  148,
+                     38,  173, 174, 62,  190, 35,  239, 5,   36,  243, 205,
+                     105, 87,  19,  147, 36,  184, 59,  24,  202, 76}});
   return Void();
 }
 
 Return<void> IMapper::setHALInstrumentation() {
-    return Void();
+  return Void();
 }
 
 Return<bool> IMapper::linkToDeath(const sp<hidl_death_recipient>& recipient,
@@ -77,11 +77,11 @@ Return<void> IMapper::getDebugInfo(getDebugInfo_cb _hidl_cb) {
   info.pid = -1;
   info.ptr = 0;
   info.arch =
-  #if defined(__LP64__)
-  ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_64BIT;
-  #else
-  ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_32BIT;
-  #endif
+#if defined(__LP64__)
+      ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_64BIT;
+#else
+      ::android::hidl::base::V1_0::DebugInfo::Architecture::IS_32BIT;
+#endif
 
   _hidl_cb(info);
   return Void();
