@@ -6,6 +6,7 @@
 //! both Trichechus and Dugong.
 
 pub mod cli;
+pub mod communication;
 pub mod sandbox;
 pub mod to_sys_util;
 pub mod transport;
