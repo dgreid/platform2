@@ -60,19 +60,22 @@ fn get_user_hash(environ: &EnvMap) -> Result<String, VmcError> {
     if let Some(hash) = environ.get("CROS_USER_ID_HASH").map(|s| String::from(*s)) {
         return Ok(hash);
     }
-    // If there is only one user, use the hash without it needing to be set.
-    // This is useful when you ssh to test devices as root.
-    let mut entries = fs::read_dir(Path::new("/home/user")).map_err(|_| ExpectedCrosUserIdHash)?;
-    let first = entries.next().ok_or(ExpectedCrosUserIdHash)?;
+    // The current user is the one with a non-empty cryptohome
+    let entries = fs::read_dir(Path::new("/home/user")).map_err(|_| ExpectedCrosUserIdHash)?;
+    let mut dirs = entries.filter_map(|f| {
+        let dir = f.ok()?;
+        if dir.path().read_dir().ok()?.count() > 0 {
+            dir.file_name().into_string().ok()
+        } else {
+            None
+        }
+    });
+    let first = dirs.next().ok_or(ExpectedCrosUserIdHash)?;
     // If there's another user cryptohome, it's ambiguous which to use so require it to be
     // specified manually.
-    match entries.next() {
+    match dirs.next() {
         Some(_) => Err(ExpectedCrosUserIdHash),
-        None => first.map_err(|_| ExpectedCrosUserIdHash).and_then(|f| {
-            f.file_name()
-                .into_string()
-                .map_err(|_| ExpectedCrosUserIdHash)
-        }),
+        None => Ok(first),
     }
 }
 
