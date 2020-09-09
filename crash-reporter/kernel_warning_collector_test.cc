@@ -264,6 +264,36 @@ TEST_F(KernelWarningCollectorTest, CollectUMACOK) {
       "sig=iwlwifi 0000:00:14.3: 0x201002FF | ADVANCED_SYSASSERT"));
 }
 
+TEST_F(KernelWarningCollectorTest, CollectSMMUFaultOk) {
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "[   74.047205] arm-smmu 15000000.iommu: Unhandled context fault: "
+      "fsr=0x402, iova=0x04367000, fsynr=0x30023, cbfrsynra=0x800, cb=5\n"
+      "[   75.303729] ath10k_snoc 18800000.wifi: failed to synchronize thermal "
+      "read\n"
+      "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kSMMUFault));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_smmu_fault_15000000_iommu.*.meta",
+      "sig=fsr=0x402, iova=0x04367000, fsynr=0x30023, cbfrsynra=0x800, cb=5"));
+}
+
+TEST_F(KernelWarningCollectorTest, CollectSMMUFaultBad) {
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "[    1.566661] arm-smmu 5040000.iommu:  8 context banks "
+      "(0 stage-2 only)\n"
+      "[    1.573025] arm-smmu 5040000.iommu:  Supported page sizes: "
+      "0x63315000\n"
+      "[    1.579385] arm-smmu 5040000.iommu:  Stage-1: 48-bit VA -> "
+      "36-bit IPA\n"
+      "<remaining log contents>"));
+  EXPECT_FALSE(
+      collector_.Collect(KernelWarningCollector::WarningType::kSMMUFault));
+  EXPECT_TRUE(IsDirectoryEmpty(test_crash_directory_));
+}
+
 TEST_F(KernelWarningCollectorTest, CollectLMACOK) {
   // Collector produces a crash report.
   ASSERT_TRUE(test_util::CreateFile(

@@ -22,6 +22,7 @@ class KernelWarningCollector : public CrashCollector {
   enum WarningType {
     kGeneric,
     kWifi,
+    kSMMUFault,
     kSuspend,
     // Iwlwifi is the name of Intel WiFi driver that we want to collect its
     // error dumps.
@@ -53,6 +54,9 @@ class KernelWarningCollector : public CrashCollector {
   bool ExtractIwlwifiSignature(const std::string& content,
                                std::string* signature,
                                std::string* func_name);
+  bool ExtractSMMUFaultSignature(const std::string& content,
+                                 std::string* signature,
+                                 std::string* func_name);
 
   DISALLOW_COPY_AND_ASSIGN(KernelWarningCollector);
 };

@@ -203,6 +203,8 @@ constexpr char crash_report_rlimit[] =
 constexpr LazyRE2 header = {
     R"(^\[\s*\S+\] WARNING:(?: CPU: \d+ PID: \d+)? at (.+))"};
 
+constexpr LazyRE2 smmu_fault = {R"(Unhandled context fault: fsr=0x)"};
+
 MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
   if (last_line_ == LineType::None) {
     if (line.find(cut_here) != std::string::npos)
@@ -276,6 +278,12 @@ MaybeCrashReport KernelParser::ParseLogEntry(const std::string& line) {
       return CrashReport(std::move(iwlwifi_text_tmp),
                          {std::move("--kernel_iwlwifi_error")});
     }
+  }
+
+  if (RE2::PartialMatch(line, *smmu_fault)) {
+    std::string smmu_text_tmp = line + "\n";
+    return CrashReport(std::move(smmu_text_tmp),
+                       {std::move("--kernel_smmu_fault")});
   }
 
   if (line.find(crash_report_rlimit) != std::string::npos) {

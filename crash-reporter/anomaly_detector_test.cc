@@ -207,6 +207,15 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmac) {
   ParserTest<KernelParser>("TEST_IWLWIFI_LMAC", {wifi_error});
 }
 
+TEST(AnomalyDetectorTest, KernelSMMU_FAULT) {
+  ParserRun smmu_error = {
+      .expected_text =
+          "[   74.047205] arm-smmu 15000000.iommu: Unhandled context fault: "
+          "fsr=0x402, iova=0x04367000, fsynr=0x30023, cbfrsynra=0x800, cb=5\n",
+      .expected_flags = {{"--kernel_smmu_fault"}}};
+  ParserTest<KernelParser>("TEST_SMMU_FAULT", {smmu_error});
+}
+
 TEST(AnomalyDetectorTest, KernelWarning) {
   ParserRun second{
       .find_this = "ttm_bo_vm.c",

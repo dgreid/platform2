@@ -15,6 +15,7 @@
 namespace {
 const char kGenericWarningExecName[] = "kernel-warning";
 const char kWifiWarningExecName[] = "kernel-wifi-warning";
+const char kSMMUFaultExecName[] = "kernel-smmu-fault";
 const char kSuspendWarningExecName[] = "kernel-suspend-warning";
 const char kKernelIwlwifiErrorExecName[] = "kernel-iwlwifi-error";
 const char kKernelWarningSignatureKey[] = "sig";
@@ -41,6 +42,12 @@ bool KernelWarningCollector::LoadKernelWarning(std::string* content,
 
   if (type == kIwlwifi) {
     if (!ExtractIwlwifiSignature(*content, signature, func_name)) {
+      return false;
+    } else if (signature->length() > 0) {
+      return true;
+    }
+  } else if (type == kSMMUFault) {
+    if (!ExtractSMMUFaultSignature(*content, signature, func_name)) {
       return false;
     } else if (signature->length() > 0) {
       return true;
@@ -206,6 +213,30 @@ bool KernelWarningCollector::ExtractIwlwifiSignature(const std::string& content,
   return true;
 }
 
+constexpr LazyRE2 smmu_sig_re = {R"((\S+): Unhandled context fault: (.*))"};
+
+bool KernelWarningCollector::ExtractSMMUFaultSignature(
+    const std::string& content,
+    std::string* signature,
+    std::string* func_name) {
+  // The signature is the part of the line after "Unhandled context fault:"
+  std::string line;
+  std::string::size_type end_position = content.find('\n');
+  if (end_position == std::string::npos) {
+    LOG(ERROR) << "unexpected smmu fault warning format";
+    return false;
+  }
+
+  line = content.substr(0, end_position);
+  if (RE2::PartialMatch(line, *smmu_sig_re, func_name, signature)) {
+    return true;
+  }
+  LOG(INFO) << line << " does not match regex";
+  signature->clear();
+  func_name->clear();
+  return false;
+}
+
 bool KernelWarningCollector::Collect(WarningType type) {
   std::string reason = "normal collection";
   bool feedback = true;
@@ -240,6 +271,8 @@ bool KernelWarningCollector::Collect(WarningType type) {
   const char* exec_name;
   if (type == kWifi)
     exec_name = kWifiWarningExecName;
+  else if (type == kSMMUFault)
+    exec_name = kSMMUFaultExecName;
   else if (type == kSuspend)
     exec_name = kSuspendWarningExecName;
   else if (type == kGeneric)

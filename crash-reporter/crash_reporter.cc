@@ -268,6 +268,7 @@ int main(int argc, char* argv[]) {
               "Report collected kernel iwlwifi error");
   DEFINE_bool(kernel_wifi_warning, false,
               "Report collected kernel wifi warning");
+  DEFINE_bool(kernel_smmu_fault, false, "Report collected kernel smmu faults");
   DEFINE_bool(kernel_suspend_warning, false,
               "Report collected kernel suspend warning");
   DEFINE_bool(missed_chrome_crash, false,
@@ -584,6 +585,12 @@ int main(int argc, char* argv[]) {
                        .cb = base::BindRepeating(
                            kernel_warn_cb,
                            KernelWarningCollector::WarningType::kWifi),
+                   },
+                   {
+                       .should_handle = FLAGS_kernel_smmu_fault,
+                       .cb = base::BindRepeating(
+                           kernel_warn_cb,
+                           KernelWarningCollector::WarningType::kSMMUFault),
                    },
                    {
                        .should_handle = FLAGS_kernel_suspend_warning,
