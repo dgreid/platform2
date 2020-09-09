@@ -183,6 +183,154 @@ TEST(DatapathTest, Start) {
                        ElementsAre("-A", "PREROUTING", "-i", "vmtap+", "-j",
                                    "MARK", "--set-mark", "1/1", "-w"),
                        true, nullptr));
+  // Asserts for apply_local_source_mark chain
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-N", "apply_local_source_mark", "-w"), true,
+                       nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-F", "apply_local_source_mark", "-w"), true,
+                       nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "OUTPUT", "-j",
+                                           "apply_local_source_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "chronos", "-j", "MARK", "--set-mark",
+                           "0x00008100/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-A", "apply_local_source_mark",
+                                           "-m", "owner", "--uid-owner",
+                                           "debugd", "-j", "MARK", "--set-mark",
+                                           "0x00008200/0x0000ff00", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-A", "apply_local_source_mark", "-m",
+                                   "owner", "--uid-owner", "cups", "-j", "MARK",
+                                   "--set-mark", "0x00008200/0x0000ff00", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "kerberosd", "-j", "MARK",
+                           "--set-mark", "0x00008400/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "kerberosd-exec", "-j", "MARK",
+                           "--set-mark", "0x00008400/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "tlsdate", "-j", "MARK", "--set-mark",
+                           "0x00008400/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "pluginvm", "-j", "MARK",
+                           "--set-mark", "0x00008200/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                           "--uid-owner", "fuse-smbfs", "-j", "MARK",
+                           "--set-mark", "0x00008400/0x0000ff00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(
+      runner,
+      iptables(StrEq("mangle"),
+               ElementsAre("-A", "apply_local_source_mark", "-m", "mark",
+                           "--mark", "0x0/0x00003f00", "-j", "MARK",
+                           "--set-mark", "0x00000400/0x00003f00", "-w"),
+               true, nullptr));
+  EXPECT_CALL(runner,
+              ip6tables(StrEq("mangle"),
+                        ElementsAre("-N", "apply_local_source_mark", "-w"),
+                        true, nullptr));
+  EXPECT_CALL(runner,
+              ip6tables(StrEq("mangle"),
+                        ElementsAre("-F", "apply_local_source_mark", "-w"),
+                        true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "OUTPUT", "-j",
+                                            "apply_local_source_mark", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "debugd", "-j", "MARK", "--set-mark",
+                            "0x00008200/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "chronos", "-j", "MARK",
+                            "--set-mark", "0x00008100/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "apply_local_source_mark",
+                                            "-m", "owner", "--uid-owner",
+                                            "cups", "-j", "MARK", "--set-mark",
+                                            "0x00008200/0x0000ff00", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "kerberosd", "-j", "MARK",
+                            "--set-mark", "0x00008400/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "kerberosd-exec", "-j", "MARK",
+                            "--set-mark", "0x00008400/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "tlsdate", "-j", "MARK",
+                            "--set-mark", "0x00008400/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "pluginvm", "-j", "MARK",
+                            "--set-mark", "0x00008200/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "owner",
+                            "--uid-owner", "fuse-smbfs", "-j", "MARK",
+                            "--set-mark", "0x00008400/0x0000ff00", "-w"),
+                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "apply_local_source_mark", "-m", "mark",
+                            "--mark", "0x0/0x00003f00", "-j", "MARK",
+                            "--set-mark", "0x00000400/0x00003f00", "-w"),
+                true, nullptr));
   // Asserts for apply_vpn_mark chain
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-N", "apply_vpn_mark", "-w"), true,
@@ -291,6 +439,31 @@ TEST(DatapathTest, Stop) {
                        ElementsAre("-D", "OUTPUT", "-o", "rmnet+", "-s",
                                    "100.115.92.0/23", "-j", "DROP", "-w"),
                        true, nullptr));
+  // Asserts for apply_local_source_mark chain
+  EXPECT_CALL(runner, iptables(StrEq("mangle"),
+                               ElementsAre("-D", "OUTPUT", "-j",
+                                           "apply_local_source_mark", "-w"),
+                               true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-F", "apply_local_source_mark", "-w"), true,
+                       nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("mangle"),
+                       ElementsAre("-X", "apply_local_source_mark", "-w"), true,
+                       nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "OUTPUT", "-j",
+                                            "apply_local_source_mark", "-w"),
+                                true, nullptr));
+  EXPECT_CALL(runner,
+              ip6tables(StrEq("mangle"),
+                        ElementsAre("-F", "apply_local_source_mark", "-w"),
+                        true, nullptr));
+  EXPECT_CALL(runner,
+              ip6tables(StrEq("mangle"),
+                        ElementsAre("-X", "apply_local_source_mark", "-w"),
+                        true, nullptr));
   // Asserts for apply_vpn_mark chain
   EXPECT_CALL(runner, iptables(StrEq("mangle"),
                                ElementsAre("-D", "OUTPUT", "-m", "mark",

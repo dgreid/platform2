@@ -10,6 +10,7 @@
 #include <sys/socket.h>
 
 #include <array>
+#include <ostream>
 #include <string>
 
 #include <base/strings/stringprintf.h>
@@ -143,6 +144,52 @@ union Fwmark {
   }
 };
 
+// Specifies how the local traffic originating from a given source should be
+// tagged in mangle OUTPUT. A source is either identified by a uid or by a
+// cgroup classid identifier.
+struct LocalSourceSpecs {
+  TrafficSource source_type;
+  const char* uid_name;
+  uint32_t classid;
+  bool is_on_vpn;
+};
+
+std::ostream& operator<<(std::ostream& stream, const LocalSourceSpecs& source);
+
+// This block defines the names of uids whose traffic is always routed through a
+// VPN connection. Chrome and nacl applications
+constexpr char kUidChronos[] = "chronos";
+// Crosh terminal and feedback reports
+constexpr char kUidDebugd[] = "debugd";
+constexpr char kUidCups[] = "cups";
+// Chrome OS Kerberos daemon
+constexpr char kUidKerberosd[] = "kerberosd";
+// Kerberos third party untrusted code
+constexpr char kUidKerberosdExec[] = "kerberosd-exec";
+// While tlsdate is not user traffic, time sync should be attempted over
+// VPN. It is OK to send tlsdate traffic over VPN because it will also try
+// to sync time immediately after boot on the sign-in screen when no VPN can
+// be active.
+constexpr char kUidTlsdate[] = "tlsdate";
+// Plugin vm problem report utility (b/160916677)
+constexpr char kUidPluginvm[] = "pluginvm";
+// smbfs SMB filesystem daemon
+constexpr char kUidFuseSmbfs[] = "fuse-smbfs";
+
+// The list of all local sources to tag in mangle OUTPUT with the VPN intent
+// bit, or with a source tag, or with both.
+constexpr std::array<LocalSourceSpecs, 8> kLocalSourceTypes{{
+    {TrafficSource::CHROME, kUidChronos, 0, true},
+    {TrafficSource::USER, kUidDebugd, 0, true},
+    {TrafficSource::USER, kUidCups, 0, true},
+    {TrafficSource::SYSTEM, kUidKerberosd, 0, true},
+    {TrafficSource::SYSTEM, kUidKerberosdExec, 0, true},
+    {TrafficSource::SYSTEM, kUidTlsdate, 0, true},
+    {TrafficSource::USER, kUidPluginvm, 0, true},
+    {TrafficSource::SYSTEM, kUidFuseSmbfs, 0, true},
+    // TODO(b/167479541) Add an entry for UpdateEngine
+}};
+
 // All local sources
 constexpr std::array<TrafficSource, 5> kLocalSources{
     {CHROME, USER, UPDATE_ENGINE, SYSTEM, HOST_VPN}};
@@ -163,6 +210,8 @@ constexpr const Fwmark kFwmarkRoutingMask = {.rt_table_id = 0xffff};
 constexpr const Fwmark kFwmarkAllSourcesMask = {.policy = 0x3f};
 // A mast for matching fwmarks of forwarded sources.
 constexpr const Fwmark kFwmarkForwardedSourcesMask = {.policy = 0x20};
+// A mask for matching fwmarks on the policy byte.
+constexpr const Fwmark kFwmarkPolicyMask = {.policy = 0xff};
 // Both the mask and fwmark values for legacy SNAT rules used for ARC and other
 // containers.
 constexpr const Fwmark kFwmarkLegacySNAT = {.legacy = 0x1};

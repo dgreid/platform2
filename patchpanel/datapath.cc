@@ -44,6 +44,7 @@ constexpr char kGuestIPv4Subnet[] = "100.115.92.0/23";
 constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
     {"eth+", "wlan+", "mlan+", "usb+", "wwan+", "rmnet+"}};
 
+constexpr char kApplyLocalSourceMarkChain[] = "apply_local_source_mark";
 constexpr char kApplyVpnMarkChain[] = "apply_vpn_mark";
 
 std::string PrefixIfname(const std::string& prefix, const std::string& ifname) {
@@ -139,6 +140,31 @@ void Datapath::Start() {
     LOG(ERROR) << "Failed to set up NAT for TAP devices."
                << " Guest connectivity may be broken.";
 
+  // Set up a mangle chain used in OUTPUT for applying the fwmark TrafficSource
+  // tag and tagging the local traffic that should be routed through a VPN.
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-N", kApplyLocalSourceMarkChain))
+    LOG(ERROR) << "Failed to set up " << kApplyLocalSourceMarkChain
+               << " mangle chain";
+  // Ensure that the chain is empty if patchpanel is restarting after a crash.
+  if (!ModifyChain(IpFamily::Dual, "mangle", "-F", kApplyLocalSourceMarkChain))
+    LOG(ERROR) << "Failed to flush " << kApplyLocalSourceMarkChain
+               << " mangle chain";
+  if (!ModifyIptables(IpFamily::Dual, "mangle",
+                      {"-A", "OUTPUT", "-j", kApplyLocalSourceMarkChain, "-w"}))
+    LOG(ERROR) << "Failed to attach " << kApplyLocalSourceMarkChain
+               << " to mangle OUTPUT";
+  // Create rules for tagging local sources with the source tag and the vpn
+  // policy tag.
+  for (const auto& source : kLocalSourceTypes) {
+    if (ModifyFwmarkLocalSourceTag("-A", source))
+      LOG(ERROR) << "Failed to create fwmark tagging rule for uid " << source
+                 << " in " << kApplyLocalSourceMarkChain;
+  }
+  // Finally add a catch-all rule for tagging any remaining local sources with
+  // the SYSTEM source tag
+  if (!ModifyFwmarkDefaultLocalSourceTag("-A", TrafficSource::SYSTEM))
+    LOG(ERROR) << "Failed to set up rule tagging traffic with default source";
+
   // Sets up a mangle chain used in OUTPUT and PREROUTING for tagging "user"
   // traffic that should be routed through a VPN.
   if (!ModifyChain(IpFamily::Dual, "mangle", "-N", kApplyVpnMarkChain))
@@ -185,15 +211,26 @@ void Datapath::Stop() {
   if (process_runner_->sysctl_w("net.ipv4.ip_forward", "0") != 0)
     LOG(ERROR) << "Failed to restore net.ipv4.ip_forward.";
 
-  // Delete the VPN marking mangle chain
+  // Detach the VPN marking mangle chain
   if (!ModifyFwmarkVpnJumpRule("OUTPUT", "-D", "" /*iif*/, kFwmarkRouteOnVpn,
                                kFwmarkVpnMask))
     LOG(ERROR)
         << "Failed to remove from mangle OUTPUT chain jump rule to VPN chain";
-  if (!ModifyChain(IpFamily::Dual, "mangle", "-F", kApplyVpnMarkChain))
-    LOG(ERROR) << "Failed to flush " << kApplyVpnMarkChain << " mangle chain";
-  if (!ModifyChain(IpFamily::Dual, "mangle", "-X", kApplyVpnMarkChain))
-    LOG(ERROR) << "Failed to delete " << kApplyVpnMarkChain << " mangle chain";
+
+  // Detach apply_local_source_mark from mangle PREROUTING
+  if (!ModifyIptables(IpFamily::Dual, "mangle",
+                      {"-D", "OUTPUT", "-j", kApplyLocalSourceMarkChain, "-w"}))
+    LOG(ERROR) << "Failed to detach " << kApplyLocalSourceMarkChain
+               << " from mangle OUTPUT";
+
+  // Delete the mangle chains
+  for (const auto* chain : {kApplyLocalSourceMarkChain, kApplyVpnMarkChain}) {
+    if (!ModifyChain(IpFamily::Dual, "mangle", "-F", chain))
+      LOG(ERROR) << "Failed to flush " << chain << " mangle chain";
+
+    if (!ModifyChain(IpFamily::Dual, "mangle", "-X", chain))
+      LOG(ERROR) << "Failed to delete " << chain << " mangle chain";
+  }
 }
 
 bool Datapath::NetnsAttachName(const std::string& netns_name, pid_t netns_pid) {
@@ -780,34 +817,43 @@ void Datapath::StopConnectionPinning(const std::string& ext_ifname) {
 bool Datapath::ModifyConnmarkSetPostrouting(IpFamily family,
                                             const std::string& op,
                                             const std::string& oif) {
-  if (oif.empty()) {
-    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark with no"
-                  " interface specified";
-    return false;
-  }
-
-  if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change POSTROUTING CONNMARK set-mark for " << oif
-               << ": incorrect IP family " << family;
-    return false;
-  }
-
   int ifindex = FindIfIndex(oif);
   if (ifindex == 0) {
     PLOG(ERROR) << "if_nametoindex(" << oif << ") failed";
     return false;
   }
 
-  std::vector<std::string> args = {op,
-                                   "POSTROUTING",
-                                   "-o",
-                                   oif,
-                                   "-j",
-                                   "CONNMARK",
-                                   "--set-mark",
-                                   Fwmark::FromIfIndex(ifindex).ToString() +
-                                       "/" + kFwmarkRoutingMask.ToString(),
-                                   "-w"};
+  return ModifyConnmarkSet(family, "POSTROUTING", op, oif,
+                           Fwmark::FromIfIndex(ifindex), kFwmarkRoutingMask);
+}
+
+bool Datapath::ModifyConnmarkSet(IpFamily family,
+                                 const std::string& chain,
+                                 const std::string& op,
+                                 const std::string& oif,
+                                 Fwmark mark,
+                                 Fwmark mask) {
+  if (chain != kApplyVpnMarkChain && (chain != "POSTROUTING" || oif.empty())) {
+    LOG(ERROR) << "Invalid arguments chain=" << chain << " oif=" << oif;
+    return false;
+  }
+
+  if (!IsValidIpFamily(family)) {
+    LOG(ERROR) << "Cannot change " << chain << " CONNMARK set-mark for " << oif
+               << ": incorrect IP family " << family;
+    return false;
+  }
+
+  std::vector<std::string> args = {op, chain};
+  if (!oif.empty()) {
+    args.push_back("-o");
+    args.push_back(oif);
+  }
+  args.push_back("-j");
+  args.push_back("CONNMARK");
+  args.push_back("--set-mark");
+  args.push_back(mark.ToString() + "/" + mask.ToString());
+  args.push_back("-w");
 
   bool success = true;
   if (family & IPv4)
@@ -857,41 +903,80 @@ bool Datapath::ModifyFwmarkRoutingTag(const std::string& op,
     return false;
   }
 
-  return ModifyFwmarkPrerouting(IpFamily::Dual, op, int_ifname,
-                                Fwmark::FromIfIndex(ifindex),
-                                kFwmarkRoutingMask);
+  return ModifyFwmark(IpFamily::Dual, "PREROUTING", op, int_ifname,
+                      "" /*uid_name*/, Fwmark::FromIfIndex(ifindex),
+                      kFwmarkRoutingMask);
 }
 
 bool Datapath::ModifyFwmarkSourceTag(const std::string& op,
                                      const std::string& iif,
                                      TrafficSource source) {
-  return ModifyFwmarkPrerouting(IpFamily::Dual, op, iif,
-                                Fwmark::FromSource(source),
-                                kFwmarkAllSourcesMask);
+  return ModifyFwmark(IpFamily::Dual, "PREROUTING", op, iif, "" /*uid_name*/,
+                      Fwmark::FromSource(source), kFwmarkAllSourcesMask);
 }
 
-bool Datapath::ModifyFwmarkPrerouting(IpFamily family,
-                                      const std::string& op,
-                                      const std::string& iif,
-                                      Fwmark mark,
-                                      Fwmark mask,
-                                      bool log_failures) {
-  if (iif.empty()) {
-    LOG(ERROR)
-        << "Cannot change PREROUTING set-fwmark with no interface specified";
-    return false;
-  }
+bool Datapath::ModifyFwmarkDefaultLocalSourceTag(const std::string& op,
+                                                 TrafficSource source) {
+  std::vector<std::string> args = {"-A",
+                                   kApplyLocalSourceMarkChain,
+                                   "-m",
+                                   "mark",
+                                   "--mark",
+                                   "0x0/" + kFwmarkAllSourcesMask.ToString(),
+                                   "-j",
+                                   "MARK",
+                                   "--set-mark",
+                                   Fwmark::FromSource(source).ToString() + "/" +
+                                       kFwmarkAllSourcesMask.ToString(),
+                                   "-w"};
+  return ModifyIptables(IpFamily::Dual, "mangle", args);
+}
 
+bool Datapath::ModifyFwmarkLocalSourceTag(const std::string& op,
+                                          const LocalSourceSpecs& source) {
+  Fwmark mark = Fwmark::FromSource(source.source_type);
+  if (source.is_on_vpn)
+    mark = mark | kFwmarkRouteOnVpn;
+
+  const std::string& uid_name = source.uid_name;
+  if (!uid_name.empty())
+    return ModifyFwmark(IpFamily::Dual, kApplyLocalSourceMarkChain, op,
+                        "" /*iif*/, uid_name, mark, kFwmarkPolicyMask);
+
+  return false;
+  // TODO(b/167479541) Supports entries specifying a cgroup classid value.
+}
+
+bool Datapath::ModifyFwmark(IpFamily family,
+                            const std::string& chain,
+                            const std::string& op,
+                            const std::string& iif,
+                            const std::string& uid_name,
+                            Fwmark mark,
+                            Fwmark mask,
+                            bool log_failures) {
   if (!IsValidIpFamily(family)) {
-    LOG(ERROR) << "Cannot change PREROUTING set-fwmark for " << iif
+    LOG(ERROR) << "Cannot change " << chain << " set-fwmark for " << iif
                << ": incorrect IP family " << family;
     return false;
   }
 
-  std::vector<std::string> args = {
-      op,   "PREROUTING", "-i",         iif,
-      "-j", "MARK",       "--set-mark", mark.ToString() + "/" + mask.ToString(),
-      "-w"};
+  std::vector<std::string> args = {op, chain};
+  if (!iif.empty()) {
+    args.push_back("-i");
+    args.push_back(iif);
+  }
+  if (!uid_name.empty()) {
+    args.push_back("-m");
+    args.push_back("owner");
+    args.push_back("--uid-owner");
+    args.push_back(uid_name);
+  }
+  args.push_back("-j");
+  args.push_back("MARK");
+  args.push_back("--set-mark");
+  args.push_back(mark.ToString() + "/" + mask.ToString());
+  args.push_back("-w");
 
   bool success = true;
   if (family & IPv4)

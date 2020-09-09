@@ -260,4 +260,29 @@ TEST_F(RoutingServiceTest, SetFwmark_Failures) {
   EXPECT_TRUE(svc->SetFwmark(6, fwmark(0x1), fwmark(0x01)));
 }
 
+TEST_F(RoutingServiceTest, LocalSourceSpecsPrettyPrinting) {
+  struct {
+    LocalSourceSpecs source;
+    std::string expected_output;
+  } testcases[] = {
+      {{}, "{source: UNKNOWN, uid: , classid: 0, is_on_vpn: false}"},
+      {{TrafficSource::CHROME, kUidChronos, 0, true},
+       "{source: CHROME, uid: chronos, classid: 0, is_on_vpn: true}"},
+      {{TrafficSource::USER, kUidDebugd, 0, true},
+       "{source: USER, uid: debugd, classid: 0, is_on_vpn: true}"},
+      {{TrafficSource::SYSTEM, kUidTlsdate, 0, true},
+       "{source: SYSTEM, uid: tlsdate, classid: 0, is_on_vpn: true}"},
+      {{TrafficSource::USER, kUidPluginvm, 0, true},
+       "{source: USER, uid: pluginvm, classid: 0, is_on_vpn: true}"},
+      {{TrafficSource::UPDATE_ENGINE, "", 1234, false},
+       "{source: UPDATE_ENGINE, uid: , classid: 1234, is_on_vpn: false}"},
+  };
+
+  for (const auto& tt : testcases) {
+    std::ostringstream stream;
+    stream << tt.source;
+    EXPECT_EQ(tt.expected_output, stream.str());
+  }
+}
+
 }  // namespace patchpanel

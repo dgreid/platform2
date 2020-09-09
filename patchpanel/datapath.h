@@ -268,6 +268,12 @@ class Datapath {
   bool ModifyConnmarkSetPostrouting(IpFamily family,
                                     const std::string& op,
                                     const std::string& oif);
+  bool ModifyConnmarkSet(IpFamily family,
+                         const std::string& chain,
+                         const std::string& op,
+                         const std::string& oif,
+                         Fwmark mark,
+                         Fwmark mask);
   bool ModifyConnmarkRestore(IpFamily family,
                              const std::string& chain,
                              const std::string& op,
@@ -278,12 +284,18 @@ class Datapath {
   bool ModifyFwmarkSourceTag(const std::string& op,
                              const std::string& iif,
                              TrafficSource source);
-  bool ModifyFwmarkPrerouting(IpFamily family,
-                              const std::string& op,
-                              const std::string& iif,
-                              Fwmark mark,
-                              Fwmark mask,
-                              bool log_failures = true);
+  bool ModifyFwmarkDefaultLocalSourceTag(const std::string& op,
+                                         TrafficSource source);
+  bool ModifyFwmarkLocalSourceTag(const std::string& op,
+                                  const LocalSourceSpecs& source);
+  bool ModifyFwmark(IpFamily family,
+                    const std::string& chain,
+                    const std::string& op,
+                    const std::string& iif,
+                    const std::string& uid_name,
+                    Fwmark mark,
+                    Fwmark mask,
+                    bool log_failures = true);
   bool ModifyIpForwarding(IpFamily family,
                           const std::string& op,
                           const std::string& iif,

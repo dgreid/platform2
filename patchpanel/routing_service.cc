@@ -67,4 +67,40 @@ bool RoutingService::SetVpnFwmark(
   return SetFwmark(sockfd, mark, kFwmarkVpnMask);
 }
 
+const char* TrafficSourceName(TrafficSource source) {
+  switch (source) {
+    case CHROME:
+      return "CHROME";
+    case USER:
+      return "USER";
+    case UPDATE_ENGINE:
+      return "UPDATE_ENGINE";
+    case SYSTEM:
+      return "SYSTEM";
+    case HOST_VPN:
+      return "HOST_VPN";
+    case ARC:
+      return "ARC";
+    case CROSVM:
+      return "CROSVM";
+    case PLUGINVM:
+      return "PLUGINVM";
+    case TETHER_DOWNSTREAM:
+      return "TETHER_DOWNSTREAM";
+    case ARC_VPN:
+      return "ARC_VPN";
+    case UNKNOWN:
+    default:
+      return "UNKNOWN";
+  }
+}
+
+std::ostream& operator<<(std::ostream& stream, const LocalSourceSpecs& source) {
+  return stream << "{source: " << TrafficSourceName(source.source_type)
+                << ", uid: " << (source.uid_name ? source.uid_name : "")
+                << ", classid: " << source.classid
+                << ", is_on_vpn: " << (source.is_on_vpn ? "true" : "false")
+                << "}";
+}
+
 }  // namespace patchpanel
