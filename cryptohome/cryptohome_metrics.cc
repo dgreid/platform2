@@ -86,6 +86,8 @@ constexpr char kOOPMountOperationResultHistogram[] =
     "Cryptohome.OOPMountOperationResult";
 constexpr char kOOPMountCleanupResultHistogram[] =
     "Cryptohome.OOPMountCleanupResult";
+constexpr char kInvalidateDirCryptoKeyResultHistogram[] =
+    "Cryptohome.InvalidateDirCryptoKeyResult";
 
 // Histogram parameters. This should match the order of 'TimerType'.
 // Min and max samples are in milliseconds.
@@ -568,6 +570,14 @@ void ReportAttestationOpsStatus(
   g_metrics->SendEnumToUMA(histogram,
                            static_cast<int>(status),
                            static_cast<int>(AttestationOpsStatus::kMaxValue));
+}
+
+void ReportInvalidateDirCryptoKeyResult(bool result) {
+  if (!g_metrics) {
+    return;
+  }
+
+  g_metrics->SendBoolToUMA(kInvalidateDirCryptoKeyResultHistogram, result);
 }
 
 }  // namespace cryptohome

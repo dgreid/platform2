@@ -453,6 +453,9 @@ void ReportOOPMountCleanupResult(OOPMountCleanupResult result);
 void ReportAttestationOpsStatus(
     const std::string& operation, AttestationOpsStatus status);
 
+// Reports the result of an InvalidateDirCryptoKey operation.
+void ReportInvalidateDirCryptoKeyResult(bool result);
+
 // Initialization helper.
 class ScopedMetricsInitializer {
  public:
