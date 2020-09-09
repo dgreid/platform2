@@ -63,7 +63,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
       std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
       std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics);
-  bool Init();
 
   void EndEnrollSession() override;
   void EndAuthSession() override;

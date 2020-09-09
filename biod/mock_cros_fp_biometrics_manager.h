@@ -23,8 +23,7 @@ class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
  public:
   /**
    * @param bus DBus Usually a mock bus
-   * @param cros_fp_device Usually a mock device so the call to Init()
-   * succeeds.
+   * @param cros_fp_device Usually a mock device
    * @param biod_metrics Usually a mock metrics object
    *
    * @return mock instance on success, nullptr on failure
@@ -35,13 +34,9 @@ class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
       std::unique_ptr<BiodMetricsInterface> biod_metrics) {
     // Using new to access non-public constructor.
     // See https://abseil.io/tips/134.
-    auto mock = base::WrapUnique(new MockCrosFpBiometricsManager(
+    return base::WrapUnique(new MockCrosFpBiometricsManager(
         PowerButtonFilter::Create(bus), std::move(cros_fp_device),
         std::move(biod_metrics)));
-    if (!mock->Init()) {
-      return nullptr;
-    }
-    return mock;
   }
 
   ~MockCrosFpBiometricsManager() override = default;

@@ -169,10 +169,6 @@ std::unique_ptr<CrosFpBiometricsManager> CrosFpBiometricsManager::Create(
                                   std::move(cros_fp_device),
                                   std::move(biod_metrics)));
 
-  if (!biometrics_manager->Init()) {
-    return nullptr;
-  }
-
   return biometrics_manager;
 }
 
@@ -304,11 +300,6 @@ bool CrosFpBiometricsManager::ResetSensor() {
     return false;
   }
 
-  if (!Init()) {
-    LOG(ERROR) << "Failed to reinitialize CrosFpBiometricsManager.";
-    return false;
-  }
-
   return true;
 }
 
@@ -352,11 +343,7 @@ CrosFpBiometricsManager::CrosFpBiometricsManager(
                     base::Bind(&CrosFpBiometricsManager::LoadRecord,
                                base::Unretained(this))),
       use_positive_match_secret_(false),
-      maintenance_timer_(std::make_unique<base::RepeatingTimer>()) {}
-
-CrosFpBiometricsManager::~CrosFpBiometricsManager() {}
-
-bool CrosFpBiometricsManager::Init() {
+      maintenance_timer_(std::make_unique<base::RepeatingTimer>()) {
   cros_dev_->SetMkbpEventCallback(base::Bind(
       &CrosFpBiometricsManager::OnMkbpEvent, base::Unretained(this)));
 
@@ -370,9 +357,9 @@ bool CrosFpBiometricsManager::Init() {
       base::Bind(&CrosFpBiometricsManager::OnMaintenanceTimerFired,
                  base::Unretained(this)));
 #endif
-
-  return true;
 }
+
+CrosFpBiometricsManager::~CrosFpBiometricsManager() {}
 
 void CrosFpBiometricsManager::OnEnrollScanDone(
     ScanResult result, const BiometricsManager::EnrollStatus& enroll_status) {
