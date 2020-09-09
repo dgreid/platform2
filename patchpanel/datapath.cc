@@ -115,7 +115,10 @@ void Datapath::Start() {
     LOG(ERROR) << "Failed to install SNAT mark rules."
                << " Guest connectivity may be broken.";
 
-  if (!AddForwardEstablishedRule())
+  // Create a FORWARD ACCEPT rule for connections already established.
+  if (process_runner_->iptables(
+          "filter", {"-A", "FORWARD", "-m", "state", "--state",
+                     "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"}) != 0)
     LOG(ERROR) << "Failed to install forwarding rule for established"
                << " connections.";
 
@@ -137,7 +140,9 @@ void Datapath::Start() {
 
 void Datapath::Stop() {
   RemoveOutboundIPv4SNATMark("vmtap+");
-  RemoveForwardEstablishedRule();
+  process_runner_->iptables("filter",
+                            {"-D", "FORWARD", "-m", "state", "--state",
+                             "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"});
   RemoveSNATMarkRules();
   for (const auto& oif : kPhysicalIfnamePrefixes)
     RemoveSourceIPv4DropRule(oif, kGuestIPv4Subnet);
@@ -494,9 +499,8 @@ bool Datapath::StartRoutingNamespace(pid_t pid,
     return false;
   }
 
-  if (!AddOutboundIPv4(host_ifname)) {
-    LOG(ERROR) << "Failed to allow FORWARD for"
-                  " traffic outgoing from "
+  if (!StartIpForwarding(IpFamily::IPv4, "", host_ifname)) {
+    LOG(ERROR) << "Failed to allow FORWARD for ingress traffic into "
                << host_ifname;
     RemoveInterface(host_ifname);
     DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr, netmask);
@@ -512,7 +516,7 @@ bool Datapath::StartRoutingNamespace(pid_t pid,
                << host_ifname;
     RemoveInterface(host_ifname);
     DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr, netmask);
-    RemoveOutboundIPv4(host_ifname);
+    StopIpForwarding(IpFamily::IPv4, "", host_ifname);
     NetnsDeleteName(netns_name);
     return false;
   }
@@ -526,7 +530,7 @@ void Datapath::StopRoutingNamespace(const std::string& netns_name,
                                     uint32_t subnet_prefixlen,
                                     uint32_t host_ipv4_addr) {
   RemoveInterface(host_ifname);
-  RemoveOutboundIPv4(host_ifname);
+  StopIpForwarding(IpFamily::IPv4, "", host_ifname);
   RemoveOutboundIPv4SNATMark(host_ifname);
   DeleteIPv4Route(host_ipv4_addr, subnet_ipv4_addr,
                   Ipv4Netmask(subnet_prefixlen));
@@ -628,16 +632,6 @@ void Datapath::RemoveInboundIPv4DNAT(const std::string& ifname,
               "-j", "ACCEPT", "-w"});
 }
 
-// TODO(hugobenichi) The name incorrectly refers to egress traffic, but this
-// FORWARD rule actually enables forwarding for ingress traffic. Fix the name.
-bool Datapath::AddOutboundIPv4(const std::string& ifname) {
-  return StartIpForwarding(IpFamily::IPv4, "", ifname);
-}
-
-void Datapath::RemoveOutboundIPv4(const std::string& ifname) {
-  StopIpForwarding(IpFamily::IPv4, "", ifname);
-}
-
 // TODO(b/161507671) Stop relying on the traffic fwmark 1/1 once forwarded
 // egress traffic is routed through the fwmark routing tag.
 bool Datapath::AddSNATMarkRules() {
@@ -672,16 +666,6 @@ void Datapath::RemoveSNATMarkRules() {
                  "--state", "INVALID", "-j", "DROP", "-w"});
 }
 
-bool Datapath::AddInterfaceSNAT(const std::string& ifname) {
-  return process_runner_->iptables("nat", {"-A", "POSTROUTING", "-o", ifname,
-                                           "-j", "MASQUERADE", "-w"}) == 0;
-}
-
-void Datapath::RemoveInterfaceSNAT(const std::string& ifname) {
-  process_runner_->iptables(
-      "nat", {"-D", "POSTROUTING", "-o", ifname, "-j", "MASQUERADE", "-w"});
-}
-
 bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
   return process_runner_->iptables(
              "mangle", {"-A", "PREROUTING", "-i", ifname, "-j", "MARK",
@@ -691,18 +675,6 @@ bool Datapath::AddOutboundIPv4SNATMark(const std::string& ifname) {
 void Datapath::RemoveOutboundIPv4SNATMark(const std::string& ifname) {
   process_runner_->iptables("mangle", {"-D", "PREROUTING", "-i", ifname, "-j",
                                        "MARK", "--set-mark", "1/1", "-w"});
-}
-
-bool Datapath::AddForwardEstablishedRule() {
-  return process_runner_->iptables(
-             "filter", {"-A", "FORWARD", "-m", "state", "--state",
-                        "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"}) == 0;
-}
-
-void Datapath::RemoveForwardEstablishedRule() {
-  process_runner_->iptables("filter",
-                            {"-D", "FORWARD", "-m", "state", "--state",
-                             "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"});
 }
 
 bool Datapath::MaskInterfaceFlags(const std::string& ifname,

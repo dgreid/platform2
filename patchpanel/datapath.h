@@ -251,24 +251,16 @@ class Datapath {
   void RemoveInboundIPv4DNAT(const std::string& ifname,
                              const std::string& ipv4_addr);
   // Create (or delete) a forwarding rule for |ifname|.
-  bool AddOutboundIPv4(const std::string& ifname);
-  void RemoveOutboundIPv4(const std::string& ifname);
   // Creates (or deletes) the forwarding and postrouting rules for SNAT
   // fwmarked IPv4 traffic.
   bool AddSNATMarkRules();
   void RemoveSNATMarkRules();
-  // Creates (or delete) a SNAT rule for traffic exiting |ifname|.
-  bool AddInterfaceSNAT(const std::string& ifname);
-  void RemoveInterfaceSNAT(const std::string& ifname);
   // Create (or delete) a mangle PREROUTING rule for marking IPv4 traffic
   // outgoing of |ifname| with the SNAT fwmark value 0x1.
   // TODO(hugobenichi) Refer to RoutingService to obtain the fwmark value and
   // add a fwmark mask in the generated rule.
   bool AddOutboundIPv4SNATMark(const std::string& ifname);
   void RemoveOutboundIPv4SNATMark(const std::string& ifname);
-  // Create (or delete) a forward rule for established connections.
-  bool AddForwardEstablishedRule();
-  void RemoveForwardEstablishedRule();
 
   bool ModifyConnmarkSetPostrouting(IpFamily family,
                                     const std::string& op,
@@ -301,18 +293,12 @@ class Datapath {
   Firewall* firewall_;
   ioctl_t ioctl_;
 
-  FRIEND_TEST(DatapathTest, AddForwardEstablishedRule);
   FRIEND_TEST(DatapathTest, AddInboundIPv4DNAT);
-  FRIEND_TEST(DatapathTest, AddInterfaceSNAT);
-  FRIEND_TEST(DatapathTest, AddOutboundIPv4);
   FRIEND_TEST(DatapathTest, AddOutboundIPv4SNATMark);
   FRIEND_TEST(DatapathTest, AddSNATMarkRules);
   FRIEND_TEST(DatapathTest, AddVirtualInterfacePair);
   FRIEND_TEST(DatapathTest, ConfigureInterface);
-  FRIEND_TEST(DatapathTest, RemoveForwardEstablishedRule);
   FRIEND_TEST(DatapathTest, RemoveInboundIPv4DNAT);
-  FRIEND_TEST(DatapathTest, RemoveInterfaceSNAT);
-  FRIEND_TEST(DatapathTest, RemoveOutboundIPv4);
   FRIEND_TEST(DatapathTest, RemoveOutboundIPv4SNATMark);
   FRIEND_TEST(DatapathTest, RemoveSNATMarkRules);
   FRIEND_TEST(DatapathTest, StartStopIpForwarding);

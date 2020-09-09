@@ -889,28 +889,6 @@ TEST(DatapathTest, RemoveInboundIPv4DNAT) {
   datapath.RemoveInboundIPv4DNAT("eth0", "1.2.3.4");
 }
 
-TEST(DatapathTest, AddOutboundIPv4) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-A", "FORWARD", "-o", "eth0", "-j",
-                                           "ACCEPT", "-w"),
-                               true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.AddOutboundIPv4("eth0");
-}
-
-TEST(DatapathTest, RemoveOutboundIPv4) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner, iptables(StrEq("filter"),
-                               ElementsAre("-D", "FORWARD", "-o", "eth0", "-j",
-                                           "ACCEPT", "-w"),
-                               true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.RemoveOutboundIPv4("eth0");
-}
-
 TEST(DatapathTest, MaskInterfaceFlags) {
   MockProcessRunner runner;
   MockFirewall firewall;
@@ -1075,52 +1053,6 @@ TEST(DatapathTest, RemoveSNATMarkRules) {
                        true, nullptr));
   Datapath datapath(&runner, &firewall);
   datapath.RemoveSNATMarkRules();
-}
-
-TEST(DatapathTest, AddForwardEstablishedRule) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner,
-              iptables(StrEq("filter"),
-                       ElementsAre("-A", "FORWARD", "-m", "state", "--state",
-                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
-                       true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.AddForwardEstablishedRule();
-}
-
-TEST(DatapathTest, RemoveForwardEstablishedRule) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner,
-              iptables(StrEq("filter"),
-                       ElementsAre("-D", "FORWARD", "-m", "state", "--state",
-                                   "ESTABLISHED,RELATED", "-j", "ACCEPT", "-w"),
-                       true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.RemoveForwardEstablishedRule();
-}
-
-TEST(DatapathTest, AddInterfaceSNAT) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner, iptables(StrEq("nat"),
-                               ElementsAre("-A", "POSTROUTING", "-o", "wwan+",
-                                           "-j", "MASQUERADE", "-w"),
-                               true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.AddInterfaceSNAT("wwan+");
-}
-
-TEST(DatapathTest, RemoveInterfaceSNAT) {
-  MockProcessRunner runner;
-  MockFirewall firewall;
-  EXPECT_CALL(runner, iptables(StrEq("nat"),
-                               ElementsAre("-D", "POSTROUTING", "-o", "wwan+",
-                                           "-j", "MASQUERADE", "-w"),
-                               true, nullptr));
-  Datapath datapath(&runner, &firewall);
-  datapath.RemoveInterfaceSNAT("wwan+");
 }
 
 TEST(DatapathTest, ArcVethHostName) {
