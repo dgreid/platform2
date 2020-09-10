@@ -29,7 +29,7 @@ pkg_config("target_defaults") {
     "libbrillo",
     "libchrome-${libbase_ver}",
     "libshill-client",
-    "libshill-net-${libbase_ver}",
+    "libshill-net",
     "protobuf-lite",
     "re2",
     "system_api",
