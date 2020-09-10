@@ -8,8 +8,9 @@
 
 #include <algorithm>
 
-#include <base/strings/string_util.h>
+#include <base/containers/adapters.h>
 #include <base/stl_util.h>
+#include <base/strings/string_util.h>
 
 #include "cros-disks/quote.h"
 
@@ -127,16 +128,14 @@ void MountOptions::Initialize(const std::vector<std::string>& options,
 }
 
 bool MountOptions::IsReadOnlyOptionSet() const {
-  for (std::vector<std::string>::const_reverse_iterator option_iterator =
-           options_.rbegin();
-       option_iterator != options_.rend(); ++option_iterator) {
-    const std::string& option = *option_iterator;
+  for (const std::string& option : base::Reversed(options_)) {
     if (option == kOptionReadOnly)
       return true;
 
     if (option == kOptionReadWrite)
       return false;
   }
+
   return true;
 }
 
