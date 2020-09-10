@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <limits.h>
 #include <linux/loop.h>
+#include <linux/magic.h>
 #include <linux/major.h>
 #include <mntent.h>
 #include <net/if.h>
@@ -23,6 +24,7 @@
 #include <sys/mount.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/statfs.h>
 #include <sys/sysmacros.h>
 #include <sys/types.h>
 #include <sys/xattr.h>
@@ -116,12 +118,23 @@ bool RestoreconInternal(const std::vector<base::FilePath>& paths,
   cb.func_log = RestoreConLogCallback;
   selinux_set_callback(SELINUX_CB_LOG, cb);
 
-  const unsigned int restorecon_flags =
+  const unsigned int base_flags =
       (is_recursive ? SELINUX_RESTORECON_RECURSE : 0) |
       SELINUX_RESTORECON_REALPATH;
 
   bool success = true;
   for (const auto& path : paths) {
+    unsigned int restorecon_flags = base_flags;
+    struct statfs fsinfo;
+    if (statfs(path.value().c_str(), &fsinfo) != 0) {
+      PLOG(WARNING) << "Failed to statfs for " << path.value();
+      // Continue anyway because restorecon should work even if it can't
+      // update digests.
+    } else if (fsinfo.f_type == TRACEFS_MAGIC) {
+      // tracefs doesn't support xattrs, so restorecon can't store digests.
+      restorecon_flags |= SELINUX_RESTORECON_SKIP_DIGEST;
+    }
+
     if (selinux_restorecon(path.value().c_str(), restorecon_flags) != 0) {
       LOG(ERROR) << "Error in restorecon of " << path.value();
       success = false;
