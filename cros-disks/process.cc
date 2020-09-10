@@ -199,8 +199,9 @@ bool Process::Start(base::ScopedFD in_fd,
   CHECK(!finished());
   CHECK(!arguments_.empty()) << "No arguments provided";
   LOG(INFO) << "Starting program " << quote(arguments_.front())
-            << " with arguments " << quote(arguments_)
-            << " and extra environment " << quote(environment_);
+            << " with arguments " << quote(arguments_);
+  LOG_IF(INFO, !environment_.empty())
+      << "and extra environment " << quote(environment_);
   pid_ = StartImpl(std::move(in_fd), std::move(out_fd), std::move(err_fd));
   return pid_ != kInvalidProcessId;
 }
