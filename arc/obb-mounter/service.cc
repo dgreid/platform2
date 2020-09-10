@@ -5,6 +5,7 @@
 #include "arc/obb-mounter/service.h"
 
 #include <string>
+#include <utility>
 
 #include <base/bind.h>
 #include <base/logging.h>
@@ -58,16 +59,18 @@ void Service::MountObb(dbus::MethodCall* method_call,
   int32_t owner_gid = 0;
   if (!reader.PopString(&obb_file) || !reader.PopString(&mount_path) ||
       !reader.PopInt32(&owner_gid)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, std::string()));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, std::string()));
     return;
   }
   if (!obb_mounter::MountObb(obb_file, mount_path, owner_gid)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED, std::string()));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call, DBUS_ERROR_FAILED,
+                                                 std::string()));
     return;
   }
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 void Service::UnmountObb(dbus::MethodCall* method_call,
@@ -75,16 +78,18 @@ void Service::UnmountObb(dbus::MethodCall* method_call,
   dbus::MessageReader reader(method_call);
   std::string mount_path;
   if (!reader.PopString(&mount_path)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_INVALID_ARGS, std::string()));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(
+            method_call, DBUS_ERROR_INVALID_ARGS, std::string()));
     return;
   }
   if (!obb_mounter::UnmountObb(mount_path)) {
-    response_sender.Run(dbus::ErrorResponse::FromMethodCall(
-        method_call, DBUS_ERROR_FAILED, std::string()));
+    std::move(response_sender)
+        .Run(dbus::ErrorResponse::FromMethodCall(method_call, DBUS_ERROR_FAILED,
+                                                 std::string()));
     return;
   }
-  response_sender.Run(dbus::Response::FromMethodCall(method_call));
+  std::move(response_sender).Run(dbus::Response::FromMethodCall(method_call));
 }
 
 }  // namespace obb_mounter
