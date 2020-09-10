@@ -90,6 +90,7 @@ include(sepolicy/file_contexts/sysfs_contexts)
 /usr/bin/systemd-cat            u:object_r:cros_systemd_cat_exec:s0
 /usr/bin/timberslide            u:object_r:cros_timberslide_exec:s0
 /usr/bin/tlsdated               u:object_r:cros_tlsdated_exec:s0
+/usr/bin/typecd                 u:object_r:cros_typecd_exec:s0
 /usr/bin/u2fd                   u:object_r:cros_u2fd_exec:s0
 /usr/bin/vmlog_forwarder        u:object_r:cros_vmlog_forwarder_exec:s0
 /usr/bin/wilco_dtc_supportd     u:object_r:cros_wilco_dtc_supportd_exec:s0
