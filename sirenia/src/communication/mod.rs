@@ -24,7 +24,7 @@ pub enum Error {
     /// Error writing the message.
     Write(io::Error),
     /// Invalid app id.
-    InvalidAppId,
+    InvalidAppId(String),
     /// Error getting the root of a flexbuffer buf.
     GetRoot(flexbuffers::ReaderError),
     /// Error deserializing the given root.
@@ -41,7 +41,7 @@ impl Display for Error {
             Read(e) => write!(f, "failed to read: {}", e),
             EmptyRead => write!(f, "no data to read from socket"),
             Write(e) => write!(f, "failed to write: {}", e),
-            InvalidAppId => write!(f, "Invalid app id"),
+            InvalidAppId(s) => write!(f, "Invalid app id: {}", s),
             GetRoot(e) => write!(f, "Problem getting the root of flexbuffer buf: {}", e),
             Deserialize(e) => write!(f, "Error deserializing: {}", e),
             Serialize(e) => write!(f, "Error serializing: {}", e),
@@ -76,7 +76,7 @@ pub struct AppInfo {
 pub fn get_app_path(id: &str) -> Result<&str> {
     match id {
         "shell" => Ok("/bin/sh"),
-        _ => Err(Error::InvalidAppId),
+        id => Err(Error::InvalidAppId(id.to_string())),
     }
 }
 
@@ -91,7 +91,6 @@ pub fn read_message<R: Read, D: DeserializeOwned>(r: &mut R) -> Result<D> {
     // Read the length of the serialized message first
     let mut buf = [0; LENGTH_BYTE_SIZE];
     reader.read_exact(&mut buf).map_err(Error::Read)?;
-    info!("Read {:?} bytes", buf);
 
     let message_size: u32 = u32::from_be_bytes(buf);
 
@@ -110,7 +109,6 @@ pub fn read_message<R: Read, D: DeserializeOwned>(r: &mut R) -> Result<D> {
 // Writes the given message to the given Write. First writes the length of the
 // serialized message then the serialized message itself.
 pub fn write_message<W: Write, S: Serialize + Debug>(w: &mut W, m: S) -> Result<()> {
-    info!("Writing message: {:?}", m);
     let mut writer = BufWriter::new(w);
 
     // Serialize the message and calculate the length
@@ -119,7 +117,6 @@ pub fn write_message<W: Write, S: Serialize + Debug>(w: &mut W, m: S) -> Result<
 
     let len: u32 = ser.view().len() as u32;
 
-    info!("Length is: {}", len);
     let mut len_ser = FlexbufferSerializer::new();
     len.serialize(&mut len_ser).map_err(Error::Serialize)?;
 
