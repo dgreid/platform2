@@ -240,6 +240,11 @@ mode_update_csme_firmware() {
   show_assets_message "update_firmware_slow_extra_warning"
 }
 
+# Show a message indicating that we're doing fwupd firmware updates.
+mode_update_fwupd_firmware() {
+  show_assets_message "update_fwupd_firmware"
+}
+
 # Main initialization and dispatcher
 main() {
   # process args
