@@ -151,6 +151,7 @@ dev_gather_logs() {
 MOUNTDIRS="
   db/pkg
   lib/portage
+  cache/dlc-images
 "
 
 # Mount stateful partition for dev packages.
