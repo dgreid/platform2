@@ -81,7 +81,7 @@ class MockCrosHealthdBluetoothObserver
 // Tests for the BluetoothEventsImpl class.
 class BluetoothEventsImplTest : public testing::Test {
  protected:
-  BluetoothEventsImplTest() { mojo::core::Init(); }
+  BluetoothEventsImplTest() = default;
   BluetoothEventsImplTest(const BluetoothEventsImplTest&) = delete;
   BluetoothEventsImplTest& operator=(const BluetoothEventsImplTest&) = delete;
 

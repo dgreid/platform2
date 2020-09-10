@@ -99,9 +99,9 @@ if (use.test) {
     deps = [
       ":libdiag_routine",
       ":libroutine_test_utils",
-      "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/common:mojo_testrunner",
       "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
     ]
     sources = [

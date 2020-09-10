@@ -14,16 +14,7 @@
 
 namespace diagnostics {
 
-namespace {
-
-class MojoUtilsTest : public testing::Test {
- protected:
-  MojoUtilsTest() { mojo::core::Init(); }
-};
-
-}  // namespace
-
-TEST_F(MojoUtilsTest, CreateMojoHandleAndRetrieveContent) {
+TEST(MojoUtilsTest, CreateMojoHandleAndRetrieveContent) {
   const base::StringPiece content("{\"key\": \"value\"}");
 
   mojo::ScopedHandle handle =
@@ -39,7 +30,7 @@ TEST_F(MojoUtilsTest, CreateMojoHandleAndRetrieveContent) {
   EXPECT_EQ(content, actual);
 }
 
-TEST_F(MojoUtilsTest, GetReadOnlySharedMemoryRegionFromMojoInvalidHandle) {
+TEST(MojoUtilsTest, GetReadOnlySharedMemoryRegionFromMojoInvalidHandle) {
   mojo::ScopedHandle handle;
   EXPECT_FALSE(handle.is_valid());
 
@@ -48,7 +39,7 @@ TEST_F(MojoUtilsTest, GetReadOnlySharedMemoryRegionFromMojoInvalidHandle) {
   EXPECT_FALSE(shm_mapping.IsValid());
 }
 
-TEST_F(MojoUtilsTest, CreateReadOnlySharedMemoryFromEmptyContent) {
+TEST(MojoUtilsTest, CreateReadOnlySharedMemoryFromEmptyContent) {
   mojo::ScopedHandle handle = CreateReadOnlySharedMemoryRegionMojoHandle("");
   // Cannot create valid handle using empty content line.
   EXPECT_FALSE(handle.is_valid());

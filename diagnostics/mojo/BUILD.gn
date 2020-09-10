@@ -8,7 +8,7 @@ import("//common-mk/pkg_config.gni")
 generate_mojom_bindings("cros_healthd_mojo_bindings") {
   mojo_root = "//diagnostics"
   deps = [
-  ":network_diagnostics_mojo_bindings",
+    ":network_diagnostics_mojo_bindings",
     ":network_health_mojo_bindings",
   ]
   sources = [

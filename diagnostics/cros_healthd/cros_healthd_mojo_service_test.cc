@@ -127,8 +127,6 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
 // Tests for the CrosHealthddMojoService class.
 class CrosHealthdMojoServiceTest : public testing::Test {
  protected:
-  CrosHealthdMojoServiceTest() { mojo::core::Init(); }
-
   void SetUp() override { ASSERT_TRUE(mock_context_.Initialize()); }
 
   CrosHealthdMojoService* service() { return &service_; }

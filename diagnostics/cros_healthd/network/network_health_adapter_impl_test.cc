@@ -51,8 +51,6 @@ class MockNetworkHealthService
 
 class NetworkHealthAdapterImplTest : public testing::Test {
  protected:
-  NetworkHealthAdapterImplTest() { mojo::core::Init(); }
-
   NetworkHealthAdapterImpl* network_health_adapter() {
     return &network_health_adapter_;
   }

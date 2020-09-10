@@ -57,7 +57,7 @@ if (use.test) {
     deps = [
       ":libwilco_dtc_supportd",
       "telemetry:telemetry_test",
-      "//common-mk/testrunner:testrunner",
+      "//diagnostics/common:mojo_testrunner",
     ]
     sources = [
       "core_test.cc",

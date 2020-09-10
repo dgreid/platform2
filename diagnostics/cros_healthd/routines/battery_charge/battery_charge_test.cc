@@ -48,7 +48,7 @@ constexpr base::TimeDelta kQuarterDuration = kFullDuration / 4;
 
 class BatteryChargeRoutineTest : public testing::Test {
  protected:
-  BatteryChargeRoutineTest() { mojo::core::Init(); }
+  BatteryChargeRoutineTest() = default;
   BatteryChargeRoutineTest(const BatteryChargeRoutineTest&) = delete;
   BatteryChargeRoutineTest& operator=(const BatteryChargeRoutineTest&) = delete;
 

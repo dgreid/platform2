@@ -65,7 +65,7 @@ std::string ConstructOutput() {
 
 class BatteryHealthRoutineTest : public testing::Test {
  protected:
-  BatteryHealthRoutineTest() { mojo::core::Init(); }
+  BatteryHealthRoutineTest() = default;
   BatteryHealthRoutineTest(const BatteryHealthRoutineTest&) = delete;
   BatteryHealthRoutineTest& operator=(const BatteryHealthRoutineTest&) = delete;
 

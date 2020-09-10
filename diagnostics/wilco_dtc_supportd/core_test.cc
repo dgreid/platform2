@@ -271,8 +271,6 @@ class MockDaemon {
 // Tests for the Core class.
 class CoreTest : public testing::Test {
  protected:
-  CoreTest() { InitializeMojo(); }
-
   void CreateCore(const std::vector<std::string>& grpc_service_uris) {
     core_ = std::make_unique<Core>(&core_delegate_, grpc_client_manager(),
                                    grpc_service_uris, &mojo_service_factory_);
@@ -320,9 +318,6 @@ class CoreTest : public testing::Test {
   void SimulateBindFailure() { simulate_bind_failure_ = true; }
 
  private:
-  // Initialize the Mojo subsystem.
-  void InitializeMojo() { mojo::core::Init(); }
-
   base::test::TaskEnvironment task_environment_{
       base::test::TaskEnvironment::ThreadingMode::MAIN_THREAD_ONLY};
 

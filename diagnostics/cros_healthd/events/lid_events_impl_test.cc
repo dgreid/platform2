@@ -50,7 +50,7 @@ class MockCrosHealthdLidObserver : public mojo_ipc::CrosHealthdLidObserver {
 // Tests for the LidEventsImpl class.
 class LidEventsImplTest : public testing::Test {
  protected:
-  LidEventsImplTest() { mojo::core::Init(); }
+  LidEventsImplTest() = default;
   LidEventsImplTest(const LidEventsImplTest&) = delete;
   LidEventsImplTest& operator=(const LidEventsImplTest&) = delete;
 

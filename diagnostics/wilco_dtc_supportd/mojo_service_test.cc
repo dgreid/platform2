@@ -53,7 +53,6 @@ namespace {
 class MojoServiceTest : public testing::Test {
  protected:
   MojoServiceTest() {
-    mojo::core::Init();
     // Obtain Mojo interface pointer that talks to |mojo_client_| - the
     // connection between them will be maintained by |mojo_client_binding_|.
     MojomWilcoDtcSupportdClientPtr mojo_client_interface_ptr;

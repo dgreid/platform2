@@ -53,7 +53,7 @@ class MockCrosHealthdPowerObserver : public mojo_ipc::CrosHealthdPowerObserver {
 // Tests for the PowerEventsImpl class.
 class PowerEventsImplTest : public testing::Test {
  protected:
-  PowerEventsImplTest() { mojo::core::Init(); }
+  PowerEventsImplTest() = default;
   PowerEventsImplTest(const PowerEventsImplTest&) = delete;
   PowerEventsImplTest& operator=(const PowerEventsImplTest&) = delete;
 
