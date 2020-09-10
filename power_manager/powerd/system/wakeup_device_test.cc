@@ -22,7 +22,8 @@ namespace {
 
 // Creates and writes |val| to |sys_path|. Also creates all necessary parent
 // directories.
-void WriteFile(const base::FilePath& sys_path, const std::string& val) {
+void CreateDirectoryAndWriteFile(const base::FilePath& sys_path,
+                                 const std::string& val) {
   ASSERT_TRUE(base::CreateDirectory(sys_path.DirName()));
   CHECK_EQ(base::WriteFile(sys_path, val.c_str(), val.length()), val.length());
 }
@@ -36,7 +37,7 @@ class WakeupDeviceTest : public testing::Test {
     wakeup_device_path_ = temp_dir_.GetPath().Append(kTestSysPath);
 
     wakeup_attr_path_ = wakeup_device_path_.Append(kPowerWakeup);
-    WriteFile(wakeup_attr_path_, "enabled");
+    CreateDirectoryAndWriteFile(wakeup_attr_path_, "enabled");
     std::string random_events_count_dir = "wakeup45";
     event_count_attr_path_ =
         wakeup_device_path_.Append(WakeupDevice::kWakeupDir)
@@ -64,10 +65,12 @@ class WakeupDeviceTest : public testing::Test {
 // wakeup device.
 TEST_F(WakeupDeviceTest, TestWakeupCountIncrement) {
   const std::string kEventCountBeforeSuspendStr = "1";
-  WriteFile(event_count_attr_path_, kEventCountBeforeSuspendStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountBeforeSuspendStr);
   wakeup_device_->PrepareForSuspend();
   const std::string kEventCountAfterResumeStr = "2";
-  WriteFile(event_count_attr_path_, kEventCountAfterResumeStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountAfterResumeStr);
   wakeup_device_->HandleResume();
   EXPECT_TRUE(wakeup_device_->CausedLastWake());
 }
@@ -77,11 +80,13 @@ TEST_F(WakeupDeviceTest, TestWakeupCountIncrement) {
 TEST_F(WakeupDeviceTest, TestWakeupCountOverflow) {
   const std::string kEventCountBeforeSuspendStr =
       base::NumberToString(std::numeric_limits<uint64_t>::max());
-  WriteFile(event_count_attr_path_, kEventCountBeforeSuspendStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountBeforeSuspendStr);
   wakeup_device_->PrepareForSuspend();
   const std::string kEventCountAfterResumeStr =
       base::NumberToString(std::numeric_limits<uint64_t>::max() + 1);
-  WriteFile(event_count_attr_path_, kEventCountAfterResumeStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountAfterResumeStr);
   wakeup_device_->HandleResume();
   EXPECT_TRUE(wakeup_device_->CausedLastWake());
 }
@@ -90,10 +95,12 @@ TEST_F(WakeupDeviceTest, TestWakeupCountOverflow) {
 // wakeup device.
 TEST_F(WakeupDeviceTest, TestEmptyWakeupCountFile) {
   const std::string kEventCountBeforeSuspendStr = "";
-  WriteFile(event_count_attr_path_, kEventCountBeforeSuspendStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountBeforeSuspendStr);
   wakeup_device_->PrepareForSuspend();
   const std::string kEventCountAfterResumeStr = "2";
-  WriteFile(event_count_attr_path_, kEventCountAfterResumeStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountAfterResumeStr);
   wakeup_device_->HandleResume();
   EXPECT_TRUE(wakeup_device_->CausedLastWake());
 }
@@ -103,7 +110,8 @@ TEST_F(WakeupDeviceTest, TestEmptyWakeupCountFile) {
 TEST_F(WakeupDeviceTest, TestWakeupCountReadFailBeforeSuspend) {
   wakeup_device_->PrepareForSuspend();
   const std::string kEventCountAfterResumeStr = base::NumberToString(1);
-  WriteFile(event_count_attr_path_, kEventCountAfterResumeStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountAfterResumeStr);
   wakeup_device_->HandleResume();
   EXPECT_FALSE(wakeup_device_->CausedLastWake());
 }
@@ -112,7 +120,8 @@ TEST_F(WakeupDeviceTest, TestWakeupCountReadFailBeforeSuspend) {
 // wake source.
 TEST_F(WakeupDeviceTest, TestWakeupCountReadFailAfterResume) {
   const std::string kEventCountBeforeSuspendStr = "1";
-  WriteFile(event_count_attr_path_, kEventCountBeforeSuspendStr);
+  CreateDirectoryAndWriteFile(event_count_attr_path_,
+                              kEventCountBeforeSuspendStr);
   wakeup_device_->PrepareForSuspend();
   ASSERT_TRUE(base::DeleteFile(event_count_attr_path_, false));
   wakeup_device_->HandleResume();
