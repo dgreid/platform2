@@ -31,6 +31,11 @@ UdevWatcher::UdevWatcher(Observer* observer, std::string subsystem)
       thread_("UdevWatcherThread") {}
 
 UdevWatcher::~UdevWatcher() {
+  if (!thread_.IsRunning()) {
+    // No-op destructor if the watcher thread is not running. It could happen
+    // if Start() failed or is not getting called at all.
+    return;
+  }
   // Post a task to reset FileDescriptorWatcher and explicitly call
   // Thread::Stop() to ensure it is completed before destroying fields.
   thread_.task_runner()->PostTask(
