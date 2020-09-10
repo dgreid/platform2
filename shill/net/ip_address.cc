@@ -300,7 +300,9 @@ IPAddress IPAddress::GetDefaultBroadcast() {
 }
 
 bool IPAddress::CanReachAddress(const IPAddress& b) const {
-  CHECK_EQ(family(), b.family());
+  if (family() != b.family()) {
+    return false;
+  }
   IPAddress b_prefixed(b);
   b_prefixed.set_prefix(prefix());
   return GetNetworkPart().HasSameAddressAs(b_prefixed.GetNetworkPart());

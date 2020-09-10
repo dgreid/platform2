@@ -441,18 +441,20 @@ INSTANTIATE_TEST_SUITE_P(
         MinPrefixLengthMapping(IPAddress::kFamilyIPv4, "10.10.10.10", 8)));
 
 struct CanReachAddressMapping {
-  CanReachAddressMapping() : family(IPAddress::kFamilyUnknown) {}
-  CanReachAddressMapping(IPAddress::Family family_in,
-                         const string& address_a_in,
+  CanReachAddressMapping(const string& address_a_in,
+                         size_t prefix_a_in,
                          const string& address_b_in,
+                         size_t prefix_b_in,
                          bool expected_result_in)
-      : family(family_in),
-        address_a(address_a_in),
+      : address_a(address_a_in),
+        prefix_a(prefix_a_in),
         address_b(address_b_in),
+        prefix_b(prefix_b_in),
         expected_result(expected_result_in) {}
-  IPAddress::Family family;
   string address_a;
+  size_t prefix_a;
   string address_b;
+  size_t prefix_b;
   size_t expected_result;
 };
 
@@ -460,10 +462,10 @@ class IPAddressCanReachAddressMappingTest
     : public testing::TestWithParam<CanReachAddressMapping> {};
 
 TEST_P(IPAddressCanReachAddressMappingTest, TestCanReachAddressMapping) {
-  IPAddress address_a(GetParam().family);
-  EXPECT_TRUE(address_a.SetAddressAndPrefixFromString(GetParam().address_a));
-  IPAddress address_b(GetParam().family);
-  EXPECT_TRUE(address_b.SetAddressAndPrefixFromString(GetParam().address_b));
+  IPAddress address_a(GetParam().address_a, GetParam().prefix_a);
+  EXPECT_TRUE(address_a.IsValid());
+  IPAddress address_b(GetParam().address_b, GetParam().prefix_b);
+  EXPECT_TRUE(address_b.IsValid());
   EXPECT_EQ(GetParam().expected_result, address_a.CanReachAddress(address_b));
 }
 
@@ -471,22 +473,14 @@ INSTANTIATE_TEST_SUITE_P(
     IPAddressCanReachAddressMappingTestRun,
     IPAddressCanReachAddressMappingTest,
     ::testing::Values(
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv6, "fe80:1000::/16", "fe80:2000::/16", true),
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv6, "fe80:1000::/16", "fe80:2000::/32", true),
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv6, "fe80:1000::/32", "fe80:2000::/16", false),
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv4, "192.168.1.1/24", "192.168.1.2/24", true),
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv4, "192.168.1.1/24", "192.168.2.2/24", false),
-        CanReachAddressMapping(
-            IPAddress::kFamilyIPv4, "192.168.1.1/16", "192.168.2.2/24", true),
-        CanReachAddressMapping(IPAddress::kFamilyIPv4,
-                               "192.168.1.1/24",
-                               "192.168.2.2/16",
-                               false)));
+        CanReachAddressMapping("fe80:1000::", 16, "fe80:2000::", 16, true),
+        CanReachAddressMapping("fe80:1000::", 16, "fe80:2000::", 32, true),
+        CanReachAddressMapping("fe80:1000::", 32, "fe80:2000::", 16, false),
+        CanReachAddressMapping("192.168.1.1", 24, "192.168.1.2", 24, true),
+        CanReachAddressMapping("192.168.1.1", 24, "192.168.2.2", 24, false),
+        CanReachAddressMapping("192.168.1.1", 16, "192.168.2.2", 24, true),
+        CanReachAddressMapping("192.168.1.1", 24, "192.168.2.2", 16, false),
+        CanReachAddressMapping("fe80:1000::", 16, "192.168.2.2", 16, false)));
 
 namespace {
 
