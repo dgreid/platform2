@@ -40,8 +40,16 @@ crypto::ScopedRSA ParseRsaFromTpmPubkeyBlob(const Blob& pubkey) {
   }
   ScopedByteArray scoped_key(parsed.pubKey.key);
   ScopedByteArray scoped_parms(parsed.algorithmParms.parms);
-  TPM_RSA_KEY_PARMS* parms =
-      reinterpret_cast<TPM_RSA_KEY_PARMS*>(parsed.algorithmParms.parms);
+  TPM_RSA_KEY_PARMS parms;
+  UINT64 parms_offset = 0;
+  tss_result = Trspi_UnloadBlob_RSA_KEY_PARMS(
+      &parms_offset, parsed.algorithmParms.parms, &parms);
+  if (TPM_ERROR(tss_result)) {
+    LOG(ERROR) << "Failed to parse RSA_KEY_PARMS: "
+               << FormatTrousersErrorCode(tss_result);
+    return nullptr;
+  }
+  ScopedByteArray scoped_exponent(parms.exponent);
   // Get the public exponent.
   crypto::ScopedRSA rsa(RSA_new());
   crypto::ScopedBIGNUM e(BN_new()), n(BN_new());
@@ -49,13 +57,13 @@ crypto::ScopedRSA ParseRsaFromTpmPubkeyBlob(const Blob& pubkey) {
     LOG(ERROR) << "Failed to create RSA or BIGNUM";
     return nullptr;
   }
-  if (!parms->exponentSize) {
+  if (!parms.exponentSize) {
     if (!BN_set_word(e.get(), kWellKnownExponent)) {
       LOG(ERROR) << "Failed to set BN exponent to WellKnownExponent";
       return nullptr;
     }
   } else {
-    if (!BN_bin2bn(parms->exponent, parms->exponentSize, e.get())) {
+    if (!BN_bin2bn(parms.exponent, parms.exponentSize, e.get())) {
       LOG(ERROR) << "Failed to load BN exponent from TPM_PUBKEY";
       return nullptr;
     }

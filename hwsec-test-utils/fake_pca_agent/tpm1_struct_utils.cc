@@ -53,8 +53,15 @@ crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
   std::unique_ptr<BYTE, base::FreeDeleter> scoped_key(parsed.pubKey.key);
   std::unique_ptr<BYTE, base::FreeDeleter> scoped_parms(
       parsed.algorithmParms.parms);
-  TPM_RSA_KEY_PARMS* parms =
-      reinterpret_cast<TPM_RSA_KEY_PARMS*>(parsed.algorithmParms.parms);
+  TPM_RSA_KEY_PARMS parms;
+  UINT64 parms_offset = 0;
+  result = Trspi_UnloadBlob_RSA_KEY_PARMS(&parms_offset,
+                                          parsed.algorithmParms.parms, &parms);
+  if (TPM_ERROR(result)) {
+    TPM_LOG(ERROR, result) << "Failed to parse RSA_KEY_PARMS.";
+    return nullptr;
+  }
+  std::unique_ptr<BYTE, base::FreeDeleter> scoped_exponent(parms.exponent);
   crypto::ScopedRSA rsa(RSA_new());
   if (!rsa) {
     LOG(ERROR) << "Failed to allocate RSA: " << GetOpenSSLError();
@@ -67,13 +74,13 @@ crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
   }
 
   // Get the public exponent.
-  if (parms->exponentSize == 0) {
+  if (parms.exponentSize == 0) {
     if (!BN_set_word(e.get(), kWellKnownExponent)) {
       LOG(ERROR) << "Failed to set exponent to WellKnownExponent.";
       return nullptr;
     }
   } else {
-    if (!BN_bin2bn(parms->exponent, parms->exponentSize, e.get())) {
+    if (!BN_bin2bn(parms.exponent, parms.exponentSize, e.get())) {
       LOG(ERROR) << "Failed to convert exponent to BIGNUM.";
       return nullptr;
     }
