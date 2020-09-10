@@ -1727,8 +1727,7 @@ void SessionManagerImpl::BackupArcBugReport(const std::string& account_id) {
                                debugd::kBackupArcBugReport);
   dbus::MessageWriter writer(&method_call);
 
-  std::string userhash = SanitizeUserName(account_id);
-  writer.AppendString(userhash);
+  writer.AppendString(account_id);
 
   std::unique_ptr<dbus::Response> response(debugd_proxy_->CallMethodAndBlock(
       &method_call, kBackupArcBugReportTimeout.InMilliseconds()));
@@ -1747,8 +1746,7 @@ void SessionManagerImpl::DeleteArcBugReportBackup(
                                debugd::kDeleteArcBugReportBackup);
   dbus::MessageWriter writer(&method_call);
 
-  std::string userhash = SanitizeUserName(account_id);
-  writer.AppendString(userhash);
+  writer.AppendString(account_id);
 
   std::unique_ptr<dbus::Response> response(debugd_proxy_->CallMethodAndBlock(
       &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT));

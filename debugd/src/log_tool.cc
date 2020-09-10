@@ -802,7 +802,7 @@ std::string LogTool::GetArcBugReport(const std::string& username,
     // If |userhash| was not empty, but was not found in the backup set
     // or the file did not exist, attempt to delete the file.
     if (!userhash.empty()) {
-      DeleteArcBugReportBackup(userhash);
+      DeleteArcBugReportBackup(username);
     }
     if (is_backup) {
       *is_backup = false;
@@ -813,8 +813,13 @@ std::string LogTool::GetArcBugReport(const std::string& username,
   return contents;
 }
 
-void LogTool::BackupArcBugReport(const std::string& userhash) {
+void LogTool::BackupArcBugReport(const std::string& usernameOrUserhash) {
   DLOG(INFO) << "Backing up ARC bug report";
+
+  const std::string userhash =
+      brillo::cryptohome::home::IsSanitizedUserName(usernameOrUserhash)
+          ? usernameOrUserhash
+          : GetSanitizedUsername(cryptohome_proxy_.get(), usernameOrUserhash);
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   const std::string logData = arc_bug_report_log_->GetLogData();
@@ -825,8 +830,13 @@ void LogTool::BackupArcBugReport(const std::string& userhash) {
   }
 }
 
-void LogTool::DeleteArcBugReportBackup(const std::string& userhash) {
+void LogTool::DeleteArcBugReportBackup(const std::string& usernameOrUserhash) {
   DLOG(INFO) << "Deleting the ARC bug report backup";
+
+  const std::string userhash =
+      brillo::cryptohome::home::IsSanitizedUserName(usernameOrUserhash)
+          ? usernameOrUserhash
+          : GetSanitizedUsername(cryptohome_proxy_.get(), usernameOrUserhash);
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   arc_bug_report_backups_.erase(userhash);

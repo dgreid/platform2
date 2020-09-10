@@ -119,10 +119,11 @@ TEST_F(LogToolTest, GetArcBugReport_DeletesFile_WhenBackupNotSet) {
   EXPECT_TRUE(base::PathExists(logPath));
   EXPECT_CALL(*GetFakeLog(), GetLogData);
   EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
-      .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
-        *out_sanitized = userhash;
-        return true;
-      })));
+      .WillRepeatedly(
+          WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
+            *out_sanitized = userhash;
+            return true;
+          })));
 
   bool is_backup;
   std::string report = GetArcBugReport("username", &is_backup);
@@ -139,6 +140,23 @@ TEST_F(LogToolTest, DeleteArcBugReportBackup) {
   EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, userhash));
   EXPECT_TRUE(base::PathExists(logPath));
   log_tool_->DeleteArcBugReportBackup(userhash);
+  EXPECT_FALSE(base::PathExists(logPath));
+}
+
+TEST_F(LogToolTest, DeleteArcBugReportBackup_HashesTheUsername) {
+  std::string userhash = "0abcdef1230abcdef1230abcdef1230abcdef123";
+  base::FilePath logPath =
+      temp_dir_.GetPath().Append(userhash).Append("arc-bugreport.log");
+  EXPECT_TRUE(CreateDirectoryAndWriteFile(logPath, userhash));
+  EXPECT_TRUE(base::PathExists(logPath));
+  EXPECT_CALL(*GetCryptHomeProxy(), GetSanitizedUsername("username", _, _, _))
+      .WillOnce(WithArg<1>(Invoke([&userhash](std::string* out_sanitized) {
+        *out_sanitized = userhash;
+        return true;
+      })));
+
+  log_tool_->DeleteArcBugReportBackup("username");
+
   EXPECT_FALSE(base::PathExists(logPath));
 }
 
