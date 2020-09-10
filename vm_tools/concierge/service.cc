@@ -623,6 +623,7 @@ bool Service::ListVmDisksInLocation(const string& cryptohome_id,
     image->set_min_size(min_size);
     image->set_image_type(image_type);
     image->set_user_chosen_size(IsDiskUserChosenSize(path.value()));
+    image->set_path(path.value());
   }
 
   response->set_total_size(response->total_size() + total_size);

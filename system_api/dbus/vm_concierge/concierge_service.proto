@@ -674,6 +674,9 @@ message VmDiskInfo {
   // True if the user chose the size for this disk.
   // False if the disk is automatically sized based on free space.
   bool user_chosen_size = 6;
+
+  // The absolute path to the disk.
+  string path = 7;
 }
 
 // Response to ListVmDisks {
