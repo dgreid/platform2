@@ -127,7 +127,8 @@ uint64_t DlcBase::GetUsedBytesOnDisk() const {
 }
 
 bool DlcBase::IsPreloadAllowed() const {
-  return manifest_.preload_allowed();
+  return manifest_.preload_allowed() &&
+         !SystemState::Get()->system_properties()->IsOfficialBuild();
 }
 
 base::FilePath DlcBase::GetRoot() const {

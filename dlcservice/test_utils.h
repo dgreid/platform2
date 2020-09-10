@@ -24,6 +24,7 @@
 #include "dlcservice/dlc_service.h"
 #include "dlcservice/mock_metrics.h"
 #include "dlcservice/mock_state_change_reporter.h"
+#include "dlcservice/mock_system_properties.h"
 
 namespace dlcservice {
 
@@ -90,6 +91,7 @@ class BaseTest : public testing::Test {
   MockBootDevice* mock_boot_device_ptr_;
 
   MockMetrics* mock_metrics_;
+  MockSystemProperties* mock_system_properties_;
   MockStateChangeReporter mock_state_change_reporter_;
 
   base::SimpleTestClock clock_;

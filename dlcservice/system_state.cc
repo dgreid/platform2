@@ -29,6 +29,7 @@ SystemState::SystemState(
     StateChangeReporterInterface* state_change_reporter,
     std::unique_ptr<BootSlot> boot_slot,
     std::unique_ptr<Metrics> metrics,
+    std::unique_ptr<SystemProperties> system_properties,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
@@ -40,6 +41,7 @@ SystemState::SystemState(
       session_manager_proxy_(std::move(session_manager_proxy)),
       state_change_reporter_(state_change_reporter),
       metrics_(std::move(metrics)),
+      system_properties_(std::move(system_properties)),
       manifest_dir_(manifest_dir),
       preloaded_content_dir_(preloaded_content_dir),
       content_dir_(content_dir),
@@ -64,6 +66,7 @@ void SystemState::Initialize(
     StateChangeReporterInterface* state_change_reporter,
     std::unique_ptr<BootSlot> boot_slot,
     std::unique_ptr<Metrics> metrics,
+    std::unique_ptr<SystemProperties> system_properties,
     const base::FilePath& manifest_dir,
     const base::FilePath& preloaded_content_dir,
     const base::FilePath& content_dir,
@@ -76,8 +79,9 @@ void SystemState::Initialize(
   g_instance_.reset(new SystemState(
       std::move(image_loader_proxy), std::move(update_engine_proxy),
       std::move(session_manager_proxy), state_change_reporter,
-      std::move(boot_slot), std::move(metrics), manifest_dir,
-      preloaded_content_dir, content_dir, prefs_dir, users_dir, clock));
+      std::move(boot_slot), std::move(metrics), std::move(system_properties),
+      manifest_dir, preloaded_content_dir, content_dir, prefs_dir, users_dir,
+      clock));
 }
 
 // static
@@ -103,6 +107,10 @@ SystemState::session_manager() const {
 
 Metrics* SystemState::metrics() const {
   return metrics_.get();
+}
+
+SystemProperties* SystemState::system_properties() const {
+  return system_properties_.get();
 }
 
 StateChangeReporterInterface* SystemState::state_change_reporter() const {

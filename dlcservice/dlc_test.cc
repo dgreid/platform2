@@ -222,6 +222,25 @@ TEST_F(DlcBaseTest, MakeReadyForUpdateNotVerfied) {
   EXPECT_FALSE(prefs.Exists(kDlcPrefVerified));
 }
 
+TEST_F(DlcBaseTest, OfficialBuildsDoNotPreloadDLCs) {
+  DlcBase dlc(kThirdDlc);
+  dlc.Initialize();
+  // Place preloaded images.
+  base::FilePath image_path = SetUpDlcPreloadedImage(kThirdDlc);
+
+  EXPECT_CALL(*mock_update_engine_proxy_ptr_,
+              SetDlcActiveValue(_, kThirdDlc, _, _))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(1);
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .WillOnce(Return(true));
+
+  EXPECT_TRUE(dlc.Install(&err_));
+
+  // Instead of being preloaded, it should start installing.
+  EXPECT_TRUE(dlc.IsInstalling());
+}
+
 // TODO(crbug.com/1042704): Deprecate after DLCs are provisioned using TLS API.
 TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   DlcBase dlc(kThirdDlc);
@@ -237,6 +256,8 @@ TEST_F(DlcBaseTest, BootingFromNonRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
   EXPECT_CALL(*mock_metrics_,
               SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .WillOnce(Return(false));
 
   EXPECT_TRUE(dlc.Install(&err_));
 
@@ -259,6 +280,8 @@ TEST_F(DlcBaseTestRemovable, BootingFromRemovableDeviceKeepsPreloadedDLCs) {
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
   EXPECT_CALL(*mock_metrics_,
               SendInstallResult(InstallResult::kSuccessAlreadyInstalled));
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .WillOnce(Return(false));
 
   EXPECT_TRUE(dlc.Install(&err_));
 
@@ -299,6 +322,8 @@ TEST_F(DlcBaseTest, InstallingCorruptPreloadedImageCleansUp) {
   EXPECT_TRUE(ResizeFile(image_path, 10));
 
   EXPECT_CALL(mock_state_change_reporter_, DlcStateChanged(_)).Times(2);
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .WillOnce(Return(false));
 
   EXPECT_FALSE(dlc.Install(&err_));
   for (const auto& path : {dlc.GetImagePath(BootSlot::Slot::A),

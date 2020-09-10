@@ -20,6 +20,7 @@
 #include "dlcservice/dlc_manager.h"
 #include "dlcservice/metrics.h"
 #include "dlcservice/state_change_reporter_interface.h"
+#include "dlcservice/system_properties.h"
 
 namespace dlcservice {
 
@@ -41,6 +42,7 @@ class SystemState {
       StateChangeReporterInterface* state_change_reporter,
       std::unique_ptr<BootSlot> boot_slot,
       std::unique_ptr<Metrics> metrics,
+      std::unique_ptr<SystemProperties> system_properties,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
       const base::FilePath& content_dir,
@@ -58,6 +60,7 @@ class SystemState {
   org::chromium::SessionManagerInterfaceProxyInterface* session_manager() const;
   Metrics* metrics() const;
   StateChangeReporterInterface* state_change_reporter() const;
+  SystemProperties* system_properties() const;
   const base::FilePath& manifest_dir() const;
   const base::FilePath& preloaded_content_dir() const;
   const base::FilePath& content_dir() const;
@@ -90,6 +93,7 @@ class SystemState {
       StateChangeReporterInterface* state_change_reporter,
       std::unique_ptr<BootSlot> boot_slot,
       std::unique_ptr<Metrics> metrics,
+      std::unique_ptr<SystemProperties> system_properties,
       const base::FilePath& manifest_dir,
       const base::FilePath& preloaded_content_dir,
       const base::FilePath& content_dir,
@@ -107,6 +111,7 @@ class SystemState {
   StateChangeReporterInterface* state_change_reporter_;
 
   std::unique_ptr<Metrics> metrics_;
+  std::unique_ptr<SystemProperties> system_properties_;
   base::FilePath manifest_dir_;
   base::FilePath preloaded_content_dir_;
   base::FilePath content_dir_;

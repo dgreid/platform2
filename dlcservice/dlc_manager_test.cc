@@ -70,6 +70,9 @@ class DlcManagerTest : public BaseTest {
 TEST_F(DlcManagerTest, PreloadAllowedDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcPreloadedImage(kThirdDlc);
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .Times(2)
+      .WillRepeatedly(Return(false));
   dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))
@@ -95,6 +98,9 @@ TEST_F(DlcManagerTest, PreloadAllowedWithBadPreinstalledDlcTest) {
   // The third DLC has pre-loaded flag on.
   SetUpDlcWithSlots(kThirdDlc);
   SetUpDlcPreloadedImage(kThirdDlc);
+  EXPECT_CALL(*mock_system_properties_, IsOfficialBuild())
+      .Times(2)
+      .WillRepeatedly(Return(false));
   dlc_manager_->Initialize();
 
   EXPECT_CALL(*mock_image_loader_proxy_ptr_, LoadDlcImage(_, _, _, _, _, _))

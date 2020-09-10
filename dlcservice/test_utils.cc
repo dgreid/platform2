@@ -71,12 +71,18 @@ void BaseTest::SetUp() {
   auto mock_metrics = std::make_unique<testing::StrictMock<MockMetrics>>();
   mock_metrics_ = mock_metrics.get();
 
+  auto mock_system_properties =
+      std::make_unique<testing::StrictMock<MockSystemProperties>>();
+  mock_system_properties_ = mock_system_properties.get();
+
   SystemState::Initialize(
       std::move(mock_image_loader_proxy_), std::move(mock_update_engine_proxy_),
       std::move(mock_session_manager_proxy_), &mock_state_change_reporter_,
       std::make_unique<BootSlot>(std::move(mock_boot_device_)),
-      std::move(mock_metrics), manifest_path_, preloaded_content_path_,
-      content_path_, prefs_path_, users_path_, &clock_, /*for_test=*/true);
+      std::move(mock_metrics), std::move(mock_system_properties),
+      manifest_path_, preloaded_content_path_, content_path_, prefs_path_,
+      users_path_, &clock_,
+      /*for_test=*/true);
 }
 
 void BaseTest::SetUpFilesAndDirectories() {

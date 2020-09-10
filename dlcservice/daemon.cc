@@ -22,8 +22,7 @@ namespace dlcservice {
 
 namespace {
 
-constexpr char kDlcPreloadedImageRootpath[] =
-    "/mnt/stateful_partition/var_overlay/cache/dlc-images";
+constexpr char kDlcPreloadedImageRootpath[] = "/var/cache/dlc-images";
 
 constexpr char kDlcServicePrefsPath[] = "/var/lib/dlcservice";
 
@@ -71,7 +70,8 @@ void Daemon::RegisterDBusObjectsAsync(
           bus_for_proxies_),
       dbus_adaptor_.get(),
       std::make_unique<BootSlot>(std::make_unique<BootDevice>()),
-      std::move(metrics), base::FilePath(imageloader::kDlcManifestRootpath),
+      std::move(metrics), std::make_unique<SystemProperties>(),
+      base::FilePath(imageloader::kDlcManifestRootpath),
       base::FilePath(kDlcPreloadedImageRootpath),
       base::FilePath(imageloader::kDlcImageRootpath),
       base::FilePath(kDlcServicePrefsPath), base::FilePath(kUsersPath),
