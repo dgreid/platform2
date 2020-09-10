@@ -24,6 +24,7 @@ namespace {
 
 constexpr int kVerificationTimeoutMs = 10000;
 constexpr int kVerificationRetryDelayUs = 500 * 1000;
+constexpr int kCancelUVFlowTimeoutMs = 5000;
 
 // Cr50 Response codes.
 // TODO(louiscollard): Don't duplicate these.
@@ -137,6 +138,13 @@ void WebAuthnHandler::MakeCredential(
     return;
   }
 
+  if (pending_uv_make_credential_session_ ||
+      pending_uv_get_assertion_session_) {
+    response.set_status(MakeCredentialResponse::REQUEST_PENDING);
+    method_response->Return(response);
+    return;
+  }
+
   if (request.rp_id().empty()) {
     response.set_status(MakeCredentialResponse::INVALID_REQUEST);
     method_response->Return(response);
@@ -163,24 +171,75 @@ void WebAuthnHandler::MakeCredential(
     writer.AppendInt32(request.verification_type());
     writer.AppendUint64(request.request_id());
 
+    pending_uv_make_credential_session_ = std::move(session);
     auth_dialog_dbus_proxy_->CallMethod(
-        &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
         base::Bind(&WebAuthnHandler::HandleUVFlowResultMakeCredential,
-                   base::Unretained(this), base::Passed(std::move(session))));
+                   base::Unretained(this)));
     return;
   }
 
   DoMakeCredential(std::move(session), PresenceRequirement::kPowerButton);
 }
 
+CancelWebAuthnFlowResponse WebAuthnHandler::Cancel(
+    const CancelWebAuthnFlowRequest& request) {
+  CancelWebAuthnFlowResponse response;
+  if (!pending_uv_make_credential_session_ &&
+      !pending_uv_get_assertion_session_) {
+    LOG(ERROR) << "No pending session to cancel.";
+    response.set_canceled(false);
+    return response;
+  }
+
+  if (pending_uv_make_credential_session_ &&
+      pending_uv_make_credential_session_->request.request_id() !=
+          request.request_id()) {
+    LOG(ERROR)
+        << "MakeCredential session has a different request_id, not cancelling.";
+    response.set_canceled(false);
+    return response;
+  }
+
+  if (pending_uv_get_assertion_session_ &&
+      pending_uv_get_assertion_session_->request.request_id() !=
+          request.request_id()) {
+    LOG(ERROR)
+        << "GetAssertion session has a different request_id, not cancelling.";
+    response.set_canceled(false);
+    return response;
+  }
+
+  dbus::MethodCall call(chromeos::kUserAuthenticationServiceInterface,
+                        chromeos::kUserAuthenticationServiceCancelMethod);
+  std::unique_ptr<dbus::Response> cancel_ui_resp =
+      auth_dialog_dbus_proxy_->CallMethodAndBlock(&call,
+                                                  kCancelUVFlowTimeoutMs);
+
+  if (!cancel_ui_resp) {
+    LOG(ERROR) << "Failed to dismiss WebAuthn user verification UI.";
+    response.set_canceled(false);
+    return response;
+  }
+
+  pending_uv_make_credential_session_.reset();
+  pending_uv_get_assertion_session_.reset();
+  LOG(INFO) << "WebAuthn user verification UI dismissed.";
+  response.set_canceled(true);
+  return response;
+}
+
 void WebAuthnHandler::HandleUVFlowResultMakeCredential(
-    struct MakeCredentialSession session, dbus::Response* flow_response) {
+    dbus::Response* flow_response) {
   MakeCredentialResponse response;
+
+  DCHECK(pending_uv_make_credential_session_);
 
   if (!flow_response) {
     LOG(ERROR) << "User auth flow had no response.";
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    pending_uv_make_credential_session_->response->Return(response);
+    pending_uv_make_credential_session_.reset();
     return;
   }
 
@@ -189,28 +248,35 @@ void WebAuthnHandler::HandleUVFlowResultMakeCredential(
   if (!response_reader.PopBool(&success)) {
     LOG(ERROR) << "Failed to parse user auth flow result.";
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    pending_uv_make_credential_session_->response->Return(response);
+    pending_uv_make_credential_session_.reset();
     return;
   }
 
   if (!success) {
     LOG(ERROR) << "User auth flow failed. Aborting MakeCredential.";
     response.set_status(MakeCredentialResponse::VERIFICATION_FAILED);
-    session.response_->Return(response);
+    pending_uv_make_credential_session_->response->Return(response);
+    pending_uv_make_credential_session_.reset();
     return;
   }
 
-  DoMakeCredential(std::move(session), PresenceRequirement::kNone);
+  DoMakeCredential(std::move(*pending_uv_make_credential_session_),
+                   PresenceRequirement::kNone);
+  pending_uv_make_credential_session_.reset();
 }
 
 void WebAuthnHandler::HandleUVFlowResultGetAssertion(
-    struct GetAssertionSession session, dbus::Response* flow_response) {
+    dbus::Response* flow_response) {
   GetAssertionResponse response;
+
+  DCHECK(pending_uv_get_assertion_session_);
 
   if (!flow_response) {
     LOG(ERROR) << "User auth flow had no response.";
     response.set_status(GetAssertionResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    pending_uv_get_assertion_session_->response->Return(response);
+    pending_uv_get_assertion_session_.reset();
     return;
   }
 
@@ -219,26 +285,29 @@ void WebAuthnHandler::HandleUVFlowResultGetAssertion(
   if (!response_reader.PopBool(&success)) {
     LOG(ERROR) << "Failed to parse user auth flow result.";
     response.set_status(GetAssertionResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    pending_uv_get_assertion_session_->response->Return(response);
+    pending_uv_get_assertion_session_.reset();
     return;
   }
 
   if (!success) {
     LOG(ERROR) << "User auth flow failed. Aborting GetAssertion.";
     response.set_status(GetAssertionResponse::VERIFICATION_FAILED);
-    session.response_->Return(response);
+    pending_uv_get_assertion_session_->response->Return(response);
+    pending_uv_get_assertion_session_.reset();
     return;
   }
 
-  DoGetAssertion(std::move(session), PresenceRequirement::kAuthorizationSecret);
+  DoGetAssertion(std::move(*pending_uv_get_assertion_session_),
+                 PresenceRequirement::kAuthorizationSecret);
+  pending_uv_get_assertion_session_.reset();
 }
 
 void WebAuthnHandler::DoMakeCredential(
     struct MakeCredentialSession session,
     PresenceRequirement presence_requirement) {
   MakeCredentialResponse response;
-  const std::vector<uint8_t> rp_id_hash =
-      util::Sha256(session.request_.rp_id());
+  const std::vector<uint8_t> rp_id_hash = util::Sha256(session.request.rp_id());
   std::vector<uint8_t> credential_id;
   std::vector<uint8_t> credential_public_key;
 
@@ -254,36 +323,36 @@ void WebAuthnHandler::DoMakeCredential(
 
   if (generate_status != MakeCredentialResponse::SUCCESS) {
     response.set_status(generate_status);
-    session.response_->Return(response);
+    session.response->Return(response);
     return;
   }
 
   if (credential_id.empty() || credential_public_key.empty()) {
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    session.response->Return(response);
     return;
   }
 
-  auto ret = HasExcludedCredentials(session.request_);
+  auto ret = HasExcludedCredentials(session.request);
   if (ret == HasCredentialsResponse::INTERNAL_ERROR) {
     response.set_status(MakeCredentialResponse::INTERNAL_ERROR);
-    session.response_->Return(response);
+    session.response->Return(response);
   } else if (ret == HasCredentialsResponse::SUCCESS) {
     response.set_status(MakeCredentialResponse::EXCLUDED_CREDENTIAL_ID);
-    session.response_->Return(response);
+    session.response->Return(response);
   }
 
   AppendToString(MakeAuthenticatorData(
                      rp_id_hash, credential_id,
                      EncodeCredentialPublicKeyInCBOR(credential_public_key),
-                     session.request_.verification_type() ==
+                     session.request.verification_type() ==
                          VerificationType::VERIFICATION_USER_VERIFICATION,
                      true),
                  response.mutable_authenticator_data());
   AppendNoneAttestation(&response);
 
   response.set_status(MakeCredentialResponse::SUCCESS);
-  session.response_->Return(response);
+  session.response->Return(response);
 }
 
 // AuthenticatorData layout:
@@ -444,6 +513,13 @@ void WebAuthnHandler::GetAssertion(
     return;
   }
 
+  if (pending_uv_make_credential_session_ ||
+      pending_uv_get_assertion_session_) {
+    response.set_status(GetAssertionResponse::REQUEST_PENDING);
+    method_response->Return(response);
+    return;
+  }
+
   if (request.rp_id().empty() ||
       request.client_data_hash().size() != SHA256_DIGEST_LENGTH) {
     response.set_status(GetAssertionResponse::INVALID_REQUEST);
@@ -500,10 +576,11 @@ void WebAuthnHandler::GetAssertion(
     writer.AppendInt32(request.verification_type());
     writer.AppendUint64(request.request_id());
 
+    pending_uv_get_assertion_session_ = std::move(session);
     auth_dialog_dbus_proxy_->CallMethod(
-        &call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT,
+        &call, dbus::ObjectProxy::TIMEOUT_INFINITE,
         base::Bind(&WebAuthnHandler::HandleUVFlowResultGetAssertion,
-                   base::Unretained(this), base::Passed(std::move(session))));
+                   base::Unretained(this)));
     return;
   }
 
@@ -516,15 +593,14 @@ void WebAuthnHandler::GetAssertion(
 void WebAuthnHandler::DoGetAssertion(struct GetAssertionSession session,
                                      PresenceRequirement presence_requirement) {
   GetAssertionResponse response;
-  const std::vector<uint8_t> rp_id_hash =
-      util::Sha256(session.request_.rp_id());
+  const std::vector<uint8_t> rp_id_hash = util::Sha256(session.request.rp_id());
   std::vector<uint8_t> authenticator_data = MakeAuthenticatorData(
       rp_id_hash, std::vector<uint8_t>(), std::vector<uint8_t>(),
-      session.request_.verification_type() ==
+      session.request.verification_type() ==
           VerificationType::VERIFICATION_USER_VERIFICATION,
       false);
   std::vector<uint8_t> data_to_sign(authenticator_data);
-  util::AppendToVector(session.request_.client_data_hash(), &data_to_sign);
+  util::AppendToVector(session.request.client_data_hash(), &data_to_sign);
   std::vector<uint8_t> hash_to_sign = util::Sha256(data_to_sign);
 
   std::vector<uint8_t> signature;
@@ -535,12 +611,12 @@ void WebAuthnHandler::DoGetAssertion(struct GetAssertionSession session,
   if (sign_status == GetAssertionResponse::SUCCESS) {
     auto* assertion = response.add_assertion();
     assertion->set_credential_id(
-        session.request_.allowed_credential_id().Get(0));
+        session.request.allowed_credential_id().Get(0));
     AppendToString(authenticator_data, assertion->mutable_authenticator_data());
     AppendToString(signature, assertion->mutable_signature());
   }
 
-  session.response_->Return(response);
+  session.response->Return(response);
 }
 
 GetAssertionResponse::GetAssertionStatus WebAuthnHandler::DoU2fSign(

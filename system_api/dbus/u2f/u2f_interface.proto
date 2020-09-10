@@ -50,6 +50,7 @@ message MakeCredentialResponse {
     INTERNAL_ERROR = 5;
     // An excluded credential belongs to this device.
     EXCLUDED_CREDENTIAL_ID = 6;
+    REQUEST_PENDING = 7;
   }
 
   MakeCredentialStatus status = 1;
@@ -101,6 +102,7 @@ message GetAssertionResponse {
     INTERNAL_ERROR = 5;
     // No allowed credential belongs to this device.
     UNKNOWN_CREDENTIAL_ID = 6;
+    REQUEST_PENDING = 7;
   }
 
   GetAssertionStatus status = 1;
@@ -129,4 +131,14 @@ message HasCredentialsResponse {
   HasCredentialsStatus status = 1;
   // Valid or resident credentials for the specified rp_id.
   repeated bytes credential_id = 2;
+}
+
+// Dismiss user verification UI and abort the operation.
+message CancelWebAuthnFlowRequest {
+  // Id used to identify the window that initiated the request.
+  uint64 request_id = 1;
+}
+
+message CancelWebAuthnFlowResponse {
+  bool canceled = 1;
 }

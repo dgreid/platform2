@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include <base/optional.h>
 #include <brillo/dbus/dbus_method_response.h>
 
 #include <u2f/proto_bindings/u2f_interface.pb.h>
@@ -26,19 +27,19 @@ using GetAssertionMethodResponse =
     brillo::dbus_utils::DBusMethodResponse<GetAssertionResponse>;
 
 struct MakeCredentialSession {
-  bool empty() { return !response_; }
+  bool empty() { return !response; }
   uint64_t session_id;
-  MakeCredentialRequest request_;
-  std::unique_ptr<MakeCredentialMethodResponse> response_;
+  MakeCredentialRequest request;
+  std::unique_ptr<MakeCredentialMethodResponse> response;
 };
 
 struct GetAssertionSession {
-  bool empty() { return !response_; }
+  bool empty() { return !response; }
   uint64_t session_id;
-  GetAssertionRequest request_;
+  GetAssertionRequest request;
   // The credential_id to send to the TPM. May be a resident credential.
-  const std::string credential_id;
-  std::unique_ptr<GetAssertionMethodResponse> response_;
+  std::string credential_id;
+  std::unique_ptr<GetAssertionMethodResponse> response;
 };
 
 enum class PresenceRequirement {
@@ -80,16 +81,19 @@ class WebAuthnHandler {
   // Tests validity and/or presence of specified credentials.
   HasCredentialsResponse HasCredentials(const HasCredentialsRequest& request);
 
+  // Dismiss user verification UI and abort the operation. This is expected to
+  // be called by the browser only in UV operations, because UP operations
+  // themselves will timeout after ~5 seconds.
+  CancelWebAuthnFlowResponse Cancel(const CancelWebAuthnFlowRequest& request);
+
  private:
   friend class WebAuthnHandlerTest;
 
   bool Initialized();
 
-  void HandleUVFlowResultMakeCredential(struct MakeCredentialSession session,
-                                        dbus::Response* flow_response);
+  void HandleUVFlowResultMakeCredential(dbus::Response* flow_response);
 
-  void HandleUVFlowResultGetAssertion(struct GetAssertionSession session,
-                                      dbus::Response* flow_response);
+  void HandleUVFlowResultGetAssertion(dbus::Response* flow_response);
 
   // Proceeds to cr50 for the current MakeCredential request, and responds to
   // the request with authenticator data.
@@ -177,6 +181,14 @@ class WebAuthnHandler {
   dbus::Bus* bus_ = nullptr;
   // Proxy to user authentication dialog in Ash. Used only in UV requests.
   dbus::ObjectProxy* auth_dialog_dbus_proxy_ = nullptr;
+
+  // The MakeCredential session that's waiting on UI. There can only be one
+  // such session. UP sessions should not use this since there can be multiple.
+  base::Optional<MakeCredentialSession> pending_uv_make_credential_session_;
+
+  // The GetAssertion session that's waiting on UI. There can only be one
+  // such session. UP sessions should not use this since there can be multiple.
+  base::Optional<GetAssertionSession> pending_uv_get_assertion_session_;
 };
 
 }  // namespace u2f
