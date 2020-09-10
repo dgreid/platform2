@@ -120,13 +120,13 @@ class Platform {
   // Unmounts |path| with |flags|.
   virtual MountErrorType Unmount(const std::string& path, int flags) const;
 
-  // Mounts the |source| filesystem of type |filesystem_type| at |target| with
-  // |options| and |data|.
+  // Mounts the |source| filesystem of type |filesystem_type| at mount point
+  // |target| with |flags| and |options|.
   virtual MountErrorType Mount(const std::string& source,
                                const std::string& target,
                                const std::string& filesystem_type,
-                               uint64_t options,
-                               const std::string& data) const;
+                               uint64_t flags,
+                               const std::string& options) const;
 
   gid_t mount_group_id() const { return mount_group_id_; }
 

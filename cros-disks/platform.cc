@@ -225,22 +225,23 @@ MountErrorType Platform::Unmount(const std::string& path, int flags) const {
 MountErrorType Platform::Mount(const std::string& source_path,
                                const std::string& target_path,
                                const std::string& filesystem_type,
-                               uint64_t options,
-                               const std::string& data) const {
+                               const uint64_t flags,
+                               const std::string& options) const {
   error_t error = 0;
   if (mount(source_path.c_str(), target_path.c_str(), filesystem_type.c_str(),
-            options, data.c_str()) != 0) {
+            flags, options.c_str()) != 0) {
     error = errno;
-    PLOG(ERROR) << "Cannot mount " << quote(source_path) << " to "
-                << quote(target_path) << " as filesystem "
-                << quote(filesystem_type) << " with options " << options << " "
-                << quote(data);
+    PLOG(ERROR) << "Cannot create mount point " << quote(target_path) << " for "
+                << quote(source_path) << " as filesystem "
+                << quote(filesystem_type) << " with flags 0x" << std::hex
+                << flags << " and options " << quote(options);
   } else {
-    LOG(INFO) << "Mounted " << quote(source_path) << " to "
-              << quote(target_path) << " as filesystem "
-              << quote(filesystem_type) << " with options " << options << " "
-              << quote(data);
+    LOG(INFO) << "Created mount point " << quote(target_path) << " for "
+              << quote(source_path) << " as filesystem "
+              << quote(filesystem_type) << " with flags 0x" << std::hex << flags
+              << " and options " << quote(options);
   }
+
   switch (error) {
     case 0:
       return MOUNT_ERROR_NONE;
