@@ -14,6 +14,7 @@
 #include <chromeos/dbus/service_constants.h>
 
 #include "biod/cros_fp_biometrics_manager.h"
+#include "biod/power_button_filter.h"
 #include "biod/proto_bindings/constants.pb.h"
 #include "biod/proto_bindings/messages.pb.h"
 
@@ -425,8 +426,8 @@ BiometricsDaemon::BiometricsDaemon() {
       "%s/%s", kBiodServicePath, kCrosFpBiometricsManagerName));
 
   auto biod_metrics = std::make_unique<BiodMetrics>();
-  auto cros_fp_bio = CrosFpBiometricsManager::Create(
-      bus_,
+  auto cros_fp_bio = std::make_unique<CrosFpBiometricsManager>(
+      PowerButtonFilter::Create(bus_),
       CrosFpDevice::Create(biod_metrics.get(),
                            std::make_unique<EcCommandFactory>()),
       std::move(biod_metrics));

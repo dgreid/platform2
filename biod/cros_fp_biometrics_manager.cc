@@ -156,22 +156,6 @@ bool CrosFpBiometricsManager::ReloadAllRecords(std::string user_id) {
   return biod_storage_.ReadRecordsForSingleUser(user_id);
 }
 
-std::unique_ptr<CrosFpBiometricsManager> CrosFpBiometricsManager::Create(
-    const scoped_refptr<dbus::Bus>& bus,
-    std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
-    std::unique_ptr<BiodMetricsInterface> biod_metrics) {
-  if (!cros_fp_device) {
-    return nullptr;
-  }
-
-  std::unique_ptr<CrosFpBiometricsManager> biometrics_manager(
-      new CrosFpBiometricsManager(PowerButtonFilter::Create(bus),
-                                  std::move(cros_fp_device),
-                                  std::move(biod_metrics)));
-
-  return biometrics_manager;
-}
-
 BiometricType CrosFpBiometricsManager::GetType() {
   return BIOMETRIC_TYPE_FINGERPRINT;
 }

@@ -26,8 +26,8 @@ class BiodMetrics;
 
 class CrosFpBiometricsManager : public BiometricsManager {
  public:
-  static std::unique_ptr<CrosFpBiometricsManager> Create(
-      const scoped_refptr<dbus::Bus>& bus,
+  CrosFpBiometricsManager(
+      std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
       std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
       std::unique_ptr<BiodMetricsInterface> biod_metrics);
 
@@ -59,11 +59,6 @@ class CrosFpBiometricsManager : public BiometricsManager {
   bool ResetEntropy(bool factory_init) override;
 
  protected:
-  CrosFpBiometricsManager(
-      std::unique_ptr<PowerButtonFilterInterface> power_button_filter,
-      std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
-      std::unique_ptr<BiodMetricsInterface> biod_metrics);
-
   void EndEnrollSession() override;
   void EndAuthSession() override;
 

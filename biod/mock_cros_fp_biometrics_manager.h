@@ -21,24 +21,7 @@ namespace biod {
 
 class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
  public:
-  /**
-   * @param bus DBus Usually a mock bus
-   * @param cros_fp_device Usually a mock device
-   * @param biod_metrics Usually a mock metrics object
-   *
-   * @return mock instance on success, nullptr on failure
-   */
-  static std::unique_ptr<MockCrosFpBiometricsManager> Create(
-      const scoped_refptr<dbus::Bus>& bus,
-      std::unique_ptr<CrosFpDeviceInterface> cros_fp_device,
-      std::unique_ptr<BiodMetricsInterface> biod_metrics) {
-    // Using new to access non-public constructor.
-    // See https://abseil.io/tips/134.
-    return base::WrapUnique(new MockCrosFpBiometricsManager(
-        PowerButtonFilter::Create(bus), std::move(cros_fp_device),
-        std::move(biod_metrics)));
-  }
-
+  using CrosFpBiometricsManager::CrosFpBiometricsManager;
   ~MockCrosFpBiometricsManager() override = default;
 
   MOCK_METHOD(BiometricType, GetType, (), (override));
@@ -85,9 +68,6 @@ class MockCrosFpBiometricsManager : public CrosFpBiometricsManager {
   void OnMaintenanceTimerFiredDelegate() {
     CrosFpBiometricsManager::OnMaintenanceTimerFired();
   }
-
- protected:
-  using CrosFpBiometricsManager::CrosFpBiometricsManager;
 };
 
 }  // namespace biod

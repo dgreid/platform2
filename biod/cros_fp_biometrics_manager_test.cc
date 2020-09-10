@@ -108,8 +108,8 @@ class CrosFpBiometricsManagerPeer {
     // Keep a pointer to the fake device to manipulate it later.
     fake_cros_dev_ = fake_cros_dev.get();
 
-    cros_fp_biometrics_manager_ = CrosFpBiometricsManager::Create(
-        mock_bus, std::move(fake_cros_dev),
+    cros_fp_biometrics_manager_ = std::make_unique<CrosFpBiometricsManager>(
+        PowerButtonFilter::Create(mock_bus), std::move(fake_cros_dev),
         std::make_unique<metrics::MockBiodMetrics>());
   }
 
@@ -353,8 +353,9 @@ class CrosFpBiometricsManagerMockTest : public ::testing::Test {
     auto mock_biod_metrics = std::make_unique<metrics::MockBiodMetrics>();
     mock_metrics_ = mock_biod_metrics.get();
 
-    mock_ = MockCrosFpBiometricsManager::Create(
-        mock_bus, std::move(mock_cros_fp_dev), std::move(mock_biod_metrics));
+    mock_ = std::make_unique<MockCrosFpBiometricsManager>(
+        PowerButtonFilter::Create(mock_bus), std::move(mock_cros_fp_dev),
+        std::move(mock_biod_metrics));
     EXPECT_TRUE(mock_);
   }
 
