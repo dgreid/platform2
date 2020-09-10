@@ -40,10 +40,10 @@ crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
   // Parse the serialized TPM_PUBKEY.
   UINT64 offset = 0;
   TPM_PUBKEY parsed = {};
-  TSS_RESULT result = Trspi_UnloadBlob_PUBKEY(
+  TSS_RESULT result = Trspi_UnloadBlob_PUBKEY_s(
       &offset,
       reinterpret_cast<BYTE*>(const_cast<char*>(serialized_tpm_pubkey.data())),
-      &parsed);
+      serialized_tpm_pubkey.length(), &parsed);
   if (result != TSS_SUCCESS) {
     TPM_LOG(ERROR, result) << "Failed to parse TPM_PUBKEY.";
     return nullptr;
@@ -53,12 +53,21 @@ crypto::ScopedEVP_PKEY TpmPublicKeyToEVP(
   std::unique_ptr<BYTE, base::FreeDeleter> scoped_key(parsed.pubKey.key);
   std::unique_ptr<BYTE, base::FreeDeleter> scoped_parms(
       parsed.algorithmParms.parms);
+  if (offset != serialized_tpm_pubkey.length()) {
+    LOG(ERROR) << "Found garbage data after the TPM_PUBKEY.";
+    return nullptr;
+  }
   TPM_RSA_KEY_PARMS parms;
   UINT64 parms_offset = 0;
-  result = Trspi_UnloadBlob_RSA_KEY_PARMS(&parms_offset,
-                                          parsed.algorithmParms.parms, &parms);
+  result = Trspi_UnloadBlob_RSA_KEY_PARMS_s(
+      &parms_offset, parsed.algorithmParms.parms,
+      parsed.algorithmParms.parmSize, &parms);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "Failed to parse RSA_KEY_PARMS.";
+    return nullptr;
+  }
+  if (parms_offset != parsed.algorithmParms.parmSize) {
+    LOG(ERROR) << "Find garbage data after the TPM_PUBKEY.";
     return nullptr;
   }
   std::unique_ptr<BYTE, base::FreeDeleter> scoped_exponent(parms.exponent);

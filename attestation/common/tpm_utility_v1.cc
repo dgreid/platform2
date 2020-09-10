@@ -1133,19 +1133,29 @@ bool TpmUtilityV1::GetRSAPublicKeyFromTpmPublicKey(
   std::string mutable_public_key(tpm_public_key_object);
   BYTE* buffer = StringAsTSSBuffer(&mutable_public_key);
   TPM_PUBKEY parsed;
-  TSS_RESULT result = Trspi_UnloadBlob_PUBKEY(&offset, buffer, &parsed);
+  TSS_RESULT result = Trspi_UnloadBlob_PUBKEY_s(
+      &offset, buffer, mutable_public_key.length(), &parsed);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "Failed to parse TPM_PUBKEY.";
     return false;
   }
   ScopedByteArray scoped_key(parsed.pubKey.key);
   ScopedByteArray scoped_parms(parsed.algorithmParms.parms);
+  if (offset != mutable_public_key.length()) {
+    LOG(ERROR) << "Found garbage data after the TPM_PUBKEY.";
+    return false;
+  }
   TPM_RSA_KEY_PARMS parms;
   UINT64 parms_offset = 0;
-  result = Trspi_UnloadBlob_RSA_KEY_PARMS(&parms_offset,
-                                          parsed.algorithmParms.parms, &parms);
+  result = Trspi_UnloadBlob_RSA_KEY_PARMS_s(
+      &parms_offset, parsed.algorithmParms.parms,
+      parsed.algorithmParms.parmSize, &parms);
   if (TPM_ERROR(result)) {
     TPM_LOG(ERROR, result) << "Failed to parse RSA_KEY_PARMS.";
+    return false;
+  }
+  if (parms_offset != parsed.algorithmParms.parmSize) {
+    LOG(ERROR) << "Find garbage data after the TPM_PUBKEY.";
     return false;
   }
   ScopedByteArray scoped_exponent(parms.exponent);

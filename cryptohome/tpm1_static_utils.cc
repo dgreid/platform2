@@ -32,7 +32,8 @@ crypto::ScopedRSA ParseRsaFromTpmPubkeyBlob(const Blob& pubkey) {
   UINT64 offset = 0;
   BYTE* buffer = const_cast<BYTE*>(pubkey.data());
   TPM_PUBKEY parsed;
-  TSS_RESULT tss_result = Trspi_UnloadBlob_PUBKEY(&offset, buffer, &parsed);
+  TSS_RESULT tss_result =
+      Trspi_UnloadBlob_PUBKEY_s(&offset, buffer, pubkey.size(), &parsed);
   if (TPM_ERROR(tss_result)) {
     LOG(ERROR) << "Failed to parse TPM_PUBKEY: "
                << FormatTrousersErrorCode(tss_result);
@@ -40,13 +41,22 @@ crypto::ScopedRSA ParseRsaFromTpmPubkeyBlob(const Blob& pubkey) {
   }
   ScopedByteArray scoped_key(parsed.pubKey.key);
   ScopedByteArray scoped_parms(parsed.algorithmParms.parms);
+  if (offset != pubkey.size()) {
+    LOG(ERROR) << "Found garbage data after the TPM_PUBKEY.";
+    return nullptr;
+  }
   TPM_RSA_KEY_PARMS parms;
   UINT64 parms_offset = 0;
-  tss_result = Trspi_UnloadBlob_RSA_KEY_PARMS(
-      &parms_offset, parsed.algorithmParms.parms, &parms);
+  tss_result = Trspi_UnloadBlob_RSA_KEY_PARMS_s(
+      &parms_offset, parsed.algorithmParms.parms,
+      parsed.algorithmParms.parmSize, &parms);
   if (TPM_ERROR(tss_result)) {
     LOG(ERROR) << "Failed to parse RSA_KEY_PARMS: "
                << FormatTrousersErrorCode(tss_result);
+    return nullptr;
+  }
+  if (parms_offset != parsed.algorithmParms.parmSize) {
+    LOG(ERROR) << "Find garbage data after the TPM_PUBKEY.";
     return nullptr;
   }
   ScopedByteArray scoped_exponent(parms.exponent);
