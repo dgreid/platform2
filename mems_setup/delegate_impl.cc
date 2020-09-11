@@ -123,13 +123,13 @@ base::Optional<gid_t> DelegateImpl::FindGroupId(const char* group) {
 
   std::vector<char> buf(len);
   struct group result;
-  struct group* resultp;
+  struct group* resultp = nullptr;
 
-  int err = getgrnam_r(group, &result, buf.data(), len, &resultp);
-  if (err)
+  getgrnam_r(group, &result, buf.data(), len, &resultp);
+  if (!resultp)
     return base::nullopt;
-  else
-    return result.gr_gid;
+
+  return resultp->gr_gid;
 }
 
 int DelegateImpl::GetPermissions(const base::FilePath& path) {
