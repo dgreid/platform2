@@ -48,10 +48,18 @@ executable("prime-search") {
   ]
 }
 
+pkg_config("libdiag_routine_pkg_deps") {
+  pkg_deps = [ "re2" ]
+}
+
 source_set("libdiag_routine") {
-  configs += [ ":common_pkg_deps" ]
+  configs += [
+    ":common_pkg_deps",
+    ":libdiag_routine_pkg_deps",
+  ]
   deps = [
     "//diagnostics/common:libcommon",
+    "//diagnostics/cros_healthd/system:libcros_healthd_system",
     "//diagnostics/cros_healthd/utils:libcros_healthd_utils",
     "//diagnostics/mojo:cros_healthd_mojo_bindings",
   ]
@@ -68,6 +76,8 @@ source_set("libdiag_routine") {
     "diag_process_adapter_impl.cc",
     "disk_read/disk_read.cc",
     "floating_point/floating_point_accuracy.cc",
+    "memory/memory.cc",
+    "memory/memory_constants.cc",
     "nvme_self_test/nvme_self_test.cc",
     "nvme_wear_level/nvme_wear_level.cc",
     "prime_search/prime_search.cc",
@@ -92,6 +102,7 @@ if (use.test) {
       "//common-mk/testrunner:testrunner",
       "//diagnostics/common:libcommon",
       "//diagnostics/common:libcommon_test_utils",
+      "//diagnostics/cros_healthd/system:libcros_healthd_system_test_utils",
     ]
     sources = [
       "ac_power/ac_power_test.cc",
@@ -99,6 +110,7 @@ if (use.test) {
       "battery_charge/battery_charge_test.cc",
       "battery_discharge/battery_discharge_test.cc",
       "battery_health/battery_health_test.cc",
+      "memory/memory_test.cc",
       "nvme_self_test/nvme_self_test_test.cc",
       "nvme_wear_level/nvme_wear_level_test.cc",
       "prime_search/prime_number_search.cc",
