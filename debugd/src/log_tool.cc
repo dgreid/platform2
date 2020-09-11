@@ -157,8 +157,12 @@ const std::vector<Log> kCommandLogs {
   {kFile, "cros_ec_panicinfo", "/sys/kernel/debug/cros_ec/panicinfo",
     SandboxedProcess::kDefaultUser, kDebugfsGroup, Log::kDefaultMaxBytes,
     LogTool::Encoding::kBase64},
-  {kFile, "cros_ec_pdinfo", "/sys/kernel/debug/cros_ec/pdinfo",
-    SandboxedProcess::kDefaultUser, kDebugfsGroup},
+  {kCommand, "cros_ec_pdinfo",
+    "for port in 0 1 2 3 4 5 6 7 8; do "
+      "echo \"-----------\"; "
+      // stderr output just tells us it failed
+      "ectool usbpd \"${port}\" 2>/dev/null || break; "
+    "done", kRoot, kRoot},
   {kFile, "cros_fp.previous", "/var/log/cros_fp.previous",
     SandboxedProcess::kDefaultUser, SandboxedProcess::kDefaultGroup,
     Log::kDefaultMaxBytes, LogTool::Encoding::kUtf8},
