@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std;
 use std::fmt;
 use std::io;
 use std::io::{ErrorKind, Read, Write};
@@ -243,8 +242,7 @@ mod test {
         let value: u64 = 0x8badf00d_deadbeef;
         let expected: [u8; 8] = [0xef, 0xbe, 0xad, 0xde, 0x0d, 0xf0, 0xad, 0x8b];
 
-        let mut buf = Vec::with_capacity(8);
-        buf.resize(8, 0);
+        let mut buf = vec![0; 8];
 
         (value as u8).encode(&mut Cursor::new(&mut *buf)).unwrap();
         assert_eq!(expected[0..1], buf[0..1]);
@@ -319,8 +317,7 @@ mod test {
         });
 
         for (val, exp) in values.iter().zip(expected) {
-            let mut buf = Vec::with_capacity(exp.len());
-            buf.resize(exp.len(), 0);
+            let mut buf = vec![0; exp.len()];
 
             WireFormat::encode(val, &mut Cursor::new(&mut *buf)).unwrap();
             assert_eq!(exp, buf);
@@ -426,8 +423,7 @@ mod test {
             expected.push(((val >> 24) & MASK) as u8);
         }
 
-        let mut actual: Vec<u8> = Vec::with_capacity(expected.len());
-        actual.resize(expected.len(), 0);
+        let mut actual: Vec<u8> = vec![0; expected.len()];
 
         WireFormat::encode(&values, &mut Cursor::new(&mut *actual))
             .expect("failed to encode vector");
@@ -477,8 +473,7 @@ mod test {
         expected.push((values.len() >> 24) as u8);
         expected.extend_from_slice(&values);
 
-        let mut actual: Vec<u8> = Vec::with_capacity(expected.len());
-        actual.resize(expected.len(), 0);
+        let mut actual: Vec<u8> = vec![0; expected.len()];
 
         WireFormat::encode(&values, &mut Cursor::new(&mut *actual))
             .expect("failed to encode datar");
@@ -506,60 +501,59 @@ mod test {
     #[test]
     fn error_cases() {
         // string is too long.
-        let mut foo = String::with_capacity(std::u16::MAX as usize);
-        while foo.len() < std::u16::MAX as usize {
-            foo.push_str("long");
+        let mut long_str = String::with_capacity(std::u16::MAX as usize);
+        while long_str.len() < std::u16::MAX as usize {
+            long_str.push_str("long");
         }
-        foo.push_str("!");
+        long_str.push_str("!");
 
-        let count = foo.len() + mem::size_of::<u16>();
-        let mut buf = Vec::with_capacity(count);
-        buf.resize(count, 0);
+        let count = long_str.len() + mem::size_of::<u16>();
+        let mut buf = vec![0; count];
 
-        foo.encode(&mut Cursor::new(&mut *buf))
+        long_str
+            .encode(&mut Cursor::new(&mut *buf))
             .expect_err("long string");
 
         // vector is too long.
-        let mut bar: Vec<u32> = Vec::with_capacity(std::u16::MAX as usize);
-        while bar.len() < std::u16::MAX as usize {
-            bar.push(0x8bad_f00d);
+        let mut long_vec: Vec<u32> = Vec::with_capacity(std::u16::MAX as usize);
+        while long_vec.len() < std::u16::MAX as usize {
+            long_vec.push(0x8bad_f00d);
         }
-        bar.push(0x00ba_b10c);
+        long_vec.push(0x00ba_b10c);
 
-        let count = bar.len() * mem::size_of::<u32>();
-        let mut buf = Vec::with_capacity(count);
-        buf.resize(count, 0);
+        let count = long_vec.len() * mem::size_of::<u32>();
+        let mut buf = vec![0; count];
 
-        WireFormat::encode(&bar, &mut Cursor::new(&mut *buf)).expect_err("long vector");
+        WireFormat::encode(&long_vec, &mut Cursor::new(&mut *buf)).expect_err("long vector");
     }
 
     #[derive(Debug, PartialEq, P9WireFormat)]
     struct Item {
-        foo: u64,
-        bar: String,
-        baz: Vec<u16>,
+        a: u64,
+        b: String,
+        c: Vec<u16>,
         buf: Data,
     }
 
     #[test]
     fn struct_encode() {
         let item = Item {
-            foo: 0xdead10cc_00bab10c,
-            bar: String::from("冻住，不许走!"),
-            baz: vec![359, 492, 8891],
+            a: 0xdead10cc_00bab10c,
+            b: String::from("冻住，不许走!"),
+            c: vec![359, 492, 8891],
             buf: Data(vec![254, 129, 0, 62, 49, 172]),
         };
 
         let mut expected: Vec<u8> = vec![0x0c, 0xb1, 0xba, 0x00, 0xcc, 0x10, 0xad, 0xde];
-        let strlen = item.bar.len() as u16;
+        let strlen = item.b.len() as u16;
         expected.push(strlen as u8);
         expected.push((strlen >> 8) as u8);
-        expected.extend_from_slice(item.bar.as_bytes());
+        expected.extend_from_slice(item.b.as_bytes());
 
-        let veclen = item.baz.len() as u16;
+        let veclen = item.c.len() as u16;
         expected.push(veclen as u8);
         expected.push((veclen >> 8) as u8);
-        for val in &item.baz {
+        for val in &item.c {
             expected.push(*val as u8);
             expected.push((val >> 8) as u8);
         }
@@ -571,8 +565,7 @@ mod test {
         expected.push((buflen >> 24) as u8);
         expected.extend_from_slice(&item.buf);
 
-        let mut actual = Vec::with_capacity(expected.len());
-        actual.resize(expected.len(), 0);
+        let mut actual = vec![0; expected.len()];
 
         WireFormat::encode(&item, &mut Cursor::new(&mut *actual)).expect("failed to encode item");
 
@@ -582,22 +575,22 @@ mod test {
     #[test]
     fn struct_decode() {
         let expected = Item {
-            foo: 0xface_b00c_0404_4b1d,
-            bar: String::from("Огонь по готовности!"),
-            baz: vec![20067, 32449, 549, 4972, 77, 1987],
+            a: 0xface_b00c_0404_4b1d,
+            b: String::from("Огонь по готовности!"),
+            c: vec![20067, 32449, 549, 4972, 77, 1987],
             buf: Data(vec![126, 236, 79, 59, 6, 159]),
         };
 
         let mut input: Vec<u8> = vec![0x1d, 0x4b, 0x04, 0x04, 0x0c, 0xb0, 0xce, 0xfa];
-        let strlen = expected.bar.len() as u16;
+        let strlen = expected.b.len() as u16;
         input.push(strlen as u8);
         input.push((strlen >> 8) as u8);
-        input.extend_from_slice(expected.bar.as_bytes());
+        input.extend_from_slice(expected.b.as_bytes());
 
-        let veclen = expected.baz.len() as u16;
+        let veclen = expected.c.len() as u16;
         input.push(veclen as u8);
         input.push((veclen >> 8) as u8);
-        for val in &expected.baz {
+        for val in &expected.c {
             input.push(*val as u8);
             input.push((val >> 8) as u8);
         }
@@ -624,25 +617,25 @@ mod test {
     fn build_encoded_buffer(value: &Nested) -> Vec<u8> {
         let mut result: Vec<u8> = Vec::new();
 
-        // encode foo
-        result.push(value.item.foo as u8);
-        result.push((value.item.foo >> 8) as u8);
-        result.push((value.item.foo >> 16) as u8);
-        result.push((value.item.foo >> 24) as u8);
-        result.push((value.item.foo >> 32) as u8);
-        result.push((value.item.foo >> 40) as u8);
-        result.push((value.item.foo >> 48) as u8);
-        result.push((value.item.foo >> 56) as u8);
+        // encode a
+        result.push(value.item.a as u8);
+        result.push((value.item.a >> 8) as u8);
+        result.push((value.item.a >> 16) as u8);
+        result.push((value.item.a >> 24) as u8);
+        result.push((value.item.a >> 32) as u8);
+        result.push((value.item.a >> 40) as u8);
+        result.push((value.item.a >> 48) as u8);
+        result.push((value.item.a >> 56) as u8);
 
-        // encode bar
-        result.push(value.item.bar.len() as u8);
-        result.push((value.item.bar.len() >> 8) as u8);
-        result.extend_from_slice(value.item.bar.as_bytes());
+        // encode b
+        result.push(value.item.b.len() as u8);
+        result.push((value.item.b.len() >> 8) as u8);
+        result.extend_from_slice(value.item.b.as_bytes());
 
-        // encode baz
-        result.push(value.item.baz.len() as u8);
-        result.push((value.item.baz.len() >> 8) as u8);
-        for val in &value.item.baz {
+        // encode c
+        result.push(value.item.c.len() as u8);
+        result.push((value.item.c.len() >> 8) as u8);
+        for val in &value.item.c {
             result.push((val & 0xffu16) as u8);
             result.push(((val >> 8) & 0xffu16) as u8);
         }
@@ -675,9 +668,9 @@ mod test {
     fn nested_encode() {
         let value = Nested {
             item: Item {
-                foo: 0xcafe_d00d_8bad_f00d,
-                bar: String::from("龍が我が敵を喰らう!"),
-                baz: vec![2679, 55_919, 44, 38_819, 792],
+                a: 0xcafe_d00d_8bad_f00d,
+                b: String::from("龍が我が敵を喰らう!"),
+                c: vec![2679, 55_919, 44, 38_819, 792],
                 buf: Data(vec![129, 55, 200, 93, 7, 68]),
             },
             val: vec![1954978, 59, 4519, 15679],
@@ -685,8 +678,7 @@ mod test {
 
         let expected = build_encoded_buffer(&value);
 
-        let mut actual = Vec::with_capacity(expected.len());
-        actual.resize(expected.len(), 0);
+        let mut actual = vec![0; expected.len()];
 
         WireFormat::encode(&value, &mut Cursor::new(&mut *actual)).expect("failed to encode value");
         assert_eq!(expected, actual);
@@ -696,9 +688,9 @@ mod test {
     fn nested_decode() {
         let expected = Nested {
             item: Item {
-                foo: 0x0ff1ce,
-                bar: String::from("龍神の剣を喰らえ!"),
-                baz: vec![21687, 159, 55, 9217, 192],
+                a: 0x0ff1ce,
+                b: String::from("龍神の剣を喰らえ!"),
+                c: vec![21687, 159, 55, 9217, 192],
                 buf: Data(vec![189, 22, 7, 59, 235]),
             },
             val: vec![15679, 8619196, 319746, 123957, 77, 0, 492],

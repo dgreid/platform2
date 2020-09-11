@@ -93,7 +93,7 @@ fn create_local_file<P: AsRef<Path>>(dir: P, name: &str) -> Vec<u8> {
         .expect("failed to read from /dev/urandom");
 
     let f = DirEntry::File {
-        name: name,
+        name,
         content: &content,
     };
     f.create(&mut Cow::from(dir.as_ref()));
@@ -118,7 +118,7 @@ fn check_qid(qid: &Qid, md: &fs::Metadata) {
 
 fn check_attr(server: &mut Server, fid: u32, md: &fs::Metadata) {
     let tgetattr = Tgetattr {
-        fid: fid,
+        fid,
         request_mask: P9_GETATTR_BASIC,
     };
 
@@ -158,7 +158,7 @@ fn check_attr(server: &mut Server, fid: u32, md: &fs::Metadata) {
 fn check_content(server: &mut Server, content: &[u8], fid: u32) {
     for offset in 0..content.len() {
         let tread = Tread {
-            fid: fid,
+            fid,
             offset: offset as u64,
             count: DEFAULT_BUFFER_SIZE,
         };
@@ -186,8 +186,8 @@ fn walk<P: Into<PathBuf>>(
     }
 
     let twalk = Twalk {
-        fid: fid,
-        newfid: newfid,
+        fid,
+        newfid,
         wnames: names,
     };
 
@@ -208,10 +208,7 @@ fn open<P: Into<PathBuf>>(
 ) -> io::Result<Rlopen> {
     walk(server, dir, dir_fid, fid, vec![String::from(name)]);
 
-    let tlopen = Tlopen {
-        fid: fid,
-        flags: flags,
-    };
+    let tlopen = Tlopen { fid, flags };
 
     server.lopen(&tlopen)
 }
@@ -231,7 +228,7 @@ fn write<P: AsRef<Path>>(server: &mut Server, dir: P, name: &str, fid: u32, flag
         .expect("failed to read from /dev/urandom");
 
     let twrite = Twrite {
-        fid: fid,
+        fid,
         offset: 0,
         data: Data(new_content),
     };
@@ -239,10 +236,7 @@ fn write<P: AsRef<Path>>(server: &mut Server, dir: P, name: &str, fid: u32, flag
     let rwrite = server.write(&twrite).expect("failed to write file");
     assert_eq!(rwrite.count, twrite.data.len() as u32);
 
-    let tfsync = Tfsync {
-        fid: fid,
-        datasync: 0,
-    };
+    let tfsync = Tfsync { fid, datasync: 0 };
     server.fsync(&tfsync).expect("failed to sync file contents");
 
     let actual_content = fs::read(file_path).expect("failed to read back content from file");
@@ -269,10 +263,10 @@ fn create<P: Into<PathBuf>>(
     walk(server, dir, dir_fid, fid, Vec::new());
 
     let tlcreate = Tlcreate {
-        fid: fid,
+        fid,
         name: String::from(name),
-        flags: flags,
-        mode: mode,
+        flags,
+        mode,
         gid: 0,
     };
 
@@ -306,7 +300,7 @@ impl<'a> Iterator for Readdir<'a> {
                 return None;
             }
 
-            mem::replace(&mut self.cursor, Cursor::new(data.0));
+            mem::drop(mem::replace(&mut self.cursor, Cursor::new(data.0)));
         }
 
         let dirent: Dirent = WireFormat::decode(&mut self.cursor).expect("failed to decode dirent");
@@ -318,8 +312,8 @@ impl<'a> Iterator for Readdir<'a> {
 
 fn readdir(server: &mut Server, fid: u32) -> Readdir {
     Readdir {
-        server: server,
-        fid: fid,
+        server,
+        fid,
         offset: 0,
         cursor: Cursor::new(Vec::new()),
     }
@@ -432,7 +426,7 @@ fn path_joins() {
         Path::new("/a/b/c/d/e/f/nested")
     );
 
-    let p1 = join_path(path.clone(), "..", &root).expect("parent 1");
+    let p1 = join_path(path, "..", &root).expect("parent 1");
     assert_eq!(&p1, Path::new("/a/b/c/d/e/"));
 
     let p2 = join_path(p1, "..", &root).expect("parent 2");
@@ -452,7 +446,7 @@ fn invalid_joins() {
 
     join_path(path.clone(), ".", &root).expect_err("current directory");
     join_path(path.clone(), "c/d/e", &root).expect_err("too many components");
-    join_path(path.clone(), "/c/d/e", &root).expect_err("absolute path");
+    join_path(path, "/c/d/e", &root).expect_err("absolute path");
 }
 
 #[test]
@@ -567,7 +561,7 @@ where
     );
 
     let mut tsetattr = Tsetattr {
-        fid: fid,
+        fid,
         valid: 0,
         mode: 0,
         uid: 0,
@@ -758,7 +752,7 @@ fn remove_all() {
 
     // Now remove everything in reverse order.
     while let Some(fid) = fids.pop_back() {
-        let tremove = Tremove { fid: fid };
+        let tremove = Tremove { fid };
 
         server.remove(&tremove).expect("failed to remove entry");
     }
@@ -818,8 +812,8 @@ fn unlink_all() {
         for (name, flags) in names {
             let tunlinkat = Tunlinkat {
                 dirfd: dfid,
-                name: name,
-                flags: flags,
+                name,
+                flags,
             };
 
             server.unlink_at(&tunlinkat).expect("failed to unlink path");
@@ -846,7 +840,7 @@ fn rename() {
 
     let newname = "newfile";
     let trename = Trename {
-        fid: fid,
+        fid,
         dfid: ROOT_FID,
         name: String::from(newname),
     };
@@ -923,7 +917,7 @@ macro_rules! open_test {
                 write(&mut server, &test_dir, name, fid, $flags);
             }
 
-            let tclunk = Tclunk { fid: fid };
+            let tclunk = Tclunk { fid };
             server.clunk(&tclunk).expect("Unable to clunk file");
         }
     };
@@ -940,7 +934,7 @@ macro_rules! open_test {
                 .expect_err("successfully opened file");
             assert_eq!(err.kind(), $expected_err);
 
-            let tclunk = Tclunk { fid: fid };
+            let tclunk = Tclunk { fid };
             server.clunk(&tclunk).expect("Unable to clunk file");
         }
     };
@@ -1052,7 +1046,7 @@ macro_rules! create_test {
                 write(&mut server, &test_dir, name, fid, $flags);
             }
 
-            let tclunk = Tclunk { fid: fid };
+            let tclunk = Tclunk { fid };
             server.clunk(&tclunk).expect("Unable to clunk file");
         }
     };

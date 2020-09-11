@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use libc;
-
 use std::cmp::min;
 use std::collections::{btree_map, BTreeMap};
 use std::ffi::CString;
@@ -126,7 +124,7 @@ fn metadata_to_qid(metadata: &fs::Metadata) -> Qid {
     };
 
     Qid {
-        ty: ty,
+        ty,
         // TODO: deal with the 2038 problem before 2038
         version: metadata.st_mtime() as u32,
         path: metadata.st_ino(),
@@ -774,10 +772,10 @@ impl Server {
                     .map_err(|_| io::Error::from_raw_os_error(libc::EINVAL))?;
 
                 let mut out = Dirent {
-                    qid: qid,
+                    qid,
                     offset: 0, // set below
-                    ty: ty,
-                    name: name,
+                    ty,
+                    name,
                 };
 
                 offset += out.byte_size() as u64;
@@ -811,13 +809,8 @@ impl Server {
         let count = min(self.msize - header_size, readdir.count);
         let mut cursor = Cursor::new(Vec::with_capacity(count as usize));
 
-        loop {
-            let byte_size = if let Some(entry) = entries.peek() {
-                entry.byte_size() as usize
-            } else {
-                // No more entries.
-                break;
-            };
+        while let Some(entry) = entries.peek() {
+            let byte_size = entry.byte_size() as usize;
 
             if cursor.get_ref().capacity() - cursor.get_ref().len() < byte_size {
                 // No more room in the buffer.
