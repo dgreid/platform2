@@ -993,6 +993,15 @@ Stringmap CellularCapability3gpp::ParseScanResult(const ScanResult& result) {
   return parsed;
 }
 
+void CellularCapability3gpp::SetInitialEpsBearer(
+    const KeyValueStore& properties,
+    Error* error,
+    const ResultCallback& callback) {
+  SLOG(this, 3) << __func__;
+  modem_3gpp_proxy_->SetInitialEpsBearerSettings(properties, error, callback,
+                                                 kTimeoutSetInitialEpsBearer);
+}
+
 void CellularCapability3gpp::SetupLocation(uint32_t sources,
                                            bool signal_location,
                                            const ResultCallback& callback) {

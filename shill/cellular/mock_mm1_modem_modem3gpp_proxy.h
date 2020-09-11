@@ -28,6 +28,13 @@ class MockModemModem3gppProxy : public ModemModem3gppProxyInterface {
               Scan,
               (Error*, const KeyValueStoresCallback&, int),
               (override));
+  MOCK_METHOD(void,
+              SetInitialEpsBearerSettings,
+              (const KeyValueStore& properties,
+               Error* error,
+               const ResultCallback& callback,
+               int timeout),
+              (override));
 
  private:
   DISALLOW_COPY_AND_ASSIGN(MockModemModem3gppProxy);

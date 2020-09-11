@@ -78,6 +78,9 @@ class CellularCapability3gpp : public CellularCapability {
   bool IsActivating() const override;
   void CompleteActivation(Error* error) override;
   void Scan(Error* error, const ResultStringmapsCallback& callback) override;
+  void SetInitialEpsBearer(const KeyValueStore& properties,
+                           Error* error,
+                           const ResultCallback& callback) override;
   void RegisterOnNetwork(const std::string& network_id,
                          Error* error,
                          const ResultCallback& callback) override;
@@ -183,6 +186,7 @@ class CellularCapability3gpp : public CellularCapability {
   FRIEND_TEST(CellularCapability3gppMainTest, OnSimLockPropertiesChanged);
   FRIEND_TEST(CellularCapability3gppMainTest, PropertiesChanged);
   FRIEND_TEST(CellularCapability3gppMainTest, Reset);
+  FRIEND_TEST(CellularCapability3gppMainTest, SetInitialEpsBearer);
   FRIEND_TEST(CellularCapability3gppMainTest, SimLockStatusChanged);
   FRIEND_TEST(CellularCapability3gppMainTest, SimLockStatusToProperty);
   FRIEND_TEST(CellularCapability3gppMainTest, SimPathChanged);

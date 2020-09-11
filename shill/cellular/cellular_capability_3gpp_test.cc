@@ -51,6 +51,7 @@ using testing::AnyNumber;
 using testing::InSequence;
 using testing::Invoke;
 using testing::Mock;
+using testing::NiceMock;
 using testing::Return;
 using testing::ReturnRef;
 using testing::SaveArg;
@@ -104,7 +105,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
       : dispatcher_(dispatcher),
         control_interface_(this),
         modem_info_(&control_interface_, dispatcher, nullptr, nullptr),
-        modem_3gpp_proxy_(new mm1::MockModemModem3gppProxy()),
+        modem_3gpp_proxy_(new NiceMock<mm1::MockModemModem3gppProxy>()),
         modem_cdma_proxy_(new mm1::MockModemModemCdmaProxy()),
         modem_location_proxy_(new mm1::MockModemLocationProxy()),
         modem_proxy_(new mm1::MockModemProxy()),
@@ -360,7 +361,7 @@ class CellularCapability3gppTest : public testing::TestWithParam<string> {
   EventDispatcher* dispatcher_;
   TestControl control_interface_;
   MockModemInfo modem_info_;
-  unique_ptr<mm1::MockModemModem3gppProxy> modem_3gpp_proxy_;
+  unique_ptr<NiceMock<mm1::MockModemModem3gppProxy>> modem_3gpp_proxy_;
   unique_ptr<mm1::MockModemModemCdmaProxy> modem_cdma_proxy_;
   unique_ptr<mm1::MockModemLocationProxy> modem_location_proxy_;
   unique_ptr<mm1::MockModemProxy> modem_proxy_;
@@ -1192,6 +1193,26 @@ TEST_F(CellularCapability3gppMainTest, UpdateActiveBearer) {
   capability_->OnBearersChanged({});
   capability_->UpdateActiveBearer();
   EXPECT_EQ(nullptr, capability_->GetActiveBearer());
+}
+
+TEST_F(CellularCapability3gppMainTest, SetInitialEpsBearer) {
+  constexpr char kTestApn[] = "test_apn";
+  KeyValueStore properties;
+  Error error;
+  ResultCallback callback =
+      Bind(&CellularCapability3gppTest::TestCallback, Unretained(this));
+
+  ResultCallback set_callback;
+  EXPECT_CALL(*modem_3gpp_proxy_,
+              SetInitialEpsBearerSettings(
+                  _, _, _, CellularCapability::kTimeoutSetInitialEpsBearer))
+      .Times(1)
+      .WillOnce(SaveArg<2>(&set_callback));
+  EXPECT_CALL(*this, TestCallback(IsSuccess()));
+  properties.Set<string>(CellularCapability3gpp::kConnectApn, kTestApn);
+  capability_->InitProxies();
+  capability_->SetInitialEpsBearer(properties, &error, callback);
+  set_callback.Run(Error(Error::kSuccess));
 }
 
 // Validates FillConnectPropertyMap

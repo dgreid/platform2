@@ -33,6 +33,10 @@ class ModemModem3gppProxy : public ModemModem3gppProxyInterface {
   void Scan(Error* error,
             const KeyValueStoresCallback& callback,
             int timeout) override;
+  void SetInitialEpsBearerSettings(const KeyValueStore& properties,
+                                   Error* error,
+                                   const ResultCallback& callback,
+                                   int timeout) override;
 
  private:
   // Callbacks for Register async call.
@@ -45,6 +49,11 @@ class ModemModem3gppProxy : public ModemModem3gppProxyInterface {
                      const std::vector<brillo::VariantDictionary>& results);
   void OnScanFailure(const KeyValueStoresCallback& callback,
                      brillo::Error* dbus_error);
+
+  // Callbacks for SetInitialEpsBearerSettings async call.
+  void OnSetEpsBearerSuccess(const ResultCallback& callback);
+  void OnSetEpsBearerFailure(const ResultCallback& callback,
+                             brillo::Error* dbus_error);
 
   std::unique_ptr<org::freedesktop::ModemManager1::Modem::Modem3gppProxy>
       proxy_;

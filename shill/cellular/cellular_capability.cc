@@ -27,6 +27,7 @@ const int CellularCapability::kTimeoutGetLocation = 45000;
 const int CellularCapability::kTimeoutRegister = 90000;
 const int CellularCapability::kTimeoutReset = 90000;
 const int CellularCapability::kTimeoutScan = 120000;
+const int CellularCapability::kTimeoutSetInitialEpsBearer = 45000;
 const int CellularCapability::kTimeoutSetupLocation = 45000;
 
 // static

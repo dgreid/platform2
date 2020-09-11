@@ -48,6 +48,7 @@ class CellularCapability {
   static const int kTimeoutRegister;
   static const int kTimeoutReset;
   static const int kTimeoutScan;
+  static const int kTimeoutSetInitialEpsBearer;
   static const int kTimeoutSetupLocation;
 
   static std::unique_ptr<CellularCapability> Create(Cellular::Type type,
@@ -123,6 +124,13 @@ class CellularCapability {
   //
   // TODO(jglasgow): Implement real error handling.
   virtual void Scan(Error* error, const ResultStringmapsCallback& callback) = 0;
+
+  // Sets the parameters specified by |properties| for the LTE initial EPS
+  // bearer used at registration, particularly the 'Attach' APN settings.
+  // specified by |properties|.
+  virtual void SetInitialEpsBearer(const KeyValueStore& properties,
+                                   Error* error,
+                                   const ResultCallback& callback) = 0;
 
   // Registers on a network with |network_id|.
   virtual void RegisterOnNetwork(const std::string& network_id,
