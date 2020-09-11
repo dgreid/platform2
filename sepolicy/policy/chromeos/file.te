@@ -52,15 +52,18 @@ type cros_chapsd_exec, exec_type, file_type, cros_file_type, cros_system_file_ty
 type cros_chromeos_cleanup_logs_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_chromeos_trim_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_chrt_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_chunneld_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_conntrackd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_core_collector_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cras_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_crash_reporter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_crash_sender_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_crosdns_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cryptohome_namespace_mounter_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cryptohome_proxy_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cryptohomed_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_cupsd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_cups_proxy_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_daisydog_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_dbus_daemon_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_dbus_send_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -109,6 +112,7 @@ type cros_restorecon_exec, exec_type, file_type, cros_file_type, cros_system_fil
 type cros_rmtfs_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_rsyslogd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_run_oci_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_seneschal_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_session_manager_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_shill_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_sshd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
@@ -126,6 +130,8 @@ type cros_update_engine_exec, exec_type, file_type, cros_file_type, cros_system_
 type cros_update_userdataauth_shell_script, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_ureadahead_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_userfeedback_file, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_vm_cicerone_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
+type cros_vm_concierge_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_vmlog_forwarder_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_wilco_dtc_supportd_exec, exec_type, file_type, cros_file_type, cros_system_file_type;
 type cros_wpa_supplicant_exec, exec_type, file_type, cros_file_type, cros_system_file_type;

@@ -1,0 +1,4 @@
+type cros_vm_concierge, domain, chromeos_domain;
+permissive cros_vm_concierge;
+
+domain_auto_trans(chromeos, cros_vm_concierge_exec, cros_vm_concierge);
