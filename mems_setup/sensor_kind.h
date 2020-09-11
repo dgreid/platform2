@@ -11,7 +11,14 @@
 
 namespace mems_setup {
 
-enum class SensorKind { ACCELEROMETER, GYROSCOPE, LIGHT };
+enum class SensorKind {
+  ACCELEROMETER,
+  GYROSCOPE,
+  LIGHT,
+  SYNC,
+  MAGNETOMETER,
+  BAROMETER
+};
 
 std::string SensorKindToString(SensorKind kind);
 base::Optional<SensorKind> SensorKindFromString(const std::string& name);

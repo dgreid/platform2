@@ -114,6 +114,15 @@ bool Configuration::Configure() {
       return ConfigGyro();
     case SensorKind::LIGHT:
       return ConfigIlluminance();
+    case SensorKind::SYNC:
+      // No other configs needed.
+      return true;
+    case SensorKind::MAGNETOMETER:
+      // No other configs needed.
+      return true;
+    case SensorKind::BAROMETER:
+      // TODO(chenghaoyang): Setup calibrations for the barometer.
+      return true;
     default:
       LOG(ERROR) << SensorKindToString(kind_) << " unimplemented";
       return false;

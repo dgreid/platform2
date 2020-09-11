@@ -13,6 +13,9 @@ namespace {
 constexpr char kAccelName[] = "accel";
 constexpr char kGyroName[] = "anglvel";
 constexpr char kLightName[] = "illuminance";
+constexpr char kSyncName[] = "count";
+constexpr char kMagnName[] = "magn";
+constexpr char kBaroName[] = "baro";
 }  // namespace
 
 std::string SensorKindToString(SensorKind kind) {
@@ -23,6 +26,12 @@ std::string SensorKindToString(SensorKind kind) {
       return kGyroName;
     case SensorKind::LIGHT:
       return kLightName;
+    case SensorKind::SYNC:
+      return kSyncName;
+    case SensorKind::MAGNETOMETER:
+      return kAccelName;
+    case SensorKind::BAROMETER:
+      return kBaroName;
   }
 
   NOTREACHED();
@@ -35,6 +44,12 @@ base::Optional<SensorKind> SensorKindFromString(const std::string& name) {
     return SensorKind::GYROSCOPE;
   if (name == kLightName)
     return SensorKind::LIGHT;
+  if (name == kSyncName)
+    return SensorKind::SYNC;
+  if (name == kMagnName)
+    return SensorKind::MAGNETOMETER;
+  if (name == kBaroName)
+    return SensorKind::BAROMETER;
 
   return base::nullopt;
 }
