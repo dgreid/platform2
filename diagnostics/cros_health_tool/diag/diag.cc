@@ -31,7 +31,7 @@ constexpr base::TimeDelta kRoutinePollIntervalTimeDelta =
     base::TimeDelta::FromMilliseconds(100);
 // Maximum time we're willing to wait for a routine to finish.
 constexpr base::TimeDelta kMaximumRoutineExecutionTimeDelta =
-    base::TimeDelta::FromSeconds(600);
+    base::TimeDelta::FromHours(1);
 
 const struct {
   const char* switch_name;
@@ -224,6 +224,9 @@ int diag_main(int argc, char** argv) {
         break;
       case mojo_ipc::DiagnosticRoutineEnum::kSignalStrength:
         routine_result = actions.ActionRunSignalStrengthRoutine();
+        break;
+      case mojo_ipc::DiagnosticRoutineEnum::kMemory:
+        routine_result = actions.ActionRunMemoryRoutine();
         break;
       default:
         std::cout << "Unsupported routine: " << FLAGS_routine << std::endl;

@@ -210,6 +210,13 @@ bool DiagActions::ActionRunLanConnectivityRoutine() {
   return PollRoutineAndProcessResult();
 }
 
+bool DiagActions::ActionRunMemoryRoutine() {
+  auto response = adapter_->RunMemoryRoutine();
+  CHECK(response) << "No RunRoutineResponse received.";
+  id_ = response->id;
+  return PollRoutineAndProcessResult();
+}
+
 bool DiagActions::ActionRunNvmeSelfTestRoutine(
     mojo_ipc::NvmeSelfTestTypeEnum nvme_self_test_type) {
   auto response = adapter_->RunNvmeSelfTestRoutine(nvme_self_test_type);

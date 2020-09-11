@@ -398,6 +398,65 @@ Status: Passed
 Status message: Routine passed.
 ```
 
+## Memory Routines
+
+### memory
+
+Uses the memtester utility to run various subtests on the device's memory.
+
+To run the memory routine:
+
+From crosh:
+```bash
+crosh> diag memory
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=memory
+```
+
+Sample output:
+```bash
+Progress: 0
+Progress: 1
+Progress: 2
+Progress: 3
+Progress: 4
+...
+Progress: 99
+Progress: 100
+Output: memtester version 4.2.2 (64-bit)
+Copyright (C) 2010 Charles Cazabon.
+
+pagesize is 4096
+pagesizemask is 0xfffffffffffff000
+want 100MB (104857600 bytes)
+got  100MB (104857600 bytes), trying mlock ...locked.
+Loop 1/1:
+  Stuck Address       : ok
+  Random Value        : ok
+  Compare XOR         : ok
+  Compare SUB         : ok
+  Compare MUL         : ok
+  Compare DIV         : ok
+  Compare OR          : ok
+  Compare AND         : ok
+  Sequential Increment: ok
+  Solid Bits          : ok
+  Block Sequential    : ok
+  Checkerboard        : ok
+  Bit Spread          : ok
+  Bit Flip            : ok
+  Walking Ones        : ok
+  Walking Zeroes      : ok
+
+Done.
+
+Status: Passed
+Status message: Memory routine passed.
+```
+
 ## Storage Routines
 
 ### disk_read
