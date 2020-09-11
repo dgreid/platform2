@@ -287,16 +287,14 @@ bool ArcVm::Start(base::FilePath kernel,
   const bool is_dev_mode = (VbGetSystemPropertyInt("cros_debug") == 1);
   if (is_dev_mode && use_dev_conf()) {
     const base::FilePath dev_conf(kDevConfFilePath);
-    if (!base::PathExists(dev_conf)) {
-      PLOG(ERROR) << "Invalid file path " << dev_conf.value();
-      return false;
+    if (base::PathExists(dev_conf)) {
+      std::string data;
+      if (!base::ReadFileToString(dev_conf, &data)) {
+        PLOG(ERROR) << "Failed to read file " << dev_conf.value();
+        return false;
+      }
+      LoadCustomParameters(data, &args);
     }
-    std::string data;
-    if (!base::ReadFileToString(dev_conf, &data)) {
-      PLOG(ERROR) << "Failed to read file " << dev_conf.value();
-      return false;
-    }
-    LoadCustomParameters(data, &args);
   }
 
   // Finally list the path to the kernel.
