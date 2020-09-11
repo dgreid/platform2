@@ -297,6 +297,15 @@ bool ArcVm::Start(base::FilePath kernel,
     }
   }
 
+  // TODO(b/167430147): Temporarily re-enable for M87 teamfooding.  This does
+  // not affect dev mode behavior which is handled by arcvm_dev.conf and chrome
+  // switch.  Remove once pstore feedback report is available (b/149920835).
+  if (!is_dev_mode) {
+    args.emplace_back("--serial",
+                      "type=syslog,hardware=virtio-console,num=1,"
+                      "console=true");
+  }
+
   // Finally list the path to the kernel.
   const std::string kernel_path =
       RemoveParametersWithKey(kKeyToOverrideKernelPath, kernel.value(), &args);
