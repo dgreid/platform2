@@ -53,7 +53,8 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest,
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
-      mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge};
+      mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge,
+      mojo_ipc::DiagnosticRoutineEnum::kMemory};
 }
 
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
@@ -437,6 +438,19 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunBatteryChargeRoutine) {
   service()->RunBatteryChargeRoutine(
       /*exec_duration=*/base::TimeDelta::FromSeconds(54),
       /*minimum_charge_percent_required=*/56, &response.id, &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the memory routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunMemoryRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kWaiting;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunMemoryRoutine(&response.id, &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

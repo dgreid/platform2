@@ -102,6 +102,8 @@ class CrosHealthdRoutineService {
       uint32_t minimum_charge_percent_required,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunMemoryRoutine(
+      int32_t* id, MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

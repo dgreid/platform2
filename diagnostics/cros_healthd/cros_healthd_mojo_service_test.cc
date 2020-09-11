@@ -115,6 +115,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
                int32_t* id,
                mojo_ipc::DiagnosticRoutineStatusEnum* status),
               (override));
+  MOCK_METHOD(void,
+              RunMemoryRoutine,
+              (int32_t*, mojo_ipc::DiagnosticRoutineStatusEnum*),
+              (override));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,

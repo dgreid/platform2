@@ -79,6 +79,7 @@ class FakeRoutineService final
       uint32_t length_seconds,
       uint32_t minimum_charge_percent_required,
       RunBatteryChargeRoutineCallback callback) override;
+  void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics

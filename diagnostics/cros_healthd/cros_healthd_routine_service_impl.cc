@@ -169,6 +169,12 @@ void CrosHealthdRoutineServiceImpl::RunBatteryChargeRoutine(
              mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge, id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunMemoryRoutine(
+    int32_t* id, MojomCrosHealthdDiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeMemoryRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kMemory, id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -243,7 +249,8 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kCpuCache,
       mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
-      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch};
+      mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
+      mojo_ipc::DiagnosticRoutineEnum::kMemory};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

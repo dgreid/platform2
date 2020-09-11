@@ -97,6 +97,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
       uint32_t minimum_charge_percent_required,
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunMemoryRoutine(
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

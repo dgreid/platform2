@@ -116,4 +116,8 @@ void FakeRoutineService::RunBatteryChargeRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunMemoryRoutine(RunMemoryRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

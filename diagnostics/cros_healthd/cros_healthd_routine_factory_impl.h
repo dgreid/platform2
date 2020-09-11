@@ -12,13 +12,14 @@
 #include <base/optional.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
+#include "diagnostics/cros_healthd/system/context.h"
 
 namespace diagnostics {
 
 // Production implementation of the CrosHealthdRoutineFactory interface.
 class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
  public:
-  CrosHealthdRoutineFactoryImpl();
+  explicit CrosHealthdRoutineFactoryImpl(Context* context);
   CrosHealthdRoutineFactoryImpl(const CrosHealthdRoutineFactoryImpl&) = delete;
   CrosHealthdRoutineFactoryImpl& operator=(
       const CrosHealthdRoutineFactoryImpl&) = delete;
@@ -60,6 +61,11 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
   std::unique_ptr<DiagnosticRoutine> MakeBatteryChargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t minimum_charge_percent_required) override;
+  std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() override;
+
+ private:
+  // Unowned. Should outlive this instance.
+  Context* const context_ = nullptr;
 };
 
 }  // namespace diagnostics

@@ -51,7 +51,8 @@ const struct {
     {"disk_read", mojo_ipc::DiagnosticRoutineEnum::kDiskRead},
     {"prime_search", mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch},
     {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge},
-    {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge}};
+    {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge},
+    {"memory", mojo_ipc::DiagnosticRoutineEnum::kMemory}};
 
 }  // namespace
 

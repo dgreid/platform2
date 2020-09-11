@@ -101,6 +101,7 @@ class CrosHealthdMojoService final
       uint32_t length_seconds,
       uint32_t minimum_charge_percent_required,
       RunBatteryChargeRoutineCallback callback) override;
+  void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdEventService overrides:
   void AddBluetoothObserver(

@@ -15,7 +15,7 @@
 #include <mojo/public/cpp/bindings/binding_set.h>
 
 #include "diagnostics/cros_healthd/cros_healthd_mojo_service.h"
-#include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
+#include "diagnostics/cros_healthd/cros_healthd_routine_factory.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events.h"
 #include "diagnostics/cros_healthd/events/lid_events.h"
@@ -91,9 +91,8 @@ class CrosHealthd final
   // Provides support for power-related events.
   std::unique_ptr<PowerEvents> power_events_;
 
-  // Production implementation of the CrosHealthdRoutineFactory interface. Will
-  // be injected into |routine_service_|.
-  CrosHealthdRoutineFactoryImpl routine_factory_impl_;
+  // |routine_service_| delegates routine creation to |routine_factory_|.
+  std::unique_ptr<CrosHealthdRoutineFactory> routine_factory_;
   // Creates new diagnostic routines and controls existing diagnostic routines.
   std::unique_ptr<CrosHealthdRoutineService> routine_service_;
   // Maintains the Mojo connection with cros_healthd clients.

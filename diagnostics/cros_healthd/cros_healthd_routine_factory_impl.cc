@@ -4,6 +4,8 @@
 
 #include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 
+#include <base/logging.h>
+
 #include "diagnostics/cros_healthd/routines/ac_power/ac_power.h"
 #include "diagnostics/cros_healthd/routines/battery_capacity/battery_capacity.h"
 #include "diagnostics/cros_healthd/routines/battery_charge/battery_charge.h"
@@ -13,6 +15,7 @@
 #include "diagnostics/cros_healthd/routines/cpu_stress/cpu_stress.h"
 #include "diagnostics/cros_healthd/routines/disk_read/disk_read.h"
 #include "diagnostics/cros_healthd/routines/floating_point/floating_point_accuracy.h"
+#include "diagnostics/cros_healthd/routines/memory/memory.h"
 #include "diagnostics/cros_healthd/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/cros_healthd/routines/nvme_wear_level/nvme_wear_level.h"
 #include "diagnostics/cros_healthd/routines/prime_search/prime_search.h"
@@ -21,7 +24,11 @@
 
 namespace diagnostics {
 
-CrosHealthdRoutineFactoryImpl::CrosHealthdRoutineFactoryImpl() = default;
+CrosHealthdRoutineFactoryImpl::CrosHealthdRoutineFactoryImpl(Context* context)
+    : context_(context) {
+  DCHECK(context_);
+}
+
 CrosHealthdRoutineFactoryImpl::~CrosHealthdRoutineFactoryImpl() = default;
 
 std::unique_ptr<DiagnosticRoutine>
@@ -121,6 +128,11 @@ CrosHealthdRoutineFactoryImpl::MakeBatteryChargeRoutine(
     base::TimeDelta exec_duration, uint32_t minimum_charge_percent_required) {
   return std::make_unique<BatteryChargeRoutine>(
       exec_duration, minimum_charge_percent_required);
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeMemoryRoutine() {
+  return std::make_unique<MemoryRoutine>(context_);
 }
 
 }  // namespace diagnostics

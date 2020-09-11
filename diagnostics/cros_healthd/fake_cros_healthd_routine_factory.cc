@@ -284,4 +284,9 @@ FakeCrosHealthdRoutineFactory::MakeBatteryChargeRoutine(
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeMemoryRoutine() {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

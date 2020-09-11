@@ -18,6 +18,7 @@
 #include <mojo/public/cpp/bindings/interface_request.h>
 #include <mojo/public/cpp/platform/platform_channel_endpoint.h>
 #include <mojo/public/cpp/system/invitation.h>
+#include "diagnostics/cros_healthd/cros_healthd_routine_factory_impl.h"
 #include "diagnostics/cros_healthd/cros_healthd_routine_service_impl.h"
 #include "diagnostics/cros_healthd/events/bluetooth_events_impl.h"
 #include "diagnostics/cros_healthd/events/lid_events_impl.h"
@@ -45,8 +46,10 @@ CrosHealthd::CrosHealthd(Context* context)
 
   power_events_ = std::make_unique<PowerEventsImpl>(context_);
 
+  routine_factory_ = std::make_unique<CrosHealthdRoutineFactoryImpl>(context_);
+
   routine_service_ = std::make_unique<CrosHealthdRoutineServiceImpl>(
-      context_, &routine_factory_impl_);
+      context_, routine_factory_.get());
 
   mojo_service_ = std::make_unique<CrosHealthdMojoService>(
       fetch_aggregator_.get(), bluetooth_events_.get(), lid_events_.get(),

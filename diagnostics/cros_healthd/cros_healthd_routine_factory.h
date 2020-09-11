@@ -85,6 +85,9 @@ class CrosHealthdRoutineFactory {
   virtual std::unique_ptr<DiagnosticRoutine> MakeBatteryChargeRoutine(
       base::TimeDelta exec_duration,
       uint32_t minimum_charge_percent_required) = 0;
+  // Constructs a new instance of the memory routine. See
+  // diagnostics/routines/memory for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() = 0;
 };
 
 }  // namespace diagnostics
