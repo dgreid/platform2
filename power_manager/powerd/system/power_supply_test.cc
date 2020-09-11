@@ -176,6 +176,7 @@ class PowerSupplyTest : public ::testing::Test {
     WriteDoubleValue(battery_dir_, "voltage_min_design", kVoltage);
     WriteValue(battery_dir_, "cycle_count", base::NumberToString(kCycleCount));
     WriteValue(battery_dir_, "serial_number", kSerialNumber);
+    prefs_.SetDouble(kUsbMinAcWattsPref, 23.45);
   }
 
   // Updates the files describing the power source and battery status.
@@ -547,6 +548,8 @@ TEST_F(PowerSupplyTest, DualRolePowerSources) {
   EXPECT_EQ(kUnknownType, status.ports[1].type);
   EXPECT_EQ("", status.external_power_source_id);
   EXPECT_TRUE(status.supports_dual_role_devices);
+  EXPECT_DOUBLE_EQ(kCurrentMax * kVoltageMax,
+                   status.preferred_minimum_external_power);
 
   // Start charging from the first power source at a high level.
   WriteValue(line1_dir, "type", kUsbPdDrpType);
@@ -572,6 +575,8 @@ TEST_F(PowerSupplyTest, DualRolePowerSources) {
   EXPECT_EQ(kUnknownType, status.ports[1].type);
   EXPECT_EQ(kLine1Id, status.external_power_source_id);
   EXPECT_TRUE(status.supports_dual_role_devices);
+  EXPECT_DOUBLE_EQ(kCurrentMax * kVoltageMax,
+                   status.preferred_minimum_external_power);
 
   // Disconnect the first power source and start charging from the second one at
   // a low power.
@@ -1722,6 +1727,7 @@ TEST_F(PowerSupplyTest, SendPowerStatusOverDBus) {
   ASSERT_TRUE(
       dbus_wrapper_.GetSentSignal(0, kPowerSupplyPollSignal, &proto, nullptr));
   EXPECT_EQ(PowerSupplyProperties_ExternalPower_AC, proto.external_power());
+  EXPECT_DOUBLE_EQ(23.45, proto.preferred_minimum_external_power());
 
   WriteValue(ac_dir_, "online", "0");
   dbus_wrapper_.ClearSentSignals();
@@ -1731,6 +1737,7 @@ TEST_F(PowerSupplyTest, SendPowerStatusOverDBus) {
       dbus_wrapper_.GetSentSignal(0, kPowerSupplyPollSignal, &proto, nullptr));
   EXPECT_EQ(PowerSupplyProperties_ExternalPower_DISCONNECTED,
             proto.external_power());
+  EXPECT_DOUBLE_EQ(23.45, proto.preferred_minimum_external_power());
 
   // The latest properties should be sent when requested.
   dbus::MethodCall method_call(kPowerManagerInterface,
@@ -1743,6 +1750,7 @@ TEST_F(PowerSupplyTest, SendPowerStatusOverDBus) {
       dbus::MessageReader(response.get()).PopArrayOfBytesAsProto(&proto));
   EXPECT_EQ(PowerSupplyProperties_ExternalPower_DISCONNECTED,
             proto.external_power());
+  EXPECT_DOUBLE_EQ(23.45, proto.preferred_minimum_external_power());
 }
 
 TEST_F(PowerSupplyTest, CopyPowerStatusToProtocolBuffer) {
@@ -1764,6 +1772,7 @@ TEST_F(PowerSupplyTest, CopyPowerStatusToProtocolBuffer) {
   status.battery_charge_full_design = kDefaultChargeFullDesign;
   status.battery_charge_full = kDefaultChargeFull;
   status.battery_voltage_min_design = kVoltageMinDesign;
+  status.preferred_minimum_external_power = 12.34;
 
   PowerSupplyProperties proto;
   CopyPowerStatusToProtocolBuffer(status, &proto);
@@ -1785,6 +1794,8 @@ TEST_F(PowerSupplyTest, CopyPowerStatusToProtocolBuffer) {
   EXPECT_DOUBLE_EQ(status.battery_charge_full, proto.battery_charge_full());
   EXPECT_DOUBLE_EQ(status.battery_voltage_min_design,
                    proto.battery_voltage_min_design());
+  EXPECT_DOUBLE_EQ(status.preferred_minimum_external_power,
+                   proto.preferred_minimum_external_power());
 
   // Check that power source details are copied, but that ports that don't have
   // anything connected are ignored.

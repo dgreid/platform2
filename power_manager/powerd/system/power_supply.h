@@ -206,6 +206,11 @@ struct PowerStatus {
   // of voltage when the battery is considered "empty" at normal conditions.
   // The value is reported in volts (V).
   double battery_voltage_min_design = 0.0;
+
+  // The device's preferred minimum external power input in watts (W). When
+  // requesting the user use a higher-power external power source, this value
+  // can be displayed.
+  double preferred_minimum_external_power = 0.0;
 };
 
 // Fetches the system's power status, e.g. whether on AC or battery, charge and

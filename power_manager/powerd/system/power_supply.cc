@@ -285,6 +285,9 @@ void CopyPowerStatusToProtocolBuffer(const PowerStatus& status,
   }
   if (!status.external_power_source_id.empty())
     proto->set_external_power_source_id(status.external_power_source_id);
+
+  proto->set_preferred_minimum_external_power(
+      status.preferred_minimum_external_power);
 }
 
 std::string GetPowerStatusBatteryDebugString(const PowerStatus& status) {
@@ -723,6 +726,8 @@ bool PowerSupply::UpdatePowerStatus(UpdatePolicy policy) {
 
   // Sort the port list as needed by ConnectedSourcesAreEqual().
   std::sort(status.ports.begin(), status.ports.end(), PortComparator());
+
+  status.preferred_minimum_external_power = usb_min_ac_watts_;
 
   // Even though we haven't successfully finished initializing the status yet,
   // save what we have so far so that if we bail out early due to a messed-up
