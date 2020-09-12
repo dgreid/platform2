@@ -189,6 +189,11 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             "enable-audio-capture",
             "when starting the vm, enable audio capture support",
         );
+        opts.optflag(
+            "",
+            "untrusted",
+            "treat this VM as untrusted, only valid in developer mode",
+        );
         let matches = opts.parse(self.args)?;
 
         if matches.free.len() != 1 {
@@ -201,6 +206,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             gpu: matches.opt_present("enable-gpu"),
             software_tpm: matches.opt_present("software-tpm"),
             audio_capture: matches.opt_present("enable-audio-capture"),
+            run_as_untrusted: matches.opt_present("untrusted"),
         };
 
         self.metrics_send_sample("Vm.VmcStart");
@@ -699,7 +705,7 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
 }
 
 const USAGE: &str = r#"
-   [ start [--enable-gpu] [--enable-audio-capture] <name> |
+   [ start [--enable-gpu] [--enable-audio-capture] [--untrusted] <name> |
      stop <name> |
      create [-p] <name> [<source media> [<removable storage name>]] [-- additional parameters]
      create-extra-disk --size SIZE [--removable-media] <host disk path> |
@@ -844,6 +850,7 @@ mod tests {
             &["vmc", "start", "termina", "--software-tpm"],
             &["vmc", "start", "termina", "--enable-gpu", "--software-tpm"],
             &["vmc", "start", "termina", "--enable-audio-capture"],
+            &["vmc", "start", "termina", "--untrusted"],
             &[
                 "vmc",
                 "start",

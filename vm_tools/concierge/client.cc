@@ -289,7 +289,7 @@ int StartVm(dbus::ObjectProxy* proxy,
     return -1;
   }
 
-  request.set_allow_untrusted(untrusted);
+  request.set_run_as_untrusted(untrusted);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StartVmRequest protobuf";

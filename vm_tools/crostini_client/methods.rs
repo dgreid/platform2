@@ -182,6 +182,7 @@ pub struct VmFeatures {
     pub gpu: bool,
     pub software_tpm: bool,
     pub audio_capture: bool,
+    pub run_as_untrusted: bool,
 }
 
 pub enum ContainerSource {
@@ -1038,6 +1039,7 @@ impl Methods {
         request.enable_gpu = features.gpu;
         request.software_tpm = features.software_tpm;
         request.enable_audio_capture = features.audio_capture;
+        request.run_as_untrusted = features.run_as_untrusted;
         request.name = vm_name.to_owned();
         {
             let disk_image = request.mut_disks().push_default();
