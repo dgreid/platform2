@@ -552,6 +552,26 @@ TEST_F(TrafficMonitorTest, SampleTrafficDnsSuccessful) {
   }
 }
 
+TEST_F(TrafficMonitorTest, SampleTrafficDnsSuccessfulV6) {
+  device_->set_ip6config(ip6config_);
+  device_->set_ipconfig(nullptr);
+
+  vector<ConnectionInfo> connection_infos = {
+      ConnectionInfo(IPPROTO_UDP,
+                     TrafficMonitorTest::kDnsTimedOutThresholdSeconds - 1,
+                     false, local_addr6_, TrafficMonitorTest::kLocalPort1,
+                     remote_addr6_, TrafficMonitorTest::kDnsPort, remote_addr6_,
+                     TrafficMonitorTest::kDnsPort, local_addr6_,
+                     TrafficMonitorTest::kLocalPort1),
+  };
+  SetupMockConnectionInfos(connection_infos);
+  EXPECT_CALL(*this, OnNoOutgoingPackets(_)).Times(0);
+  for (int count = 1;
+       count < TrafficMonitorTest::kMinimumFailedSamplesToTrigger; ++count) {
+    SampleTraffic();
+  }
+}
+
 TEST_F(TrafficMonitorTest, SampleTrafficDnsFailureThenSuccess) {
   vector<ConnectionInfo> connection_infos = {
       ConnectionInfo(IPPROTO_UDP,

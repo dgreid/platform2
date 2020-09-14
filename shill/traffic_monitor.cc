@@ -190,13 +190,23 @@ bool TrafficMonitor::IsDnsFailing() {
     // |kDnsTimedOutThresholdSeconds| and |kDnsTimedOutLowerThresholdSeconds|.
     const int64_t kDnsTimedOutLowerThresholdSeconds =
         kDnsTimedOutThresholdSeconds - kSamplingIntervalMilliseconds / 1000;
-    string device_ip_address = device_->ipconfig()->properties().address;
+    string device_ipv4;
+    if (device_->ipconfig())
+      device_ipv4 = device_->ipconfig()->properties().address;
+    // NB: we may have multiple IPv6 addresses; we do a best-effort filter using
+    // the preferred address, even though this is imprecise.
+    string device_ipv6;
+    if (device_->ip6config())
+      device_ipv6 = device_->ip6config()->properties().address;
+
     for (const auto& info : connection_infos) {
+      const auto& source_ip = info.original_source_ip_address.ToString();
+
       if (info.protocol != IPPROTO_UDP ||
           info.time_to_expire_seconds > kDnsTimedOutThresholdSeconds ||
           info.time_to_expire_seconds <= kDnsTimedOutLowerThresholdSeconds ||
           !info.is_unreplied ||
-          info.original_source_ip_address.ToString() != device_ip_address ||
+          (source_ip != device_ipv4 && source_ip != device_ipv6) ||
           info.original_destination_port != kDnsPort)
         continue;
 
