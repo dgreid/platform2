@@ -8,6 +8,7 @@ bind: 1
 brk: 1
 chmod: 1
 clock_getres: 1
+clock_gettime: 1
 clone: 1
 close: 1
 connect: 1
@@ -31,6 +32,7 @@ gettid: 1
 getuid: 1
 listen: 1
 lseek: 1
+madvise: 1
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 munmap: 1
@@ -55,5 +57,6 @@ shutdown: 1
 signalfd4: 1
 socket: arg0 == AF_UNIX
 stat: 1
+tgkill: 1
 unlink: 1
 write: 1

@@ -56,5 +56,6 @@ shutdown: 1
 signalfd4: 1
 socket: arg0 == AF_UNIX
 stat64: 1
+tgkill: 1
 unlink: 1
 write: 1
