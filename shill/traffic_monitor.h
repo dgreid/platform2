@@ -54,16 +54,7 @@ class TrafficMonitor {
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsFailureThenSuccess);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsOutstanding);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsStatsReset);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsSuccessful);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsTimedOut);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsTimedOutInvalidProtocol);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsTimedOutInvalidSourceIp);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficDnsTimedOutOutsideTimeWindow);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficNonDnsTimedOut);
-  FRIEND_TEST(TrafficMonitorTest,
-              SampleTrafficStuckTxQueueIncreasingQueueLength);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficStuckTxQueueSameQueueLength);
-  FRIEND_TEST(TrafficMonitorTest, SampleTrafficStuckTxQueueVariousQueueLengths);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficUnstuckTxQueueNoConnection);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficUnstuckTxQueueStateChanged);
   FRIEND_TEST(TrafficMonitorTest, SampleTrafficUnstuckTxQueueZeroQueueLength);
