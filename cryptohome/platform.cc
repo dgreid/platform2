@@ -544,13 +544,18 @@ bool Platform::GetGroupId(const std::string& group, gid_t* group_id) const {
   if (group_name_length == -1) {
     group_name_length = kDefaultPwnameLength;
   }
-  struct group group_info, *group_infop;
+  struct group group_info, *group_infop = nullptr;
   std::vector<char> group_name_buf(group_name_length);
-  if (getgrnam_r(group.c_str(), &group_info, group_name_buf.data(),
-                 group_name_length, &group_infop)) {
+
+  // In getgrgid_r(), err can be 0 even when a group is not found.
+  // Only *group_infop matters: if NULL, the group was not found.
+  getgrnam_r(group.c_str(), &group_info, group_name_buf.data(),
+             group_name_length, &group_infop);
+
+  if (!group_infop)
     return false;
-  }
-  *group_id = group_info.gr_gid;
+
+  *group_id = group_infop->gr_gid;
   return true;
 }
 
