@@ -20,6 +20,7 @@
 #include "lorgnette/enums.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
+#include "lorgnette/ippusb_device.h"
 
 using std::string;
 
@@ -298,11 +299,26 @@ bool Manager::ListScanners(brillo::ErrorPtr* error,
     brillo::ErrorPtr error;
     std::unique_ptr<SaneDevice> device =
         sane_client_->ConnectToDevice(&error, scanner.name());
+    activity_callback_.Run();
     if (device) {
       scanners.push_back(scanner);
     } else {
       LOG(INFO) << "Got reponse from Epson scanner " << scanner.name()
                 << " that isn't usable for scanning.";
+    }
+  }
+
+  std::vector<ScannerInfo> ippusb_devices = FindIppUsbDevices();
+  activity_callback_.Run();
+  for (const ScannerInfo& scanner : ippusb_devices) {
+    brillo::ErrorPtr error;
+    std::unique_ptr<SaneDevice> device =
+        sane_client_->ConnectToDevice(&error, scanner.name());
+    activity_callback_.Run();
+    if (device) {
+      scanners.push_back(scanner);
+    } else {
+      LOG(INFO) << "IPP-USB device doesn't support eSCL: " << scanner.name();
     }
   }
 

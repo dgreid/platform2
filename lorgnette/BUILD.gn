@@ -22,6 +22,7 @@ pkg_config("target_defaults_deps") {
     "libchrome-${libbase_ver}",
     "libmetrics",
     "libpng",
+    "libusb-1.0",
     "protobuf-lite",
     "re2",
     "sane-backends",
