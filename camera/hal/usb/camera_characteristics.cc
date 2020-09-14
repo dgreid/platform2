@@ -43,6 +43,15 @@ void ParseSize(const std::string& value, T* width, T* height) {
 }
 
 template <typename T>
+Rect<T> ParseRect(const std::string& value) {
+  Rect<T> r;
+  CHECK(RE2::FullMatch(value, "(.*),(.*),(.*),(.*)", &r.left, &r.top, &r.right,
+                       &r.bottom));
+  CHECK(r.is_valid());
+  return r;
+}
+
+template <typename T>
 std::vector<T> ParseCommaSeparated(const std::string& value) {
   std::vector<std::string> values = base::SplitString(
       value, ",", base::TRIM_WHITESPACE, base::SPLIT_WANT_ALL);
@@ -105,6 +114,8 @@ void SetEntry(const std::string& key,
   } else if (key == "sensor_info_pixel_array_size") {
     ParseSize(value, &info->sensor_info_pixel_array_size_width,
               &info->sensor_info_pixel_array_size_height);
+  } else if (key == "sensor_info_active_array_size") {
+    info->sensor_info_active_array_size = ParseRect<int32_t>(value);
   } else if (key == "horizontal_view_angle_16_9") {
     info->horizontal_view_angle_16_9 = stof(value);
   } else if (key == "horizontal_view_angle_4_3") {

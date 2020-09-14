@@ -280,10 +280,19 @@ class V4L2TestEnvironment : public ::testing::Environment {
       // If there is a camera config and test list is not HAL v1, then we can
       // check cropping requirement according to the sensor physical size.
       if (test_list_ != kDefaultTestList) {
-        sensor_pixel_array_size_width_ =
-            device_info->sensor_info_pixel_array_size_width;
-        sensor_pixel_array_size_height_ =
-            device_info->sensor_info_pixel_array_size_height;
+        if (device_info->sensor_info_active_array_size.is_valid()) {
+          sensor_array_size_width_ =
+              device_info->sensor_info_active_array_size.width();
+          sensor_array_size_height_ =
+              device_info->sensor_info_active_array_size.height();
+        } else {
+          LOGF(WARNING) << "Sensor active array size is not available in camera"
+                           " config file, using full pixel array size";
+          sensor_array_size_width_ =
+              device_info->sensor_info_pixel_array_size_width;
+          sensor_array_size_height_ =
+              device_info->sensor_info_pixel_array_size_height;
+        }
       }
     }
 
@@ -329,8 +338,8 @@ class V4L2TestEnvironment : public ::testing::Environment {
   bool support_constant_framerate_ = false;
   uint32_t skip_frames_ = 0;
   LensFacing lens_facing_ = LensFacing::kFront;
-  uint32_t sensor_pixel_array_size_width_ = 0;
-  uint32_t sensor_pixel_array_size_height_ = 0;
+  uint32_t sensor_array_size_width_ = 0;
+  uint32_t sensor_array_size_height_ = 0;
 };
 
 class V4L2Test : public ::testing::Test {
@@ -424,8 +433,8 @@ class V4L2Test : public ::testing::Test {
     // are 1920x1080 and 1600x1200, we need a larger resolution which aspect
     // ratio is the same as sensor aspect ratio.
     float sensor_aspect_ratio =
-        static_cast<float>(g_env->sensor_pixel_array_size_width_) /
-        g_env->sensor_pixel_array_size_height_;
+        static_cast<float>(g_env->sensor_array_size_width_) /
+        g_env->sensor_array_size_height_;
 
     // We need to compare the aspect ratio from sensor resolution.
     // The sensor resolution may not be just the size. It may be a little

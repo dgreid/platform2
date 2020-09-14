@@ -27,6 +27,8 @@
 #include "hal/usb/vendor_tag.h"
 #include "mojo/cros_camera_enum.mojom.h"
 
+namespace cros {
+
 namespace {
 
 constexpr int32_t kMinFps = 1;
@@ -140,7 +142,7 @@ class MetadataUpdater {
 // CTS assumes a fps range is supported if the min frame duration (1/max_fps)
 // covers the range. Thus we need to check if the USB camera actually supports
 // some fps in the range.
-bool IsFpsRangeSupported(const cros::SupportedFormats& supported_formats,
+bool IsFpsRangeSupported(const SupportedFormats& supported_formats,
                          int32_t fps_range_min,
                          int32_t fps_range_max) {
   for (const auto& format : supported_formats) {
@@ -159,9 +161,17 @@ bool IsFpsRangeSupported(const cros::SupportedFormats& supported_formats,
   return true;
 }
 
-}  // namespace
+Size GetMaxDimensions(const SupportedFormats& formats) {
+  uint32_t max_width = 0;
+  uint32_t max_height = 0;
+  for (const SupportedFormat& format : formats) {
+    max_width = std::max(max_width, format.width);
+    max_height = std::max(max_height, format.height);
+  }
+  return Size(max_width, max_height);
+}
 
-namespace cros {
+}  // namespace
 
 MetadataHandler::MetadataHandler(const camera_metadata_t& static_metadata,
                                  const camera_metadata_t& request_template,
@@ -489,11 +499,6 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
     }
   }
 
-  SupportedFormat maximum_format = GetMaximumFormat(supported_formats);
-  std::vector<int32_t> active_array_size = {
-      0, 0, static_cast<int32_t>(maximum_format.width),
-      static_cast<int32_t>(maximum_format.height)};
-
   MetadataUpdater update_static(static_metadata);
   MetadataUpdater update_request(request_metadata);
 
@@ -547,32 +552,53 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
                  std::vector<int32_t>(jpeg_available_thumbnail_sizes.end() - 2,
                                       jpeg_available_thumbnail_sizes.end()));
   update_static(ANDROID_SENSOR_INFO_MAX_FRAME_DURATION, max_frame_duration);
+
+  const Size max_dimensions = GetMaxDimensions(supported_formats);
+  std::vector<int32_t> active_array_size(4);
+  if (device_info.sensor_info_active_array_size.is_valid()) {
+    const Rect<int32_t>& rect = device_info.sensor_info_active_array_size;
+    if (rect.width() < max_dimensions.width ||
+        rect.height() < max_dimensions.height) {
+      LOGF(ERROR) << "Sensor active array size (" << rect.width() << "x"
+                  << rect.height()
+                  << ") is smaller than max supported format dimensions ("
+                  << max_dimensions.width << "x" << max_dimensions.height
+                  << ")";
+      return -EINVAL;
+    }
+    active_array_size[0] = rect.left;
+    active_array_size[1] = rect.top;
+    active_array_size[2] = rect.right;
+    active_array_size[3] = rect.bottom;
+  } else {
+    active_array_size[0] = 0;
+    active_array_size[1] = 0;
+    active_array_size[2] = static_cast<int32_t>(max_dimensions.width);
+    active_array_size[3] = static_cast<int32_t>(max_dimensions.height);
+  }
   update_static(ANDROID_SENSOR_INFO_PRE_CORRECTION_ACTIVE_ARRAY_SIZE,
                 active_array_size);
   update_static(ANDROID_SENSOR_INFO_ACTIVE_ARRAY_SIZE, active_array_size);
 
   if (is_v1_builtin) {
     if (FillSensorInfo(device_info, static_metadata,
-                       static_cast<int32_t>(maximum_format.width),
-                       static_cast<int32_t>(maximum_format.height)) != 0) {
-      LOGF(ERROR)
-          << "Failed to fill sensor info for v1 built-in/external camera";
+                       static_cast<int32_t>(max_dimensions.width),
+                       static_cast<int32_t>(max_dimensions.height)) != 0) {
+      LOGF(ERROR) << "Failed to fill sensor info for v1 built-in camera";
       return -EINVAL;
     }
   } else if (is_external) {
     // It's a sensible value for external camera, since it's required on all
-    // devices per spec.  For built-in camera, this would be filled in
+    // devices per spec. For built-in camera, this would be filled in
     // FillMetadataFromDeviceInfo() or FillSensorInfo() using the value from the
     // configuration file.
-    // References:
-    // * The official document for this field
-    //   https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics.html#SENSOR_INFO_PIXEL_ARRAY_SIZE
-    // * The implementation of external camera in Android P
-    //   https://googleplex-android.git.corp.google.com/platform/hardware/interfaces/+/6ad8708bf8b631561fa11eb1f4889907d1772d78/camera/device/3.4/default/ExternalCameraDevice.cpp#687
+    //
+    // The official document for this field:
+    // https://developer.android.com/reference/android/hardware/camera2/CameraCharacteristics.html#SENSOR_INFO_PIXEL_ARRAY_SIZE
     update_static(
         ANDROID_SENSOR_INFO_PIXEL_ARRAY_SIZE,
-        std::vector<int32_t>{static_cast<int32_t>(maximum_format.width),
-                             static_cast<int32_t>(maximum_format.height)});
+        std::vector<int32_t>{static_cast<int32_t>(max_dimensions.width),
+                             static_cast<int32_t>(max_dimensions.height)});
   }
 
   return update_static.ok() && update_request.ok() ? 0 : -EINVAL;

@@ -21,6 +21,20 @@
 
 namespace cros {
 
+template <typename T>
+struct Rect {
+  T left;
+  T top;
+  T right;
+  T bottom;
+
+  Rect() : left(0), top(0), right(0), bottom(0) {}
+  Rect(T l, T t, T r, T b) : left(l), top(t), right(r), bottom(b) {}
+  bool is_valid() const { return left < right && top < bottom; }
+  T width() const { return right - left; }
+  T height() const { return bottom - top; }
+};
+
 // The definition should match camera_metadata_enum_android_lens_facing_t
 // in camera_metadata_tags.h.
 enum class LensFacing {
@@ -70,10 +84,11 @@ struct DeviceInfo {
   std::vector<float> lens_info_available_focal_lengths;
   float lens_info_minimum_focus_distance = 0;
   float lens_info_optimal_focus_distance = 0;
-  int32_t sensor_info_pixel_array_size_width = 0;
-  int32_t sensor_info_pixel_array_size_height = 0;
   float sensor_info_physical_size_width = 0;
   float sensor_info_physical_size_height = 0;
+  int32_t sensor_info_pixel_array_size_width = 0;
+  int32_t sensor_info_pixel_array_size_height = 0;
+  Rect<int32_t> sensor_info_active_array_size;
 
   // These values are only used for legacy devices (v1 devices).
   float horizontal_view_angle_16_9 = 0;
