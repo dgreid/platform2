@@ -189,10 +189,6 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
                            std::string* handle) override;
   bool RunShillScriptStop(brillo::ErrorPtr* error,
                           const std::string& handle) override;
-  void StartVmConcierge(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response)
-      override;
-  void StopVmConcierge() override;
   void StartVmPluginDispatcher(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
       const std::string& in_user_id_hash,

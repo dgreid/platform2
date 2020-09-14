@@ -39,11 +39,9 @@ const MNT_SHARED_ROOT: &str = "/mnt/shared";
 /// Round to disk block size.
 const DEFAULT_TIMEOUT_MS: i32 = 80 * 1000;
 const EXPORT_DISK_TIMEOUT_MS: i32 = 15 * 60 * 1000;
-const COMPONENT_UPDATER_TIMEOUT_MS: i32 = 120 * 1000;
 
 enum ChromeOSError {
     BadChromeFeatureStatus,
-    BadConciergeStatus,
     BadDiskImageStatus(DiskImageStatus, String),
     BadPluginVmStatus(VmErrorCode),
     BadVmStatus(VmStatus, String),
@@ -54,7 +52,6 @@ enum ChromeOSError {
     FailedAdjustVm(String),
     FailedAttachUsb(String),
     FailedAllocateExtraDisk { path: String, errno: i32 },
-    FailedComponentUpdater(String),
     FailedCreateContainer(CreateLxdContainerResponse_Status, String),
     FailedCreateContainerSignal(LxdContainerCreatedSignal_Status, String),
     FailedDetachUsb(String),
@@ -90,7 +87,6 @@ impl fmt::Display for ChromeOSError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             BadChromeFeatureStatus => write!(f, "invalid response to chrome feature request"),
-            BadConciergeStatus => write!(f, "failed to start concierge"),
             BadDiskImageStatus(s, reason) => {
                 write!(f, "bad disk image status: `{:?}`: {}", s, reason)
             }
@@ -106,9 +102,6 @@ impl fmt::Display for ChromeOSError {
                 write!(f, "failed to allocate an extra disk at {}: {}", path, errno)
             }
             FailedDetachUsb(reason) => write!(f, "failed to detach usb device from vm: {}", reason),
-            FailedComponentUpdater(name) => {
-                write!(f, "component updater could not load component `{}`", name)
-            }
             FailedDlcInstall(name, reason) => write!(
                 f,
                 "DLC service failed to install module `{}`: {}",
@@ -405,24 +398,6 @@ impl Methods {
             .wait(timeout_millis)
     }
 
-    /// Request that component updater load a named component.
-    fn component_updater_load_component(&mut self, name: &str) -> Result<(), Box<dyn Error>> {
-        let method = Message::new_method_call(
-            "org.chromium.ComponentUpdaterService",
-            "/org/chromium/ComponentUpdaterService",
-            "org.chromium.ComponentUpdaterService",
-            "LoadComponent",
-        )?
-        .append1(name);
-        let message = self
-            .connection
-            .send_with_reply_and_block(method, COMPONENT_UPDATER_TIMEOUT_MS)?;
-        match message.get1() {
-            Some("") | None => Err(FailedComponentUpdater(name.to_owned()).into()),
-            _ => Ok(()),
-        }
-    }
-
     fn get_dlc_state(&mut self, name: &str) -> Result<DlcState_State, Box<dyn Error>> {
         let method = Message::new_method_call(
             DLC_SERVICE_SERVICE_NAME,
@@ -552,26 +527,6 @@ impl Methods {
         Ok(enabled)
     }
 
-    /// Request debugd to start vm_concierge.
-    fn start_concierge(&mut self) -> Result<(), Box<dyn Error>> {
-        // Mount the termina component, waiting up to 2 minutes to download it. If this fails we
-        // won't be able to start the concierge service below.
-        self.component_updater_load_component("cros-termina")?;
-
-        let method = Message::new_method_call(
-            DEBUGD_SERVICE_NAME,
-            DEBUGD_SERVICE_PATH,
-            DEBUGD_INTERFACE,
-            START_VM_CONCIERGE,
-        )?;
-
-        let message = self.connection.send_with_reply_and_block(method, 30000)?;
-        match message.get1() {
-            Some(true) => Ok(()),
-            _ => Err(BadConciergeStatus.into()),
-        }
-    }
-
     /// Request debugd to start vmplugin_dispatcher.
     fn start_vm_plugin_dispatcher(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         // Download and install pita component. If this fails we won't be able to start
@@ -596,13 +551,13 @@ impl Methods {
         }
     }
 
-    /// Starts all necessary VM services (concierge and optionally the Parallels dispatcher).
+    /// Starts all necessary VM services (currently just the Parallels dispatcher).
     fn start_vm_infrastructure(&mut self, user_id_hash: &str) -> Result<(), Box<dyn Error>> {
         if self.is_plugin_vm_enabled(user_id_hash)? {
             // Starting the dispatcher will also start concierge.
             self.start_vm_plugin_dispatcher(user_id_hash)
         } else if self.is_crostini_enabled(user_id_hash)? {
-            self.start_concierge()
+            Ok(())
         } else {
             Err(NoVmTechnologyEnabled.into())
         }

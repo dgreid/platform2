@@ -465,13 +465,6 @@ bool DebugdDBusAdaptor::RunShillScriptStop(brillo::ErrorPtr* error,
   return shill_scripts_tool_->Stop(handle, error);
 }
 
-void DebugdDBusAdaptor::StartVmConcierge(
-    std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response) {
-  response->Return(true);
-}
-
-void DebugdDBusAdaptor::StopVmConcierge() {}
-
 void DebugdDBusAdaptor::StartVmPluginDispatcher(
     std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<bool>> response,
     const std::string& in_user_id_hash,

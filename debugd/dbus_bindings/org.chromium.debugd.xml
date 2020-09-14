@@ -1037,23 +1037,6 @@
       </arg>
       <annotation name="org.chromium.DBus.Method.Kind" value="normal"/>
     </method>
-    <method name="StartVmConcierge">
-      <tp:docstring>
-        Starts the virtual machine concierge service.  Returns true if the
-        service was successfully started and is available over dbus, false
-        otherwise.
-      </tp:docstring>
-      <arg name="status" type="b" direction="out">
-        Whether the concierge service is ready to handle requests.
-      </arg>
-      <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
-    </method>
-    <method name="StopVmConcierge">
-      <tp:docstring>
-        Stops the virtual machine concierge service.
-      </tp:docstring>
-      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
-    </method>
     <method name="StartVmPluginDispatcher">
       <tp:docstring>
         Starts the VM Plugin Dispatcher service.  Returns true if the service was
