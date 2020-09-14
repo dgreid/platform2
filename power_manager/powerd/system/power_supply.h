@@ -530,6 +530,9 @@ class PowerSupply : public PowerSupplyInterface, public UdevSubsystemObserver {
   // Set to true when number of battery samplings is |kMaxCurrentSamplesPref|.
   bool has_max_samples_ = false;
 
+  // The number of samples of zero current we got in a row.
+  int64_t num_zero_samples_ = 0;
+
   // Calls HandlePollTimeout().
   base::OneShotTimer poll_timer_;
 

@@ -793,6 +793,9 @@ bool PowerSupply::UpdatePowerStatus(UpdatePolicy policy) {
         current_samples->AddSample(signed_current, now);
         if (!has_max_samples_)
           has_max_samples_ = current_samples->HasMaxSamples();
+        num_zero_samples_ = 0;
+      } else {
+        num_zero_samples_++;
       }
     }
 
@@ -1262,6 +1265,8 @@ bool PowerSupply::PerformUpdate(UpdatePolicy update_policy,
 void PowerSupply::SchedulePoll() {
   base::TimeDelta delay;
   base::TimeTicks now = clock_->GetCurrentTime();
+  int64_t samples = 0;
+  CHECK(prefs_->GetInt64(kMaxCurrentSamplesPref, &samples));
 
   // Wait |kBatteryStabilizedSlackMs| after |battery_stabilized_timestamp_| to
   // start polling for the current and charge to stabilized.
@@ -1270,7 +1275,7 @@ void PowerSupply::SchedulePoll() {
   if (battery_stabilized_timestamp_ > now) {
     delay = battery_stabilized_timestamp_ - now +
             base::TimeDelta::FromMilliseconds(kBatteryStabilizedSlackMs);
-  } else if (!has_max_samples_) {
+  } else if (!has_max_samples_ && num_zero_samples_ < samples) {
     delay = poll_delay_initial_;
   } else {
     delay = poll_delay_;
