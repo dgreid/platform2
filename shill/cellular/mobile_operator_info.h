@@ -130,6 +130,8 @@ class MobileOperatorInfo {
     // * "chap" (kApnAuthenticationChap):
     //   - Challenge-Handshake Authentication Protocol (CHAP) for authentication
     std::string authentication;
+    // Specify whether this APN should be requested as part of an LTE Attach.
+    bool is_attach_apn = false;
   };
 
   // Encapsulates information about the Online payment portal used by chrome to

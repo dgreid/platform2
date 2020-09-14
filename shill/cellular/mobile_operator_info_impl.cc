@@ -840,6 +840,8 @@ void MobileOperatorInfoImpl::ReloadData(const Data& data) {
             {localized_name.name(), localized_name.language()});
       }
       apn->authentication = GetApnAuthentication(apn_data);
+      apn->is_attach_apn =
+          apn_data.has_is_attach_apn() ? apn_data.is_attach_apn() : false;
       apn_list_.push_back(std::move(apn));
     }
   }

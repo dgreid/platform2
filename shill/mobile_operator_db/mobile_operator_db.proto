@@ -45,6 +45,7 @@ message MobileAPN {
     CHAP = 2;
   }
   optional Authentication authentication = 8;
+  optional bool is_attach_apn = 9 [default = false];
 }
 
 message OnlinePortal {

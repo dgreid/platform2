@@ -103,6 +103,8 @@ class ApnList {
       props->emplace(kApnPasswordProperty, mobile_apn->password);
     if (!mobile_apn->authentication.empty())
       props->emplace(kApnAuthenticationProperty, mobile_apn->authentication);
+    if (mobile_apn->is_attach_apn)
+      props->emplace(kApnAttachProperty, kApnAttachProperty);
 
     // Find the first localized and non-localized name, if any.
     if (!mobile_apn->operator_name_list.empty())
