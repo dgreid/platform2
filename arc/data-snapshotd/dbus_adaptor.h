@@ -6,6 +6,7 @@
 #define ARC_DATA_SNAPSHOTD_DBUS_ADAPTOR_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include <base/files/file_path.h>
@@ -34,6 +35,8 @@ namespace data_snapshotd {
 // BootLockbox snapshot keys:
 extern const char kLastSnapshotPublicKey[];
 extern const char kPreviousSnapshotPublicKey[];
+// Android data directory name:
+extern const char kAndroidDataDirectory[];
 
 // Implements the "org.chromium.ArcDataSnapshotdInterface" D-Bus interface
 // exposed by the arc-data-snapshotd daemon (see constants for the API methods
@@ -48,6 +51,7 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
 
   static std::unique_ptr<DBusAdaptor> CreateForTesting(
       const base::FilePath& snapshot_directory,
+      const base::FilePath& home_root_directory,
       std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client);
 
   // Registers the D-Bus object that the arc-data-snapshotd daemon exposes and
@@ -57,8 +61,9 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
 
   // Implementation of the "org.chromium.ArcDataSnapshotdInterface" D-Bus
   // interface:
-  bool GenerateKeyPair(brillo::ErrorPtr* error) override;
-  bool ClearSnapshot(brillo::ErrorPtr* error, bool last) override;
+  bool GenerateKeyPair() override;
+  bool ClearSnapshot(bool last) override;
+  bool TakeSnapshot(const std::string& account_id) override;
 
   const base::FilePath& get_last_snapshot_directory() const {
     return last_snapshot_directory_;
@@ -67,9 +72,23 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
     return previous_snapshot_directory_;
   }
 
+  // Use this method only for testing.
+  // Inode verification of snapshot directory is enabled in production by
+  // default.
+  // In production the integrity of the persisting snapshot directory is
+  // verified, inode values should stay the same.
+  //
+  // Using this method, the inode verification for snapshot directories can be
+  // disabled for testing. It is needed to ensure the integrity of snapshot
+  // directories after copying it (inodes change).
+  void set_inode_verification_enabled_for_testing(bool enabled) {
+    inode_verification_enabled_ = enabled;
+  }
+
  private:
   DBusAdaptor(
       const base::FilePath& snapshot_directory,
+      const base::FilePath& home_root_directory,
       std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client);
 
   // Manages the D-Bus interfaces exposed by the arc-data-snapshotd daemon.
@@ -78,6 +97,8 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   // Snapshot directory paths:
   const base::FilePath last_snapshot_directory_;
   const base::FilePath previous_snapshot_directory_;
+  // Home root directory.
+  const base::FilePath home_root_directory_;
 
   // Manages the communication with BootLockbox.
   std::unique_ptr<cryptohome::BootLockboxClient> boot_lockbox_client_;
@@ -88,6 +109,9 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   // GenerateKeyPair. The key is valid only when |private_key_| is set.
   // Should be stored on disk once |private_key_| is disposed.
   std::vector<uint8_t> public_key_info_;
+  // Inode verification of snapshot directories is enabled in production ny
+  // default.
+  bool inode_verification_enabled_ = true;
 };
 
 }  // namespace data_snapshotd

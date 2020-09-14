@@ -19,6 +19,7 @@ pkg_config("common_pkg_deps") {
     "libbootlockbox-client",
     "libbrillo",
     "libchrome-${libbase_ver}",
+    "libselinux",
     "openssl",
     "protobuf",
     "system_api",
@@ -38,7 +39,10 @@ proto_library("arc-data-snapshotd-protos") {
 
 source_set("libarc-data-snapshotd") {
   configs += [ ":common_pkg_deps" ]
-  sources = [ "dbus_adaptor.cc" ]
+  sources = [
+    "dbus_adaptor.cc",
+    "file_utils.cc",
+  ]
   deps = [ ":arc-data-snapshotd-protos" ]
 }
 
@@ -67,8 +71,6 @@ if (use.test) {
       "libbrillo",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",
-      "libselinux",
-      "openssl",
     ]
   }
   executable("arc-data-snapshotd_test") {
@@ -77,14 +79,10 @@ if (use.test) {
       "//common-mk:test",
     ]
     deps = [
-      ":arc-data-snapshotd-protos",
       ":data_snapshotd_adaptors",
       ":libarc-data-snapshotd",
       "//common-mk/testrunner:testrunner",
     ]
-    sources = [
-      "dbus_adaptor_test.cc",
-      "file_utils.cc",
-    ]
+    sources = [ "dbus_adaptor_test.cc" ]
   }
 }

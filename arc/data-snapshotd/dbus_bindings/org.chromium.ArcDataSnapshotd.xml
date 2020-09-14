@@ -12,15 +12,45 @@
         Public key is stored in BootlockBox.
         The method should be called before the start of user session.
       </tp:docstring>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+      <arg type="b" name="success" direction="out">
+        <tp:docstring>
+          Result of the operation.
+        </tp:docstring>
+      </arg>
     </method>
     <method name="ClearSnapshot">
       <tp:docstring>
         Clears snapshot.
       </tp:docstring>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
       <arg type="b" name="last" direction="in">
         <tp:docstring>
           Specifies a snapshot to clear.
           If true, the last snapshot directory is cleared.
+        </tp:docstring>
+      </arg>
+      <arg type="b" name="success" direction="out">
+        <tp:docstring>
+          Result of the operation.
+        </tp:docstring>
+      </arg>
+    </method>
+    <method name="TakeSnapshot">
+      <tp:docstring>
+        Saves and signs a snapshot.
+      </tp:docstring>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
+      <arg type="s" name="account_id" direction="in">
+        <tp:docstring>
+          Specifies an account ID of a user, that a snapshot is taken for.
+          The caller (Chrome) is responsible for executing this method only for
+          managed guest session account.
+        </tp:docstring>
+      </arg>
+      <arg type="b" name="success" direction="out">
+        <tp:docstring>
+          Result of the operation.
         </tp:docstring>
       </arg>
     </method>

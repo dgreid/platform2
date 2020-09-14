@@ -5,7 +5,6 @@
 #include "arc/data-snapshotd/file_utils.h"
 
 #include <algorithm>
-#include <string>
 #include <utility>
 
 #if USE_SELINUX
@@ -19,13 +18,26 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
+#include <brillo/data_encoding.h>
+#include <crypto/rsa_private_key.h>
+#include <crypto/signature_creator.h>
+#include <crypto/signature_verifier.h>
 #include <openssl/sha.h>
 
 namespace arc {
 namespace data_snapshotd {
 
+namespace {
+
+constexpr char kHashFile[] = "hash";
+constexpr char kPublicKeyFile[] = "public_key_info";
+constexpr char kUserhashFile[] = "userhash";
+
+}  // namespace
+
 bool ReadSnapshotDirectory(const base::FilePath& dir,
-                           SnapshotDirectory* snapshot_directory) {
+                           SnapshotDirectory* snapshot_directory,
+                           bool inode_verification_enabled) {
   if (!snapshot_directory) {
     LOG(ERROR) << "snapshot_directory is nullptr";
     return false;
@@ -38,10 +50,13 @@ bool ReadSnapshotDirectory(const base::FilePath& dir,
   std::vector<SnapshotFile> snapshot_files;
   for (auto file = dir_enumerator.Next(); !file.empty();
        file = dir_enumerator.Next()) {
-    std::string relative_path =
-        file.value().substr(dir.value().size(), std::string::npos);
+    base::FilePath relative_path;
+    if (!dir.IsParent(file) || !dir.AppendRelativePath(file, &relative_path)) {
+      LOG(ERROR) << dir.value() << " is not a parent of " << file.value();
+      return false;
+    }
     SnapshotFile snapshot_file;
-    snapshot_file.set_name(std::move(relative_path));
+    snapshot_file.set_name(relative_path.value());
     std::string contents;
     if (!dir_enumerator.GetInfo().IsDirectory() &&
         !base::ReadFileToString(file, &contents)) {
@@ -69,7 +84,7 @@ bool ReadSnapshotDirectory(const base::FilePath& dir,
     if (con != nullptr) {
       free(con);
     }
-#endif
+#endif  // USE_SELINUX
 
     struct stat stat_buf;
     if (lstat(file.value().c_str(), &stat_buf)) {
@@ -77,7 +92,8 @@ bool ReadSnapshotDirectory(const base::FilePath& dir,
       return false;
     }
     Stat* stat_value = snapshot_file.mutable_stat();
-    stat_value->set_ino(stat_buf.st_ino);
+    if (inode_verification_enabled)
+      stat_value->set_ino(stat_buf.st_ino);
     stat_value->set_mode(stat_buf.st_mode);
     stat_value->set_uid(stat_buf.st_uid);
     stat_value->set_gid(stat_buf.st_gid);
@@ -87,9 +103,14 @@ bool ReadSnapshotDirectory(const base::FilePath& dir,
   }
   std::sort(snapshot_files.begin(), snapshot_files.end(),
             [](const SnapshotFile& a, const SnapshotFile& b) {
+              // Sort lexicographically by name.
               return a.name() < b.name();
             });
   for (auto file : snapshot_files) {
+    if (file.name() == kHashFile)
+      continue;
+    if (file.name() == kPublicKeyFile)
+      continue;
     *snapshot_directory->mutable_files()->Add() = file;
   }
   return true;
@@ -105,11 +126,179 @@ std::vector<uint8_t> CalculateDirectoryCryptographicHash(
   }
   hash.resize(SHA256_DIGEST_LENGTH);
   if (!SHA256((const unsigned char*)serialized.data(), serialized.size(),
-              hash.data())) {
+              hash.data()) ||
+      hash.empty()) {
     LOG(ERROR) << "Failed to calculate digest of serialized SnapshotDirectory.";
     return std::vector<uint8_t>();
   }
   return hash;
+}
+
+bool StorePublicKey(const base::FilePath& dir,
+                    const std::vector<uint8_t>& public_key_info) {
+  if (public_key_info.empty()) {
+    LOG(ERROR) << "Empty public key info";
+    return false;
+  }
+  if (!base::DirectoryExists(dir)) {
+    LOG(ERROR) << "Directory " << dir.value() << " does not exist.";
+    return false;
+  }
+  std::string encoded_public_key = brillo::data_encoding::Base64Encode(
+      public_key_info.data(), public_key_info.size());
+  if (!base::WriteFile(dir.Append(kPublicKeyFile), encoded_public_key.data(),
+                       encoded_public_key.length())) {
+    LOG(ERROR) << "Failed to write public key info to file "
+               << dir.Append(kPublicKeyFile);
+    return false;
+  }
+  return true;
+}
+
+bool StoreUserhash(const base::FilePath& dir, const std::string& userhash) {
+  if (userhash.empty()) {
+    LOG(ERROR) << "Empty user hash";
+    return false;
+  }
+  if (!base::DirectoryExists(dir)) {
+    LOG(ERROR) << "Directory " << dir.value() << " does not exist.";
+    return false;
+  }
+  if (!base::WriteFile(dir.Append(kUserhashFile), userhash.c_str(),
+                       userhash.size())) {
+    LOG(ERROR) << "Failed to write userhash to file "
+               << dir.Append(kUserhashFile);
+    return false;
+  }
+  return true;
+}
+
+bool SignAndStoreHash(const base::FilePath& dir,
+                      crypto::RSAPrivateKey* private_key,
+                      bool inode_verification_enabled) {
+  if (!private_key) {
+    LOG(ERROR) << "nullptr private key";
+    return false;
+  }
+  if (!base::DirectoryExists(dir)) {
+    LOG(ERROR) << "Directory " << dir.value() << " does not exist.";
+    return false;
+  }
+  SnapshotDirectory snapshot_dir;
+  if (!ReadSnapshotDirectory(dir, &snapshot_dir, inode_verification_enabled)) {
+    return false;
+  }
+  std::vector<uint8_t> hash = CalculateDirectoryCryptographicHash(snapshot_dir);
+  if (hash.empty()) {
+    return false;
+  }
+  std::vector<uint8_t> signature;
+  if (!crypto::SignatureCreator::Sign(
+          private_key, crypto::SignatureCreator::HashAlgorithm::SHA256,
+          hash.data(), hash.size(), &signature)) {
+    LOG(ERROR) << "Failed to sign directory contents: " << dir.value();
+    return false;
+  }
+  std::string encoded_signature =
+      brillo::data_encoding::Base64Encode(signature.data(), signature.size());
+  if (!base::WriteFile(dir.Append(kHashFile), encoded_signature.data(),
+                       encoded_signature.length())) {
+    LOG(ERROR) << "Failed to write a signature to file "
+               << dir.Append(kHashFile);
+    return false;
+  }
+  return true;
+}
+
+bool VerifyHash(const base::FilePath& dir,
+                const std::string& expected_userhash,
+                const std::string& expected_public_key_digest,
+                bool inode_verification_enabled) {
+  if (!base::DirectoryExists(dir)) {
+    LOG(ERROR) << "Directory " << dir.value() << " does not exist.";
+    return false;
+  }
+  if (expected_public_key_digest.empty()) {
+    LOG(ERROR) << "Public key digest is empty.";
+    return false;
+  }
+  std::string userhash;
+  if (!base::ReadFileToString(dir.Append(kUserhashFile), &userhash)) {
+    LOG(ERROR) << "Failed to read userhash for file "
+               << dir.Append(kUserhashFile);
+    return false;
+  }
+  if (userhash != expected_userhash) {
+    LOG(ERROR) << "Requested to load snapshot for unsupported account.";
+    return false;
+  }
+  std::string encoded_public_key;
+  if (!base::ReadFileToString(dir.Append(kPublicKeyFile),
+                              &encoded_public_key)) {
+    LOG(ERROR) << "Failed to read public key info from file "
+               << dir.Append(kPublicKeyFile);
+    return false;
+  }
+  std::vector<uint8_t> public_key;
+  if (!brillo::data_encoding::Base64Decode(encoded_public_key, &public_key)) {
+    LOG(ERROR) << "Failed to decode public key.";
+    return false;
+  }
+  std::string encoded_public_key_digest =
+      CalculateEncodedSha256Digest(public_key);
+  if (encoded_public_key_digest.empty()) {
+    return false;
+  }
+  if (encoded_public_key_digest.compare(expected_public_key_digest)) {
+    LOG(ERROR) << "Public key has been modified.";
+    return false;
+  }
+
+  std::string contents;
+  if (!base::ReadFileToString(dir.Append(kHashFile), &contents)) {
+    LOG(ERROR) << "Failed to read signed hash from file "
+               << dir.Append(kHashFile);
+    return false;
+  }
+  std::vector<uint8_t> signature;
+  if (!brillo::data_encoding::Base64Decode(contents, &signature)) {
+    LOG(ERROR) << "Failed to decode signature.";
+    return false;
+  }
+  crypto::SignatureVerifier verifier;
+  if (!verifier.VerifyInit(
+          crypto::SignatureVerifier::SignatureAlgorithm::RSA_PKCS1_SHA256,
+          signature.data(), signature.size(), public_key.data(),
+          public_key.size())) {
+    LOG(ERROR) << "Failed to initilize signature verifier.";
+    return false;
+  }
+
+  SnapshotDirectory snapshot_dir;
+  if (!ReadSnapshotDirectory(dir, &snapshot_dir, inode_verification_enabled)) {
+    return false;
+  }
+  std::string serialized;
+  if (!snapshot_dir.SerializeToString(&serialized)) {
+    LOG(ERROR) << "Failed to serialize snapshot dir";
+    return false;
+  }
+  verifier.VerifyUpdate(reinterpret_cast<const uint8_t*>(serialized.c_str()),
+                        serialized.size());
+  return verifier.VerifyFinal();
+}
+
+std::string CalculateEncodedSha256Digest(const std::vector<uint8_t>& value) {
+  // Store a new public key digest.
+  std::vector<uint8_t> digest;
+  digest.resize(SHA256_DIGEST_LENGTH);
+  if (!SHA256((const unsigned char*)value.data(), value.size(),
+              digest.data()) ||
+      digest.empty()) {
+    LOG(ERROR) << "Failed to calculate digest of public key.";
+    return "";
+  }
+  return brillo::data_encoding::Base64Encode(digest.data(), digest.size());
 }
 
 }  // namespace data_snapshotd
