@@ -9,7 +9,7 @@ mod legacy;
 mod util;
 
 use std::env::var;
-use std::io::{stdout, Write};
+use std::io::{self, stdout, Write};
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicI32, Ordering};
 
@@ -244,8 +244,16 @@ fn input_loop(dispatcher: Dispatcher) {
     editor.set_helper(Some(helper));
 
     if let Some(h) = history_path.as_ref() {
-        if let Err(e) = editor.load_history(h) {
-            error!("Error loading history: {}", e);
+        match editor.load_history(h) {
+            Ok(()) => {}
+            Err(ReadlineError::Io(e)) => {
+                if e.kind() != io::ErrorKind::NotFound {
+                    error!("Error loading history: {}", e);
+                }
+            }
+            Err(e) => {
+                error!("Error loading history: {}", e);
+            }
         }
     }
 
