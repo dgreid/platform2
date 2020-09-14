@@ -88,7 +88,7 @@ void SetEntry(const std::string& key,
   } else if (key == "quirks") {
     info->quirks = ParseQuirks(value);
   } else if (key == "lens_facing") {
-    info->lens_facing = stoi(value);
+    info->lens_facing = static_cast<LensFacing>(stoi(value));
   } else if (key == "sensor_orientation") {
     info->sensor_orientation = stoi(value);
   } else if (key == "lens_info_available_apertures") {

@@ -21,17 +21,23 @@
 
 namespace cros {
 
-// Fields without default value would be filled in runtime.
+// The definition should match camera_metadata_enum_android_lens_facing_t
+// in camera_metadata_tags.h.
+enum class LensFacing {
+  kFront,
+  kBack,
+  kExternal,
+};
 
 struct DeviceInfo {
-  int camera_id;
+  int camera_id = -1;
 
   // TODO(shik): Change this to base::FilePath.
   // ex: /dev/video0
   std::string device_path;
 
   // Whether the device is an emulated vivid camera.
-  bool is_vivid;
+  bool is_vivid = false;
 
   // USB vendor id, the emulated vivid devices do not have this field.
   std::string usb_vid;
@@ -53,7 +59,7 @@ struct DeviceInfo {
 
   // Member definitions can be found in https://developer.android.com/
   // reference/android/hardware/camera2/CameraCharacteristics.html
-  uint32_t lens_facing;
+  LensFacing lens_facing = LensFacing::kFront;
   int32_t sensor_orientation = 0;
 
   // Special settings for device specific quirks.
@@ -79,9 +85,9 @@ struct DeviceInfo {
 typedef std::vector<DeviceInfo> DeviceInfos;
 
 struct SupportedFormat {
-  uint32_t width;
-  uint32_t height;
-  uint32_t fourcc;
+  uint32_t width = 0;
+  uint32_t height = 0;
+  uint32_t fourcc = 0;
   // All the supported frame rates in fps with given width, height, and
   // pixelformat. This is not sorted. For example, suppose width, height, and
   // fourcc are 640x480 YUYV. If frame rates are 15.0 and 30.0, the camera

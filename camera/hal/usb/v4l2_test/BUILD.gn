@@ -21,7 +21,7 @@ executable("media_v4l2_is_capture_device") {
 
 executable("media_v4l2_test") {
   sources = [
-    "camera_characteristics.cc",
+    "//camera/hal/usb/camera_characteristics.cc",
     "media_v4l2_device.cc",
     "media_v4l2_test.cc",
   ]

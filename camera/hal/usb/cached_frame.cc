@@ -9,9 +9,9 @@
 
 #include <string>
 
+#include <base/timer/elapsed_timer.h>
 #include <hardware/camera3.h>
 
-#include <base/timer/elapsed_timer.h>
 #include "cros-camera/common.h"
 #include "cros-camera/exif_utils.h"
 #include "cros-camera/utils/camera_config.h"

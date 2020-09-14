@@ -376,7 +376,7 @@ int MetadataHandler::FillMetadataFromSupportedFormats(
     const DeviceInfo& device_info,
     android::CameraMetadata* static_metadata,
     android::CameraMetadata* request_metadata) {
-  bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
+  bool is_external = device_info.lens_facing == LensFacing::kExternal;
   bool is_builtin = !is_external;
   bool is_v1_builtin = device_info.quirks & kQuirkV1Device;
 
@@ -615,7 +615,7 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
   MetadataUpdater update_static(static_metadata);
   MetadataUpdater update_request(request_metadata);
 
-  bool is_external = device_info.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
+  bool is_external = device_info.lens_facing == LensFacing::kExternal;
   bool is_builtin = !is_external;
   bool is_v1_builtin = device_info.quirks & kQuirkV1Device;
   bool is_v3_builtin = is_builtin && !is_v1_builtin;

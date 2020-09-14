@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "v4l2_test/media_v4l2_device.h"
+#include "hal/usb/v4l2_test/media_v4l2_device.h"
 
 #include <poll.h>
 #include <sys/stat.h>

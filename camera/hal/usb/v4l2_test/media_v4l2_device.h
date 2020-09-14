@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef CAMERA_V4L2_TEST_MEDIA_V4L2_DEVICE_H_
-#define CAMERA_V4L2_TEST_MEDIA_V4L2_DEVICE_H_
+#ifndef CAMERA_HAL_USB_V4L2_TEST_MEDIA_V4L2_DEVICE_H_
+#define CAMERA_HAL_USB_V4L2_TEST_MEDIA_V4L2_DEVICE_H_
 
 #include <errno.h>
 #include <fcntl.h>
@@ -137,4 +137,4 @@ class V4L2Device {
   uint32_t num_skip_frames_;
 };
 
-#endif  // CAMERA_V4L2_TEST_MEDIA_V4L2_DEVICE_H_
+#endif  // CAMERA_HAL_USB_V4L2_TEST_MEDIA_V4L2_DEVICE_H_

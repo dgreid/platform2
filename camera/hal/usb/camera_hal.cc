@@ -185,18 +185,19 @@ int CameraHal::GetCameraInfo(int id, struct camera_info* info) {
   }
 
   switch (device_infos_[id].lens_facing) {
-    case ANDROID_LENS_FACING_FRONT:
+    case LensFacing::kFront:
       info->facing = CAMERA_FACING_FRONT;
       break;
-    case ANDROID_LENS_FACING_BACK:
+    case LensFacing::kBack:
       info->facing = CAMERA_FACING_BACK;
       break;
-    case ANDROID_LENS_FACING_EXTERNAL:
+    case LensFacing::kExternal:
       info->facing = CAMERA_FACING_EXTERNAL;
       break;
     default:
-      LOGF(ERROR) << "Unknown facing type: " << device_infos_[id].lens_facing;
-      break;
+      LOGF(ERROR) << "Unknown lens facing: "
+                  << static_cast<int>(device_infos_[id].lens_facing);
+      return -EINVAL;
   }
   info->orientation = device_infos_[id].sensor_orientation;
   info->device_version = CAMERA_DEVICE_API_VERSION_3_3;
@@ -436,7 +437,7 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   }
 
   if (info_ptr == nullptr) {
-    info.lens_facing = ANDROID_LENS_FACING_EXTERNAL;
+    info.lens_facing = LensFacing::kExternal;
 
     // Try to reuse the same id for the same camera.
     std::string model_id = GetModelId(info);
@@ -459,7 +460,7 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
 
   android::CameraMetadata static_metadata, request_template;
   if (!FillMetadata(info, &static_metadata, &request_template)) {
-    if (info.lens_facing == ANDROID_LENS_FACING_EXTERNAL) {
+    if (info.lens_facing == LensFacing::kExternal) {
       LOGF(ERROR) << "FillMetadata failed, the new external "
                      "camera would be ignored";
       return;
@@ -476,7 +477,7 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   request_template_[info.camera_id] =
       ScopedCameraMetadata(request_template.release());
 
-  if (info.lens_facing == ANDROID_LENS_FACING_EXTERNAL) {
+  if (info.lens_facing == LensFacing::kExternal) {
     callbacks_->camera_device_status_change(callbacks_, info.camera_id,
                                             CAMERA_DEVICE_STATUS_PRESENT);
   }

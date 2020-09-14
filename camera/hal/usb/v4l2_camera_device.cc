@@ -1152,7 +1152,7 @@ int V4L2CameraDevice::SetPowerLineFrequency(PowerLineFrequency setting) {
 }
 
 bool V4L2CameraDevice::IsExternalCamera() {
-  return device_info_.lens_facing == ANDROID_LENS_FACING_EXTERNAL;
+  return device_info_.lens_facing == LensFacing::kExternal;
 }
 
 }  // namespace cros

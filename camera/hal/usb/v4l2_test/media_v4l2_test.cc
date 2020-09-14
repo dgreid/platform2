@@ -21,9 +21,10 @@
 #include <gtest/gtest.h>
 #include <libyuv.h>
 
-#include "v4l2_test/camera_characteristics.h"
-#include "v4l2_test/common_types.h"
-#include "v4l2_test/media_v4l2_device.h"
+#include "cros-camera/common.h"
+#include "hal/usb/camera_characteristics.h"
+#include "hal/usb/common_types.h"
+#include "hal/usb/v4l2_test/media_v4l2_device.h"
 
 namespace cros {
 namespace tests {
@@ -327,7 +328,7 @@ class V4L2TestEnvironment : public ::testing::Environment {
 
   bool support_constant_framerate_ = false;
   uint32_t skip_frames_ = 0;
-  uint32_t lens_facing_ = FACING_FRONT;
+  LensFacing lens_facing_ = LensFacing::kFront;
   uint32_t sensor_pixel_array_size_width_ = 0;
   uint32_t sensor_pixel_array_size_height_ = 0;
 };
@@ -774,16 +775,16 @@ TEST_F(V4L2Test, MaximumSupportedResolution) {
   uint32_t required_width;
   uint32_t required_height;
   std::string facing_str;
-  if (g_env->lens_facing_ == FACING_FRONT) {
+  if (g_env->lens_facing_ == LensFacing::kFront) {
     required_width = 1280;
     required_height = 720;
     facing_str = "user";
-  } else if (g_env->lens_facing_ == FACING_BACK) {
+  } else if (g_env->lens_facing_ == LensFacing::kBack) {
     required_width = 1920;
     required_height = 1080;
     facing_str = "world";
   } else {
-    FAIL() << "Undefined facing: " << g_env->lens_facing_;
+    FAIL() << "Invalid facing: " << static_cast<int>(g_env->lens_facing_);
   }
 
   EXPECT_GE(max_resolution.width, required_width);
