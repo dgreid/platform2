@@ -70,7 +70,12 @@
           },
           "serialized-ash-flags": "--device-help-content-id=some\u0000"
         },
-        "wallpaper": "some"
+        "wallpaper": "some",
+        "wifi": {
+          "sar-file": {
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
+          }
+        }
       },
       {
         "arc": {
@@ -136,7 +141,12 @@
           },
           "serialized-ash-flags": "--device-help-content-id=some\u0000"
         },
-        "wallpaper": "some"
+        "wallpaper": "some",
+        "wifi": {
+          "sar-file": {
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
+          }
+        }
       },
       {
         "arc": {
@@ -235,7 +245,12 @@
           },
           "serialized-ash-flags": "--bam\u0000--bar-flag=baz\u0000--device-help-content-id=another\u0000--foo-flag\u0000"
         },
-        "wallpaper": "default"
+        "wallpaper": "default",
+        "wifi": {
+          "sar-file": {
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_3.hex"
+          }
+        }
       },
       {
         "fingerprint": {

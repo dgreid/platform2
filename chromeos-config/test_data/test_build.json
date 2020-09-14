@@ -133,7 +133,13 @@
             "position": "0.3"
           }
         },
-        "wallpaper": "some"
+        "wallpaper": "some",
+        "wifi": {
+          "sar-file": {
+            "build-path": "build-path/wifi_sar_2.hex",
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
+          }
+        }
       },
       {
         "arc": {
@@ -263,7 +269,13 @@
             "position": "0.3"
           }
         },
-        "wallpaper": "some"
+        "wallpaper": "some",
+        "wifi": {
+          "sar-file": {
+            "build-path": "build-path/wifi_sar_2.hex",
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
+          }
+        }
       },
       {
         "arc": {
@@ -458,7 +470,13 @@
             "position": "0.3"
           }
         },
-        "wallpaper": "default"
+        "wallpaper": "default",
+        "wifi": {
+          "sar-file": {
+            "build-path": "build-path/wifi_sar_3.hex",
+            "system-path": "/firmware/cbfs-rw-raw/proj/wifi_sar_3.hex"
+          }
+        }
       },
       {
         "fingerprint": {

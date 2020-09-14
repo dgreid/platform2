@@ -137,6 +137,11 @@ class CrosConfigHostTest(unittest.TestCase):
     output = subprocess.check_output(call_args).decode('utf-8')
     self.CheckManyLines(output, 1)
 
+  def testGetIntelWifiSarFiles(self):
+    call_args = '{} -c {} get-intel-wifi-sar-files'.format(
+        CLI_FILE, self.conf_file).split()
+    output = subprocess.check_output(call_args).decode('utf-8')
+    self.CheckManyLines(output, 1)
 
 
 if __name__ == '__main__':

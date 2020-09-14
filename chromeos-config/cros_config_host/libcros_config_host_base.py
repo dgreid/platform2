@@ -248,6 +248,14 @@ class DeviceConfig(object):
       by this device.
     """
 
+  def GetIntelWifiSarFiles(self):
+    """Get a list of intel wifi sar files
+
+    Returns:
+      List of BaseFile objects representing the intel wifi sar files referenced
+      for this device.
+    """
+
   def GetFirmwareInfo(self):
     """Gets the FirmewareInfo instance for a given device.
 
@@ -328,6 +336,7 @@ class CrosConfigBaseImpl(object):
       result['GetBluetoothFiles'] = bluetooth_files
     result['GetCameraFiles'] = self.GetCameraFiles()
     result['GetThermalFiles'] = self.GetThermalFiles()
+    result['GetIntelWifiSarFiles'] = self.GetIntelWifiSarFiles()
     result['GetFirmwareInfo'] = self.GetFirmwareInfo()
     for target in ['coreboot', 'ec']:
       result['GetFirmwareBuildTargets_%s' % target] = \
@@ -555,6 +564,15 @@ class CrosConfigBaseImpl(object):
       by all devices
     """
     return self._GetFiles('GetThermalFiles')
+
+  def GetIntelWifiSarFiles(self):
+    """Get a list of unique intel wifi sar files for all models
+
+    Returns:
+      List of BaseFile objects representing all the intel wifi sar files
+      referenced by all devices
+    """
+    return self._GetFiles('GetIntelWifiSarFiles')
 
   def ShowTree(self, base_path, tree):
     print(u'%-10s%s' % ('Size', 'Path'))

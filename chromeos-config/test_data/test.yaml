@@ -159,6 +159,10 @@ chromeos:
               files:
                 - source: "some_touch/dptf.dv"
                   destination: "{{dptf-dv}}"
+            wifi:
+              sar-file:
+                build-path: "build-path/wifi_sar_2.hex"
+                system-path: "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
         - $sku-id: 1
           config:
             <<: *some_config
@@ -169,6 +173,10 @@ chromeos:
               files:
                 - source: "some_notouch/dptf.dv"
                   destination: "/etc/dptf/some_notouch/dptf.dv"
+            wifi:
+              sar-file:
+                build-path: "build-path/wifi_sar_2.hex"
+                system-path: "/firmware/cbfs-rw-raw/proj/wifi_sar_2.hex"
     - $name: "some2"
       products:
         - $key-id: "SOME"
@@ -241,6 +249,10 @@ chromeos:
               files:
                 - source: "another/dptf.dv"
                   destination: "/etc/dptf/another/dptf.dv"
+            wifi:
+              sar-file:
+                build-path: "build-path/wifi_sar_3.hex"
+                system-path: "/firmware/cbfs-rw-raw/proj/wifi_sar_3.hex"
             wallpaper: "default"
     - products:
         - $key-id: "SOME_CUSTOMIZATION"

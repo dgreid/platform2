@@ -132,6 +132,9 @@ class DeviceConfigJson(DeviceConfig):
   def GetThermalFiles(self):
     return self._GetFiles('/thermal')
 
+  def GetIntelWifiSarFiles(self):
+    return self._GetSystemFileV2('/wifi/sar-file')
+
   def GetWallpaperFiles(self):
     result = set()
     wallpaper = self.GetValue(self._config, 'wallpaper')

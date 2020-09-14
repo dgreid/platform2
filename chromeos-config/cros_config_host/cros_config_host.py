@@ -231,6 +231,22 @@ def GetThermalFiles(config):
     print(files.source)
     print(files.dest)
 
+def GetIntelWifiSarFiles(config):
+  """Print a list of intel wifi sar files across all models
+
+  The output is one line for the source file
+  and one line for the install file, e.g.:
+
+     proj/sw_build_config/platform/chromeos-config/generated/wifi/wifi_sar_6.hex
+     /firmware/cbfs-rw-raw/proj/wifi_sar_6.hex
+
+  Args:
+    config: A CrosConfig instance
+  """
+  for files in config.GetIntelWifiSarFiles():
+    print(files.source)
+    print(files.dest)
+
 def FileTree(config, root):
   """Print a tree showing all files installed for this config
 
@@ -343,7 +359,7 @@ def GetParser(description):
   subparsers.add_parser(
       'get-arc-files',
       help='Lists pairs of arc++ files in sequence: first line is '
-      'the relative source file file, second line is the full install pathname')
+      'the relative source file, second line is the full install pathname')
   # Parser: get-audio-files
   subparsers.add_parser(
       'get-audio-files',
@@ -380,7 +396,12 @@ def GetParser(description):
   subparsers.add_parser(
       'get-thermal-files',
       help='Lists pairs of thermal files in sequence: first line is '
-      'the relative source file file, second line is the full install pathname')
+      'the relative source file, second line is the full install pathname')
+  # Parser: get-intel-wifi-sar-files
+  subparsers.add_parser(
+      'get-intel-wifi-sar-files',
+      help='Lists pairs of intel wifi sar files in sequence: first line is '
+      'the relative source file, second line is the full install pathname')
   # Parser: file-tree
   file_tree_parser = subparsers.add_parser(
       'file-tree',
@@ -474,6 +495,8 @@ def main(argv=None):
     return GetFingerprintFirmwareROVersion(config, opts.fpmcu)
   elif opts.subcommand == 'get-thermal-files':
     GetThermalFiles(config)
+  elif opts.subcommand == 'get-intel-wifi-sar-files':
+    GetIntelWifiSarFiles(config)
   elif opts.subcommand == 'file-tree':
     FileTree(config, opts.root)
   elif opts.subcommand == 'get-firmware-build-combinations':
