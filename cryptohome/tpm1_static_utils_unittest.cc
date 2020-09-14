@@ -76,8 +76,8 @@ class Tpm1StaticUtilsRsaKeyTest
     ASSERT_TRUE(BN_set_word(e.get(), kWellKnownExponent));
     rsa_.reset(RSA_new());
     CHECK(rsa_);
-    ASSERT_TRUE(RSA_generate_key_ex(rsa_.get(), rsa_key_size_bits(), e.get(),
-                                    nullptr));
+    ASSERT_TRUE(
+        RSA_generate_key_ex(rsa_.get(), rsa_key_size_bits(), e.get(), nullptr));
   }
 
   int rsa_key_size_bits() const { return GetParam(); }

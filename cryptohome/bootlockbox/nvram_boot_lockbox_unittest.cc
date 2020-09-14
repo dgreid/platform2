@@ -27,10 +27,10 @@ class NVRamBootLockboxTest : public testing::Test {
     base::ScopedTempDir temp_directory;
     ASSERT_TRUE(temp_directory.CreateUniqueTempDir());
     file_path_ = temp_directory.GetPath().Append(kTestFilePath);
-    nvram_boot_lockbox_ =
-        std::make_unique<NVRamBootLockbox>(&fake_tpm_nvspace_utility_,
-                                           file_path_);
+    nvram_boot_lockbox_ = std::make_unique<NVRamBootLockbox>(
+        &fake_tpm_nvspace_utility_, file_path_);
   }
+
  protected:
   FakeTpmNVSpaceUtility fake_tpm_nvspace_utility_;
   std::unique_ptr<NVRamBootLockbox> nvram_boot_lockbox_;
@@ -50,7 +50,7 @@ TEST_F(NVRamBootLockboxTest, DefineSpace) {
 
 TEST_F(NVRamBootLockboxTest, StoreFail) {
   std::string key = "test_key";
-  std::string value ="test_value";
+  std::string value = "test_value";
   BootLockboxErrorCode error;
   EXPECT_TRUE(nvram_boot_lockbox_->Finalize());
   EXPECT_FALSE(nvram_boot_lockbox_->Store(key, value, &error));
@@ -66,8 +66,7 @@ TEST_F(NVRamBootLockboxTest, LoadFailDigestMisMatch) {
   EXPECT_TRUE(nvram_boot_lockbox_->Store(key, value, &error));
   // modify the proto file.
   std::string invalid_proto = "aaa";
-  base::WriteFile(file_path_, invalid_proto.c_str(),
-                  invalid_proto.size());
+  base::WriteFile(file_path_, invalid_proto.c_str(), invalid_proto.size());
   EXPECT_FALSE(nvram_boot_lockbox_->Load());
 }
 
@@ -81,8 +80,8 @@ TEST_F(NVRamBootLockboxTest, StoreLoadReadSuccess) {
   std::string stored_value;
   EXPECT_TRUE(nvram_boot_lockbox_->Read(key, &stored_value, &error));
   EXPECT_EQ(value, stored_value);
-  EXPECT_FALSE(nvram_boot_lockbox_->Read("non-exist-key",
-                                         &stored_value, &error));
+  EXPECT_FALSE(
+      nvram_boot_lockbox_->Read("non-exist-key", &stored_value, &error));
   EXPECT_EQ(error, BootLockboxErrorCode::BOOTLOCKBOX_ERROR_MISSING_KEY);
 }
 
@@ -98,8 +97,8 @@ TEST_F(NVRamBootLockboxTest, FirstStoreReadSuccess) {
   EXPECT_TRUE(nvram_boot_lockbox_->Read(key, &stored_value, &error));
   EXPECT_EQ(error, BootLockboxErrorCode::BOOTLOCKBOX_ERROR_NOT_SET);
   EXPECT_EQ(value, stored_value);
-  EXPECT_FALSE(nvram_boot_lockbox_->Read("non-exist-key",
-                                         &stored_value, &error));
+  EXPECT_FALSE(
+      nvram_boot_lockbox_->Read("non-exist-key", &stored_value, &error));
   EXPECT_EQ(error, BootLockboxErrorCode::BOOTLOCKBOX_ERROR_MISSING_KEY);
 }
 

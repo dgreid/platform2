@@ -51,8 +51,8 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
 
   brillo::SecureBlob wrapped_keyset(serialized.wrapped_keyset());
   brillo::SecureBlob derived_scrypt_key;
-  if (!ParseHeaderAndDerive(wrapped_keyset, input_key,
-                            &derived_scrypt_key, error)) {
+  if (!ParseHeaderAndDerive(wrapped_keyset, input_key, &derived_scrypt_key,
+                            error)) {
     return false;
   }
   key_blobs->scrypt_key = derived_scrypt_key;
@@ -64,8 +64,8 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
   if (serialized.has_wrapped_chaps_key()) {
     brillo::SecureBlob wrapped_chaps_key(serialized.wrapped_chaps_key());
     brillo::SecureBlob derived_chaps_key;
-    if (!ParseHeaderAndDerive(wrapped_chaps_key, input_key,
-                              &derived_chaps_key, error)) {
+    if (!ParseHeaderAndDerive(wrapped_chaps_key, input_key, &derived_chaps_key,
+                              error)) {
       return false;
     }
     key_blobs->chaps_scrypt_key = derived_chaps_key;

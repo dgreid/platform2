@@ -77,10 +77,10 @@ enum CryptohomeError {
 // These values are persisted to logs. Entries should not be renumbered and
 // numeric values should never be reused.
 enum TimerType {
-  kAsyncMountTimer,  // Unused.
-  kSyncMountTimer,  // Unused.
+  kAsyncMountTimer,       // Unused.
+  kSyncMountTimer,        // Unused.
   kAsyncGuestMountTimer,  // Unused.
-  kSyncGuestMountTimer,  // Unused.
+  kSyncGuestMountTimer,   // Unused.
   kTpmTakeOwnershipTimer,
   kPkcs11InitTimer,
   kMountExTimer,
@@ -267,12 +267,12 @@ const char kAttestationOriginSpecificIdentifiersExhausted[] =
 const char kCryptohomeDoubleMount[] = "Cryptohome.DoubleMountRequest";
 
 // Constants related to LE Credential UMA logging.
-constexpr char kLEOpResetTree[]= ".ResetTree";
-constexpr char kLEOpInsert[]= ".Insert";
-constexpr char kLEOpCheck[]= ".Check";
-constexpr char kLEOpReset[]= ".Reset";
-constexpr char kLEOpRemove[]= ".Remove";
-constexpr char kLEOpSync[]= ".Sync";
+constexpr char kLEOpResetTree[] = ".ResetTree";
+constexpr char kLEOpInsert[] = ".Insert";
+constexpr char kLEOpCheck[] = ".Check";
+constexpr char kLEOpReset[] = ".Reset";
+constexpr char kLEOpRemove[] = ".Remove";
+constexpr char kLEOpSync[] = ".Sync";
 constexpr char kLEActionLoadFromDisk[] = ".LoadFromDisk";
 constexpr char kLEActionBackend[] = ".Backend";
 constexpr char kLEActionSaveToDisk[] = ".SaveToDisk";
@@ -404,8 +404,7 @@ void ReportHomedirEncryptionType(HomedirEncryptionType type);
 
 // Reports the result of a Low Entropy (LE) Credential operation to the relevant
 // LE Credential histogram.
-void ReportLEResult(const char* type, const char* action,
-                    LECredError result);
+void ReportLEResult(const char* type, const char* action, LECredError result);
 
 // Reports the overall outcome of a Low Entropy (LE) Credential Sync operation
 // to the "Cryptohome.LECredential.SyncOutcome" enum histogram.
@@ -450,8 +449,8 @@ void ReportOOPMountCleanupResult(OOPMountCleanupResult result);
 // Reports the result of attestation-related operations. |operation| should be
 // one of the suffixes of the histogram kAttestationStatusHistogramPrefix listed
 // above.
-void ReportAttestationOpsStatus(
-    const std::string& operation, AttestationOpsStatus status);
+void ReportAttestationOpsStatus(const std::string& operation,
+                                AttestationOpsStatus status);
 
 // Reports the result of an InvalidateDirCryptoKey operation.
 void ReportInvalidateDirCryptoKeyResult(bool result);

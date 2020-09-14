@@ -79,8 +79,8 @@
 using base::FilePath;
 using brillo::Blob;
 using brillo::BlobFromString;
-using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 // Forcibly namespace the dbus-bindings generated server bindings instead of
 // modifying the files afterward.
@@ -184,17 +184,11 @@ class TpmInitStatus : public CryptohomeEventBase {
       : took_ownership_(took_ownership), status_(status) {}
   ~TpmInitStatus() override = default;
 
-  const char* GetEventName() const override {
-    return kTpmInitStatusEventType;
-  }
+  const char* GetEventName() const override { return kTpmInitStatusEventType; }
 
-  bool get_took_ownership() {
-    return took_ownership_;
-  }
+  bool get_took_ownership() { return took_ownership_; }
 
-  bool get_status() {
-    return status_;
-  }
+  bool get_status() { return status_; }
 
  private:
   bool took_ownership_;
@@ -208,7 +202,7 @@ class DircryptoMigrationProgress : public CryptohomeEventBase {
                              uint64_t total_bytes)
       : status_(status),
         current_bytes_(current_bytes),
-        total_bytes_(total_bytes) { }
+        total_bytes_(total_bytes) {}
   ~DircryptoMigrationProgress() override = default;
 
   const char* GetEventName() const override {
@@ -241,8 +235,7 @@ void MountThreadObserver::WillProcessTask(const base::PendingTask& pending_task
   std::string task_name = pending_task.posted_from.function_name();
 
   ReportAsyncDbusRequestInqueueTime(
-      task_name,
-      base::TimeTicks::Now() - pending_task.delayed_run_time);
+      task_name, base::TimeTicks::Now() - pending_task.delayed_run_time);
 }
 
 void MountThreadObserver::DidProcessTask(
@@ -354,34 +347,34 @@ bool Service::UnloadPkcs11Tokens(const std::vector<FilePath>& exclude) {
 CryptohomeErrorCode Service::MountErrorToCryptohomeError(
     const MountError code) const {
   switch (code) {
-  case MOUNT_ERROR_NONE:
-    return CRYPTOHOME_ERROR_NOT_SET;
-  case MOUNT_ERROR_FATAL:
-    return CRYPTOHOME_ERROR_MOUNT_FATAL;
-  case MOUNT_ERROR_KEY_FAILURE:
-    return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED;
-  case MOUNT_ERROR_MOUNT_POINT_BUSY:
-    return CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY;
-  case MOUNT_ERROR_TPM_COMM_ERROR:
-    return CRYPTOHOME_ERROR_TPM_COMM_ERROR;
-  case MOUNT_ERROR_UNPRIVILEGED_KEY:
-    return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED;
-  case MOUNT_ERROR_TPM_DEFEND_LOCK:
-    return CRYPTOHOME_ERROR_TPM_DEFEND_LOCK;
-  case MOUNT_ERROR_TPM_UPDATE_REQUIRED:
-    return CRYPTOHOME_ERROR_TPM_UPDATE_REQUIRED;
-  case MOUNT_ERROR_USER_DOES_NOT_EXIST:
-    return CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
-  case MOUNT_ERROR_TPM_NEEDS_REBOOT:
-    return CRYPTOHOME_ERROR_TPM_NEEDS_REBOOT;
-  case MOUNT_ERROR_OLD_ENCRYPTION:
-    return CRYPTOHOME_ERROR_MOUNT_OLD_ENCRYPTION;
-  case MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE:
-    return CRYPTOHOME_ERROR_MOUNT_PREVIOUS_MIGRATION_INCOMPLETE;
-  case MOUNT_ERROR_RECREATED:
-    return CRYPTOHOME_ERROR_NOT_SET;
-  default:
-    return CRYPTOHOME_ERROR_MOUNT_FATAL;
+    case MOUNT_ERROR_NONE:
+      return CRYPTOHOME_ERROR_NOT_SET;
+    case MOUNT_ERROR_FATAL:
+      return CRYPTOHOME_ERROR_MOUNT_FATAL;
+    case MOUNT_ERROR_KEY_FAILURE:
+      return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED;
+    case MOUNT_ERROR_MOUNT_POINT_BUSY:
+      return CRYPTOHOME_ERROR_MOUNT_MOUNT_POINT_BUSY;
+    case MOUNT_ERROR_TPM_COMM_ERROR:
+      return CRYPTOHOME_ERROR_TPM_COMM_ERROR;
+    case MOUNT_ERROR_UNPRIVILEGED_KEY:
+      return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_DENIED;
+    case MOUNT_ERROR_TPM_DEFEND_LOCK:
+      return CRYPTOHOME_ERROR_TPM_DEFEND_LOCK;
+    case MOUNT_ERROR_TPM_UPDATE_REQUIRED:
+      return CRYPTOHOME_ERROR_TPM_UPDATE_REQUIRED;
+    case MOUNT_ERROR_USER_DOES_NOT_EXIST:
+      return CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND;
+    case MOUNT_ERROR_TPM_NEEDS_REBOOT:
+      return CRYPTOHOME_ERROR_TPM_NEEDS_REBOOT;
+    case MOUNT_ERROR_OLD_ENCRYPTION:
+      return CRYPTOHOME_ERROR_MOUNT_OLD_ENCRYPTION;
+    case MOUNT_ERROR_PREVIOUS_MIGRATION_INCOMPLETE:
+      return CRYPTOHOME_ERROR_MOUNT_PREVIOUS_MIGRATION_INCOMPLETE;
+    case MOUNT_ERROR_RECREATED:
+      return CRYPTOHOME_ERROR_NOT_SET;
+    default:
+      return CRYPTOHOME_ERROR_MOUNT_FATAL;
   }
 }
 
@@ -422,7 +415,7 @@ bool Service::FilterActiveMounts(
   bool skipped = false;
   std::set<const FilePath> children_to_preserve;
 
-  for (auto match = mounts->begin(); match != mounts->end(); ) {
+  for (auto match = mounts->begin(); match != mounts->end();) {
     auto curr = match;
     bool keep = false;
     // Walk each set of sources as one group since multimaps are key ordered.
@@ -446,9 +439,8 @@ bool Service::FilterActiveMounts(
             children_to_preserve.end()) {
           keep = true;
           skipped = true;
-          LOG(WARNING) << "Stale mount " << match->second.value()
-                       << " from " << match->first.value()
-                       << " is a just a child.";
+          LOG(WARNING) << "Stale mount " << match->second.value() << " from "
+                       << match->first.value() << " is a just a child.";
         }
       }
 
@@ -457,9 +449,9 @@ bool Service::FilterActiveMounts(
         std::vector<ProcessInformation> processes;
         platform_->GetProcessesWithOpenFiles(match->second, &processes);
         if (processes.size()) {
-          LOG(WARNING) << "Stale mount " << match->second.value()
-                       << " from " << match->first.value()
-                       << " has " << processes.size() << " active holders. "
+          LOG(WARNING) << "Stale mount " << match->second.value() << " from "
+                       << match->first.value() << " has " << processes.size()
+                       << " active holders. "
                        << "First one " << processes[0].get_cmd_line()[0];
           keep = true;
           skipped = true;
@@ -486,8 +478,8 @@ void Service::GetEphemeralLoopDevicesMounts(
   std::multimap<const FilePath, const FilePath> loop_mounts;
   platform_->GetLoopDeviceMounts(&loop_mounts);
 
-  const FilePath sparse_path = FilePath(kEphemeralCryptohomeDir)
-      .Append(kSparseFileDir);
+  const FilePath sparse_path =
+      FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir);
   for (const auto& device : platform_->GetAttachedLoopDevices()) {
     // Ephemeral mounts are mounts from a loop device with ephemeral sparse
     // backing file.
@@ -552,8 +544,8 @@ bool Service::CleanUpStaleMounts(bool force) {
   // TODO(chromium:781821): Add autotests for this case.
   std::vector<Platform::LoopDevice> loop_devices =
       platform_->GetAttachedLoopDevices();
-  const FilePath sparse_dir = FilePath(kEphemeralCryptohomeDir)
-      .Append(kSparseFileDir);
+  const FilePath sparse_dir =
+      FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir);
   std::vector<FilePath> stale_sparse_files;
   platform_->EnumerateDirectoryEntries(sparse_dir, false /* is_recursive */,
                                        &stale_sparse_files);
@@ -562,18 +554,17 @@ bool Service::CleanUpStaleMounts(bool force) {
     if (!sparse_dir.IsParent(device.backing_file))
       continue;
     if (excluded.count(device.device) == 0) {
-      LOG(WARNING) << "Detaching stale loop device: "
-                   << device.device.value();
+      LOG(WARNING) << "Detaching stale loop device: " << device.device.value();
       if (!platform_->DetachLoop(device.device)) {
         ReportCryptohomeError(kEphemeralCleanUpFailed);
         PLOG(ERROR) << "Can't detach stale loop: " << device.device.value();
       }
     } else {
       // Remove if it's a non-stale loop device.
-      stale_sparse_files.erase(std::remove(stale_sparse_files.begin(),
-                                           stale_sparse_files.end(),
-                                           device.backing_file),
-                               stale_sparse_files.end());
+      stale_sparse_files.erase(
+          std::remove(stale_sparse_files.begin(), stale_sparse_files.end(),
+                      device.backing_file),
+          stale_sparse_files.end());
     }
   }
 
@@ -664,90 +655,48 @@ bool Service::Initialize() {
 
   AttestationInitialize();
 
-  async_complete_signal_ = g_signal_lookup("async_call_status",
-                                           gobject::cryptohome_get_type());
+  async_complete_signal_ =
+      g_signal_lookup("async_call_status", gobject::cryptohome_get_type());
   if (!async_complete_signal_) {
-    async_complete_signal_ = g_signal_new("async_call_status",
-                                          gobject::cryptohome_get_type(),
-                                          G_SIGNAL_RUN_LAST,
-                                          0,
-                                          NULL,
-                                          NULL,
-                                          nullptr,
-                                          G_TYPE_NONE,
-                                          3,
-                                          G_TYPE_INT,
-                                          G_TYPE_BOOLEAN,
-                                          G_TYPE_INT);
+    async_complete_signal_ =
+        g_signal_new("async_call_status", gobject::cryptohome_get_type(),
+                     G_SIGNAL_RUN_LAST, 0, NULL, NULL, nullptr, G_TYPE_NONE, 3,
+                     G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INT);
   }
 
   async_data_complete_signal_ = g_signal_lookup("async_call_status_with_data",
                                                 gobject::cryptohome_get_type());
   if (!async_data_complete_signal_) {
     async_data_complete_signal_ = g_signal_new(
-        "async_call_status_with_data",
-        gobject::cryptohome_get_type(),
-        G_SIGNAL_RUN_LAST,
-        0,
-        NULL,
-        NULL,
-        nullptr,
-        G_TYPE_NONE,
-        3,
-        G_TYPE_INT,
-        G_TYPE_BOOLEAN,
-        DBUS_TYPE_G_UCHAR_ARRAY);
+        "async_call_status_with_data", gobject::cryptohome_get_type(),
+        G_SIGNAL_RUN_LAST, 0, NULL, NULL, nullptr, G_TYPE_NONE, 3, G_TYPE_INT,
+        G_TYPE_BOOLEAN, DBUS_TYPE_G_UCHAR_ARRAY);
   }
 
-  tpm_init_signal_ = g_signal_lookup("tpm_init_status",
-                                     gobject::cryptohome_get_type());
+  tpm_init_signal_ =
+      g_signal_lookup("tpm_init_status", gobject::cryptohome_get_type());
   if (!tpm_init_signal_) {
-    tpm_init_signal_ = g_signal_new("tpm_init_status",
-                                    gobject::cryptohome_get_type(),
-                                    G_SIGNAL_RUN_LAST,
-                                    0,
-                                    NULL,
-                                    NULL,
-                                    nullptr,
-                                    G_TYPE_NONE,
-                                    3,
-                                    G_TYPE_BOOLEAN,
-                                    G_TYPE_BOOLEAN,
-                                    G_TYPE_BOOLEAN);
+    tpm_init_signal_ =
+        g_signal_new("tpm_init_status", gobject::cryptohome_get_type(),
+                     G_SIGNAL_RUN_LAST, 0, NULL, NULL, nullptr, G_TYPE_NONE, 3,
+                     G_TYPE_BOOLEAN, G_TYPE_BOOLEAN, G_TYPE_BOOLEAN);
   }
 
-  low_disk_space_signal_ = g_signal_lookup("low_disk_space",
-                                           gobject::cryptohome_get_type());
+  low_disk_space_signal_ =
+      g_signal_lookup("low_disk_space", gobject::cryptohome_get_type());
   if (!low_disk_space_signal_) {
-    low_disk_space_signal_ = g_signal_new("low_disk_space",
-                                          gobject::cryptohome_get_type(),
-                                          G_SIGNAL_RUN_LAST,
-                                          0,
-                                          NULL,
-                                          NULL,
-                                          nullptr,
-                                          G_TYPE_NONE,
-                                          1,
-                                          G_TYPE_UINT64);
+    low_disk_space_signal_ = g_signal_new(
+        "low_disk_space", gobject::cryptohome_get_type(), G_SIGNAL_RUN_LAST, 0,
+        NULL, NULL, nullptr, G_TYPE_NONE, 1, G_TYPE_UINT64);
   }
 
   dircrypto_migration_progress_signal_ = g_signal_lookup(
-      "dircrypto_migration_progress",
-      gobject::cryptohome_get_type());
+      "dircrypto_migration_progress", gobject::cryptohome_get_type());
   if (!dircrypto_migration_progress_signal_) {
     dircrypto_migration_progress_signal_ = g_signal_new(
-        "dircrypto_migration_progress",
-        gobject::cryptohome_get_type(),
-        G_SIGNAL_RUN_LAST,
-        0,
-        NULL,
-        NULL,
-        nullptr,
-        G_TYPE_NONE,
-        3,
-        G_TYPE_INT,
-        G_TYPE_UINT64,
-        G_TYPE_UINT64);
+        "dircrypto_migration_progress", gobject::cryptohome_get_type(),
+        G_SIGNAL_RUN_LAST, 0, NULL, NULL, nullptr, G_TYPE_NONE, 3, G_TYPE_INT,
+        G_TYPE_UINT64, G_TYPE_UINT64);
   }
 
   base::Thread::Options options;
@@ -773,7 +722,7 @@ bool Service::Initialize() {
     AttestationInitializeTpm();
     if (tpm_init_->ShallInitialize() ||
         base::CommandLine::ForCurrentProcess()->HasSwitch(
-          kAutoInitializeTpmSwitch)) {
+            kAutoInitializeTpmSwitch)) {
       tpm_init_->AsyncTakeOwnership();
     }
   }
@@ -851,7 +800,7 @@ bool Service::StatefulRecoveryUnmount() {
   return true;
 }
 
-bool Service::IsOwner(const std::string &userid) {
+bool Service::IsOwner(const std::string& userid) {
   std::string owner;
   if (homedirs_->GetPlainOwner(&owner) && userid.length() && userid == owner)
     return true;
@@ -990,11 +939,8 @@ void Service::NotifyEvent(CryptohomeEventBase* event) {
   if (!strcmp(event->GetEventName(), kMountTaskResultEventType)) {
     MountTaskResult* result = static_cast<MountTaskResult*>(event);
     if (!result->return_data()) {
-      g_signal_emit(cryptohome_,
-                    async_complete_signal_,
-                    0,
-                    result->sequence_id(),
-                    result->return_status(),
+      g_signal_emit(cryptohome_, async_complete_signal_, 0,
+                    result->sequence_id(), result->return_status(),
                     result->return_code());
       // TODO(wad) are there any non-mount uses of this type?
       if (!result->return_status()) {
@@ -1003,22 +949,17 @@ void Service::NotifyEvent(CryptohomeEventBase* event) {
       SendAsyncIdInfoToUma(result->sequence_id(), base::Time::Now());
     } else {
       brillo::glib::ScopedArray tmp_array(g_array_new(FALSE, FALSE, 1));
-      g_array_append_vals(tmp_array.get(),
-                          result->return_data()->data(),
+      g_array_append_vals(tmp_array.get(), result->return_data()->data(),
                           result->return_data()->size());
-      g_signal_emit(cryptohome_,
-                    async_data_complete_signal_,
-                    0,
-                    result->sequence_id(),
-                    result->return_status(),
+      g_signal_emit(cryptohome_, async_data_complete_signal_, 0,
+                    result->sequence_id(), result->return_status(),
                     tmp_array.get());
       brillo::SecureMemset(tmp_array.get()->data, 0, tmp_array.get()->len);
       SendAsyncIdInfoToUma(result->sequence_id(), base::Time::Now());
     }
     if (result->pkcs11_init()) {
       LOG(INFO) << "An asynchronous mount request with sequence id: "
-                << result->sequence_id()
-                << " finished; doing PKCS11 init...";
+                << result->sequence_id() << " finished; doing PKCS11 init...";
       // We only report and init PKCS#11 for successful mounts.
       if (result->return_status()) {
         InitializePkcs11(result->mount().get());
@@ -1267,7 +1208,7 @@ void Service::DoCheckKeyEx(std::unique_ptr<AccountIdentifier> identifier,
 gboolean Service::CheckKeyEx(GArray* account_id,
                              GArray* authorization_request,
                              GArray* check_key_request,
-                             DBusGMethodInvocation *context) {
+                             DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<CheckKeyRequest> request(new CheckKeyRequest);
@@ -1328,8 +1269,8 @@ void Service::DoRemoveKeyEx(AccountIdentifier* identifier,
     return;
   }
 
-  reply.set_error(homedirs_->RemoveKeyset(credentials,
-                                          remove_key_request->key().data()));
+  reply.set_error(
+      homedirs_->RemoveKeyset(credentials, remove_key_request->key().data()));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -1338,9 +1279,9 @@ void Service::DoRemoveKeyEx(AccountIdentifier* identifier,
 }
 
 gboolean Service::RemoveKeyEx(GArray* account_id,
-                             GArray* authorization_request,
-                             GArray* remove_key_request,
-                             DBusGMethodInvocation *context) {
+                              GArray* authorization_request,
+                              GArray* remove_key_request,
+                              DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<RemoveKeyRequest> request(new RemoveKeyRequest);
@@ -1365,11 +1306,10 @@ gboolean Service::RemoveKeyEx(GArray* account_id,
   return TRUE;
 }
 
-void Service::DoMassRemoveKeys(
-    AccountIdentifier* account_id,
-    AuthorizationRequest* authorization_request,
-    MassRemoveKeysRequest* mass_remove_keys_request,
-    DBusGMethodInvocation* context) {
+void Service::DoMassRemoveKeys(AccountIdentifier* account_id,
+                               AuthorizationRequest* authorization_request,
+                               MassRemoveKeysRequest* mass_remove_keys_request,
+                               DBusGMethodInvocation* context) {
   if (!account_id || !authorization_request || !mass_remove_keys_request) {
     SendInvalidArgsReply(context, "Failed to parse parameters.");
     return;
@@ -1410,8 +1350,7 @@ void Service::DoMassRemoveKeys(
   // get all exempt labels from mass_remove_keys_request
   std::unordered_set<std::string> exempt_labels;
   for (int i = 0; i < mass_remove_keys_request->exempt_key_data_size(); i++) {
-    exempt_labels.insert(
-        mass_remove_keys_request->exempt_key_data(i).label());
+    exempt_labels.insert(mass_remove_keys_request->exempt_key_data(i).label());
   }
   for (std::string label : labels) {
     if (exempt_labels.find(label) == exempt_labels.end()) {
@@ -1433,7 +1372,7 @@ void Service::DoMassRemoveKeys(
 gboolean Service::MassRemoveKeys(GArray* account_id,
                                  GArray* authorization_request,
                                  GArray* mass_remove_keys_request,
-                                 DBusGMethodInvocation *context) {
+                                 DBusGMethodInvocation* context) {
   auto identifier = std::make_unique<AccountIdentifier>();
   auto authorization = std::make_unique<AuthorizationRequest>();
   auto request = std::make_unique<MassRemoveKeysRequest>();
@@ -1459,9 +1398,9 @@ gboolean Service::MassRemoveKeys(GArray* account_id,
 }
 
 void Service::DoListKeysEx(AccountIdentifier* identifier,
-                            AuthorizationRequest* authorization,
-                            ListKeysRequest* list_keys_request,
-                            DBusGMethodInvocation* context) {
+                           AuthorizationRequest* authorization,
+                           ListKeysRequest* list_keys_request,
+                           DBusGMethodInvocation* context) {
   if (!identifier || !authorization || !list_keys_request) {
     SendInvalidArgsReply(context, "Failed to parse parameters.");
     return;
@@ -1495,7 +1434,7 @@ void Service::DoListKeysEx(AccountIdentifier* identifier,
 gboolean Service::ListKeysEx(GArray* account_id,
                              GArray* authorization_request,
                              GArray* list_keys_request,
-                             DBusGMethodInvocation *context) {
+                             DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<ListKeysRequest> request(new ListKeysRequest);
@@ -1506,8 +1445,7 @@ gboolean Service::ListKeysEx(GArray* account_id,
   if (!authorization->ParseFromArray(authorization_request->data,
                                      authorization_request->len))
     authorization.reset(NULL);
-  if (!request->ParseFromArray(list_keys_request->data,
-                               list_keys_request->len))
+  if (!request->ParseFromArray(list_keys_request->data, list_keys_request->len))
     request.reset(NULL);
 
   // If PBs don't parse, the validation in the handler will catch it.
@@ -1556,7 +1494,7 @@ void Service::DoGetKeyDataEx(AccountIdentifier* identifier,
     *new_kd = vk->serialized().key_data();
     // Clear any symmetric KeyAuthorizationSecrets even if they are wrapped.
     for (int a = 0; a < new_kd->authorization_data_size(); ++a) {
-      KeyAuthorizationData *auth_data = new_kd->mutable_authorization_data(a);
+      KeyAuthorizationData* auth_data = new_kd->mutable_authorization_data(a);
       for (int s = 0; s < auth_data->secrets_size(); ++s) {
         auth_data->mutable_secrets(s)->clear_symmetric_key();
         auth_data->mutable_secrets(s)->set_wrapped(false);
@@ -1571,7 +1509,7 @@ void Service::DoGetKeyDataEx(AccountIdentifier* identifier,
 gboolean Service::GetKeyDataEx(GArray* account_id,
                                GArray* authorization_request,
                                GArray* get_key_data_request,
-                               DBusGMethodInvocation *context) {
+                               DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<GetKeyDataRequest> request(new GetKeyDataRequest);
@@ -1630,7 +1568,8 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
     LOG(ERROR) << "Failed to obtain Mount for Migrate";
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else if (!homedirs_->Migrate(credentials,
-                          SecureBlob(auth_request->key().secret()), mount)) {
+                                 SecureBlob(auth_request->key().secret()),
+                                 mount)) {
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else {
     reply.clear_error();
@@ -1706,8 +1645,7 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
 
   // Ensure any new keys do not contain a wrapped authorization key.
   if (KeyHasWrappedAuthorizationSecrets(add_key_request->key())) {
-    SendInvalidArgsReply(context,
-                         "KeyAuthorizationSecrets may not be wrapped");
+    SendInvalidArgsReply(context, "KeyAuthorizationSecrets may not be wrapped");
     return;
   }
 
@@ -1725,11 +1663,9 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
   int index = -1;
   SecureBlob new_secret(add_key_request->key().secret().begin(),
                         add_key_request->key().secret().end());
-  reply.set_error(homedirs_->AddKeyset(credentials,
-                                       new_secret,
-                                       &add_key_request->key().data(),
-                                       add_key_request->clobber_if_exists(),
-                                       &index));
+  reply.set_error(homedirs_->AddKeyset(
+      credentials, new_secret, &add_key_request->key().data(),
+      add_key_request->clobber_if_exists(), &index));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -1740,7 +1676,7 @@ void Service::DoAddKeyEx(AccountIdentifier* identifier,
 gboolean Service::AddKeyEx(GArray* account_id,
                            GArray* authorization_request,
                            GArray* add_key_request,
-                           DBusGMethodInvocation *context) {
+                           DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<AddKeyRequest> request(new AddKeyRequest);
@@ -1793,11 +1729,8 @@ void Service::DoAddDataRestoreKey(AccountIdentifier* identifier,
     return;
   }
   int index = -1;
-  reply.set_error(homedirs_->AddKeyset(credentials,
-                                       data_restore_key,
-                                       &new_key_data,
-                                       true,
-                                       &index));
+  reply.set_error(homedirs_->AddKeyset(credentials, data_restore_key,
+                                       &new_key_data, true, &index));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -1814,7 +1747,7 @@ void Service::DoAddDataRestoreKey(AccountIdentifier* identifier,
 
 gboolean Service::AddDataRestoreKey(GArray* account_id,
                                     GArray* authorization_request,
-                                    DBusGMethodInvocation *context) {
+                                    DBusGMethodInvocation* context) {
   auto identifier = std::make_unique<AccountIdentifier>();
   auto authorization = std::make_unique<AuthorizationRequest>();
   // On parsing failure, pass along a NULL.
@@ -1823,11 +1756,11 @@ gboolean Service::AddDataRestoreKey(GArray* account_id,
   if (!authorization->ParseFromArray(authorization_request->data,
                                      authorization_request->len))
     authorization.reset(NULL);
-  PostTask(FROM_HERE, base::Bind(&Service::DoAddDataRestoreKey,
-                                 base::Unretained(this),
-                                 base::Owned(identifier.release()),
-                                 base::Owned(authorization.release()),
-                                 base::Unretained(context)));
+  PostTask(FROM_HERE,
+           base::Bind(&Service::DoAddDataRestoreKey, base::Unretained(this),
+                      base::Owned(identifier.release()),
+                      base::Owned(authorization.release()),
+                      base::Unretained(context)));
   return TRUE;
 }
 
@@ -1862,8 +1795,7 @@ void Service::DoUpdateKeyEx(AccountIdentifier* identifier,
   }
 
   if (KeyHasWrappedAuthorizationSecrets(update_key_request->changes())) {
-    SendInvalidArgsReply(context,
-                         "KeyAuthorizationSecrets may not be wrapped");
+    SendInvalidArgsReply(context, "KeyAuthorizationSecrets may not be wrapped");
     return;
   }
 
@@ -1878,10 +1810,9 @@ void Service::DoUpdateKeyEx(AccountIdentifier* identifier,
     return;
   }
 
-  reply.set_error(homedirs_->UpdateKeyset(
-                      credentials,
-                      &update_key_request->changes(),
-                      update_key_request->authorization_signature()));
+  reply.set_error(
+      homedirs_->UpdateKeyset(credentials, &update_key_request->changes(),
+                              update_key_request->authorization_signature()));
   if (reply.error() == CRYPTOHOME_ERROR_NOT_SET) {
     // Don't set the error if there wasn't one.
     reply.clear_error();
@@ -1892,7 +1823,7 @@ void Service::DoUpdateKeyEx(AccountIdentifier* identifier,
 gboolean Service::UpdateKeyEx(GArray* account_id,
                               GArray* authorization_request,
                               GArray* update_key_request,
-                              DBusGMethodInvocation *context) {
+                              DBusGMethodInvocation* context) {
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
   std::unique_ptr<AuthorizationRequest> authorization(new AuthorizationRequest);
   std::unique_ptr<UpdateKeyRequest> request(new UpdateKeyRequest);
@@ -2034,28 +1965,27 @@ void Service::DoGetAccountDiskUsage(AccountIdentifier* identifier,
   SendReply(context, reply);
 }
 
-gboolean Service::GetSystemSalt(GArray **OUT_salt, GError **error) {
+gboolean Service::GetSystemSalt(GArray** OUT_salt, GError** error) {
   *OUT_salt = g_array_new(false, false, 1);
   g_array_append_vals(*OUT_salt, system_salt_.data(), system_salt_.size());
   return TRUE;
 }
 
-gboolean Service::GetSanitizedUsername(gchar *username,
-                                       gchar **OUT_sanitized,
-                                       GError **error) {
+gboolean Service::GetSanitizedUsername(gchar* username,
+                                       gchar** OUT_sanitized,
+                                       GError** error) {
   // Credentials::GetObfuscatedUsername() returns an uppercase hex encoding,
   // while SanitizeUserName() returns a lowercase hex encoding. They should
   // return the same value, but login_manager is already relying on
   // SanitizeUserName() and that's the value that chrome should see.
-  std::string sanitized =
-      brillo::cryptohome::home::SanitizeUserName(username);
+  std::string sanitized = brillo::cryptohome::home::SanitizeUserName(username);
   if (sanitized.empty())
     return FALSE;
   *OUT_sanitized = g_strndup(sanitized.data(), sanitized.size());
   return TRUE;
 }
 
-gboolean Service::IsMounted(gboolean *OUT_is_mounted, GError **error) {
+gboolean Service::IsMounted(gboolean* OUT_is_mounted, GError** error) {
   // We consider "the cryptohome" to be mounted if any existing cryptohome is
   // mounted.
   *OUT_is_mounted = FALSE;
@@ -2069,10 +1999,10 @@ gboolean Service::IsMounted(gboolean *OUT_is_mounted, GError **error) {
   return TRUE;
 }
 
-gboolean Service::IsMountedForUser(gchar *userid,
-                                   gboolean *OUT_is_mounted,
-                                   gboolean *OUT_is_ephemeral_mount,
-                                   GError **error) {
+gboolean Service::IsMountedForUser(gchar* userid,
+                                   gboolean* OUT_is_mounted,
+                                   gboolean* OUT_is_ephemeral_mount,
+                                   GError** error) {
   scoped_refptr<cryptohome::Mount> mount = GetMountForUser(userid);
   *OUT_is_mounted = false;
   *OUT_is_ephemeral_mount = false;
@@ -2102,13 +2032,13 @@ void Service::DoMount(scoped_refptr<cryptohome::Mount> mount,
   event->Signal();
 }
 
-gboolean Service::Mount(const gchar *userid,
-                        const gchar *key,
+gboolean Service::Mount(const gchar* userid,
+                        const gchar* key,
                         gboolean create_if_missing,
                         gboolean ensure_ephemeral,
-                        gint *OUT_error_code,
-                        gboolean *OUT_result,
-                        GError **error) {
+                        gint* OUT_error_code,
+                        gboolean* OUT_result,
+                        GError** error) {
   CleanUpHiddenMounts();
 
   // This is safe even if cryptohomed restarts during a multi-mount
@@ -2232,9 +2162,9 @@ gboolean Service::Mount(const gchar *userid,
 
   PostTask(FROM_HERE,
            base::Bind(&Service::DoMount, base::Unretained(this),
-                      base::RetainedRef(user_mount),
-                      std::cref(credentials), std::cref(mount_args),
-                      base::Unretained(&event), base::Unretained(&return_code),
+                      base::RetainedRef(user_mount), std::cref(credentials),
+                      std::cref(mount_args), base::Unretained(&event),
+                      base::Unretained(&return_code),
                       base::Unretained(&return_status)));
 
   event.Wait();
@@ -2309,7 +2239,7 @@ void Service::DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
 
   if (request->has_create()) {
     if (request->create().copy_authorization_key()) {
-      Key *auth_key = request->mutable_create()->add_keys();
+      Key* auth_key = request->mutable_create()->add_keys();
       *auth_key = authorization->key();
       // Don't allow a key creation and mount if the key lacks
       // the privileges.
@@ -2918,10 +2848,10 @@ void Service::GetChallengeCredentialsPcrRestrictions(
   }
 }
 
-gboolean Service::MountEx(const GArray *account_id,
-                          const GArray *authorization_request,
-                          const GArray *mount_request,
-                          DBusGMethodInvocation *context) {
+gboolean Service::MountEx(const GArray* account_id,
+                          const GArray* authorization_request,
+                          const GArray* mount_request,
+                          DBusGMethodInvocation* context) {
   LOG(INFO) << "Received a mount request.";
 
   std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
@@ -3016,7 +2946,7 @@ gboolean Service::MountGuestEx(GArray* request,
 }
 
 // Unmount all mounted cryptohomes.
-gboolean Service::Unmount(gboolean *OUT_result, GError **error) {
+gboolean Service::Unmount(gboolean* OUT_result, GError** error) {
   *OUT_result = RemoveAllMounts(true);
   // If there are any unexpected mounts lingering from a crash/restart,
   // clean them up now.
@@ -3062,7 +2992,7 @@ gboolean Service::UnmountEx(GArray* request, DBusGMethodInvocation* context) {
 }
 
 gboolean Service::UpdateCurrentUserActivityTimestamp(gint time_shift_sec,
-                                                     GError **error) {
+                                                     GError** error) {
   base::AutoLock _lock(mounts_lock_);
   for (const auto& mount_pair : mounts_) {
     mount_pair.second->UpdateCurrentUserActivityTimestamp(time_shift_sec);
@@ -3147,15 +3077,14 @@ gboolean Service::TpmGetVersionStructured(guint32* OUT_family,
     return FALSE;
   }
 
-  *OUT_family           = version_info.family;
-  *OUT_spec_level       = version_info.spec_level;
-  *OUT_manufacturer     = version_info.manufacturer;
-  *OUT_tpm_model        = version_info.tpm_model;
+  *OUT_family = version_info.family;
+  *OUT_spec_level = version_info.spec_level;
+  *OUT_manufacturer = version_info.manufacturer;
+  *OUT_tpm_model = version_info.tpm_model;
   *OUT_firmware_version = version_info.firmware_version;
-  std::string vendor_specific_hex =
-      base::HexEncode(version_info.vendor_specific.data(),
-                      version_info.vendor_specific.size());
-  *OUT_vendor_specific  = g_strdup(vendor_specific_hex.c_str());
+  std::string vendor_specific_hex = base::HexEncode(
+      version_info.vendor_specific.data(), version_info.vendor_specific.size());
+  *OUT_vendor_specific = g_strdup(vendor_specific_hex.c_str());
 
   return TRUE;
 }
@@ -3209,7 +3138,7 @@ gboolean Service::Pkcs11GetTpmTokenInfoForUser(gchar* IN_username,
   return TRUE;
 }
 
-gboolean Service::Pkcs11Terminate(gchar* username, GError **error) {
+gboolean Service::Pkcs11Terminate(gchar* username, GError** error) {
   base::AutoLock _lock(mounts_lock_);
   for (const auto& mount_pair : mounts_)
     mount_pair.second->RemovePkcs11Token();
@@ -3285,8 +3214,7 @@ gboolean Service::InstallAttributesIsInvalid(gboolean* OUT_is_invalid,
 }
 
 gboolean Service::InstallAttributesIsFirstInstall(
-    gboolean* OUT_is_first_install,
-    GError** error) {
+    gboolean* OUT_is_first_install, GError** error) {
   *OUT_is_first_install =
       (install_attrs_->status() == InstallAttributes::Status::kFirstInstall);
   return TRUE;
@@ -3329,8 +3257,7 @@ void Service::DoVerifyBootLockbox(const brillo::Blob& request,
 
   VerifyBootLockboxRequest request_pb;
   if (!request_pb.ParseFromArray(request.data(), request.size()) ||
-      !request_pb.has_data() ||
-      !request_pb.has_signature()) {
+      !request_pb.has_data() || !request_pb.has_signature()) {
     SendInvalidArgsReply(context, "Bad VerifyBootLockboxRequest");
     return;
   }
@@ -3461,12 +3388,10 @@ void Service::DoGetLoginStatus(const brillo::SecureBlob& request,
   }
   BaseReply reply;
   std::string owner;
-  reply.MutableExtension(
-      GetLoginStatusReply::reply)->set_owner_user_exists(
-          homedirs_->GetPlainOwner(&owner));
-  reply.MutableExtension(
-      GetLoginStatusReply::reply)->set_boot_lockbox_finalized(
-          boot_lockbox_->IsFinalized());
+  reply.MutableExtension(GetLoginStatusReply::reply)
+      ->set_owner_user_exists(homedirs_->GetPlainOwner(&owner));
+  reply.MutableExtension(GetLoginStatusReply::reply)
+      ->set_boot_lockbox_finalized(boot_lockbox_->IsFinalized());
   SendReply(context, reply);
 }
 
@@ -3480,8 +3405,7 @@ gboolean Service::GetLoginStatus(const GArray* request,
 }
 
 void Service::DoTpmAttestationGetEnrollmentPreparationsEx(
-    const brillo::Blob& request,
-    DBusGMethodInvocation* context) {
+    const brillo::Blob& request, DBusGMethodInvocation* context) {
   AttestationGetEnrollmentPreparationsRequest request_pb;
   if (!request_pb.ParseFromArray(request.data(), request.size())) {
     SendInvalidArgsReply(context,
@@ -3499,7 +3423,8 @@ void Service::DoTpmAttestationGetEnrollmentPreparationsEx(
 
 gboolean Service::TpmAttestationGetEnrollmentPreparationsEx(
     const GArray* request, DBusGMethodInvocation* context) {
-  mount_thread_.task_runner()->PostTask(FROM_HERE,
+  mount_thread_.task_runner()->PostTask(
+      FROM_HERE,
       base::Bind(&Service::DoTpmAttestationGetEnrollmentPreparationsEx,
                  base::Unretained(this),
                  brillo::Blob(request->data, request->data + request->len),
@@ -3515,8 +3440,8 @@ void Service::DoGetTpmStatus(const brillo::SecureBlob& request,
     return;
   }
   BaseReply reply;
-  GetTpmStatusReply* extension = reply.MutableExtension(
-      GetTpmStatusReply::reply);
+  GetTpmStatusReply* extension =
+      reply.MutableExtension(GetTpmStatusReply::reply);
   extension->set_enabled(tpm_init_->IsTpmEnabled());
   extension->set_owned(tpm_init_->IsTpmOwned());
   SecureBlob owner_password;
@@ -3654,8 +3579,7 @@ gboolean Service::EndFingerprintAuthSession(
 }
 
 void Service::DoGetFirmwareManagementParameters(
-    const brillo::SecureBlob& request,
-    DBusGMethodInvocation* context) {
+    const brillo::SecureBlob& request, DBusGMethodInvocation* context) {
   GetFirmwareManagementParametersRequest request_pb;
   if (!request_pb.ParseFromArray(request.data(), request.size())) {
     SendInvalidArgsReply(context, "Bad GetFirmwareManagementParametersRequest");
@@ -3663,7 +3587,7 @@ void Service::DoGetFirmwareManagementParameters(
   }
   BaseReply reply;
   GetFirmwareManagementParametersReply* extension =
-    reply.MutableExtension(GetFirmwareManagementParametersReply::reply);
+      reply.MutableExtension(GetFirmwareManagementParametersReply::reply);
 
   if (!firmware_management_parameters_->Load()) {
     reply.set_error(CRYPTOHOME_ERROR_FIRMWARE_MANAGEMENT_PARAMETERS_INVALID);
@@ -3684,8 +3608,8 @@ void Service::DoGetFirmwareManagementParameters(
   SendReply(context, reply);
 }
 
-gboolean Service::GetFirmwareManagementParameters(const GArray* request,
-    DBusGMethodInvocation* context) {
+gboolean Service::GetFirmwareManagementParameters(
+    const GArray* request, DBusGMethodInvocation* context) {
   PostTask(FROM_HERE,
            base::Bind(&Service::DoGetFirmwareManagementParameters,
                       base::Unretained(this),
@@ -3695,8 +3619,7 @@ gboolean Service::GetFirmwareManagementParameters(const GArray* request,
 }
 
 void Service::DoSetFirmwareManagementParameters(
-    const brillo::SecureBlob& request,
-    DBusGMethodInvocation* context) {
+    const brillo::SecureBlob& request, DBusGMethodInvocation* context) {
   SetFirmwareManagementParametersRequest request_pb;
   if (!request_pb.ParseFromArray(request.data(), request.size())) {
     SendInvalidArgsReply(context, "Bad SetFirmwareManagementParametersRequest");
@@ -3732,8 +3655,8 @@ void Service::DoSetFirmwareManagementParameters(
   SendReply(context, reply);
 }
 
-gboolean Service::SetFirmwareManagementParameters(const GArray* request,
-                          DBusGMethodInvocation* context) {
+gboolean Service::SetFirmwareManagementParameters(
+    const GArray* request, DBusGMethodInvocation* context) {
   PostTask(FROM_HERE,
            base::Bind(&Service::DoSetFirmwareManagementParameters,
                       base::Unretained(this),
@@ -3743,8 +3666,7 @@ gboolean Service::SetFirmwareManagementParameters(const GArray* request,
 }
 
 void Service::DoRemoveFirmwareManagementParameters(
-    const brillo::SecureBlob& request,
-    DBusGMethodInvocation* context) {
+    const brillo::SecureBlob& request, DBusGMethodInvocation* context) {
   RemoveFirmwareManagementParametersRequest request_pb;
   if (!request_pb.ParseFromArray(request.data(), request.size())) {
     SendInvalidArgsReply(context,
@@ -3762,8 +3684,8 @@ void Service::DoRemoveFirmwareManagementParameters(
   SendReply(context, reply);
 }
 
-gboolean Service::RemoveFirmwareManagementParameters(const GArray* request,
-                             DBusGMethodInvocation* context) {
+gboolean Service::RemoveFirmwareManagementParameters(
+    const GArray* request, DBusGMethodInvocation* context) {
   PostTask(FROM_HERE,
            base::Bind(&Service::DoRemoveFirmwareManagementParameters,
                       base::Unretained(this),
@@ -3784,8 +3706,7 @@ gboolean Service::GetStatusString(gchar** OUT_status, GError** error) {
   auto attrs = install_attrs_->GetStatus();
 
   Tpm::TpmStatusInfo tpm_status_info;
-  tpm_->GetStatus(tpm_init_->GetCryptohomeKey(),
-                  &tpm_status_info);
+  tpm_->GetStatus(tpm_init_->GetCryptohomeKey(), &tpm_status_info);
   auto tpm = std::make_unique<base::DictionaryValue>();
   tpm->SetBoolean("can_connect", tpm_status_info.can_connect);
   tpm->SetBoolean("can_load_srk", tpm_status_info.can_load_srk);
@@ -3911,8 +3832,7 @@ void Service::ResetDictionaryAttackMitigation() {
   }
   brillo::Blob delegate_blob, delegate_secret;
   bool has_reset_lock_permissions = false;
-  if (!AttestationGetDelegateCredentials(&delegate_blob,
-                                         &delegate_secret,
+  if (!AttestationGetDelegateCredentials(&delegate_blob, &delegate_secret,
                                          &has_reset_lock_permissions)) {
     ReportDictionaryAttackResetStatus(kDelegateNotAvailable);
     return;
@@ -3953,8 +3873,7 @@ scoped_refptr<cryptohome::Mount> Service::CreateUntrackedMountForUser(
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
   m = mount_factory_->New();
-  if (!m->Init(platform_, crypto_,
-               user_timestamp_cache_.get())) {
+  if (!m->Init(platform_, crypto_, user_timestamp_cache_.get())) {
     return nullptr;
   }
   m->set_enterprise_owned(enterprise_owned_);
@@ -4068,8 +3987,7 @@ bool Service::GetPublicMountPassKey(const std::string& public_mount_id,
   if (!CreatePublicMountSaltIfNeeded())
     return false;
   SecureBlob passkey;
-  Crypto::PasswordToPasskey(public_mount_id.c_str(),
-                            public_mount_salt_,
+  Crypto::PasswordToPasskey(public_mount_id.c_str(), public_mount_salt_,
                             &passkey);
   *public_mount_passkey = passkey.to_string();
   return true;
@@ -4112,9 +4030,8 @@ void Service::SendDircryptoMigrationProgressSignalProto(
       progress.current_bytes(), progress.total_bytes());
 }
 
-void Service::DoMigrateToDircrypto(
-    AccountIdentifier* identifier,
-    MigrationType migration_type) {
+void Service::DoMigrateToDircrypto(AccountIdentifier* identifier,
+                                   MigrationType migration_type) {
   scoped_refptr<cryptohome::Mount> mount =
       GetMountForUser(GetAccountId(*identifier));
   if (!mount.get()) {
@@ -4166,7 +4083,6 @@ gboolean Service::GetSupportedKeyPolicies(const GArray* request,
   return TRUE;
 }
 
-
 void Service::DoGetSupportedKeyPolicies(const std::string& request,
                                         DBusGMethodInvocation* context) {
   GetSupportedKeyPoliciesRequest request_pb;
@@ -4182,7 +4098,7 @@ void Service::DoGetSupportedKeyPolicies(const std::string& request,
   if (use_tpm_ && tpm_) {
     if (tpm_->GetLECredentialBackend() &&
         tpm_->GetLECredentialBackend()->IsSupported()) {
-     extension->set_low_entropy_credentials(true);
+      extension->set_low_entropy_credentials(true);
     }
   } else {
     extension->set_low_entropy_credentials(false);
@@ -4242,8 +4158,7 @@ gboolean Service::GetCurrentSpaceForGid(guint32 gid,
 }
 
 gboolean Service::LockToSingleUserMountUntilReboot(
-    const GArray* request,
-    DBusGMethodInvocation* context) {
+    const GArray* request, DBusGMethodInvocation* context) {
   LockToSingleUserMountUntilRebootRequest request_pb;
   if (!request_pb.ParseFromArray(request->data, request->len)) {
     SendInvalidArgsReply(context, "Bad DisableLoginUntilRebootRequest.");
@@ -4255,15 +4170,12 @@ gboolean Service::LockToSingleUserMountUntilReboot(
     return FALSE;
   }
 
-  const std::string obfuscated_username =
-      SanitizeUserNameWithSalt(GetAccountId(request_pb.account_id()),
-                              system_salt_);
+  const std::string obfuscated_username = SanitizeUserNameWithSalt(
+      GetAccountId(request_pb.account_id()), system_salt_);
   mount_thread_.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&Service::DoLockToSingleUserMountUntilReboot,
-                 base::Unretained(this),
-                 obfuscated_username,
-                 base::Unretained(context)));
+      FROM_HERE, base::Bind(&Service::DoLockToSingleUserMountUntilReboot,
+                            base::Unretained(this), obfuscated_username,
+                            base::Unretained(context)));
   return TRUE;
 }
 
@@ -4292,8 +4204,7 @@ gboolean Service::GetRsuDeviceId(const GArray* request,
 }
 
 void Service::DoLockToSingleUserMountUntilReboot(
-    const std::string& obfuscated_username,
-    DBusGMethodInvocation* context) {
+    const std::string& obfuscated_username, DBusGMethodInvocation* context) {
   homedirs_->SetLockedToSingleUser();
   brillo::Blob pcr_value;
   BaseReply reply;
@@ -4341,8 +4252,8 @@ void Service::set_cleanup_threshold(uint64_t cleanup_threshold) {
   homedirs_->disk_cleanup()->set_cleanup_threshold(cleanup_threshold);
 }
 
-void Service::set_aggressive_cleanup_threshold
-    (uint64_t aggressive_cleanup_threshold) {
+void Service::set_aggressive_cleanup_threshold(
+    uint64_t aggressive_cleanup_threshold) {
   homedirs_->disk_cleanup()->set_aggressive_cleanup_threshold(
       aggressive_cleanup_threshold);
 }

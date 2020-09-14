@@ -122,10 +122,9 @@ gboolean cryptohome_remove_tracked_subdirectories(Cryptohome* self,
 gboolean cryptohome_async_remove_tracked_subdirectories(Cryptohome* self,
                                                         gint* OUT_async_id,
                                                         GError** error);
-gboolean cryptohome_update_current_user_activity_timestamp(
-    Cryptohome* self,
-    gint time_shift_sec,
-    GError** error);
+gboolean cryptohome_update_current_user_activity_timestamp(Cryptohome* self,
+                                                           gint time_shift_sec,
+                                                           GError** error);
 gboolean cryptohome_tpm_is_ready(Cryptohome* self,
                                  gboolean* OUT_ready,
                                  GError** error);
@@ -141,17 +140,13 @@ gboolean cryptohome_tpm_is_owned(Cryptohome* self,
 gboolean cryptohome_tpm_is_being_owned(Cryptohome* self,
                                        gboolean* OUT_owning,
                                        GError** error);
-gboolean cryptohome_tpm_can_attempt_ownership(Cryptohome* self,
-                                              GError** error);
-gboolean cryptohome_tpm_clear_stored_password(Cryptohome* self,
-                                              GError** error);
+gboolean cryptohome_tpm_can_attempt_ownership(Cryptohome* self, GError** error);
+gboolean cryptohome_tpm_clear_stored_password(Cryptohome* self, GError** error);
 gboolean cryptohome_tpm_is_attestation_prepared(Cryptohome* self,
                                                 gboolean* OUT_prepared,
                                                 GError** error);
 gboolean cryptohome_tpm_attestation_get_enrollment_preparations_ex(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* resp);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 gboolean cryptohome_tpm_verify_attestation_data(Cryptohome* self,
                                                 gboolean is_cros_core,
                                                 gboolean* OUT_verified,
@@ -161,15 +156,9 @@ gboolean cryptohome_tpm_verify_ek(Cryptohome* self,
                                   gboolean* OUT_verified,
                                   GError** error);
 gboolean cryptohome_tpm_attestation_create_enroll_request(
-    Cryptohome* self,
-    gint pca_type,
-    GArray** OUT_pca_request,
-    GError** error);
+    Cryptohome* self, gint pca_type, GArray** OUT_pca_request, GError** error);
 gboolean cryptohome_async_tpm_attestation_create_enroll_request(
-    Cryptohome* self,
-    gint pca_type,
-    gint* OUT_async_id,
-    GError** error);
+    Cryptohome* self, gint pca_type, gint* OUT_async_id, GError** error);
 gboolean cryptohome_tpm_attestation_enroll(Cryptohome* self,
                                            gint pca_type,
                                            GArray* pca_response,
@@ -351,11 +340,11 @@ gboolean cryptohome_tpm_attestation_get_ek(Cryptohome* self,
                                            gchar** OUT_ek_info,
                                            gboolean* OUT_success,
                                            GError** error);
-gboolean cryptohome_tpm_attestation_reset_identity(Cryptohome *self,
+gboolean cryptohome_tpm_attestation_reset_identity(Cryptohome* self,
                                                    gchar* reset_token,
                                                    GArray** OUT_reset_request,
                                                    gboolean* OUT_success,
-                                                   GError **error);
+                                                   GError** error);
 gboolean cryptohome_tpm_get_version_structured(Cryptohome* self,
                                                guint32* OUT_family,
                                                guint64* OUT_spec_level,
@@ -414,9 +403,7 @@ gboolean cryptohome_install_attributes_is_invalid(Cryptohome* self,
                                                   gboolean* OUT_is_invalid,
                                                   GError** error);
 gboolean cryptohome_install_attributes_is_first_install(
-                                                Cryptohome* self,
-                                                gboolean* OUT_is_first_install,
-                                                GError** error);
+    Cryptohome* self, gboolean* OUT_is_first_install, GError** error);
 gboolean cryptohome_sign_boot_lockbox(Cryptohome* self,
                                       GArray* request,
                                       DBusGMethodInvocation* resp);
@@ -457,17 +444,11 @@ gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
                                                  DBusGMethodInvocation* resp);
 
 gboolean cryptohome_get_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* resp);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 gboolean cryptohome_set_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* resp);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 gboolean cryptohome_remove_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* resp);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 
 gboolean cryptohome_migrate_to_dircrypto(Cryptohome* self,
                                          GArray* id,
@@ -504,9 +485,7 @@ gboolean cryptohome_get_current_space_for_gid(Cryptohome* self,
                                               GError** error);
 
 gboolean cryptohome_lock_to_single_user_mount_until_reboot(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* resp);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 
 gboolean cryptohome_get_rsu_device_id(Cryptohome* self,
                                       GArray* request,

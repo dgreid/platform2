@@ -113,14 +113,13 @@ class TpmImpl : public Tpm {
                   brillo::SecureBlob* sealed_value) override;
   bool Unseal(const brillo::SecureBlob& sealed_value,
               brillo::SecureBlob* value) override;
-  bool CreateCertifiedKey(
-      const brillo::SecureBlob& identity_key_blob,
-      const brillo::SecureBlob& external_data,
-      brillo::SecureBlob* certified_public_key,
-      brillo::SecureBlob* certified_public_key_der,
-      brillo::SecureBlob* certified_key_blob,
-      brillo::SecureBlob* certified_key_info,
-      brillo::SecureBlob* certified_key_proof) override;
+  bool CreateCertifiedKey(const brillo::SecureBlob& identity_key_blob,
+                          const brillo::SecureBlob& external_data,
+                          brillo::SecureBlob* certified_public_key,
+                          brillo::SecureBlob* certified_public_key_der,
+                          brillo::SecureBlob* certified_key_blob,
+                          brillo::SecureBlob* certified_key_info,
+                          brillo::SecureBlob* certified_key_proof) override;
   bool CreateDelegate(const std::set<uint32_t>& bound_pcrs,
                       uint8_t delegate_family_label,
                       uint8_t delegate_label,
@@ -240,8 +239,7 @@ class TpmImpl : public Tpm {
 
  private:
   // Connects to the TPM and return its context at |context_handle|.
-  bool OpenAndConnectTpm(TSS_HCONTEXT* context_handle,
-                         TSS_RESULT* result);
+  bool OpenAndConnectTpm(TSS_HCONTEXT* context_handle, TSS_RESULT* result);
 
   // Gets the Public Key blob associated with |key_handle|.
   bool GetPublicKeyBlob(TSS_HCONTEXT context_handle,
@@ -277,8 +275,7 @@ class TpmImpl : public Tpm {
   // Populates |context_handle| with a valid TSS_HCONTEXT and |tpm_handle| with
   // its matching TPM object iff the context can be created and a TPM object
   // exists in the TSS.
-  bool ConnectContextAsUser(TSS_HCONTEXT* context_handle,
-                            TSS_HTPM* tpm_handle);
+  bool ConnectContextAsUser(TSS_HCONTEXT* context_handle, TSS_HTPM* tpm_handle);
 
   // Returns the size of the specified NVRAM space.
   //
@@ -348,7 +345,8 @@ class TpmImpl : public Tpm {
   //   endorsementCredential - The endorsement credential.
   //   platformCredential - The platform credential.
   //   conformanceCredential - The conformance credential.
-  bool DecryptIdentityRequest(RSA* pca_key, const brillo::SecureBlob& request,
+  bool DecryptIdentityRequest(RSA* pca_key,
+                              const brillo::SecureBlob& request,
                               brillo::SecureBlob* identity_binding,
                               brillo::SecureBlob* endorsement_credential,
                               brillo::SecureBlob* platform_credential,

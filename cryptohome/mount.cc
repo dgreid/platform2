@@ -142,7 +142,8 @@ Mount::~Mount() {
     UnmountCryptohome();
 }
 
-bool Mount::Init(Platform* platform, Crypto* crypto,
+bool Mount::Init(Platform* platform,
+                 Crypto* crypto,
                  UserOldestActivityTimestampCache* cache) {
   platform_ = platform;
   crypto_ = crypto;
@@ -299,17 +300,13 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   }
 
   MountError local_mount_error = MOUNT_ERROR_NONE;
-  bool result = MountCryptohomeInner(credentials,
-                                     mount_args,
-                                     true,
-                                     &local_mount_error);
+  bool result =
+      MountCryptohomeInner(credentials, mount_args, true, &local_mount_error);
   // Retry once if there is a TPM communications failure
   if (!result && local_mount_error == MOUNT_ERROR_TPM_COMM_ERROR) {
     LOG(WARNING) << "TPM communication error. Retrying.";
-    result = MountCryptohomeInner(credentials,
-                                  mount_args,
-                                  true,
-                                  &local_mount_error);
+    result =
+        MountCryptohomeInner(credentials, mount_args, true, &local_mount_error);
   }
   if (mount_error) {
     *mount_error = local_mount_error;
@@ -324,9 +321,8 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
   // that is used to encrypt the file contents when the file is persisted to the
   // lower filesystem by eCryptfs.
   *key_signature = CryptoLib::SecureBlobToHex(vault_keyset.fek_sig());
-  if (!platform_->AddEcryptfsAuthToken(
-        vault_keyset.fek(), *key_signature,
-        vault_keyset.fek_salt())) {
+  if (!platform_->AddEcryptfsAuthToken(vault_keyset.fek(), *key_signature,
+                                       vault_keyset.fek_salt())) {
     LOG(ERROR) << "Couldn't add eCryptfs file encryption key to keyring.";
     return false;
   }
@@ -335,9 +331,9 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
   // key that is used to encrypt the file name when the file is persisted to the
   // lower filesystem by eCryptfs.
   *filename_key_signature = CryptoLib::SecureBlobToHex(vault_keyset.fnek_sig());
-  if (!platform_->AddEcryptfsAuthToken(
-        vault_keyset.fnek(), *filename_key_signature,
-        vault_keyset.fnek_salt())) {
+  if (!platform_->AddEcryptfsAuthToken(vault_keyset.fnek(),
+                                       *filename_key_signature,
+                                       vault_keyset.fnek_salt())) {
     LOG(ERROR) << "Couldn't add eCryptfs filename encryption key to keyring.";
     return false;
   }
@@ -439,10 +435,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
       }
       // Allow one recursion into MountCryptohomeInner by blocking re-create on
       // fatal.
-      bool local_result = MountCryptohomeInner(credentials,
-                                               mount_args,
-                                               false,
-                                               mount_error);
+      bool local_result =
+          MountCryptohomeInner(credentials, mount_args, false, mount_error);
       // If the mount was successful, set the status to indicate that the
       // cryptohome was recreated.
       if (local_result) {
@@ -517,8 +511,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
     return false;
   }
   // When migrating, mount both eCryptfs and dircrypto.
-  const bool should_mount_ecryptfs = mount_type_ == MountType::ECRYPTFS ||
-      mount_args.to_migrate_from_ecryptfs;
+  const bool should_mount_ecryptfs =
+      mount_type_ == MountType::ECRYPTFS || mount_args.to_migrate_from_ecryptfs;
   const bool should_mount_dircrypto = mount_type_ == MountType::DIR_CRYPTO;
   if (!should_mount_ecryptfs && !should_mount_dircrypto) {
     NOTREACHED() << "Unexpected mount type " << static_cast<int>(mount_type_);
@@ -544,8 +538,7 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   std::string key_signature, fnek_signature;
   if (should_mount_ecryptfs) {
     // Add the decrypted key to the keyring so that ecryptfs can use it.
-    if (!AddEcryptfsAuthToken(vault_keyset, &key_signature,
-                              &fnek_signature)) {
+    if (!AddEcryptfsAuthToken(vault_keyset, &key_signature, &fnek_signature)) {
       LOG(ERROR) << "Error adding eCryptfs keys.";
       *mount_error = MOUNT_ERROR_KEYRING_FAILED;
       return false;
@@ -664,16 +657,14 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   // TODO(fqj,b/116072767) Ignore errors since unlabeled files are currently
   // still okay during current development progress.
   platform_->RestoreSELinuxContexts(
-      homedirs_->GetUserMountDirectory(obfuscated_username),
-      true);
+      homedirs_->GetUserMountDirectory(obfuscated_username), true);
 
   return true;
 }
 
-bool Mount::MountEphemeralCryptohome(
-    const std::string& username,
-    MountHelperInterface* ephemeral_mounter,
-    base::Closure cleanup) {
+bool Mount::MountEphemeralCryptohome(const std::string& username,
+                                     MountHelperInterface* ephemeral_mounter,
+                                     base::Closure cleanup) {
   // Ephemeral cryptohome can't be mounted twice.
   CHECK(ephemeral_mounter->CanPerformEphemeralMount());
 
@@ -797,10 +788,9 @@ bool Mount::CreateCryptohome(const Credentials& credentials) const {
   }
 
   // TODO(wad) move to storage by label-derivative and not number.
-  if (!StoreVaultKeysetForUser(
-       credentials.GetObfuscatedUsername(system_salt_),
-       0,  // first key
-       &serialized)) {
+  if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
+                               0,  // first key
+                               &serialized)) {
     LOG(ERROR) << "Failed to store vault keyset for new user";
     return false;
   }
@@ -870,8 +860,7 @@ bool Mount::LoadVaultKeyset(const Credentials& credentials,
                             int index,
                             SerializedVaultKeyset* serialized) const {
   return LoadVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
-                                index,
-                                serialized);
+                                index, serialized);
 }
 
 bool Mount::LoadVaultKeysetForUser(const std::string& obfuscated_username,
@@ -905,16 +894,15 @@ bool Mount::LoadVaultKeysetForUser(const std::string& obfuscated_username,
   return true;
 }
 
-bool Mount::StoreVaultKeysetForUser(
-    const std::string& obfuscated_username,
-    int index,
-    SerializedVaultKeyset* serialized) const {
+bool Mount::StoreVaultKeysetForUser(const std::string& obfuscated_username,
+                                    int index,
+                                    SerializedVaultKeyset* serialized) const {
   if (index < 0 || index > kKeyFileMax) {
     LOG(ERROR) << "Attempted to store an invalid key index: " << index;
     return false;
   }
-  if (platform_->FileExists(GetUserLegacyKeyFileForUser(
-          obfuscated_username, index))) {
+  if (platform_->FileExists(
+          GetUserLegacyKeyFileForUser(obfuscated_username, index))) {
     SerializedVaultKeyset stored;
     LoadVaultKeysetForUser(obfuscated_username, index, &stored);
     if (serialized->has_last_activity_timestamp()) {
@@ -934,8 +922,7 @@ bool Mount::StoreVaultKeysetForUser(
   serialized->SerializeWithCachedSizesToArray(
       static_cast<google::protobuf::uint8*>(final_blob.data()));
   return platform_->WriteFileAtomicDurable(
-      GetUserLegacyKeyFileForUser(obfuscated_username, index),
-      final_blob,
+      GetUserLegacyKeyFileForUser(obfuscated_username, index), final_blob,
       kKeyFilePermissions);
 }
 
@@ -944,7 +931,7 @@ bool Mount::LoadTimestampForUser(const std::string& obfuscated_username,
                                  Timestamp* timestamp) const {
   std::string timestamp_str;
   base::FilePath timestamp_file =
-    GetUserTimestampFileForUser(obfuscated_username, index);
+      GetUserTimestampFileForUser(obfuscated_username, index);
 
   if (!platform_->ReadFileToString(timestamp_file, &timestamp_str)) {
     return false;
@@ -955,8 +942,7 @@ bool Mount::LoadTimestampForUser(const std::string& obfuscated_username,
 
 bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
                                   int index,
-                                  SerializedVaultKeyset* serialized)
-  const {
+                                  SerializedVaultKeyset* serialized) const {
   Timestamp timestamp;
   timestamp.set_timestamp(serialized->last_activity_timestamp());
   std::string timestamp_str;
@@ -964,8 +950,8 @@ bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
     return false;
   }
   if (!platform_->WriteStringToFileAtomicDurable(
-      GetUserTimestampFileForUser(obfuscated_username, index),
-      timestamp_str, kKeyFilePermissions)) {
+          GetUserTimestampFileForUser(obfuscated_username, index),
+          timestamp_str, kKeyFilePermissions)) {
     LOG(ERROR) << "Failed writing to timestamp file";
     return false;
   }
@@ -979,9 +965,8 @@ bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
     serialized->SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(blob.data()));
     return platform_->WriteFileAtomicDurable(
-                GetUserLegacyKeyFileForUser(obfuscated_username, index),
-                blob,
-                kKeyFilePermissions);
+        GetUserLegacyKeyFileForUser(obfuscated_username, index), blob,
+        kKeyFilePermissions);
   }
   return true;
 }
@@ -1028,19 +1013,17 @@ bool Mount::DecryptVaultKeyset(const Credentials& credentials,
   // If the vault keyset is signature-challenge protected, we should not
   // re-encrypt it at all (that is unnecessary).
   const unsigned crypt_flags = serialized->flags();
-  bool pcr_bound =
-      (crypt_flags & SerializedVaultKeyset::PCR_BOUND) != 0;
-  bool tpm_wrapped =
-      (crypt_flags & SerializedVaultKeyset::TPM_WRAPPED) != 0;
+  bool pcr_bound = (crypt_flags & SerializedVaultKeyset::PCR_BOUND) != 0;
+  bool tpm_wrapped = (crypt_flags & SerializedVaultKeyset::TPM_WRAPPED) != 0;
   bool scrypt_wrapped =
       (crypt_flags & SerializedVaultKeyset::SCRYPT_WRAPPED) != 0;
   bool scrypt_derived =
       (crypt_flags & SerializedVaultKeyset::SCRYPT_DERIVED) != 0;
   bool is_signature_challenge_protected =
       (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
-  bool should_tpm = (crypto_->has_tpm() && use_tpm_ &&
-                     crypto_->is_cryptohome_key_loaded() &&
-                     !is_signature_challenge_protected);
+  bool should_tpm =
+      (crypto_->has_tpm() && use_tpm_ && crypto_->is_cryptohome_key_loaded() &&
+       !is_signature_challenge_protected);
   bool is_le_credential =
       (crypt_flags & SerializedVaultKeyset::LE_CREDENTIAL) != 0;
   bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
@@ -1110,7 +1093,7 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
                                  VaultKeyset* vault_keyset,
                                  SerializedVaultKeyset* serialized) const {
   std::string obfuscated_username =
-    credentials.GetObfuscatedUsername(system_salt_);
+      credentials.GetObfuscatedUsername(system_salt_);
   std::vector<FilePath> files(2);
   files[0] = GetUserSaltFileForUser(obfuscated_username, key_index);
   files[1] = GetUserLegacyKeyFileForUser(obfuscated_username, key_index);
@@ -1137,9 +1120,8 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   // master.<index> to label=<kKeyLegacyFormat,index> for checking on
   // label uniqueness.  This means that we will still be able to use the
   // lack of KeyData in the future as input to migration.
-  if (!StoreVaultKeysetForUser(
-        credentials.GetObfuscatedUsername(system_salt_),
-        key_index, serialized)) {
+  if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
+                               key_index, serialized)) {
     LOG(ERROR) << "Write to master key failed";
     RevertCacheFiles(files);
     return false;
@@ -1175,8 +1157,7 @@ bool Mount::MountGuestCryptohome() {
                                   std::move(cleanup));
 }
 
-FilePath Mount::GetUserDirectory(
-    const Credentials& credentials) const {
+FilePath Mount::GetUserDirectory(const Credentials& credentials) const {
   return GetUserDirectoryForUser(
       credentials.GetObfuscatedUsername(system_salt_));
 }
@@ -1186,8 +1167,8 @@ FilePath Mount::GetUserDirectoryForUser(
   return shadow_root_.Append(obfuscated_username);
 }
 
-FilePath Mount::GetUserSaltFileForUser(
-    const std::string& obfuscated_username, int index) const {
+FilePath Mount::GetUserSaltFileForUser(const std::string& obfuscated_username,
+                                       int index) const {
   return GetUserLegacyKeyFileForUser(obfuscated_username, index)
       .AddExtension("salt");
 }
@@ -1195,7 +1176,7 @@ FilePath Mount::GetUserSaltFileForUser(
 FilePath Mount::GetUserTimestampFileForUser(
     const std::string& obfuscated_username, int index) const {
   return GetUserLegacyKeyFileForUser(obfuscated_username, index)
-    .AddExtension("timestamp");
+      .AddExtension("timestamp");
 }
 
 FilePath Mount::GetUserLegacyKeyFileForUser(
@@ -1207,15 +1188,16 @@ FilePath Mount::GetUserLegacyKeyFileForUser(
 }
 
 // This is the new planned format for keyfile storage.
-FilePath Mount::GetUserKeyFileForUser(
-    const std::string& obfuscated_username, const std::string& label) const {
+FilePath Mount::GetUserKeyFileForUser(const std::string& obfuscated_username,
+                                      const std::string& label) const {
   DCHECK(!label.empty());
   // SHA1 is not for any other purpose than to provide a reasonably
   // collision-resistant, fixed length, path-safe file suffix.
   std::string digest = base::SHA1HashString(label);
   std::string safe_label = base::HexEncode(digest.c_str(), digest.length());
   return shadow_root_.Append(obfuscated_username)
-                     .Append(kKeyFile).AddExtension(safe_label);
+      .Append(kKeyFile)
+      .AddExtension(safe_label);
 }
 
 FilePath Mount::GetUserTemporaryMountDirectory(
@@ -1226,19 +1208,19 @@ FilePath Mount::GetUserTemporaryMountDirectory(
 bool Mount::CheckChapsDirectory(const FilePath& dir,
                                 const FilePath& legacy_dir) {
   const Platform::Permissions kChapsDirPermissions = {
-    chaps_user_,                 // chaps
-    default_access_group_,       // chronos-access
-    S_IRWXU | S_IRGRP | S_IXGRP  // 0750
+      chaps_user_,                 // chaps
+      default_access_group_,       // chronos-access
+      S_IRWXU | S_IRGRP | S_IXGRP  // 0750
   };
   const Platform::Permissions kChapsFilePermissions = {
-    chaps_user_,                 // chaps
-    default_access_group_,       // chronos-access
-    S_IRUSR | S_IWUSR | S_IRGRP  // 0640
+      chaps_user_,                 // chaps
+      default_access_group_,       // chronos-access
+      S_IRUSR | S_IWUSR | S_IRGRP  // 0640
   };
   const Platform::Permissions kChapsSaltPermissions = {
-    0,                 // root
-    0,                 // root
-    S_IRUSR | S_IWUSR  // 0600
+      0,                 // root
+      0,                 // root
+      S_IRUSR | S_IWUSR  // 0600
   };
 
   // If the Chaps database directory does not exist, create it.
@@ -1258,10 +1240,8 @@ bool Mount::CheckChapsDirectory(const FilePath& dir,
         LOG(ERROR) << "Failed to create " << dir.value();
         return false;
       }
-      if (!platform_->SetOwnership(dir,
-                                   kChapsDirPermissions.user,
-                                   kChapsDirPermissions.group,
-                                   true)) {
+      if (!platform_->SetOwnership(dir, kChapsDirPermissions.user,
+                                   kChapsDirPermissions.group, true)) {
         LOG(ERROR) << "Couldn't set file ownership for " << dir.value();
         return false;
       }
@@ -1276,10 +1256,8 @@ bool Mount::CheckChapsDirectory(const FilePath& dir,
   // if not as expected then attempt to apply correct permissions.
   std::map<FilePath, Platform::Permissions> special_cases;
   special_cases[dir.Append("auth_data_salt")] = kChapsSaltPermissions;
-  if (!platform_->ApplyPermissionsRecursive(dir,
-                                            kChapsFilePermissions,
-                                            kChapsDirPermissions,
-                                            special_cases)) {
+  if (!platform_->ApplyPermissionsRecursive(
+          dir, kChapsFilePermissions, kChapsDirPermissions, special_cases)) {
     LOG(ERROR) << "Chaps permissions failure.";
     return false;
   }
@@ -1305,14 +1283,11 @@ bool Mount::InsertPkcs11Token() {
   if (is_pkcs11_passkey_migration_required_) {
     LOG(INFO) << "Migrating authorization data.";
     SecureBlob old_auth_data;
-    if (!crypto_->PasskeyToTokenAuthData(legacy_pkcs11_passkey_,
-                                         salt_file,
+    if (!crypto_->PasskeyToTokenAuthData(legacy_pkcs11_passkey_, salt_file,
                                          &old_auth_data))
       return false;
-    chaps_client->ChangeTokenAuthData(
-        token_dir,
-        old_auth_data,
-        pkcs11_token_auth_data_);
+    chaps_client->ChangeTokenAuthData(token_dir, old_auth_data,
+                                      pkcs11_token_auth_data_);
     is_pkcs11_passkey_migration_required_ = false;
     legacy_pkcs11_passkey_.clear();
   }
@@ -1320,11 +1295,10 @@ bool Mount::InsertPkcs11Token() {
   Pkcs11Init pkcs11init;
   int slot_id = 0;
   if (!chaps_client->LoadToken(
-      IsolateCredentialManager::GetDefaultIsolateCredential(),
-      token_dir,
-      pkcs11_token_auth_data_,
-      pkcs11init.GetTpmTokenLabelForUser(current_user_->username()),
-      &slot_id)) {
+          IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir,
+          pkcs11_token_auth_data_,
+          pkcs11init.GetTpmTokenLabelForUser(current_user_->username()),
+          &slot_id)) {
     LOG(ERROR) << "Failed to load PKCS #11 token.";
     ReportCryptohomeError(kLoadPkcs11TokenFailed);
   }
@@ -1339,8 +1313,7 @@ void Mount::RemovePkcs11Token() {
   std::unique_ptr<chaps::TokenManagerClient> chaps_client(
       chaps_client_factory_->New());
   chaps_client->UnloadToken(
-      IsolateCredentialManager::GetDefaultIsolateCredential(),
-      token_dir);
+      IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir);
 }
 
 bool Mount::CacheOldFiles(const std::vector<FilePath>& files) const {
@@ -1384,11 +1357,12 @@ bool Mount::DeleteCacheFiles(const std::vector<FilePath>& files) const {
   return true;
 }
 
-void Mount::GetUserSalt(const Credentials& credentials, bool force,
-                        int key_index, SecureBlob* salt) const {
+void Mount::GetUserSalt(const Credentials& credentials,
+                        bool force,
+                        int key_index,
+                        SecureBlob* salt) const {
   FilePath path(GetUserSaltFileForUser(
-                  credentials.GetObfuscatedUsername(system_salt_),
-                  key_index));
+      credentials.GetObfuscatedUsername(system_salt_), key_index));
   crypto_->GetOrCreateSalt(path, CRYPTOHOME_DEFAULT_SALT_LENGTH, force, salt);
 }
 
@@ -1476,11 +1450,8 @@ bool Mount::MigrateToDircrypto(
   // Do migration.
   constexpr uint64_t kMaxChunkSize = 128 * 1024 * 1024;
   dircrypto_data_migrator::MigrationHelper migrator(
-      platform_,
-      temporary_mount,
-      mount_point_,
-      GetUserDirectoryForUser(obfuscated_username),
-      kMaxChunkSize,
+      platform_, temporary_mount, mount_point_,
+      GetUserDirectoryForUser(obfuscated_username), kMaxChunkSize,
       migration_type);
   {  // Abort if already cancelled.
     base::AutoLock lock(active_dircrypto_migrator_lock_);
@@ -1524,7 +1495,9 @@ void Mount::MaybeCancelActiveDircryptoMigrationAndWait() {
   }
 }
 
-bool Mount::IsShadowOnly() const { return shadow_only_; }
+bool Mount::IsShadowOnly() const {
+  return shadow_only_;
+}
 
 // TODO(chromium:795310): include all side-effects and move out of mount.cc.
 // Sign-in/sign-out effects hook.

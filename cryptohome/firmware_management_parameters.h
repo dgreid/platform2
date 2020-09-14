@@ -16,7 +16,6 @@
 
 #include "cryptohome/tpm.h"
 
-
 namespace cryptohome {
 
 struct FirmwareManagementParametersRawV1_0;

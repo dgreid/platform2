@@ -85,65 +85,39 @@ class MountTaskResult : public CryptohomeEventBase {
       set_return_data(*rhs.return_data());
   }
 
-  virtual ~MountTaskResult() { }
+  virtual ~MountTaskResult() {}
 
   // Get the asynchronous task id
-  int sequence_id() const {
-    return sequence_id_;
-  }
+  int sequence_id() const { return sequence_id_; }
 
   // Set the asynchronous task id
-  void set_sequence_id(int value) {
-    sequence_id_ = value;
-  }
+  void set_sequence_id(int value) { sequence_id_ = value; }
 
   // Get the status of the call
-  bool return_status() const {
-    return return_status_;
-  }
+  bool return_status() const { return return_status_; }
 
   // Set the status of the call
-  void set_return_status(bool value) {
-    return_status_ = value;
-  }
+  void set_return_status(bool value) { return_status_ = value; }
 
   // Get the MountError for applicable calls (Mount, MountGuest)
-  MountError return_code() const {
-    return return_code_;
-  }
+  MountError return_code() const { return return_code_; }
 
   // Set the MountError for applicable calls (Mount, MountGuest)
-  void set_return_code(MountError value) {
-    return_code_ = value;
-  }
+  void set_return_code(MountError value) { return_code_ = value; }
 
-  scoped_refptr<Mount> mount() const {
-    return mount_;
-  }
+  scoped_refptr<Mount> mount() const { return mount_; }
 
-  void set_mount(const scoped_refptr<Mount>& value) {
-    mount_ = value;
-  }
+  void set_mount(const scoped_refptr<Mount>& value) { mount_ = value; }
 
-  bool pkcs11_init() const {
-    return pkcs11_init_;
-  }
+  bool pkcs11_init() const { return pkcs11_init_; }
 
-  void set_pkcs11_init(bool value) {
-    pkcs11_init_ = value;
-  }
+  void set_pkcs11_init(bool value) { pkcs11_init_ = value; }
 
-  bool guest() const {
-    return guest_;
-  }
+  bool guest() const { return guest_; }
 
-  void set_guest(bool value) {
-    guest_ = value;
-  }
+  void set_guest(bool value) { guest_ = value; }
 
-  const SecureBlob* return_data() const {
-    return return_data_.get();
-  }
+  const SecureBlob* return_data() const { return return_data_.get(); }
 
   void set_return_data(const SecureBlob& data) {
     return_data_.reset(new SecureBlob(data.begin(), data.end()));
@@ -163,9 +137,7 @@ class MountTaskResult : public CryptohomeEventBase {
     return *this;
   }
 
-  virtual const char* GetEventName() const {
-    return event_name_;
-  }
+  virtual const char* GetEventName() const { return event_name_; }
 
  private:
   int sequence_id_;
@@ -194,15 +166,11 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
             Mount* mount,
             const Credentials& credentials,
             int sequence_id);
-  MountTask(MountTaskObserver* observer,
-            Mount* mount,
-            int sequence_id);
+  MountTask(MountTaskObserver* observer, Mount* mount, int sequence_id);
   virtual ~MountTask();
 
   // Run is called by the worker thread when this task is being processed
-  virtual void Run() {
-    Notify();
-  }
+  virtual void Run() { Notify(); }
 
   // Allow cancellation to be sent from the main thread. This must be checked
   // in each inherited Run().
@@ -212,15 +180,11 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
   virtual bool IsCanceled() { return cancel_flag_.IsSet(); }
 
   // Gets the asynchronous call id of this task
-  int sequence_id() {
-    return sequence_id_;
-  }
+  int sequence_id() { return sequence_id_; }
 
   // Returns the mount this task is for.
   // TODO(wad) Figure out a better way. Queue per Mount?
-  scoped_refptr<Mount> mount() {
-    return mount_;
-  }
+  scoped_refptr<Mount> mount() { return mount_; }
 
   void set_mount(const scoped_refptr<Mount>& mount) {
     mount_ = mount;
@@ -232,9 +196,7 @@ class MountTask : public base::RefCountedThreadSafe<MountTask> {
   }
 
   // Gets the MountTaskResult for this task
-  MountTaskResult* result() {
-    return result_;
-  }
+  MountTaskResult* result() { return result_; }
 
   // Sets the MountTaskResult for this task
   void set_result(MountTaskResult* result) {

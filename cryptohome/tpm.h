@@ -56,6 +56,7 @@ class ScopedKeyHandle {
   TpmKeyHandle value();
   TpmKeyHandle release();
   void reset(Tpm* tpm, TpmKeyHandle handle);
+
  private:
   Tpm* tpm_;
   TpmKeyHandle handle_;
@@ -93,14 +94,14 @@ class Tpm {
 
   enum TpmNvramFlags {
     // NVRAM space is write-once; lock by writing 0 bytes
-    kTpmNvramWriteDefine = (1<<0),
+    kTpmNvramWriteDefine = (1 << 0),
 
     // NVRAM space is only accessible if PCR0 has the same value it did
     // when the space was created
-    kTpmNvramBindToPCR0 = (1<<1),
+    kTpmNvramBindToPCR0 = (1 << 1),
 
     // NVRAM space is readable by firmware (PPREAD is set)
-    kTpmNvramFirmwareReadable = (1<<2),
+    kTpmNvramFirmwareReadable = (1 << 2),
   };
 
   // Specifies the type of the currently signed in user.
@@ -241,11 +242,11 @@ class Tpm {
   //             used.
   //   sealed_data (OUT) - Sealed blob.
   virtual TpmRetryAction SealToPcrWithAuthorization(
-    TpmKeyHandle key_handle,
-    const brillo::SecureBlob& plaintext,
-    const brillo::SecureBlob& auth_blob,
-    const std::map<uint32_t, std::string>& pcr_map,
-    brillo::SecureBlob* sealed_data) = 0;
+      TpmKeyHandle key_handle,
+      const brillo::SecureBlob& plaintext,
+      const brillo::SecureBlob& auth_blob,
+      const std::map<uint32_t, std::string>& pcr_map,
+      brillo::SecureBlob* sealed_data) = 0;
 
   // Unseal a data blob using the provided |auth_blob| to derive the
   // authorization value. For TPM2.0, |key_handle| is used to decrypt the
@@ -266,11 +267,11 @@ class Tpm {
   //             so an empty map can be used.
   //   plaintext (OUT) - Unsealed blob.
   virtual TpmRetryAction UnsealWithAuthorization(
-    TpmKeyHandle key_handle,
-    const brillo::SecureBlob& sealed_data,
-    const brillo::SecureBlob& auth_blob,
-    const std::map<uint32_t, std::string>& pcr_map,
-    brillo::SecureBlob* plaintext) = 0;
+      TpmKeyHandle key_handle,
+      const brillo::SecureBlob& sealed_data,
+      const brillo::SecureBlob& auth_blob,
+      const std::map<uint32_t, std::string>& pcr_map,
+      brillo::SecureBlob* plaintext) = 0;
 
   // Retrieves the sha1sum of the public key component of the RSA key
   virtual TpmRetryAction GetPublicKeyHash(TpmKeyHandle key_handle,
@@ -282,7 +283,6 @@ class Tpm {
   // Parameters
   //   owner_password (OUT) - The random owner password used
   virtual bool GetOwnerPassword(brillo::SecureBlob* owner_password) = 0;
-
 
   // Returns whether or not the TPM is enabled.  This method call returns a
   // cached result because querying the TPM directly will block if ownership is
@@ -349,9 +349,7 @@ class Tpm {
   //   flags - Flags for NVRAM space attributes; zero or more TpmNvramFlags
   // Returns false if the index or length invalid or the required
   // authorization is not possible.
-  virtual bool DefineNvram(uint32_t index,
-                           size_t length,
-                           uint32_t flags) = 0;
+  virtual bool DefineNvram(uint32_t index, size_t length, uint32_t flags) = 0;
 
   // Destroys a defined NVRAM space
   //
@@ -368,8 +366,7 @@ class Tpm {
   //  blob - the data to write (size==0 may be used for locking)
   // Returns false if the index is invalid or the request lacks the required
   // authorization.
-  virtual bool WriteNvram(uint32_t index,
-                          const brillo::SecureBlob& blob) = 0;
+  virtual bool WriteNvram(uint32_t index, const brillo::SecureBlob& blob) = 0;
 
   // Reads from the NVRAM index to the given blob
   //
@@ -524,14 +521,13 @@ class Tpm {
   //   certified_key_blob - The certified key in blob form.
   //   certified_key_info - The key info that was signed (TPM_CERTIFY_INFO).
   //   certified_key_proof - The signature of the certified key info by the AIK.
-  virtual bool CreateCertifiedKey(
-      const brillo::SecureBlob& identity_key_blob,
-      const brillo::SecureBlob& external_data,
-      brillo::SecureBlob* certified_public_key,
-      brillo::SecureBlob* certified_public_key_der,
-      brillo::SecureBlob* certified_key_blob,
-      brillo::SecureBlob* certified_key_info,
-      brillo::SecureBlob* certified_key_proof) = 0;
+  virtual bool CreateCertifiedKey(const brillo::SecureBlob& identity_key_blob,
+                                  const brillo::SecureBlob& external_data,
+                                  brillo::SecureBlob* certified_public_key,
+                                  brillo::SecureBlob* certified_public_key_der,
+                                  brillo::SecureBlob* certified_key_blob,
+                                  brillo::SecureBlob* certified_key_info,
+                                  brillo::SecureBlob* certified_key_proof) = 0;
 
   // Creates a TPM owner delegate for future use.
   //

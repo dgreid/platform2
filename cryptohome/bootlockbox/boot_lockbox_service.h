@@ -22,7 +22,7 @@ class BootLockboxService : public brillo::DBusServiceDaemon {
 
  protected:
   int OnInit() override;
-  void OnShutdown(int *exit_code) override;
+  void OnShutdown(int* exit_code) override;
   void RegisterDBusObjectsAsync(
       brillo::dbus_utils::AsyncEventSequencer* sequencer) override;
 

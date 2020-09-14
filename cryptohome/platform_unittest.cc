@@ -28,10 +28,9 @@ namespace cryptohome {
 class PlatformTest : public ::testing::Test {
  public:
   virtual ~PlatformTest() {}
+
  protected:
-  std::string GetRandomSuffix() {
-    return platform_.GetRandomSuffix();
-  }
+  std::string GetRandomSuffix() { return platform_.GetRandomSuffix(); }
   FilePath GetTempName() {
     FilePath temp_directory;
     EXPECT_TRUE(base::GetTempDir(&temp_directory));
@@ -89,10 +88,10 @@ TEST_F(PlatformTest, HasExtendedFileAttribute) {
 
   EXPECT_TRUE(platform_.HasExtendedFileAttribute(filename, name));
 
-  EXPECT_FALSE(platform_.HasExtendedFileAttribute(
-        FilePath("file_not_exist"), name));
-  EXPECT_FALSE(platform_.HasExtendedFileAttribute(
-        filename, "user.name_not_exist"));
+  EXPECT_FALSE(
+      platform_.HasExtendedFileAttribute(FilePath("file_not_exist"), name));
+  EXPECT_FALSE(
+      platform_.HasExtendedFileAttribute(filename, "user.name_not_exist"));
   platform_.DeleteFile(filename, false /* recursive */);
 }
 
@@ -105,18 +104,10 @@ TEST_F(PlatformTest, ListExtendedFileAttribute) {
   const std::string name2("user.foo2");
   const std::string value2("bar2");
 
-  ASSERT_EQ(0,
-            setxattr(filename.value().c_str(),
-                     name.c_str(),
-                     value.c_str(),
-                     value.length(),
-                     0));
-  ASSERT_EQ(0,
-            setxattr(filename.value().c_str(),
-                     name2.c_str(),
-                     value2.c_str(),
-                     value2.length(),
-                     0));
+  ASSERT_EQ(0, setxattr(filename.value().c_str(), name.c_str(), value.c_str(),
+                        value.length(), 0));
+  ASSERT_EQ(0, setxattr(filename.value().c_str(), name2.c_str(), value2.c_str(),
+                        value2.length(), 0));
 
   std::vector<std::string> attrs;
 
@@ -137,12 +128,8 @@ TEST_F(PlatformTest, GetExtendedAttributeAsString) {
   const std::string name("user.foo");
   const std::string value("bar");
 
-  ASSERT_EQ(0,
-            setxattr(filename.value().c_str(),
-                     name.c_str(),
-                     value.c_str(),
-                     value.length(),
-                     0));
+  ASSERT_EQ(0, setxattr(filename.value().c_str(), name.c_str(), value.c_str(),
+                        value.length(), 0));
 
   std::string got;
   EXPECT_TRUE(platform_.GetExtendedFileAttributeAsString(filename, name, &got));
@@ -162,24 +149,20 @@ TEST_F(PlatformTest, GetExtendedAttribute) {
   const std::string name("user.foo");
   const int value = 42;
 
-  ASSERT_EQ(
-      0,
-      setxattr(
-          filename.value().c_str(), name.c_str(), &value, sizeof(value), 0));
+  ASSERT_EQ(0, setxattr(filename.value().c_str(), name.c_str(), &value,
+                        sizeof(value), 0));
 
   int got;
   EXPECT_TRUE(platform_.GetExtendedFileAttribute(
       filename, name, reinterpret_cast<char*>(&got), sizeof(got)));
   EXPECT_EQ(value, got);
 
-  EXPECT_FALSE(platform_.GetExtendedFileAttribute(FilePath("file_not_exist"),
-                                                  name,
-                                                  reinterpret_cast<char*>(&got),
-                                                  sizeof(got)));
-  EXPECT_FALSE(platform_.GetExtendedFileAttribute(filename,
-                                                  "user.name_not_exist",
-                                                  reinterpret_cast<char*>(&got),
-                                                  sizeof(got)));
+  EXPECT_FALSE(platform_.GetExtendedFileAttribute(
+      FilePath("file_not_exist"), name, reinterpret_cast<char*>(&got),
+      sizeof(got)));
+  EXPECT_FALSE(platform_.GetExtendedFileAttribute(
+      filename, "user.name_not_exist", reinterpret_cast<char*>(&got),
+      sizeof(got)));
   EXPECT_FALSE(platform_.GetExtendedFileAttribute(
       filename, name, reinterpret_cast<char*>(&got), sizeof(got) - 1));
   EXPECT_FALSE(platform_.GetExtendedFileAttribute(
@@ -193,14 +176,12 @@ TEST_F(PlatformTest, SetExtendedAttribute) {
   ASSERT_TRUE(platform_.WriteStringToFile(filename, content));
   const std::string name("user.foo");
   std::string value("bar");
-  EXPECT_TRUE(platform_.SetExtendedFileAttribute(
-      filename, name, value.c_str(), value.length()));
+  EXPECT_TRUE(platform_.SetExtendedFileAttribute(filename, name, value.c_str(),
+                                                 value.length()));
 
   std::vector<char> got(value.length());
-  EXPECT_EQ(
-      value.length(),
-      getxattr(
-          filename.value().c_str(), name.c_str(), got.data(), value.length()));
+  EXPECT_EQ(value.length(), getxattr(filename.value().c_str(), name.c_str(),
+                                     got.data(), value.length()));
 
   EXPECT_EQ(value, std::string(got.data(), got.size()));
 
@@ -215,12 +196,8 @@ TEST_F(PlatformTest, RemoveExtendedAttribute) {
   ASSERT_TRUE(platform_.WriteStringToFile(filename, content));
   const std::string name("user.foo");
   std::string value("bar");
-  ASSERT_EQ(0,
-            setxattr(filename.value().c_str(),
-                     name.c_str(),
-                     value.c_str(),
-                     value.length(),
-                     0));
+  ASSERT_EQ(0, setxattr(filename.value().c_str(), name.c_str(), value.c_str(),
+                        value.length(), 0));
   EXPECT_TRUE(platform_.RemoveExtendedFileAttribute(filename, name));
   EXPECT_EQ(-1, getxattr(filename.value().c_str(), name.c_str(), nullptr, 0));
   EXPECT_EQ(ENODATA, errno);
@@ -370,7 +347,7 @@ TEST_F(PlatformTest, GetLoopDeviceMounts) {
 
 TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
   base::FilePath mount_info;
-  FILE *fp;
+  FILE* fp;
   std::string filesystem, device_in, device_out, mount_info_contents;
 
   mount_info_contents.append("73 24 179:1 /beg/uid1/mount/user ");
@@ -383,8 +360,9 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
   fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
 #endif
   ASSERT_TRUE(fp != NULL);
-  EXPECT_EQ(fwrite(mount_info_contents.c_str(),
-            mount_info_contents.length(), 1, fp), 1);
+  EXPECT_EQ(
+      fwrite(mount_info_contents.c_str(), mount_info_contents.length(), 1, fp),
+      1);
   EXPECT_EQ(fclose(fp), 0);
 
   platform_.set_mount_info_path(mount_info);
@@ -407,7 +385,7 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixExt4) {
 
 TEST_F(PlatformTest, GetMountsBySourcePrefixECryptFs) {
   base::FilePath mount_info;
-  FILE *fp;
+  FILE* fp;
   std::string filesystem, device_in, device_out, mount_info_contents;
 
   mount_info_contents.append("84 24 0:29 /user /home/user/uid2 ");
@@ -420,8 +398,9 @@ TEST_F(PlatformTest, GetMountsBySourcePrefixECryptFs) {
   fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
 #endif
   ASSERT_TRUE(fp != NULL);
-  EXPECT_EQ(fwrite(mount_info_contents.c_str(),
-            mount_info_contents.length(), 1, fp), 1);
+  EXPECT_EQ(
+      fwrite(mount_info_contents.c_str(), mount_info_contents.length(), 1, fp),
+      1);
   EXPECT_EQ(fclose(fp), 0);
 
   platform_.set_mount_info_path(mount_info);
@@ -512,17 +491,17 @@ TEST_F(PlatformTest, SendFile) {
   base::File from_file(from, base::File::FLAG_OPEN | base::File::FLAG_READ);
   base::File to_file(to, base::File::FLAG_CREATE | base::File::FLAG_WRITE);
   EXPECT_TRUE(platform_.SendFile(to_file.GetPlatformFile(),
-                                 from_file.GetPlatformFile(),
-                                 offset, read_size));
+                                 from_file.GetPlatformFile(), offset,
+                                 read_size));
   std::string to_contents;
   ASSERT_TRUE(platform_.ReadFileToString(to, &to_contents));
   EXPECT_EQ(contents.substr(offset, read_size), to_contents);
 
-  EXPECT_FALSE(platform_.SendFile(-1, from_file.GetPlatformFile(), offset,
-                                  read_size));
+  EXPECT_FALSE(
+      platform_.SendFile(-1, from_file.GetPlatformFile(), offset, read_size));
   EXPECT_FALSE(platform_.SendFile(to_file.GetPlatformFile(),
-                                  from_file.GetPlatformFile(),
-                                  offset, read_size + 1));
+                                  from_file.GetPlatformFile(), offset,
+                                  read_size + 1));
   platform_.DeleteFile(from, false /* recursive */);
   platform_.DeleteFile(to, false /* recursive */);
 }

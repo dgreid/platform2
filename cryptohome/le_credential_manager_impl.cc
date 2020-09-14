@@ -56,8 +56,7 @@ LECredError LECredentialManagerImpl::InsertCredential(
   std::vector<std::vector<uint8_t>> h_aux = GetAuxHashes(label);
   if (h_aux.empty()) {
     LOG(ERROR) << "Error getting aux hashes for label: " << label.value();
-    ReportLEResult(kLEOpInsert, kLEActionLoadFromDisk,
-                   LE_CRED_ERROR_HASH_TREE);
+    ReportLEResult(kLEOpInsert, kLEActionLoadFromDisk, LE_CRED_ERROR_HASH_TREE);
     return LE_CRED_ERROR_HASH_TREE;
   }
 
@@ -126,15 +125,14 @@ LECredError LECredentialManagerImpl::RemoveCredential(const uint64_t& label) {
   std::vector<uint8_t> orig_cred, orig_mac;
   std::vector<std::vector<uint8_t>> h_aux;
   bool metadata_lost;
-  LECredError ret =
-      RetrieveLabelInfo(label_object, &orig_cred, &orig_mac, &h_aux,
-                        &metadata_lost);
+  LECredError ret = RetrieveLabelInfo(label_object, &orig_cred, &orig_mac,
+                                      &h_aux, &metadata_lost);
   if (ret != LE_CRED_SUCCESS) {
     return ret;
   }
 
-  bool success = le_tpm_backend_->RemoveCredential(label, h_aux, orig_mac,
-                                                   &root_hash_);
+  bool success =
+      le_tpm_backend_->RemoveCredential(label, h_aux, orig_mac, &root_hash_);
   if (!success) {
     LOG(ERROR) << "Error executing TPM RemoveCredential command.";
     return LE_CRED_ERROR_HASH_TREE;
@@ -167,16 +165,15 @@ LECredError LECredentialManagerImpl::CheckSecret(
     return LE_CRED_ERROR_HASH_TREE;
   }
 
-  const char *uma_log_op = is_le_secret ? kLEOpCheck : kLEOpReset;
+  const char* uma_log_op = is_le_secret ? kLEOpCheck : kLEOpReset;
 
   SignInHashTree::Label label_object(label, kLengthLabels, kBitsPerLevel);
 
   std::vector<uint8_t> orig_cred, orig_mac;
   std::vector<std::vector<uint8_t>> h_aux;
   bool metadata_lost;
-  LECredError ret =
-      RetrieveLabelInfo(label_object, &orig_cred, &orig_mac, &h_aux,
-                        &metadata_lost);
+  LECredError ret = RetrieveLabelInfo(label_object, &orig_cred, &orig_mac,
+                                      &h_aux, &metadata_lost);
   if (ret != LE_CRED_SUCCESS) {
     ReportLEResult(uma_log_op, kLEActionLoadFromDisk, ret);
     return ret;
@@ -234,9 +231,8 @@ bool LECredentialManagerImpl::NeedsPcrBinding(const uint64_t& label) {
   std::vector<uint8_t> orig_cred, orig_mac;
   std::vector<std::vector<uint8_t>> h_aux;
   bool metadata_lost;
-  LECredError ret =
-    RetrieveLabelInfo(label_object, &orig_cred, &orig_mac, &h_aux,
-                      &metadata_lost);
+  LECredError ret = RetrieveLabelInfo(label_object, &orig_cred, &orig_mac,
+                                      &h_aux, &metadata_lost);
   if (ret != LE_CRED_SUCCESS)
     return false;
 
@@ -353,7 +349,6 @@ bool LECredentialManagerImpl::Sync() {
     ReportLEResult(kLEOpSync, kLEActionBackendGetLog, LE_CRED_SUCCESS);
   }
 
-
   if (disk_root_hash == root_hash_) {
     ReportLESyncOutcome(LE_CRED_SUCCESS);
     return true;
@@ -425,8 +420,7 @@ bool LECredentialManagerImpl::ReplayCheck(
     return false;
   }
 
-  ReportLEResult(kLEOpSync, kLEActionLoadFromDisk,
-                 LE_CRED_SUCCESS);
+  ReportLEResult(kLEOpSync, kLEActionLoadFromDisk, LE_CRED_SUCCESS);
 
   std::vector<uint8_t> new_cred, new_mac;
   if (!le_tpm_backend_->ReplayLogOperation(log_root, h_aux, orig_cred,
@@ -443,8 +437,7 @@ bool LECredentialManagerImpl::ReplayCheck(
   // Store the new credential metadata and MAC.
   if (!new_cred.empty() && !new_mac.empty()) {
     if (!hash_tree_->StoreLabel(label_obj, new_mac, new_cred, false)) {
-      ReportLEResult(kLEOpSync, kLEActionSaveToDisk,
-                     LE_CRED_ERROR_HASH_TREE);
+      ReportLEResult(kLEOpSync, kLEActionSaveToDisk, LE_CRED_ERROR_HASH_TREE);
       LOG(ERROR) << "Error in LE auth replay disk hash tree update, label: "
                  << label;
       // TODO(crbug.com/809749): Report failure to UMA.
@@ -507,7 +500,6 @@ bool LECredentialManagerImpl::ReplayLogEntries(
   if (it == log.rend()) {
     it = log.rbegin();
   }
-
 
   std::vector<uint8_t> cur_root_hash = disk_root_hash;
   std::vector<uint64_t> inserted_leaves;

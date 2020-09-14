@@ -11,19 +11,19 @@
 #include "cryptohome/platform.h"
 
 namespace switches {
-static const char *kNvramPath = "nvram";
-static const char *kUnlinkNvram = "unlink-nvram";
-static const char *kLockboxPath = "lockbox";
-static const char *kCachePath = "cache";
+static const char* kNvramPath = "nvram";
+static const char* kUnlinkNvram = "unlink-nvram";
+static const char* kLockboxPath = "lockbox";
+static const char* kCachePath = "cache";
 }  // namespace switches
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
 
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
 
   // Allow the commands to be configurable.
-  base::CommandLine *cl = base::CommandLine::ForCurrentProcess();
+  base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   base::FilePath nvram_path(cl->GetSwitchValueASCII(switches::kNvramPath));
   base::FilePath lockbox_path(cl->GetSwitchValueASCII(switches::kLockboxPath));
   base::FilePath cache_path(cl->GetSwitchValueASCII(switches::kCachePath));

@@ -36,6 +36,7 @@
 using base::FilePath;
 using base::StringPrintf;
 using brillo::SecureBlob;
+using ::testing::_;
 using ::testing::DoAll;
 using ::testing::EndsWith;
 using ::testing::HasSubstr;
@@ -50,7 +51,6 @@ using ::testing::SetArgPointee;
 using ::testing::SetArrayArgument;
 using ::testing::StartsWith;
 using ::testing::StrEq;
-using ::testing::_;
 
 namespace cryptohome {
 
@@ -81,18 +81,17 @@ namespace {
 const FilePath kTestRoot("alt_test_home_dir");
 
 struct homedir {
-  const char *name;
+  const char* name;
   base::Time::Exploded time;
 };
 
-const char *kOwner = "<<OWNER>>";
+const char* kOwner = "<<OWNER>>";
 // Note, the order is important. These should be oldest to newest.
 const struct homedir kHomedirs[] = {
-  { "d5510a8dda6d743c46dadd979a61ae5603529742", { 2011, 1, 6, 1 } },
-  { "8f995cdee8f0711fd32e1cf6246424002c483d47", { 2011, 2, 2, 1 } },
-  { "973b9640e86f6073c6b6e2759ff3cf3084515e61", { 2011, 3, 2, 1 } },
-  { kOwner, { 2011, 4, 5, 1 } }
-};
+    {"d5510a8dda6d743c46dadd979a61ae5603529742", {2011, 1, 6, 1}},
+    {"8f995cdee8f0711fd32e1cf6246424002c483d47", {2011, 2, 2, 1}},
+    {"973b9640e86f6073c6b6e2759ff3cf3084515e61", {2011, 3, 2, 1}},
+    {kOwner, {2011, 4, 5, 1}}};
 
 NiceMock<MockFileEnumerator>* CreateMockFileEnumerator() {
   return new NiceMock<MockFileEnumerator>;
@@ -102,8 +101,8 @@ NiceMock<MockFileEnumerator>* CreateMockFileEnumerator() {
 class HomeDirsTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
-  HomeDirsTest() : crypto_(&platform_) { }
-  virtual ~HomeDirsTest() { }
+  HomeDirsTest() : crypto_(&platform_) {}
+  virtual ~HomeDirsTest() {}
 
   void SetUp() {
     test_helper_.SetUpSystemSalt();
@@ -134,17 +133,14 @@ class HomeDirsTest
         .WillRepeatedly(Return(false));
   }
 
-  void TearDown() {
-    test_helper_.TearDownSystemSalt();
-  }
+  void TearDown() { test_helper_.TearDownSystemSalt(); }
 
   void set_policy(bool owner_known,
                   const std::string& owner,
                   bool ephemeral_users_enabled,
                   const std::string& clean_up_strategy) {
     policy::MockDevicePolicy* device_policy = new policy::MockDevicePolicy();
-    EXPECT_CALL(*device_policy, LoadPolicy())
-        .WillRepeatedly(Return(true));
+    EXPECT_CALL(*device_policy, LoadPolicy()).WillRepeatedly(Return(true));
     EXPECT_CALL(*device_policy, GetOwner(_))
         .WillRepeatedly(SetOwner(owner_known, owner));
     EXPECT_CALL(*device_policy, GetEphemeralUsersEnabled(_))
@@ -178,11 +174,11 @@ class HomeDirsTest
     for (const auto& child : child_directories) {
       DCHECK_EQ(parent_directory.value(), child.DirName().value());
       EXPECT_CALL(platform_, GetExtendedFileAttributeAsString(
-          child, kTrackedDirectoryNameAttribute, _))
-          .WillRepeatedly(DoAll(SetArgPointee<2>(child.BaseName().value()),
-                                Return(true)));
+                                 child, kTrackedDirectoryNameAttribute, _))
+          .WillRepeatedly(
+              DoAll(SetArgPointee<2>(child.BaseName().value()), Return(true)));
       EXPECT_CALL(platform_, HasExtendedFileAttribute(
-          child, kTrackedDirectoryNameAttribute))
+                                 child, kTrackedDirectoryNameAttribute))
           .WillRepeatedly(Return(true));
     }
     // |child_directories| should be enumerated as the parent's children.
@@ -198,8 +194,8 @@ class HomeDirsTest
       }
       return mock;
     };
-    EXPECT_CALL(platform_, GetFileEnumerator(
-        parent_directory, false, base::FileEnumerator::DIRECTORIES))
+    EXPECT_CALL(platform_, GetFileEnumerator(parent_directory, false,
+                                             base::FileEnumerator::DIRECTORIES))
         .WillRepeatedly(InvokeWithoutArgs(create_file_enumerator_function));
   }
 
@@ -231,39 +227,32 @@ INSTANTIATE_TEST_SUITE_P(WithDircrypto, HomeDirsTest, ::testing::Values(false));
 TEST_P(HomeDirsTest, RemoveNonOwnerCryptohomes) {
   // Ensure that RemoveNonOwnerCryptohomes does.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kTestRoot, false, _))
-    .WillOnce(
-        DoAll(SetArgPointee<2>(homedir_paths_),
-              Return(true)));
+      .WillOnce(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
   FilePath user_prefix = brillo::cryptohome::home::GetUserPathPrefix();
   FilePath root_prefix = brillo::cryptohome::home::GetRootPathPrefix();
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(user_prefix, _, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(root_prefix, _, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DirectoryExists(_))
-    .WillRepeatedly(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(Property(&FilePath::value,
                                                   EndsWith(kEcryptfsVaultDir))))
       .WillRepeatedly(Return(ShouldTestEcryptfs()));
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[0], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[1], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(homedir_paths_[2], true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   homedirs_.RemoveNonOwnerCryptohomes();
 }
 
 TEST_P(HomeDirsTest, RenameCryptohome) {
-  ASSERT_TRUE(
-      base::CreateDirectory(FilePath(test_helper_.users[0].base_path)));
-  ASSERT_TRUE(
-      base::CreateDirectory(FilePath(test_helper_.users[1].base_path)));
-  ASSERT_TRUE(
-      base::CreateDirectory(FilePath(test_helper_.users[2].base_path)));
+  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[0].base_path)));
+  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[1].base_path)));
+  ASSERT_TRUE(base::CreateDirectory(FilePath(test_helper_.users[2].base_path)));
 
   const char kNewUserId[] = "some_new_user";
   EXPECT_TRUE(homedirs_.Rename(kDefaultUsers[0].username, kNewUserId));
@@ -377,19 +366,19 @@ TEST_P(HomeDirsTest, ComputeDiskUsageWithNonexistentUser) {
 TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   Platform real_platform;
   // Use real PathExists.
-  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(
-      Invoke(&real_platform, &Platform::FileExists));
+  EXPECT_CALL(platform_, FileExists(_))
+      .WillRepeatedly(Invoke(&real_platform, &Platform::FileExists));
   // Use real FileEnumerator.
-  EXPECT_CALL(platform_, GetFileEnumerator(_, _, _)).WillRepeatedly(
-      Invoke(&real_platform, &Platform::GetFileEnumerator));
+  EXPECT_CALL(platform_, GetFileEnumerator(_, _, _))
+      .WillRepeatedly(Invoke(&real_platform, &Platform::GetFileEnumerator));
   // Use real HasExtendedFileAttribute.
   EXPECT_CALL(platform_, HasExtendedFileAttribute(_, _))
-      .WillRepeatedly(Invoke(&real_platform,
-                             &Platform::HasExtendedFileAttribute));
+      .WillRepeatedly(
+          Invoke(&real_platform, &Platform::HasExtendedFileAttribute));
   // Use real GetExtendedFileAttributeAsString.
   EXPECT_CALL(platform_, GetExtendedFileAttributeAsString(_, _, _))
-      .WillRepeatedly(Invoke(&real_platform,
-                             &Platform::GetExtendedFileAttributeAsString));
+      .WillRepeatedly(
+          Invoke(&real_platform, &Platform::GetExtendedFileAttributeAsString));
 
   base::ScopedTempDir temp_dir;
   ASSERT_TRUE(temp_dir.CreateUniqueTempDir());
@@ -397,10 +386,10 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   ASSERT_TRUE(base::CreateDirectory(mount_dir));
 
   const char* const kDirectories[] = {
-    "aaa",
-    "bbb",
-    "bbb/ccc",
-    "bbb/ccc/ddd",
+      "aaa",
+      "bbb",
+      "bbb/ccc",
+      "bbb/ccc/ddd",
   };
   // Prepare directories.
   for (const auto& directory : kDirectories) {
@@ -423,10 +412,10 @@ TEST_P(HomeDirsTest, GetTrackedDirectoryForDirCrypto) {
   }
   // Return false for unknown directories.
   FilePath result;
-  EXPECT_FALSE(homedirs_.GetTrackedDirectory(
-      temp_dir.GetPath(), FilePath("zzz"), &result));
-  EXPECT_FALSE(homedirs_.GetTrackedDirectory(
-      temp_dir.GetPath(), FilePath("aaa/zzz"), &result));
+  EXPECT_FALSE(homedirs_.GetTrackedDirectory(temp_dir.GetPath(),
+                                             FilePath("zzz"), &result));
+  EXPECT_FALSE(homedirs_.GetTrackedDirectory(temp_dir.GetPath(),
+                                             FilePath("aaa/zzz"), &result));
 }
 
 TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
@@ -434,8 +423,7 @@ TEST_P(HomeDirsTest, GetUnmountedAndroidDataCount) {
       .WillOnce(DoAll(SetArgPointee<2>(homedir_paths_), Return(true)));
 
   for (const auto& path : homedir_paths_) {
-    auto homedir_path =
-        FilePath("/home/user/").Append(path.BaseName().value());
+    auto homedir_path = FilePath("/home/user/").Append(path.BaseName().value());
 
     EXPECT_CALL(platform_, DirectoryExists(homedir_path))
         .WillRepeatedly(Return(true));
@@ -542,7 +530,7 @@ TEST_P(HomeDirsTest, AddUserTimestampToCache) {
   EXPECT_CALL(vault_keyset_factory_, New(_, _)).WillOnce(Return(vk));
   EXPECT_CALL(*vk, Load(_)).WillRepeatedly(Return(true));
 
-  NiceMock<MockFileEnumerator> *master0;
+  NiceMock<MockFileEnumerator>* master0;
   EXPECT_CALL(platform_, GetFileEnumerator(userPath, false, _))
       .WillOnce(Return(master0 = new NiceMock<MockFileEnumerator>));
   EXPECT_CALL(*master0, Next())
@@ -651,8 +639,8 @@ TEST_P(HomeDirsTest, BadDecryptTest) {
 #define MAX_VKS 5
 class KeysetManagementTest : public HomeDirsTest {
  public:
-  KeysetManagementTest() { }
-  virtual ~KeysetManagementTest() { }
+  KeysetManagementTest() {}
+  virtual ~KeysetManagementTest() {}
 
   void SetUp() {
     HomeDirsTest::SetUp();
@@ -664,7 +652,7 @@ class KeysetManagementTest : public HomeDirsTest {
   void TearDown() {
     HomeDirsTest::TearDown();
     last_vk_++;
-    for ( ; last_vk_ < MAX_VKS; ++last_vk_) {
+    for (; last_vk_ < MAX_VKS; ++last_vk_) {
       if (active_vks_[last_vk_])
         delete active_vks_[last_vk_];
       active_vks_[last_vk_] = NULL;
@@ -692,10 +680,8 @@ class KeysetManagementTest : public HomeDirsTest {
     {
       InSequence s;
       // Single key.
-      EXPECT_CALL(*files, Next())
-        .WillOnce(Return(keyset_paths_[0]));
-      EXPECT_CALL(*files, Next())
-        .WillOnce(Return(FilePath()));
+      EXPECT_CALL(*files, Next()).WillOnce(Return(keyset_paths_[0]));
+      EXPECT_CALL(*files, Next()).WillOnce(Return(FilePath()));
     }
     return files;
   }
@@ -708,11 +694,10 @@ class KeysetManagementTest : public HomeDirsTest {
         .WillRepeatedly(Invoke(this, &KeysetManagementTest::VkDecrypt0));
 
     EXPECT_CALL(*active_vk_, serialized())
-      .WillRepeatedly(
-          Invoke(this, &KeysetManagementTest::FakeSerialized));
+        .WillRepeatedly(Invoke(this, &KeysetManagementTest::FakeSerialized));
     EXPECT_CALL(*active_vk_, mutable_serialized())
-      .WillRepeatedly(
-          Invoke(this, &KeysetManagementTest::FakeMutableSerialized));
+        .WillRepeatedly(
+            Invoke(this, &KeysetManagementTest::FakeMutableSerialized));
     return active_vk_;
   }
 
@@ -729,12 +714,11 @@ class KeysetManagementTest : public HomeDirsTest {
     keys_.push_back(test_helper_.users[1].passkey);
 
     EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
-    EXPECT_CALL(platform_, GetFileEnumerator(
-        test_helper_.users[1].base_path, false, _))
-      .WillRepeatedly(
-        InvokeWithoutArgs(this,
-                          &KeysetManagementTest::NewKeysetFileEnumerator));
+        .WillRepeatedly(Return(false));
+    EXPECT_CALL(platform_,
+                GetFileEnumerator(test_helper_.users[1].base_path, false, _))
+        .WillRepeatedly(InvokeWithoutArgs(
+            this, &KeysetManagementTest::NewKeysetFileEnumerator));
 
     homedirs_.set_vault_keyset_factory(&vault_keyset_factory_);
     // Pre-allocate VKs so that each call can advance
@@ -753,8 +737,8 @@ class KeysetManagementTest : public HomeDirsTest {
     active_vk_ = active_vks_[0];
 
     EXPECT_CALL(vault_keyset_factory_, New(_, _))
-      .WillRepeatedly(
-          InvokeWithoutArgs(this, &KeysetManagementTest::NewActiveVaultKeyset));
+        .WillRepeatedly(InvokeWithoutArgs(
+            this, &KeysetManagementTest::NewActiveVaultKeyset));
     SecureBlob passkey;
     cryptohome::Crypto::PasswordToPasskey(test_helper_.users[1].password,
                                           system_salt_, &passkey);
@@ -784,9 +768,11 @@ class KeysetManagementTest : public HomeDirsTest {
   SerializedVaultKeyset serialized_;
 };
 
-INSTANTIATE_TEST_SUITE_P(WithEcryptfs, KeysetManagementTest,
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         KeysetManagementTest,
                          ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(WithDircrypto, KeysetManagementTest,
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         KeysetManagementTest,
                          ::testing::Values(false));
 
 TEST_P(KeysetManagementTest, AddKeysetSuccess) {
@@ -796,23 +782,19 @@ TEST_P(KeysetManagementTest, AddKeysetSuccess) {
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
   int index = -1;
   // The injected keyset in the fixture handles the |credentials_| validation.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vk_,
-      Save(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .Times(0);
+              Save(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
 
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
             homedirs_.AddKeyset(*credentials_, newkey, NULL, false, &index));
@@ -829,31 +811,23 @@ TEST_P(KeysetManagementTest, AddKeysetClobber) {
   key_data.set_label("current label");
   FilePath vk_path("/some/path/master.0");
   // Show that 0 is taken.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
   // Let it claim 1 until it searches the labels.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vks_[1], set_legacy_index(_));
-  EXPECT_CALL(*active_vks_[1], legacy_index())
-    .WillOnce(Return(0));
-  EXPECT_CALL(*active_vks_[1], source_file())
-    .WillOnce(ReturnRef(vk_path));
-  EXPECT_CALL(*active_vk_, Save(vk_path))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*active_vks_[1], legacy_index()).WillOnce(Return(0));
+  EXPECT_CALL(*active_vks_[1], source_file()).WillOnce(ReturnRef(vk_path));
+  EXPECT_CALL(*active_vk_, Save(vk_path)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      DeleteFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        _))
-    .Times(1);
+              DeleteFile(Property(&FilePath::value, EndsWith("master.1")), _))
+      .Times(1);
 
   int index = -1;
   EXPECT_EQ(
@@ -861,7 +835,6 @@ TEST_P(KeysetManagementTest, AddKeysetClobber) {
       homedirs_.AddKeyset(*credentials_, newkey, &key_data, true, &index));
   EXPECT_EQ(index, 0);
 }
-
 
 TEST_P(KeysetManagementTest, AddKeysetNoClobber) {
   KeysetSetUp();
@@ -873,23 +846,20 @@ TEST_P(KeysetManagementTest, AddKeysetNoClobber) {
   KeyData key_data;
   key_data.set_label("current label");
   // The injected keyset in the fixture handles the |credentials_| validation.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
 
   EXPECT_EQ(
       CRYPTOHOME_ERROR_KEY_LABEL_EXISTS,
       homedirs_.AddKeyset(*credentials_, newkey, &key_data, false, &index));
   EXPECT_EQ(index, -1);
 }
-
 
 TEST_P(KeysetManagementTest, UpdateKeysetSuccess) {
   KeysetSetUp();
@@ -903,12 +873,9 @@ TEST_P(KeysetManagementTest, UpdateKeysetSuccess) {
   // The injected keyset in the fixture handles the |credentials_| validation.
   serialized_.mutable_key_data()->set_label("current label");
   FilePath vk_path("/some/path/master.0");
-  EXPECT_CALL(*active_vk_, source_file())
-    .WillOnce(ReturnRef(vk_path));
-  EXPECT_CALL(*active_vk_, Encrypt(new_secret, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(*active_vk_, Save(vk_path))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, source_file()).WillOnce(ReturnRef(vk_path));
+  EXPECT_CALL(*active_vk_, Encrypt(new_secret, _)).WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, Save(vk_path)).WillOnce(Return(true));
 
   EXPECT_EQ(CRYPTOHOME_ERROR_NOT_SET,
             homedirs_.UpdateKeyset(*credentials_,
@@ -968,12 +935,9 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedSuccess) {
   auth_secret->set_symmetric_key(kSomeHMACKey);
 
   FilePath vk_path("/some/path/master.0");
-  EXPECT_CALL(*active_vk_, source_file())
-    .WillOnce(ReturnRef(vk_path));
-  EXPECT_CALL(*active_vk_, Encrypt(new_pass, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(*active_vk_, Save(vk_path))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, source_file()).WillOnce(ReturnRef(vk_path));
+  EXPECT_CALL(*active_vk_, Encrypt(new_pass, _)).WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, Save(vk_path)).WillOnce(Return(true));
 
   std::string changes_str;
   ac::chrome::managedaccounts::account::Secret new_secret;
@@ -1001,7 +965,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   const char kB64CipherKey[] = "QUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUE=\n";
   // The signing key pre-installed.
   const char kB64SigningKey[] =
-    "p5TR/34XX0R7IMuffH14BiL1vcdSD8EajPzdIg09z9M=\n";
+      "p5TR/34XX0R7IMuffH14BiL1vcdSD8EajPzdIg09z9M=\n";
   // The HMAC-256 signature over kPassword using kSigningKey.
   const char kB64Signature[] = "KOPQmmJcMr9iMkr36N1cX+G9gDdBBu7zutAxNayPMN4=\n";
 
@@ -1009,7 +973,7 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   // external callers job.
   SecureBlob new_pass(kPassword);
   Key new_key;
-  new_key.set_secret(std::string(kPassword, sizeof(kPassword)-1));
+  new_key.set_secret(std::string(kPassword, sizeof(kPassword) - 1));
   new_key.mutable_data()->set_label("new label");
   // The compat revision to test is '1'.
   new_key.mutable_data()->set_revision(1);
@@ -1025,24 +989,20 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedCompatVector) {
   // Add an encryption secret to ensure later upgrades are viable.
   auth_secret->mutable_usage()->set_encrypt(true);
   std::string cipher_key;
-  ASSERT_TRUE(brillo::data_encoding::Base64Decode(kB64CipherKey,
-                                                    &cipher_key));
+  ASSERT_TRUE(brillo::data_encoding::Base64Decode(kB64CipherKey, &cipher_key));
   auth_secret->set_symmetric_key(cipher_key);
   // Add the signing key
   auth_secret = auth_data->add_secrets();
   auth_secret->mutable_usage()->set_sign(true);
   std::string signing_key;
-  ASSERT_TRUE(brillo::data_encoding::Base64Decode(kB64SigningKey,
-                                                    &signing_key));
+  ASSERT_TRUE(
+      brillo::data_encoding::Base64Decode(kB64SigningKey, &signing_key));
   auth_secret->set_symmetric_key(signing_key);
 
   FilePath vk_path("/some/path/master.0");
-  EXPECT_CALL(*active_vk_, source_file())
-    .WillOnce(ReturnRef(vk_path));
-  EXPECT_CALL(*active_vk_, Encrypt(new_pass, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(*active_vk_, Save(vk_path))
-    .WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, source_file()).WillOnce(ReturnRef(vk_path));
+  EXPECT_CALL(*active_vk_, Encrypt(new_pass, _)).WillOnce(Return(true));
+  EXPECT_CALL(*active_vk_, Save(vk_path)).WillOnce(Return(true));
 
   std::string signature;
   ASSERT_TRUE(brillo::data_encoding::Base64Decode(kB64Signature, &signature));
@@ -1088,7 +1048,6 @@ TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoEqualReplay) {
                              hmac.to_string()));
   EXPECT_NE(serialized_.key_data().label(), new_key.data().label());
 }
-
 
 TEST_P(KeysetManagementTest, UpdateKeysetAuthorizedNoLessReplay) {
   KeysetSetUp();
@@ -1205,8 +1164,7 @@ TEST_P(KeysetManagementTest, RemoveKeysetSuccess) {
   // Expect the 0 slot since it'll match all the fake keys.
   EXPECT_CALL(*active_vks_[0], set_legacy_index(0));
   // Return a different slot to make sure the code is using the right object.
-  EXPECT_CALL(*active_vks_[0], legacy_index())
-    .WillOnce(Return(1));
+  EXPECT_CALL(*active_vks_[0], legacy_index()).WillOnce(Return(1));
   // The VaultKeyset which will be removed will get index 2.
   EXPECT_CALL(*active_vks_[2],
               Load(keyset_paths_[0].ReplaceExtension(std::to_string(1))))
@@ -1238,8 +1196,7 @@ TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLabeled) {
   EXPECT_TRUE(homedirs_.GetVaultKeysetLabels(
       credentials_->GetObfuscatedUsername(system_salt_), &labels));
   ASSERT_NE(0, labels.size());
-  EXPECT_EQ(serialized_.key_data().label(),
-            labels[0]);
+  EXPECT_EQ(serialized_.key_data().label(), labels[0]);
 }
 
 TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
@@ -1250,8 +1207,7 @@ TEST_P(KeysetManagementTest, GetVaultKeysetLabelsOneLegacyLabeled) {
   EXPECT_TRUE(homedirs_.GetVaultKeysetLabels(
       credentials_->GetObfuscatedUsername(system_salt_), &labels));
   ASSERT_NE(0, labels.size());
-  EXPECT_EQ(StringPrintf("%s%d", kKeyLegacyPrefix, 0),
-            labels[0]);
+  EXPECT_EQ(StringPrintf("%s%d", kKeyLegacyPrefix, 0), labels[0]);
 }
 
 TEST_P(KeysetManagementTest, AddKeysetInvalidCreds) {
@@ -1261,8 +1217,7 @@ TEST_P(KeysetManagementTest, AddKeysetInvalidCreds) {
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
   int index = -1;
 
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .Times(0);
+  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
   // Try to authenticate with an unknown key.
   Credentials bad_credentials(test_helper_.users[1].username, newkey);
   ASSERT_EQ(CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED,
@@ -1290,8 +1245,7 @@ TEST_P(KeysetManagementTest, AddKeyset0Available) {
   // While this doesn't affect the hole-finding logic, it's good to cover the
   // full logical behavior by changing which key auths too.
   // master.0 -> master.1
-  FilePath new_keyset = test_helper_.users[1].keyset_path
-    .ReplaceExtension("1");
+  FilePath new_keyset = test_helper_.users[1].keyset_path.ReplaceExtension("1");
   test_helper_.users[1].keyset_path = new_keyset;
   KeysetSetUp();
 
@@ -1299,18 +1253,15 @@ TEST_P(KeysetManagementTest, AddKeyset0Available) {
   SecureBlob newkey;
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
 
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vk_,
-      Save(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .Times(0);
+              Save(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
 
   int index = -1;
   // Try to authenticate with an unknown key.
@@ -1326,25 +1277,20 @@ TEST_P(KeysetManagementTest, AddKeyset10Available) {
   SecureBlob newkey;
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
 
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value,
-          MatchesRegex(".*/master\\..$")),
-        StrEq("wx")))
-    .Times(10)
-    .WillRepeatedly(Return(reinterpret_cast<FILE*>(NULL)));
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.10")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .Times(0);
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, OpenFile(Property(&FilePath::value,
+                                           MatchesRegex(".*/master\\..$")),
+                                  StrEq("wx")))
+      .Times(10)
+      .WillRepeatedly(Return(reinterpret_cast<FILE*>(NULL)));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.10")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vk_,
-      Save(Property(&FilePath::value, EndsWith("master.10"))))
-    .WillOnce(Return(true));
+              Save(Property(&FilePath::value, EndsWith("master.10"))))
+      .WillOnce(Return(true));
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_NOT_SET,
@@ -1359,13 +1305,12 @@ TEST_P(KeysetManagementTest, AddKeysetNoFreeIndices) {
   SecureBlob newkey;
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
 
-  EXPECT_CALL(platform_, OpenFile(
-        Property(&FilePath::value, MatchesRegex(".*/master\\..*$")),
-        StrEq("wx")))
-    .Times(kKeyFileMax)
-    .WillRepeatedly(Return(reinterpret_cast<FILE*>(NULL)));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .Times(0);
+  EXPECT_CALL(platform_, OpenFile(Property(&FilePath::value,
+                                           MatchesRegex(".*/master\\..*$")),
+                                  StrEq("wx")))
+      .Times(kKeyFileMax)
+      .WillRepeatedly(Return(reinterpret_cast<FILE*>(NULL)));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).Times(0);
 
   int index = -1;
   ASSERT_EQ(CRYPTOHOME_ERROR_KEY_QUOTA_EXCEEDED,
@@ -1380,20 +1325,17 @@ TEST_P(KeysetManagementTest, AddKeysetEncryptFail) {
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
   int index = -1;
   // The injected keyset in the fixture handles the |credentials_| validation.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, CloseFile(reinterpret_cast<FILE*>(0xbeefbeef)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-      DeleteFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        false))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      DeleteFile(Property(&FilePath::value, EndsWith("master.0")), false))
+      .WillOnce(Return(true));
   ASSERT_EQ(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE,
             homedirs_.AddKeyset(*credentials_, newkey, NULL, false, &index));
   EXPECT_EQ(index, -1);
@@ -1406,21 +1348,20 @@ TEST_P(KeysetManagementTest, AddKeysetSaveFail) {
   cryptohome::Crypto::PasswordToPasskey("why not", system_salt_, &newkey);
   int index = -1;
   // The injected keyset in the fixture handles the |credentials_| validation.
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(*active_vk_, Encrypt(newkey, _))
-    .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.0")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
+  EXPECT_CALL(*active_vk_, Encrypt(newkey, _)).WillOnce(Return(true));
   EXPECT_CALL(*active_vk_,
-      Save(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(false));
+              Save(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, CloseFile(reinterpret_cast<FILE*>(0xbeefbeef)))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-      DeleteFile(
-        Property(&FilePath::value, EndsWith("master.0")), false))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      DeleteFile(Property(&FilePath::value, EndsWith("master.0")), false))
+      .WillOnce(Return(true));
   ASSERT_EQ(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE,
             homedirs_.AddKeyset(*credentials_, newkey, NULL, false, &index));
   EXPECT_EQ(index, -1);
@@ -1467,10 +1408,10 @@ TEST_P(KeysetManagementTest, AddKeysetNoResetSeedSuccess) {
 
 TEST_P(KeysetManagementTest, ForceRemoveKeysetSuccess) {
   KeysetSetUp();
-  EXPECT_CALL(platform_,
-      DeleteFile(
-        Property(&FilePath::value, EndsWith("master.0")), false))
-    .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      DeleteFile(Property(&FilePath::value, EndsWith("master.0")), false))
+      .WillOnce(Return(true));
   // There is only one call to VaultKeyset, so it gets the MockVaultKeyset
   // with index 0.
   EXPECT_CALL(*active_vks_[0], Load(_)).WillOnce(Return(true));
@@ -1496,11 +1437,10 @@ TEST_P(KeysetManagementTest, ForceRemoveKeysetOverMaxIndex) {
 
 TEST_P(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
   KeysetSetUp();
-  EXPECT_CALL(platform_,
-      DeleteFile(
-        Property(&FilePath::value, EndsWith("master.0")),
-        false))
-    .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      DeleteFile(Property(&FilePath::value, EndsWith("master.0")), false))
+      .WillOnce(Return(false));
   // There is only one call to VaultKeyset, so it gets the MockVaultKeyset
   // with index 0.
   EXPECT_CALL(*active_vks_[0], Load(_)).WillOnce(Return(true));
@@ -1510,45 +1450,42 @@ TEST_P(KeysetManagementTest, ForceRemoveKeysetFailedDelete) {
 TEST_P(KeysetManagementTest, MoveKeysetSuccess_0_to_1) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(false));
+              FileExists(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
   EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(platform_,
-      Rename(
-        Property(&FilePath::value, EndsWith("master.0")),
-        Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(true));
+              Rename(Property(&FilePath::value, EndsWith("master.0")),
+                     Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, CloseFile(reinterpret_cast<FILE*>(0xbeefbeef)))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   ASSERT_TRUE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
 TEST_P(KeysetManagementTest, MoveKeysetSuccess_1_to_99) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.99"))))
-    .WillOnce(Return(false));
+              FileExists(Property(&FilePath::value, EndsWith("master.99"))))
+      .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.99")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
   EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.99")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(platform_,
-      Rename(
-        Property(&FilePath::value, EndsWith("master.1")),
-        Property(&FilePath::value, EndsWith("master.99"))))
-    .WillOnce(Return(true));
+              Rename(Property(&FilePath::value, EndsWith("master.1")),
+                     Property(&FilePath::value, EndsWith("master.99"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, CloseFile(reinterpret_cast<FILE*>(0xbeefbeef)))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   ASSERT_TRUE(homedirs_.MoveKeyset(obfuscated, 1, 99));
 }
 
@@ -1575,58 +1512,55 @@ TEST_P(KeysetManagementTest, MoveKeysetTooLargeSource) {
 TEST_P(KeysetManagementTest, MoveKeysetMissingSource) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(false));
+              FileExists(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(false));
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
 TEST_P(KeysetManagementTest, MoveKeysetDestinationExists) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(true));
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
 TEST_P(KeysetManagementTest, MoveKeysetExclusiveOpenFailed) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
+              FileExists(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(NULL)));
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 
 TEST_P(KeysetManagementTest, MoveKeysetRenameFailed) {
   const std::string obfuscated = "a0b0c0";
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.0"))))
-    .WillOnce(Return(true));
+              FileExists(Property(&FilePath::value, EndsWith("master.0"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(false));
+              FileExists(Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
+      OpenFile(Property(&FilePath::value, EndsWith("master.1")), StrEq("wx")))
+      .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
   EXPECT_CALL(platform_,
-      OpenFile(
-        Property(&FilePath::value, EndsWith("master.1")),
-        StrEq("wx")))
-    .WillOnce(Return(reinterpret_cast<FILE*>(0xbeefbeef)));
-  EXPECT_CALL(platform_,
-      Rename(
-        Property(&FilePath::value, EndsWith("master.0")),
-        Property(&FilePath::value, EndsWith("master.1"))))
-    .WillOnce(Return(false));
+              Rename(Property(&FilePath::value, EndsWith("master.0")),
+                     Property(&FilePath::value, EndsWith("master.1"))))
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, CloseFile(reinterpret_cast<FILE*>(0xbeefbeef)))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   ASSERT_FALSE(homedirs_.MoveKeyset(obfuscated, 0, 1));
 }
 

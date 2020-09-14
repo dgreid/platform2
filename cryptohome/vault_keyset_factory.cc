@@ -8,8 +8,8 @@
 
 namespace cryptohome {
 
-VaultKeysetFactory::VaultKeysetFactory() { }
-VaultKeysetFactory::~VaultKeysetFactory() { }
+VaultKeysetFactory::VaultKeysetFactory() {}
+VaultKeysetFactory::~VaultKeysetFactory() {}
 
 VaultKeyset* VaultKeysetFactory::New(Platform* platform, Crypto* crypto) {
   VaultKeyset* v = new VaultKeyset();

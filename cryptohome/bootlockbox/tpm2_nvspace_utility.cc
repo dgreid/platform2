@@ -117,8 +117,7 @@ bool TPM2NVSpaceUtility::Initialize() {
 
 template <typename ReplyProtoType, typename MethodType>
 void TPM2NVSpaceUtility::SendTpmManagerRequestAndWait(
-    const MethodType& method,
-    ReplyProtoType* reply_proto) {
+    const MethodType& method, ReplyProtoType* reply_proto) {
   base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
                             base::WaitableEvent::InitialState::NOT_SIGNALED);
   auto callback = base::Bind(

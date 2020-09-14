@@ -141,7 +141,7 @@ TEST_F(TPM2NVSpaceUtilityTest, WriteNVSpaceSuccess) {
   EXPECT_CALL(mock_trunks_tpm_utility_,
               WriteNVSpace(kBootLockboxNVRamIndex, 0,
                            uint16_to_string(1) /* version */ +
-                           uint16_to_string(0) /* flags */ + nvram_data,
+                               uint16_to_string(0) /* flags */ + nvram_data,
                            false, false, _));
   EXPECT_TRUE(nvspace_utility_->WriteNVSpace(nvram_data));
 }

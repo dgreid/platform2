@@ -134,9 +134,8 @@ bool PinweaverLECredentialBackend::IsSupported() {
         if (result == trunks::SAPI_RC_ABI_MISMATCH)
           result = tpm_utility->PinWeaverIsSupported(0, &protocol_version_);
         if (result == trunks::TPM_RC_SUCCESS)
-          protocol_version_ =
-              std::min(protocol_version_,
-                       static_cast<uint8_t>(PW_PROTOCOL_VERSION));
+          protocol_version_ = std::min(
+              protocol_version_, static_cast<uint8_t>(PW_PROTOCOL_VERSION));
 
         return std::make_pair(result, 0 /* EC_SUCCESS */);
       });
@@ -155,12 +154,11 @@ bool PinweaverLECredentialBackend::InsertCredential(
     std::vector<uint8_t>* new_root) {
   trunks::ValidPcrCriteria pcr_criteria;
   if (protocol_version_ > 0) {
-      for (ValidPcrValue value : valid_pcr_criteria) {
-          trunks::ValidPcrValue* new_value =
-              pcr_criteria.add_valid_pcr_values();
-          new_value->set_bitmask(&value.bitmask, 2);
-          new_value->set_digest(value.digest);
-      }
+    for (ValidPcrValue value : valid_pcr_criteria) {
+      trunks::ValidPcrValue* new_value = pcr_criteria.add_valid_pcr_values();
+      new_value->set_bitmask(&value.bitmask, 2);
+      new_value->set_digest(value.digest);
+    }
   }
   return PerformPinweaverOperation(
       "InsertCredential", nullptr, [&](trunks::TpmUtility* tpm_utility) {
@@ -185,12 +183,12 @@ bool PinweaverLECredentialBackend::NeedsPCRBinding(
   if (protocol_version_ == 0)
     return false;
 
-  const struct unimported_leaf_data_t *unimported =
-      reinterpret_cast<const struct unimported_leaf_data_t*>
-        (cred_metadata.data());
+  const struct unimported_leaf_data_t* unimported =
+      reinterpret_cast<const struct unimported_leaf_data_t*>(
+          cred_metadata.data());
   if (unimported->head.leaf_version.minor == 0 &&
       unimported->head.leaf_version.major == 0)
-      return true;
+    return true;
 
   if (cred_metadata.size() <
       offsetof(unimported_leaf_data_t, payload) +
@@ -201,7 +199,7 @@ bool PinweaverLECredentialBackend::NeedsPCRBinding(
     return true;
   }
 
-  const struct leaf_public_data_t *leaf_data =
+  const struct leaf_public_data_t* leaf_data =
       reinterpret_cast<const struct leaf_public_data_t*>(unimported->payload);
   return leaf_data->valid_pcr_criteria[0].bitmask[0] == 0 &&
          leaf_data->valid_pcr_criteria[0].bitmask[1] == 0;

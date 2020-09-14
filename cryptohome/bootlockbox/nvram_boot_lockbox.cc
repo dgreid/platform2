@@ -23,15 +23,15 @@
 namespace cryptohome {
 
 NVRamBootLockbox::NVRamBootLockbox(
-  TPMNVSpaceUtilityInterface* tpm_nvspace_utility)
+    TPMNVSpaceUtilityInterface* tpm_nvspace_utility)
     : boot_lockbox_filepath_(base::FilePath(kNVRamBootLockboxFilePath)),
       tpm_nvspace_utility_(tpm_nvspace_utility) {}
 
 NVRamBootLockbox::NVRamBootLockbox(
     TPMNVSpaceUtilityInterface* tpm_nvspace_utility,
     const base::FilePath& bootlockbox_file_path)
-      : boot_lockbox_filepath_(bootlockbox_file_path),
-        tpm_nvspace_utility_(tpm_nvspace_utility) {}
+    : boot_lockbox_filepath_(bootlockbox_file_path),
+      tpm_nvspace_utility_(tpm_nvspace_utility) {}
 
 NVRamBootLockbox::~NVRamBootLockbox() {}
 
@@ -167,8 +167,7 @@ bool NVRamBootLockbox::FlushAndUpdate(const KeyValueMap& keyvals) {
   // It is hard to make this atomic. In the case the file digest
   // and NVRAM space content are inconsistent, the file is deleted and NVRAM
   // space is updated on write.
-  if (!brillo::WriteBlobToFileAtomic(boot_lockbox_filepath_,
-                                     content, 0600)) {
+  if (!brillo::WriteBlobToFileAtomic(boot_lockbox_filepath_, content, 0600)) {
     LOG(ERROR) << "Failed to write to boot lockbox file";
     return false;
   }
@@ -178,8 +177,8 @@ bool NVRamBootLockbox::FlushAndUpdate(const KeyValueMap& keyvals) {
     return false;
   }
 
-  brillo::SyncFileOrDirectory(boot_lockbox_filepath_,
-                              false /* is directory */, true /* data sync */);
+  brillo::SyncFileOrDirectory(boot_lockbox_filepath_, false /* is directory */,
+                              true /* data sync */);
   // Update in memory information.
   key_value_store_ = keyvals;
   root_digest_ = digest;

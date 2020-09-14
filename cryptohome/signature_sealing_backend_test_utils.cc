@@ -82,8 +82,7 @@ void SignatureSealedUnsealingMocker::SetUpCreationFailingMock(
   auto& expected_call = EXPECT_CALL(
       *mock_backend_,
       CreateUnsealingSessionImpl(ProtobufEquals(expected_sealed_data),
-                                 public_key_spki_der_,
-                                 key_algorithms_,
+                                 public_key_spki_der_, key_algorithms_,
                                  delegate_blob_, delegate_secret_));
   if (mock_repeatedly)
     expected_call.WillRepeatedly(Return(nullptr));

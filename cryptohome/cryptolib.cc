@@ -120,7 +120,7 @@ const unsigned int kWellKnownExponent = 65537;
 const unsigned int kDefaultPasswordRounds = 1337;
 
 // AES block size in bytes.
-const unsigned int  kAesBlockSize = 16;
+const unsigned int kAesBlockSize = 16;
 
 // The size of the AES-GCM IV (96-bits).
 constexpr unsigned int kAesGcmIVSize = 96 / (sizeof(uint8_t) * CHAR_BIT);
@@ -219,8 +219,8 @@ bool CryptoLib::CreateRsaKey(size_t key_bits, SecureBlob* n, SecureBlob* p) {
   return true;
 }
 
-bool CryptoLib::FillRsaPrivateKeyFromSecretPrime(
-    const SecureBlob& secret_prime, RSA* rsa) {
+bool CryptoLib::FillRsaPrivateKeyFromSecretPrime(const SecureBlob& secret_prime,
+                                                 RSA* rsa) {
   crypto::ScopedOpenSSL<BN_CTX, BN_CTX_free> bn_context(BN_CTX_new());
   if (!bn_context) {
     LOG(ERROR) << "Failed to allocate BN_CTX structure";
@@ -352,7 +352,8 @@ size_t CryptoLib::GetAesBlockSize() {
 bool CryptoLib::PasskeyToAesKey(const brillo::SecureBlob& passkey,
                                 const brillo::SecureBlob& salt,
                                 unsigned int rounds,
-                                SecureBlob* key, SecureBlob* iv) {
+                                SecureBlob* key,
+                                SecureBlob* iv) {
   if (salt.size() != PKCS5_SALT_LEN) {
     LOG(ERROR) << "Bad salt size.";
     return false;
@@ -363,13 +364,8 @@ bool CryptoLib::PasskeyToAesKey(const brillo::SecureBlob& passkey,
   SecureBlob local_iv(EVP_CIPHER_iv_length(cipher));
 
   // Convert the passkey to a key
-  if (!EVP_BytesToKey(cipher,
-                      EVP_sha1(),
-                      salt.data(),
-                      passkey.data(),
-                      passkey.size(),
-                      rounds,
-                      aes_key.data(),
+  if (!EVP_BytesToKey(cipher, EVP_sha1(), salt.data(), passkey.data(),
+                      passkey.size(), rounds, aes_key.data(),
                       local_iv.data())) {
     LOG(ERROR) << "Failure converting bytes to key";
     return false;
@@ -541,8 +537,7 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
                                            PaddingScheme padding,
                                            BlockMode block_mode,
                                            SecureBlob* plain_text) {
-  if ((start > encrypted.size()) ||
-      ((start + count) > encrypted.size()) ||
+  if ((start > encrypted.size()) || ((start + count) > encrypted.size()) ||
       ((start + count) < start)) {
     return false;
   }
@@ -572,16 +567,16 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
       return false;
   }
   if (key.size() != static_cast<unsigned int>(EVP_CIPHER_key_length(cipher))) {
-    LOG(ERROR) << "Invalid key length of " << key.size()
-               << ", expected " << EVP_CIPHER_key_length(cipher);
+    LOG(ERROR) << "Invalid key length of " << key.size() << ", expected "
+               << EVP_CIPHER_key_length(cipher);
     return false;
   }
   // ECB ignores the IV, so only check the IV length if we are using a different
   // block mode.
   if ((block_mode != kEcb) &&
       (iv.size() != static_cast<unsigned int>(EVP_CIPHER_iv_length(cipher)))) {
-    LOG(ERROR) << "Invalid iv length of " << iv.size()
-               << ", expected " << EVP_CIPHER_iv_length(cipher);
+    LOG(ERROR) << "Invalid iv length of " << iv.size() << ", expected "
+               << EVP_CIPHER_iv_length(cipher);
     return false;
   }
 
@@ -597,7 +592,7 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
   }
 
   // Make sure we're not pointing into an empty buffer or past the end.
-  const unsigned char *encrypted_buf = NULL;
+  const unsigned char* encrypted_buf = NULL;
   if (start < encrypted.size())
     encrypted_buf = &encrypted[start];
 
@@ -609,19 +604,19 @@ bool CryptoLib::AesDecryptSpecifyBlockMode(const SecureBlob& encrypted,
 
   // In the case of local_plain_text being full, we must avoid trying to
   // point past the end of the buffer when calling EVP_DecryptFinal_ex().
-  unsigned char *final_buf = NULL;
+  unsigned char* final_buf = NULL;
   if (static_cast<unsigned int>(decrypt_size) < local_plain_text.size())
     final_buf = &local_plain_text[decrypt_size];
 
   if (!EVP_DecryptFinal_ex(decryption_context.get(), final_buf, &final_size)) {
-    unsigned long err = ERR_get_error(); // NOLINT openssl types
+    unsigned long err = ERR_get_error();  // NOLINT openssl types
     ERR_load_ERR_strings();
     ERR_load_crypto_strings();
 
-    LOG(ERROR) << "DecryptFinal Error: " << err
-               << ": " << ERR_lib_error_string(err)
-               << ", " << ERR_func_error_string(err)
-               << ", " << ERR_reason_error_string(err);
+    LOG(ERROR) << "DecryptFinal Error: " << err << ": "
+               << ERR_lib_error_string(err) << ", "
+               << ERR_func_error_string(err) << ", "
+               << ERR_reason_error_string(err);
 
     return false;
   }
@@ -694,8 +689,7 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
                                            BlockMode block_mode,
                                            SecureBlob* encrypted) {
   // Verify that the range is within the data passed
-  if ((start > plain_text.size()) ||
-      ((start + count) > plain_text.size()) ||
+  if ((start > plain_text.size()) || ((start + count) > plain_text.size()) ||
       ((start + count) < start)) {
     return false;
   }
@@ -754,8 +748,8 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
       return false;
   }
   if (key.size() != static_cast<unsigned int>(EVP_CIPHER_key_length(cipher))) {
-    LOG(ERROR) << "Invalid key length of " << key.size()
-               << ", expected " << EVP_CIPHER_key_length(cipher);
+    LOG(ERROR) << "Invalid key length of " << key.size() << ", expected "
+               << EVP_CIPHER_key_length(cipher);
     return false;
   }
 
@@ -763,8 +757,8 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
   // block mode.
   if ((block_mode != kEcb) &&
       (iv.size() != static_cast<unsigned int>(EVP_CIPHER_iv_length(cipher)))) {
-    LOG(ERROR) << "Invalid iv length of " << iv.size()
-               << ", expected " << EVP_CIPHER_iv_length(cipher);
+    LOG(ERROR) << "Invalid iv length of " << iv.size() << ", expected "
+               << EVP_CIPHER_iv_length(cipher);
     return false;
   }
 
@@ -786,7 +780,7 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
   int encrypt_size = 0;
 
   // Make sure we're not pointing into an empty buffer or past the end.
-  const unsigned char *plain_buf = NULL;
+  const unsigned char* plain_buf = NULL;
   if (start < plain_text.size())
     plain_buf = &plain_text[start];
 
@@ -818,7 +812,7 @@ bool CryptoLib::AesEncryptSpecifyBlockMode(const SecureBlob& plain_text,
 
   // In the case of cipher_text being full, we must avoid trying to
   // point past the end of the buffer when calling EVP_EncryptFinal_ex().
-  unsigned char *final_buf = NULL;
+  unsigned char* final_buf = NULL;
   if (static_cast<unsigned int>(current_size) < cipher_text.size())
     final_buf = &cipher_text[current_size];
 
@@ -874,7 +868,7 @@ bool CryptoLib::ObscureRSAMessage(const SecureBlob& plaintext,
     return false;
   }
   ciphertext->resize(plaintext.size());
-  char *data = reinterpret_cast<char*>(ciphertext->data());
+  char* data = reinterpret_cast<char*>(ciphertext->data());
   memcpy(data, plaintext.data(), plaintext.size());
   memcpy(data + offset, obscured_chunk.data(), obscured_chunk.size());
   return true;
@@ -898,10 +892,9 @@ bool CryptoLib::UnobscureRSAMessage(const SecureBlob& ciphertext,
     return false;
   }
   plaintext->resize(ciphertext.size());
-  char *data = reinterpret_cast<char*>(plaintext->data());
+  char* data = reinterpret_cast<char*>(plaintext->data());
   memcpy(data, ciphertext.data(), ciphertext.size());
-  memcpy(data + offset, unobscured_chunk.data(),
-         unobscured_chunk.size());
+  memcpy(data + offset, unobscured_chunk.data(), unobscured_chunk.size());
   return true;
 }
 
@@ -1013,8 +1006,8 @@ bool CryptoLib::TpmCompatibleOAEPEncrypt(RSA* key,
 
   output->resize(padded_input.size());
   unsigned char* output_buffer = output->data();
-  result = RSA_public_encrypt(padded_input.size(), padded_buffer,
-                              output_buffer, key, RSA_NO_PADDING);
+  result = RSA_public_encrypt(padded_input.size(), padded_buffer, output_buffer,
+                              key, RSA_NO_PADDING);
   if (result == -1) {
     LOG(ERROR) << "Failed to encrypt OAEP padded input.";
     return false;

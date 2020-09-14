@@ -13,8 +13,7 @@ using base::FilePath;
 namespace cryptohome {
 
 MountStack::MountInfo::MountInfo(const FilePath& src, const FilePath& dest)
-    : src(src),
-      dest(dest) {}
+    : src(src), dest(dest) {}
 
 MountStack::MountStack() {}
 

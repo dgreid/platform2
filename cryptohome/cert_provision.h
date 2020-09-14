@@ -31,8 +31,8 @@ enum class Status {
 // and are implicitly converted to cryptohome::Attestation::PCAType when
 // calling cryptohome.
 enum PCAType {
-  kDefaultPCA = 0,    // The Google-operated Privacy CA.
-  kTestPCA = 1,       // The test instance of the Google-operated Privacy CA.
+  kDefaultPCA = 0,  // The Google-operated Privacy CA.
+  kTestPCA = 1,     // The test instance of the Google-operated Privacy CA.
 };
 
 // Attestation certificate profiles. These values match CertificateProfile
@@ -54,7 +54,7 @@ enum CertificateProfile {
 
 // Supported signing mechanisms.
 enum SignMechanism {
-  SHA1_RSA_PKCS = 0,  // Sign SHA-1 hash using RSASSA-PKCS1-v1_5
+  SHA1_RSA_PKCS = 0,    // Sign SHA-1 hash using RSASSA-PKCS1-v1_5
   SHA256_RSA_PKCS = 1,  // Sign SHA-256 hash using RSASSA-PKCS1-v1_5
   SHA256_RSA_PSS = 2,
 };
@@ -76,12 +76,12 @@ using ProgressCallback = base::Callback<void(
 //
 // Returns Status::Success if the certificate was successfully obtained, and
 // an appropriate other status on errors.
-CERT_PROVISION_EXPORT Status ProvisionCertificate(
-    PCAType pca_type,
-    const std::string& pca_url,
-    const std::string& label,
-    CertificateProfile cert_profile,
-    const ProgressCallback& progress_callback);
+CERT_PROVISION_EXPORT Status
+ProvisionCertificate(PCAType pca_type,
+                     const std::string& pca_url,
+                     const std::string& label,
+                     CertificateProfile cert_profile,
+                     const ProgressCallback& progress_callback);
 
 // Enroll with the PCA regardless of the current status (re-enroll if already
 // enrolled).
@@ -97,10 +97,10 @@ CERT_PROVISION_EXPORT Status ProvisionCertificate(
 //
 // Returns Status::Success if the certificate was successfully obtained, and
 // an appropriate other status on errors.
-CERT_PROVISION_EXPORT Status ForceEnroll(
-    PCAType pca_type,
-    const std::string& pca_url,
-    const ProgressCallback& progress_callback);
+CERT_PROVISION_EXPORT Status
+ForceEnroll(PCAType pca_type,
+            const std::string& pca_url,
+            const ProgressCallback& progress_callback);
 
 // Retrieves the provisioned certificate identified by |label| into |cert| in
 // PEM format. If |include_intermediate| is true, all intermediate certificates

@@ -250,5 +250,4 @@ bool TpmPersistentState::ShallInitializeLocked() const {
   return shall_initialize_;
 }
 
-
 }  // namespace cryptohome

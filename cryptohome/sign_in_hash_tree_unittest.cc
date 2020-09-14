@@ -120,8 +120,8 @@ TEST(SignInHashTreeUnitTest, GenerateAndStoreHashCacheFile) {
   std::vector<uint8_t> cred_data;
   bool metadata_lost = false;
   auto label = SignInHashTree::Label(0, 0, 1);
-  ASSERT_TRUE(tree.GetLabelData(label, &result_hash, &cred_data,
-                                &metadata_lost));
+  ASSERT_TRUE(
+      tree.GetLabelData(label, &result_hash, &cred_data, &metadata_lost));
   EXPECT_EQ(kRootHash4_2, result_hash);
 
   // Try updating Label "00".

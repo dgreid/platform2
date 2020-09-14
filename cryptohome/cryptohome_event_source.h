@@ -60,7 +60,6 @@ class CryptohomeEventSource {
   // Clears all pending events from the queue
   void Clear();
 
-
  private:
   // Structure that glib provides in calls to the static handlers, allows
   // getting the instance of this CryptohomeEventSource.

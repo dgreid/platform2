@@ -33,15 +33,13 @@ namespace {
 
 class BootAttributesTest : public testing::Test {
  public:
-  BootAttributesTest() : fake_signature_("fake signature") {
-  }
+  BootAttributesTest() : fake_signature_("fake signature") {}
 
   void SetUp() override {
     ON_CALL(mock_boot_lockbox_, Sign(_, _))
         .WillByDefault(DoAll(SetArgPointee<1>(fake_signature_), Return(true)));
 
-    ON_CALL(mock_boot_lockbox_, Verify(_, _))
-        .WillByDefault(Return(true));
+    ON_CALL(mock_boot_lockbox_, Verify(_, _)).WillByDefault(Return(true));
 
     ON_CALL(mock_platform_, ReadFile(_, _))
         .WillByDefault(Invoke(this, &BootAttributesTest::FakeReadFile));
@@ -155,23 +153,20 @@ TEST_F(BootAttributesTest, BasicOperations) {
 
   // Verify the signature file content.
   blob = files_[FilePath(BootAttributes::kSignatureFile)];
-  EXPECT_EQ("fake signature", std::string(
-      reinterpret_cast<char*>(blob.data()), blob.size()));
+  EXPECT_EQ("fake signature",
+            std::string(reinterpret_cast<char*>(blob.data()), blob.size()));
 }
 
 TEST_F(BootAttributesTest, SignFailed) {
-  EXPECT_CALL(mock_boot_lockbox_, Sign(_, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_platform_, WriteFile(_, _))
-      .Times(0);
+  EXPECT_CALL(mock_boot_lockbox_, Sign(_, _)).WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_platform_, WriteFile(_, _)).Times(0);
 
   boot_attributes_->Set("test", "1234");
   EXPECT_FALSE(boot_attributes_->FlushAndSign());
 }
 
 TEST_F(BootAttributesTest, WriteFileFailed) {
-  EXPECT_CALL(mock_platform_, WriteFile(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_platform_, WriteFile(_, _)).WillRepeatedly(Return(false));
 
   boot_attributes_->Set("test", "1234");
   EXPECT_FALSE(boot_attributes_->FlushAndSign());
@@ -186,8 +181,7 @@ TEST_F(BootAttributesTest, ReadFileFailed) {
 }
 
 TEST_F(BootAttributesTest, VerifyFailed) {
-  EXPECT_CALL(mock_boot_lockbox_, Verify(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(mock_boot_lockbox_, Verify(_, _)).WillRepeatedly(Return(false));
 
   EXPECT_FALSE(boot_attributes_->Load());
 }

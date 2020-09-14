@@ -38,13 +38,13 @@
 #include "cryptohome/vault_keyset.h"
 
 using base::FilePath;
-using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace cryptohome {
 
-const char *kShadowRoot = "/home/.shadow";
-const char *kEmptyOwner = "";
+const char* kShadowRoot = "/home/.shadow";
+const char* kEmptyOwner = "";
 // Each xattr is set to Android app internal data directory, contains
 // 8-byte inode number of cache subdirectory.  See
 // frameworks/base/core/java/android/app/ContextImpl.java
@@ -89,7 +89,7 @@ HomeDirs::HomeDirs()
       vault_keyset_factory_(default_vault_keyset_factory_.get()),
       use_tpm_(false) {}
 
-HomeDirs::~HomeDirs() { }
+HomeDirs::~HomeDirs() {}
 
 // static
 FilePath HomeDirs::GetEcryptfsUserVaultPath(
@@ -103,8 +103,9 @@ FilePath HomeDirs::GetUserMountDirectory(
   return shadow_root.Append(obfuscated_username).Append(kMountDir);
 }
 
-bool HomeDirs::Init(Platform* platform, Crypto* crypto,
-                    UserOldestActivityTimestampCache *cache) {
+bool HomeDirs::Init(Platform* platform,
+                    Crypto* crypto,
+                    UserOldestActivityTimestampCache* cache) {
   platform_ = platform;
   crypto_ = crypto;
   timestamp_cache_ = cache;
@@ -135,8 +136,8 @@ bool HomeDirs::AreEphemeralUsersEnabled() {
 }
 
 bool HomeDirs::AreCredentialsValid(const Credentials& creds) {
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   return GetValidKeyset(creds, vk.get(), nullptr /* key_index */,
                         nullptr /* error */);
 }
@@ -294,8 +295,8 @@ VaultKeyset* HomeDirs::GetVaultKeyset(const std::string& obfuscated_username,
   std::vector<int> key_indices;
   if (!GetVaultKeysets(obfuscated_username, &key_indices))
     return NULL;
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   for (int index : key_indices) {
     if (!LoadVaultKeysetForUser(obfuscated_username, index, vk.get())) {
       continue;
@@ -314,9 +315,8 @@ bool HomeDirs::GetVaultKeysets(const std::string& obfuscated,
   CHECK(keysets);
   FilePath user_dir = shadow_root_.Append(obfuscated);
 
-  std::unique_ptr<FileEnumerator> file_enumerator(
-      platform_->GetFileEnumerator(user_dir, false,
-                                   base::FileEnumerator::FILES));
+  std::unique_ptr<FileEnumerator> file_enumerator(platform_->GetFileEnumerator(
+      user_dir, false, base::FileEnumerator::FILES));
   FilePath next_path;
   while (!(next_path = file_enumerator->Next()).empty()) {
     FilePath file_name = next_path.BaseName();
@@ -348,12 +348,11 @@ bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
   CHECK(labels);
   FilePath user_dir = shadow_root_.Append(obfuscated_username);
 
-  std::unique_ptr<FileEnumerator> file_enumerator(
-      platform_->GetFileEnumerator(user_dir, false /* Not recursive. */,
-                                   base::FileEnumerator::FILES));
+  std::unique_ptr<FileEnumerator> file_enumerator(platform_->GetFileEnumerator(
+      user_dir, false /* Not recursive. */, base::FileEnumerator::FILES));
   FilePath next_path;
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   while (!(next_path = file_enumerator->Next()).empty()) {
     FilePath file_name = next_path.BaseName();
     // Scan for "master." files.
@@ -380,7 +379,6 @@ bool HomeDirs::GetVaultKeysetLabels(const std::string& obfuscated_username,
   return (labels->size() > 0);
 }
 
-
 bool HomeDirs::CheckAuthorizationSignature(const KeyData& existing_key_data,
                                            const Key& new_key,
                                            const std::string& signature) {
@@ -401,33 +399,32 @@ bool HomeDirs::CheckAuthorizationSignature(const KeyData& existing_key_data,
       &existing_key_data.authorization_data(0);
   const KeyAuthorizationSecret* secret;
   switch (existing_auth_data->type()) {
-  // The data is passed in the clear but authenticated with a shared
-  // symmetric secret.
-  case KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_HMACSHA256:
-    // Ensure there is an accessible signing key. Only a single
-    // secret is allowed until there is a reason to support more.
-    secret = NULL;
-    for (int secret_i = 0;
-         secret_i < existing_auth_data->secrets_size();
-         ++secret_i) {
-      secret = &existing_auth_data->secrets(secret_i);
-      if (secret->usage().sign() && !secret->wrapped())
-        break;
-      secret = NULL;  // Clear if the candidate doesn't match.
-    }
-    if (!secret) {
-      LOG(ERROR) << "Could not find a valid signing key for HMACSHA256";
+    // The data is passed in the clear but authenticated with a shared
+    // symmetric secret.
+    case KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_HMACSHA256:
+      // Ensure there is an accessible signing key. Only a single
+      // secret is allowed until there is a reason to support more.
+      secret = NULL;
+      for (int secret_i = 0; secret_i < existing_auth_data->secrets_size();
+           ++secret_i) {
+        secret = &existing_auth_data->secrets(secret_i);
+        if (secret->usage().sign() && !secret->wrapped())
+          break;
+        secret = NULL;  // Clear if the candidate doesn't match.
+      }
+      if (!secret) {
+        LOG(ERROR) << "Could not find a valid signing key for HMACSHA256";
+        return false;
+      }
+      break;
+    // The data is passed encrypted and authenticated with dedicated
+    // encrypting and signing symmetric keys.
+    case KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_AES256CBC_HMACSHA256:
+      LOG(ERROR) << "KEY_AUTHORIZATION_TYPE_AES256CBC_HMACSHA256 not supported";
       return false;
-    }
-    break;
-  // The data is passed encrypted and authenticated with dedicated
-  // encrypting and signing symmetric keys.
-  case KeyAuthorizationData::KEY_AUTHORIZATION_TYPE_AES256CBC_HMACSHA256:
-    LOG(ERROR) << "KEY_AUTHORIZATION_TYPE_AES256CBC_HMACSHA256 not supported";
-    return false;
-  default:
-    LOG(ERROR) << "Unknown KeyAuthorizationType seen";
-    return false;
+    default:
+      LOG(ERROR) << "Unknown KeyAuthorizationType seen";
+      return false;
   }
   // Now we're only handling HMACSHA256.
   // Specifically, HMACSHA256 is meant for interoperating with a server-side
@@ -452,7 +449,7 @@ bool HomeDirs::CheckAuthorizationSignature(const KeyData& existing_key_data,
   // Check the HMAC
   if (signature.length() != hmac.size() ||
       brillo::SecureMemcmp(signature.data(), hmac.data(),
-                             std::min(signature.size(), hmac.size()))) {
+                           std::min(signature.size(), hmac.size()))) {
     LOG(ERROR) << "Supplied authorization signature was invalid.";
     return false;
   }
@@ -472,8 +469,8 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
     const std::string& authorization_signature) {
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   if (!GetValidKeyset(credentials, vk.get(), nullptr /* key_index */,
                       nullptr /* error */)) {
     // Differentiate between failure and non-existent.
@@ -489,7 +486,7 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
     return CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED;
   }
 
-  SerializedVaultKeyset *key = vk->mutable_serialized();
+  SerializedVaultKeyset* key = vk->mutable_serialized();
 
   // Check the privileges to ensure Update is allowed.
   // [In practice, Add/Remove could be used to override if present.]
@@ -505,8 +502,7 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
   // Check the signature first so the rest of the function is untouched.
   if (authorized_update) {
     if (authorization_signature.empty() ||
-        !CheckAuthorizationSignature(key->key_data(),
-                                     *key_changes,
+        !CheckAuthorizationSignature(key->key_data(), *key_changes,
                                      authorization_signature)) {
       LOG(INFO) << "Unauthorized update attempted";
       return CRYPTOHOME_ERROR_UPDATE_SIGNATURE_INVALID;
@@ -556,19 +552,18 @@ CryptohomeErrorCode HomeDirs::UpdateKeyset(
   return CRYPTOHOME_ERROR_NOT_SET;
 }
 
-CryptohomeErrorCode HomeDirs::AddKeyset(
-                         const Credentials& existing_credentials,
-                         const SecureBlob& new_passkey,
-                         const KeyData* new_data,  // NULLable
-                         bool clobber,
-                         int* index) {
+CryptohomeErrorCode HomeDirs::AddKeyset(const Credentials& existing_credentials,
+                                        const SecureBlob& new_passkey,
+                                        const KeyData* new_data,  // NULLable
+                                        bool clobber,
+                                        int* index) {
   // TODO(wad) Determine how to best bubble up the failures MOUNT_ERROR
   //           encapsulate wrt the TPM behavior.
-  std::string obfuscated = existing_credentials.GetObfuscatedUsername(
-    system_salt_);
+  std::string obfuscated =
+      existing_credentials.GetObfuscatedUsername(system_salt_);
 
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   if (!GetValidKeyset(existing_credentials, vk.get(), nullptr /* key_index */,
                       nullptr /* error */)) {
     // Differentiate between failure and non-existent.
@@ -613,7 +608,7 @@ CryptohomeErrorCode HomeDirs::AddKeyset(
   int new_index = 0;
   FILE* vk_file = NULL;
   FilePath vk_path;
-  for ( ; new_index < kKeyFileMax; ++new_index) {
+  for (; new_index < kKeyFileMax; ++new_index) {
     vk_path = GetVaultKeysetPath(obfuscated, new_index);
     // Rely on fopen()'s O_EXCL|O_CREAT behavior to fail
     // repeatedly until there is an opening.
@@ -669,9 +664,8 @@ CryptohomeErrorCode HomeDirs::AddKeyset(
   return added;
 }
 
-CryptohomeErrorCode HomeDirs::RemoveKeyset(
-  const Credentials& credentials,
-  const KeyData& key_data) {
+CryptohomeErrorCode HomeDirs::RemoveKeyset(const Credentials& credentials,
+                                           const KeyData& key_data) {
   // This error condition should be caught by the caller.
   if (key_data.label().empty())
     return CRYPTOHOME_ERROR_KEY_NOT_FOUND;
@@ -686,8 +680,8 @@ CryptohomeErrorCode HomeDirs::RemoveKeyset(
     return CRYPTOHOME_ERROR_KEY_NOT_FOUND;
   }
 
-  std::unique_ptr<VaultKeyset> vk(vault_keyset_factory()->New(
-              platform_, crypto_));
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
   if (!GetValidKeyset(credentials, vk.get(), nullptr /* key_index */,
                       nullptr /* error */)) {
     // Differentiate between failure and non-existent.
@@ -714,7 +708,7 @@ CryptohomeErrorCode HomeDirs::RemoveKeyset(
     LOG(ERROR) << "RemoveKeyset: failed to remove keyset file";
     return CRYPTOHOME_ERROR_BACKING_STORE_FAILURE;
   }
-  return  CRYPTOHOME_ERROR_NOT_SET;
+  return CRYPTOHOME_ERROR_NOT_SET;
 }
 
 bool HomeDirs::ForceRemoveKeyset(const std::string& obfuscated, int index) {
@@ -861,11 +855,11 @@ std::vector<HomeDirs::HomeDir> HomeDirs::GetHomeDirs() {
 }
 
 void HomeDirs::FilterMountedHomedirs(std::vector<HomeDirs::HomeDir>* homedirs) {
-  homedirs->erase(
-      std::remove_if(
-          homedirs->begin(), homedirs->end(),
-          [](const HomeDirs::HomeDir& dir) { return dir.is_mounted; }),
-      homedirs->end());
+  homedirs->erase(std::remove_if(homedirs->begin(), homedirs->end(),
+                                 [](const HomeDirs::HomeDir& dir) {
+                                   return dir.is_mounted;
+                                 }),
+                  homedirs->end());
 }
 
 void HomeDirs::RemoveNonOwnerDirectories(const FilePath& prefix) {
@@ -888,8 +882,9 @@ void HomeDirs::RemoveNonOwnerDirectories(const FilePath& prefix) {
   }
 }
 
-bool HomeDirs::GetTrackedDirectory(
-    const FilePath& user_dir, const FilePath& tracked_dir_name, FilePath* out) {
+bool HomeDirs::GetTrackedDirectory(const FilePath& user_dir,
+                                   const FilePath& tracked_dir_name,
+                                   FilePath* out) {
   FilePath vault_path = user_dir.Append(kEcryptfsVaultDir);
   if (platform_->DirectoryExists(vault_path)) {
     // On Ecryptfs, tracked directories' names are not encrypted.
@@ -901,10 +896,9 @@ bool HomeDirs::GetTrackedDirectory(
                                          tracked_dir_name, out);
 }
 
-bool HomeDirs::GetTrackedDirectoryForDirCrypto(
-    const FilePath& mount_dir,
-    const FilePath& tracked_dir_name,
-    FilePath* out) {
+bool HomeDirs::GetTrackedDirectoryForDirCrypto(const FilePath& mount_dir,
+                                               const FilePath& tracked_dir_name,
+                                               FilePath* out) {
   FilePath current_name;
   FilePath current_path = mount_dir;
 
@@ -919,8 +913,8 @@ bool HomeDirs::GetTrackedDirectoryForDirCrypto(
                                      base::FileEnumerator::DIRECTORIES));
     for (FilePath dir = enumerator->Next(); !dir.empty();
          dir = enumerator->Next()) {
-      if (platform_->HasExtendedFileAttribute(
-              dir, kTrackedDirectoryNameAttribute)) {
+      if (platform_->HasExtendedFileAttribute(dir,
+                                              kTrackedDirectoryNameAttribute)) {
         std::string name;
         if (!platform_->GetExtendedFileAttributeAsString(
                 dir, kTrackedDirectoryNameAttribute, &name))
@@ -1099,9 +1093,8 @@ bool HomeDirs::Rename(const std::string& account_id_from,
 
   // |user_dir_renamed| is return value, because three other directories are
   // empty and will be created as needed.
-  const bool user_dir_renamed =
-      !base::PathExists(user_dir_from) ||
-      platform_->Rename(user_dir_from, user_dir_to);
+  const bool user_dir_renamed = !base::PathExists(user_dir_from) ||
+                                platform_->Rename(user_dir_from, user_dir_to);
 
   if (user_dir_renamed) {
     constexpr bool kIsRecursive = true;
@@ -1213,12 +1206,12 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
   // add() and remove() are required.  mount() was checked
   // already during MountCryptohome().
   std::unique_ptr<VaultKeyset> vk(
-    vault_keyset_factory()->New(platform_, crypto_));
+      vault_keyset_factory()->New(platform_, crypto_));
   if (!LoadVaultKeysetForUser(obfuscated, key_index, vk.get())) {
     LOG(ERROR) << "Migrate: failed to reload the active keyset";
     return false;
   }
-  const KeyData *key_data = NULL;
+  const KeyData* key_data = NULL;
   if (vk->serialized().has_key_data()) {
     key_data = &(vk->serialized().key_data());
     // legacy keys are full privs
@@ -1297,10 +1290,10 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
 }
 
 namespace {
-  const char *kChapsDaemonName = "chaps";
-  const char *kChapsDirName = ".chaps";
-  const char *kChapsSaltName = "auth_data_salt";
-}
+const char* kChapsDaemonName = "chaps";
+const char* kChapsDirName = ".chaps";
+const char* kChapsSaltName = "auth_data_salt";
+}  // namespace
 
 FilePath HomeDirs::GetChapsTokenDir(const std::string& user) const {
   return brillo::cryptohome::home::GetDaemonStorePath(user, kChapsDaemonName);
@@ -1361,7 +1354,7 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
       if (!GetValidKeyset(creds, vk.get(), nullptr /* key_index */,
                           nullptr /* error */)) {
         LOG(WARNING) << "The provided credentials are incorrect or invalid"
-          " for LE credential reset, reset skipped.";
+                        " for LE credential reset, reset skipped.";
         return;
       }
       credentials_checked = true;
@@ -1371,7 +1364,9 @@ void HomeDirs::ResetLECredentials(const Credentials& creds) {
     if (!crypto_->ResetLECredential(vk_reset->serialized(), &err, *vk)) {
       LOG(WARNING) << "Failed to reset an LE credential: " << err;
     } else {
-      vk_reset->mutable_serialized()->mutable_key_data()->mutable_policy()
+      vk_reset->mutable_serialized()
+          ->mutable_key_data()
+          ->mutable_policy()
           ->set_auth_locked(false);
       if (!vk_reset->Save(vk_reset->source_file())) {
         LOG(WARNING) << "Failed to clear auth_locked in VaultKeyset on disk.";

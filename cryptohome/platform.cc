@@ -93,9 +93,8 @@ class ScopedPath {
       PLOG(WARNING) << "Failed to clean up " << dir_.value();
     }
   }
-  void release() {
-    dir_.clear();
-  }
+  void release() { dir_.clear(); }
+
  private:
   cryptohome::Platform* platform_;
   FilePath dir_;
@@ -124,7 +123,8 @@ bool DecodeProcInfoLine(const std::string& line,
     return false;
   }
 
-  while (fs_idx < args.size() && args[fs_idx++] != "-") {}
+  while (fs_idx < args.size() && args[fs_idx++] != "-") {
+  }
   if (fs_idx + 1 >= args.size()) {
     LOG(ERROR) << "Invalid procinfo: separator or mount_source not found: "
                << line;
@@ -144,8 +144,8 @@ namespace cryptohome {
 
 const uint32_t kDefaultMountFlags = MS_NOEXEC | MS_NOSUID | MS_NODEV;
 const int kDefaultPwnameLength = 1024;
-const int kDefaultUmask = S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH
-                               | S_IXOTH;
+const int kDefaultUmask =
+    S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH;
 const char kProcDir[] = "/proc";
 const char kMountInfoFile[] = "mountinfo";
 const char kPathTune2fs[] = "/sbin/tune2fs";
@@ -156,26 +156,24 @@ const char kSysBlockPath[] = "/sys/block";
 const char kDevPath[] = "/dev";
 const char kLoopBackingFile[] = "loop/backing_file";
 const std::vector<std::string> kDefaultExt4FormatOpts(
-  { // Always use 'default' configuration.
-    "-T", "default",
-    // reserved-blocks-percentage = 0%
-    "-m", "0",
-    // ^huge_file: Do not allow files larger than 2TB.
-    // ^flex_bg: Do not allow per-block group metadata to be placed anywhere.
-    // ^has_journal: Do not create journal.
-    "-O", "^huge_file,^flex_bg,^has_journal",
-    // Attempt to discard blocks at mkfs time.
-    "-E", "discard"
-  });
+    {// Always use 'default' configuration.
+     "-T", "default",
+     // reserved-blocks-percentage = 0%
+     "-m", "0",
+     // ^huge_file: Do not allow files larger than 2TB.
+     // ^flex_bg: Do not allow per-block group metadata to be placed anywhere.
+     // ^has_journal: Do not create journal.
+     "-O", "^huge_file,^flex_bg,^has_journal",
+     // Attempt to discard blocks at mkfs time.
+     "-E", "discard"});
 
 Platform::Platform() {
-    pid_t pid = getpid();
-    mount_info_path_ = FilePath(kProcDir).Append(std::to_string(pid))
-                                         .Append(kMountInfoFile);
+  pid_t pid = getpid();
+  mount_info_path_ =
+      FilePath(kProcDir).Append(std::to_string(pid)).Append(kMountInfoFile);
 }
 
-Platform::~Platform() {
-}
+Platform::~Platform() {}
 
 std::vector<DecodedProcMountInfo> Platform::ReadMountInfoFile() {
   std::string contents;
@@ -209,7 +207,8 @@ bool Platform::GetLoopDeviceMounts(
   return mounts && mounts->size() > 0;
 }
 
-bool Platform::GetMountsBySourcePrefix(const FilePath& from_prefix,
+bool Platform::GetMountsBySourcePrefix(
+    const FilePath& from_prefix,
     std::multimap<const FilePath, const FilePath>* mounts) {
   std::vector<DecodedProcMountInfo> proc_mounts = ReadMountInfoFile();
 
@@ -226,9 +225,8 @@ bool Platform::GetMountsBySourcePrefix(const FilePath& from_prefix,
     // If there is no mounts pointer, we can return true right away.
     if (!mounts)
       return true;
-    mounts->insert(
-      std::pair<const FilePath, const FilePath>(root_dir,
-                                                FilePath(mount.mount_point)));
+    mounts->insert(std::pair<const FilePath, const FilePath>(
+        root_dir, FilePath(mount.mount_point)));
   }
   return mounts && mounts->size();
 }
@@ -247,7 +245,6 @@ bool Platform::IsDirectoryMounted(const FilePath& directory) {
 
 base::Optional<std::vector<bool>> Platform::AreDirectoriesMounted(
     const std::vector<base::FilePath>& directories) {
-
   std::string contents;
   if (!base::ReadFileToString(mount_info_path_, &contents)) {
     return base::nullopt;
@@ -267,11 +264,13 @@ base::Optional<std::vector<bool>> Platform::AreDirectoriesMounted(
   return ret;
 }
 
-bool Platform::Mount(const FilePath& from, const FilePath& to,
-                     const std::string& type, uint32_t mount_flags,
+bool Platform::Mount(const FilePath& from,
+                     const FilePath& to,
+                     const std::string& type,
+                     uint32_t mount_flags,
                      const std::string& mount_options) {
-  if (mount(from.value().c_str(), to.value().c_str(), type.c_str(),
-            mount_flags, mount_options.c_str())) {
+  if (mount(from.value().c_str(), to.value().c_str(), type.c_str(), mount_flags,
+            mount_options.c_str())) {
     return false;
   }
   return true;
@@ -323,8 +322,7 @@ std::unique_ptr<brillo::Process> Platform::CreateProcessInstance() {
 }
 
 void Platform::GetProcessesWithOpenFiles(
-    const FilePath& path,
-    std::vector<ProcessInformation>* processes) {
+    const FilePath& path, std::vector<ProcessInformation>* processes) {
   std::vector<pid_t> pids;
   LookForOpenFiles(path, &pids);
   for (auto pid : pids) {
@@ -372,8 +370,7 @@ void Platform::GetProcessOpenFileInformation(pid_t pid,
 
   std::set<FilePath> open_files;
   // List open file descriptors
-  for (FilePath fd_path = fd_dir_enum.Next();
-       !fd_path.empty();
+  for (FilePath fd_path = fd_dir_enum.Next(); !fd_path.empty();
        fd_path = fd_dir_enum.Next()) {
     ReadLink(fd_path, &link_val);
     if (IsPathChild(file_path, link_val)) {
@@ -390,11 +387,10 @@ void Platform::LookForOpenFiles(const FilePath& path_in,
 
   // Open /proc
   base::FileEnumerator proc_dir_enum(FilePath(kProcDir), false,
-      base::FileEnumerator::DIRECTORIES);
+                                     base::FileEnumerator::DIRECTORIES);
 
   // List PIDs in /proc
-  for (FilePath pid_path = proc_dir_enum.Next();
-       !pid_path.empty();
+  for (FilePath pid_path = proc_dir_enum.Next(); !pid_path.empty();
        pid_path = proc_dir_enum.Next()) {
     pid_t pid = 0;
     // Ignore PID 1 and errors
@@ -417,8 +413,7 @@ void Platform::LookForOpenFiles(const FilePath& path_in,
                                      base::FileEnumerator::FILES);
 
     // List open file descriptors
-    for (FilePath fd_path = fd_dir_enum.Next();
-         !fd_path.empty();
+    for (FilePath fd_path = fd_dir_enum.Next(); !fd_path.empty();
          fd_path = fd_dir_enum.Next()) {
       FilePath fd_link;
       ReadLink(fd_path, &fd_link);
@@ -509,7 +504,8 @@ bool Platform::SetPermissions(const FilePath& path, mode_t mode) const {
   return true;
 }
 
-bool Platform::SetGroupAccessible(const FilePath& path, gid_t group_id,
+bool Platform::SetGroupAccessible(const FilePath& path,
+                                  gid_t group_id,
                                   mode_t group_mode) const {
   uid_t user_id;
   mode_t mode;
@@ -523,7 +519,8 @@ bool Platform::SetGroupAccessible(const FilePath& path, gid_t group_id,
   return true;
 }
 
-bool Platform::GetUserId(const std::string& user, uid_t* user_id,
+bool Platform::GetUserId(const std::string& user,
+                         uid_t* user_id,
                          gid_t* group_id) const {
   // Load the passwd entry
   long user_name_length = sysconf(_SC_GETPW_R_SIZE_MAX);  // NOLINT long
@@ -533,7 +530,7 @@ bool Platform::GetUserId(const std::string& user, uid_t* user_id,
   struct passwd user_info, *user_infop;
   std::vector<char> user_name_buf(user_name_length);
   if (getpwnam_r(user.c_str(), &user_info, user_name_buf.data(),
-                user_name_length, &user_infop)) {
+                 user_name_length, &user_infop)) {
     return false;
   }
   *user_id = user_info.pw_uid;
@@ -550,7 +547,7 @@ bool Platform::GetGroupId(const std::string& group, gid_t* group_id) const {
   struct group group_info, *group_infop;
   std::vector<char> group_name_buf(group_name_length);
   if (getgrnam_r(group.c_str(), &group_info, group_name_buf.data(),
-                group_name_length, &group_infop)) {
+                 group_name_length, &group_infop)) {
     return false;
   }
   *group_id = group_info.gr_gid;
@@ -633,12 +630,11 @@ bool Platform::LockFile(int fd) {
 }
 
 bool Platform::WriteOpenFile(FILE* fp, const brillo::Blob& blob) {
-  return (fwrite(static_cast<const void*>(&blob.at(0)), 1, blob.size(), fp)
-            != blob.size());
+  return (fwrite(static_cast<const void*>(&blob.at(0)), 1, blob.size(), fp) !=
+          blob.size());
 }
 
-bool Platform::WriteFile(const FilePath& path,
-                         const brillo::Blob& blob) {
+bool Platform::WriteFile(const FilePath& path, const brillo::Blob& blob) {
   return brillo::WriteBlobToFile<brillo::Blob>(path, blob);
 }
 
@@ -652,7 +648,8 @@ bool Platform::WriteStringToFile(const FilePath& path,
   return brillo::WriteStringToFile(path, data);
 }
 
-bool Platform::WriteArrayToFile(const FilePath& path, const char* data,
+bool Platform::WriteArrayToFile(const FilePath& path,
+                                const char* data,
                                 size_t size) {
   return brillo::WriteToFile(path, data, size);
 }
@@ -704,9 +701,7 @@ bool Platform::WriteFileAtomicDurable(const FilePath& path,
 }
 
 bool Platform::WriteSecureBlobToFileAtomicDurable(
-    const FilePath& path,
-    const brillo::SecureBlob& blob,
-    mode_t mode) {
+    const FilePath& path, const brillo::SecureBlob& blob, mode_t mode) {
   if (!WriteSecureBlobToFileAtomic(path, blob, mode))
     return false;
 
@@ -755,8 +750,7 @@ bool Platform::DeleteFile(const FilePath& path, bool is_recursive) {
   return base::DeleteFile(path, is_recursive);
 }
 
-bool Platform::DeleteFileDurable(const FilePath& path,
-                                 bool is_recursive) {
+bool Platform::DeleteFileDurable(const FilePath& path, bool is_recursive) {
   if (!base::DeleteFile(path, is_recursive))
     return false;
   return SyncDirectory(path.DirName());
@@ -771,10 +765,9 @@ bool Platform::Move(const FilePath& from, const FilePath& to) {
   return base::Move(from, to);
 }
 
-bool Platform::EnumerateDirectoryEntries(
-    const FilePath& path,
-    bool recursive,
-    std::vector<FilePath>* ent_list) {
+bool Platform::EnumerateDirectoryEntries(const FilePath& path,
+                                         bool recursive,
+                                         std::vector<FilePath>* ent_list) {
   auto ft = static_cast<base::FileEnumerator::FileType>(
       base::FileEnumerator::FILES | base::FileEnumerator::DIRECTORIES |
       base::FileEnumerator::SHOW_SYM_LINKS);
@@ -789,7 +782,7 @@ base::Time Platform::GetCurrentTime() const {
 }
 
 #if BASE_VER < 780000
-bool Platform::Stat(const FilePath& path, struct stat *buf) {
+bool Platform::Stat(const FilePath& path, struct stat* buf) {
   return lstat(path.value().c_str(), buf) == 0;
 }
 #else
@@ -923,7 +916,7 @@ bool Platform::SetExtFileAttributes(const FilePath& path, int flags) {
 bool Platform::HasNoDumpFileAttribute(const FilePath& path) {
   int flags;
   return GetExtFileAttributes(path, &flags) &&
-      (flags & FS_NODUMP_FL) == FS_NODUMP_FL;
+         (flags & FS_NODUMP_FL) == FS_NODUMP_FL;
 }
 
 bool Platform::Rename(const FilePath& from, const FilePath& to) {
@@ -949,17 +942,15 @@ bool Platform::CopyPermissionsCallback(const FilePath& old_base,
   if (old_path != old_base) {
     if (old_path.IsAbsolute()) {
       if (!old_base.AppendRelativePath(old_path, &new_path)) {
-        LOG(ERROR) << "AppendRelativePath failed: parent="
-                   << old_base.value() << ", child=" << old_path.value();
+        LOG(ERROR) << "AppendRelativePath failed: parent=" << old_base.value()
+                   << ", child=" << old_path.value();
         return false;
       }
     } else {
       new_path = new_base.Append(old_path);
     }
   }
-  if (!SetOwnership(new_path,
-                    file_info.st_uid,
-                    file_info.st_gid,
+  if (!SetOwnership(new_path, file_info.st_uid, file_info.st_gid,
                     true /* follow_links */)) {
     PLOG(ERROR) << "Failed to set ownership for " << new_path.value();
     return false;
@@ -984,11 +975,9 @@ bool Platform::CopyWithPermissions(const FilePath& from_path,
 
   // Unfortunately, ownership and permissions are not always retained.
   // Apply the old ownership / permissions on a per-file basis.
-  FileEnumeratorCallback callback = base::Bind(
-      &Platform::CopyPermissionsCallback,
-      base::Unretained(this),
-      from_path,
-      to_path);
+  FileEnumeratorCallback callback =
+      base::Bind(&Platform::CopyPermissionsCallback, base::Unretained(this),
+                 from_path, to_path);
   if (!WalkPath(from_path, callback))
     return false;
 
@@ -1018,12 +1007,10 @@ bool Platform::ApplyPermissionsCallback(
   } else {
     expected = default_file_info;
   }
-  if (expected.user != file_info.st_uid ||
-      expected.group != file_info.st_gid) {
+  if (expected.user != file_info.st_uid || expected.group != file_info.st_gid) {
     LOG(WARNING) << "Unexpected user/group for " << file_path.value();
     if (!SetOwnership(file_path, expected.user, expected.group, true)) {
-      PLOG(ERROR) << "Failed to fix user/group for "
-                  << file_path.value();
+      PLOG(ERROR) << "Failed to fix user/group for " << file_path.value();
       return false;
     }
   }
@@ -1031,10 +1018,8 @@ bool Platform::ApplyPermissionsCallback(
   if ((expected.mode & permissions_mask) !=
       (file_info.st_mode & permissions_mask)) {
     LOG(WARNING) << "Unexpected permissions for " << file_path.value();
-    if (!SetPermissions(file_path,
-                        expected.mode & permissions_mask)) {
-      PLOG(ERROR) << "Failed to set permissions for "
-                  << file_path.value();
+    if (!SetPermissions(file_path, expected.mode & permissions_mask)) {
+      PLOG(ERROR) << "Failed to set permissions for " << file_path.value();
       return false;
     }
   }
@@ -1046,12 +1031,9 @@ bool Platform::ApplyPermissionsRecursive(
     const Permissions& default_file_info,
     const Permissions& default_dir_info,
     const std::map<FilePath, Permissions>& special_cases) {
-  FileEnumeratorCallback callback = base::Bind(
-      &Platform::ApplyPermissionsCallback,
-      base::Unretained(this),
-      default_file_info,
-      default_dir_info,
-      special_cases);
+  FileEnumeratorCallback callback =
+      base::Bind(&Platform::ApplyPermissionsCallback, base::Unretained(this),
+                 default_file_info, default_dir_info, special_cases);
   return WalkPath(path, callback);
 }
 
@@ -1074,9 +1056,8 @@ bool Platform::SameVFS(const base::FilePath& mnt_a,
   return (stat_a.st_dev == stat_b.st_dev);
 }
 
-
-bool Platform::FindFilesystemDevice(const FilePath &filesystem_in,
-                                    std::string *device) {
+bool Platform::FindFilesystemDevice(const FilePath& filesystem_in,
+                                    std::string* device) {
   /* Clear device to indicate failure case. */
   device->clear();
 
@@ -1094,8 +1075,8 @@ bool Platform::FindFilesystemDevice(const FilePath &filesystem_in,
   return (device->length() > 0);
 }
 
-bool Platform::ReportFilesystemDetails(const FilePath &filesystem,
-                                       const FilePath &logfile) {
+bool Platform::ReportFilesystemDetails(const FilePath& filesystem,
+                                       const FilePath& logfile) {
   brillo::ProcessImpl process;
   int rc;
   std::string device;
@@ -1112,8 +1093,8 @@ bool Platform::ReportFilesystemDetails(const FilePath &filesystem,
   rc = process.Run();
   if (rc == 0)
     return true;
-  LOG(ERROR) << "Failed to run tune2fs on " << device
-             << " (" << filesystem.value() << ", exit " << rc << ")";
+  LOG(ERROR) << "Failed to run tune2fs on " << device << " ("
+             << filesystem.value() << ", exit " << rc << ")";
   return false;
 }
 
@@ -1132,8 +1113,8 @@ bool Platform::DataSyncFile(const FilePath& path) {
 }
 
 bool Platform::SyncFile(const FilePath& path) {
-  return SyncFileOrDirectory(
-      path, false /* directory */, false /* data_sync */);
+  return SyncFileOrDirectory(path, false /* directory */,
+                             false /* data_sync */);
 }
 
 bool Platform::SyncDirectory(const FilePath& path) {
@@ -1184,9 +1165,7 @@ bool Platform::SetFileTimes(const base::FilePath& path,
                             const struct timespec& mtime,
                             bool follow_links) {
   const struct timespec times[2] = {atime, mtime};
-  if (utimensat(AT_FDCWD,
-                path.value().c_str(),
-                times,
+  if (utimensat(AT_FDCWD, path.value().c_str(), times,
                 follow_links ? 0 : AT_SYMLINK_NOFOLLOW)) {
     PLOG(ERROR) << "Failed to update times for file " << path.value();
     return false;
@@ -1222,8 +1201,8 @@ bool Platform::CreateSparseFile(const base::FilePath& path, int64_t size) {
 }
 
 bool Platform::GetBlkSize(const base::FilePath& device, uint64_t* size) {
-  base::ScopedFD fd(HANDLE_EINTR(open(device.value().c_str(),
-                                      O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
+  base::ScopedFD fd(HANDLE_EINTR(
+      open(device.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
   if (!fd.is_valid()) {
     PLOG(ERROR) << "open " << device.value();
     return false;
@@ -1236,8 +1215,8 @@ bool Platform::GetBlkSize(const base::FilePath& device, uint64_t* size) {
 }
 
 base::FilePath Platform::AttachLoop(const base::FilePath& path) {
-  base::ScopedFD control_fd(HANDLE_EINTR(open(kLoopControl,
-                                              O_RDONLY | O_CLOEXEC)));
+  base::ScopedFD control_fd(
+      HANDLE_EINTR(open(kLoopControl, O_RDONLY | O_CLOEXEC)));
   if (!control_fd.is_valid()) {
     PLOG(ERROR) << "open loop control";
     return base::FilePath();
@@ -1251,14 +1230,14 @@ base::FilePath Platform::AttachLoop(const base::FilePath& path) {
       return base::FilePath();
     }
     loopback = kLoopPrefix + base::NumberToString(num);
-    base::ScopedFD loop_fd(HANDLE_EINTR(open(loopback.c_str(),
-                                             O_RDWR | O_NOFOLLOW | O_CLOEXEC)));
+    base::ScopedFD loop_fd(
+        HANDLE_EINTR(open(loopback.c_str(), O_RDWR | O_NOFOLLOW | O_CLOEXEC)));
     if (!loop_fd.is_valid()) {
       PLOG(ERROR) << "open " + loopback;
       return base::FilePath();
     }
-    base::ScopedFD fd(HANDLE_EINTR(open(path.value().c_str(),
-                                        O_RDWR | O_CLOEXEC)));
+    base::ScopedFD fd(
+        HANDLE_EINTR(open(path.value().c_str(), O_RDWR | O_CLOEXEC)));
     if (!fd.is_valid()) {
       PLOG(ERROR) << "open " + path.value();
       return base::FilePath();
@@ -1275,8 +1254,8 @@ base::FilePath Platform::AttachLoop(const base::FilePath& path) {
 }
 
 bool Platform::DetachLoop(const base::FilePath& device) {
-  base::ScopedFD loop_fd(HANDLE_EINTR(open(device.value().c_str(),
-                                           O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
+  base::ScopedFD loop_fd(HANDLE_EINTR(
+      open(device.value().c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC)));
   if (!loop_fd.is_valid()) {
     PLOG(ERROR) << "open " + device.value();
     return false;
@@ -1302,8 +1281,8 @@ std::vector<Platform::LoopDevice> Platform::GetAttachedLoopDevices() {
     // If the backing file doesn't exist, it's not an attached loop device.
     if (!ReadFileToString(sysfs_backing_file, &backing_file_content))
       continue;
-    FilePath backing_file(base::TrimWhitespaceASCII(backing_file_content,
-                                                    base::TRIM_ALL));
+    FilePath backing_file(
+        base::TrimWhitespaceASCII(backing_file_content, base::TRIM_ALL));
     devices.push_back({backing_file, device});
   }
   return devices;
@@ -1362,8 +1341,7 @@ bool Platform::FormatExt4(const base::FilePath& file,
   return true;
 }
 
-bool Platform::ResizeFilesystem(const base::FilePath& file,
-                                uint64_t blocks) {
+bool Platform::ResizeFilesystem(const base::FilePath& file, uint64_t blocks) {
   brillo::ProcessImpl resize_process;
   resize_process.AddArg("/sbin/resize2fs");
   resize_process.AddArg("-f");
@@ -1374,8 +1352,7 @@ bool Platform::ResizeFilesystem(const base::FilePath& file,
   resize_process.SetCloseUnusedFileDescriptors(true);
 
   // Start the process and return.
-  LOG(INFO) << "Resizing filesystem on "
-            << file.value() << " to " << blocks;
+  LOG(INFO) << "Resizing filesystem on " << file.value() << " to " << blocks;
   int rc = resize_process.Run();
   if (rc != 0)
     return false;
@@ -1384,16 +1361,15 @@ bool Platform::ResizeFilesystem(const base::FilePath& file,
   return true;
 }
 
-bool Platform::RestoreSELinuxContexts(
-    const base::FilePath& path, bool recursive) {
+bool Platform::RestoreSELinuxContexts(const base::FilePath& path,
+                                      bool recursive) {
 #if USE_SELINUX
   LOG(INFO) << "Restoring SELinux contexts for: " << path.value()
             << ", recursive=" << std::boolalpha << recursive;
   int restorecon_flag = 0;
   if (recursive)
     restorecon_flag |= SELINUX_RESTORECON_RECURSE;
-  if (selinux_restorecon(path.value().c_str(),
-                         restorecon_flag) != 0) {
+  if (selinux_restorecon(path.value().c_str(), restorecon_flag) != 0) {
     PLOG(ERROR) << "restorecon(" << path.value() << ") failed";
     return false;
   }
@@ -1428,10 +1404,10 @@ extern "C" {
 }
 
 long AddEcryptfsAuthToken(  // NOLINT(runtime/int)
-    const brillo::SecureBlob& key, const std::string& key_sig,
+    const brillo::SecureBlob& key,
+    const std::string& key_sig,
     const brillo::SecureBlob& salt) {
-  DCHECK_EQ(static_cast<size_t>(ECRYPTFS_MAX_KEY_BYTES),
-            key.size());
+  DCHECK_EQ(static_cast<size_t>(ECRYPTFS_MAX_KEY_BYTES), key.size());
   DCHECK_EQ(static_cast<size_t>(ECRYPTFS_SIG_SIZE) * 2, key_sig.length());
   DCHECK_EQ(static_cast<size_t>(ECRYPTFS_SALT_SIZE), salt.size());
 
@@ -1470,9 +1446,9 @@ bool Platform::ClearUserKeyring() {
   return (keyctl(KEYCTL_CLEAR, KEY_SPEC_USER_KEYRING) == 0);
 }
 
-bool Platform::AddEcryptfsAuthToken(
-    const brillo::SecureBlob& key, const std::string& key_sig,
-    const brillo::SecureBlob& salt) {
+bool Platform::AddEcryptfsAuthToken(const brillo::SecureBlob& key,
+                                    const std::string& key_sig,
+                                    const brillo::SecureBlob& salt) {
   return (ecryptfs::AddEcryptfsAuthToken(key, key_sig, salt) >= 0);
 }
 
@@ -1496,8 +1472,8 @@ bool Platform::WalkPath(const FilePath& path,
   if (!callback.Run(path, base_entry_info))
     return false;
   if (IsDirectory(base_entry_info)) {
-    int file_types = base::FileEnumerator::FILES |
-                     base::FileEnumerator::DIRECTORIES;
+    int file_types =
+        base::FileEnumerator::FILES | base::FileEnumerator::DIRECTORIES;
     std::unique_ptr<FileEnumerator> file_enumerator(
         GetFileEnumerator(path, true, file_types));
     FilePath entry_path;
@@ -1681,7 +1657,7 @@ const base::stat_wrapper_t& FileEnumerator::FileInfo::stat() const {
 }
 
 void FileEnumerator::FileInfo::Assign(
-  const base::FileEnumerator::FileInfo& file_info) {
+    const base::FileEnumerator::FileInfo& file_info) {
   info_.reset(new base::FileEnumerator::FileInfo(file_info));
   memset(&stat_, 0, sizeof(stat_));
 }
@@ -1689,19 +1665,15 @@ void FileEnumerator::FileInfo::Assign(
 FileEnumerator::FileEnumerator(const FilePath& root_path,
                                bool recursive,
                                int file_type) {
-  enumerator_.reset(new base::FileEnumerator(root_path,
-                                             recursive,
-                                             file_type));
+  enumerator_.reset(new base::FileEnumerator(root_path, recursive, file_type));
 }
 
 FileEnumerator::FileEnumerator(const FilePath& root_path,
                                bool recursive,
                                int file_type,
                                const std::string& pattern) {
-  enumerator_.reset(new base::FileEnumerator(root_path,
-                                             recursive,
-                                             file_type,
-                                             pattern));
+  enumerator_.reset(
+      new base::FileEnumerator(root_path, recursive, file_type, pattern));
 }
 
 FileEnumerator::FileEnumerator() {}

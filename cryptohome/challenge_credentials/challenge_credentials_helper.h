@@ -70,8 +70,8 @@ class ChallengeCredentialsHelper {
 
   ChallengeCredentialsHelper() = default;
   ChallengeCredentialsHelper(const ChallengeCredentialsHelper&) = delete;
-  ChallengeCredentialsHelper& operator=(const ChallengeCredentialsHelper&)
-      = delete;
+  ChallengeCredentialsHelper& operator=(const ChallengeCredentialsHelper&) =
+      delete;
   virtual ~ChallengeCredentialsHelper() = default;
 
   // Generates and returns fresh random-based credentials for the given user

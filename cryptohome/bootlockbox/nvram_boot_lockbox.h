@@ -42,11 +42,13 @@ class NVRamBootLockbox {
   virtual ~NVRamBootLockbox();
 
   // Stores |digest| in bootlockbox.
-  virtual bool Store(const std::string& key, const std::string& digest,
+  virtual bool Store(const std::string& key,
+                     const std::string& digest,
                      BootLockboxErrorCode* error);
 
   // Reads digest identified by key.
-  virtual bool Read(const std::string& key, std::string* digest,
+  virtual bool Read(const std::string& key,
+                    std::string* digest,
                     BootLockboxErrorCode* error);
 
   // Locks bootlockbox. This function may change nvspace_state_.

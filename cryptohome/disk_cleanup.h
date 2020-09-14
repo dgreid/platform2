@@ -102,8 +102,7 @@ class DiskCleanup {
   void FilterMountedHomedirs(std::vector<HomeDirs::HomeDir>* homedirs);
   // Removes all homedirs that have not been active since the cutoff
   void FilterHomedirsProcessedBeforeCutoff(
-      base::Time cutoff,
-      std::vector<HomeDirs::HomeDir>* homedirs);
+      base::Time cutoff, std::vector<HomeDirs::HomeDir>* homedirs);
 
   // Not owned. Must outlive DiskCleanup. Passed with call to Init.
   HomeDirs* homedirs_ = nullptr;

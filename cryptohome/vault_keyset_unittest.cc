@@ -19,19 +19,19 @@
 #include "cryptohome/mock_platform.h"
 
 namespace cryptohome {
-using brillo::SecureBlob;
 using base::FilePath;
+using brillo::SecureBlob;
 
 using ::testing::_;
+using ::testing::Return;
 using ::testing::SaveArg;
 using ::testing::SetArgPointee;
-using ::testing::Return;
 using ::testing::WithArg;
 
 class VaultKeysetTest : public ::testing::Test {
  public:
-  VaultKeysetTest() { }
-  virtual ~VaultKeysetTest() { }
+  VaultKeysetTest() {}
+  virtual ~VaultKeysetTest() {}
 
   static bool FindBlobInBlob(const brillo::SecureBlob& haystack,
                              const brillo::SecureBlob& needle) {
@@ -152,7 +152,7 @@ TEST_F(VaultKeysetTest, LoadSaveTest) {
   timestamp.set_timestamp(kTestTimestamp);
   SecureBlob tbytes(timestamp.ByteSizeLong());
   google::protobuf::uint8* buf =
-    static_cast<google::protobuf::uint8*>(tbytes.data());
+      static_cast<google::protobuf::uint8*>(tbytes.data());
   timestamp.SerializeWithCachedSizesToArray(buf);
 
   keyset.mutable_serialized()->set_timestamp_file_exists(true);

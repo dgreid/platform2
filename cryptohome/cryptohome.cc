@@ -69,238 +69,241 @@ constexpr int kWaitOwnershipPollIntervalInMs = 200;
 }  // namespace
 
 namespace switches {
-  static const char kSyslogSwitch[] = "syslog";
-  static const char kAttestationServerSwitch[] = "attestation-server";
-  static struct {
-    const char *name;
-    const int aca_type;
-  } kAttestationServers[] = {{"default", attestation::DEFAULT_ACA},
-                             {"test", attestation::TEST_ACA},
-                             {nullptr, attestation::ACAType_ARRAYSIZE}};
-  static const char kVaServerSwitch[] = "va-server";
-  static struct {
-    const char *name;
-    const int va_type;
-  } kVaServers[] = {{"default", attestation::DEFAULT_VA},
-                    {"test", attestation::TEST_VA},
-                    {nullptr, attestation::VAType_ARRAYSIZE}};
-  static const char kWaitOwnershipTimeoutSwitch[] = "wait-ownership-timeout";
-  static const char kActionSwitch[] = "action";
-  static const char* kActions[] = {"mount_ex",
-                                   "mount_guest_ex",
-                                   "unmount",
-                                   "is_mounted",
-                                   "check_key_ex",
-                                   "remove_key_ex",
-                                   "get_key_data_ex",
-                                   "list_keys_ex",
-                                   "migrate_key_ex",
-                                   "add_key_ex",
-                                   "add_data_restore_key",
-                                   "mass_remove_keys",
-                                   "update_key_ex",
-                                   "remove",
-                                   "obfuscate_user",
-                                   "get_system_salt",
-                                   "dump_keyset",
-                                   "dump_last_activity",
-                                   "tpm_status",
-                                   "tpm_more_status",
-                                   "status",
-                                   "set_current_user_old",
-                                   "tpm_take_ownership",
-                                   "tpm_clear_stored_password",
-                                   "tpm_wait_ownership",
-                                   "install_attributes_set",
-                                   "install_attributes_get",
-                                   "install_attributes_finalize",
-                                   "install_attributes_count",
-                                   "install_attributes_is_ready",
-                                   "install_attributes_is_secure",
-                                   "install_attributes_is_invalid",
-                                   "install_attributes_is_first_install",
-                                   "pkcs11_get_user_token_info",
-                                   "pkcs11_get_system_token_info",
-                                   "pkcs11_is_user_token_ok",
-                                   "pkcs11_terminate",
-                                   "tpm_verify_attestation",
-                                   "tpm_verify_ek",
-                                   "tpm_attestation_status",
-                                   "tpm_attestation_more_status",
-                                   "tpm_attestation_start_enroll",
-                                   "tpm_attestation_finish_enroll",
-                                   "tpm_attestation_enroll",
-                                   "tpm_attestation_start_cert_request",
-                                   "tpm_attestation_finish_cert_request",
-                                   "tpm_attestation_get_certificate",
-                                   "tpm_attestation_key_status",
-                                   "tpm_attestation_register_key",
-                                   "tpm_attestation_enterprise_challenge",
-                                   "tpm_attestation_simple_challenge",
-                                   "tpm_attestation_get_key_payload",
-                                   "tpm_attestation_set_key_payload",
-                                   "tpm_attestation_delete_keys",
-                                   "tpm_attestation_delete_key",
-                                   "tpm_attestation_get_ek",
-                                   "tpm_attestation_reset_identity",
-                                   "tpm_attestation_reset_identity_result",
-                                   "sign_lockbox",
-                                   "verify_lockbox",
-                                   "finalize_lockbox",
-                                   "get_boot_attribute",
-                                   "set_boot_attribute",
-                                   "flush_and_sign_boot_attributes",
-                                   "get_login_status",
-                                   "initialize_cast_key",
-                                   "get_firmware_management_parameters",
-                                   "set_firmware_management_parameters",
-                                   "remove_firmware_management_parameters",
-                                   "migrate_to_dircrypto",
-                                   "needs_dircrypto_migration",
-                                   "get_enrollment_id",
-                                   "get_supported_key_policies",
-                                   "get_account_disk_usage",
-                                   "lock_to_single_user_mount_until_reboot",
-                                   "get_rsu_device_id",
-                                   "check_health",
-                                   "start_fingerprint_auth_session",
-                                   "end_fingerprint_auth_session",
-                                   NULL};
-  enum ActionEnum {
-    ACTION_MOUNT_EX,
-    ACTION_MOUNT_GUEST_EX,
-    ACTION_UNMOUNT,
-    ACTION_MOUNTED,
-    ACTION_CHECK_KEY_EX,
-    ACTION_REMOVE_KEY_EX,
-    ACTION_GET_KEY_DATA_EX,
-    ACTION_LIST_KEYS_EX,
-    ACTION_MIGRATE_KEY_EX,
-    ACTION_ADD_KEY_EX,
-    ACTION_ADD_DATA_RESTORE_KEY,
-    ACTION_MASS_REMOVE_KEYS,
-    ACTION_UPDATE_KEY_EX,
-    ACTION_REMOVE,
-    ACTION_OBFUSCATE_USER,
-    ACTION_GET_SYSTEM_SALT,
-    ACTION_DUMP_KEYSET,
-    ACTION_DUMP_LAST_ACTIVITY,
-    ACTION_TPM_STATUS,
-    ACTION_TPM_MORE_STATUS,
-    ACTION_STATUS,
-    ACTION_SET_CURRENT_USER_OLD,
-    ACTION_TPM_TAKE_OWNERSHIP,
-    ACTION_TPM_CLEAR_STORED_PASSWORD,
-    ACTION_TPM_WAIT_OWNERSHIP,
-    ACTION_INSTALL_ATTRIBUTES_SET,
-    ACTION_INSTALL_ATTRIBUTES_GET,
-    ACTION_INSTALL_ATTRIBUTES_FINALIZE,
-    ACTION_INSTALL_ATTRIBUTES_COUNT,
-    ACTION_INSTALL_ATTRIBUTES_IS_READY,
-    ACTION_INSTALL_ATTRIBUTES_IS_SECURE,
-    ACTION_INSTALL_ATTRIBUTES_IS_INVALID,
-    ACTION_INSTALL_ATTRIBUTES_IS_FIRST_INSTALL,
-    ACTION_PKCS11_GET_USER_TOKEN_INFO,
-    ACTION_PKCS11_GET_SYSTEM_TOKEN_INFO,
-    ACTION_PKCS11_IS_USER_TOKEN_OK,
-    ACTION_PKCS11_TERMINATE,
-    ACTION_TPM_VERIFY_ATTESTATION,
-    ACTION_TPM_VERIFY_EK,
-    ACTION_TPM_ATTESTATION_STATUS,
-    ACTION_TPM_ATTESTATION_MORE_STATUS,
-    ACTION_TPM_ATTESTATION_START_ENROLL,
-    ACTION_TPM_ATTESTATION_FINISH_ENROLL,
-    ACTION_TPM_ATTESTATION_ENROLL,
-    ACTION_TPM_ATTESTATION_START_CERTREQ,
-    ACTION_TPM_ATTESTATION_FINISH_CERTREQ,
-    ACTION_TPM_ATTESTATION_GET_CERTIFICATE,
-    ACTION_TPM_ATTESTATION_KEY_STATUS,
-    ACTION_TPM_ATTESTATION_REGISTER_KEY,
-    ACTION_TPM_ATTESTATION_ENTERPRISE_CHALLENGE,
-    ACTION_TPM_ATTESTATION_SIMPLE_CHALLENGE,
-    ACTION_TPM_ATTESTATION_GET_KEY_PAYLOAD,
-    ACTION_TPM_ATTESTATION_SET_KEY_PAYLOAD,
-    ACTION_TPM_ATTESTATION_DELETE_KEYS,
-    ACTION_TPM_ATTESTATION_DELETE_KEY,
-    ACTION_TPM_ATTESTATION_GET_EK,
-    ACTION_TPM_ATTESTATION_RESET_IDENTITY,
-    ACTION_TPM_ATTESTATION_RESET_IDENTITY_RESULT,
-    ACTION_SIGN_LOCKBOX,
-    ACTION_VERIFY_LOCKBOX,
-    ACTION_FINALIZE_LOCKBOX,
-    ACTION_GET_BOOT_ATTRIBUTE,
-    ACTION_SET_BOOT_ATTRIBUTE,
-    ACTION_FLUSH_AND_SIGN_BOOT_ATTRIBUTES,
-    ACTION_GET_LOGIN_STATUS,
-    ACTION_INITIALIZE_CAST_KEY,
-    ACTION_GET_FIRMWARE_MANAGEMENT_PARAMETERS,
-    ACTION_SET_FIRMWARE_MANAGEMENT_PARAMETERS,
-    ACTION_REMOVE_FIRMWARE_MANAGEMENT_PARAMETERS,
-    ACTION_MIGRATE_TO_DIRCRYPTO,
-    ACTION_NEEDS_DIRCRYPTO_MIGRATION,
-    ACTION_GET_ENROLLMENT_ID,
-    ACTION_GET_SUPPORTED_KEY_POLICIES,
-    ACTION_GET_ACCOUNT_DISK_USAGE,
-    ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT,
-    ACTION_GET_RSU_DEVICE_ID,
-    ACTION_CHECK_HEALTH,
-    ACTION_START_FINGERPRINT_AUTH_SESSION,
-    ACTION_END_FINGERPRINT_AUTH_SESSION,
-  };
-  static const char kUserSwitch[] = "user";
-  static const char kPasswordSwitch[] = "password";
-  static const char kFingerprintSwitch[] = "fingerprint";
-  static const char kKeyLabelSwitch[] = "key_label";
-  static const char kKeyRevisionSwitch[] = "key_revision";
-  static const char kHmacSigningKeySwitch[] = "hmac_signing_key";
-  static const char kNewKeyLabelSwitch[] = "new_key_label";
-  static const char kRemoveKeyLabelSwitch[] = "remove_key_label";
-  static const char kOldPasswordSwitch[] = "old_password";
-  static const char kNewPasswordSwitch[] = "new_password";
-  static const char kForceSwitch[] = "force";
-  static const char kAsyncSwitch[] = "async";
-  static const char kCreateSwitch[] = "create";
-  static const char kAttrNameSwitch[] = "name";
-  static const char kAttrPrefixSwitch[] = "prefix";
-  static const char kAttrValueSwitch[] = "value";
-  static const char kFileSwitch[] = "file";
-  static const char kInputFileSwitch[] = "input";
-  static const char kOutputFileSwitch[] = "output";
-  static const char kEnsureEphemeralSwitch[] = "ensure_ephemeral";
-  static const char kCrosCoreSwitch[] = "cros_core";
-  static const char kProtobufSwitch[] = "protobuf";
-  static const char kFlagsSwitch[] = "flags";
-  static const char kDevKeyHashSwitch[] = "developer_key_hash";
-  static const char kEcryptfsSwitch[] = "ecryptfs";
-  static const char kToMigrateFromEcryptfsSwitch[] = "to_migrate_from_ecryptfs";
-  static const char kHiddenMount[] = "hidden_mount";
-  static const char kMinimalMigration[] = "minimal_migration";
-  static const char kPublicMount[] = "public_mount";
-  static const char kKeyPolicySwitch[] = "key_policy";
-  static const char kKeyPolicyLECredential[] = "le";
-  static const char kProfileSwitch[] = "profile";
-  static const char kIgnoreCache[] = "ignore_cache";
-  static const char kRestoreKeyInHexSwitch[] = "restore_key_in_hex";
-  static const char kMassRemoveExemptLabelsSwitch[] = "exempt_key_labels";
-  static const char kEnrollSwitch[] = "enroll";
-  static const char kUseDBus[] = "use_dbus";
+static const char kSyslogSwitch[] = "syslog";
+static const char kAttestationServerSwitch[] = "attestation-server";
+static struct {
+  const char* name;
+  const int aca_type;
+} kAttestationServers[] = {{"default", attestation::DEFAULT_ACA},
+                           {"test", attestation::TEST_ACA},
+                           {nullptr, attestation::ACAType_ARRAYSIZE}};
+static const char kVaServerSwitch[] = "va-server";
+static struct {
+  const char* name;
+  const int va_type;
+} kVaServers[] = {{"default", attestation::DEFAULT_VA},
+                  {"test", attestation::TEST_VA},
+                  {nullptr, attestation::VAType_ARRAYSIZE}};
+static const char kWaitOwnershipTimeoutSwitch[] = "wait-ownership-timeout";
+static const char kActionSwitch[] = "action";
+static const char* kActions[] = {"mount_ex",
+                                 "mount_guest_ex",
+                                 "unmount",
+                                 "is_mounted",
+                                 "check_key_ex",
+                                 "remove_key_ex",
+                                 "get_key_data_ex",
+                                 "list_keys_ex",
+                                 "migrate_key_ex",
+                                 "add_key_ex",
+                                 "add_data_restore_key",
+                                 "mass_remove_keys",
+                                 "update_key_ex",
+                                 "remove",
+                                 "obfuscate_user",
+                                 "get_system_salt",
+                                 "dump_keyset",
+                                 "dump_last_activity",
+                                 "tpm_status",
+                                 "tpm_more_status",
+                                 "status",
+                                 "set_current_user_old",
+                                 "tpm_take_ownership",
+                                 "tpm_clear_stored_password",
+                                 "tpm_wait_ownership",
+                                 "install_attributes_set",
+                                 "install_attributes_get",
+                                 "install_attributes_finalize",
+                                 "install_attributes_count",
+                                 "install_attributes_is_ready",
+                                 "install_attributes_is_secure",
+                                 "install_attributes_is_invalid",
+                                 "install_attributes_is_first_install",
+                                 "pkcs11_get_user_token_info",
+                                 "pkcs11_get_system_token_info",
+                                 "pkcs11_is_user_token_ok",
+                                 "pkcs11_terminate",
+                                 "tpm_verify_attestation",
+                                 "tpm_verify_ek",
+                                 "tpm_attestation_status",
+                                 "tpm_attestation_more_status",
+                                 "tpm_attestation_start_enroll",
+                                 "tpm_attestation_finish_enroll",
+                                 "tpm_attestation_enroll",
+                                 "tpm_attestation_start_cert_request",
+                                 "tpm_attestation_finish_cert_request",
+                                 "tpm_attestation_get_certificate",
+                                 "tpm_attestation_key_status",
+                                 "tpm_attestation_register_key",
+                                 "tpm_attestation_enterprise_challenge",
+                                 "tpm_attestation_simple_challenge",
+                                 "tpm_attestation_get_key_payload",
+                                 "tpm_attestation_set_key_payload",
+                                 "tpm_attestation_delete_keys",
+                                 "tpm_attestation_delete_key",
+                                 "tpm_attestation_get_ek",
+                                 "tpm_attestation_reset_identity",
+                                 "tpm_attestation_reset_identity_result",
+                                 "sign_lockbox",
+                                 "verify_lockbox",
+                                 "finalize_lockbox",
+                                 "get_boot_attribute",
+                                 "set_boot_attribute",
+                                 "flush_and_sign_boot_attributes",
+                                 "get_login_status",
+                                 "initialize_cast_key",
+                                 "get_firmware_management_parameters",
+                                 "set_firmware_management_parameters",
+                                 "remove_firmware_management_parameters",
+                                 "migrate_to_dircrypto",
+                                 "needs_dircrypto_migration",
+                                 "get_enrollment_id",
+                                 "get_supported_key_policies",
+                                 "get_account_disk_usage",
+                                 "lock_to_single_user_mount_until_reboot",
+                                 "get_rsu_device_id",
+                                 "check_health",
+                                 "start_fingerprint_auth_session",
+                                 "end_fingerprint_auth_session",
+                                 NULL};
+enum ActionEnum {
+  ACTION_MOUNT_EX,
+  ACTION_MOUNT_GUEST_EX,
+  ACTION_UNMOUNT,
+  ACTION_MOUNTED,
+  ACTION_CHECK_KEY_EX,
+  ACTION_REMOVE_KEY_EX,
+  ACTION_GET_KEY_DATA_EX,
+  ACTION_LIST_KEYS_EX,
+  ACTION_MIGRATE_KEY_EX,
+  ACTION_ADD_KEY_EX,
+  ACTION_ADD_DATA_RESTORE_KEY,
+  ACTION_MASS_REMOVE_KEYS,
+  ACTION_UPDATE_KEY_EX,
+  ACTION_REMOVE,
+  ACTION_OBFUSCATE_USER,
+  ACTION_GET_SYSTEM_SALT,
+  ACTION_DUMP_KEYSET,
+  ACTION_DUMP_LAST_ACTIVITY,
+  ACTION_TPM_STATUS,
+  ACTION_TPM_MORE_STATUS,
+  ACTION_STATUS,
+  ACTION_SET_CURRENT_USER_OLD,
+  ACTION_TPM_TAKE_OWNERSHIP,
+  ACTION_TPM_CLEAR_STORED_PASSWORD,
+  ACTION_TPM_WAIT_OWNERSHIP,
+  ACTION_INSTALL_ATTRIBUTES_SET,
+  ACTION_INSTALL_ATTRIBUTES_GET,
+  ACTION_INSTALL_ATTRIBUTES_FINALIZE,
+  ACTION_INSTALL_ATTRIBUTES_COUNT,
+  ACTION_INSTALL_ATTRIBUTES_IS_READY,
+  ACTION_INSTALL_ATTRIBUTES_IS_SECURE,
+  ACTION_INSTALL_ATTRIBUTES_IS_INVALID,
+  ACTION_INSTALL_ATTRIBUTES_IS_FIRST_INSTALL,
+  ACTION_PKCS11_GET_USER_TOKEN_INFO,
+  ACTION_PKCS11_GET_SYSTEM_TOKEN_INFO,
+  ACTION_PKCS11_IS_USER_TOKEN_OK,
+  ACTION_PKCS11_TERMINATE,
+  ACTION_TPM_VERIFY_ATTESTATION,
+  ACTION_TPM_VERIFY_EK,
+  ACTION_TPM_ATTESTATION_STATUS,
+  ACTION_TPM_ATTESTATION_MORE_STATUS,
+  ACTION_TPM_ATTESTATION_START_ENROLL,
+  ACTION_TPM_ATTESTATION_FINISH_ENROLL,
+  ACTION_TPM_ATTESTATION_ENROLL,
+  ACTION_TPM_ATTESTATION_START_CERTREQ,
+  ACTION_TPM_ATTESTATION_FINISH_CERTREQ,
+  ACTION_TPM_ATTESTATION_GET_CERTIFICATE,
+  ACTION_TPM_ATTESTATION_KEY_STATUS,
+  ACTION_TPM_ATTESTATION_REGISTER_KEY,
+  ACTION_TPM_ATTESTATION_ENTERPRISE_CHALLENGE,
+  ACTION_TPM_ATTESTATION_SIMPLE_CHALLENGE,
+  ACTION_TPM_ATTESTATION_GET_KEY_PAYLOAD,
+  ACTION_TPM_ATTESTATION_SET_KEY_PAYLOAD,
+  ACTION_TPM_ATTESTATION_DELETE_KEYS,
+  ACTION_TPM_ATTESTATION_DELETE_KEY,
+  ACTION_TPM_ATTESTATION_GET_EK,
+  ACTION_TPM_ATTESTATION_RESET_IDENTITY,
+  ACTION_TPM_ATTESTATION_RESET_IDENTITY_RESULT,
+  ACTION_SIGN_LOCKBOX,
+  ACTION_VERIFY_LOCKBOX,
+  ACTION_FINALIZE_LOCKBOX,
+  ACTION_GET_BOOT_ATTRIBUTE,
+  ACTION_SET_BOOT_ATTRIBUTE,
+  ACTION_FLUSH_AND_SIGN_BOOT_ATTRIBUTES,
+  ACTION_GET_LOGIN_STATUS,
+  ACTION_INITIALIZE_CAST_KEY,
+  ACTION_GET_FIRMWARE_MANAGEMENT_PARAMETERS,
+  ACTION_SET_FIRMWARE_MANAGEMENT_PARAMETERS,
+  ACTION_REMOVE_FIRMWARE_MANAGEMENT_PARAMETERS,
+  ACTION_MIGRATE_TO_DIRCRYPTO,
+  ACTION_NEEDS_DIRCRYPTO_MIGRATION,
+  ACTION_GET_ENROLLMENT_ID,
+  ACTION_GET_SUPPORTED_KEY_POLICIES,
+  ACTION_GET_ACCOUNT_DISK_USAGE,
+  ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT,
+  ACTION_GET_RSU_DEVICE_ID,
+  ACTION_CHECK_HEALTH,
+  ACTION_START_FINGERPRINT_AUTH_SESSION,
+  ACTION_END_FINGERPRINT_AUTH_SESSION,
+};
+static const char kUserSwitch[] = "user";
+static const char kPasswordSwitch[] = "password";
+static const char kFingerprintSwitch[] = "fingerprint";
+static const char kKeyLabelSwitch[] = "key_label";
+static const char kKeyRevisionSwitch[] = "key_revision";
+static const char kHmacSigningKeySwitch[] = "hmac_signing_key";
+static const char kNewKeyLabelSwitch[] = "new_key_label";
+static const char kRemoveKeyLabelSwitch[] = "remove_key_label";
+static const char kOldPasswordSwitch[] = "old_password";
+static const char kNewPasswordSwitch[] = "new_password";
+static const char kForceSwitch[] = "force";
+static const char kAsyncSwitch[] = "async";
+static const char kCreateSwitch[] = "create";
+static const char kAttrNameSwitch[] = "name";
+static const char kAttrPrefixSwitch[] = "prefix";
+static const char kAttrValueSwitch[] = "value";
+static const char kFileSwitch[] = "file";
+static const char kInputFileSwitch[] = "input";
+static const char kOutputFileSwitch[] = "output";
+static const char kEnsureEphemeralSwitch[] = "ensure_ephemeral";
+static const char kCrosCoreSwitch[] = "cros_core";
+static const char kProtobufSwitch[] = "protobuf";
+static const char kFlagsSwitch[] = "flags";
+static const char kDevKeyHashSwitch[] = "developer_key_hash";
+static const char kEcryptfsSwitch[] = "ecryptfs";
+static const char kToMigrateFromEcryptfsSwitch[] = "to_migrate_from_ecryptfs";
+static const char kHiddenMount[] = "hidden_mount";
+static const char kMinimalMigration[] = "minimal_migration";
+static const char kPublicMount[] = "public_mount";
+static const char kKeyPolicySwitch[] = "key_policy";
+static const char kKeyPolicyLECredential[] = "le";
+static const char kProfileSwitch[] = "profile";
+static const char kIgnoreCache[] = "ignore_cache";
+static const char kRestoreKeyInHexSwitch[] = "restore_key_in_hex";
+static const char kMassRemoveExemptLabelsSwitch[] = "exempt_key_labels";
+static const char kEnrollSwitch[] = "enroll";
+static const char kUseDBus[] = "use_dbus";
 }  // namespace switches
 
-#define DBUS_METHOD(method_name) \
-    org_chromium_CryptohomeInterface_ ## method_name
+#define DBUS_METHOD(method_name) org_chromium_CryptohomeInterface_##method_name
 
 typedef void (*ProtoDBusReplyMethod)(DBusGProxy*, GArray*, GError*, gpointer);
-typedef gboolean (*ProtoDBusMethod)(
-    DBusGProxy*, const GArray*, GArray**, GError**);
-typedef DBusGProxyCall* (*ProtoDBusAsyncMethod)(
-    DBusGProxy*, const GArray*, ProtoDBusReplyMethod, gpointer);
+typedef gboolean (*ProtoDBusMethod)(DBusGProxy*,
+                                    const GArray*,
+                                    GArray**,
+                                    GError**);
+typedef DBusGProxyCall* (*ProtoDBusAsyncMethod)(DBusGProxy*,
+                                                const GArray*,
+                                                ProtoDBusReplyMethod,
+                                                gpointer);
 
 brillo::SecureBlob GetSystemSalt(const brillo::dbus::Proxy& proxy) {
   brillo::glib::ScopedError error;
   brillo::glib::ScopedArray salt;
-  if (!org_chromium_CryptohomeInterface_get_system_salt(proxy.gproxy(),
-      &brillo::Resetter(&salt).lvalue(),
-      &brillo::Resetter(&error).lvalue())) {
+  if (!org_chromium_CryptohomeInterface_get_system_salt(
+          proxy.gproxy(), &brillo::Resetter(&salt).lvalue(),
+          &brillo::Resetter(&error).lvalue())) {
     LOG(ERROR) << "GetSystemSalt failed: " << error->message;
     return brillo::SecureBlob();
   }
@@ -481,7 +484,7 @@ GArray* GArrayFromProtoBuf(const google::protobuf::MessageLite& pb) {
   return ary;
 }
 
-bool BuildAccountId(base::CommandLine* cl, cryptohome::AccountIdentifier *id) {
+bool BuildAccountId(base::CommandLine* cl, cryptohome::AccountIdentifier* id) {
   std::string account_id;
   if (!GetAccountId(cl, &account_id)) {
     printf("No account_id specified.\n");
@@ -498,8 +501,8 @@ bool BuildAuthorization(base::CommandLine* cl,
   if (need_password) {
     // Check if restore key is provided
     if (cl->HasSwitch(switches::kRestoreKeyInHexSwitch)) {
-      brillo::SecureBlob raw_byte(cl->
-          GetSwitchValueASCII(switches::kRestoreKeyInHexSwitch));
+      brillo::SecureBlob raw_byte(
+          cl->GetSwitchValueASCII(switches::kRestoreKeyInHexSwitch));
       if (raw_byte.to_string().length() == 0) {
         printf("No hex string specified\n");
         return false;
@@ -508,8 +511,7 @@ bool BuildAuthorization(base::CommandLine* cl,
       auth->mutable_key()->set_secret(raw_byte.to_string());
     } else {
       std::string password;
-      GetPassword(proxy, cl, switches::kPasswordSwitch,
-                  "Enter the password",
+      GetPassword(proxy, cl, switches::kPasswordSwitch, "Enter the password",
                   &password);
 
       auth->mutable_key()->set_secret(password);
@@ -543,7 +545,7 @@ class ClientLoop {
       : loop_(NULL),
         async_call_id_(0),
         return_status_(false),
-        return_code_(0) { }
+        return_code_(0) {}
 
   virtual ~ClientLoop() {
     if (loop_) {
@@ -552,30 +554,23 @@ class ClientLoop {
   }
 
   void Initialize(brillo::dbus::Proxy* proxy) {
-    dbus_g_object_register_marshaller(g_cclosure_marshal_generic,
-                                      G_TYPE_NONE,
-                                      G_TYPE_INT,
-                                      G_TYPE_BOOLEAN,
-                                      G_TYPE_INT,
+    dbus_g_object_register_marshaller(g_cclosure_marshal_generic, G_TYPE_NONE,
+                                      G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INT,
                                       G_TYPE_INVALID);
-    dbus_g_proxy_add_signal(proxy->gproxy(), "AsyncCallStatus",
-                            G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INT,
-                            G_TYPE_INVALID);
+    dbus_g_proxy_add_signal(proxy->gproxy(), "AsyncCallStatus", G_TYPE_INT,
+                            G_TYPE_BOOLEAN, G_TYPE_INT, G_TYPE_INVALID);
     dbus_g_proxy_connect_signal(proxy->gproxy(), "AsyncCallStatus",
-                                G_CALLBACK(ClientLoop::CallbackThunk),
-                                this, NULL);
-    dbus_g_object_register_marshaller(g_cclosure_marshal_generic,
-                                      G_TYPE_NONE,
-                                      G_TYPE_INT,
-                                      G_TYPE_BOOLEAN,
-                                      DBUS_TYPE_G_UCHAR_ARRAY,
-                                      G_TYPE_INVALID);
+                                G_CALLBACK(ClientLoop::CallbackThunk), this,
+                                NULL);
+    dbus_g_object_register_marshaller(g_cclosure_marshal_generic, G_TYPE_NONE,
+                                      G_TYPE_INT, G_TYPE_BOOLEAN,
+                                      DBUS_TYPE_G_UCHAR_ARRAY, G_TYPE_INVALID);
     dbus_g_proxy_add_signal(proxy->gproxy(), "AsyncCallStatusWithData",
                             G_TYPE_INT, G_TYPE_BOOLEAN, DBUS_TYPE_G_UCHAR_ARRAY,
                             G_TYPE_INVALID);
     dbus_g_proxy_connect_signal(proxy->gproxy(), "AsyncCallStatusWithData",
-                                G_CALLBACK(ClientLoop::CallbackDataThunk),
-                                this, NULL);
+                                G_CALLBACK(ClientLoop::CallbackDataThunk), this,
+                                NULL);
     loop_ = g_main_loop_new(NULL, TRUE);
   }
 
@@ -584,9 +579,7 @@ class ClientLoop {
     g_main_loop_run(loop_);
   }
 
-  void Run() {
-    Run(0);
-  }
+  void Run() { Run(0); }
 
   // This callback can be used with a ClientLoop instance as the |userdata| to
   // handle an asynchronous reply which emits a serialized BaseReply.
@@ -597,21 +590,13 @@ class ClientLoop {
     reinterpret_cast<ClientLoop*>(userdata)->ParseReply(data, error);
   }
 
-  bool get_return_status() {
-    return return_status_;
-  }
+  bool get_return_status() { return return_status_; }
 
-  int get_return_code() {
-    return return_code_;
-  }
+  int get_return_code() { return return_code_; }
 
-  std::string get_return_data() {
-    return return_data_;
-  }
+  std::string get_return_data() { return return_data_; }
 
-  cryptohome::BaseReply reply() {
-    return reply_;
-  }
+  cryptohome::BaseReply reply() { return reply_; }
 
  private:
   void Callback(int async_call_id, bool return_status, int return_code) {
@@ -630,8 +615,7 @@ class ClientLoop {
     }
   }
 
-  void ParseReply(GArray* reply_ary,
-                  GError* error) {
+  void ParseReply(GArray* reply_ary, GError* error) {
     if (error && error->message) {
       printf("Call error: %s\n", error->message);
       exit(1);
@@ -641,11 +625,12 @@ class ClientLoop {
   }
 
   static void CallbackThunk(DBusGProxy* proxy,
-                            int async_call_id, bool return_status,
-                            int return_code, gpointer userdata) {
-    reinterpret_cast<ClientLoop*>(userdata)->Callback(async_call_id,
-                                                      return_status,
-                                                      return_code);
+                            int async_call_id,
+                            bool return_status,
+                            int return_code,
+                            gpointer userdata) {
+    reinterpret_cast<ClientLoop*>(userdata)->Callback(
+        async_call_id, return_status, return_code);
   }
 
   static void CallbackDataThunk(DBusGProxy* proxy,
@@ -653,12 +638,11 @@ class ClientLoop {
                                 bool return_status,
                                 GArray* data,
                                 gpointer userdata) {
-    reinterpret_cast<ClientLoop*>(userdata)->CallbackWithData(async_call_id,
-                                                              return_status,
-                                                              data);
+    reinterpret_cast<ClientLoop*>(userdata)->CallbackWithData(
+        async_call_id, return_status, data);
   }
 
-  GMainLoop *loop_;
+  GMainLoop* loop_;
   int async_call_id_;
   bool return_status_;
   int return_code_;
@@ -678,8 +662,7 @@ bool MakeProtoDBusCall(const std::string& name,
   if (cl->HasSwitch(switches::kAsyncSwitch)) {
     ClientLoop loop;
     loop.Initialize(proxy);
-    DBusGProxyCall* call = (*async_method)(proxy->gproxy(),
-                                           request_ary.get(),
+    DBusGProxyCall* call = (*async_method)(proxy->gproxy(), request_ary.get(),
                                            &ClientLoop::ParseReplyThunk,
                                            static_cast<gpointer>(&loop));
     if (!call) {
@@ -691,8 +674,7 @@ bool MakeProtoDBusCall(const std::string& name,
   } else {
     brillo::glib::ScopedError error;
     brillo::glib::ScopedArray reply_ary;
-    if (!(*method)(proxy->gproxy(),
-                   request_ary.get(),
+    if (!(*method)(proxy->gproxy(), request_ary.get(),
                    &brillo::Resetter(&reply_ary).lvalue(),
                    &brillo::Resetter(&error).lvalue())) {
       printf("Failed to call %s: %s\n", name.c_str(), error->message);
@@ -722,9 +704,9 @@ std::string GetPCAName(int pca_type) {
   }
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   base::CommandLine::Init(argc, argv);
-  base::CommandLine *cl = base::CommandLine::ForCurrentProcess();
+  base::CommandLine* cl = base::CommandLine::ForCurrentProcess();
   if (cl->HasSwitch(switches::kSyslogSwitch))
     brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
   else
@@ -749,9 +731,10 @@ int main(int argc, char **argv) {
   }
 
   int va_type = attestation::VAType_ARRAYSIZE;
-  std::string va_server(cl->HasSwitch(switches::kVaServerSwitch) ?
-      cl->GetSwitchValueASCII(switches::kVaServerSwitch) :
-      cl->GetSwitchValueASCII(switches::kAttestationServerSwitch));
+  std::string va_server(
+      cl->HasSwitch(switches::kVaServerSwitch)
+          ? cl->GetSwitchValueASCII(switches::kVaServerSwitch)
+          : cl->GetSwitchValueASCII(switches::kAttestationServerSwitch));
   if (va_server.size()) {
     for (int i = 0; switches::kVaServers[i].name; ++i) {
       if (va_server == switches::kVaServers[i].name) {
@@ -776,17 +759,15 @@ int main(int argc, char **argv) {
 
   std::string action = cl->GetSwitchValueASCII(switches::kActionSwitch);
   brillo::dbus::BusConnection bus = brillo::dbus::GetSystemBusConnection();
-  brillo::dbus::Proxy proxy(bus,
-                              cryptohome::kCryptohomeServiceName,
-                              cryptohome::kCryptohomeServicePath,
-                              cryptohome::kCryptohomeInterface);
+  brillo::dbus::Proxy proxy(bus, cryptohome::kCryptohomeServiceName,
+                            cryptohome::kCryptohomeServicePath,
+                            cryptohome::kCryptohomeInterface);
   DCHECK(proxy.gproxy()) << "Failed to acquire proxy";
   dbus_g_proxy_set_default_timeout(proxy.gproxy(), kDefaultTimeoutMs);
 
   cryptohome::Platform platform;
 
-  if (!strcmp(switches::kActions[switches::ACTION_MOUNT_EX],
-                action.c_str())) {
+  if (!strcmp(switches::kActions[switches::ACTION_MOUNT_EX], action.c_str())) {
     bool is_public_mount = cl->HasSwitch(switches::kPublicMount);
 
     cryptohome::AccountIdentifier id;
@@ -831,24 +812,17 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call = org_chromium_CryptohomeInterface_mount_ex_async(
-                                 proxy.gproxy(),
-                                 account_ary.get(),
-                                 auth_ary.get(),
-                                 req_ary.get(),
-                                 &ClientLoop::ParseReplyThunk,
-                                 static_cast<gpointer>(&loop));
+          proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+          &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_mount_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_mount_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("MountEx call failed: %s", error->message);
         return 1;
       }
@@ -899,8 +873,8 @@ int main(int argc, char **argv) {
 
     GArray* out_reply = NULL;
     if (!org_chromium_CryptohomeInterface_start_fingerprint_auth_session(
-            proxy.gproxy(), account_ary.get(), req_ary.get(),
-            &out_reply, &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), account_ary.get(), req_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
       printf("StartFingerprintAuthSession call failed: %s", error->message);
       return 1;
     }
@@ -920,14 +894,14 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     GArray* out_reply = NULL;
     if (!org_chromium_CryptohomeInterface_end_fingerprint_auth_session(
-            proxy.gproxy(), req_ary.get(),
-            &out_reply, &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), req_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
       printf("EndFingerprintAuthSession call failed: %s", error->message);
       return 1;
     }
     // EndFingerprintAuthSession always succeeds.
   } else if (!strcmp(switches::kActions[switches::ACTION_REMOVE_KEY_EX],
-                action.c_str())) {
+                     action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -951,25 +925,18 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_remove_key_ex_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               req_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_remove_key_ex_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_remove_key_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_remove_key_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("RemoveKeyEx call failed: %s", error->message);
         return 1;
       }
@@ -989,7 +956,7 @@ int main(int argc, char **argv) {
     cryptohome::AuthorizationRequest auth;
     cryptohome::GetKeyDataRequest key_data_req;
     const std::string label =
-      cl->GetSwitchValueASCII(switches::kKeyLabelSwitch);
+        cl->GetSwitchValueASCII(switches::kKeyLabelSwitch);
     if (label.empty()) {
       printf("No key_label specified.\n");
       return 1;
@@ -1009,13 +976,9 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_get_key_data_ex_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               req_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_get_key_data_ex_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call) {
         return 1;
       }
@@ -1023,12 +986,9 @@ int main(int argc, char **argv) {
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_get_key_data_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_get_key_data_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("GetKeyDataEx call failed: %s", error->message);
         return 1;
       }
@@ -1039,7 +999,7 @@ int main(int argc, char **argv) {
       return reply.error();
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_LIST_KEYS_EX],
-                action.c_str())) {
+                     action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -1059,13 +1019,9 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_list_keys_ex_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               req_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_list_keys_ex_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call) {
         return 1;
       }
@@ -1073,12 +1029,9 @@ int main(int argc, char **argv) {
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_list_keys_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_list_keys_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("ListKeysEx call failed: %s", error->message);
         return 1;
       }
@@ -1098,7 +1051,7 @@ int main(int argc, char **argv) {
       printf("Label: %s\n", list_keys_reply.labels(i).c_str());
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_CHECK_KEY_EX],
-                action.c_str())) {
+                     action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -1126,25 +1079,18 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_check_key_ex_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               req_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_check_key_ex_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_check_key_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_check_key_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("CheckKeyEx call failed: %s", error->message);
         return 1;
       }
@@ -1175,23 +1121,18 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_add_data_restore_key_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_add_data_restore_key_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_add_data_restore_key(proxy.gproxy(),
-          account_ary.get(),
-          auth_ary.get(),
-          &out_reply,
-          &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_add_data_restore_key(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), &out_reply,
+              &brillo::Resetter(&error).lvalue())) {
         printf("Restore key addition failed: %s", error->message);
         return 1;
       }
@@ -1202,16 +1143,15 @@ int main(int argc, char **argv) {
       return reply.error();
     }
     SecureBlob data_restore_key_raw(
-        reply.GetExtension(
-            cryptohome::AddDataRestoreKeyReply::reply)
-        .data_restore_key());
+        reply.GetExtension(cryptohome::AddDataRestoreKeyReply::reply)
+            .data_restore_key());
     printf("Restore key addition succeeded.\n");
     printf("Here's the data restore key in hex: %s\n",
-        brillo::SecureBlobToSecureHex(data_restore_key_raw)
-            .to_string().c_str());
-  } else if (!strcmp(
-                switches::kActions[switches::ACTION_MASS_REMOVE_KEYS],
-                action.c_str())) {
+           brillo::SecureBlobToSecureHex(data_restore_key_raw)
+               .to_string()
+               .c_str());
+  } else if (!strcmp(switches::kActions[switches::ACTION_MASS_REMOVE_KEYS],
+                     action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -1224,10 +1164,8 @@ int main(int argc, char **argv) {
     // exempt_key_labels are seperated by comma from command line input
     // ( e.g. --exempt_key_labels=label1,label2,label3 )
     std::vector<std::string> exempt_labels = SplitString(
-        cl->GetSwitchValueASCII(switches::kMassRemoveExemptLabelsSwitch),
-        ",",
-        base::TRIM_WHITESPACE,
-        base::SPLIT_WANT_NONEMPTY);
+        cl->GetSwitchValueASCII(switches::kMassRemoveExemptLabelsSwitch), ",",
+        base::TRIM_WHITESPACE, base::SPLIT_WANT_NONEMPTY);
     for (std::string label : exempt_labels) {
       cryptohome::KeyData* data =
           mass_remove_keys_request.add_exempt_key_data();
@@ -1246,13 +1184,9 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
-           org_chromium_CryptohomeInterface_mass_remove_keys_async(
-               proxy.gproxy(),
-               account_ary.get(),
-               auth_ary.get(),
-               req_ary.get(),
-               &ClientLoop::ParseReplyThunk,
-               static_cast<gpointer>(&loop));
+          org_chromium_CryptohomeInterface_mass_remove_keys_async(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
@@ -1260,12 +1194,8 @@ int main(int argc, char **argv) {
     } else {
       GArray* out_reply = NULL;
       if (!org_chromium_CryptohomeInterface_mass_remove_keys(
-          proxy.gproxy(),
-          account_ary.get(),
-          auth_ary.get(),
-          req_ary.get(),
-          &out_reply,
-          &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("MassRemoveKeys call failed: %s", error->message);
         return 1;
       }
@@ -1327,11 +1257,10 @@ int main(int argc, char **argv) {
     }
     printf("Key migration succeeded.\n");
   } else if (!strcmp(switches::kActions[switches::ACTION_ADD_KEY_EX],
-                action.c_str())) {
+                     action.c_str())) {
     std::string new_password;
     GetPassword(proxy, cl, switches::kNewPasswordSwitch,
-                "Enter the new password",
-                &new_password);
+                "Enter the new password", &new_password);
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -1355,8 +1284,8 @@ int main(int argc, char **argv) {
       cryptohome::KeyAuthorizationSecret* auth_secret =
           auth_data->add_secrets();
       auth_secret->mutable_usage()->set_sign(true);
-      auth_secret->set_symmetric_key(cl->GetSwitchValueASCII(
-          switches::kHmacSigningKeySwitch));
+      auth_secret->set_symmetric_key(
+          cl->GetSwitchValueASCII(switches::kHmacSigningKeySwitch));
 
       LOG(INFO) << "Adding restricted key";
       cryptohome::KeyPrivileges* privs = data->mutable_privileges();
@@ -1391,24 +1320,17 @@ int main(int argc, char **argv) {
       ClientLoop loop;
       loop.Initialize(&proxy);
       DBusGProxyCall* call = org_chromium_CryptohomeInterface_add_key_ex_async(
-                                 proxy.gproxy(),
-                                 account_ary.get(),
-                                 auth_ary.get(),
-                                 req_ary.get(),
-                                 &ClientLoop::ParseReplyThunk,
-                                 static_cast<gpointer>(&loop));
+          proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+          &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_add_key_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_add_key_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("AddKeyEx call failed: %s", error->message);
         return 1;
       }
@@ -1420,11 +1342,10 @@ int main(int argc, char **argv) {
     }
     printf("Key added.\n");
   } else if (!strcmp(switches::kActions[switches::ACTION_UPDATE_KEY_EX],
-                action.c_str())) {
+                     action.c_str())) {
     std::string new_password;
     GetPassword(proxy, cl, switches::kNewPasswordSwitch,
-                "Enter the new password",
-                &new_password);
+                "Enter the new password", &new_password);
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -1442,7 +1363,8 @@ int main(int argc, char **argv) {
     if (cl->HasSwitch(switches::kKeyRevisionSwitch)) {
       int int_value = 0;
       if (!base::StringToInt(
-            cl->GetSwitchValueASCII(switches::kKeyRevisionSwitch), &int_value))
+              cl->GetSwitchValueASCII(switches::kKeyRevisionSwitch),
+              &int_value))
         LOG(FATAL) << "Cannot parse --key_revision";
       data->set_revision(int_value);
     }
@@ -1475,24 +1397,17 @@ int main(int argc, char **argv) {
       loop.Initialize(&proxy);
       DBusGProxyCall* call =
           org_chromium_CryptohomeInterface_update_key_ex_async(
-              proxy.gproxy(),
-              account_ary.get(),
-              auth_ary.get(),
-              req_ary.get(),
-              &ClientLoop::ParseReplyThunk,
-              static_cast<gpointer>(&loop));
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &ClientLoop::ParseReplyThunk, static_cast<gpointer>(&loop));
       if (!call)
         return 1;
       loop.Run();
       reply = loop.reply();
     } else {
       GArray* out_reply = NULL;
-      if (!org_chromium_CryptohomeInterface_update_key_ex(proxy.gproxy(),
-            account_ary.get(),
-            auth_ary.get(),
-            req_ary.get(),
-            &out_reply,
-            &brillo::Resetter(&error).lvalue())) {
+      if (!org_chromium_CryptohomeInterface_update_key_ex(
+              proxy.gproxy(), account_ary.get(), auth_ary.get(), req_ary.get(),
+              &out_reply, &brillo::Resetter(&error).lvalue())) {
         printf("Failed to call UpdateKeyEx!\n");
         return 1;
       }
@@ -1565,9 +1480,8 @@ int main(int argc, char **argv) {
                      action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean done = false;
-    if (!org_chromium_CryptohomeInterface_is_mounted(proxy.gproxy(),
-        &done,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_is_mounted(
+            proxy.gproxy(), &done, &brillo::Resetter(&error).lvalue())) {
       printf("IsMounted call failed: %s.\n", error->message);
     }
     if (done) {
@@ -1637,10 +1551,10 @@ int main(int argc, char **argv) {
       return 1;
     }
 
-    FilePath vault_path = FilePath("/home/.shadow")
-                              .Append(SanitizeUserNameWithSalt(account_id,
-                                      GetSystemSalt(proxy)))
-                              .Append("master.0");
+    FilePath vault_path =
+        FilePath("/home/.shadow")
+            .Append(SanitizeUserNameWithSalt(account_id, GetSystemSalt(proxy)))
+            .Append("master.0");
     brillo::Blob contents;
     if (!platform.ReadFile(vault_path, &contents)) {
       printf("Couldn't load keyset contents: %s.\n",
@@ -1655,16 +1569,16 @@ int main(int argc, char **argv) {
     }
     printf("For keyset: %s\n", vault_path.value().c_str());
     printf("  Flags:\n");
-    if ((serialized.flags() & cryptohome::SerializedVaultKeyset::TPM_WRAPPED)
-        && serialized.has_tpm_key()) {
+    if ((serialized.flags() & cryptohome::SerializedVaultKeyset::TPM_WRAPPED) &&
+        serialized.has_tpm_key()) {
       printf("    TPM_WRAPPED\n");
     }
-    if ((serialized.flags() & cryptohome::SerializedVaultKeyset::PCR_BOUND)
-        && serialized.has_tpm_key() && serialized.has_extended_tpm_key()) {
+    if ((serialized.flags() & cryptohome::SerializedVaultKeyset::PCR_BOUND) &&
+        serialized.has_tpm_key() && serialized.has_extended_tpm_key()) {
       printf("    PCR_BOUND\n");
     }
-    if (serialized.flags()
-        & cryptohome::SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    if (serialized.flags() &
+        cryptohome::SerializedVaultKeyset::SCRYPT_WRAPPED) {
       printf("    SCRYPT_WRAPPED\n");
     }
     SecureBlob blob(serialized.salt().length());
@@ -1678,16 +1592,15 @@ int main(int argc, char **argv) {
     printf("    %s\n", cryptohome::CryptoLib::SecureBlobToHex(blob).c_str());
     if (serialized.has_tpm_key()) {
       blob.resize(serialized.tpm_key().length());
-      serialized.tpm_key().copy(blob.char_data(),
-                                serialized.tpm_key().length(), 0);
+      serialized.tpm_key().copy(blob.char_data(), serialized.tpm_key().length(),
+                                0);
       printf("  TPM-Bound (Encrypted) Vault Encryption Key:\n");
       printf("    %s\n", cryptohome::CryptoLib::SecureBlobToHex(blob).c_str());
     }
     if (serialized.has_extended_tpm_key()) {
       blob.resize(serialized.extended_tpm_key().length());
-      serialized.extended_tpm_key().copy(blob.char_data(),
-                                        serialized.extended_tpm_key().length(),
-                                        0);
+      serialized.extended_tpm_key().copy(
+          blob.char_data(), serialized.extended_tpm_key().length(), 0);
       printf("  TPM-Bound (Encrypted) Vault Encryption Key, PCR extended:\n");
       printf("    %s\n", cryptohome::CryptoLib::SecureBlobToHex(blob).c_str());
     }
@@ -1715,7 +1628,7 @@ int main(int argc, char **argv) {
                timestamp_path.value().c_str());
       }
       const base::Time last_activity =
-        base::Time::FromInternalValue(timestamp.timestamp());
+          base::Time::FromInternalValue(timestamp.timestamp());
       printf("  Last activity (days ago):\n");
       printf("    %d\n", (base::Time::Now() - last_activity).InDays());
     } else if (serialized.has_last_activity_timestamp()) {
@@ -1727,8 +1640,8 @@ int main(int argc, char **argv) {
   } else if (!strcmp(switches::kActions[switches::ACTION_DUMP_LAST_ACTIVITY],
                      action.c_str())) {
     std::vector<FilePath> user_dirs;
-    if (!platform.EnumerateDirectoryEntries(
-          FilePath("/home/.shadow/"), false, &user_dirs)) {
+    if (!platform.EnumerateDirectoryEntries(FilePath("/home/.shadow/"), false,
+                                            &user_dirs)) {
       LOG(ERROR) << "Can not list shadow root.";
       return 1;
     }
@@ -1770,7 +1683,7 @@ int main(int argc, char **argv) {
                    timestamp_path.value().c_str());
           }
           const base::Time last_activity =
-            base::Time::FromInternalValue(timestamp.timestamp());
+              base::Time::FromInternalValue(timestamp.timestamp());
           if (last_activity > max_activity) {
             max_activity = last_activity;
           }
@@ -1783,46 +1696,41 @@ int main(int argc, char **argv) {
       }
       if (max_activity > base::Time::UnixEpoch()) {
         printf("%s %3d\n", dir_name.c_str(),
-                           (base::Time::Now() - max_activity).InDays());
+               (base::Time::Now() - max_activity).InDays());
       }
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_TPM_STATUS],
                      action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result = false;
-    if (!org_chromium_CryptohomeInterface_tpm_is_enabled(proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_tpm_is_enabled(
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsEnabled call failed: %s.\n", error->message);
     } else {
       printf("TPM Enabled: %s\n", (result ? "true" : "false"));
     }
     result = false;
-    if (!org_chromium_CryptohomeInterface_tpm_is_owned(proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_tpm_is_owned(
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsOwned call failed: %s.\n", error->message);
     } else {
       printf("TPM Owned: %s\n", (result ? "true" : "false"));
     }
-    if (!org_chromium_CryptohomeInterface_tpm_is_being_owned(proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_tpm_is_being_owned(
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsBeingOwned call failed: %s.\n", error->message);
     } else {
       printf("TPM Being Owned: %s\n", (result ? "true" : "false"));
     }
-    if (!org_chromium_CryptohomeInterface_tpm_is_ready(proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_tpm_is_ready(
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsReady call failed: %s.\n", error->message);
     } else {
       printf("TPM Ready: %s\n", (result ? "true" : "false"));
     }
     gchar* password;
-    if (!org_chromium_CryptohomeInterface_tpm_get_password(proxy.gproxy(),
-        &password,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_tpm_get_password(
+            proxy.gproxy(), &password, &brillo::Resetter(&error).lvalue())) {
       printf("TpmGetPassword call failed: %s.\n", error->message);
     } else {
       printf("TPM Password: %s\n", password);
@@ -1834,9 +1742,8 @@ int main(int argc, char **argv) {
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall(cryptohome::kCryptohomeGetTpmStatus,
                            DBUS_METHOD(get_tpm_status),
-                           DBUS_METHOD(get_tpm_status_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+                           DBUS_METHOD(get_tpm_status_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(cryptohome::GetTpmStatusReply::reply)) {
@@ -1848,9 +1755,8 @@ int main(int argc, char **argv) {
                      action.c_str())) {
     brillo::glib::ScopedError error;
     gchar* status;
-    if (!org_chromium_CryptohomeInterface_get_status_string(proxy.gproxy(),
-        &status,
-        &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_get_status_string(
+            proxy.gproxy(), &status, &brillo::Resetter(&error).lvalue())) {
       printf("GetStatusString call failed: %s.\n", error->message);
     } else {
       printf("%s\n", status);
@@ -1863,35 +1769,34 @@ int main(int argc, char **argv) {
     client_loop.Initialize(&proxy);
     if (!org_chromium_CryptohomeInterface_update_current_user_activity_timestamp(  // NOLINT
             proxy.gproxy(),
-            base::TimeDelta::FromDays(
-                kSetCurrentUserOldOffsetInDays).InSeconds(),
+            base::TimeDelta::FromDays(kSetCurrentUserOldOffsetInDays)
+                .InSeconds(),
             &brillo::Resetter(&error).lvalue())) {
       printf("UpdateCurrentUserActivityTimestamp call failed: %s.\n",
              error->message);
     } else {
-        printf("Timestamp successfully updated. You may verify it with "
-               "--action=dump_keyset --user=...\n");
+      printf(
+          "Timestamp successfully updated. You may verify it with "
+          "--action=dump_keyset --user=...\n");
     }
   } else if (!strcmp(switches::kActions[switches::ACTION_TPM_TAKE_OWNERSHIP],
                      action.c_str())) {
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_tpm_can_attempt_ownership(
-        proxy.gproxy(),
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &brillo::Resetter(&error).lvalue())) {
       printf("TpmCanAttemptOwnership call failed: %s.\n", error->message);
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_CLEAR_STORED_PASSWORD],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_TPM_CLEAR_STORED_PASSWORD],
+                 action.c_str())) {
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_tpm_clear_stored_password(
-        proxy.gproxy(),
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &brillo::Resetter(&error).lvalue())) {
       printf("TpmClearStoredPassword call failed: %s.\n", error->message);
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_GET],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_GET],
+                 action.c_str())) {
     std::string name;
     if (!GetAttrName(cl, &name)) {
       printf("No attribute name specified.\n");
@@ -1901,9 +1806,7 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_ready(
-        proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("IsReady call failed: %s.\n", error->message);
       return 1;
     }
@@ -1914,13 +1817,10 @@ int main(int argc, char **argv) {
 
     brillo::glib::ScopedArray value;
     if (!org_chromium_CryptohomeInterface_install_attributes_get(
-        proxy.gproxy(),
-        name.c_str(),
-        &brillo::Resetter(&value).lvalue(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
-       printf("Get() failed: %s.\n", error->message);
-       return 1;
+            proxy.gproxy(), name.c_str(), &brillo::Resetter(&value).lvalue(),
+            &result, &brillo::Resetter(&error).lvalue())) {
+      printf("Get() failed: %s.\n", error->message);
+      return 1;
     }
     std::string value_str(value->data, value->len);
     if (result == TRUE) {
@@ -1929,8 +1829,8 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_SET],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_SET],
+                 action.c_str())) {
     std::string name;
     if (!GetAttrName(cl, &name)) {
       printf("No attribute name specified.\n");
@@ -1945,9 +1845,7 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_ready(
-        proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("IsReady call failed: %s.\n", error->message);
       return 1;
     }
@@ -1960,25 +1858,20 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedArray value_ary(g_array_new(FALSE, FALSE, 1));
     g_array_append_vals(value_ary.get(), value.c_str(), value.size() + 1);
     if (!org_chromium_CryptohomeInterface_install_attributes_set(
-        proxy.gproxy(),
-        name.c_str(),
-        value_ary.get(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
-       printf("Set() failed: %s.\n", error->message);
-       return 1;
+            proxy.gproxy(), name.c_str(), value_ary.get(), &result,
+            &brillo::Resetter(&error).lvalue())) {
+      printf("Set() failed: %s.\n", error->message);
+      return 1;
     }
     if (result == FALSE)
       return 1;
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_FINALIZE],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_FINALIZE],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_ready(
-        proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("IsReady call failed: %s.\n", error->message);
       return 1;
     }
@@ -1987,16 +1880,14 @@ int main(int argc, char **argv) {
       return 1;
     }
     if (!org_chromium_CryptohomeInterface_install_attributes_finalize(
-        proxy.gproxy(),
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("Finalize() failed: %s.\n", error->message);
       return 1;
     }
     printf("InstallAttributesFinalize(): %d\n", result);
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_COUNT],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_COUNT],
+                 action.c_str())) {
     brillo::glib::ScopedError error;
     gint result;
     if (!org_chromium_CryptohomeInterface_install_attributes_count(
@@ -2005,9 +1896,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("InstallAttributesCount(): %d\n", result);
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_IS_READY],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_IS_READY],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_ready(
@@ -2016,9 +1907,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("InstallAttributesIsReady(): %d\n", static_cast<int>(result));
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_IS_SECURE],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_IS_SECURE],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_secure(
@@ -2027,9 +1918,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("InstallAttributesIsSecure(): %d\n", static_cast<int>(result));
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_IS_INVALID],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_IS_INVALID],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_invalid(
@@ -2038,9 +1929,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("InstallAttributesIsInvalid(): %d\n", static_cast<int>(result));
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INSTALL_ATTRIBUTES_IS_FIRST_INSTALL],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_INSTALL_ATTRIBUTES_IS_FIRST_INSTALL],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result;
     if (!org_chromium_CryptohomeInterface_install_attributes_is_first_install(
@@ -2050,9 +1941,8 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("InstallAttributesIsFirstInstall(): %d\n", static_cast<int>(result));
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_WAIT_OWNERSHIP],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions[switches::ACTION_TPM_WAIT_OWNERSHIP],
+                     action.c_str())) {
     // Note that this is a rather hackish implementation that will be replaced
     // once the refactor to distributed mode is over. It'll be replaced with an
     // implementation that does one synchronous call to tpm_manager's
@@ -2086,9 +1976,9 @@ int main(int argc, char **argv) {
     }
     printf("Fail to own TPM.\n");
     return 1;
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_PKCS11_GET_USER_TOKEN_INFO],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_PKCS11_GET_USER_TOKEN_INFO],
+                     action.c_str())) {
     // If no account_id is specified, proceed with the empty string.
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     if (!account_id.empty()) {
@@ -2097,11 +1987,7 @@ int main(int argc, char **argv) {
       gchar* pin = NULL;
       int slot = 0;
       if (!org_chromium_CryptohomeInterface_pkcs11_get_tpm_token_info_for_user(
-              proxy.gproxy(),
-              account_id.c_str(),
-              &label,
-              &pin,
-              &slot,
+              proxy.gproxy(), account_id.c_str(), &label, &pin, &slot,
               &brillo::Resetter(&error).lvalue())) {
         printf("PKCS #11 info call failed: %s.\n", error->message);
       } else {
@@ -2136,8 +2022,8 @@ int main(int argc, char **argv) {
       g_free(pin);
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_PKCS11_IS_USER_TOKEN_OK],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_PKCS11_IS_USER_TOKEN_OK],
+                 action.c_str())) {
     cryptohome::Pkcs11Init init;
     if (!init.IsUserTokenOK()) {
       printf("User token looks broken!\n");
@@ -2151,22 +2037,19 @@ int main(int argc, char **argv) {
     GetAccountId(cl, &account_id);
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_pkcs11_terminate(
-            proxy.gproxy(),
-            account_id.c_str(),
+            proxy.gproxy(), account_id.c_str(),
             &brillo::Resetter(&error).lvalue())) {
       printf("PKCS #11 terminate call failed: %s.\n", error->message);
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_VERIFY_ATTESTATION],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_TPM_VERIFY_ATTESTATION],
+                 action.c_str())) {
     bool is_cros_core = cl->HasSwitch(switches::kCrosCoreSwitch);
     brillo::glib::ScopedError error;
     gboolean result = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_verify_attestation_data(
-        proxy.gproxy(),
-        is_cros_core,
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_cros_core, &result,
+            &brillo::Resetter(&error).lvalue())) {
       printf("TpmVerifyAttestationData call failed: %s.\n", error->message);
       return 1;
     }
@@ -2180,10 +2063,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean result = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_verify_ek(
-        proxy.gproxy(),
-        is_cros_core,
-        &result,
-        &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_cros_core, &result,
+            &brillo::Resetter(&error).lvalue())) {
       printf("TpmVerifyEK call failed: %s.\n", error->message);
       return 1;
     }
@@ -2192,40 +2073,41 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_STATUS],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_TPM_ATTESTATION_STATUS],
+                 action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean result = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_is_attestation_prepared(
-        proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsAttestationPrepared call failed: %s.\n", error->message);
     } else {
       printf("Attestation Prepared: %s\n", (result ? "true" : "false"));
     }
     if (!org_chromium_CryptohomeInterface_tpm_is_attestation_enrolled(
-        proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsAttestationEnrolled call failed: %s.\n", error->message);
     } else {
       printf("Attestation Enrolled: %s\n", (result ? "true" : "false"));
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_MORE_STATUS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_MORE_STATUS],
+                     action.c_str())) {
     cryptohome::AttestationGetEnrollmentPreparationsRequest request;
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall(
-        cryptohome::kCryptohomeTpmAttestationGetEnrollmentPreparationsEx,
-        DBUS_METHOD(tpm_attestation_get_enrollment_preparations_ex),
-        DBUS_METHOD(tpm_attestation_get_enrollment_preparations_ex_async),
-        cl, &proxy, request, &reply, false /* print_reply */)) {
+            cryptohome::kCryptohomeTpmAttestationGetEnrollmentPreparationsEx,
+            DBUS_METHOD(tpm_attestation_get_enrollment_preparations_ex),
+            DBUS_METHOD(tpm_attestation_get_enrollment_preparations_ex_async),
+            cl, &proxy, request, &reply, false /* print_reply */)) {
       printf("TpmAttestationGetEnrollmentPreparationsEx call failed.\n");
     } else if (!reply.HasExtension(
-        cryptohome::AttestationGetEnrollmentPreparationsReply::reply)) {
+                   cryptohome::AttestationGetEnrollmentPreparationsReply::
+                       reply)) {
       printf("AttestationGetEnrollmentPreparationsReply missing.\n");
     } else {
       cryptohome::AttestationGetEnrollmentPreparationsReply* extension =
-        reply.MutableExtension(
-            cryptohome::AttestationGetEnrollmentPreparationsReply::reply);
+          reply.MutableExtension(
+              cryptohome::AttestationGetEnrollmentPreparationsReply::reply);
       auto map = extension->enrollment_preparations();
       bool prepared = false;
       for (auto it = map.cbegin(), end = map.cend(); it != end; ++it) {
@@ -2241,23 +2123,21 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean result = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_is_attestation_enrolled(
-        proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), &result, &brillo::Resetter(&error).lvalue())) {
       printf("TpmIsAttestationEnrolled call failed: %s.\n", error->message);
     } else {
       printf("Attestation Enrolled: %s\n", (result ? "true" : "false"));
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_START_ENROLL],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_START_ENROLL],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     std::string response_data;
     if (!cl->HasSwitch(switches::kAsyncSwitch)) {
       brillo::glib::ScopedArray data;
       if (!org_chromium_CryptohomeInterface_tpm_attestation_create_enroll_request(  // NOLINT
-          proxy.gproxy(),
-          pca_type,
-          &brillo::Resetter(&data).lvalue(),
-          &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), pca_type, &brillo::Resetter(&data).lvalue(),
+              &brillo::Resetter(&error).lvalue())) {
         printf("TpmAttestationCreateEnrollRequest call failed: %s.\n",
                error->message);
         return 1;
@@ -2268,9 +2148,7 @@ int main(int argc, char **argv) {
       client_loop.Initialize(&proxy);
       gint async_id = -1;
       if (!org_chromium_CryptohomeInterface_async_tpm_attestation_create_enroll_request(  // NOLINT
-              proxy.gproxy(),
-              pca_type,
-              &async_id,
+              proxy.gproxy(), pca_type, &async_id,
               &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationCreateEnrollRequest call failed: %s.\n",
                error->message);
@@ -2286,9 +2164,9 @@ int main(int argc, char **argv) {
     }
     base::WriteFile(GetOutputFile(cl), response_data.data(),
                     response_data.length());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_FINISH_ENROLL],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_FINISH_ENROLL],
+                     action.c_str())) {
     std::string contents;
     if (!base::ReadFileToString(GetInputFile(cl), &contents)) {
       printf("Failed to read input file.\n");
@@ -2300,8 +2178,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     if (!cl->HasSwitch(switches::kAsyncSwitch)) {
       if (!org_chromium_CryptohomeInterface_tpm_attestation_enroll(
-              proxy.gproxy(), pca_type, data.get(),
-              &success, &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), pca_type, data.get(), &success,
+              &brillo::Resetter(&error).lvalue())) {
         printf("TpmAttestationEnroll call failed: %s.\n", error->message);
         return 1;
       }
@@ -2310,8 +2188,8 @@ int main(int argc, char **argv) {
       client_loop.Initialize(&proxy);
       gint async_id = -1;
       if (!org_chromium_CryptohomeInterface_async_tpm_attestation_enroll(
-              proxy.gproxy(), pca_type, data.get(),
-              &async_id, &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), pca_type, data.get(), &async_id,
+              &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationEnroll call failed: %s.\n", error->message);
         return 1;
       } else {
@@ -2356,9 +2234,9 @@ int main(int argc, char **argv) {
       printf("Attestation enrollment failed.\n");
       return 1;
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_START_CERTREQ],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_START_CERTREQ],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     std::string response_data;
     cryptohome::CertificateProfile profile;
@@ -2368,12 +2246,9 @@ int main(int argc, char **argv) {
     if (!cl->HasSwitch(switches::kAsyncSwitch)) {
       brillo::glib::ScopedArray data;
       if (!org_chromium_CryptohomeInterface_tpm_attestation_create_cert_request(
-          proxy.gproxy(),
-          pca_type,
-          profile,
-          "", "",
-          &brillo::Resetter(&data).lvalue(),
-          &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), pca_type, profile, "", "",
+              &brillo::Resetter(&data).lvalue(),
+              &brillo::Resetter(&error).lvalue())) {
         printf("TpmAttestationCreateCertRequest call failed: %s.\n",
                error->message);
         return 1;
@@ -2384,11 +2259,7 @@ int main(int argc, char **argv) {
       client_loop.Initialize(&proxy);
       gint async_id = -1;
       if (!org_chromium_CryptohomeInterface_async_tpm_attestation_create_cert_request(  // NOLINT
-              proxy.gproxy(),
-              pca_type,
-              profile,
-              "", "",
-              &async_id,
+              proxy.gproxy(), pca_type, profile, "", "", &async_id,
               &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationCreateCertRequest call failed: %s.\n",
                error->message);
@@ -2404,9 +2275,9 @@ int main(int argc, char **argv) {
     }
     base::WriteFile(GetOutputFile(cl), response_data.data(),
                     response_data.length());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_FINISH_CERTREQ],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_FINISH_CERTREQ],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2428,14 +2299,9 @@ int main(int argc, char **argv) {
     if (!cl->HasSwitch(switches::kAsyncSwitch)) {
       brillo::glib::ScopedArray cert;
       if (!org_chromium_CryptohomeInterface_tpm_attestation_finish_cert_request(
-          proxy.gproxy(),
-          data.get(),
-          is_user_specific,
-          account_id.c_str(),
-          key_name.c_str(),
-          &brillo::Resetter(&cert).lvalue(),
-          &success,
-          &brillo::Resetter(&error).lvalue())) {
+              proxy.gproxy(), data.get(), is_user_specific, account_id.c_str(),
+              key_name.c_str(), &brillo::Resetter(&cert).lvalue(), &success,
+              &brillo::Resetter(&error).lvalue())) {
         printf("TpmAttestationFinishCertRequest call failed: %s.\n",
                error->message);
         return 1;
@@ -2446,12 +2312,8 @@ int main(int argc, char **argv) {
       client_loop.Initialize(&proxy);
       gint async_id = -1;
       if (!org_chromium_CryptohomeInterface_async_tpm_attestation_finish_cert_request(  // NOLINT
-              proxy.gproxy(),
-              data.get(),
-              is_user_specific,
-              account_id.c_str(),
-              key_name.c_str(),
-              &async_id,
+              proxy.gproxy(), data.get(), is_user_specific, account_id.c_str(),
+              key_name.c_str(), &async_id,
               &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationFinishCertRequest call failed: %s.\n",
                error->message);
@@ -2522,9 +2384,9 @@ int main(int argc, char **argv) {
       return 1;
     }
     base::WriteFile(GetOutputFile(cl), cert.data(), cert.length());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_KEY_STATUS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_KEY_STATUS],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2536,12 +2398,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean exists = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_does_key_exist(
-          proxy.gproxy(),
-          is_user_specific,
-          account_id.c_str(),
-          key_name.c_str(),
-          &exists,
-          &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &exists, &brillo::Resetter(&error).lvalue())) {
       printf("TpmAttestationDoesKeyExist call failed: %s.\n", error->message);
       return 1;
     }
@@ -2552,38 +2410,29 @@ int main(int argc, char **argv) {
     gboolean success = FALSE;
     brillo::glib::ScopedArray cert;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_get_certificate(
-          proxy.gproxy(),
-          is_user_specific,
-          account_id.c_str(),
-          key_name.c_str(),
-          &brillo::Resetter(&cert).lvalue(),
-          &success,
-          &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &brillo::Resetter(&cert).lvalue(), &success,
+            &brillo::Resetter(&error).lvalue())) {
       printf("TpmAttestationGetCertificate call failed: %s.\n", error->message);
       return 1;
     }
     brillo::glib::ScopedArray public_key;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_get_public_key(
-          proxy.gproxy(),
-          is_user_specific,
-          account_id.c_str(),
-          key_name.c_str(),
-          &brillo::Resetter(&public_key).lvalue(),
-          &success,
-          &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &brillo::Resetter(&public_key).lvalue(), &success,
+            &brillo::Resetter(&error).lvalue())) {
       printf("TpmAttestationGetPublicKey call failed: %s.\n", error->message);
       return 1;
     }
     std::string cert_pem =
-      std::string(static_cast<char*>(cert->data), cert->len);
+        std::string(static_cast<char*>(cert->data), cert->len);
     std::string public_key_hex =
-      base::HexEncode(public_key->data, public_key->len);
-    printf("Public Key:\n%s\n\nCertificate:\n%s\n",
-           public_key_hex.c_str(),
+        base::HexEncode(public_key->data, public_key->len);
+    printf("Public Key:\n%s\n\nCertificate:\n%s\n", public_key_hex.c_str(),
            cert_pem.c_str());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_REGISTER_KEY],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_REGISTER_KEY],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2607,8 +2456,9 @@ int main(int argc, char **argv) {
       printf("Result: %s\n", result ? "Success" : "Failure");
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_ENTERPRISE_CHALLENGE],
-      action.c_str())) {
+                 switches::kActions
+                     [switches::ACTION_TPM_ATTESTATION_ENTERPRISE_CHALLENGE],
+                 action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2627,25 +2477,16 @@ int main(int argc, char **argv) {
     g_array_append_vals(challenge.get(), contents.data(), contents.length());
     brillo::glib::ScopedArray device_id(g_array_new(FALSE, FALSE, 1));
     std::string device_id_str = "fake_device_id";
-    g_array_append_vals(device_id.get(),
-                        device_id_str.data(),
+    g_array_append_vals(device_id.get(), device_id_str.data(),
                         device_id_str.length());
     brillo::glib::ScopedError error;
     ClientLoop client_loop;
     client_loop.Initialize(&proxy);
     gint async_id = -1;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_sign_enterprise_va_challenge(  // NOLINT
-            proxy.gproxy(),
-            va_type,
-            is_user_specific,
-            account_id.c_str(),
-            key_name.c_str(),
-            account_id.c_str(),
-            device_id.get(),
-            TRUE,
-            challenge.get(),
-            &async_id,
-            &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), va_type, is_user_specific, account_id.c_str(),
+            key_name.c_str(), account_id.c_str(), device_id.get(), TRUE,
+            challenge.get(), &async_id, &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationSignEnterpriseVaChallenge call failed: %s.\n",
              error->message);
       return 1;
@@ -2656,12 +2497,11 @@ int main(int argc, char **argv) {
       return 1;
     }
     std::string response_data = client_loop.get_return_data();
-    base::WriteFileDescriptor(STDOUT_FILENO,
-                              response_data.data(),
+    base::WriteFileDescriptor(STDOUT_FILENO, response_data.data(),
                               response_data.length());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_SIMPLE_CHALLENGE],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_SIMPLE_CHALLENGE],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2678,12 +2518,8 @@ int main(int argc, char **argv) {
     client_loop.Initialize(&proxy);
     gint async_id = -1;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_sign_simple_challenge(
-            proxy.gproxy(),
-            is_user_specific,
-            account_id.c_str(),
-            key_name.c_str(),
-            challenge.get(),
-            &async_id,
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), challenge.get(), &async_id,
             &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationSignSimpleChallenge call failed: %s.\n",
              error->message);
@@ -2695,12 +2531,11 @@ int main(int argc, char **argv) {
       return 1;
     }
     std::string response_data = client_loop.get_return_data();
-    base::WriteFileDescriptor(STDOUT_FILENO,
-                              response_data.data(),
+    base::WriteFileDescriptor(STDOUT_FILENO, response_data.data(),
                               response_data.length());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_GET_KEY_PAYLOAD],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_GET_KEY_PAYLOAD],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.length() == 0) {
@@ -2713,12 +2548,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_get_key_payload(
-            proxy.gproxy(),
-            is_user_specific,
-            account_id.c_str(),
-            key_name.c_str(),
-          &brillo::Resetter(&payload).lvalue(),
-            &success,
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &brillo::Resetter(&payload).lvalue(), &success,
             &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationGetKetPayload call failed: %s.\n",
              error->message);
@@ -2729,12 +2560,10 @@ int main(int argc, char **argv) {
       return 1;
     }
     base::WriteFile(GetOutputFile(cl), payload->data, payload->len);
-    base::WriteFileDescriptor(STDOUT_FILENO,
-                              payload->data,
-                              payload->len);
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_SET_KEY_PAYLOAD],
-      action.c_str())) {
+    base::WriteFileDescriptor(STDOUT_FILENO, payload->data, payload->len);
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_SET_KEY_PAYLOAD],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     std::string value = cl->GetSwitchValueASCII(switches::kAttrValueSwitch);
@@ -2754,12 +2583,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_set_key_payload(
-            proxy.gproxy(),
-            is_user_specific,
-            account_id.c_str(),
-            key_name.c_str(),
-            payload.get(),
-            &success,
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), payload.get(), &success,
             &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationSetKetPayload call failed: %s.\n",
              error->message);
@@ -2769,9 +2594,9 @@ int main(int argc, char **argv) {
       printf("AsyncTpmAttestationSetKetPayload operation failed.\n");
       return 1;
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_DELETE_KEYS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_DELETE_KEYS],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_prefix =
         cl->GetSwitchValueASCII(switches::kAttrPrefixSwitch);
@@ -2784,12 +2609,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_delete_keys(
-            proxy.gproxy(),
-            is_user_specific,
-            account_id.c_str(),
-            key_prefix.c_str(),
-            &success,
-            &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_prefix.c_str(), &success, &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationDeleteKeys call failed: %s.\n",
              error->message);
       return 1;
@@ -2798,9 +2619,9 @@ int main(int argc, char **argv) {
       printf("Delete operation failed.\n");
       return 1;
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_DELETE_KEY],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_DELETE_KEY],
+                     action.c_str())) {
     std::string account_id = cl->GetSwitchValueASCII(switches::kUserSwitch);
     std::string key_name = cl->GetSwitchValueASCII(switches::kAttrNameSwitch);
     if (key_name.empty()) {
@@ -2812,12 +2633,8 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_delete_key(
-            proxy.gproxy(),
-            is_user_specific,
-            account_id.c_str(),
-            key_name.c_str(),
-            &success,
-            &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), is_user_specific, account_id.c_str(),
+            key_name.c_str(), &success, &brillo::Resetter(&error).lvalue())) {
       printf("AsyncTpmAttestationDeleteKeys call failed: %s.\n",
              error->message);
       return 1;
@@ -2827,17 +2644,16 @@ int main(int argc, char **argv) {
       return 1;
     }
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_GET_EK],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_TPM_ATTESTATION_GET_EK],
+                 action.c_str())) {
     if (cl->HasSwitch(switches::kProtobufSwitch)) {
       // Get the EK info as a protobuf.
       cryptohome::GetEndorsementInfoRequest request;
       cryptohome::BaseReply reply;
       if (!MakeProtoDBusCall("GetEndorsementInfo",
                              DBUS_METHOD(get_endorsement_info),
-                             DBUS_METHOD(get_endorsement_info_async),
-                             cl, &proxy, request, &reply,
-                             true /* print_reply */)) {
+                             DBUS_METHOD(get_endorsement_info_async), cl,
+                             &proxy, request, &reply, true /* print_reply */)) {
         return 1;
       }
       if (!reply.HasExtension(cryptohome::GetEndorsementInfoReply::reply)) {
@@ -2850,9 +2666,7 @@ int main(int argc, char **argv) {
       gboolean success = FALSE;
       gchar* ek_info = NULL;
       if (!org_chromium_CryptohomeInterface_tpm_attestation_get_ek(
-              proxy.gproxy(),
-              &ek_info,
-              &success,
+              proxy.gproxy(), &ek_info, &success,
               &brillo::Resetter(&error).lvalue())) {
         printf("AsyncTpmAttestationGetEK call failed: %s.\n", error->message);
         return 1;
@@ -2865,18 +2679,16 @@ int main(int argc, char **argv) {
       printf("%s\n", ek_info);
       g_free(ek_info);
     }
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_TPM_ATTESTATION_RESET_IDENTITY],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_TPM_ATTESTATION_RESET_IDENTITY],
+                     action.c_str())) {
     brillo::glib::ScopedError error;
     gboolean success = FALSE;
     std::string token = cl->GetSwitchValueASCII(switches::kPasswordSwitch);
     brillo::glib::ScopedArray reset_request;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_reset_identity(
-            proxy.gproxy(),
-            token.c_str(),
-            &brillo::Resetter(&reset_request).lvalue(),
-            &success,
+            proxy.gproxy(), token.c_str(),
+            &brillo::Resetter(&reset_request).lvalue(), &success,
             &brillo::Resetter(&error).lvalue())) {
       printf("TpmAttestationResetIdentity call failed: %s.\n", error->message);
       return 1;
@@ -2887,9 +2699,9 @@ int main(int argc, char **argv) {
     }
     base::WriteFile(GetOutputFile(cl), reset_request->data, reset_request->len);
   } else if (!strcmp(
-      switches::kActions[
-          switches::ACTION_TPM_ATTESTATION_RESET_IDENTITY_RESULT],
-      action.c_str())) {
+                 switches::kActions
+                     [switches::ACTION_TPM_ATTESTATION_RESET_IDENTITY_RESULT],
+                 action.c_str())) {
     std::string contents;
     if (!base::ReadFileToString(GetInputFile(cl), &contents)) {
       printf("Failed to read input file: %s\n",
@@ -2934,11 +2746,9 @@ int main(int argc, char **argv) {
     cryptohome::SignBootLockboxRequest request;
     request.set_data(data);
     cryptohome::BaseReply reply;
-    if (!MakeProtoDBusCall("SignBootLockbox",
-                           DBUS_METHOD(sign_boot_lockbox),
-                           DBUS_METHOD(sign_boot_lockbox_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+    if (!MakeProtoDBusCall("SignBootLockbox", DBUS_METHOD(sign_boot_lockbox),
+                           DBUS_METHOD(sign_boot_lockbox_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
 
@@ -2972,9 +2782,8 @@ int main(int argc, char **argv) {
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall("VerifyBootLockbox",
                            DBUS_METHOD(verify_boot_lockbox),
-                           DBUS_METHOD(verify_boot_lockbox_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+                           DBUS_METHOD(verify_boot_lockbox_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("VerifyBootLockbox success.\n");
@@ -2984,9 +2793,8 @@ int main(int argc, char **argv) {
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall("FinalizeBootLockbox",
                            DBUS_METHOD(finalize_boot_lockbox),
-                           DBUS_METHOD(finalize_boot_lockbox_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+                           DBUS_METHOD(finalize_boot_lockbox_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("FinalizeBootLockbox success.\n");
@@ -3001,11 +2809,9 @@ int main(int argc, char **argv) {
     cryptohome::GetBootAttributeRequest request;
     request.set_name(name);
     cryptohome::BaseReply reply;
-    if (!MakeProtoDBusCall("GetBootAttribute",
-                           DBUS_METHOD(get_boot_attribute),
-                           DBUS_METHOD(get_boot_attribute_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+    if (!MakeProtoDBusCall("GetBootAttribute", DBUS_METHOD(get_boot_attribute),
+                           DBUS_METHOD(get_boot_attribute_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(cryptohome::GetBootAttributeReply::reply)) {
@@ -3032,16 +2838,15 @@ int main(int argc, char **argv) {
     request.set_name(name);
     request.set_value(value);
     cryptohome::BaseReply reply;
-    if (!MakeProtoDBusCall("SetBootAttribute",
-                           DBUS_METHOD(set_boot_attribute),
-                           DBUS_METHOD(set_boot_attribute_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+    if (!MakeProtoDBusCall("SetBootAttribute", DBUS_METHOD(set_boot_attribute),
+                           DBUS_METHOD(set_boot_attribute_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("SetBootAttribute success.\n");
-  } else if (!strcmp(switches::kActions[
-      switches::ACTION_FLUSH_AND_SIGN_BOOT_ATTRIBUTES], action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_FLUSH_AND_SIGN_BOOT_ATTRIBUTES],
+                     action.c_str())) {
     cryptohome::FlushAndSignBootAttributesRequest request;
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall("FlushAndSignBootAttributes",
@@ -3052,16 +2857,13 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("FlushAndSignBootAttributes success.\n");
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_GET_LOGIN_STATUS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions[switches::ACTION_GET_LOGIN_STATUS],
+                     action.c_str())) {
     cryptohome::GetLoginStatusRequest request;
     cryptohome::BaseReply reply;
-    if (!MakeProtoDBusCall("GetLoginStatus",
-                           DBUS_METHOD(get_login_status),
-                           DBUS_METHOD(get_login_status_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+    if (!MakeProtoDBusCall("GetLoginStatus", DBUS_METHOD(get_login_status),
+                           DBUS_METHOD(get_login_status_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(cryptohome::GetLoginStatusReply::reply)) {
@@ -3069,34 +2871,31 @@ int main(int argc, char **argv) {
       return 1;
     }
     printf("GetLoginStatus success.\n");
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_INITIALIZE_CAST_KEY],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions[switches::ACTION_INITIALIZE_CAST_KEY],
+                     action.c_str())) {
     cryptohome::InitializeCastKeyRequest request;
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall("InitializeCastKey",
                            DBUS_METHOD(initialize_cast_key),
-                           DBUS_METHOD(initialize_cast_key_async),
-                           cl, &proxy, request, &reply,
-                           true /* print_reply */)) {
+                           DBUS_METHOD(initialize_cast_key_async), cl, &proxy,
+                           request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("InitializeCastKey success.\n");
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_GET_FIRMWARE_MANAGEMENT_PARAMETERS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_GET_FIRMWARE_MANAGEMENT_PARAMETERS],
+                     action.c_str())) {
     cryptohome::GetFirmwareManagementParametersRequest request;
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall(
-        cryptohome::kCryptohomeGetFirmwareManagementParameters,
-        DBUS_METHOD(get_firmware_management_parameters),
-        DBUS_METHOD(get_firmware_management_parameters_async),
-        cl, &proxy, request, &reply,
-        true /* print_reply */)) {
+            cryptohome::kCryptohomeGetFirmwareManagementParameters,
+            DBUS_METHOD(get_firmware_management_parameters),
+            DBUS_METHOD(get_firmware_management_parameters_async), cl, &proxy,
+            request, &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(
-        cryptohome::GetFirmwareManagementParametersReply::reply)) {
+            cryptohome::GetFirmwareManagementParametersReply::reply)) {
       printf("GetFirmwareManagementParametersReply missing.\n");
       return 1;
     }
@@ -3108,15 +2907,15 @@ int main(int argc, char **argv) {
         brillo::BlobFromString(get_fwmp_reply.developer_key_hash());
     printf("hash=%s\n", cryptohome::CryptoLib::BlobToHex(hash).c_str());
     printf("GetFirmwareManagementParameters success.\n");
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_SET_FIRMWARE_MANAGEMENT_PARAMETERS],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_SET_FIRMWARE_MANAGEMENT_PARAMETERS],
+                     action.c_str())) {
     cryptohome::SetFirmwareManagementParametersRequest request;
     cryptohome::BaseReply reply;
 
     if (cl->HasSwitch(switches::kFlagsSwitch)) {
       std::string flags_str = cl->GetSwitchValueASCII(switches::kFlagsSwitch);
-      char *end = NULL;
+      char* end = NULL;
       int32_t flags = strtol(flags_str.c_str(), &end, 0);
       if (end && *end != '\0') {
         printf("Bad flags value.\n");
@@ -3130,7 +2929,7 @@ int main(int argc, char **argv) {
 
     if (cl->HasSwitch(switches::kDevKeyHashSwitch)) {
       std::string hash_str =
-        cl->GetSwitchValueASCII(switches::kDevKeyHashSwitch);
+          cl->GetSwitchValueASCII(switches::kDevKeyHashSwitch);
       brillo::Blob hash;
       if (!base::HexStringToBytes(hash_str, &hash)) {
         printf("Bad hash value.\n");
@@ -3145,25 +2944,25 @@ int main(int argc, char **argv) {
     }
 
     if (!MakeProtoDBusCall(
-        cryptohome::kCryptohomeSetFirmwareManagementParameters,
-        DBUS_METHOD(set_firmware_management_parameters),
-        DBUS_METHOD(set_firmware_management_parameters_async),
-        cl, &proxy, request, &reply, true /* print_reply */)) {
+            cryptohome::kCryptohomeSetFirmwareManagementParameters,
+            DBUS_METHOD(set_firmware_management_parameters),
+            DBUS_METHOD(set_firmware_management_parameters_async), cl, &proxy,
+            request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("SetFirmwareManagementParameters success.\n");
   } else if (!strcmp(
-      switches::kActions[
-          switches::ACTION_REMOVE_FIRMWARE_MANAGEMENT_PARAMETERS],
-      action.c_str())) {
+                 switches::kActions
+                     [switches::ACTION_REMOVE_FIRMWARE_MANAGEMENT_PARAMETERS],
+                 action.c_str())) {
     cryptohome::RemoveFirmwareManagementParametersRequest request;
     cryptohome::BaseReply reply;
 
     if (!MakeProtoDBusCall(
-        cryptohome::kCryptohomeRemoveFirmwareManagementParameters,
-        DBUS_METHOD(remove_firmware_management_parameters),
-        DBUS_METHOD(remove_firmware_management_parameters_async),
-        cl, &proxy, request, &reply, true /* print_reply */)) {
+            cryptohome::kCryptohomeRemoveFirmwareManagementParameters,
+            DBUS_METHOD(remove_firmware_management_parameters),
+            DBUS_METHOD(remove_firmware_management_parameters_async), cl,
+            &proxy, request, &reply, true /* print_reply */)) {
       return 1;
     }
     printf("RemoveFirmwareManagementParameters success.\n");
@@ -3186,9 +2985,7 @@ int main(int argc, char **argv) {
 
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_migrate_to_dircrypto(
-            proxy.gproxy(),
-            account_ary.get(),
-            request_ary.get(),
+            proxy.gproxy(), account_ary.get(), request_ary.get(),
             &brillo::Resetter(&error).lvalue())) {
       printf("MigrateToDircrypto call failed: %s\n", error->message);
       return 1;
@@ -3210,9 +3007,7 @@ int main(int argc, char **argv) {
     brillo::glib::ScopedError error;
     gboolean needs_migration = false;
     if (!org_chromium_CryptohomeInterface_needs_dircrypto_migration(
-            proxy.gproxy(),
-            account_ary.get(),
-            &needs_migration,
+            proxy.gproxy(), account_ary.get(), &needs_migration,
             &brillo::Resetter(&error).lvalue())) {
       printf("NeedsDirCryptoMigration call failed: %s.\n", error->message);
       return 1;
@@ -3221,35 +3016,31 @@ int main(int argc, char **argv) {
       printf("Yes\n");
     else
       printf("No\n");
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_GET_ENROLLMENT_ID],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions[switches::ACTION_GET_ENROLLMENT_ID],
+                     action.c_str())) {
     gboolean success = FALSE;
     brillo::glib::ScopedArray enrollment_id;
     brillo::glib::ScopedError error;
     if (!org_chromium_CryptohomeInterface_tpm_attestation_get_enrollment_id(
-          proxy.gproxy(),
-          cl->HasSwitch(switches::kIgnoreCache),
-          &brillo::Resetter(&enrollment_id).lvalue(),
-          &success,
-          &brillo::Resetter(&error).lvalue())) {
+            proxy.gproxy(), cl->HasSwitch(switches::kIgnoreCache),
+            &brillo::Resetter(&enrollment_id).lvalue(), &success,
+            &brillo::Resetter(&error).lvalue())) {
       printf("GetEnrollmentId call failed: %s.\n", error->message);
       return 1;
     }
     std::string eid_str = base::ToLowerASCII(
         base::HexEncode(enrollment_id->data, enrollment_id->len));
     printf("%s\n", eid_str.c_str());
-  } else if (!strcmp(
-      switches::kActions[switches::ACTION_GET_SUPPORTED_KEY_POLICIES],
-      action.c_str())) {
+  } else if (!strcmp(switches::kActions
+                         [switches::ACTION_GET_SUPPORTED_KEY_POLICIES],
+                     action.c_str())) {
     cryptohome::GetSupportedKeyPoliciesRequest request;
     cryptohome::BaseReply reply;
 
-    if (!MakeProtoDBusCall(
-        cryptohome::kCryptohomeGetSupportedKeyPolicies,
-        DBUS_METHOD(get_supported_key_policies),
-        DBUS_METHOD(get_supported_key_policies_async),
-        cl, &proxy, request, &reply, true /* print_reply */)) {
+    if (!MakeProtoDBusCall(cryptohome::kCryptohomeGetSupportedKeyPolicies,
+                           DBUS_METHOD(get_supported_key_policies),
+                           DBUS_METHOD(get_supported_key_policies_async), cl,
+                           &proxy, request, &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(cryptohome::GetSupportedKeyPoliciesReply::reply)) {
@@ -3258,8 +3049,8 @@ int main(int argc, char **argv) {
     }
     printf("GetSupportedKeyPolicies success.\n");
   } else if (!strcmp(
-      switches::kActions[switches::ACTION_GET_ACCOUNT_DISK_USAGE],
-      action.c_str())) {
+                 switches::kActions[switches::ACTION_GET_ACCOUNT_DISK_USAGE],
+                 action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -3287,9 +3078,9 @@ int main(int argc, char **argv) {
     printf("Account Disk Usage in bytes: %" PRId64 "\n", ext.size());
     return 0;
   } else if (!strcmp(
-      switches::kActions[
-          switches::ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT],
-      action.c_str())) {
+                 switches::kActions
+                     [switches::ACTION_LOCK_TO_SINGLE_USER_MOUNT_UNTIL_REBOOT],
+                 action.c_str())) {
     cryptohome::AccountIdentifier id;
     if (!BuildAccountId(cl, &id))
       return 1;
@@ -3300,12 +3091,9 @@ int main(int argc, char **argv) {
     cryptohome::BaseReply reply;
     brillo::glib::ScopedError error;
     GArray* out_reply = NULL;
-    if (
-    !org_chromium_CryptohomeInterface_lock_to_single_user_mount_until_reboot(
-          proxy.gproxy(),
-          req_ary.get(),
-          &out_reply,
-          &brillo::Resetter(&error).lvalue())) {
+    if (!org_chromium_CryptohomeInterface_lock_to_single_user_mount_until_reboot(
+            proxy.gproxy(), req_ary.get(), &out_reply,
+            &brillo::Resetter(&error).lvalue())) {
       printf("LockToSingleUserMountUntilReboot call failed: %s",
              error->message);
       return 1;
@@ -3330,8 +3118,8 @@ int main(int argc, char **argv) {
     cryptohome::CheckHealthRequest request;
     cryptohome::BaseReply reply;
     if (!MakeProtoDBusCall("CheckHealth", DBUS_METHOD(check_health),
-                           DBUS_METHOD(check_health_async), cl, &proxy,
-                           request, &reply, true /* print_reply */)) {
+                           DBUS_METHOD(check_health_async), cl, &proxy, request,
+                           &reply, true /* print_reply */)) {
       return 1;
     }
     if (!reply.HasExtension(cryptohome::CheckHealthReply::reply)) {

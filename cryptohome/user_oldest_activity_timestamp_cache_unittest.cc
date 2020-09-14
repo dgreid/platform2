@@ -10,8 +10,8 @@
 #include <gtest/gtest.h>
 
 namespace {
-const base::Time::Exploded feb1st2011_exploded = { 2011, 2, 2, 1 };
-const base::Time::Exploded mar1st2011_exploded = { 2011, 3, 2, 1 };
+const base::Time::Exploded feb1st2011_exploded = {2011, 2, 2, 1};
+const base::Time::Exploded mar1st2011_exploded = {2011, 3, 2, 1};
 }  // namespace
 
 namespace cryptohome {

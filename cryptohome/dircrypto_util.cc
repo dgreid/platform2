@@ -24,7 +24,7 @@ extern "C" {
 #include <brillo/secure_blob.h>
 
 // Add missing chromeos specific partition wide drop cache.
-#define FS_IOC_DROP_CACHE  _IO('f', 129)
+#define FS_IOC_DROP_CACHE _IO('f', 129)
 
 namespace dircrypto {
 

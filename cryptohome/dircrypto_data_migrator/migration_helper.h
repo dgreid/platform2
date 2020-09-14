@@ -246,7 +246,7 @@ class MigrationHelper {
   std::unique_ptr<WorkerPool> worker_pool_;
 
   std::map<base::FilePath, int> child_counts_;  // Child count for directories.
-  base::Lock child_counts_lock_;  // Lock for child_counts_.
+  base::Lock child_counts_lock_;                // Lock for child_counts_.
 
   AtomicFlag is_cancelled_;
 

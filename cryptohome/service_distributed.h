@@ -222,8 +222,7 @@ class ServiceDistributed : public Service {
       GError** error);
 
   // Internal method to obtain the TPM status.
-  bool ObtainTpmStatus(attestation::GetStatusReply* reply,
-      GError** error);
+  bool ObtainTpmStatus(attestation::GetStatusReply* reply, GError** error);
 
   // Post a method on the attestation_thread_.
   template <typename MethodType>

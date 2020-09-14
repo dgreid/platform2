@@ -140,13 +140,9 @@ class InstallAttributes {
   // "lockbox_index", "secure", "invalid", "first_install" and "size".
   virtual std::unique_ptr<base::Value> GetStatus();
 
-  void AddObserver(Observer* obs) {
-    observer_list_.AddObserver(obs);
-  }
+  void AddObserver(Observer* obs) { observer_list_.AddObserver(obs); }
 
-  void RemoveObserver(Observer* obs) {
-    observer_list_.RemoveObserver(obs);
-  }
+  void RemoveObserver(Observer* obs) { observer_list_.RemoveObserver(obs); }
 
   void NotifyFinalized() {
     for (Observer& observer : observer_list_)
@@ -175,10 +171,10 @@ class InstallAttributes {
 
  private:
   Status status_ = Status::kUnknown;
-  bool is_secure_ = false;   // Indicates if there is hardware protection (TPM).
-  base::FilePath data_file_;     // Location data is persisted to.
-  base::FilePath cache_file_;    // World-readable data cache file.
-  uint64_t version_ = 0;         // Default implementation version.
+  bool is_secure_ = false;  // Indicates if there is hardware protection (TPM).
+  base::FilePath data_file_;   // Location data is persisted to.
+  base::FilePath cache_file_;  // World-readable data cache file.
+  uint64_t version_ = 0;       // Default implementation version.
   // Default implementations of dependencies
   std::unique_ptr<SerializedInstallAttributes> default_attributes_;
   std::unique_ptr<Lockbox> default_lockbox_;

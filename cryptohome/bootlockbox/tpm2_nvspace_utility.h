@@ -99,8 +99,7 @@ class TPM2NVSpaceUtility : public TPMNVSpaceUtilityInterface {
     DISALLOW_COPY_AND_ASSIGN(TpmManagerThread);
   };
 
-  void InitializationTask(base::WaitableEvent* completion,
-                          bool* result);
+  void InitializationTask(base::WaitableEvent* completion, bool* result);
   void ShutdownTask();
 
   // Handles tpm_manager async calls.

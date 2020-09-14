@@ -1,4 +1,4 @@
-// Copyright (c) 2019 The Chromium OS Authors. All rights reserved.
+// Copyright 2019 The Chromium OS Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -280,19 +280,17 @@ TEST_F(TpmNewImplTest, RemoveTpmOwnerDependency) {
 }
 
 TEST_F(TpmNewImplTest, RemoveTpmOwnerDependencyInvalidEnum) {
-  EXPECT_DEBUG_DEATH(GetTpm()->RemoveOwnerDependency(
-                   static_cast<TpmPersistentState::TpmOwnerDependency>(999)),
-               ".*Unexpected enum class value: 999");
+  EXPECT_DEBUG_DEATH(
+      GetTpm()->RemoveOwnerDependency(
+          static_cast<TpmPersistentState::TpmOwnerDependency>(999)),
+      ".*Unexpected enum class value: 999");
 }
 
 TEST_F(TpmNewImplTest, ClearStoredPassword) {
-  EXPECT_CALL(mock_tpm_manager_utility_,
-              ClearStoredOwnerPassword())
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
       .WillOnce(Return(true));
   EXPECT_TRUE(GetTpm()->ClearStoredPassword());
-  EXPECT_CALL(
-      mock_tpm_manager_utility_,
-      ClearStoredOwnerPassword())
+  EXPECT_CALL(mock_tpm_manager_utility_, ClearStoredOwnerPassword())
       .WillOnce(Return(false));
   EXPECT_FALSE(GetTpm()->ClearStoredPassword());
 }
@@ -308,14 +306,13 @@ TEST_F(TpmNewImplTest, GetVersionInfoCache) {
 
   EXPECT_CALL(mock_tpm_manager_utility_, GetVersionInfo(_, _, _, _, _, _))
       .WillOnce(Return(false))
-      .WillOnce(DoAll(
-          SetArgPointee<0>(expected_version_info.family),
-          SetArgPointee<1>(expected_version_info.spec_level),
-          SetArgPointee<2>(expected_version_info.manufacturer),
-          SetArgPointee<3>(expected_version_info.tpm_model),
-          SetArgPointee<4>(expected_version_info.firmware_version),
-          SetArgPointee<5>(expected_version_info.vendor_specific),
-          Return(true)));
+      .WillOnce(DoAll(SetArgPointee<0>(expected_version_info.family),
+                      SetArgPointee<1>(expected_version_info.spec_level),
+                      SetArgPointee<2>(expected_version_info.manufacturer),
+                      SetArgPointee<3>(expected_version_info.tpm_model),
+                      SetArgPointee<4>(expected_version_info.firmware_version),
+                      SetArgPointee<5>(expected_version_info.vendor_specific),
+                      Return(true)));
 
   Tpm::TpmVersionInfo actual_version_info;
   // Requests from tpm_manager, failed, not cached

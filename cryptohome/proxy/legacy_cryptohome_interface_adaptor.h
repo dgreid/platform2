@@ -129,8 +129,8 @@ class LegacyCryptohomeInterfaceAdaptor
           cryptohome::BaseReply>> response,
       const cryptohome::AccountIdentifier& in_account_id,
       const cryptohome::AuthorizationRequest& in_authorization_request,
-      const cryptohome::MassRemoveKeysRequest&
-          in_mass_remove_keys_request) override;
+      const cryptohome::MassRemoveKeysRequest& in_mass_remove_keys_request)
+      override;
   void GetKeyDataEx(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
@@ -149,12 +149,11 @@ class LegacyCryptohomeInterfaceAdaptor
       const cryptohome::AccountIdentifier& in_account_id,
       const cryptohome::AuthorizationRequest& in_authorization_request,
       const cryptohome::AddKeyRequest& in_add_key_request) override;
-  void AddDataRestoreKey(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-          cryptohome::BaseReply>> response,
-      const cryptohome::AccountIdentifier& in_account_id,
-      const cryptohome::AuthorizationRequest& in_authorization_request)
-      override;
+  void AddDataRestoreKey(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                             cryptohome::BaseReply>> response,
+                         const cryptohome::AccountIdentifier& in_account_id,
+                         const cryptohome::AuthorizationRequest&
+                             in_authorization_request) override;
   void UpdateKeyEx(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
@@ -564,10 +563,9 @@ class LegacyCryptohomeInterfaceAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
       const cryptohome::GetRsuDeviceIdRequest& in_request) override;
-  void CheckHealth(
-      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
-          cryptohome::BaseReply>> response,
-      const cryptohome::CheckHealthRequest& in_request) override;
+  void CheckHealth(std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+                       cryptohome::BaseReply>> response,
+                   const cryptohome::CheckHealthRequest& in_request) override;
 
   // This is a public version of OnDircryptoMigrationProgressSignal() that
   // simply calls the protected version. This is only used for testing because

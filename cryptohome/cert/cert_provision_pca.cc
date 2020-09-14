@@ -30,22 +30,16 @@ OpResult PCAProxyImpl::MakeRequest(const std::string& action,
                                    brillo::SecureBlob* reply) {
   brillo::ErrorPtr error;
   auto response = brillo::http::PostBinaryAndBlock(
-      pca_url_ + "/" + action,
-      request.data(),
-      request.size(),
-      brillo::mime::application::kOctet_stream,
-      {},  // headers
-      http_transport_,
-      &error);
+      pca_url_ + "/" + action, request.data(), request.size(),
+      brillo::mime::application::kOctet_stream, {},  // headers
+      http_transport_, &error);
   if (!response) {
-    return {Status::HttpError,
-            std::string("Sending PCA request failed: ") + action + ": " +
-                error->GetMessage()};
+    return {Status::HttpError, std::string("Sending PCA request failed: ") +
+                                   action + ": " + error->GetMessage()};
   }
   if (!response->IsSuccessful()) {
-    return {Status::ServerError,
-            std::string("PCA server error: ") + action + ": " +
-                response->GetStatusText()};
+    return {Status::ServerError, std::string("PCA server error: ") + action +
+                                     ": " + response->GetStatusText()};
   }
   auto response_data = response->ExtractData();
   brillo::SecureBlob tmp(response_data.begin(), response_data.end());

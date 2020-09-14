@@ -170,8 +170,10 @@ class Platform {
   //   to - The node to mount to
   //   type - The fs type
   //   mount_options - The mount options to pass to mount()
-  virtual bool Mount(const base::FilePath& from, const base::FilePath& to,
-                     const std::string& type, uint32_t mount_flags,
+  virtual bool Mount(const base::FilePath& from,
+                     const base::FilePath& to,
+                     const std::string& type,
+                     uint32_t mount_flags,
                      const std::string& mount_options);
 
   // Creates a bind mount
@@ -209,7 +211,8 @@ class Platform {
   // Parameters
   //   from_prefix - Prefix for matching mount sources
   //   mounts - matching mounted paths, may be NULL
-  virtual bool GetMountsBySourcePrefix(const base::FilePath& from_prefix,
+  virtual bool GetMountsBySourcePrefix(
+      const base::FilePath& from_prefix,
       std::multimap<const base::FilePath, const base::FilePath>* mounts);
 
   // Returns true if the directory is in the mount_info
@@ -312,7 +315,8 @@ class Platform {
   //   user - The username to query for
   //   user_id (OUT) - The user ID on success
   //   group_id (OUT) - The group ID on success
-  virtual bool GetUserId(const std::string& user, uid_t* user_id,
+  virtual bool GetUserId(const std::string& user,
+                         uid_t* user_id,
                          gid_t* group_id) const;
 
   // Returns the group id for a group
@@ -360,7 +364,6 @@ class Platform {
   //   path - Path of file to access.
   //   flag -  Access flag.
   virtual int Access(const base::FilePath& path, uint32_t flag);
-
 
   // Check if a directory exists as the given path
   virtual bool DirectoryExists(const base::FilePath& path);
@@ -450,7 +453,8 @@ class Platform {
                                      const brillo::SecureBlob& blob);
   virtual bool WriteStringToFile(const base::FilePath& path,
                                  const std::string& data);
-  virtual bool WriteArrayToFile(const base::FilePath& path, const char* data,
+  virtual bool WriteArrayToFile(const base::FilePath& path,
+                                const char* data,
                                 size_t size);
 
   // Atomically writes the entirety of the given data to |path| with |mode|
@@ -489,9 +493,7 @@ class Platform {
                                       const brillo::Blob& blob,
                                       mode_t mode);
   virtual bool WriteSecureBlobToFileAtomicDurable(
-      const base::FilePath& path,
-      const brillo::SecureBlob& blob,
-      mode_t mode);
+      const base::FilePath& path, const brillo::SecureBlob& blob, mode_t mode);
   virtual bool WriteStringToFileAtomicDurable(const base::FilePath& path,
                                               const std::string& data,
                                               mode_t mode);
@@ -555,7 +557,7 @@ class Platform {
   //  path - element to look up
   //  buf - buffer to store results into
 #if BASE_VER < 780000
-  virtual bool Stat(const base::FilePath& path, struct stat *buf);
+  virtual bool Stat(const base::FilePath& path, struct stat* buf);
 #else
   virtual bool Stat(const base::FilePath& path, base::stat_wrapper_t* buf);
 #endif
@@ -689,16 +691,16 @@ class Platform {
   // Parameters
   //   filesystem - the filesystem to examine
   //   device - output: the device name that "filesystem" in mounted on
-  virtual bool FindFilesystemDevice(const base::FilePath &filesystem,
-                                    std::string *device);
+  virtual bool FindFilesystemDevice(const base::FilePath& filesystem,
+                                    std::string* device);
 
   // Runs "tune2fs -l" with redirected output.
   //
   // Parameters
   //  filesystem - the filesystem to examine
   //  lgofile - the path written with output
-  virtual bool ReportFilesystemDetails(const base::FilePath &filesystem,
-                                       const base::FilePath &logfile);
+  virtual bool ReportFilesystemDetails(const base::FilePath& filesystem,
+                                       const base::FilePath& logfile);
 
   // Sets up a process keyring which links to the user keyring and the session
   // keyring.
@@ -712,9 +714,8 @@ class Platform {
                                const dircrypto::KeyReference& key_reference);
 
   // Adds the key to the dircrypto keyring and sets permissions.
-  virtual bool AddDirCryptoKeyToKeyring(
-      const brillo::SecureBlob& key,
-      dircrypto::KeyReference* key_reference);
+  virtual bool AddDirCryptoKeyToKeyring(const brillo::SecureBlob& key,
+                                        dircrypto::KeyReference* key_reference);
 
   // Invalidates the key to make dircrypto data inaccessible.
   virtual bool InvalidateDirCryptoKey(
@@ -736,7 +737,7 @@ class Platform {
 
   // Override the location of the mountinfo file used.
   // Default is kMountInfoFile.
-  virtual void set_mount_info_path(const base::FilePath &mount_info_path) {
+  virtual void set_mount_info_path(const base::FilePath& mount_info_path) {
     mount_info_path_ = mount_info_path;
   }
 
@@ -869,8 +870,7 @@ class Platform {
   // Parameters
   //   file - Path to the file to be resized.
   //   blocks - number of blocks to be resized to.
-  virtual bool ResizeFilesystem(const base::FilePath& file,
-                                          uint64_t blocks);
+  virtual bool ResizeFilesystem(const base::FilePath& file, uint64_t blocks);
 
   // Restore SELinux file contexts. No-op if not compiled with -DUSE_SELINUX=1
   // Returns true if restorecon succeeded.
@@ -889,7 +889,8 @@ class Platform {
   //   pid - The process to check
   //   path_in - The file path to check for
   //   process_info (OUT) - The ProcessInformation to store the results in
-  void GetProcessOpenFileInformation(pid_t pid, const base::FilePath& path_in,
+  void GetProcessOpenFileInformation(pid_t pid,
+                                     const base::FilePath& path_in,
                                      ProcessInformation* process_info);
 
   // Returns a vector of PIDs that have files open on the given path
@@ -1001,10 +1002,8 @@ class Platform {
 
 class ProcessInformation {
  public:
-  ProcessInformation()
-      : cmd_line_(),
-      process_id_(-1) { }
-  virtual ~ProcessInformation() { }
+  ProcessInformation() : cmd_line_(), process_id_(-1) {}
+  virtual ~ProcessInformation() {}
 
   std::string GetCommandLine() const {
     std::string result;
@@ -1024,9 +1023,7 @@ class ProcessInformation {
     cmd_line_.swap(*value);
   }
 
-  const std::vector<std::string>& get_cmd_line() const {
-    return cmd_line_;
-  }
+  const std::vector<std::string>& get_cmd_line() const { return cmd_line_; }
 
   // Set the open file array.  This method DOES swap out the contents of
   // |value|.  The caller should expect an empty set on return.
@@ -1035,9 +1032,7 @@ class ProcessInformation {
     open_files_.swap(*value);
   }
 
-  const std::set<base::FilePath>& get_open_files() const {
-    return open_files_;
-  }
+  const std::set<base::FilePath>& get_open_files() const { return open_files_; }
 
   // Set the command line array.  This method DOES swap out the contents of
   // |value|.  The caller should expect an empty string on return.
@@ -1046,17 +1041,11 @@ class ProcessInformation {
     cwd_.swap(*value);
   }
 
-  const std::string& get_cwd() const {
-    return cwd_;
-  }
+  const std::string& get_cwd() const { return cwd_; }
 
-  void set_process_id(int value) {
-    process_id_ = value;
-  }
+  void set_process_id(int value) { process_id_ = value; }
 
-  int get_process_id() const {
-    return process_id_;
-  }
+  int get_process_id() const { return process_id_; }
 
  private:
   std::vector<std::string> cmd_line_;

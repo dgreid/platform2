@@ -40,9 +40,8 @@ using ::testing::SetArgPointee;
 // boots.
 class FirmwareManagementParametersTest : public ::testing::Test {
  public:
-  FirmwareManagementParametersTest() :
-    fwmp_(&tpm_) { }
-  virtual ~FirmwareManagementParametersTest() { }
+  FirmwareManagementParametersTest() : fwmp_(&tpm_) {}
+  virtual ~FirmwareManagementParametersTest() {}
 
   virtual void SetUp() {
     // Create the OOBE data to reuse for post-boot tests.
@@ -56,35 +55,32 @@ class FirmwareManagementParametersTest : public ::testing::Test {
   // nvram_data: destination for blob saved to NVRAM
   void DoStore(FirmwareManagementParameters* fwmp, SecureBlob* nvram_data) {
     // Ensure an enabled, owned TPM.
-    EXPECT_CALL(tpm_, IsEnabled())
-      .WillOnce(Return(true));
-    EXPECT_CALL(tpm_, IsOwned())
-      .WillOnce(Return(true));
+    EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+    EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
 
     {
       InSequence s;
       EXPECT_CALL(tpm_,
                   IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
       EXPECT_CALL(tpm_,
                   IsNvramLocked(FirmwareManagementParameters::kNvramIndex))
-        .WillOnce(Return(false));
+          .WillOnce(Return(false));
       EXPECT_CALL(tpm_, GetNvramSize(FirmwareManagementParameters::kNvramIndex))
-        .WillOnce(
-            Return(FirmwareManagementParameters::kNvramBytes));
+          .WillOnce(Return(FirmwareManagementParameters::kNvramBytes));
 
       // Save blob that was written
       EXPECT_CALL(tpm_,
                   WriteNvram(FirmwareManagementParameters::kNvramIndex, _))
-        .Times(1)
-        .WillOnce(DoAll(SaveArg<1>(nvram_data), Return(true)));
+          .Times(1)
+          .WillOnce(DoAll(SaveArg<1>(nvram_data), Return(true)));
 
       EXPECT_CALL(tpm_,
                   WriteLockNvram(FirmwareManagementParameters::kNvramIndex))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
       EXPECT_CALL(tpm_,
                   IsNvramLocked(FirmwareManagementParameters::kNvramIndex))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
     }
     EXPECT_TRUE(fwmp->Store(fwmp_flags_, fwmp_hash_ptr_));
   }
@@ -109,9 +105,9 @@ class FirmwareManagementParametersTest : public ::testing::Test {
   DISALLOW_COPY_AND_ASSIGN(FirmwareManagementParametersTest);
 };
 const char* FirmwareManagementParametersTest::kHashData =
-  "AxxxxxxxBxxxxxxxCxxxxxxxDxxxxxxE";
-brillo::SecureBlob FirmwareManagementParametersTest::kContentsWithHash(
-  {
+    "AxxxxxxxBxxxxxxxCxxxxxxxDxxxxxxE";
+brillo::SecureBlob FirmwareManagementParametersTest::kContentsWithHash({
+    // clang-format off
     0xd2,
     0x28,
     0x10,
@@ -121,9 +117,10 @@ brillo::SecureBlob FirmwareManagementParametersTest::kContentsWithHash(
     'B', 'x', 'x', 'x', 'x', 'x', 'x', 'x',
     'C', 'x', 'x', 'x', 'x', 'x', 'x', 'x',
     'D', 'x', 'x', 'x', 'x', 'x', 'x', 'E'
-  });
-brillo::SecureBlob FirmwareManagementParametersTest::kContentsNoHash(
-  {
+    // clang-format on
+});
+brillo::SecureBlob FirmwareManagementParametersTest::kContentsNoHash({
+    // clang-format off
     0x6c,
     0x28,
     0x10,
@@ -131,7 +128,8 @@ brillo::SecureBlob FirmwareManagementParametersTest::kContentsNoHash(
     0x34, 0x12, 0x00, 0x00,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-  });
+    // clang-format on
+});
 
 //
 // The actual tests!
@@ -140,113 +138,97 @@ brillo::SecureBlob FirmwareManagementParametersTest::kContentsNoHash(
 // Create a new space
 TEST_F(FirmwareManagementParametersTest, CreateNew) {
   // HasAuthorization() checks for Create() and Destroy()
-  EXPECT_CALL(tpm_, IsEnabled())
-    .Times(2)
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .Times(2)
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).Times(2).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).Times(2).WillRepeatedly(Return(true));
   brillo::SecureBlob pw("sup");
   EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .Times(2)
-    .WillRepeatedly(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .Times(2)
+      .WillRepeatedly(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() doesn't find an existing space
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   // Create the new space
-  EXPECT_CALL(tpm_,
-              DefineNvram(FirmwareManagementParameters::kNvramIndex,
-                          FirmwareManagementParameters::kNvramBytes,
-                          Tpm::kTpmNvramWriteDefine |
-                              Tpm::kTpmNvramFirmwareReadable))
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, DefineNvram(FirmwareManagementParameters::kNvramIndex,
+                                FirmwareManagementParameters::kNvramBytes,
+                                Tpm::kTpmNvramWriteDefine |
+                                    Tpm::kTpmNvramFirmwareReadable))
+      .WillOnce(Return(true));
   EXPECT_TRUE(fwmp_.Create());
 }
 
 // Create on top of an existing space
 TEST_F(FirmwareManagementParametersTest, CreateOverExisting) {
   // HasAuthorization() checks for Create() and Destroy()
-  ON_CALL(tpm_, IsEnabled())
-    .WillByDefault(Return(true));
-  ON_CALL(tpm_, IsOwned())
-    .WillByDefault(Return(true));
+  ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
+  ON_CALL(tpm_, IsOwned()).WillByDefault(Return(true));
   brillo::SecureBlob pw("sup");
   ON_CALL(tpm_, GetOwnerPassword(_))
-    .WillByDefault(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .WillByDefault(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() the existing space
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, DestroyNvram(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   // Create the new space
-  EXPECT_CALL(tpm_,
-              DefineNvram(FirmwareManagementParameters::kNvramIndex,
-                          FirmwareManagementParameters::kNvramBytes,
-                          Tpm::kTpmNvramWriteDefine |
-                              Tpm::kTpmNvramFirmwareReadable))
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, DefineNvram(FirmwareManagementParameters::kNvramIndex,
+                                FirmwareManagementParameters::kNvramBytes,
+                                Tpm::kTpmNvramWriteDefine |
+                                    Tpm::kTpmNvramFirmwareReadable))
+      .WillOnce(Return(true));
   EXPECT_TRUE(fwmp_.Create());
 }
 
 // Create fails without auth
 TEST_F(FirmwareManagementParametersTest, CreateWithNoAuth) {
   // Enabled and owned succeed
-  ON_CALL(tpm_, IsEnabled())
-    .WillByDefault(Return(true));
-  ON_CALL(tpm_, IsOwned())
-    .WillByDefault(Return(true));
+  ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
+  ON_CALL(tpm_, IsOwned()).WillByDefault(Return(true));
 
   // No password for you
-  EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .WillOnce(Return(false));
+  EXPECT_CALL(tpm_, GetOwnerPassword(_)).WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Create());
 }
 
 // Create fails on define error
 TEST_F(FirmwareManagementParametersTest, CreateDefineError) {
   // HasAuthorization() checks for Create() and Destroy()
-  ON_CALL(tpm_, IsEnabled())
-    .WillByDefault(Return(true));
-  ON_CALL(tpm_, IsOwned())
-    .WillByDefault(Return(true));
+  ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
+  ON_CALL(tpm_, IsOwned()).WillByDefault(Return(true));
   brillo::SecureBlob pw("sup");
   ON_CALL(tpm_, GetOwnerPassword(_))
-    .WillByDefault(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .WillByDefault(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() doesn't find an existing space
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   // Create the new space fails
-  EXPECT_CALL(tpm_,
-              DefineNvram(FirmwareManagementParameters::kNvramIndex,
-                          FirmwareManagementParameters::kNvramBytes,
-                          Tpm::kTpmNvramWriteDefine |
-                              Tpm::kTpmNvramFirmwareReadable))
-    .WillOnce(Return(false));
+  EXPECT_CALL(tpm_, DefineNvram(FirmwareManagementParameters::kNvramIndex,
+                                FirmwareManagementParameters::kNvramBytes,
+                                Tpm::kTpmNvramWriteDefine |
+                                    Tpm::kTpmNvramFirmwareReadable))
+      .WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Create());
 }
 
 // Destroy existing space
 TEST_F(FirmwareManagementParametersTest, DestroyExisting) {
   // HasAuthorization() checks for Destroy()
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   brillo::SecureBlob pw("sup");
   EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() the existing space
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, DestroyNvram(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   EXPECT_TRUE(fwmp_.Destroy());
 }
@@ -254,17 +236,15 @@ TEST_F(FirmwareManagementParametersTest, DestroyExisting) {
 // Destroy non-existing space
 TEST_F(FirmwareManagementParametersTest, DestroyNonExisting) {
   // HasAuthorization() checks for Destroy()
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   brillo::SecureBlob pw("sup");
   EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() non-existing space is fine
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   EXPECT_TRUE(fwmp_.Destroy());
 }
@@ -272,33 +252,28 @@ TEST_F(FirmwareManagementParametersTest, DestroyNonExisting) {
 // Destroy fails without auth
 TEST_F(FirmwareManagementParametersTest, DestroyWithNoAuth) {
   // Enabled and owned succeed
-  ON_CALL(tpm_, IsEnabled())
-    .WillByDefault(Return(true));
-  ON_CALL(tpm_, IsOwned())
-    .WillByDefault(Return(true));
+  ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
+  ON_CALL(tpm_, IsOwned()).WillByDefault(Return(true));
 
   // No password for you
-  EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .WillOnce(Return(false));
+  EXPECT_CALL(tpm_, GetOwnerPassword(_)).WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Destroy());
 }
 
 // Destroy failure
 TEST_F(FirmwareManagementParametersTest, DestroyFailure) {
   // HasAuthorization() checks for Destroy()
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   brillo::SecureBlob pw("sup");
   EXPECT_CALL(tpm_, GetOwnerPassword(_))
-    .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<0>(pw), Return(true)));
 
   // Destroy() the existing space
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, DestroyNvram(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   EXPECT_FALSE(fwmp_.Destroy());
 }
@@ -322,64 +297,55 @@ TEST_F(FirmwareManagementParametersTest, StoreFlagsOnly) {
 
 // Store fails if TPM isn't ready
 TEST_F(FirmwareManagementParametersTest, StoreNotReady) {
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(false));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Store(fwmp_flags_, fwmp_hash_ptr_));
 }
 
 // Store fails if space doesn't exist
 TEST_F(FirmwareManagementParametersTest, StoreNoNvram) {
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Store(fwmp_flags_, fwmp_hash_ptr_));
 }
 
 // Store fails if space is locked
 TEST_F(FirmwareManagementParametersTest, StoreLockedNvram) {
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramLocked(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_FALSE(fwmp_.Store(fwmp_flags_, fwmp_hash_ptr_));
 }
 
 // Store fails if space is wrong size
 TEST_F(FirmwareManagementParametersTest, StoreNvramSizeBad) {
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramLocked(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   // Return a bad NVRAM size.
   EXPECT_CALL(tpm_, GetNvramSize(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(4));
+      .WillOnce(Return(4));
   EXPECT_FALSE(fwmp_.Store(fwmp_flags_, fwmp_hash_ptr_));
 }
 
 // Store fails if hash is wrong size
 TEST_F(FirmwareManagementParametersTest, StoreHashSizeBad) {
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillOnce(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillOnce(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, IsNvramLocked(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(tpm_, GetNvramSize(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(FirmwareManagementParameters::kNvramBytes));
+      .WillOnce(Return(FirmwareManagementParameters::kNvramBytes));
 
   // Return a bad NVRAM size.
   brillo::Blob bad_hash = brillo::BlobFromString("wrong-size");
@@ -394,10 +360,10 @@ TEST_F(FirmwareManagementParametersTest, LoadExisting) {
   SecureBlob nvram_data(kContentsWithHash);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
 
   // Load succeeds
   EXPECT_FALSE(fwmp_.IsLoaded());
@@ -418,10 +384,10 @@ TEST_F(FirmwareManagementParametersTest, GetFlags) {
   SecureBlob nvram_data(kContentsWithHash);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
 
   EXPECT_FALSE(fwmp_.IsLoaded());
   EXPECT_TRUE(fwmp_.GetFlags(&flags));
@@ -435,10 +401,10 @@ TEST_F(FirmwareManagementParametersTest, GetDeveloperKeyHash) {
   SecureBlob nvram_data(kContentsWithHash);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
 
   EXPECT_FALSE(fwmp_.IsLoaded());
   EXPECT_TRUE(fwmp_.GetDeveloperKeyHash(&hash));
@@ -452,8 +418,8 @@ TEST_F(FirmwareManagementParametersTest, LoadNoNvram) {
   brillo::Blob hash;
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .Times(3)
-    .WillRepeatedly(Return(false));
+      .Times(3)
+      .WillRepeatedly(Return(false));
 
   EXPECT_FALSE(fwmp_.Load());
   EXPECT_FALSE(fwmp_.IsLoaded());
@@ -468,10 +434,10 @@ TEST_F(FirmwareManagementParametersTest, LoadNoNvram) {
 // Load fails on read error
 TEST_F(FirmwareManagementParametersTest, LoadReadError) {
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(Return(false));
+      .Times(1)
+      .WillOnce(Return(false));
   EXPECT_FALSE(fwmp_.Load());
 }
 
@@ -482,10 +448,10 @@ TEST_F(FirmwareManagementParametersTest, LoadNvramTooSmall) {
   nvram_data.erase(nvram_data.begin(), nvram_data.begin() + 1);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
   EXPECT_FALSE(fwmp_.Load());
 }
 
@@ -497,10 +463,10 @@ TEST_F(FirmwareManagementParametersTest, LoadBadStructSize) {
   nvram_data[1]++;
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
   EXPECT_FALSE(fwmp_.Load());
 }
 
@@ -512,10 +478,10 @@ TEST_F(FirmwareManagementParametersTest, LoadBadCrc) {
   nvram_data[0] ^= 0x42;
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
   EXPECT_FALSE(fwmp_.Load());
 }
 
@@ -527,16 +493,15 @@ TEST_F(FirmwareManagementParametersTest, LoadMinorVersion) {
   nvram_data[2] += 1;
 
   // Recalculate CRC
-  nvram_data[0] = crc8(nvram_data.data() +
-                       FirmwareManagementParameters::kCrcDataOffset,
-                       nvram_data.size() -
-                       FirmwareManagementParameters::kCrcDataOffset);
+  nvram_data[0] =
+      crc8(nvram_data.data() + FirmwareManagementParameters::kCrcDataOffset,
+           nvram_data.size() - FirmwareManagementParameters::kCrcDataOffset);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
   EXPECT_TRUE(fwmp_.Load());
 }
 
@@ -548,16 +513,15 @@ TEST_F(FirmwareManagementParametersTest, LoadMajorVersion) {
   nvram_data[2] += 0x10;
 
   // Recalculate CRC
-  nvram_data[0] = crc8(nvram_data.data() +
-                       FirmwareManagementParameters::kCrcDataOffset,
-                       nvram_data.size() -
-                       FirmwareManagementParameters::kCrcDataOffset);
+  nvram_data[0] =
+      crc8(nvram_data.data() + FirmwareManagementParameters::kCrcDataOffset,
+           nvram_data.size() - FirmwareManagementParameters::kCrcDataOffset);
 
   EXPECT_CALL(tpm_, IsNvramDefined(FirmwareManagementParameters::kNvramIndex))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(tpm_, ReadNvram(FirmwareManagementParameters::kNvramIndex, _))
-    .Times(1)
-    .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
+      .Times(1)
+      .WillOnce(DoAll(SetArgPointee<1>(nvram_data), Return(true)));
   EXPECT_FALSE(fwmp_.Load());
 }
 

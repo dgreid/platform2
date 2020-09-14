@@ -21,8 +21,8 @@ namespace {
 // Creates a dbus error message.
 brillo::ErrorPtr CreateError(const std::string& code,
                              const std::string& message) {
-  return brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain,
-                               code, message);
+  return brillo::Error::Create(FROM_HERE, brillo::errors::dbus::kDomain, code,
+                               message);
 }
 
 }  // namespace

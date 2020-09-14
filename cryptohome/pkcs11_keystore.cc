@@ -34,8 +34,7 @@ const char kApplicationID[] = "CrOS_d5bbc079d2497110feadfc97c40d718ae46f4658";
 // A helper class to scope a PKCS #11 session.
 class ScopedSession {
  public:
-  explicit ScopedSession(CK_SLOT_ID slot)
-      : handle_(CK_INVALID_HANDLE) {
+  explicit ScopedSession(CK_SLOT_ID slot) : handle_(CK_INVALID_HANDLE) {
     CK_RV rv = C_Initialize(NULL);
     if (rv != CKR_OK && rv != CKR_CRYPTOKI_ALREADY_INITIALIZED) {
       // This may be normal in a test environment.
@@ -52,17 +51,13 @@ class ScopedSession {
   ~ScopedSession() {
     if (IsValid() && (C_CloseSession(handle_) != CKR_OK)) {
       LOG(WARNING) << "Failed to close PKCS #11 session.";
-    handle_ = CK_INVALID_HANDLE;
+      handle_ = CK_INVALID_HANDLE;
     }
   }
 
-  CK_SESSION_HANDLE handle() {
-    return handle_;
-  }
+  CK_SESSION_HANDLE handle() { return handle_; }
 
-  bool IsValid() {
-    return (handle_ != CK_INVALID_HANDLE);
-  }
+  bool IsValid() { return (handle_ != CK_INVALID_HANDLE); }
 
  private:
   CK_SESSION_HANDLE handle_;
@@ -70,8 +65,9 @@ class ScopedSession {
   DISALLOW_COPY_AND_ASSIGN(ScopedSession);
 };
 
-Pkcs11KeyStore::Pkcs11KeyStore() : default_pkcs11_init_(new Pkcs11Init),
-                                   pkcs11_init_(default_pkcs11_init_.get()) {}
+Pkcs11KeyStore::Pkcs11KeyStore()
+    : default_pkcs11_init_(new Pkcs11Init),
+      pkcs11_init_(default_pkcs11_init_.get()) {}
 
 Pkcs11KeyStore::Pkcs11KeyStore(Pkcs11Init* pkcs11_init)
     : pkcs11_init_(pkcs11_init) {}
@@ -93,17 +89,15 @@ bool Pkcs11KeyStore::Read(bool is_user_specific,
     return false;
   // First get the attribute with a NULL buffer which will give us the length.
   CK_ATTRIBUTE attribute = {CKA_VALUE, NULL, 0};
-  if (C_GetAttributeValue(session.handle(),
-                          key_handle,
-                          &attribute, 1) != CKR_OK) {
+  if (C_GetAttributeValue(session.handle(), key_handle, &attribute, 1) !=
+      CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to read key data: " << key_name;
     return false;
   }
   SecureBlob value_buffer(attribute.ulValueLen);
   attribute.pValue = value_buffer.data();
-  if (C_GetAttributeValue(session.handle(),
-                          key_handle,
-                          &attribute, 1) != CKR_OK) {
+  if (C_GetAttributeValue(session.handle(), key_handle, &attribute, 1) !=
+      CKR_OK) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to read key data: " << key_name;
     return false;
   }
@@ -174,11 +168,9 @@ bool Pkcs11KeyStore::DeleteByPrefix(bool is_user_specific,
   ScopedSession session(slot);
   if (!session.IsValid())
     return false;
-  EnumObjectsCallback callback = base::Bind(
-      &Pkcs11KeyStore::DeleteIfMatchesPrefix,
-      base::Unretained(this),
-      session.handle(),
-      key_prefix);
+  EnumObjectsCallback callback =
+      base::Bind(&Pkcs11KeyStore::DeleteIfMatchesPrefix, base::Unretained(this),
+                 session.handle(), key_prefix);
   if (!EnumObjects(session.handle(), callback)) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to delete key data.";
     return false;
@@ -203,9 +195,8 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
 
   // Extract the modulus from the public key.
   const unsigned char* asn1_ptr = public_key_der.data();
-  crypto::ScopedRSA public_key(d2i_RSAPublicKey(NULL,
-                                                &asn1_ptr,
-                                                public_key_der.size()));
+  crypto::ScopedRSA public_key(
+      d2i_RSAPublicKey(NULL, &asn1_ptr, public_key_der.size()));
   if (!public_key.get()) {
     LOG(ERROR) << "Pkcs11KeyStore: Failed to decode public key.";
     return false;
@@ -290,15 +281,14 @@ bool Pkcs11KeyStore::Register(bool is_user_specific,
     CK_OBJECT_CLASS certificate_class = CKO_CERTIFICATE;
     CK_CERTIFICATE_TYPE certificate_type = CKC_X_509;
     CK_ATTRIBUTE certificate_attributes[] = {
-      {CKA_CLASS, &certificate_class, sizeof(certificate_class)},
-      {CKA_TOKEN, &true_value, sizeof(true_value)},
-      {CKA_PRIVATE, &false_value, sizeof(false_value)},
-      {CKA_ID, id.data(), id.size()},
-      {CKA_LABEL, mutable_label.data(), mutable_label.size()},
-      {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
-      {CKA_SUBJECT, subject.data(), subject.size()},
-      {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}
-    };
+        {CKA_CLASS, &certificate_class, sizeof(certificate_class)},
+        {CKA_TOKEN, &true_value, sizeof(true_value)},
+        {CKA_PRIVATE, &false_value, sizeof(false_value)},
+        {CKA_ID, id.data(), id.size()},
+        {CKA_LABEL, mutable_label.data(), mutable_label.size()},
+        {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
+        {CKA_SUBJECT, subject.data(), subject.size()},
+        {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}};
 
     if (C_CreateObject(session.handle(), certificate_attributes,
                        base::size(certificate_attributes),
@@ -337,13 +327,12 @@ bool Pkcs11KeyStore::RegisterCertificate(
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
   CK_ATTRIBUTE certificate_attributes[] = {
-    {CKA_CLASS, &certificate_class, sizeof(certificate_class)},
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_PRIVATE, &false_value, sizeof(false_value)},
-    {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
-    {CKA_SUBJECT, subject.data(), subject.size()},
-    {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}
-  };
+      {CKA_CLASS, &certificate_class, sizeof(certificate_class)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &false_value, sizeof(false_value)},
+      {CKA_CERTIFICATE_TYPE, &certificate_type, sizeof(certificate_type)},
+      {CKA_SUBJECT, subject.data(), subject.size()},
+      {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   if (C_CreateObject(session.handle(), certificate_attributes,
                      base::size(certificate_attributes),
@@ -472,8 +461,7 @@ bool Pkcs11KeyStore::DeleteIfMatchesPrefix(CK_SESSION_HANDLE session_handle,
 }
 
 bool Pkcs11KeyStore::GetCertificateSubject(
-    const brillo::SecureBlob& certificate,
-    brillo::SecureBlob* subject) {
+    const brillo::SecureBlob& certificate, brillo::SecureBlob* subject) {
   const unsigned char* asn1_ptr = certificate.data();
   ScopedX509 x509(d2i_X509(NULL, &asn1_ptr, certificate.size()));
   if (!x509.get()) {
@@ -493,18 +481,16 @@ bool Pkcs11KeyStore::GetCertificateSubject(
 }
 
 bool Pkcs11KeyStore::DoesCertificateExist(
-    CK_SESSION_HANDLE session_handle,
-    const brillo::SecureBlob& certificate) {
+    CK_SESSION_HANDLE session_handle, const brillo::SecureBlob& certificate) {
   CK_OBJECT_CLASS object_class = CKO_CERTIFICATE;
   CK_BBOOL true_value = CK_TRUE;
   CK_BBOOL false_value = CK_FALSE;
   SecureBlob mutable_certificate = certificate;
   CK_ATTRIBUTE attributes[] = {
-    {CKA_CLASS, &object_class, sizeof(object_class)},
-    {CKA_TOKEN, &true_value, sizeof(true_value)},
-    {CKA_PRIVATE, &false_value, sizeof(false_value)},
-    {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}
-  };
+      {CKA_CLASS, &object_class, sizeof(object_class)},
+      {CKA_TOKEN, &true_value, sizeof(true_value)},
+      {CKA_PRIVATE, &false_value, sizeof(false_value)},
+      {CKA_VALUE, mutable_certificate.data(), mutable_certificate.size()}};
   CK_OBJECT_HANDLE object_handle = CK_INVALID_HANDLE;
   CK_ULONG count = 0;
   if ((C_FindObjectsInit(session_handle, attributes, base::size(attributes)) !=

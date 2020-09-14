@@ -4,6 +4,4 @@
 
 #include "cryptohome/mock_service.h"
 
-namespace cryptohome {
-
-}  // namespace cryptohome
+namespace cryptohome {}  // namespace cryptohome

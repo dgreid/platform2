@@ -43,8 +43,8 @@ class ChallengeCredentialsHelperImpl final : public ChallengeCredentialsHelper {
   ChallengeCredentialsHelperImpl(Tpm* tpm,
                                  const brillo::Blob& delegate_blob,
                                  const brillo::Blob& delegate_secret);
-  ChallengeCredentialsHelperImpl(const ChallengeCredentialsHelperImpl&)
-      = delete;
+  ChallengeCredentialsHelperImpl(const ChallengeCredentialsHelperImpl&) =
+      delete;
   ChallengeCredentialsHelperImpl& operator=(
       const ChallengeCredentialsHelperImpl&) = delete;
   ~ChallengeCredentialsHelperImpl() override;

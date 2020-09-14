@@ -20,9 +20,8 @@ namespace cryptohome {
 
 class UserSessionTest : public ::testing::Test {
  public:
-  UserSessionTest()
-      : salt() { }
-  virtual ~UserSessionTest() { }
+  UserSessionTest() : salt() {}
+  virtual ~UserSessionTest() {}
 
   void SetUp() {
     salt.resize(16);

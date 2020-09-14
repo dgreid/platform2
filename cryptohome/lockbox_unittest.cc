@@ -49,7 +49,6 @@ class LockboxTest : public ::testing::TestWithParam<Tpm::TpmVersion> {
     lockbox_.set_process(&process_);
   }
 
-
   uint32_t GetExpectedNvramSpaceFlags() {
     switch (GetParam()) {
       case Tpm::TpmVersion::TPM_1_2:
@@ -209,9 +208,9 @@ TEST_P(LockboxTest, StoreOk) {
   EXPECT_CALL(process_, Reset(0)).Times(1);
   EXPECT_CALL(process_, AddArg("/usr/sbin/mount-encrypted")).Times(1);
   EXPECT_CALL(process_, AddArg("finalize")).Times(1);
-  EXPECT_CALL(process_,
-              AddArg(CryptoLib::SecureBlobToHex(
-                         CryptoLib::Sha256(key_material))))
+  EXPECT_CALL(
+      process_,
+      AddArg(CryptoLib::SecureBlobToHex(CryptoLib::Sha256(key_material))))
       .Times(1);
   EXPECT_CALL(process_, BindFd(_, 1)).Times(1);
   EXPECT_CALL(process_, BindFd(_, 2)).Times(1);

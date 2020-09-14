@@ -18,7 +18,6 @@
 #include "cryptohome/platform.h"
 #include "cryptohome/tpm.h"
 
-
 namespace cryptohome {
 
 class LockboxContents;
@@ -132,7 +131,7 @@ class Lockbox {
 
  protected:
   // Call out to the mount-encrypted helper to encrypt the key.
-  virtual void FinalizeMountEncrypted(const brillo::SecureBlob &entropy) const;
+  virtual void FinalizeMountEncrypted(const brillo::SecureBlob& entropy) const;
 
  private:
   Tpm* tpm_;

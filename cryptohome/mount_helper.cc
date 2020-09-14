@@ -204,7 +204,7 @@ bool MountHelper::EnsureNewUserDirExists(const std::string& username) const {
     // chronos can modify the contents of /home/chronos.
     // Try deleting the file or link at /home/chronos/u-$hash to be robust
     // against malicious code running as chronos.
-    if (!platform_->DeleteFile(dir, /*recursive=*/ false)) {
+    if (!platform_->DeleteFile(dir, /*recursive=*/false)) {
       LOG(ERROR) << "DeleteFile() failed: " << dir.value();
       return false;
     }
@@ -475,21 +475,20 @@ bool MountHelper::BindMyFilesDownloads(const base::FilePath& user_home) {
    * crashed and bind mounts were removed by error. See crbug.com/1080730.
    * Move the files back to Download unless a file already exits.
    */
-  std::unique_ptr<FileEnumerator> enumerator(
-      platform_->GetFileEnumerator(downloads_in_myfiles, false /* recursive */,
-                                   base::FileEnumerator::DIRECTORIES |
-                                   base::FileEnumerator::FILES));
+  std::unique_ptr<FileEnumerator> enumerator(platform_->GetFileEnumerator(
+      downloads_in_myfiles, false /* recursive */,
+      base::FileEnumerator::DIRECTORIES | base::FileEnumerator::FILES));
   bool warning_sent = false;
   for (FilePath obj = enumerator->Next(); !obj.empty();
-      obj = enumerator->Next()) {
+       obj = enumerator->Next()) {
     FilePath obj_in_downloads = downloads.Append(obj.BaseName());
 
     if (platform_->FileExists(obj_in_downloads))
       platform_->DeleteFile(obj, true);
     else
       platform_->Move(obj, obj_in_downloads);
-    LOG_IF(WARNING, !warning_sent) << "Processing files in "
-                                   << downloads_in_myfiles;
+    LOG_IF(WARNING, !warning_sent)
+        << "Processing files in " << downloads_in_myfiles;
     warning_sent = true;
   }
 
@@ -669,8 +668,8 @@ bool MountHelper::CreateTrackedSubdirectories(
                                                obfuscated_username)
           : HomeDirs::GetUserMountDirectory(shadow_root_, obfuscated_username));
   if (!platform_->DirectoryExists(dest_dir)) {
-     LOG(ERROR) << "Can't create tracked subdirectories for a missing user.";
-     return false;
+    LOG(ERROR) << "Can't create tracked subdirectories for a missing user.";
+    return false;
   }
 
   const FilePath mount_dir(
@@ -711,11 +710,9 @@ bool MountHelper::CreateTrackedSubdirectories(
     if (mount_type == MountType::DIR_CRYPTO) {
       // Set xattr to make this directory trackable.
       std::string name = tracked_dir_path.BaseName().value();
-      if (!platform_->SetExtendedFileAttribute(
-              tracked_dir_path,
-              kTrackedDirectoryNameAttribute,
-              name.data(),
-              name.length())) {
+      if (!platform_->SetExtendedFileAttribute(tracked_dir_path,
+                                               kTrackedDirectoryNameAttribute,
+                                               name.data(), name.length())) {
         PLOG(ERROR) << "Unable to set xattr on " << tracked_dir_path.value();
         result = false;
         continue;
@@ -943,13 +940,12 @@ void MountHelper::ForceUnmount(const FilePath& src, const FilePath& dest) {
       std::vector<ProcessInformation> processes;
       platform_->GetProcessesWithOpenFiles(dest, &processes);
       for (const auto& proc : processes) {
-        LOG(ERROR) << "Process " << proc.get_process_id()
-                   << " had " << proc.get_open_files().size()
-                   << " open files.  Command line: "
-                   << proc.GetCommandLine();
+        LOG(ERROR) << "Process " << proc.get_process_id() << " had "
+                   << proc.get_open_files().size()
+                   << " open files.  Command line: " << proc.GetCommandLine();
         if (proc.get_cwd().length()) {
-          LOG(ERROR) << "  (" << proc.get_process_id() << ") CWD: "
-                     << proc.get_cwd();
+          LOG(ERROR) << "  (" << proc.get_process_id()
+                     << ") CWD: " << proc.get_cwd();
         }
       }
     }

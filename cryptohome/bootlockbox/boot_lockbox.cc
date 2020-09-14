@@ -44,8 +44,9 @@ const mode_t kKeyFilePermissions = 0600;
 namespace cryptohome {
 
 size_t GetPcrValueSize(Tpm* tpm) {
-  return (tpm && tpm->GetVersion() == Tpm::TpmVersion::TPM_2_0) ?
-      SHA256_DIGEST_LENGTH : SHA_DIGEST_LENGTH;
+  return (tpm && tpm->GetVersion() == Tpm::TpmVersion::TPM_2_0)
+             ? SHA256_DIGEST_LENGTH
+             : SHA_DIGEST_LENGTH;
 }
 
 BootLockbox::BootLockbox(Tpm* tpm, Platform* platform, Crypto* crypto)
@@ -99,8 +100,8 @@ bool BootLockbox::Verify(const brillo::Blob& data,
 
 bool BootLockbox::FinalizeBoot() {
   if (IsFinalized()) {
-      // The PCR is already not at the initial value, no need to extend again.
-      return true;
+    // The PCR is already not at the initial value, no need to extend again.
+    return true;
   }
   return tpm_->ExtendPCR(kPCRIndex,
                          CryptoLib::Sha1(BlobFromString(kPCRExtension)));
@@ -181,9 +182,8 @@ bool BootLockbox::SaveKey() {
     LOG(ERROR) << "Failed to encrypt boot-lockbox key.";
     return false;
   }
-  if (!platform_->WriteStringToFileAtomicDurable(FilePath(kKeyFilePath),
-                                                 encrypted_protobuf,
-                                                 kKeyFilePermissions)) {
+  if (!platform_->WriteStringToFileAtomicDurable(
+          FilePath(kKeyFilePath), encrypted_protobuf, kKeyFilePermissions)) {
     LOG(ERROR) << "Failed to write boot-lockbox key.";
     return false;
   }
@@ -191,7 +191,7 @@ bool BootLockbox::SaveKey() {
 }
 
 bool BootLockbox::CreateKey() {
-  LOG(INFO) <<  "Creating new boot-lockbox key.";
+  LOG(INFO) << "Creating new boot-lockbox key.";
   brillo::SecureBlob key_blob;
   brillo::SecureBlob public_key;
   brillo::SecureBlob creation_blob;
@@ -224,8 +224,8 @@ bool BootLockbox::VerifySignature(const brillo::Blob& public_key,
     return false;
   }
   brillo::SecureBlob digest = CryptoLib::Sha256ToSecureBlob(signed_data);
-  if (!RSA_verify(NID_sha256, digest.data(), digest.size(),
-                  signature.data(), signature.size(), rsa.get())) {
+  if (!RSA_verify(NID_sha256, digest.data(), digest.size(), signature.data(),
+                  signature.size(), rsa.get())) {
     LOG(ERROR) << "Failed to verify signature.";
     return false;
   }

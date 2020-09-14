@@ -224,7 +224,7 @@ TEST_F(CertProvisionKeyStoreTest, ReadProvisionStatusFailureGet) {
 TEST_F(CertProvisionKeyStoreTest, ReadProvisionStatusFailureMultiple) {
   EXPECT_TRUE(key_store_.Init());
 
-  found_objects_.assign({kObject, kObject+1});
+  found_objects_.assign({kObject, kObject + 1});
   EXPECT_CALL(pkcs11_, GetAttributeValue(_, _, _, _, _)).Times(0);
 
   ProvisionStatus provision_status;
@@ -252,10 +252,10 @@ TEST_F(CertProvisionKeyStoreTest, WriteProvisionStatusSuccessNew) {
 TEST_F(CertProvisionKeyStoreTest, WriteProvisionStatusSuccessExist) {
   EXPECT_TRUE(key_store_.Init());
 
-  found_objects_.assign({kObject+1, kObject+2});
+  found_objects_.assign({kObject + 1, kObject + 2});
 
-  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject+1));
-  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject+2));
+  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject + 1));
+  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject + 2));
   EXPECT_CALL(pkcs11_, CreateObject(_, kSession, _, _));
 
   ProvisionStatus provision_status;
@@ -301,10 +301,10 @@ TEST_F(CertProvisionKeyStoreTest, DeleteKeysSuccessEmpty) {
 TEST_F(CertProvisionKeyStoreTest, DeleteKeysSuccess) {
   EXPECT_TRUE(key_store_.Init());
 
-  found_objects_.assign({kObject+1, kObject+2});
+  found_objects_.assign({kObject + 1, kObject + 2});
 
-  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject+1));
-  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject+2));
+  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject + 1));
+  EXPECT_CALL(pkcs11_, DestroyObject(_, kSession, kObject + 2));
 
   std::string key_id = "300";  // some random value
   EXPECT_TRUE(key_store_.DeleteKeys(key_id, kCertLabel));
@@ -337,14 +337,14 @@ TEST_F(CertProvisionKeyStoreTest, SignSuccess) {
   found_objects_.assign({kObject});
 
   std::string key_id = "400";  // some arbitrary value
-  std::string data = "data";  // arbitrary data to sign
+  std::string data = "data";   // arbitrary data to sign
 
   signature_ = "sig-sha1";
   EXPECT_CALL(pkcs11_, SignInit(_, kSession, CKM_SHA1_RSA_PKCS, _, kObject));
   EXPECT_CALL(pkcs11_, Sign(_, kSession, _, _, _, _));
   std::string sig;
-  EXPECT_TRUE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS, data, &sig));
+  EXPECT_TRUE(key_store_.Sign(key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS,
+                              data, &sig));
   EXPECT_EQ("sig-sha1", sig);
 
   found_objects_.assign({kObject});
@@ -353,8 +353,8 @@ TEST_F(CertProvisionKeyStoreTest, SignSuccess) {
   EXPECT_CALL(pkcs11_, SignInit(_, kSession, CKM_SHA256_RSA_PKCS, _, kObject));
   EXPECT_CALL(pkcs11_, Sign(_, kSession, _, _, _, _));
   sig.clear();
-  EXPECT_TRUE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA256_RSA_PKCS, data, &sig));
+  EXPECT_TRUE(key_store_.Sign(key_id, kCertLabel,
+                              SignMechanism::SHA256_RSA_PKCS, data, &sig));
   EXPECT_EQ("sig-sha256", sig);
 
   found_objects_.assign({kObject});
@@ -379,10 +379,10 @@ TEST_F(CertProvisionKeyStoreTest, SignFailureNoKey) {
   EXPECT_CALL(pkcs11_, Sign(_, _, _, _, _, _)).Times(0);
 
   std::string key_id = "400";  // some arbitrary value
-  std::string data = "data";  // arbitrary data to sign
+  std::string data = "data";   // arbitrary data to sign
   std::string sig;
-  EXPECT_FALSE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS, data, &sig));
+  EXPECT_FALSE(key_store_.Sign(key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS,
+                               data, &sig));
 }
 
 // Checks Sign behavior if not initialized.
@@ -393,10 +393,10 @@ TEST_F(CertProvisionKeyStoreTest, SignFailureNotInit) {
   EXPECT_CALL(pkcs11_, Sign(_, _, _, _, _, _)).Times(0);
 
   std::string key_id = "400";  // some arbitrary value
-  std::string data = "data";  // arbitrary data to sign
+  std::string data = "data";   // arbitrary data to sign
   std::string sig;
-  EXPECT_FALSE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS, data, &sig));
+  EXPECT_FALSE(key_store_.Sign(key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS,
+                               data, &sig));
 }
 
 // Checks WriteProvisionStatus behavior in case of SignInit error.
@@ -409,10 +409,10 @@ TEST_F(CertProvisionKeyStoreTest, SignFailureSignInit) {
       .WillOnce(Return(CKR_GENERAL_ERROR));
   EXPECT_CALL(pkcs11_, Sign(_, _, _, _, _, _)).Times(0);
   std::string key_id = "400";  // some arbitrary value
-  std::string data = "data";  // arbitrary data to sign
+  std::string data = "data";   // arbitrary data to sign
   std::string sig;
-  EXPECT_FALSE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS, data, &sig));
+  EXPECT_FALSE(key_store_.Sign(key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS,
+                               data, &sig));
 }
 
 // Checks WriteProvisionStatus behavior in case of SignInit error.
@@ -425,10 +425,10 @@ TEST_F(CertProvisionKeyStoreTest, SignFailureSign) {
   EXPECT_CALL(pkcs11_, Sign(_, kSession, _, _, _, _))
       .WillOnce(Return(CKR_GENERAL_ERROR));
   std::string key_id = "400";  // some arbitrary value
-  std::string data = "data";  // arbitrary data to sign
+  std::string data = "data";   // arbitrary data to sign
   std::string sig;
-  EXPECT_FALSE(key_store_.Sign(
-      key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS, data, &sig));
+  EXPECT_FALSE(key_store_.Sign(key_id, kCertLabel, SignMechanism::SHA1_RSA_PKCS,
+                               data, &sig));
 }
 
 }  // namespace cert_provision

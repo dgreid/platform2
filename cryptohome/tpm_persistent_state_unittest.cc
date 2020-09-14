@@ -15,10 +15,10 @@
 
 using brillo::SecureBlob;
 
+using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::_;
 
 namespace cryptohome {
 
@@ -77,22 +77,21 @@ class TpmPersistentStateTest : public ::testing::Test {
 
   void SetUp() override {
     ON_CALL(platform_, FileExists(_))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileExists));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileExists));
     ON_CALL(platform_, DeleteFileDurable(_, _))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileDelete));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileDelete));
     ON_CALL(platform_, TouchFileDurable(_))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileTouch));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileTouch));
     ON_CALL(platform_, GetFileSize(_, _))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::GetFileSize));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::GetFileSize));
     ON_CALL(platform_, ReadFile(_, _))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileRead));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileRead));
     ON_CALL(platform_, WriteSecureBlobToFile(_, _))
-      .WillByDefault(Invoke(this,
-                            &TpmPersistentStateTest::FileWriteSecureBlob));
+        .WillByDefault(
+            Invoke(this, &TpmPersistentStateTest::FileWriteSecureBlob));
     ON_CALL(platform_, WriteSecureBlobToFileAtomicDurable(_, _, _))
-      .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileWriteAtomic));
-    ON_CALL(platform_, DataSyncFile(_))
-      .WillByDefault(Return(true));
+        .WillByDefault(Invoke(this, &TpmPersistentStateTest::FileWriteAtomic));
+    ON_CALL(platform_, DataSyncFile(_)).WillByDefault(Return(true));
   }
 
  protected:

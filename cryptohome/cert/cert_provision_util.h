@@ -29,7 +29,7 @@ struct OpResult {
 class ProgressReporter {
  public:
   ProgressReporter(const ProgressCallback& callback, int total_steps)
-    : callback_(callback), total_steps_(total_steps) {}
+      : callback_(callback), total_steps_(total_steps) {}
 
   // Sets the number of steps to take. The number of steps can change
   // mid-flight if an optional path is added or deleted.
@@ -55,9 +55,7 @@ class ProgressReporter {
 
   // Reports that the operation has been successfully completed, sets the
   // progress to 100%.
-  void Done() {
-    Report(Status::Success, total_steps_, total_steps_, "Done");
-  }
+  void Done() { Report(Status::Success, total_steps_, total_steps_, "Done"); }
 
  private:
   void Report(Status status,

@@ -7,7 +7,7 @@
 #include <base/files/file_path.h>
 #include <brillo/cryptohome.h>
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   if (argc != 3 || (strcmp(argv[1], "system") && strcmp(argv[1], "user"))) {
     printf("Usage: %s <system|user> <username>\n", argv[0]);
     return 1;

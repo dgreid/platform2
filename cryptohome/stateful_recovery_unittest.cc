@@ -16,12 +16,12 @@ namespace cryptohome {
 using base::FilePath;
 using std::ostringstream;
 
+using ::testing::_;
 using ::testing::DoAll;
 using ::testing::Return;
 using ::testing::SaveArg;
 using ::testing::SetArgPointee;
 using ::testing::StrEq;
-using ::testing::_;
 
 // MockSRHandlers is a class that contains the 3 functions required to create
 // the StatefulRecovery object. This mock object is created to simplify testing.
@@ -440,7 +440,7 @@ TEST_F(StatefulRecoveryTest, FilesystemDetailsFailure) {
 TEST_F(StatefulRecoveryTest, MountsParseOk) {
   Platform platform;
   FilePath mount_info;
-  FILE *fp;
+  FILE* fp;
   std::string device_in = "/dev/pan", device_out, mount_info_contents;
 
   mount_info_contents.append("84 24 0:29 / ");
@@ -456,8 +456,9 @@ TEST_F(StatefulRecoveryTest, MountsParseOk) {
   fp = base::CreateAndOpenTemporaryStream(&mount_info).release();
 #endif
   ASSERT_TRUE(fp != NULL);
-  EXPECT_EQ(fwrite(mount_info_contents.c_str(),
-                   mount_info_contents.length(), 1, fp), 1);
+  EXPECT_EQ(
+      fwrite(mount_info_contents.c_str(), mount_info_contents.length(), 1, fp),
+      1);
   EXPECT_EQ(fclose(fp), 0);
 
   platform.set_mount_info_path(mount_info);

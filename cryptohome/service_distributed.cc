@@ -19,8 +19,8 @@ using attestation::AttestationStatus;
 namespace cryptohome {
 
 // A helper function which maps an integer to a valid ACAType.
-gboolean ServiceDistributed::ConvertIntegerToACAType(gint type,
-    attestation::ACAType* aca_type, GError** error) {
+gboolean ServiceDistributed::ConvertIntegerToACAType(
+    gint type, attestation::ACAType* aca_type, GError** error) {
   if (!attestation::ACAType_IsValid(type)) {
     ReportUnsupportedACAType(error, type);
     return FALSE;
@@ -30,8 +30,8 @@ gboolean ServiceDistributed::ConvertIntegerToACAType(gint type,
 }
 
 // A helper function which maps an integer to a valid VAType.
-gboolean ServiceDistributed::ConvertIntegerToVAType(gint type,
-    attestation::VAType* va_type, GError** error) {
+gboolean ServiceDistributed::ConvertIntegerToVAType(
+    gint type, attestation::VAType* va_type, GError** error) {
   if (!attestation::VAType_IsValid(type)) {
     ReportUnsupportedVAType(error, type);
     return FALSE;
@@ -42,9 +42,7 @@ gboolean ServiceDistributed::ConvertIntegerToVAType(gint type,
 
 // A helper function which maps an integer to a valid KeyType.
 gboolean ServiceDistributed::ConvertIntegerToKeyType(
-    gint type,
-    attestation::KeyType* key_type,
-    GError** error) {
+    gint type, attestation::KeyType* key_type, GError** error) {
   if (type < attestation::KeyType_MIN || type > attestation::KeyType_MAX) {
     ReportUnsupportedKeyType(error, type);
     return FALSE;
@@ -92,7 +90,7 @@ bool ServiceDistributed::PrepareInterface() {
 }
 
 bool ServiceDistributed::ObtainTpmStatus(attestation::GetStatusReply* reply,
-    GError** error) {
+                                         GError** error) {
   attestation::GetStatusRequest request;
   request.set_extended_status(false);
   auto method = base::Bind(&AttestationInterface::GetStatus,
@@ -113,8 +111,7 @@ base::WeakPtr<ServiceDistributed> ServiceDistributed::GetWeakPtr() {
 }
 
 void ServiceDistributed::ReportErrorFromStatus(
-    GError** error,
-    attestation::AttestationStatus status) {
+    GError** error, attestation::AttestationStatus status) {
   VLOG(1) << "Attestation daemon returned status " << status;
   g_set_error(error, DBUS_GERROR, DBUS_GERROR_FAILED,
               "Attestation daemon returned status %d", status);
@@ -288,16 +285,15 @@ bool ServiceDistributed::AttestationGetEnrollmentPreparations(
   VLOG(1) << __func__;
   attestation::GetEnrollmentPreparationsRequest request;
   if (request_in.has_pca_type()) {
-    request.set_aca_type(static_cast<attestation::ACAType>(
-        request_in.pca_type()));
+    request.set_aca_type(
+        static_cast<attestation::ACAType>(request_in.pca_type()));
   }
   attestation::GetEnrollmentPreparationsReply reply;
   if (ObtainTpmAttestationEnrollmentPreparations(request, &reply, nullptr) &&
       reply.status() == AttestationStatus::STATUS_SUCCESS) {
     auto map = reply.enrollment_preparations();
-    for (auto it = map.cbegin(), end  = map.cend(); it != end; ++it) {
-      (*reply_out->mutable_enrollment_preparations())[it->first] =
-          it->second;
+    for (auto it = map.cbegin(), end = map.cend(); it != end; ++it) {
+      (*reply_out->mutable_enrollment_preparations())[it->first] = it->second;
     }
     return true;
   } else {
@@ -324,7 +320,8 @@ void ServiceDistributed::AttestationGetTpmStatus(GetTpmStatusReply* reply_out) {
       identity->set_features(it->features());
     }
     for (auto it = reply.identity_certificates().cbegin(),
-         end = reply.identity_certificates().cend(); it != end; ++it) {
+              end = reply.identity_certificates().cend();
+         it != end; ++it) {
       GetTpmStatusReply::IdentityCertificate identity_certificate;
       identity_certificate.set_identity(it->second.identity());
       identity_certificate.set_aca(it->second.aca());
@@ -420,9 +417,7 @@ gboolean ServiceDistributed::TpmVerifyEK(gboolean is_cros_core,
 }
 
 gboolean ServiceDistributed::TpmAttestationCreateEnrollRequest(
-    gint pca_type,
-    GArray** OUT_pca_request,
-    GError** error) {
+    gint pca_type, GArray** OUT_pca_request, GError** error) {
   VLOG(1) << __func__;
   attestation::ACAType aca_type;
   if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
@@ -451,9 +446,7 @@ gboolean ServiceDistributed::TpmAttestationCreateEnrollRequest(
 }
 
 gboolean ServiceDistributed::AsyncTpmAttestationCreateEnrollRequest(
-    gint pca_type,
-    gint* OUT_async_id,
-    GError** error) {
+    gint pca_type, gint* OUT_async_id, GError** error) {
   VLOG(1) << __func__;
   attestation::ACAType aca_type;
   if (!ConvertIntegerToACAType(pca_type, &aca_type, error)) {
@@ -812,17 +805,10 @@ gboolean ServiceDistributed::TpmAttestationSignEnterpriseChallenge(
     gint* OUT_async_id,
     GError** error) {
   VLOG(1) << __func__;
-  return TpmAttestationSignEnterpriseVaChallenge(attestation::DEFAULT_VA,
-                                                 is_user_specific,
-                                                 username,
-                                                 key_name,
-                                                 domain,
-                                                 device_id,
-                                                 include_signed_public_key,
-                                                 challenge,
-                                                 nullptr,
-                                                 OUT_async_id,
-                                                 error);
+  return TpmAttestationSignEnterpriseVaChallenge(
+      attestation::DEFAULT_VA, is_user_specific, username, key_name, domain,
+      device_id, include_signed_public_key, challenge, nullptr, OUT_async_id,
+      error);
 }
 
 gboolean ServiceDistributed::TpmAttestationSignEnterpriseVaChallenge(
@@ -1060,8 +1046,7 @@ gboolean ServiceDistributed::TpmAttestationResetIdentity(
 }
 
 void ServiceDistributed::DoGetEndorsementInfo(
-    const brillo::SecureBlob& request_array,
-    DBusGMethodInvocation* context) {
+    const brillo::SecureBlob& request_array, DBusGMethodInvocation* context) {
   VLOG(1) << __func__;
   cryptohome::GetEndorsementInfoRequest request_in;
   if (!request_in.ParseFromArray(request_array.data(), request_array.size())) {
@@ -1082,8 +1067,7 @@ void ServiceDistributed::DoGetEndorsementInfo(
 }
 
 gboolean ServiceDistributed::GetEndorsementInfo(
-    const GArray* request,
-    DBusGMethodInvocation* context) {
+    const GArray* request, DBusGMethodInvocation* context) {
   VLOG(1) << __func__;
   auto method = base::Bind(
       &ServiceDistributed::DoGetEndorsementInfo, GetWeakPtr(),
@@ -1096,8 +1080,7 @@ gboolean ServiceDistributed::GetEndorsementInfo(
 }
 
 void ServiceDistributed::DoInitializeCastKey(
-    const brillo::SecureBlob& request_array,
-    DBusGMethodInvocation* context) {
+    const brillo::SecureBlob& request_array, DBusGMethodInvocation* context) {
   ReportDeprecatedApiCalled(DeprecatedApiEvent::kInitializeCastKey);
   VLOG(1) << __func__;
   cryptohome::InitializeCastKeyRequest request_in;
@@ -1143,8 +1126,7 @@ gboolean ServiceDistributed::TpmAttestationGetEnrollmentId(
   VLOG_IF(1, reply.status() != AttestationStatus::STATUS_SUCCESS)
       << "Attestation daemon returned status " << reply.status();
   *OUT_success = (reply.status() == AttestationStatus::STATUS_SUCCESS);
-  g_array_append_vals(*OUT_enrollment_id,
-                      reply.enrollment_id().data(),
+  g_array_append_vals(*OUT_enrollment_id, reply.enrollment_id().data(),
                       reply.enrollment_id().size());
   return TRUE;
 }
@@ -1314,4 +1296,3 @@ void ServiceDistributed::OwnershipTakenSignalCallback() {
 }
 
 }  // namespace cryptohome
-

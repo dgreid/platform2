@@ -53,17 +53,17 @@ class MockFileEnumerator : public FileEnumerator {
     if (entries_.empty())
       return base::FilePath();
     current_ = entries_.at(0);
-    entries_.erase(entries_.begin(), entries_.begin()+1);
+    entries_.erase(entries_.begin(), entries_.begin() + 1);
     return current_.GetName();
   }
-  virtual const FileInfo& MockGetInfo() {
-    return current_;
-  }
+  virtual const FileInfo& MockGetInfo() { return current_; }
   FileInfo current_;
 };
 
 // TODO(wad) Migrate to an in-memory-only mock filesystem.
-ACTION(CallDeleteFile) { return base::DeleteFile(base::FilePath(arg0), arg1); }
+ACTION(CallDeleteFile) {
+  return base::DeleteFile(base::FilePath(arg0), arg1);
+}
 ACTION(CallMove) {
   return base::Move(base::FilePath(arg0), base::FilePath(arg1));
 }
@@ -82,17 +82,27 @@ ACTION(CallPathExists) {
 ACTION(CallCreateDirectory) {
   return base::CreateDirectory(base::FilePath(arg0));
 }
-ACTION(CallReadFile) { return Platform().ReadFile(arg0, arg1); }
-ACTION(CallReadFileToString) { return Platform().ReadFileToString(arg0, arg1); }
+ACTION(CallReadFile) {
+  return Platform().ReadFile(arg0, arg1);
+}
+ACTION(CallReadFileToString) {
+  return Platform().ReadFileToString(arg0, arg1);
+}
 ACTION(CallReadFileToSecureBlob) {
   return Platform().ReadFileToSecureBlob(arg0, arg1);
 }
-ACTION(CallCopy) { return Platform().Copy(arg0, arg1); }
-ACTION(CallRename) { return Platform().Rename(arg0, arg1); }
+ACTION(CallCopy) {
+  return Platform().Copy(arg0, arg1);
+}
+ACTION(CallRename) {
+  return Platform().Rename(arg0, arg1);
+}
 ACTION(CallComputeDirectoryDiskUsage) {
   return Platform().ComputeDirectoryDiskUsage(arg0);
 }
-ACTION(CallStatVFS) { return Platform().StatVFS(arg0, arg1); }
+ACTION(CallStatVFS) {
+  return Platform().StatVFS(arg0, arg1);
+}
 ACTION(CallReportFilesystemDetails) {
   return Platform().ReportFilesystemDetails(arg0, arg1);
 }

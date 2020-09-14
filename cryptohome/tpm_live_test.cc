@@ -126,8 +126,8 @@ bool TpmLiveTest::SignData(const SecureBlob& pcr_bound_key,
     return false;
   }
   SecureBlob digest = CryptoLib::Sha256(input_data);
-  if (!RSA_verify(NID_sha256, digest.data(), digest.size(),
-                  signature.data(), signature.size(), rsa.get())) {
+  if (!RSA_verify(NID_sha256, digest.data(), digest.size(), signature.data(),
+                  signature.size(), rsa.get())) {
     LOG(ERROR) << "Failed to verify signature.";
     return false;
   }
@@ -183,17 +183,20 @@ bool TpmLiveTest::PCRKeyTest() {
   std::map<uint32_t, std::string> pcr_map({{index, BlobToString(pcr_data)}});
   // Create the keys.
   if (!tpm_->CreatePCRBoundKey(pcr_map, AsymmetricKeyUsage::kSignKey,
-      &pcr_bound_key1, &public_key_der1, &creation_blob1)) {
+                               &pcr_bound_key1, &public_key_der1,
+                               &creation_blob1)) {
     LOG(ERROR) << "Error creating PCR bound signing key.";
     return false;
   }
   if (!tpm_->CreatePCRBoundKey(pcr_map, AsymmetricKeyUsage::kDecryptKey,
-      &pcr_bound_key2, &public_key_der2, &creation_blob2)) {
+                               &pcr_bound_key2, &public_key_der2,
+                               &creation_blob2)) {
     LOG(ERROR) << "Error creating PCR bound decryption key.";
     return false;
   }
   if (!tpm_->CreatePCRBoundKey(pcr_map, AsymmetricKeyUsage::kDecryptAndSignKey,
-      &pcr_bound_key3, &public_key_der3, &creation_blob3)) {
+                               &pcr_bound_key3, &public_key_der3,
+                               &creation_blob3)) {
     LOG(ERROR) << "Error creating PCR bound decrypt and sign key.";
     return false;
   }
@@ -419,15 +422,15 @@ bool TpmLiveTest::SealToPcrWithAuthorizationTest() {
   SecureBlob auth_blob(256, 'b');
   SecureBlob ciphertext;
   if (tpm_->SealToPcrWithAuthorization(handle.value(), plaintext, auth_blob,
-                                       pcr_map, &ciphertext) !=
-      Tpm::kTpmRetryNone) {
+                                       pcr_map,
+                                       &ciphertext) != Tpm::kTpmRetryNone) {
     LOG(ERROR) << "Error sealing the blob.";
     return false;
   }
   SecureBlob unsealed_text;
   if (tpm_->UnsealWithAuthorization(handle.value(), ciphertext, auth_blob,
-                                    pcr_map, &unsealed_text) !=
-      Tpm::kTpmRetryNone) {
+                                    pcr_map,
+                                    &unsealed_text) != Tpm::kTpmRetryNone) {
     LOG(ERROR) << "Error unsealing blob.";
     return false;
   }
@@ -439,8 +442,9 @@ bool TpmLiveTest::SealToPcrWithAuthorizationTest() {
   // Check that unsealing doesn't work with wrong auth_blob.
   auth_blob.char_data()[255] = 'a';
   if (tpm_->UnsealWithAuthorization(handle.value(), ciphertext, auth_blob,
-                                    pcr_map, &unsealed_text) ==
-      Tpm::kTpmRetryNone && plaintext == unsealed_text) {
+                                    pcr_map,
+                                    &unsealed_text) == Tpm::kTpmRetryNone &&
+      plaintext == unsealed_text) {
     LOG(ERROR) << "UnsealWithAuthorization failed to fail.";
     return false;
   }
@@ -465,9 +469,9 @@ bool TpmLiveTest::NvramTest(const SecureBlob& owner_password) {
       return false;
     }
   }
-  if (!tpm_->DefineNvram(index, nvram_data.size(),
-                         Tpm::kTpmNvramWriteDefine |
-                         Tpm::kTpmNvramBindToPCR0)) {
+  if (!tpm_->DefineNvram(
+          index, nvram_data.size(),
+          Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramBindToPCR0)) {
     LOG(ERROR) << "Defining Nvram index.";
     return false;
   }

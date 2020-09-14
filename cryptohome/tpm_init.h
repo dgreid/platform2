@@ -27,6 +27,7 @@ class TpmInit {
   // called on a separate thread without inheriting from
   // PlatformThread::Delegate.
   friend class TpmInitTask;
+
  public:
   using OwnershipCallback =
       base::Callback<void(bool status, bool took_ownership)>;

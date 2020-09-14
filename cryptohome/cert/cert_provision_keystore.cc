@@ -66,11 +66,9 @@ OpResult KeyStoreImpl::Init() {
     initialized_ = true;
   }
 
-  res = C_OpenSession(0 /* slotID */,
-                      CKF_SERIAL_SESSION | CKF_RW_SESSION,
+  res = C_OpenSession(0 /* slotID */, CKF_SERIAL_SESSION | CKF_RW_SESSION,
                       NULL /* pApplication callback parameter */,
-                      NULL /* Notify callback */,
-                      &session_);
+                      NULL /* Notify callback */, &session_);
   if (res != CKR_OK) {
     return KeyStoreResError("Failed to open session", res);
   }
@@ -197,8 +195,7 @@ OpResult KeyStoreImpl::Sign(const std::string& id,
   VLOG(2) << "C_Sign max signature size = " << sig_len;
   signature->assign(sig_len, 0);
   res = C_Sign(
-      session_,
-      reinterpret_cast<CK_BYTE_PTR>(const_cast<char*>(data.data())),
+      session_, reinterpret_cast<CK_BYTE_PTR>(const_cast<char*>(data.data())),
       data.size(),
       reinterpret_cast<CK_BYTE_PTR>(const_cast<char*>(signature->data())),
       &sig_len);
@@ -229,7 +226,7 @@ OpResult KeyStoreImpl::ReadProvisionStatus(
     }
 
     std::string value(attribute.ulValueLen, 0);
-    attribute.pValue = const_cast<char *>(value.data());
+    attribute.pValue = const_cast<char*>(value.data());
     res = C_GetAttributeValue(session_, object, &attribute, 1);
     if (res != CKR_OK) {
       return KeyStoreResError("Failed to get provision status", res);
@@ -275,8 +272,8 @@ OpResult KeyStoreImpl::WriteProvisionStatus(
 OpResult KeyStoreImpl::DeleteKeys(const std::string& id,
                                   const std::string& label) {
   CK_ATTRIBUTE attributes[] = {
-    {CKA_ID, const_cast<char*>(id.c_str()), id.size()},
-    {CKA_LABEL, const_cast<char*>(label.c_str()), label.size()},
+      {CKA_ID, const_cast<char*>(id.c_str()), id.size()},
+      {CKA_LABEL, const_cast<char*>(label.c_str()), label.size()},
   };
   std::vector<CK_OBJECT_HANDLE> objects;
   OpResult result = Find(attributes, base::size(attributes), &objects);

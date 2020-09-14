@@ -20,7 +20,7 @@ class Platform;
 
 class MockCrypto : public Crypto {
  public:
-  MockCrypto(): Crypto(NULL) { set_use_tpm(true); }
+  MockCrypto() : Crypto(NULL) { set_use_tpm(true); }
   virtual ~MockCrypto() {}
 
   MOCK_METHOD(bool,

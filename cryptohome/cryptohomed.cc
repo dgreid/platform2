@@ -36,17 +36,15 @@ static const char* kNoLegacyMount = "nolegacymount";
 static const char* kDirEncryption = "direncryption";
 static const char* kNoDaemonize = "nodaemonize";
 static const char* kUserDataAuthInterface = "user_data_auth_interface";
-static const char* kCleanupThreshold =
-  "cleanup_threshold";
-static const char* kAggressiveThreshold =
-  "aggressive_cleanup_threshold";
-static const char* kTargetFreeSpace =
-  "target_free_space";
+static const char* kCleanupThreshold = "cleanup_threshold";
+static const char* kAggressiveThreshold = "aggressive_cleanup_threshold";
+static const char* kTargetFreeSpace = "target_free_space";
 
 }  // namespace switches
 
 uint64_t ReadCleanupThreshold(const base::CommandLine* cl,
-    const char* switch_name, uint64_t default_value) {
+                              const char* switch_name,
+                              uint64_t default_value) {
   std::string value = cl->GetSwitchValueASCII(switch_name);
 
   if (value.size() == 0) {
@@ -89,14 +87,13 @@ int main(int argc, char** argv) {
   bool daemonize = !cl->HasSwitch(switches::kNoDaemonize);
   bool use_new_dbus_interface = cl->HasSwitch(switches::kUserDataAuthInterface);
   uint64_t cleanup_threshold =
-    ReadCleanupThreshold(cl, switches::kCleanupThreshold,
-    cryptohome::kFreeSpaceThresholdToTriggerCleanup);
-  uint64_t aggressive_cleanup_threshold =
-    ReadCleanupThreshold(cl, switches::kAggressiveThreshold,
-    cryptohome::kFreeSpaceThresholdToTriggerAggressiveCleanup);
-  uint64_t target_free_space =
-    ReadCleanupThreshold(cl, switches::kTargetFreeSpace,
-    cryptohome::kTargetFreeSpaceAfterCleanup);
+      ReadCleanupThreshold(cl, switches::kCleanupThreshold,
+                           cryptohome::kFreeSpaceThresholdToTriggerCleanup);
+  uint64_t aggressive_cleanup_threshold = ReadCleanupThreshold(
+      cl, switches::kAggressiveThreshold,
+      cryptohome::kFreeSpaceThresholdToTriggerAggressiveCleanup);
+  uint64_t target_free_space = ReadCleanupThreshold(
+      cl, switches::kTargetFreeSpace, cryptohome::kTargetFreeSpaceAfterCleanup);
 
   if (daemonize) {
     PLOG_IF(FATAL, daemon(0, noclose) == -1) << "Failed to daemonize";
@@ -127,12 +124,12 @@ int main(int argc, char** argv) {
     user_data_auth_daemon.GetUserDataAuth()->set_force_ecryptfs(!direncryption);
 
     // Set automatic cleanup thresholds.
-    user_data_auth_daemon.GetUserDataAuth()->
-      set_cleanup_threshold(cleanup_threshold);
-    user_data_auth_daemon.GetUserDataAuth()->
-      set_aggressive_cleanup_threshold(aggressive_cleanup_threshold);
-    user_data_auth_daemon.GetUserDataAuth()->
-      set_target_free_space(target_free_space);
+    user_data_auth_daemon.GetUserDataAuth()->set_cleanup_threshold(
+        cleanup_threshold);
+    user_data_auth_daemon.GetUserDataAuth()->set_aggressive_cleanup_threshold(
+        aggressive_cleanup_threshold);
+    user_data_auth_daemon.GetUserDataAuth()->set_target_free_space(
+        target_free_space);
 
     // Note the startup sequence is as following:
     // 1. UserDataAuthDaemon constructor => UserDataAuth constructor

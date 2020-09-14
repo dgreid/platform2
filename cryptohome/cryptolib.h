@@ -70,10 +70,11 @@ class CryptoLib {
     kCtr = 3,
   };
 
-  static void GetSecureRandom(unsigned char *bytes, size_t len);
+  static void GetSecureRandom(unsigned char* bytes, size_t len);
   static brillo::SecureBlob CreateSecureRandomBlob(size_t length);
 
-  static bool CreateRsaKey(size_t bits, brillo::SecureBlob* n,
+  static bool CreateRsaKey(size_t bits,
+                           brillo::SecureBlob* n,
                            brillo::SecureBlob* p);
 
   // Fills out all fields related to the RSA private key information, given the
@@ -169,18 +170,22 @@ class CryptoLib {
 
   // Same as AesDecrypt, but allows using either CBC or ECB
   static bool AesDecryptSpecifyBlockMode(const brillo::SecureBlob& ciphertext,
-                                         unsigned int start, unsigned int count,
+                                         unsigned int start,
+                                         unsigned int count,
                                          const brillo::SecureBlob& key,
                                          const brillo::SecureBlob& iv,
-                                         PaddingScheme padding, BlockMode mode,
+                                         PaddingScheme padding,
+                                         BlockMode mode,
                                          brillo::SecureBlob* plaintext);
 
   // Same as AesEncrypt, but allows using either CBC or ECB
   static bool AesEncryptSpecifyBlockMode(const brillo::SecureBlob& plaintext,
-                                         unsigned int start, unsigned int count,
+                                         unsigned int start,
+                                         unsigned int count,
                                          const brillo::SecureBlob& key,
                                          const brillo::SecureBlob& iv,
-                                         PaddingScheme padding, BlockMode mode,
+                                         PaddingScheme padding,
+                                         BlockMode mode,
                                          brillo::SecureBlob* ciphertext);
 
   // Obscure an RSA message by encrypting part of it.
@@ -239,8 +244,7 @@ class CryptoLib {
   //   encrypted_data - encrypted data protobuf..
   //   hmac_key - secret key to use in hmac computation.
   static std::string ComputeEncryptedDataHMAC(
-      const EncryptedData& encrypted_data,
-      const brillo::SecureBlob& hmac_key);
+      const EncryptedData& encrypted_data, const brillo::SecureBlob& hmac_key);
 
   // Encrypts data using the TPM_ES_RSAESOAEP_SHA1_MGF1 scheme.
   //

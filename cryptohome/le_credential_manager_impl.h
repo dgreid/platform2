@@ -142,8 +142,7 @@ class LECredentialManagerImpl : public LECredentialManager {
   // completed. It should directly be used from the log entry.
   //
   // Returns true on success, false on failure.
-  bool ReplayCheck(uint64_t label,
-                   const std::vector<uint8_t>& log_root);
+  bool ReplayCheck(uint64_t label, const std::vector<uint8_t>& log_root);
 
   // Resets the HashTree.
   bool ReplayResetTree();

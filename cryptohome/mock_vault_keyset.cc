@@ -11,10 +11,8 @@ using ::testing::Return;
 using ::testing::ReturnRef;
 
 MockVaultKeyset::MockVaultKeyset() {
-  ON_CALL(*this, serialized())
-      .WillByDefault(ReturnRef(stub_serialized_));
-  ON_CALL(*this, mutable_serialized())
-      .WillByDefault(Return(&stub_serialized_));
+  ON_CALL(*this, serialized()).WillByDefault(ReturnRef(stub_serialized_));
+  ON_CALL(*this, mutable_serialized()).WillByDefault(Return(&stub_serialized_));
 }
 
 MockVaultKeyset::~MockVaultKeyset() {}

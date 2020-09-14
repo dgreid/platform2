@@ -30,12 +30,10 @@ constexpr char Pkcs11Init::kDefaultUserLabelPrefix[];
 
 extern const FilePath kTpmOwnedFile;
 
-Pkcs11Init::Pkcs11Init() : default_platform_(new Platform),
-                           platform_(default_platform_.get()) {
-}
+Pkcs11Init::Pkcs11Init()
+    : default_platform_(new Platform), platform_(default_platform_.get()) {}
 
-Pkcs11Init::~Pkcs11Init() {
-}
+Pkcs11Init::~Pkcs11Init() {}
 
 void Pkcs11Init::GetTpmTokenInfo(std::string* OUT_label,
                                  std::string* OUT_user_pin) {
@@ -81,9 +79,9 @@ bool Pkcs11Init::GetTpmTokenSlotForPath(const FilePath& path,
   for (CK_ULONG i = 0; i < num_slots; ++i) {
     FilePath slot_path;
     if (token_manager.GetTokenPath(
-        chaps::IsolateCredentialManager::GetDefaultIsolateCredential(),
-        slot_list[i],
-        &slot_path) && (path == slot_path)) {
+            chaps::IsolateCredentialManager::GetDefaultIsolateCredential(),
+            slot_list[i], &slot_path) &&
+        (path == slot_path)) {
       *slot = slot_list[i];
       return true;
     }
@@ -141,13 +139,12 @@ bool Pkcs11Init::CheckTokenInSlot(CK_SLOT_ID slot_id,
 
   rv = C_Initialize(NULL);
   if (rv != CKR_OK && rv != CKR_CRYPTOKI_ALREADY_INITIALIZED) {
-    LOG(WARNING) << "C_Initialize failed while checking token: "
-                 << std::hex << rv;
+    LOG(WARNING) << "C_Initialize failed while checking token: " << std::hex
+                 << rv;
     return false;
   }
 
-  rv = C_OpenSession(slot_id, CKF_RW_SESSION | CKF_SERIAL_SESSION,
-                     NULL, NULL,
+  rv = C_OpenSession(slot_id, CKF_RW_SESSION | CKF_SERIAL_SESSION, NULL, NULL,
                      &session_handle);
   if (rv != CKR_OK) {
     LOG(WARNING) << "Could not open session on slot " << slot_id

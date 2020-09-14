@@ -1277,8 +1277,8 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationGetCertificate(
     const std::string& in_username,
     const std::string& in_key_name) {
   std::shared_ptr<SharedDBusMethodResponse<std::vector<uint8_t>, bool>>
-  response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
-      std::move(response)));
+      response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
+          std::move(response)));
 
   attestation::GetKeyInfoRequest request;
   request.set_key_label(in_key_name);
@@ -1322,8 +1322,8 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationGetPublicKey(
     const std::string& in_username,
     const std::string& in_key_name) {
   std::shared_ptr<SharedDBusMethodResponse<std::vector<uint8_t>, bool>>
-  response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
-      std::move(response)));
+      response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
+          std::move(response)));
 
   attestation::GetKeyInfoRequest request;
   request.set_key_label(in_key_name);
@@ -1547,8 +1547,8 @@ void LegacyCryptohomeInterfaceAdaptor::TpmAttestationGetKeyPayload(
     const std::string& in_username,
     const std::string& in_key_name) {
   std::shared_ptr<SharedDBusMethodResponse<std::vector<uint8_t>, bool>>
-  response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
-      std::move(response)));
+      response_shared(new SharedDBusMethodResponse<std::vector<uint8_t>, bool>(
+          std::move(response)));
 
   attestation::GetKeyInfoRequest request;
   request.set_key_label(in_key_name);
@@ -1800,11 +1800,8 @@ void LegacyCryptohomeInterfaceAdaptor::TpmGetVersionStructuredOnSuccess(
     const tpm_manager::GetVersionInfoReply& reply) {
   // Note that the TpmGetVersionSuccessStructured method in CryptohomeInterface
   // doesn't return any error, so we don't check reply.status() here.
-  response->Return(reply.family(),
-                   reply.spec_level(),
-                   reply.manufacturer(),
-                   reply.tpm_model(),
-                   reply.firmware_version(),
+  response->Return(reply.family(), reply.spec_level(), reply.manufacturer(),
+                   reply.tpm_model(), reply.firmware_version(),
                    base::HexEncode(reply.vendor_specific().data(),
                                    reply.vendor_specific().size()));
 }

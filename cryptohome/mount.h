@@ -87,8 +87,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual ~Mount();
 
   // Gets the uid/gid of the default user and loads the system salt
-  virtual bool Init(Platform* platform, Crypto* crypto,
-                    UserOldestActivityTimestampCache *cache);
+  virtual bool Init(Platform* platform,
+                    Crypto* crypto,
+                    UserOldestActivityTimestampCache* cache);
 
   // Attempts to mount the cryptohome for the given credentials
   //
@@ -159,7 +160,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Mounts a guest home directory to the cryptohome mount point
   virtual bool MountGuestCryptohome();
 
-
   //
   // virtual int AddKey(const Credentials& existing, const Credentials& new);
   // virtual bool RemoveKey(const Credentials& existing, int index);
@@ -168,57 +168,35 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   virtual int CurrentKey(void) const { return current_user_->key_index(); }
 
   // Used to override the default shadow root
-  void set_shadow_root(const base::FilePath& value) {
-    shadow_root_ = value;
-  }
+  void set_shadow_root(const base::FilePath& value) { shadow_root_ = value; }
 
   // Used to override the default skeleton directory
-  void set_skel_source(const base::FilePath& value) {
-    skel_source_ = value;
-  }
+  void set_skel_source(const base::FilePath& value) { skel_source_ = value; }
 
   // Used to override the default Crypto handler (does not take ownership)
-  void set_crypto(Crypto* value) {
-    crypto_ = value;
-  }
+  void set_crypto(Crypto* value) { crypto_ = value; }
 
   // Get the Crypto instance
-  virtual Crypto* crypto() {
-    return crypto_;
-  }
+  virtual Crypto* crypto() { return crypto_; }
 
   // Used to override the default HomeDirs handler (does not take ownership)
-  void set_homedirs(HomeDirs* value) {
-    homedirs_ = value;
-  }
+  void set_homedirs(HomeDirs* value) { homedirs_ = value; }
 
   // Get the HomeDirs instance
-  virtual HomeDirs* homedirs() {
-    return homedirs_;
-  }
+  virtual HomeDirs* homedirs() { return homedirs_; }
 
-  virtual Platform* platform() {
-    return platform_;
-  }
+  virtual Platform* platform() { return platform_; }
 
-  virtual const base::FilePath& mount_point() const {
-    return mount_point_;
-  }
+  virtual const base::FilePath& mount_point() const { return mount_point_; }
 
   // Used to override the default Platform handler (does not take ownership)
-  void set_platform(Platform* value) {
-    platform_ = value;
-  }
+  void set_platform(Platform* value) { platform_ = value; }
 
   // Override whether to use the TPM for added security
-  void set_use_tpm(bool value) {
-    use_tpm_ = value;
-  }
+  void set_use_tpm(bool value) { use_tpm_ = value; }
 
   // Manually set the logged in user
-  void set_current_user(UserSession* value) {
-    current_user_ = value;
-  }
+  void set_current_user(UserSession* value) { current_user_ = value; }
 
   // Set/get a flag, that this machine is enterprise owned.
   void set_enterprise_owned(bool value) {
@@ -228,12 +206,12 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
 
   // Flag indicating if PKCS#11 is ready.
   typedef enum {
-    kUninitialized = 0,  // PKCS#11 initialization hasn't been attempted.
-    kIsWaitingOnTPM,  // PKCS#11 initialization is waiting on TPM ownership,
+    kUninitialized = 0,   // PKCS#11 initialization hasn't been attempted.
+    kIsWaitingOnTPM,      // PKCS#11 initialization is waiting on TPM ownership,
     kIsBeingInitialized,  // PKCS#11 is being attempted asynchronously.
-    kIsInitialized,  // PKCS#11 was attempted and succeeded.
-    kIsFailed,  // PKCS#11 was attempted and failed.
-    kInvalidState,  // We should never be in this state.
+    kIsInitialized,       // PKCS#11 was attempted and succeeded.
+    kIsFailed,            // PKCS#11 was attempted and failed.
+    kInvalidState,        // We should never be in this state.
   } Pkcs11State;
 
   virtual void set_pkcs11_state(Pkcs11State value) { pkcs11_state_ = value; }
@@ -332,8 +310,8 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                SerializedVaultKeyset* encrypted_keyset) const;
 
   virtual bool AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
-                       std::string* key_signature,
-                       std::string* filename_key_signature) const;
+                                    std::string* key_signature,
+                                    std::string* filename_key_signature) const;
 
   virtual bool LoadVaultKeysetForUser(
       const std::string& obfuscated_username,
@@ -345,15 +323,13 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
       int index,
       SerializedVaultKeyset* encrypted_keyset) const;
 
-  virtual bool LoadTimestampForUser(
-      const std::string& obfuscated_username,
-      int index,
-      Timestamp* timestamp) const;
+  virtual bool LoadTimestampForUser(const std::string& obfuscated_username,
+                                    int index,
+                                    Timestamp* timestamp) const;
 
-  virtual bool StoreTimestampForUser(
-      const std::string& obfuscated_username,
-      int index,
-      SerializedVaultKeyset* serialized) const;
+  virtual bool StoreTimestampForUser(const std::string& obfuscated_username,
+                                     int index,
+                                     SerializedVaultKeyset* serialized) const;
 
   // Encrypts and adds the VaultKeyset to the serialized store
   //
@@ -422,8 +398,7 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                         int index) const;
 
   base::FilePath GetUserTimestampFileForUser(
-      const std::string& obfuscated_username,
-      int index) const;
+      const std::string& obfuscated_username, int index) const;
 
   // Gets the user's key file name by index
   //
@@ -431,17 +406,15 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   obfuscated_username - Obfuscated username field of the Credentials
   //   index - which key file to load
   base::FilePath GetUserLegacyKeyFileForUser(
-      const std::string& obfuscated_username,
-      int index) const;
+      const std::string& obfuscated_username, int index) const;
 
   // Gets the user's key file name by label
   //
   // Parameters
   //   obfuscated_username - Obfuscated username field of the Credentials
   //   label - which key file to load by KeyData::label()
-  base::FilePath GetUserKeyFileForUser(
-      const std::string& obfuscated_username,
-      const std::string& label) const;
+  base::FilePath GetUserKeyFileForUser(const std::string& obfuscated_username,
+                                       const std::string& label) const;
 
   // Gets the directory in the shadow root where the user's salt, key, and vault
   // are stored.
@@ -541,10 +514,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //                       out of process
   //   cleanup - Closure to use in UnmountCryptohome(), and to clean up in case
   //             of failure
-  bool MountEphemeralCryptohome(
-      const std::string& username,
-      MountHelperInterface* ephemeral_mounter,
-      base::Closure cleanup);
+  bool MountEphemeralCryptohome(const std::string& username,
+                                MountHelperInterface* ephemeral_mounter,
+                                base::Closure cleanup);
 
   // Returns the user's salt
   //
@@ -553,8 +525,10 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   force - Whether to force creation of a new salt
   //   key_index - key index the salt is associated with
   //   salt (OUT) - The user's salt
-  void GetUserSalt(const Credentials& credentials, bool force_new,
-                   int key_index, brillo::SecureBlob* salt) const;
+  void GetUserSalt(const Credentials& credentials,
+                   bool force_new,
+                   int key_index,
+                   brillo::SecureBlob* salt) const;
 
   // Tears down an ephemeral cryptohome mount, and deletes the underlying loop
   // device and sparse file.

@@ -8,10 +8,10 @@
 #include <trousers/tss.h>
 
 namespace cryptohome {
-  const char kTpmWellKnownPassword[] = TSS_WELL_KNOWN_SECRET;
-  typedef TSS_RESULT TpmReturnCode;
-  // Specifies what the key can be used for.
-  enum AsymmetricKeyUsage { kDecryptKey, kSignKey, kDecryptAndSignKey };
+const char kTpmWellKnownPassword[] = TSS_WELL_KNOWN_SECRET;
+typedef TSS_RESULT TpmReturnCode;
+// Specifies what the key can be used for.
+enum AsymmetricKeyUsage { kDecryptKey, kSignKey, kDecryptAndSignKey };
 }  // namespace cryptohome
 
 #endif  // CRYPTOHOME_TPM1_H_

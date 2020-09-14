@@ -176,8 +176,7 @@ class MountHelper : public MountHelperInterface {
   //
   // Parameters
   //   obfuscated_username - Obfuscated username field of the credentials.
-  FilePath GetMountedRootHomePath(
-      const std::string& obfuscated_username) const;
+  FilePath GetMountedRootHomePath(const std::string& obfuscated_username) const;
 
   // Mounts a mount point and pushes it to the mount stack.
   // Returns true if the mount succeeds, false otherwise.

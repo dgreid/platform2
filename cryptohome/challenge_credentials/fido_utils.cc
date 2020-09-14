@@ -141,8 +141,7 @@ FidoPKCredCreationOptionsPtr BuildFidoMakeCredentialOptions(
       "Chrome OS Login" /* relying party name */);
 
   return BuildFidoMakeCredentialOptions(
-      std::move(user), std::move(rp), challenge,
-      {}, /* exclude credentials */
+      std::move(user), std::move(rp), challenge, {}, /* exclude credentials */
       kRequestTimeOut, nullptr, /* cable registration data */
       cryptohome::fido::ProtectionPolicy::UNSPECIFIED, create_hmac_secret,
       false, /* enforce protection policy */
@@ -182,14 +181,10 @@ FidoPKCredRequestOptionsPtr BuildFidoGetAssertionOptions(
     std::vector<uint8_t> challenge,
     std::string relying_party_id,
     std::string appid) {
-
   return BuildFidoGetAssertionOptions(
-      challenge,
-      kRequestTimeOut.InMilliseconds(),
-      relying_party_id,
+      challenge, kRequestTimeOut.InMilliseconds(), relying_party_id,
       {}, /* allow credentials */
-      appid,
-      {} /* Cloud Assisted BLE authentication data */);
+      appid, {} /* Cloud Assisted BLE authentication data */);
 }
 
 }  // namespace cryptohome

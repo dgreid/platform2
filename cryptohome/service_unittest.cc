@@ -230,9 +230,8 @@ class ServiceTestNotInitialized : public ::testing::Test {
         .WillByDefault(WithArgs<1, 3>(Invoke(AssignSalt)));
     // Skip StatefulRecovery by default.
     ON_CALL(platform_,
-        ReadFileToString(
-          Property(&FilePath::value, EndsWith("decrypt_stateful")),
-          _))
+            ReadFileToString(
+                Property(&FilePath::value, EndsWith("decrypt_stateful")), _))
         .WillByDefault(Return(false));
 
     ON_CALL(arc_disk_quota_, Initialize()).WillByDefault(Return());
@@ -243,9 +242,7 @@ class ServiceTestNotInitialized : public ::testing::Test {
     service_.set_mount_for_user(username, mount_.get());
   }
 
-  void TearDown() override {
-    test_helper_.TearDownSystemSalt();
-  }
+  void TearDown() override { test_helper_.TearDownSystemSalt(); }
 
  protected:
   void DispatchEvents() { service_.DispatchEventsForTesting(); }
@@ -373,8 +370,8 @@ TEST_F(ServiceTest, GetPublicMountPassKey) {
 
 TEST_F(ServiceTest, GetSanitizedUsername) {
   char username[] = "chromeos-user";
-  gchar *sanitized = NULL;
-  GError *error = NULL;
+  gchar* sanitized = NULL;
+  GError* error = NULL;
   EXPECT_TRUE(service_.GetSanitizedUsername(username, &sanitized, &error));
   EXPECT_TRUE(error == NULL);
   ASSERT_TRUE(sanitized);
@@ -456,11 +453,11 @@ TEST_F(ServiceTestNotInitialized, CheckAutoCleanupCallbackFirst) {
   PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(10));
 }
 
-static gboolean SignalCounter(GSignalInvocationHint *ihint,
-              guint n_param_values,
-              const GValue *param_values,
-              gpointer data) {
-  int *count = reinterpret_cast<int *>(data);
+static gboolean SignalCounter(GSignalInvocationHint* ihint,
+                              guint n_param_values,
+                              const GValue* param_values,
+                              gpointer data) {
+  int* count = reinterpret_cast<int*>(data);
   (*count)++;
   return true;
 }
@@ -565,15 +562,17 @@ TEST_F(ServiceTest, NoDeadlocksInInitializeTpmComplete) {
       base::WaitableEvent::ResetPolicy::MANUAL,
       base::WaitableEvent::InitialState::NOT_SIGNALED);
   bool finished = false;
-  service_.mount_thread_.task_runner()->PostTask(FROM_HERE,
-      base::Bind([](bool* finished,
-                    base::WaitableEvent* event,
-                    base::WaitableEvent* event_stop) {
-        event->Signal();  // Signal "Ready to start"
-        // Wait up to 2s for InitializeTpmComplete to finish
-        *finished = event_stop->TimedWait(base::TimeDelta::FromSeconds(2));
-        event->Signal();  // Signal "Result ready"
-     }, &finished, &event, &event_stop));
+  service_.mount_thread_.task_runner()->PostTask(
+      FROM_HERE,
+      base::Bind(
+          [](bool* finished, base::WaitableEvent* event,
+             base::WaitableEvent* event_stop) {
+            event->Signal();  // Signal "Ready to start"
+            // Wait up to 2s for InitializeTpmComplete to finish
+            *finished = event_stop->TimedWait(base::TimeDelta::FromSeconds(2));
+            event->Signal();  // Signal "Result ready"
+          },
+          &finished, &event, &event_stop));
 
   event.Wait();  // Wait for "Ready to start"
   service_.OwnershipCallback(true, true);
@@ -588,40 +587,42 @@ struct Mounts {
 };
 
 const std::vector<Mounts> kShadowMounts = {
-  { FilePath("/home/.shadow/a"), FilePath("/home/root/0")},
-  { FilePath("/home/.shadow/a"), FilePath("/home/user/0")},
-  { FilePath("/home/.shadow/a"), FilePath("/home/chronos/user")},
-  { FilePath("/home/.shadow/a/Downloads"),
-    FilePath("/home/chronos/user/MyFiles/Downloads")},
-  { FilePath("/home/.shadow/a/server/run"), FilePath("/daemon-store/server/a")},
-  { FilePath("/home/.shadow/b"), FilePath("/home/root/1")},
-  { FilePath("/home/.shadow/b"), FilePath("/home/user/1")},
-  { FilePath("/home/.shadow/b/Downloads"),
-    FilePath("/home/chronos/u-b/MyFiles/Downloads")},
-  { FilePath("/home/.shadow/b/Downloads"),
-    FilePath("/home/user/b/MyFiles/Downloads")},
-  { FilePath("/home/.shadow/b/server/run"), FilePath("/daemon-store/server/b")},
+    {FilePath("/home/.shadow/a"), FilePath("/home/root/0")},
+    {FilePath("/home/.shadow/a"), FilePath("/home/user/0")},
+    {FilePath("/home/.shadow/a"), FilePath("/home/chronos/user")},
+    {FilePath("/home/.shadow/a/Downloads"),
+     FilePath("/home/chronos/user/MyFiles/Downloads")},
+    {FilePath("/home/.shadow/a/server/run"),
+     FilePath("/daemon-store/server/a")},
+    {FilePath("/home/.shadow/b"), FilePath("/home/root/1")},
+    {FilePath("/home/.shadow/b"), FilePath("/home/user/1")},
+    {FilePath("/home/.shadow/b/Downloads"),
+     FilePath("/home/chronos/u-b/MyFiles/Downloads")},
+    {FilePath("/home/.shadow/b/Downloads"),
+     FilePath("/home/user/b/MyFiles/Downloads")},
+    {FilePath("/home/.shadow/b/server/run"),
+     FilePath("/daemon-store/server/b")},
 };
 
 // Ephemeral mounts must be at the beginning.
 const std::vector<Mounts> kLoopDevMounts = {
-    { FilePath("/dev/loop7"), FilePath("/run/cryptohome/ephemeral_mount/1")},
-    { FilePath("/dev/loop7"), FilePath("/home/user/0")},
-    { FilePath("/dev/loop7"), FilePath("/home/root/0")},
-    { FilePath("/dev/loop7"), FilePath("/home/chronos/u-1")},
-    { FilePath("/dev/loop7"), FilePath("/home/chronos/user")},
-    { FilePath("/dev/loop1"), FilePath("/opt/google/containers")},
-    { FilePath("/dev/loop2"), FilePath("/home/root/1")},
-    { FilePath("/dev/loop2"), FilePath("/home/user/1")},
+    {FilePath("/dev/loop7"), FilePath("/run/cryptohome/ephemeral_mount/1")},
+    {FilePath("/dev/loop7"), FilePath("/home/user/0")},
+    {FilePath("/dev/loop7"), FilePath("/home/root/0")},
+    {FilePath("/dev/loop7"), FilePath("/home/chronos/u-1")},
+    {FilePath("/dev/loop7"), FilePath("/home/chronos/user")},
+    {FilePath("/dev/loop1"), FilePath("/opt/google/containers")},
+    {FilePath("/dev/loop2"), FilePath("/home/root/1")},
+    {FilePath("/dev/loop2"), FilePath("/home/user/1")},
 };
 
 // The number of mount for loop7.
 const int kEphemeralMountsCount = 5;
 
 const std::vector<Platform::LoopDevice> kLoopDevices = {
-    { FilePath("/mnt/stateful_partition/encrypted.block"),
-      FilePath("/dev/loop0")},
-    { FilePath("/run/cryptohome/ephemeral_data/1"), FilePath("/dev/loop7")},
+    {FilePath("/mnt/stateful_partition/encrypted.block"),
+     FilePath("/dev/loop0")},
+    {FilePath("/run/cryptohome/ephemeral_data/1"), FilePath("/dev/loop7")},
 };
 
 const std::vector<FilePath> kSparseFiles = {
@@ -629,9 +630,8 @@ const std::vector<FilePath> kSparseFiles = {
     FilePath("/run/cryptohome/ephemeral_data/1"),
 };
 
-bool StaleShadowMounts(
-    const FilePath& from_prefix,
-    std::multimap<const FilePath, const FilePath>* mounts) {
+bool StaleShadowMounts(const FilePath& from_prefix,
+                       std::multimap<const FilePath, const FilePath>* mounts) {
   int i = 0;
 
   for (const auto& m : kShadowMounts) {
@@ -644,8 +644,7 @@ bool StaleShadowMounts(
   return i > 0;
 }
 
-bool LoopDeviceMounts(
-    std::multimap<const FilePath, const FilePath>* mounts) {
+bool LoopDeviceMounts(std::multimap<const FilePath, const FilePath>* mounts) {
   if (!mounts)
     return false;
   for (const auto& m : kLoopDevMounts)
@@ -653,7 +652,8 @@ bool LoopDeviceMounts(
   return true;
 }
 
-bool EnumerateSparseFiles(const base::FilePath& path, bool is_recursive,
+bool EnumerateSparseFiles(const base::FilePath& path,
+                          bool is_recursive,
                           std::vector<base::FilePath>* ent_list) {
   if (path != FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir))
     return false;
@@ -667,28 +667,29 @@ TEST_F(ServiceTest, CleanUpStale_NoOpenFiles_Ephemeral) {
   // detached and sparse file is deleted.
 
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(kLoopDevices));
+      .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Invoke(LoopDeviceMounts));
-  EXPECT_CALL(platform_,
+      .WillOnce(Invoke(LoopDeviceMounts));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Invoke(EnumerateSparseFiles));
+      .WillOnce(Invoke(EnumerateSparseFiles));
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kEphemeralMountsCount);
+      .Times(kEphemeralMountsCount);
 
   for (int i = 0; i < kEphemeralMountsCount; ++i) {
     EXPECT_CALL(platform_, Unmount(kLoopDevMounts[i].dst, true, _))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(false));
 }
 
@@ -697,31 +698,31 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral) {
   // and some open filehandles to the legacy homedir, everything is kept.
 
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(kLoopDevices));
+      .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Invoke(LoopDeviceMounts));
-  EXPECT_CALL(platform_,
+      .WillOnce(Invoke(LoopDeviceMounts));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Invoke(EnumerateSparseFiles));
+      .WillOnce(Invoke(EnumerateSparseFiles));
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kEphemeralMountsCount - 1);
+      .Times(kEphemeralMountsCount - 1);
   std::vector<ProcessInformation> processes(1);
   std::vector<std::string> cmd_line(1, "test");
   processes[0].set_process_id(1);
   processes[0].set_cmd_line(&cmd_line);
   EXPECT_CALL(platform_,
-      GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
-    .Times(1)
-    .WillRepeatedly(SetArgPointee<1>(processes));
+              GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
+      .Times(1)
+      .WillRepeatedly(SetArgPointee<1>(processes));
 
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(FilePath("/dev/loop7"), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-    .Times(0);
+  EXPECT_CALL(platform_, Unmount(_, _, _)).Times(0);
   EXPECT_TRUE(service_.CleanUpStaleMounts(false));
 }
 
@@ -731,28 +732,28 @@ TEST_F(ServiceTest, CleanUpStale_OpenLegacy_Ephemeral_Forced) {
   // all mounts are unmounted, loop device is detached and file is deleted.
 
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(homedirs_.shadow_root(), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(kLoopDevices));
+      .WillRepeatedly(Return(kLoopDevices));
   EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Invoke(LoopDeviceMounts));
-  EXPECT_CALL(platform_,
+      .WillOnce(Invoke(LoopDeviceMounts));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Invoke(EnumerateSparseFiles));
-  EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(0);
+      .WillOnce(Invoke(EnumerateSparseFiles));
+  EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _)).Times(0);
 
   for (int i = 0; i < kEphemeralMountsCount; ++i) {
     EXPECT_CALL(platform_, Unmount(kLoopDevMounts[i].dst, true, _))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
   }
   EXPECT_CALL(platform_, DetachLoop(FilePath("/dev/loop7")))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kSparseFiles[0], _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kSparseFiles[1], _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, DeleteFile(kLoopDevMounts[0].dst, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(true));
 }
 
@@ -761,20 +762,20 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_NoOpenFiles_ShadowOnly) {
   // and no open filehandles, all stale mounts are unmounted.
 
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .WillOnce(Invoke(StaleShadowMounts));
+      .WillOnce(Invoke(StaleShadowMounts));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
-  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kShadowMounts.size());
+      .Times(kShadowMounts.size());
   EXPECT_CALL(platform_, Unmount(_, true, _))
-    .Times(kShadowMounts.size())
-    .WillRepeatedly(Return(true));
+      .Times(kShadowMounts.size())
+      .WillRepeatedly(Return(true));
   EXPECT_FALSE(service_.CleanUpStaleMounts(false));
 }
 
@@ -785,16 +786,16 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_OpenLegacy_ShadowOnly) {
 
   // Called by CleanUpStaleMounts and each time a directory is excluded.
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .Times(4)
-    .WillRepeatedly(Invoke(StaleShadowMounts));
+      .Times(4)
+      .WillRepeatedly(Invoke(StaleShadowMounts));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
-  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   std::vector<ProcessInformation> processes(1);
   std::vector<std::string> cmd_line(1, "test");
   processes[0].set_process_id(1);
@@ -802,11 +803,11 @@ TEST_F(ServiceTest, CleanUpStale_EmptyMap_OpenLegacy_ShadowOnly) {
   // In addition to /home/chronos/user mount point, /home/.shadow/a/Downloads
   // is not considered anymore, as it is under /home/.shadow/a.
   EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(kShadowMounts.size() - 3);
+      .Times(kShadowMounts.size() - 3);
   EXPECT_CALL(platform_,
-      GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
-    .Times(1)
-    .WillRepeatedly(SetArgPointee<1>(processes));
+              GetProcessesWithOpenFiles(FilePath("/home/chronos/user"), _))
+      .Times(1)
+      .WillRepeatedly(SetArgPointee<1>(processes));
   // Given /home/chronos/user is still used, a is still used, so only
   // b mounts should be removed.
   EXPECT_CALL(
@@ -829,69 +830,61 @@ TEST_F(ServiceTestNotInitialized,
   // ownership handed off to the Service MountMap
   MockMountFactory mount_factory;
   MockMount* mount = new MockMount();
-  EXPECT_CALL(mount_factory, New())
-    .WillOnce(Return(mount));
+  EXPECT_CALL(mount_factory, New()).WillOnce(Return(mount));
   service_.set_mount_factory(&mount_factory);
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .WillOnce(Return(false));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
-  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Return(false));
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
   ASSERT_TRUE(service_.Initialize());
 
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(&platform_, service_.crypto(), _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(*mount, MountCryptohome(_, _, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(*mount, MountCryptohome(_, _, _)).WillOnce(Return(true));
   EXPECT_CALL(*mount, UpdateCurrentUserActivityTimestamp(_))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _)).WillOnce(Return(false));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
-  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Return(false));
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
 
   gint error_code = 0;
   gboolean result = FALSE;
-  ASSERT_TRUE(service_.Mount("foo@bar.net", "key", true, false,
-                             &error_code, &result, nullptr));
+  ASSERT_TRUE(service_.Mount("foo@bar.net", "key", true, false, &error_code,
+                             &result, nullptr));
   ASSERT_EQ(TRUE, result);
   EXPECT_CALL(platform_, GetMountsBySourcePrefix(_, _))
-    .Times(4)
-    .WillRepeatedly(Invoke(StaleShadowMounts));
+      .Times(4)
+      .WillRepeatedly(Invoke(StaleShadowMounts));
   EXPECT_CALL(platform_, GetAttachedLoopDevices())
-    .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
-  EXPECT_CALL(platform_, GetLoopDeviceMounts(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
+      .WillRepeatedly(Return(std::vector<Platform::LoopDevice>()));
+  EXPECT_CALL(platform_, GetLoopDeviceMounts(_)).WillOnce(Return(false));
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
           FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir), _, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   // Only 5 look ups: user/1 and root/1 are owned, children of these
   // directories are excluded.
-  EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _))
-    .Times(5);
+  EXPECT_CALL(platform_, GetProcessesWithOpenFiles(_, _)).Times(5);
 
-  EXPECT_CALL(*mount, OwnsMountPoint(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(*mount, OwnsMountPoint(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(*mount, OwnsMountPoint(FilePath("/home/user/1")))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(*mount, OwnsMountPoint(FilePath("/home/root/1")))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   EXPECT_CALL(platform_,
-      Unmount(Property(&FilePath::value, EndsWith("/0")), true, _))
-    .Times(2)
-    .WillRepeatedly(Return(true));
+              Unmount(Property(&FilePath::value, EndsWith("/0")), true, _))
+      .Times(2)
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), true, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, Unmount(Property(&FilePath::value,
                                           EndsWith("user/MyFiles/Downloads")),
                                  true, _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, Unmount(FilePath("/daemon-store/server/a"), true, _))
       .WillOnce(Return(true));
 
@@ -900,8 +893,7 @@ TEST_F(ServiceTestNotInitialized,
   fake_token_list.push_back("/home/user/1/token");
   fake_token_list.push_back("/home/root/1/token");
   EXPECT_CALL(chaps_client_, GetTokenList(_, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(fake_token_list),
-                            Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(fake_token_list), Return(true)));
 
   EXPECT_CALL(chaps_client_,
               UnloadToken(_, FilePath("/home/chronos/user/token")))
@@ -936,7 +928,7 @@ class ServiceExTest : public ServiceTest {
     list_keys_req_.reset(new ListKeysRequest);
   }
 
-  template<class ProtoBuf>
+  template <class ProtoBuf>
   brillo::Blob BlobFromProtobuf(const ProtoBuf& pb) {
     std::string serialized;
     CHECK(pb.SerializeToString(&serialized));
@@ -984,8 +976,7 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountNotExist) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(false));
   service_.DoAddDataRestoreKey(id_.get(), auth_.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
@@ -997,8 +988,7 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountExistAddFail) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AddKeyset(_, _, _, _, _))
       .WillRepeatedly(Return(CRYPTOHOME_ERROR_BACKING_STORE_FAILURE));
   service_.DoAddDataRestoreKey(id_.get(), auth_.get(), NULL);
@@ -1012,8 +1002,7 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountExistAddSuccess) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, AddKeyset(_, _, _, _, _))
       .WillRepeatedly(Return(CRYPTOHOME_ERROR_NOT_SET));
   service_.DoAddDataRestoreKey(id_.get(), auth_.get(), NULL);
@@ -1023,18 +1012,16 @@ TEST_F(ServiceExTest, AddDataRestoreKeyAccountExistAddSuccess) {
   // Since the adding is success, the reply should contain raw bytes
   // of data restore key, whose length is 32 bytes.
   EXPECT_TRUE(reply()->HasExtension(AddDataRestoreKeyReply::reply));
-  EXPECT_EQ(32, reply()->GetExtension(AddDataRestoreKeyReply::reply)
-            .data_restore_key().length());
+  EXPECT_EQ(32, reply()
+                    ->GetExtension(AddDataRestoreKeyReply::reply)
+                    .data_restore_key()
+                    .length());
 }
 
 TEST_F(ServiceExTest, MassRemoveKeysInvalidArgsNoEmail) {
   PrepareArguments();
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(error_reply());
   EXPECT_EQ("No email supplied", *error_reply());
@@ -1043,12 +1030,8 @@ TEST_F(ServiceExTest, MassRemoveKeysInvalidArgsNoEmail) {
 TEST_F(ServiceExTest, MassRemoveKeysInvalidArgsNoSecret) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(error_reply());
   EXPECT_EQ("No key secret supplied", *error_reply());
@@ -1058,14 +1041,9 @@ TEST_F(ServiceExTest, MassRemoveKeysAccountNotExist) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(false));
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(false));
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_TRUE(reply()->has_error());
@@ -1076,16 +1054,10 @@ TEST_F(ServiceExTest, MassRemoveKeysAuthFailed) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_))
-      .WillRepeatedly(Return(false));
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(false));
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_TRUE(reply()->has_error());
@@ -1096,18 +1068,12 @@ TEST_F(ServiceExTest, MassRemoveKeysGetLabelsFailed) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
       .WillRepeatedly(Return(false));
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_TRUE(reply()->has_error());
@@ -1118,18 +1084,12 @@ TEST_F(ServiceExTest, MassRemoveKeysForceSuccess) {
   PrepareArguments();
   id_->set_account_id("foo@gmail.com");
   auth_->mutable_key()->set_secret("blerg");
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, GetVaultKeysetLabels(_, _))
       .WillRepeatedly(Return(true));
-  std::unique_ptr<MassRemoveKeysRequest>
-      mrk_req(new MassRemoveKeysRequest);
-  service_.DoMassRemoveKeys(id_.get(),
-                            auth_.get(),
-                            mrk_req.get(),
-                            NULL);
+  std::unique_ptr<MassRemoveKeysRequest> mrk_req(new MassRemoveKeysRequest);
+  service_.DoMassRemoveKeys(id_.get(), auth_.get(), mrk_req.get(), NULL);
   DispatchEvents();
   ASSERT_TRUE(reply());
   EXPECT_FALSE(reply()->has_error());
@@ -1221,9 +1181,9 @@ TEST_F(ServiceExTest, MountPublicUsesPublicMountPasskey) {
         .WillOnce(testing::Invoke([](const Credentials& credentials,
                                      const Mount::MountArgs& mount_args,
                                      MountError* error) {
-            // Tests that the passkey is filled when public_mount is set.
-            EXPECT_FALSE(credentials.passkey().empty());
-            return true;
+          // Tests that the passkey is filled when public_mount is set.
+          EXPECT_FALSE(credentials.passkey().empty());
+          return true;
         }));
     return true;
   }));
@@ -1299,12 +1259,9 @@ TEST_F(ServiceExTest, CheckKeySuccessTest) {
   auth_->mutable_key()->set_secret(kKey);
   CheckKeyRequest req;
 
-  EXPECT_CALL(*mount_, AreSameUser(_))
-      .WillOnce(Return(false));
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillOnce(Return(true));
-  EXPECT_CALL(homedirs_, AreCredentialsValid(_))
-      .WillOnce(Return(true));
+  EXPECT_CALL(*mount_, AreSameUser(_)).WillOnce(Return(false));
+  EXPECT_CALL(homedirs_, Exists(_)).WillOnce(Return(true));
+  EXPECT_CALL(homedirs_, AreCredentialsValid(_)).WillOnce(Return(true));
   service_.DoCheckKeyEx(std::move(id_), std::move(auth_), std::move(check_req_),
                         nullptr);
 
@@ -1524,10 +1481,9 @@ TEST_F(ServiceExTest, MigrateKeyTestNotMounted) {
 
   Credentials credentials(kUser, SecureBlob(kNewKey));
 
-  EXPECT_CALL(homedirs_,
-              Migrate(CredentialsEqual(testing::ByRef(credentials)),
-                      SecureBlob(kOldKey),
-                      scoped_refptr<cryptohome::Mount>(mount)))
+  EXPECT_CALL(homedirs_, Migrate(CredentialsEqual(testing::ByRef(credentials)),
+                                 SecureBlob(kOldKey),
+                                 scoped_refptr<cryptohome::Mount>(mount)))
       .WillRepeatedly(Return(true));
   service_.DoMigrateKeyEx(id_.get(), auth_.get(), migrate_req_.get(), nullptr);
 
@@ -1649,8 +1605,7 @@ TEST_F(ServiceExTest, RemoveKeyInvalidArgsEmptyRemoveLabel) {
 TEST_F(ServiceExTest, BootLockboxSignSuccess) {
   SecureBlob test_signature("test");
   EXPECT_CALL(lockbox_, Sign(_, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(test_signature),
-                            Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(test_signature), Return(true)));
 
   SignBootLockboxRequest request;
   request.set_data("test_data");
@@ -1679,8 +1634,7 @@ TEST_F(ServiceExTest, BootLockboxSignBadArgs) {
 }
 
 TEST_F(ServiceExTest, BootLockboxSignError) {
-  EXPECT_CALL(lockbox_, Sign(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(lockbox_, Sign(_, _)).WillRepeatedly(Return(false));
 
   SignBootLockboxRequest request;
   request.set_data("test_data");
@@ -1693,8 +1647,7 @@ TEST_F(ServiceExTest, BootLockboxSignError) {
 }
 
 TEST_F(ServiceExTest, BootLockboxVerifySuccess) {
-  EXPECT_CALL(lockbox_, Verify(_, _))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(lockbox_, Verify(_, _)).WillRepeatedly(Return(true));
 
   VerifyBootLockboxRequest request;
   request.set_data("test_data");
@@ -1731,8 +1684,7 @@ TEST_F(ServiceExTest, BootLockboxVerifyBadArgs) {
 }
 
 TEST_F(ServiceExTest, BootLockboxVerifyError) {
-  EXPECT_CALL(lockbox_, Verify(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(lockbox_, Verify(_, _)).WillRepeatedly(Return(false));
 
   VerifyBootLockboxRequest request;
   request.set_data("test_data");
@@ -1745,8 +1697,7 @@ TEST_F(ServiceExTest, BootLockboxVerifyError) {
 }
 
 TEST_F(ServiceExTest, BootLockboxFinalizeSuccess) {
-  EXPECT_CALL(lockbox_, FinalizeBoot())
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(lockbox_, FinalizeBoot()).WillRepeatedly(Return(true));
 
   FinalizeBootLockboxRequest request;
   service_.DoFinalizeBootLockbox(BlobFromProtobuf(request), NULL);
@@ -1766,8 +1717,7 @@ TEST_F(ServiceExTest, BootLockboxFinalizeBadArgs) {
 }
 
 TEST_F(ServiceExTest, BootLockboxFinalizeError) {
-  EXPECT_CALL(lockbox_, FinalizeBoot())
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(lockbox_, FinalizeBoot()).WillRepeatedly(Return(false));
 
   FinalizeBootLockboxRequest request;
   service_.DoFinalizeBootLockbox(BlobFromProtobuf(request), NULL);
@@ -1801,8 +1751,7 @@ TEST_F(ServiceExTest, GetBootAttributeBadArgs) {
 }
 
 TEST_F(ServiceExTest, GetBootAttributeError) {
-  EXPECT_CALL(boot_attributes_, Get(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(boot_attributes_, Get(_, _)).WillRepeatedly(Return(false));
 
   GetBootAttributeRequest request;
   request.set_name("test");
@@ -1832,8 +1781,7 @@ TEST_F(ServiceExTest, SetBootAttributeBadArgs) {
 }
 
 TEST_F(ServiceExTest, FlushAndSignBootAttributesSuccess) {
-  EXPECT_CALL(boot_attributes_, FlushAndSign())
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(boot_attributes_, FlushAndSign()).WillRepeatedly(Return(true));
 
   FlushAndSignBootAttributesRequest request;
   service_.DoFlushAndSignBootAttributes(BlobFromProtobuf(request), NULL);
@@ -1852,8 +1800,7 @@ TEST_F(ServiceExTest, FlushAndSignBootAttributesBadArgs) {
 }
 
 TEST_F(ServiceExTest, FlushAndSignBootAttributesError) {
-  EXPECT_CALL(boot_attributes_, FlushAndSign())
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(boot_attributes_, FlushAndSign()).WillRepeatedly(Return(false));
 
   FlushAndSignBootAttributesRequest request;
   service_.DoFlushAndSignBootAttributes(BlobFromProtobuf(request), NULL);
@@ -1864,10 +1811,8 @@ TEST_F(ServiceExTest, FlushAndSignBootAttributesError) {
 }
 
 TEST_F(ServiceExTest, GetLoginStatusSuccess) {
-  EXPECT_CALL(homedirs_, GetPlainOwner(_))
-    .WillOnce(Return(true));
-  EXPECT_CALL(lockbox_, IsFinalized())
-    .WillOnce(Return(false));
+  EXPECT_CALL(homedirs_, GetPlainOwner(_)).WillOnce(Return(true));
+  EXPECT_CALL(lockbox_, IsFinalized()).WillOnce(Return(false));
 
   GetLoginStatusRequest request;
   service_.DoGetLoginStatus(SecureBlobFromProtobuf(request), NULL);
@@ -1893,8 +1838,7 @@ TEST_F(ServiceExTest, GetLoginStatusBadArgs) {
 TEST_F(ServiceExTest, GetKeyDataExNoMatch) {
   PrepareArguments();
 
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
 
   id_->set_account_id("unittest@example.com");
   GetKeyDataRequest req;
@@ -1915,12 +1859,11 @@ TEST_F(ServiceExTest, GetKeyDataExOneMatch) {
   // Request the single key by label.
   PrepareArguments();
 
-  static const char *kExpectedLabel = "find-me";
+  static const char* kExpectedLabel = "find-me";
   GetKeyDataRequest req;
   req.mutable_key()->mutable_data()->set_label(kExpectedLabel);
 
-  EXPECT_CALL(homedirs_, Exists(_))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(homedirs_, Exists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(homedirs_, GetVaultKeyset(_, _))
       .Times(1)
       .WillRepeatedly(Invoke(this, &ServiceExTest::GetNiceMockVaultKeyset));
@@ -1958,12 +1901,11 @@ TEST_F(ServiceExTest, ListKeysInvalidArgsNoEmail) {
 TEST_F(ServiceExTest, GetFirmwareManagementParametersSuccess) {
   brillo::Blob hash = brillo::BlobFromString("its_a_hash");
 
-  EXPECT_CALL(fwmp_, Load())
-    .WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Load()).WillOnce(Return(true));
   EXPECT_CALL(fwmp_, GetFlags(_))
-    .WillRepeatedly(DoAll(SetArgPointee<0>(0x1234), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<0>(0x1234), Return(true)));
   EXPECT_CALL(fwmp_, GetDeveloperKeyHash(_))
-    .WillRepeatedly(DoAll(SetArgPointee<0>(hash), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<0>(hash), Return(true)));
 
   GetFirmwareManagementParametersRequest request;
   service_.DoGetFirmwareManagementParameters(SecureBlobFromProtobuf(request),
@@ -1984,8 +1926,7 @@ TEST_F(ServiceExTest, GetFirmwareManagementParametersSuccess) {
 }
 
 TEST_F(ServiceExTest, GetFirmwareManagementParametersError) {
-  EXPECT_CALL(fwmp_, Load())
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(fwmp_, Load()).WillRepeatedly(Return(false));
 
   GetFirmwareManagementParametersRequest request;
   service_.DoGetFirmwareManagementParameters(SecureBlobFromProtobuf(request),
@@ -2001,10 +1942,9 @@ TEST_F(ServiceExTest, SetFirmwareManagementParametersSuccess) {
   brillo::Blob hash = brillo::BlobFromString("its_a_hash");
   brillo::Blob out_hash;
 
-  EXPECT_CALL(fwmp_, Create())
-    .WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Create()).WillOnce(Return(true));
   EXPECT_CALL(fwmp_, Store(0x1234, _))
-    .WillOnce(DoAll(SaveArgPointee<1>(&out_hash), Return(true)));
+      .WillOnce(DoAll(SaveArgPointee<1>(&out_hash), Return(true)));
 
   SetFirmwareManagementParametersRequest request;
   request.set_flags(0x1234);
@@ -2020,10 +1960,8 @@ TEST_F(ServiceExTest, SetFirmwareManagementParametersSuccess) {
 TEST_F(ServiceExTest, SetFirmwareManagementParametersNoHash) {
   brillo::Blob hash(0);
 
-  EXPECT_CALL(fwmp_, Create())
-    .WillOnce(Return(true));
-  EXPECT_CALL(fwmp_, Store(0x1234, NULL))
-    .WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Create()).WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Store(0x1234, NULL)).WillOnce(Return(true));
 
   SetFirmwareManagementParametersRequest request;
   request.set_flags(0x1234);
@@ -2037,8 +1975,7 @@ TEST_F(ServiceExTest, SetFirmwareManagementParametersNoHash) {
 TEST_F(ServiceExTest, SetFirmwareManagementParametersCreateError) {
   brillo::Blob hash = brillo::BlobFromString("its_a_hash");
 
-  EXPECT_CALL(fwmp_, Create())
-    .WillOnce(Return(false));
+  EXPECT_CALL(fwmp_, Create()).WillOnce(Return(false));
 
   SetFirmwareManagementParametersRequest request;
   request.set_flags(0x1234);
@@ -2055,10 +1992,8 @@ TEST_F(ServiceExTest, SetFirmwareManagementParametersCreateError) {
 TEST_F(ServiceExTest, SetFirmwareManagementParametersStoreError) {
   brillo::Blob hash = brillo::BlobFromString("its_a_hash");
 
-  EXPECT_CALL(fwmp_, Create())
-    .WillOnce(Return(true));
-  EXPECT_CALL(fwmp_, Store(_, _))
-    .WillOnce(Return(false));
+  EXPECT_CALL(fwmp_, Create()).WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Store(_, _)).WillOnce(Return(false));
 
   SetFirmwareManagementParametersRequest request;
   request.set_flags(0x1234);
@@ -2073,8 +2008,7 @@ TEST_F(ServiceExTest, SetFirmwareManagementParametersStoreError) {
 }
 
 TEST_F(ServiceExTest, RemoveFirmwareManagementParametersSuccess) {
-  EXPECT_CALL(fwmp_, Destroy())
-    .WillOnce(Return(true));
+  EXPECT_CALL(fwmp_, Destroy()).WillOnce(Return(true));
 
   RemoveFirmwareManagementParametersRequest request;
   service_.DoRemoveFirmwareManagementParameters(SecureBlobFromProtobuf(request),
@@ -2085,8 +2019,7 @@ TEST_F(ServiceExTest, RemoveFirmwareManagementParametersSuccess) {
 }
 
 TEST_F(ServiceExTest, RemoveFirmwareManagementParametersError) {
-  EXPECT_CALL(fwmp_, Destroy())
-    .WillOnce(Return(false));
+  EXPECT_CALL(fwmp_, Destroy()).WillOnce(Return(false));
 
   RemoveFirmwareManagementParametersRequest request;
   service_.DoRemoveFirmwareManagementParameters(SecureBlobFromProtobuf(request),
@@ -2140,14 +2073,11 @@ TEST_F(ServiceTestNotInitialized, CheckTpmGetPassword) {
   g_free(res_pwd);
   // Check that the ASCII password is returned as is.
   EXPECT_TRUE(service_.TpmGetPassword(&res_pwd, &res_err));
-  EXPECT_EQ(0, memcmp(pwd1_ascii_str.data(),
-                      res_pwd,
-                      pwd1_ascii_str.size()));
+  EXPECT_EQ(0, memcmp(pwd1_ascii_str.data(), res_pwd, pwd1_ascii_str.size()));
   g_free(res_pwd);
   // Check that non-ASCII password is converted to UTF-8.
   EXPECT_TRUE(service_.TpmGetPassword(&res_pwd, &res_err));
-  EXPECT_EQ(0, memcmp(pwd2_non_ascii_str_utf8.data(),
-                      res_pwd,
+  EXPECT_EQ(0, memcmp(pwd2_non_ascii_str_utf8.data(), res_pwd,
                       pwd2_non_ascii_str_utf8.size()));
   g_free(res_pwd);
 }
@@ -2188,12 +2118,14 @@ TEST_F(ServiceTest, PostTaskToEventLoop) {
   // to run.
   EXPECT_CALL(arc_disk_quota_, IsQuotaSupported()).WillOnce(Return(true));
 
-  service_.PostTaskToEventLoop(base::BindOnce([] (Service *service) {
-    GError* res_err;
-    gboolean quota_supported;
-    EXPECT_TRUE(service->IsQuotaSupported(&quota_supported, &res_err));
-    EXPECT_EQ(TRUE, quota_supported);
-  }, base::Unretained(&service_)));
+  service_.PostTaskToEventLoop(base::BindOnce(
+      [](Service* service) {
+        GError* res_err;
+        gboolean quota_supported;
+        EXPECT_TRUE(service->IsQuotaSupported(&quota_supported, &res_err));
+        EXPECT_EQ(TRUE, quota_supported);
+      },
+      base::Unretained(&service_)));
 
   DispatchEvents();
 

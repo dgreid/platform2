@@ -225,12 +225,10 @@ bool TpmNewImpl::GetVersionInfo(TpmVersionInfo* version_info) {
     return false;
   }
 
-  if (!tpm_manager_utility_->GetVersionInfo(&version_info->family,
-                                            &version_info->spec_level,
-                                            &version_info->manufacturer,
-                                            &version_info->tpm_model,
-                                            &version_info->firmware_version,
-                                            &version_info->vendor_specific)) {
+  if (!tpm_manager_utility_->GetVersionInfo(
+          &version_info->family, &version_info->spec_level,
+          &version_info->manufacturer, &version_info->tpm_model,
+          &version_info->firmware_version, &version_info->vendor_specific)) {
     LOG(ERROR) << __func__ << ": failed to get version info from tpm_manager.";
     return false;
   }

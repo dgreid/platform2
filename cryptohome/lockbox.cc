@@ -194,7 +194,7 @@ bool Lockbox::Store(const brillo::Blob& blob, LockboxError* error) {
 }
 
 // TODO(keescook) Write unittests for this.
-void Lockbox::FinalizeMountEncrypted(const brillo::SecureBlob &entropy) const {
+void Lockbox::FinalizeMountEncrypted(const brillo::SecureBlob& entropy) const {
   std::string hex;
   FilePath outfile_path;
   FILE* outfile;

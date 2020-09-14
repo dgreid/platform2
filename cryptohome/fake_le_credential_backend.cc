@@ -69,8 +69,7 @@ bool FakeLECredentialBackend::InsertCredential(
                                        reset_secret.size());
   cred_metadata_entry.set_attempt_count(0);
   if (valid_pcr_criteria.size() > 0) {
-    cred_metadata_entry.set_valid_pcr_digest(
-        valid_pcr_criteria[0].digest);
+    cred_metadata_entry.set_valid_pcr_digest(valid_pcr_criteria[0].digest);
   }
 
   cred_metadata->resize(cred_metadata_entry.ByteSizeLong());
@@ -257,7 +256,7 @@ bool FakeLECredentialBackend::ResetCredential(
   struct FakeLELogEntry fake_entry;
   fake_entry.entry.type = LE_LOG_CHECK;
   fake_entry.entry.label = label;
-  fake_entry.entry.root =  RecalculateRootHash(label, *new_mac, h_aux);
+  fake_entry.entry.root = RecalculateRootHash(label, *new_mac, h_aux);
   fake_entry.check_success = (*err == LE_TPM_SUCCESS);
   fake_entry.entry.mac = *new_mac;
   AddLogEntry(fake_entry);

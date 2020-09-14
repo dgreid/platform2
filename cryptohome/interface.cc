@@ -25,7 +25,7 @@ GObject* cryptohome_constructor(GType gtype,
   parent_class = G_OBJECT_CLASS(cryptohome_parent_class);
   obj = parent_class->constructor(gtype, n_properties, properties);
 
-  Cryptohome* cryptohome = reinterpret_cast<Cryptohome* >(obj);
+  Cryptohome* cryptohome = reinterpret_cast<Cryptohome*>(obj);
   cryptohome->service = NULL;
 
   // We don't have any thing we care to expose to the glib class system.
@@ -38,19 +38,19 @@ void cryptohome_class_init(CryptohomeClass* real_class) {
   gobject_class->constructor = cryptohome_constructor;
 }
 
-void cryptohome_init(Cryptohome* self) { }
+void cryptohome_init(Cryptohome* self) {}
 
 // TODO(wad) add error messaging
 #define CRYPTOHOME_WRAP_METHOD(_NAME, args...) \
-  if (!self->service) { \
-    return FALSE; \
-  } \
+  if (!self->service) {                        \
+    return FALSE;                              \
+  }                                            \
   return self->service->_NAME(args, error);
 
 #define CRYPTOHOME_WRAP_METHOD_NO_ARGS(_NAME) \
-  if (!self->service) { \
-    return FALSE; \
-  } \
+  if (!self->service) {                       \
+    return FALSE;                             \
+  }                                           \
   return self->service->_NAME(error);
 
 gboolean cryptohome_check_key_ex(Cryptohome* self,
@@ -83,10 +83,7 @@ gboolean cryptohome_mass_remove_keys(Cryptohome* self,
                                      GArray* request,
                                      DBusGMethodInvocation* error) {
   // Leave the response called error to reuse WRAP.
-  CRYPTOHOME_WRAP_METHOD(MassRemoveKeys,
-                         identifier,
-                         authorization,
-                         request);
+  CRYPTOHOME_WRAP_METHOD(MassRemoveKeys, identifier, authorization, request);
 }
 gboolean cryptohome_list_keys_ex(Cryptohome* self,
                                  GArray* identifier,
@@ -165,8 +162,8 @@ gboolean cryptohome_is_mounted_for_user(Cryptohome* self,
                                         gboolean* OUT_is_mounted,
                                         gboolean* OUT_is_ephemeral_mount,
                                         GError** error) {
-  CRYPTOHOME_WRAP_METHOD(IsMountedForUser, userid,
-                         OUT_is_mounted, OUT_is_ephemeral_mount);
+  CRYPTOHOME_WRAP_METHOD(IsMountedForUser, userid, OUT_is_mounted,
+                         OUT_is_ephemeral_mount);
 }
 gboolean cryptohome_mount_ex(Cryptohome* self,
                              GArray* id,
@@ -188,12 +185,10 @@ gboolean cryptohome_unmount_ex(Cryptohome* self,
   // Leave the response called error to reuse WRAP.
   CRYPTOHOME_WRAP_METHOD(UnmountEx, request);
 }
-gboolean cryptohome_update_current_user_activity_timestamp(
-    Cryptohome* self,
-    gint time_shift_sec,
-    GError** error) {
-  CRYPTOHOME_WRAP_METHOD(UpdateCurrentUserActivityTimestamp,
-                         time_shift_sec);
+gboolean cryptohome_update_current_user_activity_timestamp(Cryptohome* self,
+                                                           gint time_shift_sec,
+                                                           GError** error) {
+  CRYPTOHOME_WRAP_METHOD(UpdateCurrentUserActivityTimestamp, time_shift_sec);
 }
 gboolean cryptohome_tpm_is_ready(Cryptohome* self,
                                  gboolean* OUT_ready,
@@ -234,11 +229,8 @@ gboolean cryptohome_tpm_is_attestation_prepared(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(TpmIsAttestationPrepared, OUT_prepared);
 }
 gboolean cryptohome_tpm_attestation_get_enrollment_preparations_ex(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetEnrollmentPreparationsEx,
-                         request);
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetEnrollmentPreparationsEx, request);
 }
 gboolean cryptohome_tpm_verify_attestation_data(Cryptohome* self,
                                                 gboolean is_cros_core,
@@ -253,18 +245,12 @@ gboolean cryptohome_tpm_verify_ek(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(TpmVerifyEK, is_cros_core, OUT_verified);
 }
 gboolean cryptohome_tpm_attestation_create_enroll_request(
-    Cryptohome* self,
-    gint pca_type,
-    GArray** OUT_pca_request,
-    GError** error) {
+    Cryptohome* self, gint pca_type, GArray** OUT_pca_request, GError** error) {
   CRYPTOHOME_WRAP_METHOD(TpmAttestationCreateEnrollRequest, pca_type,
                          OUT_pca_request);
 }
 gboolean cryptohome_async_tpm_attestation_create_enroll_request(
-    Cryptohome* self,
-    gint pca_type,
-    gint* OUT_async_id,
-    GError** error) {
+    Cryptohome* self, gint pca_type, gint* OUT_async_id, GError** error) {
   CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationCreateEnrollRequest, pca_type,
                          OUT_async_id);
 }
@@ -307,11 +293,8 @@ gboolean cryptohome_tpm_attestation_create_cert_request(
     gchar* request_origin,
     GArray** OUT_pca_request,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationCreateCertRequest,
-                         pca_type,
-                         certificate_profile,
-                         username,
-                         request_origin,
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationCreateCertRequest, pca_type,
+                         certificate_profile, username, request_origin,
                          OUT_pca_request);
 }
 gboolean cryptohome_async_tpm_attestation_create_cert_request(
@@ -322,11 +305,8 @@ gboolean cryptohome_async_tpm_attestation_create_cert_request(
     gchar* request_origin,
     gint* OUT_async_id,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationCreateCertRequest,
-                         pca_type,
-                         certificate_profile,
-                         username,
-                         request_origin,
+  CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationCreateCertRequest, pca_type,
+                         certificate_profile, username, request_origin,
                          OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_finish_cert_request(
@@ -338,12 +318,8 @@ gboolean cryptohome_tpm_attestation_finish_cert_request(
     GArray** OUT_cert,
     gboolean* OUT_success,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationFinishCertRequest,
-                         pca_response,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_cert,
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationFinishCertRequest, pca_response,
+                         is_user_specific, username, key_name, OUT_cert,
                          OUT_success);
 }
 gboolean cryptohome_async_tpm_attestation_finish_cert_request(
@@ -354,12 +330,8 @@ gboolean cryptohome_async_tpm_attestation_finish_cert_request(
     gchar* key_name,
     gint* OUT_async_id,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationFinishCertRequest,
-                         pca_response,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_async_id);
+  CRYPTOHOME_WRAP_METHOD(AsyncTpmAttestationFinishCertRequest, pca_response,
+                         is_user_specific, username, key_name, OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_get_certificate_ex(
     Cryptohome* self,
@@ -407,11 +379,8 @@ gboolean cryptohome_tpm_attestation_does_key_exist(Cryptohome* self,
                                                    gchar* key_name,
                                                    gboolean* OUT_exists,
                                                    GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationDoesKeyExist,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_exists);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationDoesKeyExist, is_user_specific, username,
+                         key_name, OUT_exists);
 }
 gboolean cryptohome_tpm_attestation_get_certificate(Cryptohome* self,
                                                     gboolean is_user_specific,
@@ -420,12 +389,8 @@ gboolean cryptohome_tpm_attestation_get_certificate(Cryptohome* self,
                                                     GArray** OUT_certificate,
                                                     gboolean* OUT_success,
                                                     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetCertificate,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_certificate,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetCertificate, is_user_specific,
+                         username, key_name, OUT_certificate, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_get_public_key(Cryptohome* self,
                                                    gboolean is_user_specific,
@@ -434,12 +399,8 @@ gboolean cryptohome_tpm_attestation_get_public_key(Cryptohome* self,
                                                    GArray** OUT_public_key,
                                                    gboolean* OUT_success,
                                                    GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetPublicKey,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_public_key,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetPublicKey, is_user_specific, username,
+                         key_name, OUT_public_key, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_register_key(Cryptohome* self,
                                                  gboolean is_user_specific,
@@ -447,11 +408,8 @@ gboolean cryptohome_tpm_attestation_register_key(Cryptohome* self,
                                                  gchar* key_name,
                                                  gint* OUT_async_id,
                                                  GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationRegisterKey,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_async_id);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationRegisterKey, is_user_specific, username,
+                         key_name, OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_sign_enterprise_challenge(
     Cryptohome* self,
@@ -465,13 +423,8 @@ gboolean cryptohome_tpm_attestation_sign_enterprise_challenge(
     gint* OUT_async_id,
     GError** error) {
   CRYPTOHOME_WRAP_METHOD(TpmAttestationSignEnterpriseChallenge,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         domain,
-                         device_id,
-                         include_signed_public_key,
-                         challenge,
+                         is_user_specific, username, key_name, domain,
+                         device_id, include_signed_public_key, challenge,
                          OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_sign_enterprise_va_challenge(
@@ -486,16 +439,9 @@ gboolean cryptohome_tpm_attestation_sign_enterprise_va_challenge(
     GArray* challenge,
     gint* OUT_async_id,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignEnterpriseVaChallenge,
-                         va_type,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         domain,
-                         device_id,
-                         include_signed_public_key,
-                         challenge,
-                         NULL,
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignEnterpriseVaChallenge, va_type,
+                         is_user_specific, username, key_name, domain,
+                         device_id, include_signed_public_key, challenge, NULL,
                          OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_sign_enterprise_va_challenge_v2(
@@ -511,17 +457,10 @@ gboolean cryptohome_tpm_attestation_sign_enterprise_va_challenge_v2(
     gchar* key_name_for_spkac,
     gint* OUT_async_id,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignEnterpriseVaChallenge,
-                         va_type,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         domain,
-                         device_id,
-                         include_signed_public_key,
-                         challenge,
-                         key_name_for_spkac,
-                         OUT_async_id);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignEnterpriseVaChallenge, va_type,
+                         is_user_specific, username, key_name, domain,
+                         device_id, include_signed_public_key, challenge,
+                         key_name_for_spkac, OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_sign_simple_challenge(
     Cryptohome* self,
@@ -531,12 +470,8 @@ gboolean cryptohome_tpm_attestation_sign_simple_challenge(
     GArray* challenge,
     gint* OUT_async_id,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignSimpleChallenge,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         challenge,
-                         OUT_async_id);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationSignSimpleChallenge, is_user_specific,
+                         username, key_name, challenge, OUT_async_id);
 }
 gboolean cryptohome_tpm_attestation_get_key_payload(Cryptohome* self,
                                                     gboolean is_user_specific,
@@ -545,12 +480,8 @@ gboolean cryptohome_tpm_attestation_get_key_payload(Cryptohome* self,
                                                     GArray** OUT_payload,
                                                     gboolean* OUT_success,
                                                     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetKeyPayload,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_payload,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetKeyPayload, is_user_specific,
+                         username, key_name, OUT_payload, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_set_key_payload(Cryptohome* self,
                                                     gboolean is_user_specific,
@@ -559,12 +490,8 @@ gboolean cryptohome_tpm_attestation_set_key_payload(Cryptohome* self,
                                                     GArray* payload,
                                                     gboolean* OUT_success,
                                                     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationSetKeyPayload,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         payload,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationSetKeyPayload, is_user_specific,
+                         username, key_name, payload, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_delete_keys(Cryptohome* self,
                                                 gboolean is_user_specific,
@@ -572,11 +499,8 @@ gboolean cryptohome_tpm_attestation_delete_keys(Cryptohome* self,
                                                 gchar* key_prefix,
                                                 gboolean* OUT_success,
                                                 GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationDeleteKeys,
-                         is_user_specific,
-                         username,
-                         key_prefix,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationDeleteKeys, is_user_specific, username,
+                         key_prefix, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_delete_key(Cryptohome* self,
                                                gboolean is_user_specific,
@@ -584,11 +508,8 @@ gboolean cryptohome_tpm_attestation_delete_key(Cryptohome* self,
                                                gchar* key_name,
                                                gboolean* OUT_success,
                                                GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationDeleteKey,
-                         is_user_specific,
-                         username,
-                         key_name,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationDeleteKey, is_user_specific, username,
+                         key_name, OUT_success);
 }
 gboolean cryptohome_tpm_attestation_get_ek(Cryptohome* self,
                                            gchar** OUT_ek_info,
@@ -601,10 +522,8 @@ gboolean cryptohome_tpm_attestation_reset_identity(Cryptohome* self,
                                                    GArray** OUT_reset_request,
                                                    gboolean* OUT_success,
                                                    GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationResetIdentity,
-                         reset_token,
-                         OUT_reset_request,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationResetIdentity, reset_token,
+                         OUT_reset_request, OUT_success);
 }
 gboolean cryptohome_tpm_get_version_structured(Cryptohome* self,
                                                guint32* OUT_family,
@@ -614,12 +533,8 @@ gboolean cryptohome_tpm_get_version_structured(Cryptohome* self,
                                                guint64* OUT_firmware_version,
                                                gchar** OUT_vendor_specific,
                                                GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmGetVersionStructured,
-                         OUT_family,
-                         OUT_spec_level,
-                         OUT_manufacturer,
-                         OUT_tpm_model,
-                         OUT_firmware_version,
+  CRYPTOHOME_WRAP_METHOD(TpmGetVersionStructured, OUT_family, OUT_spec_level,
+                         OUT_manufacturer, OUT_tpm_model, OUT_firmware_version,
                          OUT_vendor_specific);
 }
 gboolean cryptohome_pkcs11_get_tpm_token_info(Cryptohome* self,
@@ -627,9 +542,7 @@ gboolean cryptohome_pkcs11_get_tpm_token_info(Cryptohome* self,
                                               gchar** OUT_user_pin,
                                               gint* OUT_slot,
                                               GError** error) {
-  CRYPTOHOME_WRAP_METHOD(Pkcs11GetTpmTokenInfo,
-                         OUT_label,
-                         OUT_user_pin,
+  CRYPTOHOME_WRAP_METHOD(Pkcs11GetTpmTokenInfo, OUT_label, OUT_user_pin,
                          OUT_slot);
 }
 gboolean cryptohome_pkcs11_get_tpm_token_info_for_user(Cryptohome* self,
@@ -638,15 +551,12 @@ gboolean cryptohome_pkcs11_get_tpm_token_info_for_user(Cryptohome* self,
                                                        gchar** OUT_user_pin,
                                                        gint* OUT_slot,
                                                        GError** error) {
-  CRYPTOHOME_WRAP_METHOD(Pkcs11GetTpmTokenInfoForUser,
-                         username,
-                         OUT_label,
-                         OUT_user_pin,
-                         OUT_slot);
+  CRYPTOHOME_WRAP_METHOD(Pkcs11GetTpmTokenInfoForUser, username, OUT_label,
+                         OUT_user_pin, OUT_slot);
 }
 gboolean cryptohome_pkcs11_is_tpm_token_ready(Cryptohome* self,
-                                    gboolean* OUT_ready,
-                                    GError** error) {
+                                              gboolean* OUT_ready,
+                                              GError** error) {
   CRYPTOHOME_WRAP_METHOD(Pkcs11IsTpmTokenReady, OUT_ready);
 }
 gboolean cryptohome_pkcs11_terminate(Cryptohome* self,
@@ -661,10 +571,10 @@ gboolean cryptohome_get_status_string(Cryptohome* self,
 }
 
 gboolean cryptohome_install_attributes_get(Cryptohome* self,
-                                gchar* name,
-                                GArray** OUT_value,
-                                gboolean* OUT_successful,
-                                GError** error) {
+                                           gchar* name,
+                                           GArray** OUT_value,
+                                           gboolean* OUT_successful,
+                                           GError** error) {
   CRYPTOHOME_WRAP_METHOD(InstallAttributesGet, name, OUT_value, OUT_successful);
 }
 
@@ -707,9 +617,7 @@ gboolean cryptohome_install_attributes_is_invalid(Cryptohome* self,
 }
 
 gboolean cryptohome_install_attributes_is_first_install(
-  Cryptohome* self,
-  gboolean* OUT_is_first_install,
-  GError** error) {
+    Cryptohome* self, gboolean* OUT_is_first_install, GError** error) {
   CRYPTOHOME_WRAP_METHOD(InstallAttributesIsFirstInstall, OUT_is_first_install);
 }
 
@@ -744,9 +652,7 @@ gboolean cryptohome_set_boot_attribute(Cryptohome* self,
 }
 
 gboolean cryptohome_flush_and_sign_boot_attributes(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(FlushAndSignBootAttributes, request);
 }
 
@@ -789,23 +695,17 @@ gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
 }
 
 gboolean cryptohome_get_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(GetFirmwareManagementParameters, request);
 }
 
 gboolean cryptohome_set_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(SetFirmwareManagementParameters, request);
 }
 
 gboolean cryptohome_remove_firmware_management_parameters(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(RemoveFirmwareManagementParameters, request);
 }
 
@@ -820,8 +720,8 @@ gboolean cryptohome_needs_dircrypto_migration(Cryptohome* self,
                                               GArray* identifier,
                                               gboolean* OUT_needs_migration,
                                               GError** error) {
-  CRYPTOHOME_WRAP_METHOD(
-      NeedsDircryptoMigration, identifier, OUT_needs_migration);
+  CRYPTOHOME_WRAP_METHOD(NeedsDircryptoMigration, identifier,
+                         OUT_needs_migration);
 }
 
 gboolean cryptohome_tpm_attestation_get_enrollment_id(
@@ -830,10 +730,8 @@ gboolean cryptohome_tpm_attestation_get_enrollment_id(
     GArray** OUT_enrollment_id,
     gboolean* OUT_success,
     GError** error) {
-  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetEnrollmentId,
-                         ignore_cache,
-                         OUT_enrollment_id,
-                         OUT_success);
+  CRYPTOHOME_WRAP_METHOD(TpmAttestationGetEnrollmentId, ignore_cache,
+                         OUT_enrollment_id, OUT_success);
 }
 
 gboolean cryptohome_get_supported_key_policies(Cryptohome* self,
@@ -863,9 +761,7 @@ gboolean cryptohome_get_current_space_for_gid(Cryptohome* self,
 }
 
 gboolean cryptohome_lock_to_single_user_mount_until_reboot(
-    Cryptohome* self,
-    GArray* request,
-    DBusGMethodInvocation* error) {
+    Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(LockToSingleUserMountUntilReboot, request);
 }
 

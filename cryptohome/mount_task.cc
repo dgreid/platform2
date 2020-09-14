@@ -35,8 +35,7 @@ MountTask::MountTask(MountTaskObserver* observer, Mount* mount, int sequence_id)
   result_->set_sequence_id(sequence_id_);
 }
 
-MountTask::~MountTask() {
-}
+MountTask::~MountTask() {}
 
 void MountTask::Notify() {
   if (observer_) {

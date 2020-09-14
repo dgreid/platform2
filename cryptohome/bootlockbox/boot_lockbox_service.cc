@@ -28,7 +28,7 @@ int BootLockboxService::OnInit() {
   boot_lockbox_.reset(new NVRamBootLockbox(nvspace_utility_.get()));
 
   if (!boot_lockbox_->Load() &&
-      boot_lockbox_->GetState() == NVSpaceState::kNVSpaceUndefined ) {
+      boot_lockbox_->GetState() == NVSpaceState::kNVSpaceUndefined) {
     LOG(INFO) << "NVSpace is not defined, define it now";
     if (!boot_lockbox_->DefineSpace()) {
       // TPM define nvspace failed but continue to run the service so
@@ -49,7 +49,7 @@ int BootLockboxService::OnInit() {
   return EX_OK;
 }
 
-void BootLockboxService::OnShutdown(int *exit_code) {
+void BootLockboxService::OnShutdown(int* exit_code) {
   VLOG(1) << "Shutting down bootlockbox service";
   brillo::DBusServiceDaemon::OnShutdown(exit_code);
 }
@@ -57,8 +57,8 @@ void BootLockboxService::OnShutdown(int *exit_code) {
 void BootLockboxService::RegisterDBusObjectsAsync(
     brillo::dbus_utils::AsyncEventSequencer* sequencer) {
   VLOG(1) << "Register dbus objects...";
-  boot_lockbox_dbus_adaptor_.reset(new BootLockboxDBusAdaptor(bus_,
-      boot_lockbox_.get()));
+  boot_lockbox_dbus_adaptor_.reset(
+      new BootLockboxDBusAdaptor(bus_, boot_lockbox_.get()));
   boot_lockbox_dbus_adaptor_->RegisterAsync(
       sequencer->GetHandler("RegisterAsync() failed", true));
   VLOG(1) << "Register dbus object complete";

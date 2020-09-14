@@ -127,8 +127,8 @@ crypto::ScopedEC_Key ECPublicKey::GetEC_KEY() const {
   crypto::ScopedBIGNUM x(BN_bin2bn(x_.data(), x_.size(), nullptr));
   crypto::ScopedBIGNUM y(BN_bin2bn(y_.data(), y_.size(), nullptr));
 
-  if (!EC_POINT_set_affine_coordinates_GFp(
-        group, public_key.get(), x.release(), y.release(), nullptr)) {
+  if (!EC_POINT_set_affine_coordinates_GFp(group, public_key.get(), x.release(),
+                                           y.release(), nullptr)) {
     LOG(ERROR) << "Failed to set affine coordinates GFp.";
     return nullptr;
   }

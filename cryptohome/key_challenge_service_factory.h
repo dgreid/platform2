@@ -19,8 +19,8 @@ class KeyChallengeServiceFactory {
  public:
   KeyChallengeServiceFactory() = default;
   KeyChallengeServiceFactory(const KeyChallengeServiceFactory&) = delete;
-  KeyChallengeServiceFactory& operator=(const KeyChallengeServiceFactory&)
-      = delete;
+  KeyChallengeServiceFactory& operator=(const KeyChallengeServiceFactory&) =
+      delete;
   virtual ~KeyChallengeServiceFactory() = default;
 
   virtual std::unique_ptr<KeyChallengeService> New(

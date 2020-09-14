@@ -118,7 +118,7 @@ const struct {
   uint32_t attempts;
   uint32_t delay;
 } kDefaultDelaySchedule[] = {
-  { 5, UINT32_MAX }
+    {5, UINT32_MAX},
 };
 
 }  // namespace

@@ -79,8 +79,7 @@ class CertProvisionTest : public testing::Test {
   }
 
   void SetUp() {
-    ON_CALL(c_proxy_, Init())
-        .WillByDefault(Return(OpResult()));
+    ON_CALL(c_proxy_, Init()).WillByDefault(Return(OpResult()));
     ON_CALL(c_proxy_, CheckIfPrepared(_))
         .WillByDefault(Invoke([this](bool* prepared) {
           *prepared = prepared_;
@@ -105,35 +104,28 @@ class CertProvisionTest : public testing::Test {
               *key = GetTestPublicKey();
               return OpResult();
             }));
-    ON_CALL(c_proxy_, Register(_))
-        .WillByDefault(Return(OpResult()));
+    ON_CALL(c_proxy_, Register(_)).WillByDefault(Return(OpResult()));
 
-    ON_CALL(pca_proxy_, MakeRequest(_, _, _))
-        .WillByDefault(Return(OpResult()));
+    ON_CALL(pca_proxy_, MakeRequest(_, _, _)).WillByDefault(Return(OpResult()));
 
-    ON_CALL(key_store_, Init())
-        .WillByDefault(Return(OpResult()));
-    ON_CALL(key_store_, Sign(_, _, _, _, _))
-        .WillByDefault(Return(OpResult()));
+    ON_CALL(key_store_, Init()).WillByDefault(Return(OpResult()));
+    ON_CALL(key_store_, Sign(_, _, _, _, _)).WillByDefault(Return(OpResult()));
     ON_CALL(key_store_, ReadProvisionStatus(_, _))
-        .WillByDefault(Invoke([this](const std::string& /* label */,
-                                     MessageLite* proto) {
-          proto->ParseFromString(provision_status_.SerializeAsString());
-          return OpResult();
-        }));
+        .WillByDefault(
+            Invoke([this](const std::string& /* label */, MessageLite* proto) {
+              proto->ParseFromString(provision_status_.SerializeAsString());
+              return OpResult();
+            }));
     ON_CALL(key_store_, WriteProvisionStatus(_, _))
-        .WillByDefault(Invoke([this](const std::string& /* label */,
-                                     const MessageLite& proto) {
-          provision_status_.ParseFromString(proto.SerializeAsString());
-          return OpResult();
-        }));
-    ON_CALL(key_store_, DeleteKeys(_, _))
-        .WillByDefault(Return(OpResult()));
+        .WillByDefault(Invoke(
+            [this](const std::string& /* label */, const MessageLite& proto) {
+              provision_status_.ParseFromString(proto.SerializeAsString());
+              return OpResult();
+            }));
+    ON_CALL(key_store_, DeleteKeys(_, _)).WillByDefault(Return(OpResult()));
   }
 
-  OpResult TestError(Status status) {
-    return {status, "Test error"};
-  }
+  OpResult TestError(Status status) { return {status, "Test error"}; }
 
   // Resets the captured progress and returns the progress callback to
   // be passed to ProvisionCertificate() for capturing new progress.
@@ -146,11 +138,9 @@ class CertProvisionTest : public testing::Test {
   // Successfully provisions and checks results/
   void Provision() {
     EXPECT_EQ(Status::Success,
-              ProvisionCertificate(PCAType::kDefaultPCA,
-                                   std::string(),
-                                   kCertLabel,
-                                   CertificateProfile::CAST_CERTIFICATE,
-                                   GetProgressCallback()));
+              ProvisionCertificate(
+                  PCAType::kDefaultPCA, std::string(), kCertLabel,
+                  CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
     ExpectProvisioned(true);
     EXPECT_EQ(GetTestKeyID(), provision_status_.key_id());
   }
@@ -180,9 +170,7 @@ class CertProvisionTest : public testing::Test {
   }
   // Resets the current test RSA key. Next time it is requested through
   // GetTestPublicKey(), a new random key will be returned.
-  void ResetObtainedTestKey() {
-    rsa_.reset();
-  }
+  void ResetObtainedTestKey() { rsa_.reset(); }
   // Returns the current test public key in X.509 format.
   SecureBlob GetTestPublicKey() {
     unsigned char* buffer = nullptr;
@@ -194,9 +182,7 @@ class CertProvisionTest : public testing::Test {
     return tmp;
   }
   // Calculates the id for the current test public key.
-  std::string GetTestKeyID() {
-    return GetKeyID(GetTestPublicKey());
-  }
+  std::string GetTestKeyID() { return GetKeyID(GetTestPublicKey()); }
 
   // Captures progress reported through callback.
   std::vector<Progress> progress_;
@@ -235,11 +221,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateSuccessEnroll) {
   EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _));
   EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _)).Times(2);
   EXPECT_EQ(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   int last_progress = 0;
   for (auto p : progress_) {
     EXPECT_EQ(Status::Success, p.status);
@@ -261,11 +245,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateSuccessAlreadyEnrolled) {
   EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _)).Times(0);
   EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _)).Times(1);
   EXPECT_EQ(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   int last_progress = 0;
   for (auto p : progress_) {
     EXPECT_EQ(Status::Success, p.status);
@@ -281,11 +263,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateNotPrepared) {
   ExpectProvisioned(false);
   prepared_ = false;
   EXPECT_EQ(Status::NotPrepared,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsIn(Status::NotPrepared));
   ExpectProvisioned(false);
 }
@@ -297,11 +277,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailureEnroll) {
   EXPECT_CALL(c_proxy_, ProcessEnrollResponse(_, _))
       .WillOnce(Return(TestError(Status::CryptohomeError)));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
@@ -313,11 +291,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailureCert) {
   EXPECT_CALL(c_proxy_, ProcessCertResponse(kCertLabel, _, _))
       .WillOnce(Return(TestError(Status::CryptohomeError)));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
@@ -329,11 +305,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailurePCA) {
   EXPECT_CALL(pca_proxy_, MakeRequest(_, _, _))
       .WillOnce(Return(TestError(Status::ServerError)));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
@@ -345,11 +319,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailureRegister) {
   EXPECT_CALL(c_proxy_, Register(kCertLabel))
       .WillOnce(Return(TestError(Status::CryptohomeError)));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
@@ -362,11 +334,9 @@ TEST_F(CertProvisionTest, ProvisionCertificateFailureKeyStore) {
       .WillOnce(Return(TestError(Status::KeyStoreError)))
       .WillRepeatedly(Return(OpResult()));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   EXPECT_EQ("Test error", progress_.back().message);
   ExpectProvisioned(false);
@@ -395,11 +365,9 @@ TEST_F(CertProvisionTest, ReProvisionCertificateFailureRegister) {
       .WillOnce(Return(TestError(Status::CryptohomeError)));
   EXPECT_CALL(key_store_, DeleteKeys(_, _)).Times(0);
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   ExpectProvisioned(true);
   EXPECT_EQ(old_key_id, provision_status_.key_id());
@@ -416,11 +384,9 @@ TEST_F(CertProvisionTest, ReProvisionCertificateFailureDeleteKeys) {
   EXPECT_CALL(key_store_, DeleteKeys(old_key_id, kCertLabel))
       .WillOnce(Return(TestError(Status::KeyStoreError)));
   EXPECT_NE(Status::Success,
-            ProvisionCertificate(PCAType::kDefaultPCA,
-                                 std::string(),
-                                 kCertLabel,
-                                 CertificateProfile::CAST_CERTIFICATE,
-                                 GetProgressCallback()));
+            ProvisionCertificate(
+                PCAType::kDefaultPCA, std::string(), kCertLabel,
+                CertificateProfile::CAST_CERTIFICATE, GetProgressCallback()));
   EXPECT_THAT(progress_, ResultsNotIn(Status::Success));
   ExpectProvisioned(true);
   EXPECT_NE(old_key_id, provision_status_.key_id());
@@ -434,8 +400,7 @@ TEST_F(CertProvisionTest, GetCertificateSuccess) {
   std::string cert_chain = cert[0] + cert[1];
   SecureBlob cert_chain_blob(cert_chain);
   EXPECT_CALL(c_proxy_, ProcessCertResponse(kCertLabel, _, _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(cert_chain_blob), Return(OpResult())));
+      .WillOnce(DoAll(SetArgPointee<2>(cert_chain_blob), Return(OpResult())));
   Provision();
   std::string result_cert;
   EXPECT_EQ(Status::Success, GetCertificate(kCertLabel, true, &result_cert));
@@ -462,8 +427,7 @@ TEST_F(CertProvisionTest, SignSuccess) {
   std::string keystore_sig("signature");
 
   std::string sig;
-  EXPECT_CALL(key_store_,
-              Sign(GetTestKeyID(), kCertLabel, SHA1_RSA_PKCS, _, _))
+  EXPECT_CALL(key_store_, Sign(GetTestKeyID(), kCertLabel, SHA1_RSA_PKCS, _, _))
       .WillOnce(DoAll(SetArgPointee<4>(keystore_sig), Return(OpResult())));
   EXPECT_EQ(Status::Success, Sign(kCertLabel, SHA1_RSA_PKCS, data, &sig));
   EXPECT_EQ("signature", sig);

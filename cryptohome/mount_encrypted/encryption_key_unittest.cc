@@ -97,9 +97,9 @@ const uint8_t kLockboxV2Contents[] = {
 
 // A random encryption key used in tests that exercise existing keys.
 const uint8_t kEncryptionKeyLockboxV2[] = {
-    0xfa, 0x33, 0x18, 0x5b, 0x57, 0x64, 0x83, 0x57, 0x9a, 0xaa, 0xab, 0xef,
-    0x1e, 0x39, 0xa3, 0xa1, 0xb9, 0x94, 0xc5, 0xc9, 0xa8, 0xd9, 0x32, 0xb4,
-    0xfb, 0x65, 0xb2, 0x5f, 0xb8, 0x60, 0xb8, 0xfb,
+    0xfa, 0x33, 0x18, 0x5b, 0x57, 0x64, 0x83, 0x57, 0x9a, 0xaa, 0xab,
+    0xef, 0x1e, 0x39, 0xa3, 0xa1, 0xb9, 0x94, 0xc5, 0xc9, 0xa8, 0xd9,
+    0x32, 0xb4, 0xfb, 0x65, 0xb2, 0x5f, 0xb8, 0x60, 0xb8, 0xfb,
 };
 
 // This is kEncryptionKeyLockboxV2, encrypted with the system key from
@@ -114,9 +114,9 @@ const uint8_t kWrappedKeyLockboxV2[] = {
 // A random encryption key used in tests that exercise the situation where NVRAM
 // space is missing and we fall back to writing the encryption key to disk.
 const uint8_t kEncryptionKeyNeedsFinalization[] = {
-    0xa4, 0x46, 0x75, 0x14, 0x38, 0x66, 0x83, 0x14, 0x2f, 0x88, 0x03, 0x31,
-    0x0c, 0x13, 0x47, 0x6a, 0x52, 0x78, 0xcd, 0xff, 0xb9, 0x9c, 0x99, 0x9e,
-    0x30, 0x0b, 0x79, 0xf7, 0xad, 0x34, 0x2f, 0xb0,
+    0xa4, 0x46, 0x75, 0x14, 0x38, 0x66, 0x83, 0x14, 0x2f, 0x88, 0x03,
+    0x31, 0x0c, 0x13, 0x47, 0x6a, 0x52, 0x78, 0xcd, 0xff, 0xb9, 0x9c,
+    0x99, 0x9e, 0x30, 0x0b, 0x79, 0xf7, 0xad, 0x34, 0x2f, 0xb0,
 };
 
 // This is kEncryptionKeyNeedsFinalization, obfuscated by encrypting it with a
@@ -190,9 +190,7 @@ class EncryptionKeyTest : public testing::Test {
     ResetTPM();
   }
 
-  void SetOwned() {
-    tlcl_.SetOwned({ 0x5e, 0xc2, 0xe7 });
-  }
+  void SetOwned() { tlcl_.SetOwned({0x5e, 0xc2, 0xe7}); }
 
   void SetupSpace(uint32_t index,
                   uint32_t attributes,
@@ -377,8 +375,8 @@ TEST_F(EncryptionKeyTest, TpmExistingSpaceBadKey) {
 
 TEST_F(EncryptionKeyTest, TpmExistingSpaceBadAttributes) {
   uint32_t attributes = kEncStatefulAttributesTpm2 | TPMA_NV_PLATFORMCREATE;
-  SetupSpace(kEncStatefulIndex, attributes, false,
-             kEncStatefulTpm2Contents, sizeof(kEncStatefulTpm2Contents));
+  SetupSpace(kEncStatefulIndex, attributes, false, kEncStatefulTpm2Contents,
+             sizeof(kEncStatefulTpm2Contents));
   WriteWrappedKey(key_->key_path(), kWrappedKeyEncStatefulTpm2);
 
   ExpectFreshKey();
@@ -559,10 +557,9 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmOwnedExisting) {
   EXPECT_EQ(SystemKeyStatus::kNVRAMEncstateful, key_->system_key_status());
   CheckSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, kEncStatefulSize);
   ExpectLockboxValid(true);
-  EXPECT_EQ(
-      brillo::SecureBlob(kLockboxV2Contents,
-                         kLockboxV2Contents + sizeof(kLockboxV2Contents)),
-      tpm_->GetLockboxSpace()->contents());
+  EXPECT_EQ(brillo::SecureBlob(kLockboxV2Contents,
+                               kLockboxV2Contents + sizeof(kLockboxV2Contents)),
+            tpm_->GetLockboxSpace()->contents());
 }
 
 TEST_F(EncryptionKeyTest, EncStatefulTpmClearBadPCRBinding) {
@@ -625,8 +622,8 @@ TEST_F(EncryptionKeyTest, EncStatefulTpmOwnedBadSpaceLockboxFallback) {
 TEST_F(EncryptionKeyTest, EncStatefulLockboxMACFailure) {
   SetupSpace(kEncStatefulIndex, kEncStatefulAttributesTpm1, true,
              kEncStatefulTpm1Contents, sizeof(kEncStatefulTpm1Contents));
-  SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true,
-             kLockboxV2Contents, sizeof(kLockboxV2Contents) - 1);
+  SetupSpace(kLockboxIndex, kLockboxAttributesTpm1, true, kLockboxV2Contents,
+             sizeof(kLockboxV2Contents) - 1);
   SetOwned();
   WriteWrappedKey(key_->key_path(), kWrappedKeyEncStatefulTpm1);
 

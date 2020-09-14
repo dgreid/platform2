@@ -64,8 +64,7 @@ class ResponseCapturer {
   CreateMethodResponse() {
     return std::make_unique<brillo::dbus_utils::DBusMethodResponse<Types...>>(
         &call_,
-        base::Bind(&ResponseCapturer::Capture,
-                   weak_ptr_factory_.GetWeakPtr()));
+        base::Bind(&ResponseCapturer::Capture, weak_ptr_factory_.GetWeakPtr()));
   }
 
  private:
@@ -90,6 +89,7 @@ class BootLockboxDBusAdaptorTest : public ::testing::Test {
     boot_lockbox_dbus_adaptor_.reset(
         new BootLockboxDBusAdaptor(bus, &boot_lockbox_));
   }
+
  protected:
   NiceMock<MockTpmInit> tpm_init_;
   NiceMock<MockNVRamBootLockbox> boot_lockbox_;
@@ -114,8 +114,7 @@ TEST_F(BootLockboxDBusAdaptorTest, ReadBootLockbox) {
   cryptohome::ReadBootLockboxRequest read_request;
   read_request.set_key("test_key");
 
-  EXPECT_CALL(boot_lockbox_, Read("test_key", _, _))
-      .WillOnce(Return(true));
+  EXPECT_CALL(boot_lockbox_, Read("test_key", _, _)).WillOnce(Return(true));
   ResponseCapturer capturer;
   boot_lockbox_dbus_adaptor_->ReadBootLockbox(
       capturer.CreateMethodResponse<cryptohome::ReadBootLockboxReply>(),

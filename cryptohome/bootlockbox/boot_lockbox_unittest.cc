@@ -22,16 +22,15 @@ using base::FilePath;
 using testing::_;
 using testing::Invoke;
 using testing::NiceMock;
-using testing::WithArgs;
 using testing::Return;
+using testing::WithArgs;
 
 namespace cryptohome {
 
 // The DER encoding of SHA-256 DigestInfo as defined in PKCS #1.
 const unsigned char kSha256DigestInfo[] = {
-    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01, 0x65, 0x03,
-    0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20
-};
+    0x30, 0x31, 0x30, 0x0d, 0x06, 0x09, 0x60, 0x86, 0x48, 0x01,
+    0x65, 0x03, 0x04, 0x02, 0x01, 0x05, 0x00, 0x04, 0x20};
 
 class BootLockboxTest : public testing::Test {
  public:
@@ -41,25 +40,24 @@ class BootLockboxTest : public testing::Test {
   void SetUp() {
     // Configure a fake TPM.
     ON_CALL(tpm_, Sign(_, _, _, _))
-        .WillByDefault(WithArgs<1, 3>(Invoke(this,
-                                             &BootLockboxTest::FakeSign)));
+        .WillByDefault(
+            WithArgs<1, 3>(Invoke(this, &BootLockboxTest::FakeSign)));
     ON_CALL(tpm_, CreatePCRBoundKey(_, _, _, _, _))
         .WillByDefault(WithArgs<3>(Invoke(this, &BootLockboxTest::FakeCreate)));
-    ON_CALL(tpm_, VerifyPCRBoundKey(_, _, _))
-        .WillByDefault(Return(true));
+    ON_CALL(tpm_, VerifyPCRBoundKey(_, _, _)).WillByDefault(Return(true));
     ON_CALL(tpm_, ExtendPCR(_, _))
         .WillByDefault(InvokeWithoutArgs(this, &BootLockboxTest::FakeExtend));
     ON_CALL(tpm_, ReadPCR(_, _))
-        .WillByDefault(WithArgs<1>(Invoke(this,
-                                          &BootLockboxTest::FakeReadPCR)));
+        .WillByDefault(
+            WithArgs<1>(Invoke(this, &BootLockboxTest::FakeReadPCR)));
     ON_CALL(crypto_, EncryptWithTpm(_, _))
         .WillByDefault(Invoke(this, &BootLockboxTest::FakeEncrypt));
     ON_CALL(crypto_, DecryptWithTpm(_, _))
         .WillByDefault(Invoke(this, &BootLockboxTest::FakeDecrypt));
     // Configure a fake filesystem.
     ON_CALL(platform_, WriteStringToFileAtomicDurable(_, _, _))
-        .WillByDefault(WithArgs<0, 1>(Invoke(this,
-                                             &BootLockboxTest::FakeWriteFile)));
+        .WillByDefault(
+            WithArgs<0, 1>(Invoke(this, &BootLockboxTest::FakeWriteFile)));
     ON_CALL(platform_, ReadFileToString(_, _))
         .WillByDefault(Invoke(this, &BootLockboxTest::FakeReadFile));
     lockbox_.reset(new BootLockbox(&tpm_, &platform_, &crypto_));
@@ -72,14 +70,12 @@ class BootLockboxTest : public testing::Test {
       return false;
     brillo::SecureBlob der_header(std::begin(kSha256DigestInfo),
                                   std::end(kSha256DigestInfo));
-    brillo::SecureBlob der_encoded_input = brillo::SecureBlob::Combine(
-        der_header,
-        CryptoLib::Sha256(input));
+    brillo::SecureBlob der_encoded_input =
+        brillo::SecureBlob::Combine(der_header, CryptoLib::Sha256(input));
     unsigned char buffer[256];
-    int length = RSA_private_encrypt(
-          der_encoded_input.size(),
-          der_encoded_input.data(),
-          buffer, rsa(), RSA_PKCS1_PADDING);
+    int length =
+        RSA_private_encrypt(der_encoded_input.size(), der_encoded_input.data(),
+                            buffer, rsa(), RSA_PKCS1_PADDING);
     brillo::SecureBlob tmp(buffer, buffer + length);
     signature->swap(tmp);
     return true;
@@ -225,8 +221,7 @@ TEST_F(BootLockboxTest, ExtendPCRError) {
 }
 
 TEST_F(BootLockboxTest, VerifyWithBadKey) {
-  EXPECT_CALL(tpm_, VerifyPCRBoundKey(_, _, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(tpm_, VerifyPCRBoundKey(_, _, _)).WillRepeatedly(Return(false));
   brillo::Blob data(100);
   brillo::SecureBlob signature;
   ASSERT_TRUE(lockbox_->Sign(data, &signature));

@@ -96,17 +96,14 @@ OpResult CryptohomeProxyImpl::CheckIfEnrolled(bool* is_enrolled) {
   return OpResult();
 }
 
-OpResult CryptohomeProxyImpl::CreateEnrollRequest(
-    PCAType pca_type,
-    brillo::SecureBlob* request) {
+OpResult CryptohomeProxyImpl::CreateEnrollRequest(PCAType pca_type,
+                                                  brillo::SecureBlob* request) {
   brillo::glib::ScopedError error;
   brillo::glib::ScopedArray data;
 
   if (!org_chromium_CryptohomeInterface_tpm_attestation_create_enroll_request(
-      gproxy_,
-      pca_type,
-      &brillo::Resetter(&data).lvalue(),
-      &brillo::Resetter(&error).lvalue())) {
+          gproxy_, pca_type, &brillo::Resetter(&data).lvalue(),
+          &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationCreateEnrollRequest", error.get());
   }
   SetSecureBlob(request, data->data, data->len);
@@ -114,39 +111,30 @@ OpResult CryptohomeProxyImpl::CreateEnrollRequest(
 }
 
 OpResult CryptohomeProxyImpl::ProcessEnrollResponse(
-    PCAType pca_type,
-    const brillo::SecureBlob& response) {
+    PCAType pca_type, const brillo::SecureBlob& response) {
   brillo::glib::ScopedArray data(g_array_new(FALSE, FALSE, 1));
   g_array_append_vals(data.get(), response.data(), response.size());
   gboolean success = FALSE;
   brillo::glib::ScopedError error;
 
   if (!org_chromium_CryptohomeInterface_tpm_attestation_enroll(
-      gproxy_,
-      pca_type,
-      data.get(),
-      &success,
-      &brillo::Resetter(&error).lvalue())) {
+          gproxy_, pca_type, data.get(), &success,
+          &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationEnroll", error.get());
   }
   return OpResult();
 }
 
-OpResult CryptohomeProxyImpl::CreateCertRequest(
-    PCAType pca_type,
-    CertificateProfile cert_profile,
-    brillo::SecureBlob* request) {
+OpResult CryptohomeProxyImpl::CreateCertRequest(PCAType pca_type,
+                                                CertificateProfile cert_profile,
+                                                brillo::SecureBlob* request) {
   brillo::glib::ScopedError error;
   brillo::glib::ScopedArray data;
 
   if (!org_chromium_CryptohomeInterface_tpm_attestation_create_cert_request(
-      gproxy_,
-      pca_type,
-      cert_profile,
-      "" /* username */,
-      "" /* request_origin */,
-      &brillo::Resetter(&data).lvalue(),
-      &brillo::Resetter(&error).lvalue())) {
+          gproxy_, pca_type, cert_profile, "" /* username */,
+          "" /* request_origin */, &brillo::Resetter(&data).lvalue(),
+          &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationCreateCertRequest", error.get());
   }
   SetSecureBlob(request, data->data, data->len);
@@ -164,14 +152,10 @@ OpResult CryptohomeProxyImpl::ProcessCertResponse(
   brillo::glib::ScopedArray cert_data;
 
   if (!org_chromium_CryptohomeInterface_tpm_attestation_finish_cert_request(
-      gproxy_,
-      data.get(),
-      false /* is_user_specific */,
-      "" /* account_id */,
-      label.c_str(),
-      &brillo::Resetter(&cert_data).lvalue(),
-      &success,
-      &brillo::Resetter(&error).lvalue())) {
+          gproxy_, data.get(), false /* is_user_specific */,
+          "" /* account_id */, label.c_str(),
+          &brillo::Resetter(&cert_data).lvalue(), &success,
+          &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationFinishCertRequest", error.get());
   }
   if (!success) {
@@ -189,12 +173,8 @@ OpResult CryptohomeProxyImpl::GetPublicKey(const std::string& label,
   brillo::glib::ScopedError error;
   brillo::glib::ScopedArray public_key_data;
   if (!org_chromium_CryptohomeInterface_tpm_attestation_get_public_key(
-          gproxy_,
-          false /* is_user_specific */,
-          "" /* account_id */,
-          label.c_str(),
-          &brillo::Resetter(&public_key_data).lvalue(),
-          &success,
+          gproxy_, false /* is_user_specific */, "" /* account_id */,
+          label.c_str(), &brillo::Resetter(&public_key_data).lvalue(), &success,
           &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationGetPublicKey", error.get());
   }
@@ -211,12 +191,8 @@ OpResult CryptohomeProxyImpl::Register(const std::string& label) {
   gint async_id = -1;
   brillo::glib::ScopedError error;
   if (!org_chromium_CryptohomeInterface_tpm_attestation_register_key(
-      gproxy_,
-      false /* is_user_specific */,
-      "" /* username */,
-      label.c_str(),
-      &async_id,
-      &brillo::Resetter(&error).lvalue())) {
+          gproxy_, false /* is_user_specific */, "" /* username */,
+          label.c_str(), &async_id, &brillo::Resetter(&error).lvalue())) {
     return DBusError("TpmAttestationRegisterKey", error.get());
   }
   // TODO(apronin): implement timeout waiting for the result.
@@ -228,21 +204,15 @@ OpResult CryptohomeProxyImpl::Register(const std::string& label) {
 }
 
 AsyncStatus::AsyncStatus(::DBusGProxy* gproxy) : gproxy_(gproxy) {
-  dbus_g_object_register_marshaller(g_cclosure_marshal_generic,
-                                    G_TYPE_NONE,
-                                    G_TYPE_INT,
-                                    G_TYPE_BOOLEAN,
-                                    G_TYPE_INT,
+  dbus_g_object_register_marshaller(g_cclosure_marshal_generic, G_TYPE_NONE,
+                                    G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INT,
                                     G_TYPE_INVALID);
-  dbus_g_proxy_add_signal(gproxy_, "AsyncCallStatus",
-                          G_TYPE_INT, G_TYPE_BOOLEAN, G_TYPE_INT,
-                          G_TYPE_INVALID);
+  dbus_g_proxy_add_signal(gproxy_, "AsyncCallStatus", G_TYPE_INT,
+                          G_TYPE_BOOLEAN, G_TYPE_INT, G_TYPE_INVALID);
   dbus_g_proxy_connect_signal(gproxy_, "AsyncCallStatus",
-                              G_CALLBACK(AsyncStatus::Callback),
-                              this, NULL);
+                              G_CALLBACK(AsyncStatus::Callback), this, NULL);
   loop_ = g_main_loop_new(NULL, TRUE);
 }
-
 
 void AsyncStatus::Process(int async_id, bool status) {
   if (async_id == async_id_) {

@@ -54,9 +54,10 @@ namespace metrics {
 const char kSystemKeyStatus[] = "Platform.MountEncrypted.SystemKeyStatus";
 const char kEncryptionKeyStatus[] =
     "Platform.MountEncrypted.EncryptionKeyStatus";
-}
+}  // namespace metrics
 
-static result_code get_system_property(const char* prop, char* buf,
+static result_code get_system_property(const char* prop,
+                                       char* buf,
                                        size_t length) {
   const char* rc;
 
@@ -81,7 +82,6 @@ static int has_chromefw(void) {
   return state;
 }
 
-
 // This triggers the live encryption key to be written to disk, encrypted by the
 // system key. It is intended to be called by Cryptohome once the TPM is done
 // being set up. If the system key is passed as an argument, use it, otherwise
@@ -92,8 +92,9 @@ static result_code finalize_from_cmdline(
     char* key) {
   // Load the system key.
   brillo::SecureBlob system_key;
-  if (!brillo::SecureBlob::HexStringToSecureBlob(std::string(key), &system_key)
-      || system_key.size() != DIGEST_LENGTH) {
+  if (!brillo::SecureBlob::HexStringToSecureBlob(std::string(key),
+                                                 &system_key) ||
+      system_key.size() != DIGEST_LENGTH) {
     LOG(ERROR) << "Failed to parse system key.";
     return RESULT_FAIL_FATAL;
   }
@@ -275,15 +276,13 @@ bool SendSecretToBiodTmpFile(const mount_encrypted::EncryptionKey& key) {
 
 int main(int argc, char* argv[]) {
   result_code rc;
-  char *rootdir_env = getenv("MOUNT_ENCRYPTED_ROOT");
+  char* rootdir_env = getenv("MOUNT_ENCRYPTED_ROOT");
   base::FilePath rootdir = base::FilePath(rootdir_env ? rootdir_env : "/");
   cryptohome::Platform platform;
   brillo::LoopDeviceManager loopdev_manager;
   brillo::DeviceMapper device_mapper;
-  mount_encrypted::EncryptedFs encrypted_fs(rootdir,
-                                            &platform,
-                                            &loopdev_manager,
-                                            &device_mapper);
+  mount_encrypted::EncryptedFs encrypted_fs(rootdir, &platform,
+                                            &loopdev_manager, &device_mapper);
 
   MetricsLibrary metrics;
   metrics.SetOutputFile(kMountEncryptedMetricsPath);
@@ -300,9 +299,7 @@ int main(int argc, char* argv[]) {
       return finalize_from_cmdline(encrypted_fs, rootdir,
                                    argc > 2 ? argv[2] : NULL);
     } else if (!strcmp(argv[1], "set")) {
-      return set_system_key(rootdir,
-                            argc > 2 ? argv[2] : NULL,
-                            &platform);
+      return set_system_key(rootdir, argc > 2 ? argv[2] : NULL, &platform);
     } else {
       fprintf(stderr, "Usage: %s [info|finalize|umount|set]\n", argv[0]);
       return RESULT_FAIL_FATAL;

@@ -223,10 +223,9 @@ bool LibScryptCompat::ParseHeader(const brillo::SecureBlob& encrypted_blob,
 }
 
 // static
-bool LibScryptCompat::Decrypt(
-    const brillo::SecureBlob& encrypted_data,
-    const brillo::SecureBlob& derived_key,
-    brillo::SecureBlob* decrypted_data) {
+bool LibScryptCompat::Decrypt(const brillo::SecureBlob& encrypted_data,
+                              const brillo::SecureBlob& derived_key,
+                              brillo::SecureBlob* decrypted_data) {
   if (!VerifyDerivedKey(encrypted_data, derived_key))
     return false;
 

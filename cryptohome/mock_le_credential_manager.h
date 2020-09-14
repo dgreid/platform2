@@ -36,8 +36,7 @@ class MockLECredentialManager : public LECredentialManager {
 
   MOCK_METHOD(LECredError,
               ResetCredential,
-              (const uint64_t& label,
-               const brillo::SecureBlob& reset_secret),
+              (const uint64_t& label, const brillo::SecureBlob& reset_secret),
               (override));
 
   MOCK_METHOD(LECredError, RemoveCredential, (const uint64_t&), (override));

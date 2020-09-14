@@ -237,7 +237,7 @@ uint32_t TlclStub::ReadLock(uint32_t index) {
   });
 }
 
-uint32_t TlclStub::PCRRead(uint32_t index, void *data, uint32_t length) {
+uint32_t TlclStub::PCRRead(uint32_t index, void* data, uint32_t length) {
   if (length < TPM_PCR_DIGEST) {
     return TPM_E_BUFFER_SIZE;
   }
@@ -252,9 +252,10 @@ uint32_t TlclStub::PCRRead(uint32_t index, void *data, uint32_t length) {
   return TPM_SUCCESS;
 }
 
-uint32_t TlclStub::GetVersion(uint32_t* vendor, uint64_t* firmware_version,
-                        uint8_t* vendor_specific_buf,
-                        size_t* vendor_specific_buf_size) {
+uint32_t TlclStub::GetVersion(uint32_t* vendor,
+                              uint64_t* firmware_version,
+                              uint8_t* vendor_specific_buf,
+                              size_t* vendor_specific_buf_size) {
   if (*vendor_specific_buf_size < sizeof(kVersionVendorSpecific)) {
     return TPM_E_BUFFER_SIZE;
   }
@@ -268,7 +269,7 @@ uint32_t TlclStub::GetVersion(uint32_t* vendor, uint64_t* firmware_version,
   return TPM_SUCCESS;
 }
 
-uint32_t TlclStub::IFXFieldUpgradeInfo(TPM_IFX_FIELDUPGRADEINFO *info) {
+uint32_t TlclStub::IFXFieldUpgradeInfo(TPM_IFX_FIELDUPGRADEINFO* info) {
   memset(info, 0, sizeof(*info));
   return TPM_SUCCESS;
 }
@@ -332,7 +333,7 @@ uint32_t TlclStub::ReadDelegationFamilyTable(TPM_FAMILY_TABLE_ENTRY* table,
 
 #endif  // !USE_TPM2
 
-template<typename Action>
+template <typename Action>
 uint32_t TlclStub::WithSpace(uint32_t index, Action action) {
   auto entry = nvram_spaces_.find(index);
   if (entry == nvram_spaces_.end()) {
@@ -378,7 +379,7 @@ uint32_t TlclDefineSpaceEx(const uint8_t* owner_auth,
                                         auth_policy_size);
 }
 
-uint32_t TlclGetPermissions(uint32_t index, uint32_t *permissions) {
+uint32_t TlclGetPermissions(uint32_t index, uint32_t* permissions) {
   return TlclStub::Get()->GetPermissions(index, permissions);
 }
 
@@ -391,11 +392,11 @@ uint32_t TlclGetSpaceInfo(uint32_t index,
                                        auth_policy_size);
 }
 
-uint32_t TlclWrite(uint32_t index, const void *data, uint32_t length) {
+uint32_t TlclWrite(uint32_t index, const void* data, uint32_t length) {
   return TlclStub::Get()->Write(index, data, length);
 }
 
-uint32_t TlclRead(uint32_t index, void *data, uint32_t length) {
+uint32_t TlclRead(uint32_t index, void* data, uint32_t length) {
   return TlclStub::Get()->Read(index, data, length);
 }
 
@@ -407,7 +408,7 @@ uint32_t TlclReadLock(uint32_t index) {
   return TlclStub::Get()->ReadLock(index);
 }
 
-uint32_t TlclPCRRead(uint32_t index, void *data, uint32_t length) {
+uint32_t TlclPCRRead(uint32_t index, void* data, uint32_t length) {
   return TlclStub::Get()->PCRRead(index, data, length);
 }
 
@@ -435,14 +436,15 @@ uint32_t TlclInitNvAuthPolicy(uint32_t pcr_selection_bitmap,
   return TPM_SUCCESS;
 }
 
-uint32_t TlclGetVersion(uint32_t* vendor, uint64_t* firmware_version,
+uint32_t TlclGetVersion(uint32_t* vendor,
+                        uint64_t* firmware_version,
                         uint8_t* vendor_specific_buf,
                         size_t* vendor_specific_buf_size) {
   return TlclStub::Get()->GetVersion(
       vendor, firmware_version, vendor_specific_buf, vendor_specific_buf_size);
 }
 
-uint32_t TlclIFXFieldUpgradeInfo(TPM_IFX_FIELDUPGRADEINFO *info) {
+uint32_t TlclIFXFieldUpgradeInfo(TPM_IFX_FIELDUPGRADEINFO* info) {
   return TlclStub::Get()->IFXFieldUpgradeInfo(info);
 }
 
@@ -465,7 +467,7 @@ uint32_t TlclCreateDelegationFamily(uint8_t family_label) {
   return TlclStub::Get()->CreateDelegationFamily(family_label);
 }
 
-uint32_t TlclReadDelegationFamilyTable(TPM_FAMILY_TABLE_ENTRY *table,
+uint32_t TlclReadDelegationFamilyTable(TPM_FAMILY_TABLE_ENTRY* table,
                                        uint32_t* table_size) {
   return TlclStub::Get()->ReadDelegationFamilyTable(table, table_size);
 }

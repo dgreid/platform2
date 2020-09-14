@@ -302,8 +302,8 @@ Status Sign(const std::string& label,
     return ReportAndReturn(Status::NotProvisioned, "Not provisioned");
   }
   VLOG(1) << "Signing with key id " << provision_status.key_id();
-  result = key_store->Sign(
-      provision_status.key_id(), label, mechanism, data, signature);
+  result = key_store->Sign(provision_status.key_id(), label, mechanism, data,
+                           signature);
   if (!result) {
     return ReportAndReturn(result);
   }

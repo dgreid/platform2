@@ -364,8 +364,7 @@ void DiskCleanup::FilterMountedHomedirs(
 }
 
 void DiskCleanup::FilterHomedirsProcessedBeforeCutoff(
-    base::Time cutoff,
-    std::vector<HomeDirs::HomeDir>* homedirs) {
+    base::Time cutoff, std::vector<HomeDirs::HomeDir>* homedirs) {
   homedirs->erase(
       std::remove_if(homedirs->begin(), homedirs->end(),
                      [&](const HomeDirs::HomeDir& dir) {

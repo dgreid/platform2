@@ -48,13 +48,9 @@ class DBusErrorReply : public CryptohomeEventBase {
  public:
   // Takes ownership of both pointers.
   DBusErrorReply(DBusGMethodInvocation* context, GError* error);
-  virtual ~DBusErrorReply() { }
-  virtual const char* GetEventName() const {
-    return kDBusErrorReplyEventType;
-  }
-  virtual void Run() {
-    dbus_g_method_return_error(context_, error_.get());
-  }
+  virtual ~DBusErrorReply() {}
+  virtual const char* GetEventName() const { return kDBusErrorReplyEventType; }
+  virtual void Run() { dbus_g_method_return_error(context_, error_.get()); }
   const GError& error() const { return *error_; }
 
  private:
@@ -71,9 +67,7 @@ class DBusBlobReply : public CryptohomeEventBase {
   virtual const char* GetEventName() const { return kDBusBlobReplyEventType; }
   virtual void Run() {
     brillo::glib::ScopedArray tmp_array(g_array_new(FALSE, FALSE, 1));
-    g_array_append_vals(tmp_array.get(),
-                        reply_->c_str(),
-                        reply_->size());
+    g_array_append_vals(tmp_array.get(), reply_->c_str(), reply_->size());
     dbus_g_method_return(context_, tmp_array.get());
   }
   const std::string& reply() const { return *reply_; }

@@ -27,21 +27,30 @@ class MockChallengeCredentialsHelper : public ChallengeCredentialsHelper {
   MockChallengeCredentialsHelper() = default;
   ~MockChallengeCredentialsHelper() = default;
 
-  MOCK_METHOD(void, GenerateNew, (
-      const std::string& account_id,
-      const KeyData& key_data,
-      (const std::vector<std::map<uint32_t, brillo::Blob>>& pcr_restrictions),
-      std::unique_ptr<KeyChallengeService> key_challenge_service,
-      GenerateNewCallback callback), (override));
-  MOCK_METHOD(void, Decrypt, (const std::string& account_id,
+  MOCK_METHOD(
+      void,
+      GenerateNew,
+      (const std::string& account_id,
+       const KeyData& key_data,
+       (const std::vector<std::map<uint32_t, brillo::Blob>>& pcr_restrictions),
+       std::unique_ptr<KeyChallengeService> key_challenge_service,
+       GenerateNewCallback callback),
+      (override));
+  MOCK_METHOD(void,
+              Decrypt,
+              (const std::string& account_id,
                const KeyData& key_data,
                const KeysetSignatureChallengeInfo& keyset_challenge_info,
                std::unique_ptr<KeyChallengeService> key_challenge_service,
-               DecryptCallback callback), (override));
-  MOCK_METHOD(void, VerifyKey, (const std::string& account_id,
-                 const KeyData& key_data,
-                 std::unique_ptr<KeyChallengeService> key_challenge_service,
-                 VerifyKeyCallback callback), (override));
+               DecryptCallback callback),
+              (override));
+  MOCK_METHOD(void,
+              VerifyKey,
+              (const std::string& account_id,
+               const KeyData& key_data,
+               std::unique_ptr<KeyChallengeService> key_challenge_service,
+               VerifyKeyCallback callback),
+              (override));
 };
 
 }  // namespace cryptohome

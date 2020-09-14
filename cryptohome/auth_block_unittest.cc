@@ -55,10 +55,8 @@ TEST(PinWeaverAuthBlockTest, CreateTest) {
 
   // Call the Create() method.
   AuthInput user_input = {vault_key,
-                          /*locked_to_single_user=*/base::nullopt,
-                          salt,
-                          obfuscated_username,
-                          reset_secret};
+                          /*locked_to_single_user=*/base::nullopt, salt,
+                          obfuscated_username, reset_secret};
   AuthBlockState auth_state = {SerializedVaultKeyset()};
   KeyBlobs vkk_data;
   CryptoError error;
@@ -88,10 +86,8 @@ TEST(PinWeaverAuthBlockTest, CreateFailTest) {
   PinWeaverAuthBlock auth_block_fail(&le_cred_manager_fail, &tpm_init_fail);
   // Call the Create() method.
   AuthInput user_input = {vault_key,
-                          /*locked_to_single_user=*/base::nullopt,
-                          salt,
-                          obfuscated_username,
-                          reset_secret};
+                          /*locked_to_single_user=*/base::nullopt, salt,
+                          obfuscated_username, reset_secret};
   AuthBlockState auth_state = {SerializedVaultKeyset()};
   KeyBlobs vkk_data;
   CryptoError error;

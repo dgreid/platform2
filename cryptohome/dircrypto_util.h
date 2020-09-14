@@ -17,10 +17,10 @@ namespace dircrypto {
 
 // State of the directory's encryption key.
 enum class KeyState {
-  UNKNOWN,  // Cannot get the state.
+  UNKNOWN,        // Cannot get the state.
   NOT_SUPPORTED,  // The directory doesn't support dircrypto.
-  NO_KEY,  // No key is set.
-  ENCRYPTED,  // Key is set.
+  NO_KEY,         // No key is set.
+  ENCRYPTED,      // Key is set.
 };
 
 // KeyReference describes an in-use fscrypt key.

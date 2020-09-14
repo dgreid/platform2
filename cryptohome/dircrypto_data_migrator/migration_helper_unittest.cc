@@ -192,12 +192,8 @@ TEST_F(MigrationHelperTest, CopyAttributesDirectory) {
 
   constexpr char kAttrName[] = "user.attr";
   constexpr char kValue[] = "value";
-  ASSERT_EQ(0,
-            lsetxattr(kFromDirPath.value().c_str(),
-                      kAttrName,
-                      kValue,
-                      sizeof(kValue),
-                      XATTR_CREATE));
+  ASSERT_EQ(0, lsetxattr(kFromDirPath.value().c_str(), kAttrName, kValue,
+                         sizeof(kValue), XATTR_CREATE));
 
   // Set ext2 attributes
   base::ScopedFD from_fd(
@@ -235,9 +231,8 @@ TEST_F(MigrationHelperTest, CopyAttributesDirectory) {
   ASSERT_TRUE(platform.GetPermissions(kToDirPath, &to_mode));
   EXPECT_EQ(mode, to_mode);
   char value[sizeof(kValue) + 1];
-  EXPECT_EQ(
-      sizeof(kValue),
-      lgetxattr(kToDirPath.value().c_str(), kAttrName, &value, sizeof(kValue)));
+  EXPECT_EQ(sizeof(kValue), lgetxattr(kToDirPath.value().c_str(), kAttrName,
+                                      &value, sizeof(kValue)));
   value[sizeof(kValue)] = '\0';
   EXPECT_STREQ(kValue, value);
 
@@ -469,24 +464,12 @@ TEST_F(MigrationHelperTest, CopyAttributesFile) {
 
   constexpr char kAttrName[] = "user.attr";
   constexpr char kValue[] = "value";
-  ASSERT_EQ(0,
-            lsetxattr(kFromFilePath.value().c_str(),
-                      kAttrName,
-                      kValue,
-                      sizeof(kValue),
-                      XATTR_CREATE));
-  ASSERT_EQ(0,
-            lsetxattr(kFromFilePath.value().c_str(),
-                      kSourceURLXattrName,
-                      kValue,
-                      sizeof(kValue),
-                      XATTR_CREATE));
-  ASSERT_EQ(0,
-            lsetxattr(kFromFilePath.value().c_str(),
-                      kReferrerURLXattrName,
-                      kValue,
-                      sizeof(kValue),
-                      XATTR_CREATE));
+  ASSERT_EQ(0, lsetxattr(kFromFilePath.value().c_str(), kAttrName, kValue,
+                         sizeof(kValue), XATTR_CREATE));
+  ASSERT_EQ(0, lsetxattr(kFromFilePath.value().c_str(), kSourceURLXattrName,
+                         kValue, sizeof(kValue), XATTR_CREATE));
+  ASSERT_EQ(0, lsetxattr(kFromFilePath.value().c_str(), kReferrerURLXattrName,
+                         kValue, sizeof(kValue), XATTR_CREATE));
 
   // Set ext2 attributes
   base::ScopedFD from_fd(
@@ -522,10 +505,8 @@ TEST_F(MigrationHelperTest, CopyAttributesFile) {
   EXPECT_EQ(mode, permission);
 
   char value[sizeof(kValue) + 1];
-  EXPECT_EQ(
-      sizeof(kValue),
-      lgetxattr(
-          kToFilePath.value().c_str(), kAttrName, &value, sizeof(kValue)));
+  EXPECT_EQ(sizeof(kValue), lgetxattr(kToFilePath.value().c_str(), kAttrName,
+                                      &value, sizeof(kValue)));
   value[sizeof(kValue)] = '\0';
   EXPECT_STREQ(kValue, value);
 
@@ -539,14 +520,11 @@ TEST_F(MigrationHelperTest, CopyAttributesFile) {
 
   // Quarantine xattrs storing the origin and referrer of downloaded files
   // should also be removed.
-  EXPECT_EQ(
-      -1,
-      lgetxattr(kToFilePath.value().c_str(), kSourceURLXattrName, nullptr, 0));
+  EXPECT_EQ(-1, lgetxattr(kToFilePath.value().c_str(), kSourceURLXattrName,
+                          nullptr, 0));
   EXPECT_EQ(ENODATA, errno);
-  EXPECT_EQ(
-      -1,
-      lgetxattr(
-          kToFilePath.value().c_str(), kReferrerURLXattrName, nullptr, 0));
+  EXPECT_EQ(-1, lgetxattr(kToFilePath.value().c_str(), kReferrerURLXattrName,
+                          nullptr, 0));
   EXPECT_EQ(ENODATA, errno);
 
   base::ScopedFD to_fd(
@@ -603,24 +581,24 @@ TEST_F(MigrationHelperTest, CopyOwnership) {
   stat.st_gid = file_gid;
   EXPECT_CALL(mock_platform, SetOwnership(kToFile, file_uid, file_gid, false))
       .WillOnce(Return(true));
-  EXPECT_TRUE(helper.CopyAttributes(
-      kFile, FileEnumerator::FileInfo(kFromFile, stat)));
+  EXPECT_TRUE(
+      helper.CopyAttributes(kFile, FileEnumerator::FileInfo(kFromFile, stat)));
 
   ASSERT_TRUE(real_platform.Stat(kFromLink, &stat));
   stat.st_uid = link_uid;
   stat.st_gid = link_gid;
   EXPECT_CALL(mock_platform, SetOwnership(kToLink, link_uid, link_gid, false))
       .WillOnce(Return(true));
-  EXPECT_TRUE(helper.CopyAttributes(
-      kLink, FileEnumerator::FileInfo(kFromLink, stat)));
+  EXPECT_TRUE(
+      helper.CopyAttributes(kLink, FileEnumerator::FileInfo(kFromLink, stat)));
 
   ASSERT_TRUE(real_platform.Stat(kFromDir, &stat));
   stat.st_uid = dir_uid;
   stat.st_gid = dir_gid;
   EXPECT_CALL(mock_platform, SetOwnership(kToDir, dir_uid, dir_gid, false))
       .WillOnce(Return(true));
-  EXPECT_TRUE(helper.CopyAttributes(
-      kDir, FileEnumerator::FileInfo(kFromDir, stat)));
+  EXPECT_TRUE(
+      helper.CopyAttributes(kDir, FileEnumerator::FileInfo(kFromDir, stat)));
 }
 
 TEST_F(MigrationHelperTest, MigrateNestedDir) {
@@ -1143,16 +1121,14 @@ TEST_F(MigrationHelperTest, CancelMigrationOnAnotherThread) {
   base::Thread thread("Canceller thread");
   ASSERT_TRUE(thread.Start());
   thread.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&base::WaitableEvent::Wait,
-                 base::Unretained(&syncfile_is_called_event)));
+      FROM_HERE, base::Bind(&base::WaitableEvent::Wait,
+                            base::Unretained(&syncfile_is_called_event)));
   thread.task_runner()->PostTask(
       FROM_HERE,
       base::Bind(&MigrationHelper::Cancel, base::Unretained(&helper)));
   thread.task_runner()->PostTask(
-      FROM_HERE,
-      base::Bind(&base::WaitableEvent::Signal,
-                 base::Unretained(&cancel_is_called_event)));
+      FROM_HERE, base::Bind(&base::WaitableEvent::Signal,
+                            base::Unretained(&cancel_is_called_event)));
   // Migration gets cancelled.
   EXPECT_FALSE(helper.Migrate(base::Bind(&MigrationHelperTest::ProgressCaptor,
                                          base::Unretained(this))));
@@ -1221,7 +1197,7 @@ TEST_P(MigrationHelperJobListTest, ProcessJobs) {
     SCOPED_TRACE(i);
     FilePath dir = from_dir_.GetPath().AppendASCII(base::NumberToString(i));
     ASSERT_TRUE(platform.CreateDirectory(dir));
-    for (int j = 0 ; j < kNumFilesPerDirectory; ++j) {
+    for (int j = 0; j < kNumFilesPerDirectory; ++j) {
       SCOPED_TRACE(j);
       const std::string data =
           base::NumberToString(i * kNumFilesPerDirectory + j);
@@ -1240,7 +1216,7 @@ TEST_P(MigrationHelperJobListTest, ProcessJobs) {
     SCOPED_TRACE(i);
     FilePath dir = to_dir_.GetPath().AppendASCII(base::NumberToString(i));
     EXPECT_TRUE(platform.DirectoryExists(dir));
-    for (int j = 0 ; j < kNumFilesPerDirectory; ++j) {
+    for (int j = 0; j < kNumFilesPerDirectory; ++j) {
       SCOPED_TRACE(j);
       std::string data;
       EXPECT_TRUE(base::ReadFileToString(

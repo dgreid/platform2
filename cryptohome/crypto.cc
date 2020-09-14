@@ -252,8 +252,7 @@ Crypto::Crypto(Platform* platform)
       tpm_init_(NULL),
       disable_logging_for_tests_(false) {}
 
-Crypto::~Crypto() {
-}
+Crypto::~Crypto() {}
 
 bool Crypto::Init(TpmInit* tpm_init) {
   if (use_tpm_) {
@@ -327,12 +326,12 @@ bool Crypto::GetOrCreateSalt(const FilePath& path,
   }
   SecureBlob local_salt;
   if (force || file_len == 0 || file_len > kSystemSaltMaxSize) {
-    LOG(ERROR) << "Creating new salt at " << path.value()
-               << " (" << force << ", " << file_len << ")";
+    LOG(ERROR) << "Creating new salt at " << path.value() << " (" << force
+               << ", " << file_len << ")";
     // If this salt doesn't exist, automatically create it.
     local_salt = CryptoLib::CreateSecureRandomBlob(length);
-    if (!platform_->WriteSecureBlobToFileAtomicDurable(
-            path, local_salt, kSaltFilePermissions)) {
+    if (!platform_->WriteSecureBlobToFileAtomicDurable(path, local_salt,
+                                                       kSaltFilePermissions)) {
       LOG(ERROR) << "Could not write user salt";
       return false;
     }
@@ -364,8 +363,7 @@ void Crypto::PasswordToPasskey(const char* password,
 
   md_value.resize(SHA256_DIGEST_LENGTH / 2);
   SecureBlob local_passkey(SHA256_DIGEST_LENGTH);
-  CryptoLib::SecureBlobToHexToBuffer(md_value,
-                                     local_passkey.data(),
+  CryptoLib::SecureBlobToHexToBuffer(md_value, local_passkey.data(),
                                      local_passkey.size());
   passkey->swap(local_passkey);
 }
@@ -450,7 +448,8 @@ bool Crypto::NeedsPcrBinding(const uint64_t& label) const {
 bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
                                 const SecureBlob& vault_key,
                                 bool locked_to_single_user,
-                                unsigned int* crypt_flags, CryptoError* error,
+                                unsigned int* crypt_flags,
+                                CryptoError* error,
                                 VaultKeyset* vault_keyset) const {
   if (crypt_flags)
     *crypt_flags = serialized.flags();
@@ -461,8 +460,8 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   if (flags & SerializedVaultKeyset::LE_CREDENTIAL) {
     PinWeaverAuthBlock pin_weaver_auth(le_manager_.get(), tpm_init_);
 
-    AuthInput auth_input = { vault_key };
-    AuthBlockState auth_state = { serialized };
+    AuthInput auth_input = {vault_key};
+    AuthBlockState auth_state = {serialized};
     KeyBlobs vkk_data;
     if (!pin_weaver_auth.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
@@ -516,7 +515,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     auth_input.user_input = vault_key;
     auth_input.locked_to_single_user = locked_to_single_user;
 
-    AuthBlockState auth_state = { serialized };
+    AuthBlockState auth_state = {serialized};
     if (!tpm_auth->Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
     }
@@ -530,7 +529,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
     auth_input.user_input = vault_key;
     auth_input.locked_to_single_user = locked_to_single_user;
 
-    AuthBlockState auth_state = { serialized };
+    AuthBlockState auth_state = {serialized};
     LibScryptCompatAuthBlock auth_block;
     if (!auth_block.Derive(auth_input, auth_state, &vkk_data, error)) {
       return false;
@@ -572,8 +571,7 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
                                  const KeyBlobs& blobs,
                                  bool store_reset_seed,
                                  SerializedVaultKeyset* serialized) const {
-  if (blobs.vkk_key == base::nullopt ||
-      blobs.vkk_iv == base::nullopt ||
+  if (blobs.vkk_key == base::nullopt || blobs.vkk_iv == base::nullopt ||
       blobs.chaps_iv == base::nullopt) {
     DLOG(FATAL) << "Fields missing from KeyBlobs.";
     return false;
@@ -597,8 +595,7 @@ bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
 
   // If a reset seed is present, encrypt and store it, else clear the field.
   if (store_reset_seed && vault_keyset.reset_seed().size() != 0) {
-    const auto reset_iv =
-        CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
+    const auto reset_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
     SecureBlob wrapped_reset_seed;
     if (!CryptoLib::AesEncryptDeprecated(vault_keyset.reset_seed(),
                                          blobs.vkk_key.value(), reset_iv,
@@ -708,9 +705,7 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
   // Encrypt the VKK using the TPM and the user's passkey.  The output is an
   // encrypted blob in tpm_key, which is stored in the serialized vault
   // keyset.
-  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeKey(),
-                        local_blob,
-                        aes_skey,
+  if (tpm_->EncryptBlob(tpm_init_->GetCryptohomeKey(), local_blob, aes_skey,
                         &tpm_key) != Tpm::kTpmRetryNone) {
     LOG(ERROR) << "Failed to wrap vkk with creds.";
     return false;
@@ -720,16 +715,16 @@ bool Crypto::EncryptTPMNotBoundToPcr(const VaultKeyset& vault_keyset,
   // detect a TPM clear.  If this fails due to a transient issue, then on next
   // successful login, the vault keyset will be re-saved anyway.
   SecureBlob pub_key_hash;
-  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(),
-                             &pub_key_hash) == Tpm::kTpmRetryNone)
+  if (tpm_->GetPublicKeyHash(tpm_init_->GetCryptohomeKey(), &pub_key_hash) ==
+      Tpm::kTpmRetryNone)
     serialized->set_tpm_public_key_hash(pub_key_hash.data(),
                                         pub_key_hash.size());
 
   unsigned int flags = serialized->flags();
-  serialized->set_flags((flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED
-                               & ~SerializedVaultKeyset::PCR_BOUND)
-                        | SerializedVaultKeyset::TPM_WRAPPED
-                        | SerializedVaultKeyset::SCRYPT_DERIVED);
+  serialized->set_flags((flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED &
+                         ~SerializedVaultKeyset::PCR_BOUND) |
+                        SerializedVaultKeyset::TPM_WRAPPED |
+                        SerializedVaultKeyset::SCRYPT_DERIVED);
   serialized->set_tpm_key(tpm_key.data(), tpm_key.size());
 
   SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, local_blob);
@@ -775,8 +770,8 @@ bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
     return false;
   }
   unsigned int flags = serialized->flags();
-  serialized->set_flags((flags & ~SerializedVaultKeyset::TPM_WRAPPED)
-                        | SerializedVaultKeyset::SCRYPT_WRAPPED);
+  serialized->set_flags((flags & ~SerializedVaultKeyset::TPM_WRAPPED) |
+                        SerializedVaultKeyset::SCRYPT_WRAPPED);
   serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
   if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
     serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
@@ -988,10 +983,9 @@ bool Crypto::EncryptData(const SecureBlob& data,
     return false;
   }
   SecureBlob encrypted_data_blob;
-  if (!CryptoLib::AesEncryptSpecifyBlockMode(data, 0, data.size(), aes_key, iv,
-                                             CryptoLib::kPaddingStandard,
-                                             CryptoLib::kCbc,
-                                             &encrypted_data_blob)) {
+  if (!CryptoLib::AesEncryptSpecifyBlockMode(
+          data, 0, data.size(), aes_key, iv, CryptoLib::kPaddingStandard,
+          CryptoLib::kCbc, &encrypted_data_blob)) {
     LOG(ERROR) << "Failed to encrypt serial data.";
     return false;
   }
@@ -1000,8 +994,8 @@ bool Crypto::EncryptData(const SecureBlob& data,
   encrypted_pb.set_iv(iv.data(), iv.size());
   encrypted_pb.set_encrypted_data(encrypted_data_blob.data(),
                                   encrypted_data_blob.size());
-  encrypted_pb.set_mac(CryptoLib::ComputeEncryptedDataHMAC(encrypted_pb,
-                                                           aes_key));
+  encrypted_pb.set_mac(
+      CryptoLib::ComputeEncryptedDataHMAC(encrypted_pb, aes_key));
   if (!encrypted_pb.SerializeToString(encrypted_data)) {
     LOG(ERROR) << "Could not serialize data to string.";
     return false;
@@ -1045,21 +1039,16 @@ bool Crypto::DecryptData(const std::string& encrypted_data,
     return false;
   }
   if (0 != brillo::SecureMemcmp(mac.data(), encrypted_pb.mac().data(),
-                                  mac.length())) {
+                                mac.length())) {
     LOG(ERROR) << "Corrupted data in encrypted pb.";
     return false;
   }
   SecureBlob iv(encrypted_pb.iv().begin(), encrypted_pb.iv().end());
   SecureBlob encrypted_data_blob(encrypted_pb.encrypted_data().begin(),
                                  encrypted_pb.encrypted_data().end());
-  if (!CryptoLib::AesDecryptSpecifyBlockMode(encrypted_data_blob,
-                                             0,
-                                             encrypted_data_blob.size(),
-                                             aes_key,
-                                             iv,
-                                             CryptoLib::kPaddingStandard,
-                                             CryptoLib::kCbc,
-                                             data)) {
+  if (!CryptoLib::AesDecryptSpecifyBlockMode(
+          encrypted_data_blob, 0, encrypted_data_blob.size(), aes_key, iv,
+          CryptoLib::kPaddingStandard, CryptoLib::kCbc, data)) {
     LOG(ERROR) << "Failed to decrypt encrypted data.";
     return false;
   }

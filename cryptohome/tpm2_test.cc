@@ -182,7 +182,7 @@ class Tpm2Test : public testing::Test {
 
   void FakeGetVersionInfo(
       const tpm_manager::TpmOwnershipInterface::GetVersionInfoCallback&
-      callback) {
+          callback) {
     callback.Run(version_info_);
   }
 
@@ -374,9 +374,7 @@ TEST_F(Tpm2Test, GetDictionaryAttackInfo) {
   bool lockout;
   int seconds_remaining;
 
-  EXPECT_TRUE(tpm_->GetDictionaryAttackInfo(&counter,
-                                            &threshold,
-                                            &lockout,
+  EXPECT_TRUE(tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
                                             &seconds_remaining));
   EXPECT_EQ(3, counter);
   EXPECT_EQ(4, threshold);
@@ -391,9 +389,7 @@ TEST_F(Tpm2Test, GetDictionaryAttackInfoError) {
   int threshold;
   bool lockout;
   int seconds_remaining;
-  EXPECT_FALSE(tpm_->GetDictionaryAttackInfo(&counter,
-                                             &threshold,
-                                             &lockout,
+  EXPECT_FALSE(tpm_->GetDictionaryAttackInfo(&counter, &threshold, &lockout,
                                              &seconds_remaining));
 }
 
@@ -451,8 +447,7 @@ TEST_F(Tpm2Test, GetRandomDataBadLength) {
 TEST_F(Tpm2Test, DefineNvramSuccess) {
   uint32_t index = 2;
   size_t length = 5;
-  EXPECT_TRUE(tpm_->DefineNvram(
-      index, length, Tpm::kTpmNvramWriteDefine));
+  EXPECT_TRUE(tpm_->DefineNvram(index, length, Tpm::kTpmNvramWriteDefine));
   EXPECT_EQ(index, last_define_space_request.index());
   EXPECT_EQ(length, last_define_space_request.size());
   ASSERT_EQ(1, last_define_space_request.attributes_size());
@@ -763,8 +758,7 @@ TEST_F(Tpm2Test, CreateMultiplePCRBoundKeySuccess) {
   EXPECT_CALL(mock_tpm_utility_,
               CreateRSAKeyPair(_, modulus, exponent, _, _, true, _, _, _, _))
       .WillOnce(Return(TPM_RC_SUCCESS));
-  EXPECT_TRUE(tpm_->CreatePCRBoundKey(pcr_map,
-                                      trunks::TpmUtility::kDecryptKey,
+  EXPECT_TRUE(tpm_->CreatePCRBoundKey(pcr_map, trunks::TpmUtility::kDecryptKey,
                                       &key_blob, nullptr, &creation_blob));
 }
 
@@ -780,16 +774,14 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeySuccess) {
   pcr_select.count = 1;
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA256;
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
   std::string pcr_policy_value;
   std::map<uint32_t, std::string> pcr_map;
   EXPECT_CALL(mock_trial_session_, PolicyPCR(_))
-      .WillOnce(DoAll(SaveArg<0>(&pcr_map),
-                      Return(TPM_RC_SUCCESS)));
+      .WillOnce(DoAll(SaveArg<0>(&pcr_map), Return(TPM_RC_SUCCESS)));
   std::string policy_digest(32, 'a');
   EXPECT_CALL(mock_trial_session_, GetDigest(_))
       .WillOnce(DoAll(SetArgPointee<0>(policy_digest), Return(TPM_RC_SUCCESS)));
@@ -813,10 +805,9 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationBlob) {
   SecureBlob creation_blob;
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(Return(false));
-  EXPECT_FALSE(
-      tpm_->VerifyPCRBoundKey(
-          std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
-          creation_blob));
+  EXPECT_FALSE(tpm_->VerifyPCRBoundKey(
+      std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
+      creation_blob));
 }
 
 TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationDataCount) {
@@ -829,10 +820,9 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationDataCount) {
   creation_data.creation_data.pcr_select.count = 0;
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
-  EXPECT_FALSE(
-      tpm_->VerifyPCRBoundKey(
-          std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
-          creation_blob));
+  EXPECT_FALSE(tpm_->VerifyPCRBoundKey(
+      std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
+      creation_blob));
 }
 
 TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCRBank) {
@@ -848,10 +838,9 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCRBank) {
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA1;
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
-  EXPECT_FALSE(
-      tpm_->VerifyPCRBoundKey(
-          std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
-          creation_blob));
+  EXPECT_FALSE(tpm_->VerifyPCRBoundKey(
+      std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
+      creation_blob));
 }
 
 TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCR) {
@@ -868,10 +857,9 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCR) {
   pcr_select.pcr_selections[0].pcr_select[index / 8] = 0xFF;
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
-  EXPECT_FALSE(
-      tpm_->VerifyPCRBoundKey(
-          std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
-          creation_blob));
+  EXPECT_FALSE(tpm_->VerifyPCRBoundKey(
+      std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
+      creation_blob));
 }
 
 TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCRDigest) {
@@ -890,10 +878,9 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadCreationPCRDigest) {
       trunks::Make_TPM2B_DIGEST(CryptoLib::Sha256(SecureBlob("")).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
-  EXPECT_FALSE(
-      tpm_->VerifyPCRBoundKey(
-          std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
-          creation_blob));
+  EXPECT_FALSE(tpm_->VerifyPCRBoundKey(
+      std::map<uint32_t, std::string>({{index, pcr_value}}), key_blob,
+      creation_blob));
 }
 
 TEST_F(Tpm2Test, VerifyPCRBoundKeyImportedKey) {
@@ -908,9 +895,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyImportedKey) {
   pcr_select.count = 1;
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA256;
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -936,9 +922,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadSession) {
     pcr_select.pcr_selections[0].pcr_select[i] = 0;
   }
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -964,9 +949,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadPolicy) {
     pcr_select.pcr_selections[0].pcr_select[i] = 0;
   }
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -989,9 +973,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadDigest) {
   pcr_select.count = 1;
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA256;
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -1014,9 +997,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadPolicyDigest) {
   pcr_select.count = 1;
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA256;
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -1046,9 +1028,8 @@ TEST_F(Tpm2Test, VerifyPCRBoundKeyBadAttributes) {
   pcr_select.count = 1;
   pcr_select.pcr_selections[0].hash = trunks::TPM_ALG_SHA256;
   SetPcrSelectData(pcr_select.pcr_selections[0].pcr_select, index);
-  creation_data.creation_data.pcr_digest =
-      trunks::Make_TPM2B_DIGEST(
-          CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
+  creation_data.creation_data.pcr_digest = trunks::Make_TPM2B_DIGEST(
+      CryptoLib::Sha256ToSecureBlob(pcr_value).to_string());
   EXPECT_CALL(mock_blob_parser_, ParseCreationBlob(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<1>(creation_data), Return(true)));
 
@@ -1397,8 +1378,7 @@ TEST_F(Tpm2Test, SetUserTypeAfterNonOwner) {
   EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::NonOwner));
   testing::Mock::VerifyAndClearExpectations(&mock_tpm_utility_);
 
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_))
-      .Times(0);
+  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_)).Times(0);
   // Second attempt shall not call TpmUtility since transitioning from NonOwner
   // is not possible.
   EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
@@ -1422,8 +1402,7 @@ TEST_F(Tpm2Test, SetUserTypeCaching) {
 
   // Subsequent attempts shall do nothing since we already succeeded on the
   // second attempt.
-  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_))
-      .Times(0);
+  EXPECT_CALL(mock_tpm_utility_, ManageCCDPwd(_)).Times(0);
   EXPECT_TRUE(tpm_->SetUserType(Tpm::UserType::Owner));
 }
 
@@ -1450,22 +1429,18 @@ TEST_F(Tpm2Test, RemoveOwnerDependencyFailure) {
 TEST_F(Tpm2Test, RemoveOwnerDependencyUnknown) {
   TpmPersistentState::TpmOwnerDependency unknown_dep =
       static_cast<TpmPersistentState::TpmOwnerDependency>(100);
-  EXPECT_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _))
-        .Times(0);
+  EXPECT_CALL(mock_tpm_owner_, RemoveOwnerDependency(_, _)).Times(0);
   EXPECT_TRUE(tpm_->RemoveOwnerDependency(unknown_dep));
 }
 
 TEST_F(Tpm2Test, ClearStoredPasswordSuccess) {
-  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _))
-      .Times(1);
+  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _)).Times(1);
   EXPECT_TRUE(tpm_->ClearStoredPassword());
 }
 
 TEST_F(Tpm2Test, ClearStoredPasswordFailure) {
-  next_clear_stored_password_reply.set_status(
-      tpm_manager::STATUS_DEVICE_ERROR);
-  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _))
-      .Times(1);
+  next_clear_stored_password_reply.set_status(tpm_manager::STATUS_DEVICE_ERROR);
+  EXPECT_CALL(mock_tpm_owner_, ClearStoredOwnerPassword(_, _)).Times(1);
   EXPECT_FALSE(tpm_->ClearStoredPassword());
 }
 
@@ -1536,9 +1511,8 @@ class Tpm2RsaSignatureSecretSealingTest
     key_modulus_.resize(RSA_size(rsa.get()));
     const BIGNUM* n;
     RSA_get0_key(rsa.get(), &n, nullptr, nullptr);
-    CHECK_EQ(
-        key_modulus_.length(),
-        BN_bn2bin(n, reinterpret_cast<unsigned char*>(&key_modulus_[0])));
+    CHECK_EQ(key_modulus_.length(),
+             BN_bn2bin(n, reinterpret_cast<unsigned char*>(&key_modulus_[0])));
   }
 
   const std::vector<ChallengeSignatureAlgorithm>& supported_algorithms() const {

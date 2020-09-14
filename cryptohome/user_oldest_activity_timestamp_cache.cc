@@ -24,8 +24,7 @@ void UserOldestActivityTimestampCache::AddExistingUser(const std::string& user,
 }
 
 void UserOldestActivityTimestampCache::UpdateExistingUser(
-    const std::string& user,
-    base::Time timestamp) {
+    const std::string& user, base::Time timestamp) {
   CHECK(initialized_);
   users_timestamp_lookup_[user] = timestamp;
 }

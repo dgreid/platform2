@@ -76,12 +76,12 @@ class TlclStub {
   uint32_t WriteLock(uint32_t index);
   uint32_t ReadLock(uint32_t index);
 
-  uint32_t PCRRead(uint32_t index, void *data, uint32_t length);
+  uint32_t PCRRead(uint32_t index, void* data, uint32_t length);
 
   uint32_t GetVersion(uint32_t* vendor,
-                          uint64_t* firmware_version,
-                          uint8_t* vendor_specific_buf,
-                          size_t* vendor_specific_buf_size);
+                      uint64_t* firmware_version,
+                      uint8_t* vendor_specific_buf,
+                      size_t* vendor_specific_buf_size);
 
   uint32_t IFXFieldUpgradeInfo(TPM_IFX_FIELDUPGRADEINFO* info);
 
@@ -101,7 +101,7 @@ class TlclStub {
  private:
   bool is_owned() const { return !owner_auth_.empty(); }
 
-  template<typename Action>
+  template <typename Action>
   uint32_t WithSpace(uint32_t index, Action action);
 
   std::vector<uint8_t> owner_auth_;

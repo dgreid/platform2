@@ -20,9 +20,9 @@ namespace cryptohome {
 
 const int kUserSessionIdLength = 128;
 
-UserSession::UserSession() { }
+UserSession::UserSession() {}
 
-UserSession::~UserSession() { }
+UserSession::~UserSession() {}
 
 void UserSession::Init(const SecureBlob& salt) {
   username_salt_.assign(salt.begin(), salt.end());
@@ -96,8 +96,8 @@ void UserSession::GetObfuscatedUsername(std::string* username) const {
 
 int UserSession::key_index() const {
   LOG_IF(WARNING, key_index_ < 0)
-                << "Attempt to access an uninitialized key_index."
-                << "Guest mount? Ephemeral mount?";
+      << "Attempt to access an uninitialized key_index."
+      << "Guest mount? Ephemeral mount?";
   return key_index_;
 }
 

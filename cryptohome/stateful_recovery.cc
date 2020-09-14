@@ -24,15 +24,15 @@ using base::FilePath;
 namespace cryptohome {
 
 const char StatefulRecovery::kRecoverSource[] =
-  "/mnt/stateful_partition/encrypted";
+    "/mnt/stateful_partition/encrypted";
 const char StatefulRecovery::kRecoverDestination[] =
-  "/mnt/stateful_partition/decrypted";
+    "/mnt/stateful_partition/decrypted";
 const char StatefulRecovery::kRecoverBlockUsage[] =
-  "/mnt/stateful_partition/decrypted/block-usage.txt";
+    "/mnt/stateful_partition/decrypted/block-usage.txt";
 const char StatefulRecovery::kRecoverFilesystemDetails[] =
-  "/mnt/stateful_partition/decrypted/filesystem-details.txt";
+    "/mnt/stateful_partition/decrypted/filesystem-details.txt";
 const char StatefulRecovery::kFlagFile[] =
-  "/mnt/stateful_partition/decrypt_stateful";
+    "/mnt/stateful_partition/decrypt_stateful";
 
 StatefulRecovery::StatefulRecovery(Platform* platform,
                                    MountFunction mountfn,

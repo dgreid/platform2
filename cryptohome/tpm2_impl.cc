@@ -109,14 +109,14 @@ void SetOwnerDependency(TpmPersistentState::TpmOwnerDependency dependency,
                         std::string* dependency_field) {
   switch (dependency) {
     case TpmPersistentState::TpmOwnerDependency::kInstallAttributes:
-        dependency_field->assign(tpm_manager::kTpmOwnerDependency_Nvram);
-        break;
+      dependency_field->assign(tpm_manager::kTpmOwnerDependency_Nvram);
+      break;
     case TpmPersistentState::TpmOwnerDependency::kAttestation:
-        dependency_field->assign(tpm_manager::kTpmOwnerDependency_Attestation);
-        break;
+      dependency_field->assign(tpm_manager::kTpmOwnerDependency_Attestation);
+      break;
     default:
-        dependency_field->clear();
-        break;
+      dependency_field->clear();
+      break;
   }
 }
 
@@ -189,54 +189,54 @@ enum TpmAlerts {
   kTPMAlertNumBuckets,  // Must be the last entry.
 };
 static_assert(kTPMAlertNumBuckets <= trunks::kAlertsMaxSize + 1,
-  "Number of UMA enums less than alerts set size");
+              "Number of UMA enums less than alerts set size");
 
 // Maps alerts identifiers received from TMP firmware to UMA identifiers
 const TpmAlerts h1AlertsMap[trunks::kH1AlertsSize] = {
-  kCamoBreach,
-  kDmemParity,
-  kDrfParity,
-  kImemParity,
-  kPgmFault,
-  kCpuDIfBusError,
-  kCpuDIfUpdateWatchdog,
-  kCpuIIfBusError,
-  kCpuIIfUpdateWatchdog,
-  kCpuSIfBusError,
-  kCpuSIfUpdateWatchdog,
-  kDmaIfBusErr,
-  kDmaIfUpdateWatchdog,
-  kSpsIfBusErr,
-  kSpsIfUpdateWatchdog,
-  kUsbIfBusErr,
-  kUsbIfUpdateWatchdog,
-  kFuseDefaults,
-  kDiffFail,
-  kSoftwareAlert0,
-  kSoftwareAlert1,
-  kSoftwareAlert2,
-  kSoftwareAlert3,
-  kHearbitFail,
-  kProcOpcodeHash,
-  kSramParityScrub,
-  kAesExecCtrMax,
-  kAesHkey,
-  kCertLookup,
-  kFlashEntry,
-  kPw,
-  kShaExecCtrMax,
-  kShaFault,
-  kShaHkey,
-  kPmuBatteryMon,
-  kPmuWatchdog,
-  kRtcDead,
-  kTempMax,
-  kTempMaxDiff,
-  kTempMin,
-  kRngOutOfSpec,
-  kRngTimeout,
-  kVoltageError,
-  kXoJitteryTrim,
+    kCamoBreach,
+    kDmemParity,
+    kDrfParity,
+    kImemParity,
+    kPgmFault,
+    kCpuDIfBusError,
+    kCpuDIfUpdateWatchdog,
+    kCpuIIfBusError,
+    kCpuIIfUpdateWatchdog,
+    kCpuSIfBusError,
+    kCpuSIfUpdateWatchdog,
+    kDmaIfBusErr,
+    kDmaIfUpdateWatchdog,
+    kSpsIfBusErr,
+    kSpsIfUpdateWatchdog,
+    kUsbIfBusErr,
+    kUsbIfUpdateWatchdog,
+    kFuseDefaults,
+    kDiffFail,
+    kSoftwareAlert0,
+    kSoftwareAlert1,
+    kSoftwareAlert2,
+    kSoftwareAlert3,
+    kHearbitFail,
+    kProcOpcodeHash,
+    kSramParityScrub,
+    kAesExecCtrMax,
+    kAesHkey,
+    kCertLookup,
+    kFlashEntry,
+    kPw,
+    kShaExecCtrMax,
+    kShaFault,
+    kShaHkey,
+    kPmuBatteryMon,
+    kPmuWatchdog,
+    kRtcDead,
+    kTempMax,
+    kTempMaxDiff,
+    kTempMin,
+    kRngOutOfSpec,
+    kRngTimeout,
+    kVoltageError,
+    kXoJitteryTrim,
 };
 
 Tpm2Impl::Tpm2Impl(TrunksFactory* factory,
@@ -607,10 +607,9 @@ bool Tpm2Impl::SealToPCR0(const brillo::SecureBlob& value,
     return false;
   }
   std::string policy_digest;
-  TPM_RC result =
-      trunks->tpm_utility->GetPolicyDigestForPcrValues(
-          std::map<uint32_t, std::string>({{0, ""}}),
-          false /* use_auth_value */, &policy_digest);
+  TPM_RC result = trunks->tpm_utility->GetPolicyDigestForPcrValues(
+      std::map<uint32_t, std::string>({{0, ""}}), false /* use_auth_value */,
+      &policy_digest);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error getting policy digest: " << GetErrorString(result);
     return false;
@@ -646,8 +645,8 @@ bool Tpm2Impl::Unseal(const brillo::SecureBlob& sealed_value,
     LOG(ERROR) << "Error starting policy session: " << GetErrorString(result);
     return false;
   }
-  result = policy_session->PolicyPCR(
-      std::map<uint32_t, std::string>({{0, ""}}));
+  result =
+      policy_session->PolicyPCR(std::map<uint32_t, std::string>({{0, ""}}));
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error restricting policy to pcr 0: "
                << GetErrorString(result);
@@ -807,8 +806,8 @@ bool Tpm2Impl::CreatePCRBoundKey(const std::map<uint32_t, std::string>& pcr_map,
   std::unique_ptr<trunks::AuthorizationDelegate> delegate =
       trunks->factory->GetPasswordAuthorization("");
   result = trunks->tpm_utility->CreateRSAKeyPair(
-      key_type, kDefaultTpmRsaModulusSize,
-      kDefaultTpmPublicExponent, "",  // No authorization
+      key_type, kDefaultTpmRsaModulusSize, kDefaultTpmPublicExponent,
+      "",  // No authorization
       policy_digest,
       true,  // use_only_policy_authorization
       pcr_list, delegate.get(), &tpm_key_blob,
@@ -1177,7 +1176,7 @@ Tpm::TpmRetryAction Tpm2Impl::UnsealWithAuthorization(
   }
 
   std::unique_ptr<trunks::PolicySession> policy_session =
-    trunks->factory->GetPolicySession();
+      trunks->factory->GetPolicySession();
   // Use unsalted session here, to unseal faster.
   TPM_RC result = policy_session->StartUnboundSession(false, false);
   if (result != TPM_RC_SUCCESS) {
@@ -1192,15 +1191,13 @@ Tpm::TpmRetryAction Tpm2Impl::UnsealWithAuthorization(
   }
   result = policy_session->PolicyPCR(pcr_map);
   if (result != TPM_RC_SUCCESS) {
-    LOG(ERROR) << "Error in PolicyPCR: "
-               << GetErrorString(result);
+    LOG(ERROR) << "Error in PolicyPCR: " << GetErrorString(result);
     return ResultToRetryAction(result);
   }
   policy_session->SetEntityAuthorizationValue(auth_value);
   std::string unsealed_data;
-  result = trunks->tpm_utility->UnsealData(sealed_data.to_string(),
-                                           policy_session->GetDelegate(),
-                                           &unsealed_data);
+  result = trunks->tpm_utility->UnsealData(
+      sealed_data.to_string(), policy_session->GetDelegate(), &unsealed_data);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error unsealing data with authorization: "
                << GetErrorString(result);
@@ -1299,10 +1296,10 @@ bool Tpm2Impl::GetDictionaryAttackInfo(int* counter,
   }
 
   tpm_manager::GetDictionaryAttackInfoReply da_info;
-  auto method = base::Bind(
-      &tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfo,
-      base::Unretained(tpm_owner_),
-      tpm_manager::GetDictionaryAttackInfoRequest());
+  auto method =
+      base::Bind(&tpm_manager::TpmOwnershipInterface::GetDictionaryAttackInfo,
+                 base::Unretained(tpm_owner_),
+                 tpm_manager::GetDictionaryAttackInfoRequest());
   SendTpmManagerRequestAndWait(method, &da_info);
 
   if (da_info.status() != tpm_manager::STATUS_SUCCESS) {
@@ -1313,26 +1310,24 @@ bool Tpm2Impl::GetDictionaryAttackInfo(int* counter,
   *counter = da_info.dictionary_attack_counter();
   *threshold = da_info.dictionary_attack_threshold();
   *lockout = da_info.dictionary_attack_lockout_in_effect();
-  *seconds_remaining =
-      da_info.dictionary_attack_lockout_seconds_remaining();
+  *seconds_remaining = da_info.dictionary_attack_lockout_seconds_remaining();
 
   return true;
 }
 
 bool Tpm2Impl::ResetDictionaryAttackMitigation(
-    const Blob& /* delegate_blob */,
-    const Blob& /* delegate_secret */) {
+    const Blob& /* delegate_blob */, const Blob& /* delegate_secret */) {
   if (!InitializeTpmManagerClients()) {
     return false;
   }
 
-  auto method = base::Bind(
-      &tpm_manager::TpmOwnershipInterface::ResetDictionaryAttackLock,
-      base::Unretained(tpm_owner_),
-      tpm_manager::ResetDictionaryAttackLockRequest());
+  auto method =
+      base::Bind(&tpm_manager::TpmOwnershipInterface::ResetDictionaryAttackLock,
+                 base::Unretained(tpm_owner_),
+                 tpm_manager::ResetDictionaryAttackLockRequest());
 
-  auto callback = base::Bind(
-      [](const tpm_manager::ResetDictionaryAttackLockReply& reply) {
+  auto callback =
+      base::Bind([](const tpm_manager::ResetDictionaryAttackLockReply& reply) {
         if (reply.status() == tpm_manager::STATUS_SUCCESS) {
           LOG(INFO) << "Successfully reset DA lock.";
         } else {
@@ -1443,8 +1438,8 @@ bool Tpm2Impl::PublicAreaToPublicKeyDER(const trunks::TPMT_PUBLIC& public_area,
     return false;
   }
   if (!BN_set_word(e.get(), kDefaultTpmPublicExponent) ||
-      !BN_bin2bn(public_area.unique.rsa.buffer,
-                 public_area.unique.rsa.size, n.get()) ||
+      !BN_bin2bn(public_area.unique.rsa.buffer, public_area.unique.rsa.size,
+                 n.get()) ||
       !RSA_set0_key(rsa.get(), n.release(), e.release(), nullptr)) {
     LOG(ERROR) << "Failed to set up RSA.";
     return false;
@@ -1522,8 +1517,8 @@ bool Tpm2Impl::GetAuthValue(TpmKeyHandle key_handle,
   std::unique_ptr<trunks::AuthorizationDelegate> delegate =
       trunks->factory->GetPasswordAuthorization("");
   TPM_RC result = result = trunks->tpm_utility->AsymmetricDecrypt(
-      key_handle, trunks::TPM_ALG_NULL, trunks::TPM_ALG_NULL,
-      value_to_decrypt, delegate.get(), &decrypted_value);
+      key_handle, trunks::TPM_ALG_NULL, trunks::TPM_ALG_NULL, value_to_decrypt,
+      delegate.get(), &decrypted_value);
   if (result != TPM_RC_SUCCESS) {
     LOG(ERROR) << "Error decrypting pass_blob: " << GetErrorString(result);
     return false;
@@ -1572,8 +1567,7 @@ bool Tpm2Impl::UpdateTpmStatus(RefreshType refresh_type) {
 
   tpm_manager::GetTpmStatusRequest request;
   auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::GetTpmStatus,
-                           base::Unretained(tpm_owner_),
-                           request);
+                           base::Unretained(tpm_owner_), request);
   SendTpmManagerRequestAndWait(method, &tpm_status_);
   return (tpm_status_.status() == tpm_manager::STATUS_SUCCESS);
 }
@@ -1634,10 +1628,8 @@ bool Tpm2Impl::GetVersionInfo(TpmVersionInfo* version_info) {
 
   tpm_manager::GetVersionInfoRequest request;
   tpm_manager::GetVersionInfoReply reply;
-  auto method = base::Bind(
-      &tpm_manager::TpmOwnershipInterface::GetVersionInfo,
-      base::Unretained(tpm_owner_),
-      request);
+  auto method = base::Bind(&tpm_manager::TpmOwnershipInterface::GetVersionInfo,
+                           base::Unretained(tpm_owner_), request);
   SendTpmManagerRequestAndWait(method, &reply);
 
   if (reply.status() != tpm_manager::STATUS_SUCCESS) {
@@ -1742,8 +1734,7 @@ bool Tpm2Impl::IsCurrentPCR0ValueValid() {
 }
 
 void Tpm2Impl::SetDelegateData(const std::string& delegate_blob,
-                               bool has_reset_lock_permissions) {
-}
+                               bool has_reset_lock_permissions) {}
 
 base::Optional<bool> Tpm2Impl::IsDelegateBoundToPcr() {
   return false;

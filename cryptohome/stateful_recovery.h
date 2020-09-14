@@ -85,7 +85,7 @@ class StatefulRecovery {
   bool RecoverV2();
 
   bool requested_;
-  Platform *platform_;
+  Platform* platform_;
   MountFunction mountfn_;
   UnmountFunction unmountfn_;
   IsOwnerFunction isownerfn_;

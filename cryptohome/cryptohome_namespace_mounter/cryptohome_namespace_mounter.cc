@@ -109,8 +109,8 @@ int main(int argc, char** argv) {
 
   cryptohome::ScopedMetricsInitializer metrics;
 
-  constexpr uid_t uid = 1000;  // UID for 'chronos'.
-  constexpr gid_t gid = 1000;  // GID for 'chronos'.
+  constexpr uid_t uid = 1000;         // UID for 'chronos'.
+  constexpr gid_t gid = 1000;         // GID for 'chronos'.
   constexpr gid_t access_gid = 1001;  // GID for 'chronos-access'.
 
   cryptohome::OutOfProcessMountRequest request;

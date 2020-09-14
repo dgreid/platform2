@@ -73,8 +73,7 @@ bool BootLockboxClient::Store(const std::string& key,
   return true;
 }
 
-bool BootLockboxClient::Read(const std::string& key,
-                             std::string* digest) {
+bool BootLockboxClient::Read(const std::string& key, std::string* digest) {
   base::ElapsedTimer timer;
   cryptohome::ReadBootLockboxRequest request;
   request.set_key(key);

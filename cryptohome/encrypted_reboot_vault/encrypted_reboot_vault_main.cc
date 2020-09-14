@@ -11,10 +11,10 @@
 
 #include "cryptohome/encrypted_reboot_vault/encrypted_reboot_vault.h"
 
-
 int main(int argc, char* argv[]) {
-  DEFINE_string(action, "", "Select action from {create, unlock, validate, "
-                            "purge}");
+  DEFINE_string(action, "",
+                "Select action from {create, unlock, validate, "
+                "purge}");
 
   base::AtExitManager at_exit;
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Reboot Vault Utility");

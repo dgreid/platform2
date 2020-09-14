@@ -62,24 +62,12 @@ class VaultKeyset {
   virtual const SerializedVaultKeyset& serialized() const {
     return serialized_;
   }
-  virtual SerializedVaultKeyset* mutable_serialized() {
-    return &serialized_;
-  }
-  virtual const base::FilePath& source_file() const {
-    return source_file_;
-  }
-  virtual void set_legacy_index(int index) {
-    legacy_index_ = index;
-  }
-  virtual const int legacy_index() const {
-    return legacy_index_;
-  }
-  virtual const brillo::SecureBlob& chaps_key() const {
-    return chaps_key_;
-  }
-  virtual const brillo::SecureBlob& reset_seed() const {
-    return reset_seed_;
-  }
+  virtual SerializedVaultKeyset* mutable_serialized() { return &serialized_; }
+  virtual const base::FilePath& source_file() const { return source_file_; }
+  virtual void set_legacy_index(int index) { legacy_index_ = index; }
+  virtual const int legacy_index() const { return legacy_index_; }
+  virtual const brillo::SecureBlob& chaps_key() const { return chaps_key_; }
+  virtual const brillo::SecureBlob& reset_seed() const { return reset_seed_; }
   virtual const brillo::SecureBlob& reset_secret() const {
     return reset_secret_;
   }

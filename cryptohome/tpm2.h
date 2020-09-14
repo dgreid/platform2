@@ -9,9 +9,9 @@
 #include <trunks/tpm_utility.h>
 
 namespace cryptohome {
-  const char kTpmWellKnownPassword[] = ""; /* not used */
-  typedef trunks::TPM_RC TpmReturnCode;
-  typedef trunks::TpmUtility::AsymmetricKeyUsage AsymmetricKeyUsage;
+const char kTpmWellKnownPassword[] = ""; /* not used */
+typedef trunks::TPM_RC TpmReturnCode;
+typedef trunks::TpmUtility::AsymmetricKeyUsage AsymmetricKeyUsage;
 }  // namespace cryptohome
 
 #endif  // CRYPTOHOME_TPM2_H_

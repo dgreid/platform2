@@ -45,7 +45,7 @@ bool SaveKey(const brillo::SecureBlob& key) {
   // fail on /dev/pmsg0.
   brillo::KeyValueStore store;
   store.SetString(kEncryptionKeyTag,
-      cryptohome::CryptoLib::SecureBlobToHex(key));
+                  cryptohome::CryptoLib::SecureBlobToHex(key));
 
   std::string store_contents = store.SaveToString();
   if (store_contents.empty() ||
@@ -62,7 +62,7 @@ brillo::SecureBlob RetrieveKey() {
       base::FileEnumerator::FILES, kPmsgKeystoreRamoopsPathDesc);
 
   for (base::FilePath ramoops_file = pmsg_ramoops_enumerator.Next();
-      !ramoops_file.empty(); ramoops_file = pmsg_ramoops_enumerator.Next()) {
+       !ramoops_file.empty(); ramoops_file = pmsg_ramoops_enumerator.Next()) {
     brillo::KeyValueStore store;
     std::string val;
     if (store.Load(ramoops_file) && store.GetString(kEncryptionKeyTag, &val)) {
@@ -101,7 +101,7 @@ bool EncryptedRebootVault::CreateVault() {
 
   base::ScopedClosureRunner reset_vault(
       base::Bind(base::IgnoreResult(&EncryptedRebootVault::PurgeVault),
-          base::Unretained(this)));
+                 base::Unretained(this)));
 
   // Remove the existing vault.
   PurgeVault();
@@ -161,7 +161,7 @@ bool EncryptedRebootVault::UnlockVault() {
   // We reset the vault if we fail to unlock it for any reason.
   base::ScopedClosureRunner reset_vault(
       base::Bind(base::IgnoreResult(&EncryptedRebootVault::PurgeVault),
-          base::Unretained(this)));
+                 base::Unretained(this)));
 
   if (!Validate()) {
     LOG(ERROR) << "Invalid vault; purging.";

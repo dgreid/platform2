@@ -87,15 +87,9 @@ struct EncStatefulArea {
     return (1 << (static_cast<size_t>(flag) + kVersionShift));
   }
 
-  bool test_flag(Flag flag) const {
-    return ver_flags & flag_value(flag);
-  }
-  void set_flag(Flag flag) {
-    ver_flags |= flag_value(flag);
-  }
-  void clear_flag(Flag flag) {
-    ver_flags &= ~flag_value(flag);
-  }
+  bool test_flag(Flag flag) const { return ver_flags & flag_value(flag); }
+  void set_flag(Flag flag) { ver_flags |= flag_value(flag); }
+  void clear_flag(Flag flag) { ver_flags &= ~flag_value(flag); }
 
   result_code Init(const brillo::SecureBlob& new_key_material) {
     magic = kMagic;
@@ -493,8 +487,8 @@ result_code Tpm1SystemKeyLoader::LoadLockboxKey(
     const uint8_t* begin = lockbox_contents.data() + kLockboxSaltOffset;
     key_material.assign(begin, begin + DIGEST_LENGTH);
   } else {
-    LOG(INFO) << "Impossibly small NVRAM area size ("
-              << lockbox_contents.size() << ").";
+    LOG(INFO) << "Impossibly small NVRAM area size (" << lockbox_contents.size()
+              << ").";
     return RESULT_FAIL_FATAL;
   }
 

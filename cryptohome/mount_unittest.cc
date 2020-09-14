@@ -54,8 +54,9 @@
 #include "cryptohome/vault_keyset.h"
 #include "cryptohome/vault_keyset.pb.h"
 
-using brillo::SecureBlob;
 using base::FilePath;
+using brillo::SecureBlob;
+using ::testing::_;
 using ::testing::AnyNumber;
 using ::testing::AnyOf;
 using ::testing::AnyOfArray;
@@ -74,7 +75,6 @@ using ::testing::StrEq;
 using ::testing::StrictMock;
 using ::testing::Unused;
 using ::testing::WithArgs;
-using ::testing::_;
 
 namespace {
 
@@ -90,20 +90,20 @@ const char kHexHeSecret[] =
 const char kHexResetSecret[] =
     "B133D2450392335BA8D33AA95AD52488254070C66F5D79AEA1A46AC4A30760D4";
 const char kHexWrappedKeyset[] =
-    "B737B5D73E39BD390A4F361CE2FC166CF1E89EC6AEAA35D4B34456502C48B4F5EFA310077"\
-    "324B393E13AF633DF3072FF2EC78BD2B80D919035DB97C30F1AD418737DA3F26A4D35DF6B"\
-    "6A9743BD0DF3D37D8A68DE0932A9905452D05ECF92701B9805937F76EE01D10924268F057"\
-    "EDD66087774BB86C2CB92B01BD3A3C41C10C52838BD3A3296474598418E5191DEE9E8D831"\
-    "3C859C9EDB0D5F2BC1D7FC3C108A0D4ABB2D90E413086BCFFD0902AB68E2BF787817EB10C"\
+    "B737B5D73E39BD390A4F361CE2FC166CF1E89EC6AEAA35D4B34456502C48B4F5EFA310077"
+    "324B393E13AF633DF3072FF2EC78BD2B80D919035DB97C30F1AD418737DA3F26A4D35DF6B"
+    "6A9743BD0DF3D37D8A68DE0932A9905452D05ECF92701B9805937F76EE01D10924268F057"
+    "EDD66087774BB86C2CB92B01BD3A3C41C10C52838BD3A3296474598418E5191DEE9E8D831"
+    "3C859C9EDB0D5F2BC1D7FC3C108A0D4ABB2D90E413086BCFFD0902AB68E2BF787817EB10C"
     "25E2E43011CAB3FB8AA";
 const char kHexSalt[] = "D470B9B108902241";
 const char kHexVaultKey[] =
-    "665A58534E684F2B61516B6D42624B514E6749732B4348427450305453754158377232347"\
+    "665A58534E684F2B61516B6D42624B514E6749732B4348427450305453754158377232347"
     "37A79466C6B383D";
 const char kHexFekIv[] = "EA80F14BF29C6D580D536E7F0CC47F3E";
 const char kHexChapsIv[] = "ED85D928940E5B02ED218F29225AA34F";
 const char kHexWrappedChapsKey[] =
-    "7D7D01EECC8DAE7906CAD56310954BBEB3CC81765210D29902AB92DDE074217771AD284F2"\
+    "7D7D01EECC8DAE7906CAD56310954BBEB3CC81765210D29902AB92DDE074217771AD284F2"
     "12C13897C6CBB30CEC4CD75";
 
 }  // namespace
@@ -123,18 +123,21 @@ ACTION_P(SetEphemeralUsersEnabled, ephemeral_users_enabled) {
 
 // Straight pass through.
 Tpm::TpmRetryAction TpmPassthroughSealWithAuthorization(
-    uint32_t _key, const SecureBlob &plaintext, Unused, Unused,
-    SecureBlob *ciphertext) {
+    uint32_t _key,
+    const SecureBlob& plaintext,
+    Unused,
+    Unused,
+    SecureBlob* ciphertext) {
   ciphertext->resize(plaintext.size());
   memcpy(ciphertext->data(), plaintext.data(), plaintext.size());
   return Tpm::kTpmRetryNone;
 }
 
 Tpm::TpmRetryAction TpmPassthroughDecrypt(uint32_t _key,
-                                          const SecureBlob &ciphertext,
+                                          const SecureBlob& ciphertext,
                                           Unused,
                                           Unused,
-                                          SecureBlob *plaintext) {
+                                          SecureBlob* plaintext) {
   plaintext->resize(ciphertext.size());
   memcpy(plaintext->data(), ciphertext.data(), ciphertext.size());
   return Tpm::kTpmRetryNone;
@@ -149,8 +152,8 @@ std::string HexDecode(const std::string& hex) {
 class MountTest
     : public ::testing::TestWithParam<bool /* should_test_ecryptfs */> {
  public:
-  MountTest() : crypto_(&platform_) { }
-  virtual ~MountTest() { }
+  MountTest() : crypto_(&platform_) {}
+  virtual ~MountTest() {}
 
   void SetUp() {
     // Populate the system salt
@@ -189,24 +192,20 @@ class MountTest
   }
 
   void InsertTestUsers(const TestUserInfo* user_info_list, int count) {
-    helper_.InitTestData(kImageDir, user_info_list,
-                         static_cast<size_t>(count), ShouldTestEcryptfs());
+    helper_.InitTestData(kImageDir, user_info_list, static_cast<size_t>(count),
+                         ShouldTestEcryptfs());
   }
 
   bool DoMountInit() {
     EXPECT_CALL(platform_, GetUserId("chronos", _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(chronos_uid_),
-                      SetArgPointee<2>(chronos_gid_),
-                      Return(true)));
+        .WillOnce(DoAll(SetArgPointee<1>(chronos_uid_),
+                        SetArgPointee<2>(chronos_gid_), Return(true)));
     EXPECT_CALL(platform_, GetUserId("chaps", _, _))
-      .WillOnce(DoAll(SetArgPointee<1>(chaps_uid_),
-                      SetArgPointee<2>(shared_gid_),
-                      Return(true)));
+        .WillOnce(DoAll(SetArgPointee<1>(chaps_uid_),
+                        SetArgPointee<2>(shared_gid_), Return(true)));
     EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-      .WillOnce(DoAll(SetArgPointee<1>(shared_gid_),
-                      Return(true)));
-    return mount_->Init(&platform_, &crypto_,
-                        user_timestamp_cache_.get());
+        .WillOnce(DoAll(SetArgPointee<1>(shared_gid_), Return(true)));
+    return mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get());
   }
 
   bool LoadSerializedKeyset(const brillo::Blob& contents,
@@ -216,7 +215,7 @@ class MountTest
   }
 
   bool StoreSerializedKeyset(const SerializedVaultKeyset& serialized,
-                             TestUser *user) {
+                             TestUser* user) {
     user->credentials.resize(serialized.ByteSizeLong());
     serialized.SerializeWithCachedSizesToArray(
         static_cast<google::protobuf::uint8*>(&user->credentials[0]));
@@ -226,9 +225,8 @@ class MountTest
   void GetKeysetBlob(const SerializedVaultKeyset& serialized,
                      SecureBlob* blob) {
     SecureBlob local_wrapped_keyset(serialized.wrapped_keyset().length());
-    serialized.wrapped_keyset().copy(
-        local_wrapped_keyset.char_data(),
-        serialized.wrapped_keyset().length(), 0);
+    serialized.wrapped_keyset().copy(local_wrapped_keyset.char_data(),
+                                     serialized.wrapped_keyset().length(), 0);
     blob->swap(local_wrapped_keyset);
   }
 
@@ -279,35 +277,33 @@ class MountTest
 
   void InitializeLECredential() {
     EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
     EXPECT_TRUE(DoMountInit());
 
     mount_->set_use_tpm(true);
     crypto_.set_use_tpm(true);
 
     EXPECT_CALL(tpm_init_, HasCryptohomeKey())
-      .WillOnce(Return(false))
-      .WillRepeatedly(Return(true));
+        .WillOnce(Return(false))
+        .WillRepeatedly(Return(true));
     EXPECT_CALL(tpm_init_, SetupTpm(true))
-      .WillOnce(Return(true))  // This is by crypto.Init() and
-      .WillOnce(Return(true));  // because HasCryptohomeKey returned false once.
+        .WillOnce(Return(true))  // This is by crypto.Init() and
+        .WillOnce(
+            Return(true));  // because HasCryptohomeKey returned false once.
 
-    EXPECT_CALL(tpm_, IsEnabled())
-      .WillRepeatedly(Return(true));
-    EXPECT_CALL(tpm_, IsOwned())
-      .WillRepeatedly(Return(true));
+    EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+    EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
 
-    EXPECT_CALL(platform_, CreateDirectory(_))
-      .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
+        .WillRepeatedly(Return(false));
 
     le_cred_manager_ = new cryptohome::MockLECredentialManager();
     EXPECT_CALL(*le_cred_manager_, CheckCredential(_, _, _, _))
-      .WillRepeatedly(
-          DoAll(SetArgPointee<2>(SecureBlob(HexDecode(kHexHeSecret))),
-                SetArgPointee<3>(SecureBlob(HexDecode(kHexResetSecret))),
-                Return(LE_CRED_SUCCESS)));
+        .WillRepeatedly(
+            DoAll(SetArgPointee<2>(SecureBlob(HexDecode(kHexHeSecret))),
+                  SetArgPointee<3>(SecureBlob(HexDecode(kHexResetSecret))),
+                  Return(LE_CRED_SUCCESS)));
     crypto_.set_le_manager_for_testing(
         std::unique_ptr<cryptohome::LECredentialManager>(le_cred_manager_));
 
@@ -324,8 +320,8 @@ class MountTest
     pin_user_->InjectKeyset(&platform_, true);
     SetUserAsLECredential(pin_user_);
     EXPECT_CALL(platform_, ReadFile(pin_user_->keyset_path, _))
-      .WillOnce(DoAll(SetArgPointee<1>(pin_user_->credentials),
-                           Return(true)));
+        .WillOnce(
+            DoAll(SetArgPointee<1>(pin_user_->credentials), Return(true)));
   }
 
   // Sets expectations for cryptohome key setup.
@@ -357,9 +353,8 @@ class MountTest
   void ExpectCryptohomeMountShadowOnly(const TestUser& user) {
     ExpectCryptohomeKeySetup(user);
     if (ShouldTestEcryptfs()) {
-      EXPECT_CALL(platform_,
-                  Mount(user.vault_path, user.vault_mount_path,
-                        "ecryptfs", kDefaultMountFlags, _))
+      EXPECT_CALL(platform_, Mount(user.vault_path, user.vault_mount_path,
+                                   "ecryptfs", kDefaultMountFlags, _))
           .WillOnce(Return(true));
     }
     EXPECT_CALL(platform_, CreateDirectory(user.vault_mount_path))
@@ -378,7 +373,7 @@ class MountTest
           .WillOnce(Return(true));
     }
     EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-      .WillRepeatedly(Return(false));
+        .WillRepeatedly(Return(false));
     EXPECT_CALL(platform_, CreateDirectory(user.vault_mount_path))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(platform_,
@@ -390,23 +385,21 @@ class MountTest
     EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
         .WillOnce(Return(false));
 
-    EXPECT_CALL(platform_, Bind(user.user_vault_mount_path,
-                                user.user_mount_path))
+    EXPECT_CALL(platform_,
+                Bind(user.user_vault_mount_path, user.user_mount_path))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Bind(user.user_vault_mount_path,
-                                user.legacy_user_mount_path))
+    EXPECT_CALL(platform_,
+                Bind(user.user_vault_mount_path, user.legacy_user_mount_path))
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, Bind(user.user_vault_mount_path,
                                 MountHelper::GetNewUserPath(user.username)))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Bind(user.root_vault_mount_path,
-                                user.root_mount_path))
+    EXPECT_CALL(platform_,
+                Bind(user.root_vault_mount_path, user.root_mount_path))
         .WillOnce(Return(true));
     ExpectDownloadsBindMounts(user);
-    EXPECT_CALL(platform_,
-                RestoreSELinuxContexts(
-                    base::FilePath(user.vault_mount_path),
-                    true))
+    EXPECT_CALL(platform_, RestoreSELinuxContexts(
+                               base::FilePath(user.vault_mount_path), true))
         .WillOnce(Return(true));
   }
 
@@ -416,9 +409,9 @@ class MountTest
     //   - /home/user/<hash>
     //   - /home/chronos/user
     FilePath user_dirs[] = {
-      MountHelper::GetNewUserPath(user.username),
-      brillo::cryptohome::home::GetUserPath(user.username),
-      FilePath("/home/chronos/user"),
+        MountHelper::GetNewUserPath(user.username),
+        brillo::cryptohome::home::GetUserPath(user.username),
+        FilePath("/home/chronos/user"),
     };
 
     EXPECT_CALL(
@@ -438,7 +431,7 @@ class MountTest
           .WillOnce(Return(true));
 
       NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
-        new NiceMock<MockFileEnumerator>();
+          new NiceMock<MockFileEnumerator>();
       EXPECT_CALL(platform_, GetFileEnumerator(downloads_in_myfiles, false, _))
           .WillOnce(Return(in_myfiles_download_enumerator));
     }
@@ -450,9 +443,9 @@ class MountTest
     //   - /home/user/<hash>
     //   - /home/chronos/user
     FilePath user_dirs[] = {
-      MountHelper::GetNewUserPath(user.username),
-      brillo::cryptohome::home::GetUserPath(user.username),
-      FilePath("/home/chronos/user"),
+        MountHelper::GetNewUserPath(user.username),
+        brillo::cryptohome::home::GetUserPath(user.username),
+        FilePath("/home/chronos/user"),
     };
     for (auto const& home : user_dirs) {
       EXPECT_CALL(platform_,
@@ -470,13 +463,12 @@ class MountTest
         .WillOnce(Return(true));
     EXPECT_CALL(platform_, AttachLoop(ephemeral_filename))
         .WillOnce(Return(kLoopDevice));
-    EXPECT_CALL(platform_, FormatExt4(ephemeral_filename,
-                                      kDefaultExt4FormatOpts, 0))
+    EXPECT_CALL(platform_,
+                FormatExt4(ephemeral_filename, kDefaultExt4FormatOpts, 0))
         .WillOnce(Return(true));
 
-    EXPECT_CALL(platform_,
-                Mount(kLoopDevice, _, kEphemeralMountType,
-                      kDefaultMountFlags, _))
+    EXPECT_CALL(platform_, Mount(kLoopDevice, _, kEphemeralMountType,
+                                 kDefaultMountFlags, _))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
         .WillOnce(Return(false));  // first mount
@@ -484,25 +476,22 @@ class MountTest
         platform_,
         IsDirectoryMounted(FilePath("/home/chronos/user/MyFiles/Downloads")))
         .WillOnce(Return(false));
-    EXPECT_CALL(platform_, Bind(_, _))
-        .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, Bind(_, _)).WillRepeatedly(Return(true));
 
     EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
-    EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
-            EndsWith("MyFiles/Downloads")), _, _))
+    EXPECT_CALL(
+        platform_,
+        GetFileEnumerator(
+            Property(&FilePath::value, EndsWith("MyFiles/Downloads")), _, _))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
         .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
-    EXPECT_CALL(platform_, DirectoryExists(_))
-        .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, CreateDirectory(user.vault_path))
-        .Times(0);
-    EXPECT_CALL(platform_, CreateDirectory(_))
-        .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, FileExists(_))
-        .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, CreateDirectory(user.vault_path)).Times(0);
+    EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, SetOwnership(_, _, _, _))
         .WillRepeatedly(Return(true));
     EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
@@ -614,20 +603,18 @@ TEST_P(MountTest, BadInitTest) {
   // Salt creation failure because shadow_root is bogus.
   EXPECT_CALL(platform_, FileExists(FilePath("/dev/null/salt")))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-              WriteSecureBlobToFileAtomicDurable(
-                  FilePath("/dev/null/salt"), _, _))
+  EXPECT_CALL(platform_, WriteSecureBlobToFileAtomicDurable(
+                             FilePath("/dev/null/salt"), _, _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, GetUserId("chronos", _, _))
-    .WillOnce(DoAll(SetArgPointee<1>(1000), SetArgPointee<2>(1000),
-                    Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<1>(1000), SetArgPointee<2>(1000), Return(true)));
   EXPECT_CALL(platform_, GetUserId("chaps", _, _))
-    .WillOnce(DoAll(SetArgPointee<1>(1001), SetArgPointee<2>(1001),
-                    Return(true)));
+      .WillOnce(
+          DoAll(SetArgPointee<1>(1001), SetArgPointee<2>(1001), Return(true)));
   EXPECT_CALL(platform_, GetGroupId("chronos-access", _))
-    .WillOnce(DoAll(SetArgPointee<1>(1002), Return(true)));
-  EXPECT_FALSE(
-      mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
+      .WillOnce(DoAll(SetArgPointee<1>(1002), Return(true)));
+  EXPECT_FALSE(mount_->Init(&platform_, &crypto_, user_timestamp_cache_.get()));
   ASSERT_FALSE(mount_->AreValid(credentials));
 }
 
@@ -660,10 +647,8 @@ TEST_P(MountTest, CurrentCredentialsTest) {
   user_session.SetUser(credentials);
   mount_->set_current_user(&user_session);
 
-  EXPECT_CALL(user_session, CheckUser(_))
-      .WillOnce(Return(true));
-  EXPECT_CALL(user_session, Verify(_))
-      .WillOnce(Return(true));
+  EXPECT_CALL(user_session, CheckUser(_)).WillOnce(Return(true));
+  EXPECT_CALL(user_session, Verify(_)).WillOnce(Return(true));
 
   ASSERT_TRUE(mount_->AreValid(credentials));
 }
@@ -706,10 +691,10 @@ TEST_P(MountTest, MountCryptohomeNoPrivileges) {
   // Check that Mount only works if the mount permission is given.
   InsertTestUsers(&kDefaultUsers[10], 1);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   user->key_data.set_label("my key!");
   user->use_key_data = true;
   user->key_data.mutable_privileges()->set_mount(false);
@@ -723,18 +708,17 @@ TEST_P(MountTest, MountCryptohomeNoPrivileges) {
   user->InjectKeyset(&platform_, true);
 
   if (ShouldTestEcryptfs()) {
-    EXPECT_CALL(platform_, ClearUserKeyring())
-        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   }
 
   EXPECT_CALL(platform_, CreateDirectory(user->vault_mount_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_,
               CreateDirectory(MountHelper::GetNewUserPath(user->username)))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(platform_, RestoreSELinuxContexts(_, _)).Times(0);
 
@@ -748,10 +732,10 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   // Check that Mount only works if the mount permission is given.
   InsertTestUsers(&kDefaultUsers[10], 1);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   user->key_data.set_label("my key!");
   user->use_key_data = true;
   user->key_data.mutable_privileges()->set_mount(true);
@@ -765,10 +749,9 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   user->InjectKeyset(&platform_, true);
 
   ExpectCryptohomeMount(*user);
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   // user exists, so there'll be no skel copy after.
 
@@ -779,13 +762,11 @@ TEST_P(MountTest, MountCryptohomeHasPrivileges) {
   EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
 
   // Unmount here to avoid the scoped Mount doing it implicitly.
-  EXPECT_CALL(platform_, GetCurrentTime())
-      .WillOnce(Return(base::Time::Now()));
+  EXPECT_CALL(platform_, GetCurrentTime()).WillOnce(Return(base::Time::Now()));
   EXPECT_CALL(platform_,
               WriteStringToFileAtomicDurable(user->timestamp_path, _, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   EXPECT_TRUE(mount_->UnmountCryptohome());
 }
 
@@ -794,7 +775,7 @@ TEST_P(MountTest, BindMyFilesDownloadsSuccess) {
   auto downloads_path = dest_dir.Append("Downloads");
   auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
   NiceMock<MockFileEnumerator>* in_myfiles_download_enumerator =
-    new NiceMock<MockFileEnumerator>();
+      new NiceMock<MockFileEnumerator>();
 
   // All directories must exist for bind mount succeed.
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
@@ -866,7 +847,7 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
   FilePath dest_dir("/home/chronos/u-userhash");
   auto downloads_path = dest_dir.Append("Downloads");
   auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
-  const std::string existing_files[] = { "dir1", "file1"};
+  const std::string existing_files[] = {"dir1", "file1"};
   std::vector<FilePath> existing_files_in_download;
   std::vector<FilePath> existing_files_in_myfiles_download;
   auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
@@ -889,11 +870,9 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
         downloads_in_myfiles.Append(base));
   }
   in_myfiles_download_enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        downloads_in_myfiles.Append("dir1"), stat_dir));
-  in_myfiles_download_enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        downloads_in_myfiles.Append("file1"), stat_file));
+      FileEnumerator::FileInfo(downloads_in_myfiles.Append("dir1"), stat_dir));
+  in_myfiles_download_enumerator->entries_.push_back(FileEnumerator::FileInfo(
+      downloads_in_myfiles.Append("file1"), stat_file));
 
   // When MyFiles/Downloads doesn't exists BindMyFilesDownloads returns false.
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
@@ -905,8 +884,8 @@ TEST_P(MountTest, BindMyFilesDownloadsRemoveExistingFiles) {
       .WillOnce(Return(in_myfiles_download_enumerator));
   EXPECT_CALL(platform_, FileExists(AnyOfArray(existing_files_in_download)))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(
-        AnyOfArray(existing_files_in_myfiles_download), true))
+  EXPECT_CALL(platform_,
+              DeleteFile(AnyOfArray(existing_files_in_myfiles_download), true))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, Bind(downloads_path, downloads_in_myfiles))
       .WillOnce(Return(true));
@@ -922,7 +901,7 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
   FilePath dest_dir("/home/chronos/u-userhash");
   auto downloads_path = dest_dir.Append("Downloads");
   auto downloads_in_myfiles = dest_dir.Append("MyFiles").Append("Downloads");
-  const std::string existing_files[] = { "dir1", "file1"};
+  const std::string existing_files[] = {"dir1", "file1"};
   std::vector<FilePath> existing_files_in_download;
   std::vector<FilePath> existing_files_in_myfiles_download;
   auto* in_myfiles_download_enumerator = new NiceMock<MockFileEnumerator>();
@@ -944,12 +923,10 @@ TEST_P(MountTest, BindMyFilesDownloadsMoveForgottenFiles) {
     existing_files_in_myfiles_download.push_back(
         downloads_in_myfiles.Append(base));
   }
+  in_myfiles_download_enumerator->entries_.push_back(FileEnumerator::FileInfo(
+      downloads_in_myfiles.Append("file1"), stat_file));
   in_myfiles_download_enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        downloads_in_myfiles.Append("file1"), stat_file));
-  in_myfiles_download_enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        downloads_in_myfiles.Append("dir1"), stat_dir));
+      FileEnumerator::FileInfo(downloads_in_myfiles.Append("dir1"), stat_dir));
 
   // When MyFiles/Downloads doesn't exists BindMyFilesDownloads returns false.
   EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
@@ -983,7 +960,10 @@ class ChapsDirectoryTest : public ::testing::Test {
         kDatabaseDir("/base_chaps_dir/database"),
         kDatabaseFile("/base_chaps_dir/database/file"),
         kLegacyDir("/legacy"),
-        kRootUID(0), kRootGID(0), kChapsUID(1), kSharedGID(2),
+        kRootUID(0),
+        kRootGID(0),
+        kChapsUID(1),
+        kSharedGID(2),
         mount_(new Mount()),
         user_timestamp_cache_(new UserOldestActivityTimestampCache()) {
     crypto_.set_platform(&platform_);
@@ -1018,9 +998,7 @@ class ChapsDirectoryTest : public ::testing::Test {
         FileEnumerator::FileInfo(kDatabaseFile, database_file_stat_));
   }
 
-  bool RunCheck() {
-    return mount_->CheckChapsDirectory(kBaseDir, kLegacyDir);
-  }
+  bool RunCheck() { return mount_->CheckChapsDirectory(kBaseDir, kLegacyDir); }
 
  protected:
   const FilePath kBaseDir;
@@ -1144,8 +1122,7 @@ TEST_F(ChapsDirectoryTest, FixBadPermsFailure) {
   base_stat_.st_mode = 040700;
   SetupFakeChapsDirectory();
   // Expect corrections but fail to apply.
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(false));
   ASSERT_FALSE(RunCheck());
 }
 
@@ -1161,13 +1138,11 @@ TEST_F(ChapsDirectoryTest, FixBadOwnershipFailure) {
 
 TEST_P(MountTest, CheckChapsDirectoryMigration) {
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
 
   // Configure stub methods.
-  EXPECT_CALL(platform_, Copy(_, _))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Copy(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
 
   // Stubs which will trigger the migration code path.
   EXPECT_CALL(platform_, DirectoryExists(FilePath("/fake")))
@@ -1205,30 +1180,27 @@ TEST_P(MountTest, CheckChapsDirectoryMigration) {
   file_info2.st_mode = 0777;
   file_info2.st_uid = 5;
   file_info2.st_gid = 6;
+  enumerator->entries_.push_back(FileEnumerator::FileInfo(
+      FilePath("/fake_legacy/test_file1"), file_info1));
   enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        FilePath("/fake_legacy/test_file1"), file_info1));
-  enumerator->entries_.push_back(
-      FileEnumerator::FileInfo(
-        FilePath("test_file2"), file_info2));
+      FileEnumerator::FileInfo(FilePath("test_file2"), file_info2));
 
   // These expectations will ensure the ownership and permissions are being
   // correctly applied after the directory has been moved.
   EXPECT_CALL(platform_, SetOwnership(FilePath("/fake/test_file1"), 3, 4, true))
       .Times(1);
-  EXPECT_CALL(platform_,
-      SetPermissions(FilePath("/fake/test_file1"), 0555)).Times(1);
+  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake/test_file1"), 0555))
+      .Times(1);
   EXPECT_CALL(platform_, SetOwnership(FilePath("/fake/test_file2"), 5, 6, true))
       .Times(1);
-  EXPECT_CALL(platform_,
-      SetPermissions(FilePath("/fake/test_file2"), 0777)).Times(1);
+  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake/test_file2"), 0777))
+      .Times(1);
   EXPECT_CALL(platform_, SetOwnership(FilePath("/fake"), 1, 2, true)).Times(1);
-  EXPECT_CALL(platform_,
-      SetPermissions(FilePath("/fake"), 0123)).Times(1);
+  EXPECT_CALL(platform_, SetPermissions(FilePath("/fake"), 0123)).Times(1);
 
   DoMountInit();
-  EXPECT_TRUE(mount_->CheckChapsDirectory(
-        FilePath("/fake"), FilePath("/fake_legacy")));
+  EXPECT_TRUE(
+      mount_->CheckChapsDirectory(FilePath("/fake"), FilePath("/fake_legacy")));
 }
 
 TEST_P(MountTest, CreateCryptohomeTest) {
@@ -1237,48 +1209,41 @@ TEST_P(MountTest, CreateCryptohomeTest) {
   HomeDirs homedirs;
   homedirs.set_shadow_root(kImageDir);
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   EXPECT_TRUE(DoMountInit());
-  EXPECT_TRUE(homedirs.Init(&platform_, mount_->crypto(),
-                            user_timestamp_cache_.get()));
+  EXPECT_TRUE(
+      homedirs.Init(&platform_, mount_->crypto(), user_timestamp_cache_.get()));
 
   // TODO(wad) Make this into a UserDoesntExist() helper.
-  EXPECT_CALL(platform_, FileExists(user->image_path))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_, FileExists(user->keyset_path))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_,
-      CreateDirectory(
-        AnyOf(user->mount_prefix,
-              user->user_mount_prefix,
-              user->user_mount_path,
-              user->root_mount_prefix,
-              user->root_mount_path)))
-    .Times(7)
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      CreateDirectory(
-        AnyOf(FilePath("/home/chronos"),
-              MountHelper::GetNewUserPath(user->username))))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(user->image_path)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, FileExists(user->keyset_path)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, CreateDirectory(AnyOf(
+                             user->mount_prefix, user->user_mount_prefix,
+                             user->user_mount_path, user->root_mount_prefix,
+                             user->root_mount_path)))
+      .Times(7)
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(AnyOf(
+                             FilePath("/home/chronos"),
+                             MountHelper::GetNewUserPath(user->username))))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   if (ShouldTestEcryptfs()) {
     EXPECT_CALL(platform_, CreateDirectory(user->vault_path))
-      .WillOnce(Return(true));
+        .WillOnce(Return(true));
   }
   EXPECT_CALL(platform_, CreateDirectory(user->base_path))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   brillo::Blob creds;
-  EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+      .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
 
   bool created;
   ASSERT_TRUE(
@@ -1290,16 +1255,14 @@ TEST_P(MountTest, CreateCryptohomeTest) {
     InSequence s;
     MockFileEnumerator* files = new MockFileEnumerator();
     EXPECT_CALL(platform_, GetFileEnumerator(user->base_path, false, _))
-      .WillOnce(Return(files));
-     // Single key.
-    EXPECT_CALL(*files, Next())
-      .WillOnce(Return(user->keyset_path));
-    EXPECT_CALL(*files, Next())
-      .WillRepeatedly(Return(FilePath()));
+        .WillOnce(Return(files));
+    // Single key.
+    EXPECT_CALL(*files, Next()).WillOnce(Return(user->keyset_path));
+    EXPECT_CALL(*files, Next()).WillRepeatedly(Return(FilePath()));
   }
 
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillOnce(DoAll(SetArgPointee<1>(creds), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(creds), Return(true)));
 
   ASSERT_TRUE(homedirs.AreCredentialsValid(credentials));
 }
@@ -1311,21 +1274,20 @@ TEST_P(MountTest, GoodReDecryptTest) {
   mount_->set_use_tpm(true);
   crypto_.set_use_tpm(true);
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   EXPECT_CALL(tpm_init_, HasCryptohomeKey())
-    .WillOnce(Return(false))
-    .WillRepeatedly(Return(true));
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(tpm_init_, SetupTpm(true))
-    .WillOnce(Return(true))  // This is by crypto.Init() and
-    .WillOnce(Return(true));  // cause we forced HasCryptohomeKey to false once.
+      .WillOnce(Return(true))  // This is by crypto.Init() and
+      .WillOnce(
+          Return(true));  // cause we forced HasCryptohomeKey to false once.
   crypto_.Init(&tpm_init_);
 
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
 
   EXPECT_TRUE(DoMountInit());
 
@@ -1348,37 +1310,34 @@ TEST_P(MountTest, GoodReDecryptTest) {
   MountError error = MOUNT_ERROR_NONE;
   // Inject the pre-generated, scrypt-wrapped keyset.
   EXPECT_CALL(platform_, FileExists(user->keyset_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   EXPECT_CALL(platform_, FileExists(user->salt_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   EXPECT_CALL(platform_,
-      Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-    .WillOnce(Return(true));
+              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      Move(user->salt_path, user->salt_path.AddExtension("bak")))
-    .WillOnce(Return(true));
+              Move(user->salt_path, user->salt_path.AddExtension("bak")))
+      .WillOnce(Return(true));
 
   // Create the "TPM-wrapped" value by letting it save the plaintext.
   EXPECT_CALL(tpm_, SealToPcrWithAuthorization(_, _, _, _, _))
-    .WillRepeatedly(Invoke(TpmPassthroughSealWithAuthorization));
+      .WillRepeatedly(Invoke(TpmPassthroughSealWithAuthorization));
   brillo::SecureBlob fake_pub_key("A");
   EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_pub_key),
-                          Return(Tpm::kTpmRetryNone)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(fake_pub_key), Return(Tpm::kTpmRetryNone)));
 
   brillo::Blob migrated_keyset;
-  EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+      .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   int key_index = 0;
 
   user->InjectKeyset(&platform_, true);
@@ -1407,32 +1366,28 @@ TEST_P(MountTest, GoodReDecryptTest) {
   // Inject the migrated keyset
   Mock::VerifyAndClearExpectations(&platform_);
   EXPECT_CALL(platform_, FileExists(user->keyset_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(migrated_keyset),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(migrated_keyset), Return(true)));
   EXPECT_CALL(platform_, FileExists(user->salt_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
   EXPECT_CALL(tpm_, UnsealWithAuthorization(_, _, _, _, _))
-    .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
+      .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
 
-    MockFileEnumerator* files = new MockFileEnumerator();
-    EXPECT_CALL(platform_, GetFileEnumerator(user->base_path, false, _))
+  MockFileEnumerator* files = new MockFileEnumerator();
+  EXPECT_CALL(platform_, GetFileEnumerator(user->base_path, false, _))
       .WillOnce(Return(files));
-     // Single key.
+  // Single key.
   {
     InSequence s;
-    EXPECT_CALL(*files, Next())
-      .WillOnce(Return(user->keyset_path));
-    EXPECT_CALL(*files, Next())
-      .WillOnce(Return(FilePath()));
+    EXPECT_CALL(*files, Next()).WillOnce(Return(user->keyset_path));
+    EXPECT_CALL(*files, Next()).WillOnce(Return(FilePath()));
   }
 
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   ASSERT_TRUE(homedirs_.AreCredentialsValid(credentials));
 }
 
@@ -1443,19 +1398,15 @@ TEST_P(MountTest, TpmWrappedToPcrBoundMigrationTest) {
   mount_->set_use_tpm(true);
   crypto_.set_use_tpm(true);
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
-  EXPECT_CALL(tpm_init_, HasCryptohomeKey())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_init_, SetupTpm(true))
-    .WillOnce(Return(true));
+  EXPECT_CALL(tpm_init_, HasCryptohomeKey()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, SetupTpm(true)).WillOnce(Return(true));
   crypto_.Init(&tpm_init_);
 
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
 
   EXPECT_TRUE(DoMountInit());
 
@@ -1475,38 +1426,35 @@ TEST_P(MountTest, TpmWrappedToPcrBoundMigrationTest) {
   MountError error = MOUNT_ERROR_NONE;
   // Inject the pre-generated, TPM-wrapped keyset.
   EXPECT_CALL(platform_, FileExists(user->keyset_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   EXPECT_CALL(platform_, FileExists(user->salt_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   EXPECT_CALL(platform_,
-      Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-    .WillOnce(Return(true));
+              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      Move(user->salt_path, user->salt_path.AddExtension("bak")))
-    .WillOnce(Return(true));
+              Move(user->salt_path, user->salt_path.AddExtension("bak")))
+      .WillOnce(Return(true));
 
   //
   // Create the "TPM-wrapped" value by letting it save the plaintext.
   EXPECT_CALL(tpm_, SealToPcrWithAuthorization(_, _, _, _, _))
-    .WillRepeatedly(Invoke(TpmPassthroughSealWithAuthorization));
+      .WillRepeatedly(Invoke(TpmPassthroughSealWithAuthorization));
   brillo::SecureBlob fake_pub_key("A");
   EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_pub_key),
-                          Return(Tpm::kTpmRetryNone)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(fake_pub_key), Return(Tpm::kTpmRetryNone)));
 
   brillo::Blob migrated_keyset;
-  EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+      .WillOnce(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   int key_index = 0;
 
   user->InjectKeyset(&platform_, true);
@@ -1535,10 +1483,10 @@ TEST_P(MountTest, MountCryptohome) {
   // tracked directories are created/replaced as expected
   InsertTestUsers(&kDefaultUsers[10], 1);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
@@ -1546,10 +1494,9 @@ TEST_P(MountTest, MountCryptohome) {
   user->InjectKeyset(&platform_, true);
 
   ExpectCryptohomeMount(*user);
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   // user exists, so there'll be no skel copy after.
 
@@ -1562,9 +1509,9 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
   // Test to check if Cryptohome mount saves the chaps key correctly,
   // and doesn't regenerate it.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
   InsertTestUsers(&kDefaultUsers[0], 1);
@@ -1586,8 +1533,8 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
 
   SecureBlob local_chaps(vault_keyset.chaps_key().begin(),
                          vault_keyset.chaps_key().end());
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
   ExpectCryptohomeMount(*user);
@@ -1603,16 +1550,17 @@ TEST_P(MountTest, MountCryptohomeChapsKey) {
   // Compare the pre mount chaps key to the post mount key.
   ASSERT_EQ(local_chaps.size(), vault_keyset.chaps_key().size());
   ASSERT_EQ(0, brillo::SecureMemcmp(local_chaps.data(),
-    vault_keyset.chaps_key().data(), local_chaps.size()));
+                                    vault_keyset.chaps_key().data(),
+                                    local_chaps.size()));
 }
 
 TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   // This test checks if the mount operation recreates the chaps key
   // if it isn't present in the vault.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
   InsertTestUsers(&kDefaultUsers[0], 1);
@@ -1626,28 +1574,22 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   MountError error;
   int key_index = -1;
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .Times(2)
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                         Return(true)));
+      .Times(2)
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
 
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
 
   vault_keyset.clear_chaps_key();
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, Move(_, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(DoAll(SaveArg<1>(&(user->credentials)), Return(true)));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Move(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+      .WillRepeatedly(DoAll(SaveArg<1>(&(user->credentials)), Return(true)));
   ASSERT_TRUE(mount_->ReEncryptVaultKeyset(credentials, key_index,
                                            &vault_keyset, &serialized));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   user->InjectKeyset(&platform_, true);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
@@ -1655,8 +1597,8 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   EXPECT_EQ(key_index, 0);
   EXPECT_EQ(serialized.has_wrapped_chaps_key(), false);
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
   ExpectCryptohomeMount(*user);
@@ -1664,8 +1606,7 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   ASSERT_TRUE(
       mount_->MountCryptohome(credentials, GetDefaultMountArgs(), &error));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   user->InjectKeyset(&platform_, true);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
@@ -1677,9 +1618,9 @@ TEST_P(MountTest, MountCryptohomeLECredentials) {
   // This test checks the mount operation with the LE credentials.
   InitializeLECredential();
   EXPECT_CALL(*le_cred_manager_, NeedsPcrBinding(_))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   VaultKeyset pin_vault_keyset;
   pin_vault_keyset.Initialize(&platform_, mount_->crypto());
@@ -1696,23 +1637,22 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrate) {
   // when the switch to protocol 1 happens.
   InitializeLECredential();
   EXPECT_CALL(*le_cred_manager_, NeedsPcrBinding(_))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   brillo::Blob creds;
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, WriteFileAtomicDurable(pin_user_->keyset_path, _, _))
-    .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
+      .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)));
 
   // Make sure the same reset_secret is inserted.
   EXPECT_CALL(
       *le_cred_manager_,
       InsertCredential(_, _, SecureBlob(HexDecode(kHexResetSecret)), _, _, _))
-    .WillOnce(Return(LE_CRED_SUCCESS));
+      .WillOnce(Return(LE_CRED_SUCCESS));
   EXPECT_CALL(*le_cred_manager_, RemoveCredential(_))
-    .WillOnce(Return(LE_CRED_SUCCESS));
+      .WillOnce(Return(LE_CRED_SUCCESS));
 
   VaultKeyset pin_vault_keyset;
   pin_vault_keyset.Initialize(&platform_, mount_->crypto());
@@ -1734,18 +1674,17 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrationFails) {
   InitializeLECredential();
   EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(false));
   EXPECT_CALL(*le_cred_manager_, NeedsPcrBinding(_))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-              WriteSecureBlobToFileAtomicDurable(_, _, _)).Times(0);
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, WriteSecureBlobToFileAtomicDurable(_, _, _)).Times(0);
 
-  EXPECT_CALL(*le_cred_manager_, InsertCredential(
-      _, _, SecureBlob(HexDecode(kHexResetSecret)), _, _, _))
-    .WillOnce(Return(LE_CRED_ERROR_NO_FREE_LABEL));
+  EXPECT_CALL(
+      *le_cred_manager_,
+      InsertCredential(_, _, SecureBlob(HexDecode(kHexResetSecret)), _, _, _))
+      .WillOnce(Return(LE_CRED_ERROR_NO_FREE_LABEL));
   EXPECT_CALL(*le_cred_manager_, RemoveCredential(_)).Times(0);
 
   VaultKeyset pin_vault_keyset;
@@ -1764,9 +1703,9 @@ TEST_P(MountTest, MountCryptohomeLECredentialsMigrationFails) {
 TEST_P(MountTest, MountCryptohomeNoChange) {
   // Checks that cryptohome doesn't by default re-save the cryptohome on mount.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
   InsertTestUsers(&kDefaultUsers[11], 1);
@@ -1784,8 +1723,8 @@ TEST_P(MountTest, MountCryptohomeNoChange) {
                                          &serialized, &key_index, &error));
   EXPECT_EQ(key_index, 0);
 
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
   user->InjectKeyset(&platform_, true);
 
   ExpectCryptohomeMount(*user);
@@ -1811,9 +1750,9 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
   // Checks that doesn't create the cryptohome for the user on Mount without
   // being told to do so.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
   // Test user at index 12 hasn't been created.
@@ -1823,9 +1762,9 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
 
   // Doesn't exist.
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
 
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = false;
@@ -1840,28 +1779,26 @@ TEST_P(MountTest, MountCryptohomeNoCreate) {
   user->InjectKeyset(&platform_, true);
 
   EXPECT_CALL(platform_,
-      DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
-                            user->user_vault_path)))
-    .Times(4)
-    .WillRepeatedly(Return(false));
+              DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
+                                    user->user_vault_path)))
+      .Times(4)
+      .WillRepeatedly(Return(false));
 
   // Not legacy
   EXPECT_CALL(platform_, FileExists(user->image_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
 
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   brillo::Blob creds;
-  EXPECT_CALL(platform_,
-              WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
+      .WillOnce(DoAll(SaveArg<1>(&creds), Return(true)))
+      .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
@@ -1888,7 +1825,7 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   // checks that user activity timestamp is updated during Mount() and
   // periodically while mounted, other Keyset fields remains the same
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
   InsertTestUsers(&kDefaultUsers[9], 1);
@@ -1896,15 +1833,14 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   Credentials credentials(user->username, user->passkey);
 
   EXPECT_CALL(platform_,
-      CreateDirectory(
-        AnyOf(
-          MountHelper::GetNewUserPath(user->username),
-          Property(&FilePath::value, StartsWith(kImageDir.value())))))
-    .WillRepeatedly(Return(true));
+              CreateDirectory(AnyOf(
+                  MountHelper::GetNewUserPath(user->username),
+                  Property(&FilePath::value, StartsWith(kImageDir.value())))))
+      .WillRepeatedly(Return(true));
 
   user->InjectKeyset(&platform_, true);
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
 
   // Mount()
   MountError error;
@@ -1918,9 +1854,8 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   brillo::Blob updated_keyset;
   std::string timestamp_str;
   EXPECT_CALL(platform_,
-              WriteStringToFileAtomicDurable(user->timestamp_path,
-                                             _, _))
-    .WillRepeatedly(DoAll(SaveArg<1>(&timestamp_str), Return(true)));
+              WriteStringToFileAtomicDurable(user->timestamp_path, _, _))
+      .WillRepeatedly(DoAll(SaveArg<1>(&timestamp_str), Return(true)));
   EXPECT_CALL(platform_, GetCurrentTime())
       .WillOnce(Return(base::Time::FromInternalValue(kMagicTimestamp)));
   mount_->UpdateCurrentUserActivityTimestamp(0);
@@ -1941,14 +1876,12 @@ TEST_P(MountTest, UserActivityTimestampUpdated) {
   tstamp2.ParseFromString(timestamp_str);
   EXPECT_EQ(kMagicTimestamp2, tstamp2.timestamp());
 
-
   // Update timestamp again, after user is unmounted. User's activity
   // timestamp must not change this.
   mount_->UpdateCurrentUserActivityTimestamp(0);
   Timestamp tstamp3;
   tstamp3.ParseFromString(timestamp_str);
-  EXPECT_EQ(tstamp3.timestamp(),
-            tstamp2.timestamp());
+  EXPECT_EQ(tstamp3.timestamp(), tstamp2.timestamp());
 }
 
 TEST_P(MountTest, RememberMountOrderingTest) {
@@ -1966,16 +1899,12 @@ TEST_P(MountTest, RememberMountOrderingTest) {
     InSequence sequence;
     EXPECT_CALL(platform_, Mount(src, dest0, _, kDefaultMountFlags, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Bind(src, dest1))
-        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, Bind(src, dest1)).WillOnce(Return(true));
     EXPECT_CALL(platform_, Mount(src, dest2, _, kDefaultMountFlags, _))
         .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Unmount(dest2, _, _))
-        .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Unmount(dest1, _, _))
-        .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Unmount(dest0, _, _))
-        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, Unmount(dest2, _, _)).WillOnce(Return(true));
+    EXPECT_CALL(platform_, Unmount(dest1, _, _)).WillOnce(Return(true));
+    EXPECT_CALL(platform_, Unmount(dest0, _, _)).WillOnce(Return(true));
 
     EXPECT_TRUE(mnt_helper.MountAndPush(src, dest0, "", ""));
     EXPECT_TRUE(mnt_helper.BindAndPush(src, dest1));
@@ -1997,24 +1926,20 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   // TPM-wrapped is just plaintext
   brillo::SecureBlob fake_pub_key("A");
   EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_pub_key),
-                          Return(Tpm::kTpmRetryNone)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(fake_pub_key), Return(Tpm::kTpmRetryNone)));
   EXPECT_CALL(tpm_, DecryptBlob(_, _, _, _, _))
-    .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
+      .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
 
   // TPM calls are always ok. Control TPM presence with set_use_tpm()
-  EXPECT_CALL(tpm_init_, HasCryptohomeKey())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_init_, SetupTpm(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, HasCryptohomeKey()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, SetupTpm(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
   crypto_.Init(&tpm_init_);
 
   InsertTestUsers(&kDefaultUsers[7], 1);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
   user->InjectKeyset(&platform_, true);
   // We now have Scrypt-wrapped key injected
@@ -2023,35 +1948,34 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   HomeDirs homedirs;
   homedirs.set_shadow_root(kImageDir);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
   int key_index = 0;
 
   // Allow the "backup"s to be written during migrations
   EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, FileExists(user->salt_path.AddExtension("bak")))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-    .WillRepeatedly(Return(true));
+              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_,
-      Move(user->salt_path, user->salt_path.AddExtension("bak")))
-    .WillRepeatedly(Return(true));
+              Move(user->salt_path, user->salt_path.AddExtension("bak")))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   // Capture the migrated keysets when written to file
   brillo::Blob migrated_keyset;
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
+      .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
 
   EXPECT_CALL(platform_, FileExists(user->salt_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   // Step 1: TPM is present. Get a TPM-wrapped key.
   VaultKeyset vault_keyset;
@@ -2085,8 +2009,7 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
 
   if (flags & SerializedVaultKeyset::SCRYPT_WRAPPED) {
     EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-      .WillOnce(DoAll(SetArgPointee<1>(migrated_keyset),
-                      Return(true)));
+        .WillOnce(DoAll(SetArgPointee<1>(migrated_keyset), Return(true)));
     serialized.set_flags(flags & ~SerializedVaultKeyset::SCRYPT_WRAPPED);
     EXPECT_TRUE(mount_->ReEncryptVaultKeyset(credentials, 0, &vault_keyset,
                                              &serialized));
@@ -2132,24 +2055,20 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   // TPM-wrapped is just plaintext
   brillo::SecureBlob fake_pub_key("A");
   EXPECT_CALL(tpm_, GetPublicKeyHash(_, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_pub_key),
-                          Return(Tpm::kTpmRetryNone)));
+      .WillRepeatedly(
+          DoAll(SetArgPointee<1>(fake_pub_key), Return(Tpm::kTpmRetryNone)));
   EXPECT_CALL(tpm_, DecryptBlob(_, _, _, _, _))
-    .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
+      .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
 
   // TPM calls are always ok. Control TPM presence with set_use_tpm()
-  EXPECT_CALL(tpm_init_, HasCryptohomeKey())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_init_, SetupTpm(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsEnabled())
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(tpm_, IsOwned())
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, HasCryptohomeKey()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_init_, SetupTpm(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsEnabled()).WillRepeatedly(Return(true));
+  EXPECT_CALL(tpm_, IsOwned()).WillRepeatedly(Return(true));
   crypto_.Init(&tpm_init_);
 
   InsertTestUsers(&kDefaultUsers[7], 1);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
   user->InjectKeyset(&platform_, true);
   // We now have Scrypt-wrapped key injected
@@ -2158,38 +2077,34 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   HomeDirs homedirs;
   homedirs.set_shadow_root(kImageDir);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
   int key_index = 0;
 
   // Allow the "backup"s to be written during migrations
+  EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, FileExists(user->salt_path.AddExtension("bak")))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      FileExists(user->keyset_path.AddExtension("bak")))
-    .WillRepeatedly(Return(false));
+              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_,
-      FileExists(user->salt_path.AddExtension("bak")))
-    .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-      Move(user->keyset_path,
-           user->keyset_path.AddExtension("bak")))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      Move(user->salt_path, user->salt_path.AddExtension("bak")))
-    .WillRepeatedly(Return(true));
+              Move(user->salt_path, user->salt_path.AddExtension("bak")))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   // Capture the migrated keysets when written to file
   brillo::Blob migrated_keyset;
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
+      .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
 
   EXPECT_CALL(platform_, FileExists(user->salt_path))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   // First, get a TPM-wrapped key from the original Scrypt-wrapped
   VaultKeyset vault_keyset;
@@ -2210,11 +2125,10 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
             SerializedVaultKeyset::TPM_WRAPPED);
   EXPECT_EQ((flags & SerializedVaultKeyset::SCRYPT_WRAPPED), 0);
 
-  serialized.set_flags(flags |
-    SerializedVaultKeyset::TPM_WRAPPED |
-    SerializedVaultKeyset::SCRYPT_WRAPPED);
-  EXPECT_TRUE(mount_->StoreVaultKeysetForUser(user->obfuscated_username,
-                                              0, &serialized));
+  serialized.set_flags(flags | SerializedVaultKeyset::TPM_WRAPPED |
+                       SerializedVaultKeyset::SCRYPT_WRAPPED);
+  EXPECT_TRUE(mount_->StoreVaultKeysetForUser(user->obfuscated_username, 0,
+                                              &serialized));
 
   // When we call DecryptVaultKeyset, it should re-encrypt
   // the keys and write with only one flag set
@@ -2237,7 +2151,7 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
 TEST_P(MountTest, CreateTrackedSubdirectories) {
   EXPECT_TRUE(DoMountInit());
   InsertTestUsers(&kDefaultUsers[0], 1);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   FilePath dest_dir;
@@ -2248,27 +2162,26 @@ TEST_P(MountTest, CreateTrackedSubdirectories) {
     dest_dir = user->vault_mount_path;
     mount_->mount_type_ = ::cryptohome::MountType::DIR_CRYPTO;
   }
-  EXPECT_CALL(platform_, DirectoryExists(dest_dir))
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
 
   // Expectations for each tracked subdirectory.
   for (const auto& tracked_dir : MountHelper::GetTrackedSubdirectories()) {
     const FilePath tracked_dir_path = dest_dir.Append(tracked_dir);
     EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
-      .WillOnce(Return(false));
+        .WillOnce(Return(false));
     EXPECT_CALL(platform_, CreateDirectory(tracked_dir_path))
-      .WillOnce(Return(true));
-    EXPECT_CALL(
-        platform_,
-        SetOwnership(tracked_dir_path, chronos_uid_, chronos_gid_, true))
+        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, SetOwnership(tracked_dir_path, chronos_uid_,
+                                        chronos_gid_, true))
         .WillOnce(Return(true));
     if (!ShouldTestEcryptfs()) {
       // For dircrypto, xattr should be set.
-      EXPECT_CALL(platform_, SetExtendedFileAttribute(
-          tracked_dir_path,
-          kTrackedDirectoryNameAttribute,
-          StrEq(tracked_dir_path.BaseName().value()),
-          tracked_dir_path.BaseName().value().size())).WillOnce(Return(true));
+      EXPECT_CALL(platform_,
+                  SetExtendedFileAttribute(
+                      tracked_dir_path, kTrackedDirectoryNameAttribute,
+                      StrEq(tracked_dir_path.BaseName().value()),
+                      tracked_dir_path.BaseName().value().size()))
+          .WillOnce(Return(true));
     }
   }
   // Run the method.
@@ -2279,7 +2192,7 @@ TEST_P(MountTest, CreateTrackedSubdirectories) {
 TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
   EXPECT_TRUE(DoMountInit());
   InsertTestUsers(&kDefaultUsers[0], 1);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   FilePath dest_dir;
@@ -2290,8 +2203,7 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
     dest_dir = user->vault_mount_path;
     mount_->mount_type_ = ::cryptohome::MountType::DIR_CRYPTO;
   }
-  EXPECT_CALL(platform_, DirectoryExists(dest_dir))
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, DirectoryExists(dest_dir)).WillOnce(Return(true));
 
   // Expectations for each tracked subdirectory.
   for (const auto& tracked_dir : MountHelper::GetTrackedSubdirectories()) {
@@ -2301,29 +2213,29 @@ TEST_P(MountTest, CreateTrackedSubdirectoriesReplaceExistingDir) {
     if (ShouldTestEcryptfs()) {
       // For ecryptfs, delete and replace the existing directory.
       EXPECT_CALL(platform_, DirectoryExists(userside_dir))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
       EXPECT_CALL(platform_, DeleteFile(userside_dir, true))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
       EXPECT_CALL(platform_, DeleteFile(tracked_dir_path, false))
           .WillOnce(Return(true));
       EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
-        .WillOnce(Return(false))
-        .WillOnce(Return(false));
+          .WillOnce(Return(false))
+          .WillOnce(Return(false));
       EXPECT_CALL(platform_, CreateDirectory(tracked_dir_path))
-        .WillOnce(Return(true));
-      EXPECT_CALL(
-          platform_,
-          SetOwnership(tracked_dir_path, chronos_uid_, chronos_gid_, true))
-        .WillOnce(Return(true));
+          .WillOnce(Return(true));
+      EXPECT_CALL(platform_, SetOwnership(tracked_dir_path, chronos_uid_,
+                                          chronos_gid_, true))
+          .WillOnce(Return(true));
     } else {
       // For dircrypto, just skip the directory creation.
       EXPECT_CALL(platform_, DirectoryExists(tracked_dir_path))
-        .WillOnce(Return(true));
-      EXPECT_CALL(platform_, SetExtendedFileAttribute(
-          tracked_dir_path,
-          kTrackedDirectoryNameAttribute,
-          StrEq(tracked_dir_path.BaseName().value()),
-          tracked_dir_path.BaseName().value().size())).WillOnce(Return(true));
+          .WillOnce(Return(true));
+      EXPECT_CALL(platform_,
+                  SetExtendedFileAttribute(
+                      tracked_dir_path, kTrackedDirectoryNameAttribute,
+                      StrEq(tracked_dir_path.BaseName().value()),
+                      tracked_dir_path.BaseName().value().size()))
+          .WillOnce(Return(true));
     }
   }
   // Run the method.
@@ -2335,7 +2247,7 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
   // Checks that if both ecryptfs and dircrypto home directories
   // exist, fails with an error.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
   // Prepare a dummy user and a key.
@@ -2346,19 +2258,18 @@ TEST_P(MountTest, MountCryptohomePreviousMigrationIncomplete) {
 
   // Not legacy
   EXPECT_CALL(platform_, FileExists(user->image_path))
-    .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   // Mock the situation that both types of data directory exists.
   EXPECT_CALL(platform_,
-    DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
-                          user->user_vault_path)))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(AnyOf(user->vault_path, user->vault_mount_path,
+                                    user->user_vault_path)))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, GetDirCryptoKeyState(user->vault_mount_path))
-    .WillRepeatedly(Return(dircrypto::KeyState::ENCRYPTED));
+      .WillRepeatedly(Return(dircrypto::KeyState::ENCRYPTED));
 
   MountError error = MOUNT_ERROR_NONE;
   ASSERT_FALSE(
@@ -2373,10 +2284,10 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
   // When the existing vault is dircrypto, just fail.
   InsertTestUsers(&kDefaultUsers[10], 1);
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_TRUE(DoMountInit());
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
   user->InjectKeyset(&platform_, ShouldTestEcryptfs());
@@ -2393,30 +2304,30 @@ TEST_P(MountTest, MountCryptohomeToMigrateFromEcryptfs) {
     // When an ecryptfs vault exists, mount it to a temporary location.
     FilePath temporary_mount = user->base_path.Append(kTemporaryMountDir);
     EXPECT_CALL(platform_, CreateDirectory(temporary_mount))
-      .WillOnce(Return(true));
-    EXPECT_CALL(platform_, Mount(user->vault_path, temporary_mount,
-                                 "ecryptfs", kDefaultMountFlags, _))
-      .WillOnce(Return(true));
+        .WillOnce(Return(true));
+    EXPECT_CALL(platform_, Mount(user->vault_path, temporary_mount, "ecryptfs",
+                                 kDefaultMountFlags, _))
+        .WillOnce(Return(true));
 
     // Key set up for both dircrypto and ecryptfs.
     ExpectCryptohomeKeySetupForDircrypto(*user);
     ExpectCryptohomeKeySetupForEcryptfs(*user);
 
     EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
 
     EXPECT_CALL(platform_, IsDirectoryMounted(user->vault_mount_path))
-      .WillOnce(Return(false));
+        .WillOnce(Return(false));
 
     EXPECT_CALL(platform_, CreateDirectory(user->vault_mount_path))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
   }
 
   EXPECT_CALL(platform_,
               CreateDirectory(MountHelper::GetNewUserPath(user->username)))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
 
   MountError error = MOUNT_ERROR_NONE;
   Mount::MountArgs mount_args = GetDefaultMountArgs();
@@ -2458,9 +2369,9 @@ TEST_P(MountTest, MountCryptohomeShadowOnly) {
 TEST_P(MountTest, MountCryptohomeForceDircrypto) {
   // Checks that the force-dircrypto flag correctly rejects to mount ecryptfs.
   EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_TRUE(DoMountInit());
 
   // Prepare a dummy user and a key.
@@ -2470,28 +2381,33 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
   user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
                         kDaemonGid, ShouldTestEcryptfs());
 
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
 
   // Mock setup for successful mount when dircrypto is tested.
   if (!ShouldTestEcryptfs()) {
     ExpectCryptohomeMount(*user);
 
     // Expectations for tracked subdirectories
-    EXPECT_CALL(platform_, DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->vault_mount_path.value()))))
-      .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, SetExtendedFileAttribute(
-        Property(&FilePath::value, StartsWith(user->vault_mount_path.value())),
-        _, _, _))
-      .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, FileExists(
-        Property(&FilePath::value, StartsWith(user->vault_mount_path.value()))))
-      .WillRepeatedly(Return(true));
-    EXPECT_CALL(platform_, SetGroupAccessible(
-        Property(&FilePath::value, StartsWith(user->vault_mount_path.value())),
-        _, _))
-      .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, DirectoryExists(Property(
+                               &FilePath::value,
+                               StartsWith(user->vault_mount_path.value()))))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_,
+                SetExtendedFileAttribute(
+                    Property(&FilePath::value,
+                             StartsWith(user->vault_mount_path.value())),
+                    _, _, _))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(platform_, FileExists(Property(
+                               &FilePath::value,
+                               StartsWith(user->vault_mount_path.value()))))
+        .WillRepeatedly(Return(true));
+    EXPECT_CALL(
+        platform_,
+        SetGroupAccessible(Property(&FilePath::value,
+                                    StartsWith(user->vault_mount_path.value())),
+                           _, _))
+        .WillRepeatedly(Return(true));
   }
 
   Credentials credentials(user->username, user->passkey);
@@ -2513,45 +2429,43 @@ TEST_P(MountTest, MountCryptohomeForceDircrypto) {
 
 // Test setup that initially has no cryptohomes.
 const TestUserInfo kNoUsers[] = {
-  {"user0@invalid.domain", "zero", false},
-  {"user1@invalid.domain", "odin", false},
-  {"user2@invalid.domain", "dwaa", false},
-  {"owner@invalid.domain", "1234", false},
+    {"user0@invalid.domain", "zero", false},
+    {"user1@invalid.domain", "odin", false},
+    {"user2@invalid.domain", "dwaa", false},
+    {"owner@invalid.domain", "1234", false},
 };
 const int kNoUserCount = base::size(kNoUsers);
 
 // Test setup that initially has a cryptohome for the owner only.
 const TestUserInfo kOwnerOnlyUsers[] = {
-  {"user0@invalid.domain", "zero", false},
-  {"user1@invalid.domain", "odin", false},
-  {"user2@invalid.domain", "dwaa", false},
-  {"owner@invalid.domain", "1234", true},
+    {"user0@invalid.domain", "zero", false},
+    {"user1@invalid.domain", "odin", false},
+    {"user2@invalid.domain", "dwaa", false},
+    {"owner@invalid.domain", "1234", true},
 };
 const int kOwnerOnlyUserCount = base::size(kOwnerOnlyUsers);
 
 // Test setup that initially has cryptohomes for all users.
 const TestUserInfo kAlternateUsers[] = {
-  {"user0@invalid.domain", "zero", true},
-  {"user1@invalid.domain", "odin", true},
-  {"user2@invalid.domain", "dwaa", true},
-  {"owner@invalid.domain", "1234", true},
+    {"user0@invalid.domain", "zero", true},
+    {"user1@invalid.domain", "odin", true},
+    {"user2@invalid.domain", "dwaa", true},
+    {"owner@invalid.domain", "1234", true},
 };
 const int kAlternateUserCount = base::size(kAlternateUsers);
 
 class AltImageTest : public MountTest {
  public:
   AltImageTest() {}
-  ~AltImageTest() {
-    MountTest::TearDown();
-  }
+  ~AltImageTest() { MountTest::TearDown(); }
 
-  void SetUpAltImage(const TestUserInfo *users, int user_count) {
+  void SetUpAltImage(const TestUserInfo* users, int user_count) {
     // Set up fresh users.
     MountTest::SetUp();
     InsertTestUsers(users, user_count);
 
     EXPECT_CALL(platform_, DirectoryExists(kImageDir))
-      .WillRepeatedly(Return(true));
+        .WillRepeatedly(Return(true));
     EXPECT_TRUE(DoMountInit());
   }
 
@@ -2559,8 +2473,7 @@ class AltImageTest : public MountTest {
   bool SetUserTimestamp(TestUser* user, base::Time timestamp) {
     SerializedVaultKeyset serialized;
     if (!LoadSerializedKeyset(user->credentials, &serialized)) {
-      LOG(ERROR) << "Failed to parse keyset for "
-                 << user->username;
+      LOG(ERROR) << "Failed to parse keyset for " << user->username;
       return false;
     }
     serialized.set_last_activity_timestamp(timestamp.ToInternalValue());
@@ -2582,10 +2495,10 @@ class AltImageTest : public MountTest {
       // Guarded to keep this function reusable.
       if (populate_vaults) {
         EXPECT_CALL(platform_,
-            DirectoryExists(
-              Property(&FilePath::value,
-                StartsWith(helper_.users[user].base_path.value()))))
-          .WillRepeatedly(Return(true));
+                    DirectoryExists(Property(
+                        &FilePath::value,
+                        StartsWith(helper_.users[user].base_path.value()))))
+            .WillRepeatedly(Return(true));
         vaults_.push_back(helper_.users[user].base_path);
       }
       bool delete_user = false;
@@ -2606,9 +2519,8 @@ class AltImageTest : public MountTest {
       if (inject_keyset && !mounted_user)
         helper_.users[user].InjectKeyset(&platform_, false);
       if (delete_user) {
-        EXPECT_CALL(platform_,
-            DeleteFile(helper_.users[user].base_path, true))
-          .WillOnce(Return(true));
+        EXPECT_CALL(platform_, DeleteFile(helper_.users[user].base_path, true))
+            .WillOnce(Return(true));
       }
     }
   }
@@ -2621,19 +2533,19 @@ class AltImageTest : public MountTest {
 
 class EphemeralNoUserSystemTest : public AltImageTest {
  public:
-  EphemeralNoUserSystemTest() { }
+  EphemeralNoUserSystemTest() {}
 
-  void SetUp() {
-    SetUpAltImage(kNoUsers, kNoUserCount);
-  }
+  void SetUp() { SetUpAltImage(kNoUsers, kNoUserCount); }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(EphemeralNoUserSystemTest);
 };
 
-INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralNoUserSystemTest,
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         EphemeralNoUserSystemTest,
                          ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralNoUserSystemTest,
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         EphemeralNoUserSystemTest,
                          ::testing::Values(false));
 
 TEST_P(EphemeralNoUserSystemTest, CreateMyFilesDownloads) {
@@ -2750,38 +2662,35 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   // known owner, a regular vault is created and mounted.
   set_policy(false, "", true);
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(user->image_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   ExpectCryptohomeKeySetup(*user);
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   EXPECT_CALL(platform_, DirectoryExists(Property(
                              &FilePath::value,
                              StartsWith(user->user_vault_mount_path.value()))))
       .WillRepeatedly(Return(true));
 
-  EXPECT_CALL(platform_, Mount(_, _, kEphemeralMountType,
-                               kDefaultMountFlags, _)).Times(0);
+  EXPECT_CALL(platform_,
+              Mount(_, _, kEphemeralMountType, kDefaultMountFlags, _))
+      .Times(0);
   EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, Bind(_, _))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, IsDirectoryMounted(user->vault_mount_path))
       .WillOnce(Return(false));
   EXPECT_CALL(platform_, IsDirectoryMounted(FilePath("/home/chronos/user")))
@@ -2790,8 +2699,7 @@ TEST_P(EphemeralNoUserSystemTest, OwnerUnknownMountCreateTest) {
   ExpectDaemonStoreMounts(*user, false /* is_ephemeral */);
 
   // First user to login -> an owner.
-  EXPECT_CALL(tpm_, SetUserType(Tpm::UserType::Owner))
-      .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, SetUserType(Tpm::UserType::Owner)).WillOnce(Return(true));
 
   user->InjectKeyset(&platform_, true);
 
@@ -2820,18 +2728,17 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
   // known owner, a regular vault is created and mounted.
   set_policy(false, "", true);
 
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
   Credentials credentials(user->username, user->passkey);
 
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(user->image_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, DirectoryExists(user->vault_mount_path))
-    .WillRepeatedly(Return(false));
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_, GetFileEnumerator(_, _, _))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
       .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
@@ -2850,31 +2757,27 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
         .WillRepeatedly(Return(true));
   }
 
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->user_vault_path.value()))))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(Property(
+                  &FilePath::value, StartsWith(user->user_vault_path.value()))))
+      .WillRepeatedly(Return(true));
 
-  EXPECT_CALL(platform_, Mount(_, _, kEphemeralMountType,
-                               kDefaultMountFlags, _)).Times(0);
+  EXPECT_CALL(platform_,
+              Mount(_, _, kEphemeralMountType, kDefaultMountFlags, _))
+      .Times(0);
   EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _))
       .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, Bind(_, _))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(_, _)).WillRepeatedly(Return(true));
 
   // Inject the failure.
   // In case of MOUNT_ERROR_TPM_COMM_ERROR, it will retry mounting once,
   // so an attempt to SetUserType will happen twice.
-  EXPECT_CALL(tpm_, SetUserType(_))
-      .Times(2)
-      .WillRepeatedly(Return(false));
+  EXPECT_CALL(tpm_, SetUserType(_)).Times(2).WillRepeatedly(Return(false));
 
   // Keyset enumeration and skeleton walk will be repeated twice due to mount
   // retry logic. Note that InSequence is used here, as otherwise a single
@@ -2886,8 +2789,10 @@ TEST_P(EphemeralNoUserSystemTest, MountSetUserTypeFailTest) {
       EXPECT_CALL(platform_, GetFileEnumerator(kSkelDir, _, _))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
-      EXPECT_CALL(platform_, GetFileEnumerator(Property(&FilePath::value,
-              EndsWith("MyFiles/Downloads")), _, _))
+      EXPECT_CALL(
+          platform_,
+          GetFileEnumerator(
+              Property(&FilePath::value, EndsWith("MyFiles/Downloads")), _, _))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()))
           .WillOnce(Return(new NiceMock<MockFileEnumerator>()));
@@ -2911,15 +2816,14 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountNoCreateTest) {
   // mounted and no regular vault is created.
   set_policy(false, "", true);
   mount_->set_enterprise_owned(true);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
 
   // Always removes non-owner cryptohomes.
   std::vector<FilePath> empty;
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
 
@@ -2966,12 +2870,12 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountIsEphemeralTest) {
   // regular vault to be created.
   set_policy(true, "", false);
   mount_->set_enterprise_owned(true);
-  TestUser *user = &helper_.users[0];
+  TestUser* user = &helper_.users[0];
 
   // Always removes non-owner cryptohomes.
   std::vector<FilePath> empty;
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
 
   ExpectEphemeralCryptohomeMount(*user);
 
@@ -3134,11 +3038,7 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountFormatFailure) {
       MountHelper::GetEphemeralSparseFile(user->obfuscated_username);
 
   EXPECT_CALL(platform_, DetachLoop(_)).Times(0);
-  EXPECT_CALL(
-      platform_,
-      DeleteFile(ephemeral_filename,
-                 _))
-      .Times(1);
+  EXPECT_CALL(platform_, DeleteFile(ephemeral_filename, _)).Times(1);
   ExpectCryptohomeRemoval(*user);
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
@@ -3200,19 +3100,19 @@ TEST_P(EphemeralNoUserSystemTest, EnterpriseMountEnsureUserMountFailure) {
 
 class EphemeralOwnerOnlySystemTest : public AltImageTest {
  public:
-  EphemeralOwnerOnlySystemTest() { }
+  EphemeralOwnerOnlySystemTest() {}
 
-  void SetUp() {
-    SetUpAltImage(kOwnerOnlyUsers, kOwnerOnlyUserCount);
-  }
+  void SetUp() { SetUpAltImage(kOwnerOnlyUsers, kOwnerOnlyUserCount); }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(EphemeralOwnerOnlySystemTest);
 };
 
-INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralOwnerOnlySystemTest,
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         EphemeralOwnerOnlySystemTest,
                          ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralOwnerOnlySystemTest,
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         EphemeralOwnerOnlySystemTest,
                          ::testing::Values(false));
 
 TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
@@ -3228,10 +3128,9 @@ TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
   owner_only.push_back(owner->base_path);
 
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(owner_only), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(owner_only), Return(true)));
 
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
 
   ExpectEphemeralCryptohomeMount(*user);
 
@@ -3246,21 +3145,18 @@ TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
   ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
 
   EXPECT_CALL(platform_, Unmount(user->ephemeral_mount_path, _, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/chronos/u-")),
-        _, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/chronos/u-")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/user/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/user/")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/root/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/root/")), _, _))
       .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
       .WillOnce(Return(true));  // legacy mount
@@ -3268,8 +3164,7 @@ TEST_P(EphemeralOwnerOnlySystemTest, MountNoCreateTest) {
                                           StartsWith(kRunDaemonStoreBaseDir)),
                                  _, _))
       .WillOnce(Return(true));  // daemon store mounts
-  EXPECT_CALL(platform_, ClearUserKeyring())
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
 
   ExpectDownloadsUnmounts(*user);
 
@@ -3298,10 +3193,9 @@ TEST_P(EphemeralOwnerOnlySystemTest, NonOwnerMountIsEphemeralTest) {
   owner_only.push_back(owner->base_path);
 
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(owner_only), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(owner_only), Return(true)));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   ExpectEphemeralCryptohomeMount(*user);
 
   // Different user -> not an owner.
@@ -3343,19 +3237,19 @@ TEST_P(EphemeralOwnerOnlySystemTest, OwnerMountIsEphemeralTest) {
 
 class EphemeralExistingUserSystemTest : public AltImageTest {
  public:
-  EphemeralExistingUserSystemTest() { }
+  EphemeralExistingUserSystemTest() {}
 
-  void SetUp() {
-    SetUpAltImage(kAlternateUsers, kAlternateUserCount);
-  }
+  void SetUp() { SetUpAltImage(kAlternateUsers, kAlternateUserCount); }
 
  private:
   DISALLOW_COPY_AND_ASSIGN(EphemeralExistingUserSystemTest);
 };
 
-INSTANTIATE_TEST_SUITE_P(WithEcryptfs, EphemeralExistingUserSystemTest,
+INSTANTIATE_TEST_SUITE_P(WithEcryptfs,
+                         EphemeralExistingUserSystemTest,
                          ::testing::Values(true));
-INSTANTIATE_TEST_SUITE_P(WithDircrypto, EphemeralExistingUserSystemTest,
+INSTANTIATE_TEST_SUITE_P(WithDircrypto,
+                         EphemeralExistingUserSystemTest,
                          ::testing::Values(false));
 
 TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
@@ -3367,35 +3261,30 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   // No c-homes will be removed.  The rest of the mocking just gets us to
   // Mount().
   for (auto& user : helper_.users)
-    user.InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                         shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+    user.InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                         kDaemonGid, ShouldTestEcryptfs());
 
   std::vector<FilePath> empty;
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(_, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, Stat(_, _))
-    .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, CreateDirectory(user->vault_path))
-    .Times(0);
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Stat(_, _)).WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, CreateDirectory(user->vault_path)).Times(0);
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
 
   ExpectCryptohomeMount(*user);
   EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
 
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
 
-  EXPECT_CALL(platform_, Mount(_, _, kEphemeralMountType,
-                               kDefaultMountFlags, _)).Times(0);
+  EXPECT_CALL(platform_,
+              Mount(_, _, kEphemeralMountType, kDefaultMountFlags, _))
+      .Times(0);
 
   Mount::MountArgs mount_args = GetDefaultMountArgs();
   mount_args.create_if_missing = true;
@@ -3404,27 +3293,23 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
   Credentials credentials(user->username, user->passkey);
   ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   if (ShouldTestEcryptfs()) {
     EXPECT_CALL(platform_,
-        Unmount(Property(&FilePath::value, EndsWith("/mount")), _, _))
+                Unmount(Property(&FilePath::value, EndsWith("/mount")), _, _))
         .WillOnce(Return(true));  // user mount
   }
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/chronos/u-")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/chronos/u-")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/user/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/user/")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/root/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/root/")), _, _))
       .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
       .WillOnce(Return(true));  // legacy mount
@@ -3432,8 +3317,7 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownMountNoRemoveTest) {
                                           StartsWith(kRunDaemonStoreBaseDir)),
                                  _, _))
       .WillOnce(Return(true));  // daemon store mounts
-  EXPECT_CALL(platform_, ClearUserKeyring())
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   ExpectDownloadsUnmounts(*user);
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
@@ -3456,61 +3340,56 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
   // Let Mount know how many vaults there are.
   std::vector<FilePath> no_vaults;
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
-    // Don't re-delete on Unmount.
-    .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
+      // Don't re-delete on Unmount.
+      .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
   // Don't say any cryptohomes are mounted
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(
-          FilePath("/home/root/"),
-          FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(AnyOf(FilePath("/home/chronos"),
-                 MountHelper::GetNewUserPath(user->username)),
-           _))
+              Stat(AnyOf(FilePath("/home/chronos"),
+                         MountHelper::GetNewUserPath(user->username)),
+                   _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      Stat(AnyOf(FilePath("/home"),
-                 FilePath("/home/root"),
-                 brillo::cryptohome::home::GetRootPath(user->username),
-                 FilePath("/home/user"),
-                 brillo::cryptohome::home::GetUserPath(user->username)),
-           _))
-    .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home"), FilePath("/home/root"),
+                         brillo::cryptohome::home::GetRootPath(user->username),
+                         FilePath("/home/user"),
+                         brillo::cryptohome::home::GetUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   helper_.InjectEphemeralSkeleton(&platform_,
-      FilePath(user->user_ephemeral_mount_path));
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+                                  FilePath(user->user_ephemeral_mount_path));
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->user_mount_path.value()))))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(Property(
+                  &FilePath::value, StartsWith(user->user_mount_path.value()))))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(
+      platform_,
       DeleteFile(MountHelper::GetEphemeralSparseFile(user->obfuscated_username),
                  _))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_,
-      EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
 
@@ -3529,29 +3408,24 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountRemoveTest) {
   MountError error;
   ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/chronos/u-")),
-        _, _))
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/chronos/u-")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/user/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/user/")), _, _))
       .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/root/")),
-        _, _))
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/root/")), _, _))
       .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
       .WillOnce(Return(true));  // legacy mount
   EXPECT_CALL(platform_, DeleteFile(user->ephemeral_mount_path, _))
       .WillOnce(Return(true));
-  EXPECT_CALL(platform_, ClearUserKeyring())
-      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   ExpectDownloadsUnmounts(*user);
   // Detach succeeds.
   ON_CALL(platform_, DetachLoop(_)).WillByDefault(Return(true));
@@ -3576,47 +3450,43 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
   // Let Mount know how many vaults there are.
   std::vector<FilePath> no_vaults;
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
-    // Don't re-delete on Unmount.
-    .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
+      .WillOnce(DoAll(SetArgPointee<2>(vaults_), Return(true)))
+      // Don't re-delete on Unmount.
+      .WillRepeatedly(DoAll(SetArgPointee<2>(no_vaults), Return(true)));
   // Don't say any cryptohomes are mounted
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(FilePath("/home/root/"), FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(AnyOf(FilePath("/home/chronos"),
-                 MountHelper::GetNewUserPath(user->username)),
-           _))
+              Stat(AnyOf(FilePath("/home/chronos"),
+                         MountHelper::GetNewUserPath(user->username)),
+                   _))
       .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      Stat(AnyOf(FilePath("/home"),
-                 FilePath("/home/root"),
-                 brillo::cryptohome::home::GetRootPath(user->username),
-                 FilePath("/home/user"),
-                 brillo::cryptohome::home::GetUserPath(user->username)),
-           _))
-    .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home"), FilePath("/home/root"),
+                         brillo::cryptohome::home::GetRootPath(user->username),
+                         FilePath("/home/user"),
+                         brillo::cryptohome::home::GetUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   helper_.InjectEphemeralSkeleton(&platform_,
-      FilePath(user->user_ephemeral_mount_path));
-  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_,
-                        shared_gid_, kDaemonGid, ShouldTestEcryptfs());
+                                  FilePath(user->user_ephemeral_mount_path));
+  user->InjectUserPaths(&platform_, chronos_uid_, chronos_gid_, shared_gid_,
+                        kDaemonGid, ShouldTestEcryptfs());
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->user_mount_path.value()))))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(Property(
+                  &FilePath::value, StartsWith(user->user_mount_path.value()))))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(
       platform_,
       DeleteFile(MountHelper::GetEphemeralSparseFile(user->obfuscated_username),
@@ -3624,12 +3494,12 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
       .WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_,
-      EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_, DeleteFile(user->root_ephemeral_mount_path, true))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
 
   ExpectEphemeralCryptohomeMount(*user);
 
@@ -3649,28 +3519,24 @@ TEST_P(EphemeralExistingUserSystemTest, MountRemoveTest) {
   MountError error;
   ASSERT_TRUE(mount_->MountCryptohome(credentials, mount_args, &error));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/chronos/u-")),
-        _, _))
-    .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(Property(&FilePath::value, StartsWith("/home/user/")),
-        _, _))
-    .WillOnce(Return(true));  // user mount
-  EXPECT_CALL(platform_,
-      Unmount(
-        Property(&FilePath::value, StartsWith("/home/root/")),
-        _, _))
-    .WillOnce(Return(true));  // user mount
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/chronos/u-")), _, _))
+      .WillOnce(Return(true));  // user mount
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/user/")), _, _))
+      .WillOnce(Return(true));  // user mount
+  EXPECT_CALL(
+      platform_,
+      Unmount(Property(&FilePath::value, StartsWith("/home/root/")), _, _))
+      .WillOnce(Return(true));  // user mount
   EXPECT_CALL(platform_, Unmount(FilePath("/home/chronos/user"), _, _))
-    .WillOnce(Return(true));  // legacy mount
+      .WillOnce(Return(true));  // legacy mount
   EXPECT_CALL(platform_, DeleteFile(user->ephemeral_mount_path, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillRepeatedly(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillRepeatedly(Return(true));
   ExpectDownloadsUnmounts(*user);
   // Detach succeeds.
   ON_CALL(platform_, DetachLoop(_)).WillByDefault(Return(true));
@@ -3681,8 +3547,7 @@ TEST_P(EphemeralExistingUserSystemTest, OwnerUnknownUnmountNoRemoveTest) {
   // Checks that when a device is not enterprise enrolled and does not have a
   // known owner, no stale cryptohomes are removed while unmounting.
   set_policy(false, "", true);
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
 
@@ -3703,20 +3568,18 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseUnmountRemoveTest) {
 
   // Let Mount know how many vaults there are.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
 
   // Don't say any cryptohomes are mounted
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(FilePath("/home/root/"), FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
 
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
@@ -3738,20 +3601,18 @@ TEST_P(EphemeralExistingUserSystemTest, UnmountRemoveTest) {
 
   // Let Mount know how many vaults there are.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
 
   // Don't say any cryptohomes are mounted
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(FilePath("/home/root/"), FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, ClearUserKeyring())
-    .WillOnce(Return(true));
+  EXPECT_CALL(platform_, ClearUserKeyring()).WillOnce(Return(true));
 
   ASSERT_TRUE(mount_->UnmountCryptohome());
 }
@@ -3773,59 +3634,51 @@ TEST_P(EphemeralExistingUserSystemTest, NonOwnerMountIsEphemeralTest) {
 
   // Let Mount know how many vaults there are.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
   // Don't say any cryptohomes are mounted
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(FilePath("/home/root/"), FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(
-        AnyOf(FilePath("/home/chronos"),
-              MountHelper::GetNewUserPath(user->username)),
-        _))
-     .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home/chronos"),
+                         MountHelper::GetNewUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      Stat(
-      AnyOf(FilePath("/home"),
-            FilePath("/home/root"),
-            brillo::cryptohome::home::GetRootPath(user->username),
-            FilePath("/home/user"),
-            brillo::cryptohome::home::GetUserPath(user->username)),
-           _))
-    .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home"), FilePath("/home/root"),
+                         brillo::cryptohome::home::GetRootPath(user->username),
+                         FilePath("/home/user"),
+                         brillo::cryptohome::home::GetUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->user_mount_path.value()))))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(Property(
+                  &FilePath::value, StartsWith(user->user_mount_path.value()))))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      FileExists(
-        Property(&FilePath::value, StartsWith("/home/chronos/user"))))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(Property(&FilePath::value,
+                                             StartsWith("/home/chronos/user"))))
+      .WillRepeatedly(Return(true));
 
   helper_.InjectEphemeralSkeleton(&platform_,
-      FilePath(user->user_ephemeral_mount_path));
+                                  FilePath(user->user_ephemeral_mount_path));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_,
-      EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   ExpectEphemeralCryptohomeMount(*user);
 
   // Detach succeeds.
@@ -3855,59 +3708,51 @@ TEST_P(EphemeralExistingUserSystemTest, EnterpriseMountIsEphemeralTest) {
 
   // Let Mount know how many vaults there are.
   EXPECT_CALL(platform_, EnumerateDirectoryEntries(kImageDir, false, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<2>(vaults_), Return(true)));
   // Don't say any cryptohomes are mounted.
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(
+      platform_,
       EnumerateDirectoryEntries(
-        AnyOf(FilePath("/home/root/"), FilePath("/home/user/")),
-        _, _))
-    .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
+          AnyOf(FilePath("/home/root/"), FilePath("/home/user/")), _, _))
+      .WillRepeatedly(DoAll(SetArgPointee<2>(empty), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(
-        AnyOf(FilePath("/home/chronos"),
-              MountHelper::GetNewUserPath(user->username)),
-        _))
-    .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home/chronos"),
+                         MountHelper::GetNewUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
-      Stat(
-        AnyOf(FilePath("/home"),
-              FilePath("/home/root"),
-              brillo::cryptohome::home::GetRootPath(user->username),
-              FilePath("/home/user"),
-              brillo::cryptohome::home::GetUserPath(user->username)),
-           _))
-    .WillRepeatedly(Return(false));
+              Stat(AnyOf(FilePath("/home"), FilePath("/home/root"),
+                         brillo::cryptohome::home::GetRootPath(user->username),
+                         FilePath("/home/user"),
+                         brillo::cryptohome::home::GetUserPath(user->username)),
+                   _))
+      .WillRepeatedly(Return(false));
   // Only expect the mounted user to "exist".
   EXPECT_CALL(platform_,
-      DirectoryExists(
-        Property(&FilePath::value, StartsWith(user->user_mount_path.value()))))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+              DirectoryExists(Property(
+                  &FilePath::value, StartsWith(user->user_mount_path.value()))))
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetPermissions(_, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetPermissions(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-      FileExists(
-        Property(&FilePath::value, StartsWith("/home/chronos/user"))))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(Property(&FilePath::value,
+                                             StartsWith("/home/chronos/user"))))
+      .WillRepeatedly(Return(true));
 
   helper_.InjectEphemeralSkeleton(&platform_,
-      FilePath(user->user_ephemeral_mount_path));
+                                  FilePath(user->user_ephemeral_mount_path));
 
   EXPECT_CALL(platform_, Stat(user->root_ephemeral_mount_path, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_,
-      EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+              EnumerateDirectoryEntries(user->ephemeral_mount_path, _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
 
-  EXPECT_CALL(platform_, Unmount(_, _, _))
-    .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Unmount(_, _, _)).WillRepeatedly(Return(true));
   ExpectEphemeralCryptohomeMount(*user);
 
   // Detach succeeds.
@@ -3930,21 +3775,18 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   fake_root_st.st_gid = 0;
   fake_root_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home"), _))
-    .Times(3)
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_root_st),
-                          Return(true)));
+      .Times(3)
+      .WillRepeatedly(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_, Stat(FilePath("/home/root"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_root_st),
-                    Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(Property(&FilePath::value, StartsWith("/home/root/")), _))
-    .WillOnce(Return(false));
+              Stat(Property(&FilePath::value, StartsWith("/home/root/")), _))
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, Stat(FilePath("/home/user"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_root_st),
-                    Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
-    .WillOnce(Return(false));
+              Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
+      .WillOnce(Return(false));
 #if BASE_VER < 780000
   struct stat fake_user_st;
 #else
@@ -3954,58 +3796,54 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserDir) {
   fake_user_st.st_gid = chronos_gid_;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home/chronos"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_user_st),
-                    Return(true)));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_user_st), Return(true)));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillOnce(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillOnce(Return(false));
+  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(platform_, StatVFS(FilePath(kEphemeralCryptohomeDir), _))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
   const std::string sparse_prefix =
       FilePath(kEphemeralCryptohomeDir).Append(kSparseFileDir).value();
   EXPECT_CALL(platform_,
-      CreateSparseFile(
-          Property(&FilePath::value, StartsWith(sparse_prefix)), _))
-    .WillOnce(Return(true));
+              CreateSparseFile(
+                  Property(&FilePath::value, StartsWith(sparse_prefix)), _))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_,
-      AttachLoop(Property(&FilePath::value, StartsWith(sparse_prefix))))
-    .WillOnce(Return(FilePath("/dev/loop7")));
+              AttachLoop(Property(&FilePath::value, StartsWith(sparse_prefix))))
+      .WillOnce(Return(FilePath("/dev/loop7")));
   EXPECT_CALL(platform_,
-      FormatExt4(Property(&FilePath::value, StartsWith(sparse_prefix)),
-                 kDefaultExt4FormatOpts, 0))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
+              FormatExt4(Property(&FilePath::value, StartsWith(sparse_prefix)),
+                         kDefaultExt4FormatOpts, 0))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
       Stat(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   std::vector<FilePath> empty;
-  EXPECT_CALL(platform_,
-      EnumerateDirectoryEntries(
-        Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),  _, _))
-    .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
-  EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _))
-    .Times(0);
-  EXPECT_CALL(platform_,
-      Mount(FilePath("/dev/loop7"), _, kEphemeralMountType,
-            kDefaultMountFlags, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
+  EXPECT_CALL(platform_, EnumerateDirectoryEntries(
+                             Property(&FilePath::value,
+                                      StartsWith(kEphemeralCryptohomeDir)),
+                             _, _))
+      .WillOnce(DoAll(SetArgPointee<2>(empty), Return(true)));
+  EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _)).Times(0);
+  EXPECT_CALL(platform_, Mount(FilePath("/dev/loop7"), _, kEphemeralMountType,
+                               kDefaultMountFlags, _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
       Bind(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
            Property(&FilePath::value, StartsWith("/home/root/"))))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-      Bind(
-        Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
-        Property(&FilePath::value, StartsWith("/home/user/"))))
-    .WillOnce(Return(true));
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
+      Bind(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)),
+           Property(&FilePath::value, StartsWith("/home/user/"))))
+      .WillOnce(Return(true));
   EXPECT_CALL(platform_, Bind(Property(&FilePath::value,
                                        StartsWith(kEphemeralCryptohomeDir)),
                               FilePath("/home/chronos/user")))
@@ -4061,20 +3899,17 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
   fake_root_st.st_gid = 0;
   fake_root_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home"), _))
-    .WillRepeatedly(DoAll(SetArgPointee<1>(fake_root_st),
-                          Return(true)));
+      .WillRepeatedly(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_, Stat(FilePath("/home/root"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_root_st),
-                    Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(Property(&FilePath::value, StartsWith("/home/root/")), _))
-    .WillOnce(Return(false));
+              Stat(Property(&FilePath::value, StartsWith("/home/root/")), _))
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, Stat(FilePath("/home/user"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_root_st),
-                    Return(true)));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_root_st), Return(true)));
   EXPECT_CALL(platform_,
-      Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
-    .WillOnce(Return(false));
+              Stat(Property(&FilePath::value, StartsWith("/home/user/")), _))
+      .WillOnce(Return(false));
 #if BASE_VER < 780000
   struct stat fake_user_st;
 #else
@@ -4084,35 +3919,27 @@ TEST_P(EphemeralNoUserSystemTest, MountGuestUserFailSetUserType) {
   fake_user_st.st_gid = chronos_gid_;
   fake_user_st.st_mode = S_IFDIR | S_IRWXU;
   EXPECT_CALL(platform_, Stat(FilePath("/home/chronos"), _))
-    .WillOnce(DoAll(SetArgPointee<1>(fake_user_st),
-                    Return(true)));
-  EXPECT_CALL(platform_, CreateDirectory(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, SetOwnership(_, _, _, _))
-    .WillRepeatedly(Return(true));
+      .WillOnce(DoAll(SetArgPointee<1>(fake_user_st), Return(true)));
+  EXPECT_CALL(platform_, CreateDirectory(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, SetOwnership(_, _, _, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, SetGroupAccessible(_, _, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, IsDirectoryMounted(_))
-    .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, DirectoryExists(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, FileExists(_))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, StatVFS(_, _))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_, CreateSparseFile(_, _))
-    .WillOnce(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, IsDirectoryMounted(_)).WillRepeatedly(Return(false));
+  EXPECT_CALL(platform_, DirectoryExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, StatVFS(_, _)).WillOnce(Return(true));
+  EXPECT_CALL(platform_, CreateSparseFile(_, _)).WillOnce(Return(true));
   EXPECT_CALL(platform_, AttachLoop(_))
-    .WillOnce(Return(FilePath("/dev/loop7")));
+      .WillOnce(Return(FilePath("/dev/loop7")));
   EXPECT_CALL(platform_, FormatExt4(_, kDefaultExt4FormatOpts, 0))
-    .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
+      .WillOnce(Return(true));
+  EXPECT_CALL(
+      platform_,
       Stat(Property(&FilePath::value, StartsWith(kEphemeralCryptohomeDir)), _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(false));
   EXPECT_CALL(platform_, Mount(_, _, _, kDefaultMountFlags, _))
-    .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, Bind(_, _))
-    .WillRepeatedly(Return(true));
+      .WillRepeatedly(Return(true));
+  EXPECT_CALL(platform_, Bind(_, _)).WillRepeatedly(Return(true));
 
   EXPECT_CALL(tpm_, SetUserType(Tpm::UserType::NonOwner))
       .WillOnce(Return(false));

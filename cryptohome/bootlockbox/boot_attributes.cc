@@ -19,18 +19,15 @@ namespace cryptohome {
 const int BootAttributes::kAttributeFileVersion = 1;
 
 const char BootAttributes::kAttributeFile[] =
-  "/var/lib/boot-lockbox/boot_attributes.pb";
+    "/var/lib/boot-lockbox/boot_attributes.pb";
 
 const char BootAttributes::kSignatureFile[] =
-  "/var/lib/boot-lockbox/boot_attributes.sig";
+    "/var/lib/boot-lockbox/boot_attributes.sig";
 
 BootAttributes::BootAttributes(BootLockbox* boot_lockbox, Platform* platform)
-    : boot_lockbox_(boot_lockbox),
-      platform_(platform) {
-}
+    : boot_lockbox_(boot_lockbox), platform_(platform) {}
 
-BootAttributes::~BootAttributes() {
-}
+BootAttributes::~BootAttributes() {}
 
 bool BootAttributes::Load() {
   brillo::Blob data;

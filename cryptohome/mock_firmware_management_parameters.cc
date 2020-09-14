@@ -6,8 +6,8 @@
 
 namespace cryptohome {
 
-MockFirmwareManagementParameters::MockFirmwareManagementParameters() :
-    FirmwareManagementParameters(nullptr) {}
+MockFirmwareManagementParameters::MockFirmwareManagementParameters()
+    : FirmwareManagementParameters(nullptr) {}
 MockFirmwareManagementParameters::~MockFirmwareManagementParameters() {}
 
 }  // namespace cryptohome

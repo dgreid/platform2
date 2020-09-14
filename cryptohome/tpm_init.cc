@@ -278,8 +278,7 @@ bool TpmInit::TakeOwnership(bool* OUT_took_ownership) {
   // In monolithic mode, if we can open the TPM with the default password, then
   // we still need to zero the SRK password and unrestrict it, then change the
   // owner password.
-  if (!tpm_persistent_state_.IsReady() &&
-      !get_tpm()->DoesUseTpmManager() &&
+  if (!tpm_persistent_state_.IsReady() && !get_tpm()->DoesUseTpmManager() &&
       get_tpm()->TestTpmAuth(default_owner_password)) {
     if (!get_tpm()->InitializeSrk(default_owner_password)) {
       LOG(ERROR) << "Couldn't initialize the SRK";
@@ -327,8 +326,7 @@ void TpmInit::CreateOwnerPassword(SecureBlob* password) {
   const auto random =
       CryptoLib::CreateSecureRandomBlob(kOwnerPasswordLength / 2);
   SecureBlob tpm_password(kOwnerPasswordLength);
-  CryptoLib::SecureBlobToHexToBuffer(random,
-                                     tpm_password.data(),
+  CryptoLib::SecureBlobToHexToBuffer(random, tpm_password.data(),
                                      tpm_password.size());
   password->swap(tpm_password);
 }

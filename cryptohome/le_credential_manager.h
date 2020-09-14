@@ -86,9 +86,9 @@ class LECredentialManager {
   // LE_CRED_ERROR_PCR_NOT_MATCH if the PCR registers from TPM have unexpected
   // values, in which case only reboot will allow this user to authenticate.
   virtual LECredError CheckCredential(const uint64_t& label,
-                              const brillo::SecureBlob& le_secret,
-                              brillo::SecureBlob* he_secret,
-                              brillo::SecureBlob* reset_secret) = 0;
+                                      const brillo::SecureBlob& le_secret,
+                                      brillo::SecureBlob* he_secret,
+                                      brillo::SecureBlob* reset_secret) = 0;
 
   // Attempts reset of a LE Credential.
   //

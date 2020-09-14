@@ -15,11 +15,8 @@
 namespace cryptohome {
 
 GSourceFuncs CryptohomeEventSource::source_functions_ = {
-  CryptohomeEventSource::Prepare,
-  CryptohomeEventSource::Check,
-  CryptohomeEventSource::Dispatch,
-  nullptr
-};
+    CryptohomeEventSource::Prepare, CryptohomeEventSource::Check,
+    CryptohomeEventSource::Dispatch, nullptr};
 
 CryptohomeEventSource::CryptohomeEventSource() {
   pipe_fds_[0] = -1;
@@ -76,7 +73,7 @@ void CryptohomeEventSource::HandleDispatch() {
   // is an event queued but no pending read on the pipe.
   bool more = false;
   do {
-    struct pollfd fds = { pipe_fds_[0], POLLIN, 0 };
+    struct pollfd fds = {pipe_fds_[0], POLLIN, 0};
     if (poll(&fds, 1, 0) && (fds.revents & POLLIN)) {
       char c;
       if (read(pipe_fds_[0], &c, 1) == 1) {

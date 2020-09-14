@@ -38,8 +38,8 @@
 
 using base::FilePath;
 using brillo::Blob;
-using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 namespace cryptohome {
 
@@ -904,8 +904,8 @@ void UserDataAuth::set_cleanup_threshold(uint64_t cleanup_threshold) {
   homedirs_->disk_cleanup()->set_cleanup_threshold(cleanup_threshold);
 }
 
-void UserDataAuth::set_aggressive_cleanup_threshold
-    (uint64_t aggressive_cleanup_threshold) {
+void UserDataAuth::set_aggressive_cleanup_threshold(
+    uint64_t aggressive_cleanup_threshold) {
   homedirs_->disk_cleanup()->set_aggressive_cleanup_threshold(
       aggressive_cleanup_threshold);
 }
@@ -1075,8 +1075,7 @@ scoped_refptr<cryptohome::Mount> UserDataAuth::CreateUntrackedMountForUser(
   // TODO(dlunev): Decide if finalization should be moved to MountFactory.
   EnsureBootLockboxFinalized();
   m = mount_factory_->New();
-  if (!m->Init(platform_, crypto_,
-               user_timestamp_cache_.get())) {
+  if (!m->Init(platform_, crypto_, user_timestamp_cache_.get())) {
     return nullptr;
   }
   m->set_enterprise_owned(enterprise_owned_);
@@ -1966,17 +1965,17 @@ void UserDataAuth::CheckKey(
     return;
   }
 
-    if (!homedirs_->AreCredentialsValid(credentials)) {
-      // TODO(wad) Should this pass along KEY_NOT_FOUND too?
-      std::move(on_done).Run(
-          user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
-      ResetDictionaryAttackMitigation();
-      return;
-    }
-
-    homedirs_->ResetLECredentials(credentials);
-    std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+  if (!homedirs_->AreCredentialsValid(credentials)) {
+    // TODO(wad) Should this pass along KEY_NOT_FOUND too?
+    std::move(on_done).Run(
+        user_data_auth::CRYPTOHOME_ERROR_AUTHORIZATION_KEY_FAILED);
+    ResetDictionaryAttackMitigation();
     return;
+  }
+
+  homedirs_->ResetLECredentials(credentials);
+  std::move(on_done).Run(user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
+  return;
 }
 
 void UserDataAuth::CompleteFingerprintCheckKey(

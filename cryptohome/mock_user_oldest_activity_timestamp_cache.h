@@ -15,8 +15,8 @@
 
 namespace cryptohome {
 
-class MockUserOldestActivityTimestampCache :
-    public UserOldestActivityTimestampCache {
+class MockUserOldestActivityTimestampCache
+    : public UserOldestActivityTimestampCache {
  public:
   MockUserOldestActivityTimestampCache() = default;
   virtual ~MockUserOldestActivityTimestampCache() = default;

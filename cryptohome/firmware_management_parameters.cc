@@ -41,20 +41,16 @@ struct FirmwareManagementParametersRawV1_0 {
   uint8_t developer_key_hash[SHA256_DIGEST_LENGTH];
 } __attribute__((packed));
 
-
 // Index must match firmware; see README.firmware_management_parameters
 const uint32_t FirmwareManagementParameters::kNvramIndex = 0x100a;
 const uint32_t FirmwareManagementParameters::kNvramBytes =
-  sizeof(struct FirmwareManagementParametersRawV1_0);
+    sizeof(struct FirmwareManagementParametersRawV1_0);
 const uint32_t FirmwareManagementParameters::kCrcDataOffset = 2;
 
 FirmwareManagementParameters::FirmwareManagementParameters(Tpm* tpm)
-  : tpm_(tpm),
-    raw_(new FirmwareManagementParametersRawV1_0()) {
-}
+    : tpm_(tpm), raw_(new FirmwareManagementParametersRawV1_0()) {}
 
-FirmwareManagementParameters::~FirmwareManagementParameters() {
-}
+FirmwareManagementParameters::~FirmwareManagementParameters() {}
 
 bool FirmwareManagementParameters::TpmIsReady() const {
   if (!tpm_) {
@@ -113,16 +109,16 @@ bool FirmwareManagementParameters::Create(void) {
   }
   if (!Destroy()) {
     LOG(ERROR) << "Failed to destroy Firmware Management Parameters data "
-      "before creation.";
+                  "before creation.";
     return false;
   }
 
   nvram_bytes = kNvramBytes;
 
   // Use a WriteDefine space with no PCR0 locking
-  if (!tpm_->DefineNvram(kNvramIndex, nvram_bytes,
-                         Tpm::kTpmNvramWriteDefine |
-                             Tpm::kTpmNvramFirmwareReadable)) {
+  if (!tpm_->DefineNvram(
+          kNvramIndex, nvram_bytes,
+          Tpm::kTpmNvramWriteDefine | Tpm::kTpmNvramFirmwareReadable)) {
     LOG(ERROR) << "Create() failed to defined NVRAM space.";
     return false;
   }
@@ -164,8 +160,8 @@ bool FirmwareManagementParameters::Load(void) {
   }
 
   // Verify the CRC
-  uint8_t crc = crc8(nvram_data.data() + kCrcDataOffset,
-                     nvram_size - kCrcDataOffset);
+  uint8_t crc =
+      crc8(nvram_data.data() + kCrcDataOffset, nvram_size - kCrcDataOffset);
   if (crc != raw_->crc) {
     LOG(ERROR) << "Load() got bad CRC";
     return false;
@@ -185,8 +181,8 @@ bool FirmwareManagementParameters::Load(void) {
   return true;
 }
 
-bool FirmwareManagementParameters::Store(uint32_t flags,
-                                 const brillo::Blob* developer_key_hash) {
+bool FirmwareManagementParameters::Store(
+    uint32_t flags, const brillo::Blob* developer_key_hash) {
   if (!TpmIsReady()) {
     LOG(ERROR) << "Store() called when TPM was not ready!";
     return false;
@@ -230,9 +226,8 @@ bool FirmwareManagementParameters::Store(uint32_t flags,
   }
 
   // Recalculate the CRC
-  const uint8_t *raw8 = reinterpret_cast<uint8_t*>(raw_.get());
-  raw_->crc = crc8(raw8 + kCrcDataOffset,
-                   raw_->struct_size - kCrcDataOffset);
+  const uint8_t* raw8 = reinterpret_cast<uint8_t*>(raw_.get());
+  raw_->crc = crc8(raw8 + kCrcDataOffset, raw_->struct_size - kCrcDataOffset);
 
   // Write the data to nvram
   SecureBlob nvram_data(raw_->struct_size);

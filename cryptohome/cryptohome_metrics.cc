@@ -23,8 +23,7 @@ struct TimerHistogramParams {
   int num_buckets;
 };
 
-constexpr char kEvkkEncryptionTypeHistogram[] =
-    "Cryptohome.EvkkEncryptionType";
+constexpr char kEvkkEncryptionTypeHistogram[] = "Cryptohome.EvkkEncryptionType";
 constexpr char kCryptohomeErrorHistogram[] = "Cryptohome.Errors";
 constexpr char kDictionaryAttackResetStatusHistogram[] =
     "Platform.TPM.DictionaryAttackResetStatus";
@@ -63,15 +62,13 @@ constexpr char kCryptohomeDircryptoMigrationTotalFileCountHistogram[] =
     "Cryptohome.DircryptoMigrationTotalFileCount";
 constexpr char kCryptohomeDiskCleanupProgressHistogram[] =
     "Cryptohome.DiskCleanupProgress";
-constexpr char kCryptohomeLEResultHistogramPrefix[] =
-    "Cryptohome.LECredential";
+constexpr char kCryptohomeLEResultHistogramPrefix[] = "Cryptohome.LECredential";
 constexpr char kCryptohomeAsyncDBusRequestsPrefix[] =
     "Cryptohome.AsyncDBusRequest.";
 constexpr char kCryptohomeAsyncDBusRequestsInqueueTimePrefix[] =
     "Cryptohome.AsyncDBusRequest.Inqueue.";
 constexpr char kCryptohomeParallelTasksPrefix[] = "Cryptohome.ParallelTasks";
-constexpr char kCryptohomeLESyncOutcomeHistogramSuffix[] =
-    ".SyncOutcome";
+constexpr char kCryptohomeLESyncOutcomeHistogramSuffix[] = ".SyncOutcome";
 constexpr char kHomedirEncryptionTypeHistogram[] =
     "Cryptohome.HomedirEncryptionType";
 constexpr char kTPMVersionFingerprint[] = "Platform.TPM.VersionFingerprint";
@@ -107,12 +104,12 @@ const TimerHistogramParams kTimerHistogramParams[] = {
     {"Cryptohome.TimeToMountEx", 0, 4000, 50},
     // Ext4 crypto migration is expected to takes few minutes in a fast case,
     // and with many tens of thousands of files it may take hours.
-    {"Cryptohome.TimeToCompleteDircryptoMigration", 1000,
-     10 * 60 * 60 * 1000, 50},
+    {"Cryptohome.TimeToCompleteDircryptoMigration", 1000, 10 * 60 * 60 * 1000,
+     50},
     // Minimal migration is expected to take few seconds in a fast case,
     // and minutes in the worst case if we forgot to blocklist files.
-    {"Cryptohome.TimeToCompleteDircryptoMinimalMigration", 200,
-     2 * 60 * 1000, 50},
+    {"Cryptohome.TimeToCompleteDircryptoMinimalMigration", 200, 2 * 60 * 1000,
+     50},
     // The out-of-process mount operation will time out after 3 seconds.
     {"Cryptohome.TimeToPerformOOPMountOperation", 0, 3000, 50},
     // The out-of-process cleanup operation includes a call to waitpid(2) with
@@ -183,8 +180,7 @@ void ReportEvkkEncryptionType(EvkkEncryptionType encryption_type) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kEvkkEncryptionTypeHistogram,
-                           encryption_type,
+  g_metrics->SendEnumToUMA(kEvkkEncryptionTypeHistogram, encryption_type,
                            kEvkkEncryptionTypeNumBuckets);
 }
 
@@ -192,8 +188,7 @@ void ReportCryptohomeError(CryptohomeError error) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kCryptohomeErrorHistogram,
-                           error,
+  g_metrics->SendEnumToUMA(kCryptohomeErrorHistogram, error,
                            kCryptohomeErrorNumBuckets);
 }
 
@@ -201,8 +196,7 @@ void ReportTpmResult(TpmResult result) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kCryptohomeTpmResultsHistogram,
-                           result,
+  g_metrics->SendEnumToUMA(kCryptohomeTpmResultsHistogram, result,
                            kTpmResultNumberOfBuckets);
 }
 
@@ -229,8 +223,8 @@ void ReportTimerStop(TimerType timer_type) {
     return;
   }
   chromeos_metrics::TimerReporter* timer = GetTimer(timer_type);
-  bool success = (timer && timer->HasStarted() &&
-                  timer->Stop() && timer->ReportMilliseconds());
+  bool success = (timer && timer->HasStarted() && timer->Stop() &&
+                  timer->ReportMilliseconds());
   if (!success) {
     LOG(WARNING) << "Timer " << kTimerHistogramParams[timer_type].metric_name
                  << " failed to report.";
@@ -241,8 +235,7 @@ void ReportDictionaryAttackResetStatus(DictionaryAttackResetStatus status) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kDictionaryAttackResetStatusHistogram,
-                           status,
+  g_metrics->SendEnumToUMA(kDictionaryAttackResetStatusHistogram, status,
                            kDictionaryAttackResetStatusNumBuckets);
 }
 
@@ -250,8 +243,7 @@ void ReportDictionaryAttackCounter(int counter) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kDictionaryAttackCounterHistogram,
-                           counter,
+  g_metrics->SendEnumToUMA(kDictionaryAttackCounterHistogram, counter,
                            kDictionaryAttackCounterNumBuckets);
 }
 
@@ -259,8 +251,7 @@ void ReportChecksum(ChecksumStatus status) {
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(kChecksumStatusHistogram,
-                           status,
+  g_metrics->SendEnumToUMA(kChecksumStatusHistogram, status,
                            kChecksumStatusNumBuckets);
 }
 
@@ -291,13 +282,13 @@ void ReportFreeDiskSpaceTotalTime(int ms) {
 }
 
 void ReportFreeDiskSpaceTotalFreedInMb(int mb) {
-    if (!g_metrics) {
+  if (!g_metrics) {
     return;
   }
   constexpr int kMin = 1, kMax = 1024 * 10, /* 10 GiB maximum */
-                kNumBuckets = 50;
-  g_metrics->SendToUMA(kCryptohomeFreeDiskSpaceTotalFreedInMbHistogram,
-            mb, kMin, kMax, kNumBuckets);
+      kNumBuckets = 50;
+  g_metrics->SendToUMA(kCryptohomeFreeDiskSpaceTotalFreedInMbHistogram, mb,
+                       kMin, kMax, kNumBuckets);
 }
 
 void ReportTimeBetweenFreeDiskSpace(int s) {
@@ -306,7 +297,7 @@ void ReportTimeBetweenFreeDiskSpace(int s) {
   }
 
   constexpr int kMin = 1, kMax = 86400, /* seconds in a day */
-                kNumBuckets = 50;
+      kNumBuckets = 50;
   g_metrics->SendToUMA(kCryptohomeTimeBetweenFreeDiskSpaceHistogram, s, kMin,
                        kMax, kNumBuckets);
 }
@@ -340,8 +331,7 @@ void ReportDircryptoMigrationFailedErrorCode(base::File::Error error_code) {
     return;
   }
   g_metrics->SendEnumToUMA(
-      kCryptohomeDircryptoMigrationFailedErrorCodeHistogram,
-      -error_code,
+      kCryptohomeDircryptoMigrationFailedErrorCodeHistogram, -error_code,
       -base::File::FILE_ERROR_MAX);
 }
 
@@ -351,8 +341,7 @@ void ReportDircryptoMigrationFailedOperationType(
     return;
   }
   g_metrics->SendEnumToUMA(
-      kCryptohomeDircryptoMigrationFailedOperationTypeHistogram,
-      type,
+      kCryptohomeDircryptoMigrationFailedOperationTypeHistogram, type,
       kMigrationFailedOperationTypeNumBuckets);
 }
 
@@ -379,10 +368,8 @@ void ReportDircryptoMigrationFailedPathType(
   if (!g_metrics) {
     return;
   }
-  g_metrics->SendEnumToUMA(
-      kCryptohomeDircryptoMigrationFailedPathTypeHistogram,
-      type,
-      kMigrationFailedPathTypeNumBuckets);
+  g_metrics->SendEnumToUMA(kCryptohomeDircryptoMigrationFailedPathTypeHistogram,
+                           type, kMigrationFailedPathTypeNumBuckets);
 }
 
 void ReportDircryptoMigrationTotalByteCountInMb(int total_byte_count_mb) {
@@ -390,9 +377,8 @@ void ReportDircryptoMigrationTotalByteCountInMb(int total_byte_count_mb) {
     return;
   }
   constexpr int kMin = 1, kMax = 1024 * 1024, kNumBuckets = 50;
-  g_metrics->SendToUMA(
-      kCryptohomeDircryptoMigrationTotalByteCountInMbHistogram,
-      total_byte_count_mb, kMin, kMax, kNumBuckets);
+  g_metrics->SendToUMA(kCryptohomeDircryptoMigrationTotalByteCountInMbHistogram,
+                       total_byte_count_mb, kMin, kMax, kNumBuckets);
 }
 
 void ReportDircryptoMigrationTotalFileCount(int total_file_count) {
@@ -400,9 +386,8 @@ void ReportDircryptoMigrationTotalFileCount(int total_file_count) {
     return;
   }
   constexpr int kMin = 1, kMax = 100000000, kNumBuckets = 50;
-  g_metrics->SendToUMA(
-      kCryptohomeDircryptoMigrationTotalFileCountHistogram, total_file_count,
-      kMin, kMax, kNumBuckets);
+  g_metrics->SendToUMA(kCryptohomeDircryptoMigrationTotalFileCountHistogram,
+                       total_file_count, kMin, kMax, kNumBuckets);
 }
 
 void ReportDiskCleanupProgress(DiskCleanupProgress progress) {
@@ -419,15 +404,12 @@ void ReportHomedirEncryptionType(HomedirEncryptionType type) {
     return;
   }
   g_metrics->SendEnumToUMA(
-      kHomedirEncryptionTypeHistogram,
-      static_cast<int>(type),
+      kHomedirEncryptionTypeHistogram, static_cast<int>(type),
       static_cast<int>(
           HomedirEncryptionType::kHomedirEncryptionTypeNumBuckets));
 }
 
-void ReportLEResult(const char* type,
-                    const char* action,
-                    LECredError result) {
+void ReportLEResult(const char* type, const char* action, LECredError result) {
   if (!g_metrics) {
     return;
   }
@@ -465,15 +447,10 @@ void ReportDircryptoMigrationFailedNoSpace(int initial_migration_free_space_mb,
   }
   constexpr int kMin = 1, kMax = 1024 * 1024, kNumBuckets = 50;
   g_metrics->SendToUMA(kDircryptoMigrationInitialFreeSpaceInMbHistogram,
-                       initial_migration_free_space_mb,
-                       kMin,
-                       kMax,
+                       initial_migration_free_space_mb, kMin, kMax,
                        kNumBuckets);
   g_metrics->SendToUMA(kDircryptoMigrationNoSpaceFailureFreeSpaceInMbHistogram,
-                       failure_free_space_mb,
-                       kMin,
-                       kMax,
-                       kNumBuckets);
+                       failure_free_space_mb, kMin, kMax, kNumBuckets);
 }
 
 void ReportDircryptoMigrationFailedNoSpaceXattrSizeInBytes(
@@ -483,10 +460,7 @@ void ReportDircryptoMigrationFailedNoSpaceXattrSizeInBytes(
   }
   constexpr int kMin = 1, kMax = 1024 * 1024, kNumBuckets = 50;
   g_metrics->SendToUMA(kDircryptoMigrationNoSpaceXattrSizeInBytesHistogram,
-                       total_xattr_size_bytes,
-                       kMin,
-                       kMax,
-                       kNumBuckets);
+                       total_xattr_size_bytes, kMin, kMax, kNumBuckets);
 }
 
 void ReportParallelTasks(int amount_of_task) {
@@ -552,23 +526,21 @@ void ReportOOPMountCleanupResult(OOPMountCleanupResult result) {
     return;
   }
 
-  constexpr auto max_event =
-      static_cast<int>(OOPMountCleanupResult::kMaxValue);
+  constexpr auto max_event = static_cast<int>(OOPMountCleanupResult::kMaxValue);
   g_metrics->SendEnumToUMA(kOOPMountCleanupResultHistogram,
                            static_cast<int>(result),
                            static_cast<int>(max_event));
 }
 
-void ReportAttestationOpsStatus(
-    const std::string& operation, AttestationOpsStatus status) {
+void ReportAttestationOpsStatus(const std::string& operation,
+                                AttestationOpsStatus status) {
   if (!g_metrics) {
     return;
   }
 
   const std::string histogram =
       std::string(kAttestationStatusHistogramPrefix) + "." + operation;
-  g_metrics->SendEnumToUMA(histogram,
-                           static_cast<int>(status),
+  g_metrics->SendEnumToUMA(histogram, static_cast<int>(status),
                            static_cast<int>(AttestationOpsStatus::kMaxValue));
 }
 

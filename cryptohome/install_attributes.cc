@@ -24,11 +24,11 @@ namespace cryptohome {
 
 // By default, we store this with other cryptohome state.
 const char InstallAttributes::kDefaultDataFile[] =
-  "/home/.shadow/install_attributes.pb";
+    "/home/.shadow/install_attributes.pb";
 const mode_t InstallAttributes::kDataFilePermissions = 0644;
 // This is the default location for the cache file.
 const char InstallAttributes::kDefaultCacheFile[] =
-  "/run/lockbox/install_attributes.pb";
+    "/run/lockbox/install_attributes.pb";
 const mode_t InstallAttributes::kCacheFilePermissions = 0644;
 
 InstallAttributes::InstallAttributes(Tpm* tpm)
@@ -69,8 +69,7 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
   brillo::Blob blob;
   if (platform_->ReadFile(cache_file_, &blob)) {
     if (!attributes_->ParseFromArray(
-           static_cast<google::protobuf::uint8*>(blob.data()),
-           blob.size())) {
+            static_cast<google::protobuf::uint8*>(blob.data()), blob.size())) {
       LOG(ERROR) << "Failed to parse data file (" << blob.size() << " bytes)";
       attributes_->Clear();
       status_ = Status::kInvalid;
@@ -117,14 +116,14 @@ bool InstallAttributes::Init(TpmInit* tpm_init) {
       // Don't flag invalid here - Chrome verifies that install attributes
       // aren't invalid before locking them as part of enterprise enrollment.
       LOG(INFO) << "Init() TPM is not ready and not owned, while install "
-        << "attributes are missing or invalid.";
+                << "attributes are missing or invalid.";
       status_ = Status::kTpmNotOwned;
       return false;
     }
 
     // Cases that don't look like a cleared TPM get flagged invalid.
     LOG(INFO) << "Init() TPM is not cleared, but install attributes are "
-      << "missing or invalid.";
+              << "missing or invalid.";
     status_ = Status::kInvalid;
     return false;
   }
@@ -198,7 +197,7 @@ bool InstallAttributes::GetByIndex(int index,
     return false;
   }
   const SerializedInstallAttributes::Attribute* const attr =
-    &attributes_->attributes(index);
+      &attributes_->attributes(index);
   if (name) {
     name->assign(attr->name());
   }
@@ -225,9 +224,9 @@ bool InstallAttributes::Set(const std::string& name,
   int index = FindIndexByName(name);
   if (index != -1) {
     SerializedInstallAttributes::Attribute* attr =
-      attributes_->mutable_attributes(index);
-    attr->set_value(std::string(reinterpret_cast<const char*>(value.data()),
-                                value.size()));
+        attributes_->mutable_attributes(index);
+    attr->set_value(
+        std::string(reinterpret_cast<const char*>(value.data()), value.size()));
     return true;
   }
 
@@ -237,8 +236,8 @@ bool InstallAttributes::Set(const std::string& name,
     return false;
   }
   attr->set_name(name);
-  attr->set_value(std::string(reinterpret_cast<const char*>(value.data()),
-                              value.size()));
+  attr->set_value(
+      std::string(reinterpret_cast<const char*>(value.data()), value.size()));
   return true;
 }
 
@@ -305,7 +304,7 @@ int InstallAttributes::Count() const {
 bool InstallAttributes::SerializeAttributes(brillo::Blob* out_bytes) {
   out_bytes->resize(attributes_->ByteSizeLong());
   attributes_->SerializeWithCachedSizesToArray(
-    static_cast<google::protobuf::uint8*>(out_bytes->data()));
+      static_cast<google::protobuf::uint8*>(out_bytes->data()));
   return true;
 }
 

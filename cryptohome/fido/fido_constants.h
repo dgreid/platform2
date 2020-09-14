@@ -112,7 +112,6 @@ extern const char kBioEnrollmentMapKey[];
 extern const char kBioEnrollmentPreviewMapKey[];
 extern const char kUvTokenMapKey[];
 
-
 // U2F APDU encoding constants, as specified in
 // https://fidoalliance.org/specs/fido-u2f-v1.2-ps-20170411/fido-u2f-raw-message-formats-v1.2-ps-20170411.html#bib-U2FHeader
 constexpr size_t kU2fMaxResponseSize = 65536;

@@ -17,6 +17,6 @@
  * @param size		Size of data in bytes
  * @return CRC-8 of the data.
  */
-uint8_t crc8(const void *data, uint32_t size);
+uint8_t crc8(const void* data, uint32_t size);
 
-#endif  /* CRYPTOHOME_CRC8_H_ */
+#endif /* CRYPTOHOME_CRC8_H_ */

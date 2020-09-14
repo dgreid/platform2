@@ -68,8 +68,8 @@ class MountTaskObserverBridge : public MountTaskObserver {
  public:
   explicit MountTaskObserverBridge(cryptohome::Mount* mount,
                                    CryptohomeEventSource* source)
-    : mount_(mount), source_(source) { }
-  virtual ~MountTaskObserverBridge() { }
+      : mount_(mount), source_(source) {}
+  virtual ~MountTaskObserverBridge() {}
   virtual bool MountTaskObserve(const MountTaskResult& result) {
     auto r = std::make_unique<MountTaskResult>(result);
     r->set_mount(mount_);
@@ -128,27 +128,13 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   // Used internally during registration to set the
   // proper service information.
-  virtual const char *service_name() const {
-    return kCryptohomeServiceName;
-  }
-  virtual const char *service_path() const {
-    return kCryptohomeServicePath;
-  }
-  virtual const char *service_interface() const {
-    return kCryptohomeInterface;
-  }
-  virtual GObject* service_object() const {
-    return G_OBJECT(cryptohome_);
-  }
-  virtual void set_tpm(Tpm* tpm) {
-    tpm_ = tpm;
-  }
-  virtual void set_tpm_init(TpmInit* tpm_init) {
-    tpm_init_ = tpm_init;
-  }
-  virtual void set_initialize_tpm(bool value) {
-    initialize_tpm_ = value;
-  }
+  virtual const char* service_name() const { return kCryptohomeServiceName; }
+  virtual const char* service_path() const { return kCryptohomeServicePath; }
+  virtual const char* service_interface() const { return kCryptohomeInterface; }
+  virtual GObject* service_object() const { return G_OBJECT(cryptohome_); }
+  virtual void set_tpm(Tpm* tpm) { tpm_ = tpm; }
+  virtual void set_tpm_init(TpmInit* tpm_init) { tpm_init_ = tpm_init; }
+  virtual void set_initialize_tpm(bool value) { initialize_tpm_ = value; }
   virtual void set_install_attrs(InstallAttributes* install_attrs) {
     install_attrs_ = install_attrs;
   }
@@ -156,18 +142,14 @@ class Service : public brillo::dbus::AbstractDbusService,
                                   cryptohome::Mount* m) {
     mounts_[username] = m;
   }
-  virtual void set_crypto(Crypto* crypto) {
-      crypto_ = crypto;
-  }
+  virtual void set_crypto(Crypto* crypto) { crypto_ = crypto; }
   virtual void set_mount_factory(cryptohome::MountFactory* mf) {
     mount_factory_ = mf;
   }
-  virtual void set_use_tpm(bool value) {
-    use_tpm_ = value;
-  }
+  virtual void set_use_tpm(bool value) { use_tpm_ = value; }
 
   // Overrides the Platform implementation for Service.
-  virtual void set_platform(cryptohome::Platform *platform) {
+  virtual void set_platform(cryptohome::Platform* platform) {
     platform_ = platform;
   }
 
@@ -200,7 +182,7 @@ class Service : public brillo::dbus::AbstractDbusService,
   }
 
   // Checks if the given user is the system owner.
-  virtual bool IsOwner(const std::string &userid);
+  virtual bool IsOwner(const std::string& userid);
 
   // Returns the base directory of the eCryptfs destination, containing
   // the "user" and "root" directories.
@@ -280,7 +262,7 @@ class Service : public brillo::dbus::AbstractDbusService,
                                 GArray* migrate_request,
                                 DBusGMethodInvocation* context);
   virtual void DoAddKeyEx(AccountIdentifier* account_id,
-                          AuthorizationRequest*  authorization_request,
+                          AuthorizationRequest* authorization_request,
                           AddKeyRequest* add_key_request,
                           DBusGMethodInvocation* context);
   virtual gboolean AddKeyEx(GArray* account_id,
@@ -288,61 +270,60 @@ class Service : public brillo::dbus::AbstractDbusService,
                             GArray* add_key_request,
                             DBusGMethodInvocation* context);
   virtual void DoAddDataRestoreKey(AccountIdentifier* account_id,
-                                   AuthorizationRequest*  authorization_request,
+                                   AuthorizationRequest* authorization_request,
                                    DBusGMethodInvocation* context);
   virtual gboolean AddDataRestoreKey(GArray* account_id,
                                      GArray* authorization_request,
                                      DBusGMethodInvocation* context);
   virtual void DoUpdateKeyEx(AccountIdentifier* account_id,
-                             AuthorizationRequest*  authorization_request,
+                             AuthorizationRequest* authorization_request,
                              UpdateKeyRequest* update_key_request,
                              DBusGMethodInvocation* context);
-  virtual gboolean UpdateKeyEx(GArray *account_id,
-                               GArray *authorization_request,
-                               GArray *update_key_request,
-                               DBusGMethodInvocation *response);
+  virtual gboolean UpdateKeyEx(GArray* account_id,
+                               GArray* authorization_request,
+                               GArray* update_key_request,
+                               DBusGMethodInvocation* response);
   virtual void DoCheckKeyEx(
       std::unique_ptr<AccountIdentifier> account_id,
       std::unique_ptr<AuthorizationRequest> authorization_request,
       std::unique_ptr<CheckKeyRequest> check_key_request,
       DBusGMethodInvocation* context);
-  virtual gboolean CheckKeyEx(GArray *account_id,
-                              GArray *authorization_request,
-                              GArray *check_key_request,
-                              DBusGMethodInvocation *context);
+  virtual gboolean CheckKeyEx(GArray* account_id,
+                              GArray* authorization_request,
+                              GArray* check_key_request,
+                              DBusGMethodInvocation* context);
   virtual void DoRemoveKeyEx(AccountIdentifier* account_id,
-                             AuthorizationRequest*  authorization_request,
+                             AuthorizationRequest* authorization_request,
                              RemoveKeyRequest* remove_key_request,
                              DBusGMethodInvocation* context);
-  virtual gboolean RemoveKeyEx(GArray *account_id,
-                               GArray *authorization_request,
-                               GArray *remove_key_request,
-                               DBusGMethodInvocation *context);
+  virtual gboolean RemoveKeyEx(GArray* account_id,
+                               GArray* authorization_request,
+                               GArray* remove_key_request,
+                               DBusGMethodInvocation* context);
   virtual void DoMassRemoveKeys(AccountIdentifier* account_id,
                                 AuthorizationRequest* authorization_request,
-                                MassRemoveKeysRequest*
-                                    mass_remove_keys_request,
+                                MassRemoveKeysRequest* mass_remove_keys_request,
                                 DBusGMethodInvocation* context);
-  virtual gboolean MassRemoveKeys(GArray *account_id,
-                                  GArray *authorization_request,
-                                  GArray *mass_remove_keys_request,
-                                  DBusGMethodInvocation *context);
+  virtual gboolean MassRemoveKeys(GArray* account_id,
+                                  GArray* authorization_request,
+                                  GArray* mass_remove_keys_request,
+                                  DBusGMethodInvocation* context);
   virtual void DoGetKeyDataEx(AccountIdentifier* account_id,
-                              AuthorizationRequest*  authorization_request,
+                              AuthorizationRequest* authorization_request,
                               GetKeyDataRequest* get_key_data_request,
                               DBusGMethodInvocation* context);
-  virtual gboolean GetKeyDataEx(GArray *account_id,
-                                GArray *authorization_request,
-                                GArray *get_key_data_request,
-                                DBusGMethodInvocation *context);
+  virtual gboolean GetKeyDataEx(GArray* account_id,
+                                GArray* authorization_request,
+                                GArray* get_key_data_request,
+                                DBusGMethodInvocation* context);
   virtual void DoListKeysEx(AccountIdentifier* account_id,
-                            AuthorizationRequest*  authorization_request,
+                            AuthorizationRequest* authorization_request,
                             ListKeysRequest* list_keys_request,
                             DBusGMethodInvocation* context);
-  virtual gboolean ListKeysEx(GArray *account_id,
-                              GArray *authorization_request,
-                              GArray *list_keys_request,
-                              DBusGMethodInvocation *context);
+  virtual gboolean ListKeysEx(GArray* account_id,
+                              GArray* authorization_request,
+                              GArray* list_keys_request,
+                              DBusGMethodInvocation* context);
   virtual void DoRemoveEx(AccountIdentifier* account_id,
                           DBusGMethodInvocation* context);
   virtual gboolean RemoveEx(GArray* account, DBusGMethodInvocation* context);
@@ -351,15 +332,15 @@ class Service : public brillo::dbus::AbstractDbusService,
                                     DBusGMethodInvocation* response);
   virtual gboolean GetAccountDiskUsage(const GArray* account_id,
                                        DBusGMethodInvocation* response);
-  virtual gboolean GetSystemSalt(GArray **OUT_salt, GError **error);
-  virtual gboolean GetSanitizedUsername(gchar *username,
-                                        gchar **OUT_sanitized,
-                                        GError **error);
-  virtual gboolean IsMountedForUser(gchar *user,
-                                    gboolean *OUT_is_mounted,
-                                    gboolean *OUT_is_ephemeral_mount,
-                                    GError **error);
-  virtual gboolean IsMounted(gboolean *OUT_is_mounted, GError **error);
+  virtual gboolean GetSystemSalt(GArray** OUT_salt, GError** error);
+  virtual gboolean GetSanitizedUsername(gchar* username,
+                                        gchar** OUT_sanitized,
+                                        GError** error);
+  virtual gboolean IsMountedForUser(gchar* user,
+                                    gboolean* OUT_is_mounted,
+                                    gboolean* OUT_is_ephemeral_mount,
+                                    GError** error);
+  virtual gboolean IsMounted(gboolean* OUT_is_mounted, GError** error);
 
   void DoUpdateTimestamp(scoped_refptr<Mount> mount);
   void DoMount(scoped_refptr<cryptohome::Mount> mount,
@@ -368,13 +349,13 @@ class Service : public brillo::dbus::AbstractDbusService,
                base::WaitableEvent* event,
                MountError* return_code,
                bool* return_status);
-  virtual gboolean Mount(const gchar *user,
-                         const gchar *key,
+  virtual gboolean Mount(const gchar* user,
+                         const gchar* key,
                          gboolean create_if_missing,
                          gboolean ensure_ephemeral,
-                         gint *OUT_error_code,
-                         gboolean *OUT_result,
-                         GError **error);
+                         gint* OUT_error_code,
+                         gboolean* OUT_result,
+                         GError** error);
 
   virtual void DoMountEx(std::unique_ptr<AccountIdentifier> identifier,
                          std::unique_ptr<AuthorizationRequest> authorization,
@@ -385,22 +366,21 @@ class Service : public brillo::dbus::AbstractDbusService,
                                   DBusGMethodInvocation* context);
   virtual void DoGetAccountDiskUsage(AccountIdentifier* id,
                                      DBusGMethodInvocation* context);
-  virtual gboolean MountEx(
-      const GArray *account_id,
-      const GArray *authorization_request,
-      const GArray *mount_request,
-      DBusGMethodInvocation *response);
+  virtual gboolean MountEx(const GArray* account_id,
+                           const GArray* authorization_request,
+                           const GArray* mount_request,
+                           DBusGMethodInvocation* response);
   virtual void DoMountGuestEx(scoped_refptr<cryptohome::Mount> guest_mount,
                               std::unique_ptr<MountGuestRequest> request_pb,
                               DBusGMethodInvocation* context);
   virtual gboolean MountGuestEx(GArray* request,
                                 DBusGMethodInvocation* context);
-  virtual gboolean Unmount(gboolean *OUT_result, GError **error);
+  virtual gboolean Unmount(gboolean* OUT_result, GError** error);
   virtual void DoUnmountEx(std::unique_ptr<UnmountRequest> request_pb,
                            DBusGMethodInvocation* context);
   virtual gboolean UnmountEx(GArray* request, DBusGMethodInvocation* context);
   virtual gboolean UpdateCurrentUserActivityTimestamp(gint time_shift_sec,
-                                                      GError **error);
+                                                      GError** error);
 
   virtual gboolean TpmIsReady(gboolean* OUT_ready, GError** error);
   virtual gboolean TpmIsEnabled(gboolean* OUT_enabled, GError** error);
@@ -414,9 +394,8 @@ class Service : public brillo::dbus::AbstractDbusService,
                                       const GArray* migrate_request,
                                       GError** error);
   // Runs on the mount thread.
-  virtual void DoMigrateToDircrypto(
-      AccountIdentifier* identifier,
-      MigrationType migration_type);
+  virtual void DoMigrateToDircrypto(AccountIdentifier* identifier,
+                                    MigrationType migration_type);
 
   virtual gboolean NeedsDircryptoMigration(const GArray* account_id,
                                            gboolean* OUT_needs_migration,
@@ -487,13 +466,12 @@ class Service : public brillo::dbus::AbstractDbusService,
                                                gboolean forced,
                                                gint* OUT_async_id,
                                                GError** error) = 0;
-  virtual gboolean TpmAttestationCreateCertRequest(
-      gint pca_type,
-      gint certificate_profile,
-      gchar* username,
-      gchar* request_origin,
-      GArray** OUT_pca_request,
-      GError** error) = 0;
+  virtual gboolean TpmAttestationCreateCertRequest(gint pca_type,
+                                                   gint certificate_profile,
+                                                   gchar* username,
+                                                   gchar* request_origin,
+                                                   GArray** OUT_pca_request,
+                                                   GError** error) = 0;
   virtual gboolean AsyncTpmAttestationCreateCertRequest(
       gint pca_type,
       gint certificate_profile,
@@ -543,24 +521,24 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual gboolean TpmAttestationDoesKeyExist(gboolean is_user_specific,
                                               gchar* username,
                                               gchar* key_name,
-                                              gboolean *OUT_exists,
+                                              gboolean* OUT_exists,
                                               GError** error) = 0;
   virtual gboolean TpmAttestationGetCertificate(gboolean is_user_specific,
                                                 gchar* username,
                                                 gchar* key_name,
-                                                GArray **OUT_certificate,
+                                                GArray** OUT_certificate,
                                                 gboolean* OUT_success,
                                                 GError** error) = 0;
   virtual gboolean TpmAttestationGetPublicKey(gboolean is_user_specific,
                                               gchar* username,
                                               gchar* key_name,
-                                              GArray **OUT_public_key,
+                                              GArray** OUT_public_key,
                                               gboolean* OUT_success,
                                               GError** error) = 0;
   virtual gboolean TpmAttestationRegisterKey(gboolean is_user_specific,
                                              gchar* username,
                                              gchar* key_name,
-                                             gint *OUT_async_id,
+                                             gint* OUT_async_id,
                                              GError** error) = 0;
   virtual gboolean TpmAttestationSignEnterpriseChallenge(
       gboolean is_user_specific,
@@ -570,7 +548,7 @@ class Service : public brillo::dbus::AbstractDbusService,
       GArray* device_id,
       gboolean include_signed_public_key,
       GArray* challenge,
-      gint *OUT_async_id,
+      gint* OUT_async_id,
       GError** error) = 0;
   virtual gboolean TpmAttestationSignEnterpriseVaChallenge(
       gint va_type,
@@ -584,13 +562,12 @@ class Service : public brillo::dbus::AbstractDbusService,
       gchar* key_name_for_spkac,
       gint* OUT_async_id,
       GError** error) = 0;
-  virtual gboolean TpmAttestationSignSimpleChallenge(
-      gboolean is_user_specific,
-      gchar* username,
-      gchar* key_name,
-      GArray* challenge,
-      gint *OUT_async_id,
-      GError** error) = 0;
+  virtual gboolean TpmAttestationSignSimpleChallenge(gboolean is_user_specific,
+                                                     gchar* username,
+                                                     gchar* key_name,
+                                                     GArray* challenge,
+                                                     gint* OUT_async_id,
+                                                     GError** error) = 0;
   virtual gboolean TpmAttestationGetKeyPayload(gboolean is_user_specific,
                                                gchar* username,
                                                gchar* key_name,
@@ -638,7 +615,7 @@ class Service : public brillo::dbus::AbstractDbusService,
                                          gint* OUT_slot,
                                          GError** error);
   // Returns the label of the TPM token along with its user PIN.
-  virtual gboolean Pkcs11GetTpmTokenInfoForUser(gchar *username,
+  virtual gboolean Pkcs11GetTpmTokenInfoForUser(gchar* username,
                                                 gchar** OUT_label,
                                                 gchar** OUT_user_pin,
                                                 gint* OUT_slot,
@@ -654,13 +631,13 @@ class Service : public brillo::dbus::AbstractDbusService,
 
   // InstallAttributes methods
   virtual gboolean InstallAttributesGet(gchar* name,
-                              GArray** OUT_value,
-                              gboolean* OUT_successful,
-                              GError** error);
+                                        GArray** OUT_value,
+                                        gboolean* OUT_successful,
+                                        GError** error);
   virtual gboolean InstallAttributesSet(gchar* name,
-                              GArray* value,
-                              gboolean* OUT_successful,
-                              GError** error);
+                                        GArray* value,
+                                        gboolean* OUT_successful,
+                                        GError** error);
   virtual gboolean InstallAttributesFinalize(gboolean* OUT_finalized,
                                              GError** error);
   virtual gboolean InstallAttributesCount(gint* OUT_count, GError** error);
@@ -669,9 +646,9 @@ class Service : public brillo::dbus::AbstractDbusService,
   virtual gboolean InstallAttributesIsSecure(gboolean* OUT_secure,
                                              GError** error);
   virtual gboolean InstallAttributesIsInvalid(gboolean* OUT_invalid,
-                                             GError** error);
-virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
-                                                 GError** error);
+                                              GError** error);
+  virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
+                                                   GError** error);
 
   // Runs on the mount thread.
   virtual void DoSignBootLockbox(const brillo::Blob& request,
@@ -711,11 +688,9 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
                                   DBusGMethodInvocation* context);
   // Runs on the mount thread.
   virtual void DoTpmAttestationGetEnrollmentPreparationsEx(
-      const brillo::Blob& request,
-      DBusGMethodInvocation* context);
+      const brillo::Blob& request, DBusGMethodInvocation* context);
   virtual gboolean TpmAttestationGetEnrollmentPreparationsEx(
-      const GArray* request,
-      DBusGMethodInvocation* context);
+      const GArray* request, DBusGMethodInvocation* context);
   // Runs on the mount thread.
   virtual void DoGetTpmStatus(const brillo::SecureBlob& request,
                               DBusGMethodInvocation* context);
@@ -737,24 +712,21 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
                                              DBusGMethodInvocation* context);
   // Runs on the mount thread.
   virtual void DoGetFirmwareManagementParameters(
-      const brillo::SecureBlob& request,
-      DBusGMethodInvocation* context);
-  virtual gboolean GetFirmwareManagementParameters(const GArray* request,
-                           DBusGMethodInvocation* context);
+      const brillo::SecureBlob& request, DBusGMethodInvocation* context);
+  virtual gboolean GetFirmwareManagementParameters(
+      const GArray* request, DBusGMethodInvocation* context);
 
   // Runs on the mount thread.
   virtual void DoSetFirmwareManagementParameters(
-      const brillo::SecureBlob& request,
-      DBusGMethodInvocation* context);
-  virtual gboolean SetFirmwareManagementParameters(const GArray* request,
-                           DBusGMethodInvocation* context);
+      const brillo::SecureBlob& request, DBusGMethodInvocation* context);
+  virtual gboolean SetFirmwareManagementParameters(
+      const GArray* request, DBusGMethodInvocation* context);
 
   // Runs on the mount thread.
   virtual void DoRemoveFirmwareManagementParameters(
-      const brillo::SecureBlob& request,
-      DBusGMethodInvocation* context);
-  virtual gboolean RemoveFirmwareManagementParameters(const GArray* request,
-                              DBusGMethodInvocation* context);
+      const brillo::SecureBlob& request, DBusGMethodInvocation* context);
+  virtual gboolean RemoveFirmwareManagementParameters(
+      const GArray* request, DBusGMethodInvocation* context);
 
   virtual gboolean TpmAttestationGetEnrollmentId(gboolean ignore_cache,
                                                  GArray** OUT_enrollment_id,
@@ -782,17 +754,16 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
                                          GError** error);
 
   virtual gboolean LockToSingleUserMountUntilReboot(
-      const GArray* request,
-      DBusGMethodInvocation* context);
+      const GArray* request, DBusGMethodInvocation* context);
 
   virtual void DoLockToSingleUserMountUntilReboot(
-      const std::string& obfuscated_username,
-      DBusGMethodInvocation* context);
+      const std::string& obfuscated_username, DBusGMethodInvocation* context);
 
   virtual gboolean CheckHealth(const GArray* request,
                                DBusGMethodInvocation* context);
 
   void PostTaskToEventLoop(base::OnceClosure task);
+
  protected:
   FRIEND_TEST(ServiceTest, NoDeadlocksInInitializeTpmComplete);
 
@@ -851,7 +822,7 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
   // TODO(garryxiao): remove this after we migrate to the new dbus librabry.
   bool skip_ownership_taken_signal_connection_;
 
-  virtual GMainLoop *main_loop() { return loop_; }
+  virtual GMainLoop* main_loop() { return loop_; }
 
   // Called periodically from LowDiskCallback to initiate automatic disk
   // cleanup if needed.
@@ -919,20 +890,15 @@ virtual gboolean InstallAttributesIsFirstInstall(gboolean* OUT_first_install,
                                   const gchar* message);
   virtual void SendInvalidArgsReply(DBusGMethodInvocation* context,
                                     const char* message) {
-    SendDBusErrorReply(context,
-                       DBUS_GERROR, DBUS_GERROR_INVALID_ARGS,
-                       message);
+    SendDBusErrorReply(context, DBUS_GERROR, DBUS_GERROR_INVALID_ARGS, message);
   }
   virtual void SendFailureReply(DBusGMethodInvocation* context,
                                 const char* message) {
-    SendDBusErrorReply(context,
-                       DBUS_GERROR, DBUS_GERROR_FAILED,
-                       message);
+    SendDBusErrorReply(context, DBUS_GERROR, DBUS_GERROR_FAILED, message);
   }
   virtual void SendNotSupportedReply(DBusGMethodInvocation* context,
                                      const char* message) {
-    SendDBusErrorReply(context,
-                       DBUS_GERROR, DBUS_GERROR_NOT_SUPPORTED,
+    SendDBusErrorReply(context, DBUS_GERROR, DBUS_GERROR_NOT_SUPPORTED,
                        message);
   }
 

@@ -8,8 +8,8 @@
 
 namespace cryptohome {
 
-MountFactory::MountFactory() { }
-MountFactory::~MountFactory() { }
+MountFactory::MountFactory() {}
+MountFactory::~MountFactory() {}
 
 Mount* MountFactory::New() {
   return new Mount();

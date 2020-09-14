@@ -38,8 +38,7 @@ const uid_t kArcContainerShiftUid = 655360;
 // The gid shift of ARC++ container.
 const gid_t kArcContainerShiftGid = 655360;
 const int64_t kFreeSpaceThresholdToTriggerCleanup = 1LL << 30;
-const int64_t kFreeSpaceThresholdToTriggerAggressiveCleanup =
-                                      768 * 1024 * 1024;
+const int64_t kFreeSpaceThresholdToTriggerAggressiveCleanup = 768 * 1024 * 1024;
 const int64_t kTargetFreeSpaceAfterCleanup = 2LL << 30;
 extern const char kAndroidCacheInodeAttribute[];
 extern const char kAndroidCodeCacheInodeAttribute[];
@@ -74,12 +73,14 @@ class HomeDirs {
 
   // Gets the directory to mount the user's cryptohome at given the shadow root
   // path and obfuscated username.
-  static base::FilePath GetUserMountDirectory(const base::FilePath& shadow_root,
+  static base::FilePath GetUserMountDirectory(
+      const base::FilePath& shadow_root,
       const std::string& obfuscated_username);
 
   // Initializes this HomeDirs object. Returns true for success.
-  virtual bool Init(Platform* platform, Crypto* crypto,
-                    UserOldestActivityTimestampCache *cache);
+  virtual bool Init(Platform* platform,
+                    Crypto* crypto,
+                    UserOldestActivityTimestampCache* cache);
 
   // Removes all cryptohomes owned by anyone other than the owner user (if set),
   // regardless of free disk space.
@@ -87,7 +88,7 @@ class HomeDirs {
 
   // Returns the system salt, creating a new one if necessary. If loading the
   // system salt fails, returns false, and blob is unchanged.
-  virtual bool GetSystemSalt(brillo::SecureBlob *blob);
+  virtual bool GetSystemSalt(brillo::SecureBlob* blob);
 
   // Returns the owner's obfuscated username.
   virtual bool GetOwner(std::string* owner);
@@ -189,13 +190,11 @@ class HomeDirs {
   // key_data().label() is unique.
   // If |clobber| is true and there are no matching, labeled keys, then it does
   // nothing.  If there is an identically labeled key, it will overwrite it.
-  virtual CryptohomeErrorCode AddKeyset(
-                         const Credentials& existing_credentials,
-                         const brillo::SecureBlob& new_passkey,
-                         const KeyData* new_data,
-                         bool clobber,
-                         int* index);
-
+  virtual CryptohomeErrorCode AddKeyset(const Credentials& existing_credentials,
+                                        const brillo::SecureBlob& new_passkey,
+                                        const KeyData* new_data,
+                                        bool clobber,
+                                        int* index);
 
   // Removes the keyset identified by |key_data| if |credentials|
   // has the remove() KeyPrivilege.  The VaultKeyset backing
@@ -207,9 +206,9 @@ class HomeDirs {
   // applies |changed_data| to the keyset conditionally on if
   // |authorization_signature| is needed and is valid.
   virtual CryptohomeErrorCode UpdateKeyset(
-                         const Credentials& credentials,
-                         const Key* changed_data,
-                         const std::string& authorization_signature);
+      const Credentials& credentials,
+      const Key* changed_data,
+      const std::string& authorization_signature);
 
   // Returns true if the |signature| is valid over the |new_key| given
   // the AuthorizationData specification from |existing_key_data|.
@@ -277,7 +276,7 @@ class HomeDirs {
   // Accessors. Mostly used for unit testing. These do not take ownership of
   // passed-in pointers.
   // TODO(wad) Should this update default_crypto_.set_platform()?
-  void set_platform(Platform *value) { platform_ = value; }
+  void set_platform(Platform* value) { platform_ = value; }
   Platform* platform() { return platform_; }
   virtual void set_shadow_root(const base::FilePath& value) {
     shadow_root_ = value;
@@ -312,10 +311,9 @@ class HomeDirs {
                            const base::FilePath& tracked_dir_name,
                            base::FilePath* out);
   // GetTrackedDirectory() implementation for dircrypto.
-  bool GetTrackedDirectoryForDirCrypto(
-      const base::FilePath& mount_dir,
-      const base::FilePath& tracked_dir_name,
-      base::FilePath* out);
+  bool GetTrackedDirectoryForDirCrypto(const base::FilePath& mount_dir,
+                                       const base::FilePath& tracked_dir_name,
+                                       base::FilePath* out);
 
   // Removes all mounted homedirs from the vector
   void FilterMountedHomedirs(std::vector<HomeDir>* homedirs);

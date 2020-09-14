@@ -999,8 +999,7 @@ bool UnsealingSessionTpm1Impl::Unseal(const Blob& signed_challenge_value,
   // Obtain the TPM context and handle with the required authorization.
   ScopedTssContext tpm_context;
   TSS_HTPM tpm_handle = 0;
-  if (!tpm_->ConnectContextAsDelegate(delegate_blob_,
-                                      delegate_secret_,
+  if (!tpm_->ConnectContextAsDelegate(delegate_blob_, delegate_secret_,
                                       tpm_context.ptr(), &tpm_handle)) {
     LOG(ERROR) << "Failed to connect to the TPM";
     return false;
@@ -1115,8 +1114,7 @@ bool SignatureSealingBackendTpm1Impl::CreateSealedSecret(
   // Obtain the TPM context and handle with the required authorization.
   ScopedTssContext tpm_context;
   TSS_HTPM tpm_handle = 0;
-  if (!tpm_->ConnectContextAsDelegate(delegate_blob,
-                                      delegate_secret,
+  if (!tpm_->ConnectContextAsDelegate(delegate_blob, delegate_secret,
                                       tpm_context.ptr(), &tpm_handle)) {
     LOG(ERROR) << "Failed to connect to the TPM";
     return false;
@@ -1140,9 +1138,8 @@ bool SignatureSealingBackendTpm1Impl::CreateSealedSecret(
     LOG(ERROR) << "Failed to read the protection public key";
     return false;
   }
-  const Blob protection_key_pubkey_digest =
-      CryptoLib::Sha1(Blob(protection_key_pubkey.begin(),
-                           protection_key_pubkey.end()));
+  const Blob protection_key_pubkey_digest = CryptoLib::Sha1(
+      Blob(protection_key_pubkey.begin(), protection_key_pubkey.end()));
   const Blob msa_composite_digest =
       BuildMsaCompositeDigest(protection_key_pubkey_digest);
   // Obtain the migration authority approval ticket for the TPM_MSA_COMPOSITE
@@ -1282,8 +1279,7 @@ SignatureSealingBackendTpm1Impl::CreateUnsealingSession(
   // Obtain the TPM context and handle with the required authorization.
   ScopedTssContext tpm_context;
   TSS_HTPM tpm_handle = 0;
-  if (!tpm_->ConnectContextAsDelegate(delegate_blob,
-                                      delegate_secret,
+  if (!tpm_->ConnectContextAsDelegate(delegate_blob, delegate_secret,
                                       tpm_context.ptr(), &tpm_handle)) {
     LOG(ERROR) << "Failed to connect to the TPM";
     return nullptr;
@@ -1320,8 +1316,7 @@ SignatureSealingBackendTpm1Impl::CreateUnsealingSession(
   }
   if (!BN_set_word(e.get(), kWellKnownExponent) ||
       !RSA_generate_key_ex(migration_destination_rsa.get(),
-                           kMigrationDestinationKeySizeBits,
-                           e.get(),
+                           kMigrationDestinationKeySizeBits, e.get(),
                            nullptr)) {
     LOG(ERROR) << "Failed to generate the migration destination key";
     return nullptr;

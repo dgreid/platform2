@@ -15,10 +15,10 @@
 #include "cryptohome/mock_platform.h"
 #include "cryptohome/mock_tpm.h"
 
+using ::testing::_;
 using ::testing::Invoke;
 using ::testing::NiceMock;
 using ::testing::Return;
-using ::testing::_;
 
 namespace cryptohome {
 
@@ -32,18 +32,16 @@ const TpmKeyHandle kTestKeyHandle = 17;  // any non-zero value
 class TpmInitTest : public ::testing::Test {
  public:
   TpmInitTest()
-    : is_tpm_owned_(false),
-      is_tpm_being_owned_(false),
-      is_tpm_initialized_(false),
-      tpm_init_(&tpm_, &platform_) {}
+      : is_tpm_owned_(false),
+        is_tpm_being_owned_(false),
+        is_tpm_initialized_(false),
+        tpm_init_(&tpm_, &platform_) {}
   ~TpmInitTest() override = default;
 
   // Default mock implementations for |tpm_| methods.
   // For TPM-related flags: enabled is always true, other flags are settable.
   bool IsTpmOwned() const { return is_tpm_owned_; }
-  void SetIsTpmOwned(bool is_tpm_owned) {
-    is_tpm_owned_ = is_tpm_owned;
-  }
+  void SetIsTpmOwned(bool is_tpm_owned) { is_tpm_owned_ = is_tpm_owned; }
   bool IsTpmBeingOwned() const { return is_tpm_being_owned_; }
   void SetIsTpmBeingOwned(bool is_tpm_being_owned) {
     is_tpm_being_owned_ = is_tpm_being_owned;
@@ -160,52 +158,50 @@ class TpmInitTest : public ::testing::Test {
   }
 
   void SetUp() override {
-    ON_CALL(tpm_, IsEnabled())
-      .WillByDefault(Return(true));
+    ON_CALL(tpm_, IsEnabled()).WillByDefault(Return(true));
     ON_CALL(tpm_, IsOwned())
-      .WillByDefault(Invoke(this, &TpmInitTest::IsTpmOwned));
+        .WillByDefault(Invoke(this, &TpmInitTest::IsTpmOwned));
     ON_CALL(tpm_, SetIsOwned(_))
-      .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmOwned));
+        .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmOwned));
     ON_CALL(tpm_, IsBeingOwned())
-      .WillByDefault(Invoke(this, &TpmInitTest::IsTpmBeingOwned));
+        .WillByDefault(Invoke(this, &TpmInitTest::IsTpmBeingOwned));
     ON_CALL(tpm_, SetIsBeingOwned(_))
-      .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmBeingOwned));
+        .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmBeingOwned));
     ON_CALL(tpm_, IsInitialized())
-      .WillByDefault(Invoke(this, &TpmInitTest::IsTpmInitialized));
+        .WillByDefault(Invoke(this, &TpmInitTest::IsTpmInitialized));
     ON_CALL(tpm_, SetIsInitialized(_))
-      .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmInitialized));
+        .WillByDefault(Invoke(this, &TpmInitTest::SetIsTpmInitialized));
     ON_CALL(tpm_, PerformEnabledOwnedCheck(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::PerformTpmEnabledOwnedCheck));
+        .WillByDefault(Invoke(this, &TpmInitTest::PerformTpmEnabledOwnedCheck));
 
     ON_CALL(tpm_, GetRandomDataBlob(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::GetRandomDataBlob));
+        .WillByDefault(Invoke(this, &TpmInitTest::GetRandomDataBlob));
     ON_CALL(tpm_, GetRandomDataSecureBlob(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::GetRandomDataSecureBlob));
+        .WillByDefault(Invoke(this, &TpmInitTest::GetRandomDataSecureBlob));
 
     ON_CALL(platform_, FileExists(_))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileExists));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileExists));
     ON_CALL(platform_, Move(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileMove));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileMove));
     ON_CALL(platform_, DeleteFile(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
     ON_CALL(platform_, DeleteFileDurable(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileDelete));
     ON_CALL(platform_, TouchFileDurable(_))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileTouch));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileTouch));
     ON_CALL(platform_, GetFileSize(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::GetFileSize));
+        .WillByDefault(Invoke(this, &TpmInitTest::GetFileSize));
     ON_CALL(platform_, ReadFile(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileRead));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileRead));
     ON_CALL(platform_, ReadFileToSecureBlob(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileReadToSecureBlob));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileReadToSecureBlob));
     ON_CALL(platform_, WriteSecureBlobToFile(_, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileWriteFromSecureBlob));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileWriteFromSecureBlob));
     ON_CALL(platform_, WriteSecureBlobToFileAtomic(_, _, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileWriteAtomic));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileWriteAtomic));
     ON_CALL(platform_, WriteSecureBlobToFileAtomicDurable(_, _, _))
-      .WillByDefault(Invoke(this, &TpmInitTest::FileWriteAtomic));
-    ON_CALL(platform_, DataSyncFile(_))
-      .WillByDefault(Return(true));
+        .WillByDefault(Invoke(this, &TpmInitTest::FileWriteAtomic));
+    ON_CALL(platform_, DataSyncFile(_)).WillByDefault(Return(true));
   }
 
   void TearDown() override {}
@@ -288,8 +284,8 @@ TEST_F(TpmInitTest, TakeOwnershipMonolithicSuccess) {
   // Take Ownership.
   EXPECT_CALL(tpm_, DoesUseTpmManager()).WillOnce(Return(false));
   EXPECT_CALL(tpm_, IsEndorsementKeyAvailable())
-    .WillOnce(Return(false))
-    .WillRepeatedly(Return(true));
+      .WillOnce(Return(false))
+      .WillRepeatedly(Return(true));
   EXPECT_CALL(tpm_, CreateEndorsementKey()).WillOnce(Return(true));
   EXPECT_CALL(tpm_, TakeOwnership(_, _)).WillOnce(Return(true));
   EXPECT_CALL(tpm_, TestTpmAuth(_)).WillOnce(Return(true));
@@ -337,8 +333,7 @@ TEST_F(TpmInitTest, RemoveTpmOwnerDependencySuccess) {
                        TpmStatus::INSTALL_ATTRIBUTES_NEEDS_OWNER);
   SetTpmStatus(tpm_status);
   auto dependency = TpmPersistentState::TpmOwnerDependency::kAttestation;
-  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency))
-      .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
               WriteSecureBlobToFileAtomicDurable(kTpmStatusFile, _, _))
       .Times(1);
@@ -352,8 +347,7 @@ TEST_F(TpmInitTest, RemoveTpmOwnerDependencyAlreadyRemoved) {
   tpm_status.set_flags(TpmStatus::INSTALL_ATTRIBUTES_NEEDS_OWNER);
   SetTpmStatus(tpm_status);
   auto dependency = TpmPersistentState::TpmOwnerDependency::kAttestation;
-  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency))
-      .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
               WriteSecureBlobToFileAtomicDurable(kTpmStatusFile, _, _))
       .Times(0);
@@ -367,8 +361,7 @@ TEST_F(TpmInitTest, RemoveTpmOwnerDependencyTpmFailure) {
   tpm_status.set_flags(TpmStatus::ATTESTATION_NEEDS_OWNER);
   SetTpmStatus(tpm_status);
   auto dependency = TpmPersistentState::TpmOwnerDependency::kAttestation;
-  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency))
-      .WillOnce(Return(false));
+  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency)).WillOnce(Return(false));
   EXPECT_CALL(platform_,
               WriteSecureBlobToFileAtomicDurable(kTpmStatusFile, _, _))
       .Times(0);
@@ -379,8 +372,7 @@ TEST_F(TpmInitTest, RemoveTpmOwnerDependencyTpmFailure) {
 
 TEST_F(TpmInitTest, RemoveTpmOwnerDependencyNoTpmStatus) {
   auto dependency = TpmPersistentState::TpmOwnerDependency::kAttestation;
-  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency))
-      .WillOnce(Return(true));
+  EXPECT_CALL(tpm_, RemoveOwnerDependency(dependency)).WillOnce(Return(true));
   EXPECT_CALL(platform_,
               WriteSecureBlobToFileAtomicDurable(kTpmStatusFile, _, _))
       .Times(0);
@@ -391,7 +383,7 @@ TEST_F(TpmInitTest, LoadCryptohomeKeySuccess) {
   SetIsTpmInitialized(true);
   FileTouch(kDefaultCryptohomeKeyFile);
   EXPECT_CALL(tpm_, LoadWrappedKey(_, _))
-    .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
+      .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
   tpm_init_.SetupTpm(true);
   EXPECT_THAT(&tpm_init_, HasLoadedCryptohomeKey(kTestKeyHandle));
 }
@@ -403,10 +395,9 @@ TEST_F(TpmInitTest, LoadCryptohomeKeyTransientFailure) {
   SetIsTpmInitialized(true);
   FileWriteString(kDefaultCryptohomeKeyFile, "old-key");
   EXPECT_CALL(tpm_, LoadWrappedKey(_, _))
-    .WillOnce(Return(Tpm::kTpmRetryCommFailure))
-    .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
-  EXPECT_CALL(tpm_, WrapRsaKey(_, _, _))
-    .Times(0);
+      .WillOnce(Return(Tpm::kTpmRetryCommFailure))
+      .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
+  EXPECT_CALL(tpm_, WrapRsaKey(_, _, _)).Times(0);
   tpm_init_.SetupTpm(true);
   EXPECT_THAT(&tpm_init_, HasNoLoadedCryptohomeKey());
   tpm_init_.SetupTpm(true);
@@ -421,10 +412,10 @@ TEST_F(TpmInitTest, ReCreateCryptohomeKeyAfterLoadFailure) {
   SetIsTpmInitialized(true);
   FileWriteString(kDefaultCryptohomeKeyFile, "old-key");
   EXPECT_CALL(tpm_, LoadWrappedKey(_, _))
-    .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
-    .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
+      .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
+      .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
   EXPECT_CALL(tpm_, WrapRsaKey(_, _, _))
-    .WillOnce(GenerateWrappedKey("new-key"));
+      .WillOnce(GenerateWrappedKey("new-key"));
   tpm_init_.SetupTpm(true);
   EXPECT_THAT(&tpm_init_, HasLoadedCryptohomeKey(kTestKeyHandle));
   EXPECT_THAT(this, HasStoredCryptohomeKey("new-key"));
@@ -437,9 +428,8 @@ TEST_F(TpmInitTest, ReCreateCryptohomeKeyFailureDuringKeyCreation) {
   SetIsTpmInitialized(true);
   FileWriteString(kDefaultCryptohomeKeyFile, "old-key");
   EXPECT_CALL(tpm_, LoadWrappedKey(_, _))
-    .WillOnce(Return(Tpm::kTpmRetryFailNoRetry));
-  EXPECT_CALL(tpm_, WrapRsaKey(_, _, _))
-    .WillOnce(Return(false));
+      .WillOnce(Return(Tpm::kTpmRetryFailNoRetry));
+  EXPECT_CALL(tpm_, WrapRsaKey(_, _, _)).WillOnce(Return(false));
   tpm_init_.SetupTpm(true);
   EXPECT_THAT(&tpm_init_, HasNoLoadedCryptohomeKey());
   EXPECT_THAT(this, HasStoredCryptohomeKey("old-key"));
@@ -453,11 +443,11 @@ TEST_F(TpmInitTest, ReCreateCryptohomeKeyFailureDuringKeyLoading) {
   SetIsTpmInitialized(true);
   FileWriteString(kDefaultCryptohomeKeyFile, "old-key");
   EXPECT_CALL(tpm_, LoadWrappedKey(_, _))
-    .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
-    .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
-    .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
+      .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
+      .WillOnce(Return(Tpm::kTpmRetryFailNoRetry))
+      .WillOnce(LoadWrappedKeyToHandle(kTestKeyHandle));
   EXPECT_CALL(tpm_, WrapRsaKey(_, _, _))
-    .WillOnce(GenerateWrappedKey("new-key"));
+      .WillOnce(GenerateWrappedKey("new-key"));
   tpm_init_.SetupTpm(true);
   EXPECT_THAT(&tpm_init_, HasNoLoadedCryptohomeKey());
   EXPECT_THAT(this, HasStoredCryptohomeKey("new-key"));

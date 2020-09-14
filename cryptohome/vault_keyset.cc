@@ -24,16 +24,17 @@ const mode_t kVaultFilePermissions = 0600;
 namespace cryptohome {
 
 VaultKeyset::VaultKeyset()
-    : platform_(NULL), crypto_(NULL), loaded_(false), encrypted_(false),
-      legacy_index_(-1) {
-}
+    : platform_(NULL),
+      crypto_(NULL),
+      loaded_(false),
+      encrypted_(false),
+      legacy_index_(-1) {}
 
 VaultKeyset::VaultKeyset(VaultKeyset&& vault_keyset) {
   FromVaultKeyset(vault_keyset);
 }
 
-VaultKeyset::~VaultKeyset() {
-}
+VaultKeyset::~VaultKeyset() {}
 
 void VaultKeyset::Initialize(Platform* platform, Crypto* crypto) {
   platform_ = platform;
@@ -48,15 +49,13 @@ void VaultKeyset::FromVaultKeyset(const VaultKeyset& vault_keyset) {
   memcpy(fek_sig_.data(), vault_keyset.fek_sig_.data(), fek_sig_.size());
 
   fek_salt_.resize(vault_keyset.fek_salt_.size());
-  memcpy(fek_salt_.data(), vault_keyset.fek_salt_.data(),
-         fek_salt_.size());
+  memcpy(fek_salt_.data(), vault_keyset.fek_salt_.data(), fek_salt_.size());
 
   fnek_.resize(vault_keyset.fnek_.size());
   memcpy(fnek_.data(), vault_keyset.fnek_.data(), fnek_.size());
 
   fnek_sig_.resize(vault_keyset.fnek_sig_.size());
-  memcpy(fnek_sig_.data(), vault_keyset.fnek_sig_.data(),
-         fnek_sig_.size());
+  memcpy(fnek_sig_.data(), vault_keyset.fnek_sig_.data(), fnek_sig_.size());
 
   fnek_salt_.resize(vault_keyset.fnek_salt_.size());
   memcpy(fnek_salt_.data(), vault_keyset.fnek_salt_.data(), fnek_salt_.size());
@@ -231,7 +230,8 @@ bool VaultKeyset::Load(const FilePath& filename) {
     // TODO(crbug.com/832398): get rid of having two ways to identify an
     // LECredential: LE_CREDENTIAL and key_data.policy.low_entropy_credential.
     if (serialized_.flags() & SerializedVaultKeyset::LE_CREDENTIAL) {
-      serialized_.mutable_key_data()->mutable_policy()
+      serialized_.mutable_key_data()
+          ->mutable_policy()
           ->set_low_entropy_credential(true);
     }
     if (serialized_.has_timestamp_file_exists() &&
@@ -281,9 +281,8 @@ bool VaultKeyset::Decrypt(const SecureBlob& key,
   }
 
   CryptoError local_crypto_error = CryptoError::CE_NONE;
-  bool ok =
-      crypto_->DecryptVaultKeyset(serialized_, key, locked_to_single_user,
-                                  nullptr, &local_crypto_error, this);
+  bool ok = crypto_->DecryptVaultKeyset(serialized_, key, locked_to_single_user,
+                                        nullptr, &local_crypto_error, this);
   if (!ok && local_crypto_error == CryptoError::CE_TPM_COMM_ERROR) {
     ok = crypto_->DecryptVaultKeyset(serialized_, key, locked_to_single_user,
                                      nullptr, &local_crypto_error, this);

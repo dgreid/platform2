@@ -62,16 +62,11 @@ int Tpm::TpmVersionInfo::GetFingerprint() const {
   std::string encoded_parameters =
       base::StringPrintf("%08" PRIx32 "%016" PRIx64 "%08" PRIx32 "%08" PRIx32
                          "%016" PRIx64 "%016zx",
-                         family,
-                         spec_level,
-                         manufacturer,
-                         tpm_model,
-                         firmware_version,
-                         vendor_specific.size());
+                         family, spec_level, manufacturer, tpm_model,
+                         firmware_version, vendor_specific.size());
   encoded_parameters.append(vendor_specific);
   brillo::SecureBlob hash = CryptoLib::Sha256(
-      brillo::SecureBlob(encoded_parameters.begin(),
-                         encoded_parameters.end()));
+      brillo::SecureBlob(encoded_parameters.begin(), encoded_parameters.end()));
 
   // Return the first 31 bits from |hash|.
   int result = hash[0] | hash[1] << 8 | hash[2] << 16 | hash[3] << 24;

@@ -24,7 +24,7 @@ constexpr char kActionFinalize[] = "finalize";
 
 }  // namespace
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
   DEFINE_string(action, "",
                 "Choose one action [store|read|finalize] to perform.");
   DEFINE_string(key, "", "key for the data");
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderr);
 
   if (FLAGS_action.empty()) {
-     LOG(ERROR) << "must specify one action: [store|read|finalize]";
+    LOG(ERROR) << "must specify one action: [store|read|finalize]";
     return EXIT_FAILURE;
   }
 

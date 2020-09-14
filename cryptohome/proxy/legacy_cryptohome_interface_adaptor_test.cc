@@ -755,34 +755,29 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
 }
 
 // ------------- TpmAttestationDeleteKey(s) Related Tests -------------
-TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
-       TpmAttestationDeleteKeysSuccess) {
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest, TpmAttestationDeleteKeysSuccess) {
   attestation::DeleteKeysRequest proxied_request;
   EXPECT_CALL(attestation_, DeleteKeysAsync(_, _, _, _))
       .WillOnce(DoAll(
           SaveArg<0>(&proxied_request),
-          Invoke(
-              [](const attestation::DeleteKeysRequest& in_request,
-                 const base::Callback<void(
-                     const attestation::DeleteKeysReply&)>&
-                     success_callback,
-                 const base::Callback<void(brillo::Error*)>& error_callback,
-                 int timeout_ms) {
-                attestation::DeleteKeysReply proxied_reply;
-                proxied_reply.set_status(attestation::STATUS_SUCCESS);
-                success_callback.Run(proxied_reply);
-              })));
+          Invoke([](const attestation::DeleteKeysRequest& in_request,
+                    const base::Callback<void(
+                        const attestation::DeleteKeysReply&)>& success_callback,
+                    const base::Callback<void(brillo::Error*)>& error_callback,
+                    int timeout_ms) {
+            attestation::DeleteKeysReply proxied_reply;
+            proxied_reply.set_status(attestation::STATUS_SUCCESS);
+            success_callback.Run(proxied_reply);
+          })));
 
   base::Optional<bool> result;
   std::unique_ptr<MockDBusMethodResponse<bool>> response(
       new MockDBusMethodResponse<bool>(nullptr));
   response->save_return_args(&result);
 
-  adaptor_->TpmAttestationDeleteKeys(
-      std::move(response),
-      /*is_user_specific=*/true,
-      kUsername1,
-      kKeyLabel);
+  adaptor_->TpmAttestationDeleteKeys(std::move(response),
+                                     /*is_user_specific=*/true, kUsername1,
+                                     kKeyLabel);
 
   // Verify that Return() is indeed called at least once.
   ASSERT_TRUE(result.has_value());
@@ -798,34 +793,29 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
             attestation::DeleteKeysRequest::MATCH_BEHAVIOR_PREFIX);
 }
 
-TEST_F(LegacyCryptohomeInterfaceAdaptorTest,
-       TpmAttestationDeleteKeySuccess) {
+TEST_F(LegacyCryptohomeInterfaceAdaptorTest, TpmAttestationDeleteKeySuccess) {
   attestation::DeleteKeysRequest proxied_request;
   EXPECT_CALL(attestation_, DeleteKeysAsync(_, _, _, _))
       .WillOnce(DoAll(
           SaveArg<0>(&proxied_request),
-          Invoke(
-              [](const attestation::DeleteKeysRequest& in_request,
-                 const base::Callback<void(
-                     const attestation::DeleteKeysReply&)>&
-                     success_callback,
-                 const base::Callback<void(brillo::Error*)>& error_callback,
-                 int timeout_ms) {
-                attestation::DeleteKeysReply proxied_reply;
-                proxied_reply.set_status(attestation::STATUS_SUCCESS);
-                success_callback.Run(proxied_reply);
-              })));
+          Invoke([](const attestation::DeleteKeysRequest& in_request,
+                    const base::Callback<void(
+                        const attestation::DeleteKeysReply&)>& success_callback,
+                    const base::Callback<void(brillo::Error*)>& error_callback,
+                    int timeout_ms) {
+            attestation::DeleteKeysReply proxied_reply;
+            proxied_reply.set_status(attestation::STATUS_SUCCESS);
+            success_callback.Run(proxied_reply);
+          })));
 
   base::Optional<bool> result;
   std::unique_ptr<MockDBusMethodResponse<bool>> response(
       new MockDBusMethodResponse<bool>(nullptr));
   response->save_return_args(&result);
 
-  adaptor_->TpmAttestationDeleteKey(
-      std::move(response),
-      /*is_user_specific=*/true,
-      kUsername1,
-      kKeyLabel);
+  adaptor_->TpmAttestationDeleteKey(std::move(response),
+                                    /*is_user_specific=*/true, kUsername1,
+                                    kKeyLabel);
 
   // Verify that Return() is indeed called at least once.
   ASSERT_TRUE(result.has_value());
@@ -921,17 +911,16 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, LowDiskSpaceSignalSanity) {
 
 // --------------- TPM Ownership Interface Related Tests ---------------------
 TEST_F(LegacyCryptohomeInterfaceAdaptorTest, GetVersionInfo) {
-  EXPECT_CALL(
-      ownership_,
-      GetVersionInfoAsync(_, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
-      .WillOnce(Invoke(
-          [](const tpm_manager::GetVersionInfoRequest& in_request,
-                  const base::Callback<void(
-                      const tpm_manager::GetVersionInfoReply& /*reply*/)>&
-                      success_callback,
-                  const base::Callback<void(brillo::Error*)>&
-                      /* error_callback */,
-                  int /* timeout_ms */) {
+  EXPECT_CALL(ownership_, GetVersionInfoAsync(
+                              _, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+      .WillOnce(
+          Invoke([](const tpm_manager::GetVersionInfoRequest& in_request,
+                    const base::Callback<void(
+                        const tpm_manager::GetVersionInfoReply& /*reply*/)>&
+                        success_callback,
+                    const base::Callback<void(brillo::Error*)>&
+                    /* error_callback */,
+                    int /* timeout_ms */) {
             tpm_manager::GetVersionInfoReply info;
             info.set_family(1);
             info.set_spec_level(2);
@@ -942,8 +931,9 @@ TEST_F(LegacyCryptohomeInterfaceAdaptorTest, GetVersionInfo) {
             success_callback.Run(info);
           }));
 
-  using VersionInfoResponse = MockDBusMethodResponse<
-      uint32_t, uint64_t, uint32_t, uint32_t, uint64_t, std::string>;
+  using VersionInfoResponse =
+      MockDBusMethodResponse<uint32_t, uint64_t, uint32_t, uint32_t, uint64_t,
+                             std::string>;
   std::unique_ptr<VersionInfoResponse> response =
       std::make_unique<VersionInfoResponse>(nullptr);
 

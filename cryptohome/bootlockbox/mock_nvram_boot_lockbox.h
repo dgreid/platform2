@@ -24,7 +24,8 @@ class MockNVRamBootLockbox : public NVRamBootLockbox {
               Store,
               (const std::string&, const std::string&, BootLockboxErrorCode*),
               (override));
-  MOCK_METHOD(bool, Read,
+  MOCK_METHOD(bool,
+              Read,
               (const std::string&, std::string*, BootLockboxErrorCode*),
               (override));
   MOCK_METHOD(bool, Finalize, (), (override));

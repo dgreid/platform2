@@ -22,8 +22,8 @@
 using base::PlatformThread;
 
 namespace cryptohome {
-using ::testing::Return;
 using ::testing::_;
+using ::testing::Return;
 
 class MountTaskTest : public ::testing::Test {
  public:
@@ -37,11 +37,9 @@ class MountTaskTest : public ::testing::Test {
     wait_time_ = base::TimeDelta::FromSeconds(180);
   }
 
-  virtual ~MountTaskTest() { }
+  virtual ~MountTaskTest() {}
 
-  void SetUp() {
-    runner_.Start();
-  }
+  void SetUp() { runner_.Start(); }
 
   void TearDown() {
     if (runner_.IsRunning()) {
@@ -50,9 +48,7 @@ class MountTaskTest : public ::testing::Test {
   }
 
   // Return the next sequence number.
-  int NextSequence() {
-    return sequence_holder_.GetNext() + 1;
-  }
+  int NextSequence() { return sequence_holder_.GetNext() + 1; }
 
  protected:
   base::Thread runner_;
@@ -71,9 +67,8 @@ class MountTaskTest : public ::testing::Test {
 
 class MountTaskNotifier : public MountTaskObserver {
  public:
-  MountTaskNotifier()
-      : notified_(false) { }
-  virtual ~MountTaskNotifier() { }
+  MountTaskNotifier() : notified_(false) {}
+  virtual ~MountTaskNotifier() {}
 
   // MountTaskObserver
   virtual bool MountTaskObserve(const MountTaskResult& result) {
@@ -115,23 +110,23 @@ TEST_F(MountTaskTest, ResultEqualsTest) {
 
 TEST_F(MountTaskTest, EventTest) {
   ASSERT_FALSE(event_.IsSignaled());
-  scoped_refptr<MountTask> mount_task
-      = new MountTask(NULL, NULL, NextSequence());
+  scoped_refptr<MountTask> mount_task =
+      new MountTask(NULL, NULL, NextSequence());
   mount_task->set_complete_event(&event_);
   mount_task->set_result(&result_);
-  runner_.task_runner()->PostTask(FROM_HERE,
-      base::Bind(&MountTask::Run, mount_task.get()));
+  runner_.task_runner()->PostTask(
+      FROM_HERE, base::Bind(&MountTask::Run, mount_task.get()));
   event_.TimedWait(wait_time_);
   ASSERT_TRUE(event_.IsSignaled());
 }
 
 TEST_F(MountTaskTest, ObserveTest) {
   MountTaskNotifier notifier;
-  scoped_refptr<MountTask> mount_task
-      = new MountTask(&notifier, NULL, NextSequence());
+  scoped_refptr<MountTask> mount_task =
+      new MountTask(&notifier, NULL, NextSequence());
   mount_task->set_result(&result_);
-  runner_.task_runner()->PostTask(FROM_HERE,
-      base::Bind(&MountTask::Run, mount_task.get()));
+  runner_.task_runner()->PostTask(
+      FROM_HERE, base::Bind(&MountTask::Run, mount_task.get()));
   for (unsigned int i = 0; i < 64; i++) {
     if (!notifier.notified_) {
       PlatformThread::Sleep(base::TimeDelta::FromMilliseconds(100));

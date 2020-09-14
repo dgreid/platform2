@@ -46,8 +46,8 @@
 #include "cryptohome/tpm.h"
 
 using base::FilePath;
-using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 using brillo::SecureBlob;
+using brillo::cryptohome::home::SanitizeUserNameWithSalt;
 
 using ::testing::_;
 using ::testing::AtLeast;
@@ -2758,7 +2758,6 @@ TEST_F(UserDataAuthExTest, MigrateKeyNotMounted) {
   EXPECT_CALL(lockbox_, FinalizeBoot());
   EXPECT_CALL(*mount, Init(_, _, _)).WillOnce(Return(true));
   userdataauth_->set_mount_factory(&mount_factory);
-
 
   // Test for successful case.
   EXPECT_CALL(homedirs_, Migrate(Property(&Credentials::username, kUsername1),

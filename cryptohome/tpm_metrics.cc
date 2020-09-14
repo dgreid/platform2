@@ -8,7 +8,7 @@
 
 namespace cryptohome {
 
-#define TSS_ERROR_LAYER(x)  (x & 0x3000)
+#define TSS_ERROR_LAYER(x) (x & 0x3000)
 #define TSS_ERROR_CODE(x) (x & TSS_MAX_ERROR)
 
 TpmResult GetTpmResultSample(TpmReturnCode result) {

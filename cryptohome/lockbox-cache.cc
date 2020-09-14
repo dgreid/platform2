@@ -15,7 +15,7 @@ namespace cryptohome {
 namespace {
 // Permissions of cache file (modulo umask).
 const mode_t kCacheFilePermissions = 0644;
-}
+}  // namespace
 
 bool CacheLockbox(cryptohome::Platform* platform,
                   const base::FilePath& nvram_path,

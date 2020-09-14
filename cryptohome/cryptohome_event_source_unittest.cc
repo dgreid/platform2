@@ -24,20 +24,16 @@ class EventDestructorWatcher {
 class MyEvent : public CryptohomeEventBase {
  public:
   MyEvent(EventDestructorWatcher* watcher, int id)
-    : destructor_watcher_(watcher), id_(id) {}
+      : destructor_watcher_(watcher), id_(id) {}
   ~MyEvent() override {
     if (destructor_watcher_) {
       destructor_watcher_->NotifyDestroy(this);
     }
   }
 
-  int get_id() {
-    return id_;
-  }
+  int get_id() { return id_; }
 
-  const char* GetEventName() const override {
-    return "MyEvent";
-  }
+  const char* GetEventName() const override { return "MyEvent"; }
 
  private:
   EventDestructorWatcher* destructor_watcher_;

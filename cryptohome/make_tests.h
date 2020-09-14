@@ -40,7 +40,7 @@ class MakeTests {
  public:
   MakeTests();
 
-  virtual ~MakeTests() { }
+  virtual ~MakeTests() {}
 
   void SetUpSystemSalt();
   void InitTestData(const base::FilePath& image_dir,
@@ -55,14 +55,15 @@ class MakeTests {
 
   std::vector<TestUser> users;
   brillo::SecureBlob system_salt;
+
  private:
   DISALLOW_COPY_AND_ASSIGN(MakeTests);
 };
 
 class TestUser {
  public:
-  TestUser() { }
-  virtual ~TestUser() { }
+  TestUser() {}
+  virtual ~TestUser() {}
   // Populate from struct TestUserInfo.
   void FromInfo(const struct TestUserInfo* info,
                 const base::FilePath& image_dir);

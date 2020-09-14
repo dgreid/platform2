@@ -48,8 +48,7 @@ const size_t kInitialAuthPolicySize = 128;
 
 }  // namespace
 
-NvramSpace::NvramSpace(Tpm* tpm, uint32_t index)
-  : tpm_(tpm), index_(index) {}
+NvramSpace::NvramSpace(Tpm* tpm, uint32_t index) : tpm_(tpm), index_(index) {}
 
 void NvramSpace::Reset() {
   attributes_ = 0;
@@ -89,8 +88,7 @@ result_code NvramSpace::Read(uint32_t size) {
     if (result == TPM_E_BADINDEX) {
       LOG(INFO) << "NVRAM space " << index_ << " doesn't exist";
     } else {
-      LOG(ERROR) << "Failed to read NVRAM space " << index_ << ": "
-                 << result;
+      LOG(ERROR) << "Failed to read NVRAM space " << index_ << ": " << result;
     }
     status_ = result == TPM_E_BADINDEX ? Status::kAbsent : Status::kTpmError;
     return RESULT_FAIL_FATAL;
@@ -131,8 +129,7 @@ result_code NvramSpace::Write(const brillo::SecureBlob& contents) {
           << (result == TPM_SUCCESS ? "ok" : "FAIL");
 
   if (result != TPM_SUCCESS) {
-    LOG(ERROR) << "Failed to write NVRAM space " << index_ << ": "
-               << result;
+    LOG(ERROR) << "Failed to write NVRAM space " << index_ << ": " << result;
     return RESULT_FAIL_FATAL;
   }
 
@@ -511,8 +508,8 @@ result_code Tpm::TakeOwnership() {
   // Encrypt the well-known owner secret under the EK.
   brillo::SecureBlob owner_auth(kOwnerSecret, kOwnerSecret + kOwnerSecretSize);
   brillo::SecureBlob enc_auth;
-  if (!cryptohome::CryptoLib::TpmCompatibleOAEPEncrypt(
-          rsa.get(), owner_auth, &enc_auth)) {
+  if (!cryptohome::CryptoLib::TpmCompatibleOAEPEncrypt(rsa.get(), owner_auth,
+                                                       &enc_auth)) {
     LOG(ERROR) << "Failed to encrypt owner secret.";
     return RESULT_FAIL_FATAL;
   }

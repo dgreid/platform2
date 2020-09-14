@@ -11,7 +11,7 @@ namespace cryptohome {
 
 enum class NVSpaceState {
   kNVSpaceNormal = 0,
-  kNVSpaceError = 1,   // General TPM errors.
+  kNVSpaceError = 1,  // General TPM errors.
   kNVSpaceUninitialized = 2,
   kNVSpaceUndefined = 3,  // TPM is not defined, need powerwash to define.
   kNVSpaceWriteLocked = 4

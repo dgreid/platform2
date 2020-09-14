@@ -16,8 +16,8 @@ namespace cryptohome {
 // Cache of last access timestamp for existing users.
 class UserOldestActivityTimestampCache {
  public:
-  UserOldestActivityTimestampCache() : initialized_(false) { }
-  virtual ~UserOldestActivityTimestampCache() { }
+  UserOldestActivityTimestampCache() : initialized_(false) {}
+  virtual ~UserOldestActivityTimestampCache() {}
 
   // Initialize the cache. This must be done only once. No methods
   // must be accessed before that.  Chrome initializes cache and
@@ -26,9 +26,7 @@ class UserOldestActivityTimestampCache {
   // uninitialized and will be re-initialized (and filled) again on
   // the nearest convenience (cleanup callback).
   virtual void Initialize();
-  virtual bool initialized() const {
-    return initialized_;
-  }
+  virtual bool initialized() const { return initialized_; }
 
   // Adds a user to the cache with specified oldest activity timestamp.
   virtual void AddExistingUser(const std::string& user, base::Time timestamp);

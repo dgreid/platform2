@@ -27,7 +27,7 @@ const char kKernelCmdline[] = "/proc/cmdline";
 const char kProductUUID[] = "/sys/class/dmi/id/product_uuid";
 const char kStatefulPreservationRequest[] = "preservation_request";
 const char kPreservedPreviousKey[] = "encrypted.key.preserved";
-}
+}  // namespace paths
 
 namespace {
 
@@ -47,8 +47,7 @@ bool ReadKeyFile(const base::FilePath& path,
   }
 
   if (!cryptohome::CryptoLib::AesDecryptSpecifyBlockMode(
-          brillo::SecureBlob(ciphertext), 0,
-          ciphertext.size(), encryption_key,
+          brillo::SecureBlob(ciphertext), 0, ciphertext.size(), encryption_key,
           brillo::SecureBlob(cryptohome::kAesBlockSize),
           cryptohome::CryptoLib::kPaddingStandard, cryptohome::CryptoLib::kCbc,
           plaintext)) {
@@ -113,9 +112,8 @@ void ShredFile(const base::FilePath& file) {
   int i;
 
   // Give up if we can't safely open or stat the target.
-  base::ScopedFD fd(
-    HANDLE_EINTR(open(file.value().c_str(),
-                      O_WRONLY | O_NOFOLLOW | O_CLOEXEC)));
+  base::ScopedFD fd(HANDLE_EINTR(
+      open(file.value().c_str(), O_WRONLY | O_NOFOLLOW | O_CLOEXEC)));
   if (!fd.is_valid()) {
     PLOG(ERROR) << file;
     return;
@@ -211,7 +209,7 @@ result_code EncryptionKey::SetInsecureFallbackSystemKey() {
 
   std::string product_uuid;
   if (base::ReadFileToStringWithMaxSize(base::FilePath(paths::kProductUUID),
-                                         &product_uuid, kMaxReadSize)) {
+                                        &product_uuid, kMaxReadSize)) {
     system_key_ = Sha256(product_uuid);
     LOG(INFO) << "Using UUID as system key.";
     system_key_status_ = SystemKeyStatus::kProductUUID;

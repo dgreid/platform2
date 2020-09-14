@@ -61,7 +61,8 @@ class Crypto {
   virtual bool DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
                                   const brillo::SecureBlob& vault_key,
                                   bool locked_to_single_user,
-                                  unsigned int* crypt_flags, CryptoError* error,
+                                  unsigned int* crypt_flags,
+                                  CryptoError* error,
                                   VaultKeyset* vault_keyset) const;
 
   // Encrypts the vault keyset with the given passkey
@@ -190,37 +191,25 @@ class Crypto {
   // on the presence of a functioning, initialized TPM).  The TPM is merely used
   // to add a layer of difficulty in a brute-force attack against the user's
   // credentials.
-  void set_use_tpm(bool value) {
-    use_tpm_ = value;
-  }
+  void set_use_tpm(bool value) { use_tpm_ = value; }
 
   // Sets the TPM implementation
-  void set_tpm(Tpm* value) {
-    tpm_ = value;
-  }
+  void set_tpm(Tpm* value) { tpm_ = value; }
 
   // Gets whether the TPM is set
-  bool has_tpm() {
-    return (tpm_ != NULL);
-  }
+  bool has_tpm() { return (tpm_ != NULL); }
 
   // Gets the TPM implementation
-  Tpm* get_tpm() {
-    return tpm_;
-  }
+  Tpm* get_tpm() { return tpm_; }
 
   // Checks if the cryptohome key is loaded in TPM
   bool is_cryptohome_key_loaded() const;
 
   // Sets the Platform implementation
   // Does NOT take ownership of the pointer.
-  void set_platform(Platform* value) {
-    platform_ = value;
-  }
+  void set_platform(Platform* value) { platform_ = value; }
 
-  Platform* platform() {
-    return platform_;
-  }
+  Platform* platform() { return platform_; }
 
   void set_disable_logging_for_testing(bool disable) {
     disable_logging_for_tests_ = disable;

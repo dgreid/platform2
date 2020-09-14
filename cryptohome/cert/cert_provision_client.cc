@@ -78,12 +78,9 @@ int main(int argc, char** argv) {
       return 2;
     }
 
-    sts = cert_provision::ProvisionCertificate(
-        pca_type,
-        std::string(),
-        cert_label,
-        cert_profile,
-        base::Bind(&ProgressCallback));
+    sts = cert_provision::ProvisionCertificate(pca_type, std::string(),
+                                               cert_label, cert_profile,
+                                               base::Bind(&ProgressCallback));
     if (sts != cert_provision::Status::Success) {
       LOG(ERROR) << "ProvisionCertificate returned " << static_cast<int>(sts);
       return 3;
@@ -164,8 +161,7 @@ int main(int argc, char** argv) {
       return 1;
     }
     std::string sig;
-    sts = cert_provision::Sign(cert_label, sign_mechanism,
-                               data, &sig);
+    sts = cert_provision::Sign(cert_label, sign_mechanism, data, &sig);
     if (sts != cert_provision::Status::Success) {
       LOG(ERROR) << "Sign returned " << static_cast<int>(sts);
       return 3;
