@@ -35,29 +35,21 @@ ino_t GetSocketInodeNumber(const base::FilePath& socket_path) {
   struct group arc_camera_group;
   struct group* result = nullptr;
   char buf[1024];
-  if (HANDLE_EINTR(getgrnam_r(constants::kArcCameraGroup, &arc_camera_group,
-                              buf, sizeof(buf), &result)) != 0 ||
-      !result) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "Failed to get group information of the socket file";
+
+  getgrnam_r(constants::kArcCameraGroup, &arc_camera_group, buf, sizeof(buf),
+             &result);
+  if (!result) {
     return kInvalidInodeNum;
   }
 
   int mode;
   if (!base::GetPosixFilePermissions(socket_path, &mode) || mode != 0660) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "The socket file is not ready (Unexpected permission)";
     return kInvalidInodeNum;
   }
 
   struct stat st;
   if (stat(socket_path.value().c_str(), &st) ||
       st.st_gid != arc_camera_group.gr_gid) {
-    // TODO(crbug.com/1053569): Remove the log once we solve the race condition
-    // issue.
-    LOGF(INFO) << "The socket file is not ready (Unexpected group id)";
     return kInvalidInodeNum;
   }
   return st.st_ino;
