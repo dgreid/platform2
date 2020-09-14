@@ -28,7 +28,8 @@ using FieldType = std::pair<std::string, std::string>;
 
 const std::vector<FieldType> kPciFields = {{"vendor_id", "vendor"},
                                            {"device_id", "device"}};
-const std::vector<FieldType> kPciOptionalFields = {{"revision", "revision"}};
+const std::vector<FieldType> kPciOptionalFields = {
+    {"revision", "revision"}, {"subsystem", "subsystem_device"}};
 const std::vector<FieldType> kSdioFields = {{"vendor_id", "vendor"}};
 const std::vector<FieldType> kSdioOptionalFields = {
     {"manufacturer", "manufacturer"},

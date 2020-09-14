@@ -225,6 +225,8 @@ message Network {
     uint32 pci_device_id = 5;
     // Device revision, 8 bits
     uint32 pci_revision = 6;
+    // Subsystem ID, 16 bits
+    uint32 pci_subsystem = 12;
 
     // The following are fields for USB. Every field name comes with
     // prefix "usb_".
