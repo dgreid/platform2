@@ -72,7 +72,12 @@ bool RunHelperProcess(const HelperInfo& helper_info,
   base::File output_base_file;
   if (output) {
     base::FilePath output_path;
+#if BASE_VER < 780000
     FILE* output_file = base::CreateAndOpenTemporaryFile(&output_path);
+#else
+    FILE* output_file =
+        base::CreateAndOpenTemporaryStream(&output_path).release();
+#endif
     if (output_file == nullptr) {
       LOG(ERROR) << "Failed to create tempfile for helper process output";
       return false;
