@@ -259,6 +259,8 @@ class CellularCapability3gpp : public CellularCapability {
 
   void FillConnectPropertyMap(KeyValueStore* properties);
 
+  void FillInitialEpsBearerPropertyMap(KeyValueStore* properties);
+
   void HelpRegisterConstDerivedKeyValueStore(
       const std::string& name,
       KeyValueStore (CellularCapability3gpp::*get)(Error* error));
@@ -333,6 +335,7 @@ class CellularCapability3gpp : public CellularCapability {
   void OnGetLocationReply(const StringCallback& callback,
                           const std::map<uint32_t, brillo::Any>& results,
                           const Error& error);
+  void OnSetInitialEpsBearerReply(const Error& error);
 
   // Returns true, if |sim_path| constitutes a valid SIM path. Currently, a
   // path is accepted to be valid, as long as it is not equal to one of ""

@@ -671,6 +671,38 @@ void CellularCapability3gpp::OnConnectReply(const ResultCallback& callback,
   UpdatePendingActivationState();
 }
 
+void CellularCapability3gpp::FillInitialEpsBearerPropertyMap(
+    KeyValueStore* properties) {
+  std::deque<Stringmap> apn_list = cellular()->BuildApnTryList();
+  auto apn_info = apn_list.end();
+
+  // keep only 'attach APN'
+  for (apn_info = apn_list.begin(); apn_info != apn_list.end(); apn_info++) {
+    if (base::Contains(*apn_info, kApnAttachProperty))
+      break;
+  }
+
+  if (apn_info == apn_list.end()) {
+    SLOG(this, 2) << __func__ << ": no Attach APN.";
+    return;
+  }
+
+  SLOG(this, 2) << __func__ << ": Using APN " << (*apn_info)[kApnProperty];
+  properties->Set<string>(kConnectApn, (*apn_info)[kApnProperty]);
+  if (base::Contains(*apn_info, kApnUsernameProperty))
+    properties->Set<string>(kConnectUser, (*apn_info)[kApnUsernameProperty]);
+  if (base::Contains(*apn_info, kApnPasswordProperty)) {
+    properties->Set<string>(kConnectPassword,
+                            (*apn_info)[kApnPasswordProperty]);
+  }
+  if (base::Contains(*apn_info, kApnAuthenticationProperty)) {
+    MMBearerAllowedAuth allowed_auth = ApnAuthenticationToMMBearerAllowedAuth(
+        (*apn_info)[kApnAuthenticationProperty]);
+    if (allowed_auth != MM_BEARER_ALLOWED_AUTH_UNKNOWN)
+      properties->Set<uint32_t>(kConnectAllowedAuth, allowed_auth);
+  }
+}
+
 void CellularCapability3gpp::GetProperties() {
   SLOG(this, 3) << __func__;
 
@@ -998,8 +1030,19 @@ void CellularCapability3gpp::SetInitialEpsBearer(
     Error* error,
     const ResultCallback& callback) {
   SLOG(this, 3) << __func__;
-  modem_3gpp_proxy_->SetInitialEpsBearerSettings(properties, error, callback,
-                                                 kTimeoutSetInitialEpsBearer);
+  if (modem_3gpp_proxy_) {
+    modem_3gpp_proxy_->SetInitialEpsBearerSettings(properties, error, callback,
+                                                   kTimeoutSetInitialEpsBearer);
+  } else {
+    SLOG(this, 3) << __func__ << " skipping, no 3GPP proxy";
+  }
+}
+
+void CellularCapability3gpp::OnSetInitialEpsBearerReply(const Error& error) {
+  SLOG(this, 3) << __func__;
+  if (error.IsFailure()) {
+    SLOG(this, 2) << "Failed to set the 'attach APN' for the EPS bearer.";
+  }
 }
 
 void CellularCapability3gpp::SetupLocation(uint32_t sources,
@@ -1450,6 +1493,15 @@ void CellularCapability3gpp::OnProfilesChanged(const Profiles& profiles) {
 
   // The cellular object may need to update the APN list now.
   cellular()->OnOperatorChanged();
+
+  // Set the new parameters for the initial EPS bearer (e.g. LTE Attach APN)
+  KeyValueStore properties;
+  Error error;
+  FillInitialEpsBearerPropertyMap(&properties);
+  ResultCallback cb = Bind(&CellularCapability3gpp::OnSetInitialEpsBearerReply,
+                           weak_ptr_factory_.GetWeakPtr());
+  if (!properties.IsEmpty())
+    SetInitialEpsBearer(properties, &error, cb);
 }
 
 void CellularCapability3gpp::On3gppRegistrationChanged(
