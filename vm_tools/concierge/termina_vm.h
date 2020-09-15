@@ -103,6 +103,11 @@ class TerminaVm final : public VmBaseImpl,
   bool ConfigureNetwork(const std::vector<std::string>& nameservers,
                         const std::vector<std::string>& search_domains);
 
+  // Configures the VM to allow it to support a (single) container guest API
+  // endpoint using |vm_token| as the container token.
+  bool ConfigureContainerGuest(const std::string& vm_token,
+                               std::string* out_error);
+
   // Mounts a file system inside the VM.  Both |source| (if it is a file path)
   // and |target| must be valid paths inside the VM.  Returns true on success.
   bool Mount(std::string source,

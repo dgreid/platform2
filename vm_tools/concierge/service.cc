@@ -1353,10 +1353,16 @@ void Service::StartVm(dbus::MethodCall* method_call,
     return;
   }
 
+  // Determine the VM token. Termina doesnt use a VM token because it has
+  // per-container tokens.
+  std::string vm_token = "";
+  if (!request.start_termina())
+    vm_token = base::GenerateGUID();
+
   // Notify cicerone that we have started a VM.
   // We must notify cicerone now before calling StartTermina, but we will only
   // send the VmStartedSignal on success.
-  NotifyCiceroneOfVmStarted(vm_id, vm->cid(), vm->GetInfo().pid, "");
+  NotifyCiceroneOfVmStarted(vm_id, vm->cid(), vm->GetInfo().pid, vm_token);
 
   string failure_reason;
   vm_tools::StartTerminaResponse::MountResult mount_result =
@@ -1370,6 +1376,16 @@ void Service::StartVm(dbus::MethodCall* method_call,
     return;
   }
   response.set_mount_result((StartVmResponse::MountResult)mount_result);
+
+  if (!vm_token.empty() &&
+      !vm->ConfigureContainerGuest(vm_token, &failure_reason)) {
+    failure_reason =
+        "Failed to configure the container guest: " + failure_reason;
+    // TODO(b/162562622): This request is temporarily non-fatal. Once we are
+    // satisfied that the maitred changes have been completed, we will make this
+    // failure fatal.
+    LOG(WARNING) << failure_reason;
+  }
 
   LOG(INFO) << "Started VM with pid " << vm->pid();
 

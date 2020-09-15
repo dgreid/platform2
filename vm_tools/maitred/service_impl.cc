@@ -604,6 +604,18 @@ grpc::Status ServiceImpl::OnHostNetworkChanged(
   return grpc::Status::OK;
 }
 
+grpc::Status ServiceImpl::ConfigureContainerGuest(
+    grpc::ServerContext* ctx,
+    const vm_tools::ConfigureContainerGuestRequest* request,
+    vm_tools::EmptyMessage* response) {
+  LOG(INFO) << "Received ConfigureContainerGuest request";
+  // TODO(b/162562622) Implement me.
+  return grpc::Status(
+      grpc::UNIMPLEMENTED,
+      "Not implemented, unable to spawn container guest with token " +
+          request->container_token());
+}
+
 grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,
                                        const StartTerminaRequest* request,
                                        StartTerminaResponse* response) {

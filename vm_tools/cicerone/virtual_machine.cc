@@ -44,10 +44,12 @@ VirtualMachine::VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token)
     : vsock_cid_(cid),
       pid_(pid),
       vm_token_(std::move(vm_token)),
+      is_containerless_(!vm_token_.empty()),
       using_mock_tremplin_stub_(false),
       weak_ptr_factory_(this) {
-  DCHECK((vsock_cid_ == 0) ^ vm_token_.empty());
-  if (IsPluginVm()) {
+  // CID-less VMs must also be containerless.
+  DCHECK(vsock_cid_ != 0 || is_containerless_);
+  if (is_containerless_) {
     // This is a containerless VM, so create one container for this VM that uses
     // the same token as the VM itself.
     pending_containers_[vm_token_] = std::make_unique<Container>(
@@ -173,6 +175,8 @@ bool VirtualMachine::UnregisterContainer(const std::string& container_token) {
 
 std::string VirtualMachine::GenerateContainerToken(
     const std::string& container_name) {
+  if (is_containerless())
+    return "";
   std::string token = base::GenerateGUID();
   pending_containers_[token] = std::make_unique<Container>(
       container_name, token, weak_ptr_factory_.GetWeakPtr());

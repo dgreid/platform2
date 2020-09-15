@@ -417,6 +417,30 @@ bool TerminaVm::ConfigureNetwork(const std::vector<string>& nameservers,
   return SetResolvConfig(nameservers, search_domains);
 }
 
+bool TerminaVm::ConfigureContainerGuest(const std::string& vm_token,
+                                        std::string* out_error) {
+  LOG(INFO) << "Configuring container guest for for VM " << vsock_cid_;
+
+  vm_tools::ConfigureContainerGuestRequest request;
+  vm_tools::EmptyMessage response;
+
+  request.set_container_token(vm_token);
+
+  grpc::ClientContext ctx;
+  ctx.set_deadline(gpr_time_add(
+      gpr_now(GPR_CLOCK_MONOTONIC),
+      gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  grpc::Status status =
+      stub_->ConfigureContainerGuest(&ctx, request, &response);
+  if (!status.ok()) {
+    *out_error = status.error_message();
+    return false;
+  }
+
+  return true;
+}
+
 void TerminaVm::RunCrosvmCommand(string command) {
   vm_tools::concierge::RunCrosvmCommand(std::move(command), GetVmSocketPath());
 }

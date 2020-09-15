@@ -40,6 +40,12 @@ message NetworkConfigRequest {
   ResolvConfig resolv_config = 2;
 }
 
+// Parameters needed to spawn a container guest.
+message ConfigureContainerGuestRequest {
+  // Token which cicerone will check to verify that the guest spawned.
+  string container_token = 1;
+}
+
 // Description of a single process that should be spawned by maitre'd.
 message LaunchProcessRequest {
   // Process arguments.  argv[0] must be either an absolute path or the name of
@@ -249,6 +255,10 @@ message GetResizeBoundsResponse {
 service Maitred {
   // Set up networking inside the VM so that it can access the internet.
   rpc ConfigureNetwork(NetworkConfigRequest) returns (EmptyMessage);
+
+  // Set up a container guest in the VM, so that it can interface with cicerone.
+  rpc ConfigureContainerGuest(ConfigureContainerGuestRequest)
+      returns (EmptyMessage);
 
   // DEPRECATED. Use OnHostNetworkChanged instead.
   // Reset IPv6 in VM and restart SLAAC process to acquire a new configuration.

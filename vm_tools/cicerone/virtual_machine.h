@@ -144,6 +144,8 @@ class VirtualMachine {
   bool is_stopping() const { return is_stopping_; }
   void notify_shutdown() { is_stopping_ = true; }
 
+  bool is_containerless() { return is_containerless_; }
+
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
@@ -330,9 +332,12 @@ class VirtualMachine {
   // The pid of the main VM process.
   pid_t pid_;
 
-  // Token for identifying this VM. Only valid for plugin VMs which will have a
-  // zero value cid.
+  // Token for identifying this VM. Required for VMs which will have a zero
+  // value cid (e.g. PluginVM).
   std::string vm_token_;
+
+  // Flag to indicate that this VM should disallow spawning LXD containers.
+  bool is_containerless_;
 
   // Mapping of tokens to containers. The tokens are used to securely
   // identify a container when it connects back to concierge to identify itself.

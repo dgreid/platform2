@@ -682,7 +682,7 @@ void Service::ContainerStartupCompleted(const std::string& container_token,
     }
   }
   std::string string_ip;
-  if (!vm->IsPluginVm()) {
+  if (!vm->is_containerless()) {
     VirtualMachine::LxdContainerInfo info;
     std::string error;
     VirtualMachine::GetLxdContainerInfoStatus status =

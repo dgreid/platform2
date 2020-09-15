@@ -61,6 +61,11 @@ class ServiceImpl final : public vm_tools::Maitred::Service {
                                     const vm_tools::EmptyMessage* request,
                                     vm_tools::EmptyMessage* response) override;
 
+  grpc::Status ConfigureContainerGuest(
+      grpc::ServerContext* ctx,
+      const vm_tools::ConfigureContainerGuestRequest* request,
+      vm_tools::EmptyMessage* response) override;
+
   grpc::Status StartTermina(grpc::ServerContext* ctx,
                             const vm_tools::StartTerminaRequest* request,
                             vm_tools::StartTerminaResponse* response) override;
