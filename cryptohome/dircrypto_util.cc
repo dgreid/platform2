@@ -53,10 +53,6 @@ key_serial_t KeyReferenceToKeySerial(const brillo::SecureBlob& key_reference) {
 
   key_serial_t key =
       keyctl_search(GetSessionKeyring(), "logon", key_name.c_str(), 0);
-  if (key == kInvalidKeySerial) {
-    PLOG(ERROR) << "keyctl_search failed";
-    return kInvalidKeySerial;
-  }
 
   return key;
 }
@@ -161,7 +157,12 @@ static bool UnlinkSessionKey(const KeyReference& key_reference) {
   key_serial_t keyring = GetSessionKeyring();
   key_serial_t key = KeyReferenceToKeySerial(key_reference.reference);
 
-  if (key == kInvalidKeySerial || keyring == kInvalidKeySerial)
+  if (key == kInvalidKeySerial) {
+    PLOG(ERROR) << "keyctl_search failed";
+    return false;
+  }
+
+  if (keyring == kInvalidKeySerial)
     return false;
 
   if (keyctl_unlink(key, keyring) == -1) {
@@ -191,12 +192,14 @@ static bool InvalidateSessionKey(const KeyReference& key_reference,
 
   // At this point, the key should be invalidated, but try to invalidate it just
   // in case.
-  // If the key was already invaldated, this should fail with ENOKEY.
-  key_serial_t keyring = GetSessionKeyring();
+  // If the key was already invalidated, this should fail with ENOKEY.
   key_serial_t key = KeyReferenceToKeySerial(key_reference.reference);
-
-  if (key == kInvalidKeySerial || keyring == kInvalidKeySerial)
-    return false;
+  if (key == kInvalidKeySerial) {
+    if (errno != ENOKEY) {
+      PLOG(ERROR) << "Failed to find key to invalidate";
+    }
+    return true;
+  }
 
   if (keyctl_invalidate(key) == 0) {
     LOG(ERROR) << "We ended up invalidating key " << key;
