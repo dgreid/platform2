@@ -264,9 +264,9 @@ inline testing::Matcher<dbus::MethodCall*> StopAllVmsMethod() {
 TEST_F(SessionManagerProcessTest, CleanupBrowser) {
   FakeBrowserJob* job = CreateMockJobAndInitManager(false);
   EXPECT_CALL(*job, Kill(SIGTERM, _)).Times(1);
-  EXPECT_CALL(*job, WaitAndAbort(_)).Times(1);
+  EXPECT_CALL(*job, WaitAndKillAll(_)).Times(1);
   job->RunInBackground();
-  manager_->test_api().CleanupChildren(3);
+  manager_->test_api().CleanupChildrenBeforeExit(3);
 }
 
 // Gracefully shut down while the browser is running.
@@ -278,7 +278,7 @@ TEST_F(SessionManagerProcessTest, BrowserRunningShutdown) {
 
   // Expect the job to be killed.
   EXPECT_CALL(*job, Kill(SIGTERM, _)).Times(1);
-  EXPECT_CALL(*job, WaitAndAbort(_)).Times(1);
+  EXPECT_CALL(*job, WaitAndKillAll(_)).Times(1);
 
   brillo::MessageLoop::current()->PostTask(
       FROM_HERE,

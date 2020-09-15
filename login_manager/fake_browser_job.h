@@ -37,7 +37,7 @@ class FakeBrowserJob : public BrowserJobInterface {
   MOCK_METHOD(bool, ShouldStop, (), (const, override));
   MOCK_METHOD(void, KillEverything, (int, const std::string&), (override));
   MOCK_METHOD(void, Kill, (int, const std::string&), (override));
-  MOCK_METHOD(void, WaitAndAbort, (base::TimeDelta), (override));
+  MOCK_METHOD(void, WaitAndKillAll, (base::TimeDelta), (override));
   MOCK_METHOD(void,
               StartSession,
               (const std::string&, const std::string&),

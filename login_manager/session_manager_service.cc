@@ -291,7 +291,7 @@ void SessionManagerService::AbortBrowser(int signal,
                                          const std::string& message) {
   WriteAbortedBrowserPidFile();
   browser_->Kill(signal, message);
-  browser_->WaitAndAbort(GetKillTimeout());
+  browser_->WaitAndKillAll(GetKillTimeout());
 }
 
 void SessionManagerService::SetBrowserTestArgs(
@@ -346,7 +346,7 @@ bool SessionManagerService::HandleExit(const siginfo_t& status) {
 
   // Clears up the whole job's process group.
   browser_->KillEverything(SIGKILL, "Ensuring browser processes are gone.");
-  browser_->WaitAndAbort(GetKillTimeout());
+  browser_->WaitAndKillAll(GetKillTimeout());
   browser_->ClearPid();
 
   // Also ensure all containers are gone.
@@ -538,7 +538,7 @@ void SessionManagerService::SetExitAndScheduleShutdown(ExitCode code) {
 
   child_exit_dispatcher_.reset();
   liveness_checker_->Stop();
-  CleanupChildren(GetKillTimeout(), code);
+  CleanupChildrenBeforeExit(GetKillTimeout(), code);
   impl_->AnnounceSessionStopped();
 
   brillo::MessageLoop::current()->PostTask(
@@ -547,8 +547,8 @@ void SessionManagerService::SetExitAndScheduleShutdown(ExitCode code) {
   LOG(INFO) << "SessionManagerService quitting run loop";
 }
 
-void SessionManagerService::CleanupChildren(base::TimeDelta timeout,
-                                            ExitCode code) {
+void SessionManagerService::CleanupChildrenBeforeExit(base::TimeDelta timeout,
+                                                      ExitCode code) {
   const std::string reason = ExitCodeToString(code);
 
   const base::TimeTicks browser_exit_start_time = base::TimeTicks::Now();
@@ -558,7 +558,7 @@ void SessionManagerService::CleanupChildren(base::TimeDelta timeout,
       code == ExitCode::SUCCESS
           ? ArcContainerStopReason::SESSION_MANAGER_SHUTDOWN
           : ArcContainerStopReason::BROWSER_SHUTDOWN);
-  browser_->WaitAndAbort(timeout);
+  browser_->WaitAndKillAll(timeout);
   if (code == SessionManagerService::SUCCESS) {
     // Only record shutdown time for normal exit.
     login_metrics_->SendBrowserShutdownTime(base::TimeTicks::Now() -

@@ -45,10 +45,6 @@ class ChildJobInterface {
   // why it must die.
   virtual void Kill(int signal, const std::string& message) = 0;
 
-  // Waits |timeout| for current instance of this job to go away, then
-  // aborts the entire process group if it's not gone.
-  virtual void WaitAndAbort(base::TimeDelta timeout) = 0;
-
   // Returns the name of the job.
   virtual const std::string GetName() const = 0;
 

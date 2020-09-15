@@ -99,9 +99,8 @@ class SessionManagerService
       session_manager_service_->vm_concierge_available_ = available;
     }
 
-    // Executes the CleanupChildren() method on the manager.
-    void CleanupChildren(int timeout_sec) {
-      session_manager_service_->CleanupChildren(
+    void CleanupChildrenBeforeExit(int timeout_sec) {
+      session_manager_service_->CleanupChildrenBeforeExit(
           base::TimeDelta::FromSeconds(timeout_sec), ExitCode::SUCCESS);
     }
 
@@ -208,7 +207,7 @@ class SessionManagerService
   void SetExitAndScheduleShutdown(ExitCode code);
 
   // Terminate all children, with increasing prejudice.
-  void CleanupChildren(base::TimeDelta timeout, ExitCode code);
+  void CleanupChildrenBeforeExit(base::TimeDelta timeout, ExitCode code);
 
   // Callback when receiving a termination signal.
   bool OnTerminationSignal(const struct signalfd_siginfo& info);

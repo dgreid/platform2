@@ -115,39 +115,67 @@ TEST_F(BrowserJobTest, InitializationTest) {
   ExpectArgsToContainAll(job_args, argv_);
 }
 
-TEST_F(BrowserJobTest, WaitAndAbort) {
+TEST_F(BrowserJobTest, WaitAndKillAll) {
   const gid_t kDummyGid = 1000;
   const pid_t kDummyPid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
       .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGABRT)).Times(1);
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _))
+      .Times(3)
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).WillOnce(Return(false));
+  EXPECT_CALL(utils_, kill(kDummyPid, _, SIGABRT)).Times(1);
+  EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGKILL)).Times(1);
   EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
-  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _)).WillOnce(Return(false));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
   EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
 
   ASSERT_TRUE(job_->RunInBackground());
-  job_->WaitAndAbort(base::TimeDelta::FromSeconds(3));
+  job_->WaitAndKillAll(base::TimeDelta::FromSeconds(3));
 }
 
-TEST_F(BrowserJobTest, WaitAndAbort_AlreadyGone) {
+TEST_F(BrowserJobTest, WaitAndKillAll_AlreadyGone) {
   const gid_t kDummyGid = 1000;
   const pid_t kDummyPid = 4;
   EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
       .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
   EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
       .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
-  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
   EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _)).WillOnce(Return(true));
+  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).Times(0);
+  EXPECT_CALL(utils_, kill(_, _, _)).Times(0);
+  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
 
   EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
   EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
 
   ASSERT_TRUE(job_->RunInBackground());
-  job_->WaitAndAbort(base::TimeDelta::FromSeconds(3));
+  job_->WaitAndKillAll(base::TimeDelta::FromSeconds(3));
+}
+
+TEST_F(BrowserJobTest, WaitAndKillAll_BrowserGoneChildrenLive) {
+  const gid_t kDummyGid = 1000;
+  const pid_t kDummyPid = 4;
+  EXPECT_CALL(utils_, GetGidAndGroups(getuid(), _, _))
+      .WillOnce(DoAll(SetArgPointee<1>(kDummyGid), Return(true)));
+  EXPECT_CALL(utils_, RunInMinijail(_, _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(kDummyPid), Return(true)));
+  EXPECT_CALL(utils_, ProcessGroupIsGone(kDummyPid, _))
+      .Times(2)
+      .WillRepeatedly(Return(false));
+  EXPECT_CALL(utils_, ProcessIsGone(kDummyPid, _)).WillOnce(Return(true));
+  EXPECT_CALL(utils_, kill(kDummyPid, _, _)).Times(0);
+  EXPECT_CALL(utils_, kill(-kDummyPid, _, SIGKILL)).Times(1);
+  EXPECT_CALL(utils_, time(nullptr)).WillRepeatedly(Return(0));
+
+  EXPECT_CALL(metrics_, HasRecordedChromeExec()).WillRepeatedly(Return(false));
+  EXPECT_CALL(metrics_, RecordStats(_)).Times(AnyNumber());
+
+  ASSERT_TRUE(job_->RunInBackground());
+  job_->WaitAndKillAll(base::TimeDelta::FromSeconds(3));
 }
 
 TEST_F(BrowserJobTest, UnshareMountNamespaceForGuest) {
@@ -276,7 +304,7 @@ TEST_F(BrowserJobTest, ShouldAddCrashLoopArgBeforeStopping) {
     EXPECT_THAT(
         job_->ExportArgv(),
         Not(Contains(HasSubstr(BrowserJobInterface::kCrashLoopBeforeFlag))));
-    job_->WaitAndAbort(base::TimeDelta::FromSeconds(0));
+    job_->WaitAndKillAll(base::TimeDelta::FromSeconds(0));
   }
 
   EXPECT_FALSE(job_->ShouldStop());
@@ -287,7 +315,7 @@ TEST_F(BrowserJobTest, ShouldAddCrashLoopArgBeforeStopping) {
       << "Need to change expected value if kRestartWindowSeconds changes";
   ExpectArgsToContainFlag(job_->ExportArgv(),
                           BrowserJobInterface::kCrashLoopBeforeFlag, "121");
-  job_->WaitAndAbort(base::TimeDelta::FromSeconds(0));
+  job_->WaitAndKillAll(base::TimeDelta::FromSeconds(0));
   EXPECT_TRUE(job_->ShouldStop());
 }
 

@@ -40,7 +40,6 @@ class BrowserJobInterface : public ChildJobInterface {
   bool RunInBackground() override = 0;
   void KillEverything(int signal, const std::string& message) override = 0;
   void Kill(int signal, const std::string& message) override = 0;
-  void WaitAndAbort(base::TimeDelta timeout) override = 0;
   const std::string GetName() const override = 0;
   pid_t CurrentPid() const override = 0;
 
@@ -61,6 +60,12 @@ class BrowserJobInterface : public ChildJobInterface {
 
   // Called when the session is ended.
   virtual void StopSession() = 0;
+
+  // Waits |timeout| for this job and its children to go away, then (a) aborts
+  // the process if it's not gone and (b) SIGKILLs the job and its children.
+  // Actual time spent may be more than timeout if we try to collect an error
+  // report indicating why the job didn't exit.
+  virtual void WaitAndKillAll(base::TimeDelta timeout) = 0;
 
   // Sets command line arguments for the job from string vector. This overwrites
   // the arguments passed to BrowserJob's constructor.
@@ -127,7 +132,7 @@ class BrowserJob : public BrowserJobInterface {
   bool RunInBackground() override;
   void KillEverything(int signal, const std::string& message) override;
   void Kill(int signal, const std::string& message) override;
-  void WaitAndAbort(base::TimeDelta timeout) override;
+  void WaitAndKillAll(base::TimeDelta timeout) override;
   pid_t CurrentPid() const override;
   bool IsGuestSession() override;
   bool ShouldRunBrowser() override;

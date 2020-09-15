@@ -20,7 +20,12 @@ namespace login_manager {
 
 class SystemUtils;
 
-class GeneratorJobInterface : public ChildJobInterface {};
+class GeneratorJobInterface : public ChildJobInterface {
+ public:
+  // Waits |timeout| for current instance of this job to go away, then
+  // aborts the entire process group if it's not gone.
+  virtual void WaitAndAbort(base::TimeDelta timeout) = 0;
+};
 
 class GeneratorJobFactoryInterface {
  public:
