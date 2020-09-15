@@ -17,7 +17,11 @@ path = "src/trichechus.rs"
 panic = "abort"
 overflow-checks = true
 
+[build-dependencies]
+chromeos_dbus_bindings = { path = "../chromeos-dbus-bindings"} # provided by ebuild
+
 [dependencies]
+dbus = "0.6"
 flexbuffers = "0.1.1"
 getopts = "0.2"
 libc = "0.2.44"
