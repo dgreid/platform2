@@ -23,10 +23,16 @@ group("all") {
       ":ml_service_load_flatbuffer_fuzzer",
     ]
   }
+  if (use.ml_benchmark_drivers) {
+    deps += [ ":libml_for_benchmark" ]
+  }
 }
 
 generate_mojom_bindings("ml_mojo_bindings") {
   mojo_root = "${platform2_root}"
+  if (use.ml_benchmark_drivers) {
+    use_pic = true
+  }
   sources = [
     "mojom/graph_executor.mojom",
     "mojom/handwriting_recognizer.mojom",
@@ -136,6 +142,41 @@ static_library("ml_common") {
   ]
 }
 
+proto_library("benchmark_proto") {
+  proto_in_dir = "./proto/"
+  proto_out_dir = "include/ml"
+  sources = [ "${proto_in_dir}/benchmark.proto" ]
+  standalone = true
+  use_pic = true
+}
+
+shared_library("libml_for_benchmark") {
+  deps = [ ":ml_mojo_bindings_lib" ]
+  include_dirs = [ "${sysroot}/usr/include/tensorflow" ]
+  libs = [ "tensorflowlite" ]
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+    "libmetrics",
+    "libmojo-${libbase_ver}",
+    "protobuf",
+  ]
+  public_deps = [
+    ":benchmark_proto",
+    "//ml_benchmark:libmlbenchmark_proto",
+  ]
+  sources = [
+    "benchmark.cc",
+    "graph_executor_impl.cc",
+    "metrics.cc",
+    "model_impl.cc",
+    "model_metadata.cc",
+    "request_metrics.cc",
+    "tensor_view.cc",
+    "util.cc",
+  ]
+}
+
 static_library("ml_cmdline_common") {
   deps = [ ":ml_common" ]
   sources = [ "simple.cc" ]
@@ -174,6 +215,10 @@ if (use.test) {
       "testrunner.cc",
       "util_test.cc",
     ]
+    if (use.ml_benchmark_drivers) {
+      deps += [ ":libml_for_benchmark" ]
+      sources += [ "benchmark_test.cc" ]
+    }
     defines = [
       "USE_ONDEVICE_GRAMMAR=${use.ondevice_grammar}",
       "USE_ONDEVICE_HANDWRITING=${use.ondevice_handwriting}",

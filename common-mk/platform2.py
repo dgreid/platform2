@@ -79,6 +79,7 @@ _IUSE = [
     'kvm_guest',
     'kvm_host',
     'metrics_uploader',
+    'ml_benchmark_drivers',
     'mojo',
     'mount_oop',
     'msan',

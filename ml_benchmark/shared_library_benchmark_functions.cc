@@ -11,9 +11,9 @@ namespace {
 constexpr char kBenchmarkFunctionName[] = "benchmark_start";
 constexpr char kFreeBenchmarkFunctionName[] = "free_benchmark_results";
 
-void* load_function_from_shared_lib(const base::ScopedNativeLibrary& library,
-                                    const char* function_name,
-                                    const char* library_path) {
+void* LoadFunctionFromSharedLib(const base::ScopedNativeLibrary& library,
+                                const char* function_name,
+                                const char* library_path) {
   auto function_pointer = library.GetFunctionPointer(function_name);
 
   if (function_pointer == nullptr) {
@@ -30,16 +30,20 @@ namespace ml_benchmark {
 
 SharedLibraryBenchmarkFunctions::SharedLibraryBenchmarkFunctions(
     const base::FilePath& path) {
-  base::NativeLibrary library = base::LoadNativeLibrary(path, nullptr);
+  base::NativeLibraryLoadError load_error;
+  base::NativeLibraryOptions native_library_options;
+  native_library_options.prefer_own_symbols = true;
+  library_ = base::ScopedNativeLibrary(base::LoadNativeLibraryWithOptions(
+      path, native_library_options, &load_error));
 
-  if (library == nullptr) {
-    LOG(ERROR) << "Failed to load driver from: " << path;
+  if (!library_.is_valid()) {
+    LOG(ERROR) << "Failed to load driver from: " << path << " with error "
+               << load_error.ToString();
     return;
   }
 
-  library_ = base::ScopedNativeLibrary(library);
   auto benchmark_function_pointer =
-      reinterpret_cast<benchmark_function>(load_function_from_shared_lib(
+      reinterpret_cast<benchmark_function>(LoadFunctionFromSharedLib(
           library_, kBenchmarkFunctionName, path.value().c_str()));
 
   if (benchmark_function_pointer == nullptr) {
@@ -48,8 +52,8 @@ SharedLibraryBenchmarkFunctions::SharedLibraryBenchmarkFunctions(
 
   auto free_results_function =
       reinterpret_cast<free_benchmark_results_function>(
-          load_function_from_shared_lib(library_, kFreeBenchmarkFunctionName,
-                                        path.value().c_str()));
+          LoadFunctionFromSharedLib(library_, kFreeBenchmarkFunctionName,
+                                    path.value().c_str()));
 
   if (free_results_function == nullptr) {
     return;
