@@ -343,6 +343,12 @@ TEST(DatapathTest, StartRoutingDevice_Arc) {
                                            "-j", "MARK", "--set-mark",
                                            "0x00002000/0x00003f00", "-w"),
                                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-A", "PREROUTING", "-i", "arc_eth0", "-j", "MARK",
+                            "--set-mark", "0x00002000/0x00003f00", "-w"),
+                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.StartRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
@@ -365,6 +371,11 @@ TEST(DatapathTest, StartRoutingDevice_CrosVM) {
                                            "-j", "MARK", "--set-mark",
                                            "0x00002100/0x00003f00", "-w"),
                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-A", "PREROUTING", "-i", "vmtap0",
+                                            "-j", "MARK", "--set-mark",
+                                            "0x00002100/0x00003f00", "-w"),
+                                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.StartRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),
@@ -402,6 +413,12 @@ TEST(DatapathTest, StopRoutingDevice_Arc) {
                                            "-j", "MARK", "--set-mark",
                                            "0x00002000/0x00003f00", "-w"),
                                true, nullptr));
+  EXPECT_CALL(
+      runner,
+      ip6tables(StrEq("mangle"),
+                ElementsAre("-D", "PREROUTING", "-i", "arc_eth0", "-j", "MARK",
+                            "--set-mark", "0x00002000/0x00003f00", "-w"),
+                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.StopRoutingDevice("eth0", "arc_eth0", Ipv4Addr(1, 2, 3, 4),
@@ -424,6 +441,11 @@ TEST(DatapathTest, StopRoutingDevice_CrosVM) {
                                            "-j", "MARK", "--set-mark",
                                            "0x00002100/0x00003f00", "-w"),
                                true, nullptr));
+  EXPECT_CALL(runner, ip6tables(StrEq("mangle"),
+                                ElementsAre("-D", "PREROUTING", "-i", "vmtap0",
+                                            "-j", "MARK", "--set-mark",
+                                            "0x00002100/0x00003f00", "-w"),
+                                true, nullptr));
 
   Datapath datapath(&runner, &firewall);
   datapath.StopRoutingDevice("", "vmtap0", Ipv4Addr(1, 2, 3, 4),

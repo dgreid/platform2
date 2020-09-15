@@ -582,9 +582,9 @@ bool Datapath::ModifyFwmarkPrerouting(IpFamily family,
       "-w"};
 
   bool success = true;
-  if (family & AF_INET)
+  if (family & IPv4)
     success &= process_runner_->iptables("mangle", args, log_failures) == 0;
-  if (family & AF_INET6)
+  if (family & IPv6)
     success &= process_runner_->ip6tables("mangle", args, log_failures) == 0;
   return false;
 }
