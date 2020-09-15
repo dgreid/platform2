@@ -131,6 +131,14 @@ class MetadataHandler {
   // Awb mode to color temperature map
   AwbModeToTemperatureMap awb_temperature_;
   bool is_awb_control_supported_;
+
+  bool is_brightness_control_supported_;
+  bool is_contrast_control_supported_;
+  bool is_pan_control_supported_;
+  bool is_saturation_control_supported_;
+  bool is_sharpness_control_supported_;
+  bool is_tilt_control_supported_;
+  bool is_zoom_control_supported_;
 };
 
 }  // namespace cros

@@ -195,6 +195,21 @@ MetadataHandler::MetadataHandler(const camera_metadata_t& static_metadata,
       device_info_.device_path, kControlWhiteBalanceTemperature);
   awb_temperature_ = GetAvailableAwbTemperatures(device_info);
 
+  is_brightness_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlBrightness);
+  is_contrast_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlContrast);
+  is_pan_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlPan);
+  is_saturation_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlSaturation);
+  is_sharpness_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlSharpness);
+  is_tilt_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlTilt);
+  is_zoom_control_supported_ = V4L2CameraDevice::IsControlSupported(
+      device_info.device_path, kControlZoom);
+
   thread_checker_.DetachFromThread();
 }
 
@@ -895,7 +910,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlBrightnessRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlBrightness, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlContrast,
@@ -903,7 +917,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlContrastRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlContrast, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlPan,
@@ -911,7 +924,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlPanRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlPan, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path,
@@ -919,7 +931,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlSaturationRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlSaturation, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlSharpness,
@@ -927,7 +938,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlSharpnessRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlSharpness, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlTilt,
@@ -935,7 +945,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlTiltRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlTilt, range.default_value);
   }
 
   if (V4L2CameraDevice::QueryControl(device_info.device_path, kControlZoom,
@@ -943,7 +952,6 @@ int MetadataHandler::FillMetadataFromDeviceInfo(
     update_static(
         kVendorTagControlZoomRange,
         std::vector<int32_t>{range.minimum, range.maximum, range.step});
-    update_request(kVendorTagControlZoom, range.default_value);
   }
 
   std::vector<uint8_t> available_awb_modes;
@@ -1203,31 +1211,31 @@ int MetadataHandler::PostHandleRequest(int frame_number,
                  ANDROID_STATISTICS_SCENE_FLICKER_NONE);
 
   int32_t value;
-  if (metadata->exists(kVendorTagControlBrightness) &&
+  if (is_brightness_control_supported_ &&
       device_->GetControlValue(kControlBrightness, &value) == 0)
     update_request(kVendorTagControlBrightness, value);
 
-  if (metadata->exists(kVendorTagControlContrast) &&
+  if (is_contrast_control_supported_ &&
       device_->GetControlValue(kControlContrast, &value) == 0)
     update_request(kVendorTagControlContrast, value);
 
-  if (metadata->exists(kVendorTagControlPan) &&
+  if (is_pan_control_supported_ &&
       device_->GetControlValue(kControlPan, &value) == 0)
     update_request(kVendorTagControlPan, value);
 
-  if (metadata->exists(kVendorTagControlSaturation) &&
+  if (is_saturation_control_supported_ &&
       device_->GetControlValue(kControlSaturation, &value) == 0)
     update_request(kVendorTagControlSaturation, value);
 
-  if (metadata->exists(kVendorTagControlSharpness) &&
+  if (is_sharpness_control_supported_ &&
       device_->GetControlValue(kControlSharpness, &value) == 0)
     update_request(kVendorTagControlSharpness, value);
 
-  if (metadata->exists(kVendorTagControlTilt) &&
+  if (is_tilt_control_supported_ &&
       device_->GetControlValue(kControlTilt, &value) == 0)
     update_request(kVendorTagControlTilt, value);
 
-  if (metadata->exists(kVendorTagControlZoom) &&
+  if (is_zoom_control_supported_ &&
       device_->GetControlValue(kControlZoom, &value) == 0)
     update_request(kVendorTagControlZoom, value);
 
