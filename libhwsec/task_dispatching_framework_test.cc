@@ -47,12 +47,14 @@ class DBusMethodResponseWrapperTestBase : public testing::Test {
     // Set a value to bypass the checks in dbus libraray.
     method_call->SetSerial(5);
 
+    // TODO(crbug/1094927): Change to base::BindOnce after uprev.
     ResponseSender sender = base::Bind(
         [](std::shared_ptr<dbus::MethodCall> method_call, base::Closure check,
            std::unique_ptr<dbus::Response> response) { check.Run(); },
         method_call, check_function);
 
-    return std::make_unique<DBusMethodResponse>(method_call.get(), sender);
+    return std::make_unique<DBusMethodResponse>(method_call.get(),
+                                                std::move(sender));
   }
 
   void CheckIfDbusCallbackIsCalledOnDbusThread() {
