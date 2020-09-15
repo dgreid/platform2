@@ -11,7 +11,7 @@
 
 module chromeos.network_health.mojom;
 
-import "network_types.mojom";
+import "mojo/network_types.mojom";
 
 enum NetworkState {
   // The network type is available but not yet initialized.

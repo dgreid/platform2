@@ -10,7 +10,7 @@
 
 module chromeos.wilco_dtc_supportd.mojom;
 
-import "cros_healthd.mojom";
+import "mojo/cros_healthd.mojom";
 
 [Extensible]
 enum WilcoDtcSupportdWebRequestHttpMethod {

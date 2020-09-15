@@ -10,7 +10,7 @@
 
 module chromeos.cros_healthd.mojom;
 
-import "network_health.mojom";
+import "mojo/network_health.mojom";
 
 // An enumeration of CPU architectures.
 [Extensible]
