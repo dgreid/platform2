@@ -31,7 +31,6 @@
 #include "shill/mock_power_manager.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/net/mock_time.h"
 #include "shill/property_store_test.h"
 #include "shill/service_property_change_test.h"
@@ -64,7 +63,8 @@ using testing::Values;
 
 namespace {
 const char kConnectDisconnectReason[] = "RPC";
-}
+const char kGUID[] = "guid";
+}  // namespace
 
 namespace shill {
 
@@ -75,9 +75,6 @@ class ServiceTest : public PropertyStoreTest {
         service_(new ServiceUnderTest(&mock_manager_)),
         service2_(new ServiceUnderTest(&mock_manager_)),
         storage_id_(ServiceUnderTest::kStorageId),
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-        eap_(new NiceMock<MockEapCredentials>()),
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
         power_manager_(new MockPowerManager(control_interface())) {
     ON_CALL(*control_interface(), CreatePowerManagerProxy(_, _, _))
         .WillByDefault(ReturnNull());
@@ -86,8 +83,8 @@ class ServiceTest : public PropertyStoreTest {
     service_->misconnects_.time_ = &time_;
     DefaultValue<Timestamp>::Set(Timestamp());
 #if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-    service_->eap_.reset(eap_);  // Passes ownership.
-#endif                           // DISABLE_WIFI || DISABLE_WIRED_8021X
+    service_->eap_.reset(new NiceMock<MockEapCredentials>());
+#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
     mock_manager_.running_ = true;
     mock_manager_.set_power_manager(power_manager_);  // Passes ownership.
   }
@@ -196,9 +193,6 @@ class ServiceTest : public PropertyStoreTest {
   scoped_refptr<ServiceUnderTest> service_;
   scoped_refptr<ServiceUnderTest> service2_;
   string storage_id_;
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  MockEapCredentials* eap_;          // Owned by |service_|.
-#endif                               // DISABLE_WIFI || DISABLE_WIRED_8021X
   MockPowerManager* power_manager_;  // Owned by |mock_manager_|.
   vector<Technology> technology_order_for_sorting_;
 };
@@ -362,20 +356,18 @@ TEST_F(ServiceTest, SetProperty) {
 }
 
 TEST_F(ServiceTest, GetLoadableStorageIdentifier) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_))
-      .WillOnce(Return(false))
-      .WillOnce(Return(true));
+  FakeStore storage;
   EXPECT_EQ("", service_->GetLoadableStorageIdentifier(storage));
+  // Setting any property will add an entry for |storage_id_|.
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
   EXPECT_EQ(storage_id_, service_->GetLoadableStorageIdentifier(storage));
 }
 
 TEST_F(ServiceTest, IsLoadableFrom) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_))
-      .WillOnce(Return(false))
-      .WillOnce(Return(true));
+  FakeStore storage;
   EXPECT_FALSE(service_->IsLoadableFrom(storage));
+  // Setting any property will add an entry for |storage_id_|.
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
   EXPECT_TRUE(service_->IsLoadableFrom(storage));
 }
 
@@ -394,108 +386,78 @@ class ServiceWithOnEapCredentialsChangedOverride : public ServiceUnderTest {
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
 
 TEST_F(ServiceTest, Load) {
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  MockEapCredentials* eap = new MockEapCredentials();  // Owned by |service|.
-  scoped_refptr<ServiceWithOnEapCredentialsChangedOverride> service(
-      new ServiceWithOnEapCredentialsChangedOverride(&mock_manager_, eap));
-#else
-  scoped_refptr<ServiceUnderTest> service(new ServiceUnderTest(&mock_manager_));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillOnce(Return(true));
+  FakeStore storage;
   const string kCheckPortal("check-portal");
-  const string kGUID("guid");
-  const bool kHasEverConnected = true;
   const int kPriority = 20;
   const string kProxyConfig("proxy-config");
   const string kUIData("ui-data");
-  EXPECT_CALL(storage, GetString(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage, GetInt(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage, GetString(storage_id_, Service::kStorageCheckPortal, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kCheckPortal), Return(true)));
-  EXPECT_CALL(storage, GetString(storage_id_, Service::kStorageGUID, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kGUID), Return(true)));
-  EXPECT_CALL(storage, GetInt(storage_id_, Service::kStoragePriority, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kPriority), Return(true)));
-  EXPECT_CALL(storage, GetString(storage_id_, Service::kStorageProxyConfig, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kProxyConfig), Return(true)));
-  EXPECT_CALL(storage, GetString(storage_id_, Service::kStorageUIData, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kUIData), Return(true)));
-  EXPECT_CALL(storage, GetBool(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage,
-              GetBool(storage_id_, Service::kStorageSaveCredentials, _));
-  EXPECT_CALL(storage,
-              GetBool(storage_id_, Service::kStorageHasEverConnected, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kHasEverConnected), Return(true)));
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap, Load(&storage, storage_id_));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  MockDhcpProperties* dhcp_props = new MockDhcpProperties();
-  service->dhcp_properties_.reset(dhcp_props);
-  EXPECT_CALL(*dhcp_props, Load(&storage, storage_id_));
+  storage.SetString(storage_id_, Service::kStorageCheckPortal, kCheckPortal);
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
+  storage.SetBool(storage_id_, Service::kStorageHasEverConnected, true);
+  storage.SetInt(storage_id_, Service::kStoragePriority, kPriority);
+  storage.SetString(storage_id_, Service::kStorageProxyConfig, kProxyConfig);
+  storage.SetString(storage_id_, Service::kStorageUIData, kUIData);
 
-  EXPECT_TRUE(service->Load(&storage));
-  EXPECT_EQ(kCheckPortal, service->check_portal_);
-  EXPECT_EQ(kGUID, service->guid_);
-  EXPECT_TRUE(service->has_ever_connected_);
-  EXPECT_EQ(kProxyConfig, service->proxy_config_);
-  EXPECT_EQ(kUIData, service->ui_data_);
+  auto* dhcp_props = new DhcpProperties(&mock_manager_);
+  service_->dhcp_properties_.reset(dhcp_props);
 
-  Mock::VerifyAndClearExpectations(&storage);
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  Mock::VerifyAndClearExpectations(eap_);
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  Mock::VerifyAndClearExpectations(dhcp_props);
+  EXPECT_TRUE(service_->Load(&storage));
+  EXPECT_EQ(kCheckPortal, service_->check_portal_);
+  EXPECT_EQ(kGUID, service_->guid_);
+  EXPECT_TRUE(service_->has_ever_connected_);
+  EXPECT_EQ(kProxyConfig, service_->proxy_config_);
+  EXPECT_EQ(kUIData, service_->ui_data_);
+
+  // Removing the storage entry should cause the service to fail to load.
+  storage.DeleteGroup(storage_id_);
+  EXPECT_FALSE(service_->Load(&storage));
+
+  // Set an empty GUID to add a storage entry so that the service loads.
+  storage.SetString(storage_id_, Service::kStorageGUID, "");
 
   // Assure that parameters are set to default if not available in the profile.
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillOnce(Return(true));
-  EXPECT_CALL(storage, GetBool(storage_id_, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetString(storage_id_, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetInt(storage_id_, _, _)).WillRepeatedly(Return(false));
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap, Load(&storage, storage_id_));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  EXPECT_CALL(*dhcp_props, Load(&storage, storage_id_));
-
-  EXPECT_TRUE(service->Load(&storage));
+  EXPECT_TRUE(service_->Load(&storage));
   EXPECT_EQ(Service::kCheckPortalAuto, service_->check_portal_);
-  EXPECT_EQ("", service->guid_);
-  EXPECT_EQ("", service->proxy_config_);
-  EXPECT_EQ("", service->ui_data_);
-
-  // has_ever_connected_ flag will reset when EAP credential changes.
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_FALSE(service->has_ever_connected_);
-#else
-  EXPECT_TRUE(service->has_ever_connected_);
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+  EXPECT_EQ("", service_->guid_);
+  EXPECT_EQ("", service_->proxy_config_);
+  EXPECT_EQ("", service_->ui_data_);
 }
 
+#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
+TEST_F(ServiceTest, LoadEap) {
+  FakeStore storage;
+
+  const char kIdentity[] = "identity";
+  storage.SetString(storage_id_, EapCredentials::kStorageCredentialEapIdentity,
+                    kIdentity);
+
+  auto* eap = new EapCredentials();
+  ASSERT_FALSE(service2_->eap());
+  service2_->SetEapCredentials(eap);
+  service2_->SetHasEverConnected(true);
+  EXPECT_TRUE(service2_->has_ever_connected());
+
+  EXPECT_TRUE(service2_->Load(&storage));
+  EXPECT_EQ(service2_->eap()->identity(), kIdentity);
+
+  std::string identity;
+  EXPECT_TRUE(storage.GetString(
+      storage_id_, EapCredentials::kStorageCredentialEapIdentity, &identity));
+  EXPECT_EQ(identity, kIdentity);
+
+  // has_ever_connected_ is unaffected when loading eap credentials.
+  EXPECT_TRUE(service2_->has_ever_connected());
+}
+#endif
+
 TEST_F(ServiceTest, LoadFail) {
-  StrictMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillOnce(Return(false));
+  FakeStore storage;
   EXPECT_FALSE(service_->Load(&storage));
 }
 
 TEST_F(ServiceTest, LoadAutoConnect) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, GetBool(storage_id_, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetString(storage_id_, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetInt(storage_id_, _, _)).WillRepeatedly(Return(false));
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Load(&storage, storage_id_)).Times(AnyNumber());
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-
-  EXPECT_CALL(storage, GetBool(storage_id_, Service::kStorageAutoConnect, _))
-      .WillOnce(Return(false))
-      .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)))
-      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  FakeStore storage;
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
 
   // AutoConnect is unset.
   EXPECT_TRUE(service_->Load(&storage));
@@ -503,144 +465,133 @@ TEST_F(ServiceTest, LoadAutoConnect) {
   EXPECT_FALSE(service_->retain_auto_connect());
 
   // AutoConnect is false.
+  storage.SetBool(storage_id_, Service::kStorageAutoConnect, false);
   EXPECT_TRUE(service_->Load(&storage));
   EXPECT_FALSE(service_->auto_connect());
   EXPECT_TRUE(service_->retain_auto_connect());
 
   // AutoConnect is true.
+  storage.SetBool(storage_id_, Service::kStorageAutoConnect, true);
   EXPECT_TRUE(service_->Load(&storage));
   EXPECT_TRUE(service_->auto_connect());
   EXPECT_TRUE(service_->retain_auto_connect());
 }
 
-TEST_F(ServiceTest, SaveStringNonEmpty) {
-  MockStore storage;
+TEST_F(ServiceTest, SaveString) {
+  FakeStore storage;
   static const char kKey[] = "test-key";
   static const char kData[] = "test-data";
-  EXPECT_CALL(storage, SetString(storage_id_, kKey, kData))
-      .WillOnce(Return(true));
-  service_->SaveStringOrClear(&storage, storage_id_, kKey, kData);
-}
 
-TEST_F(ServiceTest, SaveStringEmpty) {
-  MockStore storage;
-  static const char kKey[] = "test-key";
-  EXPECT_CALL(storage, DeleteKey(storage_id_, kKey)).WillOnce(Return(true));
+  // Test setting kKey to a value.
+  service_->SaveStringOrClear(&storage, storage_id_, kKey, kData);
+  std::string data;
+  EXPECT_TRUE(storage.GetString(storage_id_, kKey, &data));
+  EXPECT_EQ(data, kData);
+
+  // Setting kKey to an empty value should delete the entry
   service_->SaveStringOrClear(&storage, storage_id_, kKey, "");
+  EXPECT_FALSE(storage.GetString(storage_id_, kKey, &data));
 }
 
 TEST_F(ServiceTest, Save) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, SetString(storage_id_, _, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, DeleteKey(storage_id_, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, DeleteKey(storage_id_, Service::kStorageAutoConnect))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetBool(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage, SetBool(storage_id_, Service::kStorageSaveCredentials,
-                               service_->save_credentials()));
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Save(&storage, storage_id_, true));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  auto dhcp_props = std::make_unique<MockDhcpProperties>();
-  EXPECT_CALL(*dhcp_props, Save(&storage, storage_id_));
-  service_->dhcp_properties_ = std::move(dhcp_props);
+  FakeStore storage;
+  service_->technology_ = Technology::kWifi;
   EXPECT_TRUE(service_->Save(&storage));
+
+  std::string type;
+  EXPECT_TRUE(storage.GetString(storage_id_, Service::kStorageType, &type));
+  EXPECT_EQ(type, service_->GetTechnologyString());
+}
+
+#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
+TEST_F(ServiceTest, SaveEap) {
+  FakeStore storage;
+  const char kIdentity[] = "identity";
+  auto* eap = new EapCredentials();
+  eap->set_identity(kIdentity);
+  ASSERT_FALSE(service2_->eap());
+  service2_->SetEapCredentials(eap);
+  service2_->set_save_credentials(true);
+  EXPECT_TRUE(service2_->Save(&storage));
+
+  std::string identity;
+  EXPECT_TRUE(storage.GetString(
+      storage_id_, EapCredentials::kStorageCredentialEapIdentity, &identity));
+  EXPECT_EQ(identity, kIdentity);
+}
+#endif
+
+TEST_F(ServiceTest, SaveDhcpProperties) {
+  FakeStore storage;
+
+  const char kHostname[] = "hostname";
+  service_->dhcp_properties_for_testing()
+      ->properties_for_testing()
+      ->Set<std::string>(DhcpProperties::kHostnameProperty, kHostname);
+  EXPECT_TRUE(service_->Save(&storage));
+
+  std::string key = std::string(DhcpProperties::kPropertyPrefix) +
+                    DhcpProperties::kHostnameProperty;
+  std::string hostname;
+  EXPECT_TRUE(storage.GetString(storage_id_, key, &hostname));
+  EXPECT_EQ(hostname, kHostname);
 }
 
 TEST_F(ServiceTest, RetainAutoConnect) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, SetString(storage_id_, _, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, DeleteKey(storage_id_, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, DeleteKey(storage_id_, Service::kStorageAutoConnect))
-      .Times(0);
-  EXPECT_CALL(storage, SetBool(storage_id_, _, _)).Times(AnyNumber());
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Save(&storage, storage_id_, true)).Times(2);
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+  FakeStore storage;
 
   // AutoConnect flag set true.
   service_->EnableAndRetainAutoConnect();
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageAutoConnect, true));
   EXPECT_TRUE(service_->Save(&storage));
+  bool auto_connect = false;
+  EXPECT_TRUE(storage.GetBool(storage_id_, Service::kStorageAutoConnect,
+                              &auto_connect));
+  EXPECT_TRUE(auto_connect);
 
   // AutoConnect flag set false.
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageAutoConnect, false));
   service_->SetAutoConnect(false);
   EXPECT_TRUE(service_->Save(&storage));
+  EXPECT_TRUE(storage.GetBool(storage_id_, Service::kStorageAutoConnect,
+                              &auto_connect));
+  EXPECT_FALSE(auto_connect);
 }
 
 TEST_F(ServiceTest, HasEverConnectedSavedToProfile) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, SetString(storage_id_, _, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, DeleteKey(storage_id_, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(storage,
-              DeleteKey(storage_id_, Service::kStorageHasEverConnected))
-      .Times(0);
-  EXPECT_CALL(storage, SetBool(storage_id_, _, _)).Times(AnyNumber());
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Save(&storage, storage_id_, true)).Times(2);
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+  FakeStore storage;
 
   // HasEverConnected flag set true.
   service_->SetHasEverConnected(true);
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageHasEverConnected, true));
   EXPECT_TRUE(service_->Save(&storage));
+  bool has_ever_connected = false;
+  EXPECT_TRUE(storage.GetBool(storage_id_, Service::kStorageHasEverConnected,
+                              &has_ever_connected));
+  EXPECT_TRUE(has_ever_connected);
 
   // HasEverConnected flag set false.
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageHasEverConnected, false));
   service_->SetHasEverConnected(false);
   EXPECT_TRUE(service_->Save(&storage));
+  EXPECT_TRUE(storage.GetBool(storage_id_, Service::kStorageHasEverConnected,
+                              &has_ever_connected));
+  EXPECT_FALSE(has_ever_connected);
 }
 
 TEST_F(ServiceTest, Unload) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillOnce(Return(true));
-  static const string string_value("value");
-  EXPECT_CALL(storage, GetString(storage_id_, _, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(string_value), Return(true)));
-  EXPECT_CALL(storage, GetBool(storage_id_, _, _))
-      .Times(AtLeast(1))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(true), Return(true)));
+  FakeStore storage;
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
+  storage.SetBool(storage_id_, Service::kStorageHasEverConnected, true);
+
   EXPECT_FALSE(service_->explicitly_disconnected_);
-  service_->explicitly_disconnected_ = true;
   EXPECT_FALSE(service_->has_ever_connected_);
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Load(&storage, storage_id_));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
-  ASSERT_TRUE(service_->Load(&storage));
-  // TODO(pstew): Only two string properties in the service are tested as
-  // a sentinel that properties are being set and reset at the right times.
-  // However, since property load/store is essentially a manual process,
-  // it is error prone and should either be exhaustively unit-tested or
-  // a generic framework for registering loaded/stored properties should
-  // be created. crbug.com/207798
-  EXPECT_EQ(string_value, service_->ui_data_);
-  EXPECT_EQ(string_value, service_->guid_);
+  service_->explicitly_disconnected_ = true;
+
+  EXPECT_TRUE(service_->Load(&storage));
+
+  EXPECT_EQ(kGUID, service_->guid_);
   EXPECT_FALSE(service_->explicitly_disconnected_);
   EXPECT_TRUE(service_->has_ever_connected_);
+
   service_->explicitly_disconnected_ = true;
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Reset());
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
   service_->Unload();
-  EXPECT_EQ(string(""), service_->ui_data_);
   EXPECT_EQ(string(""), service_->guid_);
   EXPECT_FALSE(service_->explicitly_disconnected_);
   EXPECT_FALSE(service_->has_ever_connected_);
@@ -720,7 +671,7 @@ TEST_F(ServiceTest, State) {
   // the service enters kStateConnected. (The case where the service
   // doesn't have a profile is tested above.)
   MockProfileRefPtr mock_profile(new MockProfile(&mock_manager_));
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   service_->set_profile(mock_profile);
   service_->has_ever_connected_ = false;
   EXPECT_CALL(mock_manager_, UpdateService(IsRefPtrTo(service_)));
@@ -891,11 +842,8 @@ TEST_F(ServiceTest, IsAutoConnectable) {
 
   // But if the Service is reloaded, it is eligible for auto-connect
   // again.
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(storage_id_)).WillOnce(Return(true));
-#if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
-  EXPECT_CALL(*eap_, Load(&storage, storage_id_));
-#endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
+  FakeStore storage;
+  storage.SetString(storage_id_, Service::kStorageGUID, kGUID);
   EXPECT_TRUE(service_->Load(&storage));
   EXPECT_TRUE(service_->IsAutoConnectable(&reason));
 
@@ -1086,7 +1034,7 @@ TEST_F(ServiceTest, ConfigureStringsProperty) {
 
 #if !defined(DISABLE_WIFI) || !defined(DISABLE_WIRED_8021X)
 TEST_F(ServiceTest, ConfigureEapStringProperty) {
-  MockEapCredentials* eap = new MockEapCredentials();
+  MockEapCredentials* eap = new NiceMock<MockEapCredentials>();
   service2_->SetEapCredentials(eap);  // Passes ownership.
 
   const string kEAPManagement0 = "management_zero";
@@ -1263,7 +1211,7 @@ TEST_F(ServiceTest, OnPropertyChanged) {
 
   // Expect call to Update if the profile has storage.
   EXPECT_CALL(*profile, UpdateService(_)).Times(1);
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   EXPECT_CALL(*profile, GetConstStorage()).WillOnce(Return(&storage));
   service_->OnPropertyChanged("");
 }
@@ -1833,7 +1781,7 @@ TEST_F(ServiceTest, SetAutoConnectFullUserUpdatePersists) {
   // be persisted, even if the property was not changed.
   Error error;
   MockProfileRefPtr mock_profile(new MockProfile(&mock_manager_));
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   service_->set_profile(mock_profile);
   service_->SetAutoConnect(true);
 
@@ -1916,24 +1864,22 @@ TEST_F(ServiceTest, MeteredOverride) {
 }
 
 TEST_F(ServiceTest, SaveMeteredOverride) {
-  NiceMock<MockStore> storage;
+  FakeStore storage;
+  EXPECT_TRUE(service_->Save(&storage));
+
   // Newly created services should not have a metered override value
   // since that is set by the user, and should thus have no value
   // to save to the storage.
-  EXPECT_CALL(storage, SetBool(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageMeteredOverride, _))
-      .Times(0);
-  EXPECT_TRUE(service_->Save(&storage));
-  Mock::VerifyAndClearExpectations(&storage);
+  bool metered_override = false;
+  EXPECT_FALSE(storage.GetBool(storage_id_, Service::kStorageMeteredOverride,
+                               &metered_override));
 
   Error error;
-  EXPECT_CALL(storage, SetBool(storage_id_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(storage,
-              SetBool(storage_id_, Service::kStorageMeteredOverride, true))
-      .Times(1);
   service_->SetMeteredProperty(true, &error);
   EXPECT_TRUE(service_->Save(&storage));
+  EXPECT_TRUE(storage.GetBool(storage_id_, Service::kStorageMeteredOverride,
+                              &metered_override));
+  EXPECT_TRUE(metered_override);
 }
 
 TEST_F(ServiceTest, IsNotMeteredByDefault) {

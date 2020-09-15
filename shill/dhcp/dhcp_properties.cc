@@ -31,18 +31,17 @@ static string ObjectID(const DhcpProperties* d) {
 
 namespace {
 
-// Prefix used for DhcpProperties in the PropertyStore and D-Bus interface.
-const char kPropertyPrefix[] = "DHCPProperty.";
-
 const char* const kPropertyNames[] = {DhcpProperties::kHostnameProperty,
                                       DhcpProperties::kVendorClassProperty};
 
 std::string GetFullPropertyName(const std::string& property_name) {
-  return kPropertyPrefix + property_name;
+  return DhcpProperties::kPropertyPrefix + property_name;
 }
 
 }  // namespace
 
+// Prefix used for DhcpProperties in the PropertyStore and D-Bus interface.
+const char DhcpProperties::kPropertyPrefix[] = "DHCPProperty.";
 const char DhcpProperties::kHostnameProperty[] = "Hostname";
 const char DhcpProperties::kVendorClassProperty[] = "VendorClass";
 

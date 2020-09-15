@@ -98,6 +98,8 @@ class EapCredentials {
  private:
   friend class EapCredentialsTest;
   FRIEND_TEST(EapCredentialsTest, LoadAndSave);
+  FRIEND_TEST(ServiceTest, LoadEap);
+  FRIEND_TEST(ServiceTest, SaveEap);
 
   static const char kStorageCredentialEapAnonymousIdentity[];
   static const char kStorageCredentialEapIdentity[];

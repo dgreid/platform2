@@ -21,6 +21,7 @@ class StoreInterface;
 
 class DhcpProperties {
  public:
+  static const char kPropertyPrefix[];
   static const char kHostnameProperty[];
   static const char kVendorClassProperty[];
 
@@ -52,6 +53,7 @@ class DhcpProperties {
   bool GetValueForProperty(const std::string& name, std::string* value) const;
 
   const KeyValueStore& properties() const { return properties_; }
+  KeyValueStore* properties_for_testing() { return &properties_; }
 
  private:
   friend class DhcpPropertiesTest;

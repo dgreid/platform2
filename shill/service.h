@@ -518,6 +518,9 @@ class Service : public base::RefCounted<Service> {
 #endif  // DISABLE_WIFI || DISABLE_WIRED_8021X
 
   const DhcpProperties& dhcp_properties() const { return *dhcp_properties_; }
+  DhcpProperties* dhcp_properties_for_testing() {
+    return dhcp_properties_.get();
+  }
 
   PropertyStore* mutable_store() { return &store_; }
   const PropertyStore& store() const { return store_; }
@@ -702,14 +705,11 @@ class Service : public base::RefCounted<Service> {
   FRIEND_TEST(ServiceTest, ConfigureEapStringProperty);
   FRIEND_TEST(ServiceTest, ConfigureIgnoredProperty);
   FRIEND_TEST(ServiceTest, Constructor);
-  FRIEND_TEST(ServiceTest, CustomSetterNoopChange);
   FRIEND_TEST(ServiceTest, GetIPConfigRpcIdentifier);
   FRIEND_TEST(ServiceTest, GetProperties);
-  FRIEND_TEST(ServiceTest, GetTethering);
   FRIEND_TEST(ServiceTest, IsAutoConnectable);
   FRIEND_TEST(ServiceTest, IsNotMeteredByDefault);
   FRIEND_TEST(ServiceTest, Load);
-  FRIEND_TEST(ServiceTest, LoadAutoConnect);
   FRIEND_TEST(ServiceTest, MeteredOverride);
   FRIEND_TEST(ServiceTest, PortalDetectionFailure);
   FRIEND_TEST(ServiceTest, RecheckPortal);
