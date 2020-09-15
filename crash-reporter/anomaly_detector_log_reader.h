@@ -32,13 +32,13 @@ constexpr char kAuditLogPattern[] = R"([^(]+\(([\d\.]+)\S+ (.+))";
 // Second group captures the tag (i.e. service name).
 // Third group captures the log message.
 // e.g.
-// `2020-05-10T22:45:04.419261-07:00 ERR tpm_managerd[790]: TPM error`
+// `2020-05-10T22:45:04.419261Z ERR tpm_managerd[790]: TPM error`
 // ` 0x3011 (Communication failure): Failed to connect context.`
 // e.g.2
-// `2020-05-10T22:45:04.419261-07:00 ERR kernel: [  893.009245]`
+// `2020-05-10T22:45:04.419261Z ERR kernel: [  893.009245]`
 // ` atme1_mxt_ts 3-004b: Status: 00 Config Checksum: 673e89`
 // e.g.3
-// `2020-05-14T19:37:04.202906+09:00 INFO VM(3)[8947]:`
+// `2020-05-14T19:37:04.202906Z INFO VM(3)[8947]:`
 // ` [devices/src/virtio/balloon.rs:290] ballon config changed`
 constexpr char kMessageLogPattern[] = R"((\S+) \S+ (\S*?)(?:\[\d+\])?:\s+(.+))";
 
@@ -46,7 +46,7 @@ constexpr char kMessageLogPattern[] = R"((\S+) \S+ (\S*?)(?:\[\d+\])?:\s+(.+))";
 // Second group captures the service name.
 // Third group captures the log message.
 // e.g.
-// `2020-05-15T16:34:00.678394+09:00 INFO kernel:`
+// `2020-05-15T16:34:00.678394Z INFO kernel:`
 // ` [ 1608.687863] init: Connection from private client`
 constexpr char kUpstartLogPattern[] =
     R"((\S+) \S+ \S+: \[\s*\S+\] (\w+):\s+(.+))";

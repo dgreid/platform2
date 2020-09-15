@@ -68,22 +68,22 @@ TEST(AnomalyDetectorFileReaderTest, SeekToEndTest) {
 TEST(AnomalyDetectorFileReaderTest, FileTextReaderTest) {
   auto r = InitializeFileReaderForTest("TEST_MESSAGE_LOG");
   std::string l1 =
-      "2020-05-10T22:45:04.419261-07:00 ERR tpm_managerd[790]: TPM error "
+      "2020-05-10T22:45:04.419261Z ERR tpm_managerd[790]: TPM error "
       "0x3011 (Communication failure): Failed to connect context.";
   std::string l2 = "";
   std::string l3 =
-      R"(2020-05-12T20:56:03.754453-07:00 INFO rsyslogd[642]:  [origin )"
+      R"(2020-05-12T20:56:03.754453Z INFO rsyslogd[642]:  [origin )"
       R"(software="rsyslogd" swVersion="8.1904.0" x-pid="642" )"
       R"(x-info="https://www.rsyslog.com"] rsyslogd was HUPed)";
   std::string l4 =
-      "2020-05-13T11:56:27.236308+09:00 INFO kernel: [  893.009245] "
+      "2020-05-13T11:56:27.236308Z INFO kernel: [  893.009245] "
       "atme1_mxt_ts 3-004b: Status: 00 Config Checksum: 673e89";
   std::string l5 =
-      "2020-05-14T19:37:04.202906+09:00 INFO VM(3)[8947]:  "
+      "2020-05-14T19:37:04.202906Z INFO VM(3)[8947]:  "
       "[devices/src/virtio/balloon.rs:290] ballon config changed to consume "
       "255836 pages";
   std::string l6 =
-      "2020-06-08T08:28:49.080656+09:00 NOTICE [2917]: log message with no "
+      "2020-06-08T08:28:49.080656Z NOTICE [2917]: log message with no "
       "tag.";
   FileReaderRun want{std::move(l1), std::move(l2), std::move(l3),
                      std::move(l4), std::move(l5), std::move(l6)};

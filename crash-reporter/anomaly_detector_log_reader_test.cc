@@ -88,25 +88,25 @@ TEST(AnomalyDetectorLogReaderTest, MessageReaderTest) {
               .message =
                   R"(TPM error 0x3011 (Communication failure): Failed to)"
                   R"( connect context.)",
-              .timestamp = base::Time::FromTimeT(1589175904)};
+              .timestamp = base::Time::FromTimeT(1589150704)};
   LogEntry e2{
       .tag = "rsyslogd",
       .message =
           R"([origin software="rsyslogd" swVersion="8.1904.0" x-pid="642")"
           R"( x-info="https://www.rsyslog.com"] rsyslogd was HUPed)",
-      .timestamp = base::Time::FromTimeT(1589342163)};
+      .timestamp = base::Time::FromTimeT(1589316963)};
   LogEntry e3{.tag = "kernel",
               .message = R"([  893.009245] atme1_mxt_ts 3-004b:)"
                          R"( Status: 00 Config Checksum: 673e89)",
-              .timestamp = base::Time::FromTimeT(1589338587)};
+              .timestamp = base::Time::FromTimeT(1589370987)};
   LogEntry e4{.tag = "VM(3)",
               .message =
                   "[devices/src/virtio/balloon.rs:290] ballon "
                   "config changed to consume 255836 pages",
-              .timestamp = base::Time::FromTimeT(1589452624)};
+              .timestamp = base::Time::FromTimeT(1589485024)};
   LogEntry e5{.tag = "",
               .message = "log message with no tag.",
-              .timestamp = base::Time::FromTimeT(1591572529)};
+              .timestamp = base::Time::FromTimeT(1591604929)};
 
   ReaderRun want{std::move(e1), std::move(e2), std::move(e3), std::move(e4),
                  std::move(e5)};
@@ -121,14 +121,14 @@ TEST(AnomalyDetectorLogReaderTest, UpstartMessageReaderTest) {
 
   LogEntry e1{.tag = "init",
               .message = "Connection from private client",
-              .timestamp = base::Time::FromTimeT(1589528040)};
+              .timestamp = base::Time::FromTimeT(1589560440)};
   LogEntry e2{
       .tag = "init",
       .message = "early-failure main process (168) terminated with status 124",
-      .timestamp = base::Time::FromTimeT(1589539774)};
+      .timestamp = base::Time::FromTimeT(1589572174)};
   LogEntry e3{.tag = "init",
               .message = "vpd-log main process (440) terminated with status 1",
-              .timestamp = base::Time::FromTimeT(1589539776)};
+              .timestamp = base::Time::FromTimeT(1589572176)};
 
   ReaderRun want{std::move(e1), std::move(e2), std::move(e3)};
   ReaderTest(mr, want);
