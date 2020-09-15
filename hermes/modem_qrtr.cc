@@ -109,16 +109,20 @@ void ModemQrtr::SendApdus(std::vector<lpa::card::Apdu> apdus,
          AllocateId(), QmiUimCommand::kSendApdu});
   }
   // Begin transmitting if we are not already processing a transaction.
-  if (current_state_ == State::kReady) {
+  if (current_state_.CanSend()) {
     TransmitFromQueue();
   }
 }
 
 bool ModemQrtr::IsSimValidAfterEnable() {
+  // This function is called by the lpa after profile enable.
+  ReacquireChannel();
   return true;
 }
 
 bool ModemQrtr::IsSimValidAfterDisable() {
+  // This function is called by the lpa after profile disable.
+  ReacquireChannel();
   return true;
 }
 
@@ -146,6 +150,20 @@ void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   // info can get updated.
   tx_queue_.push_front(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kGetSlots});
+  tx_queue_.push_front(
+      {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
+}
+
+void ModemQrtr::ReacquireChannel() {
+  if (current_state_ != State::kReady) {
+    return;
+  }
+
+  LOG(INFO) << "Reacquiring Channel";
+  current_state_.Transition(State::kUimStarted);
+  channel_ = kInvalidChannel;
+  tx_queue_.push_front({std::unique_ptr<TxInfo>(), AllocateId(),
+                        QmiUimCommand::kOpenLogicalChannel});
   tx_queue_.push_front(
       {std::unique_ptr<TxInfo>(), AllocateId(), QmiUimCommand::kReset});
 }
@@ -545,6 +563,10 @@ bool ModemQrtr::State::Transition(ModemQrtr::State::Value value) {
   switch (value) {
     case kUninitialized:
       valid_transition = true;
+      break;
+    case kUimStarted:
+      // we reacquire the channel from kReady after profile (en/dis)able
+      valid_transition = (value_ == kReady || value_ == kInitializeStarted);
       break;
     case kReady:
       valid_transition =

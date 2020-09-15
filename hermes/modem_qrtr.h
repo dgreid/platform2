@@ -65,6 +65,7 @@ class ModemQrtr : public lpa::card::EuiccCard {
             Logger* logger,
             Executor* executor);
   void RetryInitialization();
+  void ReacquireChannel();
   void FinalizeInitialization();
   void Shutdown();
   uint16_t AllocateId();
