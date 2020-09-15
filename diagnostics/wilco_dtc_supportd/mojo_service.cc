@@ -8,7 +8,6 @@
 #include <utility>
 
 #include <base/logging.h>
-#include <base/memory/shared_memory.h>
 
 #include "diagnostics/common/mojo_utils.h"
 #include "diagnostics/wilco_dtc_supportd/json_utils.h"

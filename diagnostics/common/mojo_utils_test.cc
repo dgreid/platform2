@@ -7,7 +7,6 @@
 #include <memory>
 #include <utility>
 
-#include <base/memory/shared_memory.h>
 #include <base/strings/string_piece.h>
 #include <gtest/gtest.h>
 #include <mojo/core/embedder/embedder.h>

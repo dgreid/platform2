@@ -21,11 +21,11 @@
 #include <base/bind.h>
 #include <base/callback.h>
 #include <base/files/file_path.h>
+#include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
 #include <base/files/scoped_temp_dir.h>
 #include <base/logging.h>
 #include <base/memory/ref_counted.h>
-#include <base/memory/shared_memory.h>
 #include <base/run_loop.h>
 #include <base/strings/stringprintf.h>
 #include <base/test/task_environment.h>
@@ -468,8 +468,7 @@ class StartedCoreTest : public CoreTest {
         *wilco_dtc_supportd_dbus_object_,
         ExportMethod(kWilcoDtcSupportdServiceInterface,
                      kWilcoDtcSupportdBootstrapMojoConnectionMethod, _, _))
-        .WillOnce(SaveArg<2 /* method_call_callback */>(
-            &bootstrap_mojo_connection_dbus_method_));
+        .WillOnce(Invoke(this, &StartedCoreTest::MockExportMethod));
 
     // Run the tested code that exports D-Bus objects and methods.
     scoped_refptr<brillo::dbus_utils::AsyncEventSequencer> dbus_sequencer(
@@ -479,6 +478,18 @@ class StartedCoreTest : public CoreTest {
 
     // Verify that required D-Bus methods are exported.
     EXPECT_FALSE(bootstrap_mojo_connection_dbus_method_.is_null());
+  }
+
+  // Mock implementation of the `wilco_dtc_supportd_dbus_object_`'s
+  // `ExportMethod()` method.
+  void MockExportMethod(
+      const std::string& interface_name,
+      const std::string& method_name,
+      dbus::ExportedObject::MethodCallCallback method_callback,
+      dbus::ExportedObject::OnExportedCallback on_exported_callback) {
+    DCHECK(interface_name == kWilcoDtcSupportdServiceInterface);
+    DCHECK(method_name == kWilcoDtcSupportdBootstrapMojoConnectionMethod);
+    bootstrap_mojo_connection_dbus_method_ = method_callback;
   }
 
   // Set mock expectations for calls triggered during test destruction.

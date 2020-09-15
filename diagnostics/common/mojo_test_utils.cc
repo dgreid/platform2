@@ -14,7 +14,6 @@
 #include <utility>
 
 #include <base/logging.h>
-#include <base/memory/shared_memory.h>
 #include <base/posix/eintr_wrapper.h>
 #include <diagnostics/common/mojo_utils.h>
 

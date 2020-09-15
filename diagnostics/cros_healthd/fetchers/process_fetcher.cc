@@ -16,6 +16,7 @@
 #include <base/optional.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
+#include <base/strings/string_util.h>
 #include <re2/re2.h>
 
 #include "diagnostics/cros_healthd/utils/error_utils.h"

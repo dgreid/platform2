@@ -6,7 +6,7 @@
 #define DIAGNOSTICS_CROS_HEALTHD_NETWORK_FAKE_NETWORK_HEALTH_ADAPTER_H_
 
 #include "diagnostics/cros_healthd/network/network_health_adapter.h"
-#include "mojo/network_health.mojom-forward.h"
+#include "mojo/network_health.mojom.h"
 
 namespace diagnostics {
 
