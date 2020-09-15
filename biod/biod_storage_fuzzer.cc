@@ -98,8 +98,8 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
       biod::BiodStorage("BiometricsManager", base::Bind(&LoadRecord));
   biod_storage.set_allow_access(true);
 
-  std::unique_ptr<TestRecord> record(
-      new TestRecord(id, user_id, label, validation_val, biod_data));
+  auto record = std::make_unique<TestRecord>(id, user_id, label, validation_val,
+                                             biod_data);
 
   base::FilePath root_path("/tmp/biod_storage_fuzzing_data");
   biod_storage.SetRootPathForTesting(root_path);

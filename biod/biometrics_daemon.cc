@@ -291,8 +291,8 @@ bool BiometricsManagerWrapper::StartEnrollSession(
   }
   enroll_session_ = std::move(enroll_session);
 
-  enroll_session_dbus_object_.reset(new DBusObject(
-      nullptr, dbus_object_.GetBus(), enroll_session_object_path_));
+  enroll_session_dbus_object_ = std::make_unique<DBusObject>(
+      nullptr, dbus_object_.GetBus(), enroll_session_object_path_);
   DBusInterface* enroll_session_interface =
       enroll_session_dbus_object_->AddOrGetInterface(kEnrollSessionInterface);
   enroll_session_interface->AddSimpleMethodHandlerWithError(
@@ -340,8 +340,8 @@ bool BiometricsManagerWrapper::StartAuthSession(brillo::ErrorPtr* error,
   }
   auth_session_ = std::move(auth_session);
 
-  auth_session_dbus_object_.reset(new DBusObject(nullptr, dbus_object_.GetBus(),
-                                                 auth_session_object_path_));
+  auth_session_dbus_object_ = std::make_unique<DBusObject>(
+      nullptr, dbus_object_.GetBus(), auth_session_object_path_);
   DBusInterface* auth_session_interface =
       auth_session_dbus_object_->AddOrGetInterface(kAuthSessionInterface);
   auth_session_interface->AddSimpleMethodHandlerWithError(
@@ -403,21 +403,21 @@ void BiometricsManagerWrapper::RefreshRecordObjects() {
 
   for (std::unique_ptr<BiometricsManager::Record>& record : records) {
     ObjectPath record_path(records_root_path + record->GetId());
-    records_.emplace_back(new RecordWrapper(this, std::move(record),
-                                            object_manager, record_path));
+    records_.emplace_back(std::make_unique<RecordWrapper>(
+        this, std::move(record), object_manager, record_path));
   }
 }
 
 BiometricsDaemon::BiometricsDaemon() {
   dbus::Bus::Options options;
   options.bus_type = dbus::Bus::SYSTEM;
-  bus_ = new dbus::Bus(options);
+  bus_ = base::MakeRefCounted<dbus::Bus>(options);
   CHECK(bus_->Connect()) << "Failed to connect to system D-Bus";
 
-  object_manager_.reset(
-      new ExportedObjectManager(bus_, ObjectPath(kBiodServicePath)));
+  object_manager_ = std::make_unique<ExportedObjectManager>(
+      bus_, ObjectPath(kBiodServicePath));
 
-  scoped_refptr<AsyncEventSequencer> sequencer(new AsyncEventSequencer());
+  auto sequencer = base::MakeRefCounted<AsyncEventSequencer>();
   object_manager_->RegisterAsync(
       sequencer->GetHandler("Manager.RegisterAsync() failed.", true));
 

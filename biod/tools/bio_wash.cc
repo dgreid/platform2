@@ -35,7 +35,7 @@ int DoBioWash(const bool factory_init = false) {
   options.bus_type = dbus::Bus::SYSTEM;
   // It's o.k to not connect to the bus as we don't really care about D-Bus
   // events for BioWash.
-  scoped_refptr<dbus::Bus> bus(new dbus::Bus(options));
+  auto bus = base::MakeRefCounted<dbus::Bus>(options);
   auto biod_metrics = std::make_unique<biod::BiodMetrics>();
   // Add all the possible BiometricsManagers available.
   std::unique_ptr<biod::BiometricsManager> cros_fp_bio =

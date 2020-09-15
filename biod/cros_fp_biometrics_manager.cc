@@ -221,8 +221,8 @@ std::vector<std::unique_ptr<BiometricsManager::Record>>
 CrosFpBiometricsManager::GetRecords() {
   std::vector<std::unique_ptr<BiometricsManager::Record>> records;
   for (int i = 0; i < records_.size(); i++)
-    records.emplace_back(std::unique_ptr<BiometricsManager::Record>(
-        new Record(weak_factory_.GetWeakPtr(), i)));
+    records.emplace_back(
+        std::make_unique<Record>(weak_factory_.GetWeakPtr(), i));
   return records;
 }
 

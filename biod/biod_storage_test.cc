@@ -106,9 +106,9 @@ class BiodStorageBaseTest : public ::testing::Test {
   BiodStorageBaseTest() {
     CHECK(temp_dir_.CreateUniqueTempDir());
     root_path_ = temp_dir_.GetPath().AppendASCII("biod_storage_unittest_root");
-    biod_storage_.reset(new BiodStorage(
+    biod_storage_ = std::make_unique<BiodStorage>(
         kBiometricsManagerName,
-        base::Bind(&BiodStorageBaseTest::LoadRecord, base::Unretained(this))));
+        base::Bind(&BiodStorageBaseTest::LoadRecord, base::Unretained(this)));
     // Since there is no session manager, allow accesses by default.
     biod_storage_->set_allow_access(true);
     biod_storage_->SetRootPathForTesting(root_path_);

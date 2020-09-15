@@ -6,6 +6,7 @@
 
 #include <base/bind.h>
 #include <base/logging.h>
+#include <base/memory/ptr_util.h>
 #include <chromeos/dbus/service_constants.h>
 #include <google/protobuf/message_lite.h>
 
@@ -30,9 +31,7 @@ namespace biod {
 
 std::unique_ptr<PowerManagerClientInterface> PowerManagerClient::Create(
     const scoped_refptr<dbus::Bus>& bus) {
-  std::unique_ptr<PowerManagerClient> power_manager_client(
-      new PowerManagerClient(bus));
-  return power_manager_client;
+  return base::WrapUnique(new PowerManagerClient(bus));
 }
 
 PowerManagerClient::PowerManagerClient(const scoped_refptr<dbus::Bus>& bus) {

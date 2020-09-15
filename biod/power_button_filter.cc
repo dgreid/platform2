@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <base/memory/ptr_util.h>
 #include <base/time/default_tick_clock.h>
 #include <cros_config/cros_config.h>
 
@@ -23,8 +24,7 @@ std::unique_ptr<PowerButtonFilterInterface> PowerButtonFilter::Create(
     config = nullptr;
   }
 
-  std::unique_ptr<PowerButtonFilter> power_button_filter(
-      new PowerButtonFilter());
+  auto power_button_filter = base::WrapUnique(new PowerButtonFilter());
   // DefaultTickClock uses TimeTicks with clock of type CLOCK_MONOTONIC in the
   // background. CLOCK_MONOTONIC advances monotonically while the system is in
   // S0. Note that CLOCK_MONOTONIC stands still when the system is suspended.
@@ -39,8 +39,7 @@ PowerButtonFilter::create_power_button_filter_for_test(
     std::unique_ptr<PowerManagerClientInterface> power_manager_client,
     std::unique_ptr<brillo::CrosConfigInterface> cros_config_prefs,
     std::unique_ptr<base::TickClock> tick_clock) {
-  std::unique_ptr<PowerButtonFilter> power_button_filter(
-      new PowerButtonFilter());
+  auto power_button_filter = base::WrapUnique(new PowerButtonFilter());
   power_button_filter->Init(std::move(power_manager_client),
                             std::move(cros_config_prefs),
                             std::move(tick_clock));

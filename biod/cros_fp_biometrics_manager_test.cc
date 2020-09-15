@@ -89,13 +89,13 @@ class CrosFpBiometricsManagerPeer {
   CrosFpBiometricsManagerPeer() {
     dbus::Bus::Options options;
     options.bus_type = dbus::Bus::SYSTEM;
-    const scoped_refptr<dbus::MockBus> mock_bus = new dbus::MockBus(options);
+    const auto mock_bus = base::MakeRefCounted<dbus::MockBus>(options);
 
     // Set EXPECT_CALL, otherwise gmock forces an failure due to "uninteresting
     // call" because we use StrictMock.
     // https://github.com/google/googletest/blob/fb49e6c164490a227bbb7cf5223b846c836a0305/googlemock/docs/cook_book.md#the-nice-the-strict-and-the-naggy-nicestrictnaggy
-    const scoped_refptr<dbus::MockObjectProxy> power_manager_proxy =
-        new dbus::MockObjectProxy(
+    const auto power_manager_proxy =
+        base::MakeRefCounted<dbus::MockObjectProxy>(
             mock_bus.get(), power_manager::kPowerManagerServiceName,
             dbus::ObjectPath(power_manager::kPowerManagerServicePath));
     EXPECT_CALL(*mock_bus,
@@ -329,12 +329,12 @@ class CrosFpBiometricsManagerMockTest : public ::testing::Test {
   CrosFpBiometricsManagerMockTest() {
     dbus::Bus::Options options;
     options.bus_type = dbus::Bus::SYSTEM;
-    const scoped_refptr<dbus::MockBus> mock_bus = new dbus::MockBus(options);
+    const auto mock_bus = base::MakeRefCounted<dbus::MockBus>(options);
 
     // Set EXPECT_CALL, otherwise gmock forces an failure due to "uninteresting
     // call" because we use StrictMock.
     // https://github.com/google/googletest/blob/fb49e6c164490a227bbb7cf5223b846c836a0305/googlemock/docs/cook_book.md#the-nice-the-strict-and-the-naggy-nicestrictnaggy
-    power_manager_proxy_ = new dbus::MockObjectProxy(
+    power_manager_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
         mock_bus.get(), power_manager::kPowerManagerServiceName,
         dbus::ObjectPath(power_manager::kPowerManagerServicePath));
     EXPECT_CALL(*mock_bus,

@@ -23,9 +23,9 @@ class PowerManagerClientTest : public testing::Test, public PowerEventObserver {
   PowerManagerClientTest() {
     dbus::Bus::Options options;
     options.bus_type = dbus::Bus::SYSTEM;
-    mock_bus_ = new dbus::MockBus(options);
+    mock_bus_ = base::MakeRefCounted<dbus::MockBus>(options);
 
-    power_manager_proxy_ = new dbus::MockObjectProxy(
+    power_manager_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
         mock_bus_.get(), power_manager::kPowerManagerServiceName,
         dbus::ObjectPath(power_manager::kPowerManagerServicePath));
 

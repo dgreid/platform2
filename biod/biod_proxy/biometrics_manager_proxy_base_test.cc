@@ -27,9 +27,9 @@ class BiometricsManagerProxyBaseTest : public testing::Test {
   BiometricsManagerProxyBaseTest() {
     dbus::Bus::Options options;
     options.bus_type = dbus::Bus::SYSTEM;
-    mock_bus_ = new dbus::MockBus(options);
+    mock_bus_ = base::MakeRefCounted<dbus::MockBus>(options);
 
-    mock_object_proxy_ = new dbus::MockObjectProxy(
+    mock_object_proxy_ = base::MakeRefCounted<dbus::MockObjectProxy>(
         mock_bus_.get(), kBiodServiceName, dbus::ObjectPath(kBiodServicePath));
 
     // Set an expectation so that the MockBus will return our mock proxy.
@@ -97,9 +97,8 @@ TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxy) {
   dbus::MessageWriter writer(fake_response.get());
   writer.AppendObjectPath(auth_session_path);
 
-  scoped_refptr<dbus::MockObjectProxy> auth_session_proxy =
-      new dbus::MockObjectProxy(mock_bus_.get(), kBiodServiceName,
-                                auth_session_path);
+  auto auth_session_proxy = base::MakeRefCounted<dbus::MockObjectProxy>(
+      mock_bus_.get(), kBiodServiceName, auth_session_path);
 
   // Set the underlying mock proxy to return our fake_response, and set the
   // mock bus to return the predefined ObjectProxy once it sees that path,
@@ -118,9 +117,8 @@ TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxy) {
 TEST_F(BiometricsManagerProxyBaseTest, StartAuthSessionGetSessionProxyAsync) {
   // The path must be correctly formatted for the writer to accept it.
   const dbus::ObjectPath auth_session_path("/org/chromium/Foo/AuthSession");
-  scoped_refptr<dbus::MockObjectProxy> auth_session_proxy =
-      new dbus::MockObjectProxy(mock_bus_.get(), kBiodServiceName,
-                                auth_session_path);
+  auto auth_session_proxy = base::MakeRefCounted<dbus::MockObjectProxy>(
+      mock_bus_.get(), kBiodServiceName, auth_session_path);
   // Set the underlying |mock_object_proxy_| to invoke the dbus callback (in
   // this case OnStartAuthSessionResp) with a fake response containing
   // |auth_session_path|.
