@@ -151,7 +151,11 @@ int main(int argc, char* argv[]) {
 
   logging::LoggingSettings logging_settings;
   logging_settings.logging_dest = logging::LOG_TO_FILE;
+#if BASE_VER < 780000
   logging_settings.log_file = log_file_path.value().c_str();
+#else
+  logging_settings.log_file_path = log_file_path.value().c_str();
+#endif
   logging_settings.lock_log = logging::DONT_LOCK_LOG_FILE;
   logging_settings.delete_old = logging::DELETE_OLD_LOG_FILE;
   logging::InitLogging(logging_settings);
