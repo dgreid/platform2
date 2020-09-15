@@ -12,7 +12,7 @@ use getopts::Options;
 
 use super::Frontend;
 use crate::disk::DiskOpType;
-use crate::methods::{ContainerSource, Methods, VmFeatures};
+use crate::methods::{ContainerSource, Methods, UserDisks, VmFeatures};
 use crate::proto::system_api::cicerone_service::StartLxdContainerRequest_PrivilegeLevel;
 use crate::EnvMap;
 
@@ -200,6 +200,18 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             "path to an extra disk image. Only valid on untrusted VMs.",
             "PATH",
         );
+        opts.optopt(
+            "",
+            "kernel",
+            "path to a custom kernel image. Only valid on untrusted VMs.",
+            "PATH",
+        );
+        opts.optopt(
+            "",
+            "rootfs",
+            "path to a custom rootfs image. Only valid on untrusted VMs.",
+            "PATH",
+        );
 
         let matches = opts.parse(self.args)?;
 
@@ -216,12 +228,16 @@ impl<'a, 'b, 'c> Command<'a, 'b, 'c> {
             run_as_untrusted: matches.opt_present("untrusted"),
         };
 
-        let extra_disk = matches.opt_str("extra-disk");
+        let user_disks = UserDisks {
+            kernel: matches.opt_str("kernel"),
+            rootfs: matches.opt_str("rootfs"),
+            extra_disk: matches.opt_str("extra-disk"),
+        };
 
         self.metrics_send_sample("Vm.VmcStart");
         try_command!(self
             .methods
-            .vm_start(vm_name, &user_id_hash, features, extra_disk));
+            .vm_start(vm_name, &user_id_hash, features, user_disks));
         self.metrics_send_sample("Vm.VmcStartSuccess");
         try_command!(self.methods.vsh_exec(vm_name, &user_id_hash));
 

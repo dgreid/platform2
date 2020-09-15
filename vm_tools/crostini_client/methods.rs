@@ -333,6 +333,13 @@ impl ConnectionProxy {
     }
 }
 
+#[derive(Default)]
+pub struct UserDisks {
+    pub kernel: Option<String>,
+    pub rootfs: Option<String>,
+    pub extra_disk: Option<String>,
+}
+
 /// Uses the standard ChromeOS interfaces to implement the methods with the least possible
 /// privilege. Uses a combination of D-Bus, protobufs, and shell protocols.
 pub struct Methods {
@@ -1032,7 +1039,7 @@ impl Methods {
         user_id_hash: &str,
         features: VmFeatures,
         stateful_disk_path: String,
-        extra_disk_path: Option<String>,
+        user_disks: UserDisks,
     ) -> Result<(), Box<dyn Error>> {
         let mut request = StartVmRequest::new();
         request.start_termina = true;
@@ -1061,22 +1068,53 @@ impl Methods {
             START_VM_METHOD,
         )?;
 
-        let response: StartVmResponse = match extra_disk_path {
-            None => self.sync_protobus(message, &request)?,
-            Some(path) => {
-                request.use_fd_for_storage = true;
-
-                let file = OpenOptions::new()
+        let mut disk_files = vec![];
+        // User-specified kernel
+        if let Some(path) = user_disks.kernel {
+            request.use_fd_for_kernel = true;
+            disk_files.push(
+                OpenOptions::new()
                     .read(true)
-                    .write(true)
                     .custom_flags(libc::O_NOFOLLOW)
-                    .open(&path)?;
-                let raw_fd = file.into_raw_fd();
+                    .open(&path)?,
+            );
+        }
+
+        // User-specified rootfs
+        if let Some(path) = user_disks.rootfs {
+            request.use_fd_for_rootfs = true;
+            disk_files.push(
+                OpenOptions::new()
+                    .read(true)
+                    .custom_flags(libc::O_NOFOLLOW)
+                    .open(&path)?,
+            );
+        }
+
+        // User-specified extra disk
+        if let Some(path) = user_disks.extra_disk {
+            request.use_fd_for_storage = true;
+            disk_files.push(
+                OpenOptions::new()
+                    .read(true)
+                    .write(true) // extra disk is writable
+                    .custom_flags(libc::O_NOFOLLOW)
+                    .open(&path)?,
+            );
+        }
+
+        let owned_fds: Vec<OwnedFd> = disk_files
+            .into_iter()
+            .map(|f| {
+                let raw_fd = f.into_raw_fd();
                 // Safe because `raw_fd` is a valid and we are the unique owner of this descriptor.
-                let owned_fd = unsafe { OwnedFd::new(raw_fd) };
-                self.sync_protobus_timeout(message, &request, &[owned_fd], DEFAULT_TIMEOUT_MS)?
-            }
-        };
+                unsafe { OwnedFd::new(raw_fd) }
+            })
+            .collect();
+
+        // Send a protobuf request with the FDs.
+        let response: StartVmResponse =
+            self.sync_protobus_timeout(message, &request, &owned_fds, DEFAULT_TIMEOUT_MS)?;
 
         match response.status {
             VmStatus::VM_STATUS_STARTING => {
@@ -1660,7 +1698,7 @@ impl Methods {
         name: &str,
         user_id_hash: &str,
         features: VmFeatures,
-        extra_disk: Option<String>,
+        user_disks: UserDisks,
     ) -> Result<(), Box<dyn Error>> {
         self.notify_vm_starting()?;
         self.start_vm_infrastructure(user_id_hash)?;
@@ -1680,8 +1718,7 @@ impl Methods {
             }
 
             let disk_image_path = self.create_disk_image(name, user_id_hash)?;
-
-            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path, extra_disk)?;
+            self.start_vm_with_disk(name, user_id_hash, features, disk_image_path, user_disks)?;
             self.start_lxd(name, user_id_hash)
         }
     }
