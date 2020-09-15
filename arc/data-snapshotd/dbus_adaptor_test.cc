@@ -41,6 +41,7 @@ constexpr char kContent[] = "content";
 constexpr char kFakeLastSnapshotPublicKey[] = "fake_public_key";
 constexpr char kFakeAccountID[] = "fake_account_id";
 constexpr char kFakeAccountID2[] = "fake_aacount_id_2";
+
 MATCHER_P(nEq, expected, "") {
   return expected != arg;
 }
@@ -68,17 +69,25 @@ class DBusAdaptorTest : public testing::Test {
   DBusAdaptorTest() : bus_(new dbus::Bus{dbus::Bus::Options{}}) {
     brillo::cryptohome::home::SetSystemSalt(&salt_);
     EXPECT_TRUE(root_tempdir_.CreateUniqueTempDir());
+  }
 
+  void SetUp() override {
+    user_directory_ = root_tempdir_.GetPath().Append(hash(kFakeAccountID));
+    EXPECT_TRUE(base::CreateDirectory(user_directory_));
     auto boot_lockbox_client =
         std::make_unique<testing::StrictMock<MockBootLockboxClient>>(bus_);
     boot_lockbox_client_ = boot_lockbox_client.get();
     dbus_adaptor_ = DBusAdaptor::CreateForTesting(
         root_tempdir_.GetPath(), root_tempdir_.GetPath(),
         std::move(boot_lockbox_client));
-
-    user_directory_ = root_tempdir_.GetPath().Append(hash(kFakeAccountID));
-    EXPECT_TRUE(base::CreateDirectory(user_directory_));
   }
+
+  void TearDown() override {
+    dbus_adaptor_.reset();
+    EXPECT_TRUE(
+        base::DeleteFile(root_tempdir_.GetPath(), true /* recursive */));
+  }
+
   DBusAdaptor* dbus_adaptor() { return dbus_adaptor_.get(); }
   const base::FilePath& last_snapshot_dir() const {
     return dbus_adaptor_->get_last_snapshot_directory();
@@ -95,6 +104,7 @@ class DBusAdaptorTest : public testing::Test {
   std::string hash(const std::string& account_id) const {
     return brillo::cryptohome::home::SanitizeUserName(account_id);
   }
+  base::FilePath user_directory() const { return user_directory_; }
 
   // Creates |dir| and fills in with random content.
   void CreateDir(const base::FilePath& dir) {
@@ -404,6 +414,261 @@ TEST_F(DBusAdaptorTest, TakeSnapshotDouble) {
 
   CreateDir(android_data_dir());
   EXPECT_FALSE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
+}
+
+// Test failure flow when user directory does not exist.
+TEST_F(DBusAdaptorTest, LoadSnapshotNoAndroidDataDir) {
+  CreateDir(last_snapshot_dir());
+  CreateDir(previous_snapshot_dir());
+  EXPECT_TRUE(base::DeleteFile(user_directory(), true /* recursive */));
+  EXPECT_FALSE(base::DirectoryExists(user_directory()));
+
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_FALSE(success);
+}
+
+// Test failure when snapshot directory does not exist.
+TEST_F(DBusAdaptorTest, LoadSnapshotNoSnapshot) {
+  CreateDir(user_directory());
+  EXPECT_TRUE(base::DirectoryExists(user_directory()));
+  EXPECT_FALSE(base::DirectoryExists(last_snapshot_dir()));
+  EXPECT_FALSE(base::DirectoryExists(previous_snapshot_dir()));
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_FALSE(success);
+}
+
+// Test failure when public key is not stored in BootLockbox.
+TEST_F(DBusAdaptorTest, LoadSnapshotNoPublicKey) {
+  CreateDir(user_directory());
+  EXPECT_TRUE(base::DirectoryExists(user_directory()));
+
+  CreateDir(last_snapshot_dir());
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  EXPECT_FALSE(base::DirectoryExists(previous_snapshot_dir()));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Return(false));
+
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_FALSE(success);
+}
+
+// Test failure when empty public key is stored in BootLockbox.
+TEST_F(DBusAdaptorTest, LoadSnapshotEmptyPublicKey) {
+  CreateDir(user_directory());
+  EXPECT_TRUE(base::DirectoryExists(user_directory()));
+
+  CreateDir(last_snapshot_dir());
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  EXPECT_FALSE(base::DirectoryExists(previous_snapshot_dir()));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([](const std::string& key, std::string* value) {
+        *value = "";
+        return true;
+      }));
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_FALSE(success);
+}
+
+// Test failure when snapshot verification fails.
+TEST_F(DBusAdaptorTest, LoadSnapshotVerificationFailure) {
+  CreateDir(user_directory());
+  EXPECT_TRUE(base::DirectoryExists(user_directory()));
+
+  CreateDir(last_snapshot_dir());
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  EXPECT_FALSE(base::DirectoryExists(previous_snapshot_dir()));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([](const std::string& key, std::string* value) {
+        *value = kFakeLastSnapshotPublicKey;
+        return true;
+      }));
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_FALSE(success);
+}
+
+// Test failure when snapshot is loaded for unknown user.
+TEST_F(DBusAdaptorTest, LoadSnapshotUnknownUser) {
+  // In this test the copied snapshot directory is verified against the origin
+  // snapshot directory. Inodes verification must be disabled, because the
+  // inode values are changed after copying.
+  // In production, it is not the case, because the directorys' integrity is
+  // verified against itself and inode values should persist.
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      false /* enabled */);
+  std::string expected_public_key_digest;
+  EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([&expected_public_key_digest](
+                           const std::string& key, const std::string& digest) {
+        expected_public_key_digest = digest;
+        return true;
+      }));
+  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
+  // Generate key pair.
+  EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
+
+  // Create android-data directory.
+  CreateDir(android_data_dir());
+  EXPECT_TRUE(base::DirectoryExists(android_data_dir()));
+
+  // Take a snapshot.
+  EXPECT_TRUE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  // Verify taken snapshot with disabled inode verification.
+  EXPECT_TRUE(VerifyHash(last_snapshot_dir(), hash(kFakeAccountID),
+                         expected_public_key_digest,
+                         false /* inode_verification_enabled */));
+
+  // Load a snapshot directory to android-data for unknown user.
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID2, &last, &success);
+  EXPECT_FALSE(success);
+
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      true /* enabled */);
+}
+
+// Test basic success flow.
+TEST_F(DBusAdaptorTest, LoadSnapshotSuccess) {
+  // In this test the copied snapshot directory is verified against the origin
+  // snapshot directory. Inodes verification must be disabled, because the
+  // inode values are changed after copying.
+  // In production, it is not the case, because the directorys' integrity is
+  // verified against itself and inode values should persist.
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      false /* enabled */);
+  std::string expected_public_key_digest;
+  EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([&expected_public_key_digest](
+                           const std::string& key, const std::string& digest) {
+        expected_public_key_digest = digest;
+        return true;
+      }));
+  EXPECT_CALL(*boot_lockbox_client(), Finalize()).WillOnce(Return(true));
+  // Generate key pair.
+  EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
+
+  // Create android-data directory.
+  CreateDir(android_data_dir());
+  EXPECT_TRUE(base::DirectoryExists(android_data_dir()));
+
+  // Take a snapshot.
+  EXPECT_TRUE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  // Verify taken snapshot with disabled inode verification.
+  EXPECT_TRUE(VerifyHash(last_snapshot_dir(), hash(kFakeAccountID),
+                         expected_public_key_digest,
+                         false /* inode_verification_enabled */));
+
+  // Remove android-data directory to be able to load a snapshot.
+  EXPECT_TRUE(base::DeleteFile(android_data_dir(), true /* recursive */));
+  EXPECT_FALSE(base::DirectoryExists(android_data_dir()));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([expected_public_key_digest](const std::string& key,
+                                                    std::string* value) {
+        *value = expected_public_key_digest;
+        return true;
+      }));
+  // Load a snapshot directory to android-data.
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_TRUE(success);
+
+  // Verify the integrity of the last snapshot with disabld inode verification.
+  EXPECT_TRUE(last);
+  EXPECT_TRUE(VerifyHash(android_data_dir(), hash(kFakeAccountID),
+                         expected_public_key_digest,
+                         false /* inode_verification_enabled */));
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      true /* enabled */);
+}
+
+// Test success flow when loading of last snapshot fails, but loading of
+// previous snapshot succeeds.
+TEST_F(DBusAdaptorTest, LoadSnapshotPreviousSuccess) {
+  // In this test the copied snapshot directory is verified against the origin
+  // snapshot directory. Inodes verification must be disabled, because the
+  // inode values are changed after copying.
+  // In production, it is not the case, because the directorys' integrity is
+  // verified against itself and inode values should persist.
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      false /* enabled */);
+  std::string expected_public_key_digest = "";
+  EXPECT_CALL(*boot_lockbox_client(),
+              Store(Eq(kLastSnapshotPublicKey), nEq("")))
+      .Times(2)
+      .WillRepeatedly(
+          Invoke([&expected_public_key_digest](const std::string& key,
+                                               const std::string& digest) {
+            if (expected_public_key_digest.empty()) {
+              expected_public_key_digest = digest;
+            }
+            return true;
+          }));
+  EXPECT_CALL(*boot_lockbox_client(), Finalize())
+      .Times(2)
+      .WillRepeatedly(Return(true));
+  // First time snapshot generating flow.
+  // Generate a key pair.
+  EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
+
+  CreateDir(android_data_dir());
+  EXPECT_TRUE(base::DirectoryExists(android_data_dir()));
+
+  // Take android-data snapshot and name it as a last snapshot.
+  EXPECT_TRUE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
+  EXPECT_TRUE(base::DirectoryExists(last_snapshot_dir()));
+  EXPECT_TRUE(VerifyHash(last_snapshot_dir(), hash(kFakeAccountID),
+                         expected_public_key_digest,
+                         false /* inode_verification_enabled */));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kLastSnapshotPublicKey), _))
+      .WillOnce(Invoke([expected_public_key_digest](const std::string& key,
+                                                    std::string* value) {
+        *value = expected_public_key_digest;
+        return true;
+      }));
+  EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kPreviousSnapshotPublicKey), _))
+      .WillOnce(Return(true));
+  EXPECT_CALL(*boot_lockbox_client(), Store(Eq(kLastSnapshotPublicKey), Eq("")))
+      .WillOnce(Return(true));
+  // Second time snapshot generating flow.
+  // Previous snapshot has been generated during the first flow.
+  EXPECT_TRUE(dbus_adaptor()->GenerateKeyPair());
+  EXPECT_TRUE(base::DirectoryExists(previous_snapshot_dir()));
+
+  // Take a snapshot.
+  EXPECT_TRUE(base::DirectoryExists(android_data_dir()));
+  EXPECT_TRUE(dbus_adaptor()->TakeSnapshot(kFakeAccountID));
+
+  EXPECT_CALL(*boot_lockbox_client(), Read(Eq(kPreviousSnapshotPublicKey), _))
+      .WillOnce(Invoke([expected_public_key_digest](const std::string& key,
+                                                    std::string* value) {
+        *value = expected_public_key_digest;
+        return true;
+      }));
+  // Invalidate the last snapshot.
+  EXPECT_TRUE(base::DeleteFile(last_snapshot_dir(), true /* recursive */));
+  // Remove android-data directory to be able to load a snapshot.
+  EXPECT_TRUE(base::DeleteFile(android_data_dir(), true /* recursive */));
+  // Load the previous snapshot, because the last one is invalid.
+  bool last, success;
+  dbus_adaptor()->LoadSnapshot(kFakeAccountID, &last, &success);
+  EXPECT_TRUE(success);
+  EXPECT_FALSE(last);
+  EXPECT_TRUE(VerifyHash(android_data_dir(), hash(kFakeAccountID),
+                         expected_public_key_digest,
+                         false /* inode_verification_enabled */));
+  dbus_adaptor()->set_inode_verification_enabled_for_testing(
+      true /* enabled */);
 }
 
 }  // namespace data_snapshotd

@@ -182,6 +182,64 @@ bool DBusAdaptor::ClearSnapshot(bool last) {
   return true;
 }
 
+void DBusAdaptor::LoadSnapshot(const std::string& account_id,
+                               bool* last,
+                               bool* success) {
+  std::string userhash = brillo::cryptohome::home::SanitizeUserName(account_id);
+  if (!base::DirectoryExists(home_root_directory_.Append(userhash))) {
+    LOG(ERROR) << "User directory does not exist for user " << account_id;
+    *success = false;
+    return;
+  }
+  base::FilePath android_data_dir =
+      home_root_directory_.Append(userhash).Append(kAndroidDataDirectory);
+  if (TryToLoadSnapshot(userhash, last_snapshot_directory_, android_data_dir,
+                        kLastSnapshotPublicKey)) {
+    *last = true;
+    *success = true;
+    return;
+  }
+  if (TryToLoadSnapshot(userhash, previous_snapshot_directory_,
+                        android_data_dir, kPreviousSnapshotPublicKey)) {
+    *last = false;
+    *success = true;
+    return;
+  }
+  *success = false;
+}
+
+bool DBusAdaptor::TryToLoadSnapshot(const std::string& userhash,
+                                    const base::FilePath& snapshot_dir,
+                                    const base::FilePath& android_data_dir,
+                                    const std::string& boot_lockbox_key) {
+  if (!base::DirectoryExists(snapshot_dir)) {
+    LOG(ERROR) << "Snapshot directory " << snapshot_dir.value()
+               << " does not exist.";
+    return false;
+  }
+
+  std::string expected_public_key_digest;
+  if (!boot_lockbox_client_->Read(boot_lockbox_key,
+                                  &expected_public_key_digest) ||
+      expected_public_key_digest.empty()) {
+    LOG(ERROR) << "Failed to read a public key digest " << boot_lockbox_key
+               << " from BootLockbox.";
+    return false;
+  }
+
+  if (!VerifyHash(snapshot_dir, userhash, expected_public_key_digest,
+                  inode_verification_enabled_)) {
+    return false;
+  }
+
+  if (!base::CopyDirectory(snapshot_dir, android_data_dir,
+                           true /* recursive */)) {
+    LOG(ERROR) << "Failed to copy a snapshot directory.";
+    return false;
+  }
+  return true;
+}
+
 DBusAdaptor::DBusAdaptor(
     const base::FilePath& snapshot_directory,
     const base::FilePath& home_root_directory,

@@ -74,6 +74,7 @@ bool VerifyHash(const base::FilePath& dir,
 // Calculates SHA256 hash of |value| and encodes it.
 // Returns an empty string in case of any error.
 std::string CalculateEncodedSha256Digest(const std::vector<uint8_t>& value);
+
 }  // namespace data_snapshotd
 }  // namespace arc
 

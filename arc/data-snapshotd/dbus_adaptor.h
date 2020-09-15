@@ -64,6 +64,9 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   bool GenerateKeyPair() override;
   bool ClearSnapshot(bool last) override;
   bool TakeSnapshot(const std::string& account_id) override;
+  void LoadSnapshot(const std::string& account_id,
+                    bool* last,
+                    bool* success) override;
 
   const base::FilePath& get_last_snapshot_directory() const {
     return last_snapshot_directory_;
@@ -86,6 +89,14 @@ class DBusAdaptor final : public org::chromium::ArcDataSnapshotdAdaptor,
   }
 
  private:
+  // Tries to load a snapshot stored in |snapshot_dir| to |android_data_dir|
+  // and verify the snapshot by the public key digest stored in BootLockbox by
+  // |boot_lockbox_key|.
+  // Returns false in case of any error.
+  bool TryToLoadSnapshot(const std::string& userhash,
+                         const base::FilePath& snapshot_dir,
+                         const base::FilePath& android_data_dir,
+                         const std::string& boot_lockbox_key);
   DBusAdaptor(
       const base::FilePath& snapshot_directory,
       const base::FilePath& home_root_directory,
