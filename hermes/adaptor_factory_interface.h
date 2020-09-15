@@ -21,8 +21,8 @@ class AdaptorFactoryInterface {
   virtual ~AdaptorFactoryInterface() = default;
   virtual std::unique_ptr<EuiccAdaptorInterface> CreateEuiccAdaptor(
       Euicc* euicc) = 0;
-  virtual std::unique_ptr<org::chromium::Hermes::ManagerAdaptor>
-  CreateManagerAdaptor(Manager* manager) = 0;
+  virtual std::unique_ptr<ManagerAdaptorInterface> CreateManagerAdaptor(
+      Manager* manager) = 0;
 };
 
 }  // namespace hermes

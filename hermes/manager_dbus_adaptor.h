@@ -5,6 +5,7 @@
 #ifndef HERMES_MANAGER_DBUS_ADAPTOR_H_
 #define HERMES_MANAGER_DBUS_ADAPTOR_H_
 
+#include "hermes/adaptor_interfaces.h"
 #include "hermes/dbus_bindings/org.chromium.Hermes.Manager.h"
 
 namespace hermes {
@@ -12,7 +13,7 @@ namespace hermes {
 class Manager;
 
 class ManagerDBusAdaptor : public org::chromium::Hermes::ManagerInterface,
-                           public org::chromium::Hermes::ManagerAdaptor {
+                           public ManagerAdaptorInterface {
  public:
   explicit ManagerDBusAdaptor(Manager* manager);
 

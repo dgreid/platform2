@@ -31,7 +31,7 @@ class Manager final : public EuiccManagerInterface {
   void UpdateAvailableEuiccsProperty();
 
   Context* context_;
-  std::unique_ptr<org::chromium::Hermes::ManagerAdaptor> dbus_adaptor_;
+  std::unique_ptr<ManagerAdaptorInterface> dbus_adaptor_;
 
   // Map of physical SIM slot -> Euicc.
   std::map<uint8_t, std::unique_ptr<Euicc>> available_euiccs_;

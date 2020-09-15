@@ -19,7 +19,7 @@ using lpa::proto::ProfileInfo;
 namespace hermes {
 
 ManagerDBusAdaptor::ManagerDBusAdaptor(Manager* manager)
-    : org::chromium::Hermes::ManagerAdaptor(this),
+    : ManagerAdaptorInterface(this),
       manager_(manager),
       dbus_object_(nullptr,
                    Context::Get()->bus(),

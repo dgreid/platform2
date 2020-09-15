@@ -15,7 +15,7 @@ class AdaptorFactory : public AdaptorFactoryInterface {
  public:
   std::unique_ptr<EuiccAdaptorInterface> CreateEuiccAdaptor(
       Euicc* euicc) override;
-  std::unique_ptr<org::chromium::Hermes::ManagerAdaptor> CreateManagerAdaptor(
+  std::unique_ptr<ManagerAdaptorInterface> CreateManagerAdaptor(
       Manager* manager) override;
 };
 

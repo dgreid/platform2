@@ -14,8 +14,8 @@ std::unique_ptr<EuiccAdaptorInterface> AdaptorFactory::CreateEuiccAdaptor(
   return std::make_unique<EuiccDBusAdaptor>(euicc);
 }
 
-std::unique_ptr<org::chromium::Hermes::ManagerAdaptor>
-AdaptorFactory::CreateManagerAdaptor(Manager* manager) {
+std::unique_ptr<ManagerAdaptorInterface> AdaptorFactory::CreateManagerAdaptor(
+    Manager* manager) {
   return std::make_unique<ManagerDBusAdaptor>(manager);
 }
 
