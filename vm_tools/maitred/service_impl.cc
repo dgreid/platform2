@@ -43,6 +43,8 @@
 #include <base/strings/stringprintf.h>
 #include <brillo/file_utils.h>
 
+#include "vm_tools/common/paths.h"
+
 using std::string;
 
 namespace vm_tools {
@@ -609,11 +611,34 @@ grpc::Status ServiceImpl::ConfigureContainerGuest(
     const vm_tools::ConfigureContainerGuestRequest* request,
     vm_tools::EmptyMessage* response) {
   LOG(INFO) << "Received ConfigureContainerGuest request";
-  // TODO(b/162562622) Implement me.
-  return grpc::Status(
-      grpc::UNIMPLEMENTED,
-      "Not implemented, unable to spawn container guest with token " +
-          request->container_token());
+  Init::ProcessLaunchInfo launch_info;
+
+  // Tell garcon what the host ip is.
+  unlink(vm_tools::kGarconHostIpFile);
+  if (symlink(kHostIpPath, vm_tools::kGarconHostIpFile) != 0) {
+    return grpc::Status(
+        grpc::INTERNAL,
+        string("failed to link host ip where garcon expects it: ") +
+            strerror(errno));
+  }
+
+  // Tell garcon what the token is.
+  base::FilePath token_path{vm_tools::kGarconContainerTokenFile};
+  if (base::WriteFile(token_path, request->container_token().c_str(),
+                      request->container_token().size()) !=
+      request->container_token().size()) {
+    return grpc::Status(grpc::INTERNAL,
+                        "failed to write container token to file");
+  }
+
+  // Run garcon.
+  if (!init_->Spawn({"/opt/google/cros-containers/bin/garcon", "--server",
+                     "--allow_any_user"},
+                    {}, true /*respawn*/, false /*use_console*/,
+                    false /*wait_for_exit*/, &launch_info)) {
+    return grpc::Status(grpc::INTERNAL, "failed to launch garcon");
+  }
+  return grpc::Status::OK;
 }
 
 grpc::Status ServiceImpl::StartTermina(grpc::ServerContext* ctx,

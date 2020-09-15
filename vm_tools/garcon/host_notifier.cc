@@ -29,14 +29,13 @@
 #include <base/time/time.h>
 #include <chromeos/constants/vm_tools.h>
 
+#include "vm_tools/common/paths.h"
 #include "vm_tools/garcon/desktop_file.h"
 #include "vm_tools/garcon/host_notifier.h"
 #include "vm_tools/garcon/mime_types_parser.h"
 
 namespace {
 
-constexpr char kHostIpFile[] = "/dev/.host_ip";
-constexpr char kSecurityTokenFile[] = "/dev/.container_token";
 constexpr int kSecurityTokenLength = 36;
 // File extension for desktop files.
 constexpr char kDesktopFileExtension[] = ".desktop";
@@ -54,7 +53,7 @@ constexpr char kUrlSchemeDelimiter[] = "://";
 
 std::string GetHostIp() {
   char host_addr[INET_ADDRSTRLEN + 1];
-  base::FilePath host_ip_path(kHostIpFile);
+  base::FilePath host_ip_path(vm_tools::kGarconHostIpFile);
   int num_read = base::ReadFile(host_ip_path, host_addr, sizeof(host_addr) - 1);
   if (num_read <= 0) {
     LOG(ERROR) << "Failed reading the host IP from: "
@@ -67,7 +66,7 @@ std::string GetHostIp() {
 
 std::string GetSecurityToken() {
   char token[kSecurityTokenLength + 1];
-  base::FilePath security_token_path(kSecurityTokenFile);
+  base::FilePath security_token_path(vm_tools::kGarconContainerTokenFile);
   int num_read = base::ReadFile(security_token_path, token, sizeof(token) - 1);
   if (num_read <= 0) {
     LOG(ERROR) << "Failed reading the container token from: "
