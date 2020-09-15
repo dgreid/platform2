@@ -28,6 +28,11 @@ const char kScanPropertyModeColor[] = "Color";
 const char kScanPropertyModeGray[] = "Gray";
 const char kScanPropertyModeLineart[] = "Lineart";
 const char kScanPropertyResolution[] = "Resolution";
+
+// The name used as a source name for the only DocumentSource in
+// ScannerCapabilities' source field if the SANE backend does not export a
+// source option.
+const char kUnspecifiedDefaultSourceName[] = "DefaultSource";
 }  // namespace lorgnette
 
 #endif  // SYSTEM_API_DBUS_LORGNETTE_DBUS_CONSTANTS_H_
