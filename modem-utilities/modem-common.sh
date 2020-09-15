@@ -120,6 +120,10 @@ esim() {
   [ -z "${euicc}" ] && error_exit "No euicc found."
 
   case "${command}" in
+    set_test_mode)
+      poll_for_dbus_service "${HERMES}"
+      esim_set_test_mode "$@"
+      ;;
     status)
       poll_for_dbus_service "${HERMES}"
       esim_status "$@"
@@ -141,7 +145,8 @@ esim() {
       esim_disable "${euicc}" "$@"
       ;;
     *)
-      error_exit "Expected one of {status|install|uninstall|enable|disable}"
+      error_exit "Expected one of "\
+        "{set_test_mode|status|install|uninstall|enable|disable}"
       ;;
   esac
 }
@@ -179,6 +184,12 @@ esim_profile_from_iccid() {
     fi
   done
   error_exit "No matching Profile found for iccid ${iccid}."
+}
+
+esim_set_test_mode() {
+  dbus_call "${HERMES}" "${HERMES_MANAGER_OBJECT}" \
+            "${HERMES_MANAGER_IFACE}.SetTestMode" \
+            boolean:"$1"
 }
 
 esim_status() {
