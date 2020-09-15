@@ -6,11 +6,15 @@
 #include <csignal>
 
 #include <base/logging.h>
+#include <brillo/syslog_logging.h>
 
 #include "iioservice/daemon/daemon.h"
 
 int main() {
-  LOG(INFO) << "Starting iioservice";
+  brillo::OpenLog("iioservice", true /*log_pid*/);
+
+  brillo::InitLog(brillo::kLogToSyslog | brillo::kLogHeader);
+
   iioservice::Daemon daemon;
   daemon.Run();
   LOG(INFO) << "Daemon stopped";
