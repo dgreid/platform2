@@ -147,7 +147,7 @@ TEST_F(CacheCleanerTest, ValidPackage) {
 // Checks that absence of main OBB file does not lead to the deletion.
 TEST_F(CacheCleanerTest, NoMainObb) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
-  ASSERT_TRUE(DeleteFile(temp_path().Append(kPackage0).Append(
+  ASSERT_TRUE(apk_cache::DeleteFile(temp_path().Append(kPackage0).Append(
       GetMainObbFileName(kPackage0, kObbVersion))));
 
   EXPECT_TRUE(Clean(temp_path()));
@@ -158,7 +158,7 @@ TEST_F(CacheCleanerTest, NoMainObb) {
 // Checks that absence of patch OBB file does not lead to the deletion.
 TEST_F(CacheCleanerTest, NoPatchObb) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
-  ASSERT_TRUE(DeleteFile(temp_path().Append(kPackage0).Append(
+  ASSERT_TRUE(apk_cache::DeleteFile(temp_path().Append(kPackage0).Append(
       GetPatchObbFileName(kPackage0, kObbVersion))));
 
   EXPECT_TRUE(Clean(temp_path()));
@@ -188,7 +188,8 @@ TEST_F(CacheCleanerTest, EmptyPackage) {
 // No attr.json must lead to the package removal.
 TEST_F(CacheCleanerTest, NoAttrJson) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
-  ASSERT_TRUE(DeleteFile(temp_path().Append(kPackage0).Append(kAttrJson)));
+  ASSERT_TRUE(
+      apk_cache::DeleteFile(temp_path().Append(kPackage0).Append(kAttrJson)));
 
   EXPECT_TRUE(Clean(temp_path()));
 
@@ -198,7 +199,7 @@ TEST_F(CacheCleanerTest, NoAttrJson) {
 // No APK file leads to the package removal.
 TEST_F(CacheCleanerTest, NoApk) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
-  ASSERT_TRUE(DeleteFile(
+  ASSERT_TRUE(apk_cache::DeleteFile(
       temp_path().Append(kPackage0).Append(GetApkFileName(kPackage0))));
 
   EXPECT_TRUE(Clean(temp_path()));
@@ -253,7 +254,7 @@ TEST_F(CacheCleanerTest, ExtraRandomDir) {
 TEST_F(CacheCleanerTest, ApkNameMismatch) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
 
-  ASSERT_TRUE(DeleteFile(
+  ASSERT_TRUE(apk_cache::DeleteFile(
       temp_path().Append(kPackage0).Append(GetApkFileName(kPackage0))));
   ASSERT_TRUE(CreateFile(
       temp_path().Append(kPackage0).Append(GetApkFileName("blabla"))));
@@ -269,7 +270,7 @@ TEST_F(CacheCleanerTest, ApkNameMismatch) {
 TEST_F(CacheCleanerTest, MainObbNameMismatch) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
 
-  ASSERT_TRUE(DeleteFile(temp_path().Append(kPackage0).Append(
+  ASSERT_TRUE(apk_cache::DeleteFile(temp_path().Append(kPackage0).Append(
       GetMainObbFileName(kPackage0, kObbVersion))));
   ASSERT_TRUE(CreateFile(temp_path().Append(kPackage0).Append(
       GetMainObbFileName("blabla", kObbVersion))));
@@ -285,7 +286,7 @@ TEST_F(CacheCleanerTest, MainObbNameMismatch) {
 TEST_F(CacheCleanerTest, PatchObbNameMismatch) {
   ASSERT_TRUE(CreateValidPackage(temp_path(), kPackage0));
 
-  ASSERT_TRUE(DeleteFile(temp_path().Append(kPackage0).Append(
+  ASSERT_TRUE(apk_cache::DeleteFile(temp_path().Append(kPackage0).Append(
       GetPatchObbFileName(kPackage0, kObbVersion))));
   ASSERT_TRUE(CreateFile(temp_path().Append(kPackage0).Append(
       GetPatchObbFileName("blabla", kObbVersion))));
