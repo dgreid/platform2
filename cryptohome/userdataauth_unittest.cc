@@ -2758,13 +2758,13 @@ TEST_F(UserDataAuthExTest, MigrateKeySanity) {
 
   // Test for successful case.
   EXPECT_CALL(homedirs_, Migrate(Property(&Credentials::username, kUsername1),
-                                 brillo::SecureBlob(kSecret1), Eq(mount_)))
+                                 brillo::SecureBlob(kSecret1), _))
       .WillOnce(Return(true));
   EXPECT_EQ(userdataauth_->MigrateKey(*migrate_req_),
             user_data_auth::CRYPTOHOME_ERROR_NOT_SET);
 
   // Test for unsuccessful case.
-  EXPECT_CALL(homedirs_, Migrate(_, brillo::SecureBlob(kSecret1), Eq(mount_)))
+  EXPECT_CALL(homedirs_, Migrate(_, brillo::SecureBlob(kSecret1), _))
       .WillOnce(Return(false));
   EXPECT_EQ(userdataauth_->MigrateKey(*migrate_req_),
             user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
@@ -2789,7 +2789,7 @@ TEST_F(UserDataAuthExTest, MigrateKeyNotMounted) {
 
   // Test for successful case.
   EXPECT_CALL(homedirs_, Migrate(Property(&Credentials::username, kUsername1),
-                                 brillo::SecureBlob(kSecret1), Eq(mount)))
+                                 brillo::SecureBlob(kSecret1), _))
       .WillOnce(Return(true));
   EXPECT_EQ(userdataauth_->MigrateKey(*migrate_req_),
             user_data_auth::CRYPTOHOME_ERROR_NOT_SET);

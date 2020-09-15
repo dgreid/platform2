@@ -2472,11 +2472,15 @@ user_data_auth::CryptohomeErrorCode UserDataAuth::MigrateKey(
     LOG(ERROR) << "Failed to obtain Mount for Migrate";
     return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
   }
+  int key_index = -1;
   if (!homedirs_->Migrate(
           credentials,
-          SecureBlob(request.authorization_request().key().secret()), mount)) {
+          SecureBlob(request.authorization_request().key().secret()),
+          &key_index)) {
     return user_data_auth::CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED;
   }
+  if (!mount->SetUserCreds(credentials, key_index))
+    LOG(WARNING) << "Failed to set new creds";
 
   return user_data_auth::CRYPTOHOME_ERROR_NOT_SET;
 }

@@ -1587,14 +1587,17 @@ void Service::DoMigrateKeyEx(AccountIdentifier* account,
     // after Migration is over.
     mount = CreateUntrackedMountForUser(GetAccountId(*account));
   }
+  int key_index = -1;
   if (!mount) {
     LOG(ERROR) << "Failed to obtain Mount for Migrate";
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else if (!homedirs_->Migrate(credentials,
                                  SecureBlob(auth_request->key().secret()),
-                                 mount)) {
+                                 &key_index)) {
     reply.set_error(CRYPTOHOME_ERROR_MIGRATE_KEY_FAILED);
   } else {
+    if (!mount->SetUserCreds(credentials, key_index))
+      LOG(WARNING) << "Failed to set new creds";
     reply.clear_error();
   }
 

@@ -231,7 +231,7 @@ class HomeDirs {
   // supplied old key to the supplied new key.
   virtual bool Migrate(const Credentials& newcreds,
                        const brillo::SecureBlob& oldkey,
-                       scoped_refptr<Mount> user_mount);
+                       int* migrated_key_index);
 
   // Returns the path to the user's chaps token directory.
   virtual base::FilePath GetChapsTokenDir(const std::string& username) const;

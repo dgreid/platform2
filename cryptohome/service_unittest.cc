@@ -1476,10 +1476,8 @@ TEST_F(ServiceExTest, MigrateKeyTest) {
 
   Credentials credentials(kUser, SecureBlob(kNewKey));
 
-  EXPECT_CALL(homedirs_,
-              Migrate(CredentialsEqual(testing::ByRef(credentials)),
-                      SecureBlob(kOldKey),
-                      scoped_refptr<cryptohome::Mount>(mount_.get())))
+  EXPECT_CALL(homedirs_, Migrate(CredentialsEqual(testing::ByRef(credentials)),
+                                 SecureBlob(kOldKey), _))
       .WillRepeatedly(Return(true));
   service_.DoMigrateKeyEx(id_.get(), auth_.get(), migrate_req_.get(), nullptr);
 
@@ -1510,8 +1508,7 @@ TEST_F(ServiceExTest, MigrateKeyTestNotMounted) {
   Credentials credentials(kUser, SecureBlob(kNewKey));
 
   EXPECT_CALL(homedirs_, Migrate(CredentialsEqual(testing::ByRef(credentials)),
-                                 SecureBlob(kOldKey),
-                                 scoped_refptr<cryptohome::Mount>(mount)))
+                                 SecureBlob(kOldKey), _))
       .WillRepeatedly(Return(true));
   service_.DoMigrateKeyEx(id_.get(), auth_.get(), migrate_req_.get(), nullptr);
 

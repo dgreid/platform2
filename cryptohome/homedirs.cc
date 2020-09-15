@@ -1170,53 +1170,31 @@ int64_t HomeDirs::ComputeDiskUsage(const std::string& account_id) {
 
 bool HomeDirs::Migrate(const Credentials& newcreds,
                        const SecureBlob& oldkey,
-                       scoped_refptr<Mount> user_mount) {
-  CHECK(user_mount);
+                       int* migrated_key_index) {
+  CHECK(migrated_key_index);
   Credentials oldcreds(newcreds.username(), oldkey);
   std::string obfuscated = newcreds.GetObfuscatedUsername(system_salt_);
-  base::ScopedClosureRunner scoped_unmount_runner;
-  if (!user_mount->IsMounted()) {
-    if (!user_mount->MountCryptohome(oldcreds, Mount::MountArgs(), NULL)) {
-      LOG(ERROR) << "Migrate: Mount failed";
-      // Fail as early as possible. Note that we don't have to worry about
-      // leaking this mount - Mount unmounts itself if it's still mounted in the
-      // destructor.
-      return false;
-    }
-    // We've mounted it, so we'll need to unmount it.
-    auto unmount_closure = base::BindOnce(
-        [](scoped_refptr<Mount> user_mount) {
-          if (user_mount->UnmountCryptohome()) {
-            LOG(INFO) << "Unmounted cryptohome after migrating.";
-          } else {
-            LOG(ERROR) << "Failed to unmount cryptohome after migrating.";
-          }
-        },
-        user_mount);
-    scoped_unmount_runner =
-        base::ScopedClosureRunner(std::move(unmount_closure));
+
+  std::unique_ptr<VaultKeyset> vk(
+      vault_keyset_factory()->New(platform_, crypto_));
+  int key_index = -1;
+  if (!GetValidKeyset(oldcreds, vk.get(), &key_index, nullptr /* error */)) {
+    LOG(ERROR) << "Can not retrieve keyset for the user: "
+               << newcreds.username();
+    return false;
   }
-  int key_index = user_mount->CurrentKey();
   if (key_index == -1) {
     LOG(ERROR) << "Attempted migration of key-less mount.";
     return false;
   }
 
-  // Grab the current key and check its permissions early.
-  // add() and remove() are required.  mount() was checked
-  // already during MountCryptohome().
-  std::unique_ptr<VaultKeyset> vk(
-      vault_keyset_factory()->New(platform_, crypto_));
-  if (!LoadVaultKeysetForUser(obfuscated, key_index, vk.get())) {
-    LOG(ERROR) << "Migrate: failed to reload the active keyset";
-    return false;
-  }
   const KeyData* key_data = NULL;
   if (vk->serialized().has_key_data()) {
     key_data = &(vk->serialized().key_data());
     // legacy keys are full privs
     if (!vk->serialized().key_data().privileges().add() ||
-        !vk->serialized().key_data().privileges().remove()) {
+        !vk->serialized().key_data().privileges().remove() ||
+        !vk->serialized().key_data().privileges().mount()) {
       LOG(ERROR) << "Migrate: key lacks sufficient privileges()";
       return false;
     }
@@ -1261,8 +1239,7 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
     ForceRemoveKeyset(obfuscated, index);  // Failure is ok.
   }
 
-  if (!user_mount->SetUserCreds(newcreds, key_index))
-    LOG(WARNING) << "Failed to set new creds";
+  *migrated_key_index = key_index;
 
   return true;
 }
