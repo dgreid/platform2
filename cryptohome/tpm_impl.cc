@@ -155,6 +155,11 @@ Tpm::TpmRetryAction ResultToRetryActionWithMessage(TSS_RESULT result,
       ReportCryptohomeError(kTpmDefendLockRunning);
       status = Tpm::kTpmRetryDefendLock;
       break;
+    case ERROR_CODE(TPM_E_SIZE):
+      LOG(ERROR) << "TPM is out of memory, a reboot is needed.";
+      ReportCryptohomeError(kTpmOutOfMemory);
+      status = Tpm::kTpmRetryReboot;
+      break;
     // This error code occurs when the TPM is in an error state.
     case ERROR_CODE(TPM_E_FAIL):
       status = Tpm::kTpmRetryReboot;

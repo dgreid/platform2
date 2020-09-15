@@ -71,6 +71,7 @@ enum CryptohomeError {
   kTssInvalidHandle = 17,
   kBothTpmAndScryptWrappedKeyset = 18,
   kEphemeralCleanUpFailed = 19,
+  kTpmOutOfMemory = 20,
   kCryptohomeErrorNumBuckets,  // Must be the last entry.
 };
 
