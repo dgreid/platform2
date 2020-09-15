@@ -242,7 +242,6 @@ bool SessionManagerService::Initialize() {
     return false;
 
   // Set any flags that were specified system-wide.
-  browser_->SetExtraArguments(impl_->GetStartUpSwitches());
   browser_->SetFeatureFlags(impl_->GetFeatureFlags());
 
   CHECK(impl_->StartDBusService())

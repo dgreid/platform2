@@ -1129,38 +1129,6 @@ TEST_F(DevicePolicyServiceTest, GetSettings) {
             settings.SerializeAsString());
 }
 
-TEST_F(DevicePolicyServiceTest, StartUpSwitchesSanitizer) {
-  MockNssUtil nss;
-  InitService(&nss, true);
-
-  em::ChromeDeviceSettingsProto settings;
-
-  // The flags field is deprecated and slated to be removed. Until that happens,
-  // suppress deprecation warnings.
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-  // Some valid flags.
-  settings.mutable_feature_flags()->add_switches("a");
-  settings.mutable_feature_flags()->add_switches("bb");
-  settings.mutable_feature_flags()->add_switches("-c");
-  settings.mutable_feature_flags()->add_switches("--d");
-  // Some invalid ones.
-  settings.mutable_feature_flags()->add_switches("");
-  settings.mutable_feature_flags()->add_switches("-");
-  settings.mutable_feature_flags()->add_switches("--");
-  settings.mutable_feature_flags()->add_switches("--policy-switches-end");
-  settings.mutable_feature_flags()->add_switches("--policy-switches-begin");
-#pragma GCC diagnostic pop
-
-  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
-  SetExpectationsAndStorePolicy(MakeChromePolicyNamespace(), store_,
-                                policy_proto_);
-
-  EXPECT_THAT(service_->GetStartUpSwitches(),
-              ElementsAre("--policy-switches-begin", "--a", "--bb", "-c", "--d",
-                          "--policy-switches-end"));
-}
-
 TEST_F(DevicePolicyServiceTest, FeatureFlags) {
   MockNssUtil nss;
   InitService(&nss, true);
@@ -1175,6 +1143,29 @@ TEST_F(DevicePolicyServiceTest, FeatureFlags) {
                                 policy_proto_);
 
   EXPECT_THAT(service_->GetFeatureFlags(), ElementsAre("first", "second"));
+}
+
+// TODO(crbug/1104193): Remove this test when switch to feature flag mapping
+// compatibility code is no longer needed.
+TEST_F(DevicePolicyServiceTest, FeatureFlagsCompatiblity) {
+  MockNssUtil nss;
+  InitService(&nss, true);
+
+  em::ChromeDeviceSettingsProto settings;
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+  settings.mutable_feature_flags()->add_switches("invalid");
+  settings.mutable_feature_flags()->add_switches(
+      "--enable-features=DarkLightMode");
+  settings.mutable_feature_flags()->add_switches("--unknown-switch");
+#pragma GCC diagnostic pop
+
+  ASSERT_NO_FATAL_FAILURE(InitPolicy(settings, owner_, fake_sig_, ""));
+  SetExpectationsAndStorePolicy(MakeChromePolicyNamespace(), store_,
+                                policy_proto_);
+
+  EXPECT_THAT(service_->GetFeatureFlags(), ElementsAre("dark-light-mode@1"));
 }
 
 TEST_F(DevicePolicyServiceTest, PersistPolicyMultipleNamespaces) {

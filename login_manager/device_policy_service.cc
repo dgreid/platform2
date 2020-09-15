@@ -27,6 +27,7 @@
 #include "bindings/device_management_backend.pb.h"
 #include "login_manager/blob_util.h"
 #include "login_manager/dbus_util.h"
+#include "login_manager/feature_flags_util.h"
 #include "login_manager/key_generator.h"
 #include "login_manager/login_metrics.h"
 #include "login_manager/owner_key_loss_mitigator.h"
@@ -71,14 +72,6 @@ void HandleVpdUpdateCompletion(bool ignore_error,
   LOG(ERROR) << "Failed to update VPD";
   completion.Run(
       CreateError(dbus_error::kVpdUpdateFailed, "Failed to update VPD"));
-}
-
-int GetSwitchPrefixLength(const std::string& switch_string) {
-  if (switch_string.substr(0, 2) == "--")
-    return 2;
-  if (switch_string.substr(0, 1) == "-")
-    return 1;
-  return 0;
 }
 
 }  // namespace
@@ -274,53 +267,37 @@ void DevicePolicyService::ReportPolicyFileMetrics(bool key_success,
   metrics_->SendPolicyFilesStatus(status);
 }
 
-std::vector<std::string> DevicePolicyService::GetStartUpSwitches() {
-  std::vector<std::string> policy_args;
-  const em::ChromeDeviceSettingsProto& policy = GetSettings();
-
-  // TODO(crbug.com/1104193): Raw switches in device settings are deprecated,
-  // remove this function once it is no longer needed.
-  if (policy.has_feature_flags()) {
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
-    const auto& switches = policy.feature_flags().switches();
-#pragma GCC diagnostic pop
-    for (const auto& switch_value : switches) {
-      const int prefix_length = GetSwitchPrefixLength(switch_value);
-      const std::string unprefixed_switch(switch_value.substr(prefix_length));
-      // Ignore empty or invalid switches.
-      if (unprefixed_switch.empty() ||
-          unprefixed_switch == chromeos::switches::kPolicySwitchesBegin ||
-          unprefixed_switch == chromeos::switches::kPolicySwitchesEnd) {
-        continue;
-      }
-      // Ensure the added switch has the proper prefix.
-      std::string prefixed_switch = switch_value;
-      if (!prefix_length)
-        prefixed_switch = std::string("--").append(switch_value);
-      policy_args.push_back(prefixed_switch);
-    }
-
-    // Add sentinel values to mark which switches were filled from policy and
-    // should not apply to user sessions.
-    if (!policy_args.empty()) {
-      policy_args.insert(
-          policy_args.begin(),
-          std::string("--").append(chromeos::switches::kPolicySwitchesBegin));
-      policy_args.push_back(
-          std::string("--").append(chromeos::switches::kPolicySwitchesEnd));
-    }
-  }
-
-  return policy_args;
-}
-
 std::vector<std::string> DevicePolicyService::GetFeatureFlags() {
+  using Status = LoginMetrics::SwitchToFeatureFlagMappingStatus;
+  auto status = Status::SWITCHES_ABSENT;
   std::vector<std::string> feature_flags;
   const em::ChromeDeviceSettingsProto& settings = GetSettings();
-  for (const auto& feature_flag : settings.feature_flags().feature_flags()) {
-    feature_flags.push_back(feature_flag);
+
+  if (settings.feature_flags().feature_flags_size() > 0) {
+    for (const auto& feature_flag : settings.feature_flags().feature_flags()) {
+      feature_flags.push_back(feature_flag);
+    }
+  } else {
+    // Previous versions of this code allowed raw switches to be specified in
+    // device settings, stored in the now deprecated |switches| proto message
+    // field. In order to keep existing device settings data files working, map
+    // these switches back to feature flags.
+    // TODO(crbug/1104193): Remove compatibility code when no longer needed.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+    if (settings.feature_flags().switches_size() > 0) {
+      status = Status::SWITCHES_VALID;
+      for (const auto& switch_string : settings.feature_flags().switches()) {
+        if (!MapSwitchToFeatureFlags(switch_string, &feature_flags)) {
+          LOG(WARNING) << "Invalid feature flag switch: " << switch_string;
+          status = Status::SWITCHES_INVALID;
+        }
+      }
+    }
+#pragma GCC diagnostic pop
   }
+
+  metrics_->SendSwitchToFeatureFlagMappingStatus(status);
 
   return feature_flags;
 }

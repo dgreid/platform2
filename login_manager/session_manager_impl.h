@@ -184,9 +184,6 @@ class SessionManagerImpl
   void AnnounceSessionStoppingIfNeeded() override;
   void AnnounceSessionStopped() override;
   bool ShouldEndSession(std::string* reason_out) override;
-  std::vector<std::string> GetStartUpSwitches() override {
-    return device_policy_->GetStartUpSwitches();
-  }
   std::vector<std::string> GetFeatureFlags() override {
     return device_policy_->GetFeatureFlags();
   }

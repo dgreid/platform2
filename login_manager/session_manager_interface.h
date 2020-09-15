@@ -24,9 +24,6 @@ class SessionManagerInterface {
   // Returns true on success. Failure to start must be fatal.
   virtual bool StartDBusService() = 0;
 
-  // Gets switches specified in device settings to pass to Chrome on startup.
-  virtual std::vector<std::string> GetStartUpSwitches() = 0;
-
   // Gets feature flags specified in device settings to pass to Chrome on
   // startup.
   virtual std::vector<std::string> GetFeatureFlags() = 0;

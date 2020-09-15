@@ -50,6 +50,9 @@ const char kMetricsDir[] = "/var/lib/metrics";
 const char kArcCumulativeUseTimeMetric[] = "Arc.CumulativeUseTime";
 const char kLoginMountNamespaceMetric[] = "Login.MountNamespaceCreationSuccess";
 
+const char kSwitchToFeatureFlagMappingStatus[] =
+    "Login.SwitchToFeatureFlagMappingStatus";
+
 }  // namespace
 
 // static
@@ -169,6 +172,14 @@ void LoginMetrics::SendArcContinueBootImpulseTime(
       static_cast<int>(arc_continue_boot_impulse_time.InMilliseconds()),
       static_cast<int>(base::TimeDelta::FromMilliseconds(1).InMilliseconds()),
       static_cast<int>(base::TimeDelta::FromSeconds(30).InMilliseconds()), 30);
+}
+
+void LoginMetrics::SendSwitchToFeatureFlagMappingStatus(
+    SwitchToFeatureFlagMappingStatus status) {
+  metrics_lib_.SendEnumToUMA(
+      kSwitchToFeatureFlagMappingStatus, static_cast<int>(status),
+      static_cast<int>(
+          SwitchToFeatureFlagMappingStatus::NUM_SWITCHES_STATUSES));
 }
 
 void LoginMetrics::ReportCrosEvent(const std::string& event) {

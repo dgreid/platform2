@@ -60,6 +60,12 @@ class LoginMetrics {
     ALL_INVALID = 2,
     NUM_VALUES = 3
   };
+  enum SwitchToFeatureFlagMappingStatus {
+    SWITCHES_ABSENT = 0,
+    SWITCHES_VALID = 1,
+    SWITCHES_INVALID = 2,
+    NUM_SWITCHES_STATUSES = 3,
+  };
   // Holds the state of several policy-related files on disk.
   // We leave an extra bit for future state-space expansion.
   // Treat as, essentially, a base-4 number that we encode in decimal before
@@ -147,6 +153,10 @@ class LoginMetrics {
   // Submits to UMA the time to execute continue-arc-boot impulse.
   virtual void SendArcContinueBootImpulseTime(
       base::TimeDelta arc_continue_boot_impulse_time);
+
+  // Submits a UMA sample indicating compatibility feature flag mapping status.
+  virtual void SendSwitchToFeatureFlagMappingStatus(
+      SwitchToFeatureFlagMappingStatus status);
 
   // CrOS events are translated to an enum and reported to the generic
   // "Platform.CrOSEvent" enum histogram. The |event| string must be registered
