@@ -234,6 +234,12 @@ mode_update_tpm_firmware_failure() {
   tput clear >>"${TTY}"
 }
 
+# Show a message indicating that we're doing a "several minutes" long
+# unspecified firmware update, with risk to the system if interrupted.
+mode_update_csme_firmware() {
+  show_assets_message "update_firmware_slow_extra_warning"
+}
+
 # Main initialization and dispatcher
 main() {
   # process args
