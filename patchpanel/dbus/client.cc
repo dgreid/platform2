@@ -65,6 +65,26 @@ void OnGetTrafficCountersDBusResponse(
       {response.counters().begin(), response.counters().end()});
 }
 
+void OnNeighborConnectedStateChangedSignal(
+    const Client::NeighborConnectedStateChangedHandler& handler,
+    dbus::Signal* signal) {
+  dbus::MessageReader reader(signal);
+  NeighborConnectedStateChangedSignal proto;
+  if (!reader.PopArrayOfBytesAsProto(&proto)) {
+    LOG(ERROR) << "Failed to parse NeighborConnectedStateChangedSignal proto";
+    return;
+  }
+
+  handler.Run(proto);
+}
+
+void OnSignalConnectedCallback(const std::string& interface_name,
+                               const std::string& signal_name,
+                               bool success) {
+  if (!success)
+    LOG(ERROR) << "Failed to connect to " << signal_name;
+}
+
 }  // namespace
 
 // static
@@ -529,6 +549,14 @@ bool Client::ModifyPortRule(ModifyPortRuleRequest::Operation op,
     return false;
   }
   return true;
+}
+
+void Client::RegisterNeighborConnectedStateChangedHandler(
+    NeighborConnectedStateChangedHandler handler) {
+  proxy_->ConnectToSignal(
+      kPatchPanelInterface, kNeighborConnectedStateChangedSignal,
+      base::BindRepeating(OnNeighborConnectedStateChangedSignal, handler),
+      base::BindOnce(OnSignalConnectedCallback));
 }
 
 }  // namespace patchpanel

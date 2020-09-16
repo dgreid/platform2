@@ -4,6 +4,7 @@
 
 #include "patchpanel/dbus/client.h"
 
+#include <base/bind.h>
 #include <chromeos/dbus/service_constants.h>
 #include <dbus/message.h>
 #include <dbus/mock_bus.h>
@@ -15,34 +16,34 @@
 #include "patchpanel/net_util.h"
 
 namespace patchpanel {
+namespace {
 
 using ::testing::_;
 using ::testing::ByMove;
 using ::testing::Return;
+using ::testing::SaveArg;
 
-namespace {
+class ClientTest : public testing::Test {
+ protected:
+  ClientTest()
+      : dbus_(new dbus::MockBus{dbus::Bus::Options{}}),
+        proxy_(new dbus::MockObjectProxy(
+            dbus_.get(),
+            kPatchPanelServiceName,
+            dbus::ObjectPath(kPatchPanelServicePath))),
+        client_(dbus_, proxy_.get()) {}
 
-scoped_refptr<dbus::MockBus> MockDBus() {
-  return new dbus::MockBus{dbus::Bus::Options{}};
-}
+  scoped_refptr<dbus::MockBus> dbus_;
+  scoped_refptr<dbus::MockObjectProxy> proxy_;
+  Client client_;
+};
 
-scoped_refptr<dbus::MockObjectProxy> PatchPanelMockProxy(dbus::MockBus* dbus) {
-  return new dbus::MockObjectProxy(dbus, kPatchPanelServiceName,
-                                   dbus::ObjectPath(kPatchPanelServicePath));
-}
-
-}  // namespace
-
-TEST(ClientTest, ConnectNamespace) {
-  auto dbus = MockDBus();
-  auto proxy = PatchPanelMockProxy(dbus.get());
+TEST_F(ClientTest, ConnectNamespace) {
   pid_t pid = 3456;
   std::string outboud_ifname = "";
 
-  Client client(dbus, proxy.get());
-
   // Failure case
-  auto result = client.ConnectNamespace(pid, outboud_ifname, false);
+  auto result = client_.ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_FALSE(result.first.is_valid());
   EXPECT_TRUE(result.second.peer_ifname().empty());
   EXPECT_TRUE(result.second.host_ifname().empty());
@@ -63,10 +64,10 @@ TEST(ClientTest, ConnectNamespace) {
   std::unique_ptr<dbus::Response> response = dbus::Response::CreateEmpty();
   dbus::MessageWriter response_writer(response.get());
   response_writer.AppendProtoAsArrayOfBytes(response_proto);
-  EXPECT_CALL(*proxy, CallMethodAndBlock(_, _))
+  EXPECT_CALL(*proxy_, CallMethodAndBlock(_, _))
       .WillOnce(Return(ByMove(std::move(response))));
 
-  result = client.ConnectNamespace(pid, outboud_ifname, false);
+  result = client_.ConnectNamespace(pid, outboud_ifname, false);
   EXPECT_TRUE(result.first.is_valid());
   EXPECT_EQ("arc_ns0", result.second.host_ifname());
   EXPECT_EQ("veth0", result.second.peer_ifname());
@@ -77,4 +78,41 @@ TEST(ClientTest, ConnectNamespace) {
   EXPECT_EQ(Ipv4Addr(100, 115, 92, 130), result.second.peer_ipv4_address());
 }
 
+TEST_F(ClientTest, RegisterNeighborEventHandler) {
+  static NeighborConnectedStateChangedSignal actual_signal_proto;
+  static int call_num = 0;
+  auto callback =
+      base::BindRepeating([](const NeighborConnectedStateChangedSignal& sig) {
+        call_num++;
+        actual_signal_proto = sig;
+      });
+
+  base::Callback<void(dbus::Signal * signal)> registered_dbus_callback;
+
+  EXPECT_CALL(*proxy_,
+              DoConnectToSignal(kPatchPanelInterface,
+                                kNeighborConnectedStateChangedSignal, _, _))
+      .WillOnce(SaveArg<2>(&registered_dbus_callback));
+  client_.RegisterNeighborConnectedStateChangedHandler(callback);
+
+  NeighborConnectedStateChangedSignal signal_proto;
+  signal_proto.set_ifindex(1);
+  signal_proto.set_ip_addr("1.2.3.4");
+  signal_proto.set_role(NeighborConnectedStateChangedSignal::GATEWAY);
+  signal_proto.set_connected(false);
+  dbus::Signal signal(kPatchPanelInterface,
+                      kNeighborConnectedStateChangedSignal);
+  dbus::MessageWriter writer(&signal);
+  writer.AppendProtoAsArrayOfBytes(signal_proto);
+
+  registered_dbus_callback.Run(&signal);
+
+  EXPECT_EQ(call_num, 1);
+  EXPECT_EQ(actual_signal_proto.ifindex(), signal_proto.ifindex());
+  EXPECT_EQ(actual_signal_proto.ip_addr(), signal_proto.ip_addr());
+  EXPECT_EQ(actual_signal_proto.role(), signal_proto.role());
+  EXPECT_EQ(actual_signal_proto.connected(), signal_proto.connected());
+}
+
+}  // namespace
 }  // namespace patchpanel

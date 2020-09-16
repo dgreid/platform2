@@ -28,6 +28,8 @@ class BRILLO_EXPORT Client {
  public:
   using GetTrafficCountersCallback =
       base::OnceCallback<void(const std::vector<TrafficCounter>&)>;
+  using NeighborConnectedStateChangedHandler =
+      base::RepeatingCallback<void(const NeighborConnectedStateChangedSignal&)>;
 
   static std::unique_ptr<Client> New();
 
@@ -92,6 +94,13 @@ class BRILLO_EXPORT Client {
                       uint32_t input_dst_port,
                       const std::string& dst_ip,
                       uint32_t dst_port);
+
+  // Registers a handler that will be called on receiving a signal of neighbor
+  // connected state changed. Currently these events are generated only for WiFi
+  // devices. The handler is registered for as long as this patchpanel::Client
+  // instance is alive.
+  void RegisterNeighborConnectedStateChangedHandler(
+      NeighborConnectedStateChangedHandler handler);
 
  private:
   scoped_refptr<dbus::Bus> bus_;
