@@ -402,17 +402,6 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
       LOGF(WARNING) << "Camera module " << vid << ":" << pid
                     << " does not support constant frame rate";
     }
-    // Checks constant frame rate can be enabled from V4L2 control.
-    const bool cfr_supported_v4l2 =
-        V4L2CameraDevice::IsConstantFrameRateSupported(path);
-    if (cfr_supported_v4l2 != !info.constant_framerate_unsupported) {
-      VLOGF(1) << "Camera characteristic constant_framerate_unsupported ("
-               << info.constant_framerate_unsupported
-               << ") doesn't match what queried from V4L2 ("
-               << !cfr_supported_v4l2 << ") for camera module " << vid << ":"
-               << pid << ". Set to unsupported.";
-      info.constant_framerate_unsupported = true;
-    }
   } else {
     VLOGF(1) << "Found an external camera";
     if (callbacks_ == nullptr) {
@@ -426,6 +415,8 @@ void CameraHal::OnDeviceAdded(ScopedUdevDevicePtr dev) {
   info.usb_pid = pid;
   info.is_vivid = is_vivid;
   info.power_line_frequency = V4L2CameraDevice::GetPowerLineFrequency(path);
+  info.constant_framerate_unsupported |=
+      !V4L2CameraDevice::IsConstantFrameRateSupported(path);
   if (!is_vivid) {
     info.quirks |= GetQuirks(vid, pid);
   }
