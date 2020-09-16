@@ -2252,7 +2252,7 @@ mno {
     uuid : "4f361ffe-4056-4224-8117-22ed9866a3d8"
     country : "ch"
     localized_name {
-      name : "Orange"
+      name : "Salt"
     }
     mccmnc : "22803"
     mobile_apn {
