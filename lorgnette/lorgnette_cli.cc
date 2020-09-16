@@ -85,7 +85,8 @@ class ScanHandler {
   bool WaitUntilConnected();
 
   bool StartScan(uint32_t resolution,
-                 const lorgnette::DocumentSource& scan_source);
+                 const lorgnette::DocumentSource& scan_source,
+                 const base::Optional<lorgnette::ScanRegion>& scan_region);
 
  private:
   void HandleScanStatusChangedSignal(
@@ -123,13 +124,18 @@ bool ScanHandler::WaitUntilConnected() {
   return connection_status_;
 }
 
-bool ScanHandler::StartScan(uint32_t resolution,
-                            const lorgnette::DocumentSource& scan_source) {
+bool ScanHandler::StartScan(
+    uint32_t resolution,
+    const lorgnette::DocumentSource& scan_source,
+    const base::Optional<lorgnette::ScanRegion>& scan_region) {
   lorgnette::StartScanRequest request;
   request.set_device_name(scanner_name_);
   request.mutable_settings()->set_resolution(resolution);
   request.mutable_settings()->set_source_name(scan_source.name());
   request.mutable_settings()->set_color_mode(lorgnette::MODE_COLOR);
+  if (scan_region.has_value())
+    *request.mutable_settings()->mutable_scan_region() = scan_region.value();
+
   std::vector<uint8_t> request_in(request.ByteSizeLong());
   request.SerializeToArray(request_in.data(), request_in.size());
 
@@ -309,6 +315,10 @@ void PrintScannerCapabilities(
   for (const lorgnette::DocumentSource& source : capabilities.sources()) {
     std::cout << "\t" << source.name() << " ("
               << lorgnette::SourceType_Name(source.type()) << ")" << std::endl;
+    if (source.has_area()) {
+      std::cout << "\t\t" << source.area().width() << "mm wide by "
+                << source.area().height() << "mm tall" << std::endl;
+    }
   }
 
   std::cout << "Color Modes:" << std::endl;
@@ -362,6 +372,7 @@ class ScanRunner {
 
   void SetResolution(uint32_t resolution) { resolution_ = resolution; }
   void SetSource(lorgnette::SourceType source) { source_ = source; }
+  void SetScanRegion(const lorgnette::ScanRegion& region) { region_ = region; }
 
   bool RunScanner(const std::string& scanner);
 
@@ -369,6 +380,7 @@ class ScanRunner {
   ManagerProxy* manager_;  // Not owned.
   uint32_t resolution_;
   lorgnette::SourceType source_;
+  base::Optional<lorgnette::ScanRegion> region_;
 };
 
 bool ScanRunner::RunScanner(const std::string& scanner) {
@@ -403,6 +415,23 @@ bool ScanRunner::RunScanner(const std::string& scanner) {
     return false;
   }
 
+  if (region_.has_value()) {
+    if (!scan_source->has_area()) {
+      LOG(ERROR)
+          << "Requested scan source does not support specifying a scan region.";
+      return false;
+    }
+
+    if (region_->top_left_x() == -1.0)
+      region_->set_top_left_x(0.0);
+    if (region_->top_left_y() == -1.0)
+      region_->set_top_left_y(0.0);
+    if (region_->bottom_right_x() == -1.0)
+      region_->set_bottom_right_x(scan_source->area().width());
+    if (region_->bottom_right_y() == -1.0)
+      region_->set_bottom_right_y(scan_source->area().height());
+  }
+
   // Implicitly uses this thread's executor as defined in main.
   base::RunLoop run_loop;
   ScanHandler handler(run_loop.QuitClosure(), manager_, scanner);
@@ -413,7 +442,7 @@ bool ScanRunner::RunScanner(const std::string& scanner) {
 
   std::cout << "Scanning from " << scanner << std::endl;
 
-  if (!handler.StartScan(resolution_, scan_source.value())) {
+  if (!handler.StartScan(resolution_, scan_source.value(), region_)) {
     return false;
   }
 
@@ -435,6 +464,15 @@ int main(int argc, char** argv) {
                 "Simplex, ADF Duplex)");
   DEFINE_bool(all, false,
               "Loop through all detected scanners instead of prompting.");
+  DEFINE_double(top_left_x, -1.0,
+                "Top-left X position of the scan region (mm)");
+  DEFINE_double(top_left_y, -1.0,
+                "Top-left Y position of the scan region (mm)");
+  DEFINE_double(bottom_right_x, -1.0,
+                "Bottom-right X position of the scan region (mm)");
+  DEFINE_double(bottom_right_y, -1.0,
+                "Bottom-right Y position of the scan region (mm)");
+
   brillo::FlagHelper::Init(argc, argv,
                            "lorgnette_cli, command-line interface to "
                            "Chromium OS Scanning Daemon");
@@ -498,6 +536,16 @@ int main(int argc, char** argv) {
   ScanRunner runner(manager.get());
   runner.SetResolution(FLAGS_scan_resolution);
   runner.SetSource(source_type.value());
+
+  if (FLAGS_top_left_x != -1.0 || FLAGS_top_left_y != -1.0 ||
+      FLAGS_bottom_right_x != -1.0 || FLAGS_bottom_right_y != -1.0) {
+    lorgnette::ScanRegion region;
+    region.set_top_left_x(FLAGS_top_left_x);
+    region.set_top_left_y(FLAGS_top_left_y);
+    region.set_bottom_right_x(FLAGS_bottom_right_x);
+    region.set_bottom_right_y(FLAGS_bottom_right_y);
+    runner.SetScanRegion(region);
+  }
 
   std::cout << "Choose a scanner (blank to quit):" << std::endl;
   for (int i = 0; i < scanners.size(); i++) {
