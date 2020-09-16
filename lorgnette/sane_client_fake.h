@@ -59,6 +59,8 @@ class SaneDeviceFake : public SaneDevice {
   bool SetDocumentSource(brillo::ErrorPtr* error,
                          const std::string& source_name) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
+  bool SetScanRegion(brillo::ErrorPtr* error,
+                     const ScanRegion& region) override;
   SANE_Status StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;

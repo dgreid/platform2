@@ -584,6 +584,17 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
     }
   }
 
+  if (settings.has_scan_region()) {
+    const ScanRegion& region = settings.scan_region();
+    LOG(INFO) << "User requested scan region: top-left (" << region.top_left_x()
+              << ", " << region.top_left_y() << "), bottom-right ("
+              << region.bottom_right_x() << ", " << region.bottom_right_y()
+              << ")";
+    if (!device->SetScanRegion(error, region)) {
+      return false;
+    }
+  }
+
   SANE_Status status = device->StartScan(error);
   if (status != SANE_STATUS_GOOD) {
     brillo::Error::AddToPrintf(error, FROM_HERE, brillo::errors::dbus::kDomain,

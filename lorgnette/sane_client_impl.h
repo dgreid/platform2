@@ -51,6 +51,7 @@ class SaneOption {
  public:
   SaneOption(const SANE_Option_Descriptor& opt, int index);
 
+  bool SetDouble(double d);
   bool SetInt(int i);
   bool SetString(const std::string& s);
   base::Optional<std::string> GetString() const;
@@ -99,6 +100,8 @@ class SaneDeviceImpl : public SaneDevice {
   bool SetDocumentSource(brillo::ErrorPtr* error,
                          const std::string& source_name) override;
   bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) override;
+  bool SetScanRegion(brillo::ErrorPtr* error,
+                     const ScanRegion& region) override;
   SANE_Status StartScan(brillo::ErrorPtr* error) override;
   bool GetScanParameters(brillo::ErrorPtr* error,
                          ScanParameters* parameters) override;
@@ -133,6 +136,8 @@ class SaneDeviceImpl : public SaneDevice {
   bool LoadOptions(brillo::ErrorPtr* error);
   bool UpdateDeviceOption(brillo::ErrorPtr* error, SaneOption* option);
   base::Optional<ScannableArea> CalculateScannableArea(brillo::ErrorPtr* error);
+  base::Optional<double> GetOptionOffset(brillo::ErrorPtr* error,
+                                         ScanOption option);
 
   SANE_Handle handle_;
   std::string name_;

@@ -519,6 +519,14 @@ TEST(SaneOptionIntTest, SetIntSucceeds) {
   EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 54);
 }
 
+TEST(SaneOptionIntTest, SetDoubleSucceeds) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
+  // Should round towards 0.
+  EXPECT_TRUE(option.SetDouble(295.7));
+  EXPECT_EQ(*static_cast<SANE_Int*>(option.GetPointer()), 295);
+}
+
 TEST(SaneOptionIntTest, SetStringFails) {
   SaneOption option(
       CreateDescriptor("Test Name", SANE_TYPE_INT, sizeof(SANE_Word)), 7);
@@ -564,6 +572,14 @@ TEST(SaneOptionFixedTest, SetIntSucceeds) {
   EXPECT_TRUE(option.SetInt(54));
   SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
   EXPECT_EQ(static_cast<int>(SANE_UNFIX(f)), 54);
+}
+
+TEST(SaneOptionFixedTest, SetDoubleSucceeds) {
+  SaneOption option(
+      CreateDescriptor("Test Name", SANE_TYPE_FIXED, sizeof(SANE_Word)), 7);
+  EXPECT_TRUE(option.SetDouble(436.2));
+  SANE_Fixed f = *static_cast<SANE_Fixed*>(option.GetPointer());
+  EXPECT_FLOAT_EQ(SANE_UNFIX(f), 436.2);
 }
 
 TEST(SaneOptionFixedTest, SetStringFails) {

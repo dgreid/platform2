@@ -362,6 +362,56 @@ bool SaneDeviceImpl::SetColorMode(brillo::ErrorPtr* error,
   return UpdateDeviceOption(error, &option);
 }
 
+bool SaneDeviceImpl::SetScanRegion(brillo::ErrorPtr* error,
+                                   const ScanRegion& region) {
+  const std::vector<ScanOption> region_options = {kTopLeftX, kTopLeftY,
+                                                  kBottomRightX, kBottomRightY};
+  for (ScanOption option_name : region_options) {
+    if (options_.count(option_name) == 0) {
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Device is missing region option %d", option_name);
+      return false;
+    }
+  }
+
+  // Get the offsets for X and Y so that if the device's coordinate system
+  // doesn't start at (0, 0), we can translate the requested region into the
+  // device's coordinates. We provide the appearance to the user that all
+  // region options start at (0, 0).
+  base::Optional<double> x_offset = GetOptionOffset(error, kTopLeftX);
+  if (!x_offset.has_value())
+    return false;
+
+  base::Optional<double> y_offset = GetOptionOffset(error, kTopLeftY);
+  if (!y_offset.has_value())
+    return false;
+
+  const base::flat_map<ScanOption, double> values{
+      {kTopLeftX, region.top_left_x() + x_offset.value()},
+      {kTopLeftY, region.top_left_y() + y_offset.value()},
+      {kBottomRightX, region.bottom_right_x() + x_offset.value()},
+      {kBottomRightY, region.bottom_right_y() + y_offset.value()},
+  };
+
+  for (const auto& kv : values) {
+    ScanOption option_name = kv.first;
+    double value = kv.second;
+
+    SaneOption& option = options_.at(option_name);
+    if (!option.SetDouble(value)) {
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError, "Failed to set SaneOption");
+      return false;
+    }
+
+    if (!UpdateDeviceOption(error, &option)) {
+      return false;
+    }
+  }
+  return true;
+}
+
 SANE_Status SaneDeviceImpl::StartScan(brillo::ErrorPtr* error) {
   if (scan_running_ && !reached_eof_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
@@ -554,6 +604,19 @@ bool SaneOption::SetInt(int i) {
       return true;
     case SANE_TYPE_FIXED:
       int_data_.f = SANE_FIX(static_cast<double>(i));
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool SaneOption::SetDouble(double d) {
+  switch (type_) {
+    case SANE_TYPE_INT:
+      int_data_.i = static_cast<int>(d);
+      return true;
+    case SANE_TYPE_FIXED:
+      int_data_.f = SANE_FIX(d);
       return true;
     default:
       return false;
@@ -775,6 +838,32 @@ base::Optional<ScannableArea> SaneDeviceImpl::CalculateScannableArea(
   }
   area.set_height(y_range.value().size);
   return area;
+}
+
+// Calculates the starting value of the range for the given ScanOption.
+// Requires that |options_| contains |option|, and that the corresponding
+// option descriptor for |option| has a range constraint.
+base::Optional<double> SaneDeviceImpl::GetOptionOffset(
+    brillo::ErrorPtr* error, SaneDeviceImpl::ScanOption option) {
+  int index = options_.at(option).GetIndex();
+  const SANE_Option_Descriptor* descriptor =
+      sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get option %d at index %d", option, index);
+    return base::nullopt;
+  }
+
+  base::Optional<OptionRange> range = GetOptionRange(error, *descriptor);
+  if (!range.has_value()) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Failed to get range for %s option.", descriptor->name);
+    return base::nullopt;
+  }
+
+  return range->start;
 }
 
 }  // namespace lorgnette

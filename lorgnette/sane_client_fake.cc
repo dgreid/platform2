@@ -108,6 +108,10 @@ bool SaneDeviceFake::SetColorMode(brillo::ErrorPtr*, ColorMode) {
   return true;
 }
 
+bool SaneDeviceFake::SetScanRegion(brillo::ErrorPtr* error, const ScanRegion&) {
+  return true;
+}
+
 SANE_Status SaneDeviceFake::StartScan(brillo::ErrorPtr* error) {
   if (scan_running_) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
