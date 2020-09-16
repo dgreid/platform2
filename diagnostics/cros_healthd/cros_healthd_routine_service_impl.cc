@@ -255,7 +255,10 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
   }
 
   if (context_->system_config()->NvmeSupported()) {
-    available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel);
+    if (context_->system_config()->IsWilcoDevice()) {
+      available_routines_.insert(
+          mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel);
+    }
     available_routines_.insert(mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest);
   }
 

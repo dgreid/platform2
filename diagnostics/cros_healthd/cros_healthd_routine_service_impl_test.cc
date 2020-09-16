@@ -70,6 +70,11 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetNvmeRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kNvmeSelfTest};
 }
 
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetWilcoRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
+      mojo_ipc::DiagnosticRoutineEnum::kNvmeWearLevel};
+}
+
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetSmartCtlRoutines() {
   return std::set<mojo_ipc::DiagnosticRoutineEnum>{
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck};
@@ -85,6 +90,7 @@ class CrosHealthdRoutineServiceImplTest : public testing::Test {
     mock_context_.fake_system_config()->SetHasBattery(true);
     mock_context_.fake_system_config()->SetNvmeSupported(true);
     mock_context_.fake_system_config()->SetSmartCtrlSupported(true);
+    mock_context_.fake_system_config()->SetIsWilcoDevice(true);
 
     CreateService();
   }
@@ -171,6 +177,22 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoSmartctl) {
 
   auto expected_routines = GetAllAvailableRoutines();
   for (const auto r : GetSmartCtlRoutines())
+    expected_routines.erase(r);
+
+  EXPECT_EQ(reply_set, expected_routines);
+}
+
+// Test that GetAvailableRoutines returns the expected list of routines when
+// wilco routines are not supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNotWilcoDevice) {
+  mock_context()->fake_system_config()->SetIsWilcoDevice(false);
+  CreateService();
+  auto reply = service()->GetAvailableRoutines();
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+
+  auto expected_routines = GetAllAvailableRoutines();
+  for (const auto r : GetWilcoRoutines())
     expected_routines.erase(r);
 
   EXPECT_EQ(reply_set, expected_routines);

@@ -26,6 +26,7 @@ class FakeSystemConfig final : public SystemConfigInterface {
   bool HasSkuNumber() override;
   bool NvmeSupported() override;
   bool SmartCtlSupported() override;
+  bool IsWilcoDevice() override;
   std::string GetMarketingName() override;
 
   // Setters for FakeSystemConfig attributes.
@@ -36,6 +37,7 @@ class FakeSystemConfig final : public SystemConfigInterface {
   void SetHasSkuNumber(bool value);
   void SetNvmeSupported(bool value);
   void SetSmartCtrlSupported(bool value);
+  void SetIsWilcoDevice(bool value);
   void SetMarketingName(const std::string& value);
 
  private:
@@ -46,6 +48,7 @@ class FakeSystemConfig final : public SystemConfigInterface {
   bool has_sku_number_property_ = true;
   bool nvme_supported_ = true;
   bool smart_ctrl_supported_ = true;
+  bool wilco_device_ = true;
   std::string marketing_name_;
 };
 

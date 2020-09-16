@@ -34,6 +34,10 @@ class SystemConfigInterface {
   // Returns if the device has support for smartctl.
   virtual bool SmartCtlSupported() = 0;
 
+  // Returns if the device has support for wilco features. See go/wilco for more
+  // details.
+  virtual bool IsWilcoDevice() = 0;
+
   // Returns the marketing name associated with this device.
   virtual std::string GetMarketingName() = 0;
 };

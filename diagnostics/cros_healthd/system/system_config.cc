@@ -4,10 +4,12 @@
 
 #include "diagnostics/cros_healthd/system/system_config.h"
 
+#include <algorithm>
 #include <string>
 
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
 #include <base/files/file_util.h>
+#include <base/system/sys_info.h>
 
 #include "diagnostics/cros_healthd/system/system_config_constants.h"
 
@@ -75,6 +77,12 @@ bool SystemConfig::NvmeSupported() {
 
 bool SystemConfig::SmartCtlSupported() {
   return base::PathExists(root_dir_.AppendASCII(kSmartctlToolPath));
+}
+
+bool SystemConfig::IsWilcoDevice() {
+  const auto wilco_devices = GetWilcoBoardNames();
+  return std::count(wilco_devices.begin(), wilco_devices.end(),
+                    base::SysInfo::GetLsbReleaseBoard());
 }
 
 std::string SystemConfig::GetMarketingName() {

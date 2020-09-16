@@ -20,4 +20,8 @@ const char kNvmeToolPath[] = "usr/sbin/nvme";
 const char kSmartctlToolPath[] = "usr/sbin/smartctl";
 const char kFioToolPath[] = "usr/bin/fio";
 
+const std::list<std::string> GetWilcoBoardNames() {
+  return {"sarien", "drallion"};
+}
+
 }  // namespace diagnostics

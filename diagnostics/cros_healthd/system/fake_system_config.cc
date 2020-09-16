@@ -41,6 +41,10 @@ void FakeSystemConfig::SetFioSupported(bool value) {
   fio_supported_ = value;
 }
 
+bool FakeSystemConfig::IsWilcoDevice() {
+  return wilco_device_;
+}
+
 std::string FakeSystemConfig::GetMarketingName() {
   return marketing_name_;
 }
@@ -67,6 +71,10 @@ void FakeSystemConfig::SetNvmeSupported(bool value) {
 
 void FakeSystemConfig::SetSmartCtrlSupported(bool value) {
   smart_ctrl_supported_ = value;
+}
+
+void FakeSystemConfig::SetIsWilcoDevice(bool value) {
+  wilco_device_ = value;
 }
 
 void FakeSystemConfig::SetMarketingName(const std::string& value) {

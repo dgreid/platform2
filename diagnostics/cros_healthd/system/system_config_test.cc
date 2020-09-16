@@ -5,6 +5,7 @@
 #include <memory>
 
 #include <base/files/scoped_temp_dir.h>
+#include <base/system/sys_info.h>
 #include <chromeos/chromeos-config/libcros_config/fake_cros_config.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -131,6 +132,19 @@ TEST_F(SystemConfigTest, SmartCtlSupportedTrue) {
 
 TEST_F(SystemConfigTest, SmartCtlSupportedFalse) {
   ASSERT_FALSE(system_config()->SmartCtlSupported());
+}
+
+TEST_F(SystemConfigTest, WilcoDeviceTrue) {
+  const auto wilco_board = *GetWilcoBoardNames().begin();
+  auto lsb_release = "CHROMEOS_RELEASE_BOARD=" + wilco_board;
+  base::SysInfo::SetChromeOSVersionInfoForTest(lsb_release, base::Time::Now());
+  ASSERT_TRUE(system_config()->IsWilcoDevice());
+}
+
+TEST_F(SystemConfigTest, WilcoDeviceFalse) {
+  auto lsb_release = "CHROMEOS_RELEASE_BOARD=mario";
+  base::SysInfo::SetChromeOSVersionInfoForTest(lsb_release, base::Time::Now());
+  ASSERT_FALSE(system_config()->IsWilcoDevice());
 }
 
 TEST_F(SystemConfigTest, CorrectMarketingName) {

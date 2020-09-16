@@ -5,6 +5,9 @@
 #ifndef DIAGNOSTICS_CROS_HEALTHD_SYSTEM_SYSTEM_CONFIG_CONSTANTS_H_
 #define DIAGNOSTICS_CROS_HEALTHD_SYSTEM_SYSTEM_CONFIG_CONSTANTS_H_
 
+#include <list>
+#include <string>
+
 namespace diagnostics {
 
 // The path used to check a device's master configuration hardware properties.
@@ -36,6 +39,9 @@ extern const char kFioToolPath[];
 extern const char kArcBuildPropertiesPath[];
 // The master configuration property that specifies a device's marketing name.
 extern const char kMarketingNameProperty[];
+
+// Returns a list of wilco board names.
+const std::list<std::string> GetWilcoBoardNames();
 
 }  // namespace diagnostics
 

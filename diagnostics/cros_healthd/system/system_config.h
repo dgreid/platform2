@@ -32,6 +32,7 @@ class SystemConfig final : public SystemConfigInterface {
   bool HasSkuNumber() override;
   bool NvmeSupported() override;
   bool SmartCtlSupported() override;
+  bool IsWilcoDevice() override;
   std::string GetMarketingName() override;
 
  private:
