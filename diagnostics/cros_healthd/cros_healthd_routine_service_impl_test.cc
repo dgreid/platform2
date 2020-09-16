@@ -80,6 +80,11 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetSmartCtlRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kSmartctlCheck};
 }
 
+std::set<mojo_ipc::DiagnosticRoutineEnum> GetFioRoutines() {
+  return std::set<mojo_ipc::DiagnosticRoutineEnum>{
+      mojo_ipc::DiagnosticRoutineEnum::kDiskRead};
+}
+
 }  // namespace
 
 // Tests for the CrosHealthdRoutineServiceImpl class.
@@ -87,6 +92,7 @@ class CrosHealthdRoutineServiceImplTest : public testing::Test {
  protected:
   void SetUp() override {
     ASSERT_TRUE(mock_context_.Initialize());
+    mock_context_.fake_system_config()->SetFioSupported(true);
     mock_context_.fake_system_config()->SetHasBattery(true);
     mock_context_.fake_system_config()->SetNvmeSupported(true);
     mock_context_.fake_system_config()->SetSmartCtrlSupported(true);
@@ -177,6 +183,22 @@ TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoSmartctl) {
 
   auto expected_routines = GetAllAvailableRoutines();
   for (const auto r : GetSmartCtlRoutines())
+    expected_routines.erase(r);
+
+  EXPECT_EQ(reply_set, expected_routines);
+}
+
+// Test that GetAvailableRoutines returns the expected list of routines when
+// fio routines are not supported.
+TEST_F(CrosHealthdRoutineServiceImplTest, GetAvailableRoutinesNoFio) {
+  mock_context()->fake_system_config()->SetFioSupported(false);
+  CreateService();
+  auto reply = service()->GetAvailableRoutines();
+  std::set<mojo_ipc::DiagnosticRoutineEnum> reply_set(reply.begin(),
+                                                      reply.end());
+
+  auto expected_routines = GetAllAvailableRoutines();
+  for (const auto r : GetFioRoutines())
     expected_routines.erase(r);
 
   EXPECT_EQ(reply_set, expected_routines);
