@@ -14,6 +14,7 @@
 
 #include <base/macros.h>
 #include <base/optional.h>
+#include <vm_applications/proto_bindings/apps.pb.h>
 #include <vm_cicerone/proto_bindings/cicerone_service.pb.h>
 #include <vm_protos/proto_bindings/container_guest.grpc.pb.h>
 #include <vm_protos/proto_bindings/tremplin.grpc.pb.h>
@@ -28,6 +29,9 @@ class OsRelease;
 // Represents a single instance of a virtual machine.
 class VirtualMachine {
  public:
+  // Convenience for the enumeration over vm types defined in vm_applications.
+  using VmType = vm_tools::apps::ApplicationList_VmType;
+
   enum class CreateLxdContainerStatus {
     UNKNOWN,
     CREATING,
@@ -144,8 +148,6 @@ class VirtualMachine {
   bool is_stopping() const { return is_stopping_; }
   void notify_shutdown() { is_stopping_ = true; }
 
-  bool is_containerless() { return is_containerless_; }
-
   // The VM's cid.
   uint32_t cid() const { return vsock_cid_; }
 
@@ -154,7 +156,11 @@ class VirtualMachine {
   // The VM's token.
   std::string vm_token() const { return vm_token_; }
 
-  bool IsPluginVm() const { return !vsock_cid_; }
+  // The type of VM this is (termina, pluginvm, ...).
+  VmType GetType() const;
+
+  // Returns true if this VM does not run containers.
+  bool IsContainerless() const;
 
   // Call during unit tests to force this class to use |mock_tremplin_stub|
   // instead of creating a real tremplin stub by connecting to the GPRC
@@ -336,8 +342,8 @@ class VirtualMachine {
   // value cid (e.g. PluginVM).
   std::string vm_token_;
 
-  // Flag to indicate that this VM should disallow spawning LXD containers.
-  bool is_containerless_;
+  // The type of vm this is.
+  VmType vm_type_;
 
   // Mapping of tokens to containers. The tokens are used to securely
   // identify a container when it connects back to concierge to identify itself.

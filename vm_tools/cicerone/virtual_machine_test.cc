@@ -118,8 +118,10 @@ TEST_F(VirtualMachineTest, PluginVmRegisterContainer) {
 }
 
 TEST_F(VirtualMachineTest, VerifyVmTypes) {
-  EXPECT_FALSE(termina_vm_.IsPluginVm());
-  EXPECT_TRUE(plugin_vm_.IsPluginVm());
+  EXPECT_EQ(termina_vm_.GetType(),
+            VirtualMachine::VmType::ApplicationList_VmType_TERMINA);
+  EXPECT_EQ(plugin_vm_.GetType(),
+            VirtualMachine::VmType::ApplicationList_VmType_PLUGIN_VM);
 }
 
 class UpgradeContainerTest : public VirtualMachineTest {

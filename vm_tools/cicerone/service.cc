@@ -682,7 +682,7 @@ void Service::ContainerStartupCompleted(const std::string& container_token,
     }
   }
   std::string string_ip;
-  if (!vm->is_containerless()) {
+  if (!vm->IsContainerless()) {
     VirtualMachine::LxdContainerInfo info;
     std::string error;
     VirtualMachine::GetLxdContainerInfoStatus status =
@@ -1005,11 +1005,7 @@ void Service::UpdateApplicationList(const std::string& container_token,
   app_list->set_vm_name(vm_name);
   app_list->set_container_name(container_name);
   app_list->set_owner_id(owner_id);
-  if (vm->IsPluginVm()) {
-    app_list->set_vm_type(vm_tools::apps::ApplicationList::PLUGIN_VM);
-  } else {
-    app_list->set_vm_type(vm_tools::apps::ApplicationList::TERMINA);
-  }
+  app_list->set_vm_type(vm->GetType());
   dbus::MethodCall method_call(
       vm_tools::apps::kVmApplicationsServiceInterface,
       vm_tools::apps::kVmApplicationsServiceUpdateApplicationListMethod);
@@ -1068,7 +1064,7 @@ void Service::OpenUrl(const std::string& container_token,
     event->Signal();
     return;
   }
-  if (!vm->IsPluginVm()) {
+  if (vm->GetType() == VirtualMachine::VmType::ApplicationList_VmType_TERMINA) {
     Container* container = vm->GetContainerForToken(container_token);
     if (!container) {
       LOG(ERROR) << "No container found matching token: " << container_token;
@@ -3254,7 +3250,8 @@ bool Service::GetVirtualMachineForCidOrToken(const uint32_t cid,
       *owner_id_out = vm.first.first;
       *name_out = vm.first.second;
       *vm_out = vm.second.get();
-      DCHECK(!(*vm_out)->IsPluginVm());
+      DCHECK((*vm_out)->GetType() !=
+             VirtualMachine::VmType::ApplicationList_VmType_PLUGIN_VM);
       return true;
     }
     return false;
@@ -3269,7 +3266,8 @@ bool Service::GetVirtualMachineForCidOrToken(const uint32_t cid,
       // This DCHECK is asserting the inputs are valid. Since fuzzers are
       // intended to give us invalid inputs, skip the DCHECK when fuzzing.
 #ifndef FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
-      DCHECK((*vm_out)->IsPluginVm());
+      DCHECK((*vm_out)->GetType() ==
+             VirtualMachine::VmType::ApplicationList_VmType_PLUGIN_VM);
 #endif  // FUZZING_BUILD_MODE_UNSAFE_FOR_PRODUCTION
       return true;
     }
@@ -3372,9 +3370,9 @@ void Service::UnregisterVmContainers(VirtualMachine* vm,
   // still need this in case that happens.
   std::vector<std::string> containers = vm->GetContainerNames();
   for (auto& container_name : containers) {
-    // We create an instance of default container for Plugin VMs, but it
-    // does not get shut down, so we need not to complain about it.
-    if (!vm->IsPluginVm() || container_name != kDefaultContainerName) {
+    // Containerless vms have a pretend container that never gets shut down, so
+    // no need to complain about it.
+    if (!vm->IsContainerless() || container_name != kDefaultContainerName) {
       LOG(WARNING) << "Latent container left in VM " << vm_name << " of "
                    << container_name;
     }

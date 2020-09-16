@@ -38,18 +38,29 @@ constexpr int64_t kDefaultTimeoutSeconds = 60;
 // creating a container.
 constexpr int64_t kLongOperationTimeoutSeconds = 120;
 
+VirtualMachine::VmType DetermineTypeFromCidAndToken(uint32_t cid,
+                                                    const std::string& token) {
+  // PluginVm does not have a CID
+  if (cid == 0)
+    return VirtualMachine::VmType::ApplicationList_VmType_PLUGIN_VM;
+  // Termina hosts containers, so it does not have a VM token.
+  if (token.empty())
+    return VirtualMachine::VmType::ApplicationList_VmType_TERMINA;
+  return VirtualMachine::VmType::ApplicationList_VmType_BOREALIS;
+}
+
 }  // namespace
 
 VirtualMachine::VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token)
     : vsock_cid_(cid),
       pid_(pid),
       vm_token_(std::move(vm_token)),
-      is_containerless_(!vm_token_.empty()),
+      vm_type_(DetermineTypeFromCidAndToken(cid, vm_token_)),
       using_mock_tremplin_stub_(false),
       weak_ptr_factory_(this) {
   // CID-less VMs must also be containerless.
-  DCHECK(vsock_cid_ != 0 || is_containerless_);
-  if (is_containerless_) {
+  DCHECK(vsock_cid_ != 0 || IsContainerless());
+  if (IsContainerless()) {
     // This is a containerless VM, so create one container for this VM that uses
     // the same token as the VM itself.
     pending_containers_[vm_token_] = std::make_unique<Container>(
@@ -59,8 +70,18 @@ VirtualMachine::VirtualMachine(uint32_t cid, pid_t pid, std::string vm_token)
 
 VirtualMachine::~VirtualMachine() = default;
 
+VirtualMachine::VmType VirtualMachine::GetType() const {
+  return vm_type_;
+}
+
+bool VirtualMachine::IsContainerless() const {
+  // Termina runs containers, the others do not.
+  return GetType() != VmType::ApplicationList_VmType_TERMINA;
+}
+
 bool VirtualMachine::ConnectTremplin() {
-  if (IsPluginVm())
+  // Tremplin manages LXD/containers, so containerless VMs dont use it.
+  if (IsContainerless())
     return false;
   if (!using_mock_tremplin_stub_) {
     std::string tremplin_address =
@@ -148,7 +169,7 @@ bool VirtualMachine::RegisterContainer(const std::string& container_token,
 
   auto iter = containers_.find(container_token);
   std::string garcon_addr;
-  if (IsPluginVm()) {
+  if (GetType() == VmType::ApplicationList_VmType_PLUGIN_VM) {
     garcon_addr = base::StringPrintf("unix:///run/vm_cicerone/client/%s.sock",
                                      container_token.c_str());
   } else if (garcon_vsock_port != 0) {
@@ -175,7 +196,7 @@ bool VirtualMachine::UnregisterContainer(const std::string& container_token) {
 
 std::string VirtualMachine::GenerateContainerToken(
     const std::string& container_name) {
-  if (is_containerless())
+  if (IsContainerless())
     return "";
   std::string token = base::GenerateGUID();
   pending_containers_[token] = std::make_unique<Container>(
