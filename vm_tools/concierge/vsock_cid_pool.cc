@@ -73,7 +73,8 @@ uint32_t VsockCidPool::Allocate() {
   }
 
   // 0 and 1 are reserved and 2 is always the host system.
-  uint32_t cid = 3;
+  // Reserve cids 3-31 for static vms.
+  uint32_t cid = 32;
   ssize_t ret = HANDLE_EINTR(read(lock->file().get(), &cid, sizeof(cid)));
   if (ret < 0) {
     PLOG(ERROR) << "Failed to read cid from " << kNextCidPath;
