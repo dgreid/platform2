@@ -78,6 +78,12 @@ class SaneOption {
   std::vector<char> string_data_;
 };
 
+// Represents the possible values for an option.
+struct OptionRange {
+  double start;
+  double size;
+};
+
 class SaneDeviceImpl : public SaneDevice {
   friend class SaneClientImpl;
 
@@ -107,11 +113,18 @@ class SaneDeviceImpl : public SaneDevice {
   static base::Optional<std::vector<uint32_t>> GetValidIntOptionValues(
       brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);
 
+  static base::Optional<OptionRange> GetOptionRange(
+      brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt);
+
  private:
   enum ScanOption {
     kResolution,
     kScanMode,
     kSource,
+    kTopLeftX,
+    kTopLeftY,
+    kBottomRightX,
+    kBottomRightY,
   };
 
   SaneDeviceImpl(SANE_Handle handle,
@@ -119,6 +132,7 @@ class SaneDeviceImpl : public SaneDevice {
                  std::shared_ptr<DeviceSet> open_devices);
   bool LoadOptions(brillo::ErrorPtr* error);
   bool UpdateDeviceOption(brillo::ErrorPtr* error, SaneOption* option);
+  base::Optional<ScannableArea> CalculateScannableArea(brillo::ErrorPtr* error);
 
   SANE_Handle handle_;
   std::string name_;

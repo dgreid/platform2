@@ -4,6 +4,7 @@
 
 #include "lorgnette/sane_client_impl.h"
 
+#include <base/containers/flat_map.h>
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
 #include <sane/saneopts.h>
@@ -194,6 +195,44 @@ bool SaneDeviceImpl::GetValidOptionValues(brillo::ErrorPtr* error,
     for (const std::string& source_name : source_names.value()) {
       values.sources.push_back(CreateDocumentSource(source_name));
     }
+  } else {
+    // The backend doesn't expose any source options; add a special default
+    // source using our special source name. We'll calculate the scannable area
+    // for this default source later.
+    values.sources.push_back(
+        CreateDocumentSource(kUnspecifiedDefaultSourceName));
+  }
+
+  if (options_.count(kTopLeftX) != 0 && options_.count(kTopLeftY) != 0 &&
+      options_.count(kBottomRightX) != 0 &&
+      options_.count(kBottomRightY) != 0) {
+    DCHECK(!values.sources.empty())
+        << "Sources is missing default source value.";
+    // We can get the scan dimensions for each scan source by setting the
+    // document source to each possible value, and then calculating the area
+    // for that source.
+    std::string initial_source;
+    if (!GetDocumentSource(error, &initial_source)) {
+      return false;
+    }
+
+    for (DocumentSource& source : values.sources) {
+      if (!SetDocumentSource(error, source.name())) {
+        return false;
+      }
+
+      base::Optional<ScannableArea> area = CalculateScannableArea(error);
+      if (!area.has_value()) {
+        return false;
+      }
+
+      *source.mutable_area() = std::move(area.value());
+    }
+
+    // Restore DocumentSource to its initial value.
+    if (!SetDocumentSource(error, initial_source)) {
+      return false;
+    }
   }
 
   if (options_.count(kScanMode) != 0) {
@@ -250,9 +289,8 @@ bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
   }
 
   if (options_.count(kSource) == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No source option found.");
-    return false;
+    *source_name_out = kUnspecifiedDefaultSourceName;
+    return true;
   }
 
   SaneOption& option = options_.at(kSource);
@@ -270,9 +308,13 @@ bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
 bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
                                        const std::string& source_name) {
   if (options_.count(kSource) == 0) {
-    brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
-                         kManagerServiceError, "No source option found.");
-    return false;
+    if (source_name == kUnspecifiedDefaultSourceName) {
+      return true;
+    } else {
+      brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
+                           kManagerServiceError, "No source option found.");
+      return false;
+    }
   }
 
   SaneOption& option = options_.at(kSource);
@@ -465,6 +507,35 @@ base::Optional<std::vector<uint32_t>> SaneDeviceImpl::GetValidIntOptionValues(
   return values;
 }
 
+// static
+base::Optional<OptionRange> SaneDeviceImpl::GetOptionRange(
+    brillo::ErrorPtr* error, const SANE_Option_Descriptor& opt) {
+  if (opt.constraint_type != SANE_CONSTRAINT_RANGE) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Expected range constraint for option %s", opt.name);
+    return base::nullopt;
+  }
+
+  OptionRange option_range;
+  const SANE_Range* range = opt.constraint.range;
+  switch (opt.type) {
+    case SANE_TYPE_INT:
+      option_range.start = range->min;
+      option_range.size = range->max - range->min;
+      return option_range;
+    case SANE_TYPE_FIXED:
+      option_range.start = SANE_UNFIX(range->min);
+      option_range.size = SANE_UNFIX(range->max) - SANE_UNFIX(range->min);
+      return option_range;
+    default:
+      brillo::Error::AddToPrintf(
+          error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+          "Unexpected option type %d for option %s", opt.type, opt.name);
+      return base::nullopt;
+  }
+}
+
 SaneOption::SaneOption(const SANE_Option_Descriptor& opt, int index) {
   name_ = opt.name;
   index_ = index;
@@ -575,6 +646,13 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
     return false;
   }
 
+  base::flat_map<std::string, ScanOption> region_options = {
+      {SANE_NAME_SCAN_TL_X, kTopLeftX},
+      {SANE_NAME_SCAN_TL_Y, kTopLeftY},
+      {SANE_NAME_SCAN_BR_X, kBottomRightX},
+      {SANE_NAME_SCAN_BR_Y, kBottomRightY},
+  };
+
   options_.clear();
   // Start at 1, since we've already checked option 0 above.
   for (int i = 1; i < num_options; i++) {
@@ -597,6 +675,19 @@ bool SaneDeviceImpl::LoadOptions(brillo::ErrorPtr* error) {
     } else if ((opt->type == SANE_TYPE_STRING) &&
                strcmp(opt->name, SANE_NAME_SCAN_SOURCE) == 0) {
       option_name = kSource;
+    } else if ((opt->type == SANE_TYPE_INT || opt->type == SANE_TYPE_FIXED) &&
+               opt->size == sizeof(SANE_Int)) {
+      auto enum_value = region_options.find(opt->name);
+      if (enum_value != region_options.end()) {
+        // Do not support the case where scan dimensions are specified in
+        // pixels.
+        if (opt->unit != SANE_UNIT_MM) {
+          LOG(WARNING) << "Found dimension option " << opt->name
+                       << " with incompatible unit: " << opt->unit;
+          continue;
+        }
+        option_name = enum_value->second;
+      }
     }
 
     if (option_name.has_value()) {
@@ -638,6 +729,52 @@ bool SaneDeviceImpl::UpdateDeviceOption(brillo::ErrorPtr* error,
   }
 
   return true;
+}
+
+base::Optional<ScannableArea> SaneDeviceImpl::CalculateScannableArea(
+    brillo::ErrorPtr* error) {
+  // What we know from the SANE API docs (verbatim):
+  // * The unit of all four scan region options must be identical
+  // * A frontend can determine the size of the scan surface by first checking
+  //   that the options have range constraints associated. If a range or
+  //   word-list constraints exist, the frontend can take the minimum and
+  //   maximum values of one of the x and y option range-constraints to
+  //   determine the scan surface size.
+  //
+  // Based on my examination of sane-backends, every backend that declares this
+  // set of options uses a range constraint.
+  ScannableArea area;
+  int index = options_.at(kTopLeftX).GetIndex();
+  const SANE_Option_Descriptor* descriptor =
+      sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get top-left X option at index %d", index);
+    return base::nullopt;
+  }
+
+  base::Optional<OptionRange> x_range = GetOptionRange(error, *descriptor);
+  if (!x_range.has_value()) {
+    return base::nullopt;
+  }
+  area.set_width(x_range.value().size);
+
+  index = options_.at(kBottomRightY).GetIndex();
+  descriptor = sane_get_option_descriptor(handle_, index);
+  if (!descriptor) {
+    brillo::Error::AddToPrintf(
+        error, FROM_HERE, brillo::errors::dbus::kDomain, kManagerServiceError,
+        "Unable to get bottom-right Y option at index %d", index);
+    return base::nullopt;
+  }
+
+  base::Optional<OptionRange> y_range = GetOptionRange(error, *descriptor);
+  if (!y_range.has_value()) {
+    return base::nullopt;
+  }
+  area.set_height(y_range.value().size);
+  return area;
 }
 
 }  // namespace lorgnette

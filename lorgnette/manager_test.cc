@@ -776,4 +776,68 @@ TEST(ValidOptionValues, NonEmptyStringList) {
             std::vector<std::string>({"Color", "Gray", "Lineart"}));
 }
 
+TEST(GetOptionRange, InvalidConstraint) {
+  SANE_Option_Descriptor desc;
+  desc.name = "Test";
+  desc.constraint_type = SANE_CONSTRAINT_WORD_LIST;
+
+  EXPECT_FALSE(SaneDeviceImpl::GetOptionRange(nullptr, desc).has_value());
+
+  desc.constraint_type = SANE_CONSTRAINT_NONE;
+  EXPECT_FALSE(SaneDeviceImpl::GetOptionRange(nullptr, desc).has_value());
+}
+
+TEST(GetOptionRange, InvalidType) {
+  SANE_Option_Descriptor desc;
+  desc.name = "Test";
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = 13;
+  range.max = 28;
+  range.quant = 4;
+  desc.constraint.range = &range;
+
+  desc.type = SANE_TYPE_STRING;
+  EXPECT_FALSE(SaneDeviceImpl::GetOptionRange(nullptr, desc).has_value());
+
+  desc.type = SANE_TYPE_BOOL;
+  EXPECT_FALSE(SaneDeviceImpl::GetOptionRange(nullptr, desc).has_value());
+}
+
+TEST(GetOptionRange, ValidFixedValue) {
+  SANE_Option_Descriptor desc;
+  desc.name = "Test";
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = SANE_FIX(2.3);
+  range.max = SANE_FIX(4.9);
+  range.quant = SANE_FIX(0.1);
+  desc.constraint.range = &range;
+  desc.type = SANE_TYPE_FIXED;
+
+  base::Optional<OptionRange> range_result =
+      SaneDeviceImpl::GetOptionRange(nullptr, desc);
+  EXPECT_TRUE(range_result.has_value());
+  EXPECT_NEAR(range_result.value().start, 2.3, 1e-4);
+  EXPECT_NEAR(range_result.value().size, 2.6, 1e-4);
+}
+
+TEST(GetOptionRange, ValidIntValue) {
+  SANE_Option_Descriptor desc;
+  desc.name = "Test";
+  desc.constraint_type = SANE_CONSTRAINT_RANGE;
+  SANE_Range range;
+  range.min = 3;
+  range.max = 27;
+  range.quant = 1;
+  desc.constraint.range = &range;
+  desc.type = SANE_TYPE_INT;
+
+  base::Optional<OptionRange> range_result =
+      SaneDeviceImpl::GetOptionRange(nullptr, desc);
+  EXPECT_TRUE(range_result.has_value());
+  EXPECT_NEAR(range_result.value().start, 3, 1e-4);
+  EXPECT_NEAR(range_result.value().size, 24, 1e-4);
+}
+
 }  // namespace lorgnette
