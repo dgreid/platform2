@@ -313,13 +313,11 @@ class ValidateCameraSchema(cros_test_lib.TestCase):
                         'count': 2,
                         'devices': [
                             {
-                                'id': '0123:abcd',
                                 'interface': 'usb',
                                 'facing': 'front',
                                 'orientation': 180,
                             },
                             {
-                                'id': 'mipi-cam',
                                 'interface': 'mipi',
                                 'facing': 'back',
                                 'orientation': 0,
@@ -332,37 +330,6 @@ class ValidateCameraSchema(cros_test_lib.TestCase):
     }
     libcros_schema.ValidateConfigSchema(self._schema,
                                         libcros_schema.FormatJson(config))
-
-  def testInvalidUsbId(self):
-    if version.parse(jsonschema.__version__) < version.Version('3.0.0'):
-      self.skipTest('jsonschema needs upgrade to support conditionals')
-
-    for invalid_usb_id in ('0123-abcd', '0123:Abcd', '123:abcd'):
-      config = {
-          'chromeos': {
-              'configs': [
-                  {
-                      'identity': {'platform-name': 'foo', 'sku-id': 1},
-                      'name': 'foo',
-                      'camera': {
-                          'count': 1,
-                          'devices': [
-                              {
-                                  'id': invalid_usb_id,
-                                  'interface': 'usb',
-                                  'facing': 'front',
-                                  'orientation': 0,
-                              },
-                          ],
-                      }
-                  },
-              ],
-          },
-      }
-      with self.assertRaises(jsonschema.ValidationError) as ctx:
-        libcros_schema.ValidateConfigSchema(self._schema,
-                                            libcros_schema.FormatJson(config))
-      self.assertIn('%r does not match' % invalid_usb_id, str(ctx.exception))
 
 
 WHITELABEL_CONFIG = """

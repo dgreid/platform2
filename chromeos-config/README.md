@@ -430,7 +430,6 @@ In the tables below,
 | Attribute | Type   | RegEx     | Required | Oneof Group | Build-only | Description |
 | --------- | ------ | --------- | -------- | ----------- | ---------- | ----------- |
 | facing | string |  | True |  | False | Direction the camera faces relative to device screen. |
-| id | string |  | True |  | False | A string to identify the camera device. For USB cameras this must be 4-digit hexadecimal VID and PID separated by a colon, e.g. 0123:abcd. For MIPI cameras it depends on vendor software usage. |
 | interface | string |  | True |  | False | The interface type of the camera device. |
 | orientation | integer |  | True |  | False | Clockwise angle through which the output image needs to be rotated to be upright on the device screen in its native orientation. |
 
