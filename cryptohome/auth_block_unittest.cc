@@ -57,15 +57,15 @@ TEST(PinWeaverAuthBlockTest, CreateTest) {
   AuthInput user_input = {vault_key,
                           /*locked_to_single_user=*/base::nullopt, salt,
                           obfuscated_username, reset_secret};
-  AuthBlockState auth_state = {SerializedVaultKeyset()};
   KeyBlobs vkk_data;
   CryptoError error;
 
   PinWeaverAuthBlock auth_block(&le_cred_manager, &tpm_init);
-  EXPECT_TRUE(auth_block.Create(user_input, &auth_state, &vkk_data, &error));
+  auto auth_state = auth_block.Create(user_input, &vkk_data, &error);
+  EXPECT_NE(base::nullopt, auth_state);
 
   // Copy the SerializedVaultKeyset back out.
-  SerializedVaultKeyset serialized = auth_state.vault_keyset.value();
+  SerializedVaultKeyset serialized = auth_state.value().vault_keyset.value();
 
   // Check the outputs.
   EXPECT_EQ(SerializedVaultKeyset::LE_CREDENTIAL, serialized.flags());
@@ -88,11 +88,10 @@ TEST(PinWeaverAuthBlockTest, CreateFailTest) {
   AuthInput user_input = {vault_key,
                           /*locked_to_single_user=*/base::nullopt, salt,
                           obfuscated_username, reset_secret};
-  AuthBlockState auth_state = {SerializedVaultKeyset()};
   KeyBlobs vkk_data;
   CryptoError error;
-  EXPECT_FALSE(
-      auth_block_fail.Create(user_input, &auth_state, &vkk_data, &error));
+  EXPECT_EQ(base::nullopt,
+            auth_block_fail.Create(user_input, &vkk_data, &error));
 }
 
 TEST(PinWeaverAuthBlockTest, DeriveTest) {

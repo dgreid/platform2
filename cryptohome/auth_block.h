@@ -26,13 +26,14 @@ class AuthBlock {
 
   // This is implemented by concrete auth methods to create a fresh key from
   // user input. The key will then be used to wrap the keyset.
-  virtual bool Create(const AuthInput& user_input,
-                      AuthBlockState* state,
-                      KeyBlobs* key_blobs,
-                      CryptoError* error) {
+  // On success, it returns a constructed object, such as a
+  // SerializedVaultKeyset, in the optional object, or base::nullopt on failure.
+  virtual base::Optional<AuthBlockState> Create(const AuthInput& user_input,
+                                                KeyBlobs* key_blobs,
+                                                CryptoError* error) {
     // TODO(kerrnel): Once all AuthBlocks have a Create() method, make this pure
     // virtual.
-    return false;
+    return base::nullopt;
   }
 
   // This is implemented by concrete auth methods to map the user secret

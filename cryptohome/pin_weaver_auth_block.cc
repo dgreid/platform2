@@ -130,13 +130,9 @@ PinWeaverAuthBlock::PinWeaverAuthBlock(LECredentialManager* le_manager,
   CHECK_NE(tpm_init, nullptr);
 }
 
-bool PinWeaverAuthBlock::Create(const AuthInput& auth_input,
-                                AuthBlockState* state,
-                                KeyBlobs* key_blobs,
-                                CryptoError* error) {
+base::Optional<AuthBlockState> PinWeaverAuthBlock::Create(
+    const AuthInput& auth_input, KeyBlobs* key_blobs, CryptoError* error) {
   DCHECK(key_blobs);
-
-  SerializedVaultKeyset* serialized = &(state->vault_keyset.value());
 
   // TODO(kerrnel): This may not be needed, but is currently retained to
   // maintain the original logic.
@@ -149,7 +145,7 @@ bool PinWeaverAuthBlock::Create(const AuthInput& auth_input,
   if (!CryptoLib::DeriveSecretsScrypt(auth_input.user_input.value(),
                                       auth_input.salt.value(),
                                       {&le_secret, &kdf_skey, &le_iv})) {
-    return false;
+    return base::nullopt;
   }
 
   // Create a randomly generated high entropy secret, derive VKKSeed from it,
@@ -167,8 +163,9 @@ bool PinWeaverAuthBlock::Create(const AuthInput& auth_input,
   const auto fek_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
   const auto chaps_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
 
-  serialized->set_le_fek_iv(fek_iv.data(), fek_iv.size());
-  serialized->set_le_chaps_iv(chaps_iv.data(), chaps_iv.size());
+  SerializedVaultKeyset serialized;
+  serialized.set_le_fek_iv(fek_iv.data(), fek_iv.size());
+  serialized.set_le_chaps_iv(chaps_iv.data(), chaps_iv.size());
 
   brillo::SecureBlob vkk_key = CryptoLib::HmacSha256(kdf_skey, vkk_seed);
 
@@ -190,7 +187,7 @@ bool PinWeaverAuthBlock::Create(const AuthInput& auth_input,
   ValidPcrCriteria valid_pcr_criteria;
   if (!GetValidPCRValues(auth_input.obfuscated_username.value(),
                          &valid_pcr_criteria)) {
-    return false;
+    return base::nullopt;
   }
 
   uint64_t label;
@@ -200,11 +197,12 @@ bool PinWeaverAuthBlock::Create(const AuthInput& auth_input,
   if (ret != LE_CRED_SUCCESS) {
     LogLERetCode(ret);
     PopulateError(error, ConvertLeError(ret));
-    return false;
+    return base::nullopt;
   }
-  serialized->set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
-  serialized->set_le_label(label);
-  return true;
+  serialized.set_flags(SerializedVaultKeyset::LE_CREDENTIAL);
+  serialized.set_le_label(label);
+
+  return {{serialized}};
 }
 
 bool PinWeaverAuthBlock::Derive(const AuthInput& auth_input,

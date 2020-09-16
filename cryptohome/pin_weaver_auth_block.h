@@ -18,10 +18,9 @@ class PinWeaverAuthBlock : public AuthBlock {
   explicit PinWeaverAuthBlock(LECredentialManager* le_manager,
                               TpmInit* tpm_init);
 
-  bool Create(const AuthInput& user_input,
-              AuthBlockState* state,
-              KeyBlobs* key_blobs,
-              CryptoError* error) override;
+  base::Optional<AuthBlockState> Create(const AuthInput& user_input,
+                                        KeyBlobs* key_blobs,
+                                        CryptoError* error) override;
 
   bool Derive(const AuthInput& auth_input,
               const AuthBlockState& state,

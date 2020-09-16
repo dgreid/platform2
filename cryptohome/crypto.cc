@@ -834,21 +834,22 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
 
     AuthInput user_input = {vault_key, /*is_pcr_extended=*/base::nullopt,
                             vault_key_salt, obfuscated_username, reset_secret};
-    AuthBlockState auth_state = {SerializedVaultKeyset()};
     KeyBlobs vkk_data;
     CryptoError error;
 
     // TODO(kerrnel): When switching to a factory method, report the error
     // object.
-    if (!pin_weaver_auth.Create(user_input, &auth_state, &vkk_data, &error)) {
+    auto auth_state = pin_weaver_auth.Create(user_input, &vkk_data, &error);
+    if (auth_state == base::nullopt) {
       LOG(ERROR) << "Failed to create pinweaver credential: " << error;
       return false;
     }
 
-    serialized->set_le_fek_iv(auth_state.vault_keyset.value().le_fek_iv());
-    serialized->set_le_chaps_iv(auth_state.vault_keyset.value().le_chaps_iv());
-    serialized->set_flags(auth_state.vault_keyset.value().flags());
-    serialized->set_le_label(auth_state.vault_keyset.value().le_label());
+    const AuthBlockState& state = auth_state.value();
+    serialized->set_le_fek_iv(state.vault_keyset.value().le_fek_iv());
+    serialized->set_le_chaps_iv(state.vault_keyset.value().le_chaps_iv());
+    serialized->set_flags(state.vault_keyset.value().flags());
+    serialized->set_le_label(state.vault_keyset.value().le_label());
     serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
 
     if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, vkk_data,
