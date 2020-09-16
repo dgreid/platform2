@@ -159,6 +159,12 @@ template("generate_mojom_bindings_gen") {
         "-d",
         mojo_root,  # Mojo depth.
       ]
+      # This is not necessary for r679961 since the parser doesn't read pickle
+      # for imported mojom. But gn will complain about unused invoker.deps, Add
+      # add deps anyway to avoid unused invoker.deps.
+      if (defined(invoker.deps)) {
+        deps = invoker.deps
+      }
     }
   } else {
     action(mojo_parse_action_name) {
@@ -187,6 +193,9 @@ template("generate_mojom_bindings_gen") {
         "--input-root",
         ".",
       ]
+      if (defined(invoker.deps)) {
+        deps = invoker.deps
+      }
     }
   }
 
@@ -285,6 +294,7 @@ template("generate_mojom_bindings") {
   generate_mojom_bindings_gen(target_gen_name) {
     forward_variables_from(invoker,
                            [
+                             "deps",
                              "mojo_extra_args",
                              "mojo_root",
                              "mojom_bindings_generator",
