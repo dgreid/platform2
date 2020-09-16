@@ -664,6 +664,7 @@ const char kMemoryPressureServiceName[] = "org.chromium.MemoryPressure";
 // Method names.
 const char kGetAvailableMemoryKBMethod[] = "GetAvailableMemoryKB";
 const char kGetMemoryMarginKBMethod[] = "GetMemoryMarginKB";
+const char kGetMemoryMarginsKBMethod[] = "GetMemoryMarginsKB";
 // Signals.
 const char kCriticalMemoryPressure[] = "CriticalMemoryPressure";
 const char kModerateMemoryPressure[] = "ModerateMemoryPressure";
