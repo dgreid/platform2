@@ -2534,6 +2534,12 @@ void LegacyCryptohomeInterfaceAdaptor::EndFingerprintAuthSession(
                  base::Unretained(this), response_shared));
 }
 
+void LegacyCryptohomeInterfaceAdaptor::GetWebAuthnSecret(
+    std::unique_ptr<
+        brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,
+    const cryptohome::AccountIdentifier& in_account_id,
+    const cryptohome::GetWebAuthnSecretRequest& in_request) {}
+
 void LegacyCryptohomeInterfaceAdaptor::GetFirmwareManagementParameters(
     std::unique_ptr<
         brillo::dbus_utils::DBusMethodResponse<cryptohome::BaseReply>> response,

@@ -685,6 +685,12 @@ class Service : public brillo::dbus::AbstractDbusService,
       DBusGMethodInvocation* context);
   virtual gboolean EndFingerprintAuthSession(const GArray* request,
                                              DBusGMethodInvocation* context);
+
+  // Runs on the mount thread.
+  virtual gboolean GetWebAuthnSecret(const GArray* account_id,
+                                     const GArray* request,
+                                     DBusGMethodInvocation* context);
+
   // Runs on the mount thread.
   virtual void DoGetFirmwareManagementParameters(
       const brillo::SecureBlob& request, DBusGMethodInvocation* context);

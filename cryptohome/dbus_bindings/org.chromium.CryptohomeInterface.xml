@@ -926,6 +926,24 @@
       </arg>
     </method>
 
+    <method name="GetWebAuthnSecret">
+      <annotation name="org.chromium.DBus.Method.Kind"
+                  value="async"/>
+      <annotation name="org.freedesktop.DBus.GLib.Async" value="true"/>
+      <arg type="ay" name="account_id" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::AccountIdentifier" />
+      </arg>
+      <arg type="ay" name="request" direction="in">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::GetWebAuthnSecretRequest" />
+      </arg>
+      <arg type="ay" name="reply" direction="out">
+        <annotation name="org.chromium.DBus.Argument.ProtobufClass"
+                    value="cryptohome::BaseReply" />
+      </arg>
+    </method>
+
     <!-- May be called asynchronously.  Both arguments are protobufs:
          request: GetFirmwareManagementParametersRequest
          reply: BaseReply with a GetFirmwareManagementParametersReply

@@ -443,6 +443,11 @@ gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
                                                  GArray* request,
                                                  DBusGMethodInvocation* resp);
 
+gboolean cryptohome_get_web_authn_secret(Cryptohome* self,
+                                         GArray* id,
+                                         GArray* request,
+                                         DBusGMethodInvocation* resp);
+
 gboolean cryptohome_get_firmware_management_parameters(
     Cryptohome* self, GArray* request, DBusGMethodInvocation* resp);
 gboolean cryptohome_set_firmware_management_parameters(

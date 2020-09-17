@@ -3713,6 +3713,47 @@ gboolean Service::EndFingerprintAuthSession(
   return TRUE;
 }
 
+gboolean Service::GetWebAuthnSecret(const GArray* account_id,
+                                    const GArray* get_secret_request,
+                                    DBusGMethodInvocation* context) {
+  std::unique_ptr<AccountIdentifier> identifier(new AccountIdentifier);
+  std::unique_ptr<GetWebAuthnSecretRequest> request(
+      new GetWebAuthnSecretRequest);
+
+  // On parsing failure, pass along a NULL.
+  if (!identifier->ParseFromArray(account_id->data, account_id->len)) {
+    SendInvalidArgsReply(context, "Cannot parse account_id");
+    return TRUE;
+  }
+  if (!request->ParseFromArray(get_secret_request->data,
+                               get_secret_request->len)) {
+    SendInvalidArgsReply(context, "Cannot parse GetWebAuthnSecret request");
+    return TRUE;
+  }
+  scoped_refptr<UserSession> session =
+      GetUserSession(GetAccountId(*identifier));
+  BaseReply reply;
+  if (!session || !session->GetMount()) {
+    reply.set_error(CRYPTOHOME_ERROR_ACCOUNT_NOT_FOUND);
+    SendReply(context, reply);
+    return TRUE;
+  }
+
+  std::unique_ptr<brillo::SecureBlob> secret =
+      session->GetMount()->GetWebAuthnSecret();
+  if (!secret) {
+    reply.set_error(CRYPTOHOME_ERROR_KEY_NOT_FOUND);
+    SendReply(context, reply);
+    return TRUE;
+  }
+
+  GetWebAuthnSecretReply* extension =
+      reply.MutableExtension(GetWebAuthnSecretReply::reply);
+  extension->set_webauthn_secret(secret->to_string());
+  SendReply(context, reply);
+  return TRUE;
+}
+
 void Service::DoGetFirmwareManagementParameters(
     const brillo::SecureBlob& request, DBusGMethodInvocation* context) {
   GetFirmwareManagementParametersRequest request_pb;

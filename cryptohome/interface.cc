@@ -694,6 +694,13 @@ gboolean cryptohome_end_fingerprint_auth_session(Cryptohome* self,
   CRYPTOHOME_WRAP_METHOD(EndFingerprintAuthSession, request);
 }
 
+gboolean cryptohome_get_web_authn_secret(Cryptohome* self,
+                                         GArray* id,
+                                         GArray* request,
+                                         DBusGMethodInvocation* error) {
+  CRYPTOHOME_WRAP_METHOD(GetWebAuthnSecret, id, request);
+}
+
 gboolean cryptohome_get_firmware_management_parameters(
     Cryptohome* self, GArray* request, DBusGMethodInvocation* error) {
   CRYPTOHOME_WRAP_METHOD(GetFirmwareManagementParameters, request);

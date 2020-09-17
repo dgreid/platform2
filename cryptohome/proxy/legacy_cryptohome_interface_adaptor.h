@@ -519,6 +519,11 @@ class LegacyCryptohomeInterfaceAdaptor
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
       const cryptohome::EndFingerprintAuthSessionRequest& in_request) override;
+  void GetWebAuthnSecret(
+      std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
+          cryptohome::BaseReply>> response,
+      const cryptohome::AccountIdentifier& in_account_id,
+      const cryptohome::GetWebAuthnSecretRequest& in_request) override;
   void GetFirmwareManagementParameters(
       std::unique_ptr<brillo::dbus_utils::DBusMethodResponse<
           cryptohome::BaseReply>> response,
