@@ -122,12 +122,13 @@ bool ShutdownArcVm(int cid) {
 
 std::string CreateSharedDataParam(const base::FilePath& data_dir,
                                   const std::string& tag,
-                                  bool enable_caches) {
+                                  bool enable_caches,
+                                  bool ascii_casefold) {
   return base::StringPrintf(
       "%s:%s:type=fs:cache=%s:uidmap=%s:gidmap=%s:timeout=3600:rewrite-"
-      "security-xattrs=true",
+      "security-xattrs=true:ascii_casefold=%s",
       data_dir.value().c_str(), tag.c_str(), enable_caches ? "always" : "never",
-      kAndroidUidMap, kAndroidGidMap);
+      kAndroidUidMap, kAndroidGidMap, ascii_casefold ? "true" : "false");
 }
 
 }  // namespace
@@ -227,13 +228,14 @@ bool ArcVm::Start(base::FilePath kernel,
       "security-xattrs=true",
       kOemEtcSharedDir, kOemEtcSharedDirTag, kOemEtcUgidMap, kOemEtcUgidMap);
 
-  std::string shared_data = CreateSharedDataParam(data_dir, "_data", true);
+  std::string shared_data =
+      CreateSharedDataParam(data_dir, "_data", true, false);
   std::string shared_data_media =
-      CreateSharedDataParam(data_dir, "_data_media", false);
+      CreateSharedDataParam(data_dir, "_data_media", false, true);
 
   std::string shared_media = base::StringPrintf(
-      "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s", kMediaSharedDir,
-      kMediaSharedDirTag, kAndroidUidMap, kAndroidGidMap);
+      "%s:%s:type=9p:cache=never:uidmap=%s:gidmap=%s:ascii_casefold=true",
+      kMediaSharedDir, kMediaSharedDirTag, kAndroidUidMap, kAndroidGidMap);
 
   // Build up the process arguments.
   // clang-format off
