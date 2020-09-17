@@ -514,9 +514,6 @@ bool DlcBase::Unmount(ErrorPtr* err) {
   }
 
   mount_point_.clear();
-  // TODO(crbug.com/1069162): Currently, when we do unmount, we remove the DLC
-  // too. So we should not change the state here. But once we switched to
-  // ref-counting, and we only do unmount, then state could be changed here too.
   return true;
 }
 
