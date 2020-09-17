@@ -71,6 +71,8 @@ TEST_F(NetworkFetcherTest, GetNetworkHealthState) {
   network->name = "My WiFi";
   network->type = chromeos::network_config::mojom::NetworkType::kWiFi;
   network->state = chromeos::network_health::mojom::NetworkState::kOnline;
+  network->signal_strength =
+      chromeos::network_health::mojom::UInt32Value::New(70);
   network->mac_address = "00:11:22:33:44:55";
 
   auto network_health_state =

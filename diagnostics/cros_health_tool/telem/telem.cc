@@ -349,12 +349,15 @@ void DisplayNetworkInfo(
   }
 
   const auto& network_health = network_result->get_network_health();
-  std::cout << "type,state,guid,name,mac_address" << std::endl;
+  std::cout << "type,state,guid,name,signal_strength,mac_address" << std::endl;
   for (const auto& network : network_health->networks) {
+    auto signal_strength = network->signal_strength
+                               ? std::to_string(network->signal_strength->value)
+                               : "N/A";
     std::cout << NetworkTypeToString(network->type) << ","
               << NetworkStateToString(network->state) << ","
               << network->guid.value_or("N/A") << ","
-              << network->name.value_or("N/A") << ","
+              << network->name.value_or("N/A") << "," << signal_strength << ","
               << network->mac_address.value_or("N/A") << std::endl;
   }
 }
