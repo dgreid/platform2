@@ -42,6 +42,15 @@ class ProcessFetcher final {
       int8_t* nice,
       uint64_t* start_time_ticks);
 
+  // Parses relevant fields from /proc/|process_id_|/statm. Returns the first
+  // error encountered or base::nullopt if no errors occurred.
+  // |total_memory_kib|, |resident_memory_kib| and |free_memory_kib| are only
+  // valid if base::nullopt was returned.
+  base::Optional<chromeos::cros_healthd::mojom::ProbeErrorPtr>
+  ParseProcPidStatm(uint32_t* total_memory_kib,
+                    uint32_t* resident_memory_kib,
+                    uint32_t* free_memory_kib);
+
   // Calculates the uptime of the process in clock ticks using
   // |start_time_ticks|. Returns the first error encountered or base::nullopt if
   // no errors occurred. |process_uptime_ticks| is only valid if base::nullopt

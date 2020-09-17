@@ -25,6 +25,7 @@ enum ProcPidStatIndices {
 // Files read from a process subdirectory of procfs.
 extern const char kProcessCmdlineFile[];
 extern const char kProcessStatFile[];
+extern const char kProcessStatmFile[];
 extern const char kProcessStatusFile[];
 
 // Returns an absolute path to the procfs subdirectory containing files related

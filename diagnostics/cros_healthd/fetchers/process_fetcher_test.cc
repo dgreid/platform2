@@ -62,6 +62,21 @@ constexpr char kInvalidNice[] = "InvalidNice";
 // Invalid starttime value.
 constexpr char kInvalidStarttime[] = "InvalidStarttime";
 
+// Valid fake data for /proc/|kPid|/statm.
+constexpr char kFakeProcPidStatmContents[] = "25648 2657 2357 151 0 18632 0";
+// Invalid /proc/|kPid|/statm: not enough tokens.
+constexpr char kProcPidStatmContentsInsufficientTokens[] =
+    "25648 2657 2357 151 0 18632";
+// Invalid /proc/|kPid|/statm: total memory less than resident memory.
+constexpr char kProcPidStatmContentsExcessiveResidentMemory[] =
+    "2657 25648 2357 151 0 18632 0";
+// Invalid /proc/|kPid|/statm: total memory overflows 32-bit unsigned int.
+constexpr char kProcPidStatmContentsOverflowingTotalMemory[] =
+    "4294967296 2657 2357 151 0 18632 0";
+// Invalid /proc/|kPid|/statm: resident memory overflows 32-bit unsigned int.
+constexpr char kProcPidStatmContentsOverflowingResidentMemory[] =
+    "25648 4294967296 2357 151 0 18632 0";
+
 // Valid fake data for /proc/|kPid|/status.
 constexpr char kFakeProcPidStatusContents[] =
     "Name:\tfake_exe\nState:\tS (sleeping)\nUid:\t20104 20104 20104 20104\n";
@@ -104,6 +119,11 @@ class ProcessFetcherTest : public testing::Test {
         GetProcProcessDirectoryPath(temp_dir_path(), kPid)
             .Append(kProcessStatFile),
         kFakeProcPidStatContents));
+    // Write /proc/|kPid|/statm.
+    ASSERT_TRUE(WriteFileAndCreateParentDirs(
+        GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+            .Append(kProcessStatmFile),
+        kFakeProcPidStatmContents));
     // Write /proc/|kPid|/status.
     ASSERT_TRUE(WriteFileAndCreateParentDirs(
         GetProcProcessDirectoryPath(temp_dir_path(), kPid)
@@ -214,6 +234,20 @@ TEST_F(ProcessFetcherTest, MissingProcPidStatFile) {
             mojo_ipc::ErrorType::kFileReadError);
 }
 
+// Test that we handle a missing /proc/|kPid|/statm file.
+TEST_F(ProcessFetcherTest, MissingProcPidStatmFile) {
+  ASSERT_TRUE(
+      base::DeleteFile(GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+                           .Append(kProcessStatmFile),
+                       false));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kFileReadError);
+}
+
 // Test that we handle a /proc/|kPid|/stat file with insufficient tokens.
 TEST_F(ProcessFetcherTest, ProcPidStatFileInsufficientTokens) {
   ASSERT_TRUE(WriteFileAndCreateParentDirs(
@@ -282,6 +316,65 @@ TEST_F(ProcessFetcherTest, OverflowingPriorityRead) {
 TEST_F(ProcessFetcherTest, InvalidProcessStarttimeRead) {
   ASSERT_TRUE(
       WriteProcPidStatData(kInvalidStarttime, ProcPidStatIndices::kStartTime));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kParseError);
+}
+
+// Test that we handle a /proc/|kPid|/statm file with insufficient tokens.
+TEST_F(ProcessFetcherTest, ProcPidStatmFileInsufficientTokens) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+          .Append(kProcessStatmFile),
+      kProcPidStatmContentsInsufficientTokens));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kParseError);
+}
+
+// Test that we handle a /proc/|kPid|/statm file with an invalid total memory
+// value.
+TEST_F(ProcessFetcherTest, ProcPidStatmFileInvalidTotalMemory) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+          .Append(kProcessStatmFile),
+      kProcPidStatmContentsOverflowingTotalMemory));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kParseError);
+}
+
+// Test that we handle a /proc/|kPid|/statm file with an invalid resident memory
+// value.
+TEST_F(ProcessFetcherTest, ProcPidStatmFileInvalidResidentMemory) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+          .Append(kProcessStatmFile),
+      kProcPidStatmContentsOverflowingResidentMemory));
+
+  auto process_result = FetchProcessInfo();
+
+  ASSERT_TRUE(process_result->is_error());
+  EXPECT_EQ(process_result->get_error()->type,
+            mojo_ipc::ErrorType::kParseError);
+}
+
+// Test that we handle a /proc/|kPid|/statm file with resident memory value
+// higher than the total memory value.
+TEST_F(ProcessFetcherTest, ProcPidStatmFileExcessiveResidentMemory) {
+  ASSERT_TRUE(WriteFileAndCreateParentDirs(
+      GetProcProcessDirectoryPath(temp_dir_path(), kPid)
+          .Append(kProcessStatmFile),
+      kProcPidStatmContentsExcessiveResidentMemory));
 
   auto process_result = FetchProcessInfo();
 

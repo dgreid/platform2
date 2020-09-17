@@ -17,6 +17,7 @@
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
+#include <base/strings/stringprintf.h>
 #include <re2/re2.h>
 
 #include "diagnostics/cros_healthd/utils/error_utils.h"
@@ -30,6 +31,9 @@ namespace {
 
 namespace mojo_ipc = chromeos::cros_healthd::mojom;
 
+// Regex used to parse a process's statm file.
+constexpr char kProcessStatmFileRegex[] =
+    R"((\d+)\s+(\d+)\s+\d+\s+\d+\s+\d+\s+\d+\s+\d+)";
 // Regex used to parse procfs's uptime file.
 constexpr char kUptimeFileRegex[] = R"(([.\d]+)\s+[.\d]+)";
 // Regex used to parse the process's Uid field in the status file.
@@ -112,6 +116,12 @@ mojo_ipc::ProcessResultPtr ProcessFetcher::FetchProcessInfo() {
   if (error.has_value())
     return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
 
+  error = ParseProcPidStatm(&process_info.total_memory_kib,
+                            &process_info.resident_memory_kib,
+                            &process_info.free_memory_kib);
+  if (error.has_value())
+    return mojo_ipc::ProcessResult::NewError(std::move(error.value()));
+
   uid_t user_id;
   error = GetProcessUid(&user_id);
   if (error.has_value())
@@ -178,6 +188,72 @@ base::Optional<mojo_ipc::ProbeErrorPtr> ProcessFetcher::ParseProcPidStat(
         mojo_ipc::ErrorType::kParseError,
         "Failed to convert starttime to uint64: " + start_time_str.as_string());
   }
+
+  return base::nullopt;
+}
+
+base::Optional<mojo_ipc::ProbeErrorPtr> ProcessFetcher::ParseProcPidStatm(
+    uint32_t* total_memory_kib,
+    uint32_t* resident_memory_kib,
+    uint32_t* free_memory_kib) {
+  DCHECK(total_memory_kib);
+  DCHECK(resident_memory_kib);
+  DCHECK(free_memory_kib);
+
+  std::string statm_contents;
+  if (!ReadAndTrimString(proc_pid_dir_, kProcessStatmFile, &statm_contents)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kFileReadError,
+        "Failed to read " + proc_pid_dir_.Append(kProcessStatmFile).value());
+  }
+
+  std::string total_memory_pages_str;
+  std::string resident_memory_pages_str;
+  if (!RE2::FullMatch(statm_contents, kProcessStatmFileRegex,
+                      &total_memory_pages_str, &resident_memory_pages_str)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to parse process's statm file: " + statm_contents);
+  }
+
+  uint32_t total_memory_pages;
+  if (!base::StringToUint(total_memory_pages_str, &total_memory_pages)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert total memory to uint32_t: " +
+            total_memory_pages_str);
+  }
+
+  uint32_t resident_memory_pages;
+  if (!base::StringToUint(resident_memory_pages_str, &resident_memory_pages)) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        "Failed to convert resident memory to uint32_t: " +
+            resident_memory_pages_str);
+  }
+
+  if (resident_memory_pages > total_memory_pages) {
+    return CreateAndLogProbeError(
+        mojo_ipc::ErrorType::kParseError,
+        base::StringPrintf("Process's resident memory (%u pages) higher than "
+                           "total memory (%u pages).",
+                           resident_memory_pages, total_memory_pages));
+  }
+
+  const auto kPageSizeInBytes = sysconf(_SC_PAGESIZE);
+  if (kPageSizeInBytes == -1) {
+    return CreateAndLogProbeError(mojo_ipc::ErrorType::kSystemUtilityError,
+                                  "Failed to run sysconf(_SC_PAGESIZE).");
+  }
+
+  const auto kPageSizeInKiB = kPageSizeInBytes / 1024;
+
+  *total_memory_kib =
+      static_cast<uint32_t>(total_memory_pages * kPageSizeInKiB);
+  *resident_memory_kib =
+      static_cast<uint32_t>(resident_memory_pages * kPageSizeInKiB);
+  *free_memory_kib = static_cast<uint32_t>(
+      (total_memory_pages - resident_memory_pages) * kPageSizeInKiB);
 
   return base::nullopt;
 }

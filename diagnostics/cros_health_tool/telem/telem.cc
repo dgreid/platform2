@@ -164,7 +164,9 @@ void DisplayProcessInfo(
 
   const auto& process = process_result->get_process_info();
 
-  std::cout << "command,user_id,priority,nice,uptime_ticks,state" << std::endl;
+  std::cout << "command,user_id,priority,nice,uptime_ticks,state,total_memory_"
+               "kib,resident_memory_kib,free_memory_kib"
+            << std::endl;
 
   // The int8_t fields need to be cast to a larger int type, otherwise they will
   // be treated as chars and display garbage. Also, wrap the command in quotes,
@@ -173,7 +175,9 @@ void DisplayProcessInfo(
   std::cout << "\"" << process->command << "\"," << process->user_id << ","
             << static_cast<int>(process->priority) << ","
             << static_cast<int>(process->nice) << "," << process->uptime_ticks
-            << "," << ProcessStateToString(process->state) << std::endl;
+            << "," << ProcessStateToString(process->state) << ","
+            << process->total_memory_kib << "," << process->resident_memory_kib
+            << "," << process->free_memory_kib << std::endl;
 }
 
 void DisplayBatteryInfo(

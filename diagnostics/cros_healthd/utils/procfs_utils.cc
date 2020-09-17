@@ -12,6 +12,7 @@ namespace diagnostics {
 
 const char kProcessCmdlineFile[] = "cmdline";
 const char kProcessStatFile[] = "stat";
+const char kProcessStatmFile[] = "statm";
 const char kProcessStatusFile[] = "status";
 
 base::FilePath GetProcProcessDirectoryPath(const base::FilePath& root_dir,
