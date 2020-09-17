@@ -135,8 +135,7 @@ uint32_t TpmVendorCommandProxy::SendU2fApdu(const std::string& req,
 }
 
 uint32_t TpmVendorCommandProxy::SendU2fGenerate(
-    const struct legacy_u2f_generate_req& req,
-    struct u2f_generate_resp* resp_out) {
+    const struct u2f_generate_req& req, struct u2f_generate_resp* resp_out) {
   return VendorCommandStruct(kVendorCcU2fGenerate, req, resp_out);
 }
 

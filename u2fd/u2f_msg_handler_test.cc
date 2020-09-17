@@ -206,9 +206,10 @@ TEST_F(U2fMessageHandlerTest, RegisterSuccess) {
 
   // See U2F_GENERATE_REQ in //platform/ec/include/u2f.h
   std::string expected_cr50_request_regex =
-      "(AA){32}"  // AppId
-      "(EE){32}"  // User Secret
-      "03";       // U2F_AUTH_ENFORCE
+      "(AA){32}"   // AppId
+      "(EE){32}"   // User Secret
+      "03"         // U2F_AUTH_ENFORCE
+      "(00){32}";  // Auth-time secret hash (unused)
 
   struct u2f_generate_resp cr50_response = {
       .keyHandle = {.origin_seed = {[0 ... 31] = 0xFD},
@@ -308,9 +309,10 @@ constexpr char kRequestRegisterG2fPrefix[] = "0001830040";
 
 // See U2F_GENERATE_REQ in //platform/ec/include/u2f.h
 constexpr char kCr50ExpectedGenReqRegex[] =
-    "(AA){32}"  // AppId
-    "(EE){32}"  // User Secret
-    "03";       // U2F_AUTH_ENFORCE | G2F_ATTEST
+    "(AA){32}"   // AppId
+    "(EE){32}"   // User Secret
+    "03"         // U2F_AUTH_ENFORCE | G2F_ATTEST
+    "(00){32}";  // Auth-time secret hash (unused)
 
 // Dummy generate response.
 constexpr struct u2f_generate_resp kCr50GenResp = {

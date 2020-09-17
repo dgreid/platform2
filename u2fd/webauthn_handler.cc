@@ -359,7 +359,7 @@ MakeCredentialResponse::MakeCredentialStatus WebAuthnHandler::DoU2fGenerate(
     return MakeCredentialResponse::INTERNAL_ERROR;
   }
 
-  struct legacy_u2f_generate_req generate_req = {
+  struct u2f_generate_req generate_req = {
       .flags = U2F_AUTH_ENFORCE  // Require user presence, consume.
   };
   util::VectorToObject(rp_id_hash, generate_req.appId);
