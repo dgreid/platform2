@@ -42,79 +42,76 @@ class MethodCallHandlers {
       const std::string& interface,
       const std::string& method,
       Handler handler,
-      brillo::dbus_utils::AsyncEventSequencer::ExportHandler export_handler) {
+      dbus::ExportedObject::OnExportedCallback export_handler) {
     generate_ec_p256_key_pair_handler_ = handler;
-    export_handler.Run(interface, method, true);
+    std::move(export_handler).Run(interface, method, true);
   }
 
   void SetWrapPublicKeyHandler(
       const std::string& interface,
       const std::string& method,
       Handler handler,
-      brillo::dbus_utils::AsyncEventSequencer::ExportHandler export_handler) {
+      dbus::ExportedObject::OnExportedCallback export_handler) {
     wrap_public_key_handler_ = handler;
-    export_handler.Run(interface, method, true);
+    std::move(export_handler).Run(interface, method, true);
   }
 
   void SetPerformECDHKeyAgreementHandler(
       const std::string& interface,
       const std::string& method,
       Handler handler,
-      brillo::dbus_utils::AsyncEventSequencer::ExportHandler export_handler) {
+      dbus::ExportedObject::OnExportedCallback export_handler) {
     perform_ecdh_key_agreement_handler_ = handler;
-    export_handler.Run(interface, method, true);
+    std::move(export_handler).Run(interface, method, true);
   }
 
   void SetCreateSecureMessageHandler(
       const std::string& interface,
       const std::string& method,
       Handler handler,
-      brillo::dbus_utils::AsyncEventSequencer::ExportHandler export_handler) {
+      dbus::ExportedObject::OnExportedCallback export_handler) {
     create_secure_message_handler_ = handler;
-    export_handler.Run(interface, method, true);
+    std::move(export_handler).Run(interface, method, true);
   }
 
   void SetUnwrapSecureMessageHandler(
       const std::string& interface,
       const std::string& method,
       Handler handler,
-      brillo::dbus_utils::AsyncEventSequencer::ExportHandler export_handler) {
+      dbus::ExportedObject::OnExportedCallback export_handler) {
     unwrap_secure_message_handler_ = handler;
-    export_handler.Run(interface, method, true);
+    std::move(export_handler).Run(interface, method, true);
   }
 
-  void CallGenerateEcP256KeyPair(
-      dbus::MethodCall* method_call,
-      const dbus::ExportedObject::ResponseSender& sender) {
+  void CallGenerateEcP256KeyPair(dbus::MethodCall* method_call,
+                                 dbus::ExportedObject::ResponseSender sender) {
     ASSERT_FALSE(generate_ec_p256_key_pair_handler_.is_null());
-    generate_ec_p256_key_pair_handler_.Run(method_call, sender);
+    generate_ec_p256_key_pair_handler_.Run(method_call, std::move(sender));
   }
 
   void CallWrapPublicKey(dbus::MethodCall* method_call,
-                         const dbus::ExportedObject::ResponseSender& sender) {
+                         dbus::ExportedObject::ResponseSender sender) {
     ASSERT_FALSE(wrap_public_key_handler_.is_null());
-    wrap_public_key_handler_.Run(method_call, sender);
+    wrap_public_key_handler_.Run(method_call, std::move(sender));
   }
 
   void CallPerformECDHKeyAgreement(
       dbus::MethodCall* method_call,
-      const dbus::ExportedObject::ResponseSender& sender) {
+      dbus::ExportedObject::ResponseSender sender) {
     ASSERT_FALSE(perform_ecdh_key_agreement_handler_.is_null());
-    perform_ecdh_key_agreement_handler_.Run(method_call, sender);
+    perform_ecdh_key_agreement_handler_.Run(method_call, std::move(sender));
   }
 
-  void CallCreateSecureMessage(
-      dbus::MethodCall* method_call,
-      const dbus::ExportedObject::ResponseSender& sender) {
+  void CallCreateSecureMessage(dbus::MethodCall* method_call,
+                               dbus::ExportedObject::ResponseSender sender) {
     ASSERT_FALSE(create_secure_message_handler_.is_null());
-    create_secure_message_handler_.Run(method_call, sender);
+    create_secure_message_handler_.Run(method_call, std::move(sender));
   }
 
-  void CallUnwrapSecureMessage(
-      dbus::MethodCall* method_call,
-      const dbus::ExportedObject::ResponseSender& sender) {
+  void CallUnwrapSecureMessage(dbus::MethodCall* method_call,
+                               dbus::ExportedObject::ResponseSender sender) {
     ASSERT_FALSE(unwrap_secure_message_handler_.is_null());
-    unwrap_secure_message_handler_.Run(method_call, sender);
+    unwrap_secure_message_handler_.Run(method_call, std::move(sender));
   }
 
  private:
