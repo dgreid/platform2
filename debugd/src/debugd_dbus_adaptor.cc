@@ -200,14 +200,12 @@ void DebugdDBusAdaptor::GetBigFeedbackLogs(const base::ScopedFD& fd,
   log_tool_->GetBigFeedbackLogs(fd, username);
 }
 
-void DebugdDBusAdaptor::BackupArcBugReport(
-    const std::string& usernameOrUserhash) {
-  log_tool_->BackupArcBugReport(usernameOrUserhash);
+void DebugdDBusAdaptor::BackupArcBugReport(const std::string& username) {
+  log_tool_->BackupArcBugReport(username);
 }
 
-void DebugdDBusAdaptor::DeleteArcBugReportBackup(
-    const std::string& usernameOrUserhash) {
-  log_tool_->DeleteArcBugReportBackup(usernameOrUserhash);
+void DebugdDBusAdaptor::DeleteArcBugReportBackup(const std::string& username) {
+  log_tool_->DeleteArcBugReportBackup(username);
 }
 
 void DebugdDBusAdaptor::GetJournalLog(const base::ScopedFD& fd) {

@@ -98,8 +98,8 @@ class LogTool {
   LogMap GetAllDebugLogs();
   void GetBigFeedbackLogs(const base::ScopedFD& fd,
                           const std::string& username);
-  void BackupArcBugReport(const std::string& userhash);
-  void DeleteArcBugReportBackup(const std::string& userhash);
+  void BackupArcBugReport(const std::string& username);
+  void DeleteArcBugReportBackup(const std::string& username);
   void GetJournalLog(const base::ScopedFD& fd);
 
   // Returns a representation of |value| with the specified encoding.
@@ -120,6 +120,7 @@ class LogTool {
   // Returns the output of arc-bugreport program in ARC.
   // Returns cached output if it is available for this user.
   std::string GetArcBugReport(const std::string& username, bool* is_backup);
+  bool IsUserHashValid(const std::string& userhash);
   base::FilePath GetArcBugReportBackupFilePath(const std::string& userhash);
 
   scoped_refptr<dbus::Bus> bus_;

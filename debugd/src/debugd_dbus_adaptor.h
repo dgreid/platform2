@@ -109,10 +109,8 @@ class DebugdDBusAdaptor : public org::chromium::debugdAdaptor,
   void GetBigFeedbackLogs(const base::ScopedFD& fd,
                           const std::string& username) override;
 
-  // TODO(b/168153061) Change to username only
-  void BackupArcBugReport(const std::string& usernameOrUserhash) override;
-  // TODO(b/168153061) Change to username only
-  void DeleteArcBugReportBackup(const std::string& usernameOrUserhash) override;
+  void BackupArcBugReport(const std::string& username) override;
+  void DeleteArcBugReportBackup(const std::string& username) override;
   void GetJournalLog(const base::ScopedFD& fd) override;
   std::string GetExample() override;
   int32_t CupsAddAutoConfiguredPrinter(const std::string& name,

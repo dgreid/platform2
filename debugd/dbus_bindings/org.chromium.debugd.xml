@@ -327,8 +327,7 @@
         If a backup already exists, it is over-written.
         If backup operation fails, an error is logged.
       </tp:docstring>
-      <!-- TODO(b/168153061) Change to username only -->
-      <arg name="usernameOrUserhash" type="s" direction="in">
+      <arg name="username" type="s" direction="in">
         <tp:docstring>
           Username or hash of the user for which the report is backed up.
         </tp:docstring>
@@ -340,8 +339,7 @@
         Deletes the backed up ARC bug report saved in daemon store.
         If delete operation fails, an error is logged.
       </tp:docstring>
-      <!-- TODO(b/168153061) Change to username only -->
-      <arg name="usernameOrUserhash" type="s" direction="in">
+      <arg name="username" type="s" direction="in">
         <tp:docstring>
           Username or hash of the user for which the report is backed up.
         </tp:docstring>

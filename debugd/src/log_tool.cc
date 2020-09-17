@@ -702,11 +702,13 @@ LogTool::LogTool(scoped_refptr<dbus::Bus> bus)
               std::make_unique<ArcBugReportLog>(),
               base::FilePath(kDaemonStoreBaseDir)) {}
 
+bool LogTool::IsUserHashValid(const std::string& userhash) {
+  return brillo::cryptohome::home::IsSanitizedUserName(userhash) &&
+         base::PathExists(daemon_store_base_dir_.Append(userhash));
+}
+
 base::FilePath LogTool::GetArcBugReportBackupFilePath(
     const std::string& userhash) {
-  CHECK(brillo::cryptohome::home::IsSanitizedUserName(userhash))
-      << "Invalid userhash '" << userhash << "'";
-
   return daemon_store_base_dir_.Append(userhash).Append(
       kArcBugReportBackupFileName);
 }
@@ -817,30 +819,34 @@ std::string LogTool::GetArcBugReport(const std::string& username,
   return contents;
 }
 
-void LogTool::BackupArcBugReport(const std::string& usernameOrUserhash) {
+void LogTool::BackupArcBugReport(const std::string& username) {
   DLOG(INFO) << "Backing up ARC bug report";
 
   const std::string userhash =
-      brillo::cryptohome::home::IsSanitizedUserName(usernameOrUserhash)
-          ? usernameOrUserhash
-          : GetSanitizedUsername(cryptohome_proxy_.get(), usernameOrUserhash);
+      GetSanitizedUsername(cryptohome_proxy_.get(), username);
+  if (!IsUserHashValid(userhash)) {
+    LOG(ERROR) << "Invalid userhash '" << userhash << "'";
+    return;
+  }
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   const std::string logData = arc_bug_report_log_->GetLogData();
   if (base::WriteFile(reportPath, logData.c_str(), logData.length())) {
     arc_bug_report_backups_.insert(userhash);
   } else {
-    PLOG(ERROR) << "Failed to backup ARC bug report";
+    PLOG(ERROR) << "Failed to back up ARC bug report";
   }
 }
 
-void LogTool::DeleteArcBugReportBackup(const std::string& usernameOrUserhash) {
+void LogTool::DeleteArcBugReportBackup(const std::string& username) {
   DLOG(INFO) << "Deleting the ARC bug report backup";
 
   const std::string userhash =
-      brillo::cryptohome::home::IsSanitizedUserName(usernameOrUserhash)
-          ? usernameOrUserhash
-          : GetSanitizedUsername(cryptohome_proxy_.get(), usernameOrUserhash);
+      GetSanitizedUsername(cryptohome_proxy_.get(), username);
+  if (!IsUserHashValid(userhash)) {
+    LOG(ERROR) << "Invalid userhash '" << userhash << "'";
+    return;
+  }
 
   const base::FilePath reportPath = GetArcBugReportBackupFilePath(userhash);
   arc_bug_report_backups_.erase(userhash);
