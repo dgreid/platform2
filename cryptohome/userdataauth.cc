@@ -1736,7 +1736,11 @@ void UserDataAuth::ContinueMountWithCredentials(
 
   MountError code = MOUNT_ERROR_NONE;
   // Does actual mounting here.
-  bool status = user_mount->MountCryptohome(*credentials, mount_args, &code);
+  bool status =
+      user_mount->MountCryptohome(*credentials, mount_args, true, &code);
+  if (!status && code == MOUNT_ERROR_TPM_COMM_ERROR) {
+    status = user_mount->MountCryptohome(*credentials, mount_args, true, &code);
+  }
 
   // PKCS#11 always starts out uninitialized right after a fresh mount.
   user_mount->set_pkcs11_state(cryptohome::Mount::kUninitialized);

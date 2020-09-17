@@ -283,30 +283,6 @@ bool Mount::EnsureCryptohome(const Credentials& credentials,
   return *created;
 }
 
-bool Mount::MountCryptohome(const Credentials& credentials,
-                            const Mount::MountArgs& mount_args,
-                            MountError* mount_error) {
-  if (IsMounted()) {
-    if (mount_error)
-      *mount_error = MOUNT_ERROR_MOUNT_POINT_BUSY;
-    return false;
-  }
-
-  MountError local_mount_error = MOUNT_ERROR_NONE;
-  bool result =
-      MountCryptohomeInner(credentials, mount_args, true, &local_mount_error);
-  // Retry once if there is a TPM communications failure
-  if (!result && local_mount_error == MOUNT_ERROR_TPM_COMM_ERROR) {
-    LOG(WARNING) << "TPM communication error. Retrying.";
-    result =
-        MountCryptohomeInner(credentials, mount_args, true, &local_mount_error);
-  }
-  if (mount_error) {
-    *mount_error = local_mount_error;
-  }
-  return result;
-}
-
 bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
                                  std::string* key_signature,
                                  std::string* filename_key_signature) const {
@@ -334,10 +310,10 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
   return true;
 }
 
-bool Mount::MountCryptohomeInner(const Credentials& credentials,
-                                 const Mount::MountArgs& mount_args,
-                                 bool recreate_on_decrypt_fatal,
-                                 MountError* mount_error) {
+bool Mount::MountCryptohome(const Credentials& credentials,
+                            const Mount::MountArgs& mount_args,
+                            bool recreate_on_decrypt_fatal,
+                            MountError* mount_error) {
   // Remove all existing cryptohomes, except for the owner's one, if the
   // ephemeral users policy is on.
   // Note that a fresh policy value is read here, which in theory can conflict
@@ -347,6 +323,12 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   // mount a non existing anymore cryptohome.
   if (homedirs_->AreEphemeralUsersEnabled())
     homedirs_->RemoveNonOwnerCryptohomes();
+
+  if (IsMounted()) {
+    if (mount_error)
+      *mount_error = MOUNT_ERROR_MOUNT_POINT_BUSY;
+    return false;
+  }
 
   current_user_->Reset();
   std::string username = credentials.username();
@@ -419,10 +401,11 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
         *mount_error = MOUNT_ERROR_REMOVE_INVALID_USER_FAILED;
         return false;
       }
-      // Allow one recursion into MountCryptohomeInner by blocking re-create on
+      // Allow one recursion into MountCryptohome by blocking re-create on
       // fatal.
       bool local_result =
-          MountCryptohomeInner(credentials, mount_args, false, mount_error);
+          MountCryptohome(credentials, mount_args,
+                          /*recreate_on_decrypt_fatal=*/false, mount_error);
       // If the mount was successful, set the status to indicate that the
       // cryptohome was recreated.
       if (local_result) {

@@ -269,7 +269,7 @@ class MountHelper : public MountHelperInterface {
   //   - /home/root/<user_hash> and
   //   - /run/daemon-store/$daemon/<user_hash>
   //     (see MountDaemonStoreDirectories()).
-  // The parameters have the same meaning as in MountCryptohomeInner resp.
+  // The parameters have the same meaning as in MountCryptohome resp.
   // MountEphemeralCryptohomeInner. Returns true if successful, false otherwise.
   bool MountHomesAndDaemonStores(const std::string& username,
                                  const std::string& obfuscated_username,

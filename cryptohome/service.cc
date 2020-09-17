@@ -2070,7 +2070,13 @@ void Service::DoMount(scoped_refptr<cryptohome::Mount> mount,
                       base::WaitableEvent* event,
                       MountError* return_code,
                       bool* return_status) {
-  *return_status = mount->MountCryptohome(credentials, mount_args, return_code);
+  DCHECK(return_code);
+  *return_status =
+      mount->MountCryptohome(credentials, mount_args, true, return_code);
+  if (!*return_status && *return_code == MOUNT_ERROR_TPM_COMM_ERROR) {
+    *return_status =
+        mount->MountCryptohome(credentials, mount_args, true, return_code);
+  }
   event->Signal();
 }
 
@@ -2837,7 +2843,12 @@ void Service::ContinueMountExWithCredentials(
   // MountCryptohome() not in the other areas prior.
   ReportTimerStart(kMountExTimer);
   MountError code = MOUNT_ERROR_NONE;
-  bool status = user_mount->MountCryptohome(*credentials, mount_args, &code);
+  // Do actual mounting here.
+  bool status =
+      user_mount->MountCryptohome(*credentials, mount_args, true, &code);
+  if (!status && code == MOUNT_ERROR_TPM_COMM_ERROR) {
+    status = user_mount->MountCryptohome(*credentials, mount_args, true, &code);
+  }
   user_mount->set_pkcs11_state(cryptohome::Mount::kUninitialized);
 
   // Mark the timer as done.

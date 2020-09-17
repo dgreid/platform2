@@ -28,7 +28,7 @@ class MockMount : public Mount {
   MOCK_METHOD(bool, AreValid, (const Credentials&), (override));
   MOCK_METHOD(bool,
               MountCryptohome,
-              (const Credentials&, const Mount::MountArgs&, MountError*),
+              (const Credentials&, const Mount::MountArgs&, bool, MountError*),
               (override));
   MOCK_METHOD(bool, UnmountCryptohome, (), (override));
   MOCK_METHOD(bool, IsMounted, (), (const, override));

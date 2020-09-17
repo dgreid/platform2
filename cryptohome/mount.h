@@ -98,9 +98,13 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   mount_args - The options for the call to mount:
   //                * Whether to create the cryptohome if it doesn't exist.
   //                * Whether to ensure that the mount is ephemeral.
+  //   recreate_on_decrypt_fatal - Attempt to recreate the cryptohome directory
+  //                               on a fatal error (for example, TPM was
+  //                               cleared)
   //   error - The specific error condition on failure
   virtual bool MountCryptohome(const Credentials& credentials,
                                const MountArgs& mount_args,
+                               bool recreate_on_decrypt_fatal,
                                MountError* error);
 
   // Unmounts any mount at the cryptohome mount point
@@ -457,23 +461,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   legacy_dir - legacy directory location
   bool CheckChapsDirectory(const base::FilePath& dir,
                            const base::FilePath& legacy_dir);
-
-  // Same as MountCryptohome but specifies if the cryptohome directory should be
-  // recreated on a fatal error
-  //
-  // Parameters
-  //   credentials - The Credentials representing the user
-  //   mount_args - The options for the call to mount: whether to create the
-  //                cryptohome if it doesn't exist and any tracked directories
-  //                to create
-  //   recreate_on_decrypt_fatal - Attempt to recreate the cryptohome directory
-  //                               on a fatal error (for example, TPM was
-  //                               cleared)
-  //   error - The specific error condition on failure
-  virtual bool MountCryptohomeInner(const Credentials& credentials,
-                                    const MountArgs& mount_args,
-                                    bool recreate_on_decrypt_fatal,
-                                    MountError* error);
 
   // Mounts and populates an ephemeral cryptohome backed by tmpfs for the given
   // user.
