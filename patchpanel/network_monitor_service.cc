@@ -69,6 +69,8 @@ bool NeedProbeForState(uint16_t current_state) {
 
 }  // namespace
 
+constexpr base::TimeDelta NeighborLinkMonitor::kActiveProbeInterval;
+
 NeighborLinkMonitor::NeighborLinkMonitor(int ifindex,
                                          const std::string& ifname,
                                          shill::RTNLHandler* rtnl_handler)

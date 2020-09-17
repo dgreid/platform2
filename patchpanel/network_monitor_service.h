@@ -141,10 +141,6 @@ class NeighborLinkMonitor {
 
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;
-
-  FRIEND_TEST(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress);
-  FRIEND_TEST(NeighborLinkMonitorTest, SendNeighborProbeMessage);
-  FRIEND_TEST(NeighborLinkMonitorTest, UpdateWatchingEntries);
 };
 
 class NetworkMonitorService {

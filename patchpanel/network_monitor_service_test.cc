@@ -43,36 +43,6 @@ MATCHER_P(IsNeighborProbeMessage, address, "") {
   return msg_address == shill::IPAddress(address);
 }
 
-shill::RTNLMessage* CreateIncomingRTNLMessage(
-    const shill::RTNLMessage::Mode mode,
-    const std::string& address,
-    uint16_t nud_state) {
-  shill::IPAddress addr(address);
-  auto* rtnl_response =
-      new shill::RTNLMessage(shill::RTNLMessage::kTypeNeighbor, mode, 0, 0, 0,
-                             kTestInterfaceIndex, addr.family());
-
-  rtnl_response->SetAttribute(NDA_DST, addr.address());
-  if (mode == shill::RTNLMessage::kModeAdd) {
-    rtnl_response->set_neighbor_status(
-        shill::RTNLMessage::NeighborStatus(nud_state, 0, 0));
-    rtnl_response->SetAttribute(
-        NDA_LLADDR, shill::ByteString(std::vector<uint8_t>{1, 2, 3, 4, 5, 6}));
-  }
-
-  return rtnl_response;
-}
-
-shill::RTNLMessage* CreateNUDStateChangedMessage(const std::string& address,
-                                                 uint16_t nud_state) {
-  return CreateIncomingRTNLMessage(shill::RTNLMessage::kModeAdd, address,
-                                   nud_state);
-}
-
-shill::RTNLMessage* CreateNeighborDeletedMessage(const std::string& address) {
-  return CreateIncomingRTNLMessage(shill::RTNLMessage::kModeDelete, address, 0);
-}
-
 }  // namespace
 
 class NeighborLinkMonitorTest : public testing::Test {
@@ -81,6 +51,7 @@ class NeighborLinkMonitorTest : public testing::Test {
     mock_rtnl_handler_ = std::make_unique<shill::MockRTNLHandler>();
     link_monitor_ = std::make_unique<NeighborLinkMonitor>(
         kTestInterfaceIndex, kTestInterfaceName, mock_rtnl_handler_.get());
+    ExpectAddRTNLListener();
   }
 
   void TearDown() override {
@@ -88,16 +59,48 @@ class NeighborLinkMonitorTest : public testing::Test {
     // |link_monitor_|.
     link_monitor_ = nullptr;
     mock_rtnl_handler_ = nullptr;
+    registered_listener_ = nullptr;
   }
 
-  void FastForwardOneActiveProbeInterval() {
-    task_environment_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
+  void ExpectAddRTNLListener() {
+    EXPECT_CALL(*mock_rtnl_handler_, AddListener(_))
+        .WillRepeatedly(::testing::SaveArg<0>(&registered_listener_));
   }
 
-  base::test::TaskEnvironment task_environment_{
+  void NotifyNUDStateChanged(const std::string& addr, uint16_t nud_state) {
+    CreateAndSendIncomingRTNLMessage(shill::RTNLMessage::kModeAdd, addr,
+                                     nud_state);
+  }
+
+  void NotifyNeighborRemoved(const std::string& addr) {
+    CreateAndSendIncomingRTNLMessage(shill::RTNLMessage::kModeDelete, addr, 0);
+  }
+
+  void CreateAndSendIncomingRTNLMessage(const shill::RTNLMessage::Mode mode,
+                                        const std::string& address,
+                                        uint16_t nud_state) {
+    ASSERT_NE(registered_listener_, nullptr);
+
+    shill::IPAddress addr(address);
+    shill::RTNLMessage msg(shill::RTNLMessage::kTypeNeighbor, mode, 0, 0, 0,
+                           kTestInterfaceIndex, addr.family());
+    msg.SetAttribute(NDA_DST, addr.address());
+    if (mode == shill::RTNLMessage::kModeAdd) {
+      msg.set_neighbor_status(
+          shill::RTNLMessage::NeighborStatus(nud_state, 0, 0));
+      msg.SetAttribute(NDA_LLADDR, shill::ByteString(
+                                       std::vector<uint8_t>{1, 2, 3, 4, 5, 6}));
+    }
+
+    registered_listener_->NotifyEvent(shill::RTNLHandler::kRequestNeighbor,
+                                      msg);
+  }
+
+  base::test::TaskEnvironment task_env_{
       base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   std::unique_ptr<shill::MockRTNLHandler> mock_rtnl_handler_;
   std::unique_ptr<NeighborLinkMonitor> link_monitor_;
+  shill::RTNLListener* registered_listener_ = nullptr;
 };
 
 TEST_F(NeighborLinkMonitorTest, SendNeighborDumpMessageOnIPConfigChanged) {
@@ -124,11 +127,6 @@ TEST_F(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress) {
 
   link_monitor_->OnIPConfigChanged(ipconfig);
 
-  std::unique_ptr<shill::RTNLMessage> gateway_is_reachable(
-      CreateNUDStateChangedMessage("fe80::1", NUD_REACHABLE));
-  std::unique_ptr<shill::RTNLMessage> dns_is_reachable(
-      CreateNUDStateChangedMessage("fe80::2", NUD_REACHABLE));
-
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborProbeMessage("fe80::1"), _))
       .WillOnce(Return(true));
@@ -136,12 +134,12 @@ TEST_F(NeighborLinkMonitorTest, WatchLinkLocalIPv6DNSServerAddress) {
               DoSendMessage(IsNeighborProbeMessage("fe80::2"), _))
       .WillOnce(Return(true));
 
-  link_monitor_->OnNeighborMessage(*gateway_is_reachable);
-  link_monitor_->OnNeighborMessage(*dns_is_reachable);
+  NotifyNUDStateChanged("fe80::1", NUD_REACHABLE);
+  NotifyNUDStateChanged("fe80::2", NUD_REACHABLE);
 }
 
 TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
-  // Only the gateway should be in the wathing list.
+  // Only the gateway should be in the watching list.
   ShillClient::IPConfig ipconfig;
   ipconfig.ipv4_address = "1.2.3.4";
   ipconfig.ipv4_gateway = "1.2.3.5";
@@ -150,34 +148,28 @@ TEST_F(NeighborLinkMonitorTest, SendNeighborProbeMessage) {
 
   // Creates a RTNL message about the NUD state of the gateway is NUD_REACHABLE
   // now. A probe message should be sent immediately after we know this address.
-  std::unique_ptr<shill::RTNLMessage> address_is_reachable(
-      CreateNUDStateChangedMessage("1.2.3.5", NUD_REACHABLE));
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborProbeMessage("1.2.3.5"), _))
       .WillOnce(Return(true));
-  link_monitor_->OnNeighborMessage(*address_is_reachable);
+  NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
 
   // Another probe message should be sent when the timer is triggered.
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborProbeMessage("1.2.3.5"), _))
       .WillOnce(Return(true));
-  FastForwardOneActiveProbeInterval();
+  task_env_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
 
   // If the state changed to NUD_PROBE, we should not probe this address again
   // when the timer is triggered.
-  std::unique_ptr<shill::RTNLMessage> address_is_probing(
-      CreateNUDStateChangedMessage("1.2.3.5", NUD_PROBE));
-  link_monitor_->OnNeighborMessage(*address_is_probing);
-  FastForwardOneActiveProbeInterval();
+  NotifyNUDStateChanged("1.2.3.5", NUD_PROBE);
+  task_env_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
 
   // The gateway is removed in the kernel. A dump request should be sent when
   // the timer is triggered.
-  std::unique_ptr<shill::RTNLMessage> address_is_removed(
-      CreateNeighborDeletedMessage("1.2.3.5"));
-  link_monitor_->OnNeighborMessage(*address_is_removed);
+  NotifyNeighborRemoved("1.2.3.5");
   EXPECT_CALL(*mock_rtnl_handler_, DoSendMessage(IsNeighborDumpMessage(), _))
       .WillOnce(Return(true));
-  FastForwardOneActiveProbeInterval();
+  task_env_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
 }
 
 TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
@@ -196,27 +188,17 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
 
   // Updates both addresses to NUD_PROBE (to avoid the link monitor sending a
   // probe request), and then NUD_REACHABLE state.
-  std::unique_ptr<shill::RTNLMessage> addr_5_is_probing(
-      CreateNUDStateChangedMessage("1.2.3.5", NUD_PROBE));
-  std::unique_ptr<shill::RTNLMessage> addr_5_is_reachable(
-      CreateNUDStateChangedMessage("1.2.3.5", NUD_REACHABLE));
-  std::unique_ptr<shill::RTNLMessage> addr_7_is_probing(
-      CreateNUDStateChangedMessage("1.2.3.7", NUD_PROBE));
-  std::unique_ptr<shill::RTNLMessage> addr_7_is_reachable(
-      CreateNUDStateChangedMessage("1.2.3.7", NUD_REACHABLE));
-  link_monitor_->OnNeighborMessage(*addr_5_is_probing);
-  link_monitor_->OnNeighborMessage(*addr_5_is_reachable);
-  link_monitor_->OnNeighborMessage(*addr_7_is_probing);
-  link_monitor_->OnNeighborMessage(*addr_7_is_reachable);
+  NotifyNUDStateChanged("1.2.3.5", NUD_PROBE);
+  NotifyNUDStateChanged("1.2.3.5", NUD_REACHABLE);
+  NotifyNUDStateChanged("1.2.3.7", NUD_PROBE);
+  NotifyNUDStateChanged("1.2.3.7", NUD_REACHABLE);
 
   // This address is not been watching now. Nothing should happen when a message
   // about it comes.
-  std::unique_ptr<shill::RTNLMessage> addr_6_is_reachable(
-      CreateNUDStateChangedMessage("1.2.3.6", NUD_REACHABLE));
-  link_monitor_->OnNeighborMessage(*addr_6_is_reachable);
+  NotifyNUDStateChanged("1.2.3.6", NUD_REACHABLE);
 
   // Nothing should happen within one interval.
-  task_environment_.FastForwardBy(base::TimeDelta::FromSeconds(30));
+  task_env_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval / 2);
 
   // Checks if probe requests sent for both addresses when the timer is
   // triggered.
@@ -226,7 +208,7 @@ TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntries) {
   EXPECT_CALL(*mock_rtnl_handler_,
               DoSendMessage(IsNeighborProbeMessage("1.2.3.7"), _))
       .WillOnce(Return(true));
-  FastForwardOneActiveProbeInterval();
+  task_env_.FastForwardBy(NeighborLinkMonitor::kActiveProbeInterval);
 }
 
 TEST_F(NeighborLinkMonitorTest, UpdateWatchingEntriesWithSameAddress) {
