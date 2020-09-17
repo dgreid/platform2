@@ -74,9 +74,6 @@ namespace cryptohome {
 const char kChapsUserName[] = "chaps";
 const char kDefaultSharedAccessGroup[] = "chronos-access";
 
-// TODO(fes): Remove once UI for BWSI switches to MountGuest()
-const char kIncognitoUser[] = "incognito";
-
 const char kKeyFile[] = "master";
 const int kKeyFileMax = 100;  // master.0 ... master.99
 const mode_t kKeyFilePermissions = 0600;
@@ -342,15 +339,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
                                  const Mount::MountArgs& mount_args,
                                  bool recreate_on_decrypt_fatal,
                                  MountError* mount_error) {
-  current_user_->Reset();
-
-  std::string username = credentials.username();
-  if (username.compare(kIncognitoUser) == 0) {
-    // TODO(fes): Have guest set error conditions?
-    *mount_error = MOUNT_ERROR_NONE;
-    return MountGuestCryptohome();
-  }
-
   // Remove all existing cryptohomes, except for the owner's one, if the
   // ephemeral users policy is on.
   // Note that a fresh policy value is read here, which in theory can conflict
@@ -361,6 +349,8 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   if (homedirs_->AreEphemeralUsersEnabled())
     homedirs_->RemoveNonOwnerCryptohomes();
 
+  current_user_->Reset();
+  std::string username = credentials.username();
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
   const bool is_owner = homedirs_->IsOrWillBeOwner(username);
