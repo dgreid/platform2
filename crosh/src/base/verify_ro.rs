@@ -12,10 +12,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::thread::{sleep, spawn};
 use std::time::Duration;
 
-use dbus::{BusType, Connection, OwnedFd};
+use dbus::arg::OwnedFd;
+use dbus::blocking::Connection;
 use libc::SIGINT;
 use sys_util::{error, pipe};
-use system_api::OrgChromiumDebugd;
+use system_api::client::OrgChromiumDebugd;
 
 use crate::dispatcher::{self, Arguments, Command, Dispatcher};
 use crate::util::{clear_signal_handlers, set_signal_handlers, TIMEOUT_MILLIS};
@@ -40,14 +41,14 @@ pub fn register(dispatcher: &mut Dispatcher) {
 }
 
 fn stop_verify_ro(handle: &str) -> Result<(), dispatcher::Error> {
-    let connection = Connection::get_private(BusType::System).map_err(|err| {
+    let connection = Connection::new_system().map_err(|err| {
         error!("ERROR: Failed to get D-Bus connection: {}", err);
         dispatcher::Error::CommandReturnedError
     })?;
-    let conn_path = connection.with_path(
+    let conn_path = connection.with_proxy(
         "org.chromium.debugd",
         "/org/chromium/debugd",
-        TIMEOUT_MILLIS,
+        Duration::from_millis(TIMEOUT_MILLIS),
     );
 
     conn_path
@@ -89,14 +90,14 @@ fn execute_verify_ro(_cmd: &Command, args: &Arguments) -> Result<(), dispatcher:
         return Err(dispatcher::Error::CommandReturnedError);
     }
 
-    let connection = Connection::get_private(BusType::System).map_err(|err| {
+    let connection = Connection::new_system().map_err(|err| {
         error!("ERROR: Failed to get D-Bus connection: {}", err);
         dispatcher::Error::CommandReturnedError
     })?;
-    let conn_path = connection.with_path(
+    let conn_path = connection.with_proxy(
         "org.chromium.debugd",
         "/org/chromium/debugd",
-        TIMEOUT_MILLIS,
+        Duration::from_millis(TIMEOUT_MILLIS),
     );
 
     set_signal_handlers(&[SIGINT], sigint_handler);
@@ -104,8 +105,8 @@ fn execute_verify_ro(_cmd: &Command, args: &Arguments) -> Result<(), dispatcher:
     let (mut read_pipe, write_pipe) = pipe(true).unwrap();
     let handle = conn_path
         .update_and_verify_fwon_usb_start(
-            // validate_raw_fd() is used to duplicate the stdout file descriptor.
-            OwnedFd::new(write_pipe.into_raw_fd()),
+            // Safe because write_pipe isn't copied elsewhere.
+            unsafe { OwnedFd::new(write_pipe.into_raw_fd()) },
             CR50_IMAGE,
             RO_DB,
         )

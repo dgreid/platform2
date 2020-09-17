@@ -13,15 +13,16 @@ use std::mem;
 use std::process::{Command, Stdio};
 use std::ptr::null_mut;
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::time::Duration;
 
-use dbus::{BusType, Connection, Message};
+use dbus::blocking::Connection;
 use libc::{c_int, sigaction, SA_RESTART, SIG_DFL};
 use regex::Regex;
 use sys_util::error;
-use system_api::OrgChromiumSessionManagerInterface;
+use system_api::client::OrgChromiumSessionManagerInterface;
 
 // 25 seconds is the default timeout for dbus-send.
-pub const TIMEOUT_MILLIS: i32 = 25000;
+pub const TIMEOUT_MILLIS: u64 = 25000;
 
 const CROS_USER_ID_HASH: &str = "CROS_USER_ID_HASH";
 
@@ -59,13 +60,13 @@ pub fn get_user_id_hash() -> Result<String, ()> {
         return Ok(lookup);
     }
 
-    let connection = Connection::get_private(BusType::System).map_err(|err| {
+    let connection = Connection::new_system().map_err(|err| {
         error!("ERROR: Failed to get D-Bus connection: {}", err);
     })?;
-    let conn_path = connection.with_path(
+    let conn_path = connection.with_proxy(
         "org.chromium.SessionManager",
         "/org/chromium/SessionManager",
-        TIMEOUT_MILLIS,
+        Duration::from_millis(TIMEOUT_MILLIS),
     );
 
     let (_, user_id_hash) = conn_path.retrieve_primary_session().map_err(|err| {
@@ -77,30 +78,31 @@ pub fn get_user_id_hash() -> Result<String, ()> {
 }
 
 pub fn is_chrome_feature_enabled(method_name: &str) -> Result<bool, ()> {
-    let method: Message = Message::new_method_call(
-        "org.chromium.ChromeFeaturesService",
-        "/org/chromium/ChromeFeaturesService",
-        "org.chromium.ChromeFeaturesServiceInterface",
-        method_name,
-    )
-    .unwrap()
-    .append1(get_user_id_hash()?);
+    let user_id_hash = get_user_id_hash()?;
 
-    let connection = Connection::get_private(BusType::System).or_else(|err| {
+    let connection = Connection::new_system().or_else(|err| {
         error!("ERROR: Failed to get D-Bus connection: {}", err);
         Err(())
     })?;
 
-    let reply = connection
-        .send_with_reply_and_block(method, TIMEOUT_MILLIS)
+    let proxy = connection.with_proxy(
+        "org.chromium.ChromeFeaturesService",
+        "/org/chromium/ChromeFeaturesService",
+        Duration::from_millis(TIMEOUT_MILLIS),
+    );
+
+    let (reply,): (bool,) = proxy
+        .method_call(
+            "org.chromium.ChromeFeaturesServiceInterface",
+            method_name,
+            (user_id_hash,),
+        )
         .or_else(|err| {
             error!("ERROR: D-Bus method call failed: {}", err);
             Err(())
         })?;
 
-    reply.get1::<bool>().ok_or_else(|| {
-        error!("ERROR: Got unexpected result: {:?}", &reply);
-    })
+    Ok(reply)
 }
 
 pub fn is_dev_mode() -> Result<bool, Error> {
