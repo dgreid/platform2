@@ -23,7 +23,7 @@ namespace debugd {
 
 namespace {
 
-constexpr char kCPUOfflineSubath[] = "devices/system/cpu/offline";
+constexpr char kCPUOfflineSubpath[] = "devices/system/cpu/offline";
 constexpr char kCPUOnlineSubpath[] = "devices/system/cpu/online";
 constexpr char kCPUSubpath[] = "devices/system/cpu";
 constexpr char kChromeCPUSubsetSubpath[] = "fs/cgroup/cpuset/chrome/cpus";
@@ -248,7 +248,7 @@ bool SchedulerConfigurationUtils::GetFDsFromControlFile(
 bool SchedulerConfigurationUtils::GetControlFDs() {
   return GetFDsFromControlFile(base_path_.Append(kCPUOnlineSubpath),
                                &online_cpus_) &&
-         GetFDsFromControlFile(base_path_.Append(kCPUOfflineSubath),
+         GetFDsFromControlFile(base_path_.Append(kCPUOfflineSubpath),
                                &offline_cpus_);
 }
 
