@@ -192,7 +192,6 @@ int StartLxdContainer(dbus::ObjectProxy* proxy,
   request.set_vm_name(vm_name);
   request.set_container_name(container_name);
   request.set_owner_id(owner_id);
-  request.set_async(true);
 
   if (!writer.AppendProtoAsArrayOfBytes(request)) {
     LOG(ERROR) << "Failed to encode StartLxdContainer protobuf";
