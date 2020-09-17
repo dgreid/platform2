@@ -10,6 +10,8 @@
 #include <google/protobuf/text_format.h>
 #include <vm_protos/proto_bindings/vm_crash.grpc.pb.h>
 
+#include "crash-reporter/constants.h"
+
 VmCollector::VmCollector()
     : CrashCollector(
           "vm_collector", kAlwaysUseUserCrashDirectory, kNormalCrashSendMode) {}
@@ -32,7 +34,8 @@ bool VmCollector::Collect(pid_t pid) {
 
   base::FilePath meta_path = GetCrashPath(crash_path, basename, "meta");
   base::FilePath proc_log_path = GetCrashPath(crash_path, basename, "proclog");
-  base::FilePath minidump_path = GetCrashPath(crash_path, basename, "dmp");
+  base::FilePath minidump_path =
+      GetCrashPath(crash_path, basename, constants::kMinidumpExtension);
 
   int bytes = crash_report.process_tree().size();
   if (WriteNewFile(proc_log_path, crash_report.process_tree().data(), bytes) <

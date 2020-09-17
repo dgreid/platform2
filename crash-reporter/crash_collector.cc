@@ -952,13 +952,14 @@ bool CrashCollector::CheckHasCapacity(const FilePath& crash_directory,
   // and atm we aren't supporting other C libraries
   while ((ent = readdir(dir))) {
     // Only count crash reports.  Ignore all other supplemental files.
-    // We define "crash reports" as .meta, .dmp, or .core files.
+    // We define "crash reports" as .meta, .dmp, .js_stack, or .core files.
     // This does mean that we ignore random files that might accumulate but
     // didn't come from us, but not a lot we can do about that.  Our crash
     // sender process should clean up unknown files independently.
     const base::FilePath filename(ent->d_name);
     const std::string ext = filename.FinalExtension();
-    if (ext != ".core" && ext != ".dmp" && ext != ".meta")
+    if (ext != ".core" && ext != constants::kMinidumpExtensionWithDot &&
+        ext != ".meta" && ext != constants::kJavaScriptStackExtensionWithDot)
       continue;
 
     // Track the basenames as our unique identifiers.  When the core/dmp files
@@ -1283,16 +1284,21 @@ void CrashCollector::FinishCrash(const FilePath& meta_path,
     AddCrashMetaUploadData("in_progress_integration_test", in_progress_test);
   }
 
+  std::string exec_name_line;
+  if (!exec_name.empty()) {
+    exec_name_line = base::StrCat({"exec_name=", exec_name, "\n"});
+  }
+
   base::Time now = test_clock_ ? test_clock_->Now() : base::Time::Now();
   int64_t now_millis = (now - base::Time::UnixEpoch()).InMilliseconds();
   std::string meta_data =
       StringPrintf("%supload_var_reportTimeMillis=%" PRId64
                    "\n"
-                   "exec_name=%s\n"
+                   "%s"
                    "%s"
                    "payload=%s\n"
                    "done=1\n",
-                   extra_metadata_.c_str(), now_millis, exec_name.c_str(),
+                   extra_metadata_.c_str(), now_millis, exec_name_line.c_str(),
                    version_info.c_str(), payload_name.c_str());
   // We must use WriteNewFile instead of base::WriteFile as we
   // do not want to write with root access to a symlink that an attacker

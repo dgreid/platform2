@@ -31,6 +31,7 @@
 #include <brillo/variant_dictionary.h>
 #include <chromeos/dbus/service_constants.h>
 
+#include "crash-reporter/constants.h"
 #include "crash-reporter/crash_sender.pb.h"
 #include "crash-reporter/crash_sender_paths.h"
 #include "crash-reporter/paths.h"

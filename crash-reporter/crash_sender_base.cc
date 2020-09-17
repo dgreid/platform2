@@ -14,6 +14,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 
+#include "crash-reporter/constants.h"
 #include "crash-reporter/crash_sender_paths.h"
 #include "crash-reporter/crash_sender_util.h"
 #include "crash-reporter/paths.h"
@@ -36,8 +37,9 @@ constexpr size_t kMaxMetaFileSize = 1024 * 1024;
 // Returns true if the given report kind is known.
 // TODO(satorux): Move collector constants to a common file.
 bool IsKnownKind(const std::string& kind) {
-  return (kind == "minidump" || kind == "kcrash" || kind == "log" ||
-          kind == "devcore" || kind == "eccrash" || kind == "bertdump");
+  return (kind == constants::kKindForMinidump || kind == "kcrash" ||
+          kind == "log" || kind == "devcore" || kind == "eccrash" ||
+          kind == "bertdump" || kind == constants::kKindForJavaScriptError);
 }
 
 // Returns true if the given key is valid for crash metadata.
@@ -101,8 +103,10 @@ std::string GetKindFromPayloadPath(const base::FilePath& payload_path) {
     return "";
 
   std::string extension = parts.back();
-  if (extension == "dmp")
-    return "minidump";
+  if (extension == constants::kMinidumpExtension)
+    return constants::kKindForMinidump;
+  if (extension == constants::kJavaScriptStackExtension)
+    return constants::kKindForJavaScriptError;
 
   return extension;
 }
@@ -472,6 +476,12 @@ FullCrash SenderBase::ReadMetaFile(const CrashDetails& details) {
   }
   crash.payload =
       std::make_pair("upload_file_" + details.payload_kind, payload_file);
+  // The crash infrastructure expects "upload_file_minidump" for minidumps but
+  // expects just "JavascriptError" for JavaScript errors. See
+  // FileStorage::kDumpFileName vs FileStorage::kJsStacktraceFileName.
+  if (details.payload_kind == constants::kKindForJavaScriptError) {
+    crash.payload.first = constants::kKindForJavaScriptError;
+  }
 
   crash.image_type = GetImageType();
   crash.boot_mode = util::GetBootModeString();

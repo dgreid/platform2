@@ -3,4 +3,5 @@
 # found in the LICENSE file.
 
 :
-; filename="minidump":
+upload_file_minidump"; filename="minidump":
+upload_file_js_stack"; filename="stack":

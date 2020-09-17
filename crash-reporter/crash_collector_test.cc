@@ -53,7 +53,9 @@ using ::testing::Return;
 
 namespace {
 
-constexpr int64_t kFakeNow = 123456789LL;
+// Fake "now" timestamp in milliseconds since Unix Epoch. Corresponds to
+// Sept 1, 2020, but basically arbitrary.
+constexpr int64_t kFakeNow = 1598929274543LL;
 
 bool IsMetrics() {
   ADD_FAILURE();
@@ -870,13 +872,49 @@ TEST_F(CrashCollectorTest, CheckHasCapacityStrangeNames) {
   EXPECT_TRUE(CheckHasCapacity());
 }
 
+struct MetaDataTest {
+  std::string test_case_name;
+  bool test_in_prog = false;
+  std::string exec_name = "kernel";
+  std::string expected_meta;
+};
+
 class CrashCollectorParameterizedTest
     : public CrashCollectorTest,
-      public ::testing::WithParamInterface<bool> {};
+      public ::testing::WithParamInterface<MetaDataTest> {
+ public:
+  static constexpr char kPayloadName[] = "payload-file";
+  static constexpr char kKernelName[] = "Linux";
+  static constexpr char kKernelVersion[] =
+      "3.8.11 #1 SMP Wed Aug 22 02:18:30 PDT 2018";
+  // Returns the time we want to use for the OS timestamp. Returns the
+  // same value (May 3, 2020 -- basically arbitrary) every time it is run, but
+  // base::Time doesn't support constexpr.
+  static base::Time GetOsTimeForTest() {
+    base::Time::Exploded exploded;
+    exploded.year = 2020;
+    exploded.month = 5;
+    exploded.day_of_month = 3;
+    exploded.day_of_week = 0;
+    exploded.hour = 7;
+    exploded.minute = 22;
+    exploded.second = 41;
+    // Must not have a millisecond component because ext2/ext3 have a second
+    // granularity.
+    exploded.millisecond = 0;
+    base::Time result;
+    CHECK(base::Time::FromUTCExploded(exploded, &result));
+    return result;
+  }
+};
+
+constexpr char CrashCollectorParameterizedTest::kPayloadName[];
+constexpr char CrashCollectorParameterizedTest::kKernelName[];
+constexpr char CrashCollectorParameterizedTest::kKernelVersion[];
 
 TEST_P(CrashCollectorParameterizedTest, MetaData) {
-  bool test_in_prog = GetParam();
-  if (test_in_prog) {
+  MetaDataTest test_case = GetParam();
+  if (test_case.test_in_prog) {
     ASSERT_TRUE(
         test_util::CreateFile(paths::GetAt(paths::kSystemRunStateDirectory,
                                            paths::kInProgressTestName),
@@ -886,7 +924,6 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
   const char kMetaFileBasename[] = "generated.meta";
   FilePath meta_file = test_dir_.Append(kMetaFileBasename);
   FilePath lsb_release = paths::Get("/etc/lsb-release");
-  const char kPayloadName[] = "payload-file";
   FilePath payload_file = test_dir_.Append(kPayloadName);
   std::string contents;
   collector_.set_lsb_release_for_test(lsb_release);
@@ -897,13 +934,8 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
       "CHROMEOS_RELEASE_CHROME_MILESTONE=82\n"
       "CHROMEOS_RELEASE_DESCRIPTION=6727.0.2015_01_26_0853 (Test Build - foo)";
   ASSERT_TRUE(test_util::CreateFile(lsb_release, kLsbContents));
-  base::Time os_time = base::Time::Now() - base::TimeDelta::FromDays(123);
-  // ext2/ext3 seem to have a timestamp granularity of 1s so round this time
-  // value down to the nearest second.
-  os_time = base::TimeDelta::FromSeconds(
-                (os_time - base::Time::UnixEpoch()).InSeconds()) +
-            base::Time::UnixEpoch();
-  ASSERT_TRUE(base::TouchFile(lsb_release, os_time, os_time));
+  const base::Time kFakeOsTime = GetOsTimeForTest();
+  ASSERT_TRUE(base::TouchFile(lsb_release, kFakeOsTime, kFakeOsTime));
   const char kPayload[] = "foo";
   ASSERT_TRUE(test_util::CreateFile(payload_file, kPayload));
   collector_.AddCrashMetaData("foo", "bar");
@@ -912,15 +944,21 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
   test_clock->SetNow(base::Time::UnixEpoch() +
                      base::TimeDelta::FromMilliseconds(kFakeNow));
   collector_.set_test_clock(std::move(test_clock));
-  const char kKernelName[] = "Linux";
-  const char kKernelVersion[] = "3.8.11 #1 SMP Wed Aug 22 02:18:30 PDT 2018";
   collector_.set_test_kernel_info(kKernelName, kKernelVersion);
-  collector_.FinishCrash(meta_file, "kernel", kPayloadName);
+  collector_.FinishCrash(meta_file, test_case.exec_name, kPayloadName);
   EXPECT_TRUE(base::ReadFileToString(meta_file, &contents));
-  std::string expected_meta = StringPrintf(
+  EXPECT_EQ(test_case.expected_meta, contents);
+  EXPECT_EQ(test_case.expected_meta.size(), collector_.get_bytes_written());
+}
+
+std::vector<MetaDataTest> GenerateMetaDataTests() {
+  const base::Time kOsTimestamp =
+      CrashCollectorParameterizedTest::GetOsTimeForTest();
+  MetaDataTest base;
+  base.test_case_name = "Base";
+  base.expected_meta = StringPrintf(
       "upload_var_collector=mock\n"
       "foo=bar\n"
-      "%s"
       "upload_var_reportTimeMillis=%" PRId64
       "\n"
       "exec_name=kernel\n"
@@ -933,16 +971,66 @@ TEST_P(CrashCollectorParameterizedTest, MetaData) {
       "upload_var_osVersion=%s\n"
       "payload=%s\n"
       "done=1\n",
-      test_in_prog ? "upload_var_in_progress_integration_test=some.Test\n" : "",
-      kFakeNow, (os_time - base::Time::UnixEpoch()).InMilliseconds(),
-      kKernelName, kKernelVersion, kPayloadName);
-  EXPECT_EQ(expected_meta, contents);
-  EXPECT_EQ(collector_.get_bytes_written(), expected_meta.size());
+      kFakeNow, (kOsTimestamp - base::Time::UnixEpoch()).InMilliseconds(),
+      CrashCollectorParameterizedTest::kKernelName,
+      CrashCollectorParameterizedTest::kKernelVersion,
+      CrashCollectorParameterizedTest::kPayloadName);
+
+  MetaDataTest test_in_progress;
+  test_in_progress.test_case_name = "Test_in_progress";
+  test_in_progress.test_in_prog = true;
+  test_in_progress.expected_meta = StringPrintf(
+      "upload_var_collector=mock\n"
+      "foo=bar\n"
+      "upload_var_in_progress_integration_test=some.Test\n"
+      "upload_var_reportTimeMillis=%" PRId64
+      "\n"
+      "exec_name=kernel\n"
+      "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"
+      "ver=6727.0.2015_01_26_0853\n"
+      "upload_var_cros_milestone=82\n"
+      "os_millis=%" PRId64
+      "\n"
+      "upload_var_osName=%s\n"
+      "upload_var_osVersion=%s\n"
+      "payload=%s\n"
+      "done=1\n",
+      kFakeNow, (kOsTimestamp - base::Time::UnixEpoch()).InMilliseconds(),
+      CrashCollectorParameterizedTest::kKernelName,
+      CrashCollectorParameterizedTest::kKernelVersion,
+      CrashCollectorParameterizedTest::kPayloadName);
+
+  MetaDataTest no_exec_name;
+  no_exec_name.test_case_name = "No_exec_name";
+  no_exec_name.exec_name = "";
+  no_exec_name.expected_meta = StringPrintf(
+      "upload_var_collector=mock\n"
+      "foo=bar\n"
+      "upload_var_reportTimeMillis=%" PRId64
+      "\n"
+      "upload_var_lsb-release=6727.0.2015_01_26_0853 (Test Build - foo)\n"
+      "ver=6727.0.2015_01_26_0853\n"
+      "upload_var_cros_milestone=82\n"
+      "os_millis=%" PRId64
+      "\n"
+      "upload_var_osName=%s\n"
+      "upload_var_osVersion=%s\n"
+      "payload=%s\n"
+      "done=1\n",
+      kFakeNow, (kOsTimestamp - base::Time::UnixEpoch()).InMilliseconds(),
+      CrashCollectorParameterizedTest::kKernelName,
+      CrashCollectorParameterizedTest::kKernelVersion,
+      CrashCollectorParameterizedTest::kPayloadName);
+
+  return {base, test_in_progress, no_exec_name};
 }
 
 INSTANTIATE_TEST_SUITE_P(CrashCollectorInstantiation,
                          CrashCollectorParameterizedTest,
-                         testing::Bool());
+                         testing::ValuesIn(GenerateMetaDataTests()),
+                         [](const testing::TestParamInfo<MetaDataTest>& info) {
+                           return info.param.test_case_name;
+                         });
 
 TEST_F(CrashCollectorTest, ErrorCollectionMetaData) {
   // Set up metadata the collector will read

@@ -18,21 +18,27 @@
 #include <brillo/process/process.h>
 #include <brillo/syslog_logging.h>
 
+#include "crash-reporter/constants.h"
 #include "crash-reporter/util.h"
 
 using base::FilePath;
 
 namespace {
 
-const char kDefaultMinidumpName[] = "upload_file_minidump";
+constexpr char kDefaultMinidumpName[] = "upload_file_minidump";
+constexpr char kDefaultJavaScriptStackName[] = "upload_file_js_stack";
 
 // Filenames for logs attached to crash reports. Also used as metadata keys.
-const char kChromeLogFilename[] = "chrome.txt";
-const char kGpuStateFilename[] = "i915_error_state.log.xz";
+constexpr char kChromeLogFilename[] = "chrome.txt";
+constexpr char kGpuStateFilename[] = "i915_error_state.log.xz";
 
 // Filename for the pid of the browser process if it was aborted due to a
 // browser hang. Written by session_manager.
 constexpr char kAbortedBrowserPidPath[] = "/run/chrome/aborted_browser_pid";
+
+// Whenever we have an executable crash, we use this key for the logging config
+// file. See HandleCrashWithDumpData for explanation.
+constexpr char kExecLogKeyName[] = "chrome";
 
 // Extract a string delimited by the given character, from the given offset
 // into a source string. Returns false if the string is zero-sized or no
@@ -59,30 +65,39 @@ ChromeCollector::ChromeCollector(CrashSendingMode crash_sending_mode)
 
 ChromeCollector::~ChromeCollector() {}
 
-bool ChromeCollector::HandleCrashWithDumpData(const std::string& data,
-                                              pid_t pid,
-                                              uid_t uid,
-                                              const std::string& exe_name,
-                                              const std::string& dump_dir) {
+bool ChromeCollector::HandleCrashWithDumpData(
+    const std::string& data,
+    pid_t pid,
+    uid_t uid,
+    const std::string& executable_name,
+    const std::string& non_exe_error_key,
+    const std::string& dump_dir) {
   // Perform basic input validation.
   CHECK(pid >= (pid_t)0) << "--pid= must be set";
   CHECK(uid >= (uid_t)0) << "--uid= must be set";
-  CHECK(!exe_name.empty()) << "--exe= must be set";
+  CHECK_NE(executable_name.empty(), non_exe_error_key.empty())
+      << "Exactly one of --exe= and --error_key= must be set";
   CHECK(dump_dir.empty() || util::IsTestImage())
       << "--chrome_dump_dir is only for tests";
 
+  const CrashType crash_type =
+      executable_name.empty() ? kJavaScriptError : kExecutableCrash;
+
+  const std::string& key_for_basename =
+      (crash_type == kExecutableCrash) ? executable_name : non_exe_error_key;
   // anomaly_detector's CrashReporterParser looks for this message; don't change
   // it without updating the regex.
-  LOG(WARNING) << "Received crash notification for " << exe_name << "[" << pid
-               << "] user " << uid << " (called directly)";
+  LOG(WARNING) << "Received crash notification for " << key_for_basename << "["
+               << pid << "] user " << uid << " (called directly)";
 
   if (!is_feedback_allowed_function_()) {
     LOG(WARNING) << "consent not given - ignoring";
     return true;
   }
 
-  if (exe_name.find('/') != std::string::npos) {
-    LOG(ERROR) << "exe_name contains illegal characters: " << exe_name;
+  if (key_for_basename.find('/') != std::string::npos) {
+    LOG(ERROR) << "--exe or --error_key contains illegal characters: "
+               << key_for_basename;
     return false;
   }
 
@@ -94,17 +109,34 @@ bool ChromeCollector::HandleCrashWithDumpData(const std::string& data,
     return false;
   }
 
-  std::string dump_basename = FormatDumpBasename(exe_name, time(nullptr), pid);
+  std::string dump_basename =
+      FormatDumpBasename(key_for_basename, time(nullptr), pid);
   FilePath meta_path = GetCrashPath(dir, dump_basename, "meta");
-  FilePath minidump_path = GetCrashPath(dir, dump_basename, "dmp");
-
-  if (!ParseCrashLog(data, dir, minidump_path, dump_basename)) {
+  FilePath payload_path;
+  if (!ParseCrashLog(data, dir, dump_basename, crash_type, &payload_path)) {
     LOG(ERROR) << "Failed to parse Chrome's crash log";
     return false;
   }
 
+  if (payload_path.empty()) {
+    LOG(ERROR) << "Did not get a payload";
+    return false;
+  }
+
+  // Keyed by crash metadata key name.
+  // If we have a crashing executable, we always use the logging key "chrome",
+  // because we treat any type of chrome binary crash the same. (In particular,
+  // we may get names that amount to "unknown" if the process disappeared before
+  // Breakpad / Crashpad could retrieve the executable name. It's probably
+  // chrome, so get the normal chrome logs.) However, JavaScript crashes with
+  // their non-exe error keys are definitely not chrome crashes and we want
+  // different logs. For example, there's no point in getting session_manager
+  // logs for a JavaScript crash.
+  const std::string key_for_logs = (crash_type == kExecutableCrash)
+                                       ? std::string(kExecLogKeyName)
+                                       : non_exe_error_key;
   const std::map<std::string, base::FilePath> additional_logs =
-      GetAdditionalLogs(dir, dump_basename);
+      GetAdditionalLogs(dir, dump_basename, key_for_logs, crash_type);
   for (const auto& it : additional_logs) {
     VLOG(1) << "Adding metadata: " << it.first << " -> " << it.second.value();
     // Call AddCrashMetaUploadFile() rather than AddCrashMetaData() here. The
@@ -123,8 +155,9 @@ bool ChromeCollector::HandleCrashWithDumpData(const std::string& data,
     }
   }
 
-  // We're done.
-  FinishCrash(meta_path, exe_name, minidump_path.BaseName().value());
+  // We're done. Note that if we got --error_key, we don't upload an exec_name
+  // field to the server.
+  FinishCrash(meta_path, executable_name, payload_path.BaseName().value());
 
   // In production |output_file_ptr_| must be stdout because chrome expects to
   // read the magic string there.
@@ -144,27 +177,32 @@ bool ChromeCollector::HandleCrash(const FilePath& file_path,
     return false;
   }
 
-  return HandleCrashWithDumpData(data, pid, uid, exe_name, "" /* dump_dir */);
+  return HandleCrashWithDumpData(data, pid, uid, exe_name,
+                                 "" /*non_exe_error_key*/, "" /* dump_dir */);
 }
 
-bool ChromeCollector::HandleCrashThroughMemfd(int memfd,
-                                              pid_t pid,
-                                              uid_t uid,
-                                              const std::string& exe_name,
-                                              const std::string& dump_dir) {
+bool ChromeCollector::HandleCrashThroughMemfd(
+    int memfd,
+    pid_t pid,
+    uid_t uid,
+    const std::string& executable_name,
+    const std::string& non_exe_error_key,
+    const std::string& dump_dir) {
   std::string data;
   if (!util::ReadMemfdToString(memfd, &data)) {
     PLOG(ERROR) << "Can't read crash log from memfd: " << memfd;
     return false;
   }
 
-  return HandleCrashWithDumpData(data, pid, uid, exe_name, dump_dir);
+  return HandleCrashWithDumpData(data, pid, uid, executable_name,
+                                 non_exe_error_key, dump_dir);
 }
 
 bool ChromeCollector::ParseCrashLog(const std::string& data,
-                                    const FilePath& dir,
-                                    const FilePath& minidump,
-                                    const std::string& basename) {
+                                    const base::FilePath& dir,
+                                    const std::string& basename,
+                                    CrashType crash_type,
+                                    base::FilePath* payload) {
   size_t at = 0;
   while (at < data.size()) {
     // Look for a : followed by a decimal number, followed by another :
@@ -199,7 +237,8 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
       // File.
       // Name will be in a semi-MIME format of
       // <descriptive name>"; filename="<name>"
-      // Descriptive name will be upload_file_minidump for the dump.
+      // Descriptive name will be upload_file_minidump for minidumps or
+      // upload_file_js_stack for JavaScript stack traces.
       std::string desc, filename;
       pcrecpp::RE re("(.*)\" *; *filename=\"(.*)\"");
       if (!re.FullMatch(name.c_str(), &desc, &filename)) {
@@ -209,7 +248,41 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
 
       if (desc.compare(kDefaultMinidumpName) == 0) {
         // The minidump.
-        WriteNewFile(minidump, data.c_str() + at, size);
+        if (crash_type != kExecutableCrash) {
+          LOG(ERROR) << "Only expect minidumps for executable crashes";
+          return false;
+        }
+        if (!payload->empty()) {
+          LOG(ERROR) << "Cannot have multiple payload sections; got minidump "
+                        "but already wrote "
+                     << payload->value();
+          return false;
+        }
+        *payload = GetCrashPath(dir, basename, constants::kMinidumpExtension);
+        if (WriteNewFile(*payload, data.c_str() + at, size) != size) {
+          // Can't send a crash report without a payload, so just fail.
+          LOG(ERROR) << "Failed to write minidump to " << payload->value();
+          return false;
+        }
+      } else if (desc.compare(kDefaultJavaScriptStackName) == 0) {
+        // A JavaScript stack trace, from a JavaScript exception
+        if (crash_type != kJavaScriptError) {
+          LOG(ERROR) << "Only expect JS stacks for JavaScript errors";
+          return false;
+        }
+        if (!payload->empty()) {
+          LOG(ERROR) << "Cannot have multiple payload sections; got JS stack "
+                        "but already wrote "
+                     << payload->value();
+          return false;
+        }
+        *payload =
+            GetCrashPath(dir, basename, constants::kJavaScriptStackExtension);
+        if (WriteNewFile(*payload, data.c_str() + at, size) != size) {
+          // Can't send a crash report without a payload, so just fail.
+          LOG(ERROR) << "Failed to write js stack to " << payload->value();
+          return false;
+        }
       } else {
         // Some other file.
         FilePath path =
@@ -217,6 +290,7 @@ bool ChromeCollector::ParseCrashLog(const std::string& data,
         if (WriteNewFile(path, data.c_str() + at, size) >= 0) {
           AddCrashMetaUploadFile(desc, path.BaseName().value());
         }
+        // else keep going and upload what we have.
       }
     } else {
       // Other attribute.
@@ -281,7 +355,10 @@ void ChromeCollector::AddLogIfNotTooBig(
 }
 
 std::map<std::string, base::FilePath> ChromeCollector::GetAdditionalLogs(
-    const FilePath& dir, const std::string& basename) {
+    const FilePath& dir,
+    const std::string& basename,
+    const std::string& key_for_logs,
+    CrashType crash_type) {
   std::map<std::string, base::FilePath> logs;
   if (get_bytes_written() > max_upload_bytes_) {
     // Minidump is already too big, no point in processing logs or querying
@@ -294,23 +371,22 @@ std::map<std::string, base::FilePath> ChromeCollector::GetAdditionalLogs(
   // Run the command specified by the config file to gather logs.
   const FilePath chrome_log_path =
       GetCrashPath(dir, basename, kChromeLogFilename).AddExtension("gz");
-  // "Chrome" can actually be several different binaries. Also, we can get the
-  // exec_name "chrome-crash-unknown-process" if Breakpad can't figure out the
-  // correct name. In all those cases, we still want to get the same set of
-  // logs, so always use the key "chrome" in the logging config.
-  constexpr char kLogKeyName[] = "chrome";
-  if (GetLogContents(log_config_path_, kLogKeyName, chrome_log_path)) {
+  if (GetLogContents(log_config_path_, key_for_logs, chrome_log_path)) {
     AddLogIfNotTooBig(kChromeLogFilename, chrome_log_path, &logs);
   }
 
-  // For unit testing, debugd_proxy_ isn't initialized, so skip attempting to
-  // get the GPU error state from debugd.
-  SetUpDBus();
-  if (debugd_proxy_) {
-    const FilePath dri_error_state_path =
-        GetCrashPath(dir, basename, kGpuStateFilename);
-    if (GetDriErrorState(dri_error_state_path))
-      AddLogIfNotTooBig(kGpuStateFilename, dri_error_state_path, &logs);
+  // Attach info about the GPU state for executable crashes. For JavaScript
+  // errors, the GPU state is likely too low-level to matter.
+  if (crash_type == kExecutableCrash) {
+    // For unit testing, debugd_proxy_ isn't initialized, so skip attempting to
+    // get the GPU error state from debugd.
+    SetUpDBus();
+    if (debugd_proxy_) {
+      const FilePath dri_error_state_path =
+          GetCrashPath(dir, basename, kGpuStateFilename);
+      if (GetDriErrorState(dri_error_state_path))
+        AddLogIfNotTooBig(kGpuStateFilename, dri_error_state_path, &logs);
+    }
   }
 
   return logs;

@@ -306,6 +306,10 @@ int main(int argc, char* argv[]) {
   DEFINE_int32(pid, -1, "PID of crashing process");
   DEFINE_int32(uid, -1, "UID of crashing process");
   DEFINE_string(exe, "", "Executable name of crashing process");
+  DEFINE_string(error_key, "",
+                "Key for error reports. Replaces exe for some errors that "
+                "aren't tied to an executable. Unlike exe, this is not "
+                "uploaded as part of the crash report.");
   DEFINE_int64(crash_loop_before, -1,
                "UNIX timestamp. If invoked before this time, use the special "
                "login-crash-loop handling system. (Keep crash report in memory "
@@ -575,25 +579,30 @@ int main(int argc, char* argv[]) {
 
   CHECK(FLAGS_chrome.empty() || FLAGS_chrome_memfd == -1)
       << "--chrome= and --chrome_memfd= cannot be both set";
+  if (FLAGS_chrome_memfd == -1) {
+    CHECK(FLAGS_error_key.empty())
+        << "--error_key is only for --chrome_memfd crashes";
+  }
 
   ChromeCollector chrome_collector(crash_sending_mode);
   collectors.push_back({
       .collector = &chrome_collector,
-      .handlers =
-          {{
-               .should_handle = !FLAGS_chrome.empty(),
-               .cb = base::BindRepeating(&ChromeCollector::HandleCrash,
-                                         base::Unretained(&chrome_collector),
-                                         FilePath(FLAGS_chrome), FLAGS_pid,
-                                         FLAGS_uid, FLAGS_exe),
-           },
-           {
-               .should_handle = FLAGS_chrome_memfd >= 0,
-               .cb = base::BindRepeating(
-                   &ChromeCollector::HandleCrashThroughMemfd,
-                   base::Unretained(&chrome_collector), FLAGS_chrome_memfd,
-                   FLAGS_pid, FLAGS_uid, FLAGS_exe, FLAGS_chrome_dump_dir),
-           }},
+      .handlers = {{
+                       .should_handle = !FLAGS_chrome.empty(),
+                       .cb = base::BindRepeating(
+                           &ChromeCollector::HandleCrash,
+                           base::Unretained(&chrome_collector),
+                           FilePath(FLAGS_chrome), FLAGS_pid, FLAGS_uid,
+                           FLAGS_exe),
+                   },
+                   {
+                       .should_handle = FLAGS_chrome_memfd >= 0,
+                       .cb = base::BindRepeating(
+                           &ChromeCollector::HandleCrashThroughMemfd,
+                           base::Unretained(&chrome_collector),
+                           FLAGS_chrome_memfd, FLAGS_pid, FLAGS_uid, FLAGS_exe,
+                           FLAGS_error_key, FLAGS_chrome_dump_dir),
+                   }},
   });
 
   KernelWarningCollector kernel_warning_collector;

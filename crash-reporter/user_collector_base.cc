@@ -12,6 +12,7 @@
 #include <base/strings/stringprintf.h>
 #include <brillo/process/process.h>
 
+#include "crash-reporter/constants.h"
 #include "crash-reporter/util.h"
 
 using base::FilePath;
@@ -269,7 +270,8 @@ UserCollectorBase::ErrorType UserCollectorBase::ConvertAndEnqueueCrash(
   std::string dump_basename = FormatDumpBasename(exec, time(nullptr), pid);
   FilePath core_path = GetCrashPath(crash_path, dump_basename, "core");
   FilePath meta_path = GetCrashPath(crash_path, dump_basename, "meta");
-  FilePath minidump_path = GetCrashPath(crash_path, dump_basename, "dmp");
+  FilePath minidump_path =
+      GetCrashPath(crash_path, dump_basename, constants::kMinidumpExtension);
   FilePath log_path = GetCrashPath(crash_path, dump_basename, "log");
   FilePath proc_log_path = GetCrashPath(crash_path, dump_basename, "proclog");
 

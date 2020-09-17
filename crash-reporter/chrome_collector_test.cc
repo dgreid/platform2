@@ -4,13 +4,18 @@
 
 #include "crash-reporter/chrome_collector.h"
 
+#include <fcntl.h>
 #include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <utility>
 
 #include <base/auto_reset.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/strings/strcat.h>
+#include <base/strings/string_number_conversions.h>
 #include <brillo/data_encoding.h>
 #include <brillo/syslog_logging.h>
 #include <debugd/dbus-proxy-mocks.h>
@@ -32,19 +37,54 @@ using ::testing::SetArgPointee;
 namespace {
 const char kTestCrashDirectory[] = "test-crash-directory";
 
-const char kCrashFormatGood[] = "value1:10:abcdefghijvalue2:5:12345";
+// We must have an upload_file_minidump to get a payload name.
+const char kCrashFormatGood[] =
+    "value1:10:abcdefghijvalue2:5:12345"
+    "upload_file_minidump\"; filename=\"dump\":3:abc";
+const char kCrashFormatNoDump[] = "value1:10:abcdefghijvalue2:5:12345";
 const char kCrashFormatEmbeddedNewline[] =
-    "value1:10:abcd\r\nghijvalue2:5:12\n34";
-const char* const kCrashFormatBadValues[] = {
-    "value1:10:abcdefghijvalue2:6=12345",
-    "value1:10:abcdefghijvalue2:512345",
-    "value1:10::abcdefghijvalue2:5=12345",
-    "value1:10:abcdefghijvalue2:4=12345",
-};
+    "value1:10:abcd\r\nghijvalue2:5:12\n34"
+    "upload_file_minidump\"; filename=\"dump\":3:a\nc";
+// Inputs that should fail ParseCrashLog regardless of crash_type.
+const char* const kCrashFormatBadValuesCommon[] = {
+    // Last length too long
+    "value1:10:abcdefghijvalue2:6:12345",
+    // Length is followed by something other than a colon.
+    "value1:10:abcdefghijvalue2:5f:12345",
+    // Length not terminated
+    "value1:10:abcdefghijvalue2:5",
+    // No last length. TODO(https://crbug.com/1135698): This should fail but it
+    // doesn't currently.
+    // "value1:10:abcdefghijvalue2:",
+    // Length not a number
+    "value1:10:abcdefghijvalue2:five:12345",
+    // Last length too short
+    "value1:10:abcdefghijvalue2:4:12345",
+    // Missing length
+    "value1::abcdefghijvalue2:5:12345",
+    // Missing initial key
+    ":5:abcdefghijvalue2:5:12345",
+    // Missing later key
+    "value1:10:abcdefghij:5:12345",
+    // Multiple minidumps
+    "upload_file_minidump\"; filename=\"dump\":7:easy as"
+    "upload_file_minidump\"; filename=\"dump\":3:123",
+    // Multiple js stacks
+    "upload_file_js_stack\"; filename=\"stack\":3:abc"
+    "upload_file_js_stack\"; filename=\"stack\":3:123"};
+// Inputs that should fail ParseCrashLog if crash_type is kExecutableCrash.
+const char* const kCrashFormatBadValuesExecutable[] = {
+    // A JavaScript stack when we expect a minidump
+    "upload_file_js_stack\"; filename=\"stack\":20:0123456789abcdefghij"};
+// Inputs that should fail ParseCrashLog if crash_type is kJavaScriptError.
+const char* const kCrashFormatBadValuesJavaScript[] = {
+    // A minidump when we expect a JavaScript stack
+    "upload_file_minidump\"; filename=\"dump\":3:abc"};
 
 const char kCrashFormatWithFile[] =
     "value1:10:abcdefghijvalue2:5:12345"
     "some_file\"; filename=\"foo.txt\":15:12345\n789\n12345"
+    "upload_file_minidump\"; filename=\"dump\":3:abc"
     "value3:2:ok";
 
 // Matches the :20: in kCrashFormatWithDumpFile
@@ -70,6 +110,12 @@ const char kCrashFormatWithWeirdFilename[] =
     "value2:5:12345"
     "dotdotfile\"; filename=\"../a.txt\":15:12345\n789\n12345"
     "upload_file_minidump\"; filename=\"dump\":20:0123456789abcdefghij"
+    "value3:2:ok";
+const char kCrashFormatWithJSStack[] =
+    "value1:10:abcdefghij"
+    "value2:5:12345"
+    "some_file\"; filename=\"foo.txt\":15:12345\n789\n12345"
+    "upload_file_js_stack\"; filename=\"stack\":20:0123456789abcdefghij"
     "value3:2:ok";
 
 const char kSampleDriErrorStateEncoded[] =
@@ -150,7 +196,9 @@ class ChromeCollectorTest : public ::testing::Test {
   void SetUpLogsShort() {
     base::FilePath config_file =
         scoped_temp_dir_.GetPath().Append("crash_config");
-    const char kConfigContents[] = "chrome=echo hello there";
+    const char kConfigContents[] =
+        "chrome=echo hello there\n"
+        "jserror=echo JavaScript has nothing to do with Java\n";
     ASSERT_TRUE(test_util::CreateFile(config_file, kConfigContents));
     collector_.set_log_config_path(config_file.value());
   }
@@ -201,9 +249,49 @@ class ChromeCollectorTest : public ::testing::Test {
 };
 
 TEST_F(ChromeCollectorTest, GoodValues) {
-  FilePath dir(".");
-  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatGood, dir,
-                                       dir.Append("minidump.dmp"), "base"));
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  const FilePath& dir = scoped_temp_dir.GetPath();
+  FilePath payload;
+  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatGood, dir, "base",
+                                       ChromeCollector::kExecutableCrash,
+                                       &payload));
+  EXPECT_EQ(payload, dir.Append("base.dmp"));
+  ExpectFileEquals("abc", payload);
+
+  // Check to see if the values made it in properly.
+  std::string meta = collector_.extra_metadata_;
+  EXPECT_TRUE(meta.find("value1=abcdefghij") != std::string::npos);
+  EXPECT_TRUE(meta.find("value2=12345") != std::string::npos);
+}
+
+TEST_F(ChromeCollectorTest, ParseCrashLogNoDump) {
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  const FilePath& dir = scoped_temp_dir.GetPath();
+  FilePath payload;
+  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatNoDump, dir, "base",
+                                       ChromeCollector::kExecutableCrash,
+                                       &payload));
+  EXPECT_EQ(payload.value(), "");
+  EXPECT_FALSE(base::PathExists(dir.Append("base.dmp")));
+
+  // Check to see if the values made it in properly.
+  std::string meta = collector_.extra_metadata_;
+  EXPECT_TRUE(meta.find("value1=abcdefghij") != std::string::npos);
+  EXPECT_TRUE(meta.find("value2=12345") != std::string::npos);
+}
+
+TEST_F(ChromeCollectorTest, ParseCrashLogJSStack) {
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  const FilePath& dir = scoped_temp_dir.GetPath();
+  FilePath payload;
+  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatWithJSStack, dir, "base",
+                                       ChromeCollector::kJavaScriptError,
+                                       &payload));
+  EXPECT_EQ(payload, dir.Append("base.js_stack"));
+  ExpectFileEquals("0123456789abcdefghij", payload);
 
   // Check to see if the values made it in properly.
   std::string meta = collector_.extra_metadata_;
@@ -212,9 +300,15 @@ TEST_F(ChromeCollectorTest, GoodValues) {
 }
 
 TEST_F(ChromeCollectorTest, Newlines) {
-  FilePath dir(".");
-  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatEmbeddedNewline, dir,
-                                       dir.Append("minidump.dmp"), "base"));
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  const FilePath& dir = scoped_temp_dir.GetPath();
+  FilePath payload;
+  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatEmbeddedNewline, dir, "base",
+                                       ChromeCollector::kExecutableCrash,
+                                       &payload));
+  EXPECT_EQ(payload, dir.Append("base.dmp"));
+  ExpectFileEquals("a\nc", payload);
 
   // Check to see if the values were escaped.
   std::string meta = collector_.extra_metadata_;
@@ -223,11 +317,40 @@ TEST_F(ChromeCollectorTest, Newlines) {
 }
 
 TEST_F(ChromeCollectorTest, BadValues) {
-  FilePath dir(".");
-  for (const char* data : kCrashFormatBadValues) {
-    brillo::ClearLog();
-    EXPECT_FALSE(collector_.ParseCrashLog(data, dir, dir.Append("minidump.dmp"),
-                                          "base"));
+  base::ScopedTempDir scoped_temp_dir;
+  ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
+  const FilePath& dir = scoped_temp_dir.GetPath();
+  int test_number = 0;
+  for (const char* data : kCrashFormatBadValuesCommon) {
+    for (auto crash_type : {ChromeCollector::kExecutableCrash,
+                            ChromeCollector::kJavaScriptError}) {
+      FilePath payload;
+      EXPECT_FALSE(collector_.ParseCrashLog(
+          data, dir,
+          base::StrCat({"base_", base::NumberToString(test_number), "_test"}),
+          crash_type, &payload))
+          << data << " did not fail (for crash_type "
+          << static_cast<int>(crash_type) << ")";
+      test_number++;
+    }
+  }
+  for (const char* data : kCrashFormatBadValuesExecutable) {
+    FilePath payload;
+    EXPECT_FALSE(collector_.ParseCrashLog(
+        data, dir,
+        base::StrCat({"base_", base::NumberToString(test_number), "_test"}),
+        ChromeCollector::kExecutableCrash, &payload))
+        << data << " did not fail";
+    test_number++;
+  }
+  for (const char* data : kCrashFormatBadValuesJavaScript) {
+    FilePath payload;
+    EXPECT_FALSE(collector_.ParseCrashLog(
+        data, dir,
+        base::StrCat({"base_", base::NumberToString(test_number), "_test"}),
+        ChromeCollector::kJavaScriptError, &payload))
+        << data << " did not fail";
+    test_number++;
   }
 }
 
@@ -235,8 +358,12 @@ TEST_F(ChromeCollectorTest, File) {
   base::ScopedTempDir scoped_temp_dir;
   ASSERT_TRUE(scoped_temp_dir.CreateUniqueTempDir());
   const FilePath& dir = scoped_temp_dir.GetPath();
-  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatWithFile, dir,
-                                       dir.Append("minidump.dmp"), "base"));
+  FilePath payload;
+  EXPECT_TRUE(collector_.ParseCrashLog(kCrashFormatWithFile, dir, "base",
+                                       ChromeCollector::kExecutableCrash,
+                                       &payload));
+  EXPECT_EQ(payload, dir.Append("base.dmp"));
+  ExpectFileEquals("abc", payload);
 
   // Check to see if the values are still correct and that the file was
   // written with the right data.
@@ -686,4 +813,72 @@ TEST_F(ChromeCollectorTest, HandleCrashSkipsLargeLogsAndLargeDriErrorFiles) {
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value1=abcdefghij"));
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value2=12345"));
   EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value3=ok"));
+}
+
+TEST_F(ChromeCollectorTest, HandleCrashForJavaScript) {
+  const FilePath& dir = scoped_temp_dir_.GetPath();
+  FilePath input_file = dir.Append("test.jsinput");
+  ASSERT_TRUE(test_util::CreateFile(input_file, kCrashFormatWithJSStack));
+  SetUpDriErrorStateToReturn(kSampleDriErrorStateEncoded);
+  SetUpLogsShort();
+
+  int input_fd = open(input_file.value().c_str(), O_RDONLY);
+  ASSERT_NE(input_fd, -1) << "open " << input_file.value() << " failed: "
+                          << logging::SystemErrorCodeToString(errno);
+  // HandleCrashThroughMemfd will close input_fd.
+  EXPECT_TRUE(collector_.HandleCrashThroughMemfd(input_fd, 123, 456, "",
+                                                 "jserror", ""));
+
+  base::FilePath output_dri_error_file;
+  EXPECT_FALSE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "jserror.*.123.i915_error_state.log.xz",
+      &output_dri_error_file));
+
+  base::FilePath output_log;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "jserror.*.123.chrome.txt.gz", &output_log));
+  int64_t output_log_compressed_size = 0;
+  EXPECT_TRUE(base::GetFileSize(output_log, &output_log_compressed_size));
+  Decompress(output_log);
+  base::FilePath output_log_uncompressed = output_log.RemoveFinalExtension();
+  std::string output_log_contents;
+  EXPECT_TRUE(
+      base::ReadFileToString(output_log_uncompressed, &output_log_contents));
+  EXPECT_EQ(output_log_contents, "JavaScript has nothing to do with Java\n");
+
+  base::FilePath output_stack_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "jserror.*.123.js_stack", &output_stack_file));
+  std::string output_stack_file_contents;
+  EXPECT_TRUE(
+      base::ReadFileToString(output_stack_file, &output_stack_file_contents));
+  EXPECT_EQ(output_stack_file_contents, "0123456789abcdefghij");
+
+  base::FilePath other_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "jserror.*.123-foo_txt.other", &other_file));
+  std::string other_file_contents;
+  EXPECT_TRUE(base::ReadFileToString(other_file, &other_file_contents));
+  EXPECT_EQ(other_file_contents, "12345\n789\n12345");
+
+  base::FilePath meta_file;
+  EXPECT_TRUE(test_util::DirectoryHasFileWithPattern(
+      test_crash_directory_, "jserror.*.123.meta", &meta_file));
+  std::string meta_file_contents;
+  EXPECT_TRUE(base::ReadFileToString(meta_file, &meta_file_contents));
+  EXPECT_EQ(collector_.get_bytes_written(),
+            meta_file_contents.size() + output_log_compressed_size +
+                other_file_contents.size() + output_stack_file_contents.size());
+  EXPECT_THAT(meta_file_contents,
+              HasSubstr("payload=" + output_stack_file.BaseName().value()));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_file_some_file=" +
+                                            other_file.BaseName().value()));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_file_chrome.txt=" +
+                                            output_log.BaseName().value()));
+  EXPECT_THAT(meta_file_contents,
+              Not(HasSubstr("upload_file_i915_error_state.log.xz")));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value1=abcdefghij"));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value2=12345"));
+  EXPECT_THAT(meta_file_contents, HasSubstr("upload_var_value3=ok"));
+  EXPECT_THAT(meta_file_contents, HasSubstr("done=1"));
 }

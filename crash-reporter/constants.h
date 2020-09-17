@@ -14,9 +14,21 @@ constexpr char kCrashGroupName[] = "crash-access";
 constexpr char kCrashUserGroupName[] = "crash-user-access";
 #endif
 
-const char kUploadVarPrefix[] = "upload_var_";
-const char kUploadTextPrefix[] = "upload_text_";
-const char kUploadFilePrefix[] = "upload_file_";
+constexpr char kUploadVarPrefix[] = "upload_var_";
+constexpr char kUploadTextPrefix[] = "upload_text_";
+constexpr char kUploadFilePrefix[] = "upload_file_";
+
+constexpr char kJavaScriptStackExtension[] = "js_stack";
+constexpr char kJavaScriptStackExtensionWithDot[] = ".js_stack";
+// This *must match* the crash::FileStorage::kJsStacktraceFileName constant
+// in the google3 internal crash processing code.
+constexpr char kKindForJavaScriptError[] = "JavascriptError";
+
+constexpr char kMinidumpExtension[] = "dmp";
+constexpr char kMinidumpExtensionWithDot[] = ".dmp";
+// This *must match* the ending of the crash::FileStorage::kDumpFileName
+// in the google3 internal crash processing code.
+constexpr char kKindForMinidump[] = "minidump";
 
 }  // namespace constants
 

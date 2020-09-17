@@ -11,6 +11,7 @@
 #include <brillo/syslog_logging.h>
 
 #include "crash-reporter/arc_util.h"
+#include "crash-reporter/constants.h"
 #include "crash-reporter/util.h"
 
 namespace {
@@ -53,8 +54,8 @@ bool ArcvmNativeCollector::HandleCrash(
 
   const std::string basename_without_ext =
       FormatDumpBasename(crash_info.exec_name, crash_info.time, crash_info.pid);
-  const base::FilePath minidump_path =
-      GetCrashPath(crash_dir, basename_without_ext, "dmp");
+  const base::FilePath minidump_path = GetCrashPath(
+      crash_dir, basename_without_ext, constants::kMinidumpExtension);
   if (!DumpFdToFile(minidump_fd, minidump_path)) {
     LOG(ERROR) << "Failed to write minidump file";
     return false;
