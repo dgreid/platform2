@@ -15,6 +15,7 @@
 #include "diagnostics/common/system/mock_debugd_adapter.h"
 #include "diagnostics/cros_healthd/executor/mock_executor_adapter.h"
 #include "diagnostics/cros_healthd/network/fake_network_health_adapter.h"
+#include "diagnostics/cros_healthd/network_diagnostics/mock_network_diagnostics_adapter.h"
 #include "diagnostics/cros_healthd/system/context.h"
 #include "diagnostics/cros_healthd/system/fake_system_config.h"
 #include "diagnostics/cros_healthd/system/fake_system_utilities.h"
@@ -44,6 +45,7 @@ class MockContext final : public Context {
   MockDebugdAdapter* mock_debugd_adapter() const;
   dbus::MockObjectProxy* mock_power_manager_proxy() const;
   FakeNetworkHealthAdapter* fake_network_health_adapter() const;
+  MockNetworkDiagnosticsAdapter* network_diagnostics_adapter() const;
   FakePowerdAdapter* fake_powerd_adapter() const;
   FakeSystemConfig* fake_system_config() const;
   FakeSystemUtilities* fake_system_utils() const;

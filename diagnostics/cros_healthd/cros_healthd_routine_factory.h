@@ -88,6 +88,9 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the memory routine. See
   // diagnostics/routines/memory for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() = 0;
+  // Constructs a new instance of the LAN connectivity routine. See
+  // diagnostics/routines/lan_connectivity for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() = 0;
 };
 
 }  // namespace diagnostics

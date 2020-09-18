@@ -119,6 +119,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
               RunMemoryRoutine,
               (int32_t*, mojo_ipc::DiagnosticRoutineStatusEnum*),
               (override));
+  MOCK_METHOD(void,
+              RunLanConnectivityRoutine,
+              (int32_t*, mojo_ipc::DiagnosticRoutineStatusEnum*),
+              (override));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -473,6 +477,25 @@ TEST_F(CrosHealthdMojoServiceTest, RequestBatteryChargeRoutine) {
       kLengthSeconds, kMinimumChargePercentRequired,
       base::Bind(&SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>,
                  &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the LAN connectivity routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestLanConnectivityRoutine) {
+  EXPECT_CALL(*routine_service(),
+              RunLanConnectivityRoutine(NotNull(), NotNull()))
+      .WillOnce(WithArgs<0, 1>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunLanConnectivityRoutine(base::Bind(
+      &SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>, &response));
 
   ASSERT_TRUE(!response.is_null());
   EXPECT_EQ(response->id, kExpectedId);

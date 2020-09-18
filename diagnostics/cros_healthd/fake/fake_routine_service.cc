@@ -120,4 +120,9 @@ void FakeRoutineService::RunMemoryRoutine(RunMemoryRoutineCallback callback) {
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunLanConnectivityRoutine(
+    RunLanConnectivityRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

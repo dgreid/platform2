@@ -54,7 +54,8 @@ std::set<mojo_ipc::DiagnosticRoutineEnum> GetAllAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kDiskRead,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
       mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge,
-      mojo_ipc::DiagnosticRoutineEnum::kMemory};
+      mojo_ipc::DiagnosticRoutineEnum::kMemory,
+      mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity};
 }
 
 std::set<mojo_ipc::DiagnosticRoutineEnum> GetBatteryRoutines() {
@@ -451,6 +452,19 @@ TEST_F(CrosHealthdRoutineServiceImplTest, RunMemoryRoutine) {
       /*output=*/"");
   mojo_ipc::RunRoutineResponse response;
   service()->RunMemoryRoutine(&response.id, &response.status);
+  EXPECT_EQ(response.id, 1);
+  EXPECT_EQ(response.status, kExpectedStatus);
+}
+
+// Test that the LAN connectivity routine can be run.
+TEST_F(CrosHealthdRoutineServiceImplTest, RunLanConnectivityRoutine) {
+  constexpr mojo_ipc::DiagnosticRoutineStatusEnum kExpectedStatus =
+      mojo_ipc::DiagnosticRoutineStatusEnum::kRunning;
+  routine_factory()->SetNonInteractiveStatus(
+      kExpectedStatus, /*status_message=*/"", /*progress_percent=*/50,
+      /*output=*/"");
+  mojo_ipc::RunRoutineResponse response;
+  service()->RunLanConnectivityRoutine(&response.id, &response.status);
   EXPECT_EQ(response.id, 1);
   EXPECT_EQ(response.status, kExpectedStatus);
 }

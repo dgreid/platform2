@@ -62,9 +62,10 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
       base::TimeDelta exec_duration,
       uint32_t minimum_charge_percent_required) override;
   std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() override;
 
  private:
-  // Unowned. Should outlive this instance.
+  // Unowned pointer that should outlive this instance.
   Context* const context_ = nullptr;
 };
 

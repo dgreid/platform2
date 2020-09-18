@@ -25,6 +25,7 @@ class NetworkDiagnosticsAdapterImpl final : public NetworkDiagnosticsAdapter {
       mojo::PendingRemote<
           chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines>
           network_diagnostics_routines) override;
+  void RunLanConnectivityRoutine(MojomLanConnectivityCallback) override;
 
  private:
   // NetworkDiagnosticsRoutines remote used to run network diagnostics.

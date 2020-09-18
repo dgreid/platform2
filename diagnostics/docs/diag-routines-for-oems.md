@@ -532,3 +532,32 @@ Progress: 100
 Status: Passed
 Status message: Routine passed
 ```
+
+## Network Routines
+
+### lan_connectivity
+
+Checks to see whether the device is connected to a LAN.
+
+The lan_connectivity routine has no parameters.
+
+To check whether a device is connected to a LAN:
+
+From crosh:
+```bash
+crosh> diag lan_connectivity
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=lan_connectivity
+```
+
+Sample output:
+```bash
+Progress: 0
+Progress: 100
+Progress: 100
+Status: Passed
+Status message: Lan Connectivity routine passed with no problems.
+```

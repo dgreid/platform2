@@ -18,4 +18,14 @@ void NetworkDiagnosticsAdapterImpl::SetNetworkDiagnosticsRoutines(
   network_diagnostics_routines_.Bind(std::move(network_diagnostics_routines));
 }
 
+void NetworkDiagnosticsAdapterImpl::RunLanConnectivityRoutine(
+    MojomLanConnectivityCallback callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(
+        chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun);
+    return;
+  }
+  network_diagnostics_routines_->LanConnectivity(std::move(callback));
+}
+
 }  // namespace diagnostics

@@ -15,6 +15,9 @@ namespace diagnostics {
 // NetworkDiagnosticsRoutines interface.
 class NetworkDiagnosticsAdapter {
  public:
+  using MojomLanConnectivityCallback = chromeos::network_diagnostics::mojom::
+      NetworkDiagnosticsRoutines::LanConnectivityCallback;
+
   virtual ~NetworkDiagnosticsAdapter() = default;
 
   // Sets the NetworkDiagnosticsRoutines remote sent by the browser.
@@ -22,6 +25,9 @@ class NetworkDiagnosticsAdapter {
       mojo::PendingRemote<
           chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines>
           network_diagnostics_routines) = 0;
+
+  // Requests that the browser invokes the LanConnectivity routine.
+  virtual void RunLanConnectivityRoutine(MojomLanConnectivityCallback) = 0;
 };
 
 }  // namespace diagnostics

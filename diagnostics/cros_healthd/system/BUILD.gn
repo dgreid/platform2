@@ -58,6 +58,7 @@ if (use.test || use.fuzzer) {
       "//diagnostics/common:libcommon_test_utils",
       "//diagnostics/cros_healthd/executor:libcros_healthd_executor_test_utils",
       "//diagnostics/cros_healthd/network:libnetwork_health_adapter_test_utils",
+      "//diagnostics/cros_healthd/network_diagnostics:libnetwork_diagnostics_adapter_test_utils",
     ]
     sources = [
       "fake_system_config.cc",

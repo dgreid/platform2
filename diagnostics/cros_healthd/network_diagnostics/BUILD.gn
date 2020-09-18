@@ -17,3 +17,36 @@ source_set("libnetwork_diagnostics_adapter") {
   deps = [ "//diagnostics/mojo:network_diagnostics_mojo_bindings" ]
   sources = [ "network_diagnostics_adapter_impl.cc" ]
 }
+
+if (use.test) {
+  pkg_config("network_diagnostics_test_pkg_deps") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
+  executable("network_diagnostics_test") {
+    configs += [
+      ":network_diagnostics_test_pkg_deps",
+      "//common-mk:test",
+    ]
+    deps = [
+      ":libnetwork_diagnostics_adapter",
+      "//diagnostics/common:mojo_testrunner",
+    ]
+    sources = [ "network_diagnostics_adapter_impl_test.cc" ]
+  }
+}
+
+if (use.test || use.fuzzer) {
+  pkg_config("libnetwork_diagnostics_adapter_test_utils_pkg_deps") {
+    pkg_deps = [ "libchrome-test-${libbase_ver}" ]
+  }
+
+  source_set("libnetwork_diagnostics_adapter_test_utils") {
+    configs += [ ":libnetwork_diagnostics_adapter_test_utils_pkg_deps" ]
+    deps = [
+      ":libnetwork_diagnostics_adapter",
+      "//diagnostics/mojo:cros_healthd_mojo_bindings",
+    ]
+    sources = [ "mock_network_diagnostics_adapter.cc" ]
+  }
+}

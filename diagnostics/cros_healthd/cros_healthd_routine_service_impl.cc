@@ -175,6 +175,12 @@ void CrosHealthdRoutineServiceImpl::RunMemoryRoutine(
              mojo_ipc::DiagnosticRoutineEnum::kMemory, id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunLanConnectivityRoutine(
+    int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeLanConnectivityRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity, id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -250,7 +256,8 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kCpuStress,
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
-      mojo_ipc::DiagnosticRoutineEnum::kMemory};
+      mojo_ipc::DiagnosticRoutineEnum::kMemory,
+      mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(
