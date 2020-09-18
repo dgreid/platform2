@@ -1090,52 +1090,36 @@ void Service::StartVm(dbus::MethodCall* method_call,
     return;
   }
 
-  // A VM image is trusted when both:
-  // 1) This daemon (or a trusted daemon) chooses the kernel and rootfs path.
-  // 2) The chosen VM is a first-party VM.
-  // In practical terms this is true iff we are booting termina.
-  bool is_trusted_image = request.start_termina();
-  base::FilePath kernel, initrd, rootfs, tools_disk;
-  if (!request.vm().dlc_id().empty() || request.start_termina()) {
-    std::string error;
-    base::FilePath vm_path = GetVmImagePath(request.vm().dlc_id(), &error);
-    if (vm_path.empty()) {
-      LOG(ERROR) << error;
-      report_error(error);
-      return;
-    }
-    kernel = vm_path.Append(kVmKernelName);
-    rootfs = vm_path.Append(kVmRootfsName);
-    if (request.start_termina())
-      tools_disk = vm_path.Append(kVmToolsDiskName);
-  } else {
-    // User-chosen VMs (i.e. with arbitrary paths) can not be trusted.
-    DCHECK(!is_trusted_image);
-    kernel = base::FilePath(request.vm().kernel());
-    initrd = base::FilePath(request.vm().initrd());
-    rootfs = base::FilePath(request.vm().rootfs());
+  string failure_reason;
+  VMImageSpec image_spec =
+      GetImageSpec(request.vm(), request.start_termina(), &failure_reason);
+  if (!failure_reason.empty()) {
+    LOG(ERROR) << "Failed to get image paths: " << failure_reason;
+    report_error("Failed to get image paths: " + failure_reason);
+    return;
   }
 
-  if (!base::PathExists(kernel)) {
-    LOG(ERROR) << "Missing VM kernel path: " << kernel.value();
+  if (!base::PathExists(image_spec.kernel)) {
+    LOG(ERROR) << "Missing VM kernel path: " << image_spec.kernel.value();
     report_error("Kernel path does not exist");
     return;
   }
 
-  if (!initrd.empty() && !base::PathExists(initrd)) {
-    LOG(ERROR) << "Missing VM initrd path: " << initrd.value();
+  if (!image_spec.initrd.empty() && !base::PathExists(image_spec.initrd)) {
+    LOG(ERROR) << "Missing VM initrd path: " << image_spec.initrd.value();
     report_error("Initrd path does not exist");
     return;
   }
 
-  if (!base::PathExists(rootfs)) {
-    LOG(ERROR) << "Missing VM rootfs path: " << rootfs.value();
+  if (!base::PathExists(image_spec.rootfs)) {
+    LOG(ERROR) << "Missing VM rootfs path: " << image_spec.rootfs.value();
     report_error("Rootfs path does not exist");
     return;
   }
 
-  const bool is_untrusted_vm = IsUntrustedVM(
-      request.run_as_untrusted(), is_trusted_image, host_kernel_version_);
+  const bool is_untrusted_vm =
+      IsUntrustedVM(request.run_as_untrusted(), image_spec.is_trusted_image,
+                    host_kernel_version_);
   const auto untrusted_vm_check_result =
       IsUntrustedVMAllowed(request.run_as_untrusted(), host_kernel_version_);
   if (is_untrusted_vm) {
@@ -1184,9 +1168,9 @@ void Service::StartVm(dbus::MethodCall* method_call,
   // is split into its own disk image(vm_tools.img).  Detect whether it exists
   // to keep compatibility with older components with only vm_rootfs.img.
   string tools_device;
-  if (base::PathExists(tools_disk)) {
+  if (base::PathExists(image_spec.tools_disk)) {
     disks.push_back(TerminaVm::Disk{
-        .path = std::move(tools_disk),
+        .path = std::move(image_spec.tools_disk),
         .writable = false,
     });
     tools_device = base::StringPrintf("/dev/vd%c", disk_letter++);
@@ -1344,12 +1328,14 @@ void Service::StartVm(dbus::MethodCall* method_call,
   SendVmStartingUpSignal(vm_id, *vm_info);
 
   auto vm = TerminaVm::Create(
-      std::move(kernel), std::move(initrd), std::move(rootfs), cpus,
-      std::move(disks), vsock_cid, std::move(network_client),
-      std::move(server_proxy), std::move(runtime_dir), std::move(log_path),
-      std::move(gpu_cache_path), std::move(rootfs_device),
-      std::move(stateful_device), std::move(stateful_size), features,
-      request.start_termina(), sigchld_handler_);
+      std::move(image_spec.kernel), std::move(image_spec.initrd),
+      std::move(image_spec.rootfs), cpus, std::move(disks), vsock_cid,
+      std::move(network_client), std::move(server_proxy),
+      std::move(runtime_dir), std::move(log_path), std::move(gpu_cache_path),
+      std::move(rootfs_device), std::move(stateful_device),
+      std::move(stateful_size), features, request.start_termina(),
+      sigchld_handler_);
+
   if (!vm) {
     constexpr char err_msg[] = "Unable to start VM";
     LOG(ERROR) << err_msg;
@@ -1429,7 +1415,6 @@ void Service::StartVm(dbus::MethodCall* method_call,
   // send the VmStartedSignal on success.
   NotifyCiceroneOfVmStarted(vm_id, vm->cid(), vm->GetInfo().pid, vm_token);
 
-  string failure_reason;
   vm_tools::StartTerminaResponse::MountResult mount_result =
       vm_tools::StartTerminaResponse::UNKNOWN;
   // Allow untrusted VMs to have privileged containers.
@@ -3408,6 +3393,51 @@ base::FilePath Service::GetVmImagePath(const std::string& dlc_id,
     return {};
   }
   return base::FilePath(dlc_root.value());
+}
+
+Service::VMImageSpec Service::GetImageSpec(
+    const vm_tools::concierge::VirtualMachineSpec& vm,
+    bool is_termina,
+    string* failure_reason) {
+  DCHECK(failure_reason);
+  DCHECK(failure_reason->empty());
+
+  // A VM image is trusted when both:
+  // 1) This daemon (or a trusted daemon) chooses the kernel and rootfs
+  // path.
+  // 2) The chosen VM is a first-party VM.
+  // In practical terms this is true iff we are booting termina without
+  // specifying kernel and rootfs image.
+  bool is_trusted_image = is_termina;
+
+  if (!is_termina && vm.dlc_id().empty()) {
+    // User-chosen VMs (i.e. with arbitrary paths) can not be trusted.
+    return VMImageSpec{
+        .kernel = base::FilePath(vm.kernel()),
+        .initrd = base::FilePath(vm.initrd()),
+        .rootfs = base::FilePath(vm.rootfs()),
+        .tools_disk = {},
+        .is_trusted_image = is_trusted_image,
+    };
+  }
+
+  base::FilePath vm_path = GetVmImagePath(vm.dlc_id(), failure_reason);
+  if (vm_path.empty())
+    return {};
+
+  base::FilePath kernel = vm_path.Append(kVmKernelName);
+  base::FilePath rootfs = vm_path.Append(kVmRootfsName);
+  base::FilePath tools_disk;
+
+  if (is_termina)
+    tools_disk = vm_path.Append(kVmToolsDiskName);
+
+  return VMImageSpec{
+      .kernel = std::move(kernel),
+      .rootfs = std::move(rootfs),
+      .tools_disk = std::move(tools_disk),
+      .is_trusted_image = is_trusted_image,
+  };
 }
 
 base::FilePath Service::PrepareVmGpuCachePath(const std::string& owner_id,
