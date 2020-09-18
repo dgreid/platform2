@@ -358,6 +358,11 @@ void CreateDirectories(ChromiumCommandBuilder* builder) {
   builder->AddEnvVar("CHROMEOS_SESSION_LOG_DIR",
                      user_dir.Append("log").value());
 
+  // Disable Mesa's internal shader disk caching feature, since Chrome has its
+  // own shader cache implementation and the GPU process sandbox does not
+  // allow threads (Mesa uses threads for this feature).
+  builder->AddEnvVar("MESA_GLSL_CACHE_DISABLE", "true");
+
   // On devices with Chrome OS camera HAL, Chrome needs to host the unix domain
   // named socket /run/camera/camera3.sock to provide the camera HAL Mojo
   // service to the system.
