@@ -196,7 +196,7 @@ bool UnwrapScryptVaultKeyset(const SerializedVaultKeyset& serialized,
                              CryptoError* error) {
   SecureBlob blob = SecureBlob(serialized.wrapped_keyset());
   SecureBlob decrypted(blob.size());
-  if (!LibScryptCompat::Decrypt(blob, vkk_data.scrypt_key.value(),
+  if (!LibScryptCompat::Decrypt(blob, vkk_data.scrypt_key->derived_key(),
                                 &decrypted)) {
     return false;
   }
@@ -205,8 +205,9 @@ bool UnwrapScryptVaultKeyset(const SerializedVaultKeyset& serialized,
     SecureBlob chaps_key;
     SecureBlob wrapped_chaps_key = SecureBlob(serialized.wrapped_chaps_key());
     chaps_key.resize(wrapped_chaps_key.size());
-    if (!LibScryptCompat::Decrypt(
-            wrapped_chaps_key, vkk_data.chaps_scrypt_key.value(), &chaps_key)) {
+    if (!LibScryptCompat::Decrypt(wrapped_chaps_key,
+                                  vkk_data.chaps_scrypt_key->derived_key(),
+                                  &chaps_key)) {
       return false;
     }
     keyset->set_chaps_key(chaps_key);
@@ -217,7 +218,8 @@ bool UnwrapScryptVaultKeyset(const SerializedVaultKeyset& serialized,
     SecureBlob wrapped_reset_seed = SecureBlob(serialized.wrapped_reset_seed());
     reset_seed.resize(wrapped_reset_seed.size());
     if (!LibScryptCompat::Decrypt(
-            wrapped_reset_seed, vkk_data.scrypt_wrapped_reset_seed_key.value(),
+            wrapped_reset_seed,
+            vkk_data.scrypt_wrapped_reset_seed_key->derived_key(),
             &reset_seed)) {
       return false;
     }

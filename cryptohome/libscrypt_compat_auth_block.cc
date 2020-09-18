@@ -4,6 +4,8 @@
 
 #include "cryptohome/libscrypt_compat_auth_block.h"
 
+#include <utility>
+
 #include <unistd.h>
 
 #include "cryptohome/cryptohome_metrics.h"
@@ -55,7 +57,7 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                             error)) {
     return false;
   }
-  key_blobs->scrypt_key = derived_scrypt_key;
+  key_blobs->scrypt_key = LibScryptCompatKeyObjects(derived_scrypt_key);
 
   // This implementation is an unfortunate effect of how the libscrypt
   // encryption and decryption functions work. It generates a fresh key for each
@@ -68,7 +70,7 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                               error)) {
       return false;
     }
-    key_blobs->chaps_scrypt_key = derived_chaps_key;
+    key_blobs->chaps_scrypt_key = LibScryptCompatKeyObjects(derived_chaps_key);
   }
 
   if (serialized.has_wrapped_reset_seed()) {
@@ -78,7 +80,8 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                               &derived_reset_seed_key, error)) {
       return false;
     }
-    key_blobs->scrypt_wrapped_reset_seed_key = derived_reset_seed_key;
+    key_blobs->scrypt_wrapped_reset_seed_key =
+        LibScryptCompatKeyObjects(derived_reset_seed_key);
   }
 
   return true;

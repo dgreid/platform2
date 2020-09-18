@@ -6,7 +6,9 @@
 #define CRYPTOHOME_KEY_OBJECTS_H_
 
 #include <string>
+#include <utility>
 
+#include <base/logging.h>
 #include <base/optional.h>
 #include <brillo/secure_blob.h>
 
@@ -28,6 +30,37 @@ struct AuthInput {
   base::Optional<brillo::SecureBlob> reset_secret;
 };
 
+// LibScrypt requires a salt to be passed from Create() into the encryption
+// phase, so this struct has an optional salt.
+struct LibScryptCompatKeyObjects {
+  // Constructors to make code readable when this class is created.
+  explicit LibScryptCompatKeyObjects(brillo::SecureBlob derived_key)
+      : derived_key_(derived_key), salt_(base::nullopt) {}
+
+  LibScryptCompatKeyObjects(brillo::SecureBlob derived_key,
+                            brillo::SecureBlob salt)
+      : derived_key_(derived_key), salt_(salt) {}
+
+  brillo::SecureBlob derived_key() const { return derived_key_; }
+
+  brillo::SecureBlob salt() const {
+    if (salt_ == base::nullopt) {
+      LOG(FATAL) << "Salt is undefined. Salt is only exposed in the Create() "
+                    "flow of the LibScryptCompatAuthBlock.";
+    }
+    return salt_.value();
+  }
+
+ private:
+  // These are non-const so the class is assignable, not because they should be
+  // modified after construction.
+
+  // The scrypt derived key which must always be present.
+  brillo::SecureBlob derived_key_;
+  // The salt which only is passed out in the Create() flow.
+  base::Optional<brillo::SecureBlob> salt_;
+};
+
 // This struct is populated by the various authentication methods, with the
 // secrets derived from the user input.
 struct KeyBlobs {
@@ -45,12 +78,13 @@ struct KeyBlobs {
   base::Optional<brillo::SecureBlob> authorization_data_iv;
   // The reset secret used for LE credentials.
   base::Optional<brillo::SecureBlob> reset_secret;
-  // The key used for existing data encrypted with libscrypt.
-  base::Optional<brillo::SecureBlob> scrypt_key;
+
+  // The following fields are for libscrypt compatibility:
+  base::Optional<LibScryptCompatKeyObjects> scrypt_key;
   // The key for scrypt wrapped chaps key.
-  base::Optional<brillo::SecureBlob> chaps_scrypt_key;
+  base::Optional<LibScryptCompatKeyObjects> chaps_scrypt_key;
   // The scrypt wrapped reset seed.
-  base::Optional<brillo::SecureBlob> scrypt_wrapped_reset_seed_key;
+  base::Optional<LibScryptCompatKeyObjects> scrypt_wrapped_reset_seed_key;
 };
 
 }  // namespace cryptohome

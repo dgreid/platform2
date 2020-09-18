@@ -549,7 +549,6 @@ TEST(LibScryptCompatAuthBlockTest, DeriveTest) {
   KeyBlobs key_out_data;
   AuthInput auth_input;
   auth_input.user_input = key;
-  auth_input.locked_to_single_user = false;
 
   AuthBlockState auth_state = {
       base::make_optional<SerializedVaultKeyset>(std::move(serialized))};
@@ -581,9 +580,10 @@ TEST(LibScryptCompatAuthBlockTest, DeriveTest) {
       0xFD, 0x7C, 0x78, 0x1D, 0x9B, 0xAD, 0xE6, 0x71, 0x35, 0x2B, 0x32,
       0x1E, 0x59, 0x19, 0x47, 0x88, 0x92, 0x50, 0x28, 0x09};
 
-  EXPECT_EQ(derived_key, key_out_data.scrypt_key);
-  EXPECT_EQ(derived_chaps_key, key_out_data.chaps_scrypt_key);
-  EXPECT_EQ(derived_reset_seed_key, key_out_data.scrypt_wrapped_reset_seed_key);
+  EXPECT_EQ(derived_key, key_out_data.scrypt_key->derived_key());
+  EXPECT_EQ(derived_chaps_key, key_out_data.chaps_scrypt_key->derived_key());
+  EXPECT_EQ(derived_reset_seed_key,
+            key_out_data.scrypt_wrapped_reset_seed_key->derived_key());
 }
 
 }  // namespace cryptohome
