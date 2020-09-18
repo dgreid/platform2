@@ -11,23 +11,17 @@
 #include "shill/cellular/mock_cellular.h"
 #include "shill/cellular/mock_mobile_operator_info.h"
 #include "shill/cellular/mock_modem_info.h"
+#include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
-#include "shill/mock_control.h"
-#include "shill/mock_manager.h"
-#include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
-#include "shill/mock_store.h"
 #include "shill/service_property_change_test.h"
 
 using std::string;
 using testing::_;
 using testing::AnyNumber;
-using testing::InSequence;
 using testing::Mock;
 using testing::NiceMock;
 using testing::Return;
-using testing::SetArgPointee;
-using testing::StrEq;
 
 namespace shill {
 
@@ -36,20 +30,16 @@ const char kImsi[] = "111222123456789";
 const char kIccid[] = "1234567890000";
 }  // namespace
 
-MATCHER_P2(ContainsCellularProperties, key, value, "") {
-  return arg.template Contains<string>(CellularService::kStorageType) &&
-         arg.template Get<string>(CellularService::kStorageType) ==
-             kTypeCellular &&
-         arg.template Contains<string>(key) &&
-         arg.template Get<string>(key) == value;
-}
-
 class CellularServiceTest : public testing::Test {
  public:
   CellularServiceTest()
       : modem_info_(nullptr, &dispatcher_, nullptr, nullptr),
         adaptor_(nullptr) {
     Service::SetNextSerialNumberForTesting(0);
+  }
+  ~CellularServiceTest() override { adaptor_ = nullptr; }
+
+  void SetUp() override {
     // Many tests set service properties which call Manager.UpdateService().
     EXPECT_CALL(*modem_info_.mock_manager(), UpdateService(_))
         .Times(AnyNumber());
@@ -61,11 +51,13 @@ class CellularServiceTest : public testing::Test {
     service_ = new CellularService(modem_info_.manager(), kImsi, kIccid,
                                    device_->GetSimCardId());
     service_->SetDevice(device_.get());
-  }
-  ~CellularServiceTest() override { adaptor_ = nullptr; }
-
-  void SetUp() override {
     adaptor_ = static_cast<ServiceMockAdaptor*>(service_->adaptor());
+
+    storage_id_ = service_->GetStorageIdentifier();
+    storage_.SetString(storage_id_, CellularService::kStorageType,
+                       kTypeCellular);
+    storage_.SetString(storage_id_, CellularService::kStorageIccid, kIccid);
+    storage_.SetString(storage_id_, CellularService::kStorageImsi, kImsi);
   }
 
  protected:
@@ -84,6 +76,8 @@ class CellularServiceTest : public testing::Test {
   scoped_refptr<MockCellular> device_;
   CellularServiceRefPtr service_;
   ServiceMockAdaptor* adaptor_;  // Owned by |service_|.
+  std::string storage_id_;
+  FakeStore storage_;
 };
 
 const char CellularServiceTest::kAddress[] = "000102030405";
@@ -300,15 +294,8 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
   EXPECT_FALSE(IsAutoConnectable(&reason));
   EXPECT_STREQ(Service::kAutoConnExplicitDisconnect, reason);
 
-  // But if the Service is reloaded, it is eligible for auto-connect
-  // again.
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageIccid, device_->iccid())))
-      .WillRepeatedly(Return(std::set<string>{"matching-storage-id"}));
-  EXPECT_TRUE(service_->Load(&storage));
+  // If the Service is reloaded, it is eligible for auto-connect again.
+  EXPECT_TRUE(service_->Load(&storage_));
   EXPECT_TRUE(IsAutoConnectable(&reason));
 
   // A non-user initiated Disconnect doesn't change anything.
@@ -331,13 +318,6 @@ TEST_F(CellularServiceTest, IsAutoConnectable) {
 }
 
 TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageIccid, device_->iccid())))
-      .WillRepeatedly(Return(std::set<string>{"matching-storage-id"}));
-
   const string kDefaultUser;
   const string kDefaultPass;
   const string kNewUser("new-username");
@@ -350,18 +330,14 @@ TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
       EXPECT_TRUE(service_->IsFailed());
       EXPECT_EQ(Service::kFailurePPPAuth, service_->failure());
       if (change_username) {
-        EXPECT_CALL(storage,
-                    GetString(_, CellularService::kStoragePPPUsername, _))
-            .WillOnce(DoAll(SetArgPointee<2>(kNewUser), Return(true)))
-            .RetiresOnSaturation();
+        storage_.SetString(storage_id_, CellularService::kStoragePPPUsername,
+                           kNewUser);
       }
       if (change_password) {
-        EXPECT_CALL(storage,
-                    GetString(_, CellularService::kStoragePPPPassword, _))
-            .WillOnce(DoAll(SetArgPointee<2>(kNewPass), Return(true)))
-            .RetiresOnSaturation();
+        storage_.SetString(storage_id_, CellularService::kStoragePPPPassword,
+                           kNewPass);
       }
-      EXPECT_TRUE(service_->Load(&storage));
+      EXPECT_TRUE(service_->Load(&storage_));
       if (change_username || change_password) {
         EXPECT_NE(Service::kFailurePPPAuth, service_->failure());
       } else {
@@ -371,80 +347,49 @@ TEST_F(CellularServiceTest, LoadResetsPPPAuthFailure) {
   }
 }
 
-TEST_F(CellularServiceTest, LoadFromProfileMatchingImsi) {
-  NiceMock<MockStore> storage;
-  string initial_storage_id = service_->GetStorageIdentifier();
+// The default storage_identifier_ will be {kCellular}_{kIccid}, however older
+// profile/storage entries may use a different identifier. This sets up an entry
+// with a matching ICCID but an arbitrary storage id and ensures that the older
+// storage_identifer_ value is set.
+TEST_F(CellularServiceTest, LoadFromProfileMatchingIccid) {
+  string initial_storage_id = storage_id_;
   string matching_storage_id = "another-storage-id";
-  std::set<string> groups = {matching_storage_id};
-  EXPECT_CALL(storage, ContainsGroup(initial_storage_id)).Times(0);
-  EXPECT_CALL(storage, ContainsGroup(matching_storage_id))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageIccid, device_->iccid())))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_TRUE(service_->IsLoadableFrom(storage));
-  EXPECT_TRUE(service_->Load(&storage));
+  storage_.DeleteGroup(initial_storage_id);
+  storage_.SetString(matching_storage_id, CellularService::kStorageType,
+                     kTypeCellular);
+  storage_.SetString(matching_storage_id, CellularService::kStorageIccid,
+                     kIccid);
+  storage_.SetString(matching_storage_id, CellularService::kStorageImsi, kImsi);
+
+  EXPECT_TRUE(service_->IsLoadableFrom(storage_));
+  EXPECT_TRUE(service_->Load(&storage_));
   EXPECT_EQ(matching_storage_id, service_->GetStorageIdentifier());
 }
 
 TEST_F(CellularServiceTest, LoadFromFirstOfMultipleMatchingProfiles) {
-  NiceMock<MockStore> storage;
-  string initial_storage_id = service_->GetStorageIdentifier();
-  string matching_storage_id1 = "another-storage-id1";
-  string matching_storage_id2 = "another-storage-id2";
-  string matching_storage_id3 = "another-storage-id3";
-  std::set<string> groups = {
-      matching_storage_id1,
-      matching_storage_id2,
-      matching_storage_id3,
-  };
-  EXPECT_CALL(storage, ContainsGroup(initial_storage_id)).Times(0);
-  EXPECT_CALL(storage, ContainsGroup(matching_storage_id1))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageIccid, device_->iccid())))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(storage, GetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_TRUE(service_->IsLoadableFrom(storage));
-  EXPECT_TRUE(service_->Load(&storage));
-  EXPECT_EQ(matching_storage_id1, service_->GetStorageIdentifier());
-}
-
-// The default storage_identifier_ will be {kCellular}_{kImsi}, however older
-// profile/storage entries may use a different identifier. This sets up an entry
-// with a matching IMSI but an arbitrary storage id and ensures that the older
-// storage_identifer_ value is set.
-TEST_F(CellularServiceTest, LoadFromOlderProfile) {
-  NiceMock<MockStore> storage;
-  string storage_id = "arbitrary-storage-id";
-  std::set<string> groups = {storage_id};
-
-  EXPECT_CALL(storage, GetGroupsWithProperties(ContainsCellularProperties(
-                           CellularService::kStorageIccid, kIccid)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(storage, ContainsGroup(storage_id)).WillRepeatedly(Return(true));
-
-  EXPECT_TRUE(service_->IsLoadableFrom(storage));
-  EXPECT_TRUE(service_->Load(&storage));
-  EXPECT_EQ(storage_id, service_->GetStorageIdentifier());
+  string initial_storage_id = storage_id_;
+  string matching_storage_ids[] = {"another-storage-id1", "another-storage-id2",
+                                   "another-storage-id3"};
+  storage_.DeleteGroup(initial_storage_id);
+  for (auto& matching_storage_id : matching_storage_ids) {
+    storage_.SetString(matching_storage_id, CellularService::kStorageType,
+                       kTypeCellular);
+    storage_.SetString(matching_storage_id, CellularService::kStorageIccid,
+                       kIccid);
+    storage_.SetString(matching_storage_id, CellularService::kStorageImsi,
+                       kImsi);
+  }
+  EXPECT_TRUE(service_->IsLoadableFrom(storage_));
+  EXPECT_TRUE(service_->Load(&storage_));
+  EXPECT_EQ(matching_storage_ids[0], service_->GetStorageIdentifier());
 }
 
 TEST_F(CellularServiceTest, Save) {
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage, SetString(_, _, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),
-                                 StrEq(Service::kStorageType), kTypeCellular))
-      .Times(1);
-  EXPECT_CALL(storage,
-              SetString(service_->GetStorageIdentifier(),
-                        StrEq(CellularService::kStorageImsi), device_->imsi()))
-      .Times(1);
-  EXPECT_CALL(storage, SetString(service_->GetStorageIdentifier(),
-                                 StrEq(CellularService::kStorageIccid),
-                                 device_->iccid()))
-      .Times(1);
-  EXPECT_TRUE(service_->Save(&storage));
+  EXPECT_TRUE(service_->Save(&storage_));
+  std::string iccid;
+  EXPECT_TRUE(
+      storage_.GetString(storage_id_, CellularService::kStorageIccid, &iccid));
+  EXPECT_EQ(iccid, device_->iccid());
 }
 
 // Some of these tests duplicate signals tested above. However, it's

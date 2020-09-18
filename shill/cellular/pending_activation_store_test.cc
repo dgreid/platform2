@@ -7,29 +7,33 @@
 #include <utility>
 
 #include <base/files/scoped_temp_dir.h>
-#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "shill/mock_store.h"
+#include "shill/fake_store.h"
 #include "shill/store_interface.h"
 
-using ::testing::_;
-using ::testing::DoAll;
-using ::testing::Mock;
-using ::testing::Return;
-using ::testing::SetArgPointee;
+namespace {
+const int kInvalid = -1;
+// Invalid enum value other than -1
+const int kUninitialized = -2;
+}  // namespace
 
 namespace shill {
 
 class PendingActivationStoreTest : public ::testing::Test {
  public:
-  PendingActivationStoreTest() : mock_store_(new MockStore()) {}
+  PendingActivationStoreTest() = default;
+  ~PendingActivationStoreTest() override = default;
+
+  void SetUp() override {
+    auto storage = std::make_unique<FakeStore>();
+    storage_ = storage.get();
+    store_.storage_ = std::move(storage);
+  }
 
  protected:
-  void SetMockStore() { store_.storage_ = std::move(mock_store_); }
-
-  std::unique_ptr<MockStore> mock_store_;
   PendingActivationStore store_;
+  FakeStore* storage_ = nullptr;
 };
 
 TEST_F(PendingActivationStoreTest, FileInteractions) {
@@ -158,109 +162,98 @@ TEST_F(PendingActivationStoreTest, FileInteractions) {
 }
 
 TEST_F(PendingActivationStoreTest, GetActivationState) {
-  MockStore* mock_store = mock_store_.get();
-  SetMockStore();
-
   const char kEntry[] = "12345689";
 
   // Value not found
-  EXPECT_CALL(*mock_store,
-              GetInt(PendingActivationStore::kIccidGroupId, kEntry, _))
-      .WillOnce(Return(false));
   EXPECT_EQ(PendingActivationStore::kStateUnknown,
             store_.GetActivationState(PendingActivationStore::kIdentifierICCID,
                                       kEntry));
 
   // File contains invalid entry
-  EXPECT_CALL(*mock_store,
-              GetInt(PendingActivationStore::kMeidGroupId, kEntry, _))
-      .WillOnce(DoAll(
-          SetArgPointee<2>(static_cast<int>(PendingActivationStore::kStateMax)),
-          Return(true)));
+  storage_->SetInt(PendingActivationStore::kMeidGroupId, kEntry,
+                   PendingActivationStore::kStateMax);
   EXPECT_EQ(PendingActivationStore::kStateUnknown,
             store_.GetActivationState(PendingActivationStore::kIdentifierMEID,
                                       kEntry));
-  EXPECT_CALL(*mock_store,
-              GetInt(PendingActivationStore::kMeidGroupId, kEntry, _))
-      .WillOnce(DoAll(SetArgPointee<2>(0), Return(true)));
+
+  storage_->SetInt(PendingActivationStore::kMeidGroupId, kEntry, 0);
   EXPECT_EQ(PendingActivationStore::kStateUnknown,
             store_.GetActivationState(PendingActivationStore::kIdentifierMEID,
                                       kEntry));
-  Mock::VerifyAndClearExpectations(mock_store);
 
   // All enum values
-  EXPECT_CALL(*mock_store,
-              GetInt(PendingActivationStore::kIccidGroupId, kEntry, _))
-      .WillOnce(DoAll(SetArgPointee<2>(1), Return(true)));
+  storage_->SetInt(PendingActivationStore::kIccidGroupId, kEntry, 1);
   EXPECT_EQ(PendingActivationStore::kStatePending,
             store_.GetActivationState(PendingActivationStore::kIdentifierICCID,
                                       kEntry));
-  EXPECT_CALL(*mock_store,
-              GetInt(PendingActivationStore::kIccidGroupId, kEntry, _))
-      .WillOnce(DoAll(SetArgPointee<2>(2), Return(true)));
+  storage_->SetInt(PendingActivationStore::kIccidGroupId, kEntry, 2);
   EXPECT_EQ(PendingActivationStore::kStateActivated,
             store_.GetActivationState(PendingActivationStore::kIdentifierICCID,
                                       kEntry));
-  Mock::VerifyAndClearExpectations(mock_store);
 }
 
 TEST_F(PendingActivationStoreTest, SetActivationState) {
-  MockStore* mock_store = mock_store_.get();
-  SetMockStore();
-
   const char kEntry[] = "12345689";
 
-  EXPECT_CALL(*mock_store, Flush()).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_store,
-              SetInt(PendingActivationStore::kIccidGroupId, kEntry, _))
-      .WillOnce(Return(false));
   EXPECT_FALSE(
       store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
                                 kEntry, PendingActivationStore::kStateUnknown));
-  EXPECT_FALSE(
-      store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
-                                kEntry, PendingActivationStore::kStateUnknown));
+
+  storage_->set_writes_fail(true);
   EXPECT_FALSE(
       store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
                                 kEntry, PendingActivationStore::kStatePending));
+  storage_->set_writes_fail(false);
 
-  EXPECT_CALL(*mock_store,
-              SetInt(PendingActivationStore::kIccidGroupId, kEntry, _))
-      .WillRepeatedly(Return(true));
   EXPECT_FALSE(store_.SetActivationState(
       PendingActivationStore::kIdentifierICCID, kEntry,
-      static_cast<PendingActivationStore::State>(-1)));
+      static_cast<PendingActivationStore::State>(kInvalid)));
+
+  int activation_state = kUninitialized;
+  storage_->SetInt(PendingActivationStore::kIccidGroupId, kEntry, kInvalid);
+
   EXPECT_FALSE(
       store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
                                 kEntry, PendingActivationStore::kStateMax));
+  EXPECT_TRUE(storage_->GetInt(PendingActivationStore::kIccidGroupId, kEntry,
+                               &activation_state));
+  EXPECT_EQ(activation_state, kInvalid);
+
   EXPECT_FALSE(
       store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
                                 kEntry, PendingActivationStore::kStateUnknown));
+  EXPECT_TRUE(storage_->GetInt(PendingActivationStore::kIccidGroupId, kEntry,
+                               &activation_state));
+  EXPECT_EQ(activation_state, kInvalid);
+
   EXPECT_TRUE(
       store_.SetActivationState(PendingActivationStore::kIdentifierICCID,
                                 kEntry, PendingActivationStore::kStatePending));
+  EXPECT_TRUE(storage_->GetInt(PendingActivationStore::kIccidGroupId, kEntry,
+                               &activation_state));
+  EXPECT_EQ(activation_state, PendingActivationStore::kStatePending);
+
   EXPECT_TRUE(store_.SetActivationState(
       PendingActivationStore::kIdentifierICCID, kEntry,
       PendingActivationStore::kStateActivated));
+  EXPECT_TRUE(storage_->GetInt(PendingActivationStore::kIccidGroupId, kEntry,
+                               &activation_state));
+  EXPECT_EQ(activation_state, PendingActivationStore::kStateActivated);
 }
 
 TEST_F(PendingActivationStoreTest, RemoveEntry) {
-  MockStore* mock_store = mock_store_.get();
-  SetMockStore();
-
   const char kEntry[] = "12345689";
 
-  EXPECT_CALL(*mock_store, Flush()).WillRepeatedly(Return(true));
-  EXPECT_CALL(*mock_store,
-              DeleteKey(PendingActivationStore::kIccidGroupId, kEntry))
-      .WillOnce(Return(false));
   EXPECT_FALSE(
       store_.RemoveEntry(PendingActivationStore::kIdentifierICCID, kEntry));
-  EXPECT_CALL(*mock_store,
-              DeleteKey(PendingActivationStore::kIccidGroupId, kEntry))
-      .WillOnce(Return(true));
+
+  storage_->SetInt(PendingActivationStore::kIccidGroupId, kEntry, 0);
   EXPECT_TRUE(
       store_.RemoveEntry(PendingActivationStore::kIdentifierICCID, kEntry));
+  int activation_state = kUninitialized;
+  EXPECT_FALSE(storage_->GetInt(PendingActivationStore::kIccidGroupId, kEntry,
+                                &activation_state));
+  EXPECT_EQ(activation_state, kUninitialized);
 }
 
 }  // namespace shill

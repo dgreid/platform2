@@ -42,6 +42,7 @@ extern "C" {
 #include "shill/dhcp/mock_dhcp_config.h"
 #include "shill/dhcp/mock_dhcp_provider.h"
 #include "shill/error.h"
+#include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
 #include "shill/mock_dbus_properties_proxy.h"
@@ -51,7 +52,6 @@ extern "C" {
 #include "shill/mock_ppp_device_factory.h"
 #include "shill/mock_process_manager.h"
 #include "shill/mock_profile.h"
-#include "shill/mock_store.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/property_store_test.h"
 #include "shill/rpc_task.h"  // for RpcTaskDelegate
@@ -508,7 +508,7 @@ class CellularTest : public testing::TestWithParam<Cellular::Type> {
   MockMobileOperatorInfo* mock_serving_operator_info_;
   CellularRefPtr device_;
   CellularServiceProvider cellular_service_provider_{modem_info_.manager()};
-  NiceMock<MockStore> profile_storage_;
+  FakeStore profile_storage_;
   scoped_refptr<NiceMock<MockProfile>> profile_;
 };
 

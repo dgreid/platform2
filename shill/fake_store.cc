@@ -246,6 +246,8 @@ template <typename T>
 bool FakeStore::WriteSetting(const string& group,
                              const string& key,
                              const T& new_value) {
+  if (writes_fail_)
+    return false;
   auto group_name_and_settings = group_name_to_settings_.find(group);
   if (group_name_and_settings == group_name_to_settings_.end()) {
     group_name_to_settings_[group][key] = new_value;

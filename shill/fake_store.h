@@ -78,6 +78,8 @@ class FakeStore : public StoreInterface {
                         const std::string& plaintext_key,
                         const std::string& value) override;
 
+  void set_writes_fail(bool writes_fail) { writes_fail_ = writes_fail; }
+
  private:
   template <typename T>
   bool ReadSetting(const std::string& group,
@@ -89,6 +91,7 @@ class FakeStore : public StoreInterface {
                     const T& new_value);
 
   std::map<std::string, brillo::VariantDictionary> group_name_to_settings_;
+  bool writes_fail_ = false;
 
   DISALLOW_COPY_AND_ASSIGN(FakeStore);
 };
