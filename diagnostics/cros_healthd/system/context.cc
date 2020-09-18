@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <base/logging.h>
+#include <base/time/default_tick_clock.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config.h>
 #include <dbus/power_manager/dbus-constants.h>
 
@@ -69,6 +70,8 @@ bool Context::Initialize() {
   executor_ = std::make_unique<ExecutorAdapterImpl>();
   executor_->Connect(std::move(endpoint_));
 
+  tick_clock_ = std::make_unique<base::DefaultTickClock>();
+
   return true;
 }
 
@@ -110,6 +113,10 @@ ExecutorAdapter* Context::executor() const {
 
 SystemUtilities* Context::system_utils() const {
   return system_utils_.get();
+}
+
+base::TickClock* Context::tick_clock() const {
+  return tick_clock_.get();
 }
 
 }  // namespace diagnostics

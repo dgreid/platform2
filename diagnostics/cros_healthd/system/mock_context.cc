@@ -36,6 +36,7 @@ bool MockContext::Initialize() {
   system_config_ = std::make_unique<FakeSystemConfig>();
   system_utils_ = std::make_unique<FakeSystemUtilities>();
   executor_ = std::make_unique<MockExecutorAdapter>();
+  tick_clock_ = std::make_unique<base::SimpleTestTickClock>();
 
   return true;
 }
@@ -82,6 +83,10 @@ FakeSystemUtilities* MockContext::fake_system_utils() const {
 
 MockExecutorAdapter* MockContext::mock_executor() const {
   return static_cast<MockExecutorAdapter*>(executor_.get());
+}
+
+base::SimpleTestTickClock* MockContext::mock_tick_clock() const {
+  return static_cast<base::SimpleTestTickClock*>(tick_clock_.get());
 }
 
 }  // namespace diagnostics

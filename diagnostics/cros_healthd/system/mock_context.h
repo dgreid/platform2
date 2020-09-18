@@ -6,6 +6,7 @@
 #define DIAGNOSTICS_CROS_HEALTHD_SYSTEM_MOCK_CONTEXT_H_
 
 #include <base/memory/scoped_refptr.h>
+#include <base/test/simple_test_tick_clock.h>
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
 #include <dbus/object_path.h>
@@ -50,6 +51,7 @@ class MockContext final : public Context {
   FakeSystemConfig* fake_system_config() const;
   FakeSystemUtilities* fake_system_utils() const;
   MockExecutorAdapter* mock_executor() const;
+  base::SimpleTestTickClock* mock_tick_clock() const;
 
  private:
   // Used to create a mock power manager proxy.

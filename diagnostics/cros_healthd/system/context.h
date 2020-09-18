@@ -8,6 +8,7 @@
 #include <memory>
 
 #include <base/memory/scoped_refptr.h>
+#include <base/time/tick_clock.h>
 #include <brillo/dbus/dbus_connection.h>
 #include <chromeos/chromeos-config/libcros_config/cros_config_interface.h>
 #include <dbus/bus.h>
@@ -87,6 +88,8 @@ class Context {
   ExecutorAdapter* executor() const;
   // Use the object returned by system_utils() to access system utilities.
   SystemUtilities* system_utils() const;
+  // Use the object returned by tick_clock() to track the passage of time.
+  base::TickClock* tick_clock() const;
 
  private:
   // Allows MockContext to override the default helper objects.
@@ -117,6 +120,7 @@ class Context {
   std::unique_ptr<SystemConfigInterface> system_config_;
   std::unique_ptr<ExecutorAdapter> executor_;
   std::unique_ptr<SystemUtilities> system_utils_;
+  std::unique_ptr<base::TickClock> tick_clock_;
 };
 
 }  // namespace diagnostics
