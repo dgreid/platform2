@@ -39,6 +39,38 @@ namespace system_proxy {
 using ::testing::_;
 using ::testing::Return;
 
+class FakeSocketForwarder : public patchpanel::SocketForwarder {
+ public:
+  FakeSocketForwarder(const std::string& name,
+                      std::unique_ptr<patchpanel::Socket> sock0,
+                      std::unique_ptr<patchpanel::Socket> sock1)
+      : patchpanel::SocketForwarder(name, std::move(sock0), std::move(sock1)) {}
+
+  void Run() override { /* do nothing */
+  }
+};
+
+class FakeProxyConnectJob : public ProxyConnectJob {
+ public:
+  FakeProxyConnectJob(std::unique_ptr<patchpanel::Socket> socket,
+                      const std::string& credentials,
+                      ResolveProxyCallback resolve_proxy_callback,
+                      AuthenticationRequiredCallback auth_required_callback,
+                      OnConnectionSetupFinishedCallback setup_finished_callback)
+      : ProxyConnectJob(std::move(socket),
+                        credentials,
+                        std::move(resolve_proxy_callback),
+                        auth_required_callback,
+                        std::move(setup_finished_callback)) {}
+
+  std::unique_ptr<patchpanel::SocketForwarder> CreateSocketForwarder(
+      std::unique_ptr<patchpanel::Socket> peer0,
+      std::unique_ptr<patchpanel::Socket> peer1) {
+    return std::make_unique<FakeSocketForwarder>(
+        "test-forwarder", std::move(peer0), std::move(peer1));
+  }
+};
+
 class ProxyConnectJobTest : public ::testing::Test {
  public:
   struct HttpAuthEntry {
@@ -68,7 +100,7 @@ class ProxyConnectJobTest : public ::testing::Test {
     cros_client_socket_ =
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[1]));
 
-    connect_job_ = std::make_unique<ProxyConnectJob>(
+    connect_job_ = std::make_unique<FakeProxyConnectJob>(
         std::make_unique<patchpanel::Socket>(base::ScopedFD(fds[0])), "",
         base::BindOnce(&ProxyConnectJobTest::ResolveProxy,
                        base::Unretained(this)),

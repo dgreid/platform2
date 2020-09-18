@@ -42,11 +42,18 @@ class HttpTestServer : public base::SimpleThread {
   // address returned by |GetUrl| until all the requets set via
   // |AddHttpConnectReply| are fulfilled.
   void Run() override;
+
   // Sets the expected HTTP responses from the server. Must be called before
   // starting the thread.
   void AddHttpConnectReply(HttpConnectReply reply);
   // Returns the URL as scheme://host:port that points to the server.
   std::string GetUrl();
+  // Returns the last open socket for which the HttpTestServer has returned
+  // |HttpConnectReply::kOk| (corresponding to the HTTP status "200 - Connection
+  // Established"). Returns nullptr if the server was not configured to create a
+  // successful connection. Do not cache the returned pointer as it's only
+  // guaranteed to be valid during the current MessageLoop iteration.
+  patchpanel::Socket* GetClientSocket();
 
  private:
   // Creates the proxy listening socket which is bound to the localhost and a
@@ -54,13 +61,20 @@ class HttpTestServer : public base::SimpleThread {
   // |GetUrl|.
   void BeforeStart() override;
 
+  // Reads and discards data from |client_socket_|.
+  void ConsumeOutstandingData();
+
   void SendConnectReply();
   // Returns the HTTP message associate with |reply|.
   std::string_view GetConnectReplyString(HttpConnectReply reply);
 
+  // Closes the |client_socket_| socket if open.
+  void CloseClientSocket();
+
   uint32_t listening_addr_;
   int listening_port_;
   std::queue<HttpConnectReply> expected_responses_;
+  std::unique_ptr<patchpanel::Socket> client_socket_;
   std::unique_ptr<patchpanel::Socket> listening_socket_;
   base::WeakPtrFactory<HttpTestServer> weak_ptr_factory_{this};
 };

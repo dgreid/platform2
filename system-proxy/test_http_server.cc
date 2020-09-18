@@ -4,6 +4,9 @@
 
 #include "system-proxy/test_http_server.h"
 
+#include <utility>
+#include <vector>
+
 #include <netinet/in.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -17,6 +20,7 @@
 
 namespace {
 constexpr int kMaxConn = 10;
+constexpr int kBufSize = 1024;
 
 const std::string_view kConnectionEstablished =
     "HTTP/1.1 200 Connection established\r\n\r\n";
@@ -46,9 +50,10 @@ HttpTestServer::~HttpTestServer() {
   if (!HasBeenStarted()) {
     return;
   }
+  CloseClientSocket();
   int fd = listening_socket_->release();
   if (close(fd) != 0) {
-    LOG(ERROR) << "Failed to close the listening socket";
+    PLOG(ERROR) << "Failed to close the listening socket";
   }
   Join();
 }
@@ -59,13 +64,27 @@ void HttpTestServer::Run() {
   while (!expected_responses_.empty()) {
     if (auto client_conn = listening_socket_->Accept(
             (struct sockaddr*)&client_src, &sockaddr_len)) {
-      std::string_view server_reply =
-          GetConnectReplyString(expected_responses_.front());
+      HttpConnectReply response = expected_responses_.front();
       expected_responses_.pop();
-      LOG(ERROR) << server_reply;
+      std::string_view server_reply = GetConnectReplyString(response);
       client_conn->SendTo(server_reply.data(), server_reply.size());
+      // Keep the socket to validate data sent by the client after a successful
+      // connection.
+      if (response == HttpConnectReply::kOk) {
+        client_socket_ = std::move(client_conn);
+      }
     }
   }
+}
+
+void HttpTestServer::CloseClientSocket() {
+  if (!client_socket_)
+    return;
+  int fd = client_socket_->release();
+  if (close(fd) != 0) {
+    PLOG(ERROR) << "Failed to close the client socket";
+  }
+  client_socket_.reset();
 }
 
 void HttpTestServer::BeforeStart() {
@@ -98,6 +117,21 @@ std::string HttpTestServer::GetUrl() {
   return base::StringPrintf(
       "http://%s:%d", patchpanel::IPv4AddressToString(listening_addr_).c_str(),
       listening_port_);
+}
+
+patchpanel::Socket* HttpTestServer::GetClientSocket() {
+  return client_socket_.get();
+}
+
+// This method is designed for consuming incoming CONNECT requests, which are
+// smaller than |kBufSize| bytes. If larger data is expected, consider doing
+// RecvFrom() in a loop until all data is read.
+void HttpTestServer::ConsumeOutstandingData() {
+  if (!client_socket_)
+    return;
+  std::vector<char> buf(kBufSize);
+  if (client_socket_->RecvFrom(buf.data(), buf.size()) < 0)
+    PLOG(ERROR) << "Error reading from client socket";
 }
 
 void HttpTestServer::AddHttpConnectReply(HttpConnectReply reply) {
