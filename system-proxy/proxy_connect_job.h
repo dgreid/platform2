@@ -89,16 +89,17 @@ class ProxyConnectJob {
  private:
   friend class ServerProxyTest;
   friend class ProxyConnectJobTest;
+  friend class HttpServerProxyConnectJobTest;
   FRIEND_TEST(ServerProxyTest, HandlePendingJobs);
   FRIEND_TEST(ServerProxyTest, HandleConnectRequest);
-  FRIEND_TEST(ProxyConnectJobTest, SuccessfulConnection);
-  FRIEND_TEST(ProxyConnectJobTest, SuccessfulConnectionAltEnding);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestWrongMethod);
   FRIEND_TEST(ProxyConnectJobTest, BadHttpRequestNoEmptyLine);
-  FRIEND_TEST(ProxyConnectJobTest, ResendWithCredentials);
-  FRIEND_TEST(ProxyConnectJobTest, NoCredentials);
-  FRIEND_TEST(ProxyConnectJobTest, KerberosAuth);
-  FRIEND_TEST(ProxyConnectJobTest, AuthenticationTimeout);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, SuccessfulConnection);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, SuccessfulConnectionAltEnding);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, ResendWithCredentials);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, NoCredentials);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, KerberosAuth);
+  FRIEND_TEST(HttpServerProxyConnectJobTest, AuthenticationTimeout);
 
   // Reads data from the socket into |raw_request| until the first empty line,
   // which would mark the end of the HTTP request header.
