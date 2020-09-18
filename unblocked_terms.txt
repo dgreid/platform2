@@ -1,0 +1,14 @@
+# This file contains patterns we want to remove from the codebase but haven't
+# yet removed from this directory.
+# This file is a subset of src/repohooks/unblocked_terms.txt.
+# Don't delete this file, even if it's empty -- We want to keep keyword_check
+# enabled.
+# See repohooks/README.md for more details.
+
+dummy
+master
+native
+sane
+sanity
+slave
+white.?list
