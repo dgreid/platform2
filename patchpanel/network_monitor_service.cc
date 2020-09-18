@@ -10,6 +10,7 @@
 #include <utility>
 
 #include <base/bind.h>
+#include <base/strings/strcat.h>
 #include <base/threading/sequenced_task_runner_handle.h>
 #include <base/logging.h>
 #include <chromeos/dbus/service_constants.h>
@@ -70,22 +71,40 @@ bool NeedProbeForState(uint16_t current_state) {
 }  // namespace
 
 constexpr base::TimeDelta NeighborLinkMonitor::kActiveProbeInterval;
+constexpr base::TimeDelta NeighborLinkMonitor::kBackToConnectedTimeout;
 
-NeighborLinkMonitor::NeighborLinkMonitor(int ifindex,
-                                         const std::string& ifname,
-                                         shill::RTNLHandler* rtnl_handler)
-    : ifindex_(ifindex), ifname_(ifname), rtnl_handler_(rtnl_handler) {}
+NeighborLinkMonitor::NeighborLinkMonitor(
+    int ifindex,
+    const std::string& ifname,
+    shill::RTNLHandler* rtnl_handler,
+    ConnectedStateChangedHandler* neighbor_event_handler)
+    : ifindex_(ifindex),
+      ifname_(ifname),
+      rtnl_handler_(rtnl_handler),
+      neighbor_event_handler_(neighbor_event_handler) {}
 
 NeighborLinkMonitor::WatchingEntry::WatchingEntry(shill::IPAddress addr,
-                                                  Role role)
-    : addr(std::move(addr)), role_flags(static_cast<uint8_t>(role)) {}
+                                                  NeighborRole role)
+    : addr(std::move(addr)), role(role) {}
+
+std::string NeighborLinkMonitor::NeighborRoleToString(
+    NeighborLinkMonitor::NeighborRole role) {
+  switch (role) {
+    case NeighborLinkMonitor::NeighborRole::kGateway:
+      return "gateway";
+    case NeighborLinkMonitor::NeighborRole::kDNSServer:
+      return "dns_server";
+    case NeighborLinkMonitor::NeighborRole::kGatewayAndDNSServer:
+      return "gateway and dns_server";
+    default:
+      NOTREACHED();
+  }
+}
 
 std::string NeighborLinkMonitor::WatchingEntry::ToString() const {
-  return "(addr=" + addr.ToString() + ", role=" +
-         (role_flags & static_cast<uint8_t>(Role::kGateway) ? "gateway" : "") +
-         (role_flags & static_cast<uint8_t>(Role::kDNSServer) ? "dns server"
-                                                              : "") +
-         ", state=" + NUDStateToString(nud_state) + ")";
+  return base::StrCat({"{ addr: ", addr.ToString(),
+                       ", role: ", NeighborRoleToString(role),
+                       ", state: ", NUDStateToString(nud_state), " }"});
 }
 
 void NeighborLinkMonitor::AddWatchingEntries(
@@ -98,7 +117,7 @@ void NeighborLinkMonitor::AddWatchingEntries(
     LOG(ERROR) << "Gateway address " << gateway << " is not valid";
     return;
   }
-  UpdateWatchingEntry(gateway_addr, WatchingEntry::Role::kGateway);
+  UpdateWatchingEntry(gateway_addr, NeighborRole::kGateway);
 
   shill::IPAddress local_addr(addr, prefix_length);
   if (!local_addr.IsValid()) {
@@ -120,7 +139,7 @@ void NeighborLinkMonitor::AddWatchingEntries(
       continue;
     }
     watching_dns_num++;
-    UpdateWatchingEntry(dns_addr, WatchingEntry::Role::kDNSServer);
+    UpdateWatchingEntry(dns_addr, NeighborRole::kDNSServer);
   }
   LOG(INFO) << shill::IPAddress::GetAddressFamilyName(local_addr.family())
             << " watching entries added on " << ifname_
@@ -129,12 +148,32 @@ void NeighborLinkMonitor::AddWatchingEntries(
 }
 
 void NeighborLinkMonitor::UpdateWatchingEntry(const shill::IPAddress& addr,
-                                              WatchingEntry::Role role) {
+                                              NeighborRole role) {
   const auto it = watching_entries_.find(addr);
-  if (it == watching_entries_.end())
-    watching_entries_.insert(std::make_pair(addr, WatchingEntry(addr, role)));
-  else
-    it->second.role_flags |= static_cast<uint8_t>(role);
+  if (it == watching_entries_.end()) {
+    watching_entries_.emplace(std::piecewise_construct, std::make_tuple(addr),
+                              std::make_tuple(addr, role));
+    return;
+  }
+
+  constexpr uint8_t gateway_flag = static_cast<uint8_t>(NeighborRole::kGateway);
+  constexpr uint8_t dns_server_flag =
+      static_cast<uint8_t>(NeighborRole::kDNSServer);
+  uint8_t current_flags =
+      static_cast<uint8_t>(it->second.role) | static_cast<uint8_t>(role);
+  switch (current_flags) {
+    case gateway_flag:
+      it->second.role = NeighborRole::kGateway;
+      break;
+    case dns_server_flag:
+      it->second.role = NeighborRole::kDNSServer;
+      break;
+    case gateway_flag | dns_server_flag:
+      it->second.role = NeighborRole::kGatewayAndDNSServer;
+      break;
+    default:
+      NOTREACHED();
+  }
 }
 
 void NeighborLinkMonitor::OnIPConfigChanged(
@@ -271,27 +310,63 @@ void NeighborLinkMonitor::OnNeighborMessage(const shill::RTNLMessage& msg) {
 
   it->second.nud_state = new_nud_state;
 
-  // Leaves a log when the neighbor becomes valid from invalid or vice versa.
-  bool old_state_is_valid = old_nud_state & kNUDStateValid;
-  bool new_state_is_valid = new_nud_state & kNUDStateValid;
-  if (old_state_is_valid != new_state_is_valid) {
-    LOG(INFO) << "NUD state changed on " << ifname_ << " for "
-              << it->second.ToString()
-              << ", old_state=" << NUDStateToString(old_nud_state);
-    if (!new_state_is_valid)
-      LOG(WARNING) << "A neighbor becomes invalid on " << ifname_ << " "
-                   << it->second.ToString();
-  }
-
   // Probes this entry if we know it for the first time (state changed
   // from NUD_NONE, e.g., the monitor just started, or this entry has been
   // removed once).
   if (old_nud_state == NUD_NONE && NeedProbeForState(new_nud_state))
     SendNeighborProbeRTNLMessage(it->second);
+
+  // Triggers NeighborStateChanged logic if the NUD valid state changed. Note
+  // that normally if |connected| is true then the NUD state should be valid,
+  // but this is not true for a new added entry because we always assume a new
+  // neighbor is connected, so we treat that case specially.
+  bool old_nud_state_is_valid =
+      (old_nud_state & kNUDStateValid) || it->second.connected;
+  bool new_nud_state_is_valid = new_nud_state & kNUDStateValid;
+  if (old_nud_state_is_valid == new_nud_state_is_valid)
+    return;
+
+  LOG(INFO) << "NUD state changed on " << ifname_ << " for "
+            << it->second.ToString()
+            << ", old_state=" << NUDStateToString(old_nud_state);
+
+  if (new_nud_state_is_valid) {
+    it->second.back_to_connected_timer.Start(
+        FROM_HERE, kBackToConnectedTimeout,
+        base::BindOnce(&NeighborLinkMonitor::ChangeWatchingEntryState,
+                       base::Unretained(this), addr, true /* connected */));
+  } else {
+    LOG(WARNING) << "Neighbor becomes invalid on " << ifname_ << " "
+                 << it->second.ToString();
+    it->second.back_to_connected_timer.Stop();
+    ChangeWatchingEntryState(addr, false /* connected */);
+  }
 }
 
-NetworkMonitorService::NetworkMonitorService(ShillClient* shill_client)
-    : shill_client_(shill_client),
+void NeighborLinkMonitor::ChangeWatchingEntryState(const shill::IPAddress& addr,
+                                                   bool connected) {
+  // If this function is triggered by a timer, the WatchingEntry which contains
+  // that timer must exist.
+  const auto it = watching_entries_.find(addr);
+  if (it == watching_entries_.end()) {
+    LOG(DFATAL) << "Watching entry not found for " << addr;
+    return;
+  }
+
+  if (it->second.connected == connected)
+    return;
+
+  it->second.connected = connected;
+  neighbor_event_handler_->Run(ifindex_, it->second.addr, it->second.role,
+                               connected);
+}
+
+NetworkMonitorService::NetworkMonitorService(
+    ShillClient* shill_client,
+    const NeighborLinkMonitor::ConnectedStateChangedHandler&
+        neighbor_event_handler)
+    : neighbor_event_handler_(neighbor_event_handler),
+      shill_client_(shill_client),
       rtnl_handler_(shill::RTNLHandler::GetInstance()) {}
 
 void NetworkMonitorService::Start() {
@@ -336,7 +411,7 @@ void NetworkMonitorService::OnDevicesChanged(
     }
 
     auto link_monitor = std::make_unique<NeighborLinkMonitor>(
-        ifindex, device_props.ifname, rtnl_handler_);
+        ifindex, device_props.ifname, rtnl_handler_, &neighbor_event_handler_);
     link_monitor->OnIPConfigChanged(device_props.ipconfig);
     neighbor_link_monitors_[device] = std::move(link_monitor);
   }

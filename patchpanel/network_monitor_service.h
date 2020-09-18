@@ -59,14 +59,47 @@ namespace patchpanel {
 //   timeouts happen), we will be notified that the state is changed to
 //   NUD_FAILED. Then we will do nothing for this address, until we heard about
 //   it again from kernel.
+//
+// We use the following logic to determine L2 connectivity state of a neighbor,
+// and broadcast a signal when the state changed, based on the NUD state:
+// - If the NUD state is not in NUD_VALID, the neighbor is considered as
+//   "disconnected".
+// - If the NUD state is kept in NUD_VALID for a while, the neighbor is
+//   considered as "connected". That means we will not send out the signal
+//   immediately after the NUD state back to NUD_VALID, but wait for some time
+//   to make sure it will not become invalid again soon.
+// - A new neighbor will always be considered as "connected", before we know its
+//   NUD state.
 class NeighborLinkMonitor {
  public:
   static constexpr base::TimeDelta kActiveProbeInterval =
       base::TimeDelta::FromSeconds(60);
 
+  // If a neighbor does not become invalid again in kBackToConnectedTimeout
+  // after it comes back to NUD_VALID, we consider it as connected. Since
+  // currently the "connected" signal is only used by shill for comparing link
+  // monitors, we use a relatively longer value here.
+  static constexpr base::TimeDelta kBackToConnectedTimeout =
+      base::TimeDelta::FromMinutes(3);
+
+  // Possible neighbor roles in the ipconfig. Represents each individual role by
+  // a single bit to make the internal implementation easier.
+  enum class NeighborRole {
+    kGateway = 0x1,
+    kDNSServer = 0x2,
+    kGatewayAndDNSServer = 0x3,
+  };
+
+  using ConnectedStateChangedHandler =
+      base::RepeatingCallback<void(int ifindex,
+                                   const shill::IPAddress& ip_addr,
+                                   NeighborRole role,
+                                   bool connected)>;
+
   NeighborLinkMonitor(int ifindex,
                       const std::string& ifname,
-                      shill::RTNLHandler* rtnl_handler);
+                      shill::RTNLHandler* rtnl_handler,
+                      ConnectedStateChangedHandler* neighbor_event_handler);
   ~NeighborLinkMonitor() = default;
 
   NeighborLinkMonitor(const NeighborLinkMonitor&) = delete;
@@ -80,30 +113,41 @@ class NeighborLinkMonitor {
   //   immediately.
   void OnIPConfigChanged(const ShillClient::IPConfig& ipconfig);
 
+  static std::string NeighborRoleToString(
+      NeighborLinkMonitor::NeighborRole role);
+
  private:
   // Represents an address and its corresponding role (a gateway or dns server
   // or both) we are watching. Also tracks the NUD state of this address in the
   // kernel.
   struct WatchingEntry {
-    enum class Role {
-      kGateway = 0x1,
-      kDNSServer = 0x2,
-    };
+    WatchingEntry(shill::IPAddress addr, NeighborRole role);
+    WatchingEntry(const WatchingEntry&) = delete;
+    WatchingEntry& operator=(const WatchingEntry&) = delete;
 
-    WatchingEntry(shill::IPAddress addr, Role role);
     std::string ToString() const;
 
     shill::IPAddress addr;
-    // Since an address could have different rules at the same time, we use a
-    // bitmap to represent its roles.
-    uint8_t role_flags;
+    NeighborRole role;
+
     // Reflects the NUD state of |addr| in the kernel neighbor table. Notes that
     // we use NUD_NONE (which is a dummy state in the kernel) to indicate that
     // we don't know this address from the kernel (i.e., this entry is just
     // added or the kernel tells us this entry has been deleted). If an entry is
     // in this state, we will send a dump request to the kernel when the timer
     // is triggered.
+    // TODO(jiejiang): The following three fields are related. We may consider
+    // changing this struct into a class if it becomes more complicated.
     uint16_t nud_state = NUD_NONE;
+
+    // Indicates the L2 connectivity state of this neighbor. See the class
+    // comment above for more details.
+    bool connected = true;
+
+    // This timer is set when the NUD state of neighbor back to NUD_VALID to
+    // broadcast the connected signal, and reset if the NUD state becomes
+    // invalid again before triggered.
+    base::OneShotTimer back_to_connected_timer;
   };
 
   // ProbeAll() is invoked periodically by |probe_timer_|. It will scan the
@@ -124,8 +168,12 @@ class NeighborLinkMonitor {
                           const std::vector<std::string>& dns_addresses);
 
   // Creates a new entry if not exist or updates the role of an existing entry.
-  void UpdateWatchingEntry(const shill::IPAddress& addr,
-                           WatchingEntry::Role role);
+  void UpdateWatchingEntry(const shill::IPAddress& addr, NeighborRole role);
+
+  // Sets the connected state of the watching entry with |addr| to |connected|,
+  // and invokes |neighbor_event_handler_| to sent out a signal if the state
+  // changes.
+  void ChangeWatchingEntryState(const shill::IPAddress& addr, bool connected);
 
   void SendNeighborDumpRTNLMessage();
   void SendNeighborProbeRTNLMessage(const WatchingEntry& entry);
@@ -141,11 +189,16 @@ class NeighborLinkMonitor {
 
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;
+
+  const ConnectedStateChangedHandler* neighbor_event_handler_;
 };
 
 class NetworkMonitorService {
  public:
-  explicit NetworkMonitorService(ShillClient* shill_client);
+  explicit NetworkMonitorService(
+      ShillClient* shill_client,
+      const NeighborLinkMonitor::ConnectedStateChangedHandler&
+          neighbor_handler);
   ~NetworkMonitorService() = default;
 
   NetworkMonitorService(const NetworkMonitorService&) = delete;
@@ -162,6 +215,7 @@ class NetworkMonitorService {
   // ifname => NeighborLinkMonitor.
   std::map<std::string, std::unique_ptr<NeighborLinkMonitor>>
       neighbor_link_monitors_;
+  NeighborLinkMonitor::ConnectedStateChangedHandler neighbor_event_handler_;
   ShillClient* shill_client_;
   // RTNLHandler is a singleton object. Stores it here for test purpose.
   shill::RTNLHandler* rtnl_handler_;

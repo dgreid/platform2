@@ -234,8 +234,10 @@ void Manager::InitialSetup() {
                                           &addr_mgr_, forwarder, arc_guest);
   cros_svc_ = std::make_unique<CrostiniService>(shill_client_.get(), &addr_mgr_,
                                                 datapath_.get(), forwarder);
-  network_monitor_svc_ =
-      std::make_unique<NetworkMonitorService>(shill_client_.get());
+  network_monitor_svc_ = std::make_unique<NetworkMonitorService>(
+      shill_client_.get(),
+      base::BindRepeating(&Manager::OnNeighborConnectedStateChanged,
+                          weak_factory_.GetWeakPtr()));
   network_monitor_svc_->Start();
 
   counters_svc_ =
@@ -246,6 +248,7 @@ void Manager::InitialSetup() {
 
 void Manager::OnShutdown(int* exit_code) {
   LOG(INFO) << "Shutting down and cleaning up";
+  network_monitor_svc_.reset();
   cros_svc_.reset();
   arc_svc_.reset();
   close(connected_namespaces_epollfd_);
@@ -853,6 +856,45 @@ std::unique_ptr<dbus::Response> Manager::OnModifyPortRule(
   response.set_success(ModifyPortRule(request));
   writer.AppendProtoAsArrayOfBytes(response);
   return dbus_response;
+}
+
+void Manager::OnNeighborConnectedStateChanged(
+    int ifindex,
+    const shill::IPAddress& ip_addr,
+    NeighborLinkMonitor::NeighborRole role,
+    bool connected) {
+  if (!ip_addr.IsValid()) {
+    LOG(DFATAL) << "ip_addr is not valid";
+    return;
+  }
+
+  using SignalProto = NeighborConnectedStateChangedSignal;
+  SignalProto proto;
+  proto.set_ifindex(ifindex);
+  proto.set_ip_addr(ip_addr.ToString());
+  switch (role) {
+    case NeighborLinkMonitor::NeighborRole::kGateway:
+      proto.set_role(SignalProto::GATEWAY);
+      break;
+    case NeighborLinkMonitor::NeighborRole::kDNSServer:
+      proto.set_role(SignalProto::DNS_SERVER);
+      break;
+    case NeighborLinkMonitor::NeighborRole::kGatewayAndDNSServer:
+      proto.set_role(SignalProto::GATEWAY_AND_DNS_SERVER);
+      break;
+    default:
+      NOTREACHED();
+  }
+
+  dbus::Signal signal(kPatchPanelInterface,
+                      kNeighborConnectedStateChangedSignal);
+  dbus::MessageWriter writer(&signal);
+  if (!writer.AppendProtoAsArrayOfBytes(proto)) {
+    LOG(ERROR) << "Failed to encode proto NeighborConnectedStateChangedSignal";
+    return;
+  }
+
+  dbus_svc_path_->SendSignal(&signal);
 }
 
 void Manager::ConnectNamespace(
