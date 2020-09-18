@@ -4,6 +4,7 @@
 
 // The base module handles registration of a base set of crosh commands.
 
+mod arc;
 mod ccd_pass;
 mod set_time;
 mod verify_ro;
@@ -12,6 +13,7 @@ mod vmc;
 use crate::dispatcher::Dispatcher;
 
 pub fn register(dispatcher: &mut Dispatcher) {
+    arc::register(dispatcher);
     ccd_pass::register(dispatcher);
     set_time::register(dispatcher);
     verify_ro::register(dispatcher);

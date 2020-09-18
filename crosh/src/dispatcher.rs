@@ -17,6 +17,7 @@ const INDENT: &str = "  ";
 
 #[sorted]
 pub enum Error {
+    CommandInvalidArguments(String),
     CommandNotFound(String),
     CommandNotImplemented(String),
     CommandReturnedError,
@@ -31,6 +32,7 @@ impl Display for Error {
 
         #[sorted]
         match self {
+            CommandInvalidArguments(msg) => write!(f, "invalid arguments: {}", msg),
             CommandNotFound(command) => write!(f, "unknown command: {}", command),
             CommandNotImplemented(command) => write!(f, "command not implemented: {}", command),
             CommandReturnedError => write!(f, "command failed"),
