@@ -123,6 +123,10 @@ class MockCrosHealthdRoutineService : public CrosHealthdRoutineService {
               RunLanConnectivityRoutine,
               (int32_t*, mojo_ipc::DiagnosticRoutineStatusEnum*),
               (override));
+  MOCK_METHOD(void,
+              RunSignalStrengthRoutine,
+              (int32_t * id, mojo_ipc::DiagnosticRoutineStatusEnum* status),
+              (override));
   MOCK_METHOD4(GetRoutineUpdate,
                void(int32_t uuid,
                     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -495,6 +499,25 @@ TEST_F(CrosHealthdMojoServiceTest, RequestLanConnectivityRoutine) {
 
   mojo_ipc::RunRoutineResponsePtr response;
   service()->RunLanConnectivityRoutine(base::Bind(
+      &SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>, &response));
+
+  ASSERT_TRUE(!response.is_null());
+  EXPECT_EQ(response->id, kExpectedId);
+  EXPECT_EQ(response->status, kExpectedStatus);
+}
+
+// Test that we can request the signal strength routine.
+TEST_F(CrosHealthdMojoServiceTest, RequestSignalStrengthRoutine) {
+  EXPECT_CALL(*routine_service(),
+              RunSignalStrengthRoutine(NotNull(), NotNull()))
+      .WillOnce(WithArgs<0, 1>(Invoke(
+          [](int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+            *id = kExpectedId;
+            *status = kExpectedStatus;
+          })));
+
+  mojo_ipc::RunRoutineResponsePtr response;
+  service()->RunSignalStrengthRoutine(base::Bind(
       &SaveMojoResponse<mojo_ipc::RunRoutineResponsePtr>, &response));
 
   ASSERT_TRUE(!response.is_null());

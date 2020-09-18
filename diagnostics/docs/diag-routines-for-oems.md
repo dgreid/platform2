@@ -561,3 +561,31 @@ Progress: 100
 Status: Passed
 Status message: Lan Connectivity routine passed with no problems.
 ```
+
+### signal_strength
+
+Checks to see whether there is an acceptable signal strength on wireless
+networks.
+
+The signal_strength routine has no parameters.
+
+To check whether there is an acceptable signal strength on wireless networks:
+
+From crosh:
+```bash
+crosh> diag signal_strength
+```
+
+From cros-health-tool:
+```bash
+$ cros-health-tool diag --action=run_routine --routine=signal_strength
+```
+
+Sample output:
+```bash
+Progress: 0
+Progress: 100
+Progress: 100
+Status: Passed
+Status message: Signal Strength routine passed with no problems.
+```

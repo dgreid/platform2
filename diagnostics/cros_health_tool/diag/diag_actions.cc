@@ -47,7 +47,8 @@ const struct {
     {"battery_discharge", mojo_ipc::DiagnosticRoutineEnum::kBatteryDischarge},
     {"battery_charge", mojo_ipc::DiagnosticRoutineEnum::kBatteryCharge},
     {"memory", mojo_ipc::DiagnosticRoutineEnum::kMemory},
-    {"lan_connectivity", mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity}};
+    {"lan_connectivity", mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity},
+    {"signal_strength", mojo_ipc::DiagnosticRoutineEnum::kSignalStrength}};
 
 const struct {
   const char* readable_status;

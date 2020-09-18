@@ -104,6 +104,8 @@ class CrosHealthdMojoService final
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
+  void RunSignalStrengthRoutine(
+      RunSignalStrengthRoutineCallback callback) override;
 
   // chromeos::cros_healthd::mojom::CrosHealthdEventService overrides:
   void AddBluetoothObserver(

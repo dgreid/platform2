@@ -27,6 +27,7 @@ namespace diagnostics {
 namespace {
 
 namespace mojo_ipc = ::chromeos::cros_healthd::mojom;
+namespace network_diagnostics_ipc = ::chromeos::network_diagnostics::mojom;
 
 }  // namespace
 
@@ -51,9 +52,9 @@ class LanConnectivityRoutineTest : public testing::Test {
                                    mojo_ipc::RoutineUpdateUnion::New()};
     routine_->Start();
     routine_->PopulateStatusUpdate(&update, true);
-    return chromeos::cros_healthd::mojom::RoutineUpdate::New(
-        update.progress_percent, std::move(update.output),
-        std::move(update.routine_update_union));
+    return mojo_ipc::RoutineUpdate::New(update.progress_percent,
+                                        std::move(update.output),
+                                        std::move(update.routine_update_union));
   }
 
   MockNetworkDiagnosticsAdapter* network_diagnostics_adapter() {
@@ -77,10 +78,10 @@ TEST_F(LanConnectivityRoutineTest, RoutineReady) {
 // verdict is network_diagnostics::mojom::RoutineVerdict::kNoProblem.
 TEST_F(LanConnectivityRoutineTest, RoutineSuccess) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunLanConnectivityRoutine(_))
-      .WillOnce(Invoke([&](MockNetworkDiagnosticsAdapter::
-                               MojomLanConnectivityCallback callback) {
+      .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                               LanConnectivityCallback callback) {
         std::move(callback).Run(
-            chromeos::network_diagnostics::mojom::RoutineVerdict::kNoProblem);
+            network_diagnostics_ipc::RoutineVerdict::kNoProblem);
       }));
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
@@ -95,12 +96,11 @@ TEST_F(LanConnectivityRoutineTest, RoutineSuccess) {
 // network_diagnostics::mojom::RoutineVerdict::kProblem.
 TEST_F(LanConnectivityRoutineTest, RoutineFailed) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunLanConnectivityRoutine(_))
-      .WillOnce(
-          Invoke([&](MockNetworkDiagnosticsAdapter::MojomLanConnectivityCallback
-                         callback) {
-            std::move(callback).Run(
-                chromeos::network_diagnostics::mojom::RoutineVerdict::kProblem);
-          }));
+      .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                               LanConnectivityCallback callback) {
+        std::move(callback).Run(
+            network_diagnostics_ipc::RoutineVerdict::kProblem);
+      }));
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
 
@@ -114,12 +114,11 @@ TEST_F(LanConnectivityRoutineTest, RoutineFailed) {
 // a network_diagnostics::mojom::RoutineVerdict::kNotRun.
 TEST_F(LanConnectivityRoutineTest, RoutineError) {
   EXPECT_CALL(*(network_diagnostics_adapter()), RunLanConnectivityRoutine(_))
-      .WillOnce(
-          Invoke([&](MockNetworkDiagnosticsAdapter::MojomLanConnectivityCallback
-                         callback) {
-            std::move(callback).Run(
-                chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun);
-          }));
+      .WillOnce(Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                               LanConnectivityCallback callback) {
+        std::move(callback).Run(
+            network_diagnostics_ipc::RoutineVerdict::kNotRun);
+      }));
 
   mojo_ipc::RoutineUpdatePtr routine_update = RunRoutineAndWaitForExit();
 

@@ -20,6 +20,7 @@
 #include "diagnostics/cros_healthd/routines/nvme_self_test/nvme_self_test.h"
 #include "diagnostics/cros_healthd/routines/nvme_wear_level/nvme_wear_level.h"
 #include "diagnostics/cros_healthd/routines/prime_search/prime_search.h"
+#include "diagnostics/cros_healthd/routines/signal_strength/signal_strength.h"
 #include "diagnostics/cros_healthd/routines/smartctl_check/smartctl_check.h"
 #include "diagnostics/cros_healthd/routines/urandom/urandom.h"
 
@@ -140,6 +141,11 @@ std::unique_ptr<DiagnosticRoutine>
 CrosHealthdRoutineFactoryImpl::MakeLanConnectivityRoutine() {
   return std::make_unique<LanConnectivityRoutine>(
       context_->network_diagnostics_adapter());
+}
+
+std::unique_ptr<DiagnosticRoutine>
+CrosHealthdRoutineFactoryImpl::MakeSignalStrengthRoutine() {
+  return CreateSignalStrengthRoutine(context_->network_diagnostics_adapter());
 }
 
 }  // namespace diagnostics

@@ -63,6 +63,7 @@ class CrosHealthdRoutineFactoryImpl final : public CrosHealthdRoutineFactory {
       uint32_t minimum_charge_percent_required) override;
   std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() override;
 
  private:
   // Unowned pointer that should outlive this instance.

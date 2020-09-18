@@ -212,6 +212,13 @@ void CrosHealthdMojoService::RunLanConnectivityRoutine(
   std::move(callback).Run(response.Clone());
 }
 
+void CrosHealthdMojoService::RunSignalStrengthRoutine(
+    RunSignalStrengthRoutineCallback callback) {
+  RunRoutineResponse response;
+  routine_service_->RunSignalStrengthRoutine(&response.id, &response.status);
+  std::move(callback).Run(response.Clone());
+}
+
 void CrosHealthdMojoService::AddBluetoothObserver(
     chromeos::cros_healthd::mojom::CrosHealthdBluetoothObserverPtr observer) {
   bluetooth_events_->AddObserver(std::move(observer));

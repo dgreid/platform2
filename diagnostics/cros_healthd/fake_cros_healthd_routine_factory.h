@@ -85,6 +85,7 @@ class FakeCrosHealthdRoutineFactory final : public CrosHealthdRoutineFactory {
       uint32_t minimum_charge_percent_required) override;
   std::unique_ptr<DiagnosticRoutine> MakeMemoryRoutine() override;
   std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() override;
+  std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() override;
 
  private:
   // The routine that will be returned by any calls to MakeSomeRoutine.

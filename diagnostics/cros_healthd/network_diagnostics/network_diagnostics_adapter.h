@@ -15,9 +15,6 @@ namespace diagnostics {
 // NetworkDiagnosticsRoutines interface.
 class NetworkDiagnosticsAdapter {
  public:
-  using MojomLanConnectivityCallback = chromeos::network_diagnostics::mojom::
-      NetworkDiagnosticsRoutines::LanConnectivityCallback;
-
   virtual ~NetworkDiagnosticsAdapter() = default;
 
   // Sets the NetworkDiagnosticsRoutines remote sent by the browser.
@@ -27,7 +24,14 @@ class NetworkDiagnosticsAdapter {
           network_diagnostics_routines) = 0;
 
   // Requests that the browser invokes the LanConnectivity routine.
-  virtual void RunLanConnectivityRoutine(MojomLanConnectivityCallback) = 0;
+  virtual void RunLanConnectivityRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          LanConnectivityCallback) = 0;
+
+  // Requests the browser to invoke the SignalStrength routine.
+  virtual void RunSignalStrengthRoutine(
+      chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines::
+          SignalStrengthCallback) = 0;
 };
 
 }  // namespace diagnostics

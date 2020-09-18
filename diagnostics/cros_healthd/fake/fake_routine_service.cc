@@ -125,4 +125,9 @@ void FakeRoutineService::RunLanConnectivityRoutine(
   NOTIMPLEMENTED();
 }
 
+void FakeRoutineService::RunSignalStrengthRoutine(
+    RunSignalStrengthRoutineCallback callback) {
+  NOTIMPLEMENTED();
+}
+
 }  // namespace diagnostics

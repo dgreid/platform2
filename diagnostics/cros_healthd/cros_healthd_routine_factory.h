@@ -91,6 +91,9 @@ class CrosHealthdRoutineFactory {
   // Constructs a new instance of the LAN connectivity routine. See
   // diagnostics/routines/lan_connectivity for details on the routine itself.
   virtual std::unique_ptr<DiagnosticRoutine> MakeLanConnectivityRoutine() = 0;
+  // Constructs a new instance of the signal strength routine. See
+  // diagnostics/routines/signal_strength for details on the routine itself.
+  virtual std::unique_ptr<DiagnosticRoutine> MakeSignalStrengthRoutine() = 0;
 };
 
 }  // namespace diagnostics

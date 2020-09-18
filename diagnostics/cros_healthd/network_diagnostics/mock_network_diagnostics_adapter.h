@@ -28,7 +28,13 @@ class MockNetworkDiagnosticsAdapter final : public NetworkDiagnosticsAdapter {
       (override));
   MOCK_METHOD(void,
               RunLanConnectivityRoutine,
-              (MojomLanConnectivityCallback),
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::LanConnectivityCallback),
+              (override));
+  MOCK_METHOD(void,
+              RunSignalStrengthRoutine,
+              (chromeos::network_diagnostics::mojom::
+                   NetworkDiagnosticsRoutines::SignalStrengthCallback),
               (override));
 };
 

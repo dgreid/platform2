@@ -103,6 +103,9 @@ class CrosHealthdRoutineServiceImpl final : public CrosHealthdRoutineService {
   void RunLanConnectivityRoutine(
       int32_t* id,
       MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
+  void RunSignalStrengthRoutine(
+      int32_t* id,
+      MojomCrosHealthdDiagnosticRoutineStatusEnum* status) override;
   void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,

@@ -181,6 +181,12 @@ void CrosHealthdRoutineServiceImpl::RunLanConnectivityRoutine(
              mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity, id, status);
 }
 
+void CrosHealthdRoutineServiceImpl::RunSignalStrengthRoutine(
+    int32_t* id, mojo_ipc::DiagnosticRoutineStatusEnum* status) {
+  RunRoutine(routine_factory_->MakeSignalStrengthRoutine(),
+             mojo_ipc::DiagnosticRoutineEnum::kSignalStrength, id, status);
+}
+
 void CrosHealthdRoutineServiceImpl::GetRoutineUpdate(
     int32_t uuid,
     mojo_ipc::DiagnosticRoutineCommandEnum command,
@@ -257,7 +263,8 @@ void CrosHealthdRoutineServiceImpl::PopulateAvailableRoutines() {
       mojo_ipc::DiagnosticRoutineEnum::kFloatingPointAccuracy,
       mojo_ipc::DiagnosticRoutineEnum::kPrimeSearch,
       mojo_ipc::DiagnosticRoutineEnum::kMemory,
-      mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity};
+      mojo_ipc::DiagnosticRoutineEnum::kLanConnectivity,
+      mojo_ipc::DiagnosticRoutineEnum::kSignalStrength};
 
   if (context_->system_config()->HasBattery()) {
     available_routines_.insert(

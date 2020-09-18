@@ -82,6 +82,8 @@ class FakeRoutineService final
   void RunMemoryRoutine(RunMemoryRoutineCallback callback) override;
   void RunLanConnectivityRoutine(
       RunLanConnectivityRoutineCallback callback) override;
+  void RunSignalStrengthRoutine(
+      RunSignalStrengthRoutineCallback callback) override;
 };
 
 }  // namespace diagnostics

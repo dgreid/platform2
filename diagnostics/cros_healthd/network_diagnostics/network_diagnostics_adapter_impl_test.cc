@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <utility>
+#include <vector>
 
 #include <base/message_loop/message_loop.h>
 #include <base/run_loop.h>
@@ -134,6 +135,34 @@ TEST_F(NetworkDiagnosticsAdapterImplTest, RunLanConnectivityRoutine) {
   run_loop.Run();
 }
 
+// Test that the SignalStrength routine can be run.
+TEST_F(NetworkDiagnosticsAdapterImplTest, RunSignalStrengthRoutine) {
+  MockNetworkDiagnosticsRoutines network_diagnostics_routines;
+  network_diagnostics_adapter()->SetNetworkDiagnosticsRoutines(
+      network_diagnostics_routines.pending_remote());
+
+  base::RunLoop run_loop;
+  EXPECT_CALL(network_diagnostics_routines, SignalStrength(_))
+      .WillOnce(WithArg<0>(
+          Invoke([&](network_diagnostics_ipc::NetworkDiagnosticsRoutines::
+                         SignalStrengthCallback callback) {
+            std::move(callback).Run(kNoProblem, /*problems=*/{});
+          })));
+
+  network_diagnostics_adapter()->RunSignalStrengthRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::SignalStrengthProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNoProblem);
+            EXPECT_EQ(problems.size(), 0);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
 // Test that RoutineVerdict::kNotRun is returned if a valid
 // NetworkDiagnosticsRoutines remote was never sent.
 TEST_F(NetworkDiagnosticsAdapterImplTest,
@@ -144,6 +173,25 @@ TEST_F(NetworkDiagnosticsAdapterImplTest,
           [&](network_diagnostics_ipc::RoutineVerdict routine_verdict) {
             EXPECT_EQ(routine_verdict,
                       network_diagnostics_ipc::RoutineVerdict::kNotRun);
+            run_loop.Quit();
+          }));
+
+  run_loop.Run();
+}
+
+// Test that RoutineVerdict::kNotRun is returned if a valid
+// NetworkDiagnosticsRoutines remote was never sent.
+TEST_F(NetworkDiagnosticsAdapterImplTest,
+       RunSignalStrengthRoutineWithNoRemote) {
+  base::RunLoop run_loop;
+  network_diagnostics_adapter()->RunSignalStrengthRoutine(
+      base::BindLambdaForTesting(
+          [&](network_diagnostics_ipc::RoutineVerdict response,
+              const std::vector<network_diagnostics_ipc::SignalStrengthProblem>&
+                  problems) {
+            EXPECT_EQ(response,
+                      network_diagnostics_ipc::RoutineVerdict::kNotRun);
+            EXPECT_EQ(problems.size(), 0);
             run_loop.Quit();
           }));
 

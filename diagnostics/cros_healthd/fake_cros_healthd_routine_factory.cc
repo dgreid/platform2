@@ -294,4 +294,9 @@ FakeCrosHealthdRoutineFactory::MakeLanConnectivityRoutine() {
   return std::move(next_routine_);
 }
 
+std::unique_ptr<DiagnosticRoutine>
+FakeCrosHealthdRoutineFactory::MakeSignalStrengthRoutine() {
+  return std::move(next_routine_);
+}
+
 }  // namespace diagnostics

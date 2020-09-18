@@ -8,24 +8,41 @@
 
 namespace diagnostics {
 
+namespace {
+
+namespace network_diagnostics_ipc = ::chromeos::network_diagnostics::mojom;
+
+}  // namespace
+
 NetworkDiagnosticsAdapterImpl::NetworkDiagnosticsAdapterImpl() = default;
 NetworkDiagnosticsAdapterImpl::~NetworkDiagnosticsAdapterImpl() = default;
 
 void NetworkDiagnosticsAdapterImpl::SetNetworkDiagnosticsRoutines(
-    mojo::PendingRemote<
-        chromeos::network_diagnostics::mojom::NetworkDiagnosticsRoutines>
+    mojo::PendingRemote<network_diagnostics_ipc::NetworkDiagnosticsRoutines>
         network_diagnostics_routines) {
   network_diagnostics_routines_.Bind(std::move(network_diagnostics_routines));
 }
 
 void NetworkDiagnosticsAdapterImpl::RunLanConnectivityRoutine(
-    MojomLanConnectivityCallback callback) {
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::LanConnectivityCallback
+        callback) {
   if (!network_diagnostics_routines_.is_bound()) {
     std::move(callback).Run(
         chromeos::network_diagnostics::mojom::RoutineVerdict::kNotRun);
     return;
   }
   network_diagnostics_routines_->LanConnectivity(std::move(callback));
+}
+
+void NetworkDiagnosticsAdapterImpl::RunSignalStrengthRoutine(
+    network_diagnostics_ipc::NetworkDiagnosticsRoutines::SignalStrengthCallback
+        callback) {
+  if (!network_diagnostics_routines_.is_bound()) {
+    std::move(callback).Run(network_diagnostics_ipc::RoutineVerdict::kNotRun,
+                            /*problems=*/{});
+    return;
+  }
+  network_diagnostics_routines_->SignalStrength(std::move(callback));
 }
 
 }  // namespace diagnostics

@@ -106,6 +106,8 @@ class CrosHealthdRoutineService {
       int32_t* id, MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void RunLanConnectivityRoutine(
       int32_t* id, MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
+  virtual void RunSignalStrengthRoutine(
+      int32_t* id, MojomCrosHealthdDiagnosticRoutineStatusEnum* status) = 0;
   virtual void GetRoutineUpdate(
       int32_t id,
       MojomCrosHealthdDiagnosticRoutineCommandEnum command,
