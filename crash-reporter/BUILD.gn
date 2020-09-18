@@ -27,6 +27,7 @@ group("all") {
   if (use.fuzzer) {
     deps += [
       ":anomaly_detector_fuzzer",
+      ":chrome_collector_fuzzer",
       ":crash_sender_fuzzer",
     ]
   }
@@ -413,6 +414,19 @@ if (use.fuzzer) {
       ":libcrash_test_util",
     ]
     sources = [ "crash_sender_fuzzer.cc" ]
+  }
+
+  executable("chrome_collector_fuzzer") {
+    configs += [
+      "//common-mk/common_fuzzer:common_fuzzer",
+      ":crash_reporter_test_config",
+    ]
+    deps = [
+      ":libcrash",
+      ":libcrash_reporter",
+      ":libcrash_test_util",
+    ]
+    sources = [ "chrome_collector_fuzzer.cc" ]
   }
 
   executable("anomaly_detector_fuzzer") {
