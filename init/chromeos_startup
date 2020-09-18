@@ -15,6 +15,10 @@ UNDO_MOUNTS=
 # encrypted stateful partition.
 ENCRYPTED_STATEFUL_MNT="/mnt/stateful_partition/encrypted"
 
+# USE_ENCRYPTED_REBOOT_VAULT determines whether the encrypted reboot vault
+# should be created/mounted.
+USE_ENCRYPTED_REBOOT_VAULT=1
+
 # Unmounts the incomplete mount setup during the failure path. Failure to
 # set up mounts in this script result in the entire stateful partition getting
 # wiped using clobber-state.
@@ -486,8 +490,10 @@ remember_mount "${ENCRYPTED_STATEFUL_MNT}"
 # Setup the encrypted reboot vault once the encrypted stateful partition
 # is available. If unlocking the encrypted reboot vault failed (due to power
 # loss/reboot/invalid vault), attempt to recreate the encrypted reboot vault.
-if ! encrypted-reboot-vault --action=unlock; then
-  encrypted-reboot-vault --action=create
+if [ "${USE_ENCRYPTED_REBOOT_VAULT}" -eq "1" ]; then
+  if ! encrypted-reboot-vault --action=unlock; then
+    encrypted-reboot-vault --action=create
+  fi
 fi
 
 force_clean_file_attrs /var
