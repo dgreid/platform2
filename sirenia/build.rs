@@ -6,15 +6,16 @@
 
 use std::path::Path;
 
-use chromeos_dbus_bindings::{self, generate_module};
+use chromeos_dbus_bindings::{self, generate_module, BindingsType};
 
 // The parent path of sirenia.
 const SOURCE_DIR: &str = ".";
 
 // (<module name>, <relative path to source xml>)
-const BINDINGS_TO_GENERATE: &[(&str, &str)] = &[(
+const BINDINGS_TO_GENERATE: &[(&str, &str, BindingsType)] = &[(
     "org_chromium_manatee",
     "dbus_bindings/org.chromium.ManaTEE1.xml",
+    BindingsType::Both,
 )];
 
 fn main() {
