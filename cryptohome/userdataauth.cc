@@ -143,6 +143,27 @@ bool KeyMatchesForLightweightChallengeResponseCheck(
   return true;
 }
 
+// Performs a single attempt to Mount a non-annonimous user.
+MountError AttemptUserMount(const Credentials& credentials,
+                            const Mount::MountArgs& mount_args,
+                            scoped_refptr<cryptohome::Mount> user_mount) {
+  if (user_mount->IsMounted()) {
+    return MOUNT_ERROR_MOUNT_POINT_BUSY;
+  }
+
+  if (mount_args.is_ephemeral) {
+    return user_mount->MountEphemeralCryptohome(credentials);
+  }
+
+  MountError code = MOUNT_ERROR_NONE;
+  if (user_mount->MountCryptohome(credentials, mount_args, true, &code)) {
+    return code;
+  }
+  // In the weird case where MountCryptohome returns false with ERROR_NONE code
+  // report it as FATAL.
+  return code == MOUNT_ERROR_NONE ? MOUNT_ERROR_FATAL : code;
+}
+
 }  // namespace
 
 UserDataAuth::UserDataAuth()
@@ -1696,6 +1717,14 @@ void UserDataAuth::ContinueMountWithCredentials(
     }
   }
 
+  if (mount_args.is_ephemeral && !mount_args.create_if_missing) {
+    LOG(ERROR) << "An ephemeral cryptohome can only be mounted when its "
+                  "creation on-the-fly is allowed.";
+    reply.set_error(user_data_auth::CRYPTOHOME_ERROR_INVALID_ARGUMENT);
+    std::move(on_done).Run(reply);
+    return;
+  }
+
   // If a user's home directory is already mounted, then we'll just recheck its
   // credential with what's cached in memory. This is much faster than going to
   // the TPM.
@@ -1734,12 +1763,21 @@ void UserDataAuth::ContinueMountWithCredentials(
   // MountCryptohome() not in the other areas prior.
   ReportTimerStart(kMountExTimer);
 
-  MountError code = MOUNT_ERROR_NONE;
+  // Remove all existing cryptohomes, except for the owner's one, if the
+  // ephemeral users policy is on.
+  // Note that a fresh policy value is read here, which in theory can conflict
+  // with the one used for calculation of |mount_args.is_ephemeral|. However,
+  // this inconsistency (whose probability is anyway pretty low in practice)
+  // should only lead to insignificant transient glitches, like an attempt to
+  // mount a non existing anymore cryptohome.
+  if (homedirs_->AreEphemeralUsersEnabled())
+    homedirs_->RemoveNonOwnerCryptohomes();
+
   // Does actual mounting here.
-  bool status =
-      user_mount->MountCryptohome(*credentials, mount_args, true, &code);
-  if (!status && code == MOUNT_ERROR_TPM_COMM_ERROR) {
-    status = user_mount->MountCryptohome(*credentials, mount_args, true, &code);
+  MountError code = AttemptUserMount(*credentials, mount_args, user_mount);
+  if (code == MOUNT_ERROR_TPM_COMM_ERROR) {
+    LOG(WARNING) << "TPM communication error. Retrying.";
+    code = AttemptUserMount(*credentials, mount_args, user_mount);
   }
 
   // PKCS#11 always starts out uninitialized right after a fresh mount.
@@ -1748,20 +1786,20 @@ void UserDataAuth::ContinueMountWithCredentials(
   // Mark the timer as done.
   ReportTimerStop(kMountExTimer);
 
-  if (!status) {
-    LOG(ERROR) << "Failed to mount cryptohome, error = " << code;
-    reply.set_error(MountErrorToCryptohomeError(code));
-    ResetDictionaryAttackMitigation();
-  }
   if (code == MOUNT_ERROR_RECREATED) {
     // MOUNT_ERROR_RECREATED is not actually an error, so we'll not reply with
     // an error. Instead, we'll set the recreated flag to true.
     reply.set_recreated(true);
-  }
-  if (status) {
-    homedirs_->ResetLECredentials(*credentials);
+  } else if (code != MOUNT_ERROR_NONE) {
+    // Mount returned a non-OK status.
+    LOG(ERROR) << "Failed to mount cryptohome, error = " << code;
+    reply.set_error(MountErrorToCryptohomeError(code));
+    ResetDictionaryAttackMitigation();
+    std::move(on_done).Run(reply);
+    return;
   }
 
+  homedirs_->ResetLECredentials(*credentials);
   std::move(on_done).Run(reply);
 
   // Update user timestamp and kick off PKCS#11 initialization for non-hidden

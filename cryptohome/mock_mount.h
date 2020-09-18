@@ -30,6 +30,10 @@ class MockMount : public Mount {
               MountCryptohome,
               (const Credentials&, const Mount::MountArgs&, bool, MountError*),
               (override));
+  MOCK_METHOD(MountError,
+              MountEphemeralCryptohome,
+              (const Credentials&),
+              (override));
   MOCK_METHOD(bool, UnmountCryptohome, (), (override));
   MOCK_METHOD(bool, IsMounted, (), (const, override));
   MOCK_METHOD(bool, IsNonEphemeralMounted, (), (const, override));

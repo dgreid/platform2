@@ -310,65 +310,41 @@ bool Mount::AddEcryptfsAuthToken(const VaultKeyset& vault_keyset,
   return true;
 }
 
+MountError Mount::MountEphemeralCryptohome(const Credentials& credentials) {
+  current_user_->Reset();
+  const std::string username = credentials.username();
+
+  if (homedirs_->IsOrWillBeOwner(username)) {
+    return MOUNT_ERROR_EPHEMERAL_MOUNT_BY_OWNER;
+  }
+
+  // Ephemeral mounts don't require dropping keys since they're not dircrypto
+  // mounts. This callback will be executed in the destructor at the latest so
+  // |this| will always be valid.
+  base::Closure cleanup =
+      base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
+
+  // Ephemeral cryptohomes for regular users are mounted in-process.
+  if (!MountEphemeralCryptohomeInternal(username, mounter_.get(),
+                                        std::move(cleanup))) {
+    homedirs_->Remove(username);
+    return MOUNT_ERROR_FATAL;
+  }
+
+  // Ephemeral and guest users will not have a key index.
+  current_user_->SetUser(credentials);
+  return MOUNT_ERROR_NONE;
+}
+
 bool Mount::MountCryptohome(const Credentials& credentials,
                             const Mount::MountArgs& mount_args,
                             bool recreate_on_decrypt_fatal,
                             MountError* mount_error) {
-  // Remove all existing cryptohomes, except for the owner's one, if the
-  // ephemeral users policy is on.
-  // Note that a fresh policy value is read here, which in theory can conflict
-  // with the one used for calculation of |mount_args.is_ephemeral|. However,
-  // this inconsistency (whose probability is anyway pretty low in practice)
-  // should only lead to insignificant transient glitches, like an attempt to
-  // mount a non existing anymore cryptohome.
-  if (homedirs_->AreEphemeralUsersEnabled())
-    homedirs_->RemoveNonOwnerCryptohomes();
-
-  if (IsMounted()) {
-    if (mount_error)
-      *mount_error = MOUNT_ERROR_MOUNT_POINT_BUSY;
-    return false;
-  }
-
   current_user_->Reset();
   std::string username = credentials.username();
   const std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
   const bool is_owner = homedirs_->IsOrWillBeOwner(username);
-
-  // Process ephemeral mounts in a special manner.
-  if (mount_args.is_ephemeral) {
-    if (!mount_args.create_if_missing) {
-      NOTREACHED() << "An ephemeral cryptohome can only be mounted when its "
-                      "creation on-the-fly is allowed.";
-      *mount_error = MOUNT_ERROR_INVALID_ARGS;
-      return false;
-    }
-
-    if (is_owner) {
-      *mount_error = MOUNT_ERROR_EPHEMERAL_MOUNT_BY_OWNER;
-      return false;
-    }
-
-    // Ephemeral mounts don't require dropping keys since they're not dircrypto
-    // mounts. This callback will be executed in the destructor at the latest so
-    // |this| will always be valid.
-    base::Closure cleanup =
-        base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
-
-    // Ephemeral cryptohomes for regular users are mounted in-process.
-    if (!MountEphemeralCryptohome(credentials.username(), mounter_.get(),
-                                  std::move(cleanup))) {
-      homedirs_->Remove(credentials.username());
-      *mount_error = MOUNT_ERROR_FATAL;
-      return false;
-    }
-
-    // Ephemeral and guest users will not have a key index.
-    current_user_->SetUser(credentials);
-    *mount_error = MOUNT_ERROR_NONE;
-    return true;
-  }
 
   if (!mount_args.create_if_missing &&
       !homedirs_->CryptohomeExists(obfuscated_username)) {
@@ -629,9 +605,10 @@ bool Mount::MountCryptohome(const Credentials& credentials,
   return true;
 }
 
-bool Mount::MountEphemeralCryptohome(const std::string& username,
-                                     MountHelperInterface* ephemeral_mounter,
-                                     base::Closure cleanup) {
+bool Mount::MountEphemeralCryptohomeInternal(
+    const std::string& username,
+    MountHelperInterface* ephemeral_mounter,
+    base::Closure cleanup) {
   // Ephemeral cryptohome can't be mounted twice.
   CHECK(ephemeral_mounter->CanPerformEphemeralMount());
 
@@ -1132,8 +1109,8 @@ bool Mount::MountGuestCryptohome() {
         base::Bind(&Mount::TearDownEphemeralMount, base::Unretained(this));
   }
 
-  return MountEphemeralCryptohome(kGuestUserName, ephemeral_mounter,
-                                  std::move(cleanup));
+  return MountEphemeralCryptohomeInternal(kGuestUserName, ephemeral_mounter,
+                                          std::move(cleanup));
 }
 
 FilePath Mount::GetUserDirectory(const Credentials& credentials) const {

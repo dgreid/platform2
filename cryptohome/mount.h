@@ -107,6 +107,15 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                                bool recreate_on_decrypt_fatal,
                                MountError* error);
 
+  // Attempts to mount an ephemeral cryptohome for the given credentials.
+  //
+  // Parameters
+  //   credentials - The Credentials representing the user
+  virtual MountError MountEphemeralCryptohome(const Credentials& credentials);
+
+  // Mounts a guest home directory to the cryptohome mount point.
+  virtual bool MountGuestCryptohome();
+
   // Unmounts any mount at the cryptohome mount point
   virtual bool UnmountCryptohome();
 
@@ -160,9 +169,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // Parameters
   //   credentials - The Credentials to attempt to decrypt the key with
   virtual bool AreValid(const Credentials& credentials);
-
-  // Mounts a guest home directory to the cryptohome mount point
-  virtual bool MountGuestCryptohome();
 
   //
   // virtual int AddKey(const Credentials& existing, const Credentials& new);
@@ -471,9 +477,9 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //                       out of process
   //   cleanup - Closure to use in UnmountCryptohome(), and to clean up in case
   //             of failure
-  bool MountEphemeralCryptohome(const std::string& username,
-                                MountHelperInterface* ephemeral_mounter,
-                                base::Closure cleanup);
+  bool MountEphemeralCryptohomeInternal(const std::string& username,
+                                        MountHelperInterface* ephemeral_mounter,
+                                        base::Closure cleanup);
 
   // Tears down an ephemeral cryptohome mount, and deletes the underlying loop
   // device and sparse file.
