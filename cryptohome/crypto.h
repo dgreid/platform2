@@ -82,16 +82,6 @@ class Crypto {
                                   const std::string& obfuscated_username,
                                   SerializedVaultKeyset* serialized) const;
 
-  // Converts the passkey to authorization data for a TPM-backed crypto token.
-  //
-  // Parameters
-  //   passkey - The passkey from which to derive the authorization data.
-  //   salt - The salt file used in deriving the authorization data.
-  //   auth_data (OUT) - The token authorization data.
-  virtual bool PasskeyToTokenAuthData(const brillo::SecureBlob& passkey,
-                                      const base::FilePath& salt_file,
-                                      brillo::SecureBlob* auth_data) const;
-
   // Gets an existing salt, or creates one if it doesn't exist
   //
   // Parameters

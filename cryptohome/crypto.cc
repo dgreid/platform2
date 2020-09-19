@@ -278,37 +278,6 @@ CryptoError Crypto::EnsureTpm(bool reload_key) const {
   return result;
 }
 
-bool Crypto::PasskeyToTokenAuthData(const brillo::SecureBlob& passkey,
-                                    const FilePath& salt_file,
-                                    SecureBlob* auth_data) const {
-  // Use the scrypt algorithm to derive auth data from the passkey.
-  const size_t kAuthDataSizeBytes = 32;
-  // The following scrypt parameters are based on Colin Percival's interactive
-  // login example in http://www.tarsnap.com/scrypt/scrypt-slides.pdf and
-  // adjusted for ~100ms performance on slower models. The performance is
-  // dependant on CPU and memory performance.
-  const uint64_t kScryptParameterN = (1 << 11);
-  const uint32_t kScryptParameterR = 8;
-  const uint32_t kScryptParameterP = 1;
-  const unsigned int kSaltLength = 32;
-  SecureBlob salt;
-  if (!GetOrCreateSalt(salt_file, kSaltLength, false, &salt)) {
-    LOG(ERROR) << "Failed to get authorization data salt.";
-    return false;
-  }
-
-  SecureBlob local_auth_data;
-  local_auth_data.resize(kAuthDataSizeBytes);
-  if (!CryptoLib::Scrypt(passkey, salt, kScryptParameterN, kScryptParameterR,
-                         kScryptParameterP, &local_auth_data)) {
-    LOG(ERROR) << "Scrypt key derivation failed.";
-    return false;
-  }
-
-  auth_data->swap(local_auth_data);
-  return true;
-}
-
 bool Crypto::GetOrCreateSalt(const FilePath& path,
                              size_t length,
                              bool force,

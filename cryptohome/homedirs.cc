@@ -1222,28 +1222,6 @@ bool HomeDirs::Migrate(const Credentials& newcreds,
     }
   }
 
-  if (vk->serialized().has_wrapped_chaps_key()) {
-    // Note that chaps_key in vault keyset is migrated/copied over into the new
-    // keyset in AddKeyset().
-    LOG(INFO) << "Keeping the same chaps token auth data in vault keyset.";
-  } else {
-    LOG(INFO) << "Changing the token auth data for legacy chaps key.";
-
-    SecureBlob old_auth_data;
-    SecureBlob auth_data;
-    std::string username = newcreds.username();
-    FilePath salt_file = GetChapsTokenSaltPath(username);
-    if (!crypto_->PasskeyToTokenAuthData(newcreds.passkey(), salt_file,
-                                         &auth_data) ||
-        !crypto_->PasskeyToTokenAuthData(oldkey, salt_file, &old_auth_data)) {
-      // On failure, token data may be partially migrated. Ideally, the user
-      // will re-attempt with the same passphrase.
-      return false;
-    }
-    chaps_client_.ChangeTokenAuthData(GetChapsTokenDir(username), old_auth_data,
-                                      auth_data);
-  }
-
   int new_key_index = -1;
   // For a labeled key with the same label as the old key,
   //  this will overwrite the existing keyset file.

@@ -114,7 +114,6 @@ Mount::Mount()
       user_timestamp_cache_(NULL),
       enterprise_owned_(false),
       pkcs11_state_(kUninitialized),
-      is_pkcs11_passkey_migration_required_(false),
       dircrypto_key_reference_(),
       legacy_mount_(true),
       mount_type_(MountType::NONE),
@@ -442,7 +441,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
   }
 
   if (!serialized.has_wrapped_chaps_key()) {
-    is_pkcs11_passkey_migration_required_ = true;
     vault_keyset.CreateRandomChapsKey();
     ReEncryptVaultKeyset(credentials, index, &vault_keyset, &serialized);
   }
@@ -635,10 +633,6 @@ bool Mount::MountCryptohomeInner(const Credentials& credentials,
       NOTREACHED() << "Unknown homedir encryption type: "
                    << static_cast<int>(mount_type_);
       break;
-  }
-
-  if (is_pkcs11_passkey_migration_required_) {
-    legacy_pkcs11_passkey_ = credentials.passkey();
   }
 
   // Start file attribute cleaner service.
@@ -1268,19 +1262,6 @@ bool Mount::InsertPkcs11Token() {
 
   std::unique_ptr<chaps::TokenManagerClient> chaps_client(
       chaps_client_factory_->New());
-
-  // If migration is required, send it before the login event.
-  if (is_pkcs11_passkey_migration_required_) {
-    LOG(INFO) << "Migrating authorization data.";
-    SecureBlob old_auth_data;
-    if (!crypto_->PasskeyToTokenAuthData(legacy_pkcs11_passkey_, salt_file,
-                                         &old_auth_data))
-      return false;
-    chaps_client->ChangeTokenAuthData(token_dir, old_auth_data,
-                                      pkcs11_token_auth_data_);
-    is_pkcs11_passkey_migration_required_ = false;
-    legacy_pkcs11_passkey_.clear();
-  }
 
   Pkcs11Init pkcs11init;
   int slot_id = 0;

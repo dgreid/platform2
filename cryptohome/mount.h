@@ -619,15 +619,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   // clears this value.
   brillo::SecureBlob pkcs11_token_auth_data_;
 
-  // Used to track the user's old passkey during passkey migration. PKCS #11
-  // initialization consumes and clears this value. This value is valid only if
-  // is_pkcs11_passkey_migration_required_ is set to true.
-  brillo::SecureBlob legacy_pkcs11_passkey_;
-
-  // Used to track whether passkey migration has occurred and PKCS #11 migration
-  // of authorization data based on the passkey needs to be performed also.
-  bool is_pkcs11_passkey_migration_required_;
-
   // Dircrypto key reference.
   dircrypto::KeyReference dircrypto_key_reference_;
 
