@@ -28,10 +28,7 @@ group("all") {
   }
   if (use.fuzzer) {
     deps += [
-      ":arp_client_fuzzer",
       ":cellular_pco_fuzzer",
-      ":nl80211_message_fuzzer",
-      ":rtnl_handler_fuzzer",
       ":verizon_subscription_state_fuzzer",
       ":wifi_ies_fuzzer",
     ]
