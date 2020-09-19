@@ -55,3 +55,9 @@ option('tracing',
   value: false,
   description: 'enable tracing via perfetto'
 )
+
+option('gamepad',
+  type: 'boolean',
+  value: false,
+  description: 'enable gamepad support'
+)

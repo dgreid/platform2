@@ -30,6 +30,9 @@
 
 #include "aura-shell-client-protocol.h"  // NOLINT(build/include_directory)
 #include "drm-server-protocol.h"         // NOLINT(build/include_directory)
+#ifdef GAMEPAD_SUPPORT
+#include "gaming-input-unstable-v2-client-protocol.h"  // NOLINT(build/include_directory)
+#endif
 #include "keyboard-extension-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "linux-dmabuf-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
 #include "pointer-constraints-unstable-v1-client-protocol.h"  // NOLINT(build/include_directory)
@@ -1044,6 +1047,10 @@ void sl_host_seat_added(struct sl_host_seat* host) {
     wl_data_device_add_listener(ctx->selection_data_device,
                                 &sl_internal_data_device_listener, ctx);
   }
+
+#ifdef GAMEPAD_SUPPORT
+  sl_gaming_seat_add_listener(ctx);
+#endif
 }
 
 void sl_host_seat_removed(struct sl_host_seat* host) {
@@ -1289,6 +1296,19 @@ static void sl_registry_handler(void* data,
     text_input_manager->host_global = sl_text_input_manager_global_create(ctx);
     assert(!ctx->text_input_manager);
     ctx->text_input_manager = text_input_manager;
+#ifdef GAMEPAD_SUPPORT
+  } else if (strcmp(interface, "zcr_gaming_input_v2") == 0) {
+    struct sl_gaming_input_manager* gaming_input_manager =
+        static_cast<sl_gaming_input_manager*>(
+            malloc(sizeof(struct sl_gaming_input_manager)));
+    assert(gaming_input_manager);
+    gaming_input_manager->ctx = ctx;
+    gaming_input_manager->id = id;
+    gaming_input_manager->internal = static_cast<zcr_gaming_input_v2*>(
+        wl_registry_bind(registry, id, &zcr_gaming_input_v2_interface, 2));
+    assert(!ctx->gaming_input_manager);
+    ctx->gaming_input_manager = gaming_input_manager;
+#endif
   }
 }
 
@@ -1379,6 +1399,14 @@ static void sl_registry_remover(void* data,
     ctx->text_input_manager = NULL;
     return;
   }
+#ifdef GAMEPAD_SUPPORT
+  if (ctx->gaming_input_manager && ctx->gaming_input_manager->id == id) {
+    zcr_gaming_input_v2_destroy(ctx->gaming_input_manager->internal);
+    free(ctx->gaming_input_manager);
+    ctx->gaming_input_manager = NULL;
+    return;
+  }
+#endif
   if (ctx->relative_pointer_manager &&
       ctx->relative_pointer_manager->id == id) {
     sl_global_destroy(ctx->relative_pointer_manager->host_global);
@@ -3652,6 +3680,9 @@ int main(int argc, char** argv) {
   ctx.linux_dmabuf = NULL;
   ctx.keyboard_extension = NULL;
   ctx.text_input_manager = NULL;
+#ifdef GAMEPAD_SUPPORT
+  ctx.gaming_input_manager = NULL;
+#endif
   ctx.display_event_source = NULL;
   ctx.display_ready_event_source = NULL;
   ctx.sigchld_event_source = NULL;
@@ -4258,6 +4289,9 @@ int main(int argc, char** argv) {
   wl_list_init(&ctx.unpaired_windows);
   wl_list_init(&ctx.host_outputs);
   wl_list_init(&ctx.selection_data_source_send_pending);
+#ifdef GAMEPAD_SUPPORT
+  wl_list_init(&ctx.gamepads);
+#endif
 
   // Parse the list of accelerators that should be reserved by the
   // compositor. Format is "|MODIFIERS|KEYSYM", where MODIFIERS is a

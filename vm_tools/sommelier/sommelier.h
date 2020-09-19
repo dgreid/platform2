@@ -44,6 +44,12 @@ struct sl_window;
 struct zaura_shell;
 struct zcr_keyboard_extension_v1;
 
+#ifdef GAMEPAD_SUPPORT
+struct sl_gamepad;
+struct sl_gaming_input_manager;
+struct zcr_gaming_input_v2;
+#endif
+
 enum {
   ATOM_WM_S0,
   ATOM_WM_PROTOCOLS,
@@ -105,6 +111,9 @@ struct sl_context {
   struct sl_linux_dmabuf* linux_dmabuf;
   struct sl_keyboard_extension* keyboard_extension;
   struct sl_text_input_manager* text_input_manager;
+#ifdef GAMEPAD_SUPPORT
+  struct sl_gaming_input_manager* gaming_input_manager;
+#endif
   struct sl_relative_pointer_manager* relative_pointer_manager;
   struct sl_pointer_constraints* pointer_constraints;
   struct wl_list outputs;
@@ -143,6 +152,9 @@ struct sl_context {
   struct wl_list windows, unpaired_windows;
   struct sl_window* host_focus_window;
   int needs_set_input_focus;
+#ifdef GAMEPAD_SUPPORT
+  struct wl_list gamepads;
+#endif
   double desired_scale;
   double scale;
   const char* application_id;
@@ -367,6 +379,14 @@ struct sl_text_input_manager {
   struct zwp_text_input_manager_v1* internal;
 };
 
+#ifdef GAMEPAD_SUPPORT
+struct sl_gaming_input_manager {
+  struct sl_context* ctx;
+  uint32_t id;
+  struct zcr_gaming_input_v2* internal;
+};
+#endif
+
 struct sl_pointer_constraints {
   struct sl_context* ctx;
   uint32_t id;
@@ -492,6 +512,17 @@ struct sl_window {
   struct wl_list link;
 };
 
+#ifdef GAMEPAD_SUPPORT
+struct sl_host_gamepad {
+  struct sl_context* ctx;
+  int state;
+  struct libevdev* ev_dev;
+  struct libevdev_uinput* uinput_dev;
+  bool stadia;
+  struct wl_list link;
+};
+#endif
+
 struct sl_host_buffer* sl_create_host_buffer(struct wl_client* client,
                                              uint32_t id,
                                              struct wl_buffer* proxy,
@@ -570,6 +601,10 @@ int sl_process_pending_configure_acks(struct sl_window* window,
                                       struct sl_host_surface* host_surface);
 
 void sl_window_update(struct sl_window* window);
+
+#ifdef GAMEPAD_SUPPORT
+void sl_gaming_seat_add_listener(struct sl_context* ctx);
+#endif
 
 #define sl_array_for_each(pos, array)                                   \
   for (pos = static_cast<typeof(pos)>((array)->data);                   \

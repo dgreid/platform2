@@ -50,6 +50,7 @@ wl_generators = [
 wl_protocols = [
     'protocol/aura-shell.xml',
     'protocol/drm.xml',
+    'protocol/gaming-input-unstable-v2.xml',
     'protocol/gtk-shell.xml',
     'protocol/keyboard-extension-unstable-v1.xml',
     'protocol/linux-dmabuf-unstable-v1.xml',
@@ -86,6 +87,23 @@ if get_option('tracing')
   includes += include_directories('perfetto/sdk')
 endif
 
+#==========#
+# Gamepad support #
+#==========#
+
+gamepad_sources = []
+gamepad_dependencies = []
+
+if get_option('gamepad')
+  gamepad_sources = [
+    'sommelier-gaming.cc',
+  ]
+  gamepad_dependencies = [
+    dependency('libevdev'),
+  ]
+  cpp_args += '-DGAMEPAD_SUPPORT'
+endif
+
 #===========#
 # Sommelier #
 #===========#
@@ -110,7 +128,7 @@ executable('sommelier',
     'sommelier-viewporter.cc',
     'sommelier-xdg-shell.cc',
     'sommelier.cc',
-  ] + wl_outs + tracing_sources,
+  ] + wl_outs + tracing_sources + gamepad_sources,
   dependencies: [
     meson.get_compiler('cpp').find_library('m'),
     dependency('gbm'),
@@ -122,7 +140,7 @@ executable('sommelier',
     dependency('xcb-composite'),
     dependency('xcb-xfixes'),
     dependency('xkbcommon'),
-  ] + tracing_dependencies,
+  ] + tracing_dependencies + gamepad_dependencies,
   cpp_args: cpp_args + [
     '-D_GNU_SOURCE',
     '-DWL_HIDE_DEPRECATED',
