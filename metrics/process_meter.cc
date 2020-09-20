@@ -101,7 +101,10 @@ ChromeProcessKind GetChromeKind(const base::CommandLine& cmdline) {
   if (program.find("/opt/google/chrome/nacl_helper") == 0)
     return CHROME_BROWSER_HELPER;
 
-  if (!cmdline.HasSwitch("type"))
+  // The Browser process needs to be identified as a binary named "chrome"
+  // in addition to not having a "type" because there are other binaries
+  // in that directory which may be running.
+  if (!cmdline.HasSwitch("type") && (program == "/opt/google/chrome/chrome"))
     return CHROME_BROWSER;
 
   auto type = cmdline.GetSwitchValueASCII("type");
