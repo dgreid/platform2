@@ -80,6 +80,11 @@ enum CupsResult {
   CUPS_LPADMIN_FAILURE = 3,
   CUPS_AUTOCONF_FAILURE = 4,
   CUPS_BAD_URI = 5,
+  CUPS_IO_ERROR = 6,
+  CUPS_MEMORY_ALLOC_ERROR = 7,
+  CUPS_PRINTER_UNREACHABLE = 8,
+  CUPS_PRINTER_WRONG_RESPONSE = 9,
+  CUPS_PRINTER_NOT_AUTOCONF = 10
 };
 
 // Debug log keys which should be substituted in the system info dialog.
