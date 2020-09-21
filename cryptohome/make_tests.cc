@@ -172,9 +172,7 @@ void TestUser::FromInfo(const struct TestUserInfo* info,
   root_ephemeral_mount_path = ephemeral_mount_path.Append("root");
   user_ephemeral_mount_path = ephemeral_mount_path.Append("user");
   keyset_path = base_path.Append("master.0");
-  salt_path = base_path.Append("master.0.salt");
   timestamp_path = base_path.Append("master.0.timestamp");
-  user_salt.assign('A', PKCS5_SALT_LEN);
   mount_prefix = brillo::cryptohome::home::GetUserPathPrefix().DirName();
   legacy_user_mount_path = FilePath("/home/chronos/user");
   user_mount_path =

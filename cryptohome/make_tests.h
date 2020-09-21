@@ -100,7 +100,6 @@ class TestUser {
   base::FilePath user_ephemeral_mount_path;
   base::FilePath root_ephemeral_mount_path;
   base::FilePath keyset_path;
-  base::FilePath salt_path;
   base::FilePath timestamp_path;
   base::FilePath mount_prefix;
   base::FilePath legacy_user_mount_path;
@@ -109,7 +108,6 @@ class TestUser {
   base::FilePath user_mount_prefix;
   base::FilePath root_mount_prefix;
   brillo::Blob credentials;
-  brillo::Blob user_salt;
   brillo::SecureBlob passkey;
   bool use_key_data;
   KeyData key_data;

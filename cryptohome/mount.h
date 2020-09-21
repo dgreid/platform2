@@ -389,14 +389,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   //   files - The file names to remove
   bool DeleteCacheFiles(const std::vector<base::FilePath>& files) const;
 
-  // Gets the user's salt file name
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the Credentials
-  //   index - key index the salt is associated with
-  base::FilePath GetUserSaltFileForUser(const std::string& obfuscated_username,
-                                        int index) const;
-
   base::FilePath GetUserTimestampFileForUser(
       const std::string& obfuscated_username, int index) const;
 
@@ -509,18 +501,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   bool MountEphemeralCryptohome(const std::string& username,
                                 MountHelperInterface* ephemeral_mounter,
                                 base::Closure cleanup);
-
-  // Returns the user's salt
-  //
-  // Parameters
-  //   credentials - The Credentials representing the user
-  //   force - Whether to force creation of a new salt
-  //   key_index - key index the salt is associated with
-  //   salt (OUT) - The user's salt
-  void GetUserSalt(const Credentials& credentials,
-                   bool force_new,
-                   int key_index,
-                   brillo::SecureBlob* salt) const;
 
   // Tears down an ephemeral cryptohome mount, and deletes the underlying loop
   // device and sparse file.

@@ -1313,16 +1313,9 @@ TEST_P(MountTest, GoodReDecryptTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
-  EXPECT_CALL(platform_, FileExists(user->salt_path))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   EXPECT_CALL(platform_,
               Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-              Move(user->salt_path, user->salt_path.AddExtension("bak")))
       .WillOnce(Return(true));
 
   // Create the "TPM-wrapped" value by letting it save the plaintext.
@@ -1369,10 +1362,6 @@ TEST_P(MountTest, GoodReDecryptTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(migrated_keyset), Return(true)));
-  EXPECT_CALL(platform_, FileExists(user->salt_path))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
   EXPECT_CALL(tpm_, UnsealWithAuthorization(_, _, _, _, _))
       .WillRepeatedly(Invoke(TpmPassthroughDecrypt));
 
@@ -1429,16 +1418,9 @@ TEST_P(MountTest, TpmWrappedToPcrBoundMigrationTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
-  EXPECT_CALL(platform_, FileExists(user->salt_path))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   EXPECT_CALL(platform_,
               Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillOnce(Return(true));
-  EXPECT_CALL(platform_,
-              Move(user->salt_path, user->salt_path.AddExtension("bak")))
       .WillOnce(Return(true));
 
   //
@@ -1956,13 +1938,8 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   // Allow the "backup"s to be written during migrations
   EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, FileExists(user->salt_path.AddExtension("bak")))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
               Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              Move(user->salt_path, user->salt_path.AddExtension("bak")))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -1971,11 +1948,6 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
   brillo::Blob migrated_keyset;
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
-
-  EXPECT_CALL(platform_, FileExists(user->salt_path))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   // Step 1: TPM is present. Get a TPM-wrapped key.
   VaultKeyset vault_keyset;
@@ -2085,13 +2057,8 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   // Allow the "backup"s to be written during migrations
   EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
       .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_, FileExists(user->salt_path.AddExtension("bak")))
-      .WillRepeatedly(Return(false));
   EXPECT_CALL(platform_,
               Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_,
-              Move(user->salt_path, user->salt_path.AddExtension("bak")))
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
@@ -2100,11 +2067,6 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
   brillo::Blob migrated_keyset;
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillRepeatedly(DoAll(SaveArg<1>(&migrated_keyset), Return(true)));
-
-  EXPECT_CALL(platform_, FileExists(user->salt_path))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, ReadFile(user->salt_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->user_salt), Return(true)));
 
   // First, get a TPM-wrapped key from the original Scrypt-wrapped
   VaultKeyset vault_keyset;

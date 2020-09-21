@@ -1078,9 +1078,8 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
                                  SerializedVaultKeyset* serialized) const {
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  std::vector<FilePath> files(2);
-  files[0] = GetUserSaltFileForUser(obfuscated_username, key_index);
-  files[1] = GetUserLegacyKeyFileForUser(obfuscated_username, key_index);
+  std::vector<FilePath> files(1);
+  files[0] = GetUserLegacyKeyFileForUser(obfuscated_username, key_index);
   if (!CacheOldFiles(files)) {
     LOG(ERROR) << "Couldn't cache old key material.";
     return false;
@@ -1149,12 +1148,6 @@ FilePath Mount::GetUserDirectory(const Credentials& credentials) const {
 FilePath Mount::GetUserDirectoryForUser(
     const std::string& obfuscated_username) const {
   return shadow_root_.Append(obfuscated_username);
-}
-
-FilePath Mount::GetUserSaltFileForUser(const std::string& obfuscated_username,
-                                       int index) const {
-  return GetUserLegacyKeyFileForUser(obfuscated_username, index)
-      .AddExtension("salt");
 }
 
 FilePath Mount::GetUserTimestampFileForUser(
@@ -1313,15 +1306,6 @@ bool Mount::DeleteCacheFiles(const std::vector<FilePath>& files) const {
     }
   }
   return true;
-}
-
-void Mount::GetUserSalt(const Credentials& credentials,
-                        bool force,
-                        int key_index,
-                        SecureBlob* salt) const {
-  FilePath path(GetUserSaltFileForUser(
-      credentials.GetObfuscatedUsername(system_salt_), key_index));
-  crypto_->GetOrCreateSalt(path, CRYPTOHOME_DEFAULT_SALT_LENGTH, force, salt);
 }
 
 std::unique_ptr<base::Value> Mount::GetStatus() {
