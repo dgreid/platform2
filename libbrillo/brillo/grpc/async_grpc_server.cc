@@ -92,11 +92,15 @@ void AsyncGrpcServerBase::OnIncomingRpc(
     bool ok) {
   if (state_ == State::kStarted)
     ExpectNextRpc(rpc_state_factory);
-  // |ok|==false means that this server is shutting down. The CompletionQueue
-  // gives back all pending tags then, so that the server has the chance to free
-  // memory. Freeing memory happens implicitly by letting the |rpc_state| go out
-  // of scope here.
-  if (!ok)
+  // Exit on shutdown. In theory, incoming RPCs with |ok|==false can only happen
+  // after gRPC shutdown has been triggered, which only happens after |state_|
+  // has been switched to State::kShutdown, so it would be enough to check
+  // |state_|. Checking both doesn't hurt and spells out the different
+  // conditions explicitly.
+  // The CompletionQueue gives back all pending tags in case of shutdown, so
+  // that the server has the chance to free memory. Freeing memory happens
+  // implicitly by letting the |rpc_state| go out of scope here.
+  if (!ok || state_ == State::kShutDown)
     return;
   RpcStateBase* rpc_state_unowned = rpc_state.get();
   CHECK(rpcs_awaiting_handler_reply_.find(rpc_state_unowned->tag()) ==

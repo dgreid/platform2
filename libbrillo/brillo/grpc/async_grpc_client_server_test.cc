@@ -7,15 +7,20 @@
 
 #include <memory>
 #include <queue>
+#include <string>
+#include <utility>
 #include <vector>
 
 #include <base/bind.h>
+#include <base/bind_helpers.h>
 #include <base/callback.h>
 #include <base/files/file_util.h>
 #include <base/files/scoped_temp_dir.h>
+#include <base/location.h>
 #include <base/macros.h>
 #include <base/run_loop.h>
 #include <base/task/single_thread_task_executor.h>
+#include <base/threading/thread_task_runner_handle.h>
 #include <gmock/gmock.h>
 #include <grpcpp/grpcpp.h>
 #include <gtest/gtest.h>
@@ -160,6 +165,68 @@ class RpcReply {
   DISALLOW_COPY_AND_ASSIGN(RpcReply);
 };
 
+// Implementation of test_rpcs.ExampleService that synchronously replies to the
+// requests and triggers self-shutdown after receiving the first RPC call.
+class SelfStoppingExampleService final {
+ public:
+  explicit SelfStoppingExampleService(
+      const std::vector<std::string>& server_uris)
+      : server_(base::ThreadTaskRunnerHandle::Get(), server_uris) {
+    server_.RegisterHandler(
+        &test_rpcs::ExampleService::AsyncService::RequestEmptyRpc,
+        base::BindRepeating(&SelfStoppingExampleService::OnEmptyRpc,
+                            base::Unretained(this)));
+  }
+
+  SelfStoppingExampleService(const SelfStoppingExampleService&) = delete;
+  SelfStoppingExampleService& operator=(const SelfStoppingExampleService&) =
+      delete;
+
+  ~SelfStoppingExampleService() {
+    if (is_any_rpc_received_) {
+      // Shut down was already performed on first RPC.
+      // The test performing the RPC has the responsibility to wait until
+      // shutdown finishes (through set_on_shutdown_callback).
+      return;
+    }
+    base::RunLoop run_loop;
+    server_.ShutDown(run_loop.QuitClosure());
+    run_loop.Run();
+  }
+
+  bool Start() { return server_.Start(); }
+
+  void set_on_shutdown_callback(base::Closure on_shutdown) {
+    on_shutdown_ = std::move(on_shutdown);
+  }
+
+ private:
+  void OnEmptyRpc(std::unique_ptr<test_rpcs::EmptyRpcRequest>,
+                  const base::Callback<void(
+                      grpc::Status status,
+                      std::unique_ptr<test_rpcs::EmptyRpcResponse> response)>&
+                      response_callback) {
+    if (!is_any_rpc_received_) {
+      is_any_rpc_received_ = true;
+      ScheduleSelfShutDown();
+    }
+    response_callback.Run(grpc::Status::OK,
+                          std::make_unique<test_rpcs::EmptyRpcResponse>());
+  }
+
+  void ScheduleSelfShutDown() {
+    base::ThreadTaskRunnerHandle::Get()->PostTask(
+        FROM_HERE,
+        base::BindOnce(
+            &AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>::ShutDown,
+            base::Unretained(&server_), std::move(on_shutdown_)));
+  }
+
+  AsyncGrpcServer<test_rpcs::ExampleService::AsyncService> server_;
+  base::Closure on_shutdown_;
+  bool is_any_rpc_received_ = false;
+};
+
 }  // namespace
 
 // Creates an |AsyncGrpcServer| and |AsyncGrpcClient| for the
@@ -203,6 +270,12 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
     ASSERT_TRUE(server_->Start());
   }
 
+  void StartSelfStoppingService() {
+    self_stopping_service_ = std::make_unique<SelfStoppingExampleService>(
+        std::vector<std::string>{GetDomainSocketAddress()});
+    ASSERT_TRUE(self_stopping_service_->Start());
+  }
+
   // Create the second AsyncGrpcClient using the same socket, which has to be
   // shutdown by ShutDownSecondClient.
   void CreateSecondClient() {
@@ -228,8 +301,11 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
   }
 
   void TearDown() override {
+    // Stop all clients and servers here, before deleting the temp dir that they
+    // use.
     ShutDownClient();
     ShutDownServer();
+    self_stopping_service_.reset();
   }
 
  protected:
@@ -243,6 +319,7 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
   }
 
   base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  std::unique_ptr<SelfStoppingExampleService> self_stopping_service_;
   std::unique_ptr<AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>
       server_;
   std::unique_ptr<AsyncGrpcClient<test_rpcs::ExampleService>> client_;
@@ -673,6 +750,33 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
 
   // Check the reduced initial reconnect time. 1 second is the gRPC default.
   EXPECT_LT(duration.InMilliseconds(), 1000);
+}
+
+// Test that there's no crash caused by calls incoming during/after the server
+// shutdown.
+TEST_F(AsyncGrpcClientServerTest, ShutdownBetweenSyncRequests) {
+  // This number should be sufficiently large in order to increase the
+  // probability of catching bugs in case they occur in the tested code.
+  // Typically, 2-5 calls is already sufficient, but it's safe to make this
+  // constant much bigger.
+  constexpr int kCallCount = 100;
+
+  StartSelfStoppingService();
+  base::RunLoop run_loop;
+  self_stopping_service_->set_on_shutdown_callback(run_loop.QuitClosure());
+
+  for (int i = 0; i < kCallCount; ++i) {
+    client_->CallRpc(
+        &test_rpcs::ExampleService::Stub::AsyncEmptyRpc,
+        test_rpcs::EmptyRpcRequest(),
+        base::DoNothing()
+            .Repeatedly<grpc::Status,
+                        std::unique_ptr<test_rpcs::EmptyRpcResponse>>());
+  }
+
+  // Waits until the service shuts down itself after receiving the first
+  // incoming RPC call.
+  run_loop.Run();
 }
 
 }  // namespace brillo
