@@ -130,8 +130,10 @@ bool RestoreconInternal(const std::vector<base::FilePath>& paths,
       PLOG(WARNING) << "Failed to statfs for " << path.value();
       // Continue anyway because restorecon should work even if it can't
       // update digests.
-    } else if (fsinfo.f_type == TRACEFS_MAGIC) {
-      // tracefs doesn't support xattrs, so restorecon can't store digests.
+    } else if (fsinfo.f_type == TRACEFS_MAGIC ||
+               fsinfo.f_type == DEBUGFS_MAGIC) {
+      // tracefs and debugfs don't support xattrs, so restorecon can't store
+      // digests.
       restorecon_flags |= SELINUX_RESTORECON_SKIP_DIGEST;
     }
 
