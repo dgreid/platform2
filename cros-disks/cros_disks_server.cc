@@ -63,8 +63,6 @@ void CrosDisksServer::Format(const std::string& path,
   Disk disk;
   if (!disk_monitor_->GetDiskByDevicePath(base::FilePath(path), &disk)) {
     error_type = FORMAT_ERROR_INVALID_DEVICE_PATH;
-  } else if (disk.is_on_boot_device) {
-    error_type = FORMAT_ERROR_DEVICE_NOT_ALLOWED;
   } else {
     error_type = format_manager_->StartFormatting(path, disk.device_file,
                                                   filesystem_type, options);
@@ -104,8 +102,6 @@ void CrosDisksServer::Rename(const std::string& path,
   Disk disk;
   if (!disk_monitor_->GetDiskByDevicePath(base::FilePath(path), &disk)) {
     error_type = RENAME_ERROR_INVALID_DEVICE_PATH;
-  } else if (disk.is_on_boot_device || disk.is_read_only) {
-    error_type = RENAME_ERROR_DEVICE_NOT_ALLOWED;
   } else {
     error_type = rename_manager_->StartRenaming(
         path, disk.device_file, volume_name, disk.filesystem_type);
@@ -240,6 +236,15 @@ bool CrosDisksServer::GetDeviceProperties(
   temp_properties[kDeviceMountPaths] = disk.mount_paths;
   *properties = std::move(temp_properties);
   return true;
+}
+
+void CrosDisksServer::AddDeviceToAllowlist(const std::string& device_path) {
+  disk_monitor_->AddDeviceToAllowlist(base::FilePath(device_path));
+}
+
+void CrosDisksServer::RemoveDeviceFromAllowlist(
+    const std::string& device_path) {
+  disk_monitor_->RemoveDeviceFromAllowlist(base::FilePath(device_path));
 }
 
 void CrosDisksServer::OnFormatCompleted(const std::string& device_path,

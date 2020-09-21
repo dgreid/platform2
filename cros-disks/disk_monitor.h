@@ -51,9 +51,6 @@ class DiskMonitor : public DeviceEventSourceInterface {
   virtual bool GetDiskByDevicePath(const base::FilePath& device_path,
                                    Disk* disk) const;
 
-  // Checks if the device path points to a device handled by this class.
-  bool IsPathRecognized(const base::FilePath& path) const;
-
   // A file descriptor that can be select()ed or poll()ed for system changes.
   int udev_monitor_fd() const;
 
@@ -61,6 +58,12 @@ class DiskMonitor : public DeviceEventSourceInterface {
   // from udev and converts the changes into device events. Returns false on
   // error or if not device event is available. Must be called to clear the fd.
   bool GetDeviceEvents(DeviceEventList* events) override;
+
+  // Adds the specified device to a list allowing it to be used despite
+  // not having certain properties. Used by tests to perform operations on
+  // loopback devices.
+  void AddDeviceToAllowlist(const base::FilePath& device);
+  void RemoveDeviceFromAllowlist(const base::FilePath& device);
 
  private:
   // An EnumerateBlockDevices callback that emulates an 'add' action on
@@ -98,6 +101,8 @@ class DiskMonitor : public DeviceEventSourceInterface {
   // A mapping from a sysfs path of a disk, detected by the udev monitor,
   // to a set of sysfs paths of the immediate children of the disk.
   std::map<std::string, std::set<std::string>> disks_detected_;
+
+  std::set<std::string> allowlist_;
 
   DISALLOW_COPY_AND_ASSIGN(DiskMonitor);
 };

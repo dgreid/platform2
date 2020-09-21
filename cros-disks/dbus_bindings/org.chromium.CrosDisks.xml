@@ -77,6 +77,14 @@
       <arg name="path" type="s" direction="in" />
       <arg name="volume_name" type="s" direction="in" />
     </method>
+    <method name="AddDeviceToAllowlist">
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+      <arg name="device_path" type="s" direction="in" />
+    </method>
+    <method name="RemoveDeviceFromAllowlist">
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple" />
+      <arg name="device_path" type="s" direction="in" />
+    </method>
 
     <signal name="DeviceAdded">
       <arg name="device" type="s" direction="out" />

@@ -107,6 +107,11 @@ class CrosDisksServer : public org::chromium::CrosDisksAdaptor,
                            const std::string& device_path,
                            brillo::VariantDictionary* properties) override;
 
+  // Used in tests to allow loopback devices to be used for operations.
+  // |device_path| specifies the syspath of the device (e.g. /sys/devices/...).
+  void AddDeviceToAllowlist(const std::string& device_path) override;
+  void RemoveDeviceFromAllowlist(const std::string& device_path) override;
+
   // Implements the FormatManagerObserverInterface interface to handle
   // the event when a formatting operation has completed.
   void OnFormatCompleted(const std::string& device_path,

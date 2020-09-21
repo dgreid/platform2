@@ -40,45 +40,52 @@ const char kUdevRemoveAction[] = "remove";
 const char kPropertyDiskEjectRequest[] = "DISK_EJECT_REQUEST";
 const char kPropertyDiskMediaChange[] = "DISK_MEDIA_CHANGE";
 
+// Checks if the device is allowed to be used through cros-disks.
+bool IsDeviceAllowed(const UdevDevice& device,
+                     const std::set<std::string>& allowlist) {
+  if (device.IsIgnored())
+    return false;
+  if (base::Contains(allowlist, device.NativePath()))
+    return true;
+  if (device.IsLoopDevice())
+    return false;
+  if (device.IsMobileBroadbandDevice())
+    return false;
+  if (device.IsOnBootDevice())
+    return false;
+  return true;
+}
+
 // An EnumerateBlockDevices callback that appends a Disk object, created from
 // |dev|, to |disks| if |dev| should not be ignored by cros-disks. Always
 // returns true to continue the enumeration in EnumerateBlockDevices.
-bool AppendDiskIfNotIgnored(std::vector<Disk>* disks,
+bool AppendDiskIfNotIgnored(const std::set<std::string>& allowlist,
+                            std::vector<Disk>* disks,
                             std::unique_ptr<brillo::UdevDevice> dev) {
-  DCHECK(disks);
-  DCHECK(dev);
-
   UdevDevice device(std::move(dev));
-  if (!device.IsIgnored())
+  if (IsDeviceAllowed(device, allowlist))
     disks->push_back(device.ToDisk());
-
   return true;  // Continue the enumeration.
 }
 
 // An EnumerateBlockDevices callback that checks if |dev| matches |path|. If
-// it's a match, sets |match| to true and |disk| (if not NULL) to a Disk object
-// created from |dev|, and returns false to stop the enumeration in
-// EnumerateBlockDevices. Otherwise, sets |match| to false, leaves |disk|
-// unchanged, and returns true to continue the enumeration in
+// it's a match, populates |device| and returns false to stop the enumeration in
 // EnumerateBlockDevices.
 bool MatchDiskByPath(const std::string& path,
-                     bool* match,
-                     Disk* disk,
+                     std::unique_ptr<UdevDevice>* device,
                      std::unique_ptr<brillo::UdevDevice> dev) {
-  DCHECK(match);
   DCHECK(dev);
+  DCHECK(device);
 
   const char* sys_path = dev->GetSysPath();
   const char* dev_path = dev->GetDevicePath();
   const char* dev_file = dev->GetDeviceNode();
-  *match = (sys_path && path == sys_path) || (dev_path && path == dev_path) ||
-           (dev_file && path == dev_file);
-  if (!*match)
+  bool match = (sys_path && path == sys_path) ||
+               (dev_path && path == dev_path) || (dev_file && path == dev_file);
+  if (!match)
     return true;  // Not a match. Continue the enumeration.
 
-  if (disk)
-    *disk = UdevDevice(std::move(dev)).ToDisk();
-
+  *device = std::make_unique<UdevDevice>(std::move(dev));
   return false;  // Match. Stop enumeration.
 }
 
@@ -90,10 +97,7 @@ void LogUdevDevice(const brillo::UdevDevice& dev) {
   // Some device events (eg USB drive removal) result in devnode being null.
   // This is gracefully handled by quote() without crashing.
   VLOG(1) << "   node: " << quote(dev.GetDeviceNode());
-  VLOG(1) << "   subsystem: " << quote(dev.GetSubsystem());
   VLOG(1) << "   devtype: " << quote(dev.GetDeviceType());
-  VLOG(1) << "   devpath: " << quote(dev.GetDevicePath());
-  VLOG(1) << "   sysname: " << quote(dev.GetSysName());
   VLOG(1) << "   syspath: " << quote(dev.GetSysPath());
 
   if (!VLOG_IS_ON(2))
@@ -105,6 +109,19 @@ void LogUdevDevice(const brillo::UdevDevice& dev) {
        prop; prop = prop->GetNext()) {
     VLOG(2) << "   " << prop->GetName() << ": " << quote(prop->GetValue());
   }
+}
+
+void LogDevice(const UdevDevice& dev) {
+  if (!VLOG_IS_ON(1))
+    return;
+
+  VLOG(1) << "path: " << quote(dev.NativePath());
+  VLOG(1) << "  attributes: virtual=" << dev.IsVirtual()
+          << " loop=" << dev.IsLoopDevice() << " boot=" << dev.IsOnBootDevice()
+          << " removable=" << dev.IsOnRemovableDevice()
+          << " broadband=" << dev.IsMobileBroadbandDevice()
+          << " automount=" << dev.IsAutoMountable()
+          << " media=" << dev.IsMediaAvailable();
 }
 
 }  // namespace
@@ -145,8 +162,8 @@ bool DiskMonitor::EmulateAddBlockDeviceEvent(
 
 std::vector<Disk> DiskMonitor::EnumerateDisks() const {
   std::vector<Disk> disks;
-  EnumerateBlockDevices(
-      base::BindRepeating(&AppendDiskIfNotIgnored, base::Unretained(&disks)));
+  EnumerateBlockDevices(base::BindRepeating(&AppendDiskIfNotIgnored, allowlist_,
+                                            base::Unretained(&disks)));
   return disks;
 }
 
@@ -179,7 +196,8 @@ void DiskMonitor::ProcessBlockDeviceEvents(
     DeviceEventList* events) {
   brillo::UdevDevice* raw_dev = dev.get();
   UdevDevice device(std::move(dev));
-  if (device.IsIgnored())
+  LogDevice(device);
+  if (!IsDeviceAllowed(device, allowlist_))
     return;
 
   bool disk_added = false;
@@ -209,6 +227,7 @@ void DiskMonitor::ProcessBlockDeviceEvents(
     if (device.IsAutoMountable()) {
       if (base::Contains(disks_detected_, device_path)) {
         // Disk already exists, so remove it and then add it again.
+        LOG(INFO) << "Re-add block device " << quote(device_path);
         events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, device_path));
       } else {
         disks_detected_[device_path] = {};
@@ -224,10 +243,12 @@ void DiskMonitor::ProcessBlockDeviceEvents(
           }
         }
       }
+      LOG(INFO) << "Add block device " << quote(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDiskAdded, device_path));
     }
   } else if (disk_removed) {
     disks_detected_.erase(device_path);
+    LOG(INFO) << "Remove block device " << quote(device_path);
     events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, device_path));
   } else if (child_disk_removed) {
     bool no_child_disks_found = true;
@@ -235,13 +256,16 @@ void DiskMonitor::ProcessBlockDeviceEvents(
       auto& child_disks = disks_detected_[device_path];
       no_child_disks_found = child_disks.empty();
       for (const auto& child_disk : child_disks) {
+        LOG(INFO) << "Remove child device " << quote(child_disk);
         events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, child_disk));
       }
     }
     // When the device contains a full-disk partition, there are no child disks.
     // Remove the device instead.
-    if (no_child_disks_found)
+    if (no_child_disks_found) {
+      LOG(INFO) << "Remove parent device " << quote(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDiskRemoved, device_path));
+    }
   }
 }
 
@@ -250,20 +274,24 @@ void DiskMonitor::ProcessMmcOrScsiDeviceEvents(
     const char* action,
     DeviceEventList* events) {
   UdevDevice device(std::move(dev));
-  if (device.IsMobileBroadbandDevice())
+  LogDevice(device);
+  if (!IsDeviceAllowed(device, allowlist_))
     return;
 
   std::string device_path = device.NativePath();
   if (strcmp(action, kUdevAddAction) == 0) {
     if (base::Contains(devices_detected_, device_path)) {
+      LOG(INFO) << "Re-add device " << quote(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDeviceScanned, device_path));
     } else {
       devices_detected_.insert(device_path);
+      LOG(INFO) << "Add device " << quote(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDeviceAdded, device_path));
     }
   } else if (strcmp(action, kUdevRemoveAction) == 0) {
     if (base::Contains(devices_detected_, device_path)) {
       devices_detected_.erase(device_path);
+      LOG(INFO) << "Remove device " << quote(device_path);
       events->push_back(DeviceEvent(DeviceEvent::kDeviceRemoved, device_path));
     }
   }
@@ -305,26 +333,31 @@ bool DiskMonitor::GetDeviceEvents(DeviceEventList* events) {
 
 bool DiskMonitor::GetDiskByDevicePath(const base::FilePath& device_path,
                                       Disk* disk) const {
+  LOG(INFO) << "Get disk by path " << quote(device_path);
   if (device_path.empty())
     return false;
 
-  bool disk_found = false;
+  std::unique_ptr<UdevDevice> device;
   EnumerateBlockDevices(base::BindRepeating(
-      &MatchDiskByPath, device_path.value(), base::Unretained(&disk_found),
-      base::Unretained(disk)));
-  return disk_found;
+      &MatchDiskByPath, device_path.value(), base::Unretained(&device)));
+  if (!device)
+    return false;
+
+  LogDevice(*device);
+  if (!IsDeviceAllowed(*device, allowlist_))
+    return false;
+
+  if (disk)
+    *disk = device->ToDisk();
+  return true;
 }
 
-bool DiskMonitor::IsPathRecognized(const base::FilePath& path) const {
-  // The following paths are handled:
-  //     /sys/...
-  //     /devices/...
-  //     /dev/...
-  return base::StartsWith(path.value(), "/sys/",
-                          base::CompareCase::SENSITIVE) ||
-         base::StartsWith(path.value(), "/devices/",
-                          base::CompareCase::SENSITIVE) ||
-         base::StartsWith(path.value(), "/dev/", base::CompareCase::SENSITIVE);
+void DiskMonitor::AddDeviceToAllowlist(const base::FilePath& device) {
+  allowlist_.insert(device.value());
+}
+
+void DiskMonitor::RemoveDeviceFromAllowlist(const base::FilePath& device) {
+  allowlist_.erase(device.value());
 }
 
 }  // namespace cros_disks
