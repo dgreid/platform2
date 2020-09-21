@@ -182,12 +182,6 @@ void ParseCommandLine(int argc,
   DEFINE_bool(test_mode, false,
               "Do not upload crashes; instead, log a special message if the "
               "crash is valid. Used by tast test ChromeCrashLoop.");
-  DEFINE_bool(delete_crashes, true,
-              "Instead of removing crashes after uploading them, create a new "
-              "file indicating that they have been uploaded. Used by "
-              "integration testing frameworks to provide data to the crash "
-              "server while also capturing crashes in a framework-specific "
-              "way.");
   DEFINE_bool(upload_old_reports, false,
               "If set, ignore the timestamp check and upload older reports.");
   brillo::FlagHelper::Init(argc, argv, "Chromium OS Crash Sender");
@@ -203,7 +197,6 @@ void ParseCommandLine(int argc,
   flags->allow_dev_sending = FLAGS_dev;
   flags->ignore_pause_file = FLAGS_ignore_pause_file;
   flags->test_mode = FLAGS_test_mode;
-  flags->delete_crashes = FLAGS_delete_crashes;
   flags->upload_old_reports = FLAGS_upload_old_reports;
   if (flags->test_mode) {
     // The pause file is intended to pause the cronjob crash_sender during
@@ -566,7 +559,6 @@ Sender::Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
       sleep_function_(options.sleep_function),
       allow_dev_sending_(options.allow_dev_sending),
       test_mode_(options.test_mode),
-      delete_crashes_(options.delete_crashes),
       upload_old_reports_(options.upload_old_reports),
       clock_(std::move(clock)) {}
 
@@ -769,8 +761,9 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
   }
 
   if (IsAlreadyUploaded(meta_file)) {
-    *reason = "Not uploading already-uploaded crash";
-    return kIgnore;
+    *reason = "Removing already-uploaded crash";
+    SendCrashRemoveReasonToUMA(kAlreadyUploaded);
+    return kRemove;
   }
 
   if (info->payload_kind == "devcore" && !IsDeviceCoredumpUploadAllowed() &&
@@ -794,7 +787,7 @@ void Sender::RemoveAndPickCrashFiles(const base::FilePath& crash_dir,
     switch (ChooseAction(meta_file, &reason, &info)) {
       case kRemove:
         LOG(INFO) << "Removing: " << reason;
-        RemoveReportFiles(meta_file, delete_crashes_);
+        RemoveReportFiles(meta_file);
         break;
       case kIgnore:
         LOG(INFO) << "Ignoring: " << reason;
@@ -904,7 +897,7 @@ void Sender::SendCrashes(const std::vector<MetaFile>& crash_meta_files,
     LOG(INFO) << "Successfully sent crash " << meta_file.value()
               << " and removing.";
     SendCrashRemoveReasonToUMA(kFinishedUploading);
-    RemoveReportFiles(meta_file, delete_crashes_);
+    RemoveReportFiles(meta_file);
   }
 }
 
@@ -1070,8 +1063,7 @@ std::unique_ptr<brillo::http::FormData> Sender::CreateCrashFormData(
   return form_data;
 }
 
-void Sender::RemoveReportFiles(const base::FilePath& meta_file,
-                               bool delete_crashes) {
+void Sender::RemoveReportFiles(const base::FilePath& meta_file) {
   if (meta_file.Extension() != ".meta") {
     LOG(ERROR) << "Not a meta file: " << meta_file.value();
     return;
@@ -1081,34 +1073,32 @@ void Sender::RemoveReportFiles(const base::FilePath& meta_file,
   const std::string pattern =
       meta_file.BaseName().RemoveExtension().value() + ".*";
 
-  bool add_uploaded_file = !delete_crashes;
-  if (delete_crashes) {
-    if (!metrics_lib_->SendCrosEventToUMA(kUMAAttemptedCrashRemoval)) {
-      LOG(WARNING) << "Failed to record crash removal attempt in UMA";
-    }
-    base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
-                              base::FileEnumerator::FILES, pattern);
-    for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
-      if (!base::DeleteFile(file, false /* recursive */)) {
-        PLOG(WARNING) << "Failed to remove " << file.value();
-        // We may have failed to remove the file due to incorrect selinux config
-        // on the directory. However, we may still be able to add files to it,
-        // so mark the crash as uploaded to prevent uploading it again.
-        // See https://crbug.com/1060019.
-        if (file.Extension() == ".meta") {
-          if (!metrics_lib_->SendCrosEventToUMA(kUMAFailedCrashRemoval)) {
-            LOG(WARNING) << "Further, couldn't record UMA event for failure";
-          }
-          add_uploaded_file = true;
+  if (!metrics_lib_->SendCrosEventToUMA(kUMAAttemptedCrashRemoval)) {
+    LOG(WARNING) << "Failed to record crash removal attempt in UMA";
+  }
+  base::FileEnumerator iter(meta_file.DirName(), false /* recursive */,
+                            base::FileEnumerator::FILES, pattern);
+  for (base::FilePath file = iter.Next(); !file.empty(); file = iter.Next()) {
+    if (!base::DeleteFile(file, false /* recursive */)) {
+      PLOG(WARNING) << "Failed to remove " << file.value();
+      // We may have failed to remove the file due to incorrect selinux config
+      // on the directory. However, we may still be able to add files to it,
+      // so mark the crash as uploaded to prevent uploading it again.
+      // See https://crbug.com/1060019.
+      if (file.Extension() == ".meta") {
+        if (!metrics_lib_->SendCrosEventToUMA(kUMAFailedCrashRemoval)) {
+          LOG(WARNING) << "Further, couldn't record UMA event for failure";
+        }
+        // TODO(mutexlox): This will only help in narrow circumstances; for
+        // instance it will not help if unix permissions on the directory don't
+        // let the write happen. Use a different directory for these so that we
+        // can write it if this directory is unwriteable.
+        base::File f(meta_file.ReplaceExtension(kAlreadyUploadedExt),
+                     base::File::FLAG_CREATE | base::File::FLAG_WRITE);
+        if (!f.IsValid()) {
+          LOG(ERROR) << "Failed to mark crash as uploaded";
         }
       }
-    }
-  }
-  if (add_uploaded_file) {
-    base::File f(meta_file.ReplaceExtension(kAlreadyUploadedExt),
-                 base::File::FLAG_CREATE | base::File::FLAG_WRITE);
-    if (!f.IsValid()) {
-      LOG(ERROR) << "Failed to mark crash as uploaded";
     }
   }
 }

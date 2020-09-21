@@ -93,7 +93,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   metrics_lib->set_metrics_enabled(provider.ConsumeBool());
   metrics_lib->set_guest_mode(provider.ConsumeBool());
   bool allow_dev_sending = provider.ConsumeBool();
-  bool delete_crashes = provider.ConsumeBool();
   util::g_force_is_mock_successful = provider.ConsumeBool();
 
   // Create the actual meta file.
@@ -112,7 +111,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   options.allow_dev_sending = allow_dev_sending;
   options.always_write_uploads_log = always_write_uploads_log;
   options.sleep_function = base::Bind(&IgnoreSleep);
-  options.delete_crashes = delete_crashes;
 
   // The remaining lines are basically a condensed version of crash_sender.cc's
   // RunChildMain.

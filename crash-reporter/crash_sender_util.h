@@ -52,7 +52,6 @@ struct CommandLineFlags {
   bool allow_dev_sending = false;
   bool ignore_pause_file = false;
   bool test_mode = false;
-  bool delete_crashes = true;
   bool upload_old_reports = false;
 };
 
@@ -237,11 +236,6 @@ class Sender {
     // looks legible instead of actually uploading it.
     bool test_mode = false;
 
-    // If true, delete crash files after sending them.
-    // Else, create a new file in the spool directory with the same basename
-    // and a special extension to indicate that the crash was already uploaded.
-    bool delete_crashes = true;
-
     // If true, ignore timestamp check and upload old reports.
     bool upload_old_reports = false;
   };
@@ -262,8 +256,9 @@ class Sender {
     kOSVersionTooOld = 10,
     kOldIncompleteMeta = 11,
     kFinishedUploading = 12,
+    kAlreadyUploaded = 13,
     // Keep kSendReasonCount one larger than any other enum value.
-    kSendReasonCount = 13,
+    kSendReasonCount = 14,
   };
 
   Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
@@ -325,7 +320,7 @@ class Sender {
 
   // Removes report files associated with the given meta file.
   // More specifically, if "foo.meta" is given, "foo.*" will be removed.
-  void RemoveReportFiles(const base::FilePath& meta_file, bool delete_crashes);
+  void RemoveReportFiles(const base::FilePath& meta_file);
 
   // Send the specified reason for removing a crash to UMA.
   void SendCrashRemoveReasonToUMA(CrashRemoveReason reason);
@@ -372,7 +367,6 @@ class Sender {
   base::Callback<void(base::TimeDelta)> sleep_function_;
   bool allow_dev_sending_;
   const bool test_mode_;
-  const bool delete_crashes_;
   const bool upload_old_reports_;
   std::unique_ptr<base::Clock> clock_;
   scoped_refptr<dbus::Bus> bus_;

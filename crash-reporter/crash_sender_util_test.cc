@@ -324,7 +324,7 @@ class CrashSenderUtilTest : public testing::Test {
     if (!CreateFile(absolute_log_, "", now))
       return false;
 
-    // These should be skipped, since the `alreadyuploaded` file exists.
+    // These should be removed, since the `alreadyuploaded` file exists.
     uploaded_meta_ = crash_directory.Append("uploaded.meta");
     uploaded_log_ = crash_directory.Append("uploaded.log");
     uploaded_already_ = crash_directory.Append("uploaded.alreadyuploaded");
@@ -780,10 +780,14 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_THAT(reason, HasSubstr(".processing file already exists"));
   ASSERT_TRUE(base::DeleteFile(processing, /*recursive=*/false));
 
-  // The following file should be ignored.
-  EXPECT_EQ(Sender::kIgnore,
+  // The following file should be removed.
+  EXPECT_CALL(
+      *raw_metrics_lib,
+      SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
+                    Sender::kAlreadyUploaded, Sender::kSendReasonCount));
+  EXPECT_EQ(Sender::kRemove,
             sender.ChooseAction(uploaded_meta_, &reason, &info));
-  EXPECT_THAT(reason, HasSubstr("Not uploading already-uploaded crash"));
+  EXPECT_THAT(reason, HasSubstr("Removing already-uploaded crash"));
   EXPECT_FALSE(
       base::PathExists(uploaded_meta_.ReplaceExtension(".processing")));
 
@@ -1001,8 +1005,8 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
   EXPECT_TRUE(base::PathExists(good_log_));
   EXPECT_TRUE(base::PathExists(absolute_meta_));
   EXPECT_TRUE(base::PathExists(absolute_log_));
-  EXPECT_TRUE(base::PathExists(uploaded_meta_));
-  EXPECT_TRUE(base::PathExists(uploaded_log_));
+  EXPECT_FALSE(base::PathExists(uploaded_meta_));
+  EXPECT_FALSE(base::PathExists(uploaded_log_));
   EXPECT_TRUE(base::PathExists(new_incomplete_meta_));
   EXPECT_TRUE(base::PathExists(new_empty_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_meta_));
@@ -1076,7 +1080,7 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   EXPECT_CALL(*raw_metrics_lib,
               SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
                             Sender::kTotalRemoval, Sender::kSendReasonCount))
-      .Times(3);
+      .Times(1);
 
   const base::FilePath crash_directory =
       paths::Get(paths::kSystemCrashDirectory);
@@ -1084,8 +1088,6 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
 
   const base::FilePath foo_meta = crash_directory.Append("foo.meta");
   const base::FilePath foo_log = crash_directory.Append("foo.log");
-  const base::FilePath foo_uploaded =
-      crash_directory.Append("foo.alreadyuploaded");
   const base::FilePath foo_dmp = crash_directory.Append("foo.dmp");
   const base::FilePath bar_log = crash_directory.Append("bar.log");
 
@@ -1093,30 +1095,10 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   ASSERT_TRUE(test_util::CreateFile(foo_log, ""));
   ASSERT_TRUE(test_util::CreateFile(foo_dmp, ""));
   ASSERT_TRUE(test_util::CreateFile(bar_log, ""));
-  EXPECT_FALSE(base::PathExists(foo_uploaded));
-
-  // This should create the alreadyuploaded file.
-  sender.RemoveReportFiles(foo_meta, false);
-  std::string contents;
-  ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
-  EXPECT_TRUE(base::PathExists(foo_uploaded));
-
-  ASSERT_TRUE(test_util::CreateFile(foo_uploaded, "asdf"));
-  base::File::Info uploaded_info;
-  ASSERT_TRUE(base::GetFileInfo(foo_uploaded, &uploaded_info));
-  // This should not update the alreadyuploaded file, since it already exists
-  sender.RemoveReportFiles(foo_meta, false);
-  ASSERT_TRUE(base::ReadFileToString(foo_meta, &contents));
-  EXPECT_TRUE(base::PathExists(foo_uploaded));
-  base::File::Info new_uploaded_info;
-  ASSERT_TRUE(base::GetFileInfo(foo_uploaded, &new_uploaded_info));
-  EXPECT_EQ(new_uploaded_info.last_modified, uploaded_info.last_modified);
-  EXPECT_EQ(new_uploaded_info.size, uploaded_info.size);
-
   // This should remove foo.*.
-  sender.RemoveReportFiles(foo_meta, true);
+  sender.RemoveReportFiles(foo_meta);
   // This should do nothing because the suffix is not ".meta".
-  sender.RemoveReportFiles(bar_log, true);
+  sender.RemoveReportFiles(bar_log);
 
   // Check what files were removed.
   EXPECT_FALSE(base::PathExists(foo_meta));
@@ -1149,7 +1131,7 @@ TEST_F(CrashSenderUtilTest, FailRemoveReportFilesSendsMetric) {
   // chmod the file so RemoveReportFiles fails
   ASSERT_EQ(chmod(crash_directory.value().c_str(), 0500), 0);
 
-  sender.RemoveReportFiles(foo_meta, true);
+  sender.RemoveReportFiles(foo_meta);
 
   // Clean up after ourselves
   EXPECT_EQ(chmod(crash_directory.value().c_str(), 0700), 0);
