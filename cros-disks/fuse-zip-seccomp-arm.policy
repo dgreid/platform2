@@ -25,6 +25,7 @@ getgid32: 1
 getpid: 1
 gettimeofday: 1
 getuid32: 1
+ioctl: 1
 kill: arg1 == SIGTERM
 lstat64: 1
 mmap2: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE

@@ -23,6 +23,7 @@ getgid: 1
 getpid: 1
 gettid: 1
 getuid: 1
+ioctl: 1
 kill: arg1 == SIGTERM
 lseek: 1
 lstat: 1
