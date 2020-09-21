@@ -596,12 +596,19 @@ bool CrosFpDevice::UploadTemplate(const VendorTemplate& tmpl) {
     req->size = tlen | (remaining == tlen ? FP_TEMPLATE_COMMIT : 0);
     std::copy(pos, pos + tlen, req->data);
     cmd.SetReqSize(tlen + sizeof(struct ec_params_fp_template));
-    if (!cmd.Run(cros_fd_.get()) || cmd.Result() != EC_RES_SUCCESS) {
+    if (!cmd.Run(cros_fd_.get())) {
+      LOG(ERROR) << "Failed to run FP_TEMPLATE command";
+      biod_metrics_->SendUploadTemplateResult(metrics::kCmdRunFailure);
+      return false;
+    }
+    if (cmd.Result() != EC_RES_SUCCESS) {
       LOG(ERROR) << "FP_TEMPLATE command failed @ " << pos - tmpl.begin();
+      biod_metrics_->SendUploadTemplateResult(cmd.Result());
       return false;
     }
     pos += tlen;
   }
+  biod_metrics_->SendUploadTemplateResult(EC_RES_SUCCESS);
   return true;
 }
 

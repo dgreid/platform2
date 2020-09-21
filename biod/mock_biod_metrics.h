@@ -47,6 +47,7 @@ class MockBiodMetrics : public BiodMetricsInterface {
               (bool success),
               (override));
   MOCK_METHOD(bool, SendDeadPixelCount, (int num_dead_pixels), (override));
+  MOCK_METHOD(bool, SendUploadTemplateResult, (int ec_result), (override));
 };
 
 }  // namespace metrics

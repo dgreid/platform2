@@ -50,10 +50,16 @@ constexpr char kRecordFormatVersionMetric[] =
 constexpr char kMigrationForPositiveMatchSecretResult[] =
     "Fingerprint.Unlock.MigrationForPositiveMatchSecretResult";
 constexpr char kNumDeadPixels[] = "Fingerprint.Sensor.NumDeadPixels";
+constexpr char kUploadTemplateSuccess[] = "Fingerprint.UploadTemplate.Success";
 
 // See
 // https://chromium.googlesource.com/chromium/src.git/+/HEAD/tools/metrics/histograms/README.md#count-histograms_choosing-number-of-buckets
 constexpr int kDefaultNumBuckets = 50;
+
+// Upper boundary to use in EC result related histograms. This follows
+// "enum ec_status" in ec_commands.h. We do not use EC_RES_MAX because that
+// value is too large for the histogram.
+constexpr int kMaxEcResultCode = 20;
 
 }  // namespace metrics
 
@@ -184,6 +190,14 @@ bool BiodMetrics::SendDeadPixelCount(int num_dead_pixels) {
   return metrics_lib_->SendToUMA(metrics::kNumDeadPixels, num_dead_pixels,
                                  min_dead, max_dead,
                                  metrics::kDefaultNumBuckets);
+}
+
+bool BiodMetrics::SendUploadTemplateResult(int ec_result) {
+  constexpr int min_ec_result_code = metrics::kCmdRunFailure;
+  return metrics_lib_->SendToUMA(
+      metrics::kUploadTemplateSuccess, ec_result, min_ec_result_code,
+      metrics::kMaxEcResultCode,
+      metrics::kMaxEcResultCode - min_ec_result_code + 1);
 }
 
 }  // namespace biod

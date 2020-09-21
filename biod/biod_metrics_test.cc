@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <base/macros.h>
+#include <chromeos/ec/ec_commands.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <metrics/metrics_library_mock.h>
@@ -211,6 +212,34 @@ TEST_F(BiodMetricsTest, SendDeadPixelCount) {
                         kExpectedMax, kExpectedNumBuckets))
       .Times(1);
   biod_metrics_.SendDeadPixelCount(5);
+  testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
+}
+
+TEST_F(BiodMetricsTest, SendUploadTemplateResult) {
+  constexpr int kExpectedSuccessEnum = 0;
+  constexpr int kExpectedInvalidParamEnum = 3;
+  constexpr int kExpectedUnavailableEnum = 9;
+  constexpr int kExpectedMinEnum = -1;
+  constexpr int kExpectedMaxEnum = 20;
+  constexpr int kExpectedNumBuckets = 22;
+
+  EXPECT_CALL(*GetMetricsLibraryMock(),
+              SendToUMA(_, kExpectedSuccessEnum, kExpectedMinEnum,
+                        kExpectedMaxEnum, kExpectedNumBuckets))
+      .Times(1);
+  biod_metrics_.SendUploadTemplateResult(EC_RES_SUCCESS);
+  testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
+  EXPECT_CALL(*GetMetricsLibraryMock(),
+              SendToUMA(_, kExpectedInvalidParamEnum, kExpectedMinEnum,
+                        kExpectedMaxEnum, kExpectedNumBuckets))
+      .Times(1);
+  biod_metrics_.SendUploadTemplateResult(EC_RES_INVALID_PARAM);
+  testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
+  EXPECT_CALL(*GetMetricsLibraryMock(),
+              SendToUMA(_, kExpectedUnavailableEnum, kExpectedMinEnum,
+                        kExpectedMaxEnum, kExpectedNumBuckets))
+      .Times(1);
+  biod_metrics_.SendUploadTemplateResult(EC_RES_UNAVAILABLE);
   testing::Mock::VerifyAndClearExpectations(GetMetricsLibraryMock());
 }
 

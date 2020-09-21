@@ -33,6 +33,9 @@ extern const char kUpdaterDurationNoUpdate[];
 extern const char kUpdaterDurationUpdate[];
 extern const char kNumDeadPixels[];
 
+// Special value to send to UMA on EC command related metrics.
+constexpr int kCmdRunFailure = -1;
+
 }  // namespace metrics
 
 class BiodMetricsInterface {
@@ -76,6 +79,7 @@ class BiodMetricsInterface {
   virtual bool SendRecordFormatVersion(int version) = 0;
   virtual bool SendMigrationForPositiveMatchSecretResult(bool success) = 0;
   virtual bool SendDeadPixelCount(int num_dead_pixels) = 0;
+  virtual bool SendUploadTemplateResult(int ec_result) = 0;
 };
 
 class BiodMetrics : public BiodMetricsInterface {
@@ -124,6 +128,9 @@ class BiodMetrics : public BiodMetricsInterface {
   bool SendMigrationForPositiveMatchSecretResult(bool success) override;
 
   bool SendDeadPixelCount(int num_dead_pixels) override;
+
+  // Return code of FP_TEMPLATE EC command
+  bool SendUploadTemplateResult(int ec_result) override;
 
   void SetMetricsLibraryForTesting(
       std::unique_ptr<MetricsLibraryInterface> metrics_lib);
