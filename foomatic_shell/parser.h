@@ -40,6 +40,7 @@ class Parser {
 
  private:
   bool ParseScript(Script* out);
+  bool ParseScriptImpl(Script* out);
   bool ParsePipeline(Pipeline* out);
   bool ParsePipeSegment(PipeSegment* out);
   bool ParseCommand(Command* out);
@@ -47,6 +48,8 @@ class Parser {
   class InputTokens;
   std::unique_ptr<InputTokens> tokens_;
   std::string message_;
+  // This counter tracks a level of recursive calls to ParseScript(...).
+  int script_recursion_level_ = 0;
 };
 
 }  // namespace foomatic_shell

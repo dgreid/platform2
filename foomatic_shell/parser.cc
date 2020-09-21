@@ -122,6 +122,20 @@ std::string::const_iterator Parser::GetPosition() const {
   return tokens_->GetCurrentToken().begin;
 }
 
+// This is a wrapper around ParseScriptImpl(...) to limit the number of
+// recursive (...) operators (sub-shells invocations).
+bool Parser::ParseScript(Script* out) {
+  if (script_recursion_level_ > 4) {
+    message_ = "Too many recursive shells executions";
+    return false;
+  }
+
+  ++script_recursion_level_;
+  const bool result = ParseScriptImpl(out);
+  --script_recursion_level_;
+  return result;
+}
+
 // Parses the following (see grammar.h for details):
 //  Script = OptSpace, {SepP,OptSpace}, Pipeline,
 //           { {SepP,OptSpace}-, Pipeline }, {SepP,OptSpace} ;
@@ -131,7 +145,7 @@ std::string::const_iterator Parser::GetPosition() const {
 // the end of a whole Script. The resultant Script is saved in |out|. |out| must
 // contain a pointer to an empty Script structure. Returns false in case of an
 // error.
-bool Parser::ParseScript(Script* out) {
+bool Parser::ParseScriptImpl(Script* out) {
   DCHECK(out != nullptr);
 
   // Parsing: OptSpace

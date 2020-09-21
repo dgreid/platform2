@@ -84,7 +84,7 @@ bool ExecuteEmbeddedShellScript(const std::string& source,
                                 std::string* output) {
   DCHECK(output != nullptr);
 
-  // This limits number of recursive `...` (backticks).
+  // This limits the number of recursive `...` (backticks).
   if (recursion_level > 2) {
     *output = "Too many recursive executions of `...` operator";
     return false;
