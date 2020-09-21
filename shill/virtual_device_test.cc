@@ -10,10 +10,10 @@
 #include <gtest/gtest.h>
 
 #include "shill/event_dispatcher.h"
+#include "shill/fake_store.h"
 #include "shill/mock_control.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_store.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/technology.h"
 
@@ -56,15 +56,14 @@ TEST_F(VirtualDeviceTest, technology) {
 }
 
 TEST_F(VirtualDeviceTest, Load) {
-  StrictMock<MockStore> storage;
-  EXPECT_CALL(storage, ContainsGroup(_)).Times(0);
+  FakeStore storage;
   EXPECT_TRUE(device_->Load(&storage));
 }
 
 TEST_F(VirtualDeviceTest, Save) {
-  StrictMock<MockStore> storage;
-  EXPECT_CALL(storage, SetBool(_, _, _)).Times(0);  // Or any type, really.
+  FakeStore storage;
   EXPECT_TRUE(device_->Save(&storage));
+  EXPECT_TRUE(storage.GetGroups().empty());
 }
 
 TEST_F(VirtualDeviceTest, Start) {

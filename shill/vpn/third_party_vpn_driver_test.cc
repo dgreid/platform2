@@ -16,7 +16,6 @@
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/mock_virtual_device.h"
 #include "shill/net/mock_io_handler_factory.h"
 #include "shill/test_event_dispatcher.h"

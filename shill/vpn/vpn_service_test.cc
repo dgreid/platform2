@@ -11,6 +11,7 @@
 #include <gtest/gtest.h>
 
 #include "shill/error.h"
+#include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_connection.h"
 #include "shill/mock_control.h"
@@ -19,7 +20,6 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/service_property_change_test.h"
 #include "shill/vpn/mock_vpn_driver.h"
 #include "shill/vpn/mock_vpn_provider.h"
@@ -200,25 +200,28 @@ TEST_F(VPNServiceTest, GetDeviceRpcId) {
 }
 
 TEST_F(VPNServiceTest, Load) {
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   static const char kStorageID[] = "storage-id";
   service_->set_storage_id(kStorageID);
-  EXPECT_CALL(storage, ContainsGroup(kStorageID)).WillOnce(Return(true));
+  storage.SetString(kStorageID, Service::kStorageType, kTypeVPN);
   EXPECT_CALL(*driver_, Load(&storage, kStorageID)).WillOnce(Return(true));
   EXPECT_TRUE(service_->Load(&storage));
 }
 
 TEST_F(VPNServiceTest, Save) {
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   static const char kStorageID[] = "storage-id";
   service_->set_storage_id(kStorageID);
   EXPECT_CALL(*driver_, Save(&storage, kStorageID, false))
       .WillOnce(Return(true));
   EXPECT_TRUE(service_->Save(&storage));
+  std::string type;
+  EXPECT_TRUE(storage.GetString(kStorageID, Service::kStorageType, &type));
+  EXPECT_EQ(type, kTypeVPN);
 }
 
 TEST_F(VPNServiceTest, SaveCredentials) {
-  NiceMock<MockStore> storage;
+  FakeStore storage;
   static const char kStorageID[] = "storage-id";
   service_->set_storage_id(kStorageID);
   service_->set_save_credentials(true);

@@ -12,23 +12,21 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "shill/fake_store.h"
 #include "shill/mock_connection.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device_info.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/property_store.h"
 #include "shill/test_event_dispatcher.h"
 
 using std::string;
 using std::vector;
 using testing::_;
-using testing::AnyNumber;
 using testing::NiceMock;
 using testing::Return;
-using testing::SetArgPointee;
 using testing::Test;
 
 namespace shill {
@@ -169,35 +167,21 @@ bool VPNDriverTest::GetProviderPropertyStrings(const PropertyStore& store,
 }
 
 TEST_F(VPNDriverTest, Load) {
-  MockStore storage;
+  FakeStore storage;
   GetArgs()->Set<string>(kVPNHostProperty, "1.2.3.4");
   GetArgs()->Set<string>(kPSKProperty, "1234");
   GetArgs()->Set<Strings>(kL2tpIpsecCaCertPemProperty,
                           vector<string>{"cleared-cert0", "cleared-cert1"});
-  EXPECT_CALL(storage, GetString(kStorageID, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetStringList(kStorageID, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(storage, GetString(_, kEapCaCertPemProperty, _)).Times(0);
-  EXPECT_CALL(storage, GetString(_, kOTPProperty, _)).Times(0);
-  EXPECT_CALL(storage, GetCryptedString(_, kOTPProperty, _, _)).Times(0);
-  EXPECT_CALL(storage, GetStringList(_, kOTPProperty, _)).Times(0);
   vector<string> kCaCerts{"cert0", "cert1"};
-  EXPECT_CALL(storage, GetStringList(kStorageID, kEapCaCertPemProperty, _))
-      .WillOnce(DoAll(SetArgPointee<2>(kCaCerts), Return(true)));
-  EXPECT_CALL(storage, GetString(kStorageID, kPortProperty, _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kPort)), Return(true)));
-  EXPECT_CALL(storage, GetString(kStorageID, kPinProperty, _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kPin)), Return(true)));
-  EXPECT_CALL(storage, GetCryptedString(kStorageID, kPSKProperty, _, _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(storage, GetCryptedString(kStorageID, kPasswordProperty, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(string(kPassword)), Return(true)));
+  storage.SetStringList(kStorageID, kEapCaCertPemProperty, kCaCerts);
+  storage.SetString(kStorageID, kPortProperty, kPort);
+  storage.SetString(kStorageID, kPinProperty, kPin);
+  storage.SetString(kStorageID, credential_prefix() + kPasswordProperty,
+                    kPassword);
+
   EXPECT_TRUE(driver_.Load(&storage, kStorageID));
-  EXPECT_TRUE(GetArgs()->Contains<Strings>(kEapCaCertPemProperty));
-  if (GetArgs()->Contains<Strings>(kEapCaCertPemProperty)) {
-    EXPECT_EQ(kCaCerts, GetArgs()->Get<Strings>(kEapCaCertPemProperty));
-  }
+
+  EXPECT_EQ(kCaCerts, GetArgs()->Get<Strings>(kEapCaCertPemProperty));
   EXPECT_EQ(kPort, GetArgs()->Lookup<string>(kPortProperty, ""));
   EXPECT_EQ(kPin, GetArgs()->Lookup<string>(kPinProperty, ""));
   EXPECT_EQ(kPassword, GetArgs()->Lookup<string>(kPasswordProperty, ""));
@@ -209,52 +193,51 @@ TEST_F(VPNDriverTest, Load) {
 }
 
 TEST_F(VPNDriverTest, Save) {
-  SetArg(kProviderTypeProperty, "");
+  SetArg(kProviderTypeProperty, kProviderOpenVpn);
   SetArg(kPinProperty, kPin);
   SetArg(kPortProperty, kPort);
   SetArg(kPasswordProperty, kPassword);
   SetArg(kOTPProperty, "987654");
   const vector<string> kCaCerts{"cert0", "cert1"};
   SetArgArray(kEapCaCertPemProperty, kCaCerts);
-  MockStore storage;
-  EXPECT_CALL(storage,
-              SetStringList(kStorageID, kEapCaCertPemProperty, kCaCerts))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetString(kStorageID, kProviderTypeProperty, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetString(kStorageID, kPortProperty, kPort))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetString(kStorageID, kPinProperty, kPin))
-      .WillOnce(Return(true));
-  EXPECT_CALL(
-      storage,
-      SetString(kStorageID, credential_prefix() + kPasswordProperty, kPassword))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetString(_, kOTPProperty, _)).Times(0);
-  EXPECT_CALL(storage, SetString(_, kEapCaCertPemProperty, _)).Times(0);
 
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kEapCaCertPemProperty)).Times(0);
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kProviderTypeProperty)).Times(0);
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kL2tpIpsecCaCertPemProperty));
-  EXPECT_CALL(storage,
-              DeleteKey(kStorageID, credential_prefix() + kPSKProperty));
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kVPNHostProperty));
+  FakeStore storage;
   EXPECT_TRUE(driver_.Save(&storage, kStorageID, true));
+
+  vector<string> ca_pem;
+  string provider_type, port, pin, password;
+  EXPECT_TRUE(
+      storage.GetStringList(kStorageID, kEapCaCertPemProperty, &ca_pem));
+  EXPECT_EQ(ca_pem, kCaCerts);
+  EXPECT_TRUE(
+      storage.GetString(kStorageID, kProviderTypeProperty, &provider_type));
+  EXPECT_EQ(provider_type, kProviderOpenVpn);
+  EXPECT_TRUE(storage.GetString(kStorageID, kPortProperty, &port));
+  EXPECT_EQ(port, kPort);
+  EXPECT_TRUE(storage.GetString(kStorageID, kPinProperty, &pin));
+  EXPECT_EQ(pin, kPin);
+  EXPECT_TRUE(storage.GetString(
+      kStorageID, credential_prefix() + kPasswordProperty, &password));
+  EXPECT_EQ(password, kPassword);
+
+  EXPECT_FALSE(storage.GetString(kStorageID, credential_prefix() + kPSKProperty,
+                                 nullptr));
 }
 
 TEST_F(VPNDriverTest, SaveNoCredentials) {
   SetArg(kPasswordProperty, kPassword);
   SetArg(kPSKProperty, "");
-  MockStore storage;
-  EXPECT_CALL(storage, SetString(_, kPasswordProperty, _)).Times(0);
-  EXPECT_CALL(storage, DeleteKey(kStorageID, _)).Times(AnyNumber());
-  EXPECT_CALL(storage,
-              DeleteKey(kStorageID, credential_prefix() + kPasswordProperty));
-  EXPECT_CALL(storage,
-              DeleteKey(kStorageID, credential_prefix() + kPSKProperty));
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kEapCaCertPemProperty));
-  EXPECT_CALL(storage, DeleteKey(kStorageID, kL2tpIpsecCaCertPemProperty));
+
+  FakeStore storage;
   EXPECT_TRUE(driver_.Save(&storage, kStorageID, false));
+
+  EXPECT_FALSE(storage.GetString(
+      kStorageID, credential_prefix() + kPasswordProperty, nullptr));
+  EXPECT_FALSE(storage.GetString(kStorageID, credential_prefix() + kPSKProperty,
+                                 nullptr));
+  EXPECT_FALSE(storage.GetString(kStorageID, kEapCaCertPemProperty, nullptr));
+  EXPECT_FALSE(
+      storage.GetString(kStorageID, kL2tpIpsecCaCertPemProperty, nullptr));
 }
 
 TEST_F(VPNDriverTest, UnloadCredentials) {

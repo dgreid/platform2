@@ -10,13 +10,11 @@
 #include <base/memory/ptr_util.h>
 #include <gtest/gtest.h>
 
-#include "shill/mock_adaptors.h"
+#include "shill/fake_store.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device_info.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/mock_virtual_device.h"
 #include "shill/test_event_dispatcher.h"
 #include "shill/vpn/mock_vpn_provider.h"
@@ -24,8 +22,6 @@
 
 using testing::_;
 using testing::NiceMock;
-using testing::Return;
-using testing::SetArgPointee;
 
 namespace shill {
 
@@ -82,13 +78,10 @@ class ArcVpnDriverTest : public testing::Test {
     const std::string kProviderHostValue = "arcvpn";
     const std::string kProviderTypeValue = "arcvpn";
 
-    EXPECT_CALL(store_, GetString(kStorageId, kProviderHostProperty, _))
-        .WillOnce(DoAll(SetArgPointee<2>(kProviderHostValue), Return(true)));
-    EXPECT_CALL(store_, GetString(kStorageId, kProviderTypeProperty, _))
-        .WillOnce(DoAll(SetArgPointee<2>(kProviderTypeValue), Return(true)));
-    EXPECT_CALL(store_, GetString(kStorageId, kArcVpnTunnelChromeProperty, _))
-        .WillOnce(DoAll(SetArgPointee<2>(tunnel_chrome ? "true" : "false"),
-                        Return(true)));
+    store_.SetString(kStorageId, kProviderHostProperty, kProviderHostValue);
+    store_.SetString(kStorageId, kProviderTypeProperty, kProviderTypeValue);
+    store_.SetString(kStorageId, kArcVpnTunnelChromeProperty,
+                     tunnel_chrome ? "true" : "false");
     driver_->Load(&store_, kStorageId);
   }
 
@@ -99,7 +92,7 @@ class ArcVpnDriverTest : public testing::Test {
   MockManager manager_;
   NiceMock<MockDeviceInfo> device_info_;
   scoped_refptr<MockVirtualDevice> device_;
-  MockStore store_;
+  FakeStore store_;
   ArcVpnDriver* driver_;  // Owned by |service_|
   scoped_refptr<MockVPNService> service_;
 };

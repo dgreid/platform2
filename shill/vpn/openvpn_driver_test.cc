@@ -28,7 +28,6 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_process_manager.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/mock_virtual_device.h"
 #include "shill/rpc_task.h"
 #include "shill/technology.h"
