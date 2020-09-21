@@ -45,7 +45,6 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_power_manager.h"
 #include "shill/mock_profile.h"
-#include "shill/mock_store.h"
 #include "shill/net/ieee80211.h"
 #include "shill/net/ip_address.h"
 #include "shill/net/mock_netlink_manager.h"

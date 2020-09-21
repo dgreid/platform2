@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include "shill/event_dispatcher.h"
+#include "shill/fake_store.h"
 #include "shill/manager.h"
 #include "shill/metrics.h"
 #include "shill/mock_adaptors.h"
@@ -27,7 +28,6 @@
 #include "shill/mock_manager.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/net/mock_netlink_manager.h"
 #include "shill/property_store_test.h"
 #include "shill/refptr_types.h"
@@ -187,17 +187,15 @@ class WiFiServiceTest : public PropertyStoreTest {
 // static
 const char WiFiServiceTest::fake_mac[] = "AaBBcCDDeeFF";
 
-MATCHER_P3(ContainsWiFiProperties, ssid, mode, security_class, "") {
+void SetWiFiProperties(FakeStore* store,
+                       const std::string& id,
+                       const std::vector<uint8_t>& ssid,
+                       const std::string& security_class) {
   string hex_ssid = base::HexEncode(ssid.data(), ssid.size());
-  return arg.template Contains<string>(WiFiService::kStorageType) &&
-         arg.template Get<string>(WiFiService::kStorageType) == kTypeWifi &&
-         arg.template Contains<string>(WiFiService::kStorageSSID) &&
-         arg.template Get<string>(WiFiService::kStorageSSID) == hex_ssid &&
-         arg.template Contains<string>(WiFiService::kStorageMode) &&
-         arg.template Get<string>(WiFiService::kStorageMode) == mode &&
-         arg.template Contains<string>(WiFiService::kStorageSecurityClass) &&
-         arg.template Get<string>(WiFiService::kStorageSecurityClass) ==
-             security_class;
+  store->SetString(id, WiFiService::kStorageType, kTypeWifi);
+  store->SetString(id, WiFiService::kStorageSSID, hex_ssid);
+  store->SetString(id, WiFiService::kStorageSecurityClass, security_class);
+  store->SetString(id, WiFiService::kStorageMode, kModeManaged);
 }
 
 class WiFiServiceSecurityTest : public WiFiServiceTest {
@@ -248,25 +246,17 @@ class WiFiServiceSecurityTest : public WiFiServiceTest {
                        bool expectation) {
     WiFiServiceRefPtr wifi_service = SetupSecureService(service_security);
 
-    NiceMock<MockStore> mock_store;
-    EXPECT_CALL(mock_store, GetGroupsWithProperties(_))
-        .WillRepeatedly(Return(set<string>()));
+    FakeStore store;
     const string kStorageId = "storage_id";
-    EXPECT_CALL(mock_store, ContainsGroup(kStorageId))
-        .WillRepeatedly(Return(true));
-    set<string> groups;
-    groups.insert(kStorageId);
-    EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                                wifi_service->ssid(), kModeManaged,
-                                storage_security_class)))
-        .WillRepeatedly(Return(groups));
-    bool is_loadable = wifi_service->IsLoadableFrom(mock_store);
+    SetWiFiProperties(&store, kStorageId, wifi_service->ssid(),
+                      storage_security_class);
+    bool is_loadable = wifi_service->IsLoadableFrom(store);
     EXPECT_EQ(expectation, is_loadable);
-    bool is_loaded = wifi_service->Load(&mock_store);
+    bool is_loaded = wifi_service->Load(&store);
     EXPECT_EQ(expectation, is_loaded);
     const string expected_identifier(expectation ? kStorageId : "");
     EXPECT_EQ(expected_identifier,
-              wifi_service->GetLoadableStorageIdentifier(mock_store));
+              wifi_service->GetLoadableStorageIdentifier(store));
 
     if (expectation != is_loadable || expectation != is_loaded) {
       return false;
@@ -785,36 +775,21 @@ TEST_F(WiFiServiceTest, EapAuthPropertyChangeClearsCachedCredentials) {
 TEST_F(WiFiServiceTest, LoadHidden) {
   WiFiServiceRefPtr service = MakeSimpleService(kSecurityNone);
   ASSERT_FALSE(service->hidden_ssid_);
-  NiceMock<MockStore> mock_store;
+  FakeStore store;
   const string storage_id = service->GetStorageIdentifier();
-  set<string> groups;
-  groups.insert(storage_id);
-  EXPECT_CALL(mock_store, ContainsGroup(StrEq(storage_id)))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityNone)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_store,
-              GetBool(StrEq(storage_id), WiFiService::kStorageHiddenSSID, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(true), Return(true)));
-  EXPECT_TRUE(service->Load(&mock_store));
+  SetWiFiProperties(&store, storage_id, simple_ssid(), kSecurityNone);
+  store.SetBool(storage_id, WiFiService::kStorageHiddenSSID, true);
+  EXPECT_TRUE(service->Load(&store));
   EXPECT_TRUE(service->hidden_ssid_);
 }
 
 TEST_F(WiFiServiceTest, SetPassphraseForNonPassphraseService) {
   WiFiServiceRefPtr service = MakeSimpleService(kSecurityNone);
-  NiceMock<MockStore> mock_store;
+  FakeStore store;
   const string storage_id = service->GetStorageIdentifier();
-  set<string> groups;
-  groups.insert(storage_id);
-  EXPECT_CALL(mock_store, ContainsGroup(StrEq(storage_id)))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityNone)))
-      .WillRepeatedly(Return(groups));
+  SetWiFiProperties(&store, storage_id, simple_ssid(), kSecurityNone);
 
-  EXPECT_TRUE(service->Load(&mock_store));
+  EXPECT_TRUE(service->Load(&store));
   Error error;
   EXPECT_FALSE(service->SetPassphrase("password", &error));
   EXPECT_TRUE(error.type() == Error::kNotSupported);
@@ -822,28 +797,13 @@ TEST_F(WiFiServiceTest, SetPassphraseForNonPassphraseService) {
 
 TEST_F(WiFiServiceTest, LoadMultipleMatchingGroups) {
   WiFiServiceRefPtr service = MakeServiceWithWiFi(kSecurityNone);
-  set<string> groups;
-  groups.insert("id0");
-  groups.insert("id1");
-  // Make sure we retain the first matched group in the same way that
-  // WiFiService::Load() will.
-  string first_group = *groups.begin();
-
-  NiceMock<MockStore> mock_store;
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityNone)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(mock_store, ContainsGroup(first_group))
-      .WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_store, ContainsGroup(StrNe(first_group))).Times(0);
-  EXPECT_CALL(mock_store, GetBool(first_group, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_store, GetBool(StrNe(first_group), _, _)).Times(0);
-  ScopedMockLog log;
-  EXPECT_CALL(log, Log(_, _, _)).Times(AnyNumber());
-  EXPECT_CALL(log,
-              Log(logging::LOG_WARNING, _, EndsWith("choosing the first.")));
-  EXPECT_TRUE(service->Load(&mock_store));
+  std::string storage_id0 = "id0";
+  std::string storage_id1 = "id1";
+  FakeStore store;
+  SetWiFiProperties(&store, storage_id0, simple_ssid(), kSecurityNone);
+  SetWiFiProperties(&store, storage_id1, simple_ssid(), kSecurityNone);
+  EXPECT_TRUE(service->Load(&store));
+  EXPECT_EQ(service->GetStorageIdentifier(), storage_id0);
 }
 
 TEST_F(WiFiServiceSecurityTest, WPAMapping) {
@@ -881,28 +841,14 @@ TEST_F(WiFiServiceSecurityTest, EndpointsDisappear) {
 
 TEST_F(WiFiServiceTest, LoadAndUnloadPassphrase) {
   WiFiServiceRefPtr service = MakeSimpleService(kSecurityPsk);
-  NiceMock<MockStore> mock_store;
+  FakeStore store;
   const string kStorageId = service->GetStorageIdentifier();
-  EXPECT_CALL(mock_store, ContainsGroup(StrEq(kStorageId)))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kStorageId);
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityPsk)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
+  SetWiFiProperties(&store, kStorageId, simple_ssid(), kSecurityPsk);
   const string kPassphrase = "passphrase";
-  EXPECT_CALL(mock_store,
-              GetCryptedString(StrEq(kStorageId), _,
-                               WiFiService::kStorageCredentialPassphrase, _))
-      .WillRepeatedly(DoAll(SetArgPointee<3>(kPassphrase), Return(true)));
-  EXPECT_CALL(
-      mock_store,
-      GetCryptedString(StrEq(kStorageId), _,
-                       StrNe(WiFiService::kStorageCredentialPassphrase), _))
-      .WillRepeatedly(Return(false));
+  store.SetString(kStorageId, WiFiService::kStorageCredentialPassphrase,
+                  kPassphrase);
   EXPECT_TRUE(service->need_passphrase_);
-  EXPECT_TRUE(service->Load(&mock_store));
+  EXPECT_TRUE(service->Load(&store));
   EXPECT_EQ(kPassphrase, service->passphrase_);
   EXPECT_TRUE(service->connectable());
   EXPECT_FALSE(service->need_passphrase_);
@@ -916,30 +862,14 @@ TEST_F(WiFiServiceTest, LoadPassphraseClearCredentials) {
   const string kOldPassphrase = "oldpassphrase";
   const string kPassphrase = "passphrase";
 
-  const bool kHasEverConnected = true;
   WiFiServiceRefPtr service = MakeServiceWithWiFi(kSecurityPsk);
-  NiceMock<MockStore> mock_store;
+  FakeStore store;
   const string kStorageId = service->GetStorageIdentifier();
-  EXPECT_CALL(mock_store, ContainsGroup(StrEq(kStorageId)))
-      .WillRepeatedly(Return(true));
-  set<string> groups;
-  groups.insert(kStorageId);
-  EXPECT_CALL(mock_store, GetGroupsWithProperties(ContainsWiFiProperties(
-                              simple_ssid(), kModeManaged, kSecurityPsk)))
-      .WillRepeatedly(Return(groups));
-  EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_store,
-              GetCryptedString(StrEq(kStorageId), _,
-                               WiFiService::kStorageCredentialPassphrase, _))
-      .WillRepeatedly(DoAll(SetArgPointee<3>(kPassphrase), Return(true)));
-  EXPECT_CALL(
-      mock_store,
-      GetCryptedString(StrEq(kStorageId), _,
-                       StrNe(WiFiService::kStorageCredentialPassphrase), _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(mock_store,
-              GetBool(kStorageId, Service::kStorageHasEverConnected, _))
-      .WillRepeatedly(DoAll(SetArgPointee<2>(kHasEverConnected), Return(true)));
+  SetWiFiProperties(&store, kStorageId, simple_ssid(), kSecurityPsk);
+  store.SetString(kStorageId, WiFiService::kStorageCredentialPassphrase,
+                  kPassphrase);
+  store.SetBool(kStorageId, Service::kStorageHasEverConnected, true);
+
   // Set old passphrase for service
   EXPECT_TRUE(service->need_passphrase_);
   service->passphrase_ = kOldPassphrase;
@@ -954,7 +884,7 @@ TEST_F(WiFiServiceTest, LoadPassphraseClearCredentials) {
   // so the credentials should be cleared.
   EXPECT_CALL(*wifi(), ClearCachedCredentials(_)).Times(1);
   EXPECT_CALL(*mock_profile, UpdateService(_)).Times(0);
-  EXPECT_TRUE(service->Load(&mock_store));
+  EXPECT_TRUE(service->Load(&store));
   EXPECT_EQ(kPassphrase, service->passphrase_);
   EXPECT_TRUE(service->has_ever_connected_);
 
@@ -967,7 +897,7 @@ TEST_F(WiFiServiceTest, LoadPassphraseClearCredentials) {
   service->set_profile(mock_profile);
   EXPECT_CALL(*mock_profile, GetConstStorage()).Times(0);
   EXPECT_CALL(*wifi(), ClearCachedCredentials(_)).Times(0);
-  EXPECT_TRUE(service->Load(&mock_store));
+  EXPECT_TRUE(service->Load(&store));
   EXPECT_EQ(kPassphrase, service->passphrase_);
   EXPECT_TRUE(service->has_ever_connected_);
 }
