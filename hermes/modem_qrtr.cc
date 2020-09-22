@@ -128,7 +128,8 @@ bool ModemQrtr::IsSimValidAfterDisable() {
 
 void ModemQrtr::Initialize(EuiccManagerInterface* euicc_manager) {
   CHECK(current_state_ == State::kUninitialized);
-  LOG(INFO) << "Initializing ModemQrtr";
+  // Initialization succeeds only if our active sim slot has an esim
+  VLOG(1) << "Trying to initialize channel to eSIM";
   euicc_manager_ = euicc_manager;
 
   // StartService should result in a received QRTR_TYPE_NEW_SERVER
@@ -169,8 +170,8 @@ void ModemQrtr::ReacquireChannel() {
 }
 
 void ModemQrtr::RetryInitialization() {
-  LOG(INFO) << "Retrying ModemQrtr initialization in "
-            << kInitRetryDelay.InSeconds() << " seconds";
+  VLOG(1) << "Reprobing for eSIM in " << kInitRetryDelay.InSeconds()
+          << " seconds";
   base::ThreadTaskRunnerHandle::Get()->PostDelayedTask(
       FROM_HERE,
       base::Bind(&ModemQrtr::Initialize, base::Unretained(this),
@@ -180,12 +181,12 @@ void ModemQrtr::RetryInitialization() {
 
 void ModemQrtr::FinalizeInitialization() {
   if (current_state_ != State::kLogicalChannelOpened) {
-    LOG(ERROR) << "ModemQrtr initialization unsuccessful";
+    VLOG(1) << "Could not open logical channel to eSIM";
     Shutdown();
     RetryInitialization();
     return;
   }
-  LOG(INFO) << "ModemQrtr initialization successful";
+  LOG(INFO) << "ModemQrtr initialization successful. eSIM found.";
   current_state_.Transition(State::kReady);
   // TODO(crbug.com/1117582) Set this based on whether or not Extended Length
   // APDU is supported.
@@ -394,7 +395,7 @@ void ModemQrtr::ProcessQmiPacket(const qrtr_packet& packet) {
 
   switch (qmi_type) {
     case QmiUimCommand::kReset:
-      LOG(INFO) << "Ignoring received RESET packet";
+      VLOG(1) << "Ignoring received RESET packet";
       break;
     case QmiUimCommand::kGetSlots:
       ReceiveQmiGetSlots(packet);
@@ -467,7 +468,13 @@ void ModemQrtr::ReceiveQmiOpenLogicalChannel(const qrtr_packet& packet) {
                          uim_open_logical_channel_resp_ei) < 0) {
     LOG(ERROR) << "Failed to decode QMI UIM response: " << cmd.ToString();
     return;
-  } else if (!CheckMessageSuccess(cmd, resp.result)) {
+  }
+
+  if (resp.result.result != 0) {
+    VLOG(1) << cmd.ToString()
+            << " Could not open channel to eSIM. This is expected if the "
+               "active sim slot is not an eSIM. QMI response contained error: "
+            << resp.result.error;
     return;
   }
 

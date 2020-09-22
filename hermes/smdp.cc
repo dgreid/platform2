@@ -36,9 +36,11 @@ Smdp::Smdp(std::string server_addr,
       executor_(executor),
       weak_factory_(this) {
   if (certs_dir.find("/test/") != std::string::npos) {
+    LOG(INFO) << "Using SSL certificates for GSMA test servers";
     server_transport_->UseCustomCertificate(
         brillo::http::Transport::Certificate::kHermesTest);
   } else {
+    LOG(INFO) << "Using SSL certificates for GSMA production servers";
     server_transport_->UseCustomCertificate(
         brillo::http::Transport::Certificate::kHermesProd);
   }
