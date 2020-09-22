@@ -10,6 +10,7 @@
 
 #include <base/macros.h>
 #include <base/memory/ref_counted.h>
+#include <brillo/brillo_export.h>
 #include <dbus/bus.h>
 
 namespace base {
@@ -26,7 +27,7 @@ class BootLockboxInterfaceProxy;
 namespace cryptohome {
 
 // A class that that manages the communication with BootLockbox.
-class BootLockboxClient {
+class BRILLO_EXPORT BootLockboxClient {
  public:
   // Creates BootLockboxClient. The factory should be called on the same thread
   // that will call ~BootLockboxClient();

@@ -123,6 +123,7 @@ executable("cryptohomed") {
     "dbus-1",
     "dbus-glib-1",
     "glib-2.0",
+    "libbootlockbox-client",
     "libbrillo",
     "libbrillo-glib",
     "libchrome-${libbase_ver}",
@@ -475,7 +476,6 @@ if (use.test) {
       "pthread",
     ]
     deps = [
-      "libs:bootlockbox-client-headers",
       "libs:cryptohome-proto",
       "libs:libcrostpm",
       "libs:libcryptohome",
@@ -610,7 +610,6 @@ if (use.test) {
       ]
       deps += [
         ":tpm-manager",
-        "libs:bootlockbox-proto",
         "libs:libcrostpm",
         "libs:libnvram-boot-lockbox",
       ]
@@ -621,14 +620,10 @@ if (use.test) {
 if (use.tpm2) {
   executable("bootlockboxtool") {
     defines = [ "USE_TPM2=${use.tpm2}" ]
-    deps = [
-      "libs:bootlockbox-client-headers",
-      "libs:bootlockbox-proto",
-      "libs:libnvram-boot-lockbox",
-      "libs:libnvram-boot-lockbox-client",
-    ]
+    deps = [ "libs:libnvram-boot-lockbox" ]
     sources = [ "bootlockbox/boot_lockbox_tool.cc" ]
     pkg_deps = [
+      "libbootlockbox-client",
       "libbrillo",
       "libchrome-${libbase_ver}",
       "protobuf",
@@ -638,7 +633,6 @@ if (use.tpm2) {
   executable("bootlockboxd") {
     deps = [
       "libs:bootlockbox-adaptors",
-      "libs:bootlockbox-proto",
       "libs:libcrostpm",
       "libs:libnvram-boot-lockbox",
     ]

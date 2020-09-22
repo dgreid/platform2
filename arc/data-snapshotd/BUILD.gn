@@ -14,12 +14,18 @@ group("all") {
 }
 
 pkg_config("common_pkg_deps") {
+  defines = [ "USE_SELINUX=${use.selinux}" ]
   pkg_deps = [
+    "libbootlockbox-client",
     "libbrillo",
     "libchrome-${libbase_ver}",
     "openssl",
+    "protobuf",
     "system_api",
   ]
+  if (use.selinux) {
+    pkg_deps += [ "libselinux" ]
+  }
 }
 
 # Generates proto definitions.
@@ -32,14 +38,8 @@ proto_library("arc-data-snapshotd-protos") {
 
 source_set("libarc-data-snapshotd") {
   configs += [ ":common_pkg_deps" ]
-  sources = [
-    "../../cryptohome/bootlockbox/boot_lockbox_client.cc",
-    "dbus_adaptor.cc",
-  ]
-  deps = [
-    "../../cryptohome/libs:bootlockbox-client-headers",
-    "../../cryptohome/libs:bootlockbox-proto",
-  ]
+  sources = [ "dbus_adaptor.cc" ]
+  deps = [ ":arc-data-snapshotd-protos" ]
 }
 
 generate_dbus_adaptors("data_snapshotd_adaptors") {
@@ -63,6 +63,7 @@ executable("arc-data-snapshotd") {
 if (use.test) {
   pkg_config("test_pkg_deps") {
     pkg_deps = [
+      "libbootlockbox-client",
       "libbrillo",
       "libchrome-${libbase_ver}",
       "libchrome-test-${libbase_ver}",

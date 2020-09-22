@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//common-mk/generate-dbus-proxies.gni")
+import("//common-mk/pkg_config.gni")
+import("//common-mk/proto_library.gni")
 
 generate_dbus_proxies("bootlockbox-proxies") {
   dbus_service_config = "../dbus_adaptors/dbus-service-config.json"
@@ -12,6 +14,82 @@ generate_dbus_proxies("bootlockbox-proxies") {
   sources = [ "../dbus_adaptors/org.chromium.BootLockboxInterface.xml" ]
 }
 
+# Copy boot_lockbox_rpc.proto from /usr/include/chromeos/dbus.
+action("bootlockbox-proto-external") {
+  proto_out_dir = "${target_gen_dir}/bootlockbox"
+  shared_proto_path = "${sysroot}/usr/include/chromeos/dbus/bootlockbox"
+  inputs = [ "${shared_proto_path}/boot_lockbox_rpc.proto" ]
+  outputs =
+      process_file_template(inputs, [ "${proto_out_dir}/{{source_file_part}}" ])
+
+  script = "../libs/external_proto_generator.py"
+  args = [
+           "-o",
+           "${proto_out_dir}",
+         ] + inputs
+}
+
+pkg_config("proto_config") {
+  pkg_deps = [ "protobuf" ]
+}
+
+proto_library("bootlockbox-generated-proto") {
+  proto_in_dir = "${target_gen_dir}/bootlockbox"
+  proto_out_dir = "include/cryptohome/bootlockbox"
+
+  # shared_library.
+  use_pic = true
+  sources = [ "${target_gen_dir}/bootlockbox/boot_lockbox_rpc.proto" ]
+  all_dependent_configs = [ ":proto_config" ]
+  deps = [ ":bootlockbox-proto-external" ]
+  standalone = true
+}
+
+proto_library("bootlockbox-proto") {
+  proto_in_dir = "../bootlockbox"
+  proto_lib_dirs = [ target_gen_dir ]
+  proto_out_dir = "include/cryptohome/bootlockbox"
+
+  # shared_library.
+  use_pic = true
+  sources = [ "${proto_in_dir}/key_value_map.proto" ]
+  all_dependent_configs = [ ":proto_config" ]
+  deps = [ ":bootlockbox-generated-proto" ]
+  standalone = true
+}
+
+config("target_defaults") {
+  defines = [
+    "USE_SELINUX=${use.selinux}",
+    "USE_TPM2=${use.tpm2}",
+  ]
+}
+
+pkg_config("bootlockbox_dependent_config") {
+  pkg_deps = [
+    "libbrillo",
+    "libchrome-${libbase_ver}",
+  ]
+}
+
+shared_library("libbootlockbox-client") {
+  configs += [ ":target_defaults" ]
+  sources = [
+    "../bootlockbox/boot_lockbox_client.cc",
+    "../bootlockbox/boot_lockbox_client.h",
+  ]
+  all_dependent_configs = [ ":bootlockbox_dependent_config" ]
+  deps = [
+    ":bootlockbox-proto",
+    ":bootlockbox-proxies",
+  ]
+}
+
 group("all") {
-  deps = [ ":bootlockbox-proxies" ]
+  deps = [
+    ":bootlockbox-generated-proto",
+    ":bootlockbox-proto",
+    ":bootlockbox-proxies",
+    ":libbootlockbox-client",
+  ]
 }

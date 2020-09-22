@@ -14,7 +14,8 @@
 #include <crypto/rsa_private_key.h>
 #include <openssl/sha.h>
 
-#include "cryptohome/bootlockbox/boot_lockbox_client.h"
+#include "arc/data-snapshotd/file_utils.h"
+#include "bootlockbox-client/bootlockbox/boot_lockbox_client.h"
 
 namespace arc {
 namespace data_snapshotd {

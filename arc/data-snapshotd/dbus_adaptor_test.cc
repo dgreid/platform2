@@ -15,13 +15,13 @@
 
 #include "arc/data-snapshotd/dbus_adaptor.h"
 #include "arc/data-snapshotd/file_utils.h"
-#include "cryptohome/bootlockbox/boot_lockbox_client.h"
+#include "bootlockbox-client/bootlockbox/boot_lockbox_client.h"
 // Note that boot_lockbox_rpc.pb.h have to be included before
 // dbus_adaptors/org.chromium.BootLockboxInterface.h because it is used in
 // there.
 #include "cryptohome/bootlockbox/boot_lockbox_rpc.pb.h"
 
-#include "bootlockbox/dbus-proxies.h"
+#include "bootlockbox-client/bootlockbox/dbus-proxies.h"
 
 using testing::_;
 using testing::Eq;
