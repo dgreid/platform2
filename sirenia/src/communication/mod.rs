@@ -62,7 +62,6 @@ pub enum Request {
 // parameters from the log function of the Syslog trait
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 pub enum Response {
-    StartConnection,
     LogInfo(String),
     LogError(String),
 }
@@ -162,7 +161,7 @@ mod tests {
     #[test]
     fn send_and_recv_response() {
         let (mut r, mut w) = open_connection();
-        let message = Response::StartConnection;
+        let message = Response::LogInfo("info".to_string());
 
         write_message(&mut w, message.clone()).unwrap();
 

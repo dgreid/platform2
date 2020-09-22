@@ -138,6 +138,10 @@ fn main() -> Result<()> {
         loop {
             match read_message(&mut r) {
                 Ok(message) => handle_message(&mut w, message, &mut transport),
+                Err(communication::Error::Read(e)) => {
+                    log_error(&mut w, e.to_string());
+                    panic!(e)
+                }
                 Err(e) => log_error(&mut w, e.to_string()),
             }
         }
@@ -173,11 +177,6 @@ fn start_tee_app(
     process: &str,
     transport: &mut Box<dyn ServerTransport>,
 ) {
-    if let Err(e) = write_message(&mut w, Response::StartConnection) {
-        log_error(&mut w, e.to_string());
-        return;
-    }
-
     // TODO: Timeout and retry accept and check port number
     let mut tee = transport.accept().unwrap();
     // TODO: Eventually will need to spawn this in a separate process, but the

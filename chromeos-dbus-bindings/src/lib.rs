@@ -15,7 +15,7 @@ use std::process::Command;
 
 const DEFAULT_BINDINGS_DIR: &str = "src/bindings";
 const DEFAULT_CLIENT_OPTS: &[&str] = &["-s", "-m", "None"];
-const DEFAULT_SERVER_OPTS: &[&str] = &["-s", "-m", "Fn", "-a", "MethodInfo"];
+const DEFAULT_SERVER_OPTS: &[&str] = &["-s", "-m", "Fn", "-a", "RefClosure"];
 
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum BindingsType {

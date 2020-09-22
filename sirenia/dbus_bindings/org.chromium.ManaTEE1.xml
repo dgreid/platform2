@@ -2,7 +2,7 @@
 
 <node name="/org/chromium/ManaTEE"
   xmlns:tp="http://telepathy.freedesktop.org/wiki/DbusSpec#extensions-v0">
-<interface name="org.chromium.ManaTEE">
+<interface name="org.chromium.ManaTEEInterface">
   <!--
     -->          StartTEEApplication:
   @app_id: Application id of TEE application to run.
@@ -15,7 +15,7 @@
   <method name="StartTEEApplication">
     <arg name="app_id" type="s" direction="in" />
     <arg name="error_code" type="i" direction="out"/>
-    <arg name="fds" type="(uu)" direction="out"/>
+    <arg name="fds" type="(hh)" direction="out"/>
     <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
   </method>
 </interface>

@@ -17,7 +17,7 @@ use std::net::{
     Ipv4Addr, Ipv6Addr, SocketAddr, SocketAddrV4, SocketAddrV6, TcpListener, TcpStream,
     ToSocketAddrs,
 };
-use std::os::unix::io::{AsRawFd, RawFd};
+use std::os::unix::io::{AsRawFd, IntoRawFd, RawFd};
 use std::str::FromStr;
 
 use core::mem::replace;
@@ -89,14 +89,27 @@ impl Display for Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// An abstraction wrapper to support the receiving side of a transport method.
-pub trait TransportRead: Read + Debug + Send + AsRawFd {}
-impl<T: Read + Debug + Send + AsRawFd> TransportRead for T {}
-/// An abstraction wrapper to support the sending side of a transport method.
-pub trait TransportWrite: Write + Debug + Send + AsRawFd {}
-impl<T: Write + Debug + Send + AsRawFd> TransportWrite for T {}
+pub trait TransportRead: Read + Debug + Send + AsRawFd {
+    fn into_raw_fd(self: Box<Self>) -> RawFd;
+}
+impl<T: Read + Debug + Send + AsRawFd + IntoRawFd> TransportRead for T {
+    fn into_raw_fd(self: Box<Self>) -> RawFd {
+        (*self).into_raw_fd()
+    }
+}
 
-/// A transport identifier.
-#[derive(Debug, Eq, PartialEq)]
+/// An abstraction wrapper to support the sending side of a transport method.
+pub trait TransportWrite: Write + Debug + Send + AsRawFd {
+    fn into_raw_fd(self: Box<Self>) -> RawFd;
+}
+impl<T: Write + Debug + Send + AsRawFd + IntoRawFd> TransportWrite for T {
+    fn into_raw_fd(self: Box<Self>) -> RawFd {
+        (*self).into_raw_fd()
+    }
+}
+
+/// Transport options that can be selected.
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub enum TransportType {
     VsockConnection(VSocketAddr),
     IpConnection(SocketAddr),
