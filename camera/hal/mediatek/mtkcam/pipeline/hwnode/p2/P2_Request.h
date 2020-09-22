@@ -124,7 +124,6 @@ class P2Request : virtual public P2FrameHolder {
   MBOOL mIsResized = MFALSE;
   MBOOL mIsReprocess = MFALSE;
   MBOOL mIsPhysic = MFALSE;
-  MBOOL mIsLarge = MFALSE;
   MUINT32 mSensorID = INVALID_SENSOR_ID;
 };
 

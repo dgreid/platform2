@@ -132,16 +132,10 @@ MVOID P2Request::updateSensorID() {
 MVOID P2Request::initIOInfo() {
   mIsResized = mImg.count(IN_RESIZED);
   mIsReprocess = mImg.count(IN_REPROCESS);
-  const MSize& streamSize = mP2Pack.getConfigInfo().mUsageHint.mStreamingSize;
   for (const auto& it : mImgOutArray) {
     if (it->isPhysicalStream()) {
       updateSensorID();
       mIsPhysic = MTRUE;
-      break;
-    }
-    MSize size = it->getTransformSize();
-    if (size.h > streamSize.h || size.w > streamSize.w) {
-      mIsLarge = MTRUE;
       break;
     }
   }
@@ -192,7 +186,7 @@ MBOOL P2Request::isPhysic() const {
 }
 
 MBOOL P2Request::isLarge() const {
-  return mIsLarge;
+  return MFALSE;
 }
 
 MVOID P2Request::releaseResource(MUINT32 res) {
