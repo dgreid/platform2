@@ -135,7 +135,7 @@ bool ScanHandler::StartScan(uint32_t resolution,
 
   brillo::ErrorPtr error;
   std::vector<uint8_t> response_out;
-  if (!manager_->StartScanMultiPage(request_in, &response_out, &error)) {
+  if (!manager_->StartScan(request_in, &response_out, &error)) {
     LOG(ERROR) << "StartScan failed: " << error->GetMessage();
     return false;
   }

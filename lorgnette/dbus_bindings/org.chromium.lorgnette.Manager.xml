@@ -29,22 +29,18 @@ ns-v0">
       </arg>
     </method>
     <method name="StartScan">
-      <annotation name="org.chromium.DBus.Method.Kind" value="async"/>
+      <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>
       <tp:docstring>
-        Initiates an asynchronous scan job, outputting PNG data to |outfd|.
-        A response will be sent once the scan has been successfully started,
-        or if starting the scan failed.
+        Sets up a multi-page scan job.
+        Initiates a connection to the scanner and prepares for scanning. Once
+        called, the client can call GetNextImage to fetch image data.
       </tp:docstring>
       <arg name="start_scan_request" type="ay" direction="in"/>
         <tp:docstring>
           Serialized StartScanRequest proto specifying the scanner to use and
           the settings for the scan.
         </tp:docstring>
-      <arg name="outfd" type="h" direction="in"/>
-        <tp:docstring>
-          Output file descriptor. PNG image data will be written to this fd.
-        </tp:docstring>
-      <arg name="scan_status_response" type="ay" direction="out" />
+      <arg name="start_scan_response" type="ay" direction="out"/>
     </method>
     <method name="StartScanMultiPage">
       <annotation name="org.chromium.DBus.Method.Kind" value="simple"/>

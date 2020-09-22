@@ -392,52 +392,7 @@ bool Manager::GetScannerCapabilities(brillo::ErrorPtr* error,
   return true;
 }
 
-void Manager::StartScan(
-    std::unique_ptr<DBusMethodResponse<std::vector<uint8_t>>> method_response,
-    const std::vector<uint8_t>& start_scan_request,
-    const base::ScopedFD& outfd) {
-  StartScanResponse response;
-  response.set_state(SCAN_STATE_FAILED);
-
-  StartScanRequest request;
-  if (!request.ParseFromArray(start_scan_request.data(),
-                              start_scan_request.size())) {
-    response.set_failure_reason("Failed to parse StartScanRequest");
-    method_response->Return(impl::SerializeProto(response));
-    return;
-  }
-
-  brillo::ErrorPtr error;
-  std::unique_ptr<SaneDevice> device;
-  if (!StartScanInternal(&error, request, &device)) {
-    response.set_failure_reason(SerializeError(error));
-    method_response->Return(impl::SerializeProto(response));
-    return;
-  }
-
-  // The scan has now been successfully started, notify the client.
-  response.set_state(SCAN_STATE_IN_PROGRESS);
-
-  std::string uuid = GenerateUUID();
-  response.set_scan_uuid(uuid);
-  method_response->Return(impl::SerializeProto(response));
-
-  ScanJobState scan_state;
-  scan_state.device_name = request.device_name();
-  scan_state.device = std::move(device);
-  scan_state.total_pages = 1;
-
-  base::ScopedFILE out_file = SetupOutputFile(&error, outfd);
-  if (!out_file) {
-    ReportScanFailed(request.device_name());
-    SendFailureSignal(uuid, SerializeError(error));
-    return;
-  }
-
-  GetNextImageInternal(uuid, &scan_state, std::move(out_file));
-}
-
-std::vector<uint8_t> Manager::StartScanMultiPage(
+std::vector<uint8_t> Manager::StartScan(
     const std::vector<uint8_t>& start_scan_request) {
   StartScanResponse response;
   response.set_state(SCAN_STATE_FAILED);
@@ -489,6 +444,11 @@ std::vector<uint8_t> Manager::StartScanMultiPage(
   response.set_scan_uuid(uuid);
   response.set_state(SCAN_STATE_IN_PROGRESS);
   return impl::SerializeProto(response);
+}
+
+std::vector<uint8_t> Manager::StartScanMultiPage(
+    const std::vector<uint8_t>& start_scan_request) {
+  return StartScan(start_scan_request);
 }
 
 void Manager::GetNextImage(

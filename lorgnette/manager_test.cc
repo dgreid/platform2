@@ -159,7 +159,7 @@ class ManagerTest : public testing::Test {
     request.mutable_settings()->set_color_mode(color_mode);
 
     std::vector<uint8_t> serialized_response =
-        manager_.StartScanMultiPage(impl::SerializeProto(request));
+        manager_.StartScan(impl::SerializeProto(request));
 
     StartScanResponse response;
     EXPECT_TRUE(response.ParseFromArray(serialized_response.data(),
