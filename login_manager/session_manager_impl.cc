@@ -1737,7 +1737,7 @@ void SessionManagerImpl::BackupArcBugReport(const std::string& account_id) {
     login_metrics_->SendArcBugReportBackupTime(base::TimeTicks::Now() -
                                                arc_bug_report_backup_time);
   } else {
-    LOG(DFATAL) << "Error contacting debugd to back up ARC bug report.";
+    LOG(ERROR) << "Error contacting debugd to back up ARC bug report.";
   }
 }
 
@@ -1753,7 +1753,7 @@ void SessionManagerImpl::DeleteArcBugReportBackup(
       &method_call, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT));
 
   if (!response) {
-    LOG(DFATAL) << "Error contacting debugd to delete ARC bug report backup.";
+    LOG(ERROR) << "Error contacting debugd to delete ARC bug report backup.";
   }
 }
 
