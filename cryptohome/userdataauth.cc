@@ -166,6 +166,8 @@ UserDataAuth::UserDataAuth()
       fingerprint_manager_(nullptr),
       default_tpm_ownership_proxy_(),
       tpm_ownership_proxy_(nullptr),
+      default_boot_lockbox_(),
+      boot_lockbox_(nullptr),
       upload_alerts_period_ms_(kUploadAlertsPeriodMS),
       ownership_callback_has_run_(false),
       default_install_attrs_(new cryptohome::InstallAttributes(NULL)),
