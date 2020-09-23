@@ -8,10 +8,13 @@
 
 #include <fcntl.h>
 #include <sys/mount.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/un.h>
 #include <unistd.h>
+
+#include <linux/vm_sockets.h>  // NOLINT - needs to be after sys/socket.h
 
 #include <memory>
 
@@ -30,7 +33,6 @@
 #include <base/threading/platform_thread.h>
 #include <base/time/time.h>
 #include <base/values.h>
-#include <patchpanel/net_util.h>
 
 #include "arc/adbd/arcvm_sock_to_usb.h"
 #include "arc/adbd/arcvm_usb_to_sock.h"
@@ -38,8 +40,7 @@
 namespace adbd {
 namespace {
 
-constexpr uint16_t kAdbProxyPort = 5555;
-constexpr uint32_t kAdbProxySockAddr = patchpanel::Ipv4Addr(127, 0, 0, 1);
+constexpr uint16_t kAdbVsockPort = 5555;
 constexpr char kRuntimePath[] = "/run/arc/adbd";
 constexpr char kConfigFSPath[] = "/dev/config";
 constexpr char kConfigPath[] = "/etc/arc/adbd.json";
@@ -388,44 +389,46 @@ bool SetupKernelModules(
   return true;
 }
 
-// Initializes a socket to arc adb proxy.
-base::ScopedFD ConnectToAdbProxy() {
-  base::ScopedFD proxy_sock(socket(AF_INET, SOCK_STREAM, 0));
-  if (!proxy_sock.is_valid()) {
-    PLOG(ERROR) << "Failed to create proxy socket";
+// Initializes vsock connection.
+base::ScopedFD InitializeVSockConnection(uint32_t cid) {
+  CHECK_GE(cid, adbd::kFirstGuestVmAddr);
+
+  base::ScopedFD vsock_sock(socket(AF_VSOCK, SOCK_STREAM, 0));
+  if (!vsock_sock.is_valid()) {
+    PLOG(ERROR) << "Failed to create vsock socket";
     return base::ScopedFD();
   }
-  struct sockaddr_in addr_in = {};
-  addr_in.sin_family = AF_INET;
-  addr_in.sin_port = htons(kAdbProxyPort);
-  addr_in.sin_addr.s_addr = kAdbProxySockAddr;
-  if (HANDLE_EINTR(connect(proxy_sock.get(),
-                           reinterpret_cast<const struct sockaddr*>(&addr_in),
-                           sizeof(addr_in))) < 0) {
-    PLOG(WARNING) << "Failed to connect to proxy socket";
+  struct sockaddr_vm addr_vm = {};
+  addr_vm.svm_family = AF_VSOCK;
+  addr_vm.svm_port = kAdbVsockPort;
+  addr_vm.svm_cid = cid;
+  if (HANDLE_EINTR(connect(vsock_sock.get(),
+                           reinterpret_cast<const struct sockaddr*>(&addr_vm),
+                           sizeof(addr_vm))) < 0) {
+    PLOG(WARNING) << "Failed to connect to vsock socket";
     return base::ScopedFD();
   }
-  LOG(INFO) << "Connected to adb proxy";
-  return proxy_sock;
+  LOG(INFO) << "Connected to ARCVM";
+  return vsock_sock;
 }
 
-void StartArcVmAdbBridge() {
+void StartArcVmAdbBridge(uint32_t cid) {
   constexpr base::TimeDelta kConnectInterval = base::TimeDelta::FromSeconds(15);
   constexpr int kMaxRetries = 4;
 
   int retries = kMaxRetries;
-  auto proxy_sock = ConnectToAdbProxy();
-  while (!proxy_sock.is_valid()) {
+  auto vsock_sock = InitializeVSockConnection(cid);
+  while (!vsock_sock.is_valid()) {
     if (--retries < 0) {
       LOG(ERROR) << "Too many retries; giving up";
       _exit(EXIT_FAILURE);
     }
-    // This path may be taken when patchpanel hasn't started listening to the
-    // socket yet. To work around the case, retry ConnectToAdbProxy() after a
-    // short sleep.
+    // This path may be taken when guest's adbd hasn't started listening to the
+    // socket yet. To work around the case, retry connecting to the socket after
+    // a short sleep.
     // TODO(crbug.com/1126289): Remove the retry hack.
     base::PlatformThread::Sleep(kConnectInterval);
-    proxy_sock = ConnectToAdbProxy();
+    vsock_sock = InitializeVSockConnection(cid);
   }
 
   // Channel direction is from device side, instead of USB perspective.
@@ -437,7 +440,7 @@ void StartArcVmAdbBridge() {
     PLOG(ERROR) << "Failed to open OUT usb endpoint";
     _exit(EXIT_FAILURE);
   }
-  auto sock_fd = proxy_sock.get();
+  auto sock_fd = vsock_sock.get();
   std::unique_ptr<ArcVmUsbToSock> ch_in =
       std::make_unique<ArcVmUsbToSock>(sock_fd, ep_out_fd.get());
   if (!ch_in->Start()) {

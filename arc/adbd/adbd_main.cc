@@ -23,11 +23,27 @@ constexpr char kRuntimePath[] = "/run/arc/adbd";
 int main(int argc, char** argv) {
   DEFINE_string(serialnumber, "", "Serial number of the Android container");
   DEFINE_bool(arcvm, true, "setup adb over usb for arcvm");
+  DEFINE_uint32(arcvm_cid, adbd::kVmAddrCidInvalid,
+                "specify cid (>=3) of ARCVM for vsock connection");
 
   base::AtExitManager at_exit;
 
   brillo::FlagHelper::Init(argc, argv, "ADB over USB proxy.");
   brillo::InitLog(brillo::kLogToSyslog | brillo::kLogToStderrIfTty);
+
+  if (FLAGS_arcvm) {
+    // The two options, arcvm and arcvm_cid, must work together and there is no
+    // point to have cid without VM (ignored). It is attempting to have cid arg
+    // only to tell arcvm from ARC++ since only VM have cid and vsock is the
+    // only way to talk with a VM. However, we still keep arcvm for the sake of
+    // clarity in code and usage, instead of relying on any unacceptable value
+    // of cid, either provided by user or from an initial value, to obscurely
+    // branch to the container-based route which differs in many ways.
+    if (FLAGS_arcvm_cid < adbd::kFirstGuestVmAddr) {
+      LOG(ERROR) << "Invalid or no cid provided when VM(vsock) is selected.";
+      return 1;
+    }
+  }
 
   const base::FilePath runtime_path(kRuntimePath);
 
@@ -108,7 +124,7 @@ int main(int argc, char** argv) {
       configured = true;
     }
     if (FLAGS_arcvm) {
-      adbd::StartArcVmAdbBridge();
+      adbd::StartArcVmAdbBridge(FLAGS_arcvm_cid);
       // TODO(crbug.com/1087440): Once we change the design of bridge to return
       // instead of terminating the process in error cases, we would
       // need to replace the LOG(FATAL) with something else since we

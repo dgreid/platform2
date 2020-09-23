@@ -14,6 +14,15 @@
 #include <base/files/scoped_file.h>
 
 namespace adbd {
+// Refer to the man page of vsock for special VM addresses [0-2].
+constexpr uint32_t kFirstGuestVmAddr = 3;
+
+// Initial value of cid argument. It means a valid cid of guest VM
+// hasn't been provided. It doesn't bear the meaning of any special
+// addresses defined in the man page of vsock and Linux header files
+// although its value is in their range.
+constexpr uint32_t kVmAddrCidInvalid = 0;
+
 // The path of USB function FS where endpoints of ADB interface live.
 constexpr char kFunctionFSPath[] = "/dev/usb-ffs/adb";
 
@@ -76,8 +85,9 @@ bool BindMountUsbBulkEndpoints();
 // to relay ADB data between USB endpoints and a socket to the ARC adb
 // proxy service. This function creates threads that are expected to run
 // until the whole process exits, so it should not return but waiting
-// for the threads to join in the normal cases.
-void StartArcVmAdbBridge();
+// for the threads to join in the normal cases. The cid (>=3) of VM must
+// be provided for vsock connection.
+void StartArcVmAdbBridge(uint32_t cid);
 }  // namespace adbd
 
 #endif  // ARC_ADBD_ADBD_H_

@@ -70,8 +70,8 @@ ioctl: arg0 == 0 && arg1 == TCGETS
 getpid: 1
 prlimit64: arg2 == 0 && arg3 != 0
 
-# For syslog /dev/log and connection to the socket of adb_proxy
-socket: arg0 == AF_INET && arg1 == SOCK_STREAM || arg0 == AF_UNIX
+# For syslog /dev/log and connection to the vsock socket
+socket: arg0 == AF_VSOCK && arg1 == SOCK_STREAM || arg0 == AF_UNIX
 connect: 1
 
 # For base::PlatformThread::Sleep()
