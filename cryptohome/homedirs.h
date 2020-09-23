@@ -355,10 +355,6 @@ class HomeDirs {
   // UID.
   bool IsOwnedByAndroidSystem(const base::FilePath& directory) const;
 
-  // If the VaultKeyset is TPM backed (directly or via PinWeaver, etc.) this
-  // method will tell the TPM firmware that a successful decryption occurred.
-  void DeclareTpmStableIfAppropriate(VaultKeyset* vk);
-
   // Takes ownership of the supplied PolicyProvider. Used to avoid leaking mocks
   // in unit tests.
   void own_policy_provider(policy::PolicyProvider* value) {

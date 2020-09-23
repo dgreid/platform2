@@ -193,7 +193,6 @@ bool HomeDirs::GetValidKeyset(const Credentials& creds,
         platform_->FileExists(base::FilePath(kLockedToSingleUserFile));
     if (vk->Decrypt(creds.passkey(), locked_to_single_user,
                     &last_crypto_error)) {
-      DeclareTpmStableIfAppropriate(vk);
       if (key_index)
         *key_index = index;
       return true;
@@ -1412,18 +1411,6 @@ bool HomeDirs::IsOwnedByAndroidSystem(const base::FilePath& directory) const {
     return false;
   }
   return uid == kAndroidSystemUid + kArcContainerShiftUid;
-}
-
-// By this point we know that the TPM is successfully owned, everything
-// is initialized, and we were able to successfully decrypt a
-// TPM-wrapped keyset. So, for TPMs with updateable firmware, we assume
-// that it is stable (and the TPM can invalidate the old version).
-void HomeDirs::DeclareTpmStableIfAppropriate(VaultKeyset* vk) {
-  bool tpm_backed =
-      (vk->serialized().flags() & SerializedVaultKeyset::TPM_WRAPPED) ||
-      (vk->serialized().flags() & SerializedVaultKeyset::LE_CREDENTIAL);
-  if (use_tpm_ && tpm_backed && crypto_->get_tpm() != nullptr)
-    crypto_->get_tpm()->DeclareTpmFirmwareStable();
 }
 
 }  // namespace cryptohome

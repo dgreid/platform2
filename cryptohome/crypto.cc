@@ -336,21 +336,39 @@ void Crypto::PasswordToPasskey(const char* password,
 bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                                const KeyBlobs& vkk_data,
                                VaultKeyset* keyset,
-                               CryptoError* error) const {
+                               CryptoError* error) {
   bool has_vkk_key = vkk_data.vkk_key != base::nullopt &&
                      vkk_data.vkk_iv != base::nullopt &&
                      vkk_data.chaps_iv != base::nullopt &&
                      vkk_data.authorization_data_iv != base::nullopt;
   bool has_scrypt_key = vkk_data.scrypt_key != base::nullopt;
+  bool successfully_unwrapped = false;
 
   if (has_vkk_key && !has_scrypt_key) {
-    return UnwrapVKKVaultKeyset(serialized, vkk_data, keyset, error);
+    successfully_unwrapped =
+        UnwrapVKKVaultKeyset(serialized, vkk_data, keyset, error);
   } else if (has_scrypt_key && !has_vkk_key) {
-    return UnwrapScryptVaultKeyset(serialized, vkk_data, keyset, error);
+    successfully_unwrapped =
+        UnwrapScryptVaultKeyset(serialized, vkk_data, keyset, error);
   } else {
     DLOG(FATAL) << "An invalid key combination exists";
     return false;
   }
+
+  if (successfully_unwrapped) {
+    // By this point we know that the TPM is successfully owned, everything
+    // is initialized, and we were able to successfully decrypt a
+    // TPM-wrapped keyset. So, for TPMs with updateable firmware, we assume
+    // that it is stable (and the TPM can invalidate the old version).
+    // TODO(dlunev): We shall try to get this out of cryptohome eventually.
+    const bool tpm_backed =
+        (serialized.flags() & SerializedVaultKeyset::TPM_WRAPPED) ||
+        (serialized.flags() & SerializedVaultKeyset::LE_CREDENTIAL);
+    if (use_tpm_ && tpm_backed && tpm_ != nullptr) {
+      tpm_->DeclareTpmFirmwareStable();
+    }
+  }
+  return successfully_unwrapped;
 }
 
 bool Crypto::DecryptScrypt(const SerializedVaultKeyset& serialized,
@@ -415,7 +433,7 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
                                 bool locked_to_single_user,
                                 unsigned int* crypt_flags,
                                 CryptoError* error,
-                                VaultKeyset* vault_keyset) const {
+                                VaultKeyset* vault_keyset) {
   if (crypt_flags)
     *crypt_flags = serialized.flags();
   PopulateError(error, CryptoError::CE_NONE);

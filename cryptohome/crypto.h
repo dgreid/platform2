@@ -63,7 +63,7 @@ class Crypto {
                                   bool locked_to_single_user,
                                   unsigned int* crypt_flags,
                                   CryptoError* error,
-                                  VaultKeyset* vault_keyset) const;
+                                  VaultKeyset* vault_keyset);
 
   // Encrypts the vault keyset with the given passkey
   //
@@ -259,7 +259,7 @@ class Crypto {
   bool UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                          const KeyBlobs& vkk_data,
                          VaultKeyset* keyset,
-                         CryptoError* error) const;
+                         CryptoError* error);
 
   bool DecryptScrypt(const SerializedVaultKeyset& serialized,
                      const brillo::SecureBlob& key,
