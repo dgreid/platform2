@@ -4,6 +4,7 @@
 
 #include "cryptohome/libscrypt_compat_auth_block.h"
 
+#include <memory>
 #include <utility>
 
 #include <unistd.h>
@@ -16,6 +17,26 @@
 namespace cryptohome {
 
 namespace {
+
+bool CreateScryptHelper(const brillo::SecureBlob& input_key,
+                        brillo::SecureBlob* salt,
+                        brillo::SecureBlob* derived_key,
+                        CryptoError* error) {
+  // Because of the implementation peculiarity of libscrypt, the salt MUST be
+  // unique for each key, and the same key can never be repurposed.
+  *salt = CryptoLib::CreateSecureRandomBlob(kLibScryptSaltSize);
+
+  derived_key->resize(kLibScryptDerivedKeySize);
+  if (!CryptoLib::Scrypt(input_key, *salt, kDefaultScryptParams.n_factor,
+                         kDefaultScryptParams.r_factor,
+                         kDefaultScryptParams.p_factor, derived_key)) {
+    LOG(ERROR) << "scrypt failed";
+    PopulateError(error, CryptoError::CE_SCRYPT_CRYPTO);
+    return false;
+  }
+
+  return true;
+}
 
 bool ParseHeaderAndDerive(const brillo::SecureBlob& wrapped_blob,
                           const brillo::SecureBlob& input_key,
@@ -43,6 +64,45 @@ bool ParseHeaderAndDerive(const brillo::SecureBlob& wrapped_blob,
 
 }  // namespace
 
+base::Optional<AuthBlockState> LibScryptCompatAuthBlock::Create(
+    const AuthInput& auth_input, KeyBlobs* key_blobs, CryptoError* error) {
+  const brillo::SecureBlob input_key = auth_input.user_input.value();
+
+  brillo::SecureBlob derived_key;
+  brillo::SecureBlob salt;
+  if (!CreateScryptHelper(input_key, &salt, &derived_key, error)) {
+    return base::nullopt;
+  }
+
+  key_blobs->scrypt_key =
+      std::make_unique<LibScryptCompatKeyObjects>(derived_key, salt);
+
+  brillo::SecureBlob derived_chaps_key;
+  brillo::SecureBlob chaps_salt;
+  if (!CreateScryptHelper(input_key, &chaps_salt, &derived_chaps_key, error)) {
+    return base::nullopt;
+  }
+
+  key_blobs->chaps_scrypt_key = std::make_unique<LibScryptCompatKeyObjects>(
+      derived_chaps_key, chaps_salt);
+
+  brillo::SecureBlob derived_reset_seed_key;
+  brillo::SecureBlob reset_seed_salt;
+  if (!CreateScryptHelper(input_key, &reset_seed_salt, &derived_reset_seed_key,
+                          error)) {
+    return base::nullopt;
+  }
+
+  key_blobs->scrypt_wrapped_reset_seed_key =
+      std::make_unique<LibScryptCompatKeyObjects>(derived_reset_seed_key,
+                                                  reset_seed_salt);
+
+  SerializedVaultKeyset serialized;
+  serialized.set_flags(SerializedVaultKeyset::SCRYPT_WRAPPED);
+
+  return {{serialized}};
+}
+
 bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                                       const AuthBlockState& state,
                                       KeyBlobs* key_blobs,
@@ -57,7 +117,8 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                             error)) {
     return false;
   }
-  key_blobs->scrypt_key = LibScryptCompatKeyObjects(derived_scrypt_key);
+  key_blobs->scrypt_key =
+      std::make_unique<LibScryptCompatKeyObjects>(derived_scrypt_key);
 
   // This implementation is an unfortunate effect of how the libscrypt
   // encryption and decryption functions work. It generates a fresh key for each
@@ -70,7 +131,8 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
                               error)) {
       return false;
     }
-    key_blobs->chaps_scrypt_key = LibScryptCompatKeyObjects(derived_chaps_key);
+    key_blobs->chaps_scrypt_key =
+        std::make_unique<LibScryptCompatKeyObjects>(derived_chaps_key);
   }
 
   if (serialized.has_wrapped_reset_seed()) {
@@ -81,7 +143,7 @@ bool LibScryptCompatAuthBlock::Derive(const AuthInput& auth_input,
       return false;
     }
     key_blobs->scrypt_wrapped_reset_seed_key =
-        LibScryptCompatKeyObjects(derived_reset_seed_key);
+        std::make_unique<LibScryptCompatKeyObjects>(derived_reset_seed_key);
   }
 
   return true;

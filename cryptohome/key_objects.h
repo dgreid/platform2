@@ -5,6 +5,7 @@
 #ifndef CRYPTOHOME_KEY_OBJECTS_H_
 #define CRYPTOHOME_KEY_OBJECTS_H_
 
+#include <memory>
 #include <string>
 #include <utility>
 
@@ -32,8 +33,9 @@ struct AuthInput {
 
 // LibScrypt requires a salt to be passed from Create() into the encryption
 // phase, so this struct has an optional salt.
-struct LibScryptCompatKeyObjects {
-  // Constructors to make code readable when this class is created.
+class LibScryptCompatKeyObjects {
+ public:
+  // This class is never usable for encryption without a salt.
   explicit LibScryptCompatKeyObjects(brillo::SecureBlob derived_key)
       : derived_key_(derived_key), salt_(base::nullopt) {}
 
@@ -41,22 +43,25 @@ struct LibScryptCompatKeyObjects {
                             brillo::SecureBlob salt)
       : derived_key_(derived_key), salt_(salt) {}
 
-  brillo::SecureBlob derived_key() const { return derived_key_; }
+  // Prohibit copy/move/assignment.
+  LibScryptCompatKeyObjects(const LibScryptCompatKeyObjects&) = delete;
+  LibScryptCompatKeyObjects(const LibScryptCompatKeyObjects&&) = delete;
+  LibScryptCompatKeyObjects& operator=(const LibScryptCompatKeyObjects&) =
+      delete;
+  LibScryptCompatKeyObjects& operator=(const LibScryptCompatKeyObjects&&) =
+      delete;
 
-  brillo::SecureBlob salt() const {
-    if (salt_ == base::nullopt) {
-      LOG(FATAL) << "Salt is undefined. Salt is only exposed in the Create() "
-                    "flow of the LibScryptCompatAuthBlock.";
-    }
-    return salt_.value();
-  }
+  // Access the derived key.
+  brillo::SecureBlob derived_key();
+
+  // Access the salt. The salt isn't used for decryption, so this only returns
+  // the salt if the object is safe to used for encryption. Once accessed, the
+  // salt is cleared and the class is no longer usable for encryption.
+  brillo::SecureBlob ConsumeSalt();
 
  private:
-  // These are non-const so the class is assignable, not because they should be
-  // modified after construction.
-
   // The scrypt derived key which must always be present.
-  brillo::SecureBlob derived_key_;
+  const brillo::SecureBlob derived_key_;
   // The salt which only is passed out in the Create() flow.
   base::Optional<brillo::SecureBlob> salt_;
 };
@@ -79,12 +84,14 @@ struct KeyBlobs {
   // The reset secret used for LE credentials.
   base::Optional<brillo::SecureBlob> reset_secret;
 
-  // The following fields are for libscrypt compatibility:
-  base::Optional<LibScryptCompatKeyObjects> scrypt_key;
+  // The following fields are for libscrypt compatibility. They must be
+  // unique_ptr's as the libscrypt keys cannot safely be re-used for multiple
+  // encryption operations, so these are destroyed upon use.
+  std::unique_ptr<LibScryptCompatKeyObjects> scrypt_key;
   // The key for scrypt wrapped chaps key.
-  base::Optional<LibScryptCompatKeyObjects> chaps_scrypt_key;
+  std::unique_ptr<LibScryptCompatKeyObjects> chaps_scrypt_key;
   // The scrypt wrapped reset seed.
-  base::Optional<LibScryptCompatKeyObjects> scrypt_wrapped_reset_seed_key;
+  std::unique_ptr<LibScryptCompatKeyObjects> scrypt_wrapped_reset_seed_key;
 };
 
 }  // namespace cryptohome

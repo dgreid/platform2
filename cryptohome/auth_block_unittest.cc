@@ -473,6 +473,30 @@ TEST(DoubleWrappedCompatAuthBlockTest, DeriveTest) {
   EXPECT_TRUE(auth_block.Derive(auth_input, auth_state, &key_out_data, &error));
 }
 
+TEST(LibScryptCompatAuthBlockTest, CreateTest) {
+  AuthInput auth_input;
+  auth_input.user_input = brillo::SecureBlob("foo");
+
+  KeyBlobs blobs;
+  CryptoError error;
+
+  LibScryptCompatAuthBlock auth_block;
+  EXPECT_NE(base::nullopt, auth_block.Create(auth_input, &blobs, &error));
+
+  // Because the salt is generated randomly inside the auth block, this test
+  // cannot check the exact values returned. The salt() could be passed through
+  // in some test specific harness, but the underlying scrypt code is tested in
+  // so many other places, it's unnecessary.
+  EXPECT_FALSE(blobs.scrypt_key->derived_key().empty());
+  EXPECT_FALSE(blobs.scrypt_key->ConsumeSalt().empty());
+
+  EXPECT_FALSE(blobs.chaps_scrypt_key->derived_key().empty());
+  EXPECT_FALSE(blobs.chaps_scrypt_key->ConsumeSalt().empty());
+
+  EXPECT_FALSE(blobs.scrypt_wrapped_reset_seed_key->derived_key().empty());
+  EXPECT_FALSE(blobs.scrypt_wrapped_reset_seed_key->ConsumeSalt().empty());
+}
+
 TEST(LibScryptCompatAuthBlockTest, DeriveTest) {
   SerializedVaultKeyset serialized;
   serialized.set_flags(SerializedVaultKeyset::SCRYPT_DERIVED);

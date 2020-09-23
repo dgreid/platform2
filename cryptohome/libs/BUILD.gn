@@ -177,6 +177,7 @@ static_library("libcrostpm") {
     "../double_wrapped_compat_auth_block.cc",
     "../firmware_management_parameters.cc",
     "../install_attributes.cc",
+    "../key_objects.cc",
     "../le_credential_manager_impl.cc",
     "../libscrypt_compat_auth_block.cc",
     "../lockbox.cc",

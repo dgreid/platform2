@@ -212,18 +212,9 @@ class Crypto {
   }
 
  private:
-  bool GenerateEncryptedRawKeyset(const VaultKeyset& vault_keyset,
-                                  const brillo::SecureBlob& vkk_key,
-                                  const brillo::SecureBlob& fek_iv,
-                                  const brillo::SecureBlob& chaps_iv,
-                                  brillo::SecureBlob* cipher_text,
-                                  brillo::SecureBlob* wrapped_chaps_key) const;
-
   // This generates keys and wraps them with the wrapping key in |key_blobs|.
   bool GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
-                           const brillo::SecureBlob& key,
-                           const brillo::SecureBlob& salt,
-                           const KeyBlobs& key_blobs,
+                           const KeyBlobs& blobs,
                            bool store_reset_seed,
                            SerializedVaultKeyset* serialized) const;
 

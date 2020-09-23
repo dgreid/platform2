@@ -239,6 +239,130 @@ bool UnwrapScryptVaultKeyset(const SerializedVaultKeyset& serialized,
   return true;
 }
 
+bool WrapVaultKeysetWithAesDeprecated(const VaultKeyset& vault_keyset,
+                                      const KeyBlobs& blobs,
+                                      bool store_reset_seed,
+                                      SerializedVaultKeyset* serialized) {
+  if (blobs.vkk_key == base::nullopt || blobs.vkk_iv == base::nullopt ||
+      blobs.chaps_iv == base::nullopt) {
+    DLOG(FATAL) << "Fields missing from KeyBlobs.";
+    return false;
+  }
+
+  SecureBlob vault_blob;
+  if (!vault_keyset.ToKeysBlob(&vault_blob)) {
+    LOG(ERROR) << "Failure serializing keyset to buffer";
+    return false;
+  }
+
+  SecureBlob vault_cipher_text;
+  if (!CryptoLib::AesEncryptDeprecated(vault_blob, blobs.vkk_key.value(),
+                                       blobs.vkk_iv.value(),
+                                       &vault_cipher_text)) {
+    return false;
+  }
+  serialized->set_wrapped_keyset(vault_cipher_text.data(),
+                                 vault_cipher_text.size());
+
+  if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
+    SecureBlob wrapped_chaps_key;
+    if (!CryptoLib::AesEncryptDeprecated(
+            vault_keyset.chaps_key(), blobs.vkk_key.value(),
+            blobs.chaps_iv.value(), &wrapped_chaps_key)) {
+      return false;
+    }
+    serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
+                                      wrapped_chaps_key.size());
+  } else {
+    serialized->clear_wrapped_chaps_key();
+  }
+
+  // If a reset seed is present, encrypt and store it, else clear the field.
+  if (store_reset_seed && vault_keyset.reset_seed().size() != 0) {
+    const auto reset_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
+    SecureBlob wrapped_reset_seed;
+    if (!CryptoLib::AesEncryptDeprecated(vault_keyset.reset_seed(),
+                                         blobs.vkk_key.value(), reset_iv,
+                                         &wrapped_reset_seed)) {
+      LOG(ERROR) << "AES encryption of Reset seed failed.";
+      return false;
+    }
+    serialized->set_wrapped_reset_seed(wrapped_reset_seed.data(),
+                                       wrapped_reset_seed.size());
+    serialized->set_reset_iv(reset_iv.data(), reset_iv.size());
+  } else {
+    serialized->clear_wrapped_reset_seed();
+    serialized->clear_reset_iv();
+  }
+
+  return true;
+}
+
+bool WrapScryptVaultKeyset(const VaultKeyset& vault_keyset,
+                           const KeyBlobs& key_blobs,
+                           SerializedVaultKeyset* serialized) {
+  if (vault_keyset.IsLECredential()) {
+    LOG(ERROR) << "Low entropy credentials cannot be scrypt-wrapped.";
+    return false;
+  }
+
+  brillo::SecureBlob blob;
+  if (!vault_keyset.ToKeysBlob(&blob)) {
+    LOG(ERROR) << "Failure serializing keyset to buffer";
+    return false;
+  }
+
+  // Append the SHA1 hash of the keyset blob. This is done solely for
+  // backwards-compatibility purposes, since scrypt already creates a
+  // MAC for the encrypted blob. It is ignored in DecryptScrypt since
+  // it is redundant.
+  brillo::SecureBlob hash = CryptoLib::Sha1(blob);
+  brillo::SecureBlob local_blob = SecureBlob::Combine(blob, hash);
+  brillo::SecureBlob cipher_text;
+  if (!LibScryptCompat::Encrypt(key_blobs.scrypt_key->derived_key(),
+                                key_blobs.scrypt_key->ConsumeSalt(), local_blob,
+                                kDefaultScryptParams, &cipher_text)) {
+    LOG(ERROR) << "Scrypt encrypt of keyset blob failed.";
+    return false;
+  }
+  serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
+
+  if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
+    SecureBlob wrapped_chaps_key;
+    if (!LibScryptCompat::Encrypt(key_blobs.chaps_scrypt_key->derived_key(),
+                                  key_blobs.chaps_scrypt_key->ConsumeSalt(),
+                                  vault_keyset.chaps_key(),
+                                  kDefaultScryptParams, &wrapped_chaps_key)) {
+      LOG(ERROR) << "Scrypt encrypt of chaps key blob failed.";
+      return false;
+    }
+    serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
+                                      wrapped_chaps_key.size());
+  } else {
+    serialized->clear_wrapped_chaps_key();
+  }
+
+  // If there is a reset seed, encrypt and store it.
+  if (vault_keyset.reset_seed().size() != 0) {
+    brillo::SecureBlob wrapped_reset_seed;
+    if (!LibScryptCompat::Encrypt(
+            key_blobs.scrypt_wrapped_reset_seed_key->derived_key(),
+            key_blobs.scrypt_wrapped_reset_seed_key->ConsumeSalt(),
+            vault_keyset.reset_seed(), kDefaultScryptParams,
+            &wrapped_reset_seed)) {
+      LOG(ERROR) << "Scrypt encrypt of reset seed failed.";
+      return false;
+    }
+
+    serialized->set_wrapped_reset_seed(wrapped_reset_seed.data(),
+                                       wrapped_reset_seed.size());
+  } else {
+    serialized->clear_wrapped_reset_seed();
+  }
+
+  return true;
+}
+
 }  // namespace
 
 // File name of the system salt file.
@@ -343,7 +467,7 @@ bool Crypto::UnwrapVaultKeyset(const SerializedVaultKeyset& serialized,
                      vkk_data.vkk_iv != base::nullopt &&
                      vkk_data.chaps_iv != base::nullopt &&
                      vkk_data.authorization_data_iv != base::nullopt;
-  bool has_scrypt_key = vkk_data.scrypt_key != base::nullopt;
+  bool has_scrypt_key = vkk_data.scrypt_key != nullptr;
   bool successfully_unwrapped = false;
 
   if (has_vkk_key && !has_scrypt_key) {
@@ -465,76 +589,21 @@ bool Crypto::DecryptVaultKeyset(const SerializedVaultKeyset& serialized,
   return UnwrapVaultKeyset(serialized, vkk_data, vault_keyset, error);
 }
 
-bool Crypto::GenerateEncryptedRawKeyset(const VaultKeyset& vault_keyset,
-                                        const SecureBlob& vkk_key,
-                                        const SecureBlob& fek_iv,
-                                        const SecureBlob& chaps_iv,
-                                        SecureBlob* cipher_text,
-                                        SecureBlob* wrapped_chaps_key) const {
-  SecureBlob blob;
-  if (!vault_keyset.ToKeysBlob(&blob)) {
-    LOG(ERROR) << "Failure serializing keyset to buffer";
-    return false;
-  }
-
-  SecureBlob chaps_key = vault_keyset.chaps_key();
-  if (!CryptoLib::AesEncryptDeprecated(blob, vkk_key, fek_iv, cipher_text) ||
-      !CryptoLib::AesEncryptDeprecated(chaps_key, vkk_key, chaps_iv,
-                                       wrapped_chaps_key)) {
-    LOG(ERROR) << "AES encryption failed.";
-    return false;
-  }
-
-  return true;
-}
-
 bool Crypto::GenerateAndWrapKeys(const VaultKeyset& vault_keyset,
-                                 const SecureBlob& key,
-                                 const SecureBlob& salt,
                                  const KeyBlobs& blobs,
                                  bool store_reset_seed,
                                  SerializedVaultKeyset* serialized) const {
-  if (blobs.vkk_key == base::nullopt || blobs.vkk_iv == base::nullopt ||
-      blobs.chaps_iv == base::nullopt) {
-    DLOG(FATAL) << "Fields missing from KeyBlobs.";
+  if (serialized->flags() & SerializedVaultKeyset::SCRYPT_WRAPPED) {
+    return WrapScryptVaultKeyset(vault_keyset, blobs, serialized);
+  }
+
+  if (!WrapVaultKeysetWithAesDeprecated(vault_keyset, blobs, store_reset_seed,
+                                        serialized)) {
     return false;
   }
 
-  SecureBlob cipher_text;
-  SecureBlob wrapped_chaps_key;
-  if (!GenerateEncryptedRawKeyset(vault_keyset, blobs.vkk_key.value(),
-                                  blobs.vkk_iv.value(), blobs.chaps_iv.value(),
-                                  &cipher_text, &wrapped_chaps_key)) {
-    return false;
-  }
-
-  if (vault_keyset.chaps_key().size() == CRYPTOHOME_CHAPS_KEY_LENGTH) {
-    serialized->set_wrapped_chaps_key(wrapped_chaps_key.data(),
-                                      wrapped_chaps_key.size());
-  } else {
-    serialized->clear_wrapped_chaps_key();
-  }
-  serialized->set_wrapped_keyset(cipher_text.data(), cipher_text.size());
-
-  // If a reset seed is present, encrypt and store it, else clear the field.
-  if (store_reset_seed && vault_keyset.reset_seed().size() != 0) {
-    const auto reset_iv = CryptoLib::CreateSecureRandomBlob(kAesBlockSize);
-    SecureBlob wrapped_reset_seed;
-    if (!CryptoLib::AesEncryptDeprecated(vault_keyset.reset_seed(),
-                                         blobs.vkk_key.value(), reset_iv,
-                                         &wrapped_reset_seed)) {
-      LOG(ERROR) << "AES encryption of Reset seed failed.";
-      return false;
-    }
-    serialized->set_wrapped_reset_seed(wrapped_reset_seed.data(),
-                                       wrapped_reset_seed.size());
-    serialized->set_reset_iv(reset_iv.data(), reset_iv.size());
-  } else {
-    serialized->clear_wrapped_reset_seed();
-    serialized->clear_reset_iv();
-  }
-
-  return true;
+  return EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
+                                  blobs.auth_iv.value());
 }
 
 bool Crypto::EncryptScrypt(const VaultKeyset& vault_keyset,
@@ -654,6 +723,10 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
                                 const SecureBlob& vault_key_salt,
                                 const std::string& obfuscated_username,
                                 SerializedVaultKeyset* serialized) const {
+  // This if statement picks the correct auth block for a given credential,
+  // invokes the Create() method, and then calls GenerateAndWrapKeys.
+  // TODO(kerrnel): Convert if statement into a method to return the auth block
+  // for a given serialized blob.
   if (vault_keyset.IsLECredential()) {
     SecureBlob reset_secret;
     SecureBlob reset_salt;
@@ -686,14 +759,9 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
     serialized->set_le_label(state.vault_keyset.value().le_label());
     serialized->mutable_key_data()->mutable_policy()->set_auth_locked(false);
 
-    if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, vkk_data,
+    if (!GenerateAndWrapKeys(vault_keyset, vkk_data,
                              /*store_reset_seed=*/false, serialized)) {
-      LOG(ERROR) << "Failed to generate unwrapped keys";
-      return false;
-    }
-
-    if (!EncryptAuthorizationData(serialized, vkk_data.vkk_key.value(),
-                                  vkk_data.auth_iv.value())) {
+      LOG(ERROR) << "GenerateAndWrapKeys failed.";
       return false;
     }
 
@@ -747,14 +815,9 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
           auth_state->vault_keyset->extended_tpm_key());
     }
 
-    if (!GenerateAndWrapKeys(vault_keyset, vault_key, vault_key_salt, blobs,
+    if (!GenerateAndWrapKeys(vault_keyset, blobs,
                              /*store_reset_seed=*/true, serialized)) {
       LOG(ERROR) << "Failed to generate unwrapped keys";
-      return false;
-    }
-
-    if (!EncryptAuthorizationData(serialized, blobs.vkk_key.value(),
-                                  blobs.auth_iv.value())) {
       return false;
     }
 
@@ -762,7 +825,23 @@ bool Crypto::EncryptVaultKeyset(const VaultKeyset& vault_keyset,
     return true;
   }
 
-  if (!EncryptScrypt(vault_keyset, vault_key, serialized)) {
+  AuthInput user_input;
+  user_input.user_input = vault_key;
+  user_input.salt = vault_key_salt;
+  user_input.obfuscated_username = obfuscated_username;
+
+  KeyBlobs blobs;
+  CryptoError error;
+  LibScryptCompatAuthBlock auth_block;
+  auto auth_state = auth_block.Create(user_input, &blobs, &error);
+  if (auth_state == base::nullopt) {
+    return false;
+  }
+
+  serialized->set_flags(auth_state->vault_keyset->flags());
+  if (!GenerateAndWrapKeys(vault_keyset, blobs,
+                           /*store_reset_seed=*/true, serialized)) {
+    LOG(ERROR) << "Failed to generate and wrap keys";
     return false;
   }
 
