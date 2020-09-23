@@ -43,6 +43,7 @@ BRILLO_EXPORT void SecureClear(T* v) {
 // Compare [n] bytes starting at [s1] with [s2] and return 0 if they match,
 // 1 if they don't. Time taken to perform the comparison is only dependent on
 // [n] and not on the relationship of the match between [s1] and [s2].
+// When n == 0, returns 0 (same as memcmp).
 BRILLO_EXPORT int SecureMemcmp(const void* s1, const void* s2, size_t n);
 
 }  // namespace brillo

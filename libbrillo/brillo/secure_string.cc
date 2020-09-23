@@ -20,7 +20,7 @@ int SecureMemcmp(const void* s1, const void* s2, size_t n) {
   int result = 0;
 
   if (0 == n)
-    return 1;
+    return 0;
 
   /* Code snippet without data-dependent branch due to
    * Nate Lawson (nate@root.org) of Root Labs. */
