@@ -15,12 +15,12 @@
 #include <gmock/gmock.h>
 
 #include "shill/dhcp/mock_dhcp_properties.h"
+#include "shill/fake_store.h"
 #include "shill/link_monitor.h"
 #include "shill/manager.h"
 #include "shill/mock_control.h"
 #include "shill/mock_device.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/portal_detector.h"
 #include "shill/property_store_test.h"
 #include "shill/resolver.h"
@@ -60,9 +60,7 @@ TEST_F(DefaultProfileTest, GetProperties) {
   // DBusAdaptor::GetProperties() will iterate over all the accessors
   // provided by Profile. The |kEntriesProperty| accessor calls
   // GetGroups() on the StoreInterface.
-  auto storage = std::make_unique<MockStore>();
-  set<string> empty_group_set;
-  EXPECT_CALL(*storage, GetGroups()).WillRepeatedly(Return(empty_group_set));
+  auto storage = std::make_unique<FakeStore>();
   profile_->SetStorageForTest(std::move(storage));
 
   Error error(Error::kInvalidProperty, "");
@@ -91,87 +89,37 @@ TEST_F(DefaultProfileTest, GetProperties) {
 }
 
 TEST_F(DefaultProfileTest, Save) {
-  auto storage = std::make_unique<MockStore>();
-  EXPECT_CALL(*storage, SetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageArpGateway, true))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageName,
-                                  DefaultProfile::kDefaultId))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage, SetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageCheckPortalList, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage,
-              SetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageIgnoredDNSSearchPaths, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage,
-              SetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageLinkMonitorTechnologies, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage,
-              SetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageNoAutoConnectTechnologies, ""))
-      .WillOnce(Return(true));
-  EXPECT_CALL(*storage,
-              SetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageProhibitedTechnologies, ""))
-      .WillOnce(Return(true));
-#if !defined(DISABLE_WIFI)
-  EXPECT_CALL(*storage, SetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
-      .Times(0);
-#endif  // DISABLE_WIFI
-  EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
+  auto owned_storage = std::make_unique<FakeStore>();
+  FakeStore* storage = owned_storage.get();
 
-  EXPECT_CALL(*device_, Save(storage.get())).Times(0);
-  profile_->SetStorageForTest(std::move(storage));
+  EXPECT_CALL(*device_, Save(storage)).Times(0);
+  profile_->SetStorageForTest(std::move(owned_storage));
   auto dhcp_props = std::make_unique<MockDhcpProperties>();
   EXPECT_CALL(*dhcp_props, Save(_, _));
   manager()->dhcp_properties_ = std::move(dhcp_props);
 
   manager()->RegisterDevice(device_);
   ASSERT_TRUE(profile_->Save());
+
+  bool gateway;
+  EXPECT_TRUE(storage->GetBool(DefaultProfile::kStorageId,
+                               DefaultProfile::kStorageArpGateway, &gateway));
+  EXPECT_TRUE(gateway);
+  std::string name;
+  EXPECT_TRUE(storage->GetString(DefaultProfile::kStorageId,
+                                 DefaultProfile::kStorageName, &name));
+  EXPECT_EQ(name, DefaultProfile::kDefaultId);
+
   manager()->DeregisterDevice(device_);
 }
 
 TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
-  auto storage = std::make_unique<MockStore>();
+  auto owned_storage = std::make_unique<FakeStore>();
   Manager::Properties manager_props;
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageArpGateway,
-                                &manager_props.arp_gateway))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageCheckPortalList,
-                                  &manager_props.check_portal_list))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageIgnoredDNSSearchPaths,
-                                  &manager_props.ignored_dns_search_paths))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageLinkMonitorTechnologies, _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageNoAutoConnectTechnologies, _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageProhibitedTechnologies, _))
-      .WillOnce(Return(false));
-#if !defined(DISABLE_WIFI)
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
-      .WillOnce(Return(false));
-#endif  // DISABLE_WIFI
   auto dhcp_props = std::make_unique<MockDhcpProperties>();
   EXPECT_CALL(*dhcp_props, Load(_, DefaultProfile::kStorageId));
   manager()->dhcp_properties_ = std::move(dhcp_props);
-  profile_->SetStorageForTest(std::move(storage));
+  profile_->SetStorageForTest(std::move(owned_storage));
 
   profile_->LoadManagerProperties(&manager_props,
                                   manager()->dhcp_properties_.get());
@@ -194,42 +142,34 @@ TEST_F(DefaultProfileTest, LoadManagerDefaultProperties) {
 }
 
 TEST_F(DefaultProfileTest, LoadManagerProperties) {
-  auto storage = std::make_unique<MockStore>();
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageArpGateway, _))
-      .WillOnce(DoAll(SetArgPointee<2>(false), Return(true)));
+  auto owned_storage = std::make_unique<FakeStore>();
+  FakeStore* storage = owned_storage.get();
+  storage->SetBool(DefaultProfile::kStorageId,
+                   DefaultProfile::kStorageArpGateway, false);
   const string portal_list("technology1,technology2");
-  EXPECT_CALL(*storage, GetString(DefaultProfile::kStorageId,
-                                  DefaultProfile::kStorageCheckPortalList, _))
-      .WillOnce(DoAll(SetArgPointee<2>(portal_list), Return(true)));
+  storage->SetString(DefaultProfile::kStorageId,
+                     DefaultProfile::kStorageCheckPortalList, portal_list);
   const string ignored_paths("chromium.org,google.com");
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageIgnoredDNSSearchPaths, _))
-      .WillOnce(DoAll(SetArgPointee<2>(ignored_paths), Return(true)));
+  storage->SetString(DefaultProfile::kStorageId,
+                     DefaultProfile::kStorageIgnoredDNSSearchPaths,
+                     ignored_paths);
   const string link_monitor_technologies("ethernet,wifi");
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageLinkMonitorTechnologies, _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(link_monitor_technologies), Return(true)));
+  storage->SetString(DefaultProfile::kStorageId,
+                     DefaultProfile::kStorageLinkMonitorTechnologies,
+                     link_monitor_technologies);
   const string no_auto_connect_technologies("wifi,cellular");
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageNoAutoConnectTechnologies, _))
-      .WillOnce(
-          DoAll(SetArgPointee<2>(no_auto_connect_technologies), Return(true)));
+  storage->SetString(DefaultProfile::kStorageId,
+                     DefaultProfile::kStorageNoAutoConnectTechnologies,
+                     no_auto_connect_technologies);
   const string prohibited_technologies("vpn,wifi");
-  EXPECT_CALL(*storage,
-              GetString(DefaultProfile::kStorageId,
-                        DefaultProfile::kStorageProhibitedTechnologies, _))
-      .WillOnce(DoAll(SetArgPointee<2>(prohibited_technologies), Return(true)));
+  storage->SetString(DefaultProfile::kStorageId,
+                     DefaultProfile::kStorageProhibitedTechnologies,
+                     prohibited_technologies);
 #if !defined(DISABLE_WIFI)
-  EXPECT_CALL(*storage, GetBool(DefaultProfile::kStorageId,
-                                DefaultProfile::kStorageWifiGlobalFTEnabled, _))
-      .WillOnce(DoAll(SetArgPointee<2>(true), Return(true)));
+  storage->SetBool(DefaultProfile::kStorageId,
+                   DefaultProfile::kStorageWifiGlobalFTEnabled, true);
 #endif  // DISABLE_WIFI
-  profile_->SetStorageForTest(std::move(storage));
+  profile_->SetStorageForTest(std::move(owned_storage));
   Manager::Properties manager_props;
   auto dhcp_props = std::make_unique<MockDhcpProperties>();
   EXPECT_CALL(*dhcp_props, Load(_, DefaultProfile::kStorageId));
@@ -256,10 +196,7 @@ TEST_F(DefaultProfileTest, GetStoragePath) {
 }
 
 TEST_F(DefaultProfileTest, ConfigureService) {
-  auto storage = std::make_unique<MockStore>();
-  EXPECT_CALL(*storage, ContainsGroup(_)).WillRepeatedly(Return(false));
-  EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
-
+  auto owned_storage = std::make_unique<FakeStore>();
   scoped_refptr<MockService> unknown_service(new MockService(manager()));
   EXPECT_CALL(*unknown_service, technology())
       .WillOnce(Return(Technology::kUnknown));
@@ -268,20 +205,20 @@ TEST_F(DefaultProfileTest, ConfigureService) {
   scoped_refptr<MockService> ethernet_service(new MockService(manager()));
   EXPECT_CALL(*ethernet_service, technology())
       .WillOnce(Return(Technology::kEthernet));
-  EXPECT_CALL(*ethernet_service, Save(storage.get())).WillOnce(Return(true));
+  EXPECT_CALL(*ethernet_service, Save(owned_storage.get()))
+      .WillOnce(Return(true));
 
-  profile_->SetStorageForTest(std::move(storage));
+  profile_->SetStorageForTest(std::move(owned_storage));
   EXPECT_FALSE(profile_->ConfigureService(unknown_service));
   EXPECT_TRUE(profile_->ConfigureService(ethernet_service));
 }
 
 TEST_F(DefaultProfileTest, UpdateDevice) {
-  auto storage = std::make_unique<MockStore>();
-  EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
-  EXPECT_CALL(*device_, Save(storage.get()))
+  auto owned_storage = std::make_unique<FakeStore>();
+  EXPECT_CALL(*device_, Save(owned_storage.get()))
       .WillOnce(Return(true))
       .WillOnce(Return(false));
-  profile_->SetStorageForTest(std::move(storage));
+  profile_->SetStorageForTest(std::move(owned_storage));
   EXPECT_TRUE(profile_->UpdateDevice(device_));
   EXPECT_FALSE(profile_->UpdateDevice(device_));
 }

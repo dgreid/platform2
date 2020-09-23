@@ -19,7 +19,6 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/property_store_test.h"
 #include "shill/service_under_test.h"
 
@@ -39,11 +38,9 @@ class ProfileTest : public PropertyStoreTest {
   ProfileTest() {
     Profile::Identifier id("rather", "irrelevant");
     profile_ = new Profile(manager(), id, FilePath(), false);
-
-    // Install a FakeStore by default. In tests that actually care
-    // about the interaction between Profile and StoreInterface, we'll
-    // replace this with a MockStore.
-    profile_->SetStorageForTest(std::make_unique<FakeStore>());
+    auto storage = std::make_unique<FakeStore>();
+    storage_ = storage.get();
+    profile_->SetStorageForTest(std::move(storage));
   }
 
   scoped_refptr<MockService> CreateMockService() {
@@ -54,8 +51,8 @@ class ProfileTest : public PropertyStoreTest {
                           Profile::InitStorageOption storage_option,
                           bool save,
                           Error::Type error_type) {
-    // Note: this code uses neither FakeStore, nor MockStore. Instead,
-    // it exercises a real StoreInterface implemenation.
+    // Note: this code does not use FakeStore. Instead, it exercises a real
+    // StoreInterface implementation.
     Error error;
     ProfileRefPtr profile(
         new Profile(manager(), id, FilePath(storage_path()), false));
@@ -69,6 +66,7 @@ class ProfileTest : public PropertyStoreTest {
 
  protected:
   ProfileRefPtr profile_;
+  FakeStore* storage_ = nullptr;
 };
 
 TEST_F(ProfileTest, DeleteEntry) {
@@ -76,47 +74,37 @@ TEST_F(ProfileTest, DeleteEntry) {
       control_interface(), dispatcher(), metrics());
   profile_->manager_ = manager.get();
 
-  auto mock_storage = std::make_unique<StrictMock<MockStore>>();
-  MockStore* storage = mock_storage.get();
-  profile_->SetStorageForTest(std::move(mock_storage));
   const string kEntryName("entry_name");
 
   // If entry does not appear in storage, DeleteEntry() should return an error.
-  EXPECT_CALL(*storage, ContainsGroup(kEntryName)).WillOnce(Return(false));
   {
     Error error;
     profile_->DeleteEntry(kEntryName, &error);
     EXPECT_EQ(Error::kNotFound, error.type());
   }
 
-  Mock::VerifyAndClearExpectations(storage);
-
   // If HandleProfileEntryDeletion() returns false, Profile should call
   // DeleteGroup() itself.
-  EXPECT_CALL(*storage, ContainsGroup(kEntryName)).WillOnce(Return(true));
+  storage_->SetString(kEntryName, "AnyKey", "AnyValue");
   EXPECT_CALL(*manager, HandleProfileEntryDeletion(_, kEntryName))
       .WillOnce(Return(false));
-  EXPECT_CALL(*storage, DeleteGroup(kEntryName)).WillOnce(Return(true));
-  EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
   {
     Error error;
     profile_->DeleteEntry(kEntryName, &error);
     EXPECT_TRUE(error.IsSuccess());
+    EXPECT_FALSE(storage_->ContainsGroup(kEntryName));
   }
-
-  Mock::VerifyAndClearExpectations(storage);
 
   // If HandleProfileEntryDeletion() returns true, Profile should not call
   // DeleteGroup() itself.
-  EXPECT_CALL(*storage, ContainsGroup(kEntryName)).WillOnce(Return(true));
+  storage_->SetString(kEntryName, "AnyKey", "AnyValue");
   EXPECT_CALL(*manager, HandleProfileEntryDeletion(_, kEntryName))
       .WillOnce(Return(true));
-  EXPECT_CALL(*storage, DeleteGroup(kEntryName)).Times(0);
-  EXPECT_CALL(*storage, Flush()).WillOnce(Return(true));
   {
     Error error;
     profile_->DeleteEntry(kEntryName, &error);
     EXPECT_TRUE(error.IsSuccess());
+    EXPECT_TRUE(storage_->ContainsGroup(kEntryName));
   }
 }
 
@@ -431,21 +419,17 @@ TEST_F(ProfileTest, GetServiceFromEntry) {
       control_interface(), dispatcher(), metrics());
   profile_->manager_ = manager.get();
 
-  MockStore* storage(new StrictMock<MockStore>());
-  profile_->storage_.reset(storage);  // Passes ownership
   const string kEntryName("entry_name");
 
   // If entry does not appear in storage, GetServiceFromEntry() should return
   // an error.
-  EXPECT_CALL(*storage, ContainsGroup(kEntryName)).WillOnce(Return(false));
   {
     Error error;
     profile_->GetServiceFromEntry(kEntryName, &error);
     EXPECT_EQ(Error::kNotFound, error.type());
   }
-  Mock::VerifyAndClearExpectations(storage);
 
-  EXPECT_CALL(*storage, ContainsGroup(kEntryName)).WillRepeatedly(Return(true));
+  storage_->SetString(kEntryName, "AnyKey", "AnyValue");
 
   // Service entry already registered with the manager, the registered service
   // is returned.
