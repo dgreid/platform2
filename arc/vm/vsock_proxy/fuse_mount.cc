@@ -38,15 +38,17 @@ FuseMount::FuseMount(const base::FilePath& mount_path, const std::string& name)
     : mount_path_(mount_path), name_(name) {}
 
 FuseMount::~FuseMount() {
+  if (session_) {
+    fuse_session_remove_chan(channel_);
+    fuse_session_destroy(session_);
+  }
   if (channel_)
     fuse_unmount(mount_path_.value().c_str(), channel_);
-  if (fuse_)
-    fuse_destroy(fuse_);
 }
 
 bool FuseMount::Init(int argc,
                      char* argv[],
-                     const struct fuse_operations& operations,
+                     const struct fuse_lowlevel_ops& operations,
                      void* private_data) {
   // Initialize fuse channel.
   channel_ = Mount(mount_path_, name_);
@@ -55,15 +57,16 @@ bool FuseMount::Init(int argc,
     return false;
   }
   buf_.resize(fuse_chan_bufsize(channel_));
-  // Initialize fuse object.
+  // Initialize fuse session.
   struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-  fuse_ =
-      fuse_new(channel_, &args, &operations, sizeof(operations), private_data);
+  session_ =
+      fuse_lowlevel_new(&args, &operations, sizeof(operations), private_data);
   fuse_opt_free_args(&args);
-  if (!fuse_) {
-    LOG(ERROR) << "fuse_new() failed.";
+  if (!session_) {
+    LOG(ERROR) << "fuse_lowlevel_new() failed.";
     return false;
   }
+  fuse_session_add_chan(session_, channel_);
   // Start watching the channel FD.
   watcher_ = base::FileDescriptorWatcher::WatchReadable(
       fuse_chan_fd(channel_), base::BindRepeating(&FuseMount::OnChannelReadable,
@@ -76,8 +79,7 @@ void FuseMount::OnChannelReadable() {
       .size = buf_.size(),
       .mem = buf_.data(),
   };
-  struct fuse_session* session = fuse_get_session(fuse_);
-  int result = fuse_session_receive_buf(session, &fbuf, &channel_);
+  int result = fuse_session_receive_buf(session_, &fbuf, &channel_);
   if (result <= 0) {
     if (result == -EINTR) {
       // Not a serious error. Return to retry.
@@ -91,7 +93,7 @@ void FuseMount::OnChannelReadable() {
     watcher_.reset();  // Stop watching the channel FD.
     return;
   }
-  fuse_session_process_buf(session, &fbuf, channel_);
+  fuse_session_process_buf(session_, &fbuf, channel_);
 }
 
 }  // namespace arc

@@ -6,8 +6,10 @@
 
 #include <errno.h>
 
+#include <algorithm>
 #include <string>
 #include <utility>
+#include <vector>
 
 #include <base/bind.h>
 #include <base/logging.h>
@@ -28,50 +30,40 @@ namespace {
 constexpr char kFileSystemName[] = "arcvm-serverproxy";
 
 // Returns ProxyFileSystem assigned to the FUSE's private_data.
-ProxyFileSystem* GetFileSystem() {
-  return static_cast<ProxyFileSystem*>(fuse_get_context()->private_data);
+ProxyFileSystem* GetFileSystem(fuse_req_t req) {
+  return static_cast<ProxyFileSystem*>(fuse_req_userdata(req));
 }
 
-int GetAttr(const char* path, struct stat* stat) {
-  return GetFileSystem()->GetAttr(path, stat);
+void Lookup(fuse_req_t req, fuse_ino_t parent, const char* name) {
+  GetFileSystem(req)->Lookup(req, parent, name);
 }
 
-int Open(const char* path, struct fuse_file_info* fi) {
-  return GetFileSystem()->Open(path, fi);
+void GetAttr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
+  GetFileSystem(req)->GetAttr(req, ino, fi);
 }
 
-int Read(const char* path,
-         char* buf,
-         size_t size,
-         off_t off,
-         struct fuse_file_info* fi) {
-  return GetFileSystem()->Read(path, buf, size, off, fi);
+void Open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
+  GetFileSystem(req)->Open(req, ino, fi);
 }
 
-int Release(const char* path, struct fuse_file_info* fi) {
-  return GetFileSystem()->Release(path, fi);
+void Read(fuse_req_t req,
+          fuse_ino_t ino,
+          size_t size,
+          off_t off,
+          struct fuse_file_info* fi) {
+  GetFileSystem(req)->Read(req, ino, size, off, fi);
 }
 
-int ReadDir(const char* path,
-            void* buf,
-            fuse_fill_dir_t filler,
-            off_t offset,
-            struct fuse_file_info* fi) {
-  return GetFileSystem()->ReadDir(path, buf, filler, offset, fi);
+void Release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi) {
+  GetFileSystem(req)->Release(req, ino, fi);
 }
 
-// Parses the given path to a handle. The path should be formatted in
-// "/<handle>", where <handle> is int64_t. Returns nullopt on error.
-base::Optional<int64_t> ParseHandle(const char* path) {
-  if (!path || path[0] != '/')
-    return base::nullopt;
-
-  // Parse the path as int64_t excluding leading '/'.
-  int64_t value = 0;
-  if (!base::StringToInt64(path + 1, &value))
-    return base::nullopt;
-
-  return value;
+void ReadDir(fuse_req_t req,
+             fuse_ino_t ino,
+             size_t size,
+             off_t off,
+             struct fuse_file_info* fi) {
+  GetFileSystem(req)->ReadDir(req, ino, size, off, fi);
 }
 
 }  // namespace
@@ -108,21 +100,10 @@ bool ProxyFileSystem::Init() {
   const std::string path_str = mount_path_.value();
   const char* fuse_argv[] = {
       "",  // Dummy argv[0].
-      // Never cache attr/dentry since our backend storage is not exclusive to
-      // this process.
-      "-o",
-      "attr_timeout=0",
-      "-o",
-      "entry_timeout=0",
-      "-o",
-      "negative_timeout=0",
-      "-o",
-      "ac_attr_timeout=0",
-      "-o",
-      "direct_io",
   };
 
-  constexpr struct fuse_operations operations = {
+  constexpr struct fuse_lowlevel_ops operations = {
+      .lookup = arc::Lookup,
       .getattr = arc::GetAttr,
       .open = arc::Open,
       .read = arc::Read,
@@ -138,146 +119,140 @@ bool ProxyFileSystem::Init() {
   return true;
 }
 
-int ProxyFileSystem::GetAttr(const char* path, struct stat* stat) {
-  if (path == base::StringPiece("/")) {
-    stat->st_mode = S_IFDIR;
-    stat->st_nlink = 2;
-    return 0;
+void ProxyFileSystem::Lookup(fuse_req_t req,
+                             fuse_ino_t parent,
+                             const char* name) {
+  // The parent must be the root directory.
+  if (parent != 1) {
+    fuse_reply_err(req, ENOENT);
+    return;
   }
 
-  auto handle = ParseHandle(path);
-  if (!handle.has_value()) {
-    LOG(ERROR) << "Invalid path: " << path;
-    return -ENOENT;
+  // Parse the name as inode;
+  uint64_t inode = 0;
+  if (!base::StringToUint64(name, &inode)) {
+    fuse_reply_err(req, ENOENT);
+    return;
+  }
+  struct fuse_entry_param entry = {};
+  entry.ino = static_cast<fuse_ino_t>(inode);
+  entry.attr.st_mode = S_IFREG;
+  entry.attr.st_nlink = 1;
+  fuse_reply_entry(req, &entry);
+}
+
+void ProxyFileSystem::GetAttr(fuse_req_t req,
+                              fuse_ino_t ino,
+                              struct fuse_file_info* fi) {
+  if (ino == 1) {  // The root directory.
+    struct stat stat = {};
+    stat.st_ino = ino, stat.st_mode = S_IFDIR, stat.st_nlink = 2,
+    fuse_reply_attr(req, &stat, 0);
+    return;
   }
 
-  auto state = GetState(handle.value());
+  auto state = GetState(ino);
   if (!state.has_value()) {
-    LOG(ERROR) << "Handle not found: " << path;
-    return -ENOENT;
+    LOG(ERROR) << "Inode not found: " << ino;
+    fuse_reply_err(req, ENOENT);
   }
 
-  stat->st_mode = S_IFREG;
-  stat->st_nlink = 1;
-  if (state.value() == State::NOT_OPENED) {
+  struct stat stat = {};
+  stat.st_ino = ino;
+  stat.st_mode = S_IFREG;
+  stat.st_nlink = 1;
+  if (!state->is_open) {
     // If the file is not opened yet, this is called from kernel to open the
     // file, which is initiated by the open(2) called in RegisterHandle()
     // on |delegate_task_runner_|.
     // Thus, we cannot make a blocking call to retrieve the size of the file,
     // because it causes deadlock. Instead, we just fill '0', and return
     // immediately.
-    stat->st_size = 0;
-    return 0;
+    stat.st_size = 0;
+    fuse_reply_attr(req, &stat, 0);
+    return;
   }
-  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                            base::WaitableEvent::InitialState::NOT_SIGNALED);
-  int return_value = -EIO;
   delegate_task_runner_->PostTask(
       FROM_HERE,
       base::BindOnce(&ProxyFileSystem::GetAttrInternal, base::Unretained(this),
-                     &event, handle.value(), &return_value, &stat->st_size));
-  event.Wait();
-  return return_value;
+                     req, state->handle, stat));
 }
 
-void ProxyFileSystem::GetAttrInternal(base::WaitableEvent* event,
+void ProxyFileSystem::GetAttrInternal(fuse_req_t req,
                                       int64_t handle,
-                                      int* return_value,
-                                      off_t* size) {
-  delegate_->Fstat(handle,
-                   base::BindOnce(
-                       [](base::WaitableEvent* event, int* return_value,
-                          off_t* out_size, int error_code, int64_t size) {
-                         *return_value = -error_code;
-                         if (error_code == 0)
-                           *out_size = static_cast<off_t>(size);
-                         event->Signal();
-                       },
-                       event, return_value, size));
+                                      struct stat stat) {
+  delegate_->Fstat(handle, base::BindOnce(
+                               [](fuse_req_t req, struct stat stat,
+                                  int error_code, int64_t size) {
+                                 if (error_code == 0) {
+                                   stat.st_size = size;
+                                   fuse_reply_attr(req, &stat, 0);
+                                 } else {
+                                   fuse_reply_err(req, error_code);
+                                 }
+                               },
+                               req, stat));
 }
 
-int ProxyFileSystem::Open(const char* path, struct fuse_file_info* fi) {
-  auto handle = ParseHandle(path);
-  if (!handle.has_value()) {
-    LOG(ERROR) << "Invalid path: " << path;
-    return -ENOENT;
-  }
-
+void ProxyFileSystem::Open(fuse_req_t req,
+                           fuse_ino_t ino,
+                           struct fuse_file_info* fi) {
   {
-    base::AutoLock lock(handle_map_lock_);
-    auto iter = handle_map_.find(handle.value());
-    if (iter == handle_map_.end()) {
-      LOG(ERROR) << "Handle not found: " << path;
-      return -ENOENT;
+    base::AutoLock lock(inode_lock_);
+    auto iter = inode_to_state_.find(ino);
+    if (iter == inode_to_state_.end()) {
+      LOG(ERROR) << "Inode not found: " << ino;
+      fuse_reply_err(req, ENOENT);
+      return;
     }
-    iter->second = State::OPENED;
-  }
+    iter->second.is_open = true;
 
-  return 0;
+    fi->direct_io = 1;
+    fi->fh = iter->second.handle;
+  }
+  fuse_reply_open(req, fi);
 }
 
-int ProxyFileSystem::Read(const char* path,
-                          char* buf,
-                          size_t size,
-                          off_t off,
-                          struct fuse_file_info* fi) {
-  auto handle = ParseHandle(path);
-  if (!handle.has_value()) {
-    LOG(ERROR) << "Invalid path: " << path;
-    return -ENOENT;
-  }
-
-  if (!GetState(handle.value()).has_value()) {
-    LOG(ERROR) << "Handle not found: " << path;
-    return -ENOENT;
-  }
-
-  base::WaitableEvent event(base::WaitableEvent::ResetPolicy::MANUAL,
-                            base::WaitableEvent::InitialState::NOT_SIGNALED);
-  int return_value = -EIO;
+void ProxyFileSystem::Read(fuse_req_t req,
+                           fuse_ino_t ino,
+                           size_t size,
+                           off_t off,
+                           struct fuse_file_info* fi) {
   delegate_task_runner_->PostTask(
       FROM_HERE,
       base::BindOnce(&ProxyFileSystem::ReadInternal, base::Unretained(this),
-                     &event, handle.value(), buf, size, off, &return_value));
-  event.Wait();
-  return return_value;
+                     req, fi->fh, size, off));
 }
 
-void ProxyFileSystem::ReadInternal(base::WaitableEvent* event,
+void ProxyFileSystem::ReadInternal(fuse_req_t req,
                                    int64_t handle,
-                                   char* buf,
                                    size_t size,
-                                   off_t off,
-                                   int* return_value) {
+                                   off_t off) {
   delegate_->Pread(
       handle, size, off,
       base::BindOnce(
-          [](base::WaitableEvent* event, char* buf, int* return_value,
-             int error_code, const std::string& blob) {
-            if (error_code != 0) {
-              *return_value = -error_code;
+          [](fuse_req_t req, int error_code, const std::string& blob) {
+            if (error_code == 0) {
+              fuse_reply_buf(req, blob.data(), blob.size());
             } else {
-              memcpy(buf, blob.data(), blob.size());
-              *return_value = static_cast<int>(blob.size());
+              fuse_reply_err(req, error_code);
             }
-            event->Signal();
           },
-          event, buf, return_value));
+          req));
 }
 
-int ProxyFileSystem::Release(const char* path, struct fuse_file_info* fi) {
-  auto handle = ParseHandle(path);
-  if (!handle.has_value()) {
-    LOG(ERROR) << "Invalid path: " << path;
-    return -ENOENT;
-  }
-
+void ProxyFileSystem::Release(fuse_req_t req,
+                              fuse_ino_t ino,
+                              struct fuse_file_info* fi) {
   {
-    base::AutoLock lock(handle_map_lock_);
-    if (handle_map_.erase(handle.value()) == 0) {
-      LOG(ERROR) << "Handle not found: " << path;
-      return -ENOENT;
+    base::AutoLock lock(inode_lock_);
+    auto it = inode_to_state_.find(ino);
+    if (it == inode_to_state_.end()) {
+      LOG(ERROR) << "Inode not found: " << ino;
+      fuse_reply_err(req, ENOENT);
+      return;
     }
+    inode_to_state_.erase(it);
   }
 
   // |this| outlives |delegate_task_runner_|, so passing raw |this| pointer here
@@ -286,41 +261,71 @@ int ProxyFileSystem::Release(const char* path, struct fuse_file_info* fi) {
       FROM_HERE,
       base::BindOnce([](ProxyFileSystem* self,
                         int64_t handle) { self->delegate_->Close(handle); },
-                     this, handle.value()));
-  return 0;
+                     this, fi->fh));
+  fuse_reply_err(req, 0);
 }
 
-int ProxyFileSystem::ReadDir(const char* path,
-                             void* buf,
-                             fuse_fill_dir_t filler,
-                             off_t offset,
-                             struct fuse_file_info* fi) {
+void ProxyFileSystem::ReadDir(fuse_req_t req,
+                              fuse_ino_t ino,
+                              size_t size,
+                              off_t off,
+                              struct fuse_file_info* fi) {
+  // It must be the root directory.
+  if (ino != 1) {
+    fuse_reply_err(req, ENOTDIR);
+    return;
+  }
+
   // Just returns as if it is empty directory.
-  filler(buf, ".", nullptr, 0);
-  filler(buf, "..", nullptr, 0);
-  return 0;
+  const char* kEntryNames[] = {
+      ".",
+      "..",
+  };
+  std::vector<char> buf;
+  for (const char* entry_name : kEntryNames) {
+    const size_t offset = buf.size();
+    // Make space for the entry.
+    const size_t entry_size =
+        fuse_add_direntry(req, nullptr, 0, entry_name, nullptr, 0);
+    buf.resize(buf.size() + entry_size);
+    // Add the entry to the buffer.
+    struct stat st = {
+        .st_ino = ino,
+    };
+    fuse_add_direntry(req, buf.data() + offset, entry_size, entry_name, &st,
+                      buf.size());
+  }
+  // Send reply.
+  fuse_reply_buf(req, buf.data() + off,
+                 std::min(buf.size() - static_cast<size_t>(off), size));
 }
 
 base::ScopedFD ProxyFileSystem::RegisterHandle(int64_t handle) {
+  fuse_ino_t inode = 0;
   {
-    base::AutoLock lock(handle_map_lock_);
-    if (!handle_map_.emplace(handle, State::NOT_OPENED).second) {
-      LOG(ERROR) << "The handle was already registered: " << handle;
+    base::AutoLock lock(inode_lock_);
+    State state = {
+        .handle = handle,
+        .is_open = false,
+    };
+    inode = next_inode_++;
+    if (!inode_to_state_.emplace(inode, state).second) {
+      LOG(ERROR) << "Failed to register inode: " << inode;
       return {};
     }
   }
 
   // Currently read-only file descriptor is only supported.
   return base::ScopedFD(HANDLE_EINTR(
-      open(mount_path_.Append(base::NumberToString(handle)).value().c_str(),
+      open(mount_path_.Append(base::NumberToString(inode)).value().c_str(),
            O_RDONLY | O_CLOEXEC)));
 }
 
 base::Optional<ProxyFileSystem::State> ProxyFileSystem::GetState(
-    int64_t handle) {
-  base::AutoLock lock_(handle_map_lock_);
-  auto iter = handle_map_.find(handle);
-  if (iter == handle_map_.end())
+    fuse_ino_t inode) {
+  base::AutoLock lock_(inode_lock_);
+  auto iter = inode_to_state_.find(inode);
+  if (iter == inode_to_state_.end())
     return base::nullopt;
   return iter->second;
 }

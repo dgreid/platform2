@@ -18,6 +18,7 @@ pkg_config("target_defaults") {
     "libchrome-${libbase_ver}",
     "protobuf-lite",
   ]
+  defines = [ "FUSE_USE_VERSION=26" ]
 }
 
 proto_library("message") {
@@ -38,7 +39,6 @@ static_library("vsock_proxy_lib") {
   ]
   configs += [ ":target_defaults" ]
   pkg_deps = [ "fuse" ]
-  defines = [ "FUSE_USE_VERSION=26" ]
   deps = [ ":message" ]
 }
 

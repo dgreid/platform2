@@ -6,6 +6,7 @@
 #define ARC_VM_VSOCK_PROXY_PROXY_FILE_SYSTEM_H_
 
 #include <fuse/fuse.h>
+#include <fuse/fuse_lowlevel.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
@@ -25,7 +26,6 @@
 
 namespace base {
 class TaskRunner;
-class WaitableEvent;
 }  // namespace base
 
 namespace arc {
@@ -64,19 +64,20 @@ class ProxyFileSystem {
   bool Init();
 
   // Implementation of the fuse operation callbacks.
-  int GetAttr(const char* path, struct stat* stat);
-  int Open(const char* path, struct fuse_file_info* fi);
-  int Read(const char* path,
-           char* buf,
-           size_t size,
-           off_t off,
-           struct fuse_file_info* fi);
-  int Release(const char* path, struct fuse_file_info* fi);
-  int ReadDir(const char* path,
-              void* buf,
-              fuse_fill_dir_t filler,
-              off_t offset,
-              struct fuse_file_info* fi);
+  void Lookup(fuse_req_t req, fuse_ino_t parent, const char* name);
+  void GetAttr(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi);
+  void Open(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi);
+  void Read(fuse_req_t req,
+            fuse_ino_t ino,
+            size_t size,
+            off_t off,
+            struct fuse_file_info* fi);
+  void Release(fuse_req_t req, fuse_ino_t ino, struct fuse_file_info* fi);
+  void ReadDir(fuse_req_t req,
+               fuse_ino_t ino,
+               size_t size,
+               off_t off,
+               struct fuse_file_info* fi);
 
   // Registers the given |handle| to the file system, then returns the file
   // descriptor corresponding to the registered file.
@@ -85,27 +86,19 @@ class ProxyFileSystem {
   base::ScopedFD RegisterHandle(int64_t handle);
 
  private:
-  // Helper to operate GetAtt(). Called on the |delegate_task_runner_|.
-  void GetAttrInternal(base::WaitableEvent* event,
-                       int64_t handle,
-                       int* return_value,
-                       off_t* size);
+  // Helper to operate GetAttr(). Called on the |delegate_task_runner_|.
+  void GetAttrInternal(fuse_req_t req, int64_t handle, struct stat stat);
 
   // Helper to operate Read(). Called on the |delegate_task_runner_|.
-  void ReadInternal(base::WaitableEvent* event,
-                    int64_t handle,
-                    char* buf,
-                    size_t size,
-                    off_t offset,
-                    int* return_value);
+  void ReadInternal(fuse_req_t req, int64_t handle, size_t size, off_t off);
 
-  // Returns the opened/not-opened-yet state of the given |handle|.
+  // Returns the state of the given inode.
   // If not registered, base::nullopt is returned.
-  enum class State {
-    NOT_OPENED,
-    OPENED,
+  struct State {
+    int64_t handle = 0;
+    bool is_open = false;
   };
-  base::Optional<State> GetState(int64_t handle);
+  base::Optional<State> GetState(fuse_ino_t inode);
 
   Delegate* const delegate_;
   scoped_refptr<base::TaskRunner> delegate_task_runner_;
@@ -113,12 +106,10 @@ class ProxyFileSystem {
 
   std::unique_ptr<FuseMount> fuse_mount_;
 
-  // Registered |handle|s to its opened/not-yet-opened state.
-  // The access to |handle_map_| needs to be guarded by |handle_map_lock_|,
-  // because fuse starts as many threads as needed so this can be accessed
-  // from multiple threads.
-  std::map<int64_t, State> handle_map_;
-  base::Lock handle_map_lock_;
+  std::map<fuse_ino_t, State> inode_to_state_ GUARDED_BY(inode_lock_);
+  fuse_ino_t next_inode_ GUARDED_BY(inode_lock_) =
+      2;  // 1 is reserved for the root directory.
+  base::Lock inode_lock_;
 
   scoped_refptr<base::TaskRunner> init_task_runner_;
 };

@@ -12,9 +12,9 @@
 #include <base/files/file_descriptor_watcher_posix.h>
 #include <base/files/file_path.h>
 
-struct fuse;
 struct fuse_chan;
-struct fuse_operations;
+struct fuse_session;
+struct fuse_lowlevel_ops;
 
 namespace arc {
 
@@ -31,7 +31,7 @@ class FuseMount {
   // Mounts and initializes the FUSE file system.
   bool Init(int argc,
             char* argv[],
-            const struct fuse_operations& operations,
+            const struct fuse_lowlevel_ops& operations,
             void* private_data);
 
  private:
@@ -42,7 +42,7 @@ class FuseMount {
   const std::string name_;
 
   struct fuse_chan* channel_ = nullptr;
-  struct fuse* fuse_ = nullptr;
+  struct fuse_session* session_ = nullptr;
   std::vector<char> buf_;
 
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;

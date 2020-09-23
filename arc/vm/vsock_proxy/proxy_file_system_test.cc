@@ -102,7 +102,14 @@ class ProxyFileSystemTest : public testing::Test,
       base::WaitableEvent::InitialState::NOT_SIGNALED};
 };
 
-TEST_F(ProxyFileSystemTest, DISABLED_RegularFileReadTest) {
+// On ARM devices, unit tests run without necessary capabilities in QEMU.
+#if defined(ARCH_CPU_ARM_FAMILY)
+#define MAYBE_RegularFileReadTest DISABLED_RegularFileReadTest
+#else
+#define MAYBE_RegularFileReadTest RegularFileReadTest
+#endif
+
+TEST_F(ProxyFileSystemTest, MAYBE_RegularFileReadTest) {
   base::ScopedFD fd = file_system_->RegisterHandle(kHandle);
   char buf[10];
   ASSERT_EQ(sizeof(buf), HANDLE_EINTR(read(fd.get(), buf, sizeof(buf))));
