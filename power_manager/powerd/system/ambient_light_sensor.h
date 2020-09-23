@@ -17,6 +17,7 @@
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/ambient_light_observer.h"
+#include "power_manager/powerd/system/ambient_light_sensor_interface.h"
 #include "power_manager/powerd/system/async_file_reader.h"
 
 namespace power_manager {
@@ -28,34 +29,6 @@ enum class SensorLocation {
   UNKNOWN,
   BASE,
   LID,
-};
-
-class AmbientLightSensorInterface {
- public:
-  AmbientLightSensorInterface() {}
-  virtual ~AmbientLightSensorInterface() {}
-
-  // Adds or removes observers for sensor readings.
-  virtual void AddObserver(AmbientLightObserver* observer) = 0;
-  virtual void RemoveObserver(AmbientLightObserver* observer) = 0;
-
-  // Whether or not this ALS supports color readings.
-  virtual bool IsColorSensor() const = 0;
-
-  // Used by observers in their callback to get the raw reading from the sensor
-  // for the ambient light level. -1 is considered an error value.
-  virtual int GetAmbientLightLux() = 0;
-
-  // Latest color temperature measured if supported. -1 is considered an error
-  // value.
-  virtual int GetColorTemperature() = 0;
-
-  // Returns the path to the illuminance file being monitored, or an empty path
-  // if a device has not yet been found.
-  virtual base::FilePath GetIlluminancePath() const = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorInterface);
 };
 
 class AmbientLightSensor : public AmbientLightSensorInterface {

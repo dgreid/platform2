@@ -10,26 +10,13 @@
 
 #include "power_manager/common/power_constants.h"
 #include "power_manager/powerd/system/ambient_light_sensor.h"
+#include "power_manager/powerd/system/ambient_light_sensor_manager_interface.h"
 
 namespace power_manager {
 
 class PrefsInterface;
 
 namespace system {
-
-class AmbientLightSensorManagerInterface {
- public:
-  AmbientLightSensorManagerInterface() {}
-  virtual ~AmbientLightSensorManagerInterface() {}
-
-  virtual AmbientLightSensorInterface* GetSensorForInternalBacklight() = 0;
-  virtual AmbientLightSensorInterface* GetSensorForKeyboardBacklight() = 0;
-
-  virtual bool HasColorSensor() = 0;
-
- private:
-  DISALLOW_COPY_AND_ASSIGN(AmbientLightSensorManagerInterface);
-};
 
 class AmbientLightSensorManager : public AmbientLightSensorManagerInterface {
  public:

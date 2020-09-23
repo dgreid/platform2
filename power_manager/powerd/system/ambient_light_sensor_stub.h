@@ -8,7 +8,7 @@
 #include <base/observer_list.h>
 #include <base/optional.h>
 
-#include "power_manager/powerd/system/ambient_light_sensor.h"
+#include "power_manager/powerd/system/ambient_light_sensor_interface.h"
 
 namespace power_manager {
 namespace system {

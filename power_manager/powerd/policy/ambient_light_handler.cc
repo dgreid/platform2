@@ -11,7 +11,7 @@
 #include <base/strings/string_split.h>
 #include <base/strings/string_util.h>
 
-#include "power_manager/powerd/system/ambient_light_sensor.h"
+#include "power_manager/powerd/system/ambient_light_sensor_interface.h"
 
 namespace power_manager {
 namespace policy {

@@ -7,8 +7,8 @@
 
 #include <memory>
 
-#include "power_manager/powerd/system/ambient_light_sensor.h"
-#include "power_manager/powerd/system/ambient_light_sensor_manager.h"
+#include "power_manager/powerd/system/ambient_light_sensor_interface.h"
+#include "power_manager/powerd/system/ambient_light_sensor_manager_interface.h"
 #include "power_manager/powerd/system/ambient_light_sensor_stub.h"
 
 namespace power_manager {

@@ -42,7 +42,7 @@
 #include "power_manager/powerd/policy/state_controller.h"
 #include "power_manager/powerd/policy/thermal_event_handler.h"
 #include "power_manager/powerd/system/acpi_wakeup_helper_interface.h"
-#include "power_manager/powerd/system/ambient_light_sensor_manager.h"
+#include "power_manager/powerd/system/ambient_light_sensor_manager_interface.h"
 #include "power_manager/powerd/system/arc_timer_manager.h"
 #include "power_manager/powerd/system/audio_client_interface.h"
 #include "power_manager/powerd/system/backlight_interface.h"
