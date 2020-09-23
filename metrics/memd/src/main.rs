@@ -108,16 +108,16 @@ const VMSTATS: [(&str, bool, bool); VMSTAT_VALUES_COUNT] = [
 
 #[derive(Debug)]
 pub enum Error {
-    LowMemFileError(Box<std::error::Error>),
+    LowMemFileError(Box<dyn std::error::Error>),
     VmstatFileError(Box<std::io::Error>),
     RunnablesFileError(Box<std::io::Error>),
-    AvailableFileError(Box<std::error::Error>),
+    AvailableFileError(Box<dyn std::error::Error>),
     CreateLogDirError(Box<std::io::Error>),
-    StartingClipCounterMissingError(Box<std::error::Error>),
-    LogStaticParametersError(Box<std::error::Error>),
-    DbusWatchError(Box<std::error::Error>),
-    LowMemFDWatchError(Box<std::error::Error>),
-    LowMemWatcherError(Box<std::error::Error>),
+    StartingClipCounterMissingError(Box<dyn std::error::Error>),
+    LogStaticParametersError(Box<dyn std::error::Error>),
+    DbusWatchError(Box<dyn std::error::Error>),
+    LowMemFDWatchError(Box<dyn std::error::Error>),
+    LowMemWatcherError(Box<dyn std::error::Error>),
 }
 
 impl std::error::Error for Error {
@@ -149,7 +149,7 @@ impl fmt::Display for Error {
     }
 }
 
-type Result<T> = std::result::Result<T, Box<std::error::Error>>;
+type Result<T> = std::result::Result<T, Box<dyn std::error::Error>>;
 
 fn errno() -> i32 {
     // _errno_location() is trivially safe to call and dereferencing the
@@ -357,7 +357,7 @@ impl FileWatcher {
         Ok(unsafe { libc::FD_ISSET(fd, &mut self.inout_read_fds) })
     }
 
-    fn watch(&mut self, timeout: &Duration, timer: &mut Timer) -> Result<usize> {
+    fn watch(&mut self, timeout: &Duration, timer: &mut dyn Timer) -> Result<usize> {
         self.inout_read_fds = self.read_fds;
         let n = timer.select(self.max_fd + 1, &mut self.inout_read_fds, &timeout);
         match n {
@@ -553,7 +553,7 @@ fn parse_int_prefix(s: &str) -> Result<(u32, usize)> {
     let mut result = 0;
     let mut count = 0;
     // Skip whitespace first.
-    for c in s.trim_left().chars() {
+    for c in s.trim_start().chars() {
         let x = c.to_digit(10);
         match x {
             Some(d) => {
@@ -761,10 +761,7 @@ impl Dbus for GenuineDbus {
     // PAYLOAD=array:byte:0x10,0xa8,0xa2,0xc5,0x51
     // dbus-send --system --type=signal / $INTERFACE.ChromeEvent $PAYLOAD
     //
-    fn process_dbus_events(
-        &mut self,
-        watcher: &mut FileWatcher,
-    ) -> Result<(Vec<(Event_Type, i64)>)> {
+    fn process_dbus_events(&mut self, watcher: &mut FileWatcher) -> Result<Vec<(Event_Type, i64)>> {
         let mut events: Vec<(Event_Type, i64)> = Vec::new();
         for &fd in self.fds.iter() {
             if !watcher.has_fired_fd(fd)? {
@@ -828,7 +825,7 @@ impl GenuineDbus {
 struct Sampler<'a> {
     always_poll_fast: bool,       // When true, program stays in fast poll mode.
     paths: &'a Paths,             // Paths of files used by the program.
-    dbus: Box<Dbus>,              // Used to receive Chrome event notifications.
+    dbus: Box<dyn Dbus>,          // Used to receive Chrome event notifications.
     low_mem_margin: u32, // Low-memory notification margin, assumed to remain constant in a boot session.
     sample_header: String, // The text at the beginning of each clip file.
     files: Files,        // Files kept open by the program.
@@ -839,7 +836,7 @@ struct Sampler<'a> {
     current_available: u32, // Amount of "available" memory (in MB) at last reading.
     current_time: i64,   // Wall clock in ms at last reading.
     collecting: bool,    // True if we're in the middle of collecting a clip.
-    timer: Box<Timer>,   // Real or mock timer.
+    timer: Box<dyn Timer>, // Real or mock timer.
     quit_request: bool,  // Signals a quit-and-restart request when testing.
 }
 
@@ -847,8 +844,8 @@ impl<'a> Sampler<'a> {
     fn new(
         always_poll_fast: bool,
         paths: &'a Paths,
-        timer: Box<Timer>,
-        dbus: Box<Dbus>,
+        timer: Box<dyn Timer>,
+        dbus: Box<dyn Dbus>,
     ) -> Result<Sampler> {
         let mut low_mem_file_flags = OpenOptions::new();
         low_mem_file_flags.custom_flags(libc::O_NONBLOCK);
@@ -1000,7 +997,7 @@ impl<'a> Sampler<'a> {
         // Idiom for do ... while.
         while {
             let fired_count = {
-                let mut watcher = &mut self.watcher;
+                let watcher = &mut self.watcher;
                 watcher.watch(&SLOW_POLL_PERIOD_DURATION, &mut *self.timer)?
             };
             debug!("fired count: {} at {}", fired_count, self.timer.now());
@@ -1052,7 +1049,7 @@ impl<'a> Sampler<'a> {
 
             let watch_start_time = self.current_time;
             let fired_count = {
-                let mut watcher = &mut self.watcher;
+                let watcher = &mut self.watcher;
                 watcher.watch(&FAST_POLL_PERIOD_DURATION, &mut *self.timer)?
             };
             self.quit_request = self.timer.quit_request();
