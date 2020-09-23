@@ -148,7 +148,7 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmacTwoSpace) {
   ParserTest<KernelParser>("TEST_IWLWIFI_LMAC_TWO_SPACE", {wifi_error});
 }
 
-TEST(AnomalyDetectorTest, KernelIwlwifiErrorSending) {
+TEST(AnomalyDetectorTest, KernelIwlwifiDriverError) {
   ParserRun wifi_error = {
       .expected_text =
           "0000:01:00.0: Loaded firmware version: 17.bfb58538.0 7260-17.ucode\n"
@@ -221,7 +221,7 @@ TEST(AnomalyDetectorTest, KernelIwlwifiErrorSending) {
           "2020-09-01T11:03:11.221478-07:00 ERR kernel: [ 2448.183473] iwlwifi "
           "0000:01:00.0: 0x00000000 | flow_handler\n",
       .expected_flags = {{"--kernel_iwlwifi_error"}}};
-  ParserTest<KernelParser>("TEST_IWLWIFI_ERROR_SENDING", {wifi_error});
+  ParserTest<KernelParser>("TEST_IWLWIFI_DRIVER_ERROR", {wifi_error});
 }
 
 TEST(AnomalyDetectorTest, KernelIwlwifiErrorLmac) {

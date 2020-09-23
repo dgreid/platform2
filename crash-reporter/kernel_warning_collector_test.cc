@@ -377,6 +377,73 @@ TEST_F(KernelWarningCollectorTest, CollectLMACOK) {
       "sig=iwlwifi 0000:00:14.3: 0x00000084 | NMI_INTERRUPT_UNKNOWN       "));
 }
 
+TEST_F(KernelWarningCollectorTest, CollectDriverError) {
+  // Collector produces a crash report.
+  ASSERT_TRUE(test_util::CreateFile(
+      test_path_,
+      "iwlwifi 0000:01:00.0: Current CMD queue read_ptr 20 write_ptr 21\n"
+      "iwlwifi 0000:01:00.0: Loaded firmware version: 17.bfb58538.0 "
+      "7260-17.ucode\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | ADVANCED_SYSASSERT\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | trm_hw_status0\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | trm_hw_status1\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | branchlink2\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | interruptlink1\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | interruptlink2\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | data1\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | data2\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | data3\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | beacon time\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | tsf low\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | tsf hi\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | time gp1\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | time gp2\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | uCode revision type\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | uCode version major\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | uCode version minor\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | hw version\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | board version\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | hcmd\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | isr0\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | isr1\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | isr2\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | isr3\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | isr4\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | last cmd Id\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | wait_event\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | l2p_control\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | l2p_duration\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | l2p_mhvalid\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | l2p_addr_match\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | lmpm_pmg_sel\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | timestamp\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | flow_handler\n"
+      "iwlwifi 0000:01:00.0: Fseq Registers:\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_ERROR_CODE\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_TOP_INIT_VERSION\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_CNVIO_INIT_VERSION\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_OTP_VERSION\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_TOP_CONTENT_VERSION\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_ALIVE_TOKEN\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_CNVI_ID\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | FSEQ_CNVR_ID\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | CNVI_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | CNVR_AUX_MISC_CHIP\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | "
+      "CNVR_SCU_SD_REGS_SD_REG_DIG_DCDC_VTRIM\n"
+      "iwlwifi 0000:01:00.0: 0x00000000 | "
+      "CNVR_SCU_SD_REGS_SD_REG_ACTIVE_VDIG_MIRROR\n"
+      "iwlwifi 0000:01:00.0: Collecting data: trigger 2 fired.\n"
+      "ieee80211 phy0: Hardware restart was requested\n"
+      "iwlwifi 0000:01:00.0: Scan failed! ret -110\n"
+      "<remaining log contents>"));
+  EXPECT_TRUE(
+      collector_.Collect(KernelWarningCollector::WarningType::kIwlwifi));
+  EXPECT_TRUE(DirectoryHasFileWithPatternAndContents(
+      test_crash_directory_, "kernel_iwlwifi_error_ADVANCED_SYSASSERT.*.meta",
+      "sig=iwlwifi 0000:01:00.0: 0x00000000 | ADVANCED_SYSASSERT"));
+}
+
 TEST_F(KernelWarningCollectorTest, CollectOKBadIwlwifiSig) {
   // Collector produces a crash report.
   ASSERT_TRUE(test_util::CreateFile(
