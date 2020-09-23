@@ -16,6 +16,7 @@ const char kEnumerateAutoMountableDevices[] = "EnumerateAutoMountableDevices";
 const char kEnumerateDevices[] = "EnumerateDevices";
 const char kEnumerateMountEntries[] = "EnumerateMountEntries";
 const char kFormat[] = "Format";
+const char kSinglePartitionFormat[] = "SinglePartitionFormat";
 const char kGetDeviceProperties[] = "GetDeviceProperties";
 const char kMount[] = "Mount";
 const char kRename[] = "Rename";
