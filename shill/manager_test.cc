@@ -41,7 +41,6 @@
 #include "shill/mock_profile.h"
 #include "shill/mock_resolver.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/mock_throttler.h"
 #include "shill/portal_detector.h"
 #include "shill/property_store_test.h"
@@ -767,12 +766,8 @@ TEST_F(ManagerTest, MoveService) {
   {
     Profile::Identifier id("irrelevant");
     ProfileRefPtr profile(new Profile(&manager, id, FilePath(), false));
-    auto storage = std::make_unique<MockStore>();
-    EXPECT_CALL(*storage, ContainsGroup(s2->GetStorageIdentifier()))
-        .WillRepeatedly(Return(true));
-    EXPECT_CALL(*storage, Flush())
-        .Times(AnyNumber())
-        .WillRepeatedly(Return(true));
+    auto storage = std::make_unique<FakeStore>();
+    storage->SetString(s2->GetStorageIdentifier(), "AnyKey", "AnyValue");
     profile->SetStorageForTest(std::move(storage));
     AdoptProfile(&manager, profile);
   }
@@ -3544,9 +3539,9 @@ TEST_F(ManagerTest, IsProfileBefore) {
 }
 
 TEST_F(ManagerTest, GetLoadableProfileEntriesForService) {
-  MockStore storage0;
-  MockStore storage1;
-  MockStore storage2;
+  FakeStore storage0;
+  FakeStore storage1;
+  FakeStore storage2;
 
   scoped_refptr<MockProfile> profile0(new NiceMock<MockProfile>(manager(), ""));
   scoped_refptr<MockProfile> profile1(new NiceMock<MockProfile>(manager(), ""));

@@ -15,7 +15,6 @@
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
 #include "shill/mock_profile.h"
-#include "shill/mock_store.h"
 #include "shill/test_event_dispatcher.h"
 
 using testing::_;

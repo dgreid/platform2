@@ -8,10 +8,10 @@
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 
+#include "shill/fake_store.h"
 #include "shill/ipconfig.h"
 #include "shill/mock_control.h"
 #include "shill/mock_ipconfig.h"
-#include "shill/mock_store.h"
 #include "shill/property_store.h"
 
 using std::string;
@@ -252,48 +252,51 @@ TEST_F(StaticIPParametersTest, ControlInterface) {
 }
 
 TEST_F(StaticIPParametersTest, Profile) {
-  StrictMock<MockStore> store;
+  FakeStore store;
   const string kID = "storage_id";
-  EXPECT_CALL(store, GetString(kID, "StaticIP.Address", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kAddress)), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.Gateway", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kGateway)), Return(true)));
-  EXPECT_CALL(store, GetInt(kID, "StaticIP.Mtu", _))
-      .WillOnce(DoAll(SetArgPointee<2>(kMtu), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.NameServers", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kNameServers)), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.SearchDomains", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kSearchDomains)), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.PeerAddress", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kPeerAddress)), Return(true)));
-  EXPECT_CALL(store, GetInt(kID, "StaticIP.Prefixlen", _))
-      .WillOnce(DoAll(SetArgPointee<2>(kPrefixLen), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.ExcludedRoutes", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kExcludedRoutes)), Return(true)));
-  EXPECT_CALL(store, GetString(kID, "StaticIP.IncludedRoutes", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kIncludedRoutes)), Return(true)));
+  store.SetString(kID, "StaticIP.Address", kAddress);
+  store.SetString(kID, "StaticIP.Gateway", kGateway);
+  store.SetInt(kID, "StaticIP.Mtu", kMtu);
+  store.SetString(kID, "StaticIP.NameServers", kNameServers);
+  store.SetString(kID, "StaticIP.SearchDomains", kSearchDomains);
+  store.SetString(kID, "StaticIP.PeerAddress", kPeerAddress);
+  store.SetInt(kID, "StaticIP.Prefixlen", kPrefixLen);
+  store.SetString(kID, "StaticIP.ExcludedRoutes", kExcludedRoutes);
+  store.SetString(kID, "StaticIP.IncludedRoutes", kIncludedRoutes);
+
   static_params_.Load(&store, kID);
   static_params_.ApplyTo(&ipconfig_props_);
   ExpectPopulatedIPConfig();
 
-  EXPECT_CALL(store, SetString(kID, "StaticIP.Address", kAddress))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.Gateway", kGateway))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetInt(kID, "StaticIP.Mtu", kMtu)).WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.NameServers", kNameServers))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.SearchDomains", kSearchDomains))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.PeerAddress", kPeerAddress))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetInt(kID, "StaticIP.Prefixlen", kPrefixLen))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.ExcludedRoutes", kExcludedRoutes))
-      .WillOnce(Return(true));
-  EXPECT_CALL(store, SetString(kID, "StaticIP.IncludedRoutes", kIncludedRoutes))
-      .WillOnce(Return(true));
   static_params_.Save(&store, kID);
+
+  std::string address;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.Address", &address));
+  EXPECT_EQ(address, kAddress);
+  std::string gateway;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.Gateway", &gateway));
+  EXPECT_EQ(gateway, kGateway);
+  int mtu;
+  EXPECT_TRUE(store.GetInt(kID, "StaticIP.Mtu", &mtu));
+  EXPECT_EQ(mtu, kMtu);
+  std::string nameservers;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.NameServers", &nameservers));
+  EXPECT_EQ(nameservers, kNameServers);
+  std::string searchdomains;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.SearchDomains", &searchdomains));
+  EXPECT_EQ(searchdomains, kSearchDomains);
+  std::string peeraddress;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.PeerAddress", &peeraddress));
+  EXPECT_EQ(peeraddress, kPeerAddress);
+  int prefixlen;
+  EXPECT_TRUE(store.GetInt(kID, "StaticIP.Prefixlen", &prefixlen));
+  EXPECT_EQ(prefixlen, kPrefixLen);
+  std::string excludedroutes;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.ExcludedRoutes", &excludedroutes));
+  EXPECT_EQ(excludedroutes, kExcludedRoutes);
+  std::string includedroutes;
+  EXPECT_TRUE(store.GetString(kID, "StaticIP.IncludedRoutes", &includedroutes));
+  EXPECT_EQ(includedroutes, kIncludedRoutes);
 }
 
 TEST_F(StaticIPParametersTest, SavedParameters) {

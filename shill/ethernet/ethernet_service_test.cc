@@ -9,10 +9,10 @@
 
 #include "shill/ethernet/mock_ethernet.h"
 #include "shill/ethernet/mock_ethernet_provider.h"
+#include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_profile.h"
-#include "shill/mock_store.h"
 #include "shill/property_store_test.h"
 #include "shill/refptr_types.h"
 #include "shill/service_property_change_test.h"
@@ -102,12 +102,12 @@ TEST_F(EthernetServiceTest, CustomSetterNoopChange) {
 TEST_F(EthernetServiceTest, LoadAutoConnect) {
   // Make sure when we try to load an Ethernet service, it sets AutoConnect
   // to be true even if the property is not found.
-  NiceMock<MockStore> mock_store;
+  FakeStore store;
   scoped_refptr<MockProfile> mock_profile = new MockProfile(&mock_manager_, "");
   ProfileRefPtr profile = mock_profile.get();
-  EXPECT_CALL(mock_store, ContainsGroup(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(mock_store, GetBool(_, _, _)).WillRepeatedly(Return(false));
-  EXPECT_TRUE(service_->Load(&mock_store));
+  store.SetString(service_->GetStorageIdentifier(), Service::kStorageType,
+                  kTypeEthernet);
+  EXPECT_TRUE(service_->Load(&store));
   EXPECT_TRUE(GetAutoConnect());
 }
 

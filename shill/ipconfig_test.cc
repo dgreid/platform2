@@ -16,7 +16,6 @@
 #include "shill/mock_adaptors.h"
 #include "shill/mock_control.h"
 #include "shill/mock_log.h"
-#include "shill/mock_store.h"
 #include "shill/net/mock_time.h"
 #include "shill/static_ip_parameters.h"
 

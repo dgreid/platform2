@@ -15,11 +15,11 @@
 #include <libpasswordprovider/password_provider.h>
 #include <libpasswordprovider/password_provider_test_utils.h>
 
+#include "shill/fake_store.h"
 #include "shill/key_value_store.h"
 #include "shill/mock_certificate_file.h"
 #include "shill/mock_log.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_store.h"
 #include "shill/supplicant/wpa_supplicant.h"
 #include "shill/technology.h"
 
@@ -213,27 +213,18 @@ TEST_F(EapCredentialsTest, IsEapAuthenticationProperty) {
 }
 
 TEST_F(EapCredentialsTest, LoadAndSave) {
-  MockStore store;
-  // For the values we're not testing...
-  EXPECT_CALL(store, GetCryptedString(_, _, _, _))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(store, GetString(_, _, _)).WillRepeatedly(Return(false));
-
+  FakeStore store;
   const string kId("storage-id");
   const string kIdentity("Purple Onion");
-  EXPECT_CALL(
-      store, GetCryptedString(kId, _,
-                              EapCredentials::kStorageCredentialEapIdentity, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kIdentity), Return(true)));
+  store.SetCryptedString(kId, /*deprecated_key=*/"",
+                         EapCredentials::kStorageCredentialEapIdentity,
+                         kIdentity);
   const string kManagement("Shave and a Haircut");
-  EXPECT_CALL(store,
-              GetString(kId, EapCredentials::kStorageEapKeyManagement, _))
-      .WillOnce(DoAll(SetArgPointee<2>(kManagement), Return(true)));
+  store.SetString(kId, EapCredentials::kStorageEapKeyManagement, kManagement);
   const string kPassword("Two Bits");
-  EXPECT_CALL(
-      store, GetCryptedString(kId, _,
-                              EapCredentials::kStorageCredentialEapPassword, _))
-      .WillOnce(DoAll(SetArgPointee<3>(kPassword), Return(true)));
+  store.SetCryptedString(kId, /*deprecated_key=*/"",
+                         EapCredentials::kStorageCredentialEapPassword,
+                         kPassword);
 
   eap_.Load(&store, kId);
   Mock::VerifyAndClearExpectations(&store);
@@ -242,30 +233,33 @@ TEST_F(EapCredentialsTest, LoadAndSave) {
   EXPECT_EQ(kManagement, eap_.key_management());
   EXPECT_EQ(kPassword, GetPassword());
 
+  // Save with save_credentials=false.
+  store.DeleteGroup(kId);
+  eap_.Save(&store, kId, /*save_credentials=*/false);
+  std::string management;
+  EXPECT_TRUE(store.GetString(kId, EapCredentials::kStorageEapKeyManagement,
+                              &management));
+  EXPECT_EQ(management, kManagement);
   // Authentication properties are deleted from the store if they are empty,
   // so we expect the fields that we haven't set to be deleted.
-  EXPECT_CALL(store, DeleteKey(_, _)).Times(AnyNumber());
-  EXPECT_CALL(store,
-              DeleteKey(kId, EapCredentials::kStorageCredentialEapIdentity));
-  EXPECT_CALL(store, SetString(kId, EapCredentials::kStorageEapKeyManagement,
-                               kManagement));
-  EXPECT_CALL(store,
-              DeleteKey(kId, EapCredentials::kStorageCredentialEapPassword));
-  eap_.Save(&store, kId, false);
-  Mock::VerifyAndClearExpectations(&store);
+  EXPECT_FALSE(store.GetString(
+      kId, EapCredentials::kStorageCredentialEapIdentity, nullptr));
+  EXPECT_FALSE(store.GetString(
+      kId, EapCredentials::kStorageCredentialEapPassword, nullptr));
 
-  // Authentication properties are deleted from the store if they are empty,
-  // so we expect the fields that we haven't set to be deleted.
-  EXPECT_CALL(store, DeleteKey(_, _)).Times(AnyNumber());
-  EXPECT_CALL(
-      store,
-      SetString(kId, EapCredentials::kStorageCredentialEapIdentity, kIdentity));
-  EXPECT_CALL(store, SetString(kId, EapCredentials::kStorageEapKeyManagement,
-                               kManagement));
-  EXPECT_CALL(
-      store,
-      SetString(kId, EapCredentials::kStorageCredentialEapPassword, kPassword));
-  eap_.Save(&store, kId, true);
+  // Save with save_credentials=true.
+  store.DeleteGroup(kId);
+  eap_.Save(&store, kId, /*save_credentials=*/true);
+  EXPECT_TRUE(store.GetString(kId, EapCredentials::kStorageEapKeyManagement,
+                              &management));
+  EXPECT_EQ(management, kManagement);
+  std::string identity, password;
+  EXPECT_TRUE(store.GetString(
+      kId, EapCredentials::kStorageCredentialEapIdentity, &identity));
+  EXPECT_EQ(identity, kIdentity);
+  EXPECT_TRUE(store.GetString(
+      kId, EapCredentials::kStorageCredentialEapPassword, &password));
+  EXPECT_EQ(password, kPassword);
 }
 
 TEST_F(EapCredentialsTest, OutputConnectionMetrics) {

@@ -27,6 +27,7 @@
 #include "shill/dhcp/mock_dhcp_provider.h"
 #include "shill/dns_server_tester.h"
 #include "shill/event_dispatcher.h"
+#include "shill/fake_store.h"
 #include "shill/mock_adaptors.h"
 #include "shill/mock_connection.h"
 #include "shill/mock_control.h"
@@ -39,7 +40,6 @@
 #include "shill/mock_metrics.h"
 #include "shill/mock_portal_detector.h"
 #include "shill/mock_service.h"
-#include "shill/mock_store.h"
 #include "shill/mock_traffic_monitor.h"
 #include "shill/net/mock_rtnl_handler.h"
 #include "shill/net/mock_time.h"
@@ -349,13 +349,9 @@ TEST_F(DeviceTest, AcquireIPConfigWithSelectedService) {
       new MockDHCPConfig(control_interface(), kDeviceName));
 
   const string service_storage_id = "service_storage_id";
-  NiceMock<MockStore> storage;
-  EXPECT_CALL(storage,
-              GetString(service_storage_id, "DHCPProperty.Hostname", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string("name of host")), Return(true)));
-  EXPECT_CALL(storage,
-              GetString(service_storage_id, "DHCPProperty.VendorClass", _))
-      .WillOnce(Return(false));
+  FakeStore storage;
+  storage.SetString(service_storage_id, "DHCPProperty.Hostname",
+                    "name of host");
 
   scoped_refptr<MockService> service(new NiceMock<MockService>(manager()));
   auto service_dhcp_properties =
@@ -365,13 +361,9 @@ TEST_F(DeviceTest, AcquireIPConfigWithSelectedService) {
   SelectService(service);
 
   const string default_profile_storage_id = "default_profile_storage_id";
-  NiceMock<MockStore> default_profile_storage;
-  EXPECT_CALL(default_profile_storage,
-              GetString(default_profile_storage_id, "DHCPProperty.Hostname", _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(default_profile_storage, GetString(default_profile_storage_id,
-                                                 "DHCPProperty.VendorClass", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string("vendorclass")), Return(true)));
+  FakeStore default_profile_storage;
+  default_profile_storage.SetString(default_profile_storage_id,
+                                    "DHCPProperty.VendorClass", "vendorclass");
 
   auto manager_dhcp_properties =
       std::make_unique<DhcpProperties>(/*manager=*/nullptr);
@@ -540,28 +532,24 @@ TEST_F(DeviceTest, MultiHomed) {
 }
 
 TEST_F(DeviceTest, Load) {
-  NiceMock<MockStore> storage;
+  device_->enabled_persistent_ = false;
+
+  FakeStore storage;
   const string id = device_->GetStorageIdentifier();
-  EXPECT_CALL(storage, ContainsGroup(id)).WillOnce(Return(true));
-  EXPECT_CALL(storage, GetBool(id, Device::kStoragePowered, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, GetUint64(id, Device::kStorageReceiveByteCount, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, GetUint64(id, Device::kStorageTransmitByteCount, _))
-      .WillOnce(Return(true));
+  storage.SetBool(id, Device::kStoragePowered, true);
   EXPECT_TRUE(device_->Load(&storage));
+  EXPECT_TRUE(device_->enabled_persistent());
 }
 
 TEST_F(DeviceTest, Save) {
-  NiceMock<MockStore> storage;
-  const string id = device_->GetStorageIdentifier();
-  EXPECT_CALL(storage, SetBool(id, Device::kStoragePowered, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetUint64(id, Device::kStorageReceiveByteCount, _))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetUint64(id, Device::kStorageTransmitByteCount, _))
-      .Times(AtLeast(true));
+  device_->enabled_persistent_ = true;
+
+  FakeStore storage;
   EXPECT_TRUE(device_->Save(&storage));
+  const string id = device_->GetStorageIdentifier();
+  bool powered = false;
+  EXPECT_TRUE(storage.GetBool(id, Device::kStoragePowered, &powered));
+  EXPECT_TRUE(powered);
 }
 
 TEST_F(DeviceTest, SelectedService) {
@@ -2441,11 +2429,7 @@ TEST_F(DevicePortalDetectionTest, DestroyConnection) {
 
 class DeviceByteCountTest : public DeviceTest {
  public:
-  DeviceByteCountTest()
-      : rx_byte_count_(0),
-        tx_byte_count_(0),
-        rx_stored_byte_count_(0),
-        tx_stored_byte_count_(0) {}
+  DeviceByteCountTest() : rx_byte_count_(0), tx_byte_count_(0) {}
   ~DeviceByteCountTest() override = default;
 
   void SetUp() override {
@@ -2454,14 +2438,12 @@ class DeviceByteCountTest : public DeviceTest {
         .WillRepeatedly(Return(&device_info_));
     EXPECT_CALL(device_info_, GetByteCounts(kDeviceInterfaceIndex, _, _))
         .WillRepeatedly(Invoke(this, &DeviceByteCountTest::ReturnByteCounts));
+  }
+
+  void SetStoredByteCounts(uint64_t rx, uint64_t tx) {
     const string id = device_->GetStorageIdentifier();
-    EXPECT_CALL(storage_, ContainsGroup(id)).WillRepeatedly(Return(true));
-    EXPECT_CALL(storage_, GetUint64(id, Device::kStorageReceiveByteCount, _))
-        .WillRepeatedly(
-            Invoke(this, &DeviceByteCountTest::GetStoredReceiveCount));
-    EXPECT_CALL(storage_, GetUint64(id, Device::kStorageTransmitByteCount, _))
-        .WillRepeatedly(
-            Invoke(this, &DeviceByteCountTest::GetStoredTransmitCount));
+    storage_.SetUint64(id, Device::kStorageReceiveByteCount, rx);
+    storage_.SetUint64(id, Device::kStorageTransmitByteCount, tx);
   }
 
   bool ReturnByteCounts(int interface_index, uint64_t* rx, uint64_t* tx) {
@@ -2475,49 +2457,24 @@ class DeviceByteCountTest : public DeviceTest {
                         int64_t expected_tx) {
     int64_t actual_rx = device->GetReceiveByteCount();
     int64_t actual_tx = device->GetTransmitByteCount();
-    EXPECT_EQ(expected_rx, actual_rx);
-    EXPECT_EQ(expected_tx, actual_tx);
     return expected_rx == actual_rx && expected_tx == actual_tx;
   }
 
-  void ExpectSavedCounts(DeviceRefPtr device,
+  bool ExpectSavedCounts(DeviceRefPtr device,
                          int64_t expected_rx,
                          int64_t expected_tx) {
-    EXPECT_CALL(storage_,
-                SetUint64(_, Device::kStorageReceiveByteCount, expected_rx))
-        .WillOnce(Return(true));
-    EXPECT_CALL(storage_,
-                SetUint64(_, Device::kStorageTransmitByteCount, expected_tx))
-        .WillOnce(Return(true));
-    EXPECT_TRUE(device->Save(&storage_));
-  }
-
-  bool GetStoredReceiveCount(const string& group,
-                             const string& key,
-                             uint64_t* value) {
-    if (!rx_stored_byte_count_) {
-      return false;
-    }
-    *value = rx_stored_byte_count_;
-    return true;
-  }
-
-  bool GetStoredTransmitCount(const string& group,
-                              const string& key,
-                              uint64_t* value) {
-    if (!tx_stored_byte_count_) {
-      return false;
-    }
-    *value = tx_stored_byte_count_;
-    return true;
+    const string id = device_->GetStorageIdentifier();
+    uint64_t rx, tx;
+    EXPECT_TRUE(storage_.GetUint64(id, Device::kStorageReceiveByteCount, &rx));
+    EXPECT_TRUE(storage_.GetUint64(id, Device::kStorageTransmitByteCount, &tx));
+    return static_cast<uint64_t>(expected_rx) == rx &&
+           static_cast<uint64_t>(expected_tx) == tx;
   }
 
  protected:
-  NiceMock<MockStore> storage_;
+  FakeStore storage_;
   uint64_t rx_byte_count_;
   uint64_t tx_byte_count_;
-  uint64_t rx_stored_byte_count_;
-  uint64_t tx_stored_byte_count_;
 };
 
 TEST_F(DeviceByteCountTest, GetByteCounts) {
@@ -2539,7 +2496,8 @@ TEST_F(DeviceByteCountTest, GetByteCounts) {
   EXPECT_TRUE(ExpectByteCounts(device, delta_rx_count, delta_tx_count));
 
   // Expect the correct values to be saved to the profile.
-  ExpectSavedCounts(device, delta_rx_count, delta_tx_count);
+  EXPECT_TRUE(device->Save(&storage_));
+  EXPECT_TRUE(ExpectSavedCounts(device, delta_rx_count, delta_tx_count));
 
   // If Device is loaded from a profile that does not contain stored byte
   // counts, the byte counts reported should remain unchanged.
@@ -2548,22 +2506,24 @@ TEST_F(DeviceByteCountTest, GetByteCounts) {
 
   // If Device is loaded from a profile that contains stored byte
   // counts, the byte counts reported should now reflect the stored values.
-  rx_stored_byte_count_ = 345;
-  tx_stored_byte_count_ = 678;
+  uint64_t rx_stored_byte_count = 345;
+  uint64_t tx_stored_byte_count = 678;
+  SetStoredByteCounts(rx_stored_byte_count, tx_stored_byte_count);
   EXPECT_TRUE(device->Load(&storage_));
   EXPECT_TRUE(
-      ExpectByteCounts(device, rx_stored_byte_count_, tx_stored_byte_count_));
+      ExpectByteCounts(device, rx_stored_byte_count, tx_stored_byte_count));
 
   // Increases to the interface receive count should be reflected as offsets
   // to the stored byte counts.
   rx_byte_count_ += delta_rx_count;
   tx_byte_count_ += delta_tx_count;
-  EXPECT_TRUE(ExpectByteCounts(device, rx_stored_byte_count_ + delta_rx_count,
-                               tx_stored_byte_count_ + delta_tx_count));
+  EXPECT_TRUE(ExpectByteCounts(device, rx_stored_byte_count + delta_rx_count,
+                               tx_stored_byte_count + delta_tx_count));
 
   // Expect the correct values to be saved to the profile.
-  ExpectSavedCounts(device, rx_stored_byte_count_ + delta_rx_count,
-                    tx_stored_byte_count_ + delta_tx_count);
+  EXPECT_TRUE(device->Save(&storage_));
+  EXPECT_TRUE(ExpectSavedCounts(device, rx_stored_byte_count + delta_rx_count,
+                                tx_stored_byte_count + delta_tx_count));
 
   // Expect that after resetting byte counts, read-back values return to zero,
   // and that the device requests this information to be persisted.

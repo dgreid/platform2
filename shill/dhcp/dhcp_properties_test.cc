@@ -7,10 +7,10 @@
 #include <chromeos/dbus/service_constants.h>
 #include <gtest/gtest.h>
 
+#include "shill/fake_store.h"
 #include "shill/mock_control.h"
 #include "shill/mock_manager.h"
 #include "shill/mock_metrics.h"
-#include "shill/mock_store.h"
 #include "shill/property_store.h"
 #include "shill/test_event_dispatcher.h"
 
@@ -166,63 +166,58 @@ TEST_F(DhcpPropertiesTest, ClearMappedStringPropertyNoExistingValue) {
 }
 
 TEST_F(DhcpPropertiesTest, LoadEmpty) {
-  MockStore storage;
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-      .WillOnce(Return(false));
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-      .WillOnce(Return(false));
+  FakeStore storage;
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_TRUE(GetDhcpProperties().IsEmpty());
 }
 
 TEST_F(DhcpPropertiesTest, Load) {
-  MockStore storage;
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kVendorClass)), Return(true)));
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kHostname)), Return(true)));
+  FakeStore storage;
+  storage.SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass);
+  storage.SetString(kStorageID, "DHCPProperty.Hostname", kHostname);
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_EQ(kVendorClass, GetDhcpProperties().Get<string>("VendorClass"));
   EXPECT_EQ(kHostname, GetDhcpProperties().Get<string>("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, LoadWithValuesSetAndClearRequired) {
-  MockStore storage;
+  FakeStore storage;
   GetDhcpProperties().Set<string>("Hostname", kHostname);
 
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-      .WillOnce(DoAll(SetArgPointee<2>(string(kVendorClass)), Return(true)));
-  EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-      .WillOnce(Return(false));
+  storage.SetString(kStorageID, "DHCPProperty.VendorClass",
+                    string(kVendorClass));
   dhcp_properties_.Load(&storage, kStorageID);
   EXPECT_EQ(kVendorClass, GetDhcpProperties().Get<string>("VendorClass"));
   EXPECT_FALSE(GetDhcpProperties().ContainsVariant("Hostname"));
 }
 
 TEST_F(DhcpPropertiesTest, SaveWithValuesSet) {
-  MockStore storage;
+  FakeStore storage;
   GetDhcpProperties().Set<string>("VendorClass", kVendorClass);
-  GetDhcpProperties().Set<string>("Hostname", "");
+  GetDhcpProperties().Set<string>("Hostname", "hostname");
 
-  EXPECT_CALL(storage,
-              SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, SetString(kStorageID, "DHCPProperty.Hostname", ""))
-      .WillOnce(Return(true));
   dhcp_properties_.Save(&storage, kStorageID);
+  std::string vendorclass, hostname;
+  EXPECT_TRUE(
+      storage.GetString(kStorageID, "DHCPProperty.VendorClass", &vendorclass));
+  EXPECT_EQ(vendorclass, kVendorClass);
+  EXPECT_TRUE(
+      storage.GetString(kStorageID, "DHCPProperty.Hostname", &hostname));
+  EXPECT_EQ(hostname, "hostname");
 }
 
 TEST_F(DhcpPropertiesTest, SavePropertyNotSetShouldBeDeleted) {
-  MockStore storage;
+  FakeStore storage;
   GetDhcpProperties().Set<string>("VendorClass", kVendorClass);
 
-  EXPECT_CALL(storage, SetString(_, _, _)).Times(0);
-  EXPECT_CALL(storage,
-              SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass))
-      .WillOnce(Return(true));
-  EXPECT_CALL(storage, DeleteKey(kStorageID, "DHCPProperty.Hostname"))
-      .WillOnce(Return(true));
   dhcp_properties_.Save(&storage, kStorageID);
+  std::string vendorclass, hostname;
+  EXPECT_TRUE(
+      storage.GetString(kStorageID, "DHCPProperty.VendorClass", &vendorclass));
+  EXPECT_EQ(vendorclass, kVendorClass);
+  EXPECT_FALSE(
+      storage.GetString(kStorageID, "DHCPProperty.Hostname", &hostname));
+  EXPECT_TRUE(hostname.empty());
 }
 
 TEST_F(DhcpPropertiesTest, CombineIntoEmpty) {

@@ -17,9 +17,9 @@
 #include "shill/dhcp/mock_dhcp_provider.h"
 #include "shill/dhcp/mock_dhcp_proxy.h"
 #include "shill/event_dispatcher.h"
+#include "shill/fake_store.h"
 #include "shill/mock_log.h"
 #include "shill/mock_process_manager.h"
-#include "shill/mock_store.h"
 #include "shill/property_store_test.h"
 #include "shill/testing.h"
 
@@ -101,22 +101,12 @@ DHCPv4ConfigRefPtr DHCPv4ConfigTest::CreateMockMinijailConfig(
     const string& vendorclass,
     const string& lease_suffix,
     bool arp_gateway) {
-  MockStore storage;
+  FakeStore storage;
   DhcpProperties dhcp_props(/*manager=*/nullptr);
-  if (!hostname.empty()) {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-        .WillOnce(DoAll(SetArgPointee<2>(string(kHostName)), Return(true)));
-  } else {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-        .WillOnce(Return(false));
-  }
-  if (!vendorclass.empty()) {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-        .WillOnce(DoAll(SetArgPointee<2>(string(kVendorClass)), Return(true)));
-  } else {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-        .WillOnce(Return(false));
-  }
+  if (!hostname.empty())
+    storage.SetString(kStorageID, "DHCPProperty.Hostname", kHostName);
+  if (!vendorclass.empty())
+    storage.SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass);
   dhcp_props.Load(&storage, kStorageID);
   DHCPv4ConfigRefPtr config(new DHCPv4Config(
       control_interface(), dispatcher(), &provider_, kDeviceName, lease_suffix,
@@ -131,22 +121,12 @@ DHCPv4ConfigRefPtr DHCPv4ConfigTest::CreateRunningConfig(
     const string& vendorclass,
     const string& lease_suffix,
     bool arp_gateway) {
-  MockStore storage;
+  FakeStore storage;
   DhcpProperties dhcp_props(/*manager=*/nullptr);
-  if (!hostname.empty()) {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-        .WillOnce(DoAll(SetArgPointee<2>(string(kHostName)), Return(true)));
-  } else {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.Hostname", _))
-        .WillOnce(Return(false));
-  }
-  if (!vendorclass.empty()) {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-        .WillOnce(DoAll(SetArgPointee<2>(string(kVendorClass)), Return(true)));
-  } else {
-    EXPECT_CALL(storage, GetString(kStorageID, "DHCPProperty.VendorClass", _))
-        .WillOnce(Return(false));
-  }
+  if (!hostname.empty())
+    storage.SetString(kStorageID, "DHCPProperty.Hostname", kHostName);
+  if (!vendorclass.empty())
+    storage.SetString(kStorageID, "DHCPProperty.VendorClass", kVendorClass);
   dhcp_props.Load(&storage, kStorageID);
   DHCPv4ConfigRefPtr config(new DHCPv4Config(
       control_interface(), dispatcher(), &provider_, kDeviceName, lease_suffix,

@@ -650,7 +650,6 @@ if (use.test) {
       "mock_routing_table.cc",
       "mock_service.cc",
       "mock_socket_info_reader.cc",
-      "mock_store.cc",
       "mock_throttler.cc",
       "mock_traffic_monitor.cc",
       "mock_virtual_device.cc",
