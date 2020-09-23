@@ -47,9 +47,9 @@ class SaneDevice {
 
   virtual bool SetScanResolution(brillo::ErrorPtr* error, int resolution) = 0;
   virtual bool GetDocumentSource(brillo::ErrorPtr* error,
-                                 DocumentSource* source_out) = 0;
+                                 std::string* source_name_out) = 0;
   virtual bool SetDocumentSource(brillo::ErrorPtr* error,
-                                 const DocumentSource& source) = 0;
+                                 const std::string& source_name) = 0;
   virtual bool SetColorMode(brillo::ErrorPtr* error, ColorMode color_mode) = 0;
   virtual SANE_Status StartScan(brillo::ErrorPtr* error) = 0;
   virtual bool GetScanParameters(brillo::ErrorPtr* error,

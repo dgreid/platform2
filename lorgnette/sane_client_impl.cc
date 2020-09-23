@@ -241,8 +241,8 @@ bool SaneDeviceImpl::SetScanResolution(brillo::ErrorPtr* error,
 }
 
 bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
-                                       DocumentSource* source_out) {
-  if (!source_out) {
+                                       std::string* source_name_out) {
+  if (!source_name_out) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError,
                          "source_out argument cannot be null");
@@ -263,12 +263,12 @@ bool SaneDeviceImpl::GetDocumentSource(brillo::ErrorPtr* error,
     return false;
   }
 
-  *source_out = CreateDocumentSource(source_name.value());
+  *source_name_out = source_name.value();
   return true;
 }
 
 bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
-                                       const DocumentSource& source) {
+                                       const std::string& source_name) {
   if (options_.count(kSource) == 0) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "No source option found.");
@@ -276,7 +276,7 @@ bool SaneDeviceImpl::SetDocumentSource(brillo::ErrorPtr* error,
   }
 
   SaneOption& option = options_.at(kSource);
-  if (!option.SetString(source.name())) {
+  if (!option.SetString(source_name)) {
     brillo::Error::AddTo(error, FROM_HERE, brillo::errors::dbus::kDomain,
                          kManagerServiceError, "Failed to set SaneOption");
     return false;

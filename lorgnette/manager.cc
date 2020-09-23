@@ -20,6 +20,7 @@
 #include "lorgnette/enums.h"
 #include "lorgnette/epson_probe.h"
 #include "lorgnette/firewall_manager.h"
+#include "lorgnette/guess_source.h"
 #include "lorgnette/ippusb_device.h"
 
 using std::string;
@@ -411,12 +412,13 @@ std::vector<uint8_t> Manager::StartScan(
     return impl::SerializeProto(response);
   }
 
-  DocumentSource source;
-  if (!device->GetDocumentSource(&error, &source)) {
+  std::string source_name;
+  if (!device->GetDocumentSource(&error, &source_name)) {
     response.set_failure_reason("Failed to get DocumentSource: " +
                                 SerializeError(error));
     return impl::SerializeProto(response);
   }
+  base::Optional<SourceType> source_type = GuessSourceType(source_name);
 
   ScanJobState scan_state;
   scan_state.device_name = request.device_name();
@@ -425,8 +427,8 @@ std::vector<uint8_t> Manager::StartScan(
   // Set the number of pages based on the source type. If it's ADF, keep
   // scanning until an error is received.
   // Otherwise, stop scanning after one page.
-  if (source.type() == SOURCE_ADF_SIMPLEX ||
-      source.type() == SOURCE_ADF_DUPLEX) {
+  if (source_type.has_value() && (source_type.value() == SOURCE_ADF_SIMPLEX ||
+                                  source_type.value() == SOURCE_ADF_DUPLEX)) {
     scan_state.total_pages = base::nullopt;
   } else {
     scan_state.total_pages = 1;
@@ -570,7 +572,7 @@ bool Manager::StartScanInternal(brillo::ErrorPtr* error,
   if (settings.has_source()) {
     LOG(INFO) << "User requested document source: '" << settings.source().name()
               << "'";
-    if (!device->SetDocumentSource(error, settings.source())) {
+    if (!device->SetDocumentSource(error, settings.source().name())) {
       return false;
     }
   }
