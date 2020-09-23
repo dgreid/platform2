@@ -951,7 +951,8 @@ class LegacyCryptohomeInterfaceAdaptor
                           const RequestProtoType&,
                           const base::Callback<void(const ReplyProtoType&)>&,
                           const base::Callback<void(brillo::Error*)>&,
-                          int)> target_method) {
+                          int)> target_method,
+                      int timeout_ms = dbus::ObjectProxy::TIMEOUT_USE_DEFAULT) {
     int async_id = NextSequence();
 
     base::Callback<void(const ReplyProtoType&)> on_success = base::Bind(
@@ -961,9 +962,7 @@ class LegacyCryptohomeInterfaceAdaptor
         base::Bind(&LegacyCryptohomeInterfaceAdaptor::AsyncForwardErrorWithData<
                        ReplyProtoType>,
                    base::Unretained(this), func, async_id);
-    std::move(target_method)
-        .Run(request, on_success, on_failure,
-             dbus::ObjectProxy::TIMEOUT_USE_DEFAULT);
+    std::move(target_method).Run(request, on_success, on_failure, timeout_ms);
 
     return async_id;
   }

@@ -1080,8 +1080,7 @@ class LegacyCryptohomeInterfaceAdaptorTestForGetTpmStatus
 
   void ExpectAttestationGetStatus(
       const base::Optional<attestation::GetStatusReply>& reply) {
-    EXPECT_CALL(attestation_,
-                GetStatusAsync(_, _, _, dbus::ObjectProxy::TIMEOUT_USE_DEFAULT))
+    EXPECT_CALL(attestation_, GetStatusAsync(_, _, _, _))
         .WillOnce(Invoke(
             [reply](const attestation::GetStatusRequest& in_request,
                     const base::Callback<void(
