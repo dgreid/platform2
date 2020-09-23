@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include <base/bind.h>
+#include <base/callback_helpers.h>
 #include <base/files/file_util.h>
 #include <base/logging.h>
 #include <chromeos/dbus/debugd/dbus-constants.h>
@@ -85,6 +87,22 @@ int RunAsUser(const std::string& user,
   int result = ProcessWithOutput::kRunError;
   process.RedirectUsingPipe(STDIN_FILENO, true);
   if (process.Start()) {
+    // Ignore SIGPIPE.
+    const struct sigaction kSigIgn = {.sa_handler = SIG_IGN,
+                                      .sa_flags = SA_RESTART};
+    struct sigaction old_sa;
+    if (sigaction(SIGPIPE, &kSigIgn, &old_sa)) {
+      PLOG(ERROR) << "sigaction failed";
+      return 1;
+    }
+    // Restore the old signal handler at the end of the scope.
+    const base::ScopedClosureRunner kRestoreSignal(base::BindOnce(
+        [](const struct sigaction& sa) {
+          if (sigaction(SIGPIPE, &sa, nullptr)) {
+            PLOG(ERROR) << "sigaction failed";
+          }
+        },
+        old_sa));
     int stdin_fd = process.GetPipe(STDIN_FILENO);
     // Kill the process if writing to or closing the pipe fails.
     if (!base::WriteFileDescriptor(stdin_fd, buf.data(), buf.size()) ||
