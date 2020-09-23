@@ -17,6 +17,7 @@
 #include <base/files/file_enumerator.h>
 #include <base/files/file_util.h>
 #include <base/json/json_writer.h>
+#include <base/strings/string_util.h>
 #include <base/strings/stringprintf.h>
 #include <base/values.h>
 
@@ -28,13 +29,16 @@ constexpr char kDevVideoPath[] = "/dev/video*";
 struct FieldType {
   std::string key_name;
   std::string file_name;
+  bool always_upper_case;
 };
-const std::vector<FieldType> kRequiredFields{{"usb_vendor_id", "idVendor"},
-                                             {"usb_product_id", "idProduct"}};
+const std::vector<FieldType> kRequiredFields{
+    {"usb_vendor_id", "idVendor", false},
+    {"usb_product_id", "idProduct", false}};
 const std::vector<FieldType> kOptionalFields{
-    {"usb_manufacturer", "manufacturer"},
-    {"usb_product", "product"},
-    {"usb_bcd_device", "bcdDevice"}};
+    {"usb_manufacturer", "manufacturer", false},
+    {"usb_product", "product", false},
+    {"usb_bcd_device", "bcdDevice", false},
+    {"usb_removable", "removable", true}};
 
 bool IsCaptureDevice(const base::FilePath& path) {
   int32_t fd = open(path.value().c_str(), O_RDONLY);
@@ -74,6 +78,9 @@ bool ReadSysfs(const base::FilePath& path,
     return false;
   }
   base::TrimString(*content, " \n", content);
+  if (field.always_upper_case) {
+    *content = base::ToUpperASCII(*content);
+  }
   return true;
 }
 
