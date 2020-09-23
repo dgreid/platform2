@@ -141,7 +141,6 @@ class HalSensor : public IHalSensor {
   MUINT32 m_minShutter;
   MUINT32 m_maxFramelength;
   MUINT32 m_framelength;
-  MUINT32 m_SensorGainBase;
   MUINT32 m_SensorGainFactor;
   MUINT32 m_SensorGainMapSize;
   struct imgsensor_agc_param_struct* m_SensorAgcParam;

@@ -708,8 +708,7 @@ MBOOL HalSensor::configure(MUINT const uCountOfParam,
   m_LineTimeInus = (line_length * 1000000 + ((pix_clk / 1000) - 1)) /
                    (pix_clk / 1000);  // 1000 base , 33657 mean 33.657 us
   m_SensorGainFactor = pImgsensorInfo->SensorGainfactor;
-  m_SensorGainBase = GAIN_BASE_3A >> m_SensorGainFactor;
-  mDgainRatio = m_SensorGainBase;
+  mDgainRatio = BASEGAIN;
   m_SensorGainMapSize = sizeof(pImgsensorInfo->sensor_agc_param_map) /
                         sizeof(pImgsensorInfo->sensor_agc_param_map[0]);
   m_SensorAgcParam = pImgsensorInfo->sensor_agc_param_map;
@@ -912,7 +911,7 @@ MINT HalSensor::sendCommand(MUINT indexDual,
                       : u32temp;
         u32temp1 = u32temp & ~3;
         if (u32temp1 > 0) {
-          mDgainRatio = m_SensorGainBase * u32temp / u32temp1;
+          mDgainRatio = BASEGAIN * u32temp / u32temp1;
         } else {
           CAM_LOGW("[%s] too small exp-lines, using SensorGainBase\n",
                    __FUNCTION__);
