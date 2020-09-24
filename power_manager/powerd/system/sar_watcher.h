@@ -104,6 +104,10 @@ class SarWatcher : public UserProximityWatcherInterface,
   // valid proximity sensor exists.
   bool OnSensorDetected(const std::string& syspath, const std::string& devlink);
 
+  // Check new udev device. If the device of |device_info| is a proximity
+  // sensor, start listening to proximity events for it.
+  void OnNewUdevDevice(const UdevDeviceInfo& device_info);
+
   OpenIioEventsFunc open_iio_events_func_;
 
   UdevInterface* udev_ = nullptr;  // non-owned
