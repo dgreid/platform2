@@ -55,16 +55,16 @@ const char kParserPath[] = "/usr/sbin/authpolicy_parser";
 const char kSmbClientPath[] = "/usr/bin/smbclient";
 
 // Seccomp filters.
-const char kKInitSeccompFilterPath[] = "/usr/share/policy/kinit-seccomp.policy";
+const char kKInitSeccompFilterPath[] = "/usr/share/policy/samba-seccomp.policy";
 const char kKListSeccompFilterPath[] = "/usr/share/policy/klist-seccomp.policy";
 const char kKPasswdSeccompFilterPath[] =
     "/usr/share/policy/kpasswd-seccomp.policy";
 const char kNetAdsSeccompFilterPath[] =
-    "/usr/share/policy/net_ads-seccomp.policy";
+    "/usr/share/policy/samba-seccomp.policy";
 const char kParserSeccompFilterPath[] =
     "/usr/share/policy/authpolicy_parser-seccomp.policy";
 const char kSmbClientSeccompFilterPath[] =
-    "/usr/share/policy/smbclient-seccomp.policy";
+    "/usr/share/policy/samba-seccomp.policy";
 
 // Debug flags.
 const char kDebugFlagsPath[] = "/etc/authpolicyd_flags";
