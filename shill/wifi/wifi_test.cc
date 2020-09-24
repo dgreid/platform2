@@ -1032,6 +1032,9 @@ class WiFiObjectTest : public ::testing::TestWithParam<string> {
   }
   bool GetSupplicantPresent() { return wifi_->supplicant_present_; }
   bool GetIsRoamingInProgress() { return wifi_->is_roaming_in_progress_; }
+  void SetIsRoamingInProgress(bool is_roaming_in_progress) {
+    wifi_->is_roaming_in_progress_ = is_roaming_in_progress;
+  }
   void SetIPConfig(const IPConfigRefPtr& ipconfig) {
     return wifi_->set_ipconfig(ipconfig);
   }
@@ -2286,8 +2289,11 @@ TEST_F(WiFiMainTest, StateChangeBackwardsWithService) {
   EXPECT_CALL(*service, ResetSuspectedCredentialFailures());
   InitiateConnect(service);
   ReportStateChanged(WPASupplicant::kInterfaceStateCompleted);
+  SetIsRoamingInProgress(true);
   ReportStateChanged(WPASupplicant::kInterfaceStateAuthenticating);
   EXPECT_EQ(WPASupplicant::kInterfaceStateAuthenticating, GetSupplicantState());
+  ReportStateChanged(WPASupplicant::kInterfaceStateAssociating);
+  EXPECT_EQ(WPASupplicant::kInterfaceStateAssociating, GetSupplicantState());
   // Verify expectations now, because WiFi may report other state changes
   // when WiFi is Stop()-ed (during TearDown()).
   Mock::VerifyAndClearExpectations(service.get());

@@ -1887,25 +1887,13 @@ void WiFi::StateChanged(const string& new_state) {
   }
 
   if (new_state == WPASupplicant::kInterfaceStateCompleted) {
-    // There are two possibilities for state changes during a roam in which we
-    // don't experience an intervening disconnect:
-    // 1. We transition from a connected state to Associating, then to
-    // Configuring, and finally back to Connected. This tends to happen in
-    // softMAC drivers where roaming and connecting is often controlled in user
-    // space and state changes are more transparent.
-    // 2. We transition from a connected state directly back to Connected. This
-    // can happen in fullMAC drivers where the driver is responsible for roaming
-    // and connecting, and wpa_supplicant may or may not receive all relevant
-    // state change events.
-    //
-    // In either of these cases, we'd like to simply renew our DHCP lease in
-    // case the new AP is on a different subnet, so we check for an existing
-    // ipconfig_ in addition to a Connected Service state.
-    // TODO(matthewmwang): Handle the IPv6 roam case.
-    if (affected_service->IsConnected() ||
-        (ipconfig() && is_roaming_in_progress_)) {
+    if (affected_service->IsConnected()) {
       StopReconnectTimer();
       if (is_roaming_in_progress_) {
+        // This means wpa_supplicant completed a roam without an intervening
+        // disconnect. We should renew our DHCP lease just in case the new
+        // AP is on a different subnet than where we started.
+        // TODO(matthewmwang): Handle the IPv6 roam case.
         is_roaming_in_progress_ = false;
         if (ipconfig()) {
           LOG(INFO) << link_name() << " renewing L3 configuration after roam.";
@@ -1933,23 +1921,24 @@ void WiFi::StateChanged(const string& new_state) {
       }
     }
     has_already_completed_ = true;
-  } else if (new_state == WPASupplicant::kInterfaceStateAssociated) {
-    affected_service->SetState(Service::kStateAssociating);
-    // Supplicant does not indicate successful association in assoc status
-    // messages, but we know at this point that 802.11 association succeeded
-    supplicant_assoc_status_ = IEEE_80211::kStatusCodeSuccessful;
   } else if (new_state == WPASupplicant::kInterfaceStateAuthenticating ||
              new_state == WPASupplicant::kInterfaceStateAssociating ||
+             new_state == WPASupplicant::kInterfaceStateAssociated ||
              new_state == WPASupplicant::kInterfaceState4WayHandshake ||
              new_state == WPASupplicant::kInterfaceStateGroupHandshake) {
     if (new_state == WPASupplicant::kInterfaceStateAssociating) {
       // Ensure auth status is kept up-to-date
       supplicant_auth_status_ = IEEE_80211::kStatusCodeSuccessful;
+    } else if (new_state == WPASupplicant::kInterfaceStateAssociated) {
+      // Supplicant does not indicate successful association in assoc status
+      // messages, but we know at this point that 802.11 association succeeded
+      supplicant_assoc_status_ = IEEE_80211::kStatusCodeSuccessful;
     }
-    // Ignore transitions into these states from Completed, to avoid
-    // bothering the user when roaming, or re-keying.
-    if (old_state != WPASupplicant::kInterfaceStateCompleted)
+    // Ignore transitions into these states when roaming is in progress, to
+    // avoid bothering the user when roaming, or re-keying.
+    if (!is_roaming_in_progress_) {
       affected_service->SetState(Service::kStateAssociating);
+    }
     // TODO(quiche): On backwards transitions, we should probably set
     // a timeout for getting back into the completed state. At present,
     // we depend on wpa_supplicant eventually reporting that CurrentBSS
