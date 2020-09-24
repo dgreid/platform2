@@ -1485,6 +1485,12 @@ bool Device::StartLinkMonitor() {
     return false;
   }
 
+  if (connection_->IsIPv6()) {
+    SLOG(this, 2) << "Device " << link_name()
+                  << ": Link Monitoring is disabled for IPv6-only network.";
+    return false;
+  }
+
   if (selected_service_ && selected_service_->link_monitor_disabled()) {
     SLOG(this, 2) << "Device " << link_name()
                   << ": Link Monitoring is disabled for the selected service";

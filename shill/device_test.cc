@@ -1093,6 +1093,12 @@ TEST_F(DeviceTest, LinkMonitor) {
   EXPECT_FALSE(StartLinkMonitor());
 
   EXPECT_CALL(*link_monitor, Start()).Times(0);
+  EXPECT_CALL(*connection, IsIPv6())
+      .WillOnce(Return(true))
+      .WillRepeatedly(Return(false));
+  EXPECT_FALSE(StartLinkMonitor());
+
+  EXPECT_CALL(*link_monitor, Start()).Times(0);
   EXPECT_CALL(*service, link_monitor_disabled())
       .WillOnce(Return(true))
       .WillRepeatedly(Return(false));
