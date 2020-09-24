@@ -45,6 +45,13 @@ std::vector<IioChannel*> IioDevice::GetAllChannels() {
   return channels;
 }
 
+void IioDevice::EnableAllChannels() {
+  for (IioChannel* chn : GetAllChannels()) {
+    if (!chn->SetEnabledAndCheck(true))
+      LOG(ERROR) << "Failed to enable channel: " << chn->GetId();
+  }
+}
+
 IioChannel* IioDevice::GetChannel(int32_t index) {
   if (index < 0 || index >= channels_.size())
     return nullptr;

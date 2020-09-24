@@ -141,7 +141,10 @@ class LIBMEMS_EXPORT FakeIioChannel : public IioChannel {
   const char* GetId() const override { return id_.c_str(); }
 
   bool IsEnabled() const override { return enabled_; }
-  bool SetEnabled(bool en) override;
+  void SetEnabled(bool en) override;
+
+  bool IsScanElementsEnabled() { return scan_elements_enabled_; }
+  bool SetScanElementsEnabled(bool en) override;
 
   base::Optional<std::string> ReadStringAttribute(
       const std::string& name) const override;
@@ -165,6 +168,7 @@ class LIBMEMS_EXPORT FakeIioChannel : public IioChannel {
  private:
   std::string id_;
   bool enabled_;
+  bool scan_elements_enabled_ = false;
   std::map<std::string, std::string> text_attributes_;
   std::map<std::string, int64_t> numeric_attributes_;
   std::map<std::string, double> double_attributes_;

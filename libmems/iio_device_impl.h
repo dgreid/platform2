@@ -73,7 +73,6 @@ class LIBMEMS_EXPORT IioDeviceImpl : public IioDevice {
  private:
   static void IioBufferDeleter(iio_buffer* buffer);
 
-  void EnableAllChannels();
   bool CreateBuffer();
 
   IioSample DeserializeSample(const uint8_t* src);

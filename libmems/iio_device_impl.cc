@@ -61,8 +61,6 @@ IioDeviceImpl::IioDeviceImpl(IioContextImpl* ctx, iio_device* dev)
     channels_[i].chn = std::make_unique<IioChannelImpl>(channel);
     channels_[i].chn_id = channels_[i].chn->GetId();
   }
-
-  EnableAllChannels();
 }
 
 IioContext* IioDeviceImpl::GetContext() const {
@@ -313,13 +311,6 @@ base::TimeDelta IioDeviceImpl::GetPeriodForObsoleteSamplesInMilliseconds() {
 void IioDeviceImpl::IioBufferDeleter(iio_buffer* buffer) {
   iio_buffer_cancel(buffer);
   iio_buffer_destroy(buffer);
-}
-
-void IioDeviceImpl::EnableAllChannels() {
-  for (IioChannel* chn : GetAllChannels()) {
-    if (!chn->SetEnabledAndCheck(true))
-      LOG(ERROR) << "Failed to enable channel: " << chn->GetId();
-  }
 }
 
 bool IioDeviceImpl::CreateBuffer() {

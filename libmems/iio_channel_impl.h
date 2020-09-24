@@ -29,7 +29,9 @@ class LIBMEMS_EXPORT IioChannelImpl : public IioChannel {
   const char* GetId() const override;
 
   bool IsEnabled() const override;
-  bool SetEnabled(bool en) override;
+  void SetEnabled(bool en) override;
+
+  bool SetScanElementsEnabled(bool en) override;
 
   base::Optional<std::string> ReadStringAttribute(
       const std::string& name) const override;

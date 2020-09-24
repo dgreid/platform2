@@ -103,6 +103,9 @@ class LIBMEMS_EXPORT IioDevice {
   // Returns all channels belonging to this device.
   std::vector<IioChannel*> GetAllChannels();
 
+  // Enables all channels belonging to this device.
+  void EnableAllChannels();
+
   // Finds the IIO channel |index| as the index in this device and returns it.
   // It will return nullptr if no such channel can be found.
   IioChannel* GetChannel(int32_t index);

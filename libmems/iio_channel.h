@@ -30,8 +30,7 @@ class IioChannel {
   virtual bool IsEnabled() const = 0;
 
   // Sets this channel's enabled status to |en|.
-  // Returns false on failure.
-  virtual bool SetEnabled(bool en) = 0;
+  virtual void SetEnabled(bool en) = 0;
 
   // Sets the channel's enabled status to |en|,
   // and returns true if the channel's enabled status matches
@@ -40,6 +39,14 @@ class IioChannel {
     SetEnabled(en);
     return en == IsEnabled();
   }
+
+  // Used only in mems_setup to enable channels for iioservice or Chrome to use.
+  // We directly write to the scan elements instead of setting up a buffer and
+  // keeping it enabled while we run (which wouldn't be long enough anyway). we
+  // do not need to handle the non scan-element case for the channels we care
+  // about.
+  // Returns false on failure of the scan-element case.
+  virtual bool SetScanElementsEnabled(bool en) = 0;
 
   // Reads the |name| attribute of this channel and returns the value
   // as a string. It will return base::nullopt if the attribute cannot

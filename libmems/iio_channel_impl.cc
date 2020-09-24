@@ -26,18 +26,14 @@ bool IioChannelImpl::IsEnabled() const {
   return iio_channel_is_enabled(channel_);
 }
 
-bool IioChannelImpl::SetEnabled(bool en) {
+void IioChannelImpl::SetEnabled(bool en) {
   if (en)
     iio_channel_enable(channel_);
   else
     iio_channel_disable(channel_);
+}
 
-  // this tool will not stick around listening to this channel,
-  // all it needs to do is leave the channel enabled for Chrome to use;
-  // so, we directly write to the scan elements instead of setting up
-  // a buffer and keeping it enabled while we run (which wouldn't be long
-  // enough anyway). we do not need to handle the non scan-element case for
-  // the channels we care about.
+bool IioChannelImpl::SetScanElementsEnabled(bool en) {
   if (!iio_channel_is_scan_element(channel_))
     return true;
 

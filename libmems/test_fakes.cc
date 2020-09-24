@@ -19,8 +19,12 @@ namespace fakes {
 FakeIioChannel::FakeIioChannel(const std::string& id, bool enabled)
     : id_(id), enabled_(enabled) {}
 
-bool FakeIioChannel::SetEnabled(bool en) {
+void FakeIioChannel::SetEnabled(bool en) {
   enabled_ = en;
+}
+
+bool FakeIioChannel::SetScanElementsEnabled(bool en) {
+  scan_elements_enabled_ = en;
   return true;
 }
 
