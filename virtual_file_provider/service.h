@@ -35,22 +35,36 @@ class Service {
   bool Initialize();
 
   // Sends read request with the given parameters.
-  // Chrome is responsible to feed the data to the FD.
+  // Chrome is responsible for feeding the data to the FD.
   void SendReadRequest(const std::string& id,
                        int64_t offset,
                        int64_t size,
                        base::ScopedFD fd);
 
-  // Sends a released ID. Chrome is responsible to release resources associated
-  // with the ID.
+  // Sends a released ID. Chrome is responsible for releasing resources
+  // associated with the ID.
   void SendIdReleased(const std::string& id);
 
  private:
-  // Handles OpenFile D-Bus method calls.
+  // Handles GenerateVirtualFileId D-Bus method call.
+  // Generates and returns an ID, to be used for FD creation on the FUSE file
+  // system at a later stage. This ID is registered in the |size_map_|.
+  void GenerateVirtualFileId(
+      dbus::MethodCall* method_call,
+      dbus::ExportedObject::ResponseSender response_sender);
+
+  // TODO(b/170695541): Remove this function.
+  // Handles OpenFile D-Bus method call.
   // Returns a seekable FD backed by the FUSE file system, and an ID associated
   // with the FD.
   void OpenFile(dbus::MethodCall* method_call,
                 dbus::ExportedObject::ResponseSender response_sender);
+
+  // Handles OpenFileById D-Bus method call.
+  // Given an ID, creates and returns a seekable FD backed by the FUSE file
+  // system.
+  void OpenFileById(dbus::MethodCall* method_call,
+                    dbus::ExportedObject::ResponseSender response_sender);
 
   const base::FilePath fuse_mount_path_;
   SizeMap* const size_map_;

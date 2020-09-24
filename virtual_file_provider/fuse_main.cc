@@ -64,6 +64,16 @@ int GetAttr(const char* path, struct stat* stat) {
 }
 
 int Open(const char* path, struct fuse_file_info* fi) {
+  DCHECK_EQ('/', path[0]);
+  // File name is the ID.
+  const std::string id(path + 1);
+
+  const int64_t file_size = GetDelegate()->GetSize(id);
+  if (file_size < 0) {
+    LOG(ERROR) << "Invalid ID " << id;
+    return -ENOENT;
+  }
+
   return 0;
 }
 
