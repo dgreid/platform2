@@ -24,7 +24,12 @@ lseek: 1
 # The following are syscalls required for pwmgetfanrpm.
 mmap: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
 mprotect: arg2 in ~PROT_EXEC || arg2 in ~PROT_WRITE
-ioctl: arg1 == 0xc108ec01 || arg1 == 0xc0283a00 || arg1 == 0xc014ec00
+# CROS_EC_DEV_IOCRDMEM_V2 = 0xc108ec01
+# CROS_EC_DEV_IOCXCMD = 0xc0283a00
+# CROS_EC_DEV_IOCXCMD_V2 = 0xc014ec0
+# CROS_EC_DEV_IOCRDMEM = 0x0c0103a01
+ioctl: arg1 == 0xc108ec01 || arg1 == 0xc0283a00 || arg1 == 0xc014ec00 || \
+       arg1 == 0x0c0103a01
 brk: 1
 rt_sigaction: 1
 execve: 1
