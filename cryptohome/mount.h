@@ -355,6 +355,12 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                             VaultKeyset* vault_keyset,
                             SerializedVaultKeyset* serialized) const;
 
+  // Check if the vault keyset needs re-encryption.
+  //
+  // Parameters
+  //   vault_keyset (IN) - vault keyset to check
+  bool ShouldReSaveKeyset(VaultKeyset* vault_keyset) const;
+
   // Attempt to decrypt the keyset for the specified user.  The method both
   // deserializes the SerializedVaultKeyset from disk and decrypts the
   // encrypted vault keyset, returning it in vault_keyset.

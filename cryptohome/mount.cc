@@ -955,6 +955,80 @@ bool Mount::StoreTimestampForUser(const std::string& obfuscated_username,
   return true;
 }
 
+bool Mount::ShouldReSaveKeyset(VaultKeyset* vault_keyset) const {
+  // If the vault keyset's TPM state is not the same as that configured for
+  // the device, re-save the keyset (this will save in the device's default
+  // method).
+  // In the table below: X = true, - = false, * = any value
+  //
+  //                 1   2   3   4   5   6   7   8   9
+  // should_tpm      X   X   X   X   -   -   -   *   X
+  //
+  // pcr_bound       -   X   *   -   -   *   -   *   -
+  //
+  // tpm_wrapped     -   X   X   -   -   X   -   X   *
+  //
+  // scrypt_wrapped  -   -   -   X   -   -   X   X   *
+  //
+  // scrypt_derived  *   X   -   *   *   *   *   *   *
+  //
+  // migrate         Y   N   Y   Y   Y   Y   N   Y   Y
+  //
+  // If the vault keyset is signature-challenge protected, we should not
+  // re-encrypt it at all (that is unnecessary).
+  const unsigned crypt_flags = vault_keyset->serialized().flags();
+  bool pcr_bound = (crypt_flags & SerializedVaultKeyset::PCR_BOUND) != 0;
+  bool tpm_wrapped = (crypt_flags & SerializedVaultKeyset::TPM_WRAPPED) != 0;
+  bool scrypt_wrapped =
+      (crypt_flags & SerializedVaultKeyset::SCRYPT_WRAPPED) != 0;
+  bool scrypt_derived =
+      (crypt_flags & SerializedVaultKeyset::SCRYPT_DERIVED) != 0;
+  bool is_signature_challenge_protected =
+      (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
+  bool should_tpm =
+      (crypto_->has_tpm() && use_tpm_ && crypto_->is_cryptohome_key_loaded() &&
+       !is_signature_challenge_protected);
+  bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
+  bool has_tpm_public_key_hash =
+      vault_keyset->serialized().has_tpm_public_key_hash();
+
+  if (is_signature_challenge_protected)
+    return false;
+
+  bool is_le_credential =
+      (crypt_flags & SerializedVaultKeyset::LE_CREDENTIAL) != 0;
+  uint64_t le_label = vault_keyset->serialized().le_label();
+  if (is_le_credential && !crypto_->NeedsPcrBinding(le_label))
+    return false;
+
+  // If the keyset was TPM-wrapped, but there was no public key hash,
+  // always re-save.
+  if (!has_tpm_public_key_hash) {
+    LOG(INFO) << "Migrating keyset " << vault_keyset->legacy_index()
+              << " as there is no public hash";
+    return true;
+  }
+
+  // Check the table.
+  if (tpm_wrapped && should_tpm && scrypt_derived && !scrypt_wrapped) {
+    if ((pcr_bound && can_unseal_with_user_auth) ||
+        (!pcr_bound && !can_unseal_with_user_auth)) {
+      return false;  // 2
+    }
+  }
+  if (scrypt_wrapped && !should_tpm && !tpm_wrapped)
+    return false;  // 7
+
+
+  LOG(INFO) << "Migrating keyset " << vault_keyset->legacy_index()
+            << ": should_tpm=" << should_tpm
+            << ", has_hash=" << has_tpm_public_key_hash
+            << ", flags=" << crypt_flags << ", pcr_bound=" << pcr_bound
+            << ", can_unseal_with_user_auth=" << can_unseal_with_user_auth;
+
+  return true;
+}
+
 bool Mount::DecryptVaultKeyset(const Credentials& credentials,
                                VaultKeyset* vault_keyset,
                                SerializedVaultKeyset* serialized,
@@ -976,71 +1050,19 @@ bool Mount::DecryptVaultKeyset(const Credentials& credentials,
     crypto_->EnsureTpm(false);
   }
 
-  // If the vault keyset's TPM state is not the same as that configured for
-  // the device, re-save the keyset (this will save in the device's default
-  // method).
-  // In the table below: X = true, - = false, * = any value
-  //
-  //                 1   2   3   4   5   6   7   8   9
-  // should_tpm      X   X   X   X   -   -   -   *   X
-  //
-  // pcr_bound       -   X   *   -   -   *   -   *   -
-  //
-  // tpm_wrapped     -   X   X   -   -   X   -   X   *
-  //
-  // scrypt_wrapped  -   -   -   X   -   -   X   X   *
-  //
-  // scrypt_derived  *   X   -   *   *   *   *   *   *
-  //
-  // migrate         Y   N   Y   Y   Y   Y   N   Y   Y
-  //
-  // If the vault keyset is signature-challenge protected, we should not
-  // re-encrypt it at all (that is unnecessary).
-  const unsigned crypt_flags = serialized->flags();
-  bool pcr_bound = (crypt_flags & SerializedVaultKeyset::PCR_BOUND) != 0;
-  bool tpm_wrapped = (crypt_flags & SerializedVaultKeyset::TPM_WRAPPED) != 0;
-  bool scrypt_wrapped =
-      (crypt_flags & SerializedVaultKeyset::SCRYPT_WRAPPED) != 0;
-  bool scrypt_derived =
-      (crypt_flags & SerializedVaultKeyset::SCRYPT_DERIVED) != 0;
-  bool is_signature_challenge_protected =
-      (crypt_flags & SerializedVaultKeyset::SIGNATURE_CHALLENGE_PROTECTED) != 0;
-  bool should_tpm =
-      (crypto_->has_tpm() && use_tpm_ && crypto_->is_cryptohome_key_loaded() &&
-       !is_signature_challenge_protected);
-  bool is_le_credential =
-      (crypt_flags & SerializedVaultKeyset::LE_CREDENTIAL) != 0;
-  bool can_unseal_with_user_auth = crypto_->CanUnsealWithUserAuth();
-  do {
-    if (is_signature_challenge_protected)
-      break;
-    // If the keyset was TPM-wrapped, but there was no public key hash,
-    // always re-save.  Otherwise, check the table.
-    if (serialized->has_tpm_public_key_hash() || is_le_credential) {
-      if (is_le_credential && !crypto_->NeedsPcrBinding(serialized->le_label()))
-        break;
-      if (tpm_wrapped && should_tpm && scrypt_derived && !scrypt_wrapped) {
-        if ((pcr_bound && can_unseal_with_user_auth) ||
-            (!pcr_bound && !can_unseal_with_user_auth)) {
-          break;  // 2
-        }
-      }
-      if (scrypt_wrapped && !should_tpm && !tpm_wrapped)
-        break;  // 7
-    }
-    LOG(INFO) << "Migrating keyset " << *index << ": should_tpm=" << should_tpm
-              << ", has_hash=" << serialized->has_tpm_public_key_hash()
-              << ", flags=" << crypt_flags << ", pcr_bound=" << pcr_bound
-              << ", can_unseal_with_user_auth=" << can_unseal_with_user_auth;
-    // This is not considered a fatal error.  Re-saving with the desired
-    // protection is ideal, but not required.
-    SerializedVaultKeyset new_serialized;
-    new_serialized.CopyFrom(*serialized);
-    if (ReEncryptVaultKeyset(credentials, *index, vault_keyset,
-                             &new_serialized)) {
-      serialized->CopyFrom(new_serialized);
-    }
-  } while (false);
+  vault_keyset->set_legacy_index(*index);
+  if (!ShouldReSaveKeyset(vault_keyset)) {
+    return true;
+  }
+
+  SerializedVaultKeyset new_serialized;
+  new_serialized.CopyFrom(*serialized);
+  // This is not considered a fatal error.  Re-saving with the desired
+  // protection is ideal, but not required.
+  if (ReEncryptVaultKeyset(credentials, *index, vault_keyset,
+                           &new_serialized)) {
+    serialized->CopyFrom(new_serialized);
+  }
 
   return true;
 }
