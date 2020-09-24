@@ -1555,14 +1555,21 @@ Properties	string ArcVpn.TunnelChrome [writeonly]
 			"ready"		Layer 3 setup is complete; ready to
 					transit and receive data.
 
-			"portal"	Layer 3 setup is complete but
-					connectivity to the Internet may be
-					limited or unavailable.
+			"no-connectivity" Layer 3 setup is complete but HTTP
+					and HTTPS connectivity to the Internet
+					is unavailable.
+
+			"redirect-found" Layer 3 setup is complete but the HTTP
+					probe found a redirect.
+
+			"portal suspected" Layer 3 setup is complete but HTTP
+					probe failed with no redirect or HTTPS
+					probe failed.
 
 			"online"	Layer 3 setup is complete and an
 					Internet connection has been checked
-					to support HTTP access to the
-					Manager.PortalURL site.
+					to support HTTP and HTTPS access to the
+					Manager.PortalHttp{s}Url site.
 
 			"failure"	An error occurred while trying to
 					reach the "ready" state. Consult the
