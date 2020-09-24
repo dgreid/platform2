@@ -1078,16 +1078,9 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
                                  SerializedVaultKeyset* serialized) const {
   std::string obfuscated_username =
       credentials.GetObfuscatedUsername(system_salt_);
-  std::vector<FilePath> files(1);
-  files[0] = GetUserLegacyKeyFileForUser(obfuscated_username, key_index);
-  if (!CacheOldFiles(files)) {
-    LOG(ERROR) << "Couldn't cache old key material.";
-    return false;
-  }
   uint64_t label = serialized->le_label();
   if (!AddVaultKeyset(credentials, vault_keyset, serialized)) {
     LOG(ERROR) << "Couldn't add keyset.";
-    RevertCacheFiles(files);
     return false;
   }
 
@@ -1106,10 +1099,9 @@ bool Mount::ReEncryptVaultKeyset(const Credentials& credentials,
   if (!StoreVaultKeysetForUser(credentials.GetObfuscatedUsername(system_salt_),
                                key_index, serialized)) {
     LOG(ERROR) << "Write to master key failed";
-    RevertCacheFiles(files);
     return false;
   }
-  DeleteCacheFiles(files);
+
   return true;
 }
 
@@ -1265,47 +1257,6 @@ void Mount::RemovePkcs11Token() {
       chaps_client_factory_->New());
   chaps_client->UnloadToken(
       IsolateCredentialManager::GetDefaultIsolateCredential(), token_dir);
-}
-
-bool Mount::CacheOldFiles(const std::vector<FilePath>& files) const {
-  for (const auto& file : files) {
-    FilePath file_bak = file.AddExtension("bak");
-    if (platform_->FileExists(file_bak)) {
-      if (!platform_->DeleteFile(file_bak, false)) {
-        return false;
-      }
-    }
-    if (platform_->FileExists(file)) {
-      if (!platform_->Move(file, file_bak)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool Mount::RevertCacheFiles(const std::vector<FilePath>& files) const {
-  for (const auto& file : files) {
-    FilePath file_bak = file.AddExtension("bak");
-    if (platform_->FileExists(file_bak)) {
-      if (!platform_->Move(file_bak, file)) {
-        return false;
-      }
-    }
-  }
-  return true;
-}
-
-bool Mount::DeleteCacheFiles(const std::vector<FilePath>& files) const {
-  for (const auto& file : files) {
-    FilePath file_bak = file.AddExtension("bak");
-    if (platform_->FileExists(file_bak)) {
-      if (!platform_->DeleteFile(file_bak, false)) {
-        return false;
-      }
-    }
-  }
-  return true;
 }
 
 std::unique_ptr<base::Value> Mount::GetStatus() {

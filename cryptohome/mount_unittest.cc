@@ -1314,10 +1314,6 @@ TEST_P(MountTest, GoodReDecryptTest) {
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
 
-  EXPECT_CALL(platform_,
-              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillOnce(Return(true));
-
   // Create the "TPM-wrapped" value by letting it save the plaintext.
   EXPECT_CALL(tpm_, SealToPcrWithAuthorization(_, _, _, _, _))
       .WillRepeatedly(Invoke(TpmPassthroughSealWithAuthorization));
@@ -1418,10 +1414,6 @@ TEST_P(MountTest, TpmWrappedToPcrBoundMigrationTest) {
       .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
-
-  EXPECT_CALL(platform_,
-              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillOnce(Return(true));
 
   //
   // Create the "TPM-wrapped" value by letting it save the plaintext.
@@ -1556,22 +1548,17 @@ TEST_P(MountTest, MountCryptohomeNoChapsKey) {
   MountError error;
   int key_index = -1;
   EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-      .Times(2)
+      .Times(3)
       .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
 
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
 
   vault_keyset.clear_chaps_key();
-  EXPECT_CALL(platform_, FileExists(_)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, DeleteFile(_, _)).WillRepeatedly(Return(true));
-  EXPECT_CALL(platform_, Move(_, _)).WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, WriteFileAtomicDurable(user->keyset_path, _, _))
       .WillRepeatedly(DoAll(SaveArg<1>(&(user->credentials)), Return(true)));
   ASSERT_TRUE(mount_->ReEncryptVaultKeyset(credentials, key_index,
                                            &vault_keyset, &serialized));
-  EXPECT_CALL(platform_, ReadFile(user->keyset_path, _))
-      .WillRepeatedly(DoAll(SetArgPointee<1>(user->credentials), Return(true)));
   user->InjectKeyset(&platform_, true);
   ASSERT_TRUE(mount_->DecryptVaultKeyset(credentials, &vault_keyset,
                                          &serialized, &key_index, &error));
@@ -1935,12 +1922,6 @@ TEST_P(MountTest, TwoWayKeysetMigrationTest) {
 
   int key_index = 0;
 
-  // Allow the "backup"s to be written during migrations
-  EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 
@@ -2054,12 +2035,6 @@ TEST_P(MountTest, BothFlagsMigrationTest) {
 
   int key_index = 0;
 
-  // Allow the "backup"s to be written during migrations
-  EXPECT_CALL(platform_, FileExists(user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(false));
-  EXPECT_CALL(platform_,
-              Move(user->keyset_path, user->keyset_path.AddExtension("bak")))
-      .WillRepeatedly(Return(true));
   EXPECT_CALL(platform_, FileExists(base::FilePath(kLockedToSingleUserFile)))
       .WillRepeatedly(Return(false));
 

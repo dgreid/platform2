@@ -371,24 +371,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
                           int* index,
                           MountError* error) const;
 
-  // Cache the old key file and salt file during migration
-  //
-  // Parameters
-  //   files - The file names to cache
-  bool CacheOldFiles(const std::vector<base::FilePath>& files) const;
-
-  // Move the cached files back to the original files
-  //
-  // Parameters
-  //   files - The file names to un-cache
-  bool RevertCacheFiles(const std::vector<base::FilePath>& files) const;
-
-  // Remove the cached files for the user
-  //
-  // Parameters
-  //   files - The file names to remove
-  bool DeleteCacheFiles(const std::vector<base::FilePath>& files) const;
-
   base::FilePath GetUserTimestampFileForUser(
       const std::string& obfuscated_username, int index) const;
 
