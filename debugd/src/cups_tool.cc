@@ -107,8 +107,8 @@ int RunAsUser(const std::string& user,
 // success code.
 int TestPPD(const std::vector<uint8_t>& ppd_content) {
   return RunAsUser(kLpadminUser, kLpadminGroup, kTestPPDCommand,
-                   kTestPPDSeccompPolicy, {"-"}, &(ppd_content),
-                   true /* root_mount_ns */);
+                   kTestPPDSeccompPolicy, {"-W", "translations", "-"},
+                   &(ppd_content), true /* root_mount_ns */);
 }
 
 // Runs lpadmin with the provided |arg_list| and |std_input|.
