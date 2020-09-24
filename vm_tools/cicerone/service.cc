@@ -3011,7 +3011,8 @@ std::unique_ptr<dbus::Response> Service::StartLxd(
   }
 
   std::string error_msg;
-  VirtualMachine::StartLxdStatus status = vm->StartLxd(&error_msg);
+  VirtualMachine::StartLxdStatus status =
+      vm->StartLxd(request.reset_lxd_db(), &error_msg);
 
   response.set_status(StartLxdResponse::UNKNOWN);
   if (StartLxdResponse::Status_IsValid(static_cast<int>(status))) {

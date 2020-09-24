@@ -312,7 +312,7 @@ class VirtualMachine {
                                                       std::string* out_error);
 
   // Tells Tremplin to start LXD.
-  StartLxdStatus StartLxd(std::string* out_error);
+  StartLxdStatus StartLxd(bool reset_lxd_db, std::string* out_error);
 
   // Informs the VM that the host network has changed.
   void HostNetworkChanged();

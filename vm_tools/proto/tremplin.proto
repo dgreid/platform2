@@ -14,7 +14,9 @@ option go_package = "tremplin_proto";
 // go code makes it difficult to have imports.
 message EmptyMessage {}
 
-message StartLxdRequest {}
+message StartLxdRequest {
+  bool reset_lxd_db = 1;
+}
 
 message StartLxdResponse {
   enum Status {

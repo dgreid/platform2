@@ -847,7 +847,7 @@ VirtualMachine::CancelUpgradeContainer(Container* container,
 }
 
 VirtualMachine::StartLxdStatus VirtualMachine::StartLxd(
-    std::string* out_error) {
+    bool reset_lxd_db, std::string* out_error) {
   DCHECK(out_error);
   vm_tools::tremplin::StartLxdRequest request;
   vm_tools::tremplin::StartLxdResponse response;
@@ -856,6 +856,8 @@ VirtualMachine::StartLxdStatus VirtualMachine::StartLxd(
   ctx.set_deadline(gpr_time_add(
       gpr_now(GPR_CLOCK_MONOTONIC),
       gpr_time_from_seconds(kDefaultTimeoutSeconds, GPR_TIMESPAN)));
+
+  request.set_reset_lxd_db(reset_lxd_db);
 
   grpc::Status status = tremplin_stub_->StartLxd(&ctx, request, &response);
   if (!status.ok()) {
