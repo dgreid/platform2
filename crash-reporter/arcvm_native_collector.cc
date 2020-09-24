@@ -4,6 +4,8 @@
 
 #include "crash-reporter/arcvm_native_collector.h"
 
+#include <utility>
+
 #include <base/files/file.h>
 #include <base/files/file_path.h>
 #include <base/files/file_util.h>
@@ -30,8 +32,15 @@ ArcvmNativeCollector::~ArcvmNativeCollector() = default;
 
 bool ArcvmNativeCollector::HandleCrash(
     const arc_util::BuildProperty& build_property,
+    const CrashInfo& crash_info) {
+  return HandleCrashWithMinidumpFD(build_property, crash_info,
+                                   base::ScopedFD(STDIN_FILENO));
+}
+
+bool ArcvmNativeCollector::HandleCrashWithMinidumpFD(
+    const arc_util::BuildProperty& build_property,
     const CrashInfo& crash_info,
-    int minidump_fd) {
+    base::ScopedFD minidump_fd) {
   std::string reason;
   const bool should_dump = ShouldDump(&reason);
   const std::string message =
@@ -56,7 +65,7 @@ bool ArcvmNativeCollector::HandleCrash(
       FormatDumpBasename(crash_info.exec_name, crash_info.time, crash_info.pid);
   const base::FilePath minidump_path = GetCrashPath(
       crash_dir, basename_without_ext, constants::kMinidumpExtension);
-  if (!DumpFdToFile(minidump_fd, minidump_path)) {
+  if (!DumpFdToFile(std::move(minidump_fd), minidump_path)) {
     LOG(ERROR) << "Failed to write minidump file";
     return false;
   }
@@ -111,17 +120,16 @@ void ArcvmNativeCollector::AddArcMetadata(
   AddCrashMetaUploadData(arc_util::kCpuAbiField, build_property.cpu_abi);
 }
 
-bool ArcvmNativeCollector::DumpFdToFile(int src_fd,
+bool ArcvmNativeCollector::DumpFdToFile(base::ScopedFD src_fd,
                                         const base::FilePath& dst_path) {
   base::ScopedFD dst_fd = GetNewFileHandle(dst_path);
   if (!dst_fd.is_valid())
     return false;
 
-  base::File src_file(src_fd);
+  base::File src_file(src_fd.release());
   constexpr size_t kBufferSize = 4096;
   char buffer[kBufferSize];
 
-  // TODO(kimiyuki): use splice syscall?
   while (true) {
     ssize_t bytes_written =
         src_file.ReadAtCurrentPosNoBestEffort(buffer, kBufferSize);

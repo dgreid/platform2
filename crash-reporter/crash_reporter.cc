@@ -329,7 +329,8 @@ int main(int argc, char* argv[]) {
   DEFINE_bool(arc_is_arcvm, false, "Is ARCVM");
   DEFINE_bool(arc_native, false, "ARC Native Crash");
   DEFINE_int64(arc_native_time, -1,
-               "UNIX timestamp. Metadata for ARCVM native crashes");
+               "UNIX timestamp of the time when the native crash happened. "
+               "Metadata for ARCVM native crashes");
 #endif
 
   OpenStandardFileDescriptors();
@@ -416,8 +417,7 @@ int main(int argc, char* argv[]) {
               ArcvmNativeCollector::CrashInfo{
                   .time = static_cast<time_t>(FLAGS_arc_native_time),
                   .pid = FLAGS_pid,
-                  .exec_name = FLAGS_exe},
-              STDIN_FILENO),
+                  .exec_name = FLAGS_exe}),
       }},
   });
 

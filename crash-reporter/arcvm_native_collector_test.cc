@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <memory>
+#include <utility>
 
 #include <base/files/file_util.h>
 #include <base/files/scoped_file.h>
@@ -74,7 +75,8 @@ class ArcvmNativeCollectorTest : public ::testing::Test {
     base::FilePath minidump_path =
         scoped_temp_dir_.GetPath().Append("minidump.dmp");
     ASSERT_TRUE(test_util::CreateFile(minidump_path, kMinidumpSampleContent));
-    minidump_fd_ = HANDLE_EINTR(open(minidump_path.value().c_str(), O_RDONLY));
+    minidump_fd_ = base::ScopedFD(
+        HANDLE_EINTR(open(minidump_path.value().c_str(), O_RDONLY)));
     ASSERT_NE(minidump_fd_, -1);
 
     test_crash_directory_ =
@@ -84,20 +86,17 @@ class ArcvmNativeCollectorTest : public ::testing::Test {
         std::make_unique<TestArcvmNativeCollector>(test_crash_directory_);
   }
 
-  void TearDown() override { close(minidump_fd_); }
-
  protected:
   std::unique_ptr<TestArcvmNativeCollector> collector_;
   base::ScopedTempDir scoped_temp_dir_;
   base::FilePath test_crash_directory_;
-  // TODO(kimiyuki): Use base::ScopedFD. However, the reason is unknown but, if
-  // simple replacing with ScopedFD causes "Bad file descriptor".
-  int minidump_fd_;
+  base::ScopedFD minidump_fd_;
 };
 
-TEST_F(ArcvmNativeCollectorTest, HandleCrash) {
-  ASSERT_TRUE(collector_->HandleCrash(GetBuildProperty(), GetCrashInfo(),
-                                      minidump_fd_));
+TEST_F(ArcvmNativeCollectorTest, HandleCrashWithMinidumpFD) {
+  ASSERT_TRUE(collector_->HandleCrashWithMinidumpFD(
+      GetBuildProperty(), GetCrashInfo(), std::move(minidump_fd_)));
+
   base::FilePath metadata_path =
       test_crash_directory_.Append(std::string(kBasenameWithoutExt) + ".meta");
   EXPECT_TRUE(base::PathExists(metadata_path));

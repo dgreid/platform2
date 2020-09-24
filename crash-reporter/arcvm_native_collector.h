@@ -20,6 +20,7 @@
 #include <string>
 
 #include <base/files/file_path.h>
+#include <base/files/scoped_file.h>
 
 // Collector for native crashes in ARCVM.
 class ArcvmNativeCollector : public CrashCollector {
@@ -36,17 +37,21 @@ class ArcvmNativeCollector : public CrashCollector {
   ~ArcvmNativeCollector() override;
 
   // Handles a native crash in ARCVM.
-  // TODO(kimiyuki): Replace |minidump_fd| with a path and make "/dev/stdin" the
-  // default argument.
   bool HandleCrash(const arc_util::BuildProperty& build_property,
-                   const CrashInfo& crash_info,
-                   int minidump_fd);
+                   const CrashInfo& crash_info);
 
  private:
   friend class ArcvmNativeCollectorMock;
   friend class ArcvmNativeCollectorTest;
-  FRIEND_TEST(ArcvmNativeCollectorTest, HandleCrash);
+  FRIEND_TEST(ArcvmNativeCollectorTest, HandleCrashWithMinidumpFD);
   FRIEND_TEST(ArcvmNativeCollectorTest, AddArcMetadata);
+
+  // Handles a native crash in ARCVM using the given FD for minidump.
+  // TODO(kimiyuki): Replace |minidump_fd| with a path and make "/dev/stdin" the
+  // default argument.
+  bool HandleCrashWithMinidumpFD(const arc_util::BuildProperty& build_property,
+                                 const CrashInfo& crash_info,
+                                 base::ScopedFD minidump_fd);
 
   // Checks whether it should dump the crash.
   bool ShouldDump(std::string* reason) const;
@@ -56,7 +61,7 @@ class ArcvmNativeCollector : public CrashCollector {
                       const CrashInfo& crash_info);
 
   // Reads the content from FD and writes it to the specified path.
-  bool DumpFdToFile(int fd, const base::FilePath& path);
+  bool DumpFdToFile(base::ScopedFD fd, const base::FilePath& path);
 };
 
 #endif  // CRASH_REPORTER_ARCVM_NATIVE_COLLECTOR_H_
