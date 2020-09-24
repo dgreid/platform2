@@ -283,6 +283,7 @@ TEST_F(AccelerometerTest, TriggerPermissions) {
   EXPECT_EQ(kChronosGroupId, gid);
 }
 
+#if !USE_IIOSERVICE
 TEST_F(AccelerometerTest, SingleSensorEnableChannels) {
   SetSingleSensor(kLidSensorLocation);
   EXPECT_TRUE(GetConfiguration()->Configure());
@@ -315,6 +316,7 @@ TEST_F(AccelerometerTest, BufferEnabled) {
   EXPECT_TRUE(mock_device_->IsBufferEnabled(&accel_buffer_len));
   EXPECT_EQ(1, accel_buffer_len);
 }
+#endif
 
 TEST_F(AccelerometerTest, SingleSensorKbWakeAnglePermissions) {
   base::FilePath kb_path("/sys/class/chromeos/cros_ec/kb_wake_angle");

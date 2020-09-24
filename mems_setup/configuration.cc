@@ -477,7 +477,7 @@ bool Configuration::ConfigAccelerometer() {
   if (!AddSysfsTrigger(kAccelSysfsTriggerId))
     return false;
 
-  if (!EnableAccelScanElements())
+  if (!USE_IIOSERVICE && !EnableAccelScanElements())
     return false;
 
   if (!EnableKeyboardAngle())
