@@ -64,11 +64,11 @@ std::string EscapeScannerName(const std::string& scanner_name) {
 class ScanHandler {
  public:
   ScanHandler(base::RepeatingClosure quit_closure,
-              std::unique_ptr<ManagerProxy> manager,
+              ManagerProxy* manager,
               std::string scanner_name)
       : cvar_(&lock_),
         quit_closure_(quit_closure),
-        manager_(std::move(manager)),
+        manager_(manager),
         scanner_name_(scanner_name),
         base_output_path_("/tmp/scan-" + EscapeScannerName(scanner_name) +
                           ".png"),
@@ -103,7 +103,7 @@ class ScanHandler {
   base::ConditionVariable cvar_;
   base::RepeatingClosure quit_closure_;
 
-  std::unique_ptr<ManagerProxy> manager_;
+  ManagerProxy* manager_;  // Not owned.
   std::string scanner_name_;
   base::FilePath base_output_path_;
   base::Optional<std::string> scan_uuid_;
@@ -356,6 +356,72 @@ base::Optional<std::vector<std::string>> ReadAirscanOutput(
   return scanner_names;
 }
 
+class ScanRunner {
+ public:
+  explicit ScanRunner(ManagerProxy* manager) : manager_(manager) {}
+
+  void SetResolution(uint32_t resolution) { resolution_ = resolution; }
+  void SetSource(lorgnette::SourceType source) { source_ = source; }
+
+  bool RunScanner(const std::string& scanner);
+
+ private:
+  ManagerProxy* manager_;  // Not owned.
+  uint32_t resolution_;
+  lorgnette::SourceType source_;
+};
+
+bool ScanRunner::RunScanner(const std::string& scanner) {
+  std::cout << "Getting device capabilities for " << scanner << std::endl;
+  base::Optional<lorgnette::ScannerCapabilities> capabilities =
+      GetScannerCapabilities(manager_, scanner);
+  if (!capabilities.has_value())
+    return false;
+  PrintScannerCapabilities(capabilities.value());
+
+  if (!base::Contains(capabilities->resolutions(), resolution_)) {
+    // Many scanners will round the requested resolution to the nearest
+    // supported resolution. We will attempt to scan with the given resolution
+    // since it may still work.
+    LOG(WARNING) << "Requested scan resolution " << resolution_
+                 << " is not supported by the selected scanner. "
+                    "Attempting to request it anyways.";
+  }
+
+  base::Optional<lorgnette::DocumentSource> scan_source;
+  for (const lorgnette::DocumentSource& source : capabilities->sources()) {
+    if (source.type() == source_) {
+      scan_source = source;
+      break;
+    }
+  }
+
+  if (!scan_source.has_value()) {
+    LOG(ERROR) << "Requested scan source "
+               << lorgnette::SourceType_Name(source_)
+               << " is not supported by the selected scanner";
+    return false;
+  }
+
+  // Implicitly uses this thread's executor as defined in main.
+  base::RunLoop run_loop;
+  ScanHandler handler(run_loop.QuitClosure(), manager_, scanner);
+
+  if (!handler.WaitUntilConnected()) {
+    return false;
+  }
+
+  std::cout << "Scanning from " << scanner << std::endl;
+
+  if (!handler.StartScan(resolution_, scan_source.value())) {
+    return false;
+  }
+
+  // Will run until the ScanHandler runs this RunLoop's quit_closure.
+  run_loop.Run();
+  return true;
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -367,6 +433,8 @@ int main(int argc, char** argv) {
   DEFINE_string(scan_source, "Platen",
                 "The scan source to use for the scanner, (e.g. Platen, ADF "
                 "Simplex, ADF Duplex)");
+  DEFINE_bool(all, false,
+              "Loop through all detected scanners instead of prompting.");
   brillo::FlagHelper::Init(argc, argv,
                            "lorgnette_cli, command-line interface to "
                            "Chromium OS Scanning Daemon");
@@ -427,65 +495,45 @@ int main(int argc, char** argv) {
   scanners.insert(scanners.end(), airscan_scanners.value().begin(),
                   airscan_scanners.value().end());
 
+  ScanRunner runner(manager.get());
+  runner.SetResolution(FLAGS_scan_resolution);
+  runner.SetSource(source_type.value());
+
   std::cout << "Choose a scanner (blank to quit):" << std::endl;
   for (int i = 0; i < scanners.size(); i++) {
     std::cout << i << ". " << scanners[i] << std::endl;
   }
-  int index = -1;
-  std::cout << "> ";
-  std::cin >> index;
-  if (std::cin.fail()) {
-    return 0;
+
+  if (!FLAGS_all) {
+    int index = -1;
+    std::cout << "> ";
+    std::cin >> index;
+    if (std::cin.fail()) {
+      return 0;
+    }
+
+    std::string scanner = scanners[index];
+    return !runner.RunScanner(scanner);
   }
 
-  std::string scanner = scanners[index];
-  std::cout << "Getting device capabilities for " << scanner << std::endl;
-  base::Optional<lorgnette::ScannerCapabilities> capabilities =
-      GetScannerCapabilities(manager.get(), scanner);
-  if (!capabilities.has_value())
-    return 1;
-  PrintScannerCapabilities(capabilities.value());
-
-  if (!base::Contains(capabilities->resolutions(), FLAGS_scan_resolution)) {
-    // Many scanners will round the requested resolution to the nearest
-    // supported resolution. We will attempt to scan with the given resolution
-    // since it may still work.
-    LOG(WARNING) << "Requested scan resolution " << FLAGS_scan_resolution
-                 << " is not supported by the selected scanner. "
-                    "Attempting to request it anyways.";
-  }
-
-  base::Optional<lorgnette::DocumentSource> scan_source;
-  for (const lorgnette::DocumentSource& source : capabilities->sources()) {
-    if (source.type() == source_type.value()) {
-      scan_source = source;
-      break;
+  std::cout << "Scanning from all scanners." << std::endl;
+  std::vector<std::string> successes;
+  std::vector<std::string> failures;
+  for (const std::string& scanner : scanners) {
+    if (runner.RunScanner(scanner)) {
+      successes.push_back(scanner);
+    } else {
+      failures.push_back(scanner);
     }
   }
-
-  if (!scan_source.has_value()) {
-    LOG(ERROR) << "Requested scan source " << FLAGS_scan_source << " ("
-               << lorgnette::SourceType_Name(source_type.value())
-               << ") is not supported by the selected scanner";
-    return 1;
+  std::cout << "Successful scans:" << std::endl;
+  for (const std::string& scanner : successes) {
+    std::cout << "  " << scanner << std::endl;
   }
-
-  // Implicitly uses this thread's executor as defined above.
-  base::RunLoop run_loop;
-  ScanHandler handler(run_loop.QuitClosure(), std::move(manager), scanner);
-
-  if (!handler.WaitUntilConnected()) {
-    return 1;
+  std::cout << "Failed scans:" << std::endl;
+  for (const std::string& scanner : failures) {
+    std::cout << "  " << scanner << std::endl;
   }
-
-  std::cout << "Scanning from " << scanner << std::endl;
-
-  if (!handler.StartScan(FLAGS_scan_resolution, scan_source.value())) {
-    return 1;
-  }
-
-  // Will run until the ScanHandler runs this RunLoop's quit_closure.
-  run_loop.Run();
 
   return 0;
 }
