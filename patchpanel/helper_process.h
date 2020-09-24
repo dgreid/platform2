@@ -44,8 +44,8 @@ class HelperProcess {
   // main process is initialized.
   void Listen();
 
-  void RegisterDeviceMessageHandler(
-      const base::Callback<void(const DeviceMessage&)>& handler);
+  void RegisterNDProxyMessageHandler(
+      const base::Callback<void(const NDProxyMessage&)>& handler);
 
   pid_t pid() const { return pid_; }
   uint8_t restarts() const { return restarts_; }

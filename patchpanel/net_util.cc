@@ -121,6 +121,20 @@ bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len) {
   return true;
 }
 
+bool GenerateEUI64Address(in6_addr* address,
+                          const in6_addr& prefix,
+                          const MacAddress& mac) {
+  // RFC 4291, Appendix A: Insert 0xFF and 0xFE to form EUI-64, then flip
+  // universal/local bit
+  memcpy(address, &prefix, sizeof(in6_addr));
+  memcpy(&(address->s6_addr[8]), &(mac[0]), 3);
+  memcpy(&(address->s6_addr[13]), &(mac[3]), 3);
+  address->s6_addr[11] = 0xff;
+  address->s6_addr[12] = 0xfe;
+  address->s6_addr[8] ^= 0x2;
+  return true;
+}
+
 void SetSockaddrIn(struct sockaddr* sockaddr, uint32_t addr) {
   struct sockaddr_in* sockaddr_in =
       reinterpret_cast<struct sockaddr_in*>(sockaddr);

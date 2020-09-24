@@ -90,6 +90,10 @@ BRILLO_EXPORT bool FindFirstIPv6Address(const std::string& ifname,
 
 BRILLO_EXPORT bool GenerateRandomIPv6Prefix(struct in6_addr* prefix, int len);
 
+BRILLO_EXPORT bool GenerateEUI64Address(in6_addr* address,
+                                        const in6_addr& prefix,
+                                        const MacAddress& mac);
+
 BRILLO_EXPORT void SetSockaddrIn(struct sockaddr* sockaddr, uint32_t addr);
 
 BRILLO_EXPORT std::ostream& operator<<(std::ostream& stream,

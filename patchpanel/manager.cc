@@ -15,8 +15,8 @@
 
 #include <utility>
 
-#include "base/files/scoped_file.h"
 #include <base/bind.h>
+#include <base/files/scoped_file.h>
 #include <base/logging.h>
 #include <base/strings/string_number_conversions.h>
 #include <base/strings/string_split.h>
@@ -222,8 +222,8 @@ void Manager::InitialSetup() {
 
   StartDatapath();
 
-  nd_proxy_->RegisterDeviceMessageHandler(base::Bind(
-      &Manager::OnDeviceMessageFromNDProxy, weak_factory_.GetWeakPtr()));
+  nd_proxy_->RegisterNDProxyMessageHandler(
+      base::Bind(&Manager::OnNDProxyMessage, weak_factory_.GetWeakPtr()));
 
   shill_client_ = std::make_unique<ShillClient>(bus_);
   auto* const forwarder = static_cast<TrafficForwarder*>(this);
@@ -1218,14 +1218,28 @@ void Manager::StopForwarding(const std::string& ifname_physical,
   }
 }
 
-void Manager::OnDeviceMessageFromNDProxy(const DeviceMessage& msg) {
-  LOG_IF(DFATAL, msg.dev_ifname().empty())
+void Manager::OnNDProxyMessage(const NDProxyMessage& msg) {
+  LOG_IF(DFATAL, msg.ifname().empty())
       << "Received DeviceMessage w/ empty dev_ifname";
-
-  if (!datapath_->AddIPv6HostRoute(msg.dev_ifname(), msg.guest_ip6addr(),
-                                   128)) {
-    LOG(WARNING) << "Failed to setup the IPv6 route for interface "
-                 << msg.dev_ifname();
+  switch (msg.type()) {
+    case NDProxyMessage::ADD_ROUTE:
+      if (!datapath_->AddIPv6HostRoute(msg.ifname(), msg.ip6addr(), 128)) {
+        LOG(WARNING) << "Failed to setup the IPv6 route for interface "
+                     << msg.ifname() << ", addr " << msg.ip6addr();
+      }
+      break;
+    case NDProxyMessage::ADD_ADDR:
+      if (!datapath_->AddIPv6Address(msg.ifname(), msg.ip6addr())) {
+        LOG(WARNING) << "Failed to setup the IPv6 address for interface "
+                     << msg.ifname() << ", addr " << msg.ip6addr();
+      }
+      break;
+    case NDProxyMessage::DEL_ADDR:
+      datapath_->RemoveIPv6Address(msg.ifname(), msg.ip6addr());
+      break;
+    default:
+      LOG(ERROR) << "Unknown NDProxy event " << msg.type();
+      NOTREACHED();
   }
 }
 

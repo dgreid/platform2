@@ -277,6 +277,35 @@ void NDProxy::ReadAndProcessOneFrame(int fd) {
     }
   }
 
+  // On receiving RA from router, generate an address for each guest-facing
+  // interface, and sent it to DeviceManager so it can be assigned. This address
+  // will be used when directly communicating with guest OS through IPv6.
+  if (icmp6->icmp6_type == ND_ROUTER_ADVERT &&
+      IsRouterInterface(dst_addr.sll_ifindex) &&
+      !router_discovery_handler_.is_null()) {
+    const nd_opt_prefix_info* prefix_info =
+        GetPrefixInfoOption(in_frame_buffer_, len);
+    if (prefix_info != nullptr && prefix_info->nd_opt_pi_prefix_len <= 64) {
+      // Generate an EUI-64 address from virtual interface MAC. A prefix
+      // larger that /64 is required.
+      for (int target_if : if_map_ra_[dst_addr.sll_ifindex]) {
+        MacAddress local_mac;
+        if (!GetLocalMac(target_if, &local_mac))
+          continue;
+        in6_addr eui64_ip;
+        GenerateEUI64Address(&eui64_ip, prefix_info->nd_opt_pi_prefix,
+                             local_mac);
+        char eui64_addr_str[INET6_ADDRSTRLEN];
+        inet_ntop(AF_INET6, &eui64_ip, eui64_addr_str, INET6_ADDRSTRLEN);
+        char target_ifname[IFNAMSIZ];
+        if_indextoname(target_if, target_ifname);
+        router_discovery_handler_.Run(std::string(target_ifname),
+                                      std::string(eui64_addr_str));
+      }
+    }
+  }
+
+  // Translate the NDP frame and send it through proxy interface
   auto map_entry = MapForType(icmp6->icmp6_type)->find(dst_addr.sll_ifindex);
   if (map_entry == MapForType(icmp6->icmp6_type)->end())
     return;
@@ -334,6 +363,23 @@ void NDProxy::ReadAndProcessOneFrame(int fd) {
       PLOG(ERROR) << "sendmsg() failed on interface " << target_if;
     }
   }
+}
+
+const nd_opt_prefix_info* NDProxy::GetPrefixInfoOption(const uint8_t* in_frame,
+                                                       ssize_t frame_len) {
+  for (const uint8_t* ptr =
+           in_frame + ETH_HLEN + sizeof(ip6_hdr) + sizeof(nd_router_advert);
+       ptr + offsetof(nd_opt_hdr, nd_opt_len) < in_frame + frame_len &&
+       (reinterpret_cast<const nd_opt_hdr*>(ptr))->nd_opt_len > 0;
+       ptr += (reinterpret_cast<const nd_opt_hdr*>(ptr))->nd_opt_len
+              << 3) /* nd_opt_len is in 8 bytes */ {
+    const nd_opt_hdr* opt = reinterpret_cast<const nd_opt_hdr*>(ptr);
+    if (opt->nd_opt_type == ND_OPT_PREFIX_INFORMATION &&
+        opt->nd_opt_len << 3 == sizeof(nd_opt_prefix_info)) {
+      return reinterpret_cast<const nd_opt_prefix_info*>(opt);
+    }
+  }
+  return nullptr;
 }
 
 bool NDProxy::GetLocalMac(int if_id, MacAddress* mac_addr) {
@@ -458,6 +504,12 @@ void NDProxy::RegisterOnGuestIpDiscoveryHandler(
   guest_discovery_handler_ = handler;
 }
 
+void NDProxy::RegisterOnRouterDiscoveryHandler(
+    const base::Callback<void(const std::string&, const std::string&)>&
+        handler) {
+  router_discovery_handler_ = handler;
+}
+
 NDProxy::interface_mapping* NDProxy::MapForType(uint8_t type) {
   switch (type) {
     case ND_ROUTER_SOLICIT:
@@ -556,6 +608,24 @@ bool NDProxy::IsGuestInterface(int ifindex) {
   return if_map_rs_.find(ifindex) != if_map_rs_.end();
 }
 
+bool NDProxy::IsRouterInterface(int ifindex) {
+  return if_map_ra_.find(ifindex) != if_map_ra_.end();
+}
+
+std::vector<std::string> NDProxy::GetGuestInterfaces(
+    const std::string& ifname_physical) {
+  std::vector<std::string> result;
+  int ifid_physical = if_nametoindex(ifname_physical.c_str());
+  if (ifid_physical == 0)
+    return result;
+  for (int ifid_guest : if_map_ra_[ifid_physical]) {
+    char ifname[IFNAMSIZ];
+    if_indextoname(ifid_guest, ifname);
+    result.push_back(ifname);
+  }
+  return result;
+}
+
 NDProxyDaemon::NDProxyDaemon(base::ScopedFD control_fd)
     : msg_dispatcher_(
           std::make_unique<MessageDispatcher>(std::move(control_fd))) {}
@@ -586,6 +656,8 @@ int NDProxyDaemon::OnInit() {
   }
   proxy_.RegisterOnGuestIpDiscoveryHandler(base::Bind(
       &NDProxyDaemon::OnGuestIpDiscovery, weak_factory_.GetWeakPtr()));
+  proxy_.RegisterOnRouterDiscoveryHandler(base::Bind(
+      &NDProxyDaemon::OnRouterDiscovery, weak_factory_.GetWeakPtr()));
 
   // Initialize data fd
   fd_ = NDProxy::PreparePacketSocket();
@@ -618,8 +690,22 @@ void NDProxyDaemon::OnDeviceMessage(const DeviceMessage& msg) {
   if (msg.has_teardown()) {
     if (msg.has_br_ifname()) {
       proxy_.RemoveInterfacePair(dev_ifname, msg.br_ifname());
+      if (guest_if_addrs_.find(msg.br_ifname()) != guest_if_addrs_.end()) {
+        SendMessage(NDProxyMessage::DEL_ADDR, msg.br_ifname(),
+                    guest_if_addrs_[msg.br_ifname()]);
+        guest_if_addrs_.erase(msg.br_ifname());
+      }
+
     } else {
+      auto guest_ifs = proxy_.GetGuestInterfaces(dev_ifname);
       proxy_.RemoveInterface(dev_ifname);
+      for (const auto& guest_if : guest_ifs) {
+        if (guest_if_addrs_.find(guest_if) != guest_if_addrs_.end()) {
+          SendMessage(NDProxyMessage::DEL_ADDR, guest_if,
+                      guest_if_addrs_[guest_if]);
+          guest_if_addrs_.erase(guest_if);
+        }
+      }
     }
   } else if (msg.has_br_ifname()) {
     proxy_.AddInterfacePair(dev_ifname, msg.br_ifname());
@@ -628,14 +714,32 @@ void NDProxyDaemon::OnDeviceMessage(const DeviceMessage& msg) {
 
 void NDProxyDaemon::OnGuestIpDiscovery(const std::string& ifname,
                                        const std::string& ip6addr) {
-  // Send information back to DeviceManager
+  SendMessage(NDProxyMessage::ADD_ROUTE, ifname, ip6addr);
+}
+
+void NDProxyDaemon::OnRouterDiscovery(const std::string& ifname,
+                                      const std::string& ip6addr) {
+  std::string current_addr = guest_if_addrs_[ifname];
+  if (current_addr == ip6addr)
+    return;
+  if (!current_addr.empty()) {
+    SendMessage(NDProxyMessage::DEL_ADDR, ifname, current_addr);
+  }
+  SendMessage(NDProxyMessage::ADD_ADDR, ifname, ip6addr);
+  guest_if_addrs_[ifname] = ip6addr;
+}
+
+void NDProxyDaemon::SendMessage(NDProxyMessage::NDProxyEventType type,
+                                const std::string& ifname,
+                                const std::string& ip6addr) {
   if (!msg_dispatcher_)
     return;
-  DeviceMessage msg;
-  msg.set_dev_ifname(ifname);
-  msg.set_guest_ip6addr(ip6addr);
+  NDProxyMessage msg;
+  msg.set_type(type);
+  msg.set_ifname(ifname);
+  msg.set_ip6addr(ip6addr);
   IpHelperMessage ipm;
-  *ipm.mutable_device_message() = msg;
+  *ipm.mutable_ndproxy_message() = msg;
   msg_dispatcher_->SendMessage(ipm);
 }
 

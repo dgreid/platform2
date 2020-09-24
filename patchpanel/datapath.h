@@ -25,7 +25,7 @@ enum IpFamily {
   NONE = 0,
   IPv4 = 1 << 0,
   IPv6 = 1 << 1,
-  Dual = IPv4 | IPv6,  //(1 << 0) | (1 << 1);
+  Dual = IPv4 | IPv6,  // (1 << 0) | (1 << 1);
 };
 
 // cros lint will yell to force using int16/int64 instead of long here, however
@@ -205,10 +205,10 @@ class Datapath {
                                    const std::string& ipv6_addr,
                                    int ipv6_prefix_len);
 
-  virtual bool AddIPv6Neighbor(const std::string& ifname,
-                               const std::string& ipv6_addr);
-  virtual void RemoveIPv6Neighbor(const std::string& ifname,
-                                  const std::string& ipv6_addr);
+  virtual bool AddIPv6Address(const std::string& ifname,
+                              const std::string& ipv6_addr);
+  virtual void RemoveIPv6Address(const std::string& ifname,
+                                 const std::string& ipv6_addr);
 
   // Adds (or deletes) a route to direct to |gateway_addr| the traffic destined
   // to the subnet defined by |addr| and |netmask|.
@@ -257,7 +257,7 @@ class Datapath {
   Firewall* firewall_;
   ioctl_t ioctl_;
 
-  bool ModifyRtentry(unsigned long op, struct rtentry* route);
+  bool ModifyRtentry(ioctl_req_t op, struct rtentry* route);
 
   DISALLOW_COPY_AND_ASSIGN(Datapath);
 };

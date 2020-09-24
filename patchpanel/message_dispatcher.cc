@@ -32,6 +32,11 @@ void MessageDispatcher::RegisterFailureHandler(
   failure_handler_ = handler;
 }
 
+void MessageDispatcher::RegisterNDProxyMessageHandler(
+    const base::Callback<void(const NDProxyMessage&)>& handler) {
+  ndproxy_handler_ = handler;
+}
+
 void MessageDispatcher::RegisterGuestMessageHandler(
     const base::Callback<void(const GuestMessage&)>& handler) {
   guest_handler_ = handler;
@@ -60,6 +65,10 @@ void MessageDispatcher::OnFileCanReadWithoutBlocking() {
   if (!msg_.ParseFromArray(buffer, len)) {
     LOG(ERROR) << "Error parsing protobuf";
     return;
+  }
+
+  if (msg_.has_ndproxy_message() && !ndproxy_handler_.is_null()) {
+    ndproxy_handler_.Run(msg_.ndproxy_message());
   }
 
   if (msg_.has_guest_message() && !guest_handler_.is_null()) {

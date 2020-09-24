@@ -150,6 +150,29 @@ TEST(Ipv6, IcmpChecksum) {
   EXPECT_EQ(ori_cksum, Icmpv6Checksum(ip6, icmp6));
 }
 
+TEST(Ipv6, EUI64Addr) {
+  struct {
+    std::string prefix;
+    MacAddress mac_address;
+    std::string eui64_address;
+  } test_cases[] = {{"::", {0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, "::200:ff:fe00:0"},
+                    {"2001:da8:ff:5002::",
+                     {0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc},
+                     "2001:da8:ff:5002:1034:56ff:fe78:9abc"},
+                    {"fe80::",
+                     {0xf4, 0x99, 0x9f, 0xf4, 0x4f, 0xe4},
+                     "fe80::f699:9fff:fef4:4fe4"}};
+  in6_addr prefix;
+  in6_addr addr;
+  for (auto const& test_case : test_cases) {
+    inet_pton(AF_INET6, test_case.prefix.c_str(), &prefix);
+    GenerateEUI64Address(&addr, prefix, test_case.mac_address);
+    char eui64_addr_str[INET6_ADDRSTRLEN];
+    inet_ntop(AF_INET6, &addr, eui64_addr_str, INET6_ADDRSTRLEN);
+    EXPECT_EQ(test_case.eui64_address, eui64_addr_str);
+  }
+}
+
 TEST(Ipv4, BroadcastAddr) {
   uint32_t base = Ipv4Addr(100, 115, 92, 0);
   struct {

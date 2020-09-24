@@ -80,12 +80,12 @@ void HelperProcess::Listen() {
   msg_dispatcher_->Start();
 }
 
-void HelperProcess::RegisterDeviceMessageHandler(
-    const base::Callback<void(const DeviceMessage&)>& handler) {
+void HelperProcess::RegisterNDProxyMessageHandler(
+    const base::Callback<void(const NDProxyMessage&)>& handler) {
   if (!msg_dispatcher_) {
     return;
   }
-  msg_dispatcher_->RegisterDeviceMessageHandler(handler);
+  msg_dispatcher_->RegisterNDProxyMessageHandler(handler);
 }
 
 }  // namespace patchpanel

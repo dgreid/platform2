@@ -16,6 +16,7 @@
 #include <memory>
 #include <set>
 #include <string>
+#include <vector>
 
 #include <base/files/scoped_file.h>
 #include <base/macros.h>
@@ -47,6 +48,9 @@ class NDProxy {
                            const MacAddress& local_mac_addr,
                            uint8_t* out_frame);
 
+  static const nd_opt_prefix_info* GetPrefixInfoOption(const uint8_t* in_frame,
+                                                       ssize_t frame_len);
+
   // Given an extended |buffer|, find a proper frame buffer pointer so that
   // pt > buffer, and start of IP header (pt + ETH_H_LEN) is 4-bytes aligned.
   // In the worst case the size of usable buffer will be original size minus 3.
@@ -76,6 +80,11 @@ class NDProxy {
       const base::Callback<void(const std::string&, const std::string&)>&
           handler);
 
+  // Callback upon receiving prefix information from RA frame.
+  void RegisterOnRouterDiscoveryHandler(
+      const base::Callback<void(const std::string&, const std::string&)>&
+          handler);
+
   // To proxy between upstream interface and guest OS interface (eth0-arc_eth0)
   // Outbound RS, inbound RA, and bidirectional NS/NA will be proxied.
   bool AddInterfacePair(const std::string& ifname_physical,
@@ -87,6 +96,11 @@ class NDProxy {
 
   // Remove all proxy interface pair with ifindex.
   bool RemoveInterface(const std::string& ifname);
+
+  // Utility to get a list of guest interfaces names that are currently being
+  // proxied with a specific physical interface.
+  std::vector<std::string> GetGuestInterfaces(
+      const std::string& ifname_physical);
 
  private:
   // Data structure to store interface mapping for a certain kind of packet to
@@ -110,6 +124,7 @@ class NDProxy {
 
   interface_mapping* MapForType(uint8_t type);
   bool IsGuestInterface(int ifindex);
+  bool IsRouterInterface(int ifindex);
 
   // Socket used to communicate with kernel through ioctl. No real packet data
   // goes through this socket.
@@ -129,6 +144,8 @@ class NDProxy {
 
   base::Callback<void(const std::string&, const std::string&)>
       guest_discovery_handler_;
+  base::Callback<void(const std::string&, const std::string&)>
+      router_discovery_handler_;
 
   base::WeakPtrFactory<NDProxy> weak_factory_{this};
 
@@ -155,6 +172,16 @@ class NDProxyDaemon : public brillo::Daemon {
   // Callback from NDProxy core when receive NA from guest
   void OnGuestIpDiscovery(const std::string& ifname,
                           const std::string& ip6addr);
+
+  // Callback from NDProxy core when receive prefix info from router
+  void OnRouterDiscovery(const std::string& ifname, const std::string& ip6addr);
+
+  void SendMessage(NDProxyMessage::NDProxyEventType type,
+                   const std::string& ifname,
+                   const std::string& ip6addr);
+
+  // Map from guest-facing ifname to eui address we assigned
+  std::map<std::string, std::string> guest_if_addrs_;
 
   // Utilize MessageDispatcher to watch control fd
   std::unique_ptr<MessageDispatcher> msg_dispatcher_;

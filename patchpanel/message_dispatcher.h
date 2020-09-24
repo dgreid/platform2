@@ -26,6 +26,9 @@ class MessageDispatcher {
 
   void RegisterFailureHandler(const base::Callback<void()>& handler);
 
+  void RegisterNDProxyMessageHandler(
+      const base::Callback<void(const NDProxyMessage&)>& handler);
+
   void RegisterGuestMessageHandler(
       const base::Callback<void(const GuestMessage&)>& handler);
 
@@ -41,6 +44,7 @@ class MessageDispatcher {
   base::ScopedFD fd_;
   std::unique_ptr<base::FileDescriptorWatcher::Controller> watcher_;
   base::Callback<void()> failure_handler_;
+  base::Callback<void(const NDProxyMessage&)> ndproxy_handler_;
   base::Callback<void(const GuestMessage&)> guest_handler_;
   base::Callback<void(const DeviceMessage&)> device_handler_;
 

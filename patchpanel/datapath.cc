@@ -534,15 +534,14 @@ void Datapath::RemoveIPv6HostRoute(const std::string& ifname,
   process_runner_->ip6("route", "del", {ipv6_addr_cidr, "dev", ifname});
 }
 
-bool Datapath::AddIPv6Neighbor(const std::string& ifname,
-                               const std::string& ipv6_addr) {
-  return process_runner_->ip6("neigh", "add",
-                              {"proxy", ipv6_addr, "dev", ifname}) == 0;
+bool Datapath::AddIPv6Address(const std::string& ifname,
+                              const std::string& ipv6_addr) {
+  return process_runner_->ip6("addr", "add", {ipv6_addr, "dev", ifname}) == 0;
 }
 
-void Datapath::RemoveIPv6Neighbor(const std::string& ifname,
-                                  const std::string& ipv6_addr) {
-  process_runner_->ip6("neigh", "del", {"proxy", ipv6_addr, "dev", ifname});
+void Datapath::RemoveIPv6Address(const std::string& ifname,
+                                 const std::string& ipv6_addr) {
+  process_runner_->ip6("addr", "del", {ipv6_addr, "dev", ifname});
 }
 
 bool Datapath::ModifyFwmarkSourceTag(const std::string& op,
@@ -725,7 +724,7 @@ bool Datapath::DeleteIPv4Route(const std::string& ifname,
   return ModifyRtentry(SIOCDELRT, &route);
 }
 
-bool Datapath::ModifyRtentry(unsigned long op, struct rtentry* route) {
+bool Datapath::ModifyRtentry(ioctl_req_t op, struct rtentry* route) {
   DCHECK(route);
   if (op != SIOCADDRT && op != SIOCDELRT) {
     LOG(ERROR) << "Invalid operation " << op << " for rtentry " << *route;

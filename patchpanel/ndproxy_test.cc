@@ -117,6 +117,21 @@ const uint8_t tcp_frame[] =
     "\xa5\x6c\x80\x10\x01\x54\x04\xb9\x00\x00\x01\x01\x08\x0a\x00\x5a"
     "\x59\xc0\x32\x53\x14\x3a";
 
+TEST(NDProxyTest, GetPrefixInfoOption) {
+  uint8_t in_buffer_extended[IP_MAXPACKET + ETHER_HDR_LEN + 4];
+  uint8_t* in_buffer = NDProxy::AlignFrameBuffer(in_buffer_extended);
+  const nd_opt_prefix_info* prefix_info;
+
+  memcpy(in_buffer, ra_frame, sizeof(ra_frame));
+  prefix_info = NDProxy::GetPrefixInfoOption(in_buffer, sizeof(ra_frame));
+  EXPECT_NE(nullptr, prefix_info);
+  EXPECT_EQ(64, prefix_info->nd_opt_pi_prefix_len);
+
+  memcpy(in_buffer, rs_frame, sizeof(rs_frame));
+  prefix_info = NDProxy::GetPrefixInfoOption(in_buffer, sizeof(rs_frame));
+  EXPECT_EQ(nullptr, prefix_info);
+}
+
 TEST(NDProxyTest, TranslateFrame) {
   uint8_t in_buffer_extended[IP_MAXPACKET + ETHER_HDR_LEN + 4];
   uint8_t out_buffer_extended[IP_MAXPACKET + ETHER_HDR_LEN + 4];
