@@ -156,6 +156,7 @@ type cros_home_shadow_uid_root_shill_logs, file_type, cros_file_type, cros_home_
 type cros_home_shadow_uid_root_usb_bouncer, file_type, cros_file_type, cros_home_file_type;
 
 type system_data_file, file_type, android_file_type; # this is Android file label.
+type system_data_root_file, file_type, android_file_type;
 type testharness_file, file_type, android_file_type;
 type cache_file, file_type, cros_file_type, cros_home_file_type;
 allow domain cros_home:dir r_dir_perms;
