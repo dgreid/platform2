@@ -812,33 +812,34 @@ bool Crypto::EncryptChallengeCredential(
 bool Crypto::EncryptAuthorizationData(SerializedVaultKeyset* serialized,
                                       const SecureBlob& vkk_key,
                                       const SecureBlob& vkk_iv) const {
-  // Handle AuthorizationData secrets if provided.
-  if (serialized->key_data().authorization_data_size() > 0) {
-    KeyData* key_data = serialized->mutable_key_data();
-    for (int auth_data_i = 0; auth_data_i < key_data->authorization_data_size();
-         ++auth_data_i) {
-      KeyAuthorizationData* auth_data =
-          key_data->mutable_authorization_data(auth_data_i);
-      for (int secret_i = 0; secret_i < auth_data->secrets_size(); ++secret_i) {
-        KeyAuthorizationSecret* secret = auth_data->mutable_secrets(secret_i);
-        // Secrets that are externally provided should not be wrapped when
-        // this is called.  However, calling Encrypt() again should be
-        // idempotent.  External callers should be filtered at the API layer.
-        if (secret->wrapped() || !secret->has_symmetric_key())
-          continue;
-        SecureBlob clear_auth_key(secret->symmetric_key());
-        SecureBlob encrypted_auth_key;
+  if (serialized->key_data().authorization_data_size() <= 0)
+    return true;
 
-        if (!CryptoLib::AesEncryptDeprecated(clear_auth_key, vkk_key, vkk_iv,
-                                             &encrypted_auth_key)) {
-          LOG(ERROR) << "Failed to wrap a symmetric authorization key:"
-                     << " (" << auth_data_i << "," << secret_i << ")";
-          // This forces a failure.
-          return false;
-        }
-        secret->set_symmetric_key(encrypted_auth_key.to_string());
-        secret->set_wrapped(true);
+  // Handle AuthorizationData secrets if provided.
+  KeyData* key_data = serialized->mutable_key_data();
+  for (int auth_data_i = 0; auth_data_i < key_data->authorization_data_size();
+       ++auth_data_i) {
+    KeyAuthorizationData* auth_data =
+        key_data->mutable_authorization_data(auth_data_i);
+    for (int secret_i = 0; secret_i < auth_data->secrets_size(); ++secret_i) {
+      KeyAuthorizationSecret* secret = auth_data->mutable_secrets(secret_i);
+      // Secrets that are externally provided should not be wrapped when
+      // this is called.  However, calling Encrypt() again should be
+      // idempotent.  External callers should be filtered at the API layer.
+      if (secret->wrapped() || !secret->has_symmetric_key())
+        continue;
+      SecureBlob clear_auth_key(secret->symmetric_key());
+      SecureBlob encrypted_auth_key;
+
+      if (!CryptoLib::AesEncryptDeprecated(clear_auth_key, vkk_key, vkk_iv,
+                                           &encrypted_auth_key)) {
+        LOG(ERROR) << "Failed to wrap a symmetric authorization key:"
+                   << " (" << auth_data_i << "," << secret_i << ")";
+        // This forces a failure.
+        return false;
       }
+      secret->set_symmetric_key(encrypted_auth_key.to_string());
+      secret->set_wrapped(true);
     }
   }
 
