@@ -79,6 +79,11 @@ bool UserProximityWatcher::Init(PrefsInterface* prefs, UdevInterface* udev) {
   prefs->GetBool(kSetWifiTransmitPowerForProximityPref,
                  &use_proximity_for_wifi_);
 
+  prefs->GetBool(kSetCellularTransmitPowerForActivityProximityPref,
+                 &use_activity_proximity_for_cellular_);
+  prefs->GetBool(kSetWifiTransmitPowerForActivityProximityPref,
+                 &use_activity_proximity_for_wifi_);
+
   udev_ = udev;
   udev_->AddSubsystemObserver(kIioUdevSubsystem, this);
 
@@ -167,22 +172,46 @@ bool UserProximityWatcher::IsIioSarSensor(const UdevDeviceInfo& dev,
   return false;
 }
 
+bool UserProximityWatcher::IsIioActivitySensor(const UdevDeviceInfo& dev,
+                                               std::string* devlink_out) {
+  if (dev.subsystem != kIioUdevSubsystem || dev.devtype != kIioUdevDevice)
+    return false;
+  if (dev.syspath.find("-activity") == std::string::npos)
+    return false;
+
+  *devlink_out = "/dev/" + dev.sysname;
+  return true;
+}
+
 uint32_t UserProximityWatcher::GetUsableSensorRoles(const SensorType type,
                                                     const std::string& path) {
   uint32_t responsibility = UserProximityObserver::SensorRole::SENSOR_ROLE_NONE;
 
-  if (type == SensorType::SAR) {
-    const auto proximity_index = path.find("proximity-");
-    if (proximity_index == std::string::npos)
-      return responsibility;
+  switch (type) {
+    case SensorType::ACTIVITY: {
+      if (use_activity_proximity_for_cellular_)
+        responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_LTE;
+      if (use_activity_proximity_for_wifi_)
+        responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI;
+      break;
+    }
+    case SensorType::SAR: {
+      const auto proximity_index = path.find("proximity-");
+      if (proximity_index == std::string::npos)
+        return responsibility;
 
-    if (use_proximity_for_cellular_ &&
-        path.find("-lte", proximity_index) != std::string::npos)
-      responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_LTE;
+      if (use_proximity_for_cellular_ &&
+          path.find("-lte", proximity_index) != std::string::npos)
+        responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_LTE;
 
-    if (use_proximity_for_wifi_ &&
-        path.find("-wifi", proximity_index) != std::string::npos)
-      responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI;
+      if (use_proximity_for_wifi_ &&
+          path.find("-wifi", proximity_index) != std::string::npos)
+        responsibility |= UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI;
+      break;
+    }
+    default: {
+      LOG(WARNING) << "Unknown type of proximity sensor at " << path;
+    }
   }
 
   return responsibility;
@@ -316,6 +345,16 @@ bool UserProximityWatcher::ConfigureSarSensor(const std::string& syspath,
   return true;
 }
 
+bool UserProximityWatcher::ConfigureActivitySensor(const std::string& syspath,
+                                                   uint32_t role) {
+  std::string enable_path = "events/in_proximity_change_either_en";
+  if (!udev_->SetSysattr(syspath, enable_path, "1")) {
+    LOG(ERROR) << "Could not enable proximity sensor";
+    return false;
+  }
+  return true;
+}
+
 bool UserProximityWatcher::OnSensorDetected(const SensorType type,
                                             const std::string& syspath,
                                             const std::string& devlink) {
@@ -327,9 +366,22 @@ bool UserProximityWatcher::OnSensorDetected(const SensorType type,
     return true;
   }
 
-  if (type == SensorType::SAR && !ConfigureSarSensor(syspath, role)) {
-    LOG(WARNING) << "Unable to configure sar sensor at " << devlink;
-    return false;
+  switch (type) {
+    case SensorType::SAR:
+      if (!ConfigureSarSensor(syspath, role)) {
+        LOG(WARNING) << "Unable to configure sar sensor at " << devlink;
+        return false;
+      }
+      break;
+    case SensorType::ACTIVITY:
+      if (!ConfigureActivitySensor(syspath, role)) {
+        LOG(WARNING) << "Unable to configure activity sensor at " << devlink;
+        return false;
+      }
+      break;
+    default:
+      LOG(WARNING) << "Unknown type of proximity sensor at " << devlink;
+      return false;
   }
 
   int event_fd = open_iio_events_func_.Run(base::FilePath(devlink));
@@ -362,6 +414,8 @@ void UserProximityWatcher::OnNewUdevDevice(const UdevDeviceInfo& device_info) {
   SensorType type = SensorType::UNKNOWN;
   if (IsIioSarSensor(device_info, &devlink))
     type = SensorType::SAR;
+  else if (IsIioActivitySensor(device_info, &devlink))
+    type = SensorType::ACTIVITY;
   else
     return;
 

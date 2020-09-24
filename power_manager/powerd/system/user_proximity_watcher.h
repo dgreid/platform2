@@ -37,7 +37,7 @@ class UserProximityWatcher : public UserProximityWatcherInterface,
                              public UdevSubsystemObserver {
  public:
   // Sensor type for proximity detection.
-  enum class SensorType { UNKNOWN, SAR };
+  enum class SensorType { UNKNOWN, SAR, ACTIVITY };
 
   // udev subsystem to watch.
   static const char kIioUdevSubsystem[];
@@ -90,6 +90,7 @@ class UserProximityWatcher : public UserProximityWatcherInterface,
   // the IIO subsystem. If so, |devlink_out| is the path to the file to be used
   // to read proximity events from this device.
   bool IsIioSarSensor(const UdevDeviceInfo& dev, std::string* devlink_out);
+  bool IsIioActivitySensor(const UdevDeviceInfo& dev, std::string* devlink_out);
 
   // Sets proximity IIO attributes for rising, falling, or either direction
   bool SetIioRisingFallingValue(const std::string& syspath,
@@ -99,9 +100,11 @@ class UserProximityWatcher : public UserProximityWatcherInterface,
                                 const std::string& path_prefix,
                                 const std::string& postfix);
 
-  // Configures the proximity sensor for usage based on values read from
-  // cros_config
+  // Configures the SAR sensor for usage based on values read from cros_config
   bool ConfigureSarSensor(const std::string& syspath, uint32_t role);
+
+  // Configures the activity sensor to enable it.
+  bool ConfigureActivitySensor(const std::string& syspath, uint32_t role);
 
   // Opens a file descriptor suitable for listening to proximity events for
   // the sensor at |devlink|, and notifies registered observers that a new
@@ -124,6 +127,8 @@ class UserProximityWatcher : public UserProximityWatcherInterface,
 
   bool use_proximity_for_cellular_ = false;
   bool use_proximity_for_wifi_ = false;
+  bool use_activity_proximity_for_cellular_ = false;
+  bool use_activity_proximity_for_wifi_ = false;
 };
 
 }  // namespace system

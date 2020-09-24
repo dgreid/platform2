@@ -87,10 +87,14 @@ const char kSetWifiTransmitPowerForTabletModePref[] =
     "set_wifi_transmit_power_for_tablet_mode";
 const char kSetWifiTransmitPowerForProximityPref[] =
     "set_wifi_transmit_power_for_proximity";
+const char kSetWifiTransmitPowerForActivityProximityPref[] =
+    "set_wifi_transmit_power_for_activity_proximity";
 const char kSetCellularTransmitPowerForTabletModePref[] =
     "set_cellular_transmit_power_for_tablet_mode";
 const char kSetCellularTransmitPowerForProximityPref[] =
     "set_cellular_transmit_power_for_proximity";
+const char kSetCellularTransmitPowerForActivityProximityPref[] =
+    "set_cellular_transmit_power_for_activity_proximity";
 const char kSetCellularTransmitPowerDprGpioPref[] =
     "set_cellular_transmit_power_dpr_gpio";
 const char kEnableConsoleDuringSuspendPref[] = "enable_console_during_suspend";

@@ -70,13 +70,26 @@ class UserProximityWatcherTest : public testing::Test {
   }
 
   void Init(UserProximityWatcher::SensorType type, uint32_t roles) {
-    if (type == UserProximityWatcher::SensorType::SAR) {
-      prefs_.SetInt64(
-          kSetCellularTransmitPowerForProximityPref,
-          roles & UserProximityObserver::SensorRole::SENSOR_ROLE_LTE);
-      prefs_.SetInt64(
-          kSetWifiTransmitPowerForProximityPref,
-          roles & UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI);
+    switch (type) {
+      case UserProximityWatcher::SensorType::SAR:
+        prefs_.SetInt64(
+            kSetCellularTransmitPowerForProximityPref,
+            roles & UserProximityObserver::SensorRole::SENSOR_ROLE_LTE);
+        prefs_.SetInt64(
+            kSetWifiTransmitPowerForProximityPref,
+            roles & UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI);
+        break;
+      case UserProximityWatcher::SensorType::ACTIVITY:
+        prefs_.SetInt64(
+            kSetCellularTransmitPowerForActivityProximityPref,
+            roles & UserProximityObserver::SensorRole::SENSOR_ROLE_LTE);
+        prefs_.SetInt64(
+            kSetWifiTransmitPowerForActivityProximityPref,
+            roles & UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI);
+        break;
+      default:
+        ADD_FAILURE() << "Unknown sensor type";
+        return;
     }
     CHECK(user_proximity_watcher_->Init(&prefs_, &udev_));
     observer_.reset(
@@ -215,6 +228,36 @@ TEST_F(UserProximityWatcherTest, UnknownDevice) {
   AddDevice("/sys/mockunknown", "/dev/unknown-wifi-right");
   EXPECT_EQ(JoinActions(nullptr), observer_->GetActions());
   EXPECT_EQ(0, GetNumOpenedSensors());
+}
+
+TEST_F(UserProximityWatcherTest, DetectUsableActivityDevice) {
+  Init(UserProximityWatcher::SensorType::ACTIVITY,
+       UserProximityObserver::SensorRole::SENSOR_ROLE_WIFI);
+
+  AddDevice("/sys/cros-ec-activity.6.auto/MOCKSENSOR", "/dev/MOCKSENSOR");
+  EXPECT_EQ(JoinActions("OnNewSensor(roles=0x1)", nullptr),
+            observer_->GetActions());
+  EXPECT_EQ(1, GetNumOpenedSensors());
+}
+
+TEST_F(UserProximityWatcherTest, DetectNotUsableActivityDevice) {
+  Init(UserProximityWatcher::SensorType::ACTIVITY,
+       UserProximityObserver::SensorRole::SENSOR_ROLE_NONE);
+
+  AddDevice("/sys/cros-ec-activity.6.auto/MOCKSENSOR", "/dev/MOCKSENSOR");
+  EXPECT_EQ(JoinActions(nullptr), observer_->GetActions());
+  EXPECT_EQ(0, GetNumOpenedSensors());
+}
+
+TEST_F(UserProximityWatcherTest, ReceiveActivityProximityInfo) {
+  Init(UserProximityWatcher::SensorType::ACTIVITY,
+       UserProximityObserver::SensorRole::SENSOR_ROLE_LTE);
+
+  AddDevice("/sys/cros-ec-activity.6.auto/MOCKSENSOR", "/dev/MOCKSENSOR");
+  observer_->GetActions();  // consume OnNewSensor
+  SendEvent("/dev/MOCKSENSOR", UserProximity::NEAR);
+  EXPECT_EQ(JoinActions("OnProximityEvent(value=near)", nullptr),
+            observer_->GetActions());
 }
 
 }  // namespace

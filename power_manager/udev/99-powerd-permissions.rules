@@ -7,6 +7,10 @@ ACTION!="remove", SUBSYSTEM=="bluetooth", ENV{DEVTYPE}=="host", RUN+="/bin/chown
 # Make pluggable keyboard backlights writable by powerd.
 ACTION!="remove", SUBSYSTEM=="leds", DEVPATH=="*:kbd_backlight", RUN+="/lib/udev/chown-sysfs-backlight-dir.sh $sys/$devpath"
 
+# Allow powerd to read activity sensor
+ACTION!="remove", ATTR{name}=="cros-ec-activity", MODE="440", GROUP="power"
+ACTION!="remove", ATTR{name}=="cros-ec-activity", RUN+="/usr/bin/find /sys/bus/iio/devices/$kernel/events -name in_*_en -execdir /bin/chmod 660 {} ; -execdir /bin/chgrp power {} ;"
+
 # Older kernels (<v4.19) put cros_fp under the chromeos class
 # The cros_ec-access group is also required by cros_healthd (the associated user
 # that is part of the cros_ec-access group is "healthd_ec").

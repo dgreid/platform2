@@ -225,14 +225,20 @@ extern const char kSuspendToIdlePref[];
 // If true, update wifi transmit power when in tablet vs. clamshell mode.
 extern const char kSetWifiTransmitPowerForTabletModePref[];
 
-// If true, update wifi transmit power based on proximity sensors.
+// If true, update wifi transmit power based on proximity SAR sensors.
 extern const char kSetWifiTransmitPowerForProximityPref[];
+
+// If true, update wifi transmit power based on proximity activity sensors.
+extern const char kSetWifiTransmitPowerForActivityProximityPref[];
 
 // If true, update cellular transmit power when in tablet vs. clamshell mode.
 extern const char kSetCellularTransmitPowerForTabletModePref[];
 
-// If true, update cellular transmit power based on proximity sensors.
+// If true, update cellular transmit power based on proximity SAR sensors.
 extern const char kSetCellularTransmitPowerForProximityPref[];
+
+// If true, update cellular transmit power based on proximity activity sensors.
+extern const char kSetCellularTransmitPowerForActivityProximityPref[];
 
 // GPIO number for the dynamic power reduction signal of a built-in cellular
 // modem.
