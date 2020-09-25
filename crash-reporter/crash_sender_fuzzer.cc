@@ -118,7 +118,6 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   // RunChildMain.
   util::Sender sender(std::move(metrics_lib),
                       std::make_unique<test_util::AdvancingClock>(), options);
-  CHECK(sender.Init());
   std::vector<util::MetaFile> reports_to_send;
   util::RemoveOrphanedCrashFiles(test_dir);
   sender.RemoveAndPickCrashFiles(test_dir, &reports_to_send);

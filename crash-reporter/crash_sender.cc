@@ -118,10 +118,6 @@ int RunChildMain(int argc, char* argv[]) {
   options.test_mode = flags.test_mode;
   options.delete_crashes = flags.delete_crashes;
   util::Sender sender(std::move(metrics_lib), std::move(clock), options);
-  if (!sender.Init()) {
-    LOG(ERROR) << "Failed to initialize util::Sender";
-    return EXIT_FAILURE;
-  }
 
   // If you add sigificant code past this point, consider updating
   // crash_sender_fuzzer.cc as well.

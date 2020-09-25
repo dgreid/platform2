@@ -12,7 +12,6 @@
 
 #include <base/files/file.h>
 #include <base/files/file_path.h>
-#include <base/files/scoped_temp_dir.h>
 #include <base/optional.h>
 #include <base/time/clock.h>
 #include <base/time/time.h>
@@ -271,9 +270,6 @@ class Sender {
          std::unique_ptr<base::Clock> clock,
          const Options& options);
 
-  // Initializes the sender object. Returns true on success.
-  bool Init();
-
   // Lock the lock file so no other instance of crash_sender can access the
   // disk files. Dies if lock file cannot be acquired after a delay.
   //
@@ -316,10 +312,6 @@ class Sender {
   // non-destructive manner).
   std::unique_ptr<brillo::http::FormData> CreateCrashFormData(
       const CrashDetails& details, std::string* product_name_out);
-
-  // Returns the temporary directory used in the object. Valid after Init() is
-  // completed successfully.
-  const base::FilePath& temp_dir() const { return scoped_temp_dir_.GetPath(); }
 
   // For tests only, crash while sending crashes.
   void SetCrashDuringSendForTesting(bool crash) {
@@ -373,7 +365,6 @@ class Sender {
   std::vector<std::string> proxy_servers_;
   std::string form_data_boundary_;
   bool always_write_uploads_log_;
-  base::ScopedTempDir scoped_temp_dir_;
   const int max_crash_rate_;
   const int max_crash_bytes_;
   const base::TimeDelta max_spread_time_;

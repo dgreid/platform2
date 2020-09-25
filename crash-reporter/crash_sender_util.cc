@@ -570,15 +570,6 @@ Sender::Sender(std::unique_ptr<MetricsLibraryInterface> metrics_lib,
       upload_old_reports_(options.upload_old_reports),
       clock_(std::move(clock)) {}
 
-bool Sender::Init() {
-  if (!scoped_temp_dir_.CreateUniqueTempDir()) {
-    PLOG(ERROR) << "Failed to create a temporary directory";
-    return false;
-  }
-
-  return true;
-}
-
 base::File Sender::AcquireLockFileOrDie() {
   base::FilePath lock_file_path = paths::Get(paths::kCrashSenderLockFile);
   base::File lock_file(lock_file_path, base::File::FLAG_OPEN_ALWAYS |

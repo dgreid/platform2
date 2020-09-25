@@ -735,7 +735,6 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   Sender::Options options;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   std::string reason;
   CrashInfo info;
@@ -907,7 +906,6 @@ TEST_F(CrashSenderUtilDeathTest, ChooseActionCrash) {
   Sender::Options options;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   ASSERT_TRUE(SetMockCrashSending(true));
   sender.SetCrashDuringSendForTesting(true);
@@ -934,7 +932,6 @@ TEST_F(CrashSenderUtilTest, ChooseActionDevMode) {
   options.allow_dev_sending = true;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   std::string reason;
   CrashInfo info;
@@ -955,7 +952,6 @@ TEST_F(CrashSenderUtilTest, ChooseActionUploadOldReports) {
   options.upload_old_reports = true;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   std::string reason;
   CrashInfo info;
@@ -974,7 +970,6 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
   options.session_manager_proxy = mock.release();
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   ASSERT_TRUE(SetConditions(kOfficialBuild, kSignInMode, kMetricsEnabled,
                             raw_metrics_lib));
@@ -1062,7 +1057,6 @@ TEST_F(CrashSenderUtilTest, RemoveReportFiles) {
   MetricsLibraryMock* raw_metrics_lib = metrics_lib_.get();
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   EXPECT_CALL(*raw_metrics_lib,
               SendEnumToUMA("Platform.CrOS.CrashSenderRemoveReason",
@@ -1127,7 +1121,6 @@ TEST_F(CrashSenderUtilTest, FailRemoveReportFilesSendsMetric) {
 
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   const base::FilePath crash_directory =
       paths::Get(paths::kSystemCrashDirectory);
@@ -1445,7 +1438,6 @@ TEST_F(CrashSenderUtilTest, GetUserCrashDirectories) {
   options.session_manager_proxy = mock.release();
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   EXPECT_THAT(
       sender.GetUserCrashDirectories(),
@@ -1740,7 +1732,6 @@ TEST_F(CrashSenderUtilTest, SendCrashes) {
   options.always_write_uploads_log = true;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   // Send crashes.
   EXPECT_CALL(
@@ -1877,7 +1868,6 @@ TEST_F(CrashSenderUtilTest, SendCrashes_Fail) {
   options.always_write_uploads_log = true;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   sender.SendCrashes(crashes_to_send, nullptr);
 
@@ -1932,7 +1922,6 @@ TEST_F(CrashSenderUtilDeathTest, SendCrashes_Crash) {
   options.always_write_uploads_log = true;
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
 
   ASSERT_TRUE(SetMockCrashSending(true));
   sender.SetCrashDuringSendForTesting(true);
@@ -1954,7 +1943,6 @@ TEST_F(CrashSenderUtilTest, LockFile) {
   Sender::Options options;
   options.sleep_function = base::Bind(&FakeSleep, &sleep_times);
   Sender sender(std::move(metrics_lib_), std::move(clock), options);
-  ASSERT_TRUE(sender.Init());
 
   EXPECT_FALSE(IsFileLocked(paths::Get(paths::kCrashSenderLockFile)));
   base::File lock(sender.AcquireLockFileOrDie());
@@ -1987,7 +1975,6 @@ TEST_F(CrashSenderUtilTest, LockFileTriesAgainIfFirstAttemptFails) {
   Sender::Options options;
   options.sleep_function = base::Bind(&FakeSleep, &sleep_times);
   Sender sender(std::move(metrics_lib_), std::move(clock), options);
-  ASSERT_TRUE(sender.Init());
 
   base::File lock(sender.AcquireLockFileOrDie());
   EXPECT_TRUE(IsFileLocked(lock_file_path));
@@ -2020,7 +2007,6 @@ TEST_F(CrashSenderUtilTest, LockFileTriesOneLastTimeAfterTimeout) {
   Sender::Options options;
   options.sleep_function = base::Bind(&FakeSleep, &sleep_times);
   Sender sender(std::move(metrics_lib_), std::move(clock), options);
-  ASSERT_TRUE(sender.Init());
 
   base::File lock(sender.AcquireLockFileOrDie());
   EXPECT_TRUE(IsFileLocked(lock_file_path));
@@ -2035,7 +2021,6 @@ TEST_F(CrashSenderUtilDeathTest, LockFileDiesIfFileIsLocked) {
   options.sleep_function = base::Bind(&FakeSleep, &sleep_times);
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
   EXPECT_EXIT(sender.AcquireLockFileOrDie(), ExitedWithCode(EXIT_FAILURE),
               "Failed to acquire a lock");
 }
@@ -2073,7 +2058,6 @@ void IsNetworkOnlineTest::TestIsNetworkOnline(std::string connection_state,
   options.shill_proxy = mock.release();
   Sender sender(std::move(metrics_lib_),
                 std::make_unique<test_util::AdvancingClock>(), options);
-  ASSERT_TRUE(sender.Init());
   EXPECT_EQ(sender.IsNetworkOnline(), expected_result);
 }
 
