@@ -409,3 +409,16 @@ ext4_fsverity_supported() {
   # Return true if kernel supports fs-verity in ext4.
   "${fsverity_enabled}" && [ -e /sys/fs/ext4/features/verity ]
 }
+
+ext4_quota_supported() {
+  [ -d /proc/sys/fs/quota ]
+}
+
+ext4_prjquota_supported() {
+  # Can be set in the ebuild.
+  local prjquota_enabled=false
+
+  # Return true if quota is supported (required but not sufficient condition)
+  # and prjquota flag is set.
+  "${prjquota_enabled}" && ext4_quota_supported
+}

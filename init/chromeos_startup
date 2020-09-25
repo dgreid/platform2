@@ -305,19 +305,28 @@ if [ "$ROOTDEV_RET_CODE" = "0" ] && [ "$ROOTDEV_TYPE" != "/dev/ram" ]; then
       # Add Android's AID_RESERVED_DISK to resgid.
       SB_FEATURES="${SB_FEATURES} -g 20119"
     fi
-    if [ -d /proc/sys/fs/quota ]; then
+    if ext4_quota_supported; then
       # Quota is enabled in the kernel, make sure that quota is enabled in the
       # filesystem.
       if ! string_contains "${FS_FEATURES}" "quota"; then
         SB_OPTIONS="${SB_OPTIONS},quota"
         SB_FEATURES="${SB_FEATURES} -Qusrquota,grpquota"
       fi
+      if ext4_prjquota_supported; then
+        if ! string_contains "${FS_FEATURES}" "project"; then
+          SB_FEATURES="${SB_FEATURES} -Qprjquota"
+        fi
+      else
+        if string_contains "${FS_FEATURES}" "project"; then
+          SB_FEATURES="${SB_FEATURES} -Q^prjquota"
+        fi
+      fi
     else
       # Quota is not enabled in the kernel, make sure that quota is disabled in
       # the filesystem.
       if string_contains "${FS_FEATURES}" "quota"; then
         SB_OPTIONS="${SB_OPTIONS},^quota"
-        SB_FEATURES="${SB_FEATURES} -Q^usrquota,^grpquota"
+        SB_FEATURES="${SB_FEATURES} -Q^usrquota,^grpquota,^prjquota"
       fi
     fi
 

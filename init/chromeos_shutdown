@@ -186,7 +186,7 @@ else
     if [ "${UPDATE_TARGET}" -lt 10756 ]; then
       if dumpe2fs -h "${STATE_DEV}" 2>/dev/null | \
                 grep -qe "^Filesystem features:.* quota.*"; then
-        tune2fs -O^quota -Q^usrquota,^grpquota "${STATE_DEV}"
+        tune2fs -O^quota -Q^usrquota,^grpquota,^prjquota "${STATE_DEV}"
       fi
     fi
   fi
