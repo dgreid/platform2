@@ -408,14 +408,6 @@ class Mount : public base::RefCountedThreadSafe<Mount> {
   base::FilePath GetUserLegacyKeyFileForUser(
       const std::string& obfuscated_username, int index) const;
 
-  // Gets the user's key file name by label
-  //
-  // Parameters
-  //   obfuscated_username - Obfuscated username field of the Credentials
-  //   label - which key file to load by KeyData::label()
-  base::FilePath GetUserKeyFileForUser(const std::string& obfuscated_username,
-                                       const std::string& label) const;
-
   // Gets the directory in the shadow root where the user's salt, key, and vault
   // are stored.
   //

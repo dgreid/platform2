@@ -1171,19 +1171,6 @@ FilePath Mount::GetUserLegacyKeyFileForUser(
       .AddExtension(base::NumberToString(index));
 }
 
-// This is the new planned format for keyfile storage.
-FilePath Mount::GetUserKeyFileForUser(const std::string& obfuscated_username,
-                                      const std::string& label) const {
-  DCHECK(!label.empty());
-  // SHA1 is not for any other purpose than to provide a reasonably
-  // collision-resistant, fixed length, path-safe file suffix.
-  std::string digest = base::SHA1HashString(label);
-  std::string safe_label = base::HexEncode(digest.c_str(), digest.length());
-  return shadow_root_.Append(obfuscated_username)
-      .Append(kKeyFile)
-      .AddExtension(safe_label);
-}
-
 FilePath Mount::GetUserTemporaryMountDirectory(
     const std::string& obfuscated_username) const {
   return mounter_->GetUserTemporaryMountDirectory(obfuscated_username);
