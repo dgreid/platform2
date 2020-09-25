@@ -101,6 +101,7 @@ _IUSE = [
     'tpm',
     'tpm2',
     'tpm2_simulator',
+    'trogdor_sar_hack',
     'ubsan',
     'udev',
     'usb_camera_monocle',

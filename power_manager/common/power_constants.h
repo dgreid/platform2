@@ -325,9 +325,20 @@ enum class LidState {
 
 enum class RadioTransmitPower {
   LOW,
+#if USE_TROGDOR_SAR_HACK
+  MEDIUM,
+#endif  // USE_TROGDOR_SAR_HACK
   HIGH,
   UNSPECIFIED,
 };
+
+#if USE_TROGDOR_SAR_HACK
+enum class ModemState {
+  OFFLINE,
+  ONLINE,
+  UNKNOWN,
+};
+#endif  // USE_TROGDOR_SAR_HACK
 
 // Convertible Chromebooks may either be folded into a tablet or used as a
 // clamshell.

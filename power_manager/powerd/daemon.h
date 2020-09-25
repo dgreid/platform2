@@ -20,7 +20,11 @@
 #include <dbus/exported_object.h>
 
 #include "power_manager/common/prefs_observer.h"
+#if USE_TROGDOR_SAR_HACK
+#include "power_manager/powerd/policy/cellular_controller_trogdor.h"
+#else  // USE_TROGDOR_SAR_HACK
 #include "power_manager/powerd/policy/cellular_controller.h"
+#endif  // USE_TROGDOR_SAR_HACK
 #include "power_manager/powerd/policy/charge_controller.h"
 #include "power_manager/powerd/policy/input_event_handler.h"
 #include "power_manager/powerd/policy/suspender.h"
@@ -50,7 +54,11 @@ class MetricsCollector;
 
 namespace policy {
 class BacklightController;
+#if USE_TROGDOR_SAR_HACK
+class CellularControllerTrogdor;
+#else   // USE_TROGDOR_SAR_HACK
 class CellularController;
+#endif  // USE_TROGDOR_SAR_HACK
 class InputDeviceController;
 class UserProximityHandler;
 class ShutdownFromSuspend;
@@ -88,7 +96,11 @@ class Daemon;
 class Daemon : public policy::InputEventHandler::Delegate,
                public policy::Suspender::Delegate,
                public policy::WifiController::Delegate,
+#if USE_TROGDOR_SAR_HACK
+               public policy::CellularControllerTrogdor::Delegate,
+#else   // USE_TROGDOR_SAR_HACK
                public policy::CellularController::Delegate,
+#endif  // USE_TROGDOR_SAR_HACK
                public system::AudioObserver,
                public system::DBusWrapperInterface::Observer,
                public system::PowerSupplyObserver {
@@ -152,9 +164,13 @@ class Daemon : public policy::InputEventHandler::Delegate,
   void SetWifiTransmitPower(RadioTransmitPower power,
                             WifiRegDomain domain) override;
 
+#if USE_TROGDOR_SAR_HACK
+  void SetCellularTransmitPower(RadioTransmitPower power) override;
+#else   // USE_TROGDOR_SAR_HACK
   // Overridden from policy::CellularController::Delegate:
   void SetCellularTransmitPower(RadioTransmitPower power,
                                 int64_t dpr_gpio_number) override;
+#endif  // USE_TROGDOR_SAR_HACK
 
   // Overridden from system::AudioObserver:
   void OnAudioStateChange(bool active) override;
@@ -306,7 +322,11 @@ class Daemon : public policy::InputEventHandler::Delegate,
   std::unique_ptr<policy::ShutdownFromSuspend> shutdown_from_suspend_;
   std::unique_ptr<policy::Suspender> suspender_;
   std::unique_ptr<policy::WifiController> wifi_controller_;
+#if USE_TROGDOR_SAR_HACK
+  std::unique_ptr<policy::CellularControllerTrogdor> cellular_controller_;
+#else   // USE_TROGDOR_SAR_HACK
   std::unique_ptr<policy::CellularController> cellular_controller_;
+#endif  // USE_TROGDOR_SAR_HACK
   std::unique_ptr<system::SuspendConfiguratorInterface> suspend_configurator_;
   std::unique_ptr<system::WakeupSourceIdentifierInterface>
       wakeup_source_identifier_;

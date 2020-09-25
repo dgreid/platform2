@@ -353,7 +353,6 @@ int main(int argc, char* argv[]) {
   base::SingleThreadTaskExecutor task_executor(base::MessagePumpType::IO);
   // This is used in AlarmTimer.
   base::FileDescriptorWatcher watcher{task_executor.task_runner()};
-
   power_manager::DaemonDelegateImpl delegate;
   // Extra parens to avoid http://en.wikipedia.org/wiki/Most_vexing_parse.
   power_manager::Daemon daemon(&delegate, (base::FilePath(FLAGS_run_dir)));

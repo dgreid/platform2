@@ -82,6 +82,10 @@ int main(int argc, char* argv[]) {
               "Set cellular transmit power mode to low");
   DEFINE_int64(cellular_transmit_power_gpio, -1,
                "GPIO pin to write to for changing cellular transmit power");
+#if USE_TROGDOR_SAR_HACK
+  DEFINE_int32(cellular_transmit_power_trogdor_level, 0, "QMI SAR Power level");
+#endif  // USE_TROGDOR_SAR_HACK
+
   brillo::FlagHelper::Init(argc, argv, "powerd setuid helper");
 
   if (FLAGS_action == "mosys_eventlog") {
@@ -116,6 +120,13 @@ int main(int argc, char* argv[]) {
         "--gpio=" + base::NumberToString(FLAGS_cellular_transmit_power_gpio);
     RunCommand("set_cellular_transmit_power", mode.c_str(), target.c_str(),
                nullptr);
+#if USE_TROGDOR_SAR_HACK
+  } else if (FLAGS_action == "set_cellular_transmit_power_trogdor") {
+    std::string level =
+        "--level=" +
+        base::NumberToString(FLAGS_cellular_transmit_power_trogdor_level);
+    RunCommand("set_cellular_transmit_power_trogdor", level.c_str(), nullptr);
+#endif  // USE_TROGDOR_SAR_HACK
   } else if (FLAGS_action == "set_wifi_transmit_power") {
     const std::string tablet =
         FLAGS_wifi_transmit_power_tablet ? "--tablet" : "--notablet";

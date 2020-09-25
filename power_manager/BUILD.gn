@@ -50,10 +50,16 @@ group("all") {
       ":powerd_als_fuzzer",
     ]
   }
+  if (use.trogdor_sar_hack) {
+    deps += [ ":set_cellular_transmit_power_trogdor" ]
+  }
 }
 
 pkg_config("target_defaults") {
-  defines = [ "USE_BUFFET=${use.buffet}" ]
+  defines = [
+    "USE_BUFFET=${use.buffet}",
+    "USE_TROGDOR_SAR_HACK=${use.trogdor_sar_hack}",
+  ]
 
   # NOSORT
   pkg_deps = [
@@ -72,6 +78,16 @@ pkg_config("target_defaults") {
     pkg_deps += [ "protobuf" ]
   } else {
     pkg_deps += [ "protobuf-lite" ]
+  }
+  if (use.trogdor_sar_hack) {
+    pkg_deps += [
+      "gio-2.0",
+      "gio-unix-2.0",
+      "glib-2.0",
+      "gthread-2.0",
+      "qmi-glib",
+    ]
+    libs = [ "qrtr" ]
   }
 }
 
@@ -192,6 +208,9 @@ static_library("libpolicy") {
     "powerd/policy/user_proximity_voting.cc",
     "powerd/policy/wifi_controller.cc",
   ]
+  if (use.trogdor_sar_hack) {
+    sources += [ "powerd/policy/cellular_controller_trogdor.cc" ]
+  }
   libs = [ "m" ]
 }
 
@@ -240,6 +259,11 @@ executable("powerd_setuid_helper") {
 executable("set_cellular_transmit_power") {
   configs += [ ":target_defaults" ]
   sources = [ "powerd/set_cellular_transmit_power.cc" ]
+}
+
+executable("set_cellular_transmit_power_trogdor") {
+  configs += [ ":target_defaults" ]
+  sources = [ "powerd/set_cellular_transmit_power_trogdor.cc" ]
 }
 
 pkg_config("set_wifi_transmit_power_config") {
