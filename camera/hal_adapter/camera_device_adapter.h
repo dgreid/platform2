@@ -10,6 +10,7 @@
 #include <deque>
 #include <map>
 #include <memory>
+#include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
@@ -20,6 +21,7 @@
 #include <base/files/scoped_file.h>
 #include <base/synchronization/lock.h>
 #include <base/threading/thread.h>
+#include <base/timer/timer.h>
 #include <camera/camera_metadata.h>
 #include <mojo/public/cpp/bindings/binding.h>
 #include <system/camera_metadata.h>
@@ -186,6 +188,8 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
   void ResetDeviceOpsDelegateOnThread();
   void ResetCallbackOpsDelegateOnThread();
 
+  void MonitorTimeout(const std::string& name);
+
   // The thread that all the camera3 device ops operate on.
   base::Thread camera_device_ops_thread_;
 
@@ -202,6 +206,9 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
 
   // A thread to notify errors in added requests.
   base::Thread notify_error_thread_;
+
+  // A thread that handles timeouts of request/response monitors.
+  base::Thread monitor_thread_;
 
   // The delegate that handles the Camera3DeviceOps mojo IPC.
   std::unique_ptr<Camera3DeviceOpsDelegate> device_ops_delegate_;
@@ -293,6 +300,12 @@ class CameraDeviceAdapter : public camera3_callback_ops_t {
 
   // ANDROID_PARTIAL_RESULT_COUNT from static metadata.
   int32_t partial_result_count_;
+
+  // Monitors for capture requests and capture results. If there is no capture
+  // requests/responses for a while the monitors will output a log to indicate
+  // this situation.
+  base::OneShotTimer capture_request_monitor_;
+  base::OneShotTimer capture_result_monitor_;
 
   DISALLOW_IMPLICIT_CONSTRUCTORS(CameraDeviceAdapter);
 };
