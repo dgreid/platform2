@@ -155,9 +155,11 @@ class BRILLO_EXPORT AsyncGrpcServerBase {
 //   // |on_shutdown_callback| is called.
 // The handlers (e.g. |do_something_handler| in the example) have the following
 // form:
-//   void DoSomethingHandler(std::unique_ptr<DoSomethingRequest> request,
-//     const base::Callback<void (std::unique_ptr<DoSomethingResponse)>
-//         send_response_callback>);
+//   void DoSomethingHandler(
+//       std::unique_ptr<DoSomethingRequest> request,
+//       const base::Callback<void(grpc::Status,
+//                                 std::unique_ptr<DoSomethingResponse>)>&
+//           send_response_callback);
 template <typename AsyncService>
 class AsyncGrpcServer final : public internal::AsyncGrpcServerBase {
  public:
