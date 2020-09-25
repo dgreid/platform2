@@ -390,9 +390,16 @@ class CrashSenderUtilTest : public testing::Test {
     if (!TouchFileHelper(old_incomplete_meta_, now - hour * 24))
       return false;
 
-    // This should be removed, since the meta file is new.
+    // This should be ignored, even though the payload doesn't exist,
+    // since the meta file is new.
     new_incomplete_meta_ = crash_directory.Append("new_incomplete.meta");
-    if (!CreateFile(new_incomplete_meta_, "payload=good.log\n", now))
+    if (!CreateFile(new_incomplete_meta_, "payload=nonexistent.log\n", now))
+      return false;
+
+    // This should be ignored, even though there's no payload, since the meta
+    // file is new.
+    new_empty_meta_ = crash_directory.Append("new_empty.meta");
+    if (!CreateFile(new_empty_meta_, "", now))
       return false;
 
     // This should be kept since the OS timestamp is recent.
@@ -483,6 +490,7 @@ class CrashSenderUtilTest : public testing::Test {
   base::FilePath unknown_xxx_;
   base::FilePath old_incomplete_meta_;
   base::FilePath new_incomplete_meta_;
+  base::FilePath new_empty_meta_;
   base::FilePath recent_os_meta_;
   base::FilePath recent_os_log_;
   base::FilePath old_os_meta_;
@@ -786,6 +794,12 @@ TEST_F(CrashSenderUtilTest, ChooseAction) {
   EXPECT_FALSE(
       base::PathExists(new_incomplete_meta_.ReplaceExtension(".processing")));
 
+  EXPECT_EQ(Sender::kIgnore,
+            sender.ChooseAction(new_empty_meta_, &reason, &info));
+  EXPECT_THAT(reason, HasSubstr("Recent incomplete metadata"));
+  EXPECT_FALSE(
+      base::PathExists(new_empty_meta_.ReplaceExtension(".processing")));
+
   // Device coredump should be ignored by default.
   EXPECT_EQ(Sender::kIgnore,
             sender.ChooseAction(devcore_meta_, &reason, &info));
@@ -990,6 +1004,7 @@ TEST_F(CrashSenderUtilTest, RemoveAndPickCrashFiles) {
   EXPECT_TRUE(base::PathExists(uploaded_meta_));
   EXPECT_TRUE(base::PathExists(uploaded_log_));
   EXPECT_TRUE(base::PathExists(new_incomplete_meta_));
+  EXPECT_TRUE(base::PathExists(new_empty_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_meta_));
   EXPECT_TRUE(base::PathExists(recent_os_log_));
   EXPECT_FALSE(base::PathExists(empty_meta_));

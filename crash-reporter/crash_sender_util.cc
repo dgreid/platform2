@@ -697,6 +697,30 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
 
   MetadataToCrashInfo(info->metadata, info);
 
+  base::File::Info file_info;
+  if (!base::GetFileInfo(meta_file, &file_info)) {
+    // Should not happen since it succeeded to read the file.
+    *reason = "Failed to get file info";
+    return kIgnore;
+  }
+
+  // Before verifying any properties of the metadata file (e.g. that all fields
+  // are completely written), we must check that it is actually complete.
+  // For example, we shouldn't remove a metadata file due to a missing payload
+  // while that meta file is still being written.
+  info->last_modified = file_info.last_modified;
+  if (!IsCompleteMetadata(info->metadata)) {
+    const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
+    if (delta.InHours() >= 24) {
+      *reason = "Removing old incomplete metadata";
+      SendCrashRemoveReasonToUMA(kOldIncompleteMeta);
+      return kRemove;
+    } else {
+      *reason = "Recent incomplete metadata";
+      return kIgnore;
+    }
+  }
+
   if (info->payload_file.empty()) {
     *reason = "Payload is not found in the meta data: " + raw_metadata;
     SendCrashRemoveReasonToUMA(kPayloadUnspecified);
@@ -742,26 +766,6 @@ Sender::Action Sender::ChooseAction(const base::FilePath& meta_file,
     *reason = "Old OS version";
     SendCrashRemoveReasonToUMA(kOSVersionTooOld);
     return kRemove;
-  }
-
-  base::File::Info file_info;
-  if (!base::GetFileInfo(meta_file, &file_info)) {
-    // Should not happen since it succeeded to read the file.
-    *reason = "Failed to get file info";
-    return kIgnore;
-  }
-
-  info->last_modified = file_info.last_modified;
-  if (!IsCompleteMetadata(info->metadata)) {
-    const base::TimeDelta delta = clock_->Now() - file_info.last_modified;
-    if (delta.InHours() >= 24) {
-      *reason = "Removing old incomplete metadata";
-      SendCrashRemoveReasonToUMA(kOldIncompleteMeta);
-      return kRemove;
-    } else {
-      *reason = "Recent incomplete metadata";
-      return kIgnore;
-    }
   }
 
   if (IsAlreadyUploaded(meta_file)) {
