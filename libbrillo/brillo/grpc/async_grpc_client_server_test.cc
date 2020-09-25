@@ -169,6 +169,74 @@ class RpcReply {
   base::WeakPtrFactory<RpcReply> weak_ptr_factory_;
 };
 
+// Implementation of test_rpcs.ExampleService that accumulates all RPC calls and
+// allows to manually trigger responses to them.
+class ManualExampleService final {
+ public:
+  explicit ManualExampleService(const std::vector<std::string>& server_uris)
+      : server_(base::ThreadTaskRunnerHandle::Get(), server_uris) {
+    server_.RegisterHandler(
+        &test_rpcs::ExampleService::AsyncService::RequestEmptyRpc,
+        pending_empty_rpcs_.GetRpcHandlerCallback());
+    server_.RegisterHandler(
+        &test_rpcs::ExampleService::AsyncService::RequestEchoIntRpc,
+        pending_echo_int_rpcs_.GetRpcHandlerCallback());
+    server_.RegisterHandler(
+        &test_rpcs::ExampleService::AsyncService::RequestHeavyRpc,
+        pending_heavy_rpcs_.GetRpcHandlerCallback());
+  }
+
+  ManualExampleService(const ManualExampleService&) = delete;
+  ManualExampleService& operator=(const ManualExampleService&) = delete;
+
+  ~ManualExampleService() {
+    if (in_shutdown_) {
+      // Shutdown was already performed.
+      return;
+    }
+    base::RunLoop run_loop;
+    server_.ShutDown(run_loop.QuitClosure());
+    run_loop.Run();
+  }
+
+  bool Start() { return server_.Start(); }
+
+  void ShutDown(base::Closure on_shutdown) {
+    DCHECK(!in_shutdown_);
+    in_shutdown_ = true;
+    server_.ShutDown(std::move(on_shutdown));
+  }
+
+  PendingIncomingRpcQueue<test_rpcs::EmptyRpcRequest,
+                          test_rpcs::EmptyRpcResponse>*
+  pending_empty_rpcs() {
+    return &pending_empty_rpcs_;
+  }
+  PendingIncomingRpcQueue<test_rpcs::EchoIntRpcRequest,
+                          test_rpcs::EchoIntRpcResponse>*
+  pending_echo_int_rpcs() {
+    return &pending_echo_int_rpcs_;
+  }
+  PendingIncomingRpcQueue<test_rpcs::HeavyRpcRequest,
+                          test_rpcs::HeavyRpcResponse>*
+  pending_heavy_rpcs() {
+    return &pending_heavy_rpcs_;
+  }
+
+ private:
+  AsyncGrpcServer<test_rpcs::ExampleService::AsyncService> server_;
+  bool in_shutdown_ = false;
+  PendingIncomingRpcQueue<test_rpcs::EmptyRpcRequest,
+                          test_rpcs::EmptyRpcResponse>
+      pending_empty_rpcs_;
+  PendingIncomingRpcQueue<test_rpcs::EchoIntRpcRequest,
+                          test_rpcs::EchoIntRpcResponse>
+      pending_echo_int_rpcs_;
+  PendingIncomingRpcQueue<test_rpcs::HeavyRpcRequest,
+                          test_rpcs::HeavyRpcResponse>
+      pending_heavy_rpcs_;
+};
+
 // Implementation of test_rpcs.ExampleService that synchronously replies to the
 // requests and triggers self-shutdown after receiving the first RPC call.
 class SelfStoppingExampleService final {
@@ -233,11 +301,11 @@ class SelfStoppingExampleService final {
 
 }  // namespace
 
-// Creates an |AsyncGrpcServer| and |AsyncGrpcClient| for the
+// Tests communication between |AsyncGrpcServer| and |AsyncGrpcClient| for the
 // test_rpcs::ExampleService::AsyncService interface (defined in
-// test_rpcs.proto), set up to talk to each other.
+// test_rpcs.proto).
 class AsyncGrpcClientServerTest : public ::testing::Test {
- public:
+ protected:
   AsyncGrpcClientServerTest() = default;
   AsyncGrpcClientServerTest(const AsyncGrpcClientServerTest&) = delete;
   AsyncGrpcClientServerTest& operator=(const AsyncGrpcClientServerTest&) =
@@ -251,36 +319,30 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
     // |tmpfile_| will be used as a unix domain socket to communicate between
     // the server and client used here.
     tmpfile_ = tmpdir_.GetPath().AppendASCII("testsocket");
-
-    StartServer();
-
-    // Create the AsyncGrpcClient.
-    client_ = std::make_unique<AsyncGrpcClient<test_rpcs::ExampleService>>(
-        task_executor_.task_runner(), GetDomainSocketAddress());
   }
 
-  void StartServer() {
-    // Create and start the AsyncGrpcServer.
-    server_ = std::make_unique<
-        AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>(
-        task_executor_.task_runner(),
+  ManualExampleService* manual_service() { return manual_service_.get(); }
+
+  // Run an AsyncGrpcServer that accumulates all RPC calls and allows to
+  // manually respond to them.
+  void StartManualService() {
+    manual_service_ = std::make_unique<ManualExampleService>(
         std::vector<std::string>{GetDomainSocketAddress()});
-    server_->RegisterHandler(
-        &test_rpcs::ExampleService::AsyncService::RequestEmptyRpc,
-        pending_empty_rpcs_.GetRpcHandlerCallback());
-    server_->RegisterHandler(
-        &test_rpcs::ExampleService::AsyncService::RequestEchoIntRpc,
-        pending_echo_int_rpcs_.GetRpcHandlerCallback());
-    server_->RegisterHandler(
-        &test_rpcs::ExampleService::AsyncService::RequestHeavyRpc,
-        pending_heavy_rpcs_.GetRpcHandlerCallback());
-    ASSERT_TRUE(server_->Start());
+    ASSERT_TRUE(manual_service_->Start());
   }
 
+  // Run an AsyncGrpcServer that shuts down itself after receiving the first RPC
+  // call.
   void StartSelfStoppingService() {
     self_stopping_service_ = std::make_unique<SelfStoppingExampleService>(
         std::vector<std::string>{GetDomainSocketAddress()});
     ASSERT_TRUE(self_stopping_service_->Start());
+  }
+
+  // Create an AsyncGrpcClient.
+  void CreateClient() {
+    client_ = std::make_unique<AsyncGrpcClient<test_rpcs::ExampleService>>(
+        task_executor_.task_runner(), GetDomainSocketAddress());
   }
 
   // Create the second AsyncGrpcClient using the same socket, which has to be
@@ -302,45 +364,29 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
     client2_.reset();
   }
 
-  void RestartServer() {
-    ShutDownServer();
-    StartServer();
+  void RestartManualService() {
+    manual_service_.reset();
+    StartManualService();
   }
 
   void TearDown() override {
     // Stop all clients and servers here, before deleting the temp dir that they
     // use.
-    ShutDownClient();
-    ShutDownServer();
+    if (client2_)
+      ShutDownSecondClient();
+    if (client_)
+      ShutDownClient();
     self_stopping_service_.reset();
+    ShutDownManualService();
   }
 
- protected:
-  void ShutDownServer() {
-    if (!server_)
-      return;
-    base::RunLoop loop;
-    server_->ShutDown(loop.QuitClosure());
-    loop.Run();
-    server_.reset();
-  }
+  void ShutDownManualService() { manual_service_.reset(); }
 
   base::SingleThreadTaskExecutor task_executor_{base::MessagePumpType::IO};
+  std::unique_ptr<ManualExampleService> manual_service_;
   std::unique_ptr<SelfStoppingExampleService> self_stopping_service_;
-  std::unique_ptr<AsyncGrpcServer<test_rpcs::ExampleService::AsyncService>>
-      server_;
   std::unique_ptr<AsyncGrpcClient<test_rpcs::ExampleService>> client_;
   std::unique_ptr<AsyncGrpcClient<test_rpcs::ExampleService>> client2_;
-
-  PendingIncomingRpcQueue<test_rpcs::EmptyRpcRequest,
-                          test_rpcs::EmptyRpcResponse>
-      pending_empty_rpcs_;
-  PendingIncomingRpcQueue<test_rpcs::EchoIntRpcRequest,
-                          test_rpcs::EchoIntRpcResponse>
-      pending_echo_int_rpcs_;
-  PendingIncomingRpcQueue<test_rpcs::HeavyRpcRequest,
-                          test_rpcs::HeavyRpcResponse>
-      pending_heavy_rpcs_;
 
  private:
   std::string GetDomainSocketAddress() { return "unix:" + tmpfile_.value(); }
@@ -361,19 +407,26 @@ class AsyncGrpcClientServerTest : public ::testing::Test {
 };
 
 // Start and shutdown a server and a client.
-TEST_F(AsyncGrpcClientServerTest, NoRpcs) {}
+TEST_F(AsyncGrpcClientServerTest, NoRpcs) {
+  StartManualService();
+  CreateClient();
+}
 
 // Send one RPC and verify that the response arrives at the client.
 // Verifies that the response contains the data transferred in the request.
 TEST_F(AsyncGrpcClientServerTest, OneRpcWithResponse) {
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
   test_rpcs::EchoIntRpcRequest request;
   request.set_int_to_echo(42);
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
                    rpc_reply.MakeWriter());
 
-  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_rpc =
+      manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
   EXPECT_EQ(42, pending_rpc->request->int_to_echo());
 
   auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
@@ -386,6 +439,9 @@ TEST_F(AsyncGrpcClientServerTest, OneRpcWithResponse) {
 }
 
 TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EchoIntRpcResponse> echo_int_rpc_reply;
   RpcReply<test_rpcs::EmptyRpcResponse> empty_rpc_reply;
 
@@ -402,8 +458,9 @@ TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
                    echo_int_rpc_request, echo_int_rpc_reply.MakeWriter());
 
   // Respond to the EchoIntRpc and wait for the response
-  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_echo_int_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_echo_int_rpc =
+      manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
   EXPECT_EQ(33, pending_echo_int_rpc->request->int_to_echo());
   auto echo_int_response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
   echo_int_response->set_echoed_int(33);
@@ -415,8 +472,9 @@ TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
   EXPECT_EQ(33, echo_int_rpc_reply.response().echoed_int());
 
   // Respond to the EmptyRpc and wait for the response
-  pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_empty_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_empty_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_empty_rpc =
+      manual_service()->pending_empty_rpcs()->GetOldestPendingRpc();
   auto empty_rpc_response = std::make_unique<test_rpcs::EmptyRpcResponse>();
   pending_empty_rpc->handler_done_callback.Run(grpc::Status::OK,
                                                std::move(empty_rpc_response));
@@ -428,13 +486,17 @@ TEST_F(AsyncGrpcClientServerTest, MultipleRpcTypes) {
 // Send one RPC, cancel it on the server side. Verify that the error arrives at
 // the client.
 TEST_F(AsyncGrpcClientServerTest, OneRpcExplicitCancellation) {
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EmptyRpcResponse> rpc_reply;
   test_rpcs::EmptyRpcRequest request;
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEmptyRpc, request,
                    rpc_reply.MakeWriter());
 
-  pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_empty_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_rpc =
+      manual_service()->pending_empty_rpcs()->GetOldestPendingRpc();
   pending_rpc->handler_done_callback.Run(
       grpc::Status(grpc::StatusCode::CANCELLED, "Cancelled on the server side"),
       nullptr);
@@ -448,14 +510,18 @@ TEST_F(AsyncGrpcClientServerTest, OneRpcExplicitCancellation) {
 // Also implicitly verifies that shutting down the server when there's a pending
 // RPC does not e.g. hang or crash.
 TEST_F(AsyncGrpcClientServerTest, ShutDownWhileRpcIsPending) {
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EmptyRpcResponse> rpc_reply;
   test_rpcs::EmptyRpcRequest request;
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEmptyRpc, request,
                    rpc_reply.MakeWriter());
 
-  pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_empty_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
-  ShutDownServer();
+  manual_service()->pending_empty_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_empty_rpc =
+      manual_service()->pending_empty_rpcs()->GetOldestPendingRpc();
+  ShutDownManualService();
 
   rpc_reply.Wait();
   EXPECT_TRUE(rpc_reply.IsError());
@@ -470,22 +536,26 @@ TEST_F(AsyncGrpcClientServerTest, ShutDownWhileRpcIsPending) {
 // This should not crash, but we expect that the cancellation arrives at the
 // sender.
 TEST_F(AsyncGrpcClientServerTest, SendResponseAfterInitiatingShutdown) {
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EmptyRpcResponse> rpc_reply;
   test_rpcs::EmptyRpcRequest request;
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEmptyRpc, request,
                    rpc_reply.MakeWriter());
 
-  pending_empty_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_empty_rpc = pending_empty_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_empty_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_empty_rpc =
+      manual_service()->pending_empty_rpcs()->GetOldestPendingRpc();
 
   base::RunLoop loop;
-  server_->ShutDown(loop.QuitClosure());
+  manual_service()->ShutDown(loop.QuitClosure());
   auto empty_rpc_response = std::make_unique<test_rpcs::EmptyRpcResponse>();
   pending_empty_rpc->handler_done_callback.Run(grpc::Status::OK,
                                                std::move(empty_rpc_response));
 
   loop.Run();
-  server_.reset();
+  ShutDownManualService();
 
   rpc_reply.Wait();
   EXPECT_TRUE(rpc_reply.IsError());
@@ -495,6 +565,10 @@ TEST_F(AsyncGrpcClientServerTest, SendResponseAfterInitiatingShutdown) {
 // of them in a batch.
 TEST_F(AsyncGrpcClientServerTest, ManyRpcs) {
   const int kNumOfRpcs = 10;
+
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EchoIntRpcResponse> rpc_replies[kNumOfRpcs];
   for (int i = 0; i < kNumOfRpcs; ++i) {
     test_rpcs::EchoIntRpcRequest request;
@@ -503,9 +577,11 @@ TEST_F(AsyncGrpcClientServerTest, ManyRpcs) {
                      rpc_replies[i].MakeWriter());
   }
 
-  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(kNumOfRpcs);
+  manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(
+      kNumOfRpcs);
   for (int i = 0; i < kNumOfRpcs; ++i) {
-    auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+    auto pending_rpc =
+        manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(pending_rpc->request->int_to_echo());
     pending_rpc->handler_done_callback.Run(grpc::Status::OK,
@@ -528,14 +604,18 @@ TEST_F(AsyncGrpcClientServerTest, HeavyRpcData) {
   ASSERT_GE(kDataSize, 0);
   const std::string kData(kDataSize, '\1');
 
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::HeavyRpcResponse> rpc_reply;
   test_rpcs::HeavyRpcRequest request;
   request.set_data(kData);
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncHeavyRpc, request,
                    rpc_reply.MakeWriter());
 
-  pending_heavy_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_rpc = pending_heavy_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_heavy_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_rpc =
+      manual_service()->pending_heavy_rpcs()->GetOldestPendingRpc();
   EXPECT_EQ(kData, pending_rpc->request->data());
 
   auto response = std::make_unique<test_rpcs::HeavyRpcResponse>();
@@ -551,6 +631,9 @@ TEST_F(AsyncGrpcClientServerTest, HeavyRpcData) {
 TEST_F(AsyncGrpcClientServerTest, ExcessivelyBigRpcRequest) {
   const int kDataSize = kMaxGrpcMessageSize + 1;
   const std::string kData(kDataSize, '\1');
+
+  StartManualService();
+  CreateClient();
 
   RpcReply<test_rpcs::HeavyRpcResponse> rpc_reply;
   test_rpcs::HeavyRpcRequest request;
@@ -568,12 +651,16 @@ TEST_F(AsyncGrpcClientServerTest, ExcessivelyBigRpcResponse) {
   const int kDataSize = kMaxGrpcMessageSize + 1;
   const std::string kData(kDataSize, '\1');
 
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::HeavyRpcResponse> rpc_reply;
   client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncHeavyRpc,
                    test_rpcs::HeavyRpcRequest(), rpc_reply.MakeWriter());
 
-  pending_heavy_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_rpc = pending_heavy_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_heavy_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_rpc =
+      manual_service()->pending_heavy_rpcs()->GetOldestPendingRpc();
 
   auto response = std::make_unique<test_rpcs::HeavyRpcResponse>();
   response->set_data(kData);
@@ -588,6 +675,10 @@ TEST_F(AsyncGrpcClientServerTest, ExcessivelyBigRpcResponse) {
 // Verifies that the response contains the data transferred in the request.
 TEST_F(AsyncGrpcClientServerTest, TwoRpcClients) {
   const int kNumOfRpcs = 3;
+
+  StartManualService();
+  CreateClient();
+
   RpcReply<test_rpcs::EchoIntRpcResponse> rpc_replies[kNumOfRpcs];
   {
     test_rpcs::EchoIntRpcRequest request;
@@ -611,9 +702,11 @@ TEST_F(AsyncGrpcClientServerTest, TwoRpcClients) {
                      rpc_replies[2].MakeWriter());
   }
 
-  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(kNumOfRpcs);
+  manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(
+      kNumOfRpcs);
   for (int i = 0; i < kNumOfRpcs; ++i) {
-    auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+    auto pending_rpc =
+        manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
     response->set_echoed_int(pending_rpc->request->int_to_echo());
     pending_rpc->handler_done_callback.Run(grpc::Status::OK,
@@ -659,6 +752,9 @@ void OnRetryableEchoIntRpcReply(
 
 // Set up a RPC server, then restart it. Send one RPC to each instance.
 TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
+  StartManualService();
+  CreateClient();
+
   {
     RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
     test_rpcs::EchoIntRpcRequest request;
@@ -666,8 +762,9 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
     client_->CallRpc(&test_rpcs::ExampleService::Stub::AsyncEchoIntRpc, request,
                      rpc_reply.MakeWriter());
 
-    pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
-    auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+    manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(1);
+    auto pending_rpc =
+        manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
     EXPECT_EQ(1, pending_rpc->request->int_to_echo());
 
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
@@ -680,7 +777,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
     EXPECT_EQ(1, rpc_reply.response().echoed_int());
   }
 
-  RestartServer();
+  RestartManualService();
 
   {
     RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
@@ -704,8 +801,9 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
         base::Bind(&OnRetryableEchoIntRpcReply, client_.get(), request,
                    rpc_reply.MakeWriter()));
 
-    pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
-    auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+    manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(1);
+    auto pending_rpc =
+        manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
     EXPECT_EQ(2, pending_rpc->request->int_to_echo());
 
     auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
@@ -722,7 +820,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerRestarted) {
 // Send a request to a stopped server. The request should not fail immediately,
 // it should wait for the rpc deadline to pass.
 TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
-  ShutDownServer();
+  CreateClient();
 
   client_->SetDefaultRpcDeadlineForTesting(
       base::TimeDelta::FromMilliseconds(50));
@@ -745,7 +843,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped) {
 
 // Like RpcServerStopped. Pass context deadline to CallRpc directly.
 TEST_F(AsyncGrpcClientServerTest, RpcServerStopped_PerRequestTimeout) {
-  ShutDownServer();
+  CreateClient();
 
   client_->SetDefaultRpcDeadlineForTesting(
       base::TimeDelta::FromMilliseconds(50));
@@ -770,7 +868,7 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStopped_PerRequestTimeout) {
 // Send a request to a server that starts after the request is made. The client
 // should only send the request after the connection has been established.
 TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
-  ShutDownServer();
+  CreateClient();
 
   RpcReply<test_rpcs::EchoIntRpcResponse> rpc_reply;
   test_rpcs::EchoIntRpcRequest request;
@@ -780,10 +878,11 @@ TEST_F(AsyncGrpcClientServerTest, RpcServerStartedAfter) {
 
   base::TimeTicks start = base::TimeTicks::Now();
 
-  StartServer();
+  StartManualService();
 
-  pending_echo_int_rpcs_.WaitUntilPendingRpcCount(1);
-  auto pending_rpc = pending_echo_int_rpcs_.GetOldestPendingRpc();
+  manual_service()->pending_echo_int_rpcs()->WaitUntilPendingRpcCount(1);
+  auto pending_rpc =
+      manual_service()->pending_echo_int_rpcs()->GetOldestPendingRpc();
   EXPECT_EQ(1, pending_rpc->request->int_to_echo());
 
   auto response = std::make_unique<test_rpcs::EchoIntRpcResponse>();
@@ -810,6 +909,7 @@ TEST_F(AsyncGrpcClientServerTest, ShutdownBetweenSyncRequests) {
   constexpr int kCallCount = 100;
 
   StartSelfStoppingService();
+  CreateClient();
   base::RunLoop run_loop;
   self_stopping_service_->set_on_shutdown_callback(run_loop.QuitClosure());
 
