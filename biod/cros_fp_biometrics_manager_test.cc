@@ -11,7 +11,7 @@
 #include <dbus/mock_bus.h>
 #include <dbus/mock_object_proxy.h>
 #include <gtest/gtest.h>
-#include <base/test/scoped_task_environment.h>
+#include <base/test/task_environment.h>
 
 #include "biod/biod_crypto.h"
 #include "biod/biod_crypto_test_data.h"
@@ -182,8 +182,8 @@ class CrosFpBiometricsManagerPeer {
   }
 
  private:
-  base::test::ScopedTaskEnvironment scoped_task_environment_{
-      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   std::unique_ptr<CrosFpBiometricsManager> cros_fp_biometrics_manager_;
   FakeCrosFpDevice* fake_cros_dev_;
 };
@@ -358,8 +358,8 @@ class CrosFpBiometricsManagerMockTest : public ::testing::Test {
     EXPECT_TRUE(mock_);
   }
 
-  base::test::ScopedTaskEnvironment scoped_task_environment_{
-      base::test::ScopedTaskEnvironment::TimeSource::MOCK_TIME};
+  base::test::TaskEnvironment task_environment_{
+      base::test::TaskEnvironment::TimeSource::MOCK_TIME};
   scoped_refptr<dbus::MockObjectProxy> power_manager_proxy_;
   std::unique_ptr<MockCrosFpBiometricsManager> mock_;
   MockCrosFpDevice* mock_cros_dev_;
@@ -368,17 +368,17 @@ class CrosFpBiometricsManagerMockTest : public ::testing::Test {
 
 TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_TooShort) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(0);
-  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromHours(12));
+  task_environment_.FastForwardBy(base::TimeDelta::FromHours(12));
 }
 
 TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Once) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(1);
-  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromDays(1));
+  task_environment_.FastForwardBy(base::TimeDelta::FromDays(1));
 }
 
 TEST_F(CrosFpBiometricsManagerMockTest, TestMaintenanceTimer_Multiple) {
   EXPECT_CALL(*mock_, OnMaintenanceTimerFired).Times(2);
-  scoped_task_environment_.FastForwardBy(base::TimeDelta::FromDays(2));
+  task_environment_.FastForwardBy(base::TimeDelta::FromDays(2));
 }
 
 TEST_F(CrosFpBiometricsManagerMockTest, TestOnMaintenanceTimerFired) {
