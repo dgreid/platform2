@@ -31,6 +31,7 @@ copies.
 | [avtest_label_detect](./avtest_label_detect/) | Test tool for OCRing device labels |
 | [biod](./biod/) | Biometrics daemon |
 | [bluetooth](./bluetooth/) | Bluetooth Service and tools |
+| [bootid-logger](./bootid-logger/) | Simple command to record the current boot id to the log. |
 | [bootstat](./bootstat/) | Tools for tracking points in the overall boot process (for metrics) |
 | [buffet](./buffet/) | Daemon for reacting to cloud messages |
 | [camera](./camera/) | Chrome OS Camera daemon |

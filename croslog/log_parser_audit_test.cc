@@ -192,6 +192,30 @@ TEST_F(LogParserAuditTest, Parse) {
         "syscall=273 compat=0 ip=0x7b7aefb1949d code=0x50000",
         s.substr(33, s.size()));
   }
+
+  {
+    base::Optional<std::string> maybe_line = reader.Forward();
+    EXPECT_TRUE(maybe_line.has_value());
+    MaybeLogEntry e = parser.Parse(std::move(maybe_line.value()));
+    EXPECT_TRUE(e.has_value());
+
+    const std::string& s = e->entire_line();
+    EXPECT_EQ("2019-09-16T14:21:41.984000+00:00", s.substr(0, 32));
+    EXPECT_EQ(TimeFromExploded(2019, 9, 16, 14, 21, 41, 984000), e->time());
+    EXPECT_EQ(493, e->pid());
+    EXPECT_EQ("audit", e->tag());
+
+    EXPECT_EQ(
+        "INFO audit[493]: DAEMON_START op=start ver=2.8.4 format=raw "
+        "kernel=3.18.0-19732-gf84df209b0a1 auid=4294967295 pid=493 uid=0 "
+        "ses=4294967295 subj=u:r:cros_auditd:s0 res=success",
+        s.substr(33, s.size()));
+  }
+
+  {
+    base::Optional<std::string> maybe_line = reader.Forward();
+    EXPECT_FALSE(maybe_line.has_value());
+  }
 }
 
 TEST_F(LogParserAuditTest, ParseWithTimezone) {
