@@ -323,6 +323,18 @@ void Datapath::RemoveInterface(const std::string& ifname) {
   process_runner_->ip("link", "delete", {ifname}, false /*log_failures*/);
 }
 
+bool Datapath::AddSourceIPv4DropRule(const std::string& oif,
+                                     const std::string& src_ip) {
+  return process_runner_->iptables("filter", {"-I", "OUTPUT", "-o", oif, "-s",
+                                              src_ip, "-j", "DROP", "-w"}) == 0;
+}
+
+bool Datapath::RemoveSourceIPv4DropRule(const std::string& oif,
+                                        const std::string& src_ip) {
+  return process_runner_->iptables("filter", {"-D", "OUTPUT", "-o", oif, "-s",
+                                              src_ip, "-j", "DROP", "-w"}) == 0;
+}
+
 void Datapath::StartRoutingDevice(const std::string& ext_ifname,
                                   const std::string& int_ifname,
                                   uint32_t int_ipv4_addr,

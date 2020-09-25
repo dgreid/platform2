@@ -36,6 +36,12 @@ namespace patchpanel {
 namespace {
 constexpr int kSubprocessRestartDelayMs = 900;
 
+// Constants used for dropping locally originated traffic bound to an incorrect
+// source IPv4 address.
+constexpr char kGuestIPv4Subnet[] = "100.115.92.0/23";
+constexpr std::array<const char*, 6> kPhysicalIfnamePrefixes{
+    {"eth+", "wlan+", "mlan+", "usb+", "wwan+", "rmnet+"}};
+
 // Time interval between epoll checks on file descriptors committed by callers
 // of ConnectNamespace DBus API.
 constexpr const base::TimeDelta kConnectNamespaceCheckInterval =
@@ -325,11 +331,15 @@ void Manager::StartDatapath() {
                << " connections.";
   }
 
-  // TODO(chromium:898210): Move interface-specific masquerading setup to shill;
-  // such that we can better set up the masquerade rules based on connection
-  // type rather than interface names.
-  if (!datapath_->AddInterfaceSNAT("wwan+")) {
-    LOG(ERROR) << "Failed to set up wifi masquerade";
+  // chromium:898210: Drop any locally originated traffic that would exit a
+  // physical interface with a source IPv4 address from the subnet of IPs used
+  // for VMs, containers, and connected namespaces This is needed to prevent
+  // packets leaking with an incorrect src IP when a local process binds to the
+  // wrong interface.
+  for (const auto& oif : kPhysicalIfnamePrefixes) {
+    if (!datapath_->AddSourceIPv4DropRule(oif, kGuestIPv4Subnet))
+      LOG(WARNING) << "Failed to set up IPv4 drop rule for src ip "
+                   << kGuestIPv4Subnet << " exiting " << oif;
   }
 
   if (!datapath_->AddOutboundIPv4SNATMark("vmtap+")) {
@@ -343,9 +353,10 @@ void Manager::StopDatapath() {
     return;
 
   datapath_->RemoveOutboundIPv4SNATMark("vmtap+");
-  datapath_->RemoveInterfaceSNAT("wwan+");
   datapath_->RemoveForwardEstablishedRule();
   datapath_->RemoveSNATMarkRules();
+  for (const auto& oif : kPhysicalIfnamePrefixes)
+    datapath_->RemoveSourceIPv4DropRule(oif, kGuestIPv4Subnet);
 
   auto& runner = datapath_->runner();
   // Restore original local port range.

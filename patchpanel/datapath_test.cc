@@ -294,6 +294,24 @@ TEST(DatapathTest, RemoveBridge) {
   datapath.RemoveBridge("br");
 }
 
+TEST(DatapathTest, AddRemoveSourceIPv4DropRule) {
+  MockProcessRunner runner;
+  MockFirewall firewall;
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-I", "OUTPUT", "-o", "eth+", "-s",
+                                   "100.115.92.0/24", "-j", "DROP", "-w"),
+                       true, nullptr));
+  EXPECT_CALL(runner,
+              iptables(StrEq("filter"),
+                       ElementsAre("-D", "OUTPUT", "-o", "eth+", "-s",
+                                   "100.115.92.0/24", "-j", "DROP", "-w"),
+                       true, nullptr));
+  Datapath datapath(&runner, &firewall);
+  datapath.AddSourceIPv4DropRule("eth+", "100.115.92.0/24");
+  datapath.RemoveSourceIPv4DropRule("eth+", "100.115.92.0/24");
+}
+
 TEST(DatapathTest, StartRoutingDevice_Arc) {
   MockProcessRunner runner;
   MockFirewall firewall;

@@ -119,6 +119,15 @@ class Datapath {
 
   virtual void RemoveInterface(const std::string& ifname);
 
+  // Create (or delete) an OUTPUT DROP rule for any locally originated traffic
+  // whose src IPv4 matches |src_ip| and would exit |oif|. This is mainly used
+  // for dropping Chrome webRTC traffic incorrectly bound on ARC and other
+  // guests virtual interfaces (chromium:898210).
+  virtual bool AddSourceIPv4DropRule(const std::string& oif,
+                                     const std::string& src_ip);
+  virtual bool RemoveSourceIPv4DropRule(const std::string& oif,
+                                        const std::string& src_ip);
+
   // Sets up IPv4 SNAT, IP forwarding, and traffic marking for the given
   // virtual device |int_ifname| associated to |source|. if |ext_ifname| is
   // empty, the device is implicitly routed through the highest priority
