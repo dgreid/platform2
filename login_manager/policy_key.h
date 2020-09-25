@@ -31,6 +31,10 @@ class SystemUtils;
 // present, we will allow the owner's key to be set programmatically,
 // and will persist it to disk upon request.  Attempts to set the key
 // before on-disk storage has been checked will be denied.
+//
+// Note: Changes in the format of the owner key might break rollback
+// (go/rollback-data-restore). If possible, try to maintain backwards
+// compatibility for four release cycles.
 class PolicyKey {
  public:
   PolicyKey(const base::FilePath& key_file, NssUtil* nss);
