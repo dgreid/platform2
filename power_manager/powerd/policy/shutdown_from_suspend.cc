@@ -40,11 +40,32 @@ void ShutdownFromSuspend::Init(PrefsInterface* prefs,
 
   if (enabled_) {
     shutdown_delay_ = base::TimeDelta::FromSeconds(shutdown_after_sec);
+    prefs->GetDouble(kLowBatteryShutdownPercentPref,
+                     &low_battery_shutdown_percent_);
     LOG(INFO) << "Shutdown from suspend is configured to "
-              << util::TimeDeltaToString(shutdown_delay_);
+              << util::TimeDeltaToString(shutdown_delay_)
+              << ". low_battery_shutdown_percent is "
+              << low_battery_shutdown_percent_;
   } else {
     LOG(INFO) << "Shutdown from suspend is disabled";
   }
+}
+
+bool ShutdownFromSuspend::ShouldShutdown() {
+  bool shutdown = false;
+
+  if (timer_fired_) {
+    LOG(INFO) << "Timer expired.";
+    shutdown = true;
+  }
+
+  if (power_supply_->GetPowerStatus().battery_charge <=
+      low_battery_shutdown_percent_) {
+    LOG(INFO) << "Battery is low.";
+    shutdown = true;
+  }
+
+  return shutdown;
 }
 
 ShutdownFromSuspend::Action ShutdownFromSuspend::PrepareForSuspendAttempt() {
@@ -53,13 +74,12 @@ ShutdownFromSuspend::Action ShutdownFromSuspend::PrepareForSuspendAttempt() {
 
   // TODO(crbug.com/964510): If the timer is gonna expire in next few minutes,
   // shutdown.
-  if (in_dark_resume_ && timer_fired_) {
-    if (!power_supply_->GetPowerStatus().line_power_on)
+  if (in_dark_resume_ && ShutdownFromSuspend::ShouldShutdown()) {
+    if (!power_supply_->GetPowerStatus().line_power_on) {
+      LOG(INFO) << "Shutting down.";
       return ShutdownFromSuspend::Action::SHUT_DOWN;
-
-    LOG(INFO) << "Not shutting down even after "
-              << util::TimeDeltaToString(shutdown_delay_)
-              << " in suspend as line power is connected";
+    }
+    LOG(INFO) << "Not shutting down from resume as line power is connected.";
   }
 
   if (!alarm_timer_->IsRunning()) {

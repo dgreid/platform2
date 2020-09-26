@@ -46,6 +46,8 @@ class ShutdownFromSuspend : public ShutdownFromSuspendInterface {
   // Invoked by |alarm_timer_| after spending |shutdown_delay_| in suspend.
   void OnTimerWake();
 
+  bool ShouldShutdown();
+
   // Is shutdown after x enabled ?
   bool enabled_ = false;
   // Time in suspend after which the device wakes up to shut down.
@@ -58,6 +60,8 @@ class ShutdownFromSuspend : public ShutdownFromSuspendInterface {
   std::unique_ptr<timers::SimpleAlarmTimer> alarm_timer_;
 
   system::PowerSupplyInterface* power_supply_ = nullptr;  // weak
+
+  double low_battery_shutdown_percent_ = 0.0;
 
   DISALLOW_COPY_AND_ASSIGN(ShutdownFromSuspend);
 };
