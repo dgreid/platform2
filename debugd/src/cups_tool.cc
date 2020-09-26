@@ -39,11 +39,6 @@ constexpr char kUriHelperBasename[] = "cups_uri_helper";
 constexpr char kUriHelperSeccompPolicy[] =
     "/usr/share/policy/cups-uri-helper.policy";
 
-// lpadmin returns 1 for all failures and 0 for success as deteremined by
-// surveying systemv/lpadmin.c in the codebase.  So, any other error is
-// an abnormal failure.
-constexpr int kLpadminNormalFailure = 1;
-
 // Returns the exit code for the executed process.
 // By default disallow root mount namespace. Passing true as optional argument
 // enables root mount namespace.
@@ -126,6 +121,40 @@ int Lpadmin(const ProcessWithOutput::ArgList& arg_list,
                    inherit_usergroups);
 }
 
+// Translates a return code from lpadmin to a CupsResult value.
+CupsResult LpadminReturnCodeToCupsResult(int return_code, bool autoconf) {
+  if (return_code != 0)
+    LOG(WARNING) << "lpadmin failed: " << return_code;
+
+  switch (return_code) {
+    case 0:  // OK
+      return CupsResult::CUPS_SUCCESS;
+    case 1:  // UNKNOWN_ERROR
+      return (autoconf ? CupsResult::CUPS_AUTOCONF_FAILURE
+                       : CupsResult::CUPS_LPADMIN_FAILURE);
+    case 2:  // WRONG_PARAMETERS
+      return CupsResult::CUPS_FATAL;
+    case 3:  // IO_ERROR
+      return CupsResult::CUPS_IO_ERROR;
+    case 4:  // MEMORY_ALLOC_ERROR
+      return CupsResult::CUPS_MEMORY_ALLOC_ERROR;
+    case 5:  // INVALID_PPD_FILE
+      return (autoconf ? CupsResult::CUPS_FATAL : CupsResult::CUPS_INVALID_PPD);
+    case 6:  // SERVER_UNREACHABLE
+      return CupsResult::CUPS_FATAL;
+    case 7:  // PRINTER_UNREACHABLE
+      return CupsResult::CUPS_PRINTER_UNREACHABLE;
+    case 8:  // PRINTER_WRONG_RESPONSE
+      return CupsResult::CUPS_PRINTER_WRONG_RESPONSE;
+    case 9:  // PRINTER_NOT_AUTOCONFIGURABLE
+      return (autoconf ? CupsResult::CUPS_PRINTER_NOT_AUTOCONF
+                       : CupsResult::CUPS_FATAL);
+    default:
+      // unexpected return code
+      return CupsResult::CUPS_FATAL;
+  }
+}
+
 // Checks whether the scheme for the given |uri| is one of the required schemes
 // for IPP Everywhere.
 bool IppEverywhereURI(const std::string& uri) {
@@ -141,8 +170,7 @@ bool IppEverywhereURI(const std::string& uri) {
 }  // namespace
 
 // Invokes lpadmin with arguments to configure a new printer using '-m
-// everywhere'.  Returns 0 for success, 1 for failure, 4 if configuration
-// failed.
+// everywhere'.
 int32_t CupsTool::AddAutoConfiguredPrinter(const std::string& name,
                                            const std::string& uri) {
   if (!IppEverywhereURI(uri)) {
@@ -155,35 +183,18 @@ int32_t CupsTool::AddAutoConfiguredPrinter(const std::string& name,
     return CupsResult::CUPS_BAD_URI;
   }
 
-  int32_t result;
-  if (base::StartsWith(uri, "ippusb://",
-                       base::CompareCase::INSENSITIVE_ASCII)) {
-    // In the case of printing with the ippusb scheme, we want to run lpadmin in
-    // a minijail with the inherit usergroups option set.
-    result = Lpadmin({"-v", uri, "-p", name, "-m", "everywhere", "-E"}, true);
-  } else {
-    result = Lpadmin({"-v", uri, "-p", name, "-m", "everywhere", "-E"});
-  }
-
-  if (result == EXIT_SUCCESS) {
-    return CupsResult::CUPS_SUCCESS;
-  }
-
-  if (result == kLpadminNormalFailure) {
-    return CupsResult::CUPS_AUTOCONF_FAILURE;
-  }
-
-  // Lpadmin may have crashed.  Something is very wrong.
-  LOG(WARNING) << "Lpadmin failed: " << result;
-  return CupsResult::CUPS_FATAL;
+  const bool is_ippusb =
+      base::StartsWith(uri, "ippusb://", base::CompareCase::INSENSITIVE_ASCII);
+  const int result =
+      Lpadmin({"-v", uri, "-p", name, "-m", "everywhere", "-E"}, is_ippusb);
+  return LpadminReturnCodeToCupsResult(result, /*autoconf=*/true);
 }
 
 int32_t CupsTool::AddManuallyConfiguredPrinter(
     const std::string& name,
     const std::string& uri,
     const std::vector<uint8_t>& ppd_contents) {
-  int result = TestPPD(ppd_contents);
-  if (result != EXIT_SUCCESS) {
+  if (TestPPD(ppd_contents) != EXIT_SUCCESS) {
     LOG(ERROR) << "PPD failed validation";
     return CupsResult::CUPS_INVALID_PPD;
   }
@@ -193,14 +204,9 @@ int32_t CupsTool::AddManuallyConfiguredPrinter(
     return CupsResult::CUPS_BAD_URI;
   }
 
-  // lpadmin only returns 0 for success and 1 for failure.
-  result =
+  const int result =
       Lpadmin({"-v", uri, "-p", name, "-P", "-", "-E"}, false, &ppd_contents);
-  if (result != EXIT_SUCCESS) {
-    return CupsResult::CUPS_LPADMIN_FAILURE;
-  }
-
-  return CupsResult::CUPS_SUCCESS;
+  return LpadminReturnCodeToCupsResult(result, /*autoconf=*/false);
 }
 
 // Invokes lpadmin with -x to delete a printer.
